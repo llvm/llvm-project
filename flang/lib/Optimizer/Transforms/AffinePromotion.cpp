@@ -20,6 +20,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "flang-affine-promotion"
 
@@ -574,7 +575,7 @@ public:
     auto function = getFunction();
     markAllAnalysesPreserved();
     auto functionAnalysis = AffineFunctionAnalysis(function);
-    mlir::OwningRewritePatternList patterns;
+    mlir::OwningRewritePatternList patterns(context);
     patterns.insert<AffineIfConversion>(context, functionAnalysis);
     patterns.insert<AffineLoopConversion>(context, functionAnalysis);
     mlir::ConversionTarget target = *context;

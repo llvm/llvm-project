@@ -20,6 +20,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Debug.h"
 
 //===----------------------------------------------------------------------===//
 // Target rewrite: rewriting of ops to make target-specific lowerings manifest.

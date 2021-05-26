@@ -43,10 +43,12 @@
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Parser.h"
-#include "mlir/Target/LLVMIR.h"
+#include "mlir/Target/LLVMIR/Import.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "flang-lower-bridge"
@@ -341,8 +343,8 @@ public:
       if (loc.has_value()) {
         // loc is a pair (begin, end); use the beginning position
         auto &filePos = loc->first;
-        return mlir::FileLineColLoc::get(filePos.file.path(), filePos.line,
-                                         filePos.column, &getMLIRContext());
+        return mlir::FileLineColLoc::get(&getMLIRContext(), filePos.file.path(),
+                                         filePos.line, filePos.column);
       }
     }
     return genLocation();
@@ -2222,7 +2224,9 @@ private:
       genFIRProcedureExit(funit, funit.getSubprogramSymbol());
     funit.finalBlock = nullptr;
     // FIXME: Simplification should happen in a normal pass, not here.
-    (void)mlir::simplifyRegions({builder->getRegion()}); // remove dead code
+    mlir::IRRewriter rewriter(*builder);
+    (void)mlir::simplifyRegions(rewriter,
+                                {builder->getRegion()}); // remove dead code
     delete builder;
     builder = nullptr;
     localSymbols.clear();

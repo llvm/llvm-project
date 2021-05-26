@@ -20,6 +20,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Semantics/symbol.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
@@ -194,7 +195,7 @@ fir::GlobalOp Fortran::lower::FirOpBuilder::createGlobal(
   auto insertPt = saveInsertionPoint();
   if (auto glob = module.lookupSymbol<fir::GlobalOp>(name))
     return glob;
-  setInsertionPoint(module.getBody()->getTerminator());
+  setInsertionPoint(module.getBody(), module.getBody()->end());
   auto glob = create<fir::GlobalOp>(loc, name, isConst, type, value, linkage);
   restoreInsertionPoint(insertPt);
   return glob;
@@ -207,7 +208,7 @@ fir::GlobalOp Fortran::lower::FirOpBuilder::createGlobal(
   auto insertPt = saveInsertionPoint();
   if (auto glob = module.lookupSymbol<fir::GlobalOp>(name))
     return glob;
-  setInsertionPoint(module.getBody()->getTerminator());
+  setInsertionPoint(module.getBody(), module.getBody()->end());
   auto glob = create<fir::GlobalOp>(loc, name, isConst, type, mlir::Attribute{},
                                     linkage);
   auto &region = glob.getRegion();

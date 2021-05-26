@@ -21,6 +21,10 @@ program wsloop
 !$OMP DO SCHEDULE(static, 4)
 
 !LLVMIR:  define internal void @_QQmain..omp_par
+!LLVMIR:   %p.lastiter{{.*}} = alloca i32, align 4
+!LLVMIR:   %p.lowerbound{{.*}} = alloca i32, align 4
+!LLVMIR:   %p.upperbound{{.*}} = alloca i32, align 4
+!LLVMIR:   %p.stride{{.*}} = alloca i32, align 4
 !LLVMIR:  omp_loop.preheader:                               ; preds = %omp.par.region1
 !LLVMIR:    @__kmpc_global_thread_num
 !LLVMIR:    call void @__kmpc_for_static_init_4u(%{{.*}}, i32 %{{.*}}, i32 34, i32* %{{.*}}, i32* %{{.*}}, i32* %{{.*}}, i32 1, i32 4)
@@ -65,10 +69,6 @@ end do
 chunk = 6
 !$OMP DO SCHEDULE(static, chunk)
 !LLVMIR: omp_loop.after{{.*}}:                                  ; preds = %omp_loop.exit{{.*}}
-!LLVMIR:   %p.lastiter{{.*}} = alloca i32, align 4
-!LLVMIR:   %p.lowerbound{{.*}} = alloca i32, align 4
-!LLVMIR:   %p.upperbound{{.*}} = alloca i32, align 4
-!LLVMIR:   %p.stride{{.*}} = alloca i32, align 4
 !LLVMIR:   store i32 6, i32* %[[CHUNK_ADDR:.*]], align 4
 !LLVMIR:   %[[CHUNK_VAL:.*]] = load i32, i32* %[[CHUNK_ADDR]], align 4
 

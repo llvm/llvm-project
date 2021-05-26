@@ -44,6 +44,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -2425,17 +2426,17 @@ public:
     }
 
     // Iteration space is created with outermost columns, innermost rows
-    fir::DoLoopOp inner;
     auto innerArg = destination.getResult();
     mlir::Value outerRes;
     const auto loopDepth = loopUppers.size();
     llvm::SmallVector<mlir::Value> ivars;
     auto insPt = builder.saveInsertionPoint();
     assert(loopDepth > 0);
+    llvm::SmallVector<fir::DoLoopOp> loops;
     for (auto i : llvm::enumerate(llvm::reverse(loopUppers))) {
       if (i.index() > 0) {
-        assert(inner);
-        builder.setInsertionPointToStart(inner.getBody());
+        assert(!loops.empty());
+        builder.setInsertionPointToStart(loops.back().getBody());
       }
       auto loop = builder.create<fir::DoLoopOp>(
           loc, zero, i.value(), one, /*unordered=*/false,
@@ -2446,18 +2447,18 @@ public:
       ivars.push_back(loop.getInductionVar());
       if (!outerRes)
         outerRes = loop.getResult(0);
-      if (!inner)
+      if (loops.empty())
         insPt = builder.saveInsertionPoint();
-      if (i.index() < loopDepth - 1) {
-        // Add the fir.result for all loops except the innermost one.
-        builder.setInsertionPointToStart(loop.getBody());
-        builder.create<fir::ResultOp>(loc, innerArg);
-      }
-      inner = loop;
+      loops.push_back(loop);
+    }
+    // Add the fir.result for all loops except the innermost one.
+    for (unsigned i = 0; i + 1 < loopDepth; ++i) {
+      builder.setInsertionPointToEnd(loops[i].getBody());
+      builder.create<fir::ResultOp>(loc, loops[i + 1].getResult(0));
     }
 
     // move insertion point inside loop nest
-    builder.setInsertionPointToStart(inner.getBody());
+    builder.setInsertionPointToStart(loops.back().getBody());
 
     // put loop variables in row to column order
     IterationSpace iters{innerArg, outerRes, llvm::reverse(ivars)};
@@ -3587,7 +3588,7 @@ public:
     auto one = builder.createIntegerConstant(loc, idxTy, 1);
 
     if (fir::isRecordWithAllocatableMember(eleTy))
-       TODO(loc, "deep copy on allocatable members");
+      TODO(loc, "deep copy on allocatable members");
 
     if (!eleSz) {
       // Compute the element size at runtime.

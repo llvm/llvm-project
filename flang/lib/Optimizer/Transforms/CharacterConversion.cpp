@@ -17,6 +17,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "flang-character-conversion"
 
@@ -99,7 +100,7 @@ public:
     if (clOpts.runtimeName.empty()) {
       auto *context = &getContext();
       auto func = getOperation();
-      mlir::OwningRewritePatternList patterns;
+      mlir::OwningRewritePatternList patterns(context);
       patterns.insert<CharacterConvertConversion>(context);
       mlir::ConversionTarget target(*context);
       target.addLegalDialect<mlir::AffineDialect, fir::FIROpsDialect,

@@ -2203,8 +2203,7 @@ mlir::FuncOp fir::createFuncOp(mlir::Location loc, mlir::ModuleOp module,
                                llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   if (auto f = module.lookupSymbol<mlir::FuncOp>(name))
     return f;
-  mlir::OpBuilder modBuilder(module.getBodyRegion());
-  modBuilder.setInsertionPoint(module.getBody()->getTerminator());
+  mlir::OpBuilder modBuilder = mlir::OpBuilder::atBlockEnd(module.getBody());
   auto result = modBuilder.create<mlir::FuncOp>(loc, name, type, attrs);
   result.setVisibility(mlir::SymbolTable::Visibility::Private);
   return result;

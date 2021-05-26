@@ -17,7 +17,6 @@ target_link_libraries(fir-opt PRIVATE
   MLIRAffineToStandard
   MLIRAnalysis
   MLIRSCFToStandard
-  MLIREDSC
   MLIRParser
   MLIRStandardToLLVM
   MLIRSupport

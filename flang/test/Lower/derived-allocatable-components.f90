@@ -123,8 +123,6 @@ end subroutine
 ! CHECK-SAME: %[[arg1:.*]]: !fir.ref<!fir.array<100x!fir.type<_QMacompTreal_a1{p:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>>
 subroutine ref_array_real_a(a1_0, a1_1)
   type(real_a1) :: a1_0, a1_1(100)
-  ! Currently, base is evaluated twice (issue 772). Skip first eval.
-  ! CHECK:  fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   ! CHECK: %[[fld:.*]] = fir.field_index p, !fir.type<_QMacompTreal_a1{p:!fir.box<!fir.heap<!fir.array<?xf32>>>}>
   ! CHECK: %[[fld_coor:.*]] = fir.coordinate_of %[[arg0]], %[[fld]] : (!fir.ref<!fir.type<_QMacompTreal_a1{p:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   ! CHECK-DAG: %[[box:.*]] = fir.load %[[fld_coor]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
@@ -137,8 +135,6 @@ subroutine ref_array_real_a(a1_0, a1_1)
   call takes_real_array(a1_0%p(20:50:2))
 
 
-  ! Currently, base is evaluated twice (issue 772). Skip first eval.
-  ! CHECK: fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   ! CHECK: %[[a1_1_coor:.*]] = fir.coordinate_of %[[arg1]], %{{.*}} : (!fir.ref<!fir.array<100x!fir.type<_QMacompTreal_a1{p:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>>, i64) -> !fir.ref<!fir.type<_QMacompTreal_a1{p:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
   ! CHECK: %[[fld:.*]] = fir.field_index p, !fir.type<_QMacompTreal_a1{p:!fir.box<!fir.heap<!fir.array<?xf32>>>}>
   ! CHECK: %[[fld_coor:.*]] = fir.coordinate_of %[[a1_1_coor]], %[[fld]] : (!fir.ref<!fir.type<_QMacompTreal_a1{p:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>

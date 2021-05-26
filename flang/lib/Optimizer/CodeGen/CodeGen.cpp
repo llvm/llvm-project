@@ -32,7 +32,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Target/LLVMIR.h"
+#include "mlir/Target/LLVMIR/Import.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -2917,7 +2917,7 @@ public:
     auto *context = getModule().getContext();
     fir::LLVMTypeConverter typeConverter{getModule()};
     auto loc = mlir::UnknownLoc::get(context);
-    mlir::OwningRewritePatternList pattern;
+    mlir::OwningRewritePatternList pattern(context);
     pattern.insert<
         AbsentOpConversion, AddcOpConversion, AddrOfOpConversion,
         AllocaOpConversion, AllocMemOpConversion, BoxAddrOpConversion,
@@ -2956,7 +2956,7 @@ public:
     target.addLegalDialect<mlir::omp::OpenMPDialect>();
 
     // required NOPs for applying a full conversion
-    target.addLegalOp<mlir::ModuleOp, mlir::ModuleTerminatorOp>();
+    target.addLegalOp<mlir::ModuleOp>();
 
     // apply the patterns
     if (mlir::failed(mlir::applyFullConversion(getModule(), target,

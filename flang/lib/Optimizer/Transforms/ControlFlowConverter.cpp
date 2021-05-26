@@ -144,11 +144,11 @@ public:
   void runOnFunction() override {
     if (disableControlFlowLowering)
       return;
-
-    mlir::OwningRewritePatternList patterns;
-    patterns.insert<SelectTypeOpConversion>(&getContext());
-    mlir::populateAffineToStdConversionPatterns(patterns, &getContext());
-    mlir::ConversionTarget target(getContext());
+    auto &context = getContext();
+    mlir::OwningRewritePatternList patterns(&context);
+    patterns.insert<SelectTypeOpConversion>(&context);
+    mlir::populateAffineToStdConversionPatterns(patterns);
+    mlir::ConversionTarget target(context);
     target.addLegalDialect<fir::FIROpsDialect, mlir::scf::SCFDialect,
                            mlir::StandardOpsDialect>();
     target.addIllegalOp<fir::SelectTypeOp>();

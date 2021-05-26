@@ -49,6 +49,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -133,7 +134,7 @@ using ProgramName = std::string;
 
 // Print the module without the "module { ... }" wrapper.
 static void printModule(mlir::ModuleOp mlirModule, llvm::raw_ostream &out) {
-  for (auto &op : mlirModule.getBody()->without_terminator())
+  for (auto &op : *mlirModule.getBody())
     out << op << '\n';
   out << '\n';
 }

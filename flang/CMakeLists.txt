@@ -202,6 +202,7 @@ else()
   include_directories(SYSTEM ${MLIR_TABLEGEN_OUTPUT_DIR})
 endif()
 set(FLANG_INCLUDE_DIR ${FLANG_BINARY_DIR}/include)
+set(FLANG_INTRINSIC_MODULES_DIR ${CMAKE_BINARY_DIR}/include/flang)
 
 if(FLANG_BUILD_NEW_DRIVER)
     # TODO: Remove when libclangDriver is lifted out of Clang

@@ -13,6 +13,7 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -23,6 +24,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "flang-affine-demotion"
 
@@ -108,11 +110,11 @@ mlir::Type convertMemRef(mlir::MemRefType type) {
       type.getElementType());
 }
 
-class StdAllocConversion : public mlir::OpRewritePattern<mlir::AllocOp> {
+class StdAllocConversion : public mlir::OpRewritePattern<memref::AllocOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
   mlir::LogicalResult
-  matchAndRewrite(mlir::AllocOp op,
+  matchAndRewrite(memref::AllocOp op,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<fir::AllocaOp>(op, convertMemRef(op.getType()),
                                                op.memref());
@@ -129,13 +131,13 @@ public:
     LLVM_DEBUG(llvm::dbgs() << "AffineDemotion: running on function:\n";
                function.print(llvm::dbgs()););
 
-    mlir::OwningRewritePatternList patterns;
+    mlir::OwningRewritePatternList patterns(context);
     patterns.insert<ConvertConversion>(context);
     patterns.insert<AffineLoadConversion>(context);
     patterns.insert<AffineStoreConversion>(context);
     patterns.insert<StdAllocConversion>(context);
     mlir::ConversionTarget target(*context);
-    target.addIllegalOp<mlir::AllocOp>();
+    target.addIllegalOp<memref::AllocOp>();
     target.addDynamicallyLegalOp<fir::ConvertOp>([](fir::ConvertOp op) {
       if (op.res().getType().isa<mlir::MemRefType>())
         return false;

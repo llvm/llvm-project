@@ -1,5 +1,6 @@
 ! RUN: bbc -emit-fir -o - %s | FileCheck %s
 
+
 ! CHECK-LABEL: func @_QPcompare1(%arg0: !fir.ref<!fir.logical<4>>, %arg1: !fir.boxchar<1>, %arg2: !fir.boxchar<1>)
 subroutine compare1(x, c1, c2)
   character(*) c1, c2, d1, d2

@@ -56,7 +56,7 @@ static cl::opt<std::string> targetTriple("target",
 #include "flang/Tools/CLOptions.inc"
 
 static void printModuleBody(mlir::ModuleOp mod, raw_ostream &output) {
-  for (auto &op : mod.getBody()->without_terminator())
+  for (auto &op : *mod.getBody())
     output << op << '\n';
 }
 

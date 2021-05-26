@@ -50,7 +50,6 @@ subroutine foodim1()
 
   ! Test reading allocatable bounds and extents
   print *, x(42)
-  ! CHECK-DAG: fir.load %[[xExtVar]] : !fir.ref<index>
   ! CHECK-DAG: fir.load %[[xLbVar]] : !fir.ref<index>
   ! CHECK-DAG: fir.load %[[xAddrVar]] : !fir.ref<!fir.heap<!fir.array<?xf32>>>
 

@@ -13,6 +13,7 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "flang-array-value-copy"
 
@@ -682,7 +683,7 @@ public:
     auto &analysis = getAnalysis<ArrayCopyAnalysis>();
     const auto &useMap = analysis.getUseMap();
 
-    mlir::OwningRewritePatternList patterns1;
+    mlir::OwningRewritePatternList patterns1(context);
     patterns1.insert<ArrayFetchConversion>(context, useMap);
     patterns1.insert<ArrayUpdateConversion>(context, analysis, useMap);
     mlir::ConversionTarget target(*context);
@@ -697,7 +698,7 @@ public:
       signalPassFailure();
     }
 
-    mlir::OwningRewritePatternList patterns2;
+    mlir::OwningRewritePatternList patterns2(context);
     patterns2.insert<ArrayLoadConversion>(context);
     patterns2.insert<ArrayMergeStoreConversion>(context);
     target.addIllegalOp<ArrayLoadOp, ArrayMergeStoreOp>();

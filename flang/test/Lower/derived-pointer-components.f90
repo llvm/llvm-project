@@ -121,8 +121,6 @@ end subroutine
 ! CHECK-SAME: %[[arg1:.*]]: !fir.ref<!fir.array<100x!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>>
 subroutine ref_array_real_p(p1_0, p1_1)
   type(real_p1) :: p1_0, p1_1(100)
-  ! Currently, base is evaluated twice (issue 772). Skip first eval.
-  ! CHECK:  fir.load %{{.*}} : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK: %[[fld:.*]] = fir.field_index p, !fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
   ! CHECK: %[[fld_coor:.*]] = fir.coordinate_of %[[arg0]], %[[fld]] : (!fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK-DAG: %[[box:.*]] = fir.load %[[fld_coor]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
@@ -134,13 +132,11 @@ subroutine ref_array_real_p(p1_0, p1_1)
   call takes_real_array(p1_0%p(20:50:2))
 
 
-  ! Currently, base is evaluated twice (issue 772). Skip first eval.
-  ! CHECK: fir.load %{{.*}} : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK: %[[p1_1_coor:.*]] = fir.coordinate_of %[[arg1]], %{{.*}} : (!fir.ref<!fir.array<100x!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>>, i64) -> !fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>
   ! CHECK: %[[fld:.*]] = fir.field_index p, !fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>
   ! CHECK: %[[fld_coor:.*]] = fir.coordinate_of %[[p1_1_coor]], %[[fld]] : (!fir.ref<!fir.type<_QMpcompTreal_p1{p:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK-DAG: %[[box:.*]] = fir.load %[[fld_coor]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
-  ! CHECK-DAG: %[[dims:.*]]:3 = fir.box_dims %[[box]], %c0_5 : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
+  ! CHECK-DAG: %[[dims:.*]]:3 = fir.box_dims %[[box]], %c0{{.*}} : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
   ! CHECK-DAG: %[[shift:.*]] = fir.shift %[[dims]]#0 : (index) -> !fir.shift<1>
   ! CHECK-DAG: %[[slice:.*]] = fir.slice %c20{{.*}}, %c50{{.*}}, %c2{{.*}} : (i64, i64, i64) -> !fir.slice<1>
   ! CHECK: %[[rebox:.*]] = fir.rebox %[[box]](%[[shift]]) [%[[slice]]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.shift<1>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>

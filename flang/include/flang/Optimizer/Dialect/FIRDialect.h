@@ -50,16 +50,6 @@ public:
   static llvm::StringRef getDialectNamespace() { return "fircg"; }
 };
 
-/// The FIR codegen dialect is a dialect containing a small set of transient
-/// operations used exclusively during code generation.
-class FIRCodeGenDialect final : public mlir::Dialect {
-public:
-  explicit FIRCodeGenDialect(mlir::MLIRContext *ctx);
-  virtual ~FIRCodeGenDialect();
-
-  static llvm::StringRef getDialectNamespace() { return "fircg"; }
-};
-
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIRDIALECT_H
