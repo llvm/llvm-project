@@ -55,7 +55,7 @@ end of the array. Therefore, runtime array can be implemented as a zero length
 array type.
 
 Moreover, SPIR-V supports the notion of array stride. Currently only natural
-strides (based on [`VulkanLayoutUtils`](VulkanLayoutUtils)) are supported. They
+strides (based on [`VulkanLayoutUtils`][VulkanLayoutUtils]) are supported. They
 are also mapped to LLVM array.
 
 SPIR-V Dialect                        | LLVM Dialect
@@ -500,7 +500,7 @@ The SPIR-V to LLVM conversion does not involve modelling of workgroups.
 Hence, we say that only current invocation is in conversion's scope. This means
 that global variables with pointers of `Input`, `Output`, and `Private` storage
 classes are supported. Also, `StorageBuffer` storage class is allowed for
-executing [`mlir-spirv-cpu-runner`](#`mlir-spirv-cpu-runner`).
+executing [`mlir-spirv-cpu-runner`](#mlir-spirv-cpu-runner).
 
 Moreover, `bind` that specifies the descriptor set and the binding number and
 `built_in` that specifies SPIR-V `BuiltIn` decoration have no conversion into
@@ -780,10 +780,10 @@ to LLVM dialect.
 ### `spv.func`
 This op declares or defines a SPIR-V function and it is converted to `llvm.func`.
 This conversion handles signature conversion, and function control attributes
-remapping to LLVM dialect function [`passthrough` attribute](Dialects/LLVM.md#Attribute-pass-through).
+remapping to LLVM dialect function [`passthrough` attribute](Dialects/LLVM.md/#attribute-pass-through).
 
-The following mapping is used to map [SPIR-V function control](SPIRVFunctionAttributes) to
-[LLVM function attributes](LLVMFunctionAttributes):
+The following mapping is used to map [SPIR-V function control][SPIRVFunctionAttributes] to
+[LLVM function attributes][LLVMFunctionAttributes]:
 
 SPIR-V Function Control Attributes    | LLVM Function Attributes
 :-----------------------------------: | :-----------------------------------:
@@ -820,7 +820,7 @@ supported.
 
 To build the runner, add the following option to `cmake`:
 ```bash
--DMLIR_SPIRV_CPU_RUNNER_ENABLED=1
+-DMLIR_ENABLE_SPIRV_CPU_RUNNER=1
 ```
 
 ### Pipeline

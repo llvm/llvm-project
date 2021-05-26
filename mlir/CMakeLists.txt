@@ -56,26 +56,26 @@ add_custom_target(mlir-doc)
 # Build the CUDA conversions and run according tests if the NVPTX backend
 # is available
 if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
-  set(MLIR_CUDA_CONVERSIONS_ENABLED 1)
+  set(MLIR_ENABLE_CUDA_CONVERSIONS 1)
 else()
-  set(MLIR_CUDA_CONVERSIONS_ENABLED 0)
+  set(MLIR_ENABLE_CUDA_CONVERSIONS 0)
 endif()
 # TODO: we should use a config.h file like LLVM does
-add_definitions(-DMLIR_CUDA_CONVERSIONS_ENABLED=${MLIR_CUDA_CONVERSIONS_ENABLED})
+add_definitions(-DMLIR_CUDA_CONVERSIONS_ENABLED=${MLIR_ENABLE_CUDA_CONVERSIONS})
 
 # Build the ROCm conversions and run according tests if the AMDGPU backend
 # is available
 if ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
-  set(MLIR_ROCM_CONVERSIONS_ENABLED 1)
+  set(MLIR_ENABLE_ROCM_CONVERSIONS 1)
 else()
-  set(MLIR_ROCM_CONVERSIONS_ENABLED 0)
+  set(MLIR_ENABLE_ROCM_CONVERSIONS 0)
 endif()
-add_definitions(-DMLIR_ROCM_CONVERSIONS_ENABLED=${MLIR_ROCM_CONVERSIONS_ENABLED})
+add_definitions(-DMLIR_ROCM_CONVERSIONS_ENABLED=${MLIR_ENABLE_ROCM_CONVERSIONS})
 
-set(MLIR_CUDA_RUNNER_ENABLED 0 CACHE BOOL "Enable building the mlir CUDA runner")
-set(MLIR_ROCM_RUNNER_ENABLED 0 CACHE BOOL "Enable building the mlir ROCm runner")
-set(MLIR_SPIRV_CPU_RUNNER_ENABLED 0 CACHE BOOL "Enable building the mlir SPIR-V cpu runner")
-set(MLIR_VULKAN_RUNNER_ENABLED 0 CACHE BOOL "Enable building the mlir Vulkan runner")
+set(MLIR_ENABLE_CUDA_RUNNER 0 CACHE BOOL "Enable building the mlir CUDA runner")
+set(MLIR_ENABLE_ROCM_RUNNER 0 CACHE BOOL "Enable building the mlir ROCm runner")
+set(MLIR_ENABLE_SPIRV_CPU_RUNNER 0 CACHE BOOL "Enable building the mlir SPIR-V cpu runner")
+set(MLIR_ENABLE_VULKAN_RUNNER 0 CACHE BOOL "Enable building the mlir Vulkan runner")
 
 option(MLIR_INCLUDE_TESTS
        "Generate build targets for the MLIR unit tests."
@@ -96,15 +96,15 @@ option(MLIR_INCLUDE_INTEGRATION_TESTS
 # This linking mode is somewhat more consistent across platforms and surfaces
 # undefined symbols at link time (vs runtime). It is suitable for development
 # workflows but can be disabled for more flexible deployment by
-# setting -DMLIR_PYTHON_BINDINGS_VERSION_LOCKED=OFF
+# setting -DMLIR_BINDINGS_PYTHON_LOCK_VERSION=OFF
 #-------------------------------------------------------------------------------
 
-set(MLIR_BINDINGS_PYTHON_ENABLED 0 CACHE BOOL
+set(MLIR_ENABLE_BINDINGS_PYTHON 0 CACHE BOOL
        "Enables building of Python bindings.")
-set(MLIR_PYTHON_BINDINGS_VERSION_LOCKED 1 CACHE BOOL
+set(MLIR_BINDINGS_PYTHON_LOCK_VERSION 1 CACHE BOOL
        "Links to specific python libraries, resolving all symbols.")
 
-if(MLIR_BINDINGS_PYTHON_ENABLED)
+if(MLIR_ENABLE_BINDINGS_PYTHON)
   include(MLIRDetectPythonEnv)
   find_package(Python3 ${LLVM_MINIMUM_PYTHON_VERSION}
     COMPONENTS Interpreter Development NumPy REQUIRED)
@@ -146,7 +146,7 @@ endif()
 # Generally things after this point may depend on MLIR_ALL_LIBS or libMLIR.so.
 add_subdirectory(tools)
 
-if(MLIR_BINDINGS_PYTHON_ENABLED)
+if(MLIR_ENABLE_BINDINGS_PYTHON)
   # Python sources: built extensions come in via lib/Bindings/Python
   add_subdirectory(python)
 endif()

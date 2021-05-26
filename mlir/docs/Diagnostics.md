@@ -60,7 +60,7 @@ InFlightDiagnostic emit(Location loc, DiagnosticSeverity severity);
 ```
 
 Using the `DiagnosticEngine`, though, is generally not the preferred way to emit
-diagnostics in MLIR. [`operation`](LangRef.md#operations) provides utility
+diagnostics in MLIR. [`operation`](LangRef.md/#operations) provides utility
 methods for emitting diagnostics:
 
 ```c++

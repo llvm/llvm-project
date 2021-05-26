@@ -26,6 +26,11 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   project(Flang)
   set(FLANG_STANDALONE_BUILD ON)
 
+  # For in-tree builds, this variable is inherited from
+  # llvm-project/llvm/CMakeLists.txt. For out-of-tree builds, we need a
+  # separate definition.
+  option(FLANG_BUILD_NEW_DRIVER "Build the flang compiler driver" ON)
+
   set(FLANG_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
   if (NOT MSVC_IDE)
     set(LLVM_ENABLE_ASSERTIONS ${ENABLE_ASSERTIONS}

@@ -142,8 +142,7 @@ int Disassembler::disassemble(const Target &T, const std::string &TripleName,
   }
 
   // Set up the MCContext for creating symbols and MCExpr's.
-  MCContext Ctx(Triple(TripleName), MAI.get(), MRI.get(), /*MOFI=*/nullptr,
-                &STI);
+  MCContext Ctx(Triple(TripleName), MAI.get(), MRI.get(), &STI);
 
   std::unique_ptr<const MCDisassembler> DisAsm(
       T.createMCDisassembler(STI, Ctx));

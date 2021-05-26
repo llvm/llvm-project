@@ -215,6 +215,7 @@ public:
   void unmapTestOnly() {
     TSDRegistry.unmapTestOnly();
     Primary.unmapTestOnly();
+    Secondary.unmapTestOnly();
 #ifdef GWP_ASAN_HOOKS
     if (getFlags()->GWP_ASAN_InstallSignalHandlers)
       gwp_asan::segv_handler::uninstallSignalHandlers();

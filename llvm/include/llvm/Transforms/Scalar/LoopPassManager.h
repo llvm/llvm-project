@@ -183,6 +183,12 @@ protected:
   PreservedAnalyses runWithoutLoopNestPasses(Loop &L, LoopAnalysisManager &AM,
                                              LoopStandardAnalysisResults &AR,
                                              LPMUpdater &U);
+
+private:
+  static const Loop &getLoopFromIR(Loop &L) { return L; }
+  static const Loop &getLoopFromIR(LoopNest &LN) {
+    return LN.getOutermostLoop();
+  }
 };
 
 /// The Loop pass manager.
@@ -358,9 +364,12 @@ template <typename IRUnitT, typename PassT>
 Optional<PreservedAnalyses> LoopPassManager::runSinglePass(
     IRUnitT &IR, PassT &Pass, LoopAnalysisManager &AM,
     LoopStandardAnalysisResults &AR, LPMUpdater &U, PassInstrumentation &PI) {
+  // Get the loop in case of Loop pass and outermost loop in case of LoopNest
+  // pass which is to be passed to BeforePass and AfterPass call backs.
+  const Loop &L = getLoopFromIR(IR);
   // Check the PassInstrumentation's BeforePass callbacks before running the
   // pass, skip its execution completely if asked to (callback returns false).
-  if (!PI.runBeforePass<IRUnitT>(*Pass, IR))
+  if (!PI.runBeforePass<Loop>(*Pass, L))
     return None;
 
   PreservedAnalyses PA;
@@ -373,7 +382,7 @@ Optional<PreservedAnalyses> LoopPassManager::runSinglePass(
   if (U.skipCurrentLoop())
     PI.runAfterPassInvalidated<IRUnitT>(*Pass, PA);
   else
-    PI.runAfterPass<IRUnitT>(*Pass, IR, PA);
+    PI.runAfterPass<Loop>(*Pass, L, PA);
   return PA;
 }
 

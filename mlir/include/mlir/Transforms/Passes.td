@@ -631,6 +631,7 @@ def NormalizeMemRefs : Pass<"normalize-memrefs", "ModuleOp"> {
   ```
   }];
   let constructor = "mlir::createNormalizeMemRefsPass()";
+  let dependentDialects = ["AffineDialect"];
 }
 
 def ParallelLoopCollapsing : Pass<"parallel-loop-collapsing"> {

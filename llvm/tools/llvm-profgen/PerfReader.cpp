@@ -143,9 +143,11 @@ void VirtualUnwinder::collectSamplesFromFrameTrie(
   if (!Cur->isDummyRoot()) {
     if (!Stack.pushFrame(Cur)) {
       // Process truncated context
+      // Start a new traversal ignoring its bottom context
+      T EmptyStack(Binary);
+      collectSamplesFromFrame(Cur, EmptyStack);
       for (const auto &Item : Cur->Children) {
-        // Start a new traversal ignoring its bottom context
-        collectSamplesFromFrameTrie(Item.second.get());
+        collectSamplesFromFrameTrie(Item.second.get(), EmptyStack);
       }
       return;
     }

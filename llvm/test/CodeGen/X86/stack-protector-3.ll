@@ -14,6 +14,8 @@
 ; RUN: llc -mtriple=x86_64-pc-linux-gnu -o - < %t/f2.ll | FileCheck --check-prefix=CHECK-OFFSET %s
 ; RUN: llc -mtriple=x86_64-pc-linux-gnu -o - < %t/g2.ll | FileCheck --check-prefix=CHECK-NEGATIVE-OFFSET %s
 
+;--- main.ll
+
 ; CHECK-TLS-FS-40:       movq    %fs:40, %rax
 ; CHECK-TLS-FS-40:       movq    %fs:40, %rax
 ; CHECK-TLS-FS-40-NEXT:  cmpq    16(%rsp), %rax
@@ -54,8 +56,6 @@
 ; CHECK-GLOBAL:       .LBB0_2:
 ; CHECK-GLOBAL-NEXT:  .cfi_def_cfa_offset 32
 ; CHECK-GLOBAL-NEXT:  callq   __stack_chk_fail
-
-;--- main.ll
 
 ; ModuleID = 't.c'
 @.str = private unnamed_addr constant [14 x i8] c"stackoverflow\00", align 1

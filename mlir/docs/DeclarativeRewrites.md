@@ -51,7 +51,7 @@ features:
 *   Matching multi-result ops in nested patterns.
 *   Matching and generating variadic operand/result ops in nested patterns.
 *   Packing and unpacking variadic operands/results during generation.
-*   [`NativeCodeCall`](#native-code-call-transforming-the-generated-op)
+*   [`NativeCodeCall`](#nativecodecall-transforming-the-generated-op)
     returning more than one results.
 
 ## Rule Definition
@@ -90,7 +90,7 @@ Each pattern is specified as a TableGen `dag` object with the syntax of
 `(operator arg0, arg1, ...)`.
 
 `operator` is typically an MLIR op, but it can also be other
-[directives](#special-directives). `argN` is for matching (if used in source
+[directives](#rewrite-directives). `argN` is for matching (if used in source
 pattern) or generating (if used in result pattern) the `N`-th argument for
 `operator`. If the `operator` is some MLIR operation, it means the `N`-th
 argument as specified in the `arguments` list of the op's definition.

@@ -90,13 +90,13 @@ def BSETINVMask : ImmLeaf<XLenVT, [{
 // Check if (or r, i) can be optimized to (BSETI (BSETI r, i0), i1),
 // in which i = (1 << i0) | (1 << i1).
 def BSETINVTwoBitsMask : PatLeaf<(imm), [{
-   if (!N->hasOneUse())
-     return false;
-   // The immediate should not be a simm12.
-   if (isInt<12>(N->getSExtValue()))
-     return false;
-   // The immediate must have exactly two bits set.
-   return countPopulation(N->getZExtValue()) == 2;
+  if (!N->hasOneUse())
+    return false;
+  // The immediate should not be a simm12.
+  if (isInt<12>(N->getSExtValue()))
+    return false;
+  // The immediate must have exactly two bits set.
+  return countPopulation(N->getZExtValue()) == 2;
 }]>;
 
 def BSETINVTwoBitsMaskLow : SDNodeXForm<imm, [{
@@ -109,6 +109,23 @@ def BSETINVTwoBitsMaskHigh : SDNodeXForm<imm, [{
   uint64_t I = N->getZExtValue();
   return CurDAG->getTargetConstant(63 - countLeadingZeros(I), SDLoc(N),
                                    N->getValueType(0));
+}]>;
+
+// Check if (or r, imm) can be optimized to (BSETI (ORI r, i0), i1),
+// in which imm = i0 | (1 << i1).
+def BSETINVORIMask : PatLeaf<(imm), [{
+  if (!N->hasOneUse())
+    return false;
+  // The immediate should not be a simm12.
+  if (isInt<12>(N->getSExtValue()))
+    return false;
+  // There should be only one set bit from bit 11 to the top.
+  return isPowerOf2_64(N->getZExtValue() & ~0x7ff);
+}]>;
+
+def BSETINVORIMaskLow : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() & 0x7ff,
+                                   SDLoc(N), N->getValueType(0));
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -754,6 +771,12 @@ def : Pat<(or GPR:$r, BSETINVTwoBitsMask:$i),
 def : Pat<(xor GPR:$r, BSETINVTwoBitsMask:$i),
           (BINVI (BINVI GPR:$r, (BSETINVTwoBitsMaskLow BSETINVTwoBitsMask:$i)),
                  (BSETINVTwoBitsMaskHigh BSETINVTwoBitsMask:$i))>;
+def : Pat<(or GPR:$r, BSETINVORIMask:$i),
+          (BSETI (ORI GPR:$r, (BSETINVORIMaskLow BSETINVORIMask:$i)),
+                 (BSETINVTwoBitsMaskHigh BSETINVORIMask:$i))>;
+def : Pat<(xor GPR:$r, BSETINVORIMask:$i),
+          (BINVI (XORI GPR:$r, (BSETINVORIMaskLow BSETINVORIMask:$i)),
+                 (BSETINVTwoBitsMaskHigh BSETINVORIMask:$i))>;
 }
 
 // There's no encoding for roli in the the 'B' extension as it can be
