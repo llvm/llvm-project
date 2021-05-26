@@ -1,4 +1,4 @@
-//===- MutagenCrossOver.cpp - Cross over two test inputs ------------------===//
+//===- FuzzerCrossOver.cpp - Cross over two test inputs -------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,11 +8,12 @@
 // Cross over test inputs.
 //===----------------------------------------------------------------------===//
 
+#include "FuzzerDefs.h"
+#include "FuzzerMutate.h"
 #include "FuzzerRandom.h"
-#include "MutagenDispatcher.h"
 #include <cstring>
 
-namespace mutagen {
+namespace fuzzer {
 
 // Cross Data1 and Data2, store the result (up to MaxOutSize bytes) in Out.
 size_t MutationDispatcher::CrossOver(const uint8_t *Data1, size_t Size1,
@@ -39,12 +40,12 @@ size_t MutationDispatcher::CrossOver(const uint8_t *Data1, size_t Size1,
       (*InPos) += ExtraSize;
     }
     // Use the other input data on the next iteration.
-    InPos = CurrentlyUsingFirstData ? &Pos2 : &Pos1;
+    InPos  = CurrentlyUsingFirstData ? &Pos2 : &Pos1;
     InSize = CurrentlyUsingFirstData ? Size2 : Size1;
-    Data = CurrentlyUsingFirstData ? Data2 : Data1;
+    Data   = CurrentlyUsingFirstData ? Data2 : Data1;
     CurrentlyUsingFirstData = !CurrentlyUsingFirstData;
   }
   return OutPos;
 }
 
-} // namespace mutagen
+}  // namespace fuzzer
