@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
         free(p);
       size += 16;
       p = malloc(size);
-      usable_size = __sanitizer_get_allocated_size(p);
+      usable_size = malloc_usable_size(p);
       assert(usable_size >= size);
     } while (usable_size == size);
     for (int i = 0; i < usable_size; i++)
@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
       if (!strcmp(argv[1], "pointers")) {
         old_p = p = realloc(nullptr, size);
         assert(p);
-        size = __sanitizer_get_allocated_size(p);
+        size = malloc_usable_size(p);
         // Our realloc implementation will return the same pointer if the size
         // requested is lower than or equal to the usable size of the associated
         // chunk.

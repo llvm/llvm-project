@@ -23,6 +23,27 @@ struct nothrow_t {};
 enum class align_val_t : size_t {};
 } // namespace std
 
+// It's not valid for a non-throwing non-noreturn operator new to return
+// nullptr. In these cases, just terminate.
+#define CHECK_ALIGN_NORETURN(align)                                            \
+  do {                                                                         \
+    scudo::uptr alignment = static_cast<scudo::uptr>(align);                   \
+    if (UNLIKELY(!scudo::isPowerOfTwo(alignment))) {                           \
+      scudo::reportAlignmentNotPowerOfTwo(alignment);                          \
+    }                                                                          \
+  } while (0)
+
+#define CHECK_ALIGN(align)                                                     \
+  do {                                                                         \
+    scudo::uptr alignment = static_cast<scudo::uptr>(align);                   \
+    if (UNLIKELY(!scudo::isPowerOfTwo(alignment))) {                           \
+      if (Allocator.canReturnNull()) {                                         \
+        return nullptr;                                                        \
+      }                                                                        \
+      scudo::reportAlignmentNotPowerOfTwo(alignment);                          \
+    }                                                                          \
+  } while (0)
+
 INTERFACE WEAK void *operator new(size_t size) {
   return Allocator.allocate(size, scudo::Chunk::Origin::New);
 }
@@ -38,20 +59,24 @@ INTERFACE WEAK void *operator new[](size_t size,
   return Allocator.allocate(size, scudo::Chunk::Origin::NewArray);
 }
 INTERFACE WEAK void *operator new(size_t size, std::align_val_t align) {
+  CHECK_ALIGN_NORETURN(align);
   return Allocator.allocate(size, scudo::Chunk::Origin::New,
                             static_cast<scudo::uptr>(align));
 }
 INTERFACE WEAK void *operator new[](size_t size, std::align_val_t align) {
+  CHECK_ALIGN_NORETURN(align);
   return Allocator.allocate(size, scudo::Chunk::Origin::NewArray,
                             static_cast<scudo::uptr>(align));
 }
 INTERFACE WEAK void *operator new(size_t size, std::align_val_t align,
                                   std::nothrow_t const &) NOEXCEPT {
+  CHECK_ALIGN(align);
   return Allocator.allocate(size, scudo::Chunk::Origin::New,
                             static_cast<scudo::uptr>(align));
 }
 INTERFACE WEAK void *operator new[](size_t size, std::align_val_t align,
                                     std::nothrow_t const &) NOEXCEPT {
+  CHECK_ALIGN(align);
   return Allocator.allocate(size, scudo::Chunk::Origin::NewArray,
                             static_cast<scudo::uptr>(align));
 }

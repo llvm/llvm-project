@@ -1,5 +1,5 @@
 // RUN: %clang_scudo %s -o %t
-// RUN: not %run %t pointers 2>&1 | FileCheck %s
+// RUN: not --crash %run %t pointers 2>&1 | FileCheck %s
 
 // Tests that a non MinAlignment aligned pointer will trigger the associated
 // error on deallocation.

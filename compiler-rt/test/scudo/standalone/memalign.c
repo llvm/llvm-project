@@ -1,10 +1,10 @@
 // RUN: %clang_scudo %s -o %t
-// RUN:                                                 %run %t valid       2>&1
-// RUN:                                             not %run %t invalid     2>&1 | FileCheck --check-prefix=CHECK-align %s
-// RUN: %env_scudo_opts=allocator_may_return_null=1     %run %t invalid     2>&1
-// RUN:                                             not %run %t double-free 2>&1 | FileCheck --check-prefix=CHECK-double-free %s
-// RUN: %env_scudo_opts=DeallocationTypeMismatch=1  not %run %t realloc     2>&1 | FileCheck --check-prefix=CHECK-realloc %s
-// RUN: %env_scudo_opts=DeallocationTypeMismatch=0      %run %t realloc     2>&1
+// RUN:                                         %run %t valid       2>&1
+// RUN: %env_scudo_opts=may_return_null=0       not --crash %run %t invalid     2>&1 | FileCheck --check-prefix=CHECK-align %s
+// RUN: %env_scudo_opts=may_return_null=1       %run %t invalid     2>&1
+// RUN:                                         not --crash %run %t double-free 2>&1 | FileCheck --check-prefix=CHECK-double-free %s
+// RUN: %env_scudo_opts=dealloc_type_mismatch=1 not --crash %run %t realloc     2>&1 | FileCheck --check-prefix=CHECK-realloc %s
+// RUN: %env_scudo_opts=dealloc_type_mismatch=0 %run %t realloc     2>&1
 
 // Tests that the various aligned allocation functions work as intended. Also
 // tests for the condition where the alignment is not a power of 2.
