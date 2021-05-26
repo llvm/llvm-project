@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cstdio>
 #include <dlfcn.h>
 #include <execinfo.h>
-#include <stdio.h>
 #include <sys/proc.h>
 #include <sys/sysctl.h>
 #include <sys/types.h>
 
-#include <limits.h>
+#include <climits>
 
 #include <kvm.h>
 #include <sys/exec.h>

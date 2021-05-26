@@ -11,7 +11,7 @@
 
 #include "lldb/Utility/Stream.h"
 #include "llvm/ADT/SmallVector.h"
-#include <stdio.h>
+#include <cstdio>
 #include <string>
 
 namespace lldb_private {

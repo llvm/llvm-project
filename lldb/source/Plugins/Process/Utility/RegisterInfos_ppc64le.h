@@ -8,7 +8,7 @@
 
 #ifdef DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
 
-#include <stddef.h>
+#include <cstddef>
 
 // Computes the offset of the given GPR in the user data area.
 #define GPR_OFFSET(regname) (offsetof(GPR, regname))

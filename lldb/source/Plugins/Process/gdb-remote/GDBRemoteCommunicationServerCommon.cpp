@@ -8,7 +8,7 @@
 
 #include "GDBRemoteCommunicationServerCommon.h"
 
-#include <errno.h>
+#include <cerrno>
 
 #ifdef __APPLE__
 #include <TargetConditionals.h>

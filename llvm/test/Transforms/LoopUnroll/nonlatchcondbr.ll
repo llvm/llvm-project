@@ -229,5 +229,35 @@ for.end:
   ret void
 }
 
+; Test it doesn't crash.
+define void @test4(i32 %arg) {
+; CHECK-LABEL: @test4(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br i1 false, label [[BB4:%.*]], label [[BB1_1:%.*]]
+; CHECK:       bb4:
+; CHECK-NEXT:    unreachable
+; CHECK:       bb1.1:
+; CHECK-NEXT:    br i1 false, label [[BB4]], label [[BB1_2:%.*]]
+; CHECK:       bb1.2:
+; CHECK-NEXT:    br i1 false, label [[BB4]], label [[BB1_3:%.*]]
+; CHECK:       bb1.3:
+; CHECK-NEXT:    br i1 false, label [[BB4]], label [[BB1]], !llvm.loop [[LOOP3:![0-9]+]]
+;
+bb:
+  br label %bb1
+
+bb1:                                              ; preds = %bb1, %bb
+  %tmp = phi i64 [ 0, %bb ], [ 65, %bb1 ]
+  %tmp2 = phi i32 [ %arg, %bb ], [ %tmp3, %bb1 ]
+  %tmp3 = add i32 0, -1880031232
+  br i1 false, label %bb4, label %bb1
+
+bb4:                                              ; preds = %bb1
+  unreachable
+}
+
+
 declare void @bar(i32)
 declare i1 @foo(i64)

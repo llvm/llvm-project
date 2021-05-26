@@ -14,7 +14,7 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-defines.h"
 
-#include <stdint.h>
+#include <cstdint>
 
 namespace lldb_private {
 class Address;

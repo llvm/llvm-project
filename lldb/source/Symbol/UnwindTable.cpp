@@ -8,7 +8,7 @@
 
 #include "lldb/Symbol/UnwindTable.h"
 
-#include <stdio.h>
+#include <cstdio>
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"

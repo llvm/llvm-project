@@ -24,7 +24,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timeout.h"
 
-#include <limits.h>
+#include <climits>
 
 #include <algorithm>
 #include <cstdlib>

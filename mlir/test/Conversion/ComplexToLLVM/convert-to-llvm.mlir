@@ -1,19 +1,24 @@
 // RUN: mlir-opt %s -convert-complex-to-llvm | FileCheck %s
 
-// CHECK-LABEL: func @complex_numbers
-// CHECK-NEXT:    %[[REAL0:.*]] = constant 1.200000e+00 : f32
-// CHECK-NEXT:    %[[IMAG0:.*]] = constant 3.400000e+00 : f32
+// CHECK-LABEL: func @complex_create
+// CHECK-SAME:    (%[[REAL0:.*]]: f32, %[[IMAG0:.*]]: f32)
 // CHECK-NEXT:    %[[CPLX0:.*]] = llvm.mlir.undef : !llvm.struct<(f32, f32)>
 // CHECK-NEXT:    %[[CPLX1:.*]] = llvm.insertvalue %[[REAL0]], %[[CPLX0]][0] : !llvm.struct<(f32, f32)>
 // CHECK-NEXT:    %[[CPLX2:.*]] = llvm.insertvalue %[[IMAG0]], %[[CPLX1]][1] : !llvm.struct<(f32, f32)>
-// CHECK-NEXT:    %[[REAL1:.*]] = llvm.extractvalue %[[CPLX2:.*]][0] : !llvm.struct<(f32, f32)>
-// CHECK-NEXT:    %[[IMAG1:.*]] = llvm.extractvalue %[[CPLX2:.*]][1] : !llvm.struct<(f32, f32)>
-func @complex_numbers() {
-  %real0 = constant 1.2 : f32
-  %imag0 = constant 3.4 : f32
-  %cplx2 = complex.create %real0, %imag0 : complex<f32>
-  %real1 = complex.re%cplx2 : complex<f32>
-  %imag1 = complex.im %cplx2 : complex<f32>
+func @complex_create(%real: f32, %imag: f32) -> complex<f32> {
+  %cplx2 = complex.create %real, %imag : complex<f32>
+  return %cplx2 : complex<f32>
+}
+
+// CHECK-LABEL: func @complex_extract
+// CHECK-SAME:    (%[[CPLX:.*]]: complex<f32>)
+// CHECK-NEXT:    %[[CAST0:.*]] = llvm.mlir.cast %[[CPLX]] : complex<f32> to !llvm.struct<(f32, f32)>
+// CHECK-NEXT:    %[[REAL:.*]] = llvm.extractvalue %[[CAST0]][0] : !llvm.struct<(f32, f32)>
+// CHECK-NEXT:    %[[CAST1:.*]] = llvm.mlir.cast %[[CPLX]] : complex<f32> to !llvm.struct<(f32, f32)>
+// CHECK-NEXT:    %[[IMAG:.*]] = llvm.extractvalue %[[CAST1]][1] : !llvm.struct<(f32, f32)>
+func @complex_extract(%cplx: complex<f32>) {
+  %real1 = complex.re %cplx : complex<f32>
+  %imag1 = complex.im %cplx : complex<f32>
   return
 }
 

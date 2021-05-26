@@ -48,7 +48,7 @@
 #include <cstring>
 #include <utility>
 
-#include <assert.h>
+#include <cassert>
 
 #define DEFAULT_DISASM_BYTE_SIZE 32
 

@@ -8,8 +8,8 @@
 
 #include "lldb/Host/Config.h"
 
-#include <errno.h>
-#include <stdlib.h>
+#include <cerrno>
+#include <cstdlib>
 #if LLDB_ENABLE_POSIX
 #include <netinet/in.h>
 #include <sys/mman.h>
@@ -20,8 +20,8 @@
 #if defined(__APPLE__)
 #include <sys/sysctl.h>
 #endif
+#include <ctime>
 #include <sys/types.h>
-#include <time.h>
 
 #include <algorithm>
 #include <csignal>

@@ -22,7 +22,7 @@
 #include "MacOSX/MachProcess.h"
 #include "MacOSX/MachThread.h"
 
-#include <inttypes.h>
+#include <cinttypes>
 #include <sys/sysctl.h>
 
 // BCR address match type

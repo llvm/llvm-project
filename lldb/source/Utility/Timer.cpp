@@ -16,10 +16,10 @@
 #include <utility>
 #include <vector>
 
-#include <assert.h>
-#include <inttypes.h>
-#include <stdarg.h>
-#include <stdio.h>
+#include <cassert>
+#include <cinttypes>
+#include <cstdarg>
+#include <cstdio>
 
 using namespace lldb_private;
 

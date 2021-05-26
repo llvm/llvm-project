@@ -34,9 +34,9 @@
 #include <string>
 #include <vector>
 
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
 
 namespace llvm {
 template <typename T> class SmallVectorImpl;

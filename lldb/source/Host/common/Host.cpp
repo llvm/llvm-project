@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 // C includes
-#include <errno.h>
-#include <limits.h>
-#include <stdlib.h>
+#include <cerrno>
+#include <climits>
+#include <cstdlib>
 #include <sys/types.h>
 #ifndef _WIN32
 #include <dlfcn.h>

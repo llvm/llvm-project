@@ -14,7 +14,7 @@
 #include "DNBError.h"
 #include "DNBLog.h"
 #include <arpa/inet.h>
-#include <errno.h>
+#include <cerrno>
 #include <fcntl.h>
 #include <map>
 #include <netdb.h>

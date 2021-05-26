@@ -11,8 +11,8 @@
 #include "lldb/Utility/Status.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cerrno>
+#include <cinttypes>
 #include <cstdlib>
-#include <inttypes.h>
 
 using namespace lldb_private;
 using namespace llvm;

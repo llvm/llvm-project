@@ -14,7 +14,7 @@
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Utility/StreamString.h"
 
-#include <limits.h>
+#include <climits>
 
 using namespace lldb;
 using namespace lldb_private;

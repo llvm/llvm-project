@@ -9,7 +9,7 @@
 #ifndef LLDB_DATAFORMATTERS_TYPESUMMARY_H
 #define LLDB_DATAFORMATTERS_TYPESUMMARY_H
 
-#include <stdint.h>
+#include <cstdint>
 
 #include <functional>
 #include <memory>

@@ -41,9 +41,9 @@
 #ifdef __ANDROID__
 #include <arpa/inet.h>
 #include <asm-generic/errno-base.h>
-#include <errno.h>
-#include <linux/tcp.h>
+#include <cerrno>
 #include <fcntl.h>
+#include <linux/tcp.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 #endif // __ANDROID__
