@@ -331,6 +331,10 @@ static cl::opt<bool>
                            cl::desc("Prefer in-loop vector reductions, "
                                     "overriding the targets preference."));
 
+// FIXME: When loop hints are passed which allow reordering of FP operations,
+// we still choose to use strict reductions with this flag. We should instead
+// use the default behaviour of vectorizing with unordered reductions if
+// reordering is allowed.
 cl::opt<bool> EnableStrictReductions(
     "enable-strict-reductions", cl::init(false), cl::Hidden,
     cl::desc("Enable the vectorisation of loops with in-order (strict) "
@@ -9956,7 +9960,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  if (!Requirements.canVectorizeFPMath(Hints)) {
+  if (!LVL.canVectorizeFPMath(EnableStrictReductions)) {
     ORE->emit([&]() {
       auto *ExactFPMathInst = Requirements.getExactFPInst();
       return OptimizationRemarkAnalysisFPCommute(DEBUG_TYPE, "CantReorderFPOps",
