@@ -93,7 +93,7 @@ void dwarfdump::calculateSectionSizes(const ObjectFile &Obj,
     LLVM_DEBUG(dbgs() << SectionName.str() << ": " << Section.getSize()
                       << '\n');
 
-    if (!Section.isDebugSection(SectionName))
+    if (!Section.isDebugSection())
       continue;
 
     Sizes.TotalDebugSectionsSize += Section.getSize();
