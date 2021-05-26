@@ -451,3 +451,26 @@ def : Pat<(i32 (extloadi8 addrimm12:$addr)),
           (LBU_NM addrimm12:$addr)>, ISA_NANOMIPS;
 def : Pat<(i32 (extloadi16 addrimm12:$addr)),
           (LHU_NM addrimm12:$addr)>, ISA_NANOMIPS;
+
+
+// Conditional Moves
+def MOVZ_NM : InstNM<(outs GPR32NMOpnd:$rd),
+                     (ins GPR32NMOpnd:$rs, GPR32NMOpnd:$rt, GPR32NMOpnd:$F),
+                     "movz\t$rd, $rs, $rt",
+                     []>, InstSize32 {
+  let Constraints = "$F = $rd";
+}
+
+def MOVN_NM : InstNM<(outs GPR32NMOpnd:$rd),
+                     (ins GPR32NMOpnd:$rs, GPR32NMOpnd:$rt, GPR32NMOpnd:$F),
+                     "movn\t$rd, $rs, $rt",
+                     []>, InstSize32 {
+    let Constraints = "$F = $rd";
+}
+
+// Use MIPS conditional instruction definitions
+defm : MovzPats0<GPR32NM, GPR32NM, MOVZ_NM, SLT_NM, SLTU_NM, SLTI_NM,
+                 SLTIU_NM>, ISA_NANOMIPS;
+defm : MovzPats1<GPR32NM, GPR32NM, MOVZ_NM, XOR_NM>, ISA_NANOMIPS;
+defm : MovzPats2<GPR32NM, GPR32NM, MOVZ_NM, XORI_NM>, ISA_NANOMIPS;
+defm : MovnPats<GPR32NM, GPR32NM, MOVN_NM, XOR_NM>, ISA_NANOMIPS;

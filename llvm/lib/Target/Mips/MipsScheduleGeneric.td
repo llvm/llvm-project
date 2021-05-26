@@ -280,6 +280,11 @@ def : InstRW<[GenericWriteDIV], (instrs DDIV, DMOD)>;
 
 def : InstRW<[GenericWriteDIVU], (instrs DDIVU, DMODU)>;
 
+// nanoMIPS
+// ========
+
+ def : InstRW<[GenericWriteALU], (instrs MOVN_NM, MOVZ_NM)>;
+
 // CTISTD Pipeline
 // ---------------
 
