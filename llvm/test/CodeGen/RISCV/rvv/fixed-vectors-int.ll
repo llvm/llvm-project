@@ -3959,7 +3959,6 @@ define void @extract_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX2-NEXT:    vsetivli a2, 4, e64,m2,ta,mu
 ; LMULMAX2-NEXT:    vle64.v v26, (a0)
 ; LMULMAX2-NEXT:    vle64.v v28, (a1)
-; LMULMAX2-NEXT:    vsetivli a1, 4, e64,m2,ta,mu
 ; LMULMAX2-NEXT:    vadd.vv v26, v26, v28
 ; LMULMAX2-NEXT:    vse64.v v26, (a0)
 ; LMULMAX2-NEXT:    ret
@@ -3973,7 +3972,6 @@ define void @extract_v4i64(<4 x i64>* %x, <4 x i64>* %y) {
 ; LMULMAX1-NEXT:    vle64.v v27, (a1)
 ; LMULMAX1-NEXT:    addi a1, a1, 16
 ; LMULMAX1-NEXT:    vle64.v v28, (a1)
-; LMULMAX1-NEXT:    vsetivli a1, 2, e64,m1,ta,mu
 ; LMULMAX1-NEXT:    vadd.vv v26, v26, v28
 ; LMULMAX1-NEXT:    vadd.vv v25, v25, v27
 ; LMULMAX1-NEXT:    vse64.v v25, (a0)
