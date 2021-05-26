@@ -24,11 +24,7 @@
 
 // Check the user-defined macro for warnings
 #if defined(PSTL_USAGE_WARNINGS)
-#    undef _PSTL_USAGE_WARNINGS
-#    define _PSTL_USAGE_WARNINGS PSTL_USAGE_WARNINGS
-// Check the internal macro for warnings
-#elif !defined(_PSTL_USAGE_WARNINGS)
-#    define _PSTL_USAGE_WARNINGS 0
+#    define _PSTL_USAGE_WARNINGS
 #endif
 
 #if !defined(_PSTL_ASSERT)
