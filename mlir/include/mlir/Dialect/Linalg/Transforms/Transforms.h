@@ -493,6 +493,14 @@ struct LinalgTilingOptions {
     return *this;
   }
 
+  /// Specification markers of how to distribute the `linalg.tiled_loop`.
+  SmallVector<StringRef, 2> distributionTypes = {};
+
+  LinalgTilingOptions &setDistributionTypes(ArrayRef<StringRef> types) {
+    distributionTypes.assign(types.begin(), types.end());
+    return *this;
+  }
+
   /// Computation function that returns a padding value to use when padding to
   /// force static sizes. When `paddingValueComputationFunction` is set, padding
   /// operations are introduced, that guarantee the underlying op is statically
