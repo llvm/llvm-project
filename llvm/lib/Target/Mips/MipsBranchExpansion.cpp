@@ -656,14 +656,17 @@ void MipsBranchExpansion::expandToLongBranch(MBBInfo &I) {
     // Compare 4 upper bits to check if it's the same segment
     bool SameSegmentJump = JOffset >> 28 == TgtMBBOffset >> 28;
 
-    if (STI->hasMips32r6() && TII->isBranchOffsetInRange(Mips::BC, I.Offset)) {
+    if ((STI->hasMips32r6() && TII->isBranchOffsetInRange(Mips::BC, I.Offset))
+        || (STI->hasNanoMips() && TII->isBranchOffsetInRange(Mips::BC_NM,
+                                                             I.Offset))) {
       // R6:
       // $longbr:
       //  bc $tgt
       // $fallthrough:
       //
       BuildMI(*LongBrMBB, Pos, DL,
-              TII->get(STI->inMicroMipsMode() ? Mips::BC_MMR6 : Mips::BC))
+              TII->get(STI->inMicroMipsMode() ? Mips::BC_MMR6 :
+                       STI->hasNanoMips() ? Mips::BC_NM : Mips::BC))
           .addMBB(TgtMBB);
     } else if (SameSegmentJump) {
       // Pre R6:

@@ -454,6 +454,10 @@ bool MipsInstrInfo::isBranchOffsetInRange(unsigned BranchOpc,
   case Mips::BEQZC_NM:
   case Mips::BNEZC_NM:
     return isInt<8>(BrOffset);
+
+  case Mips::BC_NM:
+  case Mips::BALC_NM:
+    return isInt<26>(BrOffset);
 }
 
   llvm_unreachable("Unknown branch instruction!");
