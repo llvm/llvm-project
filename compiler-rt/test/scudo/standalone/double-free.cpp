@@ -1,7 +1,7 @@
 // RUN: %clangxx_scudo %s -o %t
-// RUN: not %run %t malloc   2>&1 | FileCheck %s
-// RUN: not %run %t new      2>&1 | FileCheck %s
-// RUN: not %run %t newarray 2>&1 | FileCheck %s
+// RUN: not --crash %run %t malloc   2>&1 | FileCheck %s
+// RUN: not --crash %run %t new      2>&1 | FileCheck %s
+// RUN: not --crash %run %t newarray 2>&1 | FileCheck %s
 
 // Tests double-free error on pointers allocated with different allocation
 // functions.
