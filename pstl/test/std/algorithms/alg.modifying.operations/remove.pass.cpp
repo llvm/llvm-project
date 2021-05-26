@@ -21,8 +21,8 @@ using namespace TestUtils;
 
 struct run_remove
 {
-#if _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                             \
-    _PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN //dummy specialization by policy type, in case of broken configuration
+#if defined(_PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN) ||                                                             \
+    defined(_PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN) //dummy specialization by policy type, in case of broken configuration
     template <typename InputIterator, typename OutputIterator, typename Size, typename T>
     void
     operator()(pstl::execution::unsequenced_policy, InputIterator first, InputIterator last, OutputIterator out_first,
@@ -59,8 +59,8 @@ struct run_remove
 
 struct run_remove_if
 {
-#if _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                             \
-    _PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN //dummy specialization by policy type, in case of broken configuration
+#if defined(_PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN) ||                                                             \
+    defined(_PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN) //dummy specialization by policy type, in case of broken configuration
     template <typename InputIterator, typename OutputIterator, typename Size, typename Predicate>
     void
     operator()(pstl::execution::unsequenced_policy, InputIterator first, InputIterator last, OutputIterator out_first,
@@ -133,7 +133,7 @@ struct test_non_const
 int
 main()
 {
-#if !_PSTL_ICC_18_TEST_EARLY_EXIT_MONOTONIC_RELEASE_BROKEN
+#if !defined(_PSTL_ICC_18_TEST_EARLY_EXIT_MONOTONIC_RELEASE_BROKEN)
     test<int32_t>(666, 42, [](int32_t) { return true; }, [](size_t j) { return j; });
 #endif
 
@@ -142,7 +142,7 @@ main()
     test<float64_t>(-666.0, 8.5, [](const float64_t& val) { return val != 8.5; },
                     [](size_t j) { return ((j + 1) % 7 & 2) != 0 ? 8.5 : float64_t(j % 32 + j); });
 
-#if !_PSTL_ICC_17_TEST_MAC_RELEASE_32_BROKEN
+#if !defined(_PSTL_ICC_17_TEST_MAC_RELEASE_32_BROKEN)
     test<Number>(Number(-666, OddTag()), Number(42, OddTag()), IsMultiple(3, OddTag()),
                  [](int32_t j) { return Number(j, OddTag()); });
 #endif
