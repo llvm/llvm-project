@@ -3437,6 +3437,7 @@ cl::init(false), cl::desc("Check that tail calls from swifttailcc functions to"
 
 void Verifier::verifyMustTailCall(CallInst &CI) {
   if (!CI.isMustTailCall()) {
+#ifndef NDEBUG
     if (EnableSwiftTailCCMustTailCheck &&
         CI.getCallingConv() == CallingConv::SwiftTail &&
         CI.getCaller()->getCallingConv() == CallingConv::SwiftTail &&
@@ -3445,6 +3446,7 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
         false, "tail call from swifttail->swiftail should be marked musttail",
         &CI);
     }
+#endif
     return;
   }
 
