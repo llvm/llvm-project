@@ -769,9 +769,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       addAllExtLoads(VT, InnerVT, Expand);
     }
 
-    setOperationAction(ISD::MULHS, VT, Expand);
     setOperationAction(ISD::SMUL_LOHI, VT, Expand);
-    setOperationAction(ISD::MULHU, VT, Expand);
     setOperationAction(ISD::UMUL_LOHI, VT, Expand);
 
     setOperationAction(ISD::BSWAP, VT, Expand);
@@ -949,6 +947,11 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v8i16, Custom);
     setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v4i32, Custom);
     setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v2i64, Custom);
+
+    for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
+      setOperationAction(ISD::MULHS, VT, Expand);
+      setOperationAction(ISD::MULHU, VT, Expand);
+    }
 
     // NEON only has FMA instructions as of VFP4.
     if (!Subtarget->hasVFP4Base()) {
