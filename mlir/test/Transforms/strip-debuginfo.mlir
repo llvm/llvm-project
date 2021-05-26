@@ -17,6 +17,13 @@ func @inline_notation() -> i32 {
   affine.if #set0(%2) {
   } loc(fused<"myPass">["foo", "foo2"])
 
+  "foo.region"() ({
+  // CHECK: ^bb0(%{{.*}}: i32 loc(unknown), %{{.*}}: i32 loc(unknown)):
+ ^bb0(%a0: i32 loc("argloc"), %z: i32 loc("argloc2")):
+    %s = addi %a0, %a0 : i32
+    "foo.yield"(%s) : (i32) -> ()
+  }) : () -> ()
+
   // CHECK: return %0 : i32 loc(unknown)
   return %1 : i32 loc("bar")
 }
