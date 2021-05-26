@@ -909,6 +909,7 @@ void PreambleThread::build(Request Req) {
     ASTPeer.updatePreamble(std::move(Req.CI), std::move(Req.Inputs),
                            LatestBuild, std::move(Req.CIDiags),
                            std::move(Req.WantDiags));
+    Callbacks.onPreamblePublished(FileName);
   });
 
   if (!LatestBuild || Inputs.ForceRebuild) {
