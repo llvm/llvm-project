@@ -35,6 +35,10 @@ static constexpr const char *kCreateValue = "mlirAsyncRuntimeCreateValue";
 static constexpr const char *kCreateGroup = "mlirAsyncRuntimeCreateGroup";
 static constexpr const char *kEmplaceToken = "mlirAsyncRuntimeEmplaceToken";
 static constexpr const char *kEmplaceValue = "mlirAsyncRuntimeEmplaceValue";
+static constexpr const char *kSetTokenError = "mlirAsyncRuntimeSetTokenError";
+static constexpr const char *kSetValueError = "mlirAsyncRuntimeSetValueError";
+static constexpr const char *kIsTokenError = "mlirAsyncRuntimeIsTokenError";
+static constexpr const char *kIsValueError = "mlirAsyncRuntimeIsValueError";
 static constexpr const char *kAwaitToken = "mlirAsyncRuntimeAwaitToken";
 static constexpr const char *kAwaitValue = "mlirAsyncRuntimeAwaitValue";
 static constexpr const char *kAwaitGroup = "mlirAsyncRuntimeAwaitAllInGroup";
@@ -99,6 +103,26 @@ struct AsyncAPI {
   static FunctionType emplaceValueFunctionType(MLIRContext *ctx) {
     auto value = opaquePointerType(ctx);
     return FunctionType::get(ctx, {value}, {});
+  }
+
+  static FunctionType setTokenErrorFunctionType(MLIRContext *ctx) {
+    return FunctionType::get(ctx, {TokenType::get(ctx)}, {});
+  }
+
+  static FunctionType setValueErrorFunctionType(MLIRContext *ctx) {
+    auto value = opaquePointerType(ctx);
+    return FunctionType::get(ctx, {value}, {});
+  }
+
+  static FunctionType isTokenErrorFunctionType(MLIRContext *ctx) {
+    auto i1 = IntegerType::get(ctx, 1);
+    return FunctionType::get(ctx, {TokenType::get(ctx)}, {i1});
+  }
+
+  static FunctionType isValueErrorFunctionType(MLIRContext *ctx) {
+    auto value = opaquePointerType(ctx);
+    auto i1 = IntegerType::get(ctx, 1);
+    return FunctionType::get(ctx, {value}, {i1});
   }
 
   static FunctionType awaitTokenFunctionType(MLIRContext *ctx) {
@@ -173,6 +197,10 @@ static void addAsyncRuntimeApiDeclarations(ModuleOp module) {
   addFuncDecl(kCreateGroup, AsyncAPI::createGroupFunctionType(ctx));
   addFuncDecl(kEmplaceToken, AsyncAPI::emplaceTokenFunctionType(ctx));
   addFuncDecl(kEmplaceValue, AsyncAPI::emplaceValueFunctionType(ctx));
+  addFuncDecl(kSetTokenError, AsyncAPI::setTokenErrorFunctionType(ctx));
+  addFuncDecl(kSetValueError, AsyncAPI::setValueErrorFunctionType(ctx));
+  addFuncDecl(kIsTokenError, AsyncAPI::isTokenErrorFunctionType(ctx));
+  addFuncDecl(kIsValueError, AsyncAPI::isValueErrorFunctionType(ctx));
   addFuncDecl(kAwaitToken, AsyncAPI::awaitTokenFunctionType(ctx));
   addFuncDecl(kAwaitValue, AsyncAPI::awaitValueFunctionType(ctx));
   addFuncDecl(kAwaitGroup, AsyncAPI::awaitGroupFunctionType(ctx));
@@ -560,17 +588,53 @@ public:
   matchAndRewrite(RuntimeSetAvailableOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     Type operandType = op.operand().getType();
+    rewriter.replaceOpWithNewOp<CallOp>(
+        op, operandType.isa<TokenType>() ? kEmplaceToken : kEmplaceValue,
+        TypeRange(), operands);
+    return success();
+  }
+};
+} // namespace
 
-    if (operandType.isa<TokenType>() || operandType.isa<ValueType>()) {
-      rewriter.create<CallOp>(op->getLoc(),
-                              operandType.isa<TokenType>() ? kEmplaceToken
-                                                           : kEmplaceValue,
-                              TypeRange(), operands);
-      rewriter.eraseOp(op);
-      return success();
-    }
+//===----------------------------------------------------------------------===//
+// Convert async.runtime.set_error to the corresponding runtime API call.
+//===----------------------------------------------------------------------===//
 
-    return rewriter.notifyMatchFailure(op, "unsupported async type");
+namespace {
+class RuntimeSetErrorOpLowering
+    : public OpConversionPattern<RuntimeSetErrorOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(RuntimeSetErrorOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type operandType = op.operand().getType();
+    rewriter.replaceOpWithNewOp<CallOp>(
+        op, operandType.isa<TokenType>() ? kSetTokenError : kSetValueError,
+        TypeRange(), operands);
+    return success();
+  }
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
+// Convert async.runtime.is_error to the corresponding runtime API call.
+//===----------------------------------------------------------------------===//
+
+namespace {
+class RuntimeIsErrorOpLowering : public OpConversionPattern<RuntimeIsErrorOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(RuntimeIsErrorOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type operandType = op.operand().getType();
+    rewriter.replaceOpWithNewOp<CallOp>(
+        op, operandType.isa<TokenType>() ? kIsTokenError : kIsValueError,
+        rewriter.getI1Type(), operands);
+    return success();
   }
 };
 } // namespace
@@ -889,7 +953,8 @@ void ConvertAsyncToLLVMPass::runOnOperation() {
   patterns.add<ReturnOpOpConversion>(converter, ctx);
 
   // Lower async.runtime operations to the async runtime API calls.
-  patterns.add<RuntimeSetAvailableOpLowering, RuntimeAwaitOpLowering,
+  patterns.add<RuntimeSetAvailableOpLowering, RuntimeSetErrorOpLowering,
+               RuntimeIsErrorOpLowering, RuntimeAwaitOpLowering,
                RuntimeAwaitAndResumeOpLowering, RuntimeResumeOpLowering,
                RuntimeAddToGroupOpLowering, RuntimeAddRefOpLowering,
                RuntimeDropRefOpLowering>(converter, ctx);

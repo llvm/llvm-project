@@ -43,6 +43,24 @@ func @set_value_available() {
   return
 }
 
+// CHECK-LABEL: @is_token_error
+func @is_token_error() -> i1 {
+  // CHECK: %[[TOKEN:.*]] = call @mlirAsyncRuntimeCreateToken
+  %0 = async.runtime.create : !async.token
+  // CHECK: %[[ERR:.*]] = call @mlirAsyncRuntimeIsTokenError(%[[TOKEN]])
+  %1 = async.runtime.is_error %0 : !async.token
+  return %1 : i1
+}
+
+// CHECK-LABEL: @is_value_error
+func @is_value_error() -> i1 {
+  // CHECK: %[[VALUE:.*]] = call @mlirAsyncRuntimeCreateValue
+  %0 = async.runtime.create : !async.value<f32>
+  // CHECK: %[[ERR:.*]] = call @mlirAsyncRuntimeIsValueError(%[[VALUE]])
+  %1 = async.runtime.is_error %0 : !async.value<f32>
+  return %1 : i1
+}
+
 // CHECK-LABEL: @await_token
 func @await_token() {
   // CHECK: %[[TOKEN:.*]] = call @mlirAsyncRuntimeCreateToken
