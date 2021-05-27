@@ -189,9 +189,9 @@ bool AMDGPUTargetInfo::initFeatureMap(
     case GK_GFX1100:
       Features["ci-insts"] = true;
       Features["dot1-insts"] = true;
-      Features["dot2-insts"] = true;
       Features["dot5-insts"] = true;
       Features["dot6-insts"] = true;
+      Features["dot7-insts"] = true;
       Features["dl-insts"] = true;
       Features["flat-address-space"] = true;
       Features["16-bit-insts"] = true;
