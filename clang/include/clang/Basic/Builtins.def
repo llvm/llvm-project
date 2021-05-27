@@ -1577,22 +1577,22 @@ BUILTIN(__builtin_nontemporal_store, "v.", "t")
 BUILTIN(__builtin_nontemporal_load, "v.", "t")
 
 // Coroutine intrinsics.
-BUILTIN(__builtin_coro_resume, "vv*", "")
-BUILTIN(__builtin_coro_destroy, "vv*", "")
-BUILTIN(__builtin_coro_done, "bv*", "n")
-BUILTIN(__builtin_coro_promise, "v*v*IiIb", "n")
+LANGBUILTIN(__builtin_coro_resume, "vv*", "", COR_LANG)
+LANGBUILTIN(__builtin_coro_destroy, "vv*", "", COR_LANG)
+LANGBUILTIN(__builtin_coro_done, "bv*", "n", COR_LANG)
+LANGBUILTIN(__builtin_coro_promise, "v*v*IiIb", "n", COR_LANG)
 
-BUILTIN(__builtin_coro_size, "z", "n")
-BUILTIN(__builtin_coro_frame, "v*", "n")
-BUILTIN(__builtin_coro_noop, "v*", "n")
-BUILTIN(__builtin_coro_free, "v*v*", "n")
+LANGBUILTIN(__builtin_coro_size, "z", "n", COR_LANG)
+LANGBUILTIN(__builtin_coro_frame, "v*", "n", COR_LANG)
+LANGBUILTIN(__builtin_coro_noop, "v*", "n", COR_LANG)
+LANGBUILTIN(__builtin_coro_free, "v*v*", "n", COR_LANG)
 
-BUILTIN(__builtin_coro_id, "v*Iiv*v*v*", "n")
-BUILTIN(__builtin_coro_alloc, "b", "n")
-BUILTIN(__builtin_coro_begin, "v*v*", "n")
-BUILTIN(__builtin_coro_end, "bv*Ib", "n")
-BUILTIN(__builtin_coro_suspend, "cIb", "n")
-BUILTIN(__builtin_coro_param, "bv*v*", "n")
+LANGBUILTIN(__builtin_coro_id, "v*Iiv*v*v*", "n", COR_LANG)
+LANGBUILTIN(__builtin_coro_alloc, "b", "n", COR_LANG)
+LANGBUILTIN(__builtin_coro_begin, "v*v*", "n", COR_LANG)
+LANGBUILTIN(__builtin_coro_end, "bv*Ib", "n", COR_LANG)
+LANGBUILTIN(__builtin_coro_suspend, "cIb", "n", COR_LANG)
+LANGBUILTIN(__builtin_coro_param, "bv*v*", "n", COR_LANG)
 
 // OpenCL v2.0 s6.13.16, s9.17.3.5 - Pipe functions.
 // We need the generic prototype, since the packet type could be anything.

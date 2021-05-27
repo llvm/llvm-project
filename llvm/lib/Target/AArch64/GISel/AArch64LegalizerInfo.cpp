@@ -328,7 +328,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                                  {v4s32, p0, 128, 8},
                                  {v2s64, p0, 128, 8}})
       .clampScalar(0, s8, s64)
-      .lowerIfMemSizeNotPow2()
       .lowerIf([=](const LegalityQuery &Query) {
         return Query.Types[0].isScalar() &&
                Query.Types[0].getSizeInBits() != Query.MMODescrs[0].SizeInBits;
@@ -338,6 +337,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampMaxNumElements(0, s16, 8)
       .clampMaxNumElements(0, s32, 4)
       .clampMaxNumElements(0, s64, 2)
+      .lowerIfMemSizeNotPow2()
       .customIf(IsPtrVecPred);
 
   // Constants
