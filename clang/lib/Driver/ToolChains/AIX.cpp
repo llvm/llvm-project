@@ -221,6 +221,7 @@ void AIX::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
   switch (GetCXXStdlibType(Args)) {
   case ToolChain::CST_Libcxx:
     CmdArgs.push_back("-lc++");
+    CmdArgs.push_back("-lc++abi");
     return;
   case ToolChain::CST_Libstdcxx:
     llvm::report_fatal_error("linking libstdc++ unimplemented on AIX");
