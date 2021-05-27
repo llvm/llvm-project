@@ -445,3 +445,60 @@ if.end:                                           ; preds = %if.else, %if.then
   ret <vscale x 1 x double> %3
 }
 
+; FIXME: The vsetvli in for.body can be removed, it's redundant by its
+; predecessors, but we need to look through a PHI to prove it.
+define void @saxpy_vec(i64 %n, float %a, float* nocapture readonly %x, float* nocapture %y) {
+; CHECK-LABEL: saxpy_vec:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetvli a4, a0, e32,m8,ta,mu
+; CHECK-NEXT:    beqz a4, .LBB8_3
+; CHECK-NEXT:  # %bb.1: # %for.body.preheader
+; CHECK-NEXT:    fmv.w.x ft0, a1
+; CHECK-NEXT:  .LBB8_2: # %for.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vsetvli zero, a4, e32,m8,ta,mu
+; CHECK-NEXT:    vle32.v v8, (a2)
+; CHECK-NEXT:    vle32.v v16, (a3)
+; CHECK-NEXT:    slli a1, a4, 2
+; CHECK-NEXT:    add a2, a2, a1
+; CHECK-NEXT:    vsetvli zero, zero, e32,m8,tu,mu
+; CHECK-NEXT:    vfmacc.vf v16, ft0, v8
+; CHECK-NEXT:    vsetvli zero, zero, e32,m8,ta,mu
+; CHECK-NEXT:    vse32.v v16, (a3)
+; CHECK-NEXT:    sub a0, a0, a4
+; CHECK-NEXT:    vsetvli a4, a0, e32,m8,ta,mu
+; CHECK-NEXT:    add a3, a3, a1
+; CHECK-NEXT:    bnez a4, .LBB8_2
+; CHECK-NEXT:  .LBB8_3: # %for.end
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call i64 @llvm.riscv.vsetvli.i64(i64 %n, i64 2, i64 3)
+  %cmp.not13 = icmp eq i64 %0, 0
+  br i1 %cmp.not13, label %for.end, label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %1 = phi i64 [ %7, %for.body ], [ %0, %entry ]
+  %n.addr.016 = phi i64 [ %sub, %for.body ], [ %n, %entry ]
+  %x.addr.015 = phi float* [ %add.ptr, %for.body ], [ %x, %entry ]
+  %y.addr.014 = phi float* [ %add.ptr1, %for.body ], [ %y, %entry ]
+  %2 = bitcast float* %x.addr.015 to <vscale x 16 x float>*
+  %3 = tail call <vscale x 16 x float> @llvm.riscv.vle.nxv16f32.i64(<vscale x 16 x float>* %2, i64 %1)
+  %add.ptr = getelementptr inbounds float, float* %x.addr.015, i64 %1
+  %4 = bitcast float* %y.addr.014 to <vscale x 16 x float>*
+  %5 = tail call <vscale x 16 x float> @llvm.riscv.vle.nxv16f32.i64(<vscale x 16 x float>* %4, i64 %1)
+  %6 = tail call <vscale x 16 x float> @llvm.riscv.vfmacc.nxv16f32.f32.i64(<vscale x 16 x float> %5, float %a, <vscale x 16 x float> %3, i64 %1)
+  tail call void @llvm.riscv.vse.nxv16f32.i64(<vscale x 16 x float> %6, <vscale x 16 x float>* %4, i64 %1)
+  %add.ptr1 = getelementptr inbounds float, float* %y.addr.014, i64 %1
+  %sub = sub i64 %n.addr.016, %1
+  %7 = tail call i64 @llvm.riscv.vsetvli.i64(i64 %sub, i64 2, i64 3)
+  %cmp.not = icmp eq i64 %7, 0
+  br i1 %cmp.not, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+declare i64 @llvm.riscv.vsetvli.i64(i64, i64 immarg, i64 immarg)
+declare <vscale x 16 x float> @llvm.riscv.vle.nxv16f32.i64(<vscale x 16 x float>* nocapture, i64)
+declare <vscale x 16 x float> @llvm.riscv.vfmacc.nxv16f32.f32.i64(<vscale x 16 x float>, float, <vscale x 16 x float>, i64)
+declare void @llvm.riscv.vse.nxv16f32.i64(<vscale x 16 x float>, <vscale x 16 x float>* nocapture, i64)
