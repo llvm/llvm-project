@@ -66,8 +66,6 @@ void PressureTracker::onInstructionExecuted(unsigned IID) { IPI.erase(IID); }
 void PressureTracker::handleInstructionIssuedEvent(
     const HWInstructionIssuedEvent &Event) {
   unsigned IID = Event.IR.getSourceIndex();
-  using ResourceRef = HWInstructionIssuedEvent::ResourceRef;
-  using ResourceUse = std::pair<ResourceRef, ResourceCycles>;
   for (const ResourceUse &Use : Event.UsedResources) {
     const ResourceRef &RR = Use.first;
     unsigned Index = ProcResID2ResourceUsersIndex[RR.first];
