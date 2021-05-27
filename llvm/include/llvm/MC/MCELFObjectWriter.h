@@ -47,7 +47,7 @@ struct ELFRelocationEntry {
         << ", OriginalAddend=" << OriginalAddend;
   }
 
-  void dump() const { print(errs()); }
+  LLVM_DUMP_METHOD void dump() const { print(errs()); }
 };
 
 class MCELFObjectTargetWriter : public MCObjectTargetWriter {
