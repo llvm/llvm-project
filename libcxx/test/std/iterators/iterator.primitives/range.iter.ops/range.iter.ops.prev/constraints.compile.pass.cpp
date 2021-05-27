@@ -11,16 +11,23 @@
 // UNSUPPORTED: gcc-10
 
 // ranges::prev
+// Make sure we're SFINAE-friendly when the template argument constraints are not met.
 
 #include <iterator>
 
-#include <array>
-
+#include <cstddef>
+#include <utility>
 #include "test_iterators.h"
 
-void proper_constraints() {
-  auto a = std::array{0, 1, 2};
-  (void)std::ranges::prev(forward_iterator(a.begin()));    // expected-error {{no matching function for call}}
-  (void)std::ranges::prev(forward_iterator(a.begin()), 5); // expected-error {{no matching function for call}}
-  (void)std::ranges::prev(forward_iterator(a.begin()), 7); // expected-error {{no matching function for call}}
-}
+template <class ...Args>
+concept has_ranges_prev = requires (Args ...args) {
+  { std::ranges::prev(std::forward<Args>(args)...) };
+};
+
+using It = forward_iterator<int*>;
+static_assert(!has_ranges_prev<It>);
+static_assert(!has_ranges_prev<It, std::ptrdiff_t>);
+static_assert(!has_ranges_prev<It, std::ptrdiff_t, It>);
+
+// Test the test
+static_assert(has_ranges_prev<int*, std::ptrdiff_t, int*>);
