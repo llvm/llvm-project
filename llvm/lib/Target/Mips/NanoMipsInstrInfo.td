@@ -30,7 +30,7 @@ def imm32ZExt5  : IntImmLeaf<i32, [{ return isUInt<5>(Imm.getZExtValue()); }]>;
 def imm32SExt12  : IntImmLeaf<i32, [{ return isInt<12>(Imm.getSExtValue()); }]>;
 // Immediate range covering both signed 12-bit and unsigned 16-bit immediates.
 def imm32SExt12OrZExt16 : IntImmLeaf<i32, [{ return isInt<12>(Imm.getSExtValue())
-                                           || isInt<16>(Imm.getZExtValue()); }]>;
+                                           || isUInt<16>(Imm.getZExtValue()); }]>;
 
 def UImm12AsmOperandClass : UImmAsmOperandClass<12, []>;
 
