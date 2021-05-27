@@ -1,7 +1,7 @@
 // Test that executable with ELF-TLS will link/run successfully
 // RUN: %clangxx -fno-emulated-tls %s -o %t
 // RUN: %run %t 2>&1
-// REQUIRES: android-28
+// REQUIRES: android-29
 
 #include <stdio.h>
 #include <stdlib.h>
