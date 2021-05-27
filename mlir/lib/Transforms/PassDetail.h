@@ -12,6 +12,8 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
+class AffineDialect;
+
 // Forward declaration from Dialect.h
 template <typename ConcreteDialect>
 void registerDialect(DialectRegistry &registry);

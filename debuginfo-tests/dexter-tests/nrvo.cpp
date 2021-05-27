@@ -36,5 +36,5 @@ int main() {
   get_string2();
 }
 
-// DexExpectWatchValue('result.i', 3, on_line='readresult1')
-// DexExpectWatchValue('result.i', 5, on_line='readresult2')
+// DexExpectWatchValue('result.i', 3, on_line=ref('readresult1'))
+// DexExpectWatchValue('result.i', 5, on_line=ref('readresult2'))

@@ -7,7 +7,8 @@
 svbool_t test_svrdffr()
 {
   // CHECK-LABEL: test_svrdffr
-  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.rdffr()
+  // CHECK: %[[INTRINSIC:.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.rdffr.z(<vscale x 16 x i1>
+  // CHECK-NOT: rdffr
   // CHECK: ret <vscale x 16 x i1> %[[INTRINSIC]]
   return svrdffr();
 }

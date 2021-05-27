@@ -466,6 +466,12 @@ def Builtin_IntegerAttr : Builtin_Attr<"Integer"> {
         return BoolAttr::get(type.getContext(), value.getBoolValue());
       return $_get(type.getContext(), type, value);
     }]>,
+    AttrBuilder<(ins "const APSInt &":$value), [{
+      auto signedness = value.isSigned() ?
+        IntegerType::Signed : IntegerType::Unsigned;
+      auto type = IntegerType::get($_ctxt, value.getBitWidth(), signedness);
+      return $_get(type.getContext(), type, value);
+    }]>,
     AttrBuilderWithInferredContext<(ins "Type":$type, "int64_t":$value), [{
       // `index` has a defined internal storage width.
       if (type.isIndex()) {
@@ -491,6 +497,10 @@ def Builtin_IntegerAttr : Builtin_Attr<"Integer"> {
     /// Return the integer value as a unsigned 64-bit int. The attribute must be
     /// an unsigned integer.
     uint64_t getUInt() const;
+
+    /// Return the value as an APSInt which carries the signed from the type of
+    /// the attribute.  This traps on signless integers types!
+    APSInt getAPSInt() const;
 
   private:
     /// Return a boolean attribute. This is a special variant of the `get`
@@ -807,10 +817,25 @@ def Builtin_StringAttr : Builtin_Attr<"String"> {
       return $_get(type.getContext(), bytes, type);
     }]>,
     AttrBuilder<(ins "StringRef":$bytes), [{
+      if (bytes.empty())
+        return get($_ctxt);
       return $_get($_ctxt, bytes, NoneType::get($_ctxt));
-    }]>
+    }]>,
+
+    /// Build an empty string attr with NoneType.
+    AttrBuilder<(ins)>
   ];
-  let extraClassDeclaration = "using ValueType = StringRef;";
+  let extraClassDeclaration = [{
+    using ValueType = StringRef;
+
+  private:
+    /// Return an empty StringAttr with NoneType type. This is a special variant
+    /// of the `get` method that is used by the MLIRContext to cache the
+    /// instance.
+    static StringAttr getEmptyStringAttrUnchecked(MLIRContext *context);
+    friend MLIRContext;
+  public:
+  }];
   let skipDefaultBuilders = 1;
 }
 
@@ -846,7 +871,7 @@ def Builtin_SymbolRefAttr : Builtin_Attr<"SymbolRef"> {
     legally hold a symbol reference simplifies reasoning about these data
     accesses.
 
-    See [`Symbols And SymbolTables`](SymbolsAndSymbolTables.md) for more
+    See [`Symbols And SymbolTables`](../SymbolsAndSymbolTables.md) for more
     information.
 
     Examples:

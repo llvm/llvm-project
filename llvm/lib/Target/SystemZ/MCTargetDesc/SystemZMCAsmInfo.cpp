@@ -29,10 +29,19 @@ SystemZMCAsmInfo::SystemZMCAsmInfo(const Triple &TT) {
   AllowHashAtStartOfIdentifier = (AssemblerDialect == AD_HLASM);
   DotIsPC = (AssemblerDialect == AD_ATT);
   StarIsPC = (AssemblerDialect == AD_HLASM);
+  EmitGNUAsmStartIndentationMarker = (AssemblerDialect == AD_ATT);
+  AllowAtInName = (AssemblerDialect == AD_HLASM);
 
   ZeroDirective = "\t.space\t";
   Data64bitsDirective = "\t.quad\t";
   UsesELFSectionDirectiveForBSS = true;
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::DwarfCFI;
+}
+
+bool SystemZMCAsmInfo::isAcceptableChar(char C) const {
+  if (AssemblerDialect == AD_ATT)
+    return MCAsmInfo::isAcceptableChar(C);
+
+  return MCAsmInfo::isAcceptableChar(C) || C == '#';
 }

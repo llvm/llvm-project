@@ -1,4 +1,4 @@
-; RUN: opt -mtriple aarch64-linux-gnu -mattr=+sve -loop-vectorize -dce -instcombine -S < %s | FileCheck %s
+; RUN: opt -mtriple aarch64-linux-gnu -mattr=+sve -loop-vectorize -scalable-vectorization=on -dce -instcombine -S < %s | FileCheck %s
 
 ; Ensure that we can vectorize loops such as:
 ;   int *ptr = c;

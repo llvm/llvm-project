@@ -11,7 +11,7 @@
 
 #include "lldb/lldb-enumerations.h"
 
-#include <stdint.h>
+#include <cstdint>
 
 namespace lldb_private {
 

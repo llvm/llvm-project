@@ -442,6 +442,8 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     return "noprofile";
   if (hasAttribute(Attribute::NoUnwind))
     return "nounwind";
+  if (hasAttribute(Attribute::NoSanitizeCoverage))
+    return "nosanitize_coverage";
   if (hasAttribute(Attribute::OptForFuzzing))
     return "optforfuzzing";
   if (hasAttribute(Attribute::OptimizeNone))
@@ -781,8 +783,12 @@ AttributeSet AttributeSet::removeAttribute(LLVMContext &C,
 }
 
 AttributeSet AttributeSet::removeAttributes(LLVMContext &C,
-                                              const AttrBuilder &Attrs) const {
+                                            const AttrBuilder &Attrs) const {
   AttrBuilder B(*this);
+  // If there is nothing to remove, directly return the original set.
+  if (!B.overlaps(Attrs))
+    return *this;
+
   B.remove(Attrs);
   return get(C, B);
 }
@@ -1480,17 +1486,12 @@ AttributeList AttributeList::removeAttribute(LLVMContext &C, unsigned Index,
 AttributeList
 AttributeList::removeAttributes(LLVMContext &C, unsigned Index,
                                 const AttrBuilder &AttrsToRemove) const {
-  if (!pImpl)
-    return {};
-
-  Index = attrIdxToArrayIdx(Index);
-  SmallVector<AttributeSet, 4> AttrSets(this->begin(), this->end());
-  if (Index >= AttrSets.size())
-    AttrSets.resize(Index + 1);
-
-  AttrSets[Index] = AttrSets[Index].removeAttributes(C, AttrsToRemove);
-
-  return getImpl(C, AttrSets);
+  AttributeSet Attrs = getAttributes(Index);
+  AttributeSet NewAttrs = Attrs.removeAttributes(C, AttrsToRemove);
+  // If nothing was removed, return the original list.
+  if (Attrs == NewAttrs)
+    return *this;
+  return setAttributes(C, Index, NewAttrs);
 }
 
 AttributeList AttributeList::removeAttributes(LLVMContext &C,

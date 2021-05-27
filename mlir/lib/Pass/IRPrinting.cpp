@@ -134,6 +134,11 @@ void IRPrinterInstrumentation::runBeforePass(Pass *pass, Operation *op) {
 void IRPrinterInstrumentation::runAfterPass(Pass *pass, Operation *op) {
   if (isa<OpToOpPassAdaptor>(pass))
     return;
+
+  // Check to see if we are only printing on failure.
+  if (config->shouldPrintAfterOnlyOnFailure())
+    return;
+
   // If the config asked to detect changes, compare the current fingerprint with
   // the previous.
   if (config->shouldPrintAfterOnlyOnChange()) {
@@ -177,9 +182,11 @@ void IRPrinterInstrumentation::runAfterPassFailed(Pass *pass, Operation *op) {
 /// Initialize the configuration.
 PassManager::IRPrinterConfig::IRPrinterConfig(bool printModuleScope,
                                               bool printAfterOnlyOnChange,
+                                              bool printAfterOnlyOnFailure,
                                               OpPrintingFlags opPrintingFlags)
     : printModuleScope(printModuleScope),
       printAfterOnlyOnChange(printAfterOnlyOnChange),
+      printAfterOnlyOnFailure(printAfterOnlyOnFailure),
       opPrintingFlags(opPrintingFlags) {}
 PassManager::IRPrinterConfig::~IRPrinterConfig() {}
 
@@ -212,9 +219,10 @@ struct BasicIRPrinterConfig : public PassManager::IRPrinterConfig {
       std::function<bool(Pass *, Operation *)> shouldPrintBeforePass,
       std::function<bool(Pass *, Operation *)> shouldPrintAfterPass,
       bool printModuleScope, bool printAfterOnlyOnChange,
-      OpPrintingFlags opPrintingFlags, raw_ostream &out)
+      bool printAfterOnlyOnFailure, OpPrintingFlags opPrintingFlags,
+      raw_ostream &out)
       : IRPrinterConfig(printModuleScope, printAfterOnlyOnChange,
-                        opPrintingFlags),
+                        printAfterOnlyOnFailure, opPrintingFlags),
         shouldPrintBeforePass(shouldPrintBeforePass),
         shouldPrintAfterPass(shouldPrintAfterPass), out(out) {
     assert((shouldPrintBeforePass || shouldPrintAfterPass) &&
@@ -257,9 +265,11 @@ void PassManager::enableIRPrinting(std::unique_ptr<IRPrinterConfig> config) {
 void PassManager::enableIRPrinting(
     std::function<bool(Pass *, Operation *)> shouldPrintBeforePass,
     std::function<bool(Pass *, Operation *)> shouldPrintAfterPass,
-    bool printModuleScope, bool printAfterOnlyOnChange, raw_ostream &out,
+    bool printModuleScope, bool printAfterOnlyOnChange,
+    bool printAfterOnlyOnFailure, raw_ostream &out,
     OpPrintingFlags opPrintingFlags) {
   enableIRPrinting(std::make_unique<BasicIRPrinterConfig>(
       std::move(shouldPrintBeforePass), std::move(shouldPrintAfterPass),
-      printModuleScope, printAfterOnlyOnChange, opPrintingFlags, out));
+      printModuleScope, printAfterOnlyOnChange, printAfterOnlyOnFailure,
+      opPrintingFlags, out));
 }

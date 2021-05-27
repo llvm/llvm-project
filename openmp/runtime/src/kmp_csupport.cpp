@@ -1494,13 +1494,13 @@ void __kmpc_critical_with_hint(ident_t *loc, kmp_int32 global_tid,
   kmp_dyna_lock_t *lk = (kmp_dyna_lock_t *)crit;
   // Check if it is initialized.
   KMP_PUSH_PARTITIONED_TIMER(OMP_critical_wait);
+  kmp_dyna_lockseq_t lockseq = __kmp_map_hint_to_lock(hint);
   if (*lk == 0) {
-    kmp_dyna_lockseq_t lckseq = __kmp_map_hint_to_lock(hint);
-    if (KMP_IS_D_LOCK(lckseq)) {
+    if (KMP_IS_D_LOCK(lockseq)) {
       KMP_COMPARE_AND_STORE_ACQ32((volatile kmp_int32 *)crit, 0,
-                                  KMP_GET_D_TAG(lckseq));
+                                  KMP_GET_D_TAG(lockseq));
     } else {
-      __kmp_init_indirect_csptr(crit, loc, global_tid, KMP_GET_I_TAG(lckseq));
+      __kmp_init_indirect_csptr(crit, loc, global_tid, KMP_GET_I_TAG(lockseq));
     }
   }
   // Branch for accessing the actual lock object and set operation. This
@@ -1533,11 +1533,11 @@ void __kmpc_critical_with_hint(ident_t *loc, kmp_int32 global_tid,
     }
 #endif
 #if KMP_USE_INLINED_TAS
-    if (__kmp_user_lock_seq == lockseq_tas && !__kmp_env_consistency_check) {
+    if (lockseq == lockseq_tas && !__kmp_env_consistency_check) {
       KMP_ACQUIRE_TAS_LOCK(lck, global_tid);
     } else
 #elif KMP_USE_INLINED_FUTEX
-    if (__kmp_user_lock_seq == lockseq_futex && !__kmp_env_consistency_check) {
+    if (lockseq == lockseq_futex && !__kmp_env_consistency_check) {
       KMP_ACQUIRE_FUTEX_LOCK(lck, global_tid);
     } else
 #endif
@@ -1614,7 +1614,8 @@ void __kmpc_end_critical(ident_t *loc, kmp_int32 global_tid,
   KC_TRACE(10, ("__kmpc_end_critical: called T#%d\n", global_tid));
 
 #if KMP_USE_DYNAMIC_LOCK
-  if (KMP_IS_D_LOCK(__kmp_user_lock_seq)) {
+  int locktag = KMP_EXTRACT_D_TAG(crit);
+  if (locktag) {
     lck = (kmp_user_lock_p)crit;
     KMP_ASSERT(lck != NULL);
     if (__kmp_env_consistency_check) {
@@ -1624,11 +1625,11 @@ void __kmpc_end_critical(ident_t *loc, kmp_int32 global_tid,
     __kmp_itt_critical_releasing(lck);
 #endif
 #if KMP_USE_INLINED_TAS
-    if (__kmp_user_lock_seq == lockseq_tas && !__kmp_env_consistency_check) {
+    if (locktag == locktag_tas && !__kmp_env_consistency_check) {
       KMP_RELEASE_TAS_LOCK(lck, global_tid);
     } else
 #elif KMP_USE_INLINED_FUTEX
-    if (__kmp_user_lock_seq == lockseq_futex && !__kmp_env_consistency_check) {
+    if (locktag == locktag_futex && !__kmp_env_consistency_check) {
       KMP_RELEASE_FUTEX_LOCK(lck, global_tid);
     } else
 #endif

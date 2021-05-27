@@ -96,6 +96,20 @@ public:
     FK_Enabled = 1,    ///< Forcing enabled.
   };
 
+  enum ScalableForceKind {
+    /// Not selected.
+    SK_Unspecified = -1,
+    /// Disables vectorization with scalable vectors.
+    SK_FixedWidthOnly = 0,
+    /// Vectorize loops using scalable vectors or fixed-width vectors, but favor
+    /// scalable vectors when the cost-model is inconclusive. This is the
+    /// default when the scalable.enable hint is enabled through a pragma.
+    SK_PreferScalable = 1,
+    /// Vectorize loops using scalable vectors or fixed-width  vectors, but
+    /// favor fixed-width vectors when the cost is inconclusive.
+    SK_PreferFixedWidth = 2,
+  };
+
   LoopVectorizeHints(const Loop *L, bool InterleaveOnlyWhenForced,
                      OptimizationRemarkEmitter &ORE);
 
@@ -109,7 +123,8 @@ public:
   void emitRemarkWithHints() const;
 
   ElementCount getWidth() const {
-    return ElementCount::get(Width.Value, isScalable());
+    return ElementCount::get(Width.Value,
+                             isScalableVectorizationExplicitlyEnabled());
   }
   unsigned getInterleave() const {
     if (Interleave.Value)
@@ -129,22 +144,27 @@ public:
     return (ForceKind)Force.Value;
   }
 
-  bool isScalable() const { return Scalable.Value; }
+  /// \return true if scalable vectorization has been explicitly enabled.
+  bool isScalableVectorizationExplicitlyEnabled() const {
+    return Scalable.Value == SK_PreferFixedWidth ||
+           Scalable.Value == SK_PreferScalable;
+  }
+
+  /// \return true if scalable vectorization has been explicitly disabled.
+  bool isScalableVectorizationDisabled() const {
+    return Scalable.Value == SK_FixedWidthOnly;
+  }
 
   /// If hints are provided that force vectorization, use the AlwaysPrint
   /// pass name to force the frontend to print the diagnostic.
   const char *vectorizeAnalysisPassName() const;
 
-  bool allowReordering() const {
-    // When enabling loop hints are provided we allow the vectorizer to change
-    // the order of operations that is given by the scalar loop. This is not
-    // enabled by default because can be unsafe or inefficient. For example,
-    // reordering floating-point operations will change the way round-off
-    // error accumulates in the loop.
-    ElementCount EC = getWidth();
-    return getForce() == LoopVectorizeHints::FK_Enabled ||
-           EC.getKnownMinValue() > 1;
-  }
+  /// When enabling loop hints are provided we allow the vectorizer to change
+  /// the order of operations that is given by the scalar loop. This is not
+  /// enabled by default because can be unsafe or inefficient. For example,
+  /// reordering floating-point operations will change the way round-off
+  /// error accumulates in the loop.
+  bool allowReordering() const;
 
   bool isPotentiallyUnsafe() const {
     // Avoid FP vectorization if the target is unsure about proper support.
@@ -195,9 +215,6 @@ public:
 
 
   Instruction *getExactFPInst() { return ExactFPMathInst; }
-  bool canVectorizeFPMath(const LoopVectorizeHints &Hints) const {
-    return !ExactFPMathInst || Hints.allowReordering();
-  }
 
   unsigned getNumRuntimePointerChecks() const {
     return NumRuntimePointerChecks;
@@ -254,6 +271,11 @@ public:
   /// (should be functional for inner loop vectorization) based on VPlan.
   /// If false, good old LV code.
   bool canVectorize(bool UseVPlanNativePath);
+
+  /// Returns true if it is legal to vectorize the FP math operations in this
+  /// loop. Vectorizing is legal if we allow reordering of FP operations, or if
+  /// we can use in-order reductions.
+  bool canVectorizeFPMath(bool EnableStrictReductions);
 
   /// Return true if we can vectorize this loop while folding its tail by
   /// masking, and mark all respective loads/stores for masking.

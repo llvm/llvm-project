@@ -54,7 +54,7 @@ folding: an operation whose operands contain constants can often be folded to a
 result constant value.
 
 MLIR operations may override a
-[`fold`](../Canonicalization.md/#canonicalizing-with-fold) routine, which
+[`fold`](../Canonicalization.md/#canonicalizing-with-the-fold-method) routine, which
 exposes a simpler API compared to a general DAG-to-DAG pattern matcher, and
 allows for it to be applicable in cases that a generic matcher would not. For
 example, a DAG-rewrite can remove arbitrary nodes in the current function, which

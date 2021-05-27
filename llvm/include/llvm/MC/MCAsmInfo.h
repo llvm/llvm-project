@@ -146,6 +146,10 @@ protected:
   /// Default is true.
   bool AllowAdditionalComments = true;
 
+  /// Should we emit the '\t' as the starting indentation marker for GNU inline
+  /// asm statements. Defaults to true.
+  bool EmitGNUAsmStartIndentationMarker = true;
+
   /// This is appended to emitted labels.  Defaults to ":"
   const char *LabelSuffix;
 
@@ -260,6 +264,11 @@ protected:
   /// string of bytes.  For targets that do not support this, it shall be set to
   /// null.  Defaults to null.
   const char *ByteListDirective = nullptr;
+
+  /// This directive allows emission of a zero-terminated ascii string without
+  /// the standard C escape characters embedded into it.  If a target doesn't
+  /// support this, it can be set to null. Defaults to null.
+  const char *PlainStringDirective = nullptr;
 
   /// Form used for character literals in the assembly syntax.  Useful for
   /// producing strings as byte lists.  If a target does not use or support
@@ -624,6 +633,9 @@ public:
     return RestrictCommentStringToStartOfStatement;
   }
   bool shouldAllowAdditionalComments() const { return AllowAdditionalComments; }
+  bool getEmitGNUAsmStartIndentationMarker() const {
+    return EmitGNUAsmStartIndentationMarker;
+  }
   const char *getLabelSuffix() const { return LabelSuffix; }
 
   bool useAssignmentForEHBegin() const { return UseAssignmentForEHBegin; }
@@ -679,6 +691,7 @@ public:
   const char *getAsciiDirective() const { return AsciiDirective; }
   const char *getAscizDirective() const { return AscizDirective; }
   const char *getByteListDirective() const { return ByteListDirective; }
+  const char *getPlainStringDirective() const { return PlainStringDirective; }
   AsmCharLiteralSyntax characterLiteralSyntax() const {
     return CharacterLiteralSyntax;
   }

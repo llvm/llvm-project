@@ -1,4 +1,4 @@
-if (MLIR_CUDA_CONVERSIONS_ENABLED)
+if (MLIR_ENABLE_CUDA_CONVERSIONS)
   set(NVPTX_LIBS
     NVPTXCodeGen
     NVPTXDesc
@@ -6,7 +6,7 @@ if (MLIR_CUDA_CONVERSIONS_ENABLED)
   )
 endif()
 
-if (MLIR_ROCM_CONVERSIONS_ENABLED)
+if (MLIR_ENABLE_ROCM_CONVERSIONS)
   set(AMDGPU_LIBS
     MCParser
     AMDGPUAsmParser
@@ -47,7 +47,6 @@ add_mlir_dialect_library(MLIRGPU
   MLIRAsync
   MLIRDataLayoutInterfaces
   MLIRDLTI
-  MLIREDSC
   MLIRIR
   MLIRMemRef
   MLIRLLVMIR
@@ -60,8 +59,8 @@ add_mlir_dialect_library(MLIRGPU
   MLIRTransformUtils
   )
 
-if(MLIR_CUDA_RUNNER_ENABLED)
-  if(NOT MLIR_CUDA_CONVERSIONS_ENABLED)
+if(MLIR_ENABLE_CUDA_RUNNER)
+  if(NOT MLIR_ENABLE_CUDA_CONVERSIONS)
     message(SEND_ERROR
       "Building mlir with cuda support requires the NVPTX backend")
   endif()
@@ -99,7 +98,7 @@ if(MLIR_CUDA_RUNNER_ENABLED)
 
 endif()
 
-if(MLIR_ROCM_RUNNER_ENABLED)
+if(MLIR_ENABLE_ROCM_RUNNER)
   if (NOT ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD))
     message(SEND_ERROR
       "Building mlir with ROCm support requires the AMDGPU backend")

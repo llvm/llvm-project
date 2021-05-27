@@ -28,7 +28,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-#include <stdint.h>
+#include <cstdint>
 
 namespace llvm {
 class raw_ostream;

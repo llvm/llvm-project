@@ -162,7 +162,7 @@ entry:
 ; CHECK-ASM-NEXT:   .vbyte  4, L.._Z10add_structifd1SP2SD1Di0-._Z10add_structifd1SP2SD1Di # Function size
 ; CHECK-FUNC-NEXT:   .vbyte  4, L.._Z10add_structifd1SP2SD1Di0-._Z10add_structifd1SP2SD1Di[PR] # Function size
 ; COMMON-NEXT:  .vbyte  2, 0x001a                       # Function name len = 26
-; COMMON-NEXT:  .byte   '_,'Z,'1,'0,'a,'d,'d,'_,'s,'t,'r,'u,'c,'t,'i,'f,'d,'1,'S,'P,'2,'S,'D,'1,'D,'i # Function Name
+; COMMON-NEXT:  .byte   "_Z10add_structifd1SP2SD1Di"    # Function Name
 ; COMMON-NEXT:                                        # -- End function
 
 
@@ -190,7 +190,7 @@ entry:
 ; CHECK-ASM-NEXT:   .vbyte  4, L..main0-.main               # Function size
 ; CHECK-FUNC-NEXT:   .vbyte  4, L..main0-.main[PR]               # Function size
 ; COMMON-NEXT:  .vbyte  2, 0x0004                       # Function name len = 4
-; COMMON-NEXT:  .byte   'm,'a,'i,'n                     # Function Name
+; COMMON-NEXT:  .byte   "main"                        # Function Name
 ; COMMON-NEXT:                                        # -- End function
 
 
@@ -214,5 +214,5 @@ entry:
 ; CHECK-ASM-NEXT:  .vbyte  4, L.._Z7add_bari1SfdP2SD1Di0-._Z7add_bari1SfdP2SD1Di # Function size
 ; CHECK-FUNC-NEXT:  .vbyte  4, L.._Z7add_bari1SfdP2SD1Di0-._Z7add_bari1SfdP2SD1Di[PR] # Function size
 ; COMMON-NEXT:  .vbyte  2, 0x0016                       # Function name len = 22
-; COMMON-NEXT:  .byte   '_,'Z,'7,'a,'d,'d,'_,'b,'a,'r,'i,'1,'S,'f,'d,'P,'2,'S,'D,'1,'D,'i # Function Name
+; COMMON-NEXT:  .byte   "_Z7add_bari1SfdP2SD1Di"        # Function Name
 ; COMMON-NEXT:                                        # -- End function

@@ -888,6 +888,37 @@ ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {
     LLDB_LOG(log, "[ClangASTImporter] Complete definition not found");
   }
 
+  // Disable the minimal import for fields that have record types. There is
+  // no point in minimally importing the record behind their type as Clang
+  // will anyway request their definition when the FieldDecl is added to the
+  // RecordDecl (as Clang will query the FieldDecl's type for things such
+  // as a deleted constexpr destructor).
+  // By importing the type ahead of time we avoid some corner cases where
+  // the FieldDecl's record is importing in the middle of Clang's
+  // `DeclContext::addDecl` logic.
+  if (clang::FieldDecl *fd = dyn_cast<FieldDecl>(From)) {
+    // This is only necessary because we do the 'minimal import'. Remove this
+    // once LLDB stopped using that mode.
+    assert(isMinimalImport() && "Only necessary for minimal import");
+    QualType field_type = fd->getType();
+    if (field_type->isRecordType()) {
+      // First get the underlying record and minimally import it.
+      clang::TagDecl *record_decl = field_type->getAsTagDecl();
+      llvm::Expected<Decl *> imported = Import(record_decl);
+      if (!imported)
+        return imported.takeError();
+      // Check how/if the import got redirected to a different AST. Now
+      // import the definition of what was actually imported. If there is no
+      // origin then that means the record was imported by just picking a
+      // compatible type in the target AST (in which case there is no more
+      // importing to do).
+      if (clang::Decl *origin = m_master.GetDeclOrigin(*imported).decl) {
+        if (llvm::Error def_err = ImportDefinition(record_decl))
+          return std::move(def_err);
+      }
+    }
+  }
+
   return ASTImporter::ImportImpl(From);
 }
 

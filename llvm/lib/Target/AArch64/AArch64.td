@@ -523,6 +523,9 @@ def FeatureHardenSlsRetBr : SubtargetFeature<"harden-sls-retbr",
 def FeatureHardenSlsBlr : SubtargetFeature<"harden-sls-blr",
   "HardenSlsBlr", "true",
   "Harden against straight line speculation across BLR instructions">;
+def FeatureHardenSlsNoComdat : SubtargetFeature<"harden-sls-nocomdat",
+  "HardenSlsNoComdat", "true",
+  "Generate thunk code for SLS mitigation in the normal text section">;
 
 //===----------------------------------------------------------------------===//
 // AArch64 Processors supported.

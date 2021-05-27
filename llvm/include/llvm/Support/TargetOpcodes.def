@@ -85,6 +85,10 @@ HANDLE_TARGET_OPCODE(DBG_VALUE_LIST)
 /// that defines the value, rather than a virtual register.
 HANDLE_TARGET_OPCODE(DBG_INSTR_REF)
 
+/// DBG_PHI - remainder of a PHI, identifies a program point where values
+/// merge under control flow.
+HANDLE_TARGET_OPCODE(DBG_PHI)
+
 /// DBG_LABEL - a mapping of the llvm.dbg.label intrinsic
 HANDLE_TARGET_OPCODE(DBG_LABEL)
 

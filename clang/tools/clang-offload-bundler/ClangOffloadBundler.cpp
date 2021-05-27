@@ -621,6 +621,7 @@ public:
                                     OFFLOAD_BUNDLER_MAGIC_STR + TargetNames[I] +
                                     "=readonly,exclude"));
     }
+    ObjcopyArgs.push_back("--");
     ObjcopyArgs.push_back(InputFileNames[HostInputIndex]);
     ObjcopyArgs.push_back(OutputFileNames.front());
 

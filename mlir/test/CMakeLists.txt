@@ -1,21 +1,20 @@
 add_subdirectory(CAPI)
-add_subdirectory(EDSC)
 add_subdirectory(SDBM)
 add_subdirectory(lib)
 
-if(MLIR_BINDINGS_PYTHON_ENABLED)
+if(MLIR_ENABLE_BINDINGS_PYTHON)
   add_subdirectory(python)
 endif()
 
 llvm_canonicalize_cmake_booleans(
-  MLIR_BINDINGS_PYTHON_ENABLED
+  MLIR_ENABLE_BINDINGS_PYTHON
   LLVM_BUILD_EXAMPLES
-  MLIR_CUDA_CONVERSIONS_ENABLED
-  MLIR_CUDA_RUNNER_ENABLED
-  MLIR_ROCM_CONVERSIONS_ENABLED
-  MLIR_ROCM_RUNNER_ENABLED
-  MLIR_SPIRV_CPU_RUNNER_ENABLED
-  MLIR_VULKAN_RUNNER_ENABLED
+  MLIR_ENABLE_CUDA_CONVERSIONS
+  MLIR_ENABLE_CUDA_RUNNER
+  MLIR_ENABLE_ROCM_CONVERSIONS
+  MLIR_ENABLE_ROCM_RUNNER
+  MLIR_ENABLE_SPIRV_CPU_RUNNER
+  MLIR_ENABLE_VULKAN_RUNNER
   )
 
 # Passed to lit.site.cfg.py.in to set up the path where to find the libraries
@@ -33,6 +32,7 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
       "If set, arch-specific integration tests are run with Intel SDE.")
   option(MLIR_RUN_AMX_TESTS "Run AMX tests.")
   option(MLIR_RUN_X86VECTOR_TESTS "Run X86Vector tests.")
+  option(MLIR_RUN_CUDA_TENSOR_CORE_TESTS "Run CUDA Tensor core WMMA tests.")
   # Passed to lit.site.cfg.py.in to set up the path where to find the libraries.
   set(MLIR_INTEGRATION_TEST_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
@@ -63,8 +63,8 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-pass-test
   mlir-capi-sparse-tensor-test
   mlir-cpu-runner
-  mlir-edsc-builder-api-test
   mlir-linalg-ods-gen
+  mlir-linalg-ods-yaml-gen
   mlir-lsp-server
   mlir-opt
   mlir-reduce
@@ -76,11 +76,11 @@ set(MLIR_TEST_DEPENDS
   mlir_async_runtime
   )
 
-if(MLIR_CUDA_RUNNER_ENABLED)
+if(MLIR_ENABLE_CUDA_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS mlir_cuda_runtime)
 endif()
 
-if(MLIR_ROCM_RUNNER_ENABLED)
+if(MLIR_ENABLE_ROCM_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS mlir_rocm_runtime)
 endif()
 
@@ -98,7 +98,7 @@ if(LLVM_BUILD_EXAMPLES)
     )
 endif()
 
-if(MLIR_SPIRV_CPU_RUNNER_ENABLED)
+if(MLIR_ENABLE_SPIRV_CPU_RUNNER)
   add_subdirectory(mlir-spirv-cpu-runner)
   list(APPEND MLIR_TEST_DEPENDS
     mlir-spirv-cpu-runner
@@ -106,13 +106,13 @@ if(MLIR_SPIRV_CPU_RUNNER_ENABLED)
   )
 endif()
 
-if(MLIR_VULKAN_RUNNER_ENABLED)
+if(MLIR_ENABLE_VULKAN_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS
     mlir-vulkan-runner
   )
 endif()
 
-if(MLIR_BINDINGS_PYTHON_ENABLED)
+if(MLIR_ENABLE_BINDINGS_PYTHON)
   list(APPEND MLIR_TEST_DEPENDS
     MLIRBindingsPythonExtension
     MLIRBindingsPythonSources

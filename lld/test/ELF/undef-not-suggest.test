@@ -50,6 +50,7 @@ Symbols:
     Section: .data
   - Name:    foo
     Section: .text.foo
+    Binding: STB_GLOBAL
   - Name:    for
     Section: .data
 

@@ -10,7 +10,7 @@ add_lld_library(lldMachO2
   Arch/ARM64Common.cpp
   Arch/ARM64_32.cpp
   Arch/X86_64.cpp
-  UnwindInfoSection.cpp
+  ConcatOutputSection.cpp
   Driver.cpp
   DriverUtils.cpp
   Dwarf.cpp
@@ -18,7 +18,7 @@ add_lld_library(lldMachO2
   InputFiles.cpp
   InputSection.cpp
   LTO.cpp
-  MergedOutputSection.cpp
+  MapFile.cpp
   ObjC.cpp
   OutputSection.cpp
   OutputSegment.cpp
@@ -27,7 +27,7 @@ add_lld_library(lldMachO2
   Symbols.cpp
   SyntheticSections.cpp
   Target.cpp
-  MapFile.cpp
+  UnwindInfoSection.cpp
   Writer.cpp
 
   LINK_COMPONENTS
@@ -48,6 +48,7 @@ add_lld_library(lldMachO2
   LINK_LIBS
   lldCommon
   ${LLVM_PTHREAD_LIB}
+  ${XAR_LIB}
 
   DEPENDS
   MachOOptionsTableGen

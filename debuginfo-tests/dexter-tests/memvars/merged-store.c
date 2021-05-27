@@ -40,4 +40,4 @@ int main() {
   return fun(5, 20);
 }
 
-// DexExpectWatchValue('parama', 20, on_line='s0')
+// DexExpectWatchValue('parama', 20, on_line=ref('s0'))

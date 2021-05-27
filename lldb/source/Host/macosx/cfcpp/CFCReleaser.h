@@ -13,7 +13,7 @@
 
 #ifdef __cplusplus
 
-#include <assert.h>
+#include <cassert>
 
 // Templatized CF helper class that can own any CF pointer and will
 // call CFRelease() on any valid pointer it owns unless that pointer is

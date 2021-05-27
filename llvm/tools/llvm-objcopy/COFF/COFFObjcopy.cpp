@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "COFFObjcopy.h"
-#include "CopyConfig.h"
+#include "COFFConfig.h"
+#include "CommonConfig.h"
 #include "Object.h"
 #include "Reader.h"
 #include "Writer.h"
@@ -130,7 +131,7 @@ static void setSectionFlags(Section &Sec, SectionFlag AllFlags) {
   Sec.Header.Characteristics = NewCharacteristics;
 }
 
-static Error handleArgs(const CopyConfig &Config, Object &Obj) {
+static Error handleArgs(const CommonConfig &Config, Object &Obj) {
   // Perform the actual section removals.
   Obj.removeSections([&Config](const Section &Sec) {
     // Contrary to --only-keep-debug, --only-section fully removes sections that
@@ -248,28 +249,11 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
     if (Error E = addGnuDebugLink(Obj, Config.AddGnuDebugLink))
       return E;
 
-  if (Config.AllowBrokenLinks || !Config.SplitDWO.empty() ||
-      !Config.SymbolsPrefix.empty() || !Config.AllocSectionsPrefix.empty() ||
-      !Config.DumpSection.empty() || !Config.KeepSection.empty() ||
-      Config.NewSymbolVisibility || !Config.SymbolsToGlobalize.empty() ||
-      !Config.SymbolsToKeep.empty() || !Config.SymbolsToLocalize.empty() ||
-      !Config.SymbolsToWeaken.empty() || !Config.SymbolsToKeepGlobal.empty() ||
-      !Config.SectionsToRename.empty() || !Config.SetSectionAlignment.empty() ||
-      Config.ExtractDWO || Config.LocalizeHidden || Config.PreserveDates ||
-      Config.StripDWO || Config.StripNonAlloc || Config.StripSections ||
-      Config.StripSwiftSymbols || Config.KeepUndefined || Config.Weaken ||
-      Config.DecompressDebugSections ||
-      Config.DiscardMode == DiscardType::Locals ||
-      !Config.SymbolsToAdd.empty() || Config.EntryExpr) {
-    return createStringError(llvm::errc::invalid_argument,
-                             "option not supported by llvm-objcopy for COFF");
-  }
-
   return Error::success();
 }
 
-Error executeObjcopyOnBinary(const CopyConfig &Config, COFFObjectFile &In,
-                             raw_ostream &Out) {
+Error executeObjcopyOnBinary(const CommonConfig &Config, const COFFConfig &,
+                             COFFObjectFile &In, raw_ostream &Out) {
   COFFReader Reader(In);
   Expected<std::unique_ptr<Object>> ObjOrErr = Reader.create();
   if (!ObjOrErr)

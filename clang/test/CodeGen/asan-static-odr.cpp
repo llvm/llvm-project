@@ -11,7 +11,7 @@ int main() {
 
 // CHECK-NOT: __odr_asan_gen
 // CHECK-NOT: private alias
-// CHECK: [[VAR:@.*global.*]] ={{.*}} global { i32, [60 x i8] } zeroinitializer, align 32
+// CHECK: [[VAR:@.*global.*]] ={{.*}} global { i32, [28 x i8] } zeroinitializer, align 32
 // CHECK: @0 = internal global {{.*}} [[VAR]] to i64), {{.*}}, i64 -1 }]
 // CHECK: call void @__asan_register_globals(i64 ptrtoint ([1 x { i64, i64, i64, i64, i64, i64, i64, i64 }]* @0 to i64), i64 1)
 // CHECK: call void @__asan_unregister_globals(i64 ptrtoint ([1 x { i64, i64, i64, i64, i64, i64, i64, i64 }]* @0 to i64), i64 1)

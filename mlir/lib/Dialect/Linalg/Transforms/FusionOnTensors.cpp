@@ -1310,6 +1310,52 @@ struct FoldReshapeOpsByLinearizationPass
   }
 };
 
+/// Forces `outs` operands of linalg operations to use `linalg.init_tensor` if
+/// the value of the `outs` operand is not used within the op.  This is only
+/// implemented for `linalg.generic` operations for now, but should hold for all
+/// linalg structured ops.
+struct RemoveOutsDependency : public OpRewritePattern<GenericOp> {
+  using OpRewritePattern<GenericOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(GenericOp op,
+                                PatternRewriter &rewriter) const override {
+    rewriter.startRootUpdate(op);
+    bool modifiedOutput = false;
+    Location loc = op.getLoc();
+    for (OpOperand &opOperand : op.getOutputOpOperands()) {
+      if (!op.payloadUsesValueFromOpOperand(&opOperand)) {
+        Value operandVal = opOperand.get();
+        auto operandType = operandVal.getType().dyn_cast<RankedTensorType>();
+        if (!operandType)
+          continue;
+
+        // If outs is already an `init_tensor` operation, nothing to do.
+        auto definingOp = operandVal.getDefiningOp<InitTensorOp>();
+        if (definingOp)
+          continue;
+        modifiedOutput = true;
+        SmallVector<Value> dynamicDims;
+        for (auto dim : llvm::enumerate(operandType.getShape())) {
+          if (dim.value() != ShapedType::kDynamicSize)
+            continue;
+          dynamicDims.push_back(rewriter.createOrFold<memref::DimOp>(
+              loc, operandVal, dim.index()));
+        }
+        Value initTensor = rewriter.create<InitTensorOp>(
+            loc, dynamicDims, operandType.getShape(),
+            operandType.getElementType());
+        op->setOperand(opOperand.getOperandNumber(), initTensor);
+      }
+    }
+    if (!modifiedOutput) {
+      rewriter.cancelRootUpdate(op);
+      return failure();
+    }
+    rewriter.finalizeRootUpdate(op);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::linalg::populateFoldReshapeOpsByLinearizationPatterns(
@@ -1339,6 +1385,7 @@ void mlir::linalg::populateElementwiseOpsFusionPatterns(
   auto *context = patterns.getContext();
   patterns.add<FuseElementwiseOps, FoldSplatConstants>(
       context, options.controlElementwiseOpsFusionFn);
+  patterns.add<RemoveOutsDependency>(context);
   populateFoldReshapeOpsByExpansionPatterns(patterns,
                                             options.controlFoldingReshapesFn);
   AffineApplyOp::getCanonicalizationPatterns(patterns, context);

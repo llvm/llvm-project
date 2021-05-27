@@ -4,8 +4,8 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/libfoo.s -o %t/libfoo.o
 # RUN: %lld -dylib %t/libfoo.o -o %t/libfoo.dylib
 # RUN: %lld %t/test.o -L%t -lfoo -o %t/test -lSystem
-# RUN: llvm-objdump -d --no-show-raw-insn --rebase --bind --lazy-bind --weak-bind --full-contents %t/test | \
-# RUN:   FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn --rebase --bind --lazy-bind \
+# RUN:   --weak-bind --full-contents %t/test | FileCheck %s
 
 # CHECK:      Contents of section __DATA_CONST,__got:
 ## Check that this section contains a nonzero pointer. It should point to
@@ -37,13 +37,15 @@
 # CHECK-DAG:   __DATA        __la_symbol_ptr 0x[[#%x,WEAK_DY_FN:]]   pointer 0 libfoo    _weak_dysym_fn
 # CHECK-DAG:   __DATA        __data          0x[[#%x,WEAK_DY:]]      pointer 0 libfoo    _weak_dysym
 # CHECK-DAG:   __DATA        __thread_vars   0x{{[0-9a-f]*}}         pointer 0 libSystem __tlv_bootstrap
+# CHECK-DAG:   __DATA        __thread_vars   0x{{[0-9a-f]*}}         pointer 0 libSystem __tlv_bootstrap
 # CHECK-DAG:   __DATA        __thread_ptrs   0x[[#WEAK_DY_TLV_ADDR]] pointer 0 libfoo    _weak_dysym_tlv
 ## Check that we don't have any other bindings
-# CHECK-NOT:   pointer
+# CHECK-EMPTY:
 
 # CHECK-LABEL: Lazy bind table:
+# CHECK-NEXT:  segment section address dylib symbol
 ## Verify that we have no lazy bindings
-# CHECK-NOT:   pointer
+# CHECK-EMPTY:
 
 # CHECK-LABEL: Weak bind table:
 # CHECK-DAG:   __DATA_CONST __got           0x[[#WEAK_DY_GOT_ADDR]]   pointer 0 _weak_dysym_for_gotpcrel
@@ -55,7 +57,7 @@
 # CHECK-DAG:   __DATA       __la_symbol_ptr 0x[[#WEAK_DY_FN]]         pointer 0 _weak_dysym_fn
 # CHECK-DAG:   __DATA       __la_symbol_ptr 0x[[#WEAK_EXT_FN]]        pointer 0 _weak_external_fn
 ## Check that we don't have any other bindings
-# CHECK-NOT:   pointer
+# CHECK-EMPTY:
 
 ## Weak internal symbols don't get bindings
 # RUN: llvm-objdump --macho --bind --lazy-bind --weak-bind %t/test | FileCheck %s --check-prefix=WEAK-INTERNAL

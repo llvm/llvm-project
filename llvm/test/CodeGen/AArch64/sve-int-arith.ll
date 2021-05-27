@@ -45,6 +45,16 @@ define <vscale x 16 x i8> @add_i8_zero(<vscale x 16 x i8> %a) {
   ret <vscale x 16 x i8> %res
 }
 
+define <vscale x 1 x i32> @add_nxv1i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b) {
+; CHECK-LABEL: add_nxv1i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    add z0.s, z0.s, z1.s
+; CHECK-NEXT:    ret
+entry:
+  %c = add <vscale x 1 x i32> %a, %b
+  ret <vscale x 1 x i32> %c
+}
+
 define <vscale x 2 x i64> @sub_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: sub_i64:
 ; CHECK:       // %bb.0:

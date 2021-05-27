@@ -278,6 +278,13 @@ void registerTestLinalgTensorFusionTransforms() {
           "Test Linalg on tensor fusion transformation "
           "patterns by applying them greedily.");
 }
+void registerTestLinalgTiledLoopFusionTransforms() {
+  PassRegistration<TestLinalgFusionTransforms<LinalgTilingLoopType::TiledLoops>>
+      testTiledLoopFusionTransformsPass(
+          "test-linalg-tiled-loop-fusion-transform-patterns",
+          "Test Linalg on tensor fusion transformation "
+          "patterns by applying them greedily.");
+}
 void registerTestLinalgGreedyFusion() {
   PassRegistration<TestLinalgGreedyFusion> testFusionTransformsPass(
       "test-linalg-greedy-fusion",

@@ -16,7 +16,7 @@
 
 #include <cstddef>
 
-#include <string.h>
+#include <cstring>
 
 using namespace lldb;
 using namespace lldb_private;

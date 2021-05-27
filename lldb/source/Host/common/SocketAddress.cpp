@@ -17,15 +17,15 @@
 #endif
 
 #include "lldb/Host/SocketAddress.h"
-#include <stddef.h>
-#include <stdio.h>
+#include <cstddef>
+#include <cstdio>
 
 #if !defined(_WIN32)
 #include <arpa/inet.h>
 #endif
 
-#include <assert.h>
-#include <string.h>
+#include <cassert>
+#include <cstring>
 
 #include "lldb/Host/PosixApi.h"
 

@@ -19,6 +19,7 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyValueInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -193,15 +194,14 @@ static bool simplifyCommonValuePhi(PHINode *P, LazyValueInfo *LVI,
       return false;
   }
 
+  // LVI only guarantees that the value matches a certain constant if the value
+  // is not poison. Make sure we don't replace a well-defined value with poison.
+  // This is usually satisfied due to a prior branch on the value.
+  if (!isGuaranteedNotToBePoison(CommonValue, nullptr, P, DT))
+    return false;
+
   // All constant incoming values map to the same variable along the incoming
-  // edges of the phi. The phi is unnecessary. However, we must drop all
-  // poison-generating flags to ensure that no poison is propagated to the phi
-  // location by performing this substitution.
-  // Warning: If the underlying analysis changes, this may not be enough to
-  //          guarantee that poison is not propagated.
-  // TODO: We may be able to re-infer flags by re-analyzing the instruction.
-  if (auto *CommonInst = dyn_cast<Instruction>(CommonValue))
-    CommonInst->dropPoisonGeneratingFlags();
+  // edges of the phi. The phi is unnecessary.
   P->replaceAllUsesWith(CommonValue);
   P->eraseFromParent();
   ++NumPhiCommon;
@@ -1118,7 +1118,6 @@ CorrelatedValuePropagationPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (!Changed) {
     PA = PreservedAnalyses::all();
   } else {
-    PA.preserve<GlobalsAA>();
     PA.preserve<DominatorTreeAnalysis>();
     PA.preserve<LazyValueAnalysis>();
   }

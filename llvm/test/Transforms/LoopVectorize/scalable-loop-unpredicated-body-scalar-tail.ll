@@ -1,5 +1,5 @@
-; RUN: opt -S -loop-vectorize -instcombine -force-vector-interleave=1 -force-vector-width=4 -force-target-supports-scalable-vectors=true < %s | FileCheck %s --check-prefix=CHECKUF1
-; RUN: opt -S -loop-vectorize -instcombine -force-vector-interleave=2 -force-vector-width=4 -force-target-supports-scalable-vectors=true < %s | FileCheck %s --check-prefix=CHECKUF2
+; RUN: opt -S -loop-vectorize -instcombine -force-vector-interleave=1 -force-vector-width=4 -force-target-supports-scalable-vectors=true -scalable-vectorization=on < %s | FileCheck %s --check-prefix=CHECKUF1
+; RUN: opt -S -loop-vectorize -instcombine -force-vector-interleave=2 -force-vector-width=4 -force-target-supports-scalable-vectors=true -scalable-vectorization=on < %s | FileCheck %s --check-prefix=CHECKUF2
 
 ; CHECKUF1: for.body.preheader:
 ; CHECKUF1-DAG: %wide.trip.count = zext i32 %N to i64

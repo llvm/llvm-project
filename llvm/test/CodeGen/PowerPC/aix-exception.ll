@@ -116,7 +116,7 @@ eh.resume:                                        ; preds = %catch.dispatch
 ; ASM:    .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack
 ; ASM:    .vbyte  4, L.._Z9catchFuncv0-._Z9catchFuncv # Function size
 ; ASM:    .vbyte  2, 0x000d                       # Function name len = 13
-; ASM:    .byte   '_,'Z,'9,'c,'a,'t,'c,'h,'F,'u,'n,'c,'v # Function Name
+; ASM:    .byte   "_Z9catchFuncv"                 # Function Name
 ; ASM:    .byte   0x08                            # ExtensionTableFlag = TB_EH_INFO
 ; ASM:    .align  2
 ; ASM32:  .vbyte  4, L..C1-TOC[TC0]               # EHInfo Table

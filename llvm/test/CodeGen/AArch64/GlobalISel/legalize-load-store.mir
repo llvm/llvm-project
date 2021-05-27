@@ -517,3 +517,26 @@ body: |
     G_STORE %val64(s64), %0(p0) :: (store 2)
     G_STORE %val64(s64), %0(p0) :: (store 4)
 ...
+---
+name:            store_6xs64
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: store_6xs64
+    ; CHECK: liveins: $x0
+    ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
+    ; CHECK: %ptr:_(p0) = COPY $x0
+    ; CHECK: G_STORE [[DEF]](<2 x s64>), %ptr(p0) :: (store 16)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C]](s64)
+    ; CHECK: G_STORE [[DEF]](<2 x s64>), [[PTR_ADD]](p0) :: (store 16 into unknown-address + 16)
+    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
+    ; CHECK: [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD %ptr, [[C1]](s64)
+    ; CHECK: G_STORE [[DEF]](<2 x s64>), [[PTR_ADD1]](p0) :: (store 16 into unknown-address + 32)
+    ; CHECK: RET_ReallyLR
+    %val:_(<6 x s64>) = G_IMPLICIT_DEF
+    %ptr:_(p0) = COPY $x0
+    G_STORE %val(<6 x s64>), %ptr(p0) :: (store 48, align 16)
+    RET_ReallyLR
+...

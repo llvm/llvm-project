@@ -348,14 +348,4 @@ extern "C" MLIR_CRUNNERUTILS_EXPORT void printNewline();
 extern "C" MLIR_CRUNNERUTILS_EXPORT void print_flops(double flops);
 extern "C" MLIR_CRUNNERUTILS_EXPORT double rtclock();
 
-//===----------------------------------------------------------------------===//
-// Small runtime support library for sparse tensors.
-//===----------------------------------------------------------------------===//
-extern "C" MLIR_CRUNNERUTILS_EXPORT void *openTensorC(char *filename,
-                                                      uint64_t *idata);
-extern "C" MLIR_CRUNNERUTILS_EXPORT void
-readTensorItemC(void *tensor, uint64_t *idata, double *ddata);
-extern "C" MLIR_CRUNNERUTILS_EXPORT void closeTensor(void *tensor);
-extern "C" MLIR_CRUNNERUTILS_EXPORT char *getTensorFilename(uint64_t id);
-
 #endif // EXECUTIONENGINE_CRUNNERUTILS_H_

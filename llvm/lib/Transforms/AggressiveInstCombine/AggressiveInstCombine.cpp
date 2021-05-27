@@ -431,8 +431,6 @@ PreservedAnalyses AggressiveInstCombinePass::run(Function &F,
   // Mark all the analyses that instcombine updates as preserved.
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
-  PA.preserve<AAManager>();
-  PA.preserve<GlobalsAA>();
   return PA;
 }
 

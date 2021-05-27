@@ -16,7 +16,7 @@ this is a great place to start.
 ## Operation Pass
 
 In MLIR, the main unit of abstraction and transformation is an
-[operation](LangRef.md#operations). As such, the pass manager is designed to
+[operation](LangRef.md/#operations). As such, the pass manager is designed to
 work on instances of operations at different levels of nesting. The structure of
 the [pass manager](#pass-manager), and the concept of nesting, is detailed
 further below. All passes in MLIR derive from `OperationPass` and adhere to the
@@ -98,8 +98,8 @@ is added to. This means that passes of this type may operate on several
 different operation types. Passes of this type are generally written generically
 using operation [interfaces](Interfaces.md) and [traits](Traits.md). Examples of
 this type of pass are
-[Common Sub-Expression Elimination](Passes.md#-cse-eliminate-common-sub-expressions)
-and [Inlining](Passes.md#-inline-inline-function-calls).
+[Common Sub-Expression Elimination](Passes.md/#-cse-eliminate-common-sub-expressions)
+and [Inlining](Passes.md/#-inline-inline-function-calls).
 
 To create an operation pass, a derived class must adhere to the following:
 
@@ -298,7 +298,7 @@ operation of a specific type. This operation type must adhere to the following
 requirement:
 
 *   Must be registered and marked
-    [`IsolatedFromAbove`](Traits.md#isolatedfromabove).
+    [`IsolatedFromAbove`](Traits.md/#isolatedfromabove).
 
     *   Passes are expected to not modify operations at or above the current
         operation being processed. If the operation is not isolated, it may
@@ -314,7 +314,7 @@ another existing `OpPassManager` via the `nest<>` method. This method takes the
 operation type that the nested pass manager will operate on. At the top-level, a
 `PassManager` acts as an `OpPassManager`. Nesting in this sense, corresponds to
 the [structural](Tutorials/UnderstandingTheIRStructure.md) nesting within
-[Regions](LangRef.md#regions) of the IR.
+[Regions](LangRef.md/#regions) of the IR.
 
 For example, the following `.mlir`:
 
@@ -393,7 +393,7 @@ program has been run through the passes. This provides several benefits:
 In some situations it may be useful to run a pass pipeline within another pass,
 to allow configuring or filtering based on some invariants of the current
 operation being operated on. For example, the
-[Inliner Pass](Passes.md#-inline-inline-function-calls) may want to run
+[Inliner Pass](Passes.md/#-inline-inline-function-calls) may want to run
 intraprocedural simplification passes while it is inlining to produce a better
 cost model, and provide more optimal inlining. To enable this, passes may run an
 arbitrary `OpPassManager` on the current operation being operated on or any
@@ -1126,6 +1126,21 @@ func @simple_constant() -> (i32, i32) {
 }
 ```
 
+*   `print-ir-after-failure`
+    *   Only print IR after a pass failure.
+    *   This option should *not* be used with the other `print-ir-after` flags
+        above.
+
+```shell
+$ mlir-opt foo.mlir -pass-pipeline='func(cse,bad-pass)' -print-ir-failure
+
+*** IR Dump After BadPass Failed ***
+func @simple_constant() -> (i32, i32) {
+  %c1_i32 = constant 1 : i32
+  return %c1_i32, %c1_i32 : i32, i32
+}
+```
+
 *   `print-ir-module-scope`
     *   Always print the top-level module operation, regardless of pass type or
         operation nesting level.
@@ -1198,11 +1213,14 @@ useful for situations where the crash is known to be within a specific pass, or
 when the original input relies on components (like dialects or passes) that may
 not always be available.
 
+Note: Local reproducer generation requires that multi-threading is
+disabled(`-mlir-disable-threading`)
+
 For example, if the failure in the previous example came from `canonicalize`,
 the following reproducer will be generated:
 
 ```mlir
-// configuration: -pass-pipeline='func(canonicalize)' -verify-each
+// configuration: -pass-pipeline='func(canonicalize)' -verify-each -mlir-disable-threading
 
 module {
   func @foo() {

@@ -33,4 +33,10 @@ using Test = ::testing::Test;
 #define EXPECT_STREQ(X, Y) EXPECT_EQ(strcmp(X, Y), 0)
 #endif
 
+#if SCUDO_FUCHSIA
+#define SKIP_ON_FUCHSIA(T) DISABLED_##T
+#else
+#define SKIP_ON_FUCHSIA(T) T
+#endif
+
 extern bool UseQuarantine;

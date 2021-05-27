@@ -45,6 +45,16 @@ add_mlir_dialect_python_bindings(MLIRBindingsPythonTensorOps
   DIALECT_NAME tensor)
 add_dependencies(MLIRBindingsPythonSources MLIRBindingsPythonTensorOps)
 
+add_mlir_dialect_python_bindings(MLIRBindingsPythonTosaOps
+  TD_FILE TosaOps.td
+  DIALECT_NAME tosa)
+add_dependencies(MLIRBindingsPythonSources MLIRBindingsPythonTosaOps)
+
+add_mlir_dialect_python_bindings(MLIRBindingsPythonVectorOps
+  TD_FILE VectorOps.td
+  DIALECT_NAME vector)
+add_dependencies(MLIRBindingsPythonSources MLIRBindingsPythonVectorOps)
+
 ################################################################################
 # Installation.
 ################################################################################

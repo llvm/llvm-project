@@ -18,7 +18,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 
-#include <ctype.h>
+#include <cctype>
 #include <locale>
 #include <memory>
 

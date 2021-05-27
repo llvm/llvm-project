@@ -13,7 +13,7 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
 
-class RenameThisSampleTestTestCase(TestBase):
+class TestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
@@ -24,16 +24,6 @@ class RenameThisSampleTestTestCase(TestBase):
         self.main_source_file = lldb.SBFileSpec("main.cpp")
         self.first_initializer_line = line_number("main.cpp", "Set the before constructor breakpoint here")
         self.second_initializer_line = line_number("main.cpp", "Set the after constructor breakpoint here")
-        self.sample_test()
-
-    def setUp(self):
-        # Call super's setUp().
-        TestBase.setUp(self)
-        # Set up your test case here. If your test doesn't need any set up then
-        # remove this method from your TestCase class.
-
-    def sample_test(self):
-        """You might use the test implementation in several ways, say so here."""
 
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
                                    " Set a breakpoint here to get started", self.main_source_file)

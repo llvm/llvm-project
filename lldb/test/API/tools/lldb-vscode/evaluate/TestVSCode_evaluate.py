@@ -39,7 +39,11 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
             [
                 line_number(source, "// breakpoint 1"),
                 line_number(source, "// breakpoint 2"),
-                line_number(source, "// breakpoint 3")
+                line_number(source, "// breakpoint 3"),
+                line_number(source, "// breakpoint 4"),
+                line_number(source, "// breakpoint 5"),
+                line_number(source, "// breakpoint 6"),
+                line_number(source, "// breakpoint 7"),
             ]
         )
         self.continue_to_next_stop()
@@ -131,6 +135,20 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
             self.assertEvaluateFailure("var + 1")
             self.assertEvaluateFailure("foo_func")
             self.assertEvaluateFailure("foo_var")
+
+        # Now we check that values are updated after stepping
+        self.continue_to_next_stop()
+        self.assertEvaluate("my_vec", "size=2")
+        self.continue_to_next_stop()
+        self.assertEvaluate("my_vec", "size=3")
+
+        self.assertEvaluate("my_map", "size=2")
+        self.continue_to_next_stop()
+        self.assertEvaluate("my_map", "size=3")
+        
+        self.assertEvaluate("my_bool_vec", "size=1")
+        self.continue_to_next_stop()
+        self.assertEvaluate("my_bool_vec", "size=2")
 
     @skipIfWindows
     @skipIfRemote

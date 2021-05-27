@@ -9,7 +9,7 @@
 #ifndef LLDB_API_SBCOMMANDRETURNOBJECT_H
 #define LLDB_API_SBCOMMANDRETURNOBJECT_H
 
-#include <stdio.h>
+#include <cstdio>
 
 #include <memory>
 

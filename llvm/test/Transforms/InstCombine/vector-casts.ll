@@ -411,3 +411,145 @@ define <2 x i64> @zext_less_casting_with_wideop(<2 x i64> %x, <2 x i64> %y) {
   ret <2 x i64> %r
 }
 
+define <4 x float> @sitofp_shuf(<4 x i32> %x) {
+; CHECK-LABEL: @sitofp_shuf(
+; CHECK-NEXT:    [[TMP1:%.*]] = sitofp <4 x i32> [[X:%.*]] to <4 x float>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> undef, <4 x i32> <i32 1, i32 2, i32 3, i32 undef>
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %s = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 undef>
+  %r = sitofp <4 x i32> %s to <4 x float>
+  ret <4 x float> %r
+}
+
+define <3 x half> @uitofp_shuf(<3 x i16> %x) {
+; CHECK-LABEL: @uitofp_shuf(
+; CHECK-NEXT:    [[TMP1:%.*]] = uitofp <3 x i16> [[X:%.*]] to <3 x half>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x half> [[TMP1]], <3 x half> undef, <3 x i32> <i32 2, i32 undef, i32 0>
+; CHECK-NEXT:    ret <3 x half> [[R]]
+;
+  %s = shufflevector <3 x i16> %x, <3 x i16> poison, <3 x i32> <i32 2, i32 undef, i32 0>
+  %r = uitofp <3 x i16> %s to <3 x half>
+  ret <3 x half> %r
+}
+
+define <4 x i64> @fptosi_shuf(<4 x double> %x) {
+; CHECK-LABEL: @fptosi_shuf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptosi <4 x double> [[X:%.*]] to <4 x i64>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> undef, <4 x i32> <i32 undef, i32 2, i32 3, i32 undef>
+; CHECK-NEXT:    ret <4 x i64> [[R]]
+;
+  %s = shufflevector <4 x double> %x, <4 x double> poison, <4 x i32> <i32 undef, i32 2, i32 3, i32 undef>
+  %r = fptosi <4 x double> %s to <4 x i64>
+  ret <4 x i64> %r
+}
+
+define <2 x i32> @fptoui_shuf(<2 x float> %x) {
+; CHECK-LABEL: @fptoui_shuf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptoui <2 x float> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> undef, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %s = shufflevector <2 x float> %x, <2 x float> poison, <2 x i32> <i32 1, i32 1>
+  %r = fptoui <2 x float> %s to <2 x i32>
+  ret <2 x i32> %r
+}
+
+; negative test
+; TODO: Should we reduce the width of the shuffle?
+
+define <4 x half> @narrowing_sitofp_shuf(<4 x i32> %x) {
+; CHECK-LABEL: @narrowing_sitofp_shuf(
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 undef>
+; CHECK-NEXT:    [[R:%.*]] = sitofp <4 x i32> [[S]] to <4 x half>
+; CHECK-NEXT:    ret <4 x half> [[R]]
+;
+  %s = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 undef>
+  %r = sitofp <4 x i32> %s to <4 x half>
+  ret <4 x half> %r
+}
+
+; negative test
+
+define <4 x double> @widening_uitofp_shuf(<4 x i32> %x) {
+; CHECK-LABEL: @widening_uitofp_shuf(
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 undef>
+; CHECK-NEXT:    [[R:%.*]] = uitofp <4 x i32> [[S]] to <4 x double>
+; CHECK-NEXT:    ret <4 x double> [[R]]
+;
+  %s = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 undef>
+  %r = uitofp <4 x i32> %s to <4 x double>
+  ret <4 x double> %r
+}
+
+; negative test
+
+define <3 x i64> @fptosi_narrowing_shuf(<4 x double> %x) {
+; CHECK-LABEL: @fptosi_narrowing_shuf(
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x double> [[X:%.*]], <4 x double> poison, <3 x i32> <i32 undef, i32 2, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = fptosi <3 x double> [[S]] to <3 x i64>
+; CHECK-NEXT:    ret <3 x i64> [[R]]
+;
+  %s = shufflevector <4 x double> %x, <4 x double> poison, <3 x i32> <i32 undef, i32 2, i32 3>
+  %r = fptosi <3 x double> %s to <3 x i64>
+  ret <3 x i64> %r
+}
+
+; negative test
+; TODO: Should we reduce the width of the cast?
+
+define <3 x i32> @fptoui_widening_shuf(<2 x float> %x) {
+; CHECK-LABEL: @fptoui_widening_shuf(
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> poison, <3 x i32> <i32 1, i32 1, i32 0>
+; CHECK-NEXT:    [[R:%.*]] = fptoui <3 x float> [[S]] to <3 x i32>
+; CHECK-NEXT:    ret <3 x i32> [[R]]
+;
+  %s = shufflevector <2 x float> %x, <2 x float> poison, <3 x i32> <i32 1, i32 1, i32 0>
+  %r = fptoui <3 x float> %s to <3 x i32>
+  ret <3 x i32> %r
+}
+
+; negative test
+; TODO: Should we reduce the width of the cast?
+
+define <4 x half> @narrowing_sitofp_widening_shuf(<2 x i32> %x) {
+; CHECK-LABEL: @narrowing_sitofp_widening_shuf(
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x i32> [[X:%.*]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 0, i32 undef>
+; CHECK-NEXT:    [[R:%.*]] = sitofp <4 x i32> [[S]] to <4 x half>
+; CHECK-NEXT:    ret <4 x half> [[R]]
+;
+  %s = shufflevector <2 x i32> %x, <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 0, i32 undef>
+  %r = sitofp <4 x i32> %s to <4 x half>
+  ret <4 x half> %r
+}
+
+declare void @use(<4 x i32>)
+
+; negative test
+
+define <4 x float> @sitofp_shuf_extra_use(<4 x i32> %x) {
+; CHECK-LABEL: @sitofp_shuf_extra_use(
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 undef>
+; CHECK-NEXT:    call void @use(<4 x i32> [[S]])
+; CHECK-NEXT:    [[R:%.*]] = sitofp <4 x i32> [[S]] to <4 x float>
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %s = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 undef>
+  call void @use(<4 x i32> %s)
+  %r = sitofp <4 x i32> %s to <4 x float>
+  ret <4 x float> %r
+}
+
+; negative test
+; TODO: Allow scalable vectors?
+
+define <vscale x 4 x float> @sitofp_shuf_scalable(<vscale x 4 x i32> %x) {
+; CHECK-LABEL: @sitofp_shuf_scalable(
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <vscale x 4 x i32> [[X:%.*]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = sitofp <vscale x 4 x i32> [[S]] to <vscale x 4 x float>
+; CHECK-NEXT:    ret <vscale x 4 x float> [[R]]
+;
+  %s = shufflevector <vscale x 4 x i32> %x, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %r = sitofp <vscale x 4 x i32> %s to <vscale x 4 x float>
+  ret <vscale x 4 x float> %r
+}

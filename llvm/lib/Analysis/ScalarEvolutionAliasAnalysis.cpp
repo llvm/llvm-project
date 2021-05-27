@@ -19,6 +19,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/InitializePasses.h"
 using namespace llvm;
 
@@ -115,6 +116,13 @@ Value *SCEVAAResult::GetBaseValue(const SCEV *S) {
   }
   // No Identified object found.
   return nullptr;
+}
+
+bool SCEVAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
+                              FunctionAnalysisManager::Invalidator &Inv) {
+  // We don't care if this analysis itself is preserved, it has no state. But
+  // we need to check that the analyses it depends on have been.
+  return Inv.invalidate<ScalarEvolutionAnalysis>(Fn, PA);
 }
 
 AnalysisKey SCEVAA::Key;

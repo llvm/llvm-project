@@ -18,7 +18,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/TargetParser.h"
+#include <cstdint>
 #include <cstring>
+#include <limits>
 
 namespace clang {
 namespace targets {
@@ -142,16 +144,83 @@ bool M68kTargetInfo::validateAsmConstraint(
   switch (*Name) {
   case 'a': // address register
   case 'd': // data register
-  case 'f': // floating point register
     info.setAllowsRegister();
     return true;
-  case 'K': // the constant 1
-  case 'L': // constant -1^20 .. 1^19
-  case 'M': // constant 1-4:
+  case 'I': // constant integer in the range [1,8]
+    info.setRequiresImmediate(1, 8);
     return true;
+  case 'J': // constant signed 16-bit integer
+    info.setRequiresImmediate(std::numeric_limits<int16_t>::min(),
+                              std::numeric_limits<int16_t>::max());
+    return true;
+  case 'K': // constant that is NOT in the range of [-0x80, 0x80)
+    info.setRequiresImmediate();
+    return true;
+  case 'L': // constant integer in the range [-8,-1]
+    info.setRequiresImmediate(-8, -1);
+    return true;
+  case 'M': // constant that is NOT in the range of [-0x100, 0x100]
+    info.setRequiresImmediate();
+    return true;
+  case 'N': // constant integer in the range [24,31]
+    info.setRequiresImmediate(24, 31);
+    return true;
+  case 'O': // constant integer 16
+    info.setRequiresImmediate(16);
+    return true;
+  case 'P': // constant integer in the range [8,15]
+    info.setRequiresImmediate(8, 15);
+    return true;
+  case 'C':
+    ++Name;
+    switch (*Name) {
+    case '0': // constant integer 0
+      info.setRequiresImmediate(0);
+      return true;
+    case 'i': // constant integer
+    case 'j': // integer constant that doesn't fit in 16 bits
+      info.setRequiresImmediate();
+      return true;
+    default:
+      break;
+    }
+    break;
+  default:
+    break;
   }
-  // FIXME: Support all constraints like 'N', 'O', 'P', 'R'
   return false;
+}
+
+llvm::Optional<std::string>
+M68kTargetInfo::handleAsmEscapedChar(char EscChar) const {
+  char C;
+  switch (EscChar) {
+  case '.':
+  case '#':
+    C = EscChar;
+    break;
+  case '/':
+    C = '%';
+    break;
+  case '$':
+    C = 's';
+    break;
+  case '&':
+    C = 'd';
+    break;
+  default:
+    return llvm::None;
+  }
+
+  return std::string(1, C);
+}
+
+std::string M68kTargetInfo::convertConstraint(const char *&Constraint) const {
+  if (*Constraint == 'C')
+    // Two-character constraint; add "^" hint for later parsing
+    return std::string("^") + std::string(Constraint++, 2);
+
+  return std::string(1, *Constraint);
 }
 
 const char *M68kTargetInfo::getClobbers() const {

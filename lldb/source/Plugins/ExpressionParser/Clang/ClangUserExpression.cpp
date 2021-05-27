@@ -8,7 +8,7 @@
 
 #include "lldb/Host/Config.h"
 
-#include <stdio.h>
+#include <cstdio>
 #if HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
@@ -352,16 +352,17 @@ bool ClangUserExpression::SetupPersistentState(DiagnosticManager &diagnostic_man
 
 static void SetupDeclVendor(ExecutionContext &exe_ctx, Target *target,
                             DiagnosticManager &diagnostic_manager) {
-  ClangModulesDeclVendor *decl_vendor = target->GetClangModulesDeclVendor();
-  if (!decl_vendor)
-    return;
-
   if (!target->GetEnableAutoImportClangModules())
     return;
 
   auto *persistent_state = llvm::cast<ClangPersistentVariables>(
       target->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC));
   if (!persistent_state)
+    return;
+
+  std::shared_ptr<ClangModulesDeclVendor> decl_vendor =
+      persistent_state->GetClangModulesDeclVendor();
+  if (!decl_vendor)
     return;
 
   StackFrame *frame = exe_ctx.GetFramePtr();

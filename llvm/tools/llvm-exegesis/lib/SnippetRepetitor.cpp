@@ -11,6 +11,7 @@
 
 #include "SnippetRepetitor.h"
 #include "Target.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 
@@ -24,8 +25,8 @@ public:
 
   // Repeats the snippet until there are at least MinInstructions in the
   // resulting code.
-  FillFunction Repeat(ArrayRef<MCInst> Instructions,
-                      unsigned MinInstructions) const override {
+  FillFunction Repeat(ArrayRef<MCInst> Instructions, unsigned MinInstructions,
+                      unsigned LoopBodySize) const override {
     return [Instructions, MinInstructions](FunctionFiller &Filler) {
       auto Entry = Filler.getEntry();
       if (!Instructions.empty()) {
@@ -53,17 +54,26 @@ public:
             State.getTargetMachine().getTargetTriple())) {}
 
   // Loop over the snippet ceil(MinInstructions / Instructions.Size()) times.
-  FillFunction Repeat(ArrayRef<MCInst> Instructions,
-                      unsigned MinInstructions) const override {
-    return [this, Instructions, MinInstructions](FunctionFiller &Filler) {
+  FillFunction Repeat(ArrayRef<MCInst> Instructions, unsigned MinInstructions,
+                      unsigned LoopBodySize) const override {
+    return [this, Instructions, MinInstructions,
+            LoopBodySize](FunctionFiller &Filler) {
       const auto &ET = State.getExegesisTarget();
       auto Entry = Filler.getEntry();
       auto Loop = Filler.addBasicBlock();
       auto Exit = Filler.addBasicBlock();
 
+      const unsigned LoopUnrollFactor =
+          LoopBodySize <= Instructions.size()
+              ? 1
+              : divideCeil(LoopBodySize, Instructions.size());
+      assert(LoopUnrollFactor >= 1 && "Should end up with at least 1 snippet.");
+
       // Set loop counter to the right value:
-      const APInt LoopCount(32, (MinInstructions + Instructions.size() - 1) /
-                                    Instructions.size());
+      const APInt LoopCount(
+          32,
+          divideCeil(MinInstructions, LoopUnrollFactor * Instructions.size()));
+      assert(LoopCount.uge(1) && "Trip count should be at least 1.");
       for (const MCInst &Inst :
            ET.setRegTo(State.getSubtargetInfo(), LoopCounter, LoopCount))
         Entry.addInstruction(Inst);
@@ -78,7 +88,10 @@ public:
         Loop.MBB->addLiveIn(Reg);
       for (const auto &LiveIn : Entry.MBB->liveins())
         Loop.MBB->addLiveIn(LiveIn);
-      Loop.addInstructions(Instructions);
+      for (auto _ : seq(0U, LoopUnrollFactor)) {
+        (void)_;
+        Loop.addInstructions(Instructions);
+      }
       ET.decrementLoopCounterAndJump(*Loop.MBB, *Loop.MBB,
                                      State.getInstrInfo());
 

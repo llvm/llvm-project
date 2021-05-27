@@ -23,7 +23,7 @@ int main(int argc, const char **argv) {
   return 0;
 }
 
-// DexExpectWatchValue('s.a[0]', '0', on_line='asan')
-// DexExpectWatchValue('s.a[1]', '1', on_line='asan')
-// DexExpectWatchValue('s.a[7]', '7', on_line='asan')
+// DexExpectWatchValue('s.a[0]', '0', on_line=ref('asan'))
+// DexExpectWatchValue('s.a[1]', '1', on_line=ref('asan'))
+// DexExpectWatchValue('s.a[7]', '7', on_line=ref('asan'))
 

@@ -14,4 +14,4 @@ int main() {
 }
 
 // DexLabel('test', on_line=13)
-// DexExpectWatchValue('result', '0', on_line='test')
+// DexExpectWatchValue('result', '0', on_line=ref('test'))

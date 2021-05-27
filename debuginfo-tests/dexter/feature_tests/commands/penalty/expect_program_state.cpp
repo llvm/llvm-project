@@ -24,7 +24,7 @@ DexExpectProgramState({
     'frames': [
         {
             'location': {
-                'lineno': 'check'
+                'lineno': ref('check')
             },
             'watches': {
                 'lhs': '0', 'rhs': '0'

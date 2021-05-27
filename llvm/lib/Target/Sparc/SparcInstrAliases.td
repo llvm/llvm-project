@@ -444,6 +444,7 @@ def : InstAlias<"mov $asr, $rd", (RDASR IntRegs:$rd, ASRRegs:$asr), 0>;
 def : InstAlias<"mov %psr, $rd", (RDPSR IntRegs:$rd), 0>;
 def : InstAlias<"mov %wim, $rd", (RDWIM IntRegs:$rd), 0>;
 def : InstAlias<"mov %tbr, $rd", (RDTBR IntRegs:$rd), 0>;
+def : InstAlias<"mov %pc, $rd", (RDPC IntRegs:$rd), 0>;
 
 // mov reg_or_imm, specialreg -> wr %g0, reg_or_imm, specialreg
 def : InstAlias<"mov $rs2, $asr", (WRASRrr ASRRegs:$asr, G0, IntRegs:$rs2), 0>;
@@ -491,6 +492,7 @@ def : MnemonicAlias<"stsh", "sth">;
 
 def : MnemonicAlias<"stuha", "stha">;
 def : MnemonicAlias<"stsha", "stha">;
+def : MnemonicAlias<"stw", "st">, Requires<[HasV9]>;
 
 def : MnemonicAlias<"lduw", "ld">, Requires<[HasV9]>;
 def : MnemonicAlias<"lduwa", "lda">, Requires<[HasV9]>;

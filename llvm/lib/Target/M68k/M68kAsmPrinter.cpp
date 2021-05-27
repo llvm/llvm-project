@@ -18,6 +18,7 @@
 
 #include "M68k.h"
 #include "M68kMachineFunction.h"
+#include "MCTargetDesc/M68kInstPrinter.h"
 #include "TargetInfo/M68kTargetInfo.h"
 
 #include "llvm/Support/TargetRegistry.h"
@@ -31,6 +32,48 @@ bool M68kAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   MCInstLowering = std::make_unique<M68kMCInstLower>(MF, *this);
   AsmPrinter::runOnMachineFunction(MF);
   return true;
+}
+
+void M68kAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
+                                  raw_ostream &OS) {
+  const MachineOperand &MO = MI->getOperand(OpNum);
+  switch (MO.getType()) {
+  case MachineOperand::MO_Register:
+    OS << "%" << M68kInstPrinter::getRegisterName(MO.getReg());
+    break;
+  case MachineOperand::MO_Immediate:
+    OS << '#' << MO.getImm();
+    break;
+  case MachineOperand::MO_MachineBasicBlock:
+    MO.getMBB()->getSymbol()->print(OS, MAI);
+    break;
+  case MachineOperand::MO_GlobalAddress:
+    PrintSymbolOperand(MO, OS);
+    break;
+  case MachineOperand::MO_BlockAddress:
+    GetBlockAddressSymbol(MO.getBlockAddress())->print(OS, MAI);
+    break;
+  case MachineOperand::MO_ConstantPoolIndex: {
+    const DataLayout &DL = getDataLayout();
+    OS << DL.getPrivateGlobalPrefix() << "CPI" << getFunctionNumber() << '_'
+       << MO.getIndex();
+    break;
+  }
+  default:
+    llvm_unreachable("not implemented");
+  }
+}
+
+bool M68kAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                                     const char *ExtraCode, raw_ostream &OS) {
+  // Print the operand if there is no operand modifier.
+  if (!ExtraCode || !ExtraCode[0]) {
+    printOperand(MI, OpNo, OS);
+    return false;
+  }
+
+  // Fallback to the default implementation.
+  return AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS);
 }
 
 void M68kAsmPrinter::emitInstruction(const MachineInstr *MI) {

@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
@@ -1627,6 +1628,23 @@ MachineBasicBlock::livein_iterator MachineBasicBlock::livein_begin() const {
       MachineFunctionProperties::Property::TracksLiveness) &&
       "Liveness information is accurate");
   return LiveIns.begin();
+}
+
+MachineBasicBlock::liveout_iterator MachineBasicBlock::liveout_begin() const {
+  const MachineFunction &MF = *getParent();
+  assert(MF.getProperties().hasProperty(
+      MachineFunctionProperties::Property::TracksLiveness) &&
+      "Liveness information is accurate");
+
+  const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
+  MCPhysReg ExceptionPointer = 0, ExceptionSelector = 0;
+  if (MF.getFunction().hasPersonalityFn()) {
+    auto PersonalityFn = MF.getFunction().getPersonalityFn();
+    ExceptionPointer = TLI.getExceptionPointerRegister(PersonalityFn);
+    ExceptionSelector = TLI.getExceptionSelectorRegister(PersonalityFn);
+  }
+
+  return liveout_iterator(*this, ExceptionPointer, ExceptionSelector, false);
 }
 
 const MBBSectionID MBBSectionID::ColdSectionID(MBBSectionID::SectionType::Cold);

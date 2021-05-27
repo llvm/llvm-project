@@ -3,6 +3,7 @@
 # RUN: cd %S/Inputs
 # RUN: yaml2obj %s -o %t.obj
 # RUN: lld-link %t.obj -out:%t.exe -debug -pdb:%t.pdb -nodefaultlib -entry:main 2>&1 | FileCheck %s
+# RUN: lld-link %t.obj -out:%t.exe -debug:ghash -pdb:%t.pdb -nodefaultlib -entry:main 2>&1 | FileCheck %s
 # RUN: cd %S
 
 # CHECK: warning: Cannot use debug info for '{{.*}}.obj'

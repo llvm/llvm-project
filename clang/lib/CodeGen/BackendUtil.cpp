@@ -558,15 +558,6 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.UniqueSectionNames = CodeGenOpts.UniqueSectionNames;
   Options.UniqueBasicBlockSectionNames =
       CodeGenOpts.UniqueBasicBlockSectionNames;
-  Options.StackProtectorGuard =
-      llvm::StringSwitch<llvm::StackProtectorGuards>(
-          CodeGenOpts.StackProtectorGuard)
-          .Case("tls", llvm::StackProtectorGuards::TLS)
-          .Case("global", llvm::StackProtectorGuards::Global)
-          .Case("sysreg", llvm::StackProtectorGuards::SysReg)
-          .Default(llvm::StackProtectorGuards::None);
-  Options.StackProtectorGuardOffset = CodeGenOpts.StackProtectorGuardOffset;
-  Options.StackProtectorGuardReg = CodeGenOpts.StackProtectorGuardReg;
   Options.TLSSize = CodeGenOpts.TLSSize;
   Options.EmulatedTLS = CodeGenOpts.EmulatedTLS;
   Options.ExplicitEmulatedTLS = CodeGenOpts.ExplicitEmulatedTLS;
@@ -736,9 +727,7 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
                            addBoundsCheckingPass);
   }
 
-  if (CodeGenOpts.SanitizeCoverageType ||
-      CodeGenOpts.SanitizeCoverageIndirectCalls ||
-      CodeGenOpts.SanitizeCoverageTraceCmp) {
+  if (CodeGenOpts.hasSanitizeCoverage()) {
     PMBuilder.addExtension(PassManagerBuilder::EP_OptimizerLast,
                            addSanitizerCoveragePass);
     PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
@@ -873,10 +862,6 @@ static void setCommandLineOpts(const CodeGenOptions &CodeGenOpts) {
   if (!CodeGenOpts.DebugPass.empty()) {
     BackendArgs.push_back("-debug-pass");
     BackendArgs.push_back(CodeGenOpts.DebugPass.c_str());
-    // New PM supports structure dumping. Old PM is still used for codegen,
-    // so we need to pass both options.
-    if (!CodeGenOpts.LegacyPassManager && CodeGenOpts.DebugPass == "Structure")
-      BackendArgs.push_back("-debug-pass-structure");
   }
   if (!CodeGenOpts.LimitFloatPrecision.empty()) {
     BackendArgs.push_back("-limit-float-precision");
@@ -1112,9 +1097,7 @@ static void addSanitizers(const Triple &TargetTriple,
                           const LangOptions &LangOpts, PassBuilder &PB) {
   PB.registerOptimizerLastEPCallback([&](ModulePassManager &MPM,
                                          PassBuilder::OptimizationLevel Level) {
-    if (CodeGenOpts.SanitizeCoverageType ||
-        CodeGenOpts.SanitizeCoverageIndirectCalls ||
-        CodeGenOpts.SanitizeCoverageTraceCmp) {
+    if (CodeGenOpts.hasSanitizeCoverage()) {
       auto SancovOpts = getSancovOptsFromCGOpts(CodeGenOpts);
       MPM.addPass(ModuleSanitizerCoveragePass(
           SancovOpts, CodeGenOpts.SanitizeCoverageAllowlistFiles,
@@ -1284,8 +1267,14 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
 
+  bool DebugPassStructure = CodeGenOpts.DebugPass == "Structure";
   PassInstrumentationCallbacks PIC;
-  StandardInstrumentations SI(CodeGenOpts.DebugPassManager);
+  PrintPassOptions PrintPassOpts;
+  PrintPassOpts.Indent = DebugPassStructure;
+  PrintPassOpts.SkipAnalyses = DebugPassStructure;
+  StandardInstrumentations SI(CodeGenOpts.DebugPassManager ||
+                                  DebugPassStructure,
+                              /*VerifyEach*/ false, PrintPassOpts);
   SI.registerCallbacks(PIC, &FAM);
   PassBuilder PB(TM.get(), PTO, PGOOpt, &PIC);
 

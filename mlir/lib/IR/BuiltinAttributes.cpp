@@ -196,6 +196,10 @@ DictionaryAttr DictionaryAttr::getEmptyUnchecked(MLIRContext *context) {
   return Base::get(context, ArrayRef<NamedAttribute>());
 }
 
+StringAttr StringAttr::getEmptyStringAttrUnchecked(MLIRContext *context) {
+  return Base::get(context, "", NoneType::get(context));
+}
+
 //===----------------------------------------------------------------------===//
 // FloatAttr
 //===----------------------------------------------------------------------===//
@@ -257,6 +261,14 @@ int64_t IntegerAttr::getSInt() const {
 uint64_t IntegerAttr::getUInt() const {
   assert(getType().isUnsignedInteger() && "must be unsigned integer");
   return getValue().getZExtValue();
+}
+
+/// Return the value as an APSInt which carries the signed from the type of
+/// the attribute.  This traps on signless integers types!
+APSInt IntegerAttr::getAPSInt() const {
+  assert(!getType().isSignlessInteger() &&
+         "Signless integers don't carry a sign for APSInt");
+  return APSInt(getValue(), getType().isUnsignedInteger());
 }
 
 LogicalResult IntegerAttr::verify(function_ref<InFlightDiagnostic()> emitError,

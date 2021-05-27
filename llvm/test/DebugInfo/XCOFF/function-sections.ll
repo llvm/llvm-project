@@ -72,7 +72,7 @@ entry:
 ; CHECK-NEXT:          .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack
 ; CHECK-NEXT:          .vbyte  4, L..foo0-.foo[PR]             # Function size
 ; CHECK-NEXT:          .vbyte  2, 0x0003                       # Function name len = 3
-; CHECK-NEXT:          .byte   'f,'o,'o                        # Function Name
+; CHECK-NEXT:          .byte   "foo"                           # Function Name
 ; CHECK-NEXT:  L..func_end0:
 ; CHECK-NEXT:                                          # -- End function
 ; CHECK-NEXT:          .csect .bar[PR],2
@@ -108,7 +108,7 @@ entry:
 ; CHECK-NEXT:          .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack
 ; CHECK-NEXT:          .vbyte  4, L..bar0-.bar[PR]             # Function size
 ; CHECK-NEXT:          .vbyte  2, 0x0003                       # Function name len = 3
-; CHECK-NEXT:          .byte   'b,'a,'r                        # Function Name
+; CHECK-NEXT:          .byte   "bar"                           # Function Name
 ; CHECK-NEXT:  L..func_end1:
 ; CHECK-NEXT:                                          # -- End function
 ; CHECK-NEXT:  L..sec_end0:
@@ -222,17 +222,17 @@ entry:
 ; CHECK:               .dwsect 0x70000
 ; CHECK-NEXT:  L...dwstr:
 ; CHECK-NEXT:  L..info_string0:
-; CHECK-NEXT:          .byte   'c,'l,'a,'n,'g,' ,'v,'e,'r,'s,'i,'o,'n,' ,'1,'3,'.,'0,'.,'0,0000 # string offset=0
+; CHECK-NEXT:          .string "clang version 13.0.0"          # string offset=0
 ; CHECK-NEXT:  L..info_string1:
-; CHECK-NEXT:          .byte   '1,'.,'c,0000                   # string offset=21
+; CHECK-NEXT:          .string "1.c"                           # string offset=21
 ; CHECK-NEXT:  L..info_string2:
-; CHECK-NEXT:          .byte   'd,'e,'b,'u,'g,0000             # string offset=25
+; CHECK-NEXT:          .string "debug"                         # string offset=25
 ; CHECK-NEXT:  L..info_string3:
-; CHECK-NEXT:          .byte   'f,'o,'o,0000                   # string offset=31
+; CHECK-NEXT:          .string "foo"                           # string offset=31
 ; CHECK-NEXT:  L..info_string4:
-; CHECK-NEXT:          .byte   'i,'n,'t,0000                   # string offset=35
+; CHECK-NEXT:          .string "int"                           # string offset=35
 ; CHECK-NEXT:  L..info_string5:
-; CHECK-NEXT:          .byte   'b,'a,'r,0000                   # string offset=39
+; CHECK-NEXT:          .string "bar"                           # string offset=39
 ; CHECK-NEXT:          .toc
 ; CHECK:               .dwsect 0x20000
 ; CHECK-NEXT:  L...dwline:
@@ -258,10 +258,10 @@ entry:
 ; CHECK-NEXT:          .byte   0
 ; CHECK-NEXT:          .byte   0
 ; CHECK-NEXT:          .byte   1
-; CHECK-NEXT:          .byte   'd,'e,'b,'u,'g
+; CHECK-NEXT:          .byte   "debug"
 ; CHECK-NEXT:          .byte   0
 ; CHECK-NEXT:          .byte   0
-; CHECK-NEXT:          .byte   '1,'.,'c
+; CHECK-NEXT:          .byte   "1.c"
 ; CHECK-NEXT:          .byte   0
 ; CHECK-NEXT:          .byte   1
 ; CHECK-NEXT:          .byte   0

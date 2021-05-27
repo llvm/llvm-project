@@ -17,8 +17,8 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 
 static llvm::ManagedStatic<lldb_private::SystemLifetimeManager>
     g_debugger_lifetime;

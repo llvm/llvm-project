@@ -356,7 +356,10 @@ void canonicalizeSetAndOperands(IntegerSet *set,
 /// other AffineApplyOps supplying those operands. The operands of the resulting
 /// AffineApplyOp do not change the length of  AffineApplyOp chains.
 AffineApplyOp makeComposedAffineApply(OpBuilder &b, Location loc, AffineMap map,
-                                      ArrayRef<Value> operands);
+                                      ValueRange operands);
+/// Variant of `makeComposedAffineApply` which infers the AffineMap from `e`.
+AffineApplyOp makeComposedAffineApply(OpBuilder &b, Location loc, AffineExpr e,
+                                      ValueRange values);
 
 /// Given an affine map `map` and its input `operands`, this method composes
 /// into `map`, maps of AffineApplyOps whose results are the values in

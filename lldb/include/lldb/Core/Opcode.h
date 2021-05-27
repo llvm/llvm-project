@@ -14,9 +14,9 @@
 
 #include "llvm/Support/SwapByteOrder.h"
 
-#include <assert.h>
-#include <stdint.h>
-#include <string.h>
+#include <cassert>
+#include <cstdint>
+#include <cstring>
 
 namespace lldb {
 class SBInstruction;

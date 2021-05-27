@@ -8,7 +8,7 @@
 
 #include "PlatformDarwin.h"
 
-#include <string.h>
+#include <cstring>
 
 #include <algorithm>
 #include <memory>

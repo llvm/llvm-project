@@ -25,6 +25,7 @@
 #include "clang/Lex/ExternalPreprocessorSource.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/LexDiagnostic.h"
+#include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
@@ -1813,7 +1814,14 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
 
     if (!Tok.isAnnotation() && Tok.getIdentifierInfo())
       Tok.setKind(tok::identifier);
-    else {
+    else if (Tok.is(tok::string_literal) && !Tok.hasUDSuffix()) {
+      StringLiteralParser Literal(Tok, *this);
+      if (Literal.hadError)
+        return;
+
+      Tok.setIdentifierInfo(getIdentifierInfo(Literal.GetString()));
+      Tok.setKind(tok::identifier);
+    } else {
       Diag(Tok.getLocation(), diag::err_pp_identifier_arg_not_identifier)
         << Tok.getKind();
       // Don't walk past anything that's not a real token.

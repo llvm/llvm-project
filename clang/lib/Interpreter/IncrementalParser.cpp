@@ -54,7 +54,8 @@ public:
             Err = llvm::createStringError(
                 std::errc::state_not_recoverable,
                 "Driver initialization failed. "
-                "Incremental mode for action is not supported");
+                "Incremental mode for action %d is not supported",
+                CI.getFrontendOpts().ProgramAction);
             return Act;
           case frontend::ASTDump:
             LLVM_FALLTHROUGH;
@@ -63,6 +64,8 @@ public:
           case frontend::ParseSyntaxOnly:
             Act = CreateFrontendAction(CI);
             break;
+          case frontend::EmitAssembly:
+            LLVM_FALLTHROUGH;
           case frontend::EmitObj:
             LLVM_FALLTHROUGH;
           case frontend::EmitLLVMOnly:

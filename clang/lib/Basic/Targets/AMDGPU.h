@@ -288,10 +288,12 @@ public:
     Opts["__cl_clang_variadic_functions"] = true;
     Opts["__cl_clang_function_pointers"] = true;
     Opts["__cl_clang_non_portable_kernel_param_types"] = true;
+    Opts["__cl_clang_bitfields"] = true;
 
     bool IsAMDGCN = isAMDGCN(getTriple());
 
     Opts["cl_khr_fp64"] = hasFP64();
+    Opts["__opencl_c_fp64"] = hasFP64();
 
     if (IsAMDGCN || GPUKind >= llvm::AMDGPU::GK_CEDAR) {
       Opts["cl_khr_byte_addressable_store"] = true;

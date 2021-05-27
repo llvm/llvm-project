@@ -12,12 +12,13 @@ Python code being embedded within DExTer commands.
 import os
 import unittest
 from copy import copy
-
+from pathlib import PurePath
 from collections import defaultdict, OrderedDict
 
 from dex.utils.Exceptions import CommandParseError
 
 from dex.command.CommandBase import CommandBase
+from dex.command.commands.DexDeclareFile import DexDeclareFile
 from dex.command.commands.DexExpectProgramState import DexExpectProgramState
 from dex.command.commands.DexExpectStepKind import DexExpectStepKind
 from dex.command.commands.DexExpectStepOrder import DexExpectStepOrder
@@ -37,6 +38,7 @@ def _get_valid_commands():
         { name (str): command (class) }
     """
     return {
+      DexDeclareFile.get_name() : DexDeclareFile,
       DexExpectProgramState.get_name() : DexExpectProgramState,
       DexExpectStepKind.get_name() : DexExpectStepKind,
       DexExpectStepOrder.get_name() : DexExpectStepOrder,
@@ -69,7 +71,7 @@ def _merge_subcommands(command_name: str, valid_commands: dict) -> dict:
     return valid_commands
 
 
-def _build_command(command_type, raw_text: str, path: str, lineno: str) -> CommandBase:
+def _build_command(command_type, labels, raw_text: str, path: str, lineno: str) -> CommandBase:
     """Build a command object from raw text.
 
     This function will call eval().
@@ -80,8 +82,18 @@ def _build_command(command_type, raw_text: str, path: str, lineno: str) -> Comma
     Returns:
         A dexter command object.
     """
+    def label_to_line(label_name: str) -> int:
+        line = labels.get(label_name, None)
+        if line != None:
+            return line
+        raise format_unresolved_label_err(label_name, raw_text, path, lineno)
+
     valid_commands = _merge_subcommands(
-        command_type.get_name(), { command_type.get_name(): command_type })
+        command_type.get_name(), {
+            'ref': label_to_line,
+            command_type.get_name(): command_type,
+        })
+
     # pylint: disable=eval-used
     command = eval(raw_text, valid_commands)
     # pylint: enable=eval-used
@@ -89,27 +101,6 @@ def _build_command(command_type, raw_text: str, path: str, lineno: str) -> Comma
     command.path = path
     command.lineno = lineno
     return command
-
-
-def resolve_labels(command: CommandBase, commands: dict):
-    """Attempt to resolve any labels in command"""
-    dex_labels = commands['DexLabel']
-    command_label_args = command.get_label_args()
-    for command_arg in command_label_args:
-        for dex_label in list(dex_labels.values()):
-            if (os.path.samefile(dex_label.path, command.path) and
-                dex_label.eval() == command_arg):
-                command.resolve_label(dex_label.get_as_pair())
-    # labels for command should be resolved by this point.
-    if command.has_labels():
-        syntax_error = SyntaxError()
-        syntax_error.filename = command.path
-        syntax_error.lineno = command.lineno
-        syntax_error.offset = 0
-        syntax_error.msg = 'Unresolved labels'
-        for label in command.get_label_args():
-            syntax_error.msg += ' \'' + label + '\''
-        raise syntax_error
 
 
 def _search_line_for_cmd_start(line: str, start: int, valid_commands: dict) -> int:
@@ -176,6 +167,16 @@ class TextPoint():
         return self.char + 1
 
 
+def format_unresolved_label_err(label: str, src: str, filename: str, lineno) -> CommandParseError:
+    err = CommandParseError()
+    err.src = src
+    err.caret = '' # Don't bother trying to point to the bad label.
+    err.filename = filename
+    err.lineno = lineno
+    err.info = f'Unresolved label: \'{label}\''
+    return err
+
+
 def format_parse_err(msg: str, path: str, lines: list, point: TextPoint) -> CommandParseError:
     err = CommandParseError()
     err.filename = path
@@ -193,10 +194,29 @@ def skip_horizontal_whitespace(line, point):
             return
 
 
-def _find_all_commands_in_file(path, file_lines, valid_commands):
+def add_line_label(labels, label, cmd_path, cmd_lineno):
+    # Enforce unique line labels.
+    if label.eval() in labels:
+        err = CommandParseError()
+        err.info = f'Found duplicate line label: \'{label.eval()}\''
+        err.lineno = cmd_lineno
+        err.filename = cmd_path
+        err.src = label.raw_text
+        # Don't both trying to point to it since we're only printing the raw
+        # command, which isn't much text.
+        err.caret = ''
+        raise err
+    labels[label.eval()] = label.get_line()
+
+
+def _find_all_commands_in_file(path, file_lines, valid_commands, source_root_dir):
+    labels = {} # dict of {name: line}.
+    cmd_path = path
+    declared_files = set()
     commands = defaultdict(dict)
     paren_balance = 0
     region_start = TextPoint(0, 0)
+
     for region_start.line in range(len(file_lines)):
         line = file_lines[region_start.line]
         region_start.char = 0
@@ -222,7 +242,7 @@ def _find_all_commands_in_file(path, file_lines, valid_commands):
             end, paren_balance = _search_line_for_cmd_end(line, region_start.char, paren_balance)
             # Add this text blob to the command.
             cmd_text_list.append(line[region_start.char:end])
-            # Move parse ptr to end of line or parens
+            # Move parse ptr to end of line or parens.
             region_start.char = end
 
             # If the parens are unbalanced start reading the next line in an attempt
@@ -235,8 +255,9 @@ def _find_all_commands_in_file(path, file_lines, valid_commands):
             try:
                 command = _build_command(
                     valid_commands[command_name],
+                    labels,
                     raw_text,
-                    path,
+                    cmd_path,
                     cmd_point.get_lineno(),
                 )
             except SyntaxError as e:
@@ -252,7 +273,17 @@ def _find_all_commands_in_file(path, file_lines, valid_commands):
                 err_point.char += len(command_name)
                 raise format_parse_err(str(e), path, file_lines, err_point)
             else:
-                resolve_labels(command, commands)
+                if type(command) is DexLabel:
+                    add_line_label(labels, command, path, cmd_point.get_lineno())
+                elif type(command) is DexDeclareFile:
+                    cmd_path = command.declared_file
+                    if not os.path.isabs(cmd_path):
+                        source_dir = (source_root_dir if source_root_dir else
+                                      os.path.dirname(path))
+                        cmd_path = os.path.join(source_dir, cmd_path)
+                    # TODO: keep stored paths as PurePaths for 'longer'.
+                    cmd_path = str(PurePath(cmd_path))
+                    declared_files.add(cmd_path)
                 assert (path, cmd_point) not in commands[command_name], (
                     command_name, commands[command_name])
                 commands[command_name][path, cmd_point] = command
@@ -263,32 +294,34 @@ def _find_all_commands_in_file(path, file_lines, valid_commands):
         err_point.char += len(command_name)
         msg = "Unbalanced parenthesis starting here"
         raise format_parse_err(msg, path, file_lines, err_point)
-    return dict(commands)
+    return dict(commands), declared_files
 
-def _find_all_commands(source_files):
+def _find_all_commands(test_files, source_root_dir):
     commands = defaultdict(dict)
     valid_commands = _get_valid_commands()
-    for source_file in source_files:
-        with open(source_file) as fp:
+    new_source_files = set()
+    for test_file in test_files:
+        with open(test_file) as fp:
             lines = fp.readlines()
-        file_commands = _find_all_commands_in_file(source_file, lines,
-                                                   valid_commands)
+        file_commands, declared_files = _find_all_commands_in_file(
+            test_file, lines, valid_commands, source_root_dir)
         for command_name in file_commands:
             commands[command_name].update(file_commands[command_name])
+        new_source_files |= declared_files
 
-    return dict(commands)
+    return dict(commands), new_source_files
 
-def get_command_infos(source_files):
+def get_command_infos(test_files, source_root_dir):
   with Timer('parsing commands'):
       try:
-          commands = _find_all_commands(source_files)
+          commands, new_source_files = _find_all_commands(test_files, source_root_dir)
           command_infos = OrderedDict()
           for command_type in commands:
               for command in commands[command_type].values():
                   if command_type not in command_infos:
                       command_infos[command_type] = []
                   command_infos[command_type].append(command)
-          return OrderedDict(command_infos)
+          return OrderedDict(command_infos), new_source_files
       except CommandParseError as e:
           msg = 'parser error: <d>{}({}):</> {}\n{}\n{}\n'.format(
                 e.filename, e.lineno, e.info, e.src, e.caret)
@@ -326,7 +359,8 @@ class TestParseCommand(unittest.TestCase):
         Returns:
             { cmd_name: { (path, line): command_obj } }
         """
-        return _find_all_commands_in_file(__file__, lines, self.valid_commands)
+        cmds, declared_files = _find_all_commands_in_file(__file__, lines, self.valid_commands, None)
+        return cmds
 
 
     def _find_all_mock_values_in_lines(self, lines):

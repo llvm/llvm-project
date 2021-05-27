@@ -81,6 +81,7 @@ void registerTestLinalgElementwiseFusion();
 void registerTestPushExpandingReshape();
 void registerTestLinalgFusionTransforms();
 void registerTestLinalgTensorFusionTransforms();
+void registerTestLinalgTiledLoopFusionTransforms();
 void registerTestLinalgGreedyFusion();
 void registerTestLinalgHoisting();
 void registerTestLinalgTileAndFuseSequencePass();
@@ -159,6 +160,7 @@ void registerTestPasses() {
   test::registerTestPushExpandingReshape();
   test::registerTestLinalgFusionTransforms();
   test::registerTestLinalgTensorFusionTransforms();
+  test::registerTestLinalgTiledLoopFusionTransforms();
   test::registerTestLinalgGreedyFusion();
   test::registerTestLinalgHoisting();
   test::registerTestLinalgTileAndFuseSequencePass();
@@ -190,7 +192,7 @@ int main(int argc, char **argv) {
 #ifdef MLIR_INCLUDE_TESTS
   test::registerTestDialect(registry);
 #endif
-  return failed(MlirOptMain(argc, argv, "MLIR modular optimizer driver\n",
-                            registry,
-                            /*preloadDialectsInContext=*/false));
+  return mlir::asMainReturnCode(
+      mlir::MlirOptMain(argc, argv, "MLIR modular optimizer driver\n", registry,
+                        /*preloadDialectsInContext=*/false));
 }

@@ -375,3 +375,16 @@ class Bar<0> : public Foo<Z> { // expected-error{{partial specialization of 'Bar
   Bar() : Foo<Z>() {}
 };
 } // namespace
+
+namespace Crash {
+template<typename T>
+class Base {};
+
+template<typename T> class Foo;
+
+template <typename T>
+class Foo<int> : public Base<T> {}; // expected-error{{partial specialization of 'Foo' does not use any of its template parameters}}
+
+// verify that getASTRecordLayout doesn't crash on the ClassTemplateSpecializationDecl.
+constexpr int s = sizeof(Foo<int>);
+}

@@ -118,3 +118,81 @@ define void @vf16(<32 x i16>* %in.vec, <16 x i16>* %out.vec0, <16 x i16>* %out.v
 
   ret void
 }
+
+define void @vf32(<64 x i16>* %in.vec, <32 x i16>* %out.vec0, <32 x i16>* %out.vec1) nounwind {
+; AVX2-SLOW-LABEL: vf32:
+; AVX2-SLOW:       # %bb.0:
+; AVX2-SLOW-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX2-SLOW-NEXT:    vmovdqa 32(%rdi), %ymm1
+; AVX2-SLOW-NEXT:    vmovdqa 64(%rdi), %ymm2
+; AVX2-SLOW-NEXT:    vmovdqa 96(%rdi), %ymm3
+; AVX2-SLOW-NEXT:    vpshuflw {{.*#+}} ymm4 = ymm1[0,2,2,3,4,5,6,7,8,10,10,11,12,13,14,15]
+; AVX2-SLOW-NEXT:    vpshufhw {{.*#+}} ymm4 = ymm4[0,1,2,3,4,6,6,7,8,9,10,11,12,14,14,15]
+; AVX2-SLOW-NEXT:    vpshuflw {{.*#+}} ymm5 = ymm0[0,2,2,3,4,5,6,7,8,10,10,11,12,13,14,15]
+; AVX2-SLOW-NEXT:    vpshufhw {{.*#+}} ymm5 = ymm5[0,1,2,3,4,6,6,7,8,9,10,11,12,14,14,15]
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} ymm4 = ymm5[0,2],ymm4[0,2],ymm5[4,6],ymm4[4,6]
+; AVX2-SLOW-NEXT:    vpermpd {{.*#+}} ymm4 = ymm4[0,2,1,3]
+; AVX2-SLOW-NEXT:    vpshuflw {{.*#+}} ymm5 = ymm3[0,2,2,3,4,5,6,7,8,10,10,11,12,13,14,15]
+; AVX2-SLOW-NEXT:    vpshufhw {{.*#+}} ymm5 = ymm5[0,1,2,3,4,6,6,7,8,9,10,11,12,14,14,15]
+; AVX2-SLOW-NEXT:    vpshuflw {{.*#+}} ymm6 = ymm2[0,2,2,3,4,5,6,7,8,10,10,11,12,13,14,15]
+; AVX2-SLOW-NEXT:    vpshufhw {{.*#+}} ymm6 = ymm6[0,1,2,3,4,6,6,7,8,9,10,11,12,14,14,15]
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} ymm5 = ymm6[0,2],ymm5[0,2],ymm6[4,6],ymm5[4,6]
+; AVX2-SLOW-NEXT:    vpermpd {{.*#+}} ymm5 = ymm5[0,2,1,3]
+; AVX2-SLOW-NEXT:    vmovdqa {{.*#+}} ymm6 = <u,u,u,u,u,u,u,u,2,3,6,7,10,11,14,15,u,u,u,u,u,u,u,u,18,19,22,23,26,27,30,31>
+; AVX2-SLOW-NEXT:    vpshufb %ymm6, %ymm1, %ymm1
+; AVX2-SLOW-NEXT:    vmovdqa {{.*#+}} ymm7 = <2,3,6,7,10,11,14,15,u,u,u,u,u,u,u,u,18,19,22,23,26,27,30,31,u,u,u,u,u,u,u,u>
+; AVX2-SLOW-NEXT:    vpshufb %ymm7, %ymm0, %ymm0
+; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
+; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; AVX2-SLOW-NEXT:    vpshufb %ymm6, %ymm3, %ymm1
+; AVX2-SLOW-NEXT:    vpshufb %ymm7, %ymm2, %ymm2
+; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1],ymm1[2,3],ymm2[4,5],ymm1[6,7]
+; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,1,3]
+; AVX2-SLOW-NEXT:    vmovaps %ymm5, 32(%rsi)
+; AVX2-SLOW-NEXT:    vmovaps %ymm4, (%rsi)
+; AVX2-SLOW-NEXT:    vmovdqa %ymm1, 32(%rdx)
+; AVX2-SLOW-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-SLOW-NEXT:    vzeroupper
+; AVX2-SLOW-NEXT:    retq
+;
+; AVX2-FAST-LABEL: vf32:
+; AVX2-FAST:       # %bb.0:
+; AVX2-FAST-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX2-FAST-NEXT:    vmovdqa 32(%rdi), %ymm1
+; AVX2-FAST-NEXT:    vmovdqa 64(%rdi), %ymm2
+; AVX2-FAST-NEXT:    vmovdqa 96(%rdi), %ymm3
+; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm4 = <0,1,4,5,u,u,u,u,8,9,12,13,u,u,u,u,16,17,20,21,u,u,u,u,24,25,28,29,u,u,u,u>
+; AVX2-FAST-NEXT:    vpshufb %ymm4, %ymm1, %ymm5
+; AVX2-FAST-NEXT:    vpshufb %ymm4, %ymm0, %ymm6
+; AVX2-FAST-NEXT:    vshufps {{.*#+}} ymm5 = ymm6[0,2],ymm5[0,2],ymm6[4,6],ymm5[4,6]
+; AVX2-FAST-NEXT:    vpermpd {{.*#+}} ymm5 = ymm5[0,2,1,3]
+; AVX2-FAST-NEXT:    vpshufb %ymm4, %ymm3, %ymm6
+; AVX2-FAST-NEXT:    vpshufb %ymm4, %ymm2, %ymm4
+; AVX2-FAST-NEXT:    vshufps {{.*#+}} ymm4 = ymm4[0,2],ymm6[0,2],ymm4[4,6],ymm6[4,6]
+; AVX2-FAST-NEXT:    vpermpd {{.*#+}} ymm4 = ymm4[0,2,1,3]
+; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm6 = <u,u,u,u,u,u,u,u,2,3,6,7,10,11,14,15,u,u,u,u,u,u,u,u,18,19,22,23,26,27,30,31>
+; AVX2-FAST-NEXT:    vpshufb %ymm6, %ymm1, %ymm1
+; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm7 = <2,3,6,7,10,11,14,15,u,u,u,u,u,u,u,u,18,19,22,23,26,27,30,31,u,u,u,u,u,u,u,u>
+; AVX2-FAST-NEXT:    vpshufb %ymm7, %ymm0, %ymm0
+; AVX2-FAST-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5],ymm1[6,7]
+; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; AVX2-FAST-NEXT:    vpshufb %ymm6, %ymm3, %ymm1
+; AVX2-FAST-NEXT:    vpshufb %ymm7, %ymm2, %ymm2
+; AVX2-FAST-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0,1],ymm1[2,3],ymm2[4,5],ymm1[6,7]
+; AVX2-FAST-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,1,3]
+; AVX2-FAST-NEXT:    vmovaps %ymm4, 32(%rsi)
+; AVX2-FAST-NEXT:    vmovaps %ymm5, (%rsi)
+; AVX2-FAST-NEXT:    vmovdqa %ymm1, 32(%rdx)
+; AVX2-FAST-NEXT:    vmovdqa %ymm0, (%rdx)
+; AVX2-FAST-NEXT:    vzeroupper
+; AVX2-FAST-NEXT:    retq
+  %wide.vec = load <64 x i16>, <64 x i16>* %in.vec, align 32
+
+  %strided.vec0 = shufflevector <64 x i16> %wide.vec, <64 x i16> poison, <32 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30, i32 32, i32 34, i32 36, i32 38, i32 40, i32 42, i32 44, i32 46, i32 48, i32 50, i32 52, i32 54, i32 56, i32 58, i32 60, i32 62>
+  %strided.vec1 = shufflevector <64 x i16> %wide.vec, <64 x i16> poison, <32 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31, i32 33, i32 35, i32 37, i32 39, i32 41, i32 43, i32 45, i32 47, i32 49, i32 51, i32 53, i32 55, i32 57, i32 59, i32 61, i32 63>
+
+  store <32 x i16> %strided.vec0, <32 x i16>* %out.vec0, align 32
+  store <32 x i16> %strided.vec1, <32 x i16>* %out.vec1, align 32
+
+  ret void
+}

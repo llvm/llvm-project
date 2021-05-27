@@ -7,7 +7,7 @@ target triple = "amdgcn-amd-amdhsa"
 ; for objects in constant address space.
 
 @G10 = addrspace(4) global [10 x i8] zeroinitializer, align 1
-; CHECK: @G10 = addrspace(4) global { [10 x i8], [54 x i8] }
+; CHECK: @G10 = addrspace(4) global { [10 x i8], [22 x i8] }
 
 @G31 = addrspace(4) global [31 x i8] zeroinitializer, align 1
 @G32 = addrspace(4) global [32 x i8] zeroinitializer, align 1

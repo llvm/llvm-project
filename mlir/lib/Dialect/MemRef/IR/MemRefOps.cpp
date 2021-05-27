@@ -18,6 +18,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
 
 using namespace mlir;
@@ -498,32 +499,47 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
 
     Value source = cloneOp.input();
 
-    // Removes the clone operation and the corresponding dealloc and alloc
-    // operation (if any).
-    auto tryRemoveClone = [&](Operation *sourceOp, Operation *dealloc,
-                              Operation *alloc) {
-      if (!sourceOp || !dealloc || !alloc ||
-          alloc->getBlock() != dealloc->getBlock())
-        return false;
-      rewriter.replaceOp(cloneOp, source);
-      rewriter.eraseOp(dealloc);
-      return true;
-    };
+    // This only finds dealloc operations for the immediate value. It should
+    // also consider aliases. That would also make the safety check below
+    // redundant.
+    Operation *cloneDeallocOp = findDealloc(cloneOp.output());
+    Operation *sourceDeallocOp = findDealloc(source);
 
-    // Removes unnecessary clones that are derived from the result of the clone
-    // op.
-    Operation *deallocOp = findDealloc(cloneOp.output());
-    Operation *sourceOp = source.getDefiningOp();
-    if (tryRemoveClone(sourceOp, deallocOp, sourceOp))
-      return success();
+    // If both are deallocated in the same block, their in-block lifetimes
+    // might not fully overlap, so we cannot decide which one to drop.
+    if (cloneDeallocOp && sourceDeallocOp &&
+        cloneDeallocOp->getBlock() == sourceDeallocOp->getBlock())
+      return failure();
 
-    // Removes unnecessary clones that are derived from the source of the clone
-    // op.
-    deallocOp = findDealloc(source);
-    if (tryRemoveClone(sourceOp, deallocOp, cloneOp))
-      return success();
+    Block *currentBlock = cloneOp->getBlock();
+    Operation *redundantDealloc = nullptr;
+    if (cloneDeallocOp && cloneDeallocOp->getBlock() == currentBlock) {
+      redundantDealloc = cloneDeallocOp;
+    } else if (sourceDeallocOp && sourceDeallocOp->getBlock() == currentBlock) {
+      redundantDealloc = sourceDeallocOp;
+    }
 
-    return failure();
+    if (!redundantDealloc)
+      return failure();
+
+    // Safety check that there are no other deallocations inbetween
+    // cloneOp and redundantDealloc, as otherwise we might deallocate an alias
+    // of source before the uses of the clone. With alias information, we could
+    // restrict this to only fail of the dealloc's operand is an alias
+    // of the source.
+    for (Operation *pos = cloneOp->getNextNode(); pos != redundantDealloc;
+         pos = pos->getNextNode()) {
+      auto effectInterface = dyn_cast<MemoryEffectOpInterface>(pos);
+      if (!effectInterface)
+        continue;
+      if (effectInterface.hasEffect<MemoryEffects::Free>())
+        return failure();
+    }
+
+    rewriter.replaceOpWithNewOp<memref::CastOp>(cloneOp, cloneOp.getType(),
+                                                source);
+    rewriter.eraseOp(redundantDealloc);
+    return success();
   }
 };
 
@@ -664,10 +680,11 @@ OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
     return *(view.getDynamicSizes().begin() +
              memrefType.getDynamicDimIndex(unsignedIndex));
 
-  if (auto subview = dyn_cast_or_null<SubViewOp>(definingOp)) {
-    assert(subview.isDynamicSize(unsignedIndex) &&
+  if (auto sizeInterface =
+          dyn_cast_or_null<OffsetSizeAndStrideOpInterface>(definingOp)) {
+    assert(sizeInterface.isDynamicSize(unsignedIndex) &&
            "Expected dynamic subview size");
-    return subview.getDynamicSize(unsignedIndex);
+    return sizeInterface.getDynamicSize(unsignedIndex);
   }
 
   // dim(memrefcast) -> dim
@@ -734,8 +751,8 @@ static Value getResultDimFromShapeInterface(OpBuilder &builder, OpResult result,
   // check if the op implements the first interface method or the second, and
   // get the value to use appropriately.
   SmallVector<Value> reifiedResultShapes;
-  if (succeeded(
-          shapedTypeOp.reifyReturnTypeShapes(builder, reifiedResultShapes))) {
+  if (succeeded(shapedTypeOp.reifyReturnTypeShapes(
+          builder, result.getOwner()->getOperands(), reifiedResultShapes))) {
     if (reifiedResultShapes.size() <= resultNumber)
       return nullptr;
     Value resultShape = reifiedResultShapes[resultNumber];

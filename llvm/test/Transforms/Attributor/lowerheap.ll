@@ -66,6 +66,6 @@ attributes #0 = { nounwind willreturn }
 ; IS________OPM: attributes #[[ATTR1]] = { nounwind }
 ;.
 ; IS________NPM: attributes #[[ATTR0:[0-9]+]] = { nounwind willreturn }
-; IS________NPM: attributes #[[ATTR1:[0-9]+]] = { argmemonly nofree nosync nounwind willreturn writeonly }
+; IS________NPM: attributes #[[ATTR1:[0-9]+]] = { argmemonly nofree nounwind willreturn writeonly }
 ; IS________NPM: attributes #[[ATTR2]] = { nounwind }
 ;.

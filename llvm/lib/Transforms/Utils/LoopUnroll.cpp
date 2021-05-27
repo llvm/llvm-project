@@ -213,7 +213,11 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 
     // Aggressively clean up dead instructions that simplifyLoopIVs already
     // identified. Any remaining should be cleaned up below.
-    RecursivelyDeleteTriviallyDeadInstructions(DeadInsts);
+    while (!DeadInsts.empty()) {
+      Value *V = DeadInsts.pop_back_val();
+      if (Instruction *Inst = dyn_cast_or_null<Instruction>(V))
+        RecursivelyDeleteTriviallyDeadInstructions(Inst);
+    }
   }
 
   // At this point, the code is well formed.  Perform constprop, instsimplify,
@@ -570,7 +574,9 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   for (Loop *SubLoop : *L)
     LoopsToSimplify.insert(SubLoop);
 
-  if (Header->getParent()->isDebugInfoForProfiling())
+  // When a FSDiscriminator is enabled, we don't need to add the multiply
+  // factors to the discriminators.
+  if (Header->getParent()->isDebugInfoForProfiling() && !EnableFSDiscriminator)
     for (BasicBlock *BB : L->getBlocks())
       for (Instruction &I : *BB)
         if (!isa<DbgInfoIntrinsic>(&I))

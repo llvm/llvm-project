@@ -329,6 +329,8 @@ define internal i32 @return2or4(i32 %c) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@return2or4
 ; IS__CGSCC____-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp eq i32 undef, 0
+; IS__CGSCC____-NEXT:    [[RET:%.*]] = select i1 undef, i32 2, i32 4
 ; IS__CGSCC____-NEXT:    ret i32 undef
 ;
   %cmp = icmp eq i32 %c, 0
@@ -532,6 +534,7 @@ define i1 @potential_test10(i32 %c) {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@potential_test10
 ; IS__CGSCC____-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
+; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp eq i32 undef, 0
 ; IS__CGSCC____-NEXT:    ret i1 false
 ;
   %ret = call i32 @may_return_undef(i32 %c)
@@ -629,8 +632,9 @@ define i32 @potential_test11(i1 %c) {
 ; IS__TUNIT_OPM-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT_OPM-NEXT:    [[ZERO1:%.*]] = call i32 @optimize_undef_1(i1 [[C]]) #[[ATTR0]], !range [[RNG2:![0-9]+]]
 ; IS__TUNIT_OPM-NEXT:    [[ZERO2:%.*]] = call i32 @optimize_undef_2(i1 [[C]]) #[[ATTR0]], !range [[RNG3:![0-9]+]]
+; IS__TUNIT_OPM-NEXT:    [[ZERO3:%.*]] = call i32 @optimize_undef_3(i1 [[C]]) #[[ATTR0]], !range [[RNG2]]
 ; IS__TUNIT_OPM-NEXT:    [[ACC1:%.*]] = add i32 [[ZERO1]], [[ZERO2]]
-; IS__TUNIT_OPM-NEXT:    [[ACC2:%.*]] = add i32 [[ACC1]], 0
+; IS__TUNIT_OPM-NEXT:    [[ACC2:%.*]] = add i32 [[ACC1]], [[ZERO3]]
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[ACC2]]
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
@@ -638,8 +642,9 @@ define i32 @potential_test11(i1 %c) {
 ; IS__TUNIT_NPM-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
 ; IS__TUNIT_NPM-NEXT:    [[ZERO1:%.*]] = call i32 @optimize_undef_1(i1 [[C]]) #[[ATTR0]], !range [[RNG0]]
 ; IS__TUNIT_NPM-NEXT:    [[ZERO2:%.*]] = call i32 @optimize_undef_2(i1 [[C]]) #[[ATTR0]], !range [[RNG3:![0-9]+]]
+; IS__TUNIT_NPM-NEXT:    [[ZERO3:%.*]] = call i32 @optimize_undef_3(i1 [[C]]) #[[ATTR0]], !range [[RNG0]]
 ; IS__TUNIT_NPM-NEXT:    [[ACC1:%.*]] = add i32 [[ZERO1]], [[ZERO2]]
-; IS__TUNIT_NPM-NEXT:    [[ACC2:%.*]] = add i32 [[ACC1]], 0
+; IS__TUNIT_NPM-NEXT:    [[ACC2:%.*]] = add i32 [[ACC1]], [[ZERO3]]
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[ACC2]]
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn

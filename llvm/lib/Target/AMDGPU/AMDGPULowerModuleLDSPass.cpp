@@ -52,7 +52,7 @@ class AMDGPULowerModuleLDS : public ModulePass {
 
   static void removeFromUsedList(Module &M, StringRef Name,
                                  SmallPtrSetImpl<Constant *> &ToRemove) {
-    GlobalVariable *GV = M.getGlobalVariable(Name);
+    GlobalVariable *GV = M.getNamedGlobal(Name);
     if (!GV || ToRemove.empty()) {
       return;
     }
@@ -72,6 +72,10 @@ class AMDGPULowerModuleLDS : public ModulePass {
     }
 
     GV->eraseFromParent();
+
+    for (Constant *C : ToRemove) {
+      C->removeDeadConstantUsers();
+    }
 
     if (!Init.empty()) {
       ArrayType *ATy =
@@ -129,6 +133,9 @@ class AMDGPULowerModuleLDS : public ModulePass {
                        "");
   }
 
+private:
+  SmallPtrSet<GlobalValue *, 32> UsedList;
+
 public:
   static char ID;
 
@@ -137,13 +144,28 @@ public:
   }
 
   bool runOnModule(Module &M) override {
+    UsedList = AMDGPU::getUsedList(M);
+
+    bool Changed = processUsedLDS(M);
+
+    for (Function &F : M.functions()) {
+      if (!AMDGPU::isKernelCC(&F))
+        continue;
+      Changed |= processUsedLDS(M, &F);
+    }
+
+    UsedList.clear();
+    return Changed;
+  }
+
+private:
+  bool processUsedLDS(Module &M, Function *F = nullptr) {
     LLVMContext &Ctx = M.getContext();
     const DataLayout &DL = M.getDataLayout();
-    SmallPtrSet<GlobalValue *, 32> UsedList = AMDGPU::getUsedList(M);
 
     // Find variables to move into new struct instance
     std::vector<GlobalVariable *> FoundLocalVars =
-        AMDGPU::findVariablesToLower(M, UsedList);
+        AMDGPU::findVariablesToLower(M, UsedList, F);
 
     if (FoundLocalVars.empty()) {
       // No variables to rewrite, no changes made.
@@ -207,23 +229,25 @@ public:
         LocalVars.cbegin(), LocalVars.cend(), std::back_inserter(LocalVarTypes),
         [](const GlobalVariable *V) -> Type * { return V->getValueType(); });
 
-    StructType *LDSTy = StructType::create(
-        Ctx, LocalVarTypes, llvm::StringRef("llvm.amdgcn.module.lds.t"));
+    std::string VarName(
+        F ? (Twine("llvm.amdgcn.kernel.") + F->getName() + ".lds").str()
+          : "llvm.amdgcn.module.lds");
+    StructType *LDSTy = StructType::create(Ctx, LocalVarTypes, VarName + ".t");
 
     Align MaxAlign =
         AMDGPU::getAlign(DL, LocalVars[0]); // was sorted on alignment
-    Constant *InstanceAddress = Constant::getIntegerValue(
-        PointerType::get(LDSTy, AMDGPUAS::LOCAL_ADDRESS), APInt(32, 0));
 
     GlobalVariable *SGV = new GlobalVariable(
         M, LDSTy, false, GlobalValue::InternalLinkage, UndefValue::get(LDSTy),
-        "llvm.amdgcn.module.lds", nullptr, GlobalValue::NotThreadLocal,
-        AMDGPUAS::LOCAL_ADDRESS, false);
+        VarName, nullptr, GlobalValue::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS,
+        false);
     SGV->setAlignment(MaxAlign);
-    appendToCompilerUsed(
-        M, {static_cast<GlobalValue *>(
-               ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-                   cast<Constant>(SGV), Type::getInt8PtrTy(Ctx)))});
+    if (!F) {
+      appendToCompilerUsed(
+          M, {static_cast<GlobalValue *>(
+                 ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+                     cast<Constant>(SGV), Type::getInt8PtrTy(Ctx)))});
+    }
 
     // The verifier rejects used lists containing an inttoptr of a constant
     // so remove the variables from these lists before replaceAllUsesWith
@@ -235,16 +259,25 @@ public:
     for (size_t I = 0; I < LocalVars.size(); I++) {
       GlobalVariable *GV = LocalVars[I];
       Constant *GEPIdx[] = {ConstantInt::get(I32, 0), ConstantInt::get(I32, I)};
-      GV->replaceAllUsesWith(
-          ConstantExpr::getGetElementPtr(LDSTy, InstanceAddress, GEPIdx));
-      GV->eraseFromParent();
+      Constant *GEP = ConstantExpr::getGetElementPtr(LDSTy, SGV, GEPIdx);
+      if (F) {
+        GV->replaceUsesWithIf(GEP, [F](Use &U) {
+          return AMDGPU::isUsedOnlyFromFunction(U.getUser(), F);
+        });
+      } else {
+        GV->replaceAllUsesWith(GEP);
+      }
+      if (GV->use_empty()) {
+        UsedList.erase(GV);
+        GV->eraseFromParent();
+      }
     }
 
     // Mark kernels with asm that reads the address of the allocated structure
     // This is not necessary for lowering. This lets other passes, specifically
     // PromoteAlloca, accurately calculate how much LDS will be used by the
     // kernel after lowering.
-    {
+    if (!F) {
       IRBuilder<> Builder(Ctx);
       SmallPtrSet<Function *, 32> Kernels;
       for (auto &I : M.functions()) {

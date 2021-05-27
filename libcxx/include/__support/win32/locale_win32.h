@@ -11,9 +11,9 @@
 #define _LIBCPP_SUPPORT_WIN32_LOCALE_WIN32_H
 
 #include <__config>
-#include <stdio.h>
-#include <locale.h> // _locale_t
 #include <__nullptr>
+#include <locale.h> // _locale_t
+#include <stdio.h>
 
 #define _X_ALL LC_ALL
 #define _X_COLLATE LC_COLLATE

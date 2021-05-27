@@ -129,8 +129,8 @@ struct DisabledSizeRangeWithBeginEnd {
   constexpr size_t size() const { return 1; }
 };
 
-template<>
-inline constexpr bool std::disable_sized_range<DisabledSizeRangeWithBeginEnd> = true;
+template <>
+inline constexpr bool std::ranges::disable_sized_range<DisabledSizeRangeWithBeginEnd> = true;
 static_assert(!std::is_invocable_v<RangeSizeT, DisabledSizeRangeWithBeginEnd&>);
 
 struct BeginEndAndEmpty {

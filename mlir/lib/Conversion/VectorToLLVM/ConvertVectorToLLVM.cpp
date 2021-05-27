@@ -16,6 +16,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Support/MathExtras.h"
 #include "mlir/Target/LLVMIR/TypeTranslation.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -119,6 +120,42 @@ LogicalResult getMemRefAlignment(LLVMTypeConverter &typeConverter,
   return success();
 }
 
+// Return the minimal alignment value that satisfies all the AssumeAlignment
+// uses of `value`. If no such uses exist, return 1.
+static unsigned getAssumedAlignment(Value value) {
+  unsigned align = 1;
+  for (auto &u : value.getUses()) {
+    Operation *owner = u.getOwner();
+    if (auto op = dyn_cast<memref::AssumeAlignmentOp>(owner))
+      align = mlir::lcm(align, op.alignment());
+  }
+  return align;
+}
+// Helper that returns data layout alignment of a memref associated with a
+// transfer op, including additional information from assume_alignment calls
+// on the source of the transfer
+LogicalResult getTransferOpAlignment(LLVMTypeConverter &typeConverter,
+                                     VectorTransferOpInterface xfer,
+                                     unsigned &align) {
+  if (failed(getMemRefAlignment(
+          typeConverter, xfer.getShapedType().cast<MemRefType>(), align)))
+    return failure();
+  align = std::max(align, getAssumedAlignment(xfer.source()));
+  return success();
+}
+
+// Helper that returns data layout alignment of a memref associated with a
+// load, store, scatter, or gather op, including additional information from
+// assume_alignment calls on the source of the transfer
+template <class OpAdaptor>
+LogicalResult getMemRefOpAlignment(LLVMTypeConverter &typeConverter,
+                                   OpAdaptor op, unsigned &align) {
+  if (failed(getMemRefAlignment(typeConverter, op.getMemRefType(), align)))
+    return failure();
+  align = std::max(align, getAssumedAlignment(op.base()));
+  return success();
+}
+
 // Add an index vector component to a base pointer. This almost always succeeds
 // unless the last stride is non-unit or the memory space is not zero.
 static LogicalResult getIndexedPtrs(ConversionPatternRewriter &rewriter,
@@ -151,8 +188,7 @@ replaceTransferOpWithLoadOrStore(ConversionPatternRewriter &rewriter,
                                  TransferReadOp xferOp,
                                  ArrayRef<Value> operands, Value dataPtr) {
   unsigned align;
-  if (failed(getMemRefAlignment(
-          typeConverter, xferOp.getShapedType().cast<MemRefType>(), align)))
+  if (failed(getTransferOpAlignment(typeConverter, xferOp, align)))
     return failure();
   rewriter.replaceOpWithNewOp<LLVM::LoadOp>(xferOp, dataPtr, align);
   return success();
@@ -171,10 +207,8 @@ replaceTransferOpWithMasked(ConversionPatternRewriter &rewriter,
   Value fill = rewriter.create<SplatOp>(loc, vecTy, adaptor.padding());
 
   unsigned align;
-  if (failed(getMemRefAlignment(
-          typeConverter, xferOp.getShapedType().cast<MemRefType>(), align)))
+  if (failed(getTransferOpAlignment(typeConverter, xferOp, align)))
     return failure();
-
   rewriter.replaceOpWithNewOp<LLVM::MaskedLoadOp>(
       xferOp, vecTy, dataPtr, mask, ValueRange{fill},
       rewriter.getI32IntegerAttr(align));
@@ -187,8 +221,7 @@ replaceTransferOpWithLoadOrStore(ConversionPatternRewriter &rewriter,
                                  TransferWriteOp xferOp,
                                  ArrayRef<Value> operands, Value dataPtr) {
   unsigned align;
-  if (failed(getMemRefAlignment(
-          typeConverter, xferOp.getShapedType().cast<MemRefType>(), align)))
+  if (failed(getTransferOpAlignment(typeConverter, xferOp, align)))
     return failure();
   auto adaptor = TransferWriteOpAdaptor(operands, xferOp->getAttrDictionary());
   rewriter.replaceOpWithNewOp<LLVM::StoreOp>(xferOp, adaptor.vector(), dataPtr,
@@ -202,8 +235,7 @@ replaceTransferOpWithMasked(ConversionPatternRewriter &rewriter,
                             TransferWriteOp xferOp, ArrayRef<Value> operands,
                             Value dataPtr, Value mask) {
   unsigned align;
-  if (failed(getMemRefAlignment(
-          typeConverter, xferOp.getShapedType().cast<MemRefType>(), align)))
+  if (failed(getTransferOpAlignment(typeConverter, xferOp, align)))
     return failure();
 
   auto adaptor = TransferWriteOpAdaptor(operands, xferOp->getAttrDictionary());
@@ -337,7 +369,8 @@ public:
 
     // Resolve alignment.
     unsigned align;
-    if (failed(getMemRefAlignment(*this->getTypeConverter(), memRefTy, align)))
+    if (failed(getMemRefOpAlignment(*this->getTypeConverter(), loadOrStoreOp,
+                                    align)))
       return failure();
 
     // Resolve address.
@@ -367,7 +400,7 @@ public:
 
     // Resolve alignment.
     unsigned align;
-    if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align)))
+    if (failed(getMemRefOpAlignment(*getTypeConverter(), gather, align)))
       return failure();
 
     // Resolve address.
@@ -402,7 +435,7 @@ public:
 
     // Resolve alignment.
     unsigned align;
-    if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align)))
+    if (failed(getMemRefOpAlignment(*getTypeConverter(), scatter, align)))
       return failure();
 
     // Resolve address.
@@ -935,8 +968,9 @@ public:
 class VectorInsertStridedSliceOpSameRankRewritePattern
     : public OpRewritePattern<InsertStridedSliceOp> {
 public:
-  VectorInsertStridedSliceOpSameRankRewritePattern(MLIRContext *ctx)
-      : OpRewritePattern<InsertStridedSliceOp>(ctx) {
+  using OpRewritePattern<InsertStridedSliceOp>::OpRewritePattern;
+
+  void initialize() {
     // This pattern creates recursive InsertStridedSliceOp, but the recursion is
     // bounded as the rank is strictly decreasing.
     setHasBoundedRewriteRecursion();
@@ -993,6 +1027,15 @@ public:
   }
 };
 
+/// Return true if the last dimension of the MemRefType has unit stride. Also
+/// return true for memrefs with no strides.
+static bool isLastMemrefDimUnitStride(MemRefType type) {
+  int64_t offset;
+  SmallVector<int64_t> strides;
+  auto successStrides = getStridesAndOffset(type, strides, offset);
+  return succeeded(successStrides) && (strides.empty() || strides.back() == 1);
+}
+
 /// Returns the strides if the memory underlying `memRefType` has a contiguous
 /// static layout.
 static llvm::Optional<SmallVector<int64_t, 4>>
@@ -1013,7 +1056,7 @@ computeContiguousStrides(MemRefType memRefType) {
   // contiguous dynamic shapes in other ways than with just empty/identity
   // layout.
   auto sizes = memRefType.getShape();
-  for (int index = 0, e = strides.size() - 2; index < e; ++index) {
+  for (int index = 0, e = strides.size() - 1; index < e; ++index) {
     if (ShapedType::isDynamic(sizes[index + 1]) ||
         ShapedType::isDynamicStrideOrOffset(strides[index]) ||
         ShapedType::isDynamicStrideOrOffset(strides[index + 1]))
@@ -1115,8 +1158,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     auto adaptor = getTransferOpAdapter(xferOp, operands);
 
-    if (xferOp.getVectorType().getRank() > 1 ||
-        llvm::size(xferOp.indices()) == 0)
+    if (xferOp.getVectorType().getRank() > 1 || xferOp.indices().empty())
       return failure();
     if (xferOp.permutation_map() !=
         AffineMap::getMinorIdentityMap(xferOp.permutation_map().getNumInputs(),
@@ -1126,9 +1168,8 @@ public:
     auto memRefType = xferOp.getShapedType().template dyn_cast<MemRefType>();
     if (!memRefType)
       return failure();
-    // Only contiguous source tensors supported atm.
-    auto strides = computeContiguousStrides(memRefType);
-    if (!strides)
+    // Last dimension must be contiguous. (Otherwise: Use VectorToSCF.)
+    if (!isLastMemrefDimUnitStride(memRefType))
       return failure();
     // Out-of-bounds dims are handled by MaterializeTransferMask.
     if (xferOp.hasOutOfBoundsDim())
@@ -1330,8 +1371,9 @@ private:
 class VectorExtractStridedSliceOpConversion
     : public OpRewritePattern<ExtractStridedSliceOp> {
 public:
-  VectorExtractStridedSliceOpConversion(MLIRContext *ctx)
-      : OpRewritePattern<ExtractStridedSliceOp>(ctx) {
+  using OpRewritePattern<ExtractStridedSliceOp>::OpRewritePattern;
+
+  void initialize() {
     // This pattern creates recursive ExtractStridedSliceOp, but the recursion
     // is bounded as the rank is strictly decreasing.
     setHasBoundedRewriteRecursion();

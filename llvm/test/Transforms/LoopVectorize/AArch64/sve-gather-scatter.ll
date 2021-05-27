@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -dce -instcombine -mtriple aarch64-linux-gnu -mattr=+sve -S %s -o - | FileCheck %s
+; RUN: opt -loop-vectorize -dce -instcombine -mtriple aarch64-linux-gnu -mattr=+sve -S %s -scalable-vectorization=on -o - | FileCheck %s
 
 define void @gather_nxv4i32_ind64(float* noalias nocapture readonly %a, i64* noalias nocapture readonly %b, float* noalias nocapture %c, i64 %n) {
 ; CHECK-LABEL: @gather_nxv4i32_ind64

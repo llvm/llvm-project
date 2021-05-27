@@ -30,5 +30,5 @@ int main() {
 }
 
 ////                           fun(1)  fun(0)
-// DexExpectWatchValue('local',   '0',    '0', on_line='s1')
-// DexExpectWatchValue('local',   '2',    '1', on_line='s2')
+// DexExpectWatchValue('local',   '0',    '0', on_line=ref('s1'))
+// DexExpectWatchValue('local',   '2',    '1', on_line=ref('s2'))

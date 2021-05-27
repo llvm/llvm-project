@@ -870,6 +870,7 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     case wasm::R_WASM_TABLE_INDEX_I32:
     case wasm::R_WASM_TABLE_INDEX_I64:
     case wasm::R_WASM_TABLE_INDEX_REL_SLEB:
+    case wasm::R_WASM_TABLE_INDEX_REL_SLEB64:
       if (!isValidFunctionSymbol(Reloc.Index))
         return make_error<GenericBinaryError>(
             "invalid relocation function index", object_error::parse_failed);

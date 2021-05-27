@@ -9,7 +9,7 @@
 #include "lldb/Host/posix/HostThreadPosix.h"
 #include "lldb/Utility/Status.h"
 
-#include <errno.h>
+#include <cerrno>
 #include <pthread.h>
 
 using namespace lldb;

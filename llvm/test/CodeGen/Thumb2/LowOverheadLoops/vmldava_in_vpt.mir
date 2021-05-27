@@ -146,8 +146,6 @@ body:             |
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r4, -16
   ; CHECK:   renamable $r4 = tLDRspi $sp, 9, 14 /* CC::al */, $noreg :: (load 4 from %fixed-stack.5)
   ; CHECK:   renamable $r12 = t2MOVi 0, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   renamable $r5, dead $cpsr = tADDi3 renamable $r4, 3, 14 /* CC::al */, $noreg
-  ; CHECK:   dead renamable $r5, dead $cpsr = tLSRri killed renamable $r5, 2, 14 /* CC::al */, $noreg
   ; CHECK:   $lr = MVE_WLSTP_32 killed renamable $r4, %bb.3
   ; CHECK: bb.1.for.body.lr.ph:
   ; CHECK:   successors: %bb.2(0x80000000)

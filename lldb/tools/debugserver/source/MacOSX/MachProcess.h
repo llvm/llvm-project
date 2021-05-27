@@ -252,6 +252,7 @@ public:
                                      struct mach_o_information &inf);
   JSONGenerator::ObjectSP FormatDynamicLibrariesIntoJSON(
       const std::vector<struct binary_image_information> &image_infos);
+  uint32_t GetPlatform();
   /// Get the runtime platform from DYLD via SPI.
   uint32_t GetProcessPlatformViaDYLDSPI();
   /// Use the dyld SPI present in macOS 10.12, iOS 10, tvOS 10,
@@ -378,6 +379,7 @@ private:
 
   pid_t m_pid;           // Process ID of child process
   cpu_type_t m_cpu_type; // The CPU type of this process
+  uint32_t m_platform;   // The platform of this process
   int m_child_stdin;
   int m_child_stdout;
   int m_child_stderr;

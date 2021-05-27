@@ -106,6 +106,7 @@ template <> struct ScalarEnumerationTraits<clang::tooling::Diagnostic::Level> {
   static void enumeration(IO &IO, clang::tooling::Diagnostic::Level &Value) {
     IO.enumCase(Value, "Warning", clang::tooling::Diagnostic::Warning);
     IO.enumCase(Value, "Error", clang::tooling::Diagnostic::Error);
+    IO.enumCase(Value, "Remark", clang::tooling::Diagnostic::Remark);
   }
 };
 

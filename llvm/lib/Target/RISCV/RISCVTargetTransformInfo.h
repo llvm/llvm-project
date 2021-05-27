@@ -78,7 +78,7 @@ public:
                                          TTI::TargetCostKind CostKind,
                                          const Instruction *I);
 
-  bool isLegalElementTypeForRVV(Type *ScalarTy) {
+  bool isLegalElementTypeForRVV(Type *ScalarTy) const {
     if (ScalarTy->isPointerTy())
       return true;
 
@@ -138,6 +138,36 @@ public:
   getVPLegalizationStrategy(const VPIntrinsic &PI) const {
     using VPLegalization = TargetTransformInfo::VPLegalization;
     return VPLegalization(VPLegalization::Legal, VPLegalization::Legal);
+  }
+
+  bool isLegalToVectorizeReduction(RecurrenceDescriptor RdxDesc,
+                                   ElementCount VF) const {
+    if (!ST->hasStdExtV())
+      return false;
+
+    if (!VF.isScalable())
+      return true;
+
+    Type *Ty = RdxDesc.getRecurrenceType();
+    if (!isLegalElementTypeForRVV(Ty))
+      return false;
+
+    switch (RdxDesc.getRecurrenceKind()) {
+    case RecurKind::Add:
+    case RecurKind::FAdd:
+    case RecurKind::And:
+    case RecurKind::Or:
+    case RecurKind::Xor:
+    case RecurKind::SMin:
+    case RecurKind::SMax:
+    case RecurKind::UMin:
+    case RecurKind::UMax:
+    case RecurKind::FMin:
+    case RecurKind::FMax:
+      return true;
+    default:
+      return false;
+    }
   }
 };
 

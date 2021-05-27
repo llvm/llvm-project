@@ -55,16 +55,15 @@ void OutputSegment::finalizeInputSegments() {
       return seg->flags == ms->flags && seg->alignment == ms->alignment;
     });
     if (i == mergedSegments.end()) {
-      LLVM_DEBUG(llvm::dbgs() << "new merge section: " << name
+      LLVM_DEBUG(llvm::dbgs() << "new merge segment: " << name
                               << " alignment=" << ms->alignment << "\n");
-      SyntheticMergedChunk *syn =
-          make<SyntheticMergedChunk>(name, ms->alignment, ms->flags);
+      auto *syn = make<SyntheticMergedChunk>(name, ms->alignment, ms->flags);
       syn->outputSeg = this;
       mergedSegments.push_back(syn);
       i = std::prev(mergedSegments.end());
       newSegments.push_back(syn);
     } else {
-      LLVM_DEBUG(llvm::dbgs() << "adding to merge section: " << name << "\n");
+      LLVM_DEBUG(llvm::dbgs() << "adding to merge segment: " << name << "\n");
     }
     (*i)->addMergeChunk(ms);
   }

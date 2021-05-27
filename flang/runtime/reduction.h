@@ -7,9 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // Defines the API for the reduction transformational intrinsic functions.
-// (Except the complex-valued DOT_PRODUCT and the complex-valued total reduction
-// forms of SUM & PRODUCT; the API for those is in complex-reduction.h so that
-// C's _Complex can be used for their return types.)
 
 #ifndef FORTRAN_RUNTIME_REDUCTION_H_
 #define FORTRAN_RUNTIME_REDUCTION_H_
@@ -36,10 +33,10 @@ extern "C" {
 // results in a caller-supplied descriptor, which is assumed to
 // be large enough.
 //
-// Complex-valued SUM and PRODUCT reductions have their API
-// entry points defined in complex-reduction.h; these are C wrappers
-// around C++ implementations so as to keep usage of C's _Complex
-// types out of C++ code.
+// Complex-valued SUM and PRODUCT reductions and complex-valued
+// DOT_PRODUCT have their API entry points defined in complex-reduction.h;
+// these here are C wrappers around C++ implementations so as to keep
+// usage of C's _Complex types out of C++ code.
 
 // SUM()
 

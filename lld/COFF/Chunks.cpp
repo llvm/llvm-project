@@ -32,12 +32,15 @@ namespace coff {
 SectionChunk::SectionChunk(ObjFile *f, const coff_section *h)
     : Chunk(SectionKind), file(f), header(h), repl(this) {
   // Initialize relocs.
-  setRelocs(file->getCOFFObj()->getRelocations(header));
+  if (file)
+    setRelocs(file->getCOFFObj()->getRelocations(header));
 
   // Initialize sectionName.
   StringRef sectionName;
-  if (Expected<StringRef> e = file->getCOFFObj()->getSectionName(header))
-    sectionName = *e;
+  if (file) {
+    if (Expected<StringRef> e = file->getCOFFObj()->getSectionName(header))
+      sectionName = *e;
+  }
   sectionNameData = sectionName.data();
   sectionNameSize = sectionName.size();
 
@@ -49,7 +52,10 @@ SectionChunk::SectionChunk(ObjFile *f, const coff_section *h)
   // enabled, treat non-comdat sections as roots. Generally optimized object
   // files will be built with -ffunction-sections or /Gy, so most things worth
   // stripping will be in a comdat.
-  live = !config->doGC || !isCOMDAT();
+  if (config)
+    live = !config->doGC || !isCOMDAT();
+  else
+    live = true;
 }
 
 // SectionChunk is one of the most frequently allocated classes, so it is
@@ -476,6 +482,8 @@ static uint8_t getBaserelType(const coff_relocation &rel) {
   case AMD64:
     if (rel.Type == IMAGE_REL_AMD64_ADDR64)
       return IMAGE_REL_BASED_DIR64;
+    if (rel.Type == IMAGE_REL_AMD64_ADDR32)
+      return IMAGE_REL_BASED_HIGHLOW;
     return IMAGE_REL_BASED_ABSOLUTE;
   case I386:
     if (rel.Type == IMAGE_REL_I386_DIR32)
@@ -816,18 +824,19 @@ void RVAFlagTableChunk::writeTo(uint8_t *buf) const {
     ulittle32_t rva;
     uint8_t flag;
   };
-  RVAFlag *begin = reinterpret_cast<RVAFlag *>(buf);
-  size_t cnt = 0;
-  for (const ChunkAndOffset &co : syms) {
-    begin[cnt].rva = co.inputChunk->getRVA() + co.offset;
-    begin[cnt].flag = 0;
-    ++cnt;
+  auto flags =
+      makeMutableArrayRef(reinterpret_cast<RVAFlag *>(buf), syms.size());
+  for (auto t : zip(syms, flags)) {
+    const auto &sym = std::get<0>(t);
+    auto &flag = std::get<1>(t);
+    flag.rva = sym.inputChunk->getRVA() + sym.offset;
+    flag.flag = 0;
   }
-  auto lt = [](RVAFlag &a, RVAFlag &b) { return a.rva < b.rva; };
-  auto eq = [](RVAFlag &a, RVAFlag &b) { return a.rva == b.rva; };
-  (void)eq;
-  std::sort(begin, begin + cnt, lt);
-  assert(std::unique(begin, begin + cnt, eq) == begin + cnt &&
+  llvm::sort(flags,
+             [](const RVAFlag &a, const RVAFlag &b) { return a.rva < b.rva; });
+  assert(llvm::unique(flags, [](const RVAFlag &a,
+                                const RVAFlag &b) { return a.rva == b.rva; }) ==
+             flags.end() &&
          "RVA tables should be de-duplicated");
 }
 

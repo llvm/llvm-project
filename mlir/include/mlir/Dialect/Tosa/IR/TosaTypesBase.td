@@ -94,9 +94,13 @@ def Tosa_AnyNumber : AnyTypeOf<[Tosa_Int, Tosa_QuantizedInt, Tosa_Float],
 // Tensor types
 //===----------------------------------------------------------------------===//
 
+def Tosa_Int32Tensor : TensorOf<[Tosa_Int32]>;
 def Tosa_Int32Or64Tensor : TensorOf<[Tosa_Int32Or64]>;
 
+// Either ranked or unranked tensor of TOSA supported element types. 
 def Tosa_Tensor : TensorOf<[Tosa_AnyNumber]>;
+// Must be ranked but no further constraints
+def Tosa_RankedTensor : RankedTensorOf<[Tosa_AnyNumber]>;
 
 // Any tensor element type allowed in Tosa ops.
 def Tosa_ElementType : Type<Or<[Tosa_Int.predicate, Tosa_QuantizedInt.predicate,
@@ -115,16 +119,12 @@ def Tosa_Tensor2D : 2DTensorOf<[Tosa_AnyNumber]>;
 def Tosa_Tensor3D : 3DTensorOf<[Tosa_AnyNumber]>;
 def Tosa_Tensor4D : 4DTensorOf<[Tosa_AnyNumber]>;
 def Tosa_Tensor5D : TensorRankOf<[Tosa_AnyNumber], [5]>;
-def Tosa_Tensor6D : TensorRankOf<[Tosa_AnyNumber], [6]>;
 
 // Ranked tensors up to given rank.
-def Tosa_Tensor1Dto2D : TensorRankOf<[Tosa_AnyNumber], [1,2]>;
 def Tosa_Tensor1Dto4D : TensorRankOf<[Tosa_AnyNumber], [1,2,3,4]>;
-def Tosa_Tensor1Dto5D : TensorRankOf<[Tosa_AnyNumber], [1,2,3,4,5]>;
 def Tosa_Tensor1Dto6D : TensorRankOf<[Tosa_AnyNumber], [1,2,3,4,5,6]>;
 
 def Tosa_TensorUpto4D : TensorRankOf<[Tosa_AnyNumber], [0,1,2,3,4]>;
-def Tosa_TensorUpto6D : TensorRankOf<[Tosa_AnyNumber], [0,1,2,3,4,5,6]>;
 
 def Tosa_Int32TensorUpto4D : TensorRankOf<[Tosa_Int32], [0,1,2,3,4]>;
 

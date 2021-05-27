@@ -61,21 +61,8 @@ static bool hasResourceHazard(const ResourceManager &RM, const InstRef &IR) {
   return false;
 }
 
-static unsigned findLastWriteBackCycle(const InstRef &IR) {
-  unsigned LastWBCycle = 0;
-  for (const WriteState &WS : IR.getInstruction()->getDefs()) {
-    int CyclesLeft = WS.getCyclesLeft();
-    if (CyclesLeft == UNKNOWN_CYCLES)
-      CyclesLeft = WS.getLatency();
-    if (CyclesLeft < 0)
-      CyclesLeft = 0;
-    LastWBCycle = std::max(LastWBCycle, (unsigned)CyclesLeft);
-  }
-  return LastWBCycle;
-}
-
 static unsigned findFirstWriteBackCycle(const InstRef &IR) {
-  unsigned FirstWBCycle = ~0U;
+  unsigned FirstWBCycle = IR.getInstruction()->getLatency();
   for (const WriteState &WS : IR.getInstruction()->getDefs()) {
     int CyclesLeft = WS.getCyclesLeft();
     if (CyclesLeft == UNKNOWN_CYCLES)
@@ -266,7 +253,7 @@ llvm::Error InOrderIssueStage::tryIssue(InstRef &IR, unsigned *StallCycles) {
   IssuedInst.push_back(IR);
 
   if (!IR.getInstruction()->getDesc().RetireOOO)
-    LastWriteBackCycle = findLastWriteBackCycle(IR);
+    LastWriteBackCycle = IS.getCyclesLeft();
 
   return llvm::ErrorSuccess();
 }

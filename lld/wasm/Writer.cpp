@@ -100,7 +100,7 @@ private:
   uint64_t fileSize = 0;
 
   std::vector<WasmInitEntry> initFunctions;
-  llvm::StringMap<std::vector<InputSection *>> customSectionMapping;
+  llvm::StringMap<std::vector<InputChunk *>> customSectionMapping;
 
   // Stable storage for command export wrapper function name strings.
   std::list<std::string> commandExportWrapperNames;
@@ -121,7 +121,7 @@ void Writer::calculateCustomSections() {
   log("calculateCustomSections");
   bool stripDebug = config->stripDebug || config->stripAll;
   for (ObjFile *file : symtab->objectFiles) {
-    for (InputSection *section : file->customSections) {
+    for (InputChunk *section : file->customSections) {
       // Exclude COMDAT sections that are not selected for inclusion
       if (section->discarded)
         continue;
@@ -895,53 +895,37 @@ void Writer::createOutputSegments() {
 }
 
 void Writer::combineOutputSegments() {
-  // With PIC code we currently only support a single data segment since
-  // we only have a single __memory_base to use as our base address.
-  // This pass combines all non-TLS data segments into a single .data
-  // segment.
+  // With PIC code we currently only support a single active data segment since
+  // we only have a single __memory_base to use as our base address.  This pass
+  // combines all data segments into a single .data segment.
   // This restructions can be relaxed once we have extended constant
   // expressions available:
   // https://github.com/WebAssembly/extended-const
-  assert(config->isPic);
+  assert(config->isPic && !config->sharedMemory);
   if (segments.size() <= 1)
     return;
-  OutputSegment *combined = nullptr;
-  std::vector<OutputSegment *> new_segments;
+  OutputSegment *combined = make<OutputSegment>(".data");
+  combined->startVA = segments[0]->startVA;
   for (OutputSegment *s : segments) {
-    if (s->isTLS()) {
-      new_segments.push_back(s);
-    } else {
-      if (!combined) {
-        LLVM_DEBUG(dbgs() << "created combined output segment: .data\n");
-        combined = make<OutputSegment>(".data");
-        combined->startVA = s->startVA;
-        if (config->sharedMemory)
-          combined->initFlags = WASM_DATA_SEGMENT_IS_PASSIVE;
-      }
-      bool first = true;
-      for (InputChunk *inSeg : s->inputSegments) {
-        if (first)
-          inSeg->alignment = std::max(inSeg->alignment, s->alignment);
-        first = false;
+    bool first = true;
+    for (InputChunk *inSeg : s->inputSegments) {
+      if (first)
+        inSeg->alignment = std::max(inSeg->alignment, s->alignment);
+      first = false;
 #ifndef NDEBUG
-        uint64_t oldVA = inSeg->getVA();
+      uint64_t oldVA = inSeg->getVA();
 #endif
-        combined->addInputSegment(inSeg);
+      combined->addInputSegment(inSeg);
 #ifndef NDEBUG
-        uint64_t newVA = inSeg->getVA();
-        LLVM_DEBUG(dbgs() << "added input segment. name=" << inSeg->getName()
-                          << " oldVA=" << oldVA << " newVA=" << newVA << "\n");
-        assert(oldVA == newVA);
+      uint64_t newVA = inSeg->getVA();
+      LLVM_DEBUG(dbgs() << "added input segment. name=" << inSeg->getName()
+                        << " oldVA=" << oldVA << " newVA=" << newVA << "\n");
+      assert(oldVA == newVA);
 #endif
-      }
     }
   }
-  if (combined) {
-    new_segments.push_back(combined);
-    segments = new_segments;
-    for (size_t i = 0; i < segments.size(); ++i)
-      segments[i]->index = i;
-  }
+
+  segments = {combined};
 }
 
 static void createFunction(DefinedFunction *func, StringRef bodyContent) {
@@ -1403,6 +1387,8 @@ void Writer::run() {
     config->tableBase = 1;
     if (WasmSym::definedTableBase)
       WasmSym::definedTableBase->setVA(config->tableBase);
+    if (WasmSym::definedTableBase32)
+      WasmSym::definedTableBase32->setVA(config->tableBase);
   }
 
   log("-- createOutputSegments");
@@ -1438,7 +1424,9 @@ void Writer::run() {
     }
   }
 
-  if (config->isPic) {
+  if (config->isPic && !config->sharedMemory) {
+    // In shared memory mode all data segments are passive and initilized
+    // via __wasm_init_memory.
     log("-- combineOutputSegments");
     combineOutputSegments();
   }

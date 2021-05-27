@@ -40,6 +40,7 @@ struct DILineInfo {
   uint32_t Line = 0;
   uint32_t Column = 0;
   uint32_t StartLine = 0;
+  Optional<uint64_t> StartAddress;
 
   // DWARF-specific.
   uint32_t Discriminator = 0;

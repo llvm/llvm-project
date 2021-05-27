@@ -135,6 +135,8 @@ lists.
 
   .. __: http://lists.llvm.org/mailman/listinfo/llvm-announce
 
+.. _online-sync-ups:
+
 Online Sync-Ups
 ---------------
 

@@ -136,8 +136,10 @@ public:
     Opts["__cl_clang_function_pointers"] = true;
     Opts["__cl_clang_variadic_functions"] = true;
     Opts["__cl_clang_non_portable_kernel_param_types"] = true;
+    Opts["__cl_clang_bitfields"] = true;
 
     Opts["cl_khr_fp64"] = true;
+    Opts["__opencl_c_fp64"] = true;
     Opts["cl_khr_byte_addressable_store"] = true;
     Opts["cl_khr_global_int32_base_atomics"] = true;
     Opts["cl_khr_global_int32_extended_atomics"] = true;

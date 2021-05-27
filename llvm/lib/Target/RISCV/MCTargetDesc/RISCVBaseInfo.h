@@ -86,7 +86,7 @@ enum VConstraintType {
   VMConstraint = 0b100,
 };
 
-enum VLMUL {
+enum VLMUL : uint8_t {
   LMUL_1 = 0,
   LMUL_2,
   LMUL_4,
@@ -242,8 +242,9 @@ inline static bool isValidRoundingMode(unsigned Mode) {
 namespace RISCVSysReg {
 struct SysReg {
   const char *Name;
-  unsigned Encoding;
   const char *AltName;
+  const char *DeprecatedName;
+  unsigned Encoding;
   // FIXME: add these additional fields when needed.
   // Privilege Access: Read, Write, Read-Only.
   // unsigned ReadWrite;

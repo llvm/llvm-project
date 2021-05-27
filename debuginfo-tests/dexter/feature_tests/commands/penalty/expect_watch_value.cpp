@@ -15,6 +15,6 @@ int main()
     return 0;  // DexLabel('ret')
 }
 
-// DexExpectWatchValue('i', '0', '1', '2', on_line='loop')
-// DexExpectWatchValue('i', '3', on_line='ret')
+// DexExpectWatchValue('i', '0', '1', '2', on_line=ref('loop'))
+// DexExpectWatchValue('i', '3', on_line=ref('ret'))
 // ---------------------^ out of scope

@@ -5,6 +5,7 @@ INSTALL_ROOT = "@CMAKE_BINARY_DIR@"
 COMPILER = "@CMAKE_CXX_COMPILER@"
 EXEC_ROOT = "@LIBCXX_BINARY_DIR@"
 CMAKE_OSX_SYSROOT = "@CMAKE_OSX_SYSROOT@"
+TARGET_TRIPLE = "@TARGET_TRIPLE@"
 
 import os
 import pipes
@@ -22,6 +23,8 @@ config.test_source_root = os.path.join(LIBCXX_ROOT, 'test')
 config.test_format = libcxx.test.format.CxxStandardLibraryTest()
 config.recursiveExpansionLimit = 10
 config.test_exec_root = EXEC_ROOT
+if TARGET_TRIPLE:
+    config.target_triple = TARGET_TRIPLE
 
 # Configure basic substitutions
 runPy = os.path.join(LIBCXX_ROOT, 'utils', 'run.py')
@@ -35,7 +38,7 @@ config.substitutions.append(('%{compile_flags}',
         os.path.join(LIBCXX_ROOT, 'test', 'support'))
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ {} {}'.format(
+    '-nostdlib++ {} {} -pthread'.format(
         os.path.join(INSTALL_ROOT, 'lib', 'libc++.a'),
         os.path.join(INSTALL_ROOT, 'lib', 'libc++abi.a'))
 ))

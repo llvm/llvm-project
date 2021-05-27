@@ -61,17 +61,17 @@
 
 #ifndef NOGLOBALS
 // NORDC-DAG: @device_var = internal global i32
-// RDC-DAG: @device_var = dso_local global i32
+// RDC-DAG: @device_var = global i32
 // WIN-DAG: @"?device_var@@3HA" = internal global i32
 __device__ int device_var;
 
 // NORDC-DAG: @constant_var = internal global i32
-// RDC-DAG: @constant_var = dso_local global i32
+// RDC-DAG: @constant_var = global i32
 // WIN-DAG: @"?constant_var@@3HA" = internal global i32
 __constant__ int constant_var;
 
 // NORDC-DAG: @shared_var = internal global i32
-// RDC-DAG: @shared_var = dso_local global i32
+// RDC-DAG: @shared_var = global i32
 // WIN-DAG: @"?shared_var@@3HA" = internal global i32
 __shared__ int shared_var;
 
@@ -95,12 +95,12 @@ extern __constant__ int ext_constant_var;
 // external device-side variables with definitions should generate
 // definitions for the shadows.
 // NORDC-DAG: @ext_device_var_def = internal global i32 undef,
-// RDC-DAG: @ext_device_var_def = dso_local global i32 undef,
+// RDC-DAG: @ext_device_var_def = global i32 undef,
 // WIN-DAG: @"?ext_device_var_def@@3HA" = internal global i32 undef
 extern __device__ int ext_device_var_def;
 __device__ int ext_device_var_def = 1;
 // NORDC-DAG: @ext_device_var_def = internal global i32 undef,
-// RDC-DAG: @ext_device_var_def = dso_local global i32 undef,
+// RDC-DAG: @ext_device_var_def = global i32 undef,
 // WIN-DAG: @"?ext_constant_var_def@@3HA" = internal global i32 undef
 __constant__ int ext_constant_var_def = 2;
 

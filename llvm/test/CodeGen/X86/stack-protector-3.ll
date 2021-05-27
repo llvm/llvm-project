@@ -1,10 +1,20 @@
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -o - < %s | FileCheck --check-prefix=CHECK-TLS-FS-40 %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -stack-protector-guard=tls -o - < %s | FileCheck --check-prefix=CHECK-TLS-FS-40 %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -stack-protector-guard=global -o - < %s | FileCheck --check-prefix=CHECK-GLOBAL %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -stack-protector-guard-reg=fs -o - < %s | FileCheck --check-prefix=CHECK-TLS-FS-40 %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -stack-protector-guard-reg=gs -o - < %s | FileCheck --check-prefix=CHECK-GS %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -stack-protector-guard-offset=20 -o - < %s | FileCheck --check-prefix=CHECK-OFFSET %s
-; RUN: llc -mtriple=x86_64-pc-linux-gnu -stack-protector-guard-offset=-20 -o - < %s | FileCheck --check-prefix=CHECK-NEGATIVE-OFFSET %s
+; RUN: split-file %s %t
+; RUN: cat %t/main.ll %t/a.ll > %t/a2.ll
+; RUN: cat %t/main.ll %t/b.ll > %t/b2.ll
+; RUN: cat %t/main.ll %t/c.ll > %t/c2.ll
+; RUN: cat %t/main.ll %t/d.ll > %t/d2.ll
+; RUN: cat %t/main.ll %t/e.ll > %t/e2.ll
+; RUN: cat %t/main.ll %t/f.ll > %t/f2.ll
+; RUN: cat %t/main.ll %t/g.ll > %t/g2.ll
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -o - < %t/a2.ll | FileCheck --check-prefix=CHECK-TLS-FS-40 %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -o - < %t/b2.ll | FileCheck --check-prefix=CHECK-TLS-FS-40 %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -o - < %t/c2.ll | FileCheck --check-prefix=CHECK-GLOBAL %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -o - < %t/d2.ll | FileCheck --check-prefix=CHECK-TLS-FS-40 %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -o - < %t/e2.ll | FileCheck --check-prefix=CHECK-GS %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -o - < %t/f2.ll | FileCheck --check-prefix=CHECK-OFFSET %s
+; RUN: llc -mtriple=x86_64-pc-linux-gnu -o - < %t/g2.ll | FileCheck --check-prefix=CHECK-NEGATIVE-OFFSET %s
+
+;--- main.ll
 
 ; CHECK-TLS-FS-40:       movq    %fs:40, %rax
 ; CHECK-TLS-FS-40:       movq    %fs:40, %rax
@@ -75,3 +85,23 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noa
 attributes #0 = { nounwind sspreq uwtable writeonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind willreturn }
 attributes #2 = { nounwind }
+
+;--- a.ll
+;--- b.ll
+!llvm.module.flags = !{!1}
+!1 = !{i32 2, !"stack-protector-guard", !"tls"}
+;--- c.ll
+!llvm.module.flags = !{!1}
+!1 = !{i32 2, !"stack-protector-guard", !"global"}
+;--- d.ll
+!llvm.module.flags = !{!1}
+!1 = !{i32 2, !"stack-protector-guard-reg", !"fs"}
+;--- e.ll
+!llvm.module.flags = !{!1}
+!1 = !{i32 2, !"stack-protector-guard-reg", !"gs"}
+;--- f.ll
+!llvm.module.flags = !{!1}
+!1 = !{i32 2, !"stack-protector-guard-offset", i32 20}
+;--- g.ll
+!llvm.module.flags = !{!1}
+!1 = !{i32 2, !"stack-protector-guard-offset", i32 -20}

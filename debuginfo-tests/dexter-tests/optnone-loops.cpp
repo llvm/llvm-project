@@ -22,9 +22,9 @@ __attribute__((optnone)) void simple_memcpy_loop(int *dest, const int *src,
     dest[i] = src[i]; // DexLabel('target_simple_memcpy_loop')
 }
 
-// DexLimitSteps('i', 0, 4, 8, on_line='target_simple_memcpy_loop')
-// DexExpectWatchValue('nelems', '16', on_line='target_simple_memcpy_loop')
-// DexExpectWatchValue('src[i]', '3', '7', '1', on_line='target_simple_memcpy_loop')
+// DexLimitSteps('i', 0, 4, 8, on_line=ref('target_simple_memcpy_loop'))
+// DexExpectWatchValue('nelems', '16', on_line=ref('target_simple_memcpy_loop'))
+// DexExpectWatchValue('src[i]', '3', '7', '1', on_line=ref('target_simple_memcpy_loop'))
 
 
 // A trivial loop that could be optimized into a builtin memcpy
@@ -35,9 +35,9 @@ __attribute__((optnone)) void trivial_memcpy_loop(int *dest, const int *src) {
     dest[i] = src[i]; // DexLabel('target_trivial_memcpy_loop')
 }
 
-// DexLimitSteps('i', 3, 7, 9, 14, 15, on_line='target_trivial_memcpy_loop')
-// DexExpectWatchValue('i', 3, 7, 9, 14, 15, on_line='target_trivial_memcpy_loop')
-// DexExpectWatchValue('dest[i-1] == src[i-1]', 'true', on_line='target_trivial_memcpy_loop')
+// DexLimitSteps('i', 3, 7, 9, 14, 15, on_line=ref('target_trivial_memcpy_loop'))
+// DexExpectWatchValue('i', 3, 7, 9, 14, 15, on_line=ref('target_trivial_memcpy_loop'))
+// DexExpectWatchValue('dest[i-1] == src[i-1]', 'true', on_line=ref('target_trivial_memcpy_loop'))
 
 
 __attribute__((always_inline)) int foo(int a) { return a + 5; }
@@ -49,16 +49,16 @@ __attribute__((optnone)) void nonleaf_function_with_loop(int *dest,
     dest[i] = foo(src[i]); // DexLabel('target_nonleaf_function_with_loop')
 }
 
-// DexLimitSteps('i', 1, on_line='target_nonleaf_function_with_loop')
-// DexExpectWatchValue('dest[0]', '8', on_line='target_nonleaf_function_with_loop')
-// DexExpectWatchValue('dest[1]', '4', on_line='target_nonleaf_function_with_loop')
-// DexExpectWatchValue('dest[2]', '5', on_line='target_nonleaf_function_with_loop')
-// DexExpectWatchValue('src[0]', '8', on_line='target_nonleaf_function_with_loop')
-// DexExpectWatchValue('src[1]', '4', on_line='target_nonleaf_function_with_loop')
-// DexExpectWatchValue('src[2]', '5', on_line='target_nonleaf_function_with_loop')
+// DexLimitSteps('i', 1, on_line=ref('target_nonleaf_function_with_loop'))
+// DexExpectWatchValue('dest[0]', '8', on_line=ref('target_nonleaf_function_with_loop'))
+// DexExpectWatchValue('dest[1]', '4', on_line=ref('target_nonleaf_function_with_loop'))
+// DexExpectWatchValue('dest[2]', '5', on_line=ref('target_nonleaf_function_with_loop'))
+// DexExpectWatchValue('src[0]', '8', on_line=ref('target_nonleaf_function_with_loop'))
+// DexExpectWatchValue('src[1]', '4', on_line=ref('target_nonleaf_function_with_loop'))
+// DexExpectWatchValue('src[2]', '5', on_line=ref('target_nonleaf_function_with_loop'))
 
-// DexExpectWatchValue('src[1] == dest[1]', 'true', on_line='target_nonleaf_function_with_loop')
-// DexExpectWatchValue('src[2] == dest[2]', 'true', on_line='target_nonleaf_function_with_loop')
+// DexExpectWatchValue('src[1] == dest[1]', 'true', on_line=ref('target_nonleaf_function_with_loop'))
+// DexExpectWatchValue('src[2] == dest[2]', 'true', on_line=ref('target_nonleaf_function_with_loop'))
 
 
 // This entire function could be optimized into a
@@ -72,8 +72,8 @@ __attribute__((optnone)) int counting_loop(unsigned values) {
   return i;
 }
 
-// DexLimitSteps('i', 8, 16, on_line='target_counting_loop')
-// DexExpectWatchValue('i', 8, 16, on_line='target_counting_loop')
+// DexLimitSteps('i', 8, 16, on_line=ref('target_counting_loop'))
+// DexExpectWatchValue('i', 8, 16, on_line=ref('target_counting_loop'))
 
 
 // This loop could be rotated.
@@ -105,10 +105,10 @@ __attribute__((optnone)) int loop_rotate_test(int *src, unsigned count) {
   return result; // DexLabel('target_loop_rotate_test_ret')
 }
 
-// DexLimitSteps('result', 13, on_line='target_loop_rotate_test')
-// DexExpectWatchValue('src[count]', 13, on_line='target_loop_rotate_test')
-// DexLimitSteps('result', 158, on_line='target_loop_rotate_test_ret')
-// DexExpectWatchValue('result', 158, on_line='target_loop_rotate_test_ret')
+// DexLimitSteps('result', 13, on_line=ref('target_loop_rotate_test'))
+// DexExpectWatchValue('src[count]', 13, on_line=ref('target_loop_rotate_test'))
+// DexLimitSteps('result', 158, on_line=ref('target_loop_rotate_test_ret'))
+// DexExpectWatchValue('result', 158, on_line=ref('target_loop_rotate_test_ret'))
 
 
 typedef int *intptr __attribute__((aligned(16)));
@@ -133,15 +133,15 @@ __attribute__((optnone)) void loop_vectorize_test(intptr dest, intptr src) {
   }
 }
 
-// DexLimitSteps('count', 4, 8, 12, 16, from_line='target_loop_vectorize_test', to_line='target_loop_vectorize_test_9')
-// DexExpectWatchValue('tempArray[count] == src[count]', 'true', on_line='target_loop_vectorize_test_2')
-// DexExpectWatchValue('tempArray[count+1] == src[count+1]', 'true', on_line='target_loop_vectorize_test_3')
-// DexExpectWatchValue('tempArray[count+2] == src[count+2]', 'true', on_line='target_loop_vectorize_test_4')
-// DexExpectWatchValue('tempArray[count+3] == src[count+3]', 'true', on_line='target_loop_vectorize_test_5')
-// DexExpectWatchValue('dest[count] == tempArray[count]', 'true', on_line='target_loop_vectorize_test_6')
-// DexExpectWatchValue('dest[count+1] == tempArray[count+1]', 'true', on_line='target_loop_vectorize_test_7')
-// DexExpectWatchValue('dest[count+2] == tempArray[count+2]', 'true', on_line='target_loop_vectorize_test_8')
-// DexExpectWatchValue('dest[count+3] == tempArray[count+3]', 'true', on_line='target_loop_vectorize_test_9')
+// DexLimitSteps('count', 4, 8, 12, 16, from_line=ref('target_loop_vectorize_test'), to_line=ref('target_loop_vectorize_test_9'))
+// DexExpectWatchValue('tempArray[count] == src[count]', 'true', on_line=ref('target_loop_vectorize_test_2'))
+// DexExpectWatchValue('tempArray[count+1] == src[count+1]', 'true', on_line=ref('target_loop_vectorize_test_3'))
+// DexExpectWatchValue('tempArray[count+2] == src[count+2]', 'true', on_line=ref('target_loop_vectorize_test_4'))
+// DexExpectWatchValue('tempArray[count+3] == src[count+3]', 'true', on_line=ref('target_loop_vectorize_test_5'))
+// DexExpectWatchValue('dest[count] == tempArray[count]', 'true', on_line=ref('target_loop_vectorize_test_6'))
+// DexExpectWatchValue('dest[count+1] == tempArray[count+1]', 'true', on_line=ref('target_loop_vectorize_test_7'))
+// DexExpectWatchValue('dest[count+2] == tempArray[count+2]', 'true', on_line=ref('target_loop_vectorize_test_8'))
+// DexExpectWatchValue('dest[count+3] == tempArray[count+3]', 'true', on_line=ref('target_loop_vectorize_test_9'))
 
 
 int main() {

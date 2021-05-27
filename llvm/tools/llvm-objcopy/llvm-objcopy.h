@@ -23,9 +23,10 @@ class Archive;
 } // end namespace object
 
 namespace objcopy {
-struct CopyConfig;
+class MultiFormatConfig;
 Expected<std::vector<NewArchiveMember>>
-createNewArchiveMembers(CopyConfig &Config, const object::Archive &Ar);
+createNewArchiveMembers(const MultiFormatConfig &Config,
+                        const object::Archive &Ar);
 
 } // end namespace objcopy
 } // end namespace llvm

@@ -9,7 +9,7 @@
 #ifndef LLD_MACHO_UNWIND_INFO_H
 #define LLD_MACHO_UNWIND_INFO_H
 
-#include "MergedOutputSection.h"
+#include "ConcatOutputSection.h"
 #include "SyntheticSections.h"
 
 #include "mach-o/compact_unwind_encoding.h"
@@ -26,7 +26,7 @@ public:
   uint64_t getSize() const override { return unwindInfoSize; }
   virtual void prepareRelocations(InputSection *) = 0;
 
-  void setCompactUnwindSection(MergedOutputSection *cuSection) {
+  void setCompactUnwindSection(ConcatOutputSection *cuSection) {
     compactUnwindSection = cuSection;
   }
 
@@ -36,12 +36,11 @@ protected:
     align = 4;
   }
 
-  MergedOutputSection *compactUnwindSection = nullptr;
+  ConcatOutputSection *compactUnwindSection = nullptr;
   uint64_t unwindInfoSize = 0;
 };
 
 UnwindInfoSection *makeUnwindInfoSection();
-void prepareCompactUnwind(InputSection *isec);
 
 } // namespace macho
 } // namespace lld

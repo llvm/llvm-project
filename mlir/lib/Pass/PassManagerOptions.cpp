@@ -48,6 +48,11 @@ struct PassManagerOptions {
       llvm::cl::desc(
           "When printing the IR after a pass, only print if the IR changed"),
       llvm::cl::init(false)};
+  llvm::cl::opt<bool> printAfterFailure{
+      "print-ir-after-failure",
+      llvm::cl::desc(
+          "When printing the IR after a pass, only print if the pass failed"),
+      llvm::cl::init(false)};
   llvm::cl::opt<bool> printModuleScope{
       "print-ir-module-scope",
       llvm::cl::desc("When printing IR for print-ir-[before|after]{-all} "
@@ -96,8 +101,9 @@ void PassManagerOptions::addPrinterInstrumentation(PassManager &pm) {
   }
 
   // Handle print-after.
-  if (printAfterAll) {
-    // If we are printing after all, then just return true for the filter.
+  if (printAfterAll || printAfterFailure) {
+    // If we are printing after all or failure, then just return true for the
+    // filter.
     shouldPrintAfterPass = [](Pass *, Operation *) { return true; };
   } else if (printAfter.hasAnyOccurrences()) {
     // Otherwise if there are specific passes to print after, then check to see
@@ -114,7 +120,8 @@ void PassManagerOptions::addPrinterInstrumentation(PassManager &pm) {
 
   // Otherwise, add the IR printing instrumentation.
   pm.enableIRPrinting(shouldPrintBeforePass, shouldPrintAfterPass,
-                      printModuleScope, printAfterChange, llvm::errs());
+                      printModuleScope, printAfterChange, printAfterFailure,
+                      llvm::errs());
 }
 
 void mlir::registerPassManagerCLOptions() {

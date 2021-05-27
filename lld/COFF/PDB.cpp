@@ -1185,8 +1185,25 @@ void PDBLinker::addPublicsToPDB() {
     // Only emit external, defined, live symbols that have a chunk. Static,
     // non-external symbols do not appear in the symbol table.
     auto *def = dyn_cast<Defined>(s);
-    if (def && def->isLive() && def->getChunk())
+    if (def && def->isLive() && def->getChunk()) {
+      // Don't emit a public symbol for coverage data symbols. LLVM code
+      // coverage (and PGO) create a __profd_ and __profc_ symbol for every
+      // function. C++ mangled names are long, and tend to dominate symbol size.
+      // Including these names triples the size of the public stream, which
+      // results in bloated PDB files. These symbols generally are not helpful
+      // for debugging, so suppress them.
+      StringRef name = def->getName();
+      if (name.data()[0] == '_' && name.data()[1] == '_') {
+        // Drop the '_' prefix for x86.
+        if (config->machine == I386)
+          name = name.drop_front(1);
+        if (name.startswith("__profd_") || name.startswith("__profc_") ||
+            name.startswith("__covrec_")) {
+          return;
+        }
+      }
       publics.push_back(createPublic(def));
+    }
   });
 
   if (!publics.empty()) {
@@ -1648,9 +1665,13 @@ void PDBLinker::addSections(ArrayRef<OutputSection *> outputSections,
 }
 
 void PDBLinker::commit(codeview::GUID *guid) {
-  ExitOnError exitOnErr((config->pdbPath + ": ").str());
-  // Write to a file.
-  exitOnErr(builder.commit(config->pdbPath, guid));
+  // Print an error and continue if PDB writing fails. This is done mainly so
+  // the user can see the output of /time and /summary, which is very helpful
+  // when trying to figure out why a PDB file is too large.
+  if (Error e = builder.commit(config->pdbPath, guid)) {
+    checkError(std::move(e));
+    error("failed to write PDB file " + Twine(config->pdbPath));
+  }
 }
 
 static uint32_t getSecrelReloc() {

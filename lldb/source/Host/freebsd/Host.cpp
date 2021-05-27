@@ -16,9 +16,9 @@
 
 #include <machine/elf.h>
 
+#include <cstdio>
 #include <dlfcn.h>
 #include <execinfo.h>
-#include <stdio.h>
 
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"

@@ -23,6 +23,12 @@ func @ops(%f: f32) {
   // CHECK: complex.div %[[C]], %[[C]] : complex<f32>
   %div = complex.div %complex, %complex : complex<f32>
 
+  // CHECK: complex.eq %[[C]], %[[C]] : complex<f32>
+  %eq = complex.eq %complex, %complex : complex<f32>
+
+  // CHECK: complex.neq %[[C]], %[[C]] : complex<f32>
+  %neq = complex.neq %complex, %complex : complex<f32>
+
   // CHECK: complex.mul %[[C]], %[[C]] : complex<f32>
   %prod = complex.mul %complex, %complex : complex<f32>
 

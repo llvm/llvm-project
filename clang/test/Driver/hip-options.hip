@@ -56,3 +56,17 @@
 // RUN:   --offload-arch=gfx906 -fgpu-inline-threshold=1000 %s 2>&1 | FileCheck -check-prefix=THRESH %s
 // THRESH: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-mllvm" "-inline-threshold=1000"
 // THRESH-NOT: clang{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-inline-threshold=1000"
+
+// Check -foffload-lto=thin translated correctly.
+
+// RUN: %clang -### -target x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --cuda-gpu-arch=gfx906 -foffload-lto=thin %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=THINLTO %s
+
+// RUN: %clang -### -target x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --cuda-gpu-arch=gfx906 -fgpu-rdc -foffload-lto=thin %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=THINLTO %s
+
+// THINLTO-NOT: clang{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-flto-unit"
+// THINLTO: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-flto=thin" "-flto-unit"
+// THINLTO: lld{{.*}}"-plugin-opt=mcpu=gfx906" "-plugin-opt=thinlto" "-plugin-opt=-force-import-all"

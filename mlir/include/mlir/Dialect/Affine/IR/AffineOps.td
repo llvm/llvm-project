@@ -133,7 +133,7 @@ def AffineForOp : Affine_Op<"for",
     containing its body. This region must contain one block that terminates with
     [`affine.yield`](#affineyield-affineyieldop). *Note:* when
     `affine.for` is printed in custom format, the terminator is omitted. The
-    block has one argument of [`index`](../LangRef.md#index-type) type that
+    block has one argument of [`index`](Builtin.md/#indextype) type that
     represents the induction variable of the loop.
 
     The `affine.for` operation executes its body a number of times iterating
@@ -601,14 +601,14 @@ def AffineParallelOp : Affine_Op<"parallel",
   let summary = "multi-index parallel band operation";
   let description = [{
     The "affine.parallel" operation represents a hyper-rectangular affine
-    parallel band, defining multiple SSA values for its induction variables. It
-    has one region capturing the parallel band body. The induction variables are
-    represented as arguments of this region. These SSA values always have type
-    index, which is the size of the machine word. The strides, represented by
-    steps, are positive constant integers which defaults to "1" if not present.
-    The lower and upper bounds specify a half-open range: the range includes the
-    lower bound but does not include the upper bound. The body region must
-    contain exactly one block that terminates with "affine.yield".
+    parallel band, defining zero or more SSA values for its induction variables.
+    It has one region capturing the parallel band body. The induction variables
+    are represented as arguments of this region. These SSA values always have
+    type index, which is the size of the machine word. The strides, represented
+    by steps, are positive constant integers which defaults to "1" if not
+    present. The lower and upper bounds specify a half-open range: the range
+    includes the lower bound but does not include the upper bound. The body
+    region must contain exactly one block that terminates with "affine.yield".
 
     The lower and upper bounds of a parallel operation are represented as an
     application of an affine mapping to a list of SSA values passed to the map.
@@ -912,9 +912,9 @@ def AffineVectorLoadOp : AffineLoadOpBase<"vector_load"> {
   let summary = "affine vector load operation";
   let description = [{
     The "affine.vector_load" is the vector counterpart of
-    [affine.load](#affineload-operation). It reads a slice from a
-    [MemRef](../LangRef.md#memref-type), supplied as its first operand,
-    into a [vector](../LangRef.md#vector-type) of the same base elemental type.
+    [affine.load](#affineload-affineloadop). It reads a slice from a
+    [MemRef](Builtin.md/#memreftype), supplied as its first operand,
+    into a [vector](Builtin.md/#vectortype) of the same base elemental type.
     The index for each memref dimension is an affine expression of loop induction
     variables and symbols. These indices determine the start position of the read
     within the memref. The shape of the return vector type determines the shape of
@@ -976,8 +976,8 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
   let description = [{
     The "affine.vector_store" is the vector counterpart of
     [affine.store](#affinestore-affinestoreop). It writes a
-    [vector](../LangRef.md#vector-type), supplied as its first operand,
-    into a slice within a [MemRef](../LangRef.md#memref-type) of the same base
+    [vector](Builtin.md/#vectortype), supplied as its first operand,
+    into a slice within a [MemRef](Builtin.md/#memreftype) of the same base
     elemental type, supplied as its second operand.
     The index for each memref dimension is an affine expression of loop
     induction variables and symbols. These indices determine the start position

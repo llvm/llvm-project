@@ -9,8 +9,8 @@ define void @rvv_vla(i64 %n, i64 %i) nounwind {
 ; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    addi s0, sp, 32
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    addi a3, zero, 3
-; CHECK-NEXT:    mul a2, a2, a3
+; CHECK-NEXT:    slli a3, a2, 1
+; CHECK-NEXT:    add a2, a3, a2
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    slli a0, a0, 2
 ; CHECK-NEXT:    addi a0, a0, 15
@@ -22,8 +22,8 @@ define void @rvv_vla(i64 %n, i64 %i) nounwind {
 ; CHECK-NEXT:    addi a2, a2, -32
 ; CHECK-NEXT:    vl1re64.v v25, (a2)
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    addi a3, zero, 3
-; CHECK-NEXT:    mul a2, a2, a3
+; CHECK-NEXT:    slli a3, a2, 1
+; CHECK-NEXT:    add a2, a3, a2
 ; CHECK-NEXT:    sub a2, s0, a2
 ; CHECK-NEXT:    addi a2, a2, -32
 ; CHECK-NEXT:    vl2re64.v v26, (a2)
@@ -56,8 +56,8 @@ define void @rvv_overaligned() nounwind {
 ; CHECK-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    addi s0, sp, 128
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    addi a1, zero, 3
-; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    slli a1, a0, 1
+; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    csrr a0, vlenb
@@ -94,8 +94,8 @@ define void @rvv_vla_and_overaligned(i64 %n, i64 %i) nounwind {
 ; CHECK-NEXT:    sd s1, 104(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    addi s0, sp, 128
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    addi a3, zero, 3
-; CHECK-NEXT:    mul a2, a2, a3
+; CHECK-NEXT:    slli a3, a2, 1
+; CHECK-NEXT:    add a2, a3, a2
 ; CHECK-NEXT:    sub sp, sp, a2
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    mv s1, sp

@@ -32,9 +32,21 @@ template <typename Config> static void testSecondaryBasic(void) {
   memset(P, 'A', Size);
   EXPECT_GE(SecondaryT::getBlockSize(P), Size);
   L->deallocate(scudo::Options{}, P);
+
   // If the Secondary can't cache that pointer, it will be unmapped.
-  if (!L->canCache(Size))
-    EXPECT_DEATH(memset(P, 'A', Size), "");
+  if (!L->canCache(Size)) {
+    EXPECT_DEATH(
+        {
+          // Repeat few time to avoid missing crash if it's mmaped by unrelated
+          // code.
+          for (int i = 0; i < 10; ++i) {
+            P = L->allocate(scudo::Options{}, Size);
+            L->deallocate(scudo::Options{}, P);
+            memset(P, 'A', Size);
+          }
+        },
+        "");
+  }
 
   const scudo::uptr Align = 1U << 16;
   P = L->allocate(scudo::Options{}, Size + Align, Align);
@@ -55,6 +67,7 @@ template <typename Config> static void testSecondaryBasic(void) {
   scudo::ScopedString Str(1024);
   L->getStats(&Str);
   Str.output();
+  L->unmapTestOnly();
 }
 
 struct NoCacheConfig {
@@ -112,6 +125,7 @@ TEST(ScudoSecondaryTest, SecondaryCombinations) {
   scudo::ScopedString Str(1024);
   L->getStats(&Str);
   Str.output();
+  L->unmapTestOnly();
 }
 
 TEST(ScudoSecondaryTest, SecondaryIterate) {
@@ -135,6 +149,7 @@ TEST(ScudoSecondaryTest, SecondaryIterate) {
   scudo::ScopedString Str(1024);
   L->getStats(&Str);
   Str.output();
+  L->unmapTestOnly();
 }
 
 TEST(ScudoSecondaryTest, SecondaryOptions) {
@@ -158,6 +173,7 @@ TEST(ScudoSecondaryTest, SecondaryOptions) {
     EXPECT_TRUE(L->setOption(scudo::Option::MaxCacheEntrySize, 1UL << 20));
     EXPECT_TRUE(L->canCache(1UL << 16));
   }
+  L->unmapTestOnly();
 }
 
 static std::mutex Mutex;
@@ -204,4 +220,5 @@ TEST(ScudoSecondaryTest, SecondaryThreadsRace) {
   scudo::ScopedString Str(1024);
   L->getStats(&Str);
   Str.output();
+  L->unmapTestOnly();
 }

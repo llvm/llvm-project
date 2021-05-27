@@ -30,11 +30,14 @@ std::unique_ptr<OperationPass<FuncOp>>
 createLinalgTilingToParallelLoopsPass(ArrayRef<int64_t> tileSizes = {});
 
 std::unique_ptr<OperationPass<FuncOp>>
-createLinalgTilingToTiledLoopPass(ArrayRef<int64_t> tileSizes = {});
+createLinalgTilingToTiledLoopPass(ArrayRef<int64_t> tileSizes = {},
+                                  ArrayRef<StringRef> distributionTypes = {});
 
 std::unique_ptr<OperationPass<FuncOp>>
 createLinalgPromotionPass(bool dynamicBuffers, bool useAlloca);
 std::unique_ptr<OperationPass<FuncOp>> createLinalgPromotionPass();
+
+std::unique_ptr<OperationPass<FuncOp>> createLinalgInlineScalarOperandsPass();
 
 /// Create a pass to convert Linalg tiled loops to `scf.for` and `scf.parallel`
 /// loops and memref.load/memref.store accesses.

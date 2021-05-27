@@ -35,7 +35,7 @@ add_llvm_tool(llvm-objdump
   OtoolOptsTableGen
   )
 
-if(HAVE_LIBXAR)
+if(LLVM_HAVE_LIBXAR)
   target_link_libraries(llvm-objdump PRIVATE ${XAR_LIB})
 endif()
 

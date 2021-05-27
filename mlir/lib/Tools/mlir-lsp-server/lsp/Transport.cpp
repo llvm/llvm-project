@@ -217,6 +217,7 @@ void JSONTransport::sendMessage(llvm::json::Value msg) {
   out << "Content-Length: " << outputBuffer.size() << "\r\n\r\n"
       << outputBuffer;
   out.flush();
+  Logger::debug(">>> {0}\n", outputBuffer);
 }
 
 bool JSONTransport::handleMessage(llvm::json::Value msg,

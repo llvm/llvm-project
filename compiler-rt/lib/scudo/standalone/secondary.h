@@ -28,7 +28,10 @@ namespace scudo {
 
 namespace LargeBlock {
 
-struct Header {
+struct alignas(Max<uptr>(archSupportsMemoryTagging()
+                             ? archMemoryTagGranuleSize()
+                             : 1,
+                         1U << SCUDO_MIN_ALIGNMENT_LOG)) Header {
   LargeBlock::Header *Prev;
   LargeBlock::Header *Next;
   uptr CommitBase;
@@ -38,9 +41,12 @@ struct Header {
   [[no_unique_address]] MapPlatformData Data;
 };
 
-constexpr uptr getHeaderSize() {
-  return roundUpTo(sizeof(Header), 1U << SCUDO_MIN_ALIGNMENT_LOG);
-}
+static_assert(sizeof(Header) % (1U << SCUDO_MIN_ALIGNMENT_LOG) == 0, "");
+static_assert(!archSupportsMemoryTagging() ||
+                  sizeof(Header) % archMemoryTagGranuleSize() == 0,
+              "");
+
+constexpr uptr getHeaderSize() { return sizeof(Header); }
 
 template <typename Config> static uptr addHeaderTag(uptr Ptr) {
   if (allocatorSupportsMemoryTagging<Config>())
@@ -49,8 +55,7 @@ template <typename Config> static uptr addHeaderTag(uptr Ptr) {
 }
 
 template <typename Config> static Header *getHeader(uptr Ptr) {
-  return reinterpret_cast<Header *>(addHeaderTag<Config>(Ptr) -
-                                    getHeaderSize());
+  return reinterpret_cast<Header *>(addHeaderTag<Config>(Ptr)) - 1;
 }
 
 template <typename Config> static Header *getHeader(const void *Ptr) {
@@ -66,7 +71,6 @@ static void unmap(LargeBlock::Header *H) {
 
 class MapAllocatorNoCache {
 public:
-  void initLinkerInitialized(UNUSED s32 ReleaseToOsInterval) {}
   void init(UNUSED s32 ReleaseToOsInterval) {}
   bool retrieve(UNUSED Options Options, UNUSED uptr Size, UNUSED uptr Alignment,
                 UNUSED LargeBlock::Header **H, UNUSED bool *Zeroed) {
@@ -78,6 +82,7 @@ public:
   void enable() {}
   void releaseToOS() {}
   void disableMemoryTagging() {}
+  void unmapTestOnly() {}
   bool setOption(Option O, UNUSED sptr Value) {
     if (O == Option::ReleaseInterval || O == Option::MaxCacheEntriesCount ||
         O == Option::MaxCacheEntrySize)
@@ -115,16 +120,13 @@ public:
                     Config::SecondaryCacheEntriesArraySize,
                 "");
 
-  void initLinkerInitialized(s32 ReleaseToOsInterval) {
+  void init(s32 ReleaseToOsInterval) {
+    DCHECK_EQ(EntriesCount, 0U);
     setOption(Option::MaxCacheEntriesCount,
               static_cast<sptr>(Config::SecondaryCacheDefaultMaxEntriesCount));
     setOption(Option::MaxCacheEntrySize,
               static_cast<sptr>(Config::SecondaryCacheDefaultMaxEntrySize));
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
-  }
-  void init(s32 ReleaseToOsInterval) {
-    memset(this, 0, sizeof(*this));
-    initLinkerInitialized(ReleaseToOsInterval);
   }
 
   void store(Options Options, LargeBlock::Header *H) {
@@ -321,6 +323,8 @@ public:
 
   void enable() { Mutex.unlock(); }
 
+  void unmapTestOnly() { empty(); }
+
 private:
   void empty() {
     struct {
@@ -396,15 +400,13 @@ private:
 
 template <typename Config> class MapAllocator {
 public:
-  void initLinkerInitialized(GlobalStats *S, s32 ReleaseToOsInterval = -1) {
-    Cache.initLinkerInitialized(ReleaseToOsInterval);
-    Stats.initLinkerInitialized();
+  void init(GlobalStats *S, s32 ReleaseToOsInterval = -1) {
+    DCHECK_EQ(AllocatedBytes, 0U);
+    DCHECK_EQ(FreedBytes, 0U);
+    Cache.init(ReleaseToOsInterval);
+    Stats.init();
     if (LIKELY(S))
       S->link(&Stats);
-  }
-  void init(GlobalStats *S, s32 ReleaseToOsInterval = -1) {
-    memset(this, 0, sizeof(*this));
-    initLinkerInitialized(S, ReleaseToOsInterval);
   }
 
   void *allocate(Options Options, uptr Size, uptr AlignmentHint = 0,
@@ -450,6 +452,8 @@ public:
   void releaseToOS() { Cache.releaseToOS(); }
 
   void disableMemoryTagging() { Cache.disableMemoryTagging(); }
+
+  void unmapTestOnly() { Cache.unmapTestOnly(); }
 
 private:
   typename Config::SecondaryCache Cache;

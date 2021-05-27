@@ -18,6 +18,6 @@ int main(int argc, const char **argv) {
   return 0;
 }
 
-// DexExpectWatchValue('vla[0]', '23', on_line='end_init')
-// DexExpectWatchValue('vla[1]', '22', on_line='end_init')
+// DexExpectWatchValue('vla[0]', '23', on_line=ref('end_init'))
+// DexExpectWatchValue('vla[1]', '22', on_line=ref('end_init'))
 

@@ -1381,10 +1381,38 @@ bool SystemZAsmParser::ParseInstruction(ParseInstructionInfo &Info,
     // Read any subsequent operands.
     while (getLexer().is(AsmToken::Comma)) {
       Parser.Lex();
+
+      if (isParsingHLASM() && getLexer().is(AsmToken::Space))
+        return Error(
+            Parser.getTok().getLoc(),
+            "No space allowed between comma that separates operand entries");
+
       if (parseOperand(Operands, Name)) {
         return true;
       }
     }
+
+    // Under the HLASM variant, we could have the remark field
+    // The remark field occurs after the operation entries
+    // There is a space that separates the operation entries and the
+    // remark field.
+    if (isParsingHLASM() && getTok().is(AsmToken::Space)) {
+      // We've confirmed that there is a Remark field.
+      StringRef Remark(getLexer().LexUntilEndOfStatement());
+      Parser.Lex();
+
+      // If there is nothing after the space, then there is nothing to emit
+      // We could have a situation as this:
+      // "  \n"
+      // After lexing above, we will have
+      // "\n"
+      // This isn't an explicit remark field, so we don't have to output
+      // this as a comment.
+      if (Remark.size())
+        // Output the entire Remarks Field as a comment
+        getStreamer().AddComment(Remark);
+    }
+
     if (getLexer().isNot(AsmToken::EndOfStatement)) {
       SMLoc Loc = getLexer().getLoc();
       return Error(Loc, "unexpected token in argument list");

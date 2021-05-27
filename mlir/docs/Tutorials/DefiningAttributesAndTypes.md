@@ -1,11 +1,11 @@
 # Defining Dialect Attributes and Types
 
 This document is a quickstart to defining dialect specific extensions to the
-[attribute](LangRef.md#attributes) and [type](LangRef.md#type-system) systems in
+[attribute](../LangRef.md/#attributes) and [type](../LangRef.md/#type-system) systems in
 MLIR. The main part of this tutorial focuses on defining types, but the
 instructions are nearly identical for defining attributes.
 
-See [MLIR specification](LangRef.md) for more information about MLIR, the
+See [MLIR specification](../LangRef.md) for more information about MLIR, the
 structure of the IR, operations, etc.
 
 ## Types
@@ -25,13 +25,13 @@ So before defining the derived `Type`, it's important to know which of the two
 classes of `Type` we are defining:
 
 Some types are _singleton_ in nature, meaning they have no parameters and only
-ever have one instance, like the [`index` type](LangRef.md#index-type).
+ever have one instance, like the [`index` type](../Dialects/Builtin.md/#indextype).
 
 Other types are _parametric_, and contain additional information that
 differentiates different instances of the same `Type`. For example the
-[`integer` type](LangRef.md#integer-type) contains a bitwidth, with `i8` and
+[`integer` type](../Dialects/Builtin.md/#integertype) contains a bitwidth, with `i8` and
 `i16` representing different instances of
-[`integer` type](LangRef.md#integer-type). _Parametric_ may also contain a
+[`integer` type](../Dialects/Builtin.md/#integertype). _Parametric_ may also contain a
 mutable component, which can be used, for example, to construct self-referring
 recursive types. The mutable component _cannot_ be used to differentiate
 instances of a type class, so usually such types contain other parametric
@@ -319,7 +319,7 @@ public:
 
 Once the dialect types have been defined, they must then be registered with a
 `Dialect`. This is done via a similar mechanism to
-[operations](LangRef.md#operations), with the `addTypes` method. The one
+[operations](../LangRef.md/#operations), with the `addTypes` method. The one
 distinct difference with operations, is that when a type is registered the
 definition of its storage class must be visible.
 
@@ -351,7 +351,7 @@ public:
 
 These methods take an instance of a high-level parser or printer that allows for
 easily implementing the necessary functionality. As described in the
-[MLIR language reference](../../LangRef.md#dialect-types), dialect types are
+[MLIR language reference](../LangRef.md/#dialect-types), dialect types are
 generally represented as: `! dialect-namespace < type-data >`, with a pretty
 form available under certain circumstances. The responsibility of our parser and
 printer is to provide the `type-data` bits.

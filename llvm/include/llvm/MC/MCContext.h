@@ -371,17 +371,17 @@ namespace llvm {
       bool operator<(const ELFEntrySizeKey &Other) const {
         if (SectionName != Other.SectionName)
           return SectionName < Other.SectionName;
-        if ((Flags & ELF::SHF_STRINGS) != (Other.Flags & ELF::SHF_STRINGS))
-          return Other.Flags & ELF::SHF_STRINGS;
+        if (Flags != Other.Flags)
+          return Flags < Other.Flags;
         return EntrySize < Other.EntrySize;
       }
     };
 
-    // Symbols must be assigned to a section with a compatible entry
-    // size. This map is used to assign unique IDs to sections to
-    // distinguish between sections with identical names but incompatible entry
-    // sizes. This can occur when a symbol is explicitly assigned to a
-    // section, e.g. via __attribute__((section("myname"))).
+    // Symbols must be assigned to a section with a compatible entry size and
+    // flags. This map is used to assign unique IDs to sections to distinguish
+    // between sections with identical names but incompatible entry sizes and/or
+    // flags. This can occur when a symbol is explicitly assigned to a section,
+    // e.g. via __attribute__((section("myname"))).
     std::map<ELFEntrySizeKey, unsigned> ELFEntrySizeMap;
 
     // This set is used to record the generic mergeable section names seen.
@@ -393,8 +393,7 @@ namespace llvm {
 
   public:
     explicit MCContext(const Triple &TheTriple, const MCAsmInfo *MAI,
-                       const MCRegisterInfo *MRI, const MCObjectFileInfo *MOFI,
-                       const MCSubtargetInfo *MSTI,
+                       const MCRegisterInfo *MRI, const MCSubtargetInfo *MSTI,
                        const SourceMgr *Mgr = nullptr,
                        MCTargetOptions const *TargetOpts = nullptr,
                        bool DoAutoReset = true);
@@ -415,6 +414,8 @@ namespace llvm {
     void setDiagnosticHandler(DiagHandlerTy DiagHandler) {
       this->DiagHandler = DiagHandler;
     }
+
+    void setObjectFileInfo(const MCObjectFileInfo *Mofi) { MOFI = Mofi; }
 
     const MCAsmInfo *getAsmInfo() const { return MAI; }
 
@@ -588,6 +589,8 @@ namespace llvm {
 
     bool isELFGenericMergeableSection(StringRef Name);
 
+    /// Return the unique ID of the section with the given name, flags and entry
+    /// size, if it exists.
     Optional<unsigned> getELFUniqueIDForEntsize(StringRef SectionName,
                                                 unsigned Flags,
                                                 unsigned EntrySize);
@@ -610,8 +613,9 @@ namespace llvm {
     getAssociativeCOFFSection(MCSectionCOFF *Sec, const MCSymbol *KeySym,
                               unsigned UniqueID = GenericSectionID);
 
-    MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K) {
-      return getWasmSection(Section, K, 0, nullptr);
+    MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
+                                  unsigned Flags = 0) {
+      return getWasmSection(Section, K, Flags, nullptr);
     }
 
     MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,

@@ -249,7 +249,11 @@ bool AMDGPUPropagateAttributes::process() {
         if (!I)
           continue;
         CallBase *CI = dyn_cast<CallBase>(I);
-        if (!CI)
+        // Only propagate attributes if F is the called function. Specifically,
+        // do not propagate attributes if F is passed as an argument.
+        // FIXME: handle bitcasted callee, e.g.
+        // %retval = call i8* bitcast (i32* ()* @f to i8* ()*)()
+        if (!CI || CI->getCalledOperand() != &F)
           continue;
         Function *Caller = CI->getCaller();
         if (!Caller || !Visited.insert(CI).second)

@@ -7,7 +7,7 @@
 //===---------------------------------------------------------------------===//
 
 #include <cassert>
-#include <stddef.h>
+#include <cstddef>
 #include <vector>
 
 #include "lldb/lldb-defines.h"

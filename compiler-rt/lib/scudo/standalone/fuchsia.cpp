@@ -41,7 +41,7 @@ static void *allocateVmar(uptr Size, MapPlatformData *Data, bool AllowNoMem) {
       Size, &Data->Vmar, &Data->VmarBase);
   if (UNLIKELY(Status != ZX_OK)) {
     if (Status != ZX_ERR_NO_MEMORY || !AllowNoMem)
-      dieOnMapUnmapError(Status == ZX_ERR_NO_MEMORY);
+      dieOnMapUnmapError(Status == ZX_ERR_NO_MEMORY ? Size : 0);
     return nullptr;
   }
   return reinterpret_cast<void *>(Data->VmarBase);
@@ -71,7 +71,7 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
     Status = _zx_vmo_set_size(Vmo, VmoSize + Size);
     if (Status != ZX_OK) {
       if (Status != ZX_ERR_NO_MEMORY || !AllowNoMem)
-        dieOnMapUnmapError(Status == ZX_ERR_NO_MEMORY);
+        dieOnMapUnmapError(Status == ZX_ERR_NO_MEMORY ? Size : 0);
       return nullptr;
     }
   } else {
@@ -79,7 +79,7 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
     Status = _zx_vmo_create(Size, ZX_VMO_RESIZABLE, &Vmo);
     if (UNLIKELY(Status != ZX_OK)) {
       if (Status != ZX_ERR_NO_MEMORY || !AllowNoMem)
-        dieOnMapUnmapError(Status == ZX_ERR_NO_MEMORY);
+        dieOnMapUnmapError(Status == ZX_ERR_NO_MEMORY ? Size : 0);
       return nullptr;
     }
     _zx_object_set_property(Vmo, ZX_PROP_NAME, Name, strlen(Name));
@@ -105,7 +105,7 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
   }
   if (UNLIKELY(Status != ZX_OK)) {
     if (Status != ZX_ERR_NO_MEMORY || !AllowNoMem)
-      dieOnMapUnmapError(Status == ZX_ERR_NO_MEMORY);
+      dieOnMapUnmapError(Status == ZX_ERR_NO_MEMORY ? Size : 0);
     return nullptr;
   }
   if (Data)

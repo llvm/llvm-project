@@ -1290,14 +1290,12 @@ let AssemblerPredicate = isGFX11Only,
     defvar dpp_ps = !cast<VOP_DPP_Pseudo>(opName #"_e64" #"_dpp");
     def _e64_dpp_gfx11 : Base_VOP3b_DPP16<op, dpp_ps, asmName>,
                          SIMCInstr<dpp_ps.PseudoInstr, SIEncodingFamily.GFX11> {
-      string AsmDPP = ps.Pfl.AsmVOP3DPP16;
       let DecoderNamespace = "DPPGFX11";
     }
   }
   multiclass VOP3be_Real_dpp8_gfx11<bits<10> op, string opName, string asmName> {
     defvar ps = !cast<VOP3_Pseudo>(opName #"_e64");
     def _e64_dpp8_gfx11 : VOP3b_DPP8_Base<op, ps, asmName> {
-      string AsmDPP8 = ps.Pfl.AsmVOP3DPP8;
       let DecoderNamespace = "DPP8GFX11";
     }
   }

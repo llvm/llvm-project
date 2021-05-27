@@ -408,8 +408,14 @@ private:
     // Consider the types of the block arguments for aliases if 'printBlockArgs'
     // is set to true.
     if (printBlockArgs) {
-      for (Type type : block->getArgumentTypes())
-        printType(type);
+      for (BlockArgument arg : block->getArguments()) {
+        printType(arg.getType());
+
+        // Visit the argument location.
+        if (printerFlags.shouldPrintDebugInfo())
+          // TODO: Allow deferring argument locations.
+          initializer.visit(arg.getLoc(), /*canBeDeferred=*/false);
+      }
     }
 
     // Consider the operations within this block, ignoring the terminator if
@@ -431,6 +437,15 @@ private:
     print(entryBlock, printEntryBlockArgs, printBlockTerminators);
     for (Block &b : llvm::drop_begin(region, 1))
       print(&b);
+  }
+
+  void printRegionArgument(BlockArgument arg, ArrayRef<NamedAttribute> argAttrs,
+                           bool omitType) override {
+    printType(arg.getType());
+    // Visit the argument location.
+    if (printerFlags.shouldPrintDebugInfo())
+      // TODO: Allow deferring argument locations.
+      initializer.visit(arg.getLoc(), /*canBeDeferred=*/false);
   }
 
   /// Consider the given type to be printed for an alias.
@@ -485,8 +500,6 @@ private:
   void printSuccessor(Block *) override {}
   void printSuccessorAndUseList(Block *, ValueRange) override {}
   void shadowRegionArgs(Region &, ValueRange) override {}
-  void printRegionArgument(BlockArgument arg, ArrayRef<NamedAttribute> argAttrs,
-                           bool omitType) override {}
 
   /// The printer flags to use when determining potential aliases.
   const OpPrintingFlags &printerFlags;
@@ -1243,7 +1256,7 @@ protected:
                              ArrayRef<StringRef> elidedAttrs = {},
                              bool withKeyword = false);
   void printNamedAttribute(NamedAttribute attr);
-  void printTrailingLocation(Location loc);
+  void printTrailingLocation(Location loc, bool allowAlias = true);
   void printLocationInternal(LocationAttr loc, bool pretty = false);
 
   /// Print a dense elements attribute. If 'allowHex' is true, a hex string is
@@ -1286,13 +1299,13 @@ protected:
 };
 } // end anonymous namespace
 
-void ModulePrinter::printTrailingLocation(Location loc) {
+void ModulePrinter::printTrailingLocation(Location loc, bool allowAlias) {
   // Check to see if we are printing debug information.
   if (!printerFlags.shouldPrintDebugInfo())
     return;
 
   os << " ";
-  printLocation(loc, /*allowAlias=*/true);
+  printLocation(loc, /*allowAlias=*/allowAlias);
 }
 
 void ModulePrinter::printLocationInternal(LocationAttr loc, bool pretty) {
@@ -2444,7 +2457,8 @@ void OperationPrinter::printRegionArgument(BlockArgument arg,
     printType(arg.getType());
   }
   printOptionalAttrDict(argAttrs);
-  printTrailingLocation(arg.getLoc());
+  // TODO: We should allow location aliases on block arguments.
+  printTrailingLocation(arg.getLoc(), /*allowAlias*/ false);
 }
 
 void OperationPrinter::print(Operation *op) {
@@ -2557,7 +2571,8 @@ void OperationPrinter::print(Block *block, bool printBlockArgs,
         printValueID(arg);
         os << ": ";
         printType(arg.getType());
-        printTrailingLocation(arg.getLoc());
+        // TODO: We should allow location aliases on block arguments.
+        printTrailingLocation(arg.getLoc(), /*allowAlias*/ false);
       });
       os << ')';
     }

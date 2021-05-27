@@ -20,7 +20,7 @@ namespace llvm {
 
 namespace AMDGPU {
 
-bool isKernelCC(Function *Func) {
+bool isKernelCC(const Function *Func) {
   return AMDGPU::isModuleEntryFunctionCC(Func->getCallingConv());
 }
 
@@ -29,18 +29,33 @@ Align getAlign(DataLayout const &DL, const GlobalVariable *GV) {
                                        GV->getValueType());
 }
 
-bool userRequiresLowering(const SmallPtrSetImpl<GlobalValue *> &UsedList,
-                          User *InitialUser) {
+bool isUsedOnlyFromFunction(const User *U, const Function *F) {
+  if (auto *I = dyn_cast<Instruction>(U)) {
+    return I->getFunction() == F;
+  }
+
+  if (isa<ConstantExpr>(U)) {
+    return all_of(U->users(),
+                  [F](const User *U) { return isUsedOnlyFromFunction(U, F); });
+  }
+
+  return false;
+}
+
+bool shouldLowerLDSToStruct(const SmallPtrSetImpl<GlobalValue *> &UsedList,
+                            const GlobalVariable &GV, const Function *F) {
   // Any LDS variable can be lowered by moving into the created struct
   // Each variable so lowered is allocated in every kernel, so variables
   // whose users are all known to be safe to lower without the transform
   // are left unchanged.
-  SmallPtrSet<User *, 8> Visited;
-  SmallVector<User *, 16> Stack;
-  Stack.push_back(InitialUser);
+  bool Ret = false;
+  SmallPtrSet<const User *, 8> Visited;
+  SmallVector<const User *, 16> Stack(GV.users());
+
+  assert(!F || isKernelCC(F));
 
   while (!Stack.empty()) {
-    User *V = Stack.pop_back_val();
+    const User *V = Stack.pop_back_val();
     Visited.insert(V);
 
     if (auto *G = dyn_cast<GlobalValue>(V->stripPointerCasts())) {
@@ -50,31 +65,45 @@ bool userRequiresLowering(const SmallPtrSetImpl<GlobalValue *> &UsedList,
     }
 
     if (auto *I = dyn_cast<Instruction>(V)) {
-      if (isKernelCC(I->getFunction())) {
-        continue;
+      const Function *UF = I->getFunction();
+      if (UF == F) {
+        // Used from this kernel, we want to put it into the structure.
+        Ret = true;
+      } else if (!F) {
+        Ret |= !isKernelCC(UF);
       }
+      continue;
     }
 
     if (auto *E = dyn_cast<ConstantExpr>(V)) {
-      for (Value::user_iterator EU = E->user_begin(); EU != E->user_end();
-           ++EU) {
-        if (Visited.insert(*EU).second) {
-          Stack.push_back(*EU);
+      if (F) {
+        // Any use which does not end up an instruction disqualifies a
+        // variable to be put into a kernel's LDS structure because later
+        // we will need to replace only this kernel's uses for which we
+        // need to identify a using function.
+        if (!isUsedOnlyFromFunction(E, F))
+          return false;
+      }
+      for (const User *U : E->users()) {
+        if (Visited.insert(U).second) {
+          Stack.push_back(U);
         }
       }
       continue;
     }
 
-    // Unknown user, conservatively lower the variable
-    return true;
+    // Unknown user, conservatively lower the variable.
+    // For module LDS conservatively means place it into the module LDS struct.
+    // For kernel LDS it means lower as a standalone variable.
+    return !F;
   }
 
-  return false;
+  return Ret;
 }
 
 std::vector<GlobalVariable *>
-findVariablesToLower(Module &M,
-                     const SmallPtrSetImpl<GlobalValue *> &UsedList) {
+findVariablesToLower(Module &M, const SmallPtrSetImpl<GlobalValue *> &UsedList,
+                     const Function *F) {
   std::vector<llvm::GlobalVariable *> LocalVars;
   for (auto &GV : M.globals()) {
     if (GV.getType()->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS) {
@@ -98,9 +127,7 @@ findVariablesToLower(Module &M,
       // dropped by the back end if not. This pass skips over it.
       continue;
     }
-    if (std::none_of(GV.user_begin(), GV.user_end(), [&](User *U) {
-          return userRequiresLowering(UsedList, U);
-        })) {
+    if (!shouldLowerLDSToStruct(UsedList, GV, F)) {
       continue;
     }
     LocalVars.push_back(&GV);

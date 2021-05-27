@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   FusionOnTensors.cpp
   Generalization.cpp
   Hoisting.cpp
+  InlineScalarOperands.cpp
   Interchange.cpp
   Loops.cpp
   Promotion.cpp
@@ -27,11 +28,9 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRAffineUtils
   MLIRAnalysis
   MLIRComplex
-  MLIREDSC
   MLIRIR
   MLIRMemRef
   MLIRLinalgAnalysis
-  MLIRLinalgEDSC
   MLIRLinalg
   MLIRLinalgUtils
   MLIRSCF

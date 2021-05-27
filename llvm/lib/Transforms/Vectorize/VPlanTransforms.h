@@ -28,6 +28,8 @@ struct VPlanTransforms {
       Loop *OrigLoop, VPlanPtr &Plan,
       LoopVectorizationLegality::InductionList &Inductions,
       SmallPtrSetImpl<Instruction *> &DeadInstructions, ScalarEvolution &SE);
+
+  static bool sinkScalarOperands(VPlan &Plan);
 };
 
 } // namespace llvm

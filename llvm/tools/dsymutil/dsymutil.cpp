@@ -436,6 +436,11 @@ getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
       (Options.LinkOpts.Update || !Options.SymbolMap.empty()))
     return OutputLocation(std::string(InputFile));
 
+  // When dumping the debug map, just return an empty output location. This
+  // allows us to compute the output location once.
+  if (Options.DumpDebugMap)
+    return OutputLocation("");
+
   // If a flat dSYM has been requested, things are pretty simple.
   if (Options.Flat) {
     if (Options.OutputFile.empty()) {
@@ -500,18 +505,18 @@ int main(int argc, char **argv) {
         "for the executable <input file> by using debug symbols information\n"
         "contained in its symbol table.\n",
         false);
-    return 0;
+    return EXIT_SUCCESS;
   }
 
   if (Args.hasArg(OPT_version)) {
     cl::PrintVersionMessage();
-    return 0;
+    return EXIT_SUCCESS;
   }
 
   auto OptionsOrErr = getOptions(Args);
   if (!OptionsOrErr) {
     WithColor::error() << toString(OptionsOrErr.takeError());
-    return 1;
+    return EXIT_FAILURE;
   }
 
   auto &Options = *OptionsOrErr;
@@ -525,7 +530,7 @@ int main(int argc, char **argv) {
       Reproducer::createReproducer(Options.ReproMode, Options.ReproducerPath);
   if (!Repro) {
     WithColor::error() << toString(Repro.takeError());
-    return 1;
+    return EXIT_FAILURE;
   }
 
   Options.LinkOpts.VFS = (*Repro)->getVFS();
@@ -534,7 +539,7 @@ int main(int argc, char **argv) {
     if (Arch != "*" && Arch != "all" &&
         !object::MachOObjectFile::isValidArch(Arch)) {
       WithColor::error() << "unsupported cpu architecture: '" << Arch << "'\n";
-      return 1;
+      return EXIT_FAILURE;
     }
 
   SymbolMapLoader SymMapLoader(Options.SymbolMap);
@@ -544,7 +549,7 @@ int main(int argc, char **argv) {
     if (Options.DumpStab) {
       if (!dumpStab(Options.LinkOpts.VFS, InputFile, Options.Archs,
                     Options.LinkOpts.PrependPath))
-        return 1;
+        return EXIT_FAILURE;
       continue;
     }
 
@@ -556,7 +561,7 @@ int main(int argc, char **argv) {
     if (auto EC = DebugMapPtrsOrErr.getError()) {
       WithColor::error() << "cannot parse the debug map for '" << InputFile
                          << "': " << EC.message() << '\n';
-      return 1;
+      return EXIT_FAILURE;
     }
 
     // Remember the number of debug maps that are being processed to decide how
@@ -574,11 +579,20 @@ int main(int argc, char **argv) {
     // Ensure that the debug map is not empty (anymore).
     if (DebugMapPtrsOrErr->empty()) {
       WithColor::error() << "no architecture to link\n";
-      return 1;
+      return EXIT_FAILURE;
     }
 
     // Shared a single binary holder for all the link steps.
     BinaryHolder BinHolder(Options.LinkOpts.VFS);
+
+    // Compute the output location and update the resource directory.
+    Expected<OutputLocation> OutputLocationOrErr =
+        getOutputFileName(InputFile, Options);
+    if (!OutputLocationOrErr) {
+      WithColor::error() << toString(OutputLocationOrErr.takeError());
+      return EXIT_FAILURE;
+    }
+    Options.LinkOpts.ResourceDir = OutputLocationOrErr->getResourceDir();
 
     // Statistics only require different architectures to be processed
     // sequentially, the link itself can still happen in parallel. Change the
@@ -621,14 +635,6 @@ int main(int argc, char **argv) {
       // types don't work with std::bind in the ThreadPool implementation.
       std::shared_ptr<raw_fd_ostream> OS;
 
-      Expected<OutputLocation> OutputLocationOrErr =
-          getOutputFileName(InputFile, Options);
-      if (!OutputLocationOrErr) {
-        WithColor::error() << toString(OutputLocationOrErr.takeError());
-        return 1;
-      }
-      Options.LinkOpts.ResourceDir = OutputLocationOrErr->getResourceDir();
-
       std::string OutputFile = OutputLocationOrErr->DWARFFile;
       if (NeedsTempFiles) {
         TempFiles.emplace_back(Map->getTriple().getArchName().str());
@@ -636,7 +642,7 @@ int main(int argc, char **argv) {
         auto E = TempFiles.back().createTempFile();
         if (E) {
           WithColor::error() << toString(std::move(E));
-          return 1;
+          return EXIT_FAILURE;
         }
 
         auto &TempFile = *(TempFiles.back().File);
@@ -649,7 +655,7 @@ int main(int argc, char **argv) {
             Options.LinkOpts.NoOutput ? "-" : OutputFile, EC, sys::fs::OF_None);
         if (EC) {
           WithColor::error() << OutputFile << ": " << EC.message();
-          return 1;
+          return EXIT_FAILURE;
         }
       }
 
@@ -675,21 +681,28 @@ int main(int argc, char **argv) {
     Threads.wait();
 
     if (!AllOK)
-      return 1;
+      return EXIT_FAILURE;
 
     if (NeedsTempFiles) {
-      Expected<OutputLocation> OutputLocationOrErr =
-          getOutputFileName(InputFile, Options);
-      if (!OutputLocationOrErr) {
-        WithColor::error() << toString(OutputLocationOrErr.takeError());
-        return 1;
-      }
       if (!MachOUtils::generateUniversalBinary(TempFiles,
                                                OutputLocationOrErr->DWARFFile,
                                                Options.LinkOpts, SDKPath))
-        return 1;
+        return EXIT_FAILURE;
+    }
+
+    // The Mach-O object file format is limited to 4GB. Make sure that we print
+    // an error when we emit an invalid Mach-O companion file. Leave the
+    // invalid object file around on disk for inspection.
+    ErrorOr<vfs::Status> stat =
+        Options.LinkOpts.VFS->status(OutputLocationOrErr->DWARFFile);
+    if (stat) {
+      if (stat->getSize() > std::numeric_limits<uint32_t>::max()) {
+        WithColor::error() << "the linked debug info exceeds the 4GB Mach-O "
+                              "object file format.";
+        return EXIT_FAILURE;
+      }
     }
   }
 
-  return 0;
+  return EXIT_SUCCESS;
 }

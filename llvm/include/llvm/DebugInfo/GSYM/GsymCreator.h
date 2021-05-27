@@ -133,7 +133,7 @@ class FileWriter;
 /// of FunctionInfo objects, see "llvm/DebugInfo/GSYM/FunctionInfo.h".
 class GsymCreator {
   // Private member variables require Mutex protections
-  mutable std::recursive_mutex Mutex;
+  mutable std::mutex Mutex;
   std::vector<FunctionInfo> Funcs;
   StringTableBuilder StrTab;
   StringSet<> StringStorage;

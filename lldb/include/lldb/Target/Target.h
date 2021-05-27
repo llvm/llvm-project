@@ -37,8 +37,6 @@
 
 namespace lldb_private {
 
-class ClangModulesDeclVendor;
-
 OptionEnumValues GetDynamicValueTypes();
 
 enum InlineStrategy {
@@ -1336,8 +1334,6 @@ public:
 
   SourceManager &GetSourceManager();
 
-  ClangModulesDeclVendor *GetClangModulesDeclVendor();
-
   // Methods.
   lldb::SearchFilterSP
   GetSearchFilterForModule(const FileSpec *containingModule);
@@ -1420,8 +1416,6 @@ protected:
 
   typedef std::map<lldb::LanguageType, lldb::REPLSP> REPLMap;
   REPLMap m_repl_map;
-
-  std::unique_ptr<ClangModulesDeclVendor> m_clang_modules_decl_vendor_up;
 
   lldb::SourceManagerUP m_source_manager_up;
 

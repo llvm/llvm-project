@@ -63,12 +63,12 @@ static void defaultDiagHandler(const SMDiagnostic &SMD, bool, const SourceMgr &,
 }
 
 MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
-                     const MCRegisterInfo *mri, const MCObjectFileInfo *mofi,
-                     const MCSubtargetInfo *msti, const SourceMgr *mgr,
-                     MCTargetOptions const *TargetOpts, bool DoAutoReset)
+                     const MCRegisterInfo *mri, const MCSubtargetInfo *msti,
+                     const SourceMgr *mgr, MCTargetOptions const *TargetOpts,
+                     bool DoAutoReset)
     : TT(TheTriple), SrcMgr(mgr), InlineSrcMgr(nullptr),
-      DiagHandler(defaultDiagHandler), MAI(mai), MRI(mri), MOFI(mofi),
-      MSTI(msti), Symbols(Allocator), UsedNames(Allocator),
+      DiagHandler(defaultDiagHandler), MAI(mai), MRI(mri), MSTI(msti),
+      Symbols(Allocator), UsedNames(Allocator),
       InlineAsmUsedLabelNames(Allocator),
       CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
       AutoReset(DoAutoReset), TargetOptions(TargetOpts) {
@@ -580,7 +580,7 @@ void MCContext::recordELFMergeableSectionInfo(StringRef SectionName,
                                               unsigned Flags, unsigned UniqueID,
                                               unsigned EntrySize) {
   bool IsMergeable = Flags & ELF::SHF_MERGE;
-  if (IsMergeable && (UniqueID == GenericSectionID))
+  if (UniqueID == GenericSectionID)
     ELFSeenGenericMergeableSections.insert(SectionName);
 
   // For mergeable sections or non-mergeable sections with a generic mergeable

@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -dce -instcombine -mtriple aarch64-linux-gnu -mattr=+sve -S %s -o - | FileCheck %s
+; RUN: opt -loop-vectorize -scalable-vectorization=on -dce -instcombine -mtriple aarch64-linux-gnu -mattr=+sve -S %s -o - | FileCheck %s
 
 define void @cond_inv_load_i32i32i16(i32* noalias nocapture %a, i32* noalias nocapture readonly %cond, i16* noalias nocapture readonly %inv, i64 %n) {
 ; CHECK-LABEL: @cond_inv_load_i32i32i16

@@ -15,9 +15,7 @@
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
-#include "mlir/Dialect/StandardOps/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
-#include "mlir/Dialect/Vector/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Matchers.h"
@@ -32,8 +30,6 @@
 #include <type_traits>
 
 using namespace mlir;
-using namespace mlir::edsc;
-using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
 
 using llvm::dbgs;
@@ -158,7 +154,7 @@ static Operation *getSingleBinaryOpAssumedReduction(OpOperand &outputOperand) {
 /// Otherwise, just return `value`.
 // TODO: this is best effort atm and there is currently no guarantee of
 // correctness for the broadcast semantics.
-static Value broadcastIfNeeded(OpBuilder &builder, Value value,
+static Value broadcastIfNeeded(OpBuilder &b, Value value,
                                ArrayRef<int64_t> shape) {
   unsigned numDimsGtOne = std::count_if(shape.begin(), shape.end(),
                                         [](int64_t val) { return val > 1; });
@@ -169,8 +165,8 @@ static Value broadcastIfNeeded(OpBuilder &builder, Value value,
     return value;
   auto newVecType = VectorType::get(shape, vecType ? vecType.getElementType()
                                                    : value.getType());
-  return builder.create<vector::BroadcastOp>(
-      builder.getInsertionPoint()->getLoc(), newVecType, value);
+  return b.create<vector::BroadcastOp>(b.getInsertionPoint()->getLoc(),
+                                       newVecType, value);
 }
 
 static llvm::Optional<vector::CombiningKind>
@@ -189,7 +185,7 @@ getKindForOp(Operation *reductionOp) {
 /// If value of assumed VectorType has a shape different than `shape`, build and
 /// return a new vector.broadcast to `shape`.
 /// Otherwise, just return value.
-static Value reduceIfNeeded(OpBuilder &builder, VectorType targetVectorType,
+static Value reduceIfNeeded(OpBuilder &b, VectorType targetVectorType,
                             Value value, OpOperand &outputOperand) {
   assert(targetVectorType.getShape() ==
          outputOperand.get().getType().cast<ShapedType>().getShape());
@@ -201,7 +197,7 @@ static Value reduceIfNeeded(OpBuilder &builder, VectorType targetVectorType,
   Operation *reductionOp = getSingleBinaryOpAssumedReduction(outputOperand);
   auto linalgOp = cast<LinalgOp>(outputOperand.getOwner());
   unsigned pos = 0;
-  MLIRContext *ctx = builder.getContext();
+  MLIRContext *ctx = b.getContext();
   SmallVector<AffineExpr> exprs;
   for (auto s : linalgOp.iterator_types())
     if (isParallelIterator(s))
@@ -217,41 +213,45 @@ static Value reduceIfNeeded(OpBuilder &builder, VectorType targetVectorType,
       reductionMask[idx] = true;
     ++idx;
   }
-  return builder.create<vector::MultiDimReductionOp>(loc, value, reductionMask,
-                                                     *maybeKind);
+  return b.create<vector::MultiDimReductionOp>(loc, value, reductionMask,
+                                               *maybeKind);
 }
 
 /// Build a vector.transfer_read from `source` at indices set to all `0`.
 /// If source has rank zero, build an memref.load.
 /// Return the produced value.
-static Value buildVectorRead(OpBuilder &builder, Value source,
-                             VectorType vectorType, AffineMap map) {
-  edsc::ScopedContext scope(builder);
+static Value buildVectorRead(OpBuilder &b, Value source, VectorType vectorType,
+                             AffineMap map) {
+  Location loc = source.getLoc();
   auto shapedType = source.getType().cast<ShapedType>();
-  SmallVector<Value> indices(shapedType.getRank(), std_constant_index(0));
-  return vector_transfer_read(vectorType, source, indices, map);
+  SmallVector<Value> indices(shapedType.getRank(),
+                             b.create<ConstantIndexOp>(loc, 0));
+  return b.create<vector::TransferReadOp>(loc, vectorType, source, indices,
+                                          map);
 }
 
 /// Build a vector.transfer_write of `value` into `outputOperand` at indices set
 /// to all `0`; where `outputOperand` is an output operand of the LinalgOp
 /// currently being vectorized. If `dest` has null rank, build an memref.store.
 /// Return the produced value or null if no value is produced.
-static Value buildVectorWrite(OpBuilder &builder, Value value,
+static Value buildVectorWrite(OpBuilder &b, Value value,
                               OpOperand &outputOperand) {
-  edsc::ScopedContext scope(builder);
   Operation *write;
+  Location loc = value.getLoc();
   auto shapedType = outputOperand.get().getType().cast<ShapedType>();
   if (VectorType vectorType =
           extractVectorTypeFromShapedValue(outputOperand.get())) {
     auto linalgOp = cast<LinalgOp>(outputOperand.getOwner());
     AffineMap map = reindexIndexingMap(
         linalgOp.getIndexingMap(outputOperand.getOperandNumber()));
-    SmallVector<Value> indices(shapedType.getRank(), std_constant_index(0));
-    value = broadcastIfNeeded(builder, value, vectorType.getShape());
-    value = reduceIfNeeded(builder, vectorType, value, outputOperand);
-    write = vector_transfer_write(value, outputOperand.get(), indices, map);
+    SmallVector<Value> indices(shapedType.getRank(),
+                               b.create<ConstantIndexOp>(loc, 0));
+    value = broadcastIfNeeded(b, value, vectorType.getShape());
+    value = reduceIfNeeded(b, vectorType, value, outputOperand);
+    write = b.create<vector::TransferWriteOp>(loc, value, outputOperand.get(),
+                                              indices, map);
   } else {
-    write = memref_store(value, outputOperand.get());
+    write = b.create<memref::StoreOp>(loc, value, outputOperand.get());
   }
   LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: vectorized op: " << *write);
   if (!write->getResults().empty())
@@ -273,7 +273,7 @@ using CustomVectorizationHook = std::function<VectorizationResult(
 /// vectorization algorithm for RAUW. This function is meant to be used as a
 /// CustomVectorizationHook.
 static VectorizationResult
-vectorizeLinalgYield(OpBuilder &builder, Operation *op,
+vectorizeLinalgYield(OpBuilder &b, Operation *op,
                      const BlockAndValueMapping &bvm, LinalgOp linalgOp,
                      SmallVectorImpl<Value> &newResults) {
   auto yieldOp = dyn_cast<linalg::YieldOp>(op);
@@ -284,7 +284,7 @@ vectorizeLinalgYield(OpBuilder &builder, Operation *op,
     // TODO: use a map.
     Value vectorValue = bvm.lookup(outputs.value());
     Value newResult = buildVectorWrite(
-        builder, vectorValue, linalgOp.getOutputOpOperands()[outputs.index()]);
+        b, vectorValue, linalgOp.getOutputOpOperands()[outputs.index()]);
     if (newResult)
       newResults.push_back(newResult);
   }
@@ -295,8 +295,8 @@ vectorizeLinalgYield(OpBuilder &builder, Operation *op,
 /// VectorizationStatus::NewOp to signal the vectorization algorithm that it
 /// should map the produced operations. This function is meant to be used as a
 /// CustomVectorizationHook.
-static VectorizationResult
-vectorizeLinalgIndex(OpBuilder &builder, Operation *op, LinalgOp linalgOp) {
+static VectorizationResult vectorizeLinalgIndex(OpBuilder &b, Operation *op,
+                                                LinalgOp linalgOp) {
   IndexOp indexOp = dyn_cast<linalg::IndexOp>(op);
   if (!indexOp)
     return VectorizationResult{VectorizationStatus::Failure, nullptr};
@@ -307,7 +307,7 @@ vectorizeLinalgIndex(OpBuilder &builder, Operation *op, LinalgOp linalgOp) {
   SmallVector<int64_t> constantSeq(
       llvm::seq<int64_t>(0, targetShape[indexOp.dim()]));
   ConstantOp constantOp =
-      builder.create<ConstantOp>(loc, builder.getIndexVectorAttr(constantSeq));
+      b.create<ConstantOp>(loc, b.getIndexVectorAttr(constantSeq));
   // Return the one-dimensional index vector if it lives in the trailing
   // dimension of the iteration space since the vectorization algorithm in this
   // case can handle the broadcast.
@@ -317,13 +317,13 @@ vectorizeLinalgIndex(OpBuilder &builder, Operation *op, LinalgOp linalgOp) {
   // broadcast the one-dimensional index vector to the permuted shape, and
   // finally transpose the broadcasted index vector to undo the permutation.
   std::swap(targetShape[indexOp.dim()], targetShape.back());
-  auto broadCastOp = builder.create<vector::BroadcastOp>(
-      loc, VectorType::get(targetShape, builder.getIndexType()), constantOp);
+  auto broadCastOp = b.create<vector::BroadcastOp>(
+      loc, VectorType::get(targetShape, b.getIndexType()), constantOp);
   SmallVector<int64_t> transposition(
       llvm::seq<int64_t>(0, linalgOp.getNumLoops()));
   std::swap(transposition.back(), transposition[indexOp.dim()]);
   auto transposeOp =
-      builder.create<vector::TransposeOp>(loc, broadCastOp, transposition);
+      b.create<vector::TransposeOp>(loc, broadCastOp, transposition);
   return VectorizationResult{VectorizationStatus::NewOp, transposeOp};
 }
 
@@ -347,8 +347,7 @@ vectorizeLinalgIndex(OpBuilder &builder, Operation *op, LinalgOp linalgOp) {
 /// This function does not update `bvm` but returns a VectorizationStatus that
 /// instructs the caller what `bvm` update needs to occur.
 static VectorizationResult
-vectorizeOneOp(OpBuilder &builder, Operation *op,
-               const BlockAndValueMapping &bvm,
+vectorizeOneOp(OpBuilder &b, Operation *op, const BlockAndValueMapping &bvm,
                ArrayRef<CustomVectorizationHook> customVectorizationHooks) {
   LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: vectorize op " << *op);
 
@@ -365,7 +364,7 @@ vectorizeOneOp(OpBuilder &builder, Operation *op,
   // 2. Constant ops don't get vectorized but rather broadcasted at their users.
   // Clone so that the constant is not confined to the linalgOp block .
   if (isa<ConstantOp>(op))
-    return VectorizationResult{VectorizationStatus::NewOp, builder.clone(*op)};
+    return VectorizationResult{VectorizationStatus::NewOp, b.clone(*op)};
 
   // 3. Only ElementwiseMappable are allowed in the generic vectorization.
   if (!OpTrait::hasElementwiseMappableTraits(op))
@@ -383,7 +382,7 @@ vectorizeOneOp(OpBuilder &builder, Operation *op,
   auto vectorizedOperands = llvm::map_range(op->getOperands(), [&](Value v) {
     return firstMaxRankedShape.empty()
                ? bvm.lookup(v)
-               : broadcastIfNeeded(builder, bvm.lookup(v), firstMaxRankedShape);
+               : broadcastIfNeeded(b, bvm.lookup(v), firstMaxRankedShape);
   });
   //   c. for elementwise, the result is the vector with the firstMaxRankedShape
   auto returnTypes = llvm::map_range(op->getResultTypes(), [&](Type t) {
@@ -398,7 +397,7 @@ vectorizeOneOp(OpBuilder &builder, Operation *op,
   state.addOperands(llvm::to_vector<4>(vectorizedOperands));
   state.addTypes(llvm::to_vector<4>(returnTypes));
   return VectorizationResult{VectorizationStatus::NewOp,
-                             builder.createOperation(state)};
+                             b.createOperation(state)};
 }
 
 /// Detect whether `r` has only ConstantOp, ElementwiseMappable and YieldOp.
@@ -455,7 +454,7 @@ static bool isElementwise(Operation *op) {
 /// This is not deemed a problem as we expect canonicalizations and foldings to
 /// aggressively clean up the useless work.
 LogicalResult vectorizeAsLinalgGeneric(
-    OpBuilder &builder, LinalgOp linalgOp, SmallVectorImpl<Value> &newResults,
+    OpBuilder &b, LinalgOp linalgOp, SmallVectorImpl<Value> &newResults,
     bool broadcastToMaximalCommonShape = false,
     ArrayRef<CustomVectorizationHook> customVectorizationHooks = {}) {
   // 1. Fail to vectorize if the operation does not have one non-empty region.
@@ -485,8 +484,7 @@ LogicalResult vectorizeAsLinalgGeneric(
     ShapedType shapedType = shapedArg.getType().cast<ShapedType>();
     // TODO: 0-d vectors.
     if (shapedType.getShape().empty()) {
-      Value loaded =
-          builder.create<memref::LoadOp>(linalgOp.getLoc(), shapedArg);
+      Value loaded = b.create<memref::LoadOp>(linalgOp.getLoc(), shapedArg);
       LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: new vectorized bbarg("
                         << bbarg.getArgNumber() << "): " << loaded);
       bvm.map(bbarg, loaded);
@@ -506,7 +504,7 @@ LogicalResult vectorizeAsLinalgGeneric(
       vectorType = VectorType::get(map.compose(shapedType.getShape()),
                                    shapedType.getElementType());
     }
-    Value vectorRead = buildVectorRead(builder, shapedArg, vectorType, map);
+    Value vectorRead = buildVectorRead(b, shapedArg, vectorType, map);
     LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: new vectorized bbarg("
                       << bbarg.getArgNumber() << "): " << vectorRead);
     bvm.map(bbarg, vectorRead);
@@ -518,7 +516,7 @@ LogicalResult vectorizeAsLinalgGeneric(
   CustomVectorizationHook vectorizeYield =
       [&](Operation *op,
           const BlockAndValueMapping &bvm) -> VectorizationResult {
-    return vectorizeLinalgYield(builder, op, bvm, linalgOp, newResults);
+    return vectorizeLinalgYield(b, op, bvm, linalgOp, newResults);
   };
   hooks.push_back(vectorizeYield);
 
@@ -526,13 +524,13 @@ LogicalResult vectorizeAsLinalgGeneric(
   CustomVectorizationHook vectorizeIndex =
       [&](Operation *op,
           const BlockAndValueMapping &bvm) -> VectorizationResult {
-    return vectorizeLinalgIndex(builder, op, linalgOp);
+    return vectorizeLinalgIndex(b, op, linalgOp);
   };
   hooks.push_back(vectorizeIndex);
 
   // 5. Iteratively call `vectorizeOneOp` to each op in the slice.
   for (Operation &op : block.getOperations()) {
-    VectorizationResult result = vectorizeOneOp(builder, &op, bvm, hooks);
+    VectorizationResult result = vectorizeOneOp(b, &op, bvm, hooks);
     if (result.status == VectorizationStatus::Failure) {
       LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: failed to vectorize: " << op);
       return failure();
@@ -547,7 +545,7 @@ LogicalResult vectorizeAsLinalgGeneric(
   return success();
 }
 
-static LogicalResult vectorizeContraction(OpBuilder &builder, LinalgOp linalgOp,
+static LogicalResult vectorizeContraction(OpBuilder &b, LinalgOp linalgOp,
                                           SmallVectorImpl<Value> &newResults) {
   assert(isaContractionOpInterface(linalgOp) &&
          "expected vectorizeContraction preconditions to be met");
@@ -568,8 +566,7 @@ static LogicalResult vectorizeContraction(OpBuilder &builder, LinalgOp linalgOp,
     auto vType = outShape.empty()
                      ? op->getResult(0).getType()
                      : VectorType::get(outShape, op->getResult(0).getType());
-    auto zero =
-        builder.create<ConstantOp>(loc, vType, builder.getZeroAttr(vType));
+    auto zero = b.create<ConstantOp>(loc, vType, b.getZeroAttr(vType));
     // Indexing maps at the time of vector.transfer_read are adjusted to order
     // vector dimensions in the same order as the canonical linalg op iteration
     // space order.
@@ -584,12 +581,12 @@ static LogicalResult vectorizeContraction(OpBuilder &builder, LinalgOp linalgOp,
             .compose(linalgOp.getIndexingMap(1)),
         inversePermutation(reindexIndexingMap(linalgOp.getIndexingMap(2)))
             .compose(linalgOp.getIndexingMap(2))};
-    Operation *contract = builder.create<vector::ContractionOp>(
+    Operation *contract = b.create<vector::ContractionOp>(
         loc, bvm.lookup(op->getOperand(0)), bvm.lookup(op->getOperand(1)), zero,
-        builder.getAffineMapArrayAttr(indexingMaps), linalgOp.iterator_types());
+        b.getAffineMapArrayAttr(indexingMaps), linalgOp.iterator_types());
     return VectorizationResult{VectorizationStatus::NewOp, contract};
   };
-  return vectorizeAsLinalgGeneric(builder, linalgOp, newResults,
+  return vectorizeAsLinalgGeneric(b, linalgOp, newResults,
                                   /*broadcastToMaximalCommonShape=*/false,
                                   {vectorizeContraction});
 }
@@ -635,22 +632,20 @@ LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
 }
 
 LogicalResult
-mlir::linalg::vectorizeLinalgOp(OpBuilder &builder, Operation *op,
+mlir::linalg::vectorizeLinalgOp(OpBuilder &b, Operation *op,
                                 SmallVectorImpl<Value> &newResults) {
   if (failed(vectorizeLinalgOpPrecondition(op)))
     return failure();
 
-  edsc::ScopedContext scope(builder, op->getLoc());
   auto linalgOp = cast<LinalgOp>(op);
-
   if (isaContractionOpInterface(linalgOp))
-    return vectorizeContraction(builder, linalgOp, newResults);
+    return vectorizeContraction(b, linalgOp, newResults);
 
   LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE "]: "
                     << "Vectorize linalg op as a generic by broadcasting to "
                        "maximal common shape: "
                     << *op);
-  return vectorizeAsLinalgGeneric(builder, linalgOp, newResults,
+  return vectorizeAsLinalgGeneric(b, linalgOp, newResults,
                                   /*broadcastToMaximalCommonShape=*/true);
 }
 
@@ -726,7 +721,6 @@ LogicalResult ConvOpVectorization<ConvOp, N>::matchAndRewrite(
     ConvOp op, PatternRewriter &rewriter) const {
   Location loc = op.getLoc();
   MLIRContext *context = op.getContext();
-  edsc::ScopedContext scope(rewriter, loc);
 
   ShapedType inShapeType = op.getInputShapedType(0);
   ShapedType kShapeType = op.getInputShapedType(1);
@@ -762,13 +756,16 @@ LogicalResult ConvOpVectorization<ConvOp, N>::matchAndRewrite(
   Type elemType = inShapeType.getElementType();
 
   auto map = AffineMap::get(rank, 0, mapping, context);
-  SmallVector<Value, 4> zeros(rank, std_constant_index(0));
+  SmallVector<Value, 4> zeros(rank, rewriter.create<ConstantIndexOp>(loc, 0));
   auto vecType = VectorType::get(vectorDims, elemType);
 
-  auto inputVec = vector_transfer_read(vecType, input, zeros, map);
-  auto kernelVec = vector_transfer_read(vecType, kernel, zeros, map);
+  auto inputVec =
+      rewriter.create<vector::TransferReadOp>(loc, vecType, input, zeros, map);
+  auto kernelVec =
+      rewriter.create<vector::TransferReadOp>(loc, vecType, kernel, zeros, map);
 
-  auto acc = std_constant(elemType, rewriter.getZeroAttr(elemType));
+  auto acc = rewriter.create<ConstantOp>(loc, elemType,
+                                         rewriter.getZeroAttr(elemType));
 
   std::array<AffineMap, 3> indexingMaps{
       AffineMap::getMultiDimIdentityMap(numDims, context),

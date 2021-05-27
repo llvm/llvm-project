@@ -12,7 +12,7 @@ Current status: Under development and not enabled by default
 
 ### CMake variables
 
-* **`MLIR_BINDINGS_PYTHON_ENABLED`**`:BOOL`
+* **`MLIR_ENABLE_BINDINGS_PYTHON`**`:BOOL`
 
   Enables building the Python bindings. Defaults to `OFF`.
 
@@ -23,7 +23,7 @@ Current status: Under development and not enabled by default
   multiple Python implementations, setting this explicitly to the preferred
   `python3` executable is strongly recommended.
 
-* **`MLIR_PYTHON_BINDINGS_VERSION_LOCKED`**`:BOOL`
+* **`MLIR_BINDINGS_PYTHON_LOCK_VERSION`**`:BOOL`
 
   Links the native extension against the Python runtime library, which is
   optional on some platforms. While setting this to `OFF` can yield some greater

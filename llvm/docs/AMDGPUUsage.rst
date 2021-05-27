@@ -318,7 +318,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                                                         Add product
                                                                                                         names.
 
-     **GCN GFX9 (Vega)** [AMD-GCN-GFX9]_
+     **GCN GFX9 (Vega)** [AMD-GCN-GFX9]_ [AMD-GCN-GFX908-CDNA1]_
      -----------------------------------------------------------------------------------------------------------------------
      ``gfx900``                  ``amdgcn``   dGPU  - xnack           - Absolute      - *rocm-amdhsa* - Radeon Vega
                                                                         flat          - *pal-amdhsa*    Frontier Edition
@@ -1164,12 +1164,11 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1031``    0x037      ``gfx1031``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1032``    0x038      ``gfx1032``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1033``    0x039      ``gfx1033``
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1034``    0x03e      ``gfx1034``
      ``EF_AMDGPU_MACH_AMDGCN_GFX602``     0x03a      ``gfx602``
      ``EF_AMDGPU_MACH_AMDGCN_GFX705``     0x03b      ``gfx705``
      ``EF_AMDGPU_MACH_AMDGCN_GFX805``     0x03c      ``gfx805``
      *reserved*                           0x03d      Reserved.
-     *reserved*                           0x03e      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1034``    0x03e      ``gfx1034``
      ``EF_AMDGPU_MACH_AMDGCN_GFX90A``     0x03f      ``gfx90a``
      *reserved*                           0x040      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1100``    0x041      ``gfx1100``
@@ -1305,7 +1304,7 @@ are deprecated and should not be used.
   Specifies the code object version number. The description field has the
   following layout:
 
-  .. code::
+  .. code:: c
 
     struct amdgpu_hsa_note_code_object_version_s {
       uint32_t major_version;
@@ -1318,7 +1317,7 @@ are deprecated and should not be used.
   Specifies the HSAIL properties used by the HSAIL Finalizer. The description
   field has the following layout:
 
-  .. code::
+  .. code:: c
 
     struct amdgpu_hsa_note_hsail_s {
       uint32_t hsail_major_version;
@@ -1331,7 +1330,7 @@ are deprecated and should not be used.
 ``NT_AMD_HSA_ISA_VERSION``
   Specifies the target ISA version. The description field has the following layout:
 
-  .. code::
+  .. code:: c
 
     struct amdgpu_hsa_note_isa_s {
       uint16_t vendor_name_size;
@@ -11481,7 +11480,8 @@ in this description.
 For more information about instructions, their semantics and supported
 combinations of operands, refer to one of instruction set architecture manuals
 [AMD-GCN-GFX6]_, [AMD-GCN-GFX7]_, [AMD-GCN-GFX8]_, [AMD-GCN-GFX9]_,
-[AMD-GCN-GFX10-RDNA1]_, [AMD-GCN-GFX10-RDNA2]_, and [AMD-GCN-GFX11]_.
+[AMD-GCN-GFX908-CDNA1]_, [AMD-GCN-GFX10-RDNA1]_, [AMD-GCN-GFX10-RDNA2]_,
+and [AMD-GCN-GFX11]_.
 
 Operands
 ~~~~~~~~
@@ -12224,6 +12224,7 @@ Additional Documentation
 .. [AMD-GCN-GFX7] `AMD Sea Islands Series ISA <http://developer.amd.com/wordpress/media/2013/07/AMD_Sea_Islands_Instruction_Set_Architecture.pdf>`_
 .. [AMD-GCN-GFX8] `AMD GCN3 Instruction Set Architecture <http://amd-dev.wpengine.netdna-cdn.com/wordpress/media/2013/12/AMD_GCN3_Instruction_Set_Architecture_rev1.1.pdf>`__
 .. [AMD-GCN-GFX9] `AMD "Vega" Instruction Set Architecture <http://developer.amd.com/wordpress/media/2013/12/Vega_Shader_ISA_28July2017.pdf>`__
+.. [AMD-GCN-GFX908-CDNA1] `AMD Instinct MI100 Instruction Set Architecture <https://developer.amd.com/wp-content/resources/CDNA1_Shader_ISA_14December2020.pdf>`__
 .. [AMD-GCN-GFX10-RDNA1] `AMD "RDNA 1.0" Instruction Set Architecture <https://gpuopen.com/wp-content/uploads/2019/08/RDNA_Shader_ISA_5August2019.pdf>`__
 .. [AMD-GCN-GFX10-RDNA2] `AMD "RDNA 2" Instruction Set Architecture <https://developer.amd.com/wp-content/resources/RDNA2_Shader_ISA_November2020.pdf>`__
 .. [AMD-GCN-GFX11] `AMD GFX11 Instruction Set Architecture <http://developer.amd.com/>`__

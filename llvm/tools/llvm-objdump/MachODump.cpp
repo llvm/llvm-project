@@ -53,7 +53,7 @@
 #include <cstring>
 #include <system_error>
 
-#ifdef HAVE_LIBXAR
+#ifdef LLVM_HAVE_LIBXAR
 extern "C" {
 #include <xar/xar.h>
 }
@@ -184,7 +184,7 @@ typedef std::pair<uint64_t, DiceRef> DiceTableEntry;
 typedef std::vector<DiceTableEntry> DiceTable;
 typedef DiceTable::iterator dice_table_iterator;
 
-#ifdef HAVE_LIBXAR
+#ifdef LLVM_HAVE_LIBXAR
 namespace {
 struct ScopedXarFile {
   xar_t xar;
@@ -211,7 +211,7 @@ struct ScopedXarIter {
   operator xar_iter_t() { return iter; }
 };
 } // namespace
-#endif // defined(HAVE_LIBXAR)
+#endif // defined(LLVM_HAVE_LIBXAR)
 
 // This is used to search for a data in code table entry for the PC being
 // disassembled.  The j parameter has the PC in j.first.  A single data in code
@@ -1697,12 +1697,12 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
                              StringRef DisSegName, StringRef DisSectName);
 static void DumpProtocolSection(MachOObjectFile *O, const char *sect,
                                 uint32_t size, uint32_t addr);
-#ifdef HAVE_LIBXAR
+#ifdef LLVM_HAVE_LIBXAR
 static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
                                 uint32_t size, bool verbose,
                                 bool PrintXarHeader, bool PrintXarFileHeaders,
                                 std::string XarMemberName);
-#endif // defined(HAVE_LIBXAR)
+#endif // defined(LLVM_HAVE_LIBXAR)
 
 static void DumpSectionContents(StringRef Filename, MachOObjectFile *O,
                                 bool verbose) {
@@ -1773,13 +1773,13 @@ static void DumpSectionContents(StringRef Filename, MachOObjectFile *O,
             DumpProtocolSection(O, sect, sect_size, sect_addr);
             continue;
           }
-#ifdef HAVE_LIBXAR
+#ifdef LLVM_HAVE_LIBXAR
           if (SegName == "__LLVM" && SectName == "__bundle") {
             DumpBitcodeSection(O, sect, sect_size, verbose, SymbolicOperands,
                                ArchiveHeaders, "");
             continue;
           }
-#endif // defined(HAVE_LIBXAR)
+#endif // defined(LLVM_HAVE_LIBXAR)
           switch (section_type) {
           case MachO::S_REGULAR:
             DumpRawSectionContents(O, sect, sect_size, sect_addr);
@@ -6460,7 +6460,7 @@ static void DumpProtocolSection(MachOObjectFile *O, const char *sect,
   }
 }
 
-#ifdef HAVE_LIBXAR
+#ifdef LLVM_HAVE_LIBXAR
 static inline void swapStruct(struct xar_header &xar) {
   sys::swapByteOrder(xar.magic);
   sys::swapByteOrder(xar.size);
@@ -6823,7 +6823,7 @@ static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
     }
   }
 }
-#endif // defined(HAVE_LIBXAR)
+#endif // defined(LLVM_HAVE_LIBXAR)
 
 static void printObjcMetaData(MachOObjectFile *O, bool verbose) {
   if (O->is64Bit())
@@ -7228,8 +7228,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   std::unique_ptr<const MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TripleName, MachOMCPU, FeaturesStr));
   CHECK_TARGET_INFO_CREATION(STI);
-  MCContext Ctx(Triple(TripleName), AsmInfo.get(), MRI.get(), /*MOFI=*/nullptr,
-                STI.get());
+  MCContext Ctx(Triple(TripleName), AsmInfo.get(), MRI.get(), STI.get());
   std::unique_ptr<MCDisassembler> DisAsm(
       TheTarget->createMCDisassembler(*STI, Ctx));
   CHECK_TARGET_INFO_CREATION(DisAsm);
@@ -7280,8 +7279,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
                                            FeaturesStr));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbSTI);
     ThumbCtx.reset(new MCContext(Triple(ThumbTripleName), ThumbAsmInfo.get(),
-                                 ThumbMRI.get(), /*MOFI=*/nullptr,
-                                 ThumbSTI.get()));
+                                 ThumbMRI.get(), ThumbSTI.get()));
     ThumbDisAsm.reset(ThumbTarget->createMCDisassembler(*ThumbSTI, *ThumbCtx));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbDisAsm);
     MCContext *PtrThumbCtx = ThumbCtx.get();

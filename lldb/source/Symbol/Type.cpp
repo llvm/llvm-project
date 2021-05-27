@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdio.h>
+#include <cstdio>
 
 #include "lldb/Core/Module.h"
 #include "lldb/Utility/DataBufferHeap.h"

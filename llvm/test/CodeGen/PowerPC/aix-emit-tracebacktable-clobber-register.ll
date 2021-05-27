@@ -43,6 +43,6 @@ entry:
 ; CHECK-ASM-NEXT:   .vbyte  4, L..bar0-.bar                 # Function size
 ; CHECK-FUNC-NEXT:  .vbyte  4, L..bar0-.bar[PR]             # Function size
 ; COMMON-NEXT:  .vbyte  2, 0x0003                       # Function name len = 3
-; COMMON-NEXT:  .byte   'b,'a,'r                        # Function Name
+; COMMON-NEXT:  .byte   "bar"                           # Function Name
 ; COMMON-NEXT:  .byte   0x1f                            # AllocaUsed
 ; COMMON-NEXT:                                        # -- End function

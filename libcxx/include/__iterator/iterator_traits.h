@@ -11,9 +11,9 @@
 #define _LIBCPP___ITERATOR_ITERATOR_TRAITS_H
 
 #include <__config>
-#include <concepts>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/readable_traits.h>
+#include <concepts>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -428,7 +428,7 @@ struct _LIBCPP_TEMPLATE_VIS iterator_traits<_Tp*>
 
 template <class _Tp, class _Up, bool = __has_iterator_category<iterator_traits<_Tp> >::value>
 struct __has_iterator_category_convertible_to
-    : _BoolConstant<is_convertible<typename iterator_traits<_Tp>::iterator_category, _Up>::value>
+    : is_convertible<typename iterator_traits<_Tp>::iterator_category, _Up>
 {};
 
 template <class _Tp, class _Up>
@@ -436,7 +436,7 @@ struct __has_iterator_category_convertible_to<_Tp, _Up, false> : false_type {};
 
 template <class _Tp, class _Up, bool = __has_iterator_concept<_Tp>::value>
 struct __has_iterator_concept_convertible_to
-    : _BoolConstant<is_convertible<typename _Tp::iterator_concept, _Up>::value>
+    : is_convertible<typename _Tp::iterator_concept, _Up>
 {};
 
 template <class _Tp, class _Up>
@@ -454,10 +454,12 @@ struct __is_cpp17_bidirectional_iterator : public __has_iterator_category_conver
 template <class _Tp>
 struct __is_cpp17_random_access_iterator : public __has_iterator_category_convertible_to<_Tp, random_access_iterator_tag> {};
 
-// __is_cpp17_contiguous_iterator determines if an iterator is contiguous,
-// either because it advertises itself as such (in C++20) or because it
-// is a pointer type or a known trivial wrapper around a pointer type,
-// such as __wrap_iter<T*>.
+// __is_cpp17_contiguous_iterator determines if an iterator is known by
+// libc++ to be contiguous, either because it advertises itself as such
+// (in C++20) or because it is a pointer type or a known trivial wrapper
+// around a (possibly fancy) pointer type, such as __wrap_iter<T*>.
+// Such iterators receive special "contiguous" optimizations in
+// std::copy and std::sort.
 //
 #if _LIBCPP_STD_VER > 17
 template <class _Tp>

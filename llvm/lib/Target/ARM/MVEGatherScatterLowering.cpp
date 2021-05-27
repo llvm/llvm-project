@@ -349,7 +349,8 @@ MVEGatherScatterLowering::getVarAndConst(Value *Inst, int TypeScale) {
 
 Value *MVEGatherScatterLowering::lowerGather(IntrinsicInst *I) {
   using namespace PatternMatch;
-  LLVM_DEBUG(dbgs() << "masked gathers: checking transform preconditions\n");
+  LLVM_DEBUG(dbgs() << "masked gathers: checking transform preconditions\n"
+                    << *I << "\n");
 
   // @llvm.masked.gather.*(Ptrs, alignment, Mask, Src0)
   // Attempt to turn the masked gather in I into a MVE intrinsic
@@ -390,7 +391,8 @@ Value *MVEGatherScatterLowering::lowerGather(IntrinsicInst *I) {
     // sext/zext as well as of the gather itself
     I->eraseFromParent();
 
-  LLVM_DEBUG(dbgs() << "masked gathers: successfully built masked gather\n");
+  LLVM_DEBUG(dbgs() << "masked gathers: successfully built masked gather\n"
+                    << *Load << "\n");
   return Load;
 }
 
@@ -510,7 +512,8 @@ Value *MVEGatherScatterLowering::tryCreateMaskedGatherOffset(
 
 Value *MVEGatherScatterLowering::lowerScatter(IntrinsicInst *I) {
   using namespace PatternMatch;
-  LLVM_DEBUG(dbgs() << "masked scatters: checking transform preconditions\n");
+  LLVM_DEBUG(dbgs() << "masked scatters: checking transform preconditions\n"
+                    << *I << "\n");
 
   // @llvm.masked.scatter.*(data, ptrs, alignment, mask)
   // Attempt to turn the masked scatter in I into a MVE intrinsic
@@ -537,7 +540,8 @@ Value *MVEGatherScatterLowering::lowerScatter(IntrinsicInst *I) {
   if (!Store)
     return nullptr;
 
-  LLVM_DEBUG(dbgs() << "masked scatters: successfully built masked scatter\n");
+  LLVM_DEBUG(dbgs() << "masked scatters: successfully built masked scatter\n"
+                    << *Store << "\n");
   I->eraseFromParent();
   return Store;
 }
@@ -609,9 +613,8 @@ Value *MVEGatherScatterLowering::tryCreateMaskedScatterOffset(
     }
   }
   if (InputTy->getPrimitiveSizeInBits() != 128) {
-    LLVM_DEBUG(
-        dbgs() << "masked scatters: cannot create scatters for non-standard"
-               << " input types. Expanding.\n");
+    LLVM_DEBUG(dbgs() << "masked scatters: cannot create scatters for "
+                         "non-standard input types. Expanding.\n");
     return nullptr;
   }
 
@@ -882,7 +885,8 @@ static bool hasAllGatScatUsers(Instruction *I) {
 
 bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
                                                LoopInfo *LI) {
-  LLVM_DEBUG(dbgs() << "masked gathers/scatters: trying to optimize\n");
+  LLVM_DEBUG(dbgs() << "masked gathers/scatters: trying to optimize\n"
+                    << *Offsets << "\n");
   // Optimise the addresses of gathers/scatters by moving invariant
   // calculations out of the loop
   if (!isa<Instruction>(Offsets))

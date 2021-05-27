@@ -19,14 +19,12 @@
 /*
  * Helper functions
  */
-const char *get_atmi_error_string(atmi_status_t err) {
+const char *get_atmi_error_string(hsa_status_t err) {
   switch (err) {
-  case ATMI_STATUS_SUCCESS:
-    return "ATMI_STATUS_SUCCESS";
-  case ATMI_STATUS_UNKNOWN:
-    return "ATMI_STATUS_UNKNOWN";
-  case ATMI_STATUS_ERROR:
-    return "ATMI_STATUS_ERROR";
+  case HSA_STATUS_SUCCESS:
+    return "HSA_STATUS_SUCCESS";
+  case HSA_STATUS_ERROR:
+    return "HSA_STATUS_ERROR";
   default:
     return "";
   }
@@ -99,7 +97,6 @@ void Environment::GetEnvAll() {
     std::cout << "ATMI_MAX_HSA_QUEUE_SIZE : positive integer" << std::endl
               << "ATMI_DEBUG : 1 for printing out trace/debug info"
               << std::endl;
-    exit(0);
   }
 
   var = GetEnv("ATMI_MAX_HSA_QUEUE_SIZE");

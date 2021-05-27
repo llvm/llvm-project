@@ -21,8 +21,8 @@
 #include <memory>
 #include <vector>
 
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 
 using namespace lldb_private;
 

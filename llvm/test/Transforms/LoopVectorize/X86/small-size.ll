@@ -567,40 +567,40 @@ define void @example23c(i16* noalias nocapture %src, i32* noalias nocapture %dst
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
+; CHECK-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i32, i32* [[DST:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = zext i16 [[TMP4]] to i32
 ; CHECK-NEXT:    [[TMP19:%.*]] = shl nuw nsw i32 [[TMP18]], 7
-; CHECK-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i32, i32* [[DST:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    store i32 [[TMP19]], i32* [[NEXT_GEP7]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i1> [[TMP1]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[PRED_STORE_IF17:%.*]], label [[PRED_STORE_CONTINUE18:%.*]]
 ; CHECK:       pred.store.if17:
-; CHECK-NEXT:    [[TMP21:%.*]] = zext i16 [[TMP8]] to i32
-; CHECK-NEXT:    [[TMP22:%.*]] = shl nuw nsw i32 [[TMP21]], 7
-; CHECK-NEXT:    [[TMP23:%.*]] = or i64 [[INDEX]], 1
-; CHECK-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i32, i32* [[DST]], i64 [[TMP23]]
-; CHECK-NEXT:    store i32 [[TMP22]], i32* [[NEXT_GEP8]], align 4
+; CHECK-NEXT:    [[TMP21:%.*]] = or i64 [[INDEX]], 1
+; CHECK-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i32, i32* [[DST]], i64 [[TMP21]]
+; CHECK-NEXT:    [[TMP22:%.*]] = zext i16 [[TMP8]] to i32
+; CHECK-NEXT:    [[TMP23:%.*]] = shl nuw nsw i32 [[TMP22]], 7
+; CHECK-NEXT:    store i32 [[TMP23]], i32* [[NEXT_GEP8]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE18]]
 ; CHECK:       pred.store.continue18:
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i1> [[TMP1]], i32 2
 ; CHECK-NEXT:    br i1 [[TMP24]], label [[PRED_STORE_IF19:%.*]], label [[PRED_STORE_CONTINUE20:%.*]]
 ; CHECK:       pred.store.if19:
-; CHECK-NEXT:    [[TMP25:%.*]] = zext i16 [[TMP12]] to i32
-; CHECK-NEXT:    [[TMP26:%.*]] = shl nuw nsw i32 [[TMP25]], 7
-; CHECK-NEXT:    [[TMP27:%.*]] = or i64 [[INDEX]], 2
-; CHECK-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i32, i32* [[DST]], i64 [[TMP27]]
-; CHECK-NEXT:    store i32 [[TMP26]], i32* [[NEXT_GEP9]], align 4
+; CHECK-NEXT:    [[TMP25:%.*]] = or i64 [[INDEX]], 2
+; CHECK-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i32, i32* [[DST]], i64 [[TMP25]]
+; CHECK-NEXT:    [[TMP26:%.*]] = zext i16 [[TMP12]] to i32
+; CHECK-NEXT:    [[TMP27:%.*]] = shl nuw nsw i32 [[TMP26]], 7
+; CHECK-NEXT:    store i32 [[TMP27]], i32* [[NEXT_GEP9]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE20]]
 ; CHECK:       pred.store.continue20:
 ; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x i1> [[TMP1]], i32 3
 ; CHECK-NEXT:    br i1 [[TMP28]], label [[PRED_STORE_IF21:%.*]], label [[PRED_STORE_CONTINUE22]]
 ; CHECK:       pred.store.if21:
-; CHECK-NEXT:    [[TMP29:%.*]] = zext i16 [[TMP16]] to i32
-; CHECK-NEXT:    [[TMP30:%.*]] = shl nuw nsw i32 [[TMP29]], 7
-; CHECK-NEXT:    [[TMP31:%.*]] = or i64 [[INDEX]], 3
-; CHECK-NEXT:    [[NEXT_GEP10:%.*]] = getelementptr i32, i32* [[DST]], i64 [[TMP31]]
-; CHECK-NEXT:    store i32 [[TMP30]], i32* [[NEXT_GEP10]], align 4
+; CHECK-NEXT:    [[TMP29:%.*]] = or i64 [[INDEX]], 3
+; CHECK-NEXT:    [[NEXT_GEP10:%.*]] = getelementptr i32, i32* [[DST]], i64 [[TMP29]]
+; CHECK-NEXT:    [[TMP30:%.*]] = zext i16 [[TMP16]] to i32
+; CHECK-NEXT:    [[TMP31:%.*]] = shl nuw nsw i32 [[TMP30]], 7
+; CHECK-NEXT:    store i32 [[TMP31]], i32* [[NEXT_GEP10]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE22]]
 ; CHECK:       pred.store.continue22:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4

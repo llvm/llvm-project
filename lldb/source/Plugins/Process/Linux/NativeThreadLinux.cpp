@@ -8,7 +8,7 @@
 
 #include "NativeThreadLinux.h"
 
-#include <signal.h>
+#include <csignal>
 #include <sstream>
 
 #include "NativeProcessLinux.h"

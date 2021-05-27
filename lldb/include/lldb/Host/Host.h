@@ -17,8 +17,8 @@
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-private.h"
 #include <cerrno>
+#include <cstdarg>
 #include <map>
-#include <stdarg.h>
 #include <string>
 #include <type_traits>
 

@@ -15,8 +15,8 @@ target triple = "x86_64-apple-macosx10.11.0"
 ; CHECK: @b = {{.*}} %struct
 
 ; CHECK: @llvm.compiler.used =
-; CHECK-SAME: i8* bitcast ({ %struct, [48 x i8] }* @a to i8*)
-; CHECK-SAME: i8* bitcast ({ %struct, [48 x i8] }* @b to i8*)
+; CHECK-SAME: i8* bitcast ({ %struct, [16 x i8] }* @a to i8*)
+; CHECK-SAME: i8* bitcast ({ %struct, [16 x i8] }* @b to i8*)
 
 define i32 @main(i32, i8** nocapture readnone) {
   %3 = alloca %struct, align 8

@@ -16,7 +16,7 @@
 
 /* Indicate that this is LLVM compiled from the amd-gfx branch. */
 #define LLVM_HAVE_BRANCH_AMD_GFX
-#define LLVM_MAIN_REVISION 388775
+#define LLVM_MAIN_REVISION 389578
 
 /* Define if LLVM_ENABLE_DUMP is enabled */
 #cmakedefine LLVM_ENABLE_DUMP
@@ -97,5 +97,8 @@
 
 /* Define to 1 to enable the experimental new pass manager by default */
 #cmakedefine01 LLVM_ENABLE_NEW_PASS_MANAGER
+
+/* Define if the xar_open() function is supported on this platform. */
+#cmakedefine LLVM_HAVE_LIBXAR ${LLVM_HAVE_LIBXAR}
 
 #endif

@@ -106,5 +106,4 @@ void CheckIntegerKind(Terminator &terminator, int kind, const char *intrinsic) {
     terminator.Crash("%s: bad KIND=%d argument", intrinsic, kind);
   }
 }
-
 } // namespace Fortran::runtime

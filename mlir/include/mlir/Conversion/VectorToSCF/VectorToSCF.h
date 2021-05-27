@@ -50,6 +50,7 @@ class RewritePatternSet;
 struct VectorTransferToSCFOptions {
   bool unroll = false;
   unsigned targetRank = 1;
+  bool lowerPermutationMaps = false;
 
   VectorTransferToSCFOptions &setUnroll(bool u) {
     unroll = u;
@@ -58,6 +59,11 @@ struct VectorTransferToSCFOptions {
 
   VectorTransferToSCFOptions &setTargetRank(unsigned r) {
     targetRank = r;
+    return *this;
+  }
+
+  VectorTransferToSCFOptions &setLowerPermutationMaps(bool l) {
+    lowerPermutationMaps = l;
     return *this;
   }
 };

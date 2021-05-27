@@ -398,11 +398,19 @@
 ; NEWPM-NEXT: Running pass: InlinerPass on (f)
 ; NEWPM-NEXT: Running pass: PostOrderFunctionAttrsPass on (f)
 ; NEWPM-NEXT: Running analysis: AAManager on f
+; NEWPM-NEXT: Invalidating analysis: PreservedCFGCheckerAnalysis on f
+; NEWPM-NEXT: Invalidating analysis: DominatorTreeAnalysis on f
+; NEWPM-NEXT: Invalidating analysis: BasicAA on f
+; NEWPM-NEXT: Invalidating analysis: AAManager on f
 ; NEWPM-NEXT: Running pass: ArgumentPromotionPass on (f)
 ; NEWPM-NEXT: Running pass: OpenMPOptCGSCCPass on (f)
+; NEWPM-NEXT: Running analysis: PreservedCFGCheckerAnalysis on f
 ; NEWPM-NEXT: Running pass: SROA on f
+; NEWPM-NEXT: Running analysis: DominatorTreeAnalysis on f
 ; NEWPM-NEXT: Running pass: EarlyCSEPass on f
 ; NEWPM-NEXT: Running analysis: MemorySSAAnalysis on f
+; NEWPM-NEXT: Running analysis: AAManager on f
+; NEWPM-NEXT: Running analysis: BasicAA on f
 ; NEWPM-NEXT: Running pass: SpeculativeExecutionPass on f
 ; NEWPM-NEXT: Running pass: JumpThreadingPass on f
 ; NEWPM-NEXT: Running analysis: LazyValueAnalysis on f
@@ -444,6 +452,16 @@
 ; NEWPM-NEXT: Running pass: LCSSAPass on f
 ; NEWPM-NEXT: Running pass: SimplifyCFGPass on f
 ; NEWPM-NEXT: Running pass: InstCombinePass on f
+; NEWPM-NEXT: Invalidating analysis: PreservedCFGCheckerAnalysis on f
+; NEWPM-NEXT: Invalidating analysis: DominatorTreeAnalysis on f
+; NEWPM-NEXT: Invalidating analysis: BasicAA on f
+; NEWPM-NEXT: Invalidating analysis: AAManager on f
+; NEWPM-NEXT: Invalidating analysis: MemorySSAAnalysis on f
+; NEWPM-NEXT: Invalidating analysis: LoopAnalysis on f
+; NEWPM-NEXT: Invalidating analysis: PhiValuesAnalysis on f
+; NEWPM-NEXT: Invalidating analysis: MemoryDependenceAnalysis on f
+; NEWPM-NEXT: Invalidating analysis: DemandedBitsAnalysis on f
+; NEWPM-NEXT: Invalidating analysis: PostDominatorTreeAnalysis on f
 ; NEWPM-NEXT: Invalidating analysis: CallGraphAnalysis on
 ; NEWPM-NEXT: Running pass: GlobalOptPass on
 ; NEWPM-NEXT: Running pass: GlobalDCEPass on
@@ -451,9 +469,14 @@
 ; NEWPM-NEXT: Running pass: ReversePostOrderFunctionAttrsPass on
 ; NEWPM-NEXT: Running analysis: CallGraphAnalysis on
 ; NEWPM-NEXT: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
+; NEWPM-NEXT: Running analysis: PreservedCFGCheckerAnalysis on f
 ; NEWPM-NEXT: Running pass: Float2IntPass on f
+; NEWPM-NEXT: Running analysis: DominatorTreeAnalysis on f
 ; NEWPM-NEXT: Running pass: LowerConstantIntrinsicsPass on f
 ; NEWPM-NEXT: Running pass: LowerMatrixIntrinsicsPass on f
+; NEWPM-NEXT: Running analysis: AAManager on f
+; NEWPM-NEXT: Running analysis: BasicAA on f
+; NEWPM-NEXT: Running analysis: LoopAnalysis on f
 ; NEWPM-NEXT: Running pass: EarlyCSEPass on f
 ; NEWPM-NEXT: Running pass: LoopSimplifyPass on f
 ; NEWPM-NEXT: Running pass: LCSSAPass on f
@@ -464,6 +487,9 @@
 ; NEWPM-NEXT: Running pass: LoopVectorizePass on f
 ; NEWPM-NEXT: Running analysis: BlockFrequencyAnalysis on f
 ; NEWPM-NEXT: Running analysis: BranchProbabilityAnalysis on f
+; NEWPM-NEXT: Running analysis: PostDominatorTreeAnalysis on f
+; NEWPM-NEXT: Running analysis: DemandedBitsAnalysis on f
+; NEWPM-NEXT: Running analysis: MemorySSAAnalysis on f
 ; NEWPM-NEXT: Running pass: LoopLoadEliminationPass on f
 ; NEWPM-NEXT: Running pass: InstCombinePass on f
 ; NEWPM-NEXT: Running pass: SimplifyCFGPass on f

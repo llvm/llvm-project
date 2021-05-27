@@ -203,7 +203,7 @@ public:
 
 TEST_F(PassManagerTest, Basic) {
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
   M->setDataLayout(TM->createDataLayout());

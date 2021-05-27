@@ -1035,13 +1035,11 @@ DWARFContext::DIEsForAddress DWARFContext::getDIEsForAddress(uint64_t Address) {
 
 /// TODO: change input parameter from "uint64_t Address"
 ///       into "SectionedAddress Address"
-static bool getFunctionNameAndStartLineForAddress(DWARFCompileUnit *CU,
-                                                  uint64_t Address,
-                                                  FunctionNameKind Kind,
-                                                  DILineInfoSpecifier::FileLineInfoKind FileNameKind,
-                                                  std::string &FunctionName,
-                                                  std::string &StartFile,
-                                                  uint32_t &StartLine) {
+static bool getFunctionNameAndStartLineForAddress(
+    DWARFCompileUnit *CU, uint64_t Address, FunctionNameKind Kind,
+    DILineInfoSpecifier::FileLineInfoKind FileNameKind,
+    std::string &FunctionName, std::string &StartFile, uint32_t &StartLine,
+    Optional<uint64_t> &StartAddress) {
   // The address may correspond to instruction in some inlined function,
   // so we have to build the chain of inlined functions and take the
   // name of the topmost function in it.
@@ -1066,7 +1064,8 @@ static bool getFunctionNameAndStartLineForAddress(DWARFCompileUnit *CU,
     StartLine = DeclLineResult;
     FoundResult = true;
   }
-
+  if (auto LowPcAddr = toSectionedAddress(DIE.find(DW_AT_low_pc)))
+    StartAddress = LowPcAddr->Address;
   return FoundResult;
 }
 
@@ -1233,9 +1232,9 @@ DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
   if (!CU)
     return Result;
 
-  getFunctionNameAndStartLineForAddress(CU, Address.Address, Spec.FNKind, Spec.FLIKind,
-                                        Result.FunctionName,
-                                        Result.StartFileName, Result.StartLine);
+  getFunctionNameAndStartLineForAddress(
+      CU, Address.Address, Spec.FNKind, Spec.FLIKind, Result.FunctionName,
+      Result.StartFileName, Result.StartLine, Result.StartAddress);
   if (Spec.FLIKind != FileLineInfoKind::None) {
     if (const DWARFLineTable *LineTable = getLineTableForUnit(CU)) {
       LineTable->getFileLineInfoForAddress(
@@ -1248,7 +1247,7 @@ DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
 
 DILineInfoTable DWARFContext::getLineInfoForAddressRange(
     object::SectionedAddress Address, uint64_t Size, DILineInfoSpecifier Spec) {
-  DILineInfoTable  Lines;
+  DILineInfoTable Lines;
   DWARFCompileUnit *CU = getCompileUnitForAddress(Address.Address);
   if (!CU)
     return Lines;
@@ -1256,8 +1255,10 @@ DILineInfoTable DWARFContext::getLineInfoForAddressRange(
   uint32_t StartLine = 0;
   std::string StartFileName;
   std::string FunctionName(DILineInfo::BadString);
-  getFunctionNameAndStartLineForAddress(CU, Address.Address, Spec.FNKind, Spec.FLIKind,
-                                        FunctionName, StartFileName, StartLine);
+  Optional<uint64_t> StartAddress;
+  getFunctionNameAndStartLineForAddress(CU, Address.Address, Spec.FNKind,
+                                        Spec.FLIKind, FunctionName,
+                                        StartFileName, StartLine, StartAddress);
 
   // If the Specifier says we don't need FileLineInfo, just
   // return the top-most function at the starting address.
@@ -1266,6 +1267,7 @@ DILineInfoTable DWARFContext::getLineInfoForAddressRange(
     Result.FunctionName = FunctionName;
     Result.StartFileName = StartFileName;
     Result.StartLine = StartLine;
+    Result.StartAddress = StartAddress;
     Lines.push_back(std::make_pair(Address.Address, Result));
     return Lines;
   }
@@ -1290,6 +1292,7 @@ DILineInfoTable DWARFContext::getLineInfoForAddressRange(
     Result.Column = Row.Column;
     Result.StartFileName = StartFileName;
     Result.StartLine = StartLine;
+    Result.StartAddress = StartAddress;
     Lines.push_back(std::make_pair(Row.Address.Address, Result));
   }
 
@@ -1332,6 +1335,8 @@ DWARFContext::getInliningInfoForAddress(object::SectionedAddress Address,
     if (auto DeclLineResult = FunctionDIE.getDeclLine())
       Frame.StartLine = DeclLineResult;
     Frame.StartFileName = FunctionDIE.getDeclFile(Spec.FLIKind);
+    if (auto LowPcAddr = toSectionedAddress(FunctionDIE.find(DW_AT_low_pc)))
+      Frame.StartAddress = LowPcAddr->Address;
     if (Spec.FLIKind != FileLineInfoKind::None) {
       if (i == 0) {
         // For the topmost frame, initialize the line table of this

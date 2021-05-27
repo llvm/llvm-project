@@ -50,6 +50,13 @@ namespace std::ranges {
   template<range R>
     using range_rvalue_reference_t = iter_rvalue_reference_t<iterator_t<R>>;
 
+  // [range.sized]
+  template<class>
+    inline constexpr bool disable_sized_range = false;
+
+  template<class T>
+    concept sized_range = ...;
+
   // [range.view], views
   template<class T>
     inline constexpr bool enable_view = ...;
@@ -78,6 +85,7 @@ namespace std::ranges {
 #include <__config>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
+#include <__ranges/data.h>
 #include <__ranges/empty.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/view.h>

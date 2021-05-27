@@ -16,5 +16,5 @@ int main() {
   }
 }
 
-// DexExpectWatchValue('index', 2, 7, 9, on_line='check')
-// DexLimitSteps('ix', 2, 7, 9, on_line='check')
+// DexExpectWatchValue('index', 2, 7, 9, on_line=ref('check'))
+// DexLimitSteps('ix', 2, 7, 9, on_line=ref('check'))

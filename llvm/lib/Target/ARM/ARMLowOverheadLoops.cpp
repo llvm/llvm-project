@@ -158,7 +158,7 @@ namespace {
 
       if (auto *Preheader = ML.getLoopPreheader())
         GetPredecessor(Preheader);
-      else if (auto *Preheader = MLI.findLoopPreheader(&ML, true))
+      else if (auto *Preheader = MLI.findLoopPreheader(&ML, true, true))
         GetPredecessor(Preheader);
     }
   };
@@ -386,7 +386,7 @@ namespace {
       MF = ML.getHeader()->getParent();
       if (auto *MBB = ML.getLoopPreheader())
         Preheader = MBB;
-      else if (auto *MBB = MLI.findLoopPreheader(&ML, true))
+      else if (auto *MBB = MLI.findLoopPreheader(&ML, true, true))
         Preheader = MBB;
       VPTState::reset();
     }
@@ -628,25 +628,6 @@ bool LowOverheadLoop::ValidateTailPredicate() {
   if (!ValidateLiveOuts()) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Invalid live outs.\n");
     return false;
-  }
-
-  // Check that creating a [W|D]LSTP, which will define LR with an element
-  // count instead of iteration count, won't affect any other instructions
-  // than the LoopStart and LoopDec.
-  // TODO: We should try to insert the [W|D]LSTP after any of the other uses.
-  Register StartReg = isDo(Start) ? Start->getOperand(1).getReg()
-                                  : Start->getOperand(0).getReg();
-  if (StartInsertPt == Start && StartReg == ARM::LR) {
-    if (auto *IterCount = RDA.getMIOperand(Start, isDo(Start) ? 1 : 0)) {
-      SmallPtrSet<MachineInstr *, 2> Uses;
-      RDA.getGlobalUses(IterCount, MCRegister::from(ARM::LR), Uses);
-      for (auto *Use : Uses) {
-        if (Use != Start && Use != Dec) {
-          LLVM_DEBUG(dbgs() << " ARM Loops: Found LR use: " << *Use);
-          return false;
-        }
-      }
-    }
   }
 
   // For tail predication, we need to provide the number of elements, instead
@@ -1216,16 +1197,15 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
   for (auto I = ML->begin(), E = ML->end(); I != E; ++I)
     Changed |= ProcessLoop(*I);
 
-  LLVM_DEBUG(dbgs() << "ARM Loops: Processing loop containing:\n";
-             if (auto *Preheader = ML->getLoopPreheader())
-               dbgs() << " - " << Preheader->getName() << "\n";
-             else if (auto *Preheader = MLI->findLoopPreheader(ML))
-               dbgs() << " - " << Preheader->getName() << "\n";
-             else if (auto *Preheader = MLI->findLoopPreheader(ML, true))
-               dbgs() << " - " << Preheader->getName() << "\n";
-             for (auto *MBB : ML->getBlocks())
-               dbgs() << " - " << MBB->getName() << "\n";
-            );
+  LLVM_DEBUG({
+    dbgs() << "ARM Loops: Processing loop containing:\n";
+    if (auto *Preheader = ML->getLoopPreheader())
+      dbgs() << " - Preheader: " << printMBBReference(*Preheader) << "\n";
+    else if (auto *Preheader = MLI->findLoopPreheader(ML, true, true))
+      dbgs() << " - Preheader: " << printMBBReference(*Preheader) << "\n";
+    for (auto *MBB : ML->getBlocks())
+      dbgs() << " - Block: " << printMBBReference(*MBB) << "\n";
+  });
 
   // Search the given block for a loop start instruction. If one isn't found,
   // and there's only one predecessor block, search that one too.
@@ -1410,8 +1390,7 @@ void ARMLowOverheadLoops::IterationCountDCE(LowOverheadLoop &LoLoop) {
 
   LLVM_DEBUG(dbgs() << "ARM Loops: Trying DCE on loop iteration count.\n");
 
-  MachineInstr *Def =
-      RDA->getMIOperand(LoLoop.Start, isDo(LoLoop.Start) ? 1 : 0);
+  MachineInstr *Def = RDA->getMIOperand(LoLoop.Start, 1);
   if (!Def) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Couldn't find iteration count.\n");
     return;

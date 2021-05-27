@@ -46,6 +46,9 @@ static mc::RegisterMCTargetOptionsFlags MOF;
 static cl::opt<std::string>
 InputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));
 
+static cl::list<std::string>
+    DisassemblerOptions("M", cl::desc("Disassembler options"));
+
 static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                            cl::value_desc("filename"),
                                            cl::init("-"));
@@ -394,10 +397,11 @@ int main(int argc, char **argv) {
 
   // FIXME: This is not pretty. MCContext has a ptr to MCObjectFileInfo and
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.
-  MCObjectFileInfo MOFI;
-  MCContext Ctx(TheTriple, MAI.get(), MRI.get(), &MOFI, STI.get(), &SrcMgr,
+  MCContext Ctx(TheTriple, MAI.get(), MRI.get(), STI.get(), &SrcMgr,
                 &MCOptions);
-  MOFI.initMCObjectFileInfo(Ctx, PIC, LargeCodeModel);
+  std::unique_ptr<MCObjectFileInfo> MOFI(
+      TheTarget->createMCObjectFileInfo(Ctx, PIC, LargeCodeModel));
+  Ctx.setObjectFileInfo(MOFI.get());
 
   if (SaveTempLabels)
     Ctx.setAllowTemporaryLabels(false);
@@ -494,6 +498,12 @@ int main(int argc, char **argv) {
           << OutputAsmVariant << ".\n";
       return 1;
     }
+
+    for (StringRef Opt : DisassemblerOptions)
+      if (!IP->applyTargetSpecificCLOption(Opt)) {
+        WithColor::error() << "invalid disassembler option '" << Opt << "'\n";
+        return 1;
+      }
 
     // Set the display preference for hex vs. decimal immediates.
     IP->setPrintImmHex(PrintImmHex);

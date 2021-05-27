@@ -135,8 +135,9 @@ bool CompilerInstance::createTarget() {
 
   // We should do it here because target knows nothing about
   // language options when it's being created.
-  if (getLangOpts().OpenCL)
-    getTarget().validateOpenCLTarget(getLangOpts(), getDiagnostics());
+  if (getLangOpts().OpenCL &&
+      !getTarget().validateOpenCLTarget(getLangOpts(), getDiagnostics()))
+    return false;
 
   // Inform the target of the language options.
   // FIXME: We shouldn't need to do this, the target should be immutable once

@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_INTERPRETER_INCREMENTALEXECUTOR_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 
 #include <memory>
@@ -34,7 +35,8 @@ class IncrementalExecutor {
   llvm::orc::ThreadSafeContext &TSCtx;
 
 public:
-  IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC, llvm::Error &Err);
+  IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC, llvm::Error &Err,
+                      const llvm::Triple &Triple);
   ~IncrementalExecutor();
 
   llvm::Error addModule(std::unique_ptr<llvm::Module> M);

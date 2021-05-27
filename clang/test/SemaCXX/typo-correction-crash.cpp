@@ -42,3 +42,12 @@ class S {
   }
 };
 }
+
+namespace NoCrashOnCheckArgAlignment {
+template <typename a> void b(a &);
+void test() {
+  for (auto file_data :b(files_db_data)); // expected-error {{use of undeclared identifier 'files_db_data'; did you mean 'file_data'?}} \
+                                          // expected-note {{'file_data' declared here}} \
+                                          // expected-error {{cannot use type 'void' as a range}}
+}
+}

@@ -158,6 +158,7 @@ constexpr std::array<const char *, N> static getSymbolArray(
       return reinterpret_cast<T::FunctionType>(P);                             \
     }                                                                          \
   };                                                                           \
+  static_assert(ARITY == trait<decltype(&SYMBOL)>::nargs, "Arity Error");      \
   }
 
 #define DLWRAP_IMPL(SYMBOL, ARITY)                                             \

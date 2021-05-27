@@ -373,18 +373,18 @@ define i32 @test9(i32 %a) nounwind {
 define <4 x i32> @test10(<4 x i32> %a) nounwind {
 ; X86-LABEL: test10:
 ; X86:       # %bb.0:
-; X86-NEXT:    andnps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    andnps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LIN-LABEL: test10:
 ; X64-LIN:       # %bb.0:
-; X64-LIN-NEXT:    andnps {{.*}}(%rip), %xmm0
+; X64-LIN-NEXT:    andnps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-LIN-NEXT:    retq
 ;
 ; X64-WIN-LABEL: test10:
 ; X64-WIN:       # %bb.0:
 ; X64-WIN-NEXT:    movaps (%rcx), %xmm0
-; X64-WIN-NEXT:    andnps __xmm@{{.*}}(%rip), %xmm0
+; X64-WIN-NEXT:    andnps __xmm@00001000000010000000100000001000(%rip), %xmm0
 ; X64-WIN-NEXT:    retq
   %1 = and <4 x i32> %a, <i32 4096, i32 4096, i32 4096, i32 4096>
   %2 = xor <4 x i32> %1, <i32 4096, i32 4096, i32 4096, i32 4096>

@@ -638,34 +638,38 @@ static void initializeProfileForContinuousMode(void) {
     }
   }
 
-  int Fileno = fileno(File);
+  /* mmap() the profile counters so long as there is at least one counter.
+   * If there aren't any counters, mmap() would fail with EINVAL. */
+  if (CountersSize > 0) {
+    int Fileno = fileno(File);
 
-  /* Determine how much padding is needed before/after the counters and after
-   * the names. */
-  uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
-      PaddingBytesAfterNames;
-  __llvm_profile_get_padding_sizes_for_counters(
-      DataSize, CountersSize, NamesSize, &PaddingBytesBeforeCounters,
-      &PaddingBytesAfterCounters, &PaddingBytesAfterNames);
+    /* Determine how much padding is needed before/after the counters and after
+     * the names. */
+    uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
+        PaddingBytesAfterNames;
+    __llvm_profile_get_padding_sizes_for_counters(
+        DataSize, CountersSize, NamesSize, &PaddingBytesBeforeCounters,
+        &PaddingBytesAfterCounters, &PaddingBytesAfterNames);
 
-  uint64_t PageAlignedCountersLength =
-      (CountersSize * sizeof(uint64_t)) + PaddingBytesAfterCounters;
-  uint64_t FileOffsetToCounters =
-      CurrentFileOffset + sizeof(__llvm_profile_header) +
-      (DataSize * sizeof(__llvm_profile_data)) + PaddingBytesBeforeCounters;
+    uint64_t PageAlignedCountersLength =
+        (CountersSize * sizeof(uint64_t)) + PaddingBytesAfterCounters;
+    uint64_t FileOffsetToCounters =
+        CurrentFileOffset + sizeof(__llvm_profile_header) +
+        (DataSize * sizeof(__llvm_profile_data)) + PaddingBytesBeforeCounters;
 
-  uint64_t *CounterMmap = (uint64_t *)mmap(
-      (void *)CountersBegin, PageAlignedCountersLength, PROT_READ | PROT_WRITE,
-      MAP_FIXED | MAP_SHARED, Fileno, FileOffsetToCounters);
-  if (CounterMmap != CountersBegin) {
-    PROF_ERR(
-        "Continuous counter sync mode is enabled, but mmap() failed (%s).\n"
-        "  - CountersBegin: %p\n"
-        "  - PageAlignedCountersLength: %" PRIu64 "\n"
-        "  - Fileno: %d\n"
-        "  - FileOffsetToCounters: %" PRIu64 "\n",
-        strerror(errno), CountersBegin, PageAlignedCountersLength, Fileno,
-        FileOffsetToCounters);
+    uint64_t *CounterMmap = (uint64_t *)mmap(
+        (void *)CountersBegin, PageAlignedCountersLength, PROT_READ | PROT_WRITE,
+        MAP_FIXED | MAP_SHARED, Fileno, FileOffsetToCounters);
+    if (CounterMmap != CountersBegin) {
+      PROF_ERR(
+          "Continuous counter sync mode is enabled, but mmap() failed (%s).\n"
+          "  - CountersBegin: %p\n"
+          "  - PageAlignedCountersLength: %" PRIu64 "\n"
+          "  - Fileno: %d\n"
+          "  - FileOffsetToCounters: %" PRIu64 "\n",
+          strerror(errno), CountersBegin, PageAlignedCountersLength, Fileno,
+          FileOffsetToCounters);
+    }
   }
 
   if (ProfileRequiresUnlock)

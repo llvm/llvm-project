@@ -134,6 +134,7 @@ void InputChunk::relocate(uint8_t *buf) const {
       encodeSLEB128(static_cast<int32_t>(value), loc, 5);
       break;
     case R_WASM_TABLE_INDEX_SLEB64:
+    case R_WASM_TABLE_INDEX_REL_SLEB64:
     case R_WASM_MEMORY_ADDR_SLEB64:
     case R_WASM_MEMORY_ADDR_REL_SLEB64:
       encodeSLEB128(static_cast<int64_t>(value), loc, 10);
@@ -328,24 +329,24 @@ void InputFunction::writeCompressed(uint8_t *buf) const {
   LLVM_DEBUG(dbgs() << "  total: " << (buf + chunkSize - orig) << "\n");
 }
 
-uint64_t InputChunk::getOffset(uint64_t offset) const {
-  return outSecOff + offset;
-}
-
-uint64_t InputChunk::getSegmentOffset(uint64_t offset) const {
+uint64_t InputChunk::getChunkOffset(uint64_t offset) const {
   if (const auto *ms = dyn_cast<MergeInputChunk>(this)) {
-    LLVM_DEBUG(dbgs() << "getSegmentOffset(merged): " << getName() << "\n");
+    LLVM_DEBUG(dbgs() << "getChunkOffset(merged): " << getName() << "\n");
     LLVM_DEBUG(dbgs() << "offset: " << offset << "\n");
     LLVM_DEBUG(dbgs() << "parentOffset: " << ms->getParentOffset(offset)
                       << "\n");
     assert(ms->parent);
-    return ms->parent->getSegmentOffset(ms->getParentOffset(offset));
+    return ms->parent->getChunkOffset(ms->getParentOffset(offset));
   }
   return outputSegmentOffset + offset;
 }
 
+uint64_t InputChunk::getOffset(uint64_t offset) const {
+  return outSecOff + getChunkOffset(offset);
+}
+
 uint64_t InputChunk::getVA(uint64_t offset) const {
-  return (outputSeg ? outputSeg->startVA : 0) + getSegmentOffset(offset);
+  return (outputSeg ? outputSeg->startVA : 0) + getChunkOffset(offset);
 }
 
 // Generate code to apply relocations to the data section at runtime.

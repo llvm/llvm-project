@@ -246,6 +246,33 @@ define void @insert_v2i64_nxv16i64_lo2(<2 x i64>* %psv, <vscale x 16 x i64>* %ou
 }
 
 
+; Insert subvectors that need widening
+
+define <vscale x 4 x i32> @insert_nxv1i32_nxv4i32_undef() nounwind {
+; CHECK-LABEL: insert_nxv1i32_nxv4i32_undef:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov z0.s, #1 // =0x1
+; CHECK-NEXT:    ret
+entry:
+  %0 = insertelement <vscale x 1 x i32> undef, i32 1, i32 0
+  %subvec = shufflevector <vscale x 1 x i32> %0, <vscale x 1 x i32> undef, <vscale x 1 x i32> zeroinitializer
+  %retval = call <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.nxv1i32(<vscale x 4 x i32> undef, <vscale x 1 x i32> %subvec, i64 0)
+  ret <vscale x 4 x i32> %retval
+}
+
+define <vscale x 6 x i16> @insert_nxv1i16_nxv6i16_undef() nounwind {
+; CHECK-LABEL: insert_nxv1i16_nxv6i16_undef:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov z0.h, #1 // =0x1
+; CHECK-NEXT:    ret
+entry:
+  %0 = insertelement <vscale x 1 x i16> undef, i16 1, i32 0
+  %subvec = shufflevector <vscale x 1 x i16> %0, <vscale x 1 x i16> undef, <vscale x 1 x i32> zeroinitializer
+  %retval = call <vscale x 6 x i16> @llvm.experimental.vector.insert.nxv6i16.nxv1i16(<vscale x 6 x i16> undef, <vscale x 1 x i16> %subvec, i64 0)
+  ret <vscale x 6 x i16> %retval
+}
+
+
 declare <vscale x 2 x i64> @llvm.experimental.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64>, <2 x i64>, i64)
 declare <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32>, <4 x i32>, i64)
 declare <vscale x 8 x i16> @llvm.experimental.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16>, <8 x i16>, i64)
@@ -253,3 +280,5 @@ declare <vscale x 16 x i8> @llvm.experimental.vector.insert.nxv16i8.v16i8(<vscal
 
 declare <vscale x 16 x i64> @llvm.experimental.vector.insert.nxv8i64.nxv16i64(<vscale x 16 x i64>, <vscale x 8 x i64>, i64)
 declare <vscale x 16 x i64> @llvm.experimental.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64>, <2 x i64>, i64)
+declare <vscale x 4 x i32> @llvm.experimental.vector.insert.nxv4i32.nxv1i32(<vscale x 4 x i32>, <vscale x 1 x i32>, i64)
+declare <vscale x 6 x i16> @llvm.experimental.vector.insert.nxv6i16.nxv1i16(<vscale x 6 x i16>, <vscale x 1 x i16>, i64)

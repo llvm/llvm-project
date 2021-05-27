@@ -26,10 +26,7 @@ class TestStepOverWatchpoint(TestBase):
     def test(self):
         """Test stepping over watchpoints."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(self.target, VALID_TARGET)
+        target = self.createTestTarget()
 
         lldbutil.run_break_set_by_symbol(self, 'main')
 

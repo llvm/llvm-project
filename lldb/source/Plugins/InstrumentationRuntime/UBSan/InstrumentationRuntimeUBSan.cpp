@@ -29,7 +29,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
-#include <ctype.h>
+#include <cctype>
 
 #include <memory>
 

@@ -33,6 +33,11 @@
 #endif
 #pragma OPENCL EXTENSION __cl_clang_non_portable_kernel_param_types : enable
 
+#ifndef __cl_clang_bitfields
+#error "Missing __cl_clang_bitfields define"
+#endif
+#pragma OPENCL EXTENSION __cl_clang_bitfields : enable
+
 #ifdef cl_khr_fp16
 #error "Incorrect cl_khr_fp16 define"
 #endif

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -canonicalize --split-input-file | FileCheck %s
+// RUN: mlir-opt %s -canonicalize --split-input-file -allow-unregistered-dialect | FileCheck %s
 
 // Test case: Basic folding of memref.tensor_load(memref.buffer_cast(t)) -> t
 // CHECK-LABEL: func @tensor_load_of_buffer_cast(
@@ -128,4 +128,82 @@ func @rank_reducing_subview_canonicalize(%arg0 : memref<?x?x?xf32>, %arg1 : inde
 //  CHECK-SAME:      [4, 1, %{{[a-zA-Z0-9_]+}}] [1, 1, 1]
 //  CHECK-SAME:      : memref<?x?x?xf32> to memref<4x?xf32
 //       CHECK:   %[[RESULT:.+]] = memref.cast %[[SUBVIEW]]
-//       CHEKC:   return %[[RESULT]]
+//       CHECK:   return %[[RESULT]]
+
+// -----
+
+// CHECK-LABEL: @clone_before_dealloc
+// CHECK-SAME: %[[ARG:.*]]: memref<?xf32>
+func @clone_before_dealloc(%arg0: memref<?xf32>) -> memref<?xf32> {
+  // CHECK-NEXT: return %[[ARG]]
+  %0 = memref.clone %arg0 : memref<?xf32> to memref<?xf32>
+  memref.dealloc %arg0 : memref<?xf32>
+  return %0 : memref<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @clone_before_dealloc
+// CHECK-SAME: %[[ARG:.*]]: memref<?xf32>
+func @clone_before_dealloc(%arg0: memref<?xf32>) -> memref<?xf32> {
+  // CHECK-NEXT: "use"(%arg0)
+  // CHECK-NEXT: return %[[ARG]]
+  %0 = memref.clone %arg0 : memref<?xf32> to memref<?xf32>
+  "use"(%0) : (memref<?xf32>) -> ()
+  memref.dealloc %0 : memref<?xf32>
+  return %arg0 : memref<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @clone_after_cast
+// CHECK-SAME: %[[ARG:.*]]: memref<?xf32>
+func @clone_after_cast(%arg0: memref<?xf32>) -> memref<32xf32> {
+  // CHECK-NEXT: memref.clone %[[ARG]] : memref<?xf32> to memref<32xf32>
+  // CHECK-NOT: memref.cast
+  %0 = memref.cast %arg0 : memref<?xf32> to memref<32xf32>
+  %1 = memref.clone %0 : memref<32xf32> to memref<32xf32>
+  return %1 : memref<32xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @clone_and_cast
+// CHECK-SAME: %[[ARG:.*]]: memref<?xf32>
+func @clone_and_cast(%arg0: memref<?xf32>) -> memref<32xf32> {
+  // CHECK-NEXT: %[[RES:.*]] = memref.cast %[[ARG]] : memref<?xf32> to memref<32xf32>
+  %0 = memref.clone %arg0 : memref<?xf32> to memref<32xf32>
+  // CHECK-NEXT: return %[[RES]]
+  memref.dealloc %arg0 : memref<?xf32>
+  return %0 : memref<32xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @alias_is_freed
+func @alias_is_freed(%arg0 : memref<?xf32>) {
+  // CHECK: memref.clone
+  // CHECK: memref.dealloc
+  // CHECK: memref.dealloc
+  %0 = memref.cast %arg0 : memref<?xf32> to memref<32xf32>
+  %1 = memref.clone %0 : memref<32xf32> to memref<32xf32>
+  memref.dealloc %arg0 : memref<?xf32>
+  "use"(%1) : (memref<32xf32>) -> ()
+  memref.dealloc %1 : memref<32xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @dim_of_sized_view
+//  CHECK-SAME:   %{{[a-z0-9A-Z_]+}}: memref<?xi8>
+//  CHECK-SAME:   %[[SIZE:.[a-z0-9A-Z_]+]]: index
+//       CHECK:   return %[[SIZE]] : index
+func @dim_of_sized_view(%arg : memref<?xi8>, %size: index) -> index {
+  %c0 = constant 0 : index
+  %0 = memref.reinterpret_cast %arg to offset: [0], sizes: [%size], strides: [0] : memref<?xi8> to memref<?xi8>
+  %1 = memref.dim %0, %c0 : memref<?xi8>
+  return %1 : index
+}
+
+

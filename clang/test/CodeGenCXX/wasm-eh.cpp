@@ -381,7 +381,7 @@ void test8() {
 // RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-DEFAULT
 // RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -Wwasm-exception-spec -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-ON
 // RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -Wno-wasm-exception-spec -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-OFF
-// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fexceptions -fcxx-exceptions -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=NOT-WASM-EH
+// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fexceptions -fcxx-exceptions -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=EM-EH-WARNING
 
 // Wasm EH ignores dynamic exception specifications with types at the moment.
 // This is controlled by -Wwasm-exception-spec, which is on by default. This
@@ -392,7 +392,7 @@ void test9() throw(int) {
 // WARNING-DEFAULT: warning: dynamic exception specifications with types are currently ignored in wasm
 // WARNING-ON: warning: dynamic exception specifications with types are currently ignored in wasm
 // WARNING-OFF-NOT: warning: dynamic exception specifications with types are currently ignored in wasm
-// NOT-WASM-EH-NOT: warning: dynamic exception specifications with types are currently ignored in wasm
+// EM-EH-WARNING: warning: dynamic exception specifications with types are currently ignored in wasm
 
 // Wasm curremtly treats 'throw()' in the same way as 'noexept'. Check if the
 // same warning message is printed as if when a 'noexcept' function throws.

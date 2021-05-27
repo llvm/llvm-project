@@ -19,6 +19,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
@@ -86,8 +87,15 @@ void populateVectorSlicesLoweringPatterns(RewritePatternSet &patterns);
 /// Collect a set of transfer read/write lowering patterns.
 ///
 /// These patterns lower transfer ops to simpler ops like `vector.load`,
-/// `vector.store` and `vector.broadcast`.
+/// `vector.store` and `vector.broadcast`. Includes all patterns of
+/// populateVectorTransferPermutationMapLoweringPatterns.
 void populateVectorTransferLoweringPatterns(RewritePatternSet &patterns);
+
+/// Collect a set of transfer read/write lowering patterns that simplify the
+/// permutation map (e.g., converting it to a minor identity map) by inserting
+/// broadcasts and transposes.
+void populateVectorTransferPermutationMapLoweringPatterns(
+    RewritePatternSet &patterns);
 
 /// These patterns materialize masks for various vector ops such as transfers.
 void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,

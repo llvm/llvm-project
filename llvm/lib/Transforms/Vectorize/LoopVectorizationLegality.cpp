@@ -37,6 +37,13 @@ static cl::opt<bool>
     EnableIfConversion("enable-if-conversion", cl::init(true), cl::Hidden,
                        cl::desc("Enable if-conversion during vectorization."));
 
+namespace llvm {
+cl::opt<bool>
+    HintsAllowReordering("hints-allow-reordering", cl::init(true), cl::Hidden,
+                         cl::desc("Allow enabling loop hints to reorder "
+                                  "FP operations during vectorization."));
+}
+
 // TODO: Move size-based thresholds out of legality checking, make cost based
 // decisions instead of hard thresholds.
 static cl::opt<unsigned> VectorizeSCEVCheckThreshold(
@@ -47,6 +54,23 @@ static cl::opt<unsigned> PragmaVectorizeSCEVCheckThreshold(
     "pragma-vectorize-scev-check-threshold", cl::init(128), cl::Hidden,
     cl::desc("The maximum number of SCEV checks allowed with a "
              "vectorize(enable) pragma"));
+
+// FIXME: When scalable vectorization is stable enough, change the default
+// to SK_PreferFixedWidth.
+static cl::opt<LoopVectorizeHints::ScalableForceKind> ScalableVectorization(
+    "scalable-vectorization", cl::init(LoopVectorizeHints::SK_FixedWidthOnly),
+    cl::Hidden,
+    cl::desc("Control whether the compiler can use scalable vectors to "
+             "vectorize a loop"),
+    cl::values(
+        clEnumValN(LoopVectorizeHints::SK_FixedWidthOnly, "off",
+                   "Scalable vectorization is disabled."),
+        clEnumValN(LoopVectorizeHints::SK_PreferFixedWidth, "on",
+                   "Scalable vectorization is available, but favor fixed-width "
+                   "vectorization when the cost is inconclusive."),
+        clEnumValN(LoopVectorizeHints::SK_PreferScalable, "preferred",
+                   "Scalable vectorization is available and favored when the "
+                   "cost is inconclusive.")));
 
 /// Maximum vectorization interleave count.
 static const unsigned MaxInterleaveFactor = 16;
@@ -77,14 +101,24 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
       Force("vectorize.enable", FK_Undefined, HK_FORCE),
       IsVectorized("isvectorized", 0, HK_ISVECTORIZED),
       Predicate("vectorize.predicate.enable", FK_Undefined, HK_PREDICATE),
-      Scalable("vectorize.scalable.enable", false, HK_SCALABLE), TheLoop(L),
-      ORE(ORE) {
+      Scalable("vectorize.scalable.enable", SK_Unspecified, HK_SCALABLE),
+      TheLoop(L), ORE(ORE) {
   // Populate values with existing loop metadata.
   getHintsFromMetadata();
 
   // force-vector-interleave overrides DisableInterleaving.
   if (VectorizerParams::isInterleaveForced())
     Interleave.Value = VectorizerParams::VectorizationInterleave;
+
+  if ((LoopVectorizeHints::ScalableForceKind)Scalable.Value == SK_Unspecified)
+    // If the width is set, but the metadata says nothing about the scalable
+    // property, then assume it concerns only a fixed-width UserVF.
+    // If width is not set, the flag takes precedence.
+    Scalable.Value = Width.Value ? SK_FixedWidthOnly : ScalableVectorization;
+  else if (ScalableVectorization == SK_FixedWidthOnly)
+    // If the flag is set to disable any use of scalable vectors, override the
+    // loop hint.
+    Scalable.Value = SK_FixedWidthOnly;
 
   if (IsVectorized.Value != 1)
     // If the vectorization width and interleaving count are both 1 then
@@ -182,6 +216,15 @@ const char *LoopVectorizeHints::vectorizeAnalysisPassName() const {
   if (getForce() == LoopVectorizeHints::FK_Undefined && getWidth().isZero())
     return LV_NAME;
   return OptimizationRemarkAnalysis::AlwaysPrint;
+}
+
+bool LoopVectorizeHints::allowReordering() const {
+  // Allow the vectorizer to change the order of operations if enabling
+  // loop hints are provided
+  ElementCount EC = getWidth();
+  return HintsAllowReordering &&
+         (getForce() == LoopVectorizeHints::FK_Enabled ||
+          EC.getKnownMinValue() > 1);
 }
 
 void LoopVectorizeHints::getHintsFromMetadata() {
@@ -855,6 +898,32 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   PSE.addPredicate(LAI->getPSE().getUnionPredicate());
 
   return true;
+}
+
+bool LoopVectorizationLegality::canVectorizeFPMath(
+    bool EnableStrictReductions) {
+
+  // First check if there is any ExactFP math or if we allow reassociations
+  if (!Requirements->getExactFPInst() || Hints->allowReordering())
+    return true;
+
+  // If the above is false, we have ExactFPMath & do not allow reordering.
+  // If the EnableStrictReductions flag is set, first check if we have any
+  // Exact FP induction vars, which we cannot vectorize.
+  if (!EnableStrictReductions ||
+      any_of(getInductionVars(), [&](auto &Induction) -> bool {
+        InductionDescriptor IndDesc = Induction.second;
+        return IndDesc.getExactFPMathInst();
+      }))
+    return false;
+
+  // We can now only vectorize if all reductions with Exact FP math also
+  // have the isOrdered flag set, which indicates that we can move the
+  // reduction operations in-loop.
+  return (all_of(getReductionVars(), [&](auto &Reduction) -> bool {
+    RecurrenceDescriptor RdxDesc = Reduction.second;
+    return !RdxDesc.hasExactFPMath() || RdxDesc.isOrdered();
+  }));
 }
 
 bool LoopVectorizationLegality::isInductionPhi(const Value *V) {

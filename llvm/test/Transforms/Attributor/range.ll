@@ -612,10 +612,11 @@ define void @f1(i32){
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@f1
 ; IS__CGSCC_NPM-SAME: (i32 [[TMP0:%.*]]) #[[ATTR1]] {
-; IS__CGSCC_NPM-NEXT:    br label [[TMP3:%.*]]
-; IS__CGSCC_NPM:       2:
-; IS__CGSCC_NPM-NEXT:    unreachable
+; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = icmp sgt i32 10, 15
+; IS__CGSCC_NPM-NEXT:    br i1 false, label [[TMP3:%.*]], label [[TMP4:%.*]]
 ; IS__CGSCC_NPM:       3:
+; IS__CGSCC_NPM-NEXT:    unreachable
+; IS__CGSCC_NPM:       4:
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
   %2 = tail call i32 @r1(i32 %0)
@@ -1932,11 +1933,13 @@ define internal i32 @cast_and_return(i1 %c) {
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@cast_and_return
 ; IS__CGSCC_OPM-SAME: (i1 [[C:%.*]]) #[[ATTR2]] {
+; IS__CGSCC_OPM-NEXT:    [[RET:%.*]] = zext i1 undef to i32
 ; IS__CGSCC_OPM-NEXT:    ret i32 undef
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@cast_and_return
 ; IS__CGSCC_NPM-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; IS__CGSCC_NPM-NEXT:    [[RET:%.*]] = zext i1 undef to i32
 ; IS__CGSCC_NPM-NEXT:    ret i32 undef
 ;
   %ret = zext i1 %c to i32
@@ -2280,11 +2283,13 @@ define internal i1 @is_less_than_100_2(i32 %c) {
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@is_less_than_100_2
 ; IS__CGSCC_OPM-SAME: (i32 noundef [[C:%.*]]) #[[ATTR2]] {
+; IS__CGSCC_OPM-NEXT:    [[CMP:%.*]] = icmp slt i32 [[C]], 100
 ; IS__CGSCC_OPM-NEXT:    ret i1 true
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@is_less_than_100_2
 ; IS__CGSCC_NPM-SAME: (i32 noundef [[C:%.*]]) #[[ATTR1]] {
+; IS__CGSCC_NPM-NEXT:    [[CMP:%.*]] = icmp slt i32 [[C]], 100
 ; IS__CGSCC_NPM-NEXT:    ret i1 true
 ;
   %cmp = icmp slt i32 %c, 100

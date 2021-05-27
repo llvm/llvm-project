@@ -9,7 +9,7 @@
 #ifndef LLDB_DATAFORMATTERS_TYPESYNTHETIC_H
 #define LLDB_DATAFORMATTERS_TYPESYNTHETIC_H
 
-#include <stdint.h>
+#include <cstdint>
 
 #include <functional>
 #include <initializer_list>

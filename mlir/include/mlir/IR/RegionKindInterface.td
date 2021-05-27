@@ -23,7 +23,7 @@ def RegionKindInterface : OpInterface<"RegionKindInterface"> {
     their regions. Currently, two kinds of regions are
     supported. RegionKind::Graph represents a graph region without
     control flow semantics. RegionKind::SSACFG represents an
-    [SSA-style control flow](LangRef.md#modeling-control-flow) region
+    [SSA-style control flow](../LangRef.md/#modeling-control-flow) region
     with basic blocks, sequential semantics, and reachability.
   }];
   let cppNamespace = "::mlir";

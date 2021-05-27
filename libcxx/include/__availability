@@ -138,6 +138,13 @@
 // #   define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_latch
 // #   define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_semaphore
 
+    // This controls the availability of the C++20 format library.
+    // The library is in development and not ABI stable yet. Currently
+    // P2216 is aiming to be retroactively accepted in C++20. This paper
+    // contains ABI breaking changes.
+#   define _LIBCPP_AVAILABILITY_FORMAT
+// #   define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format
+
 #elif defined(__APPLE__)
 
 #   define _LIBCPP_AVAILABILITY_SHARED_MUTEX                                    \
@@ -223,6 +230,13 @@
 #   define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_latch
 #   define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_semaphore
 
+    // This controls the availability of the C++20 format library.
+    // The library is in development and not ABI stable yet. Currently
+    // P2216 is aiming to be retroactively accepted in C++20. This paper
+    // contains ABI breaking changes.
+#   define _LIBCPP_AVAILABILITY_FORMAT                                          \
+        __attribute__((unavailable))
+#   define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format
 #else
 
 // ...New vendors can add availability markup here...

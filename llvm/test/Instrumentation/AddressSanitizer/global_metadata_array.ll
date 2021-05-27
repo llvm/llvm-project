@@ -18,8 +18,8 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__sub_I_asan_globals.cpp, i8* null }]
 
 ; Check that globals were instrumented:
-; CHECK: @global = global { i32, [60 x i8] } zeroinitializer, align 32
-; CHECK: @.str = internal constant { [14 x i8], [50 x i8] } { [14 x i8] c"Hello, world!\00", [50 x i8] zeroinitializer }{{.*}}, align 32
+; CHECK: @global = global { i32, [28 x i8] } zeroinitializer, align 32
+; CHECK: @.str = internal constant { [14 x i8], [18 x i8] } { [14 x i8] c"Hello, world!\00", [18 x i8] zeroinitializer }{{.*}}, align 32
 
 ; Check emitted location descriptions:
 ; CHECK: [[VARNAME:@___asan_gen_.[0-9]+]] = private unnamed_addr constant [7 x i8] c"global\00", align 1

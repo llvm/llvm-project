@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "SyntheticSections.h"
+#include "ConcatOutputSection.h"
 #include "Config.h"
 #include "ExportTrie.h"
 #include "InputFiles.h"
 #include "MachOStructs.h"
-#include "MergedOutputSection.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -20,7 +20,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
@@ -31,7 +31,7 @@
 #include <sys/mman.h>
 #endif
 
-#ifdef HAVE_LIBXAR
+#ifdef LLVM_HAVE_LIBXAR
 #include <fcntl.h>
 #include <xar/xar.h>
 #endif
@@ -753,7 +753,10 @@ void SymtabSection::finalizeContents() {
       if (!defined->includeInSymtab)
         continue;
       assert(defined->isExternal());
-      addSymbol(externalSymbols, defined);
+      if (defined->privateExtern)
+        addSymbol(localSymbols, defined);
+      else
+        addSymbol(externalSymbols, defined);
     } else if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
       if (dysym->isReferenced())
         addSymbol(undefinedSymbols, sym);
@@ -922,6 +925,9 @@ void StringTableSection::writeTo(uint8_t *buf) const {
   }
 }
 
+static_assert((CodeSignatureSection::blobHeadersSize % 8) == 0, "");
+static_assert((CodeSignatureSection::fixedHeadersSize % 8) == 0, "");
+
 CodeSignatureSection::CodeSignatureSection()
     : LinkEditSection(segment_names::linkEdit, section_names::codeSignature) {
   align = 16; // required by libstuff
@@ -1033,7 +1039,7 @@ private:
   } while (0);
 
 void BitcodeBundleSection::finalize() {
-#ifdef HAVE_LIBXAR
+#ifdef LLVM_HAVE_LIBXAR
   using namespace llvm::sys::fs;
   CHECK_EC(createTemporaryFile("bitcode-bundle", "xar", xarPath));
 
@@ -1045,7 +1051,7 @@ void BitcodeBundleSection::finalize() {
   CHECK_EC(xar_close(xar));
 
   file_size(xarPath, xarSize);
-#endif // defined(HAVE_LIBXAR)
+#endif // defined(LLVM_HAVE_LIBXAR)
 }
 
 void BitcodeBundleSection::writeTo(uint8_t *buf) const {

@@ -14,7 +14,6 @@
 #ifndef LLVM_TRANSFORMS_UTILS_DEBUGIFY_H
 #define LLVM_TRANSFORMS_UTILS_DEBUGIFY_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
@@ -23,10 +22,11 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 
-using DebugFnMap = llvm::DenseMap<llvm::StringRef, const llvm::DISubprogram *>;
-using DebugInstMap = llvm::DenseMap<const llvm::Instruction *, bool>;
+using DebugFnMap = llvm::MapVector<llvm::StringRef, const llvm::DISubprogram *>;
+using DebugInstMap = llvm::MapVector<const llvm::Instruction *, bool>;
+using DebugVarMap = llvm::MapVector<const llvm::DILocalVariable *, unsigned>;
 using WeakInstValueMap =
-    llvm::DenseMap<const llvm::Instruction *, llvm::WeakVH>;
+    llvm::MapVector<const llvm::Instruction *, llvm::WeakVH>;
 
 /// Used to track the Debug Info Metadata information.
 struct DebugInfoPerPass {
@@ -37,6 +37,8 @@ struct DebugInfoPerPass {
   // This tracks value (instruction) deletion. If an instruction gets deleted,
   // WeakVH nulls itself.
   WeakInstValueMap InstToDelete;
+  // Maps variable into dbg users (#dbg values/declares for this variable).
+  DebugVarMap DIVariables;
 };
 
 /// Map pass names to a per-pass DebugInfoPerPass instance.

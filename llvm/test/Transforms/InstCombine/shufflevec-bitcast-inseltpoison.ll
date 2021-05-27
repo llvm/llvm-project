@@ -56,9 +56,9 @@ define <4 x i16> @splat_bitcast_operand_uses(<8 x i8> %x) {
 
 define <4 x i32> @splat_bitcast_operand_same_size_src_elt(<4 x float> %x) {
 ; CHECK-LABEL: @splat_bitcast_operand_same_size_src_elt(
-; CHECK-NEXT:    [[S1:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
-; CHECK-NEXT:    [[S2:%.*]] = bitcast <4 x float> [[S1]] to <4 x i32>
-; CHECK-NEXT:    ret <4 x i32> [[S2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[X:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[BC:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    ret <4 x i32> [[BC]]
 ;
   %s1 = shufflevector <4 x float> %x, <4 x float> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
   %bc = bitcast <4 x float> %s1 to <4 x i32>

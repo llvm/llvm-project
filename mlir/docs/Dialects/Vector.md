@@ -157,7 +157,7 @@ are available for the `LLVM` target starting from the Virtual Vector Level.
 
 Higher-dimensional `vector`s are ubiquitous in modern HPC hardware. One way to
 think about Generic Retargetable `vector`-Level Dialect is that it operates on
-`vector` types that are a multiples of a "good" `vector` size so the HW can
+`vector` types that are multiples of a "good" `vector` size so the HW can
 efficiently implement a set of high-level primitives
 (e.g. `vector<8x8x8x16xf32>` when HW `vector` size is say `vector<4x8xf32>`).
 

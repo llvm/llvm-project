@@ -84,6 +84,20 @@ struct EffectiveContext {
     : Inner(DC),
       Dependent(DC->isDependentContext()) {
 
+    // An implicit deduction guide is semantically in the context enclosing the
+    // class template, but for access purposes behaves like the constructor
+    // from which it was produced.
+    if (auto *DGD = dyn_cast<CXXDeductionGuideDecl>(DC)) {
+      if (DGD->isImplicit()) {
+        DC = DGD->getCorrespondingConstructor();
+        if (!DC) {
+          // The copy deduction candidate doesn't have a corresponding
+          // constructor.
+          DC = cast<DeclContext>(DGD->getDeducedTemplate()->getTemplatedDecl());
+        }
+      }
+    }
+
     // C++11 [class.access.nest]p1:
     //   A nested class is a member and as such has the same access
     //   rights as any other member.

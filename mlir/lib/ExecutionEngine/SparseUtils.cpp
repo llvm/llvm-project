@@ -241,18 +241,6 @@ private:
   std::vector<V> values;
 };
 
-/// Templated reader.
-template <typename P, typename I, typename V>
-void *newSparseTensor(char *filename, uint8_t *sparsity, uint64_t size) {
-  uint64_t idata[64];
-  SparseTensor *t = static_cast<SparseTensor *>(openTensorC(filename, idata));
-  assert(size == t->getRank()); // sparsity array must match rank
-  SparseTensorStorageBase *tensor =
-      new SparseTensorStorage<P, I, V>(t, sparsity);
-  delete t;
-  return tensor;
-}
-
 /// Helper to convert string to lower case.
 static char *toLower(char *token) {
   for (char *c = token; *c; c++)
@@ -330,48 +318,9 @@ static void readExtFROSTTHeader(FILE *file, char *name, uint64_t *idata) {
   }
 }
 
-} // anonymous namespace
-
-//===----------------------------------------------------------------------===//
-//
-// Public API of the sparse runtime support library that enables MLIR code
-// to read a sparse tensor from an external format (MME for FROSTT).
-//
-// For example, a sparse matrix in MME can be read as follows.
-//
-//   %tensor = call @openTensor(%fileName, %idata)
-//     : (!llvm.ptr<i8>, memref<?xindex>) -> (!llvm.ptr<i8>)
-//   %rank = load %idata[%c0] : memref<?xindex>    # always 2 for MME
-//   %nnz  = load %idata[%c1] : memref<?xindex>
-//   %m    = load %idata[%c2] : memref<?xindex>
-//   %n    = load %idata[%c3] : memref<?xindex>
-//   .. prepare reading in m x n sparse tensor A with nnz nonzero elements ..
-//   scf.for %k = %c0 to %nnz step %c1 {
-//     call @readTensorItem(%tensor, %idata, %ddata)
-//       : (!llvm.ptr<i8>, memref<?xindex>, memref<?xf64>) -> ()
-//     %i = load %idata[%c0] : memref<?xindex>
-//     %j = load %idata[%c1] : memref<?xindex>
-//     %d = load %ddata[%c0] : memref<?xf64>
-//     .. process next nonzero element A[i][j] = d
-//        where the elements appear in lexicographic order ..
-//   }
-//   call @closeTensor(%tensor) : (!llvm.ptr<i8>) -> ()
-//
-//
-// Note that input parameters in the "MLIRized" version of a function mimic
-// the data layout of a MemRef<?xT> (but cannot use a direct struct). The
-// output parameter uses a direct struct.
-//
-//===----------------------------------------------------------------------===//
-
-extern "C" {
-
-/// Reads in a sparse tensor with the given filename. The call yields a
-/// pointer to an opaque memory-resident sparse tensor object that is only
-/// understood by other methods in the sparse runtime support library. An
-/// array parameter is used to pass the rank, the number of nonzero elements,
-/// and the dimension sizes (one per rank).
-void *openTensorC(char *filename, uint64_t *idata) {
+/// Reads a sparse tensor with the given filename into a memory-resident
+/// sparse tensor in coordinate scheme.
+static SparseTensor *openTensor(char *filename, uint64_t *perm) {
   // Open the file.
   FILE *file = fopen(filename, "r");
   if (!file) {
@@ -379,6 +328,7 @@ void *openTensorC(char *filename, uint64_t *idata) {
     exit(1);
   }
   // Perform some file format dependent set up.
+  uint64_t idata[512];
   if (strstr(filename, ".mtx")) {
     readMMEHeader(file, filename, idata);
   } else if (strstr(filename, ".tns")) {
@@ -393,16 +343,18 @@ void *openTensorC(char *filename, uint64_t *idata) {
   uint64_t nnz = idata[1];
   std::vector<uint64_t> indices(rank);
   for (uint64_t r = 0; r < rank; r++)
-    indices[r] = idata[2 + r];
+    indices[perm[r]] = idata[2 + r];
   SparseTensor *tensor = new SparseTensor(indices, nnz);
   // Read all nonzero elements.
   for (uint64_t k = 0; k < nnz; k++) {
+    uint64_t idx = -1;
     for (uint64_t r = 0; r < rank; r++) {
-      if (fscanf(file, "%" PRIu64, &indices[r]) != 1) {
+      if (fscanf(file, "%" PRIu64, &idx) != 1) {
         fprintf(stderr, "Cannot find next index in %s\n", filename);
         exit(1);
       }
-      indices[r]--; // 0-based index
+      // Add 0-based index.
+      indices[perm[r]] = idx - 1;
     }
     double value;
     if (fscanf(file, "%lg\n", &value) != 1) {
@@ -417,33 +369,21 @@ void *openTensorC(char *filename, uint64_t *idata) {
   return tensor;
 }
 
-/// "MLIRized" version.
-void *openTensor(char *filename, uint64_t *ibase, uint64_t *idata,
-                 uint64_t ioff, uint64_t isize, uint64_t istride) {
-  assert(istride == 1);
-  return openTensorC(filename, idata + ioff);
+/// Templated reader.
+template <typename P, typename I, typename V>
+void *newSparseTensor(char *filename, uint8_t *sparsity, uint64_t *perm,
+                      uint64_t size) {
+  SparseTensor *t = openTensor(filename, perm);
+  assert(size == t->getRank()); // sparsity array must match rank
+  SparseTensorStorageBase *tensor =
+      new SparseTensorStorage<P, I, V>(t, sparsity);
+  delete t;
+  return tensor;
 }
 
-/// Yields the next element from the given opaque sparse tensor object.
-void readTensorItemC(void *tensor, uint64_t *idata, double *ddata) {
-  const Element &e = static_cast<SparseTensor *>(tensor)->next();
-  for (uint64_t r = 0, rank = e.indices.size(); r < rank; r++)
-    idata[r] = e.indices[r];
-  ddata[0] = e.value;
-}
+} // anonymous namespace
 
-/// "MLIRized" version.
-void readTensorItem(void *tensor, uint64_t *ibase, uint64_t *idata,
-                    uint64_t ioff, uint64_t isize, uint64_t istride,
-                    double *dbase, double *ddata, uint64_t doff, uint64_t dsize,
-                    uint64_t dstride) {
-  assert(istride == 1 && dstride == 1);
-  readTensorItemC(tensor, idata + ioff, ddata + doff);
-}
-
-/// Closes the given opaque sparse tensor object, releasing its memory
-/// resources. After this call, the opaque object cannot be used anymore.
-void closeTensor(void *tensor) { delete static_cast<SparseTensor *>(tensor); }
+extern "C" {
 
 /// Helper method to read a sparse tensor filename from the environment,
 /// defined with the naming convention ${TENSOR0}, ${TENSOR1}, etc.
@@ -477,7 +417,7 @@ char *getTensorFilename(uint64_t id) {
 
 #define CASE(p, i, v, P, I, V)                                                 \
   if (ptrTp == (p) && indTp == (i) && valTp == (v))                            \
-  return newSparseTensor<P, I, V>(filename, sparsity, asize)
+  return newSparseTensor<P, I, V>(filename, sparsity, perm, asize)
 
 #define IMPL1(RET, NAME, TYPE, LIB)                                            \
   RET NAME(void *tensor) {                                                     \
@@ -515,9 +455,12 @@ enum PrimaryTypeEnum : uint64_t {
 
 void *newSparseTensor(char *filename, uint8_t *abase, uint8_t *adata,
                       uint64_t aoff, uint64_t asize, uint64_t astride,
-                      uint64_t ptrTp, uint64_t indTp, uint64_t valTp) {
-  assert(astride == 1);
+                      uint64_t *pbase, uint64_t *pdata, uint64_t poff,
+                      uint64_t psize, uint64_t pstride, uint64_t ptrTp,
+                      uint64_t indTp, uint64_t valTp) {
+  assert(astride == 1 && pstride == 1);
   uint8_t *sparsity = adata + aoff;
+  uint64_t *perm = pdata + poff;
 
   // The most common cases: 64-bit or 32-bit overhead, double/float values.
   CASE(kU64, kU64, kF64, uint64_t, uint64_t, double);

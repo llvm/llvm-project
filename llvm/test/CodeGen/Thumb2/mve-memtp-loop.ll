@@ -233,23 +233,14 @@ define void @test11(i8* nocapture %x, i8* nocapture %y, i32 %n) {
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    popgt {r4, pc}
 ; CHECK-NEXT:  .LBB10_1: @ %prehead
-; CHECK-NEXT:    add.w r3, r2, #15
 ; CHECK-NEXT:    mov r12, r1
-; CHECK-NEXT:    bic r3, r3, #16
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsr.w lr, r3, #4
 ; CHECK-NEXT:    mov r3, r2
-; CHECK-NEXT:    subs.w lr, lr, #0
-; CHECK-NEXT:    beq .LBB10_3
+; CHECK-NEXT:    wlstp.8 lr, r3, .LBB10_3
 ; CHECK-NEXT:  .LBB10_2: @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vctp.8 r3
-; CHECK-NEXT:    subs r3, #16
-; CHECK-NEXT:    vpstt
-; CHECK-NEXT:    vldrbt.u8 q0, [r12], #16
-; CHECK-NEXT:    vstrbt.8 q0, [r4], #16
-; CHECK-NEXT:    subs.w lr, lr, #1
-; CHECK-NEXT:    bne .LBB10_2
-; CHECK-NEXT:    b .LBB10_3
+; CHECK-NEXT:    vldrb.u8 q0, [r12], #16
+; CHECK-NEXT:    vstrb.8 q0, [r4], #16
+; CHECK-NEXT:    letp lr, .LBB10_2
 ; CHECK-NEXT:  .LBB10_3: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldrb r3, [r0], #1
@@ -325,20 +316,13 @@ define void @twoloops(i32* %X, i32 %n, i32 %m) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    add.w r1, r2, #15
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    bic r1, r1, #16
-; CHECK-NEXT:    mov r3, r2
-; CHECK-NEXT:    lsr.w lr, r1, #4
-; CHECK-NEXT:    mov r1, r0
-; CHECK-NEXT:    mov r12, lr
-; CHECK-NEXT:    wls lr, lr, .LBB13_2
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r1, r2
+; CHECK-NEXT:    wlstp.8 lr, r1, .LBB13_2
 ; CHECK-NEXT:  .LBB13_1: @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vctp.8 r3
-; CHECK-NEXT:    subs r3, #16
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrbt.8 q0, [r1], #16
-; CHECK-NEXT:    le lr, .LBB13_1
+; CHECK-NEXT:    vstrb.8 q0, [r3], #16
+; CHECK-NEXT:    letp lr, .LBB13_1
 ; CHECK-NEXT:  .LBB13_2: @ %entry
 ; CHECK-NEXT:    wlstp.8 lr, r2, .LBB13_4
 ; CHECK-NEXT:  .LBB13_3: @ =>This Inner Loop Header: Depth=1
@@ -475,6 +459,94 @@ cleanup:
 }
 
 declare void @other()
+
+@arr_56 = external dso_local local_unnamed_addr global [21 x [16 x [11 x i8]]], align 1
+define void @multilooped_exit(i32 %b) {
+; CHECK-LABEL: multilooped_exit:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    cmp r0, #1
+; CHECK-NEXT:    it lt
+; CHECK-NEXT:    poplt {r4, pc}
+; CHECK-NEXT:  .LBB18_1: @ %loop.preheader
+; CHECK-NEXT:    mov.w r4, #-1
+; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    b .LBB18_3
+; CHECK-NEXT:  .LBB18_2: @ %loop
+; CHECK-NEXT:    @ in Loop: Header=BB18_3 Depth=1
+; CHECK-NEXT:    adds r4, #1
+; CHECK-NEXT:    cmp.w r4, #1024
+; CHECK-NEXT:    bge .LBB18_11
+; CHECK-NEXT:  .LBB18_3: @ %loop
+; CHECK-NEXT:    @ =>This Loop Header: Depth=1
+; CHECK-NEXT:    @ Child Loop BB18_4 Depth 2
+; CHECK-NEXT:    @ Child Loop BB18_6 Depth 2
+; CHECK-NEXT:    @ Child Loop BB18_8 Depth 2
+; CHECK-NEXT:    @ Child Loop BB18_10 Depth 2
+; CHECK-NEXT:    movw r3, :lower16:arr_56
+; CHECK-NEXT:    add.w r1, r0, #15
+; CHECK-NEXT:    movt r3, :upper16:arr_56
+; CHECK-NEXT:    lsr.w r12, r1, #4
+; CHECK-NEXT:    mov r2, r3
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    wlstp.8 lr, r1, .LBB18_5
+; CHECK-NEXT:  .LBB18_4: @ Parent Loop BB18_3 Depth=1
+; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    vstrb.8 q0, [r2], #16
+; CHECK-NEXT:    letp lr, .LBB18_4
+; CHECK-NEXT:  .LBB18_5: @ %loop
+; CHECK-NEXT:    @ in Loop: Header=BB18_3 Depth=1
+; CHECK-NEXT:    mov r2, r3
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    wlstp.8 lr, r1, .LBB18_7
+; CHECK-NEXT:  .LBB18_6: @ Parent Loop BB18_3 Depth=1
+; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    vstrb.8 q0, [r2], #16
+; CHECK-NEXT:    letp lr, .LBB18_6
+; CHECK-NEXT:  .LBB18_7: @ %loop
+; CHECK-NEXT:    @ in Loop: Header=BB18_3 Depth=1
+; CHECK-NEXT:    mov r2, r3
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    wlstp.8 lr, r1, .LBB18_9
+; CHECK-NEXT:  .LBB18_8: @ Parent Loop BB18_3 Depth=1
+; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    vstrb.8 q0, [r2], #16
+; CHECK-NEXT:    letp lr, .LBB18_8
+; CHECK-NEXT:  .LBB18_9: @ %loop
+; CHECK-NEXT:    @ in Loop: Header=BB18_3 Depth=1
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    subs.w lr, r12, #0
+; CHECK-NEXT:    beq .LBB18_2
+; CHECK-NEXT:    b .LBB18_10
+; CHECK-NEXT:  .LBB18_10: @ Parent Loop BB18_3 Depth=1
+; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    vctp.8 r1
+; CHECK-NEXT:    subs r1, #16
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vstrbt.8 q0, [r3], #16
+; CHECK-NEXT:    subs.w lr, lr, #1
+; CHECK-NEXT:    bne .LBB18_10
+; CHECK-NEXT:    b .LBB18_2
+; CHECK-NEXT:  .LBB18_11: @ %exit
+; CHECK-NEXT:    pop {r4, pc}
+entry:
+  %cmp8 = icmp sgt i32 %b, 0
+  br i1 %cmp8, label %loop, label %exit
+
+loop:
+  %p = phi i32 [ 0, %entry ], [ %inc, %loop ]
+  call void @llvm.memset.p0i8.i32(i8* align 1 getelementptr ([21 x [16 x [11 x i8]]], [21 x [16 x [11 x i8]]]* @arr_56, i32 0, i32 0, i32 undef, i32 0), i8 0, i32 %b, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 1 getelementptr ([21 x [16 x [11 x i8]]], [21 x [16 x [11 x i8]]]* @arr_56, i32 0, i32 0, i32 undef, i32 0), i8 0, i32 %b, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 1 getelementptr ([21 x [16 x [11 x i8]]], [21 x [16 x [11 x i8]]]* @arr_56, i32 0, i32 0, i32 undef, i32 0), i8 0, i32 %b, i1 false)
+  call void @llvm.memset.p0i8.i32(i8* align 1 getelementptr ([21 x [16 x [11 x i8]]], [21 x [16 x [11 x i8]]]* @arr_56, i32 0, i32 0, i32 undef, i32 0), i8 0, i32 %b, i1 false)
+  %inc = add i32 %p, 1
+  %c = icmp slt i32 %p, 1024
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
 
 attributes #0 = { noinline  optnone }
 attributes #1 = { optsize }

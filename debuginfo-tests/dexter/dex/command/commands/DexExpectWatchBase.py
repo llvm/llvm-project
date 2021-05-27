@@ -82,22 +82,6 @@ class DexExpectWatchBase(CommandBase):
     def encountered_values(self):
         return sorted(list(set(self.values) - self._missing_values))
 
-
-    def resolve_label(self, label_line_pair):
-        # from_line and to_line could have the same label.
-        label, lineno = label_line_pair
-        if self._to_line == label:
-            self._to_line = lineno
-        if self._from_line == label:
-            self._from_line = lineno
-
-    def has_labels(self):
-        return len(self.get_label_args()) > 0
-
-    def get_label_args(self):
-        return [label for label in (self._from_line, self._to_line)
-                      if isinstance(label, str)]
-
     @abc.abstractmethod
     def _get_expected_field(self, watch):
         """Return a field from watch that this ExpectWatch command is checking.

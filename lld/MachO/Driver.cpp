@@ -31,7 +31,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/Magic.h"
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Option/ArgList.h"
@@ -992,7 +992,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       args.hasFlag(OPT_encryptable, OPT_no_encryption,
                    is_contained(encryptablePlatforms, config->platform()));
 
-#ifndef HAVE_LIBXAR
+#ifndef LLVM_HAVE_LIBXAR
   if (config->emitBitcodeBundle)
     error("-bitcode_bundle unsupported because LLD wasn't built with libxar");
 #endif

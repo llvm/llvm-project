@@ -820,13 +820,20 @@ namespace llvm {
         HST(getHexagonSubtarget(G)), HwLen(HST.getVectorLength()) {}
 
     MVT getSingleVT(MVT ElemTy) const {
+      assert(ElemTy != MVT::i1 && "Use getBoolVT for predicates");
       unsigned NumElems = HwLen / (ElemTy.getSizeInBits()/8);
       return MVT::getVectorVT(ElemTy, NumElems);
     }
 
     MVT getPairVT(MVT ElemTy) const {
+      assert(ElemTy != MVT::i1); // Suspicious: there are no predicate pairs.
       unsigned NumElems = (2*HwLen) / (ElemTy.getSizeInBits()/8);
       return MVT::getVectorVT(ElemTy, NumElems);
+    }
+
+    MVT getBoolVT() const {
+      // Return HwLen x i1.
+      return MVT::getVectorVT(MVT::i1, HwLen);
     }
 
     void selectShuffle(SDNode *N);
@@ -837,15 +844,16 @@ namespace llvm {
     void select(SDNode *ISelN);
     void materialize(const ResultStack &Results);
 
+    SDValue getConst32(int Val, const SDLoc &dl);
     SDValue getVectorConstant(ArrayRef<uint8_t> Data, const SDLoc &dl);
 
     enum : unsigned {
       None,
       PackMux,
     };
-    OpRef concat(OpRef Va, OpRef Vb, ResultStack &Results);
+    OpRef concats(OpRef Va, OpRef Vb, ResultStack &Results);
     OpRef packs(ShuffleMask SM, OpRef Va, OpRef Vb, ResultStack &Results,
-                MutableArrayRef<int> NewMask, unsigned Options = None);
+                 MutableArrayRef<int> NewMask, unsigned Options = None);
     OpRef packp(ShuffleMask SM, OpRef Va, OpRef Vb, ResultStack &Results,
                 MutableArrayRef<int> NewMask);
     OpRef vmuxs(ArrayRef<uint8_t> Bytes, OpRef Va, OpRef Vb,
@@ -915,6 +923,85 @@ static bool isIdentity(ArrayRef<int> Mask) {
       return false;
   }
   return true;
+}
+
+static SmallVector<unsigned, 4> getInputSegmentList(ShuffleMask SM,
+                                                    unsigned SegLen) {
+  assert(isPowerOf2_32(SegLen));
+  SmallVector<unsigned, 4> SegList;
+  if (SM.MaxSrc == -1)
+    return SegList;
+
+  unsigned Shift = Log2_32(SegLen);
+  BitVector Segs(alignTo(SM.MaxSrc + 1, SegLen) >> Shift);
+
+  for (int I = 0, E = SM.Mask.size(); I != E; ++I) {
+    int M = SM.Mask[I];
+    if (M >= 0)
+      Segs.set(M >> Shift);
+  }
+
+  for (unsigned B : Segs.set_bits())
+    SegList.push_back(B);
+  return SegList;
+}
+
+static SmallVector<unsigned, 4> getOutputSegmentMap(ShuffleMask SM,
+                                                    unsigned SegLen) {
+  // Calculate the layout of the output segments in terms of the input
+  // segments.
+  // For example [1,3,1,0] means that the output consists of 4 output
+  // segments, where the first output segment has only elements of the
+  // input segment at index 1. The next output segment only has elements
+  // of the input segment 3, etc.
+  // If an output segment only has undef elements, the value will be ~0u.
+  // If an output segment has elements from more than one input segment,
+  // the corresponding value will be ~1u.
+  unsigned MaskLen = SM.Mask.size();
+  assert(MaskLen % SegLen == 0);
+  SmallVector<unsigned, 4> Map(MaskLen / SegLen);
+
+  for (int S = 0, E = Map.size(); S != E; ++S) {
+    unsigned Idx = ~0u;
+    for (int I = 0; I != static_cast<int>(SegLen); ++I) {
+      int M = SM.Mask[S*SegLen + I];
+      if (M < 0)
+        continue;
+      unsigned G = M / SegLen; // Input segment of this element.
+      if (Idx == ~0u) {
+        Idx = G;
+      } else if (Idx != G) {
+        Idx = ~1u;
+        break;
+      }
+    }
+    Map[S] = Idx;
+  }
+
+  return Map;
+}
+
+static void packSegmentMask(ArrayRef<int> Mask, ArrayRef<unsigned> OutSegMap,
+                            unsigned SegLen, MutableArrayRef<int> PackedMask) {
+  SmallVector<unsigned, 4> InvMap;
+  for (int I = OutSegMap.size() - 1; I >= 0; --I) {
+    unsigned S = OutSegMap[I];
+    assert(S != ~0u && "Unexpected undef");
+    assert(S != ~1u && "Unexpected multi");
+    if (InvMap.size() <= S)
+      InvMap.resize(S+1);
+    InvMap[S] = I;
+  }
+
+  unsigned Shift = Log2_32(SegLen);
+  for (int I = 0, E = Mask.size(); I != E; ++I) {
+    int M = Mask[I];
+    if (M >= 0) {
+      int OutIdx = InvMap[M >> Shift];
+      M = (M & (SegLen-1)) + SegLen*OutIdx;
+    }
+    PackedMask[I] = M;
+  }
 }
 
 static bool isPermutation(ArrayRef<int> Mask) {
@@ -1017,18 +1104,20 @@ void HvxSelector::materialize(const ResultStack &Results) {
   DAG.RemoveDeadNodes();
 }
 
-OpRef HvxSelector::concat(OpRef Lo, OpRef Hi, ResultStack &Results) {
+OpRef HvxSelector::concats(OpRef Lo, OpRef Hi, ResultStack &Results) {
   DEBUG_WITH_TYPE("isel", {dbgs() << __func__ << '\n';});
   const SDLoc &dl(Results.InpNode);
   Results.push(TargetOpcode::REG_SEQUENCE, getPairVT(MVT::i8), {
-    DAG.getTargetConstant(Hexagon::HvxWRRegClassID, dl, MVT::i32),
-    Lo, DAG.getTargetConstant(Hexagon::vsub_lo, dl, MVT::i32),
-    Hi, DAG.getTargetConstant(Hexagon::vsub_hi, dl, MVT::i32),
+    getConst32(Hexagon::HvxWRRegClassID, dl),
+    Lo, getConst32(Hexagon::vsub_lo, dl),
+    Hi, getConst32(Hexagon::vsub_hi, dl),
   });
   return OpRef::res(Results.top());
 }
 
-// Va, Vb are single vectors, SM can be arbitrarily long.
+// Va, Vb are single vectors. If SM only uses two vector halves from Va/Vb,
+// pack these halves into a single vector, and remap SM into NewMask to use
+// the new vector instead.
 OpRef HvxSelector::packs(ShuffleMask SM, OpRef Va, OpRef Vb,
                          ResultStack &Results, MutableArrayRef<int> NewMask,
                          unsigned Options) {
@@ -1036,68 +1125,193 @@ OpRef HvxSelector::packs(ShuffleMask SM, OpRef Va, OpRef Vb,
   if (!Va.isValid() || !Vb.isValid())
     return OpRef::fail();
 
-  int VecLen = SM.Mask.size();
   MVT Ty = getSingleVT(MVT::i8);
+  MVT PairTy = getPairVT(MVT::i8);
+  OpRef Inp[2] = {Va, Vb};
+  unsigned VecLen = SM.Mask.size();
 
-  auto IsExtSubvector = [] (ShuffleMask M) {
-    assert(M.MinSrc >= 0 && M.MaxSrc >= 0);
-    for (int I = 0, E = M.Mask.size(); I != E; ++I) {
-      if (M.Mask[I] >= 0 && M.Mask[I]-I != M.MinSrc)
-        return false;
+  auto valign = [this](OpRef Lo, OpRef Hi, unsigned Amt, MVT Ty,
+                       ResultStack &Results) {
+    if (Amt == 0)
+      return Lo;
+    const SDLoc &dl(Results.InpNode);
+    if (isUInt<3>(Amt) || isUInt<3>(HwLen - Amt)) {
+      bool IsRight = isUInt<3>(Amt); // Right align.
+      SDValue S = getConst32(IsRight ? Amt : HwLen - Amt, dl);
+      unsigned Opc = IsRight ? Hexagon::V6_valignbi : Hexagon::V6_vlalignbi;
+      Results.push(Opc, Ty, {Hi, Lo, S});
+      return OpRef::res(Results.top());
     }
-    return true;
+    Results.push(Hexagon::A2_tfrsi, MVT::i32, {getConst32(Amt, dl)});
+    OpRef A = OpRef::res(Results.top());
+    Results.push(Hexagon::V6_valignb, Ty, {Hi, Lo, A});
+    return OpRef::res(Results.top());
   };
 
-  if (SM.MaxSrc - SM.MinSrc < int(HwLen)) {
-    if (SM.MinSrc == 0 || SM.MinSrc == int(HwLen) || !IsExtSubvector(SM)) {
-      // If the mask picks elements from only one of the operands, return
-      // that operand, and update the mask to use index 0 to refer to the
-      // first element of that operand.
-      // If the mask extracts a subvector, it will be handled below, so
-      // skip it here.
-      if (SM.MaxSrc < int(HwLen)) {
-        memcpy(NewMask.data(), SM.Mask.data(), sizeof(int)*VecLen);
-        return Va;
-      }
-      if (SM.MinSrc >= int(HwLen)) {
-        for (int I = 0; I != VecLen; ++I) {
-          int M = SM.Mask[I];
-          if (M != -1)
-            M -= HwLen;
-          NewMask[I] = M;
-        }
-        return Vb;
-      }
-    }
-    int MinSrc = SM.MinSrc;
-    if (SM.MaxSrc < int(HwLen)) {
-      Vb = Va;
-    } else if (SM.MinSrc > int(HwLen)) {
-      Va = Vb;
-      MinSrc = SM.MinSrc - HwLen;
-    }
-    const SDLoc &dl(Results.InpNode);
-    if (isUInt<3>(MinSrc) || isUInt<3>(HwLen-MinSrc)) {
-      bool IsRight = isUInt<3>(MinSrc); // Right align.
-      SDValue S = DAG.getTargetConstant(IsRight ? MinSrc : HwLen-MinSrc,
-                                        dl, MVT::i32);
-      unsigned Opc = IsRight ? Hexagon::V6_valignbi
-                             : Hexagon::V6_vlalignbi;
-      Results.push(Opc, Ty, {Vb, Va, S});
-    } else {
-      SDValue S = DAG.getTargetConstant(MinSrc, dl, MVT::i32);
-      Results.push(Hexagon::A2_tfrsi, MVT::i32, {S});
-      unsigned Top = Results.top();
-      Results.push(Hexagon::V6_valignb, Ty, {Vb, Va, OpRef::res(Top)});
-    }
-    for (int I = 0; I != VecLen; ++I) {
+  // Segment is a vector half.
+  unsigned SegLen = HwLen / 2;
+
+  // Check if we can shuffle vector halves around to get the used elements
+  // into a single vector.
+  SmallVector<int,128> MaskH(SM.Mask.begin(), SM.Mask.end());
+  SmallVector<unsigned, 4> SegList = getInputSegmentList(SM.Mask, SegLen);
+  unsigned SegCount = SegList.size();
+  SmallVector<unsigned, 4> SegMap = getOutputSegmentMap(SM.Mask, SegLen);
+
+  if (SegList.empty())
+    return OpRef::undef(Ty);
+
+  // NOTE:
+  // In the following part of the function, where the segments are rearranged,
+  // the shuffle mask SM can be of any length that is a multiple of a vector
+  // (i.e. a multiple of 2*SegLen), and non-zero.
+  // The output segment map is computed, and it may have any even number of
+  // entries, but the rearrangement of input segments will be done based only
+  // on the first two (non-undef) entries in the segment map.
+  // For example, if the output map is 3, 1, 1, 3 (it can have at most two
+  // distinct entries!), the segments 1 and 3 of Va/Vb will be packaged into
+  // a single vector V = 3:1. The output mask will then be updated to use
+  // seg(0,V), seg(1,V), seg(1,V), seg(0,V).
+  //
+  // Picking the segments based on the output map is an optimization. For
+  // correctness it is only necessary that Seg0 and Seg1 are the two input
+  // segments that are used in the output.
+
+  unsigned Seg0 = ~0u, Seg1 = ~0u;
+  for (int I = 0, E = SegMap.size(); I != E; ++I) {
+    unsigned X = SegMap[I];
+    if (X == ~0u)
+      continue;
+    if (Seg0 == ~0u)
+      Seg0 = X;
+    else if (Seg1 != ~0u)
+      break;
+    if (X == ~1u || X != Seg0)
+      Seg1 = X;
+  }
+
+  if (SegCount == 1) {
+    unsigned SrcOp = SegList[0] / 2;
+    for (int I = 0; I != static_cast<int>(VecLen); ++I) {
       int M = SM.Mask[I];
-      if (M != -1)
-        M -= SM.MinSrc;
+      if (M >= 0) {
+        M -= SrcOp * HwLen;
+        assert(M >= 0);
+      }
       NewMask[I] = M;
     }
-    return OpRef::res(Results.top());
+    return Inp[SrcOp];
   }
+
+  if (SegCount == 2) {
+    // Seg0 should not be undef here: this would imply a SegList
+    // with <= 1 elements, which was checked earlier.
+    assert(Seg0 != ~0u);
+
+    // If Seg0 or Seg1 are "multi-defined", pick them from the input
+    // segment list instead.
+    if (Seg0 == ~1u || Seg1 == ~1u) {
+      if (Seg0 == Seg1) {
+        Seg0 = SegList[0];
+        Seg1 = SegList[1];
+      } else if (Seg0 == ~1u) {
+        Seg0 = SegList[0] != Seg1 ? SegList[0] : SegList[1];
+      } else {
+        assert(Seg1 == ~1u); // Sanity
+        Seg1 = SegList[0] != Seg0 ? SegList[0] : SegList[1];
+      }
+    }
+    assert(Seg0 != ~1u && Seg1 != ~1u);
+
+    assert(Seg0 != Seg1 && "Expecting different segments");
+    const SDLoc &dl(Results.InpNode);
+    Results.push(Hexagon::A2_tfrsi, MVT::i32, {getConst32(SegLen, dl)});
+    OpRef HL = OpRef::res(Results.top());
+
+    // Va = AB, Vb = CD
+
+    if (Seg0 / 2 == Seg1 / 2) {
+      // Same input vector.
+      Va = Inp[Seg0 / 2];
+      if (Seg0 > Seg1) {
+        // Swap halves.
+        Results.push(Hexagon::V6_vror, Ty, {Inp[Seg0 / 2], HL});
+        Va = OpRef::res(Results.top());
+      }
+      packSegmentMask(SM.Mask, {Seg0, Seg1}, SegLen, MaskH);
+    } else if (Seg0 % 2 == Seg1 % 2) {
+      // Picking AC, BD, CA, or DB.
+      // vshuff(CD,AB,HL) -> BD:AC
+      // vshuff(AB,CD,HL) -> DB:CA
+      auto Vs = (Seg0 == 0 || Seg0 == 1) ? std::make_pair(Vb, Va)  // AC or BD
+                                         : std::make_pair(Va, Vb); // CA or DB
+      Results.push(Hexagon::V6_vshuffvdd, PairTy, {Vs.first, Vs.second, HL});
+      OpRef P = OpRef::res(Results.top());
+      Va = (Seg0 == 0 || Seg0 == 2) ? OpRef::lo(P) : OpRef::hi(P);
+      packSegmentMask(SM.Mask, {Seg0, Seg1}, SegLen, MaskH);
+    } else {
+      // Picking AD, BC, CB, or DA.
+      if ((Seg0 == 0 && Seg1 == 3) || (Seg0 == 2 && Seg1 == 1)) {
+        // AD or BC: this can be done using vmux.
+        // Q = V6_pred_scalar2 SegLen
+        // V = V6_vmux Q, (Va, Vb) or (Vb, Va)
+        Results.push(Hexagon::V6_pred_scalar2, getBoolVT(), {HL});
+        OpRef Qt = OpRef::res(Results.top());
+        auto Vs = (Seg0 == 0) ? std::make_pair(Va, Vb)  // AD
+                              : std::make_pair(Vb, Va); // CB
+        Results.push(Hexagon::V6_vmux, Ty, {Qt, Vs.first, Vs.second});
+        Va = OpRef::res(Results.top());
+        packSegmentMask(SM.Mask, {Seg0, Seg1}, SegLen, MaskH);
+      } else {
+        // BC or DA: this could be done via valign by SegLen.
+        // Do nothing here, because valign (if possible) will be generated
+        // later on (make sure the Seg0 values are as expected, for sanity).
+        assert(Seg0 == 1 || Seg0 == 3);
+      }
+    }
+  }
+
+  // Check if the arguments can be packed by valign(Va,Vb) or valign(Vb,Va).
+
+  ShuffleMask SMH(MaskH);
+  assert(SMH.Mask.size() == VecLen);
+  SmallVector<int,128> MaskA(SMH.Mask.begin(), SMH.Mask.end());
+
+  if (SMH.MaxSrc - SMH.MinSrc >= static_cast<int>(HwLen)) {
+    // valign(Lo=Va,Hi=Vb) won't work. Try swapping Va/Vb.
+    SmallVector<int,128> Swapped(SMH.Mask.begin(), SMH.Mask.end());
+    ShuffleVectorSDNode::commuteMask(Swapped);
+    ShuffleMask SW(Swapped);
+    if (SW.MaxSrc - SW.MinSrc < static_cast<int>(HwLen)) {
+      MaskA.assign(SW.Mask.begin(), SW.Mask.end());
+      std::swap(Va, Vb);
+    }
+  }
+  ShuffleMask SMA(MaskA);
+  assert(SMA.Mask.size() == VecLen);
+
+  if (SMA.MaxSrc - SMA.MinSrc < static_cast<int>(HwLen)) {
+    int ShiftR = SMA.MinSrc;
+    if (ShiftR >= static_cast<int>(HwLen)) {
+      Va = Vb;
+      Vb = OpRef::undef(Ty);
+      ShiftR -= HwLen;
+    }
+    OpRef RetVal = valign(Va, Vb, ShiftR, Ty, Results);
+
+    for (int I = 0; I != static_cast<int>(VecLen); ++I) {
+      int M = SMA.Mask[I];
+      if (M != -1)
+        M -= SMA.MinSrc;
+      NewMask[I] = M;
+    }
+    return RetVal;
+  }
+
+  // By here, packing by segment (half-vector) shuffling, and vector alignment
+  // failed. Try vmux.
+  // Note: since this is using the original mask, Va and Vb must not have been
+  // modified.
 
   if (Options & PackMux) {
     // If elements picked from Va and Vb have all different (source) indexes
@@ -1105,11 +1319,11 @@ OpRef HvxSelector::packs(ShuffleMask SM, OpRef Va, OpRef Vb,
     BitVector Picked(HwLen);
     SmallVector<uint8_t,128> MuxBytes(HwLen);
     bool CanMux = true;
-    for (int I = 0; I != VecLen; ++I) {
+    for (int I = 0; I != static_cast<int>(VecLen); ++I) {
       int M = SM.Mask[I];
       if (M == -1)
         continue;
-      if (M >= int(HwLen))
+      if (M >= static_cast<int>(HwLen))
         M -= HwLen;
       else
         MuxBytes[M] = 0xFF;
@@ -1122,27 +1336,23 @@ OpRef HvxSelector::packs(ShuffleMask SM, OpRef Va, OpRef Vb,
     if (CanMux)
       return vmuxs(MuxBytes, Va, Vb, Results);
   }
-
   return OpRef::fail();
 }
 
+// Va, Vb are vector pairs. If SM only uses two single vectors from Va/Vb,
+// pack these vectors into a pair, and remap SM into NewMask to use the
+// new pair instead.
 OpRef HvxSelector::packp(ShuffleMask SM, OpRef Va, OpRef Vb,
                          ResultStack &Results, MutableArrayRef<int> NewMask) {
   DEBUG_WITH_TYPE("isel", {dbgs() << __func__ << '\n';});
-  unsigned HalfMask = 0;
-  unsigned LogHw = Log2_32(HwLen);
-  for (int M : SM.Mask) {
-    if (M == -1)
-      continue;
-    HalfMask |= (1u << (M >> LogHw));
-  }
-
-  if (HalfMask == 0)
+  SmallVector<unsigned, 4> SegList = getInputSegmentList(SM.Mask, HwLen);
+  if (SegList.empty())
     return OpRef::undef(getPairVT(MVT::i8));
 
   // If more than two halves are used, bail.
   // TODO: be more aggressive here?
-  if (countPopulation(HalfMask) > 2)
+  unsigned SegCount = SegList.size();
+  if (SegCount > 2)
     return OpRef::fail();
 
   MVT HalfTy = getSingleVT(MVT::i8);
@@ -1150,29 +1360,23 @@ OpRef HvxSelector::packp(ShuffleMask SM, OpRef Va, OpRef Vb,
   OpRef Inp[2] = { Va, Vb };
   OpRef Out[2] = { OpRef::undef(HalfTy), OpRef::undef(HalfTy) };
 
-  uint8_t HalfIdx[4] = { 0xFF, 0xFF, 0xFF, 0xFF };
-  unsigned Idx = 0;
-  for (unsigned I = 0; I != 4; ++I) {
-    if ((HalfMask & (1u << I)) == 0)
-      continue;
-    assert(Idx < 2);
-    OpRef Op = Inp[I/2];
-    Out[Idx] = (I & 1) ? OpRef::hi(Op) : OpRef::lo(Op);
-    HalfIdx[I] = Idx++;
+  // Really make sure we have at most 2 vectors used in the mask.
+  assert(SegCount <= 2);
+
+  for (int I = 0, E = SegList.size(); I != E; ++I) {
+    unsigned S = SegList[I];
+    OpRef Op = Inp[S / 2];
+    Out[I] = (S & 1) ? OpRef::hi(Op) : OpRef::lo(Op);
   }
 
-  int VecLen = SM.Mask.size();
-  for (int I = 0; I != VecLen; ++I) {
-    int M = SM.Mask[I];
-    if (M >= 0) {
-      uint8_t Idx = HalfIdx[M >> LogHw];
-      assert(Idx == 0 || Idx == 1);
-      M = (M & (HwLen-1)) + HwLen*Idx;
-    }
-    NewMask[I] = M;
-  }
-
-  return concat(Out[0], Out[1], Results);
+  // NOTE: Using SegList as the packing map here (not SegMap). This works,
+  // because we're not concerned here about the order of the segments (i.e.
+  // single vectors) in the output pair. Changing the order of vectors is
+  // free (as opposed to changing the order of vector halves as in packs),
+  // and so there is no extra cost added in case the order needs to be
+  // changed later.
+  packSegmentMask(SM.Mask, SegList, HwLen, NewMask);
+  return concats(Out[0], Out[1], Results);
 }
 
 OpRef HvxSelector::vmuxs(ArrayRef<uint8_t> Bytes, OpRef Va, OpRef Vb,
@@ -1194,7 +1398,7 @@ OpRef HvxSelector::vmuxp(ArrayRef<uint8_t> Bytes, OpRef Va, OpRef Vb,
   size_t S = Bytes.size() / 2;
   OpRef L = vmuxs(Bytes.take_front(S), OpRef::lo(Va), OpRef::lo(Vb), Results);
   OpRef H = vmuxs(Bytes.drop_front(S), OpRef::hi(Va), OpRef::hi(Vb), Results);
-  return concat(L, H, Results);
+  return concats(L, H, Results);
 }
 
 OpRef HvxSelector::shuffs1(ShuffleMask SM, OpRef Va, ResultStack &Results) {
@@ -1208,6 +1412,25 @@ OpRef HvxSelector::shuffs1(ShuffleMask SM, OpRef Va, ResultStack &Results) {
     return Va;
   if (isUndef(SM.Mask))
     return OpRef::undef(getSingleVT(MVT::i8));
+
+  unsigned HalfLen = HwLen / 2;
+  assert(isPowerOf2_32(HalfLen)); // Sanity.
+
+  // Handle special case where the output is the same half of the input
+  // repeated twice, i.e. if Va = AB, then handle the output of AA or BB.
+  std::pair<int, unsigned> Strip1 = findStrip(SM.Mask, 1, HalfLen);
+  if ((Strip1.first & ~HalfLen) == 0 && Strip1.second == HalfLen) {
+    std::pair<int, unsigned> Strip2 =
+        findStrip(SM.Mask.drop_front(HalfLen), 1, HalfLen);
+    if (Strip1 == Strip2) {
+      const SDLoc &dl(Results.InpNode);
+      Results.push(Hexagon::A2_tfrsi, MVT::i32, {getConst32(HalfLen, dl)});
+      Results.push(Hexagon::V6_vshuffvdd, getPairVT(MVT::i8),
+                   {Va, Va, OpRef::res(Results.top())});
+      OpRef S = OpRef::res(Results.top());
+      return (Strip1.first == 0) ? OpRef::lo(S) : OpRef::hi(S);
+    }
+  }
 
   OpRef P = perfect(SM, Va, Results);
   if (P.isValid())
@@ -1226,10 +1449,14 @@ OpRef HvxSelector::shuffs2(ShuffleMask SM, OpRef Va, OpRef Vb,
     return C;
 
   int VecLen = SM.Mask.size();
-  SmallVector<int,128> NewMask(VecLen);
-  OpRef P = packs(SM, Va, Vb, Results, NewMask);
+  SmallVector<int,128> PackedMask(VecLen);
+  OpRef P = packs(SM, Va, Vb, Results, PackedMask);
   if (P.isValid())
-    return shuffs1(ShuffleMask(NewMask), P, Results);
+    return shuffs1(ShuffleMask(PackedMask), P, Results);
+
+  // TODO: Before we split the mask, try perfect shuffle on concatenated
+  // operands. This won't work now, because the perfect code does not
+  // tolerate undefs in the mask.
 
   SmallVector<int,128> MaskL(VecLen), MaskR(VecLen);
   splitMask(SM.Mask, MaskL, MaskR);
@@ -1267,7 +1494,7 @@ OpRef HvxSelector::shuffp1(ShuffleMask SM, OpRef Va, ResultStack &Results) {
     OpRef L = shuffs1(PM.lo(), P, Results);
     OpRef H = shuffs1(PM.hi(), P, Results);
     if (L.isValid() && H.isValid())
-      return concat(L, H, Results);
+      return concats(L, H, Results);
   }
 
   OpRef R = perfect(SM, Va, Results);
@@ -1278,7 +1505,7 @@ OpRef HvxSelector::shuffp1(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   OpRef L = shuffs2(SM.lo(), OpRef::lo(Va), OpRef::hi(Va), Results);
   OpRef H = shuffs2(SM.hi(), OpRef::lo(Va), OpRef::hi(Va), Results);
   if (L.isValid() && H.isValid())
-    return concat(L, H, Results);
+    return concats(L, H, Results);
 
   return OpRef::fail();
 }
@@ -1650,7 +1877,7 @@ OpRef HvxSelector::expanding(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   int L = Strip.second;
 
   // First, check the non-ignored strips.
-  for (int I = 2*L; I < 2*N; I += 2*L) {
+  for (int I = 2*L; I < N; I += 2*L) {
     auto S = findStrip(SM.Mask.drop_front(I), 1, N-I);
     if (S.second != unsigned(L))
       return OpRef::fail();
@@ -1658,7 +1885,7 @@ OpRef HvxSelector::expanding(ShuffleMask SM, OpRef Va, ResultStack &Results) {
       return OpRef::fail();
   }
   // Check the -1s.
-  for (int I = L; I < 2*N; I += 2*L) {
+  for (int I = L; I < N; I += 2*L) {
     auto S = findStrip(SM.Mask.drop_front(I), 0, N-I);
     if (S.first != -1 || S.second != unsigned(L))
       return OpRef::fail();
@@ -1945,9 +2172,9 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
 
   const SDLoc &dl(Results.InpNode);
   OpRef Arg = HavePairs ? Va
-                        : concat(Va, OpRef::undef(SingleTy), Results);
+                        : concats(Va, OpRef::undef(SingleTy), Results);
   if (InvertedPair)
-    Arg = concat(OpRef::hi(Arg), OpRef::lo(Arg), Results);
+    Arg = concats(OpRef::hi(Arg), OpRef::lo(Arg), Results);
 
   for (unsigned I = 0, E = SwapElems.size(); I != E; ) {
     bool IsInc = I == E-1 || SwapElems[I] < SwapElems[I+1];
@@ -1962,8 +2189,7 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
     ++I;
 
     NodeTemplate Res;
-    Results.push(Hexagon::A2_tfrsi, MVT::i32,
-                 { DAG.getTargetConstant(S, dl, MVT::i32) });
+    Results.push(Hexagon::A2_tfrsi, MVT::i32, {getConst32(S, dl)});
     Res.Opc = IsInc ? Hexagon::V6_vshuffvdd : Hexagon::V6_vdealvdd;
     Res.Ty = PairTy;
     Res.Ops = { OpRef::hi(Arg), OpRef::lo(Arg), OpRef::res(-1) };
@@ -2024,6 +2250,10 @@ OpRef HvxSelector::butterfly(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   }
 
   return OpRef::fail();
+}
+
+SDValue HvxSelector::getConst32(int Val, const SDLoc &dl) {
+  return DAG.getTargetConstant(Val, dl, MVT::i32);
 }
 
 SDValue HvxSelector::getVectorConstant(ArrayRef<uint8_t> Data,
@@ -2126,9 +2356,8 @@ void HvxSelector::selectRor(SDNode *N) {
     if (S == 0) {
       NewN = VecV.getNode();
     } else if (isUInt<3>(S)) {
-      SDValue C = DAG.getTargetConstant(S, dl, MVT::i32);
       NewN = DAG.getMachineNode(Hexagon::V6_valignbi, dl, Ty,
-                                {VecV, VecV, C});
+                                {VecV, VecV, getConst32(S, dl)});
     }
   }
 

@@ -1162,6 +1162,7 @@ define void @indices_convert() {
 ; XOP:       # %bb.0: # %bb
 ; XOP-NEXT:    vpshufd {{.*#+}} xmm0 = mem[2,3,2,3]
 ; XOP-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; XOP-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; XOP-NEXT:    vmovapd (%rax), %xmm1
 ; XOP-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
 ; XOP-NEXT:    vpermil2pd $0, %xmm0, %xmm1, %xmm1, %xmm0
@@ -1172,6 +1173,7 @@ define void @indices_convert() {
 ; AVX1:       # %bb.0: # %bb
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = mem[2,3,2,3]
 ; AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; AVX1-NEXT:    vmovapd (%rax), %xmm1
 ; AVX1-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vpermilpd %xmm0, %xmm1, %xmm0
@@ -1183,6 +1185,7 @@ define void @indices_convert() {
 ; AVX2-NEXT:    vpbroadcastq (%rax), %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]
 ; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; AVX2-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovapd (%rax), %xmm1
 ; AVX2-NEXT:    vpermilpd %xmm0, %xmm1, %xmm0
@@ -1191,12 +1194,13 @@ define void @indices_convert() {
 ;
 ; AVX512-LABEL: indices_convert:
 ; AVX512:       # %bb.0: # %bb
-; AVX512-NEXT:    vmovaps (%rax), %ymm0
-; AVX512-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [7,7,7,7]
-; AVX512-NEXT:    vandps %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vpermpd %zmm0, %zmm1, %zmm0
-; AVX512-NEXT:    vmovups %xmm0, (%rax)
+; AVX512-NEXT:    vmovdqa (%rax), %ymm0
+; AVX512-NEXT:    vpbroadcastq (%rax), %xmm1
+; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [7,7,7,7]
+; AVX512-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; AVX512-NEXT:    vpermq %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    vmovdqu %xmm0, (%rax)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 ;
@@ -1204,6 +1208,7 @@ define void @indices_convert() {
 ; AVX512VL:       # %bb.0: # %bb
 ; AVX512VL-NEXT:    vpbroadcastq (%rax), %xmm0
 ; AVX512VL-NEXT:    vpandd {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; AVX512VL-NEXT:    vpermq (%rax), %ymm0, %ymm0
 ; AVX512VL-NEXT:    vmovdqu %xmm0, (%rax)
 ; AVX512VL-NEXT:    vzeroupper

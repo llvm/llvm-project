@@ -769,9 +769,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       addAllExtLoads(VT, InnerVT, Expand);
     }
 
-    setOperationAction(ISD::MULHS, VT, Expand);
     setOperationAction(ISD::SMUL_LOHI, VT, Expand);
-    setOperationAction(ISD::MULHU, VT, Expand);
     setOperationAction(ISD::UMUL_LOHI, VT, Expand);
 
     setOperationAction(ISD::BSWAP, VT, Expand);
@@ -949,6 +947,11 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v8i16, Custom);
     setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v4i32, Custom);
     setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::v2i64, Custom);
+
+    for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
+      setOperationAction(ISD::MULHS, VT, Expand);
+      setOperationAction(ISD::MULHU, VT, Expand);
+    }
 
     // NEON only has FMA instructions as of VFP4.
     if (!Subtarget->hasVFP4Base()) {
@@ -1781,6 +1784,9 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(ARMISD::VLD2_UPD)
     MAKE_CASE(ARMISD::VLD3_UPD)
     MAKE_CASE(ARMISD::VLD4_UPD)
+    MAKE_CASE(ARMISD::VLD1x2_UPD)
+    MAKE_CASE(ARMISD::VLD1x3_UPD)
+    MAKE_CASE(ARMISD::VLD1x4_UPD)
     MAKE_CASE(ARMISD::VLD2LN_UPD)
     MAKE_CASE(ARMISD::VLD3LN_UPD)
     MAKE_CASE(ARMISD::VLD4LN_UPD)
@@ -1792,6 +1798,9 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(ARMISD::VST2_UPD)
     MAKE_CASE(ARMISD::VST3_UPD)
     MAKE_CASE(ARMISD::VST4_UPD)
+    MAKE_CASE(ARMISD::VST1x2_UPD)
+    MAKE_CASE(ARMISD::VST1x3_UPD)
+    MAKE_CASE(ARMISD::VST1x4_UPD)
     MAKE_CASE(ARMISD::VST2LN_UPD)
     MAKE_CASE(ARMISD::VST3LN_UPD)
     MAKE_CASE(ARMISD::VST4LN_UPD)
@@ -11107,7 +11116,7 @@ static Register genTPEntry(MachineBasicBlock *TpEntry,
                            MachineBasicBlock *TpExit, Register OpSizeReg,
                            const TargetInstrInfo *TII, DebugLoc Dl,
                            MachineRegisterInfo &MRI) {
-  // Calculates loop iteration count = ceil(n/16)/16 = ((n + 15)&(-16)) / 16.
+  // Calculates loop iteration count = ceil(n/16) = (n + 15) >> 4.
   Register AddDestReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
   BuildMI(TpEntry, Dl, TII->get(ARM::t2ADDri), AddDestReg)
       .addUse(OpSizeReg)
@@ -11115,16 +11124,9 @@ static Register genTPEntry(MachineBasicBlock *TpEntry,
       .add(predOps(ARMCC::AL))
       .addReg(0);
 
-  Register BicDestReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
-  BuildMI(TpEntry, Dl, TII->get(ARM::t2BICri), BicDestReg)
-      .addUse(AddDestReg, RegState::Kill)
-      .addImm(16)
-      .add(predOps(ARMCC::AL))
-      .addReg(0);
-
-  Register LsrDestReg = MRI.createVirtualRegister(&ARM::GPRlrRegClass);
+  Register LsrDestReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
   BuildMI(TpEntry, Dl, TII->get(ARM::t2LSRri), LsrDestReg)
-      .addUse(BicDestReg, RegState::Kill)
+      .addUse(AddDestReg, RegState::Kill)
       .addImm(4)
       .add(predOps(ARMCC::AL))
       .addReg(0);
@@ -11136,6 +11138,10 @@ static Register genTPEntry(MachineBasicBlock *TpEntry,
   BuildMI(TpEntry, Dl, TII->get(ARM::t2WhileLoopStart))
       .addUse(TotalIterationsReg)
       .addMBB(TpExit);
+
+  BuildMI(TpEntry, Dl, TII->get(ARM::t2B))
+      .addMBB(TpLoopBody)
+      .add(predOps(ARMCC::AL));
 
   return TotalIterationsReg;
 }
@@ -14625,6 +14631,9 @@ static SDValue CombineBaseUpdate(SDNode *N,
     // Find the new opcode for the updating load/store.
     bool isLoadOp = true;
     bool isLaneOp = false;
+    // Workaround for vst1x and vld1x intrinsics which do not have alignment
+    // as an operand.
+    bool hasAlignment = true;
     unsigned NewOpc = 0;
     unsigned NumVecs = 0;
     if (isIntrinsic) {
@@ -14639,16 +14648,16 @@ static SDValue CombineBaseUpdate(SDNode *N,
         NumVecs = 3; break;
       case Intrinsic::arm_neon_vld4:     NewOpc = ARMISD::VLD4_UPD;
         NumVecs = 4; break;
-      case Intrinsic::arm_neon_vld1x2:
-      case Intrinsic::arm_neon_vld1x3:
-      case Intrinsic::arm_neon_vld1x4:
-      case Intrinsic::arm_neon_vst1x2:
-      case Intrinsic::arm_neon_vst1x3:
-      case Intrinsic::arm_neon_vst1x4:
+      case Intrinsic::arm_neon_vld1x2:   NewOpc = ARMISD::VLD1x2_UPD;
+        NumVecs = 2; hasAlignment = false; break;
+      case Intrinsic::arm_neon_vld1x3:   NewOpc = ARMISD::VLD1x3_UPD;
+        NumVecs = 3; hasAlignment = false; break;
+      case Intrinsic::arm_neon_vld1x4:   NewOpc = ARMISD::VLD1x4_UPD;
+        NumVecs = 4; hasAlignment = false; break;
       case Intrinsic::arm_neon_vld2dup:
       case Intrinsic::arm_neon_vld3dup:
       case Intrinsic::arm_neon_vld4dup:
-        // TODO: Support updating VLD1x and VLDxDUP nodes. For now, we just skip
+        // TODO: Support updating VLDxDUP nodes. For now, we just skip
         // combining base updates for such intrinsics.
         continue;
       case Intrinsic::arm_neon_vld2lane: NewOpc = ARMISD::VLD2LN_UPD;
@@ -14671,6 +14680,12 @@ static SDValue CombineBaseUpdate(SDNode *N,
         NumVecs = 3; isLoadOp = false; isLaneOp = true; break;
       case Intrinsic::arm_neon_vst4lane: NewOpc = ARMISD::VST4LN_UPD;
         NumVecs = 4; isLoadOp = false; isLaneOp = true; break;
+      case Intrinsic::arm_neon_vst1x2:   NewOpc = ARMISD::VST1x2_UPD;
+        NumVecs = 2; isLoadOp = false; hasAlignment = false; break;
+      case Intrinsic::arm_neon_vst1x3:   NewOpc = ARMISD::VST1x3_UPD;
+        NumVecs = 3; isLoadOp = false; hasAlignment = false; break;
+      case Intrinsic::arm_neon_vst1x4:   NewOpc = ARMISD::VST1x4_UPD;
+        NumVecs = 4; isLoadOp = false; hasAlignment = false; break;
       }
     } else {
       isLaneOp = true;
@@ -14774,7 +14789,9 @@ static SDValue CombineBaseUpdate(SDNode *N,
     } else {
       // Loads (and of course intrinsics) match the intrinsics' signature,
       // so just add all but the alignment operand.
-      for (unsigned i = AddrOpIdx + 1; i < N->getNumOperands() - 1; ++i)
+      unsigned LastOperand =
+          hasAlignment ? N->getNumOperands() - 1 : N->getNumOperands();
+      for (unsigned i = AddrOpIdx + 1; i < LastOperand; ++i)
         Ops.push_back(N->getOperand(i));
     }
 

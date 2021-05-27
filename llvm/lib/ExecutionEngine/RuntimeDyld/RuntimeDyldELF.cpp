@@ -951,14 +951,17 @@ void RuntimeDyldELF::resolveBPFRelocation(const SectionEntry &Section,
     report_fatal_error("Relocation type not implemented yet!");
     break;
   case ELF::R_BPF_NONE:
+  case ELF::R_BPF_64_64:
+  case ELF::R_BPF_64_32:
+  case ELF::R_BPF_64_NODYLD32:
     break;
-  case ELF::R_BPF_64_64: {
+  case ELF::R_BPF_64_ABS64: {
     write(isBE, Section.getAddressWithOffset(Offset), Value + Addend);
     LLVM_DEBUG(dbgs() << "Writing " << format("%p", (Value + Addend)) << " at "
                       << format("%p\n", Section.getAddressWithOffset(Offset)));
     break;
   }
-  case ELF::R_BPF_64_32: {
+  case ELF::R_BPF_64_ABS32: {
     Value += Addend;
     assert(Value <= UINT32_MAX);
     write(isBE, Section.getAddressWithOffset(Offset), static_cast<uint32_t>(Value));
@@ -1269,7 +1272,9 @@ RuntimeDyldELF::processRelocationRef(
   LLVM_DEBUG(dbgs() << "\t\tSectionID: " << SectionID << " Offset: " << Offset
                     << "\n");
   if ((Arch == Triple::aarch64 || Arch == Triple::aarch64_be)) {
-    if (RelType == ELF::R_AARCH64_CALL26 || RelType == ELF::R_AARCH64_JUMP26) {
+    if ((RelType == ELF::R_AARCH64_CALL26 ||
+         RelType == ELF::R_AARCH64_JUMP26) &&
+        MemMgr.allowStubAllocation()) {
       resolveAArch64Branch(SectionID, Value, RelI, Stubs);
     } else if (RelType == ELF::R_AARCH64_ADR_GOT_PAGE) {
       // Craete new GOT entry or find existing one. If GOT entry is
@@ -1732,7 +1737,7 @@ RuntimeDyldELF::processRelocationRef(
       // equivalent to the usual PLT implementation except that we use the stub
       // mechanism in RuntimeDyld (which puts stubs at the end of the section)
       // rather than allocating a PLT section.
-      if (Value.SymbolName) {
+      if (Value.SymbolName && MemMgr.allowStubAllocation()) {
         // This is a call to an external function.
         // Look for an existing stub.
         SectionEntry *Section = &Sections[SectionID];
@@ -1777,9 +1782,9 @@ RuntimeDyldELF::processRelocationRef(
         resolveRelocation(*Section, Offset, StubAddress, ELF::R_X86_64_PC32,
                           Addend);
       } else {
-        RelocationEntry RE(SectionID, Offset, ELF::R_X86_64_PC32, Value.Addend,
-                  Value.Offset);
-        addRelocationForSection(RE, Value.SectionID);
+        Value.Addend += support::ulittle32_t::ref(
+            computePlaceholderAddress(SectionID, Offset));
+        processSimpleRelocation(SectionID, Offset, ELF::R_X86_64_PC32, Value);
       }
     } else if (RelType == ELF::R_X86_64_GOTPCREL ||
                RelType == ELF::R_X86_64_GOTPCRELX ||

@@ -72,6 +72,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Utils/MemoryOpRemark.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -97,6 +98,7 @@ INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(StackProtector)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(IRTranslator, DEBUG_TYPE, "IRTranslator LLVM IR -> MI",
                 false, false)
 
@@ -164,6 +166,8 @@ void IRTranslator::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
   if (OptLevel != CodeGenOpt::None)
     AU.addRequired<BranchProbabilityInfoWrapperPass>();
+  AU.addRequired<TargetLibraryInfoWrapperPass>();
+  AU.addPreserved<TargetLibraryInfoWrapperPass>();
   getSelectionDAGFallbackAnalysisUsage(AU);
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -1815,6 +1819,16 @@ bool IRTranslator::translateConstrainedFPIntrinsic(
 
 bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                                            MachineIRBuilder &MIRBuilder) {
+  if (auto *MI = dyn_cast<AnyMemIntrinsic>(&CI)) {
+    if (ORE->enabled()) {
+      const Function &F = *MI->getParent()->getParent();
+      auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+      if (MemoryOpRemark::canHandle(MI, TLI)) {
+        MemoryOpRemark R(*ORE, "memsize", *DL, TLI);
+        R.visit(MI);
+      }
+    }
+  }
 
   // If this is a simple intrinsic (that is, we just need to add a def of
   // a vreg, and uses for each arg operand, then translate it.
@@ -1913,9 +1927,9 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     assert(DI.getVariable()->isValidLocationForIntrinsic(
                MIRBuilder.getDebugLoc()) &&
            "Expected inlined-at fields to agree");
-    if (!V) {
-      // Currently the optimizer can produce this; insert an undef to
-      // help debugging.  Probably the optimizer should not do this.
+    if (!V || DI.hasArgList()) {
+      // DI cannot produce a valid DBG_VALUE, so produce an undef DBG_VALUE to
+      // terminate any prior location.
       MIRBuilder.buildIndirectDbgValue(0, DI.getVariable(), DI.getExpression());
     } else if (const auto *CI = dyn_cast<Constant>(V)) {
       MIRBuilder.buildConstDbgValue(*CI, DI.getVariable(), DI.getExpression());
@@ -2242,6 +2256,17 @@ bool IRTranslator::translateCallBase(const CallBase &CB,
       continue;
     }
     Args.push_back(getOrCreateVRegs(*Arg));
+  }
+
+  if (auto *CI = dyn_cast<CallInst>(&CB)) {
+    if (ORE->enabled()) {
+      const Function &F = *CI->getParent()->getParent();
+      auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
+      if (MemoryOpRemark::canHandle(CI, TLI)) {
+        MemoryOpRemark R(*ORE, "memsize", *DL, TLI);
+        R.visit(CI);
+      }
+    }
   }
 
   // We don't set HasCalls on MFI here yet because call lowering may decide to
