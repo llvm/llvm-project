@@ -13,13 +13,43 @@
 
 #include "llvm/MCA/Stages/InOrderIssueStage.h"
 #include "llvm/MCA/HardwareUnits/RegisterFile.h"
-#include "llvm/MCA/HardwareUnits/ResourceManager.h"
 #include "llvm/MCA/HardwareUnits/RetireControlUnit.h"
 #include "llvm/MCA/Instruction.h"
 
 #define DEBUG_TYPE "llvm-mca"
 namespace llvm {
 namespace mca {
+
+void StallInfo::clear() {
+  IR.invalidate();
+  CyclesLeft = 0;
+  Kind = StallKind::DEFAULT;
+}
+
+void StallInfo::update(const InstRef &Inst, unsigned Cycles, StallKind SK) {
+  IR = Inst;
+  CyclesLeft = Cycles;
+  Kind = SK;
+}
+
+void StallInfo::cycleEnd() {
+  if (!isValid())
+    return;
+
+  if (!CyclesLeft)
+    return;
+
+  --CyclesLeft;
+}
+
+InOrderIssueStage::InOrderIssueStage(const MCSubtargetInfo &STI,
+                                     RegisterFile &PRF)
+    : STI(STI), PRF(PRF), RM(STI.getSchedModel()), NumIssued(), SI(),
+      CarryOver(), Bandwidth(), LastWriteBackCycle() {}
+
+unsigned InOrderIssueStage::getIssueWidth() const {
+  return STI.getSchedModel().IssueWidth;
+}
 
 bool InOrderIssueStage::hasWorkToComplete() const {
   return !IssuedInst.empty() || SI.isValid() || CarriedOver;
@@ -33,7 +63,7 @@ bool InOrderIssueStage::isAvailable(const InstRef &IR) const {
   unsigned NumMicroOps = Inst.getNumMicroOps();
   const InstrDesc &Desc = Inst.getDesc();
 
-  bool ShouldCarryOver = NumMicroOps > SM.IssueWidth;
+  bool ShouldCarryOver = NumMicroOps > getIssueWidth();
   if (Bandwidth < NumMicroOps && !ShouldCarryOver)
     return false;
 
@@ -90,7 +120,7 @@ bool InOrderIssueStage::canExecute(const InstRef &IR) {
     return false;
   }
 
-  if (hasResourceHazard(*RM, IR)) {
+  if (hasResourceHazard(RM, IR)) {
     SI.update(IR, /* delay */ 1, StallInfo::StallKind::DISPATCH);
     return false;
   }
@@ -184,13 +214,13 @@ llvm::Error InOrderIssueStage::tryIssue(InstRef &IR) {
   notifyInstructionDispatched(IR, NumMicroOps, UsedRegs);
 
   SmallVector<ResourceUse, 4> UsedResources;
-  RM->issueInstruction(Desc, UsedResources);
+  RM.issueInstruction(Desc, UsedResources);
   IS.execute(SourceIndex);
 
   // Replace resource masks with valid resource processor IDs.
   for (ResourceUse &Use : UsedResources) {
     uint64_t Mask = Use.first.first;
-    Use.first.first = RM->resolveResourceMask(Mask);
+    Use.first.first = RM.resolveResourceMask(Mask);
   }
   notifyInstructionIssued(IR, UsedResources);
 
@@ -308,13 +338,13 @@ void InOrderIssueStage::notifyStallEvent() {
 
 llvm::Error InOrderIssueStage::cycleStart() {
   NumIssued = 0;
-  Bandwidth = SM.IssueWidth;
+  Bandwidth = getIssueWidth();
 
   PRF.cycleStart();
 
   // Release consumed resources.
   SmallVector<ResourceRef, 4> Freed;
-  RM->cycleEvent(Freed);
+  RM.cycleEvent(Freed);
 
   updateIssuedInst();
 
@@ -343,7 +373,7 @@ llvm::Error InOrderIssueStage::cycleStart() {
     }
   }
 
-  assert(NumIssued <= SM.IssueWidth && "Overflow.");
+  assert((NumIssued <= getIssueWidth()) && "Overflow.");
   return llvm::ErrorSuccess();
 }
 
