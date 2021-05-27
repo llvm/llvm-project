@@ -506,6 +506,12 @@ bool MipsSEInstrInfo::isBranchWithImm(unsigned Opc) const {
   case Mips::BBIT1:
   case Mips::BBIT032:
   case Mips::BBIT132:
+  case Mips::BEQIC_NM:
+  case Mips::BGEIC_NM:
+  case Mips::BGEIUC_NM:
+  case Mips::BLTIC_NM:
+  case Mips::BLTIUC_NM:
+  case Mips::BNEIC_NM:
     return true;
   }
 }
