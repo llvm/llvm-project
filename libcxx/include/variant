@@ -201,12 +201,12 @@ namespace std {
 
 #include <__availability>
 #include <__config>
+#include <__functional/hash.h>
+#include <__tuple>
 #include <__utility/forward.h>
 #include <__variant/monostate.h>
-#include <__tuple>
 #include <compare>
 #include <exception>
-#include <functional>
 #include <initializer_list>
 #include <limits>
 #include <new>
@@ -1747,6 +1747,28 @@ struct _LIBCPP_TEMPLATE_VIS hash<
     return __hash_combine(__res, hash<size_t>{}(__v.index()));
   }
 };
+
+// __unchecked_get is the same as std::get, except, it is UB to use it with the wrong
+// type whereas std::get will throw or returning nullptr. This makes it faster than
+// std::get.
+template <size_t _Ip, class _Vp>
+inline _LIBCPP_INLINE_VISIBILITY
+constexpr auto&& __unchecked_get(_Vp&& __v) noexcept {
+  using __variant_detail::__access::__variant;
+  return __variant::__get_alt<_Ip>(_VSTD::forward<_Vp>(__v)).__value;
+}
+
+template <class _Tp, class... _Types>
+inline _LIBCPP_INLINE_VISIBILITY
+constexpr auto&& __unchecked_get(const variant<_Types...>& __v) noexcept {
+  return __unchecked_get<__find_exactly_one_t<_Tp, _Types...>::value>(__v);
+}
+
+template <class _Tp, class... _Types>
+inline _LIBCPP_INLINE_VISIBILITY
+constexpr auto&& __unchecked_get(variant<_Types...>& __v) noexcept {
+  return __unchecked_get<__find_exactly_one_t<_Tp, _Types...>::value>(__v);
+}
 
 #endif // _LIBCPP_STD_VER > 14
 
