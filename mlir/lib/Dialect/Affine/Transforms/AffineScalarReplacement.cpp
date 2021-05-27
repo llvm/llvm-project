@@ -41,14 +41,14 @@ namespace {
 // 2) the store/load op should dominate the load op,
 //
 // 3) among all op's that satisfy both (1) and (2), for store to load
-// forwarding, the one that postdominates all store op's that have a dependence
-// into the load, is provably the last writer to the particular memref location
-// being loaded at the load op, and its store value can be forwarded to the
-// load; for load CSE, any op that postdominates all store op's that have a
-// dependence into the load can be forwarded and the first one found is chosen.
-// Note that the only dependences that are to be considered are those that are
-// satisfied at the block* of the innermost common surrounding loop of the
-// <store/load, load> being considered.
+// forwarding, the one that does not dominate any store op that has a
+// dependence into the load, is provably the last writer to the particular
+// memref location being loaded at the load op, and its store value can be
+// forwarded to the load; for load CSE, any op that does not dominate any store
+// op that have a dependence into the load can be forwarded and the first one
+// found is chosen. Note that the only dependences that are to be considered are
+// those that are satisfied at the block* of the innermost common surrounding
+// loop of the <store/load, load> being considered.
 //
 // (* A dependence being satisfied at a block: a dependence that is satisfied by
 // virtue of the destination operation appearing textually / lexically after
@@ -75,12 +75,11 @@ struct AffineScalarReplacement
 
   // A list of memref's that are potentially dead / could be eliminated.
   SmallPtrSet<Value, 4> memrefsToErase;
-  // Load op's whose results were replaced by those forwarded from stores
+  // Load ops whose results were replaced by those forwarded from stores
   // dominating stores or loads..
   SmallVector<Operation *, 8> loadOpsToErase;
 
   DominanceInfo *domInfo = nullptr;
-  PostDominanceInfo *postDomInfo = nullptr;
 };
 
 } // end anonymous namespace
@@ -138,7 +137,7 @@ AffineScalarReplacement::forwardStoreToLoad(AffineReadOpInterface loadOp) {
 
   // Store ops that have a dependence into the load (even if they aren't
   // forwarding candidates). Each forwarding candidate will be checked for a
-  // post-dominance on these. 'fwdingCandidates' are a subset of depSrcStores.
+  // dominance on these. 'fwdingCandidates' are a subset of depSrcStores.
   SmallVector<Operation *, 8> depSrcStores;
 
   for (auto *storeOp : storeOps) {
@@ -169,16 +168,23 @@ AffineScalarReplacement::forwardStoreToLoad(AffineReadOpInterface loadOp) {
     fwdingCandidates.push_back(storeOp);
   }
 
-  // 3. Of all the store op's that meet the above criteria, the store that
-  // postdominates all 'depSrcStores' (if one exists) is the unique store
-  // providing the value to the load, i.e., provably the last writer to that
-  // memref loc.
-  // Note: this can be implemented in a cleaner way with postdominator tree
-  // traversals. Consider this for the future if needed.
+  // 3. Of all the store ops that meet the above criteria, the store op
+  // that does not dominate any of the ops in 'depSrcStores' (if such exists)
+  // will not have any of those latter ops on its paths to `loadOp`. It would
+  // thus be the unique store providing the value to the load. This condition is
+  // however conservative for eg:
+  //
+  // for ... {
+  //    store
+  //    load
+  //    store
+  //    load
+  // }
+  //
   Operation *lastWriteStoreOp = nullptr;
   for (auto *storeOp : fwdingCandidates) {
     if (llvm::all_of(depSrcStores, [&](Operation *depStore) {
-          return postDomInfo->postDominates(storeOp, depStore);
+          return !domInfo->properlyDominates(storeOp, depStore);
         })) {
       lastWriteStoreOp = storeOp;
       break;
@@ -207,7 +213,8 @@ AffineScalarReplacement::forwardStoreToLoad(AffineReadOpInterface loadOp) {
 // loadA will be be replaced with loadB if:
 // 1) loadA and loadB have mathematically equivalent affine access functions.
 // 2) loadB dominates loadA.
-// 3) loadB postdominates all the store op's that have a dependence into loadA.
+// 3) loadB does not dominate any of the store ops that have a dependence into
+//    loadA.
 void AffineScalarReplacement::loadCSE(AffineReadOpInterface loadOp) {
   // The list of load op candidates for forwarding that satisfy conditions
   // (1) and (2) above - they will be filtered later when checking (3).
@@ -259,15 +266,15 @@ void AffineScalarReplacement::loadCSE(AffineReadOpInterface loadOp) {
   }
 
   // 3. Of all the load op's that meet the above criteria, return the first load
-  // found that postdominates all 'depSrcStores' and has the same shape as the
-  // load to be replaced (if one exists). The shape check is needed for affine
-  // vector loads.
+  // found that does not dominate any op in 'depSrcStores' and has the same
+  // shape as the load to be replaced (if one exists). The shape check is needed
+  // for affine vector loads.
   Operation *firstLoadOp = nullptr;
   Value oldVal = loadOp.getValue();
   for (auto *loadOp : fwdingCandidates) {
     if (llvm::all_of(depSrcStores,
                      [&](Operation *depStore) {
-                       return postDomInfo->postDominates(loadOp, depStore);
+                       return !domInfo->properlyDominates(loadOp, depStore);
                      }) &&
         cast<AffineReadOpInterface>(loadOp).getValue().getType() ==
             oldVal.getType()) {
@@ -294,7 +301,6 @@ void AffineScalarReplacement::runOnFunction() {
   }
 
   domInfo = &getAnalysis<DominanceInfo>();
-  postDomInfo = &getAnalysis<PostDominanceInfo>();
 
   loadOpsToErase.clear();
   memrefsToErase.clear();
