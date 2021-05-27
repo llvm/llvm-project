@@ -1762,8 +1762,11 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
               sym_file->ParseXcodeSDK(*sym_file->GetCompileUnitAtIndex(i)));
 
       std::string sdk_path = HostInfo::GetXcodeSDKPath(sdk).str();
-      LOG_PRINTF(LIBLLDB_LOG_TYPES, "Host SDK path is %s.", sdk_path.c_str());
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "Host SDK path for sdk %s is %s.",
+                 sdk.GetString().str().c_str(), sdk_path.c_str());
       if (FileSystem::Instance().Exists(sdk_path)) {
+        // Note that this is not final. InitializeSearchPathOptions()
+        // will set the SDK path based on the triple if this fails.
         swift_ast_sp->SetPlatformSDKPath(sdk_path);
         swift_ast_sp->GetCompilerInvocation().setSDKPath(sdk_path);
       }
@@ -2629,6 +2632,8 @@ void SwiftASTContext::InitializeSearchPathOptions(
       // depend on the SDK path including the
       // RuntimeLibraryImportPaths, which are *only* initialized
       // through this mechanism.
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "Setting SDK path \"%s\"",
+                 sdk_path.c_str());
       invocation.setSDKPath(sdk_path);
     }
 
