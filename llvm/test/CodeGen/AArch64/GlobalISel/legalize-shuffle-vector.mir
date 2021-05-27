@@ -136,3 +136,79 @@ body:             |
     RET_ReallyLR implicit $d0, implicit $d1
 
 ...
+---
+name:            oversize_shuffle_v4i64
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $q0, $q1, $q2, $q3, $x0
+
+    ; CHECK-LABEL: name: oversize_shuffle_v4i64
+    ; CHECK: liveins: $q0, $q1, $q2, $q3, $x0
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+    ; CHECK: [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
+    ; CHECK: [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
+    ; CHECK: [[COPY4:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[SHUF:%[0-9]+]]:_(<2 x s64>) = G_SHUFFLE_VECTOR [[COPY1]](<2 x s64>), [[COPY2]], shufflemask(1, 2)
+    ; CHECK: [[SHUF1:%[0-9]+]]:_(<2 x s64>) = G_SHUFFLE_VECTOR [[COPY3]](<2 x s64>), [[COPY]], shufflemask(1, 2)
+    ; CHECK: G_STORE [[SHUF]](<2 x s64>), [[COPY4]](p0) :: (store 16, align 32)
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C]](s64)
+    ; CHECK: G_STORE [[SHUF1]](<2 x s64>), [[PTR_ADD]](p0) :: (store 16 into unknown-address + 16)
+    ; CHECK: RET_ReallyLR
+    %3:_(<2 x s64>) = COPY $q0
+    %4:_(<2 x s64>) = COPY $q1
+    %0:_(<4 x s64>) = G_CONCAT_VECTORS %3(<2 x s64>), %4(<2 x s64>)
+    %5:_(<2 x s64>) = COPY $q2
+    %6:_(<2 x s64>) = COPY $q3
+    %1:_(<4 x s64>) = G_CONCAT_VECTORS %5(<2 x s64>), %6(<2 x s64>)
+    %2:_(p0) = COPY $x0
+    %7:_(<4 x s64>) = G_SHUFFLE_VECTOR %0(<4 x s64>), %1, shufflemask(3, 4, 7, 0)
+    G_STORE %7(<4 x s64>), %2(p0) :: (store 32)
+    RET_ReallyLR
+
+...
+---
+name:            oversize_shuffle_v8i32_build_vector
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $q0, $q1, $q2, $q3, $x0
+
+    ; CHECK-LABEL: name: oversize_shuffle_v8i32_build_vector
+    ; CHECK: liveins: $q0, $q1, $q2, $q3, $x0
+    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK: [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $q2
+    ; CHECK: [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $q3
+    ; CHECK: [[COPY4:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<4 x s32>), [[C]](s64)
+    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK: [[EVEC1:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY1]](<4 x s32>), [[C1]](s64)
+    ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CHECK: [[EVEC2:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY2]](<4 x s32>), [[C2]](s64)
+    ; CHECK: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
+    ; CHECK: [[EVEC3:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY3]](<4 x s32>), [[C3]](s64)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[EVEC]](s32), [[EVEC1]](s32), [[EVEC2]](s32), [[EVEC3]](s32)
+    ; CHECK: [[SHUF:%[0-9]+]]:_(<4 x s32>) = G_SHUFFLE_VECTOR [[COPY1]](<4 x s32>), [[COPY]], shufflemask(2, 6, 5, 3)
+    ; CHECK: G_STORE [[BUILD_VECTOR]](<4 x s32>), [[COPY4]](p0) :: (store 16, align 32)
+    ; CHECK: [[C4:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY4]], [[C4]](s64)
+    ; CHECK: G_STORE [[SHUF]](<4 x s32>), [[PTR_ADD]](p0) :: (store 16 into unknown-address + 16)
+    ; CHECK: RET_ReallyLR
+    %3:_(<4 x s32>) = COPY $q0
+    %4:_(<4 x s32>) = COPY $q1
+    %0:_(<8 x s32>) = G_CONCAT_VECTORS %3(<4 x s32>), %4(<4 x s32>)
+    %5:_(<4 x s32>) = COPY $q2
+    %6:_(<4 x s32>) = COPY $q3
+    %1:_(<8 x s32>) = G_CONCAT_VECTORS %5(<4 x s32>), %6(<4 x s32>)
+    %2:_(p0) = COPY $x0
+    %7:_(<8 x s32>) = G_SHUFFLE_VECTOR %0(<8 x s32>), %1, shufflemask(0, 5, 10, 15, 6, 2, 1, 7)
+    G_STORE %7(<8 x s32>), %2(p0) :: (store 32)
+    RET_ReallyLR
+
+...
