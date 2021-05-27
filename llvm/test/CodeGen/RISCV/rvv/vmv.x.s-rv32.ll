@@ -241,7 +241,7 @@ define i64 @intrinsic_vmv.x.s_s_nxv1i64(<vscale x 1 x i64> %0) nounwind {
 ; CHECK-LABEL: intrinsic_vmv.x.s_s_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi a0, zero, 32
-; CHECK-NEXT:    vsetivli a1, 1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetivli zero, 1, e64,m1,ta,mu
 ; CHECK-NEXT:    vsrl.vx v25, v8, a0
 ; CHECK-NEXT:    vmv.x.s a1, v25
 ; CHECK-NEXT:    vmv.x.s a0, v8
@@ -257,7 +257,7 @@ define i64 @intrinsic_vmv.x.s_s_nxv2i64(<vscale x 2 x i64> %0) nounwind {
 ; CHECK-LABEL: intrinsic_vmv.x.s_s_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi a0, zero, 32
-; CHECK-NEXT:    vsetivli a1, 1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 1, e64,m2,ta,mu
 ; CHECK-NEXT:    vsrl.vx v26, v8, a0
 ; CHECK-NEXT:    vmv.x.s a1, v26
 ; CHECK-NEXT:    vmv.x.s a0, v8
@@ -273,7 +273,7 @@ define i64 @intrinsic_vmv.x.s_s_nxv4i64(<vscale x 4 x i64> %0) nounwind {
 ; CHECK-LABEL: intrinsic_vmv.x.s_s_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi a0, zero, 32
-; CHECK-NEXT:    vsetivli a1, 1, e64,m4,ta,mu
+; CHECK-NEXT:    vsetivli zero, 1, e64,m4,ta,mu
 ; CHECK-NEXT:    vsrl.vx v28, v8, a0
 ; CHECK-NEXT:    vmv.x.s a1, v28
 ; CHECK-NEXT:    vmv.x.s a0, v8
@@ -289,7 +289,7 @@ define i64 @intrinsic_vmv.x.s_s_nxv8i64(<vscale x 8 x i64> %0) nounwind {
 ; CHECK-LABEL: intrinsic_vmv.x.s_s_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi a0, zero, 32
-; CHECK-NEXT:    vsetivli a1, 1, e64,m8,ta,mu
+; CHECK-NEXT:    vsetivli zero, 1, e64,m8,ta,mu
 ; CHECK-NEXT:    vsrl.vx v16, v8, a0
 ; CHECK-NEXT:    vmv.x.s a1, v16
 ; CHECK-NEXT:    vmv.x.s a0, v8

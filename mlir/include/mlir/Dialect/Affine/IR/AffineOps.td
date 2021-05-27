@@ -601,14 +601,14 @@ def AffineParallelOp : Affine_Op<"parallel",
   let summary = "multi-index parallel band operation";
   let description = [{
     The "affine.parallel" operation represents a hyper-rectangular affine
-    parallel band, defining multiple SSA values for its induction variables. It
-    has one region capturing the parallel band body. The induction variables are
-    represented as arguments of this region. These SSA values always have type
-    index, which is the size of the machine word. The strides, represented by
-    steps, are positive constant integers which defaults to "1" if not present.
-    The lower and upper bounds specify a half-open range: the range includes the
-    lower bound but does not include the upper bound. The body region must
-    contain exactly one block that terminates with "affine.yield".
+    parallel band, defining zero or more SSA values for its induction variables.
+    It has one region capturing the parallel band body. The induction variables
+    are represented as arguments of this region. These SSA values always have
+    type index, which is the size of the machine word. The strides, represented
+    by steps, are positive constant integers which defaults to "1" if not
+    present. The lower and upper bounds specify a half-open range: the range
+    includes the lower bound but does not include the upper bound. The body
+    region must contain exactly one block that terminates with "affine.yield".
 
     The lower and upper bounds of a parallel operation are represented as an
     application of an affine mapping to a list of SSA values passed to the map.

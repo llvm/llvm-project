@@ -339,10 +339,8 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB, MachineInstr &MI,
   DebugLoc DL = MI.getDebugLoc();
 
   if (Info.hasAVLImm()) {
-    // TODO: Use X0 as the destination.
-    Register DestReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
     BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoVSETIVLI))
-        .addReg(DestReg, RegState::Define | RegState::Dead)
+        .addReg(RISCV::X0, RegState::Define | RegState::Dead)
         .addImm(Info.getAVLImm())
         .addImm(Info.encodeVTYPE());
     return;
@@ -358,10 +356,13 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB, MachineInstr &MI,
     return;
   }
 
-  Register DestReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
+  // Use X0 as the DestReg unless AVLReg is X0.
+  Register DestReg = RISCV::X0;
+  if (AVLReg == RISCV::X0)
+    DestReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
   BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoVSETVLI))
       .addReg(DestReg, RegState::Define | RegState::Dead)
-      .addReg(Info.getAVLReg())
+      .addReg(AVLReg)
       .addImm(Info.encodeVTYPE());
 }
 

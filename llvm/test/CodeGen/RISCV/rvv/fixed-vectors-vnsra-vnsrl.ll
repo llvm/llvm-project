@@ -5,7 +5,7 @@
 define <8 x i8> @vnsra_v8i16_v8i8_scalar(<8 x i16> %x, i16 %y) {
 ; CHECK-LABEL: vnsra_v8i16_v8i8_scalar:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 8, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vnsra.wx v25, v8, a0
 ; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    ret
@@ -19,7 +19,7 @@ define <8 x i8> @vnsra_v8i16_v8i8_scalar(<8 x i16> %x, i16 %y) {
 define <4 x i16> @vnsra_v4i32_v4i16_scalar(<4 x i32> %x, i32 %y) {
 ; CHECK-LABEL: vnsra_v4i32_v4i16_scalar:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 4, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vnsra.wx v25, v8, a0
 ; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    ret
@@ -33,10 +33,30 @@ define <4 x i16> @vnsra_v4i32_v4i16_scalar(<4 x i32> %x, i32 %y) {
 define <2 x i32> @vnsra_v2i64_v2i32_scalar(<2 x i64> %x, i64 %y) {
 ; CHECK-LABEL: vnsra_v2i64_v2i32_scalar:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vnsra.wx v25, v8, a0
 ; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    ret
+; RV32-LABEL: vnsra_v2i64_v2i32_scalar:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    vsetivli zero, 2, e64,m1,ta,mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v25, (a0), zero
+; RV32-NEXT:    vsra.vv v25, v8, v25
+; RV32-NEXT:    vsetivli zero, 2, e32,mf2,ta,mu
+; RV32-NEXT:    vnsrl.wi v8, v25, 0
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+; RV64-LABEL: vnsra_v2i64_v2i32_scalar:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e32,mf2,ta,mu
+; RV64-NEXT:    vnsra.wx v25, v8, a0
+; RV64-NEXT:    vmv1r.v v8, v25
+; RV64-NEXT:    ret
   %insert = insertelement <2 x i64> undef, i64 %y, i32 0
   %splat = shufflevector <2 x i64> %insert, <2 x i64> undef, <2 x i32> zeroinitializer
   %a = ashr <2 x i64> %x, %splat
@@ -47,7 +67,7 @@ define <2 x i32> @vnsra_v2i64_v2i32_scalar(<2 x i64> %x, i64 %y) {
 define <8 x i8> @vnsra_v8i16_v8i8_imm(<8 x i16> %x) {
 ; CHECK-LABEL: vnsra_v8i16_v8i8_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vnsrl.wi v25, v8, 8
 ; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    ret
@@ -59,7 +79,7 @@ define <8 x i8> @vnsra_v8i16_v8i8_imm(<8 x i16> %x) {
 define <4 x i16> @vnsra_v4i32_v4i16_imm(<4 x i32> %x) {
 ; CHECK-LABEL: vnsra_v4i32_v4i16_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vnsrl.wi v25, v8, 16
 ; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    ret
@@ -71,7 +91,7 @@ define <4 x i16> @vnsra_v4i32_v4i16_imm(<4 x i32> %x) {
 define <2 x i32> @vnsra_v2i64_v2i32_imm(<2 x i64> %x) {
 ; CHECK-LABEL: vnsra_v2i64_v2i32_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vnsrl.wi v25, v8, 31
 ; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    ret
@@ -83,7 +103,7 @@ define <2 x i32> @vnsra_v2i64_v2i32_imm(<2 x i64> %x) {
 define <8 x i8> @vnsrl_v8i16_v8i8_scalar(<8 x i16> %x, i16 %y) {
 ; CHECK-LABEL: vnsrl_v8i16_v8i8_scalar:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 8, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vnsrl.wx v25, v8, a0
 ; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    ret
@@ -97,7 +117,7 @@ define <8 x i8> @vnsrl_v8i16_v8i8_scalar(<8 x i16> %x, i16 %y) {
 define <4 x i16> @vnsrl_v4i32_v4i16_scalar(<4 x i32> %x, i32 %y) {
 ; CHECK-LABEL: vnsrl_v4i32_v4i16_scalar:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 4, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vnsrl.wx v25, v8, a0
 ; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    ret
@@ -111,10 +131,30 @@ define <4 x i16> @vnsrl_v4i32_v4i16_scalar(<4 x i32> %x, i32 %y) {
 define <2 x i32> @vnsrl_v2i64_v2i32_scalar(<2 x i64> %x, i64 %y) {
 ; CHECK-LABEL: vnsrl_v2i64_v2i32_scalar:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a1, 2, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vnsrl.wx v25, v8, a0
 ; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    ret
+; RV32-LABEL: vnsrl_v2i64_v2i32_scalar:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    vsetivli zero, 2, e64,m1,ta,mu
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v25, (a0), zero
+; RV32-NEXT:    vsrl.vv v25, v8, v25
+; RV32-NEXT:    vsetivli zero, 2, e32,mf2,ta,mu
+; RV32-NEXT:    vnsrl.wi v8, v25, 0
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+; RV64-LABEL: vnsrl_v2i64_v2i32_scalar:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e32,mf2,ta,mu
+; RV64-NEXT:    vnsrl.wx v25, v8, a0
+; RV64-NEXT:    vmv1r.v v8, v25
+; RV64-NEXT:    ret
   %insert = insertelement <2 x i64> undef, i64 %y, i32 0
   %splat = shufflevector <2 x i64> %insert, <2 x i64> undef, <2 x i32> zeroinitializer
   %a = lshr <2 x i64> %x, %splat
@@ -125,7 +165,7 @@ define <2 x i32> @vnsrl_v2i64_v2i32_scalar(<2 x i64> %x, i64 %y) {
 define <8 x i8> @vnsrl_v8i16_v8i8_imm(<8 x i16> %x) {
 ; CHECK-LABEL: vnsrl_v8i16_v8i8_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 8, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
 ; CHECK-NEXT:    vnsrl.wi v25, v8, 8
 ; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    ret
@@ -137,7 +177,7 @@ define <8 x i8> @vnsrl_v8i16_v8i8_imm(<8 x i16> %x) {
 define <4 x i16> @vnsrl_v4i32_v4i16_imm(<4 x i32> %x) {
 ; CHECK-LABEL: vnsrl_v4i32_v4i16_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 4, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vnsrl.wi v25, v8, 16
 ; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    ret
@@ -149,7 +189,7 @@ define <4 x i16> @vnsrl_v4i32_v4i16_imm(<4 x i32> %x) {
 define <2 x i32> @vnsrl_v2i64_v2i32_imm(<2 x i64> %x) {
 ; CHECK-LABEL: vnsrl_v2i64_v2i32_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 2, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vnsrl.wi v25, v8, 31
 ; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    ret

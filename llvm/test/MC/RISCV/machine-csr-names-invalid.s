@@ -1,5 +1,5 @@
 # RUN: not llvm-mc -triple riscv64 < %s 2>&1 \
-# RUN:  | FileCheck -check-prefixes=CHECK-NEED-RV32 %s
+# RUN:   | FileCheck -check-prefixes=CHECK-NEED-RV32 %s
 
 # These machine mode CSR register names are RV32 only.
 

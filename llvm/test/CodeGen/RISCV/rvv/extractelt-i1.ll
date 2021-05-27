@@ -10,7 +10,7 @@ define i1 @extractelt_nxv1i1(<vscale x 1 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vmseq.vi v0, v25, 0
 ; CHECK-NEXT:    vmv.v.i v25, 0
 ; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
-; CHECK-NEXT:    vsetivli a0, 1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetivli zero, 1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v25, v25, a1
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -28,7 +28,7 @@ define i1 @extractelt_nxv2i1(<vscale x 2 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vmseq.vi v0, v25, 0
 ; CHECK-NEXT:    vmv.v.i v25, 0
 ; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
-; CHECK-NEXT:    vsetivli a0, 1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetivli zero, 1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v25, v25, a1
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -46,7 +46,7 @@ define i1 @extractelt_nxv4i1(<vscale x 4 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vmseq.vi v0, v25, 0
 ; CHECK-NEXT:    vmv.v.i v25, 0
 ; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
-; CHECK-NEXT:    vsetivli a0, 1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v25, v25, a1
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -64,7 +64,7 @@ define i1 @extractelt_nxv8i1(<vscale x 8 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vmseq.vi v0, v25, 0
 ; CHECK-NEXT:    vmv.v.i v25, 0
 ; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
-; CHECK-NEXT:    vsetivli a0, 1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli zero, 1, e8,m1,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v25, v25, a1
 ; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
@@ -82,7 +82,7 @@ define i1 @extractelt_nxv16i1(<vscale x 16 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vmseq.vi v0, v26, 0
 ; CHECK-NEXT:    vmv.v.i v26, 0
 ; CHECK-NEXT:    vmerge.vim v26, v26, 1, v0
-; CHECK-NEXT:    vsetivli a0, 1, e8,m2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 1, e8,m2,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v26, v26, a1
 ; CHECK-NEXT:    vmv.x.s a0, v26
 ; CHECK-NEXT:    ret
@@ -100,7 +100,7 @@ define i1 @extractelt_nxv32i1(<vscale x 32 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vmseq.vi v0, v28, 0
 ; CHECK-NEXT:    vmv.v.i v28, 0
 ; CHECK-NEXT:    vmerge.vim v28, v28, 1, v0
-; CHECK-NEXT:    vsetivli a0, 1, e8,m4,ta,mu
+; CHECK-NEXT:    vsetivli zero, 1, e8,m4,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v28, v28, a1
 ; CHECK-NEXT:    vmv.x.s a0, v28
 ; CHECK-NEXT:    ret
@@ -118,7 +118,7 @@ define i1 @extractelt_nxv64i1(<vscale x 64 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli a0, 1, e8,m8,ta,mu
+; CHECK-NEXT:    vsetivli zero, 1, e8,m8,ta,mu
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret

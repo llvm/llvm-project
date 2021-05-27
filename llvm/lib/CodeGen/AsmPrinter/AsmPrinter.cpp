@@ -1313,6 +1313,10 @@ void AsmPrinter::emitFunctionBody() {
         // location, and a nearby DBG_VALUE created. We can safely ignore
         // the instruction reference.
         break;
+      case TargetOpcode::DBG_PHI:
+        // This instruction is only used to label a program point, it's purely
+        // meta information.
+        break;
       case TargetOpcode::DBG_LABEL:
         if (isVerbose()) {
           if (!emitDebugLabelComment(&MI, *this))
@@ -1353,11 +1357,9 @@ void AsmPrinter::emitFunctionBody() {
 
     // We must emit temporary symbol for the end of this basic block, if either
     // we have BBLabels enabled or if this basic blocks marks the end of a
-    // section (except the section containing the entry basic block as the end
-    // symbol for that section is CurrentFnEnd).
+    // section.
     if (MF->hasBBLabels() ||
-        (MAI->hasDotTypeDotSizeDirective() && MBB.isEndSection() &&
-         !MBB.sameSection(&MF->front())))
+        (MAI->hasDotTypeDotSizeDirective() && MBB.isEndSection()))
       OutStreamer->emitLabel(MBB.getEndSymbol());
 
     if (MBB.isEndSection()) {

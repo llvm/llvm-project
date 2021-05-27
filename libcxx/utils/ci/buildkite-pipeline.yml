@@ -135,6 +135,19 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
+  - label: "GCC-next/C++20"
+    command: "libcxx/utils/ci/run-buildbot generic-gcc-next"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    soft_fail:
+      - exit_status: 1
+
   #
   # All other supported configurations of libc++.
   #
