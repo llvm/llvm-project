@@ -35,6 +35,8 @@
 ; $ clang++ -S -emit-llvm -g -O2 loclist_2.cc
 ;
 
+target triple = "x86_64-unknown-linux-gnu"
+
 @b = external dso_local local_unnamed_addr global i8, align 1
 
 define dso_local void @_Z4testv() local_unnamed_addr !dbg !7 {
