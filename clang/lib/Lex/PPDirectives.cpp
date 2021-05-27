@@ -3259,6 +3259,9 @@ void Preprocessor::HandleElifFamilyDirective(Token &ElifToken,
     case tok::pp_elifndef:
       Callbacks->Elifndef(ElifToken.getLocation(), ConditionRange, CI.IfLoc);
       break;
+    default:
+      assert(false && "unexpected directive kind");
+      break;
     }
   }
 
