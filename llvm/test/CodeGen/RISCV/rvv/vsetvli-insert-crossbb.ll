@@ -83,8 +83,6 @@ if.end:                                           ; preds = %if.else, %if.then
   ret <vscale x 1 x double> %3
 }
 
-; FIXME: The last vsetvli is redundant, but we need to look through a phi to
-; prove it.
 define <vscale x 1 x double> @test3(i64 %avl, i8 zeroext %cond, <vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
@@ -92,12 +90,11 @@ define <vscale x 1 x double> @test3(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m1,ta,mu
 ; CHECK-NEXT:    vfadd.vv v25, v8, v9
-; CHECK-NEXT:    j .LBB2_3
+; CHECK-NEXT:    vfmul.vv v8, v25, v8
+; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB2_2: # %if.else
 ; CHECK-NEXT:    vsetvli a0, a0, e64,m1,ta,mu
 ; CHECK-NEXT:    vfsub.vv v25, v8, v9
-; CHECK-NEXT:  .LBB2_3: # %if.end
-; CHECK-NEXT:    vsetvli zero, a0, e64,m1,ta,mu
 ; CHECK-NEXT:    vfmul.vv v8, v25, v8
 ; CHECK-NEXT:    ret
 entry:
@@ -445,8 +442,6 @@ if.end:                                           ; preds = %if.else, %if.then
   ret <vscale x 1 x double> %3
 }
 
-; FIXME: The vsetvli in for.body can be removed, it's redundant by its
-; predecessors, but we need to look through a PHI to prove it.
 define void @saxpy_vec(i64 %n, float %a, float* nocapture readonly %x, float* nocapture %y) {
 ; CHECK-LABEL: saxpy_vec:
 ; CHECK:       # %bb.0: # %entry
@@ -456,12 +451,11 @@ define void @saxpy_vec(i64 %n, float %a, float* nocapture readonly %x, float* no
 ; CHECK-NEXT:    fmv.w.x ft0, a1
 ; CHECK-NEXT:  .LBB8_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetvli zero, a4, e32,m8,ta,mu
 ; CHECK-NEXT:    vle32.v v8, (a2)
 ; CHECK-NEXT:    vle32.v v16, (a3)
 ; CHECK-NEXT:    slli a1, a4, 2
 ; CHECK-NEXT:    add a2, a2, a1
-; CHECK-NEXT:    vsetvli zero, zero, e32,m8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a4, e32,m8,tu,mu
 ; CHECK-NEXT:    vfmacc.vf v16, ft0, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32,m8,ta,mu
 ; CHECK-NEXT:    vse32.v v16, (a3)
