@@ -29,12 +29,10 @@
 ; BB-SECTIONS-ASM: .LBB_END0_{{[0-9]+}}:
 ; BB-SECTIONS-ASM: .size	_Z3fooi.__part.1, .LBB_END0_{{[0-9]+}}-_Z3fooi.__part.1
 ; BB-SECTIONS-ASM: _Z3fooi.__part.2:
-; BB-SECTIONS-ASM: .Ltmp{{[0-9]+}}:
-; BB-SECTIONS-ASM-NEXT: .LBB_END0_{{[0-9]+}}:
+; BB-SECTIONS-ASM: .LBB_END0_{{[0-9]+}}:
 ; BB-SECTIONS-ASM: .size	_Z3fooi.__part.2, .LBB_END0_{{[0-9]+}}-_Z3fooi.__part.2
 ; BB-SECTIONS-ASM: _Z3fooi.__part.3:
-; BB-SECTIONS-ASM: .Ltmp{{[0-9]+}}:
-; BB-SECTIONS-ASM-NEXT: .LBB_END0_{{[0-9]+}}:
+; BB-SECTIONS-ASM: .LBB_END0_{{[0-9]+}}:
 ; BB-SECTIONS-ASM: .size	_Z3fooi.__part.3, .LBB_END0_{{[0-9]+}}-_Z3fooi.__part.3
 ; BB-SECTIONS-ASM: .Lfunc_end0:
 ; BB-SECTIONS-ASM: .Ldebug_ranges0:
