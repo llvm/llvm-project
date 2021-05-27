@@ -1096,7 +1096,7 @@ bool AArch64LegalizerInfo::legalizeAtomicCmpxchg128(
     //     %out = CASP %in1, ...
     //     %OldLo = G_EXTRACT %out, 0
     //     %OldHi = G_EXTRACT %out, 64
-    auto Ordering = (*MI.memoperands_begin())->getOrdering();
+    auto Ordering = (*MI.memoperands_begin())->getMergedOrdering();
     unsigned Opcode;
     switch (Ordering) {
     case AtomicOrdering::Acquire:

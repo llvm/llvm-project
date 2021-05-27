@@ -2225,7 +2225,7 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
 std::pair <SDValue, SDValue> DAGTypeLegalizer::ExpandAtomic(SDNode *Node) {
   unsigned Opc = Node->getOpcode();
   MVT VT = cast<AtomicSDNode>(Node)->getMemoryVT().getSimpleVT();
-  AtomicOrdering order = cast<AtomicSDNode>(Node)->getOrdering();
+  AtomicOrdering order = cast<AtomicSDNode>(Node)->getMergedOrdering();
   // Lower to outline atomic libcall if outline atomics enabled,
   // or to sync libcall otherwise
   RTLIB::Libcall LC = RTLIB::getOUTLINE_ATOMIC(Opc, order, VT);
