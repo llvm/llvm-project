@@ -64,8 +64,8 @@ MMAMatrixType::verify(function_ref<InFlightDiagnostic()> emitError,
                       ArrayRef<int64_t> shape, Type elementType,
                       StringRef operand) {
   if (!operand.equals("AOp") && !operand.equals("BOp") &&
-      !operand.equals("COp") && !operand.equals("DOp"))
-    return emitError() << "operand expected to be one of AOp, BOp, COp or DOp";
+      !operand.equals("COp"))
+    return emitError() << "operand expected to be one of AOp, BOp or COp";
 
   if (shape.size() != 2)
     return emitError() << "MMAMatrixType must have exactly two dimensions";
@@ -1027,9 +1027,9 @@ static LogicalResult verify(SubgroupMmaStoreMatrixOp op) {
         "destination memorySpace of kGenericMemorySpace, "
         "kGlobalMemorySpace or kSharedMemorySpace only allowed");
 
-  if (!srcMatrixType.getOperand().equals("DOp"))
+  if (!srcMatrixType.getOperand().equals("COp"))
     return op.emitError(
-        "expected the operand matrix being stored to have 'DOp' operand type");
+        "expected the operand matrix being stored to have 'COp' operand type");
 
   return success();
 }
