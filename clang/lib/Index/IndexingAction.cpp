@@ -78,6 +78,8 @@ public:
                                    *MD.getMacroInfo());
   }
 
+  using PPCallbacks::Elifdef;
+  using PPCallbacks::Elifndef;
   void Elifdef(SourceLocation Loc, const Token &MacroNameTok,
                const MacroDefinition &MD) override {
     if (!MD.getMacroInfo()) // Ignore non-existent macro.
