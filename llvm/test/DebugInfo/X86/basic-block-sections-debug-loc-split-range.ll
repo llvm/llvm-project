@@ -22,6 +22,8 @@
 ; ranges are split correctly with sections.  With basic block sections,
 ; the dbg value 157 (0x9d) gets split into one more range.
 
+target triple = "x86_64-unknown-linux-gnu"
+
 define dso_local void @_ZL4ncatPcjz(i8* %0, i32 %1, ...) unnamed_addr  align 32 !dbg !22 {
 .critedge3:
   call void @llvm.dbg.value(metadata i32 157, metadata !27, metadata !DIExpression()), !dbg !46
