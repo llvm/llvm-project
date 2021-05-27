@@ -11,6 +11,9 @@
 // RUN: -fallow-half-arguments-and-returns -S -ffp-exception-behavior=strict \
 // RUN: -o - %s | FileCheck --check-prefix=CHECK-ASM \
 // RUN: --check-prefix=FIXME-CHECK  %s
+// RUN: %clang_cc1 -triple powerpcspe -S -ffp-exception-behavior=strict \
+// RUN: -target-feature +spe -fexperimental-strict-floating-point -emit-llvm \
+// RUN: %s -o - | FileCheck --check-prefix=CHECK-CONSTRAINED %s
 
 typedef __attribute__((vector_size(4 * sizeof(float)))) float vec_float;
 typedef __attribute__((vector_size(2 * sizeof(double)))) double vec_double;
