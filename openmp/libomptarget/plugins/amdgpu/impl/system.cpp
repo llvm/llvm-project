@@ -13,6 +13,7 @@
 #include <iostream>
 #include <set>
 #include <string>
+#include <sstream> 
 
 #include "internal.h"
 #include "machine.h"
