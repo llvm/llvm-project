@@ -11,20 +11,16 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MCA_IN_ORDER_ISSUE_STAGE_H
-#define LLVM_MCA_IN_ORDER_ISSUE_STAGE_H
+#ifndef LLVM_MCA_STAGES_INORDERISSUESTAGE_H
+#define LLVM_MCA_STAGES_INORDERISSUESTAGE_H
 
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/MCA/HardwareUnits/ResourceManager.h"
 #include "llvm/MCA/SourceMgr.h"
 #include "llvm/MCA/Stages/Stage.h"
 
 namespace llvm {
-struct MCSchedModel;
-class MCSubtargetInfo;
-
 namespace mca {
 class RegisterFile;
-class ResourceManager;
 
 struct StallInfo {
   enum class StallKind { DEFAULT, REGISTER_DEPS, DISPATCH, DELAY };
@@ -35,41 +31,21 @@ struct StallInfo {
 
   StallInfo() : IR(), CyclesLeft(), Kind(StallKind::DEFAULT) {}
 
-  bool isValid() const { return (bool)IR; }
-
   StallKind getStallKind() const { return Kind; }
   unsigned getCyclesLeft() const { return CyclesLeft; }
   const InstRef &getInstruction() const { return IR; }
   InstRef &getInstruction() { return IR; }
 
-  void clear() {
-    IR.invalidate();
-    CyclesLeft = 0;
-    Kind = StallKind::DEFAULT;
-  }
-
-  void update(const InstRef &Inst, unsigned Cycles, StallKind SK) {
-    IR = Inst;
-    CyclesLeft = Cycles;
-    Kind = SK;
-  }
-
-  void cycleEnd() {
-    if (!isValid())
-      return;
-
-    if (!CyclesLeft)
-      return;
-
-    --CyclesLeft;
-  }
+  bool isValid() const { return (bool)IR; }
+  void clear();
+  void update(const InstRef &Inst, unsigned Cycles, StallKind SK);
+  void cycleEnd();
 };
 
 class InOrderIssueStage final : public Stage {
-  const MCSchedModel &SM;
   const MCSubtargetInfo &STI;
   RegisterFile &PRF;
-  std::unique_ptr<ResourceManager> RM;
+  ResourceManager RM;
 
   /// Instructions that were issued, but not executed yet.
   SmallVector<InstRef, 4> IssuedInst;
@@ -125,11 +101,9 @@ class InOrderIssueStage final : public Stage {
   void retireInstruction(InstRef &IR);
 
 public:
-  InOrderIssueStage(RegisterFile &PRF, const MCSchedModel &SM,
-                    const MCSubtargetInfo &STI)
-      : SM(SM), STI(STI), PRF(PRF), RM(std::make_unique<ResourceManager>(SM)),
-        NumIssued(), SI(), CarryOver(), Bandwidth(), LastWriteBackCycle() {}
+  InOrderIssueStage(const MCSubtargetInfo &STI, RegisterFile &PRF);
 
+  unsigned getIssueWidth() const;
   bool isAvailable(const InstRef &) const override;
   bool hasWorkToComplete() const override;
   Error execute(InstRef &IR) override;
@@ -140,4 +114,4 @@ public:
 } // namespace mca
 } // namespace llvm
 
-#endif // LLVM_MCA_IN_ORDER_ISSUE_STAGE_H
+#endif // LLVM_MCA_STAGES_INORDERISSUESTAGE_H
