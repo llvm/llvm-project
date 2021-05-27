@@ -20,6 +20,7 @@ set(files
   __iterator/iter_move.h
   __iterator/iterator_traits.h
   __iterator/next.h
+  __iterator/prev.h
   __iterator/readable_traits.h
   __libcpp_version
   __locale
