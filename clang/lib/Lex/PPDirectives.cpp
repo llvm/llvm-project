@@ -100,6 +100,14 @@ enum MacroDiag {
   MD_ReservedMacro  //> #define of #undef reserved id, disabled by default
 };
 
+/// Enumerates possible %select values for the pp_err_elif_after_else and
+/// pp_err_elif_without_if diagnostics.
+enum PPElifDiag {
+  PED_Elif,
+  PED_Elifdef,
+  PED_Elifndef
+};
+
 // The -fmodule-name option tells the compiler to textually include headers in
 // the specified module, meaning clang won't build the specified module. This is
 // useful in a number of situations, for instance, when building a library that
@@ -578,7 +586,8 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
         PPConditionalInfo &CondInfo = CurPPLexer->peekConditionalLevel();
 
         // If this is a #else with a #else before it, report the error.
-        if (CondInfo.FoundElse) Diag(Tok, diag::pp_err_else_after_else);
+        if (CondInfo.FoundElse)
+          Diag(Tok, diag::pp_err_else_after_else) << PED_Elif;
 
         // Note that we've seen a #else in this conditional.
         CondInfo.FoundElse = true;
@@ -628,6 +637,59 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
           }
           // If this condition is true, enter it!
           if (CondValue) {
+            CondInfo.FoundNonSkip = true;
+            break;
+          }
+        }
+      } else if (Sub == "lifdef" ||  // "elifdef"
+                 Sub == "lifndef") { // "elifndef"
+        bool IsElifDef = Sub == "lifdef";
+        PPConditionalInfo &CondInfo = CurPPLexer->peekConditionalLevel();
+        Token DirectiveToken = Tok;
+
+        // If this is a #elif with a #else before it, report the error.
+        if (CondInfo.FoundElse)
+          Diag(Tok, diag::pp_err_elif_after_else)
+              << (IsElifDef ? PED_Elifdef : PED_Elifndef);
+
+        // If this is in a skipping block or if we're already handled this #if
+        // block, don't bother parsing the condition.
+        if (CondInfo.WasSkipping || CondInfo.FoundNonSkip) {
+          DiscardUntilEndOfDirective();
+        } else {
+          // Restore the value of LexingRawMode so that identifiers are
+          // looked up, etc, inside the #elif[n]def expression.
+          assert(CurPPLexer->LexingRawMode && "We have to be skipping here!");
+          CurPPLexer->LexingRawMode = false;
+          Token MacroNameTok;
+          ReadMacroName(MacroNameTok);
+          CurPPLexer->LexingRawMode = true;
+
+          // If the macro name token is tok::eod, there was an error that was
+          // already reported.
+          if (MacroNameTok.is(tok::eod)) {
+            // Skip code until we get to #endif.  This helps with recovery by
+            // not emitting an error when the #endif is reached.
+            continue;
+          }
+
+          CheckEndOfDirective(IsElifDef ? "elifdef" : "elifndef");
+
+          IdentifierInfo *MII = MacroNameTok.getIdentifierInfo();
+          auto MD = getMacroDefinition(MII);
+          MacroInfo *MI = MD.getMacroInfo();
+
+          if (Callbacks) {
+            if (IsElifDef) {
+              Callbacks->Elifdef(DirectiveToken.getLocation(), MacroNameTok,
+                                 MD);
+            } else {
+              Callbacks->Elifndef(DirectiveToken.getLocation(), MacroNameTok,
+                                  MD);
+            }
+          }
+          // If this condition is true, enter it!
+          if (static_cast<bool>(MI) == IsElifDef) {
             CondInfo.FoundNonSkip = true;
             break;
           }
@@ -1015,7 +1077,10 @@ void Preprocessor::HandleDirective(Token &Result) {
       return HandleIfdefDirective(Result, SavedHash, true,
                                   ReadAnyTokensBeforeDirective);
     case tok::pp_elif:
-      return HandleElifDirective(Result, SavedHash);
+    case tok::pp_elifdef:
+    case tok::pp_elifndef:
+      return HandleElifFamilyDirective(Result, SavedHash, II->getPPKeywordID());
+
     case tok::pp_else:
       return HandleElseDirective(Result, SavedHash);
     case tok::pp_endif:
@@ -3154,10 +3219,13 @@ void Preprocessor::HandleElseDirective(Token &Result, const Token &HashToken) {
                                /*FoundElse*/ true, Result.getLocation());
 }
 
-/// HandleElifDirective - Implements the \#elif directive.
-///
-void Preprocessor::HandleElifDirective(Token &ElifToken,
-                                       const Token &HashToken) {
+/// Implements the \#elif, \#elifdef, and \#elifndef directives.
+void Preprocessor::HandleElifFamilyDirective(Token &ElifToken,
+                                             const Token &HashToken,
+                                             tok::PPKeywordKind Kind) {
+  PPElifDiag DirKind = Kind == tok::pp_elif      ? PED_Elif
+                       : Kind == tok::pp_elifdef ? PED_Elifdef
+                                                 : PED_Elifndef;
   ++NumElse;
 
   // #elif directive in a non-skipping conditional... start skipping.
@@ -3167,7 +3235,7 @@ void Preprocessor::HandleElifDirective(Token &ElifToken,
 
   PPConditionalInfo CI;
   if (CurPPLexer->popConditionalLevel(CI)) {
-    Diag(ElifToken, diag::pp_err_elif_without_if);
+    Diag(ElifToken, diag::pp_err_elif_without_if) << DirKind;
     return;
   }
 
@@ -3176,11 +3244,23 @@ void Preprocessor::HandleElifDirective(Token &ElifToken,
     CurPPLexer->MIOpt.EnterTopLevelConditional();
 
   // If this is a #elif with a #else before it, report the error.
-  if (CI.FoundElse) Diag(ElifToken, diag::pp_err_elif_after_else);
+  if (CI.FoundElse)
+    Diag(ElifToken, diag::pp_err_elif_after_else) << DirKind;
 
-  if (Callbacks)
-    Callbacks->Elif(ElifToken.getLocation(), ConditionRange,
-                    PPCallbacks::CVK_NotEvaluated, CI.IfLoc);
+  if (Callbacks) {
+    switch (Kind) {
+    case tok::pp_elif:
+      Callbacks->Elif(ElifToken.getLocation(), ConditionRange,
+                      PPCallbacks::CVK_NotEvaluated, CI.IfLoc);
+      break;
+    case tok::pp_elifdef:
+      Callbacks->Elifdef(ElifToken.getLocation(), ConditionRange, CI.IfLoc);
+      break;
+    case tok::pp_elifndef:
+      Callbacks->Elifndef(ElifToken.getLocation(), ConditionRange, CI.IfLoc);
+      break;
+    }
+  }
 
   bool RetainExcludedCB = PPOpts->RetainExcludedConditionalBlocks &&
     getSourceManager().isInMainFile(ElifToken.getLocation());

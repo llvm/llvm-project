@@ -93,6 +93,14 @@ private:
              const MacroDefinition &MD) override;
   void Ifndef(SourceLocation Loc, const Token &MacroNameTok,
               const MacroDefinition &MD) override;
+  void Elifdef(SourceLocation Loc, const Token &MacroNameTok,
+               const MacroDefinition &MD) override;
+  void Elifdef(SourceLocation Loc, SourceRange ConditionRange,
+               SourceLocation IfLoc) override;
+  void Elifndef(SourceLocation Loc, const Token &MacroNameTok,
+                const MacroDefinition &MD) override;
+  void Elifndef(SourceLocation Loc, SourceRange ConditionRange,
+                SourceLocation IfLoc) override;
   void Else(SourceLocation Loc, SourceLocation IfLoc) override;
   void Endif(SourceLocation Loc, SourceLocation IfLoc) override;
 };

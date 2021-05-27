@@ -538,6 +538,10 @@ class Token;
                const MacroDefinition &MD) override;
     void Ifndef(SourceLocation Loc, const Token &MacroNameTok,
                 const MacroDefinition &MD) override;
+    void Elifdef(SourceLocation Loc, const Token &MacroNameTok,
+                 const MacroDefinition &MD) override;
+    void Elifndef(SourceLocation Loc, const Token &MacroNameTok,
+                  const MacroDefinition &MD) override;
 
     /// Hook called whenever the 'defined' operator is seen.
     void Defined(const Token &MacroNameTok, const MacroDefinition &MD,
