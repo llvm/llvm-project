@@ -19,16 +19,15 @@
 #include "FuzzerPlatform.h"
 #include "FuzzerRandom.h"
 #include "FuzzerTracePC.h"
-#include "mutagen/MutagenDispatcher.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
-#include <fstream>
 #include <mutex>
 #include <string>
 #include <thread>
+#include <fstream>
 
 // This function should be present in the libFuzzer so that the client
 // binary can test for its existence.
@@ -804,9 +803,8 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
                         ReadCorpora(*Inputs, {}));
   }
 
-  LLVMMutagenConfiguration Config;
-  ConfigureMutagen(Seed, Options, &Config);
-  auto *MD = new MutationDispatcher(&Config);
+  Random Rand(Seed);
+  auto *MD = new MutationDispatcher(Rand, Options);
   auto *Corpus = new InputCorpus(Options.OutputCorpus, Entropic);
   auto *F = new Fuzzer(Callback, *Corpus, *MD, Options);
 

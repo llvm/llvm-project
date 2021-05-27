@@ -528,6 +528,11 @@ bool ExecuteCommand(const Command &BaseCmd, std::string *CmdOutput) {
   return Ret == 0;
 }
 
+const void *SearchMemory(const void *Data, size_t DataLen, const void *Patt,
+                         size_t PattLen) {
+  return memmem(Data, DataLen, Patt, PattLen);
+}
+
 // In fuchsia, accessing /dev/null is not supported. There's nothing
 // similar to a file that discards everything that is written to it.
 // The way of doing something similar in fuchsia is by using
