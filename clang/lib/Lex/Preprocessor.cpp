@@ -274,7 +274,7 @@ void Preprocessor::PrintStats() {
   llvm::errs() << "    " << NumEnteredSourceFiles << " source files entered.\n";
   llvm::errs() << "    " << MaxIncludeStackDepth << " max include stack depth\n";
   llvm::errs() << "  " << NumIf << " #if/#ifndef/#ifdef.\n";
-  llvm::errs() << "  " << NumElse << " #else/#elif.\n";
+  llvm::errs() << "  " << NumElse << " #else/#elif/#elifdef/#elifndef.\n";
   llvm::errs() << "  " << NumEndif << " #endif.\n";
   llvm::errs() << "  " << NumPragma << " #pragma.\n";
   llvm::errs() << NumSkipped << " #if/#ifndef#ifdef regions skipped\n";
