@@ -212,9 +212,10 @@ struct AsyncValue : public RefCounted {
 // tokens or values added to the group).
 struct AsyncGroup : public RefCounted {
   AsyncGroup(AsyncRuntime *runtime)
-      : RefCounted(runtime), pendingTokens(0), rank(0) {}
+      : RefCounted(runtime), pendingTokens(0), numErrors(0), rank(0) {}
 
   std::atomic<int> pendingTokens;
+  std::atomic<int> numErrors;
   std::atomic<int> rank;
 
   // Pending awaiters are guarded by a mutex.
@@ -262,7 +263,11 @@ extern "C" int64_t mlirAsyncRuntimeAddTokenToGroup(AsyncToken *token,
   int rank = group->rank.fetch_add(1);
   group->pendingTokens.fetch_add(1);
 
-  auto onTokenReady = [group]() {
+  auto onTokenReady = [group, token]() {
+    // Increment the number of errors in the group.
+    if (State(token->state).isError())
+      group->numErrors.fetch_add(1);
+
     // Run all group awaiters if it was the last token in the group.
     if (group->pendingTokens.fetch_sub(1) == 1) {
       group->cv.notify_all();
@@ -354,6 +359,10 @@ extern "C" bool mlirAsyncRuntimeIsTokenError(AsyncToken *token) {
 
 extern "C" bool mlirAsyncRuntimeIsValueError(AsyncValue *value) {
   return State(value->state).isError();
+}
+
+extern "C" bool mlirAsyncRuntimeIsGroupError(AsyncGroup *group) {
+  return group->numErrors.load() > 0;
 }
 
 extern "C" void mlirAsyncRuntimeAwaitToken(AsyncToken *token) {
@@ -483,6 +492,8 @@ void __mlir_runner_init(llvm::StringMap<void *> &exportSymbols) {
                &mlir::runtime::mlirAsyncRuntimeIsTokenError);
   exportSymbol("mlirAsyncRuntimeIsValueError",
                &mlir::runtime::mlirAsyncRuntimeIsValueError);
+  exportSymbol("mlirAsyncRuntimeIsGroupError",
+               &mlir::runtime::mlirAsyncRuntimeIsGroupError);
   exportSymbol("mlirAsyncRuntimeAwaitToken",
                &mlir::runtime::mlirAsyncRuntimeAwaitToken);
   exportSymbol("mlirAsyncRuntimeAwaitValue",

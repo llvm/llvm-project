@@ -81,5 +81,29 @@ func @main() {
   vector.print %err3_0 : i1
   vector.print %err3_1 : i1
 
+  // ------------------------------------------------------------------------ //
+  // Check error propagation from a token to the group.
+  // ------------------------------------------------------------------------ //
+
+  %group0 = async.create_group
+
+  %token4 = async.execute {
+    async.yield
+  }
+
+  %token5 = async.execute {
+    assert %false, "error"
+    async.yield
+  }
+
+  %idx0 = async.add_to_group %token4, %group0 : !async.token
+  %idx1 = async.add_to_group %token5, %group0 : !async.token
+
+  async.runtime.await %group0 : !async.group
+
+  // CHECK: 1
+  %err4 = async.runtime.is_error %group0 : !async.group
+  vector.print %err4 : i1
+
   return
 }
