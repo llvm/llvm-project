@@ -3018,6 +3018,32 @@ static bool CC_MipsO32(unsigned ValNo, MVT ValVT, MVT LocVT,
   return false;
 }
 
+// Passing 64-bit values requires register alignment. This function handles the
+// lower part of a 64-bit value which has to be in the even register. The high
+// part will occupy next free register, so it doesn't need any special handling.
+static bool CC_NanoMipsP32_64BitLo(unsigned ValNo, MVT ValVT, MVT LocVT,
+                                 CCValAssign::LocInfo LocInfo,
+                                 ISD::ArgFlagsTy ArgFlags, CCState &State) {
+  static const MCPhysReg Regs[] = {
+      Mips::A0_NM, Mips::A1_NM, Mips::A2_NM, Mips::A3_NM,
+      Mips::A4_NM, Mips::A5_NM, Mips::A6_NM, Mips::A7_NM,
+  };
+  MCPhysReg Reg = State.AllocateReg(Regs);
+  if (Reg == Mips::A1_NM || Reg == Mips::A3_NM || Reg == Mips::A5_NM ||
+      Reg == Mips::A7_NM) {
+    Reg = State.AllocateReg(Regs);
+  }
+
+  if (!Reg) {
+    unsigned Offset = State.AllocateStack(ValVT.getStoreSize(), Align(8));
+    State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
+  } else {
+    State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+  }
+
+  return false;
+}
+
 static bool CC_MipsO32_FP32(unsigned ValNo, MVT ValVT,
                             MVT LocVT, CCValAssign::LocInfo LocInfo,
                             ISD::ArgFlagsTy ArgFlags, CCState &State) {

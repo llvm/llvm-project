@@ -16,6 +16,11 @@ class CCIfSubtarget<string F, CCAction A, string Invert = "">
                       F),
            A>;
 
+// Match if the argument is lower part of a 64-bit value.
+class CCIfOrigArgWas64BitLo<CCAction A>
+    : CCIf<"static_cast<MipsCCState *>(&State)->WasOriginalArg64BitLo(ValNo)",
+           A>;
+
 // The inverse of CCIfSubtarget
 class CCIfSubtargetNot<string F, CCAction A> : CCIfSubtarget<F, A, "!">;
 
@@ -122,9 +127,13 @@ def CC_MipsO32_FP : CallingConv<[
 // nanoMIPS P32 Calling Convention
 //===----------------------------------------------------------------------===//
 
+def CC_NanoMipsP32_64BitLo : CustomCallingConv;
+
 def CC_NanoMipsP32 : CallingConv<[
   // Promote i8/i16 arguments to i32.
   CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+
+  CCIfOrigArgWas64BitLo<CCDelegateTo<CC_NanoMipsP32_64BitLo>>,
 
   // Pass arguments in A0_NM...A7_NM.
   CCIfType<[i32], CCAssignToReg<[A0_NM, A1_NM, A2_NM, A3_NM, A4_NM, A5_NM, A6_NM, A7_NM]>>,

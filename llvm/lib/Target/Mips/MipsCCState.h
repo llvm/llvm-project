@@ -63,6 +63,10 @@ private:
   void
   PreAnalyzeFormalArgumentsForF128(const SmallVectorImpl<ISD::InputArg> &Ins);
 
+  // Find all arguments which are lower parts of a 64-bit value.
+  void PreAnalyzeFormalArgumentsFor64BitLo(
+      const SmallVectorImpl<ISD::InputArg> &Ins);
+
   void
   PreAnalyzeCallResultForVectorFloat(const SmallVectorImpl<ISD::InputArg> &Ins,
                                      const Type *RetTy);
@@ -90,6 +94,9 @@ private:
   /// See ISD::OutputArg::IsFixed,
   SmallVector<bool, 4> CallOperandIsFixed;
 
+  // Records whether the value is lower part of a 64-bit value.
+  SmallVector<bool, 8> OriginalArgWas64BitLo;
+
   // Used to handle MIPS16-specific calling convention tweaks.
   // FIXME: This should probably be a fully fledged calling convention.
   SpecialCallingConvType SpecialCallingConv;
@@ -104,6 +111,7 @@ public:
       const SmallVectorImpl<ISD::OutputArg> &Outs, CCAssignFn Fn,
       std::vector<TargetLowering::ArgListEntry> &FuncArgs, const char *Func) {
     OriginalArgWasF128.clear();
+    OriginalArgWas64BitLo.clear();
     OriginalArgWasFloat.clear();
     OriginalArgWasFloatVector.clear();
     CallOperandIsFixed.clear();
@@ -132,13 +140,13 @@ public:
                                  CCAssignFn Fn) {
     OriginalArgWasFloat.clear();
     OriginalArgWasF128.clear();
+    PreAnalyzeFormalArgumentsFor64BitLo(Ins);
     OriginalArgWasFloatVector.clear();
     PreAnalyzeFormalArgumentsForF128(Ins);
   }
 
   void AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
                               CCAssignFn Fn) {
-    PreAnalyzeFormalArguments(Ins, Fn);
     CCState::AnalyzeFormalArguments(Ins, Fn);
   }
 
@@ -153,6 +161,7 @@ public:
                             const char *Func) {
     OriginalArgWasFloat.clear();
     OriginalArgWasF128.clear();
+    OriginalArgWas64BitLo.clear();
     OriginalArgWasFloatVector.clear();
     PreAnalyzeCallResultForF128(Ins, RetTy, Func);
     PreAnalyzeCallResultForVectorFloat(Ins, RetTy);
@@ -169,6 +178,7 @@ public:
                         CCAssignFn Fn) {
     OriginalArgWasFloat.clear();
     OriginalArgWasF128.clear();
+    OriginalArgWas64BitLo.clear();
     OriginalArgWasFloatVector.clear();
     PreAnalyzeReturnForF128(Outs);
     PreAnalyzeReturnForVectorFloat(Outs);
@@ -178,6 +188,7 @@ public:
                      CCAssignFn Fn) {
     PreAnalyzeReturn(Outs, Fn);
     CCState::AnalyzeReturn(Outs, Fn);
+    OriginalArgWasFloatVector.clear();
   }
 
   bool CheckReturn(const SmallVectorImpl<ISD::OutputArg> &ArgsFlags,
@@ -187,11 +198,13 @@ public:
     bool Return = CCState::CheckReturn(ArgsFlags, Fn);
     OriginalArgWasFloat.clear();
     OriginalArgWasF128.clear();
+    OriginalArgWas64BitLo.clear();
     OriginalArgWasFloatVector.clear();
     return Return;
   }
 
   bool WasOriginalArgF128(unsigned ValNo) { return OriginalArgWasF128[ValNo]; }
+  bool WasOriginalArg64BitLo(unsigned ValNo) { return OriginalArgWas64BitLo[ValNo]; }
   bool WasOriginalArgFloat(unsigned ValNo) {
       return OriginalArgWasFloat[ValNo];
   }

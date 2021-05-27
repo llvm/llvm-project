@@ -138,8 +138,8 @@ void MipsCCState::PreAnalyzeCallOperand(const Type *ArgTy, bool IsFixed,
   CallOperandIsFixed.push_back(IsFixed);
 }
 
-/// Identify lowered values that originated from f128, float and sret to vXfXX
-/// arguments and record this.
+/// Identify lowered values that originated from f128, float, sret to vXfXX
+/// arguments, lower part of 64-bit value arguments and record this.
 void MipsCCState::PreAnalyzeCallOperands(
     const SmallVectorImpl<ISD::OutputArg> &Outs,
     std::vector<TargetLowering::ArgListEntry> &FuncArgs,
@@ -147,6 +147,9 @@ void MipsCCState::PreAnalyzeCallOperands(
   for (unsigned i = 0; i < Outs.size(); ++i) {
     TargetLowering::ArgListEntry FuncArg = FuncArgs[Outs[i].OrigArgIndex];
 
+    OriginalArgWas64BitLo.push_back(
+        Outs[i].ArgVT.getSimpleVT().getFixedSizeInBits() == 64 &&
+        Outs[i].PartOffset == 0);
     OriginalArgWasF128.push_back(originalTypeIsF128(FuncArg.Ty, Func));
     OriginalArgWasFloat.push_back(FuncArg.Ty->isFloatingPointTy());
     OriginalArgWasFloatVector.push_back(FuncArg.Ty->isVectorTy());
@@ -204,5 +207,15 @@ void MipsCCState::PreAnalyzeFormalArgumentsForF128(
     // first argument is actually an SRet pointer to a vector, then the next
     // argument slot is $a2.
     OriginalArgWasFloatVector.push_back(FuncArg->getType()->isVectorTy());
+  }
+}
+
+// Find all arguments which are lower parts of a 64-bit value.
+void MipsCCState::PreAnalyzeFormalArgumentsFor64BitLo(
+    const SmallVectorImpl<ISD::InputArg> &Ins) {
+  for (unsigned i = 0; i < Ins.size(); ++i) {
+    OriginalArgWas64BitLo.push_back(
+        Ins[i].ArgVT.getSimpleVT().getFixedSizeInBits() == 64 &&
+        Ins[i].PartOffset == 0);
   }
 }
