@@ -543,7 +543,7 @@ public:
     }
   }
 
-  void appendExtraArgument(mlir::Type tupTy) {
+  void appendHostAssocTupleArg(mlir::Type tupTy) {
     auto *ctxt = tupTy.getContext();
     addFirOperand(tupTy, nextPassedArgPosition(), Property::BaseAddress,
                   {mlir::NamedAttribute{
@@ -859,9 +859,12 @@ void Fortran::lower::CallInterface<T>::determineInterface(
     impl.buildImplicitInterface(procedure);
   else
     impl.buildExplicitInterface(procedure);
+  // We only expect the extra host asspciations argument from the callee side as
+  // the definition of internal procedures will be present, and we'll always
+  // have a FuncOp definition in the ModuleOp, when lowering.
   if constexpr (std::is_same_v<T, Fortran::lower::CalleeInterface>) {
     if (side().hasHostAssociated())
-      impl.appendExtraArgument(side().getHostAssociatedTy());
+      impl.appendHostAssocTupleArg(side().getHostAssociatedTy());
   }
 }
 

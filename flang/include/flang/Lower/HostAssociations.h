@@ -46,8 +46,7 @@ public:
 
   /// Code gen the FIR for the local bindings for the host associated symbols
   /// for an internal (child) procedure using `builder`.
-  void internalProcedureBindings(AbstractConverter &converter, SymMap &symMap,
-                                 HostAssociations &internal);
+  void internalProcedureBindings(AbstractConverter &converter, SymMap &symMap);
 
   /// Return the type of the extra argument to add to each internal procedure.
   mlir::Type getArgumentType(AbstractConverter &convert);

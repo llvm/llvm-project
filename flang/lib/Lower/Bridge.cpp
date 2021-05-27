@@ -2045,11 +2045,13 @@ private:
         auto box = charHelp.createEmboxChar(arg.firArgument, arg.firLength);
         addSymbol(arg.entity->get(), box);
       } else {
-        if (arg.entity.has_value())
+        if (arg.entity.has_value()) {
           addSymbol(arg.entity->get(), arg.firArgument);
-        else if (funit.parentHasHostAssoc())
-          funit.parentHostAssoc().internalProcedureBindings(
-              *this, localSymbols, funit.getHostAssoc());
+        } else {
+          assert(funit.parentHasHostAssoc());
+          funit.parentHostAssoc().internalProcedureBindings(*this,
+                                                            localSymbols);
+        }
       }
     };
     for (const auto &arg : callee.getPassedArguments())
@@ -2130,6 +2132,7 @@ private:
       if (const auto *varDetails =
               sym.detailsIf<Fortran::semantics::HostAssocDetails>()) {
         auto hostBox = localSymbols.lookupSymbol(varDetails->symbol());
+        assert(hostBox && "host association is not in map");
         localSymbols.addSymbol(sym, hostBox.toExtendedValue());
         continue;
       }

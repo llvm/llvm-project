@@ -638,7 +638,7 @@ struct FunctionLikeUnit : public ProgramUnit {
   /// set of host associations.
   bool parentHasHostAssoc();
 
-  /// Return the host associations for this function like unit. The lis of host
+  /// Return the host associations for this function like unit. The list of host
   /// associations are kept in the host procedure.
   HostAssociations &getHostAssoc() { return hostAssociations; }
 

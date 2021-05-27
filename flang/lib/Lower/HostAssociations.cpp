@@ -50,8 +50,7 @@ void Fortran::lower::HostAssociations::hostProcedureBindings(
 
 void Fortran::lower::HostAssociations::internalProcedureBindings(
     Fortran::lower::AbstractConverter &converter,
-    Fortran::lower::SymMap &symMap,
-    Fortran::lower::HostAssociations &internal) {
+    Fortran::lower::SymMap &symMap) {
   if (symbols.empty())
     return;
 
@@ -68,9 +67,9 @@ void Fortran::lower::HostAssociations::internalProcedureBindings(
       tupleArg = arg;
       break;
     }
-
   if (!tupleArg)
     fir::emitFatalError(loc, "no host association argument found");
+
   converter.bindHostAssocTuple(tupleArg);
 
   auto offTy = builder.getIntegerType(32);
