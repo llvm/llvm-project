@@ -278,7 +278,7 @@ AsyncRuntimeRefCountingPass::addDropRefInDivergentLivenessSuccessor(
     const LivenessBlockInfo *blockLiveness = liveness.getLiveness(&block);
 
     // Skip the block if value is not in the `liveOut` set.
-    if (!blockLiveness->isLiveOut(value))
+    if (!blockLiveness || !blockLiveness->isLiveOut(value))
       continue;
 
     BlockSet liveInSuccessors;   // `value` is in `liveIn` set
@@ -287,7 +287,7 @@ AsyncRuntimeRefCountingPass::addDropRefInDivergentLivenessSuccessor(
     // Collect successors that do not have `value` in the `liveIn` set.
     for (Block *successor : block.getSuccessors()) {
       const LivenessBlockInfo *succLiveness = liveness.getLiveness(successor);
-      if (succLiveness->isLiveIn(value))
+      if (succLiveness && succLiveness->isLiveIn(value))
         liveInSuccessors.insert(successor);
       else
         noLiveInSuccessors.insert(successor);
