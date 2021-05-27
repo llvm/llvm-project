@@ -1,4 +1,5 @@
-// RUN: mlir-opt %s -split-input-file -async-to-async-runtime -print-ir-after-all | FileCheck %s --dump-input=always
+// RUN: mlir-opt %s -split-input-file -async-to-async-runtime                  \
+// RUN:   | FileCheck %s --dump-input=always
 
 // CHECK-LABEL: @execute_no_async_args
 func @execute_no_async_args(%arg0: f32, %arg1: memref<1xf32>) {
@@ -101,11 +102,17 @@ func @nested_async_execute(%arg0: f32, %arg1: f32, %arg2: memref<1xf32>) {
 // CHECK:   async.coro.suspend %[[SAVED]]
 // CHECK-SAME: ^[[SUSPEND]], ^[[RESUME_1:.*]], ^[[CLEANUP]]
 
-// Set token available after second resumption.
+// Check the error of the awaited token after resumption.
 // CHECK: ^[[RESUME_1]]:
+// CHECK:   %[[ERR:.*]] = async.runtime.is_error %[[INNER_TOKEN]]
+// CHECK:   cond_br %[[ERR]], ^[[SET_ERROR:.*]], ^[[CONTINUATION:.*]]
+
+// Set token available if the token is not in the error state.
+// CHECK: ^[[CONTINUATION:.*]]:
 // CHECK:   memref.store
 // CHECK:   async.runtime.set_available %[[TOKEN]]
 
+// CHECK: ^[[SET_ERROR]]:
 // CHECK: ^[[CLEANUP]]:
 // CHECK: ^[[SUSPEND]]:
 
@@ -155,8 +162,13 @@ func @async_execute_token_dependency(%arg0: f32, %arg1: memref<1xf32>) {
 // CHECK:   async.coro.suspend %[[SAVED]]
 // CHECK-SAME: ^[[SUSPEND]], ^[[RESUME_1:.*]], ^[[CLEANUP]]
 
-// Emplace result token after second resumption.
+// Check the error of the awaited token after resumption.
 // CHECK: ^[[RESUME_1]]:
+// CHECK:   %[[ERR:.*]] = async.runtime.is_error %[[ARG0]]
+// CHECK:   cond_br %[[ERR]], ^[[SET_ERROR:.*]], ^[[CONTINUATION:.*]]
+
+// Emplace result token after second resumption and error checking.
+// CHECK: ^[[CONTINUATION:.*]]:
 // CHECK:   memref.store
 // CHECK:   async.runtime.set_available %[[TOKEN]]
 
@@ -204,8 +216,13 @@ func @async_group_await_all(%arg0: f32, %arg1: memref<1xf32>) {
 // CHECK:   async.coro.suspend
 // CHECK-SAME: ^[[SUSPEND]], ^[[RESUME_1:.*]], ^[[CLEANUP]]
 
-// Emplace result token.
+// Check the error of the awaited token after resumption.
 // CHECK: ^[[RESUME_1]]:
+// CHECK:   %[[ERR:.*]] = async.runtime.is_error %[[ARG]]
+// CHECK:   cond_br %[[ERR]], ^[[SET_ERROR:.*]], ^[[CONTINUATION:.*]]
+
+// Emplace result token after error checking.
+// CHECK: ^[[CONTINUATION:.*]]:
 // CHECK:   async.runtime.set_available %[[TOKEN]]
 
 // CHECK: ^[[CLEANUP]]:
@@ -293,11 +310,65 @@ func @async_value_operands() {
 // CHECK:   async.coro.suspend
 // CHECK-SAME: ^[[SUSPEND]], ^[[RESUME_1:.*]], ^[[CLEANUP]]
 
-// Load from the async.value argument.
+// Check the error of the awaited token after resumption.
 // CHECK: ^[[RESUME_1]]:
+// CHECK:   %[[ERR:.*]] = async.runtime.is_error %[[ARG]]
+// CHECK:   cond_br %[[ERR]], ^[[SET_ERROR:.*]], ^[[CONTINUATION:.*]]
+
+// // Load from the async.value argument after error checking.
+// CHECK: ^[[CONTINUATION:.*]]:
 // CHECK:   %[[LOADED:.*]] = async.runtime.load %[[ARG]] : !async.value<f32
 // CHECK:   addf %[[LOADED]], %[[LOADED]] : f32
 // CHECK:   async.runtime.set_available %[[TOKEN]]
 
 // CHECK: ^[[CLEANUP]]:
 // CHECK: ^[[SUSPEND]]:
+
+// -----
+
+// CHECK-LABEL: @execute_asserttion
+func @execute_asserttion(%arg0: i1) {
+  %token = async.execute {
+    assert %arg0, "error"
+    async.yield
+  }
+  async.await %token : !async.token
+  return
+}
+
+// Function outlined from the async.execute operation.
+// CHECK-LABEL: func private @async_execute_fn(
+// CHECK-SAME:  %[[ARG0:.*]]: i1
+// CHECK-SAME:  -> !async.token
+
+// Create token for return op, and mark a function as a coroutine.
+// CHECK: %[[TOKEN:.*]] = async.runtime.create : !async.token
+// CHECK: %[[ID:.*]] = async.coro.id
+// CHECK: %[[HDL:.*]] = async.coro.begin
+
+// Initial coroutine suspension.
+// CHECK:      async.coro.suspend
+// CHECK-SAME: ^[[SUSPEND:.*]], ^[[RESUME:.*]], ^[[CLEANUP:.*]]
+
+// Resume coroutine after suspension.
+// CHECK: ^[[RESUME]]:
+// CHECK:   cond_br %[[ARG0]], ^[[SET_AVAILABLE:.*]], ^[[SET_ERROR:.*]]
+
+// Set coroutine completion token to available state.
+// CHECK: ^[[SET_AVAILABLE]]:
+// CHECK:   async.runtime.set_available %[[TOKEN]]
+// CHECK:   br ^[[CLEANUP]]
+
+// Set coroutine completion token to error state.
+// CHECK: ^[[SET_ERROR]]:
+// CHECK:   async.runtime.set_error %[[TOKEN]]
+// CHECK:   br ^[[CLEANUP]]
+
+// Delete coroutine.
+// CHECK: ^[[CLEANUP]]:
+// CHECK:   async.coro.free %[[ID]], %[[HDL]]
+
+// Suspend coroutine, and also a return statement for ramp function.
+// CHECK: ^[[SUSPEND]]:
+// CHECK:   async.coro.end %[[HDL]]
+// CHECK:   return %[[TOKEN]]

@@ -108,6 +108,10 @@ static opt<unsigned>
                     "number of cores on the current machine."),
                cl::value_desc("n"), cat(ConversionOptions));
 
+static opt<bool>
+    Quiet("quiet", desc("Do not output warnings about the debug information"),
+          cat(ConversionOptions));
+
 static list<uint64_t> LookupAddresses("address",
                                       desc("Lookup an address in a GSYM file"),
                                       cl::value_desc("addr"),
@@ -281,7 +285,7 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
       NumThreads > 0 ? NumThreads : std::thread::hardware_concurrency();
   auto &OS = outs();
 
-  GsymCreator Gsym;
+  GsymCreator Gsym(Quiet);
 
   // See if we can figure out the base address for a given object file, and if
   // we can, then set the base address to use to this value. This will ease

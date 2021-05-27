@@ -6,6 +6,7 @@ extern int x;
 #endif
 
 #ifdef foo
+#elifdef foo
 #endif
 
 #if defined(foo)
@@ -15,6 +16,7 @@ extern int x;
 // PR3938
 #if 0
 #ifdef D
+#elifdef D
 #else 1       // Should not warn due to C99 6.10p4
 #endif
 #endif

@@ -2039,6 +2039,64 @@ public:
   }
 };
 
+// This represents a use of the __builtin_sycl_unique_stable_name, which takes a
+// type-id, and at CodeGen time emits a unique string representation of the
+// type in a way that permits us to properly encode information about the SYCL
+// kernels.
+class SYCLUniqueStableNameExpr final : public Expr {
+  friend class ASTStmtReader;
+  SourceLocation OpLoc, LParen, RParen;
+  TypeSourceInfo *TypeInfo;
+
+  SYCLUniqueStableNameExpr(EmptyShell Empty, QualType ResultTy);
+  SYCLUniqueStableNameExpr(SourceLocation OpLoc, SourceLocation LParen,
+                           SourceLocation RParen, QualType ResultTy,
+                           TypeSourceInfo *TSI);
+
+  void setTypeSourceInfo(TypeSourceInfo *Ty) { TypeInfo = Ty; }
+
+  void setLocation(SourceLocation L) { OpLoc = L; }
+  void setLParenLocation(SourceLocation L) { LParen = L; }
+  void setRParenLocation(SourceLocation L) { RParen = L; }
+
+public:
+  TypeSourceInfo *getTypeSourceInfo() { return TypeInfo; }
+
+  const TypeSourceInfo *getTypeSourceInfo() const { return TypeInfo; }
+
+  static SYCLUniqueStableNameExpr *
+  Create(const ASTContext &Ctx, SourceLocation OpLoc, SourceLocation LParen,
+         SourceLocation RParen, TypeSourceInfo *TSI);
+
+  static SYCLUniqueStableNameExpr *CreateEmpty(const ASTContext &Ctx);
+
+  SourceLocation getBeginLoc() const { return getLocation(); }
+  SourceLocation getEndLoc() const { return RParen; }
+  SourceLocation getLocation() const { return OpLoc; }
+  SourceLocation getLParenLocation() const { return LParen; }
+  SourceLocation getRParenLocation() const { return RParen; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == SYCLUniqueStableNameExprClass;
+  }
+
+  // Iterators
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  // Convenience function to generate the name of the currently stored type.
+  std::string ComputeName(ASTContext &Context) const;
+
+  // Get the generated name of the type.  Note that this only works after all
+  // kernels have been instantiated.
+  static std::string ComputeName(ASTContext &Context, QualType Ty);
+};
+
 /// ParenExpr - This represents a parethesized expression, e.g. "(1)".  This
 /// AST node is only formed if full location information is requested.
 class ParenExpr : public Expr {

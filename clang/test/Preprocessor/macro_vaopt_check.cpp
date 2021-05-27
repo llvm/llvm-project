@@ -68,7 +68,9 @@
 #if __VA_OPT__ // expected-warning {{__VA_OPT__ can only appear in the expansion of a variadic macro}}
 #endif
 
+// expected-warning@+2 {{__VA_OPT__ can only appear in the expansion of a variadic macro}}
 #ifdef __VA_OPT__ // expected-warning {{__VA_OPT__ can only appear in the expansion of a variadic macro}}
+#elifdef __VA_OPT__
 #endif
 
 #define BAD __VA_OPT__ // expected-warning {{__VA_OPT__ can only appear in the expansion of a variadic macro}}

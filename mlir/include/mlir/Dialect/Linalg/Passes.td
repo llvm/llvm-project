@@ -34,6 +34,11 @@ def LinalgComprehensiveFuncBufferize :
     same buffers. The analysis is performed on SSA use-def chains starting from
     function operands that are annotated with the 'inplaceable' attribute
   }];
+  let options = [
+    Option<"testAnalysisOnly", "test-analysis-only", "bool",
+            /*default=*/"false",
+           "Only runs inplaceability analysis (for testing purposes only)">
+  ];
   let constructor = "mlir::createLinalgComprehensiveFuncBufferizePass()";
 }
 

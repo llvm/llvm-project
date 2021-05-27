@@ -135,11 +135,9 @@ struct LowerGpuOpsToNVVMOpsPass
       numElemsPerThreadF16["AOp"] = 8;
       numElemsPerThreadF16["BOp"] = 8;
       numElemsPerThreadF16["COp"] = 4;
-      numElemsPerThreadF16["DOp"] = 4;
       numElemsPerThreadF32["AOp"] = 8;
       numElemsPerThreadF32["BOp"] = 8;
       numElemsPerThreadF32["COp"] = 8;
-      numElemsPerThreadF32["DOp"] = 8;
       Type structToReturn;
       if (type.getElementType().isF16()) {
         // Number of f16's in 32-bit.

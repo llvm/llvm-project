@@ -9198,6 +9198,18 @@ void Sema::CodeCompletePreprocessorDirective(bool InConditional) {
     Builder.AddPlaceholderChunk("condition");
     Results.AddResult(Builder.TakeString());
 
+    // #elifdef <macro>
+    Builder.AddTypedTextChunk("elifdef");
+    Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+    Builder.AddPlaceholderChunk("macro");
+    Results.AddResult(Builder.TakeString());
+
+    // #elifndef <macro>
+    Builder.AddTypedTextChunk("elifndef");
+    Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+    Builder.AddPlaceholderChunk("macro");
+    Results.AddResult(Builder.TakeString());
+
     // #else
     Builder.AddTypedTextChunk("else");
     Results.AddResult(Builder.TakeString());

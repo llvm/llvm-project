@@ -88,8 +88,9 @@ private:
   /// has a `+1` reference count.
   LogicalResult addAddRefBeforeFunctionCall(Value value);
 
-  /// (#3) Verifies that if a block has a value in the `liveOut` set, then the
-  /// value is in `liveIn` set in all successors.
+  /// (#3) Adds the `drop_ref` operation to account for successor blocks with
+  /// divergent `liveIn` property: `value` is not in the `liveIn` set of all
+  /// successor blocks.
   ///
   /// Example:
   ///
@@ -98,12 +99,29 @@ private:
   ///     cond_br %cond, ^bb1, ^bb2
   ///   ^bb1:
   ///     async.runtime.await %token
-  ///     return
+  ///     async.runtime.drop_ref %token
+  ///     br ^bb2
   ///   ^bb2:
   ///     return
   ///
-  /// This CFG will be rejected because ^bb2 does not have `value` in the
-  /// `liveIn` set, and it will leak a reference counted object.
+  /// In this example ^bb2 does not have `value` in the `liveIn` set, so we have
+  /// to branch into a special "reference counting block" from the ^entry that
+  /// will have a `drop_ref` operation, and then branch into the ^bb2.
+  ///
+  /// After transformation:
+  ///
+  ///   ^entry:
+  ///     %token = async.runtime.create : !async.token
+  ///     cond_br %cond, ^bb1, ^reference_counting
+  ///   ^bb1:
+  ///     async.runtime.await %token
+  ///     async.runtime.drop_ref %token
+  ///     br ^bb2
+  ///   ^reference_counting:
+  ///     async.runtime.drop_ref %token
+  ///     br ^bb2
+  ///   ^bb2:
+  ///     return
   ///
   /// An exception to this rule are blocks with `async.coro.suspend` terminator,
   /// because in Async to LLVM lowering it is guaranteed that the control flow
@@ -126,7 +144,7 @@ private:
   /// Although cleanup and suspend blocks do not have the `value` in the
   /// `liveIn` set, it is guaranteed that execution will eventually continue in
   /// the resume block (we never explicitly destroy coroutines).
-  LogicalResult verifySuccessors(Value value);
+  LogicalResult addDropRefInDivergentLivenessSuccessor(Value value);
 };
 
 } // namespace
@@ -237,11 +255,16 @@ AsyncRuntimeRefCountingPass::addAddRefBeforeFunctionCall(Value value) {
   return success();
 }
 
-LogicalResult AsyncRuntimeRefCountingPass::verifySuccessors(Value value) {
+LogicalResult
+AsyncRuntimeRefCountingPass::addDropRefInDivergentLivenessSuccessor(
+    Value value) {
+  using BlockSet = llvm::SmallPtrSet<Block *, 4>;
+
   OpBuilder builder(value.getContext());
 
-  // Blocks with successfors with different `liveIn` properties of the `value`.
-  llvm::SmallSet<Block *, 4> divergentLivenessBlocks;
+  // If a block has successors with different `liveIn` property of the `value`,
+  // record block successors that do not thave the `value` in the `liveIn` set.
+  llvm::SmallDenseMap<Block *, BlockSet> divergentLivenessBlocks;
 
   // Use liveness analysis to find the placement of `drop_ref`operation.
   auto &liveness = getAnalysis<Liveness>();
@@ -255,17 +278,16 @@ LogicalResult AsyncRuntimeRefCountingPass::verifySuccessors(Value value) {
     const LivenessBlockInfo *blockLiveness = liveness.getLiveness(&block);
 
     // Skip the block if value is not in the `liveOut` set.
-    if (!blockLiveness->isLiveOut(value))
+    if (!blockLiveness || !blockLiveness->isLiveOut(value))
       continue;
 
-    // Sucessors with value in `liveIn` set and not value in `liveIn` set.
-    llvm::SmallSet<Block *, 4> liveInSuccessors;
-    llvm::SmallSet<Block *, 4> noLiveInSuccessors;
+    BlockSet liveInSuccessors;   // `value` is in `liveIn` set
+    BlockSet noLiveInSuccessors; // `value` is not in the `liveIn` set
 
     // Collect successors that do not have `value` in the `liveIn` set.
     for (Block *successor : block.getSuccessors()) {
       const LivenessBlockInfo *succLiveness = liveness.getLiveness(successor);
-      if (succLiveness->isLiveIn(value))
+      if (succLiveness && succLiveness->isLiveIn(value))
         liveInSuccessors.insert(successor);
       else
         noLiveInSuccessors.insert(successor);
@@ -273,18 +295,60 @@ LogicalResult AsyncRuntimeRefCountingPass::verifySuccessors(Value value) {
 
     // Block has successors with different `liveIn` property of the `value`.
     if (!liveInSuccessors.empty() && !noLiveInSuccessors.empty())
-      divergentLivenessBlocks.insert(&block);
+      divergentLivenessBlocks.try_emplace(&block, noLiveInSuccessors);
   }
 
-  // Verify that divergent `liveIn` property only present in blocks with
-  // async.coro.suspend terminator.
-  for (Block *block : divergentLivenessBlocks) {
+  // Try to insert `dropRef` operations to handle blocks with divergent liveness
+  // in successors blocks.
+  for (auto kv : divergentLivenessBlocks) {
+    Block *block = kv.getFirst();
+    BlockSet &successors = kv.getSecond();
+
+    // Coroutine suspension is a special case terminator for wich we do not
+    // need to create additional reference counting (see details above).
     Operation *terminator = block->getTerminator();
     if (isa<CoroSuspendOp>(terminator))
       continue;
 
-    return terminator->emitOpError("successor have different `liveIn` property "
-                                   "of the reference counted value: ");
+    // We only support successor blocks with empty block argument list.
+    auto hasArgs = [](Block *block) { return !block->getArguments().empty(); };
+    if (llvm::any_of(successors, hasArgs))
+      return terminator->emitOpError()
+             << "successor have different `liveIn` property of the reference "
+                "counted value";
+
+    // Make sure that `dropRef` operation is called when branched into the
+    // successor block without `value` in the `liveIn` set.
+    for (Block *successor : successors) {
+      // If successor has a unique predecessor, it is safe to create `dropRef`
+      // operations directly in the successor block.
+      //
+      // Otherwise we need to create a special block for reference counting
+      // operations, and branch from it to the original successor block.
+      Block *refCountingBlock = nullptr;
+
+      if (successor->getUniquePredecessor() == block) {
+        refCountingBlock = successor;
+      } else {
+        refCountingBlock = &successor->getParent()->emplaceBlock();
+        refCountingBlock->moveBefore(successor);
+        OpBuilder builder = OpBuilder::atBlockEnd(refCountingBlock);
+        builder.create<BranchOp>(value.getLoc(), successor);
+      }
+
+      OpBuilder builder = OpBuilder::atBlockBegin(refCountingBlock);
+      builder.create<RuntimeDropRefOp>(value.getLoc(), value,
+                                       builder.getI32IntegerAttr(1));
+
+      // No need to update the terminator operation.
+      if (successor == refCountingBlock)
+        continue;
+
+      // Update terminator `successor` block to `refCountingBlock`.
+      for (auto pair : llvm::enumerate(terminator->getSuccessors()))
+        if (pair.value() == successor)
+          terminator->setSuccessor(refCountingBlock, pair.index());
+    }
   }
 
   return success();
@@ -316,8 +380,8 @@ AsyncRuntimeRefCountingPass::addAutomaticRefCounting(Value value) {
   if (failed(addAddRefBeforeFunctionCall(value)))
     return failure();
 
-  // Verify that the `value` is in `liveIn` set of all successors.
-  if (failed(verifySuccessors(value)))
+  // Add `drop_ref` operations to successors with divergent `value` liveness.
+  if (failed(addDropRefInDivergentLivenessSuccessor(value)))
     return failure();
 
   return success();

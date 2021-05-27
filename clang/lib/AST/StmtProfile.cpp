@@ -1190,6 +1190,12 @@ void StmtProfiler::VisitDeclRefExpr(const DeclRefExpr *S) {
   }
 }
 
+void StmtProfiler::VisitSYCLUniqueStableNameExpr(
+    const SYCLUniqueStableNameExpr *S) {
+  VisitExpr(S);
+  VisitType(S->getTypeSourceInfo()->getType());
+}
+
 void StmtProfiler::VisitPredefinedExpr(const PredefinedExpr *S) {
   VisitExpr(S);
   ID.AddInteger(S->getIdentKind());
