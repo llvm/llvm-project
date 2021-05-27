@@ -11715,25 +11715,27 @@ bool ASTContext::IsSYCLKernelNamingDecl(const NamedDecl *ND) const {
 
 // Filters the Decls list to those that share the lambda mangling with the
 // passed RD.
-static void FilterSYCLKernelNamingDecls(
-    ASTContext &Ctx, const CXXRecordDecl *RD,
+void ASTContext::FilterSYCLKernelNamingDecls(
+    const CXXRecordDecl *RD,
     llvm::SmallVectorImpl<const CXXRecordDecl *> &Decls) {
-  static std::unique_ptr<ItaniumMangleContext> Mangler{
-      ItaniumMangleContext::create(Ctx, Ctx.getDiagnostics())};
+
+  if (!SYCLKernelFilterContext)
+    SYCLKernelFilterContext.reset(
+        ItaniumMangleContext::create(*this, getDiagnostics()));
 
   llvm::SmallString<128> LambdaSig;
   llvm::raw_svector_ostream Out(LambdaSig);
-  Mangler->mangleLambdaSig(RD, Out);
+  SYCLKernelFilterContext->mangleLambdaSig(RD, Out);
 
-  llvm::erase_if(Decls, [&LambdaSig](const CXXRecordDecl *LocalRD) {
+  llvm::erase_if(Decls, [this, &LambdaSig](const CXXRecordDecl *LocalRD) {
     llvm::SmallString<128> LocalLambdaSig;
     llvm::raw_svector_ostream LocalOut(LocalLambdaSig);
-    Mangler->mangleLambdaSig(LocalRD, LocalOut);
+    SYCLKernelFilterContext->mangleLambdaSig(LocalRD, LocalOut);
     return LambdaSig != LocalLambdaSig;
   });
 }
 
-unsigned ASTContext::GetSYCLKernelNamingIndex(const NamedDecl *ND) const {
+unsigned ASTContext::GetSYCLKernelNamingIndex(const NamedDecl *ND) {
   assert(getLangOpts().isSYCL() && "Only valid for SYCL programs");
   assert(IsSYCLKernelNamingDecl(ND) &&
          "Lambda not involved in mangling asked for a naming index?");
@@ -11753,7 +11755,7 @@ unsigned ASTContext::GetSYCLKernelNamingIndex(const NamedDecl *ND) const {
   // doesn't use the itanium mangler, and just sets the lambda mangling number
   // incrementally, with no consideration to the signature.
   if (Target->getCXXABI().getKind() != TargetCXXABI::Microsoft)
-    FilterSYCLKernelNamingDecls(const_cast<ASTContext &>(*this), RD, Decls);
+    FilterSYCLKernelNamingDecls(RD, Decls);
 
   llvm::sort(Decls, [](const CXXRecordDecl *LHS, const CXXRecordDecl *RHS) {
     return LHS->getLambdaManglingNumber() < RHS->getLambdaManglingNumber();
