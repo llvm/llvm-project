@@ -3226,12 +3226,15 @@ TypeSystemSwiftTypeRef::GetTypedefedType(opaque_compiler_type_t type) {
                   node->getKind() != Node::Kind::BoundGenericTypeAlias))
       return {};
     auto pair = ResolveTypeAlias(m_swift_ast_context, dem, node);
+    NodePointer type_node = dem.createNode(Node::Kind::Type);
     if (NodePointer resolved = std::get<swift::Demangle::NodePointer>(pair)) {
-      NodePointer type_node = dem.createNode(Node::Kind::Type);
       type_node->addChild(resolved, dem);
-      return RemangleAsType(dem, type_node);
+    } else {
+      NodePointer clang_node = GetClangTypeNode(std::get<CompilerType>(pair),
+                                                dem, m_swift_ast_context);
+      type_node->addChild(clang_node, dem);
     }
-    return std::get<CompilerType>(pair);
+    return RemangleAsType(dem, type_node);
   };
 #ifndef NDEBUG
   // We skip validation when dealing with a builtin type since builtins are
