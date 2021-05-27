@@ -194,11 +194,11 @@ LANGSTANDARD_ALIAS_DEPR(openclcpp, "CLC++")
 
 // CUDA
 LANGSTANDARD(cuda, "cuda", CUDA, "NVIDIA CUDA(tm)",
-             LineComment | CPlusPlus | Digraphs)
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | Digraphs)
 
 // HIP
 LANGSTANDARD(hip, "hip", HIP, "HIP",
-             LineComment | CPlusPlus | Digraphs)
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | Digraphs)
 
 #undef LANGSTANDARD
 #undef LANGSTANDARD_ALIAS
