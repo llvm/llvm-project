@@ -591,8 +591,11 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
   runtimeTarget.addIllegalOp<CreateGroupOp, AddToGroupOp>();
   runtimeTarget.addIllegalOp<ExecuteOp, AwaitOp, AwaitAllOp, async::YieldOp>();
 
-  // Assertions must be converted to runtime errors.
-  runtimeTarget.addIllegalOp<AssertOp>();
+  // Assertions must be converted to runtime errors inside async functions.
+  runtimeTarget.addDynamicallyLegalOp<AssertOp>([&](AssertOp op) -> bool {
+    auto func = op->getParentOfType<FuncOp>();
+    return outlinedFunctions.find(func) == outlinedFunctions.end();
+  });
   runtimeTarget.addLegalOp<CondBranchOp>();
 
   if (failed(applyPartialConversion(module, runtimeTarget,
