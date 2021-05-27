@@ -43866,6 +43866,10 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
   assert(N->getOperand(1).getValueType() == MVT::i8 &&
          "Unexpected shift amount type");
 
+  // (shift undef, X) -> 0
+  if (N0.isUndef())
+    return DAG.getConstant(0, SDLoc(N), VT);
+
   // Out of range logical bit shifts are guaranteed to be zero.
   // Out of range arithmetic bit shifts splat the sign bit.
   unsigned ShiftVal = N->getConstantOperandVal(1);
