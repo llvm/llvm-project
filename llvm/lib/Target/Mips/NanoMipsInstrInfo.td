@@ -388,7 +388,7 @@ def BLTUC_NM  : CBranchNM<"bltuc", brtarget, setult, GPR32NMOpnd>, InstSize32;
 
 def BNEC_NM  : CBranchNM<"bnec", brtarget, setne, GPR32NMOpnd>, InstSize32;
 def BNEIC_NM : CBranchImmNM<"bneic", brtarget, setne, GPR32NMOpnd, uimm7, immZExt7>;
-def BNEZC_NM : CBranchZeroNM<"beqzc", brtarget, setne, GPR32NMOpnd>;
+def BNEZC_NM : CBranchZeroNM<"bnezc", brtarget, setne, GPR32NMOpnd>;
 
 // Unconditional branch
 // TODO: native nanomips formats
