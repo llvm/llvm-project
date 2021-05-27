@@ -8,7 +8,7 @@ declare {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vloxseg2.mask.nxv1
 define <vscale x 16 x i16> @test_vloxseg2_nxv16i16_nxv16i16(i16* %base, <vscale x 16 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv16i16_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -22,7 +22,7 @@ define <vscale x 16 x i16> @test_vloxseg2_mask_nxv16i16_nxv16i16(<vscale x 16 x 
 ; CHECK-LABEL: test_vloxseg2_mask_nxv16i16_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v4, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -38,7 +38,7 @@ declare {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vloxseg2.mask.nxv1
 define <vscale x 16 x i16> @test_vloxseg2_nxv16i16_nxv16i8(i16* %base, <vscale x 16 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv16i16_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -52,7 +52,7 @@ define <vscale x 16 x i16> @test_vloxseg2_mask_nxv16i16_nxv16i8(<vscale x 16 x i
 ; CHECK-LABEL: test_vloxseg2_mask_nxv16i16_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v4, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -68,7 +68,7 @@ declare {<vscale x 16 x i16>,<vscale x 16 x i16>} @llvm.riscv.vloxseg2.mask.nxv1
 define <vscale x 16 x i16> @test_vloxseg2_nxv16i16_nxv16i32(i16* %base, <vscale x 16 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv16i16_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -82,7 +82,7 @@ define <vscale x 16 x i16> @test_vloxseg2_mask_nxv16i16_nxv16i32(<vscale x 16 x 
 ; CHECK-LABEL: test_vloxseg2_mask_nxv16i16_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v4, (a0), v16, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -98,7 +98,7 @@ declare {<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.vloxseg2.mask.nxv4i3
 define <vscale x 4 x i32> @test_vloxseg2_nxv4i32_nxv4i32(i32* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4i32_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -112,7 +112,7 @@ define <vscale x 4 x i32> @test_vloxseg2_mask_nxv4i32_nxv4i32(<vscale x 4 x i32>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4i32_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v6, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -128,7 +128,7 @@ declare {<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.vloxseg2.mask.nxv4i3
 define <vscale x 4 x i32> @test_vloxseg2_nxv4i32_nxv4i8(i32* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4i32_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -142,7 +142,7 @@ define <vscale x 4 x i32> @test_vloxseg2_mask_nxv4i32_nxv4i8(<vscale x 4 x i32> 
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4i32_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v6, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -158,7 +158,7 @@ declare {<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.vloxseg2.mask.nxv4i3
 define <vscale x 4 x i32> @test_vloxseg2_nxv4i32_nxv4i64(i32* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4i32_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -172,7 +172,7 @@ define <vscale x 4 x i32> @test_vloxseg2_mask_nxv4i32_nxv4i64(<vscale x 4 x i32>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4i32_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v6, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -188,7 +188,7 @@ declare {<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.vloxseg2.mask.nxv4i3
 define <vscale x 4 x i32> @test_vloxseg2_nxv4i32_nxv4i16(i32* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4i32_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -202,7 +202,7 @@ define <vscale x 4 x i32> @test_vloxseg2_mask_nxv4i32_nxv4i16(<vscale x 4 x i32>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4i32_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v6, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -218,7 +218,7 @@ declare {<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.v
 define <vscale x 4 x i32> @test_vloxseg3_nxv4i32_nxv4i32(i32* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv4i32_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -234,7 +234,7 @@ define <vscale x 4 x i32> @test_vloxseg3_mask_nxv4i32_nxv4i32(<vscale x 4 x i32>
 ; CHECK-NEXT:    vmv2r.v v2, v8
 ; CHECK-NEXT:    vmv2r.v v4, v2
 ; CHECK-NEXT:    vmv2r.v v6, v2
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v2, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -250,7 +250,7 @@ declare {<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.v
 define <vscale x 4 x i32> @test_vloxseg3_nxv4i32_nxv4i8(i32* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv4i32_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -266,7 +266,7 @@ define <vscale x 4 x i32> @test_vloxseg3_mask_nxv4i32_nxv4i8(<vscale x 4 x i32> 
 ; CHECK-NEXT:    vmv2r.v v2, v8
 ; CHECK-NEXT:    vmv2r.v v4, v2
 ; CHECK-NEXT:    vmv2r.v v6, v2
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v2, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -282,7 +282,7 @@ declare {<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.v
 define <vscale x 4 x i32> @test_vloxseg3_nxv4i32_nxv4i64(i32* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv4i32_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -297,7 +297,7 @@ define <vscale x 4 x i32> @test_vloxseg3_mask_nxv4i32_nxv4i64(<vscale x 4 x i32>
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
 ; CHECK-NEXT:    vmv2r.v v10, v6
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v6, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
@@ -313,7 +313,7 @@ declare {<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>} @llvm.riscv.v
 define <vscale x 4 x i32> @test_vloxseg3_nxv4i32_nxv4i16(i32* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv4i32_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -329,7 +329,7 @@ define <vscale x 4 x i32> @test_vloxseg3_mask_nxv4i32_nxv4i16(<vscale x 4 x i32>
 ; CHECK-NEXT:    vmv2r.v v2, v8
 ; CHECK-NEXT:    vmv2r.v v4, v2
 ; CHECK-NEXT:    vmv2r.v v6, v2
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v2, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -345,7 +345,7 @@ declare {<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x 
 define <vscale x 4 x i32> @test_vloxseg4_nxv4i32_nxv4i32(i32* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv4i32_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -362,7 +362,7 @@ define <vscale x 4 x i32> @test_vloxseg4_mask_nxv4i32_nxv4i32(<vscale x 4 x i32>
 ; CHECK-NEXT:    vmv2r.v v14, v12
 ; CHECK-NEXT:    vmv2r.v v16, v12
 ; CHECK-NEXT:    vmv2r.v v18, v12
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v14
 ; CHECK-NEXT:    ret
@@ -378,7 +378,7 @@ declare {<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x 
 define <vscale x 4 x i32> @test_vloxseg4_nxv4i32_nxv4i8(i32* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv4i32_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -395,7 +395,7 @@ define <vscale x 4 x i32> @test_vloxseg4_mask_nxv4i32_nxv4i8(<vscale x 4 x i32> 
 ; CHECK-NEXT:    vmv2r.v v14, v12
 ; CHECK-NEXT:    vmv2r.v v16, v12
 ; CHECK-NEXT:    vmv2r.v v18, v12
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v14
 ; CHECK-NEXT:    ret
@@ -411,7 +411,7 @@ declare {<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x 
 define <vscale x 4 x i32> @test_vloxseg4_nxv4i32_nxv4i64(i32* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv4i32_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -428,7 +428,7 @@ define <vscale x 4 x i32> @test_vloxseg4_mask_nxv4i32_nxv4i64(<vscale x 4 x i32>
 ; CHECK-NEXT:    vmv2r.v v18, v16
 ; CHECK-NEXT:    vmv2r.v v20, v16
 ; CHECK-NEXT:    vmv2r.v v22, v16
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v16, (a0), v12, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v18
 ; CHECK-NEXT:    ret
@@ -444,7 +444,7 @@ declare {<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x i32>,<vscale x 4 x 
 define <vscale x 4 x i32> @test_vloxseg4_nxv4i32_nxv4i16(i32* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv4i32_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -461,7 +461,7 @@ define <vscale x 4 x i32> @test_vloxseg4_mask_nxv4i32_nxv4i16(<vscale x 4 x i32>
 ; CHECK-NEXT:    vmv2r.v v14, v12
 ; CHECK-NEXT:    vmv2r.v v16, v12
 ; CHECK-NEXT:    vmv2r.v v18, v12
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v14
 ; CHECK-NEXT:    ret
@@ -477,7 +477,7 @@ declare {<vscale x 16 x i8>,<vscale x 16 x i8>} @llvm.riscv.vloxseg2.mask.nxv16i
 define <vscale x 16 x i8> @test_vloxseg2_nxv16i8_nxv16i16(i8* %base, <vscale x 16 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv16i8_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -491,7 +491,7 @@ define <vscale x 16 x i8> @test_vloxseg2_mask_nxv16i8_nxv16i16(<vscale x 16 x i8
 ; CHECK-LABEL: test_vloxseg2_mask_nxv16i8_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e8,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v6, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -507,7 +507,7 @@ declare {<vscale x 16 x i8>,<vscale x 16 x i8>} @llvm.riscv.vloxseg2.mask.nxv16i
 define <vscale x 16 x i8> @test_vloxseg2_nxv16i8_nxv16i8(i8* %base, <vscale x 16 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv16i8_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -521,7 +521,7 @@ define <vscale x 16 x i8> @test_vloxseg2_mask_nxv16i8_nxv16i8(<vscale x 16 x i8>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv16i8_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e8,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v6, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -537,7 +537,7 @@ declare {<vscale x 16 x i8>,<vscale x 16 x i8>} @llvm.riscv.vloxseg2.mask.nxv16i
 define <vscale x 16 x i8> @test_vloxseg2_nxv16i8_nxv16i32(i8* %base, <vscale x 16 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv16i8_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -551,7 +551,7 @@ define <vscale x 16 x i8> @test_vloxseg2_mask_nxv16i8_nxv16i32(<vscale x 16 x i8
 ; CHECK-LABEL: test_vloxseg2_mask_nxv16i8_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e8,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v6, (a0), v16, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -567,7 +567,7 @@ declare {<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>} @llvm.riscv.v
 define <vscale x 16 x i8> @test_vloxseg3_nxv16i8_nxv16i16(i8* %base, <vscale x 16 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv16i8_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -582,7 +582,7 @@ define <vscale x 16 x i8> @test_vloxseg3_mask_nxv16i8_nxv16i16(<vscale x 16 x i8
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
 ; CHECK-NEXT:    vmv2r.v v10, v6
-; CHECK-NEXT:    vsetvli a1, a1, e8,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v6, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
@@ -598,7 +598,7 @@ declare {<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>} @llvm.riscv.v
 define <vscale x 16 x i8> @test_vloxseg3_nxv16i8_nxv16i8(i8* %base, <vscale x 16 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv16i8_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -614,7 +614,7 @@ define <vscale x 16 x i8> @test_vloxseg3_mask_nxv16i8_nxv16i8(<vscale x 16 x i8>
 ; CHECK-NEXT:    vmv2r.v v2, v8
 ; CHECK-NEXT:    vmv2r.v v4, v2
 ; CHECK-NEXT:    vmv2r.v v6, v2
-; CHECK-NEXT:    vsetvli a1, a1, e8,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v2, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -630,7 +630,7 @@ declare {<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>} @llvm.riscv.v
 define <vscale x 16 x i8> @test_vloxseg3_nxv16i8_nxv16i32(i8* %base, <vscale x 16 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv16i8_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -645,7 +645,7 @@ define <vscale x 16 x i8> @test_vloxseg3_mask_nxv16i8_nxv16i32(<vscale x 16 x i8
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
 ; CHECK-NEXT:    vmv2r.v v10, v6
-; CHECK-NEXT:    vsetvli a1, a1, e8,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v6, (a0), v16, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
@@ -661,7 +661,7 @@ declare {<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x
 define <vscale x 16 x i8> @test_vloxseg4_nxv16i8_nxv16i16(i8* %base, <vscale x 16 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv16i8_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -678,7 +678,7 @@ define <vscale x 16 x i8> @test_vloxseg4_mask_nxv16i8_nxv16i16(<vscale x 16 x i8
 ; CHECK-NEXT:    vmv2r.v v18, v16
 ; CHECK-NEXT:    vmv2r.v v20, v16
 ; CHECK-NEXT:    vmv2r.v v22, v16
-; CHECK-NEXT:    vsetvli a1, a1, e8,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v16, (a0), v12, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v18
 ; CHECK-NEXT:    ret
@@ -694,7 +694,7 @@ declare {<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x
 define <vscale x 16 x i8> @test_vloxseg4_nxv16i8_nxv16i8(i8* %base, <vscale x 16 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv16i8_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -711,7 +711,7 @@ define <vscale x 16 x i8> @test_vloxseg4_mask_nxv16i8_nxv16i8(<vscale x 16 x i8>
 ; CHECK-NEXT:    vmv2r.v v14, v12
 ; CHECK-NEXT:    vmv2r.v v16, v12
 ; CHECK-NEXT:    vmv2r.v v18, v12
-; CHECK-NEXT:    vsetvli a1, a1, e8,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v14
 ; CHECK-NEXT:    ret
@@ -727,7 +727,7 @@ declare {<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x i8>,<vscale x 16 x
 define <vscale x 16 x i8> @test_vloxseg4_nxv16i8_nxv16i32(i8* %base, <vscale x 16 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv16i8_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -743,7 +743,7 @@ define <vscale x 16 x i8> @test_vloxseg4_mask_nxv16i8_nxv16i32(<vscale x 16 x i8
 ; CHECK-NEXT:    vmv2r.v v6, v8
 ; CHECK-NEXT:    vmv2r.v v10, v6
 ; CHECK-NEXT:    vmv2r.v v12, v6
-; CHECK-NEXT:    vsetvli a1, a1, e8,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v6, (a0), v16, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2_v12m2
 ; CHECK-NEXT:    ret
@@ -759,7 +759,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.vloxseg2.mask.nxv1i6
 define <vscale x 1 x i64> @test_vloxseg2_nxv1i64_nxv1i64(i64* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1i64_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -773,7 +773,7 @@ define <vscale x 1 x i64> @test_vloxseg2_mask_nxv1i64_nxv1i64(<vscale x 1 x i64>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1i64_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -789,7 +789,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.vloxseg2.mask.nxv1i6
 define <vscale x 1 x i64> @test_vloxseg2_nxv1i64_nxv1i32(i64* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1i64_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -803,7 +803,7 @@ define <vscale x 1 x i64> @test_vloxseg2_mask_nxv1i64_nxv1i32(<vscale x 1 x i64>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1i64_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -819,7 +819,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.vloxseg2.mask.nxv1i6
 define <vscale x 1 x i64> @test_vloxseg2_nxv1i64_nxv1i16(i64* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1i64_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -833,7 +833,7 @@ define <vscale x 1 x i64> @test_vloxseg2_mask_nxv1i64_nxv1i16(<vscale x 1 x i64>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1i64_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -849,7 +849,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.vloxseg2.mask.nxv1i6
 define <vscale x 1 x i64> @test_vloxseg2_nxv1i64_nxv1i8(i64* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1i64_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -863,7 +863,7 @@ define <vscale x 1 x i64> @test_vloxseg2_mask_nxv1i64_nxv1i8(<vscale x 1 x i64> 
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1i64_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -879,7 +879,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.v
 define <vscale x 1 x i64> @test_vloxseg3_nxv1i64_nxv1i64(i64* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1i64_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -895,7 +895,7 @@ define <vscale x 1 x i64> @test_vloxseg3_mask_nxv1i64_nxv1i64(<vscale x 1 x i64>
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -911,7 +911,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.v
 define <vscale x 1 x i64> @test_vloxseg3_nxv1i64_nxv1i32(i64* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1i64_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -927,7 +927,7 @@ define <vscale x 1 x i64> @test_vloxseg3_mask_nxv1i64_nxv1i32(<vscale x 1 x i64>
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -943,7 +943,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.v
 define <vscale x 1 x i64> @test_vloxseg3_nxv1i64_nxv1i16(i64* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1i64_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -959,7 +959,7 @@ define <vscale x 1 x i64> @test_vloxseg3_mask_nxv1i64_nxv1i16(<vscale x 1 x i64>
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -975,7 +975,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>} @llvm.riscv.v
 define <vscale x 1 x i64> @test_vloxseg3_nxv1i64_nxv1i8(i64* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1i64_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -991,7 +991,7 @@ define <vscale x 1 x i64> @test_vloxseg3_mask_nxv1i64_nxv1i8(<vscale x 1 x i64> 
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1007,7 +1007,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x 
 define <vscale x 1 x i64> @test_vloxseg4_nxv1i64_nxv1i64(i64* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1i64_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1024,7 +1024,7 @@ define <vscale x 1 x i64> @test_vloxseg4_mask_nxv1i64_nxv1i64(<vscale x 1 x i64>
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1040,7 +1040,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x 
 define <vscale x 1 x i64> @test_vloxseg4_nxv1i64_nxv1i32(i64* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1i64_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1057,7 +1057,7 @@ define <vscale x 1 x i64> @test_vloxseg4_mask_nxv1i64_nxv1i32(<vscale x 1 x i64>
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1073,7 +1073,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x 
 define <vscale x 1 x i64> @test_vloxseg4_nxv1i64_nxv1i16(i64* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1i64_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1090,7 +1090,7 @@ define <vscale x 1 x i64> @test_vloxseg4_mask_nxv1i64_nxv1i16(<vscale x 1 x i64>
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1106,7 +1106,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x 
 define <vscale x 1 x i64> @test_vloxseg4_nxv1i64_nxv1i8(i64* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1i64_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1123,7 +1123,7 @@ define <vscale x 1 x i64> @test_vloxseg4_mask_nxv1i64_nxv1i8(<vscale x 1 x i64> 
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1139,7 +1139,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x 
 define <vscale x 1 x i64> @test_vloxseg5_nxv1i64_nxv1i64(i64* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1i64_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1157,7 +1157,7 @@ define <vscale x 1 x i64> @test_vloxseg5_mask_nxv1i64_nxv1i64(<vscale x 1 x i64>
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1173,7 +1173,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x 
 define <vscale x 1 x i64> @test_vloxseg5_nxv1i64_nxv1i32(i64* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1i64_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1191,7 +1191,7 @@ define <vscale x 1 x i64> @test_vloxseg5_mask_nxv1i64_nxv1i32(<vscale x 1 x i64>
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1207,7 +1207,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x 
 define <vscale x 1 x i64> @test_vloxseg5_nxv1i64_nxv1i16(i64* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1i64_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1225,7 +1225,7 @@ define <vscale x 1 x i64> @test_vloxseg5_mask_nxv1i64_nxv1i16(<vscale x 1 x i64>
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1241,7 +1241,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x 
 define <vscale x 1 x i64> @test_vloxseg5_nxv1i64_nxv1i8(i64* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1i64_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1259,7 +1259,7 @@ define <vscale x 1 x i64> @test_vloxseg5_mask_nxv1i64_nxv1i8(<vscale x 1 x i64> 
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1275,7 +1275,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x 
 define <vscale x 1 x i64> @test_vloxseg6_nxv1i64_nxv1i64(i64* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1i64_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1294,7 +1294,7 @@ define <vscale x 1 x i64> @test_vloxseg6_mask_nxv1i64_nxv1i64(<vscale x 1 x i64>
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1310,7 +1310,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x 
 define <vscale x 1 x i64> @test_vloxseg6_nxv1i64_nxv1i32(i64* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1i64_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1329,7 +1329,7 @@ define <vscale x 1 x i64> @test_vloxseg6_mask_nxv1i64_nxv1i32(<vscale x 1 x i64>
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1345,7 +1345,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x 
 define <vscale x 1 x i64> @test_vloxseg6_nxv1i64_nxv1i16(i64* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1i64_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1364,7 +1364,7 @@ define <vscale x 1 x i64> @test_vloxseg6_mask_nxv1i64_nxv1i16(<vscale x 1 x i64>
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1380,7 +1380,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x 
 define <vscale x 1 x i64> @test_vloxseg6_nxv1i64_nxv1i8(i64* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1i64_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1399,7 +1399,7 @@ define <vscale x 1 x i64> @test_vloxseg6_mask_nxv1i64_nxv1i8(<vscale x 1 x i64> 
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1415,7 +1415,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x 
 define <vscale x 1 x i64> @test_vloxseg7_nxv1i64_nxv1i64(i64* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1i64_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1435,7 +1435,7 @@ define <vscale x 1 x i64> @test_vloxseg7_mask_nxv1i64_nxv1i64(<vscale x 1 x i64>
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1451,7 +1451,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x 
 define <vscale x 1 x i64> @test_vloxseg7_nxv1i64_nxv1i32(i64* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1i64_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1471,7 +1471,7 @@ define <vscale x 1 x i64> @test_vloxseg7_mask_nxv1i64_nxv1i32(<vscale x 1 x i64>
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1487,7 +1487,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x 
 define <vscale x 1 x i64> @test_vloxseg7_nxv1i64_nxv1i16(i64* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1i64_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1507,7 +1507,7 @@ define <vscale x 1 x i64> @test_vloxseg7_mask_nxv1i64_nxv1i16(<vscale x 1 x i64>
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1523,7 +1523,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x 
 define <vscale x 1 x i64> @test_vloxseg7_nxv1i64_nxv1i8(i64* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1i64_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1543,7 +1543,7 @@ define <vscale x 1 x i64> @test_vloxseg7_mask_nxv1i64_nxv1i8(<vscale x 1 x i64> 
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1559,7 +1559,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x 
 define <vscale x 1 x i64> @test_vloxseg8_nxv1i64_nxv1i64(i64* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1i64_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1580,7 +1580,7 @@ define <vscale x 1 x i64> @test_vloxseg8_mask_nxv1i64_nxv1i64(<vscale x 1 x i64>
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -1596,7 +1596,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x 
 define <vscale x 1 x i64> @test_vloxseg8_nxv1i64_nxv1i32(i64* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1i64_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1617,7 +1617,7 @@ define <vscale x 1 x i64> @test_vloxseg8_mask_nxv1i64_nxv1i32(<vscale x 1 x i64>
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -1633,7 +1633,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x 
 define <vscale x 1 x i64> @test_vloxseg8_nxv1i64_nxv1i16(i64* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1i64_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1654,7 +1654,7 @@ define <vscale x 1 x i64> @test_vloxseg8_mask_nxv1i64_nxv1i16(<vscale x 1 x i64>
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -1670,7 +1670,7 @@ declare {<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x i64>,<vscale x 1 x 
 define <vscale x 1 x i64> @test_vloxseg8_nxv1i64_nxv1i8(i64* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1i64_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1691,7 +1691,7 @@ define <vscale x 1 x i64> @test_vloxseg8_mask_nxv1i64_nxv1i8(<vscale x 1 x i64> 
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -1707,7 +1707,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vloxseg2.mask.nxv1i3
 define <vscale x 1 x i32> @test_vloxseg2_nxv1i32_nxv1i64(i32* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1i32_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1721,7 +1721,7 @@ define <vscale x 1 x i32> @test_vloxseg2_mask_nxv1i32_nxv1i64(<vscale x 1 x i32>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1i32_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -1737,7 +1737,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vloxseg2.mask.nxv1i3
 define <vscale x 1 x i32> @test_vloxseg2_nxv1i32_nxv1i32(i32* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1i32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1751,7 +1751,7 @@ define <vscale x 1 x i32> @test_vloxseg2_mask_nxv1i32_nxv1i32(<vscale x 1 x i32>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1i32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -1767,7 +1767,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vloxseg2.mask.nxv1i3
 define <vscale x 1 x i32> @test_vloxseg2_nxv1i32_nxv1i16(i32* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1i32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1781,7 +1781,7 @@ define <vscale x 1 x i32> @test_vloxseg2_mask_nxv1i32_nxv1i16(<vscale x 1 x i32>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1i32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -1797,7 +1797,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.vloxseg2.mask.nxv1i3
 define <vscale x 1 x i32> @test_vloxseg2_nxv1i32_nxv1i8(i32* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1i32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1811,7 +1811,7 @@ define <vscale x 1 x i32> @test_vloxseg2_mask_nxv1i32_nxv1i8(<vscale x 1 x i32> 
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1i32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -1827,7 +1827,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.v
 define <vscale x 1 x i32> @test_vloxseg3_nxv1i32_nxv1i64(i32* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1i32_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1843,7 +1843,7 @@ define <vscale x 1 x i32> @test_vloxseg3_mask_nxv1i32_nxv1i64(<vscale x 1 x i32>
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1859,7 +1859,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.v
 define <vscale x 1 x i32> @test_vloxseg3_nxv1i32_nxv1i32(i32* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1i32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1875,7 +1875,7 @@ define <vscale x 1 x i32> @test_vloxseg3_mask_nxv1i32_nxv1i32(<vscale x 1 x i32>
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1891,7 +1891,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.v
 define <vscale x 1 x i32> @test_vloxseg3_nxv1i32_nxv1i16(i32* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1i32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1907,7 +1907,7 @@ define <vscale x 1 x i32> @test_vloxseg3_mask_nxv1i32_nxv1i16(<vscale x 1 x i32>
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1923,7 +1923,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>} @llvm.riscv.v
 define <vscale x 1 x i32> @test_vloxseg3_nxv1i32_nxv1i8(i32* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1i32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1939,7 +1939,7 @@ define <vscale x 1 x i32> @test_vloxseg3_mask_nxv1i32_nxv1i8(<vscale x 1 x i32> 
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1955,7 +1955,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vloxseg4_nxv1i32_nxv1i64(i32* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1i32_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -1972,7 +1972,7 @@ define <vscale x 1 x i32> @test_vloxseg4_mask_nxv1i32_nxv1i64(<vscale x 1 x i32>
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -1988,7 +1988,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vloxseg4_nxv1i32_nxv1i32(i32* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1i32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -2005,7 +2005,7 @@ define <vscale x 1 x i32> @test_vloxseg4_mask_nxv1i32_nxv1i32(<vscale x 1 x i32>
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2021,7 +2021,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vloxseg4_nxv1i32_nxv1i16(i32* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1i32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -2038,7 +2038,7 @@ define <vscale x 1 x i32> @test_vloxseg4_mask_nxv1i32_nxv1i16(<vscale x 1 x i32>
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2054,7 +2054,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vloxseg4_nxv1i32_nxv1i8(i32* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1i32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -2071,7 +2071,7 @@ define <vscale x 1 x i32> @test_vloxseg4_mask_nxv1i32_nxv1i8(<vscale x 1 x i32> 
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2087,7 +2087,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vloxseg5_nxv1i32_nxv1i64(i32* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1i32_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -2105,7 +2105,7 @@ define <vscale x 1 x i32> @test_vloxseg5_mask_nxv1i32_nxv1i64(<vscale x 1 x i32>
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2121,7 +2121,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vloxseg5_nxv1i32_nxv1i32(i32* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1i32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -2139,7 +2139,7 @@ define <vscale x 1 x i32> @test_vloxseg5_mask_nxv1i32_nxv1i32(<vscale x 1 x i32>
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2155,7 +2155,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vloxseg5_nxv1i32_nxv1i16(i32* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1i32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -2173,7 +2173,7 @@ define <vscale x 1 x i32> @test_vloxseg5_mask_nxv1i32_nxv1i16(<vscale x 1 x i32>
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2189,7 +2189,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vloxseg5_nxv1i32_nxv1i8(i32* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1i32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -2207,7 +2207,7 @@ define <vscale x 1 x i32> @test_vloxseg5_mask_nxv1i32_nxv1i8(<vscale x 1 x i32> 
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2223,7 +2223,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vloxseg6_nxv1i32_nxv1i64(i32* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1i32_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -2242,7 +2242,7 @@ define <vscale x 1 x i32> @test_vloxseg6_mask_nxv1i32_nxv1i64(<vscale x 1 x i32>
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2258,7 +2258,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vloxseg6_nxv1i32_nxv1i32(i32* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1i32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -2277,7 +2277,7 @@ define <vscale x 1 x i32> @test_vloxseg6_mask_nxv1i32_nxv1i32(<vscale x 1 x i32>
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2293,7 +2293,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vloxseg6_nxv1i32_nxv1i16(i32* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1i32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -2312,7 +2312,7 @@ define <vscale x 1 x i32> @test_vloxseg6_mask_nxv1i32_nxv1i16(<vscale x 1 x i32>
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2328,7 +2328,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vloxseg6_nxv1i32_nxv1i8(i32* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1i32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -2347,7 +2347,7 @@ define <vscale x 1 x i32> @test_vloxseg6_mask_nxv1i32_nxv1i8(<vscale x 1 x i32> 
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2363,7 +2363,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vloxseg7_nxv1i32_nxv1i64(i32* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1i32_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -2383,7 +2383,7 @@ define <vscale x 1 x i32> @test_vloxseg7_mask_nxv1i32_nxv1i64(<vscale x 1 x i32>
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2399,7 +2399,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vloxseg7_nxv1i32_nxv1i32(i32* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1i32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -2419,7 +2419,7 @@ define <vscale x 1 x i32> @test_vloxseg7_mask_nxv1i32_nxv1i32(<vscale x 1 x i32>
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2435,7 +2435,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vloxseg7_nxv1i32_nxv1i16(i32* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1i32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -2455,7 +2455,7 @@ define <vscale x 1 x i32> @test_vloxseg7_mask_nxv1i32_nxv1i16(<vscale x 1 x i32>
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2471,7 +2471,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vloxseg7_nxv1i32_nxv1i8(i32* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1i32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -2491,7 +2491,7 @@ define <vscale x 1 x i32> @test_vloxseg7_mask_nxv1i32_nxv1i8(<vscale x 1 x i32> 
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2507,7 +2507,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vloxseg8_nxv1i32_nxv1i64(i32* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1i32_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -2528,7 +2528,7 @@ define <vscale x 1 x i32> @test_vloxseg8_mask_nxv1i32_nxv1i64(<vscale x 1 x i32>
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -2544,7 +2544,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vloxseg8_nxv1i32_nxv1i32(i32* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1i32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -2565,7 +2565,7 @@ define <vscale x 1 x i32> @test_vloxseg8_mask_nxv1i32_nxv1i32(<vscale x 1 x i32>
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -2581,7 +2581,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vloxseg8_nxv1i32_nxv1i16(i32* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1i32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -2602,7 +2602,7 @@ define <vscale x 1 x i32> @test_vloxseg8_mask_nxv1i32_nxv1i16(<vscale x 1 x i32>
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -2618,7 +2618,7 @@ declare {<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x i32>,<vscale x 1 x 
 define <vscale x 1 x i32> @test_vloxseg8_nxv1i32_nxv1i8(i32* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1i32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -2639,7 +2639,7 @@ define <vscale x 1 x i32> @test_vloxseg8_mask_nxv1i32_nxv1i8(<vscale x 1 x i32> 
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -2655,7 +2655,7 @@ declare {<vscale x 8 x i16>,<vscale x 8 x i16>} @llvm.riscv.vloxseg2.mask.nxv8i1
 define <vscale x 8 x i16> @test_vloxseg2_nxv8i16_nxv8i16(i16* %base, <vscale x 8 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv8i16_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2669,7 +2669,7 @@ define <vscale x 8 x i16> @test_vloxseg2_mask_nxv8i16_nxv8i16(<vscale x 8 x i16>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv8i16_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v6, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -2685,7 +2685,7 @@ declare {<vscale x 8 x i16>,<vscale x 8 x i16>} @llvm.riscv.vloxseg2.mask.nxv8i1
 define <vscale x 8 x i16> @test_vloxseg2_nxv8i16_nxv8i8(i16* %base, <vscale x 8 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv8i16_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2699,7 +2699,7 @@ define <vscale x 8 x i16> @test_vloxseg2_mask_nxv8i16_nxv8i8(<vscale x 8 x i16> 
 ; CHECK-LABEL: test_vloxseg2_mask_nxv8i16_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v6, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -2715,7 +2715,7 @@ declare {<vscale x 8 x i16>,<vscale x 8 x i16>} @llvm.riscv.vloxseg2.mask.nxv8i1
 define <vscale x 8 x i16> @test_vloxseg2_nxv8i16_nxv8i64(i16* %base, <vscale x 8 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv8i16_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2729,7 +2729,7 @@ define <vscale x 8 x i16> @test_vloxseg2_mask_nxv8i16_nxv8i64(<vscale x 8 x i16>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv8i16_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v6, (a0), v16, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -2745,7 +2745,7 @@ declare {<vscale x 8 x i16>,<vscale x 8 x i16>} @llvm.riscv.vloxseg2.mask.nxv8i1
 define <vscale x 8 x i16> @test_vloxseg2_nxv8i16_nxv8i32(i16* %base, <vscale x 8 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv8i16_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2759,7 +2759,7 @@ define <vscale x 8 x i16> @test_vloxseg2_mask_nxv8i16_nxv8i32(<vscale x 8 x i16>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv8i16_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v6, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -2775,7 +2775,7 @@ declare {<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>} @llvm.riscv.v
 define <vscale x 8 x i16> @test_vloxseg3_nxv8i16_nxv8i16(i16* %base, <vscale x 8 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv8i16_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2791,7 +2791,7 @@ define <vscale x 8 x i16> @test_vloxseg3_mask_nxv8i16_nxv8i16(<vscale x 8 x i16>
 ; CHECK-NEXT:    vmv2r.v v2, v8
 ; CHECK-NEXT:    vmv2r.v v4, v2
 ; CHECK-NEXT:    vmv2r.v v6, v2
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v2, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -2807,7 +2807,7 @@ declare {<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>} @llvm.riscv.v
 define <vscale x 8 x i16> @test_vloxseg3_nxv8i16_nxv8i8(i16* %base, <vscale x 8 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv8i16_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2823,7 +2823,7 @@ define <vscale x 8 x i16> @test_vloxseg3_mask_nxv8i16_nxv8i8(<vscale x 8 x i16> 
 ; CHECK-NEXT:    vmv2r.v v2, v8
 ; CHECK-NEXT:    vmv2r.v v4, v2
 ; CHECK-NEXT:    vmv2r.v v6, v2
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v2, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -2839,7 +2839,7 @@ declare {<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>} @llvm.riscv.v
 define <vscale x 8 x i16> @test_vloxseg3_nxv8i16_nxv8i64(i16* %base, <vscale x 8 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv8i16_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2854,7 +2854,7 @@ define <vscale x 8 x i16> @test_vloxseg3_mask_nxv8i16_nxv8i64(<vscale x 8 x i16>
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
 ; CHECK-NEXT:    vmv2r.v v10, v6
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v6, (a0), v16, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
@@ -2870,7 +2870,7 @@ declare {<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>} @llvm.riscv.v
 define <vscale x 8 x i16> @test_vloxseg3_nxv8i16_nxv8i32(i16* %base, <vscale x 8 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv8i16_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2885,7 +2885,7 @@ define <vscale x 8 x i16> @test_vloxseg3_mask_nxv8i16_nxv8i32(<vscale x 8 x i16>
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
 ; CHECK-NEXT:    vmv2r.v v10, v6
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v6, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
@@ -2901,7 +2901,7 @@ declare {<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x 
 define <vscale x 8 x i16> @test_vloxseg4_nxv8i16_nxv8i16(i16* %base, <vscale x 8 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv8i16_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2918,7 +2918,7 @@ define <vscale x 8 x i16> @test_vloxseg4_mask_nxv8i16_nxv8i16(<vscale x 8 x i16>
 ; CHECK-NEXT:    vmv2r.v v14, v12
 ; CHECK-NEXT:    vmv2r.v v16, v12
 ; CHECK-NEXT:    vmv2r.v v18, v12
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v14
 ; CHECK-NEXT:    ret
@@ -2934,7 +2934,7 @@ declare {<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x 
 define <vscale x 8 x i16> @test_vloxseg4_nxv8i16_nxv8i8(i16* %base, <vscale x 8 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv8i16_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2951,7 +2951,7 @@ define <vscale x 8 x i16> @test_vloxseg4_mask_nxv8i16_nxv8i8(<vscale x 8 x i16> 
 ; CHECK-NEXT:    vmv2r.v v14, v12
 ; CHECK-NEXT:    vmv2r.v v16, v12
 ; CHECK-NEXT:    vmv2r.v v18, v12
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v14
 ; CHECK-NEXT:    ret
@@ -2967,7 +2967,7 @@ declare {<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x 
 define <vscale x 8 x i16> @test_vloxseg4_nxv8i16_nxv8i64(i16* %base, <vscale x 8 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv8i16_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -2983,7 +2983,7 @@ define <vscale x 8 x i16> @test_vloxseg4_mask_nxv8i16_nxv8i64(<vscale x 8 x i16>
 ; CHECK-NEXT:    vmv2r.v v6, v8
 ; CHECK-NEXT:    vmv2r.v v10, v6
 ; CHECK-NEXT:    vmv2r.v v12, v6
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v6, (a0), v16, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2_v12m2
 ; CHECK-NEXT:    ret
@@ -2999,7 +2999,7 @@ declare {<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x i16>,<vscale x 8 x 
 define <vscale x 8 x i16> @test_vloxseg4_nxv8i16_nxv8i32(i16* %base, <vscale x 8 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv8i16_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -3016,7 +3016,7 @@ define <vscale x 8 x i16> @test_vloxseg4_mask_nxv8i16_nxv8i32(<vscale x 8 x i16>
 ; CHECK-NEXT:    vmv2r.v v18, v16
 ; CHECK-NEXT:    vmv2r.v v20, v16
 ; CHECK-NEXT:    vmv2r.v v22, v16
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v16, (a0), v12, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v18
 ; CHECK-NEXT:    ret
@@ -3032,7 +3032,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vloxseg2.mask.nxv4i8.n
 define <vscale x 4 x i8> @test_vloxseg2_nxv4i8_nxv4i32(i8* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4i8_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3046,7 +3046,7 @@ define <vscale x 4 x i8> @test_vloxseg2_mask_nxv4i8_nxv4i32(<vscale x 4 x i8> %v
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4i8_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v7, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -3062,7 +3062,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vloxseg2.mask.nxv4i8.n
 define <vscale x 4 x i8> @test_vloxseg2_nxv4i8_nxv4i8(i8* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4i8_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3076,7 +3076,7 @@ define <vscale x 4 x i8> @test_vloxseg2_mask_nxv4i8_nxv4i8(<vscale x 4 x i8> %va
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4i8_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -3092,7 +3092,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vloxseg2.mask.nxv4i8.n
 define <vscale x 4 x i8> @test_vloxseg2_nxv4i8_nxv4i64(i8* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4i8_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3106,7 +3106,7 @@ define <vscale x 4 x i8> @test_vloxseg2_mask_nxv4i8_nxv4i64(<vscale x 4 x i8> %v
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4i8_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v7, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -3122,7 +3122,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vloxseg2.mask.nxv4i8.n
 define <vscale x 4 x i8> @test_vloxseg2_nxv4i8_nxv4i16(i8* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4i8_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3136,7 +3136,7 @@ define <vscale x 4 x i8> @test_vloxseg2_mask_nxv4i8_nxv4i16(<vscale x 4 x i8> %v
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4i8_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -3152,7 +3152,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vlox
 define <vscale x 4 x i8> @test_vloxseg3_nxv4i8_nxv4i32(i8* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv4i8_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3167,7 +3167,7 @@ define <vscale x 4 x i8> @test_vloxseg3_mask_nxv4i8_nxv4i32(<vscale x 4 x i8> %v
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
 ; CHECK-NEXT:    vmv1r.v v9, v7
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v7, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
@@ -3183,7 +3183,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vlox
 define <vscale x 4 x i8> @test_vloxseg3_nxv4i8_nxv4i8(i8* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv4i8_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3199,7 +3199,7 @@ define <vscale x 4 x i8> @test_vloxseg3_mask_nxv4i8_nxv4i8(<vscale x 4 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -3215,7 +3215,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vlox
 define <vscale x 4 x i8> @test_vloxseg3_nxv4i8_nxv4i64(i8* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv4i8_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3230,7 +3230,7 @@ define <vscale x 4 x i8> @test_vloxseg3_mask_nxv4i8_nxv4i64(<vscale x 4 x i8> %v
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
 ; CHECK-NEXT:    vmv1r.v v9, v7
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v7, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
@@ -3246,7 +3246,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>} @llvm.riscv.vlox
 define <vscale x 4 x i8> @test_vloxseg3_nxv4i8_nxv4i16(i8* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv4i8_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3262,7 +3262,7 @@ define <vscale x 4 x i8> @test_vloxseg3_mask_nxv4i8_nxv4i16(<vscale x 4 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -3278,7 +3278,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vloxseg4_nxv4i8_nxv4i32(i8* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv4i8_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3295,7 +3295,7 @@ define <vscale x 4 x i8> @test_vloxseg4_mask_nxv4i8_nxv4i32(<vscale x 4 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -3311,7 +3311,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vloxseg4_nxv4i8_nxv4i8(i8* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv4i8_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3328,7 +3328,7 @@ define <vscale x 4 x i8> @test_vloxseg4_mask_nxv4i8_nxv4i8(<vscale x 4 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -3344,7 +3344,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vloxseg4_nxv4i8_nxv4i64(i8* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv4i8_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3360,7 +3360,7 @@ define <vscale x 4 x i8> @test_vloxseg4_mask_nxv4i8_nxv4i64(<vscale x 4 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v7, v8
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v7, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
@@ -3376,7 +3376,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vloxseg4_nxv4i8_nxv4i16(i8* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv4i8_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3393,7 +3393,7 @@ define <vscale x 4 x i8> @test_vloxseg4_mask_nxv4i8_nxv4i16(<vscale x 4 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -3409,7 +3409,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vloxseg5_nxv4i8_nxv4i32(i8* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv4i8_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3427,7 +3427,7 @@ define <vscale x 4 x i8> @test_vloxseg5_mask_nxv4i8_nxv4i32(<vscale x 4 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -3443,7 +3443,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vloxseg5_nxv4i8_nxv4i8(i8* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv4i8_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3461,7 +3461,7 @@ define <vscale x 4 x i8> @test_vloxseg5_mask_nxv4i8_nxv4i8(<vscale x 4 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -3477,7 +3477,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vloxseg5_nxv4i8_nxv4i64(i8* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv4i8_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3494,7 +3494,7 @@ define <vscale x 4 x i8> @test_vloxseg5_mask_nxv4i8_nxv4i64(<vscale x 4 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v7, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
@@ -3510,7 +3510,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vloxseg5_nxv4i8_nxv4i16(i8* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv4i8_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3528,7 +3528,7 @@ define <vscale x 4 x i8> @test_vloxseg5_mask_nxv4i8_nxv4i16(<vscale x 4 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -3544,7 +3544,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vloxseg6_nxv4i8_nxv4i32(i8* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv4i8_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3563,7 +3563,7 @@ define <vscale x 4 x i8> @test_vloxseg6_mask_nxv4i8_nxv4i32(<vscale x 4 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -3579,7 +3579,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vloxseg6_nxv4i8_nxv4i8(i8* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv4i8_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3598,7 +3598,7 @@ define <vscale x 4 x i8> @test_vloxseg6_mask_nxv4i8_nxv4i8(<vscale x 4 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -3614,7 +3614,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vloxseg6_nxv4i8_nxv4i64(i8* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv4i8_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3633,7 +3633,7 @@ define <vscale x 4 x i8> @test_vloxseg6_mask_nxv4i8_nxv4i64(<vscale x 4 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v1, (a0), v12, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -3649,7 +3649,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vloxseg6_nxv4i8_nxv4i16(i8* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv4i8_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3668,7 +3668,7 @@ define <vscale x 4 x i8> @test_vloxseg6_mask_nxv4i8_nxv4i16(<vscale x 4 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -3684,7 +3684,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vloxseg7_nxv4i8_nxv4i32(i8* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv4i8_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3704,7 +3704,7 @@ define <vscale x 4 x i8> @test_vloxseg7_mask_nxv4i8_nxv4i32(<vscale x 4 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -3720,7 +3720,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vloxseg7_nxv4i8_nxv4i8(i8* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv4i8_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3740,7 +3740,7 @@ define <vscale x 4 x i8> @test_vloxseg7_mask_nxv4i8_nxv4i8(<vscale x 4 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -3756,7 +3756,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vloxseg7_nxv4i8_nxv4i64(i8* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv4i8_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3776,7 +3776,7 @@ define <vscale x 4 x i8> @test_vloxseg7_mask_nxv4i8_nxv4i64(<vscale x 4 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v1, (a0), v12, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -3792,7 +3792,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vloxseg7_nxv4i8_nxv4i16(i8* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv4i8_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3812,7 +3812,7 @@ define <vscale x 4 x i8> @test_vloxseg7_mask_nxv4i8_nxv4i16(<vscale x 4 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -3828,7 +3828,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vloxseg8_nxv4i8_nxv4i32(i8* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv4i8_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3849,7 +3849,7 @@ define <vscale x 4 x i8> @test_vloxseg8_mask_nxv4i8_nxv4i32(<vscale x 4 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v17, v12
 ; CHECK-NEXT:    vmv1r.v v18, v12
 ; CHECK-NEXT:    vmv1r.v v19, v12
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v13
 ; CHECK-NEXT:    ret
@@ -3865,7 +3865,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vloxseg8_nxv4i8_nxv4i8(i8* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv4i8_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3886,7 +3886,7 @@ define <vscale x 4 x i8> @test_vloxseg8_mask_nxv4i8_nxv4i8(<vscale x 4 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -3902,7 +3902,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vloxseg8_nxv4i8_nxv4i64(i8* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv4i8_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3923,7 +3923,7 @@ define <vscale x 4 x i8> @test_vloxseg8_mask_nxv4i8_nxv4i64(<vscale x 4 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v21, v16
 ; CHECK-NEXT:    vmv1r.v v22, v16
 ; CHECK-NEXT:    vmv1r.v v23, v16
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v16, (a0), v12, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v17
 ; CHECK-NEXT:    ret
@@ -3939,7 +3939,7 @@ declare {<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>,<vscale x 4 x i8>
 define <vscale x 4 x i8> @test_vloxseg8_nxv4i8_nxv4i16(i8* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv4i8_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3960,7 +3960,7 @@ define <vscale x 4 x i8> @test_vloxseg8_mask_nxv4i8_nxv4i16(<vscale x 4 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -3976,7 +3976,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.vloxseg2.mask.nxv1i1
 define <vscale x 1 x i16> @test_vloxseg2_nxv1i16_nxv1i64(i16* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1i16_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -3990,7 +3990,7 @@ define <vscale x 1 x i16> @test_vloxseg2_mask_nxv1i16_nxv1i64(<vscale x 1 x i16>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1i16_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -4006,7 +4006,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.vloxseg2.mask.nxv1i1
 define <vscale x 1 x i16> @test_vloxseg2_nxv1i16_nxv1i32(i16* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1i16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4020,7 +4020,7 @@ define <vscale x 1 x i16> @test_vloxseg2_mask_nxv1i16_nxv1i32(<vscale x 1 x i16>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1i16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -4036,7 +4036,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.vloxseg2.mask.nxv1i1
 define <vscale x 1 x i16> @test_vloxseg2_nxv1i16_nxv1i16(i16* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1i16_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4050,7 +4050,7 @@ define <vscale x 1 x i16> @test_vloxseg2_mask_nxv1i16_nxv1i16(<vscale x 1 x i16>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1i16_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -4066,7 +4066,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.vloxseg2.mask.nxv1i1
 define <vscale x 1 x i16> @test_vloxseg2_nxv1i16_nxv1i8(i16* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1i16_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4080,7 +4080,7 @@ define <vscale x 1 x i16> @test_vloxseg2_mask_nxv1i16_nxv1i8(<vscale x 1 x i16> 
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1i16_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -4096,7 +4096,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.v
 define <vscale x 1 x i16> @test_vloxseg3_nxv1i16_nxv1i64(i16* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1i16_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4112,7 +4112,7 @@ define <vscale x 1 x i16> @test_vloxseg3_mask_nxv1i16_nxv1i64(<vscale x 1 x i16>
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -4128,7 +4128,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.v
 define <vscale x 1 x i16> @test_vloxseg3_nxv1i16_nxv1i32(i16* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1i16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4144,7 +4144,7 @@ define <vscale x 1 x i16> @test_vloxseg3_mask_nxv1i16_nxv1i32(<vscale x 1 x i16>
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -4160,7 +4160,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.v
 define <vscale x 1 x i16> @test_vloxseg3_nxv1i16_nxv1i16(i16* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1i16_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4176,7 +4176,7 @@ define <vscale x 1 x i16> @test_vloxseg3_mask_nxv1i16_nxv1i16(<vscale x 1 x i16>
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -4192,7 +4192,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>} @llvm.riscv.v
 define <vscale x 1 x i16> @test_vloxseg3_nxv1i16_nxv1i8(i16* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1i16_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4208,7 +4208,7 @@ define <vscale x 1 x i16> @test_vloxseg3_mask_nxv1i16_nxv1i8(<vscale x 1 x i16> 
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -4224,7 +4224,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vloxseg4_nxv1i16_nxv1i64(i16* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1i16_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4241,7 +4241,7 @@ define <vscale x 1 x i16> @test_vloxseg4_mask_nxv1i16_nxv1i64(<vscale x 1 x i16>
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -4257,7 +4257,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vloxseg4_nxv1i16_nxv1i32(i16* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1i16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4274,7 +4274,7 @@ define <vscale x 1 x i16> @test_vloxseg4_mask_nxv1i16_nxv1i32(<vscale x 1 x i16>
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -4290,7 +4290,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vloxseg4_nxv1i16_nxv1i16(i16* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1i16_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4307,7 +4307,7 @@ define <vscale x 1 x i16> @test_vloxseg4_mask_nxv1i16_nxv1i16(<vscale x 1 x i16>
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -4323,7 +4323,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vloxseg4_nxv1i16_nxv1i8(i16* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1i16_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4340,7 +4340,7 @@ define <vscale x 1 x i16> @test_vloxseg4_mask_nxv1i16_nxv1i8(<vscale x 1 x i16> 
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -4356,7 +4356,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vloxseg5_nxv1i16_nxv1i64(i16* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1i16_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4374,7 +4374,7 @@ define <vscale x 1 x i16> @test_vloxseg5_mask_nxv1i16_nxv1i64(<vscale x 1 x i16>
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -4390,7 +4390,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vloxseg5_nxv1i16_nxv1i32(i16* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1i16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4408,7 +4408,7 @@ define <vscale x 1 x i16> @test_vloxseg5_mask_nxv1i16_nxv1i32(<vscale x 1 x i16>
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -4424,7 +4424,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vloxseg5_nxv1i16_nxv1i16(i16* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1i16_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4442,7 +4442,7 @@ define <vscale x 1 x i16> @test_vloxseg5_mask_nxv1i16_nxv1i16(<vscale x 1 x i16>
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -4458,7 +4458,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vloxseg5_nxv1i16_nxv1i8(i16* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1i16_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4476,7 +4476,7 @@ define <vscale x 1 x i16> @test_vloxseg5_mask_nxv1i16_nxv1i8(<vscale x 1 x i16> 
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -4492,7 +4492,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vloxseg6_nxv1i16_nxv1i64(i16* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1i16_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4511,7 +4511,7 @@ define <vscale x 1 x i16> @test_vloxseg6_mask_nxv1i16_nxv1i64(<vscale x 1 x i16>
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -4527,7 +4527,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vloxseg6_nxv1i16_nxv1i32(i16* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1i16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4546,7 +4546,7 @@ define <vscale x 1 x i16> @test_vloxseg6_mask_nxv1i16_nxv1i32(<vscale x 1 x i16>
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -4562,7 +4562,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vloxseg6_nxv1i16_nxv1i16(i16* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1i16_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4581,7 +4581,7 @@ define <vscale x 1 x i16> @test_vloxseg6_mask_nxv1i16_nxv1i16(<vscale x 1 x i16>
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -4597,7 +4597,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vloxseg6_nxv1i16_nxv1i8(i16* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1i16_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4616,7 +4616,7 @@ define <vscale x 1 x i16> @test_vloxseg6_mask_nxv1i16_nxv1i8(<vscale x 1 x i16> 
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -4632,7 +4632,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vloxseg7_nxv1i16_nxv1i64(i16* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1i16_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4652,7 +4652,7 @@ define <vscale x 1 x i16> @test_vloxseg7_mask_nxv1i16_nxv1i64(<vscale x 1 x i16>
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -4668,7 +4668,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vloxseg7_nxv1i16_nxv1i32(i16* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1i16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4688,7 +4688,7 @@ define <vscale x 1 x i16> @test_vloxseg7_mask_nxv1i16_nxv1i32(<vscale x 1 x i16>
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -4704,7 +4704,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vloxseg7_nxv1i16_nxv1i16(i16* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1i16_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4724,7 +4724,7 @@ define <vscale x 1 x i16> @test_vloxseg7_mask_nxv1i16_nxv1i16(<vscale x 1 x i16>
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -4740,7 +4740,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vloxseg7_nxv1i16_nxv1i8(i16* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1i16_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4760,7 +4760,7 @@ define <vscale x 1 x i16> @test_vloxseg7_mask_nxv1i16_nxv1i8(<vscale x 1 x i16> 
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -4776,7 +4776,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vloxseg8_nxv1i16_nxv1i64(i16* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1i16_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4797,7 +4797,7 @@ define <vscale x 1 x i16> @test_vloxseg8_mask_nxv1i16_nxv1i64(<vscale x 1 x i16>
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -4813,7 +4813,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vloxseg8_nxv1i16_nxv1i32(i16* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1i16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4834,7 +4834,7 @@ define <vscale x 1 x i16> @test_vloxseg8_mask_nxv1i16_nxv1i32(<vscale x 1 x i16>
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -4850,7 +4850,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vloxseg8_nxv1i16_nxv1i16(i16* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1i16_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4871,7 +4871,7 @@ define <vscale x 1 x i16> @test_vloxseg8_mask_nxv1i16_nxv1i16(<vscale x 1 x i16>
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -4887,7 +4887,7 @@ declare {<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x i16>,<vscale x 1 x 
 define <vscale x 1 x i16> @test_vloxseg8_nxv1i16_nxv1i8(i16* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1i16_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4908,7 +4908,7 @@ define <vscale x 1 x i16> @test_vloxseg8_mask_nxv1i16_nxv1i8(<vscale x 1 x i16> 
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -4924,7 +4924,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vloxseg2.mask.nxv2i3
 define <vscale x 2 x i32> @test_vloxseg2_nxv2i32_nxv2i32(i32* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2i32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4938,7 +4938,7 @@ define <vscale x 2 x i32> @test_vloxseg2_mask_nxv2i32_nxv2i32(<vscale x 2 x i32>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2i32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -4954,7 +4954,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vloxseg2.mask.nxv2i3
 define <vscale x 2 x i32> @test_vloxseg2_nxv2i32_nxv2i8(i32* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2i32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4968,7 +4968,7 @@ define <vscale x 2 x i32> @test_vloxseg2_mask_nxv2i32_nxv2i8(<vscale x 2 x i32> 
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2i32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -4984,7 +4984,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vloxseg2.mask.nxv2i3
 define <vscale x 2 x i32> @test_vloxseg2_nxv2i32_nxv2i16(i32* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2i32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -4998,7 +4998,7 @@ define <vscale x 2 x i32> @test_vloxseg2_mask_nxv2i32_nxv2i16(<vscale x 2 x i32>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2i32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -5014,7 +5014,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.vloxseg2.mask.nxv2i3
 define <vscale x 2 x i32> @test_vloxseg2_nxv2i32_nxv2i64(i32* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2i32_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5028,7 +5028,7 @@ define <vscale x 2 x i32> @test_vloxseg2_mask_nxv2i32_nxv2i64(<vscale x 2 x i32>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2i32_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v7, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -5044,7 +5044,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.v
 define <vscale x 2 x i32> @test_vloxseg3_nxv2i32_nxv2i32(i32* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2i32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5060,7 +5060,7 @@ define <vscale x 2 x i32> @test_vloxseg3_mask_nxv2i32_nxv2i32(<vscale x 2 x i32>
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -5076,7 +5076,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.v
 define <vscale x 2 x i32> @test_vloxseg3_nxv2i32_nxv2i8(i32* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2i32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5092,7 +5092,7 @@ define <vscale x 2 x i32> @test_vloxseg3_mask_nxv2i32_nxv2i8(<vscale x 2 x i32> 
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -5108,7 +5108,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.v
 define <vscale x 2 x i32> @test_vloxseg3_nxv2i32_nxv2i16(i32* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2i32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5124,7 +5124,7 @@ define <vscale x 2 x i32> @test_vloxseg3_mask_nxv2i32_nxv2i16(<vscale x 2 x i32>
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -5140,7 +5140,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>} @llvm.riscv.v
 define <vscale x 2 x i32> @test_vloxseg3_nxv2i32_nxv2i64(i32* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2i32_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5155,7 +5155,7 @@ define <vscale x 2 x i32> @test_vloxseg3_mask_nxv2i32_nxv2i64(<vscale x 2 x i32>
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
 ; CHECK-NEXT:    vmv1r.v v9, v7
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v7, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
@@ -5171,7 +5171,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vloxseg4_nxv2i32_nxv2i32(i32* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2i32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5188,7 +5188,7 @@ define <vscale x 2 x i32> @test_vloxseg4_mask_nxv2i32_nxv2i32(<vscale x 2 x i32>
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -5204,7 +5204,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vloxseg4_nxv2i32_nxv2i8(i32* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2i32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5221,7 +5221,7 @@ define <vscale x 2 x i32> @test_vloxseg4_mask_nxv2i32_nxv2i8(<vscale x 2 x i32> 
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -5237,7 +5237,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vloxseg4_nxv2i32_nxv2i16(i32* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2i32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5254,7 +5254,7 @@ define <vscale x 2 x i32> @test_vloxseg4_mask_nxv2i32_nxv2i16(<vscale x 2 x i32>
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -5270,7 +5270,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vloxseg4_nxv2i32_nxv2i64(i32* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2i32_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5287,7 +5287,7 @@ define <vscale x 2 x i32> @test_vloxseg4_mask_nxv2i32_nxv2i64(<vscale x 2 x i32>
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -5303,7 +5303,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vloxseg5_nxv2i32_nxv2i32(i32* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv2i32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5321,7 +5321,7 @@ define <vscale x 2 x i32> @test_vloxseg5_mask_nxv2i32_nxv2i32(<vscale x 2 x i32>
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -5337,7 +5337,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vloxseg5_nxv2i32_nxv2i8(i32* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv2i32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5355,7 +5355,7 @@ define <vscale x 2 x i32> @test_vloxseg5_mask_nxv2i32_nxv2i8(<vscale x 2 x i32> 
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -5371,7 +5371,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vloxseg5_nxv2i32_nxv2i16(i32* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv2i32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5389,7 +5389,7 @@ define <vscale x 2 x i32> @test_vloxseg5_mask_nxv2i32_nxv2i16(<vscale x 2 x i32>
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -5405,7 +5405,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vloxseg5_nxv2i32_nxv2i64(i32* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv2i32_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5423,7 +5423,7 @@ define <vscale x 2 x i32> @test_vloxseg5_mask_nxv2i32_nxv2i64(<vscale x 2 x i32>
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -5439,7 +5439,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vloxseg6_nxv2i32_nxv2i32(i32* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv2i32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5458,7 +5458,7 @@ define <vscale x 2 x i32> @test_vloxseg6_mask_nxv2i32_nxv2i32(<vscale x 2 x i32>
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -5474,7 +5474,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vloxseg6_nxv2i32_nxv2i8(i32* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv2i32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5493,7 +5493,7 @@ define <vscale x 2 x i32> @test_vloxseg6_mask_nxv2i32_nxv2i8(<vscale x 2 x i32> 
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -5509,7 +5509,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vloxseg6_nxv2i32_nxv2i16(i32* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv2i32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5528,7 +5528,7 @@ define <vscale x 2 x i32> @test_vloxseg6_mask_nxv2i32_nxv2i16(<vscale x 2 x i32>
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -5544,7 +5544,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vloxseg6_nxv2i32_nxv2i64(i32* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv2i32_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5563,7 +5563,7 @@ define <vscale x 2 x i32> @test_vloxseg6_mask_nxv2i32_nxv2i64(<vscale x 2 x i32>
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -5579,7 +5579,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vloxseg7_nxv2i32_nxv2i32(i32* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv2i32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5599,7 +5599,7 @@ define <vscale x 2 x i32> @test_vloxseg7_mask_nxv2i32_nxv2i32(<vscale x 2 x i32>
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -5615,7 +5615,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vloxseg7_nxv2i32_nxv2i8(i32* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv2i32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5635,7 +5635,7 @@ define <vscale x 2 x i32> @test_vloxseg7_mask_nxv2i32_nxv2i8(<vscale x 2 x i32> 
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -5651,7 +5651,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vloxseg7_nxv2i32_nxv2i16(i32* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv2i32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5671,7 +5671,7 @@ define <vscale x 2 x i32> @test_vloxseg7_mask_nxv2i32_nxv2i16(<vscale x 2 x i32>
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -5687,7 +5687,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vloxseg7_nxv2i32_nxv2i64(i32* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv2i32_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5707,7 +5707,7 @@ define <vscale x 2 x i32> @test_vloxseg7_mask_nxv2i32_nxv2i64(<vscale x 2 x i32>
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -5723,7 +5723,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vloxseg8_nxv2i32_nxv2i32(i32* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv2i32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5744,7 +5744,7 @@ define <vscale x 2 x i32> @test_vloxseg8_mask_nxv2i32_nxv2i32(<vscale x 2 x i32>
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -5760,7 +5760,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vloxseg8_nxv2i32_nxv2i8(i32* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv2i32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5781,7 +5781,7 @@ define <vscale x 2 x i32> @test_vloxseg8_mask_nxv2i32_nxv2i8(<vscale x 2 x i32> 
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -5797,7 +5797,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vloxseg8_nxv2i32_nxv2i16(i32* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv2i32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5818,7 +5818,7 @@ define <vscale x 2 x i32> @test_vloxseg8_mask_nxv2i32_nxv2i16(<vscale x 2 x i32>
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -5834,7 +5834,7 @@ declare {<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x i32>,<vscale x 2 x 
 define <vscale x 2 x i32> @test_vloxseg8_nxv2i32_nxv2i64(i32* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv2i32_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5855,7 +5855,7 @@ define <vscale x 2 x i32> @test_vloxseg8_mask_nxv2i32_nxv2i64(<vscale x 2 x i32>
 ; CHECK-NEXT:    vmv1r.v v17, v12
 ; CHECK-NEXT:    vmv1r.v v18, v12
 ; CHECK-NEXT:    vmv1r.v v19, v12
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v13
 ; CHECK-NEXT:    ret
@@ -5871,7 +5871,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vloxseg2.mask.nxv8i8.n
 define <vscale x 8 x i8> @test_vloxseg2_nxv8i8_nxv8i16(i8* %base, <vscale x 8 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv8i8_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5885,7 +5885,7 @@ define <vscale x 8 x i8> @test_vloxseg2_mask_nxv8i8_nxv8i16(<vscale x 8 x i8> %v
 ; CHECK-LABEL: test_vloxseg2_mask_nxv8i8_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v7, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -5901,7 +5901,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vloxseg2.mask.nxv8i8.n
 define <vscale x 8 x i8> @test_vloxseg2_nxv8i8_nxv8i8(i8* %base, <vscale x 8 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv8i8_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5915,7 +5915,7 @@ define <vscale x 8 x i8> @test_vloxseg2_mask_nxv8i8_nxv8i8(<vscale x 8 x i8> %va
 ; CHECK-LABEL: test_vloxseg2_mask_nxv8i8_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -5931,7 +5931,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vloxseg2.mask.nxv8i8.n
 define <vscale x 8 x i8> @test_vloxseg2_nxv8i8_nxv8i64(i8* %base, <vscale x 8 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv8i8_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5945,7 +5945,7 @@ define <vscale x 8 x i8> @test_vloxseg2_mask_nxv8i8_nxv8i64(<vscale x 8 x i8> %v
 ; CHECK-LABEL: test_vloxseg2_mask_nxv8i8_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v7, (a0), v16, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -5961,7 +5961,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vloxseg2.mask.nxv8i8.n
 define <vscale x 8 x i8> @test_vloxseg2_nxv8i8_nxv8i32(i8* %base, <vscale x 8 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv8i8_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -5975,7 +5975,7 @@ define <vscale x 8 x i8> @test_vloxseg2_mask_nxv8i8_nxv8i32(<vscale x 8 x i8> %v
 ; CHECK-LABEL: test_vloxseg2_mask_nxv8i8_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v7, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -5991,7 +5991,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vlox
 define <vscale x 8 x i8> @test_vloxseg3_nxv8i8_nxv8i16(i8* %base, <vscale x 8 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv8i8_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6006,7 +6006,7 @@ define <vscale x 8 x i8> @test_vloxseg3_mask_nxv8i8_nxv8i16(<vscale x 8 x i8> %v
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
 ; CHECK-NEXT:    vmv1r.v v9, v7
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v7, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
@@ -6022,7 +6022,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vlox
 define <vscale x 8 x i8> @test_vloxseg3_nxv8i8_nxv8i8(i8* %base, <vscale x 8 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv8i8_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6038,7 +6038,7 @@ define <vscale x 8 x i8> @test_vloxseg3_mask_nxv8i8_nxv8i8(<vscale x 8 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -6054,7 +6054,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vlox
 define <vscale x 8 x i8> @test_vloxseg3_nxv8i8_nxv8i64(i8* %base, <vscale x 8 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv8i8_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6069,7 +6069,7 @@ define <vscale x 8 x i8> @test_vloxseg3_mask_nxv8i8_nxv8i64(<vscale x 8 x i8> %v
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
 ; CHECK-NEXT:    vmv1r.v v9, v7
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v7, (a0), v16, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
@@ -6085,7 +6085,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>} @llvm.riscv.vlox
 define <vscale x 8 x i8> @test_vloxseg3_nxv8i8_nxv8i32(i8* %base, <vscale x 8 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv8i8_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6100,7 +6100,7 @@ define <vscale x 8 x i8> @test_vloxseg3_mask_nxv8i8_nxv8i32(<vscale x 8 x i8> %v
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
 ; CHECK-NEXT:    vmv1r.v v9, v7
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v7, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
@@ -6116,7 +6116,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vloxseg4_nxv8i8_nxv8i16(i8* %base, <vscale x 8 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv8i8_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6133,7 +6133,7 @@ define <vscale x 8 x i8> @test_vloxseg4_mask_nxv8i8_nxv8i16(<vscale x 8 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -6149,7 +6149,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vloxseg4_nxv8i8_nxv8i8(i8* %base, <vscale x 8 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv8i8_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6166,7 +6166,7 @@ define <vscale x 8 x i8> @test_vloxseg4_mask_nxv8i8_nxv8i8(<vscale x 8 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -6182,7 +6182,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vloxseg4_nxv8i8_nxv8i64(i8* %base, <vscale x 8 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv8i8_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6198,7 +6198,7 @@ define <vscale x 8 x i8> @test_vloxseg4_mask_nxv8i8_nxv8i64(<vscale x 8 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v7, v8
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v7, (a0), v16, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
@@ -6214,7 +6214,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vloxseg4_nxv8i8_nxv8i32(i8* %base, <vscale x 8 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv8i8_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6230,7 +6230,7 @@ define <vscale x 8 x i8> @test_vloxseg4_mask_nxv8i8_nxv8i32(<vscale x 8 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v7, v8
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v7, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
@@ -6246,7 +6246,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vloxseg5_nxv8i8_nxv8i16(i8* %base, <vscale x 8 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv8i8_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6264,7 +6264,7 @@ define <vscale x 8 x i8> @test_vloxseg5_mask_nxv8i8_nxv8i16(<vscale x 8 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -6280,7 +6280,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vloxseg5_nxv8i8_nxv8i8(i8* %base, <vscale x 8 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv8i8_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6298,7 +6298,7 @@ define <vscale x 8 x i8> @test_vloxseg5_mask_nxv8i8_nxv8i8(<vscale x 8 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -6314,7 +6314,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vloxseg5_nxv8i8_nxv8i64(i8* %base, <vscale x 8 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv8i8_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6331,7 +6331,7 @@ define <vscale x 8 x i8> @test_vloxseg5_mask_nxv8i8_nxv8i64(<vscale x 8 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v7, (a0), v16, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
@@ -6347,7 +6347,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vloxseg5_nxv8i8_nxv8i32(i8* %base, <vscale x 8 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv8i8_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6364,7 +6364,7 @@ define <vscale x 8 x i8> @test_vloxseg5_mask_nxv8i8_nxv8i32(<vscale x 8 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v7, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
@@ -6380,7 +6380,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vloxseg6_nxv8i8_nxv8i16(i8* %base, <vscale x 8 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv8i8_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6399,7 +6399,7 @@ define <vscale x 8 x i8> @test_vloxseg6_mask_nxv8i8_nxv8i16(<vscale x 8 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -6415,7 +6415,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vloxseg6_nxv8i8_nxv8i8(i8* %base, <vscale x 8 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv8i8_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6434,7 +6434,7 @@ define <vscale x 8 x i8> @test_vloxseg6_mask_nxv8i8_nxv8i8(<vscale x 8 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -6450,7 +6450,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vloxseg6_nxv8i8_nxv8i64(i8* %base, <vscale x 8 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv8i8_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6468,7 +6468,7 @@ define <vscale x 8 x i8> @test_vloxseg6_mask_nxv8i8_nxv8i64(<vscale x 8 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vmv1r.v v12, v7
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v7, (a0), v16, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12
 ; CHECK-NEXT:    ret
@@ -6484,7 +6484,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vloxseg6_nxv8i8_nxv8i32(i8* %base, <vscale x 8 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv8i8_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6503,7 +6503,7 @@ define <vscale x 8 x i8> @test_vloxseg6_mask_nxv8i8_nxv8i32(<vscale x 8 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v1, (a0), v12, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -6519,7 +6519,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vloxseg7_nxv8i8_nxv8i16(i8* %base, <vscale x 8 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv8i8_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6539,7 +6539,7 @@ define <vscale x 8 x i8> @test_vloxseg7_mask_nxv8i8_nxv8i16(<vscale x 8 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -6555,7 +6555,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vloxseg7_nxv8i8_nxv8i8(i8* %base, <vscale x 8 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv8i8_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6575,7 +6575,7 @@ define <vscale x 8 x i8> @test_vloxseg7_mask_nxv8i8_nxv8i8(<vscale x 8 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -6591,7 +6591,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vloxseg7_nxv8i8_nxv8i64(i8* %base, <vscale x 8 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv8i8_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6610,7 +6610,7 @@ define <vscale x 8 x i8> @test_vloxseg7_mask_nxv8i8_nxv8i64(<vscale x 8 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v11, v7
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vmv1r.v v13, v7
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v7, (a0), v16, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13
 ; CHECK-NEXT:    ret
@@ -6626,7 +6626,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vloxseg7_nxv8i8_nxv8i32(i8* %base, <vscale x 8 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv8i8_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6646,7 +6646,7 @@ define <vscale x 8 x i8> @test_vloxseg7_mask_nxv8i8_nxv8i32(<vscale x 8 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v1, (a0), v12, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -6662,7 +6662,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vloxseg8_nxv8i8_nxv8i16(i8* %base, <vscale x 8 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv8i8_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6683,7 +6683,7 @@ define <vscale x 8 x i8> @test_vloxseg8_mask_nxv8i8_nxv8i16(<vscale x 8 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v17, v12
 ; CHECK-NEXT:    vmv1r.v v18, v12
 ; CHECK-NEXT:    vmv1r.v v19, v12
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v13
 ; CHECK-NEXT:    ret
@@ -6699,7 +6699,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vloxseg8_nxv8i8_nxv8i8(i8* %base, <vscale x 8 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv8i8_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6720,7 +6720,7 @@ define <vscale x 8 x i8> @test_vloxseg8_mask_nxv8i8_nxv8i8(<vscale x 8 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -6736,7 +6736,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vloxseg8_nxv8i8_nxv8i64(i8* %base, <vscale x 8 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv8i8_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6756,7 +6756,7 @@ define <vscale x 8 x i8> @test_vloxseg8_mask_nxv8i8_nxv8i64(<vscale x 8 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v12, v7
 ; CHECK-NEXT:    vmv1r.v v13, v7
 ; CHECK-NEXT:    vmv1r.v v14, v7
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v7, (a0), v16, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11_v12_v13_v14
 ; CHECK-NEXT:    ret
@@ -6772,7 +6772,7 @@ declare {<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>,<vscale x 8 x i8>
 define <vscale x 8 x i8> @test_vloxseg8_nxv8i8_nxv8i32(i8* %base, <vscale x 8 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv8i8_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6793,7 +6793,7 @@ define <vscale x 8 x i8> @test_vloxseg8_mask_nxv8i8_nxv8i32(<vscale x 8 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v21, v16
 ; CHECK-NEXT:    vmv1r.v v22, v16
 ; CHECK-NEXT:    vmv1r.v v23, v16
-; CHECK-NEXT:    vsetvli a1, a1, e8,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v16, (a0), v12, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v17
 ; CHECK-NEXT:    ret
@@ -6809,7 +6809,7 @@ declare {<vscale x 4 x i64>,<vscale x 4 x i64>} @llvm.riscv.vloxseg2.mask.nxv4i6
 define <vscale x 4 x i64> @test_vloxseg2_nxv4i64_nxv4i32(i64* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4i64_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -6823,7 +6823,7 @@ define <vscale x 4 x i64> @test_vloxseg2_mask_nxv4i64_nxv4i32(<vscale x 4 x i64>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4i64_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v4, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -6839,7 +6839,7 @@ declare {<vscale x 4 x i64>,<vscale x 4 x i64>} @llvm.riscv.vloxseg2.mask.nxv4i6
 define <vscale x 4 x i64> @test_vloxseg2_nxv4i64_nxv4i8(i64* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4i64_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -6853,7 +6853,7 @@ define <vscale x 4 x i64> @test_vloxseg2_mask_nxv4i64_nxv4i8(<vscale x 4 x i64> 
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4i64_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v4, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -6869,7 +6869,7 @@ declare {<vscale x 4 x i64>,<vscale x 4 x i64>} @llvm.riscv.vloxseg2.mask.nxv4i6
 define <vscale x 4 x i64> @test_vloxseg2_nxv4i64_nxv4i64(i64* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4i64_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -6883,7 +6883,7 @@ define <vscale x 4 x i64> @test_vloxseg2_mask_nxv4i64_nxv4i64(<vscale x 4 x i64>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4i64_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v4, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -6899,7 +6899,7 @@ declare {<vscale x 4 x i64>,<vscale x 4 x i64>} @llvm.riscv.vloxseg2.mask.nxv4i6
 define <vscale x 4 x i64> @test_vloxseg2_nxv4i64_nxv4i16(i64* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4i64_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -6913,7 +6913,7 @@ define <vscale x 4 x i64> @test_vloxseg2_mask_nxv4i64_nxv4i16(<vscale x 4 x i64>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4i64_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v4, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -6929,7 +6929,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.vloxseg2.mask.nxv4i1
 define <vscale x 4 x i16> @test_vloxseg2_nxv4i16_nxv4i32(i16* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4i16_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6943,7 +6943,7 @@ define <vscale x 4 x i16> @test_vloxseg2_mask_nxv4i16_nxv4i32(<vscale x 4 x i16>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4i16_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v7, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -6959,7 +6959,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.vloxseg2.mask.nxv4i1
 define <vscale x 4 x i16> @test_vloxseg2_nxv4i16_nxv4i8(i16* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4i16_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -6973,7 +6973,7 @@ define <vscale x 4 x i16> @test_vloxseg2_mask_nxv4i16_nxv4i8(<vscale x 4 x i16> 
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4i16_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -6989,7 +6989,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.vloxseg2.mask.nxv4i1
 define <vscale x 4 x i16> @test_vloxseg2_nxv4i16_nxv4i64(i16* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4i16_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7003,7 +7003,7 @@ define <vscale x 4 x i16> @test_vloxseg2_mask_nxv4i16_nxv4i64(<vscale x 4 x i16>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4i16_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v7, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -7019,7 +7019,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.vloxseg2.mask.nxv4i1
 define <vscale x 4 x i16> @test_vloxseg2_nxv4i16_nxv4i16(i16* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4i16_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7033,7 +7033,7 @@ define <vscale x 4 x i16> @test_vloxseg2_mask_nxv4i16_nxv4i16(<vscale x 4 x i16>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4i16_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -7049,7 +7049,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.v
 define <vscale x 4 x i16> @test_vloxseg3_nxv4i16_nxv4i32(i16* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv4i16_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7064,7 +7064,7 @@ define <vscale x 4 x i16> @test_vloxseg3_mask_nxv4i16_nxv4i32(<vscale x 4 x i16>
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
 ; CHECK-NEXT:    vmv1r.v v9, v7
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v7, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
@@ -7080,7 +7080,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.v
 define <vscale x 4 x i16> @test_vloxseg3_nxv4i16_nxv4i8(i16* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv4i16_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7096,7 +7096,7 @@ define <vscale x 4 x i16> @test_vloxseg3_mask_nxv4i16_nxv4i8(<vscale x 4 x i16> 
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -7112,7 +7112,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.v
 define <vscale x 4 x i16> @test_vloxseg3_nxv4i16_nxv4i64(i16* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv4i16_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7127,7 +7127,7 @@ define <vscale x 4 x i16> @test_vloxseg3_mask_nxv4i16_nxv4i64(<vscale x 4 x i16>
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
 ; CHECK-NEXT:    vmv1r.v v9, v7
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v7, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
@@ -7143,7 +7143,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>} @llvm.riscv.v
 define <vscale x 4 x i16> @test_vloxseg3_nxv4i16_nxv4i16(i16* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv4i16_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7159,7 +7159,7 @@ define <vscale x 4 x i16> @test_vloxseg3_mask_nxv4i16_nxv4i16(<vscale x 4 x i16>
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -7175,7 +7175,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vloxseg4_nxv4i16_nxv4i32(i16* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv4i16_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7192,7 +7192,7 @@ define <vscale x 4 x i16> @test_vloxseg4_mask_nxv4i16_nxv4i32(<vscale x 4 x i16>
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -7208,7 +7208,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vloxseg4_nxv4i16_nxv4i8(i16* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv4i16_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7225,7 +7225,7 @@ define <vscale x 4 x i16> @test_vloxseg4_mask_nxv4i16_nxv4i8(<vscale x 4 x i16> 
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -7241,7 +7241,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vloxseg4_nxv4i16_nxv4i64(i16* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv4i16_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7257,7 +7257,7 @@ define <vscale x 4 x i16> @test_vloxseg4_mask_nxv4i16_nxv4i64(<vscale x 4 x i16>
 ; CHECK-NEXT:    vmv1r.v v7, v8
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v7, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
@@ -7273,7 +7273,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vloxseg4_nxv4i16_nxv4i16(i16* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv4i16_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7290,7 +7290,7 @@ define <vscale x 4 x i16> @test_vloxseg4_mask_nxv4i16_nxv4i16(<vscale x 4 x i16>
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -7306,7 +7306,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vloxseg5_nxv4i16_nxv4i32(i16* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv4i16_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7324,7 +7324,7 @@ define <vscale x 4 x i16> @test_vloxseg5_mask_nxv4i16_nxv4i32(<vscale x 4 x i16>
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -7340,7 +7340,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vloxseg5_nxv4i16_nxv4i8(i16* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv4i16_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7358,7 +7358,7 @@ define <vscale x 4 x i16> @test_vloxseg5_mask_nxv4i16_nxv4i8(<vscale x 4 x i16> 
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -7374,7 +7374,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vloxseg5_nxv4i16_nxv4i64(i16* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv4i16_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7391,7 +7391,7 @@ define <vscale x 4 x i16> @test_vloxseg5_mask_nxv4i16_nxv4i64(<vscale x 4 x i16>
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v7, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
@@ -7407,7 +7407,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vloxseg5_nxv4i16_nxv4i16(i16* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv4i16_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7425,7 +7425,7 @@ define <vscale x 4 x i16> @test_vloxseg5_mask_nxv4i16_nxv4i16(<vscale x 4 x i16>
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -7441,7 +7441,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vloxseg6_nxv4i16_nxv4i32(i16* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv4i16_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7460,7 +7460,7 @@ define <vscale x 4 x i16> @test_vloxseg6_mask_nxv4i16_nxv4i32(<vscale x 4 x i16>
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -7476,7 +7476,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vloxseg6_nxv4i16_nxv4i8(i16* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv4i16_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7495,7 +7495,7 @@ define <vscale x 4 x i16> @test_vloxseg6_mask_nxv4i16_nxv4i8(<vscale x 4 x i16> 
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -7511,7 +7511,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vloxseg6_nxv4i16_nxv4i64(i16* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv4i16_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7530,7 +7530,7 @@ define <vscale x 4 x i16> @test_vloxseg6_mask_nxv4i16_nxv4i64(<vscale x 4 x i16>
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v1, (a0), v12, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -7546,7 +7546,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vloxseg6_nxv4i16_nxv4i16(i16* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv4i16_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7565,7 +7565,7 @@ define <vscale x 4 x i16> @test_vloxseg6_mask_nxv4i16_nxv4i16(<vscale x 4 x i16>
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -7581,7 +7581,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vloxseg7_nxv4i16_nxv4i32(i16* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv4i16_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7601,7 +7601,7 @@ define <vscale x 4 x i16> @test_vloxseg7_mask_nxv4i16_nxv4i32(<vscale x 4 x i16>
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -7617,7 +7617,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vloxseg7_nxv4i16_nxv4i8(i16* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv4i16_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7637,7 +7637,7 @@ define <vscale x 4 x i16> @test_vloxseg7_mask_nxv4i16_nxv4i8(<vscale x 4 x i16> 
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -7653,7 +7653,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vloxseg7_nxv4i16_nxv4i64(i16* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv4i16_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7673,7 +7673,7 @@ define <vscale x 4 x i16> @test_vloxseg7_mask_nxv4i16_nxv4i64(<vscale x 4 x i16>
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v1, (a0), v12, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -7689,7 +7689,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vloxseg7_nxv4i16_nxv4i16(i16* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv4i16_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7709,7 +7709,7 @@ define <vscale x 4 x i16> @test_vloxseg7_mask_nxv4i16_nxv4i16(<vscale x 4 x i16>
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -7725,7 +7725,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vloxseg8_nxv4i16_nxv4i32(i16* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv4i16_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7746,7 +7746,7 @@ define <vscale x 4 x i16> @test_vloxseg8_mask_nxv4i16_nxv4i32(<vscale x 4 x i16>
 ; CHECK-NEXT:    vmv1r.v v17, v12
 ; CHECK-NEXT:    vmv1r.v v18, v12
 ; CHECK-NEXT:    vmv1r.v v19, v12
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v13
 ; CHECK-NEXT:    ret
@@ -7762,7 +7762,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vloxseg8_nxv4i16_nxv4i8(i16* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv4i16_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7783,7 +7783,7 @@ define <vscale x 4 x i16> @test_vloxseg8_mask_nxv4i16_nxv4i8(<vscale x 4 x i16> 
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -7799,7 +7799,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vloxseg8_nxv4i16_nxv4i64(i16* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv4i16_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7820,7 +7820,7 @@ define <vscale x 4 x i16> @test_vloxseg8_mask_nxv4i16_nxv4i64(<vscale x 4 x i16>
 ; CHECK-NEXT:    vmv1r.v v21, v16
 ; CHECK-NEXT:    vmv1r.v v22, v16
 ; CHECK-NEXT:    vmv1r.v v23, v16
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v16, (a0), v12, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v17
 ; CHECK-NEXT:    ret
@@ -7836,7 +7836,7 @@ declare {<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x i16>,<vscale x 4 x 
 define <vscale x 4 x i16> @test_vloxseg8_nxv4i16_nxv4i16(i16* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv4i16_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7857,7 +7857,7 @@ define <vscale x 4 x i16> @test_vloxseg8_mask_nxv4i16_nxv4i16(<vscale x 4 x i16>
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -7873,7 +7873,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vloxseg2.mask.nxv1i8.n
 define <vscale x 1 x i8> @test_vloxseg2_nxv1i8_nxv1i64(i8* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1i8_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7887,7 +7887,7 @@ define <vscale x 1 x i8> @test_vloxseg2_mask_nxv1i8_nxv1i64(<vscale x 1 x i8> %v
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1i8_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -7903,7 +7903,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vloxseg2.mask.nxv1i8.n
 define <vscale x 1 x i8> @test_vloxseg2_nxv1i8_nxv1i32(i8* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1i8_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7917,7 +7917,7 @@ define <vscale x 1 x i8> @test_vloxseg2_mask_nxv1i8_nxv1i32(<vscale x 1 x i8> %v
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1i8_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -7933,7 +7933,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vloxseg2.mask.nxv1i8.n
 define <vscale x 1 x i8> @test_vloxseg2_nxv1i8_nxv1i16(i8* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1i8_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7947,7 +7947,7 @@ define <vscale x 1 x i8> @test_vloxseg2_mask_nxv1i8_nxv1i16(<vscale x 1 x i8> %v
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1i8_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -7963,7 +7963,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vloxseg2.mask.nxv1i8.n
 define <vscale x 1 x i8> @test_vloxseg2_nxv1i8_nxv1i8(i8* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1i8_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -7977,7 +7977,7 @@ define <vscale x 1 x i8> @test_vloxseg2_mask_nxv1i8_nxv1i8(<vscale x 1 x i8> %va
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1i8_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -7993,7 +7993,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vlox
 define <vscale x 1 x i8> @test_vloxseg3_nxv1i8_nxv1i64(i8* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1i8_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8009,7 +8009,7 @@ define <vscale x 1 x i8> @test_vloxseg3_mask_nxv1i8_nxv1i64(<vscale x 1 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -8025,7 +8025,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vlox
 define <vscale x 1 x i8> @test_vloxseg3_nxv1i8_nxv1i32(i8* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1i8_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8041,7 +8041,7 @@ define <vscale x 1 x i8> @test_vloxseg3_mask_nxv1i8_nxv1i32(<vscale x 1 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -8057,7 +8057,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vlox
 define <vscale x 1 x i8> @test_vloxseg3_nxv1i8_nxv1i16(i8* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1i8_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8073,7 +8073,7 @@ define <vscale x 1 x i8> @test_vloxseg3_mask_nxv1i8_nxv1i16(<vscale x 1 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -8089,7 +8089,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>} @llvm.riscv.vlox
 define <vscale x 1 x i8> @test_vloxseg3_nxv1i8_nxv1i8(i8* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1i8_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8105,7 +8105,7 @@ define <vscale x 1 x i8> @test_vloxseg3_mask_nxv1i8_nxv1i8(<vscale x 1 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -8121,7 +8121,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vloxseg4_nxv1i8_nxv1i64(i8* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1i8_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8138,7 +8138,7 @@ define <vscale x 1 x i8> @test_vloxseg4_mask_nxv1i8_nxv1i64(<vscale x 1 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -8154,7 +8154,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vloxseg4_nxv1i8_nxv1i32(i8* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1i8_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8171,7 +8171,7 @@ define <vscale x 1 x i8> @test_vloxseg4_mask_nxv1i8_nxv1i32(<vscale x 1 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -8187,7 +8187,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vloxseg4_nxv1i8_nxv1i16(i8* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1i8_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8204,7 +8204,7 @@ define <vscale x 1 x i8> @test_vloxseg4_mask_nxv1i8_nxv1i16(<vscale x 1 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -8220,7 +8220,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vloxseg4_nxv1i8_nxv1i8(i8* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1i8_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8237,7 +8237,7 @@ define <vscale x 1 x i8> @test_vloxseg4_mask_nxv1i8_nxv1i8(<vscale x 1 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -8253,7 +8253,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vloxseg5_nxv1i8_nxv1i64(i8* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1i8_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8271,7 +8271,7 @@ define <vscale x 1 x i8> @test_vloxseg5_mask_nxv1i8_nxv1i64(<vscale x 1 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -8287,7 +8287,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vloxseg5_nxv1i8_nxv1i32(i8* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1i8_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8305,7 +8305,7 @@ define <vscale x 1 x i8> @test_vloxseg5_mask_nxv1i8_nxv1i32(<vscale x 1 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -8321,7 +8321,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vloxseg5_nxv1i8_nxv1i16(i8* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1i8_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8339,7 +8339,7 @@ define <vscale x 1 x i8> @test_vloxseg5_mask_nxv1i8_nxv1i16(<vscale x 1 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -8355,7 +8355,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vloxseg5_nxv1i8_nxv1i8(i8* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1i8_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8373,7 +8373,7 @@ define <vscale x 1 x i8> @test_vloxseg5_mask_nxv1i8_nxv1i8(<vscale x 1 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -8389,7 +8389,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vloxseg6_nxv1i8_nxv1i64(i8* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1i8_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8408,7 +8408,7 @@ define <vscale x 1 x i8> @test_vloxseg6_mask_nxv1i8_nxv1i64(<vscale x 1 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -8424,7 +8424,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vloxseg6_nxv1i8_nxv1i32(i8* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1i8_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8443,7 +8443,7 @@ define <vscale x 1 x i8> @test_vloxseg6_mask_nxv1i8_nxv1i32(<vscale x 1 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -8459,7 +8459,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vloxseg6_nxv1i8_nxv1i16(i8* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1i8_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8478,7 +8478,7 @@ define <vscale x 1 x i8> @test_vloxseg6_mask_nxv1i8_nxv1i16(<vscale x 1 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -8494,7 +8494,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vloxseg6_nxv1i8_nxv1i8(i8* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1i8_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8513,7 +8513,7 @@ define <vscale x 1 x i8> @test_vloxseg6_mask_nxv1i8_nxv1i8(<vscale x 1 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -8529,7 +8529,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vloxseg7_nxv1i8_nxv1i64(i8* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1i8_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8549,7 +8549,7 @@ define <vscale x 1 x i8> @test_vloxseg7_mask_nxv1i8_nxv1i64(<vscale x 1 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -8565,7 +8565,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vloxseg7_nxv1i8_nxv1i32(i8* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1i8_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8585,7 +8585,7 @@ define <vscale x 1 x i8> @test_vloxseg7_mask_nxv1i8_nxv1i32(<vscale x 1 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -8601,7 +8601,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vloxseg7_nxv1i8_nxv1i16(i8* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1i8_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8621,7 +8621,7 @@ define <vscale x 1 x i8> @test_vloxseg7_mask_nxv1i8_nxv1i16(<vscale x 1 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -8637,7 +8637,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vloxseg7_nxv1i8_nxv1i8(i8* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1i8_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8657,7 +8657,7 @@ define <vscale x 1 x i8> @test_vloxseg7_mask_nxv1i8_nxv1i8(<vscale x 1 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -8673,7 +8673,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vloxseg8_nxv1i8_nxv1i64(i8* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1i8_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8694,7 +8694,7 @@ define <vscale x 1 x i8> @test_vloxseg8_mask_nxv1i8_nxv1i64(<vscale x 1 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -8710,7 +8710,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vloxseg8_nxv1i8_nxv1i32(i8* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1i8_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8731,7 +8731,7 @@ define <vscale x 1 x i8> @test_vloxseg8_mask_nxv1i8_nxv1i32(<vscale x 1 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -8747,7 +8747,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vloxseg8_nxv1i8_nxv1i16(i8* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1i8_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8768,7 +8768,7 @@ define <vscale x 1 x i8> @test_vloxseg8_mask_nxv1i8_nxv1i16(<vscale x 1 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -8784,7 +8784,7 @@ declare {<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>,<vscale x 1 x i8>
 define <vscale x 1 x i8> @test_vloxseg8_nxv1i8_nxv1i8(i8* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1i8_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8805,7 +8805,7 @@ define <vscale x 1 x i8> @test_vloxseg8_mask_nxv1i8_nxv1i8(<vscale x 1 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf8,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf8,tu,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -8821,7 +8821,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vloxseg2.mask.nxv2i8.n
 define <vscale x 2 x i8> @test_vloxseg2_nxv2i8_nxv2i32(i8* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2i8_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8835,7 +8835,7 @@ define <vscale x 2 x i8> @test_vloxseg2_mask_nxv2i8_nxv2i32(<vscale x 2 x i8> %v
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2i8_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -8851,7 +8851,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vloxseg2.mask.nxv2i8.n
 define <vscale x 2 x i8> @test_vloxseg2_nxv2i8_nxv2i8(i8* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2i8_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8865,7 +8865,7 @@ define <vscale x 2 x i8> @test_vloxseg2_mask_nxv2i8_nxv2i8(<vscale x 2 x i8> %va
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2i8_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -8881,7 +8881,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vloxseg2.mask.nxv2i8.n
 define <vscale x 2 x i8> @test_vloxseg2_nxv2i8_nxv2i16(i8* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2i8_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8895,7 +8895,7 @@ define <vscale x 2 x i8> @test_vloxseg2_mask_nxv2i8_nxv2i16(<vscale x 2 x i8> %v
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2i8_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -8911,7 +8911,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vloxseg2.mask.nxv2i8.n
 define <vscale x 2 x i8> @test_vloxseg2_nxv2i8_nxv2i64(i8* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2i8_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8925,7 +8925,7 @@ define <vscale x 2 x i8> @test_vloxseg2_mask_nxv2i8_nxv2i64(<vscale x 2 x i8> %v
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2i8_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v7, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -8941,7 +8941,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vlox
 define <vscale x 2 x i8> @test_vloxseg3_nxv2i8_nxv2i32(i8* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2i8_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8957,7 +8957,7 @@ define <vscale x 2 x i8> @test_vloxseg3_mask_nxv2i8_nxv2i32(<vscale x 2 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -8973,7 +8973,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vlox
 define <vscale x 2 x i8> @test_vloxseg3_nxv2i8_nxv2i8(i8* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2i8_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -8989,7 +8989,7 @@ define <vscale x 2 x i8> @test_vloxseg3_mask_nxv2i8_nxv2i8(<vscale x 2 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -9005,7 +9005,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vlox
 define <vscale x 2 x i8> @test_vloxseg3_nxv2i8_nxv2i16(i8* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2i8_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9021,7 +9021,7 @@ define <vscale x 2 x i8> @test_vloxseg3_mask_nxv2i8_nxv2i16(<vscale x 2 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -9037,7 +9037,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>} @llvm.riscv.vlox
 define <vscale x 2 x i8> @test_vloxseg3_nxv2i8_nxv2i64(i8* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2i8_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9052,7 +9052,7 @@ define <vscale x 2 x i8> @test_vloxseg3_mask_nxv2i8_nxv2i64(<vscale x 2 x i8> %v
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
 ; CHECK-NEXT:    vmv1r.v v9, v7
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v7, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
@@ -9068,7 +9068,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vloxseg4_nxv2i8_nxv2i32(i8* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2i8_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9085,7 +9085,7 @@ define <vscale x 2 x i8> @test_vloxseg4_mask_nxv2i8_nxv2i32(<vscale x 2 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -9101,7 +9101,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vloxseg4_nxv2i8_nxv2i8(i8* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2i8_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9118,7 +9118,7 @@ define <vscale x 2 x i8> @test_vloxseg4_mask_nxv2i8_nxv2i8(<vscale x 2 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -9134,7 +9134,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vloxseg4_nxv2i8_nxv2i16(i8* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2i8_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9151,7 +9151,7 @@ define <vscale x 2 x i8> @test_vloxseg4_mask_nxv2i8_nxv2i16(<vscale x 2 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -9167,7 +9167,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vloxseg4_nxv2i8_nxv2i64(i8* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2i8_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9184,7 +9184,7 @@ define <vscale x 2 x i8> @test_vloxseg4_mask_nxv2i8_nxv2i64(<vscale x 2 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -9200,7 +9200,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vloxseg5_nxv2i8_nxv2i32(i8* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv2i8_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9218,7 +9218,7 @@ define <vscale x 2 x i8> @test_vloxseg5_mask_nxv2i8_nxv2i32(<vscale x 2 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -9234,7 +9234,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vloxseg5_nxv2i8_nxv2i8(i8* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv2i8_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9252,7 +9252,7 @@ define <vscale x 2 x i8> @test_vloxseg5_mask_nxv2i8_nxv2i8(<vscale x 2 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -9268,7 +9268,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vloxseg5_nxv2i8_nxv2i16(i8* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv2i8_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9286,7 +9286,7 @@ define <vscale x 2 x i8> @test_vloxseg5_mask_nxv2i8_nxv2i16(<vscale x 2 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -9302,7 +9302,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vloxseg5_nxv2i8_nxv2i64(i8* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv2i8_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9320,7 +9320,7 @@ define <vscale x 2 x i8> @test_vloxseg5_mask_nxv2i8_nxv2i64(<vscale x 2 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -9336,7 +9336,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vloxseg6_nxv2i8_nxv2i32(i8* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv2i8_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9355,7 +9355,7 @@ define <vscale x 2 x i8> @test_vloxseg6_mask_nxv2i8_nxv2i32(<vscale x 2 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -9371,7 +9371,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vloxseg6_nxv2i8_nxv2i8(i8* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv2i8_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9390,7 +9390,7 @@ define <vscale x 2 x i8> @test_vloxseg6_mask_nxv2i8_nxv2i8(<vscale x 2 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -9406,7 +9406,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vloxseg6_nxv2i8_nxv2i16(i8* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv2i8_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9425,7 +9425,7 @@ define <vscale x 2 x i8> @test_vloxseg6_mask_nxv2i8_nxv2i16(<vscale x 2 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -9441,7 +9441,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vloxseg6_nxv2i8_nxv2i64(i8* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv2i8_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9460,7 +9460,7 @@ define <vscale x 2 x i8> @test_vloxseg6_mask_nxv2i8_nxv2i64(<vscale x 2 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -9476,7 +9476,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vloxseg7_nxv2i8_nxv2i32(i8* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv2i8_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9496,7 +9496,7 @@ define <vscale x 2 x i8> @test_vloxseg7_mask_nxv2i8_nxv2i32(<vscale x 2 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -9512,7 +9512,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vloxseg7_nxv2i8_nxv2i8(i8* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv2i8_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9532,7 +9532,7 @@ define <vscale x 2 x i8> @test_vloxseg7_mask_nxv2i8_nxv2i8(<vscale x 2 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -9548,7 +9548,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vloxseg7_nxv2i8_nxv2i16(i8* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv2i8_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9568,7 +9568,7 @@ define <vscale x 2 x i8> @test_vloxseg7_mask_nxv2i8_nxv2i16(<vscale x 2 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -9584,7 +9584,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vloxseg7_nxv2i8_nxv2i64(i8* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv2i8_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9604,7 +9604,7 @@ define <vscale x 2 x i8> @test_vloxseg7_mask_nxv2i8_nxv2i64(<vscale x 2 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -9620,7 +9620,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vloxseg8_nxv2i8_nxv2i32(i8* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv2i8_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9641,7 +9641,7 @@ define <vscale x 2 x i8> @test_vloxseg8_mask_nxv2i8_nxv2i32(<vscale x 2 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -9657,7 +9657,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vloxseg8_nxv2i8_nxv2i8(i8* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv2i8_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9678,7 +9678,7 @@ define <vscale x 2 x i8> @test_vloxseg8_mask_nxv2i8_nxv2i8(<vscale x 2 x i8> %va
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -9694,7 +9694,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vloxseg8_nxv2i8_nxv2i16(i8* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv2i8_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9715,7 +9715,7 @@ define <vscale x 2 x i8> @test_vloxseg8_mask_nxv2i8_nxv2i16(<vscale x 2 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -9731,7 +9731,7 @@ declare {<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>,<vscale x 2 x i8>
 define <vscale x 2 x i8> @test_vloxseg8_nxv2i8_nxv2i64(i8* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv2i8_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9752,7 +9752,7 @@ define <vscale x 2 x i8> @test_vloxseg8_mask_nxv2i8_nxv2i64(<vscale x 2 x i8> %v
 ; CHECK-NEXT:    vmv1r.v v17, v12
 ; CHECK-NEXT:    vmv1r.v v18, v12
 ; CHECK-NEXT:    vmv1r.v v19, v12
-; CHECK-NEXT:    vsetvli a1, a1, e8,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v13
 ; CHECK-NEXT:    ret
@@ -9768,7 +9768,7 @@ declare {<vscale x 8 x i32>,<vscale x 8 x i32>} @llvm.riscv.vloxseg2.mask.nxv8i3
 define <vscale x 8 x i32> @test_vloxseg2_nxv8i32_nxv8i16(i32* %base, <vscale x 8 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv8i32_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -9782,7 +9782,7 @@ define <vscale x 8 x i32> @test_vloxseg2_mask_nxv8i32_nxv8i16(<vscale x 8 x i32>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv8i32_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v4, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -9798,7 +9798,7 @@ declare {<vscale x 8 x i32>,<vscale x 8 x i32>} @llvm.riscv.vloxseg2.mask.nxv8i3
 define <vscale x 8 x i32> @test_vloxseg2_nxv8i32_nxv8i8(i32* %base, <vscale x 8 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv8i32_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -9812,7 +9812,7 @@ define <vscale x 8 x i32> @test_vloxseg2_mask_nxv8i32_nxv8i8(<vscale x 8 x i32> 
 ; CHECK-LABEL: test_vloxseg2_mask_nxv8i32_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v4, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -9828,7 +9828,7 @@ declare {<vscale x 8 x i32>,<vscale x 8 x i32>} @llvm.riscv.vloxseg2.mask.nxv8i3
 define <vscale x 8 x i32> @test_vloxseg2_nxv8i32_nxv8i64(i32* %base, <vscale x 8 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv8i32_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -9842,7 +9842,7 @@ define <vscale x 8 x i32> @test_vloxseg2_mask_nxv8i32_nxv8i64(<vscale x 8 x i32>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv8i32_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v4, (a0), v16, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -9858,7 +9858,7 @@ declare {<vscale x 8 x i32>,<vscale x 8 x i32>} @llvm.riscv.vloxseg2.mask.nxv8i3
 define <vscale x 8 x i32> @test_vloxseg2_nxv8i32_nxv8i32(i32* %base, <vscale x 8 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv8i32_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -9872,7 +9872,7 @@ define <vscale x 8 x i32> @test_vloxseg2_mask_nxv8i32_nxv8i32(<vscale x 8 x i32>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv8i32_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v4, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -9888,7 +9888,7 @@ declare {<vscale x 32 x i8>,<vscale x 32 x i8>} @llvm.riscv.vloxseg2.mask.nxv32i
 define <vscale x 32 x i8> @test_vloxseg2_nxv32i8_nxv32i16(i8* %base, <vscale x 32 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv32i8_nxv32i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -9902,7 +9902,7 @@ define <vscale x 32 x i8> @test_vloxseg2_mask_nxv32i8_nxv32i16(<vscale x 32 x i8
 ; CHECK-LABEL: test_vloxseg2_mask_nxv32i8_nxv32i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e8,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v4, (a0), v16, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -9918,7 +9918,7 @@ declare {<vscale x 32 x i8>,<vscale x 32 x i8>} @llvm.riscv.vloxseg2.mask.nxv32i
 define <vscale x 32 x i8> @test_vloxseg2_nxv32i8_nxv32i8(i8* %base, <vscale x 32 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv32i8_nxv32i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e8,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -9932,7 +9932,7 @@ define <vscale x 32 x i8> @test_vloxseg2_mask_nxv32i8_nxv32i8(<vscale x 32 x i8>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv32i8_nxv32i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e8,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e8,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v4, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -9948,7 +9948,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.vloxseg2.mask.nxv2i1
 define <vscale x 2 x i16> @test_vloxseg2_nxv2i16_nxv2i32(i16* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2i16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9962,7 +9962,7 @@ define <vscale x 2 x i16> @test_vloxseg2_mask_nxv2i16_nxv2i32(<vscale x 2 x i16>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2i16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -9978,7 +9978,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.vloxseg2.mask.nxv2i1
 define <vscale x 2 x i16> @test_vloxseg2_nxv2i16_nxv2i8(i16* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2i16_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -9992,7 +9992,7 @@ define <vscale x 2 x i16> @test_vloxseg2_mask_nxv2i16_nxv2i8(<vscale x 2 x i16> 
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2i16_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -10008,7 +10008,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.vloxseg2.mask.nxv2i1
 define <vscale x 2 x i16> @test_vloxseg2_nxv2i16_nxv2i16(i16* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2i16_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10022,7 +10022,7 @@ define <vscale x 2 x i16> @test_vloxseg2_mask_nxv2i16_nxv2i16(<vscale x 2 x i16>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2i16_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -10038,7 +10038,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.vloxseg2.mask.nxv2i1
 define <vscale x 2 x i16> @test_vloxseg2_nxv2i16_nxv2i64(i16* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2i16_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10052,7 +10052,7 @@ define <vscale x 2 x i16> @test_vloxseg2_mask_nxv2i16_nxv2i64(<vscale x 2 x i16>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2i16_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v7, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -10068,7 +10068,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.v
 define <vscale x 2 x i16> @test_vloxseg3_nxv2i16_nxv2i32(i16* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2i16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10084,7 +10084,7 @@ define <vscale x 2 x i16> @test_vloxseg3_mask_nxv2i16_nxv2i32(<vscale x 2 x i16>
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10100,7 +10100,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.v
 define <vscale x 2 x i16> @test_vloxseg3_nxv2i16_nxv2i8(i16* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2i16_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10116,7 +10116,7 @@ define <vscale x 2 x i16> @test_vloxseg3_mask_nxv2i16_nxv2i8(<vscale x 2 x i16> 
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10132,7 +10132,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.v
 define <vscale x 2 x i16> @test_vloxseg3_nxv2i16_nxv2i16(i16* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2i16_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10148,7 +10148,7 @@ define <vscale x 2 x i16> @test_vloxseg3_mask_nxv2i16_nxv2i16(<vscale x 2 x i16>
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10164,7 +10164,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>} @llvm.riscv.v
 define <vscale x 2 x i16> @test_vloxseg3_nxv2i16_nxv2i64(i16* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2i16_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10179,7 +10179,7 @@ define <vscale x 2 x i16> @test_vloxseg3_mask_nxv2i16_nxv2i64(<vscale x 2 x i16>
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
 ; CHECK-NEXT:    vmv1r.v v9, v7
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v7, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
@@ -10195,7 +10195,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vloxseg4_nxv2i16_nxv2i32(i16* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2i16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10212,7 +10212,7 @@ define <vscale x 2 x i16> @test_vloxseg4_mask_nxv2i16_nxv2i32(<vscale x 2 x i16>
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10228,7 +10228,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vloxseg4_nxv2i16_nxv2i8(i16* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2i16_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10245,7 +10245,7 @@ define <vscale x 2 x i16> @test_vloxseg4_mask_nxv2i16_nxv2i8(<vscale x 2 x i16> 
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10261,7 +10261,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vloxseg4_nxv2i16_nxv2i16(i16* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2i16_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10278,7 +10278,7 @@ define <vscale x 2 x i16> @test_vloxseg4_mask_nxv2i16_nxv2i16(<vscale x 2 x i16>
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10294,7 +10294,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vloxseg4_nxv2i16_nxv2i64(i16* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2i16_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10311,7 +10311,7 @@ define <vscale x 2 x i16> @test_vloxseg4_mask_nxv2i16_nxv2i64(<vscale x 2 x i16>
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10327,7 +10327,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vloxseg5_nxv2i16_nxv2i32(i16* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv2i16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10345,7 +10345,7 @@ define <vscale x 2 x i16> @test_vloxseg5_mask_nxv2i16_nxv2i32(<vscale x 2 x i16>
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10361,7 +10361,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vloxseg5_nxv2i16_nxv2i8(i16* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv2i16_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10379,7 +10379,7 @@ define <vscale x 2 x i16> @test_vloxseg5_mask_nxv2i16_nxv2i8(<vscale x 2 x i16> 
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10395,7 +10395,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vloxseg5_nxv2i16_nxv2i16(i16* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv2i16_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10413,7 +10413,7 @@ define <vscale x 2 x i16> @test_vloxseg5_mask_nxv2i16_nxv2i16(<vscale x 2 x i16>
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10429,7 +10429,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vloxseg5_nxv2i16_nxv2i64(i16* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv2i16_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10447,7 +10447,7 @@ define <vscale x 2 x i16> @test_vloxseg5_mask_nxv2i16_nxv2i64(<vscale x 2 x i16>
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10463,7 +10463,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vloxseg6_nxv2i16_nxv2i32(i16* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv2i16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10482,7 +10482,7 @@ define <vscale x 2 x i16> @test_vloxseg6_mask_nxv2i16_nxv2i32(<vscale x 2 x i16>
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10498,7 +10498,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vloxseg6_nxv2i16_nxv2i8(i16* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv2i16_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10517,7 +10517,7 @@ define <vscale x 2 x i16> @test_vloxseg6_mask_nxv2i16_nxv2i8(<vscale x 2 x i16> 
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10533,7 +10533,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vloxseg6_nxv2i16_nxv2i16(i16* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv2i16_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10552,7 +10552,7 @@ define <vscale x 2 x i16> @test_vloxseg6_mask_nxv2i16_nxv2i16(<vscale x 2 x i16>
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10568,7 +10568,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vloxseg6_nxv2i16_nxv2i64(i16* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv2i16_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10587,7 +10587,7 @@ define <vscale x 2 x i16> @test_vloxseg6_mask_nxv2i16_nxv2i64(<vscale x 2 x i16>
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10603,7 +10603,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vloxseg7_nxv2i16_nxv2i32(i16* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv2i16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10623,7 +10623,7 @@ define <vscale x 2 x i16> @test_vloxseg7_mask_nxv2i16_nxv2i32(<vscale x 2 x i16>
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10639,7 +10639,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vloxseg7_nxv2i16_nxv2i8(i16* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv2i16_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10659,7 +10659,7 @@ define <vscale x 2 x i16> @test_vloxseg7_mask_nxv2i16_nxv2i8(<vscale x 2 x i16> 
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10675,7 +10675,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vloxseg7_nxv2i16_nxv2i16(i16* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv2i16_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10695,7 +10695,7 @@ define <vscale x 2 x i16> @test_vloxseg7_mask_nxv2i16_nxv2i16(<vscale x 2 x i16>
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10711,7 +10711,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vloxseg7_nxv2i16_nxv2i64(i16* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv2i16_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10731,7 +10731,7 @@ define <vscale x 2 x i16> @test_vloxseg7_mask_nxv2i16_nxv2i64(<vscale x 2 x i16>
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10747,7 +10747,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vloxseg8_nxv2i16_nxv2i32(i16* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv2i16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10768,7 +10768,7 @@ define <vscale x 2 x i16> @test_vloxseg8_mask_nxv2i16_nxv2i32(<vscale x 2 x i16>
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -10784,7 +10784,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vloxseg8_nxv2i16_nxv2i8(i16* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv2i16_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10805,7 +10805,7 @@ define <vscale x 2 x i16> @test_vloxseg8_mask_nxv2i16_nxv2i8(<vscale x 2 x i16> 
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -10821,7 +10821,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vloxseg8_nxv2i16_nxv2i16(i16* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv2i16_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10842,7 +10842,7 @@ define <vscale x 2 x i16> @test_vloxseg8_mask_nxv2i16_nxv2i16(<vscale x 2 x i16>
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -10858,7 +10858,7 @@ declare {<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x i16>,<vscale x 2 x 
 define <vscale x 2 x i16> @test_vloxseg8_nxv2i16_nxv2i64(i16* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv2i16_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -10879,7 +10879,7 @@ define <vscale x 2 x i16> @test_vloxseg8_mask_nxv2i16_nxv2i64(<vscale x 2 x i16>
 ; CHECK-NEXT:    vmv1r.v v17, v12
 ; CHECK-NEXT:    vmv1r.v v18, v12
 ; CHECK-NEXT:    vmv1r.v v19, v12
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v13
 ; CHECK-NEXT:    ret
@@ -10895,7 +10895,7 @@ declare {<vscale x 2 x i64>,<vscale x 2 x i64>} @llvm.riscv.vloxseg2.mask.nxv2i6
 define <vscale x 2 x i64> @test_vloxseg2_nxv2i64_nxv2i32(i64* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2i64_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10909,7 +10909,7 @@ define <vscale x 2 x i64> @test_vloxseg2_mask_nxv2i64_nxv2i32(<vscale x 2 x i64>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2i64_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v6, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -10925,7 +10925,7 @@ declare {<vscale x 2 x i64>,<vscale x 2 x i64>} @llvm.riscv.vloxseg2.mask.nxv2i6
 define <vscale x 2 x i64> @test_vloxseg2_nxv2i64_nxv2i8(i64* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2i64_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10939,7 +10939,7 @@ define <vscale x 2 x i64> @test_vloxseg2_mask_nxv2i64_nxv2i8(<vscale x 2 x i64> 
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2i64_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v6, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -10955,7 +10955,7 @@ declare {<vscale x 2 x i64>,<vscale x 2 x i64>} @llvm.riscv.vloxseg2.mask.nxv2i6
 define <vscale x 2 x i64> @test_vloxseg2_nxv2i64_nxv2i16(i64* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2i64_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10969,7 +10969,7 @@ define <vscale x 2 x i64> @test_vloxseg2_mask_nxv2i64_nxv2i16(<vscale x 2 x i64>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2i64_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v6, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -10985,7 +10985,7 @@ declare {<vscale x 2 x i64>,<vscale x 2 x i64>} @llvm.riscv.vloxseg2.mask.nxv2i6
 define <vscale x 2 x i64> @test_vloxseg2_nxv2i64_nxv2i64(i64* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2i64_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -10999,7 +10999,7 @@ define <vscale x 2 x i64> @test_vloxseg2_mask_nxv2i64_nxv2i64(<vscale x 2 x i64>
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2i64_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v6, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -11015,7 +11015,7 @@ declare {<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>} @llvm.riscv.v
 define <vscale x 2 x i64> @test_vloxseg3_nxv2i64_nxv2i32(i64* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2i64_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -11031,7 +11031,7 @@ define <vscale x 2 x i64> @test_vloxseg3_mask_nxv2i64_nxv2i32(<vscale x 2 x i64>
 ; CHECK-NEXT:    vmv2r.v v2, v8
 ; CHECK-NEXT:    vmv2r.v v4, v2
 ; CHECK-NEXT:    vmv2r.v v6, v2
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v2, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -11047,7 +11047,7 @@ declare {<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>} @llvm.riscv.v
 define <vscale x 2 x i64> @test_vloxseg3_nxv2i64_nxv2i8(i64* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2i64_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -11063,7 +11063,7 @@ define <vscale x 2 x i64> @test_vloxseg3_mask_nxv2i64_nxv2i8(<vscale x 2 x i64> 
 ; CHECK-NEXT:    vmv2r.v v2, v8
 ; CHECK-NEXT:    vmv2r.v v4, v2
 ; CHECK-NEXT:    vmv2r.v v6, v2
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v2, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -11079,7 +11079,7 @@ declare {<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>} @llvm.riscv.v
 define <vscale x 2 x i64> @test_vloxseg3_nxv2i64_nxv2i16(i64* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2i64_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -11095,7 +11095,7 @@ define <vscale x 2 x i64> @test_vloxseg3_mask_nxv2i64_nxv2i16(<vscale x 2 x i64>
 ; CHECK-NEXT:    vmv2r.v v2, v8
 ; CHECK-NEXT:    vmv2r.v v4, v2
 ; CHECK-NEXT:    vmv2r.v v6, v2
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v2, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -11111,7 +11111,7 @@ declare {<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>} @llvm.riscv.v
 define <vscale x 2 x i64> @test_vloxseg3_nxv2i64_nxv2i64(i64* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2i64_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -11127,7 +11127,7 @@ define <vscale x 2 x i64> @test_vloxseg3_mask_nxv2i64_nxv2i64(<vscale x 2 x i64>
 ; CHECK-NEXT:    vmv2r.v v2, v8
 ; CHECK-NEXT:    vmv2r.v v4, v2
 ; CHECK-NEXT:    vmv2r.v v6, v2
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v2, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -11143,7 +11143,7 @@ declare {<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x 
 define <vscale x 2 x i64> @test_vloxseg4_nxv2i64_nxv2i32(i64* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2i64_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -11160,7 +11160,7 @@ define <vscale x 2 x i64> @test_vloxseg4_mask_nxv2i64_nxv2i32(<vscale x 2 x i64>
 ; CHECK-NEXT:    vmv2r.v v14, v12
 ; CHECK-NEXT:    vmv2r.v v16, v12
 ; CHECK-NEXT:    vmv2r.v v18, v12
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v14
 ; CHECK-NEXT:    ret
@@ -11176,7 +11176,7 @@ declare {<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x 
 define <vscale x 2 x i64> @test_vloxseg4_nxv2i64_nxv2i8(i64* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2i64_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -11193,7 +11193,7 @@ define <vscale x 2 x i64> @test_vloxseg4_mask_nxv2i64_nxv2i8(<vscale x 2 x i64> 
 ; CHECK-NEXT:    vmv2r.v v14, v12
 ; CHECK-NEXT:    vmv2r.v v16, v12
 ; CHECK-NEXT:    vmv2r.v v18, v12
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v14
 ; CHECK-NEXT:    ret
@@ -11209,7 +11209,7 @@ declare {<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x 
 define <vscale x 2 x i64> @test_vloxseg4_nxv2i64_nxv2i16(i64* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2i64_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -11226,7 +11226,7 @@ define <vscale x 2 x i64> @test_vloxseg4_mask_nxv2i64_nxv2i16(<vscale x 2 x i64>
 ; CHECK-NEXT:    vmv2r.v v14, v12
 ; CHECK-NEXT:    vmv2r.v v16, v12
 ; CHECK-NEXT:    vmv2r.v v18, v12
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v14
 ; CHECK-NEXT:    ret
@@ -11242,7 +11242,7 @@ declare {<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x i64>,<vscale x 2 x 
 define <vscale x 2 x i64> @test_vloxseg4_nxv2i64_nxv2i64(i64* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2i64_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -11259,7 +11259,7 @@ define <vscale x 2 x i64> @test_vloxseg4_mask_nxv2i64_nxv2i64(<vscale x 2 x i64>
 ; CHECK-NEXT:    vmv2r.v v14, v12
 ; CHECK-NEXT:    vmv2r.v v16, v12
 ; CHECK-NEXT:    vmv2r.v v18, v12
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v14
 ; CHECK-NEXT:    ret
@@ -11275,7 +11275,7 @@ declare {<vscale x 16 x half>,<vscale x 16 x half>} @llvm.riscv.vloxseg2.mask.nx
 define <vscale x 16 x half> @test_vloxseg2_nxv16f16_nxv16i16(half* %base, <vscale x 16 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv16f16_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -11289,7 +11289,7 @@ define <vscale x 16 x half> @test_vloxseg2_mask_nxv16f16_nxv16i16(<vscale x 16 x
 ; CHECK-LABEL: test_vloxseg2_mask_nxv16f16_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v4, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -11305,7 +11305,7 @@ declare {<vscale x 16 x half>,<vscale x 16 x half>} @llvm.riscv.vloxseg2.mask.nx
 define <vscale x 16 x half> @test_vloxseg2_nxv16f16_nxv16i8(half* %base, <vscale x 16 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv16f16_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -11319,7 +11319,7 @@ define <vscale x 16 x half> @test_vloxseg2_mask_nxv16f16_nxv16i8(<vscale x 16 x 
 ; CHECK-LABEL: test_vloxseg2_mask_nxv16f16_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v4, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -11335,7 +11335,7 @@ declare {<vscale x 16 x half>,<vscale x 16 x half>} @llvm.riscv.vloxseg2.mask.nx
 define <vscale x 16 x half> @test_vloxseg2_nxv16f16_nxv16i32(half* %base, <vscale x 16 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv16f16_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -11349,7 +11349,7 @@ define <vscale x 16 x half> @test_vloxseg2_mask_nxv16f16_nxv16i32(<vscale x 16 x
 ; CHECK-LABEL: test_vloxseg2_mask_nxv16f16_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v4, (a0), v16, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -11365,7 +11365,7 @@ declare {<vscale x 4 x double>,<vscale x 4 x double>} @llvm.riscv.vloxseg2.mask.
 define <vscale x 4 x double> @test_vloxseg2_nxv4f64_nxv4i32(double* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4f64_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -11379,7 +11379,7 @@ define <vscale x 4 x double> @test_vloxseg2_mask_nxv4f64_nxv4i32(<vscale x 4 x d
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4f64_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v4, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -11395,7 +11395,7 @@ declare {<vscale x 4 x double>,<vscale x 4 x double>} @llvm.riscv.vloxseg2.mask.
 define <vscale x 4 x double> @test_vloxseg2_nxv4f64_nxv4i8(double* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4f64_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -11409,7 +11409,7 @@ define <vscale x 4 x double> @test_vloxseg2_mask_nxv4f64_nxv4i8(<vscale x 4 x do
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4f64_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v4, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -11425,7 +11425,7 @@ declare {<vscale x 4 x double>,<vscale x 4 x double>} @llvm.riscv.vloxseg2.mask.
 define <vscale x 4 x double> @test_vloxseg2_nxv4f64_nxv4i64(double* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4f64_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -11439,7 +11439,7 @@ define <vscale x 4 x double> @test_vloxseg2_mask_nxv4f64_nxv4i64(<vscale x 4 x d
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4f64_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v4, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -11455,7 +11455,7 @@ declare {<vscale x 4 x double>,<vscale x 4 x double>} @llvm.riscv.vloxseg2.mask.
 define <vscale x 4 x double> @test_vloxseg2_nxv4f64_nxv4i16(double* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4f64_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -11469,7 +11469,7 @@ define <vscale x 4 x double> @test_vloxseg2_mask_nxv4f64_nxv4i16(<vscale x 4 x d
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4f64_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v4, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -11485,7 +11485,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>} @llvm.riscv.vloxseg2.mask.
 define <vscale x 1 x double> @test_vloxseg2_nxv1f64_nxv1i64(double* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1f64_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -11499,7 +11499,7 @@ define <vscale x 1 x double> @test_vloxseg2_mask_nxv1f64_nxv1i64(<vscale x 1 x d
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1f64_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -11515,7 +11515,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>} @llvm.riscv.vloxseg2.mask.
 define <vscale x 1 x double> @test_vloxseg2_nxv1f64_nxv1i32(double* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1f64_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -11529,7 +11529,7 @@ define <vscale x 1 x double> @test_vloxseg2_mask_nxv1f64_nxv1i32(<vscale x 1 x d
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1f64_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -11545,7 +11545,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>} @llvm.riscv.vloxseg2.mask.
 define <vscale x 1 x double> @test_vloxseg2_nxv1f64_nxv1i16(double* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1f64_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -11559,7 +11559,7 @@ define <vscale x 1 x double> @test_vloxseg2_mask_nxv1f64_nxv1i16(<vscale x 1 x d
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1f64_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -11575,7 +11575,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>} @llvm.riscv.vloxseg2.mask.
 define <vscale x 1 x double> @test_vloxseg2_nxv1f64_nxv1i8(double* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1f64_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -11589,7 +11589,7 @@ define <vscale x 1 x double> @test_vloxseg2_mask_nxv1f64_nxv1i8(<vscale x 1 x do
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1f64_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -11605,7 +11605,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>} @llv
 define <vscale x 1 x double> @test_vloxseg3_nxv1f64_nxv1i64(double* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1f64_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -11621,7 +11621,7 @@ define <vscale x 1 x double> @test_vloxseg3_mask_nxv1f64_nxv1i64(<vscale x 1 x d
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -11637,7 +11637,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>} @llv
 define <vscale x 1 x double> @test_vloxseg3_nxv1f64_nxv1i32(double* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1f64_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -11653,7 +11653,7 @@ define <vscale x 1 x double> @test_vloxseg3_mask_nxv1f64_nxv1i32(<vscale x 1 x d
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -11669,7 +11669,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>} @llv
 define <vscale x 1 x double> @test_vloxseg3_nxv1f64_nxv1i16(double* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1f64_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -11685,7 +11685,7 @@ define <vscale x 1 x double> @test_vloxseg3_mask_nxv1f64_nxv1i16(<vscale x 1 x d
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -11701,7 +11701,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>} @llv
 define <vscale x 1 x double> @test_vloxseg3_nxv1f64_nxv1i8(double* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1f64_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -11717,7 +11717,7 @@ define <vscale x 1 x double> @test_vloxseg3_mask_nxv1f64_nxv1i8(<vscale x 1 x do
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -11733,7 +11733,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vloxseg4_nxv1f64_nxv1i64(double* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1f64_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -11750,7 +11750,7 @@ define <vscale x 1 x double> @test_vloxseg4_mask_nxv1f64_nxv1i64(<vscale x 1 x d
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -11766,7 +11766,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vloxseg4_nxv1f64_nxv1i32(double* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1f64_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -11783,7 +11783,7 @@ define <vscale x 1 x double> @test_vloxseg4_mask_nxv1f64_nxv1i32(<vscale x 1 x d
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -11799,7 +11799,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vloxseg4_nxv1f64_nxv1i16(double* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1f64_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -11816,7 +11816,7 @@ define <vscale x 1 x double> @test_vloxseg4_mask_nxv1f64_nxv1i16(<vscale x 1 x d
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -11832,7 +11832,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vloxseg4_nxv1f64_nxv1i8(double* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1f64_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -11849,7 +11849,7 @@ define <vscale x 1 x double> @test_vloxseg4_mask_nxv1f64_nxv1i8(<vscale x 1 x do
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -11865,7 +11865,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vloxseg5_nxv1f64_nxv1i64(double* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1f64_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -11883,7 +11883,7 @@ define <vscale x 1 x double> @test_vloxseg5_mask_nxv1f64_nxv1i64(<vscale x 1 x d
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -11899,7 +11899,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vloxseg5_nxv1f64_nxv1i32(double* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1f64_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -11917,7 +11917,7 @@ define <vscale x 1 x double> @test_vloxseg5_mask_nxv1f64_nxv1i32(<vscale x 1 x d
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -11933,7 +11933,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vloxseg5_nxv1f64_nxv1i16(double* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1f64_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -11951,7 +11951,7 @@ define <vscale x 1 x double> @test_vloxseg5_mask_nxv1f64_nxv1i16(<vscale x 1 x d
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -11967,7 +11967,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vloxseg5_nxv1f64_nxv1i8(double* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1f64_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -11985,7 +11985,7 @@ define <vscale x 1 x double> @test_vloxseg5_mask_nxv1f64_nxv1i8(<vscale x 1 x do
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -12001,7 +12001,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vloxseg6_nxv1f64_nxv1i64(double* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1f64_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12020,7 +12020,7 @@ define <vscale x 1 x double> @test_vloxseg6_mask_nxv1f64_nxv1i64(<vscale x 1 x d
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -12036,7 +12036,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vloxseg6_nxv1f64_nxv1i32(double* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1f64_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12055,7 +12055,7 @@ define <vscale x 1 x double> @test_vloxseg6_mask_nxv1f64_nxv1i32(<vscale x 1 x d
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -12071,7 +12071,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vloxseg6_nxv1f64_nxv1i16(double* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1f64_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12090,7 +12090,7 @@ define <vscale x 1 x double> @test_vloxseg6_mask_nxv1f64_nxv1i16(<vscale x 1 x d
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -12106,7 +12106,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vloxseg6_nxv1f64_nxv1i8(double* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1f64_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12125,7 +12125,7 @@ define <vscale x 1 x double> @test_vloxseg6_mask_nxv1f64_nxv1i8(<vscale x 1 x do
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -12141,7 +12141,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vloxseg7_nxv1f64_nxv1i64(double* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1f64_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12161,7 +12161,7 @@ define <vscale x 1 x double> @test_vloxseg7_mask_nxv1f64_nxv1i64(<vscale x 1 x d
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -12177,7 +12177,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vloxseg7_nxv1f64_nxv1i32(double* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1f64_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12197,7 +12197,7 @@ define <vscale x 1 x double> @test_vloxseg7_mask_nxv1f64_nxv1i32(<vscale x 1 x d
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -12213,7 +12213,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vloxseg7_nxv1f64_nxv1i16(double* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1f64_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12233,7 +12233,7 @@ define <vscale x 1 x double> @test_vloxseg7_mask_nxv1f64_nxv1i16(<vscale x 1 x d
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -12249,7 +12249,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vloxseg7_nxv1f64_nxv1i8(double* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1f64_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12269,7 +12269,7 @@ define <vscale x 1 x double> @test_vloxseg7_mask_nxv1f64_nxv1i8(<vscale x 1 x do
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -12285,7 +12285,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vloxseg8_nxv1f64_nxv1i64(double* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1f64_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12306,7 +12306,7 @@ define <vscale x 1 x double> @test_vloxseg8_mask_nxv1f64_nxv1i64(<vscale x 1 x d
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -12322,7 +12322,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vloxseg8_nxv1f64_nxv1i32(double* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1f64_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12343,7 +12343,7 @@ define <vscale x 1 x double> @test_vloxseg8_mask_nxv1f64_nxv1i32(<vscale x 1 x d
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -12359,7 +12359,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vloxseg8_nxv1f64_nxv1i16(double* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1f64_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12380,7 +12380,7 @@ define <vscale x 1 x double> @test_vloxseg8_mask_nxv1f64_nxv1i16(<vscale x 1 x d
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -12396,7 +12396,7 @@ declare {<vscale x 1 x double>,<vscale x 1 x double>,<vscale x 1 x double>,<vsca
 define <vscale x 1 x double> @test_vloxseg8_nxv1f64_nxv1i8(double* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1f64_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12417,7 +12417,7 @@ define <vscale x 1 x double> @test_vloxseg8_mask_nxv1f64_nxv1i8(<vscale x 1 x do
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -12433,7 +12433,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>} @llvm.riscv.vloxseg2.mask.nx
 define <vscale x 2 x float> @test_vloxseg2_nxv2f32_nxv2i32(float* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2f32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12447,7 +12447,7 @@ define <vscale x 2 x float> @test_vloxseg2_mask_nxv2f32_nxv2i32(<vscale x 2 x fl
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2f32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -12463,7 +12463,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>} @llvm.riscv.vloxseg2.mask.nx
 define <vscale x 2 x float> @test_vloxseg2_nxv2f32_nxv2i8(float* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2f32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12477,7 +12477,7 @@ define <vscale x 2 x float> @test_vloxseg2_mask_nxv2f32_nxv2i8(<vscale x 2 x flo
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2f32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -12493,7 +12493,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>} @llvm.riscv.vloxseg2.mask.nx
 define <vscale x 2 x float> @test_vloxseg2_nxv2f32_nxv2i16(float* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2f32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12507,7 +12507,7 @@ define <vscale x 2 x float> @test_vloxseg2_mask_nxv2f32_nxv2i16(<vscale x 2 x fl
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2f32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -12523,7 +12523,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>} @llvm.riscv.vloxseg2.mask.nx
 define <vscale x 2 x float> @test_vloxseg2_nxv2f32_nxv2i64(float* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2f32_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12537,7 +12537,7 @@ define <vscale x 2 x float> @test_vloxseg2_mask_nxv2f32_nxv2i64(<vscale x 2 x fl
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2f32_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v7, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -12553,7 +12553,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>} @llvm.r
 define <vscale x 2 x float> @test_vloxseg3_nxv2f32_nxv2i32(float* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2f32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12569,7 +12569,7 @@ define <vscale x 2 x float> @test_vloxseg3_mask_nxv2f32_nxv2i32(<vscale x 2 x fl
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -12585,7 +12585,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>} @llvm.r
 define <vscale x 2 x float> @test_vloxseg3_nxv2f32_nxv2i8(float* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2f32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12601,7 +12601,7 @@ define <vscale x 2 x float> @test_vloxseg3_mask_nxv2f32_nxv2i8(<vscale x 2 x flo
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -12617,7 +12617,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>} @llvm.r
 define <vscale x 2 x float> @test_vloxseg3_nxv2f32_nxv2i16(float* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2f32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12633,7 +12633,7 @@ define <vscale x 2 x float> @test_vloxseg3_mask_nxv2f32_nxv2i16(<vscale x 2 x fl
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -12649,7 +12649,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>} @llvm.r
 define <vscale x 2 x float> @test_vloxseg3_nxv2f32_nxv2i64(float* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2f32_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12664,7 +12664,7 @@ define <vscale x 2 x float> @test_vloxseg3_mask_nxv2f32_nxv2i64(<vscale x 2 x fl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
 ; CHECK-NEXT:    vmv1r.v v9, v7
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v7, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
@@ -12680,7 +12680,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vloxseg4_nxv2f32_nxv2i32(float* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2f32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12697,7 +12697,7 @@ define <vscale x 2 x float> @test_vloxseg4_mask_nxv2f32_nxv2i32(<vscale x 2 x fl
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -12713,7 +12713,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vloxseg4_nxv2f32_nxv2i8(float* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2f32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12730,7 +12730,7 @@ define <vscale x 2 x float> @test_vloxseg4_mask_nxv2f32_nxv2i8(<vscale x 2 x flo
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -12746,7 +12746,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vloxseg4_nxv2f32_nxv2i16(float* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2f32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12763,7 +12763,7 @@ define <vscale x 2 x float> @test_vloxseg4_mask_nxv2f32_nxv2i16(<vscale x 2 x fl
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -12779,7 +12779,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vloxseg4_nxv2f32_nxv2i64(float* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2f32_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12796,7 +12796,7 @@ define <vscale x 2 x float> @test_vloxseg4_mask_nxv2f32_nxv2i64(<vscale x 2 x fl
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -12812,7 +12812,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vloxseg5_nxv2f32_nxv2i32(float* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv2f32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12830,7 +12830,7 @@ define <vscale x 2 x float> @test_vloxseg5_mask_nxv2f32_nxv2i32(<vscale x 2 x fl
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -12846,7 +12846,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vloxseg5_nxv2f32_nxv2i8(float* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv2f32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12864,7 +12864,7 @@ define <vscale x 2 x float> @test_vloxseg5_mask_nxv2f32_nxv2i8(<vscale x 2 x flo
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -12880,7 +12880,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vloxseg5_nxv2f32_nxv2i16(float* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv2f32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12898,7 +12898,7 @@ define <vscale x 2 x float> @test_vloxseg5_mask_nxv2f32_nxv2i16(<vscale x 2 x fl
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -12914,7 +12914,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vloxseg5_nxv2f32_nxv2i64(float* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv2f32_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12932,7 +12932,7 @@ define <vscale x 2 x float> @test_vloxseg5_mask_nxv2f32_nxv2i64(<vscale x 2 x fl
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -12948,7 +12948,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vloxseg6_nxv2f32_nxv2i32(float* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv2f32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -12967,7 +12967,7 @@ define <vscale x 2 x float> @test_vloxseg6_mask_nxv2f32_nxv2i32(<vscale x 2 x fl
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -12983,7 +12983,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vloxseg6_nxv2f32_nxv2i8(float* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv2f32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13002,7 +13002,7 @@ define <vscale x 2 x float> @test_vloxseg6_mask_nxv2f32_nxv2i8(<vscale x 2 x flo
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -13018,7 +13018,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vloxseg6_nxv2f32_nxv2i16(float* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv2f32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13037,7 +13037,7 @@ define <vscale x 2 x float> @test_vloxseg6_mask_nxv2f32_nxv2i16(<vscale x 2 x fl
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -13053,7 +13053,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vloxseg6_nxv2f32_nxv2i64(float* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv2f32_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13072,7 +13072,7 @@ define <vscale x 2 x float> @test_vloxseg6_mask_nxv2f32_nxv2i64(<vscale x 2 x fl
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -13088,7 +13088,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vloxseg7_nxv2f32_nxv2i32(float* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv2f32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13108,7 +13108,7 @@ define <vscale x 2 x float> @test_vloxseg7_mask_nxv2f32_nxv2i32(<vscale x 2 x fl
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -13124,7 +13124,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vloxseg7_nxv2f32_nxv2i8(float* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv2f32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13144,7 +13144,7 @@ define <vscale x 2 x float> @test_vloxseg7_mask_nxv2f32_nxv2i8(<vscale x 2 x flo
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -13160,7 +13160,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vloxseg7_nxv2f32_nxv2i16(float* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv2f32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13180,7 +13180,7 @@ define <vscale x 2 x float> @test_vloxseg7_mask_nxv2f32_nxv2i16(<vscale x 2 x fl
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -13196,7 +13196,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vloxseg7_nxv2f32_nxv2i64(float* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv2f32_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13216,7 +13216,7 @@ define <vscale x 2 x float> @test_vloxseg7_mask_nxv2f32_nxv2i64(<vscale x 2 x fl
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -13232,7 +13232,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vloxseg8_nxv2f32_nxv2i32(float* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv2f32_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13253,7 +13253,7 @@ define <vscale x 2 x float> @test_vloxseg8_mask_nxv2f32_nxv2i32(<vscale x 2 x fl
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -13269,7 +13269,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vloxseg8_nxv2f32_nxv2i8(float* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv2f32_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13290,7 +13290,7 @@ define <vscale x 2 x float> @test_vloxseg8_mask_nxv2f32_nxv2i8(<vscale x 2 x flo
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -13306,7 +13306,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vloxseg8_nxv2f32_nxv2i16(float* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv2f32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13327,7 +13327,7 @@ define <vscale x 2 x float> @test_vloxseg8_mask_nxv2f32_nxv2i16(<vscale x 2 x fl
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -13343,7 +13343,7 @@ declare {<vscale x 2 x float>,<vscale x 2 x float>,<vscale x 2 x float>,<vscale 
 define <vscale x 2 x float> @test_vloxseg8_nxv2f32_nxv2i64(float* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv2f32_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13364,7 +13364,7 @@ define <vscale x 2 x float> @test_vloxseg8_mask_nxv2f32_nxv2i64(<vscale x 2 x fl
 ; CHECK-NEXT:    vmv1r.v v17, v12
 ; CHECK-NEXT:    vmv1r.v v18, v12
 ; CHECK-NEXT:    vmv1r.v v19, v12
-; CHECK-NEXT:    vsetvli a1, a1, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v13
 ; CHECK-NEXT:    ret
@@ -13380,7 +13380,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>} @llvm.riscv.vloxseg2.mask.nxv1
 define <vscale x 1 x half> @test_vloxseg2_nxv1f16_nxv1i64(half* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1f16_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13394,7 +13394,7 @@ define <vscale x 1 x half> @test_vloxseg2_mask_nxv1f16_nxv1i64(<vscale x 1 x hal
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1f16_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -13410,7 +13410,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>} @llvm.riscv.vloxseg2.mask.nxv1
 define <vscale x 1 x half> @test_vloxseg2_nxv1f16_nxv1i32(half* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1f16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13424,7 +13424,7 @@ define <vscale x 1 x half> @test_vloxseg2_mask_nxv1f16_nxv1i32(<vscale x 1 x hal
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1f16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -13440,7 +13440,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>} @llvm.riscv.vloxseg2.mask.nxv1
 define <vscale x 1 x half> @test_vloxseg2_nxv1f16_nxv1i16(half* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1f16_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13454,7 +13454,7 @@ define <vscale x 1 x half> @test_vloxseg2_mask_nxv1f16_nxv1i16(<vscale x 1 x hal
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1f16_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -13470,7 +13470,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>} @llvm.riscv.vloxseg2.mask.nxv1
 define <vscale x 1 x half> @test_vloxseg2_nxv1f16_nxv1i8(half* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1f16_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13484,7 +13484,7 @@ define <vscale x 1 x half> @test_vloxseg2_mask_nxv1f16_nxv1i8(<vscale x 1 x half
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1f16_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -13500,7 +13500,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>} @llvm.risc
 define <vscale x 1 x half> @test_vloxseg3_nxv1f16_nxv1i64(half* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1f16_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13516,7 +13516,7 @@ define <vscale x 1 x half> @test_vloxseg3_mask_nxv1f16_nxv1i64(<vscale x 1 x hal
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -13532,7 +13532,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>} @llvm.risc
 define <vscale x 1 x half> @test_vloxseg3_nxv1f16_nxv1i32(half* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1f16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13548,7 +13548,7 @@ define <vscale x 1 x half> @test_vloxseg3_mask_nxv1f16_nxv1i32(<vscale x 1 x hal
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -13564,7 +13564,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>} @llvm.risc
 define <vscale x 1 x half> @test_vloxseg3_nxv1f16_nxv1i16(half* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1f16_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13580,7 +13580,7 @@ define <vscale x 1 x half> @test_vloxseg3_mask_nxv1f16_nxv1i16(<vscale x 1 x hal
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -13596,7 +13596,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>} @llvm.risc
 define <vscale x 1 x half> @test_vloxseg3_nxv1f16_nxv1i8(half* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1f16_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13612,7 +13612,7 @@ define <vscale x 1 x half> @test_vloxseg3_mask_nxv1f16_nxv1i8(<vscale x 1 x half
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -13628,7 +13628,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vloxseg4_nxv1f16_nxv1i64(half* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1f16_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13645,7 +13645,7 @@ define <vscale x 1 x half> @test_vloxseg4_mask_nxv1f16_nxv1i64(<vscale x 1 x hal
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -13661,7 +13661,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vloxseg4_nxv1f16_nxv1i32(half* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1f16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13678,7 +13678,7 @@ define <vscale x 1 x half> @test_vloxseg4_mask_nxv1f16_nxv1i32(<vscale x 1 x hal
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -13694,7 +13694,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vloxseg4_nxv1f16_nxv1i16(half* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1f16_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13711,7 +13711,7 @@ define <vscale x 1 x half> @test_vloxseg4_mask_nxv1f16_nxv1i16(<vscale x 1 x hal
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -13727,7 +13727,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vloxseg4_nxv1f16_nxv1i8(half* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1f16_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13744,7 +13744,7 @@ define <vscale x 1 x half> @test_vloxseg4_mask_nxv1f16_nxv1i8(<vscale x 1 x half
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -13760,7 +13760,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vloxseg5_nxv1f16_nxv1i64(half* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1f16_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13778,7 +13778,7 @@ define <vscale x 1 x half> @test_vloxseg5_mask_nxv1f16_nxv1i64(<vscale x 1 x hal
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -13794,7 +13794,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vloxseg5_nxv1f16_nxv1i32(half* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1f16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13812,7 +13812,7 @@ define <vscale x 1 x half> @test_vloxseg5_mask_nxv1f16_nxv1i32(<vscale x 1 x hal
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -13828,7 +13828,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vloxseg5_nxv1f16_nxv1i16(half* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1f16_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13846,7 +13846,7 @@ define <vscale x 1 x half> @test_vloxseg5_mask_nxv1f16_nxv1i16(<vscale x 1 x hal
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -13862,7 +13862,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vloxseg5_nxv1f16_nxv1i8(half* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1f16_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13880,7 +13880,7 @@ define <vscale x 1 x half> @test_vloxseg5_mask_nxv1f16_nxv1i8(<vscale x 1 x half
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -13896,7 +13896,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vloxseg6_nxv1f16_nxv1i64(half* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1f16_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13915,7 +13915,7 @@ define <vscale x 1 x half> @test_vloxseg6_mask_nxv1f16_nxv1i64(<vscale x 1 x hal
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -13931,7 +13931,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vloxseg6_nxv1f16_nxv1i32(half* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1f16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13950,7 +13950,7 @@ define <vscale x 1 x half> @test_vloxseg6_mask_nxv1f16_nxv1i32(<vscale x 1 x hal
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -13966,7 +13966,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vloxseg6_nxv1f16_nxv1i16(half* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1f16_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -13985,7 +13985,7 @@ define <vscale x 1 x half> @test_vloxseg6_mask_nxv1f16_nxv1i16(<vscale x 1 x hal
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14001,7 +14001,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vloxseg6_nxv1f16_nxv1i8(half* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1f16_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14020,7 +14020,7 @@ define <vscale x 1 x half> @test_vloxseg6_mask_nxv1f16_nxv1i8(<vscale x 1 x half
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14036,7 +14036,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vloxseg7_nxv1f16_nxv1i64(half* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1f16_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14056,7 +14056,7 @@ define <vscale x 1 x half> @test_vloxseg7_mask_nxv1f16_nxv1i64(<vscale x 1 x hal
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14072,7 +14072,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vloxseg7_nxv1f16_nxv1i32(half* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1f16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14092,7 +14092,7 @@ define <vscale x 1 x half> @test_vloxseg7_mask_nxv1f16_nxv1i32(<vscale x 1 x hal
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14108,7 +14108,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vloxseg7_nxv1f16_nxv1i16(half* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1f16_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14128,7 +14128,7 @@ define <vscale x 1 x half> @test_vloxseg7_mask_nxv1f16_nxv1i16(<vscale x 1 x hal
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14144,7 +14144,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vloxseg7_nxv1f16_nxv1i8(half* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1f16_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14164,7 +14164,7 @@ define <vscale x 1 x half> @test_vloxseg7_mask_nxv1f16_nxv1i8(<vscale x 1 x half
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14180,7 +14180,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vloxseg8_nxv1f16_nxv1i64(half* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1f16_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14201,7 +14201,7 @@ define <vscale x 1 x half> @test_vloxseg8_mask_nxv1f16_nxv1i64(<vscale x 1 x hal
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -14217,7 +14217,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vloxseg8_nxv1f16_nxv1i32(half* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1f16_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14238,7 +14238,7 @@ define <vscale x 1 x half> @test_vloxseg8_mask_nxv1f16_nxv1i32(<vscale x 1 x hal
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -14254,7 +14254,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vloxseg8_nxv1f16_nxv1i16(half* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1f16_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14275,7 +14275,7 @@ define <vscale x 1 x half> @test_vloxseg8_mask_nxv1f16_nxv1i16(<vscale x 1 x hal
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -14291,7 +14291,7 @@ declare {<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1 x half>,<vscale x 1
 define <vscale x 1 x half> @test_vloxseg8_nxv1f16_nxv1i8(half* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1f16_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,ta,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14312,7 +14312,7 @@ define <vscale x 1 x half> @test_vloxseg8_mask_nxv1f16_nxv1i8(<vscale x 1 x half
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf4,tu,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -14328,7 +14328,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>} @llvm.riscv.vloxseg2.mask.nx
 define <vscale x 1 x float> @test_vloxseg2_nxv1f32_nxv1i64(float* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1f32_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14342,7 +14342,7 @@ define <vscale x 1 x float> @test_vloxseg2_mask_nxv1f32_nxv1i64(<vscale x 1 x fl
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1f32_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -14358,7 +14358,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>} @llvm.riscv.vloxseg2.mask.nx
 define <vscale x 1 x float> @test_vloxseg2_nxv1f32_nxv1i32(float* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1f32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14372,7 +14372,7 @@ define <vscale x 1 x float> @test_vloxseg2_mask_nxv1f32_nxv1i32(<vscale x 1 x fl
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1f32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -14388,7 +14388,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>} @llvm.riscv.vloxseg2.mask.nx
 define <vscale x 1 x float> @test_vloxseg2_nxv1f32_nxv1i16(float* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1f32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14402,7 +14402,7 @@ define <vscale x 1 x float> @test_vloxseg2_mask_nxv1f32_nxv1i16(<vscale x 1 x fl
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1f32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -14418,7 +14418,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>} @llvm.riscv.vloxseg2.mask.nx
 define <vscale x 1 x float> @test_vloxseg2_nxv1f32_nxv1i8(float* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv1f32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14432,7 +14432,7 @@ define <vscale x 1 x float> @test_vloxseg2_mask_nxv1f32_nxv1i8(<vscale x 1 x flo
 ; CHECK-LABEL: test_vloxseg2_mask_nxv1f32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -14448,7 +14448,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>} @llvm.r
 define <vscale x 1 x float> @test_vloxseg3_nxv1f32_nxv1i64(float* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1f32_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14464,7 +14464,7 @@ define <vscale x 1 x float> @test_vloxseg3_mask_nxv1f32_nxv1i64(<vscale x 1 x fl
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14480,7 +14480,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>} @llvm.r
 define <vscale x 1 x float> @test_vloxseg3_nxv1f32_nxv1i32(float* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1f32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14496,7 +14496,7 @@ define <vscale x 1 x float> @test_vloxseg3_mask_nxv1f32_nxv1i32(<vscale x 1 x fl
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14512,7 +14512,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>} @llvm.r
 define <vscale x 1 x float> @test_vloxseg3_nxv1f32_nxv1i16(float* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1f32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14528,7 +14528,7 @@ define <vscale x 1 x float> @test_vloxseg3_mask_nxv1f32_nxv1i16(<vscale x 1 x fl
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14544,7 +14544,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>} @llvm.r
 define <vscale x 1 x float> @test_vloxseg3_nxv1f32_nxv1i8(float* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv1f32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14560,7 +14560,7 @@ define <vscale x 1 x float> @test_vloxseg3_mask_nxv1f32_nxv1i8(<vscale x 1 x flo
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14576,7 +14576,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vloxseg4_nxv1f32_nxv1i64(float* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1f32_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14593,7 +14593,7 @@ define <vscale x 1 x float> @test_vloxseg4_mask_nxv1f32_nxv1i64(<vscale x 1 x fl
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14609,7 +14609,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vloxseg4_nxv1f32_nxv1i32(float* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1f32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14626,7 +14626,7 @@ define <vscale x 1 x float> @test_vloxseg4_mask_nxv1f32_nxv1i32(<vscale x 1 x fl
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14642,7 +14642,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vloxseg4_nxv1f32_nxv1i16(float* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1f32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14659,7 +14659,7 @@ define <vscale x 1 x float> @test_vloxseg4_mask_nxv1f32_nxv1i16(<vscale x 1 x fl
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14675,7 +14675,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vloxseg4_nxv1f32_nxv1i8(float* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv1f32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14692,7 +14692,7 @@ define <vscale x 1 x float> @test_vloxseg4_mask_nxv1f32_nxv1i8(<vscale x 1 x flo
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14708,7 +14708,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vloxseg5_nxv1f32_nxv1i64(float* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1f32_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14726,7 +14726,7 @@ define <vscale x 1 x float> @test_vloxseg5_mask_nxv1f32_nxv1i64(<vscale x 1 x fl
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14742,7 +14742,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vloxseg5_nxv1f32_nxv1i32(float* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1f32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14760,7 +14760,7 @@ define <vscale x 1 x float> @test_vloxseg5_mask_nxv1f32_nxv1i32(<vscale x 1 x fl
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14776,7 +14776,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vloxseg5_nxv1f32_nxv1i16(float* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1f32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14794,7 +14794,7 @@ define <vscale x 1 x float> @test_vloxseg5_mask_nxv1f32_nxv1i16(<vscale x 1 x fl
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14810,7 +14810,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vloxseg5_nxv1f32_nxv1i8(float* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv1f32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14828,7 +14828,7 @@ define <vscale x 1 x float> @test_vloxseg5_mask_nxv1f32_nxv1i8(<vscale x 1 x flo
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14844,7 +14844,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vloxseg6_nxv1f32_nxv1i64(float* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1f32_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14863,7 +14863,7 @@ define <vscale x 1 x float> @test_vloxseg6_mask_nxv1f32_nxv1i64(<vscale x 1 x fl
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14879,7 +14879,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vloxseg6_nxv1f32_nxv1i32(float* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1f32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14898,7 +14898,7 @@ define <vscale x 1 x float> @test_vloxseg6_mask_nxv1f32_nxv1i32(<vscale x 1 x fl
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14914,7 +14914,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vloxseg6_nxv1f32_nxv1i16(float* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1f32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14933,7 +14933,7 @@ define <vscale x 1 x float> @test_vloxseg6_mask_nxv1f32_nxv1i16(<vscale x 1 x fl
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14949,7 +14949,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vloxseg6_nxv1f32_nxv1i8(float* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv1f32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -14968,7 +14968,7 @@ define <vscale x 1 x float> @test_vloxseg6_mask_nxv1f32_nxv1i8(<vscale x 1 x flo
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -14984,7 +14984,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vloxseg7_nxv1f32_nxv1i64(float* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1f32_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -15004,7 +15004,7 @@ define <vscale x 1 x float> @test_vloxseg7_mask_nxv1f32_nxv1i64(<vscale x 1 x fl
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15020,7 +15020,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vloxseg7_nxv1f32_nxv1i32(float* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1f32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -15040,7 +15040,7 @@ define <vscale x 1 x float> @test_vloxseg7_mask_nxv1f32_nxv1i32(<vscale x 1 x fl
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15056,7 +15056,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vloxseg7_nxv1f32_nxv1i16(float* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1f32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -15076,7 +15076,7 @@ define <vscale x 1 x float> @test_vloxseg7_mask_nxv1f32_nxv1i16(<vscale x 1 x fl
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15092,7 +15092,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vloxseg7_nxv1f32_nxv1i8(float* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv1f32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -15112,7 +15112,7 @@ define <vscale x 1 x float> @test_vloxseg7_mask_nxv1f32_nxv1i8(<vscale x 1 x flo
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15128,7 +15128,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vloxseg8_nxv1f32_nxv1i64(float* %base, <vscale x 1 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1f32_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -15149,7 +15149,7 @@ define <vscale x 1 x float> @test_vloxseg8_mask_nxv1f32_nxv1i64(<vscale x 1 x fl
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -15165,7 +15165,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vloxseg8_nxv1f32_nxv1i32(float* %base, <vscale x 1 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1f32_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -15186,7 +15186,7 @@ define <vscale x 1 x float> @test_vloxseg8_mask_nxv1f32_nxv1i32(<vscale x 1 x fl
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -15202,7 +15202,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vloxseg8_nxv1f32_nxv1i16(float* %base, <vscale x 1 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1f32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -15223,7 +15223,7 @@ define <vscale x 1 x float> @test_vloxseg8_mask_nxv1f32_nxv1i16(<vscale x 1 x fl
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -15239,7 +15239,7 @@ declare {<vscale x 1 x float>,<vscale x 1 x float>,<vscale x 1 x float>,<vscale 
 define <vscale x 1 x float> @test_vloxseg8_nxv1f32_nxv1i8(float* %base, <vscale x 1 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv1f32_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -15260,7 +15260,7 @@ define <vscale x 1 x float> @test_vloxseg8_mask_nxv1f32_nxv1i8(<vscale x 1 x flo
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -15276,7 +15276,7 @@ declare {<vscale x 8 x half>,<vscale x 8 x half>} @llvm.riscv.vloxseg2.mask.nxv8
 define <vscale x 8 x half> @test_vloxseg2_nxv8f16_nxv8i16(half* %base, <vscale x 8 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv8f16_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15290,7 +15290,7 @@ define <vscale x 8 x half> @test_vloxseg2_mask_nxv8f16_nxv8i16(<vscale x 8 x hal
 ; CHECK-LABEL: test_vloxseg2_mask_nxv8f16_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v6, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -15306,7 +15306,7 @@ declare {<vscale x 8 x half>,<vscale x 8 x half>} @llvm.riscv.vloxseg2.mask.nxv8
 define <vscale x 8 x half> @test_vloxseg2_nxv8f16_nxv8i8(half* %base, <vscale x 8 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv8f16_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15320,7 +15320,7 @@ define <vscale x 8 x half> @test_vloxseg2_mask_nxv8f16_nxv8i8(<vscale x 8 x half
 ; CHECK-LABEL: test_vloxseg2_mask_nxv8f16_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v6, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -15336,7 +15336,7 @@ declare {<vscale x 8 x half>,<vscale x 8 x half>} @llvm.riscv.vloxseg2.mask.nxv8
 define <vscale x 8 x half> @test_vloxseg2_nxv8f16_nxv8i64(half* %base, <vscale x 8 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv8f16_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15350,7 +15350,7 @@ define <vscale x 8 x half> @test_vloxseg2_mask_nxv8f16_nxv8i64(<vscale x 8 x hal
 ; CHECK-LABEL: test_vloxseg2_mask_nxv8f16_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v6, (a0), v16, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -15366,7 +15366,7 @@ declare {<vscale x 8 x half>,<vscale x 8 x half>} @llvm.riscv.vloxseg2.mask.nxv8
 define <vscale x 8 x half> @test_vloxseg2_nxv8f16_nxv8i32(half* %base, <vscale x 8 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv8f16_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15380,7 +15380,7 @@ define <vscale x 8 x half> @test_vloxseg2_mask_nxv8f16_nxv8i32(<vscale x 8 x hal
 ; CHECK-LABEL: test_vloxseg2_mask_nxv8f16_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v6, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -15396,7 +15396,7 @@ declare {<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>} @llvm.risc
 define <vscale x 8 x half> @test_vloxseg3_nxv8f16_nxv8i16(half* %base, <vscale x 8 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv8f16_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15412,7 +15412,7 @@ define <vscale x 8 x half> @test_vloxseg3_mask_nxv8f16_nxv8i16(<vscale x 8 x hal
 ; CHECK-NEXT:    vmv2r.v v2, v8
 ; CHECK-NEXT:    vmv2r.v v4, v2
 ; CHECK-NEXT:    vmv2r.v v6, v2
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v2, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -15428,7 +15428,7 @@ declare {<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>} @llvm.risc
 define <vscale x 8 x half> @test_vloxseg3_nxv8f16_nxv8i8(half* %base, <vscale x 8 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv8f16_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15444,7 +15444,7 @@ define <vscale x 8 x half> @test_vloxseg3_mask_nxv8f16_nxv8i8(<vscale x 8 x half
 ; CHECK-NEXT:    vmv2r.v v2, v8
 ; CHECK-NEXT:    vmv2r.v v4, v2
 ; CHECK-NEXT:    vmv2r.v v6, v2
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v2, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -15460,7 +15460,7 @@ declare {<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>} @llvm.risc
 define <vscale x 8 x half> @test_vloxseg3_nxv8f16_nxv8i64(half* %base, <vscale x 8 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv8f16_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15475,7 +15475,7 @@ define <vscale x 8 x half> @test_vloxseg3_mask_nxv8f16_nxv8i64(<vscale x 8 x hal
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
 ; CHECK-NEXT:    vmv2r.v v10, v6
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v6, (a0), v16, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
@@ -15491,7 +15491,7 @@ declare {<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>} @llvm.risc
 define <vscale x 8 x half> @test_vloxseg3_nxv8f16_nxv8i32(half* %base, <vscale x 8 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv8f16_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15506,7 +15506,7 @@ define <vscale x 8 x half> @test_vloxseg3_mask_nxv8f16_nxv8i32(<vscale x 8 x hal
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
 ; CHECK-NEXT:    vmv2r.v v10, v6
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v6, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
@@ -15522,7 +15522,7 @@ declare {<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8
 define <vscale x 8 x half> @test_vloxseg4_nxv8f16_nxv8i16(half* %base, <vscale x 8 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv8f16_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15539,7 +15539,7 @@ define <vscale x 8 x half> @test_vloxseg4_mask_nxv8f16_nxv8i16(<vscale x 8 x hal
 ; CHECK-NEXT:    vmv2r.v v14, v12
 ; CHECK-NEXT:    vmv2r.v v16, v12
 ; CHECK-NEXT:    vmv2r.v v18, v12
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v14
 ; CHECK-NEXT:    ret
@@ -15555,7 +15555,7 @@ declare {<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8
 define <vscale x 8 x half> @test_vloxseg4_nxv8f16_nxv8i8(half* %base, <vscale x 8 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv8f16_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15572,7 +15572,7 @@ define <vscale x 8 x half> @test_vloxseg4_mask_nxv8f16_nxv8i8(<vscale x 8 x half
 ; CHECK-NEXT:    vmv2r.v v14, v12
 ; CHECK-NEXT:    vmv2r.v v16, v12
 ; CHECK-NEXT:    vmv2r.v v18, v12
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v14
 ; CHECK-NEXT:    ret
@@ -15588,7 +15588,7 @@ declare {<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8
 define <vscale x 8 x half> @test_vloxseg4_nxv8f16_nxv8i64(half* %base, <vscale x 8 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv8f16_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15604,7 +15604,7 @@ define <vscale x 8 x half> @test_vloxseg4_mask_nxv8f16_nxv8i64(<vscale x 8 x hal
 ; CHECK-NEXT:    vmv2r.v v6, v8
 ; CHECK-NEXT:    vmv2r.v v10, v6
 ; CHECK-NEXT:    vmv2r.v v12, v6
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v6, (a0), v16, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2_v12m2
 ; CHECK-NEXT:    ret
@@ -15620,7 +15620,7 @@ declare {<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8 x half>,<vscale x 8
 define <vscale x 8 x half> @test_vloxseg4_nxv8f16_nxv8i32(half* %base, <vscale x 8 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv8f16_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15637,7 +15637,7 @@ define <vscale x 8 x half> @test_vloxseg4_mask_nxv8f16_nxv8i32(<vscale x 8 x hal
 ; CHECK-NEXT:    vmv2r.v v18, v16
 ; CHECK-NEXT:    vmv2r.v v20, v16
 ; CHECK-NEXT:    vmv2r.v v22, v16
-; CHECK-NEXT:    vsetvli a1, a1, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v16, (a0), v12, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v18
 ; CHECK-NEXT:    ret
@@ -15653,7 +15653,7 @@ declare {<vscale x 8 x float>,<vscale x 8 x float>} @llvm.riscv.vloxseg2.mask.nx
 define <vscale x 8 x float> @test_vloxseg2_nxv8f32_nxv8i16(float* %base, <vscale x 8 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv8f32_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -15667,7 +15667,7 @@ define <vscale x 8 x float> @test_vloxseg2_mask_nxv8f32_nxv8i16(<vscale x 8 x fl
 ; CHECK-LABEL: test_vloxseg2_mask_nxv8f32_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v4, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -15683,7 +15683,7 @@ declare {<vscale x 8 x float>,<vscale x 8 x float>} @llvm.riscv.vloxseg2.mask.nx
 define <vscale x 8 x float> @test_vloxseg2_nxv8f32_nxv8i8(float* %base, <vscale x 8 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv8f32_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -15697,7 +15697,7 @@ define <vscale x 8 x float> @test_vloxseg2_mask_nxv8f32_nxv8i8(<vscale x 8 x flo
 ; CHECK-LABEL: test_vloxseg2_mask_nxv8f32_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v4, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -15713,7 +15713,7 @@ declare {<vscale x 8 x float>,<vscale x 8 x float>} @llvm.riscv.vloxseg2.mask.nx
 define <vscale x 8 x float> @test_vloxseg2_nxv8f32_nxv8i64(float* %base, <vscale x 8 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv8f32_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -15727,7 +15727,7 @@ define <vscale x 8 x float> @test_vloxseg2_mask_nxv8f32_nxv8i64(<vscale x 8 x fl
 ; CHECK-LABEL: test_vloxseg2_mask_nxv8f32_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v4, (a0), v16, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -15743,7 +15743,7 @@ declare {<vscale x 8 x float>,<vscale x 8 x float>} @llvm.riscv.vloxseg2.mask.nx
 define <vscale x 8 x float> @test_vloxseg2_nxv8f32_nxv8i32(float* %base, <vscale x 8 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv8f32_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -15757,7 +15757,7 @@ define <vscale x 8 x float> @test_vloxseg2_mask_nxv8f32_nxv8i32(<vscale x 8 x fl
 ; CHECK-LABEL: test_vloxseg2_mask_nxv8f32_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv4r.v v4, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v4, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -15773,7 +15773,7 @@ declare {<vscale x 2 x double>,<vscale x 2 x double>} @llvm.riscv.vloxseg2.mask.
 define <vscale x 2 x double> @test_vloxseg2_nxv2f64_nxv2i32(double* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2f64_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15787,7 +15787,7 @@ define <vscale x 2 x double> @test_vloxseg2_mask_nxv2f64_nxv2i32(<vscale x 2 x d
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2f64_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v6, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -15803,7 +15803,7 @@ declare {<vscale x 2 x double>,<vscale x 2 x double>} @llvm.riscv.vloxseg2.mask.
 define <vscale x 2 x double> @test_vloxseg2_nxv2f64_nxv2i8(double* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2f64_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15817,7 +15817,7 @@ define <vscale x 2 x double> @test_vloxseg2_mask_nxv2f64_nxv2i8(<vscale x 2 x do
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2f64_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v6, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -15833,7 +15833,7 @@ declare {<vscale x 2 x double>,<vscale x 2 x double>} @llvm.riscv.vloxseg2.mask.
 define <vscale x 2 x double> @test_vloxseg2_nxv2f64_nxv2i16(double* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2f64_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15847,7 +15847,7 @@ define <vscale x 2 x double> @test_vloxseg2_mask_nxv2f64_nxv2i16(<vscale x 2 x d
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2f64_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v6, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -15863,7 +15863,7 @@ declare {<vscale x 2 x double>,<vscale x 2 x double>} @llvm.riscv.vloxseg2.mask.
 define <vscale x 2 x double> @test_vloxseg2_nxv2f64_nxv2i64(double* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2f64_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15877,7 +15877,7 @@ define <vscale x 2 x double> @test_vloxseg2_mask_nxv2f64_nxv2i64(<vscale x 2 x d
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2f64_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v6, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -15893,7 +15893,7 @@ declare {<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>} @llv
 define <vscale x 2 x double> @test_vloxseg3_nxv2f64_nxv2i32(double* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2f64_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15909,7 +15909,7 @@ define <vscale x 2 x double> @test_vloxseg3_mask_nxv2f64_nxv2i32(<vscale x 2 x d
 ; CHECK-NEXT:    vmv2r.v v2, v8
 ; CHECK-NEXT:    vmv2r.v v4, v2
 ; CHECK-NEXT:    vmv2r.v v6, v2
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v2, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -15925,7 +15925,7 @@ declare {<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>} @llv
 define <vscale x 2 x double> @test_vloxseg3_nxv2f64_nxv2i8(double* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2f64_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15941,7 +15941,7 @@ define <vscale x 2 x double> @test_vloxseg3_mask_nxv2f64_nxv2i8(<vscale x 2 x do
 ; CHECK-NEXT:    vmv2r.v v2, v8
 ; CHECK-NEXT:    vmv2r.v v4, v2
 ; CHECK-NEXT:    vmv2r.v v6, v2
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v2, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -15957,7 +15957,7 @@ declare {<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>} @llv
 define <vscale x 2 x double> @test_vloxseg3_nxv2f64_nxv2i16(double* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2f64_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -15973,7 +15973,7 @@ define <vscale x 2 x double> @test_vloxseg3_mask_nxv2f64_nxv2i16(<vscale x 2 x d
 ; CHECK-NEXT:    vmv2r.v v2, v8
 ; CHECK-NEXT:    vmv2r.v v4, v2
 ; CHECK-NEXT:    vmv2r.v v6, v2
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v2, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -15989,7 +15989,7 @@ declare {<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>} @llv
 define <vscale x 2 x double> @test_vloxseg3_nxv2f64_nxv2i64(double* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2f64_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -16005,7 +16005,7 @@ define <vscale x 2 x double> @test_vloxseg3_mask_nxv2f64_nxv2i64(<vscale x 2 x d
 ; CHECK-NEXT:    vmv2r.v v2, v8
 ; CHECK-NEXT:    vmv2r.v v4, v2
 ; CHECK-NEXT:    vmv2r.v v6, v2
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v2, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -16021,7 +16021,7 @@ declare {<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>,<vsca
 define <vscale x 2 x double> @test_vloxseg4_nxv2f64_nxv2i32(double* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2f64_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -16038,7 +16038,7 @@ define <vscale x 2 x double> @test_vloxseg4_mask_nxv2f64_nxv2i32(<vscale x 2 x d
 ; CHECK-NEXT:    vmv2r.v v14, v12
 ; CHECK-NEXT:    vmv2r.v v16, v12
 ; CHECK-NEXT:    vmv2r.v v18, v12
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v14
 ; CHECK-NEXT:    ret
@@ -16054,7 +16054,7 @@ declare {<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>,<vsca
 define <vscale x 2 x double> @test_vloxseg4_nxv2f64_nxv2i8(double* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2f64_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -16071,7 +16071,7 @@ define <vscale x 2 x double> @test_vloxseg4_mask_nxv2f64_nxv2i8(<vscale x 2 x do
 ; CHECK-NEXT:    vmv2r.v v14, v12
 ; CHECK-NEXT:    vmv2r.v v16, v12
 ; CHECK-NEXT:    vmv2r.v v18, v12
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v14
 ; CHECK-NEXT:    ret
@@ -16087,7 +16087,7 @@ declare {<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>,<vsca
 define <vscale x 2 x double> @test_vloxseg4_nxv2f64_nxv2i16(double* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2f64_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -16104,7 +16104,7 @@ define <vscale x 2 x double> @test_vloxseg4_mask_nxv2f64_nxv2i16(<vscale x 2 x d
 ; CHECK-NEXT:    vmv2r.v v14, v12
 ; CHECK-NEXT:    vmv2r.v v16, v12
 ; CHECK-NEXT:    vmv2r.v v18, v12
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v14
 ; CHECK-NEXT:    ret
@@ -16120,7 +16120,7 @@ declare {<vscale x 2 x double>,<vscale x 2 x double>,<vscale x 2 x double>,<vsca
 define <vscale x 2 x double> @test_vloxseg4_nxv2f64_nxv2i64(double* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2f64_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -16137,7 +16137,7 @@ define <vscale x 2 x double> @test_vloxseg4_mask_nxv2f64_nxv2i64(<vscale x 2 x d
 ; CHECK-NEXT:    vmv2r.v v14, v12
 ; CHECK-NEXT:    vmv2r.v v16, v12
 ; CHECK-NEXT:    vmv2r.v v18, v12
-; CHECK-NEXT:    vsetvli a1, a1, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e64,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v14
 ; CHECK-NEXT:    ret
@@ -16153,7 +16153,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>} @llvm.riscv.vloxseg2.mask.nxv4
 define <vscale x 4 x half> @test_vloxseg2_nxv4f16_nxv4i32(half* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4f16_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16167,7 +16167,7 @@ define <vscale x 4 x half> @test_vloxseg2_mask_nxv4f16_nxv4i32(<vscale x 4 x hal
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4f16_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v7, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -16183,7 +16183,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>} @llvm.riscv.vloxseg2.mask.nxv4
 define <vscale x 4 x half> @test_vloxseg2_nxv4f16_nxv4i8(half* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4f16_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16197,7 +16197,7 @@ define <vscale x 4 x half> @test_vloxseg2_mask_nxv4f16_nxv4i8(<vscale x 4 x half
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4f16_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -16213,7 +16213,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>} @llvm.riscv.vloxseg2.mask.nxv4
 define <vscale x 4 x half> @test_vloxseg2_nxv4f16_nxv4i64(half* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4f16_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16227,7 +16227,7 @@ define <vscale x 4 x half> @test_vloxseg2_mask_nxv4f16_nxv4i64(<vscale x 4 x hal
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4f16_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v7, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -16243,7 +16243,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>} @llvm.riscv.vloxseg2.mask.nxv4
 define <vscale x 4 x half> @test_vloxseg2_nxv4f16_nxv4i16(half* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4f16_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16257,7 +16257,7 @@ define <vscale x 4 x half> @test_vloxseg2_mask_nxv4f16_nxv4i16(<vscale x 4 x hal
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4f16_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -16273,7 +16273,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>} @llvm.risc
 define <vscale x 4 x half> @test_vloxseg3_nxv4f16_nxv4i32(half* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv4f16_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16288,7 +16288,7 @@ define <vscale x 4 x half> @test_vloxseg3_mask_nxv4f16_nxv4i32(<vscale x 4 x hal
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
 ; CHECK-NEXT:    vmv1r.v v9, v7
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v7, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
@@ -16304,7 +16304,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>} @llvm.risc
 define <vscale x 4 x half> @test_vloxseg3_nxv4f16_nxv4i8(half* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv4f16_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16320,7 +16320,7 @@ define <vscale x 4 x half> @test_vloxseg3_mask_nxv4f16_nxv4i8(<vscale x 4 x half
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -16336,7 +16336,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>} @llvm.risc
 define <vscale x 4 x half> @test_vloxseg3_nxv4f16_nxv4i64(half* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv4f16_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16351,7 +16351,7 @@ define <vscale x 4 x half> @test_vloxseg3_mask_nxv4f16_nxv4i64(<vscale x 4 x hal
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
 ; CHECK-NEXT:    vmv1r.v v9, v7
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v7, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
@@ -16367,7 +16367,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>} @llvm.risc
 define <vscale x 4 x half> @test_vloxseg3_nxv4f16_nxv4i16(half* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv4f16_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16383,7 +16383,7 @@ define <vscale x 4 x half> @test_vloxseg3_mask_nxv4f16_nxv4i16(<vscale x 4 x hal
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -16399,7 +16399,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vloxseg4_nxv4f16_nxv4i32(half* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv4f16_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16416,7 +16416,7 @@ define <vscale x 4 x half> @test_vloxseg4_mask_nxv4f16_nxv4i32(<vscale x 4 x hal
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -16432,7 +16432,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vloxseg4_nxv4f16_nxv4i8(half* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv4f16_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16449,7 +16449,7 @@ define <vscale x 4 x half> @test_vloxseg4_mask_nxv4f16_nxv4i8(<vscale x 4 x half
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -16465,7 +16465,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vloxseg4_nxv4f16_nxv4i64(half* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv4f16_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16481,7 +16481,7 @@ define <vscale x 4 x half> @test_vloxseg4_mask_nxv4f16_nxv4i64(<vscale x 4 x hal
 ; CHECK-NEXT:    vmv1r.v v7, v8
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v7, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10
 ; CHECK-NEXT:    ret
@@ -16497,7 +16497,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vloxseg4_nxv4f16_nxv4i16(half* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv4f16_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16514,7 +16514,7 @@ define <vscale x 4 x half> @test_vloxseg4_mask_nxv4f16_nxv4i16(<vscale x 4 x hal
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -16530,7 +16530,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vloxseg5_nxv4f16_nxv4i32(half* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv4f16_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16548,7 +16548,7 @@ define <vscale x 4 x half> @test_vloxseg5_mask_nxv4f16_nxv4i32(<vscale x 4 x hal
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -16564,7 +16564,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vloxseg5_nxv4f16_nxv4i8(half* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv4f16_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16582,7 +16582,7 @@ define <vscale x 4 x half> @test_vloxseg5_mask_nxv4f16_nxv4i8(<vscale x 4 x half
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -16598,7 +16598,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vloxseg5_nxv4f16_nxv4i64(half* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv4f16_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16615,7 +16615,7 @@ define <vscale x 4 x half> @test_vloxseg5_mask_nxv4f16_nxv4i64(<vscale x 4 x hal
 ; CHECK-NEXT:    vmv1r.v v9, v7
 ; CHECK-NEXT:    vmv1r.v v10, v7
 ; CHECK-NEXT:    vmv1r.v v11, v7
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v7, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9_v10_v11
 ; CHECK-NEXT:    ret
@@ -16631,7 +16631,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vloxseg5_nxv4f16_nxv4i16(half* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv4f16_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16649,7 +16649,7 @@ define <vscale x 4 x half> @test_vloxseg5_mask_nxv4f16_nxv4i16(<vscale x 4 x hal
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -16665,7 +16665,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vloxseg6_nxv4f16_nxv4i32(half* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv4f16_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16684,7 +16684,7 @@ define <vscale x 4 x half> @test_vloxseg6_mask_nxv4f16_nxv4i32(<vscale x 4 x hal
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -16700,7 +16700,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vloxseg6_nxv4f16_nxv4i8(half* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv4f16_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16719,7 +16719,7 @@ define <vscale x 4 x half> @test_vloxseg6_mask_nxv4f16_nxv4i8(<vscale x 4 x half
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -16735,7 +16735,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vloxseg6_nxv4f16_nxv4i64(half* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv4f16_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16754,7 +16754,7 @@ define <vscale x 4 x half> @test_vloxseg6_mask_nxv4f16_nxv4i64(<vscale x 4 x hal
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v1, (a0), v12, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -16770,7 +16770,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vloxseg6_nxv4f16_nxv4i16(half* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv4f16_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16789,7 +16789,7 @@ define <vscale x 4 x half> @test_vloxseg6_mask_nxv4f16_nxv4i16(<vscale x 4 x hal
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -16805,7 +16805,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vloxseg7_nxv4f16_nxv4i32(half* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv4f16_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16825,7 +16825,7 @@ define <vscale x 4 x half> @test_vloxseg7_mask_nxv4f16_nxv4i32(<vscale x 4 x hal
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -16841,7 +16841,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vloxseg7_nxv4f16_nxv4i8(half* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv4f16_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16861,7 +16861,7 @@ define <vscale x 4 x half> @test_vloxseg7_mask_nxv4f16_nxv4i8(<vscale x 4 x half
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -16877,7 +16877,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vloxseg7_nxv4f16_nxv4i64(half* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv4f16_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16897,7 +16897,7 @@ define <vscale x 4 x half> @test_vloxseg7_mask_nxv4f16_nxv4i64(<vscale x 4 x hal
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v1, (a0), v12, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -16913,7 +16913,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vloxseg7_nxv4f16_nxv4i16(half* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv4f16_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16933,7 +16933,7 @@ define <vscale x 4 x half> @test_vloxseg7_mask_nxv4f16_nxv4i16(<vscale x 4 x hal
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -16949,7 +16949,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vloxseg8_nxv4f16_nxv4i32(half* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv4f16_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -16970,7 +16970,7 @@ define <vscale x 4 x half> @test_vloxseg8_mask_nxv4f16_nxv4i32(<vscale x 4 x hal
 ; CHECK-NEXT:    vmv1r.v v17, v12
 ; CHECK-NEXT:    vmv1r.v v18, v12
 ; CHECK-NEXT:    vmv1r.v v19, v12
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v13
 ; CHECK-NEXT:    ret
@@ -16986,7 +16986,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vloxseg8_nxv4f16_nxv4i8(half* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv4f16_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17007,7 +17007,7 @@ define <vscale x 4 x half> @test_vloxseg8_mask_nxv4f16_nxv4i8(<vscale x 4 x half
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -17023,7 +17023,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vloxseg8_nxv4f16_nxv4i64(half* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv4f16_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17044,7 +17044,7 @@ define <vscale x 4 x half> @test_vloxseg8_mask_nxv4f16_nxv4i64(<vscale x 4 x hal
 ; CHECK-NEXT:    vmv1r.v v21, v16
 ; CHECK-NEXT:    vmv1r.v v22, v16
 ; CHECK-NEXT:    vmv1r.v v23, v16
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v16, (a0), v12, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v17
 ; CHECK-NEXT:    ret
@@ -17060,7 +17060,7 @@ declare {<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4 x half>,<vscale x 4
 define <vscale x 4 x half> @test_vloxseg8_nxv4f16_nxv4i16(half* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv4f16_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,ta,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17081,7 +17081,7 @@ define <vscale x 4 x half> @test_vloxseg8_mask_nxv4f16_nxv4i16(<vscale x 4 x hal
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,m1,tu,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -17097,7 +17097,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>} @llvm.riscv.vloxseg2.mask.nxv2
 define <vscale x 2 x half> @test_vloxseg2_nxv2f16_nxv2i32(half* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2f16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17111,7 +17111,7 @@ define <vscale x 2 x half> @test_vloxseg2_mask_nxv2f16_nxv2i32(<vscale x 2 x hal
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2f16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -17127,7 +17127,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>} @llvm.riscv.vloxseg2.mask.nxv2
 define <vscale x 2 x half> @test_vloxseg2_nxv2f16_nxv2i8(half* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2f16_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17141,7 +17141,7 @@ define <vscale x 2 x half> @test_vloxseg2_mask_nxv2f16_nxv2i8(<vscale x 2 x half
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2f16_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -17157,7 +17157,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>} @llvm.riscv.vloxseg2.mask.nxv2
 define <vscale x 2 x half> @test_vloxseg2_nxv2f16_nxv2i16(half* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2f16_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17171,7 +17171,7 @@ define <vscale x 2 x half> @test_vloxseg2_mask_nxv2f16_nxv2i16(<vscale x 2 x hal
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2f16_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v7, (a0), v9, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -17187,7 +17187,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>} @llvm.riscv.vloxseg2.mask.nxv2
 define <vscale x 2 x half> @test_vloxseg2_nxv2f16_nxv2i64(half* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv2f16_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17201,7 +17201,7 @@ define <vscale x 2 x half> @test_vloxseg2_mask_nxv2f16_nxv2i64(<vscale x 2 x hal
 ; CHECK-LABEL: test_vloxseg2_mask_nxv2f16_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v7, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8
 ; CHECK-NEXT:    ret
@@ -17217,7 +17217,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>} @llvm.risc
 define <vscale x 2 x half> @test_vloxseg3_nxv2f16_nxv2i32(half* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2f16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17233,7 +17233,7 @@ define <vscale x 2 x half> @test_vloxseg3_mask_nxv2f16_nxv2i32(<vscale x 2 x hal
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -17249,7 +17249,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>} @llvm.risc
 define <vscale x 2 x half> @test_vloxseg3_nxv2f16_nxv2i8(half* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2f16_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17265,7 +17265,7 @@ define <vscale x 2 x half> @test_vloxseg3_mask_nxv2f16_nxv2i8(<vscale x 2 x half
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -17281,7 +17281,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>} @llvm.risc
 define <vscale x 2 x half> @test_vloxseg3_nxv2f16_nxv2i16(half* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2f16_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17297,7 +17297,7 @@ define <vscale x 2 x half> @test_vloxseg3_mask_nxv2f16_nxv2i16(<vscale x 2 x hal
 ; CHECK-NEXT:    vmv1r.v v1, v8
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -17313,7 +17313,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>} @llvm.risc
 define <vscale x 2 x half> @test_vloxseg3_nxv2f16_nxv2i64(half* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv2f16_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17328,7 +17328,7 @@ define <vscale x 2 x half> @test_vloxseg3_mask_nxv2f16_nxv2i64(<vscale x 2 x hal
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv1r.v v7, v8
 ; CHECK-NEXT:    vmv1r.v v9, v7
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v7, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8 killed $v8 killed $v7_v8_v9
 ; CHECK-NEXT:    ret
@@ -17344,7 +17344,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vloxseg4_nxv2f16_nxv2i32(half* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2f16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17361,7 +17361,7 @@ define <vscale x 2 x half> @test_vloxseg4_mask_nxv2f16_nxv2i32(<vscale x 2 x hal
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -17377,7 +17377,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vloxseg4_nxv2f16_nxv2i8(half* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2f16_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17394,7 +17394,7 @@ define <vscale x 2 x half> @test_vloxseg4_mask_nxv2f16_nxv2i8(<vscale x 2 x half
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -17410,7 +17410,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vloxseg4_nxv2f16_nxv2i16(half* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2f16_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17427,7 +17427,7 @@ define <vscale x 2 x half> @test_vloxseg4_mask_nxv2f16_nxv2i16(<vscale x 2 x hal
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -17443,7 +17443,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vloxseg4_nxv2f16_nxv2i64(half* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv2f16_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17460,7 +17460,7 @@ define <vscale x 2 x half> @test_vloxseg4_mask_nxv2f16_nxv2i64(<vscale x 2 x hal
 ; CHECK-NEXT:    vmv1r.v v2, v1
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -17476,7 +17476,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vloxseg5_nxv2f16_nxv2i32(half* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv2f16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17494,7 +17494,7 @@ define <vscale x 2 x half> @test_vloxseg5_mask_nxv2f16_nxv2i32(<vscale x 2 x hal
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg5ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -17510,7 +17510,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vloxseg5_nxv2f16_nxv2i8(half* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv2f16_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17528,7 +17528,7 @@ define <vscale x 2 x half> @test_vloxseg5_mask_nxv2f16_nxv2i8(<vscale x 2 x half
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg5ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -17544,7 +17544,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vloxseg5_nxv2f16_nxv2i16(half* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv2f16_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17562,7 +17562,7 @@ define <vscale x 2 x half> @test_vloxseg5_mask_nxv2f16_nxv2i16(<vscale x 2 x hal
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg5ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -17578,7 +17578,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vloxseg5_nxv2f16_nxv2i64(half* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg5_nxv2f16_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17596,7 +17596,7 @@ define <vscale x 2 x half> @test_vloxseg5_mask_nxv2f16_nxv2i64(<vscale x 2 x hal
 ; CHECK-NEXT:    vmv1r.v v3, v1
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg5ei64.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -17612,7 +17612,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vloxseg6_nxv2f16_nxv2i32(half* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv2f16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17631,7 +17631,7 @@ define <vscale x 2 x half> @test_vloxseg6_mask_nxv2f16_nxv2i32(<vscale x 2 x hal
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg6ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -17647,7 +17647,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vloxseg6_nxv2f16_nxv2i8(half* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv2f16_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17666,7 +17666,7 @@ define <vscale x 2 x half> @test_vloxseg6_mask_nxv2f16_nxv2i8(<vscale x 2 x half
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg6ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -17682,7 +17682,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vloxseg6_nxv2f16_nxv2i16(half* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv2f16_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17701,7 +17701,7 @@ define <vscale x 2 x half> @test_vloxseg6_mask_nxv2f16_nxv2i16(<vscale x 2 x hal
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg6ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -17717,7 +17717,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vloxseg6_nxv2f16_nxv2i64(half* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg6_nxv2f16_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17736,7 +17736,7 @@ define <vscale x 2 x half> @test_vloxseg6_mask_nxv2f16_nxv2i64(<vscale x 2 x hal
 ; CHECK-NEXT:    vmv1r.v v4, v1
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg6ei64.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -17752,7 +17752,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vloxseg7_nxv2f16_nxv2i32(half* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv2f16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17772,7 +17772,7 @@ define <vscale x 2 x half> @test_vloxseg7_mask_nxv2f16_nxv2i32(<vscale x 2 x hal
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg7ei32.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -17788,7 +17788,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vloxseg7_nxv2f16_nxv2i8(half* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv2f16_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17808,7 +17808,7 @@ define <vscale x 2 x half> @test_vloxseg7_mask_nxv2f16_nxv2i8(<vscale x 2 x half
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg7ei8.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -17824,7 +17824,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vloxseg7_nxv2f16_nxv2i16(half* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv2f16_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17844,7 +17844,7 @@ define <vscale x 2 x half> @test_vloxseg7_mask_nxv2f16_nxv2i16(<vscale x 2 x hal
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg7ei16.v v1, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -17860,7 +17860,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vloxseg7_nxv2f16_nxv2i64(half* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg7_nxv2f16_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17880,7 +17880,7 @@ define <vscale x 2 x half> @test_vloxseg7_mask_nxv2f16_nxv2i64(<vscale x 2 x hal
 ; CHECK-NEXT:    vmv1r.v v5, v1
 ; CHECK-NEXT:    vmv1r.v v6, v1
 ; CHECK-NEXT:    vmv1r.v v7, v1
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg7ei64.v v1, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -17896,7 +17896,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vloxseg8_nxv2f16_nxv2i32(half* %base, <vscale x 2 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv2f16_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17917,7 +17917,7 @@ define <vscale x 2 x half> @test_vloxseg8_mask_nxv2f16_nxv2i32(<vscale x 2 x hal
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg8ei32.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -17933,7 +17933,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vloxseg8_nxv2f16_nxv2i8(half* %base, <vscale x 2 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv2f16_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17954,7 +17954,7 @@ define <vscale x 2 x half> @test_vloxseg8_mask_nxv2f16_nxv2i8(<vscale x 2 x half
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg8ei8.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -17970,7 +17970,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vloxseg8_nxv2f16_nxv2i16(half* %base, <vscale x 2 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv2f16_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -17991,7 +17991,7 @@ define <vscale x 2 x half> @test_vloxseg8_mask_nxv2f16_nxv2i16(<vscale x 2 x hal
 ; CHECK-NEXT:    vmv1r.v v15, v10
 ; CHECK-NEXT:    vmv1r.v v16, v10
 ; CHECK-NEXT:    vmv1r.v v17, v10
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg8ei16.v v10, (a0), v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v11
 ; CHECK-NEXT:    ret
@@ -18007,7 +18007,7 @@ declare {<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2 x half>,<vscale x 2
 define <vscale x 2 x half> @test_vloxseg8_nxv2f16_nxv2i64(half* %base, <vscale x 2 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg8_nxv2f16_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,ta,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv1r.v v8, v1
 ; CHECK-NEXT:    ret
@@ -18028,7 +18028,7 @@ define <vscale x 2 x half> @test_vloxseg8_mask_nxv2f16_nxv2i64(<vscale x 2 x hal
 ; CHECK-NEXT:    vmv1r.v v17, v12
 ; CHECK-NEXT:    vmv1r.v v18, v12
 ; CHECK-NEXT:    vmv1r.v v19, v12
-; CHECK-NEXT:    vsetvli a1, a1, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e16,mf2,tu,mu
 ; CHECK-NEXT:    vloxseg8ei64.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v13
 ; CHECK-NEXT:    ret
@@ -18044,7 +18044,7 @@ declare {<vscale x 4 x float>,<vscale x 4 x float>} @llvm.riscv.vloxseg2.mask.nx
 define <vscale x 4 x float> @test_vloxseg2_nxv4f32_nxv4i32(float* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4f32_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -18058,7 +18058,7 @@ define <vscale x 4 x float> @test_vloxseg2_mask_nxv4f32_nxv4i32(<vscale x 4 x fl
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4f32_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei32.v v6, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -18074,7 +18074,7 @@ declare {<vscale x 4 x float>,<vscale x 4 x float>} @llvm.riscv.vloxseg2.mask.nx
 define <vscale x 4 x float> @test_vloxseg2_nxv4f32_nxv4i8(float* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4f32_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -18088,7 +18088,7 @@ define <vscale x 4 x float> @test_vloxseg2_mask_nxv4f32_nxv4i8(<vscale x 4 x flo
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4f32_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei8.v v6, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -18104,7 +18104,7 @@ declare {<vscale x 4 x float>,<vscale x 4 x float>} @llvm.riscv.vloxseg2.mask.nx
 define <vscale x 4 x float> @test_vloxseg2_nxv4f32_nxv4i64(float* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4f32_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -18118,7 +18118,7 @@ define <vscale x 4 x float> @test_vloxseg2_mask_nxv4f32_nxv4i64(<vscale x 4 x fl
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4f32_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei64.v v6, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -18134,7 +18134,7 @@ declare {<vscale x 4 x float>,<vscale x 4 x float>} @llvm.riscv.vloxseg2.mask.nx
 define <vscale x 4 x float> @test_vloxseg2_nxv4f32_nxv4i16(float* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg2_nxv4f32_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -18148,7 +18148,7 @@ define <vscale x 4 x float> @test_vloxseg2_mask_nxv4f32_nxv4i16(<vscale x 4 x fl
 ; CHECK-LABEL: test_vloxseg2_mask_nxv4f32_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v6, (a0), v10, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2
 ; CHECK-NEXT:    ret
@@ -18164,7 +18164,7 @@ declare {<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>} @llvm.r
 define <vscale x 4 x float> @test_vloxseg3_nxv4f32_nxv4i32(float* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv4f32_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -18180,7 +18180,7 @@ define <vscale x 4 x float> @test_vloxseg3_mask_nxv4f32_nxv4i32(<vscale x 4 x fl
 ; CHECK-NEXT:    vmv2r.v v2, v8
 ; CHECK-NEXT:    vmv2r.v v4, v2
 ; CHECK-NEXT:    vmv2r.v v6, v2
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei32.v v2, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -18196,7 +18196,7 @@ declare {<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>} @llvm.r
 define <vscale x 4 x float> @test_vloxseg3_nxv4f32_nxv4i8(float* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv4f32_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -18212,7 +18212,7 @@ define <vscale x 4 x float> @test_vloxseg3_mask_nxv4f32_nxv4i8(<vscale x 4 x flo
 ; CHECK-NEXT:    vmv2r.v v2, v8
 ; CHECK-NEXT:    vmv2r.v v4, v2
 ; CHECK-NEXT:    vmv2r.v v6, v2
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei8.v v2, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -18228,7 +18228,7 @@ declare {<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>} @llvm.r
 define <vscale x 4 x float> @test_vloxseg3_nxv4f32_nxv4i64(float* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv4f32_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -18243,7 +18243,7 @@ define <vscale x 4 x float> @test_vloxseg3_mask_nxv4f32_nxv4i64(<vscale x 4 x fl
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmv2r.v v6, v8
 ; CHECK-NEXT:    vmv2r.v v10, v6
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei64.v v6, (a0), v12, v0.t
 ; CHECK-NEXT:    # kill: def $v8m2 killed $v8m2 killed $v6m2_v8m2_v10m2
 ; CHECK-NEXT:    ret
@@ -18259,7 +18259,7 @@ declare {<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>} @llvm.r
 define <vscale x 4 x float> @test_vloxseg3_nxv4f32_nxv4i16(float* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg3_nxv4f32_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -18275,7 +18275,7 @@ define <vscale x 4 x float> @test_vloxseg3_mask_nxv4f32_nxv4i16(<vscale x 4 x fl
 ; CHECK-NEXT:    vmv2r.v v2, v8
 ; CHECK-NEXT:    vmv2r.v v4, v2
 ; CHECK-NEXT:    vmv2r.v v6, v2
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg3ei16.v v2, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v4
 ; CHECK-NEXT:    ret
@@ -18291,7 +18291,7 @@ declare {<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>,<vscale 
 define <vscale x 4 x float> @test_vloxseg4_nxv4f32_nxv4i32(float* %base, <vscale x 4 x i32> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv4f32_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -18308,7 +18308,7 @@ define <vscale x 4 x float> @test_vloxseg4_mask_nxv4f32_nxv4i32(<vscale x 4 x fl
 ; CHECK-NEXT:    vmv2r.v v14, v12
 ; CHECK-NEXT:    vmv2r.v v16, v12
 ; CHECK-NEXT:    vmv2r.v v18, v12
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei32.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v14
 ; CHECK-NEXT:    ret
@@ -18324,7 +18324,7 @@ declare {<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>,<vscale 
 define <vscale x 4 x float> @test_vloxseg4_nxv4f32_nxv4i8(float* %base, <vscale x 4 x i8> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv4f32_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -18341,7 +18341,7 @@ define <vscale x 4 x float> @test_vloxseg4_mask_nxv4f32_nxv4i8(<vscale x 4 x flo
 ; CHECK-NEXT:    vmv2r.v v14, v12
 ; CHECK-NEXT:    vmv2r.v v16, v12
 ; CHECK-NEXT:    vmv2r.v v18, v12
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei8.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v14
 ; CHECK-NEXT:    ret
@@ -18357,7 +18357,7 @@ declare {<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>,<vscale 
 define <vscale x 4 x float> @test_vloxseg4_nxv4f32_nxv4i64(float* %base, <vscale x 4 x i64> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv4f32_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -18374,7 +18374,7 @@ define <vscale x 4 x float> @test_vloxseg4_mask_nxv4f32_nxv4i64(<vscale x 4 x fl
 ; CHECK-NEXT:    vmv2r.v v18, v16
 ; CHECK-NEXT:    vmv2r.v v20, v16
 ; CHECK-NEXT:    vmv2r.v v22, v16
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei64.v v16, (a0), v12, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v18
 ; CHECK-NEXT:    ret
@@ -18390,7 +18390,7 @@ declare {<vscale x 4 x float>,<vscale x 4 x float>,<vscale x 4 x float>,<vscale 
 define <vscale x 4 x float> @test_vloxseg4_nxv4f32_nxv4i16(float* %base, <vscale x 4 x i16> %index, i64 %vl) {
 ; CHECK-LABEL: test_vloxseg4_nxv4f32_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,ta,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v0, (a0), v8
 ; CHECK-NEXT:    vmv2r.v v8, v2
 ; CHECK-NEXT:    ret
@@ -18407,7 +18407,7 @@ define <vscale x 4 x float> @test_vloxseg4_mask_nxv4f32_nxv4i16(<vscale x 4 x fl
 ; CHECK-NEXT:    vmv2r.v v14, v12
 ; CHECK-NEXT:    vmv2r.v v16, v12
 ; CHECK-NEXT:    vmv2r.v v18, v12
-; CHECK-NEXT:    vsetvli a1, a1, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, a1, e32,m2,tu,mu
 ; CHECK-NEXT:    vloxseg4ei16.v v12, (a0), v10, v0.t
 ; CHECK-NEXT:    vmv2r.v v8, v14
 ; CHECK-NEXT:    ret

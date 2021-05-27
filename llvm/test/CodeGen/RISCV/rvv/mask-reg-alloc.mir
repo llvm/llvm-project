@@ -15,7 +15,7 @@ body:             |
     liveins: $v0, $v1, $v2, $v3
     ; CHECK-LABEL: name: mask_reg_alloc
     ; CHECK: liveins: $v0, $v1, $v2, $v3
-    ; CHECK: dead renamable $x10 = PseudoVSETIVLI 1, 64, implicit-def $vl, implicit-def $vtype
+    ; CHECK: dead $x0 = PseudoVSETIVLI 1, 64, implicit-def $vl, implicit-def $vtype
     ; CHECK: renamable $v25 = PseudoVMERGE_VIM_M1 killed renamable $v2, 1, killed renamable $v0, 1, 3, implicit $vl, implicit $vtype
     ; CHECK: renamable $v0 = COPY killed renamable $v1
     ; CHECK: renamable $v26 = PseudoVMERGE_VIM_M1 killed renamable $v3, 1, killed renamable $v0, 1, 3, implicit $vl, implicit $vtype

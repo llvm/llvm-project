@@ -260,3 +260,21 @@ v_ashrrev_i16 v0, lds_direct, v0
 
 v_add_f32 v5, v1, lds_direct
 // GFX90A: error: lds_direct is not supported on this GPU
+
+ds_gws_init a1 offset:65535 gds
+// GFX90A: error: vgpr must be even aligned
+
+ds_gws_init a255 offset:65535 gds
+// GFX90A: error: vgpr must be even aligned
+
+ds_gws_sema_br v1 offset:65535 gds
+// GFX90A: error: vgpr must be even aligned
+
+ds_gws_sema_br v255 offset:65535 gds
+// GFX90A: error: vgpr must be even aligned
+
+ds_gws_barrier a3 offset:4 gds
+// GFX90A: error: vgpr must be even aligned
+
+ds_gws_barrier a255 offset:4 gds
+// GFX90A: error: vgpr must be even aligned

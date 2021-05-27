@@ -14,24 +14,6 @@
  */
 
 /**
- * @brief Status codes.
- */
-typedef enum atmi_status_t {
-  /**
-   * The function has been executed successfully.
-   */
-  ATMI_STATUS_SUCCESS = 0,
-  /**
-   * A undocumented error has occurred.
-   */
-  ATMI_STATUS_UNKNOWN = 1,
-  /**
-   * A generic error has occurred.
-   */
-  ATMI_STATUS_ERROR = 2,
-} atmi_status_t;
-
-/**
  * @brief Device Types.
  */
 typedef enum atmi_devtype_s {

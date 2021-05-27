@@ -5,10 +5,14 @@ define void @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, <2 x i64>* undef, align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i64> [[TMP0]], <i64 1, i64 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
-; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq i64 [[TMP2]], 0
-; CHECK-NEXT:    [[VEC_0_I:%.*]] = select i1 [[CMP_I]], <2 x i64> [[TMP1]], <2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[VEC_0_VEC_EXTRACT_I:%.*]] = extractelement <2 x i64> [[TMP0]], i32 0
+; CHECK-NEXT:    [[ADD_I:%.*]] = add i64 [[VEC_0_VEC_EXTRACT_I]], 1
+; CHECK-NEXT:    [[VEC_0_VEC_INSERT_I:%.*]] = insertelement <2 x i64> [[TMP0]], i64 [[ADD_I]], i32 0
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq i64 [[ADD_I]], 0
+; CHECK-NEXT:    [[VEC_8_VEC_EXTRACT_I:%.*]] = extractelement <2 x i64> [[TMP0]], i32 1
+; CHECK-NEXT:    [[INC_I:%.*]] = add i64 [[VEC_8_VEC_EXTRACT_I]], 1
+; CHECK-NEXT:    [[VEC_8_VEC_INSERT_I:%.*]] = insertelement <2 x i64> [[VEC_0_VEC_INSERT_I]], i64 [[INC_I]], i32 1
+; CHECK-NEXT:    [[VEC_0_I:%.*]] = select i1 [[CMP_I]], <2 x i64> [[VEC_8_VEC_INSERT_I]], <2 x i64> [[VEC_0_VEC_INSERT_I]]
 ; CHECK-NEXT:    ret void
 ;
 entry:

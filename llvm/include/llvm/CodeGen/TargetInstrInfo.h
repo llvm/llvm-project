@@ -1975,6 +1975,11 @@ public:
     return OptLevel >= CodeGenOpt::Aggressive ? 4 : 2;
   }
 
+  /// Returns the callee operand from the given \p MI.
+  virtual const MachineOperand &getCalleeOperand(const MachineInstr &MI) const {
+    return MI.getOperand(0);
+  }
+
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;

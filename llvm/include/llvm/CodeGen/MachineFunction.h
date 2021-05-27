@@ -457,6 +457,24 @@ public:
   std::map<DebugInstrOperandPair, DebugInstrOperandPair>
       DebugValueSubstitutions;
 
+  /// Location of a PHI instruction that is also a debug-info variable value,
+  /// for the duration of register allocation. Loaded by the PHI-elimination
+  /// pass, and emitted as DBG_PHI instructions during VirtRegRewriter, with
+  /// maintenance applied by intermediate passes that edit registers (such as
+  /// coalescing and the allocator passes).
+  class DebugPHIRegallocPos {
+  public:
+    MachineBasicBlock *MBB; ///< Block where this PHI was originally located.
+    Register Reg;           ///< VReg where the control-flow-merge happens.
+    unsigned SubReg;        ///< Optional subreg qualifier within Reg.
+    DebugPHIRegallocPos(MachineBasicBlock *MBB, Register Reg, unsigned SubReg)
+        : MBB(MBB), Reg(Reg), SubReg(SubReg) {}
+  };
+
+  /// Map of debug instruction numbers to the position of their PHI instructions
+  /// during register allocation. See DebugPHIRegallocPos.
+  DenseMap<unsigned, DebugPHIRegallocPos> DebugPHIPositions;
+
   /// Create a substitution between one <instr,operand> value to a different,
   /// new value.
   void makeDebugValueSubstitution(DebugInstrOperandPair, DebugInstrOperandPair);

@@ -1,4 +1,5 @@
-// RUN: llvm-mc -triple=aarch64-none-linux-gnu < %s | FileCheck %s
+// RUN: llvm-mc -triple=aarch64 < %s | FileCheck %s --check-prefixes=CHECK,ALIAS
+// RUN: llvm-mc -triple=aarch64 -M no-aliases < %s | FileCheck %s --check-prefixes=CHECK,NOALIAS
 // RUN: not llvm-mc -mattr=+no-neg-immediates -triple=aarch64-none-linux-gnu < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-NEG-IMM
 
         add w0, w2, #4096
@@ -103,23 +104,31 @@
 // CHECK: adds x2, x5, #0
         adds x2, x5, #0
 
-// CHECK: {{adds xzr,|cmn}} x5, #5
-// CHECK: {{adds xzr,|cmn}} x5, #5
+// ALIAS: cmn x5, #5
+// ALIAS: cmn x5, #5
+// NOALIAS: adds xzr, x5, #5
+// NOALIAS: adds xzr, x5, #5
 // CHECK-NO-NEG-IMM: instruction requires: NegativeImmediates
         cmn x5, #5
         cmp x5, #-5
-// CHECK: {{subs xzr,|cmp}} x6, #4095
-// CHECK: {{subs xzr,|cmp}} x6, #4095
+// ALIAS: cmp x6, #4095
+// ALIAS: cmp x6, #4095
+// NOALIAS: subs xzr, x6, #4095
+// NOALIAS: subs xzr, x6, #4095
 // CHECK-NO-NEG-IMM: instruction requires: NegativeImmediates
         cmp x6, #4095
         cmn x6, #-4095
-// CHECK: {{adds wzr,|cmn}} w7, #5
-// CHECK: {{adds wzr,|cmn}} w7, #5
+// ALIAS: cmn w7, #5
+// ALIAS: cmn w7, #5
+// NOALIAS: adds wzr, w7, #5
+// NOALIAS: adds wzr, w7, #5
 // CHECK-NO-NEG-IMM: instruction requires: NegativeImmediates
         cmn w7, #5
         cmp w7, #-5
-// CHECK: {{subs wzr,|cmp}} w8, #4095
-// CHECK: {{subs wzr,|cmp}} w8, #4095
+// ALIAS: cmp w8, #4095
+// ALIAS: cmp w8, #4095
+// NOALIAS: subs wzr, w8, #4095
+// NOALIAS: subs wzr, w8, #4095
 // CHECK-NO-NEG-IMM: instruction requires: NegativeImmediates
         cmp w8, #4095
         cmn w8, #-4095

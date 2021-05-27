@@ -166,9 +166,8 @@ EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone, bool IsCloned,
     assert(TRI->isTypeLegalForClass(*UseRC, VT) &&
            "Incompatible phys register def and uses!");
     DstRC = UseRC;
-  } else {
-    DstRC = TLI->getRegClassFor(VT, Node->isDivergent());
-  }
+  } else
+    DstRC = SrcRC;
 
   // If all uses are reading from the src physical register and copying the
   // register is either impossible or very expensive, then don't create a copy.

@@ -75,8 +75,6 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
                      const CanonicalIncludes &CanonIncludes) override {
     if (FIndex)
       FIndex->updatePreamble(Path, Version, Ctx, std::move(PP), CanonIncludes);
-    if (ServerCallbacks)
-      ServerCallbacks->onSemanticsMaybeChanged(Path);
   }
 
   void onMainAST(PathRef Path, ParsedAST &AST, PublishFn Publish) override {
@@ -103,6 +101,11 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
   void onFileUpdated(PathRef File, const TUStatus &Status) override {
     if (ServerCallbacks)
       ServerCallbacks->onFileUpdated(File, Status);
+  }
+
+  void onPreamblePublished(PathRef File) override {
+    if (ServerCallbacks)
+      ServerCallbacks->onSemanticsMaybeChanged(File);
   }
 
 private:

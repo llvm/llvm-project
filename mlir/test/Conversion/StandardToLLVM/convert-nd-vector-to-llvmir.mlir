@@ -47,3 +47,94 @@ func @zexti_vector(%arg0 : vector<1x2x3xi32>, %arg1 : vector<1x2x3xi64>) {
   %0 = zexti %arg0: vector<1x2x3xi32> to vector<1x2x3xi64>
   return
 }
+
+// CHECK-LABEL: @sitofp
+func @sitofp_vector(%arg0 : vector<1x2x3xi32>) -> vector<1x2x3xf32> {
+  // CHECK: llvm.mlir.undef : !llvm.array<1 x array<2 x vector<3xf32>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xi32>>>
+  // CHECK: llvm.sitofp %{{.*}} : vector<3xi32> to vector<3xf32>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xf32>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xi32>>>
+  // CHECK: llvm.sitofp %{{.*}} : vector<3xi32> to vector<3xf32>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xf32>>>
+  %0 = sitofp %arg0: vector<1x2x3xi32> to vector<1x2x3xf32>
+  return %0 : vector<1x2x3xf32>
+}
+
+// CHECK-LABEL: @uitofp
+func @uitofp_vector(%arg0 : vector<1x2x3xi32>) -> vector<1x2x3xf32> {
+  // CHECK: llvm.mlir.undef : !llvm.array<1 x array<2 x vector<3xf32>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xi32>>>
+  // CHECK: llvm.uitofp %{{.*}} : vector<3xi32> to vector<3xf32>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xf32>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xi32>>>
+  // CHECK: llvm.uitofp %{{.*}} : vector<3xi32> to vector<3xf32>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xf32>>>
+  %0 = uitofp %arg0: vector<1x2x3xi32> to vector<1x2x3xf32>
+  return %0 : vector<1x2x3xf32>
+}
+
+// CHECK-LABEL: @fptosi
+func @fptosi_vector(%arg0 : vector<1x2x3xf32>) -> vector<1x2x3xi32> {
+  // CHECK: llvm.mlir.undef : !llvm.array<1 x array<2 x vector<3xi32>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xf32>>>
+  // CHECK: llvm.fptosi %{{.*}} : vector<3xf32> to vector<3xi32>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xi32>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xf32>>>
+  // CHECK: llvm.fptosi %{{.*}} : vector<3xf32> to vector<3xi32>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xi32>>>
+  %0 = fptosi %arg0: vector<1x2x3xf32> to vector<1x2x3xi32>
+  return %0 : vector<1x2x3xi32>
+}
+
+// CHECK-LABEL: @fptoui
+func @fptoui_vector(%arg0 : vector<1x2x3xf32>) -> vector<1x2x3xi32> {
+  // CHECK: llvm.mlir.undef : !llvm.array<1 x array<2 x vector<3xi32>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xf32>>>
+  // CHECK: llvm.fptoui %{{.*}} : vector<3xf32> to vector<3xi32>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xi32>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xf32>>>
+  // CHECK: llvm.fptoui %{{.*}} : vector<3xf32> to vector<3xi32>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xi32>>>
+  %0 = fptoui %arg0: vector<1x2x3xf32> to vector<1x2x3xi32>
+  return %0 : vector<1x2x3xi32>
+}
+
+// CHECK-LABEL: @fpext
+func @fpext_vector(%arg0 : vector<1x2x3xf16>) -> vector<1x2x3xf64> {
+  // CHECK: llvm.mlir.undef : !llvm.array<1 x array<2 x vector<3xf64>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xf16>>>
+  // CHECK: llvm.fpext %{{.*}} : vector<3xf16> to vector<3xf64>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xf64>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xf16>>>
+  // CHECK: llvm.fpext %{{.*}} : vector<3xf16> to vector<3xf64>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xf64>>>
+  %0 = fpext %arg0: vector<1x2x3xf16> to vector<1x2x3xf64>
+  return %0 : vector<1x2x3xf64>
+}
+
+// CHECK-LABEL: @fptrunc
+func @fptrunc_vector(%arg0 : vector<1x2x3xf64>) -> vector<1x2x3xf16> {
+  // CHECK: llvm.mlir.undef : !llvm.array<1 x array<2 x vector<3xf16>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xf64>>>
+  // CHECK: llvm.fptrunc %{{.*}} : vector<3xf64> to vector<3xf16>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xf16>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xf64>>>
+  // CHECK: llvm.fptrunc %{{.*}} : vector<3xf64> to vector<3xf16>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xf16>>>
+  %0 = fptrunc %arg0: vector<1x2x3xf64> to vector<1x2x3xf16>
+  return %0 : vector<1x2x3xf16>
+}
+
+// CHECK-LABEL: @trunci
+func @trunci_vector(%arg0 : vector<1x2x3xi64>) -> vector<1x2x3xi16> {
+  // CHECK: llvm.mlir.undef : !llvm.array<1 x array<2 x vector<3xi16>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xi64>>>
+  // CHECK: llvm.trunc %{{.*}} : vector<3xi64> to vector<3xi16>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xi16>>>
+  // CHECK: llvm.extractvalue %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xi64>>>
+  // CHECK: llvm.trunc %{{.*}} : vector<3xi64> to vector<3xi16>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[0, 1] : !llvm.array<1 x array<2 x vector<3xi16>>>
+  %0 = trunci %arg0: vector<1x2x3xi64> to vector<1x2x3xi16>
+  return %0 : vector<1x2x3xi16>
+}

@@ -68,7 +68,6 @@ void checkMemoryTaggingMaybe(AllocatorT *Allocator, void *P, scudo::uptr Size,
 
 template <typename Config> struct TestAllocator : scudo::Allocator<Config> {
   TestAllocator() {
-    this->reset();
     this->initThreadMaybe();
     if (scudo::archSupportsMemoryTagging() &&
         !scudo::systemDetectsMemoryTagFaultsTestOnly())
