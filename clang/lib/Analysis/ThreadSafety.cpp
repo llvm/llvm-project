@@ -1050,6 +1050,8 @@ public:
                       const CFGBlock* PredBlock,
                       const CFGBlock *CurrBlock);
 
+  bool join(const FactEntry &a, const FactEntry &b);
+
   void intersectAndWarn(FactSet &FSet1, const FactSet &FSet2,
                         SourceLocation JoinLoc, LockErrorKind LEK1,
                         LockErrorKind LEK2);
@@ -2186,6 +2188,21 @@ void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
   }
 }
 
+/// Given two facts merging on a join point, decide whether to warn and which
+/// one to keep.
+///
+/// \return  false if we should keep \p A, true if we should keep \p B.
+bool ThreadSafetyAnalyzer::join(const FactEntry &A, const FactEntry &B) {
+  if (A.kind() != B.kind()) {
+    Handler.handleExclusiveAndShared("mutex", B.toString(), B.loc(), A.loc());
+    // Take the exclusive capability to reduce further warnings.
+    return B.kind() == LK_Exclusive;
+  } else {
+    // The non-asserted capability is the one we want to track.
+    return A.asserted() && !B.asserted();
+  }
+}
+
 /// Compute the intersection of two locksets and issue warnings for any
 /// locks in the symmetric difference.
 ///
@@ -2213,20 +2230,8 @@ void ThreadSafetyAnalyzer::intersectAndWarn(FactSet &FSet1,
 
     FactSet::iterator Iter1 = FSet1.findLockIter(FactMan, LDat2);
     if (Iter1 != FSet1.end()) {
-      const FactEntry &LDat1 = FactMan[*Iter1];
-      if (LDat1.kind() != LDat2.kind()) {
-        Handler.handleExclusiveAndShared("mutex", LDat2.toString(), LDat2.loc(),
-                                         LDat1.loc());
-        if (LEK1 == LEK_LockedSomePredecessors &&
-            LDat1.kind() != LK_Exclusive) {
-          // Take the exclusive lock, which is the one in FSet2.
-          *Iter1 = Fact;
-        }
-      } else if (LEK1 == LEK_LockedSomePredecessors && LDat1.asserted() &&
-                 !LDat2.asserted()) {
-        // The non-asserted lock in FSet2 is the one we want to track.
+      if (join(FactMan[*Iter1], LDat2) && LEK1 == LEK_LockedSomePredecessors)
         *Iter1 = Fact;
-      }
     } else {
       LDat2.handleRemovalFromIntersection(FSet2, FactMan, JoinLoc, LEK1,
                                           Handler);
