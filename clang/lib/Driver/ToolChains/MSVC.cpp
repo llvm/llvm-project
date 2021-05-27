@@ -1337,8 +1337,8 @@ VersionTuple MSVCToolChain::computeMSVCVersion(const Driver *D,
   if (MSVT.empty() &&
       Args.hasFlag(options::OPT_fms_extensions, options::OPT_fno_ms_extensions,
                    IsWindowsMSVC)) {
-    // -fms-compatibility-version=19.11 is default, aka 2017, 15.3
-    MSVT = VersionTuple(19, 11);
+    // -fms-compatibility-version=19.14 is default, aka 2017, 15.7
+    MSVT = VersionTuple(19, 14);
   }
   return MSVT;
 }
