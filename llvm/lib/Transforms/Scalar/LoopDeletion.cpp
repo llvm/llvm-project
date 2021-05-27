@@ -293,7 +293,7 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
     using namespace PatternMatch;
     ICmpInst::Predicate Pred;
     Value *LHS, *RHS;
-    const BasicBlock *IfTrue, *IfFalse;
+    BasicBlock *IfTrue, *IfFalse;
     auto *Term = BB->getTerminator();
     // TODO: Handle switches.
     if (!match(Term, m_Br(m_ICmp(Pred, m_Value(LHS), m_Value(RHS)),
@@ -316,13 +316,12 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
     // in-loop.
     // TODO: isKnownPredicateAt is more powerful, but it's too compile time
     // consuming. So we avoid using it here.
-    if (L->contains(Term->getSuccessor(1)) &&
-        SE.isKnownPredicate(Pred, LHSS, RHSS))
-      MarkLiveEdge(BB, Term->getSuccessor(0));
-    else if (L->contains(Term->getSuccessor(0)) &&
+    if (L->contains(IfFalse) && SE.isKnownPredicate(Pred, LHSS, RHSS))
+      MarkLiveEdge(BB, IfTrue);
+    else if (L->contains(IfTrue) &&
              SE.isKnownPredicate(ICmpInst::getInversePredicate(Pred), LHSS,
                                  RHSS))
-      MarkLiveEdge(BB, Term->getSuccessor(1));
+      MarkLiveEdge(BB, IfFalse);
     else
       MarkAllSuccessorsLive(BB);
   }
