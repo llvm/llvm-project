@@ -1357,9 +1357,11 @@ void AsmPrinter::emitFunctionBody() {
 
     // We must emit temporary symbol for the end of this basic block, if either
     // we have BBLabels enabled or if this basic blocks marks the end of a
-    // section.
+    // section (except the section containing the entry basic block as the end
+    // symbol for that section is CurrentFnEnd).
     if (MF->hasBBLabels() ||
-        (MAI->hasDotTypeDotSizeDirective() && MBB.isEndSection()))
+        (MAI->hasDotTypeDotSizeDirective() && MBB.isEndSection() &&
+         !MBB.sameSection(&MF->front())))
       OutStreamer->emitLabel(MBB.getEndSymbol());
 
     if (MBB.isEndSection()) {
