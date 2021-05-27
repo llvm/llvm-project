@@ -22,39 +22,41 @@ extern ATLMachine g_atl_machine;
 namespace core {
 
 namespace {
-ATLProcessor &get_processor_by_mem_place(atmi_mem_place_t place) {
-  int dev_id = place.dev_id;
-  switch (place.dev_type) {
+ATLProcessor &get_processor_by_mem_place(int DeviceId,
+                                         atmi_devtype_t DeviceType) {
+  switch (DeviceType) {
   case ATMI_DEVTYPE_CPU:
-    return g_atl_machine.processors<ATLCPUProcessor>()[dev_id];
+    return g_atl_machine.processors<ATLCPUProcessor>()[DeviceId];
   case ATMI_DEVTYPE_GPU:
-    return g_atl_machine.processors<ATLGPUProcessor>()[dev_id];
+    return g_atl_machine.processors<ATLGPUProcessor>()[DeviceId];
   }
 }
 
-hsa_amd_memory_pool_t get_memory_pool_by_mem_place(atmi_mem_place_t place) {
-  ATLProcessor &proc = get_processor_by_mem_place(place);
-  return get_memory_pool(proc, place.mem_id);
+hsa_amd_memory_pool_t get_memory_pool_by_mem_place(int DeviceId,
+                                                   atmi_devtype_t DeviceType) {
+  ATLProcessor &proc = get_processor_by_mem_place(DeviceId, DeviceType);
+  return get_memory_pool(proc, 0 /*Memory Type (always zero) */);
 }
 } // namespace
 
 hsa_status_t register_allocation(void *ptr, size_t size,
-                                 atmi_mem_place_t place) {
-  if (place.dev_type == ATMI_DEVTYPE_CPU)
+                                 atmi_devtype_t DeviceType) {
+  if (DeviceType == ATMI_DEVTYPE_CPU)
     return allow_access_to_all_gpu_agents(ptr);
   else
     return HSA_STATUS_SUCCESS;
 }
 
-hsa_status_t Runtime::Malloc(void **ptr, size_t size, atmi_mem_place_t place) {
-  hsa_amd_memory_pool_t pool = get_memory_pool_by_mem_place(place);
+hsa_status_t Runtime::Malloc(void **ptr, size_t size, int DeviceId,
+                             atmi_devtype_t DeviceType) {
+  hsa_amd_memory_pool_t pool =
+      get_memory_pool_by_mem_place(DeviceId, DeviceType);
   hsa_status_t err = hsa_amd_memory_pool_allocate(pool, size, 0, ptr);
   DEBUG_PRINT("Malloced [%s %d] %p\n",
-              place.dev_type == ATMI_DEVTYPE_CPU ? "CPU" : "GPU", place.dev_id,
-              *ptr);
+              DeviceType == ATMI_DEVTYPE_CPU ? "CPU" : "GPU", DeviceId, *ptr);
 
   if (err == HSA_STATUS_SUCCESS) {
-    err = register_allocation(*ptr, size, place);
+    err = register_allocation(*ptr, size, DeviceType);
   }
 
   return (err == HSA_STATUS_SUCCESS) ? HSA_STATUS_SUCCESS : HSA_STATUS_ERROR;
