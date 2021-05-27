@@ -2,6 +2,7 @@
 add_mlir_library(MLIRLinalgTestPasses
   TestConvVectorization.cpp
   TestLinalgCodegenStrategy.cpp
+  TestLinalgDistribution.cpp
   TestLinalgElementwiseFusion.cpp
   TestLinalgFusionTransforms.cpp
   TestLinalgHoisting.cpp
