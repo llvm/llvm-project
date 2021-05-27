@@ -290,16 +290,10 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
     // doing that violates the ranges that are calculated in the history map.
     // However, we currently do not emit debug values for constant arguments
     // directly at the start of the function, so this code is still useful.
-    // FIXME: If the first mention of an argument is in a unique section basic
-    // block, we cannot always assign the CurrentFnBeginLabel as it lies in a
-    // different section.  Temporarily, we disable generating loc list
-    // information or DW_AT_const_value when the block is in a different
-    // section.
     const DILocalVariable *DIVar =
         Entries.front().getInstr()->getDebugVariable();
     if (DIVar->isParameter() &&
-        getDISubprogram(DIVar->getScope())->describes(&MF->getFunction()) &&
-        Entries.front().getInstr()->getParent()->sameSection(&MF->front())) {
+        getDISubprogram(DIVar->getScope())->describes(&MF->getFunction())) {
       if (!IsDescribedByReg(Entries.front().getInstr()))
         LabelsBeforeInsn[Entries.front().getInstr()] = Asm->getFunctionBegin();
       if (Entries.front().getInstr()->getDebugExpression()->isFragment()) {
@@ -385,22 +379,25 @@ void DebugHandlerBase::endInstruction() {
 
   DenseMap<const MachineInstr *, MCSymbol *>::iterator I =
       LabelsAfterInsn.find(CurMI);
-  CurMI = nullptr;
 
-  // No label needed.
-  if (I == LabelsAfterInsn.end())
+  // No label needed or label already assigned.
+  if (I == LabelsAfterInsn.end() || I->second) {
+    CurMI = nullptr;
     return;
+  }
 
-  // Label already assigned.
-  if (I->second)
-    return;
-
-  // We need a label after this instruction.
-  if (!PrevLabel) {
+  // We need a label after this instruction.  With basic block sections, just
+  // use the end symbol of the section if this is the last instruction of the
+  // section.  This reduces the need for an additional label and also helps
+  // merging ranges.
+  if (CurMI->getParent()->isEndSection() && CurMI->getNextNode() == nullptr) {
+    PrevLabel = CurMI->getParent()->getEndSymbol();
+  } else if (!PrevLabel) {
     PrevLabel = MMI->getContext().createTempSymbol();
     Asm->OutStreamer->emitLabel(PrevLabel);
   }
   I->second = PrevLabel;
+  CurMI = nullptr;
 }
 
 void DebugHandlerBase::endFunction(const MachineFunction *MF) {
