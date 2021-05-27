@@ -20,7 +20,7 @@ constexpr void check_round_trip(stride_counting_iterator<I> const& i, std::ptrdi
 template <std::random_access_iterator I>
 constexpr void check_round_trip(stride_counting_iterator<I> const& i, std::ptrdiff_t const n) {
   assert(i.stride_count() <= 1);
-  assert(i.stride_displacement() == n < 0 ? -1 : 1);
+  assert(i.stride_displacement() == (n < 0 ? -1 : 1));
 }
 
 template <std::input_or_output_iterator I>
