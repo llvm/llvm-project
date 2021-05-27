@@ -121,31 +121,35 @@ unsigned RISCVVType::encodeVTYPE(RISCVII::VLMUL VLMUL, unsigned SEW,
   return VTypeI;
 }
 
-void RISCVVType::printVType(unsigned VType, raw_ostream &OS) {
-  RISCVII::VLMUL VLMUL = getVLMUL(VType);
-
-  unsigned Sew = getSEW(VType);
-  OS << "e" << Sew;
-
+std::pair<unsigned, bool> RISCVVType::decodeVLMUL(RISCVII::VLMUL VLMUL) {
   switch (VLMUL) {
   case RISCVII::VLMUL::LMUL_RESERVED:
     llvm_unreachable("Unexpected LMUL value!");
   case RISCVII::VLMUL::LMUL_1:
   case RISCVII::VLMUL::LMUL_2:
   case RISCVII::VLMUL::LMUL_4:
-  case RISCVII::VLMUL::LMUL_8: {
-    unsigned LMul = 1 << static_cast<unsigned>(VLMUL);
-    OS << ",m" << LMul;
-    break;
-  }
+  case RISCVII::VLMUL::LMUL_8:
+    return std::make_pair(1 << static_cast<unsigned>(VLMUL), false);
   case RISCVII::VLMUL::LMUL_F2:
   case RISCVII::VLMUL::LMUL_F4:
-  case RISCVII::VLMUL::LMUL_F8: {
-    unsigned LMul = 1 << (8 - static_cast<unsigned>(VLMUL));
-    OS << ",mf" << LMul;
-    break;
+  case RISCVII::VLMUL::LMUL_F8:
+    return std::make_pair(1 << (8 - static_cast<unsigned>(VLMUL)), true);
   }
-  }
+}
+
+void RISCVVType::printVType(unsigned VType, raw_ostream &OS) {
+  unsigned Sew = getSEW(VType);
+  OS << "e" << Sew;
+
+  unsigned LMul;
+  bool Fractional;
+  std::tie(LMul, Fractional) = decodeVLMUL(getVLMUL(VType));
+
+  if (Fractional)
+    OS << ",mf";
+  else
+    OS << ",m";
+  OS << LMul;
 
   if (isTailAgnostic(VType))
     OS << ",ta";

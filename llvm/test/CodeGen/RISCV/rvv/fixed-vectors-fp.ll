@@ -438,9 +438,9 @@ define void @copysign_neg_trunc_v4f16_v4f32(<4 x half>* %x, <4 x float>* %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16,mf2,ta,mu
 ; CHECK-NEXT:    vle16.v v25, (a0)
-; CHECK-NEXT:    vsetivli zero, 4, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,m1,ta,mu
 ; CHECK-NEXT:    vle32.v v26, (a1)
-; CHECK-NEXT:    vsetivli zero, 4, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,mf2,ta,mu
 ; CHECK-NEXT:    vfncvt.f.f.w v27, v26
 ; CHECK-NEXT:    vfsgnjn.vv v25, v25, v27
 ; CHECK-NEXT:    vse16.v v25, (a0)
@@ -460,10 +460,10 @@ define void @copysign_neg_ext_v2f64_v2f32(<2 x double>* %x, <2 x float>* %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vle64.v v25, (a0)
-; CHECK-NEXT:    vsetivli zero, 2, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vle32.v v26, (a1)
 ; CHECK-NEXT:    vfwcvt.f.f.v v27, v26
-; CHECK-NEXT:    vsetivli zero, 2, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vfsgnjn.vv v25, v25, v27
 ; CHECK-NEXT:    vse64.v v25, (a0)
 ; CHECK-NEXT:    ret
