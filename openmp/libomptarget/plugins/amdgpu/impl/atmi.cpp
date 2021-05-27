@@ -67,8 +67,8 @@ hsa_status_t atmi_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
   }
 
   void *tempHostPtr;
-  atmi_mem_place_t CPU = ATMI_MEM_PLACE_CPU_MEM(0, 0, 0);
-  hsa_status_t ret = atmi_malloc(&tempHostPtr, size, CPU);
+  hsa_status_t ret =
+      atmi_malloc(&tempHostPtr, size, 0 /* DeviceId */, ATMI_DEVTYPE_CPU);
   if (ret != HSA_STATUS_SUCCESS) {
     DEBUG_PRINT("atmi_malloc: Unable to alloc %d bytes for temp scratch\n",
                 size);
@@ -97,8 +97,9 @@ hsa_status_t atmi_memcpy_d2h(hsa_signal_t signal, void *dest,
   }
 
   void *tempHostPtr;
-  atmi_mem_place_t CPU = ATMI_MEM_PLACE_CPU_MEM(0, 0, 0);
-  hsa_status_t ret = atmi_malloc(&tempHostPtr, size, CPU);
+
+  hsa_status_t ret =
+      atmi_malloc(&tempHostPtr, size, 0 /* DeviceId */, ATMI_DEVTYPE_CPU);
   if (ret != HSA_STATUS_SUCCESS) {
     DEBUG_PRINT("atmi_malloc: Unable to alloc %d bytes for temp scratch\n",
                 size);
@@ -117,6 +118,7 @@ hsa_status_t atmi_memcpy_d2h(hsa_signal_t signal, void *dest,
 
 hsa_status_t atmi_free(void *ptr) { return core::Runtime::Memfree(ptr); }
 
-hsa_status_t atmi_malloc(void **ptr, size_t size, atmi_mem_place_t place) {
-  return core::Runtime::Malloc(ptr, size, place);
+hsa_status_t atmi_malloc(void **ptr, size_t size, int DeviceId,
+                         atmi_devtype_t DeviceType) {
+  return core::Runtime::Malloc(ptr, size, DeviceId, DeviceType);
 }

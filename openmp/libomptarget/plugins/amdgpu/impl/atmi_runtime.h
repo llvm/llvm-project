@@ -99,8 +99,8 @@ atmi_machine_t *atmi_machine_get_info();
  * @retval ::HSA_STATUS_ERROR The function encountered errors.
  *
  */
-hsa_status_t atmi_malloc(void **ptr, size_t size, atmi_mem_place_t place);
-
+hsa_status_t atmi_malloc(void **ptr, size_t size, int DeviceId,
+                         atmi_devtype_t DeviceType);
 /**
  * @brief Frees memory that was previously allocated.
  *
