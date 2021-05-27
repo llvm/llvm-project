@@ -524,7 +524,7 @@ public:
   static MCCFIInstruction createLLVMDefAspaceCfa(MCSymbol *L, unsigned Register,
                                                  int Offset,
                                                  unsigned AddressSpace) {
-    return MCCFIInstruction(OpLLVMDefAspaceCfa, L, Register, -Offset,
+    return MCCFIInstruction(OpLLVMDefAspaceCfa, L, Register, Offset,
                             AddressSpace);
   }
 

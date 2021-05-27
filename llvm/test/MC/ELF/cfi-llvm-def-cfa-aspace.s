@@ -1,5 +1,6 @@
-// RUN: llvm-mc -filetype=asm -triple x86_64-pc-linux-gnu %s -o - | FileCheck --check-prefix=ASM %s
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readobj -S --sr --sd - | FileCheck --check-prefix=READOBJ %s
+# RUN: llvm-mc -filetype=asm -triple x86_64-pc-linux-gnu %s -o - | FileCheck --check-prefix=ASM %s
+# RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o %t
+# RUN: llvm-readelf -S -r -x .eh_frame %t | FileCheck --check-prefix=READELF %s
 
 f:
 	.cfi_startproc
@@ -8,48 +9,22 @@ f:
 	nop
 	.cfi_endproc
 
-// ASM: f:
-// ASM-NEXT: .cfi_startproc
-// ASM-NEXT: nop
-// ASM-NEXT: .cfi_llvm_def_aspace_cfa %rcx, 0, 6
-// ASM-NEXT: nop
-// ASM-NEXT: .cfi_endproc
+# ASM: f:
+# ASM-NEXT: .cfi_startproc
+# ASM-NEXT: nop
+# ASM-NEXT: .cfi_llvm_def_aspace_cfa %rcx, 0, 6
+# ASM-NEXT: nop
+# ASM-NEXT: .cfi_endproc
 
-// READOBJ:        Section {
-// READOBJ:          Name: .eh_frame
-// READOBJ-NEXT:     Type: SHT_X86_64_UNWIND
-// READOBJ-NEXT:     Flags [
-// READOBJ-NEXT:       SHF_ALLOC
-// READOBJ-NEXT:     ]
-// READOBJ-NEXT:     Address: 0x0
-// READOBJ-NEXT:     Offset: 0x48
-// READOBJ-NEXT:     Size: 48
-// READOBJ-NEXT:     Link: 0
-// READOBJ-NEXT:     Info: 0
-// READOBJ-NEXT:     AddressAlignment: 8
-// READOBJ-NEXT:     EntrySize: 0
-// READOBJ-NEXT:     Relocations [
-// READOBJ-NEXT:     ]
-// READOBJ-NEXT:     SectionData (
-// READOBJ-NEXT:       0000: 14000000 00000000 017A5200 01781001
-// READOBJ-NEXT:       0010: 1B0C0708 90010000 14000000 1C000000
-// READOBJ-NEXT:       0020: 00000000 02000000 00413002 00060000
-// READOBJ-NEXT:     )
-// READOBJ-NEXT:   }
+# READELF: Section Headers:
+# READELF: Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+# READELF: .eh_frame         X86_64_UNWIND   0000000000000000 000048 000030 00   A  0   0  8
 
-// READOBJ:        Section {
-// READOBJ:          Name: .rela.eh_frame
-// READOBJ-NEXT:     Type: SHT_RELA
-// READOBJ-NEXT:     Flags [
-// READOBJ-NEXT:     ]
-// READOBJ-NEXT:     Address: 0x0
-// READOBJ-NEXT:     Offset:
-// READOBJ-NEXT:     Size: 24
-// READOBJ-NEXT:     Link:
-// READOBJ-NEXT:     Info:
-// READOBJ-NEXT:     AddressAlignment: 8
-// READOBJ-NEXT:     EntrySize: 24
-// READOBJ-NEXT:     Relocations [
-// READOBJ-NEXT:       0x20 R_X86_64_PC32 .text 0x0
-// READOBJ-NEXT:     ]
-// READOBJ:        }
+# READELF: Relocation section '.rela.eh_frame' at offset 0xc0 contains 1 entries:
+# READELF-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+# READELF-NEXT: 0000000000000020  0000000100000002 R_X86_64_PC32          0000000000000000 .text + 0
+
+# READELF: Hex dump of section '.eh_frame':
+# READELF-NEXT: 0x00000000 14000000 00000000 017a5200 01781001
+# READELF-NEXT: 0x00000010 1b0c0708 90010000 14000000 1c000000
+# READELF-NEXT: 0x00000020 00000000 02000000 00413002 00060000

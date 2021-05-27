@@ -1405,14 +1405,16 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
 
     return;
   }
+  // TODO: Implement `_sf` variants if/when they need to be emitted.
   case MCCFIInstruction::OpLLVMDefAspaceCfa: {
     unsigned Reg = Instr.getRegister();
-    unsigned AddressSpace = Instr.getAddressSpace();
+    if (!IsEH)
+      Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
     Streamer.emitIntValue(dwarf::DW_CFA_LLVM_def_aspace_cfa, 1);
     Streamer.emitULEB128IntValue(Reg);
-    CFAOffset = -Instr.getOffset();
+    CFAOffset = Instr.getOffset();
     Streamer.emitULEB128IntValue(CFAOffset);
-    Streamer.emitULEB128IntValue(AddressSpace);
+    Streamer.emitULEB128IntValue(Instr.getAddressSpace());
 
     return;
   }

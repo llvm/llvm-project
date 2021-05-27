@@ -2210,7 +2210,7 @@ bool MIParser::parseCFIRegister(Register &Reg) {
 
 bool MIParser::parseCFIAddressSpace(unsigned &AddressSpace) {
   if (Token.isNot(MIToken::IntegerLiteral))
-    return error("expected a cfi address space");
+    return error("expected a cfi address space literal");
   if (Token.integerValue().isSigned())
     return error("expected an unsigned integer (cfi address space)");
   AddressSpace = Token.integerValue().getZExtValue();
@@ -2290,9 +2290,8 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
         parseCFIOffset(Offset) || expectAndConsume(MIToken::comma) ||
         parseCFIAddressSpace(AddressSpace))
       return true;
-    // NB: MCCFIInstruction::createDefCfa negates the offset.
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createLLVMDefAspaceCfa(
-        nullptr, Reg, -Offset, AddressSpace));
+        nullptr, Reg, Offset, AddressSpace));
     break;
   case MIToken::kw_cfi_remember_state:
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createRememberState(nullptr));
