@@ -885,8 +885,9 @@ Constant *StripPtrCastKeepAS(Constant *Ptr, Type *&ElemTy,
 
   // Preserve the address space number of the pointer.
   if (NewPtrTy->getAddressSpace() != OldPtrTy->getAddressSpace()) {
-    NewPtrTy = ElemTy->getPointerTo(OldPtrTy->getAddressSpace());
-    Ptr = ConstantExpr::getPointerCast(Ptr, NewPtrTy);
+    Ptr = ConstantExpr::getPointerCast(
+        Ptr, PointerType::getWithSamePointeeType(NewPtrTy,
+                                                 OldPtrTy->getAddressSpace()));
   }
   return Ptr;
 }
