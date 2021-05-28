@@ -2290,6 +2290,28 @@ TEST_F(FormatTest, BreakInheritanceStyle) {
                "    public aaaaaaaaaaaaaaaaaaa< // break\n"
                "        aaaaaaaaaaaaaaaa> {};",
                StyleWithInheritanceBreakAfterColon);
+
+  FormatStyle StyleWithInheritanceBreakAfterComma = getLLVMStyle();
+  StyleWithInheritanceBreakAfterComma.BreakInheritanceList =
+      FormatStyle::BILS_AfterComma;
+  verifyFormat("class MyClass : public X {};",
+               StyleWithInheritanceBreakAfterComma);
+  verifyFormat("class MyClass : public X,\n"
+               "                public Y {};",
+               StyleWithInheritanceBreakAfterComma);
+  verifyFormat(
+      "class AAAAAAAAAAAAAAAAAAAAAA : public BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB,\n"
+      "                               public CCCCCCCCCCCCCCCCCCCCCCCCCCCCCC "
+      "{};",
+      StyleWithInheritanceBreakAfterComma);
+  verifyFormat("struct aaaaaaaaaaaaa : public aaaaaaaaaaaaaaaaaaa< // break\n"
+               "                           aaaaaaaaaaaaaaaa> {};",
+               StyleWithInheritanceBreakAfterComma);
+  verifyFormat("class AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n"
+               "    : public OnceBreak,\n"
+               "      public AlwaysBreak,\n"
+               "      EvenBasesFitInOneLine {};",
+               StyleWithInheritanceBreakAfterComma);
 }
 
 TEST_F(FormatTest, FormatsVariableDeclarationsAfterStructOrClass) {
@@ -5584,6 +5606,12 @@ TEST_F(FormatTest, BreakConstructorInitializersAfterColon) {
       "class SomeClass :\n"
       "  public aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
       "  public bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb {};",
+      Style);
+  Style.BreakInheritanceList = FormatStyle::BILS_AfterComma;
+  verifyFormat(
+      "class SomeClass\n"
+      "  : public aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+      "    public bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb {};",
       Style);
 }
 
@@ -13505,6 +13533,12 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeColon) {
                "}\n"
                "}",
                InheritanceStyle);
+  InheritanceStyle.BreakInheritanceList = FormatStyle::BILS_AfterComma;
+  verifyFormat("class Foooooooooooooooooooooo\n"
+               "    : public aaaaaaaaaaaaaaaaaa,\n"
+               "      public bbbbbbbbbbbbbbbbbb {\n"
+               "}",
+               InheritanceStyle);
   InheritanceStyle.BreakInheritanceList = FormatStyle::BILS_AfterColon;
   verifyFormat("class Foooooooooooooooooooooo:\n"
                "    public aaaaaaaaaaaaaaaaaa,\n"
@@ -16843,6 +16877,8 @@ TEST_F(FormatTest, ParsesConfiguration) {
               BreakConstructorInitializers, FormatStyle::BCIS_BeforeComma);
 
   Style.BreakInheritanceList = FormatStyle::BILS_BeforeColon;
+  CHECK_PARSE("BreakInheritanceList: AfterComma", BreakInheritanceList,
+              FormatStyle::BILS_AfterComma);
   CHECK_PARSE("BreakInheritanceList: BeforeComma", BreakInheritanceList,
               FormatStyle::BILS_BeforeComma);
   CHECK_PARSE("BreakInheritanceList: AfterColon", BreakInheritanceList,

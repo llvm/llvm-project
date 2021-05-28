@@ -763,13 +763,6 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     }
   }
 
-  // When completely unrolling, the last latch becomes unreachable.
-  if (!LatchIsExiting && CompletelyUnroll) {
-    BranchInst *Term = cast<BranchInst>(Latches.back()->getTerminator());
-    new UnreachableInst(Term->getContext(), Term);
-    Term->eraseFromParent();
-  }
-
   // Update dominators of blocks we might reach through exits.
   // Immediate dominator of such block might change, because we add more
   // routes which can lead to the exit: we can now reach it from the copied
@@ -819,6 +812,12 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
          DT->verify(DominatorTree::VerificationLevel::Fast));
 
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+
+  // When completely unrolling, the last latch becomes unreachable.
+  if (!LatchIsExiting && CompletelyUnroll)
+    changeToUnreachable(Latches.back()->getTerminator(), /* UseTrap */ false,
+                        PreserveLCSSA, &DTU);
+
   // Merge adjacent basic blocks, if possible.
   for (BasicBlock *Latch : Latches) {
     BranchInst *Term = dyn_cast<BranchInst>(Latch->getTerminator());

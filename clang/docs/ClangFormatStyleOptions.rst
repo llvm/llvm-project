@@ -2038,6 +2038,15 @@ the configuration (without a prefix: ``Auto``).
            Base2
        {};
 
+  * ``BILS_AfterComma`` (in configuration: ``AfterComma``)
+    Break inheritance list only after the commas.
+
+    .. code-block:: c++
+
+       class Foo : Base1,
+                   Base2
+       {};
+
 
 
 **BreakStringLiterals** (``bool``)
