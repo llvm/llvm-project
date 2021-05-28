@@ -62,7 +62,9 @@ Improvements to Clang's diagnostics
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
-- ...
+- The default value of _MSC_VER was raised from 1911 to 1914. MSVC 19.14 has the
+  support to overaligned objects on x86_32 which is required for some LLVM 
+  passes.
 
 New Compiler Flags
 ------------------
