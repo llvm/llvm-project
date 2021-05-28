@@ -617,7 +617,7 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(SimplifyCFGPass());
   FPM.addPass(InstCombinePass());
   if (EnableLoopFlatten)
-    FPM.addPass(createFunctionToLoopPassAdaptor(LoopFlattenPass()));
+    FPM.addPass(LoopFlattenPass());
   // The loop passes in LPM2 (LoopFullUnrollPass) do not preserve MemorySSA.
   // *All* loop passes must preserve it, in order to be able to use it.
   FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM2),
@@ -792,7 +792,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(SimplifyCFGPass());
   FPM.addPass(InstCombinePass());
   if (EnableLoopFlatten)
-    FPM.addPass(createFunctionToLoopPassAdaptor(LoopFlattenPass()));
+    FPM.addPass(LoopFlattenPass());
   // The loop passes in LPM2 (LoopIdiomRecognizePass, IndVarSimplifyPass,
   // LoopDeletionPass and LoopFullUnrollPass) do not preserve MemorySSA.
   // *All* loop passes must preserve it, in order to be able to use it.
@@ -1842,7 +1842,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   // More loops are countable; try to optimize them.
   if (EnableLoopFlatten && Level.getSpeedupLevel() > 1)
-    MainFPM.addPass(createFunctionToLoopPassAdaptor(LoopFlattenPass()));
+    MainFPM.addPass(LoopFlattenPass());
 
   if (EnableConstraintElimination)
     MainFPM.addPass(ConstraintEliminationPass());
