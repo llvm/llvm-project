@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <inttypes.h>
+#include <cinttypes>
 
 #include "SBReproducerPrivate.h"
 #include "lldb/API/SBQueue.h"

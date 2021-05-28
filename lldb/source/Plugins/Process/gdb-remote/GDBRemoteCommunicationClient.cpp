@@ -8,7 +8,7 @@
 
 #include "GDBRemoteCommunicationClient.h"
 
-#include <math.h>
+#include <cmath>
 #include <sys/stat.h>
 
 #include <numeric>

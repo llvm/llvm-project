@@ -1661,6 +1661,7 @@ static bool isFuncOnlyAttr(Attribute::AttrKind Kind) {
   case Attribute::NoCfCheck:
   case Attribute::NoUnwind:
   case Attribute::NoInline:
+  case Attribute::NoSanitizeCoverage:
   case Attribute::AlwaysInline:
   case Attribute::OptimizeForSize:
   case Attribute::StackProtect:
@@ -2614,6 +2615,29 @@ void Verifier::visitFunction(const Function &F) {
     const User *U;
     if (F.hasAddressTaken(&U))
       Assert(false, "Invalid user of intrinsic instruction!", U);
+  }
+
+  // Check intrinsics' signatures.
+  switch (F.getIntrinsicID()) {
+  case Intrinsic::experimental_gc_get_pointer_base: {
+    FunctionType *FT = F.getFunctionType();
+    Assert(FT->getNumParams() == 1, "wrong number of parameters", F);
+    Assert(isa<PointerType>(F.getReturnType()),
+           "gc.get.pointer.base must return a pointer", F);
+    Assert(FT->getParamType(0) == F.getReturnType(),
+           "gc.get.pointer.base operand and result must be of the same type",
+           F);
+    break;
+  }
+  case Intrinsic::experimental_gc_get_pointer_offset: {
+    FunctionType *FT = F.getFunctionType();
+    Assert(FT->getNumParams() == 1, "wrong number of parameters", F);
+    Assert(isa<PointerType>(FT->getParamType(0)),
+           "gc.get.pointer.offset operand must be a pointer", F);
+    Assert(F.getReturnType()->isIntegerTy(),
+           "gc.get.pointer.offset must return integer", F);
+    break;
+  }
   }
 
   auto *N = F.getSubprogram();

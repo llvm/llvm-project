@@ -291,7 +291,7 @@ define <vscale x 8 x i1> @icmp_uge_vi_nxv8i8_5(<vscale x 8 x i8> %va) {
 define <vscale x 8 x i1> @icmp_uge_vi_nxv8i8_6(<vscale x 8 x i8> %va, i64 %vl) {
 ; CHECK-LABEL: icmp_uge_vi_nxv8i8_6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a0, e8,m1,ta,mu
 ; CHECK-NEXT:    vmv.v.i v25, 0
 ; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmsleu.vv v0, v25, v8

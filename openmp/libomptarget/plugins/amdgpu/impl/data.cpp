@@ -46,7 +46,7 @@ hsa_status_t register_allocation(void *ptr, size_t size,
     return HSA_STATUS_SUCCESS;
 }
 
-atmi_status_t Runtime::Malloc(void **ptr, size_t size, atmi_mem_place_t place) {
+hsa_status_t Runtime::Malloc(void **ptr, size_t size, atmi_mem_place_t place) {
   hsa_amd_memory_pool_t pool = get_memory_pool_by_mem_place(place);
   hsa_status_t err = hsa_amd_memory_pool_allocate(pool, size, 0, ptr);
   DEBUG_PRINT("Malloced [%s %d] %p\n",
@@ -57,14 +57,14 @@ atmi_status_t Runtime::Malloc(void **ptr, size_t size, atmi_mem_place_t place) {
     err = register_allocation(*ptr, size, place);
   }
 
-  return (err == HSA_STATUS_SUCCESS) ? ATMI_STATUS_SUCCESS : ATMI_STATUS_ERROR;
+  return (err == HSA_STATUS_SUCCESS) ? HSA_STATUS_SUCCESS : HSA_STATUS_ERROR;
 }
 
-atmi_status_t Runtime::Memfree(void *ptr) {
+hsa_status_t Runtime::Memfree(void *ptr) {
   hsa_status_t err = hsa_amd_memory_pool_free(ptr);
   DEBUG_PRINT("Freed %p\n", ptr);
 
-  return (err == HSA_STATUS_SUCCESS) ? ATMI_STATUS_SUCCESS : ATMI_STATUS_ERROR;
+  return (err == HSA_STATUS_SUCCESS) ? HSA_STATUS_SUCCESS : HSA_STATUS_ERROR;
 }
 
 } // namespace core

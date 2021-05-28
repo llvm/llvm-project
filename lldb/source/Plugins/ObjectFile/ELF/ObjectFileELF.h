@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_ELF_OBJECTFILEELF_H
 #define LLDB_SOURCE_PLUGINS_OBJECTFILE_ELF_OBJECTFILEELF_H
 
-#include <stdint.h>
+#include <cstdint>
 
 #include <vector>
 

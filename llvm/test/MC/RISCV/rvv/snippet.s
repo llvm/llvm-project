@@ -1,8 +1,8 @@
 ## A snippet from https://github.com/riscv/riscv-v-spec.
 
 # RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+experimental-v < %s \
-# RUN: | llvm-objdump -d --mattr=+experimental-v - \
-# RUN: | FileCheck %s --check-prefix=CHECK-INST
+# RUN:   | llvm-objdump -d --mattr=+experimental-v - \
+# RUN:   | FileCheck %s --check-prefix=CHECK-INST
 
 loop:
     vsetvli a3, a0, e16,m4,ta,ma  # vtype = 16-bit integer vectors

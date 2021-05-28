@@ -910,7 +910,8 @@ share code among the `tools`_.
 
 ``llvm/lib/MC/``
 
-  (FIXME: T.B.D.)  ....?
+  The libraries represent and process code at machine code level. Handles 
+  assembly and object-file emission. 
 
 ``llvm/lib/ExecutionEngine/``
 

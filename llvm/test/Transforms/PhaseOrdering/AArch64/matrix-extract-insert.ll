@@ -13,8 +13,8 @@ define void @matrix_extract_insert_scalar(i32 %i, i32 %k, i32 %j, [225 x double]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], 225
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP2]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast [225 x double]* [[A:%.*]] to <225 x double>*
-; CHECK-NEXT:    [[TMP4:%.*]] = load <225 x double>, <225 x double>* [[TMP3]], align 8
-; CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <225 x double> [[TMP4]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <225 x double>, <225 x double>* [[TMP3]], i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[MATRIXEXT:%.*]] = load double, double* [[TMP4]], align 8
 ; CHECK-NEXT:    [[CONV2:%.*]] = zext i32 [[I:%.*]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i64 [[TMP0]], [[CONV2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP5]], 225
@@ -25,8 +25,8 @@ define void @matrix_extract_insert_scalar(i32 %i, i32 %k, i32 %j, [225 x double]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[MATRIXEXT]], [[MATRIXEXT4]]
 ; CHECK-NEXT:    [[MATRIXEXT7:%.*]] = extractelement <225 x double> [[TMP8]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[MATRIXEXT7]], [[MUL]]
-; CHECK-NEXT:    [[MATINS:%.*]] = insertelement <225 x double> [[TMP8]], double [[SUB]], i64 [[TMP1]]
-; CHECK-NEXT:    store <225 x double> [[MATINS]], <225 x double>* [[TMP7]], align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds <225 x double>, <225 x double>* [[TMP7]], i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    store double [[SUB]], double* [[TMP9]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -112,8 +112,8 @@ define void @matrix_extract_insert_loop(i32 %i, [225 x double]* nonnull align 8 
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nuw nsw i64 [[TMP2]], [[CONV_US]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i64 [[TMP6]], 225
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP7]])
-; CHECK-NEXT:    [[TMP8:%.*]] = load <225 x double>, <225 x double>* [[TMP0]], align 8
-; CHECK-NEXT:    [[MATRIXEXT_US:%.*]] = extractelement <225 x double> [[TMP8]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds <225 x double>, <225 x double>* [[TMP0]], i64 0, i64 [[TMP6]]
+; CHECK-NEXT:    [[MATRIXEXT_US:%.*]] = load double, double* [[TMP8]], align 8
 ; CHECK-NEXT:    [[MATRIXEXT8_US:%.*]] = extractelement <225 x double> [[TMP5]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[MUL_US:%.*]] = fmul double [[MATRIXEXT_US]], [[MATRIXEXT8_US]]
 ; CHECK-NEXT:    [[MATRIXEXT11_US:%.*]] = extractelement <225 x double> [[TMP5]], i64 [[TMP6]]

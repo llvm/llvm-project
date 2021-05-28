@@ -10,7 +10,7 @@
 ; not an immediate.
 
 ; FUNC-LABEL: {{^}}load_i32_local_const_ptr:
-; GCN: v_mov_b32_e32 v[[PTR:[0-9]+]], lds@abs32@lo
+; GCN: v_mov_b32_e32 v[[PTR:[0-9]+]], 0{{$}}
 ; GCN: ds_read_b32 v{{[0-9]+}}, v[[PTR]] offset:4
 
 ; R600: LDS_READ_RET

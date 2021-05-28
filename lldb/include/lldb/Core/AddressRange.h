@@ -13,7 +13,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 
-#include <stddef.h>
+#include <cstddef>
 
 namespace lldb_private {
 class SectionList;

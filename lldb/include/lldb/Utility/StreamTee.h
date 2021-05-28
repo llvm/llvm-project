@@ -9,7 +9,7 @@
 #ifndef LLDB_UTILITY_STREAMTEE_H
 #define LLDB_UTILITY_STREAMTEE_H
 
-#include <limits.h>
+#include <climits>
 
 #include <mutex>
 

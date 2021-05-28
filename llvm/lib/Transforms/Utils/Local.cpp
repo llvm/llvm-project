@@ -1724,6 +1724,9 @@ void llvm::salvageDebugInfo(Instruction &I) {
 
 void llvm::salvageDebugInfoForDbgValues(
     Instruction &I, ArrayRef<DbgVariableIntrinsic *> DbgUsers) {
+  // This is an arbitrary chosen limit on the maximum number of values we can
+  // salvage up to in a DIArgList, used for performance reasons.
+  const unsigned MaxDebugArgs = 16;
   bool Salvaged = false;
 
   for (auto *DII : DbgUsers) {
@@ -1748,11 +1751,15 @@ void llvm::salvageDebugInfoForDbgValues(
     DII->replaceVariableLocationOp(&I, I.getOperand(0));
     if (AdditionalValues.empty()) {
       DII->setExpression(SalvagedExpr);
-    } else if (isa<DbgValueInst>(DII)) {
+    } else if (isa<DbgValueInst>(DII) &&
+               DII->getNumVariableLocationOps() + AdditionalValues.size() <=
+                   MaxDebugArgs) {
       DII->addVariableLocationOps(AdditionalValues, SalvagedExpr);
     } else {
       // Do not salvage using DIArgList for dbg.addr/dbg.declare, as it is
       // currently only valid for stack value expressions.
+      // Also do not salvage if the resulting DIArgList would contain an
+      // unreasonably large number of values.
       Value *Undef = UndefValue::get(I.getOperand(0)->getType());
       DII->replaceVariableLocationOp(I.getOperand(0), Undef);
     }

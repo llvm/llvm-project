@@ -132,7 +132,7 @@ public:
   typedef GlobalQuarantine<QuarantineCallback, void> QuarantineT;
   typedef typename QuarantineT::CacheT QuarantineCacheT;
 
-  void initLinkerInitialized() {
+  void init() {
     performSanityChecks();
 
     // Check if hardware CRC32 is supported in the binary and by the platform,
@@ -166,11 +166,10 @@ public:
     QuarantineMaxChunkSize =
         static_cast<u32>(getFlags()->quarantine_max_chunk_size);
 
-    Stats.initLinkerInitialized();
+    Stats.init();
     const s32 ReleaseToOsIntervalMs = getFlags()->release_to_os_interval_ms;
-    Primary.initLinkerInitialized(ReleaseToOsIntervalMs);
-    Secondary.initLinkerInitialized(&Stats, ReleaseToOsIntervalMs);
-
+    Primary.init(ReleaseToOsIntervalMs);
+    Secondary.init(&Stats, ReleaseToOsIntervalMs);
     Quarantine.init(
         static_cast<uptr>(getFlags()->quarantine_size_kb << 10),
         static_cast<uptr>(getFlags()->thread_local_quarantine_size_kb << 10));
@@ -210,10 +209,8 @@ public:
     TSDRegistry.initThreadMaybe(this, MinimalInit);
   }
 
-  void reset() { memset(this, 0, sizeof(*this)); }
-
   void unmapTestOnly() {
-    TSDRegistry.unmapTestOnly();
+    TSDRegistry.unmapTestOnly(this);
     Primary.unmapTestOnly();
     Secondary.unmapTestOnly();
 #ifdef GWP_ASAN_HOOKS
@@ -226,9 +223,7 @@ public:
   TSDRegistryT *getTSDRegistry() { return &TSDRegistry; }
 
   // The Cache must be provided zero-initialized.
-  void initCache(CacheT *Cache) {
-    Cache->initLinkerInitialized(&Stats, &Primary);
-  }
+  void initCache(CacheT *Cache) { Cache->init(&Stats, &Primary); }
 
   // Release the resources used by a TSD, which involves:
   // - draining the local quarantine cache to the global quarantine;

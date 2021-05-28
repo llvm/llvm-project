@@ -38,13 +38,13 @@
 
 #include <asl.h>
 #include <crt_externs.h>
+#include <cstdio>
+#include <cstdlib>
 #include <dlfcn.h>
 #include <grp.h>
 #include <libproc.h>
 #include <pwd.h>
 #include <spawn.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <sys/proc.h>
 #include <sys/stat.h>
 #include <sys/sysctl.h>

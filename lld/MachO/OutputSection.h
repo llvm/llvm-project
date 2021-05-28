@@ -12,6 +12,8 @@
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 
+#include <limits>
+
 namespace lld {
 namespace macho {
 
@@ -25,7 +27,7 @@ class OutputSegment;
 class OutputSection {
 public:
   enum Kind {
-    MergedKind,
+    ConcatKind,
     SyntheticKind,
   };
 
@@ -56,6 +58,10 @@ public:
 
   StringRef name;
   OutputSegment *parent = nullptr;
+  // For output sections that don't have explicit ordering requirements, their
+  // output order should be based on the order of the input sections they
+  // contain.
+  int inputOrder = std::numeric_limits<int>::max();
 
   uint32_t index = 0;
   uint64_t addr = 0;

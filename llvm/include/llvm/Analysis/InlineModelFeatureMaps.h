@@ -34,11 +34,10 @@ namespace llvm {
   M(NrCtantParams, "nr_ctant_params",                                          \
     "number of parameters in the call site that are constants")                \
   M(CostEstimate, "cost_estimate", "total cost estimate (threshold - free)")   \
-  M(EdgeCount, "edge_count",                                                   \
+  M(EdgeCount, "edge_count", "total number of calls in the module")            \
+  M(CallerUsers, "caller_users",                                               \
     "number of module-internal users of the caller, +1 if the caller is "      \
     "exposed externally")                                                      \
-  M(CallerUsers, "caller_users",                                               \
-    "number of blocks reached from a conditional instruction, in the caller")  \
   M(CallerConditionallyExecutedBlocks, "caller_conditionally_executed_blocks", \
     "number of blocks reached from a conditional instruction, in the caller")  \
   M(CallerBasicBlockCount, "caller_basic_block_count",                         \
@@ -46,7 +45,8 @@ namespace llvm {
   M(CalleeConditionallyExecutedBlocks, "callee_conditionally_executed_blocks", \
     "number of blocks reached from a conditional instruction, in the callee")  \
   M(CalleeUsers, "callee_users",                                               \
-    "number of blocks reached from a conditional instruction, in the callee")
+    "number of module-internal users of the callee, +1 if the callee is "      \
+    "exposed externally")
 
 enum class FeatureIndex : size_t {
 #define POPULATE_INDICES(INDEX_NAME, NAME, COMMENT) INDEX_NAME,

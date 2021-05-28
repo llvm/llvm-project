@@ -21,9 +21,9 @@
 #include <array>
 #include <utility>
 
-#include <inttypes.h>
-#include <stdint.h>
-#include <string.h>
+#include <cinttypes>
+#include <cstdint>
+#include <cstring>
 
 using namespace lldb_private;
 

@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/BCD.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -296,6 +297,22 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   return "generic";
 }
 
+namespace {
+StringRef getCPUNameFromS390Model(unsigned int Id, bool HaveVectorSupport) {
+  if (Id >= 8561 && HaveVectorSupport)
+    return "z15";
+  if (Id >= 3906 && HaveVectorSupport)
+    return "z14";
+  if (Id >= 2964 && HaveVectorSupport)
+    return "z13";
+  if (Id >= 2827)
+    return "zEC12";
+  if (Id >= 2817)
+    return "z196";
+  return "generic";
+}
+} // end anonymous namespace
+
 StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
   // STIDP is a privileged operation, so use /proc/cpuinfo instead.
 
@@ -331,18 +348,8 @@ StringRef sys::detail::getHostCPUNameForS390x(StringRef ProcCpuinfoContent) {
       if (Pos != StringRef::npos) {
         Pos += sizeof("machine = ") - 1;
         unsigned int Id;
-        if (!Lines[I].drop_front(Pos).getAsInteger(10, Id)) {
-          if (Id >= 8561 && HaveVectorSupport)
-            return "z15";
-          if (Id >= 3906 && HaveVectorSupport)
-            return "z14";
-          if (Id >= 2964 && HaveVectorSupport)
-            return "z13";
-          if (Id >= 2827)
-            return "zEC12";
-          if (Id >= 2817)
-            return "z196";
-        }
+        if (!Lines[I].drop_front(Pos).getAsInteger(10, Id))
+          return getCPUNameFromS390Model(Id, HaveVectorSupport);
       }
       break;
     }
@@ -1228,6 +1235,29 @@ StringRef sys::getHostCPUName() {
   std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
   StringRef Content = P ? P->getBuffer() : "";
   return detail::getHostCPUNameForS390x(Content);
+}
+#elif defined(__MVS__)
+StringRef sys::getHostCPUName() {
+  // Get pointer to Communications Vector Table (CVT).
+  // The pointer is located at offset 16 of the Prefixed Save Area (PSA).
+  // It is stored as 31 bit pointer and will be zero-extended to 64 bit.
+  int *StartToCVTOffset = reinterpret_cast<int *>(0x10);
+  // Since its stored as a 31-bit pointer, get the 4 bytes from the start
+  // of address.
+  int ReadValue = *StartToCVTOffset;
+  // Explicitly clear the high order bit.
+  ReadValue = (ReadValue & 0x7FFFFFFF);
+  char *CVT = reinterpret_cast<char *>(ReadValue);
+  // The model number is located in the CVT prefix at offset -6 and stored as
+  // signless packed decimal.
+  uint16_t Id = *(uint16_t *)&CVT[-6];
+  // Convert number to integer.
+  Id = decodePackedBCD<uint16_t>(Id, false);
+  // Check for vector support. It's stored in field CVTFLAG5 (offset 244),
+  // bit CVTVEF (X'80'). The facilities list is part of the PSA but the vector
+  // extension can only be used if bit CVTVEF is on.
+  bool HaveVectorSupport = CVT[244] & 0x80;
+  return getCPUNameFromS390Model(Id, HaveVectorSupport);
 }
 #elif defined(__APPLE__) && defined(__aarch64__)
 StringRef sys::getHostCPUName() {

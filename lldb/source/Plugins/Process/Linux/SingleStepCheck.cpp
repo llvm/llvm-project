@@ -8,8 +8,8 @@
 
 #include "SingleStepCheck.h"
 
+#include <csignal>
 #include <sched.h>
-#include <signal.h>
 #include <sys/wait.h>
 #include <unistd.h>
 

@@ -20,7 +20,7 @@
 #include "include/atomic_support.h"
 
 #if __has_feature(address_sanitizer)
-extern "C" void __asan_handle_no_return(void);
+#include <sanitizer/asan_interface.h>
 #endif
 
 // +---------------------------+-----------------------------+---------------+

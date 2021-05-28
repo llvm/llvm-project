@@ -951,14 +951,17 @@ void RuntimeDyldELF::resolveBPFRelocation(const SectionEntry &Section,
     report_fatal_error("Relocation type not implemented yet!");
     break;
   case ELF::R_BPF_NONE:
+  case ELF::R_BPF_64_64:
+  case ELF::R_BPF_64_32:
+  case ELF::R_BPF_64_NODYLD32:
     break;
-  case ELF::R_BPF_64_64: {
+  case ELF::R_BPF_64_ABS64: {
     write(isBE, Section.getAddressWithOffset(Offset), Value + Addend);
     LLVM_DEBUG(dbgs() << "Writing " << format("%p", (Value + Addend)) << " at "
                       << format("%p\n", Section.getAddressWithOffset(Offset)));
     break;
   }
-  case ELF::R_BPF_64_32: {
+  case ELF::R_BPF_64_ABS32: {
     Value += Addend;
     assert(Value <= UINT32_MAX);
     write(isBE, Section.getAddressWithOffset(Offset), static_cast<uint32_t>(Value));

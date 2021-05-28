@@ -39,9 +39,9 @@ func @remove_op_with_variadic_results_and_folder(%arg0 : i32, %arg1 : i32) -> (i
 // CHECK-LABEL: func @test_commutative_multi
 // CHECK-SAME: (%[[ARG_0:[a-z0-9]*]]: i32, %[[ARG_1:[a-z0-9]*]]: i32)
 func @test_commutative_multi(%arg0: i32, %arg1: i32) -> (i32, i32) {
-  // CHECK: %[[C42:.*]] = constant 42 : i32
+  // CHECK-DAG: %[[C42:.*]] = constant 42 : i32
   %c42_i32 = constant 42 : i32
-  // CHECK: %[[C43:.*]] = constant 43 : i32
+  // CHECK-DAG: %[[C43:.*]] = constant 43 : i32
   %c43_i32 = constant 43 : i32
   // CHECK-NEXT: %[[O0:.*]] = "test.op_commutative"(%[[ARG_0]], %[[ARG_1]], %[[C42]], %[[C43]]) : (i32, i32, i32, i32) -> i32
   %y = "test.op_commutative"(%c42_i32, %arg0, %arg1, %c43_i32) : (i32, i32, i32, i32) -> i32
@@ -104,4 +104,12 @@ func @result_shape_per_dim(%arg0 : tensor<2x3x?xf32>, %arg1 : tensor<?x5xf32>)
   // CHECK-DAG: %[[D1:.+]] = memref.dim %[[ARG_0]], %[[C2]]
   // CHECK: return %[[D0]], %[[C5]], %[[C2]], %[[C3]], %[[D1]]
   return %1, %2, %3, %4, %5 : index, index, index, index, index
+}
+
+// CHECK-LABEL: test_dialect_canonicalizer
+func @test_dialect_canonicalizer() -> (i32) {
+  %0 = "test.dialect_canonicalizable"() : () -> (i32)
+  // CHECK: %[[CST:.*]] = constant 42 : i32
+  // CHECK: return %[[CST]]
+  return %0 : i32
 }

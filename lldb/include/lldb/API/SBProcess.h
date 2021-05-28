@@ -14,7 +14,7 @@
 #include "lldb/API/SBProcessInfo.h"
 #include "lldb/API/SBQueue.h"
 #include "lldb/API/SBTarget.h"
-#include <stdio.h>
+#include <cstdio>
 
 namespace lldb {
 

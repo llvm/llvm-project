@@ -827,7 +827,8 @@ func @tiled_loop_reduction(%input_3d: tensor<16x24x32xf32>,
           %i2d_ = %input_2d: tensor<16x32xf32>,
           %i1d_ = %input_1d: tensor<24xf32>)
       outs(%o_ =  %output: tensor<24xf32>)
-      iterators["reduction", "parallel", "reduction"] {
+      iterators["reduction", "parallel", "reduction"]
+      distribution["block_x", "block_y", "none"] {
     %sub_3d = subtensor %i3d_[%i, %j, %k][2, 4, 8][1, 1, 1]
       : tensor<16x24x32xf32> to tensor<2x4x8xf32>
     %sub_2d = subtensor %i2d_[%i, %k][2, 8][1, 1]

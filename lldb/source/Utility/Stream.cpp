@@ -16,8 +16,8 @@
 
 #include <string>
 
-#include <inttypes.h>
-#include <stddef.h>
+#include <cinttypes>
+#include <cstddef>
 
 using namespace lldb;
 using namespace lldb_private;

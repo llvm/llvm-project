@@ -25,7 +25,7 @@
 
 #include "llvm/ADT/StringRef.h"
 
-#include <assert.h>
+#include <cassert>
 #include <memory>
 
 namespace lldb_private {

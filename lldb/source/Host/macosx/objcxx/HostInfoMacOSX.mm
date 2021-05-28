@@ -25,7 +25,7 @@
 #include <string>
 
 // C inclues
-#include <stdlib.h>
+#include <cstdlib>
 #include <sys/sysctl.h>
 #include <sys/syslimits.h>
 #include <sys/types.h>

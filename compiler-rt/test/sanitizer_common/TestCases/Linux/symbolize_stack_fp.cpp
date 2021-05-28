@@ -34,5 +34,5 @@ __attribute__((noinline)) void A<0>::RecursiveTemplateFunction(const T &) {
 
 int main() {
   // CHECK: {{vector<.*vector<.*vector<.*vector<.*vector<}}
-  A<10>().RecursiveTemplateFunction(0);
+  A<7>().RecursiveTemplateFunction(0);
 }

@@ -199,7 +199,7 @@ static void hostrpc_handler_SERVICE_MALLOC_PRINTF(uint32_t device_id,
   int cpu_device_id = 0;
   size_t sz = (size_t)payload[0];
   atmi_mem_place_t place = ATMI_MEM_PLACE_CPU_MEM(0, cpu_device_id, 0);
-  atmi_status_t err = atmi_malloc(&ptr, sz, place);
+  hsa_status_t err = atmi_malloc(&ptr, sz, place);
   payload[0] = (uint64_t)err;
   payload[1] = (uint64_t)ptr;
 }
@@ -208,7 +208,7 @@ static void hostrpc_handler_SERVICE_MALLOC(uint32_t device_id,
                                            uint64_t *payload) {
   void *ptr = NULL;
   atmi_mem_place_t place = ATMI_MEM_PLACE_GPU_MEM(0, device_id, 0);
-  atmi_status_t err = atmi_malloc(&ptr, payload[0], place);
+  hsa_status_t err = atmi_malloc(&ptr, payload[0], place);
   payload[0] = (uint64_t)err;
   payload[1] = (uint64_t)ptr;
 }
@@ -239,7 +239,7 @@ static int local_vector_product_zeros(int N, int *A, int *B, int *C) {
 // This is the service for the demo of vector_product_zeros
 static void hostrpc_handler_SERVICE_DEMO(uint32_t device_id,
                                          uint64_t *payload) {
-  atmi_status_t copyerr;
+  hsa_status_t copyerr;
   int N = (int)payload[0];
   int *A_D = (int *)payload[1];
   int *B_D = (int *)payload[2];

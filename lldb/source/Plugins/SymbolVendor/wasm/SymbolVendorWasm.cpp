@@ -8,7 +8,7 @@
 
 #include "SymbolVendorWasm.h"
 
-#include <string.h>
+#include <cstring>
 
 #include "Plugins/ObjectFile/wasm/ObjectFileWasm.h"
 #include "lldb/Core/Module.h"

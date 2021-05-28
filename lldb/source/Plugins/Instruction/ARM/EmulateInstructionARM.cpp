@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdlib.h>
+#include <cstdlib>
 
 #include "EmulateInstructionARM.h"
 #include "EmulationStateARM.h"

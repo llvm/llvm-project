@@ -191,7 +191,7 @@ __brick_transform_scan(_RandomAccessIterator __first, _RandomAccessIterator __la
                        _UnaryOperation __unary_op, _Tp __init, _BinaryOperation __binary_op, _Inclusive,
                        /*is_vector=*/std::true_type) noexcept
 {
-#if (_PSTL_UDS_PRESENT)
+#if defined(_PSTL_UDS_PRESENT)
     return __unseq_backend::__simd_scan(__first, __last - __first, __result, __unary_op, __init, __binary_op,
                                         _Inclusive());
 #else

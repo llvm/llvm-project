@@ -14,13 +14,13 @@
 
 #include <bsm/audit.h>
 #include <bsm/audit_session.h>
-#include <errno.h>
+#include <cerrno>
+#include <csignal>
 #include <libproc.h>
 #include <mach-o/loader.h>
 #include <mach/exception_types.h>
 #include <mach/task_info.h>
 #include <pwd.h>
-#include <signal.h>
 #include <sys/stat.h>
 #include <sys/sysctl.h>
 #include <unistd.h>

@@ -19,8 +19,8 @@
 #include "lldb/lldb-private-interfaces.h"
 #include "llvm/ADT/StringRef.h"
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 #define LLDB_PLUGIN_DEFINE_ADV(ClassName, PluginName)                          \
   namespace lldb_private {                                                     \

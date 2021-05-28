@@ -19,18 +19,17 @@ namespace lld {
 namespace macho {
 
 class InputFile;
-class InputSection;
 class OutputSection;
 
 class InputSection {
 public:
   virtual ~InputSection() = default;
   virtual uint64_t getSize() const { return data.size(); }
-  virtual uint64_t getFileSize() const;
+  uint64_t getFileSize() const;
   uint64_t getFileOffset() const;
   uint64_t getVA() const;
 
-  virtual void writeTo(uint8_t *buf);
+  void writeTo(uint8_t *buf);
 
   InputFile *file = nullptr;
   StringRef name;

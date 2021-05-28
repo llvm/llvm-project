@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "SyntheticSections.h"
+#include "ConcatOutputSection.h"
 #include "Config.h"
 #include "ExportTrie.h"
 #include "InputFiles.h"
 #include "MachOStructs.h"
-#include "MergedOutputSection.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -924,6 +924,9 @@ void StringTableSection::writeTo(uint8_t *buf) const {
     off += str.size() + 1; // account for null terminator
   }
 }
+
+static_assert((CodeSignatureSection::blobHeadersSize % 8) == 0, "");
+static_assert((CodeSignatureSection::fixedHeadersSize % 8) == 0, "");
 
 CodeSignatureSection::CodeSignatureSection()
     : LinkEditSection(segment_names::linkEdit, section_names::codeSignature) {

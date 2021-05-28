@@ -1104,3 +1104,111 @@ while.end.loopexit:
 while.end:
   ret void
 }
+
+define void @test_guard_slt_sgt_1(i32* nocapture %a, i64 %N) {
+; CHECK-LABEL: 'test_guard_slt_sgt_1'
+; CHECK:       Determining loop execution counts for: @test_guard_slt_sgt
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %N)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %N)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %c.0 = icmp slt i64 %N, 12
+  %c.1 = icmp sgt i64 %N, 0
+  %and = and i1 %c.0, %c.1
+  br i1 %and, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %idx = getelementptr inbounds i32, i32* %a, i64 %iv
+  store i32 1, i32* %idx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %N
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_guard_slt_sgt_2(i32* nocapture %a, i64 %i) {
+; CHECK-LABEL: 'test_guard_slt_sgt_2'
+; CHECK:       Determining loop execution counts for: @test_guard_slt_sgt
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (17 + (-1 * %i))
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (17 + (-1 * %i))
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %c.0 = icmp slt i64 %i, 16
+  %c.1 = icmp sgt i64 %i, 4
+  %and = and i1 %c.0, %c.1
+  br i1 %and, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ %i, %entry ]
+  %idx = getelementptr inbounds i32, i32* %a, i64 %iv
+  store i32 1, i32* %idx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 18
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_guard_sle_sge_1(i32* nocapture %a, i64 %N) {
+; CHECK-LABEL: 'test_guard_sle_sge_1'
+; CHECK:       Determining loop execution counts for: @test_guard_sle_sge_1
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %N)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is -2
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %N)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %c.0 = icmp sle i64 %N, 12
+  %c.1 = icmp sge i64 %N, 1
+  %and = and i1 %c.0, %c.1
+  br i1 %and, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %idx = getelementptr inbounds i32, i32* %a, i64 %iv
+  store i32 1, i32* %idx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %N
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_guard_sle_sge_2(i32* nocapture %a, i64 %i) {
+; CHECK-LABEL: 'test_guard_sle_sge_2'
+; CHECK:       Determining loop execution counts for: @test_guard_sle_sge
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (17 + (-1 * %i))
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (17 + (-1 * %i))
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
+entry:
+  %c.0 = icmp sle i64 %i, 16
+  %c.1 = icmp sge i64 %i, 4
+  %and = and i1 %c.0, %c.1
+  br i1 %and, label %loop, label %exit
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ %i, %entry ]
+  %idx = getelementptr inbounds i32, i32* %a, i64 %iv
+  store i32 1, i32* %idx, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 18
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}

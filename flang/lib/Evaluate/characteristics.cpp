@@ -611,7 +611,7 @@ common::Intent DummyArgument::GetIntent() const {
                         [](const DummyDataObject &data) { return data.intent; },
                         [](const DummyProcedure &proc) { return proc.intent; },
                         [](const AlternateReturn &) -> common::Intent {
-                          DIE("Alternate return have no intent");
+                          DIE("Alternate returns have no intent");
                         },
                     },
       u);

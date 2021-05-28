@@ -335,9 +335,7 @@ define i8 @srem_minusone_divisor() {
 
 define i32 @srem_of_mul_nsw(i32 %x, i32 %y) {
 ; CHECK-LABEL: @srem_of_mul_nsw(
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[MOD:%.*]] = srem i32 [[MUL]], [[Y]]
-; CHECK-NEXT:    ret i32 [[MOD]]
+; CHECK-NEXT:    ret i32 0
 ;
   %mul = mul nsw i32 %x, %y
   %mod = srem i32 %mul, %y
@@ -349,9 +347,7 @@ define i32 @srem_of_mul_nsw(i32 %x, i32 %y) {
 ;   - vector types
 define <2 x i32> @srem_of_mul_nsw_vec_commuted(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @srem_of_mul_nsw_vec_commuted(
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw <2 x i32> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[MOD:%.*]] = srem <2 x i32> [[MUL]], [[Y]]
-; CHECK-NEXT:    ret <2 x i32> [[MOD]]
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
 ;
   %mul = mul nsw <2 x i32> %y, %x
   %mod = srem <2 x i32> %mul, %y
@@ -393,9 +389,7 @@ define i32 @urem_of_mul_nsw(i32 %x, i32 %y) {
 
 define i32 @urem_of_mul_nuw(i32 %x, i32 %y) {
 ; CHECK-LABEL: @urem_of_mul_nuw(
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[MOD:%.*]] = urem i32 [[MUL]], [[Y]]
-; CHECK-NEXT:    ret i32 [[MOD]]
+; CHECK-NEXT:    ret i32 0
 ;
   %mul = mul nuw i32 %x, %y
   %mod = urem i32 %mul, %y
@@ -404,9 +398,7 @@ define i32 @urem_of_mul_nuw(i32 %x, i32 %y) {
 
 define <2 x i32> @srem_of_mul_nuw_vec_commuted(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @srem_of_mul_nuw_vec_commuted(
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw <2 x i32> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[MOD:%.*]] = urem <2 x i32> [[MUL]], [[Y]]
-; CHECK-NEXT:    ret <2 x i32> [[MOD]]
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
 ;
   %mul = mul nuw <2 x i32> %y, %x
   %mod = urem <2 x i32> %mul, %y
@@ -426,10 +418,7 @@ define i32 @urem_of_mul(i32 %x, i32 %y) {
 
 define i4 @srem_mul_sdiv(i4 %x, i4 %y) {
 ; CHECK-LABEL: @srem_mul_sdiv(
-; CHECK-NEXT:    [[D:%.*]] = sdiv i4 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul i4 [[D]], [[Y]]
-; CHECK-NEXT:    [[MOD:%.*]] = srem i4 [[MUL]], [[Y]]
-; CHECK-NEXT:    ret i4 [[MOD]]
+; CHECK-NEXT:    ret i4 0
 ;
   %d = sdiv i4 %x, %y
   %mul = mul i4 %d, %y
@@ -452,10 +441,7 @@ define i8 @srem_mul_udiv(i8 %x, i8 %y) {
 
 define <3 x i7> @urem_mul_udiv_vec_commuted(<3 x i7> %x, <3 x i7> %y) {
 ; CHECK-LABEL: @urem_mul_udiv_vec_commuted(
-; CHECK-NEXT:    [[D:%.*]] = udiv <3 x i7> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul <3 x i7> [[Y]], [[D]]
-; CHECK-NEXT:    [[MOD:%.*]] = urem <3 x i7> [[MUL]], [[Y]]
-; CHECK-NEXT:    ret <3 x i7> [[MOD]]
+; CHECK-NEXT:    ret <3 x i7> zeroinitializer
 ;
   %d = udiv <3 x i7> %x, %y
   %mul = mul <3 x i7> %y, %d

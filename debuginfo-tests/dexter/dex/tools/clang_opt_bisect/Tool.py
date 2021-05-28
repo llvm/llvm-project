@@ -92,8 +92,11 @@ class Tool(TestToolBase):
             executable_path=self.context.options.executable,
             source_paths=self.context.options.source_files,
             dexter_version=self.context.version)
-        step_collection.commands = get_command_infos(
-            self.context.options.source_files)
+
+        step_collection.commands, new_source_files = get_command_infos(
+            self.context.options.source_files, self.context.options.source_root_dir)
+        self.context.options.source_files.extend(list(new_source_files))
+
         debugger_controller = DefaultController(self.context, step_collection)
         return debugger_controller
 

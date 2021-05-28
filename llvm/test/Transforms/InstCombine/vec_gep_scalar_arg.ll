@@ -3,9 +3,9 @@
 
 define <4 x i16*> @PR41270([4 x i16]* %x) {
 ; CHECK-LABEL: @PR41270(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x [4 x i16]*> undef, [4 x i16]* [[X:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x i16], <4 x [4 x i16]*> [[TMP1]], i64 0, i64 3
-; CHECK-NEXT:    ret <4 x i16*> [[TMP2]]
+; CHECK-NEXT:    [[T3:%.*]] = getelementptr inbounds [4 x i16], [4 x i16]* [[X:%.*]], i64 0, i64 3
+; CHECK-NEXT:    [[INS2:%.*]] = insertelement <4 x i16*> undef, i16* [[T3]], i32 0
+; CHECK-NEXT:    ret <4 x i16*> [[INS2]]
 ;
   %ins = insertelement <4 x [4 x i16]*> undef, [4 x i16]* %x, i32 0
   %splat = shufflevector <4 x [4 x i16]*> %ins, <4 x [4 x i16]*> undef, <4 x i32> zeroinitializer

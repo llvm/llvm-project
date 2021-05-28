@@ -452,6 +452,12 @@ public:
   bool hasMaybeUnusedDebugInfo() const {
     return getDebugInfo() >= codegenoptions::UnusedTypeInfo;
   }
+
+  // Check if any one of SanitizeCoverage* is enabled.
+  bool hasSanitizeCoverage() const {
+    return SanitizeCoverageType || SanitizeCoverageIndirectCalls ||
+           SanitizeCoverageTraceCmp;
+  }
 };
 
 }  // end namespace clang

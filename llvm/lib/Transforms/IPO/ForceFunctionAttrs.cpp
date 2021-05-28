@@ -53,6 +53,7 @@ static Attribute::AttrKind parseAttrKind(StringRef Kind) {
       .Case("nocf_check", Attribute::NoCfCheck)
       .Case("norecurse", Attribute::NoRecurse)
       .Case("nounwind", Attribute::NoUnwind)
+      .Case("nosanitize_coverage", Attribute::NoSanitizeCoverage)
       .Case("optforfuzzing", Attribute::OptForFuzzing)
       .Case("optnone", Attribute::OptimizeNone)
       .Case("optsize", Attribute::OptimizeForSize)

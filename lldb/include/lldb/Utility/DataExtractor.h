@@ -19,8 +19,8 @@
 #include "llvm/Support/SwapByteOrder.h"
 
 #include <cassert>
-#include <stdint.h>
-#include <string.h>
+#include <cstdint>
+#include <cstring>
 
 namespace lldb_private {
 class Log;

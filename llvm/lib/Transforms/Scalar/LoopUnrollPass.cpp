@@ -356,8 +356,8 @@ static Optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
 
   SmallSetVector<BasicBlock *, 16> BBWorklist;
   SmallSetVector<std::pair<BasicBlock *, BasicBlock *>, 4> ExitWorklist;
-  DenseMap<Value *, Constant *> SimplifiedValues;
-  SmallVector<std::pair<Value *, Constant *>, 4> SimplifiedInputValues;
+  DenseMap<Value *, Value *> SimplifiedValues;
+  SmallVector<std::pair<Value *, Value *>, 4> SimplifiedInputValues;
 
   // The estimated cost of the unrolled form of the loop. We try to estimate
   // this by simplifying as much as we can while computing the estimate.
@@ -498,11 +498,9 @@ static Optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
 
       Value *V = PHI->getIncomingValueForBlock(
           Iteration == 0 ? L->getLoopPreheader() : L->getLoopLatch());
-      Constant *C = dyn_cast<Constant>(V);
-      if (Iteration != 0 && !C)
-        C = SimplifiedValues.lookup(V);
-      if (C)
-        SimplifiedInputValues.push_back({PHI, C});
+      if (Iteration != 0 && SimplifiedValues.count(V))
+        V = SimplifiedValues.lookup(V);
+      SimplifiedInputValues.push_back({PHI, V});
     }
 
     // Now clear and re-populate the map for the next iteration.
@@ -571,13 +569,18 @@ static Optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
 
       Instruction *TI = BB->getTerminator();
 
+      auto getSimplifiedConstant = [&](Value *V) -> Constant * {
+        if (SimplifiedValues.count(V))
+          V = SimplifiedValues.lookup(V);
+        return dyn_cast<Constant>(V);
+      };
+
       // Add in the live successors by first checking whether we have terminator
       // that may be simplified based on the values simplified by this call.
       BasicBlock *KnownSucc = nullptr;
       if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
         if (BI->isConditional()) {
-          if (Constant *SimpleCond =
-                  SimplifiedValues.lookup(BI->getCondition())) {
+          if (auto *SimpleCond = getSimplifiedConstant(BI->getCondition())) {
             // Just take the first successor if condition is undef
             if (isa<UndefValue>(SimpleCond))
               KnownSucc = BI->getSuccessor(0);
@@ -587,8 +590,7 @@ static Optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
           }
         }
       } else if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
-        if (Constant *SimpleCond =
-                SimplifiedValues.lookup(SI->getCondition())) {
+        if (auto *SimpleCond = getSimplifiedConstant(SI->getCondition())) {
           // Just take the first successor if condition is undef
           if (isa<UndefValue>(SimpleCond))
             KnownSucc = SI->getSuccessor(0);

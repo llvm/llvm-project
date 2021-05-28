@@ -46,7 +46,7 @@ class UnrolledInstAnalyzer : private InstVisitor<UnrolledInstAnalyzer, bool> {
 
 public:
   UnrolledInstAnalyzer(unsigned Iteration,
-                       DenseMap<Value *, Constant *> &SimplifiedValues,
+                       DenseMap<Value *, Value *> &SimplifiedValues,
                        ScalarEvolution &SE, const Loop *L)
       : SimplifiedValues(SimplifiedValues), SE(SE), L(L) {
       IterationNumber = SE.getConstant(APInt(64, Iteration));
@@ -68,15 +68,12 @@ private:
   /// iteration.
   const SCEV *IterationNumber;
 
-  /// A Value->Constant map for keeping values that we managed to
-  /// constant-fold on the given iteration.
-  ///
   /// While we walk the loop instructions, we build up and maintain a mapping
   /// of simplified values specific to this iteration.  The idea is to propagate
   /// any special information we have about loads that can be replaced with
   /// constants after complete unrolling, and account for likely simplifications
   /// post-unrolling.
-  DenseMap<Value *, Constant *> &SimplifiedValues;
+  DenseMap<Value *, Value *> &SimplifiedValues;
 
   ScalarEvolution &SE;
   const Loop *L;

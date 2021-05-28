@@ -8,8 +8,8 @@
 
 #include <arpa/inet.h>
 #include <asl.h>
+#include <cerrno>
 #include <crt_externs.h>
-#include <errno.h>
 #include <getopt.h>
 #include <netdb.h>
 #include <netinet/in.h>

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <assert.h>
+#include <cassert>
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/dwarf.h"

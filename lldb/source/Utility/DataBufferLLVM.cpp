@@ -10,7 +10,7 @@
 
 #include "llvm/Support/MemoryBuffer.h"
 
-#include <assert.h>
+#include <cassert>
 
 using namespace lldb_private;
 

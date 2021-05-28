@@ -17,7 +17,7 @@
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
 
-#include <stdint.h>
+#include <cstdint>
 
 #include <string>
 

@@ -1027,6 +1027,15 @@ public:
   }
 };
 
+/// Return true if the last dimension of the MemRefType has unit stride. Also
+/// return true for memrefs with no strides.
+static bool isLastMemrefDimUnitStride(MemRefType type) {
+  int64_t offset;
+  SmallVector<int64_t> strides;
+  auto successStrides = getStridesAndOffset(type, strides, offset);
+  return succeeded(successStrides) && (strides.empty() || strides.back() == 1);
+}
+
 /// Returns the strides if the memory underlying `memRefType` has a contiguous
 /// static layout.
 static llvm::Optional<SmallVector<int64_t, 4>>
@@ -1047,7 +1056,7 @@ computeContiguousStrides(MemRefType memRefType) {
   // contiguous dynamic shapes in other ways than with just empty/identity
   // layout.
   auto sizes = memRefType.getShape();
-  for (int index = 0, e = strides.size() - 2; index < e; ++index) {
+  for (int index = 0, e = strides.size() - 1; index < e; ++index) {
     if (ShapedType::isDynamic(sizes[index + 1]) ||
         ShapedType::isDynamicStrideOrOffset(strides[index]) ||
         ShapedType::isDynamicStrideOrOffset(strides[index + 1]))
@@ -1149,8 +1158,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     auto adaptor = getTransferOpAdapter(xferOp, operands);
 
-    if (xferOp.getVectorType().getRank() > 1 ||
-        llvm::size(xferOp.indices()) == 0)
+    if (xferOp.getVectorType().getRank() > 1 || xferOp.indices().empty())
       return failure();
     if (xferOp.permutation_map() !=
         AffineMap::getMinorIdentityMap(xferOp.permutation_map().getNumInputs(),
@@ -1160,9 +1168,8 @@ public:
     auto memRefType = xferOp.getShapedType().template dyn_cast<MemRefType>();
     if (!memRefType)
       return failure();
-    // Only contiguous source tensors supported atm.
-    auto strides = computeContiguousStrides(memRefType);
-    if (!strides)
+    // Last dimension must be contiguous. (Otherwise: Use VectorToSCF.)
+    if (!isLastMemrefDimUnitStride(memRefType))
       return failure();
     // Out-of-bounds dims are handled by MaterializeTransferMask.
     if (xferOp.hasOutOfBoundsDim())

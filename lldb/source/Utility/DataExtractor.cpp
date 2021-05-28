@@ -33,9 +33,9 @@
 #include <cstdint>
 #include <string>
 
-#include <ctype.h>
-#include <inttypes.h>
-#include <string.h>
+#include <cctype>
+#include <cinttypes>
+#include <cstring>
 
 using namespace lldb;
 using namespace lldb_private;

@@ -1474,6 +1474,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoCfCheck;
   case bitc::ATTR_KIND_NO_UNWIND:
     return Attribute::NoUnwind;
+  case bitc::ATTR_KIND_NO_SANITIZE_COVERAGE:
+    return Attribute::NoSanitizeCoverage;
   case bitc::ATTR_KIND_NULL_POINTER_IS_VALID:
     return Attribute::NullPointerIsValid;
   case bitc::ATTR_KIND_OPT_FOR_FUZZING:
@@ -5230,25 +5232,31 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       InstructionList.push_back(I);
       break;
     }
+    case bitc::FUNC_CODE_INST_ATOMICRMW_OLD:
     case bitc::FUNC_CODE_INST_ATOMICRMW: {
-      // ATOMICRMW:[ptrty, ptr, val, op, vol, ordering, ssid, align?]
+      // ATOMICRMW_OLD: [ptrty, ptr, val, op, vol, ordering, ssid, align?]
+      // ATOMICRMW: [ptrty, ptr, valty, val, op, vol, ordering, ssid, align?]
       const size_t NumRecords = Record.size();
       unsigned OpNum = 0;
 
       Value *Ptr = nullptr;
-      if (getValueTypePair(Record, OpNum, NextValueNo, Ptr))
+      if (getValueTypePair(Record, OpNum, NextValueNo, Ptr, &FullTy))
         return error("Invalid record");
 
       if (!isa<PointerType>(Ptr->getType()))
         return error("Invalid record");
 
       Value *Val = nullptr;
-      if (popValue(Record, OpNum, NextValueNo, nullptr, Val))
-        return error("Invalid record");
-
-      if (!cast<PointerType>(Ptr->getType())
-               ->isOpaqueOrPointeeTypeMatches(Val->getType()))
-        return error("Invalid record");
+      if (BitCode == bitc::FUNC_CODE_INST_ATOMICRMW_OLD) {
+        if (popValue(Record, OpNum, NextValueNo,
+                     getPointerElementFlatType(FullTy), Val))
+          return error("Invalid record");
+        FullTy = getPointerElementFlatType(FullTy);
+      } else {
+        if (getValueTypePair(Record, OpNum, NextValueNo, Val))
+          return error("Invalid record");
+        FullTy = Val->getType();
+      }
 
       if (!(NumRecords == (OpNum + 4) || NumRecords == (OpNum + 5)))
         return error("Invalid record");

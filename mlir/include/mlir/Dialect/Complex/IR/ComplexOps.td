@@ -88,7 +88,7 @@ def CreateOp : Complex_Op<"create",
 
   let summary = "complex number creation operation";
   let description = [{
-    The `complex.complex` operation creates a complex number from two
+    The `complex.create` operation creates a complex number from two
     floating-point operands, the real and the imaginary part.
 
     Example:
@@ -102,6 +102,7 @@ def CreateOp : Complex_Op<"create",
   let results = (outs Complex<AnyFloat>:$complex);
 
   let assemblyFormat = "$real `,` $imaginary attr-dict `:` type($complex)";
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

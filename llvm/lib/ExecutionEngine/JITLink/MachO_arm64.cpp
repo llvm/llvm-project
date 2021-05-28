@@ -413,9 +413,8 @@ public:
       PerGraphGOTAndPLTStubsBuilder_MachO_arm64>::PerGraphGOTAndPLTStubsBuilder;
 
   bool isGOTEdgeToFix(Edge &E) const {
-    return (E.getKind() == GOTPage21 || E.getKind() == GOTPageOffset12 ||
-            E.getKind() == PointerToGOT) &&
-           E.getTarget().isExternal();
+    return E.getKind() == GOTPage21 || E.getKind() == GOTPageOffset12 ||
+           E.getKind() == PointerToGOT;
   }
 
   Symbol &createGOTEntry(Symbol &Target) {

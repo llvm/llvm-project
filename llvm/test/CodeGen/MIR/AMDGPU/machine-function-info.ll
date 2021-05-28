@@ -10,7 +10,7 @@
 ; CHECK: machineFunctionInfo:
 ; CHECK-NEXT: explicitKernArgSize: 128
 ; CHECK-NEXT: maxKernArgAlign: 64
-; CHECK-NEXT: ldsSize: 0
+; CHECK-NEXT: ldsSize: 2048
 ; CHECK-NEXT: dynLDSAlign: 1
 ; CHECK-NEXT: isEntryFunction: true
 ; CHECK-NEXT: noSignedZerosFPMath: false

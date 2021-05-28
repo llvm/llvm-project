@@ -10,8 +10,8 @@
 #define LLDB_UTILITY_DATABUFFER_H
 #if defined(__cplusplus)
 
-#include <stdint.h>
-#include <string.h>
+#include <cstdint>
+#include <cstring>
 
 #include "lldb/lldb-types.h"
 

@@ -507,14 +507,22 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   }
 
   static const CostTblEntry AVX512BWShiftCostTable[] = {
+    { ISD::SHL,   MVT::v16i8,      4 }, // extend/vpsllvw/pack sequence.
+    { ISD::SRL,   MVT::v16i8,      4 }, // extend/vpsrlvw/pack sequence.
+    { ISD::SRA,   MVT::v16i8,      4 }, // extend/vpsravw/pack sequence.
+    { ISD::SHL,   MVT::v32i8,      4 }, // extend/vpsllvw/pack sequence.
+    { ISD::SRL,   MVT::v32i8,      4 }, // extend/vpsrlvw/pack sequence.
+    { ISD::SRA,   MVT::v32i8,      6 }, // extend/vpsravw/pack sequence.
+    { ISD::SHL,   MVT::v64i8,      6 }, // extend/vpsllvw/pack sequence.
+    { ISD::SRL,   MVT::v64i8,      7 }, // extend/vpsrlvw/pack sequence.
+    { ISD::SRA,   MVT::v64i8,     15 }, // extend/vpsravw/pack sequence.
+
     { ISD::SHL,   MVT::v8i16,      1 }, // vpsllvw
     { ISD::SRL,   MVT::v8i16,      1 }, // vpsrlvw
     { ISD::SRA,   MVT::v8i16,      1 }, // vpsravw
-
     { ISD::SHL,   MVT::v16i16,     1 }, // vpsllvw
     { ISD::SRL,   MVT::v16i16,     1 }, // vpsrlvw
     { ISD::SRA,   MVT::v16i16,     1 }, // vpsravw
-
     { ISD::SHL,   MVT::v32i16,     1 }, // vpsllvw
     { ISD::SRL,   MVT::v32i16,     1 }, // vpsrlvw
     { ISD::SRA,   MVT::v32i16,     1 }, // vpsravw
@@ -643,10 +651,10 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SHL,     MVT::v8i32,    2 }, // vpsllvd (Haswell from agner.org)
     { ISD::SRL,     MVT::v8i32,    2 }, // vpsrlvd (Haswell from agner.org)
     { ISD::SRA,     MVT::v8i32,    2 }, // vpsravd (Haswell from agner.org)
-    { ISD::SHL,     MVT::v2i64,    2 }, // vpsllvq (Haswell from agner.org)
-    { ISD::SRL,     MVT::v2i64,    2 }, // vpsrlvq (Haswell from agner.org)
-    { ISD::SHL,     MVT::v4i64,    2 }, // vpsllvq (Haswell from agner.org)
-    { ISD::SRL,     MVT::v4i64,    2 }, // vpsrlvq (Haswell from agner.org)
+    { ISD::SHL,     MVT::v2i64,    1 }, // vpsllvq (Haswell from agner.org)
+    { ISD::SRL,     MVT::v2i64,    1 }, // vpsrlvq (Haswell from agner.org)
+    { ISD::SHL,     MVT::v4i64,    1 }, // vpsllvq (Haswell from agner.org)
+    { ISD::SRL,     MVT::v4i64,    1 }, // vpsrlvq (Haswell from agner.org)
   };
 
   if (ST->hasAVX512()) {
@@ -661,8 +669,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
                                     TargetTransformInfo::OP_None);
   }
 
-  // Look for AVX2 lowering tricks (XOP is always better at 128-bit shifts).
-  if (ST->hasAVX2() && !(ST->hasXOP() && LT.second.is128BitVector())) {
+  // Look for AVX2 lowering tricks (XOP is always better at v4i32 shifts).
+  if (ST->hasAVX2() && !(ST->hasXOP() && LT.second == MVT::v4i32)) {
     if (ISD == ISD::SHL && LT.second == MVT::v16i16 &&
         (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
          Op2Info == TargetTransformInfo::OK_NonUniformConstantValue))
@@ -760,22 +768,28 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   }
 
   static const CostTblEntry AVX2CostTable[] = {
-    { ISD::SHL,  MVT::v32i8,     11 }, // vpblendvb sequence.
-    { ISD::SHL,  MVT::v64i8,     22 }, // 2*vpblendvb sequence.
-    { ISD::SHL,  MVT::v16i16,    10 }, // extend/vpsrlvd/pack sequence.
-    { ISD::SHL,  MVT::v32i16,    20 }, // 2*extend/vpsrlvd/pack sequence.
+    { ISD::SHL,  MVT::v16i8,      6 }, // vpblendvb sequence.
+    { ISD::SHL,  MVT::v32i8,      6 }, // vpblendvb sequence.
+    { ISD::SHL,  MVT::v64i8,     12 }, // 2*vpblendvb sequence.
+    { ISD::SHL,  MVT::v8i16,      5 }, // extend/vpsrlvd/pack sequence.
+    { ISD::SHL,  MVT::v16i16,     7 }, // extend/vpsrlvd/pack sequence.
+    { ISD::SHL,  MVT::v32i16,    14 }, // 2*extend/vpsrlvd/pack sequence.
 
-    { ISD::SRL,  MVT::v32i8,     11 }, // vpblendvb sequence.
-    { ISD::SRL,  MVT::v64i8,     22 }, // 2*vpblendvb sequence.
-    { ISD::SRL,  MVT::v16i16,    10 }, // extend/vpsrlvd/pack sequence.
-    { ISD::SRL,  MVT::v32i16,    20 }, // 2*extend/vpsrlvd/pack sequence.
+    { ISD::SRL,  MVT::v16i8,      6 }, // vpblendvb sequence.
+    { ISD::SRL,  MVT::v32i8,      6 }, // vpblendvb sequence.
+    { ISD::SRL,  MVT::v64i8,     12 }, // 2*vpblendvb sequence.
+    { ISD::SRL,  MVT::v8i16,      5 }, // extend/vpsrlvd/pack sequence.
+    { ISD::SRL,  MVT::v16i16,     7 }, // extend/vpsrlvd/pack sequence.
+    { ISD::SRL,  MVT::v32i16,    14 }, // 2*extend/vpsrlvd/pack sequence.
 
-    { ISD::SRA,  MVT::v32i8,     24 }, // vpblendvb sequence.
-    { ISD::SRA,  MVT::v64i8,     48 }, // 2*vpblendvb sequence.
-    { ISD::SRA,  MVT::v16i16,    10 }, // extend/vpsravd/pack sequence.
-    { ISD::SRA,  MVT::v32i16,    20 }, // 2*extend/vpsravd/pack sequence.
-    { ISD::SRA,  MVT::v2i64,      4 }, // srl/xor/sub sequence.
-    { ISD::SRA,  MVT::v4i64,      4 }, // srl/xor/sub sequence.
+    { ISD::SRA,  MVT::v16i8,     17 }, // vpblendvb sequence.
+    { ISD::SRA,  MVT::v32i8,     17 }, // vpblendvb sequence.
+    { ISD::SRA,  MVT::v64i8,     34 }, // 2*vpblendvb sequence.
+    { ISD::SRA,  MVT::v8i16,      5 }, // extend/vpsravd/pack sequence.
+    { ISD::SRA,  MVT::v16i16,     7 }, // extend/vpsravd/pack sequence.
+    { ISD::SRA,  MVT::v32i16,    14 }, // 2*extend/vpsravd/pack sequence.
+    { ISD::SRA,  MVT::v2i64,      2 }, // srl/xor/sub sequence.
+    { ISD::SRA,  MVT::v4i64,      2 }, // srl/xor/sub sequence.
 
     { ISD::SUB,  MVT::v32i8,      1 }, // psubb
     { ISD::ADD,  MVT::v32i8,      1 }, // paddb
@@ -831,6 +845,33 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SUB,     MVT::v4i64,      4 },
     { ISD::ADD,     MVT::v4i64,      4 },
 
+    { ISD::SHL,     MVT::v16i8,     10 }, // pblendvb sequence .
+    { ISD::SHL,     MVT::v32i8,     22 }, // pblendvb sequence + split.
+    { ISD::SHL,     MVT::v8i16,      6 }, // pblendvb sequence.
+    { ISD::SHL,     MVT::v16i16,    13 }, // pblendvb sequence + split.
+    { ISD::SHL,     MVT::v4i32,      3 }, // pslld/paddd/cvttps2dq/pmulld
+    { ISD::SHL,     MVT::v8i32,      9 }, // pslld/paddd/cvttps2dq/pmulld + split
+    { ISD::SHL,     MVT::v2i64,      2 }, // Shift each lane + blend.
+    { ISD::SHL,     MVT::v4i64,      6 }, // Shift each lane + blend + split.
+
+    { ISD::SRL,     MVT::v16i8,     11 }, // pblendvb sequence.
+    { ISD::SRL,     MVT::v32i8,     23 }, // pblendvb sequence + split.
+    { ISD::SRL,     MVT::v8i16,     13 }, // pblendvb sequence.
+    { ISD::SRL,     MVT::v16i16,    28 }, // pblendvb sequence + split.
+    { ISD::SRL,     MVT::v4i32,      6 }, // Shift each lane + blend.
+    { ISD::SRL,     MVT::v8i32,     14 }, // Shift each lane + blend + split.
+    { ISD::SRL,     MVT::v2i64,      2 }, // Shift each lane + blend.
+    { ISD::SRL,     MVT::v4i64,      6 }, // Shift each lane + blend + split.
+
+    { ISD::SRA,     MVT::v16i8,     21 }, // pblendvb sequence.
+    { ISD::SRA,     MVT::v32i8,     44 }, // pblendvb sequence + split.
+    { ISD::SRA,     MVT::v8i16,     13 }, // pblendvb sequence.
+    { ISD::SRA,     MVT::v16i16,    28 }, // pblendvb sequence + split.
+    { ISD::SRA,     MVT::v4i32,      6 }, // Shift each lane + blend.
+    { ISD::SRA,     MVT::v8i32,     14 }, // Shift each lane + blend + split.
+    { ISD::SRA,     MVT::v2i64,      5 }, // Shift each lane + blend.
+    { ISD::SRA,     MVT::v4i64,     12 }, // Shift each lane + blend + split.
+
     { ISD::FNEG,    MVT::v4f64,      2 }, // BTVER2 from http://www.agner.org/
     { ISD::FNEG,    MVT::v8f32,      2 }, // BTVER2 from http://www.agner.org/
 
@@ -880,25 +921,16 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
 
   static const CostTblEntry SSE41CostTable[] = {
     { ISD::SHL,  MVT::v16i8,      11 }, // pblendvb sequence.
-    { ISD::SHL,  MVT::v32i8,  2*11+2 }, // pblendvb sequence + split.
     { ISD::SHL,  MVT::v8i16,      14 }, // pblendvb sequence.
-    { ISD::SHL,  MVT::v16i16, 2*14+2 }, // pblendvb sequence + split.
     { ISD::SHL,  MVT::v4i32,       4 }, // pslld/paddd/cvttps2dq/pmulld
-    { ISD::SHL,  MVT::v8i32,   2*4+2 }, // pslld/paddd/cvttps2dq/pmulld + split
 
     { ISD::SRL,  MVT::v16i8,      12 }, // pblendvb sequence.
-    { ISD::SRL,  MVT::v32i8,  2*12+2 }, // pblendvb sequence + split.
     { ISD::SRL,  MVT::v8i16,      14 }, // pblendvb sequence.
-    { ISD::SRL,  MVT::v16i16, 2*14+2 }, // pblendvb sequence + split.
     { ISD::SRL,  MVT::v4i32,      11 }, // Shift each lane + blend.
-    { ISD::SRL,  MVT::v8i32,  2*11+2 }, // Shift each lane + blend + split.
 
     { ISD::SRA,  MVT::v16i8,      24 }, // pblendvb sequence.
-    { ISD::SRA,  MVT::v32i8,  2*24+2 }, // pblendvb sequence + split.
     { ISD::SRA,  MVT::v8i16,      14 }, // pblendvb sequence.
-    { ISD::SRA,  MVT::v16i16, 2*14+2 }, // pblendvb sequence + split.
     { ISD::SRA,  MVT::v4i32,      12 }, // Shift each lane + blend.
-    { ISD::SRA,  MVT::v8i32,  2*12+2 }, // Shift each lane + blend + split.
 
     { ISD::MUL,  MVT::v4i32,       2 }  // pmulld (Nehalem from agner.org)
   };
@@ -914,19 +946,16 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SHL,  MVT::v8i16,      32 }, // cmpgtb sequence.
     { ISD::SHL,  MVT::v4i32,     2*5 }, // We optimized this using mul.
     { ISD::SHL,  MVT::v2i64,       4 }, // splat+shuffle sequence.
-    { ISD::SHL,  MVT::v4i64,   2*4+2 }, // splat+shuffle sequence + split.
 
     { ISD::SRL,  MVT::v16i8,      26 }, // cmpgtb sequence.
     { ISD::SRL,  MVT::v8i16,      32 }, // cmpgtb sequence.
     { ISD::SRL,  MVT::v4i32,      16 }, // Shift each lane + blend.
     { ISD::SRL,  MVT::v2i64,       4 }, // splat+shuffle sequence.
-    { ISD::SRL,  MVT::v4i64,   2*4+2 }, // splat+shuffle sequence + split.
 
     { ISD::SRA,  MVT::v16i8,      54 }, // unpacked cmpgtb sequence.
     { ISD::SRA,  MVT::v8i16,      32 }, // cmpgtb sequence.
     { ISD::SRA,  MVT::v4i32,      16 }, // Shift each lane + blend.
     { ISD::SRA,  MVT::v2i64,      12 }, // srl/xor/sub sequence.
-    { ISD::SRA,  MVT::v4i64,  2*12+2 }, // srl/xor/sub sequence+split.
 
     { ISD::MUL,  MVT::v8i16,       1 }, // pmullw
     { ISD::MUL,  MVT::v4i32,       6 }, // 3*pmuludq/4*shuffle
@@ -4731,8 +4760,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
   // TODO: Support also strided loads (interleaved-groups with gaps).
   if (Indices.size() && Indices.size() != Factor)
     return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                             Alignment, AddressSpace,
-                                             CostKind);
+                                             Alignment, AddressSpace, CostKind);
 
   // VecTy for interleave memop is <VF*Factor x Elt>.
   // So, for VF=4, Interleave Factor = 3, Element type = i32 we have
@@ -4744,8 +4772,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
   // (see MachineValueType.h::getVectorVT()).
   if (!LegalVT.isVector())
     return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                             Alignment, AddressSpace,
-                                             CostKind);
+                                             Alignment, AddressSpace, CostKind);
 
   unsigned VF = VecTy->getNumElements() / Factor;
   Type *ScalarTy = VecTy->getElementType();
@@ -4762,8 +4789,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
   EVT ETy = TLI->getValueType(DL, VT);
   if (!ETy.isSimple())
     return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                             Alignment, AddressSpace,
-                                             CostKind);
+                                             Alignment, AddressSpace, CostKind);
 
   // TODO: Complete for other data-types and strides.
   // Each combination of Stride, element bit width and VF results in a different
@@ -4773,39 +4799,39 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
   // The cost of the loads/stores is accounted for separately.
   //
   static const CostTblEntry AVX2InterleavedLoadTbl[] = {
-    { 2, MVT::v4i64, 6 }, //(load 8i64 and) deinterleave into 2 x 4i64
+      {2, MVT::v4i64, 6}, // (load 8i64 and) deinterleave into 2 x 4i64
 
-    { 3, MVT::v2i8,  10 }, //(load 6i8 and)  deinterleave into 3 x 2i8
-    { 3, MVT::v4i8,  4 },  //(load 12i8 and) deinterleave into 3 x 4i8
-    { 3, MVT::v8i8,  9 },  //(load 24i8 and) deinterleave into 3 x 8i8
-    { 3, MVT::v16i8, 11},  //(load 48i8 and) deinterleave into 3 x 16i8
-    { 3, MVT::v32i8, 13},  //(load 96i8 and) deinterleave into 3 x 32i8
+      {3, MVT::v2i8, 10},  // (load 6i8 and) deinterleave into 3 x 2i8
+      {3, MVT::v4i8, 4},   // (load 12i8 and) deinterleave into 3 x 4i8
+      {3, MVT::v8i8, 9},   // (load 24i8 and) deinterleave into 3 x 8i8
+      {3, MVT::v16i8, 11}, // (load 48i8 and) deinterleave into 3 x 16i8
+      {3, MVT::v32i8, 13}, // (load 96i8 and) deinterleave into 3 x 32i8
 
-    { 3, MVT::v8i32, 17 }, //(load 24i32 and)deinterleave into 3 x 8i32
+      {3, MVT::v8i32, 17}, // (load 24i32 and) deinterleave into 3 x 8i32
 
-    { 4, MVT::v2i8,  12 }, //(load 8i8 and)   deinterleave into 4 x 2i8
-    { 4, MVT::v4i8,  4 },  //(load 16i8 and)  deinterleave into 4 x 4i8
-    { 4, MVT::v8i8,  20 }, //(load 32i8 and)  deinterleave into 4 x 8i8
-    { 4, MVT::v16i8, 39 }, //(load 64i8 and)  deinterleave into 4 x 16i8
-    { 4, MVT::v32i8, 80 }, //(load 128i8 and) deinterleave into 4 x 32i8
+      {4, MVT::v2i8, 12},  // (load 8i8 and) deinterleave into 4 x 2i8
+      {4, MVT::v4i8, 4},   // (load 16i8 and) deinterleave into 4 x 4i8
+      {4, MVT::v8i8, 20},  // (load 32i8 and) deinterleave into 4 x 8i8
+      {4, MVT::v16i8, 39}, // (load 64i8 and) deinterleave into 4 x 16i8
+      {4, MVT::v32i8, 80}, // (load 128i8 and) deinterleave into 4 x 32i8
 
-    { 8, MVT::v8i32, 40 }  //(load 64i32 and)deinterleave into 8 x 8i32
+      {8, MVT::v8i32, 40} // (load 64i32 and) deinterleave into 8 x 8i32
   };
 
   static const CostTblEntry AVX2InterleavedStoreTbl[] = {
-    { 2, MVT::v4i64, 6 }, //interleave into 2 x 4i64 into 8i64 (and store)
+      {2, MVT::v4i64, 6}, // interleave 2 x 4i64 into 8i64 (and store)
 
-    { 3, MVT::v2i8,  7 },  //interleave 3 x 2i8  into 6i8 (and store)
-    { 3, MVT::v4i8,  8 },  //interleave 3 x 4i8  into 12i8 (and store)
-    { 3, MVT::v8i8,  11 }, //interleave 3 x 8i8  into 24i8 (and store)
-    { 3, MVT::v16i8, 11 }, //interleave 3 x 16i8 into 48i8 (and store)
-    { 3, MVT::v32i8, 13 }, //interleave 3 x 32i8 into 96i8 (and store)
+      {3, MVT::v2i8, 7},   // interleave 3 x 2i8 into 6i8 (and store)
+      {3, MVT::v4i8, 8},   // interleave 3 x 4i8 into 12i8 (and store)
+      {3, MVT::v8i8, 11},  // interleave 3 x 8i8 into 24i8 (and store)
+      {3, MVT::v16i8, 11}, // interleave 3 x 16i8 into 48i8 (and store)
+      {3, MVT::v32i8, 13}, // interleave 3 x 32i8 into 96i8 (and store)
 
-    { 4, MVT::v2i8,  12 }, //interleave 4 x 2i8  into 8i8 (and store)
-    { 4, MVT::v4i8,  9 },  //interleave 4 x 4i8  into 16i8 (and store)
-    { 4, MVT::v8i8,  10 }, //interleave 4 x 8i8  into 32i8 (and store)
-    { 4, MVT::v16i8, 10 }, //interleave 4 x 16i8 into 64i8 (and store)
-    { 4, MVT::v32i8, 12 }  //interleave 4 x 32i8 into 128i8 (and store)
+      {4, MVT::v2i8, 12},  // interleave 4 x 2i8 into 8i8 (and store)
+      {4, MVT::v4i8, 9},   // interleave 4 x 4i8 into 16i8 (and store)
+      {4, MVT::v8i8, 10},  // interleave 4 x 8i8 into 32i8 (and store)
+      {4, MVT::v16i8, 10}, // interleave 4 x 16i8 into 64i8 (and store)
+      {4, MVT::v32i8, 12}  // interleave 4 x 32i8 into 128i8 (and store)
   };
 
   if (Opcode == Instruction::Load) {

@@ -52,3 +52,41 @@ bb:
   %tmp12 = select i1 %tmp10, i64 %tmp11, i64 %arg
   ret i64 %tmp12
 }
+
+define i32 @optbranch_32(i32 %Arg) {
+; CHECK-LABEL: optbranch_32:
+; CHECK:        alhsik	%r2, %r2, 1
+; CHECK-NEXT:   bler	%r14
+; CHECK-NEXT:   .LBB4_1:
+; CHECK-NEXT: 	lhi	%r2, -1
+; CHECK-NEXT: 	br	%r14
+bb:
+  %i1 = icmp eq i32 %Arg, -1
+  br i1 %i1, label %bb2, label %bb3
+
+bb2:
+  ret i32 -1
+
+bb3:
+  %i4 = add nuw i32 %Arg, 1
+  ret i32 %i4
+}
+
+define i64 @optbranch_64(i64 %Arg) {
+; CHECK-LABEL: optbranch_64:
+; CHECK:        alghsik	%r2, %r2, 1
+; CHECK-NEXT:   bler	%r14
+; CHECK-NEXT:   .LBB5_1:
+; CHECK-NEXT: 	lghi	%r2, -1
+; CHECK-NEXT: 	br	%r14
+bb:
+  %i1 = icmp eq i64 %Arg, -1
+  br i1 %i1, label %bb2, label %bb3
+
+bb2:
+  ret i64 -1
+
+bb3:
+  %i4 = add nuw i64 %Arg, 1
+  ret i64 %i4
+}

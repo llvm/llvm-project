@@ -10,7 +10,7 @@
 #define LLDB_CORE_DWARF_H
 
 #include "lldb/Utility/RangeMap.h"
-#include <stdint.h>
+#include <cstdint>
 
 // Get the DWARF constant definitions from llvm
 #include "llvm/BinaryFormat/Dwarf.h"

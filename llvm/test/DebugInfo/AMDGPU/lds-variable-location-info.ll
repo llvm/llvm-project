@@ -8,7 +8,6 @@
 ; CHECK-NEXT: DW_AT_type
 ; CHECK-NEXT: DW_AT_decl_file
 ; CHECK-NEXT: DW_AT_decl_line
-; CHECK-NEXT: DW_AT_location [DW_FORM_exprloc]      (DW_OP_constu 0x0)
 ; Function Attrs: convergent noinline nounwind optnone
 define protected amdgpu_kernel void @fun(i32 %in) #0 !dbg !2 !kernel_arg_addr_space !16 !kernel_arg_access_qual !17 !kernel_arg_type !18 !kernel_arg_base_type !18 !kernel_arg_type_qual !19 {
 entry:

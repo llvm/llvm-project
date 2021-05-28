@@ -10,6 +10,13 @@
 
 #include "report.h"
 
+TEST(ScudoReportTest, Check) {
+  CHECK_LT(-1, 1);
+  EXPECT_DEATH(CHECK_GT(-1, 1),
+               "\\(-1\\) > \\(1\\) \\(\\(u64\\)op1=18446744073709551615, "
+               "\\(u64\\)op2=1");
+}
+
 TEST(ScudoReportTest, Generic) {
   // Potentially unused if EXPECT_DEATH isn't defined.
   UNUSED void *P = reinterpret_cast<void *>(0x42424242U);
