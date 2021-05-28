@@ -1482,6 +1482,8 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &CI) {
 
   Value *Src = CI.getOperand(0);
   Type *SrcTy = Src->getType(), *DestTy = CI.getType();
+  unsigned SrcBitSize = SrcTy->getScalarSizeInBits();
+  unsigned DestBitSize = DestTy->getScalarSizeInBits();
 
   // If we know that the value being extended is positive, we can use a zext
   // instead.
@@ -1499,9 +1501,6 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &CI) {
     Value *Res = EvaluateInDifferentType(Src, DestTy, true);
     assert(Res->getType() == DestTy);
 
-    uint32_t SrcBitSize = SrcTy->getScalarSizeInBits();
-    uint32_t DestBitSize = DestTy->getScalarSizeInBits();
-
     // If the high bits are already filled with sign bit, just replace this
     // cast with the result.
     if (ComputeNumSignBits(Res, 0, &CI) > DestBitSize - SrcBitSize)
@@ -1517,9 +1516,7 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &CI) {
   // into shifts.
   Value *X;
   if (match(Src, m_OneUse(m_Trunc(m_Value(X)))) && X->getType() == DestTy) {
-    // sext(trunc(X)) --> ashr(shl(X, C), C)
-    unsigned SrcBitSize = SrcTy->getScalarSizeInBits();
-    unsigned DestBitSize = DestTy->getScalarSizeInBits();
+    // sext (trunc X) --> ashr (shl X, C), C
     Constant *ShAmt = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
     return BinaryOperator::CreateAShr(Builder.CreateShl(X, ShAmt), ShAmt);
   }
