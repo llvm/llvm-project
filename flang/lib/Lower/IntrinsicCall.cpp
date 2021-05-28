@@ -402,6 +402,9 @@ struct IntrinsicLibrary {
                                    llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genCeiling(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genChar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  template <mlir::CmpIPredicate pred>
+  fir::ExtendedValue genCharacterCompare(mlir::Type,
+                                         llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genConjg(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genDateAndTime(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genDim(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -567,8 +570,8 @@ static constexpr IntrinsicHandler handlers[]{
        {"zone", asAddr},
        {"values", asAddr}}},
      /*isElemental=*/false},
-    {"dim", &I::genDim},
     {"dble", &I::genConversion},
+    {"dim", &I::genDim},
     {"dprod", &I::genDprod},
     {"floor", &I::genFloor},
     {"iachar", &I::genIchar},
@@ -584,6 +587,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"ior", &I::genIOr},
     {"len", &I::genLen},
     {"len_trim", &I::genLenTrim},
+    {"lge", &I::genCharacterCompare<mlir::CmpIPredicate::sge>},
+    {"lgt", &I::genCharacterCompare<mlir::CmpIPredicate::sgt>},
+    {"lle", &I::genCharacterCompare<mlir::CmpIPredicate::sle>},
+    {"llt", &I::genCharacterCompare<mlir::CmpIPredicate::slt>},
     {"max", &I::genExtremum<Extremum::Max, ExtremumBehavior::MinMaxss>},
     {"maxloc",
      &I::genMaxloc,
@@ -645,6 +652,16 @@ static constexpr IntrinsicHandler handlers[]{
        {"kind", asValue}}},
      /*isElemental=*/true},
 };
+
+static const IntrinsicHandler *findIntrinsicHandler(llvm::StringRef name) {
+  auto compare = [](const IntrinsicHandler &handler, llvm::StringRef name) {
+    return name.compare(handler.name) > 0;
+  };
+  auto result =
+      std::lower_bound(std::begin(handlers), std::end(handlers), name, compare);
+  return result != std::end(handlers) && result->name == name ? result
+                                                              : nullptr;
+}
 
 /// To make fir output more readable for debug, one can outline all intrinsic
 /// implementation in wrappers (overrides the IntrinsicHandler::outline flag).
@@ -1172,16 +1189,15 @@ fir::ExtendedValue
 IntrinsicLibrary::genIntrinsicCall(llvm::StringRef name,
                                    llvm::Optional<mlir::Type> resultType,
                                    llvm::ArrayRef<fir::ExtendedValue> args) {
-  for (const auto &handler : handlers)
-    if (name == handler.name) {
-      bool outline = handler.outline || outlineAllIntrinsics;
-      return std::visit(
-          [&](auto &generator) -> fir::ExtendedValue {
-            return invokeHandler(generator, handler, resultType, args, outline,
-                                 *this);
-          },
-          handler.generator);
-    }
+  if (const auto &handler = findIntrinsicHandler(name)) {
+    bool outline = handler->outline || outlineAllIntrinsics;
+    return std::visit(
+        [&](auto &generator) -> fir::ExtendedValue {
+          return invokeHandler(generator, *handler, resultType, args, outline,
+                               *this);
+        },
+        handler->generator);
+  }
 
   if (!resultType)
     // Subroutine should have a handler, they are likely missing for now.
@@ -1395,13 +1411,12 @@ mlir::SymbolRefAttr IntrinsicLibrary::getUnrestrictedIntrinsicSymbolRefAttr(
   // this before calling the code generators.
   bool loadRefArguments = true;
   mlir::FuncOp funcOp;
-  for (const auto &handler : handlers)
-    if (name == handler.name)
-      funcOp = std::visit(
-          [&](auto generator) {
-            return getWrapper(generator, name, signature, loadRefArguments);
-          },
-          handler.generator);
+  if (const auto &handler = findIntrinsicHandler(name))
+    funcOp = std::visit(
+        [&](auto generator) {
+          return getWrapper(generator, name, signature, loadRefArguments);
+        },
+        handler->generator);
 
   if (!funcOp) {
     llvm::SmallVector<mlir::Type> argTypes;
@@ -1655,6 +1670,17 @@ IntrinsicLibrary::genChar(mlir::Type type,
   auto len =
       builder.createIntegerConstant(loc, builder.getCharacterLengthType(), 1);
   return fir::CharBoxValue{cast, len};
+}
+
+/// LGE, LGT, LLE, LLT
+template <mlir::CmpIPredicate pred>
+fir::ExtendedValue
+IntrinsicLibrary::genCharacterCompare(mlir::Type type,
+                                      llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  return Fortran::lower::genCharCompare(
+      builder, loc, pred, fir::getBase(args[0]), fir::getLen(args[0]),
+      fir::getBase(args[1]), fir::getLen(args[1]));
 }
 
 // CONJG
@@ -2335,10 +2361,9 @@ mlir::Value IntrinsicLibrary::genExtremum(mlir::Type,
 
 const Fortran::lower::IntrinsicArgumentLoweringRules *
 Fortran::lower::getIntrinsicArgumentLowering(llvm::StringRef intrinsicName) {
-  for (const auto &handler : handlers)
-    if (intrinsicName == handler.name)
-      if (!handler.argLoweringRules.hasDefaultRules())
-        return &handler.argLoweringRules;
+  if (const auto &handler = findIntrinsicHandler(intrinsicName))
+    if (!handler->argLoweringRules.hasDefaultRules())
+      return &handler->argLoweringRules;
   return nullptr;
 }
 

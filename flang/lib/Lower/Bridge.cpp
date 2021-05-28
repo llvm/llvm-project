@@ -1318,8 +1318,8 @@ private:
         Fortran::lower::CharacterExprHelper charHelper{*builder, loc};
         auto [lhsAddr, lhsLen] = charHelper.createUnboxChar(selector);
         auto [rhsAddr, rhsLen] = charHelper.createUnboxChar(rhs);
-        return Fortran::lower::genRawCharCompare(*builder, loc, pred, lhsAddr,
-                                                 lhsLen, rhsAddr, rhsLen);
+        return Fortran::lower::genCharCompare(*builder, loc, pred, lhsAddr,
+                                              lhsLen, rhsAddr, rhsLen);
       };
       auto *newBlock = insertBlock(*caseBlock);
       if (attr.isa<fir::ClosedIntervalAttr>()) {

@@ -47,10 +47,10 @@ static int discoverKind(mlir::Type ty) {
 //===----------------------------------------------------------------------===//
 
 mlir::Value
-Fortran::lower::genRawCharCompare(Fortran::lower::FirOpBuilder &builder,
-                                  mlir::Location loc, mlir::CmpIPredicate cmp,
-                                  mlir::Value lhsBuff, mlir::Value lhsLen,
-                                  mlir::Value rhsBuff, mlir::Value rhsLen) {
+Fortran::lower::genCharCompare(Fortran::lower::FirOpBuilder &builder,
+                               mlir::Location loc, mlir::CmpIPredicate cmp,
+                               mlir::Value lhsBuff, mlir::Value lhsLen,
+                               mlir::Value rhsBuff, mlir::Value rhsLen) {
   mlir::FuncOp beginFunc;
   switch (discoverKind(lhsBuff.getType())) {
   case 1:
@@ -89,8 +89,8 @@ Fortran::lower::genCharCompare(Fortran::lower::FirOpBuilder &builder,
   };
   auto lhsBuffer = allocateIfNotInMemory(fir::getBase(lhs));
   auto rhsBuffer = allocateIfNotInMemory(fir::getBase(rhs));
-  return genRawCharCompare(builder, loc, cmp, lhsBuffer, fir::getLen(lhs),
-                           rhsBuffer, fir::getLen(rhs));
+  return genCharCompare(builder, loc, cmp, lhsBuffer, fir::getLen(lhs),
+                        rhsBuffer, fir::getLen(rhs));
 }
 
 mlir::Value
