@@ -6372,19 +6372,57 @@ define i16 @load_single_extract_variable_index_i16(<8 x i16>* %A, i32 %idx) {
 
 define i32 @load_single_extract_variable_index_i32(<4 x i32>* %A, i32 %idx) {
 ; CHECK-LABEL: load_single_extract_variable_index_i32
-; CHECK:      ldr w0, [x0, w1, sxtw #2]
-; CHECK-NEXT: ret
+; CHECK:       ldr w0, [x0, w1, sxtw #2]
+; CHECK-NEXT:  ret
 ;
   %lv = load <4 x i32>, <4 x i32>* %A
   %e = extractelement <4 x i32> %lv, i32 %idx
   ret i32 %e
 }
 
+define i32 @load_single_extract_variable_index_v3i32_small_align(<3 x i32>* %A, i32 %idx) {
+; CHECK-LABEL: load_single_extract_variable_index_v3i32_small_align
+; CHECK:       ldr d0, [x0]
+; CHECK-NEXT:  add x[[PTR_ADD:.*]], x0, #8
+; CHECK-NEXT:  ld1.s   { v0 }[2], [x[[PTR_ADD]]]
+; CHECK-NEXT:  and [[IDX_1:.*]], x1, #0x3
+; CHECK-NEXT:  mov x[[IDX_2:.*]], sp
+; CHECK-NEXT:  str q0, [sp]
+; CHECK-NEXT:  bfi x[[IDX_2]], [[IDX_1]], #2, #2
+; CHECK-NEXT:  ldr w0, [x[[IDX_2]]]
+; CHECK-NEXT:  add sp, sp, #16
+; CHECK-NEXT:  ret
+;
+  %lv = load <3 x i32>, <3 x i32>* %A, align 2
+  %e = extractelement <3 x i32> %lv, i32 %idx
+  ret i32 %e
+}
+
+define i32 @load_single_extract_variable_index_v3i32_default_align(<3 x i32>* %A, i32 %idx) {
+; CHECK-LABEL: load_single_extract_variable_index_v3i32_default_align
+; CHECK:       ldr w0, [x0, w1, sxtw #2]
+; CHECK-NEXT:  ret
+;
+  %lv = load <3 x i32>, <3 x i32>* %A
+  %e = extractelement <3 x i32> %lv, i32 %idx
+  ret i32 %e
+}
+
+define i32 @load_single_extract_valid_const_index_v3i32(<3 x i32>* %A, i32 %idx) {
+; CHECK-LABEL: load_single_extract_valid_const_index_v3i32
+; CHECK:      ldr w0, [x0, #8]
+; CHECK-NEXT: ret
+;
+  %lv = load <3 x i32>, <3 x i32>* %A
+  %e = extractelement <3 x i32> %lv, i32 2
+  ret i32 %e
+}
+
 define i32 @load_single_extract_variable_index_masked_i32(<4 x i32>* %A, i32 %idx) {
 ; CHECK-LABEL: load_single_extract_variable_index_masked_i32
-; CHECK:      and [[IDX:.*]], w1, #0x3
-; CHECK-NEXT: ldr w0, [x0, [[IDX]], uxtw #2]
-; CHECK-NEXT: ret
+; CHECK:       and [[IDX:.*]], w1, #0x3
+; CHECK-NEXT:  ldr w0, [x0, [[IDX]], uxtw #2]
+; CHECK-NEXT:  ret
 ;
   %idx.x = and i32 %idx, 3
   %lv = load <4 x i32>, <4 x i32>* %A
@@ -6394,9 +6432,9 @@ define i32 @load_single_extract_variable_index_masked_i32(<4 x i32>* %A, i32 %id
 
 define i32 @load_single_extract_variable_index_masked2_i32(<4 x i32>* %A, i32 %idx) {
 ; CHECK-LABEL: load_single_extract_variable_index_masked2_i32
-; CHECK:      and [[IDX:.*]], w1, #0x1
-; CHECK-NEXT: ldr w0, [x0, [[IDX]], uxtw #2]
-; CHECK-NEXT: ret
+; CHECK:       and [[IDX:.*]], w1, #0x1
+; CHECK-NEXT:  ldr w0, [x0, [[IDX]], uxtw #2]
+; CHECK-NEXT:  ret
 ;
   %idx.x = and i32 %idx, 1
   %lv = load <4 x i32>, <4 x i32>* %A
