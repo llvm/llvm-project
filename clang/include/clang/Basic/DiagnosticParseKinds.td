@@ -693,6 +693,9 @@ def ext_using_attribute_ns : ExtWarn<
 def err_using_attribute_ns_conflict : Error<
   "attribute with scope specifier cannot follow default scope specifier">;
 def err_attributes_not_allowed : Error<"an attribute list cannot appear here">;
+def ext_cxx11_attr_placement : ExtWarn<
+  "ISO C++ does not allow an attribute list to appear here">,
+  InGroup<DiagGroup<"cxx-attribute-extension">>;
 def err_attributes_misplaced : Error<"misplaced attributes; expected attributes here">;
 def err_l_square_l_square_not_attribute : Error<
   "C++11 only allows consecutive left square brackets when "

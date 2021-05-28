@@ -2634,6 +2634,10 @@ private:
   /// locations where attributes are not allowed.
   void DiagnoseAndSkipCXX11Attributes();
 
+  /// Emit warnings for C++11 and C2x attributes that are in a position that
+  /// clang accepts as an extension.
+  void DiagnoseCXX11AttributeExtension(ParsedAttributesWithRange &Attrs);
+
   /// Parses syntax-generic attribute arguments for attributes which are
   /// known to the implementation, and adds them to the given ParsedAttributes
   /// list with the given attribute syntax. Returns the number of arguments
@@ -3059,6 +3063,7 @@ private:
                                        const ParsedTemplateInfo &TemplateInfo,
                                        SourceLocation UsingLoc,
                                        SourceLocation &DeclEnd,
+                                       ParsedAttributesWithRange &Attrs,
                                        AccessSpecifier AS = AS_none);
   Decl *ParseAliasDeclarationAfterDeclarator(
       const ParsedTemplateInfo &TemplateInfo, SourceLocation UsingLoc,
