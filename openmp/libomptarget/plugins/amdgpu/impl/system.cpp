@@ -1071,11 +1071,10 @@ populate_InfoTables(hsa_executable_symbol_t symbol, int gpu,
       return err;
     }
 
-    atmi_mem_place_t place = ATMI_MEM_PLACE(ATMI_DEVTYPE_GPU, gpu, 0);
     DEBUG_PRINT("Symbol %s = %p (%u bytes)\n", name, (void *)info.addr,
                 info.size);
     err = register_allocation(reinterpret_cast<void *>(info.addr),
-                              (size_t)info.size, place);
+                              (size_t)info.size, ATMI_DEVTYPE_GPU);
     if (err != HSA_STATUS_SUCCESS) {
       return err;
     }

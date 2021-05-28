@@ -236,6 +236,17 @@ public:
   void collectWrites(const MCSubtargetInfo &STI, const ReadState &RS,
                      SmallVectorImpl<WriteRef> &Writes,
                      SmallVectorImpl<WriteRef> &CommittedWrites) const;
+  struct RAWHazard {
+    MCPhysReg RegisterID;
+    int CyclesLeft;
+
+    RAWHazard() : RegisterID(), CyclesLeft() {}
+    bool isValid() const { return RegisterID; }
+    bool hasUnknownCycles() const { return CyclesLeft < 0; }
+  };
+
+  RAWHazard checkRAWHazards(const MCSubtargetInfo &STI,
+                            const ReadState &RS) const;
 
   // This method updates the register mappings inserting a new register
   // definition. This method is also responsible for updating the number of

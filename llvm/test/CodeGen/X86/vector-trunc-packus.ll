@@ -31,7 +31,7 @@ define <2 x i32> @trunc_packus_v2i64_v2i32(<2 x i64> %a0) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,3,3]
 ; SSE2-NEXT:    por %xmm2, %xmm3
 ; SSE2-NEXT:    pand %xmm3, %xmm0
-; SSE2-NEXT:    pandn {{.*}}(%rip), %xmm3
+; SSE2-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSE2-NEXT:    por %xmm0, %xmm3
 ; SSE2-NEXT:    movdqa %xmm3, %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm0
@@ -61,7 +61,7 @@ define <2 x i32> @trunc_packus_v2i64_v2i32(<2 x i64> %a0) {
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,3,3]
 ; SSSE3-NEXT:    por %xmm2, %xmm3
 ; SSSE3-NEXT:    pand %xmm3, %xmm0
-; SSSE3-NEXT:    pandn {{.*}}(%rip), %xmm3
+; SSSE3-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSSE3-NEXT:    por %xmm0, %xmm3
 ; SSSE3-NEXT:    movdqa %xmm3, %xmm0
 ; SSSE3-NEXT:    pxor %xmm1, %xmm0
@@ -178,7 +178,7 @@ define void @trunc_packus_v2i64_v2i32_store(<2 x i64> %a0, <2 x i32>* %p1) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,3,3]
 ; SSE2-NEXT:    por %xmm2, %xmm3
 ; SSE2-NEXT:    pand %xmm3, %xmm0
-; SSE2-NEXT:    pandn {{.*}}(%rip), %xmm3
+; SSE2-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSE2-NEXT:    por %xmm0, %xmm3
 ; SSE2-NEXT:    movdqa %xmm3, %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm0
@@ -209,7 +209,7 @@ define void @trunc_packus_v2i64_v2i32_store(<2 x i64> %a0, <2 x i32>* %p1) {
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,3,3]
 ; SSSE3-NEXT:    por %xmm2, %xmm3
 ; SSSE3-NEXT:    pand %xmm3, %xmm0
-; SSSE3-NEXT:    pandn {{.*}}(%rip), %xmm3
+; SSSE3-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSSE3-NEXT:    por %xmm0, %xmm3
 ; SSSE3-NEXT:    movdqa %xmm3, %xmm0
 ; SSSE3-NEXT:    pxor %xmm1, %xmm0
@@ -988,7 +988,7 @@ define <2 x i16> @trunc_packus_v2i64_v2i16(<2 x i64> %a0) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,3,3]
 ; SSE2-NEXT:    por %xmm2, %xmm3
 ; SSE2-NEXT:    pand %xmm3, %xmm0
-; SSE2-NEXT:    pandn {{.*}}(%rip), %xmm3
+; SSE2-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSE2-NEXT:    por %xmm0, %xmm3
 ; SSE2-NEXT:    movdqa %xmm3, %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm0
@@ -1020,7 +1020,7 @@ define <2 x i16> @trunc_packus_v2i64_v2i16(<2 x i64> %a0) {
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,3,3]
 ; SSSE3-NEXT:    por %xmm2, %xmm3
 ; SSSE3-NEXT:    pand %xmm3, %xmm0
-; SSSE3-NEXT:    pandn {{.*}}(%rip), %xmm3
+; SSSE3-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSSE3-NEXT:    por %xmm0, %xmm3
 ; SSSE3-NEXT:    movdqa %xmm3, %xmm0
 ; SSSE3-NEXT:    pxor %xmm1, %xmm0
@@ -1162,7 +1162,7 @@ define void @trunc_packus_v2i64_v2i16_store(<2 x i64> %a0, <2 x i16> *%p1) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,3,3]
 ; SSE2-NEXT:    por %xmm2, %xmm3
 ; SSE2-NEXT:    pand %xmm3, %xmm0
-; SSE2-NEXT:    pandn {{.*}}(%rip), %xmm3
+; SSE2-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSE2-NEXT:    por %xmm0, %xmm3
 ; SSE2-NEXT:    movdqa %xmm3, %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm0
@@ -1195,7 +1195,7 @@ define void @trunc_packus_v2i64_v2i16_store(<2 x i64> %a0, <2 x i16> *%p1) {
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,3,3]
 ; SSSE3-NEXT:    por %xmm2, %xmm3
 ; SSSE3-NEXT:    pand %xmm3, %xmm0
-; SSSE3-NEXT:    pandn {{.*}}(%rip), %xmm3
+; SSSE3-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSSE3-NEXT:    por %xmm0, %xmm3
 ; SSSE3-NEXT:    movdqa %xmm3, %xmm0
 ; SSSE3-NEXT:    pxor %xmm1, %xmm0
@@ -2688,7 +2688,7 @@ define <2 x i8> @trunc_packus_v2i64_v2i8(<2 x i64> %a0) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,3,3]
 ; SSE2-NEXT:    por %xmm2, %xmm3
 ; SSE2-NEXT:    pand %xmm3, %xmm0
-; SSE2-NEXT:    pandn {{.*}}(%rip), %xmm3
+; SSE2-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSE2-NEXT:    por %xmm0, %xmm3
 ; SSE2-NEXT:    movdqa %xmm3, %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm0
@@ -2701,7 +2701,7 @@ define <2 x i8> @trunc_packus_v2i64_v2i8(<2 x i64> %a0) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,1,3,3]
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    pand %xmm3, %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
@@ -2722,7 +2722,7 @@ define <2 x i8> @trunc_packus_v2i64_v2i8(<2 x i64> %a0) {
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,3,3]
 ; SSSE3-NEXT:    por %xmm2, %xmm3
 ; SSSE3-NEXT:    pand %xmm3, %xmm0
-; SSSE3-NEXT:    pandn {{.*}}(%rip), %xmm3
+; SSSE3-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSSE3-NEXT:    por %xmm0, %xmm3
 ; SSSE3-NEXT:    movdqa %xmm3, %xmm0
 ; SSSE3-NEXT:    pxor %xmm1, %xmm0
@@ -2839,7 +2839,7 @@ define void @trunc_packus_v2i64_v2i8_store(<2 x i64> %a0, <2 x i8> *%p1) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,3,3]
 ; SSE2-NEXT:    por %xmm2, %xmm3
 ; SSE2-NEXT:    pand %xmm3, %xmm0
-; SSE2-NEXT:    pandn {{.*}}(%rip), %xmm3
+; SSE2-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSE2-NEXT:    por %xmm0, %xmm3
 ; SSE2-NEXT:    movdqa %xmm3, %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm0
@@ -2852,7 +2852,7 @@ define void @trunc_packus_v2i64_v2i8_store(<2 x i64> %a0, <2 x i8> *%p1) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
 ; SSE2-NEXT:    por %xmm0, %xmm1
 ; SSE2-NEXT:    pand %xmm3, %xmm1
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    packuswb %xmm1, %xmm1
 ; SSE2-NEXT:    packuswb %xmm1, %xmm1
 ; SSE2-NEXT:    packuswb %xmm1, %xmm1
@@ -2875,7 +2875,7 @@ define void @trunc_packus_v2i64_v2i8_store(<2 x i64> %a0, <2 x i8> *%p1) {
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,3,3]
 ; SSSE3-NEXT:    por %xmm2, %xmm3
 ; SSSE3-NEXT:    pand %xmm3, %xmm0
-; SSSE3-NEXT:    pandn {{.*}}(%rip), %xmm3
+; SSSE3-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSSE3-NEXT:    por %xmm0, %xmm3
 ; SSSE3-NEXT:    movdqa %xmm3, %xmm0
 ; SSSE3-NEXT:    pxor %xmm1, %xmm0
@@ -5066,7 +5066,7 @@ define <4 x i8> @trunc_packus_v4i32_v4i8(<4 x i32> %a0) "min-legal-vector-width"
 ; SSE2-NEXT:    movdqa %xmm2, %xmm0
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
 ; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    retq
@@ -5088,7 +5088,7 @@ define <4 x i8> @trunc_packus_v4i32_v4i8(<4 x i32> %a0) "min-legal-vector-width"
 ;
 ; SSE41-LABEL: trunc_packus_v4i32_v4i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pminsd {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    pminsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    pxor %xmm1, %xmm1
 ; SSE41-NEXT:    pmaxsd %xmm0, %xmm1
 ; SSE41-NEXT:    packusdw %xmm1, %xmm1
@@ -5098,7 +5098,7 @@ define <4 x i8> @trunc_packus_v4i32_v4i8(<4 x i32> %a0) "min-legal-vector-width"
 ;
 ; AVX1-LABEL: trunc_packus_v4i32_v4i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpminsd {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpminsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
@@ -5172,7 +5172,7 @@ define void @trunc_packus_v4i32_v4i8_store(<4 x i32> %a0, <4 x i8> *%p1) {
 ; SSE2-NEXT:    movdqa %xmm2, %xmm1
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
 ; SSE2-NEXT:    pand %xmm2, %xmm1
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    packuswb %xmm1, %xmm1
 ; SSE2-NEXT:    packuswb %xmm1, %xmm1
 ; SSE2-NEXT:    movd %xmm1, (%rdi)
@@ -5196,7 +5196,7 @@ define void @trunc_packus_v4i32_v4i8_store(<4 x i32> %a0, <4 x i8> *%p1) {
 ;
 ; SSE41-LABEL: trunc_packus_v4i32_v4i8_store:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pminsd {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    pminsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    pxor %xmm1, %xmm1
 ; SSE41-NEXT:    pmaxsd %xmm0, %xmm1
 ; SSE41-NEXT:    packusdw %xmm1, %xmm1
@@ -5206,7 +5206,7 @@ define void @trunc_packus_v4i32_v4i8_store(<4 x i32> %a0, <4 x i8> *%p1) {
 ;
 ; AVX1-LABEL: trunc_packus_v4i32_v4i8_store:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpminsd {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpminsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0

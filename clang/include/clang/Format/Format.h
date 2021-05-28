@@ -1973,7 +1973,9 @@ struct FormatStyle {
     ELAAMS_Always,
   };
 
-  /// Defines in which cases to put empty line after access modifiers.
+  /// Defines when to put an empty line after access modifiers.
+  /// ``EmptyLineBeforeAccessModifier`` configuration handles the number of
+  /// empty lines between two access modifiers.
   EmptyLineAfterAccessModifierStyle EmptyLineAfterAccessModifier;
 
   /// Different styles for empty line before access modifiers.

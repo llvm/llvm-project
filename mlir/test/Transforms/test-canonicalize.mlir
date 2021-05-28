@@ -105,3 +105,11 @@ func @result_shape_per_dim(%arg0 : tensor<2x3x?xf32>, %arg1 : tensor<?x5xf32>)
   // CHECK: return %[[D0]], %[[C5]], %[[C2]], %[[C3]], %[[D1]]
   return %1, %2, %3, %4, %5 : index, index, index, index, index
 }
+
+// CHECK-LABEL: test_dialect_canonicalizer
+func @test_dialect_canonicalizer() -> (i32) {
+  %0 = "test.dialect_canonicalizable"() : () -> (i32)
+  // CHECK: %[[CST:.*]] = constant 42 : i32
+  // CHECK: return %[[CST]]
+  return %0 : i32
+}

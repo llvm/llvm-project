@@ -1,4 +1,4 @@
-Checks: '-*,clang-diagnostic-*,llvm-*,misc-*,-misc-unused-parameters,-misc-non-private-member-variables-in-classes,-readability-identifier-naming'
+Checks: '-*,clang-diagnostic-*,llvm-*,misc-*,-misc-unused-parameters,-misc-non-private-member-variables-in-classes,-readability-identifier-naming,-misc-no-recursion'
 # Note that the readability-identifier-naming check is disabled, there are too
 # many violations in the codebase and they create too much noise in clang-tidy
 # results.

@@ -393,6 +393,12 @@ public:
     return getPointerTy(DL);
   }
 
+  /// Returns the type to be used for the EVL/AVL operand of VP nodes:
+  /// ISD::VP_ADD, ISD::VP_SUB, etc. It must be a legal scalar integer type,
+  /// and must be at least as large as i32. The EVL is implicitly zero-extended
+  /// to any larger type.
+  virtual MVT getVPExplicitVectorLengthTy() const { return MVT::i32; }
+
   /// This callback is used to inspect load/store instructions and add
   /// target-specific MachineMemOperand flags to them.  The default
   /// implementation does nothing.

@@ -5,7 +5,7 @@ set(LLVM_OPTIONAL_SOURCES
   VulkanRuntime.h
   )
 
-if (MLIR_VULKAN_RUNNER_ENABLED)
+if (MLIR_ENABLE_VULKAN_RUNNER)
   message(STATUS "Building the Vulkan runner")
 
   # At first try "FindVulkan" from:

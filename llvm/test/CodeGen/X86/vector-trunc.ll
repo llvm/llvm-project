@@ -1077,7 +1077,7 @@ define void @trunc16i16_16i8(<16 x i16> %a) {
 ;
 ; AVX1-LABEL: trunc16i16_16i8:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovdqu %xmm0, (%rax)
@@ -1086,7 +1086,7 @@ define void @trunc16i16_16i8(<16 x i16> %a) {
 ;
 ; AVX2-LABEL: trunc16i16_16i8:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vmovdqu %xmm0, (%rax)
@@ -1791,7 +1791,7 @@ entry:
 define i64 @trunc8i16_i64(<8 x i16> %inval) {
 ; SSE2-LABEL: trunc8i16_i64:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    movq %xmm0, %rax
 ; SSE2-NEXT:    retq

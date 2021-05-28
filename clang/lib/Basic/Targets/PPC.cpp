@@ -59,6 +59,7 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     } else if (Feature == "+prefix-instrs") {
       HasPrefixInstrs = true;
     } else if (Feature == "+spe" || Feature == "+efpu2") {
+      HasStrictFP = false;
       HasSPE = true;
       LongDoubleWidth = LongDoubleAlign = 64;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
@@ -84,6 +85,9 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 /// #defines that are not tied to a specific subtarget.
 void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
+
+  defineXLCompatMacros(Builder);
+
   // Target identification.
   Builder.defineMacro("__ppc__");
   Builder.defineMacro("__PPC__");

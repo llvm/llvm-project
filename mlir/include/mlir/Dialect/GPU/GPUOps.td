@@ -966,7 +966,7 @@ def GPU_SubgroupMmaStoreMatrixOp : GPU_Op<"subgroup_mma_store_matrix",
 
     ```mlir
     gpu.subgroup_mma_store_matrix %D, %sg[%i,%j] : { leadDimension = 32 : i32} :
-    !gpu.mma_matrix<16x16xf16, "DOp">, memref<32x32xf16, 3>
+    !gpu.mma_matrix<16x16xf16, "COp">, memref<32x32xf16, 3>
     ```
   }];
 
@@ -982,7 +982,8 @@ def GPU_SubgroupMmaStoreMatrixOp : GPU_Op<"subgroup_mma_store_matrix",
   let verifier = [{ return ::verify(*this); }];
 }
 
-def GPU_SubgroupMmaComputeOp : GPU_Op<"subgroup_mma_compute", []>{
+def GPU_SubgroupMmaComputeOp : GPU_Op<"subgroup_mma_compute",
+   [NoSideEffect, AllTypesMatch<["opC", "res"]>]>{
 
   let summary = "GPU warp synchronous matrix multiply accumulate";
 
@@ -992,7 +993,7 @@ def GPU_SubgroupMmaComputeOp : GPU_Op<"subgroup_mma_compute", []>{
 
     This operation takes three `!gpu.mma_matrix`s as arguments. All of them hold `A`,
      `B` and `C`operands for the mma operation. The operation performed is represented
-    as `D = A * B + C`. The op returns a `!gpu.mma_matrix` which contains the result of
+    as `C += A * B`. The op returns a `!gpu.mma_matrix` which contains the result of
     the operation held by the current thread.
 
     This op is meant to be used along with `gpu.subgroup_mma_store_matrix` and
@@ -1002,8 +1003,8 @@ def GPU_SubgroupMmaComputeOp : GPU_Op<"subgroup_mma_compute", []>{
 
     ```mlir
     %D = gpu.subgroup_mma_compute_matrix %A, %B, %C :
-    !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp">,
-    !gpu.mma_matrix<16x16xf16, "COp"> -> !gpu.mma_matrix<16x16xf16, "DOp">
+    !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp">>
+    -> !gpu.mma_matrix<16x16xf16, "COp">
     ```
   }];
 
@@ -1014,7 +1015,7 @@ def GPU_SubgroupMmaComputeOp : GPU_Op<"subgroup_mma_compute", []>{
   let results = (outs GPU_MMAMatrix:$res);
 
   let assemblyFormat = [{
-    $opA`,` $opB`,` $opC attr-dict `:` type($opA)`,` type($opB)`,` type($opC) `->` type($res)
+    $opA`,` $opB`,` $opC attr-dict `:` type($opA)`,` type($opB) `->` type($res)
   }];
 
   let verifier = [{ return ::verify(*this); }];

@@ -266,11 +266,11 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
     using namespace PatternMatch;
     ICmpInst::Predicate Pred;
     Value *LHS, *RHS;
-    const BasicBlock *IfTrue, *IfFalse;
+    BasicBlock *IfTrue, *IfFalse;
+    auto *Term = BB->getTerminator();
     // TODO: Handle switches.
-    if (!match(BB->getTerminator(),
-               m_Br(m_ICmp(Pred, m_Value(LHS), m_Value(RHS)),
-                    m_BasicBlock(IfTrue), m_BasicBlock(IfFalse)))) {
+    if (!match(Term, m_Br(m_ICmp(Pred, m_Value(LHS), m_Value(RHS)),
+                          m_BasicBlock(IfTrue), m_BasicBlock(IfFalse)))) {
       MarkAllSuccessorsLive(BB);
       continue;
     }
@@ -283,13 +283,16 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
     // Can we prove constant true or false for this condition?
     const SCEV *LHSS = getSCEVOnFirstIteration(LHS, L, SE, FirstIterSCEV);
     const SCEV *RHSS = getSCEVOnFirstIteration(RHS, L, SE, FirstIterSCEV);
+    // Only query for liveness of in-loop edge if another successor is also
+    // in-loop.
     // TODO: isKnownPredicateAt is more powerful, but it's too compile time
     // consuming. So we avoid using it here.
-    if (SE.isKnownPredicate(Pred, LHSS, RHSS))
-      MarkLiveEdge(BB, BB->getTerminator()->getSuccessor(0));
-    else if (SE.isKnownPredicate(ICmpInst::getInversePredicate(Pred), LHSS,
+    if (L->contains(IfFalse) && SE.isKnownPredicate(Pred, LHSS, RHSS))
+      MarkLiveEdge(BB, IfTrue);
+    else if (L->contains(IfTrue) &&
+             SE.isKnownPredicate(ICmpInst::getInversePredicate(Pred), LHSS,
                                  RHSS))
-      MarkLiveEdge(BB, BB->getTerminator()->getSuccessor(1));
+      MarkLiveEdge(BB, IfFalse);
     else
       MarkAllSuccessorsLive(BB);
   }
@@ -311,6 +314,8 @@ breakBackedgeIfNotTaken(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
     return LoopDeletionResult::Unmodified;
 
   auto *BTC = SE.getBackedgeTakenCount(L);
+  if (!isa<SCEVCouldNotCompute>(BTC) && SE.isKnownNonZero(BTC))
+    return LoopDeletionResult::Unmodified;
   if (!BTC->isZero() && !canProveExitOnFirstIteration(L, DT, SE, LI))
     return LoopDeletionResult::Unmodified;
 

@@ -16,15 +16,38 @@
 
 using namespace mlir;
 
+/// Print a value that is used as an operand of an alias query.
+static void printAliasOperand(Operation *op) {
+  llvm::errs() << op->getAttrOfType<StringAttr>("test.ptr").getValue();
+}
+static void printAliasOperand(Value value) {
+  if (BlockArgument arg = value.dyn_cast<BlockArgument>()) {
+    Region *region = arg.getParentRegion();
+    unsigned parentBlockNumber =
+        std::distance(region->begin(), arg.getOwner()->getIterator());
+    llvm::errs() << region->getParentOp()
+                        ->getAttrOfType<StringAttr>("test.ptr")
+                        .getValue()
+                 << ".region" << region->getRegionNumber();
+    if (parentBlockNumber != 0)
+      llvm::errs() << ".block" << parentBlockNumber;
+    llvm::errs() << "#" << arg.getArgNumber();
+    return;
+  }
+  OpResult result = value.cast<OpResult>();
+  printAliasOperand(result.getOwner());
+  llvm::errs() << "#" << result.getResultNumber();
+}
+
+//===----------------------------------------------------------------------===//
+// Testing AliasResult
+//===----------------------------------------------------------------------===//
+
 namespace {
 struct TestAliasAnalysisPass
     : public PassWrapper<TestAliasAnalysisPass, OperationPass<>> {
   void runOnOperation() override {
-    llvm::errs() << "Testing : ";
-    if (Attribute testName = getOperation()->getAttr("test.name"))
-      llvm::errs() << testName << "\n";
-    else
-      llvm::errs() << getOperation()->getAttr("sym_name") << "\n";
+    llvm::errs() << "Testing : " << getOperation()->getAttr("sym_name") << "\n";
 
     // Collect all of the values to check for aliasing behavior.
     AliasAnalysis &aliasAnalysis = getAnalysis<AliasAnalysis>();
@@ -49,52 +72,64 @@ struct TestAliasAnalysisPass
     printAliasOperand(lhs);
     llvm::errs() << " <-> ";
     printAliasOperand(rhs);
-    llvm::errs() << ": ";
-
-    switch (result.getKind()) {
-    case AliasResult::NoAlias:
-      llvm::errs() << "NoAlias";
-      break;
-    case AliasResult::MayAlias:
-      llvm::errs() << "MayAlias";
-      break;
-    case AliasResult::PartialAlias:
-      llvm::errs() << "PartialAlias";
-      break;
-    case AliasResult::MustAlias:
-      llvm::errs() << "MustAlias";
-      break;
-    }
-    llvm::errs() << "\n";
-  }
-  /// Print a value that is used as an operand of an alias query.
-  void printAliasOperand(Value value) {
-    if (BlockArgument arg = value.dyn_cast<BlockArgument>()) {
-      Region *region = arg.getParentRegion();
-      unsigned parentBlockNumber =
-          std::distance(region->begin(), arg.getOwner()->getIterator());
-      llvm::errs() << region->getParentOp()
-                          ->getAttrOfType<StringAttr>("test.ptr")
-                          .getValue()
-                   << ".region" << region->getRegionNumber();
-      if (parentBlockNumber != 0)
-        llvm::errs() << ".block" << parentBlockNumber;
-      llvm::errs() << "#" << arg.getArgNumber();
-      return;
-    }
-    OpResult result = value.cast<OpResult>();
-    llvm::errs()
-        << result.getOwner()->getAttrOfType<StringAttr>("test.ptr").getValue()
-        << "#" << result.getResultNumber();
+    llvm::errs() << ": " << result << "\n";
   }
 };
 } // end anonymous namespace
 
+//===----------------------------------------------------------------------===//
+// Testing ModRefResult
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct TestAliasAnalysisModRefPass
+    : public PassWrapper<TestAliasAnalysisModRefPass, OperationPass<>> {
+  void runOnOperation() override {
+    llvm::errs() << "Testing : " << getOperation()->getAttr("sym_name") << "\n";
+
+    // Collect all of the values to check for aliasing behavior.
+    AliasAnalysis &aliasAnalysis = getAnalysis<AliasAnalysis>();
+    SmallVector<Value, 32> valsToCheck;
+    getOperation()->walk([&](Operation *op) {
+      if (!op->getAttr("test.ptr"))
+        return;
+      valsToCheck.append(op->result_begin(), op->result_end());
+      for (Region &region : op->getRegions())
+        for (Block &block : region)
+          valsToCheck.append(block.args_begin(), block.args_end());
+    });
+
+    // Check for aliasing behavior between each of the values.
+    for (auto it = valsToCheck.begin(), e = valsToCheck.end(); it != e; ++it) {
+      getOperation()->walk([&](Operation *op) {
+        if (!op->getAttr("test.ptr"))
+          return;
+        printModRefResult(aliasAnalysis.getModRef(op, *it), op, *it);
+      });
+    }
+  }
+
+  /// Print the result of an alias query.
+  void printModRefResult(ModRefResult result, Operation *op, Value location) {
+    printAliasOperand(op);
+    llvm::errs() << " -> ";
+    printAliasOperand(location);
+    llvm::errs() << ": " << result << "\n";
+  }
+};
+} // end anonymous namespace
+
+//===----------------------------------------------------------------------===//
+// Pass Registration
+//===----------------------------------------------------------------------===//
+
 namespace mlir {
 namespace test {
 void registerTestAliasAnalysisPass() {
-  PassRegistration<TestAliasAnalysisPass> pass("test-alias-analysis",
-                                               "Test alias analysis results.");
+  PassRegistration<TestAliasAnalysisPass> aliasPass(
+      "test-alias-analysis", "Test alias analysis results.");
+  PassRegistration<TestAliasAnalysisModRefPass> modRefPass(
+      "test-alias-analysis-modref", "Test alias analysis ModRef results.");
 }
 } // namespace test
 } // namespace mlir

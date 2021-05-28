@@ -1298,7 +1298,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPThreadprivate &x) {
 bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclarativeAllocate &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_allocate);
   const auto &list{std::get<parser::OmpObjectList>(x.t)};
-  ResolveOmpObjectList(list, Symbol::Flag::OmpAllocateDirective);
+  ResolveOmpObjectList(list, Symbol::Flag::OmpDeclarativeAllocateDirective);
   return false;
 }
 
@@ -1306,7 +1306,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPExecutableAllocate &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_allocate);
   const auto &list{std::get<std::optional<parser::OmpObjectList>>(x.t)};
   if (list)
-    ResolveOmpObjectList(*list, Symbol::Flag::OmpAllocateDirective);
+    ResolveOmpObjectList(*list, Symbol::Flag::OmpExecutableAllocateDirective);
   return true;
 }
 
@@ -1482,7 +1482,16 @@ void OmpAttributeVisitor::ResolveOmpObject(
                     AddAllocateName(name);
                   }
                 }
-                if (ompFlag == Symbol::Flag::OmpAllocateDirective &&
+                if (ompFlag == Symbol::Flag::OmpDeclarativeAllocateDirective &&
+                    IsAllocatable(*symbol)) {
+                  context_.Say(designator.source,
+                      "List items specified in the ALLOCATE directive must not "
+                      "have the ALLOCATABLE attribute unless the directive is "
+                      "associated with an ALLOCATE statement"_err_en_US);
+                }
+                if ((ompFlag == Symbol::Flag::OmpDeclarativeAllocateDirective ||
+                        ompFlag ==
+                            Symbol::Flag::OmpExecutableAllocateDirective) &&
                     ResolveOmpObjectScope(name) == nullptr) {
                   context_.Say(designator.source, // 2.15.3
                       "List items must be declared in the same scoping unit "

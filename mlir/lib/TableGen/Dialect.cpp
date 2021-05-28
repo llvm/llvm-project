@@ -61,6 +61,10 @@ llvm::Optional<StringRef> Dialect::getExtraClassDeclaration() const {
   return value.empty() ? llvm::Optional<StringRef>() : value;
 }
 
+bool Dialect::hasCanonicalizer() const {
+  return def->getValueAsBit("hasCanonicalizer");
+}
+
 bool Dialect::hasConstantMaterializer() const {
   return def->getValueAsBit("hasConstantMaterializer");
 }

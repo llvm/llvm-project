@@ -720,6 +720,16 @@ void test_smart_ptr_no_leak() {
   obj->release();
 }
 
+void test_osmetaclass_release() {
+  const char *name = "no_name";
+  const OSMetaClass *meta = OSMetaClass::copyMetaClassWithName(name);
+  if (!meta) {
+    return;
+  } else {
+    meta->releaseMetaClass();
+  }
+}
+
 OSObject *getRuleViolation() {
   return new OSObject; // expected-warning{{Potential leak of an object of type 'OSObject'}}
 // expected-note@-1{{Operator 'new' returns an OSObject of type 'OSObject' with a +1 retain count}}

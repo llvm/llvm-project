@@ -1519,9 +1519,11 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
          BI != BE; ++BI) {
       // Loop metadata needs to be updated so that the start and end locs
       // reference inlined-at locations.
-      auto updateLoopInfoLoc = [&Ctx, &InlinedAtNode, &IANodes](
-                                   const DILocation &Loc) -> DILocation * {
-        return inlineDebugLoc(&Loc, InlinedAtNode, Ctx, IANodes).get();
+      auto updateLoopInfoLoc = [&Ctx, &InlinedAtNode,
+                                &IANodes](Metadata *MD) -> Metadata * {
+        if (auto *Loc = dyn_cast_or_null<DILocation>(MD))
+          return inlineDebugLoc(Loc, InlinedAtNode, Ctx, IANodes).get();
+        return MD;
       };
       updateLoopMetadataDebugLocations(*BI, updateLoopInfoLoc);
 

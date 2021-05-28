@@ -159,7 +159,7 @@ define <16 x i16> @sext_16i8_16i16(<16 x i8> %z) {
 define <16 x i8> @trunc_16i16_16i8(<16 x i16> %z) {
 ; X32-LABEL: trunc_16i16_16i8:
 ; X32:       # %bb.0:
-; X32-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X32-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X32-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X32-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vzeroupper
@@ -167,7 +167,7 @@ define <16 x i8> @trunc_16i16_16i8(<16 x i16> %z) {
 ;
 ; X64-LABEL: trunc_16i16_16i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; X64-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; X64-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper

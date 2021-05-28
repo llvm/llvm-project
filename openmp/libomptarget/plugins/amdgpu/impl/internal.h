@@ -209,7 +209,7 @@ template <typename T> inline T *alignUp(T *value, size_t alignment) {
 }
 
 hsa_status_t register_allocation(void *addr, size_t size,
-                                 atmi_mem_place_t place);
+                                 atmi_devtype_t DeviceType);
 
 extern bool atl_is_atmi_initialized();
 

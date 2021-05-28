@@ -52,6 +52,8 @@ public:
 /// operation to enable non-blocking waiting via coroutine suspension.
 namespace {
 struct CoroMachinery {
+  FuncOp func;
+
   // Async execute region returns a completion token, and an async value for
   // each yielded value.
   //
@@ -63,6 +65,7 @@ struct CoroMachinery {
   llvm::SmallVector<Value, 4> returnValues; // returned async values
 
   Value coroHandle; // coroutine handle (!async.coro.handle value)
+  Block *setError;  // switch completion token and all values to error state
   Block *cleanup;   // coroutine cleanup block
   Block *suspend;   // coroutine suspension block
 };
@@ -74,6 +77,7 @@ struct CoroMachinery {
 /// See LLVM coroutines documentation: https://llvm.org/docs/Coroutines.html
 ///
 ///  - `entry` block sets up the coroutine.
+///  - `set_error` block sets completion token and async values state to error.
 ///  - `cleanup` block cleans up the coroutine state.
 ///  - `suspend block after the @llvm.coro.end() defines what value will be
 ///    returned to the initial caller of a coroutine. Everything before the
@@ -89,6 +93,11 @@ struct CoroMachinery {
 ///       %value = <async value> : !async.value<T> // create async value
 ///       %id = async.coro.id                      // create a coroutine id
 ///       %hdl = async.coro.begin %id              // create a coroutine handle
+///       br ^cleanup
+///
+///     ^set_error: // this block created lazily only if needed (see code below)
+///       async.runtime.set_error %token : !async.token
+///       async.runtime.set_error %value : !async.value<T>
 ///       br ^cleanup
 ///
 ///     ^cleanup:
@@ -163,12 +172,37 @@ static CoroMachinery setupCoroMachinery(FuncOp func) {
   // continuations, and will conditionally branch to cleanup or suspend blocks.
 
   CoroMachinery machinery;
+  machinery.func = func;
   machinery.asyncToken = retToken;
   machinery.returnValues = retValues;
   machinery.coroHandle = coroHdlOp.handle();
+  machinery.setError = nullptr; // created lazily only if needed
   machinery.cleanup = cleanupBlock;
   machinery.suspend = suspendBlock;
   return machinery;
+}
+
+// Lazily creates `set_error` block only if it is required for lowering to the
+// runtime operations (see for example lowering of assert operation).
+static Block *setupSetErrorBlock(CoroMachinery &coro) {
+  if (coro.setError)
+    return coro.setError;
+
+  coro.setError = coro.func.addBlock();
+  coro.setError->moveBefore(coro.cleanup);
+
+  auto builder =
+      ImplicitLocOpBuilder::atBlockBegin(coro.func->getLoc(), coro.setError);
+
+  // Coroutine set_error block: set error on token and all returned values.
+  builder.create<RuntimeSetErrorOp>(coro.asyncToken);
+  for (Value retValue : coro.returnValues)
+    builder.create<RuntimeSetErrorOp>(retValue);
+
+  // Branch into the cleanup block.
+  builder.create<BranchOp>(coro.cleanup);
+
+  return coro.setError;
 }
 
 /// Outline the body region attached to the `async.execute` op into a standalone
@@ -316,9 +350,8 @@ class AwaitOpLoweringBase : public OpConversionPattern<AwaitType> {
   using AwaitAdaptor = typename AwaitType::Adaptor;
 
 public:
-  AwaitOpLoweringBase(
-      MLIRContext *ctx,
-      const llvm::DenseMap<FuncOp, CoroMachinery> &outlinedFunctions)
+  AwaitOpLoweringBase(MLIRContext *ctx,
+                      llvm::DenseMap<FuncOp, CoroMachinery> &outlinedFunctions)
       : OpConversionPattern<AwaitType>(ctx),
         outlinedFunctions(outlinedFunctions) {}
 
@@ -346,7 +379,7 @@ public:
     // Inside the coroutine we convert await operation into coroutine suspension
     // point, and resume execution asynchronously.
     if (isInCoroutine) {
-      const CoroMachinery &coro = outlined->getSecond();
+      CoroMachinery &coro = outlined->getSecond();
       Block *suspended = op->getBlock();
 
       ImplicitLocOpBuilder builder(loc, op, rewriter.getListener());
@@ -366,8 +399,22 @@ public:
       builder.create<CoroSuspendOp>(coroSaveOp.state(), coro.suspend, resume,
                                     coro.cleanup);
 
-      // Make sure that replacement value will be constructed in resume block.
-      rewriter.setInsertionPointToStart(resume);
+      // Split the resume block into error checking and continuation.
+      Block *continuation = rewriter.splitBlock(resume, Block::iterator(op));
+
+      // Check if the awaited value is in the error state.
+      builder.setInsertionPointToStart(resume);
+      auto isError =
+          builder.create<RuntimeIsErrorOp>(loc, rewriter.getI1Type(), operand);
+      builder.create<CondBranchOp>(isError,
+                                   /*trueDest=*/setupSetErrorBlock(coro),
+                                   /*trueArgs=*/ArrayRef<Value>(),
+                                   /*falseDest=*/continuation,
+                                   /*falseArgs=*/ArrayRef<Value>());
+
+      // Make sure that replacement value will be constructed in the
+      // continuation block.
+      rewriter.setInsertionPointToStart(continuation);
     }
 
     // Erase or replace the await operation with the new value.
@@ -385,7 +432,7 @@ public:
   }
 
 private:
-  const llvm::DenseMap<FuncOp, CoroMachinery> &outlinedFunctions;
+  llvm::DenseMap<FuncOp, CoroMachinery> &outlinedFunctions;
 };
 
 /// Lowering for `async.await` with a token operand.
@@ -437,12 +484,12 @@ public:
   LogicalResult
   matchAndRewrite(async::YieldOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    // Check if yield operation is inside the outlined coroutine function.
+    // Check if yield operation is inside the async coroutine function.
     auto func = op->template getParentOfType<FuncOp>();
     auto outlined = outlinedFunctions.find(func);
     if (outlined == outlinedFunctions.end())
       return rewriter.notifyMatchFailure(
-          op, "operation is not inside the outlined async.execute function");
+          op, "operation is not inside the async coroutine function");
 
     Location loc = op->getLoc();
     const CoroMachinery &coro = outlined->getSecond();
@@ -464,6 +511,46 @@ public:
 
 private:
   const llvm::DenseMap<FuncOp, CoroMachinery> &outlinedFunctions;
+};
+
+//===----------------------------------------------------------------------===//
+// Convert std.assert operation to cond_br into `set_error` block.
+//===----------------------------------------------------------------------===//
+
+class AssertOpLowering : public OpConversionPattern<AssertOp> {
+public:
+  AssertOpLowering(MLIRContext *ctx,
+                   llvm::DenseMap<FuncOp, CoroMachinery> &outlinedFunctions)
+      : OpConversionPattern<AssertOp>(ctx),
+        outlinedFunctions(outlinedFunctions) {}
+
+  LogicalResult
+  matchAndRewrite(AssertOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Check if assert operation is inside the async coroutine function.
+    auto func = op->template getParentOfType<FuncOp>();
+    auto outlined = outlinedFunctions.find(func);
+    if (outlined == outlinedFunctions.end())
+      return rewriter.notifyMatchFailure(
+          op, "operation is not inside the async coroutine function");
+
+    Location loc = op->getLoc();
+    CoroMachinery &coro = outlined->getSecond();
+
+    Block *cont = rewriter.splitBlock(op->getBlock(), Block::iterator(op));
+    rewriter.setInsertionPointToEnd(cont->getPrevNode());
+    rewriter.create<CondBranchOp>(loc, AssertOpAdaptor(operands).arg(),
+                                  /*trueDest=*/cont,
+                                  /*trueArgs=*/ArrayRef<Value>(),
+                                  /*falseDest=*/setupSetErrorBlock(coro),
+                                  /*falseArgs=*/ArrayRef<Value>());
+    rewriter.eraseOp(op);
+
+    return success();
+  }
+
+private:
+  llvm::DenseMap<FuncOp, CoroMachinery> &outlinedFunctions;
 };
 
 //===----------------------------------------------------------------------===//
@@ -495,11 +582,21 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
                     AwaitAllOpLowering, YieldOpLowering>(ctx,
                                                          outlinedFunctions);
 
+  // Lower assertions to conditional branches into error blocks.
+  asyncPatterns.add<AssertOpLowering>(ctx, outlinedFunctions);
+
   // All high level async operations must be lowered to the runtime operations.
   ConversionTarget runtimeTarget(*ctx);
   runtimeTarget.addLegalDialect<AsyncDialect>();
   runtimeTarget.addIllegalOp<CreateGroupOp, AddToGroupOp>();
   runtimeTarget.addIllegalOp<ExecuteOp, AwaitOp, AwaitAllOp, async::YieldOp>();
+
+  // Assertions must be converted to runtime errors inside async functions.
+  runtimeTarget.addDynamicallyLegalOp<AssertOp>([&](AssertOp op) -> bool {
+    auto func = op->getParentOfType<FuncOp>();
+    return outlinedFunctions.find(func) == outlinedFunctions.end();
+  });
+  runtimeTarget.addLegalOp<CondBranchOp>();
 
   if (failed(applyPartialConversion(module, runtimeTarget,
                                     std::move(asyncPatterns)))) {

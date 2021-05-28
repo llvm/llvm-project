@@ -316,7 +316,9 @@ Disabling instrumentation with ``__attribute__((no_sanitize("coverage")))``
 ===========================================================================
 
 It is possible to disable coverage instrumentation for select functions via the
-function attribute ``__attribute__((no_sanitize("coverage")))``.
+function attribute ``__attribute__((no_sanitize("coverage")))``. Because this
+attribute may not be supported by other compilers, it is recommended to use it
+together with ``__has_feature(coverage_sanitizer)``.
 
 Disabling instrumentation without source modification
 =====================================================

@@ -66,9 +66,9 @@ define <4 x float> @hang_when_merging_stores_after_legalization(<8 x float> %x, 
 ; LMULMAX2-NEXT:    addi a0, a0, %lo(.LCPI1_0)
 ; LMULMAX2-NEXT:    vsetivli zero, 4, e32,m1,ta,mu
 ; LMULMAX2-NEXT:    vle32.v v27, (a0)
-; LMULMAX2-NEXT:    vsetivli zero, 4, e32,m1,tu,mu
+; LMULMAX2-NEXT:    vsetvli zero, zero, e32,m1,tu,mu
 ; LMULMAX2-NEXT:    vrgather.vv v26, v9, v27, v0.t
-; LMULMAX2-NEXT:    vsetivli zero, 4, e32,m1,ta,mu
+; LMULMAX2-NEXT:    vsetvli zero, zero, e32,m1,ta,mu
 ; LMULMAX2-NEXT:    vrgather.vv v27, v10, v25
 ; LMULMAX2-NEXT:    addi a0, zero, 8
 ; LMULMAX2-NEXT:    vsetivli zero, 1, e8,mf8,ta,mu
@@ -77,7 +77,7 @@ define <4 x float> @hang_when_merging_stores_after_legalization(<8 x float> %x, 
 ; LMULMAX2-NEXT:    addi a0, a0, %lo(.LCPI1_1)
 ; LMULMAX2-NEXT:    vsetivli zero, 4, e32,m1,ta,mu
 ; LMULMAX2-NEXT:    vle32.v v25, (a0)
-; LMULMAX2-NEXT:    vsetivli zero, 4, e32,m1,tu,mu
+; LMULMAX2-NEXT:    vsetvli zero, zero, e32,m1,tu,mu
 ; LMULMAX2-NEXT:    vrgather.vv v27, v11, v25, v0.t
 ; LMULMAX2-NEXT:    addi a0, zero, 3
 ; LMULMAX2-NEXT:    vsetivli zero, 1, e8,mf8,ta,mu

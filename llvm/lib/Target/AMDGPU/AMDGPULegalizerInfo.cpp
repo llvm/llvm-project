@@ -222,7 +222,9 @@ static LegalityPredicate elementTypeIsLegal(unsigned TypeIdx) {
   };
 }
 
-static LegalityPredicate isWideScalarTruncStore(unsigned TypeIdx) {
+// If we have a truncating store or an extending load with a data size larger
+// than 32-bits, we need to reduce to a 32-bit type.
+static LegalityPredicate isWideScalarExtLoadTruncStore(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     const LLT Ty = Query.Types[TypeIdx];
     return !Ty.isVector() && Ty.getSizeInBits() > 32 &&
@@ -259,12 +261,11 @@ static unsigned maxSizeForAddrSpace(const GCNSubtarget &ST, unsigned AS,
 }
 
 static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
-                                 const LegalityQuery &Query,
-                                 unsigned Opcode) {
+                                 const LegalityQuery &Query) {
   const LLT Ty = Query.Types[0];
 
   // Handle G_LOAD, G_ZEXTLOAD, G_SEXTLOAD
-  const bool IsLoad = Opcode != AMDGPU::G_STORE;
+  const bool IsLoad = Query.Opcode != AMDGPU::G_STORE;
 
   unsigned RegSize = Ty.getSizeInBits();
   unsigned MemSize = Query.MMODescrs[0].SizeInBits;
@@ -273,6 +274,10 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
 
   // All of these need to be custom lowered to cast the pointer operand.
   if (AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
+    return false;
+
+  // Do not handle extending vector loads.
+  if (Ty.isVector() && MemSize != RegSize)
     return false;
 
   // TODO: We should be able to widen loads if the alignment is high enough, but
@@ -343,10 +348,9 @@ static bool loadStoreBitcastWorkaround(const LLT Ty) {
   return EltSize != 32 && EltSize != 64;
 }
 
-static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query,
-                             unsigned Opcode) {
+static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query) {
   const LLT Ty = Query.Types[0];
-  return isRegisterType(Ty) && isLoadStoreSizeLegal(ST, Query, Opcode) &&
+  return isRegisterType(Ty) && isLoadStoreSizeLegal(ST, Query) &&
          !loadStoreBitcastWorkaround(Ty);
 }
 
@@ -1113,7 +1117,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                       {V2S32, ConstantPtr, 32, GlobalAlign32}});
     Actions.legalIf(
       [=](const LegalityQuery &Query) -> bool {
-        return isLoadStoreLegal(ST, Query, Op);
+        return isLoadStoreLegal(ST, Query);
       });
 
     // Constant 32-bit is handled by addrspacecasting the 32-bit pointer to
@@ -1251,15 +1255,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               return std::make_pair(0, EltTy);
             })
     .lowerIfMemSizeNotPow2()
-    .minScalar(0, S32);
-
-    if (IsStore)
-      Actions.narrowScalarIf(isWideScalarTruncStore(0), changeTo(0, S32));
-
-    Actions
-        .widenScalarToNextPow2(0)
-        .moreElementsIf(vectorSmallerThan(0, 32), moreEltsToNext32Bit(0))
-        .lower();
+    .minScalar(0, S32)
+    .narrowScalarIf(isWideScalarExtLoadTruncStore(0), changeTo(0, S32))
+    .widenScalarToNextPow2(0)
+    .moreElementsIf(vectorSmallerThan(0, 32), moreEltsToNext32Bit(0))
+    .lower();
   }
 
   auto &ExtLoads = getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
@@ -1270,11 +1270,23 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                                   {S32, PrivatePtr, 8, 8},
                                                   {S32, PrivatePtr, 16, 16},
                                                   {S32, ConstantPtr, 8, 8},
-                                                  {S32, ConstantPtr, 16, 2 * 8}});
+                                                  {S32, ConstantPtr, 16, 2 * 8}})
+                       .legalIf(
+                         [=](const LegalityQuery &Query) -> bool {
+                           return isLoadStoreLegal(ST, Query);
+                         });
+
   if (ST.hasFlatAddressSpace()) {
     ExtLoads.legalForTypesWithMemDesc(
         {{S32, FlatPtr, 8, 8}, {S32, FlatPtr, 16, 16}});
   }
+
+  // Constant 32-bit is handled by addrspacecasting the 32-bit pointer to
+  // 64-bits.
+  //
+  // TODO: Should generalize bitcast action into coerce, which will also cover
+  // inserting addrspacecasts.
+  ExtLoads.customIf(typeIs(1, Constant32Ptr));
 
   ExtLoads.clampScalar(0, S32, S32)
           .widenScalarToNextPow2(0)
@@ -1697,6 +1709,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case TargetOpcode::G_GLOBAL_VALUE:
     return legalizeGlobalValue(MI, MRI, B);
   case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_SEXTLOAD:
+  case TargetOpcode::G_ZEXTLOAD:
     return legalizeLoad(Helper, MI);
   case TargetOpcode::G_FMAD:
     return legalizeFMad(MI, MRI, B);
@@ -2409,6 +2423,9 @@ bool AMDGPULegalizerInfo::legalizeLoad(LegalizerHelper &Helper,
     Observer.changedInstr(MI);
     return true;
   }
+
+  if (MI.getOpcode() != AMDGPU::G_LOAD)
+    return false;
 
   Register ValReg = MI.getOperand(0).getReg();
   LLT ValTy = MRI.getType(ValReg);

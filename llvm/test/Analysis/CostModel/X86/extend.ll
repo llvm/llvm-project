@@ -36,8 +36,8 @@ define i32 @zext_vXi32() {
 ; AVX1-LABEL: 'zext_vXi32'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I64 = zext i32 undef to i64
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i64 = zext <2 x i32> undef to <2 x i64>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4i64 = zext <4 x i32> undef to <4 x i64>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8i64 = zext <8 x i32> undef to <8 x i64>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4i64 = zext <4 x i32> undef to <4 x i64>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8i64 = zext <8 x i32> undef to <8 x i64>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX2-LABEL: 'zext_vXi32'
@@ -57,8 +57,8 @@ define i32 @zext_vXi32() {
 ; BTVER2-LABEL: 'zext_vXi32'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %I64 = zext i32 undef to i64
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i64 = zext <2 x i32> undef to <2 x i64>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4i64 = zext <4 x i32> undef to <4 x i64>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8i64 = zext <8 x i32> undef to <8 x i64>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4i64 = zext <4 x i32> undef to <4 x i64>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8i64 = zext <8 x i32> undef to <8 x i64>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %I64 = zext i32 undef to i64
@@ -114,7 +114,7 @@ define i32 @zext_vXi16() {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = zext i16 undef to i32
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i32 = zext <2 x i16> undef to <2 x i32>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i32 = zext <4 x i16> undef to <4 x i32>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8i32 = zext <8 x i16> undef to <8 x i32>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8i32 = zext <8 x i16> undef to <8 x i32>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i32 = zext <16 x i16> undef to <16 x i32>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
@@ -150,7 +150,7 @@ define i32 @zext_vXi16() {
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = zext i16 undef to i32
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i32 = zext <2 x i16> undef to <2 x i32>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i32 = zext <4 x i16> undef to <4 x i32>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8i32 = zext <8 x i16> undef to <8 x i32>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8i32 = zext <8 x i16> undef to <8 x i32>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i32 = zext <16 x i16> undef to <16 x i32>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
@@ -226,19 +226,19 @@ define i32 @zext_vXi8() {
 ; AVX1-LABEL: 'zext_vXi8'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = zext i8 undef to i64
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i64 = zext <2 x i8> undef to <2 x i64>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4i64 = zext <4 x i8> undef to <4 x i64>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8i64 = zext <8 x i8> undef to <8 x i64>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4i64 = zext <4 x i8> undef to <4 x i64>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8i64 = zext <8 x i8> undef to <8 x i64>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = zext i8 undef to i32
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i32 = zext <2 x i8> undef to <2 x i32>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i32 = zext <4 x i8> undef to <4 x i32>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8i32 = zext <8 x i8> undef to <8 x i32>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8i32 = zext <8 x i8> undef to <8 x i32>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i32 = zext <16 x i8> undef to <16 x i32>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = zext i8 undef to i16
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i16 = zext <2 x i8> undef to <2 x i16>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i16 = zext <4 x i8> undef to <4 x i16>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i16 = zext <8 x i8> undef to <8 x i16>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i16 = zext <16 x i8> undef to <16 x i16>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V32i16 = zext <32 x i8> undef to <32 x i16>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16i16 = zext <16 x i8> undef to <16 x i16>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V32i16 = zext <32 x i8> undef to <32 x i16>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX2-LABEL: 'zext_vXi8'
@@ -298,19 +298,19 @@ define i32 @zext_vXi8() {
 ; BTVER2-LABEL: 'zext_vXi8'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = zext i8 undef to i64
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i64 = zext <2 x i8> undef to <2 x i64>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4i64 = zext <4 x i8> undef to <4 x i64>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8i64 = zext <8 x i8> undef to <8 x i64>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4i64 = zext <4 x i8> undef to <4 x i64>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8i64 = zext <8 x i8> undef to <8 x i64>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = zext i8 undef to i32
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i32 = zext <2 x i8> undef to <2 x i32>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i32 = zext <4 x i8> undef to <4 x i32>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8i32 = zext <8 x i8> undef to <8 x i32>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8i32 = zext <8 x i8> undef to <8 x i32>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i32 = zext <16 x i8> undef to <16 x i32>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = zext i8 undef to i16
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i16 = zext <2 x i8> undef to <2 x i16>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i16 = zext <4 x i8> undef to <4 x i16>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i16 = zext <8 x i8> undef to <8 x i16>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i16 = zext <16 x i8> undef to <16 x i16>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V32i16 = zext <32 x i8> undef to <32 x i16>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16i16 = zext <16 x i8> undef to <16 x i16>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V32i16 = zext <32 x i8> undef to <32 x i16>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %I64 = zext i8 undef to i64
@@ -539,8 +539,8 @@ define i32 @sext_vXi32() {
 ; AVX1-LABEL: 'sext_vXi32'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = sext i32 undef to i64
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i64 = sext <2 x i32> undef to <2 x i64>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4i64 = sext <4 x i32> undef to <4 x i64>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8i64 = sext <8 x i32> undef to <8 x i64>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4i64 = sext <4 x i32> undef to <4 x i64>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8i64 = sext <8 x i32> undef to <8 x i64>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX2-LABEL: 'sext_vXi32'
@@ -560,8 +560,8 @@ define i32 @sext_vXi32() {
 ; BTVER2-LABEL: 'sext_vXi32'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = sext i32 undef to i64
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i64 = sext <2 x i32> undef to <2 x i64>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4i64 = sext <4 x i32> undef to <4 x i64>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8i64 = sext <8 x i32> undef to <8 x i64>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4i64 = sext <4 x i32> undef to <4 x i64>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8i64 = sext <8 x i32> undef to <8 x i64>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %I64 = sext i32 undef to i64
@@ -612,12 +612,12 @@ define i32 @sext_vXi16() {
 ; AVX1-LABEL: 'sext_vXi16'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = sext i16 undef to i64
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i64 = sext <2 x i16> undef to <2 x i64>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4i64 = sext <4 x i16> undef to <4 x i64>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8i64 = sext <8 x i16> undef to <8 x i64>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4i64 = sext <4 x i16> undef to <4 x i64>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8i64 = sext <8 x i16> undef to <8 x i64>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = sext i16 undef to i32
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i32 = sext <2 x i16> undef to <2 x i32>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i32 = sext <4 x i16> undef to <4 x i32>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8i32 = sext <8 x i16> undef to <8 x i32>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8i32 = sext <8 x i16> undef to <8 x i32>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i32 = sext <16 x i16> undef to <16 x i32>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
@@ -648,12 +648,12 @@ define i32 @sext_vXi16() {
 ; BTVER2-LABEL: 'sext_vXi16'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = sext i16 undef to i64
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i64 = sext <2 x i16> undef to <2 x i64>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4i64 = sext <4 x i16> undef to <4 x i64>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8i64 = sext <8 x i16> undef to <8 x i64>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4i64 = sext <4 x i16> undef to <4 x i64>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8i64 = sext <8 x i16> undef to <8 x i64>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = sext i16 undef to i32
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i32 = sext <2 x i16> undef to <2 x i32>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i32 = sext <4 x i16> undef to <4 x i32>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8i32 = sext <8 x i16> undef to <8 x i32>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8i32 = sext <8 x i16> undef to <8 x i32>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i32 = sext <16 x i16> undef to <16 x i32>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
@@ -729,19 +729,19 @@ define i32 @sext_vXi8() {
 ; AVX1-LABEL: 'sext_vXi8'
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = sext i8 undef to i64
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i64 = sext <2 x i8> undef to <2 x i64>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4i64 = sext <4 x i8> undef to <4 x i64>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8i64 = sext <8 x i8> undef to <8 x i64>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4i64 = sext <4 x i8> undef to <4 x i64>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8i64 = sext <8 x i8> undef to <8 x i64>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = sext i8 undef to i32
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i32 = sext <2 x i8> undef to <2 x i32>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i32 = sext <4 x i8> undef to <4 x i32>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8i32 = sext <8 x i8> undef to <8 x i32>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8i32 = sext <8 x i8> undef to <8 x i32>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i32 = sext <16 x i8> undef to <16 x i32>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = sext i8 undef to i16
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i16 = sext <2 x i8> undef to <2 x i16>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i16 = sext <4 x i8> undef to <4 x i16>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i16 = sext <8 x i8> undef to <8 x i16>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i16 = sext <16 x i8> undef to <16 x i16>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V32i16 = sext <32 x i8> undef to <32 x i16>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16i16 = sext <16 x i8> undef to <16 x i16>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V32i16 = sext <32 x i8> undef to <32 x i16>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX2-LABEL: 'sext_vXi8'
@@ -801,19 +801,19 @@ define i32 @sext_vXi8() {
 ; BTVER2-LABEL: 'sext_vXi8'
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = sext i8 undef to i64
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i64 = sext <2 x i8> undef to <2 x i64>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4i64 = sext <4 x i8> undef to <4 x i64>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V8i64 = sext <8 x i8> undef to <8 x i64>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4i64 = sext <4 x i8> undef to <4 x i64>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V8i64 = sext <8 x i8> undef to <8 x i64>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I32 = sext i8 undef to i32
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i32 = sext <2 x i8> undef to <2 x i32>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i32 = sext <4 x i8> undef to <4 x i32>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8i32 = sext <8 x i8> undef to <8 x i32>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8i32 = sext <8 x i8> undef to <8 x i32>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i32 = sext <16 x i8> undef to <16 x i32>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = sext i8 undef to i16
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2i16 = sext <2 x i8> undef to <2 x i16>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i16 = sext <4 x i8> undef to <4 x i16>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i16 = sext <8 x i8> undef to <8 x i16>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16i16 = sext <16 x i8> undef to <16 x i16>
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V32i16 = sext <32 x i8> undef to <32 x i16>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16i16 = sext <16 x i8> undef to <16 x i16>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V32i16 = sext <32 x i8> undef to <32 x i16>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %I64 = sext i8 undef to i64
