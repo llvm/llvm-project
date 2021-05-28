@@ -32,14 +32,20 @@ using namespace clang;
 using namespace clang::frontend;
 
 namespace {
+/// Holds information about a single DirectoryLookup object.
+struct DirectoryLookupInfo {
+  IncludeDirGroup Group;
+  DirectoryLookup Lookup;
+
+  DirectoryLookupInfo(IncludeDirGroup Group, DirectoryLookup Lookup)
+      : Group(Group), Lookup(Lookup) {}
+};
 
 /// InitHeaderSearch - This class makes it easier to set the search paths of
 ///  a HeaderSearch object. InitHeaderSearch stores several search path lists
 ///  internally, which can be sent to a HeaderSearch object in one swoop.
 class InitHeaderSearch {
-  std::vector<std::pair<IncludeDirGroup, DirectoryLookup> > IncludePath;
-  typedef std::vector<std::pair<IncludeDirGroup,
-                      DirectoryLookup> >::const_iterator path_iterator;
+  std::vector<DirectoryLookupInfo> IncludePath;
   std::vector<std::pair<std::string, bool> > SystemHeaderPrefixes;
   HeaderSearch &Headers;
   bool Verbose;
@@ -154,8 +160,7 @@ bool InitHeaderSearch::AddUnmappedPath(const Twine &Path, IncludeDirGroup Group,
 
   // If the directory exists, add it.
   if (auto DE = FM.getOptionalDirectoryRef(MappedPathStr)) {
-    IncludePath.push_back(
-      std::make_pair(Group, DirectoryLookup(*DE, Type, isFramework)));
+    IncludePath.emplace_back(Group, DirectoryLookup(*DE, Type, isFramework));
     return true;
   }
 
@@ -165,9 +170,8 @@ bool InitHeaderSearch::AddUnmappedPath(const Twine &Path, IncludeDirGroup Group,
     if (auto FE = FM.getFile(MappedPathStr)) {
       if (const HeaderMap *HM = Headers.CreateHeaderMap(*FE)) {
         // It is a headermap, add it to the search path.
-        IncludePath.push_back(
-          std::make_pair(Group,
-                         DirectoryLookup(HM, Type, Group == IndexHeaderMap)));
+        IncludePath.emplace_back(
+            Group, DirectoryLookup(HM, Type, Group == IndexHeaderMap));
         return true;
       }
     }
@@ -558,32 +562,32 @@ void InitHeaderSearch::Realize(const LangOptions &Lang) {
 
   // Quoted arguments go first.
   for (auto &Include : IncludePath)
-    if (Include.first == Quoted)
-      SearchList.push_back(Include.second);
+    if (Include.Group == Quoted)
+      SearchList.push_back(Include.Lookup);
 
   // Deduplicate and remember index.
   RemoveDuplicates(SearchList, 0, Verbose);
   unsigned NumQuoted = SearchList.size();
 
   for (auto &Include : IncludePath)
-    if (Include.first == Angled || Include.first == IndexHeaderMap)
-      SearchList.push_back(Include.second);
+    if (Include.Group == Angled || Include.Group == IndexHeaderMap)
+      SearchList.push_back(Include.Lookup);
 
   RemoveDuplicates(SearchList, NumQuoted, Verbose);
   unsigned NumAngled = SearchList.size();
 
   for (auto &Include : IncludePath)
-    if (Include.first == System || Include.first == ExternCSystem ||
-        (!Lang.ObjC && !Lang.CPlusPlus && Include.first == CSystem) ||
+    if (Include.Group == System || Include.Group == ExternCSystem ||
+        (!Lang.ObjC && !Lang.CPlusPlus && Include.Group == CSystem) ||
         (/*FIXME !Lang.ObjC && */ Lang.CPlusPlus &&
-         Include.first == CXXSystem) ||
-        (Lang.ObjC && !Lang.CPlusPlus && Include.first == ObjCSystem) ||
-        (Lang.ObjC && Lang.CPlusPlus && Include.first == ObjCXXSystem))
-      SearchList.push_back(Include.second);
+         Include.Group == CXXSystem) ||
+        (Lang.ObjC && !Lang.CPlusPlus && Include.Group == ObjCSystem) ||
+        (Lang.ObjC && Lang.CPlusPlus && Include.Group == ObjCXXSystem))
+      SearchList.push_back(Include.Lookup);
 
   for (auto &Include : IncludePath)
-    if (Include.first == After)
-      SearchList.push_back(Include.second);
+    if (Include.Group == After)
+      SearchList.push_back(Include.Lookup);
 
   // Remove duplicates across both the Angled and System directories.  GCC does
   // this and failing to remove duplicates across these two groups breaks
