@@ -12111,9 +12111,9 @@ NamedDecl *Sema::BuildUsingDeclaration(
     return nullptr;
 
   DeclContext *LookupContext = computeDeclContext(SS);
+  NamedDecl *D;
   NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
   if (!LookupContext || EllipsisLoc.isValid()) {
-    NamedDecl *D;
     if (HasTypenameKeyword) {
       // FIXME: not all declaration name kinds are legal here
       D = UnresolvedUsingTypenameDecl::Create(Context, CurContext,
@@ -12127,7 +12127,6 @@ NamedDecl *Sema::BuildUsingDeclaration(
     }
     D->setAccess(AS);
     CurContext->addDecl(D);
-    ProcessDeclAttributeList(S, D, AttrList);
     return D;
   }
 
@@ -12137,7 +12136,6 @@ NamedDecl *Sema::BuildUsingDeclaration(
                           UsingName, HasTypenameKeyword);
     UD->setAccess(AS);
     CurContext->addDecl(UD);
-    ProcessDeclAttributeList(S, UD, AttrList);
     UD->setInvalidDecl(Invalid);
     return UD;
   };
