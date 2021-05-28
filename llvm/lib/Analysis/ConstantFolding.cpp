@@ -710,7 +710,7 @@ Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
         // fold it if the resulting pointer operand is a GlobalValue. Otherwise
         // there is nothing else to simplify since the GEP is already in the
         // most simplified form.
-        if (auto *SimplifiedGEP = dyn_cast<GEPOperator>(Simplified)) {
+        if (isa<GEPOperator>(Simplified)) {
           if (auto *GV = dyn_cast<GlobalVariable>(Simplified->getOperand(0))) {
             if (GV->isConstant() && GV->hasDefinitiveInitializer()) {
               if (Constant *V = ConstantFoldLoadThroughGEPConstantExpr(
