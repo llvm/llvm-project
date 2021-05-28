@@ -774,7 +774,7 @@ static void instantiateCommon(Fortran::lower::AbstractConverter &converter,
 
     symMap.addSymbol(common, commonAddr);
   }
-  auto byteOffset = varSym.offset();
+  auto byteOffset = varSym.GetUltimate().offset();
   auto i8Ty = builder.getIntegerType(8);
   auto i8Ptr = builder.getRefType(i8Ty);
   auto seqTy = builder.getRefType(builder.getVarLenSeqTy(i8Ty));

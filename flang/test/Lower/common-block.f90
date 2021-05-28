@@ -44,3 +44,17 @@ subroutine s3
  ! x and c are not directly initialized, but overlapping aliases are.
  common /z/ x, c
 end
+
+
+module mod_with_common
+  integer :: i, j
+  common /c_in_mod/ i, j
+end module
+! CHECK-LABEL: _QPs4
+subroutine s4
+  use mod_with_common
+  ! CHECK: load i32, i32* bitcast ([8 x i8]* @_QBc_in_mod to i32*)
+  print *, i
+  ! CHECK: load i32, i32* bitcast (i8* getelementptr inbounds ([8 x i8], [8 x i8]* @_QBc_in_mod, i32 0, i64 4) to i32*)
+  print *, j
+end subroutine
