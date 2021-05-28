@@ -3,7 +3,7 @@
 
 %struct.spam = type { double, double, double, double, double, double, double }
 
-define void @test2(i32* %arg)  {
+define void @test2(i32* %arg, i64* %out)  {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_HEADER:%.*]]
@@ -11,28 +11,26 @@ define void @test2(i32* %arg)  {
 ; CHECK-NEXT:    store i32 0, i32* [[ARG:%.*]], align 4
 ; CHECK-NEXT:    br label [[FOR_LATCH:%.*]]
 ; CHECK:       for.latch:
+; CHECK-NEXT:    store volatile i64 0, i64* [[OUT:%.*]], align 4
 ; CHECK-NEXT:    [[PTR_1:%.*]] = getelementptr inbounds i32, i32* [[ARG]], i64 1
 ; CHECK-NEXT:    store i32 0, i32* [[PTR_1]], align 4
 ; CHECK-NEXT:    br label [[FOR_LATCH_1:%.*]]
 ; CHECK:       if.end.loopexit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.latch.1:
+; CHECK-NEXT:    store volatile i64 1, i64* [[OUT]], align 4
 ; CHECK-NEXT:    [[PTR_2:%.*]] = getelementptr inbounds i32, i32* [[ARG]], i64 2
 ; CHECK-NEXT:    store i32 0, i32* [[PTR_2]], align 4
 ; CHECK-NEXT:    br label [[FOR_LATCH_2:%.*]]
 ; CHECK:       for.latch.2:
+; CHECK-NEXT:    store volatile i64 2, i64* [[OUT]], align 4
 ; CHECK-NEXT:    [[PTR_3:%.*]] = getelementptr inbounds i32, i32* [[ARG]], i64 3
 ; CHECK-NEXT:    store i32 0, i32* [[PTR_3]], align 4
 ; CHECK-NEXT:    br i1 true, label [[IF_END_LOOPEXIT:%.*]], label [[FOR_LATCH_3:%.*]]
 ; CHECK:       for.latch.3:
+; CHECK-NEXT:    store volatile i64 3, i64* [[OUT]], align 4
 ; CHECK-NEXT:    unreachable
 ;
-
-
-
-
-
-
 
 entry:
   br label %for.header
@@ -46,6 +44,7 @@ for.header:                              ; preds = %for.latch, %entry
   br i1 %exitcond802, label %if.end.loopexit, label %for.latch
 
 for.latch: ; preds = %for.header
+  store volatile i64 %indvars.iv800, i64* %out
   br label %for.header
 
 if.end.loopexit:                                  ; preds = %for.header
@@ -70,10 +69,6 @@ define double @test_with_lcssa(double %arg1, double* %arg2) {
 ; CHECK:       loop.latch.1:
 ; CHECK-NEXT:    unreachable
 ;
-
-
-
-
 
 entry:
   br label %loop.header
@@ -143,16 +138,6 @@ define void @test_with_nested_loop(i32* %arg)  {
 ; CHECK-NEXT:    unreachable
 ;
 
-
-
-
-
-
-
-
-
-
-
 entry:
   br label %outer.header
 
@@ -201,9 +186,6 @@ define void @test_with_nested_loop_unroll_inner(i32* %arg)  {
 ; CHECK-NEXT:    ret void
 ;
 
-
-
-
 entry:
   br label %outer.header
 
@@ -251,10 +233,6 @@ define void @test_switchinst_in_header() {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
-
-
-
-
 
 entry:
   br label %while.header
