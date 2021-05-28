@@ -113,9 +113,6 @@ Attribute Changes in Clang
 
 - ...
 
-- Added support for C++11-style ``[[]]`` attributes on using-declarations, as a
-  clang extension.
-
 Windows Support
 ---------------
 

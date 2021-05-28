@@ -50,3 +50,49 @@ define void @val_compare_and_swap(i128* %p, i128 %oldval, i128 %newval) {
   store i128 %val, i128* %p
   ret void
 }
+
+define void @val_compare_and_swap_monotonic_seqcst(i128* %p, i128 %oldval, i128 %newval) {
+; CHECK-LLSC-O1-LABEL: val_compare_and_swap_monotonic_seqcst:
+; CHECK-LLSC-O1:    ldxp {{x[0-9]+}}, {{x[0-9]+}}, [x0]
+; [... LOTS of stuff that is generic IR unrelated to atomic operations ...]
+; CHECK-LLSC-O1:    stxp {{w[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}, [x0]
+;
+; CHECK-CAS-O1-LABEL: val_compare_and_swap_monotonic_seqcst:
+; CHECK-CAS-O1:    caspal x2, x3, x4, x5, [x0]
+
+; CHECK-LLSC-O0-LABEL: val_compare_and_swap_monotonic_seqcst:
+; CHECK-LLSC-O0:  .LBB1_1:
+; CHECK-LLSC-O0:    ldaxp
+; CHECK-LLSC-O0:    stlxp
+
+; CHECK-CAS-O0-LABEL: val_compare_and_swap_monotonic_seqcst:
+; CHECK-CAS-O0:    caspal
+
+  %pair = cmpxchg i128* %p, i128 %oldval, i128 %newval monotonic seq_cst
+  %val = extractvalue { i128, i1 } %pair, 0
+  store i128 %val, i128* %p
+  ret void
+}
+
+define void @val_compare_and_swap_release_acquire(i128* %p, i128 %oldval, i128 %newval) {
+; CHECK-LLSC-O1-LABEL: val_compare_and_swap_release_acquire:
+; CHECK-LLSC-O1:    ldxp {{x[0-9]+}}, {{x[0-9]+}}, [x0]
+; [... LOTS of stuff that is generic IR unrelated to atomic operations ...]
+; CHECK-LLSC-O1:    stlxp {{w[0-9]+}}, {{x[0-9]+}}, {{x[0-9]+}}, [x0]
+;
+; CHECK-CAS-O1-LABEL: val_compare_and_swap_release_acquire:
+; CHECK-CAS-O1:    caspal x2, x3, x4, x5, [x0]
+
+; CHECK-LLSC-O0-LABEL: val_compare_and_swap_release_acquire:
+; CHECK-LLSC-O0:  .LBB2_1:
+; CHECK-LLSC-O0:    ldaxp
+; CHECK-LLSC-O0:    stlxp
+
+; CHECK-CAS-O0-LABEL: val_compare_and_swap_release_acquire:
+; CHECK-CAS-O0:    caspal
+
+  %pair = cmpxchg i128* %p, i128 %oldval, i128 %newval release acquire
+  %val = extractvalue { i128, i1 } %pair, 0
+  store i128 %val, i128* %p
+  ret void
+}

@@ -45,7 +45,7 @@ def DecImm : SDNodeXForm<imm, [{
 //===----------------------------------------------------------------------===//
 
 // This class describes information associated to the LMUL.
-class LMULInfo<int lmul, VReg regclass, VReg wregclass,
+class LMULInfo<int lmul, int oct, VReg regclass, VReg wregclass,
                VReg f2regclass, VReg f4regclass, VReg f8regclass, string mx> {
   bits<3> value = lmul; // This is encoded as the vlmul field of vtype.
   VReg vrclass = regclass;
@@ -54,17 +54,18 @@ class LMULInfo<int lmul, VReg regclass, VReg wregclass,
   VReg f4vrclass = f4regclass;
   VReg f2vrclass = f2regclass;
   string MX = mx;
+  int octuple = oct;
 }
 
 // Associate LMUL with tablegen records of register classes.
-def V_M1  : LMULInfo<0b000,   VR,        VRM2,   VR,   VR, VR, "M1">;
-def V_M2  : LMULInfo<0b001, VRM2,        VRM4,   VR,   VR, VR, "M2">;
-def V_M4  : LMULInfo<0b010, VRM4,        VRM8, VRM2,   VR, VR, "M4">;
-def V_M8  : LMULInfo<0b011, VRM8,/*NoVReg*/VR, VRM4, VRM2, VR, "M8">;
+def V_M1  : LMULInfo<0b000,  8,   VR,        VRM2,   VR,   VR, VR, "M1">;
+def V_M2  : LMULInfo<0b001, 16, VRM2,        VRM4,   VR,   VR, VR, "M2">;
+def V_M4  : LMULInfo<0b010, 32, VRM4,        VRM8, VRM2,   VR, VR, "M4">;
+def V_M8  : LMULInfo<0b011, 64, VRM8,/*NoVReg*/VR, VRM4, VRM2, VR, "M8">;
 
-def V_MF8 : LMULInfo<0b101, VR, VR,/*NoVReg*/VR,/*NoVReg*/VR,/*NoVReg*/VR, "MF8">;
-def V_MF4 : LMULInfo<0b110, VR, VR,          VR,/*NoVReg*/VR,/*NoVReg*/VR, "MF4">;
-def V_MF2 : LMULInfo<0b111, VR, VR,          VR,          VR,/*NoVReg*/VR, "MF2">;
+def V_MF8 : LMULInfo<0b101, 1, VR, VR,/*NoVReg*/VR,/*NoVReg*/VR,/*NoVReg*/VR, "MF8">;
+def V_MF4 : LMULInfo<0b110, 2, VR, VR,          VR,/*NoVReg*/VR,/*NoVReg*/VR, "MF4">;
+def V_MF2 : LMULInfo<0b111, 4, VR, VR,          VR,          VR,/*NoVReg*/VR, "MF2">;
 
 // Used to iterate over all possible LMULs.
 def MxList {
@@ -100,16 +101,6 @@ class NFSet<LMULInfo m> {
 
 class shift_amount<int num> {
   int val = !if(!eq(num, 1), 0, !add(1, shift_amount<!srl(num, 1)>.val));
-}
-
-class octuple_from_str<string MX> {
-  int ret = !cond(!eq(MX, "MF8") : 1,
-                        !eq(MX, "MF4") : 2,
-                        !eq(MX, "MF2") : 4,
-                        !eq(MX, "M1") : 8,
-                        !eq(MX, "M2") : 16,
-                        !eq(MX, "M4") : 32,
-                        !eq(MX, "M8") : 64);
 }
 
 class octuple_to_str<int octuple> {
@@ -1049,7 +1040,7 @@ multiclass VPseudoAMOEI<int eew> {
   // therefore only [32, 64] is allowed here.
   foreach sew = [32, 64] in {
     foreach lmul = MxSet<sew>.m in {
-      defvar octuple_lmul = octuple_from_str<lmul.MX>.ret;
+      defvar octuple_lmul = lmul.octuple;
       // Calculate emul = eew * lmul / sew
       defvar octuple_emul = !srl(!mul(eew, octuple_lmul), shift_amount<sew>.val);
       if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
@@ -1295,7 +1286,7 @@ multiclass VPseudoILoad<bit Ordered> {
   foreach eew = EEWList in {
     foreach sew = EEWList in {
       foreach lmul = MxSet<sew>.m in {
-        defvar octuple_lmul = octuple_from_str<lmul.MX>.ret;
+        defvar octuple_lmul = lmul.octuple;
         // Calculate emul = eew * lmul / sew
         defvar octuple_emul = !srl(!mul(eew, octuple_lmul), shift_amount<sew>.val);
         if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
@@ -1355,7 +1346,7 @@ multiclass VPseudoIStore<bit Ordered> {
   foreach eew = EEWList in {
     foreach sew = EEWList in {
       foreach lmul = MxSet<sew>.m in {
-        defvar octuple_lmul = octuple_from_str<lmul.MX>.ret;
+        defvar octuple_lmul = lmul.octuple;
         // Calculate emul = eew * lmul / sew
         defvar octuple_emul = !srl(!mul(eew, octuple_lmul), shift_amount<sew>.val);
         if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
@@ -1479,7 +1470,7 @@ multiclass VPseudoBinaryV_VV<string Constraint = ""> {
 multiclass VPseudoBinaryV_VV_EEW<int eew, string Constraint = ""> {
   foreach m = MxList.m in {
     foreach sew = EEWList in {
-      defvar octuple_lmul = octuple_from_str<m.MX>.ret;
+      defvar octuple_lmul = m.octuple;
       // emul = lmul * eew / sew
       defvar octuple_emul = !srl(!mul(octuple_lmul, eew), shift_amount<sew>.val);
       if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
@@ -1984,7 +1975,7 @@ multiclass VPseudoISegLoad<bit Ordered> {
   foreach idx_eew = EEWList in {
     foreach sew = EEWList in {
       foreach val_lmul = MxSet<sew>.m in {
-        defvar octuple_lmul = octuple_from_str<val_lmul.MX>.ret;
+        defvar octuple_lmul = val_lmul.octuple;
         // Calculate emul = eew * lmul / sew
         defvar octuple_emul = !srl(!mul(idx_eew, octuple_lmul), shift_amount<sew>.val);
         if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
@@ -2044,7 +2035,7 @@ multiclass VPseudoISegStore<bit Ordered> {
   foreach idx_eew = EEWList in {
     foreach sew = EEWList in {
       foreach val_lmul = MxSet<sew>.m in {
-        defvar octuple_lmul = octuple_from_str<val_lmul.MX>.ret;
+        defvar octuple_lmul = val_lmul.octuple;
         // Calculate emul = eew * lmul / sew
         defvar octuple_emul = !srl(!mul(idx_eew, octuple_lmul), shift_amount<sew>.val);
         if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
@@ -2535,7 +2526,7 @@ multiclass VPatBinaryV_VV_INT_EEW<string intrinsic, string instruction,
   foreach vti = vtilist in {
     // emul = lmul * eew / sew
     defvar vlmul = vti.LMul;
-    defvar octuple_lmul = octuple_from_str<vlmul.MX>.ret;
+    defvar octuple_lmul = vlmul.octuple;
     defvar octuple_emul = !srl(!mul(octuple_lmul, eew), vti.Log2SEW);
     if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {
       defvar emul_str = octuple_to_str<octuple_emul>.ret;
@@ -3101,7 +3092,7 @@ multiclass VPatAMOV_WD<string intrinsic,
   foreach eew = EEWList in {
     foreach vti = vtilist in {
       if !or(!eq(vti.SEW, 32), !eq(vti.SEW, 64)) then {
-        defvar octuple_lmul = octuple_from_str<vti.LMul.MX>.ret;
+        defvar octuple_lmul = vti.LMul.octuple;
         // Calculate emul = eew * lmul / sew
         defvar octuple_emul = !srl(!mul(eew, octuple_lmul), vti.Log2SEW);
         if !and(!ge(octuple_emul, 1), !le(octuple_emul, 64)) then {

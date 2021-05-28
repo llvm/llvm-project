@@ -10,7 +10,7 @@
 
 // insert_iterator
 
-// insert_iterator(Cont& x, Cont::iterator i);
+// insert_iterator(Cont& x, Cont::iterator i); // constexpr in C++20
 
 #include <iterator>
 #include <vector>
