@@ -153,3 +153,49 @@ outer.latch:
 exit:
   ret void
 }
+
+; The inner loop may not terminate, so we cannot remote it, unless the
+; function/loop is mustprogress. Test case from PR50511.
+define void @inner_loop_may_be_infinite(i1 %c1, i1 %c2) {
+; CHECK-LABEL: @inner_loop_may_be_infinite(
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+  br label %loop1
+
+loop1:
+  br i1 %c1, label %loop1.latch, label %loop2
+
+loop2:
+  br i1 %c2, label %loop1.latch, label %loop2
+
+loop1.latch:
+  br i1 false, label %loop1, label %exit
+
+exit:
+  ret void
+}
+
+; Similar to @inner_loop_may_be_infinite, but with mustprogress. We can delete
+; both loops.
+define void @inner_loop_may_be_infinite_mustprogress(i1 %c1, i1 %c2) mustprogress {
+; CHECK-LABEL: @inner_loop_may_be_infinite_mustprogress(
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+  br label %loop1
+
+loop1:
+  br i1 %c1, label %loop1.latch, label %loop2
+
+loop2:
+  br i1 %c2, label %loop1.latch, label %loop2
+
+loop1.latch:
+  br i1 false, label %loop1, label %exit
+
+exit:
+  ret void
+}
