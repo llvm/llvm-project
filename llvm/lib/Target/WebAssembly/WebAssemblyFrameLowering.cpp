@@ -314,16 +314,6 @@ void WebAssemblyFrameLowering::emitEpilogue(MachineFunction &MF,
   writeSPToGlobal(SPReg, MF, MBB, InsertPt, DL);
 }
 
-bool WebAssemblyFrameLowering::isSupportedStackID(
-    TargetStackID::Value ID) const {
-  // Use the Object stack for WebAssembly locals which can only be accessed
-  // by name, not via an address in linear memory.
-  if (ID == TargetStackID::WasmLocal)
-    return true;
-
-  return TargetFrameLowering::isSupportedStackID(ID);
-}
-
 TargetFrameLowering::DwarfFrameBase
 WebAssemblyFrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
   DwarfFrameBase Loc;
