@@ -132,8 +132,8 @@ std::string doSystemDiff(StringRef Before, StringRef After,
   // Store the 2 bodies into temporary files and call diff on them
   // to get the body of the node.
   const unsigned NumFiles = 3;
-  std::string FileName[NumFiles];
-  int FD[NumFiles]{-1, -1, -1};
+  static std::string FileName[NumFiles];
+  static int FD[NumFiles]{-1, -1, -1};
   for (unsigned I = 0; I < NumFiles; ++I) {
     if (FD[I] == -1) {
       SmallVector<char, 200> SV;

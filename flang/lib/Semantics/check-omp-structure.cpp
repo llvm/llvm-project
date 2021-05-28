@@ -1131,6 +1131,26 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Private &x) {
   CheckIntentInPointer(x.v, llvm::omp::Clause::OMPC_private);
 }
 
+bool OmpStructureChecker::IsDataRefTypeParamInquiry(
+    const parser::DataRef *dataRef) {
+  bool dataRefIsTypeParamInquiry{false};
+  if (const auto *structComp{
+          parser::Unwrap<parser::StructureComponent>(dataRef)}) {
+    if (const auto *compSymbol{structComp->component.symbol}) {
+      if (const auto *compSymbolMiscDetails{
+              std::get_if<MiscDetails>(&compSymbol->details())}) {
+        const auto detailsKind = compSymbolMiscDetails->kind();
+        dataRefIsTypeParamInquiry =
+            (detailsKind == MiscDetails::Kind::KindParamInquiry ||
+                detailsKind == MiscDetails::Kind::LenParamInquiry);
+      } else if (compSymbol->has<TypeParamDetails>()) {
+        dataRefIsTypeParamInquiry = true;
+      }
+    }
+  }
+  return dataRefIsTypeParamInquiry;
+}
+
 void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
     const parser::CharBlock &source, const parser::OmpObjectList &objList) {
 
@@ -1138,9 +1158,14 @@ void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
     std::visit(
         common::visitors{
             [&](const parser::Designator &designator) {
-              if (std::get_if<parser::DataRef>(&designator.u)) {
-                if ((parser::Unwrap<parser::StructureComponent>(ompObject)) ||
-                    (parser::Unwrap<parser::ArrayElement>(ompObject))) {
+              if (const auto *dataRef{
+                      std::get_if<parser::DataRef>(&designator.u)}) {
+                if (IsDataRefTypeParamInquiry(dataRef)) {
+                  context_.Say(source,
+                      "A type parameter inquiry cannot appear in an ALLOCATE directive"_err_en_US);
+                } else if (parser::Unwrap<parser::StructureComponent>(
+                               ompObject) ||
+                    parser::Unwrap<parser::ArrayElement>(ompObject)) {
                   context_.Say(source,
                       "A variable that is part of another variable (as an "
                       "array or structure element)"

@@ -707,16 +707,26 @@ AMDGPUToolChain::getGPUArch(const llvm::opt::ArgList &DriverArgs) const {
       getTriple(), DriverArgs.getLastArgValue(options::OPT_mcpu_EQ));
 }
 
-void AMDGPUToolChain::checkTargetID(
-    const llvm::opt::ArgList &DriverArgs) const {
+AMDGPUToolChain::ParsedTargetIDType
+AMDGPUToolChain::getParsedTargetID(const llvm::opt::ArgList &DriverArgs) const {
   StringRef TargetID = DriverArgs.getLastArgValue(options::OPT_mcpu_EQ);
   if (TargetID.empty())
-    return;
+    return {None, None, None};
 
   llvm::StringMap<bool> FeatureMap;
   auto OptionalGpuArch = parseTargetID(getTriple(), TargetID, &FeatureMap);
-  if (!OptionalGpuArch) {
-    getDriver().Diag(clang::diag::err_drv_bad_target_id) << TargetID;
+  if (!OptionalGpuArch)
+    return {TargetID.str(), None, None};
+
+  return {TargetID.str(), OptionalGpuArch.getValue().str(), FeatureMap};
+}
+
+void AMDGPUToolChain::checkTargetID(
+    const llvm::opt::ArgList &DriverArgs) const {
+  auto PTID = getParsedTargetID(DriverArgs);
+  if (PTID.OptionalTargetID && !PTID.OptionalGPUArch) {
+    getDriver().Diag(clang::diag::err_drv_bad_target_id)
+        << PTID.OptionalTargetID.getValue();
   }
 }
 

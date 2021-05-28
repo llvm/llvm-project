@@ -107,7 +107,19 @@ public:
 
 protected:
   /// Check and diagnose invalid target ID specified by -mcpu.
-  void checkTargetID(const llvm::opt::ArgList &DriverArgs) const;
+  virtual void checkTargetID(const llvm::opt::ArgList &DriverArgs) const;
+
+  /// The struct type returned by getParsedTargetID.
+  struct ParsedTargetIDType {
+    Optional<std::string> OptionalTargetID;
+    Optional<std::string> OptionalGPUArch;
+    Optional<llvm::StringMap<bool>> OptionalFeatures;
+  };
+
+  /// Get target ID, GPU arch, and target ID features if the target ID is
+  /// specified and valid.
+  ParsedTargetIDType
+  getParsedTargetID(const llvm::opt::ArgList &DriverArgs) const;
 
   /// Get GPU arch from -mcpu without checking.
   StringRef getGPUArch(const llvm::opt::ArgList &DriverArgs) const;

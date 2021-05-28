@@ -35,6 +35,8 @@ struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
   /// execution.
   LogicalResult initialize(MLIRContext *context) override {
     RewritePatternSet owningPatterns(context);
+    for (auto *dialect : context->getLoadedDialects())
+      dialect->getCanonicalizationPatterns(owningPatterns);
     for (auto *op : context->getRegisteredOperations())
       op->getCanonicalizationPatterns(owningPatterns, context);
     patterns = std::move(owningPatterns);

@@ -116,7 +116,7 @@ define void @nonpow2_load_narrowing() {
 ; Currently can't handle vector lengths that aren't an exact multiple of
 ; natively supported vector lengths. Test that the fall-back works for those.
 ; FALLBACK-WITH-REPORT-ERR-G_IMPLICIT_DEF-LEGALIZABLE: (FIXME: this is what is expected once we can legalize non-pow-of-2 G_IMPLICIT_DEF) remark: <unknown>:0:0: unable to legalize instruction: %1:_(<7 x s64>) = G_ADD %0, %0 (in function: nonpow2_vector_add_fewerelements
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %{{[0-9]+}}:_(s64) = G_EXTRACT_VECTOR_ELT %{{[0-9]+}}:_(<7 x s64>), %{{[0-9]+}}:_(s64) (in function: nonpow2_vector_add_fewerelements)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %47:_(<14 x s64>) = G_CONCAT_VECTORS %41:_(<2 x s64>), %42:_(<2 x s64>), %43:_(<2 x s64>), %44:_(<2 x s64>), %29:_(<2 x s64>), %29:_(<2 x s64>), %29:_(<2 x s64>) (in function: nonpow2_vector_add_fewerelements)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_vector_add_fewerelements
 ; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_vector_add_fewerelements:
 define void @nonpow2_vector_add_fewerelements() {

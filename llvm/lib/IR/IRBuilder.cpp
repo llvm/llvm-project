@@ -780,6 +780,24 @@ CallInst *IRBuilderBase::CreateGCRelocate(Instruction *Statepoint,
  return createCallHelper(FnGCRelocate, Args, this, Name);
 }
 
+CallInst *IRBuilderBase::CreateGCGetPointerBase(Value *DerivedPtr,
+                                                const Twine &Name) {
+  Module *M = BB->getParent()->getParent();
+  Type *PtrTy = DerivedPtr->getType();
+  Function *FnGCFindBase = Intrinsic::getDeclaration(
+      M, Intrinsic::experimental_gc_get_pointer_base, {PtrTy, PtrTy});
+  return createCallHelper(FnGCFindBase, {DerivedPtr}, this, Name);
+}
+
+CallInst *IRBuilderBase::CreateGCGetPointerOffset(Value *DerivedPtr,
+                                                  const Twine &Name) {
+  Module *M = BB->getParent()->getParent();
+  Type *PtrTy = DerivedPtr->getType();
+  Function *FnGCGetOffset = Intrinsic::getDeclaration(
+      M, Intrinsic::experimental_gc_get_pointer_offset, {PtrTy});
+  return createCallHelper(FnGCGetOffset, {DerivedPtr}, this, Name);
+}
+
 CallInst *IRBuilderBase::CreateUnaryIntrinsic(Intrinsic::ID ID, Value *V,
                                               Instruction *FMFSource,
                                               const Twine &Name) {

@@ -270,7 +270,7 @@ define <2 x i64> @extract1_i32_zext_insert1_i64_zero(<4 x i32> %x) {
 define <2 x i64> @extract2_i32_zext_insert1_i64_undef(<4 x i32> %x) {
 ; SSE2-LABEL: extract2_i32_zext_insert1_i64_undef:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: extract2_i32_zext_insert1_i64_undef:
@@ -293,7 +293,7 @@ define <2 x i64> @extract2_i32_zext_insert1_i64_undef(<4 x i32> %x) {
 define <2 x i64> @extract2_i32_zext_insert1_i64_zero(<4 x i32> %x) {
 ; SSE2-LABEL: extract2_i32_zext_insert1_i64_zero:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: extract2_i32_zext_insert1_i64_zero:

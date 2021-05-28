@@ -1993,7 +1993,7 @@ define <16 x i32> @splat_v3i32(<3 x i32>* %ptr) {
 ; SSE2-NEXT:    xorps %xmm1, %xmm1
 ; SSE2-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,0,1]
-; SSE2-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    xorps %xmm1, %xmm1
 ; SSE2-NEXT:    xorps %xmm3, %xmm3
 ; SSE2-NEXT:    retq

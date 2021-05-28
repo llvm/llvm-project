@@ -1391,7 +1391,7 @@ Register RISCVInstrInfo::getVLENFactoredAmount(MachineFunction &MF,
     uint32_t ShiftAmount = Log2_32(NumOfVReg + 1);
     BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), ScaledRegister)
         .addReg(VL)
-        .addReg(ShiftAmount);
+        .addImm(ShiftAmount);
     BuildMI(MBB, II, DL, TII->get(RISCV::SUB), VL)
         .addReg(ScaledRegister, RegState::Kill)
         .addReg(VL, RegState::Kill);

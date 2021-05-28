@@ -986,8 +986,13 @@ static bool shouldAssumeDSOLocal(const CodeGenModule &CGM,
     // In MinGW, variables without DLLImport can still be automatically
     // imported from a DLL by the linker; don't mark variables that
     // potentially could come from another DLL as DSO local.
+
+    // With EmulatedTLS, TLS variables can be autoimported from other DLLs
+    // (and this actually happens in the public interface of libstdc++), so
+    // such variables can't be marked as DSO local. (Native TLS variables
+    // can't be dllimported at all, though.)
     if (GV->isDeclarationForLinker() && isa<llvm::GlobalVariable>(GV) &&
-        !GV->isThreadLocal())
+        (!GV->isThreadLocal() || CGM.getCodeGenOpts().EmulatedTLS))
       return false;
   }
 

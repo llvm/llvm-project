@@ -19,4 +19,14 @@
 #if f(2
 #endif
 
+/* expected-error@+2 {{macro name missing}} */
+#ifdef FOO
+#elifdef
+#endif
+
+/* expected-error@+2 {{macro name must be an identifier}} */
+#ifdef FOO
+#elifdef !
+#endif
+
 int x;

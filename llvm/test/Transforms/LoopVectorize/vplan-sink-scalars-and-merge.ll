@@ -221,3 +221,84 @@ loop:
 exit:
   ret void
 }
+
+; Make sure we do not sink uniform instructions.
+define void @uniform_gep(i64 %k, i16* noalias %A, i16* noalias %B) {
+; CHECK-LABEL: LV: Checking a loop in "uniform_gep"
+; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
+; CHECK-NEXT: loop:
+; CHECK-NEXT:   WIDEN-INDUCTION %iv = phi 21, %iv.next
+; CHECK-NEXT:   EMIT vp<%2> = WIDEN-CANONICAL-INDUCTION
+; CHECK-NEXT:   EMIT vp<%3> = icmp ule vp<%2> vp<%0>
+; CHECK-NEXT:   CLONE ir<%gep.A.uniform> = getelementptr ir<%A>, ir<0>
+; CHECK-NEXT: Successor(s): pred.load
+
+; CHECK:      <xVFxUF> pred.load: {
+; CHECK-NEXT:   pred.load.entry:
+; CHECK-NEXT:     BRANCH-ON-MASK vp<%3>
+; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
+; CHECK-NEXT:   CondBit: vp<%3> (loop)
+
+; CHECK:        pred.load.if:
+; CHECK-NEXT:     REPLICATE ir<%lv> = load ir<%gep.A.uniform>
+; CHECK-NEXT:   Successor(s): pred.load.continue
+
+; CHECK:        pred.load.continue:
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%6> = ir<%lv>
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+
+; CHECK:      loop.0:
+; CHECK-NEXT:   WIDEN ir<%cmp> = icmp ir<%iv>, ir<%k>
+; CHECK-NEXT: Successor(s): loop.then
+
+; CHECK:      loop.then:
+; CHECK-NEXT:   EMIT vp<%8> = not ir<%cmp>
+; CHECK-NEXT:   EMIT vp<%9> = select vp<%3> vp<%8> ir<false>
+; CHECK-NEXT: Successor(s): pred.store
+
+; CHECK:      <xVFxUF> pred.store: {
+; CHECK-NEXT:   pred.store.entry:
+; CHECK-NEXT:     BRANCH-ON-MASK vp<%9>
+; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
+; CHECK-NEXT:   CondBit: vp<%9> (loop.then)
+
+; CHECK:        pred.store.if:
+; CHECK-NEXT:     REPLICATE ir<%gep.B> = getelementptr ir<%B>, ir<%iv>
+; CHECK-NEXT:     REPLICATE store vp<%6>, ir<%gep.B>
+; CHECK-NEXT:   Successor(s): pred.store.continue
+
+; CHECK:      pred.store.continue:
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+
+; CHECK:      loop.then.0:
+; CHECK-NEXT: Successor(s): loop.latch
+
+; CHECK:      loop.latch:
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 21, %entry ], [ %iv.next, %loop.latch ]
+  %gep.A.uniform = getelementptr inbounds i16, i16* %A, i64 0
+  %gep.B = getelementptr inbounds i16, i16* %B, i64 %iv
+  %lv = load i16, i16* %gep.A.uniform, align 1
+  %cmp = icmp ult i64 %iv, %k
+  br i1 %cmp, label %loop.latch, label %loop.then
+
+loop.then:
+  store i16 %lv, i16* %gep.B, align 1
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add nsw i64 %iv, 1
+  %cmp179 = icmp slt i64 %iv.next, 32
+  br i1 %cmp179, label %loop, label %exit
+
+exit:
+  ret void
+}

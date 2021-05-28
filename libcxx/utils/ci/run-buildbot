@@ -553,6 +553,14 @@ windows-static)
     echo "+++ Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 ;;
+#################################################################
+# Insert vendor-specific internal configurations below.
+#
+# This allows vendors to extend this file with their own internal
+# configurations without running into merge conflicts with upstream.
+#################################################################
+
+#################################################################
 *)
     echo "${BUILDER} is not a known configuration"
     exit 1

@@ -246,9 +246,6 @@ std::list<KernelTy> KernelsList;
 static atmi_place_t get_gpu_place(int device_id) {
   return ATMI_PLACE_GPU(0, device_id);
 }
-static atmi_mem_place_t get_gpu_mem_place(int device_id) {
-  return ATMI_MEM_PLACE_GPU_MEM(0, device_id, 0);
-}
 
 static std::vector<hsa_agent_t> find_gpu_agents() {
   std::vector<hsa_agent_t> res;
@@ -1155,8 +1152,7 @@ struct device_environment {
         void *state_ptr;
         uint32_t state_ptr_size;
         hsa_status_t err = atmi_interop_hsa_get_symbol_info(
-            SymbolInfo, get_gpu_mem_place(device_id), sym(), &state_ptr,
-            &state_ptr_size);
+            SymbolInfo, device_id, sym(), &state_ptr, &state_ptr_size);
         if (err != HSA_STATUS_SUCCESS) {
           DP("failed to find %s in loaded image\n", sym());
           return err;
@@ -1176,11 +1172,10 @@ struct device_environment {
   }
 };
 
-static hsa_status_t atmi_calloc(void **ret_ptr, size_t size,
-                                atmi_mem_place_t place) {
+static hsa_status_t atmi_calloc(void **ret_ptr, size_t size, int DeviceId) {
   uint64_t rounded = 4 * ((size + 3) / 4);
   void *ptr;
-  hsa_status_t err = atmi_malloc(&ptr, rounded, place);
+  hsa_status_t err = atmi_malloc(&ptr, rounded, DeviceId, ATMI_DEVTYPE_GPU);
   if (err != HSA_STATUS_SUCCESS) {
     return err;
   }
@@ -1282,8 +1277,8 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     uint32_t state_ptr_size;
     auto &SymbolInfoMap = DeviceInfo.SymbolInfoTable[device_id];
     hsa_status_t err = atmi_interop_hsa_get_symbol_info(
-        SymbolInfoMap, get_gpu_mem_place(device_id),
-        "omptarget_nvptx_device_State", &state_ptr, &state_ptr_size);
+        SymbolInfoMap, device_id, "omptarget_nvptx_device_State", &state_ptr,
+        &state_ptr_size);
 
     if (err != HSA_STATUS_SUCCESS) {
       DP("No device_state symbol found, skipping initialization\n");
@@ -1309,8 +1304,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
         if (dss.first.get() == nullptr) {
           assert(dss.second == 0);
           void *ptr = NULL;
-          hsa_status_t err = atmi_calloc(&ptr, device_State_bytes,
-                                         get_gpu_mem_place(device_id));
+          hsa_status_t err = atmi_calloc(&ptr, device_State_bytes, device_id);
           if (err != HSA_STATUS_SUCCESS) {
             DP("Failed to allocate device_state array\n");
             return NULL;
@@ -1367,8 +1361,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 
       auto &SymbolInfoMap = DeviceInfo.SymbolInfoTable[device_id];
       hsa_status_t err = atmi_interop_hsa_get_symbol_info(
-          SymbolInfoMap, get_gpu_mem_place(device_id), e->name, &varptr,
-          &varsize);
+          SymbolInfoMap, device_id, e->name, &varptr, &varsize);
 
       if (err != HSA_STATUS_SUCCESS) {
         // Inform the user what symbol prevented offloading
@@ -1407,11 +1400,10 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
 
     DP("to find the kernel name: %s size: %lu\n", e->name, strlen(e->name));
 
-    atmi_mem_place_t place = get_gpu_mem_place(device_id);
     uint32_t kernarg_segment_size;
     auto &KernelInfoMap = DeviceInfo.KernelInfoTable[device_id];
     hsa_status_t err = atmi_interop_hsa_get_kernel_info(
-        KernelInfoMap, place, e->name,
+        KernelInfoMap, device_id, e->name,
         HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE,
         &kernarg_segment_size);
 
@@ -1578,7 +1570,7 @@ void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *, int32_t kind) {
     return NULL;
   }
 
-  hsa_status_t err = atmi_malloc(&ptr, size, get_gpu_mem_place(device_id));
+  hsa_status_t err = atmi_malloc(&ptr, size, device_id, ATMI_DEVTYPE_GPU);
   DP("Tgt alloc data %ld bytes, (tgt:%016llx).\n", size,
      (long long unsigned)(Elf64_Addr)ptr);
   ptr = (err == HSA_STATUS_SUCCESS) ? ptr : NULL;

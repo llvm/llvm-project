@@ -8,6 +8,7 @@ HELP: --arch=<arch>
 HELP: --convert=<path>
 HELP: --num-threads=<n>
 HELP: --out-file=<path>
+HELP: --quiet
 HELP: --verify
 HELP: Generic Options:
 HELP: --help

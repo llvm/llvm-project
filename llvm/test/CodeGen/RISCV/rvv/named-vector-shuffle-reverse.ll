@@ -55,7 +55,7 @@ define <vscale x 1 x i8> @reverse_nxv1i8(<vscale x 1 x i8> %a) {
 ; RV32-BITS-UNKNOWN-NEXT:    vsetvli a1, zero, e16,mf4,ta,mu
 ; RV32-BITS-UNKNOWN-NEXT:    vid.v v25
 ; RV32-BITS-UNKNOWN-NEXT:    vrsub.vx v26, v25, a0
-; RV32-BITS-UNKNOWN-NEXT:    vsetvli a0, zero, e8,mf8,ta,mu
+; RV32-BITS-UNKNOWN-NEXT:    vsetvli zero, zero, e8,mf8,ta,mu
 ; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v25, v8, v26
 ; RV32-BITS-UNKNOWN-NEXT:    vmv1r.v v8, v25
 ; RV32-BITS-UNKNOWN-NEXT:    ret
@@ -92,7 +92,7 @@ define <vscale x 1 x i8> @reverse_nxv1i8(<vscale x 1 x i8> %a) {
 ; RV64-BITS-UNKNOWN-NEXT:    vsetvli a1, zero, e16,mf4,ta,mu
 ; RV64-BITS-UNKNOWN-NEXT:    vid.v v25
 ; RV64-BITS-UNKNOWN-NEXT:    vrsub.vx v26, v25, a0
-; RV64-BITS-UNKNOWN-NEXT:    vsetvli a0, zero, e8,mf8,ta,mu
+; RV64-BITS-UNKNOWN-NEXT:    vsetvli zero, zero, e8,mf8,ta,mu
 ; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v25, v8, v26
 ; RV64-BITS-UNKNOWN-NEXT:    vmv1r.v v8, v25
 ; RV64-BITS-UNKNOWN-NEXT:    ret
@@ -133,7 +133,7 @@ define <vscale x 2 x i8> @reverse_nxv2i8(<vscale x 2 x i8> %a) {
 ; RV32-BITS-UNKNOWN-NEXT:    vsetvli a1, zero, e16,mf2,ta,mu
 ; RV32-BITS-UNKNOWN-NEXT:    vid.v v25
 ; RV32-BITS-UNKNOWN-NEXT:    vrsub.vx v26, v25, a0
-; RV32-BITS-UNKNOWN-NEXT:    vsetvli a0, zero, e8,mf4,ta,mu
+; RV32-BITS-UNKNOWN-NEXT:    vsetvli zero, zero, e8,mf4,ta,mu
 ; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v25, v8, v26
 ; RV32-BITS-UNKNOWN-NEXT:    vmv1r.v v8, v25
 ; RV32-BITS-UNKNOWN-NEXT:    ret
@@ -170,7 +170,7 @@ define <vscale x 2 x i8> @reverse_nxv2i8(<vscale x 2 x i8> %a) {
 ; RV64-BITS-UNKNOWN-NEXT:    vsetvli a1, zero, e16,mf2,ta,mu
 ; RV64-BITS-UNKNOWN-NEXT:    vid.v v25
 ; RV64-BITS-UNKNOWN-NEXT:    vrsub.vx v26, v25, a0
-; RV64-BITS-UNKNOWN-NEXT:    vsetvli a0, zero, e8,mf4,ta,mu
+; RV64-BITS-UNKNOWN-NEXT:    vsetvli zero, zero, e8,mf4,ta,mu
 ; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v25, v8, v26
 ; RV64-BITS-UNKNOWN-NEXT:    vmv1r.v v8, v25
 ; RV64-BITS-UNKNOWN-NEXT:    ret
@@ -211,7 +211,7 @@ define <vscale x 4 x i8> @reverse_nxv4i8(<vscale x 4 x i8> %a) {
 ; RV32-BITS-UNKNOWN-NEXT:    vsetvli a1, zero, e16,m1,ta,mu
 ; RV32-BITS-UNKNOWN-NEXT:    vid.v v25
 ; RV32-BITS-UNKNOWN-NEXT:    vrsub.vx v26, v25, a0
-; RV32-BITS-UNKNOWN-NEXT:    vsetvli a0, zero, e8,mf2,ta,mu
+; RV32-BITS-UNKNOWN-NEXT:    vsetvli zero, zero, e8,mf2,ta,mu
 ; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v25, v8, v26
 ; RV32-BITS-UNKNOWN-NEXT:    vmv1r.v v8, v25
 ; RV32-BITS-UNKNOWN-NEXT:    ret
@@ -248,7 +248,7 @@ define <vscale x 4 x i8> @reverse_nxv4i8(<vscale x 4 x i8> %a) {
 ; RV64-BITS-UNKNOWN-NEXT:    vsetvli a1, zero, e16,m1,ta,mu
 ; RV64-BITS-UNKNOWN-NEXT:    vid.v v25
 ; RV64-BITS-UNKNOWN-NEXT:    vrsub.vx v26, v25, a0
-; RV64-BITS-UNKNOWN-NEXT:    vsetvli a0, zero, e8,mf2,ta,mu
+; RV64-BITS-UNKNOWN-NEXT:    vsetvli zero, zero, e8,mf2,ta,mu
 ; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v25, v8, v26
 ; RV64-BITS-UNKNOWN-NEXT:    vmv1r.v v8, v25
 ; RV64-BITS-UNKNOWN-NEXT:    ret
@@ -288,7 +288,7 @@ define <vscale x 8 x i8> @reverse_nxv8i8(<vscale x 8 x i8> %a) {
 ; RV32-BITS-UNKNOWN-NEXT:    vsetvli a1, zero, e16,m2,ta,mu
 ; RV32-BITS-UNKNOWN-NEXT:    vid.v v26
 ; RV32-BITS-UNKNOWN-NEXT:    vrsub.vx v26, v26, a0
-; RV32-BITS-UNKNOWN-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
+; RV32-BITS-UNKNOWN-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v25, v8, v26
 ; RV32-BITS-UNKNOWN-NEXT:    vmv1r.v v8, v25
 ; RV32-BITS-UNKNOWN-NEXT:    ret
@@ -322,7 +322,7 @@ define <vscale x 8 x i8> @reverse_nxv8i8(<vscale x 8 x i8> %a) {
 ; RV64-BITS-UNKNOWN-NEXT:    vsetvli a1, zero, e16,m2,ta,mu
 ; RV64-BITS-UNKNOWN-NEXT:    vid.v v26
 ; RV64-BITS-UNKNOWN-NEXT:    vrsub.vx v26, v26, a0
-; RV64-BITS-UNKNOWN-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
+; RV64-BITS-UNKNOWN-NEXT:    vsetvli zero, zero, e8,m1,ta,mu
 ; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v25, v8, v26
 ; RV64-BITS-UNKNOWN-NEXT:    vmv1r.v v8, v25
 ; RV64-BITS-UNKNOWN-NEXT:    ret
@@ -361,7 +361,7 @@ define <vscale x 16 x i8> @reverse_nxv16i8(<vscale x 16 x i8> %a) {
 ; RV32-BITS-UNKNOWN-NEXT:    vsetvli a1, zero, e16,m4,ta,mu
 ; RV32-BITS-UNKNOWN-NEXT:    vid.v v28
 ; RV32-BITS-UNKNOWN-NEXT:    vrsub.vx v28, v28, a0
-; RV32-BITS-UNKNOWN-NEXT:    vsetvli a0, zero, e8,m2,ta,mu
+; RV32-BITS-UNKNOWN-NEXT:    vsetvli zero, zero, e8,m2,ta,mu
 ; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v26, v8, v28
 ; RV32-BITS-UNKNOWN-NEXT:    vmv2r.v v8, v26
 ; RV32-BITS-UNKNOWN-NEXT:    ret
@@ -398,7 +398,7 @@ define <vscale x 16 x i8> @reverse_nxv16i8(<vscale x 16 x i8> %a) {
 ; RV64-BITS-UNKNOWN-NEXT:    vsetvli a1, zero, e16,m4,ta,mu
 ; RV64-BITS-UNKNOWN-NEXT:    vid.v v28
 ; RV64-BITS-UNKNOWN-NEXT:    vrsub.vx v28, v28, a0
-; RV64-BITS-UNKNOWN-NEXT:    vsetvli a0, zero, e8,m2,ta,mu
+; RV64-BITS-UNKNOWN-NEXT:    vsetvli zero, zero, e8,m2,ta,mu
 ; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v26, v8, v28
 ; RV64-BITS-UNKNOWN-NEXT:    vmv2r.v v8, v26
 ; RV64-BITS-UNKNOWN-NEXT:    ret
@@ -439,7 +439,7 @@ define <vscale x 32 x i8> @reverse_nxv32i8(<vscale x 32 x i8> %a) {
 ; RV32-BITS-UNKNOWN-NEXT:    vsetvli a1, zero, e16,m8,ta,mu
 ; RV32-BITS-UNKNOWN-NEXT:    vid.v v16
 ; RV32-BITS-UNKNOWN-NEXT:    vrsub.vx v16, v16, a0
-; RV32-BITS-UNKNOWN-NEXT:    vsetvli a0, zero, e8,m4,ta,mu
+; RV32-BITS-UNKNOWN-NEXT:    vsetvli zero, zero, e8,m4,ta,mu
 ; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v28, v8, v16
 ; RV32-BITS-UNKNOWN-NEXT:    vmv4r.v v8, v28
 ; RV32-BITS-UNKNOWN-NEXT:    ret
@@ -476,7 +476,7 @@ define <vscale x 32 x i8> @reverse_nxv32i8(<vscale x 32 x i8> %a) {
 ; RV64-BITS-UNKNOWN-NEXT:    vsetvli a1, zero, e16,m8,ta,mu
 ; RV64-BITS-UNKNOWN-NEXT:    vid.v v16
 ; RV64-BITS-UNKNOWN-NEXT:    vrsub.vx v16, v16, a0
-; RV64-BITS-UNKNOWN-NEXT:    vsetvli a0, zero, e8,m4,ta,mu
+; RV64-BITS-UNKNOWN-NEXT:    vsetvli zero, zero, e8,m4,ta,mu
 ; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v28, v8, v16
 ; RV64-BITS-UNKNOWN-NEXT:    vmv4r.v v8, v28
 ; RV64-BITS-UNKNOWN-NEXT:    ret
@@ -517,7 +517,7 @@ define <vscale x 64 x i8> @reverse_nxv64i8(<vscale x 64 x i8> %a) {
 ; RV32-BITS-UNKNOWN-NEXT:    vsetvli a1, zero, e16,m8,ta,mu
 ; RV32-BITS-UNKNOWN-NEXT:    vid.v v16
 ; RV32-BITS-UNKNOWN-NEXT:    vrsub.vx v24, v16, a0
-; RV32-BITS-UNKNOWN-NEXT:    vsetvli a0, zero, e8,m4,ta,mu
+; RV32-BITS-UNKNOWN-NEXT:    vsetvli zero, zero, e8,m4,ta,mu
 ; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v20, v8, v24
 ; RV32-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v16, v12, v24
 ; RV32-BITS-UNKNOWN-NEXT:    vmv8r.v v8, v16
@@ -556,7 +556,7 @@ define <vscale x 64 x i8> @reverse_nxv64i8(<vscale x 64 x i8> %a) {
 ; RV64-BITS-UNKNOWN-NEXT:    vsetvli a1, zero, e16,m8,ta,mu
 ; RV64-BITS-UNKNOWN-NEXT:    vid.v v16
 ; RV64-BITS-UNKNOWN-NEXT:    vrsub.vx v24, v16, a0
-; RV64-BITS-UNKNOWN-NEXT:    vsetvli a0, zero, e8,m4,ta,mu
+; RV64-BITS-UNKNOWN-NEXT:    vsetvli zero, zero, e8,m4,ta,mu
 ; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v20, v8, v24
 ; RV64-BITS-UNKNOWN-NEXT:    vrgatherei16.vv v16, v12, v24
 ; RV64-BITS-UNKNOWN-NEXT:    vmv8r.v v8, v16

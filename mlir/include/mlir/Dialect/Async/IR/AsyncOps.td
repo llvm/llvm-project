@@ -343,7 +343,7 @@ def Async_RuntimeCreateOp : Async_Op<"runtime.create"> {
 }
 
 def Async_RuntimeSetAvailableOp : Async_Op<"runtime.set_available"> {
-  let summary = "switches token or value available state";
+  let summary = "switches token or value to available state";
   let description = [{
     The `async.runtime.set_available` operation switches async token or value
     state to available.
@@ -353,11 +353,37 @@ def Async_RuntimeSetAvailableOp : Async_Op<"runtime.set_available"> {
   let assemblyFormat = "$operand attr-dict `:` type($operand)";
 }
 
+def Async_RuntimeSetErrorOp : Async_Op<"runtime.set_error"> {
+  let summary = "switches token or value to error state";
+  let description = [{
+    The `async.runtime.set_error` operation switches async token or value
+    state to error.
+  }];
+
+  let arguments = (ins Async_AnyValueOrTokenType:$operand);
+  let assemblyFormat = "$operand attr-dict `:` type($operand)";
+}
+
+def Async_RuntimeIsErrorOp : Async_Op<"runtime.is_error"> {
+  let summary = "returns true if token, value or group is in error state";
+  let description = [{
+    The `async.runtime.is_error` operation returns true if the token, value or
+    group (any of the async runtime values) is in the error state. It is the
+    caller responsibility to check error state after the call to `await` or
+    resuming after `await_and_resume`.
+  }];
+
+  let arguments = (ins Async_AnyAsyncType:$operand);
+  let results = (outs I1:$is_error);
+
+  let assemblyFormat = "$operand attr-dict `:` type($operand)";
+}
+
 def Async_RuntimeAwaitOp : Async_Op<"runtime.await"> {
   let summary = "blocks the caller thread until the operand becomes available";
   let description = [{
     The `async.runtime.await` operation blocks the caller thread until the
-    operand becomes available.
+    operand becomes available or error.
   }];
 
   let arguments = (ins Async_AnyAsyncType:$operand);
@@ -379,8 +405,8 @@ def Async_RuntimeAwaitAndResumeOp : Async_Op<"runtime.await_and_resume"> {
   let summary = "awaits the async operand and resumes the coroutine";
   let description = [{
     The `async.runtime.await_and_resume` operation awaits for the operand to
-    become available and resumes the coroutine on a thread managed by the
-    runtime.
+    become available or error and resumes the coroutine on a thread managed by
+    the runtime.
   }];
 
   let arguments = (ins Async_AnyAsyncType:$operand,

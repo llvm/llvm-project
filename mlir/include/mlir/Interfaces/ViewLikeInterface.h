@@ -32,6 +32,10 @@ class OffsetSizeAndStrideOpInterface;
 
 namespace detail {
 LogicalResult verifyOffsetSizeAndStrideOp(OffsetSizeAndStrideOpInterface op);
+
+bool sameOffsetsSizesAndStrides(
+    OffsetSizeAndStrideOpInterface a, OffsetSizeAndStrideOpInterface b,
+    llvm::function_ref<bool(OpFoldResult, OpFoldResult)> cmp);
 } // namespace detail
 } // namespace mlir
 

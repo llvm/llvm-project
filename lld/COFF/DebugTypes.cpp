@@ -594,6 +594,8 @@ void TpiSource::loadGHashes() {
 // memory usage.
 void TpiSource::assignGHashesFromVector(
     std::vector<GloballyHashedType> &&hashVec) {
+  if (hashVec.empty())
+    return;
   GloballyHashedType *hashes = new GloballyHashedType[hashVec.size()];
   memcpy(hashes, hashVec.data(), hashVec.size() * sizeof(GloballyHashedType));
   ghashes = makeArrayRef(hashes, hashVec.size());

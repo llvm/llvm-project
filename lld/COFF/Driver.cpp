@@ -693,7 +693,16 @@ static std::string createResponseFile(const opt::InputArgList &args,
   return std::string(data.str());
 }
 
-enum class DebugKind { Unknown, None, Full, FastLink, GHash, Dwarf, Symtab };
+enum class DebugKind {
+  Unknown,
+  None,
+  Full,
+  FastLink,
+  GHash,
+  NoGHash,
+  Dwarf,
+  Symtab
+};
 
 static DebugKind parseDebugKind(const opt::InputArgList &args) {
   auto *a = args.getLastArg(OPT_debug, OPT_debug_opt);
@@ -703,14 +712,15 @@ static DebugKind parseDebugKind(const opt::InputArgList &args) {
     return DebugKind::Full;
 
   DebugKind debug = StringSwitch<DebugKind>(a->getValue())
-                     .CaseLower("none", DebugKind::None)
-                     .CaseLower("full", DebugKind::Full)
-                     .CaseLower("fastlink", DebugKind::FastLink)
-                     // LLD extensions
-                     .CaseLower("ghash", DebugKind::GHash)
-                     .CaseLower("dwarf", DebugKind::Dwarf)
-                     .CaseLower("symtab", DebugKind::Symtab)
-                     .Default(DebugKind::Unknown);
+                        .CaseLower("none", DebugKind::None)
+                        .CaseLower("full", DebugKind::Full)
+                        .CaseLower("fastlink", DebugKind::FastLink)
+                        // LLD extensions
+                        .CaseLower("ghash", DebugKind::GHash)
+                        .CaseLower("noghash", DebugKind::NoGHash)
+                        .CaseLower("dwarf", DebugKind::Dwarf)
+                        .CaseLower("symtab", DebugKind::Symtab)
+                        .Default(DebugKind::Unknown);
 
   if (debug == DebugKind::FastLink) {
     warn("/debug:fastlink unsupported; using /debug:full");
@@ -1393,7 +1403,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Handle /debug
   DebugKind debug = parseDebugKind(args);
   if (debug == DebugKind::Full || debug == DebugKind::Dwarf ||
-      debug == DebugKind::GHash) {
+      debug == DebugKind::GHash || debug == DebugKind::NoGHash) {
     config->debug = true;
     config->incremental = true;
   }
@@ -1416,7 +1426,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /pdb
   bool shouldCreatePDB =
-      (debug == DebugKind::Full || debug == DebugKind::GHash);
+      (debug == DebugKind::Full || debug == DebugKind::GHash ||
+       debug == DebugKind::NoGHash);
   if (shouldCreatePDB) {
     if (auto *arg = args.getLastArg(OPT_pdb))
       config->pdbPath = arg->getValue();
@@ -1749,7 +1760,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   config->terminalServerAware =
       !config->dll && args.hasFlag(OPT_tsaware, OPT_tsaware_no, true);
   config->debugDwarf = debug == DebugKind::Dwarf;
-  config->debugGHashes = debug == DebugKind::GHash;
+  config->debugGHashes = debug == DebugKind::GHash || debug == DebugKind::Full;
   config->debugSymtab = debug == DebugKind::Symtab;
   config->autoImport =
       args.hasFlag(OPT_auto_import, OPT_auto_import_no, config->mingw);

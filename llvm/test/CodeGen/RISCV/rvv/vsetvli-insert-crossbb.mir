@@ -230,12 +230,12 @@ body:             |
   ; CHECK:   PseudoBR %bb.1
   ; CHECK: bb.1.if.then:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   dead $x0 = PseudoVSETVLI [[COPY]], 88, implicit-def $vl, implicit-def $vtype
+  ; CHECK:   dead $x0 = PseudoVSETVLI killed $x0, 88, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK:   early-clobber %1:vr = PseudoVZEXT_VF2_M1 [[PseudoVLE32_V_MF2_]], $noreg, 6, implicit $vl, implicit $vtype
   ; CHECK:   PseudoBR %bb.3
   ; CHECK: bb.2.if.else:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   dead $x0 = PseudoVSETVLI [[COPY]], 88, implicit-def $vl, implicit-def $vtype
+  ; CHECK:   dead $x0 = PseudoVSETVLI killed $x0, 88, implicit-def $vl, implicit-def $vtype, implicit $vl
   ; CHECK:   early-clobber %2:vr = PseudoVSEXT_VF2_M1 [[PseudoVLE32_V_MF2_]], $noreg, 6, implicit $vl, implicit $vtype
   ; CHECK: bb.3.if.end:
   ; CHECK:   [[PHI:%[0-9]+]]:vr = PHI %1, %bb.1, %2, %bb.2

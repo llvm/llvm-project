@@ -8669,6 +8669,26 @@ public:
     return true;
   }
 
+  bool VisitSYCLUniqueStableNameExpr(const SYCLUniqueStableNameExpr *E) {
+    std::string ResultStr = E->ComputeName(Info.Ctx);
+
+    Info.Ctx.SYCLUniqueStableNameEvaluatedValues[E] = ResultStr;
+
+    QualType CharTy = Info.Ctx.CharTy.withConst();
+    APInt Size(Info.Ctx.getTypeSize(Info.Ctx.getSizeType()),
+               ResultStr.size() + 1);
+    QualType ArrayTy = Info.Ctx.getConstantArrayType(CharTy, Size, nullptr,
+                                                     ArrayType::Normal, 0);
+
+    StringLiteral *SL =
+        StringLiteral::Create(Info.Ctx, ResultStr, StringLiteral::Ascii,
+                              /*Pascal*/ false, ArrayTy, E->getLocation());
+
+    evaluateLValue(SL, Result);
+    Result.addArray(Info, E, cast<ConstantArrayType>(ArrayTy));
+    return true;
+  }
+
   // FIXME: Missing: @protocol, @selector
 };
 } // end anonymous namespace
@@ -10367,7 +10387,8 @@ namespace {
 
       Result = APValue(APValue::UninitArray(), 0,
                        CAT->getSize().getZExtValue());
-      if (!Result.hasArrayFiller()) return true;
+      if (!Result.hasArrayFiller())
+        return true;
 
       // Zero-initialize all elements.
       LValue Subobject = This;
@@ -15154,6 +15175,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::CoawaitExprClass:
   case Expr::DependentCoawaitExprClass:
   case Expr::CoyieldExprClass:
+  case Expr::SYCLUniqueStableNameExprClass:
     return ICEDiag(IK_NotICE, E->getBeginLoc());
 
   case Expr::InitListExprClass: {

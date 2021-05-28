@@ -304,7 +304,7 @@ define void @lmul_1_2_4_8() nounwind {
 ; CHECK-NEXT:    sd s0, 48(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    addi s0, sp, 64
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a1, a0, vl
+; CHECK-NEXT:    slli a1, a0, 4
 ; CHECK-NEXT:    sub a0, a1, a0
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    andi sp, sp, -64

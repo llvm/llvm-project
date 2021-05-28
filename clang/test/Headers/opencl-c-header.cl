@@ -190,46 +190,46 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 #elif (__OPENCL_C_VERSION__ < 200)
 
 #ifdef  __opencl_c_pipes
-#error "Incorret feature macro __opencl_c_pipes define"
+#error "Incorrect feature macro __opencl_c_pipes define"
 #endif
 #ifdef __opencl_c_generic_address_space
-#error "Incorret feature macro __opencl_c_generic_address_space define"
+#error "Incorrect feature macro __opencl_c_generic_address_space define"
 #endif
 #ifdef __opencl_c_work_group_collective_functions
-#error "Incorret feature macro __opencl_c_work_group_collective_functions define"
+#error "Incorrect feature macro __opencl_c_work_group_collective_functions define"
 #endif
 #ifdef __opencl_c_atomic_order_acq_rel
-#error "Incorret feature macro __opencl_c_atomic_order_acq_rel define"
+#error "Incorrect feature macro __opencl_c_atomic_order_acq_rel define"
 #endif
 #ifdef __opencl_c_atomic_order_seq_cst
-#error "Incorret feature macro __opencl_c_atomic_order_seq_cst define"
+#error "Incorrect feature macro __opencl_c_atomic_order_seq_cst define"
 #endif
 #ifdef __opencl_c_atomic_scope_device
-#error "Incorret feature macro __opencl_c_atomic_scope_device define"
+#error "Incorrect feature macro __opencl_c_atomic_scope_device define"
 #endif
 #ifdef __opencl_c_atomic_scope_all_devices
-#error "Incorret feature macro __opencl_c_atomic_scope_all_devices define"
+#error "Incorrect feature macro __opencl_c_atomic_scope_all_devices define"
 #endif
 #ifdef __opencl_c_device_enqueue
-#error "Incorret feature macro __opencl_c_device_enqueue define"
+#error "Incorrect feature macro __opencl_c_device_enqueue define"
 #endif
 #ifdef __opencl_c_read_write_images
-#error "Incorret feature macro __opencl_c_read_write_images define"
+#error "Incorrect feature macro __opencl_c_read_write_images define"
 #endif
 #ifdef __opencl_c_program_scope_global_variables
-#error "Incorret feature macro __opencl_c_program_scope_global_variables define"
+#error "Incorrect feature macro __opencl_c_program_scope_global_variables define"
 #endif
 #ifdef __opencl_c_images
-#error "Incorret feature macro __opencl_c_images define"
+#error "Incorrect feature macro __opencl_c_images define"
 #endif
 #ifdef __opencl_c_3d_image_writes
-#error "Incorret feature macro __opencl_c_3d_image_writes define"
+#error "Incorrect feature macro __opencl_c_3d_image_writes define"
 #endif
 #ifdef __opencl_c_fp64
-#error "Incorret feature macro __opencl_c_fp64 define"
+#error "Incorrect feature macro __opencl_c_fp64 define"
 #endif
 #ifdef __opencl_c_subgroups
-#error "Incorret feature macro __opencl_c_subgroups define"
+#error "Incorrect feature macro __opencl_c_subgroups define"
 #endif
 
 #endif //(defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ == 200)
