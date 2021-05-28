@@ -14,6 +14,7 @@ add_flang_library(FortranLower
   ConvertVariable.cpp
   DoLoopHelper.cpp
   FIRBuilder.cpp
+  HostAssociations.cpp
   IntrinsicCall.cpp
   IO.cpp
   Mangler.cpp

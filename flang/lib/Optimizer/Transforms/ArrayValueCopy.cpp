@@ -517,7 +517,8 @@ public:
     auto copyElement = [&](mlir::Value coor) {
       auto input = update.merge();
       if (auto inEleTy = fir::dyn_cast_ptrEleTy(input.getType())) {
-        auto outEleTy = fir::unwrapSequenceType(update.getType());
+        [[maybe_unused]] auto outEleTy =
+            fir::unwrapSequenceType(update.getType());
         if (auto inChrTy = inEleTy.dyn_cast<fir::CharacterType>()) {
           assert(outEleTy.isa<fir::CharacterType>());
           fir::factory::genCharacterCopy(input, recoverCharLen(input), coor,
