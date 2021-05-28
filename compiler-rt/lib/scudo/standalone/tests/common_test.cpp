@@ -43,8 +43,7 @@ TEST(ScudoCommonTest, SKIP_ON_FUCHSIA(ResidentMemorySize)) {
   EXPECT_GT(getResidentMemorySize() - OnStart, Size - Threshold);
 
   releasePagesToOS((uptr)P, 0, Size, &Data);
-  // FIXME: does not work with QEMU-user.
-  // EXPECT_LT(getResidentMemorySize() - OnStart, Threshold);
+  EXPECT_LT(getResidentMemorySize() - OnStart, Threshold);
 
   memset(P, 1, Size);
   EXPECT_GT(getResidentMemorySize() - OnStart, Size - Threshold);
