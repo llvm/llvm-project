@@ -639,7 +639,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
             return Query.Types[1].getNumElements() <= 16;
           },
           0, s8)
-      .minScalarOrElt(0, s8); // Worst case, we need at least s8.
+      .minScalarOrElt(0, s8) // Worst case, we need at least s8.
+      .clampMaxNumElements(1, s64, 2)
+      .clampMaxNumElements(1, s32, 4)
+      .clampMaxNumElements(1, s16, 8);
 
   getActionDefinitionsBuilder(G_INSERT_VECTOR_ELT)
       .legalIf(typeInSet(0, {v8s16, v2s32, v4s32, v2s64}));
