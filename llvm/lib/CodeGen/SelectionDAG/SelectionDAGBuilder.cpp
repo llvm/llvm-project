@@ -7305,7 +7305,7 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
   SDVTList VTs = DAG.getVTList(ValueVTs);
 
   auto EVLParamPos =
-      VPIntrinsic::GetVectorLengthParamPos(VPIntrin.getIntrinsicID());
+      VPIntrinsic::getVectorLengthParamPos(VPIntrin.getIntrinsicID());
 
   MVT EVLParamVT = TLI.getVPExplicitVectorLengthTy();
   assert(EVLParamVT.isScalarInteger() && EVLParamVT.bitsGE(MVT::i32) &&
@@ -7313,7 +7313,7 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
 
   // Request operands.
   SmallVector<SDValue, 7> OpValues;
-  for (int I = 0; I < (int)VPIntrin.getNumArgOperands(); ++I) {
+  for (unsigned I = 0; I < VPIntrin.getNumArgOperands(); ++I) {
     auto Op = getValue(VPIntrin.getArgOperand(I));
     if (I == EVLParamPos)
       Op = DAG.getNode(ISD::ZERO_EXTEND, DL, EVLParamVT, Op);
