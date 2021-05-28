@@ -662,6 +662,8 @@ bool SIFrameLowering::isSupportedStackID(TargetStackID::Value ID) const {
     return true;
   case TargetStackID::ScalableVector:
     return false;
+  default:
+    break;
   }
   llvm_unreachable("Invalid TargetStackID::Value");
 }

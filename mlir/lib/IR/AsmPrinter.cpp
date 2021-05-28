@@ -420,8 +420,12 @@ private:
 
     // Consider the operations within this block, ignoring the terminator if
     // requested.
+    bool hasTerminator =
+        !block->empty() && block->back().hasTrait<OpTrait::IsTerminator>();
     auto range = llvm::make_range(
-        block->begin(), std::prev(block->end(), printBlockTerminator ? 0 : 1));
+        block->begin(),
+        std::prev(block->end(),
+                  (!hasTerminator || printBlockTerminator) ? 0 : 1));
     for (Operation &op : range)
       print(&op);
   }
@@ -2604,8 +2608,12 @@ void OperationPrinter::print(Block *block, bool printBlockArgs,
   }
 
   currentIndent += indentWidth;
+  bool hasTerminator =
+      !block->empty() && block->back().hasTrait<OpTrait::IsTerminator>();
   auto range = llvm::make_range(
-      block->begin(), std::prev(block->end(), printBlockTerminator ? 0 : 1));
+      block->begin(),
+      std::prev(block->end(),
+                (!hasTerminator || printBlockTerminator) ? 0 : 1));
   for (auto &op : range) {
     print(&op);
     os << newLine;

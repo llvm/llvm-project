@@ -41,5 +41,5 @@ body:             |
     $r1 = COPY %1
     $r2 = COPY %2
     $r3 = COPY %3
-    TCRETURNri killed %5, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3
+    TCRETURNri killed %5, 0, implicit $sp, implicit $r0, implicit $r1, implicit $r2, implicit $r3
 ...
