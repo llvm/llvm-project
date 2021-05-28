@@ -528,12 +528,6 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   if (!LatchIsExiting)
     ++NumUnrolledNotLatch;
-  Optional<bool> ContinueOnTrue = None;
-  BasicBlock *LoopExit = nullptr;
-  if (ExitingBI) {
-    ContinueOnTrue = L->contains(ExitingBI->getSuccessor(0));
-    LoopExit = ExitingBI->getSuccessor(*ContinueOnTrue);
-  }
 
   // For the first iteration of the loop, we should use the precloned values for
   // PHI nodes.  Insert associations now.
@@ -545,14 +539,11 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   std::vector<BasicBlock *> Headers;
   std::vector<BasicBlock *> ExitingBlocks;
-  std::vector<BasicBlock *> ExitingSucc;
   std::vector<BasicBlock *> Latches;
   Headers.push_back(Header);
   Latches.push_back(LatchBlock);
-  if (ExitingBI) {
+  if (ExitingBI)
     ExitingBlocks.push_back(ExitingBI->getParent());
-    ExitingSucc.push_back(ExitingBI->getSuccessor(!(*ContinueOnTrue)));
-  }
 
   // The current on-the-fly SSA update requires blocks to be processed in
   // reverse postorder so that LastValueMap contains the correct value at each
@@ -652,12 +643,9 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
       // Keep track of the exiting block and its successor block contained in
       // the loop for the current iteration.
-      if (ExitingBI) {
+      if (ExitingBI)
         if (*BB == ExitingBlocks[0])
           ExitingBlocks.push_back(New);
-        if (*BB == ExitingSucc[0])
-          ExitingSucc.push_back(New);
-      }
 
       NewBlocks.push_back(New);
       UnrolledLoopBlocks.push_back(New);
@@ -714,109 +702,72 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     }
   }
 
-  auto setDest = [](BasicBlock *Src, BasicBlock *Dest, BasicBlock *BlockInLoop,
-                    bool NeedConditional, Optional<bool> ContinueOnTrue,
-                    bool IsDestLoopExit) {
-    auto *Term = cast<BranchInst>(Src->getTerminator());
-    if (NeedConditional) {
-      // Update the conditional branch's successor for the following
-      // iteration.
-      assert(ContinueOnTrue.hasValue() &&
-             "Expecting valid ContinueOnTrue when NeedConditional is true");
-      Term->setSuccessor(!(*ContinueOnTrue), Dest);
-    } else {
-      // Remove phi operands at this loop exit
-      if (!IsDestLoopExit) {
-        BasicBlock *BB = Src;
-        for (BasicBlock *Succ : successors(BB)) {
-          // Preserve the incoming value from BB if we are jumping to the block
-          // in the current loop.
-          if (Succ == BlockInLoop)
-            continue;
-          for (PHINode &Phi : Succ->phis())
-            Phi.removeIncomingValue(BB, false);
-        }
+  // Connect latches of the unrolled iterations to the headers of the next
+  // iteration. Currently they point to the header of the same iteration.
+  for (unsigned i = 0, e = Latches.size(); i != e; ++i) {
+    unsigned j = (i + 1) % e;
+    Latches[i]->getTerminator()->replaceSuccessorWith(Headers[i], Headers[j]);
+  }
+
+  if (ExitingBI) {
+    auto SetDest = [](BasicBlock *Src, bool WillExit, bool ExitOnTrue) {
+      auto *Term = cast<BranchInst>(Src->getTerminator());
+      BasicBlock *Dest = Term->getSuccessor(ExitOnTrue ^ WillExit);
+
+      // Remove predecessors from all non-Dest successors.
+      for (BasicBlock *Succ : successors(Src)) {
+        if (Succ == Dest)
+          continue;
+        Succ->removePredecessor(Src, /* KeepOneInputPHIs */ true);
       }
+
       // Replace the conditional branch with an unconditional one.
       BranchInst::Create(Dest, Term);
       Term->eraseFromParent();
-    }
-  };
+    };
 
-  // Connect latches of the unrolled iterations to the headers of the next
-  // iteration. If the latch is also the exiting block, the conditional branch
-  // may have to be preserved.
-  for (unsigned i = 0, e = Latches.size(); i != e; ++i) {
-    // The branch destination.
-    unsigned j = (i + 1) % e;
-    BasicBlock *Dest = Headers[j];
-    bool NeedConditional = LatchIsExiting;
-
-    if (LatchIsExiting) {
-      if (RuntimeTripCount && j != 0)
-        NeedConditional = false;
-
-      // For a complete unroll, make the last iteration end with a branch
-      // to the exit block.
+    auto WillExit = [&](unsigned i, unsigned j) -> Optional<bool> {
       if (CompletelyUnroll) {
-        if (j == 0)
-          Dest = LoopExit;
-        // If using trip count upper bound to completely unroll, we need to
-        // keep the conditional branch except the last one because the loop
-        // may exit after any iteration.
-        assert(NeedConditional &&
-               "NeedCondition cannot be modified by both complete "
-               "unrolling and runtime unrolling");
-        NeedConditional =
-            (ULO.PreserveCondBr && j && !(ULO.PreserveOnlyFirst && i != 0));
-      } else if (j != BreakoutTrip &&
-                 (ULO.TripMultiple == 0 || j % ULO.TripMultiple != 0)) {
+        if (ULO.PreserveCondBr && j && !(ULO.PreserveOnlyFirst && i != 0))
+          return None;
+        return j == 0;
+      }
+
+      if (RuntimeTripCount && j != 0)
+        return false;
+
+      if (j != BreakoutTrip &&
+          (ULO.TripMultiple == 0 || j % ULO.TripMultiple != 0)) {
         // If we know the trip count or a multiple of it, we can safely use an
         // unconditional branch for some iterations.
-        NeedConditional = false;
+        return false;
       }
-    }
+      return None;
+    };
 
-    setDest(Latches[i], Dest, Headers[i], NeedConditional, ContinueOnTrue,
-            Dest == LoopExit);
-  }
-
-  if (!LatchIsExiting) {
-    // If the latch is not exiting, we may be able to simplify the conditional
-    // branches in the unrolled exiting blocks.
+    // Fold branches for iterations where we know that they will exit or not
+    // exit.
+    bool ExitOnTrue = !L->contains(ExitingBI->getSuccessor(0));
     for (unsigned i = 0, e = ExitingBlocks.size(); i != e; ++i) {
       // The branch destination.
       unsigned j = (i + 1) % e;
-      bool NeedConditional = true;
-
-      if (RuntimeTripCount && j != 0)
-        NeedConditional = false;
-
-      if (CompletelyUnroll)
-        // We cannot drop the conditional branch for the last condition, as we
-        // may have to execute the loop body depending on the condition.
-        NeedConditional = j == 0 || ULO.PreserveCondBr;
-      else if (j != BreakoutTrip &&
-               (ULO.TripMultiple == 0 || j % ULO.TripMultiple != 0))
-        // If we know the trip count or a multiple of it, we can safely use an
-        // unconditional branch for some iterations.
-        NeedConditional = false;
-
-      // Conditional branches from non-latch exiting block have successors
-      // either in the same loop iteration or outside the loop. The branches are
-      // already correct.
-      if (NeedConditional)
+      Optional<bool> KnownWillExit = WillExit(i, j);
+      if (!KnownWillExit)
         continue;
-      setDest(ExitingBlocks[i], ExitingSucc[i], ExitingSucc[i], NeedConditional,
-              None, false);
-    }
 
-    // When completely unrolling, the last latch becomes unreachable.
-    if (CompletelyUnroll) {
-      BranchInst *Term = cast<BranchInst>(Latches.back()->getTerminator());
-      new UnreachableInst(Term->getContext(), Term);
-      Term->eraseFromParent();
+      // TODO: Also fold known-exiting branches for non-latch exits.
+      if (*KnownWillExit && !LatchIsExiting)
+        continue;
+
+      SetDest(ExitingBlocks[i], *KnownWillExit, ExitOnTrue);
     }
+  }
+
+  // When completely unrolling, the last latch becomes unreachable.
+  if (!LatchIsExiting && CompletelyUnroll) {
+    BranchInst *Term = cast<BranchInst>(Latches.back()->getTerminator());
+    new UnreachableInst(Term->getContext(), Term);
+    Term->eraseFromParent();
   }
 
   // Update dominators of blocks we might reach through exits.
