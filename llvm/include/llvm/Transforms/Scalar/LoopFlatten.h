@@ -24,8 +24,7 @@ class LoopFlattenPass : public PassInfoMixin<LoopFlattenPass> {
 public:
   LoopFlattenPass() = default;
 
-  PreservedAnalyses run(LoopNest &LN, LoopAnalysisManager &LAM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // end namespace llvm
