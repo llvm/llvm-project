@@ -25,7 +25,6 @@ void traverse(Function &F) {
   for (auto iterator = df_begin(&F.getEntryBlock()),
            IE = df_end(&F.getEntryBlock());
        iterator != IE; ++iterator) {
-    outs() << *iterator << "\n";
     outs() << iterator->getName() << "\n";
     for (auto &instruction : **iterator) {
       outs() << instruction << "\n";
@@ -38,7 +37,6 @@ void traverse(Function &F) {
   for (auto iterator = idf_begin(&F.getEntryBlock()),
            IE = idf_end(&F.getEntryBlock());
        iterator != IE; ++iterator) {
-    outs() << *iterator << "\n";
     outs() << iterator->getName() << "\n";
     for (auto &instruction : **iterator) {
       outs() << instruction << "\n";
@@ -51,7 +49,6 @@ void traverse(Function &F) {
   for (auto iterator = bf_begin(&F.getEntryBlock()),
            IE = bf_end(&F.getEntryBlock());
        iterator != IE; ++iterator) {
-    outs() << *iterator << "\n";
     outs() << iterator->getName() << "\n";
     for (auto &instruction : **iterator) {
       outs() << instruction << "\n";
@@ -64,7 +61,6 @@ void traverse(Function &F) {
   for (auto iterator = po_begin(&F.getEntryBlock()),
            IE = po_end(&F.getEntryBlock());
        iterator != IE; ++iterator) {
-    outs() << *iterator << "\n";
     outs() << iterator->getName() << "\n";
     for (auto &instruction : **iterator) {
       outs() << instruction << "\n";
@@ -88,7 +84,6 @@ void traverse(Function &F) {
   for (auto iterator = succ_begin(&F.getEntryBlock()),
            IE = succ_end(&F.getEntryBlock());
        iterator != IE; ++iterator) {
-    outs() << *iterator << "\n";
     outs() << iterator->getName() << "\n";
     for (auto &instruction : **iterator) {
       outs() << instruction << "\n";
@@ -123,7 +118,7 @@ void traverseBasicBlock(Function &F, int nestedLevel) {
         // use this hack to check if function is external
         if (call != nullptr && call->getCalledFunction() != nullptr && !call->getCalledFunction()->empty()) {
           outs() << prefix << "Traversing nestedLevel function " << call->getCalledFunction()->getName() << " Instruction '" << i << "'\n";
-          traverseBasicBlock(*call->getCalledFunction(), nestedLevel + 1);
+          traverseBasicBlock(*(call->getCalledFunction()), nestedLevel + 1);
           outs() << prefix << "Finished traversing nestedLevel function " << call->getCalledFunction()->getName() << "\n";
         } else {
           // The function is outside of the translation unit, hence it is an exit point
@@ -168,7 +163,5 @@ PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
 
   traverse(F);
 
-  CFGPrinterPass cfg;
-  cfg.run(F, AM);
   return PreservedAnalyses::all();
 }
