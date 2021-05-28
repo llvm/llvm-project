@@ -8458,9 +8458,7 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
 void EpilogueVectorizerEpilogueLoop::printDebugTracesAtStart() {
   LLVM_DEBUG({
     dbgs() << "Create Skeleton for epilogue vectorized loop (second pass)\n"
-           << "Main Loop VF:" << EPI.MainLoopVF.getKnownMinValue()
-           << ", Main Loop UF:" << EPI.MainLoopUF
-           << ", Epilogue Loop VF:" << EPI.EpilogueVF.getKnownMinValue()
+           << "Epilogue Loop VF:" << EPI.EpilogueVF.getKnownMinValue()
            << ", Epilogue Loop UF:" << EPI.EpilogueUF << "\n";
   });
 }
