@@ -24,13 +24,12 @@ namespace llvm {
   class RegScavenger;
 
 namespace TargetStackID {
-enum Value {
-  Default = 0,
-  SGPRSpill = 1,
-  ScalableVector = 2,
-  WasmLocal = 3,
-  NoAlloc = 255
-};
+  enum Value {
+    Default = 0,
+    SGPRSpill = 1,
+    ScalableVector = 2,
+    NoAlloc = 255
+  };
 }
 
 /// Information about stack frame layout on the target.  It holds the direction
