@@ -1777,7 +1777,7 @@ define void @cmpxchg_i32_release_acquire(i32* %ptr, i32 %cmp, i32 %val) nounwind
 ; RV32IA-LABEL: cmpxchg_i32_release_acquire:
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:  .LBB24_1: # =>This Inner Loop Header: Depth=1
-; RV32IA-NEXT:    lr.w a3, (a0)
+; RV32IA-NEXT:    lr.w.aq a3, (a0)
 ; RV32IA-NEXT:    bne a3, a1, .LBB24_3
 ; RV32IA-NEXT:  # %bb.2: # in Loop: Header=BB24_1 Depth=1
 ; RV32IA-NEXT:    sc.w.rl a4, a2, (a0)
@@ -1802,7 +1802,7 @@ define void @cmpxchg_i32_release_acquire(i32* %ptr, i32 %cmp, i32 %val) nounwind
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    sext.w a1, a1
 ; RV64IA-NEXT:  .LBB24_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.w a3, (a0)
+; RV64IA-NEXT:    lr.w.aq a3, (a0)
 ; RV64IA-NEXT:    bne a3, a1, .LBB24_3
 ; RV64IA-NEXT:  # %bb.2: # in Loop: Header=BB24_1 Depth=1
 ; RV64IA-NEXT:    sc.w.rl a4, a2, (a0)
@@ -2375,7 +2375,7 @@ define void @cmpxchg_i64_release_acquire(i64* %ptr, i64 %cmp, i64 %val) nounwind
 ; RV64IA-LABEL: cmpxchg_i64_release_acquire:
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:  .LBB34_1: # =>This Inner Loop Header: Depth=1
-; RV64IA-NEXT:    lr.d a3, (a0)
+; RV64IA-NEXT:    lr.d.aq a3, (a0)
 ; RV64IA-NEXT:    bne a3, a1, .LBB34_3
 ; RV64IA-NEXT:  # %bb.2: # in Loop: Header=BB34_1 Depth=1
 ; RV64IA-NEXT:    sc.d.rl a4, a2, (a0)
