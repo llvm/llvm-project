@@ -242,11 +242,7 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
     auto mangleName = converter.mangleName(s) + ".desc";
     if (builder.getNamedGlobal(mangleName))
       continue;
-    const auto expr =
-        Fortran::evaluate::TypedWrapper<Fortran::evaluate::Designator,
-                                        Fortran::evaluate::DataRef>(
-            *Fortran::evaluate::DynamicType::From(s.GetType()),
-            Fortran::evaluate::DataRef{s});
+    const auto expr = Fortran::evaluate::AsGenericExpr(s);
     auto boxTy = fir::BoxType::get(converter.genType(s));
     auto descFunc = [&](Fortran::lower::FirOpBuilder &b) {
       auto box =
@@ -280,11 +276,7 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
         descAddr = builder.create<fir::AddrOfOp>(loc, desc.resultType(),
                                                  desc.getSymbol());
       } else {
-        const auto expr =
-            Fortran::evaluate::TypedWrapper<Fortran::evaluate::Designator,
-                                            Fortran::evaluate::DataRef>(
-                *Fortran::evaluate::DynamicType::From(s.GetType()),
-                Fortran::evaluate::DataRef{s});
+        const auto expr = Fortran::evaluate::AsGenericExpr(s);
         auto exv = converter.genExprAddr(*expr, stmtCtx);
         auto box = builder.createBox(loc, exv);
         descAddr = builder.createTemporary(loc, box.getType());
