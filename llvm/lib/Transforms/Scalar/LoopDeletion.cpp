@@ -283,17 +283,16 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
     // Can we prove constant true or false for this condition?
     const SCEV *LHSS = getSCEVOnFirstIteration(LHS, L, SE, FirstIterSCEV);
     const SCEV *RHSS = getSCEVOnFirstIteration(RHS, L, SE, FirstIterSCEV);
-    // Only query for liveness of in-loop edge if another successor is also
-    // in-loop.
-    // TODO: isKnownPredicateAt is more powerful, but it's too compile time
-    // consuming. So we avoid using it here.
-    if (L->contains(Term->getSuccessor(1)) &&
-        SE.isKnownPredicate(Pred, LHSS, RHSS))
-      MarkLiveEdge(BB, Term->getSuccessor(0));
+        // Only query for liveness of in-loop edge if another successor is also
+        // in-loop.
+        // TODO: isKnownPredicateAt is more powerful, but it's too compile time
+        // consuming. So we avoid using it here.
+        if (L->contains(Term->getSuccessor(1)) &&
+            SE.isKnownPredicate(Pred, LHSS, RHSS))
+        MarkLiveEdge(BB, Term->getSuccessor(0));
     else if (L->contains(Term->getSuccessor(0)) &&
              SE.isKnownPredicate(ICmpInst::getInversePredicate(Pred), LHSS,
-                                 RHSS))
-      MarkLiveEdge(BB, Term->getSuccessor(1));
+                                 RHSS)) MarkLiveEdge(BB, Term->getSuccessor(1));
     else
       MarkAllSuccessorsLive(BB);
   }
