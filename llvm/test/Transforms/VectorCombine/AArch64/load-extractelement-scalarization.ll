@@ -472,14 +472,45 @@ define i32 @load_4_extracts_with_variable_indices_short_vector(<4 x i32>* %x, i6
   ret i32 %res.2
 }
 
-define i32 @load_multiple_extracts_with_variable_indices_large_vector(<16 x i32>* %x, i64 %idx.0, i64 %idx.1) {
-; CHECK-LABEL: @load_multiple_extracts_with_variable_indices_large_vector(
-; CHECK-NEXT:    [[LV:%.*]] = load <16 x i32>, <16 x i32>* [[X:%.*]], align 64
-; CHECK-NEXT:    [[E_0:%.*]] = extractelement <16 x i32> [[LV]], i64 [[IDX_0:%.*]]
-; CHECK-NEXT:    [[E_1:%.*]] = extractelement <16 x i32> [[LV]], i64 [[IDX_1:%.*]]
+define i32 @load_multiple_extracts_with_variable_indices_large_vector_only_first_valid(<16 x i32>* %x, i64 %idx.0, i64 %idx.1) {
+; CHECK-LABEL: @load_multiple_extracts_with_variable_indices_large_vector_only_first_valid(
+; CHECK-NEXT:    [[CMP_IDX_0:%.*]] = icmp ult i64 [[IDX_0:%.*]], 16
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_IDX_0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i32>, <16 x i32>* [[X:%.*]], i32 0, i64 [[IDX_0]]
+; CHECK-NEXT:    [[E_0:%.*]] = load i32, i32* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <16 x i32>, <16 x i32>* [[X]], i32 0, i64 [[IDX_1:%.*]]
+; CHECK-NEXT:    [[E_1:%.*]] = load i32, i32* [[TMP2]], align 4
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[E_0]], [[E_1]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
+  %cmp.idx.0 = icmp ult i64 %idx.0, 16
+  call void @llvm.assume(i1 %cmp.idx.0)
+
+  %lv = load <16 x i32>, <16 x i32>* %x
+  %e.0 = extractelement <16 x i32> %lv, i64 %idx.0
+  %e.1 = extractelement <16 x i32> %lv, i64 %idx.1
+  %res = add i32 %e.0, %e.1
+  ret i32 %res
+}
+
+define i32 @load_multiple_extracts_with_variable_indices_large_vector_only_all_valid(<16 x i32>* %x, i64 %idx.0, i64 %idx.1) {
+; CHECK-LABEL: @load_multiple_extracts_with_variable_indices_large_vector_only_all_valid(
+; CHECK-NEXT:    [[CMP_IDX_0:%.*]] = icmp ult i64 [[IDX_0:%.*]], 16
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_IDX_0]])
+; CHECK-NEXT:    [[CMP_IDX_1:%.*]] = icmp ult i64 [[IDX_1:%.*]], 16
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_IDX_1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i32>, <16 x i32>* [[X:%.*]], i32 0, i64 [[IDX_0]]
+; CHECK-NEXT:    [[E_0:%.*]] = load i32, i32* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <16 x i32>, <16 x i32>* [[X]], i32 0, i64 [[IDX_1]]
+; CHECK-NEXT:    [[E_1:%.*]] = load i32, i32* [[TMP2]], align 4
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[E_0]], [[E_1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %cmp.idx.0 = icmp ult i64 %idx.0, 16
+  call void @llvm.assume(i1 %cmp.idx.0)
+  %cmp.idx.1 = icmp ult i64 %idx.1, 16
+  call void @llvm.assume(i1 %cmp.idx.1)
+
   %lv = load <16 x i32>, <16 x i32>* %x
   %e.0 = extractelement <16 x i32> %lv, i64 %idx.0
   %e.1 = extractelement <16 x i32> %lv, i64 %idx.1
