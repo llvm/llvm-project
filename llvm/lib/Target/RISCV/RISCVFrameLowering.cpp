@@ -1100,6 +1100,8 @@ bool RISCVFrameLowering::isSupportedStackID(TargetStackID::Value ID) const {
   case TargetStackID::NoAlloc:
   case TargetStackID::SGPRSpill:
     return false;
+  default:
+    break;
   }
   llvm_unreachable("Invalid TargetStackID::Value");
 }
