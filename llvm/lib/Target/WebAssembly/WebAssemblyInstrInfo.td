@@ -72,8 +72,6 @@ def SDT_WebAssemblyCallSeqEnd :
     SDCallSeqEnd<[SDTCisVT<0, iPTR>, SDTCisVT<1, iPTR>]>;
 def SDT_WebAssemblyBrTable    : SDTypeProfile<0, -1, [SDTCisPtrTy<0>]>;
 def SDT_WebAssemblyArgument   : SDTypeProfile<1, 1, [SDTCisVT<1, i32>]>;
-def SDT_WebAssemblyLocalGet   : SDTypeProfile<1, 1, [SDTCisVT<1, i32>]>;
-def SDT_WebAssemblyLocalSet   : SDTypeProfile<0, 2, [SDTCisVT<0, i32>]>;
 def SDT_WebAssemblyReturn     : SDTypeProfile<0, -1, []>;
 def SDT_WebAssemblyWrapper    : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
                                                      SDTCisPtrTy<0>]>;
@@ -116,12 +114,6 @@ def WebAssemblyglobal_get :
 def WebAssemblyglobal_set :
     SDNode<"WebAssemblyISD::GLOBAL_SET", SDT_WebAssemblyGlobalSet,
            [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def WebAssemblylocal_get :
-    SDNode<"WebAssemblyISD::LOCAL_GET", SDT_WebAssemblyLocalGet,
-           [SDNPHasChain, SDNPMayLoad]>;
-def WebAssemblylocal_set :
-    SDNode<"WebAssemblyISD::LOCAL_SET", SDT_WebAssemblyLocalSet,
-           [SDNPHasChain, SDNPMayStore]>;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific Operands.
@@ -340,10 +332,6 @@ multiclass LOCAL<WebAssemblyRegClass rc, Operand global_op> {
     def : Pat<(WebAssemblyglobal_set
                vt:$src, (WebAssemblywrapper tglobaladdr:$addr)),
               (!cast<NI>("GLOBAL_SET_" # rc) tglobaladdr:$addr, vt:$src)>;
-    def : Pat<(vt (WebAssemblylocal_get (i32 timm:$local))),
-              (!cast<NI>("LOCAL_GET_" # rc) timm:$local)>;
-    def : Pat<(WebAssemblylocal_set timm:$local, vt:$src),
-              (!cast<NI>("LOCAL_SET_" # rc) timm:$local, vt:$src)>;
   }
 }
 defm "" : LOCAL<I32, global_op32>;
