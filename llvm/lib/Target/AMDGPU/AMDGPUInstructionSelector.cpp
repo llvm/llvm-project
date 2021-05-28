@@ -3692,11 +3692,6 @@ AMDGPUInstructionSelector::selectScratchSAddr(MachineOperand &Root) const {
   }};
 }
 
-static bool isStackPtrRelative(const MachinePointerInfo &PtrInfo) {
-  auto PSV = PtrInfo.V.dyn_cast<const PseudoSourceValue *>();
-  return PSV && PSV->isStack();
-}
-
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
   MachineInstr *MI = Root.getParent();
@@ -3818,18 +3813,13 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffset(
 
   const MachineFunction *MF = MBB->getParent();
   const SIMachineFunctionInfo *Info = MF->getInfo<SIMachineFunctionInfo>();
-  const MachineMemOperand *MMO = *MI->memoperands_begin();
-  const MachinePointerInfo &PtrInfo = MMO->getPointerInfo();
 
   return {{
       [=](MachineInstrBuilder &MIB) { // rsrc
         MIB.addReg(Info->getScratchRSrcReg());
       },
       [=](MachineInstrBuilder &MIB) { // soffset
-        if (isStackPtrRelative(PtrInfo))
-          MIB.addReg(Info->getStackPtrOffsetReg());
-        else
-          MIB.addImm(0);
+        MIB.addImm(0);
       },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Offset); } // offset
   }};

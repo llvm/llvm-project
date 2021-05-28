@@ -9,13 +9,15 @@
 // COFF-DAG: define dso_local i32* @zed()
 // COFF-DAG: declare dllimport void @import_func()
 
-// RUN: %clang_cc1 -triple x86_64-w64-mingw32 -emit-llvm %s -o - | FileCheck --check-prefix=MINGW %s
+// RUN: %clang_cc1 -triple x86_64-w64-mingw32 -emit-llvm %s -o - | FileCheck --check-prefixes=MINGW,MINGW-NATIVE_TLS %s
+// RUN: %clang_cc1 -triple x86_64-w64-mingw32 -emit-llvm %s -o - -femulated-tls | FileCheck --check-prefixes=MINGW,MINGW-EMUTLS %s
 // MINGW:      @baz = dso_local global i32 42
 // MINGW-NEXT: @import_var = external dllimport global i32
 // MINGW-NEXT: @weak_bar = extern_weak global i32
 // MINGW-NEXT: @bar = external global i32
 // MINGW-NEXT: @local_thread_var = dso_local thread_local global i32 42
-// MINGW-NEXT: @thread_var = external dso_local thread_local global i32
+// MINGW-NATIVE_TLS-NEXT: @thread_var = external dso_local thread_local global i32
+// MINGW-EMUTLS-NEXT: @thread_var = external thread_local global i32
 // MINGW-DAG: declare dso_local void @foo()
 // MINGW-DAG: define dso_local i32* @zed()
 // MINGW-DAG: declare dllimport void @import_func()

@@ -70,11 +70,11 @@ bool stripDebugInfo(Function &F);
 bool stripNonLineTableDebugInfo(Module &M);
 
 /// Update the debug locations contained within the MD_loop metadata attached
-/// to the instruction \p I, if one exists. \p Updater is applied to each debug
-/// location in the MD_loop metadata: the returned value is included in the
+/// to the instruction \p I, if one exists. \p Updater is applied to Metadata
+/// operand in the MD_loop metadata: the returned value is included in the
 /// updated loop metadata node if it is non-null.
 void updateLoopMetadataDebugLocations(
-    Instruction &I, function_ref<DILocation *(const DILocation &)> Updater);
+    Instruction &I, function_ref<Metadata *(Metadata *)> Updater);
 
 /// Return Debug Info Metadata Version by checking module flags.
 unsigned getDebugMetadataVersionFromModule(const Module &M);

@@ -858,9 +858,6 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   if (!FixedVT)
     return false;
 
-  if (!canScalarizeAccess(FixedVT, Idx, &I, AC))
-    return false;
-
   InstructionCost OriginalCost = TTI.getMemoryOpCost(
       Instruction::Load, LI->getType(), Align(LI->getAlignment()),
       LI->getPointerAddressSpace());
@@ -893,6 +890,9 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
       LastCheckedInst = UI;
     else if (LastCheckedInst->comesBefore(UI))
       LastCheckedInst = UI;
+
+    if (!canScalarizeAccess(FixedVT, UI->getOperand(1), &I, AC))
+      return false;
 
     auto *Index = dyn_cast<ConstantInt>(UI->getOperand(1));
     OriginalCost +=

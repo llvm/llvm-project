@@ -3942,7 +3942,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (CallConv == CallingConv::X86_INTR)
     report_fatal_error("X86 interrupts may not be called directly");
 
-  if (Subtarget.isPICStyleGOT() && !IsGuaranteeTCO) {
+  bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
+  if (Subtarget.isPICStyleGOT() && !IsGuaranteeTCO && !IsMustTail) {
     // If we are using a GOT, disable tail calls to external symbols with
     // default visibility. Tail calling such a symbol requires using a GOT
     // relocation, which forces early binding of the symbol. This breaks code
@@ -3954,13 +3955,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       isTailCall = false;
   }
 
-  bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
-  if (IsMustTail) {
-    // Force this to be a tail call.  The verifier rules are enough to ensure
-    // that we can lower this successfully without moving the return address
-    // around.
-    isTailCall = true;
-  } else if (isTailCall) {
+
+  if (isTailCall && !IsMustTail) {
     // Check if it's really possible to do a tail call.
     isTailCall = IsEligibleForTailCallOptimization(Callee, CallConv,
                     isVarArg, SR != NotStructReturn,
@@ -3975,6 +3971,10 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     if (isTailCall)
       ++NumTailCalls;
   }
+
+  if (IsMustTail && !isTailCall)
+    report_fatal_error("failed to perform tail call elimination on a call "
+                       "site marked musttail");
 
   assert(!(isVarArg && canGuaranteeTCO(CallConv)) &&
          "Var args not supported with calling convention fastcc, ghc or hipe");
@@ -4005,7 +4005,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     NumBytes = GetAlignedArgumentStackSize(NumBytes, DAG);
 
   int FPDiff = 0;
-  if (isTailCall && !IsSibcall && !IsMustTail) {
+  if (isTailCall &&
+      shouldGuaranteeTCO(CallConv,
+                         MF.getTarget().Options.GuaranteedTailCallOpt)) {
     // Lower arguments at fp - stackoffset + fpdiff.
     unsigned NumBytesCallerPushed = X86Info->getBytesToPopOnReturn();
 

@@ -341,3 +341,33 @@ void CastIntToUnsignedLongIntStaticCast() {
   matrix_5_5<unsigned long int> u;
   u = static_cast<matrix_5_5<unsigned long int>>(i);
 }
+
+class Foo {
+  int x[10];
+
+public:
+  Foo(matrix_5_5<int> x);
+};
+
+Foo class_constructor_matrix_ty(matrix_5_5<int> m) {
+  // CHECK-LABEL: define void @_Z27class_constructor_matrix_tyu11matrix_typeILm5ELm5EiE(%class.Foo* noalias sret(%class.Foo) align 4 %agg.result, <25 x i32> %m)
+  // CHECK:         [[M:%.*]]  = load <25 x i32>, <25 x i32>* {{.*}}, align 4
+  // CHECK-NEXT:    call void @_ZN3FooC1Eu11matrix_typeILm5ELm5EiE(%class.Foo* nonnull align 4 dereferenceable(40) %agg.result, <25 x i32> [[M]])
+  // CHECK-NEXT:    ret void
+
+  return Foo(m);
+}
+
+struct Bar {
+  float x[10];
+  Bar(matrix_4_4<float> x);
+};
+
+Bar struct_constructor_matrix_ty(matrix_4_4<float> m) {
+  // CHECK-LABEL: define void @_Z28struct_constructor_matrix_tyu11matrix_typeILm4ELm4EfE(%struct.Bar* noalias sret(%struct.Bar) align 4 %agg.result, <16 x float> %m)
+  // CHECK:         [[M:%.*]] = load <16 x float>, <16 x float>* {{.*}}, align 4
+  // CHECK-NEXT:    call void @_ZN3BarC1Eu11matrix_typeILm4ELm4EfE(%struct.Bar* nonnull align 4 dereferenceable(40) %agg.result, <16 x float> [[M]])
+  // CHECK-NEXT:    ret void
+
+  return Bar(m);
+}

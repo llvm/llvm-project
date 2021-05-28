@@ -2037,7 +2037,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       }
 
       auto NewMI = std::prev(MBBI);
-      for (unsigned i = 1, e = MBBI->getNumOperands(); i != e; ++i)
+      for (unsigned i = 2, e = MBBI->getNumOperands(); i != e; ++i)
         NewMI->addOperand(MBBI->getOperand(i));
 
 

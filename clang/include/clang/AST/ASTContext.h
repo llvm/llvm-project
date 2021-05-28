@@ -103,6 +103,7 @@ class DynTypedNode;
 class DynTypedNodeList;
 class Expr;
 class GlobalDecl;
+class ItaniumMangleContext;
 class MangleContext;
 class MangleNumberingContext;
 class MaterializeTemporaryExpr;
@@ -3166,7 +3167,7 @@ public:
 
   void AddSYCLKernelNamingDecl(const CXXRecordDecl *RD);
   bool IsSYCLKernelNamingDecl(const NamedDecl *RD) const;
-  unsigned GetSYCLKernelNamingIndex(const NamedDecl *RD) const;
+  unsigned GetSYCLKernelNamingIndex(const NamedDecl *RD);
   /// A SourceLocation to store whether we have evaluated a kernel name already,
   /// and where it happened.  If so, we need to diagnose an illegal use of the
   /// builtin.
@@ -3185,6 +3186,10 @@ private:
   llvm::DenseMap<const DeclContext *,
                  llvm::SmallPtrSet<const CXXRecordDecl *, 4>>
       SYCLKernelNamingTypes;
+  std::unique_ptr<ItaniumMangleContext> SYCLKernelFilterContext;
+  void FilterSYCLKernelNamingDecls(
+      const CXXRecordDecl *RD,
+      llvm::SmallVectorImpl<const CXXRecordDecl *> &Decls);
 };
 
 /// Insertion operator for diagnostics.

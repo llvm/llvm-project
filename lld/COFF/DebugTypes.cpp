@@ -594,6 +594,8 @@ void TpiSource::loadGHashes() {
 // memory usage.
 void TpiSource::assignGHashesFromVector(
     std::vector<GloballyHashedType> &&hashVec) {
+  if (hashVec.empty())
+    return;
   GloballyHashedType *hashes = new GloballyHashedType[hashVec.size()];
   memcpy(hashes, hashVec.data(), hashVec.size() * sizeof(GloballyHashedType));
   ghashes = makeArrayRef(hashes, hashVec.size());
@@ -1069,7 +1071,8 @@ void TypeMerger::mergeTypesWithGHash() {
 
   // Cap the table size so that we can use 32-bit cell indices. Type indices are
   // also 32-bit, so this is an inherent PDB file format limit anyway.
-  tableSize = std::min(size_t(INT32_MAX), tableSize);
+  tableSize =
+      std::min(size_t(INT32_MAX) - TypeIndex::FirstNonSimpleIndex, tableSize);
   ghashState.table.init(static_cast<uint32_t>(tableSize));
 
   // Insert ghashes in parallel. During concurrent insertion, we cannot observe

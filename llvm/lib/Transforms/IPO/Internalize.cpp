@@ -233,7 +233,10 @@ bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
   // FIXME: We should probably add this (and the __stack_chk_guard) via some
   // type of call-back in CodeGen.
   AlwaysPreserved.insert("__stack_chk_fail");
-  AlwaysPreserved.insert("__stack_chk_guard");
+  if (Triple(M.getTargetTriple()).isOSAIX())
+    AlwaysPreserved.insert("__ssp_canary_word");
+  else
+    AlwaysPreserved.insert("__stack_chk_guard");
 
   // Mark all global variables with initializers that are not in the api as
   // internal as well.
