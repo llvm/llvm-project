@@ -20,7 +20,7 @@
 
 @__profn_foo = private constant [3 x i8] c"foo"
 @__profn_foo_weak = weak hidden constant [8 x i8] c"foo_weak"
-@"__profn_linkage.ll:foo_internal" = internal constant [23 x i8] c"linkage.ll:foo_internal"
+@"__profn_linkage.ll:foo_internal" = private constant [23 x i8] c"linkage.ll:foo_internal"
 @__profn_foo_inline = linkonce_odr hidden constant [10 x i8] c"foo_inline"
 @__profn_foo_extern = linkonce_odr hidden constant [10 x i8] c"foo_extern"
 
@@ -47,10 +47,10 @@ define weak void @foo_weak() {
   ret void
 }
 
-; ELF: @"__profc_linkage.ll:foo_internal" = internal global{{.*}}section "__llvm_prf_cnts", comdat($"__profd_linkage.ll:foo_internal")
-; ELF: @"__profd_linkage.ll:foo_internal" = internal global{{.*}}section "__llvm_prf_data", comdat
-; MACHO: @"__profc_linkage.ll:foo_internal" = internal global
-; MACHO: @"__profd_linkage.ll:foo_internal" = internal global
+; ELF: @"__profc_linkage.ll:foo_internal" = private global{{.*}}section "__llvm_prf_cnts", comdat($"__profd_linkage.ll:foo_internal")
+; ELF: @"__profd_linkage.ll:foo_internal" = private global{{.*}}section "__llvm_prf_data", comdat
+; MACHO: @"__profc_linkage.ll:foo_internal" = private global
+; MACHO: @"__profd_linkage.ll:foo_internal" = private global
 ; COFF: @"__profc_linkage.ll:foo_internal" = internal global
 ; COFF: @"__profd_linkage.ll:foo_internal" = internal global
 define internal void @foo_internal() {
