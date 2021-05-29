@@ -26,7 +26,7 @@ int main(int, char**)
 {
     typedef std::pair<const int, double> V;
     {
-        typedef test_compare<std::less<int> > C;
+        typedef test_less<int> C;
         typedef test_allocator<V> A;
         std::map<int, double, C, A> mo(C(5), A(7));
         std::map<int, double, C, A> m = std::move(mo);
@@ -53,7 +53,7 @@ int main(int, char**)
             V(3, 1.5),
             V(3, 2),
         };
-        typedef test_compare<std::less<int> > C;
+        typedef test_less<int> C;
         typedef test_allocator<V> A;
         std::map<int, double, C, A> mo(ar, ar+sizeof(ar)/sizeof(ar[0]), C(5), A(7));
         std::map<int, double, C, A> m = std::move(mo);
@@ -71,7 +71,7 @@ int main(int, char**)
         assert(distance(mo.begin(), mo.end()) == 0);
     }
     {
-        typedef test_compare<std::less<int> > C;
+        typedef test_less<int> C;
         typedef min_allocator<V> A;
         std::map<int, double, C, A> mo(C(5), A());
         std::map<int, double, C, A> m = std::move(mo);
@@ -98,7 +98,7 @@ int main(int, char**)
             V(3, 1.5),
             V(3, 2),
         };
-        typedef test_compare<std::less<int> > C;
+        typedef test_less<int> C;
         typedef min_allocator<V> A;
         std::map<int, double, C, A> mo(ar, ar+sizeof(ar)/sizeof(ar[0]), C(5), A());
         std::map<int, double, C, A> m = std::move(mo);

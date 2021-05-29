@@ -29,7 +29,7 @@ int main(int, char**)
     {
         typedef std::unordered_multimap<NotConstructible, NotConstructible,
                                    test_hash<std::hash<NotConstructible> >,
-                                   test_compare<std::equal_to<NotConstructible> >,
+                                   test_equal_to<NotConstructible>,
                                    test_allocator<std::pair<const NotConstructible,
                                                                   NotConstructible> >
                                    > C;
@@ -38,7 +38,7 @@ int main(int, char**)
            );
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.hash_function() == test_hash<std::hash<NotConstructible> >(8));
-        assert(c.key_eq() == test_compare<std::equal_to<NotConstructible> >());
+        assert(c.key_eq() == test_equal_to<NotConstructible>());
         assert(c.get_allocator() ==
                (test_allocator<std::pair<const NotConstructible, NotConstructible> >()));
         assert(c.size() == 0);
@@ -51,7 +51,7 @@ int main(int, char**)
     {
         typedef std::unordered_multimap<NotConstructible, NotConstructible,
                                    test_hash<std::hash<NotConstructible> >,
-                                   test_compare<std::equal_to<NotConstructible> >,
+                                   test_equal_to<NotConstructible>,
                                    min_allocator<std::pair<const NotConstructible,
                                                                  NotConstructible> >
                                    > C;
@@ -60,7 +60,7 @@ int main(int, char**)
            );
         LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.hash_function() == test_hash<std::hash<NotConstructible> >(8));
-        assert(c.key_eq() == test_compare<std::equal_to<NotConstructible> >());
+        assert(c.key_eq() == test_equal_to<NotConstructible>());
         assert(c.get_allocator() ==
                (min_allocator<std::pair<const NotConstructible, NotConstructible> >()));
         assert(c.size() == 0);
