@@ -6,8 +6,8 @@
 ;    memcpy(dest, src, n);
 ; }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i32, i1 immarg) #1
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i32, i1 immarg)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg)
 declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1 immarg)
 
 define void @test1(i8* noalias nocapture %X, i8* noalias nocapture readonly %Y, i32 %n){
@@ -546,6 +546,470 @@ loop:
 
 exit:
   ret void
+}
+
+@arr_21 = external dso_local local_unnamed_addr global [17 x [12 x [19 x i16]]], align 2
+@arr_20 = external dso_local local_unnamed_addr global [17 x [12 x [19 x i64]]], align 8
+@arr_22 = external dso_local local_unnamed_addr global [17 x [12 x [19 x i16]]], align 2
+define i32 @reverted(i1 zeroext %b) {
+; CHECK-LABEL: reverted:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; CHECK-NEXT:    .pad #12
+; CHECK-NEXT:    sub sp, #12
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov.w r1, #11
+; CHECK-NEXT:    cinc r1, r1, ne
+; CHECK-NEXT:    movs r0, #38
+; CHECK-NEXT:    mul r2, r1, r0
+; CHECK-NEXT:    str r1, [sp, #8] @ 4-byte Spill
+; CHECK-NEXT:    movw r0, :lower16:arr_22
+; CHECK-NEXT:    vmov.i32 q0, #0x0
+; CHECK-NEXT:    movt r0, :upper16:arr_22
+; CHECK-NEXT:    str r2, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    add.w r1, r2, #15
+; CHECK-NEXT:    lsrs r3, r1, #4
+; CHECK-NEXT:    mov r1, r2
+; CHECK-NEXT:    str r3, [sp] @ 4-byte Spill
+; CHECK-NEXT:    wlstp.8 lr, r1, .LBB19_2
+; CHECK-NEXT:  .LBB19_1: @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vstrb.8 q0, [r0], #16
+; CHECK-NEXT:    letp lr, .LBB19_1
+; CHECK-NEXT:  .LBB19_2: @ %entry
+; CHECK-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
+; CHECK-NEXT:    movw r6, :lower16:arr_20
+; CHECK-NEXT:    movt r6, :upper16:arr_20
+; CHECK-NEXT:    add.w r3, r6, #80
+; CHECK-NEXT:    dls lr, r0
+; CHECK-NEXT:    movw r0, :lower16:arr_21
+; CHECK-NEXT:    movt r0, :upper16:arr_21
+; CHECK-NEXT:    add.w r5, r0, #36
+; CHECK-NEXT:    add.w r11, r6, #128
+; CHECK-NEXT:    add.w r7, r6, #112
+; CHECK-NEXT:    add.w r2, r6, #96
+; CHECK-NEXT:    add.w r4, r6, #64
+; CHECK-NEXT:    add.w r0, r6, #48
+; CHECK-NEXT:    add.w r1, r6, #32
+; CHECK-NEXT:    add.w r12, r6, #16
+; CHECK-NEXT:    adr r6, .LCPI19_0
+; CHECK-NEXT:    vldrw.u32 q0, [r6]
+; CHECK-NEXT:    movw r6, :lower16:arr_20
+; CHECK-NEXT:    mov.w r8, #327685
+; CHECK-NEXT:    mov.w r9, #5
+; CHECK-NEXT:    vmov.i16 q1, #0x5
+; CHECK-NEXT:    mov.w r10, #0
+; CHECK-NEXT:    movt r6, :upper16:arr_20
+; CHECK-NEXT:  .LBB19_3: @ %for.cond8.preheader
+; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    str r8, [r5, #-4]
+; CHECK-NEXT:    vstrh.16 q1, [r5, #-36]
+; CHECK-NEXT:    strh.w r9, [r5]
+; CHECK-NEXT:    vstrh.16 q1, [r5, #-20]
+; CHECK-NEXT:    vstrw.32 q0, [r3]
+; CHECK-NEXT:    vstrh.16 q0, [r12], #152
+; CHECK-NEXT:    vstrh.16 q0, [r6], #152
+; CHECK-NEXT:    vstrh.16 q0, [r1], #152
+; CHECK-NEXT:    vstrh.16 q0, [r0], #152
+; CHECK-NEXT:    vstrh.16 q0, [r4], #152
+; CHECK-NEXT:    vstrh.16 q0, [r2], #152
+; CHECK-NEXT:    vstrh.16 q0, [r7], #152
+; CHECK-NEXT:    vstrh.16 q0, [r11], #152
+; CHECK-NEXT:    strd r9, r10, [r3, #64]
+; CHECK-NEXT:    adds r5, #38
+; CHECK-NEXT:    adds r3, #152
+; CHECK-NEXT:    le lr, .LBB19_3
+; CHECK-NEXT:  @ %bb.4: @ %for.cond.cleanup6
+; CHECK-NEXT:    movw r0, :lower16:arr_22
+; CHECK-NEXT:    ldrd r2, r1, [sp] @ 8-byte Folded Reload
+; CHECK-NEXT:    movt r0, :upper16:arr_22
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    add.w r0, r0, #1824
+; CHECK-NEXT:    wlstp.8 lr, r1, .LBB19_6
+; CHECK-NEXT:  .LBB19_5: @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vstrb.8 q1, [r0], #16
+; CHECK-NEXT:    letp lr, .LBB19_5
+; CHECK-NEXT:  .LBB19_6: @ %for.cond.cleanup6
+; CHECK-NEXT:    movw r6, :lower16:arr_20
+; CHECK-NEXT:    movw r0, #7376
+; CHECK-NEXT:    movt r6, :upper16:arr_20
+; CHECK-NEXT:    adds r3, r6, r0
+; CHECK-NEXT:    movw r0, #7408
+; CHECK-NEXT:    add.w r12, r6, r0
+; CHECK-NEXT:    movw r0, #7344
+; CHECK-NEXT:    add.w r9, r6, r0
+; CHECK-NEXT:    movw r0, #7312
+; CHECK-NEXT:    adds r2, r6, r0
+; CHECK-NEXT:    movw r0, :lower16:arr_21
+; CHECK-NEXT:    add.w r1, r6, #7424
+; CHECK-NEXT:    add.w r7, r6, #7392
+; CHECK-NEXT:    add.w r4, r6, #7360
+; CHECK-NEXT:    add.w r5, r6, #7328
+; CHECK-NEXT:    add.w r8, r6, #7296
+; CHECK-NEXT:    ldr r6, [sp, #8] @ 4-byte Reload
+; CHECK-NEXT:    movt r0, :upper16:arr_21
+; CHECK-NEXT:    addw r0, r0, #1860
+; CHECK-NEXT:    mov.w r10, #5
+; CHECK-NEXT:    dls lr, r6
+; CHECK-NEXT:    mov.w r6, #327685
+; CHECK-NEXT:    vmov.i16 q1, #0x5
+; CHECK-NEXT:    mov.w r11, #0
+; CHECK-NEXT:  .LBB19_7: @ %for.cond8.preheader.1
+; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    str r6, [r0, #-4]
+; CHECK-NEXT:    vstrh.16 q1, [r0, #-36]
+; CHECK-NEXT:    strh.w r10, [r0]
+; CHECK-NEXT:    vstrh.16 q1, [r0, #-20]
+; CHECK-NEXT:    vstrw.32 q0, [r3]
+; CHECK-NEXT:    vstrh.16 q0, [r2], #152
+; CHECK-NEXT:    vstrh.16 q0, [r8], #152
+; CHECK-NEXT:    vstrh.16 q0, [r5], #152
+; CHECK-NEXT:    vstrh.16 q0, [r9], #152
+; CHECK-NEXT:    vstrh.16 q0, [r4], #152
+; CHECK-NEXT:    vstrh.16 q0, [r7], #152
+; CHECK-NEXT:    vstrh.16 q0, [r12], #152
+; CHECK-NEXT:    vstrh.16 q0, [r1], #152
+; CHECK-NEXT:    strd r10, r11, [r3, #64]
+; CHECK-NEXT:    adds r0, #38
+; CHECK-NEXT:    adds r3, #152
+; CHECK-NEXT:    le lr, .LBB19_7
+; CHECK-NEXT:  @ %bb.8: @ %for.cond.cleanup6.1
+; CHECK-NEXT:    movw r0, :lower16:arr_22
+; CHECK-NEXT:    ldrd r2, r1, [sp] @ 8-byte Folded Reload
+; CHECK-NEXT:    movt r0, :upper16:arr_22
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    add.w r0, r0, #3648
+; CHECK-NEXT:    wlstp.8 lr, r1, .LBB19_10
+; CHECK-NEXT:  .LBB19_9: @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vstrb.8 q1, [r0], #16
+; CHECK-NEXT:    letp lr, .LBB19_9
+; CHECK-NEXT:  .LBB19_10: @ %for.cond.cleanup6.1
+; CHECK-NEXT:    movw r7, :lower16:arr_20
+; CHECK-NEXT:    movw r0, #14672
+; CHECK-NEXT:    movt r7, :upper16:arr_20
+; CHECK-NEXT:    adds r3, r7, r0
+; CHECK-NEXT:    movw r0, #14704
+; CHECK-NEXT:    add.w r12, r7, r0
+; CHECK-NEXT:    movw r0, #14688
+; CHECK-NEXT:    add.w r8, r7, r0
+; CHECK-NEXT:    movw r0, #14640
+; CHECK-NEXT:    add.w r9, r7, r0
+; CHECK-NEXT:    movw r0, #14624
+; CHECK-NEXT:    adds r2, r7, r0
+; CHECK-NEXT:    movw r0, #14608
+; CHECK-NEXT:    movw r1, :lower16:arr_21
+; CHECK-NEXT:    add r0, r7
+; CHECK-NEXT:    add.w r4, r7, #14720
+; CHECK-NEXT:    add.w r5, r7, #14656
+; CHECK-NEXT:    add.w r6, r7, #14592
+; CHECK-NEXT:    ldr r7, [sp, #8] @ 4-byte Reload
+; CHECK-NEXT:    movt r1, :upper16:arr_21
+; CHECK-NEXT:    addw r1, r1, #3684
+; CHECK-NEXT:    mov.w r10, #5
+; CHECK-NEXT:    dls lr, r7
+; CHECK-NEXT:    mov.w r7, #327685
+; CHECK-NEXT:    vmov.i16 q1, #0x5
+; CHECK-NEXT:    mov.w r11, #0
+; CHECK-NEXT:  .LBB19_11: @ %for.cond8.preheader.2
+; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    str r7, [r1, #-4]
+; CHECK-NEXT:    vstrh.16 q1, [r1, #-36]
+; CHECK-NEXT:    strh.w r10, [r1]
+; CHECK-NEXT:    vstrh.16 q1, [r1, #-20]
+; CHECK-NEXT:    vstrw.32 q0, [r3]
+; CHECK-NEXT:    vstrh.16 q0, [r0], #152
+; CHECK-NEXT:    vstrh.16 q0, [r6], #152
+; CHECK-NEXT:    vstrh.16 q0, [r2], #152
+; CHECK-NEXT:    vstrh.16 q0, [r9], #152
+; CHECK-NEXT:    vstrh.16 q0, [r5], #152
+; CHECK-NEXT:    vstrh.16 q0, [r8], #152
+; CHECK-NEXT:    vstrh.16 q0, [r12], #152
+; CHECK-NEXT:    vstrh.16 q0, [r4], #152
+; CHECK-NEXT:    strd r10, r11, [r3, #64]
+; CHECK-NEXT:    adds r1, #38
+; CHECK-NEXT:    adds r3, #152
+; CHECK-NEXT:    le lr, .LBB19_11
+; CHECK-NEXT:  @ %bb.12: @ %for.cond.cleanup6.2
+; CHECK-NEXT:    movw r0, :lower16:arr_22
+; CHECK-NEXT:    ldr r1, [sp] @ 4-byte Reload
+; CHECK-NEXT:    movt r0, :upper16:arr_22
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    add.w r0, r0, #5472
+; CHECK-NEXT:    wls lr, r1, .LBB19_14
+; CHECK-NEXT:  .LBB19_13: @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr r1, [sp, #4] @ 4-byte Reload
+; CHECK-NEXT:    vctp.8 r1
+; CHECK-NEXT:    subs r1, #16
+; CHECK-NEXT:    str r1, [sp, #4] @ 4-byte Spill
+; CHECK-NEXT:    vpst
+; CHECK-NEXT:    vstrbt.8 q1, [r0], #16
+; CHECK-NEXT:    le lr, .LBB19_13
+; CHECK-NEXT:  .LBB19_14: @ %for.cond.cleanup6.2
+; CHECK-NEXT:    movw r2, :lower16:arr_21
+; CHECK-NEXT:    movw r1, #5508
+; CHECK-NEXT:    movt r2, :upper16:arr_21
+; CHECK-NEXT:    movw r7, :lower16:arr_20
+; CHECK-NEXT:    add r2, r1
+; CHECK-NEXT:    movw r1, #22000
+; CHECK-NEXT:    movt r7, :upper16:arr_20
+; CHECK-NEXT:    add.w r12, r7, r1
+; CHECK-NEXT:    movw r1, #21984
+; CHECK-NEXT:    add.w r8, r7, r1
+; CHECK-NEXT:    movw r1, #21952
+; CHECK-NEXT:    add.w r9, r7, r1
+; CHECK-NEXT:    movw r1, #21936
+; CHECK-NEXT:    movw r0, #21968
+; CHECK-NEXT:    adds r5, r7, r1
+; CHECK-NEXT:    movw r1, #21920
+; CHECK-NEXT:    movw r3, #21904
+; CHECK-NEXT:    adds r4, r7, r3
+; CHECK-NEXT:    add r0, r7
+; CHECK-NEXT:    add r1, r7
+; CHECK-NEXT:    add.w r3, r7, #22016
+; CHECK-NEXT:    add.w r6, r7, #21888
+; CHECK-NEXT:    ldr r7, [sp, #8] @ 4-byte Reload
+; CHECK-NEXT:    mov.w r10, #5
+; CHECK-NEXT:    vmov.i16 q1, #0x5
+; CHECK-NEXT:    mov.w r11, #0
+; CHECK-NEXT:    dls lr, r7
+; CHECK-NEXT:    mov.w r7, #327685
+; CHECK-NEXT:  .LBB19_15: @ %for.cond8.preheader.3
+; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    str r7, [r2, #-4]
+; CHECK-NEXT:    vstrh.16 q1, [r2, #-36]
+; CHECK-NEXT:    strh.w r10, [r2]
+; CHECK-NEXT:    vstrh.16 q1, [r2, #-20]
+; CHECK-NEXT:    vstrw.32 q0, [r0]
+; CHECK-NEXT:    vstrh.16 q0, [r4], #152
+; CHECK-NEXT:    vstrh.16 q0, [r6], #152
+; CHECK-NEXT:    vstrh.16 q0, [r1], #152
+; CHECK-NEXT:    vstrh.16 q0, [r5], #152
+; CHECK-NEXT:    vstrh.16 q0, [r9], #152
+; CHECK-NEXT:    vstrh.16 q0, [r8], #152
+; CHECK-NEXT:    vstrh.16 q0, [r12], #152
+; CHECK-NEXT:    vstrh.16 q0, [r3], #152
+; CHECK-NEXT:    strd r10, r11, [r0, #64]
+; CHECK-NEXT:    adds r2, #38
+; CHECK-NEXT:    adds r0, #152
+; CHECK-NEXT:    le lr, .LBB19_15
+; CHECK-NEXT:  @ %bb.16: @ %for.cond.cleanup6.3
+; CHECK-NEXT:    add sp, #12
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  @ %bb.17:
+; CHECK-NEXT:  .LCPI19_0:
+; CHECK-NEXT:    .long 5 @ 0x5
+; CHECK-NEXT:    .long 0 @ 0x0
+; CHECK-NEXT:    .long 5 @ 0x5
+; CHECK-NEXT:    .long 0 @ 0x0
+entry:
+  %add = select i1 %b, i32 12, i32 11
+  %0 = mul nuw nsw i32 %add, 38
+  call void @llvm.memset.p0i8.i32(i8* noundef nonnull align 2 dereferenceable(1) bitcast ([17 x [12 x [19 x i16]]]* @arr_22 to i8*), i8 0, i32 %0, i1 false)
+  br label %for.cond8.preheader
+
+for.cond8.preheader:                              ; preds = %entry, %for.cond8.preheader
+  %d.051 = phi i32 [ 0, %entry ], [ %inc, %for.cond8.preheader ]
+  %arrayidx16 = getelementptr inbounds [17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_21, i32 0, i32 0, i32 %d.051, i32 0
+  %arrayidx21 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 0, i32 %d.051, i32 0
+  %1 = bitcast i64* %arrayidx21 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %1, align 8
+  %arrayidx21.2 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 0, i32 %d.051, i32 2
+  %2 = bitcast i64* %arrayidx21.2 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %2, align 8
+  %arrayidx21.4 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 0, i32 %d.051, i32 4
+  %3 = bitcast i64* %arrayidx21.4 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %3, align 8
+  %arrayidx21.6 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 0, i32 %d.051, i32 6
+  %4 = bitcast i16* %arrayidx16 to <8 x i16>*
+  store <8 x i16> <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>, <8 x i16>* %4, align 2
+  %5 = bitcast i64* %arrayidx21.6 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %5, align 8
+  %arrayidx16.8 = getelementptr inbounds [17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_21, i32 0, i32 0, i32 %d.051, i32 8
+  %arrayidx21.8 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 0, i32 %d.051, i32 8
+  %6 = bitcast i64* %arrayidx21.8 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %6, align 8
+  %arrayidx21.10 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 0, i32 %d.051, i32 10
+  %7 = bitcast i64* %arrayidx21.10 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %7, align 8
+  %arrayidx21.12 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 0, i32 %d.051, i32 12
+  %8 = bitcast i64* %arrayidx21.12 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %8, align 8
+  %arrayidx21.14 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 0, i32 %d.051, i32 14
+  %9 = bitcast i16* %arrayidx16.8 to <8 x i16>*
+  store <8 x i16> <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>, <8 x i16>* %9, align 2
+  %10 = bitcast i64* %arrayidx21.14 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %10, align 8
+  %arrayidx16.16 = getelementptr inbounds [17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_21, i32 0, i32 0, i32 %d.051, i32 16
+  store i16 5, i16* %arrayidx16.16, align 2
+  %arrayidx21.16 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 0, i32 %d.051, i32 16
+  %arrayidx16.17 = getelementptr inbounds [17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_21, i32 0, i32 0, i32 %d.051, i32 17
+  store i16 5, i16* %arrayidx16.17, align 2
+  %11 = bitcast i64* %arrayidx21.16 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %11, align 8
+  %arrayidx16.18 = getelementptr inbounds [17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_21, i32 0, i32 0, i32 %d.051, i32 18
+  store i16 5, i16* %arrayidx16.18, align 2
+  %arrayidx21.18 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 0, i32 %d.051, i32 18
+  store i64 5, i64* %arrayidx21.18, align 8
+  %inc = add nuw nsw i32 %d.051, 1
+  %exitcond.not = icmp eq i32 %inc, %add
+  br i1 %exitcond.not, label %for.cond.cleanup6, label %for.cond8.preheader
+
+for.cond.cleanup6:                                ; preds = %for.cond8.preheader
+  call void @llvm.memset.p0i8.i32(i8* noundef nonnull align 2 dereferenceable(1) bitcast (i16* getelementptr inbounds ([17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_22, i32 0, i32 4, i32 0, i32 0) to i8*), i8 0, i32 %0, i1 false)
+  br label %for.cond8.preheader.1
+
+for.cond8.preheader.1:                            ; preds = %for.cond8.preheader.1, %for.cond.cleanup6
+  %d.051.1 = phi i32 [ 0, %for.cond.cleanup6 ], [ %inc.1, %for.cond8.preheader.1 ]
+  %arrayidx16.1 = getelementptr inbounds [17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_21, i32 0, i32 4, i32 %d.051.1, i32 0
+  %arrayidx21.1 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 4, i32 %d.051.1, i32 0
+  %12 = bitcast i64* %arrayidx21.1 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %12, align 8
+  %arrayidx21.2.1 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 4, i32 %d.051.1, i32 2
+  %13 = bitcast i64* %arrayidx21.2.1 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %13, align 8
+  %arrayidx21.4.1 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 4, i32 %d.051.1, i32 4
+  %14 = bitcast i64* %arrayidx21.4.1 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %14, align 8
+  %arrayidx21.6.1 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 4, i32 %d.051.1, i32 6
+  %15 = bitcast i16* %arrayidx16.1 to <8 x i16>*
+  store <8 x i16> <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>, <8 x i16>* %15, align 2
+  %16 = bitcast i64* %arrayidx21.6.1 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %16, align 8
+  %arrayidx16.8.1 = getelementptr inbounds [17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_21, i32 0, i32 4, i32 %d.051.1, i32 8
+  %arrayidx21.8.1 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 4, i32 %d.051.1, i32 8
+  %17 = bitcast i64* %arrayidx21.8.1 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %17, align 8
+  %arrayidx21.10.1 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 4, i32 %d.051.1, i32 10
+  %18 = bitcast i64* %arrayidx21.10.1 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %18, align 8
+  %arrayidx21.12.1 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 4, i32 %d.051.1, i32 12
+  %19 = bitcast i64* %arrayidx21.12.1 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %19, align 8
+  %arrayidx21.14.1 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 4, i32 %d.051.1, i32 14
+  %20 = bitcast i16* %arrayidx16.8.1 to <8 x i16>*
+  store <8 x i16> <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>, <8 x i16>* %20, align 2
+  %21 = bitcast i64* %arrayidx21.14.1 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %21, align 8
+  %arrayidx16.16.1 = getelementptr inbounds [17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_21, i32 0, i32 4, i32 %d.051.1, i32 16
+  store i16 5, i16* %arrayidx16.16.1, align 2
+  %arrayidx21.16.1 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 4, i32 %d.051.1, i32 16
+  %arrayidx16.17.1 = getelementptr inbounds [17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_21, i32 0, i32 4, i32 %d.051.1, i32 17
+  store i16 5, i16* %arrayidx16.17.1, align 2
+  %22 = bitcast i64* %arrayidx21.16.1 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %22, align 8
+  %arrayidx16.18.1 = getelementptr inbounds [17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_21, i32 0, i32 4, i32 %d.051.1, i32 18
+  store i16 5, i16* %arrayidx16.18.1, align 2
+  %arrayidx21.18.1 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 4, i32 %d.051.1, i32 18
+  store i64 5, i64* %arrayidx21.18.1, align 8
+  %inc.1 = add nuw nsw i32 %d.051.1, 1
+  %exitcond.not.1 = icmp eq i32 %inc.1, %add
+  br i1 %exitcond.not.1, label %for.cond.cleanup6.1, label %for.cond8.preheader.1
+
+for.cond.cleanup6.1:                              ; preds = %for.cond8.preheader.1
+  call void @llvm.memset.p0i8.i32(i8* noundef nonnull align 2 dereferenceable(1) bitcast (i16* getelementptr inbounds ([17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_22, i32 0, i32 8, i32 0, i32 0) to i8*), i8 0, i32 %0, i1 false)
+  br label %for.cond8.preheader.2
+
+for.cond8.preheader.2:                            ; preds = %for.cond8.preheader.2, %for.cond.cleanup6.1
+  %d.051.2 = phi i32 [ 0, %for.cond.cleanup6.1 ], [ %inc.2, %for.cond8.preheader.2 ]
+  %arrayidx16.2 = getelementptr inbounds [17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_21, i32 0, i32 8, i32 %d.051.2, i32 0
+  %arrayidx21.254 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 8, i32 %d.051.2, i32 0
+  %23 = bitcast i64* %arrayidx21.254 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %23, align 8
+  %arrayidx21.2.2 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 8, i32 %d.051.2, i32 2
+  %24 = bitcast i64* %arrayidx21.2.2 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %24, align 8
+  %arrayidx21.4.2 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 8, i32 %d.051.2, i32 4
+  %25 = bitcast i64* %arrayidx21.4.2 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %25, align 8
+  %arrayidx21.6.2 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 8, i32 %d.051.2, i32 6
+  %26 = bitcast i16* %arrayidx16.2 to <8 x i16>*
+  store <8 x i16> <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>, <8 x i16>* %26, align 2
+  %27 = bitcast i64* %arrayidx21.6.2 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %27, align 8
+  %arrayidx16.8.2 = getelementptr inbounds [17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_21, i32 0, i32 8, i32 %d.051.2, i32 8
+  %arrayidx21.8.2 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 8, i32 %d.051.2, i32 8
+  %28 = bitcast i64* %arrayidx21.8.2 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %28, align 8
+  %arrayidx21.10.2 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 8, i32 %d.051.2, i32 10
+  %29 = bitcast i64* %arrayidx21.10.2 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %29, align 8
+  %arrayidx21.12.2 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 8, i32 %d.051.2, i32 12
+  %30 = bitcast i64* %arrayidx21.12.2 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %30, align 8
+  %arrayidx21.14.2 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 8, i32 %d.051.2, i32 14
+  %31 = bitcast i16* %arrayidx16.8.2 to <8 x i16>*
+  store <8 x i16> <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>, <8 x i16>* %31, align 2
+  %32 = bitcast i64* %arrayidx21.14.2 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %32, align 8
+  %arrayidx16.16.2 = getelementptr inbounds [17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_21, i32 0, i32 8, i32 %d.051.2, i32 16
+  store i16 5, i16* %arrayidx16.16.2, align 2
+  %arrayidx21.16.2 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 8, i32 %d.051.2, i32 16
+  %arrayidx16.17.2 = getelementptr inbounds [17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_21, i32 0, i32 8, i32 %d.051.2, i32 17
+  store i16 5, i16* %arrayidx16.17.2, align 2
+  %33 = bitcast i64* %arrayidx21.16.2 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %33, align 8
+  %arrayidx16.18.2 = getelementptr inbounds [17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_21, i32 0, i32 8, i32 %d.051.2, i32 18
+  store i16 5, i16* %arrayidx16.18.2, align 2
+  %arrayidx21.18.2 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 8, i32 %d.051.2, i32 18
+  store i64 5, i64* %arrayidx21.18.2, align 8
+  %inc.2 = add nuw nsw i32 %d.051.2, 1
+  %exitcond.not.2 = icmp eq i32 %inc.2, %add
+  br i1 %exitcond.not.2, label %for.cond.cleanup6.2, label %for.cond8.preheader.2
+
+for.cond.cleanup6.2:                              ; preds = %for.cond8.preheader.2
+  call void @llvm.memset.p0i8.i32(i8* noundef nonnull align 2 dereferenceable(1) bitcast (i16* getelementptr inbounds ([17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_22, i32 0, i32 12, i32 0, i32 0) to i8*), i8 0, i32 %0, i1 false)
+  br label %for.cond8.preheader.3
+
+for.cond8.preheader.3:                            ; preds = %for.cond8.preheader.3, %for.cond.cleanup6.2
+  %d.051.3 = phi i32 [ 0, %for.cond.cleanup6.2 ], [ %inc.3, %for.cond8.preheader.3 ]
+  %arrayidx16.3 = getelementptr inbounds [17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_21, i32 0, i32 12, i32 %d.051.3, i32 0
+  %arrayidx21.3 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 12, i32 %d.051.3, i32 0
+  %34 = bitcast i64* %arrayidx21.3 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %34, align 8
+  %arrayidx21.2.3 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 12, i32 %d.051.3, i32 2
+  %35 = bitcast i64* %arrayidx21.2.3 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %35, align 8
+  %arrayidx21.4.3 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 12, i32 %d.051.3, i32 4
+  %36 = bitcast i64* %arrayidx21.4.3 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %36, align 8
+  %arrayidx21.6.3 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 12, i32 %d.051.3, i32 6
+  %37 = bitcast i16* %arrayidx16.3 to <8 x i16>*
+  store <8 x i16> <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>, <8 x i16>* %37, align 2
+  %38 = bitcast i64* %arrayidx21.6.3 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %38, align 8
+  %arrayidx16.8.3 = getelementptr inbounds [17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_21, i32 0, i32 12, i32 %d.051.3, i32 8
+  %arrayidx21.8.3 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 12, i32 %d.051.3, i32 8
+  %39 = bitcast i64* %arrayidx21.8.3 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %39, align 8
+  %arrayidx21.10.3 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 12, i32 %d.051.3, i32 10
+  %40 = bitcast i64* %arrayidx21.10.3 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %40, align 8
+  %arrayidx21.12.3 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 12, i32 %d.051.3, i32 12
+  %41 = bitcast i64* %arrayidx21.12.3 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %41, align 8
+  %arrayidx21.14.3 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 12, i32 %d.051.3, i32 14
+  %42 = bitcast i16* %arrayidx16.8.3 to <8 x i16>*
+  store <8 x i16> <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>, <8 x i16>* %42, align 2
+  %43 = bitcast i64* %arrayidx21.14.3 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %43, align 8
+  %arrayidx16.16.3 = getelementptr inbounds [17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_21, i32 0, i32 12, i32 %d.051.3, i32 16
+  store i16 5, i16* %arrayidx16.16.3, align 2
+  %arrayidx21.16.3 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 12, i32 %d.051.3, i32 16
+  %arrayidx16.17.3 = getelementptr inbounds [17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_21, i32 0, i32 12, i32 %d.051.3, i32 17
+  store i16 5, i16* %arrayidx16.17.3, align 2
+  %44 = bitcast i64* %arrayidx21.16.3 to <2 x i64>*
+  store <2 x i64> <i64 5, i64 5>, <2 x i64>* %44, align 8
+  %arrayidx16.18.3 = getelementptr inbounds [17 x [12 x [19 x i16]]], [17 x [12 x [19 x i16]]]* @arr_21, i32 0, i32 12, i32 %d.051.3, i32 18
+  store i16 5, i16* %arrayidx16.18.3, align 2
+  %arrayidx21.18.3 = getelementptr inbounds [17 x [12 x [19 x i64]]], [17 x [12 x [19 x i64]]]* @arr_20, i32 0, i32 12, i32 %d.051.3, i32 18
+  store i64 5, i64* %arrayidx21.18.3, align 8
+  %inc.3 = add nuw nsw i32 %d.051.3, 1
+  %exitcond.not.3 = icmp eq i32 %inc.3, %add
+  br i1 %exitcond.not.3, label %for.cond.cleanup6.3, label %for.cond8.preheader.3
+
+for.cond.cleanup6.3:                              ; preds = %for.cond8.preheader.3
+  ret i32 undef
 }
 
 attributes #0 = { noinline  optnone }

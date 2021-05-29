@@ -191,12 +191,27 @@ CGNVCUDARuntime::addUnderscoredPrefixToName(StringRef FuncName) const {
   return ((Twine("__cuda") + Twine(FuncName)).str());
 }
 
+static std::unique_ptr<MangleContext> InitDeviceMC(CodeGenModule &CGM) {
+  // If the host and device have different C++ ABIs, mark it as the device
+  // mangle context so that the mangling needs to retrieve the additional
+  // device lambda mangling number instead of the regular host one.
+  if (CGM.getContext().getAuxTargetInfo() &&
+      CGM.getContext().getTargetInfo().getCXXABI().isMicrosoft() &&
+      CGM.getContext().getAuxTargetInfo()->getCXXABI().isItaniumFamily()) {
+    return std::unique_ptr<MangleContext>(
+        CGM.getContext().createDeviceMangleContext(
+            *CGM.getContext().getAuxTargetInfo()));
+  }
+
+  return std::unique_ptr<MangleContext>(CGM.getContext().createMangleContext(
+      CGM.getContext().getAuxTargetInfo()));
+}
+
 CGNVCUDARuntime::CGNVCUDARuntime(CodeGenModule &CGM)
     : CGCUDARuntime(CGM), Context(CGM.getLLVMContext()),
       TheModule(CGM.getModule()),
       RelocatableDeviceCode(CGM.getLangOpts().GPURelocatableDeviceCode),
-      DeviceMC(CGM.getContext().createMangleContext(
-          CGM.getContext().getAuxTargetInfo())) {
+      DeviceMC(InitDeviceMC(CGM)) {
   CodeGen::CodeGenTypes &Types = CGM.getTypes();
   ASTContext &Ctx = CGM.getContext();
 
@@ -207,14 +222,6 @@ CGNVCUDARuntime::CGNVCUDARuntime(CodeGenModule &CGM)
   CharPtrTy = llvm::PointerType::getUnqual(Types.ConvertType(Ctx.CharTy));
   VoidPtrTy = cast<llvm::PointerType>(Types.ConvertType(Ctx.VoidPtrTy));
   VoidPtrPtrTy = VoidPtrTy->getPointerTo();
-  if (CGM.getContext().getAuxTargetInfo()) {
-    // If the host and device have different C++ ABIs, mark it as the device
-    // mangle context so that the mangling needs to retrieve the additonal
-    // device lambda mangling number instead of the regular host one.
-    DeviceMC->setDeviceMangleContext(
-        CGM.getContext().getTargetInfo().getCXXABI().isMicrosoft() &&
-        CGM.getContext().getAuxTargetInfo()->getCXXABI().isItaniumFamily());
-  }
 }
 
 llvm::FunctionCallee CGNVCUDARuntime::getSetupArgumentFn() const {

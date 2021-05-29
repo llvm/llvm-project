@@ -35,25 +35,37 @@ TEST(ScudoCommonTest, SKIP_ON_FUCHSIA(ResidentMemorySize)) {
   const uptr Threshold = Size >> 3;
 
   MapPlatformData Data = {};
-  uptr *P = reinterpret_cast<uptr *>(
-      map(nullptr, Size, "ResidentMemorySize", 0, &Data));
-  const ptrdiff_t N = Size / sizeof(*P);
+  void *P = map(nullptr, Size, "ResidentMemorySize", 0, &Data);
   ASSERT_NE(nullptr, P);
   EXPECT_LT(getResidentMemorySize() - OnStart, Threshold);
-  EXPECT_EQ(std::count(P, P + N, 0), N);
 
   memset(P, 1, Size);
-  EXPECT_EQ(std::count(P, P + N, 0), 0);
   EXPECT_GT(getResidentMemorySize() - OnStart, Size - Threshold);
 
   releasePagesToOS((uptr)P, 0, Size, &Data);
-  EXPECT_EQ(std::count(P, P + N, 0), N);
   // FIXME: does not work with QEMU-user.
   // EXPECT_LT(getResidentMemorySize() - OnStart, Threshold);
 
   memset(P, 1, Size);
-  EXPECT_EQ(std::count(P, P + N, 0), 0);
   EXPECT_GT(getResidentMemorySize() - OnStart, Size - Threshold);
+
+  unmap(P, Size, 0, &Data);
+}
+
+TEST(ScudoCommonTest, Zeros) {
+  const uptr Size = 1ull << 20;
+
+  MapPlatformData Data = {};
+  uptr *P = reinterpret_cast<uptr *>(map(nullptr, Size, "Zeros", 0, &Data));
+  const ptrdiff_t N = Size / sizeof(*P);
+  ASSERT_NE(nullptr, P);
+  EXPECT_EQ(std::count(P, P + N, 0), N);
+
+  memset(P, 1, Size);
+  EXPECT_EQ(std::count(P, P + N, 0), 0);
+
+  releasePagesToOS((uptr)P, 0, Size, &Data);
+  EXPECT_EQ(std::count(P, P + N, 0), N);
 
   unmap(P, Size, 0, &Data);
 }

@@ -327,6 +327,9 @@ inline static RISCVII::VLMUL getVLMUL(unsigned VType) {
   return static_cast<RISCVII::VLMUL>(VLMUL);
 }
 
+// Decode VLMUL into 1,2,4,8 and fractional indicator.
+std::pair<unsigned, bool> decodeVLMUL(RISCVII::VLMUL VLMUL);
+
 inline static unsigned decodeVSEW(unsigned VSEW) {
   assert(VSEW < 8 && "Unexpected VSEW value");
   return 1 << (VSEW + 3);

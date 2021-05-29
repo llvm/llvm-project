@@ -196,10 +196,8 @@ static void hostrpc_handler_SERVICE_MALLOC_PRINTF(uint32_t device_id,
                                                   uint64_t *payload) {
   void *ptr = NULL;
   // CPU device ID 0 is the fine grain memory
-  int cpu_device_id = 0;
   size_t sz = (size_t)payload[0];
-  atmi_mem_place_t place = ATMI_MEM_PLACE_CPU_MEM(0, cpu_device_id, 0);
-  hsa_status_t err = atmi_malloc(&ptr, sz, place);
+  hsa_status_t err = atmi_malloc(&ptr, sz, 0 /* DeviceId */, ATMI_DEVTYPE_CPU);
   payload[0] = (uint64_t)err;
   payload[1] = (uint64_t)ptr;
 }
@@ -207,8 +205,7 @@ static void hostrpc_handler_SERVICE_MALLOC_PRINTF(uint32_t device_id,
 static void hostrpc_handler_SERVICE_MALLOC(uint32_t device_id,
                                            uint64_t *payload) {
   void *ptr = NULL;
-  atmi_mem_place_t place = ATMI_MEM_PLACE_GPU_MEM(0, device_id, 0);
-  hsa_status_t err = atmi_malloc(&ptr, payload[0], place);
+  hsa_status_t err = atmi_malloc(&ptr, payload[0], 0 /* DeviceId */, ATMI_DEVTYPE_CPU);
   payload[0] = (uint64_t)err;
   payload[1] = (uint64_t)ptr;
 }

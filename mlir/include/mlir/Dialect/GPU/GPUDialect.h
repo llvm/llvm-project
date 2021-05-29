@@ -85,9 +85,9 @@ struct MMAMatrixStorageType : public TypeStorage {
   Type elementType;
 
   /// MMA operand that this MMAMatrix holds. The general form of operation this
-  /// type supports is given by the equation D = (alpha*(A*B)) + (beta*C). This
-  /// field specifies which operand in the given equation is held by this type.
-  /// The valid values are "AOp", "BOp", "COp" and "DOp".
+  /// type supports is given by the equation C += A*B. This field specifies
+  /// which operand in the given equation is held by this type. The valid values
+  /// are "AOp", "BOp" and "COp".
   StringRef operand;
 };
 
@@ -112,13 +112,13 @@ struct MMAMatrixStorageType : public TypeStorage {
 /// and 8 f32s for f32 data type of MMAMatrix. Some other instances of usage
 /// are:-
 ///
-///   %3 = gpu.subgroup_mma_compute %0, %1, %2 : !gpu.mma_matrix<16x16xf16,
-///   "AOp">, !gpu.mma_matrix<16x16xf16, "BOp">, !gpu.mma_matrix<16x16xf32,
-///                             "COp"> -> !gpu.mma_matrix<16x16xf32, "DOp">
+///   %3 = gpu.subgroup_mma_compute %0, %1, %2 :
+///   !gpu.mma_matrix<16x16xf16, "AOp">, !gpu.mma_matrix<16x16xf16, "BOp">
+///    -> !gpu.mma_matrix<16x16xf32, "COp">
 ///
 ///
 ///   gpu.subgroup_mma_store_matrix %3, %arg22[%c0, %c0] {leadDimension = 16
-///           : index}: !gpu.mma_matrix<16x16xf32, "DOp">, memref<16x16xf32>
+///           : index}: !gpu.mma_matrix<16x16xf32, "COp">, memref<16x16xf32>
 // TODO: consider moving this to ODS.
 class MMAMatrixType
     : public Type::TypeBase<MMAMatrixType, Type, MMAMatrixStorageType> {
@@ -154,9 +154,8 @@ public:
   Type getElementType() const;
 
   /// The general form of operation this type supports is given by the equation
-  /// D = (alpha*(A*B)) + (beta*C). This function returns which operand in the
-  /// given equation is held by this type. String returned can be one of"AOp",
-  /// "BOp", "COp" and "DOp".
+  /// C += A*B. This function returns which operand in the given equation is
+  /// held by this type. String returned can be one of"AOp", "BOp" and "COp".
   StringRef getOperand() const;
 };
 

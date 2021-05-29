@@ -34,7 +34,7 @@ define <vscale x 1 x i1> @intrinsic_vmfne_mask_vv_nxv1f16_nxv1f16(<vscale x 1 x 
 ; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    vsetvli zero, a0, e16,mf4,ta,mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v9
-; CHECK-NEXT:    vsetvli zero, a0, e16,mf4,tu,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,mf4,tu,mu
 ; CHECK-NEXT:    vmfne.vv v25, v9, v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    ret
@@ -86,7 +86,7 @@ define <vscale x 2 x i1> @intrinsic_vmfne_mask_vv_nxv2f16_nxv2f16(<vscale x 2 x 
 ; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    vsetvli zero, a0, e16,mf2,ta,mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v9
-; CHECK-NEXT:    vsetvli zero, a0, e16,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,mf2,tu,mu
 ; CHECK-NEXT:    vmfne.vv v25, v9, v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    ret
@@ -138,7 +138,7 @@ define <vscale x 4 x i1> @intrinsic_vmfne_mask_vv_nxv4f16_nxv4f16(<vscale x 4 x 
 ; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    vsetvli zero, a0, e16,m1,ta,mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v9
-; CHECK-NEXT:    vsetvli zero, a0, e16,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,m1,tu,mu
 ; CHECK-NEXT:    vmfne.vv v25, v9, v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    ret
@@ -190,7 +190,7 @@ define <vscale x 8 x i1> @intrinsic_vmfne_mask_vv_nxv8f16_nxv8f16(<vscale x 8 x 
 ; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    vsetvli zero, a0, e16,m2,ta,mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v10
-; CHECK-NEXT:    vsetvli zero, a0, e16,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,m2,tu,mu
 ; CHECK-NEXT:    vmfne.vv v25, v10, v12, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    ret
@@ -242,7 +242,7 @@ define <vscale x 16 x i1> @intrinsic_vmfne_mask_vv_nxv16f16_nxv16f16(<vscale x 1
 ; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    vsetvli zero, a0, e16,m4,ta,mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v12
-; CHECK-NEXT:    vsetvli zero, a0, e16,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,m4,tu,mu
 ; CHECK-NEXT:    vmfne.vv v25, v12, v16, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    ret
@@ -294,7 +294,7 @@ define <vscale x 1 x i1> @intrinsic_vmfne_mask_vv_nxv1f32_nxv1f32(<vscale x 1 x 
 ; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    vsetvli zero, a0, e32,mf2,ta,mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v9
-; CHECK-NEXT:    vsetvli zero, a0, e32,mf2,tu,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,mf2,tu,mu
 ; CHECK-NEXT:    vmfne.vv v25, v9, v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    ret
@@ -346,7 +346,7 @@ define <vscale x 2 x i1> @intrinsic_vmfne_mask_vv_nxv2f32_nxv2f32(<vscale x 2 x 
 ; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    vsetvli zero, a0, e32,m1,ta,mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v9
-; CHECK-NEXT:    vsetvli zero, a0, e32,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,m1,tu,mu
 ; CHECK-NEXT:    vmfne.vv v25, v9, v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    ret
@@ -398,7 +398,7 @@ define <vscale x 4 x i1> @intrinsic_vmfne_mask_vv_nxv4f32_nxv4f32(<vscale x 4 x 
 ; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    vsetvli zero, a0, e32,m2,ta,mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v10
-; CHECK-NEXT:    vsetvli zero, a0, e32,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,m2,tu,mu
 ; CHECK-NEXT:    vmfne.vv v25, v10, v12, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    ret
@@ -450,7 +450,7 @@ define <vscale x 8 x i1> @intrinsic_vmfne_mask_vv_nxv8f32_nxv8f32(<vscale x 8 x 
 ; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    vsetvli zero, a0, e32,m4,ta,mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v12
-; CHECK-NEXT:    vsetvli zero, a0, e32,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,m4,tu,mu
 ; CHECK-NEXT:    vmfne.vv v25, v12, v16, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    ret
@@ -502,7 +502,7 @@ define <vscale x 1 x i1> @intrinsic_vmfne_mask_vv_nxv1f64_nxv1f64(<vscale x 1 x 
 ; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    vsetvli zero, a0, e64,m1,ta,mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v9
-; CHECK-NEXT:    vsetvli zero, a0, e64,m1,tu,mu
+; CHECK-NEXT:    vsetvli zero, zero, e64,m1,tu,mu
 ; CHECK-NEXT:    vmfne.vv v25, v9, v10, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    ret
@@ -554,7 +554,7 @@ define <vscale x 2 x i1> @intrinsic_vmfne_mask_vv_nxv2f64_nxv2f64(<vscale x 2 x 
 ; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    vsetvli zero, a0, e64,m2,ta,mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v10
-; CHECK-NEXT:    vsetvli zero, a0, e64,m2,tu,mu
+; CHECK-NEXT:    vsetvli zero, zero, e64,m2,tu,mu
 ; CHECK-NEXT:    vmfne.vv v25, v10, v12, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    ret
@@ -606,7 +606,7 @@ define <vscale x 4 x i1> @intrinsic_vmfne_mask_vv_nxv4f64_nxv4f64(<vscale x 4 x 
 ; CHECK-NEXT:    vmv1r.v v25, v0
 ; CHECK-NEXT:    vsetvli zero, a0, e64,m4,ta,mu
 ; CHECK-NEXT:    vmfne.vv v0, v8, v12
-; CHECK-NEXT:    vsetvli zero, a0, e64,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, zero, e64,m4,tu,mu
 ; CHECK-NEXT:    vmfne.vv v25, v12, v16, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v25
 ; CHECK-NEXT:    ret

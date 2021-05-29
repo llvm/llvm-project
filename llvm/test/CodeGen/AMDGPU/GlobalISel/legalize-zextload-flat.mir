@@ -13,11 +13,8 @@ body: |
     ; SI: $vgpr0 = COPY [[ZEXTLOAD]](s32)
     ; VI-LABEL: name: test_zextload_flat_i32_i8
     ; VI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 1)
-    ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
-    ; VI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
-    ; VI: $vgpr0 = COPY [[AND]](s32)
+    ; VI: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load 1)
+    ; VI: $vgpr0 = COPY [[ZEXTLOAD]](s32)
     %0:_(p0) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_ZEXTLOAD %0 :: (load 1, addrspace 0)
     $vgpr0 = COPY %1
@@ -34,11 +31,8 @@ body: |
     ; SI: $vgpr0 = COPY [[ZEXTLOAD]](s32)
     ; VI-LABEL: name: test_zextload_flat_i32_i16
     ; VI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 2)
-    ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
-    ; VI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
-    ; VI: $vgpr0 = COPY [[AND]](s32)
+    ; VI: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load 2)
+    ; VI: $vgpr0 = COPY [[ZEXTLOAD]](s32)
      %0:_(p0) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_ZEXTLOAD %0 :: (load 2, addrspace 0)
     $vgpr0 = COPY %1
@@ -56,12 +50,9 @@ body: |
     ; SI: $vgpr0 = COPY [[COPY1]](s32)
     ; VI-LABEL: name: test_zextload_flat_i31_i8
     ; VI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 1)
-    ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
-    ; VI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
-    ; VI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[AND]](s32)
-    ; VI: $vgpr0 = COPY [[COPY2]](s32)
+    ; VI: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load 1)
+    ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[ZEXTLOAD]](s32)
+    ; VI: $vgpr0 = COPY [[COPY1]](s32)
     %0:_(p0) = COPY $vgpr0_vgpr1
     %1:_(s31) = G_ZEXTLOAD %0 :: (load 1, addrspace 0)
     %2:_(s32) = G_ANYEXT %1
@@ -80,11 +71,8 @@ body: |
     ; SI: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
     ; VI-LABEL: name: test_zextload_flat_i64_i8
     ; VI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 1)
-    ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
-    ; VI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
-    ; VI: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[AND]](s32)
+    ; VI: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load 1)
+    ; VI: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[ZEXTLOAD]](s32)
     ; VI: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
     %0:_(p0) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_ZEXTLOAD %0 :: (load 1, addrspace 0)
@@ -103,11 +91,8 @@ body: |
     ; SI: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
     ; VI-LABEL: name: test_zextload_flat_i64_i16
     ; VI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
-    ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load 2)
-    ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
-    ; VI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
-    ; VI: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[AND]](s32)
+    ; VI: [[ZEXTLOAD:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[COPY]](p0) :: (load 2)
+    ; VI: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[ZEXTLOAD]](s32)
     ; VI: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
     %0:_(p0) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_ZEXTLOAD %0 :: (load 2, addrspace 0)

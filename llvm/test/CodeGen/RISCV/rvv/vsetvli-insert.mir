@@ -193,7 +193,7 @@ body:             |
     ; CHECK: [[COPY1:%[0-9]+]]:gpr = COPY $x10
     ; CHECK: dead $x0 = PseudoVSETVLI [[COPY]], 87, implicit-def $vl, implicit-def $vtype
     ; CHECK: [[PseudoVLE32_V_MF2_:%[0-9]+]]:vr = PseudoVLE32_V_MF2 [[COPY1]], $noreg, 5, implicit $vl, implicit $vtype
-    ; CHECK: dead $x0 = PseudoVSETVLI [[COPY]], 88, implicit-def $vl, implicit-def $vtype
+    ; CHECK: dead $x0 = PseudoVSETVLI killed $x0, 88, implicit-def $vl, implicit-def $vtype, implicit $vl
     ; CHECK: early-clobber %3:vr = PseudoVZEXT_VF2_M1 killed [[PseudoVLE32_V_MF2_]], $noreg, 6, implicit $vl, implicit $vtype
     ; CHECK: $v8 = COPY %3
     ; CHECK: PseudoRET implicit $v8

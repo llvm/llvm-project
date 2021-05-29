@@ -49,6 +49,11 @@ test()
     static_assert((std::is_same<typename R::difference_type, typename T::difference_type>::value), "");
     static_assert((std::is_same<typename R::reference, typename T::reference>::value), "");
     static_assert((std::is_same<typename R::pointer, typename std::iterator_traits<It>::pointer>::value), "");
+
+#if TEST_STD_VER <= 14
+    typedef std::iterator<typename T::iterator_category, typename T::value_type> iterator_base;
+    static_assert((std::is_base_of<iterator_base, R>::value), "");
+#endif
 #if TEST_STD_VER > 17
     if constexpr (std::is_same_v<typename T::iterator_category, std::contiguous_iterator_tag>) {
         static_assert((std::is_same<typename R::iterator_category, std::random_access_iterator_tag>::value), "");

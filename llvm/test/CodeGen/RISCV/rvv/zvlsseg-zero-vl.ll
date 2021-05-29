@@ -14,7 +14,7 @@ define <vscale x 16 x i16> @test_vlseg2_mask_nxv16i16(i16* %base, <vscale x 16 x
 ; CHECK-NEXT:    vsetivli zero, 0, e16,m4,ta,mu
 ; CHECK-NEXT:    vlseg2e16.v v4, (a0)
 ; CHECK-NEXT:    vmv4r.v v8, v4
-; CHECK-NEXT:    vsetivli zero, 0, e16,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,m4,tu,mu
 ; CHECK-NEXT:    vlseg2e16.v v4, (a0), v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -35,7 +35,7 @@ define <vscale x 16 x i16> @test_vlsseg2_mask_nxv16i16(i16* %base, i64 %offset, 
 ; CHECK-NEXT:    vsetivli zero, 0, e16,m4,ta,mu
 ; CHECK-NEXT:    vlsseg2e16.v v4, (a0), a1
 ; CHECK-NEXT:    vmv4r.v v8, v4
-; CHECK-NEXT:    vsetivli zero, 0, e16,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,m4,tu,mu
 ; CHECK-NEXT:    vlsseg2e16.v v4, (a0), a1, v0.t
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v4m4_v8m4
 ; CHECK-NEXT:    ret
@@ -55,7 +55,7 @@ define <vscale x 16 x i16> @test_vloxseg2_mask_nxv16i16_nxv16i16(i16* %base, <vs
 ; CHECK-NEXT:    vsetivli zero, 0, e16,m4,ta,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v12, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v16, v12
-; CHECK-NEXT:    vsetivli zero, 0, e16,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,m4,tu,mu
 ; CHECK-NEXT:    vloxseg2ei16.v v12, (a0), v8, v0.t
 ; CHECK-NEXT:    vmv4r.v v8, v16
 ; CHECK-NEXT:    ret
@@ -76,7 +76,7 @@ define <vscale x 16 x i16> @test_vluxseg2_mask_nxv16i16_nxv16i16(i16* %base, <vs
 ; CHECK-NEXT:    vsetivli zero, 0, e16,m4,ta,mu
 ; CHECK-NEXT:    vluxseg2ei16.v v12, (a0), v8
 ; CHECK-NEXT:    vmv4r.v v16, v12
-; CHECK-NEXT:    vsetivli zero, 0, e16,m4,tu,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,m4,tu,mu
 ; CHECK-NEXT:    vluxseg2ei16.v v12, (a0), v8, v0.t
 ; CHECK-NEXT:    vmv4r.v v8, v16
 ; CHECK-NEXT:    ret

@@ -29,7 +29,6 @@ public:
     numHalfsInOpFrags[A] = 8;
     numHalfsInOpFrags[B] = 8;
     numHalfsInOpFrags[C] = 4;
-    numHalfsInOpFrags[D] = 4;
     i32Ty = IntegerType::get(context, 32);
     f16Ty = FloatType::getF16(context);
     f32Ty = FloatType::getF32(context);
@@ -63,7 +62,7 @@ public:
   SmallVector<unsigned, 4> numHalfsInOpFrags;
   /// Represents the operands of a MMA operation of the form D = (alpha*(A*B)) +
   /// (beta*C).
-  enum OperandMap { A, B, C, D };
+  enum OperandMap { A, B, C };
 };
 
 /// Checks if all the operands of the op being lowered are of LLVM Types. The
@@ -305,7 +304,7 @@ public:
             .getType()
             .cast<gpu::MMAMatrixType>()
             .getElementType() == f16Ty) {
-      for (unsigned i = 0, e = numHalfsInOpFrags[D]; i < e; ++i) {
+      for (unsigned i = 0, e = numHalfsInOpFrags[C]; i < e; ++i) {
         Value toUse = rewriter.create<LLVM::ExtractValueOp>(
             loc, f16x2Ty, operands[0], rewriter.getI32ArrayAttr(i));
         storeOpOperands.push_back(toUse);

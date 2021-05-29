@@ -154,11 +154,7 @@ bool operator!=(const allocator<T>&, const allocator<U>&) noexcept; // constexpr
 
 template <class OutputIterator, class T>
 class raw_storage_iterator
-    : public iterator<output_iterator_tag,
-                      T,                               // purposefully not C++03
-                      ptrdiff_t,                       // purposefully not C++03
-                      T*,                              // purposefully not C++03
-                      raw_storage_iterator&>           // purposefully not C++03
+    : public iterator<output_iterator_tag, void, void, void, void> // until C++17
 {
 public:
     explicit raw_storage_iterator(OutputIterator x);

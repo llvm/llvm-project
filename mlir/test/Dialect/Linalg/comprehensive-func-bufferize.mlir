@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -linalg-comprehensive-func-bufferize -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -linalg-comprehensive-func-bufferize=test-analysis-only -split-input-file | FileCheck %s --check-prefix=ANALYSIS
 
 // CHECK-DAG: #[[$map_2d_dyn:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
 
@@ -218,3 +219,140 @@ func @subtensor_insert_fun_not_inplace(%A : tensor<?xf32> {linalg.inplaceable = 
   %r1 = linalg.fill(%A, %f0) : tensor<?xf32>, f32 -> tensor<?xf32>
   return %r0, %r1: tensor<?xf32>, tensor<?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @subtensor_fun
+func @subtensor_fun(%A : tensor<?xf32> {linalg.inplaceable = true})
+  ->  tensor<4xf32>
+{
+  //      CHECK: %[[BUFFER_CAST_A:.*]] = memref.buffer_cast {{.*}} : memref<?xf32
+
+  // CHECK: %[[ALLOC:.*]] = memref.alloc() : memref<4xf32>
+  // CHECK: %[[SV:.*]] = memref.subview %[[BUFFER_CAST_A]][0] [4] [1]
+  // CHECK: linalg.copy(%[[SV]], %[[ALLOC]])
+  %r0 = subtensor %A[0][4][1] : tensor<?xf32> to tensor<4xf32>
+  return %r0: tensor<4xf32>
+}
+
+// -----
+
+// ANALYSIS-LABEL: func @subtensor_readonly_use
+func @subtensor_readonly_use(
+    %A : tensor<?x?xf32> {linalg.inplaceable = true},
+    %B : tensor<4x4xf32>, %C : tensor<4x4xf32>) ->  tensor<4x4xf32>
+{
+  // subtensor is only used as a read.
+  //     ANALYSIS: subtensor {{.*}} {__inplace_results_attr__ = ["true"]}
+  %sA = subtensor %A[0, 0][4, 4][1, 1] : tensor<?x?xf32> to tensor<4x4xf32>
+  // matmul output operand is not inplaceable at the function boundary.
+  //     ANALYSIS: linalg.matmul {{.*}}
+  // ANALYSIS-NOT: {__inplace_results_attr__ = ["true"]}
+  %D = linalg.matmul  ins(%sA, %B: tensor<4x4xf32>, tensor<4x4xf32>)
+                     outs(%B: tensor<4x4xf32>)
+    -> tensor<4x4xf32>
+  return %D: tensor<4x4xf32>
+}
+
+// -----
+
+// ANALYSIS-LABEL: func @subtensor_nonmatching_subtensor_insert_inplace
+func @subtensor_nonmatching_subtensor_insert_inplace(
+    %A : tensor<?xf32> {linalg.inplaceable = true}, %idx: index)
+  ->  tensor<?xf32>
+{
+  // subtensor has no matching subtensor_insert and is not just used by known
+  // readonly ops.
+  //     ANALYSIS: subtensor {{.*}}
+  // ANALYSIS-NOT: {__inplace_results_attr__ = ["true"]}
+  %r0 = subtensor %A[0][4][1] : tensor<?xf32> to tensor<4xf32>
+  // subtensor_insert can bufferize inplace fine.
+  //     ANALYSIS: subtensor_insert {{.*}} {__inplace_results_attr__ = ["true"]}
+  %r1 = subtensor_insert %r0 into %A[%idx][4][1] : tensor<4xf32> into tensor<?xf32>
+  return %r1: tensor<?xf32>
+}
+
+// -----
+
+// ANALYSIS-LABEL: func @subtensor_nonmatching_subtensor_insert_non_inplace
+func @subtensor_nonmatching_subtensor_insert_non_inplace(
+    %A : tensor<?xf32> {linalg.inplaceable = false}, %idx: index)
+  ->  tensor<?xf32>
+{
+  // subtensor has no matching subtensor_insert and is not just used by known
+  // readonly ops.
+  //     ANALYSIS: subtensor {{.*}} {__inplace_results_attr__ = ["true"]}
+  %r0 = subtensor %A[0][4][1] : tensor<?xf32> to tensor<4xf32>
+  // subtensor_insert cannot bufferize inplace.
+  //     ANALYSIS: subtensor_insert {{.*}}
+  // ANALYSIS-NOT: {__inplace_results_attr__ = ["true"]}
+  %r1 = subtensor_insert %r0 into %A[%idx][4][1] : tensor<4xf32> into tensor<?xf32>
+  return %r1: tensor<?xf32>
+}
+
+// -----
+
+// ANALYSIS-LABEL: func @subtensor_matching_subtensor_insert
+func @subtensor_matching_subtensor_insert(%A : tensor<?xf32> {linalg.inplaceable = true})
+  ->  tensor<?xf32>
+{
+  // subtensor has a matching subtensor_insert that bufferizes inplace.
+  // TODO: Atm subtensor is not inplaceable but can be.
+  // In the grander scheme, this will canonicalize away beforehand.
+  //     ANALYSIS: subtensor {{.*}}
+  // ANALYSIS-NOT: {__inplace_results_attr__ = ["true"]}
+  %r0 = subtensor %A[0][4][1] : tensor<?xf32> to tensor<4xf32>
+  // subtensor_insert can bufferize inplace fine.
+  //     ANALYSIS: subtensor_insert {{.*}} {__inplace_results_attr__ = ["true"]}
+  %r1 = subtensor_insert %r0 into %A[0][4][1] : tensor<4xf32> into tensor<?xf32>
+  return %r1: tensor<?xf32>
+}
+
+// -----
+
+// ANALYSIS-LABEL: func @subtensor_matching_and_nonmatching_1
+func @subtensor_matching_and_nonmatching_1(%A : tensor<?xf32> {linalg.inplaceable = true}, %idx: index)
+  ->  (tensor<?xf32>, tensor<?xf32>)
+{
+  // %r1 is not inplaceable and %r2 is a matching subtensor_insert so %r0 could
+  // be inplaceable.
+  // In the grander scheme, %r2 will canonicalize away beforehand but %r0 will still
+  // not be inplaceable as the production of %r1 may involve a self-copy.
+  //     ANALYSIS: subtensor {{.*}}
+  // ANALYSIS-NOT: {__inplace_results_attr__ = ["true"]}
+  %r0 = subtensor %A[0][4][1] : tensor<?xf32> to tensor<4xf32>
+  //     ANALYSIS: subtensor_insert {{.*}}
+  // ANALYSIS-NOT: {__inplace_results_attr__ = ["true"]}
+  %r1 = subtensor_insert %r0 into %A[%idx][4][1] : tensor<4xf32> into tensor<?xf32>
+  //     ANALYSIS: subtensor_insert {{.*}} {__inplace_results_attr__ = ["true"]}
+  %r2 = subtensor_insert %r0 into %A[0][4][1] : tensor<4xf32> into tensor<?xf32>
+  return %r1, %r2: tensor<?xf32>, tensor<?xf32>
+}
+
+// -----
+
+// ANALYSIS-LABEL: func @subtensor_matching_and_nonmatching_2
+func @subtensor_matching_and_nonmatching_2(%A : tensor<?xf32> {linalg.inplaceable = true}, %idx: index)
+  ->  (tensor<?xf32>, tensor<?xf32>)
+{
+  // %r1 is not inplaceable and %r2 is a matching subtensor_insert so %r0 should
+  // be inplaceable.
+  // In the grander scheme, %r2 will canonicalize away beforehand and %r0 will become
+  // inplaceable by reducing to the `subtensor_nonmatching_subtensor_insert_non_inplace`
+  // case,
+  //     ANALYSIS: subtensor {{.*}}
+  // ANALYSIS-NOT: {__inplace_results_attr__ = ["true"]}
+  %r0 = subtensor %A[0][4][1] : tensor<?xf32> to tensor<4xf32>
+  //     ANALYSIS: subtensor_insert {{.*}}
+  // ANALYSIS-NOT: {__inplace_results_attr__ = ["true"]}
+  %r2 = subtensor_insert %r0 into %A[0][4][1] : tensor<4xf32> into tensor<?xf32>
+  //     ANALYSIS: subtensor_insert {{.*}} {__inplace_results_attr__ = ["true"]}
+  %r1 = subtensor_insert %r0 into %A[%idx][4][1] : tensor<4xf32> into tensor<?xf32>
+
+  return %r1, %r2: tensor<?xf32>, tensor<?xf32>
+}
+
+// -----
+
+// TODO: unknown ops, linalg chain success, linalg chain failure.
+
