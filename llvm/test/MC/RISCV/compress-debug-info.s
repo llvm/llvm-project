@@ -1,6 +1,6 @@
-# RUN: llvm-mc -triple riscv32 -mattr=+c -g -M no-aliases %s \
+# RUN: llvm-mc -triple riscv32 -mattr=+c %s -g -o - -riscv-no-aliases \
 # RUN:   | FileCheck %s -check-prefixes=COMPRESS,BOTH
-# RUN: llvm-mc -triple riscv32 -g -M no-aliases %s \
+# RUN: llvm-mc -triple riscv32 %s -g -o - -riscv-no-aliases \
 # RUN:   | FileCheck %s -check-prefixes=UNCOMPRESS,BOTH
 
 
