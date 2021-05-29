@@ -34,6 +34,11 @@ using namespace llvm;
 #define GEN_UNCOMPRESS_INSTR
 #include "RISCVGenCompressInstEmitter.inc"
 
+static cl::opt<bool>
+    NoAliases("riscv-no-aliases",
+              cl::desc("Disable the emission of assembler pseudo instructions"),
+              cl::init(false), cl::Hidden);
+
 // Print architectural register names rather than the ABI names (such as x2
 // instead of sp).
 // TODO: Make RISCVInstPrinter::getRegisterName non-static so that this can a
@@ -64,11 +69,11 @@ void RISCVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   bool Res = false;
   const MCInst *NewMI = MI;
   MCInst UncompressedMI;
-  if (PrintAliases)
+  if (PrintAliases && !NoAliases)
     Res = uncompressInst(UncompressedMI, *MI, MRI, STI);
   if (Res)
     NewMI = const_cast<MCInst *>(&UncompressedMI);
-  if (!PrintAliases || !printAliasInstr(NewMI, Address, STI, O))
+  if (!PrintAliases || NoAliases || !printAliasInstr(NewMI, Address, STI, O))
     printInstruction(NewMI, Address, STI, O);
   printAnnotation(O, Annot);
 }
