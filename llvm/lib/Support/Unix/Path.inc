@@ -209,8 +209,11 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   // to the file.
   char exe_path[PATH_MAX];
 #if __FreeBSD_version >= 1300057
-  if (elf_aux_info(AT_EXECPATH, exe_path, sizeof(exe_path)) == 0)
-    return exe_path;
+  if (elf_aux_info(AT_EXECPATH, exe_path, sizeof(exe_path)) == 0) {
+    char link_path[PATH_MAX];
+    if (realpath(exe_path, link_path))
+      return link_path;
+  }
 #else
   // elf_aux_info(AT_EXECPATH, ... is not available in all supported versions,
   // fall back to finding the ELF auxiliary vectors after the process's
@@ -219,9 +222,12 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   while (*p++ != 0)
     ;
   // Iterate through auxiliary vectors for AT_EXECPATH.
-  for (; *(uintptr_t *)p != AT_NULL; p++) {
-    if (*(uintptr_t *)p++ == AT_EXECPATH)
-      return *p;
+  for (Elf_Auxinfo *aux = (Elf_Auxinfo *)p; aux->a_type != AT_NULL; aux++) {
+    if (aux->a_type == AT_EXECPATH) {
+      char link_path[PATH_MAX];
+      if (realpath((char *)aux->a_un.a_ptr, link_path))
+        return link_path;
+    }
   }
 #endif
   // Fall back to argv[0] if auxiliary vectors are not available.
