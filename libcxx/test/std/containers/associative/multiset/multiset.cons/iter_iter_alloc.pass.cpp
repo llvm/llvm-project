@@ -38,7 +38,7 @@ int main(int, char**)
         3,
         3
     };
-    typedef test_compare<std::less<V> > C;
+    typedef test_less<V> C;
     typedef test_allocator<V> A;
     std::multiset<V, C, A> m(cpp17_input_iterator<const V*>(ar),
                         cpp17_input_iterator<const V*>(ar+sizeof(ar)/sizeof(ar[0])),
@@ -73,7 +73,7 @@ int main(int, char**)
         3
     };
     typedef test_allocator<V> A;
-    typedef test_compare<std::less<int> > C;
+    typedef test_less<int> C;
     A a;
     std::multiset<V, C, A> m(ar, ar+sizeof(ar)/sizeof(ar[0]), a);
 

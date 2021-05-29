@@ -24,7 +24,7 @@
 int main(int, char**)
 {
     {
-    typedef test_compare<std::less<int> > Cmp;
+    typedef test_less<int> Cmp;
     typedef test_allocator<int> A;
     typedef std::set<int, Cmp, A> C;
     typedef C::value_type V;
@@ -42,7 +42,7 @@ int main(int, char**)
     assert(m.get_allocator() == A(4));
     }
     {
-    typedef test_compare<std::less<int> > Cmp;
+    typedef test_less<int> Cmp;
     typedef test_allocator<int> A;
     typedef std::set<int, Cmp, A> C;
     typedef C::value_type V;
