@@ -247,6 +247,37 @@ TEST_F(FormatTestCSharp, Attributes) {
   verifyFormat("[TestMethod]\n"
                "public string Host { set; get; }");
 
+  // Adjacent properties should not cause line wrapping issues
+  verifyFormat("[JsonProperty(\"foo\")]\n"
+               "public string Foo { set; get; }\n"
+               "[JsonProperty(\"bar\")]\n"
+               "public string Bar { set; get; }\n"
+               "[JsonProperty(\"bar\")]\n"
+               "protected string Bar { set; get; }\n"
+               "[JsonProperty(\"bar\")]\n"
+               "internal string Bar { set; get; }");
+
+  // Multiple attributes should always be split (not just the first ones)
+  verifyFormat("[XmlIgnore]\n"
+               "[JsonProperty(\"foo\")]\n"
+               "public string Foo { set; get; }");
+
+  verifyFormat("[XmlIgnore]\n"
+               "[JsonProperty(\"foo\")]\n"
+               "public string Foo { set; get; }\n"
+               "[XmlIgnore]\n"
+               "[JsonProperty(\"bar\")]\n"
+               "public string Bar { set; get; }");
+
+  verifyFormat("[XmlIgnore]\n"
+               "[ScriptIgnore]\n"
+               "[JsonProperty(\"foo\")]\n"
+               "public string Foo { set; get; }\n"
+               "[XmlIgnore]\n"
+               "[ScriptIgnore]\n"
+               "[JsonProperty(\"bar\")]\n"
+               "public string Bar { set; get; }");
+
   verifyFormat("[TestMethod(\"start\", HelpText = \"Starts the server "
                "listening on provided host\")]\n"
                "public string Host { set; get; }");
@@ -268,6 +299,34 @@ TEST_F(FormatTestCSharp, Attributes) {
 
   // Attributes in a method declaration do not cause line wrapping.
   verifyFormat("void MethodA([In][Out] ref double x)\n"
+               "{\n"
+               "}");
+
+  verifyFormat("void MethodA([In, Out] ref double x)\n"
+               "{\n"
+               "}");
+
+  verifyFormat("void MethodA([In, Out] double[] x)\n"
+               "{\n"
+               "}");
+
+  verifyFormat("void MethodA([In] double[] x)\n"
+               "{\n"
+               "}");
+
+  verifyFormat("void MethodA(int[] x)\n"
+               "{\n"
+               "}");
+  verifyFormat("void MethodA(int[][] x)\n"
+               "{\n"
+               "}");
+  verifyFormat("void MethodA([] x)\n"
+               "{\n"
+               "}");
+
+  verifyFormat("public void Log([CallerLineNumber] int line = -1, "
+               "[CallerFilePath] string path = null,\n"
+               "                [CallerMemberName] string name = null)\n"
                "{\n"
                "}");
 

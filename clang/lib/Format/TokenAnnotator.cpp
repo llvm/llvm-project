@@ -3520,6 +3520,17 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       return false;
     if (Right.is(TT_CSharpGenericTypeConstraint))
       return true;
+
+    // Break after C# [...] and before public/protected/private/internal.
+    if (Left.is(TT_AttributeSquare) && Left.is(tok::r_square) &&
+        (Right.isAccessSpecifier(/*ColonRequired=*/false) ||
+         Right.is(Keywords.kw_internal)))
+      return true;
+    // Break between ] and [ but only when there are really 2 attributes.
+    if (Left.is(TT_AttributeSquare) && Right.is(TT_AttributeSquare) &&
+        Left.is(tok::r_square) && Right.is(tok::l_square))
+      return true;
+
   } else if (Style.Language == FormatStyle::LK_JavaScript) {
     // FIXME: This might apply to other languages and token kinds.
     if (Right.is(tok::string_literal) && Left.is(tok::plus) && Left.Previous &&
