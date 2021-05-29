@@ -753,16 +753,16 @@ SVal SValBuilder::evalCastSubKind(loc::MemRegionVal V, QualType CastTy,
         if (const auto *SR = dyn_cast<SymbolicRegion>(R)) {
           QualType SRTy = SR->getSymbol()->getType();
           if (!hasSameUnqualifiedPointeeType(SRTy, CastTy)) {
-            R = StateMgr.getStoreManager().castRegion(SR, CastTy);
-            return loc::MemRegionVal(R);
+            if (auto OptR = StateMgr.getStoreManager().castRegion(SR, CastTy))
+              return loc::MemRegionVal(*OptR);
           }
         }
       }
       // Next fixes pointer dereference using type different from its initial
       // one. See PR37503 and PR49007 for details.
       if (const auto *ER = dyn_cast<ElementRegion>(R)) {
-        if ((R = StateMgr.getStoreManager().castRegion(ER, CastTy)))
-          return loc::MemRegionVal(R);
+        if (auto OptR = StateMgr.getStoreManager().castRegion(ER, CastTy))
+          return loc::MemRegionVal(*OptR);
       }
 
       return V;
@@ -807,8 +807,8 @@ SVal SValBuilder::evalCastSubKind(loc::MemRegionVal V, QualType CastTy,
 
     // Get the result of casting a region to a different type.
     const MemRegion *R = V.getRegion();
-    if ((R = StateMgr.getStoreManager().castRegion(R, CastTy)))
-      return loc::MemRegionVal(R);
+    if (auto OptR = StateMgr.getStoreManager().castRegion(R, CastTy))
+      return loc::MemRegionVal(*OptR);
   }
 
   // Pointer to whatever else.
@@ -873,8 +873,8 @@ SVal SValBuilder::evalCastSubKind(nonloc::LocAsInteger V, QualType CastTy,
   if (!IsUnknownOriginalType && Loc::isLocType(CastTy) &&
       OriginalTy->isIntegralOrEnumerationType()) {
     if (const MemRegion *R = L.getAsRegion())
-      if ((R = StateMgr.getStoreManager().castRegion(R, CastTy)))
-        return loc::MemRegionVal(R);
+      if (auto OptR = StateMgr.getStoreManager().castRegion(R, CastTy))
+        return loc::MemRegionVal(*OptR);
     return L;
   }
 
@@ -890,8 +890,8 @@ SVal SValBuilder::evalCastSubKind(nonloc::LocAsInteger V, QualType CastTy,
       // Delegate to store manager to get the result of casting a region to a
       // different type. If the MemRegion* returned is NULL, this expression
       // Evaluates to UnknownVal.
-      if ((R = StateMgr.getStoreManager().castRegion(R, CastTy)))
-        return loc::MemRegionVal(R);
+      if (auto OptR = StateMgr.getStoreManager().castRegion(R, CastTy))
+        return loc::MemRegionVal(*OptR);
     }
   } else {
     if (Loc::isLocType(CastTy)) {
