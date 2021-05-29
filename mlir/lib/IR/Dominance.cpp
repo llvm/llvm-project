@@ -27,7 +27,8 @@ template class llvm::DomTreeNodeBase<Block>;
 /// Return true if the region with the given index inside the operation
 /// has SSA dominance.
 static bool hasSSADominance(Operation *op, unsigned index) {
-  if (!op->isRegistered()) return false;
+  if (!op->isRegistered())
+    return false;
 
   auto kindInterface = dyn_cast<RegionKindInterface>(op);
   return !kindInterface || kindInterface.hasSSADominance(index);
@@ -43,8 +44,11 @@ void DominanceInfoBase<IsPostDom>::recalculate(Operation *op) {
 
   // Build the dominance for each of the operation regions.
   op->walk([&](Operation *op) {
-    auto kindInterface = dyn_cast<RegionKindInterface>(op);
     unsigned numRegions = op->getNumRegions();
+    if (numRegions == 0)
+      return;
+
+    auto kindInterface = dyn_cast<RegionKindInterface>(op);
     for (unsigned i = 0; i < numRegions; i++) {
       Region &region = op->getRegion(i);
       // Don't compute dominance if the region is empty.
