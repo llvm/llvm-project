@@ -285,6 +285,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
                                   const TargetTransformInfo *TTI,
                                   OptimizationRemarkEmitter *ORE,
                                   bool PreserveLCSSA, Loop **RemainderLoop) {
+  assert(DT && "DomTree is required");
 
   if (!L->getLoopPreheader()) {
     LLVM_DEBUG(dbgs() << "  Can't unroll; loop preheader-insertion failed.\n");
@@ -654,16 +655,14 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       // dedicated entry block (copy of the header block), this header's copy
       // dominates all copied blocks. That means, dominance relations in the
       // copied body are the same as in the original body.
-      if (DT) {
-        if (*BB == Header)
-          DT->addNewBlock(New, Latches[It - 1]);
-        else {
-          auto BBDomNode = DT->getNode(*BB);
-          auto BBIDom = BBDomNode->getIDom();
-          BasicBlock *OriginalBBIDom = BBIDom->getBlock();
-          DT->addNewBlock(
-              New, cast<BasicBlock>(LastValueMap[cast<Value>(OriginalBBIDom)]));
-        }
+      if (*BB == Header)
+        DT->addNewBlock(New, Latches[It - 1]);
+      else {
+        auto BBDomNode = DT->getNode(*BB);
+        auto BBIDom = BBDomNode->getIDom();
+        BasicBlock *OriginalBBIDom = BBIDom->getBlock();
+        DT->addNewBlock(
+            New, cast<BasicBlock>(LastValueMap[cast<Value>(OriginalBBIDom)]));
       }
     }
 
@@ -767,7 +766,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // Immediate dominator of such block might change, because we add more
   // routes which can lead to the exit: we can now reach it from the copied
   // iterations too.
-  if (DT && ULO.Count > 1) {
+  if (ULO.Count > 1) {
     for (auto *BB : OriginalLoopBlocks) {
       auto *BBDomNode = DT->getNode(BB);
       SmallVector<BasicBlock *, 16> ChildrenToUpdate;
@@ -808,7 +807,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     }
   }
 
-  assert(!DT || !UnrollVerifyDomtree ||
+  assert(!UnrollVerifyDomtree ||
          DT->verify(DominatorTree::VerificationLevel::Fast));
 
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
@@ -862,39 +861,36 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   if (PreserveLCSSA && OuterL && CompletelyUnroll && !NeedToFixLCSSA)
     NeedToFixLCSSA |= ::needToInsertPhisForLCSSA(OuterL, UnrolledLoopBlocks, LI);
 
-  // If we have a pass and a DominatorTree we should re-simplify impacted loops
-  // to ensure subsequent analyses can rely on this form. We want to simplify
+  // Make sure that loop-simplify form is preserved. We want to simplify
   // at least one layer outside of the loop that was unrolled so that any
   // changes to the parent loop exposed by the unrolling are considered.
-  if (DT) {
-    if (OuterL) {
-      // OuterL includes all loops for which we can break loop-simplify, so
-      // it's sufficient to simplify only it (it'll recursively simplify inner
-      // loops too).
-      if (NeedToFixLCSSA) {
-        // LCSSA must be performed on the outermost affected loop. The unrolled
-        // loop's last loop latch is guaranteed to be in the outermost loop
-        // after LoopInfo's been updated by LoopInfo::erase.
-        Loop *LatchLoop = LI->getLoopFor(Latches.back());
-        Loop *FixLCSSALoop = OuterL;
-        if (!FixLCSSALoop->contains(LatchLoop))
-          while (FixLCSSALoop->getParentLoop() != LatchLoop)
-            FixLCSSALoop = FixLCSSALoop->getParentLoop();
+  if (OuterL) {
+    // OuterL includes all loops for which we can break loop-simplify, so
+    // it's sufficient to simplify only it (it'll recursively simplify inner
+    // loops too).
+    if (NeedToFixLCSSA) {
+      // LCSSA must be performed on the outermost affected loop. The unrolled
+      // loop's last loop latch is guaranteed to be in the outermost loop
+      // after LoopInfo's been updated by LoopInfo::erase.
+      Loop *LatchLoop = LI->getLoopFor(Latches.back());
+      Loop *FixLCSSALoop = OuterL;
+      if (!FixLCSSALoop->contains(LatchLoop))
+        while (FixLCSSALoop->getParentLoop() != LatchLoop)
+          FixLCSSALoop = FixLCSSALoop->getParentLoop();
 
-        formLCSSARecursively(*FixLCSSALoop, *DT, LI, SE);
-      } else if (PreserveLCSSA) {
-        assert(OuterL->isLCSSAForm(*DT) &&
-               "Loops should be in LCSSA form after loop-unroll.");
-      }
-
-      // TODO: That potentially might be compile-time expensive. We should try
-      // to fix the loop-simplified form incrementally.
-      simplifyLoop(OuterL, DT, LI, SE, AC, nullptr, PreserveLCSSA);
-    } else {
-      // Simplify loops for which we might've broken loop-simplify form.
-      for (Loop *SubLoop : LoopsToSimplify)
-        simplifyLoop(SubLoop, DT, LI, SE, AC, nullptr, PreserveLCSSA);
+      formLCSSARecursively(*FixLCSSALoop, *DT, LI, SE);
+    } else if (PreserveLCSSA) {
+      assert(OuterL->isLCSSAForm(*DT) &&
+             "Loops should be in LCSSA form after loop-unroll.");
     }
+
+    // TODO: That potentially might be compile-time expensive. We should try
+    // to fix the loop-simplified form incrementally.
+    simplifyLoop(OuterL, DT, LI, SE, AC, nullptr, PreserveLCSSA);
+  } else {
+    // Simplify loops for which we might've broken loop-simplify form.
+    for (Loop *SubLoop : LoopsToSimplify)
+      simplifyLoop(SubLoop, DT, LI, SE, AC, nullptr, PreserveLCSSA);
   }
 
   return CompletelyUnroll ? LoopUnrollResult::FullyUnrolled
