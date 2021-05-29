@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-b -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-b -M no-aliases \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ-NOALIAS %s
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-b \
 # RUN:     | FileCheck -check-prefixes=CHECK-S-OBJ %s
