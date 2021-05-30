@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "mcasmparser"
-
 #include "HexagonTargetStreamer.h"
 #include "MCTargetDesc/HexagonMCChecker.h"
 #include "MCTargetDesc/HexagonMCELFStreamer.h"
@@ -57,6 +55,8 @@
 #include <memory>
 #include <string>
 #include <utility>
+
+#define DEBUG_TYPE "mcasmparser"
 
 using namespace llvm;
 

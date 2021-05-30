@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "hexagon-disassembler"
-
 #include "MCTargetDesc/HexagonBaseInfo.h"
 #include "MCTargetDesc/HexagonMCChecker.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
@@ -31,6 +29,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+
+#define DEBUG_TYPE "hexagon-disassembler"
 
 using namespace llvm;
 using namespace Hexagon;

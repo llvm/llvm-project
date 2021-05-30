@@ -17,8 +17,6 @@
 
 #include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
-#define AA_NAME "alignment-from-assumptions"
-#define DEBUG_TYPE AA_NAME
 #include "llvm/Transforms/Scalar/AlignmentFromAssumptions.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -37,6 +35,9 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+
+#define AA_NAME "alignment-from-assumptions"
+#define DEBUG_TYPE AA_NAME
 using namespace llvm;
 
 STATISTIC(NumLoadAlignChanged,

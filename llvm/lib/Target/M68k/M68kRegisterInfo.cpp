@@ -11,8 +11,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "m68k-reg-info"
-
 #include "M68kRegisterInfo.h"
 
 #include "M68k.h"
@@ -31,6 +29,8 @@
 
 #define GET_REGINFO_TARGET_DESC
 #include "M68kGenRegisterInfo.inc"
+
+#define DEBUG_TYPE "m68k-reg-info"
 
 using namespace llvm;
 
