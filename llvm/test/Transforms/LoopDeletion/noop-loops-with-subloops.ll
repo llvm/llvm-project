@@ -154,7 +154,7 @@ exit:
   ret void
 }
 
-; The inner loop may not terminate, so we cannot remote it, unless the
+; The inner loop may not terminate, so we cannot remove it, unless the
 ; function/loop is mustprogress. Test case from PR50511.
 define void @inner_loop_may_be_infinite(i1 %c1, i1 %c2) {
 ; CHECK-LABEL: @inner_loop_may_be_infinite(
@@ -177,10 +177,10 @@ exit:
   ret void
 }
 
-; Similar to @inner_loop_may_be_infinite, but with mustprogress. We can delete
-; both loops.
-define void @inner_loop_may_be_infinite_mustprogress(i1 %c1, i1 %c2) mustprogress {
-; CHECK-LABEL: @inner_loop_may_be_infinite_mustprogress(
+; Similar to @inner_loop_may_be_infinite, but the function is marked as
+; mustprogress. The loops can be removed.
+define void @inner_loop_may_be_infinite_but_fn_mustprogress(i1 %c1, i1 %c2) mustprogress {
+; CHECK-LABEL: @inner_loop_may_be_infinite_but_fn_mustprogress(
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -199,3 +199,86 @@ loop1.latch:
 exit:
   ret void
 }
+
+; Similar to @inner_loop_may_be_infinite, but the parent loop loop1 is marked
+; as mustprogress. The loops can be removed.
+define void @inner_loop_may_be_infinite_but_top_loop_mustprogress(i1 %c1, i1 %c2) mustprogress {
+; CHECK-LABEL: @inner_loop_may_be_infinite_but_top_loop_mustprogress(
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+  br label %loop1
+
+loop1:
+  br i1 %c1, label %loop1.latch, label %loop2
+
+loop2:
+  br i1 %c2, label %loop1.latch, label %loop2
+
+loop1.latch:
+  br i1 false, label %loop1, label %exit, !llvm.loop !3
+
+exit:
+  ret void
+}
+
+; loop3 and loop1 are not marked as mustprogress, but loop2 (parent of loop3)
+; is. The loops can be removed.
+define void @loop2_mustprogress_but_not_child_loop_loop3(i1 %c1, i1 %c2, i1 %c3) {
+; CHECK-LABEL: @loop2_mustprogress_but_not_child_loop_loop3(
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+  br label %loop1
+
+loop1:
+  br i1 %c1, label %loop1.latch, label %loop2
+
+loop2:
+  br label %loop3
+
+loop3:
+  br i1 %c2, label %loop2.latch, label %loop3
+
+loop2.latch:
+  br i1 %c3, label %loop1.latch, label %loop2, !llvm.loop !3
+
+loop1.latch:
+  br i1 false, label %loop1, label %exit
+
+exit:
+  ret void
+}
+
+; Cannot remove loop3 or loop1, as they are not mustprogress. loop2 is
+; mustprogress and can be removed.
+define void @loop2_mustprogress_but_not_sibling_loop(i1 %c1, i1 %c2, i1 %c3) {
+; CHECK-LABEL: @loop2_mustprogress_but_not_sibling_loop(
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+  br label %loop1
+
+loop1:
+  br i1 %c1, label %loop1.latch, label %loop2
+
+loop2:
+  br i1 %c2, label %loop3, label %loop2, !llvm.loop !4
+
+loop3:
+  br i1 %c2, label %loop1.latch, label %loop3
+
+loop1.latch:
+  br i1 false, label %loop1, label %exit
+
+exit:
+  ret void
+}
+
+!1 = !{!"llvm.loop.mustprogress"}
+!2 = distinct !{!2, !1}
+!3 = distinct !{!3, !1}
+!4 = distinct !{!4, !1}
