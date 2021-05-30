@@ -546,3 +546,63 @@ define i32 @load_multiple_extracts_with_variable_indices_large_vector_only_all_v
   %res = add i32 %e.0, %e.1
   ret i32 %res
 }
+
+define i32 @load_multiple_extracts_with_variable_indices_large_vector_only_first_valid_by_and(<16 x i32>* %x, i64 %idx.0, i64 %idx.1) {
+; CHECK-LABEL: @load_multiple_extracts_with_variable_indices_large_vector_only_first_valid_by_and(
+; CHECK-NEXT:    [[IDX_0_CLAMPED:%.*]] = and i64 [[IDX_0:%.*]], 15
+; CHECK-NEXT:    [[LV:%.*]] = load <16 x i32>, <16 x i32>* [[X:%.*]], align 64
+; CHECK-NEXT:    [[E_0:%.*]] = extractelement <16 x i32> [[LV]], i64 [[IDX_0_CLAMPED]]
+; CHECK-NEXT:    [[E_1:%.*]] = extractelement <16 x i32> [[LV]], i64 [[IDX_1:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[E_0]], [[E_1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %idx.0.clamped = and i64 %idx.0, 15
+
+  %lv = load <16 x i32>, <16 x i32>* %x
+  %e.0 = extractelement <16 x i32> %lv, i64 %idx.0.clamped
+  %e.1 = extractelement <16 x i32> %lv, i64 %idx.1
+  %res = add i32 %e.0, %e.1
+  ret i32 %res
+}
+
+define i32 @load_multiple_extracts_with_variable_indices_large_vector_all_valid_by_and(<16 x i32>* %x, i64 %idx.0, i64 %idx.1) {
+; CHECK-LABEL: @load_multiple_extracts_with_variable_indices_large_vector_all_valid_by_and(
+; CHECK-NEXT:    [[IDX_0_CLAMPED:%.*]] = and i64 [[IDX_0:%.*]], 15
+; CHECK-NEXT:    [[IDX_1_CLAMPED:%.*]] = and i64 [[IDX_1:%.*]], 15
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i32>, <16 x i32>* [[X:%.*]], i32 0, i64 [[IDX_0_CLAMPED]]
+; CHECK-NEXT:    [[E_0:%.*]] = load i32, i32* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <16 x i32>, <16 x i32>* [[X]], i32 0, i64 [[IDX_1_CLAMPED]]
+; CHECK-NEXT:    [[E_1:%.*]] = load i32, i32* [[TMP2]], align 4
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[E_0]], [[E_1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %idx.0.clamped = and i64 %idx.0, 15
+  %idx.1.clamped = and i64 %idx.1, 15
+
+  %lv = load <16 x i32>, <16 x i32>* %x
+  %e.0 = extractelement <16 x i32> %lv, i64 %idx.0.clamped
+  %e.1 = extractelement <16 x i32> %lv, i64 %idx.1.clamped
+  %res = add i32 %e.0, %e.1
+  ret i32 %res
+}
+
+define i32 @load_multiple_extracts_with_variable_indices_large_vector_all_valid_by_and_some_noundef(<16 x i32>* %x, i64 %idx.0, i64 noundef %idx.1) {
+; CHECK-LABEL: @load_multiple_extracts_with_variable_indices_large_vector_all_valid_by_and_some_noundef(
+; CHECK-NEXT:    [[IDX_0_CLAMPED:%.*]] = and i64 [[IDX_0:%.*]], 15
+; CHECK-NEXT:    [[IDX_1_CLAMPED:%.*]] = and i64 [[IDX_1:%.*]], 15
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i32>, <16 x i32>* [[X:%.*]], i32 0, i64 [[IDX_0_CLAMPED]]
+; CHECK-NEXT:    [[E_0:%.*]] = load i32, i32* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <16 x i32>, <16 x i32>* [[X]], i32 0, i64 [[IDX_1_CLAMPED]]
+; CHECK-NEXT:    [[E_1:%.*]] = load i32, i32* [[TMP2]], align 4
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[E_0]], [[E_1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %idx.0.clamped = and i64 %idx.0, 15
+  %idx.1.clamped = and i64 %idx.1, 15
+
+  %lv = load <16 x i32>, <16 x i32>* %x
+  %e.0 = extractelement <16 x i32> %lv, i64 %idx.0.clamped
+  %e.1 = extractelement <16 x i32> %lv, i64 %idx.1.clamped
+  %res = add i32 %e.0, %e.1
+  ret i32 %res
+}
