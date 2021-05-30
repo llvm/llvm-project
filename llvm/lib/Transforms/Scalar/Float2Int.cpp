@@ -13,8 +13,6 @@
 
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
-#define DEBUG_TYPE "float2int"
-
 #include "llvm/Transforms/Scalar/Float2Int.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
@@ -31,6 +29,9 @@
 #include "llvm/Transforms/Scalar.h"
 #include <deque>
 #include <functional> // For std::function
+
+#define DEBUG_TYPE "float2int"
+
 using namespace llvm;
 
 // The algorithm is simple. Start at instructions that convert from the
