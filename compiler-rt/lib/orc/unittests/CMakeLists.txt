@@ -81,6 +81,7 @@ endmacro()
 
 set(UNITTEST_SOURCES
   adt_test.cpp
+  c_api_test.cpp
   endian_test.cpp
   error_test.cpp
   extensible_rtti_test.cpp
