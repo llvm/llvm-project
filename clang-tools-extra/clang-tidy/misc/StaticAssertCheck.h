@@ -30,9 +30,6 @@ public:
   }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
-  llvm::Optional<TraversalKind> getCheckTraversalKind() const override {
-    return TK_IgnoreUnlessSpelledInSource;
-  }
 
 private:
   SourceLocation getLastParenLoc(const ASTContext *ASTCtx,
