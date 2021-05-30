@@ -3922,7 +3922,6 @@ void mlir::populateStdToLLVMMemoryConversionPatterns(
   // clang-format off
   patterns.add<
       AssumeAlignmentOpLowering,
-      DeallocOpLowering,
       DimOpLowering,
       GlobalMemrefOpLowering,
       GetGlobalMemrefOpLowering,
@@ -3936,10 +3935,11 @@ void mlir::populateStdToLLVMMemoryConversionPatterns(
       TransposeOpLowering,
       ViewOpLowering>(converter);
   // clang-format on
-  if (converter.getOptions().useAlignedAlloc)
-    patterns.add<AlignedAllocOpLowering>(converter);
-  else
-    patterns.add<AllocOpLowering>(converter);
+  auto allocLowering = converter.getOptions().allocLowering;
+  if (allocLowering == LowerToLLVMOptions::AllocLowering::AlignedAlloc)
+    patterns.add<AlignedAllocOpLowering, DeallocOpLowering>(converter);
+  else if (allocLowering == LowerToLLVMOptions::AllocLowering::Malloc)
+    patterns.add<AllocOpLowering, DeallocOpLowering>(converter);
 }
 
 void mlir::populateStdToLLVMFuncOpConversionPattern(
@@ -4071,7 +4071,9 @@ struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
     options.emitCWrappers = emitCWrappers;
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
-    options.useAlignedAlloc = useAlignedAlloc;
+    options.allocLowering =
+        (useAlignedAlloc ? LowerToLLVMOptions::AllocLowering::AlignedAlloc
+                         : LowerToLLVMOptions::AllocLowering::Malloc);
     options.dataLayout = llvm::DataLayout(this->dataLayout);
     LLVMTypeConverter typeConverter(&getContext(), options);
 
@@ -4139,9 +4141,16 @@ std::unique_ptr<OperationPass<ModuleOp>> mlir::createLowerToLLVMPass() {
 
 std::unique_ptr<OperationPass<ModuleOp>>
 mlir::createLowerToLLVMPass(const LowerToLLVMOptions &options) {
+  auto allocLowering = options.allocLowering;
+  // There is no way to provide additional patterns for pass, so
+  // AllocLowering::None will always fail.
+  assert(allocLowering != LowerToLLVMOptions::AllocLowering::None &&
+         "LLVMLoweringPass doesn't support AllocLowering::None");
+  bool useAlignedAlloc =
+      (allocLowering == LowerToLLVMOptions::AllocLowering::AlignedAlloc);
   return std::make_unique<LLVMLoweringPass>(
       options.useBarePtrCallConv, options.emitCWrappers,
-      options.getIndexBitwidth(), options.useAlignedAlloc, options.dataLayout);
+      options.getIndexBitwidth(), useAlignedAlloc, options.dataLayout);
 }
 
 mlir::LowerToLLVMOptions::LowerToLLVMOptions(MLIRContext *ctx)
