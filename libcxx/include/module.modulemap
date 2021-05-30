@@ -533,21 +533,22 @@ module std [system] {
   }
 
   // FIXME: These should be private.
-  module __bits { header "__bits" export * }
   module __bit_reference { header "__bit_reference" export * }
+  module __bits { header "__bits" export * }
   module __debug { header "__debug" export * }
   module __errc { header "__errc" export * }
   module __functional_base { header "__functional_base" export * }
   module __hash_table { header "__hash_table" export * }
   module __locale { header "__locale" export * }
   module __mutex_base { header "__mutex_base" export * }
+  module __node_handle { header "__node_handle" export * }
   module __split_buffer { header "__split_buffer" export * }
   module __std_stream { header "__std_stream" export * }
   module __string { header "__string" export * }
+  module __threading_support { header "__threading_support" export * }
   module __tree { header "__tree" export * }
   module __tuple { header "__tuple" export * }
   module __undef_macros { header "__undef_macros" export * }
-  module __node_handle { header "__node_handle" export * }
 
   module experimental {
     requires cplusplus11

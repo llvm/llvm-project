@@ -55,7 +55,7 @@ namespace std {
 */
 
 #include <__config>
-#include <__bits>
+#include <__bits> // __libcpp_clz
 #include <__debug>
 #include <limits>
 #include <type_traits>

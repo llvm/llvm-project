@@ -574,8 +574,8 @@ template <class T>
 
 */
 
-#include <__config>
 #include <__availability>
+#include <__config>
 #include <__threading_support>
 #include <cstddef>
 #include <cstdint>
