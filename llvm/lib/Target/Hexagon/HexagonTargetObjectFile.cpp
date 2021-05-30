@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "hexagon-sdata"
-
 #include "HexagonTargetObjectFile.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -31,6 +29,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+
+#define DEBUG_TYPE "hexagon-sdata"
 
 using namespace llvm;
 

@@ -10,13 +10,13 @@
 // instructions on to the real streamer.
 //
 //===----------------------------------------------------------------------===//
-#define DEBUG_TYPE "avrmcelfstreamer"
-
 #include "MCTargetDesc/AVRMCELFStreamer.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCObjectWriter.h"
+
+#define DEBUG_TYPE "avrmcelfstreamer"
 
 using namespace llvm;
 

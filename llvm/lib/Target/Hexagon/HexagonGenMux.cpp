@@ -19,8 +19,6 @@
 // the predicate register, they cannot use the .new form. In such cases it
 // is better to collapse them back to a single MUX instruction.
 
-#define DEBUG_TYPE "hexmux"
-
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
@@ -46,6 +44,8 @@
 #include <iterator>
 #include <limits>
 #include <utility>
+
+#define DEBUG_TYPE "hexmux"
 
 using namespace llvm;
 
