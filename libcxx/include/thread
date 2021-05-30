@@ -83,20 +83,18 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 */
 
 #include <__config>
-#include <iosfwd>
+#include <__debug>
 #include <__functional_base>
-#include <type_traits>
+#include <__mutex_base>
+#include <__threading_support>
+#include <chrono>
 #include <cstddef>
 #include <functional>
+#include <iosfwd>
 #include <memory>
 #include <system_error>
-#include <chrono>
-#include <__mutex_base>
-#ifndef _LIBCPP_CXX03_LANG
 #include <tuple>
-#endif
-#include <__threading_support>
-#include <__debug>
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

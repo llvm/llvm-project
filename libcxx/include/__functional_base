@@ -11,10 +11,10 @@
 #define _LIBCPP_FUNCTIONAL_BASE
 
 #include <__config>
-#include <type_traits>
-#include <typeinfo>
 #include <exception>
 #include <new>
+#include <type_traits>
+#include <typeinfo>
 #include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

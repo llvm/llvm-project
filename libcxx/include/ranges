@@ -88,8 +88,8 @@ namespace std::ranges {
 #include <__ranges/data.h>
 #include <__ranges/empty.h>
 #include <__ranges/enable_borrowed_range.h>
-#include <__ranges/view.h>
 #include <__ranges/size.h>
+#include <__ranges/view.h>
 #include <compare>          // Required by the standard.
 #include <initializer_list> // Required by the standard.
 #include <iterator>         // Required by the standard.
