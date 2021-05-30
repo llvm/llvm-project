@@ -171,6 +171,21 @@ def DREGS : RegisterClass<"AVR", [i16], 8,
     R14R13, R12R11, R10R9
   )>;
 
+// Lower 16-bit pair registers in R0..R15, only used in inline assembly.
+def DREGSlo : RegisterClass<"AVR", [i16], 8,
+  (
+    add R15R14, R13R12, R11R10, R9R8, R7R6, R5R4, R3R2, R1R0
+  )>;
+
+// Lower 16-bit pair registers in r16..r23, only used in inline assembly.
+def DREGSLD8lo : RegisterClass<"AVR", [i16], 8,
+  (
+    // Return value and arguments.
+    add R19R18, R21R20, R23R22,
+    // Callee saved registers.
+    R17R16
+  )>;
+
 // 16-bit pair register class for movw
 def DREGSMOVW : RegisterClass<"AVR", [i16], 8,
   (
