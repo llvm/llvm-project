@@ -25,6 +25,24 @@
 
 using namespace mlir;
 
+/// Return true if the specified region is known to follow SSA dominance
+/// properties, i.e. it isn't a graph region.
+static bool regionHasSSADominance(Operation &op, size_t regionNo,
+                                  RegionKindInterface regionKindItf) {
+  // If the op is unregistered, then we don't know if it has SSADominance or
+  // not, so assume not.
+  if (!op.isRegistered())
+    return false;
+
+  // If the op is registered but has no RegionKindInterface, then it defaults to
+  // SSADominance.
+  if (!regionKindItf)
+    return true;
+
+  // Otherwise, ask the interface.
+  return regionKindItf.hasSSADominance(regionNo);
+}
+
 namespace {
 struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
   static unsigned getHashValue(const Operation *opC) {
@@ -74,16 +92,16 @@ struct CSE : public CSEBase<CSE> {
   /// operation was marked for removal, failure otherwise.
   LogicalResult simplifyOperation(ScopedMapTy &knownValues, Operation *op,
                                   bool hasSSADominance);
-  void simplifyBlock(ScopedMapTy &knownValues, DominanceInfo &domInfo,
-                     Block *bb, bool hasSSADominance);
-  void simplifyRegion(ScopedMapTy &knownValues, DominanceInfo &domInfo,
-                      Region &region);
+  void simplifyBlock(ScopedMapTy &knownValues, Block *bb, bool hasSSADominance);
+  void simplifyRegion(ScopedMapTy &knownValues, Region &region,
+                      bool hasSSADominance);
 
   void runOnOperation() override;
 
 private:
   /// Operations marked as dead and to be erased.
   std::vector<Operation *> opsToErase;
+  DominanceInfo *domInfo = nullptr;
 };
 } // end anonymous namespace
 
@@ -155,41 +173,49 @@ LogicalResult CSE::simplifyOperation(ScopedMapTy &knownValues, Operation *op,
   return failure();
 }
 
-void CSE::simplifyBlock(ScopedMapTy &knownValues, DominanceInfo &domInfo,
-                        Block *bb, bool hasSSADominance) {
-  for (auto &inst : *bb) {
+void CSE::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
+                        bool hasSSADominance) {
+  for (auto &op : *bb) {
     // If the operation is simplified, we don't process any held regions.
-    if (succeeded(simplifyOperation(knownValues, &inst, hasSSADominance)))
+    if (succeeded(simplifyOperation(knownValues, &op, hasSSADominance)))
       continue;
+
+    // Most operations don't have regions, so fast path that case.
+    if (op.getNumRegions() == 0)
+      continue;
+
+    auto regionKindItf = dyn_cast<RegionKindInterface>(op);
 
     // If this operation is isolated above, we can't process nested regions with
     // the given 'knownValues' map. This would cause the insertion of implicit
     // captures in explicit capture only regions.
-    if (inst.mightHaveTrait<OpTrait::IsIsolatedFromAbove>()) {
+    if (op.mightHaveTrait<OpTrait::IsIsolatedFromAbove>()) {
       ScopedMapTy nestedKnownValues;
-      for (auto &region : inst.getRegions())
-        simplifyRegion(nestedKnownValues, domInfo, region);
+      for (size_t i = 0, e = op.getNumRegions(); i != e; ++i) {
+        simplifyRegion(nestedKnownValues, op.getRegion(i),
+                       regionHasSSADominance(op, i, regionKindItf));
+      }
       continue;
     }
 
     // Otherwise, process nested regions normally.
-    for (auto &region : inst.getRegions())
-      simplifyRegion(knownValues, domInfo, region);
+    for (size_t i = 0, e = op.getNumRegions(); i != e; ++i) {
+      simplifyRegion(knownValues, op.getRegion(i),
+                     regionHasSSADominance(op, i, regionKindItf));
+    }
   }
 }
 
-void CSE::simplifyRegion(ScopedMapTy &knownValues, DominanceInfo &domInfo,
-                         Region &region) {
+void CSE::simplifyRegion(ScopedMapTy &knownValues, Region &region,
+                         bool hasSSADominance) {
   // If the region is empty there is nothing to do.
   if (region.empty())
     return;
 
-  bool hasSSADominance = domInfo.hasDominanceInfo(&region);
-
   // If the region only contains one block, then simplify it directly.
   if (std::next(region.begin()) == region.end()) {
     ScopedMapTy::ScopeTy scope(knownValues);
-    simplifyBlock(knownValues, domInfo, &region.front(), hasSSADominance);
+    simplifyBlock(knownValues, &region.front(), hasSSADominance);
     return;
   }
 
@@ -209,7 +235,7 @@ void CSE::simplifyRegion(ScopedMapTy &knownValues, DominanceInfo &domInfo,
 
   // Process the nodes of the dom tree for this region.
   stack.emplace_back(std::make_unique<CFGStackNode>(
-      knownValues, domInfo.getRootNode(&region)));
+      knownValues, domInfo->getRootNode(&region)));
 
   while (!stack.empty()) {
     auto &currentNode = stack.back();
@@ -217,7 +243,7 @@ void CSE::simplifyRegion(ScopedMapTy &knownValues, DominanceInfo &domInfo,
     // Check to see if we need to process this node.
     if (!currentNode->processed) {
       currentNode->processed = true;
-      simplifyBlock(knownValues, domInfo, currentNode->node->getBlock(),
+      simplifyBlock(knownValues, currentNode->node->getBlock(),
                     hasSSADominance);
     }
 
@@ -238,9 +264,14 @@ void CSE::runOnOperation() {
   /// A scoped hash table of defining operations within a region.
   ScopedMapTy knownValues;
 
-  DominanceInfo &domInfo = getAnalysis<DominanceInfo>();
-  for (Region &region : getOperation()->getRegions())
-    simplifyRegion(knownValues, domInfo, region);
+  domInfo = &getAnalysis<DominanceInfo>();
+  Operation *rootOp = getOperation();
+
+  auto regionKindItf = dyn_cast<RegionKindInterface>(getOperation());
+  for (size_t i = 0, e = rootOp->getNumRegions(); i != e; ++i) {
+    simplifyRegion(knownValues, rootOp->getRegion(i),
+                   regionHasSSADominance(*rootOp, i, regionKindItf));
+  }
 
   // If no operations were erased, then we mark all analyses as preserved.
   if (opsToErase.empty())
@@ -254,6 +285,7 @@ void CSE::runOnOperation() {
   // We currently don't remove region operations, so mark dominance as
   // preserved.
   markAnalysesPreserved<DominanceInfo, PostDominanceInfo>();
+  domInfo = nullptr;
 }
 
 std::unique_ptr<Pass> mlir::createCSEPass() { return std::make_unique<CSE>(); }
