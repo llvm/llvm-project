@@ -60,7 +60,7 @@ namespace scudo {
 
 struct DefaultConfig {
   using SizeClassMap = DefaultSizeClassMap;
-  static const bool MaySupportMemoryTagging = false;
+  static const bool MaySupportMemoryTagging = true;
 
 #if SCUDO_CAN_USE_PRIMARY64
   typedef SizeClassAllocator64<DefaultConfig> Primary;
@@ -87,7 +87,6 @@ struct DefaultConfig {
 
   template <class A> using TSDRegistryT = TSDRegistryExT<A>; // Exclusive
 };
-
 struct AndroidConfig {
   using SizeClassMap = AndroidSizeClassMap;
   static const bool MaySupportMemoryTagging = true;
