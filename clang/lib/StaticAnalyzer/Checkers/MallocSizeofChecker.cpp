@@ -139,6 +139,10 @@ static bool typesCompatible(ASTContext &C, QualType A, QualType B) {
   if (B->isVoidPointerType() && A->getAs<PointerType>())
     return true;
 
+  // sizeof(pointer type) is compatible with void*
+  if (A->isVoidPointerType() && B->getAs<PointerType>())
+    return true;
+
   while (true) {
     A = A.getCanonicalType();
     B = B.getCanonicalType();
