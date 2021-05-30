@@ -14,7 +14,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   include(CMakePackageConfigHelpers)
   include(GNUInstallDirs)
 
-  find_package(ROCM PATHS "/opt/rocm")
+  find_package(ROCM)
   if (ROCM_FOUND)
     include(ROCMSetupVersion)
     rocm_setup_version(VERSION "${PROJECT_VERSION}")
@@ -35,11 +35,8 @@ if (ROCM_CCACHE_BUILD)
 endif() # if (ROCM_CCACHE_BUILD)
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-  find_package(LLVM REQUIRED
-    PATHS "/opt/rocm/llvm")
-  find_package(Clang
-    HINTS ${LLVM_DIR}/../clang
-    PATHS "/opt/rocm/llvm")
+  find_package(LLVM REQUIRED)
+  find_package(Clang HINTS ${LLVM_DIR}/../clang)
 
   list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
 
@@ -104,7 +101,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
   ## Debian package values
   set ( CPACK_DEBIAN_PACKAGE_MAINTAINER "ROCm Compiler Support <rocm.compiler.support@amd.com>" )
-  set ( CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm" CACHE PATH "CPACK packaging path prefix default" )
 
   set ( CPACK_DEBIAN_PACKAGE_RELEASE "local" )
   if( DEFINED ENV{CPACK_DEBIAN_PACKAGE_RELEASE} )
