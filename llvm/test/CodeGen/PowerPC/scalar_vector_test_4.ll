@@ -216,7 +216,6 @@ define <4 x float> @s2v_test_f1(float* nocapture readonly %f64, <4 x float> %vec
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lfs f0, 0(r3)
 ; P9LE-NEXT:    xscvdpspn vs0, f0
-; P9LE-NEXT:    xxsldwi vs0, vs0, vs0, 3
 ; P9LE-NEXT:    xxinsertw v2, vs0, 12
 ; P9LE-NEXT:    blr
 ;
@@ -224,7 +223,6 @@ define <4 x float> @s2v_test_f1(float* nocapture readonly %f64, <4 x float> %vec
 ; P9BE:       # %bb.0: # %entry
 ; P9BE-NEXT:    lfs f0, 0(r3)
 ; P9BE-NEXT:    xscvdpspn vs0, f0
-; P9BE-NEXT:    xxsldwi vs0, vs0, vs0, 3
 ; P9BE-NEXT:    xxinsertw v2, vs0, 0
 ; P9BE-NEXT:    blr
 ;
