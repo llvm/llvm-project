@@ -1786,7 +1786,6 @@ public:
   static bool classofKind(Kind K) {
     return K >= firstCXXRecord && K <= lastCXXRecord;
   }
-  void markAbstract() { data().Abstract = true; }
 };
 
 /// Store information needed for an explicit specifier.
