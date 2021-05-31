@@ -11604,10 +11604,11 @@ Decl *Sema::ActOnUsingDeclaration(Scope *S, AccessSpecifier AS,
     }
   }
 
-  NamedDecl *UD =
-      BuildUsingDeclaration(S, AS, UsingLoc, TypenameLoc.isValid(), TypenameLoc,
-                            SS, TargetNameInfo, EllipsisLoc, AttrList,
-                            /*IsInstantiation*/false);
+  NamedDecl *UD = BuildUsingDeclaration(
+      S, AS, UsingLoc, TypenameLoc.isValid(), TypenameLoc, SS, TargetNameInfo,
+      EllipsisLoc, AttrList,
+      /*IsInstantiation=*/false,
+      AttrList.hasAttribute(ParsedAttr::AT_UsingIfExists));
   if (UD)
     PushOnScopeChains(UD, S, /*AddToContext*/ false);
 
@@ -11626,6 +11627,12 @@ IsEquivalentForUsingDecl(ASTContext &Context, NamedDecl *D1, NamedDecl *D2) {
     if (TypedefNameDecl *TD2 = dyn_cast<TypedefNameDecl>(D2))
       return Context.hasSameType(TD1->getUnderlyingType(),
                                  TD2->getUnderlyingType());
+
+  // Two using_if_exists using-declarations are equivalent if both are
+  // unresolved.
+  if (isa<UnresolvedUsingIfExistsDecl>(D1) &&
+      isa<UnresolvedUsingIfExistsDecl>(D2))
+    return true;
 
   return false;
 }
@@ -11736,6 +11743,20 @@ bool Sema::CheckUsingShadowDecl(UsingDecl *Using, NamedDecl *Orig,
 
   if (FoundEquivalentDecl)
     return false;
+
+  // Always emit a diagnostic for a mismatch between an unresolved
+  // using_if_exists and a resolved using declaration in either direction.
+  if (isa<UnresolvedUsingIfExistsDecl>(Target) !=
+      (isa_and_nonnull<UnresolvedUsingIfExistsDecl>(NonTag))) {
+    if (!NonTag && !Tag)
+      return false;
+    Diag(Using->getLocation(), diag::err_using_decl_conflict);
+    Diag(Target->getLocation(), diag::note_using_decl_target);
+    Diag((NonTag ? NonTag : Tag)->getLocation(),
+         diag::note_using_decl_conflict);
+    Using->setInvalidDecl();
+    return true;
+  }
 
   if (FunctionDecl *FD = Target->getAsFunction()) {
     NamedDecl *OldDecl = nullptr;
@@ -12001,7 +12022,8 @@ NamedDecl *Sema::BuildUsingDeclaration(
     Scope *S, AccessSpecifier AS, SourceLocation UsingLoc,
     bool HasTypenameKeyword, SourceLocation TypenameLoc, CXXScopeSpec &SS,
     DeclarationNameInfo NameInfo, SourceLocation EllipsisLoc,
-    const ParsedAttributesView &AttrList, bool IsInstantiation) {
+    const ParsedAttributesView &AttrList, bool IsInstantiation,
+    bool IsUsingIfExists) {
   assert(!SS.isInvalid() && "Invalid CXXScopeSpec.");
   SourceLocation IdentLoc = NameInfo.getLoc();
   assert(IdentLoc.isValid() && "Invalid TargetName location.");
@@ -12070,6 +12092,13 @@ NamedDecl *Sema::BuildUsingDeclaration(
                               IdentLoc))
     return nullptr;
 
+  // 'using_if_exists' doesn't make sense on an inherited constructor.
+  if (IsUsingIfExists && UsingName.getName().getNameKind() ==
+                             DeclarationName::CXXConstructorName) {
+    Diag(UsingLoc, diag::err_using_if_exists_on_ctor);
+    return nullptr;
+  }
+
   DeclContext *LookupContext = computeDeclContext(SS);
   NestedNameSpecifierLoc QualifierLoc = SS.getWithLocInContext(Context);
   if (!LookupContext || EllipsisLoc.isValid()) {
@@ -12125,6 +12154,11 @@ NamedDecl *Sema::BuildUsingDeclaration(
   }
 
   LookupQualifiedName(R, LookupContext);
+
+  if (R.empty() && IsUsingIfExists)
+    R.addDecl(UnresolvedUsingIfExistsDecl::Create(Context, CurContext, UsingLoc,
+                                                  UsingName.getName()),
+              AS_public);
 
   // Try to correct typos if possible. If constructor name lookup finds no
   // results, that means the named class has no explicit constructors, and we
@@ -12199,7 +12233,8 @@ NamedDecl *Sema::BuildUsingDeclaration(
 
   if (HasTypenameKeyword) {
     // If we asked for a typename and got a non-type decl, error out.
-    if (!R.getAsSingle<TypeDecl>()) {
+    if (!R.getAsSingle<TypeDecl>() &&
+        !R.getAsSingle<UnresolvedUsingIfExistsDecl>()) {
       Diag(IdentLoc, diag::err_using_typename_non_type);
       for (LookupResult::iterator I = R.begin(), E = R.end(); I != E; ++I)
         Diag((*I)->getUnderlyingDecl()->getLocation(),
