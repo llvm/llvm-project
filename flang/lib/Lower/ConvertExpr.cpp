@@ -1457,19 +1457,9 @@ public:
           builder.createConvert(loc, idxTy, fir::getBase(subVal)));
     }
     auto shape = builder.createShape(loc, exv);
-    llvm::SmallVector<mlir::Value> lengthParams;
-    exv.match(
-        [&](const fir::CharArrayBoxValue &arr) {
-          lengthParams.emplace_back(arr.getLen());
-        },
-        [&](const fir::BoxValue &arr) {
-          auto lengths = arr.getExplicitParameters();
-          lengthParams.append(lengths.begin(), lengths.end());
-        },
-        [](const auto &) {});
     auto elementAddr = builder.create<fir::ArrayCoorOp>(
         loc, refTy, addr, shape, /*slice=*/mlir::Value{}, arrayCoorArgs,
-        lengthParams);
+        fir::getTypeParams(exv));
     return arrayElementToExtendedValue(builder, loc, exv, elementAddr);
   }
 
@@ -3387,8 +3377,8 @@ public:
       return [=](IterSpace iters) -> ExtValue {
         mlir::Value coor = builder.create<fir::ArrayCoorOp>(
             loc, refEleTy, memref, shape, slice, iters.iterVec(),
-            /*lenParams=*/llvm::None);
-        return coor;
+            fir::getTypeParams(extMemref));
+        return arrayElementToExtendedValue(builder, loc, extMemref, coor);
       };
     }
     auto arrLoad = builder.create<fir::ArrayLoadOp>(

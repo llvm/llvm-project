@@ -586,4 +586,24 @@ subroutine test19h(a,b,i,j)
   a = b(1:140:2)
 end subroutine test19h
 
+! CHECK-LABEL: func @_QPtest_elemental_character_intrinsic(
+! CHECK-SAME: %[[c1:.*]]: !fir.boxchar<1>, %[[c2:.*]]: !fir.boxchar<1>)
+subroutine test_elemental_character_intrinsic(c1, c2)
+  ! CHECK-DAG: %[[u1:.*]]:2 = fir.unboxchar %[[c1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+  ! CHECK-DAG: %[[addr1:.*]] = fir.convert %[[u1]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<10x!fir.char<1,?>>>
+  ! CHECK-DAG: %[[u2:.*]]:2 = fir.unboxchar %[[c2]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+  ! CHECK-DAG: %[[addr2:.*]] = fir.convert %[[u2]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<10x!fir.char<1,?>>>
+  character(*) :: c1(10), c2(10)
+
+  ! CHECK: fir.do_loop %[[i:.*]] = %c0{{.*}} to {{.*}} -> (!fir.array<10xi32>) {
+    ! CHECK: %[[coor1:.*]] = fir.array_coor %[[addr1]](%{{.*}}) %[[i]] typeparams %[[u1]]#1 : (!fir.ref<!fir.array<10x!fir.char<1,?>>>, !fir.shape<1>, index, index) -> !fir.ref<!fir.char<1,?>>
+    ! CHECK: %[[coor2:.*]] = fir.array_coor %[[addr2]](%{{.*}}) %[[i]] typeparams %[[u2]]#1 : (!fir.ref<!fir.array<10x!fir.char<1,?>>>, !fir.shape<1>, index, index) -> !fir.ref<!fir.char<1,?>>
+    ! CHECK-DAG: %[[a1:.*]] = fir.convert %[[coor1]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
+    ! CHECK-DAG: %[[l1:.*]] = fir.convert %[[u1]]#1 : (index) -> i64
+    ! CHECK-DAG: %[[a2:.*]] = fir.convert %[[coor2]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
+    ! CHECK-DAG: %[[l2:.*]] = fir.convert %[[u2]]#1 : (index) -> i64
+    ! CHECK: fir.call @_FortranAScan1(%[[a1]], %[[l1]], %[[a2]], %[[l2]], %{{.*}}) : (!fir.ref<i8>, i64, !fir.ref<i8>, i64, i1) -> i64
+  print *, scan(c1, c2)
+end subroutine
+
 ! CHECK: func private @_QPbar(
