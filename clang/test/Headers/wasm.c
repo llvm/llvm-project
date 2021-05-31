@@ -21,7 +21,7 @@ v128_t test_v128_load(const void *mem) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[MEM:%.*]], align 1, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i8> undef, i8 [[TMP0]], i32 0
-// CHECK-NEXT:    [[VECINIT16_I:%.*]] = shufflevector <16 x i8> [[VECINIT_I]], <16 x i8> undef, <16 x i32> zeroinitializer
+// CHECK-NEXT:    [[VECINIT16_I:%.*]] = shufflevector <16 x i8> [[VECINIT_I]], <16 x i8> poison, <16 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <16 x i8> [[VECINIT16_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
@@ -34,7 +34,7 @@ v128_t test_v128_load8_splat(const void *mem) {
 // CHECK-NEXT:    [[__V1_I:%.*]] = bitcast i8* [[MEM:%.*]] to i16*
 // CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* [[__V1_I]], align 1, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i16> undef, i16 [[TMP0]], i32 0
-// CHECK-NEXT:    [[VECINIT8_I:%.*]] = shufflevector <8 x i16> [[VECINIT_I]], <8 x i16> undef, <8 x i32> zeroinitializer
+// CHECK-NEXT:    [[VECINIT8_I:%.*]] = shufflevector <8 x i16> [[VECINIT_I]], <8 x i16> poison, <8 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[VECINIT8_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
@@ -47,7 +47,7 @@ v128_t test_v128_load16_splat(const void *mem) {
 // CHECK-NEXT:    [[__V1_I:%.*]] = bitcast i8* [[MEM:%.*]] to i32*
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[__V1_I]], align 1, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i32> undef, i32 [[TMP0]], i32 0
-// CHECK-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <4 x i32> [[VECINIT_I]], <4 x i32> undef, <4 x i32> zeroinitializer
+// CHECK-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <4 x i32> [[VECINIT_I]], <4 x i32> poison, <4 x i32> zeroinitializer
 // CHECK-NEXT:    ret <4 x i32> [[VECINIT4_I]]
 //
 v128_t test_v128_load32_splat(const void *mem) {
@@ -59,7 +59,7 @@ v128_t test_v128_load32_splat(const void *mem) {
 // CHECK-NEXT:    [[__V1_I:%.*]] = bitcast i8* [[MEM:%.*]] to i64*
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* [[__V1_I]], align 1, !tbaa [[TBAA2]]
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i64> undef, i64 [[TMP0]], i32 0
-// CHECK-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <2 x i64> [[VECINIT_I]], <2 x i64> undef, <2 x i32> zeroinitializer
+// CHECK-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <2 x i64> [[VECINIT_I]], <2 x i64> poison, <2 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[VECINIT2_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
@@ -439,7 +439,7 @@ v128_t test_f64x2_const_splat() {
 // CHECK-LABEL: @test_i8x16_splat(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <16 x i8> undef, i8 [[A:%.*]], i32 0
-// CHECK-NEXT:    [[VECINIT15_I:%.*]] = shufflevector <16 x i8> [[VECINIT_I]], <16 x i8> undef, <16 x i32> zeroinitializer
+// CHECK-NEXT:    [[VECINIT15_I:%.*]] = shufflevector <16 x i8> [[VECINIT_I]], <16 x i8> poison, <16 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <16 x i8> [[VECINIT15_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
@@ -481,7 +481,7 @@ v128_t test_i8x16_replace_lane(v128_t a, int8_t b) {
 // CHECK-LABEL: @test_i16x8_splat(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i16> undef, i16 [[A:%.*]], i32 0
-// CHECK-NEXT:    [[VECINIT7_I:%.*]] = shufflevector <8 x i16> [[VECINIT_I]], <8 x i16> undef, <8 x i32> zeroinitializer
+// CHECK-NEXT:    [[VECINIT7_I:%.*]] = shufflevector <8 x i16> [[VECINIT_I]], <8 x i16> poison, <8 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i16> [[VECINIT7_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
@@ -523,7 +523,7 @@ v128_t test_i16x8_replace_lane(v128_t a, int16_t b) {
 // CHECK-LABEL: @test_i32x4_splat(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i32> undef, i32 [[A:%.*]], i32 0
-// CHECK-NEXT:    [[VECINIT3_I:%.*]] = shufflevector <4 x i32> [[VECINIT_I]], <4 x i32> undef, <4 x i32> zeroinitializer
+// CHECK-NEXT:    [[VECINIT3_I:%.*]] = shufflevector <4 x i32> [[VECINIT_I]], <4 x i32> poison, <4 x i32> zeroinitializer
 // CHECK-NEXT:    ret <4 x i32> [[VECINIT3_I]]
 //
 v128_t test_i32x4_splat(int32_t a) {
@@ -551,7 +551,7 @@ v128_t test_i32x4_replace_lane(v128_t a, int32_t b) {
 // CHECK-LABEL: @test_i64x2_splat(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i64> undef, i64 [[A:%.*]], i32 0
-// CHECK-NEXT:    [[VECINIT1_I:%.*]] = shufflevector <2 x i64> [[VECINIT_I]], <2 x i64> undef, <2 x i32> zeroinitializer
+// CHECK-NEXT:    [[VECINIT1_I:%.*]] = shufflevector <2 x i64> [[VECINIT_I]], <2 x i64> poison, <2 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[VECINIT1_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
@@ -615,7 +615,7 @@ v128_t test_f32x4_replace_lane(v128_t a, float b) {
 // CHECK-LABEL: @test_f64x2_splat(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x double> undef, double [[A:%.*]], i32 0
-// CHECK-NEXT:    [[VECINIT1_I:%.*]] = shufflevector <2 x double> [[VECINIT_I]], <2 x double> undef, <2 x i32> zeroinitializer
+// CHECK-NEXT:    [[VECINIT1_I:%.*]] = shufflevector <2 x double> [[VECINIT_I]], <2 x double> poison, <2 x i32> zeroinitializer
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x double> [[VECINIT1_I]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
@@ -1281,7 +1281,7 @@ v128_t test_v128_andnot(v128_t a, v128_t b) {
 // CHECK-LABEL: @test_v128_any_true(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.wasm.anytrue.v16i8(<16 x i8> [[TMP0]]) #[[ATTR10:[0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.wasm.anytrue.v16i8(<16 x i8> [[TMP0]]) #[[ATTR11:[0-9]+]]
 // CHECK-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[TMP1]], 0
 // CHECK-NEXT:    ret i1 [[TOBOOL_I]]
 //
@@ -1291,7 +1291,7 @@ bool test_v128_any_true(v128_t a) {
 
 // CHECK-LABEL: @test_v128_bitselect(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.wasm.bitselect.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> [[MASK:%.*]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.wasm.bitselect.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> [[MASK:%.*]]) #[[ATTR11]]
 // CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v128_t test_v128_bitselect(v128_t a, v128_t b, v128_t mask) {
@@ -1301,7 +1301,7 @@ v128_t test_v128_bitselect(v128_t a, v128_t b, v128_t mask) {
 // CHECK-LABEL: @test_i8x16_abs(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i8> @llvm.abs.v16i8(<16 x i8> [[TMP0]], i1 false) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i8> @llvm.abs.v16i8(<16 x i8> [[TMP0]], i1 false) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -1323,7 +1323,7 @@ v128_t test_i8x16_neg(v128_t a) {
 // CHECK-LABEL: @test_i8x16_all_true(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.wasm.alltrue.v16i8(<16 x i8> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.wasm.alltrue.v16i8(<16 x i8> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[TMP1]], 0
 // CHECK-NEXT:    ret i1 [[TOBOOL_I]]
 //
@@ -1334,7 +1334,7 @@ bool test_i8x16_all_true(v128_t a) {
 // CHECK-LABEL: @test_i8x16_bitmask(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.wasm.bitmask.v16i8(<16 x i8> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.wasm.bitmask.v16i8(<16 x i8> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int32_t test_i8x16_bitmask(v128_t a) {
@@ -1344,7 +1344,7 @@ int32_t test_i8x16_bitmask(v128_t a) {
 // CHECK-LABEL: @test_i8x16_popcnt(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i8> @llvm.wasm.popcnt(<16 x i8> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i8> @llvm.wasm.popcnt(<16 x i8> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -1410,7 +1410,7 @@ v128_t test_i8x16_add(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -1422,7 +1422,7 @@ v128_t test_i8x16_add_sat(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.uadd.sat.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.uadd.sat.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -1446,7 +1446,7 @@ v128_t test_i8x16_sub(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.wasm.sub.sat.signed.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.wasm.sub.sat.signed.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -1458,7 +1458,7 @@ v128_t test_i8x16_sub_sat(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.wasm.sub.sat.unsigned.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.wasm.sub.sat.unsigned.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -1522,7 +1522,7 @@ v128_t test_u8x16_max(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.wasm.avgr.unsigned.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.wasm.avgr.unsigned.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -1533,7 +1533,7 @@ v128_t test_u8x16_avgr(v128_t a, v128_t b) {
 // CHECK-LABEL: @test_i16x8_abs(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i16> @llvm.abs.v8i16(<8 x i16> [[TMP0]], i1 false) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i16> @llvm.abs.v8i16(<8 x i16> [[TMP0]], i1 false) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i16> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -1555,7 +1555,7 @@ v128_t test_i16x8_neg(v128_t a) {
 // CHECK-LABEL: @test_i16x8_all_true(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.wasm.alltrue.v8i16(<8 x i16> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.wasm.alltrue.v8i16(<8 x i16> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[TMP1]], 0
 // CHECK-NEXT:    ret i1 [[TOBOOL_I]]
 //
@@ -1566,7 +1566,7 @@ bool test_i16x8_all_true(v128_t a) {
 // CHECK-LABEL: @test_i16x8_bitmask(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.wasm.bitmask.v8i16(<8 x i16> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.wasm.bitmask.v8i16(<8 x i16> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int32_t test_i16x8_bitmask(v128_t a) {
@@ -1631,7 +1631,7 @@ v128_t test_i16x8_add(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -1643,7 +1643,7 @@ v128_t test_i16x8_add_sat(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -1667,7 +1667,7 @@ v128_t test_i16x8_sub(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.wasm.sub.sat.signed.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.wasm.sub.sat.signed.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -1679,7 +1679,7 @@ v128_t test_i16x8_sub_sat(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.wasm.sub.sat.unsigned.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.wasm.sub.sat.unsigned.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -1755,7 +1755,7 @@ v128_t test_u16x8_max(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.wasm.avgr.unsigned.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.wasm.avgr.unsigned.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -1765,7 +1765,7 @@ v128_t test_u16x8_avgr(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_i32x4_abs(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[A:%.*]], i1 false) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.abs.v4i32(<4 x i32> [[A:%.*]], i1 false) #[[ATTR11]]
 // CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 //
 v128_t test_i32x4_abs(v128_t a) {
@@ -1783,7 +1783,7 @@ v128_t test_i32x4_neg(v128_t a) {
 
 // CHECK-LABEL: @test_i32x4_all_true(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.wasm.alltrue.v4i32(<4 x i32> [[A:%.*]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.wasm.alltrue.v4i32(<4 x i32> [[A:%.*]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[TMP0]], 0
 // CHECK-NEXT:    ret i1 [[TOBOOL_I]]
 //
@@ -1793,7 +1793,7 @@ bool test_i32x4_all_true(v128_t a) {
 
 // CHECK-LABEL: @test_i32x4_bitmask(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.wasm.bitmask.v4i32(<4 x i32> [[A:%.*]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.wasm.bitmask.v4i32(<4 x i32> [[A:%.*]]) #[[ATTR11]]
 // CHECK-NEXT:    ret i32 [[TMP0]]
 //
 int32_t test_i32x4_bitmask(v128_t a) {
@@ -1904,7 +1904,7 @@ v128_t test_u32x4_max(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.wasm.dot(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.wasm.dot(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
 v128_t test_i32x4_dot_i16x8(v128_t a, v128_t b) {
@@ -1914,7 +1914,7 @@ v128_t test_i32x4_dot_i16x8(v128_t a, v128_t b) {
 // CHECK-LABEL: @test_i64x2_abs(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.abs.v2i64(<2 x i64> [[TMP0]], i1 false) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i64> @llvm.abs.v2i64(<2 x i64> [[TMP0]], i1 false) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -1936,7 +1936,7 @@ v128_t test_i64x2_neg(v128_t a) {
 // CHECK-LABEL: @test_i64x2_all_true(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.wasm.alltrue.v2i64(<2 x i64> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.wasm.alltrue.v2i64(<2 x i64> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[TMP1]], 0
 // CHECK-NEXT:    ret i1 [[TOBOOL_I]]
 //
@@ -1947,7 +1947,7 @@ bool test_i64x2_all_true(v128_t a) {
 // CHECK-LABEL: @test_i64x2_bitmask(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x i64>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.wasm.bitmask.v2i64(<2 x i64> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.wasm.bitmask.v2i64(<2 x i64> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int32_t test_i64x2_bitmask(v128_t a) {
@@ -2035,7 +2035,7 @@ v128_t test_i64x2_mul(v128_t a, v128_t b) {
 // CHECK-LABEL: @test_f32x4_abs(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x float> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -2057,7 +2057,7 @@ v128_t test_f32x4_neg(v128_t a) {
 // CHECK-LABEL: @test_f32x4_sqrt(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.sqrt.v4f32(<4 x float> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.sqrt.v4f32(<4 x float> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x float> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -2068,7 +2068,7 @@ v128_t test_f32x4_sqrt(v128_t a) {
 // CHECK-LABEL: @test_f32x4_ceil(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.ceil.v4f32(<4 x float> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.ceil.v4f32(<4 x float> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x float> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -2079,7 +2079,7 @@ v128_t test_f32x4_ceil(v128_t a) {
 // CHECK-LABEL: @test_f32x4_floor(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.floor.v4f32(<4 x float> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.floor.v4f32(<4 x float> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x float> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -2090,7 +2090,7 @@ v128_t test_f32x4_floor(v128_t a) {
 // CHECK-LABEL: @test_f32x4_trunc(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.trunc.v4f32(<4 x float> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.trunc.v4f32(<4 x float> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x float> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -2101,7 +2101,7 @@ v128_t test_f32x4_trunc(v128_t a) {
 // CHECK-LABEL: @test_f32x4_nearest(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.nearbyint.v4f32(<4 x float> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.nearbyint.v4f32(<4 x float> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x float> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -2161,7 +2161,7 @@ v128_t test_f32x4_div(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.minimum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.minimum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x float> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -2173,7 +2173,7 @@ v128_t test_f32x4_min(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.maximum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.maximum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x float> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -2185,7 +2185,7 @@ v128_t test_f32x4_max(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.wasm.pmin.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.wasm.pmin.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x float> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -2197,7 +2197,7 @@ v128_t test_f32x4_pmin(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.wasm.pmax.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.wasm.pmax.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x float> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -2208,7 +2208,7 @@ v128_t test_f32x4_pmax(v128_t a, v128_t b) {
 // CHECK-LABEL: @test_f64x2_abs(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.fabs.v2f64(<2 x double> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.fabs.v2f64(<2 x double> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x double> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -2230,7 +2230,7 @@ v128_t test_f64x2_neg(v128_t a) {
 // CHECK-LABEL: @test_f64x2_sqrt(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x double> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -2241,7 +2241,7 @@ v128_t test_f64x2_sqrt(v128_t a) {
 // CHECK-LABEL: @test_f64x2_ceil(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.ceil.v2f64(<2 x double> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.ceil.v2f64(<2 x double> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x double> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -2252,7 +2252,7 @@ v128_t test_f64x2_ceil(v128_t a) {
 // CHECK-LABEL: @test_f64x2_floor(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.floor.v2f64(<2 x double> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.floor.v2f64(<2 x double> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x double> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -2263,7 +2263,7 @@ v128_t test_f64x2_floor(v128_t a) {
 // CHECK-LABEL: @test_f64x2_trunc(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.trunc.v2f64(<2 x double> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.trunc.v2f64(<2 x double> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x double> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -2274,7 +2274,7 @@ v128_t test_f64x2_trunc(v128_t a) {
 // CHECK-LABEL: @test_f64x2_nearest(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.nearbyint.v2f64(<2 x double> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.nearbyint.v2f64(<2 x double> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x double> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -2334,7 +2334,7 @@ v128_t test_f64x2_div(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.minimum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.minimum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x double> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -2346,7 +2346,7 @@ v128_t test_f64x2_min(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.maximum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.maximum.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x double> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -2358,7 +2358,7 @@ v128_t test_f64x2_max(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.wasm.pmin.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.wasm.pmin.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x double> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -2370,7 +2370,7 @@ v128_t test_f64x2_pmin(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.wasm.pmax.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <2 x double> @llvm.wasm.pmax.v2f64(<2 x double> [[TMP0]], <2 x double> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x double> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -2381,7 +2381,7 @@ v128_t test_f64x2_pmax(v128_t a, v128_t b) {
 // CHECK-LABEL: @test_i32x4_trunc_sat_f32x4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i32> @llvm.fptosi.sat.v4i32.v4f32(<4 x float> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i32> @llvm.fptosi.sat.v4i32.v4f32(<4 x float> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
 v128_t test_i32x4_trunc_sat_f32x4(v128_t a) {
@@ -2391,7 +2391,7 @@ v128_t test_i32x4_trunc_sat_f32x4(v128_t a) {
 // CHECK-LABEL: @test_u32x4_trunc_sat_f32x4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
 v128_t test_u32x4_trunc_sat_f32x4(v128_t a) {
@@ -2443,7 +2443,7 @@ v128_t test_f64x2_convert_low_u32x4(v128_t a) {
 // CHECK-LABEL: @test_i32x4_trunc_sat_f64x2_zero(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i32> @llvm.fptosi.sat.v2i32.v2f64(<2 x double> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i32> @llvm.fptosi.sat.v2i32.v2f64(<2 x double> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -2454,7 +2454,7 @@ v128_t test_i32x4_trunc_sat_f64x2_zero(v128_t a) {
 // CHECK-LABEL: @test_u32x4_trunc_sat_f64x2_zero(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i32> @llvm.fptoui.sat.v2i32.v2f64(<2 x double> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x i32> @llvm.fptoui.sat.v2i32.v2f64(<2 x double> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -2465,7 +2465,7 @@ v128_t test_u32x4_trunc_sat_f64x2_zero(v128_t a) {
 // CHECK-LABEL: @test_f32x4_demote_f64x2_zero(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <2 x double>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.wasm.demote.zero(<2 x double> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.wasm.demote.zero(<2 x double> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x float> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -2476,7 +2476,7 @@ v128_t test_f32x4_demote_f64x2_zero(v128_t a) {
 // CHECK-LABEL: @test_f64x2_promote_low_f32x4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <4 x float>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.wasm.promote.low(<4 x float> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <2 x double> @llvm.wasm.promote.low(<4 x float> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x double> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -2536,7 +2536,7 @@ v128_t test_i64x2_shuffle(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.wasm.swizzle(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.wasm.swizzle(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -2548,7 +2548,7 @@ v128_t test_i8x16_swizzle(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.wasm.narrow.signed.v16i8.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -2560,7 +2560,7 @@ v128_t test_i8x16_narrow_i16x8(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.wasm.narrow.unsigned.v16i8.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.wasm.narrow.unsigned.v16i8.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -2570,7 +2570,7 @@ v128_t test_u8x16_narrow_i16x8(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_i16x8_narrow_i32x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.wasm.narrow.signed.v8i16.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[TMP0]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
@@ -2580,7 +2580,7 @@ v128_t test_i16x8_narrow_i32x4(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_u16x8_narrow_i32x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.wasm.narrow.unsigned.v8i16.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.wasm.narrow.unsigned.v8i16.v4i32(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i16> [[TMP0]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
@@ -2727,7 +2727,7 @@ v128_t test_u64x2_extend_high_u32x4(v128_t a) {
 // CHECK-LABEL: @test_i16x8_extadd_pairwise_i8x16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i16> @llvm.wasm.extadd.pairwise.signed.v8i16(<16 x i8> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i16> @llvm.wasm.extadd.pairwise.signed.v8i16(<16 x i8> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i16> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -2738,7 +2738,7 @@ v128_t test_i16x8_extadd_pairwise_i8x16(v128_t a) {
 // CHECK-LABEL: @test_u16x8_extadd_pairwise_u8x16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i16> @llvm.wasm.extadd.pairwise.unsigned.v8i16(<16 x i8> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i16> @llvm.wasm.extadd.pairwise.unsigned.v8i16(<16 x i8> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i16> [[TMP1]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
@@ -2749,7 +2749,7 @@ v128_t test_u16x8_extadd_pairwise_u8x16(v128_t a) {
 // CHECK-LABEL: @test_i32x4_extadd_pairwise_i16x8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i32> @llvm.wasm.extadd.pairwise.signed.v4i32(<8 x i16> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i32> @llvm.wasm.extadd.pairwise.signed.v4i32(<8 x i16> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
 v128_t test_i32x4_extadd_pairwise_i16x8(v128_t a) {
@@ -2759,7 +2759,7 @@ v128_t test_i32x4_extadd_pairwise_i16x8(v128_t a) {
 // CHECK-LABEL: @test_u32x4_extadd_pairwise_u16x8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i32> @llvm.wasm.extadd.pairwise.unsigned.v4i32(<8 x i16> [[TMP0]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i32> @llvm.wasm.extadd.pairwise.unsigned.v4i32(<8 x i16> [[TMP0]]) #[[ATTR11]]
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
 v128_t test_u32x4_extadd_pairwise_u16x8(v128_t a) {
@@ -2770,7 +2770,7 @@ v128_t test_u32x4_extadd_pairwise_u16x8(v128_t a) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.wasm.extmul.low.signed.v8i16(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.wasm.extmul.low.signed.v8i16(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -2782,7 +2782,7 @@ v128_t test_i16x8_extmul_low_i8x16(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.wasm.extmul.high.signed.v8i16(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.wasm.extmul.high.signed.v8i16(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -2794,7 +2794,7 @@ v128_t test_i16x8_extmul_high_i8x16(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.wasm.extmul.low.unsigned.v8i16(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.wasm.extmul.low.unsigned.v8i16(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -2806,7 +2806,7 @@ v128_t test_u16x8_extmul_low_u8x16(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.wasm.extmul.high.unsigned.v8i16(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.wasm.extmul.high.unsigned.v8i16(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //
@@ -2818,7 +2818,7 @@ v128_t test_u16x8_extmul_high_u8x16(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.wasm.extmul.low.signed.v4i32(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.wasm.extmul.low.signed.v4i32(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
 v128_t test_i32x4_extmul_low_i16x8(v128_t a, v128_t b) {
@@ -2829,7 +2829,7 @@ v128_t test_i32x4_extmul_low_i16x8(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.wasm.extmul.high.signed.v4i32(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.wasm.extmul.high.signed.v4i32(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
 v128_t test_i32x4_extmul_high_i16x8(v128_t a, v128_t b) {
@@ -2840,7 +2840,7 @@ v128_t test_i32x4_extmul_high_i16x8(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.wasm.extmul.low.unsigned.v4i32(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.wasm.extmul.low.unsigned.v4i32(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
 v128_t test_u32x4_extmul_low_u16x8(v128_t a, v128_t b) {
@@ -2851,7 +2851,7 @@ v128_t test_u32x4_extmul_low_u16x8(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.wasm.extmul.high.unsigned.v4i32(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.wasm.extmul.high.unsigned.v4i32(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
 v128_t test_u32x4_extmul_high_u16x8(v128_t a, v128_t b) {
@@ -2860,7 +2860,7 @@ v128_t test_u32x4_extmul_high_u16x8(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_i64x2_extmul_low_i32x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i64> @llvm.wasm.extmul.low.signed.v2i64(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i64> @llvm.wasm.extmul.low.signed.v2i64(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
@@ -2870,7 +2870,7 @@ v128_t test_i64x2_extmul_low_i32x4(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_i64x2_extmul_high_i32x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i64> @llvm.wasm.extmul.high.signed.v2i64(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i64> @llvm.wasm.extmul.high.signed.v2i64(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
@@ -2880,7 +2880,7 @@ v128_t test_i64x2_extmul_high_i32x4(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_u64x2_extmul_low_u32x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i64> @llvm.wasm.extmul.low.unsigned.v2i64(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i64> @llvm.wasm.extmul.low.unsigned.v2i64(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
@@ -2890,7 +2890,7 @@ v128_t test_u64x2_extmul_low_u32x4(v128_t a, v128_t b) {
 
 // CHECK-LABEL: @test_u64x2_extmul_high_u32x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i64> @llvm.wasm.extmul.high.unsigned.v2i64(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <2 x i64> @llvm.wasm.extmul.high.unsigned.v2i64(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 //
@@ -2902,7 +2902,7 @@ v128_t test_u64x2_extmul_high_u32x4(v128_t a, v128_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A:%.*]] to <8 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[B:%.*]] to <8 x i16>
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.wasm.q15mulr.sat.signed(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR10]]
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.wasm.q15mulr.sat.signed(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]]) #[[ATTR11]]
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <4 x i32>
 // CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 //

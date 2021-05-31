@@ -40,13 +40,13 @@ bfloat16x4_t test_vcopy_lane_bf16_v2(bfloat16x4_t a, bfloat16x4_t b) {
 
 // CHECK-LE-LABEL: @test_vcopyq_lane_bf16_v1(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = shufflevector <4 x bfloat> [[B:%.*]], <4 x bfloat> undef, <8 x i32> <i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = shufflevector <4 x bfloat> [[B:%.*]], <4 x bfloat> poison, <8 x i32> <i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 // CHECK-LE-NEXT:    [[VSET_LANE:%.*]] = shufflevector <8 x bfloat> [[A:%.*]], <8 x bfloat> [[TMP0]], <8 x i32> <i32 10, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 // CHECK-LE-NEXT:    ret <8 x bfloat> [[VSET_LANE]]
 //
 // CHECK-BE-LABEL: @test_vcopyq_lane_bf16_v1(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = shufflevector <4 x bfloat> [[B:%.*]], <4 x bfloat> undef, <8 x i32> <i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = shufflevector <4 x bfloat> [[B:%.*]], <4 x bfloat> poison, <8 x i32> <i32 undef, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 // CHECK-BE-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x bfloat> [[A:%.*]], <8 x bfloat> undef, <8 x i32> <i32 undef, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
 // CHECK-BE-NEXT:    [[VSET_LANE:%.*]] = shufflevector <8 x bfloat> [[SHUFFLE]], <8 x bfloat> [[TMP0]], <8 x i32> <i32 9, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 // CHECK-BE-NEXT:    [[SHUFFLE5:%.*]] = shufflevector <8 x bfloat> [[VSET_LANE]], <8 x bfloat> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
@@ -58,13 +58,13 @@ bfloat16x8_t test_vcopyq_lane_bf16_v1(bfloat16x8_t a, bfloat16x4_t b) {
 
 // CHECK-LE-LABEL: @test_vcopyq_lane_bf16_v2(
 // CHECK-LE-NEXT:  entry:
-// CHECK-LE-NEXT:    [[TMP0:%.*]] = shufflevector <4 x bfloat> [[B:%.*]], <4 x bfloat> undef, <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+// CHECK-LE-NEXT:    [[TMP0:%.*]] = shufflevector <4 x bfloat> [[B:%.*]], <4 x bfloat> poison, <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 // CHECK-LE-NEXT:    [[VSET_LANE:%.*]] = shufflevector <8 x bfloat> [[A:%.*]], <8 x bfloat> [[TMP0]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 7>
 // CHECK-LE-NEXT:    ret <8 x bfloat> [[VSET_LANE]]
 //
 // CHECK-BE-LABEL: @test_vcopyq_lane_bf16_v2(
 // CHECK-BE-NEXT:  entry:
-// CHECK-BE-NEXT:    [[TMP0:%.*]] = shufflevector <4 x bfloat> [[B:%.*]], <4 x bfloat> undef, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+// CHECK-BE-NEXT:    [[TMP0:%.*]] = shufflevector <4 x bfloat> [[B:%.*]], <4 x bfloat> poison, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
 // CHECK-BE-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x bfloat> [[A:%.*]], <8 x bfloat> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 undef, i32 0>
 // CHECK-BE-NEXT:    [[VSET_LANE:%.*]] = shufflevector <8 x bfloat> [[SHUFFLE]], <8 x bfloat> [[TMP0]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 11, i32 7>
 // CHECK-BE-NEXT:    [[SHUFFLE5:%.*]] = shufflevector <8 x bfloat> [[VSET_LANE]], <8 x bfloat> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
