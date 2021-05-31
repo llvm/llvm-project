@@ -68,7 +68,7 @@ entry:
   br i1 %work_match, label %.execute.fn, label %.check.next
 
 .execute.fn:                                      ; preds = %.execute.parallel
-  call void @__omp_outlined__1_wrapper(i16 0, i32 %4) 
+  call void @__omp_outlined__1_wrapper(i16 zeroext 0, i32 %4) 
   br label %.terminate.parallel
 
 .check.next:                                      ; preds = %.execute.parallel
@@ -77,7 +77,7 @@ entry:
   br i1 %work_match1, label %.execute.fn2, label %.check.next3
 
 .execute.fn2:                                     ; preds = %.check.next
-  call void @__omp_outlined__2_wrapper(i16 0, i32 %4) 
+  call void @__omp_outlined__2_wrapper(i16 zeroext 0, i32 %4) 
   br label %.terminate.parallel
 
 .check.next3:                                     ; preds = %.check.next
@@ -86,7 +86,7 @@ entry:
   br i1 %work_match4, label %.execute.fn5, label %.check.next6
 
 .execute.fn5:                                     ; preds = %.check.next3
-  call void @__omp_outlined__3_wrapper(i16 0, i32 %4) 
+  call void @__omp_outlined__3_wrapper(i16 zeroext 0, i32 %4) 
   br label %.terminate.parallel
 
 .check.next6:                                     ; preds = %.check.next3

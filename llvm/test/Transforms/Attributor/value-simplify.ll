@@ -433,22 +433,22 @@ define i32* @complicated_args_inalloca(i32* %arg) {
 ; IS__TUNIT____: Function Attrs: nofree nosync nounwind readnone willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@complicated_args_inalloca
 ; IS__TUNIT____-SAME: (i32* nofree readnone returned "no-capture-maybe-returned" [[ARG:%.*]]) #[[ATTR1]] {
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nofree writeonly "no-capture-maybe-returned" [[ARG]]) #[[ATTR1]]
+; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nofree writeonly inalloca(i32) "no-capture-maybe-returned" [[ARG]]) #[[ATTR1]]
 ; IS__TUNIT____-NEXT:    ret i32* [[CALL]]
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@complicated_args_inalloca
 ; IS__CGSCC_OPM-SAME: (i32* nofree noundef nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[ARG:%.*]]) #[[ATTR1]] {
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nofree noundef nonnull writeonly dereferenceable(4) "no-capture-maybe-returned" [[ARG]]) #[[ATTR8:[0-9]+]]
+; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nofree noundef nonnull writeonly inalloca(i32) dereferenceable(4) "no-capture-maybe-returned" [[ARG]]) #[[ATTR8:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    ret i32* [[CALL]]
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@complicated_args_inalloca
 ; IS__CGSCC_NPM-SAME: (i32* nofree noundef nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[ARG:%.*]]) #[[ATTR1]] {
-; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nofree noundef nonnull writeonly dereferenceable(4) "no-capture-maybe-returned" [[ARG]]) #[[ATTR7:[0-9]+]]
+; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nofree noundef nonnull writeonly inalloca(i32) dereferenceable(4) "no-capture-maybe-returned" [[ARG]]) #[[ATTR7:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    ret i32* [[CALL]]
 ;
-  %call = call i32* @test_inalloca(i32* %arg)
+  %call = call i32* @test_inalloca(i32* inalloca(i32) %arg)
   ret i32* %call
 }
 
@@ -522,13 +522,13 @@ define void @complicated_args_sret(%struct.X** %b) {
 ; IS__TUNIT_OPM: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@complicated_args_sret
 ; IS__TUNIT_OPM-SAME: (%struct.X** nocapture nofree writeonly [[B:%.*]]) #[[ATTR3]] {
-; IS__TUNIT_OPM-NEXT:    call void @test_sret(%struct.X* noalias nocapture nofree noundef writeonly align 536870912 null, %struct.X** nocapture nofree writeonly align 8 [[B]]) #[[ATTR6:[0-9]+]]
+; IS__TUNIT_OPM-NEXT:    call void @test_sret(%struct.X* noalias nocapture nofree noundef writeonly sret(%struct.X) align 536870912 null, %struct.X** nocapture nofree writeonly align 8 [[B]]) #[[ATTR6:[0-9]+]]
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
 ; IS__TUNIT_NPM: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@complicated_args_sret
 ; IS__TUNIT_NPM-SAME: (%struct.X** nocapture nofree writeonly [[B:%.*]]) #[[ATTR3]] {
-; IS__TUNIT_NPM-NEXT:    call void @test_sret(%struct.X* noalias nocapture nofree noundef writeonly align 536870912 null, %struct.X** nocapture nofree writeonly align 8 [[B]]) #[[ATTR5:[0-9]+]]
+; IS__TUNIT_NPM-NEXT:    call void @test_sret(%struct.X* noalias nocapture nofree noundef writeonly sret(%struct.X) align 536870912 null, %struct.X** nocapture nofree writeonly align 8 [[B]]) #[[ATTR5:[0-9]+]]
 ; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
@@ -536,7 +536,7 @@ define void @complicated_args_sret(%struct.X** %b) {
 ; IS__CGSCC____-SAME: (%struct.X** nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[B:%.*]]) #[[ATTR2]] {
 ; IS__CGSCC____-NEXT:    unreachable
 ;
-  call void @test_sret(%struct.X* null, %struct.X** %b)
+  call void @test_sret(%struct.X* sret(%struct.X) null, %struct.X** %b)
   ret void
 }
 
@@ -615,7 +615,7 @@ define void @complicated_args_byval() {
 ; IS__CGSCC_NPM-SAME: () #[[ATTR3:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
-  call void @test_byval(%struct.X* @S)
+  call void @test_byval(%struct.X* byval(%struct.X) @S)
   ret void
 }
 
@@ -655,7 +655,7 @@ define i8* @complicated_args_byval2() {
 ; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call i8* @test_byval2() #[[ATTR10:[0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    ret i8* [[C]]
 ;
-  %c = call i8* @test_byval2(%struct.X* @S)
+  %c = call i8* @test_byval2(%struct.X* byval(%struct.X) @S)
   ret i8* %c
 }
 
