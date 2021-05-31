@@ -334,3 +334,42 @@ TYPED_TEST(SearchTests, VerifyTests) {
   RunSearchTests(
       "VERIFY", tests, std::get<SearchFunction<TypeParam>>(functions));
 }
+
+// Test REPEAT()
+template <typename CHAR> struct RepeatTests : public ::testing::Test {};
+TYPED_TEST_SUITE(RepeatTests, CharacterTypes, );
+
+struct RepeatTestCase {
+  std::size_t ncopies;
+  const char *input, *output;
+};
+
+template <typename CHAR>
+void RunRepeatTest(
+    std::size_t ncopies, const char *inputRaw, const char *outputRaw) {
+  OwningPtr<Descriptor> input{CreateDescriptor<CHAR>({}, {inputRaw})};
+  ASSERT_NE(input, nullptr);
+  ASSERT_TRUE(input->IsAllocated());
+
+  StaticDescriptor<1> outputStaticDescriptor;
+  Descriptor &output{outputStaticDescriptor.descriptor()};
+
+  RTNAME(Repeat)(output, *input, ncopies);
+  std::basic_string<CHAR> got{
+      output.OffsetElement<CHAR>(), output.ElementBytes() / sizeof(CHAR)};
+  std::basic_string<CHAR> expect{outputRaw, outputRaw + std::strlen(outputRaw)};
+  ASSERT_EQ(got, expect) << "'" << inputRaw << "' * " << ncopies
+                         << "' for CHARACTER(kind=" << sizeof(CHAR) << ")";
+}
+
+TYPED_TEST(RepeatTests, Repeat) {
+  static std::vector<RepeatTestCase> testcases{
+      {1, "just one copy", "just one copy"},
+      {5, "copy.", "copy.copy.copy.copy.copy."},
+      {0, "no copies", ""},
+  };
+
+  for (const auto &t : testcases) {
+    RunRepeatTest<TypeParam>(t.ncopies, t.input, t.output);
+  }
+}
