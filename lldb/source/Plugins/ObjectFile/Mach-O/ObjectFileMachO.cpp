@@ -1332,7 +1332,7 @@ void ObjectFileMachO::SanitizeSegmentCommand(segment_command_64 &seg_cmd,
 
   if ((m_header.flags & MH_DYLIB_IN_CACHE) && !IsInMemory()) {
     // In shared cache images, the load commands are relative to the
-    // shared cache file, and not the the specific image we are
+    // shared cache file, and not the specific image we are
     // examining. Let's fix this up so that it looks like a normal
     // image.
     if (strncmp(seg_cmd.segname, "__TEXT", sizeof(seg_cmd.segname)) == 0)

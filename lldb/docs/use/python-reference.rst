@@ -315,8 +315,8 @@ a stop for the recursion. For instance, if you request a Module depth search,
 then the callback will be called for each Module as it gets added to the
 Target, but the searcher will not recurse into the Compile Units in the module.
 
-One other slight sublety is that the depth at which you get called back is not
-necessarily the depth at which the the SearchFilter is specified. For instance,
+One other slight subtlety is that the depth at which you get called back is not
+necessarily the depth at which the SearchFilter is specified. For instance,
 if you are doing symbol searches, it is convenient to use the Module depth for
 the search, since symbols are stored in the module. But the SearchFilter might
 specify some subset of CompileUnits, so not all the symbols you might find in
