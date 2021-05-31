@@ -41,12 +41,14 @@ class PatternRewriter;
 /// with `b` at location `loc`.
 SmallVector<Range, 8> getOrCreateRanges(OffsetSizeAndStrideOpInterface op,
                                         OpBuilder &b, Location loc);
+} // namespace mlir
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/StandardOps/IR/Ops.h.inc"
 
 #include "mlir/Dialect/StandardOps/IR/OpsDialect.h.inc"
 
+namespace mlir {
 /// This is a refinement of the "constant" op for the case where it is
 /// returning a float value of FloatType.
 ///
