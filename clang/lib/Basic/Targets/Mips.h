@@ -221,7 +221,10 @@ public:
   bool hasFeature(StringRef Feature) const override;
 
   BuiltinVaListKind getBuiltinVaListKind() const override {
-    return TargetInfo::VoidPtrBuiltinVaList;
+    if (ABI == "p32")
+      return TargetInfo::NanoMipsBuiltinVaList;
+    else
+      return TargetInfo::VoidPtrBuiltinVaList;
   }
 
   ArrayRef<const char *> getGCCRegNames() const override {
@@ -338,7 +341,6 @@ public:
     FloatABI = HardFloat;
     DspRev = NoDSP;
     FPMode = isFP64Default() ? FP64 : FPXX;
-
     for (const auto &Feature : Features) {
       if (Feature == "+single-float")
         IsSingleFloat = true;

@@ -305,7 +305,16 @@ public:
     //    void *__saved_reg_area_end_pointer;
     //    void *__overflow_area_pointer;
     //} va_list;
-    HexagonBuiltinVaList
+    HexagonBuiltinVaList,
+
+    // typedef struct __va_list {
+    //   void *__overflow_argptr;
+    //   void *__gpr_top;
+    //   void *__fpr_top;
+    //   signed char __gpr_offset;
+    //   signed char __fpr_offset;
+    // } va_list;
+    NanoMipsBuiltinVaList
   };
 
 protected:
