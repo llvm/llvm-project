@@ -7580,9 +7580,7 @@ CompilerType
 SwiftASTContext::GetTypeForFormatters(opaque_compiler_type_t type) {
   VALID_OR_RETURN_CHECK_TYPE(type, CompilerType());
 
-  swift::Type swift_type(GetSwiftType(type));
-  assert(&swift_type->getASTContext() == GetASTContext());
-  return ToCompilerType({swift_type});
+  return {this, type};
 }
 
 LazyBool SwiftASTContext::ShouldPrintAsOneLiner(opaque_compiler_type_t type,
