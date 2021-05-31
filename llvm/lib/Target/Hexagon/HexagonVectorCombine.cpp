@@ -1321,8 +1321,7 @@ auto HexagonVectorCombine::calculatePointerDifference(Value *Ptr0,
     return None;
 
   Builder B(Gep0->getParent());
-  Value *BasePtr = Gep0->getPointerOperand();
-  int Scale = DL.getTypeStoreSize(BasePtr->getType()->getPointerElementType());
+  int Scale = DL.getTypeStoreSize(Gep0->getSourceElementType());
 
   // FIXME: for now only check GEPs with a single index.
   if (Gep0->getNumOperands() != 2 || Gep1->getNumOperands() != 2)

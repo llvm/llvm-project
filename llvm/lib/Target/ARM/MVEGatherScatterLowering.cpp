@@ -488,9 +488,9 @@ Value *MVEGatherScatterLowering::tryCreateMaskedGatherOffset(
   if (Load)
     return Load;
 
-  int Scale = computeScale(
-      BasePtr->getType()->getPointerElementType()->getPrimitiveSizeInBits(),
-      OriginalTy->getScalarSizeInBits());
+  int Scale =
+      computeScale(GEP->getSourceElementType()->getPrimitiveSizeInBits(),
+                   OriginalTy->getScalarSizeInBits());
   if (Scale == -1)
     return nullptr;
   Root = Extend;
@@ -630,9 +630,9 @@ Value *MVEGatherScatterLowering::tryCreateMaskedScatterOffset(
       tryCreateIncrementingGatScat(I, BasePtr, Offsets, GEP, Builder);
   if (Store)
     return Store;
-  int Scale = computeScale(
-      BasePtr->getType()->getPointerElementType()->getPrimitiveSizeInBits(),
-      MemoryTy->getScalarSizeInBits());
+  int Scale =
+      computeScale(GEP->getSourceElementType()->getPrimitiveSizeInBits(),
+                   MemoryTy->getScalarSizeInBits());
   if (Scale == -1)
     return nullptr;
 
@@ -1143,9 +1143,8 @@ bool MVEGatherScatterLowering::optimiseAddress(Value *Address, BasicBlock *BB,
     // (always i32 if it is not of vector type) and the base has to be a
     // pointer.
     if (Offsets && Base && Base != GEP) {
-      PointerType *BaseType = cast<PointerType>(Base->getType());
       GetElementPtrInst *NewAddress = GetElementPtrInst::Create(
-          BaseType->getPointerElementType(), Base, Offsets, "gep.merged", GEP);
+          GEP->getSourceElementType(), Base, Offsets, "gep.merged", GEP);
       GEP->replaceAllUsesWith(NewAddress);
       GEP = NewAddress;
       Changed = true;
