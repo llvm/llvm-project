@@ -984,8 +984,16 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     return CFI_attribute_other;
   }
 
-  bool isDerivedType(fir::BoxType boxTy) const {
-    return boxTy.getEleTy().isa<fir::RecordType>();
+  static fir::RecordType unwrapIfDerived(fir::BoxType boxTy) {
+    return fir::unwrapSequenceType(fir::dyn_cast_ptrOrBoxEleTy(boxTy))
+        .template dyn_cast<fir::RecordType>();
+  }
+  static bool isDerivedTypeWithLenParams(fir::BoxType boxTy) {
+    auto recTy = unwrapIfDerived(boxTy);
+    return recTy && recTy.getNumLenParams() > 0;
+  }
+  static bool isDerivedType(fir::BoxType boxTy) {
+    return static_cast<bool>(unwrapIfDerived(boxTy));
   }
 
   // Get the element size and CFI type code of the boxed value.
@@ -1068,7 +1076,17 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
       return getSizeAndTypeCode(loc, rewriter, seqTy.getEleTy(), lenParams);
     }
     if (boxEleTy.isa<fir::RecordType>()) {
-      TODO(loc, "record type fir.box codegen");
+      auto ptrTy = mlir::LLVM::LLVMPointerType::get(
+          this->lowerTy().convertType(boxEleTy));
+      auto nullPtr = rewriter.create<mlir::LLVM::NullOp>(loc, ptrTy);
+      auto one =
+          genConstantIndex(loc, this->lowerTy().offsetType(), rewriter, 1);
+      auto gep = rewriter.create<mlir::LLVM::GEPOp>(
+          loc, ptrTy, mlir::ValueRange{nullPtr, one});
+      auto eleSize = rewriter.create<mlir::LLVM::PtrToIntOp>(
+          loc, this->lowerTy().indexType(), gep);
+      return {eleSize,
+              this->genConstantOffset(loc, rewriter, fir::derivedToTypeCode())};
     }
     if (fir::isa_ref_type(boxEleTy)) {
       // FIXME: use the target pointer size rather than sizeof(void*)
@@ -1117,6 +1135,32 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     return insertField(rewriter, loc, dest, {0}, base, /*bitCast=*/true);
   }
 
+  /// Get the address of the type descriptor global variable that was created by
+  /// lowering for derived type \p recType.
+  template <typename BOX>
+  mlir::Value
+  getTypeDescriptor(BOX box, mlir::ConversionPatternRewriter &rewriter,
+                    mlir::Location loc, fir::RecordType recType) const {
+    auto split = recType.getName().split('T');
+    std::string name = (split.first + "E.dt." + split.second).str();
+    auto module = box->template getParentOfType<mlir::ModuleOp>();
+    if (auto global = module.template lookupSymbol<fir::GlobalOp>(name)) {
+      auto ty = mlir::LLVM::LLVMPointerType::get(
+          this->lowerTy().convertType(global.getType()));
+      return rewriter.create<mlir::LLVM::AddressOfOp>(loc, ty,
+                                                      global.sym_name());
+    } else if (auto global =
+                   module.template lookupSymbol<mlir::LLVM::GlobalOp>(name)) {
+      // The global may have already been translated to LLVM.
+      auto ty = mlir::LLVM::LLVMPointerType::get(global.getType());
+      return rewriter.create<mlir::LLVM::AddressOfOp>(loc, ty,
+                                                      global.sym_name());
+    }
+    // Builtin derived types have no type descriptors. Return nullptr, that is
+    // what the runtime expects for these types.
+    return rewriter.create<mlir::LLVM::NullOp>(loc, this->voidPtrTy());
+  }
+
   template <typename BOX>
   std::tuple<fir::BoxType, mlir::Value, mlir::Value>
   consDescriptorPrefix(BOX box, mlir::ConversionPatternRewriter &rewriter,
@@ -1141,9 +1185,26 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     dest =
         insertField(rewriter, loc, dest, {5},
                     this->genConstantOffset(loc, rewriter, getCFIAttr(boxTy)));
-    dest = insertField(
-        rewriter, loc, dest, {6},
-        this->genConstantOffset(loc, rewriter, isDerivedType(boxTy)));
+    const bool hasAddendum = isDerivedType(boxTy);
+    dest = insertField(rewriter, loc, dest, {6},
+                       this->genConstantOffset(loc, rewriter, hasAddendum));
+
+    if (hasAddendum) {
+      // TODO: For now, set addendum flags to zero. The runtime expects some
+      // information such as TARGET here.
+      auto isArray =
+          fir::dyn_cast_ptrOrBoxEleTy(boxTy).template isa<fir::SequenceType>();
+      unsigned typeDescFieldId = isArray ? 8 : 7;
+      unsigned flagsFieldId = typeDescFieldId + 1;
+      auto i64Ty = mlir::IntegerType::get(box.getContext(), 64);
+      dest = insertField(rewriter, loc, dest, flagsFieldId,
+                         genConstantIndex(loc, i64Ty, rewriter, 0));
+      auto typeDesc =
+          getTypeDescriptor(box, rewriter, loc, unwrapIfDerived(boxTy));
+      dest = insertField(rewriter, loc, dest, {typeDescFieldId}, typeDesc,
+                         /*bitCast=*/true);
+    }
+
     return {boxTy, dest, eleSize};
   }
 
@@ -1176,8 +1237,9 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
     auto [boxTy, dest, eleSize] = consDescriptorPrefix(
         embox, rewriter, /*rank=*/0, /*lenParams=*/operands.drop_front(1));
     dest = insertBaseAddress(rewriter, embox.getLoc(), dest, operands[0]);
-    if (isDerivedType(boxTy))
-      TODO(embox.getLoc(), "derived type fir.embox codegen");
+    if (isDerivedTypeWithLenParams(boxTy))
+      TODO(embox.getLoc(),
+           "fir.embox codegen of derived with length parameters");
     auto result = placeInMemoryIfNotGlobalInit(rewriter, embox.getLoc(), dest);
     rewriter.replaceOp(embox, result);
     return success();
@@ -1320,8 +1382,8 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
       base = rewriter.create<mlir::LLVM::GEPOp>(loc, base.getType(), args);
     }
     dest = insertBaseAddress(rewriter, loc, dest, base);
-    if (isDerivedType(boxTy))
-      TODO(loc, "derived type in fir.embox codegen");
+    if (isDerivedTypeWithLenParams(boxTy))
+      TODO(loc, "fir.embox codegen of derived with length parameters");
 
     auto result = placeInMemoryIfNotGlobalInit(rewriter, loc, dest);
     rewriter.replaceOp(xbox, result);
@@ -2924,24 +2986,23 @@ public:
         BoxCharLenOpConversion, BoxDimsOpConversion, BoxEleSizeOpConversion,
         BoxIsAllocOpConversion, BoxIsArrayOpConversion, BoxIsPtrOpConversion,
         BoxProcHostOpConversion, BoxRankOpConversion, BoxTypeDescOpConversion,
-        CallOpConversion, CmpcOpConversion,
-        ConstcOpConversion, ConvertOpConversion, CoordinateOpConversion,
-        DispatchOpConversion, DispatchTableOpConversion, DivcOpConversion,
-        DTEntryOpConversion, EmboxOpConversion, EmboxCharOpConversion,
-        EmboxProcOpConversion, FieldIndexOpConversion, FirEndOpConversion,
-        ExtractValueOpConversion, IsPresentOpConversion, FreeMemOpConversion,
-        GenTypeDescOpConversion, GlobalLenOpConversion, GlobalOpConversion,
-        HasValueOpConversion, InsertOnRangeOpConversion,
-        InsertValueOpConversion, LenParamIndexOpConversion, LoadOpConversion,
-        MulcOpConversion, NegcOpConversion, NegfOpConversion,
-        NoReassocOpConversion, SelectCaseOpConversion, SelectOpConversion,
-        SelectRankOpConversion, SelectTypeOpConversion, ShapeOpConversion,
-        ShapeShiftOpConversion, ShiftOpConversion, SliceOpConversion,
-        StoreOpConversion, StringLitOpConversion, SubcOpConversion,
-        UnboxCharOpConversion, UnboxOpConversion, UnboxProcOpConversion,
-        UndefOpConversion, UnreachableOpConversion, XArrayCoorOpConversion,
-        XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(
-        context, typeConverter);
+        CallOpConversion, CmpcOpConversion, ConstcOpConversion,
+        ConvertOpConversion, CoordinateOpConversion, DispatchOpConversion,
+        DispatchTableOpConversion, DivcOpConversion, DTEntryOpConversion,
+        EmboxOpConversion, EmboxCharOpConversion, EmboxProcOpConversion,
+        FieldIndexOpConversion, FirEndOpConversion, ExtractValueOpConversion,
+        IsPresentOpConversion, FreeMemOpConversion, GenTypeDescOpConversion,
+        GlobalLenOpConversion, GlobalOpConversion, HasValueOpConversion,
+        InsertOnRangeOpConversion, InsertValueOpConversion,
+        LenParamIndexOpConversion, LoadOpConversion, MulcOpConversion,
+        NegcOpConversion, NegfOpConversion, NoReassocOpConversion,
+        SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
+        SelectTypeOpConversion, ShapeOpConversion, ShapeShiftOpConversion,
+        ShiftOpConversion, SliceOpConversion, StoreOpConversion,
+        StringLitOpConversion, SubcOpConversion, UnboxCharOpConversion,
+        UnboxOpConversion, UnboxProcOpConversion, UndefOpConversion,
+        UnreachableOpConversion, XArrayCoorOpConversion, XEmboxOpConversion,
+        XReboxOpConversion, ZeroOpConversion>(context, typeConverter);
     mlir::populateStdToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateOpenMPToLLVMConversionPatterns(typeConverter, pattern);
     mlir::ConversionTarget target{*context};

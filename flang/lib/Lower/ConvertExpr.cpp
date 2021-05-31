@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/ConvertExpr.h"
+#include "BuiltinModules.h"
 #include "ConvertVariable.h"
 #include "MaskExpr.h"
 #include "RTBuilder.h"
@@ -529,6 +530,13 @@ public:
     return false;
   }
 
+  static bool isBuiltinCPtr(const Fortran::semantics::Symbol &sym) {
+    if (const auto *declType = sym.GetType())
+      if (const auto *derived = declType->AsDerived())
+        return Fortran::semantics::IsIsoCType(derived);
+    return false;
+  }
+
   /// A structure constructor is lowered two ways. In an initializer context,
   /// the entire structure must be constant, so the aggregate value is
   /// constructed inline. This allows it to be the body of a GlobalOp.
@@ -577,40 +585,61 @@ public:
       if (!inInitializer && sym->Rank() > 0)
         TODO(loc, "array component in structure constructor");
 
-      auto val = genval(expr.value());
-      auto valTy = fir::getBase(val).getType();
-      if (fir::isa_ref_type(valTy)) {
-        assert(!inInitializer && "expecting a constant value");
-        auto fldType = fir::dyn_cast_ptrEleTy(valTy);
-        if (fir::isa_char(fldType)) {
-          auto fldCharTy = fldType.cast<fir::CharacterType>();
-          if (!fldCharTy.hasConstantLen())
-            TODO(loc, "CHARACTER LEN type parameter not constant");
-          auto fldRefTy = builder.getRefType(fldType);
-          auto lenVal = builder.createIntegerConstant(loc, builder.getI64Type(),
-                                                      fldCharTy.getLen());
-          mlir::Value from = builder.create<fir::CoordinateOp>(
-              loc, fldRefTy, fir::getBase(val), field);
-          ExtValue fromPtr{fir::CharBoxValue{from, lenVal}};
-          mlir::Value to = builder.create<fir::CoordinateOp>(
-              loc, fldRefTy, fir::getBase(res), field);
-          ExtValue toPtr{fir::CharBoxValue{to, lenVal}};
-          Fortran::lower::CharacterExprHelper{builder, loc}.createAssign(
-              toPtr, fromPtr);
-          continue;
+      mlir::Value val;
+      if (isBuiltinCPtr(sym)) {
+        // Builtin c_ptr and c_funptr have special handling because initial
+        // value are handled for them as an extension.
+        auto addr = inInitializer ? Fortran::lower::genExtAddrInInitializer(
+                                        converter, loc, expr.value())
+                                  : genExtAddr(expr.value());
+        auto baseAddr = fir::getBase(addr);
+        auto undef = builder.create<fir::UndefOp>(loc, componentTy);
+        auto cPtrRecTy = componentTy.dyn_cast<fir::RecordType>();
+        assert(cPtrRecTy && "c_ptr and c_funptr must be derived types");
+        llvm::StringRef addrFieldName = Fortran::lower::builtin::cptrFieldName;
+        auto addrFieldTy = cPtrRecTy.getType(addrFieldName);
+        mlir::Value addrField = builder.create<fir::FieldIndexOp>(
+            loc, fieldTy, addrFieldName, componentTy,
+            /*typeParams=*/mlir::ValueRange{});
+        auto castAddr =
+            builder.createConvert(loc, addrFieldTy, fir::getBase(baseAddr));
+        val = builder.create<fir::InsertValueOp>(loc, componentTy, undef,
+                                                 castAddr, addrField);
+      } else {
+        val = fir::getBase(genval(expr.value()));
+        auto valTy = val.getType();
+        if (fir::isa_ref_type(valTy)) {
+          assert(!inInitializer && "expecting a constant value");
+          auto fldType = fir::dyn_cast_ptrEleTy(valTy);
+          if (fir::isa_char(fldType)) {
+            auto fldCharTy = fldType.cast<fir::CharacterType>();
+            if (!fldCharTy.hasConstantLen())
+              TODO(loc, "CHARACTER LEN type parameter not constant");
+            auto fldRefTy = builder.getRefType(fldType);
+            auto lenVal = builder.createIntegerConstant(
+                loc, builder.getI64Type(), fldCharTy.getLen());
+            mlir::Value from =
+                builder.create<fir::CoordinateOp>(loc, fldRefTy, val, field);
+            fir::ExtendedValue fromPtr{fir::CharBoxValue{from, lenVal}};
+            mlir::Value to = builder.create<fir::CoordinateOp>(
+                loc, fldRefTy, fir::getBase(res), field);
+            fir::ExtendedValue toPtr{fir::CharBoxValue{to, lenVal}};
+            Fortran::lower::CharacterExprHelper{builder, loc}.createAssign(
+                toPtr, fromPtr);
+            continue;
+          }
         }
       }
 
       if (inInitializer) {
-        auto castVal =
-            builder.createConvert(loc, componentTy, fir::getBase(val));
+        auto castVal = builder.createConvert(loc, componentTy, val);
         res =
             builder.create<fir::InsertValueOp>(loc, recTy, res, castVal, field);
       } else {
         auto coorTy = builder.getRefType(recTy.getType(name));
         auto coor = builder.create<fir::CoordinateOp>(loc, coorTy,
                                                       fir::getBase(res), field);
-        builder.create<fir::StoreOp>(loc, fir::getBase(val), coor);
+        builder.create<fir::StoreOp>(loc, val, coor);
       }
     }
     return inInitializer ? res : builder.create<fir::LoadOp>(loc, res);
@@ -1086,6 +1115,32 @@ public:
     }
   }
 
+  fir::ExtendedValue genArrayLit(
+      const Fortran::evaluate::Constant<Fortran::evaluate::SomeDerived> &con) {
+    llvm::SmallVector<mlir::Value> lbounds;
+    llvm::SmallVector<mlir::Value> extents;
+    auto idxTy = builder.getIndexType();
+    for (auto [lb, extent] : llvm::zip(con.lbounds(), con.shape())) {
+      lbounds.push_back(builder.createIntegerConstant(getLoc(), idxTy, lb - 1));
+      extents.push_back(builder.createIntegerConstant(getLoc(), idxTy, extent));
+    }
+    fir::SequenceType::Shape shape;
+    shape.append(con.shape().begin(), con.shape().end());
+    auto recTy = converter.genType(con.GetType().GetDerivedTypeSpec());
+    auto arrayTy = fir::SequenceType::get(shape, recTy);
+    mlir::Value array = builder.create<fir::UndefOp>(getLoc(), arrayTy);
+    Fortran::evaluate::ConstantSubscripts subscripts = con.lbounds();
+    do {
+      auto derivedVal = fir::getBase(genval(con.At(subscripts)));
+      llvm::SmallVector<mlir::Value> idx;
+      for (auto [dim, lb] : llvm::zip(subscripts, con.lbounds()))
+        idx.push_back(builder.createIntegerConstant(getLoc(), idxTy, dim - lb));
+      array = builder.create<fir::InsertValueOp>(getLoc(), arrayTy, array,
+                                                 derivedVal, idx);
+    } while (con.IncrementSubscripts(subscripts));
+    return fir::ArrayBoxValue{array, extents, lbounds};
+  }
+
   template <Fortran::common::TypeCategory TC, int KIND>
   ExtValue
   genval(const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC, KIND>>
@@ -1100,23 +1155,14 @@ public:
       return genScalarLit<TC, KIND>(opt.value());
     }
   }
-  template <Fortran::common::TypeCategory TC>
-  ExtValue genval(
-      const Fortran::evaluate::Constant<Fortran::evaluate::SomeKind<TC>> &con) {
-    if constexpr (TC == Fortran::common::TypeCategory::Integer) {
-      auto opt = (*con).ToInt64();
-      auto type = getSomeKindInteger();
-      auto attr = builder.getIntegerAttr(type, opt);
-      auto res = builder.create<mlir::ConstantOp>(getLoc(), type, attr);
-      return res.getResult();
-    } else if constexpr (TC == Fortran::common::TypeCategory::Derived) {
-      if (auto ctor = con.GetScalarValue())
-        return genval(ctor.value());
-      fir::emitFatalError(getLoc(),
-                          "constant of derived type has no constructor");
-    } else {
-      fir::emitFatalError(getLoc(), "unhandled constant of unknown kind");
-    }
+  fir::ExtendedValue genval(
+      const Fortran::evaluate::Constant<Fortran::evaluate::SomeDerived> &con) {
+    if (con.Rank() > 0)
+      return genArrayLit(con);
+    if (auto ctor = con.GetScalarValue())
+      return genval(ctor.value());
+    fir::emitFatalError(getLoc(),
+                        "constant of derived type has no constructor");
   }
 
   template <typename A>

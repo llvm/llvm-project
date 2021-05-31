@@ -1742,8 +1742,8 @@ private:
             [&](const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
               // Pointer assignment with possibly empty bounds-spec
               auto lhs = genExprMutableBox(loc, assign.lhs);
-              if (Fortran::common::Unwrap<Fortran::evaluate::NullPointer>(
-                      assign.rhs.u)) {
+              if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
+                      assign.rhs)) {
                 Fortran::lower::disassociateMutableBox(*builder, loc, lhs);
                 return;
               }
@@ -1770,8 +1770,8 @@ private:
                     &boundExprs) {
               // Pointer assignment with bounds-remapping
               auto lhs = genExprMutableBox(loc, assign.lhs);
-              if (Fortran::common::Unwrap<Fortran::evaluate::NullPointer>(
-                      assign.rhs.u)) {
+              if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
+                      assign.rhs)) {
                 Fortran::lower::disassociateMutableBox(*builder, loc, lhs);
                 return;
               }

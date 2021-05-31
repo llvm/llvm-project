@@ -24,7 +24,8 @@
 
 namespace fir {
 class GlobalOp;
-}
+class ExtendedValue;
+} // namespace fir
 namespace Fortran {
 namespace semantics {
 class Scope;
@@ -77,6 +78,12 @@ void mapCallInterfaceSymbols(AbstractConverter &,
                              const Fortran::lower::CallerInterface &caller,
                              SymMap &symMap);
 
+// TODO: consider saving the initial expression symbol dependence analysis in
+// in the PFT variable and dealing with the dependent symbols instantiation in
+// the fir::GlobalOp body at the fir::GlobalOp creation point rather than by
+// having genExtAddrInInitializer and genInitialDataTarget custom entry points
+// here to deal with this while lowering the initial expression value.
+
 /// Create initial-data-target fir.box in a global initializer region.
 /// This handles the local instantiation of the target variable.
 mlir::Value
@@ -84,6 +91,11 @@ genInitialDataTarget(Fortran::lower::AbstractConverter &, mlir::Location,
                      mlir::Type boxType,
                      const evaluate::Expr<evaluate::SomeType> &initialTarget);
 
+/// Generate address \p addr inside an initializer.
+fir::ExtendedValue
+genExtAddrInInitializer(Fortran::lower::AbstractConverter &converter,
+                        mlir::Location loc,
+                        const evaluate::Expr<evaluate::SomeType> &addr);
 } // namespace lower
 } // namespace Fortran
 #endif // FORTRAN_LOWER_CONVERT_VARIABLE_H

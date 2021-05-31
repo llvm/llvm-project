@@ -141,6 +141,26 @@ static mlir::Type unwrapElementType(mlir::Type type) {
   return type;
 }
 
+fir::ExtendedValue Fortran::lower::genExtAddrInInitializer(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::lower::SomeExpr &addr) {
+  Fortran::lower::SymMap globalOpSymMap;
+  Fortran::lower::AggregateStoreMap storeMap;
+  Fortran::lower::StatementContext stmtCtx;
+  if (const auto *sym = Fortran::evaluate::GetFirstSymbol(addr)) {
+    // Length parameters processing will need care in global initializer
+    // context.
+    if (hasDerivedTypeWithLengthParameters(*sym))
+      TODO(loc, "initial-data-target with derived type length parameters");
+
+    auto var = Fortran::lower::pft::Variable(*sym, /*global=*/true);
+    Fortran::lower::instantiateVariable(converter, var, globalOpSymMap,
+                                        storeMap);
+  }
+  return Fortran::lower::createSomeExtendedAddress(loc, converter, addr,
+                                                   globalOpSymMap, stmtCtx);
+}
+
 /// create initial-data-target fir.box in a global initializer region.
 mlir::Value Fortran::lower::genInitialDataTarget(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
@@ -149,9 +169,10 @@ mlir::Value Fortran::lower::genInitialDataTarget(
   Fortran::lower::AggregateStoreMap storeMap;
   Fortran::lower::StatementContext stmtCtx;
   auto &builder = converter.getFirOpBuilder();
-  if (Fortran::common::Unwrap<Fortran::evaluate::NullPointer>(initialTarget))
+  if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(
+          initialTarget))
     return Fortran::lower::createUnallocatedBox(
-        builder, loc, boxType, /*nonDeferredParams*/ llvm::None);
+        builder, loc, boxType, /*nonDeferredParams=*/llvm::None);
   // Pointer initial data target, and NULL(mold).
   if (const auto *sym = Fortran::evaluate::GetFirstSymbol(initialTarget)) {
     // Length parameters processing will need care in global initializer
@@ -159,7 +180,7 @@ mlir::Value Fortran::lower::genInitialDataTarget(
     if (hasDerivedTypeWithLengthParameters(*sym))
       TODO(loc, "initial-data-target with derived type length parameters");
 
-    auto var = Fortran::lower::pft::Variable(*sym, /*global*/ true);
+    auto var = Fortran::lower::pft::Variable(*sym, /*global=*/true);
     Fortran::lower::instantiateVariable(converter, var, globalOpSymMap,
                                         storeMap);
   }
