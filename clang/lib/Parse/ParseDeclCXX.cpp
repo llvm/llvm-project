@@ -1710,7 +1710,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
     TUK = Sema::TUK_Reference;
   else if (Tok.is(tok::l_brace) ||
            (getLangOpts().CPlusPlus && Tok.is(tok::colon)) ||
-           (isCXX11FinalKeyword() &&
+           (isClassCompatibleKeyword() &&
             (NextToken().is(tok::l_brace) || NextToken().is(tok::colon)))) {
     if (DS.isFriendSpecified()) {
       // C++ [class.friend]p2:
@@ -1726,14 +1726,18 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       // Okay, this is a class definition.
       TUK = Sema::TUK_Definition;
     }
-  } else if (isCXX11FinalKeyword() && (NextToken().is(tok::l_square) ||
-                                       NextToken().is(tok::kw_alignas))) {
+  } else if (isClassCompatibleKeyword() &&
+             (NextToken().is(tok::l_square) ||
+              NextToken().is(tok::kw_alignas) ||
+              isCXX11VirtSpecifier(NextToken()) != VirtSpecifiers::VS_None)) {
     // We can't tell if this is a definition or reference
     // until we skipped the 'final' and C++11 attribute specifiers.
     TentativeParsingAction PA(*this);
 
-    // Skip the 'final' keyword.
-    ConsumeToken();
+    // Skip the 'final', abstract'... keywords.
+    while (isClassCompatibleKeyword()) {
+      ConsumeToken();
+    }
 
     // Skip C++11 attribute specifiers.
     while (true) {
@@ -1982,7 +1986,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   if (TUK == Sema::TUK_Definition) {
     assert(Tok.is(tok::l_brace) ||
            (getLangOpts().CPlusPlus && Tok.is(tok::colon)) ||
-           isCXX11FinalKeyword());
+           isClassCompatibleKeyword());
     if (SkipBody.ShouldSkip)
       SkipCXXMemberSpecification(StartLoc, AttrFixitLoc, TagType,
                                  TagOrTempResult.get());
@@ -2249,8 +2253,10 @@ VirtSpecifiers::Specifier Parser::isCXX11VirtSpecifier(const Token &Tok) const {
     Ident_final = &PP.getIdentifierTable().get("final");
     if (getLangOpts().GNUKeywords)
       Ident_GNU_final = &PP.getIdentifierTable().get("__final");
-    if (getLangOpts().MicrosoftExt)
+    if (getLangOpts().MicrosoftExt) {
       Ident_sealed = &PP.getIdentifierTable().get("sealed");
+      Ident_abstract = &PP.getIdentifierTable().get("abstract");
+    }
     Ident_override = &PP.getIdentifierTable().get("override");
   }
 
@@ -2259,6 +2265,9 @@ VirtSpecifiers::Specifier Parser::isCXX11VirtSpecifier(const Token &Tok) const {
 
   if (II == Ident_sealed)
     return VirtSpecifiers::VS_Sealed;
+
+  if (II == Ident_abstract)
+    return VirtSpecifiers::VS_Abstract;
 
   if (II == Ident_final)
     return VirtSpecifiers::VS_Final;
@@ -2305,6 +2314,8 @@ void Parser::ParseOptionalCXX11VirtSpecifierSeq(VirtSpecifiers &VS,
         << VirtSpecifiers::getSpecifierName(Specifier);
     } else if (Specifier == VirtSpecifiers::VS_Sealed) {
       Diag(Tok.getLocation(), diag::ext_ms_sealed_keyword);
+    } else if (Specifier == VirtSpecifiers::VS_Abstract) {
+      Diag(Tok.getLocation(), diag::ext_ms_abstract_keyword);
     } else if (Specifier == VirtSpecifiers::VS_GNU_Final) {
       Diag(Tok.getLocation(), diag::ext_warn_gnu_final);
     } else {
@@ -2325,6 +2336,16 @@ bool Parser::isCXX11FinalKeyword() const {
   return Specifier == VirtSpecifiers::VS_Final ||
          Specifier == VirtSpecifiers::VS_GNU_Final ||
          Specifier == VirtSpecifiers::VS_Sealed;
+}
+
+/// isClassCompatibleKeyword - Determine whether the next token is a C++11
+/// 'final' or Microsoft 'sealed' or 'abstract' contextual keywords.
+bool Parser::isClassCompatibleKeyword() const {
+  VirtSpecifiers::Specifier Specifier = isCXX11VirtSpecifier();
+  return Specifier == VirtSpecifiers::VS_Final ||
+         Specifier == VirtSpecifiers::VS_GNU_Final ||
+         Specifier == VirtSpecifiers::VS_Sealed ||
+         Specifier == VirtSpecifiers::VS_Abstract;
 }
 
 /// Parse a C++ member-declarator up to, but not including, the optional
@@ -2893,8 +2914,13 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
       HasStaticInitializer = true;
     }
 
+    if (PureSpecLoc.isValid() && VS.getAbstractLoc().isValid()) {
+      Diag(PureSpecLoc, diag::err_duplicate_virt_specifier) << "abstract";
+    }
     if (ThisDecl && PureSpecLoc.isValid())
       Actions.ActOnPureSpecifier(ThisDecl, PureSpecLoc);
+    else if (ThisDecl && VS.getAbstractLoc().isValid())
+      Actions.ActOnPureSpecifier(ThisDecl, VS.getAbstractLoc());
 
     // Handle the initializer.
     if (HasInClassInit != ICIS_NoInit) {
@@ -3279,30 +3305,53 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
     Actions.ActOnTagStartDefinition(getCurScope(), TagDecl);
 
   SourceLocation FinalLoc;
+  SourceLocation AbstractLoc;
   bool IsFinalSpelledSealed = false;
+  bool IsAbstract = false;
 
   // Parse the optional 'final' keyword.
   if (getLangOpts().CPlusPlus && Tok.is(tok::identifier)) {
-    VirtSpecifiers::Specifier Specifier = isCXX11VirtSpecifier(Tok);
-    assert((Specifier == VirtSpecifiers::VS_Final ||
-            Specifier == VirtSpecifiers::VS_GNU_Final ||
-            Specifier == VirtSpecifiers::VS_Sealed) &&
+    while (true) {
+      VirtSpecifiers::Specifier Specifier = isCXX11VirtSpecifier(Tok);
+      if (Specifier == VirtSpecifiers::VS_None)
+        break;
+      if (isCXX11FinalKeyword()) {
+        if (FinalLoc.isValid()) {
+          auto Skipped = ConsumeToken();
+          Diag(Skipped, diag::err_duplicate_class_virt_specifier)
+              << VirtSpecifiers::getSpecifierName(Specifier);
+        } else {
+          FinalLoc = ConsumeToken();
+          if (Specifier == VirtSpecifiers::VS_Sealed)
+            IsFinalSpelledSealed = true;
+        }
+      } else {
+        if (AbstractLoc.isValid()) {
+          auto Skipped = ConsumeToken();
+          Diag(Skipped, diag::err_duplicate_class_virt_specifier)
+              << VirtSpecifiers::getSpecifierName(Specifier);
+        } else {
+          AbstractLoc = ConsumeToken();
+          IsAbstract = true;
+        }
+      }
+      if (TagType == DeclSpec::TST_interface)
+        Diag(FinalLoc, diag::err_override_control_interface)
+            << VirtSpecifiers::getSpecifierName(Specifier);
+      else if (Specifier == VirtSpecifiers::VS_Final)
+        Diag(FinalLoc, getLangOpts().CPlusPlus11
+                           ? diag::warn_cxx98_compat_override_control_keyword
+                           : diag::ext_override_control_keyword)
+            << VirtSpecifiers::getSpecifierName(Specifier);
+      else if (Specifier == VirtSpecifiers::VS_Sealed)
+        Diag(FinalLoc, diag::ext_ms_sealed_keyword);
+      else if (Specifier == VirtSpecifiers::VS_Abstract)
+        Diag(AbstractLoc, diag::ext_ms_abstract_keyword);
+      else if (Specifier == VirtSpecifiers::VS_GNU_Final)
+        Diag(FinalLoc, diag::ext_warn_gnu_final);
+    }
+    assert((FinalLoc.isValid() || AbstractLoc.isValid()) &&
            "not a class definition");
-    FinalLoc = ConsumeToken();
-    IsFinalSpelledSealed = Specifier == VirtSpecifiers::VS_Sealed;
-
-    if (TagType == DeclSpec::TST_interface)
-      Diag(FinalLoc, diag::err_override_control_interface)
-        << VirtSpecifiers::getSpecifierName(Specifier);
-    else if (Specifier == VirtSpecifiers::VS_Final)
-      Diag(FinalLoc, getLangOpts().CPlusPlus11
-                         ? diag::warn_cxx98_compat_override_control_keyword
-                         : diag::ext_override_control_keyword)
-        << VirtSpecifiers::getSpecifierName(Specifier);
-    else if (Specifier == VirtSpecifiers::VS_Sealed)
-      Diag(FinalLoc, diag::ext_ms_sealed_keyword);
-    else if (Specifier == VirtSpecifiers::VS_GNU_Final)
-      Diag(FinalLoc, diag::ext_warn_gnu_final);
 
     // Parse any C++11 attributes after 'final' keyword.
     // These attributes are not allowed to appear here,
@@ -3375,7 +3424,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
 
   if (TagDecl)
     Actions.ActOnStartCXXMemberDeclarations(getCurScope(), TagDecl, FinalLoc,
-                                            IsFinalSpelledSealed,
+                                            IsFinalSpelledSealed, IsAbstract,
                                             T.getOpenLocation());
 
   // C++ 11p3: Members of a class defined with the keyword class are private
