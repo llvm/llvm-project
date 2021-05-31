@@ -8369,7 +8369,10 @@ CreateNanoMipsBuiltinVaListdecl(const ASTContext *Context) {
   Context->VaListTagDecl = VaListTagDecl;
   QualType VaListTagType = Context->getRecordType(VaListTagDecl);
 
-  return Context->buildImplicitTypedef(VaListTagType, "__builtin_va_list");
+  llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 1);
+  QualType VaListTagArrayType = Context->getConstantArrayType(
+      VaListTagType, Size, nullptr, ArrayType::Normal, 0);
+  return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
 
 static TypedefDecl *CreateVaListDecl(const ASTContext *Context,
