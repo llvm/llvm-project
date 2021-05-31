@@ -1229,6 +1229,10 @@ static bool isArgumentExtended(SDValue Op, MVT::SimpleValueType initialType,
         argCouldWork = true;
         isSigned = false;
         break;
+      case ISD::LoadExtType::EXTLOAD: {
+        argCouldWork = true;
+        isSigned = true;
+      } break;
       default:
         break;
       }
