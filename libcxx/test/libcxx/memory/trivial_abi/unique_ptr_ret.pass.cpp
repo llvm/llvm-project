@@ -46,7 +46,11 @@ int main(int, char**) {
   //
   // With trivial_abi, local_addr is the address of a local variable in
   // make_val, and hence different from &ret.
+#if !defined(__i386__)
+  // On X86, structs are never returned in registers.
+  // Thus, unique_ptr will be passed indirectly even if it is trivial.
   assert((void*)&ret != local_addr);
+#endif
 
   return 0;
 }

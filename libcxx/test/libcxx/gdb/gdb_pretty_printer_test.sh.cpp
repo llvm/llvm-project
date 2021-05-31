@@ -427,9 +427,9 @@ void multiset_test() {
 
 void vector_test() {
   std::vector<bool> test0 = {true, false};
-  ComparePrettyPrintToChars(test0,
+  ComparePrettyPrintToRegex(test0,
                             "std::vector<bool> of "
-                            "length 2, capacity 64 = {1, 0}");
+                            "length 2, capacity (32|64) = {1, 0}");
   for (int i = 0; i < 31; ++i) {
     test0.push_back(true);
     test0.push_back(false);
@@ -444,9 +444,9 @@ void vector_test() {
   ComparePrettyPrintToRegex(
       test0,
       "std::vector<bool> of length 65, "
-      "capacity 128 = {1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, "
-      "1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, "
-      "1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1}");
+      "capacity (96|128) = {1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, "
+      "0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, "
+      "0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1}");
 
   std::vector<int> test1;
   ComparePrettyPrintToChars(test1, "std::vector of length 0, capacity 0");
