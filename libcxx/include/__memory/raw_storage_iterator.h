@@ -40,7 +40,11 @@ private:
 public:
     typedef output_iterator_tag iterator_category;
     typedef void                value_type;
+#if _LIBCPP_STD_VER > 17
+    typedef ptrdiff_t           difference_type;
+#else
     typedef void                difference_type;
+#endif
     typedef void                pointer;
     typedef void                reference;
 

@@ -11,8 +11,11 @@
 
 // raw_storage_iterator associated types
 
+#include <cstddef>
 #include <memory>
 #include <type_traits>
+
+#include "test_macros.h"
 
 struct T;
 typedef T* OutputIt;
@@ -20,6 +23,10 @@ typedef std::raw_storage_iterator<OutputIt, T> It;
 
 static_assert(std::is_same<It::iterator_category, std::output_iterator_tag>::value, "");
 static_assert(std::is_same<It::value_type, void>::value, "");
+#if TEST_STD_VER > 17
+static_assert(std::is_same<It::difference_type, std::ptrdiff_t>::value, "");
+#else
 static_assert(std::is_same<It::difference_type, void>::value, "");
+#endif
 static_assert(std::is_same<It::pointer, void>::value, "");
 static_assert(std::is_same<It::reference, void>::value, "");
