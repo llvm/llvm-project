@@ -1334,7 +1334,6 @@ SBDebugger::GetInternalVariableValue(const char *var_name,
       lldb::SBStringList, SBDebugger, GetInternalVariableValue,
       (const char *, const char *), var_name, debugger_instance_name);
 
-  SBStringList ret_value;
   DebuggerSP debugger_sp(Debugger::FindDebuggerWithInstanceName(
       ConstString(debugger_instance_name)));
   Status error;
