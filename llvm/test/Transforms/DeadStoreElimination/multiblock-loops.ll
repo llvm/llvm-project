@@ -111,7 +111,6 @@ define void @test_loop(i32 %N, i32* noalias nocapture readonly %A, i32* noalias 
 ; CHECK:       for.body4.lr.ph:
 ; CHECK-NEXT:    [[I_028:%.*]] = phi i32 [ [[INC11:%.*]], [[FOR_COND_CLEANUP3:%.*]] ], [ 0, [[FOR_BODY4_LR_PH_PREHEADER]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i32 [[I_028]]
-; CHECK-NEXT:    store i32 0, i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[I_028]], [[N]]
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
 ; CHECK:       for.body4:
@@ -626,10 +625,13 @@ exit:
 define i16 @partial_override_overloop(i1 %c, i32 %i) {
 ; CHECK-LABEL: @partial_override_overloop(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FIRST:%.*]]
+; CHECK:       first:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i16], [10 x i16]* @x, i16 0, i32 [[I:%.*]]
+; CHECK-NEXT:    store i16 1, i16* [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    br label [[DO_BODY:%.*]]
 ; CHECK:       do.body:
-; CHECK-NEXT:    [[I_0:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[DO_BODY]] ]
+; CHECK-NEXT:    [[I_0:%.*]] = phi i16 [ 0, [[FIRST]] ], [ [[INC:%.*]], [[DO_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [10 x i16], [10 x i16]* @x, i16 0, i16 [[I_0]]
 ; CHECK-NEXT:    store i16 2, i16* [[ARRAYIDX2]], align 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i16 [[I_0]], 4
@@ -643,12 +645,16 @@ define i16 @partial_override_overloop(i1 %c, i32 %i) {
 ; CHECK-NEXT:    ret i16 0
 ;
 entry:
+  ; Branch to first so MemoryLoc is not in the entry block.
+  br label %first
+
+first:
   %arrayidx = getelementptr inbounds [10 x i16], [10 x i16]* @x, i16 0, i32 %i
   store i16 1, i16* %arrayidx, align 1
   br label %do.body
 
 do.body:
-  %i.0 = phi i16 [ 0, %entry ], [ %inc, %do.body ]
+  %i.0 = phi i16 [ 0, %first ], [ %inc, %do.body ]
   %arrayidx2 = getelementptr inbounds [10 x i16], [10 x i16]* @x, i16 0, i16 %i.0
   store i16 2, i16* %arrayidx2, align 1
   %exitcond = icmp eq i16 %i.0, 4
