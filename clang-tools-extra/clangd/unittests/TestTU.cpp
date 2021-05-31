@@ -17,6 +17,7 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/Utils.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "gtest/gtest.h"
 
 namespace clang {
 namespace clangd {
