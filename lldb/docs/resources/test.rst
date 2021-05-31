@@ -80,7 +80,7 @@ operating systems.
 
 Finally, the shell tests always run in batch mode. You start with some input
 and the test verifies the output. The debugger can be sensitive to its
-environment, such as the the platform it runs on. It can be hard to express
+environment, such as the platform it runs on. It can be hard to express
 that the same test might behave slightly differently on macOS and Linux.
 Additionally, the debugger is an interactive tool, and the shell test provide
 no good way of testing those interactive aspects, such as tab completion for
