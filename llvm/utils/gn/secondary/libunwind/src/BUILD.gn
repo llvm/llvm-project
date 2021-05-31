@@ -84,8 +84,8 @@ if (libunwind_enable_shared) {
     }
     if (current_os == "mac") {
       ldflags += [
-        "-compatibility_version 1",
-        "-install_name /usr/lib/libunwind.1.dylib",
+        "-Wl,-compatibility_version,1",
+        "-Wl,-install_name,/usr/lib/libunwind.1.dylib",
       ]
     }
     sources = unwind_sources
