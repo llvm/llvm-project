@@ -369,7 +369,7 @@ static void createResumeEntryBlock(Function &F, coro::Shape &Shape) {
                                  coro::Shape::SwitchFieldIndex::Resume,
                                   "ResumeFn.addr");
       auto *NullPtr = ConstantPointerNull::get(cast<PointerType>(
-          cast<PointerType>(GepIndex->getType())->getElementType()));
+          FrameTy->getTypeAtIndex(coro::Shape::SwitchFieldIndex::Resume)));
       Builder.CreateStore(NullPtr, GepIndex);
     } else {
       auto *GepIndex = Builder.CreateStructGEP(
