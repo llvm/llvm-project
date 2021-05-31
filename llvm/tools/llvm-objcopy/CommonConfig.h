@@ -141,6 +141,36 @@ public:
   bool empty() const { return PosMatchers.empty() && NegMatchers.empty(); }
 };
 
+enum class SymbolFlag {
+  Global,
+  Local,
+  Weak,
+  Default,
+  Hidden,
+  Protected,
+  File,
+  Section,
+  Object,
+  Function,
+  IndirectFunction,
+  Debug,
+  Constructor,
+  Warning,
+  Indirect,
+  Synthetic,
+  UniqueObject,
+};
+
+// Symbol info specified by --add-symbol option. Symbol flags not supported
+// by a concrete format should be ignored.
+struct NewSymbolInfo {
+  StringRef SymbolName;
+  StringRef SectionName;
+  uint64_t Value = 0;
+  std::vector<SymbolFlag> Flags;
+  std::vector<StringRef> BeforeSyms;
+};
+
 // Configuration for copying/stripping a single file.
 struct CommonConfig {
   // Main input/output options
@@ -199,6 +229,9 @@ struct CommonConfig {
   // calculated with EntryExpr(input_address), when either --set-start or
   // --change-start is used.
   std::function<uint64_t(uint64_t)> EntryExpr;
+
+  // Symbol info specified by --add-symbol option.
+  std::vector<NewSymbolInfo> SymbolsToAdd;
 
   // Boolean options
   bool AllowBrokenLinks = false;
