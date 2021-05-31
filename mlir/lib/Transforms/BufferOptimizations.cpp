@@ -194,7 +194,12 @@ private:
             dominators.properlyDominates(upperBound, currentBlock))) {
       // Try to find an immediate dominator and check whether the parent block
       // is above the immediate dominator (if any).
-      DominanceInfoNode *idom = dominators.getNode(currentBlock)->getIDom();
+      DominanceInfoNode *idom = nullptr;
+
+      // DominanceInfo doesn't support getNode queries for single-block regions.
+      if (!currentBlock->isEntryBlock())
+        idom = dominators.getNode(currentBlock)->getIDom();
+
       if (idom && dominators.properlyDominates(parentBlock, idom->getBlock())) {
         // If the current immediate dominator is below the placement block, move
         // to the immediate dominator block.
