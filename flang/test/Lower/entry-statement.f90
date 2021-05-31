@@ -85,3 +85,10 @@ function hh(c1)
 entry qq(c1)
   qq = c1
 end
+
+! CHECK-LABEL: func @_QPchar_array()
+function char_array()
+  character(10), c(5)
+! CHECK-LABEL: func @_QPchar_array_entry(%arg0: !fir.boxchar<1>)
+entry char_array_entry(c)
+end

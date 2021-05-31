@@ -115,7 +115,7 @@ Fortran::lower::CharacterExprHelper::toExtendedValue(mlir::Value character,
     type = eleType;
 
   if (auto arrayType = type.dyn_cast<fir::SequenceType>()) {
-    type = arrayType;
+    type = arrayType.getEleTy();
     auto indexType = builder.getIndexType();
     for (auto extent : arrayType.getShape()) {
       if (extent == fir::SequenceType::getUnknownExtent())
@@ -326,8 +326,7 @@ Fortran::lower::getLlvmMemset(Fortran::lower::FirOpBuilder &builder) {
 }
 
 /// Get the standard `realloc` function.
-mlir::FuncOp
-Fortran::lower::getRealloc(Fortran::lower::FirOpBuilder &builder) {
+mlir::FuncOp Fortran::lower::getRealloc(Fortran::lower::FirOpBuilder &builder) {
   auto ptrTy = builder.getRefType(builder.getIntegerType(8));
   llvm::SmallVector<mlir::Type> args = {ptrTy, builder.getI64Type()};
   auto reallocTy = mlir::FunctionType::get(builder.getContext(), args, {ptrTy});
