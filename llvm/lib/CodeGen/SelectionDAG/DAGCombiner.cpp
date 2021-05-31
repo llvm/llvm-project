@@ -10937,6 +10937,36 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
           return DAG.getSExtOrTrunc(VsetCC, DL, VT);
         }
       }
+
+      // Try to eliminate the sext of a setcc by zexting the compare operands.
+      // TODO: Handle signed compare by sexting the ops.
+      if (!ISD::isSignedIntSetCC(CC) && N0.hasOneUse() &&
+          TLI.isOperationLegalOrCustom(ISD::SETCC, VT) /*&&
+          !TLI.isOperationLegalOrCustom(ISD::SETCC, SVT)*/) {
+        // We have an unsupported narrow vector compare op that would be legal
+        // if extended to the destination type. See if the compare operands
+        // can be freely extended to the destination type.
+        auto IsFreeToZext = [&](SDValue V) {
+          if (isConstantOrConstantVector(V, /*NoOpaques*/ true))
+            return true;
+
+          // Match a simple, non-extended load that can be converted to a
+          // legal zext-load.
+          // TODO: Handle more than one use if the other uses are free to zext.
+          // TODO: Allow widening of an existing zext-load?
+          return ISD::isNON_EXTLoad(V.getNode()) &&
+                 ISD::isUNINDEXEDLoad(V.getNode()) &&
+                 cast<LoadSDNode>(V)->isSimple() &&
+                 TLI.isLoadExtLegal(ISD::ZEXTLOAD, VT, V.getValueType()) &&
+                 V.hasOneUse();
+        };
+
+        if (IsFreeToZext(N00) && IsFreeToZext(N01)) {
+          SDValue Ext0 = DAG.getZExtOrTrunc(N00, DL, VT);
+          SDValue Ext1 = DAG.getZExtOrTrunc(N01, DL, VT);
+          return DAG.getSetCC(DL, VT, Ext0, Ext1, CC);
+        }
+      }
     }
 
     // sext(setcc x, y, cc) -> (select (setcc x, y, cc), T, 0)
