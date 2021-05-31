@@ -3832,7 +3832,7 @@ static std::pair<const SCEV *, ConstantInt *> splitAddExpr(const SCEV *S) {
 
 /// Return the ValueOffsetPair set for \p S. \p S can be represented
 /// by the value and offset from any ValueOffsetPair in the set.
-SetVector<ScalarEvolution::ValueOffsetPair> *
+ScalarEvolution::ValueOffsetPairSetVector *
 ScalarEvolution::getSCEVValues(const SCEV *S) {
   ExprValueMapType::iterator SI = ExprValueMap.find_as(S);
   if (SI == ExprValueMap.end())
@@ -3855,7 +3855,7 @@ void ScalarEvolution::eraseValueFromMap(Value *V) {
   if (I != ValueExprMap.end()) {
     const SCEV *S = I->second;
     // Remove {V, 0} from the set of ExprValueMap[S]
-    if (SetVector<ValueOffsetPair> *SV = getSCEVValues(S))
+    if (auto *SV = getSCEVValues(S))
       SV->remove({V, nullptr});
 
     // Remove {V, Offset} from the set of ExprValueMap[Stripped]
@@ -3863,7 +3863,7 @@ void ScalarEvolution::eraseValueFromMap(Value *V) {
     ConstantInt *Offset;
     std::tie(Stripped, Offset) = splitAddExpr(S);
     if (Offset != nullptr) {
-      if (SetVector<ValueOffsetPair> *SV = getSCEVValues(Stripped))
+      if (auto *SV = getSCEVValues(Stripped))
         SV->remove({V, Offset});
     }
     ValueExprMap.erase(V);
