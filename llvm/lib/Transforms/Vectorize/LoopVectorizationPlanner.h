@@ -344,7 +344,7 @@ private:
   /// Legal. This method is only used for the legacy inner loop vectorizer.
   VPlanPtr buildVPlanWithVPRecipes(
       VFRange &Range, SmallPtrSetImpl<Instruction *> &DeadInstructions,
-      const DenseMap<Instruction *, Instruction *> &SinkAfter);
+      const MapVector<Instruction *, Instruction *> &SinkAfter);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// according to the information gathered by Legal when it checked if it is
