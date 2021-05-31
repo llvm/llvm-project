@@ -50,18 +50,19 @@ ORC_RT_C_EXTERN_C_BEGIN
 typedef union {
   const char *ValuePtr;
   char Value[sizeof(ValuePtr)];
-} OrcRTCWrapperFunctionResultDataUnion;
+} __orc_rt_CWrapperFunctionResultDataUnion;
 
 /**
- * OrcRTCWrapperFunctionResult is a kind of C-SmallVector with an out-of-band
- * error state.
+ * __orc_rt_CWrapperFunctionResult is a kind of C-SmallVector with an
+ * out-of-band error state.
  *
  * If Size == 0 and Data.ValuePtr is non-zero then the value is in the
  * 'out-of-band error' state, and Data.ValuePtr points at a malloc-allocated,
  * null-terminated string error message.
  *
- * If Size <= sizeof(OrcRTCWrapperFunctionResultData) then the value is in the
- * 'small' state and the content is held in the first Size bytes of Data.Value.
+ * If Size <= sizeof(__orc_rt_CWrapperFunctionResultData) then the value is in
+ * the 'small' state and the content is held in the first Size bytes of
+ * Data.Value.
  *
  * If Size > sizeof(OrtRTCWrapperFunctionResultData) then the value is in the
  * 'large' state and the content is held in the first Size bytes of the
@@ -69,29 +70,29 @@ typedef union {
  * malloc, and will be freed with free when this value is destroyed.
  */
 typedef struct {
-  OrcRTCWrapperFunctionResultDataUnion Data;
+  __orc_rt_CWrapperFunctionResultDataUnion Data;
   size_t Size;
-} OrcRTCWrapperFunctionResult;
+} __orc_rt_CWrapperFunctionResult;
 
-typedef struct OrcRTCSharedOpaqueJITProcessControl
-    *OrcRTSharedJITProcessControlRef;
+typedef struct __orc_rt_CSharedOpaqueJITProcessControl
+    *__orc_rt_SharedJITProcessControlRef;
 
 /**
- * Zero-initialize an OrcRTCWrapperFunctionResult.
+ * Zero-initialize an __orc_rt_CWrapperFunctionResult.
  */
 static inline void
-OrcRTCWrapperFunctionResultInit(OrcRTCWrapperFunctionResult *R) {
+__orc_rt_CWrapperFunctionResultInit(__orc_rt_CWrapperFunctionResult *R) {
   R->Size = 0;
   R->Data.ValuePtr = 0;
 }
 
 /**
- * Create an OrcRTCWrapperFunctionResult with an uninitialized buffer of size
- * Size. The buffer is returned via the DataPtr argument.
+ * Create an __orc_rt_CWrapperFunctionResult with an uninitialized buffer of
+ * size Size. The buffer is returned via the DataPtr argument.
  */
 static inline char *
-OrcRTCWrapperFunctionResultAllocate(OrcRTCWrapperFunctionResult *R,
-                                    size_t Size) {
+__orc_rt_CWrapperFunctionResultAllocate(__orc_rt_CWrapperFunctionResult *R,
+                                        size_t Size) {
   char *DataPtr;
   R->Size = Size;
   if (Size > sizeof(R->Data.Value)) {
@@ -103,11 +104,11 @@ OrcRTCWrapperFunctionResultAllocate(OrcRTCWrapperFunctionResult *R,
 }
 
 /**
- * Create an OrcRTWrapperFunctionResult from the given data range.
+ * Create an __orc_rt_WrapperFunctionResult from the given data range.
  */
-static inline OrcRTCWrapperFunctionResult
-OrcRTCreateCWrapperFunctionResultFromRange(const char *Data, size_t Size) {
-  OrcRTCWrapperFunctionResult R;
+static inline __orc_rt_CWrapperFunctionResult
+__orc_rt_CreateCWrapperFunctionResultFromRange(const char *Data, size_t Size) {
+  __orc_rt_CWrapperFunctionResult R;
   R.Size = Size;
   if (R.Size > sizeof(R.Data.Value)) {
     char *Tmp = (char *)malloc(Size);
@@ -119,27 +120,28 @@ OrcRTCreateCWrapperFunctionResultFromRange(const char *Data, size_t Size) {
 }
 
 /**
- * Create an OrcRTCWrapperFunctionResult by copying the given string, including
- * the null-terminator.
+ * Create an __orc_rt_CWrapperFunctionResult by copying the given string,
+ * including the null-terminator.
  *
  * This function copies the input string. The client is responsible for freeing
  * the ErrMsg arg.
  */
-static inline OrcRTCWrapperFunctionResult
-OrcRTCreateCWrapperFunctionResultFromString(const char *Source) {
-  return OrcRTCreateCWrapperFunctionResultFromRange(Source, strlen(Source) + 1);
+static inline __orc_rt_CWrapperFunctionResult
+__orc_rt_CreateCWrapperFunctionResultFromString(const char *Source) {
+  return __orc_rt_CreateCWrapperFunctionResultFromRange(Source,
+                                                        strlen(Source) + 1);
 }
 
 /**
- * Create an OrcRTCWrapperFunctionResult representing an out-of-band
+ * Create an __orc_rt_CWrapperFunctionResult representing an out-of-band
  * error.
  *
  * This function takes ownership of the string argument which must have been
  * allocated with malloc.
  */
-static inline OrcRTCWrapperFunctionResult
-OrcRTCreateCWrapperFunctionResultFromOutOfBandError(const char *ErrMsg) {
-  OrcRTCWrapperFunctionResult R;
+static inline __orc_rt_CWrapperFunctionResult
+__orc_rt_CreateCWrapperFunctionResultFromOutOfBandError(const char *ErrMsg) {
+  __orc_rt_CWrapperFunctionResult R;
   R.Size = 0;
   char *Tmp = (char *)malloc(strlen(ErrMsg) + 1);
   strcpy(Tmp, ErrMsg);
@@ -148,11 +150,11 @@ OrcRTCreateCWrapperFunctionResultFromOutOfBandError(const char *ErrMsg) {
 }
 
 /**
- * This should be called to destroy OrcRTCWrapperFunctionResult values
+ * This should be called to destroy __orc_rt_CWrapperFunctionResult values
  * regardless of their state.
  */
 static inline void
-OrcRTDisposeCWrapperFunctionResult(OrcRTCWrapperFunctionResult *R) {
+__orc_rt_DisposeCWrapperFunctionResult(__orc_rt_CWrapperFunctionResult *R) {
   if (R->Size > sizeof(R->Data.Value) ||
       (R->Size == 0 && R->Data.ValuePtr))
     free((void *)R->Data.ValuePtr);
@@ -160,22 +162,22 @@ OrcRTDisposeCWrapperFunctionResult(OrcRTCWrapperFunctionResult *R) {
 
 /**
  * Get a pointer to the data contained in the given
- * OrcRTCWrapperFunctionResult.
+ * __orc_rt_CWrapperFunctionResult.
  */
 static inline const char *
-OrcRTCWrapperFunctionResultData(const OrcRTCWrapperFunctionResult *R) {
+__orc_rt_CWrapperFunctionResultData(const __orc_rt_CWrapperFunctionResult *R) {
   assert((R->Size != 0 || R->Data.ValuePtr == nullptr) &&
          "Cannot get data for out-of-band error value");
   return R->Size > sizeof(R->Data.Value) ? R->Data.ValuePtr : R->Data.Value;
 }
 
 /**
- * Safely get the size of the given OrcRTCWrapperFunctionResult.
+ * Safely get the size of the given __orc_rt_CWrapperFunctionResult.
  *
  * Asserts that we're not trying to access the size of an error value.
  */
 static inline size_t
-OrcRTCWrapperFunctionResultSize(const OrcRTCWrapperFunctionResult *R) {
+__orc_rt_CWrapperFunctionResultSize(const __orc_rt_CWrapperFunctionResult *R) {
   assert((R->Size != 0 || R->Data.ValuePtr == nullptr) &&
          "Cannot get size for out-of-band error value");
   return R->Size;
@@ -183,22 +185,22 @@ OrcRTCWrapperFunctionResultSize(const OrcRTCWrapperFunctionResult *R) {
 
 /**
  * Returns 1 if this value is equivalent to a value just initialized by
- * OrcRTCWrapperFunctionResultInit, 0 otherwise.
+ * __orc_rt_CWrapperFunctionResultInit, 0 otherwise.
  */
 static inline size_t
-OrcRTCWrapperFunctionResultEmpty(const OrcRTCWrapperFunctionResult *R) {
+__orc_rt_CWrapperFunctionResultEmpty(const __orc_rt_CWrapperFunctionResult *R) {
   return R->Size == 0 && R->Data.ValuePtr == 0;
 }
 
 /**
  * Returns a pointer to the out-of-band error string for this
- * OrcRTCWrapperFunctionResult, or null if there is no error.
+ * __orc_rt_CWrapperFunctionResult, or null if there is no error.
  *
- * The OrcRTCWrapperFunctionResult retains ownership of the error
+ * The __orc_rt_CWrapperFunctionResult retains ownership of the error
  * string, so it should be copied if the caller wishes to preserve it.
  */
-static inline const char *OrcRTCWrapperFunctionResultGetOutOfBandError(
-    const OrcRTCWrapperFunctionResult *R) {
+static inline const char *__orc_rt_CWrapperFunctionResultGetOutOfBandError(
+    const __orc_rt_CWrapperFunctionResult *R) {
   return R->Size == 0 ? R->Data.ValuePtr : 0;
 }
 
