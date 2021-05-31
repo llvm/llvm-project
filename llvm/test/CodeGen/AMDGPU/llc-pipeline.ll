@@ -62,8 +62,7 @@
 ; GCN-O0-NEXT:       FunctionPass Manager
 ; GCN-O0-NEXT:         AMDGPU Lower Kernel Arguments
 ; GCN-O0-NEXT:       Analysis if a function is memory bound
-; GCN-O0-NEXT:     Rewrite Symbols
-; GCN-O0-NEXT:     FunctionPass Manager
+; GCN-O0-NEXT:       FunctionPass Manager
 ; GCN-O0-NEXT:       Lazy Value Information Analysis
 ; GCN-O0-NEXT:       Lower SwitchInst's to branches
 ; GCN-O0-NEXT:       Lower invoke and unwind, for unwindless code generators
@@ -104,8 +103,6 @@
 ; GCN-O0-NEXT:       Natural Loop Information
 ; GCN-O0-NEXT:       LCSSA Verifier
 ; GCN-O0-NEXT:       Loop-Closed SSA Form Pass
-; GCN-O0-NEXT:     CallGraph Construction
-; GCN-O0-NEXT:     Call Graph SCC Pass Manager
 ; GCN-O0-NEXT:       DummyCGSCCPass
 ; GCN-O0-NEXT:       FunctionPass Manager
 ; GCN-O0-NEXT:         Safe Stack instrumentation pass
@@ -243,8 +240,6 @@
 ; GCN-O1-NEXT:         Dominator Tree Construction
 ; GCN-O1-NEXT:         Natural Loop Information
 ; GCN-O1-NEXT:         CodeGen Prepare
-; GCN-O1-NEXT:     Rewrite Symbols
-; GCN-O1-NEXT:     FunctionPass Manager
 ; GCN-O1-NEXT:       Lazy Value Information Analysis
 ; GCN-O1-NEXT:       Lower SwitchInst's to branches
 ; GCN-O1-NEXT:       Lower invoke and unwind, for unwindless code generators
@@ -285,8 +280,6 @@
 ; GCN-O1-NEXT:       Natural Loop Information
 ; GCN-O1-NEXT:       LCSSA Verifier
 ; GCN-O1-NEXT:       Loop-Closed SSA Form Pass
-; GCN-O1-NEXT:     CallGraph Construction
-; GCN-O1-NEXT:     Call Graph SCC Pass Manager
 ; GCN-O1-NEXT:       DummyCGSCCPass
 ; GCN-O1-NEXT:       FunctionPass Manager
 ; GCN-O1-NEXT:         Safe Stack instrumentation pass
@@ -512,8 +505,6 @@
 ; GCN-O1-OPTS-NEXT:         Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:         Natural Loop Information
 ; GCN-O1-OPTS-NEXT:         CodeGen Prepare
-; GCN-O1-OPTS-NEXT:     Rewrite Symbols
-; GCN-O1-OPTS-NEXT:     FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:       Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; GCN-O1-OPTS-NEXT:       Function Alias Analysis Results
@@ -560,8 +551,6 @@
 ; GCN-O1-OPTS-NEXT:       Natural Loop Information
 ; GCN-O1-OPTS-NEXT:       LCSSA Verifier
 ; GCN-O1-OPTS-NEXT:       Loop-Closed SSA Form Pass
-; GCN-O1-OPTS-NEXT:     CallGraph Construction
-; GCN-O1-OPTS-NEXT:     Call Graph SCC Pass Manager
 ; GCN-O1-OPTS-NEXT:       DummyCGSCCPass
 ; GCN-O1-OPTS-NEXT:       FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:         Safe Stack instrumentation pass
@@ -795,8 +784,6 @@
 ; GCN-O2-NEXT:         Dominator Tree Construction
 ; GCN-O2-NEXT:         Natural Loop Information
 ; GCN-O2-NEXT:         CodeGen Prepare
-; GCN-O2-NEXT:     Rewrite Symbols
-; GCN-O2-NEXT:     FunctionPass Manager
 ; GCN-O2-NEXT:       Dominator Tree Construction
 ; GCN-O2-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; GCN-O2-NEXT:       Function Alias Analysis Results
@@ -843,8 +830,6 @@
 ; GCN-O2-NEXT:       Natural Loop Information
 ; GCN-O2-NEXT:       LCSSA Verifier
 ; GCN-O2-NEXT:       Loop-Closed SSA Form Pass
-; GCN-O2-NEXT:     CallGraph Construction
-; GCN-O2-NEXT:     Call Graph SCC Pass Manager
 ; GCN-O2-NEXT:       DummyCGSCCPass
 ; GCN-O2-NEXT:       FunctionPass Manager
 ; GCN-O2-NEXT:         Safe Stack instrumentation pass
@@ -1092,8 +1077,6 @@
 ; GCN-O3-NEXT:         Dominator Tree Construction
 ; GCN-O3-NEXT:         Natural Loop Information
 ; GCN-O3-NEXT:         CodeGen Prepare
-; GCN-O3-NEXT:     Rewrite Symbols
-; GCN-O3-NEXT:     FunctionPass Manager
 ; GCN-O3-NEXT:       Dominator Tree Construction
 ; GCN-O3-NEXT:       Basic Alias Analysis (stateless AA impl)
 ; GCN-O3-NEXT:       Function Alias Analysis Results
@@ -1140,8 +1123,6 @@
 ; GCN-O3-NEXT:       Natural Loop Information
 ; GCN-O3-NEXT:       LCSSA Verifier
 ; GCN-O3-NEXT:       Loop-Closed SSA Form Pass
-; GCN-O3-NEXT:     CallGraph Construction
-; GCN-O3-NEXT:     Call Graph SCC Pass Manager
 ; GCN-O3-NEXT:       DummyCGSCCPass
 ; GCN-O3-NEXT:       FunctionPass Manager
 ; GCN-O3-NEXT:         Safe Stack instrumentation pass
