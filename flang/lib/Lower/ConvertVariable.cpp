@@ -1322,7 +1322,7 @@ void Fortran::lower::mapSymbolAttributes(
       [&](const Fortran::lower::details::StaticArrayDynamicChar &x) {
         mlir::Value addr;
         mlir::Value len;
-        bool mustBeDummy = false;
+        [[maybe_unused]] bool mustBeDummy = false;
         auto charLen = x.charLen();
         // if element type is a CHARACTER, determine the LEN value
         if (isDummy) {

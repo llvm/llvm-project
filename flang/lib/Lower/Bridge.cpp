@@ -432,15 +432,8 @@ private:
     // FIXME: should return fir::ExtendedValue
     if (auto v = lookupSymbol(sym))
       return v.getAddr();
-    // OpenMP: Sometimes the OpenMP standard requires that variables,
-    // like indices of sequential loops, in a parallel region are
-    // privatised. These privatised variables should be placed inside
-    // the region and not in the entry block.
-    bool isPinned =
-        sym.test(Fortran::semantics::Symbol::Flag::OmpPrivate) &&
-        sym.test(Fortran::semantics::Symbol::Flag::OmpPreDetermined);
-    auto newVal = builder->createTemporary(
-        loc, genType(sym), toStringRef(sym.name()), shape, {}, {}, isPinned);
+    auto newVal = builder->createTemporary(loc, genType(sym),
+                                           toStringRef(sym.name()), shape);
     addSymbol(sym, newVal);
     return newVal;
   }

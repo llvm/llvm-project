@@ -166,18 +166,18 @@ elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams) {
 mlir::Value Fortran::lower::FirOpBuilder::createTemporary(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::ValueRange shape, mlir::ValueRange lenParams,
-    llvm::ArrayRef<mlir::NamedAttribute> attrs, bool isPinned) {
+    llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   llvm::SmallVector<mlir::Value> dynamicShape =
       elideExtentsAlreadyInType(type, shape);
   llvm::SmallVector<mlir::Value> dynamicLength =
       elideLengthsAlreadyInType(type, lenParams);
   InsertPoint insPt;
-  const bool hoistAlloc =
-      !isPinned && dynamicShape.empty() && dynamicLength.empty();
+  const bool hoistAlloc = dynamicShape.empty() && dynamicLength.empty();
   if (hoistAlloc) {
     insPt = saveInsertionPoint();
-    setInsertionPointToStart(getEntryBlock());
+    setInsertionPointToStart(getAllocaBlock());
   }
+
   assert(!type.isa<fir::ReferenceType>() && "cannot be a reference");
   auto ae = create<fir::AllocaOp>(loc, type, name, dynamicLength, dynamicShape,
                                   attrs);

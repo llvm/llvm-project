@@ -21,3 +21,72 @@ program wsloop
 !FIRDialect:  }
         !$OMP END PARALLEL
 end
+
+!FIRDialect: func @_QPsub1() {
+subroutine sub1
+!FIRDialect:   {{.*}} = fir.alloca i32 {{{.*}}uniq_name = "_QFsub1Ei"}
+  integer :: i
+  integer :: arr(10)
+!FIRDialect:   omp.parallel {
+!FIRDialect:     {{.*}} = fir.alloca i32 {uniq_name = "i"}
+  !$OMP PARALLEL
+  do i=1, 10
+    arr(i) = i
+  end do
+!FIRDialect:     omp.terminator
+!FIRDialect:   }
+  !$OMP END PARALLEL
+end subroutine
+
+!FIRDialect: func @_QPsub2() {
+subroutine sub2
+!FIRDialect:   %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsub2Ei"}
+  integer :: i
+  integer :: arr(10)
+!FIRDialect:   omp.parallel {
+!FIRDialect:     %2 = fir.alloca i32 {uniq_name = "i"}
+  !$OMP PARALLEL
+!FIRDialect:     omp.master  {
+  !$OMP MASTER
+  do i=1, 10
+    arr(i) = i
+  end do
+!FIRDialect:       omp.terminator
+!FIRDialect:     }
+  !$OMP END MASTER
+!FIRDialect:     omp.terminator
+!FIRDialect:   }
+  !$OMP END PARALLEL
+end subroutine
+
+
+!FIRDialect: func @_QPsub3() {
+subroutine sub3
+!FIRDialect:   %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsub3Ei"}
+!FIRDialect:   %2 = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFsub3Ej"}
+  integer :: i,j
+  integer :: arr(10)
+!FIRDialect:   omp.parallel {
+!FIRDialect:     %3 = fir.alloca i32 {uniq_name = "i"}
+  !$OMP PARALLEL
+  do i=1, 10
+    arr(i) = i
+  end do
+!FIRDialect:     omp.master  {
+  !$OMP MASTER
+!FIRDialect:       omp.parallel {
+!FIRDialect:         %8 = fir.alloca i32 {uniq_name = "j"}
+  !$OMP PARALLEL
+  do j=1, 10
+    arr(j) = j
+  end do
+!FIRDialect:         omp.terminator
+!FIRDialect:       }
+  !$OMP END PARALLEL
+!FIRDialect:       omp.terminator
+!FIRDialect:     }
+  !$OMP END MASTER
+!FIRDialect:     omp.terminator
+!FIRDialect:   }
+  !$OMP END PARALLEL
+end subroutine
