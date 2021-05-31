@@ -2630,24 +2630,25 @@ static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
 template <typename TransferOp>
 static LogicalResult foldTransferInBoundsAttribute(TransferOp op) {
   AffineMap permutationMap = op.permutation_map();
-  if (!permutationMap.isMinorIdentity())
-    return failure();
   bool changed = false;
   SmallVector<bool, 4> newInBounds;
   newInBounds.reserve(op.getTransferRank());
-  op.zipResultAndIndexing([&](int64_t resultIdx, int64_t indicesIdx) {
+  for (unsigned i = 0; i < op.getTransferRank(); ++i) {
     // Already marked as in-bounds, nothing to see here.
-    if (op.isDimInBounds(resultIdx)) {
+    if (op.isDimInBounds(i)) {
       newInBounds.push_back(true);
-      return;
+      continue;
     }
     // Currently out-of-bounds, check whether we can statically determine it is
     // inBounds.
-    auto inBounds = isInBounds(op, resultIdx, indicesIdx);
+    auto dimExpr = permutationMap.getResult(i).dyn_cast<AffineDimExpr>();
+    assert(dimExpr && "Broadcast dims must be in-bounds");
+    auto inBounds = isInBounds(
+        op, /*resultIdx=*/i, /*indicesIdx=*/dimExpr.getPosition());
     newInBounds.push_back(inBounds);
     // We commit the pattern if it is "more inbounds".
     changed |= inBounds;
-  });
+  }
   if (!changed)
     return failure();
   // OpBuilder is only used as a helper to build an I64ArrayAttr.

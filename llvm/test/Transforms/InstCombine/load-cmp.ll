@@ -33,7 +33,8 @@ define i1 @test1(i32 %X) {
 
 define i1 @test1_noinbounds(i32 %X) {
 ; CHECK-LABEL: @test1_noinbounds(
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[X:%.*]], 9
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 2147483647
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], 9
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %P = getelementptr [10 x i16], [10 x i16]* @G16, i32 0, i32 %X
@@ -44,8 +45,8 @@ define i1 @test1_noinbounds(i32 %X) {
 
 define i1 @test1_noinbounds_i64(i64 %X) {
 ; CHECK-LABEL: @test1_noinbounds_i64(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], 9
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], 2147483647
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i64 [[TMP1]], 9
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %P = getelementptr [10 x i16], [10 x i16]* @G16, i64 0, i64 %X
@@ -54,10 +55,14 @@ define i1 @test1_noinbounds_i64(i64 %X) {
   ret i1 %R
 }
 
+; When x is 0x8009, x * 2(ElementSize) overflows and it becomes 0x0012.
+; It is the same location as when x is 0x0009, So we need to return
+; true if x AND 0x7FFF is 0x0009.
+
 define i1 @test1_noinbounds_as1(i32 %x) {
 ; CHECK-LABEL: @test1_noinbounds_as1(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i16
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[TMP1]], 9
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 32767
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], 9
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %p = getelementptr [10 x i16], [10 x i16] addrspace(1)* @G16_as1, i16 0, i32 %x
@@ -260,7 +265,8 @@ define i1 @test10_struct_arr(i32 %x) {
 
 define i1 @test10_struct_arr_noinbounds(i32 %x) {
 ; CHECK-LABEL: @test10_struct_arr_noinbounds(
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 268435455
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %p = getelementptr [4 x %Foo], [4 x %Foo]* @GStructArr, i32 0, i32 %x, i32 2
@@ -294,7 +300,9 @@ define i1 @test10_struct_arr_i64(i64 %x) {
 
 define i1 @test10_struct_arr_noinbounds_i16(i16 %x) {
 ; CHECK-LABEL: @test10_struct_arr_noinbounds_i16(
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i16 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 268435455
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP2]], 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %p = getelementptr [4 x %Foo], [4 x %Foo]* @GStructArr, i32 0, i16 %x, i32 2
@@ -305,8 +313,8 @@ define i1 @test10_struct_arr_noinbounds_i16(i16 %x) {
 
 define i1 @test10_struct_arr_noinbounds_i64(i64 %x) {
 ; CHECK-LABEL: @test10_struct_arr_noinbounds_i64(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], 268435455
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i64 [[TMP1]], 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %p = getelementptr [4 x %Foo], [4 x %Foo]* @GStructArr, i32 0, i64 %x, i32 2

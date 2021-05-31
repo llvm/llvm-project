@@ -1,7 +1,3 @@
-REQUIRES: system-darwin
-
-FIXME: Replace otool with llvm-objcopy --dump-section=__TEXT,__eh_frame.
-
 $ cat eh_frame.cpp
 int f1()
 {
@@ -19,8 +15,8 @@ $ ld -no_compact_unwind eh_frame.o -o eh_frame.out
 
 RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/eh_frame/eh_frame.out -o %t.dSYM
 RUN: llvm-dwarfdump --verify %t.dSYM
-RUN: otool -s __TEXT __eh_frame %p/../Inputs/private/tmp/eh_frame/eh_frame.out | FileCheck %s
-RUN: otool -s __TEXT __eh_frame %t.dSYM/Contents/Resources/DWARF/eh_frame.out | FileCheck %s
+RUN: llvm-otool -s __TEXT __eh_frame %p/../Inputs/private/tmp/eh_frame/eh_frame.out | FileCheck %s
+RUN: llvm-otool -s __TEXT __eh_frame %t.dSYM/Contents/Resources/DWARF/eh_frame.out | FileCheck %s
 
 CHECK: 14 00 00 00 00 00 00 00 01 7a 52 00 01 78 10 01
 CHECK: 10 0c 07 08 90 01 00 00

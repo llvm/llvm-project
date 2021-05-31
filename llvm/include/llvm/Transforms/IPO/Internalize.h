@@ -40,14 +40,9 @@ class InternalizePass : public PassInfoMixin<InternalizePass> {
     size_t Size = 0;
     // Whether the comdat has an externally visible member.
     bool External = false;
-    // ELF only. Used to rename the comdat.
-    Comdat *Dest = nullptr;
   };
 
-  // For ELF, we need to rename comdat to a uniquified name. We derive the new
-  // comdat name from ModuleId.
-  std::string ModuleId;
-  bool IsELF = false;
+  bool IsWasm = false;
 
   /// Client supplied callback to control wheter a symbol must be preserved.
   const std::function<bool(const GlobalValue &)> MustPreserveGV;

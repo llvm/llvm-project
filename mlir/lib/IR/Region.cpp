@@ -137,60 +137,6 @@ void Region::dropAllReferences() {
     b.dropAllReferences();
 }
 
-/// Check if there are any values used by operations in `region` defined
-/// outside its ancestor region `limit`.  That is, given `A{B{C{}}}` with region
-/// `C` and limit `B`, the values defined in `B` can be used but the values
-/// defined in `A` cannot.  Emit errors if `noteLoc` is provided; this location
-/// is used to point to the operation containing the region, the actual error is
-/// reported at the operation with an offending use.
-static bool isIsolatedAbove(Region &region, Region &limit,
-                            Optional<Location> noteLoc) {
-  assert(limit.isAncestor(&region) &&
-         "expected isolation limit to be an ancestor of the given region");
-
-  // List of regions to analyze.  Each region is processed independently, with
-  // respect to the common `limit` region, so we can look at them in any order.
-  // Therefore, use a simple vector and push/pop back the current region.
-  SmallVector<Region *, 8> pendingRegions;
-  pendingRegions.push_back(&region);
-
-  // Traverse all operations in the region.
-  while (!pendingRegions.empty()) {
-    for (Operation &op : pendingRegions.pop_back_val()->getOps()) {
-      for (Value operand : op.getOperands()) {
-        // operand should be non-null here if the IR is well-formed. But
-        // we don't assert here as this function is called from the verifier
-        // and so could be called on invalid IR.
-        if (!operand) {
-          if (noteLoc)
-            op.emitOpError("block's operand not defined").attachNote(noteLoc);
-          return false;
-        }
-
-        // Check that any value that is used by an operation is defined in the
-        // same region as either an operation result or a block argument.
-        if (operand.getParentRegion()->isProperAncestor(&limit)) {
-          if (noteLoc) {
-            op.emitOpError("using value defined outside the region")
-                    .attachNote(noteLoc)
-                << "required by region isolation constraints";
-          }
-          return false;
-        }
-      }
-      // Schedule any regions the operations contain for further checking.
-      pendingRegions.reserve(pendingRegions.size() + op.getNumRegions());
-      for (Region &subRegion : op.getRegions())
-        pendingRegions.push_back(&subRegion);
-    }
-  }
-  return true;
-}
-
-bool Region::isIsolatedFromAbove(Optional<Location> noteLoc) {
-  return isIsolatedAbove(*this, *this, noteLoc);
-}
-
 Region *llvm::ilist_traits<::mlir::Block>::getParentRegion() {
   size_t Offset(
       size_t(&((Region *)nullptr->*Region::getSublistAccess(nullptr))));

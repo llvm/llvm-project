@@ -25,6 +25,11 @@ namespace mlir {
 namespace linalg {
 class LinalgOp;
 
+/// OpOperand vector that implicitly converts to a Value vector.
+struct OpOperandVector : public SmallVector<OpOperand *> {
+  operator SmallVector<Value>();
+};
+
 /// Returns the values obtained by applying `map` to the list of values.
 SmallVector<Value, 4> applyMapToValues(OpBuilder &b, Location loc,
                                        AffineMap map, ValueRange values);

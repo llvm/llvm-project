@@ -122,8 +122,8 @@ template <class Mutex>
 
 */
 
-#include <__config>
 #include <__availability>
+#include <__config>
 #include <version>
 
 _LIBCPP_PUSH_MACROS

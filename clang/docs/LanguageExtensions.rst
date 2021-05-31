@@ -632,20 +632,6 @@ Attributes on the ``enum`` declaration do not apply to individual enumerators.
 
 Query for this feature with ``__has_extension(enumerator_attributes)``.
 
-C++11 Attributes on using-declarations
-======================================
-
-Clang allows C++-style ``[[]]`` attributes to be written on using-declarations.
-For instance:
-
-.. code-block:: c++
-
-  [[clang::using_if_exists]] using foo::bar;
-  using foo::baz [[clang::using_if_exists]];
-
-You can test for support for this extension with
-``__has_extension(cxx_attributes_on_using_declarations)``.
-
 'User-Specified' System Frameworks
 ==================================
 

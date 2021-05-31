@@ -384,22 +384,22 @@ define void @byval_no_fnarg(i8* byval(i8) %written) {
 define void @testbyval(i8* %read_only) {
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@testbyval
 ; IS__TUNIT____-SAME: (i8* nocapture readonly [[READ_ONLY:%.*]]) {
-; IS__TUNIT____-NEXT:    call void @byval_not_readonly_1(i8* nocapture readonly [[READ_ONLY]]) #[[ATTR2]]
-; IS__TUNIT____-NEXT:    call void @byval_not_readnone_1(i8* noalias nocapture readnone [[READ_ONLY]])
+; IS__TUNIT____-NEXT:    call void @byval_not_readonly_1(i8* nocapture readonly byval(i8) [[READ_ONLY]]) #[[ATTR2]]
+; IS__TUNIT____-NEXT:    call void @byval_not_readnone_1(i8* noalias nocapture readnone byval(i8) [[READ_ONLY]])
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: readonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@testbyval
 ; IS__CGSCC____-SAME: (i8* nocapture noundef nonnull readonly dereferenceable(1) [[READ_ONLY:%.*]]) #[[ATTR2]] {
-; IS__CGSCC____-NEXT:    call void @byval_not_readonly_1(i8* noalias nocapture noundef nonnull readonly dereferenceable(1) [[READ_ONLY]]) #[[ATTR2]]
-; IS__CGSCC____-NEXT:    call void @byval_not_readnone_1(i8* noalias nocapture noundef nonnull readnone dereferenceable(1) [[READ_ONLY]])
+; IS__CGSCC____-NEXT:    call void @byval_not_readonly_1(i8* noalias nocapture noundef nonnull readonly byval(i8) dereferenceable(1) [[READ_ONLY]]) #[[ATTR2]]
+; IS__CGSCC____-NEXT:    call void @byval_not_readnone_1(i8* noalias nocapture noundef nonnull readnone byval(i8) dereferenceable(1) [[READ_ONLY]])
 ; IS__CGSCC____-NEXT:    ret void
 ;
-  call void @byval_not_readonly_1(i8* %read_only)
-  call void @byval_not_readonly_2(i8* %read_only)
-  call void @byval_not_readnone_1(i8* %read_only)
-  call void @byval_not_readnone_2(i8* %read_only)
-  call void @byval_no_fnarg(i8* %read_only)
+  call void @byval_not_readonly_1(i8* byval(i8) %read_only)
+  call void @byval_not_readonly_2(i8* byval(i8) %read_only)
+  call void @byval_not_readnone_1(i8* byval(i8) %read_only)
+  call void @byval_not_readnone_2(i8* byval(i8) %read_only)
+  call void @byval_no_fnarg(i8* byval(i8) %read_only)
   ret void
 }
 ;}

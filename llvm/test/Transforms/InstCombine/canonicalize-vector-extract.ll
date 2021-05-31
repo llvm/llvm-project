@@ -30,7 +30,7 @@ define <8 x i32> @trivial_nop(<8 x i32> %vec) {
 
 define <2 x i32> @valid_extraction_a(<8 x i32> %vec) {
 ; CHECK-LABEL: @valid_extraction_a(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[VEC:%.*]], <8 x i32> undef, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[VEC:%.*]], <8 x i32> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
 ;
   %1 = call <2 x i32> @llvm.experimental.vector.extract.v2i32.v4i32(<8 x i32> %vec, i64 0)
@@ -39,7 +39,7 @@ define <2 x i32> @valid_extraction_a(<8 x i32> %vec) {
 
 define <2 x i32> @valid_extraction_b(<8 x i32> %vec) {
 ; CHECK-LABEL: @valid_extraction_b(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[VEC:%.*]], <8 x i32> undef, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[VEC:%.*]], <8 x i32> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
 ;
   %1 = call <2 x i32> @llvm.experimental.vector.extract.v2i32.v4i32(<8 x i32> %vec, i64 2)
@@ -48,7 +48,7 @@ define <2 x i32> @valid_extraction_b(<8 x i32> %vec) {
 
 define <2 x i32> @valid_extraction_c(<8 x i32> %vec) {
 ; CHECK-LABEL: @valid_extraction_c(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[VEC:%.*]], <8 x i32> undef, <2 x i32> <i32 4, i32 5>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[VEC:%.*]], <8 x i32> poison, <2 x i32> <i32 4, i32 5>
 ; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
 ;
   %1 = call <2 x i32> @llvm.experimental.vector.extract.v2i32.v4i32(<8 x i32> %vec, i64 4)
@@ -57,7 +57,7 @@ define <2 x i32> @valid_extraction_c(<8 x i32> %vec) {
 
 define <2 x i32> @valid_extraction_d(<8 x i32> %vec) {
 ; CHECK-LABEL: @valid_extraction_d(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[VEC:%.*]], <8 x i32> undef, <2 x i32> <i32 6, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[VEC:%.*]], <8 x i32> poison, <2 x i32> <i32 6, i32 7>
 ; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
 ;
   %1 = call <2 x i32> @llvm.experimental.vector.extract.v2i32.v4i32(<8 x i32> %vec, i64 6)
@@ -66,7 +66,7 @@ define <2 x i32> @valid_extraction_d(<8 x i32> %vec) {
 
 define <4 x i32> @valid_extraction_e(<8 x i32> %vec) {
 ; CHECK-LABEL: @valid_extraction_e(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[VEC:%.*]], <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[VEC:%.*]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = call <4 x i32> @llvm.experimental.vector.extract.v4i32.v8i32(<8 x i32> %vec, i64 0)
@@ -75,7 +75,7 @@ define <4 x i32> @valid_extraction_e(<8 x i32> %vec) {
 
 define <4 x i32> @valid_extraction_f(<8 x i32> %vec) {
 ; CHECK-LABEL: @valid_extraction_f(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[VEC:%.*]], <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[VEC:%.*]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = call <4 x i32> @llvm.experimental.vector.extract.v4i32.v8i32(<8 x i32> %vec, i64 4)
@@ -84,7 +84,7 @@ define <4 x i32> @valid_extraction_f(<8 x i32> %vec) {
 
 define <3 x i32> @valid_extraction_g(<8 x i32> %vec) {
 ; CHECK-LABEL: @valid_extraction_g(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[VEC:%.*]], <8 x i32> undef, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[VEC:%.*]], <8 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
 ; CHECK-NEXT:    ret <3 x i32> [[TMP1]]
 ;
   %1 = call <3 x i32> @llvm.experimental.vector.extract.v3i32.v8i32(<8 x i32> %vec, i64 0)
@@ -93,7 +93,7 @@ define <3 x i32> @valid_extraction_g(<8 x i32> %vec) {
 
 define <3 x i32> @valid_extraction_h(<8 x i32> %vec) {
 ; CHECK-LABEL: @valid_extraction_h(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[VEC:%.*]], <8 x i32> undef, <3 x i32> <i32 3, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[VEC:%.*]], <8 x i32> poison, <3 x i32> <i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    ret <3 x i32> [[TMP1]]
 ;
   %1 = call <3 x i32> @llvm.experimental.vector.extract.v3i32.v8i32(<8 x i32> %vec, i64 3)

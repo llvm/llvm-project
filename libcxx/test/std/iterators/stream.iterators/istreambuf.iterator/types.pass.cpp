@@ -9,13 +9,21 @@
 // <iterator>
 
 // template<class charT, class traits = char_traits<charT> >
-// class istreambuf_iterator {
+// class istreambuf_iterator
+//  : public iterator<input_iterator_tag, charT, traits::off_type, unspecified, charT> // until C++17
+// {
 // public:
-//     typedef charT                         char_type;
-//     typedef traits                        traits_type;
-//     typedef typename traits::int_type     int_type;
-//     typedef basic_streambuf<charT,traits> streambuf_type;
-//     typedef basic_istream<charT,traits>   istream_type;
+//     typedef input_iterator_tag             iterator_category;
+//     typedef charT                          value_type;
+//     typedef traits::off_type               difference_type;
+//     typedef unspecified                    pointer;
+//     typedef charT                          reference;
+//
+//     typedef charT                          char_type;
+//     typedef traits                         traits_type;
+//     typedef traits::int_type               int_type;
+//     typedef basic_streambuf<charT, traits> streambuf_type;
+//     typedef basic_istream<charT, traits>   istream_type;
 //     ...
 //
 // All specializations of istreambuf_iterator shall have a trivial copy constructor,

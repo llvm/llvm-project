@@ -21,7 +21,7 @@
 
 int main(int, char**)
 {
-    typedef test_compare<std::less<int> > Cmp;
+    typedef test_less<int> Cmp;
     typedef std::multiset<int, Cmp> C;
     typedef C::value_type V;
     C m({1, 2, 3, 4, 5, 6}, Cmp(10));

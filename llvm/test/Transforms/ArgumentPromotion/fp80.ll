@@ -20,15 +20,15 @@ define void @run() {
 ; CHECK-NEXT:    [[DOT0:%.*]] = getelementptr [[UNION_U:%.*]], %union.u* bitcast (%struct.s* @b to %union.u*), i32 0, i32 0
 ; CHECK-NEXT:    [[DOT0_VAL:%.*]] = load x86_fp80, x86_fp80* [[DOT0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call x86_fp80 @UseLongDoubleSafely(x86_fp80 [[DOT0_VAL]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @AccessPaddingOfStruct(%struct.Foo* @a)
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @CaptureAStruct(%struct.Foo* @a)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @AccessPaddingOfStruct(%struct.Foo* byval(%struct.Foo) @a)
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @CaptureAStruct(%struct.Foo* byval(%struct.Foo) @a)
 ; CHECK-NEXT:    ret void
 ;
 entry:
   tail call i8 @UseLongDoubleUnsafely(%union.u* byval(%union.u) align 16 bitcast (%struct.s* @b to %union.u*))
   tail call x86_fp80 @UseLongDoubleSafely(%union.u* byval(%union.u) align 16 bitcast (%struct.s* @b to %union.u*))
-  call i64 @AccessPaddingOfStruct(%struct.Foo* @a)
-  call i64 @CaptureAStruct(%struct.Foo* @a)
+  call i64 @AccessPaddingOfStruct(%struct.Foo* byval(%struct.Foo) @a)
+  call i64 @CaptureAStruct(%struct.Foo* byval(%struct.Foo) @a)
   ret void
 }
 

@@ -101,7 +101,7 @@ int main(int, char**)
     }
     {
         typedef test_allocator<V> A;
-        typedef test_compare<std::less<int> > C;
+        typedef test_less<int> C;
         typedef std::map<int, double, C, A> M;
         V ar1[] =
         {
@@ -135,7 +135,7 @@ int main(int, char**)
     }
     {
         typedef other_allocator<V> A;
-        typedef test_compare<std::less<int> > C;
+        typedef test_less<int> C;
         typedef std::map<int, double, C, A> M;
         V ar1[] =
         {
@@ -245,7 +245,7 @@ int main(int, char**)
     }
     {
         typedef min_allocator<V> A;
-        typedef test_compare<std::less<int> > C;
+        typedef test_less<int> C;
         typedef std::map<int, double, C, A> M;
         V ar1[] =
         {

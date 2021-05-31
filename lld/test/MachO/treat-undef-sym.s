@@ -10,8 +10,7 @@
 # RUN:     FileCheck %s -check-prefix=INVAL-WARNING
 # RUN: not %lld -undefined suppress -o /dev/null %t.o 2>&1 | \
 # RUN:     FileCheck %s -check-prefix=INVAL-SUPPRESS
-# RUN: %lld -undefined dynamic_lookup -lSystem -o %t.out %t.o 2>&1 | \
-# RUN:     FileCheck %s -check-prefix=SUPPRESS --allow-empty
+# RUN: %lld -undefined dynamic_lookup -lSystem -o %t.out %t.o 2>&1 | count 0
 # RUN: llvm-objdump --macho --lazy-bind %t.out \
 # RUN:     | FileCheck --check-prefix=BIND %s
 
@@ -20,12 +19,10 @@
 # RUN:     FileCheck %s -check-prefix=WARNING
 # RUN: llvm-objdump --macho --lazy-bind %t.out \
 # RUN:     | FileCheck --check-prefix=BIND %s
-# RUN: %lld -flat_namespace -lSystem -undefined suppress -o %t.out %t.o 2>&1 | \
-# RUN:     FileCheck %s -check-prefix=SUPPRESS --allow-empty
+# RUN: %lld -flat_namespace -lSystem -undefined suppress -o %t.out %t.o 2>&1 | count 0
 # RUN: llvm-objdump --macho --lazy-bind %t.out \
 # RUN:     | FileCheck --check-prefix=BIND %s
-# RUN: %lld -flat_namespace -lSystem -undefined dynamic_lookup -o %t.out %t.o 2>&1 | \
-# RUN:     FileCheck %s -check-prefix=SUPPRESS --allow-empty
+# RUN: %lld -flat_namespace -lSystem -undefined dynamic_lookup -o %t.out %t.o 2>&1 | count 0
 # RUN: llvm-objdump --macho --lazy-bind %t.out \
 # RUN:     | FileCheck --check-prefix=BIND %s
 
@@ -40,8 +37,6 @@
 
 # WARNING: warning: undefined symbol: _bar
 # WARNING-NEXT: >>> referenced by
-
-# SUPPRESS-NOT: undefined symbol: _bar
 
 # UNKNOWN: unknown -undefined TREATMENT 'bogus'
 # UNKNOWN-NEXT: error: undefined symbol: _bar

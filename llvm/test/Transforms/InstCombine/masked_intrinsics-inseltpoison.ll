@@ -46,7 +46,7 @@ define <2 x double> @load_cemask(<2 x double>* %ptr, <2 x double> %passthru)  {
 
 define <2 x double> @load_lane0(<2 x double>* %ptr, double %pt)  {
 ; CHECK-LABEL: @load_lane0(
-; CHECK-NEXT:    [[PTV2:%.*]] = insertelement <2 x double> undef, double [[PT:%.*]], i64 1
+; CHECK-NEXT:    [[PTV2:%.*]] = insertelement <2 x double> poison, double [[PT:%.*]], i64 1
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* [[PTR:%.*]], i32 2, <2 x i1> <i1 true, i1 false>, <2 x double> [[PTV2]])
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
@@ -72,7 +72,7 @@ define double @load_all(double* %base, double %pt)  {
 define <2 x double> @load_generic(<2 x double>* %ptr, double %pt, <2 x i1> %mask)  {
 ; CHECK-LABEL: @load_generic(
 ; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> poison, double [[PT:%.*]], i64 0
-; CHECK-NEXT:    [[PTV2:%.*]] = shufflevector <2 x double> [[PTV1]], <2 x double> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[PTV2:%.*]] = shufflevector <2 x double> [[PTV1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* [[PTR:%.*]], i32 4, <2 x i1> [[MASK:%.*]], <2 x double> [[PTV2]])
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
@@ -85,7 +85,7 @@ define <2 x double> @load_generic(<2 x double>* %ptr, double %pt, <2 x i1> %mask
 define <2 x double> @load_speculative(<2 x double>* dereferenceable(16) align 4 %ptr, double %pt, <2 x i1> %mask)  {
 ; CHECK-LABEL: @load_speculative(
 ; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> poison, double [[PT:%.*]], i64 0
-; CHECK-NEXT:    [[PTV2:%.*]] = shufflevector <2 x double> [[PTV1]], <2 x double> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[PTV2:%.*]] = shufflevector <2 x double> [[PTV1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[UNMASKEDLOAD:%.*]] = load <2 x double>, <2 x double>* [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> [[MASK:%.*]], <2 x double> [[UNMASKEDLOAD]], <2 x double> [[PTV2]]
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
@@ -99,7 +99,7 @@ define <2 x double> @load_speculative(<2 x double>* dereferenceable(16) align 4 
 define <2 x double> @load_speculative_less_aligned(<2 x double>* dereferenceable(16) %ptr, double %pt, <2 x i1> %mask)  {
 ; CHECK-LABEL: @load_speculative_less_aligned(
 ; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> poison, double [[PT:%.*]], i64 0
-; CHECK-NEXT:    [[PTV2:%.*]] = shufflevector <2 x double> [[PTV1]], <2 x double> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[PTV2:%.*]] = shufflevector <2 x double> [[PTV1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[UNMASKEDLOAD:%.*]] = load <2 x double>, <2 x double>* [[PTR:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> [[MASK:%.*]], <2 x double> [[UNMASKEDLOAD]], <2 x double> [[PTV2]]
 ; CHECK-NEXT:    ret <2 x double> [[TMP1]]
@@ -115,7 +115,7 @@ define <2 x double> @load_speculative_less_aligned(<2 x double>* dereferenceable
 define <2 x double> @load_spec_neg_size(<2 x double>* dereferenceable(8) %ptr, double %pt, <2 x i1> %mask)  {
 ; CHECK-LABEL: @load_spec_neg_size(
 ; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> poison, double [[PT:%.*]], i64 0
-; CHECK-NEXT:    [[PTV2:%.*]] = shufflevector <2 x double> [[PTV1]], <2 x double> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[PTV2:%.*]] = shufflevector <2 x double> [[PTV1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* nonnull [[PTR:%.*]], i32 4, <2 x i1> [[MASK:%.*]], <2 x double> [[PTV2]])
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
@@ -129,7 +129,7 @@ define <2 x double> @load_spec_neg_size(<2 x double>* dereferenceable(8) %ptr, d
 define <2 x double> @load_spec_lan0(<2 x double>* dereferenceable(8) %ptr, double %pt, <2 x i1> %mask)  {
 ; CHECK-LABEL: @load_spec_lan0(
 ; CHECK-NEXT:    [[PTV1:%.*]] = insertelement <2 x double> poison, double [[PT:%.*]], i64 0
-; CHECK-NEXT:    [[PTV2:%.*]] = shufflevector <2 x double> [[PTV1]], <2 x double> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[PTV2:%.*]] = shufflevector <2 x double> [[PTV1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[MASK2:%.*]] = insertelement <2 x i1> [[MASK:%.*]], i1 false, i64 1
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* nonnull [[PTR:%.*]], i32 4, <2 x i1> [[MASK2]], <2 x double> [[PTV2]])
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
@@ -217,7 +217,7 @@ define <2 x double> @gather_lane0_maybe(double* %base, double %pt, <2 x i1> %mas
 ; CHECK-LABEL: @gather_lane0_maybe(
 ; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr double, double* [[BASE:%.*]], <2 x i64> <i64 0, i64 1>
 ; CHECK-NEXT:    [[PT_V1:%.*]] = insertelement <2 x double> poison, double [[PT:%.*]], i64 0
-; CHECK-NEXT:    [[PT_V2:%.*]] = shufflevector <2 x double> [[PT_V1]], <2 x double> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[PT_V2:%.*]] = shufflevector <2 x double> [[PT_V1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[MASK2:%.*]] = insertelement <2 x i1> [[MASK:%.*]], i1 false, i64 1
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0f64(<2 x double*> [[PTRS]], i32 4, <2 x i1> [[MASK2]], <2 x double> [[PT_V2]])
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
@@ -234,7 +234,7 @@ define <2 x double> @gather_lane0_maybe_spec(double* %base, double %pt, <2 x i1>
 ; CHECK-LABEL: @gather_lane0_maybe_spec(
 ; CHECK-NEXT:    [[PTRS:%.*]] = getelementptr double, double* [[BASE:%.*]], <2 x i64> <i64 0, i64 1>
 ; CHECK-NEXT:    [[PT_V1:%.*]] = insertelement <2 x double> poison, double [[PT:%.*]], i64 0
-; CHECK-NEXT:    [[PT_V2:%.*]] = shufflevector <2 x double> [[PT_V1]], <2 x double> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[PT_V2:%.*]] = shufflevector <2 x double> [[PT_V1]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[MASK2:%.*]] = insertelement <2 x i1> [[MASK:%.*]], i1 false, i64 1
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0f64(<2 x double*> [[PTRS]], i32 4, <2 x i1> [[MASK2]], <2 x double> [[PT_V2]])
 ; CHECK-NEXT:    ret <2 x double> [[RES]]

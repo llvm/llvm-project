@@ -8,6 +8,10 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // type_traits
 
+// MSVC mode seems to use different rules regarding enum sizes, so E1
+// doesn't cause an error.
+// UNSUPPORTED: msvc
+
 // underlying_type
 // Mandates: enum must not be an incomplete enumeration type.
 

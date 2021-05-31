@@ -59,6 +59,7 @@ static_library("LLVMARMCodeGen") {
     "//llvm/lib/Target",
     "//llvm/lib/Transforms/CFGuard",
     "//llvm/lib/Transforms/Utils",
+    "//llvm/lib/Transforms/IPO",
   ]
   include_dirs = [ "." ]
   sources = [

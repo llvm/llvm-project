@@ -170,7 +170,7 @@ const char *SBDebugger::GetProgressFromEvent(const lldb::SBEvent &event,
   completed = progress_data->GetCompleted();
   total = progress_data->GetTotal();
   is_debugger_specific = progress_data->IsDebuggerSpecific();
-  // We must record the static method _after_ the out paramters have been
+  // We must record the static method _after_ the out parameters have been
   // filled in.
   LLDB_RECORD_STATIC_METHOD(
       const char *, SBDebugger, GetProgressFromEvent,
@@ -1334,7 +1334,6 @@ SBDebugger::GetInternalVariableValue(const char *var_name,
       lldb::SBStringList, SBDebugger, GetInternalVariableValue,
       (const char *, const char *), var_name, debugger_instance_name);
 
-  SBStringList ret_value;
   DebuggerSP debugger_sp(Debugger::FindDebuggerWithInstanceName(
       ConstString(debugger_instance_name)));
   Status error;
