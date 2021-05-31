@@ -155,6 +155,14 @@ LogicalResult mlir::linalg::detail::verifyContractionInterface(Operation *op) {
 // StructuredOpInterface implementation
 //===----------------------------------------------------------------------===//
 
+OpOperandVector::operator SmallVector<Value>() {
+  SmallVector<Value> result;
+  result.reserve(this->size());
+  llvm::transform(*this, std::back_inserter(result),
+                  [](OpOperand *opOperand) { return opOperand->get(); });
+  return result;
+}
+
 /// Fully compose map with operands and canonicalize the result.
 /// Return the `createOrFold`'ed AffineApply op.
 static Value createFoldedComposedAffineApply(OpBuilder &b, Location loc,
