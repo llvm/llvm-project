@@ -78,6 +78,12 @@ public:
 
   int getMoveF64ViaSpillFI(MachineFunction &MF, const TargetRegisterClass *RC);
 
+  int getVarArgsStackIndex() const { return VarArgsStackIndex; }
+  void setVarArgsStackIndex(int Index) { VarArgsStackIndex = Index; }
+
+  unsigned getVarArgsGPRSize() const { return VarArgsGPRSize; }
+  void setVarArgsGPRSize(unsigned Size) { VarArgsGPRSize = Size; }
+
   std::map<const char *, const Mips16HardFloatInfo::FuncSignature *>
   StubsNeeded;
 
@@ -121,6 +127,14 @@ private:
   /// FrameIndex for expanding BuildPairF64 nodes to spill and reload when the
   /// O32 FPXX ABI is enabled. -1 is used to denote invalid index.
   int MoveF64ViaSpillFI = -1;
+
+  /// Size of the varargs area for arguments passed in general purpose
+  /// registers.
+  unsigned VarArgsGPRSize = 0;
+
+  /// FrameIndex for start of varargs area for arguments passed on the
+  /// stack.
+  int VarArgsStackIndex = 0;
 };
 
 } // end namespace llvm
