@@ -1241,6 +1241,7 @@ DataFlowSanitizer::buildWrapperFunction(Function *F, StringRef NewFName,
     std::vector<Value *> Args(ArgIt, ArgIt + FT->getNumParams());
 
     CallInst *CI = CallInst::Create(F, Args, "", BB);
+    CI->setAttributes(F->getAttributes());
     if (FT->getReturnType()->isVoidTy())
       ReturnInst::Create(*Ctx, BB);
     else
@@ -2480,13 +2481,17 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
 Value *DFSanFunction::updateOriginIfTainted(Value *Shadow, Value *Origin,
                                             IRBuilder<> &IRB) {
   assert(DFS.shouldTrackOrigins());
-  return IRB.CreateCall(DFS.DFSanChainOriginIfTaintedFn, {Shadow, Origin});
+  auto *CB = IRB.CreateCall(DFS.DFSanChainOriginIfTaintedFn, {Shadow, Origin});
+  CB->setAttributes(CB->getCalledFunction()->getAttributes());
+  return CB;
 }
 
 Value *DFSanFunction::updateOrigin(Value *V, IRBuilder<> &IRB) {
   if (!DFS.shouldTrackOrigins())
     return V;
-  return IRB.CreateCall(DFS.DFSanChainOriginFn, V);
+  auto *CB = IRB.CreateCall(DFS.DFSanChainOriginFn, V);
+  CB->setAttributes(CB->getCalledFunction()->getAttributes());
+  return CB;
 }
 
 Value *DFSanFunction::originToIntptr(IRBuilder<> &IRB, Value *Origin) {
@@ -2561,10 +2566,11 @@ void DFSanFunction::storeOrigin(Instruction *Pos, Value *Addr, uint64_t Size,
   }
 
   if (shouldInstrumentWithCall()) {
-    IRB.CreateCall(DFS.DFSanMaybeStoreOriginFn,
-                   {CollapsedShadow,
-                    IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
-                    ConstantInt::get(DFS.IntptrTy, Size), Origin});
+    auto *CB = IRB.CreateCall(DFS.DFSanMaybeStoreOriginFn,
+                              {CollapsedShadow,
+                               IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
+                               ConstantInt::get(DFS.IntptrTy, Size), Origin});
+    CB->setAttributes(CB->getCalledFunction()->getAttributes());
   } else {
     Value *Cmp = convertToBool(CollapsedShadow, IRB, "_dfscmp");
     Instruction *CheckTerm = SplitBlockAndInsertIfThen(
@@ -2937,11 +2943,12 @@ void DFSanVisitor::visitMemSetInst(MemSetInst &I) {
   Value *ValOrigin = DFSF.DFS.shouldTrackOrigins()
                          ? DFSF.getOrigin(I.getValue())
                          : DFSF.DFS.ZeroOrigin;
-  IRB.CreateCall(
+  auto *CB = IRB.CreateCall(
       DFSF.DFS.DFSanSetLabelFn,
       {ValShadow, ValOrigin,
        IRB.CreateBitCast(I.getDest(), Type::getInt8PtrTy(*DFSF.DFS.Ctx)),
        IRB.CreateZExtOrTrunc(I.getLength(), DFSF.DFS.IntptrTy)});
+  CB->setAttributes(CB->getCalledFunction()->getAttributes());
 }
 
 void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
