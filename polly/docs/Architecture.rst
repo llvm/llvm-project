@@ -68,7 +68,7 @@ benefit if Polly is scheduled at this position. The additional set of
 canonicalization passes required will result in a small, but general compile
 time increase and some random run-time performance changes due to slightly
 different IR being passed through the optimizers. To force Polly to run early in
-the pass pipleline use the option *-polly-position=early* (default today).
+the pass pipeline use the option *-polly-position=early* (default today).
 
 .. image:: images/LLVM-Passes-early.png
     :align: center
