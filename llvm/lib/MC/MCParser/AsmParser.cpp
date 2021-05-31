@@ -197,6 +197,11 @@ protected:
                                              StringRef IDVal, AsmToken ID,
                                              SMLoc IDLoc);
 
+  /// Should we emit DWARF describing this assembler source?  (Returns false if
+  /// the source has .file directives, which means we don't want to generate
+  /// info describing the assembler source itself.)
+  bool enabledGenDwarfForAssembly();
+
 public:
   AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
             const MCAsmInfo &MAI, unsigned CB);
@@ -325,11 +330,6 @@ private:
     SrcMgr.PrintMessage(Loc, Kind, Msg, Ranges);
   }
   static void DiagHandler(const SMDiagnostic &Diag, void *Context);
-
-  /// Should we emit DWARF describing this assembler source?  (Returns false if
-  /// the source has .file directives, which means we don't want to generate
-  /// info describing the assembler source itself.)
-  bool enabledGenDwarfForAssembly();
 
   /// Enter the specified file. This returns true on failure.
   bool enterIncludeFile(const std::string &Filename);
@@ -6170,22 +6170,54 @@ bool AsmParser::parseMSInlineAsm(
   return false;
 }
 
+bool HLASMAsmParser::parseAsHLASMLabel(ParseStatementInfo &Info,
+                                       MCAsmParserSemaCallback *SI) {
+  AsmToken LabelTok = getTok();
+  SMLoc LabelLoc = LabelTok.getLoc();
+  StringRef LabelVal;
+
+  if (parseIdentifier(LabelVal))
+    return Error(LabelLoc, "The HLASM Label has to be an Identifier");
+
+  // We have validated whether the token is an Identifier.
+  // Now we have to validate whether the token is a
+  // valid HLASM Label.
+  if (!getTargetParser().isLabel(LabelTok) || checkForValidSection())
+    return true;
+
+  // Lex leading spaces to get to the next operand.
+  lexLeadingSpaces();
+
+  // We shouldn't emit the label if there is nothing else after the label.
+  // i.e asm("<token>\n")
+  if (getTok().is(AsmToken::EndOfStatement))
+    return Error(LabelLoc,
+                 "Cannot have just a label for an HLASM inline asm statement");
+
+  // FIXME: Later on, ensure emitted labels are case-insensitive.
+  MCSymbol *Sym = getContext().getOrCreateSymbol(LabelVal);
+
+  getTargetParser().doBeforeLabelEmit(Sym);
+
+  // Emit the label.
+  Out.emitLabel(Sym, LabelLoc);
+
+  // If we are generating dwarf for assembly source files then gather the
+  // info to make a dwarf label entry for this label if needed.
+  if (enabledGenDwarfForAssembly())
+    MCGenDwarfLabelEntry::Make(Sym, &getStreamer(), getSourceManager(),
+                               LabelLoc);
+
+  getTargetParser().onLabelParsed(Sym);
+
+  return false;
+}
+
 bool HLASMAsmParser::parseAsMachineInstruction(ParseStatementInfo &Info,
                                                MCAsmParserSemaCallback *SI) {
   AsmToken OperationEntryTok = Lexer.getTok();
   SMLoc OperationEntryLoc = OperationEntryTok.getLoc();
   StringRef OperationEntryVal;
-
-  // If we see a new line or carriage return, emit the new line
-  // and lex it.
-  if (OperationEntryTok.is(AsmToken::EndOfStatement)) {
-    if (getTok().getString().front() == '\n' ||
-        getTok().getString().front() == '\r') {
-      Out.AddBlankLine();
-      Lex();
-      return false;
-    }
-  }
 
   // Attempt to parse the first token as an Identifier
   if (parseIdentifier(OperationEntryVal))
@@ -6203,8 +6235,8 @@ bool HLASMAsmParser::parseStatement(ParseStatementInfo &Info,
                                     MCAsmParserSemaCallback *SI) {
   assert(!hasPendingError() && "parseStatement started with pending error");
 
-  // Should the first token be interpreted as a machine instruction.
-  bool ShouldParseAsMachineInstruction = false;
+  // Should the first token be interpreted as a HLASM Label.
+  bool ShouldParseAsHLASMLabel = false;
 
   // If a Name Entry exists, it should occur at the very
   // start of the string. In this case, we should parse the
@@ -6212,8 +6244,8 @@ bool HLASMAsmParser::parseStatement(ParseStatementInfo &Info,
   // If the Name entry is missing (i.e. there's some other
   // token), then we attempt to parse the first non-space
   // token as a Machine Instruction.
-  if (getTok().is(AsmToken::Space))
-    ShouldParseAsMachineInstruction = true;
+  if (getTok().isNot(AsmToken::Space))
+    ShouldParseAsHLASMLabel = true;
 
   // If we have an EndOfStatement (which includes the target's comment
   // string) we can appropriately lex it early on)
@@ -6231,13 +6263,28 @@ bool HLASMAsmParser::parseStatement(ParseStatementInfo &Info,
   // first token.
   lexLeadingSpaces();
 
-  if (ShouldParseAsMachineInstruction)
-    return parseAsMachineInstruction(Info, SI);
+  // If we see a new line or carriage return as the first operand,
+  // after lexing leading spaces, emit the new line and lex the
+  // EndOfStatement token.
+  if (Lexer.is(AsmToken::EndOfStatement)) {
+    if (getTok().getString().front() == '\n' ||
+        getTok().getString().front() == '\r') {
+      Out.AddBlankLine();
+      Lex();
+      return false;
+    }
+  }
 
-  // Label parsing support isn't implemented completely (yet).
-  SMLoc Loc = getTok().getLoc();
-  eatToEndOfStatement();
-  return Error(Loc, "HLASM Label parsing support not yet implemented");
+  // Handle the label first if we have to before processing the rest
+  // of the tokens as a machine instruction.
+  if (ShouldParseAsHLASMLabel) {
+    // If there were any errors while handling and emitting the label,
+    // early return.
+    if (parseAsHLASMLabel(Info, SI))
+      return true;
+  }
+
+  return parseAsMachineInstruction(Info, SI);
 }
 
 namespace llvm {
