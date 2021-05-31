@@ -148,7 +148,7 @@ define void @shuffle_preserve_broadcast4(double * noalias %from, double * noalia
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V0_2]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[P]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[V0_1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[TO:%.*]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], <2 x double>* [[TMP5]], align 4
@@ -222,7 +222,7 @@ define void @shuffle_preserve_broadcast6(double * noalias %from, double * noalia
 ; CHECK-NEXT:    [[V0_1:%.*]] = load double, double* [[FROM]], align 4
 ; CHECK-NEXT:    [[V0_2:%.*]] = load double, double* [[FROM_1]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V0_1]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[V0_2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[P]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP1]], [[TMP3]]
