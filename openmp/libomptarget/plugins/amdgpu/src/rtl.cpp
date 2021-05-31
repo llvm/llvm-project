@@ -351,7 +351,7 @@ public:
 
   struct atmiFreePtrDeletor {
     void operator()(void *p) {
-      atmi_free(p); // ignore failure to free
+      core::Runtime::Memfree(p); // ignore failure to free
     }
   };
 
@@ -1175,7 +1175,7 @@ struct device_environment {
 static hsa_status_t atmi_calloc(void **ret_ptr, size_t size, int DeviceId) {
   uint64_t rounded = 4 * ((size + 3) / 4);
   void *ptr;
-  hsa_status_t err = atmi_malloc(&ptr, rounded, DeviceId, ATMI_DEVTYPE_GPU);
+  hsa_status_t err = core::Runtime::DeviceMalloc(&ptr, rounded, DeviceId);
   if (err != HSA_STATUS_SUCCESS) {
     return err;
   }
@@ -1183,7 +1183,7 @@ static hsa_status_t atmi_calloc(void **ret_ptr, size_t size, int DeviceId) {
   hsa_status_t rc = hsa_amd_memory_fill(ptr, 0, rounded / 4);
   if (rc != HSA_STATUS_SUCCESS) {
     fprintf(stderr, "zero fill device_state failed with %u\n", rc);
-    atmi_free(ptr);
+    core::Runtime::Memfree(ptr);
     return HSA_STATUS_ERROR;
   }
 
@@ -1570,7 +1570,7 @@ void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *, int32_t kind) {
     return NULL;
   }
 
-  hsa_status_t err = atmi_malloc(&ptr, size, device_id, ATMI_DEVTYPE_GPU);
+  hsa_status_t err = core::Runtime::DeviceMalloc(&ptr, size, device_id);
   DP("Tgt alloc data %ld bytes, (tgt:%016llx).\n", size,
      (long long unsigned)(Elf64_Addr)ptr);
   ptr = (err == HSA_STATUS_SUCCESS) ? ptr : NULL;
@@ -1623,7 +1623,7 @@ int32_t __tgt_rtl_data_delete(int device_id, void *tgt_ptr) {
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
   hsa_status_t err;
   DP("Tgt free data (tgt:%016llx).\n", (long long unsigned)(Elf64_Addr)tgt_ptr);
-  err = atmi_free(tgt_ptr);
+  err = core::Runtime::Memfree(tgt_ptr);
   if (err != HSA_STATUS_SUCCESS) {
     DP("Error when freeing CUDA memory\n");
     return OFFLOAD_FAIL;
