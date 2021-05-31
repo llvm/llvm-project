@@ -16456,7 +16456,6 @@ Decl *Sema::ActOnObjCContainerStartDefinition(Decl *IDecl) {
 void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
                                            SourceLocation FinalLoc,
                                            bool IsFinalSpelledSealed,
-                                           bool IsAbstract,
                                            SourceLocation LBraceLoc) {
   AdjustDeclIfTemplate(TagD);
   CXXRecordDecl *Record = cast<CXXRecordDecl>(TagD);
@@ -16466,14 +16465,11 @@ void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
   if (!Record->getIdentifier())
     return;
 
-  if (IsAbstract)
-    Record->markAbstract();
-
-  if (FinalLoc.isValid()) {
+  if (FinalLoc.isValid())
     Record->addAttr(FinalAttr::Create(
         Context, FinalLoc, AttributeCommonInfo::AS_Keyword,
         static_cast<FinalAttr::Spelling>(IsFinalSpelledSealed)));
-  }
+
   // C++ [class]p2:
   //   [...] The class-name is also inserted into the scope of the
   //   class itself; this is known as the injected-class-name. For
