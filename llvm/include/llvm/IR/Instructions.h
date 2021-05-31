@@ -1017,8 +1017,8 @@ public:
   void setResultElementType(Type *Ty) { ResultElementType = Ty; }
 
   Type *getResultElementType() const {
-    assert(ResultElementType ==
-           cast<PointerType>(getType()->getScalarType())->getElementType());
+    assert(cast<PointerType>(getType()->getScalarType())
+               ->isOpaqueOrPointeeTypeMatches(ResultElementType));
     return ResultElementType;
   }
 
@@ -1160,8 +1160,8 @@ GetElementPtrInst::GetElementPtrInst(Type *PointeeType, Value *Ptr,
                   Values, InsertBefore),
       SourceElementType(PointeeType),
       ResultElementType(getIndexedType(PointeeType, IdxList)) {
-  assert(ResultElementType ==
-         cast<PointerType>(getType()->getScalarType())->getElementType());
+  assert(cast<PointerType>(getType()->getScalarType())
+             ->isOpaqueOrPointeeTypeMatches(ResultElementType));
   init(Ptr, IdxList, NameStr);
 }
 
@@ -1174,8 +1174,8 @@ GetElementPtrInst::GetElementPtrInst(Type *PointeeType, Value *Ptr,
                   Values, InsertAtEnd),
       SourceElementType(PointeeType),
       ResultElementType(getIndexedType(PointeeType, IdxList)) {
-  assert(ResultElementType ==
-         cast<PointerType>(getType()->getScalarType())->getElementType());
+  assert(cast<PointerType>(getType()->getScalarType())
+             ->isOpaqueOrPointeeTypeMatches(ResultElementType));
   init(Ptr, IdxList, NameStr);
 }
 
