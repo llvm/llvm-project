@@ -10941,8 +10941,8 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
       // Try to eliminate the sext of a setcc by zexting the compare operands.
       // TODO: Handle signed compare by sexting the ops.
       if (!ISD::isSignedIntSetCC(CC) && N0.hasOneUse() &&
-          TLI.isOperationLegalOrCustom(ISD::SETCC, VT) /*&&
-          !TLI.isOperationLegalOrCustom(ISD::SETCC, SVT)*/) {
+          TLI.isOperationLegalOrCustom(ISD::SETCC, VT) &&
+          !TLI.isOperationLegalOrCustom(ISD::SETCC, SVT)) {
         // We have an unsupported narrow vector compare op that would be legal
         // if extended to the destination type. See if the compare operands
         // can be freely extended to the destination type.

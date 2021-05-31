@@ -417,20 +417,19 @@ define <8 x i32> @cmp_ne_zextload_from_legal_op(<8 x i16>* %x, <8 x i16>* %y) {
 ;
 ; AVX2-LABEL: cmp_ne_zextload_from_legal_op:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
-; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX2-NEXT:    vpcmpeqw (%rsi), %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: cmp_ne_zextload_from_legal_op:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovzxwd {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
-; AVX512-NEXT:    vpmovzxwd {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
-; AVX512-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX512-NEXT:    vpcmpeqw (%rsi), %xmm0, %xmm0
 ; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
-; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
+; AVX512-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX512-NEXT:    retq
   %loadx = load <8 x i16>, <8 x i16>* %x
   %loady = load <8 x i16>, <8 x i16>* %y
