@@ -170,6 +170,11 @@ public:
   bool isExceptionalTerminator() const {
     return isExceptionalTerminator(getOpcode());
   }
+
+  /// It checks if this instruction is the only user of at least one of
+  /// its operands.
+  bool isOnlyUserOfAnyOperand();
+
   bool isIndirectTerminator() const {
     return isIndirectTerminator(getOpcode());
   }
