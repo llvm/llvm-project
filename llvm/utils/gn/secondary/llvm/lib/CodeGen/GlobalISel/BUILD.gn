@@ -24,6 +24,7 @@ static_library("GlobalISel") {
     "InlineAsmLowering.cpp",
     "InstructionSelect.cpp",
     "InstructionSelector.cpp",
+    "LegacyLegalizerInfo.cpp",
     "LegalityPredicates.cpp",
     "LegalizeMutations.cpp",
     "Legalizer.cpp",
