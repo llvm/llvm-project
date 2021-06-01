@@ -158,7 +158,19 @@ exit:
 ; function/loop is mustprogress. Test case from PR50511.
 define void @inner_loop_may_be_infinite(i1 %c1, i1 %c2) {
 ; CHECK-LABEL: @inner_loop_may_be_infinite(
-; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK-NEXT:    br label [[LOOP1:%.*]]
+; CHECK:       loop1:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[LOOP1_LATCH:%.*]], label [[LOOP2_PREHEADER:%.*]]
+; CHECK:       loop2.preheader:
+; CHECK-NEXT:    br label [[LOOP2:%.*]]
+; CHECK:       loop2:
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[LOOP1_LATCH_LOOPEXIT:%.*]], label [[LOOP2]]
+; CHECK:       loop1.latch.loopexit:
+; CHECK-NEXT:    br label [[LOOP1_LATCH]]
+; CHECK:       loop1.latch:
+; CHECK-NEXT:    br i1 false, label [[LOOP1_LATCH_LOOP1_CRIT_EDGE:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop1.latch.loop1_crit_edge:
+; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -256,7 +268,21 @@ exit:
 ; mustprogress and can be removed.
 define void @loop2_mustprogress_but_not_sibling_loop(i1 %c1, i1 %c2, i1 %c3) {
 ; CHECK-LABEL: @loop2_mustprogress_but_not_sibling_loop(
-; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK-NEXT:    br label [[LOOP1:%.*]]
+; CHECK:       loop1:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[LOOP1_LATCH:%.*]], label [[LOOP2_PREHEADER:%.*]]
+; CHECK:       loop2.preheader:
+; CHECK-NEXT:    br label [[LOOP3_PREHEADER:%.*]]
+; CHECK:       loop3.preheader:
+; CHECK-NEXT:    br label [[LOOP3:%.*]]
+; CHECK:       loop3:
+; CHECK-NEXT:    br i1 [[C3:%.*]], label [[LOOP1_LATCH_LOOPEXIT:%.*]], label [[LOOP3]]
+; CHECK:       loop1.latch.loopexit:
+; CHECK-NEXT:    br label [[LOOP1_LATCH]]
+; CHECK:       loop1.latch:
+; CHECK-NEXT:    br i1 false, label [[LOOP1_LATCH_LOOP1_CRIT_EDGE:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop1.latch.loop1_crit_edge:
+; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -281,7 +307,27 @@ exit:
 define void @loop2_finite_but_child_is_not(i1 %c1, i1 %c2, i1 %c3) {
 ; CHECK-LABEL: @loop2_finite_but_child_is_not(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK-NEXT:    br label [[LOOP1:%.*]]
+; CHECK:       loop1:
+; CHECK-NEXT:    [[IV1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV1_NEXT:%.*]], [[LOOP1_LATCH:%.*]] ]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[LOOP1_LATCH]], label [[LOOP2_PREHEADER:%.*]]
+; CHECK:       loop2.preheader:
+; CHECK-NEXT:    br label [[LOOP2:%.*]]
+; CHECK:       loop2:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[LOOP2_LATCH:%.*]] ], [ 0, [[LOOP2_PREHEADER]] ]
+; CHECK-NEXT:    br label [[LOOP3:%.*]]
+; CHECK:       loop3:
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[LOOP2_LATCH]], label [[LOOP3]]
+; CHECK:       loop2.latch:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[IV]], 200
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP1_LATCH_LOOPEXIT:%.*]], label [[LOOP2]]
+; CHECK:       loop1.latch.loopexit:
+; CHECK-NEXT:    br label [[LOOP1_LATCH]]
+; CHECK:       loop1.latch:
+; CHECK-NEXT:    [[IV1_NEXT]] = add nuw i32 [[IV1]], 1
+; CHECK-NEXT:    [[C4:%.*]] = icmp ult i32 [[IV1_NEXT]], 200
+; CHECK-NEXT:    br i1 [[C4]], label [[LOOP1]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
