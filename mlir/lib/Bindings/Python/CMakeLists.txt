@@ -25,6 +25,14 @@ add_dependencies(MLIRBindingsPythonExtension MLIRCoreBindingsPythonExtension)
 add_subdirectory(Transforms)
 add_subdirectory(Conversions)
 
+add_mlir_python_extension(MLIRAllPassesRegistrationBindingsPythonExtension _mlirAllPassesRegistration
+  INSTALL_DIR
+    python
+  SOURCES
+    AllPassesRegistration.cpp
+)
+add_dependencies(MLIRBindingsPythonExtension MLIRAllPassesRegistrationBindingsPythonExtension)
+
 add_mlir_python_extension(MLIRAsyncPassesBindingsPythonExtension _mlirAsyncPasses
   INSTALL_DIR
     python
@@ -37,7 +45,7 @@ add_mlir_python_extension(MLIRSparseTensorPassesBindingsPythonExtension _mlirSpa
   INSTALL_DIR
     python
   SOURCES
-  SparseTensorPasses.cpp
+    SparseTensorPasses.cpp
 )
 add_dependencies(MLIRBindingsPythonExtension MLIRSparseTensorPassesBindingsPythonExtension)
 
