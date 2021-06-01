@@ -6374,7 +6374,7 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
 MCAsmParser *llvm::createMCAsmParser(SourceMgr &SM, MCContext &C,
                                      MCStreamer &Out, const MCAsmInfo &MAI,
                                      unsigned CB) {
-  if (C.getTargetTriple().isOSzOS())
+  if (C.getTargetTriple().isSystemZ() && C.getTargetTriple().isOSzOS())
     return new HLASMAsmParser(SM, C, Out, MAI, CB);
 
   return new AsmParser(SM, C, Out, MAI, CB);
