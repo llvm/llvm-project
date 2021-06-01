@@ -617,14 +617,6 @@ protected:
 
   void DecrementIgnoreCount();
 
-  // BreakpointLocation::IgnoreCountShouldStop &
-  // Breakpoint::IgnoreCountShouldStop can only be called once per stop, and
-  // BreakpointLocation::IgnoreCountShouldStop should be tested first, and if
-  // it returns false we should continue, otherwise we should test
-  // Breakpoint::IgnoreCountShouldStop.
-
-  bool IgnoreCountShouldStop();
-
 private:
   // To call from CopyFromBreakpoint.
   Breakpoint(Target &new_target, const Breakpoint &bp_to_copy_from);
