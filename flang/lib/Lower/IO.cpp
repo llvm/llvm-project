@@ -413,8 +413,7 @@ genOutputItemList(Fortran::lower::AbstractConverter &converter,
     llvm::SmallVector<mlir::Value> outputFuncArgs = {cookie};
     Fortran::lower::CharacterExprHelper helper{builder, loc};
     if (argType.isa<fir::BoxType>()) {
-      auto exv = converter.genExprAddr(expr, stmtCtx, loc);
-      auto box = builder.createBox(loc, exv);
+      auto box = converter.genExprBox(*expr, stmtCtx, loc);
       outputFuncArgs.push_back(builder.createConvert(loc, argType, box));
     } else if (helper.isCharacterScalar(itemTy)) {
       auto exv = converter.genExprAddr(expr, stmtCtx, loc);
@@ -490,29 +489,31 @@ static void genInputItemList(Fortran::lower::AbstractConverter &converter,
     auto &pVar = std::get<Fortran::parser::Variable>(item.u);
     auto loc = converter.genLocation(pVar.GetSource());
     makeNextConditionalOn(builder, loc, checkResult, ok, inLoop);
-    Fortran::lower::CharacterExprHelper charHelper{builder, loc};
-    auto itemBox =
-        converter.genExprAddr(Fortran::semantics::GetExpr(pVar), stmtCtx, loc);
-    auto itemAddr = fir::getBase(itemBox);
-    auto itemTy = fir::dyn_cast_ptrEleTy(itemAddr.getType());
-    if (!itemTy)
-      fir::emitFatalError(loc, "internal error: unhandled input item type");
+    const auto *expr = Fortran::semantics::GetExpr(pVar);
+    if (!expr)
+      fir::emitFatalError(loc, "internal error: could not get evaluate::Expr");
+    auto itemTy = converter.genType(*expr);
     auto inputFunc = getInputFunc(loc, builder, itemTy, isFormatted);
     auto argType = inputFunc.getType().getInput(1);
-    if (argType.isa<fir::BoxType>())
-      itemAddr = builder.createBox(loc, itemBox);
-    itemAddr = builder.createConvert(loc, argType, itemAddr);
-    llvm::SmallVector<mlir::Value> inputFuncArgs = {cookie, itemAddr};
+
+    llvm::SmallVector<mlir::Value> inputFuncArgs = {cookie};
     if (argType.isa<fir::BoxType>()) {
-      // do nothing
-    } else if (charHelper.isCharacterScalar(itemTy)) {
-      auto len = fir::getLen(itemBox);
-      inputFuncArgs.push_back(
-          builder.createConvert(loc, inputFunc.getType().getInput(2), len));
-    } else if (itemTy.isa<mlir::IntegerType>()) {
-      inputFuncArgs.push_back(builder.create<mlir::ConstantOp>(
-          loc, builder.getI32IntegerAttr(
-                   itemTy.cast<mlir::IntegerType>().getWidth() / 8)));
+      auto box = converter.genExprBox(*expr, stmtCtx, loc);
+      inputFuncArgs.push_back(builder.createConvert(loc, argType, box));
+    } else {
+      auto itemExv = converter.genExprAddr(expr, stmtCtx, loc);
+      auto itemAddr = fir::getBase(itemExv);
+      inputFuncArgs.push_back(builder.createConvert(loc, argType, itemAddr));
+      Fortran::lower::CharacterExprHelper charHelper{builder, loc};
+      if (charHelper.isCharacterScalar(itemTy)) {
+        auto len = fir::getLen(itemExv);
+        inputFuncArgs.push_back(
+            builder.createConvert(loc, inputFunc.getType().getInput(2), len));
+      } else if (itemTy.isa<mlir::IntegerType>()) {
+        inputFuncArgs.push_back(builder.create<mlir::ConstantOp>(
+            loc, builder.getI32IntegerAttr(
+                     itemTy.cast<mlir::IntegerType>().getWidth() / 8)));
+      }
     }
     ok =
         builder.create<fir::CallOp>(loc, inputFunc, inputFuncArgs).getResult(0);

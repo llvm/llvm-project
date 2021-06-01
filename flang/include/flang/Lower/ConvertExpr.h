@@ -104,7 +104,8 @@ createSomeArrayTempValue(AbstractConverter &converter,
                          const evaluate::Expr<evaluate::SomeType> &expr,
                          SymMap &symMap, StatementContext &stmtCtx);
 
-/// Lower an array expression to a value of type box.
+/// Lower an array expression to a value of type box. The expression must be a
+/// variable.
 fir::ExtendedValue
 createSomeArrayBox(AbstractConverter &converter,
                    const evaluate::Expr<evaluate::SomeType> &expr,

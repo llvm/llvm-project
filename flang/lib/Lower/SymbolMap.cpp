@@ -52,6 +52,7 @@ llvm::SmallVector<mlir::Value> fir::getTypeParams(const ExtendedValue &exv) {
   auto baseTy = fir::getBase(exv).getType();
   if (auto t = fir::dyn_cast_ptrEleTy(baseTy))
     baseTy = t;
+  baseTy = fir::unwrapSequenceType(baseTy);
   if (!fir::hasDynamicSize(baseTy))
     return {}; // type has constant size, no type parameters needed
   [[maybe_unused]] auto loc = fir::getBase(exv).getLoc();

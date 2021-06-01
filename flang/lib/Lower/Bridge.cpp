@@ -298,6 +298,14 @@ public:
                     const Fortran::lower::SomeExpr &expr) override final {
     return createSomeMutableBox(loc, *this, expr, localSymbols);
   }
+  mlir::Value genExprBox(const Fortran::lower::SomeExpr &expr,
+                         Fortran::lower::StatementContext &context,
+                         mlir::Location loc) override final {
+    if (expr.Rank() > 0 && Fortran::evaluate::IsVariable(expr))
+      return fir::getBase(
+          createSomeArrayBox(*this, expr, localSymbols, context));
+    return builder->createBox(loc, genExprAddr(expr, context, &loc));
+  }
 
   Fortran::evaluate::FoldingContext &getFoldingContext() override final {
     return foldingContext;
