@@ -25,8 +25,8 @@ build to generate a shared library (lldbIntelFeatures) to provide all these
 commands.
 
 For each hardware feature, separate cli commands have been developed that are
-provided by wrappers (cli-wrapper-pt.cpp and cli-wrapper-mpxtable.cpp) residing
-in feature specific folders ("intel-pt" and "intel-mpx" respectively).
+provided by wrappers (e.g. cli-wrapper-mpxtable.cpp) residing
+in feature specific folders.
 
 For details regarding cli commands of each feature, please refer to these
 feature specific wrappers.
@@ -43,11 +43,6 @@ the feature specific source files (residing in feature specific folders).
 Furthermore, flexibility is provided to the user to include/exclude a particular
 feature while building lldbIntelFeatures library. This is done by flags described
 below:
-
-  - LLDB_BUILD_INTEL_PT - The flag enables building of Intel(R) Processor Trace
-    feature (inside intel-pt folder). This flag defaults to "OFF" meaning the
-    feature is excluded while building lldbIntelFeatures library. Set it to "ON"
-    in order to include it.
 
   - LLDB_BUILD_INTEL_MPX - Enables building Intel(R) Memory Protection Extensions
     feature (inside intel-mpx folder). This flag defaults to "ON" meaning
