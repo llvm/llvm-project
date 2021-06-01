@@ -120,7 +120,7 @@ bool VPlanTransforms::sinkScalarOperands(VPlan &Plan) {
   while (!WorkList.empty()) {
     auto *C = WorkList.pop_back_val();
     auto *SinkCandidate = dyn_cast_or_null<VPReplicateRecipe>(C->Def);
-    if (!SinkCandidate)
+    if (!SinkCandidate || SinkCandidate->isUniform())
       continue;
 
     // All users of SinkCandidate must be in the same block in order to perform
