@@ -441,6 +441,9 @@ public:
     ConstantInt* Mask = dyn_cast<ConstantInt>(AndI.getOperand(1));
     return Mask && Mask->getValue().isIntN(16);
   }
+  bool convertSetCCLogicToBitwiseLogic(EVT VT) const override {
+    return VT.isScalarInteger();
+  }
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &,
                          EVT) const override;
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
