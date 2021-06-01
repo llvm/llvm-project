@@ -22,6 +22,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -3689,32 +3690,17 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E) {
   if (E->State == TreeEntry::NeedToGather) {
     if (allConstant(VL))
       return 0;
-    if (isSplat(VL)) {
-      return ReuseShuffleCost +
-             TTI->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy, None,
-                                 0);
-    }
     if (isa<InsertElementInst>(VL[0]))
       return InstructionCost::getInvalid();
-    if (E->getOpcode() == Instruction::ExtractElement &&
-        allSameType(VL) && allSameBlock(VL)) {
-      SmallVector<int> Mask;
-      Optional<TargetTransformInfo::ShuffleKind> ShuffleKind =
-          isShuffle(VL, Mask);
-      if (ShuffleKind.hasValue()) {
-        InstructionCost Cost =
-            computeExtractCost(VL, VecTy, *ShuffleKind, Mask, *TTI);
-        AdjustExtractsCost(Cost, /*IsGather=*/true);
-        return ReuseShuffleCost + Cost;
-      }
-    }
-    InstructionCost GatherCost = 0;
     SmallVector<int> Mask;
     SmallVector<const TreeEntry *> Entries;
     Optional<TargetTransformInfo::ShuffleKind> Shuffle =
         isGatherShuffledEntry(E, Mask, Entries);
     if (Shuffle.hasValue()) {
+      InstructionCost GatherCost = 0;
       if (ShuffleVectorInst::isIdentityMask(Mask)) {
+        // Perfect match in the graph, will reuse the previously vectorized
+        // node. Cost is 0.
         LLVM_DEBUG(
             dbgs()
             << "SLP: perfect diamond match for gather bundle that starts with "
@@ -3723,12 +3709,38 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E) {
         LLVM_DEBUG(dbgs() << "SLP: shuffled " << Entries.size()
                           << " entries for bundle that starts with "
                           << *VL.front() << ".\n");
+        // Detected that instead of gather we can emit a shuffle of single/two
+        // previously vectorized nodes. Add the cost of the permutation rather
+        // than gather.
         GatherCost = TTI->getShuffleCost(*Shuffle, VecTy, Mask);
       }
-    } else {
-      GatherCost = getGatherCost(VL);
+      return ReuseShuffleCost + GatherCost;
     }
-    return ReuseShuffleCost + GatherCost;
+    if (isSplat(VL)) {
+      // Found the broadcasting of the single scalar, calculate the cost as the
+      // broadcast.
+      return ReuseShuffleCost +
+             TTI->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy, None,
+                                 0);
+    }
+    if (E->getOpcode() == Instruction::ExtractElement && allSameType(VL) &&
+        allSameBlock(VL)) {
+      // Check that gather of extractelements can be represented as just a
+      // shuffle of a single/two vectors the scalars are extracted from.
+      SmallVector<int> Mask;
+      Optional<TargetTransformInfo::ShuffleKind> ShuffleKind =
+          isShuffle(VL, Mask);
+      if (ShuffleKind.hasValue()) {
+        // Found the bunch of extractelement instructions that must be gathered
+        // into a vector and can be represented as a permutation elements in a
+        // single input vector or of 2 input vectors.
+        InstructionCost Cost =
+            computeExtractCost(VL, VecTy, *ShuffleKind, Mask, *TTI);
+        AdjustExtractsCost(Cost, /*IsGather=*/true);
+        return ReuseShuffleCost + Cost;
+      }
+    }
+    return ReuseShuffleCost + getGatherCost(VL);
   }
   assert((E->State == TreeEntry::Vectorize ||
           E->State == TreeEntry::ScatterVectorize) &&
@@ -4417,6 +4429,8 @@ InstructionCost BoUpSLP::getTreeCost() {
             return false;
           auto *IE1 = cast<InsertElementInst>(VU);
           auto *IE2 = cast<InsertElementInst>(V);
+          // Go though of insertelement instructions trying to find either VU as
+          // the original vector for IE2 or V as the original vector for IE1.
           do {
             if (IE1 == VU || IE2 == V)
               return true;
@@ -4519,57 +4533,127 @@ InstructionCost BoUpSLP::getTreeCost() {
 Optional<TargetTransformInfo::ShuffleKind>
 BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, SmallVectorImpl<int> &Mask,
                                SmallVectorImpl<const TreeEntry *> &Entries) {
+  // TODO: currently checking only for Scalars in the tree entry, need to count
+  // reused elements too for better cost estimation.
   Mask.assign(TE->Scalars.size(), UndefMaskElem);
   Entries.clear();
-  DenseMap<Value *, const TreeEntry *> UsedValuesEntry;
+  // Build a lists of values to tree entries.
+  DenseMap<Value *, SmallPtrSet<const TreeEntry *, 4>> ValueToTEs;
+  for (const std::unique_ptr<TreeEntry> &EntryPtr : VectorizableTree) {
+    if (EntryPtr.get() == TE)
+      break;
+    if (EntryPtr->State != TreeEntry::NeedToGather)
+      continue;
+    for (Value *V : EntryPtr->Scalars)
+      ValueToTEs.try_emplace(V).first->getSecond().insert(EntryPtr.get());
+  }
+  // Find all tree entries used by the gathered values. If no common entries
+  // found - not a shuffle.
+  // Here we build a set of tree nodes for each gathered value and trying to
+  // find the intersection between these sets. If we have at least one common
+  // tree node for each gathered value - we have just a permutation of the
+  // single vector. If we have 2 different sets, we're in situation where we
+  // have a permutation of 2 input vectors.
+  SmallVector<SmallPtrSet<const TreeEntry *, 4>> UsedTEs;
+  DenseMap<Value *, int> UsedValuesEntry;
+  for (Value *V : TE->Scalars) {
+    if (isa<UndefValue>(V))
+      continue;
+    // Build a list of tree entries where V is used.
+    SmallPtrSet<const TreeEntry *, 4> VToTEs;
+    auto It = ValueToTEs.find(V);
+    if (It != ValueToTEs.end())
+      VToTEs = It->second;
+    if (const TreeEntry *VTE = getTreeEntry(V))
+      VToTEs.insert(VTE);
+    if (VToTEs.empty())
+      return None;
+    if (UsedTEs.empty()) {
+      // The first iteration, just insert the list of nodes to vector.
+      UsedTEs.push_back(VToTEs);
+    } else {
+      // Need to check if there are any previously used tree nodes which use V.
+      // If there are no such nodes, consider that we have another one input
+      // vector.
+      SmallPtrSet<const TreeEntry *, 4> SavedVToTEs(VToTEs);
+      unsigned Idx = 0;
+      for (SmallPtrSet<const TreeEntry *, 4> &Set : UsedTEs) {
+        // Do we have a non-empty intersection of previously listed tree entries
+        // and tree entries using current V?
+        set_intersect(VToTEs, Set);
+        if (!VToTEs.empty()) {
+          // Yes, write the new subset and continue analysis for the next
+          // scalar.
+          Set.swap(VToTEs);
+          break;
+        }
+        VToTEs = SavedVToTEs;
+        ++Idx;
+      }
+      // No non-empty intersection found - need to add a second set of possible
+      // source vectors.
+      if (Idx == UsedTEs.size()) {
+        // If the number of input vectors is greater than 2 - not a permutation,
+        // fallback to the regular gather.
+        if (UsedTEs.size() == 2)
+          return None;
+        UsedTEs.push_back(SavedVToTEs);
+        Idx = UsedTEs.size() - 1;
+      }
+      UsedValuesEntry.try_emplace(V, Idx);
+    }
+  }
+
   unsigned VF = 0;
-  // FIXME: Shall be replaced by GetVF function once non-power-2 patch is
-  // landed.
-  auto &&GetVF = [](const TreeEntry *TE) {
-    if (!TE->ReuseShuffleIndices.empty())
-      return TE->ReuseShuffleIndices.size();
-    return TE->Scalars.size();
-  };
+  if (UsedTEs.size() == 1) {
+    // Try to find the perfect match in another gather node at first.
+    auto It = find_if(UsedTEs.front(), [TE](const TreeEntry *EntryPtr) {
+      return EntryPtr->isSame(TE->Scalars);
+    });
+    if (It != UsedTEs.front().end()) {
+      Entries.push_back(*It);
+      std::iota(Mask.begin(), Mask.end(), 0);
+      return TargetTransformInfo::SK_PermuteSingleSrc;
+    }
+    // No perfect match, just shuffle, so choose the first tree node.
+    Entries.push_back(*UsedTEs.front().begin());
+  } else {
+    // Try to find nodes with the same vector factor.
+    assert(UsedTEs.size() == 2 && "Expected at max 2 permuted entries.");
+    // FIXME: Shall be replaced by GetVF function once non-power-2 patch is
+    // landed.
+    auto &&GetVF = [](const TreeEntry *TE) {
+      if (!TE->ReuseShuffleIndices.empty())
+        return TE->ReuseShuffleIndices.size();
+      return TE->Scalars.size();
+    };
+    DenseMap<int, const TreeEntry *> VFToTE;
+    for (const TreeEntry *TE : UsedTEs.front())
+      VFToTE.try_emplace(GetVF(TE), TE);
+    for (const TreeEntry *TE : UsedTEs.back()) {
+      auto It = VFToTE.find(GetVF(TE));
+      if (It != VFToTE.end()) {
+        VF = It->first;
+        Entries.push_back(It->second);
+        Entries.push_back(TE);
+        break;
+      }
+    }
+    // No 2 source vectors with the same vector factor - give up and do regular
+    // gather.
+    if (Entries.empty())
+      return None;
+  }
+
+  // Build a shuffle mask for better cost estimation and vector emission.
   for (int I = 0, E = TE->Scalars.size(); I < E; ++I) {
     Value *V = TE->Scalars[I];
     if (isa<UndefValue>(V))
       continue;
-    const TreeEntry *VTE = UsedValuesEntry.lookup(V);
-    if (!VTE) {
-      if (Entries.size() == 2)
-        return None;
-      VTE = getTreeEntry(V);
-      if (!VTE || find_if(
-                      VectorizableTree,
-                      [VTE, TE](const std::unique_ptr<TreeEntry> &EntryPtr) {
-                        return EntryPtr.get() == VTE || EntryPtr.get() == TE;
-                      })->get() == TE) {
-        // Check if it is used in one of the gathered entries.
-        const auto *It =
-            find_if(VectorizableTree,
-                    [V, TE](const std::unique_ptr<TreeEntry> &EntryPtr) {
-                      return EntryPtr.get() == TE ||
-                             (EntryPtr->State == TreeEntry::NeedToGather &&
-                              is_contained(EntryPtr->Scalars, V));
-                    });
-        // The vector factor of shuffled entries must be the same.
-        if (It->get() == TE)
-          return None;
-        VTE = It->get();
-      }
-      Entries.push_back(VTE);
-      if (Entries.size() == 1) {
-        VF = GetVF(VTE);
-      } else if (VF != GetVF(VTE)) {
-        assert(Entries.size() == 2 && "Expected shuffle of 1 or 2 entries.");
-        assert(VF > 0 && "Expected non-zero vector factor.");
-        return None;
-      }
-      for (Value *SV : VTE->Scalars)
-        UsedValuesEntry.try_emplace(SV, VTE);
-    }
+    unsigned Idx = UsedValuesEntry.lookup(V);
+    const TreeEntry *VTE = Entries[Idx];
     int FoundLane = findLaneForValue(VTE->Scalars, VTE->ReuseShuffleIndices, V);
-    Mask[I] = (Entries.front() == VTE ? 0 : VF) + FoundLane;
+    Mask[I] = Idx * VF + FoundLane;
     // Extra check required by isSingleSourceMaskImpl function (called by
     // ShuffleVectorInst::isSingleSourceMask).
     if (Mask[I] >= 2 * E)
