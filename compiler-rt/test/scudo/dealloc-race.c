@@ -1,12 +1,12 @@
 // RUN: %clang_scudo %s -O2 -o %t
 // RUN: %env_scudo_opts="QuarantineChunksUpToSize=0" %run %t 2>&1
 
-// This test attempts to reproduce a race condition in the original Scudo in the
-// deallocation path when bypassing the Quarantine. The old behavior was to
-// zero-out the chunk header after checking its checksum, state & various other
-// things, but that left a window during which 2 (or more) threads could
-// deallocate the same chunk, with a net result of having said chunk present in
-// those distinct thread caches.
+// This test attempts to reproduce a race condition in the deallocation path
+// when bypassing the Quarantine. The old behavior was to zero-out the chunk
+// header after checking its checksum, state & various other things, but that
+// left a window during which 2 (or more) threads could deallocate the same
+// chunk, with a net result of having said chunk present in those distinct
+// thread caches.
 
 // A passing test means all the children died with an error. The failing
 // scenario involves winning a race, so repro can be scarce.

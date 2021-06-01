@@ -1,13 +1,13 @@
 // RUN: %clangxx_scudo %s -lstdc++ -o %t
-// RUN: %env_scudo_opts=may_return_null=0 not --crash %run %t malloc 2>&1      | FileCheck %s --check-prefix=CHECK-max
-// RUN: %env_scudo_opts=may_return_null=1             %run %t malloc 2>&1
-// RUNZ: %env_scudo_opts=may_return_null=0 not --crash %run %t calloc 2>&1      | FileCheck %s --check-prefix=CHECK-calloc
-// RUNZ: %env_scudo_opts=may_return_null=1             %run %t calloc 2>&1
-// RUNZ: %env_scudo_opts=may_return_null=0 not --crash %run %t new 2>&1         | FileCheck %s --check-prefix=CHECK-max
-// RUNZ: %env_scudo_opts=may_return_null=1 not --crash %run %t new 2>&1         | FileCheck %s --check-prefix=CHECK-oom
-// RUNZ: %env_scudo_opts=may_return_null=0 not --crash %run %t new-nothrow 2>&1 | FileCheck %s --check-prefix=CHECK-max
-// RUNZ: %env_scudo_opts=may_return_null=1             %run %t new-nothrow 2>&1
-// RUNZ:                                               %run %t usable 2>&1
+// RUN: %env_scudo_opts=allocator_may_return_null=0 not %run %t malloc 2>&1      | FileCheck %s --check-prefix=CHECK-max
+// RUN: %env_scudo_opts=allocator_may_return_null=1     %run %t malloc 2>&1
+// RUN: %env_scudo_opts=allocator_may_return_null=0 not %run %t calloc 2>&1      | FileCheck %s --check-prefix=CHECK-calloc
+// RUN: %env_scudo_opts=allocator_may_return_null=1     %run %t calloc 2>&1
+// RUN: %env_scudo_opts=allocator_may_return_null=0 not %run %t new 2>&1         | FileCheck %s --check-prefix=CHECK-max
+// RUN: %env_scudo_opts=allocator_may_return_null=1 not %run %t new 2>&1         | FileCheck %s --check-prefix=CHECK-oom
+// RUN: %env_scudo_opts=allocator_may_return_null=0 not %run %t new-nothrow 2>&1 | FileCheck %s --check-prefix=CHECK-max
+// RUN: %env_scudo_opts=allocator_may_return_null=1     %run %t new-nothrow 2>&1
+// RUN:                                                 %run %t usable 2>&1
 
 // Tests for various edge cases related to sizes, notably the maximum size the
 // allocator can allocate. Tests that an integer overflow in the parameters of
@@ -54,12 +54,12 @@ int main(int argc, char **argv) {
     // Playing with the actual usable size of a chunk.
     void *p = malloc(1007);
     assert(p);
-    size_t size = malloc_usable_size(p);
+    size_t size = __sanitizer_get_allocated_size(p);
     assert(size >= 1007);
     memset(p, 'A', size);
     p = realloc(p, 2014);
     assert(p);
-    size = malloc_usable_size(p);
+    size = __sanitizer_get_allocated_size(p);
     assert(size >= 2014);
     memset(p, 'B', size);
     free(p);

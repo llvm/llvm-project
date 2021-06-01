@@ -1,10 +1,10 @@
 // RUN: %clangxx_scudo -fsized-deallocation %s -o %t
-// RUN: %env_scudo_opts=delete_size_mismatch=1             %run %t gooddel    2>&1
-// RUN: %env_scudo_opts=delete_size_mismatch=1 not --crash %run %t baddel     2>&1 | FileCheck %s
-// RUN: %env_scudo_opts=delete_size_mismatch=0             %run %t baddel     2>&1
-// RUN: %env_scudo_opts=delete_size_mismatch=1             %run %t gooddelarr 2>&1
-// RUN: %env_scudo_opts=delete_size_mismatch=1 not --crash %run %t baddelarr  2>&1 | FileCheck %s
-// RUN: %env_scudo_opts=delete_size_mismatch=0             %run %t baddelarr  2>&1
+// RUN: %env_scudo_opts=DeleteSizeMismatch=1     %run %t gooddel    2>&1
+// RUN: %env_scudo_opts=DeleteSizeMismatch=1 not %run %t baddel     2>&1 | FileCheck %s
+// RUN: %env_scudo_opts=DeleteSizeMismatch=0     %run %t baddel     2>&1
+// RUN: %env_scudo_opts=DeleteSizeMismatch=1     %run %t gooddelarr 2>&1
+// RUN: %env_scudo_opts=DeleteSizeMismatch=1 not %run %t baddelarr  2>&1 | FileCheck %s
+// RUN: %env_scudo_opts=DeleteSizeMismatch=0     %run %t baddelarr  2>&1
 
 // Ensures that the sized delete operator errors out when the appropriate
 // option is passed and the sizes do not match between allocation and

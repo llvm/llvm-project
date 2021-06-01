@@ -1,7 +1,7 @@
 // RUN: %clang_scudo %s -o %t
-// RUN:                                       %run %t valid   2>&1
-// RUN:                                       not --crash %run %t invalid 2>&1 | FileCheck %s
-// RUNX: %env_scudo_opts=may_return_null=1     %run %t invalid 2>&1
+// RUN:                                                 %run %t valid   2>&1
+// RUN:                                             not %run %t invalid 2>&1 | FileCheck %s
+// RUN: %env_scudo_opts=allocator_may_return_null=1     %run %t invalid 2>&1
 // UNSUPPORTED: android
 
 // Tests that valloc and pvalloc work as intended.

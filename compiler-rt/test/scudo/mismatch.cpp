@@ -1,8 +1,8 @@
 // RUN: %clangxx_scudo %s -o %t
-// RUN: %env_scudo_opts=dealloc_type_mismatch=1 not --crash %run %t mallocdel 2>&1 | FileCheck --check-prefix=CHECK-dealloc %s
-// RUN: %env_scudo_opts=dealloc_type_mismatch=0             %run %t mallocdel 2>&1
-// RUN: %env_scudo_opts=dealloc_type_mismatch=1 not --crash %run %t newfree   2>&1 | FileCheck --check-prefix=CHECK-dealloc %s
-// RUN: %env_scudo_opts=dealloc_type_mismatch=0             %run %t newfree   2>&1
+// RUN: %env_scudo_opts=DeallocationTypeMismatch=1 not %run %t mallocdel 2>&1 | FileCheck --check-prefix=CHECK-dealloc %s
+// RUN: %env_scudo_opts=DeallocationTypeMismatch=0     %run %t mallocdel 2>&1
+// RUN: %env_scudo_opts=DeallocationTypeMismatch=1 not %run %t newfree   2>&1 | FileCheck --check-prefix=CHECK-dealloc %s
+// RUN: %env_scudo_opts=DeallocationTypeMismatch=0     %run %t newfree   2>&1
 
 // Tests that type mismatches between allocation and deallocation functions are
 // caught when the related option is set.
