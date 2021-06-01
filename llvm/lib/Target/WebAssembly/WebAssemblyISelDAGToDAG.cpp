@@ -14,6 +14,7 @@
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
 #include "WebAssemblyTargetMachine.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h" // To access function attributes.
@@ -56,6 +57,8 @@ public:
     return SelectionDAGISel::runOnMachineFunction(MF);
   }
 
+  void PreprocessISelDAG() override;
+
   void Select(SDNode *Node) override;
 
   bool SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
@@ -68,6 +71,18 @@ private:
   // add select functions here...
 };
 } // end anonymous namespace
+
+void WebAssemblyDAGToDAGISel::PreprocessISelDAG() {
+  // Stack objects that should be allocated to locals are hoisted to WebAssembly
+  // locals when they are first used.  However for those without uses, we hoist
+  // them here.  It would be nice if there were some hook to do this when they
+  // are added to the MachineFrameInfo, but that's not the case right now.
+  MachineFrameInfo &FrameInfo = MF->getFrameInfo();
+  for (int Idx = 0; Idx < FrameInfo.getObjectIndexEnd(); Idx++)
+    WebAssemblyFrameLowering::getLocalForStackObject(*MF, Idx);
+
+  SelectionDAGISel::PreprocessISelDAG();
+}
 
 void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we already have selected!
