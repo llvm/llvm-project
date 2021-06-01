@@ -25,24 +25,6 @@
 
 using namespace mlir;
 
-/// Return true if the specified region is known to follow SSA dominance
-/// properties, i.e. it isn't a graph region.
-static bool regionHasSSADominance(Operation &op, size_t regionNo,
-                                  RegionKindInterface regionKindItf) {
-  // If the op is unregistered, then we don't know if it has SSADominance or
-  // not, so assume not.
-  if (!op.isRegistered())
-    return false;
-
-  // If the op is registered but has no RegionKindInterface, then it defaults to
-  // SSADominance.
-  if (!regionKindItf)
-    return true;
-
-  // Otherwise, ask the interface.
-  return regionKindItf.hasSSADominance(regionNo);
-}
-
 namespace {
 struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
   static unsigned getHashValue(const Operation *opC) {
@@ -93,8 +75,7 @@ struct CSE : public CSEBase<CSE> {
   LogicalResult simplifyOperation(ScopedMapTy &knownValues, Operation *op,
                                   bool hasSSADominance);
   void simplifyBlock(ScopedMapTy &knownValues, Block *bb, bool hasSSADominance);
-  void simplifyRegion(ScopedMapTy &knownValues, Region &region,
-                      bool hasSSADominance);
+  void simplifyRegion(ScopedMapTy &knownValues, Region &region);
 
   void runOnOperation() override;
 
@@ -184,33 +165,28 @@ void CSE::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
     if (op.getNumRegions() == 0)
       continue;
 
-    auto regionKindItf = dyn_cast<RegionKindInterface>(op);
-
     // If this operation is isolated above, we can't process nested regions with
     // the given 'knownValues' map. This would cause the insertion of implicit
     // captures in explicit capture only regions.
     if (op.mightHaveTrait<OpTrait::IsIsolatedFromAbove>()) {
       ScopedMapTy nestedKnownValues;
-      for (size_t i = 0, e = op.getNumRegions(); i != e; ++i) {
-        simplifyRegion(nestedKnownValues, op.getRegion(i),
-                       regionHasSSADominance(op, i, regionKindItf));
-      }
+      for (auto &region : op.getRegions())
+        simplifyRegion(nestedKnownValues, region);
       continue;
     }
 
     // Otherwise, process nested regions normally.
-    for (size_t i = 0, e = op.getNumRegions(); i != e; ++i) {
-      simplifyRegion(knownValues, op.getRegion(i),
-                     regionHasSSADominance(op, i, regionKindItf));
-    }
+    for (auto &region : op.getRegions())
+      simplifyRegion(knownValues, region);
   }
 }
 
-void CSE::simplifyRegion(ScopedMapTy &knownValues, Region &region,
-                         bool hasSSADominance) {
+void CSE::simplifyRegion(ScopedMapTy &knownValues, Region &region) {
   // If the region is empty there is nothing to do.
   if (region.empty())
     return;
+
+  bool hasSSADominance = domInfo->hasSSADominance(&region);
 
   // If the region only contains one block, then simplify it directly.
   if (region.hasOneBlock()) {
@@ -267,11 +243,8 @@ void CSE::runOnOperation() {
   domInfo = &getAnalysis<DominanceInfo>();
   Operation *rootOp = getOperation();
 
-  auto regionKindItf = dyn_cast<RegionKindInterface>(getOperation());
-  for (size_t i = 0, e = rootOp->getNumRegions(); i != e; ++i) {
-    simplifyRegion(knownValues, rootOp->getRegion(i),
-                   regionHasSSADominance(*rootOp, i, regionKindItf));
-  }
+  for (auto &region : rootOp->getRegions())
+    simplifyRegion(knownValues, region);
 
   // If no operations were erased, then we mark all analyses as preserved.
   if (opsToErase.empty())
