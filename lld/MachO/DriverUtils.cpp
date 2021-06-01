@@ -197,9 +197,8 @@ Optional<std::string> macho::resolveDylibPath(StringRef path) {
 // especially if it's a commonly re-exported core library.
 static DenseMap<CachedHashStringRef, DylibFile *> loadedDylibs;
 
-Optional<DylibFile *> macho::loadDylib(MemoryBufferRef mbref,
-                                       DylibFile *umbrella,
-                                       bool isBundleLoader) {
+DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
+                            bool isBundleLoader) {
   CachedHashStringRef path(mbref.getBufferIdentifier());
   DylibFile *&file = loadedDylibs[path];
   if (file)
@@ -212,7 +211,7 @@ Optional<DylibFile *> macho::loadDylib(MemoryBufferRef mbref,
     if (!result) {
       error("could not load TAPI file at " + mbref.getBufferIdentifier() +
             ": " + toString(result.takeError()));
-      return {};
+      return nullptr;
     }
     file = make<DylibFile>(**result, umbrella, isBundleLoader);
 
