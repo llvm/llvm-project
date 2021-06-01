@@ -548,6 +548,35 @@ static void instantiateDependentAMDGPUWavesPerEUAttr(
   S.addAMDGPUWavesPerEUAttr(New, Attr, MinExpr, MaxExpr);
 }
 
+// This doesn't take any template parameters, but we have a custom action that
+// needs to happen when the kernel itself is instantiated. We need to run the
+// ItaniumMangler to mark the names required to name this kernel.
+static void instantiateDependentSYCLKernelAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const SYCLKernelAttr &Attr, Decl *New) {
+  // Functions cannot be partially specialized, so if we are being instantiated,
+  // we are obviously a complete specialization. Since this attribute is only
+  // valid on function template declarations, we know that this is a full
+  // instantiation of a kernel.
+  S.AddSYCLKernelLambda(cast<FunctionDecl>(New));
+
+  // Evaluate whether this would change any of the already evaluated
+  // __builtin_sycl_unique_stable_name values.
+  for (auto &Itr : S.Context.SYCLUniqueStableNameEvaluatedValues) {
+    const std::string &CurName = Itr.first->ComputeName(S.Context);
+    if (Itr.second != CurName) {
+      S.Diag(New->getLocation(),
+             diag::err_kernel_invalidates_sycl_unique_stable_name);
+      S.Diag(Itr.first->getLocation(),
+             diag::note_sycl_unique_stable_name_evaluated_here);
+      // Update this so future diagnostics work correctly.
+      Itr.second = CurName;
+    }
+  }
+
+  New->addAttr(Attr.clone(S.getASTContext()));
+}
+
 /// Determine whether the attribute A might be relevent to the declaration D.
 /// If not, we can skip instantiating it. The attribute may or may not have
 /// been instantiated yet.
@@ -720,6 +749,11 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
     if (auto *A = dyn_cast<OwnerAttr>(TmplAttr)) {
       if (!New->hasAttr<OwnerAttr>())
         New->addAttr(A->clone(Context));
+      continue;
+    }
+
+    if (auto *A = dyn_cast<SYCLKernelAttr>(TmplAttr)) {
+      instantiateDependentSYCLKernelAttr(*this, TemplateArgs, *A, New);
       continue;
     }
 

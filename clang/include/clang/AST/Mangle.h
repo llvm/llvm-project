@@ -107,9 +107,6 @@ public:
   virtual bool shouldMangleCXXName(const NamedDecl *D) = 0;
   virtual bool shouldMangleStringLiteral(const StringLiteral *SL) = 0;
 
-  virtual bool isDeviceMangleContext() const { return false; }
-  virtual void setDeviceMangleContext(bool) {}
-
   virtual bool isUniqueInternalLinkageDecl(const NamedDecl *ND) {
     return false;
   }
@@ -173,6 +170,8 @@ public:
 
 class ItaniumMangleContext : public MangleContext {
 public:
+  using DiscriminatorOverrideTy =
+      llvm::Optional<unsigned> (*)(ASTContext &, const NamedDecl *);
   explicit ItaniumMangleContext(ASTContext &C, DiagnosticsEngine &D)
       : MangleContext(C, D, MK_Itanium) {}
 
@@ -195,12 +194,18 @@ public:
 
   virtual void mangleDynamicStermFinalizer(const VarDecl *D, raw_ostream &) = 0;
 
+  // This has to live here, otherwise the CXXNameMangler won't have access to
+  // it.
+  virtual DiscriminatorOverrideTy getDiscriminatorOverride() const = 0;
   static bool classof(const MangleContext *C) {
     return C->getKind() == MK_Itanium;
   }
 
   static ItaniumMangleContext *create(ASTContext &Context,
                                       DiagnosticsEngine &Diags);
+  static ItaniumMangleContext *create(ASTContext &Context,
+                                      DiagnosticsEngine &Diags,
+                                      DiscriminatorOverrideTy Discriminator);
 };
 
 class MicrosoftMangleContext : public MangleContext {
