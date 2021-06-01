@@ -1793,6 +1793,12 @@ public:
   /// Should be used only when getIRStackGuard returns nullptr.
   virtual Function *getSSPStackGuardCheck(const Module &M) const;
 
+  /// \returns true if a constant G_UBFX is legal on the target.
+  virtual bool isConstantUnsignedBitfieldExtactLegal(unsigned Opc, LLT Ty1,
+                                                     LLT Ty2) const {
+    return false;
+  }
+
 protected:
   Value *getDefaultSafeStackPointerLocation(IRBuilder<> &IRB,
                                             bool UseTLS) const;
