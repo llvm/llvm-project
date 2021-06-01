@@ -678,6 +678,7 @@ template <class LP> void Writer::createLoadCommands() {
     in.header->addLoadCommand(make<LCMinVersion>(config->platformInfo));
 
   int64_t dylibOrdinal = 1;
+  DenseMap<StringRef, int64_t> ordinalForInstallName;
   for (InputFile *file : inputFiles) {
     if (auto *dylibFile = dyn_cast<DylibFile>(file)) {
       if (dylibFile->isBundleLoader) {
@@ -701,7 +702,29 @@ template <class LP> void Writer::createLoadCommands() {
            config->deadStripDylibs))
         continue;
 
-      dylibFile->ordinal = dylibOrdinal++;
+      // Several DylibFiles can have the same installName. Only emit a single
+      // load command for that installName and give all these DylibFiles the
+      // same ordinal.
+      // This can happen if:
+      // - a new framework could change its installName to an older
+      //   framework name via an $ld$ symbol depending on platform_version
+      // - symlink (eg libpthread.tbd is a symlink to libSystem.tbd)
+      // - a framework can be linked both explicitly on the linker
+      //   command line and implicitly as a reexport from a different
+      //   framework. The re-export will usually point to the tbd file
+      //   in Foo.framework/Versions/A/Foo.tbd, while the explicit link will
+      //   usually find Foo.framwork/Foo.tbd. These are usually two identical
+      //   but distinct files (concrete example: CFNetwork.framework, reexported
+      //   from CoreServices.framework).
+      // In the first case, *semantically distinct* DylibFiles will have the
+      // same installName.
+      int64_t &ordinal = ordinalForInstallName[dylibFile->dylibName];
+      if (ordinal) {
+        dylibFile->ordinal = ordinal;
+        continue;
+      }
+
+      ordinal = dylibFile->ordinal = dylibOrdinal++;
       LoadCommandType lcType =
           dylibFile->forceWeakImport || dylibFile->refState == RefState::Weak
               ? LC_LOAD_WEAK_DYLIB
