@@ -1717,6 +1717,10 @@ using CosOpLowering = VectorConvertToLLVMPattern<math::CosOp, LLVM::CosOp>;
 using DivFOpLowering = VectorConvertToLLVMPattern<DivFOp, LLVM::FDivOp>;
 using ExpOpLowering = VectorConvertToLLVMPattern<math::ExpOp, LLVM::ExpOp>;
 using Exp2OpLowering = VectorConvertToLLVMPattern<math::Exp2Op, LLVM::Exp2Op>;
+using FPExtOpLowering = VectorConvertToLLVMPattern<FPExtOp, LLVM::FPExtOp>;
+using FPToSIOpLowering = VectorConvertToLLVMPattern<FPToSIOp, LLVM::FPToSIOp>;
+using FPToUIOpLowering = VectorConvertToLLVMPattern<FPToUIOp, LLVM::FPToUIOp>;
+using FPTruncOpLowering = VectorConvertToLLVMPattern<FPTruncOp, LLVM::FPTruncOp>;
 using FloorFOpLowering = VectorConvertToLLVMPattern<FloorFOp, LLVM::FFloorOp>;
 using FmaFOpLowering = VectorConvertToLLVMPattern<FmaFOp, LLVM::FMAOp>;
 using Log10OpLowering =
@@ -1729,6 +1733,7 @@ using NegFOpLowering = VectorConvertToLLVMPattern<NegFOp, LLVM::FNegOp>;
 using OrOpLowering = VectorConvertToLLVMPattern<OrOp, LLVM::OrOp>;
 using PowFOpLowering = VectorConvertToLLVMPattern<math::PowFOp, LLVM::PowOp>;
 using RemFOpLowering = VectorConvertToLLVMPattern<RemFOp, LLVM::FRemOp>;
+using SIToFPOpLowering = VectorConvertToLLVMPattern<SIToFPOp, LLVM::SIToFPOp>;
 using SelectOpLowering = VectorConvertToLLVMPattern<SelectOp, LLVM::SelectOp>;
 using SignExtendIOpLowering =
     VectorConvertToLLVMPattern<SignExtendIOp, LLVM::SExtOp>;
@@ -1744,6 +1749,8 @@ using SinOpLowering = VectorConvertToLLVMPattern<math::SinOp, LLVM::SinOp>;
 using SqrtOpLowering = VectorConvertToLLVMPattern<math::SqrtOp, LLVM::SqrtOp>;
 using SubFOpLowering = VectorConvertToLLVMPattern<SubFOp, LLVM::FSubOp>;
 using SubIOpLowering = VectorConvertToLLVMPattern<SubIOp, LLVM::SubOp>;
+using TruncateIOpLowering = VectorConvertToLLVMPattern<TruncateIOp, LLVM::TruncOp>;
+using UIToFPOpLowering = VectorConvertToLLVMPattern<UIToFPOp, LLVM::UIToFPOp>;
 using UnsignedDivIOpLowering =
     VectorConvertToLLVMPattern<UnsignedDivIOp, LLVM::UDivOp>;
 using UnsignedRemIOpLowering =
@@ -3112,41 +3119,6 @@ struct CmpFOpLowering : public ConvertOpToLLVMPattern<CmpFOp> {
   }
 };
 
-struct SIToFPLowering
-    : public OneToOneConvertToLLVMPattern<SIToFPOp, LLVM::SIToFPOp> {
-  using Super::Super;
-};
-
-struct UIToFPLowering
-    : public OneToOneConvertToLLVMPattern<UIToFPOp, LLVM::UIToFPOp> {
-  using Super::Super;
-};
-
-struct FPExtLowering
-    : public OneToOneConvertToLLVMPattern<FPExtOp, LLVM::FPExtOp> {
-  using Super::Super;
-};
-
-struct FPToSILowering
-    : public OneToOneConvertToLLVMPattern<FPToSIOp, LLVM::FPToSIOp> {
-  using Super::Super;
-};
-
-struct FPToUILowering
-    : public OneToOneConvertToLLVMPattern<FPToUIOp, LLVM::FPToUIOp> {
-  using Super::Super;
-};
-
-struct FPTruncLowering
-    : public OneToOneConvertToLLVMPattern<FPTruncOp, LLVM::FPTruncOp> {
-  using Super::Super;
-};
-
-struct TruncateIOpLowering
-    : public OneToOneConvertToLLVMPattern<TruncateIOp, LLVM::TruncOp> {
-  using Super::Super;
-};
-
 // Base class for LLVM IR lowering terminator operations with successors.
 template <typename SourceOp, typename TargetOp>
 struct OneToOneLLVMTerminatorLowering
@@ -3908,10 +3880,10 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       Log10OpLowering,
       Log1pOpLowering,
       Log2OpLowering,
-      FPExtLowering,
-      FPToSILowering,
-      FPToUILowering,
-      FPTruncLowering,
+      FPExtOpLowering,
+      FPToSIOpLowering,
+      FPToUIOpLowering,
+      FPTruncOpLowering,
       IndexCastOpLowering,
       MulFOpLowering,
       MulIOpLowering,
@@ -3922,7 +3894,7 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       RemFOpLowering,
       ReturnOpLowering,
       RsqrtOpLowering,
-      SIToFPLowering,
+      SIToFPOpLowering,
       SelectOpLowering,
       ShiftLeftOpLowering,
       SignExtendIOpLowering,
@@ -3936,7 +3908,7 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       SubFOpLowering,
       SubIOpLowering,
       TruncateIOpLowering,
-      UIToFPLowering,
+      UIToFPOpLowering,
       UnsignedDivIOpLowering,
       UnsignedRemIOpLowering,
       UnsignedShiftRightOpLowering,
