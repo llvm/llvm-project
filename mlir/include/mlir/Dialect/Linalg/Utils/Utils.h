@@ -184,6 +184,8 @@ struct ProcInfo {
 };
 using ProcInfoCallBackFn = std::function<SmallVector<ProcInfo, 2>(
     OpBuilder &b, Location loc, ArrayRef<Range> parallelLoopRanges)>;
+using OneDimProcInfoCallBackFn =
+    std::function<ProcInfo(OpBuilder &b, Location loc)>;
 
 /// Options that allow distribution of loops generated in Linalg transforms to
 /// processors while generating the loops.
@@ -201,6 +203,11 @@ struct LinalgLoopDistributionOptions {
   /// applied. If the vector is less than the number of `scf.parallel` loops
   /// generated, then no distribution is applied.
   SmallVector<DistributionMethod, 0> distributionMethod = {};
+
+  /// The map keyed by the distribution type that contains callback functions
+  /// that return the Values for processor ID (`procId`), and number of
+  /// processors (`nprocs`) used to execute the parallel loops.
+  DenseMap<StringRef, OneDimProcInfoCallBackFn> procInfoMap;
 };
 
 /// Update the `lb`, `ub` and `step` to get per processor `lb`, `ub` and `step`.
