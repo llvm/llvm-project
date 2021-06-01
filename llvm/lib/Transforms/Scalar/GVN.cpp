@@ -894,17 +894,17 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
                         << "\n\n\n");
     }
   } else if (isCoercedLoadValue()) {
-    LoadInst *Load = getCoercedLoadValue();
-    if (Load->getType() == LoadTy && Offset == 0) {
-      Res = Load;
+    LoadInst *CoercedLoad = getCoercedLoadValue();
+    if (CoercedLoad->getType() == LoadTy && Offset == 0) {
+      Res = CoercedLoad;
     } else {
-      Res = getLoadValueForLoad(Load, Offset, LoadTy, InsertPt, DL);
+      Res = getLoadValueForLoad(CoercedLoad, Offset, LoadTy, InsertPt, DL);
       // We would like to use gvn.markInstructionForDeletion here, but we can't
       // because the load is already memoized into the leader map table that GVN
       // tracks.  It is potentially possible to remove the load from the table,
       // but then there all of the operations based on it would need to be
       // rehashed.  Just leave the dead load around.
-      gvn.getMemDep().removeInstruction(Load);
+      gvn.getMemDep().removeInstruction(CoercedLoad);
       LLVM_DEBUG(dbgs() << "GVN COERCED NONLOCAL LOAD:\nOffset: " << Offset
                         << "  " << *getCoercedLoadValue() << '\n'
                         << *Res << '\n'
