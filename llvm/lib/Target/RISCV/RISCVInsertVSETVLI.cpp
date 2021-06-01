@@ -9,13 +9,17 @@
 // This file implements a function pass that inserts VSETVLI instructions where
 // needed.
 //
-// The pass consists of a single pass over each basic block looking for changes
-// in VL/VTYPE usage that requires a vsetvli to be inserted. We assume the
-// VL/VTYPE values are unknown from predecessors so the first vector instruction
-// will always require a new VSETVLI.
+// This pass consists of 3 phases:
 //
-// TODO: Future enhancements to this pass will take into account VL/VTYPE from
-// predecessors.
+// Phase 1 collects how each basic block affects VL/VTYPE.
+//
+// Phase 2 uses the information from phase 1 to do a data flow analysis to
+// propagate the VL/VTYPE changes through the function. This gives us the
+// VL/VTYPE at the start of each basic block.
+//
+// Phase 3 inserts VSETVLI instructions in each basic block. Information from
+// phase 2 is used to prevent inserting a VSETVLI before the first vector
+// instruction in the block if possible.
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,6 +27,7 @@
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include <queue>
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-insert-vsetvli"
@@ -51,6 +56,12 @@ class VSETVLIInfo {
 
 public:
   VSETVLIInfo() : AVLImm(0) {}
+
+  static VSETVLIInfo getUnknown() {
+    VSETVLIInfo Info;
+    Info.setUnknown();
+    return Info;
+  }
 
   bool isValid() const { return State != Uninitialized; }
   void setUnknown() { State = Unknown; }
@@ -148,11 +159,88 @@ public:
 
     return getAVLReg() == Other.getAVLReg();
   }
+
+  bool operator==(const VSETVLIInfo &Other) const {
+    // Uninitialized is only equal to another Uninitialized.
+    if (!isValid())
+      return !Other.isValid();
+    if (!Other.isValid())
+      return !isValid();
+
+    // Unknown is only equal to another Unknown.
+    if (isUnknown())
+      return Other.isUnknown();
+    if (Other.isUnknown())
+      return isUnknown();
+
+    // Otherwise compare the VTYPE and AVL.
+    return hasSameVTYPE(Other) && hasSameAVL(Other);
+  }
+
+  bool operator!=(const VSETVLIInfo &Other) const { return !(*this == Other); }
+
+  // Calculate the VSETVLIInfo visible to a block assuming this and Other are
+  // both predecessors.
+  VSETVLIInfo intersect(const VSETVLIInfo &Other) const {
+    // If the new value isn't valid, ignore it.
+    if (!Other.isValid())
+      return *this;
+
+    // If this value isn't valid, this must be the first predecessor, use it.
+    if (!isValid())
+      return Other;
+
+    if (*this == Other)
+      return *this;
+
+    // If the configurations don't match, assume unknown.
+    return VSETVLIInfo::getUnknown();
+  }
+
+  // Calculate the VSETVLIInfo visible at the end of the block assuming this
+  // is the predecessor value, and Other is change for this block.
+  VSETVLIInfo merge(const VSETVLIInfo &Other) const {
+    assert(isValid() && "Can only merge with a valid VSETVLInfo");
+
+    // Nothing changed from the predecessor, keep it.
+    if (!Other.isValid())
+      return *this;
+
+    // If the change is compatible with the input, we won't create a VSETVLI
+    // and should keep the predecessor.
+    if (isCompatible(Other))
+      return *this;
+
+    // Otherwise just use whatever is in this block.
+    return Other;
+  }
+};
+
+struct BlockData {
+  // The VSETVLIInfo that represents the net changes to the VL/VTYPE registers
+  // made by this block. Calculated in Phase 1.
+  VSETVLIInfo Change;
+
+  // The VSETVLIInfo that represents the VL/VTYPE settings on exit from this
+  // block. Calculated in Phase 2.
+  VSETVLIInfo Exit;
+
+  // The VSETVLIInfo that represents the VL/VTYPE settings from all predecessor
+  // blocks. Calculated in Phase 2, and used by Phase 3.
+  VSETVLIInfo Pred;
+
+  // Keeps track of whether the block is already in the queue.
+  bool InQueue = false;
+
+  BlockData() {}
 };
 
 class RISCVInsertVSETVLI : public MachineFunctionPass {
   const TargetInstrInfo *TII;
   MachineRegisterInfo *MRI;
+
+  std::vector<BlockData> BlockInfo;
+  std::queue<const MachineBasicBlock *> WorkList;
 
 public:
   static char ID;
@@ -170,10 +258,13 @@ public:
   StringRef getPassName() const override { return RISCV_INSERT_VSETVLI_NAME; }
 
 private:
+  bool needVSETVLI(const VSETVLIInfo &Require, const VSETVLIInfo &CurInfo);
   void insertVSETVLI(MachineBasicBlock &MBB, MachineInstr &MI,
                      const VSETVLIInfo &Info);
 
-  bool emitVSETVLIs(MachineBasicBlock &MBB);
+  bool computeVLVTYPEChanges(const MachineBasicBlock &MBB);
+  void computeIncomingVLVTYPE(const MachineBasicBlock &MBB);
+  void emitVSETVLIs(MachineBasicBlock &MBB);
 };
 
 } // end anonymous namespace
@@ -276,7 +367,7 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB, MachineInstr &MI,
 
 // Return a VSETVLIInfo representing the changes made by this VSETVLI or
 // VSETIVLI instruction.
-VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) {
+static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) {
   VSETVLIInfo NewInfo;
   if (MI.getOpcode() == RISCV::PseudoVSETVLI) {
     Register AVLReg = MI.getOperand(1).getReg();
@@ -292,12 +383,111 @@ VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI) {
   return NewInfo;
 }
 
-bool RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
-  bool MadeChange = false;
+bool RISCVInsertVSETVLI::needVSETVLI(const VSETVLIInfo &Require,
+                                     const VSETVLIInfo &CurInfo) {
+  if (CurInfo.isCompatible(Require))
+    return false;
 
-  // Assume predecessor state is unknown.
+  // We didn't find a compatible value. If our AVL is a virtual register,
+  // it might be defined by a VSET(I)VLI. If it has the same VTYPE we need
+  // and the last VL/VTYPE we observed is the same, we don't need a
+  // VSETVLI here.
+  if (!CurInfo.isUnknown() && Require.hasAVLReg() &&
+      Require.getAVLReg().isVirtual() && Require.hasSameVTYPE(CurInfo)) {
+    if (MachineInstr *DefMI = MRI->getVRegDef(Require.getAVLReg())) {
+      if (DefMI->getOpcode() == RISCV::PseudoVSETVLI ||
+          DefMI->getOpcode() == RISCV::PseudoVSETIVLI) {
+        VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
+        if (DefInfo.hasSameAVL(CurInfo) && DefInfo.hasSameVTYPE(CurInfo))
+          return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+bool RISCVInsertVSETVLI::computeVLVTYPEChanges(const MachineBasicBlock &MBB) {
+  bool HadVectorOp = false;
+
+  BlockData &BBInfo = BlockInfo[MBB.getNumber()];
+  for (const MachineInstr &MI : MBB) {
+    // If this is an explicit VSETVLI or VSETIVLI, update our state.
+    if (MI.getOpcode() == RISCV::PseudoVSETVLI ||
+        MI.getOpcode() == RISCV::PseudoVSETIVLI) {
+      HadVectorOp = true;
+      BBInfo.Change = getInfoForVSETVLI(MI);
+      continue;
+    }
+
+    uint64_t TSFlags = MI.getDesc().TSFlags;
+    if (RISCVII::hasSEWOp(TSFlags)) {
+      HadVectorOp = true;
+
+      VSETVLIInfo NewInfo = computeInfoForInstr(MI, TSFlags, MRI);
+
+      if (!BBInfo.Change.isValid()) {
+        BBInfo.Change = NewInfo;
+      } else {
+        // If this instruction isn't compatible with the previous VL/VTYPE
+        // we need to insert a VSETVLI.
+        if (needVSETVLI(NewInfo, BBInfo.Change))
+          BBInfo.Change = NewInfo;
+      }
+    }
+
+    // If this is something that updates VL/VTYPE that we don't know about, set
+    // the state to unknown.
+    if (MI.isCall() || MI.modifiesRegister(RISCV::VL) ||
+        MI.modifiesRegister(RISCV::VTYPE)) {
+      BBInfo.Change = VSETVLIInfo::getUnknown();
+    }
+  }
+
+  // Initial exit state is whatever change we found in the block.
+  BBInfo.Exit = BBInfo.Change;
+
+  return HadVectorOp;
+}
+
+void RISCVInsertVSETVLI::computeIncomingVLVTYPE(const MachineBasicBlock &MBB) {
+  BlockData &BBInfo = BlockInfo[MBB.getNumber()];
+
+  BBInfo.InQueue = false;
+
+  VSETVLIInfo InInfo;
+  if (MBB.pred_empty()) {
+    // There are no predecessors, so use the default starting status.
+    InInfo.setUnknown();
+  } else {
+    for (MachineBasicBlock *P : MBB.predecessors())
+      InInfo = InInfo.intersect(BlockInfo[P->getNumber()].Exit);
+  }
+
+  // If we don't have any valid predecessor value, wait until we do.
+  if (!InInfo.isValid())
+    return;
+
+  BBInfo.Pred = InInfo;
+
+  VSETVLIInfo TmpStatus = BBInfo.Pred.merge(BBInfo.Change);
+
+  // If the new exit value matches the old exit value, we don't need to revisit
+  // any blocks.
+  if (BBInfo.Exit == TmpStatus)
+    return;
+
+  BBInfo.Exit = TmpStatus;
+
+  // Add the successors to the work list so we can propagate the changed exit
+  // status.
+  for (MachineBasicBlock *S : MBB.successors())
+    if (!BlockInfo[S->getNumber()].InQueue)
+      WorkList.push(S);
+}
+
+void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
   VSETVLIInfo CurInfo;
-  CurInfo.setUnknown();
 
   for (MachineInstr &MI : MBB) {
     // If this is an explicit VSETVLI or VSETIVLI, update our state.
@@ -309,7 +499,6 @@ bool RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
              "Unexpected operands where VL and VTYPE should be");
       MI.getOperand(3).setIsDead(false);
       MI.getOperand(4).setIsDead(false);
-      MadeChange = true;
       CurInfo = getInfoForVSETVLI(MI);
       continue;
     }
@@ -330,47 +519,32 @@ bool RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       MI.addOperand(MachineOperand::CreateReg(RISCV::VTYPE, /*isDef*/ false,
                                               /*isImp*/ true));
 
-      bool NeedVSETVLI = true;
-      if (CurInfo.isValid() && CurInfo.isCompatible(NewInfo))
-        NeedVSETVLI = false;
-
-      // We didn't find a compatible value. If our AVL is a virtual register,
-      // it might be defined by a VSET(I)VLI. If it has the same VTYPE we need
-      // and the last VL/VTYPE we observed is the same, we don't need a
-      // VSETVLI here.
-      if (NeedVSETVLI && !CurInfo.isUnknown() && NewInfo.hasAVLReg() &&
-          NewInfo.getAVLReg().isVirtual() && NewInfo.hasSameVTYPE(CurInfo)) {
-        if (MachineInstr *DefMI = MRI->getVRegDef(NewInfo.getAVLReg())) {
-          if (DefMI->getOpcode() == RISCV::PseudoVSETVLI ||
-              DefMI->getOpcode() == RISCV::PseudoVSETIVLI) {
-            VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
-            if (DefInfo.hasSameAVL(CurInfo) && DefInfo.hasSameVTYPE(CurInfo))
-              NeedVSETVLI = false;
-          }
+      if (!CurInfo.isValid()) {
+        // We haven't found any vector instructions or VL/VTYPE changes yet,
+        // use the predecessor information.
+        assert(BlockInfo[MBB.getNumber()].Pred.isValid() &&
+               "Expected a valid predecessor state.");
+        if (needVSETVLI(NewInfo, BlockInfo[MBB.getNumber()].Pred)) {
+          insertVSETVLI(MBB, MI, NewInfo);
+          CurInfo = NewInfo;
+        }
+      } else {
+        // If this instruction isn't compatible with the previous VL/VTYPE
+        // we need to insert a VSETVLI.
+        if (needVSETVLI(NewInfo, CurInfo)) {
+          insertVSETVLI(MBB, MI, NewInfo);
+          CurInfo = NewInfo;
         }
       }
-
-      // If this instruction isn't compatible with the previous VL/VTYPE
-      // we need to insert a VSETVLI.
-      if (NeedVSETVLI) {
-        insertVSETVLI(MBB, MI, NewInfo);
-        CurInfo = NewInfo;
-      }
-
-      // If we find an instruction we at least changed the operands.
-      MadeChange = true;
     }
+
     // If this is something updates VL/VTYPE that we don't know about, set
     // the state to unknown.
     if (MI.isCall() || MI.modifiesRegister(RISCV::VL) ||
         MI.modifiesRegister(RISCV::VTYPE)) {
-      VSETVLIInfo NewInfo;
-      NewInfo.setUnknown();
-      CurInfo = NewInfo;
+      CurInfo = VSETVLIInfo::getUnknown();
     }
   }
-
-  return MadeChange;
 }
 
 bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
@@ -382,12 +556,41 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   TII = ST.getInstrInfo();
   MRI = &MF.getRegInfo();
 
-  bool Changed = false;
+  assert(BlockInfo.empty() && "Expect empty block infos");
+  BlockInfo.resize(MF.getNumBlockIDs());
 
-  for (MachineBasicBlock &MBB : MF)
-    Changed |= emitVSETVLIs(MBB);
+  bool HaveVectorOp = false;
 
-  return Changed;
+  // Phase 1 - determine how VL/VTYPE are affected by the each block.
+  for (const MachineBasicBlock &MBB : MF)
+    HaveVectorOp |= computeVLVTYPEChanges(MBB);
+
+  // If we didn't find any instructions that need VSETVLI, we're done.
+  if (HaveVectorOp) {
+    // Phase 2 - determine the exit VL/VTYPE from each block. We add all
+    // blocks to the list here, but will also add any that need to be revisited
+    // during Phase 2 processing.
+    for (const MachineBasicBlock &MBB : MF) {
+      WorkList.push(&MBB);
+      BlockInfo[MBB.getNumber()].InQueue = true;
+    }
+    while (!WorkList.empty()) {
+      const MachineBasicBlock &MBB = *WorkList.front();
+      WorkList.pop();
+      computeIncomingVLVTYPE(MBB);
+    }
+
+    // Phase 3 - add any vsetvli instructions needed in the block. Use the
+    // Phase 2 information to avoid adding vsetvlis before the first vector
+    // instruction in the block if the VL/VTYPE is satisfied by its
+    // predecessors.
+    for (MachineBasicBlock &MBB : MF)
+      emitVSETVLIs(MBB);
+  }
+
+  BlockInfo.clear();
+
+  return HaveVectorOp;
 }
 
 /// Returns an instance of the Insert VSETVLI pass.
