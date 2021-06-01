@@ -7722,7 +7722,8 @@ static bool findBuildAggregate_rec(Instruction *LastInsertInst,
     LastInsertInst = dyn_cast<Instruction>(LastInsertInst->getOperand(0));
   } while (LastInsertInst != nullptr &&
            (isa<InsertValueInst>(LastInsertInst) ||
-            isa<InsertElementInst>(LastInsertInst)));
+            isa<InsertElementInst>(LastInsertInst)) &&
+           LastInsertInst->hasOneUse());
   return true;
 }
 
