@@ -788,7 +788,7 @@ ToolChain::UnwindLibType ToolChain::GetUnwindLibType(
   else if (LibName == "platform" || LibName == "") {
     ToolChain::RuntimeLibType RtLibType = GetRuntimeLibType(Args);
     if (RtLibType == ToolChain::RLT_CompilerRT) {
-      if (getTriple().isAndroid())
+      if (getTriple().isAndroid() || getTriple().isOSAIX())
         unwindLibType = ToolChain::UNW_CompilerRT;
       else
         unwindLibType = ToolChain::UNW_None;
