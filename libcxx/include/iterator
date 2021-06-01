@@ -383,6 +383,9 @@ constexpr move_iterator<Iterator> operator+(   // constexpr in C++17
 template <class Iterator>   // constexpr in C++17
 constexpr  move_iterator<Iterator> make_move_iterator(const Iterator& i);
 
+// [default.sentinel], default sentinel
+struct default_sentinel_t;
+inline constexpr default_sentinel_t default_sentinel{};
 
 template <class T, class charT = char, class traits = char_traits<charT>, class Distance = ptrdiff_t>
 class istream_iterator
@@ -554,6 +557,7 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <__functional_base>
 #include <__iterator/advance.h>
 #include <__iterator/concepts.h>
+#include <__iterator/default_sentinel.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/indirect_concepts.h>
 #include <__iterator/iter_move.h>
