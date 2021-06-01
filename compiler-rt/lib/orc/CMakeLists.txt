@@ -20,6 +20,7 @@ set(ORC_IMPL_HEADERS
   error.h
   extensible_rtti.h
   stl_extras.h
+  wrapper_function_utils.h
 )
 
 # Create list of all source files for
