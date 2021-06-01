@@ -42,11 +42,6 @@ static cl::opt<unsigned> UseDerefAtPointSemantics(
     "use-dereferenceable-at-point-semantics", cl::Hidden, cl::init(false),
     cl::desc("Deref attributes and metadata infer facts at definition only"));
 
-
-static cl::opt<unsigned> NonGlobalValueMaxNameSize(
-    "non-global-value-max-name-size", cl::Hidden, cl::init(1024),
-    cl::desc("Maximum size for the name of non-global values."));
-
 //===----------------------------------------------------------------------===//
 //                                Value Class
 //===----------------------------------------------------------------------===//
@@ -322,11 +317,6 @@ void Value::setNameImpl(const Twine &NewName) {
   // Name isn't changing?
   if (getName() == NameRef)
     return;
-
-  // Cap the size of non-GlobalValue names.
-  if (NameRef.size() > NonGlobalValueMaxNameSize && !isa<GlobalValue>(this))
-    NameRef =
-        NameRef.substr(0, std::max(1u, (unsigned)NonGlobalValueMaxNameSize));
 
   assert(!getType()->isVoidTy() && "Cannot assign a name to void values!");
 
