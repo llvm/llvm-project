@@ -255,13 +255,7 @@ struct __iterator_traits_member_pointer_or_arrow_or_void<_Ip> { using type = typ
 // Otherwise, if `decltype(declval<I&>().operator->())` is well-formed, then `pointer` names that
 // type.
 template<class _Ip>
-concept __has_arrow =
-  requires(_Ip& __i) {
-    __i.operator->();
-  };
-
-template<class _Ip>
-  requires __has_arrow<_Ip> && (!__has_member_pointer<_Ip>)
+  requires requires(_Ip& __i) { __i.operator->(); } && (!__has_member_pointer<_Ip>)
 struct __iterator_traits_member_pointer_or_arrow_or_void<_Ip> {
   using type = decltype(declval<_Ip&>().operator->());
 };
