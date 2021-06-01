@@ -487,8 +487,9 @@ func @variable(%arg0: f32) -> () {
 // -----
 
 func @variable_init_normal_constant() -> () {
+  // CHECK: %[[cst:.*]] = spv.Constant
   %0 = spv.Constant 4.0 : f32
-  // CHECK: spv.Variable init(%0) : !spv.ptr<f32, Function>
+  // CHECK: spv.Variable init(%[[cst]]) : !spv.ptr<f32, Function>
   %1 = spv.Variable init(%0) : !spv.ptr<f32, Function>
   return
 }
