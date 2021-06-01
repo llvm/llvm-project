@@ -343,7 +343,8 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
       return failure();
 
   // All shaped operands must be indexed.
-  if (linalgOp.indexing_maps().size() != linalgOp.getNumInputsAndOutputs())
+  if (static_cast<int64_t>(linalgOp.indexing_maps().size()) !=
+      linalgOp.getNumInputsAndOutputs())
     return op->emitOpError("expected the number of indexing_map (")
            << linalgOp.indexing_maps().size()
            << ") to be equal to the number of input/output operands ("
