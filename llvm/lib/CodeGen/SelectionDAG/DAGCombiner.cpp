@@ -546,6 +546,7 @@ namespace {
     SDValue foldSignChangeInBitcast(SDNode *N);
     SDValue foldSelectCCToShiftAnd(const SDLoc &DL, SDValue N0, SDValue N1,
                                    SDValue N2, SDValue N3, ISD::CondCode CC);
+    SDValue foldSextSetcc(SDNode *N);
     SDValue foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
                               const SDLoc &DL);
     SDValue foldSubToUSubSat(EVT DstVT, SDNode *N);
@@ -10771,6 +10772,112 @@ static SDValue foldExtendedSignBitTest(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+SDValue DAGCombiner::foldSextSetcc(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  if (N0.getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  SDValue N00 = N0.getOperand(0);
+  SDValue N01 = N0.getOperand(1);
+  ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
+  EVT VT = N->getValueType(0);
+  EVT N00VT = N00.getValueType();
+  SDLoc DL(N);
+
+  // On some architectures (such as SSE/NEON/etc) the SETCC result type is
+  // the same size as the compared operands. Try to optimize sext(setcc())
+  // if this is the case.
+  if (VT.isVector() && !LegalOperations &&
+      TLI.getBooleanContents(N00VT) ==
+          TargetLowering::ZeroOrNegativeOneBooleanContent) {
+    EVT SVT = getSetCCResultType(N00VT);
+
+    // If we already have the desired type, don't change it.
+    if (SVT != N0.getValueType()) {
+      // We know that the # elements of the results is the same as the
+      // # elements of the compare (and the # elements of the compare result
+      // for that matter).  Check to see that they are the same size.  If so,
+      // we know that the element size of the sext'd result matches the
+      // element size of the compare operands.
+      if (VT.getSizeInBits() == SVT.getSizeInBits())
+        return DAG.getSetCC(DL, VT, N00, N01, CC);
+
+      // If the desired elements are smaller or larger than the source
+      // elements, we can use a matching integer vector type and then
+      // truncate/sign extend.
+      EVT MatchingVecType = N00VT.changeVectorElementTypeToInteger();
+      if (SVT == MatchingVecType) {
+        SDValue VsetCC = DAG.getSetCC(DL, MatchingVecType, N00, N01, CC);
+        return DAG.getSExtOrTrunc(VsetCC, DL, VT);
+      }
+    }
+
+    // Try to eliminate the sext of a setcc by zexting the compare operands.
+    // TODO: Handle signed compare by sexting the ops.
+    if (!ISD::isSignedIntSetCC(CC) && N0.hasOneUse() &&
+        TLI.isOperationLegalOrCustom(ISD::SETCC, VT) &&
+        !TLI.isOperationLegalOrCustom(ISD::SETCC, SVT)) {
+      // We have an unsupported narrow vector compare op that would be legal
+      // if extended to the destination type. See if the compare operands
+      // can be freely extended to the destination type.
+      auto IsFreeToZext = [&](SDValue V) {
+        if (isConstantOrConstantVector(V, /*NoOpaques*/ true))
+          return true;
+
+        // Match a simple, non-extended load that can be converted to a
+        // legal zext-load.
+        // TODO: Handle more than one use if the other uses are free to zext.
+        // TODO: Allow widening of an existing zext-load?
+        return ISD::isNON_EXTLoad(V.getNode()) &&
+               ISD::isUNINDEXEDLoad(V.getNode()) &&
+               cast<LoadSDNode>(V)->isSimple() &&
+               TLI.isLoadExtLegal(ISD::ZEXTLOAD, VT, V.getValueType()) &&
+               V.hasOneUse();
+      };
+
+      if (IsFreeToZext(N00) && IsFreeToZext(N01)) {
+        SDValue Ext0 = DAG.getZExtOrTrunc(N00, DL, VT);
+        SDValue Ext1 = DAG.getZExtOrTrunc(N01, DL, VT);
+        return DAG.getSetCC(DL, VT, Ext0, Ext1, CC);
+      }
+    }
+  }
+
+  // sext(setcc x, y, cc) -> (select (setcc x, y, cc), T, 0)
+  // Here, T can be 1 or -1, depending on the type of the setcc and
+  // getBooleanContents().
+  unsigned SetCCWidth = N0.getScalarValueSizeInBits();
+
+  // To determine the "true" side of the select, we need to know the high bit
+  // of the value returned by the setcc if it evaluates to true.
+  // If the type of the setcc is i1, then the true case of the select is just
+  // sext(i1 1), that is, -1.
+  // If the type of the setcc is larger (say, i8) then the value of the high
+  // bit depends on getBooleanContents(), so ask TLI for a real "true" value
+  // of the appropriate width.
+  SDValue ExtTrueVal = (SetCCWidth == 1)
+                           ? DAG.getAllOnesConstant(DL, VT)
+                           : DAG.getBoolConstant(true, DL, VT, N00VT);
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+  if (SDValue SCC = SimplifySelectCC(DL, N00, N01, ExtTrueVal, Zero, CC, true))
+    return SCC;
+
+  if (!VT.isVector() && !TLI.convertSelectOfConstantsToMath(VT)) {
+    EVT SetCCVT = getSetCCResultType(N00VT);
+    // Don't do this transform for i1 because there's a select transform
+    // that would reverse it.
+    // TODO: We should not do this transform at all without a target hook
+    // because a sext is likely cheaper than a select?
+    if (SetCCVT.getScalarSizeInBits() != 1 &&
+        (!LegalOperations || TLI.isOperationLegal(ISD::SETCC, N00VT))) {
+      SDValue SetCC = DAG.getSetCC(DL, SetCCVT, N00, N01, CC);
+      return DAG.getSelect(DL, VT, SetCC, ExtTrueVal, Zero);
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
@@ -10902,106 +11009,8 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   if (SDValue V = foldExtendedSignBitTest(N, DAG, LegalOperations))
     return V;
 
-  if (N0.getOpcode() == ISD::SETCC) {
-    SDValue N00 = N0.getOperand(0);
-    SDValue N01 = N0.getOperand(1);
-    ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
-    EVT N00VT = N00.getValueType();
-
-    // sext(setcc) -> sext_in_reg(vsetcc) for vectors.
-    // Only do this before legalize for now.
-    if (VT.isVector() && !LegalOperations &&
-        TLI.getBooleanContents(N00VT) ==
-            TargetLowering::ZeroOrNegativeOneBooleanContent) {
-      // On some architectures (such as SSE/NEON/etc) the SETCC result type is
-      // of the same size as the compared operands. Only optimize sext(setcc())
-      // if this is the case.
-      EVT SVT = getSetCCResultType(N00VT);
-
-      // If we already have the desired type, don't change it.
-      if (SVT != N0.getValueType()) {
-        // We know that the # elements of the results is the same as the
-        // # elements of the compare (and the # elements of the compare result
-        // for that matter).  Check to see that they are the same size.  If so,
-        // we know that the element size of the sext'd result matches the
-        // element size of the compare operands.
-        if (VT.getSizeInBits() == SVT.getSizeInBits())
-          return DAG.getSetCC(DL, VT, N00, N01, CC);
-
-        // If the desired elements are smaller or larger than the source
-        // elements, we can use a matching integer vector type and then
-        // truncate/sign extend.
-        EVT MatchingVecType = N00VT.changeVectorElementTypeToInteger();
-        if (SVT == MatchingVecType) {
-          SDValue VsetCC = DAG.getSetCC(DL, MatchingVecType, N00, N01, CC);
-          return DAG.getSExtOrTrunc(VsetCC, DL, VT);
-        }
-      }
-
-      // Try to eliminate the sext of a setcc by zexting the compare operands.
-      // TODO: Handle signed compare by sexting the ops.
-      if (!ISD::isSignedIntSetCC(CC) && N0.hasOneUse() &&
-          TLI.isOperationLegalOrCustom(ISD::SETCC, VT) &&
-          !TLI.isOperationLegalOrCustom(ISD::SETCC, SVT)) {
-        // We have an unsupported narrow vector compare op that would be legal
-        // if extended to the destination type. See if the compare operands
-        // can be freely extended to the destination type.
-        auto IsFreeToZext = [&](SDValue V) {
-          if (isConstantOrConstantVector(V, /*NoOpaques*/ true))
-            return true;
-
-          // Match a simple, non-extended load that can be converted to a
-          // legal zext-load.
-          // TODO: Handle more than one use if the other uses are free to zext.
-          // TODO: Allow widening of an existing zext-load?
-          return ISD::isNON_EXTLoad(V.getNode()) &&
-                 ISD::isUNINDEXEDLoad(V.getNode()) &&
-                 cast<LoadSDNode>(V)->isSimple() &&
-                 TLI.isLoadExtLegal(ISD::ZEXTLOAD, VT, V.getValueType()) &&
-                 V.hasOneUse();
-        };
-
-        if (IsFreeToZext(N00) && IsFreeToZext(N01)) {
-          SDValue Ext0 = DAG.getZExtOrTrunc(N00, DL, VT);
-          SDValue Ext1 = DAG.getZExtOrTrunc(N01, DL, VT);
-          return DAG.getSetCC(DL, VT, Ext0, Ext1, CC);
-        }
-      }
-    }
-
-    // sext(setcc x, y, cc) -> (select (setcc x, y, cc), T, 0)
-    // Here, T can be 1 or -1, depending on the type of the setcc and
-    // getBooleanContents().
-    unsigned SetCCWidth = N0.getScalarValueSizeInBits();
-
-    // To determine the "true" side of the select, we need to know the high bit
-    // of the value returned by the setcc if it evaluates to true.
-    // If the type of the setcc is i1, then the true case of the select is just
-    // sext(i1 1), that is, -1.
-    // If the type of the setcc is larger (say, i8) then the value of the high
-    // bit depends on getBooleanContents(), so ask TLI for a real "true" value
-    // of the appropriate width.
-    SDValue ExtTrueVal = (SetCCWidth == 1)
-                             ? DAG.getAllOnesConstant(DL, VT)
-                             : DAG.getBoolConstant(true, DL, VT, N00VT);
-    SDValue Zero = DAG.getConstant(0, DL, VT);
-    if (SDValue SCC =
-            SimplifySelectCC(DL, N00, N01, ExtTrueVal, Zero, CC, true))
-      return SCC;
-
-    if (!VT.isVector() && !TLI.convertSelectOfConstantsToMath(VT)) {
-      EVT SetCCVT = getSetCCResultType(N00VT);
-      // Don't do this transform for i1 because there's a select transform
-      // that would reverse it.
-      // TODO: We should not do this transform at all without a target hook
-      // because a sext is likely cheaper than a select?
-      if (SetCCVT.getScalarSizeInBits() != 1 &&
-          (!LegalOperations || TLI.isOperationLegal(ISD::SETCC, N00VT))) {
-        SDValue SetCC = DAG.getSetCC(DL, SetCCVT, N00, N01, CC);
-        return DAG.getSelect(DL, VT, SetCC, ExtTrueVal, Zero);
-      }
-    }
-  }
+  if (SDValue V = foldSextSetcc(N))
+    return V;
 
   // fold (sext x) -> (zext x) if the sign bit is known zero.
   if ((!LegalOperations || TLI.isOperationLegal(ISD::ZERO_EXTEND, VT)) &&
