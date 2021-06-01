@@ -682,6 +682,8 @@ PreambleBounds Lexer::ComputePreamble(StringRef Buffer,
               .Case("ifdef", PDK_Skipped)
               .Case("ifndef", PDK_Skipped)
               .Case("elif", PDK_Skipped)
+              .Case("elifdef", PDK_Skipped)
+              .Case("elifndef", PDK_Skipped)
               .Case("else", PDK_Skipped)
               .Case("endif", PDK_Skipped)
               .Default(PDK_Unknown);

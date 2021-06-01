@@ -44,6 +44,8 @@ enum TokenKind {
   pp_ifdef,
   pp_ifndef,
   pp_elif,
+  pp_elifdef,
+  pp_elifndef,
   pp_else,
   pp_endif,
   decl_at_import,
