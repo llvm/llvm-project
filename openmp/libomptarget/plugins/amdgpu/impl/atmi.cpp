@@ -11,13 +11,6 @@
 #include <memory>
 
 /*
- * Machine Info
- */
-atmi_machine_t *atmi_machine_get_info() {
-  return core::Runtime::GetMachineInfo();
-}
-
-/*
  * Data
  */
 
