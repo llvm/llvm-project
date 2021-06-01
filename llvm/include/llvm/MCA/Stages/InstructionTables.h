@@ -27,7 +27,7 @@ namespace mca {
 
 class InstructionTables final : public Stage {
   const MCSchedModel &SM;
-  SmallVector<std::pair<ResourceRef, ResourceCycles>, 4> UsedResources;
+  SmallVector<ResourceUse, 4> UsedResources;
   SmallVector<uint64_t, 8> Masks;
 
 public:

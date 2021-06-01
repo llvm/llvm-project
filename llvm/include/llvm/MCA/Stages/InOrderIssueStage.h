@@ -18,8 +18,6 @@
 #include "llvm/MCA/SourceMgr.h"
 #include "llvm/MCA/Stages/Stage.h"
 
-#include <queue>
-
 namespace llvm {
 struct MCSchedModel;
 class MCSubtargetInfo;
@@ -27,6 +25,45 @@ class MCSubtargetInfo;
 namespace mca {
 class RegisterFile;
 class ResourceManager;
+
+struct StallInfo {
+  enum class StallKind { DEFAULT, REGISTER_DEPS, DISPATCH, DELAY };
+
+  InstRef IR;
+  unsigned CyclesLeft;
+  StallKind Kind;
+
+  StallInfo() : IR(), CyclesLeft(), Kind(StallKind::DEFAULT) {}
+
+  bool isValid() const { return (bool)IR; }
+
+  StallKind getStallKind() const { return Kind; }
+  unsigned getCyclesLeft() const { return CyclesLeft; }
+  const InstRef &getInstruction() const { return IR; }
+  InstRef &getInstruction() { return IR; }
+
+  void clear() {
+    IR.invalidate();
+    CyclesLeft = 0;
+    Kind = StallKind::DEFAULT;
+  }
+
+  void update(const InstRef &Inst, unsigned Cycles, StallKind SK) {
+    IR = Inst;
+    CyclesLeft = Cycles;
+    Kind = SK;
+  }
+
+  void cycleEnd() {
+    if (!isValid())
+      return;
+
+    if (!CyclesLeft)
+      return;
+
+    --CyclesLeft;
+  }
+};
 
 class InOrderIssueStage final : public Stage {
   const MCSchedModel &SM;
@@ -40,10 +77,7 @@ class InOrderIssueStage final : public Stage {
   /// Number of instructions issued in the current cycle.
   unsigned NumIssued;
 
-  /// If an instruction cannot execute due to an unmet register or resource
-  /// dependency, the it is stalled for StallCyclesLeft.
-  InstRef StalledInst;
-  unsigned StallCyclesLeft;
+  StallInfo SI;
 
   /// Instruction that is issued in more than 1 cycle.
   InstRef CarriedOver;
@@ -61,19 +95,31 @@ class InOrderIssueStage final : public Stage {
   InOrderIssueStage(const InOrderIssueStage &Other) = delete;
   InOrderIssueStage &operator=(const InOrderIssueStage &Other) = delete;
 
-  /// If IR has an unmet register or resource dependency, canExecute returns
-  /// false. StallCycles is set to the number of cycles left before the
-  /// instruction can be issued.
-  bool canExecute(const InstRef &IR, unsigned *StallCycles) const;
+  /// Returns true if IR can execute during this cycle.
+  /// In case of stall, it updates SI with information about the stalled
+  /// instruction and the stall reason.
+  bool canExecute(const InstRef &IR);
 
-  /// Issue the instruction, or update StallCycles if IR is stalled.
-  Error tryIssue(InstRef &IR, unsigned *StallCycles);
+  /// Issue the instruction, or update the StallInfo.
+  Error tryIssue(InstRef &IR);
 
   /// Update status of instructions from IssuedInst.
   void updateIssuedInst();
 
   /// Continue to issue the CarriedOver instruction.
   void updateCarriedOver();
+
+  /// Notifies a stall event to the Stage listener. Stall information is
+  /// obtained from the internal StallInfo field.
+  void notifyStallEvent();
+
+  void notifyInstructionIssued(const InstRef &IR,
+                               ArrayRef<ResourceUse> UsedRes);
+  void notifyInstructionDispatched(const InstRef &IR, unsigned Ops,
+                                   ArrayRef<unsigned> UsedRegs);
+  void notifyInstructionExecuted(const InstRef &IR);
+  void notifyInstructionRetired(const InstRef &IR,
+                                ArrayRef<unsigned> FreedRegs);
 
   /// Retire instruction once it is executed.
   void retireInstruction(InstRef &IR);
@@ -82,8 +128,7 @@ public:
   InOrderIssueStage(RegisterFile &PRF, const MCSchedModel &SM,
                     const MCSubtargetInfo &STI)
       : SM(SM), STI(STI), PRF(PRF), RM(std::make_unique<ResourceManager>(SM)),
-        NumIssued(0), StallCyclesLeft(0), CarryOver(0), Bandwidth(0),
-        LastWriteBackCycle(0) {}
+        NumIssued(), SI(), CarryOver(), Bandwidth(), LastWriteBackCycle() {}
 
   bool isAvailable(const InstRef &) const override;
   bool hasWorkToComplete() const override;
