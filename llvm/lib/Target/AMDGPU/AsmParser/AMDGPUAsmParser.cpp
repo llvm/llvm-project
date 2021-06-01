@@ -1546,6 +1546,7 @@ private:
   bool validateMAIAccWrite(const MCInst &Inst, const OperandVector &Operands);
   bool validateAGPRLdSt(const MCInst &Inst) const;
   bool validateVGPRAlign(const MCInst &Inst) const;
+  bool validateGWS(const MCInst &Inst, const OperandVector &Operands);
   bool validateDivScale(const MCInst &Inst);
   bool validateCoherencyBits(const MCInst &Inst, const OperandVector &Operands,
                              const SMLoc &IDLoc);
@@ -4108,6 +4109,34 @@ bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
   return true;
 }
 
+// gfx90a has an undocumented limitation:
+// DS_GWS opcodes must use even aligned registers.
+bool AMDGPUAsmParser::validateGWS(const MCInst &Inst,
+                                  const OperandVector &Operands) {
+  if (!getFeatureBits()[AMDGPU::FeatureGFX90AInsts])
+    return true;
+
+  int Opc = Inst.getOpcode();
+  if (Opc != AMDGPU::DS_GWS_INIT_vi && Opc != AMDGPU::DS_GWS_BARRIER_vi &&
+      Opc != AMDGPU::DS_GWS_SEMA_BR_vi)
+    return true;
+
+  const MCRegisterInfo *MRI = getMRI();
+  const MCRegisterClass &VGRP32 = MRI->getRegClass(AMDGPU::VGPR_32RegClassID);
+  int Data0Pos =
+      AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::data0);
+  assert(Data0Pos != -1);
+  auto Reg = Inst.getOperand(Data0Pos).getReg();
+  auto RegIdx = Reg - (VGRP32.contains(Reg) ? AMDGPU::VGPR0 : AMDGPU::AGPR0);
+  if (RegIdx & 1) {
+    SMLoc RegLoc = getRegLoc(Reg, Operands);
+    Error(RegLoc, "vgpr must be even aligned");
+    return false;
+  }
+
+  return true;
+}
+
 bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
                                             const OperandVector &Operands,
                                             const SMLoc &IDLoc) {
@@ -4249,6 +4278,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateVGPRAlign(Inst)) {
     Error(IDLoc,
       "invalid register class: vgpr tuples must be 64 bit aligned");
+    return false;
+  }
+  if (!validateGWS(Inst, Operands)) {
     return false;
   }
 
