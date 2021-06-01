@@ -282,7 +282,6 @@ function(lldb_add_post_install_steps_darwin name install_prefix)
   endif()
 
   # Generate dSYM
-  # TODO: Add an option to skip dSYM creation
   if(NOT ${name} STREQUAL "repl_swift")
     set(dsym_name ${output_name}.dSYM)
     if(is_framework)
