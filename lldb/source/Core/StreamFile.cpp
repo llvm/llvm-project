@@ -10,7 +10,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/Log.h"
 
-#include <stdio.h>
+#include <cstdio>
 
 using namespace lldb;
 using namespace lldb_private;

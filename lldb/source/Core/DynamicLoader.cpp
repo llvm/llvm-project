@@ -24,7 +24,7 @@
 
 #include <memory>
 
-#include <assert.h>
+#include <cassert>
 
 using namespace lldb;
 using namespace lldb_private;

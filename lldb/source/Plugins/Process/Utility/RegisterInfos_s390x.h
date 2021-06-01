@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stddef.h>
+#include <cstddef>
 
 #include "llvm/Support/Compiler.h"
 

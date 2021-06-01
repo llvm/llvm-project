@@ -35,8 +35,8 @@
 #include <memory>
 #include <utility>
 
-#include <assert.h>
-#include <stdio.h>
+#include <cassert>
+#include <cstdio>
 
 namespace lldb_private {
 class ExecutionContext;

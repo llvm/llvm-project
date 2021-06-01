@@ -18,8 +18,8 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 namespace lldb_private {
 class DataExtractor;

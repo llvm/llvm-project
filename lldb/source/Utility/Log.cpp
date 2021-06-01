@@ -25,7 +25,7 @@
 #include <mutex>
 #include <utility>
 
-#include <assert.h>
+#include <cassert>
 #if defined(_WIN32)
 #include <process.h>
 #else

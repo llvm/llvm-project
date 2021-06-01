@@ -17,7 +17,7 @@
 
 #include <algorithm>
 
-#include <ctype.h>
+#include <cctype>
 
 using namespace lldb;
 using namespace lldb_private;

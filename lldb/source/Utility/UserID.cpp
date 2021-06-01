@@ -9,7 +9,7 @@
 #include "lldb/Utility/UserID.h"
 #include "lldb/Utility/Stream.h"
 
-#include <inttypes.h>
+#include <cinttypes>
 
 using namespace lldb;
 using namespace lldb_private;

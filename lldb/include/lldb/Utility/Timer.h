@@ -12,7 +12,7 @@
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Chrono.h"
 #include <atomic>
-#include <stdint.h>
+#include <cstdint>
 
 namespace lldb_private {
 class Stream;

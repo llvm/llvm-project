@@ -32,10 +32,10 @@
 #include "llvm/Support/Chrono.h"
 
 #include <atomic>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <mutex>
-#include <stddef.h>
-#include <stdint.h>
 #include <string>
 #include <vector>
 

@@ -10,7 +10,7 @@
 
 #include <string>
 
-#include <stdint.h>
+#include <cstdint>
 #include <tuple>
 
 using namespace lldb_private;

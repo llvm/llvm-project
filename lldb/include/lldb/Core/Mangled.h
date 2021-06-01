@@ -17,8 +17,8 @@
 
 #include "llvm/ADT/StringRef.h"
 
+#include <cstddef>
 #include <memory>
-#include <stddef.h>
 
 namespace lldb_private {
 

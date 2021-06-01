@@ -18,7 +18,7 @@
 #include "lldb/lldb-types.h"
 #include "llvm/Support/ErrorHandling.h"
 
-#include <assert.h>
+#include <cassert>
 #include <memory>
 
 namespace lldb_private {

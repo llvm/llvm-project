@@ -8,7 +8,7 @@
 
 #include "lldb/Expression/DWARFExpression.h"
 
-#include <inttypes.h>
+#include <cinttypes>
 
 #include <vector>
 

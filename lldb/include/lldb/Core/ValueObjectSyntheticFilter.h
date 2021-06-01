@@ -20,7 +20,7 @@
 #include <cstdint>
 #include <memory>
 
-#include <stddef.h>
+#include <cstddef>
 
 namespace lldb_private {
 class Declaration;

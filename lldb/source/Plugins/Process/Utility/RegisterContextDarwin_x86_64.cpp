@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <inttypes.h>
-#include <stdarg.h>
-#include <stddef.h>
+#include <cinttypes>
+#include <cstdarg>
+#include <cstddef>
 
 #include <memory>
 

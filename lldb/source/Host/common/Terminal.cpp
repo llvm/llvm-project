@@ -12,8 +12,8 @@
 #include "lldb/Host/PosixApi.h"
 #include "llvm/ADT/STLExtras.h"
 
+#include <csignal>
 #include <fcntl.h>
-#include <signal.h>
 
 #if LLDB_ENABLE_TERMIOS
 #include <termios.h>

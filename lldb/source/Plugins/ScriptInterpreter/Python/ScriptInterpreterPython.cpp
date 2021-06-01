@@ -45,10 +45,10 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
 
+#include <cstdio>
+#include <cstdlib>
 #include <memory>
 #include <mutex>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string>
 
 using namespace lldb;

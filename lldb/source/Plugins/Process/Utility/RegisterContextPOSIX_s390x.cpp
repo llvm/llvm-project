@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cerrno>
+#include <cstdint>
 #include <cstring>
-#include <errno.h>
-#include <stdint.h>
 
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"

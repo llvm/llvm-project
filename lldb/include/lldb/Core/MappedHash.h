@@ -9,8 +9,8 @@
 #ifndef LLDB_CORE_MAPPEDHASH_H
 #define LLDB_CORE_MAPPEDHASH_H
 
-#include <assert.h>
-#include <stdint.h>
+#include <cassert>
+#include <cstdint>
 
 #include <algorithm>
 #include <functional>

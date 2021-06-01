@@ -8,8 +8,8 @@
 
 #include "lldb/Utility/StringExtractorGDBRemote.h"
 
-#include <ctype.h>
-#include <string.h>
+#include <cctype>
+#include <cstring>
 
 constexpr lldb::pid_t StringExtractorGDBRemote::AllProcesses;
 constexpr lldb::tid_t StringExtractorGDBRemote::AllThreads;

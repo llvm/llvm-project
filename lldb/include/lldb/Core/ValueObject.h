@@ -38,8 +38,8 @@
 #include <string>
 #include <utility>
 
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 
 namespace lldb_private {
 class Declaration;

@@ -13,9 +13,9 @@
 
 #include "llvm/Support/Threading.h"
 
-#include <limits.h>
-#include <stdio.h>
-#include <string.h>
+#include <climits>
+#include <cstdio>
+#include <cstring>
 #include <sys/utsname.h>
 #include <unistd.h>
 

@@ -26,7 +26,7 @@
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #endif // LLDB_ENABLE_SWIFT
 
-#include <string.h>
+#include <cstring>
 namespace lldb_private {
 class Declaration;
 }

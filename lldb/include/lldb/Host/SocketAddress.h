@@ -9,7 +9,7 @@
 #ifndef LLDB_HOST_SOCKETADDRESS_H
 #define LLDB_HOST_SOCKETADDRESS_H
 
-#include <stdint.h>
+#include <cstdint>
 
 #ifdef _WIN32
 #include "lldb/Host/windows/windows.h"

@@ -9,7 +9,7 @@
 #include "lldb/API/SBProcess.h"
 #include "SBReproducerPrivate.h"
 
-#include <inttypes.h>
+#include <cinttypes>
 
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"

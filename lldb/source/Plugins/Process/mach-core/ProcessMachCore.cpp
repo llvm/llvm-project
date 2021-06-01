@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <errno.h>
-#include <stdlib.h>
+#include <cerrno>
+#include <cstdlib>
 
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Threading.h"

@@ -12,7 +12,7 @@
 #include "lldb/API/SBData.h"
 #include "lldb/API/SBDefines.h"
 
-#include <stdio.h>
+#include <cstdio>
 
 // There's a lot to be fixed here, but need to wait for underlying insn
 // implementation to be revised & settle down first.

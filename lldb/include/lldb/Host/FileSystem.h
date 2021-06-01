@@ -21,8 +21,8 @@
 
 #include "lldb/lldb-types.h"
 
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
 #include <sys/stat.h>
 
 namespace lldb_private {

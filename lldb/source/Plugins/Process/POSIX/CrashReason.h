@@ -11,7 +11,7 @@
 
 #include "lldb/lldb-types.h"
 
-#include <signal.h>
+#include <csignal>
 
 #include <string>
 
