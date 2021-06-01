@@ -25,3 +25,25 @@ subroutine pass_assumed_len_char_array(carray)
   ! CHECK: fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[descriptor]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
   print *, carray
 end
+
+! CHECK-LABEL: func @_QPpass_array_slice_read
+! CHECK-SAME: %[[x:.*]]: !fir.box<!fir.array<?xf32>>
+subroutine pass_array_slice_read(x)
+  real :: x(:)
+  read(5, *) x(101:200:2) 
+  ! CHECK: %[[slice:.*]] = fir.slice %c101{{.*}}, %c200{{.*}}, %c2{{.*}} : (i64, i64, i64) -> !fir.slice<1>
+  ! CHECK: %[[box:.*]] = fir.rebox %[[x]] [%[[slice]]] : (!fir.box<!fir.array<?xf32>>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
+  ! CHECK: %[[box_cast:.*]] = fir.convert %[[box]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
+  ! CHECK: fir.call @_FortranAioInputDescriptor(%{{.*}}, %[[box_cast]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
+end 
+
+! CHECK-LABEL: func @_QPpass_array_slice_write
+! CHECK-SAME: %[[x:.*]]: !fir.box<!fir.array<?xf32>>
+subroutine pass_array_slice_write(x)
+  real :: x(:)
+  write(1, rec=1) x(101:200:2) 
+  ! CHECK: %[[slice:.*]] = fir.slice %c101{{.*}}, %c200{{.*}}, %c2{{.*}} : (i64, i64, i64) -> !fir.slice<1>
+  ! CHECK: %[[box:.*]] = fir.rebox %[[x]] [%[[slice]]] : (!fir.box<!fir.array<?xf32>>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
+  ! CHECK: %[[box_cast:.*]] = fir.convert %[[box]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
+  ! CHECK: fir.call @_FortranAioOutputDescriptor(%{{.*}}, %[[box_cast]]) : (!fir.ref<i8>, !fir.box<none>) -> i1
+end 

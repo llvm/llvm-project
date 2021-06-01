@@ -90,7 +90,11 @@ public:
   // Expressions
   //===--------------------------------------------------------------------===//
 
-  /// Generate the address of the location holding the expression, someExpr
+  /// Generate the address of the location holding the expression, someExpr.
+  /// If SomeExpr is a Designator that is not compile time contiguous, the
+  /// address returned is the one of a contiguous temporary storage holding the
+  /// expression value. The clean-up for this temporary is added to the
+  /// StatementContext.
   virtual fir::ExtendedValue genExprAddr(const SomeExpr &, StatementContext &,
                                          mlir::Location *loc = nullptr) = 0;
   /// Generate the address of the location holding the expression, someExpr
@@ -109,6 +113,12 @@ public:
                                   mlir::Location loc) {
     return genExprValue(*someExpr, stmtCtx, &loc);
   }
+
+  /// Generate or get a fir.box describing the expression. If SomeExpr is
+  /// a Designator, the fir.box describes an entity over the Designator base
+  /// storage without making a temporary.
+  virtual mlir::Value genExprBox(const SomeExpr &, StatementContext &,
+                                 mlir::Location) = 0;
 
   /// Generate the address of the box describing the variable designated
   /// by the expression. The expression must be an allocatable or pointer

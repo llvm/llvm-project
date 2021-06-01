@@ -66,12 +66,10 @@ subroutine sub(a)
   ! CHECK-DAG: %[[one:.*]] = constant 1 : i64
   ! CHECK-DAG: %[[five:.*]] = constant 5 : i64
   ! CHECK-DAG: %[[two:.*]] = constant 2 : i64
-  ! CHECK-DAG: %[[three:.*]] = constant 3 : index
-  ! CHECK: %[[shape:.*]] = fir.shape %[[ten]] :
-  ! CHECK: %[[slice:.*]] = fir.slice %[[one]], %[[five]], %[[two]] :
-  ! CHECK: %[[allocmem:.*]] = fir.allocmem !fir.array<3x!fir.char<1>>
-  ! CHECK: %[[shape3:.*]] = fir.shape %[[three]] :
-  ! CHECK: fir.array_coor %{{.*}}(%[[shape]]) [%[[slice]]] %
-  ! CHECK: fir.embox %[[allocmem]](%[[shape3]]) : (!fir.heap<!fir.array<3x!fir.char<1>>>, !fir.shape<1>) -> !fir.box<!fir.array<3x!fir.char<1>>>
+  ! CHECK: %[[unboxchar:.*]]:2 = fir.unboxchar
+  ! CHECK: %[[a_addr:.*]] = fir.convert %[[unboxchar]]#0 :
+  ! CHECK-DAG: %[[shape10:.*]] = fir.shape %[[ten]] :
+  ! CHECK-DAG: %[[slice:.*]] = fir.slice %[[one]], %[[five]], %[[two]] :
+  ! CHECK: fir.embox %[[a_addr]](%[[shape10]]) [%[[slice]]] : (!fir.ref<!fir.array<10x!fir.char<1>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<?x!fir.char<1>>>
   print *, "a = ", a(1:5:2)
 end subroutine sub
