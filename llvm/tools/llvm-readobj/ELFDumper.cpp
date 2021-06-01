@@ -298,6 +298,13 @@ protected:
 
   std::vector<GroupSection> getGroups();
 
+  // Returns the function symbol index for the given address. Matches the
+  // symbol's section with FunctionSec when specified.
+  // Returns None if no function symbol can be found for the address or in case
+  // it is not defined in the specified section.
+  Optional<uint32_t>
+  getSymbolIndexForFunctionAddress(uint64_t SymValue,
+                                   Optional<const Elf_Shdr *> FunctionSec);
   bool printFunctionStackSize(uint64_t SymValue,
                               Optional<const Elf_Shdr *> FunctionSec,
                               const Elf_Shdr &StackSizeSec, DataExtractor Data,
@@ -353,6 +360,7 @@ protected:
   const Elf_Shdr *DotAddrsigSec = nullptr;
   DenseMap<const Elf_Shdr *, ArrayRef<Elf_Word>> ShndxTables;
   Optional<uint64_t> SONameOffset;
+  Optional<DenseMap<uint64_t, std::vector<uint32_t>>> AddressToIndexMap;
 
   const Elf_Shdr *SymbolVersionSection = nullptr;   // .gnu.version
   const Elf_Shdr *SymbolVersionNeedSection = nullptr; // .gnu.version_r
@@ -5703,64 +5711,82 @@ template <class ELFT> void GNUELFDumper<ELFT>::printDependentLibs() {
 }
 
 template <class ELFT>
-bool ELFDumper<ELFT>::printFunctionStackSize(
-    uint64_t SymValue, Optional<const Elf_Shdr *> FunctionSec,
-    const Elf_Shdr &StackSizeSec, DataExtractor Data, uint64_t *Offset) {
-  uint32_t FuncSymIndex = 0;
-  if (this->DotSymtabSec) {
-    if (Expected<Elf_Sym_Range> SymsOrError = Obj.symbols(this->DotSymtabSec)) {
-      uint32_t Index = (uint32_t)-1;
-      for (const Elf_Sym &Sym : *SymsOrError) {
-        ++Index;
+Optional<uint32_t> ELFDumper<ELFT>::getSymbolIndexForFunctionAddress(
+    uint64_t SymValue, Optional<const Elf_Shdr *> FunctionSec) {
+  if (!this->AddressToIndexMap.hasValue()) {
+    // Populate the address to index map upon the first invocation of this
+    // function.
+    this->AddressToIndexMap.emplace();
+    if (this->DotSymtabSec) {
+      if (Expected<Elf_Sym_Range> SymsOrError =
+              Obj.symbols(this->DotSymtabSec)) {
+        uint32_t Index = (uint32_t)-1;
+        for (const Elf_Sym &Sym : *SymsOrError) {
+          ++Index;
 
-        if (Sym.st_shndx == ELF::SHN_UNDEF || Sym.getType() != ELF::STT_FUNC)
-          continue;
-
-        if (Expected<uint64_t> SymAddrOrErr =
-                ObjF.toSymbolRef(this->DotSymtabSec, Index).getAddress()) {
-          if (SymValue != *SymAddrOrErr)
+          if (Sym.st_shndx == ELF::SHN_UNDEF || Sym.getType() != ELF::STT_FUNC)
             continue;
-        } else {
-          std::string Name = this->getStaticSymbolName(Index);
-          reportUniqueWarning("unable to get address of symbol '" + Name +
-                              "': " + toString(SymAddrOrErr.takeError()));
-          break;
-        }
 
-        // Check if the symbol is in the right section. FunctionSec == None
-        // means "any section".
-        if (FunctionSec) {
-          if (Expected<const Elf_Shdr *> SecOrErr =
-                  Obj.getSection(Sym, this->DotSymtabSec,
-                                 this->getShndxTable(this->DotSymtabSec))) {
-            if (*FunctionSec != *SecOrErr)
-              continue;
-          } else {
+          Expected<uint64_t> SymAddrOrErr =
+              ObjF.toSymbolRef(this->DotSymtabSec, Index).getAddress();
+          if (!SymAddrOrErr) {
             std::string Name = this->getStaticSymbolName(Index);
-            // Note: it is impossible to trigger this error currently, it is
-            // untested.
-            reportUniqueWarning("unable to get section of symbol '" + Name +
-                                "': " + toString(SecOrErr.takeError()));
-            break;
+            reportUniqueWarning("unable to get address of symbol '" + Name +
+                                "': " + toString(SymAddrOrErr.takeError()));
+            return None;
           }
-        }
 
-        FuncSymIndex = Index;
-        break;
+          (*this->AddressToIndexMap)[*SymAddrOrErr].push_back(Index);
+        }
+      } else {
+        reportUniqueWarning("unable to read the symbol table: " +
+                            toString(SymsOrError.takeError()));
       }
-    } else {
-      reportUniqueWarning("unable to read the symbol table: " +
-                          toString(SymsOrError.takeError()));
     }
   }
 
+  auto Symbols = this->AddressToIndexMap->find(SymValue);
+  if (Symbols == this->AddressToIndexMap->end())
+    return None;
+
+  for (uint32_t Index : Symbols->second) {
+    // Check if the symbol is in the right section. FunctionSec == None
+    // means "any section".
+    if (FunctionSec) {
+      const Elf_Sym &Sym = *cantFail(Obj.getSymbol(this->DotSymtabSec, Index));
+      if (Expected<const Elf_Shdr *> SecOrErr =
+              Obj.getSection(Sym, this->DotSymtabSec,
+                             this->getShndxTable(this->DotSymtabSec))) {
+        if (*FunctionSec != *SecOrErr)
+          continue;
+      } else {
+        std::string Name = this->getStaticSymbolName(Index);
+        // Note: it is impossible to trigger this error currently, it is
+        // untested.
+        reportUniqueWarning("unable to get section of symbol '" + Name +
+                            "': " + toString(SecOrErr.takeError()));
+        return None;
+      }
+    }
+
+    return Index;
+  }
+  return None;
+}
+
+template <class ELFT>
+bool ELFDumper<ELFT>::printFunctionStackSize(
+    uint64_t SymValue, Optional<const Elf_Shdr *> FunctionSec,
+    const Elf_Shdr &StackSizeSec, DataExtractor Data, uint64_t *Offset) {
+  Optional<uint32_t> FuncSymIndex =
+      this->getSymbolIndexForFunctionAddress(SymValue, FunctionSec);
   std::string FuncName = "?";
   if (!FuncSymIndex)
     reportUniqueWarning(
         "could not identify function symbol for stack size entry in " +
         describe(StackSizeSec));
   else
-    FuncName = this->getStaticSymbolName(FuncSymIndex);
+    FuncName = this->getStaticSymbolName(*FuncSymIndex);
 
   // Extract the size. The expectation is that Offset is pointing to the right
   // place, i.e. past the function address.
