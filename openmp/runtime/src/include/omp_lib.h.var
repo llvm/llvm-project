@@ -52,6 +52,10 @@
       parameter(omp_depend_kind=int_ptr_kind())
       integer omp_event_handle_kind
       parameter(omp_event_handle_kind=int_ptr_kind())
+      integer omp_interop_kind
+      parameter(omp_interop_kind=int_ptr_kind())
+      integer omp_interop_fr_kind
+      parameter(omp_interop_fr_kind=omp_integer_kind)
 
       integer(kind=omp_integer_kind)openmp_version
       parameter(openmp_version=@LIBOMP_OMP_YEAR_MONTH@)
@@ -246,6 +250,24 @@
       parameter(omp_pause_soft=1)
       integer(kind=omp_pause_resource_kind)omp_pause_hard
       parameter(omp_pause_hard=2)
+
+      integer(kind=omp_interop_fr_kind)omp_ifr_cuda
+      parameter(omp_ifr_cuda=1)
+      integer(kind=omp_interop_fr_kind)omp_ifr_cuda_driver
+      parameter(omp_ifr_cuda_driver=2)
+      integer(kind=omp_interop_fr_kind)omp_ifr_opencl
+      parameter(omp_ifr_opencl=3)
+      integer(kind=omp_interop_fr_kind)omp_ifr_sycl
+      parameter(omp_ifr_sycl=4)
+      integer(kind=omp_interop_fr_kind)omp_ifr_hip
+      parameter(omp_ifr_hip=5)
+      integer(kind=omp_interop_fr_kind)omp_ifr_level_zero
+      parameter(omp_ifr_level_zero=6)
+      integer(kind=omp_interop_fr_kind)omp_ifr_last
+      parameter(omp_ifr_last=7)
+
+      integer(kind=omp_interop_kind)omp_interop_none
+      parameter(omp_interop_none=0)
 
       interface
 

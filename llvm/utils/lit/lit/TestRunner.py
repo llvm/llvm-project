@@ -209,7 +209,7 @@ def quote_windows_command(seq):
             result.append(' ')
 
         # This logic differs from upstream list2cmdline.
-        needquote = (" " in arg) or ("\t" in arg) or ("\"" in arg) or ("[" in arg) or not arg
+        needquote = (" " in arg) or ("\t" in arg) or ("\"" in arg) or ("[" in arg) or (";" in arg) or not arg
         if needquote:
             result.append('"')
 

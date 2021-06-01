@@ -232,11 +232,11 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
     else
       interchangedIvs.assign(ivs.begin(), ivs.end());
 
-    assert(op.getNumOutputTensors() == iterArgs.size() &&
+    assert(op.getOutputTensorOperands().size() == iterArgs.size() &&
            "num output tensors must match number of loop iter arguments");
 
-    auto operands = llvm::to_vector<4>(op.getInputs());
-    SmallVector<Value, 4> outputBuffers = op.getOutputBuffers();
+    SmallVector<Value> operands = op.getInputOperands();
+    SmallVector<Value> outputBuffers = op.getOutputBufferOperands();
     // TODO: thanks to simplifying assumption we do not need to worry about
     // order of output buffers and tensors: there is only ever one kind.
     assert(outputBuffers.empty() || iterArgs.empty());
@@ -252,7 +252,7 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
     // TODO: use an interface/adaptor to avoid leaking position in
     // `tiledOperands`.
     SmallVector<Type, 4> resultTensorTypes;
-    for (OpOperand *opOperand : op.getOutputTensorsOpOperands())
+    for (OpOperand *opOperand : op.getOutputTensorOperands())
       resultTensorTypes.push_back(
           tiledOperands[opOperand->getOperandNumber()].getType());
 
@@ -260,7 +260,7 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
 
     // Insert a subtensor_insert for each output tensor.
     unsigned resultIdx = 0;
-    for (OpOperand *opOperand : op.getOutputTensorsOpOperands()) {
+    for (OpOperand *opOperand : op.getOutputTensorOperands()) {
       // TODO: use an interface/adaptor to avoid leaking position in
       // `tiledOperands`.
       Value outputTensor = tiledOperands[opOperand->getOperandNumber()];

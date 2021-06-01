@@ -620,6 +620,12 @@ def icmp_to_true_false_known_bits : GICombineRule<
          [{ return Helper.matchICmpToTrueFalseKnownBits(*${d}, ${matchinfo}); }]),
   (apply [{ Helper.replaceInstWithConstant(*${d}, ${matchinfo}); }])>;
 
+def bitfield_extract_from_and : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$info),
+  (match (wip_match_opcode G_AND):$root,
+    [{ return Helper.matchBitfieldExtractFromAnd(*${root}, ${info}); }]),
+  (apply [{ return Helper.applyBuildFn(*${root}, ${info}); }])>;
+
 def funnel_shift_combines : GICombineGroup<[funnel_shift_to_rotate]>;
 
 // FIXME: These should use the custom predicate feature once it lands.
@@ -664,7 +670,7 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     unmerge_zext_to_zext, trunc_ext_fold, trunc_shl,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
-    div_rem_to_divrem, funnel_shift_combines]>;
+    div_rem_to_divrem, funnel_shift_combines, bitfield_extract_from_and]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

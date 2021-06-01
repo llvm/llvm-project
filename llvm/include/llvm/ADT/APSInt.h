@@ -348,6 +348,26 @@ inline raw_ostream &operator<<(raw_ostream &OS, const APSInt &I) {
   return OS;
 }
 
+/// Provide DenseMapInfo for APSInt, using the DenseMapInfo for APInt.
+template <> struct DenseMapInfo<APSInt> {
+  static inline APSInt getEmptyKey() {
+    return APSInt(DenseMapInfo<APInt>::getEmptyKey());
+  }
+
+  static inline APSInt getTombstoneKey() {
+    return APSInt(DenseMapInfo<APInt>::getTombstoneKey());
+  }
+
+  static unsigned getHashValue(const APSInt &Key) {
+    return DenseMapInfo<APInt>::getHashValue(Key);
+  }
+
+  static bool isEqual(const APSInt &LHS, const APSInt &RHS) {
+    return LHS.getBitWidth() == RHS.getBitWidth() &&
+           LHS.isUnsigned() == RHS.isUnsigned() && LHS == RHS;
+  }
+};
+
 } // end namespace llvm
 
 #endif

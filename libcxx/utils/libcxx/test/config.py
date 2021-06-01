@@ -10,6 +10,7 @@ import copy
 import os
 import pkgutil
 import pipes
+import platform
 import re
 import shlex
 import shutil
@@ -21,6 +22,7 @@ import libcxx.util
 import libcxx.test.features
 import libcxx.test.newconfig
 import libcxx.test.params
+import lit
 
 def loadSiteConfig(lit_config, config, param_name, env_name):
     # We haven't loaded the site specific configuration (the user is
@@ -490,17 +492,22 @@ class Configuration(object):
             self.config.available_features.add('-fmodules')
             self.cxx.useModules()
 
+    def quote(self, s):
+        if platform.system() == 'Windows':
+            return lit.TestRunner.quote_windows_command([s])
+        return pipes.quote(s)
+
     def configure_substitutions(self):
         sub = self.config.substitutions
-        sub.append(('%{cxx}', pipes.quote(self.cxx.path)))
+        sub.append(('%{cxx}', self.quote(self.cxx.path)))
         flags = self.cxx.flags + (self.cxx.modules_flags if self.cxx.use_modules else [])
         compile_flags = self.cxx.compile_flags + (self.cxx.warning_flags if self.cxx.use_warnings else [])
-        sub.append(('%{flags}',         ' '.join(map(pipes.quote, flags))))
-        sub.append(('%{compile_flags}', ' '.join(map(pipes.quote, compile_flags))))
-        sub.append(('%{link_flags}',    ' '.join(map(pipes.quote, self.cxx.link_flags))))
+        sub.append(('%{flags}',         ' '.join(map(self.quote, flags))))
+        sub.append(('%{compile_flags}', ' '.join(map(self.quote, compile_flags))))
+        sub.append(('%{link_flags}',    ' '.join(map(self.quote, self.cxx.link_flags))))
 
         codesign_ident = self.get_lit_conf('llvm_codesign_identity', '')
-        env_vars = ' '.join('%s=%s' % (k, pipes.quote(v)) for (k, v) in self.exec_env.items())
+        env_vars = ' '.join('%s=%s' % (k, self.quote(v)) for (k, v) in self.exec_env.items())
         exec_args = [
             '--execdir %T',
             '--codesign_identity "{}"'.format(codesign_ident),

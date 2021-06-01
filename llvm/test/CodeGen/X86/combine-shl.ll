@@ -2,7 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse2 | FileCheck %s --check-prefixes=CHECK,SSE,SSE2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 | FileCheck %s --check-prefixes=CHECK,SSE,SSE41
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=CHECK,AVX,AVX-SLOW
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-shuffle | FileCheck %s --check-prefixes=CHECK,AVX,AVX-FAST
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=CHECK,AVX,AVX-FAST-ALL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=CHECK,AVX,AVX-FAST-PERLANE
 
 ; fold (shl 0, x) -> 0
 define <4 x i32> @combine_vec_shl_zero(<4 x i32> %x) {
@@ -145,14 +146,23 @@ define <4 x i32> @combine_vec_shl_trunc_and(<4 x i32> %x, <4 x i64> %y) {
 ; AVX-SLOW-NEXT:    vzeroupper
 ; AVX-SLOW-NEXT:    retq
 ;
-; AVX-FAST-LABEL: combine_vec_shl_trunc_and:
-; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vmovdqa {{.*#+}} ymm2 = <0,2,4,6,u,u,u,u>
-; AVX-FAST-NEXT:    vpermd %ymm1, %ymm2, %ymm1
-; AVX-FAST-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX-FAST-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0
-; AVX-FAST-NEXT:    vzeroupper
-; AVX-FAST-NEXT:    retq
+; AVX-FAST-ALL-LABEL: combine_vec_shl_trunc_and:
+; AVX-FAST-ALL:       # %bb.0:
+; AVX-FAST-ALL-NEXT:    vmovdqa {{.*#+}} ymm2 = <0,2,4,6,u,u,u,u>
+; AVX-FAST-ALL-NEXT:    vpermd %ymm1, %ymm2, %ymm1
+; AVX-FAST-ALL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX-FAST-ALL-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0
+; AVX-FAST-ALL-NEXT:    vzeroupper
+; AVX-FAST-ALL-NEXT:    retq
+;
+; AVX-FAST-PERLANE-LABEL: combine_vec_shl_trunc_and:
+; AVX-FAST-PERLANE:       # %bb.0:
+; AVX-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
+; AVX-FAST-PERLANE-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX-FAST-PERLANE-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0
+; AVX-FAST-PERLANE-NEXT:    vzeroupper
+; AVX-FAST-PERLANE-NEXT:    retq
   %1 = and <4 x i64> %y, <i64 15, i64 255, i64 4095, i64 65535>
   %2 = trunc <4 x i64> %1 to <4 x i32>
   %3 = shl <4 x i32> %x, %2

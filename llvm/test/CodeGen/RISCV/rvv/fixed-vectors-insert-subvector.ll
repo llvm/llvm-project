@@ -424,8 +424,8 @@ define void @insert_v8i1_v4i1_0(<8 x i1>* %vp, <4 x i1>* %svp) {
 ; CHECK-NEXT:    vsetivli zero, 4, e8,mf2,tu,mu
 ; CHECK-NEXT:    vslideup.vi v25, v26, 0
 ; CHECK-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
-; CHECK-NEXT:    vmsne.vi v26, v25, 0
-; CHECK-NEXT:    vse1.v v26, (a0)
+; CHECK-NEXT:    vmsne.vi v25, v25, 0
+; CHECK-NEXT:    vse1.v v25, (a0)
 ; CHECK-NEXT:    ret
   %v = load <8 x i1>, <8 x i1>* %vp
   %sv = load <4 x i1>, <4 x i1>* %svp
@@ -451,8 +451,8 @@ define void @insert_v8i1_v4i1_4(<8 x i1>* %vp, <4 x i1>* %svp) {
 ; CHECK-NEXT:    vsetivli zero, 8, e8,mf2,tu,mu
 ; CHECK-NEXT:    vslideup.vi v25, v26, 4
 ; CHECK-NEXT:    vsetvli zero, zero, e8,mf2,ta,mu
-; CHECK-NEXT:    vmsne.vi v26, v25, 0
-; CHECK-NEXT:    vse1.v v26, (a0)
+; CHECK-NEXT:    vmsne.vi v25, v25, 0
+; CHECK-NEXT:    vse1.v v25, (a0)
 ; CHECK-NEXT:    ret
   %v = load <8 x i1>, <8 x i1>* %vp
   %sv = load <4 x i1>, <4 x i1>* %svp

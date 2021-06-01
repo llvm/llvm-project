@@ -49,8 +49,6 @@ public:
     return instance;
   }
 
-  // machine info
-  static atmi_machine_t *GetMachineInfo();
   // modules
   static hsa_status_t RegisterModuleFromMemory(
       void *, size_t, atmi_place_t,

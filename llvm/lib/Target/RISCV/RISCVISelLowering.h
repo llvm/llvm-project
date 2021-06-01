@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_RISCV_RISCVISELLOWERING_H
 
 #include "RISCV.h"
+#include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
 
@@ -484,12 +485,24 @@ public:
   bool shouldRemoveExtendFromGSIndex(EVT VT) const override;
 
 private:
+  /// RISCVCCAssignFn - This target-specific function extends the default
+  /// CCValAssign with additional information used to lower RISC-V calling
+  /// conventions.
+  typedef bool RISCVCCAssignFn(const DataLayout &DL, RISCVABI::ABI,
+                               unsigned ValNo, MVT ValVT, MVT LocVT,
+                               CCValAssign::LocInfo LocInfo,
+                               ISD::ArgFlagsTy ArgFlags, CCState &State,
+                               bool IsFixed, bool IsRet, Type *OrigTy,
+                               const RISCVTargetLowering &TLI,
+                               Optional<unsigned> FirstMaskArgument);
+
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
-                        const SmallVectorImpl<ISD::InputArg> &Ins,
-                        bool IsRet) const;
+                        const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
+                        RISCVCCAssignFn Fn) const;
   void analyzeOutputArgs(MachineFunction &MF, CCState &CCInfo,
                          const SmallVectorImpl<ISD::OutputArg> &Outs,
-                         bool IsRet, CallLoweringInfo *CLI) const;
+                         bool IsRet, CallLoweringInfo *CLI,
+                         RISCVCCAssignFn Fn) const;
 
   template <class NodeTy>
   SDValue getAddr(NodeTy *N, SelectionDAG &DAG, bool IsLocal = true) const;

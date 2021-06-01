@@ -441,7 +441,7 @@ bool AtomicExpand::expandAtomicLoadToCmpXchg(LoadInst *LI) {
     Order = AtomicOrdering::Monotonic;
 
   Value *Addr = LI->getPointerOperand();
-  Type *Ty = cast<PointerType>(Addr->getType())->getElementType();
+  Type *Ty = LI->getType();
   Constant *DummyVal = Constant::getNullValue(Ty);
 
   Value *Pair = Builder.CreateAtomicCmpXchg(
