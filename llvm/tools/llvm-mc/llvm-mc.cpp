@@ -46,6 +46,9 @@ static mc::RegisterMCTargetOptionsFlags MOF;
 static cl::opt<std::string>
 InputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));
 
+static cl::list<std::string>
+    DisassemblerOptions("M", cl::desc("Disassembler options"));
+
 static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                            cl::value_desc("filename"),
                                            cl::init("-"));
@@ -495,6 +498,12 @@ int main(int argc, char **argv) {
           << OutputAsmVariant << ".\n";
       return 1;
     }
+
+    for (StringRef Opt : DisassemblerOptions)
+      if (!IP->applyTargetSpecificCLOption(Opt)) {
+        WithColor::error() << "invalid disassembler option '" << Opt << "'\n";
+        return 1;
+      }
 
     // Set the display preference for hex vs. decimal immediates.
     IP->setPrintImmHex(PrintImmHex);
