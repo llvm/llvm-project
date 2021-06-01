@@ -727,6 +727,15 @@ public:
   /// Returns 0 if the trip count is unknown or not constant.
   unsigned getSmallConstantMaxTripCount(const Loop *L);
 
+  /// Returns the largest constant divisor of the trip count as a normal
+  /// unsigned value, if possible. This means that the actual trip count is
+  /// always a multiple of the returned value. Returns 1 if the trip count is
+  /// unknown or not guaranteed to be the multiple of a constant., Will also
+  /// return 1 if the trip count is very large (>= 2^32).
+  /// Note that the argument is an exit count for loop L, NOT a trip count.
+  unsigned getSmallConstantTripMultiple(const Loop *L,
+                                        const SCEV *ExitCount);
+
   /// Returns the largest constant divisor of the trip count of the
   /// loop if it is a single-exit loop and we can compute a small maximum for
   /// that loop.
