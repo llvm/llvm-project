@@ -9,8 +9,6 @@
 #define MLIR_REDUCER_PASSES_H
 
 #include "mlir/Pass/Pass.h"
-#include "mlir/Reducer/OptReductionPass.h"
-#include "mlir/Reducer/ReductionTreePass.h"
 
 namespace mlir {
 

@@ -8,6 +8,7 @@
 
 #include "TestDialect.h"
 #include "TestAttributes.h"
+#include "TestInterfaces.h"
 #include "TestTypes.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -16,6 +17,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Reducer/ReductionPatternInterface.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -170,6 +172,18 @@ struct TestInlinerInterface : public DialectInlinerInterface {
     return builder.create<TestCastOp>(conversionLoc, resultType, input);
   }
 };
+
+struct TestReductionPatternInterface : public DialectReductionPatternInterface {
+public:
+  TestReductionPatternInterface(Dialect *dialect)
+      : DialectReductionPatternInterface(dialect) {}
+
+  virtual void
+  populateReductionPatterns(RewritePatternSet &patterns) const final {
+    populateTestReductionPatterns(patterns);
+  }
+};
+
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -207,7 +221,7 @@ void TestDialect::initialize() {
 #include "TestOps.cpp.inc"
       >();
   addInterfaces<TestOpAsmInterface, TestDialectFoldInterface,
-                TestInlinerInterface>();
+                TestInlinerInterface, TestReductionPatternInterface>();
   allowUnknownOperations();
 
   // Instantiate our fallback op interface that we'll use on specific
