@@ -538,6 +538,21 @@ class LDVImpl {
   using StashedInstrRef =
       std::tuple<unsigned, unsigned, const DILocalVariable *,
                  const DIExpression *, DebugLoc>;
+
+  /// Position and VReg of a PHI instruction during register allocation.
+  struct PHIValPos {
+    SlotIndex SI;    /// Slot where this PHI occurs.
+    Register Reg;    /// VReg this PHI occurs in.
+    unsigned SubReg; /// Qualifiying subregister for Reg.
+  };
+
+  /// Map from debug instruction number to PHI position during allocation.
+  std::map<unsigned, PHIValPos> PHIValToPos;
+  /// Index of, for each VReg, which debug instruction numbers and corresponding
+  /// PHIs are sensitive to splitting. Each VReg may have multiple PHI defs,
+  /// at different positions.
+  DenseMap<Register, std::vector<unsigned>> RegToPHIIdx;
+
   std::map<SlotIndex, std::vector<StashedInstrRef>> StashedInstrReferences;
 
   /// Whether emitDebugValues is called.
@@ -614,6 +629,8 @@ public:
   /// Release all memory.
   void clear() {
     MF = nullptr;
+    PHIValToPos.clear();
+    RegToPHIIdx.clear();
     StashedInstrReferences.clear();
     userValues.clear();
     userLabels.clear();
@@ -628,6 +645,10 @@ public:
 
   /// Map virtual register to an equivalence class.
   void mapVirtReg(Register VirtReg, UserValue *EC);
+
+  /// Replace any PHI referring to OldReg with its corresponding NewReg, if
+  /// present.
+  void splitPHIRegister(Register OldReg, ArrayRef<Register> NewRegs);
 
   /// Replace all references to OldReg with NewRegs.
   void splitRegister(Register OldReg, ArrayRef<Register> NewRegs);
@@ -1224,6 +1245,21 @@ bool LDVImpl::runOnMachineFunction(MachineFunction &mf) {
   bool Changed = collectDebugValues(mf);
   computeIntervals();
   LLVM_DEBUG(print(dbgs()));
+
+  // Collect the set of VReg / SlotIndexs where PHIs occur; index the sensitive
+  // VRegs too, for when we're notified of a range split.
+  SlotIndexes *Slots = LIS->getSlotIndexes();
+  for (const auto &PHIIt : MF->DebugPHIPositions) {
+    const MachineFunction::DebugPHIRegallocPos &Position = PHIIt.second;
+    MachineBasicBlock *MBB = Position.MBB;
+    Register Reg = Position.Reg;
+    unsigned SubReg = Position.SubReg;
+    SlotIndex SI = Slots->getMBBStartIdx(MBB);
+    PHIValPos VP = {SI, Reg, SubReg};
+    PHIValToPos.insert(std::make_pair(PHIIt.first, VP));
+    RegToPHIIdx[Reg].push_back(PHIIt.first);
+  }
+
   ModifiedMF = Changed;
   return Changed;
 }
@@ -1382,7 +1418,50 @@ UserValue::splitRegister(Register OldReg, ArrayRef<Register> NewRegs,
   return DidChange;
 }
 
+void LDVImpl::splitPHIRegister(Register OldReg, ArrayRef<Register> NewRegs) {
+  auto RegIt = RegToPHIIdx.find(OldReg);
+  if (RegIt == RegToPHIIdx.end())
+    return;
+
+  std::vector<std::pair<Register, unsigned>> NewRegIdxes;
+  // Iterate over all the debug instruction numbers affected by this split.
+  for (unsigned InstrID : RegIt->second) {
+    auto PHIIt = PHIValToPos.find(InstrID);
+    assert(PHIIt != PHIValToPos.end());
+    const SlotIndex &Slot = PHIIt->second.SI;
+    assert(OldReg == PHIIt->second.Reg);
+
+    // Find the new register that covers this position.
+    for (auto NewReg : NewRegs) {
+      const LiveInterval &LI = LIS->getInterval(NewReg);
+      auto LII = LI.find(Slot);
+      if (LII != LI.end() && LII->start <= Slot) {
+        // This new register covers this PHI position, record this for indexing.
+        NewRegIdxes.push_back(std::make_pair(NewReg, InstrID));
+        // Record that this value lives in a different VReg now.
+        PHIIt->second.Reg = NewReg;
+        break;
+      }
+    }
+
+    // If we do not find a new register covering this PHI, then register
+    // allocation has dropped its location, for example because it's not live.
+    // The old VReg will not be mapped to a physreg, and the instruction
+    // number will have been optimized out.
+  }
+
+  // Re-create register index using the new register numbers.
+  RegToPHIIdx.erase(RegIt);
+  for (auto &RegAndInstr : NewRegIdxes)
+    RegToPHIIdx[RegAndInstr.first].push_back(RegAndInstr.second);
+}
+
 void LDVImpl::splitRegister(Register OldReg, ArrayRef<Register> NewRegs) {
+  // Consider whether this split range affects any PHI locations.
+  splitPHIRegister(OldReg, NewRegs);
+
+  // Check whether any intervals mapped by a DBG_VALUE were split and need
+  // updating.
   bool DidChange = false;
   for (UserValue *UV = lookupVirtReg(OldReg); UV; UV = UV->getNext())
     DidChange |= UV->splitRegister(OldReg, NewRegs, *LIS);
@@ -1722,11 +1801,53 @@ void LDVImpl::emitDebugValues(VirtRegMap *VRM) {
     userLabel->emitDebugLabel(*LIS, *TII, BBSkipInstsMap);
   }
 
+  LLVM_DEBUG(dbgs() << "********** EMITTING DEBUG PHIS **********\n");
+
+  auto Slots = LIS->getSlotIndexes();
+  for (auto &It : PHIValToPos) {
+    // For each ex-PHI, identify its physreg location or stack slot, and emit
+    // a DBG_PHI for it.
+    unsigned InstNum = It.first;
+    auto Slot = It.second.SI;
+    Register Reg = It.second.Reg;
+    unsigned SubReg = It.second.SubReg;
+
+    MachineBasicBlock *OrigMBB = Slots->getMBBFromIndex(Slot);
+    if (VRM->isAssignedReg(Reg) &&
+        Register::isPhysicalRegister(VRM->getPhys(Reg))) {
+      unsigned PhysReg = VRM->getPhys(Reg);
+      if (SubReg != 0)
+        PhysReg = TRI->getSubReg(PhysReg, SubReg);
+
+      auto Builder = BuildMI(*OrigMBB, OrigMBB->begin(), DebugLoc(),
+                             TII->get(TargetOpcode::DBG_PHI));
+      Builder.addReg(PhysReg);
+      Builder.addImm(InstNum);
+    } else if (VRM->getStackSlot(Reg) != VirtRegMap::NO_STACK_SLOT) {
+      const MachineRegisterInfo &MRI = MF->getRegInfo();
+      const TargetRegisterClass *TRC = MRI.getRegClass(Reg);
+      unsigned SpillSize, SpillOffset;
+
+      // Test whether this location is legal with the given subreg.
+      bool Success =
+          TII->getStackSlotRange(TRC, SubReg, SpillSize, SpillOffset, *MF);
+
+      if (Success) {
+        auto Builder = BuildMI(*OrigMBB, OrigMBB->begin(), DebugLoc(),
+                               TII->get(TargetOpcode::DBG_PHI));
+        Builder.addFrameIndex(VRM->getStackSlot(Reg));
+        Builder.addImm(InstNum);
+      }
+    }
+    // If there was no mapping for a value ID, it's optimized out. Create no
+    // DBG_PHI, and any variables using this value will become optimized out.
+  }
+  MF->DebugPHIPositions.clear();
+
   LLVM_DEBUG(dbgs() << "********** EMITTING INSTR REFERENCES **********\n");
 
   // Re-insert any DBG_INSTR_REFs back in the position they were. Ordering
   // is preserved by vector.
-  auto Slots = LIS->getSlotIndexes();
   const MCInstrDesc &RefII = TII->get(TargetOpcode::DBG_INSTR_REF);
   for (auto &P : StashedInstrReferences) {
     const SlotIndex &Idx = P.first;

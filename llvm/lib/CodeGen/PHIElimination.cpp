@@ -316,6 +316,16 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
                                   IncomingReg, DestReg);
   }
 
+  if (MPhi->peekDebugInstrNum()) {
+    // If referred to by debug-info, store where this PHI was.
+    MachineFunction *MF = MBB.getParent();
+    unsigned ID = MPhi->peekDebugInstrNum();
+    auto P = MachineFunction::DebugPHIRegallocPos(&MBB, IncomingReg, 0);
+    auto Res = MF->DebugPHIPositions.insert({ID, P});
+    assert(Res.second);
+    (void)Res;
+  }
+
   // Update live variable information if there is any.
   if (LV) {
     if (IncomingReg) {
