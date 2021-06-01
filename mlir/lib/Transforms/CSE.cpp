@@ -213,7 +213,7 @@ void CSE::simplifyRegion(ScopedMapTy &knownValues, Region &region,
     return;
 
   // If the region only contains one block, then simplify it directly.
-  if (std::next(region.begin()) == region.end()) {
+  if (region.hasOneBlock()) {
     ScopedMapTy::ScopeTy scope(knownValues);
     simplifyBlock(knownValues, &region.front(), hasSSADominance);
     return;
