@@ -65,6 +65,32 @@ define double @exp_a_exp_b_reassoc(double %a, double %b) {
   ret double %mul
 }
 
+; TODO: Multiple uses, but only 1 user.
+
+define double @exp_a_a(double %a) {
+; CHECK-LABEL: @exp_a_a(
+; CHECK-NEXT:    [[T:%.*]] = call double @llvm.exp.f64(double [[A:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = fmul reassoc double [[T]], [[T]]
+; CHECK-NEXT:    ret double [[M]]
+;
+  %t = call double @llvm.exp.f64(double %a)
+  %m = fmul reassoc double %t, %t
+  ret double %m
+}
+
+define double @exp_a_a_extra_use(double %a) {
+; CHECK-LABEL: @exp_a_a_extra_use(
+; CHECK-NEXT:    [[T:%.*]] = call double @llvm.exp.f64(double [[A:%.*]])
+; CHECK-NEXT:    call void @use(double [[T]])
+; CHECK-NEXT:    [[M:%.*]] = fmul reassoc double [[T]], [[T]]
+; CHECK-NEXT:    ret double [[M]]
+;
+  %t = call double @llvm.exp.f64(double %a)
+  call void @use(double %t)
+  %m = fmul reassoc double %t, %t
+  ret double %m
+}
+
 ; exp(a) * exp(b) * exp(c) * exp(d) => exp(a+b+c+d) with reassoc
 define double @exp_a_exp_b_exp_c_exp_d_fast(double %a, double %b, double %c, double %d) {
 ; CHECK-LABEL: @exp_a_exp_b_exp_c_exp_d_fast(
