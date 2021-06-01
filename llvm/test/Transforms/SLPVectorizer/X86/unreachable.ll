@@ -23,17 +23,12 @@ define void @foo(i32* nocapture %x) #0 {
 ; CHECK-NEXT:    [[T10:%.*]] = load i32, i32* [[T9]], align 4
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[T1_0:%.*]] = phi i32 [ [[T4]], [[BB1:%.*]] ], [ 2, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[T2_0:%.*]] = phi i32 [ [[T6]], [[BB1]] ], [ 2, [[ENTRY]] ]
-; CHECK-NEXT:    [[T3_0:%.*]] = phi i32 [ [[T8]], [[BB1]] ], [ 2, [[ENTRY]] ]
-; CHECK-NEXT:    [[T4_0:%.*]] = phi i32 [ [[T10]], [[BB1]] ], [ 2, [[ENTRY]] ]
-; CHECK-NEXT:    store i32 [[T1_0]], i32* [[X]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i32> [ poison, [[BB1:%.*]] ], [ <i32 2, i32 2, i32 2, i32 2>, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[T12:%.*]] = getelementptr inbounds i32, i32* [[X]], i64 1
-; CHECK-NEXT:    store i32 [[T2_0]], i32* [[T12]], align 4
 ; CHECK-NEXT:    [[T13:%.*]] = getelementptr inbounds i32, i32* [[X]], i64 2
-; CHECK-NEXT:    store i32 [[T3_0]], i32* [[T13]], align 4
 ; CHECK-NEXT:    [[T14:%.*]] = getelementptr inbounds i32, i32* [[X]], i64 3
-; CHECK-NEXT:    store i32 [[T4_0]], i32* [[T14]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[X]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> [[TMP0]], <4 x i32>* [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
