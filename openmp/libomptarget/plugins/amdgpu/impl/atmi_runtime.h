@@ -58,23 +58,6 @@ hsa_status_t atmi_module_register_from_memory_to_place(
 
 /** @} */
 
-/** \defgroup machine ATMI Machine
- * @{
- */
-/**
- * @brief ATMI's device discovery function to get the current machine's
- * topology.
- *
- * @detail The @p atmi_machine_t structure is a tree-based representation of the
- * compute and memory elements in the current node. Once ATMI is initialized,
- * this function can be called to retrieve the pointer to this global structure.
- *
- * @return Returns a pointer to a global structure of tyoe @p atmi_machine_t.
- * Returns NULL if ATMI is not initialized.
- */
-atmi_machine_t *atmi_machine_get_info();
-/** @} */
-
 hsa_status_t atmi_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
                              const void *hostSrc, size_t size,
                              hsa_agent_t agent);
