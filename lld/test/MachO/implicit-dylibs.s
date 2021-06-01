@@ -58,11 +58,11 @@
 # CHECK-DAG: __DATA __data {{.*}} pointer 0 libreexporter _framework_baz
 # CHECK-DAG: __DATA __data {{.*}} pointer 0 libc++abi     ___gxx_personality_v0
 
-# RUN: llvm-objdump --macho --all-headers %t/test | FileCheck %s \
+# RUN: llvm-otool -l %t/test | FileCheck %s \
 # RUN:   --check-prefix=LOAD -DDIR=%t --implicit-check-not LC_LOAD_DYLIB
 ## Check that we don't create duplicate LC_LOAD_DYLIBs.
 # RUN: %lld -syslibroot %t -o %t/test -lSystem -L%t -lreexporter -ltoplevel %t/test.o
-# RUN: llvm-objdump --macho --all-headers %t/test | FileCheck %s \
+# RUN: llvm-otool -l %t/test | FileCheck %s \
 # RUN:   --check-prefix=LOAD -DDIR=%t --implicit-check-not LC_LOAD_DYLIB
 
 # LOAD:          cmd LC_LOAD_DYLIB
@@ -76,13 +76,7 @@
 # LOAD-NEXT:    name /usr/lib/libc++abi.dylib
 # LOAD:          cmd LC_LOAD_DYLIB
 # LOAD-NEXT: cmdsize
-# LOAD-NEXT:    name /usr/lib/libc++.dylib
-# LOAD:          cmd LC_LOAD_DYLIB
-# LOAD-NEXT: cmdsize
 # LOAD-NEXT:    name /usr/lib/libtoplevel.dylib
-# LOAD:          cmd LC_LOAD_DYLIB
-# LOAD-NEXT: cmdsize
-# LOAD-NEXT:    name /usr/lib/libunused.dylib
 # LOAD:          cmd LC_LOAD_DYLIB
 # LOAD-NEXT: cmdsize
 # LOAD-NEXT:    name [[DIR]]/libreexporter.dylib

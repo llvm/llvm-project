@@ -109,6 +109,7 @@ struct Configuration {
   llvm::StringRef outputFile;
   llvm::StringRef ltoObjPath;
   llvm::StringRef thinLTOJobs;
+  bool deadStripDylibs = false;
   bool demangle = false;
   PlatformInfo platformInfo;
   NamespaceKind namespaceKind = NamespaceKind::twolevel;
