@@ -201,10 +201,11 @@ Optional<DylibFile *> macho::loadDylib(MemoryBufferRef mbref,
                                        DylibFile *umbrella,
                                        bool isBundleLoader) {
   CachedHashStringRef path(mbref.getBufferIdentifier());
-  DylibFile *file = loadedDylibs[path];
+  DylibFile *&file = loadedDylibs[path];
   if (file)
     return file;
 
+  DylibFile *newFile;
   file_magic magic = identify_magic(mbref.getBuffer());
   if (magic == file_magic::tapi_file) {
     Expected<std::unique_ptr<InterfaceFile>> result = TextAPIReader::get(mbref);
@@ -214,19 +215,27 @@ Optional<DylibFile *> macho::loadDylib(MemoryBufferRef mbref,
       return {};
     }
     file = make<DylibFile>(**result, umbrella, isBundleLoader);
+
+    // parseReexports() can recursively call loadDylib(). That's fine since
+    // we wrote DylibFile we just loaded to the loadDylib cache via the `file`
+    // reference. But the recursive load can grow loadDylibs, so the `file`
+    // reference might become invalid after parseReexports() -- so copy the
+    // pointer it refers to before going on.
+    newFile = file;
+    newFile->parseReexports(**result);
   } else {
     assert(magic == file_magic::macho_dynamically_linked_shared_lib ||
            magic == file_magic::macho_dynamically_linked_shared_lib_stub ||
            magic == file_magic::macho_executable ||
            magic == file_magic::macho_bundle);
     file = make<DylibFile>(mbref, umbrella, isBundleLoader);
+
+    // parseLoadCommands() can also recursively call loadDylib(). See comment
+    // in previous block for why this means we must copy `file` here.
+    newFile = file;
+    newFile->parseLoadCommands(mbref, umbrella);
   }
-  // Note that DylibFile's ctor may recursively invoke loadDylib(), which can
-  // cause loadedDylibs to get resized and its iterators invalidated. As such,
-  // we redo the key lookup here instead of caching an iterator from our earlier
-  // lookup at the start of the function.
-  loadedDylibs[path] = file;
-  return file;
+  return newFile;
 }
 
 Optional<StringRef>
