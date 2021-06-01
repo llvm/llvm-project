@@ -11,13 +11,6 @@
 #include <memory>
 
 /*
- * Initialize/Finalize
- */
-atmi_status_t atmi_init() { return core::Runtime::Initialize(); }
-
-atmi_status_t atmi_finalize() { return core::Runtime::Finalize(); }
-
-/*
  * Machine Info
  */
 atmi_machine_t *atmi_machine_get_info() {

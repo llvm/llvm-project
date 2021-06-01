@@ -466,11 +466,12 @@ public:
       print_kernel_trace = 0;
 
     DP("Start initializing HSA-ATMI\n");
-    atmi_status_t err = atmi_init();
+    atmi_status_t err = core::atl_init_gpu_context();
     if (err != ATMI_STATUS_SUCCESS) {
       DP("Error when initializing HSA-ATMI\n");
       return;
     }
+
     // Init hostcall soon after initializing ATMI
     hostrpc_init();
 
@@ -574,15 +575,20 @@ public:
     // Terminate hostrpc before finalizing ATMI
     hostrpc_terminate();
 
+    hsa_status_t Err;
     for (uint32_t I = 0; I < HSAExecutables.size(); I++) {
-      hsa_status_t Err = hsa_executable_destroy(HSAExecutables[I]);
+      Err = hsa_executable_destroy(HSAExecutables[I]);
       if (Err != HSA_STATUS_SUCCESS) {
         DP("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
            "Destroying executable", get_error_string(Err));
       }
     }
 
-    atmi_finalize();
+    Err = hsa_shut_down();
+    if (Err != HSA_STATUS_SUCCESS) {
+      printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, "Shutting down HSA",
+             get_error_string(Err));
+    }
   }
 };
 
