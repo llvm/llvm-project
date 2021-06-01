@@ -25,7 +25,6 @@
 #include "index/Index.h"
 #include "support/Path.h"
 #include "llvm/ADT/StringMap.h"
-#include "gtest/gtest.h"
 #include <memory>
 #include <string>
 #include <utility>

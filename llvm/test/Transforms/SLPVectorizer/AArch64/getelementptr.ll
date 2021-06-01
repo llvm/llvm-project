@@ -61,7 +61,7 @@ define i32 @getelementptr_4x32(i32* nocapture readonly %g, i32 %n, i32 %x, i32 %
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[T4:%.*]] = shl nsw i32 [[TMP5]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> poison, i32 [[T4]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <4 x i32> [[TMP7]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[TMP8]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = sext i32 [[TMP9]] to i64
@@ -176,7 +176,7 @@ define i32 @getelementptr_2x32(i32* nocapture readonly %g, i32 %n, i32 %x, i32 %
 ; CHECK-NEXT:    [[T8:%.*]] = load i32, i32* [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[ADD1]], [[T8]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[T4]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> undef, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i32> [[TMP8]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <2 x i32> [[TMP9]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = sext i32 [[TMP11]] to i64

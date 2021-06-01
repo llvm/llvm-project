@@ -1314,6 +1314,8 @@ llvm::json::Value toJSON(InlayHintKind K) {
   switch (K) {
   case InlayHintKind::ParameterHint:
     return "parameter";
+  case InlayHintKind::TypeHint:
+    return "type";
   }
   llvm_unreachable("Unknown clang.clangd.InlayHintKind");
 }

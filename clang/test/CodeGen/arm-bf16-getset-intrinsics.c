@@ -18,7 +18,7 @@ bfloat16x4_t test_vcreate_bf16(uint64_t a) {
 // CHECK-LABEL: @test_vdup_n_bf16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x bfloat> undef, bfloat [[V:%.*]], i32 0
-// CHECK-NEXT:    [[VECINIT3_I:%.*]] = shufflevector <4 x bfloat> [[VECINIT_I]], <4 x bfloat> undef, <4 x i32> zeroinitializer
+// CHECK-NEXT:    [[VECINIT3_I:%.*]] = shufflevector <4 x bfloat> [[VECINIT_I]], <4 x bfloat> poison, <4 x i32> zeroinitializer
 // CHECK-NEXT:    ret <4 x bfloat> [[VECINIT3_I]]
 //
 bfloat16x4_t test_vdup_n_bf16(bfloat16_t v) {
@@ -28,7 +28,7 @@ bfloat16x4_t test_vdup_n_bf16(bfloat16_t v) {
 // CHECK-LABEL: @test_vdupq_n_bf16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x bfloat> undef, bfloat [[V:%.*]], i32 0
-// CHECK-NEXT:    [[VECINIT7_I:%.*]] = shufflevector <8 x bfloat> [[VECINIT_I]], <8 x bfloat> undef, <8 x i32> zeroinitializer
+// CHECK-NEXT:    [[VECINIT7_I:%.*]] = shufflevector <8 x bfloat> [[VECINIT_I]], <8 x bfloat> poison, <8 x i32> zeroinitializer
 // CHECK-NEXT:    ret <8 x bfloat> [[VECINIT7_I]]
 //
 bfloat16x8_t test_vdupq_n_bf16(bfloat16_t v) {

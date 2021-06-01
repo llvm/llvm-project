@@ -153,10 +153,17 @@ template <class T, class U>
 bool operator!=(const allocator<T>&, const allocator<U>&) noexcept; // constexpr in C++20
 
 template <class OutputIterator, class T>
-class raw_storage_iterator
+class raw_storage_iterator // deprecated in C++17, removed in C++20
     : public iterator<output_iterator_tag, void, void, void, void> // until C++17
 {
 public:
+    typedef output_iterator_tag iterator_category;
+    typedef void                value_type;
+    typedef void                difference_type; // until C++20
+    typedef ptrdiff_t           difference_type; // since C++20
+    typedef void                pointer;
+    typedef void                reference;
+
     explicit raw_storage_iterator(OutputIterator x);
     raw_storage_iterator& operator*();
     raw_storage_iterator& operator=(const T& element);

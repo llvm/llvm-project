@@ -202,7 +202,7 @@ exit:
 
 ; Similar to @inner_loop_may_be_infinite, but the parent loop loop1 is marked
 ; as mustprogress. The loops can be removed.
-define void @inner_loop_may_be_infinite_but_top_loop_mustprogress(i1 %c1, i1 %c2) mustprogress {
+define void @inner_loop_may_be_infinite_but_top_loop_mustprogress(i1 %c1, i1 %c2) {
 ; CHECK-LABEL: @inner_loop_may_be_infinite_but_top_loop_mustprogress(
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -269,10 +269,80 @@ loop2:
   br i1 %c2, label %loop3, label %loop2, !llvm.loop !4
 
 loop3:
-  br i1 %c2, label %loop1.latch, label %loop3
+  br i1 %c3, label %loop1.latch, label %loop3
 
 loop1.latch:
   br i1 false, label %loop1, label %exit
+
+exit:
+  ret void
+}
+
+define void @loop2_finite_but_child_is_not(i1 %c1, i1 %c2, i1 %c3) {
+; CHECK-LABEL: @loop2_finite_but_child_is_not(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop1
+
+loop1:
+  %iv1 = phi i32 [ 0, %entry ], [ %iv1.next, %loop1.latch ]
+  br i1 %c1, label %loop1.latch, label %loop2
+
+loop2:
+  %iv = phi i32 [ 0, %loop1 ], [ %iv.next, %loop2.latch ]
+  br label %loop3
+
+loop3:
+  br i1 %c2, label %loop2.latch, label %loop3
+
+loop2.latch:
+  %iv.next = add nuw i32 %iv, 1
+  %c = icmp ugt i32 %iv, 200
+  br i1 %c, label %loop1.latch, label %loop2
+
+loop1.latch:
+  %iv1.next = add nuw i32 %iv1, 1
+  %c4 = icmp ult i32 %iv1.next, 200
+  br i1 %c4, label %loop1, label %exit
+
+exit:
+  ret void
+}
+
+define void @loop2_finite_and_child_is_mustprogress(i1 %c1, i1 %c2, i1 %c3) {
+; CHECK-LABEL: @loop2_finite_and_child_is_mustprogress(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop1
+
+loop1:
+  %iv1 = phi i32 [ 0, %entry ], [ %iv1.next, %loop1.latch ]
+  br i1 %c1, label %loop1.latch, label %loop2
+
+loop2:
+  %iv = phi i32 [ 0, %loop1 ], [ %iv.next, %loop2.latch ]
+  br label %loop3
+
+loop3:
+  br i1 %c2, label %loop2.latch, label %loop3, !llvm.loop !5
+
+loop2.latch:
+  %iv.next = add nuw i32 %iv, 1
+  %c = icmp ugt i32 %iv, 200
+  br i1 %c, label %loop1.latch, label %loop2
+
+loop1.latch:
+  %iv1.next = add nuw i32 %iv1, 1
+  %c4 = icmp ult i32 %iv1.next, 200
+  br i1 %c4, label %loop1, label %exit
 
 exit:
   ret void
@@ -282,3 +352,4 @@ exit:
 !2 = distinct !{!2, !1}
 !3 = distinct !{!3, !1}
 !4 = distinct !{!4, !1}
+!5 = distinct !{!5, !1}

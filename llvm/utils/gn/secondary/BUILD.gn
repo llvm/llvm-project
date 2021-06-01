@@ -18,11 +18,13 @@ group("default") {
     deps += [
       "//libcxx",
       "//libcxxabi",
-      "//libunwind",
     ]
   }
   if (current_os == "linux" || current_os == "android") {
     deps += [ "//compiler-rt/test/hwasan" ]
+  }
+  if (current_os == "linux" || current_os == "mac") {
+    deps += [ "//libunwind" ]
   }
 
   testonly = true
