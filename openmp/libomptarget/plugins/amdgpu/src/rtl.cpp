@@ -1833,17 +1833,15 @@ int32_t __tgt_rtl_run_target_team_region_locked(
     return OFFLOAD_FAIL;
   }
 
-  uint32_t group_segment_size;
-  uint32_t sgpr_count, vgpr_count, sgpr_spill_count, vgpr_spill_count;
+  const atl_kernel_info_t KernelInfoEntry =
+      KernelInfoTable[device_id][kernel_name];
+  const uint32_t group_segment_size = KernelInfoEntry.group_segment_size;
+  const uint32_t sgpr_count = KernelInfoEntry.sgpr_count;
+  const uint32_t vgpr_count = KernelInfoEntry.vgpr_count;
+  const uint32_t sgpr_spill_count = KernelInfoEntry.sgpr_spill_count;
+  const uint32_t vgpr_spill_count = KernelInfoEntry.vgpr_spill_count;
 
-  {
-    auto it = KernelInfoTable[device_id][kernel_name];
-    group_segment_size = it.group_segment_size;
-    sgpr_count = it.sgpr_count;
-    vgpr_count = it.vgpr_count;
-    sgpr_spill_count = it.sgpr_spill_count;
-    vgpr_spill_count = it.vgpr_spill_count;
-  }
+  assert(arg_num == (int)KernelInfoEntry.num_args);
 
   /*
    * Set limit based on ThreadsPerGroup and GroupsPerDevice
@@ -1896,20 +1894,12 @@ int32_t __tgt_rtl_run_target_team_region_locked(
     packet->grid_size_x = num_groups * threadsPerGroup;
     packet->grid_size_y = 1;
     packet->grid_size_z = 1;
-    packet->private_segment_size = 0;
-    packet->group_segment_size = 0;
-    packet->kernel_object = 0;
+    packet->private_segment_size = KernelInfoEntry.private_segment_size;
+    packet->group_segment_size = KernelInfoEntry.group_segment_size;
+    packet->kernel_object = KernelInfoEntry.kernel_object;
     packet->kernarg_address = 0;     // use the block allocator
     packet->reserved2 = 0;           // atmi writes id_ here
     packet->completion_signal = {0}; // may want a pool of signals
-
-    {
-      auto it = KernelInfoTable[device_id][kernel_name];
-      packet->kernel_object = it.kernel_object;
-      packet->private_segment_size = it.private_segment_size;
-      packet->group_segment_size = it.group_segment_size;
-      assert(arg_num == (int)it.num_args);
-    }
 
     KernelArgPool *ArgPool = nullptr;
     {
