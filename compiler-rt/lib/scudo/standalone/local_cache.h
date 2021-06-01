@@ -49,16 +49,12 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     CompactPtrT Batch[MaxNumCached];
   };
 
-  void initLinkerInitialized(GlobalStats *S, SizeClassAllocator *A) {
-    Stats.initLinkerInitialized();
+  void init(GlobalStats *S, SizeClassAllocator *A) {
+    DCHECK(isEmpty());
+    Stats.init();
     if (LIKELY(S))
       S->link(&Stats);
     Allocator = A;
-  }
-
-  void init(GlobalStats *S, SizeClassAllocator *A) {
-    memset(this, 0, sizeof(*this));
-    initLinkerInitialized(S, A);
   }
 
   void destroy(GlobalStats *S) {

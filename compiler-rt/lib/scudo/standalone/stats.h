@@ -29,8 +29,10 @@ typedef uptr StatCounters[StatCount];
 // LocalStats::add'ing, this is OK, we will still get a meaningful number.
 class LocalStats {
 public:
-  void initLinkerInitialized() {}
-  void init() { memset(this, 0, sizeof(*this)); }
+  void init() {
+    for (uptr I = 0; I < StatCount; I++)
+      DCHECK_EQ(get(static_cast<StatType>(I)), 0U);
+  }
 
   void add(StatType I, uptr V) {
     V += atomic_load_relaxed(&StatsArray[I]);
@@ -56,13 +58,7 @@ private:
 // Global stats, used for aggregation and querying.
 class GlobalStats : public LocalStats {
 public:
-  void initLinkerInitialized() {}
-  void init() {
-    LocalStats::init();
-    Mutex.init();
-    StatsList = {};
-    initLinkerInitialized();
-  }
+  void init() { LocalStats::init(); }
 
   void link(LocalStats *S) {
     ScopedLock L(Mutex);

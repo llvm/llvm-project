@@ -24,28 +24,32 @@ namespace scudo {
 
 template <class Allocator, u32 TSDsArraySize, u32 DefaultTSDCount>
 struct TSDRegistrySharedT {
-  void initLinkerInitialized(Allocator *Instance) {
-    Instance->initLinkerInitialized();
+  void init(Allocator *Instance) {
+    DCHECK(!Initialized);
+    Instance->init();
     for (u32 I = 0; I < TSDsArraySize; I++)
-      TSDs[I].initLinkerInitialized(Instance);
+      TSDs[I].init(Instance);
     const u32 NumberOfCPUs = getNumberOfCPUs();
     setNumberOfTSDs((NumberOfCPUs == 0) ? DefaultTSDCount
                                         : Min(NumberOfCPUs, DefaultTSDCount));
     Initialized = true;
-  }
-  void init(Allocator *Instance) {
-    memset(this, 0, sizeof(*this));
-    initLinkerInitialized(Instance);
   }
 
   void initOnceMaybe(Allocator *Instance) {
     ScopedLock L(Mutex);
     if (LIKELY(Initialized))
       return;
-    initLinkerInitialized(Instance); // Sets Initialized.
+    init(Instance); // Sets Initialized.
   }
 
-  void unmapTestOnly() { setCurrentTSD(nullptr); }
+  void unmapTestOnly(Allocator *Instance) {
+    for (u32 I = 0; I < TSDsArraySize; I++) {
+      TSDs[I].commitBack(Instance);
+      TSDs[I] = {};
+    }
+    setCurrentTSD(nullptr);
+    Initialized = false;
+  }
 
   ALWAYS_INLINE void initThreadMaybe(Allocator *Instance,
                                      UNUSED bool MinimalInit) {
