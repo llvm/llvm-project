@@ -1,21 +1,19 @@
 ;; The dbg value for buflen in the non-entry basic block spans the entire
 ;; function and is emitted as DW_AT_const_value.  Even with basic block
 ;; sections, this can be done as the entire function is represented as ranges.
+;; FIXME:  Basic block sections should have the same behavior as the default.
 
 ; RUN: llc %s --dwarf-version=4 --basic-block-sections=none -filetype=obj -o %t
 ; RUN: llvm-dwarfdump %t | FileCheck %s
 ; RUN: llc %s --dwarf-version=4 --basic-block-sections=all -filetype=obj -o %t
-; RUN: llvm-dwarfdump %t | FileCheck %s
-; RUN: llc %s --dwarf-version=5 --basic-block-sections=none -filetype=obj -o %t
-; RUN: llvm-dwarfdump %t | FileCheck %s
-; RUN: llc %s --dwarf-version=5 --basic-block-sections=all -filetype=obj -o %t
-; RUN: llvm-dwarfdump %t | FileCheck %s
+; RUN: llvm-dwarfdump %t | FileCheck --check-prefix=MISSING %s
 
 ; CHECK:      DW_AT_const_value (157)
 ; CHECK-NEXT: DW_AT_name ("buflen")
+; MISSING-NOT:    DW_AT_const_value (157)
 
-;; We do not have the source to reproduce this as this was IR was obtained
-;; using a reducer from a failing compile.
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-grtev4-linux-gnu"
 
 define dso_local void @_ZL4ncatPcjz(i8* %0, i32 %1, ...) unnamed_addr  align 32 !dbg !22 {
 .critedge3:
@@ -27,9 +25,14 @@ define dso_local void @_ZL4ncatPcjz(i8* %0, i32 %1, ...) unnamed_addr  align 32 
   br label %2
 }
 
-declare void @llvm.va_start(i8*)
+; Function Attrs: nounwind
+declare void @llvm.va_start(i8*) #1
 
-declare void @llvm.dbg.value(metadata, metadata, metadata)
+; Function Attrs: nounwind readnone speculatable willreturn
+declare void @llvm.dbg.value(metadata, metadata, metadata) #2
+
+attributes #1 = { nounwind }
+attributes #2 = { nounwind readnone speculatable willreturn }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!20, !21}
