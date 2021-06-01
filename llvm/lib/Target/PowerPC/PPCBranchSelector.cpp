@@ -415,5 +415,5 @@ bool PPCBSel::runOnMachineFunction(MachineFunction &Fn) {
   }
 
   BlockSizes.clear();
-  return true;
+  return EverMadeChange;
 }
