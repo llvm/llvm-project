@@ -53,6 +53,11 @@ test()
     static_assert((std::is_same<typename R::reference, void>::value), "");
     static_assert((std::is_same<typename R::pointer, void>::value), "");
     static_assert((std::is_same<typename R::iterator_category, std::output_iterator_tag>::value), "");
+
+#if TEST_STD_VER <= 14
+    typedef std::iterator<std::output_iterator_tag, void, void, void, void> iterator_base;
+    static_assert((std::is_base_of<iterator_base, R>::value), "");
+#endif
 }
 
 int main(int, char**)
