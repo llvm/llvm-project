@@ -16,6 +16,8 @@ program openacc_parallel_validity
   real :: reduction_r
   logical :: reduction_l
   real(8), dimension(N, N) :: aa, bb, cc
+  real(8), dimension(:), allocatable :: dd
+  real(8), pointer :: p
   logical :: ifCondition = .TRUE.
   real(8), dimension(N) :: a, f, g, h
 
@@ -89,7 +91,8 @@ program openacc_parallel_validity
   !$acc parallel deviceptr(aa, bb) no_create(cc)
   !$acc end parallel
 
-  !$acc parallel attach(aa, bb, cc)
+  !ERROR: Argument `cc` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
+  !$acc parallel attach(dd, p, cc)
   !$acc end parallel
 
   !$acc parallel private(aa) firstprivate(bb, cc)

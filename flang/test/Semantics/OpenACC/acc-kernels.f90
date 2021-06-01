@@ -21,6 +21,8 @@ program openacc_kernels_validity
   real :: reduction_r
   logical :: reduction_l
   real(8), dimension(N, N) :: aa, bb, cc
+  real(8), dimension(:), allocatable :: dd
+  real(8), pointer :: p
   logical :: ifCondition = .TRUE.
   type(atype) :: t
   type(atype), dimension(10) :: ta
@@ -99,7 +101,8 @@ program openacc_kernels_validity
   !$acc kernels deviceptr(aa, bb) no_create(cc)
   !$acc end kernels
 
-  !$acc kernels attach(aa, bb, cc)
+  !ERROR: Argument `aa` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
+  !$acc kernels attach(dd, p, aa)
   !$acc end kernels
 
   !ERROR: PRIVATE clause is not allowed on the KERNELS directive
