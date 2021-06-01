@@ -3123,7 +3123,10 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
         // locations, which are supposed to be immutable?
         Chain = addTokenForArgument(Chain, DAG, MFI, FI);
       } else {
-        DstAddr = PtrOff;
+        // Stores to the argument stack area are relative to the stack pointer.
+        SDValue SP = DAG.getCopyFromReg(Chain, DL, Info->getStackPtrOffsetReg(),
+                                        MVT::i32);
+        DstAddr = DAG.getNode(ISD::ADD, DL, MVT::i32, SP, PtrOff);
         DstInfo = MachinePointerInfo::getStack(MF, LocMemOffset);
         Alignment =
             commonAlignment(Subtarget->getStackAlignment(), LocMemOffset);
