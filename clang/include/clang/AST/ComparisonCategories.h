@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include <array>
 #include <cassert>
+#include <vector>
 
 namespace llvm {
   class StringRef;

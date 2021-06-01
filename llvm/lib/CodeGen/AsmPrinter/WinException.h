@@ -14,6 +14,7 @@
 #define LLVM_LIB_CODEGEN_ASMPRINTER_WIN64EXCEPTION_H
 
 #include "EHStreamer.h"
+#include <vector>
 
 namespace llvm {
 class GlobalValue;
