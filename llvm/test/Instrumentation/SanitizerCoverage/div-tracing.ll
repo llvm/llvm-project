@@ -12,7 +12,7 @@ entry:
 }
 
 ; CHECK-LABEL: @div_a_b
-; CHECK: call void @__sanitizer_cov_trace_div4(i32 %b)
+; CHECK: call void @__sanitizer_cov_trace_div4(i32 zeroext %b)
 ; CHECK: ret
 
 
