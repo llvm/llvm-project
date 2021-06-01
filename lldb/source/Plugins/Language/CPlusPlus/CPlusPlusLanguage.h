@@ -105,6 +105,8 @@ public:
 
   static lldb_private::ConstString GetPluginNameStatic();
 
+  bool SymbolNameFitsToLanguage(Mangled mangled) const override;
+
   static bool IsCPPMangledName(llvm::StringRef name);
 
   // Extract C++ context and identifier from a string using heuristic matching
