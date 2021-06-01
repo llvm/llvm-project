@@ -31,7 +31,7 @@ bidirectional_iterator: `D100278 <https://llvm.org/D100278>`_",
 [predef.iterators],Updates to predefined iterators.,"[iterator.concepts], [iterator.cust.swap], [iterator.cust.move]",,,
 [move.sentinel],,[concepts] … Note: for testing it may be beneficial to have completed [predef.iterators]. ,,,
 [common.iterator],,"[iterator.concepts], [iterator.cust.swap], [iterator.cust.move]",Zoe Carver,,
-[default.sentinels],The empty std::default_sentinel_t.,,,,
+[default.sentinels],The empty std::default_sentinel_t.,,Zoe Carver,,✅
 [counted.iterator],,"[iterator.concepts], [iterator.cust.swap], [iterator.cust.move], [default.sentinels]",,,
 [stream.iterators],,[default.sentinels],,,
 [ranges.syn]: pt. 1,All the stuff not specified elsewhere. ,"[range.access], [iterator.concepts], [range.all], [range.subrange], unreachable, [range.empty]",,,
