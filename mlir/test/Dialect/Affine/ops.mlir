@@ -184,6 +184,17 @@ func @parallel_min_max(%a: index, %b: index, %c: index, %d: index) {
 
 // -----
 
+// CHECK-LABEL: @parallel_no_ivs
+func @parallel_no_ivs() {
+  // CHECK: affine.parallel () = () to ()
+  affine.parallel () = () to () {
+    affine.yield
+  }
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @affine_if
 func @affine_if() -> f32 {
   // CHECK: %[[ZERO:.*]] = constant {{.*}} : f32
