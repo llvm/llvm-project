@@ -25,6 +25,45 @@ using namespace LegacyLegalizeActions;
 
 #define DEBUG_TYPE "legalizer-info"
 
+raw_ostream &llvm::operator<<(raw_ostream &OS, LegacyLegalizeAction Action) {
+  switch (Action) {
+  case Legal:
+    OS << "Legal";
+    break;
+  case NarrowScalar:
+    OS << "NarrowScalar";
+    break;
+  case WidenScalar:
+    OS << "WidenScalar";
+    break;
+  case FewerElements:
+    OS << "FewerElements";
+    break;
+  case MoreElements:
+    OS << "MoreElements";
+    break;
+  case Bitcast:
+    OS << "Bitcast";
+    break;
+  case Lower:
+    OS << "Lower";
+    break;
+  case Libcall:
+    OS << "Libcall";
+    break;
+  case Custom:
+    OS << "Custom";
+    break;
+  case Unsupported:
+    OS << "Unsupported";
+    break;
+  case NotFound:
+    OS << "NotFound";
+    break;
+  }
+  return OS;
+}
+
 LegacyLegalizerInfo::LegacyLegalizerInfo() : TablesInitialized(false) {
   // Set defaults.
   // FIXME: these two (G_ANYEXT and G_TRUNC?) can be legalized to the
