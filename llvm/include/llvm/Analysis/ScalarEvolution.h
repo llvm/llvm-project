@@ -712,17 +712,18 @@ public:
   /// must be interpreted as a loop having an unknown trip count.
   const SCEV *getTripCountFromExitCount(const SCEV *ExitCount);
 
-  /// Returns the maximum trip count of the loop if it is a single-exit
-  /// loop and we can compute a small maximum for that loop.
-  ///
-  /// Implemented in terms of the \c getSmallConstantTripCount overload with
-  /// the single exiting block passed to it. See that routine for details.
+  /// Returns the exact trip count of the loop if we can compute it, and
+  /// the result is a small constant.  '0' is used to represent an unknown
+  /// or non-constant trip count.  Note that a trip count is simply one more
+  /// than the backedge taken count for the loop.
   unsigned getSmallConstantTripCount(const Loop *L);
 
-  /// Returns the maximum trip count of this loop as a normal unsigned
-  /// value. Returns 0 if the trip count is unknown or not constant. This
-  /// "trip count" assumes that control exits via ExitingBlock. More
-  /// precisely, it is the number of times that control may reach ExitingBlock
+  /// Return the exact trip count for this loop if we exit through ExitingBlock.
+  /// '0' is used to represent an unknown or non-constant trip count.  Note
+  /// that a trip count is simply one more than the backedge taken count for
+  /// the same exit.
+  /// This "trip count" assumes that control exits via ExitingBlock. More
+  /// precisely, it is the number of times that control will reach ExitingBlock
   /// before taking the branch. For loops with multiple exits, it may not be
   /// the number times that the loop header executes if the loop exits
   /// prematurely via another branch.
