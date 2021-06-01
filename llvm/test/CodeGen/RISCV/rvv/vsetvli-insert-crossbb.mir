@@ -150,7 +150,7 @@ body:             |
   ; CHECK:   [[COPY1:%[0-9]+]]:vr = COPY $v8
   ; CHECK:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
   ; CHECK:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
-  ; CHECK:   dead %9:gpr = PseudoVSETVLI [[COPY]], 88, implicit-def $vl, implicit-def $vtype
+  ; CHECK:   dead $x0 = PseudoVSETVLI [[COPY]], 88, implicit-def $vl, implicit-def $vtype
   ; CHECK:   [[PseudoVLE64_V_M1_:%[0-9]+]]:vr = PseudoVLE64_V_M1 [[COPY2]], $noreg, 6, implicit $vl, implicit $vtype
   ; CHECK:   [[COPY4:%[0-9]+]]:gpr = COPY $x0
   ; CHECK:   BEQ [[COPY3]], [[COPY4]], %bb.2
@@ -223,19 +223,19 @@ body:             |
   ; CHECK:   [[COPY1:%[0-9]+]]:gpr = COPY $x12
   ; CHECK:   [[COPY2:%[0-9]+]]:gpr = COPY $x11
   ; CHECK:   [[COPY3:%[0-9]+]]:gpr = COPY $x10
-  ; CHECK:   dead %9:gpr = PseudoVSETVLI [[COPY]], 87, implicit-def $vl, implicit-def $vtype
+  ; CHECK:   dead $x0 = PseudoVSETVLI [[COPY]], 87, implicit-def $vl, implicit-def $vtype
   ; CHECK:   [[PseudoVLE32_V_MF2_:%[0-9]+]]:vr = PseudoVLE32_V_MF2 [[COPY2]], $noreg, 5, implicit $vl, implicit $vtype
   ; CHECK:   [[COPY4:%[0-9]+]]:gpr = COPY $x0
   ; CHECK:   BEQ [[COPY3]], [[COPY4]], %bb.2
   ; CHECK:   PseudoBR %bb.1
   ; CHECK: bb.1.if.then:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   dead %10:gpr = PseudoVSETVLI [[COPY]], 88, implicit-def $vl, implicit-def $vtype
+  ; CHECK:   dead $x0 = PseudoVSETVLI [[COPY]], 88, implicit-def $vl, implicit-def $vtype
   ; CHECK:   early-clobber %1:vr = PseudoVZEXT_VF2_M1 [[PseudoVLE32_V_MF2_]], $noreg, 6, implicit $vl, implicit $vtype
   ; CHECK:   PseudoBR %bb.3
   ; CHECK: bb.2.if.else:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   dead %11:gpr = PseudoVSETVLI [[COPY]], 88, implicit-def $vl, implicit-def $vtype
+  ; CHECK:   dead $x0 = PseudoVSETVLI [[COPY]], 88, implicit-def $vl, implicit-def $vtype
   ; CHECK:   early-clobber %2:vr = PseudoVSEXT_VF2_M1 [[PseudoVLE32_V_MF2_]], $noreg, 6, implicit $vl, implicit $vtype
   ; CHECK: bb.3.if.end:
   ; CHECK:   [[PHI:%[0-9]+]]:vr = PHI %1, %bb.1, %2, %bb.2
@@ -303,12 +303,12 @@ body:             |
   ; CHECK:   PseudoBR %bb.1
   ; CHECK: bb.1.if.then:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   dead %9:gpr = PseudoVSETVLI [[COPY]], 88, implicit-def $vl, implicit-def $vtype
+  ; CHECK:   dead $x0 = PseudoVSETVLI [[COPY]], 88, implicit-def $vl, implicit-def $vtype
   ; CHECK:   [[PseudoVADD_VV_M1_:%[0-9]+]]:vr = PseudoVADD_VV_M1 [[COPY2]], [[COPY1]], $noreg, 6, implicit $vl, implicit $vtype
   ; CHECK:   PseudoBR %bb.3
   ; CHECK: bb.2.if.else:
   ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   dead %10:gpr = PseudoVSETVLI [[COPY]], 88, implicit-def $vl, implicit-def $vtype
+  ; CHECK:   dead $x0 = PseudoVSETVLI [[COPY]], 88, implicit-def $vl, implicit-def $vtype
   ; CHECK:   [[PseudoVSUB_VV_M1_:%[0-9]+]]:vr = PseudoVSUB_VV_M1 [[COPY1]], [[COPY1]], $noreg, 6, implicit $vl, implicit $vtype
   ; CHECK: bb.3.if.end:
   ; CHECK:   [[PHI:%[0-9]+]]:vr = PHI [[PseudoVADD_VV_M1_]], %bb.1, [[PseudoVSUB_VV_M1_]], %bb.2
