@@ -828,6 +828,8 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
     return;
   }
 
+  deadStrippable = hdr->flags & MH_DEAD_STRIPPABLE_DYLIB;
+
   if (!checkCompatibility(this))
     return;
 

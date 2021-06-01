@@ -702,7 +702,6 @@ def objc_gc_only : Flag<["-"], "objc_gc_only">,
     Group<grp_rare>;
 def dead_strip_dylibs : Flag<["-"], "dead_strip_dylibs">,
     HelpText<"Remove dylibs that are unreachable by the entry point or exported symbols">,
-    Flags<[HelpHidden]>,
     Group<grp_rare>;
 def allow_sub_type_mismatches : Flag<["-"], "allow_sub_type_mismatches">,
     HelpText<"Permit mixing objects compiled for different ARM CPU subtypes">,

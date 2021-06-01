@@ -81,6 +81,7 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
               toString(file));
     } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
       overridesWeakDef = !isWeakDef && dysym->isWeakDef();
+      dysym->unreference();
     }
     // Defined symbols take priority over other types of symbols, so in case
     // of a name conflict, we fall through to the replaceSymbol() call below.
@@ -106,7 +107,7 @@ Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
   else if (auto *lazy = dyn_cast<LazySymbol>(s))
     lazy->fetchArchiveMember();
   else if (auto *dynsym = dyn_cast<DylibSymbol>(s))
-    dynsym->refState = std::max(dynsym->refState, refState);
+    dynsym->reference(refState);
   else if (auto *undefined = dyn_cast<Undefined>(s))
     undefined->refState = std::max(undefined->refState, refState);
   return s;
@@ -147,7 +148,7 @@ Symbol *SymbolTable::addDylib(StringRef name, DylibFile *file, bool isWeakDef,
     } else if (auto *undefined = dyn_cast<Undefined>(s)) {
       refState = undefined->refState;
     } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
-      refState = dysym->refState;
+      refState = dysym->getRefState();
     }
   }
 
@@ -155,8 +156,11 @@ Symbol *SymbolTable::addDylib(StringRef name, DylibFile *file, bool isWeakDef,
   if (wasInserted || isa<Undefined>(s) ||
       (isa<DylibSymbol>(s) &&
        ((!isWeakDef && s->isWeakDef()) ||
-        (!isDynamicLookup && cast<DylibSymbol>(s)->isDynamicLookup()))))
+        (!isDynamicLookup && cast<DylibSymbol>(s)->isDynamicLookup())))) {
+    if (auto *dynsym = dyn_cast<DylibSymbol>(s))
+      dynsym->unreference();
     replaceSymbol<DylibSymbol>(s, file, name, isWeakDef, refState, isTlv);
+  }
 
   return s;
 }
