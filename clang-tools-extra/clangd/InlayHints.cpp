@@ -78,7 +78,7 @@ public:
     if (isa<DecompositionDecl>(D))
       return true;
 
-    if (auto *AT = D->getType()->getContainedAutoType()) {
+    if (D->getType()->getContainedAutoType()) {
       if (!D->getType()->isDependentType()) {
         // Our current approach is to place the hint on the variable
         // and accordingly print the full type
