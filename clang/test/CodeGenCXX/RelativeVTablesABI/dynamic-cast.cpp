@@ -1,7 +1,7 @@
 // dynamic_cast
 // Ensure that dynamic casting works normally
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O3 -S -o - -emit-llvm -fexperimental-relative-c++-abi-vtables | FileCheck %s
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O3 -S -o - -emit-llvm | FileCheck %s
 
 // CHECK:      define{{.*}} %class.A* @_Z6upcastP1B(%class.B* readnone %b) local_unnamed_addr
 // CHECK-NEXT: entry:
