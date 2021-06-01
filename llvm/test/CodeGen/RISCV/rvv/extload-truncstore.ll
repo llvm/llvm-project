@@ -398,8 +398,8 @@ define void @truncstore_nxv1i8_nxv1i1(<vscale x 1 x i8> %x, <vscale x 1 x i1> *%
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a1, zero, e8,mf8,ta,mu
 ; CHECK-NEXT:    vand.vi v25, v8, 1
-; CHECK-NEXT:    vmsne.vi v26, v25, 0
-; CHECK-NEXT:    vse1.v v26, (a0)
+; CHECK-NEXT:    vmsne.vi v25, v25, 0
+; CHECK-NEXT:    vse1.v v25, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <vscale x 1 x i8> %x to <vscale x 1 x i1>
   store <vscale x 1 x i1> %y, <vscale x 1 x i1>* %z

@@ -1695,31 +1695,42 @@ multiclass PseudoUnaryV_VF8 {
   }
 }
 
-// The destination EEW is 1.
+// The destination EEW is 1 since "For the purposes of register group overlap
+// constraints, mask elements have EEW=1."
 // The source EEW is 8, 16, 32, or 64.
 // When the destination EEW is different from source EEW, we need to use
 // @earlyclobber to avoid the overlap between destination and source registers.
+// We don't need @earlyclobber for LMUL<=1 since that matches this overlap
+// exception from the spec
+// "The destination EEW is smaller than the source EEW and the overlap is in the
+//  lowest-numbered part of the source register group".
+// With LMUL<=1 the source and dest occupy a single register so any overlap
+// is in the lowest-numbered part.
 multiclass VPseudoBinaryM_VV {
   foreach m = MxList.m in
-    defm _VV : VPseudoBinaryM<VR, m.vrclass, m.vrclass, m, "@earlyclobber $rd">;
+    defm _VV : VPseudoBinaryM<VR, m.vrclass, m.vrclass, m,
+                              !if(!ge(m.octuple, 16), "@earlyclobber $rd", "")>;
 }
 
 multiclass VPseudoBinaryM_VX {
   foreach m = MxList.m in
     defm "_VX" :
-      VPseudoBinaryM<VR, m.vrclass, GPR, m, "@earlyclobber $rd">;
+      VPseudoBinaryM<VR, m.vrclass, GPR, m,
+                     !if(!ge(m.octuple, 16), "@earlyclobber $rd", "")>;
 }
 
 multiclass VPseudoBinaryM_VF {
   foreach m = MxList.m in
     foreach f = FPList.fpinfo in
       defm "_V" # f.FX :
-        VPseudoBinaryM<VR, m.vrclass, f.fprclass, m, "@earlyclobber $rd">;
+        VPseudoBinaryM<VR, m.vrclass, f.fprclass, m,
+                       !if(!ge(m.octuple, 16), "@earlyclobber $rd", "")>;
 }
 
 multiclass VPseudoBinaryM_VI {
   foreach m = MxList.m in
-    defm _VI : VPseudoBinaryM<VR, m.vrclass, simm5, m, "@earlyclobber $rd">;
+    defm _VI : VPseudoBinaryM<VR, m.vrclass, simm5, m,
+                              !if(!ge(m.octuple, 16), "@earlyclobber $rd", "")>;
 }
 
 multiclass VPseudoBinaryV_VV_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
