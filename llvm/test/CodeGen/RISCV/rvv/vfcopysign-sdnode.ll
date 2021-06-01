@@ -69,7 +69,7 @@ define <vscale x 1 x half> @vfcopysign_exttrunc_vf_nxv1f16_nxv1f32(<vscale x 1 x
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v25, fa0
-; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfncvt.f.f.w v26, v25
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v26
 ; CHECK-NEXT:    ret
@@ -98,7 +98,7 @@ define <vscale x 1 x half> @vfcopynsign_exttrunc_vf_nxv1f16_nxv1f32(<vscale x 1 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v25, fa0
-; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfncvt.f.f.w v26, v25
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v26
 ; CHECK-NEXT:    ret
@@ -115,7 +115,7 @@ define <vscale x 1 x half> @vfcopysign_exttrunc_vv_nxv1f16_nxv1f64(<vscale x 1 x
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v25, v9
-; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfncvt.f.f.w v26, v25
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v26
 ; CHECK-NEXT:    ret
@@ -129,9 +129,9 @@ define <vscale x 1 x half> @vfcopysign_exttrunc_vf_nxv1f16_nxv1f64(<vscale x 1 x
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v25, fa0
-; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v26, v25
-; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfncvt.f.f.w v25, v26
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v25
 ; CHECK-NEXT:    ret
@@ -147,7 +147,7 @@ define <vscale x 1 x half> @vfcopynsign_exttrunc_vv_nxv1f16_nxv1f64(<vscale x 1 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v25, v9
-; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfncvt.f.f.w v26, v25
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v26
 ; CHECK-NEXT:    ret
@@ -162,9 +162,9 @@ define <vscale x 1 x half> @vfcopynsign_exttrunc_vf_nxv1f16_nxv1f64(<vscale x 1 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v25, fa0
-; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v26, v25
-; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfncvt.f.f.w v25, v26
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v25
 ; CHECK-NEXT:    ret
@@ -337,7 +337,7 @@ define <vscale x 8 x half> @vfcopysign_exttrunc_vf_nxv8f16_nxv8f32(<vscale x 8 x
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v28, fa0
-; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vfncvt.f.f.w v26, v28
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v26
 ; CHECK-NEXT:    ret
@@ -366,7 +366,7 @@ define <vscale x 8 x half> @vfcopynsign_exttrunc_vf_nxv8f16_nxv8f32(<vscale x 8 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v28, fa0
-; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vfncvt.f.f.w v26, v28
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v26
 ; CHECK-NEXT:    ret
@@ -383,7 +383,7 @@ define <vscale x 8 x half> @vfcopysign_exttrunc_vv_nxv8f16_nxv8f64(<vscale x 8 x
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v28, v16
-; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vfncvt.f.f.w v26, v28
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v26
 ; CHECK-NEXT:    ret
@@ -397,9 +397,9 @@ define <vscale x 8 x half> @vfcopysign_exttrunc_vf_nxv8f16_nxv8f64(<vscale x 8 x
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v16, fa0
-; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,m4,ta,mu
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v28, v16
-; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vfncvt.f.f.w v26, v28
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v26
 ; CHECK-NEXT:    ret
@@ -415,7 +415,7 @@ define <vscale x 8 x half> @vfcopynsign_exttrunc_vv_nxv8f16_nxv8f64(<vscale x 8 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v28, v16
-; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vfncvt.f.f.w v26, v28
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v26
 ; CHECK-NEXT:    ret
@@ -430,9 +430,9 @@ define <vscale x 8 x half> @vfcopynsign_exttrunc_vf_nxv8f16_nxv8f64(<vscale x 8 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v16, fa0
-; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,m4,ta,mu
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v28, v16
-; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vfncvt.f.f.w v26, v28
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v26
 ; CHECK-NEXT:    ret
@@ -593,7 +593,7 @@ define <vscale x 1 x float> @vfcopysign_exttrunc_vv_nxv1f32_nxv1f16(<vscale x 1 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v25, v9
-; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v25
 ; CHECK-NEXT:    ret
   %e = fpext <vscale x 1 x half> %vs to <vscale x 1 x float>
@@ -607,7 +607,7 @@ define <vscale x 1 x float> @vfcopysign_exttrunc_vf_nxv1f32_nxv1f16(<vscale x 1 
 ; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v25, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v26, v25
-; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v26
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x half> undef, half %s, i32 0
@@ -622,7 +622,7 @@ define <vscale x 1 x float> @vfcopynsign_exttrunc_vv_nxv1f32_nxv1f16(<vscale x 1
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v25, v9
-; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v25
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 1 x half> %vs
@@ -637,7 +637,7 @@ define <vscale x 1 x float> @vfcopynsign_exttrunc_vf_nxv1f32_nxv1f16(<vscale x 1
 ; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v25, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v26, v25
-; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v26
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x half> undef, half %s, i32 0
@@ -665,7 +665,7 @@ define <vscale x 1 x float> @vfcopysign_exttrunc_vf_nxv1f32_nxv1f64(<vscale x 1 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v25, fa0
-; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfncvt.f.f.w v26, v25
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v26
 ; CHECK-NEXT:    ret
@@ -694,7 +694,7 @@ define <vscale x 1 x float> @vfcopynsign_exttrunc_vf_nxv1f32_nxv1f64(<vscale x 1
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v25, fa0
-; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfncvt.f.f.w v26, v25
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v26
 ; CHECK-NEXT:    ret
@@ -855,7 +855,7 @@ define <vscale x 8 x float> @vfcopysign_exttrunc_vv_nxv8f32_nxv8f16(<vscale x 8 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v28, v12
-; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,m4,ta,mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v28
 ; CHECK-NEXT:    ret
   %e = fpext <vscale x 8 x half> %vs to <vscale x 8 x float>
@@ -869,7 +869,7 @@ define <vscale x 8 x float> @vfcopysign_exttrunc_vf_nxv8f32_nxv8f16(<vscale x 8 
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v26, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v28, v26
-; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,m4,ta,mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v28
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x half> undef, half %s, i32 0
@@ -884,7 +884,7 @@ define <vscale x 8 x float> @vfcopynsign_exttrunc_vv_nxv8f32_nxv8f16(<vscale x 8
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v28, v12
-; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,m4,ta,mu
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v28
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 8 x half> %vs
@@ -899,7 +899,7 @@ define <vscale x 8 x float> @vfcopynsign_exttrunc_vf_nxv8f32_nxv8f16(<vscale x 8
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v26, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v28, v26
-; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,m4,ta,mu
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v28
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x half> undef, half %s, i32 0
@@ -927,7 +927,7 @@ define <vscale x 8 x float> @vfcopysign_exttrunc_vf_nxv8f32_nxv8f64(<vscale x 8 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v16, fa0
-; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,m4,ta,mu
 ; CHECK-NEXT:    vfncvt.f.f.w v28, v16
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v28
 ; CHECK-NEXT:    ret
@@ -956,7 +956,7 @@ define <vscale x 8 x float> @vfcopynsign_exttrunc_vf_nxv8f32_nxv8f64(<vscale x 8
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v16, fa0
-; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,m4,ta,mu
 ; CHECK-NEXT:    vfncvt.f.f.w v28, v16
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v28
 ; CHECK-NEXT:    ret
@@ -1069,9 +1069,9 @@ define <vscale x 1 x double> @vfcopysign_exttrunc_vv_nxv1f64_nxv1f16(<vscale x 1
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v25, v9
-; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v26, v25
-; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v26
 ; CHECK-NEXT:    ret
   %e = fpext <vscale x 1 x half> %vs to <vscale x 1 x double>
@@ -1085,9 +1085,9 @@ define <vscale x 1 x double> @vfcopysign_exttrunc_vf_nxv1f64_nxv1f16(<vscale x 1
 ; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v25, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v26, v25
-; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v25, v26
-; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v25
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x half> undef, half %s, i32 0
@@ -1102,9 +1102,9 @@ define <vscale x 1 x double> @vfcopynsign_exttrunc_vv_nxv1f64_nxv1f16(<vscale x 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v25, v9
-; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v26, v25
-; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v26
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 1 x half> %vs
@@ -1119,9 +1119,9 @@ define <vscale x 1 x double> @vfcopynsign_exttrunc_vf_nxv1f64_nxv1f16(<vscale x 
 ; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v25, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v26, v25
-; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v25, v26
-; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v25
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x half> undef, half %s, i32 0
@@ -1137,7 +1137,7 @@ define <vscale x 1 x double> @vfcopysign_exttrunc_vv_nxv1f64_nxv1f32(<vscale x 1
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v25, v9
-; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v25
 ; CHECK-NEXT:    ret
   %e = fpext <vscale x 1 x float> %vs to <vscale x 1 x double>
@@ -1151,7 +1151,7 @@ define <vscale x 1 x double> @vfcopysign_exttrunc_vf_nxv1f64_nxv1f32(<vscale x 1
 ; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v25, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v26, v25
-; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v26
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x float> undef, float %s, i32 0
@@ -1166,7 +1166,7 @@ define <vscale x 1 x double> @vfcopynsign_exttrunc_vv_nxv1f64_nxv1f32(<vscale x 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v25, v9
-; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v25
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 1 x float> %vs
@@ -1181,7 +1181,7 @@ define <vscale x 1 x double> @vfcopynsign_exttrunc_vf_nxv1f64_nxv1f32(<vscale x 
 ; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v25, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v26, v25
-; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v26
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x float> undef, float %s, i32 0
@@ -1341,9 +1341,9 @@ define <vscale x 8 x double> @vfcopysign_exttrunc_vv_nxv8f64_nxv8f16(<vscale x 8
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v28, v16
-; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,m4,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v16, v28
-; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e64,m8,ta,mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %e = fpext <vscale x 8 x half> %vs to <vscale x 8 x double>
@@ -1357,9 +1357,9 @@ define <vscale x 8 x double> @vfcopysign_exttrunc_vf_nxv8f64_nxv8f16(<vscale x 8
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v26, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v28, v26
-; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,m4,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v16, v28
-; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e64,m8,ta,mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x half> undef, half %s, i32 0
@@ -1374,9 +1374,9 @@ define <vscale x 8 x double> @vfcopynsign_exttrunc_vv_nxv8f64_nxv8f16(<vscale x 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v28, v16
-; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,m4,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v16, v28
-; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e64,m8,ta,mu
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 8 x half> %vs
@@ -1391,9 +1391,9 @@ define <vscale x 8 x double> @vfcopynsign_exttrunc_vf_nxv8f64_nxv8f16(<vscale x 
 ; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v26, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v28, v26
-; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e32,m4,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v16, v28
-; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e64,m8,ta,mu
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x half> undef, half %s, i32 0
@@ -1409,7 +1409,7 @@ define <vscale x 8 x double> @vfcopysign_exttrunc_vv_nxv8f64_nxv8f32(<vscale x 8
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v24, v16
-; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e64,m8,ta,mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v24
 ; CHECK-NEXT:    ret
   %e = fpext <vscale x 8 x float> %vs to <vscale x 8 x double>
@@ -1423,7 +1423,7 @@ define <vscale x 8 x double> @vfcopysign_exttrunc_vf_nxv8f64_nxv8f32(<vscale x 8
 ; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v28, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v16, v28
-; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e64,m8,ta,mu
 ; CHECK-NEXT:    vfsgnj.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x float> undef, float %s, i32 0
@@ -1438,7 +1438,7 @@ define <vscale x 8 x double> @vfcopynsign_exttrunc_vv_nxv8f64_nxv8f32(<vscale x 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v24, v16
-; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e64,m8,ta,mu
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v24
 ; CHECK-NEXT:    ret
   %n = fneg <vscale x 8 x float> %vs
@@ -1453,7 +1453,7 @@ define <vscale x 8 x double> @vfcopynsign_exttrunc_vf_nxv8f64_nxv8f32(<vscale x 
 ; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v28, fa0
 ; CHECK-NEXT:    vfwcvt.f.f.v v16, v28
-; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e64,m8,ta,mu
 ; CHECK-NEXT:    vfsgnjn.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x float> undef, float %s, i32 0

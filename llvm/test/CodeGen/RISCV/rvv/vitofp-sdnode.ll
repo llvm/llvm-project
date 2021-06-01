@@ -1549,7 +1549,7 @@ define <vscale x 1 x half> @vsitofp_nxv1i64_nxv1f16(<vscale x 1 x i64> %va) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
 ; RV32-NEXT:    vfncvt.f.x.w v25, v8
-; RV32-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
+; RV32-NEXT:    vsetvli zero, zero, e16,mf4,ta,mu
 ; RV32-NEXT:    vfncvt.f.f.w v8, v25
 ; RV32-NEXT:    ret
 ;
@@ -1557,7 +1557,7 @@ define <vscale x 1 x half> @vsitofp_nxv1i64_nxv1f16(<vscale x 1 x i64> %va) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
 ; RV64-NEXT:    vfncvt.f.x.w v25, v8
-; RV64-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
+; RV64-NEXT:    vsetvli zero, zero, e16,mf4,ta,mu
 ; RV64-NEXT:    vfncvt.f.f.w v8, v25
 ; RV64-NEXT:    ret
   %evec = sitofp <vscale x 1 x i64> %va to <vscale x 1 x half>
@@ -1569,7 +1569,7 @@ define <vscale x 1 x half> @vuitofp_nxv1i64_nxv1f16(<vscale x 1 x i64> %va) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
 ; RV32-NEXT:    vfncvt.f.xu.w v25, v8
-; RV32-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
+; RV32-NEXT:    vsetvli zero, zero, e16,mf4,ta,mu
 ; RV32-NEXT:    vfncvt.f.f.w v8, v25
 ; RV32-NEXT:    ret
 ;
@@ -1577,7 +1577,7 @@ define <vscale x 1 x half> @vuitofp_nxv1i64_nxv1f16(<vscale x 1 x i64> %va) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
 ; RV64-NEXT:    vfncvt.f.xu.w v25, v8
-; RV64-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
+; RV64-NEXT:    vsetvli zero, zero, e16,mf4,ta,mu
 ; RV64-NEXT:    vfncvt.f.f.w v8, v25
 ; RV64-NEXT:    ret
   %evec = uitofp <vscale x 1 x i64> %va to <vscale x 1 x half>
@@ -1657,7 +1657,7 @@ define <vscale x 2 x half> @vsitofp_nxv2i64_nxv2f16(<vscale x 2 x i64> %va) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli a0, zero, e32,m1,ta,mu
 ; RV32-NEXT:    vfncvt.f.x.w v25, v8
-; RV32-NEXT:    vsetvli a0, zero, e16,mf2,ta,mu
+; RV32-NEXT:    vsetvli zero, zero, e16,mf2,ta,mu
 ; RV32-NEXT:    vfncvt.f.f.w v8, v25
 ; RV32-NEXT:    ret
 ;
@@ -1665,7 +1665,7 @@ define <vscale x 2 x half> @vsitofp_nxv2i64_nxv2f16(<vscale x 2 x i64> %va) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a0, zero, e32,m1,ta,mu
 ; RV64-NEXT:    vfncvt.f.x.w v25, v8
-; RV64-NEXT:    vsetvli a0, zero, e16,mf2,ta,mu
+; RV64-NEXT:    vsetvli zero, zero, e16,mf2,ta,mu
 ; RV64-NEXT:    vfncvt.f.f.w v8, v25
 ; RV64-NEXT:    ret
   %evec = sitofp <vscale x 2 x i64> %va to <vscale x 2 x half>
@@ -1677,7 +1677,7 @@ define <vscale x 2 x half> @vuitofp_nxv2i64_nxv2f16(<vscale x 2 x i64> %va) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli a0, zero, e32,m1,ta,mu
 ; RV32-NEXT:    vfncvt.f.xu.w v25, v8
-; RV32-NEXT:    vsetvli a0, zero, e16,mf2,ta,mu
+; RV32-NEXT:    vsetvli zero, zero, e16,mf2,ta,mu
 ; RV32-NEXT:    vfncvt.f.f.w v8, v25
 ; RV32-NEXT:    ret
 ;
@@ -1685,7 +1685,7 @@ define <vscale x 2 x half> @vuitofp_nxv2i64_nxv2f16(<vscale x 2 x i64> %va) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a0, zero, e32,m1,ta,mu
 ; RV64-NEXT:    vfncvt.f.xu.w v25, v8
-; RV64-NEXT:    vsetvli a0, zero, e16,mf2,ta,mu
+; RV64-NEXT:    vsetvli zero, zero, e16,mf2,ta,mu
 ; RV64-NEXT:    vfncvt.f.f.w v8, v25
 ; RV64-NEXT:    ret
   %evec = uitofp <vscale x 2 x i64> %va to <vscale x 2 x half>
@@ -1765,7 +1765,7 @@ define <vscale x 4 x half> @vsitofp_nxv4i64_nxv4f16(<vscale x 4 x i64> %va) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli a0, zero, e32,m2,ta,mu
 ; RV32-NEXT:    vfncvt.f.x.w v26, v8
-; RV32-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
+; RV32-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; RV32-NEXT:    vfncvt.f.f.w v8, v26
 ; RV32-NEXT:    ret
 ;
@@ -1773,7 +1773,7 @@ define <vscale x 4 x half> @vsitofp_nxv4i64_nxv4f16(<vscale x 4 x i64> %va) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a0, zero, e32,m2,ta,mu
 ; RV64-NEXT:    vfncvt.f.x.w v26, v8
-; RV64-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
+; RV64-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; RV64-NEXT:    vfncvt.f.f.w v8, v26
 ; RV64-NEXT:    ret
   %evec = sitofp <vscale x 4 x i64> %va to <vscale x 4 x half>
@@ -1785,7 +1785,7 @@ define <vscale x 4 x half> @vuitofp_nxv4i64_nxv4f16(<vscale x 4 x i64> %va) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli a0, zero, e32,m2,ta,mu
 ; RV32-NEXT:    vfncvt.f.xu.w v26, v8
-; RV32-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
+; RV32-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; RV32-NEXT:    vfncvt.f.f.w v8, v26
 ; RV32-NEXT:    ret
 ;
@@ -1793,7 +1793,7 @@ define <vscale x 4 x half> @vuitofp_nxv4i64_nxv4f16(<vscale x 4 x i64> %va) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a0, zero, e32,m2,ta,mu
 ; RV64-NEXT:    vfncvt.f.xu.w v26, v8
-; RV64-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
+; RV64-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; RV64-NEXT:    vfncvt.f.f.w v8, v26
 ; RV64-NEXT:    ret
   %evec = uitofp <vscale x 4 x i64> %va to <vscale x 4 x half>
@@ -1873,7 +1873,7 @@ define <vscale x 8 x half> @vsitofp_nxv8i64_nxv8f16(<vscale x 8 x i64> %va) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
 ; RV32-NEXT:    vfncvt.f.x.w v28, v8
-; RV32-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
+; RV32-NEXT:    vsetvli zero, zero, e16,m2,ta,mu
 ; RV32-NEXT:    vfncvt.f.f.w v8, v28
 ; RV32-NEXT:    ret
 ;
@@ -1881,7 +1881,7 @@ define <vscale x 8 x half> @vsitofp_nxv8i64_nxv8f16(<vscale x 8 x i64> %va) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
 ; RV64-NEXT:    vfncvt.f.x.w v28, v8
-; RV64-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
+; RV64-NEXT:    vsetvli zero, zero, e16,m2,ta,mu
 ; RV64-NEXT:    vfncvt.f.f.w v8, v28
 ; RV64-NEXT:    ret
   %evec = sitofp <vscale x 8 x i64> %va to <vscale x 8 x half>
@@ -1893,7 +1893,7 @@ define <vscale x 8 x half> @vuitofp_nxv8i64_nxv8f16(<vscale x 8 x i64> %va) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
 ; RV32-NEXT:    vfncvt.f.xu.w v28, v8
-; RV32-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
+; RV32-NEXT:    vsetvli zero, zero, e16,m2,ta,mu
 ; RV32-NEXT:    vfncvt.f.f.w v8, v28
 ; RV32-NEXT:    ret
 ;
@@ -1901,7 +1901,7 @@ define <vscale x 8 x half> @vuitofp_nxv8i64_nxv8f16(<vscale x 8 x i64> %va) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
 ; RV64-NEXT:    vfncvt.f.xu.w v28, v8
-; RV64-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
+; RV64-NEXT:    vsetvli zero, zero, e16,m2,ta,mu
 ; RV64-NEXT:    vfncvt.f.f.w v8, v28
 ; RV64-NEXT:    ret
   %evec = uitofp <vscale x 8 x i64> %va to <vscale x 8 x half>

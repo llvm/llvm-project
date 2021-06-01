@@ -120,6 +120,8 @@ public:
   }
 
   unsigned encodeVTYPE() const {
+    assert(isValid() && !isUnknown() &&
+           "Can't encode VTYPE for uninitialized or unknown");
     return RISCVVType::encodeVTYPE(VLMul, SEW, TailAgnostic, MaskAgnostic);
   }
 
@@ -131,6 +133,30 @@ public:
     return std::tie(VLMul, SEW, TailAgnostic, MaskAgnostic) ==
            std::tie(Other.VLMul, Other.SEW, Other.TailAgnostic,
                     Other.MaskAgnostic);
+  }
+
+  // Convert VLMUL to a fixed point value with 3 bits of fraction.
+  unsigned getSEWLMULRatio() const {
+    assert(isValid() && !isUnknown() &&
+           "Can't use VTYPE for uninitialized or unknown");
+    unsigned LMul;
+    bool Fractional;
+    std::tie(LMul, Fractional) = RISCVVType::decodeVLMUL(VLMul);
+
+    // Convert LMul to a fixed point value with 3 fractional bits.
+    LMul = Fractional ? (8 / LMul) : (LMul * 8);
+
+    assert(SEW >= 8 && "Unexpected SEW value");
+    return (SEW * 8) / LMul;
+  }
+
+  // Check if the VTYPE for these two VSETVLIInfos produce the same VLMAX.
+  bool hasSameVLMAX(const VSETVLIInfo &Other) const {
+    assert(isValid() && Other.isValid() &&
+           "Can't compare invalid VSETVLIInfos");
+    assert(!isUnknown() && !Other.isUnknown() &&
+           "Can't compare VTYPE in unknown state");
+    return getSEWLMULRatio() == Other.getSEWLMULRatio();
   }
 
   bool isCompatible(const VSETVLIInfo &Other) const {
@@ -260,7 +286,7 @@ public:
 private:
   bool needVSETVLI(const VSETVLIInfo &Require, const VSETVLIInfo &CurInfo);
   void insertVSETVLI(MachineBasicBlock &MBB, MachineInstr &MI,
-                     const VSETVLIInfo &Info);
+                     const VSETVLIInfo &Info, const VSETVLIInfo &PrevInfo);
 
   bool computeVLVTYPEChanges(const MachineBasicBlock &MBB);
   void computeIncomingVLVTYPE(const MachineBasicBlock &MBB);
@@ -335,8 +361,21 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
 }
 
 void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB, MachineInstr &MI,
-                                       const VSETVLIInfo &Info) {
+                                       const VSETVLIInfo &Info,
+                                       const VSETVLIInfo &PrevInfo) {
   DebugLoc DL = MI.getDebugLoc();
+
+  // Use X0, X0 form if the AVL is the same and the SEW+LMUL gives the same
+  // VLMAX.
+  if (PrevInfo.isValid() && !PrevInfo.isUnknown() &&
+      Info.hasSameAVL(PrevInfo) && Info.hasSameVLMAX(PrevInfo)) {
+    BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoVSETVLI))
+        .addReg(RISCV::X0, RegState::Define | RegState::Dead)
+        .addReg(RISCV::X0, RegState::Kill)
+        .addImm(Info.encodeVTYPE())
+        .addReg(RISCV::VL, RegState::Implicit);
+    return;
+  }
 
   if (Info.hasAVLImm()) {
     BuildMI(MBB, MI, DL, TII->get(RISCV::PseudoVSETIVLI))
@@ -526,14 +565,14 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
         assert(BlockInfo[MBB.getNumber()].Pred.isValid() &&
                "Expected a valid predecessor state.");
         if (needVSETVLI(NewInfo, BlockInfo[MBB.getNumber()].Pred)) {
-          insertVSETVLI(MBB, MI, NewInfo);
+          insertVSETVLI(MBB, MI, NewInfo, BlockInfo[MBB.getNumber()].Pred);
           CurInfo = NewInfo;
         }
       } else {
         // If this instruction isn't compatible with the previous VL/VTYPE
         // we need to insert a VSETVLI.
         if (needVSETVLI(NewInfo, CurInfo)) {
-          insertVSETVLI(MBB, MI, NewInfo);
+          insertVSETVLI(MBB, MI, NewInfo, CurInfo);
           CurInfo = NewInfo;
         }
       }
