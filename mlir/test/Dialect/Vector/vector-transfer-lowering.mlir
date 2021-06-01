@@ -228,6 +228,7 @@ func @transfer_broadcasting_complex(%mem : memref<10x20x30x8x8xf32>, %i : index)
 #map3 = affine_map<(d0, d1) -> (d1, d0, 0, 0)>
 #map4 = affine_map<(d0, d1) -> (0, d1, 0, d0)>
 #map5 = affine_map<(d0, d1, d2, d3) -> (d2, d1, d3, d0)>
+#map6 = affine_map<(d0, d1) -> (0)>
 
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, 0, 0)>
 // CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1, d2, d3) -> (d1, 0, d3)>
@@ -235,7 +236,7 @@ func @transfer_broadcasting_complex(%mem : memref<10x20x30x8x8xf32>, %i : index)
 // CHECK-LABEL: func @transfer_read_permutations
 func @transfer_read_permutations(%arg0 : memref<?x?xf32>, %arg1 : memref<?x?x?x?xf32>)
     -> (vector<7x14x8x16xf32>, vector<7x14x8x16xf32>, vector<7x14x8x16xf32>,
-       vector<7x14x8x16xf32>, vector<7x14x8x16xf32>, vector<7x14x8x16xf32>) {
+       vector<7x14x8x16xf32>, vector<7x14x8x16xf32>, vector<7x14x8x16xf32>, vector<8xf32>) {
 // CHECK-DAG: %[[CF0:.*]] = constant 0.000000e+00 : f32
 // CHECK-DAG: %[[C0:.*]] = constant 0 : index
   %cst = constant 0.000000e+00 : f32
@@ -275,9 +276,13 @@ func @transfer_read_permutations(%arg0 : memref<?x?xf32>, %arg1 : memref<?x?x?x?
 // CHECK: vector.transfer_read %{{.*}}[%[[C0]], %[[C0]], %[[C0]], %[[C0]]], %[[CF0]] : memref<?x?x?x?xf32>, vector<16x14x7x8xf32>
 // CHECK: vector.transpose %{{.*}}, [2, 1, 3, 0] : vector<16x14x7x8xf32> to vector<7x14x8x16xf32>
 
-  return %0, %1, %2, %3, %4, %5 : vector<7x14x8x16xf32>, vector<7x14x8x16xf32>,
+  %6 = vector.transfer_read %arg0[%c0, %c0], %cst {permutation_map = #map6} : memref<?x?xf32>, vector<8xf32>
+// CHECK: memref.load %{{.*}}[%[[C0]], %[[C0]]] : memref<?x?xf32>
+// CHECK: vector.broadcast %{{.*}} : f32 to vector<8xf32>
+
+  return %0, %1, %2, %3, %4, %5, %6 : vector<7x14x8x16xf32>, vector<7x14x8x16xf32>,
          vector<7x14x8x16xf32>, vector<7x14x8x16xf32>, vector<7x14x8x16xf32>,
-         vector<7x14x8x16xf32>
+         vector<7x14x8x16xf32>, vector<8xf32>
 }
 
 // -----
