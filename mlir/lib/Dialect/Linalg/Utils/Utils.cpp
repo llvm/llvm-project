@@ -534,7 +534,8 @@ SmallVector<Value, 4> makeTiledShapes(OpBuilder &b, Location loc,
     LLVM_DEBUG(llvm::dbgs() << "size: " << subShapeSizes.back() << "\n");
   }
 
-  assert(valuesToTile.size() == linalgOp.getNumInputsAndOutputs() &&
+  assert(static_cast<int64_t>(valuesToTile.size()) ==
+             linalgOp.getNumInputsAndOutputs() &&
          "expected one value to tile for every operand");
   MLIRContext *context = b.getContext();
   SmallVector<Value, 4> tiledShapes;
