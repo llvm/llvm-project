@@ -17,9 +17,6 @@ set_target_properties(FuzzerUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
 add_custom_target(FuzzedDataProviderUnitTests)
 set_target_properties(FuzzedDataProviderUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
 
-add_custom_target(MutagenUnitTests)
-set_target_properties(MutagenUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
-
 set(LIBFUZZER_UNITTEST_LINK_FLAGS ${COMPILER_RT_UNITTEST_LINK_FLAGS})
 list(APPEND LIBFUZZER_UNITTEST_LINK_FLAGS --driver-mode=g++)
 
@@ -49,28 +46,16 @@ if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST FUZZER_SUPPORTED_ARCH)
   set(arch ${COMPILER_RT_DEFAULT_TARGET_ARCH})
 
   set(LIBFUZZER_TEST_RUNTIME RTFuzzerTest.${arch})
-  set(LIBMUTAGEN_TEST_RUNTIME RTMutagenTest.${arch})
   if(APPLE)
     set(LIBFUZZER_TEST_RUNTIME_OBJECTS
       $<TARGET_OBJECTS:RTfuzzer.osx>)
-    set(LIBMUTAGEN_TEST_RUNTIME_OBJECTS
-      $<TARGET_OBJECTS:RTmutagen.osx>)
   else()
     set(LIBFUZZER_TEST_RUNTIME_OBJECTS
       $<TARGET_OBJECTS:RTfuzzer.${arch}>)
-    set(LIBMUTAGEN_TEST_RUNTIME_OBJECTS
-      $<TARGET_OBJECTS:RTmutagen.${arch}>)
   endif()
   add_library(${LIBFUZZER_TEST_RUNTIME} STATIC
-    ${LIBFUZZER_TEST_RUNTIME_OBJECTS}
-    ${LIBMUTAGEN_TEST_RUNTIME_OBJECTS})
+    ${LIBFUZZER_TEST_RUNTIME_OBJECTS})
   set_target_properties(${LIBFUZZER_TEST_RUNTIME} PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    FOLDER "Compiler-RT Runtime tests")
-
-  add_library(${LIBMUTAGEN_TEST_RUNTIME} STATIC
-    ${LIBMUTAGEN_TEST_RUNTIME_OBJECTS})
-  set_target_properties(${LIBMUTAGEN_TEST_RUNTIME} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     FOLDER "Compiler-RT Runtime tests")
 
@@ -81,8 +66,6 @@ if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST FUZZER_SUPPORTED_ARCH)
     set(LIBFUZZER_TEST_RUNTIME_DEPS libcxx_fuzzer_${arch}-build ${libfuzzer_headers})
     set(LIBFUZZER_TEST_RUNTIME_CFLAGS -isystem ${LIBCXX_${arch}_PREFIX}/include/c++/v1)
     set(LIBFUZZER_TEST_RUNTIME_LINK_FLAGS ${LIBCXX_${arch}_PREFIX}/lib/libc++.a)
-    file(GLOB libmutagen_headers ../mutagen/*.h)
-    set(LIBMUTAGEN_TEST_RUNTIME_DEPS libcxx_fuzzer_${arch}-build ${libmutagen_headers})
   endif()
 
   set(FuzzerTestObjects)
@@ -90,7 +73,7 @@ if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST FUZZER_SUPPORTED_ARCH)
     FuzzerUnitTests "Fuzzer-${arch}-Test" ${arch}
     SOURCES FuzzerUnittest.cpp ${COMPILER_RT_GTEST_SOURCE}
     RUNTIME ${LIBFUZZER_TEST_RUNTIME}
-    DEPS gtest ${LIBFUZZER_TEST_RUNTIME_DEPS}
+    DEPS gtest ${LIBFUZZER_TEST_RUNTIME_DEPS} 
     CFLAGS ${LIBFUZZER_UNITTEST_CFLAGS} ${LIBFUZZER_TEST_RUNTIME_CFLAGS}
     LINK_FLAGS ${LIBFUZZER_UNITTEST_LINK_FLAGS} ${LIBFUZZER_TEST_RUNTIME_LINK_FLAGS})
   set_target_properties(FuzzerUnitTests PROPERTIES
@@ -104,16 +87,5 @@ if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST FUZZER_SUPPORTED_ARCH)
     CFLAGS ${LIBFUZZER_UNITTEST_CFLAGS} ${LIBFUZZER_TEST_RUNTIME_CFLAGS}
     LINK_FLAGS ${LIBFUZZER_UNITTEST_LINK_FLAGS} ${LIBFUZZER_TEST_RUNTIME_LINK_FLAGS})
   set_target_properties(FuzzedDataProviderUnitTests PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-
-  set(MutagenTestObjects)
-  generate_compiler_rt_tests(MutagenTestObjects
-    MutagenUnitTests "Mutagen-${arch}-Test" ${arch}
-    SOURCES MutagenUnittest.cpp ${COMPILER_RT_GTEST_SOURCE}
-    RUNTIME ${LIBFUZZER_TEST_RUNTIME}
-    DEPS gtest ${LIBFUZZER_TEST_RUNTIME_DEPS} ${LIBMUTAGEN_TEST_RUNTIME_DEPS}
-    CFLAGS ${LIBFUZZER_UNITTEST_CFLAGS} ${LIBFUZZER_TEST_RUNTIME_CFLAGS}
-    LINK_FLAGS ${LIBFUZZER_UNITTEST_LINK_FLAGS} ${LIBFUZZER_TEST_RUNTIME_LINK_FLAGS})
-  set_target_properties(MutagenUnitTests PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 endif()
