@@ -34,13 +34,11 @@ define double @exp2_a_exp2_b_multiple_uses(double %a, double %b) {
   ret double %mul
 }
 
-; TODO: Multiple uses, but only 1 user.
-
 define double @exp2_a_a(double %a) {
 ; CHECK-LABEL: @exp2_a_a(
-; CHECK-NEXT:    [[T:%.*]] = call double @llvm.exp2.f64(double [[A:%.*]])
-; CHECK-NEXT:    [[M:%.*]] = fmul reassoc double [[T]], [[T]]
-; CHECK-NEXT:    ret double [[M]]
+; CHECK-NEXT:    [[T:%.*]] = fadd reassoc double [[A:%.*]], [[A]]
+; CHECK-NEXT:    [[E:%.*]] = call reassoc double @llvm.exp2.f64(double [[T]])
+; CHECK-NEXT:    ret double [[E]]
 ;
   %t = call double @llvm.exp2.f64(double %a)
   %m = fmul reassoc double %t, %t

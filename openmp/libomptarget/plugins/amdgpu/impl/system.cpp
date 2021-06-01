@@ -140,8 +140,6 @@ static const std::map<std::string, KernelArgMD::ValueKind> ArgValueKind = {
     {"hidden_hostcall_buffer", KernelArgMD::ValueKind::HiddenHostcallBuffer},
 };
 
-// global variables. TODO: Get rid of these
-atmi_machine_t g_atmi_machine;
 ATLMachine g_atl_machine;
 
 std::vector<hsa_amd_memory_pool_t> atl_gpu_kernarg_pools;
@@ -154,12 +152,6 @@ std::vector<hsa_amd_memory_pool_t> atl_gpu_kernarg_pools;
 atl_context_t atlc = {.struct_initialized = false};
 
 namespace core {
-/* Machine Info */
-atmi_machine_t *Runtime::GetMachineInfo() {
-  if (!atlc.g_hsa_initialized)
-    return NULL;
-  return &g_atmi_machine;
-}
 
 hsa_status_t allow_access_to_all_gpu_agents(void *ptr) {
   std::vector<ATLGPUProcessor> &gpu_procs =
@@ -362,12 +354,7 @@ static hsa_status_t init_compute_and_memory() {
     }
   }
 
-  g_atmi_machine.device_count_by_type[ATMI_DEVTYPE_CPU] = cpu_procs.size();
-  g_atmi_machine.device_count_by_type[ATMI_DEVTYPE_GPU] = gpu_procs.size();
-
   size_t num_procs = cpu_procs.size() + gpu_procs.size();
-  // g_atmi_machine.devices = (atmi_device_t *)malloc(num_procs *
-  // sizeof(atmi_device_t));
   atmi_device_t *all_devices = reinterpret_cast<atmi_device_t *>(
       malloc(num_procs * sizeof(atmi_device_t)));
   int num_iGPUs = 0;
@@ -385,17 +372,10 @@ static hsa_status_t init_compute_and_memory() {
   DEBUG_PRINT("dGPU Agents: %d\n", num_dGPUs);
   DEBUG_PRINT("GPU Agents: %lu\n", gpu_procs.size());
 
-  g_atmi_machine.device_count_by_type[ATMI_DEVTYPE_iGPU] = num_iGPUs;
-  g_atmi_machine.device_count_by_type[ATMI_DEVTYPE_dGPU] = num_dGPUs;
-
   int cpus_begin = 0;
   int cpus_end = cpu_procs.size();
   int gpus_begin = cpu_procs.size();
   int gpus_end = cpu_procs.size() + gpu_procs.size();
-  g_atmi_machine.devices_by_type[ATMI_DEVTYPE_CPU] = &all_devices[cpus_begin];
-  g_atmi_machine.devices_by_type[ATMI_DEVTYPE_GPU] = &all_devices[gpus_begin];
-  g_atmi_machine.devices_by_type[ATMI_DEVTYPE_iGPU] = &all_devices[gpus_begin];
-  g_atmi_machine.devices_by_type[ATMI_DEVTYPE_dGPU] = &all_devices[gpus_begin];
   int proc_index = 0;
   for (int i = cpus_begin; i < cpus_end; i++) {
     all_devices[i].type = cpu_procs[proc_index].type();
