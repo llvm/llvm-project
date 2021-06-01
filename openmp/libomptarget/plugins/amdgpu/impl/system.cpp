@@ -146,8 +146,6 @@ ATLMachine g_atl_machine;
 
 std::vector<hsa_amd_memory_pool_t> atl_gpu_kernarg_pools;
 
-bool g_atmi_initialized = false;
-
 /*
    atlc is all internal global values.
    The structure atl_context_t is defined in atl_internal.h
@@ -163,18 +161,6 @@ atmi_machine_t *Runtime::GetMachineInfo() {
   return &g_atmi_machine;
 }
 
-static void atl_set_atmi_initialized() {
-  // FIXME: thread safe? locks?
-  g_atmi_initialized = true;
-}
-
-static void atl_reset_atmi_initialized() {
-  // FIXME: thread safe? locks?
-  g_atmi_initialized = false;
-}
-
-bool atl_is_atmi_initialized() { return g_atmi_initialized; }
-
 hsa_status_t allow_access_to_all_gpu_agents(void *ptr) {
   std::vector<ATLGPUProcessor> &gpu_procs =
       g_atl_machine.processors<ATLGPUProcessor>();
@@ -186,26 +172,18 @@ hsa_status_t allow_access_to_all_gpu_agents(void *ptr) {
 }
 
 atmi_status_t Runtime::Initialize() {
-  atmi_devtype_t devtype = ATMI_DEVTYPE_GPU;
-  if (atl_is_atmi_initialized())
-    return ATMI_STATUS_SUCCESS;
-
-  if (devtype == ATMI_DEVTYPE_ALL || devtype & ATMI_DEVTYPE_GPU) {
-    atmi_status_t rc = atl_init_gpu_context();
-    if (rc != ATMI_STATUS_SUCCESS) {
-      printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, "GPU context init",
-             get_atmi_error_string(atl_init_gpu_context()));
-      return rc;
-    }
+  atmi_status_t rc = atl_init_gpu_context();
+  if (rc != ATMI_STATUS_SUCCESS) {
+    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, "GPU context init",
+           get_atmi_error_string(atl_init_gpu_context()));
+    return rc;
   }
 
-  atl_set_atmi_initialized();
   return ATMI_STATUS_SUCCESS;
 }
 
 atmi_status_t Runtime::Finalize() {
   atmi_status_t rc = ATMI_STATUS_SUCCESS;
-  atl_reset_atmi_initialized();
   hsa_status_t err = hsa_shut_down();
   if (err != HSA_STATUS_SUCCESS) {
     printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__, "Shutting down HSA",
