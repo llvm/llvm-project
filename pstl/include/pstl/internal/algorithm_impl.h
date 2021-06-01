@@ -979,7 +979,7 @@ __brick_copy_if(_RandomAccessIterator1 __first, _RandomAccessIterator1 __last, _
                 _UnaryPredicate __pred,
                 /*vector=*/std::true_type) noexcept
 {
-#if (_PSTL_MONOTONIC_PRESENT)
+#if defined(_PSTL_MONOTONIC_PRESENT)
     return __unseq_backend::__simd_copy_if(__first, __last - __first, __result, __pred);
 #else
     return std::copy_if(__first, __last, __result, __pred);
@@ -1038,7 +1038,7 @@ void
 __brick_copy_by_mask(_RandomAccessIterator1 __first, _RandomAccessIterator1 __last, _RandomAccessIterator2 __result,
                      bool* __restrict __mask, _Assigner __assigner, /*vector=*/std::true_type) noexcept
 {
-#if (_PSTL_MONOTONIC_PRESENT)
+#if defined(_PSTL_MONOTONIC_PRESENT)
     __unseq_backend::__simd_copy_by_mask(__first, __last - __first, __result, __mask, __assigner);
 #else
     __internal::__brick_copy_by_mask(__first, __last, __result, __mask, __assigner, std::false_type());
@@ -1071,7 +1071,7 @@ __brick_partition_by_mask(_RandomAccessIterator1 __first, _RandomAccessIterator1
                           _RandomAccessIterator2 __out_true, _RandomAccessIterator3 __out_false, bool* __mask,
                           /*vector=*/std::true_type) noexcept
 {
-#if (_PSTL_MONOTONIC_PRESENT)
+#if defined(_PSTL_MONOTONIC_PRESENT)
     __unseq_backend::__simd_partition_by_mask(__first, __last - __first, __out_true, __out_false, __mask);
 #else
     __internal::__brick_partition_by_mask(__first, __last, __out_true, __out_false, __mask, std::false_type());
@@ -1319,7 +1319,7 @@ _RandomAccessIterator2
 __brick_unique_copy(_RandomAccessIterator1 __first, _RandomAccessIterator1 __last, _RandomAccessIterator2 __result,
                     _BinaryPredicate __pred, /*vector=*/std::true_type) noexcept
 {
-#if (_PSTL_MONOTONIC_PRESENT)
+#if defined(_PSTL_MONOTONIC_PRESENT)
     return __unseq_backend::__simd_unique_copy(__first, __last - __first, __result, __pred);
 #else
     return std::unique_copy(__first, __last, __result, __pred);
@@ -1536,7 +1536,7 @@ _ForwardIterator
 __brick_rotate(_ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator __last,
                /*is_vector=*/std::false_type) noexcept
 {
-#if _PSTL_CPP11_STD_ROTATE_BROKEN
+#if defined(_PSTL_CPP11_STD_ROTATE_BROKEN)
     std::rotate(__first, __middle, __last);
     return std::next(__first, std::distance(__middle, __last));
 #else
@@ -2055,7 +2055,7 @@ __brick_partition_copy(_RandomAccessIterator1 __first, _RandomAccessIterator1 __
                        _RandomAccessIterator3 __out_false, _UnaryPredicate __pred,
                        /*is_vector=*/std::true_type) noexcept
 {
-#if (_PSTL_MONOTONIC_PRESENT)
+#if defined(_PSTL_MONOTONIC_PRESENT)
     return __unseq_backend::__simd_partition_copy(__first, __last - __first, __out_true, __out_false, __pred);
 #else
     return std::partition_copy(__first, __last, __out_true, __out_false, __pred);
@@ -2232,7 +2232,7 @@ __pattern_partial_sort_copy(_ExecutionPolicy&& __exec, _RandomAccessIterator1 __
                     _RandomAccessIterator1 __j1 = __first + (__j - __d_first);
 
                 // 1. Copy elements from input to output
-#if !_PSTL_ICC_18_OMP_SIMD_BROKEN
+#if !defined(_PSTL_ICC_18_OMP_SIMD_BROKEN)
                     __internal::__brick_copy(__i1, __j1, __i, __is_vector);
 #else
                     std::copy(__i1, __j1, __i);
@@ -2583,7 +2583,7 @@ _RandomAccessIterator
 __brick_remove_if(_RandomAccessIterator __first, _RandomAccessIterator __last, _UnaryPredicate __pred,
                   /* __is_vector = */ std::true_type) noexcept
 {
-#if _PSTL_MONOTONIC_PRESENT
+#if defined(_PSTL_MONOTONIC_PRESENT)
     return __unseq_backend::__simd_remove_if(__first, __last - __first, __pred);
 #else
     return std::remove_if(__first, __last, __pred);
@@ -3437,7 +3437,7 @@ _RandomAccessIterator
 __brick_min_element(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp,
                     /* __is_vector = */ std::true_type) noexcept
 {
-#if _PSTL_UDR_PRESENT
+#if defined(_PSTL_UDR_PRESENT)
     return __unseq_backend::__simd_min_element(__first, __last - __first, __comp);
 #else
     return std::min_element(__first, __last, __comp);
@@ -3492,7 +3492,7 @@ std::pair<_RandomAccessIterator, _RandomAccessIterator>
 __brick_minmax_element(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp,
                        /* __is_vector = */ std::true_type) noexcept
 {
-#if _PSTL_UDR_PRESENT
+#if defined(_PSTL_UDR_PRESENT)
     return __unseq_backend::__simd_minmax_element(__first, __last - __first, __comp);
 #else
     return std::minmax_element(__first, __last, __comp);
@@ -3542,7 +3542,7 @@ std::pair<_ForwardIterator1, _ForwardIterator2>
 __mismatch_serial(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
                   _ForwardIterator2 __last2, _BinaryPredicate __pred)
 {
-#if _PSTL_CPP14_2RANGE_MISMATCH_EQUAL_PRESENT
+#if defined(_PSTL_CPP14_2RANGE_MISMATCH_EQUAL_PRESENT)
     return std::mismatch(__first1, __last1, __first2, __last2, __pred);
 #else
     for (; __first1 != __last1 && __first2 != __last2 && __pred(*__first1, *__first2); ++__first1, ++__first2)
