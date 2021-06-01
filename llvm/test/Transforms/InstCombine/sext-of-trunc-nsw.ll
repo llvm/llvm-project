@@ -101,3 +101,125 @@ define i16 @t5_extrause(i8 %x) {
   %c = sext i4 %b to i16
   ret i16 %c
 }
+
+define i64 @narrow_source_matching_signbits(i32 %x) {
+; CHECK-LABEL: @narrow_source_matching_signbits(
+; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[A:%.*]] = shl nsw i32 -1, [[M]]
+; CHECK-NEXT:    [[B:%.*]] = trunc i32 [[A]] to i8
+; CHECK-NEXT:    [[C:%.*]] = sext i8 [[B]] to i64
+; CHECK-NEXT:    ret i64 [[C]]
+;
+  %m = and i32 %x, 7
+  %a = shl nsw i32 -1, %m
+  %b = trunc i32 %a to i8
+  %c = sext i8 %b to i64
+  ret i64 %c
+}
+
+define i64 @narrow_source_not_matching_signbits(i32 %x) {
+; CHECK-LABEL: @narrow_source_not_matching_signbits(
+; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[A:%.*]] = shl nsw i32 -1, [[M]]
+; CHECK-NEXT:    [[B:%.*]] = trunc i32 [[A]] to i8
+; CHECK-NEXT:    [[C:%.*]] = sext i8 [[B]] to i64
+; CHECK-NEXT:    ret i64 [[C]]
+;
+  %m = and i32 %x, 8
+  %a = shl nsw i32 -1, %m
+  %b = trunc i32 %a to i8
+  %c = sext i8 %b to i64
+  ret i64 %c
+}
+
+define i24 @wide_source_matching_signbits(i32 %x) {
+; CHECK-LABEL: @wide_source_matching_signbits(
+; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[A:%.*]] = shl nsw i32 -1, [[M]]
+; CHECK-NEXT:    [[B:%.*]] = trunc i32 [[A]] to i8
+; CHECK-NEXT:    [[C:%.*]] = sext i8 [[B]] to i24
+; CHECK-NEXT:    ret i24 [[C]]
+;
+  %m = and i32 %x, 7
+  %a = shl nsw i32 -1, %m
+  %b = trunc i32 %a to i8
+  %c = sext i8 %b to i24
+  ret i24 %c
+}
+
+define i24 @wide_source_not_matching_signbits(i32 %x) {
+; CHECK-LABEL: @wide_source_not_matching_signbits(
+; CHECK-NEXT:    [[M2:%.*]] = and i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[A:%.*]] = shl nsw i32 -1, [[M2]]
+; CHECK-NEXT:    [[B:%.*]] = trunc i32 [[A]] to i8
+; CHECK-NEXT:    [[C:%.*]] = sext i8 [[B]] to i24
+; CHECK-NEXT:    ret i24 [[C]]
+;
+  %m2 = and i32 %x, 8
+  %a = shl nsw i32 -1, %m2
+  %b = trunc i32 %a to i8
+  %c = sext i8 %b to i24
+  ret i24 %c
+}
+
+define i32 @same_source_matching_signbits(i32 %x) {
+; CHECK-LABEL: @same_source_matching_signbits(
+; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 -16777216, [[M]]
+; CHECK-NEXT:    [[C:%.*]] = ashr exact i32 [[TMP1]], 24
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %m = and i32 %x, 7
+  %a = shl nsw i32 -1, %m
+  %b = trunc i32 %a to i8
+  %c = sext i8 %b to i32
+  ret i32 %c
+}
+
+define i32 @same_source_not_matching_signbits(i32 %x) {
+; CHECK-LABEL: @same_source_not_matching_signbits(
+; CHECK-NEXT:    [[M2:%.*]] = and i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 -16777216, [[M2]]
+; CHECK-NEXT:    [[C:%.*]] = ashr exact i32 [[TMP1]], 24
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %m2 = and i32 %x, 8
+  %a = shl nsw i32 -1, %m2
+  %b = trunc i32 %a to i8
+  %c = sext i8 %b to i32
+  ret i32 %c
+}
+
+define i32 @same_source_matching_signbits_extra_use(i32 %x) {
+; CHECK-LABEL: @same_source_matching_signbits_extra_use(
+; CHECK-NEXT:    [[M:%.*]] = and i32 [[X:%.*]], 7
+; CHECK-NEXT:    [[A:%.*]] = shl nsw i32 -1, [[M]]
+; CHECK-NEXT:    [[B:%.*]] = trunc i32 [[A]] to i8
+; CHECK-NEXT:    call void @use8(i8 [[B]])
+; CHECK-NEXT:    [[C:%.*]] = sext i8 [[B]] to i32
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %m = and i32 %x, 7
+  %a = shl nsw i32 -1, %m
+  %b = trunc i32 %a to i8
+  call void @use8(i8 %b)
+  %c = sext i8 %b to i32
+  ret i32 %c
+}
+
+define i32 @same_source_not_matching_signbits_extra_use(i32 %x) {
+; CHECK-LABEL: @same_source_not_matching_signbits_extra_use(
+; CHECK-NEXT:    [[M2:%.*]] = and i32 [[X:%.*]], 8
+; CHECK-NEXT:    [[A:%.*]] = shl nsw i32 -1, [[M2]]
+; CHECK-NEXT:    [[B:%.*]] = trunc i32 [[A]] to i8
+; CHECK-NEXT:    call void @use8(i8 [[B]])
+; CHECK-NEXT:    [[C:%.*]] = sext i8 [[B]] to i32
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %m2 = and i32 %x, 8
+  %a = shl nsw i32 -1, %m2
+  %b = trunc i32 %a to i8
+  call void @use8(i8 %b)
+  %c = sext i8 %b to i32
+  ret i32 %c
+}
