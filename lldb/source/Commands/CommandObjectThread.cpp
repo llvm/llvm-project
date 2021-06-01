@@ -1868,11 +1868,11 @@ public:
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     Process *process = m_exe_ctx.GetProcessPtr();
-    
+
     if (args.GetArgumentCount() == 0) {
       process->PruneThreadPlans();
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      return true;  
+      return true;
     }
 
     const size_t num_args = args.GetArgumentCount();
@@ -1960,12 +1960,12 @@ public:
   ~CommandObjectTraceStop() override = default;
 
   bool DoExecuteOnThreads(Args &command, CommandReturnObject &result,
-                          const std::vector<lldb::tid_t> &tids) override {
+                          llvm::ArrayRef<lldb::tid_t> tids) override {
     ProcessSP process_sp = m_exe_ctx.GetProcessSP();
 
     TraceSP trace_sp = process_sp->GetTarget().GetTrace();
 
-    if (llvm::Error err = trace_sp->StopThreads(tids))
+    if (llvm::Error err = trace_sp->Stop(tids))
       result.SetError(toString(std::move(err)));
     else
       result.SetStatus(eReturnStatusSuccessFinishResult);

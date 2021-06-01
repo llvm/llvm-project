@@ -53,7 +53,7 @@ public:
 
 protected:
   bool DoExecuteOnThreads(Args &command, CommandReturnObject &result,
-                          const std::vector<lldb::tid_t> &tids) override;
+                          llvm::ArrayRef<lldb::tid_t> tids) override;
 
   TraceIntelPT &m_trace;
   CommandOptions m_options;

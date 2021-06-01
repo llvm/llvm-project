@@ -974,6 +974,12 @@ public:
 
     STRING_EXTENSION_LEVEL(SBTarget, lldb::eDescriptionLevelBrief)
 
+    lldb::SBTrace
+    GetTrace ();
+
+    lldb::SBTrace
+    CreateTrace (lldb::SBError &error);
+
 #ifdef SWIGPYTHON
     %pythoncode %{
         class modules_access(object):

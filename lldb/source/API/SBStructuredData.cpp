@@ -72,10 +72,19 @@ lldb::SBError SBStructuredData::SetFromJSON(lldb::SBStream &stream) {
   return LLDB_RECORD_RESULT(error);
 }
 
+lldb::SBError SBStructuredData::SetFromJSON(const char *json) {
+  LLDB_RECORD_METHOD(lldb::SBError, SBStructuredData, SetFromJSON,
+                     (const char *), json);
+  lldb::SBStream s;
+  s.Print(json);
+  return LLDB_RECORD_RESULT(SetFromJSON(s));
+}
+
 bool SBStructuredData::IsValid() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBStructuredData, IsValid);
   return this->operator bool();
 }
+
 SBStructuredData::operator bool() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBStructuredData, operator bool);
 
@@ -207,6 +216,8 @@ template <> void RegisterMethods<SBStructuredData>(Registry &R) {
       SBStructuredData, operator=,(const lldb::SBStructuredData &));
   LLDB_REGISTER_METHOD(lldb::SBError, SBStructuredData, SetFromJSON,
                        (lldb::SBStream &));
+  LLDB_REGISTER_METHOD(lldb::SBError, SBStructuredData, SetFromJSON,
+                       (const char *));
   LLDB_REGISTER_METHOD_CONST(bool, SBStructuredData, IsValid, ());
   LLDB_REGISTER_METHOD_CONST(bool, SBStructuredData, operator bool, ());
   LLDB_REGISTER_METHOD(void, SBStructuredData, Clear, ());
