@@ -2810,28 +2810,6 @@ LegalizerHelper::lowerLoad(MachineInstr &MI) {
     return Legalized;
   }
 
-  if (DstTy.isScalar()) {
-    Register TmpReg =
-      MRI.createGenericVirtualRegister(LLT::scalar(MMO.getSizeInBits()));
-    MIRBuilder.buildLoad(TmpReg, PtrReg, MMO);
-    switch (MI.getOpcode()) {
-    default:
-      llvm_unreachable("Unexpected opcode");
-    case TargetOpcode::G_LOAD:
-      MIRBuilder.buildAnyExtOrTrunc(DstReg, TmpReg);
-      break;
-    case TargetOpcode::G_SEXTLOAD:
-      MIRBuilder.buildSExt(DstReg, TmpReg);
-      break;
-    case TargetOpcode::G_ZEXTLOAD:
-      MIRBuilder.buildZExt(DstReg, TmpReg);
-      break;
-    }
-
-    MI.eraseFromParent();
-    return Legalized;
-  }
-
   return UnableToLegalize;
 }
 

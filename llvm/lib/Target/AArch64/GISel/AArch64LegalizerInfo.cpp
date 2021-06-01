@@ -294,11 +294,18 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalForTypesWithMemDesc({{s32, p0, 8, 8}, {s32, p0, 16, 8}})
       .clampScalar(0, s8, s64)
       .lowerIfMemSizeNotPow2()
+      .widenScalarToNextPow2(0)
+      .narrowScalarIf([=](const LegalityQuery &Query) {
+        // Clamp extending load results to 32-bits.
+        return Query.Types[0].isScalar() &&
+               Query.Types[0].getSizeInBits() != Query.MMODescrs[0].SizeInBits &&
+               Query.Types[0].getSizeInBits() > 32;
+        },
+        changeTo(0, s32))
       // Lower any any-extending loads left into G_ANYEXT and G_LOAD
       .lowerIf([=](const LegalityQuery &Query) {
         return Query.Types[0].getSizeInBits() != Query.MMODescrs[0].SizeInBits;
       })
-      .widenScalarToNextPow2(0)
       .clampMaxNumElements(0, s8, 16)
       .clampMaxNumElements(0, s16, 8)
       .clampMaxNumElements(0, s32, 4)
