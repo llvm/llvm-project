@@ -2,10 +2,13 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse2 | FileCheck %s --check-prefixes=SSE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-SLOW
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-FAST
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-FAST-ALL
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-FAST-PERLANE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefixes=AVX,AVX512,AVX512F
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw,+fast-variable-shuffle | FileCheck %s --check-prefixes=AVX,AVX512,AVX512BW
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512dq,+fast-variable-shuffle | FileCheck %s --check-prefixes=AVX,AVX512,AVX512DQ
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX512,AVX512BW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512bw,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX512,AVX512BW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512dq,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX512,AVX512DQ
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512dq,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX512,AVX512DQ
 
 ;
 ; add
@@ -37,14 +40,22 @@ define <4 x i32> @trunc_add_v4i64_v4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
 ;
-; AVX2-FAST-LABEL: trunc_add_v4i64_v4i32:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
-; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm1, %ymm0
-; AVX2-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX2-FAST-NEXT:    vzeroupper
-; AVX2-FAST-NEXT:    retq
+; AVX2-FAST-ALL-LABEL: trunc_add_v4i64_v4i32:
+; AVX2-FAST-ALL:       # %bb.0:
+; AVX2-FAST-ALL-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
+; AVX2-FAST-ALL-NEXT:    vmovdqa {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
+; AVX2-FAST-ALL-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX2-FAST-ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX2-FAST-ALL-NEXT:    vzeroupper
+; AVX2-FAST-ALL-NEXT:    retq
+;
+; AVX2-FAST-PERLANE-LABEL: trunc_add_v4i64_v4i32:
+; AVX2-FAST-PERLANE:       # %bb.0:
+; AVX2-FAST-PERLANE-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
+; AVX2-FAST-PERLANE-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; AVX2-FAST-PERLANE-NEXT:    vzeroupper
+; AVX2-FAST-PERLANE-NEXT:    retq
 ;
 ; AVX512-LABEL: trunc_add_v4i64_v4i32:
 ; AVX512:       # %bb.0:
@@ -472,13 +483,21 @@ define <4 x i32> @trunc_add_const_v4i64_v4i32(<4 x i64> %a0) nounwind {
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
 ;
-; AVX2-FAST-LABEL: trunc_add_const_v4i64_v4i32:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
-; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm1, %ymm0
-; AVX2-FAST-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vzeroupper
-; AVX2-FAST-NEXT:    retq
+; AVX2-FAST-ALL-LABEL: trunc_add_const_v4i64_v4i32:
+; AVX2-FAST-ALL:       # %bb.0:
+; AVX2-FAST-ALL-NEXT:    vmovdqa {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
+; AVX2-FAST-ALL-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX2-FAST-ALL-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-FAST-ALL-NEXT:    vzeroupper
+; AVX2-FAST-ALL-NEXT:    retq
+;
+; AVX2-FAST-PERLANE-LABEL: trunc_add_const_v4i64_v4i32:
+; AVX2-FAST-PERLANE:       # %bb.0:
+; AVX2-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX2-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; AVX2-FAST-PERLANE-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-FAST-PERLANE-NEXT:    vzeroupper
+; AVX2-FAST-PERLANE-NEXT:    retq
 ;
 ; AVX512-LABEL: trunc_add_const_v4i64_v4i32:
 ; AVX512:       # %bb.0:
@@ -803,14 +822,22 @@ define <4 x i32> @trunc_sub_v4i64_v4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
 ;
-; AVX2-FAST-LABEL: trunc_sub_v4i64_v4i32:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vpsubq %ymm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
-; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm1, %ymm0
-; AVX2-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX2-FAST-NEXT:    vzeroupper
-; AVX2-FAST-NEXT:    retq
+; AVX2-FAST-ALL-LABEL: trunc_sub_v4i64_v4i32:
+; AVX2-FAST-ALL:       # %bb.0:
+; AVX2-FAST-ALL-NEXT:    vpsubq %ymm1, %ymm0, %ymm0
+; AVX2-FAST-ALL-NEXT:    vmovdqa {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
+; AVX2-FAST-ALL-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX2-FAST-ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX2-FAST-ALL-NEXT:    vzeroupper
+; AVX2-FAST-ALL-NEXT:    retq
+;
+; AVX2-FAST-PERLANE-LABEL: trunc_sub_v4i64_v4i32:
+; AVX2-FAST-PERLANE:       # %bb.0:
+; AVX2-FAST-PERLANE-NEXT:    vpsubq %ymm1, %ymm0, %ymm0
+; AVX2-FAST-PERLANE-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; AVX2-FAST-PERLANE-NEXT:    vzeroupper
+; AVX2-FAST-PERLANE-NEXT:    retq
 ;
 ; AVX512-LABEL: trunc_sub_v4i64_v4i32:
 ; AVX512:       # %bb.0:
@@ -1206,13 +1233,21 @@ define <4 x i32> @trunc_sub_const_v4i64_v4i32(<4 x i64> %a0) nounwind {
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
 ;
-; AVX2-FAST-LABEL: trunc_sub_const_v4i64_v4i32:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
-; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm1, %ymm0
-; AVX2-FAST-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vzeroupper
-; AVX2-FAST-NEXT:    retq
+; AVX2-FAST-ALL-LABEL: trunc_sub_const_v4i64_v4i32:
+; AVX2-FAST-ALL:       # %bb.0:
+; AVX2-FAST-ALL-NEXT:    vmovdqa {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
+; AVX2-FAST-ALL-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX2-FAST-ALL-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-FAST-ALL-NEXT:    vzeroupper
+; AVX2-FAST-ALL-NEXT:    retq
+;
+; AVX2-FAST-PERLANE-LABEL: trunc_sub_const_v4i64_v4i32:
+; AVX2-FAST-PERLANE:       # %bb.0:
+; AVX2-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX2-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; AVX2-FAST-PERLANE-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-FAST-PERLANE-NEXT:    vzeroupper
+; AVX2-FAST-PERLANE-NEXT:    retq
 ;
 ; AVX512-LABEL: trunc_sub_const_v4i64_v4i32:
 ; AVX512:       # %bb.0:
@@ -1574,14 +1609,24 @@ define <4 x i32> @trunc_mul_v4i64_v4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
 ;
-; AVX2-FAST-LABEL: trunc_mul_v4i64_v4i32:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2,4,6,4,6,6,7]
-; AVX2-FAST-NEXT:    vpermd %ymm1, %ymm2, %ymm1
-; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm2, %ymm0
-; AVX2-FAST-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vzeroupper
-; AVX2-FAST-NEXT:    retq
+; AVX2-FAST-ALL-LABEL: trunc_mul_v4i64_v4i32:
+; AVX2-FAST-ALL:       # %bb.0:
+; AVX2-FAST-ALL-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2,4,6,4,6,6,7]
+; AVX2-FAST-ALL-NEXT:    vpermd %ymm1, %ymm2, %ymm1
+; AVX2-FAST-ALL-NEXT:    vpermd %ymm0, %ymm2, %ymm0
+; AVX2-FAST-ALL-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
+; AVX2-FAST-ALL-NEXT:    vzeroupper
+; AVX2-FAST-ALL-NEXT:    retq
+;
+; AVX2-FAST-PERLANE-LABEL: trunc_mul_v4i64_v4i32:
+; AVX2-FAST-PERLANE:       # %bb.0:
+; AVX2-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX2-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
+; AVX2-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX2-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm2[0,2]
+; AVX2-FAST-PERLANE-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
+; AVX2-FAST-PERLANE-NEXT:    vzeroupper
+; AVX2-FAST-PERLANE-NEXT:    retq
 ;
 ; AVX512F-LABEL: trunc_mul_v4i64_v4i32:
 ; AVX512F:       # %bb.0:
@@ -2118,13 +2163,21 @@ define <4 x i32> @trunc_mul_const_v4i64_v4i32(<4 x i64> %a0) nounwind {
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
 ;
-; AVX2-FAST-LABEL: trunc_mul_const_v4i64_v4i32:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vmovdqa {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
-; AVX2-FAST-NEXT:    vpermd %ymm0, %ymm1, %ymm0
-; AVX2-FAST-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vzeroupper
-; AVX2-FAST-NEXT:    retq
+; AVX2-FAST-ALL-LABEL: trunc_mul_const_v4i64_v4i32:
+; AVX2-FAST-ALL:       # %bb.0:
+; AVX2-FAST-ALL-NEXT:    vmovdqa {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
+; AVX2-FAST-ALL-NEXT:    vpermd %ymm0, %ymm1, %ymm0
+; AVX2-FAST-ALL-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-FAST-ALL-NEXT:    vzeroupper
+; AVX2-FAST-ALL-NEXT:    retq
+;
+; AVX2-FAST-PERLANE-LABEL: trunc_mul_const_v4i64_v4i32:
+; AVX2-FAST-PERLANE:       # %bb.0:
+; AVX2-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX2-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; AVX2-FAST-PERLANE-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-FAST-PERLANE-NEXT:    vzeroupper
+; AVX2-FAST-PERLANE-NEXT:    retq
 ;
 ; AVX512-LABEL: trunc_mul_const_v4i64_v4i32:
 ; AVX512:       # %bb.0:
@@ -2529,14 +2582,22 @@ define <4 x i32> @trunc_and_v4i64_v4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
 ;
-; AVX2-FAST-LABEL: trunc_and_v4i64_v4i32:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vandps %ymm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
-; AVX2-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
-; AVX2-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX2-FAST-NEXT:    vzeroupper
-; AVX2-FAST-NEXT:    retq
+; AVX2-FAST-ALL-LABEL: trunc_and_v4i64_v4i32:
+; AVX2-FAST-ALL:       # %bb.0:
+; AVX2-FAST-ALL-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; AVX2-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
+; AVX2-FAST-ALL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX2-FAST-ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX2-FAST-ALL-NEXT:    vzeroupper
+; AVX2-FAST-ALL-NEXT:    retq
+;
+; AVX2-FAST-PERLANE-LABEL: trunc_and_v4i64_v4i32:
+; AVX2-FAST-PERLANE:       # %bb.0:
+; AVX2-FAST-PERLANE-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; AVX2-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX2-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; AVX2-FAST-PERLANE-NEXT:    vzeroupper
+; AVX2-FAST-PERLANE-NEXT:    retq
 ;
 ; AVX512-LABEL: trunc_and_v4i64_v4i32:
 ; AVX512:       # %bb.0:
@@ -2885,13 +2946,21 @@ define <4 x i32> @trunc_and_const_v4i64_v4i32(<4 x i64> %a0) nounwind {
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
 ;
-; AVX2-FAST-LABEL: trunc_and_const_v4i64_v4i32:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
-; AVX2-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
-; AVX2-FAST-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vzeroupper
-; AVX2-FAST-NEXT:    retq
+; AVX2-FAST-ALL-LABEL: trunc_and_const_v4i64_v4i32:
+; AVX2-FAST-ALL:       # %bb.0:
+; AVX2-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
+; AVX2-FAST-ALL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX2-FAST-ALL-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-FAST-ALL-NEXT:    vzeroupper
+; AVX2-FAST-ALL-NEXT:    retq
+;
+; AVX2-FAST-PERLANE-LABEL: trunc_and_const_v4i64_v4i32:
+; AVX2-FAST-PERLANE:       # %bb.0:
+; AVX2-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX2-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; AVX2-FAST-PERLANE-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-FAST-PERLANE-NEXT:    vzeroupper
+; AVX2-FAST-PERLANE-NEXT:    retq
 ;
 ; AVX512-LABEL: trunc_and_const_v4i64_v4i32:
 ; AVX512:       # %bb.0:
@@ -3214,14 +3283,22 @@ define <4 x i32> @trunc_xor_v4i64_v4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
 ;
-; AVX2-FAST-LABEL: trunc_xor_v4i64_v4i32:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vxorps %ymm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
-; AVX2-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
-; AVX2-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX2-FAST-NEXT:    vzeroupper
-; AVX2-FAST-NEXT:    retq
+; AVX2-FAST-ALL-LABEL: trunc_xor_v4i64_v4i32:
+; AVX2-FAST-ALL:       # %bb.0:
+; AVX2-FAST-ALL-NEXT:    vxorps %ymm1, %ymm0, %ymm0
+; AVX2-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
+; AVX2-FAST-ALL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX2-FAST-ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX2-FAST-ALL-NEXT:    vzeroupper
+; AVX2-FAST-ALL-NEXT:    retq
+;
+; AVX2-FAST-PERLANE-LABEL: trunc_xor_v4i64_v4i32:
+; AVX2-FAST-PERLANE:       # %bb.0:
+; AVX2-FAST-PERLANE-NEXT:    vxorps %ymm1, %ymm0, %ymm0
+; AVX2-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX2-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; AVX2-FAST-PERLANE-NEXT:    vzeroupper
+; AVX2-FAST-PERLANE-NEXT:    retq
 ;
 ; AVX512-LABEL: trunc_xor_v4i64_v4i32:
 ; AVX512:       # %bb.0:
@@ -3570,13 +3647,21 @@ define <4 x i32> @trunc_xor_const_v4i64_v4i32(<4 x i64> %a0) nounwind {
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
 ;
-; AVX2-FAST-LABEL: trunc_xor_const_v4i64_v4i32:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
-; AVX2-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
-; AVX2-FAST-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vzeroupper
-; AVX2-FAST-NEXT:    retq
+; AVX2-FAST-ALL-LABEL: trunc_xor_const_v4i64_v4i32:
+; AVX2-FAST-ALL:       # %bb.0:
+; AVX2-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
+; AVX2-FAST-ALL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX2-FAST-ALL-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-FAST-ALL-NEXT:    vzeroupper
+; AVX2-FAST-ALL-NEXT:    retq
+;
+; AVX2-FAST-PERLANE-LABEL: trunc_xor_const_v4i64_v4i32:
+; AVX2-FAST-PERLANE:       # %bb.0:
+; AVX2-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX2-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; AVX2-FAST-PERLANE-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-FAST-PERLANE-NEXT:    vzeroupper
+; AVX2-FAST-PERLANE-NEXT:    retq
 ;
 ; AVX512-LABEL: trunc_xor_const_v4i64_v4i32:
 ; AVX512:       # %bb.0:
@@ -3899,14 +3984,22 @@ define <4 x i32> @trunc_or_v4i64_v4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
 ;
-; AVX2-FAST-LABEL: trunc_or_v4i64_v4i32:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vorps %ymm1, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
-; AVX2-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
-; AVX2-FAST-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX2-FAST-NEXT:    vzeroupper
-; AVX2-FAST-NEXT:    retq
+; AVX2-FAST-ALL-LABEL: trunc_or_v4i64_v4i32:
+; AVX2-FAST-ALL:       # %bb.0:
+; AVX2-FAST-ALL-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; AVX2-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
+; AVX2-FAST-ALL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX2-FAST-ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX2-FAST-ALL-NEXT:    vzeroupper
+; AVX2-FAST-ALL-NEXT:    retq
+;
+; AVX2-FAST-PERLANE-LABEL: trunc_or_v4i64_v4i32:
+; AVX2-FAST-PERLANE:       # %bb.0:
+; AVX2-FAST-PERLANE-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; AVX2-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX2-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; AVX2-FAST-PERLANE-NEXT:    vzeroupper
+; AVX2-FAST-PERLANE-NEXT:    retq
 ;
 ; AVX512-LABEL: trunc_or_v4i64_v4i32:
 ; AVX512:       # %bb.0:
@@ -4255,13 +4348,21 @@ define <4 x i32> @trunc_or_const_v4i64_v4i32(<4 x i64> %a0) nounwind {
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
 ;
-; AVX2-FAST-LABEL: trunc_or_const_v4i64_v4i32:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
-; AVX2-FAST-NEXT:    vpermps %ymm0, %ymm1, %ymm0
-; AVX2-FAST-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-FAST-NEXT:    vzeroupper
-; AVX2-FAST-NEXT:    retq
+; AVX2-FAST-ALL-LABEL: trunc_or_const_v4i64_v4i32:
+; AVX2-FAST-ALL:       # %bb.0:
+; AVX2-FAST-ALL-NEXT:    vmovaps {{.*#+}} ymm1 = <0,2,4,6,u,u,u,u>
+; AVX2-FAST-ALL-NEXT:    vpermps %ymm0, %ymm1, %ymm0
+; AVX2-FAST-ALL-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-FAST-ALL-NEXT:    vzeroupper
+; AVX2-FAST-ALL-NEXT:    retq
+;
+; AVX2-FAST-PERLANE-LABEL: trunc_or_const_v4i64_v4i32:
+; AVX2-FAST-PERLANE:       # %bb.0:
+; AVX2-FAST-PERLANE-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX2-FAST-PERLANE-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; AVX2-FAST-PERLANE-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-FAST-PERLANE-NEXT:    vzeroupper
+; AVX2-FAST-PERLANE-NEXT:    retq
 ;
 ; AVX512-LABEL: trunc_or_const_v4i64_v4i32:
 ; AVX512:       # %bb.0:
