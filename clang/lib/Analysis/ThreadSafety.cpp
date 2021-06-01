@@ -2194,9 +2194,16 @@ void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
 /// \return  false if we should keep \p A, true if we should keep \p B.
 bool ThreadSafetyAnalyzer::join(const FactEntry &A, const FactEntry &B) {
   if (A.kind() != B.kind()) {
-    Handler.handleExclusiveAndShared("mutex", B.toString(), B.loc(), A.loc());
-    // Take the exclusive capability to reduce further warnings.
-    return B.kind() == LK_Exclusive;
+    // For managed capabilities, the destructor should unlock in the right mode
+    // anyway. For asserted capabilities no unlocking is needed.
+    if ((A.managed() || A.asserted()) && (B.managed() || B.asserted())) {
+      // The shared capability subsumes the exclusive capability.
+      return B.kind() == LK_Shared;
+    } else {
+      Handler.handleExclusiveAndShared("mutex", B.toString(), B.loc(), A.loc());
+      // Take the exclusive capability to reduce further warnings.
+      return B.kind() == LK_Exclusive;
+    }
   } else {
     // The non-asserted capability is the one we want to track.
     return A.asserted() && !B.asserted();
