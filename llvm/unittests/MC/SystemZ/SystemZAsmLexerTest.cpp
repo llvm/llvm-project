@@ -48,6 +48,7 @@ public:
     AllowHashAtStartOfIdentifier = Value;
   }
   void setAllowDotIsPC(bool Value) { DotIsPC = Value; }
+  void setAssemblerDialect(unsigned Value) { AssemblerDialect = Value; }
 };
 
 // Setup a testing class that the GTest framework can call.
@@ -733,5 +734,20 @@ TEST_F(SystemZAsmLexerTest, CheckRejectStringLiterals) {
       {AsmToken::Identifier, AsmToken::Error, AsmToken::Identifier,
        AsmToken::Error, AsmToken::EndOfStatement, AsmToken::Eof});
   lexAndCheckTokens(AsmStr, ExpectedTokens);
+}
+
+TEST_F(SystemZAsmLexerTest, CheckPrintAcceptableSymbol) {
+  std::string AsmStr = "ab13_$.@";
+  EXPECT_EQ(true, MUPMAI->isValidUnquotedName(AsmStr));
+  AsmStr += "#";
+  EXPECT_EQ(false, MUPMAI->isValidUnquotedName(AsmStr));
+}
+
+TEST_F(SystemZAsmLexerTest, CheckPrintAcceptableSymbol2) {
+  MUPMAI->setAssemblerDialect(1);
+  std::string AsmStr = "ab13_$.@";
+  EXPECT_EQ(true, MUPMAI->isValidUnquotedName(AsmStr));
+  AsmStr += "#";
+  EXPECT_EQ(true, MUPMAI->isValidUnquotedName(AsmStr));
 }
 } // end anonymous namespace
