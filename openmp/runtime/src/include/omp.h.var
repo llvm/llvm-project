@@ -182,6 +182,16 @@
         omp_irc_other = -6
     } omp_interop_rc_t;
 
+    typedef enum omp_interop_fr {
+        omp_ifr_cuda = 1,
+        omp_ifr_cuda_driver = 2,
+        omp_ifr_opencl = 3,
+        omp_ifr_sycl = 4,
+        omp_ifr_hip = 5,
+        omp_ifr_level_zero = 6,
+        omp_ifr_last = 7
+    } omp_interop_fr_t;
+
     typedef void * omp_interop_t;
 
     /*!
@@ -211,7 +221,7 @@
     /*!
      * The `omp_get_interop_rc_desc` routine retrieves a description of the return code associated with an `omp_interop_t` object.
      */
-    extern const char * __KAI_KMPC_CONVENTION  omp_get_interop_rc_desc(const omp_interop_rc_t, omp_interop_rc_t);
+    extern const char * __KAI_KMPC_CONVENTION  omp_get_interop_rc_desc(const omp_interop_t, omp_interop_rc_t);
 
     /* OpenMP 5.1 device memory routines */
 

@@ -1025,16 +1025,23 @@ static const SCEV *BinomialCoefficient(const SCEV *It, unsigned K,
 /// where BC(It, k) stands for binomial coefficient.
 const SCEV *SCEVAddRecExpr::evaluateAtIteration(const SCEV *It,
                                                 ScalarEvolution &SE) const {
-  const SCEV *Result = getStart();
-  for (unsigned i = 1, e = getNumOperands(); i != e; ++i) {
+  return evaluateAtIteration(makeArrayRef(op_begin(), op_end()), It, SE);
+}
+
+const SCEV *
+SCEVAddRecExpr::evaluateAtIteration(ArrayRef<const SCEV *> Operands,
+                                    const SCEV *It, ScalarEvolution &SE) {
+  assert(Operands.size() > 0);
+  const SCEV *Result = Operands[0];
+  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
     // The computation is correct in the face of overflow provided that the
     // multiplication is performed _after_ the evaluation of the binomial
     // coefficient.
-    const SCEV *Coeff = BinomialCoefficient(It, i, SE, getType());
+    const SCEV *Coeff = BinomialCoefficient(It, i, SE, Result->getType());
     if (isa<SCEVCouldNotCompute>(Coeff))
       return Coeff;
 
-    Result = SE.getAddExpr(Result, SE.getMulExpr(getOperand(i), Coeff));
+    Result = SE.getAddExpr(Result, SE.getMulExpr(Operands[i], Coeff));
   }
   return Result;
 }

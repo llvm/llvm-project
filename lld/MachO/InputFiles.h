@@ -130,13 +130,6 @@ public:
 // .dylib file
 class DylibFile : public InputFile {
 public:
-  // Mach-O dylibs can re-export other dylibs as sub-libraries, meaning that the
-  // symbols in those sub-libraries will be available under the umbrella
-  // library's namespace. Those sub-libraries can also have their own
-  // re-exports. When loading a re-exported dylib, `umbrella` should be set to
-  // the root dylib to ensure symbols in the child library are correctly bound
-  // to the root. On the other hand, if a dylib is being directly loaded
-  // (through an -lfoo flag), then `umbrella` should be a nullptr.
   explicit DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
                      bool isBundleLoader = false);
 
@@ -144,9 +137,20 @@ public:
                      DylibFile *umbrella = nullptr,
                      bool isBundleLoader = false);
 
+  // Mach-O dylibs can re-export other dylibs as sub-libraries, meaning that the
+  // symbols in those sub-libraries will be available under the umbrella
+  // library's namespace. Those sub-libraries can also have their own
+  // re-exports. When loading a re-exported dylib, `umbrella` should be set to
+  // the root dylib to ensure symbols in the child library are correctly bound
+  // to the root. On the other hand, if a dylib is being directly loaded
+  // (through an -lfoo flag), then `umbrella` should be a nullptr.
+  void parseLoadCommands(MemoryBufferRef mb, DylibFile *umbrella);
+  void parseReexports(const llvm::MachO::InterfaceFile &interface);
+
   static bool classof(const InputFile *f) { return f->kind() == DylibKind; }
 
   StringRef dylibName;
+  DylibFile *exportingFile;
   uint32_t compatibilityVersion = 0;
   uint32_t currentVersion = 0;
   int64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel

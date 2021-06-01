@@ -133,6 +133,8 @@ struct Configuration {
   SymbolPatterns exportedSymbols;
   SymbolPatterns unexportedSymbols;
 
+  bool zeroModTime = false;
+
   llvm::MachO::Architecture arch() const { return platformInfo.target.Arch; }
 
   llvm::MachO::PlatformKind platform() const {

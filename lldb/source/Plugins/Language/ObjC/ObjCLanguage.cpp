@@ -267,6 +267,13 @@ ObjCLanguage::GetMethodNameVariants(ConstString method_name) const {
   return variant_names;
 }
 
+bool ObjCLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
+  ConstString demangled_name = mangled.GetDemangledName();
+  if (!demangled_name)
+    return false;
+  return ObjCLanguage::IsPossibleObjCMethodName(demangled_name.GetCString());
+}
+
 static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
   if (!objc_category_sp)
     return;

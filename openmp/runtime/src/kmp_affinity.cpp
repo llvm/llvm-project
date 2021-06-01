@@ -599,6 +599,16 @@ void kmp_topology_t::canonicalize() {
   _set_globals();
   _set_last_level_cache();
 
+#if KMP_MIC_SUPPORTED
+  // Manually Add L2 = Tile equivalence
+  if (__kmp_mic_type == mic3) {
+    if (get_level(KMP_HW_L2) != -1)
+      set_equivalent_type(KMP_HW_TILE, KMP_HW_L2);
+    else if (get_level(KMP_HW_TILE) != -1)
+      set_equivalent_type(KMP_HW_L2, KMP_HW_TILE);
+  }
+#endif
+
   // Perform post canonicalization checking
   KMP_ASSERT(depth > 0);
   for (int level = 0; level < depth; ++level) {

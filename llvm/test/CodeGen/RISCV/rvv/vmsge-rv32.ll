@@ -2761,11 +2761,9 @@ define <vscale x 1 x i1> @intrinsic_vmsge_maskedoff_mask_vx_nxv1i64_i64(<vscale 
 ; CHECK-NEXT:    sw a0, 8(sp)
 ; CHECK-NEXT:    vsetvli zero, a2, e64,m1,ta,mu
 ; CHECK-NEXT:    addi a0, sp, 8
-; CHECK-NEXT:    vlse64.v v26, (a0), zero
-; CHECK-NEXT:    vmv1r.v v25, v0
+; CHECK-NEXT:    vlse64.v v25, (a0), zero
 ; CHECK-NEXT:    vsetvli zero, zero, e64,m1,tu,mu
-; CHECK-NEXT:    vmsle.vv v25, v26, v8, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v25
+; CHECK-NEXT:    vmsle.vv v0, v25, v8, v0.t
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
 entry:
