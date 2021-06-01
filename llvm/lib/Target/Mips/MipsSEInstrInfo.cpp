@@ -651,6 +651,15 @@ unsigned MipsSEInstrInfo::loadImmediate(int64_t Imm, MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator II,
                                         const DebugLoc &DL,
                                         unsigned *NewImm) const {
+  if (Subtarget.hasNanoMips()) {
+    assert(Imm == (int32_t)Imm);
+    MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
+    const TargetRegisterClass *RC = &Mips::GPR32NMRegClass;
+    Register Reg = RegInfo.createVirtualRegister(RC);
+    BuildMI(MBB, II, DL, get(Mips::Li_NM), Reg).addImm((int32_t)Imm);
+    return Reg;
+  }
+
   MipsAnalyzeImmediate AnalyzeImm;
   const MipsSubtarget &STI = Subtarget;
   MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
