@@ -1179,14 +1179,19 @@ SDValue VectorLegalizer::ExpandVSELECT(SDNode *Node) {
   // AND,OR,XOR, we will have to scalarize the op.
   // Notice that the operation may be 'promoted' which means that it is
   // 'bitcasted' to another type which is handled.
-  // This operation also isn't safe with AND, OR, XOR when the boolean
-  // type is 0/1 as we need an all ones vector constant to mask with.
-  // FIXME: Sign extend 1 to all ones if thats legal on the target.
   if (TLI.getOperationAction(ISD::AND, VT) == TargetLowering::Expand ||
       TLI.getOperationAction(ISD::XOR, VT) == TargetLowering::Expand ||
-      TLI.getOperationAction(ISD::OR, VT) == TargetLowering::Expand ||
-      TLI.getBooleanContents(Op1.getValueType()) !=
-          TargetLowering::ZeroOrNegativeOneBooleanContent)
+      TLI.getOperationAction(ISD::OR, VT) == TargetLowering::Expand)
+    return DAG.UnrollVectorOp(Node);
+
+  // This operation also isn't safe with AND, OR, XOR when the boolean type is
+  // 0/1 and the select operands aren't also booleans, as we need an all-ones
+  // vector constant to mask with.
+  // FIXME: Sign extend 1 to all ones if that's legal on the target.
+  auto BoolContents = TLI.getBooleanContents(Op1.getValueType());
+  if (BoolContents != TargetLowering::ZeroOrNegativeOneBooleanContent &&
+      !(BoolContents == TargetLowering::ZeroOrOneBooleanContent &&
+        Op1.getValueType().getVectorElementType() == MVT::i1))
     return DAG.UnrollVectorOp(Node);
 
   // If the mask and the type are different sizes, unroll the vector op. This
