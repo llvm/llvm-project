@@ -708,8 +708,8 @@ define void @truncstore_nxv1i32_nxv1i8(<vscale x 1 x i32> %x, <vscale x 1 x i8>*
 ; CHECK-NEXT:    vsetvli a1, zero, e16,mf4,ta,mu
 ; CHECK-NEXT:    vnsrl.wi v25, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8,mf8,ta,mu
-; CHECK-NEXT:    vnsrl.wi v26, v25, 0
-; CHECK-NEXT:    vse8.v v26, (a0)
+; CHECK-NEXT:    vnsrl.wi v25, v25, 0
+; CHECK-NEXT:    vse8.v v25, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <vscale x 1 x i32> %x to <vscale x 1 x i8>
   store <vscale x 1 x i8> %y, <vscale x 1 x i8>* %z
@@ -760,8 +760,8 @@ define void @truncstore_nxv2i32_nxv2i8(<vscale x 2 x i32> %x, <vscale x 2 x i8>*
 ; CHECK-NEXT:    vsetvli a1, zero, e16,mf2,ta,mu
 ; CHECK-NEXT:    vnsrl.wi v25, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8,mf4,ta,mu
-; CHECK-NEXT:    vnsrl.wi v26, v25, 0
-; CHECK-NEXT:    vse8.v v26, (a0)
+; CHECK-NEXT:    vnsrl.wi v25, v25, 0
+; CHECK-NEXT:    vse8.v v25, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <vscale x 2 x i32> %x to <vscale x 2 x i8>
   store <vscale x 2 x i8> %y, <vscale x 2 x i8>* %z
@@ -810,8 +810,8 @@ define void @truncstore_nxv4i32_nxv4i8(<vscale x 4 x i32> %x, <vscale x 4 x i8>*
 ; CHECK-NEXT:    vsetvli a1, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vnsrl.wi v25, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8,mf2,ta,mu
-; CHECK-NEXT:    vnsrl.wi v26, v25, 0
-; CHECK-NEXT:    vse8.v v26, (a0)
+; CHECK-NEXT:    vnsrl.wi v25, v25, 0
+; CHECK-NEXT:    vse8.v v25, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <vscale x 4 x i32> %x to <vscale x 4 x i8>
   store <vscale x 4 x i8> %y, <vscale x 4 x i8>* %z
@@ -936,9 +936,9 @@ define void @truncstore_nxv1i64_nxv1i8(<vscale x 1 x i64> %x, <vscale x 1 x i8>*
 ; CHECK-NEXT:    vsetvli a1, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vnsrl.wi v25, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e16,mf4,ta,mu
-; CHECK-NEXT:    vnsrl.wi v26, v25, 0
+; CHECK-NEXT:    vnsrl.wi v25, v25, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8,mf8,ta,mu
-; CHECK-NEXT:    vnsrl.wi v25, v26, 0
+; CHECK-NEXT:    vnsrl.wi v25, v25, 0
 ; CHECK-NEXT:    vse8.v v25, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <vscale x 1 x i64> %x to <vscale x 1 x i8>
@@ -952,8 +952,8 @@ define void @truncstore_nxv1i64_nxv1i16(<vscale x 1 x i64> %x, <vscale x 1 x i16
 ; CHECK-NEXT:    vsetvli a1, zero, e32,mf2,ta,mu
 ; CHECK-NEXT:    vnsrl.wi v25, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e16,mf4,ta,mu
-; CHECK-NEXT:    vnsrl.wi v26, v25, 0
-; CHECK-NEXT:    vse16.v v26, (a0)
+; CHECK-NEXT:    vnsrl.wi v25, v25, 0
+; CHECK-NEXT:    vse16.v v25, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <vscale x 1 x i64> %x to <vscale x 1 x i16>
   store <vscale x 1 x i16> %y, <vscale x 1 x i16>* %z
@@ -978,9 +978,9 @@ define void @truncstore_nxv2i64_nxv2i8(<vscale x 2 x i64> %x, <vscale x 2 x i8>*
 ; CHECK-NEXT:    vsetvli a1, zero, e32,m1,ta,mu
 ; CHECK-NEXT:    vnsrl.wi v25, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e16,mf2,ta,mu
-; CHECK-NEXT:    vnsrl.wi v26, v25, 0
+; CHECK-NEXT:    vnsrl.wi v25, v25, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8,mf4,ta,mu
-; CHECK-NEXT:    vnsrl.wi v25, v26, 0
+; CHECK-NEXT:    vnsrl.wi v25, v25, 0
 ; CHECK-NEXT:    vse8.v v25, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <vscale x 2 x i64> %x to <vscale x 2 x i8>
@@ -994,8 +994,8 @@ define void @truncstore_nxv2i64_nxv2i16(<vscale x 2 x i64> %x, <vscale x 2 x i16
 ; CHECK-NEXT:    vsetvli a1, zero, e32,m1,ta,mu
 ; CHECK-NEXT:    vnsrl.wi v25, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e16,mf2,ta,mu
-; CHECK-NEXT:    vnsrl.wi v26, v25, 0
-; CHECK-NEXT:    vse16.v v26, (a0)
+; CHECK-NEXT:    vnsrl.wi v25, v25, 0
+; CHECK-NEXT:    vse16.v v25, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <vscale x 2 x i64> %x to <vscale x 2 x i16>
   store <vscale x 2 x i16> %y, <vscale x 2 x i16>* %z
@@ -1022,8 +1022,8 @@ define void @truncstore_nxv4i64_nxv4i8(<vscale x 4 x i64> %x, <vscale x 4 x i8>*
 ; CHECK-NEXT:    vsetvli zero, zero, e16,m1,ta,mu
 ; CHECK-NEXT:    vnsrl.wi v25, v26, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8,mf2,ta,mu
-; CHECK-NEXT:    vnsrl.wi v26, v25, 0
-; CHECK-NEXT:    vse8.v v26, (a0)
+; CHECK-NEXT:    vnsrl.wi v25, v25, 0
+; CHECK-NEXT:    vse8.v v25, (a0)
 ; CHECK-NEXT:    ret
   %y = trunc <vscale x 4 x i64> %x to <vscale x 4 x i8>
   store <vscale x 4 x i8> %y, <vscale x 4 x i8>* %z

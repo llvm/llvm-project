@@ -1571,22 +1571,27 @@ multiclass VPseudoBinaryW_WF {
                                        f.fprclass, m>;
 }
 
+// Narrowing instructions like vnsrl/vnsra/vnclip(u) don't need @earlyclobber
+// if the source and destination have an LMUL<=1. This matches this overlap
+// exception from the spec.
+// "The destination EEW is smaller than the source EEW and the overlap is in the
+//  lowest-numbered part of the source register group."
 multiclass VPseudoBinaryV_WV {
   foreach m = MxListW.m in
     defm _WV : VPseudoBinary<m.vrclass, m.wvrclass, m.vrclass, m,
-                             "@earlyclobber $rd">;
+                             !if(!ge(m.octuple, 8), "@earlyclobber $rd", "")>;
 }
 
 multiclass VPseudoBinaryV_WX {
   foreach m = MxListW.m in
     defm _WX : VPseudoBinary<m.vrclass, m.wvrclass, GPR, m,
-                             "@earlyclobber $rd">;
+                             !if(!ge(m.octuple, 8), "@earlyclobber $rd", "")>;
 }
 
 multiclass VPseudoBinaryV_WI {
   foreach m = MxListW.m in
     defm _WI : VPseudoBinary<m.vrclass, m.wvrclass, uimm5, m,
-                             "@earlyclobber $rd">;
+                             !if(!ge(m.octuple, 8), "@earlyclobber $rd", "")>;
 }
 
 // For vadc and vsbc, the instruction encoding is reserved if the destination
