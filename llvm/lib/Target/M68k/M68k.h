@@ -16,8 +16,10 @@
 #define LLVM_LIB_TARGET_M68K_M68K_H
 
 namespace llvm {
-
 class FunctionPass;
+class InstructionSelector;
+class M68kRegisterBankInfo;
+class M68kSubtarget;
 class M68kTargetMachine;
 
 /// This pass converts a legalized DAG into a M68k-specific DAG, ready for
@@ -44,6 +46,10 @@ FunctionPass *createM68kCollapseMOVEMPass();
 /// has to be run after all pseudo expansions and prologue/epilogue emission
 /// so that all possible MOVEs are present.
 FunctionPass *createM68kConvertMOVToMOVMPass();
+
+InstructionSelector *
+createM68kInstructionSelector(const M68kTargetMachine &, const M68kSubtarget &,
+                              const M68kRegisterBankInfo &);
 
 } // namespace llvm
 

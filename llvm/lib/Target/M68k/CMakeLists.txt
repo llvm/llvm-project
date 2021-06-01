@@ -3,6 +3,7 @@ add_llvm_component_group(M68k)
 set(LLVM_TARGET_DEFINITIONS M68k.td)
 
 tablegen(LLVM M68kGenRegisterInfo.inc     -gen-register-info)
+tablegen(LLVM M68kGenRegisterBank.inc     -gen-register-bank)
 tablegen(LLVM M68kGenInstrInfo.inc        -gen-instr-info)
 tablegen(LLVM M68kGenSubtargetInfo.inc    -gen-subtarget)
 tablegen(LLVM M68kGenMCCodeBeads.inc      -gen-code-beads)
@@ -16,14 +17,18 @@ add_public_tablegen_target(M68kCommonTableGen)
 
 add_llvm_target(M68kCodeGen
   M68kAsmPrinter.cpp
+  M68kCallLowering.cpp
   M68kCollapseMOVEMPass.cpp
   M68kExpandPseudo.cpp
   M68kFrameLowering.cpp
   M68kInstrInfo.cpp
+  M68kInstructionSelector.cpp
   M68kISelLowering.cpp
   M68kISelDAGToDAG.cpp
+  M68kLegalizerInfo.cpp
   M68kMachineFunction.cpp
   M68kMCInstLower.cpp
+  M68kRegisterBankInfo.cpp
   M68kRegisterInfo.cpp
   M68kSubtarget.cpp
   M68kTargetMachine.cpp
@@ -34,6 +39,7 @@ add_llvm_target(M68kCodeGen
   AsmPrinter
   CodeGen
   Core
+  GlobalISel
   MC
   SelectionDAG
   Support
