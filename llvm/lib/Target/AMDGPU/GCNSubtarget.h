@@ -136,6 +136,7 @@ protected:
   bool HasGFX10A16;
   bool HasG16;
   bool HasNSAEncoding;
+  bool GFX10_AEncoding;
   bool GFX10_BEncoding;
   bool HasDLInsts;
   bool HasDot1Insts;
@@ -871,6 +872,10 @@ public:
   bool hasImageGather4D16Bug() const { return HasImageGather4D16Bug; }
 
   bool hasNSAEncoding() const { return HasNSAEncoding; }
+
+  bool hasGFX10_AEncoding() const {
+    return GFX10_AEncoding;
+  }
 
   bool hasGFX10_BEncoding() const {
     return GFX10_BEncoding;
