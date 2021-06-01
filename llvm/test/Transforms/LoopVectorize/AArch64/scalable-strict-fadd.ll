@@ -1,5 +1,6 @@
-; RUN: opt < %s -loop-vectorize -scalable-vectorization=on -mtriple aarch64-unknown-linux-gnu -mattr=+sve -enable-strict-reductions=false -S 2>%t | FileCheck %s --check-prefix=CHECK-UNORDERED
-; RUN: opt < %s -loop-vectorize -scalable-vectorization=on -mtriple aarch64-unknown-linux-gnu -mattr=+sve -enable-strict-reductions=true  -S 2>%t | FileCheck %s --check-prefix=CHECK-ORDERED
+; RUN: opt < %s -loop-vectorize -scalable-vectorization=on -mtriple aarch64-unknown-linux-gnu -mattr=+sve -enable-strict-reductions=false -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-NOT-VECTORIZED
+; RUN: opt < %s -loop-vectorize -scalable-vectorization=on -mtriple aarch64-unknown-linux-gnu -mattr=+sve -enable-strict-reductions=false -hints-allow-reordering=true  -S 2>%t | FileCheck %s --check-prefix=CHECK-UNORDERED
+; RUN: opt < %s -loop-vectorize -scalable-vectorization=on -mtriple aarch64-unknown-linux-gnu -mattr=+sve -enable-strict-reductions=true  -hints-allow-reordering=false -S 2>%t | FileCheck %s --check-prefix=CHECK-ORDERED
 
 define float @fadd_strict(float* noalias nocapture readonly %a, i64 %n) {
 ; CHECK-ORDERED-LABEL: @fadd_strict
@@ -25,6 +26,9 @@ define float @fadd_strict(float* noalias nocapture readonly %a, i64 %n) {
 ; CHECK-UNORDERED: for.end
 ; CHECK-UNORDERED: %[[RES:.*]] = phi float [ %[[FADD]], %for.body ], [ %[[RDX]], %middle.block ]
 ; CHECK-UNORDERED: ret float %[[RES]]
+
+; CHECK-NOT-VECTORIZED-LABEL: @fadd_strict
+; CHECK-NOT-VECTORIZED-NOT: vector.body
 
 entry:
   br label %for.body
@@ -86,6 +90,10 @@ define float @fadd_strict_unroll(float* noalias nocapture readonly %a, i64 %n) {
 ; CHECK-UNORDERED: for.end
 ; CHECK-UNORDERED: %[[RES:.*]] = phi float [ %[[FADD]], %for.body ], [ %[[RDX]], %middle.block ]
 ; CHECK-UNORDERED: ret float %[[RES]]
+
+; CHECK-NOT-VECTORIZED-LABEL: @fadd_strict_unroll
+; CHECK-NOT-VECTORIZED-NOT: vector.body
+
 entry:
   br label %for.body
 
@@ -166,6 +174,9 @@ define void @fadd_strict_interleave(float* noalias nocapture readonly %a, float*
 ; CHECK-UNORDERED: store float %[[RDX2]], float* {{.*}}
 ; CHECK-UNORDERED: ret void
 
+; CHECK-NOT-VECTORIZED-LABEL: @fadd_strict_interleave
+; CHECK-NOT-VECTORIZED-NOT: vector.body
+
 entry:
   %arrayidxa = getelementptr inbounds float, float* %a, i64 1
   %a1 = load float, float* %a, align 4
@@ -227,6 +238,9 @@ define float @fadd_of_sum(float* noalias nocapture readonly %a, float* noalias n
 ; CHECK-UNORDERED: for.end
 ; CHECK-UNORDERED: %[[SUM:.*]] = phi float [ 0.000000e+00, %entry ], [ %[[EXIT]], %for.end.loopexit ]
 ; CHECK-UNORDERED: ret float %[[SUM]]
+
+; CHECK-NOT-VECTORIZED-LABEL: @fadd_of_sum
+; CHECK-NOT-VECTORIZED-NOT: vector.body
 
 entry:
   %arrayidx = getelementptr inbounds float, float* %a, i64 1
@@ -295,6 +309,9 @@ define float @fadd_conditional(float* noalias nocapture readonly %a, float* noal
 ; CHECK-UNORDERED: %[[RDX_PHI:.*]] = phi float [ %[[FADD]], %for.inc ], [ %[[RDX]], %middle.block ]
 ; CHECK-UNORDERED: ret float %[[RDX_PHI]]
 
+; CHECK-NOT-VECTORIZED-LABEL: @fadd_conditional
+; CHECK-NOT-VECTORIZED-NOT: vector.body
+
 entry:
   br label %for.body
 
@@ -324,27 +341,9 @@ for.end:
 }
 
 ; Negative test - loop contains multiple fadds which we cannot safely reorder
-; Note: This test vectorizes the loop with a non-strict implementation, which reorders the FAdd operations.
-; This is happening because we are using hints, where allowReordering returns true.
 define float @fadd_multiple(float* noalias nocapture %a, float* noalias nocapture %b, i64 %n) {
 ; CHECK-ORDERED-LABEL: @fadd_multiple
-; CHECK-ORDERED: vector.body
-; CHECK-ORDERED: %[[PHI:.*]] = phi <vscale x 8 x float> [ insertelement (<vscale x 8 x float> shufflevector (<vscale x 8 x float> insertelement (<vscale x 8 x float> undef, float -0.000000e+00, i32 0), <vscale x 8 x float> undef, <vscale x 8 x i32> zeroinitializer), float -0.000000e+00, i32 0), %vector.ph ], [ %[[VEC_FADD2:.*]], %vector.body ]
-; CHECK-ORDERED: %[[VEC_LOAD1:.*]] = load <vscale x 8 x float>, <vscale x 8 x float>
-; CHECK-ORDERED: %[[VEC_FADD1:.*]] = fadd <vscale x 8 x float> %[[PHI]], %[[VEC_LOAD1]]
-; CHECK-ORDERED: %[[VEC_LOAD2:.*]] = load <vscale x 8 x float>, <vscale x 8 x float>
-; CHECK-ORDERED: %[[VEC_FADD2]] = fadd <vscale x 8 x float> %[[VEC_FADD1]], %[[VEC_LOAD2]]
-; CHECK-ORDERED: middle.block
-; CHECK-ORDERED: %[[RDX:.*]] = call float @llvm.vector.reduce.fadd.nxv8f32(float -0.000000e+00, <vscale x 8 x float> %[[VEC_FADD2]])
-; CHECK-ORDERED: for.body
-; CHECK-ORDERED: %[[SUM:.*]] = phi float [ %bc.merge.rdx, %scalar.ph ], [ %[[FADD2:.*]], %for.body ]
-; CHECK-ORDERED: %[[LOAD1:.*]] = load float, float*
-; CHECK-ORDERED: %[[FADD1:.*]] = fadd float %[[SUM]], %[[LOAD1]]
-; CHECK-ORDERED: %[[LOAD2:.*]] = load float, float*
-; CHECK-ORDERED: %[[FADD2]] = fadd float %[[FADD1]], %[[LOAD2]]
-; CHECK-ORDERED: for.end
-; CHECK-ORDERED: %[[RET:.*]] = phi float [ %[[FADD2]], %for.body ], [ %[[RDX]], %middle.block ]
-; CHECK-ORDERED: ret float %[[RET]]
+; CHECK-ORDERED-NOT: vector.body
 
 ; CHECK-UNORDERED-LABEL: @fadd_multiple
 ; CHECK-UNORDERED: vector.body
@@ -364,6 +363,10 @@ define float @fadd_multiple(float* noalias nocapture %a, float* noalias nocaptur
 ; CHECK-UNORDERED: for.end
 ; CHECK-UNORDERED: %[[RET:.*]] = phi float [ %[[FADD2]], %for.body ], [ %[[RDX]], %middle.block ]
 ; CHECK-UNORDERED: ret float %[[RET]]
+
+; CHECK-NOT-VECTORIZED-LABEL: @fadd_multiple
+; CHECK-NOT-VECTORIZED-NOT: vector.body
+
 entry:
   br label %for.body
 
