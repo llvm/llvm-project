@@ -33,29 +33,30 @@ using namespace LegalizeActions;
 /// In practice, not specifying those isn't a problem, and the below functions
 /// should disappear quickly as we add support for legalizing non-power-of-2
 /// sized types further.
-static void
-addAndInterleaveWithUnsupported(LegalizerInfo::SizeAndActionsVec &result,
-                                const LegalizerInfo::SizeAndActionsVec &v) {
+static void addAndInterleaveWithUnsupported(
+    LegacyLegalizerInfo::SizeAndActionsVec &result,
+    const LegacyLegalizerInfo::SizeAndActionsVec &v) {
   for (unsigned i = 0; i < v.size(); ++i) {
     result.push_back(v[i]);
     if (i + 1 < v[i].first && i + 1 < v.size() &&
         v[i + 1].first != v[i].first + 1)
-      result.push_back({v[i].first + 1, Unsupported});
+      result.push_back({v[i].first + 1, LegacyLegalizeActions::Unsupported});
   }
 }
 
-static LegalizerInfo::SizeAndActionsVec
-widen_8_16(const LegalizerInfo::SizeAndActionsVec &v) {
+static LegacyLegalizerInfo::SizeAndActionsVec
+widen_8_16(const LegacyLegalizerInfo::SizeAndActionsVec &v) {
   assert(v.size() >= 1);
   assert(v[0].first > 17);
-  LegalizerInfo::SizeAndActionsVec result = {{1, Unsupported},
-                                             {8, WidenScalar},
-                                             {9, Unsupported},
-                                             {16, WidenScalar},
-                                             {17, Unsupported}};
+  LegacyLegalizerInfo::SizeAndActionsVec result = {
+      {1, LegacyLegalizeActions::Unsupported},
+      {8, LegacyLegalizeActions::WidenScalar},
+      {9, LegacyLegalizeActions::Unsupported},
+      {16, LegacyLegalizeActions::WidenScalar},
+      {17, LegacyLegalizeActions::Unsupported}};
   addAndInterleaveWithUnsupported(result, v);
   auto Largest = result.back().first;
-  result.push_back({Largest + 1, Unsupported});
+  result.push_back({Largest + 1, LegacyLegalizeActions::Unsupported});
   return result;
 }
 
@@ -74,9 +75,10 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
+  auto &LegacyInfo = getLegacyLegalizerInfo();
   if (ST.isThumb1Only()) {
     // Thumb1 is not supported yet.
-    computeTables();
+    LegacyInfo.computeTables();
     verify(*ST.getInstrInfo());
     return;
   }
@@ -116,13 +118,13 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         .clampScalar(0, s32, s32);
 
   for (unsigned Op : {G_SREM, G_UREM}) {
-    setLegalizeScalarToDifferentSizeStrategy(Op, 0, widen_8_16);
+    LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(Op, 0, widen_8_16);
     if (HasHWDivide)
-      setAction({Op, s32}, Lower);
+      LegacyInfo.setAction({Op, s32}, LegacyLegalizeActions::Lower);
     else if (AEABI(ST))
-      setAction({Op, s32}, Custom);
+      LegacyInfo.setAction({Op, s32}, LegacyLegalizeActions::Custom);
     else
-      setAction({Op, s32}, Libcall);
+      LegacyInfo.setAction({Op, s32}, LegacyLegalizeActions::Libcall);
   }
 
   getActionDefinitionsBuilder(G_INTTOPTR)
@@ -198,7 +200,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
     LoadStoreBuilder.maxScalar(0, s32);
 
     for (auto Ty : {s32, s64})
-      setAction({G_FNEG, Ty}, Lower);
+      LegacyInfo.setAction({G_FNEG, Ty}, LegacyLegalizeActions::Lower);
 
     getActionDefinitionsBuilder(G_FCONSTANT).customFor({s32, s64});
 
@@ -246,7 +248,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         .clampScalar(0, s32, s32);
   }
 
-  computeTables();
+  LegacyInfo.computeTables();
   verify(*ST.getInstrInfo());
 }
 

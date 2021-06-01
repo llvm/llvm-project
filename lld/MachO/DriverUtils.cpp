@@ -197,9 +197,8 @@ Optional<std::string> macho::resolveDylibPath(StringRef path) {
 // especially if it's a commonly re-exported core library.
 static DenseMap<CachedHashStringRef, DylibFile *> loadedDylibs;
 
-Optional<DylibFile *> macho::loadDylib(MemoryBufferRef mbref,
-                                       DylibFile *umbrella,
-                                       bool isBundleLoader) {
+DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
+                            bool isBundleLoader) {
   CachedHashStringRef path(mbref.getBufferIdentifier());
   DylibFile *&file = loadedDylibs[path];
   if (file)
@@ -212,7 +211,7 @@ Optional<DylibFile *> macho::loadDylib(MemoryBufferRef mbref,
     if (!result) {
       error("could not load TAPI file at " + mbref.getBufferIdentifier() +
             ": " + toString(result.takeError()));
-      return {};
+      return nullptr;
     }
     file = make<DylibFile>(**result, umbrella, isBundleLoader);
 
@@ -222,7 +221,8 @@ Optional<DylibFile *> macho::loadDylib(MemoryBufferRef mbref,
     // reference might become invalid after parseReexports() -- so copy the
     // pointer it refers to before going on.
     newFile = file;
-    newFile->parseReexports(**result);
+    if (newFile->exportingFile)
+      newFile->parseReexports(**result);
   } else {
     assert(magic == file_magic::macho_dynamically_linked_shared_lib ||
            magic == file_magic::macho_dynamically_linked_shared_lib_stub ||
@@ -233,7 +233,8 @@ Optional<DylibFile *> macho::loadDylib(MemoryBufferRef mbref,
     // parseLoadCommands() can also recursively call loadDylib(). See comment
     // in previous block for why this means we must copy `file` here.
     newFile = file;
-    newFile->parseLoadCommands(mbref, umbrella);
+    if (newFile->exportingFile)
+      newFile->parseLoadCommands(mbref, umbrella);
   }
   return newFile;
 }

@@ -16,6 +16,7 @@ set(files
   __hash_table
   __iterator/advance.h
   __iterator/concepts.h
+  __iterator/default_sentinel.h
   __iterator/incrementable_traits.h
   __iterator/indirect_concepts.h
   __iterator/iter_move.h

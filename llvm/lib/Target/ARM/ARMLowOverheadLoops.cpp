@@ -1227,7 +1227,7 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
   if (LoLoop.Preheader)
     LoLoop.Start = SearchForStart(LoLoop.Preheader);
   else
-    return false;
+    return Changed;
 
   // Find the low-overhead loop components and decide whether or not to fall
   // back to a normal loop. Also look for a vctp instructions and decide
@@ -1261,7 +1261,7 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
   LLVM_DEBUG(LoLoop.dump());
   if (!LoLoop.FoundAllComponents()) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Didn't find loop start, update, end\n");
-    return false;
+    return Changed;
   }
 
   assert(LoLoop.Start->getOpcode() != ARM::t2WhileLoopStart &&

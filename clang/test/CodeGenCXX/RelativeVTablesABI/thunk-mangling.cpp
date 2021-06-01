@@ -5,7 +5,7 @@
 // Running that linked binary still won't work since we're using conflicting
 // ABIs, but we should still be able to link.
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O1 -S -o - -emit-llvm -fexperimental-relative-c++-abi-vtables | FileCheck %s
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O1 -S -o - -emit-llvm | FileCheck %s
 
 // This would be normally n24 (3 ptr widths) but is 12 since the vtable is
 // entierely made of i32s now.

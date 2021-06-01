@@ -2853,7 +2853,8 @@ TreePatternNodePtr TreePattern::ParseTreePattern(Init *TheInit,
         ParseTreePattern(Dag->getArg(0), Dag->getArgNameStr(0));
 
     // Apply the type cast.
-    assert(New->getNumTypes() == 1 && "FIXME: Unhandled");
+    if (New->getNumTypes() != 1)
+      error("Type cast can only have one type!");
     const CodeGenHwModes &CGH = getDAGPatterns().getTargetInfo().getHwModes();
     New->UpdateNodeType(0, getValueTypeByHwMode(Operator, CGH), *this);
 

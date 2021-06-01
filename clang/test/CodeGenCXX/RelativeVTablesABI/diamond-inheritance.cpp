@@ -1,7 +1,7 @@
 // Diamond inheritance.
 // A more complicated multiple inheritance example that includes longer chain of inheritance and a common ancestor.
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O1 -S -o - -emit-llvm -fexperimental-relative-c++-abi-vtables -fhalf-no-semantic-interposition | FileCheck %s
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O1 -S -o - -emit-llvm -fhalf-no-semantic-interposition | FileCheck %s
 
 // CHECK-DAG: %class.B = type { %class.A }
 // CHECK-DAG: %class.A = type { i32 (...)** }
