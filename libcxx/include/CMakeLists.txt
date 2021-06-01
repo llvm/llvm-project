@@ -1,4 +1,5 @@
 set(files
+  __algorithm/unwrap_iter.h
   __availability
   __bit_reference
   __bits
@@ -17,10 +18,12 @@ set(files
   __iterator/advance.h
   __iterator/concepts.h
   __iterator/incrementable_traits.h
+  __iterator/indirect_concepts.h
   __iterator/iter_move.h
   __iterator/iterator_traits.h
   __iterator/next.h
   __iterator/prev.h
+  __iterator/projected.h
   __iterator/readable_traits.h
   __libcpp_version
   __locale

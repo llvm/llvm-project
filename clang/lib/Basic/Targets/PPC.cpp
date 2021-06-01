@@ -85,6 +85,9 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 /// #defines that are not tied to a specific subtarget.
 void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
+
+  defineXLCompatMacros(Builder);
+
   // Target identification.
   Builder.defineMacro("__ppc__");
   Builder.defineMacro("__PPC__");

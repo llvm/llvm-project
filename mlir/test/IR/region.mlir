@@ -101,3 +101,9 @@ func @named_region_has_wrong_number_of_blocks() {
     func @foo2() { return }
   }
 ) : () -> ()
+
+// CHECK: test.single_no_terminator_custom_asm_op
+// CHECK-NEXT: important_dont_drop
+test.single_no_terminator_custom_asm_op {
+  "important_dont_drop"() : () -> ()
+}

@@ -1360,6 +1360,16 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // Now process the instruction normally.
     break;
   }
+  case PPC::PseudoEIEIO: {
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(PPC::ORI).addReg(PPC::X2).addReg(PPC::X2).addImm(0));
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(PPC::ORI).addReg(PPC::X2).addReg(PPC::X2).addImm(0));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::EnforceIEIO));
+    return;
+  }
   }
 
   LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);

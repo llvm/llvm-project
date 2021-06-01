@@ -27,6 +27,44 @@ AliasResult AliasResult::merge(AliasResult other) const {
   return MayAlias;
 }
 
+void AliasResult::print(raw_ostream &os) const {
+  switch (kind) {
+  case Kind::NoAlias:
+    os << "NoAlias";
+    break;
+  case Kind::MayAlias:
+    os << "MayAlias";
+    break;
+  case Kind::PartialAlias:
+    os << "PartialAlias";
+    break;
+  case Kind::MustAlias:
+    os << "MustAlias";
+    break;
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// ModRefResult
+//===----------------------------------------------------------------------===//
+
+void ModRefResult::print(raw_ostream &os) const {
+  switch (kind) {
+  case Kind::NoModRef:
+    os << "NoModRef";
+    break;
+  case Kind::Ref:
+    os << "Ref";
+    break;
+  case Kind::Mod:
+    os << "Mod";
+    break;
+  case Kind::ModRef:
+    os << "ModRef";
+    break;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // AliasAnalysis
 //===----------------------------------------------------------------------===//
@@ -35,7 +73,6 @@ AliasAnalysis::AliasAnalysis(Operation *op) {
   addAnalysisImplementation(LocalAliasAnalysis());
 }
 
-/// Given the two values, return their aliasing behavior.
 AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   // Check each of the alias analysis implemenations for an alias result.
   for (const std::unique_ptr<Concept> &aliasImpl : aliasImpls) {
@@ -44,4 +81,17 @@ AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
       return result;
   }
   return AliasResult::MayAlias;
+}
+
+ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
+  // Compute the mod-ref behavior by refining a top `ModRef` result with each of
+  // the alias analysis implementations. We early exit at the point where we
+  // refine down to a `NoModRef`.
+  ModRefResult result = ModRefResult::getModAndRef();
+  for (const std::unique_ptr<Concept> &aliasImpl : aliasImpls) {
+    result = result.intersect(aliasImpl->getModRef(op, location));
+    if (result.isNoModRef())
+      return result;
+  }
+  return result;
 }

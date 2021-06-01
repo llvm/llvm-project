@@ -6,7 +6,7 @@
 define i32 @load_with_pointer_phi_no_runtime_checks(%s1* %data) {
 ; CHECK-LABEL: load_with_pointer_phi_no_runtime_checks
 ; CHECK-NEXT:  loop.header:
-; CHECK-NEXT:    Memory dependences are safe
+; CHECK-NEXT:    Report: cannot identify array bounds
 ;
 entry:
   br label %loop.header
@@ -41,7 +41,7 @@ exit:                                             ; preds = %loop.latch
 define i32 @store_with_pointer_phi_no_runtime_checks(%s1* %data) {
 ; CHECK-LABEL: 'store_with_pointer_phi_no_runtime_checks'
 ; CHECK-NEXT:  loop.header:
-; CHECK-NEXT:    Memory dependences are safe
+; CHECK-NEXT:    Report: cannot identify array bounds
 ;
 entry:
   br label %loop.header
@@ -76,23 +76,7 @@ exit:                                             ; preds = %loop.latch
 define i32 @store_with_pointer_phi_runtime_checks(double* %A, double* %B, double* %C) {
 ; CHECK-LABEL: 'store_with_pointer_phi_runtime_checks'
 ; CHECK-NEXT:  loop.header:
-; CHECK-NEXT:    Memory dependences are safe with run-time checks
-; CHECK:         Run-time memory checks:
-; CHECK-NEXT:    Check 0:
-; CHECK-NEXT:      Comparing group ([[GROUP_C:.+]]):
-; CHECK-NEXT:        %gep.2 = getelementptr inbounds double, double* %C, i64 %iv
-; CHECK-NEXT:      Against group ([[GROUP_B:.+]]):
-; CHECK-NEXT:        %gep.1 = getelementptr inbounds double, double* %B, i64 %iv
-; CHECK-NEXT:    Check 1:
-; CHECK-NEXT:      Comparing group ([[GROUP_C]]):
-; CHECK-NEXT:        %gep.2 = getelementptr inbounds double, double* %C, i64 %iv
-; CHECK-NEXT:      Against group ([[GROUP_A:.+]]):
-; CHECK-NEXT:        %arrayidx = getelementptr inbounds double, double* %A, i64 %iv
-; CHECK-NEXT:    Check 2:
-; CHECK-NEXT:      Comparing group ([[GROUP_B]]):
-; CHECK-NEXT:        %gep.1 = getelementptr inbounds double, double* %B, i64 %iv
-; CHECK-NEXT:      Against group ([[GROUP_A]]):
-; CHECK-NEXT:        %arrayidx = getelementptr inbounds double, double* %A, i64 %iv
+; CHECK-NEXT:    Report: cannot identify array bounds
 ;
 entry:
   br label %loop.header

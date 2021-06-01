@@ -381,7 +381,7 @@ define <16 x i16> @insert_v16i16_z12345z789ABCDEz(<16 x i16> %a) {
 ;
 ; AVX-LABEL: insert_v16i16_z12345z789ABCDEz:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %1 = insertelement <16 x i16> %a, i16 0, i32 0
   %2 = insertelement <16 x i16> %1, i16 0, i32 6
@@ -392,17 +392,17 @@ define <16 x i16> @insert_v16i16_z12345z789ABCDEz(<16 x i16> %a) {
 define <16 x i8> @insert_v16i8_z123456789ABCDEz(<16 x i8> %a) {
 ; SSE2-LABEL: insert_v16i8_z123456789ABCDEz:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: insert_v16i8_z123456789ABCDEz:
 ; SSE3:       # %bb.0:
-; SSE3-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE3-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: insert_v16i8_z123456789ABCDEz:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSSE3-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: insert_v16i8_z123456789ABCDEz:
@@ -428,7 +428,7 @@ define <16 x i8> @insert_v16i8_z123456789ABCDEz(<16 x i8> %a) {
 ;
 ; AVX2-FAST-LABEL: insert_v16i8_z123456789ABCDEz:
 ; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; AVX2-FAST-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-FAST-NEXT:    retq
   %1 = insertelement <16 x i8> %a, i8 0, i32 0
   %2 = insertelement <16 x i8> %1, i8 0, i32 15
@@ -438,20 +438,20 @@ define <16 x i8> @insert_v16i8_z123456789ABCDEz(<16 x i8> %a) {
 define <32 x i8> @insert_v32i8_z123456789ABCDEzGHIJKLMNOPQRSTzz(<32 x i8> %a) {
 ; SSE2-LABEL: insert_v32i8_z123456789ABCDEzGHIJKLMNOPQRSTzz:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    andps {{.*}}(%rip), %xmm0
-; SSE2-NEXT:    andps {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: insert_v32i8_z123456789ABCDEzGHIJKLMNOPQRSTzz:
 ; SSE3:       # %bb.0:
-; SSE3-NEXT:    andps {{.*}}(%rip), %xmm0
-; SSE3-NEXT:    andps {{.*}}(%rip), %xmm1
+; SSE3-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE3-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: insert_v32i8_z123456789ABCDEzGHIJKLMNOPQRSTzz:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    andps {{.*}}(%rip), %xmm0
-; SSSE3-NEXT:    andps {{.*}}(%rip), %xmm1
+; SSSE3-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSSE3-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: insert_v32i8_z123456789ABCDEzGHIJKLMNOPQRSTzz:
@@ -465,7 +465,7 @@ define <32 x i8> @insert_v32i8_z123456789ABCDEzGHIJKLMNOPQRSTzz(<32 x i8> %a) {
 ;
 ; AVX-LABEL: insert_v32i8_z123456789ABCDEzGHIJKLMNOPQRSTzz:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %1 = insertelement <32 x i8> %a, i8 0, i32 0
   %2 = insertelement <32 x i8> %1, i8 0, i32 15

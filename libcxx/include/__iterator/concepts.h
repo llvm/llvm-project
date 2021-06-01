@@ -17,6 +17,7 @@
 #include <__iterator/readable_traits.h>
 #include <__memory/pointer_traits.h>
 #include <concepts>
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -47,6 +48,9 @@ concept __indirectly_readable_impl =
 
 template<class _In>
 concept indirectly_readable = __indirectly_readable_impl<remove_cvref_t<_In> >;
+
+template<indirectly_readable _Tp>
+using iter_common_reference_t = common_reference_t<iter_reference_t<_Tp>, iter_value_t<_Tp>&>;
 
 // [iterator.concept.writable]
 template<class _Out, class _Tp>

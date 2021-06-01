@@ -156,6 +156,7 @@
 // CHECK-NEXT: SpeculativeLoadHardening (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: StandaloneDebug (SubjectMatchRule_record)
 // CHECK-NEXT: SwiftAsync (SubjectMatchRule_function, SubjectMatchRule_objc_method)
+// CHECK-NEXT: SwiftAsyncContext (SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: SwiftAsyncError (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: SwiftAsyncName (SubjectMatchRule_objc_method, SubjectMatchRule_function)
 // CHECK-NEXT: SwiftBridgedTypedef (SubjectMatchRule_type_alias)

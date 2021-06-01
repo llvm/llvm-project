@@ -463,7 +463,7 @@ if config.android:
   except ValueError:
     lit_config.fatal("Failed to read ro.build.version.sdk (using '%s' as adb): got '%s'" % (adb, android_api_level_str))
   android_api_level = min(android_api_level, int(config.android_api_level))
-  for required in [26, 28, 30]:
+  for required in [26, 28, 29, 30]:
     if android_api_level >= required:
       config.available_features.add('android-%s' % required)
   # FIXME: Replace with appropriate version when availible.

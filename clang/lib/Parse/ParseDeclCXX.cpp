@@ -497,11 +497,7 @@ Parser::ParseUsingDirectiveOrDeclaration(DeclaratorContext Context,
   }
 
   // Otherwise, it must be a using-declaration or an alias-declaration.
-
-  // Using declarations can't have attributes.
-  ProhibitAttributes(attrs);
-
-  return ParseUsingDeclaration(Context, TemplateInfo, UsingLoc, DeclEnd,
+  return ParseUsingDeclaration(Context, TemplateInfo, UsingLoc, DeclEnd, attrs,
                                AS_none);
 }
 
@@ -627,7 +623,8 @@ bool Parser::ParseUsingDeclarator(DeclaratorContext Context,
   if (getLangOpts().CPlusPlus11 && Context == DeclaratorContext::Member &&
       Tok.is(tok::identifier) &&
       (NextToken().is(tok::semi) || NextToken().is(tok::comma) ||
-       NextToken().is(tok::ellipsis)) &&
+       NextToken().is(tok::ellipsis) || NextToken().is(tok::l_square) ||
+       NextToken().is(tok::kw___attribute)) &&
       D.SS.isNotEmpty() && LastII == Tok.getIdentifierInfo() &&
       !D.SS.getScopeRep()->getAsNamespace() &&
       !D.SS.getScopeRep()->getAsNamespaceAlias()) {
@@ -670,11 +667,10 @@ bool Parser::ParseUsingDeclarator(DeclaratorContext Context,
 ///     alias-declaration: C++11 [dcl.dcl]p1
 ///       'using' identifier attribute-specifier-seq[opt] = type-id ;
 ///
-Parser::DeclGroupPtrTy
-Parser::ParseUsingDeclaration(DeclaratorContext Context,
-                              const ParsedTemplateInfo &TemplateInfo,
-                              SourceLocation UsingLoc, SourceLocation &DeclEnd,
-                              AccessSpecifier AS) {
+Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
+    DeclaratorContext Context, const ParsedTemplateInfo &TemplateInfo,
+    SourceLocation UsingLoc, SourceLocation &DeclEnd,
+    ParsedAttributesWithRange &PrefixAttrs, AccessSpecifier AS) {
   // Check for misplaced attributes before the identifier in an
   // alias-declaration.
   ParsedAttributesWithRange MisplacedAttrs(AttrFactory);
@@ -686,6 +682,17 @@ Parser::ParseUsingDeclaration(DeclaratorContext Context,
   ParsedAttributesWithRange Attrs(AttrFactory);
   MaybeParseAttributes(PAKM_GNU | PAKM_CXX11, Attrs);
 
+  // If we had any misplaced attributes from earlier, this is where they
+  // should have been written.
+  if (MisplacedAttrs.Range.isValid()) {
+    Diag(MisplacedAttrs.Range.getBegin(), diag::err_attributes_not_allowed)
+        << FixItHint::CreateInsertionFromRange(
+               Tok.getLocation(),
+               CharSourceRange::getTokenRange(MisplacedAttrs.Range))
+        << FixItHint::CreateRemoval(MisplacedAttrs.Range);
+    Attrs.takeAllFrom(MisplacedAttrs);
+  }
+
   // Maybe this is an alias-declaration.
   if (Tok.is(tok::equal)) {
     if (InvalidDeclarator) {
@@ -693,16 +700,7 @@ Parser::ParseUsingDeclaration(DeclaratorContext Context,
       return nullptr;
     }
 
-    // If we had any misplaced attributes from earlier, this is where they
-    // should have been written.
-    if (MisplacedAttrs.Range.isValid()) {
-      Diag(MisplacedAttrs.Range.getBegin(), diag::err_attributes_not_allowed)
-        << FixItHint::CreateInsertionFromRange(
-               Tok.getLocation(),
-               CharSourceRange::getTokenRange(MisplacedAttrs.Range))
-        << FixItHint::CreateRemoval(MisplacedAttrs.Range);
-      Attrs.takeAllFrom(MisplacedAttrs);
-    }
+    ProhibitAttributes(PrefixAttrs);
 
     Decl *DeclFromDeclSpec = nullptr;
     Decl *AD = ParseAliasDeclarationAfterDeclarator(
@@ -710,10 +708,7 @@ Parser::ParseUsingDeclaration(DeclaratorContext Context,
     return Actions.ConvertDeclToDeclGroup(AD, DeclFromDeclSpec);
   }
 
-  // C++11 attributes are not allowed on a using-declaration, but GNU ones
-  // are.
-  ProhibitAttributes(MisplacedAttrs);
-  ProhibitAttributes(Attrs);
+  DiagnoseCXX11AttributeExtension(PrefixAttrs);
 
   // Diagnose an attempt to declare a templated using-declaration.
   // In C++11, alias-declarations can be templates:
@@ -731,8 +726,10 @@ Parser::ParseUsingDeclaration(DeclaratorContext Context,
 
   SmallVector<Decl *, 8> DeclsInGroup;
   while (true) {
-    // Parse (optional) attributes (most likely GNU strong-using extension).
-    MaybeParseGNUAttributes(Attrs);
+    // Parse (optional) attributes.
+    MaybeParseAttributes(PAKM_GNU | PAKM_CXX11, Attrs);
+    DiagnoseCXX11AttributeExtension(Attrs);
+    Attrs.addAll(PrefixAttrs.begin(), PrefixAttrs.end());
 
     if (InvalidDeclarator)
       SkipUntil(tok::comma, tok::semi, StopBeforeMatch);
@@ -2618,8 +2615,6 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
   MaybeParseMicrosoftAttributes(attrs);
 
   if (Tok.is(tok::kw_using)) {
-    ProhibitAttributes(attrs);
-
     // Eat 'using'.
     SourceLocation UsingLoc = ConsumeToken();
 
@@ -2638,7 +2633,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
     SourceLocation DeclEnd;
     // Otherwise, it must be a using-declaration or an alias-declaration.
     return ParseUsingDeclaration(DeclaratorContext::Member, TemplateInfo,
-                                 UsingLoc, DeclEnd, AS);
+                                 UsingLoc, DeclEnd, attrs, AS);
   }
 
   // Hold late-parsed attributes so we can attach a Decl to them later.

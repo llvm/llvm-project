@@ -338,6 +338,7 @@ static bool findGccVersion(StringRef LibDir, std::string &GccLibDir,
       continue;
     if (CandidateVersion <= Version)
       continue;
+    Version = CandidateVersion;
     Ver = std::string(VersionText);
     GccLibDir = LI->path();
   }

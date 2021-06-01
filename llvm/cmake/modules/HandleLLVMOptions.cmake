@@ -474,6 +474,23 @@ if( MSVC )
           CMAKE_SHARED_LINKER_FLAGS)
   endif()
 
+  # Get all linker flags in upper case form so we can search them.
+  set(all_linker_flags_uppercase
+    "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_MODULE_LINKER_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS}")
+  string(TOUPPER "${all_linker_flags_uppercase}" all_linker_flags_uppercase)
+
+  if (CLANG_CL AND LINKER_IS_LLD)
+    # If we are using clang-cl with lld-link and /debug is present in any of the
+    # linker flag variables, pass -gcodeview-ghash to the compiler to speed up
+    # linking. This flag is orthogonal from /Zi, /Z7, and other flags that
+    # enable debug info emission, and only has an effect if those are also in
+    # use.
+    string(FIND "${all_linker_flags_uppercase}" "/DEBUG" linker_flag_idx)
+    if (${linker_flag_idx} GREATER -1)
+      add_flag_if_supported("-gcodeview-ghash" GCODEVIEW_GHASH)
+    endif()
+  endif()
+
   # Disable string literal const->non-const type conversion.
   # "When specified, the compiler requires strict const-qualification
   # conformance for pointers initialized by using string literals."
@@ -499,13 +516,7 @@ if( MSVC )
     if (SUPPORTS_BREPRO)
       # Check if /INCREMENTAL is passed to the linker and complain that it
       # won't work with /Brepro.
-      string(TOUPPER "${CMAKE_EXE_LINKER_FLAGS}" upper_exe_flags)
-      string(TOUPPER "${CMAKE_MODULE_LINKER_FLAGS}" upper_module_flags)
-      string(TOUPPER "${CMAKE_SHARED_LINKER_FLAGS}" upper_shared_flags)
-
-      string(FIND "${upper_exe_flags} ${upper_module_flags} ${upper_shared_flags}"
-        "/INCREMENTAL" linker_flag_idx)
-
+      string(FIND "${all_linker_flags_uppercase}" "/INCREMENTAL" linker_flag_idx)
       if (${linker_flag_idx} GREATER -1)
         message(WARNING "/Brepro not compatible with /INCREMENTAL linking - builds will be non-deterministic")
       else()

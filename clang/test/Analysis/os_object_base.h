@@ -67,6 +67,8 @@ struct OSObject : public OSMetaClassBase {
 struct OSMetaClass : public OSMetaClassBase {
   virtual OSObject * alloc() const;
   static OSObject * allocClassWithName(const char * name);
+  static const OSMetaClass *copyMetaClassWithName(const char *name);
+  void releaseMetaClass() const;
   virtual ~OSMetaClass(){}
 };
 

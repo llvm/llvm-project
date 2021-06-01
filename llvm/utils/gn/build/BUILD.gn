@@ -298,7 +298,7 @@ config("compiler_defaults") {
   if (use_ubsan) {
     assert(is_clang && current_os == "linux",
            "ubsan only supported on Linux/Clang")
-    cflags += [ "-fsanitize=undefined" ]
+    cflags += [ "-fsanitize=undefined", "-fno-sanitize-recover=all" ]
     ldflags += [ "-fsanitize=undefined" ]
   }
 
