@@ -3101,7 +3101,6 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
   CommandObject *cmd_obj = nullptr;
   StreamString revised_command_line;
   bool wants_raw_input = false;
-  size_t actual_cmd_name_len = 0;
   std::string next_word;
   StringList matches;
   bool done = false;
@@ -3123,12 +3122,10 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
         revised_command_line.Printf("%s", alias_result.c_str());
         if (cmd_obj) {
           wants_raw_input = cmd_obj->WantsRawCommandString();
-          actual_cmd_name_len = cmd_obj->GetCommandName().size();
         }
       } else {
         if (cmd_obj) {
           llvm::StringRef cmd_name = cmd_obj->GetCommandName();
-          actual_cmd_name_len += cmd_name.size();
           revised_command_line.Printf("%s", cmd_name.str().c_str());
           wants_raw_input = cmd_obj->WantsRawCommandString();
         } else {
@@ -3143,7 +3140,6 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
           // The subcommand's name includes the parent command's name, so
           // restart rather than append to the revised_command_line.
           llvm::StringRef sub_cmd_name = sub_cmd_obj->GetCommandName();
-          actual_cmd_name_len = sub_cmd_name.size() + 1;
           revised_command_line.Clear();
           revised_command_line.Printf("%s", sub_cmd_name.str().c_str());
           cmd_obj = sub_cmd_obj;

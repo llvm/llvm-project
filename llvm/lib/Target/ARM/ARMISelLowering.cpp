@@ -6861,12 +6861,10 @@ static SDValue isVMOVModifiedImm(uint64_t SplatBits, uint64_t SplatUndef,
       return SDValue();
     // NEON has a 64-bit VMOV splat where each byte is either 0 or 0xff.
     uint64_t BitMask = 0xff;
-    uint64_t Val = 0;
     unsigned ImmMask = 1;
     Imm = 0;
     for (int ByteNum = 0; ByteNum < 8; ++ByteNum) {
       if (((SplatBits | SplatUndef) & BitMask) == BitMask) {
-        Val |= BitMask;
         Imm |= ImmMask;
       } else if ((SplatBits & BitMask) != 0) {
         return SDValue();

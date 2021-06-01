@@ -683,8 +683,6 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
       r3_value.GetData(r3_data);
       rdx_value.GetData(rdx_data);
 
-      uint32_t fp_bytes =
-          0; // Tracks how much of the xmm registers we've consumed so far
       uint32_t integer_bytes =
           0; // Tracks how much of the r3/rds registers we've consumed so far
 
@@ -751,7 +749,6 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
             break;
           } else if (*field_bit_width == 64) {
             copy_from_offset = 0;
-            fp_bytes += field_byte_width;
           } else if (*field_bit_width == 32) {
             // This one is kind of complicated.  If we are in an "eightbyte"
             // with another float, we'll be stuffed into an xmm register with
@@ -815,8 +812,6 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
                 copy_from_offset = integer_bytes - 8;
                 integer_bytes += field_byte_width;
               }
-            } else {
-              fp_bytes += field_byte_width;
             }
           }
         }

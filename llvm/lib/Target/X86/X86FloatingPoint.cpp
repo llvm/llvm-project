@@ -1526,7 +1526,7 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
 
     // Scan the assembly for ST registers used, defined and clobbered. We can
     // only tell clobbers from defs by looking at the asm descriptor.
-    unsigned STUses = 0, STDefs = 0, STClobbers = 0, STDeadDefs = 0;
+    unsigned STUses = 0, STDefs = 0, STClobbers = 0;
     unsigned NumOps = 0;
     SmallSet<unsigned, 1> FRegIdx;
     unsigned RCID;
@@ -1559,8 +1559,6 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
       case InlineAsm::Kind_RegDef:
       case InlineAsm::Kind_RegDefEarlyClobber:
         STDefs |= (1u << STReg);
-        if (MO.isDead())
-          STDeadDefs |= (1u << STReg);
         break;
       case InlineAsm::Kind_Clobber:
         STClobbers |= (1u << STReg);
