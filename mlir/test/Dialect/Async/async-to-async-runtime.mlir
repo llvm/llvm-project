@@ -216,8 +216,13 @@ func @async_group_await_all(%arg0: f32, %arg1: memref<1xf32>) {
 // CHECK:   async.coro.suspend
 // CHECK-SAME: ^[[SUSPEND]], ^[[RESUME_1:.*]], ^[[CLEANUP]]
 
-// Emplace result token.
+// Check the error of the awaited token after resumption.
 // CHECK: ^[[RESUME_1]]:
+// CHECK:   %[[ERR:.*]] = async.runtime.is_error %[[ARG]]
+// CHECK:   cond_br %[[ERR]], ^[[SET_ERROR:.*]], ^[[CONTINUATION:.*]]
+
+// Emplace result token after error checking.
+// CHECK: ^[[CONTINUATION:.*]]:
 // CHECK:   async.runtime.set_available %[[TOKEN]]
 
 // CHECK: ^[[CLEANUP]]:

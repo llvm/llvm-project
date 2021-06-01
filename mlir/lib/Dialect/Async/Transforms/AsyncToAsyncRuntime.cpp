@@ -399,25 +399,22 @@ public:
       builder.create<CoroSuspendOp>(coroSaveOp.state(), coro.suspend, resume,
                                     coro.cleanup);
 
-      // TODO: Async groups do not yet support runtime errors.
-      if (!std::is_same<AwaitAllOp, AwaitType>::value) {
-        // Split the resume block into error checking and continuation.
-        Block *continuation = rewriter.splitBlock(resume, Block::iterator(op));
+      // Split the resume block into error checking and continuation.
+      Block *continuation = rewriter.splitBlock(resume, Block::iterator(op));
 
-        // Check if the awaited value is in the error state.
-        builder.setInsertionPointToStart(resume);
-        auto isError = builder.create<RuntimeIsErrorOp>(
-            loc, rewriter.getI1Type(), operand);
-        builder.create<CondBranchOp>(isError,
-                                     /*trueDest=*/setupSetErrorBlock(coro),
-                                     /*trueArgs=*/ArrayRef<Value>(),
-                                     /*falseDest=*/continuation,
-                                     /*falseArgs=*/ArrayRef<Value>());
+      // Check if the awaited value is in the error state.
+      builder.setInsertionPointToStart(resume);
+      auto isError =
+          builder.create<RuntimeIsErrorOp>(loc, rewriter.getI1Type(), operand);
+      builder.create<CondBranchOp>(isError,
+                                   /*trueDest=*/setupSetErrorBlock(coro),
+                                   /*trueArgs=*/ArrayRef<Value>(),
+                                   /*falseDest=*/continuation,
+                                   /*falseArgs=*/ArrayRef<Value>());
 
-        // Make sure that replacement value will be constructed in the
-        // continuation block.
-        rewriter.setInsertionPointToStart(continuation);
-      }
+      // Make sure that replacement value will be constructed in the
+      // continuation block.
+      rewriter.setInsertionPointToStart(continuation);
     }
 
     // Erase or replace the await operation with the new value.

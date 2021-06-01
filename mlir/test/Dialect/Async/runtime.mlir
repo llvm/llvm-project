@@ -66,6 +66,13 @@ func @is_value_error(%arg0: !async.value<f32>) -> i1 {
   return %0 : i1
 }
 
+// CHECK-LABEL: @is_group_error
+func @is_group_error(%arg0: !async.group) -> i1 {
+  // CHECK: %[[ERR:.*]] = async.runtime.is_error %arg0 : !async.group
+  %0 = async.runtime.is_error %arg0 : !async.group
+  return %0 : i1
+}
+
 // CHECK-LABEL: @await_token
 func @await_token(%arg0: !async.token) {
   // CHECK: async.runtime.await %arg0 : !async.token
