@@ -508,9 +508,9 @@ public:
       OmpCopyIn, OmpCopyPrivate,
       // OpenMP miscellaneous flags
       OmpCommonBlock, OmpReduction, OmpAligned, OmpAllocate,
-      OmpAllocateDirective, OmpDeclareSimd, OmpDeclareTarget, OmpThreadprivate,
-      OmpDeclareReduction, OmpFlushed, OmpCriticalLock, OmpIfSpecified, OmpNone,
-      OmpPreDetermined);
+      OmpDeclarativeAllocateDirective, OmpExecutableAllocateDirective,
+      OmpDeclareSimd, OmpDeclareTarget, OmpThreadprivate, OmpDeclareReduction,
+      OmpFlushed, OmpCriticalLock, OmpIfSpecified, OmpNone, OmpPreDetermined);
   using Flags = common::EnumSet<Flag, Flag_enumSize>;
 
   const Scope &owner() const { return *owner_; }
