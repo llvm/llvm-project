@@ -252,9 +252,11 @@ namespace {
 /// This class represents all of the information pertaining to a specific MLIR
 /// document.
 struct MLIRDocument {
-  MLIRDocument(const lsp::URIForFile &uri, StringRef contents, int64_t version,
+  MLIRDocument(const lsp::URIForFile &uri, StringRef contents,
                DialectRegistry &registry,
                std::vector<lsp::Diagnostic> &diagnostics);
+  MLIRDocument(const MLIRDocument &) = delete;
+  MLIRDocument &operator=(const MLIRDocument &) = delete;
 
   //===--------------------------------------------------------------------===//
   // Definitions and References
@@ -283,9 +285,6 @@ struct MLIRDocument {
   buildHoverForBlockArgument(llvm::SMRange hoverRange, BlockArgument arg,
                              const AsmParserState::BlockDefinition &block);
 
-  /// The version of this document.
-  int64_t version;
-
   /// The context used to hold the state contained by the parsed document.
   MLIRContext context;
 
@@ -302,9 +301,9 @@ struct MLIRDocument {
 } // namespace
 
 MLIRDocument::MLIRDocument(const lsp::URIForFile &uri, StringRef contents,
-                           int64_t version, DialectRegistry &registry,
+                           DialectRegistry &registry,
                            std::vector<lsp::Diagnostic> &diagnostics)
-    : version(version), context(registry) {
+    : context(registry) {
   context.allowUnregisteredDialects();
   ScopedDiagnosticHandler handler(&context, [&](Diagnostic &diag) {
     diagnostics.push_back(getLspDiagnoticFromDiag(diag, uri));
@@ -549,6 +548,170 @@ lsp::Hover MLIRDocument::buildHoverForBlockArgument(
 }
 
 //===----------------------------------------------------------------------===//
+// MLIRTextFileChunk
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// This class represents a single chunk of an MLIR text file.
+struct MLIRTextFileChunk {
+  MLIRTextFileChunk(uint64_t lineOffset, const lsp::URIForFile &uri,
+                    StringRef contents, DialectRegistry &registry,
+                    std::vector<lsp::Diagnostic> &diagnostics)
+      : lineOffset(lineOffset), document(uri, contents, registry, diagnostics) {
+  }
+
+  /// Adjust the line number of the given range to anchor at the beginning of
+  /// the file, instead of the beginning of this chunk.
+  void adjustLocForChunkOffset(lsp::Range &range) {
+    adjustLocForChunkOffset(range.start);
+    adjustLocForChunkOffset(range.end);
+  }
+  /// Adjust the line number of the given position to anchor at the beginning of
+  /// the file, instead of the beginning of this chunk.
+  void adjustLocForChunkOffset(lsp::Position &pos) { pos.line += lineOffset; }
+
+  /// The line offset of this chunk from the beginning of the file.
+  uint64_t lineOffset;
+  /// The document referred to by this chunk.
+  MLIRDocument document;
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
+// MLIRTextFile
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// This class represents a text file containing one or more MLIR documents.
+class MLIRTextFile {
+public:
+  MLIRTextFile(const lsp::URIForFile &uri, StringRef fileContents,
+               int64_t version, DialectRegistry &registry,
+               std::vector<lsp::Diagnostic> &diagnostics);
+
+  /// Return the current version of this text file.
+  int64_t getVersion() const { return version; }
+
+  //===--------------------------------------------------------------------===//
+  // LSP Queries
+  //===--------------------------------------------------------------------===//
+
+  void getLocationsOf(const lsp::URIForFile &uri, lsp::Position defPos,
+                      std::vector<lsp::Location> &locations);
+  void findReferencesOf(const lsp::URIForFile &uri, lsp::Position pos,
+                        std::vector<lsp::Location> &references);
+  Optional<lsp::Hover> findHover(const lsp::URIForFile &uri,
+                                 lsp::Position hoverPos);
+
+private:
+  /// Find the MLIR document that contains the given position, and update the
+  /// position to be anchored at the start of the found chunk instead of the
+  /// beginning of the file.
+  MLIRTextFileChunk &getChunkFor(lsp::Position &pos);
+
+  /// The full string contents of the file.
+  std::string contents;
+
+  /// The version of this file.
+  int64_t version;
+
+  /// The chunks of this file. The order of these chunks is the order in which
+  /// they appear in the text file.
+  std::vector<std::unique_ptr<MLIRTextFileChunk>> chunks;
+};
+} // namespace
+
+MLIRTextFile::MLIRTextFile(const lsp::URIForFile &uri, StringRef fileContents,
+                           int64_t version, DialectRegistry &registry,
+                           std::vector<lsp::Diagnostic> &diagnostics)
+    : contents(fileContents.str()), version(version) {
+  // Split the file into separate MLIR documents.
+  // TODO: Find a way to share the split file marker with other tools. We don't
+  // want to use `splitAndProcessBuffer` here, but we do want to make sure this
+  // marker doesn't go out of sync.
+  SmallVector<StringRef, 8> subContents;
+  StringRef(contents).split(subContents, "// -----");
+  chunks.emplace_back(std::make_unique<MLIRTextFileChunk>(
+      /*lineOffset=*/0, uri, subContents.front(), registry, diagnostics));
+
+  uint64_t lineOffset = subContents.front().count('\n');
+  for (StringRef docContents : llvm::drop_begin(subContents)) {
+    unsigned currentNumDiags = diagnostics.size();
+    auto chunk = std::make_unique<MLIRTextFileChunk>(
+        lineOffset, uri, docContents, registry, diagnostics);
+    lineOffset += docContents.count('\n');
+
+    // Adjust locations used in diagnostics to account for the offset from the
+    // beginning of the file.
+    for (lsp::Diagnostic &diag :
+         llvm::drop_begin(diagnostics, currentNumDiags)) {
+      chunk->adjustLocForChunkOffset(diag.range);
+
+      if (!diag.relatedInformation)
+        continue;
+      for (auto &it : *diag.relatedInformation)
+        if (it.location.uri == uri)
+          chunk->adjustLocForChunkOffset(it.location.range);
+    }
+    chunks.emplace_back(std::move(chunk));
+  }
+}
+
+void MLIRTextFile::getLocationsOf(const lsp::URIForFile &uri,
+                                  lsp::Position defPos,
+                                  std::vector<lsp::Location> &locations) {
+  MLIRTextFileChunk &chunk = getChunkFor(defPos);
+  chunk.document.getLocationsOf(uri, defPos, locations);
+
+  // Adjust any locations within this file for the offset of this chunk.
+  if (chunk.lineOffset == 0)
+    return;
+  for (lsp::Location &loc : locations)
+    if (loc.uri == uri)
+      chunk.adjustLocForChunkOffset(loc.range);
+}
+
+void MLIRTextFile::findReferencesOf(const lsp::URIForFile &uri,
+                                    lsp::Position pos,
+                                    std::vector<lsp::Location> &references) {
+  MLIRTextFileChunk &chunk = getChunkFor(pos);
+  chunk.document.findReferencesOf(uri, pos, references);
+
+  // Adjust any locations within this file for the offset of this chunk.
+  if (chunk.lineOffset == 0)
+    return;
+  for (lsp::Location &loc : references)
+    if (loc.uri == uri)
+      chunk.adjustLocForChunkOffset(loc.range);
+}
+
+Optional<lsp::Hover> MLIRTextFile::findHover(const lsp::URIForFile &uri,
+                                             lsp::Position hoverPos) {
+  MLIRTextFileChunk &chunk = getChunkFor(hoverPos);
+  Optional<lsp::Hover> hoverInfo = chunk.document.findHover(uri, hoverPos);
+
+  // Adjust any locations within this file for the offset of this chunk.
+  if (chunk.lineOffset != 0 && hoverInfo && hoverInfo->range)
+    chunk.adjustLocForChunkOffset(*hoverInfo->range);
+  return hoverInfo;
+}
+
+MLIRTextFileChunk &MLIRTextFile::getChunkFor(lsp::Position &pos) {
+  if (chunks.size() == 1)
+    return *chunks.front();
+
+  // Search for the first chunk with a greater line offset, the previous chunk
+  // is the one that contains `pos`.
+  auto it = llvm::upper_bound(
+      chunks, pos, [](const lsp::Position &pos, const auto &chunk) {
+        return static_cast<uint64_t>(pos.line) < chunk->lineOffset;
+      });
+  MLIRTextFileChunk &chunk = it == chunks.end() ? *chunks.back() : **(--it);
+  pos.line -= chunk.lineOffset;
+  return chunk;
+}
+
+//===----------------------------------------------------------------------===//
 // MLIRServer::Impl
 //===----------------------------------------------------------------------===//
 
@@ -559,8 +722,8 @@ struct lsp::MLIRServer::Impl {
   /// files.
   DialectRegistry &registry;
 
-  /// The documents held by the server, mapped by their URI file name.
-  llvm::StringMap<std::unique_ptr<MLIRDocument>> documents;
+  /// The files held by the server, mapped by their URI file name.
+  llvm::StringMap<std::unique_ptr<MLIRTextFile>> files;
 };
 
 //===----------------------------------------------------------------------===//
@@ -574,40 +737,40 @@ lsp::MLIRServer::~MLIRServer() {}
 void lsp::MLIRServer::addOrUpdateDocument(
     const URIForFile &uri, StringRef contents, int64_t version,
     std::vector<Diagnostic> &diagnostics) {
-  impl->documents[uri.file()] = std::make_unique<MLIRDocument>(
+  impl->files[uri.file()] = std::make_unique<MLIRTextFile>(
       uri, contents, version, impl->registry, diagnostics);
 }
 
 Optional<int64_t> lsp::MLIRServer::removeDocument(const URIForFile &uri) {
-  auto it = impl->documents.find(uri.file());
-  if (it == impl->documents.end())
+  auto it = impl->files.find(uri.file());
+  if (it == impl->files.end())
     return llvm::None;
 
-  int64_t version = it->second->version;
-  impl->documents.erase(it);
+  int64_t version = it->second->getVersion();
+  impl->files.erase(it);
   return version;
 }
 
 void lsp::MLIRServer::getLocationsOf(const URIForFile &uri,
                                      const Position &defPos,
                                      std::vector<Location> &locations) {
-  auto fileIt = impl->documents.find(uri.file());
-  if (fileIt != impl->documents.end())
+  auto fileIt = impl->files.find(uri.file());
+  if (fileIt != impl->files.end())
     fileIt->second->getLocationsOf(uri, defPos, locations);
 }
 
 void lsp::MLIRServer::findReferencesOf(const URIForFile &uri,
                                        const Position &pos,
                                        std::vector<Location> &references) {
-  auto fileIt = impl->documents.find(uri.file());
-  if (fileIt != impl->documents.end())
+  auto fileIt = impl->files.find(uri.file());
+  if (fileIt != impl->files.end())
     fileIt->second->findReferencesOf(uri, pos, references);
 }
 
 Optional<lsp::Hover> lsp::MLIRServer::findHover(const URIForFile &uri,
                                                 const Position &hoverPos) {
-  auto fileIt = impl->documents.find(uri.file());
-  if (fileIt != impl->documents.end())
+  auto fileIt = impl->files.find(uri.file());
+  if (fileIt != impl->files.end())
     return fileIt->second->findHover(uri, hoverPos);
   return llvm::None;
 }
