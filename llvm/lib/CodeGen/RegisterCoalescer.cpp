@@ -928,7 +928,7 @@ RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
     if (UseMO.isUndef())
       continue;
     MachineInstr *UseMI = UseMO.getParent();
-    if (UseMI->isDebugValue()) {
+    if (UseMI->isDebugInstr()) {
       // FIXME These don't have an instruction index.  Not clear we have enough
       // info to decide whether to do this replacement or not.  For now do it.
       UseMO.setReg(NewReg);
@@ -1561,7 +1561,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
          UI != MRI->use_end();) {
       MachineOperand &UseMO = *UI++;
       MachineInstr *UseMI = UseMO.getParent();
-      if (UseMI->isDebugValue()) {
+      if (UseMI->isDebugInstr()) {
         if (Register::isPhysicalRegister(DstReg))
           UseMO.substPhysReg(DstReg, *TRI);
         else
@@ -1742,7 +1742,7 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
       if (SubReg == 0 || MO.isUndef())
         continue;
       MachineInstr &MI = *MO.getParent();
-      if (MI.isDebugValue())
+      if (MI.isDebugInstr())
         continue;
       SlotIndex UseIdx = LIS->getInstructionIndex(MI).getRegSlot(true);
       addUndefFlag(*DstInt, UseIdx, MO, SubReg);
@@ -1769,7 +1769,7 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
 
     // If SrcReg wasn't read, it may still be the case that DstReg is live-in
     // because SrcReg is a sub-register.
-    if (DstInt && !Reads && SubIdx && !UseMI->isDebugValue())
+    if (DstInt && !Reads && SubIdx && !UseMI->isDebugInstr())
       Reads = DstInt->liveAt(LIS->getInstructionIndex(*UseMI));
 
     // Replace SrcReg with DstReg in all UseMI operands.
@@ -1799,7 +1799,7 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
             // unused lanes. This may happen with rematerialization.
             DstInt->createSubRange(Allocator, UnusedLanes);
           }
-          SlotIndex MIIdx = UseMI->isDebugValue()
+          SlotIndex MIIdx = UseMI->isDebugInstr()
             ? LIS->getSlotIndexes()->getIndexBefore(*UseMI)
             : LIS->getInstructionIndex(*UseMI);
           SlotIndex UseIdx = MIIdx.getRegSlot(true);
@@ -1815,7 +1815,7 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
 
     LLVM_DEBUG({
       dbgs() << "\t\tupdated: ";
-      if (!UseMI->isDebugValue())
+      if (!UseMI->isDebugInstr())
         dbgs() << LIS->getInstructionIndex(*UseMI) << "\t";
       dbgs() << *UseMI;
     });
