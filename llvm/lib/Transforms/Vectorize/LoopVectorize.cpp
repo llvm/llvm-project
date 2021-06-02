@@ -70,6 +70,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -1204,6 +1205,16 @@ enum ScalarEpilogueLowering {
   CM_ScalarEpilogueNotAllowedUsePredicate
 };
 
+/// ElementCountComparator creates a total ordering for ElementCount
+/// for the purposes of using it in a set structure.
+struct ElementCountComparator {
+  bool operator()(const ElementCount &LHS, const ElementCount &RHS) const {
+    return std::make_tuple(LHS.isScalable(), LHS.getKnownMinValue()) <
+           std::make_tuple(RHS.isScalable(), RHS.getKnownMinValue());
+  }
+};
+using ElementCountSet = SmallSet<ElementCount, 16, ElementCountComparator>;
+
 /// LoopVectorizationCostModel - estimates the expected speedups due to
 /// vectorization.
 /// In many cases vectorization is not profitable. This can happen because of
@@ -1236,10 +1247,12 @@ public:
   bool runtimeChecksRequired();
 
   /// \return The most profitable vectorization factor and the cost of that VF.
-  /// This method checks every power of two up to MaxVF. If UserVF is not ZERO
+  /// This method checks every VF in \p CandidateVFs. If UserVF is not ZERO
   /// then this vectorization factor will be selected if vectorization is
   /// possible.
-  VectorizationFactor selectVectorizationFactor(ElementCount MaxVF);
+  VectorizationFactor
+  selectVectorizationFactor(const ElementCountSet &CandidateVFs);
+
   VectorizationFactor
   selectEpilogueVectorizationFactor(const ElementCount MaxVF,
                                     const LoopVectorizationPlanner &LVP);
@@ -6013,6 +6026,14 @@ bool LoopVectorizationCostModel::isMoreProfitable(
     return RTCostA < RTCostB;
   }
 
+  // When set to preferred, for now assume vscale may be larger than 1, so
+  // that scalable vectorization is slightly favorable over fixed-width
+  // vectorization.
+  if (Hints->isScalableVectorizationPreferred())
+    if (A.Width.isScalable() && !B.Width.isScalable())
+      return (CostA * B.Width.getKnownMinValue()) <=
+             (CostB * A.Width.getKnownMinValue());
+
   // To avoid the need for FP division:
   //      (CostA / A.Width) < (CostB / B.Width)
   // <=>  (CostA * B.Width) < (CostB * A.Width)
@@ -6020,30 +6041,30 @@ bool LoopVectorizationCostModel::isMoreProfitable(
          (CostB * A.Width.getKnownMinValue());
 }
 
-VectorizationFactor
-LoopVectorizationCostModel::selectVectorizationFactor(ElementCount MaxVF) {
-  // FIXME: This can be fixed for scalable vectors later, because at this stage
-  // the LoopVectorizer will only consider vectorizing a loop with scalable
-  // vectors when the loop has a hint to enable vectorization for a given VF.
-  assert(!MaxVF.isScalable() && "scalable vectors not yet supported");
-
+VectorizationFactor LoopVectorizationCostModel::selectVectorizationFactor(
+    const ElementCountSet &VFCandidates) {
   InstructionCost ExpectedCost = expectedCost(ElementCount::getFixed(1)).first;
   LLVM_DEBUG(dbgs() << "LV: Scalar loop costs: " << ExpectedCost << ".\n");
   assert(ExpectedCost.isValid() && "Unexpected invalid cost for scalar loop");
+  assert(VFCandidates.count(ElementCount::getFixed(1)) &&
+         "Expected Scalar VF to be a candidate");
 
   const VectorizationFactor ScalarCost(ElementCount::getFixed(1), ExpectedCost);
   VectorizationFactor ChosenFactor = ScalarCost;
 
   bool ForceVectorization = Hints->getForce() == LoopVectorizeHints::FK_Enabled;
-  if (ForceVectorization && MaxVF.isVector()) {
+  if (ForceVectorization && VFCandidates.size() > 1) {
     // Ignore scalar width, because the user explicitly wants vectorization.
     // Initialize cost to max so that VF = 2 is, at least, chosen during cost
     // evaluation.
     ChosenFactor.Cost = std::numeric_limits<InstructionCost::CostType>::max();
   }
 
-  for (auto i = ElementCount::getFixed(2); ElementCount::isKnownLE(i, MaxVF);
-       i *= 2) {
+  for (const auto &i : VFCandidates) {
+    // The cost for scalar VF=1 is already calculated, so ignore it.
+    if (i.isScalar())
+      continue;
+
     // Notice that the vector loop needs to be executed less times, so
     // we need to divide the cost of the vector loops by the width of
     // the vector elements.
@@ -6053,7 +6074,9 @@ LoopVectorizationCostModel::selectVectorizationFactor(ElementCount MaxVF) {
     VectorizationFactor Candidate(i, C.first);
     LLVM_DEBUG(
         dbgs() << "LV: Vector loop of width " << i << " costs: "
-               << (*Candidate.Cost.getValue() / Candidate.Width.getFixedValue())
+               << (*Candidate.Cost.getValue() /
+                   Candidate.Width.getKnownMinValue())
+               << (i.isScalable() ? " (assuming a minimum vscale of 1)" : "")
                << ".\n");
 
     if (!C.second && !ForceVectorization) {
@@ -7967,17 +7990,21 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
     // profitable to scalarize.
     CM.selectUserVectorizationFactor(UserVF);
     CM.collectInLoopReductions();
-    buildVPlansWithVPRecipes({UserVF}, {UserVF});
+    buildVPlansWithVPRecipes(UserVF, UserVF);
     LLVM_DEBUG(printPlans(dbgs()));
     return {{UserVF, 0}};
   }
 
-  ElementCount MaxVF = MaxFactors.FixedVF;
-  assert(!MaxVF.isScalable() &&
-         "Scalable vectors not yet supported beyond this point");
+  // Populate the set of Vectorization Factor Candidates.
+  ElementCountSet VFCandidates;
+  for (auto VF = ElementCount::getFixed(1);
+       ElementCount::isKnownLE(VF, MaxFactors.FixedVF); VF *= 2)
+    VFCandidates.insert(VF);
+  for (auto VF = ElementCount::getScalable(1);
+       ElementCount::isKnownLE(VF, MaxFactors.ScalableVF); VF *= 2)
+    VFCandidates.insert(VF);
 
-  for (ElementCount VF = ElementCount::getFixed(1);
-       ElementCount::isKnownLE(VF, MaxVF); VF *= 2) {
+  for (const auto VF : VFCandidates) {
     // Collect Uniform and Scalar instructions after vectorization with VF.
     CM.collectUniformsAndScalars(VF);
 
@@ -7988,14 +8015,15 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
   }
 
   CM.collectInLoopReductions();
+  buildVPlansWithVPRecipes(ElementCount::getFixed(1), MaxFactors.FixedVF);
+  buildVPlansWithVPRecipes(ElementCount::getScalable(1), MaxFactors.ScalableVF);
 
-  buildVPlansWithVPRecipes(ElementCount::getFixed(1), MaxVF);
   LLVM_DEBUG(printPlans(dbgs()));
   if (!MaxFactors.hasVector())
     return VectorizationFactor::Disabled();
 
   // Select the optimal vectorization factor.
-  auto SelectedVF = CM.selectVectorizationFactor(MaxVF);
+  auto SelectedVF = CM.selectVectorizationFactor(VFCandidates);
 
   // Check if it is profitable to vectorize with runtime checks.
   unsigned NumRuntimePointerChecks = Requirements.getNumRuntimePointerChecks();

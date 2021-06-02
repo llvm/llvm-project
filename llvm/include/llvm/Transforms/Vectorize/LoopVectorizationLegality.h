@@ -144,6 +144,13 @@ public:
     return (ForceKind)Force.Value;
   }
 
+  /// \return true if the cost-model for scalable vectorization should
+  /// favor vectorization with scalable vectors over fixed-width vectors when
+  /// the cost-model is inconclusive.
+  bool isScalableVectorizationPreferred() const {
+    return Scalable.Value == SK_PreferScalable;
+  }
+
   /// \return true if scalable vectorization has been explicitly enabled.
   bool isScalableVectorizationExplicitlyEnabled() const {
     return Scalable.Value == SK_PreferFixedWidth ||
