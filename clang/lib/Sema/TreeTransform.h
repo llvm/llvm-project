@@ -14394,7 +14394,11 @@ QualType TreeTransform<Derived>::RebuildUnresolvedUsingType(SourceLocation Loc,
 
     // A valid resolved using typename decl points to exactly one type decl.
     assert(++Using->shadow_begin() == Using->shadow_end());
-    Ty = cast<TypeDecl>((*Using->shadow_begin())->getTargetDecl());
+
+    NamedDecl *Target = Using->shadow_begin()->getTargetDecl();
+    if (SemaRef.DiagnoseUseOfDecl(Target, Loc))
+      return QualType();
+    Ty = cast<TypeDecl>(Target);
   } else {
     assert(isa<UnresolvedUsingTypenameDecl>(D) &&
            "UnresolvedUsingTypenameDecl transformed to non-using decl");

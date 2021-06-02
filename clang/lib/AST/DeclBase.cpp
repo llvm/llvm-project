@@ -811,6 +811,9 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case TypeAliasTemplate:
       return IDNS_Ordinary | IDNS_Tag | IDNS_Type;
 
+    case UnresolvedUsingIfExists:
+      return IDNS_Type | IDNS_Ordinary;
+
     case OMPDeclareReduction:
       return IDNS_OMPReduction;
 
