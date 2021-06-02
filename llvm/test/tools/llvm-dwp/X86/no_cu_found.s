@@ -1,12 +1,12 @@
 # RUN: llvm-mc --triple=x86_64-unknown-linux --filetype=obj --split-dwarf-file=%t.dwo -dwarf-version=5 %s -o %t.o
 # RUN: not llvm-dwp %t.dwo -o /dev/null 2>&1 | FileCheck %s
 
-# CHECK: error: {{.*}}: unit type DW_UT_split_compile type not found in debug_info header. Unexpected unit type 0x12 found
+# CHECK: error: no compile unit found in file: {{.*}}no_cu_found.s
 	.section	.debug_info.dwo,"e",@progbits
 	.long	.Ldebug_info_dwo_end0-.Ldebug_info_dwo_start0 # Length of Unit
 .Ldebug_info_dwo_start0:
 	.short	5                      # DWARF version number
-	.byte	12                       # DWARF Unit Type
+	.byte	12                       # DWARF Unit Type (DW_TAG_string_type, wrong type)
 	.byte	8                       # Address Size (in bytes)
 	.long	0                       # Offset Into Abbrev. Section
 	.quad	-1173350285159172090
