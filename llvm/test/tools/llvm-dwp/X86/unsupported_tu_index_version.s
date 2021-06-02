@@ -5,7 +5,7 @@
 ## of version 2 and a TU index of version 5. A valid TU is not required, but
 ## the .debug_types.dwo section should not be empty.
 
-# CHECK: error: unsupported tu_index version: 5 (only version 2 is supported)
+# CHECK: error: expected index version 2, but got: 5
 
 .section .debug_abbrev.dwo, "e", @progbits
 .LAbbrevBegin:
