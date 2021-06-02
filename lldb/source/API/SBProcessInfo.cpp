@@ -179,6 +179,21 @@ lldb::pid_t SBProcessInfo::GetParentProcessID() {
   return proc_id;
 }
 
+const char *SBProcessInfo::GetTriple() {
+  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBProcessInfo, GetTriple);
+
+  const char *triple = nullptr;
+  if (m_opaque_up) {
+    const auto &arch = m_opaque_up->GetArchitecture();
+    if (arch.IsValid()) {
+      // Const-ify the string so we don't need to worry about the lifetime of
+      // the string
+      triple = ConstString(arch.GetTriple().getTriple().c_str()).GetCString();
+    }
+  }
+  return triple;
+}
+
 namespace lldb_private {
 namespace repro {
 
@@ -204,6 +219,7 @@ void RegisterMethods<SBProcessInfo>(Registry &R) {
   LLDB_REGISTER_METHOD(bool, SBProcessInfo, EffectiveUserIDIsValid, ());
   LLDB_REGISTER_METHOD(bool, SBProcessInfo, EffectiveGroupIDIsValid, ());
   LLDB_REGISTER_METHOD(lldb::pid_t, SBProcessInfo, GetParentProcessID, ());
+  LLDB_REGISTER_METHOD(const char *, SBProcessInfo, GetTriple, ());
 }
 
 }
