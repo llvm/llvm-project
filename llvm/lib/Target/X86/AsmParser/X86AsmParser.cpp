@@ -4793,7 +4793,6 @@ bool X86AsmParser::parseDirectiveFPOSetFrame(SMLoc L) {
 
 // .cv_fpo_pushreg ebx
 bool X86AsmParser::parseDirectiveFPOPushReg(SMLoc L) {
-  MCAsmParser &Parser = getParser();
   unsigned Reg;
   SMLoc DummyLoc;
   if (ParseRegister(Reg, DummyLoc, DummyLoc) || parseEOL())
