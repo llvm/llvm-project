@@ -38,9 +38,8 @@ config.substitutions.append(('%{compile_flags}',
         os.path.join(LIBCXX_ROOT, 'test', 'support'))
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ {} {} -pthread'.format(
-        os.path.join(INSTALL_ROOT, 'lib', 'libc++.a'),
-        os.path.join(INSTALL_ROOT, 'lib', 'libc++abi.a'))
+    '-nostdlib++ -L {} -lc++ -lc++abi -pthread'.format(
+        os.path.join(INSTALL_ROOT, 'lib'))
 ))
 config.substitutions.append(('%{exec}',
     '{} {} --execdir %T -- '.format(
