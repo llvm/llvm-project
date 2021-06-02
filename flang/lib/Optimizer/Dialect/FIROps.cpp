@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -360,6 +361,45 @@ static mlir::LogicalResult verify(fir::ArrayLoadOp op) {
       if (sliceTy.getRank() != arrDim)
         return op.emitOpError("rank of dimension in slice mismatched");
 
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// ArrayMergeStoreOp
+//===----------------------------------------------------------------------===//
+
+static mlir::LogicalResult verify(fir::ArrayMergeStoreOp op) {
+  if (!isa<ArrayLoadOp>(op.original().getDefiningOp()))
+    return op.emitOpError("operand #0 must be result of a fir.array_load op");
+  if (auto sl = op.slice()) {
+    if (auto slOp = sl.getDefiningOp()) {
+      auto sliceOp = mlir::cast<fir::SliceOp>(slOp);
+      if (!sliceOp.fields().empty()) {
+        // This is an intra-object merge, where the slice is projecting the
+        // subfields that are to be overwritten by the merge operation.
+        auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(op.memref().getType());
+        if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>()) {
+          auto projTy =
+              fir::applyPathToType(seqTy.getEleTy(), sliceOp.fields());
+          if (fir::unwrapSequenceType(op.original().getType()) != projTy)
+            return op.emitOpError(
+                "type of origin does not match sliced memref type");
+          if (fir::unwrapSequenceType(op.sequence().getType()) != projTy)
+            return op.emitOpError(
+                "type of sequence does not match sliced memref type");
+          return mlir::success();
+        }
+        return op.emitOpError("referenced type is not an array");
+      }
+    }
+    return mlir::success();
+  }
+  auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(op.memref().getType());
+  if (op.original().getType() != eleTy)
+    return op.emitOpError("type of origin does not match memref element type");
+  if (op.sequence().getType() != eleTy)
+    return op.emitOpError(
+        "type of sequence does not match memref element type");
   return mlir::success();
 }
 
@@ -1567,7 +1607,7 @@ static constexpr llvm::StringRef getTargetOffsetAttr() {
 template <typename A, typename... AdditionalArgs>
 static A getSubOperands(unsigned pos, A allArgs,
                         mlir::DenseIntElementsAttr ranges,
-                        AdditionalArgs &&...additionalArgs) {
+                        AdditionalArgs &&... additionalArgs) {
   unsigned start = 0;
   for (unsigned i = 0; i < pos; ++i)
     start += (*(ranges.begin() + i)).getZExtValue();
@@ -2264,6 +2304,55 @@ bool fir::anyFuncArgsHaveAttr(mlir::FuncOp func, llvm::StringRef attr) {
     if (func.getArgAttr(i, attr))
       return true;
   return false;
+}
+
+mlir::Type fir::applyPathToType(mlir::Type rootTy, mlir::ValueRange path) {
+  auto eleTy = rootTy;
+  for (auto i = path.begin(), end = path.end(); eleTy && i != end; ++i) {
+    auto v = *i;
+    eleTy =
+        llvm::TypeSwitch<mlir::Type, mlir::Type>(eleTy)
+            .Case<fir::RecordType>([&](fir::RecordType ty) -> mlir::Type {
+              if (auto op = v.getDefiningOp()) {
+                if (auto off = mlir::dyn_cast<fir::FieldIndexOp>(op))
+                  return ty.getType(off.getFieldName());
+                if (auto off = mlir::dyn_cast<mlir::ConstantOp>(op))
+                  return ty.getType(fir::toInt(off));
+              }
+              return {};
+            })
+            .Case<fir::SequenceType>([&](fir::SequenceType ty) -> mlir::Type {
+              auto rank = ty.getDimension();
+              if (std::distance(i, end) >= rank && rank > 0) {
+                for (auto ii = i, ee = i + rank; ii != ee; ++ii) {
+                  auto vv = *ii;
+                  if (!fir::isa_integer(vv.getType()))
+                    return {};
+                }
+                i += rank - 1;
+                return ty.getEleTy();
+              }
+              return {};
+            })
+            .Case<mlir::TupleType>([&](mlir::TupleType ty) -> mlir::Type {
+              if (auto op = v.getDefiningOp())
+                if (auto off = mlir::dyn_cast<mlir::ConstantOp>(op))
+                  return ty.getType(fir::toInt(off));
+              return {};
+            })
+            .Case<fir::ComplexType>([&](fir::ComplexType ty) -> mlir::Type {
+              if (fir::isa_integer(v.getType()))
+                return ty.getElementType();
+              return {};
+            })
+            .Case<mlir::ComplexType>([&](mlir::ComplexType ty) -> mlir::Type {
+              if (fir::isa_integer(v.getType()))
+                return ty.getElementType();
+              return {};
+            })
+            .Default([&](auto) -> mlir::Type { return {}; });
+  }
+  return eleTy;
 }
 
 // Tablegen operators

@@ -81,11 +81,11 @@ subroutine test_assign_in_array_ref(x, y)
   x = 42.
   ! CHECK: %[[xload:.*]] = fir.array_load %[[xaddr]]({{.*}}) : (!fir.ref<!fir.array<?xf32>>, !fir.shapeshift<1>) -> !fir.array<?xf32>
   ! CHECK: %[[xloop:.*]] = fir.do_loop {{.*}} iter_args(%arg3 = %[[xload]]) -> (!fir.array<?xf32>)
-  ! CHECK: fir.array_merge_store %[[xload]], %[[xloop]] to %[[xaddr]] : !fir.ref<!fir.array<?xf32>>
+  ! CHECK: fir.array_merge_store %[[xload]], %[[xloop]] to %[[xaddr]] : !fir.array<?xf32>, !fir.array<?xf32>, !fir.ref<!fir.array<?xf32>>
   y = 42.
   ! CHECK: %[[yload:.*]] = fir.array_load %arg1 : (!fir.box<!fir.array<?xf32>>) -> !fir.array<?xf32>
   ! CHECK: %[[yloop:.*]] = fir.do_loop {{.*}} iter_args(%arg3 = %[[yload]]) -> (!fir.array<?xf32>) {
-  ! CHECK: fir.array_merge_store %[[yload]], %[[yloop]] to %arg1 : !fir.box<!fir.array<?xf32>>
+  ! CHECK: fir.array_merge_store %[[yload]], %[[yloop]] to %arg1 : !fir.array<?xf32>, !fir.array<?xf32>, !fir.box<!fir.array<?xf32>>
 end subroutine
 
 ! CHECK-LABEL: func @_QPtest_slice_ref(%arg0: !fir.box<!fir.array<?xf32>> {fir.contiguous}, %arg1: !fir.box<!fir.array<?xf32>>

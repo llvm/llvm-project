@@ -332,9 +332,10 @@ int main(int argc, char **argv) {
     // to the bin) directory.
     includeDirs.push_back(
         llvm::sys::path::parent_path(
-            llvm::sys::fs::getMainExecutable(argv[0], nullptr))
+            llvm::sys::path::parent_path(
+                llvm::sys::fs::getMainExecutable(argv[0], nullptr)))
             .str() +
-        "/../include/flang");
+        "/include/flang");
   }
 
   Fortran::parser::Options options;
