@@ -483,6 +483,15 @@ protected:
               }
             }
 
+            // We've done all the checks whose failure means "we consider lldb
+            // not to have hit the breakpoint".  Now we're going to check for
+            // conditions that might continue after hitting.  Start with the
+            // ignore count:
+            if (!bp_loc_sp->IgnoreCountShouldStop()) {
+              actually_said_continue = true;
+              continue;
+            }
+
             // Check the auto-continue bit on the location, do this before the
             // callback since it may change this, but that would be for the
             // NEXT hit.  Note, you might think you could check auto-continue
