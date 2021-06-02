@@ -866,7 +866,7 @@ struct UnrollTransferReadConversion
                                 PatternRewriter &rewriter) const override {
     if (xferOp.getVectorType().getRank() <= options.targetRank)
       return failure();
-    if (xferOp.getShapedType().template isa<RankedTensorType>())
+    if (isTensorOp(xferOp) && !options.lowerTensors)
       return failure();
     // Transfer ops that modify the element type are not supported atm.
     if (xferOp.getVectorType().getElementType() !=
@@ -988,7 +988,7 @@ struct UnrollTransferWriteConversion
                                 PatternRewriter &rewriter) const override {
     if (xferOp.getVectorType().getRank() <= options.targetRank)
       return failure();
-    if (xferOp.getShapedType().template isa<RankedTensorType>())
+    if (isTensorOp(xferOp) && !options.lowerTensors)
       return failure();
     // Transfer ops that modify the element type are not supported atm.
     if (xferOp.getVectorType().getElementType() !=
@@ -998,15 +998,19 @@ struct UnrollTransferWriteConversion
     auto vec = getDataVector(xferOp);
     auto xferVecType = xferOp.getVectorType();
     int64_t dimSize = xferVecType.getShape()[0];
+    auto source = xferOp.source(); // memref or tensor to be written to.
+    auto sourceType = isTensorOp(xferOp) ? xferOp.getShapedType() : Type();
 
     // Generate fully unrolled loop of transfer ops.
     Location loc = xferOp.getLoc();
     for (int64_t i = 0; i < dimSize; ++i) {
       Value iv = rewriter.create<ConstantIndexOp>(loc, i);
 
-      generateInBoundsCheck(
+      auto updatedSource = generateInBoundsCheck(
           rewriter, xferOp, iv, unpackedDim(xferOp),
-          /*inBoundsCase=*/[&](OpBuilder &b, Location loc) {
+          isTensorOp(xferOp) ? TypeRange(sourceType) : TypeRange(),
+          /*inBoundsCase=*/
+          [&](OpBuilder &b, Location loc) {
             // Indices for the new transfer op.
             SmallVector<Value, 8> xferIndices;
             getXferIndices(b, xferOp, iv, xferIndices);
@@ -1019,17 +1023,29 @@ struct UnrollTransferWriteConversion
             auto extracted =
                 b.create<vector::ExtractOp>(loc, vec, extractionIndices);
             auto inBoundsAttr = dropFirstElem(b, xferOp.in_boundsAttr());
-
             auto newXferOp = b.create<vector::TransferWriteOp>(
-                loc, Type(), extracted, xferOp.source(), xferIndices,
+                loc, sourceType, extracted, source, xferIndices,
                 AffineMapAttr::get(unpackedPermutationMap(b, xferOp)), Value(),
                 inBoundsAttr);
 
             maybeAssignMask(b, xferOp, newXferOp, i);
+
+            return isTensorOp(xferOp) ? newXferOp->getResult(0) : Value();
+          },
+          /*outOfBoundsCase=*/
+          [&](OpBuilder &b, Location loc) {
+            return isTensorOp(xferOp) ? source : Value();
           });
+
+      if (isTensorOp(xferOp))
+        source = updatedSource;
     }
 
-    rewriter.eraseOp(xferOp);
+    if (isTensorOp(xferOp))
+      rewriter.replaceOp(xferOp, source);
+    else
+      rewriter.eraseOp(xferOp);
+
     return success();
   }
 };
