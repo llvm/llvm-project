@@ -70,7 +70,7 @@ struct Config {
   enum class BackgroundPolicy { Build, Skip };
   /// Describes an external index configuration.
   struct ExternalIndexSpec {
-    enum { None, File, Server } Kind;
+    enum { None, File, Server } Kind = None;
     /// This is one of:
     /// - Address of a clangd-index-server, in the form of "ip:port".
     /// - Absolute path to an index produced by clangd-indexer.
@@ -83,7 +83,7 @@ struct Config {
   struct {
     /// Whether this TU should be indexed.
     BackgroundPolicy Background = BackgroundPolicy::Build;
-    llvm::Optional<ExternalIndexSpec> External;
+    ExternalIndexSpec External;
   } Index;
 
   /// Controls warnings and errors when parsing code.

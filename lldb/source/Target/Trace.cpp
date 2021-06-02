@@ -291,6 +291,7 @@ DumpInstructionSymbolContext(Stream &s,
 static void DumpInstructionDisassembly(Stream &s, InstructionSymbolInfo &insn) {
   if (!insn.instruction)
     return;
+  s.Printf("    ");
   insn.instruction->Dump(&s, /*show_address*/ false, /*show_bytes*/ false,
                          /*max_opcode_byte_size*/ 0, &insn.exe_ctx, &insn.sc,
                          /*prev_sym_ctx*/ nullptr,
@@ -341,7 +342,7 @@ void Trace::DumpTraceInstructions(Thread &thread, Stream &s, size_t count,
             DumpInstructionSymbolContext(s, prev_insn, *insn);
 
           printInstructionIndex(index);
-          s.Printf("0x%016" PRIx64 "    ", insn->load_address);
+          s.Printf("0x%016" PRIx64, insn->load_address);
 
           if (!raw)
             DumpInstructionDisassembly(s, *insn);
