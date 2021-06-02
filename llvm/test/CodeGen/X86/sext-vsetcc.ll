@@ -548,3 +548,43 @@ define <8 x i32> @multi_use_wider_size(<8 x i8>* %src, <8 x i16>* %dst) nounwind
   store <8 x i16> %sext, <8 x i16>* %dst
   ret <8 x i32> %zext
 }
+
+define <4 x i64> @PR50055_signed(<2 x i64>* %src, <4 x i64>* %dst) {
+; SSE-LABEL: PR50055_signed:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3],xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; SSE-NEXT:    psrad $24, %xmm0
+; SSE-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
+; SSE-NEXT:    psrad $24, %xmm1
+; SSE-NEXT:    pxor %xmm3, %xmm3
+; SSE-NEXT:    pcmpgtb %xmm3, %xmm2
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; SSE-NEXT:    psrad $24, %xmm3
+; SSE-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4,4,5,5,6,6,7,7]
+; SSE-NEXT:    psrad $24, %xmm2
+; SSE-NEXT:    movdqa %xmm2, 16(%rsi)
+; SSE-NEXT:    movdqa %xmm3, (%rsi)
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR50055_signed:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vpmovsxbd %xmm1, %ymm0
+; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpcmpgtb %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vpmovsxbd %xmm1, %ymm1
+; AVX-NEXT:    vmovdqa %ymm1, (%rsi)
+; AVX-NEXT:    retq
+  %t0 = bitcast <2 x i64>* %src to <8 x i8>*
+  %t1 = load <8 x i8>, <8 x i8>* %t0, align 1
+  %conv = sext <8 x i8> %t1 to <8 x i32>
+  %t2 = bitcast <8 x i32> %conv to <4 x i64>
+  %cmp = icmp sgt <8 x i8> %t1, zeroinitializer
+  %sext = sext <8 x i1> %cmp to <8 x i32>
+  %t3 = bitcast <4 x i64>* %dst to <8 x i32>*
+  store <8 x i32> %sext, <8 x i32>* %t3, align 32
+  ret <4 x i64> %t2
+}
