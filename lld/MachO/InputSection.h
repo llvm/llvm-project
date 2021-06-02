@@ -9,6 +9,7 @@
 #ifndef LLD_MACHO_INPUT_SECTION_H
 #define LLD_MACHO_INPUT_SECTION_H
 
+#include "Config.h"
 #include "Relocations.h"
 
 #include "lld/Common/LLVM.h"
@@ -47,17 +48,17 @@ public:
   // How many symbols refer to this InputSection.
   uint32_t numRefs = 0;
 
-  // True if this InputSection could not be written to the output file.
-  // With subsections_via_symbols, most symbol have its own InputSection,
+  // With subsections_via_symbols, most symbols have their own InputSection,
   // and for weak symbols (e.g. from inline functions), only the
   // InputSection from one translation unit will make it to the output,
   // while all copies in other translation units are coalesced into the
   // first and not copied to the output.
-  bool canOmitFromOutput = false;
+  bool wasCoalesced = false;
 
-  bool shouldOmitFromOutput() const {
-    return canOmitFromOutput && numRefs == 0;
-  }
+  bool isCoalescedWeak() const { return wasCoalesced && numRefs == 0; }
+  bool shouldOmitFromOutput() const { return !live || isCoalescedWeak(); }
+
+  bool live = !config->deadStrip;
 
   ArrayRef<uint8_t> data;
   std::vector<Reloc> relocs;

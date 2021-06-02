@@ -9,7 +9,7 @@
 ## (but not in other types of files)
 
 # RUN: llvm-mc %t/dylib.s -triple=x86_64-apple-macos10.15 -filetype=obj -o %t/dylib.o
-# RUN: %lld -pie -dylib %t/dylib.o -o %t/dylib.out
+# RUN: %lld -pie -dylib -dead_strip %t/dylib.o -o %t/dylib.out
 # RUN: llvm-objdump -m --syms %t/dylib.out | FileCheck %s --check-prefix DYLIB
 
 # RUN: not %lld -pie -o /dev/null %t/dylib.o 2>&1 | FileCheck %s --check-prefix ERR-DYLIB
@@ -21,7 +21,7 @@
 
 ## Test that in an executable, we can link against __mh_execute_header
 # RUN: llvm-mc %t/main.s -triple=x86_64-apple-macos10.15 -filetype=obj -o %t/exec.o
-# RUN: %lld -pie %t/exec.o -o %t/exec.out
+# RUN: %lld -pie -dead_strip -lSystem %t/exec.o -o %t/exec.out
 
 ## But it would be an error trying to reference __mh_execute_header in a dylib
 # RUN: not %lld -pie -o /dev/null -dylib %t/exec.o 2>&1 | FileCheck %s --check-prefix ERR-EXEC
@@ -34,6 +34,7 @@
 _main:
  mov __mh_execute_header@GOTPCREL(%rip), %rax
  ret
+.subsections_via_symbols
 
 #--- dylib.s
 .text
@@ -41,3 +42,4 @@ _main:
 _main:
  mov __mh_dylib_header@GOTPCREL(%rip), %rax
  ret
+.subsections_via_symbols

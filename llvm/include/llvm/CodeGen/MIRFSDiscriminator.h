@@ -41,6 +41,7 @@
 
 namespace llvm {
 
+using namespace sampleprof;
 class MIRAddFSDiscriminators : public MachineFunctionPass {
   MachineFunction *MF;
   unsigned LowBit;
@@ -48,10 +49,11 @@ class MIRAddFSDiscriminators : public MachineFunctionPass {
 
 public:
   static char ID;
-  /// FS bits that will be used in this pass (numbers are 0 based and
-  /// inclusive).
-  MIRAddFSDiscriminators(unsigned LowBit = 0, unsigned HighBit = 0)
-      : MachineFunctionPass(ID), LowBit(LowBit), HighBit(HighBit) {
+  /// PassNum is the sequence number this pass is called, start from 1.
+  MIRAddFSDiscriminators(FSDiscriminatorPass P = FSDiscriminatorPass::Pass1)
+      : MachineFunctionPass(ID) {
+    LowBit = getFSPassBitBegin(P);
+    HighBit = getFSPassBitEnd(P);
     assert(LowBit < HighBit && "HighBit needs to be greater than Lowbit");
   }
 

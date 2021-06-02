@@ -220,7 +220,7 @@ struct WeakBindingEntry {
 //   other dylibs should coalesce to.
 //
 //   2) Weak bindings: These tell dyld that a given symbol reference should
-//   coalesce to a non-weak definition if one is found. Note that unlike in the
+//   coalesce to a non-weak definition if one is found. Note that unlike the
 //   entries in the BindingSection, the bindings here only refer to these
 //   symbols by name, but do not specify which dylib to load them from.
 class WeakBindingSection : public LinkEditSection {

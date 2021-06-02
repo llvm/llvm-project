@@ -536,10 +536,11 @@ InstructionCost TargetTransformInfo::getFPOpCost(Type *Ty) const {
   return Cost;
 }
 
-int TargetTransformInfo::getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx,
-                                               const APInt &Imm,
-                                               Type *Ty) const {
-  int Cost = TTIImpl->getIntImmCodeSizeCost(Opcode, Idx, Imm, Ty);
+InstructionCost TargetTransformInfo::getIntImmCodeSizeCost(unsigned Opcode,
+                                                           unsigned Idx,
+                                                           const APInt &Imm,
+                                                           Type *Ty) const {
+  InstructionCost Cost = TTIImpl->getIntImmCodeSizeCost(Opcode, Idx, Imm, Ty);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

@@ -4022,9 +4022,17 @@ SDValue RISCVTargetLowering::lowerVECTOR_REVERSE(SDValue Op,
 SDValue
 RISCVTargetLowering::lowerFixedLengthVectorLoadToRVV(SDValue Op,
                                                      SelectionDAG &DAG) const {
+  SDLoc DL(Op);
   auto *Load = cast<LoadSDNode>(Op);
 
-  SDLoc DL(Op);
+  if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
+                                      Load->getMemoryVT(),
+                                      *Load->getMemOperand())) {
+    SDValue Result, Chain;
+    std::tie(Result, Chain) = expandUnalignedLoad(Load, DAG);
+    return DAG.getMergeValues({Result, Chain}, DL);
+  }
+
   MVT VT = Op.getSimpleValueType();
   MVT ContainerVT = getContainerForFixedLengthVector(VT);
 
@@ -4043,9 +4051,14 @@ RISCVTargetLowering::lowerFixedLengthVectorLoadToRVV(SDValue Op,
 SDValue
 RISCVTargetLowering::lowerFixedLengthVectorStoreToRVV(SDValue Op,
                                                       SelectionDAG &DAG) const {
+  SDLoc DL(Op);
   auto *Store = cast<StoreSDNode>(Op);
 
-  SDLoc DL(Op);
+  if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
+                                      Store->getMemoryVT(),
+                                      *Store->getMemOperand()))
+    return expandUnalignedStore(Store, DAG);
+
   SDValue StoreVal = Store->getValue();
   MVT VT = StoreVal.getSimpleValueType();
 

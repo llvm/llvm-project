@@ -26,6 +26,8 @@ using namespace llvm;
 #define DEBUG_TYPE "legalize-types"
 
 /// GetFPLibCall - Return the right libcall for the given floating point type.
+/// FIXME: This is a local version of RTLIB::getFPLibCall that should be
+///        refactored away (see RTLIB::getPOWI for an example).
 static RTLIB::Libcall GetFPLibCall(EVT VT,
                                    RTLIB::Libcall Call_F32,
                                    RTLIB::Libcall Call_F64,
@@ -572,12 +574,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FPOWI(SDNode *N) {
   unsigned Offset = IsStrict ? 1 : 0;
   assert(N->getOperand(1 + Offset).getValueType() == MVT::i32 &&
          "Unsupported power type!");
-  RTLIB::Libcall LC = GetFPLibCall(N->getValueType(0),
-                                   RTLIB::POWI_F32,
-                                   RTLIB::POWI_F64,
-                                   RTLIB::POWI_F80,
-                                   RTLIB::POWI_F128,
-                                   RTLIB::POWI_PPCF128);
+  RTLIB::Libcall LC = RTLIB::getPOWI(N->getValueType(0));
+  assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fpowi.");
   if (!TLI.getLibcallName(LC)) {
     // Some targets don't have a powi libcall; use pow instead.
     // FIXME: Implement this if some target needs it.
@@ -1515,10 +1513,7 @@ void DAGTypeLegalizer::ExpandFloatRes_FPOW(SDNode *N,
 
 void DAGTypeLegalizer::ExpandFloatRes_FPOWI(SDNode *N,
                                             SDValue &Lo, SDValue &Hi) {
-  ExpandFloatRes_Binary(N, GetFPLibCall(N->getValueType(0),
-                                        RTLIB::POWI_F32, RTLIB::POWI_F64,
-                                        RTLIB::POWI_F80, RTLIB::POWI_F128,
-                                        RTLIB::POWI_PPCF128), Lo, Hi);
+  ExpandFloatRes_Binary(N, RTLIB::getPOWI(N->getValueType(0)), Lo, Hi);
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FREEZE(SDNode *N,

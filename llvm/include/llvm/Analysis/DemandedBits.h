@@ -53,6 +53,9 @@ public:
   /// accepted, but will always produce a mask with all bits set.
   APInt getDemandedBits(Instruction *I);
 
+  /// Return the bits demanded from use U.
+  APInt getDemandedBits(Use *U);
+
   /// Return true if, during analysis, I could not be reached.
   bool isInstructionDead(Instruction *I);
 
