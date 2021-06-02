@@ -40,25 +40,6 @@ typedef enum atmi_memtype_s {
  */
 
 /**
- * @brief ATMI Compute Place
- */
-typedef struct atmi_place_s {
-  /**
-   * The node in a cluster where computation should occur.
-   * Default is node_id = 0 for local computations.
-   */
-  unsigned int node_id;
-  /**
-   * Device type: CPU, GPU or DSP
-   */
-  atmi_devtype_t type;
-  /**
-   * The device ordinal number ordered by runtime; -1 for any
-   */
-  int device_id;
-} atmi_place_t;
-
-/**
  * @brief ATMI Memory Space/region Structure
  */
 typedef struct atmi_memory_s {
