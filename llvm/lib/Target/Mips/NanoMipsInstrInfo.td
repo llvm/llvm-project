@@ -294,6 +294,8 @@ def : MipsPat<(MipsJmpLink (i32 texternalsym:$dst)),
 
 def : MipsPat<(MipsFullAddr tglobaladdr:$in),
               (Li_NM tglobaladdr:$in)>, ISA_NANOMIPS;
+def : MipsPat<(MipsFullAddr tblockaddress:$in),
+              (Li_NM tblockaddress:$in)>, ISA_NANOMIPS;
 def : MipsPat<(MipsFullAddr tjumptable:$in),
               (Li_NM tjumptable:$in)>, ISA_NANOMIPS;
 
