@@ -10813,28 +10813,29 @@ SDValue DAGCombiner::foldSextSetcc(SDNode *N) {
     }
 
     // Try to eliminate the sext of a setcc by zexting the compare operands.
-    // TODO: Handle signed compare by sexting the ops.
-    if (!ISD::isSignedIntSetCC(CC) && N0.hasOneUse() &&
-        TLI.isOperationLegalOrCustom(ISD::SETCC, VT) &&
+    if (N0.hasOneUse() && TLI.isOperationLegalOrCustom(ISD::SETCC, VT) &&
         !TLI.isOperationLegalOrCustom(ISD::SETCC, SVT)) {
+      bool IsSignedCmp = ISD::isSignedIntSetCC(CC);
+      unsigned LoadOpcode = IsSignedCmp ? ISD::SEXTLOAD : ISD::ZEXTLOAD;
+      unsigned ExtOpcode = IsSignedCmp ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
+
       // We have an unsupported narrow vector compare op that would be legal
       // if extended to the destination type. See if the compare operands
       // can be freely extended to the destination type.
-      auto IsFreeToZext = [&](SDValue V) {
+      auto IsFreeToExtend = [&](SDValue V) {
         if (isConstantOrConstantVector(V, /*NoOpaques*/ true))
           return true;
-
         // Match a simple, non-extended load that can be converted to a
-        // legal zext-load.
-        // TODO: Allow widening of an existing zext-load?
+        // legal {z/s}ext-load.
+        // TODO: Allow widening of an existing {z/s}ext-load?
         if (!(ISD::isNON_EXTLoad(V.getNode()) &&
               ISD::isUNINDEXEDLoad(V.getNode()) &&
               cast<LoadSDNode>(V)->isSimple() &&
-              TLI.isLoadExtLegal(ISD::ZEXTLOAD, VT, V.getValueType())))
+              TLI.isLoadExtLegal(LoadOpcode, VT, V.getValueType())))
           return false;
 
         // Non-chain users of this value must either be the setcc in this
-        // sequence or zexts that can be folded into the new zext-load.
+        // sequence or extends that can be folded into the new {z/s}ext-load.
         for (SDNode::use_iterator UI = V->use_begin(), UE = V->use_end();
              UI != UE; ++UI) {
           // Skip uses of the chain and the setcc.
@@ -10844,16 +10845,15 @@ SDValue DAGCombiner::foldSextSetcc(SDNode *N) {
           // Extra users must have exactly the same cast we are about to create.
           // TODO: This restriction could be eased if ExtendUsesToFormExtLoad()
           //       is enhanced similarly.
-          if (User->getOpcode() != ISD::ZERO_EXTEND ||
-              User->getValueType(0) != VT)
+          if (User->getOpcode() != ExtOpcode || User->getValueType(0) != VT)
             return false;
         }
         return true;
       };
 
-      if (IsFreeToZext(N00) && IsFreeToZext(N01)) {
-        SDValue Ext0 = DAG.getZExtOrTrunc(N00, DL, VT);
-        SDValue Ext1 = DAG.getZExtOrTrunc(N01, DL, VT);
+      if (IsFreeToExtend(N00) && IsFreeToExtend(N01)) {
+        SDValue Ext0 = DAG.getNode(ExtOpcode, DL, VT, N00);
+        SDValue Ext1 = DAG.getNode(ExtOpcode, DL, VT, N01);
         return DAG.getSetCC(DL, VT, Ext0, Ext1, CC);
       }
     }
