@@ -438,7 +438,7 @@ define <8 x i32> @cmp_ne_zextload_from_legal_op(<8 x i16>* %x, <8 x i16>* %y) {
   ret <8 x i32> %sext
 }
 
-; negative test - extra use (TODO)
+; Both uses of the load can be absorbed by the zext-load, so we eliminate the explicit casts.
 
 define <8 x i32> @PR50055(<8 x i8>* %src, <8 x i32>* %dst) nounwind {
 ; SSE-LABEL: PR50055:
@@ -462,28 +462,13 @@ define <8 x i32> @PR50055(<8 x i8>* %src, <8 x i32>* %dst) nounwind {
 ; SSE-NEXT:    movdqa %xmm3, (%rsi)
 ; SSE-NEXT:    retq
 ;
-; AVX2-LABEL: PR50055:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpmovsxbd %xmm1, %ymm1
-; AVX2-NEXT:    vmovdqa %ymm1, (%rsi)
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: PR50055:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX512-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
-; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm1
-; AVX512-NEXT:    vpternlogq $15, %zmm1, %zmm1, %zmm1
-; AVX512-NEXT:    vpmovsxbd %xmm1, %ymm1
-; AVX512-NEXT:    vmovdqa %ymm1, (%rsi)
-; AVX512-NEXT:    retq
+; AVX-LABEL: PR50055:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmovzxbd {{.*#+}} ymm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm1
+; AVX-NEXT:    vmovdqa %ymm1, (%rsi)
+; AVX-NEXT:    retq
   %load = load <8 x i8>, <8 x i8>* %src
   %zext = zext <8 x i8> %load to <8 x i32>
   %icmp = icmp ne <8 x i8> %load, zeroinitializer
@@ -492,8 +477,10 @@ define <8 x i32> @PR50055(<8 x i8>* %src, <8 x i32>* %dst) nounwind {
   ret <8 x i32> %zext
 }
 
-define <8 x i16> @multi_use_narrower_sizes(<8 x i8>* %src, <8 x i32>* %dst) nounwind {
-; SSE-LABEL: multi_use_narrower_sizes:
+; negative test - extra uses must be absorbable by a zext-load.
+
+define <8 x i16> @multi_use_narrower_size(<8 x i8>* %src, <8 x i32>* %dst) nounwind {
+; SSE-LABEL: multi_use_narrower_size:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; SSE-NEXT:    pxor %xmm2, %xmm2
@@ -509,7 +496,7 @@ define <8 x i16> @multi_use_narrower_sizes(<8 x i8>* %src, <8 x i32>* %dst) noun
 ; SSE-NEXT:    movdqa %xmm2, (%rsi)
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: multi_use_narrower_sizes:
+; AVX-LABEL: multi_use_narrower_size:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
 ; AVX-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
@@ -526,6 +513,8 @@ define <8 x i16> @multi_use_narrower_sizes(<8 x i8>* %src, <8 x i32>* %dst) noun
   store <8 x i32> %sext, <8 x i32>* %dst
   ret <8 x i16> %zext
 }
+
+; negative test - extra uses must be absorbable by a zext-load.
 
 define <8 x i32> @multi_use_wider_size(<8 x i8>* %src, <8 x i16>* %dst) nounwind {
 ; SSE-LABEL: multi_use_wider_size:
