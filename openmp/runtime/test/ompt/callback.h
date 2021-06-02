@@ -34,7 +34,8 @@ static const char *ompt_task_status_t_values[] = {
     "ompt_task_detach", // 4
     "ompt_task_early_fulfill", // 5
     "ompt_task_late_fulfill", // 6
-    "ompt_task_switch" // 7
+    "ompt_task_switch", // 7
+    "ompt_taskwait_complete" // 8
 };
 static const char* ompt_cancel_flag_t_values[] = {
   "ompt_cancel_parallel",
@@ -67,6 +68,8 @@ static void format_task_type(int type, char *buffer) {
     progress += sprintf(progress, "ompt_task_explicit");
   if (type & ompt_task_target)
     progress += sprintf(progress, "ompt_task_target");
+  if (type & ompt_task_taskwait)
+    progress += sprintf(progress, "ompt_task_taskwait");
   if (type & ompt_task_undeferred)
     progress += sprintf(progress, "|ompt_task_undeferred");
   if (type & ompt_task_untied)
@@ -1015,7 +1018,8 @@ on_ompt_callback_task_schedule(
          (second_task_data ? second_task_data->value : -1),
          ompt_task_status_t_values[prior_task_status], prior_task_status);
   if (prior_task_status == ompt_task_complete ||
-      prior_task_status == ompt_task_late_fulfill) {
+      prior_task_status == ompt_task_late_fulfill ||
+      prior_task_status == ompt_taskwait_complete) {
     printf("%" PRIu64 ":" _TOOL_PREFIX " ompt_event_task_end: task_id=%" PRIu64
            "\n", ompt_get_thread_data()->value, first_task_data->value);
   }
