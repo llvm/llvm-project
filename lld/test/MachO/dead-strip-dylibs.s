@@ -4,6 +4,7 @@
 
 # RUN: llvm-mc %t/bar.s -triple=x86_64-apple-macos -filetype=obj -o %t/bar.o
 # RUN: %lld -dylib %t/bar.o -o %t/bar.dylib
+# RUN: %lld -dylib %t/bar.o -o %t/libbar.dylib
 # RUN: %lld -dylib -mark_dead_strippable_dylib %t/bar.o -o %t/bar-strip.dylib
 
 # RUN: llvm-mc %t/foo.s -triple=x86_64-apple-macos -filetype=obj -o %t/foo.o
@@ -36,7 +37,7 @@
 # RUN:      -dead_strip_dylibs
 # RUN: llvm-otool -L %t/main | FileCheck --check-prefix=NOBAR %s
 
-## ...or bar is explicitly marked dead-strippable
+## ...or bar is explicitly marked dead-strippable.
 # RUN: %lld -lSystem %t/main.o -o %t/main %t/foo.dylib %t/bar-strip.dylib
 # RUN: llvm-otool -L %t/main | FileCheck --check-prefix=NOBARSTRIP %s
 # NOBARSTRIP-NOT: bar-strip.dylib
@@ -45,9 +46,16 @@
 # NOBARSTRIP: foo.dylib
 # NOBARSTRIP-NOT: bar-strip.dylib
 
+## But -needed_library and -needed-l win over -dead_strip_dylibs again.
+# RUN: %lld -lSystem %t/main.o -o %t/main %t/foo_with_bar.dylib \
+# RUN:     -needed_library %t/bar.dylib -dead_strip_dylibs
+# RUN: llvm-otool -L %t/main | FileCheck --check-prefix=BAR %s
+# RUN: %lld -lSystem %t/main.o -o %t/main %t/foo_with_bar.dylib \
+# RUN:     -L%t -needed-lbar -dead_strip_dylibs
+# RUN: llvm-otool -L %t/main | FileCheck --check-prefix=BAR %s
+
 ## LC_LINKER_OPTION does not count as an explicit reference.
 # RUN: llvm-mc %t/linkopt_bar.s -triple=x86_64-apple-macos -filetype=obj -o %t/linkopt_bar.o
-# RUN: %lld -dylib %t/bar.o -o %t/libbar.dylib
 # RUN: %lld -lSystem %t/main.o %t/linkopt_bar.o -o %t/main -L %t %t/foo.dylib
 # RUN: llvm-otool -L %t/main | FileCheck --check-prefix=NOLIBBAR %s
 # NOLIBBAR-NOT: libbar.dylib

@@ -114,6 +114,14 @@ def weak_library : Separate<["-"], "weak_library">,
     MetaVarName<"<path>">,
     HelpText<"Like bare <path>, but mark library and its references as weak imports">,
     Group<grp_libs>;
+def needed_l : Joined<["-"], "needed-l">,
+    MetaVarName<"<name>">,
+    HelpText<"Like -l<name>, but link library even if its symbols are not used and -dead_strip_dylibs is active">,
+    Group<grp_libs>;
+def needed_library : Separate<["-"], "needed_library">,
+    MetaVarName<"<path>">,
+    HelpText<"Like bare <path>, but link library even if its symbols are not used and -dead_strip_dylibs is active">,
+    Group<grp_libs>;
 def reexport_l : Joined<["-"], "reexport-l">,
     MetaVarName<"<name>">,
     HelpText<"Like -l<name>, but export all symbols of <name> from newly created library">,
@@ -156,6 +164,10 @@ def framework : Separate<["-"], "framework">,
 def weak_framework : Separate<["-"], "weak_framework">,
     MetaVarName<"<name>">,
     HelpText<"Like -framework <name>, but mark framework and its references as weak imports">,
+    Group<grp_libs>;
+def needed_framework : Separate<["-"], "needed_framework">,
+    MetaVarName<"<name>">,
+    HelpText<"Like -framework <name>, but link <name> even if none of its symbols are used and -dead_strip_dylibs is active">,
     Group<grp_libs>;
 def reexport_framework : Separate<["-"], "reexport_framework">,
     MetaVarName<"<name>">,
