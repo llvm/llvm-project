@@ -18,14 +18,23 @@
 ## Check that they have the appropriate LC_REEXPORT_DYLIB commands, and that
 ## NO_REEXPORTED_DYLIBS is (un)set as appropriate.
 
-# RUN: llvm-objdump --macho --all-headers %t/libhello.dylib | FileCheck %s \
-# RUN:   --check-prefix=HELLO-HEADERS
+# RUN: llvm-otool -hv %t/libhello.dylib | \
+# RUN:     FileCheck --check-prefix=HELLO-HEADERS %s
 # HELLO-HEADERS: NO_REEXPORTED_DYLIBS
 
-# RUN: llvm-objdump --macho --all-headers %t/libgoodbye.dylib | FileCheck %s \
+# RUN: llvm-otool -l %t/libgoodbye.dylib | FileCheck %s \
 # RUN:   --check-prefix=REEXPORT-HEADERS -DPATH=%t/libhello.dylib
 
-# RUN: llvm-objdump --macho --all-headers %t/libsuper.dylib | FileCheck %s \
+# RUN: llvm-otool -l %t/libsuper.dylib | FileCheck %s \
+# RUN:   --check-prefix=REEXPORT-HEADERS -DPATH=%t/libgoodbye.dylib
+
+# RUN: %lld -dylib -L%t -reexport-lgoodbye -install_name \
+# RUN:   @executable_path/libsuper.dylib %t/libsuper.o -o %t/libsuper.dylib
+# RUN: llvm-otool -l %t/libsuper.dylib | FileCheck %s \
+# RUN:   --check-prefix=REEXPORT-HEADERS -DPATH=%t/libgoodbye.dylib
+# RUN: %lld -dylib -reexport_library %t/libgoodbye.dylib -install_name \
+# RUN:   @executable_path/libsuper.dylib %t/libsuper.o -o %t/libsuper.dylib
+# RUN: llvm-otool -l %t/libsuper.dylib | FileCheck %s \
 # RUN:   --check-prefix=REEXPORT-HEADERS -DPATH=%t/libgoodbye.dylib
 
 # REEXPORT-HEADERS-NOT: NO_REEXPORTED_DYLIBS
@@ -53,16 +62,24 @@
 
 
 ## We can match dylibs without extensions too.
-# RUN: mkdir -p %t/Hello.framework/Versions
-# RUN: %lld -dylib %t/libhello.o -o %t/Hello.framework/Versions/Hello
-# RUN: %lld -dylib -o %t/libgoodbye2.dylib -sub_library Hello %t/Hello.framework/Versions/Hello %t/libgoodbye.o
-# RUN: llvm-objdump --macho --all-headers %t/libgoodbye2.dylib | FileCheck %s \
-# RUN:   --check-prefix=REEXPORT-HEADERS -DPATH=%t/Hello.framework/Versions/Hello
+# RUN: mkdir -p %t/Hello.framework
+# RUN: %lld -dylib %t/libhello.o -o %t/Hello.framework/Hello
+# RUN: %lld -dylib -o %t/libgoodbye2.dylib -sub_library Hello %t/Hello.framework/Hello %t/libgoodbye.o
+# RUN: llvm-otool -l %t/libgoodbye2.dylib | FileCheck %s \
+# RUN:   --check-prefix=REEXPORT-HEADERS -DPATH=%t/Hello.framework/Hello
 
 ## -sub_umbrella works almost identically...
-# RUN: %lld -dylib -o %t/libgoodbye3.dylib -sub_umbrella Hello %t/Hello.framework/Versions/Hello %t/libgoodbye.o
-# RUN: llvm-objdump --macho --all-headers %t/libgoodbye3.dylib | FileCheck %s \
-# RUN:   --check-prefix=REEXPORT-HEADERS -DPATH=%t/Hello.framework/Versions/Hello
+# RUN: %lld -dylib -o %t/libgoodbye3.dylib -sub_umbrella Hello %t/Hello.framework/Hello %t/libgoodbye.o
+# RUN: llvm-otool -l %t/libgoodbye3.dylib | FileCheck %s \
+# RUN:   --check-prefix=REEXPORT-HEADERS -DPATH=%t/Hello.framework/Hello
+
+# RUN: %lld -dylib -o %t/libgoodbye3.dylib -F %t -framework Hello -sub_umbrella Hello %t/libgoodbye.o
+# RUN: llvm-otool -l %t/libgoodbye3.dylib | FileCheck %s \
+# RUN:   --check-prefix=REEXPORT-HEADERS -DPATH=%t/Hello.framework/Hello
+
+# RUN: %lld -dylib -o %t/libgoodbye3.dylib -F %t -reexport_framework Hello %t/libgoodbye.o
+# RUN: llvm-otool -l %t/libgoodbye3.dylib | FileCheck %s \
+# RUN:   --check-prefix=REEXPORT-HEADERS -DPATH=%t/Hello.framework/Hello
 
 ## But it doesn't match .dylib extensions:
 # RUN: not %lld -dylib -L%t -sub_umbrella libhello -lhello %t/libgoodbye.o \
