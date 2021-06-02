@@ -666,6 +666,10 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
       {"debug_line.dwo", {MCOFI.getDwarfLineDWOSection(), DW_SECT_LINE}},
       {"debug_macro.dwo", {MCOFI.getDwarfMacroDWOSection(), DW_SECT_MACRO}},
       {"debug_abbrev.dwo", {MCOFI.getDwarfAbbrevDWOSection(), DW_SECT_ABBREV}},
+      {"debug_loclists.dwo",
+       {MCOFI.getDwarfLoclistsDWOSection(), DW_SECT_LOCLISTS}},
+      {"debug_rnglists.dwo",
+       {MCOFI.getDwarfRnglistsDWOSection(), DW_SECT_RNGLISTS}},
       {"debug_cu_index", {CUIndexSection, static_cast<DWARFSectionKind>(0)}},
       {"debug_tu_index", {TUIndexSection, static_cast<DWARFSectionKind>(0)}}};
 
