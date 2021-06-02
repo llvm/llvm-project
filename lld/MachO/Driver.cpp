@@ -235,6 +235,7 @@ static std::vector<ArchiveMember> getArchiveMembers(MemoryBufferRef mb) {
 }
 
 static InputFile *addFile(StringRef path, bool forceLoadArchive,
+                          bool isExplicit = true,
                           bool isBundleLoader = false) {
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
@@ -294,7 +295,8 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
   case file_magic::macho_dynamically_linked_shared_lib_stub:
   case file_magic::tapi_file:
     if (DylibFile * dylibFile = loadDylib(mbref)) {
-      dylibFile->explicitlyLinked = true;
+      if (isExplicit)
+        dylibFile->explicitlyLinked = true;
       newFile = dylibFile;
     }
     break;
@@ -327,8 +329,8 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
 static void addLibrary(StringRef name, bool isWeak, bool isReexport,
                        bool isExplicit) {
   if (Optional<StringRef> path = findLibrary(name)) {
-    if (auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path, false))) {
-      dylibFile->explicitlyLinked = isExplicit;
+    if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
+            addFile(*path, /*forceLoadArchive=*/false, isExplicit))) {
       if (isWeak)
         dylibFile->forceWeakImport = true;
       if (isReexport) {
@@ -344,8 +346,8 @@ static void addLibrary(StringRef name, bool isWeak, bool isReexport,
 static void addFramework(StringRef name, bool isWeak, bool isReexport,
                          bool isExplicit) {
   if (Optional<std::string> path = findFramework(name)) {
-    if (auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path, false))) {
-      dylibFile->explicitlyLinked = isExplicit;
+    if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
+            addFile(*path, /*forceLoadArchive=*/false, isExplicit))) {
       if (isWeak)
         dylibFile->forceWeakImport = true;
       if (isReexport) {
@@ -400,7 +402,7 @@ static void addFileList(StringRef path) {
     return;
   MemoryBufferRef mbref = *buffer;
   for (StringRef path : args::getLines(mbref))
-    addFile(rerootPath(path), false);
+    addFile(rerootPath(path), /*forceLoadArchive=*/false);
 }
 
 // An order file has one entry per line, in the following format:
@@ -876,25 +878,25 @@ void createFiles(const InputArgList &args) {
 
     switch (opt.getID()) {
     case OPT_INPUT:
-      addFile(rerootPath(arg->getValue()), false);
+      addFile(rerootPath(arg->getValue()), /*forceLoadArchive=*/false);
       break;
     case OPT_reexport_library:
-      if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-              addFile(rerootPath(arg->getValue()), false))) {
+      if (auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(
+              rerootPath(arg->getValue()), /*forceLoadArchive=*/false))) {
         config->hasReexports = true;
         dylibFile->reexport = true;
       }
       break;
     case OPT_weak_library:
       if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-              addFile(rerootPath(arg->getValue()), false)))
+              addFile(rerootPath(arg->getValue()), /*forceLoadArchive=*/false)))
         dylibFile->forceWeakImport = true;
       break;
     case OPT_filelist:
       addFileList(arg->getValue());
       break;
     case OPT_force_load:
-      addFile(rerootPath(arg->getValue()), true);
+      addFile(rerootPath(arg->getValue()), /*forceLoadArchive=*/true);
       break;
     case OPT_l:
     case OPT_reexport_l:
@@ -1001,7 +1003,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   if (const Arg *arg = args.getLastArg(OPT_bundle_loader)) {
     if (config->outputType != MH_BUNDLE)
       error("-bundle_loader can only be used with MachO bundle output");
-    addFile(arg->getValue(), false, true);
+    addFile(arg->getValue(), /*forceLoadArchive=*/false, /*isExplicit=*/false,
+            /*isBundleLoader=*/true);
   }
   config->ltoObjPath = args.getLastArgValue(OPT_object_path_lto);
   config->ltoNewPassManager =
