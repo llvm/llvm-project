@@ -37,6 +37,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
+#include "flang/Optimizer/Transforms/Factory.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
@@ -3378,8 +3379,11 @@ public:
     if (isReferentiallyOpaque()) {
       auto refEleTy = builder.getRefType(eleTy);
       return [=](IterSpace iters) -> ExtValue {
+        // ArrayCoorOp does not expect zero based indices.
+        auto indices = fir::factory::originateIndices(loc, builder, shape,
+                                                      iters.iterVec());
         mlir::Value coor = builder.create<fir::ArrayCoorOp>(
-            loc, refEleTy, memref, shape, slice, iters.iterVec(),
+            loc, refEleTy, memref, shape, slice, indices,
             fir::getTypeParams(extMemref));
         return arrayElementToExtendedValue(builder, loc, extMemref, coor);
       };

@@ -136,6 +136,40 @@ void genCharacterCopy(mlir::Value src, mlir::Value srcLen, mlir::Value dst,
   builder.restoreInsertionPoint(insPt);
 }
 
+/// Get origins from fir.shape_shift/fir.shift op. Empty result if
+/// \p shapeVal is empty or is a fir.shape.
+inline std::vector<mlir::Value> getOrigins(mlir::Value shapeVal) {
+  if (shapeVal)
+    if (auto *shapeOp = shapeVal.getDefiningOp()) {
+      if (auto shOp = mlir::dyn_cast<fir::ShapeShiftOp>(shapeOp))
+        return shOp.getOrigins();
+      else if (auto shOp = mlir::dyn_cast<fir::ShiftOp>(shapeOp))
+        return shOp.getOrigins();
+    }
+  return {};
+}
+
+/// Convert the normalized indices on array_fetch and array_update to the
+/// dynamic (and non-zero) origin required by array_coor.
+template <typename B>
+llvm::SmallVector<mlir::Value> originateIndices(mlir::Location loc, B &builder,
+                                                mlir::Value shapeVal,
+                                                mlir::ValueRange indices) {
+  llvm::SmallVector<mlir::Value> result;
+  auto origins = getOrigins(shapeVal);
+  if (!origins.empty()) {
+    assert(indices.size() == origins.size());
+    for (auto [i, lb] : llvm::zip(indices, origins))
+      result.push_back(builder.template create<mlir::AddIOp>(loc, i, lb));
+    return result;
+  }
+  assert(!shapeVal || mlir::isa<fir::ShapeOp>(shapeVal.getDefiningOp()));
+  auto one = builder.template create<mlir::ConstantIndexOp>(loc, 1);
+  for (auto i : indices)
+    result.push_back(builder.template create<mlir::AddIOp>(loc, i, one));
+  return result;
+}
+
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_TRANSFORMS_FACTORY_H
