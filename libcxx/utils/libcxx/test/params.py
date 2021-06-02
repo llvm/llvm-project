@@ -77,6 +77,14 @@ DEFAULT_PARAMETERS = [
               AddCompileFlag(lambda cfg: getStdFlag(cfg, std)),
             ]),
 
+  Parameter(name='enable_modules', choices=[True, False], type=bool, default=False,
+            help="Whether to build the test suite with Clang modules enabled.",
+            actions=lambda modules: [
+              AddFeature('modules-build'),
+              AddCompileFlag('-fmodules'),
+              AddCompileFlag('-Xclang -fmodules-local-submodule-visibility'),
+            ] if modules else []),
+
   Parameter(name='enable_exceptions', choices=[True, False], type=bool, default=True,
             help="Whether to enable exceptions when compiling the test suite.",
             actions=lambda exceptions: [] if exceptions else [
