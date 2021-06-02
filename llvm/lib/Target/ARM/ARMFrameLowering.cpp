@@ -903,7 +903,7 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
          "This emitEpilogue does not support Thumb1!");
   bool isARM = !AFI->isThumbFunction();
 
-  // Amount of stack space we reserved next next to incoming args for either
+  // Amount of stack space we reserved next to incoming args for either
   // varargs registers or stack arguments in tail calls made by this function.
   unsigned ReservedArgStack = AFI->getArgRegsSaveSize();
 
@@ -2350,10 +2350,8 @@ MachineBasicBlock::iterator ARMFrameLowering::eliminateCallFramePseudoInstr(
   unsigned PredReg = TII.getFramePred(*I);
 
   if (!hasReservedCallFrame(MF)) {
-    // Bail early if the callee is expected to do the adjustment. If
-    // CalleePopAmount is valid but 0 anyway, Amount will be 0 too so it doesn't
-    // matter if we continue a bit longer.
-    if (IsDestroy && CalleePopAmount != 0)
+    // Bail early if the callee is expected to do the adjustment.
+    if (IsDestroy && CalleePopAmount != -1U)
       return MBB.erase(I);
 
     // If we have alloca, convert as follows:
@@ -2375,7 +2373,7 @@ MachineBasicBlock::iterator ARMFrameLowering::eliminateCallFramePseudoInstr(
                      Pred, PredReg);
       }
     }
-  } else if (CalleePopAmount != 0) {
+  } else if (CalleePopAmount != -1U) {
     // If the calling convention demands that the callee pops arguments from the
     // stack, we want to add it back if we have a reserved call frame.
     emitSPUpdate(isARM, MBB, I, dl, TII, -CalleePopAmount,

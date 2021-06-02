@@ -2758,12 +2758,12 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   InFlag = Chain.getValue(1);
   DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
 
-  // If we're guaranteeing tail-call, it's because the callee will pop its own
-  // stack on return. So we need to undo that after the call to restore the
-  // status-quo.
+  // If we're guaranteeing tail-calls will be honoured, the callee must
+  // pop its own argument stack on return. But this call is *not* a tail call so
+  // we need to undo that after it returns to restore the status-quo.
   bool TailCallOpt = getTargetMachine().Options.GuaranteedTailCallOpt;
   uint64_t CalleePopBytes =
-      canGuaranteeTCO(CallConv, TailCallOpt) ? alignTo(NumBytes, 16) : 0;
+      canGuaranteeTCO(CallConv, TailCallOpt) ? alignTo(NumBytes, 16) : -1ULL;
 
   Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(NumBytes, dl, true),
                              DAG.getIntPtrConstant(CalleePopBytes, dl, true),
@@ -4563,7 +4563,7 @@ SDValue ARMTargetLowering::LowerFormalArguments(
   bool TailCallOpt = MF.getTarget().Options.GuaranteedTailCallOpt;
   if (canGuaranteeTCO(CallConv, TailCallOpt)) {
     // The only way to guarantee a tail call is if the callee restores its
-    // argument area, but it must also keep the stack aligned when doing so. FIXME: explain in more detail.
+    // argument area, but it must also keep the stack aligned when doing so.
     const DataLayout &DL = DAG.getDataLayout();
     StackArgSize = alignTo(StackArgSize, DL.getStackAlignment());
 
