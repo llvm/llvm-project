@@ -618,13 +618,15 @@ let SubtargetPredicate = isGFX11Plus in {
   defm V_MINMAX_U32     : VOP3Inst<"v_minmax_u32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
   defm V_MAXMIN_I32     : VOP3Inst<"v_maxmin_i32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
   defm V_MINMAX_I32     : VOP3Inst<"v_minmax_i32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
-// TODO-GFX11 codegen support DOT2_F16_F16, CVT_PK_.16_F32
-  defm V_DOT2_F16_F16   : VOP3Inst<"v_dot2_f16_f16", VOP3_DOT_Profile<VOP_F16_V2F16_V2F16_F16>>;
-  // TODO-GFX11 USE I16 as a workaround to support BF16
-  /*defm V_DOT2_BF16_BF16 : VOP3Inst<"v_dot2_bf16_bf16", VOP3_DOT_Profile<>>;*/
+// TODO-GFX11 codegen support CVT_PK_.16_F32
   defm V_CVT_PK_I16_F32 : VOP3Inst<"v_cvt_pk_i16_f32", VOP3_Profile<VOP_V2I16_F32_F32>>;
   defm V_CVT_PK_U16_F32 : VOP3Inst<"v_cvt_pk_u16_f32", VOP3_Profile<VOP_V2I16_F32_F32>>;
 } // End SubtargetPredicate = isGFX11Plus
+
+let SubtargetPredicate = HasDot8Insts in {
+  defm V_DOT2_F16_F16 :   VOP3Inst<"v_dot2_f16_f16",   VOP3_DOT_Profile<VOP_F16_V2F16_V2F16_F16>>;
+  defm V_DOT2_BF16_BF16 : VOP3Inst<"v_dot2_bf16_bf16", VOP3_DOT_Profile<VOP_I16_V2I16_V2I16_I16>>;
+}
 
 //===----------------------------------------------------------------------===//
 // Integer Clamp Patterns
@@ -747,8 +749,7 @@ defm V_MINMAX_U32          : VOP3_Realtriple_gfx11<0x263>;
 defm V_MAXMIN_I32          : VOP3_Realtriple_gfx11<0x264>;
 defm V_MINMAX_I32          : VOP3_Realtriple_gfx11<0x265>;
 defm V_DOT2_F16_F16        : VOP3_Realtriple_gfx11<0x266>;
-// TODO-GFX11
-/*defm V_DOT2_BF16_BF16      : VOP3_Realtriple_gfx11<0x267>;*/
+defm V_DOT2_BF16_BF16      : VOP3_Realtriple_gfx11<0x267>;
 defm V_DIV_SCALE_F32       : VOP3be_Real_gfx11<0x2fc, "V_DIV_SCALE_F32", "v_div_scale_f32">;
 defm V_DIV_SCALE_F64       : VOP3be_Real_gfx11<0x2fd, "V_DIV_SCALE_F64", "v_div_scale_f64">;
 defm V_MAD_U64_U32         : VOP3be_Real_gfx11<0x2fe, "V_MAD_U64_U32", "v_mad_u64_u32">;
