@@ -9,8 +9,8 @@
 ## have the info on the type and compile units.
 
 # CHECK-DAG: .debug_info.dwo contents
-# CHECK-NOT: Type Unit:
-# CHECK: 0x00000000: Compile Unit: length = 0x00000011, format = DWARF32, version = 0x0005, unit_type = DW_UT_split_compile, abbr_offset = 0x0000, addr_size = 0x08, DWO_id = {{.*}} (next unit at 0x00000015)
+# CHECK: 0x00000000: Type Unit: length = 0x00000017, format = DWARF32, version = 0x0005, unit_type = DW_UT_split_type, abbr_offset = 0x0000, addr_size = 0x08, name = '', type_signature = {{.*}}, type_offset = 0x0019 (next unit at 0x0000001b)
+# CHECK: 0x0000001b: Compile Unit: length = 0x00000011, format = DWARF32, version = 0x0005, unit_type = DW_UT_split_compile, abbr_offset = 0x0000, addr_size = 0x08, DWO_id = {{.*}} (next unit at 0x00000030)
     .section	.debug_info.dwo,"e",@progbits
     .long	.Ldebug_info_dwo_end0-.Ldebug_info_dwo_start0 # Length of Unit
 .Ldebug_info_dwo_start0:
