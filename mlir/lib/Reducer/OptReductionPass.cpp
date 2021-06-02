@@ -12,14 +12,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Reducer/OptReductionPass.h"
+#include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassRegistry.h"
+#include "mlir/Reducer/PassDetail.h"
 #include "mlir/Reducer/Passes.h"
 #include "mlir/Reducer/Tester.h"
+#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "mlir-reduce"
 
 using namespace mlir;
+
+namespace {
+
+class OptReductionPass : public OptReductionBase<OptReductionPass> {
+public:
+  /// Runs the pass instance in the pass pipeline.
+  void runOnOperation() override;
+};
+
+} // end anonymous namespace
 
 /// Runs the pass instance in the pass pipeline.
 void OptReductionPass::runOnOperation() {
