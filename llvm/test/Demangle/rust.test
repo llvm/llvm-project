@@ -70,6 +70,16 @@ CHECK: generic::<_, _, _>
 CHECK: generic_const::<_>
        _RIC13generic_constKpE
 
+; Generic lifetime arguments
+
+CHECK: generic_lifetime::<'_>
+       _RIC16generic_lifetimeL_E
+
+; Invalid lifetime index.
+
+CHECK: _RIC16generic_lifetimeL0_E
+       _RIC16generic_lifetimeL0_E
+
 ; Basic types
 
 CHECK: basic::<i8>
@@ -178,8 +188,14 @@ CHECK: types::<(_, _, _)>
 CHECK: types::<&_>
        _RIC5typesRpE
 
+CHECK: types::<&_>
+       _RIC5typesRL_pE
+
 CHECK: types::<&mut _>
        _RIC5typesQpE
+
+CHECK: types::<&mut _>
+       _RIC5typesQL_pE
 
 CHECK: types::<*const _>
        _RIC5typesPpE
@@ -215,6 +231,28 @@ CHECK: function::<extern "cdecl" fn()>
 
 CHECK: function::<unsafe extern "C-cmse-nonsecure-call" fn()>
        _RIC8functionFUK21C_cmse_nonsecure_callEuE
+
+; Binders
+
+CHECK: binders::<for<'a> fn(&'a _)>
+       _RIC7bindersFG_RL0_pEuE
+
+CHECK: binders::<for<'a> fn(&'a mut _)>
+       _RIC7bindersFG_QL0_pEuE
+
+CHECK: binders::<for<'a, 'b> fn(&'a _, &'b _)>
+       _RIC7bindersFG0_RL1_pRL0_pEuE
+
+CHECK: binders::<for<'a, 'b> fn() -> for<'c, 'd> fn(&'a _, &'d _)>
+       _RIC7bindersFG0_EFG0_RL3_pRL0_pEuE
+
+CHECK: binders::<for<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k, 'l, 'm, 'n, 'o, 'p, 'q, 'r, 's, 't, 'u, 'v, 'w, 'x, 'y, 'z, 'z1, 'z2, 'z3, 'z4> fn(&'a &'b &'c &'d &'e &'f &'g &'h &'i &'j &'k &'l &'m &'n &'o &'p &'q &'r &'s &'t &'u &'v &'w &'x &'y &'z &'z1 &'z2 &'z3 &'z4 ())>
+       _RIC7bindersFGs_RLt_RLs_RLr_RLq_RLp_RLo_RLn_RLm_RLl_RLk_RLj_RLi_RLh_RLg_RLf_RLe_RLd_RLc_RLb_RLa_RL9_RL8_RL7_RL6_RL5_RL4_RL3_RL2_RL1_RL0_uEuE
+
+; Invalid binder. Too many bound lifetimes.
+
+CHECK: _RIC7bindersFGFF_EuE
+       _RIC7bindersFGFF_EuE
 
 ; Integer constants. Test value demangling.
 
