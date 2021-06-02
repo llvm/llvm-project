@@ -214,8 +214,6 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
       return nullptr;
     }
     file = make<DylibFile>(**result, umbrella, isBundleLoader);
-    if (config->printEachFile)
-      message(toString(file));
 
     // parseReexports() can recursively call loadDylib(). That's fine since
     // we wrote DylibFile we just loaded to the loadDylib cache via the `file`
@@ -231,8 +229,6 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
            magic == file_magic::macho_executable ||
            magic == file_magic::macho_bundle);
     file = make<DylibFile>(mbref, umbrella, isBundleLoader);
-    if (config->printEachFile)
-      message(toString(file));
 
     // parseLoadCommands() can also recursively call loadDylib(). See comment
     // in previous block for why this means we must copy `file` here.
