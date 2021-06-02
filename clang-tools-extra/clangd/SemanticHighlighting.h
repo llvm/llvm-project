@@ -67,6 +67,7 @@ enum class HighlightingModifier {
   Static,
   Abstract,
   DependentName,
+  DefaultLibrary,
 
   FunctionScope,
   ClassScope,

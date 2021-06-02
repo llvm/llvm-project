@@ -246,6 +246,29 @@ bool isDependent(const Decl *D) {
   return false;
 }
 
+/// Returns true if `Decl` is considered to be from a default/system library.
+/// This currently checks the systemness of the file by include type, although
+/// different heuristics may be used in the future (e.g. sysroot paths).
+bool isDefaultLibrary(const Decl *D) {
+  SourceLocation Loc = D->getLocation();
+  if (!Loc.isValid())
+    return false;
+  return D->getASTContext().getSourceManager().isInSystemHeader(Loc);
+}
+
+bool isDefaultLibrary(const Type *T) {
+  if (!T)
+    return false;
+  const Type *Underlying = T->getPointeeOrArrayElementType();
+  if (Underlying->isBuiltinType())
+    return true;
+  if (auto *TD = dyn_cast<TemplateTypeParmType>(Underlying))
+    return isDefaultLibrary(TD->getDecl());
+  if (auto *TD = Underlying->getAsTagDecl())
+    return isDefaultLibrary(TD);
+  return false;
+}
+
 // For a macro usage `DUMP(foo)`, we want:
 //  - DUMP --> "macro"
 //  - foo --> "variable".
@@ -473,6 +496,8 @@ public:
                       .addModifier(HighlightingModifier::Deduced);
       if (auto Mod = scopeModifier(L.getTypePtr()))
         Tok.addModifier(*Mod);
+      if (isDefaultLibrary(L.getTypePtr()))
+        Tok.addModifier(HighlightingModifier::DefaultLibrary);
     }
     return true;
   }
@@ -485,8 +510,11 @@ public:
                              H.getResolver())) {
       auto &Tok = H.addToken(D->getTypeSpecStartLoc(), *K)
                       .addModifier(HighlightingModifier::Deduced);
-      if (auto Mod = scopeModifier(AT->getDeducedType().getTypePtrOrNull()))
+      const Type *Deduced = AT->getDeducedType().getTypePtrOrNull();
+      if (auto Mod = scopeModifier(Deduced))
         Tok.addModifier(*Mod);
+      if (isDefaultLibrary(Deduced))
+        Tok.addModifier(HighlightingModifier::DefaultLibrary);
     }
     return true;
   }
@@ -494,7 +522,7 @@ public:
   // We handle objective-C selectors specially, because one reference can
   // cover several non-contiguous tokens.
   void highlightObjCSelector(const ArrayRef<SourceLocation> &Locs, bool Decl,
-                             bool Class) {
+                             bool Class, bool DefaultLibrary) {
     HighlightingKind Kind =
         Class ? HighlightingKind::StaticMethod : HighlightingKind::Method;
     for (SourceLocation Part : Locs) {
@@ -504,20 +532,27 @@ public:
         Tok.addModifier(HighlightingModifier::Declaration);
       if (Class)
         Tok.addModifier(HighlightingModifier::Static);
+      if (DefaultLibrary)
+        Tok.addModifier(HighlightingModifier::DefaultLibrary);
     }
   }
 
   bool VisitObjCMethodDecl(ObjCMethodDecl *OMD) {
     llvm::SmallVector<SourceLocation> Locs;
     OMD->getSelectorLocs(Locs);
-    highlightObjCSelector(Locs, /*Decl=*/true, OMD->isClassMethod());
+    highlightObjCSelector(Locs, /*Decl=*/true, OMD->isClassMethod(),
+                          isDefaultLibrary(OMD));
     return true;
   }
 
   bool VisitObjCMessageExpr(ObjCMessageExpr *OME) {
     llvm::SmallVector<SourceLocation> Locs;
     OME->getSelectorLocs(Locs);
-    highlightObjCSelector(Locs, /*Decl=*/false, OME->isClassMessage());
+    bool DefaultLibrary = false;
+    if (ObjCMethodDecl *OMD = OME->getMethodDecl())
+      DefaultLibrary = isDefaultLibrary(OMD);
+    highlightObjCSelector(Locs, /*Decl=*/false, OME->isClassMessage(),
+                          DefaultLibrary);
     return true;
   }
 
@@ -643,6 +678,8 @@ std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST) {
             Tok.addModifier(HighlightingModifier::Abstract);
           if (isDependent(Decl))
             Tok.addModifier(HighlightingModifier::DependentName);
+          if (isDefaultLibrary(Decl))
+            Tok.addModifier(HighlightingModifier::DefaultLibrary);
           if (Decl->isDeprecated())
             Tok.addModifier(HighlightingModifier::Deprecated);
           // Do not treat an UnresolvedUsingValueDecl as a declaration.
@@ -827,6 +864,8 @@ llvm::StringRef toSemanticTokenModifier(HighlightingModifier Modifier) {
     return "abstract";
   case HighlightingModifier::DependentName:
     return "dependentName"; // nonstandard
+  case HighlightingModifier::DefaultLibrary:
+    return "defaultLibrary";
   case HighlightingModifier::FunctionScope:
     return "functionScope"; // nonstandard
   case HighlightingModifier::ClassScope:
