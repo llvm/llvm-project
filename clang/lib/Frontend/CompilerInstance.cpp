@@ -703,37 +703,31 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
 // Output Files
 
 void CompilerInstance::clearOutputFiles(bool EraseFiles) {
-  // Ignore errors that occur when trying to discard the temp file.
   for (OutputFile &OF : OutputFiles) {
     if (EraseFiles) {
-      if (OF.File)
-        consumeError(OF.File->discard());
+      if (!OF.TempFilename.empty()) {
+        llvm::sys::fs::remove(OF.TempFilename);
+        continue;
+      }
       if (!OF.Filename.empty())
         llvm::sys::fs::remove(OF.Filename);
       continue;
     }
 
-    if (!OF.File)
+    if (OF.TempFilename.empty())
       continue;
-
-    if (OF.File->TmpName.empty()) {
-      consumeError(OF.File->discard());
-      continue;
-    }
 
     // If '-working-directory' was passed, the output filename should be
     // relative to that.
     SmallString<128> NewOutFile(OF.Filename);
     FileMgr->FixupRelativePath(NewOutFile);
-
-    llvm::Error E = OF.File->keep(NewOutFile);
-    if (!E)
+    std::error_code EC = llvm::sys::fs::rename(OF.TempFilename, NewOutFile);
+    if (!EC)
       continue;
-
     getDiagnostics().Report(diag::err_unable_to_rename_temp)
-        << OF.File->TmpName << OF.Filename << std::move(E);
+        << OF.TempFilename << OF.Filename << EC.message();
 
-    llvm::sys::fs::remove(OF.File->TmpName);
+    llvm::sys::fs::remove(OF.TempFilename);
   }
   OutputFiles.clear();
   if (DeleteBuiltModules) {
@@ -815,7 +809,7 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
     }
   }
 
-  Optional<llvm::sys::fs::TempFile> Temp;
+  std::string TempFile;
   if (UseTemporary) {
     // Create a temporary file.
     // Insert -%%%%%%%% before the extension (if any), and because some tools
@@ -827,36 +821,25 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
     TempPath += "-%%%%%%%%";
     TempPath += OutputExtension;
     TempPath += ".tmp";
-    Expected<llvm::sys::fs::TempFile> ExpectedFile =
-        llvm::sys::fs::TempFile::create(TempPath);
+    int fd;
+    std::error_code EC = llvm::sys::fs::createUniqueFile(
+        TempPath, fd, TempPath,
+        Binary ? llvm::sys::fs::OF_None : llvm::sys::fs::OF_Text);
 
-    llvm::Error E = handleErrors(
-        ExpectedFile.takeError(), [&](const llvm::ECError &E) -> llvm::Error {
-          std::error_code EC = E.convertToErrorCode();
-          if (CreateMissingDirectories &&
-              EC == llvm::errc::no_such_file_or_directory) {
-            StringRef Parent = llvm::sys::path::parent_path(OutputPath);
-            EC = llvm::sys::fs::create_directories(Parent);
-            if (!EC) {
-              ExpectedFile = llvm::sys::fs::TempFile::create(TempPath);
-              if (!ExpectedFile)
-                return llvm::errorCodeToError(
-                    llvm::errc::no_such_file_or_directory);
-            }
-          }
-          return llvm::errorCodeToError(EC);
-        });
+    if (CreateMissingDirectories &&
+        EC == llvm::errc::no_such_file_or_directory) {
+      StringRef Parent = llvm::sys::path::parent_path(OutputPath);
+      EC = llvm::sys::fs::create_directories(Parent);
+      if (!EC) {
+        EC = llvm::sys::fs::createUniqueFile(TempPath, fd, TempPath,
+                                             Binary ? llvm::sys::fs::OF_None
+                                                    : llvm::sys::fs::OF_Text);
+      }
+    }
 
-    if (E) {
-      consumeError(std::move(E));
-    } else {
-      Temp = std::move(ExpectedFile.get());
-      TempPath = Temp->TmpName;
-
-      OS.reset(new llvm::raw_fd_ostream(Temp->FD, /*shouldClose=*/false,
-                                        Binary ? llvm::sys::fs::OF_None
-                                               : llvm::sys::fs::OF_Text));
-      OSFile = std::string(TempPath.str());
+    if (!EC) {
+      OS.reset(new llvm::raw_fd_ostream(fd, /*shouldClose=*/true));
+      OSFile = TempFile = std::string(TempPath.str());
     }
     // If we failed to create the temporary, fallback to writing to the file
     // directly. This handles the corner case where we cannot write to the
@@ -880,7 +863,7 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
   // Add the output file -- but don't try to remove "-", since this means we are
   // using stdin.
   OutputFiles.emplace_back(((OutputPath != "-") ? OutputPath : "").str(),
-                           std::move(Temp));
+                           std::move(TempFile));
 
   if (!Binary || OS->supportsSeeking())
     return std::move(OS);
