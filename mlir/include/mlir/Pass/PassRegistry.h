@@ -108,7 +108,7 @@ class PassInfo : public PassRegistryEntry {
 public:
   /// PassInfo constructor should not be invoked directly, instead use
   /// PassRegistration or registerPass.
-  PassInfo(StringRef arg, StringRef description, TypeID passID,
+  PassInfo(StringRef arg, StringRef description,
            const PassAllocatorFunction &allocator);
 };
 
