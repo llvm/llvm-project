@@ -183,6 +183,12 @@
 // RUN:   -c %s 2>&1 \
 // RUN: | FileCheck -check-prefixes FATBIN-COMMON,PTX-SM35,PTX-SM30 %s
 
+// Verify -flto=thin -fwhole-program-vtables handling. This should result in
+// both options being passed to the host compilation, with neither passed to
+// the device compilation.
+// RUN: %clang -### -target x86_64-linux-gnu -c -flto=thin -fwhole-program-vtables %s 2>&1 \
+// RUN: | FileCheck -check-prefixes DEVICE,DEVICE-NOSAVE,HOST,INCLUDES-DEVICE,NOLINK,THINLTOWPD %s
+// THINLTOWPD-NOT: error: invalid argument '-fwhole-program-vtables' only allowed with '-flto'
 
 // ARCH-SM20: "-cc1"{{.*}}"-target-cpu" "sm_20"
 // NOARCH-SM20-NOT: "-cc1"{{.*}}"-target-cpu" "sm_20"
@@ -206,8 +212,10 @@
 // Match the job that produces PTX assembly.
 // DEVICE: "-cc1" "-triple" "nvptx64-nvidia-cuda"
 // DEVICE-NOSAVE-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
+// THINLTOWPD-NOT: "-flto=thin"
 // DEVICE-SAME: "-fcuda-is-device"
 // DEVICE-SM30-SAME: "-target-cpu" "sm_30"
+// THINLTOWPD-NOT: "-fwhole-program-vtables"
 // DEVICE-SAME: "-o" "[[PTXFILE:[^"]*]]"
 // DEVICE-NOSAVE-SAME: "-x" "cuda"
 // DEVICE-SAVE-SAME: "-x" "ir"
@@ -252,12 +260,14 @@
 // Match host-side compilation.
 // HOST: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // HOST-SAME: "-aux-triple" "nvptx64-nvidia-cuda"
+// THINLTOWPD-SAME: "-flto=thin"
 // HOST-NOT: "-fcuda-is-device"
 // There is only one GPU binary after combining it with fatbinary!
 // INCLUDES-DEVICE2-NOT: "-fcuda-include-gpubinary"
 // INCLUDES-DEVICE-SAME: "-fcuda-include-gpubinary" "[[FATBINARY]]"
 // There is only one GPU binary after combining it with fatbinary.
 // INCLUDES-DEVICE2-NOT: "-fcuda-include-gpubinary"
+// THINLTOWPD-SAME: "-fwhole-program-vtables"
 // HOST-SAME: "-o" "[[HOSTOUTPUT:[^"]*]]"
 // HOST-NOSAVE-SAME: "-x" "cuda"
 // HOST-SAVE-SAME: "-x" "cuda-cpp-output"
