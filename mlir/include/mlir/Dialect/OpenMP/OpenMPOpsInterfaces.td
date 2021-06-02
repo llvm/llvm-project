@@ -18,7 +18,7 @@ include "mlir/IR/OpBase.td"
 def OutlineableOpenMPOpInterface : OpInterface<"OutlineableOpenMPOpInterface"> {
   let description = [{
     OpenMP operations whose region will be outlined will implement this
-    interface. These operations will
+    interface.
   }];
 
   let cppNamespace = "::mlir::omp";

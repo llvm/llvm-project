@@ -21,7 +21,6 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/KindMapping.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/DenseMap.h"
@@ -70,20 +69,13 @@ public:
   mlir::Value convertWithSemantics(mlir::Location loc, mlir::Type toTy,
                                    mlir::Value val);
 
+  /// Get the entry block of the current Function
+  mlir::Block *getEntryBlock() { return &getFunction().front(); }
+
   /// Get the block for adding Allocas. If OpenMP is enabled then get the
   /// the alloca block from an Operation which can be Outlined. Otherwise
   /// use the entry block of the current Function
-  mlir::Block *getAllocaBlock() {
-    auto iface =
-        getRegion().getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
-    return iface ? iface.getAllocaBlock() : &getFunction().front();
-    // mlir::Block *eb = nullptr;
-    // do {
-    //   if (auto iface = dyn_cast<mlir::omp::OutlineableOpenMPOpInterface>(op))
-    //     eb = iface.getAllocaBlock();
-    // } while ((op = op->getParentOp()));
-    // return eb ? eb : &getFunction().front();
-  }
+  mlir::Block *getAllocaBlock();
 
   /// Safely create a reference type to the type `eleTy`.
   mlir::Type getRefType(mlir::Type eleTy);

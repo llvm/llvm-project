@@ -19,6 +19,7 @@
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Semantics/symbol.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
@@ -159,6 +160,13 @@ elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams) {
   if (fir::hasDynamicSize(type))
     return lenParams;
   return {};
+}
+
+/// Get the block for adding Allocas.
+mlir::Block *Fortran::lower::FirOpBuilder::getAllocaBlock() {
+  auto iface =
+      getRegion().getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
+  return iface ? iface.getAllocaBlock() : getEntryBlock();
 }
 
 /// Create a temporary variable on the stack. Anonymous temporaries have no

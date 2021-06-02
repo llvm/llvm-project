@@ -24,7 +24,7 @@ end
 
 !FIRDialect: func @_QPsub1() {
 subroutine sub1
-!FIRDialect:   {{.*}} = fir.alloca i32 {{{.*}}uniq_name = "_QFsub1Ei"}
+!FIRDialect:   {{.*}} = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsub1Ei"}
   integer :: i
   integer :: arr(10)
 !FIRDialect:   omp.parallel {
@@ -40,11 +40,11 @@ end subroutine
 
 !FIRDialect: func @_QPsub2() {
 subroutine sub2
-!FIRDialect:   %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsub2Ei"}
+!FIRDialect:   {{.*}} = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsub2Ei"}
   integer :: i
   integer :: arr(10)
 !FIRDialect:   omp.parallel {
-!FIRDialect:     %2 = fir.alloca i32 {uniq_name = "i"}
+!FIRDialect:     {{.*}} = fir.alloca i32 {uniq_name = "i"}
   !$OMP PARALLEL
 !FIRDialect:     omp.master  {
   !$OMP MASTER
@@ -62,12 +62,12 @@ end subroutine
 
 !FIRDialect: func @_QPsub3() {
 subroutine sub3
-!FIRDialect:   %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsub3Ei"}
-!FIRDialect:   %2 = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFsub3Ej"}
+!FIRDialect:   {{.*}} = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsub3Ei"}
+!FIRDialect:   {{.*}} = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFsub3Ej"}
   integer :: i,j
   integer :: arr(10)
 !FIRDialect:   omp.parallel {
-!FIRDialect:     %3 = fir.alloca i32 {uniq_name = "i"}
+!FIRDialect:     {{.*}} = fir.alloca i32 {uniq_name = "i"}
   !$OMP PARALLEL
   do i=1, 10
     arr(i) = i
@@ -75,7 +75,7 @@ subroutine sub3
 !FIRDialect:     omp.master  {
   !$OMP MASTER
 !FIRDialect:       omp.parallel {
-!FIRDialect:         %8 = fir.alloca i32 {uniq_name = "j"}
+!FIRDialect:         {{.*}} = fir.alloca i32 {uniq_name = "j"}
   !$OMP PARALLEL
   do j=1, 10
     arr(j) = j
