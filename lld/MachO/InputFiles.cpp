@@ -826,6 +826,9 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
     return;
   }
 
+  if (config->printEachFile)
+    message(toString(this));
+
   deadStrippable = hdr->flags & MH_DEAD_STRIPPABLE_DYLIB;
 
   if (!checkCompatibility(this))
@@ -899,6 +902,9 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   dylibName = saver.save(interface.getInstallName());
   compatibilityVersion = interface.getCompatibilityVersion().rawValue();
   currentVersion = interface.getCurrentVersion().rawValue();
+
+  if (config->printEachFile)
+    message(toString(this));
 
   if (!is_contained(skipPlatformChecks, dylibName) &&
       !is_contained(interface.targets(), config->platformInfo.target)) {
