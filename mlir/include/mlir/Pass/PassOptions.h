@@ -181,7 +181,13 @@ public:
       return *this;
     }
 
-    MutableArrayRef<DataType> operator->() const { return &*this; }
+    /// Allow accessing the data held by this option.
+    MutableArrayRef<DataType> operator*() {
+      return static_cast<std::vector<DataType> &>(*this);
+    }
+    ArrayRef<DataType> operator*() const {
+      return static_cast<const std::vector<DataType> &>(*this);
+    }
 
   private:
     /// Return the main option instance.
@@ -189,6 +195,11 @@ public:
 
     /// Print the name and value of this option to the given stream.
     void print(raw_ostream &os) final {
+      // Don't print the list if empty. An empty option value can be treated as
+      // an element of the list in certain cases (e.g. ListOption<std::string>).
+      if ((**this).empty())
+        return;
+
       os << this->ArgStr << '=';
       auto printElementFn = [&](const DataType &value) {
         printValue(os, this->getParser(), value);
