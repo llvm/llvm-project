@@ -12,6 +12,8 @@
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
+#include <__iterator/iterator_traits.h>
+#include <__iterator/readable_traits.h>
 #include <concepts>
 #include <type_traits>
 
