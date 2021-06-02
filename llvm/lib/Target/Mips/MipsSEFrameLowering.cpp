@@ -416,10 +416,12 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
   unsigned ZERO = ABI.GetNullPtr();
   unsigned MOVE = ABI.GetGPRMoveOp();
   unsigned ADDiu = ABI.GetPtrAddiuOp();
-  unsigned AND = ABI.IsN64() ? Mips::AND64 : Mips::AND;
+  unsigned AND = ABI.GetPtrAndOp();
 
-  const TargetRegisterClass *RC = ABI.ArePtrs64bit() ?
-        &Mips::GPR64RegClass : &Mips::GPR32RegClass;
+  const TargetRegisterClass *RC =
+      ABI.ArePtrs64bit()
+          ? &Mips::GPR64RegClass
+          : ABI.IsP32() ? &Mips::GPR32NMRegClass : &Mips::GPR32RegClass;
 
   // First, compute final stack size.
   uint64_t StackSize = MFI.getStackSize();
@@ -547,6 +549,7 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
       BuildMI(MBB, MBBI, dl, TII.get(AND), SP).addReg(SP).addReg(VR);
 
       if (hasBP(MF)) {
+        assert(!ABI.IsP32() && "NYI for nanoMIPS");
         // move $s7, $sp
         unsigned BP = STI.isABI_N64() ? Mips::S7_64 : Mips::S7;
         BuildMI(MBB, MBBI, dl, TII.get(MOVE), BP)
