@@ -18,6 +18,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LegalizeTypes.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -1986,8 +1987,44 @@ SDValue DAGTypeLegalizer::PromoteIntOp_PREFETCH(SDNode *N, unsigned OpNo) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_FPOWI(SDNode *N) {
-  SDValue Op = SExtPromotedInteger(N->getOperand(1));
-  return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0), Op), 0);
+  // FIXME: Support for promotion of STRICT_FPOWI is not implemented yet.
+  assert(N->getOpcode() == ISD::FPOWI && "No STRICT_FPOWI support here yet.");
+
+  // The integer operand is the last operand in FPOWI (so the result and
+  // floating point operand is already type legalized).
+
+  // We can't just promote the exponent type in FPOWI, since we want to lower
+  // the node to a libcall and we if we promote to a type larger than
+  // sizeof(int) the libcall might not be according to the targets ABI. Instead
+  // we rewrite to a libcall here directly, letting makeLibCall handle promotion
+  // if the target accepts it according to shouldSignExtendTypeInLibCall.
+  RTLIB::Libcall LC;
+  switch (N->getSimpleValueType(0).SimpleTy) {
+  default: llvm_unreachable("Unexpected request for libcall!");
+  case MVT::f32: LC = RTLIB::POWI_F32; break;
+  case MVT::f64: LC = RTLIB::POWI_F64; break;
+  case MVT::f80: LC = RTLIB::POWI_F80; break;
+  case MVT::f128: LC = RTLIB::POWI_F128; break;
+  case MVT::ppcf128: LC = RTLIB::POWI_PPCF128; break;
+  }
+  if (!TLI.getLibcallName(LC)) {
+    // Some targets don't have a powi libcall; use pow instead.
+    // FIXME: Implement this if some target needs it.
+    DAG.getContext()->emitError("Don't know how to promote fpowi to fpow");
+    return DAG.getUNDEF(N->getValueType(0));
+  }
+  // The exponent should fit in a sizeof(int) type for the libcall to be valid.
+  assert(DAG.getLibInfo().getIntSize() ==
+         N->getOperand(1).getValueType().getSizeInBits() &&
+         "POWI exponent should match with sizeof(int) when doing the libcall.");
+  TargetLowering::MakeLibCallOptions CallOptions;
+  CallOptions.setSExt(true);
+  SDValue Ops[2] = { N->getOperand(0), N->getOperand(1) };
+  std::pair<SDValue, SDValue> Tmp =
+      TLI.makeLibCall(DAG, LC, N->getValueType(0), Ops,
+                      CallOptions, SDLoc(N), SDValue());
+  ReplaceValueWith(SDValue(N, 0), Tmp.first);
+  return SDValue();
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_VECREDUCE(SDNode *N) {
