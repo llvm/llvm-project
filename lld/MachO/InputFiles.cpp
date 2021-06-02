@@ -488,10 +488,10 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
     if (isWeakDefCanBeHidden)
       isPrivateExtern = true;
 
-    return symtab->addDefined(name, isec->file, isec, value, size,
-                              sym.n_desc & N_WEAK_DEF, isPrivateExtern,
-                              sym.n_desc & N_ARM_THUMB_DEF,
-                              sym.n_desc & REFERENCED_DYNAMICALLY);
+    return symtab->addDefined(
+        name, isec->file, isec, value, size, sym.n_desc & N_WEAK_DEF,
+        isPrivateExtern, sym.n_desc & N_ARM_THUMB_DEF,
+        sym.n_desc & REFERENCED_DYNAMICALLY, sym.n_desc & N_NO_DEAD_STRIP);
   }
 
   assert(!isWeakDefCanBeHidden &&
@@ -499,7 +499,8 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
   return make<Defined>(
       name, isec->file, isec, value, size, sym.n_desc & N_WEAK_DEF,
       /*isExternal=*/false, /*isPrivateExtern=*/false,
-      sym.n_desc & N_ARM_THUMB_DEF, sym.n_desc & REFERENCED_DYNAMICALLY);
+      sym.n_desc & N_ARM_THUMB_DEF, sym.n_desc & REFERENCED_DYNAMICALLY,
+      sym.n_desc & N_NO_DEAD_STRIP);
 }
 
 // Absolute symbols are defined symbols that do not have an associated
@@ -512,13 +513,15 @@ static macho::Symbol *createAbsolute(const NList &sym, InputFile *file,
     return symtab->addDefined(name, file, nullptr, sym.n_value, /*size=*/0,
                               /*isWeakDef=*/false, sym.n_type & N_PEXT,
                               sym.n_desc & N_ARM_THUMB_DEF,
-                              /*isReferencedDynamically=*/false);
+                              /*isReferencedDynamically=*/false,
+                              sym.n_desc & N_NO_DEAD_STRIP);
   }
   return make<Defined>(name, file, nullptr, sym.n_value, /*size=*/0,
                        /*isWeakDef=*/false,
                        /*isExternal=*/false, /*isPrivateExtern=*/false,
                        sym.n_desc & N_ARM_THUMB_DEF,
-                       /*isReferencedDynamically=*/false);
+                       /*isReferencedDynamically=*/false,
+                       sym.n_desc & N_NO_DEAD_STRIP);
 }
 
 template <class NList>
@@ -614,7 +617,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       auto *nextIsec = make<InputSection>(*isec);
       nextIsec->data = isec->data.slice(symbolOffset);
       nextIsec->numRefs = 0;
-      nextIsec->canOmitFromOutput = false;
+      nextIsec->wasCoalesced = false;
       isec->data = isec->data.slice(0, symbolOffset);
 
       // By construction, the symbol will be at offset zero in the new
@@ -640,6 +643,7 @@ OpaqueFile::OpaqueFile(MemoryBufferRef mb, StringRef segName,
   isec->segname = segName.take_front(16);
   const auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   isec->data = {buf, mb.getBufferSize()};
+  isec->live = true;
   subsections.push_back({{0, isec}});
 }
 
@@ -1027,7 +1031,8 @@ static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,
   return symtab->addDefined(name, &file, /*isec=*/nullptr, /*value=*/0,
                             /*size=*/0, objSym.isWeak(), isPrivateExtern,
                             /*isThumb=*/false,
-                            /*isReferencedDynamically=*/false);
+                            /*isReferencedDynamically=*/false,
+                            /*noDeadStrip=*/false);
 }
 
 BitcodeFile::BitcodeFile(MemoryBufferRef mbref)

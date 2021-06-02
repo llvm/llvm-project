@@ -10,6 +10,7 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "LTO.h"
+#include "MarkLive.h"
 #include "ObjC.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
@@ -541,12 +542,15 @@ static void replaceCommonSymbols() {
     isec->flags = S_ZEROFILL;
     inputSections.push_back(isec);
 
+    // FIXME: CommonSymbol should store isReferencedDynamically, noDeadStrip
+    // and pass them on here.
     replaceSymbol<Defined>(sym, sym->getName(), isec->file, isec, /*value=*/0,
                            /*size=*/0,
                            /*isWeakDef=*/false,
                            /*isExternal=*/true, common->privateExtern,
                            /*isThumb=*/false,
-                           /*isReferencedDynamically=*/false);
+                           /*isReferencedDynamically=*/false,
+                           /*noDeadStrip=*/false);
   }
 }
 
@@ -967,6 +971,9 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   depTracker =
       make<DependencyTracker>(args.getLastArgValue(OPT_dependency_info));
 
+  // Must be set before any InputSections and Symbols are created.
+  config->deadStrip = args.hasArg(OPT_dead_strip);
+
   config->systemLibraryRoots = getSystemLibraryRoots(args);
   if (const char *path = getReproduceOption(args)) {
     // Note that --reproduce is a debug option so you can ignore it
@@ -1284,6 +1291,9 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
             inputSections.push_back(subsectionEntry.isec);
       }
     }
+
+    if (config->deadStrip)
+      markLive();
 
     // Write to an output file.
     if (target->wordSize == 8)
