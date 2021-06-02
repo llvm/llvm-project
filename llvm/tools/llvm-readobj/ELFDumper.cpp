@@ -6722,9 +6722,14 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
 }
 
 template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
+  bool IsRelocatable = this->Obj.getHeader().e_type == ELF::ET_REL;
   for (const Elf_Shdr &Sec : cantFail(this->Obj.sections())) {
     if (Sec.sh_type != SHT_LLVM_BB_ADDR_MAP)
       continue;
+    Optional<const Elf_Shdr *> FunctionSec = None;
+    if (IsRelocatable)
+      FunctionSec =
+          unwrapOrError(this->FileName, this->Obj.getSection(Sec.sh_link));
     ListScope L(W, "BBAddrMap");
     Expected<std::vector<Elf_BBAddrMap>> BBAddrMapOrErr =
         this->Obj.decodeBBAddrMap(Sec);
@@ -6736,6 +6741,17 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
     for (const Elf_BBAddrMap &AM : *BBAddrMapOrErr) {
       DictScope D(W, "Function");
       W.printHex("At", AM.Addr);
+      Optional<uint32_t> FuncSymIndex =
+          this->getSymbolIndexForFunctionAddress(AM.Addr, FunctionSec);
+      std::string FuncName = "<?>";
+      if (FuncSymIndex == None)
+        this->reportUniqueWarning(
+            "could not identify function symbol for address (0x" +
+            Twine::utohexstr(AM.Addr) + ") in " + this->describe(Sec));
+      else
+        FuncName = this->getStaticSymbolName(*FuncSymIndex);
+      W.printString("Name", FuncName);
+
       ListScope L(W, "BB entries");
       for (const typename Elf_BBAddrMap::BBEntry &BBE : AM.BBEntries) {
         DictScope L(W);
