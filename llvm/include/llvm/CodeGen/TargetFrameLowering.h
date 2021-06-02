@@ -216,11 +216,6 @@ public:
   emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI) const {}
 
-  virtual void emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
-                                         MachineBasicBlock::iterator MBBI,
-                                         const DebugLoc &DL,
-                                         bool IsPrologue) const {}
-
   /// Replace a StackProbe stub (if any) with the actual probe code inline
   virtual void inlineStackProbe(MachineFunction &MF,
                                 MachineBasicBlock &PrologueMBB) const {}

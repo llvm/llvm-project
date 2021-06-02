@@ -57,10 +57,9 @@ class M68kFrameLowering : public TargetFrameLowering {
   void BuildCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                 const DebugLoc &DL, const MCCFIInstruction &CFIInst) const;
 
-  void emitCalleeSavedFrameMoves(MachineBasicBlock &MBB,
-                                 MachineBasicBlock::iterator MBBI,
-                                 const DebugLoc &DL,
-                                 bool IsProlog) const override;
+  void emitPrologueCalleeSavedFrameMoves(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MBBI,
+                                         const DebugLoc &DL) const;
 
   unsigned getPSPSlotOffsetFromSP(const MachineFunction &MF) const;
 
