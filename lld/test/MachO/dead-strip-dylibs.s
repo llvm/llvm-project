@@ -48,8 +48,22 @@
 ## LC_LINKER_OPTION does not count as an explicit reference.
 # RUN: llvm-mc %t/linkopt_bar.s -triple=x86_64-apple-macos -filetype=obj -o %t/linkopt_bar.o
 # RUN: %lld -dylib %t/bar.o -o %t/libbar.dylib
-# RUN: %lld -lSystem %t/main.o %t/linkopt_bar.o -o %t/main -L %t %t/foo_with_bar.dylib
-# RUN: llvm-otool -L %t/main | FileCheck --check-prefix=NOBAR %s
+# RUN: %lld -lSystem %t/main.o %t/linkopt_bar.o -o %t/main -L %t %t/foo.dylib
+# RUN: llvm-otool -L %t/main | FileCheck --check-prefix=NOLIBBAR %s
+# NOLIBBAR-NOT: libbar.dylib
+# NOLIBBAR: /usr/lib/libSystem.dylib
+# NOLIBBAR-NOT: libbar.dylib
+# NOLIBBAR: foo.dylib
+# NOLIBBAR-NOT: libbar.dylib
+
+## ...but with an additional explicit reference it's not stripped again.
+# RUN: %lld -lSystem %t/main.o %t/linkopt_bar.o -o %t/main -L %t %t/foo.dylib -lbar
+# RUN: llvm-otool -L %t/main | FileCheck --check-prefix=LIBBAR %s
+# RUN: %lld -lSystem %t/main.o -o %t/main -L %t %t/foo.dylib -lbar %t/linkopt_bar.o
+# RUN: llvm-otool -L %t/main | FileCheck --check-prefix=LIBBAR %s
+# LIBBAR-DAG: /usr/lib/libSystem.dylib
+# LIBBAR-DAG: libbar.dylib
+# LIBBAR-DAG: foo.dylib
 
 ## Test that a DylibSymbol being replaced by a DefinedSymbol marks the
 ## dylib as unreferenced.
