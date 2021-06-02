@@ -578,8 +578,8 @@ static void addDomainConstraints(const FlatAffineConstraints &srcDomain,
 //
 //   d0      d1      s0         c
 //   --      --      --         --
-//   a0     -c0      (a1 - c1)  (a1 - c2) = 0
-//   b0     -f0      (b1 - f1)  (b1 - f2) = 0
+//   a0     -c0      (a1 - c1)  (a2 - c2) = 0
+//   b0     -f0      (b1 - f1)  (b2 - f2) = 0
 //
 // Returns failure if any AffineExpr cannot be flattened (due to it being
 // semi-affine). Returns success otherwise.
