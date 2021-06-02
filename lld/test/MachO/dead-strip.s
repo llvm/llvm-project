@@ -195,8 +195,9 @@
 # RUN: %lld -lc++ -lSystem -dead_strip %t/unwind.o -o %t/unwind
 # RUN: llvm-objdump --syms %t/unwind | \
 # RUN:     FileCheck --check-prefix=UNWIND --implicit-check-not unref %s
-# RUN: llvm-otool -l %t/unwind | grep -q 'sectname __unwind_info'
-# RUN: llvm-otool -l %t/unwind | grep -q 'sectname __gcc_except_tab'
+# RUN: llvm-otool -l %t/unwind | FileCheck --check-prefix=UNWINDSECT %s
+# UNWINDSECT-DAG: sectname __unwind_info
+# UNWINDSECT-DAG: sectname __gcc_except_tab
 # UNWIND-LABEL: SYMBOL TABLE:
 # UNWIND-NEXT:   l O __TEXT,__gcc_except_tab GCC_except_table1
 # UNWIND-NEXT:   l O __DATA,__data __dyld_private
