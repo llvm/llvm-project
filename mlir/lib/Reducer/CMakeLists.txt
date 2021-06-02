@@ -8,6 +8,7 @@ add_mlir_library(MLIRReduce
    MLIRPass
    MLIRRewrite
    MLIRTransformUtils
+   DEPENDS
    MLIRReducerIncGen
 )
 
