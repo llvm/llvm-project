@@ -35,6 +35,38 @@ public:
   bool lowerCall(MachineIRBuilder &MIRBuilder,
                  CallLoweringInfo &Info) const override;
 };
+
+class PPCIncomingValueHandler : public CallLowering::IncomingValueHandler {
+public:
+  PPCIncomingValueHandler(MachineIRBuilder &MIRBuilder,
+                          MachineRegisterInfo &MRI)
+      : CallLowering::IncomingValueHandler(MIRBuilder, MRI) {}
+
+  uint64_t StackUsed;
+
+private:
+  void assignValueToReg(Register ValVReg, Register PhysReg,
+                        CCValAssign &VA) override;
+
+  void assignValueToAddress(Register ValVReg, Register Addr, uint64_t Size,
+                            MachinePointerInfo &MPO, CCValAssign &VA) override;
+
+  Register getStackAddress(uint64_t Size, int64_t Offset,
+                           MachinePointerInfo &MPO,
+                           ISD::ArgFlagsTy Flags) override;
+
+  virtual void markPhysRegUsed(unsigned PhysReg) = 0;
+};
+
+class FormalArgHandler : public PPCIncomingValueHandler {
+
+  void markPhysRegUsed(unsigned PhysReg) override;
+
+public:
+  FormalArgHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
+      : PPCIncomingValueHandler(MIRBuilder, MRI) {}
+};
+
 } // end namespace llvm
 
 #endif
