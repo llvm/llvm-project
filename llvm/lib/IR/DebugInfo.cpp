@@ -388,7 +388,7 @@ static bool isDILocationReachable(SmallPtrSetImpl<Metadata *> &Visited,
   MDNode *N = dyn_cast_or_null<MDNode>(MD);
   if (!N)
     return false;
-  if (Reachable.count(N) || isa<DILocation>(N))
+  if (isa<DILocation>(N) || Reachable.count(N))
     return true;
   if (!Visited.insert(N).second)
     return false;
@@ -415,8 +415,7 @@ static MDNode *stripDebugLocFromLoopID(MDNode *N) {
   // count_if avoids an early exit.
   if (!std::count_if(N->op_begin() + 1, N->op_end(),
                      [&Visited, &DILocationReachable](const MDOperand &Op) {
-                       return isa<DILocation>(Op.get()) ||
-                              isDILocationReachable(
+                       return isDILocationReachable(
                                   Visited, DILocationReachable, Op.get());
                      }))
     return N;
@@ -426,8 +425,7 @@ static MDNode *stripDebugLocFromLoopID(MDNode *N) {
   if (std::all_of(
           N->op_begin() + 1, N->op_end(),
           [&Visited, &DILocationReachable](const MDOperand &Op) {
-            return isa<DILocation>(Op.get()) ||
-                   isDILocationReachable(Visited, DILocationReachable,
+            return isDILocationReachable(Visited, DILocationReachable,
                                          Op.get());
           }))
     return nullptr;

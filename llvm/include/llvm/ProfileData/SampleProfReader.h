@@ -236,6 +236,7 @@
 #include "llvm/ProfileData/GCOV.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Discriminator.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SymbolRemappingReader.h"
@@ -349,6 +350,26 @@ public:
 
   /// Read and validate the file header.
   virtual std::error_code readHeader() = 0;
+
+  /// Set the bits for FS discriminators. Parameter Pass specify the sequence
+  /// number, Pass == i is for the i-th round of adding FS discriminators.
+  /// Pass == 0 is for using base discriminators.
+  void setDiscriminatorMaskedBitFrom(FSDiscriminatorPass P) {
+    MaskedBitFrom = getFSPassBitEnd(P);
+  }
+  /// Set the bits for using base discriminators.
+  void setBaseDiscriminatorMask() {
+    setDiscriminatorMaskedBitFrom(FSDiscriminatorPass::Base);
+  }
+
+  /// Get the bitmask the discriminators: For FS profiles, return the bit
+  /// mask for this pass. For non FS profiles, return (unsigned) -1.
+  uint32_t getDiscriminatorMask() const {
+    if (!ProfileIsFS)
+      return 0xFFFFFFFF;
+    assert((MaskedBitFrom != 0) && "MaskedBitFrom is not set properly");
+    return getN1Bits(MaskedBitFrom);
+  }
 
   /// The interface to read sample profiles from the associated file.
   std::error_code read() {
@@ -505,6 +526,9 @@ protected:
   /// Number of context-sensitive profiles.
   uint32_t CSProfileCount = 0;
 
+  /// Whether the function profiles use FS discriminators.
+  bool ProfileIsFS = false;
+
   /// \brief The format of sample.
   SampleProfileFormat Format = SPF_None;
 
@@ -512,6 +536,10 @@ protected:
   /// is used by compiler. If SampleProfileReader is used by other
   /// tools which are not compiler, M is usually nullptr.
   const Module *M = nullptr;
+
+  /// Zero out the discriminator bits higher than bit MaskedBitFrom (0 based).
+  /// The default is to keep all the bits.
+  uint32_t MaskedBitFrom = 31;
 };
 
 class SampleProfileReaderText : public SampleProfileReader {

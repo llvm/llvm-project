@@ -9,6 +9,7 @@
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -61,6 +62,7 @@ struct SampleProfTest : ::testing::Test {
     ASSERT_TRUE(NoError(ReaderOrErr.getError()));
     Reader = std::move(ReaderOrErr.get());
     Reader->setModule(&M);
+    Reader->setBaseDiscriminatorMask();
   }
 
   TempFile createRemapFile() {

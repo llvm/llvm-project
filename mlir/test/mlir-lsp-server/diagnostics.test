@@ -15,7 +15,7 @@
 // CHECK-NEXT:         "message": "custom op 'func' expected valid '@'-identifier for symbol name",
 // CHECK-NEXT:         "range": {
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:             "character": 6,
+// CHECK-NEXT:             "character": 7,
 // CHECK-NEXT:             "line": 0
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "start": {

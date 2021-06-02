@@ -609,9 +609,10 @@ void Writer::scanSymbols() {
   TimeTraceScope timeScope("Scan symbols");
   for (const Symbol *sym : symtab->getSymbols()) {
     if (const auto *defined = dyn_cast<Defined>(sym)) {
-      if (defined->overridesWeakDef)
+      if (defined->overridesWeakDef && defined->isLive())
         in.weakBinding->addNonWeakDefinition(defined);
     } else if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
+      // This branch intentionally doesn't check isLive().
       if (dysym->isDynamicLookup())
         continue;
       dysym->getFile()->refState =
@@ -697,7 +698,7 @@ template <class LP> void Writer::createLoadCommands() {
       // FIXME: `isReferenced()` is currently computed before dead code
       // stripping, so references from dead code keep a dylib alive. This
       // matches ld64, but it's something we should do better.
-      if (!dylibFile->isReferenced() &&
+      if (!dylibFile->isReferenced() && !dylibFile->forceNeeded &&
           (!dylibFile->explicitlyLinked || dylibFile->deadStrippable ||
            config->deadStripDylibs))
         continue;
@@ -705,17 +706,21 @@ template <class LP> void Writer::createLoadCommands() {
       // Several DylibFiles can have the same installName. Only emit a single
       // load command for that installName and give all these DylibFiles the
       // same ordinal.
-      // This can happen if:
+      // This can happen in several cases:
       // - a new framework could change its installName to an older
       //   framework name via an $ld$ symbol depending on platform_version
-      // - symlink (eg libpthread.tbd is a symlink to libSystem.tbd)
+      // - symlinks (for example, libpthread.tbd is a symlink to libSystem.tbd;
+      //   Foo.framework/Foo.tbd is usually a symlink to
+      //   Foo.framework/Versions/Current/Foo.tbd, where
+      //   Foo.framework/Versions/Current is usually a symlink to
+      //   Foo.framework/Versions/A)
       // - a framework can be linked both explicitly on the linker
       //   command line and implicitly as a reexport from a different
       //   framework. The re-export will usually point to the tbd file
       //   in Foo.framework/Versions/A/Foo.tbd, while the explicit link will
-      //   usually find Foo.framwork/Foo.tbd. These are usually two identical
-      //   but distinct files (concrete example: CFNetwork.framework, reexported
-      //   from CoreServices.framework).
+      //   usually find Foo.framwork/Foo.tbd. These are usually symlinks,
+      //   but in a --reproduce archive they will be identical but distinct
+      //   files.
       // In the first case, *semantically distinct* DylibFiles will have the
       // same installName.
       int64_t &ordinal = ordinalForInstallName[dylibFile->dylibName];

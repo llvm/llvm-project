@@ -2401,12 +2401,6 @@ public:
 
   ExprResult RebuildSYCLUniqueStableNameExpr(SourceLocation OpLoc,
                                              SourceLocation LParen,
-                                             SourceLocation RParen, Expr *E) {
-    return getSema().BuildSYCLUniqueStableNameExpr(OpLoc, LParen, RParen, E);
-  }
-
-  ExprResult RebuildSYCLUniqueStableNameExpr(SourceLocation OpLoc,
-                                             SourceLocation LParen,
                                              SourceLocation RParen,
                                              TypeSourceInfo *TSI) {
     return getSema().BuildSYCLUniqueStableNameExpr(OpLoc, LParen, RParen, TSI);
@@ -14394,7 +14388,11 @@ QualType TreeTransform<Derived>::RebuildUnresolvedUsingType(SourceLocation Loc,
 
     // A valid resolved using typename decl points to exactly one type decl.
     assert(++Using->shadow_begin() == Using->shadow_end());
-    Ty = cast<TypeDecl>((*Using->shadow_begin())->getTargetDecl());
+
+    NamedDecl *Target = Using->shadow_begin()->getTargetDecl();
+    if (SemaRef.DiagnoseUseOfDecl(Target, Loc))
+      return QualType();
+    Ty = cast<TypeDecl>(Target);
   } else {
     assert(isa<UnresolvedUsingTypenameDecl>(D) &&
            "UnresolvedUsingTypenameDecl transformed to non-using decl");

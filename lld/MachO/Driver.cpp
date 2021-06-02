@@ -10,6 +10,7 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "LTO.h"
+#include "MarkLive.h"
 #include "ObjC.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
@@ -235,6 +236,7 @@ static std::vector<ArchiveMember> getArchiveMembers(MemoryBufferRef mb) {
 }
 
 static InputFile *addFile(StringRef path, bool forceLoadArchive,
+                          bool isExplicit = true,
                           bool isBundleLoader = false) {
   Optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
@@ -294,7 +296,8 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
   case file_magic::macho_dynamically_linked_shared_lib_stub:
   case file_magic::tapi_file:
     if (DylibFile * dylibFile = loadDylib(mbref)) {
-      dylibFile->explicitlyLinked = true;
+      if (isExplicit)
+        dylibFile->explicitlyLinked = true;
       newFile = dylibFile;
     }
     break;
@@ -324,11 +327,13 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
   return newFile;
 }
 
-static void addLibrary(StringRef name, bool isWeak, bool isReexport,
-                       bool isExplicit) {
+static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
+                       bool isReexport, bool isExplicit) {
   if (Optional<StringRef> path = findLibrary(name)) {
-    if (auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path, false))) {
-      dylibFile->explicitlyLinked = isExplicit;
+    if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
+            addFile(*path, /*forceLoadArchive=*/false, isExplicit))) {
+      if (isNeeded)
+        dylibFile->forceNeeded = true;
       if (isWeak)
         dylibFile->forceWeakImport = true;
       if (isReexport) {
@@ -341,11 +346,13 @@ static void addLibrary(StringRef name, bool isWeak, bool isReexport,
   error("library not found for -l" + name);
 }
 
-static void addFramework(StringRef name, bool isWeak, bool isReexport,
-                         bool isExplicit) {
+static void addFramework(StringRef name, bool isNeeded, bool isWeak,
+                         bool isReexport, bool isExplicit) {
   if (Optional<std::string> path = findFramework(name)) {
-    if (auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path, false))) {
-      dylibFile->explicitlyLinked = isExplicit;
+    if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
+            addFile(*path, /*forceLoadArchive=*/false, isExplicit))) {
+      if (isNeeded)
+        dylibFile->forceNeeded = true;
       if (isWeak)
         dylibFile->forceWeakImport = true;
       if (isReexport) {
@@ -381,12 +388,12 @@ void macho::parseLCLinkerOption(InputFile *f, unsigned argc, StringRef data) {
   for (const Arg *arg : args) {
     switch (arg->getOption().getID()) {
     case OPT_l:
-      addLibrary(arg->getValue(), /*isWeak=*/false, /*isReexport=*/false,
-                 /*isExplicit=*/false);
+      addLibrary(arg->getValue(), /*isNeeded=*/false, /*isWeak=*/false,
+                 /*isReexport=*/false, /*isExplicit=*/false);
       break;
     case OPT_framework:
-      addFramework(arg->getValue(), /*isWeak=*/false, /*isReexport=*/false,
-                   /*isExplicit=*/false);
+      addFramework(arg->getValue(), /*isNeeded=*/false, /*isWeak=*/false,
+                   /*isReexport=*/false, /*isExplicit=*/false);
       break;
     default:
       error(arg->getSpelling() + " is not allowed in LC_LINKER_OPTION");
@@ -400,7 +407,7 @@ static void addFileList(StringRef path) {
     return;
   MemoryBufferRef mbref = *buffer;
   for (StringRef path : args::getLines(mbref))
-    addFile(rerootPath(path), false);
+    addFile(rerootPath(path), /*forceLoadArchive=*/false);
 }
 
 // An order file has one entry per line, in the following format:
@@ -535,12 +542,15 @@ static void replaceCommonSymbols() {
     isec->flags = S_ZEROFILL;
     inputSections.push_back(isec);
 
+    // FIXME: CommonSymbol should store isReferencedDynamically, noDeadStrip
+    // and pass them on here.
     replaceSymbol<Defined>(sym, sym->getName(), isec->file, isec, /*value=*/0,
                            /*size=*/0,
                            /*isWeakDef=*/false,
                            /*isExternal=*/true, common->privateExtern,
                            /*isThumb=*/false,
-                           /*isReferencedDynamically=*/false);
+                           /*isReferencedDynamically=*/false,
+                           /*noDeadStrip=*/false);
   }
 }
 
@@ -876,36 +886,45 @@ void createFiles(const InputArgList &args) {
 
     switch (opt.getID()) {
     case OPT_INPUT:
-      addFile(rerootPath(arg->getValue()), false);
+      addFile(rerootPath(arg->getValue()), /*forceLoadArchive=*/false);
+      break;
+    case OPT_needed_library:
+      if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
+              addFile(rerootPath(arg->getValue()), false)))
+        dylibFile->forceNeeded = true;
       break;
     case OPT_reexport_library:
-      if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-              addFile(rerootPath(arg->getValue()), false))) {
+      if (auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(
+              rerootPath(arg->getValue()), /*forceLoadArchive=*/false))) {
         config->hasReexports = true;
         dylibFile->reexport = true;
       }
       break;
     case OPT_weak_library:
       if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-              addFile(rerootPath(arg->getValue()), false)))
+              addFile(rerootPath(arg->getValue()), /*forceLoadArchive=*/false)))
         dylibFile->forceWeakImport = true;
       break;
     case OPT_filelist:
       addFileList(arg->getValue());
       break;
     case OPT_force_load:
-      addFile(rerootPath(arg->getValue()), true);
+      addFile(rerootPath(arg->getValue()), /*forceLoadArchive=*/true);
       break;
     case OPT_l:
+    case OPT_needed_l:
     case OPT_reexport_l:
     case OPT_weak_l:
-      addLibrary(arg->getValue(), opt.getID() == OPT_weak_l,
-                 opt.getID() == OPT_reexport_l, /*isExplicit=*/true);
+      addLibrary(arg->getValue(), opt.getID() == OPT_needed_l,
+                 opt.getID() == OPT_weak_l, opt.getID() == OPT_reexport_l,
+                 /*isExplicit=*/true);
       break;
     case OPT_framework:
+    case OPT_needed_framework:
     case OPT_reexport_framework:
     case OPT_weak_framework:
-      addFramework(arg->getValue(), opt.getID() == OPT_weak_framework,
+      addFramework(arg->getValue(), opt.getID() == OPT_needed_framework,
+                   opt.getID() == OPT_weak_framework,
                    opt.getID() == OPT_reexport_framework, /*isExplicit=*/true);
       break;
     default:
@@ -951,6 +970,9 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   target = createTargetInfo(args);
   depTracker =
       make<DependencyTracker>(args.getLastArgValue(OPT_dependency_info));
+
+  // Must be set before any InputSections and Symbols are created.
+  config->deadStrip = args.hasArg(OPT_dead_strip);
 
   config->systemLibraryRoots = getSystemLibraryRoots(args);
   if (const char *path = getReproduceOption(args)) {
@@ -1001,7 +1023,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   if (const Arg *arg = args.getLastArg(OPT_bundle_loader)) {
     if (config->outputType != MH_BUNDLE)
       error("-bundle_loader can only be used with MachO bundle output");
-    addFile(arg->getValue(), false, true);
+    addFile(arg->getValue(), /*forceLoadArchive=*/false, /*isExplicit=*/false,
+            /*isBundleLoader=*/true);
   }
   config->ltoObjPath = args.getLastArgValue(OPT_object_path_lto);
   config->ltoNewPassManager =
@@ -1268,6 +1291,9 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
             inputSections.push_back(subsectionEntry.isec);
       }
     }
+
+    if (config->deadStrip)
+      markLive();
 
     // Write to an output file.
     if (target->wordSize == 8)

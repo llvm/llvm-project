@@ -64,11 +64,9 @@ static std::vector<Defined *> getSymbols() {
   for (InputFile *file : inputFiles)
     if (isa<ObjFile>(file))
       for (Symbol *sym : file->symbols) {
-        if (sym == nullptr)
-          continue;
-        if (auto *d = dyn_cast<Defined>(sym))
-          if (d->isec && d->getFile() == file) {
-            assert(!d->isec->shouldOmitFromOutput() &&
+        if (auto *d = dyn_cast_or_null<Defined>(sym))
+          if (d->isLive() && d->isec && d->getFile() == file) {
+            assert(!d->isec->isCoalescedWeak() &&
                    "file->symbols should store resolved symbols");
             v.push_back(d);
           }

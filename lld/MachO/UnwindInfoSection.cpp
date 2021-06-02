@@ -89,18 +89,10 @@ using namespace lld::macho;
 // compact_unwind_encoding.h for an overview of the format we are encoding
 // here.
 
-// TODO(gkm): prune __eh_frame entries superseded by __unwind_info
+// TODO(gkm): prune __eh_frame entries superseded by __unwind_info, PR50410
 // TODO(gkm): how do we align the 2nd-level pages?
 
 using EncodingMap = llvm::DenseMap<compact_unwind_encoding_t, size_t>;
-
-template <class Ptr> struct CompactUnwindEntry {
-  Ptr functionAddress;
-  uint32_t functionLength;
-  compact_unwind_encoding_t encoding;
-  Ptr personality;
-  Ptr lsda;
-};
 
 struct SecondLevelPage {
   uint32_t kind;
@@ -146,6 +138,11 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(InputSection *isec) {
   assert(!isec->shouldOmitFromOutput() &&
          "__compact_unwind section should not be omitted");
 
+  // FIXME: This could skip relocations for CompactUnwindEntries that
+  // point to dead-stripped functions. That might save some amount of
+  // work. But since there are usually just few personality functions
+  // that are referenced from many places, at least some of them likely
+  // live, it wouldn't reduce number of got entries.
   for (Reloc &r : isec->relocs) {
     assert(target->hasAttr(r.type, RelocAttrBits::UNSIGNED));
     if (r.offset % sizeof(CompactUnwindEntry<Ptr>) !=
@@ -177,17 +174,20 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(InputSection *isec) {
     }
 
     if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
-      assert(!referentIsec->shouldOmitFromOutput());
+      assert(!referentIsec->isCoalescedWeak());
 
       // Personality functions can be referenced via section relocations
       // if they live in the same object file. Create placeholder synthetic
       // symbols for them in the GOT.
       Symbol *&s = personalityTable[{referentIsec, r.addend}];
       if (s == nullptr) {
+        // This runs after dead stripping, so the noDeadStrip argument does not
+        // matter.
         s = make<Defined>("<internal>", /*file=*/nullptr, referentIsec,
                           r.addend, /*size=*/0, /*isWeakDef=*/false,
                           /*isExternal=*/false, /*isPrivateExtern=*/false,
-                          /*isThumb=*/false, /*isReferencedDynamically=*/false);
+                          /*isThumb=*/false, /*isReferencedDynamically=*/false,
+                          /*noDeadStrip=*/false);
         in.got->addEntry(s);
       }
       r.referent = s;

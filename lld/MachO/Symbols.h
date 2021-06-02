@@ -51,6 +51,8 @@ public:
     return {nameData, nameSize};
   }
 
+  bool isLive() const;
+
   virtual uint64_t getVA() const { return 0; }
 
   virtual uint64_t getFileOffset() const {
@@ -96,7 +98,8 @@ public:
 protected:
   Symbol(Kind k, StringRefZ name, InputFile *file)
       : symbolKind(k), nameData(name.data), nameSize(name.size), file(file),
-        isUsedInRegularObj(!file || isa<ObjFile>(file)) {}
+        isUsedInRegularObj(!file || isa<ObjFile>(file)),
+        used(!config->deadStrip) {}
 
   Kind symbolKind;
   const char *nameData;
@@ -105,19 +108,22 @@ protected:
 
 public:
   // True if this symbol was referenced by a regular (non-bitcode) object.
-  bool isUsedInRegularObj;
+  bool isUsedInRegularObj : 1;
+
+  // True if an undefined or dylib symbol is used from a live section.
+  bool used : 1;
 };
 
 class Defined : public Symbol {
 public:
   Defined(StringRefZ name, InputFile *file, InputSection *isec, uint64_t value,
           uint64_t size, bool isWeakDef, bool isExternal, bool isPrivateExtern,
-          bool isThumb, bool isReferencedDynamically)
+          bool isThumb, bool isReferencedDynamically, bool noDeadStrip)
       : Symbol(DefinedKind, name, file), isec(isec), value(value), size(size),
         overridesWeakDef(false), privateExtern(isPrivateExtern),
         includeInSymtab(true), thumb(isThumb),
-        referencedDynamically(isReferencedDynamically), weakDef(isWeakDef),
-        external(isExternal) {
+        referencedDynamically(isReferencedDynamically),
+        noDeadStrip(noDeadStrip), weakDef(isWeakDef), external(isExternal) {
     if (isec)
       isec->numRefs++;
   }
@@ -156,7 +162,14 @@ public:
   // symbol table by tools like strip. In theory, this could be set on arbitrary
   // symbols in input object files. In practice, it's used solely for the
   // synthetic __mh_execute_header symbol.
+  // This is information for the static linker, and it's also written to the
+  // output file's symbol table for tools running later (such as `strip`).
   bool referencedDynamically : 1;
+  // Set on symbols that should not be removed by dead code stripping.
+  // Set for example on `__attribute__((used))` globals, or on some Objective-C
+  // metadata. This is information only for the static linker and not written
+  // to the output.
+  bool noDeadStrip : 1;
 
 private:
   const bool weakDef : 1;

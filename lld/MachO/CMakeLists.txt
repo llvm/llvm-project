@@ -19,6 +19,7 @@ add_lld_library(lldMachO2
   InputSection.cpp
   LTO.cpp
   MapFile.cpp
+  MarkLive.cpp
   ObjC.cpp
   OutputSection.cpp
   OutputSegment.cpp

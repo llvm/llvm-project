@@ -22,6 +22,23 @@ namespace mlir {
 class Block;
 
 //===----------------------------------------------------------------------===//
+// BlockOperand
+//===----------------------------------------------------------------------===//
+
+/// A block operand represents an operand that holds a reference to a Block,
+/// e.g. for terminator operations.
+class BlockOperand : public IROperand<BlockOperand, Block *> {
+public:
+  using IROperand<BlockOperand, Block *>::IROperand;
+
+  /// Provide the use list that is attached to the given block.
+  static IRObjectWithUseList<BlockOperand> *getUseList(Block *value);
+
+  /// Return which operand this is in the BlockOperand list of the Operation.
+  unsigned getOperandNumber();
+};
+
+//===----------------------------------------------------------------------===//
 // Predecessors
 //===----------------------------------------------------------------------===//
 
