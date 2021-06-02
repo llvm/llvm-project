@@ -19,5 +19,5 @@
 using namespace llvm;
 
 RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
-  computeTables();
+  getLegacyLegalizerInfo().computeTables();
 }

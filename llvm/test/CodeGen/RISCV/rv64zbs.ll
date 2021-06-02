@@ -800,6 +800,56 @@ define i64 @sbclri_i64_63(i64 %a) nounwind {
   ret i64 %and
 }
 
+define i64 @sbclri_i64_large0(i64 %a) nounwind {
+; RV64I-LABEL: sbclri_i64_large0:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 1044480
+; RV64I-NEXT:    addiw a1, a1, -256
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: sbclri_i64_large0:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    lui a1, 1044480
+; RV64IB-NEXT:    addiw a1, a1, -256
+; RV64IB-NEXT:    and a0, a0, a1
+; RV64IB-NEXT:    ret
+;
+; RV64IBS-LABEL: sbclri_i64_large0:
+; RV64IBS:       # %bb.0:
+; RV64IBS-NEXT:    lui a1, 1044480
+; RV64IBS-NEXT:    addiw a1, a1, -256
+; RV64IBS-NEXT:    and a0, a0, a1
+; RV64IBS-NEXT:    ret
+  %and = and i64 %a, -16777472
+  ret i64 %and
+}
+
+define i64 @sbclri_i64_large1(i64 %a) nounwind {
+; RV64I-LABEL: sbclri_i64_large1:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 1044464
+; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64IB-LABEL: sbclri_i64_large1:
+; RV64IB:       # %bb.0:
+; RV64IB-NEXT:    lui a1, 1044464
+; RV64IB-NEXT:    addiw a1, a1, -1
+; RV64IB-NEXT:    and a0, a0, a1
+; RV64IB-NEXT:    ret
+;
+; RV64IBS-LABEL: sbclri_i64_large1:
+; RV64IBS:       # %bb.0:
+; RV64IBS-NEXT:    lui a1, 1044464
+; RV64IBS-NEXT:    addiw a1, a1, -1
+; RV64IBS-NEXT:    and a0, a0, a1
+; RV64IBS-NEXT:    ret
+  %and = and i64 %a, -16842753
+  ret i64 %and
+}
+
 define signext i32 @sbseti_i32_10(i32 signext %a) nounwind {
 ; RV64I-LABEL: sbseti_i32_10:
 ; RV64I:       # %bb.0:

@@ -38,7 +38,7 @@ void TestReducer::runOnFunction() {
     op.walk([&](Operation *op) {
       StringRef opName = op->getName().getStringRef();
 
-      if (opName == "test.crashOp") {
+      if (opName.contains("op_crash")) {
         llvm::errs() << "MLIR Reducer Test generated failure: Found "
                         "\"crashOp\" operation\n";
         exit(1);

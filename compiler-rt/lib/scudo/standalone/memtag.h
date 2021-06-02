@@ -67,14 +67,26 @@ inline bool systemSupportsMemoryTagging() {
 }
 
 inline bool systemDetectsMemoryTagFaultsTestOnly() {
+#ifndef PR_SET_TAGGED_ADDR_CTRL
+#define PR_SET_TAGGED_ADDR_CTRL 54
+#endif
 #ifndef PR_GET_TAGGED_ADDR_CTRL
 #define PR_GET_TAGGED_ADDR_CTRL 56
+#endif
+#ifndef PR_TAGGED_ADDR_ENABLE
+#define PR_TAGGED_ADDR_ENABLE (1UL << 0)
 #endif
 #ifndef PR_MTE_TCF_SHIFT
 #define PR_MTE_TCF_SHIFT 1
 #endif
+#ifndef PR_MTE_TAG_SHIFT
+#define PR_MTE_TAG_SHIFT 3
+#endif
 #ifndef PR_MTE_TCF_NONE
 #define PR_MTE_TCF_NONE (0UL << PR_MTE_TCF_SHIFT)
+#endif
+#ifndef PR_MTE_TCF_SYNC
+#define PR_MTE_TCF_SYNC (1UL << PR_MTE_TCF_SHIFT)
 #endif
 #ifndef PR_MTE_TCF_MASK
 #define PR_MTE_TCF_MASK (3UL << PR_MTE_TCF_SHIFT)
@@ -84,11 +96,23 @@ inline bool systemDetectsMemoryTagFaultsTestOnly() {
           PR_MTE_TCF_MASK) != PR_MTE_TCF_NONE;
 }
 
+inline void enableSystemMemoryTaggingTestOnly() {
+  prctl(PR_SET_TAGGED_ADDR_CTRL,
+        PR_TAGGED_ADDR_ENABLE | PR_MTE_TCF_SYNC | (0xfffe << PR_MTE_TAG_SHIFT),
+        0, 0, 0);
+}
+
 #else // !SCUDO_LINUX
 
 inline bool systemSupportsMemoryTagging() { return false; }
 
-inline bool systemDetectsMemoryTagFaultsTestOnly() { return false; }
+inline bool systemDetectsMemoryTagFaultsTestOnly() {
+  UNREACHABLE("memory tagging not supported");
+}
+
+inline void enableSystemMemoryTaggingTestOnly() {
+  UNREACHABLE("memory tagging not supported");
+}
 
 #endif // SCUDO_LINUX
 
@@ -247,6 +271,10 @@ inline bool systemSupportsMemoryTagging() {
 }
 
 inline bool systemDetectsMemoryTagFaultsTestOnly() {
+  UNREACHABLE("memory tagging not supported");
+}
+
+inline void enableSystemMemoryTaggingTestOnly() {
   UNREACHABLE("memory tagging not supported");
 }
 

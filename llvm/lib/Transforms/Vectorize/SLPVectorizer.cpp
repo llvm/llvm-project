@@ -2831,6 +2831,12 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       // Keeps the reordered operands to avoid code duplication.
       SmallVector<ValueList, 2> OperandsVec;
       for (unsigned I = 0, E = PH->getNumIncomingValues(); I < E; ++I) {
+        if (!DT->isReachableFromEntry(PH->getIncomingBlock(I))) {
+          ValueList Operands(VL.size(), PoisonValue::get(PH->getType()));
+          TE->setOperand(I, Operands);
+          OperandsVec.push_back(Operands);
+          continue;
+        }
         ValueList Operands;
         // Prepare the operand vector.
         for (Value *V : VL)

@@ -59,6 +59,7 @@ if (current_toolchain == default_toolchain) {
 
   copy("copy_headers") {
     sources = [
+      "__algorithm/unwrap_iter.h",
       "__availability",
       "__bit_reference",
       "__bits",
@@ -76,6 +77,7 @@ if (current_toolchain == default_toolchain) {
       "__hash_table",
       "__iterator/advance.h",
       "__iterator/concepts.h",
+      "__iterator/default_sentinel.h",
       "__iterator/incrementable_traits.h",
       "__iterator/indirect_concepts.h",
       "__iterator/iter_move.h",
@@ -110,6 +112,7 @@ if (current_toolchain == default_toolchain) {
       "__ranges/enable_borrowed_range.h",
       "__ranges/size.h",
       "__ranges/view.h",
+      "__ranges/view_interface.h",
       "__split_buffer",
       "__std_stream",
       "__string",

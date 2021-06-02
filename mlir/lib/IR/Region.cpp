@@ -122,7 +122,7 @@ void Region::cloneInto(Region *dest, Region::iterator destPos,
 /// ancestor of 'block' that lies in this region. Returns nullptr if the latter
 /// fails.
 Block *Region::findAncestorBlockInRegion(Block &block) {
-  auto currBlock = &block;
+  Block *currBlock = &block;
   while (currBlock->getParent() != this) {
     Operation *parentOp = currBlock->getParentOp();
     if (!parentOp || !parentOp->getBlock())
@@ -130,6 +130,22 @@ Block *Region::findAncestorBlockInRegion(Block &block) {
     currBlock = parentOp->getBlock();
   }
   return currBlock;
+}
+
+/// Returns 'op' if 'op' lies in this region, or otherwise finds the
+/// ancestor of 'op' that lies in this region. Returns nullptr if the
+/// latter fails.
+Operation *Region::findAncestorOpInRegion(Operation &op) {
+  Operation *curOp = &op;
+  while (Region *opRegion = curOp->getParentRegion()) {
+    if (opRegion == this)
+      return curOp;
+
+    curOp = opRegion->getParentOp();
+    if (!curOp)
+      return nullptr;
+  }
+  return nullptr;
 }
 
 void Region::dropAllReferences() {

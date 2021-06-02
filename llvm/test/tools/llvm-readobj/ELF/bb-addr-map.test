@@ -1,13 +1,14 @@
 ## This test checks how we handle the --bb-addr-map option.
 
-## Check 64-bit:
-# RUN: yaml2obj %s -DBITS=64 -DADDR=0xFFFFFFFF1 -o %t1.x64.o
-# RUN: llvm-readobj %t1.x64.o --bb-addr-map | FileCheck %s -DADDR=0xFFFFFFFF1 --check-prefix=LLVM
+# Check 64-bit:
+# RUN: yaml2obj %s -DBITS=64 -DADDR=0x999999999 -o %t1.x64.o
+# RUN: llvm-readobj %t1.x64.o --bb-addr-map 2>&1 | FileCheck %s -DADDR=0x999999999 -DFILE=%t1.x64.o --check-prefix=LLVM
+
 # RUN: llvm-readelf %t1.x64.o --bb-addr-map | FileCheck %s --check-prefix=GNU
 
 ## Check 32-bit:
 # RUN: yaml2obj %s -DBITS=32 -o %t1.x32.o
-# RUN: llvm-readobj %t1.x32.o --bb-addr-map | FileCheck -DADDR=0x11111 %s --check-prefix=LLVM
+# RUN: llvm-readobj %t1.x32.o --bb-addr-map 2>&1 | FileCheck -DADDR=0x11111 %s -DFILE=%t1.x32.o --check-prefix=LLVM
 # RUN: llvm-readelf %t1.x32.o --bb-addr-map | FileCheck %s --check-prefix=GNU
 
 ## Check that a malformed section can be handled.
@@ -17,6 +18,8 @@
 # LLVM:      BBAddrMap [
 # LLVM-NEXT:   Function {
 # LLVM-NEXT:     At: [[ADDR]]
+# LLVM-NEXT: warning: '[[FILE]]': could not identify function symbol for address ([[ADDR]]) in SHT_LLVM_BB_ADDR_MAP section with index 3
+# LLVM-NEXT:     Name: <?>
 # LLVM-NEXT:     BB entries [
 # LLVM-NEXT:       {
 # LLVM-NEXT:         Offset: 0x0
@@ -38,6 +41,7 @@
 # LLVM-NEXT:   }
 # LLVM-NEXT:   Function {
 # LLVM-NEXT:     At: 0x22222
+# LLVM-NEXT:     Name: foo
 # LLVM-NEXT:     BB entries [
 # LLVM-NEXT:       {
 # LLVM-NEXT:         Offset: 0x6
@@ -53,6 +57,7 @@
 # LLVM-NEXT: BBAddrMap [
 # LLVM-NEXT:   Function {
 # LLVM-NEXT:     At: 0x33333
+# LLVM-NEXT:     Name: bar
 # LLVM-NEXT:     BB entries [
 # LLVM-NEXT:       {
 # LLVM-NEXT:         Offset: 0x9
@@ -69,14 +74,15 @@
 # GNU: GNUStyle::printBBAddrMaps not implemented
 
 # TRUNCATED:      BBAddrMap [
-# TRUNCATED-NEXT:   warning: '[[FILE]]': unable to dump SHT_LLVM_BB_ADDR_MAP section with index 1: unable to decode LEB128 at offset [[OFFSET]]: malformed uleb128, extends past end
+# TRUNCATED-NEXT:   warning: '[[FILE]]': unable to dump SHT_LLVM_BB_ADDR_MAP section with index 3: unable to decode LEB128 at offset [[OFFSET]]: malformed uleb128, extends past end
 # TRUNCATED-NEXT: ]
 ## Check that the other valid section is properly dumped.
 # TRUNCATED-NEXT: BBAddrMap [
 # TRUNCATED-NEXT:   Function {
-# TRUNCATED-NEXT:          At: 0x33333
-# TRUNCATED-NEXT:          BB entries [
-# TRUNCATED-NEXT:            {
+# TRUNCATED-NEXT:     At: 0x33333
+# TRUNCATED-NEXT:     Name: bar
+# TRUNCATED-NEXT:     BB entries [
+# TRUNCATED-NEXT:       {
 # TRUNCATED-NEXT:         Offset: 0x9
 # TRUNCATED-NEXT:         Size: 0xA
 # TRUNCATED-NEXT:         HasReturn: Yes
@@ -94,9 +100,16 @@ FileHeader:
   Data:  ELFDATA2LSB
   Type:  ET_EXEC
 Sections:
+  - Name:   .text
+    Type:   SHT_PROGBITS
+    Flags:  [SHF_ALLOC]
+  - Name:   .text.bar
+    Type:   SHT_PROGBITS
+    Flags:  [SHF_ALLOC]
   - Name:   bb_addr_map_1
     Type:   SHT_LLVM_BB_ADDR_MAP
     ShSize: [[SIZE=<none>]]
+    Link:   .text
     Entries:
       - Address: [[ADDR=0x11111]]
         BBEntries:
@@ -116,9 +129,19 @@ Sections:
     Size:   16
   - Name:   bb_addr_map_2
     Type:   SHT_LLVM_BB_ADDR_MAP
+    Link:   .text.bar
     Entries:
       - Address: 0x33333
         BBEntries:
           - AddressOffset: 0x9
             Size:          0xa
             Metadata:      0xb
+Symbols:
+  - Name:    foo
+    Section: .text
+    Type:    STT_FUNC
+    Value:   0x22222
+  - Name:    bar
+    Section: .text.bar
+    Type:    STT_FUNC
+    Value:   0x33333

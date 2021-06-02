@@ -48,12 +48,18 @@ class RewritePatternSet;
 /// is reused and only a second vector.type_cast is added.
 
 struct VectorTransferToSCFOptions {
-  bool unroll = false;
   unsigned targetRank = 1;
   bool lowerPermutationMaps = false;
+  bool lowerTensors = false;
+  bool unroll = false;
 
-  VectorTransferToSCFOptions &setUnroll(bool u) {
-    unroll = u;
+  VectorTransferToSCFOptions &setLowerPermutationMaps(bool l) {
+    lowerPermutationMaps = l;
+    return *this;
+  }
+
+  VectorTransferToSCFOptions &setLowerTensors(bool l) {
+    lowerTensors = l;
     return *this;
   }
 
@@ -62,8 +68,8 @@ struct VectorTransferToSCFOptions {
     return *this;
   }
 
-  VectorTransferToSCFOptions &setLowerPermutationMaps(bool l) {
-    lowerPermutationMaps = l;
+  VectorTransferToSCFOptions &setUnroll(bool u) {
+    unroll = u;
     return *this;
   }
 };

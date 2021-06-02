@@ -730,11 +730,11 @@ void ObjFile::parseDebugInfo() {
 }
 
 // The path can point to either a dylib or a .tbd file.
-static Optional<DylibFile *> loadDylib(StringRef path, DylibFile *umbrella) {
+static DylibFile *loadDylib(StringRef path, DylibFile *umbrella) {
   Optional<MemoryBufferRef> mbref = readFile(path);
   if (!mbref) {
     error("could not read dylib file at " + path);
-    return {};
+    return nullptr;
   }
   return loadDylib(*mbref, umbrella);
 }
@@ -748,9 +748,8 @@ static Optional<DylibFile *> loadDylib(StringRef path, DylibFile *umbrella) {
 //
 // Re-exports can either refer to on-disk files, or to documents within .tbd
 // files.
-static Optional<DylibFile *>
-findDylib(StringRef path, DylibFile *umbrella,
-          const InterfaceFile *currentTopLevelTapi) {
+DylibFile *findDylib(StringRef path, DylibFile *umbrella,
+                     const InterfaceFile *currentTopLevelTapi) {
   if (path::is_absolute(path, path::Style::posix))
     for (StringRef root : config->systemLibraryRoots)
       if (Optional<std::string> dylibPath =
@@ -771,7 +770,7 @@ findDylib(StringRef path, DylibFile *umbrella,
   if (Optional<std::string> dylibPath = resolveDylibPath(path))
     return loadDylib(*dylibPath, umbrella);
 
-  return {};
+  return nullptr;
 }
 
 // If a re-exported dylib is public (lives in /usr/lib or
@@ -796,12 +795,11 @@ static bool isImplicitlyLinked(StringRef path) {
 
 void loadReexport(StringRef path, DylibFile *umbrella,
                   const InterfaceFile *currentTopLevelTapi) {
-  Optional<DylibFile *> reexport =
-      findDylib(path, umbrella, currentTopLevelTapi);
+  DylibFile *reexport = findDylib(path, umbrella, currentTopLevelTapi);
   if (!reexport)
     error("unable to locate re-export with install name " + path);
   else if (isImplicitlyLinked(path))
-    inputFiles.insert(*reexport);
+    inputFiles.insert(reexport);
 }
 
 DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
@@ -828,11 +826,13 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
     return;
   }
 
+  deadStrippable = hdr->flags & MH_DEAD_STRIPPABLE_DYLIB;
+
   if (!checkCompatibility(this))
     return;
 
   // Initialize symbols.
-  DylibFile *exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
+  exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
   if (const load_command *cmd = findCommand(hdr, LC_DYLD_INFO_ONLY)) {
     auto *c = reinterpret_cast<const dyld_info_command *>(cmd);
     parseTrie(buf + c->export_off, c->export_size,
@@ -846,9 +846,12 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
     error("LC_DYLD_INFO_ONLY not found in " + toString(this));
     return;
   }
+}
 
-  const uint8_t *p =
-      reinterpret_cast<const uint8_t *>(hdr) + target->headerSize;
+void DylibFile::parseLoadCommands(MemoryBufferRef mb, DylibFile *umbrella) {
+  auto *hdr = reinterpret_cast<const mach_header *>(mb.getBufferStart());
+  const uint8_t *p = reinterpret_cast<const uint8_t *>(mb.getBufferStart()) +
+                     target->headerSize;
   for (uint32_t i = 0, n = hdr->ncmds; i < n; ++i) {
     auto *cmd = reinterpret_cast<const load_command *>(p);
     p += cmd->cmdsize;
@@ -869,13 +872,20 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
       const auto *c = reinterpret_cast<const dylib_command *>(cmd);
       StringRef dylibPath =
           reinterpret_cast<const char *>(c) + read32le(&c->dylib.name);
-      Optional<DylibFile *> dylib = findDylib(dylibPath, umbrella, nullptr);
+      DylibFile *dylib = findDylib(dylibPath, umbrella, nullptr);
       if (!dylib)
         error(Twine("unable to locate library '") + dylibPath +
               "' loaded from '" + toString(this) + "' for -flat_namespace");
     }
   }
 }
+
+// Some versions of XCode ship with .tbd files that don't have the right
+// platform settings.
+static constexpr std::array<StringRef, 3> skipPlatformChecks{
+    "/usr/lib/system/libsystem_kernel.dylib",
+    "/usr/lib/system/libsystem_platform.dylib",
+    "/usr/lib/system/libsystem_pthread.dylib"};
 
 DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
                      bool isBundleLoader)
@@ -890,13 +900,6 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   compatibilityVersion = interface.getCompatibilityVersion().rawValue();
   currentVersion = interface.getCurrentVersion().rawValue();
 
-  // Some versions of XCode ship with .tbd files that don't have the right
-  // platform settings.
-  static constexpr std::array<StringRef, 3> skipPlatformChecks{
-      "/usr/lib/system/libsystem_kernel.dylib",
-      "/usr/lib/system/libsystem_platform.dylib",
-      "/usr/lib/system/libsystem_pthread.dylib"};
-
   if (!is_contained(skipPlatformChecks, dylibName) &&
       !is_contained(interface.targets(), config->platformInfo.target)) {
     error(toString(this) + " is incompatible with " +
@@ -904,7 +907,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
     return;
   }
 
-  DylibFile *exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
+  exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
   auto addSymbol = [&](const Twine &name) -> void {
     symbols.push_back(symtab->addDylib(saver.save(name), exportingFile,
                                        /*isWeakDef=*/false,
@@ -934,10 +937,11 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
       break;
     }
   }
+}
 
+void DylibFile::parseReexports(const llvm::MachO::InterfaceFile &interface) {
   const InterfaceFile *topLevel =
       interface.getParent() == nullptr ? &interface : interface.getParent();
-
   for (InterfaceFileRef intfRef : interface.reexportedLibraries()) {
     InterfaceFile::const_target_range targets = intfRef.targets();
     if (is_contained(skipPlatformChecks, intfRef.getInstallName()) ||

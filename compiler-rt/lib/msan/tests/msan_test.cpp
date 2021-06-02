@@ -1875,18 +1875,21 @@ TEST_STRTO_FLOAT_LOC(__wcstold_l, wchar_t, L)
 TEST(MemorySanitizer, modf) {
   double x, y;
   x = modf(2.1, &y);
+  EXPECT_NOT_POISONED(x);
   EXPECT_NOT_POISONED(y);
 }
 
 TEST(MemorySanitizer, modff) {
   float x, y;
   x = modff(2.1, &y);
+  EXPECT_NOT_POISONED(x);
   EXPECT_NOT_POISONED(y);
 }
 
 TEST(MemorySanitizer, modfl) {
   long double x, y;
   x = modfl(2.1, &y);
+  EXPECT_NOT_POISONED(x);
   EXPECT_NOT_POISONED(y);
 }
 

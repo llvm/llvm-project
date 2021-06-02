@@ -31,7 +31,7 @@ __global__ void k1() {
 
 static __device__ int x;
 static __constant__ int y;
-static int z;
+static int z; // dev-note {{host variable declared here}}
 
 __global__ void kernel(int *a) {
   a[0] = x;

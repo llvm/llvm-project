@@ -197,36 +197,50 @@ Optional<std::string> macho::resolveDylibPath(StringRef path) {
 // especially if it's a commonly re-exported core library.
 static DenseMap<CachedHashStringRef, DylibFile *> loadedDylibs;
 
-Optional<DylibFile *> macho::loadDylib(MemoryBufferRef mbref,
-                                       DylibFile *umbrella,
-                                       bool isBundleLoader) {
+DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
+                            bool isBundleLoader) {
   CachedHashStringRef path(mbref.getBufferIdentifier());
-  DylibFile *file = loadedDylibs[path];
+  DylibFile *&file = loadedDylibs[path];
   if (file)
     return file;
 
+  DylibFile *newFile;
   file_magic magic = identify_magic(mbref.getBuffer());
   if (magic == file_magic::tapi_file) {
     Expected<std::unique_ptr<InterfaceFile>> result = TextAPIReader::get(mbref);
     if (!result) {
       error("could not load TAPI file at " + mbref.getBufferIdentifier() +
             ": " + toString(result.takeError()));
-      return {};
+      return nullptr;
     }
     file = make<DylibFile>(**result, umbrella, isBundleLoader);
+    if (config->printEachFile)
+      message(toString(file));
+
+    // parseReexports() can recursively call loadDylib(). That's fine since
+    // we wrote DylibFile we just loaded to the loadDylib cache via the `file`
+    // reference. But the recursive load can grow loadDylibs, so the `file`
+    // reference might become invalid after parseReexports() -- so copy the
+    // pointer it refers to before going on.
+    newFile = file;
+    if (newFile->exportingFile)
+      newFile->parseReexports(**result);
   } else {
     assert(magic == file_magic::macho_dynamically_linked_shared_lib ||
            magic == file_magic::macho_dynamically_linked_shared_lib_stub ||
            magic == file_magic::macho_executable ||
            magic == file_magic::macho_bundle);
     file = make<DylibFile>(mbref, umbrella, isBundleLoader);
+    if (config->printEachFile)
+      message(toString(file));
+
+    // parseLoadCommands() can also recursively call loadDylib(). See comment
+    // in previous block for why this means we must copy `file` here.
+    newFile = file;
+    if (newFile->exportingFile)
+      newFile->parseLoadCommands(mbref, umbrella);
   }
-  // Note that DylibFile's ctor may recursively invoke loadDylib(), which can
-  // cause loadedDylibs to get resized and its iterators invalidated. As such,
-  // we redo the key lookup here instead of caching an iterator from our earlier
-  // lookup at the start of the function.
-  loadedDylibs[path] = file;
-  return file;
+  return newFile;
 }
 
 Optional<StringRef>
@@ -263,6 +277,9 @@ Optional<InputFile *> macho::loadArchiveMember(MemoryBufferRef mb,
                                                uint32_t modTime,
                                                StringRef archiveName,
                                                bool objCOnly) {
+  if (config->zeroModTime)
+    modTime = 0;
+
   switch (identify_magic(mb.getBuffer())) {
   case file_magic::macho_object:
     if (!objCOnly || hasObjCSection(mb))
@@ -280,6 +297,9 @@ Optional<InputFile *> macho::loadArchiveMember(MemoryBufferRef mb,
 }
 
 uint32_t macho::getModTime(StringRef path) {
+  if (config->zeroModTime)
+    return 0;
+
   fs::file_status stat;
   if (!fs::status(path, stat))
     if (fs::exists(stat))

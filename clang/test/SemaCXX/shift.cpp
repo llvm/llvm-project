@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -Wall -Wshift-sign-overflow -ffreestanding -fsyntax-only -verify=expected,cxx17 -std=c++17 %s
-// RUN: %clang_cc1 -Wall -Wshift-sign-overflow -ffreestanding -fsyntax-only -verify=expected,cxx2a -std=c++2a %s
+// RUN: %clang_cc1 -Wall -Wno-unused-but-set-variable -Wshift-sign-overflow -ffreestanding -fsyntax-only -verify=expected,cxx17 -std=c++17 %s
+// RUN: %clang_cc1 -Wall -Wno-unused-but-set-variable -Wshift-sign-overflow -ffreestanding -fsyntax-only -verify=expected,cxx2a -std=c++2a %s
 
 #include <limits.h>
 
