@@ -131,6 +131,9 @@ func main () -> Void
     var my_b = B()
 
     my_b.method()
+
+    let my_c = [1, 2, 3].map { x in x }
+    print(my_c)
 }
 
 main()

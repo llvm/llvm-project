@@ -444,7 +444,7 @@ swift::Stmt *SwiftASTManipulator::ConvertExpressionToTmpReturnVarAccess(
                                           result_loc_info.tmp_var_decl);
 
   const auto static_spelling_kind = swift::StaticSpellingKind::KeywordStatic;
-  result_loc_info.binding_decl = swift::PatternBindingDecl::createImplicit(
+  result_loc_info.binding_decl = swift::PatternBindingDecl::createForDebugger(
       ast_context, static_spelling_kind, var_pattern, expr, new_decl_context);
   result_loc_info.binding_decl->setStatic(false);
 
@@ -457,8 +457,12 @@ swift::Stmt *SwiftASTManipulator::ConvertExpressionToTmpReturnVarAccess(
     body.push_back(result_loc_info.return_stmt);
   }
 
+  swift::SourceLoc brace_end = result_loc_info.orig_expr->getEndLoc();
+  if (brace_end.isInvalid()) {
+    brace_end = source_loc;
+  }
   auto *body_stmt = swift::BraceStmt::create(
-      ast_context, source_loc, llvm::ArrayRef<swift::ASTNode>(body), source_loc,
+      ast_context, source_loc, llvm::ArrayRef<swift::ASTNode>(body), brace_end,
       true);
 
   // Default construct a label info that contains nothing for the 'do'
