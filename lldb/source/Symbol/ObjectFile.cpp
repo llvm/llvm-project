@@ -617,11 +617,13 @@ ObjectFile::GetSymbolTypeFromName(llvm::StringRef name,
 }
 
 ConstString ObjectFile::GetNextSyntheticSymbolName() {
-  StreamString ss;
+  llvm::SmallString<256> name;
+  llvm::raw_svector_ostream os(name);
   ConstString file_name = GetModule()->GetFileSpec().GetFilename();
-  ss.Printf("___lldb_unnamed_symbol%u$$%s", ++m_synthetic_symbol_idx,
-            file_name.GetCString());
-  return ConstString(ss.GetString());
+  ++m_synthetic_symbol_idx;
+  os << "___lldb_unnamed_symbol" << m_synthetic_symbol_idx << "$$"
+     << file_name.GetStringRef();
+  return ConstString(os.str());
 }
 
 std::vector<ObjectFile::LoadableData>
