@@ -420,3 +420,30 @@ define <vscale x 16 x double> @vselect_combine_regression(<vscale x 16 x i64> %v
   %sel = select <vscale x 16 x i1> %cond, <vscale x 16 x double> %vb, <vscale x 16 x double> zeroinitializer
   ret <vscale x 16 x double> %sel
 }
+
+define void @vselect_legalize_regression(<vscale x 16 x double> %a, <vscale x 16 x i1> %ma, <vscale x 16 x i1> %mb, <vscale x 16 x double>* %out) {
+; CHECK-LABEL: vselect_legalize_regression:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a2, zero, e8,m2,ta,mu
+; CHECK-NEXT:    vle1.v v25, (a0)
+; CHECK-NEXT:    vmand.mm v25, v0, v25
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    srli a0, a0, 3
+; CHECK-NEXT:    vsetvli a2, zero, e8,mf4,ta,mu
+; CHECK-NEXT:    vslidedown.vx v0, v25, a0
+; CHECK-NEXT:    vmv1r.v v2, v25
+; CHECK-NEXT:    vsetvli a2, zero, e64,m8,ta,mu
+; CHECK-NEXT:    vmv.v.i v24, 0
+; CHECK-NEXT:    vmerge.vvm v16, v24, v16, v0
+; CHECK-NEXT:    vmv1r.v v0, v2
+; CHECK-NEXT:    vmerge.vvm v8, v24, v8, v0
+; CHECK-NEXT:    vs8r.v v8, (a1)
+; CHECK-NEXT:    slli a0, a0, 6
+; CHECK-NEXT:    add a0, a1, a0
+; CHECK-NEXT:    vs8r.v v16, (a0)
+; CHECK-NEXT:    ret
+  %cond = and <vscale x 16 x i1> %ma, %mb
+  %sel = select <vscale x 16 x i1> %cond, <vscale x 16 x double> %a, <vscale x 16 x double> zeroinitializer
+  store <vscale x 16 x double> %sel, <vscale x 16 x double>* %out
+  ret void
+}
