@@ -550,6 +550,56 @@ define i32 @sbclri_i32_31(i32 %a) nounwind {
   ret i32 %and
 }
 
+define i32 @sbclri_i32_large0(i32 %a) nounwind {
+; RV32I-LABEL: sbclri_i32_large0:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 1044480
+; RV32I-NEXT:    addi a1, a1, -256
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: sbclri_i32_large0:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    lui a1, 1044480
+; RV32IB-NEXT:    addi a1, a1, -256
+; RV32IB-NEXT:    and a0, a0, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBS-LABEL: sbclri_i32_large0:
+; RV32IBS:       # %bb.0:
+; RV32IBS-NEXT:    lui a1, 1044480
+; RV32IBS-NEXT:    addi a1, a1, -256
+; RV32IBS-NEXT:    and a0, a0, a1
+; RV32IBS-NEXT:    ret
+  %and = and i32 %a, -16777472
+  ret i32 %and
+}
+
+define i32 @sbclri_i32_large1(i32 %a) nounwind {
+; RV32I-LABEL: sbclri_i32_large1:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 1044464
+; RV32I-NEXT:    addi a1, a1, -1
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: sbclri_i32_large1:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    lui a1, 1044464
+; RV32IB-NEXT:    addi a1, a1, -1
+; RV32IB-NEXT:    and a0, a0, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBS-LABEL: sbclri_i32_large1:
+; RV32IBS:       # %bb.0:
+; RV32IBS-NEXT:    lui a1, 1044464
+; RV32IBS-NEXT:    addi a1, a1, -1
+; RV32IBS-NEXT:    and a0, a0, a1
+; RV32IBS-NEXT:    ret
+  %and = and i32 %a, -16842753
+  ret i32 %and
+}
+
 define i32 @sbseti_i32_10(i32 %a) nounwind {
 ; RV32I-LABEL: sbseti_i32_10:
 ; RV32I:       # %bb.0:
