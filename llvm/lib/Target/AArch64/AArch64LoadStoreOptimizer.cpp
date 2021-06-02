@@ -1515,6 +1515,32 @@ static Optional<MCPhysReg> tryToFindRegisterToRename(
   return None;
 }
 
+// Returns a boolean that represents whether there exists a register
+// from FirstMI to the beginning of the block that can be renamed. If
+// one exists, we update Flags with its value.
+static bool updateFlagsWithRenameReg(
+    Optional<bool> MaybeCanRename, LdStPairFlags &Flags, MachineInstr &FirstMI,
+    MachineInstr &MI, LiveRegUnits &DefinedInBB, LiveRegUnits &UsedInBetween,
+    SmallPtrSetImpl<const TargetRegisterClass *> &RequiredClasses,
+    const TargetRegisterInfo *TRI) {
+  if (DebugCounter::shouldExecute(RegRenamingCounter)) {
+    if (!MaybeCanRename)
+      MaybeCanRename = {
+          canRenameUpToDef(FirstMI, UsedInBetween, RequiredClasses, TRI)};
+
+    if (*MaybeCanRename) {
+      Optional<MCPhysReg> MaybeRenameReg = tryToFindRegisterToRename(
+          FirstMI, MI, DefinedInBB, UsedInBetween, RequiredClasses, TRI);
+      if (MaybeRenameReg) {
+        Flags.setRenameReg(*MaybeRenameReg);
+        Flags.setMergeForward(true);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 /// Scan the instructions looking for a load/store that can be combined with the
 /// current instruction into a wider equivalent or a load/store pair.
 MachineBasicBlock::iterator
@@ -1666,6 +1692,27 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
             continue;
           }
         }
+        // If the load/store pattern has been optimized and reordered
+        // into the following:
+        //    ldr	q0, [x1, #16]
+        //    str	q0, [x0, #16]
+        //    ldr	q0, [x1]
+        //    str	q0, [x0]
+        // and the destination register of the load/store instruction is
+        // the same register as or a sub/super register of the other
+        // load/store, it will not generate an LDP/STP, so we attempt to
+        // rename the register so that it can be recognised as a pair.
+        // TODO: This is currently supported for STPs, LDPs are not
+        // being generated yet.
+        if (TRI->isSuperOrSubRegisterEq(Reg, getLdStRegOp(MI).getReg())) {
+          bool flagsHaveRenameReg = updateFlagsWithRenameReg(
+              MaybeCanRename, Flags, FirstMI, MI, DefinedInBB, UsedInBetween,
+              RequiredClasses, TRI);
+          if (flagsHaveRenameReg) {
+            MBBIWithRenameReg = MBBI;
+            continue;
+          }
+        }
         // If the destination register of one load is the same register or a
         // sub/super register of the other load, bail and keep looking. A
         // load-pair instruction with both destination registers the same is
@@ -1714,22 +1761,11 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
             Flags.clearRenameReg();
             return MBBI;
           }
-
-          if (DebugCounter::shouldExecute(RegRenamingCounter)) {
-            if (!MaybeCanRename)
-              MaybeCanRename = {canRenameUpToDef(FirstMI, UsedInBetween,
-                                                 RequiredClasses, TRI)};
-
-            if (*MaybeCanRename) {
-              Optional<MCPhysReg> MaybeRenameReg = tryToFindRegisterToRename(
-                  FirstMI, MI, DefinedInBB, UsedInBetween, RequiredClasses,
-                  TRI);
-              if (MaybeRenameReg) {
-                Flags.setRenameReg(*MaybeRenameReg);
-                Flags.setMergeForward(true);
-                MBBIWithRenameReg = MBBI;
-              }
-            }
+          bool flagsHaveRenameReg = updateFlagsWithRenameReg(
+              MaybeCanRename, Flags, FirstMI, MI, DefinedInBB, UsedInBetween,
+              RequiredClasses, TRI);
+          if (flagsHaveRenameReg) {
+            MBBIWithRenameReg = MBBI;
           }
         }
         // Unable to combine these instructions due to interference in between.
