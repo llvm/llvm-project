@@ -504,6 +504,25 @@ public:
   void substituteDebugValuesForInst(const MachineInstr &Old, MachineInstr &New,
                                     unsigned MaxOperand = UINT_MAX);
 
+  /// Find the underlying  defining instruction / operand for a COPY instruction
+  /// while in SSA form. Copies do not actually define values -- they move them
+  /// between registers. Labelling a COPY-like instruction with an instruction
+  /// number is to be avoided as it makes value numbers non-unique later in
+  /// compilation. This method follows the definition chain for any sequence of
+  /// COPY-like instructions to find whatever non-COPY-like instruction defines
+  /// the copied value; or for parameters, creates a DBG_PHI on entry.
+  /// May insert instructions into the entry block!
+  /// \p MI The copy-like instruction to salvage.
+  /// \returns An instruction/operand pair identifying the defining value.
+  DebugInstrOperandPair salvageCopySSA(MachineInstr &MI);
+
+  /// Finalise any partially emitted debug instructions. These are DBG_INSTR_REF
+  /// instructions where we only knew the vreg of the value they use, not the
+  /// instruction that defines that vreg. Once isel finishes, we should have
+  /// enough information for every DBG_INSTR_REF to point at an instruction
+  /// (or DBG_PHI).
+  void finalizeDebugInstrRefs();
+
   MachineFunction(Function &F, const LLVMTargetMachine &Target,
                   const TargetSubtargetInfo &STI, unsigned FunctionNum,
                   MachineModuleInfo &MMI);

@@ -1007,6 +1007,205 @@ void MachineFunction::substituteDebugValuesForInst(const MachineInstr &Old,
   }
 }
 
+auto MachineFunction::salvageCopySSA(MachineInstr &MI)
+    -> DebugInstrOperandPair {
+  MachineRegisterInfo &MRI = getRegInfo();
+  const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
+  const TargetInstrInfo &TII = *getSubtarget().getInstrInfo();
+
+  // Chase the value read by a copy-like instruction back to the instruction
+  // that ultimately _defines_ that value. This may pass:
+  //  * Through multiple intermediate copies, including subregister moves /
+  //    copies,
+  //  * Copies from physical registers that must then be traced back to the
+  //    defining instruction,
+  //  * Or, physical registers may be live-in to (only) the entry block, which
+  //    requires a DBG_PHI to be created.
+  // We can pursue this problem in that order: trace back through copies,
+  // optionally through a physical register, to a defining instruction. We
+  // should never move from physreg to vreg. As we're still in SSA form, no need
+  // to worry about partial definitions of registers.
+
+  // Helper lambda to interpret a copy-like instruction. Takes instruction,
+  // returns the register read and any subregister identifying which part is
+  // read.
+  auto GetRegAndSubreg =
+      [&](const MachineInstr &Cpy) -> std::pair<Register, unsigned> {
+    Register NewReg, OldReg;
+    unsigned SubReg;
+    if (Cpy.isCopy()) {
+      OldReg = Cpy.getOperand(0).getReg();
+      NewReg = Cpy.getOperand(1).getReg();
+      SubReg = Cpy.getOperand(1).getSubReg();
+    } else if (Cpy.isSubregToReg()) {
+      OldReg = Cpy.getOperand(0).getReg();
+      NewReg = Cpy.getOperand(2).getReg();
+      SubReg = Cpy.getOperand(3).getImm();
+    } else {
+      auto CopyDetails = *TII.isCopyInstr(Cpy);
+      const MachineOperand &Src = *CopyDetails.Source;
+      const MachineOperand &Dest = *CopyDetails.Destination;
+      OldReg = Dest.getReg();
+      NewReg = Src.getReg();
+      SubReg = Src.getSubReg();
+    }
+
+    return {NewReg, SubReg};
+  };
+
+  // First seek either the defining instruction, or a copy from a physreg.
+  // During search, the current state is the current copy instruction, and which
+  // register we've read. Accumulate qualifying subregisters into SubregsSeen;
+  // deal with those later.
+  auto State = GetRegAndSubreg(MI);
+  auto CurInst = MI.getIterator();
+  SmallVector<unsigned, 4> SubregsSeen;
+  while (true) {
+    // If we've found a copy from a physreg, first portion of search is over.
+    if (!State.first.isVirtual())
+      break;
+
+    // Record any subregister qualifier.
+    if (State.second)
+      SubregsSeen.push_back(State.second);
+
+    assert(MRI.hasOneDef(State.first));
+    MachineInstr &Inst = *MRI.def_begin(State.first)->getParent();
+    CurInst = Inst.getIterator();
+
+    // Any non-copy instruction is the defining instruction we're seeking.
+    if (!Inst.isCopyLike() && !TII.isCopyInstr(Inst))
+      break;
+    State = GetRegAndSubreg(Inst);
+  };
+
+  // Helper lambda to apply additional subregister substitutions to a known
+  // instruction/operand pair. Adds new (fake) substitutions so that we can
+  // record the subregister. FIXME: this isn't very space efficient if multiple
+  // values are tracked back through the same copies; cache something later.
+  auto ApplySubregisters =
+      [&](DebugInstrOperandPair P) -> DebugInstrOperandPair {
+    for (unsigned Subreg : reverse(SubregsSeen)) {
+      // Fetch a new instruction number, not attached to an actual instruction.
+      unsigned NewInstrNumber = getNewDebugInstrNum();
+      // Add a substitution from the "new" number to the known one, with a
+      // qualifying subreg.
+      makeDebugValueSubstitution({NewInstrNumber, 0}, P, Subreg);
+      // Return the new number; to find the underlying value, consumers need to
+      // deal with the qualifying subreg.
+      P = {NewInstrNumber, 0};
+    }
+    return P;
+  };
+
+  // If we managed to find the defining instruction after COPYs, return an
+  // instruction / operand pair after adding subregister qualifiers.
+  if (State.first.isVirtual()) {
+    // Virtual register def -- we can just look up where this happens.
+    MachineInstr *Inst = MRI.def_begin(State.first)->getParent();
+    for (auto &MO : Inst->operands()) {
+      if (!MO.isReg() || !MO.isDef() || MO.getReg() != State.first)
+        continue;
+      return ApplySubregisters(
+          {Inst->getDebugInstrNum(), Inst->getOperandNo(&MO)});
+    }
+
+    llvm_unreachable("Vreg def with no corresponding operand?");
+  }
+
+  // Our search ended in a copy from a physreg: walk back up the function
+  // looking for whatever defines the physreg.
+  assert(CurInst->isCopyLike() || TII.isCopyInstr(*CurInst));
+  State = GetRegAndSubreg(*CurInst);
+  Register RegToSeek = State.first;
+
+  auto RMII = CurInst->getReverseIterator();
+  auto PrevInstrs = make_range(RMII, CurInst->getParent()->instr_rend());
+  for (auto &ToExamine : PrevInstrs) {
+    for (auto &MO : ToExamine.operands()) {
+      // Test for operand that defines something aliasing RegToSeek.
+      if (!MO.isReg() || !MO.isDef() ||
+          !TRI.regsOverlap(RegToSeek, MO.getReg()))
+        continue;
+
+      return ApplySubregisters(
+          {ToExamine.getDebugInstrNum(), ToExamine.getOperandNo(&MO)});
+    }
+  }
+
+  // We reached the start of the block before finding a defining instruction.
+  // It must be an argument: assert that this is the entry block, and produce
+  // a DBG_PHI.
+  assert(!State.first.isVirtual());
+  MachineBasicBlock &TargetBB = *CurInst->getParent();
+  assert(&*TargetBB.getParent()->begin() == &TargetBB);
+
+  // Create DBG_PHI for specified physreg.
+  auto Builder = BuildMI(TargetBB, TargetBB.getFirstNonPHI(), DebugLoc(),
+                         TII.get(TargetOpcode::DBG_PHI));
+  Builder.addReg(State.first, RegState::Debug);
+  unsigned NewNum = getNewDebugInstrNum();
+  Builder.addImm(NewNum);
+  return ApplySubregisters({NewNum, 0u});
+}
+
+void MachineFunction::finalizeDebugInstrRefs() {
+  auto *TII = getSubtarget().getInstrInfo();
+
+  auto MakeDbgValue = [&](MachineInstr &MI) {
+    const MCInstrDesc &RefII = TII->get(TargetOpcode::DBG_VALUE);
+    MI.setDesc(RefII);
+    MI.getOperand(1).ChangeToRegister(0, false);
+    MI.getOperand(0).setIsDebug();
+  };
+
+  if (!getTarget().Options.ValueTrackingVariableLocations)
+    return;
+
+  for (auto &MBB : *this) {
+    for (auto &MI : MBB) {
+      if (!MI.isDebugRef() || !MI.getOperand(0).isReg())
+        continue;
+
+      Register Reg = MI.getOperand(0).getReg();
+
+      // Some vregs can be deleted as redundant in the meantime. Mark those
+      // as DBG_VALUE $noreg.
+      if (Reg == 0) {
+        MakeDbgValue(MI);
+        continue;
+      }
+
+      assert(Reg.isVirtual());
+      MachineInstr &DefMI = *RegInfo->def_instr_begin(Reg);
+      assert(RegInfo->hasOneDef(Reg));
+
+      // If we've found a copy-like instruction, follow it back to the
+      // instruction that defines the source value, see salvageCopySSA docs
+      // for why this is important.
+      if (DefMI.isCopyLike() || TII->isCopyInstr(DefMI)) {
+        auto Result = salvageCopySSA(DefMI);
+        MI.getOperand(0).ChangeToImmediate(Result.first);
+        MI.getOperand(1).setImm(Result.second);
+      } else {
+        // Otherwise, identify the operand number that the VReg refers to.
+        unsigned OperandIdx = 0;
+        for (const auto &MO : DefMI.operands()) {
+          if (MO.isReg() && MO.isDef() && MO.getReg() == Reg)
+            break;
+          ++OperandIdx;
+        }
+        assert(OperandIdx < DefMI.getNumOperands());
+
+        // Morph this instr ref to point at the given instruction and operand.
+        unsigned ID = DefMI.getDebugInstrNum();
+        MI.getOperand(0).ChangeToImmediate(ID);
+        MI.getOperand(1).setImm(OperandIdx);
+      }
+    }
+  }
+}
+
 /// \}
 
 //===----------------------------------------------------------------------===//
