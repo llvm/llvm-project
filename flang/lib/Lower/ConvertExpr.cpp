@@ -3460,37 +3460,42 @@ public:
       auto exv = asScalarRef(x);
       return RT{exv, fir::getBase(exv).getType()};
     }
-    return std::visit(
-        Fortran::common::visitors{
-            [&](const Fortran::evaluate::Component &c) {
-              auto [exv, refTy] = buildComponentsPath(components, c);
-              auto ty = fir::dyn_cast_ptrEleTy(refTy);
-              assert(ty.isa<fir::SequenceType>());
-              auto arrTy = ty.cast<fir::SequenceType>();
-              auto name = toStringRef(x.GetLastSymbol().name());
-              auto recTy = arrTy.getEleTy();
-              auto eleTy = recTy.cast<fir::RecordType>().getType(name);
-              auto fldTy = fir::FieldType::get(eleTy.getContext());
-              components.push_back(builder.create<fir::FieldIndexOp>(
-                  getLoc(), fldTy, name, recTy, fir::getTypeParams(exv)));
-              return RT{exv, builder.getRefType(fir::SequenceType::get(
-                                 arrTy.getShape(), eleTy))};
-            },
-            [&](const Fortran::semantics::SymbolRef &y) {
-              auto exv = asScalarRef(y);
-              return RT{exv, fir::getBase(exv).getType()};
-            },
-            [&](const Fortran::evaluate::ArrayRef &r) {
-              // Must be scalar per C919 and C925
-              auto exv = asScalarRef(r);
-              return RT{exv, fir::getBase(exv).getType()};
-            },
-            [&](const Fortran::evaluate::CoarrayRef &r) {
-              // Must be scalar per C919 and C925
-              auto exv = asScalarRef(r);
-              return RT{exv, fir::getBase(exv).getType()};
-            }},
-        dr.u);
+    auto addComponent = [&](const ExtValue &exv, mlir::Type ty) {
+      assert(ty.isa<fir::SequenceType>());
+      auto arrTy = ty.cast<fir::SequenceType>();
+      auto name = toStringRef(x.GetLastSymbol().name());
+      auto recTy = arrTy.getEleTy();
+      auto eleTy = recTy.cast<fir::RecordType>().getType(name);
+      auto fldTy = fir::FieldType::get(eleTy.getContext());
+      components.push_back(builder.create<fir::FieldIndexOp>(
+          getLoc(), fldTy, name, recTy, fir::getTypeParams(exv)));
+      return RT{exv, builder.getRefType(
+                         fir::SequenceType::get(arrTy.getShape(), eleTy))};
+    };
+    return std::visit(Fortran::common::visitors{
+                          [&](const Fortran::evaluate::Component &c) {
+                            auto [exv, refTy] =
+                                buildComponentsPath(components, c);
+                            auto ty = fir::dyn_cast_ptrOrBoxEleTy(refTy);
+                            return addComponent(exv, ty);
+                          },
+                          [&](const Fortran::semantics::SymbolRef &y) {
+                            auto exv = asScalarRef(y);
+                            auto ty = fir::dyn_cast_ptrOrBoxEleTy(
+                                fir::getBase(exv).getType());
+                            return addComponent(exv, ty);
+                          },
+                          [&](const Fortran::evaluate::ArrayRef &r) {
+                            // Must be scalar per C919 and C925
+                            auto exv = asScalarRef(r);
+                            return RT{exv, fir::getBase(exv).getType()};
+                          },
+                          [&](const Fortran::evaluate::CoarrayRef &r) {
+                            // Must be scalar per C919 and C925
+                            auto exv = asScalarRef(r);
+                            return RT{exv, fir::getBase(exv).getType()};
+                          }},
+                      dr.u);
   }
 
   /// Example: <code>array%RE</code>
