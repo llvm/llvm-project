@@ -960,8 +960,8 @@ bool AMDGPUPromoteAllocaImpl::handleAlloca(AllocaInst &I, bool SufficientLDS) {
     if (!Call) {
       if (ICmpInst *CI = dyn_cast<ICmpInst>(V)) {
         Value *Src0 = CI->getOperand(0);
-        Type *EltTy = Src0->getType()->getPointerElementType();
-        PointerType *NewTy = PointerType::get(EltTy, AMDGPUAS::LOCAL_ADDRESS);
+        PointerType *NewTy = PointerType::getWithSamePointeeType(
+            cast<PointerType>(Src0->getType()), AMDGPUAS::LOCAL_ADDRESS);
 
         if (isa<ConstantPointerNull>(CI->getOperand(0)))
           CI->setOperand(0, ConstantPointerNull::get(NewTy));
@@ -977,8 +977,8 @@ bool AMDGPUPromoteAllocaImpl::handleAlloca(AllocaInst &I, bool SufficientLDS) {
       if (isa<AddrSpaceCastInst>(V))
         continue;
 
-      Type *EltTy = V->getType()->getPointerElementType();
-      PointerType *NewTy = PointerType::get(EltTy, AMDGPUAS::LOCAL_ADDRESS);
+      PointerType *NewTy = PointerType::getWithSamePointeeType(
+          cast<PointerType>(V->getType()), AMDGPUAS::LOCAL_ADDRESS);
 
       // FIXME: It doesn't really make sense to try to do this for all
       // instructions.
@@ -1035,11 +1035,11 @@ bool AMDGPUPromoteAllocaImpl::handleAlloca(AllocaInst &I, bool SufficientLDS) {
       continue;
     case Intrinsic::objectsize: {
       Value *Src = Intr->getOperand(0);
-      Type *SrcTy = Src->getType()->getPointerElementType();
-      Function *ObjectSize = Intrinsic::getDeclaration(Mod,
-        Intrinsic::objectsize,
-        { Intr->getType(), PointerType::get(SrcTy, AMDGPUAS::LOCAL_ADDRESS) }
-      );
+      Function *ObjectSize = Intrinsic::getDeclaration(
+          Mod, Intrinsic::objectsize,
+          {Intr->getType(),
+           PointerType::getWithSamePointeeType(
+               cast<PointerType>(Src->getType()), AMDGPUAS::LOCAL_ADDRESS)});
 
       CallInst *NewCall = Builder.CreateCall(
           ObjectSize,

@@ -316,7 +316,8 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
   if (newFile) {
     // printArchiveMemberLoad() prints both .a and .o names, so no need to
     // print the .a name here.
-    if (config->printEachFile && magic != file_magic::archive)
+    if (config->printEachFile && magic != file_magic::archive &&
+        !isa<DylibFile>(newFile))
       message(toString(newFile));
     inputFiles.insert(newFile);
   }
