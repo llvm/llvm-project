@@ -6,8 +6,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos -o %t/main.o %t/main.s
 
-# RUN: %lld -lSystem %t/main.o %t/lib.a -o /dev/null -why_load | \
-# RUN:     FileCheck %s --check-prefix=NOFOO --allow-empty
+# RUN: %lld -lSystem %t/main.o %t/lib.a -o /dev/null -why_load | count 0
 
 # RUN: %lld -lSystem %t/main.o %t/lib.a -u _foo -o /dev/null -why_load | \
 # RUN:     FileCheck %s --check-prefix=FOO
@@ -18,7 +17,6 @@
 # RUN: %lld -lSystem %t/main.o %t/lib.a -u _asdf -undefined dynamic_lookup -o %t/dyn-lookup
 # RUN: llvm-objdump --macho --syms %t/dyn-lookup | FileCheck %s --check-prefix=DYN
 
-# NOFOO-NOT: _foo forced load of {{.+}}lib.a(foo.o)
 # FOO: _foo forced load of {{.+}}lib.a(foo.o)
 # UNDEF:      error: undefined symbol: _asdf
 # UNDEF-NEXT: >>> referenced by -u

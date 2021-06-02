@@ -3,8 +3,8 @@
 #define _LIBCPP_SPLIT_BUFFER
 
 #include <__config>
-#include <type_traits>
 #include <algorithm>
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

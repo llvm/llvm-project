@@ -432,6 +432,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 */
 
 #include <__config>
+#include <__debug>
 #include <__hash_table>
 #include <__node_handle>
 #include <compare>
@@ -440,8 +441,6 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <stdexcept>
 #include <tuple>
 #include <version>
-
-#include <__debug>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

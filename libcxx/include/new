@@ -86,8 +86,8 @@ void  operator delete[](void* ptr, void*) noexcept;
 
 */
 
-#include <__config>
 #include <__availability>
+#include <__config>
 #include <cstddef>
 #include <cstdlib>
 #include <exception>

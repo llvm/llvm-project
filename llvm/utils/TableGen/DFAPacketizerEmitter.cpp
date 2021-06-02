@@ -14,8 +14,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "dfa-emitter"
-
 #include "CodeGenSchedule.h"
 #include "CodeGenTarget.h"
 #include "DFAEmitter.h"
@@ -33,6 +31,8 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#define DEBUG_TYPE "dfa-emitter"
 
 using namespace llvm;
 

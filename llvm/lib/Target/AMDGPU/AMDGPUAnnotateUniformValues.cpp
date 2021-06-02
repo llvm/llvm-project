@@ -114,9 +114,9 @@ void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {
         Value *Idx = Constant::getIntegerValue(
           Type::getInt32Ty(Ptr->getContext()), APInt(64, 0));
         // Insert GEP at the entry to make it dominate all uses
-        PtrI = GetElementPtrInst::Create(
-          Ptr->getType()->getPointerElementType(), Ptr,
-          ArrayRef<Value*>(Idx), Twine(""), F->getEntryBlock().getFirstNonPHI());
+        PtrI = GetElementPtrInst::Create(I.getType(), Ptr,
+                                         ArrayRef<Value *>(Idx), Twine(""),
+                                         F->getEntryBlock().getFirstNonPHI());
       }
       I.replaceUsesOfWith(Ptr, PtrI);
     }

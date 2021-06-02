@@ -13,17 +13,17 @@
 ; RUN: opt < %s -mtriple=x86_64-pc-windows -instrprof -S | FileCheck %s -check-prefix=WINDOWS
 ; RUN: opt < %s -mtriple=x86_64-pc-windows -passes=instrprof -S | FileCheck %s -check-prefix=WINDOWS
 
-@__profn_foo = hidden constant [3 x i8] c"foo"
+@__profn_foo = private constant [3 x i8] c"foo"
 ; MACHO-NOT: __profn_foo
 ; ELF-NOT: __profn_foo
 ; WINDOWS-NOT: __profn_foo
 
-; MACHO: @__profc_foo = hidden global [1 x i64] zeroinitializer, section "__DATA,__llvm_prf_cnts", align 8
-; ELF: @__profc_foo = hidden global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", comdat($__profd_foo), align 8
+; MACHO: @__profc_foo = private global [1 x i64] zeroinitializer, section "__DATA,__llvm_prf_cnts", align 8
+; ELF: @__profc_foo = private global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", comdat($__profd_foo), align 8
 ; WINDOWS: @__profc_foo = internal global [1 x i64] zeroinitializer, section ".lprfc$M", align 8
 
-; MACHO: @__profd_foo = hidden {{.*}}, section "__DATA,__llvm_prf_data,regular,live_support", align 8
-; ELF: @__profd_foo = hidden {{.*}}, section "__llvm_prf_data", comdat, align 8
+; MACHO: @__profd_foo = private {{.*}}, section "__DATA,__llvm_prf_data,regular,live_support", align 8
+; ELF: @__profd_foo = private {{.*}}, section "__llvm_prf_data", comdat, align 8
 ; WINDOWS: @__profd_foo = internal global {{.*}}, section ".lprfd$M", align 8
 
 ; ELF: @__llvm_prf_nm = private constant [{{.*}} x i8] c"{{.*}}", section "{{.*}}__llvm_prf_names", align 1

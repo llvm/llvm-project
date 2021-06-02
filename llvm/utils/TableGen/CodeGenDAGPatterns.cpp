@@ -1035,33 +1035,33 @@ std::string TreePredicateFn::getPredCode() const {
   }
 
   if (isAtomic() && isAtomicOrderingMonotonic())
-    Code += "if (cast<AtomicSDNode>(N)->getOrdering() != "
+    Code += "if (cast<AtomicSDNode>(N)->getMergedOrdering() != "
             "AtomicOrdering::Monotonic) return false;\n";
   if (isAtomic() && isAtomicOrderingAcquire())
-    Code += "if (cast<AtomicSDNode>(N)->getOrdering() != "
+    Code += "if (cast<AtomicSDNode>(N)->getMergedOrdering() != "
             "AtomicOrdering::Acquire) return false;\n";
   if (isAtomic() && isAtomicOrderingRelease())
-    Code += "if (cast<AtomicSDNode>(N)->getOrdering() != "
+    Code += "if (cast<AtomicSDNode>(N)->getMergedOrdering() != "
             "AtomicOrdering::Release) return false;\n";
   if (isAtomic() && isAtomicOrderingAcquireRelease())
-    Code += "if (cast<AtomicSDNode>(N)->getOrdering() != "
+    Code += "if (cast<AtomicSDNode>(N)->getMergedOrdering() != "
             "AtomicOrdering::AcquireRelease) return false;\n";
   if (isAtomic() && isAtomicOrderingSequentiallyConsistent())
-    Code += "if (cast<AtomicSDNode>(N)->getOrdering() != "
+    Code += "if (cast<AtomicSDNode>(N)->getMergedOrdering() != "
             "AtomicOrdering::SequentiallyConsistent) return false;\n";
 
   if (isAtomic() && isAtomicOrderingAcquireOrStronger())
-    Code += "if (!isAcquireOrStronger(cast<AtomicSDNode>(N)->getOrdering())) "
+    Code += "if (!isAcquireOrStronger(cast<AtomicSDNode>(N)->getMergedOrdering())) "
             "return false;\n";
   if (isAtomic() && isAtomicOrderingWeakerThanAcquire())
-    Code += "if (isAcquireOrStronger(cast<AtomicSDNode>(N)->getOrdering())) "
+    Code += "if (isAcquireOrStronger(cast<AtomicSDNode>(N)->getMergedOrdering())) "
             "return false;\n";
 
   if (isAtomic() && isAtomicOrderingReleaseOrStronger())
-    Code += "if (!isReleaseOrStronger(cast<AtomicSDNode>(N)->getOrdering())) "
+    Code += "if (!isReleaseOrStronger(cast<AtomicSDNode>(N)->getMergedOrdering())) "
             "return false;\n";
   if (isAtomic() && isAtomicOrderingWeakerThanRelease())
-    Code += "if (isReleaseOrStronger(cast<AtomicSDNode>(N)->getOrdering())) "
+    Code += "if (isReleaseOrStronger(cast<AtomicSDNode>(N)->getMergedOrdering())) "
             "return false;\n";
 
   if (isLoad() || isStore()) {

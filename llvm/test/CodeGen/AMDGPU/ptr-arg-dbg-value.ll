@@ -18,10 +18,10 @@ define hidden void @ptr_arg_split_subregs(%struct.A* %arg1) #0 !dbg !9 {
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04 ;
 ; CHECK-NEXT:    .cfi_undefined 2562
 ; CHECK-NEXT:    ;DEBUG_VALUE: ptr_arg_split_subregs:a <- [DW_OP_LLVM_fragment 32 32] [$vgpr1+0]
+; CHECK-NEXT:    ;DEBUG_VALUE: ptr_arg_split_subregs:a <- [DW_OP_LLVM_fragment 0 32] [$vgpr0+0]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1
 ; CHECK-NEXT:  .Ltmp0:
-; CHECK-NEXT:    ;DEBUG_VALUE: ptr_arg_split_subregs:a <- [DW_OP_LLVM_fragment 0 32] [$vgpr0+0]
 ; CHECK-NEXT:    .loc 1 7 13 prologue_end ; example.cpp:7:13
 ; CHECK-NEXT:    flat_store_dword v[0:1], v2 offset:396
 ; CHECK-NEXT:    .loc 1 8 5 ; example.cpp:8:5

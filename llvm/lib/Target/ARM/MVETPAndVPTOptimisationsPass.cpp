@@ -290,6 +290,9 @@ MachineInstr *MVETPAndVPTOptimisations::CheckForLRUseInPredecessors(
       MIB.add(LoopStart->getOperand(0));
       MIB.add(LoopStart->getOperand(1));
 
+      // Make sure to remove the kill flags, to prevent them from being invalid.
+      LoopStart->getOperand(1).setIsKill(false);
+
       // Revert the t2WhileLoopStartLR to a CMP and Br.
       RevertWhileLoopStartLR(LoopStart, TII, ARM::t2Bcc, true);
       return MIB;

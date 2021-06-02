@@ -25,6 +25,17 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+template <class _InputIter>
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    typename enable_if<__is_cpp17_input_iterator<_InputIter>::value, _InputIter>::type
+    next(_InputIter __x, typename iterator_traits<_InputIter>::difference_type __n = 1) {
+  _LIBCPP_ASSERT(__n >= 0 || __is_cpp17_bidirectional_iterator<_InputIter>::value,
+                 "Attempt to next(it, n) with negative n on a non-bidirectional iterator");
+
+  _VSTD::advance(__x, __n);
+  return __x;
+}
+
 #if !defined(_LIBCPP_HAS_NO_RANGES)
 
 namespace ranges {

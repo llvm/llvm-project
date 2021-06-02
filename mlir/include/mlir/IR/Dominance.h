@@ -1,8 +1,18 @@
-//===- Dominance.h - Dominator analysis for CFGs ----------------*- C++ -*-===//
+//===- Dominance.h - Dominator analysis for regions -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// The DominanceInfo and PostDominanceInfo class provide routines for performimg
+// simple dominance checks, and expose dominator trees for advanced clients.
+// These classes provide fully region-aware functionality, lazily constructing
+// dominator information for any multi-block regions that need it.
+//
+// For more information about the theory behind dominance in graphs algorithms,
+// see: https://en.wikipedia.org/wiki/Dominator_(graph_theory)
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,7 +30,8 @@ using DominanceInfoNode = llvm::DomTreeNodeBase<Block>;
 class Operation;
 
 namespace detail {
-template <bool IsPostDom> class DominanceInfoBase {
+template <bool IsPostDom>
+class DominanceInfoBase {
   using base = llvm::DominatorTreeBase<Block, IsPostDom>;
 
 public:
@@ -38,11 +49,6 @@ public:
   /// and b. If no common dominator can be found, this function will return
   /// nullptr.
   Block *findNearestCommonDominator(Block *a, Block *b) const;
-
-  /// Return true if there is dominanceInfo for the given region.
-  bool hasDominanceInfo(Region *region) {
-    return dominanceInfos.count(region) != 0;
-  }
 
   /// Get the root dominance node of the given region.
   DominanceInfoNode *getRootNode(Region *region) {
@@ -164,7 +170,8 @@ namespace llvm {
 
 /// DominatorTree GraphTraits specialization so the DominatorTree can be
 /// iterated by generic graph iterators.
-template <> struct GraphTraits<mlir::DominanceInfoNode *> {
+template <>
+struct GraphTraits<mlir::DominanceInfoNode *> {
   using ChildIteratorType = mlir::DominanceInfoNode::const_iterator;
   using NodeRef = mlir::DominanceInfoNode *;
 
@@ -173,7 +180,8 @@ template <> struct GraphTraits<mlir::DominanceInfoNode *> {
   static inline ChildIteratorType child_end(NodeRef N) { return N->end(); }
 };
 
-template <> struct GraphTraits<const mlir::DominanceInfoNode *> {
+template <>
+struct GraphTraits<const mlir::DominanceInfoNode *> {
   using ChildIteratorType = mlir::DominanceInfoNode::const_iterator;
   using NodeRef = const mlir::DominanceInfoNode *;
 

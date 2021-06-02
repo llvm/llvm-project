@@ -299,7 +299,7 @@ Value *SimplifyInstruction(Instruction *I, const SimplifyQuery &Q,
 /// return null.
 /// AllowRefinement specifies whether the simplification can be a refinement
 /// (e.g. 0 instead of poison), or whether it needs to be strictly identical.
-Value *SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
+Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
                               const SimplifyQuery &Q, bool AllowRefinement);
 
 /// Replace all uses of 'I' with 'SimpleV' and simplify the uses recursively.

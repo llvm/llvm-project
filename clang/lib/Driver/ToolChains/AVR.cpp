@@ -353,6 +353,23 @@ AVRToolChain::AVRToolChain(const Driver &D, const llvm::Triple &Triple,
   }
 }
 
+void AVRToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
+                                             ArgStringList &CC1Args) const {
+  if (DriverArgs.hasArg(options::OPT_nostdinc) ||
+      DriverArgs.hasArg(options::OPT_nostdlibinc))
+    return;
+
+  // Omit if there is no avr-libc installed.
+  Optional<std::string> AVRLibcRoot = findAVRLibcInstallation();
+  if (!AVRLibcRoot.hasValue())
+    return;
+
+  // Add 'avr-libc/include' to clang system include paths if applicable.
+  std::string AVRInc = AVRLibcRoot.getValue() + "/include";
+  if (llvm::sys::fs::is_directory(AVRInc))
+    addSystemInclude(DriverArgs, CC1Args, AVRInc);
+}
+
 Tool *AVRToolChain::buildLinker() const {
   return new tools::AVR::Linker(getTriple(), *this, LinkStdlib);
 }

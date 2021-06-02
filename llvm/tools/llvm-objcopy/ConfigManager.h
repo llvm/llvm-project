@@ -32,13 +32,9 @@ struct ConfigManager : public MultiFormatConfig {
   Expected<const MachOConfig &> getMachOConfig() const override;
   Expected<const WasmConfig &> getWasmConfig() const override;
 
-  // String representation for lazy ELF options.
-  std::vector<StringRef> SymbolsToAdd;
-  Optional<StringRef> NewSymbolVisibility;
-
   // All configs.
   CommonConfig Common;
-  mutable Optional<ELFConfig> ELF;
+  ELFConfig ELF;
   COFFConfig COFF;
   MachOConfig MachO;
   WasmConfig Wasm;

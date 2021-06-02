@@ -31,7 +31,7 @@ int main(int, char**)
 {
     {
         typedef test_hash<std::hash<int> > Hash;
-        typedef test_compare<std::equal_to<int> > Compare;
+        typedef test_equal_to<int> Compare;
         typedef test_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
         C c1(0, Hash(1), Compare(1), Alloc(1, 1));
@@ -59,7 +59,7 @@ int main(int, char**)
     }
     {
         typedef test_hash<std::hash<int> > Hash;
-        typedef test_compare<std::equal_to<int> > Compare;
+        typedef test_equal_to<int> Compare;
         typedef test_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
         typedef std::pair<int, std::string> P;
@@ -109,7 +109,7 @@ int main(int, char**)
     }
     {
         typedef test_hash<std::hash<int> > Hash;
-        typedef test_compare<std::equal_to<int> > Compare;
+        typedef test_equal_to<int> Compare;
         typedef test_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
         typedef std::pair<int, std::string> P;
@@ -158,7 +158,7 @@ int main(int, char**)
     }
     {
         typedef test_hash<std::hash<int> > Hash;
-        typedef test_compare<std::equal_to<int> > Compare;
+        typedef test_equal_to<int> Compare;
         typedef test_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
         typedef std::pair<int, std::string> P;
@@ -229,7 +229,7 @@ int main(int, char**)
 
     {
         typedef test_hash<std::hash<int> > Hash;
-        typedef test_compare<std::equal_to<int> > Compare;
+        typedef test_equal_to<int> Compare;
         typedef other_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
         C c1(0, Hash(1), Compare(1), Alloc(1));
@@ -257,7 +257,7 @@ int main(int, char**)
     }
     {
         typedef test_hash<std::hash<int> > Hash;
-        typedef test_compare<std::equal_to<int> > Compare;
+        typedef test_equal_to<int> Compare;
         typedef other_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
         typedef std::pair<int, std::string> P;
@@ -305,7 +305,7 @@ int main(int, char**)
     }
     {
         typedef test_hash<std::hash<int> > Hash;
-        typedef test_compare<std::equal_to<int> > Compare;
+        typedef test_equal_to<int> Compare;
         typedef other_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
         typedef std::pair<int, std::string> P;
@@ -352,7 +352,7 @@ int main(int, char**)
     }
     {
         typedef test_hash<std::hash<int> > Hash;
-        typedef test_compare<std::equal_to<int> > Compare;
+        typedef test_equal_to<int> Compare;
         typedef other_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
         typedef std::pair<int, std::string> P;
@@ -419,7 +419,7 @@ int main(int, char**)
 #if TEST_STD_VER >= 11
     {
         typedef test_hash<std::hash<int> > Hash;
-        typedef test_compare<std::equal_to<int> > Compare;
+        typedef test_equal_to<int> Compare;
         typedef min_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
         C c1(0, Hash(1), Compare(1), Alloc());
@@ -447,7 +447,7 @@ int main(int, char**)
     }
     {
         typedef test_hash<std::hash<int> > Hash;
-        typedef test_compare<std::equal_to<int> > Compare;
+        typedef test_equal_to<int> Compare;
         typedef min_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
         typedef std::pair<int, std::string> P;
@@ -495,7 +495,7 @@ int main(int, char**)
     }
     {
         typedef test_hash<std::hash<int> > Hash;
-        typedef test_compare<std::equal_to<int> > Compare;
+        typedef test_equal_to<int> Compare;
         typedef min_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
         typedef std::pair<int, std::string> P;
@@ -542,7 +542,7 @@ int main(int, char**)
     }
     {
         typedef test_hash<std::hash<int> > Hash;
-        typedef test_compare<std::equal_to<int> > Compare;
+        typedef test_equal_to<int> Compare;
         typedef min_allocator<std::pair<const int, std::string> > Alloc;
         typedef std::unordered_multimap<int, std::string, Hash, Compare, Alloc> C;
         typedef std::pair<int, std::string> P;

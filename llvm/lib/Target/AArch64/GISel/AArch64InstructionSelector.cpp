@@ -958,6 +958,15 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
                       << " operand\n");
     return false;
   }
+
+  // If this a GPR ZEXT that we want to just reduce down into a copy.
+  // The sizes will be mismatched with the source < 32b but that's ok.
+  if (I.getOpcode() == TargetOpcode::G_ZEXT) {
+    I.setDesc(TII.get(AArch64::COPY));
+    assert(SrcRegBank.getID() == AArch64::GPRRegBankID);
+    return selectCopy(I, TII, MRI, TRI, RBI);
+  }
+
   I.setDesc(TII.get(AArch64::COPY));
   return CheckCopy();
 }

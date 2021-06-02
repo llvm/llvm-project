@@ -468,3 +468,28 @@ define i1 @bor_lor_right2(i1 %A, i1 %B) {
   ret i1 %res
 }
 
+; Value equivalence substitution does not account for vector
+; transforms, so it needs a scalar condition operand.
+; For example, this would miscompile if %a = {1, 0}.
+
+define <2 x i1> @PR50500_trueval(<2 x i1> %a, <2 x i1> %b) {
+; CHECK-LABEL: @PR50500_trueval(
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x i1> [[A:%.*]], <2 x i1> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[A]], <2 x i1> [[S]], <2 x i1> [[B:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %s = shufflevector <2 x i1> %a, <2 x i1> poison, <2 x i32> <i32 1, i32 0>
+  %r = select <2 x i1> %a, <2 x i1> %s, <2 x i1> %b
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @PR50500_falseval(<2 x i1> %a, <2 x i1> %b) {
+; CHECK-LABEL: @PR50500_falseval(
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x i1> [[A:%.*]], <2 x i1> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[A]], <2 x i1> [[B:%.*]], <2 x i1> [[S]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %s = shufflevector <2 x i1> %a, <2 x i1> poison, <2 x i32> <i32 1, i32 0>
+  %r = select <2 x i1> %a, <2 x i1> %b, <2 x i1> %s
+  ret <2 x i1> %r
+}

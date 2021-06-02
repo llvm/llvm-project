@@ -514,26 +514,26 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 */
 
 #include <__config>
-#include <compare>
-#include <string_view>
-#include <iosfwd>
-#include <cstring>
-#include <cstdio>  // For EOF.
-#include <cwchar>
+#include <__debug>
+#include <__functional_base>
 #include <algorithm>
+#include <compare>
+#include <cstdio>  // EOF
+#include <cstring>
+#include <cwchar>
+#include <initializer_list>
+#include <iosfwd>
 #include <iterator>
-#include <utility>
 #include <memory>
 #include <stdexcept>
+#include <string_view>
 #include <type_traits>
-#include <initializer_list>
-#include <__functional_base>
+#include <utility>
 #include <version>
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
-#include <cstdint>
-#endif
 
-#include <__debug>
+#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
+# include <cstdint>
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

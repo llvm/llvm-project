@@ -255,6 +255,23 @@ public:
     return static_cast<AtomicOrdering>(AtomicInfo.FailureOrdering);
   }
 
+  /// Return a single atomic ordering that is at least as strong as both the
+  /// success and failure orderings for an atomic operation.  (For operations
+  /// other than cmpxchg, this is equivalent to getOrdering().)
+  AtomicOrdering getMergedOrdering() const {
+    AtomicOrdering Ordering = getOrdering();
+    AtomicOrdering FailureOrdering = getFailureOrdering();
+    if (FailureOrdering == AtomicOrdering::SequentiallyConsistent)
+      return AtomicOrdering::SequentiallyConsistent;
+    if (FailureOrdering == AtomicOrdering::Acquire) {
+      if (Ordering == AtomicOrdering::Monotonic)
+        return AtomicOrdering::Acquire;
+      if (Ordering == AtomicOrdering::Release)
+        return AtomicOrdering::AcquireRelease;
+    }
+    return Ordering;
+  }
+
   bool isLoad() const { return FlagVals & MOLoad; }
   bool isStore() const { return FlagVals & MOStore; }
   bool isVolatile() const { return FlagVals & MOVolatile; }

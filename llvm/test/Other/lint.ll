@@ -70,7 +70,7 @@ define i32 @foo() noreturn {
 ; CHECK: Undefined behavior: Null pointer dereference
   call void @llvm.stackrestore(i8* null)
 ; CHECK: Undefined behavior: Null pointer dereference
-  call void @has_sret(i8* null)
+  call void @has_sret(i8* sret(i8) null)
 ; CHECK: Unusual: noalias argument aliases another argument
   call void @has_noaliases(i32* @CG, i32* @CG)
 ; CHECK: Call argument count mismatches callee argument count

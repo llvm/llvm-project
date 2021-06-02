@@ -34,7 +34,7 @@ int main(int, char**)
         typedef test_allocator<int> A;
         typedef std::unordered_set<int,
                                    test_hash<std::hash<int> >,
-                                   test_compare<std::equal_to<int> >,
+                                   test_equal_to<int>,
                                    A
                                    > C;
         typedef int P;
@@ -66,7 +66,7 @@ int main(int, char**)
         typedef min_allocator<int> A;
         typedef std::unordered_set<int,
                                    test_hash<std::hash<int> >,
-                                   test_compare<std::equal_to<int> >,
+                                   test_equal_to<int>,
                                    A
                                    > C;
         typedef int P;
