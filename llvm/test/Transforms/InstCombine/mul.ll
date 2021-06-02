@@ -261,8 +261,7 @@ define i32 @mul_bools_sext_one_use_per_op(i1 %x, i1 %y) {
 
 define i32 @mul_bool_sext_one_user(i1 %x) {
 ; CHECK-LABEL: @mul_bool_sext_one_user(
-; CHECK-NEXT:    [[SX:%.*]] = sext i1 [[X:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = mul nsw i32 [[SX]], [[SX]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sx = sext i1 %x to i32
@@ -296,7 +295,7 @@ define i32 @mul_bool_sext_one_extra_user(i1 %x) {
 ; CHECK-LABEL: @mul_bool_sext_one_extra_user(
 ; CHECK-NEXT:    [[SX:%.*]] = sext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[SX]])
-; CHECK-NEXT:    [[R:%.*]] = mul nsw i32 [[SX]], [[SX]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[X]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %sx = sext i1 %x to i32
