@@ -156,6 +156,7 @@ public:
   int64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel
   RefState refState;
   bool reexport = false;
+  bool forceNeeded = false;
   bool forceWeakImport = false;
   bool deadStrippable = false;
   bool explicitlyLinked = false;

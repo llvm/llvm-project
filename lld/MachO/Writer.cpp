@@ -697,7 +697,7 @@ template <class LP> void Writer::createLoadCommands() {
       // FIXME: `isReferenced()` is currently computed before dead code
       // stripping, so references from dead code keep a dylib alive. This
       // matches ld64, but it's something we should do better.
-      if (!dylibFile->isReferenced() &&
+      if (!dylibFile->isReferenced() && !dylibFile->forceNeeded &&
           (!dylibFile->explicitlyLinked || dylibFile->deadStrippable ||
            config->deadStripDylibs))
         continue;
