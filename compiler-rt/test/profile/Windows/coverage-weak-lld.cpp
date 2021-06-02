@@ -51,6 +51,8 @@
 // CHECK2: weak
 // CHECK2: weak
 
+/// __profc__Z4weakv in %t2.o is weak and resolves to the value of %t0.o's copy.
+/// Without GC it takes a duplicate entry.
 // PROFILE2:      ?weak@@YAXXZ:
 // PROFILE2-NEXT:    Hash:
 // PROFILE2-NEXT:    Counters: 1
@@ -58,7 +60,7 @@
 // PROFILE2:      ?weak@@YAXXZ:
 // PROFILE2-NEXT:    Hash:
 // PROFILE2-NEXT:    Counters: 1
-// PROFILE2-NEXT:    Function count: 0
+// PROFILE2-NEXT:    Function count: 2
 
 #ifdef OBJ_1
 #include <stdio.h>
