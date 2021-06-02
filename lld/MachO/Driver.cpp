@@ -324,24 +324,34 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
   return newFile;
 }
 
-static void addLibrary(StringRef name, bool isWeak, bool isExplicit = true) {
+static void addLibrary(StringRef name, bool isWeak, bool isReexport,
+                       bool isExplicit) {
   if (Optional<StringRef> path = findLibrary(name)) {
     if (auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path, false))) {
       dylibFile->explicitlyLinked = isExplicit;
       if (isWeak)
         dylibFile->forceWeakImport = true;
+      if (isReexport) {
+        config->hasReexports = true;
+        dylibFile->reexport = true;
+      }
     }
     return;
   }
   error("library not found for -l" + name);
 }
 
-static void addFramework(StringRef name, bool isWeak, bool isExplicit = true) {
+static void addFramework(StringRef name, bool isWeak, bool isReexport,
+                         bool isExplicit) {
   if (Optional<std::string> path = findFramework(name)) {
     if (auto *dylibFile = dyn_cast_or_null<DylibFile>(addFile(*path, false))) {
       dylibFile->explicitlyLinked = isExplicit;
       if (isWeak)
         dylibFile->forceWeakImport = true;
+      if (isReexport) {
+        config->hasReexports = true;
+        dylibFile->reexport = true;
+      }
     }
     return;
   }
@@ -371,10 +381,12 @@ void macho::parseLCLinkerOption(InputFile *f, unsigned argc, StringRef data) {
   for (const Arg *arg : args) {
     switch (arg->getOption().getID()) {
     case OPT_l:
-      addLibrary(arg->getValue(), /*isWeak=*/false, /*isExplicit=*/false);
+      addLibrary(arg->getValue(), /*isWeak=*/false, /*isReexport=*/false,
+                 /*isExplicit=*/false);
       break;
     case OPT_framework:
-      addFramework(arg->getValue(), /*isWeak=*/false, /*isExplicit=*/false);
+      addFramework(arg->getValue(), /*isWeak=*/false, /*isReexport=*/false,
+                   /*isExplicit=*/false);
       break;
     default:
       error(arg->getSpelling() + " is not allowed in LC_LINKER_OPTION");
@@ -866,6 +878,13 @@ void createFiles(const InputArgList &args) {
     case OPT_INPUT:
       addFile(rerootPath(arg->getValue()), false);
       break;
+    case OPT_reexport_library:
+      if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
+              addFile(rerootPath(arg->getValue()), false))) {
+        config->hasReexports = true;
+        dylibFile->reexport = true;
+      }
+      break;
     case OPT_weak_library:
       if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
               addFile(rerootPath(arg->getValue()), false)))
@@ -878,12 +897,16 @@ void createFiles(const InputArgList &args) {
       addFile(rerootPath(arg->getValue()), true);
       break;
     case OPT_l:
+    case OPT_reexport_l:
     case OPT_weak_l:
-      addLibrary(arg->getValue(), opt.getID() == OPT_weak_l);
+      addLibrary(arg->getValue(), opt.getID() == OPT_weak_l,
+                 opt.getID() == OPT_reexport_l, /*isExplicit=*/true);
       break;
     case OPT_framework:
+    case OPT_reexport_framework:
     case OPT_weak_framework:
-      addFramework(arg->getValue(), opt.getID() == OPT_weak_framework);
+      addFramework(arg->getValue(), opt.getID() == OPT_weak_framework,
+                   opt.getID() == OPT_reexport_framework, /*isExplicit=*/true);
       break;
     default:
       break;

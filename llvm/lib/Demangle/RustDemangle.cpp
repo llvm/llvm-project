@@ -103,6 +103,7 @@ bool Demangler::demangle(StringView Mangled) {
   Error = false;
   Print = true;
   RecursionLevel = 0;
+  BoundLifetimes = 0;
 
   if (!Mangled.consumeFront("_R")) {
     Error = true;
@@ -242,11 +243,12 @@ void Demangler::demangleImplPath(InType InType) {
 //               | "K" <const>
 // <lifetime> = "L" <base-62-number>
 void Demangler::demangleGenericArg() {
-  if (consumeIf('K'))
+  if (consumeIf('L'))
+    printLifetime(parseBase62Number());
+  else if (consumeIf('K'))
     demangleConst();
   else
     demangleType();
-  // FIXME demangle lifetimes.
 }
 
 // <basic-type> = "a"      // i8
@@ -455,13 +457,16 @@ void Demangler::demangleType() {
     break;
   }
   case 'R':
-    print("&");
-    // FIXME demangle [<lifetime>].
-    demangleType();
-    break;
   case 'Q':
-    print("&mut ");
-    // FIXME demangle [<lifetime>].
+    print('&');
+    if (consumeIf('L')) {
+      if (auto Lifetime = parseBase62Number()) {
+        printLifetime(Lifetime);
+        print(' ');
+      }
+    }
+    if (C == 'Q')
+      print("mut ");
     demangleType();
     break;
   case 'P':
@@ -486,7 +491,8 @@ void Demangler::demangleType() {
 // <abi> = "C"
 //       | <undisambiguated-identifier>
 void Demangler::demangleFnSig() {
-  // FIXME demangle binder.
+  SwapAndRestore<size_t> SaveBoundLifetimes(BoundLifetimes, BoundLifetimes);
+  demangleOptionalBinder();
 
   if (consumeIf('U'))
     print("unsafe ");
@@ -521,6 +527,33 @@ void Demangler::demangleFnSig() {
     print(" -> ");
     demangleType();
   }
+}
+
+// Demangles optional binder and updates the number of bound lifetimes.
+//
+// <binder> = "G" <base-62-number>
+void Demangler::demangleOptionalBinder() {
+  uint64_t Binder = parseOptionalBase62Number('G');
+  if (Error || Binder == 0)
+    return;
+
+  // In valid inputs each bound lifetime is referenced later. Referencing a
+  // lifetime requires at least one byte of input. Reject inputs that are too
+  // short to reference all bound lifetimes. Otherwise demangling of invalid
+  // binders could generate excessive amounts of output.
+  if (Binder >= Input.size() - BoundLifetimes) {
+    Error = true;
+    return;
+  }
+
+  print("for<");
+  for (size_t I = 0; I != Binder; ++I) {
+    BoundLifetimes += 1;
+    if (I > 0)
+      print(", ");
+    printLifetime(1);
+  }
+  print("> ");
 }
 
 // <const> = <basic-type> <const-data>
@@ -664,7 +697,12 @@ Identifier Demangler::parseIdentifier() {
 }
 
 // Parses optional base 62 number. The presence of a number is determined using
-// Tag. Returns 0 when tag is absent and parsed value + 1 otherwise.
+// Tag. Returns 0 when tag is absent and parsed value + 1 otherwise
+//
+// This function is indended for parsing disambiguators and binders which when
+// not present have their value interpreted as 0, and otherwise as decoded
+// value + 1. For example for binders, value for "G_" is 1, for "G0_" value is
+// 2. When "G" is absent value is 0.
 uint64_t Demangler::parseOptionalBase62Number(char Tag) {
   if (!consumeIf(Tag))
     return 0;
@@ -787,4 +825,29 @@ uint64_t Demangler::parseHexNumber(StringView &HexDigits) {
   assert(Start < End);
   HexDigits = Input.substr(Start, End - Start);
   return Value;
+}
+
+// Prints a lifetime. An index 0 always represents an erased lifetime. Indices
+// starting from 1, are De Bruijn indices, referring to higher-ranked lifetimes
+// bound by one of the enclosing binders.
+void Demangler::printLifetime(uint64_t Index) {
+  if (Index == 0) {
+    print("'_");
+    return;
+  }
+
+  if (Index - 1 >= BoundLifetimes) {
+    Error = true;
+    return;
+  }
+
+  uint64_t Depth = BoundLifetimes - Index;
+  print('\'');
+  if (Depth < 26) {
+    char C = 'a' + Depth;
+    print(C);
+  } else {
+    print('z');
+    printDecimalNumber(Depth - 26 + 1);
+  }
 }

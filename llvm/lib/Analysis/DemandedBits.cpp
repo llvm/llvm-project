@@ -452,6 +452,33 @@ APInt DemandedBits::getDemandedBits(Instruction *I) {
       DL.getTypeSizeInBits(I->getType()->getScalarType()));
 }
 
+APInt DemandedBits::getDemandedBits(Use *U) {
+  Type *T = (*U)->getType();
+  Instruction *UserI = cast<Instruction>(U->getUser());
+  const DataLayout &DL = UserI->getModule()->getDataLayout();
+  unsigned BitWidth = DL.getTypeSizeInBits(T->getScalarType());
+
+  // We only track integer uses, everything else produces a mask with all bits
+  // set
+  if (!T->isIntOrIntVectorTy())
+    return APInt::getAllOnesValue(BitWidth);
+
+  if (isUseDead(U))
+    return APInt(BitWidth, 0);
+
+  performAnalysis();
+
+  APInt AOut = getDemandedBits(UserI);
+  APInt AB = APInt::getAllOnesValue(BitWidth);
+  KnownBits Known, Known2;
+  bool KnownBitsComputed = false;
+
+  determineLiveOperandBits(UserI, *U, U->getOperandNo(), AOut, AB, Known,
+                           Known2, KnownBitsComputed);
+
+  return AB;
+}
+
 bool DemandedBits::isInstructionDead(Instruction *I) {
   performAnalysis();
 
@@ -485,10 +512,24 @@ bool DemandedBits::isUseDead(Use *U) {
 }
 
 void DemandedBits::print(raw_ostream &OS) {
+  auto PrintDB = [&](const Instruction *I, const APInt &A, Value *V = nullptr) {
+    OS << "DemandedBits: 0x" << Twine::utohexstr(A.getLimitedValue())
+       << " for ";
+    if (V) {
+      V->printAsOperand(OS, false);
+      OS << " in ";
+    }
+    OS << *I << '\n';
+  };
+
   performAnalysis();
   for (auto &KV : AliveBits) {
-    OS << "DemandedBits: 0x" << Twine::utohexstr(KV.second.getLimitedValue())
-       << " for " << *KV.first << '\n';
+    Instruction *I = KV.first;
+    PrintDB(I, KV.second);
+
+    for (Use &OI : I->operands()) {
+      PrintDB(I, getDemandedBits(&OI), OI);
+    }
   }
 }
 
