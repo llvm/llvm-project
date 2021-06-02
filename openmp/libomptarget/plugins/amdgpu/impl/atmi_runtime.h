@@ -51,7 +51,7 @@ extern "C" {
  *
  */
 hsa_status_t atmi_module_register_from_memory_to_place(
-    void *module_bytes, size_t module_size, atmi_place_t place,
+    void *module_bytes, size_t module_size, int DeviceId,
     hsa_status_t (*on_deserialized_data)(void *data, size_t size,
                                          void *cb_state),
     void *cb_state);
