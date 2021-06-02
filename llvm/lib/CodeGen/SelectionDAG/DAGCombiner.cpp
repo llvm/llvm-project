@@ -10826,13 +10826,29 @@ SDValue DAGCombiner::foldSextSetcc(SDNode *N) {
 
         // Match a simple, non-extended load that can be converted to a
         // legal zext-load.
-        // TODO: Handle more than one use if the other uses are free to zext.
         // TODO: Allow widening of an existing zext-load?
-        return ISD::isNON_EXTLoad(V.getNode()) &&
-               ISD::isUNINDEXEDLoad(V.getNode()) &&
-               cast<LoadSDNode>(V)->isSimple() &&
-               TLI.isLoadExtLegal(ISD::ZEXTLOAD, VT, V.getValueType()) &&
-               V.hasOneUse();
+        if (!(ISD::isNON_EXTLoad(V.getNode()) &&
+              ISD::isUNINDEXEDLoad(V.getNode()) &&
+              cast<LoadSDNode>(V)->isSimple() &&
+              TLI.isLoadExtLegal(ISD::ZEXTLOAD, VT, V.getValueType())))
+          return false;
+
+        // Non-chain users of this value must either be the setcc in this
+        // sequence or zexts that can be folded into the new zext-load.
+        for (SDNode::use_iterator UI = V->use_begin(), UE = V->use_end();
+             UI != UE; ++UI) {
+          // Skip uses of the chain and the setcc.
+          SDNode *User = *UI;
+          if (UI.getUse().getResNo() != 0 || User == N0.getNode())
+            continue;
+          // Extra users must have exactly the same cast we are about to create.
+          // TODO: This restriction could be eased if ExtendUsesToFormExtLoad()
+          //       is enhanced similarly.
+          if (User->getOpcode() != ISD::ZERO_EXTEND ||
+              User->getValueType(0) != VT)
+            return false;
+        }
+        return true;
       };
 
       if (IsFreeToZext(N00) && IsFreeToZext(N01)) {
