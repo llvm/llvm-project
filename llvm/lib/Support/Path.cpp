@@ -1229,7 +1229,7 @@ Error TempFile::keep(const Twine &Name) {
   auto H = reinterpret_cast<HANDLE>(_get_osfhandle(FD));
   std::error_code RenameEC = setDeleteDisposition(H, false);
   if (!RenameEC) {
-    RenameEC = rename_handle(H, Name);
+    RenameEC = rename_fd(FD, Name);
     // If rename failed because it's cross-device, copy instead
     if (RenameEC ==
       std::error_code(ERROR_NOT_SAME_DEVICE, std::system_category())) {
