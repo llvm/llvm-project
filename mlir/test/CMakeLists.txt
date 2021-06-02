@@ -17,6 +17,11 @@ llvm_canonicalize_cmake_booleans(
   MLIR_ENABLE_VULKAN_RUNNER
   )
 
+# Passed to lit.site.cfg.py.so that the out of tree Standalone dialect test
+# can find MLIR's CMake configuration
+set(MLIR_CMAKE_DIR
+  "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/mlir")
+
 # Passed to lit.site.cfg.py.in to set up the path where to find the libraries
 # for linalg integration tests.
 set(MLIR_DIALECT_LINALG_INTEGRATION_TEST_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
