@@ -886,12 +886,6 @@ void RuntimeTableBuilder::DescribeSpecialProc(
       }
     } else { // user defined derived type I/O
       CHECK(proc->dummyArguments.size() >= 4);
-      bool isArg0Descriptor{
-          !proc->dummyArguments.at(0).CanBePassedViaImplicitInterface()};
-      // N.B. When the user defined I/O subroutine is a type bound procedure,
-      // its first argument is always a descriptor, otherwise, when it was an
-      // interface, it never is.
-      CHECK(!!binding == isArg0Descriptor);
       if (binding) {
         isArgDescriptorSet |= 1;
       }
