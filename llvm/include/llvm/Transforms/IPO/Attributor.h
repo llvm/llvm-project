@@ -3223,10 +3223,10 @@ struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute> {
   AAHeapToStack(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
   /// Returns true if HeapToStack conversion is assumed to be possible.
-  bool isAssumedHeapToStack() const { return getAssumed(); }
+  virtual bool isAssumedHeapToStack(CallBase &CB) const = 0;
 
   /// Returns true if HeapToStack conversion is known to be possible.
-  bool isKnownHeapToStack() const { return getKnown(); }
+  virtual bool isKnownHeapToStack(CallBase &CB) const = 0;
 
   /// Create an abstract attribute view for the position \p IRP.
   static AAHeapToStack &createForPosition(const IRPosition &IRP, Attributor &A);
