@@ -1427,7 +1427,7 @@ mlir::SymbolRefAttr IntrinsicLibrary::getUnrestrictedIntrinsicSymbolRefAttr(
         argTypes.push_back(type);
     }
     auto soughtFuncType =
-        builder.getFunctionType(signature.getResults(), argTypes);
+        builder.getFunctionType(argTypes, signature.getResults());
     auto rtCallGenerator = getRuntimeCallGenerator(name, soughtFuncType);
     funcOp = getWrapper(rtCallGenerator, name, signature, loadRefArguments);
   }
