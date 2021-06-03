@@ -37,6 +37,7 @@
 
 #include "Debug.h"
 #include "get_elf_mach_gfx_name.h"
+#include "machine.h"
 #include "omptargetplugin.h"
 #include "print_tracing.h"
 
@@ -136,15 +137,15 @@ public:
   KernelArgPool(const KernelArgPool &) = delete;
   KernelArgPool(KernelArgPool &&) = delete;
 
-  KernelArgPool(uint32_t kernarg_segment_size)
+  KernelArgPool(uint32_t kernarg_segment_size,
+                hsa_amd_memory_pool_t &memory_pool)
       : kernarg_segment_size(kernarg_segment_size) {
 
     // atmi uses one pool per kernel for all gpus, with a fixed upper size
     // preserving that exact scheme here, including the queue<int>
 
     hsa_status_t err = hsa_amd_memory_pool_allocate(
-        atl_gpu_kernarg_pools[0],
-        kernarg_size_including_implicit() * MAX_NUM_KERNELS, 0,
+        memory_pool, kernarg_size_including_implicit() * MAX_NUM_KERNELS, 0,
         &kernarg_region);
 
     if (err != HSA_STATUS_SUCCESS) {
@@ -224,7 +225,8 @@ struct KernelTy {
 
   KernelTy(int8_t _ExecutionMode, int16_t _ConstWGSize, int32_t _device_id,
            void *_CallStackAddr, const char *_Name,
-           uint32_t _kernarg_segment_size)
+           uint32_t _kernarg_segment_size,
+           hsa_amd_memory_pool_t &KernArgMemoryPool)
       : ExecutionMode(_ExecutionMode), ConstWGSize(_ConstWGSize),
         device_id(_device_id), CallStackAddr(_CallStackAddr), Name(_Name) {
     DP("Construct kernelinfo: ExecMode %d\n", ExecutionMode);
@@ -232,8 +234,8 @@ struct KernelTy {
     std::string N(_Name);
     if (KernelArgPoolMap.find(N) == KernelArgPoolMap.end()) {
       KernelArgPoolMap.insert(
-          std::make_pair(N, std::unique_ptr<KernelArgPool>(
-                                new KernelArgPool(_kernarg_segment_size))));
+          std::make_pair(N, std::unique_ptr<KernelArgPool>(new KernelArgPool(
+                                _kernarg_segment_size, KernArgMemoryPool))));
     }
   }
 };
@@ -297,6 +299,74 @@ uint16_t create_header() {
   header |= HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_RELEASE_FENCE_SCOPE;
   return header;
 }
+
+hsa_status_t addKernArgPool(hsa_amd_memory_pool_t MemoryPool, void *Data) {
+  std::vector<hsa_amd_memory_pool_t> *Result =
+      static_cast<std::vector<hsa_amd_memory_pool_t> *>(Data);
+  bool AllocAllowed = false;
+  hsa_status_t err = hsa_amd_memory_pool_get_info(
+      MemoryPool, HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED,
+      &AllocAllowed);
+  if (err != HSA_STATUS_SUCCESS) {
+    fprintf(stderr, "Alloc allowed in memory pool check failed: %s\n",
+            get_error_string(err));
+    return err;
+  }
+
+  if (!AllocAllowed) {
+    // nothing needs to be done here.
+    return HSA_STATUS_SUCCESS;
+  }
+
+  uint32_t GlobalFlags = 0;
+  err = hsa_amd_memory_pool_get_info(
+      MemoryPool, HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, &GlobalFlags);
+  if (err != HSA_STATUS_SUCCESS) {
+    fprintf(stderr, "Get memory pool info failed: %s\n", get_error_string(err));
+    return err;
+  }
+
+  fprintf(stderr, "Flags : %d\n", GlobalFlags);
+  if ((GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED) &&
+      (GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT)) {
+    size_t size = 0;
+    err = hsa_amd_memory_pool_get_info(MemoryPool,
+                                       HSA_AMD_MEMORY_POOL_INFO_SIZE, &size);
+    if (err != HSA_STATUS_SUCCESS) {
+      fprintf(stderr, "Get memory pool size failed: %s\n",
+              get_error_string(err));
+      return err;
+    }
+    if (size > 0)
+      Result->push_back(MemoryPool);
+  }
+
+  return HSA_STATUS_SUCCESS;
+}
+
+std::pair<hsa_status_t, hsa_amd_memory_pool_t>
+FindKernargPool(const std::vector<hsa_agent_t> &HSAAgents) {
+  std::vector<hsa_amd_memory_pool_t> KernArgPools;
+  for (const auto &processor : g_atl_machine.processors<ATLCPUProcessor>()) {
+    hsa_agent_t Agent = processor.agent();
+    hsa_status_t err = HSA_STATUS_SUCCESS;
+    err = hsa_amd_agent_iterate_memory_pools(
+        Agent, addKernArgPool, static_cast<void *>(&KernArgPools));
+    if (err != HSA_STATUS_SUCCESS) {
+      printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
+             "Iterate all memory pools", get_error_string(err));
+      return {err, hsa_amd_memory_pool_t{}};
+    }
+  }
+
+  if (KernArgPools.empty()) {
+    fprintf(stderr, "Unable to find any valid kernarg pool\n");
+    return {HSA_STATUS_ERROR, hsa_amd_memory_pool_t{}};
+  }
+
+  return {HSA_STATUS_SUCCESS, KernArgPools[0]};
+}
+
 } // namespace
 } // namespace core
 
@@ -343,6 +413,8 @@ public:
 
   std::vector<std::map<std::string, atl_kernel_info_t>> KernelInfoTable;
   std::vector<std::map<std::string, atl_symbol_info_t>> SymbolInfoTable;
+
+  hsa_amd_memory_pool_t KernArgPool;
 
   struct atmiFreePtrDeletor {
     void operator()(void *p) {
@@ -475,6 +547,12 @@ public:
       return;
     } else {
       DP("There are %d devices supporting HSA.\n", NumberOfDevices);
+    }
+
+    std::tie(err, KernArgPool) = core::FindKernargPool(HSAAgents);
+    if (err != HSA_STATUS_SUCCESS) {
+      DP("Error when reading memory pools\n");
+      return;
     }
 
     // Init the device info
@@ -1543,8 +1621,8 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     }
 
     KernelsList.push_back(KernelTy(ExecModeVal, WGSizeVal, device_id,
-                                   CallStackAddr, e->name,
-                                   kernarg_segment_size));
+                                   CallStackAddr, e->name, kernarg_segment_size,
+                                   DeviceInfo.KernArgPool));
     __tgt_offload_entry entry = *e;
     entry.addr = (void *)&KernelsList.back();
     DeviceInfo.addOffloadEntry(device_id, entry);
