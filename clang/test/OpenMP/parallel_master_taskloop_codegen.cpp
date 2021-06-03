@@ -1901,4 +1901,3 @@ struct S {
 // CHECK2-NEXT:    call void @__cxx_global_var_init()
 // CHECK2-NEXT:    ret void
 //
-//

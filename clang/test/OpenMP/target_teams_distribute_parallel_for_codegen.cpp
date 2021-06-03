@@ -4832,4 +4832,3 @@ int target_teams_fun(int *g){
 // CHECK13:       omp.precond.end:
 // CHECK13-NEXT:    ret void
 //
-//

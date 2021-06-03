@@ -654,6 +654,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
 // CHECK1-NEXT:    br i1 [[TMP4]], label [[DOTCANCEL_EXIT:%.*]], label [[DOTCANCEL_CONTINUE:%.*]]
 // CHECK1:       .cancel.exit:
+// CHECK1-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP2]])
 // CHECK1-NEXT:    br label [[DOTCANCEL_CONTINUE]]
 // CHECK1:       .cancel.continue:
 // CHECK1-NEXT:    ret void
@@ -1683,6 +1684,7 @@ int bar(int n){
 // CHECK2-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
 // CHECK2-NEXT:    br i1 [[TMP4]], label [[DOTCANCEL_EXIT:%.*]], label [[DOTCANCEL_CONTINUE:%.*]]
 // CHECK2:       .cancel.exit:
+// CHECK2-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP2]])
 // CHECK2-NEXT:    br label [[DOTCANCEL_CONTINUE]]
 // CHECK2:       .cancel.continue:
 // CHECK2-NEXT:    ret void
@@ -2706,6 +2708,7 @@ int bar(int n){
 // CHECK3-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
 // CHECK3-NEXT:    br i1 [[TMP4]], label [[DOTCANCEL_EXIT:%.*]], label [[DOTCANCEL_CONTINUE:%.*]]
 // CHECK3:       .cancel.exit:
+// CHECK3-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP2]])
 // CHECK3-NEXT:    br label [[DOTCANCEL_CONTINUE]]
 // CHECK3:       .cancel.continue:
 // CHECK3-NEXT:    ret void
@@ -3711,6 +3714,7 @@ int bar(int n){
 // CHECK4-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
 // CHECK4-NEXT:    br i1 [[TMP4]], label [[DOTCANCEL_EXIT:%.*]], label [[DOTCANCEL_CONTINUE:%.*]]
 // CHECK4:       .cancel.exit:
+// CHECK4-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP2]])
 // CHECK4-NEXT:    br label [[DOTCANCEL_CONTINUE]]
 // CHECK4:       .cancel.continue:
 // CHECK4-NEXT:    ret void
@@ -4412,6 +4416,7 @@ int bar(int n){
 // CHECK9-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
 // CHECK9-NEXT:    br i1 [[TMP4]], label [[DOTCANCEL_EXIT:%.*]], label [[DOTCANCEL_CONTINUE:%.*]]
 // CHECK9:       .cancel.exit:
+// CHECK9-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP2]])
 // CHECK9-NEXT:    br label [[DOTCANCEL_CONTINUE]]
 // CHECK9:       .cancel.continue:
 // CHECK9-NEXT:    ret void
@@ -4825,6 +4830,7 @@ int bar(int n){
 // CHECK10-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
 // CHECK10-NEXT:    br i1 [[TMP4]], label [[DOTCANCEL_EXIT:%.*]], label [[DOTCANCEL_CONTINUE:%.*]]
 // CHECK10:       .cancel.exit:
+// CHECK10-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP2]])
 // CHECK10-NEXT:    br label [[DOTCANCEL_CONTINUE]]
 // CHECK10:       .cancel.continue:
 // CHECK10-NEXT:    ret void
@@ -5238,6 +5244,7 @@ int bar(int n){
 // CHECK11-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
 // CHECK11-NEXT:    br i1 [[TMP4]], label [[DOTCANCEL_EXIT:%.*]], label [[DOTCANCEL_CONTINUE:%.*]]
 // CHECK11:       .cancel.exit:
+// CHECK11-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP2]])
 // CHECK11-NEXT:    br label [[DOTCANCEL_CONTINUE]]
 // CHECK11:       .cancel.continue:
 // CHECK11-NEXT:    ret void
@@ -5636,6 +5643,7 @@ int bar(int n){
 // CHECK12-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
 // CHECK12-NEXT:    br i1 [[TMP4]], label [[DOTCANCEL_EXIT:%.*]], label [[DOTCANCEL_CONTINUE:%.*]]
 // CHECK12:       .cancel.exit:
+// CHECK12-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP2]])
 // CHECK12-NEXT:    br label [[DOTCANCEL_CONTINUE]]
 // CHECK12:       .cancel.continue:
 // CHECK12-NEXT:    ret void
@@ -6344,6 +6352,7 @@ int bar(int n){
 // CHECK17-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
 // CHECK17-NEXT:    br i1 [[TMP4]], label [[DOTCANCEL_EXIT:%.*]], label [[DOTCANCEL_CONTINUE:%.*]]
 // CHECK17:       .cancel.exit:
+// CHECK17-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP2]])
 // CHECK17-NEXT:    br label [[DOTCANCEL_CONTINUE]]
 // CHECK17:       .cancel.continue:
 // CHECK17-NEXT:    ret void
@@ -7373,6 +7382,7 @@ int bar(int n){
 // CHECK18-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
 // CHECK18-NEXT:    br i1 [[TMP4]], label [[DOTCANCEL_EXIT:%.*]], label [[DOTCANCEL_CONTINUE:%.*]]
 // CHECK18:       .cancel.exit:
+// CHECK18-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP2]])
 // CHECK18-NEXT:    br label [[DOTCANCEL_CONTINUE]]
 // CHECK18:       .cancel.continue:
 // CHECK18-NEXT:    ret void
@@ -8396,6 +8406,7 @@ int bar(int n){
 // CHECK19-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
 // CHECK19-NEXT:    br i1 [[TMP4]], label [[DOTCANCEL_EXIT:%.*]], label [[DOTCANCEL_CONTINUE:%.*]]
 // CHECK19:       .cancel.exit:
+// CHECK19-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP2]])
 // CHECK19-NEXT:    br label [[DOTCANCEL_CONTINUE]]
 // CHECK19:       .cancel.continue:
 // CHECK19-NEXT:    ret void
@@ -9401,6 +9412,7 @@ int bar(int n){
 // CHECK20-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
 // CHECK20-NEXT:    br i1 [[TMP4]], label [[DOTCANCEL_EXIT:%.*]], label [[DOTCANCEL_CONTINUE:%.*]]
 // CHECK20:       .cancel.exit:
+// CHECK20-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP2]])
 // CHECK20-NEXT:    br label [[DOTCANCEL_CONTINUE]]
 // CHECK20:       .cancel.continue:
 // CHECK20-NEXT:    ret void
@@ -10102,6 +10114,7 @@ int bar(int n){
 // CHECK25-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
 // CHECK25-NEXT:    br i1 [[TMP4]], label [[DOTCANCEL_EXIT:%.*]], label [[DOTCANCEL_CONTINUE:%.*]]
 // CHECK25:       .cancel.exit:
+// CHECK25-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP2]])
 // CHECK25-NEXT:    br label [[DOTCANCEL_CONTINUE]]
 // CHECK25:       .cancel.continue:
 // CHECK25-NEXT:    ret void
@@ -10515,6 +10528,7 @@ int bar(int n){
 // CHECK26-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
 // CHECK26-NEXT:    br i1 [[TMP4]], label [[DOTCANCEL_EXIT:%.*]], label [[DOTCANCEL_CONTINUE:%.*]]
 // CHECK26:       .cancel.exit:
+// CHECK26-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP2]])
 // CHECK26-NEXT:    br label [[DOTCANCEL_CONTINUE]]
 // CHECK26:       .cancel.continue:
 // CHECK26-NEXT:    ret void
@@ -10928,6 +10942,7 @@ int bar(int n){
 // CHECK27-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
 // CHECK27-NEXT:    br i1 [[TMP4]], label [[DOTCANCEL_EXIT:%.*]], label [[DOTCANCEL_CONTINUE:%.*]]
 // CHECK27:       .cancel.exit:
+// CHECK27-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP2]])
 // CHECK27-NEXT:    br label [[DOTCANCEL_CONTINUE]]
 // CHECK27:       .cancel.continue:
 // CHECK27-NEXT:    ret void
@@ -11326,6 +11341,7 @@ int bar(int n){
 // CHECK28-NEXT:    [[TMP4:%.*]] = icmp ne i32 [[TMP3]], 0
 // CHECK28-NEXT:    br i1 [[TMP4]], label [[DOTCANCEL_EXIT:%.*]], label [[DOTCANCEL_CONTINUE:%.*]]
 // CHECK28:       .cancel.exit:
+// CHECK28-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_cancel_barrier(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 [[TMP2]])
 // CHECK28-NEXT:    br label [[DOTCANCEL_CONTINUE]]
 // CHECK28:       .cancel.continue:
 // CHECK28-NEXT:    ret void
