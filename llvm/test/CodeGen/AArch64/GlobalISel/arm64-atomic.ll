@@ -214,12 +214,12 @@ define i64 @val_compare_and_swap_64_monotonic_seqcst(i64* %p, i64 %cmp, i64 %new
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB4_1: ; %cmpxchg.start
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NOLSE-O1-NEXT:    ldxr x8, [x0]
+; CHECK-NOLSE-O1-NEXT:    ldaxr x8, [x0]
 ; CHECK-NOLSE-O1-NEXT:    cmp x8, x1
 ; CHECK-NOLSE-O1-NEXT:    b.ne LBB4_4
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
 ; CHECK-NOLSE-O1-NEXT:    ; in Loop: Header=BB4_1 Depth=1
-; CHECK-NOLSE-O1-NEXT:    stxr w9, x2, [x0]
+; CHECK-NOLSE-O1-NEXT:    stlxr w9, x2, [x0]
 ; CHECK-NOLSE-O1-NEXT:    cbnz w9, LBB4_1
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.3: ; %cmpxchg.end
 ; CHECK-NOLSE-O1-NEXT:    mov x0, x8
@@ -264,7 +264,7 @@ define i64 @val_compare_and_swap_64_release_acquire(i64* %p, i64 %cmp, i64 %new)
 ; CHECK-NOLSE-O1:       ; %bb.0:
 ; CHECK-NOLSE-O1-NEXT:  LBB5_1: ; %cmpxchg.start
 ; CHECK-NOLSE-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NOLSE-O1-NEXT:    ldxr x8, [x0]
+; CHECK-NOLSE-O1-NEXT:    ldaxr x8, [x0]
 ; CHECK-NOLSE-O1-NEXT:    cmp x8, x1
 ; CHECK-NOLSE-O1-NEXT:    b.ne LBB5_4
 ; CHECK-NOLSE-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
