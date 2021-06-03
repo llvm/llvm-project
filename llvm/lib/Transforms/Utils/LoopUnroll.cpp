@@ -256,8 +256,7 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 ///
 /// PreserveCondBr indicates whether the conditional branch of the LatchBlock
 /// needs to be preserved.  It is needed when we use trip count upper bound to
-/// fully unroll the loop. If PreserveOnlyFirst is also set then only the first
-/// conditional branch needs to be preserved.
+/// fully unroll the loop.
 ///
 /// Similarly, TripMultiple divides the number of times that the LatchBlock may
 /// execute without exiting the loop.
@@ -380,6 +379,11 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       PreserveLCSSA && CompletelyUnroll &&
       any_of(ExitBlocks,
              [](const BasicBlock *BB) { return isa<PHINode>(BB->begin()); });
+
+  const unsigned MaxTripCount = SE->getSmallConstantMaxTripCount(L);
+  const bool MaxOrZero = SE->isBackedgeTakenCountMaxOrZero(L);
+
+  const bool PreserveOnlyFirst = ULO.Count == MaxTripCount && MaxOrZero;
 
   // The current loop unroll pass can unroll loops that have
   // (1) single latch; and
@@ -755,7 +759,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
     auto WillExit = [&](unsigned i, unsigned j) -> Optional<bool> {
       if (CompletelyUnroll) {
-        if (ULO.PreserveCondBr && j && !(ULO.PreserveOnlyFirst && i != 0))
+        if (ULO.PreserveCondBr && j && !(PreserveOnlyFirst && i != 0))
           return None;
         return j == 0;
       }
