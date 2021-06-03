@@ -318,7 +318,7 @@ Scope *Scope::FindScope(parser::CharBlock source) {
 }
 
 void Scope::AddSourceRange(const parser::CharBlock &source) {
-  for (auto *scope = this; !scope->IsGlobal(); scope = &scope->parent()) {
+  for (auto *scope{this}; !scope->IsGlobal(); scope = &scope->parent()) {
     scope->sourceRange_.ExtendToCover(source);
   }
 }
