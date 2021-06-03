@@ -24,8 +24,8 @@ static void addOperands(Operation *op, SetVector<Value> &operandSet) {
     return;
   TypeSwitch<Operation *, void>(op)
       .Case<linalg::LinalgOp>([&](linalg::LinalgOp linalgOp) {
-        operandSet.insert(linalgOp.getInputs().begin(),
-                          linalgOp.getInputs().end());
+        SmallVector<Value> inputOperands = linalgOp.getInputOperands();
+        operandSet.insert(inputOperands.begin(), inputOperands.end());
       })
       .Default([&](Operation *operation) {
         operandSet.insert(operation->operand_begin(), operation->operand_end());
