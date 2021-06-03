@@ -71,6 +71,12 @@ foreach(arch ${ASAN_TEST_ARCH})
     list(APPEND ASAN_DYNAMIC_TESTSUITES
       ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
   endif()
+
+  # ARM on Linux may include thumb code, where fast unwinding does not work.
+  # Enable unwind tables so that we do not end up falling back to it in tests.
+  if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND NOT ANDROID AND ${arch} MATCHES "arm")
+    set(ASAN_TEST_TARGET_CFLAGS "${ASAN_TEST_TARGET_CFLAGS} -funwind-tables")
+  endif()
 endforeach()
 
 # iOS and iOS simulator test suites

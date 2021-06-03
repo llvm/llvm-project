@@ -13,22 +13,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <vector>
-
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllPasses.h"
 #include "mlir/Parser.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Reducer/OptReductionPass.h"
 #include "mlir/Reducer/Passes.h"
-#include "mlir/Reducer/Passes/OpReducer.h"
-#include "mlir/Reducer/ReductionNode.h"
-#include "mlir/Reducer/ReductionTreePass.h"
-#include "mlir/Reducer/Tester.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ToolOutputFile.h"
 

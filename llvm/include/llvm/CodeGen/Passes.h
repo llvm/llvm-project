@@ -15,6 +15,7 @@
 #define LLVM_CODEGEN_PASSES_H
 
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Discriminator.h"
 #include <functional>
 #include <string>
 
@@ -490,9 +491,10 @@ namespace llvm {
   /// Create IR Type Promotion pass. \see TypePromotion.cpp
   FunctionPass *createTypePromotionPass();
 
-  /// Add Flow Sensitive Discriminators.
-  FunctionPass *createMIRAddFSDiscriminatorsPass(unsigned LowBit,
-                                                 unsigned HighBit);
+  /// Add Flow Sensitive Discriminators. PassNum specifies the
+  /// sequence number of this pass (starting from 1).
+  FunctionPass *
+  createMIRAddFSDiscriminatorsPass(sampleprof::FSDiscriminatorPass P);
 
   /// Creates MIR Debugify pass. \see MachineDebugify.cpp
   ModulePass *createDebugifyMachineModulePass();

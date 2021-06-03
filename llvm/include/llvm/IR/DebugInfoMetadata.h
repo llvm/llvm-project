@@ -1741,7 +1741,7 @@ public:
   }
 
   /// Return the bits used for base discriminators.
-  static unsigned getBaseDiscriminatorBits() { return BASE_DIS_BIT_END; }
+  static unsigned getBaseDiscriminatorBits() { return getBaseFSBitEnd(); }
 
   /// Returns the base discriminator for a given encoded discriminator \p D.
   static unsigned getBaseDiscriminatorFromDiscriminator(unsigned D) {

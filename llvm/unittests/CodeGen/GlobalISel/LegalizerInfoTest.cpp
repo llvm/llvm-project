@@ -48,15 +48,17 @@ namespace {
 TEST(LegalizerInfoTest, ScalarRISC) {
   using namespace TargetOpcode;
   LegalizerInfo L;
+  auto &LegacyInfo = L.getLegacyLegalizerInfo();
   // Typical RISCy set of operations based on AArch64.
   for (unsigned Op : {G_ADD, G_SUB}) {
     for (unsigned Size : {32, 64})
-      L.setAction({Op, 0, LLT::scalar(Size)}, Legal);
-    L.setLegalizeScalarToDifferentSizeStrategy(
-        Op, 0, LegalizerInfo::widenToLargerTypesAndNarrowToLargest);
+      LegacyInfo.setAction({Op, 0, LLT::scalar(Size)},
+                           LegacyLegalizeActions::Legal);
+    LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(
+        Op, 0, LegacyLegalizerInfo::widenToLargerTypesAndNarrowToLargest);
   }
 
-  L.computeTables();
+  LegacyInfo.computeTables();
 
   for (unsigned opcode : {G_ADD, G_SUB}) {
     // Check we infer the correct types and actually do what we're told.
@@ -89,20 +91,28 @@ TEST(LegalizerInfoTest, ScalarRISC) {
 TEST(LegalizerInfoTest, VectorRISC) {
   using namespace TargetOpcode;
   LegalizerInfo L;
+  auto &LegacyInfo = L.getLegacyLegalizerInfo();
   // Typical RISCy set of operations based on ARM.
-  L.setAction({G_ADD, LLT::vector(8, 8)}, Legal);
-  L.setAction({G_ADD, LLT::vector(16, 8)}, Legal);
-  L.setAction({G_ADD, LLT::vector(4, 16)}, Legal);
-  L.setAction({G_ADD, LLT::vector(8, 16)}, Legal);
-  L.setAction({G_ADD, LLT::vector(2, 32)}, Legal);
-  L.setAction({G_ADD, LLT::vector(4, 32)}, Legal);
+  LegacyInfo.setAction({G_ADD, LLT::vector(8, 8)},
+                       LegacyLegalizeActions::Legal);
+  LegacyInfo.setAction({G_ADD, LLT::vector(16, 8)},
+                       LegacyLegalizeActions::Legal);
+  LegacyInfo.setAction({G_ADD, LLT::vector(4, 16)},
+                       LegacyLegalizeActions::Legal);
+  LegacyInfo.setAction({G_ADD, LLT::vector(8, 16)},
+                       LegacyLegalizeActions::Legal);
+  LegacyInfo.setAction({G_ADD, LLT::vector(2, 32)},
+                       LegacyLegalizeActions::Legal);
+  LegacyInfo.setAction({G_ADD, LLT::vector(4, 32)},
+                       LegacyLegalizeActions::Legal);
 
-  L.setLegalizeVectorElementToDifferentSizeStrategy(
-      G_ADD, 0, LegalizerInfo::widenToLargerTypesUnsupportedOtherwise);
+  LegacyInfo.setLegalizeVectorElementToDifferentSizeStrategy(
+      G_ADD, 0, LegacyLegalizerInfo::widenToLargerTypesUnsupportedOtherwise);
 
-  L.setAction({G_ADD, 0, LLT::scalar(32)}, Legal);
+  LegacyInfo.setAction({G_ADD, 0, LLT::scalar(32)},
+                       LegacyLegalizeActions::Legal);
 
-  L.computeTables();
+  LegacyInfo.computeTables();
 
   // Check we infer the correct types and actually do what we're told for some
   // simple cases.
@@ -124,17 +134,18 @@ TEST(LegalizerInfoTest, VectorRISC) {
 TEST(LegalizerInfoTest, MultipleTypes) {
   using namespace TargetOpcode;
   LegalizerInfo L;
+  auto &LegacyInfo = L.getLegacyLegalizerInfo();
   LLT p0 = LLT::pointer(0, 64);
   LLT s64 = LLT::scalar(64);
 
   // Typical RISCy set of operations based on AArch64.
-  L.setAction({G_PTRTOINT, 0, s64}, Legal);
-  L.setAction({G_PTRTOINT, 1, p0}, Legal);
+  LegacyInfo.setAction({G_PTRTOINT, 0, s64}, LegacyLegalizeActions::Legal);
+  LegacyInfo.setAction({G_PTRTOINT, 1, p0}, LegacyLegalizeActions::Legal);
 
-  L.setLegalizeScalarToDifferentSizeStrategy(
-      G_PTRTOINT, 0, LegalizerInfo::widenToLargerTypesAndNarrowToLargest);
+  LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(
+      G_PTRTOINT, 0, LegacyLegalizerInfo::widenToLargerTypesAndNarrowToLargest);
 
-  L.computeTables();
+  LegacyInfo.computeTables();
 
   // Check we infer the correct types and actually do what we're told.
   EXPECT_EQ(L.getAction({G_PTRTOINT, {s64, p0}}),
@@ -152,15 +163,16 @@ TEST(LegalizerInfoTest, MultipleTypes) {
 TEST(LegalizerInfoTest, MultipleSteps) {
   using namespace TargetOpcode;
   LegalizerInfo L;
+  auto &LegacyInfo = L.getLegacyLegalizerInfo();
   LLT s32 = LLT::scalar(32);
   LLT s64 = LLT::scalar(64);
 
-  L.setLegalizeScalarToDifferentSizeStrategy(
-      G_UREM, 0, LegalizerInfo::widenToLargerTypesUnsupportedOtherwise);
-  L.setAction({G_UREM, 0, s32}, Lower);
-  L.setAction({G_UREM, 0, s64}, Lower);
+  LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(
+      G_UREM, 0, LegacyLegalizerInfo::widenToLargerTypesUnsupportedOtherwise);
+  LegacyInfo.setAction({G_UREM, 0, s32}, LegacyLegalizeActions::Lower);
+  LegacyInfo.setAction({G_UREM, 0, s64}, LegacyLegalizeActions::Lower);
 
-  L.computeTables();
+  LegacyInfo.computeTables();
 
   EXPECT_EQ(L.getAction({G_UREM, {LLT::scalar(16)}}),
             LegalizeActionStep(WidenScalar, 0, LLT::scalar(32)));
@@ -171,12 +183,14 @@ TEST(LegalizerInfoTest, MultipleSteps) {
 TEST(LegalizerInfoTest, SizeChangeStrategy) {
   using namespace TargetOpcode;
   LegalizerInfo L;
+  auto &LegacyInfo = L.getLegacyLegalizerInfo();
   for (unsigned Size : {1, 8, 16, 32})
-    L.setAction({G_UREM, 0, LLT::scalar(Size)}, Legal);
+    LegacyInfo.setAction({G_UREM, 0, LLT::scalar(Size)},
+                         LegacyLegalizeActions::Legal);
 
-  L.setLegalizeScalarToDifferentSizeStrategy(
-      G_UREM, 0, LegalizerInfo::widenToLargerTypesUnsupportedOtherwise);
-  L.computeTables();
+  LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(
+      G_UREM, 0, LegacyLegalizerInfo::widenToLargerTypesUnsupportedOtherwise);
+  LegacyInfo.computeTables();
 
   // Check we infer the correct types and actually do what we're told.
   for (unsigned Size : {1, 8, 16, 32}) {
@@ -229,11 +243,12 @@ TEST(LegalizerInfoTest, RuleSets) {
 
   {
     LegalizerInfo LI;
+    auto &LegacyInfo = LI.getLegacyLegalizerInfo();
 
     LI.getActionDefinitionsBuilder(G_IMPLICIT_DEF)
       .legalFor({v4s32, v4p0})
       .moreElementsToNextPow2(0);
-    LI.computeTables();
+    LegacyInfo.computeTables();
 
     EXPECT_ACTION(Unsupported, 0, LLT(), LegalityQuery(G_IMPLICIT_DEF, {s32}));
     EXPECT_ACTION(Unsupported, 0, LLT(), LegalityQuery(G_IMPLICIT_DEF, {v2s32}));
@@ -244,10 +259,11 @@ TEST(LegalizerInfoTest, RuleSets) {
   // Test minScalarOrElt
   {
     LegalizerInfo LI;
+    auto &LegacyInfo = LI.getLegacyLegalizerInfo();
     LI.getActionDefinitionsBuilder(G_OR)
       .legalFor({s32})
       .minScalarOrElt(0, s32);
-    LI.computeTables();
+    LegacyInfo.computeTables();
 
     EXPECT_ACTION(WidenScalar, 0, s32, LegalityQuery(G_OR, {s16}));
     EXPECT_ACTION(WidenScalar, 0, v2s32, LegalityQuery(G_OR, {v2s16}));
@@ -256,10 +272,11 @@ TEST(LegalizerInfoTest, RuleSets) {
   // Test maxScalarOrELt
   {
     LegalizerInfo LI;
+    auto &LegacyInfo = LI.getLegacyLegalizerInfo();
     LI.getActionDefinitionsBuilder(G_AND)
       .legalFor({s16})
       .maxScalarOrElt(0, s16);
-    LI.computeTables();
+    LegacyInfo.computeTables();
 
     EXPECT_ACTION(NarrowScalar, 0, s16, LegalityQuery(G_AND, {s32}));
     EXPECT_ACTION(NarrowScalar, 0, v2s16, LegalityQuery(G_AND, {v2s32}));
@@ -268,10 +285,11 @@ TEST(LegalizerInfoTest, RuleSets) {
   // Test clampScalarOrElt
   {
     LegalizerInfo LI;
+    auto &LegacyInfo = LI.getLegacyLegalizerInfo();
     LI.getActionDefinitionsBuilder(G_XOR)
       .legalFor({s16})
       .clampScalarOrElt(0, s16, s32);
-    LI.computeTables();
+    LegacyInfo.computeTables();
 
     EXPECT_ACTION(NarrowScalar, 0, s32, LegalityQuery(G_XOR, {s64}));
     EXPECT_ACTION(WidenScalar, 0, s16, LegalityQuery(G_XOR, {s8}));
@@ -284,10 +302,11 @@ TEST(LegalizerInfoTest, RuleSets) {
   // Test minScalar
   {
     LegalizerInfo LI;
+    auto &LegacyInfo = LI.getLegacyLegalizerInfo();
     LI.getActionDefinitionsBuilder(G_OR)
       .legalFor({s32})
       .minScalar(0, s32);
-    LI.computeTables();
+    LegacyInfo.computeTables();
 
     // Only handle scalars, ignore vectors.
     EXPECT_ACTION(WidenScalar, 0, s32, LegalityQuery(G_OR, {s16}));
@@ -297,10 +316,11 @@ TEST(LegalizerInfoTest, RuleSets) {
   // Test maxScalar
   {
     LegalizerInfo LI;
+    auto &LegacyInfo = LI.getLegacyLegalizerInfo();
     LI.getActionDefinitionsBuilder(G_AND)
       .legalFor({s16})
       .maxScalar(0, s16);
-    LI.computeTables();
+    LegacyInfo.computeTables();
 
     // Only handle scalars, ignore vectors.
     EXPECT_ACTION(NarrowScalar, 0, s16, LegalityQuery(G_AND, {s32}));
@@ -310,11 +330,12 @@ TEST(LegalizerInfoTest, RuleSets) {
   // Test clampScalar
   {
     LegalizerInfo LI;
+    auto &LegacyInfo = LI.getLegacyLegalizerInfo();
 
     LI.getActionDefinitionsBuilder(G_XOR)
       .legalFor({s16})
       .clampScalar(0, s16, s32);
-    LI.computeTables();
+    LegacyInfo.computeTables();
 
     EXPECT_ACTION(NarrowScalar, 0, s32, LegalityQuery(G_XOR, {s64}));
     EXPECT_ACTION(WidenScalar, 0, s16, LegalityQuery(G_XOR, {s8}));
@@ -327,11 +348,12 @@ TEST(LegalizerInfoTest, RuleSets) {
   // Test widenScalarOrEltToNextPow2
   {
     LegalizerInfo LI;
+    auto &LegacyInfo = LI.getLegacyLegalizerInfo();
 
     LI.getActionDefinitionsBuilder(G_AND)
       .legalFor({s32})
       .widenScalarOrEltToNextPow2(0, 32);
-    LI.computeTables();
+    LegacyInfo.computeTables();
 
     // Handle scalars and vectors
     EXPECT_ACTION(WidenScalar, 0, s32, LegalityQuery(G_AND, {s5}));
@@ -343,11 +365,12 @@ TEST(LegalizerInfoTest, RuleSets) {
   // Test widenScalarToNextPow2
   {
     LegalizerInfo LI;
+    auto &LegacyInfo = LI.getLegacyLegalizerInfo();
 
     LI.getActionDefinitionsBuilder(G_AND)
       .legalFor({s32})
       .widenScalarToNextPow2(0, 32);
-    LI.computeTables();
+    LegacyInfo.computeTables();
 
     EXPECT_ACTION(WidenScalar, 0, s32, LegalityQuery(G_AND, {s5}));
     EXPECT_ACTION(WidenScalar, 0, s64, LegalityQuery(G_AND, {s33}));
@@ -366,10 +389,11 @@ TEST(LegalizerInfoTest, MMOAlignment) {
 
   {
     LegalizerInfo LI;
+    auto &LegacyInfo = LI.getLegacyLegalizerInfo();
     LI.getActionDefinitionsBuilder(G_LOAD)
       .legalForTypesWithMemDesc({{s32, p0, 32, 32}});
 
-    LI.computeTables();
+    LegacyInfo.computeTables();
 
     EXPECT_ACTION(Legal, 0, LLT(),
                   LegalityQuery(G_LOAD, {s32, p0},
@@ -391,10 +415,11 @@ TEST(LegalizerInfoTest, MMOAlignment) {
     const uint64_t MaxAlignment = UINT64_C(1) << 29;
     const uint64_t MaxAlignInBits = 8 * MaxAlignment;
     LegalizerInfo LI;
+    auto &LegacyInfo = LI.getLegacyLegalizerInfo();
     LI.getActionDefinitionsBuilder(G_LOAD)
       .legalForTypesWithMemDesc({{s32, p0, 32, MaxAlignInBits}});
 
-    LI.computeTables();
+    LegacyInfo.computeTables();
 
     EXPECT_ACTION(Legal, 0, LLT(),
                   LegalityQuery(G_LOAD, {s32, p0},

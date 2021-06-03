@@ -6,5 +6,5 @@ install-name:     '/usr/lib/libc++abi.dylib'
 current-version:  1281
 exports:
   - archs:        [ i386, x86_64, arm64 ]
-    symbols:      [ ___gxx_personality_v0 ]
+    symbols:      [ ___cxa_allocate_exception, ___cxa_begin_catch, ___cxa_end_catch, ___cxa_throw, ___gxx_personality_v0, __ZTIi ]
 ...

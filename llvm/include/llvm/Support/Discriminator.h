@@ -13,6 +13,9 @@
 #ifndef LLVM_SUPPORT_DISCRIMINATOR_H
 #define LLVM_SUPPORT_DISCRIMINATOR_H
 
+#include "llvm/Support/Error.h"
+#include <assert.h>
+
 // Utility functions for encoding / decoding discriminators.
 /// With a given unsigned int \p U, use up to 13 bits to represent it.
 /// old_bit 1~5  --> new_bit 1~5
@@ -48,26 +51,83 @@ static inline unsigned encodingBits(unsigned C) {
 }
 
 // Some constants used in FS Discriminators.
-#define BASE_DIS_BIT_BEG 0
-#define BASE_DIS_BIT_END 7
+//
+namespace llvm {
+namespace sampleprof {
+enum class FSDiscriminatorPass : unsigned {
+  Base = 0,
+  Pass0 = 0,
+  Pass1 = 1,
+  Pass2 = 2,
+  Pass3 = 3,
+  Pass4 = 4,
+  PassLast = 4,
+};
+} // namespace sampleprof
 
-#define PASS_1_DIS_BIT_BEG 8
-#define PASS_1_DIS_BIT_END 13
+using namespace sampleprof;
 
-#define PASS_2_DIS_BIT_BEG 14
-#define PASS_2_DIS_BIT_END 19
+// The number of bits reserved for the base discrimininator. The base
+// discriminaitor starts from bit 0.
+static const unsigned BaseDiscriminatorBitWidth = 8;
 
-#define PASS_3_DIS_BIT_BEG 20
-#define PASS_3_DIS_BIT_END 25
+// The number of bits reserved for each FS discriminator pass.
+static const unsigned FSDiscriminatorBitWidth = 6;
 
-#define PASS_LAST_DIS_BIT_BEG 26
-#define PASS_LAST_DIS_BIT_END 31
-
-// Set bits range [0 .. n] to 1. Used in FS Discriminators.
-static inline unsigned getN1Bits(int N) {
-  if (N >= 31)
-    return 0xFFFFFFFF;
-  return (1 << (N + 1)) - 1;
+// Return the number of FS passes, excluding the pass adding the base
+// discriminators.
+// The number of passes for FS discriminators. Note that the total
+// number of discriminaitor bits, i.e.
+// BaseDiscriminatorBitWidth
+//  + FSDiscriminatorBitWidth * getNumFSPasses()
+// needs to fit in an unsigned int type.
+static inline unsigned getNumFSPasses() {
+  return static_cast<unsigned>(FSDiscriminatorPass::PassLast);
 }
+
+// Return the ending bit for FSPass P.
+static inline unsigned getFSPassBitEnd(FSDiscriminatorPass P) {
+  unsigned I = static_cast<unsigned>(P);
+  assert(I <= getNumFSPasses() && "Invalid FS discriminator pass number.");
+  return BaseDiscriminatorBitWidth + I * FSDiscriminatorBitWidth - 1;
+}
+
+// Return the begining bit for FSPass P.
+static inline unsigned getFSPassBitBegin(FSDiscriminatorPass P) {
+  if (P == FSDiscriminatorPass::Base)
+    return 0;
+  unsigned I = static_cast<unsigned>(P);
+  assert(I <= getNumFSPasses() && "Invalid FS discriminator pass number.");
+  return getFSPassBitEnd(static_cast<FSDiscriminatorPass>(I - 1)) + 1;
+}
+
+// Return the beginning bit for the last FSPass.
+static inline int getLastFSPassBitBegin() {
+  return getFSPassBitBegin(static_cast<FSDiscriminatorPass>(getNumFSPasses()));
+}
+
+// Return the ending bit for the last FSPass.
+static inline unsigned getLastFSPassBitEnd() {
+  return getFSPassBitEnd(static_cast<FSDiscriminatorPass>(getNumFSPasses()));
+}
+
+// Return the beginning bit for the base (first) FSPass.
+static inline unsigned getBaseFSBitBegin() { return 0; }
+
+// Return the ending bit for the base (first) FSPass.
+static inline unsigned getBaseFSBitEnd() {
+  return BaseDiscriminatorBitWidth - 1;
+}
+
+// Set bits in range of [0 .. n] to 1. Used in FS Discriminators.
+static inline unsigned getN1Bits(int N) {
+  // Work around the g++ bug that folding "(1U << (N + 1)) - 1" to 0.
+  if (N == 31)
+    return 0xFFFFFFFF;
+  assert((N < 32) && "N is invalid");
+  return (1U << (N + 1)) - 1;
+}
+
+} // namespace llvm
 
 #endif /* LLVM_SUPPORT_DISCRIMINATOR_H */

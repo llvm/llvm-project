@@ -660,6 +660,18 @@ public:
     return PointerType::get(C, 0);
   }
 
+  /// This constructs a pointer type with the same pointee type as input
+  /// PointerType (or opaque pointer is the input PointerType is opaque) and the
+  /// given address space. This is only useful during the opaque pointer
+  /// transition.
+  /// TODO: remove after opaque pointer transition is complete.
+  static PointerType *getWithSamePointeeType(PointerType *PT,
+                                             unsigned AddressSpace) {
+    if (PT->isOpaque())
+      return get(PT->getContext(), AddressSpace);
+    return get(PT->getElementType(), AddressSpace);
+  }
+
   Type *getElementType() const {
     assert(!isOpaque() && "Attempting to get element type of opaque pointer");
     return PointeeTy;

@@ -390,6 +390,9 @@
 #      define _LIBCPP_HAS_QUICK_EXIT
 #      define _LIBCPP_HAS_TIMESPEC_GET
 #    endif
+#  elif defined(_LIBCPP_MSVCRT)
+     // Using Microsoft's C Runtime library, not MinGW
+#    define _LIBCPP_HAS_TIMESPEC_GET
 #  elif defined(__APPLE__)
      // timespec_get and aligned_alloc were introduced in macOS 10.15 and
      // aligned releases

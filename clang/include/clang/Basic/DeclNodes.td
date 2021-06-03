@@ -75,6 +75,7 @@ def Named : DeclNode<Decl, "named declarations", 1>;
   def UsingPack : DeclNode<Named>;
   def UsingShadow : DeclNode<Named>;
     def ConstructorUsingShadow : DeclNode<UsingShadow>;
+  def UnresolvedUsingIfExists : DeclNode<Named>;
   def ObjCMethod : DeclNode<Named, "Objective-C methods">, DeclContext;
   def ObjCContainer : DeclNode<Named, "Objective-C containers", 1>, DeclContext;
     def ObjCCategory : DeclNode<ObjCContainer>;

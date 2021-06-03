@@ -109,7 +109,9 @@ struct Configuration {
   llvm::StringRef outputFile;
   llvm::StringRef ltoObjPath;
   llvm::StringRef thinLTOJobs;
+  bool deadStripDylibs = false;
   bool demangle = false;
+  bool deadStrip = false;
   PlatformInfo platformInfo;
   NamespaceKind namespaceKind = NamespaceKind::twolevel;
   UndefinedSymbolTreatment undefinedSymbolTreatment =
@@ -132,6 +134,8 @@ struct Configuration {
 
   SymbolPatterns exportedSymbols;
   SymbolPatterns unexportedSymbols;
+
+  bool zeroModTime = false;
 
   llvm::MachO::Architecture arch() const { return platformInfo.target.Arch; }
 

@@ -34,6 +34,7 @@
 
 namespace mlir {
 class DLTIDialect;
+class RewritePatternSet;
 } // namespace mlir
 
 #include "TestOpEnums.h.inc"
@@ -47,6 +48,7 @@ class DLTIDialect;
 namespace mlir {
 namespace test {
 void registerTestDialect(DialectRegistry &registry);
+void populateTestReductionPatterns(RewritePatternSet &patterns);
 } // namespace test
 } // namespace mlir
 

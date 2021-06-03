@@ -117,6 +117,10 @@ bool Instruction::comesBefore(const Instruction *Other) const {
   return Order < Other->Order;
 }
 
+bool Instruction::isOnlyUserOfAnyOperand() {
+  return any_of(operands(), [](Value *V) { return V->hasOneUser(); });
+}
+
 void Instruction::setHasNoUnsignedWrap(bool b) {
   cast<OverflowingBinaryOperator>(this)->setHasNoUnsignedWrap(b);
 }

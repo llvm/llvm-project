@@ -5,6 +5,11 @@
  *===------------------------------------------------------------------------*/
 #include "atmi_interop_hsa.h"
 #include "internal.h"
+#include "machine.h"
+
+// TODO: need to get rid of this as well
+
+extern ATLMachine g_atl_machine;
 
 hsa_status_t atmi_interop_hsa_get_symbol_info(
     const std::map<std::string, atl_symbol_info_t> &SymbolInfoTable,
@@ -18,11 +23,10 @@ hsa_status_t atmi_interop_hsa_get_symbol_info(
      atmi_memcpy(signal, host_add, var_addr, var_size);
   */
 
-  atmi_machine_t *machine = atmi_machine_get_info();
-  if (!symbol || !var_addr || !var_size || !machine)
+  if (!symbol || !var_addr || !var_size)
     return HSA_STATUS_ERROR;
   if (DeviceId < 0 ||
-      DeviceId >= machine->device_count_by_type[ATMI_DEVTYPE_GPU])
+      DeviceId >= g_atl_machine.processors<ATLGPUProcessor>().size())
     return HSA_STATUS_ERROR;
 
   // get the symbol info
@@ -52,11 +56,10 @@ hsa_status_t atmi_interop_hsa_get_kernel_info(
                                   &val);
   */
 
-  atmi_machine_t *machine = atmi_machine_get_info();
-  if (!kernel_name || !value || !machine)
+  if (!kernel_name || !value)
     return HSA_STATUS_ERROR;
   if (DeviceId < 0 ||
-      DeviceId >= machine->device_count_by_type[ATMI_DEVTYPE_GPU])
+      DeviceId >= g_atl_machine.processors<ATLGPUProcessor>().size())
     return HSA_STATUS_ERROR;
 
   hsa_status_t status = HSA_STATUS_SUCCESS;

@@ -1177,8 +1177,12 @@ void TargetPassConfig::addMachinePasses() {
   addPass(&PatchableFunctionID);
 
   if (EnableFSDiscriminator && !FSNoFinalDiscrim)
-    addPass(createMIRAddFSDiscriminatorsPass(PASS_LAST_DIS_BIT_BEG,
-                                             PASS_LAST_DIS_BIT_END));
+    // Add FS discriminators here so that all the instruction duplicates
+    // in different BBs get their own discriminators. With this, we can "sum"
+    // the SampleFDO counters instead of using MAX. This will improve the
+    // SampleFDO profile quality.
+    addPass(createMIRAddFSDiscriminatorsPass(
+        sampleprof::FSDiscriminatorPass::PassLast));
 
   addPreEmitPass();
 

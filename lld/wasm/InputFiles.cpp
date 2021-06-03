@@ -368,8 +368,11 @@ static bool shouldMerge(const WasmSection &sec) {
   // currently go by the name alone.
   // TODO(sbc): Add ability for wasm sections to carry flags so we don't
   // need to use names here.
-  return sec.Name.startswith(".debug_str") ||
-         sec.Name.startswith(".debug_line_str");
+  // For now, keep in sync with uses of wasm::WASM_SEG_FLAG_STRINGS in
+  // MCObjectFileInfo::initWasmMCObjectFileInfo which creates these custom
+  // sections.
+  return sec.Name == ".debug_str" || sec.Name == ".debug_str.dwo" ||
+         sec.Name == ".debug_line_str";
 }
 
 static bool shouldMerge(const WasmSegment &seg) {

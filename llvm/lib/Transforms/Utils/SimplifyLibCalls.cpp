@@ -1424,17 +1424,18 @@ static Value *getPow(Value *InnerChain[33], unsigned Exp, IRBuilderBase &B) {
   return InnerChain[Exp];
 }
 
-// Return a properly extended 32-bit integer if the operation is an itofp.
-static Value *getIntToFPVal(Value *I2F, IRBuilderBase &B) {
+// Return a properly extended integer (DstWidth bits wide) if the operation is
+// an itofp.
+static Value *getIntToFPVal(Value *I2F, IRBuilderBase &B, unsigned DstWidth) {
   if (isa<SIToFPInst>(I2F) || isa<UIToFPInst>(I2F)) {
     Value *Op = cast<Instruction>(I2F)->getOperand(0);
-    // Make sure that the exponent fits inside an int32_t,
+    // Make sure that the exponent fits inside an "int" of size DstWidth,
     // thus avoiding any range issues that FP has not.
     unsigned BitWidth = Op->getType()->getPrimitiveSizeInBits();
-    if (BitWidth < 32 ||
-        (BitWidth == 32 && isa<SIToFPInst>(I2F)))
-      return isa<SIToFPInst>(I2F) ? B.CreateSExt(Op, B.getInt32Ty())
-                                  : B.CreateZExt(Op, B.getInt32Ty());
+    if (BitWidth < DstWidth ||
+        (BitWidth == DstWidth && isa<SIToFPInst>(I2F)))
+      return isa<SIToFPInst>(I2F) ? B.CreateSExt(Op, B.getIntNTy(DstWidth))
+                                  : B.CreateZExt(Op, B.getIntNTy(DstWidth));
   }
 
   return nullptr;
@@ -1524,7 +1525,7 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
   if (match(Base, m_SpecificFP(2.0)) &&
       (isa<SIToFPInst>(Expo) || isa<UIToFPInst>(Expo)) &&
       hasFloatFn(TLI, Ty, LibFunc_ldexp, LibFunc_ldexpf, LibFunc_ldexpl)) {
-    if (Value *ExpoI = getIntToFPVal(Expo, B))
+    if (Value *ExpoI = getIntToFPVal(Expo, B, TLI->getIntSize()))
       return emitBinaryFloatFnCall(ConstantFP::get(Ty, 1.0), ExpoI, TLI,
                                    LibFunc_ldexp, LibFunc_ldexpf, LibFunc_ldexpl,
                                    B, Attrs);
@@ -1776,7 +1777,12 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
 
   // powf(x, itofp(y)) -> powi(x, y)
   if (AllowApprox && (isa<SIToFPInst>(Expo) || isa<UIToFPInst>(Expo))) {
-    if (Value *ExpoI = getIntToFPVal(Expo, B))
+    // FIXME: Currently we always use 32 bits for the exponent in llvm.powi. In
+    // the future we want to use the target dependent "size of int", or
+    // otherwise we could end up using the wrong type for the exponent when
+    // mapping llvm.powi back to an rtlib call. See
+    // https://reviews.llvm.org/D99439 for such a fix.
+    if (Value *ExpoI = getIntToFPVal(Expo, B, 32))
       return createPowWithIntegerExponent(Base, ExpoI, M, B);
   }
 
@@ -1803,11 +1809,11 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
   Type *Ty = CI->getType();
   Value *Op = CI->getArgOperand(0);
 
-  // Turn exp2(sitofp(x)) -> ldexp(1.0, sext(x))  if sizeof(x) <= 32
-  // Turn exp2(uitofp(x)) -> ldexp(1.0, zext(x))  if sizeof(x) < 32
+  // Turn exp2(sitofp(x)) -> ldexp(1.0, sext(x))  if sizeof(x) <= IntSize
+  // Turn exp2(uitofp(x)) -> ldexp(1.0, zext(x))  if sizeof(x) < IntSize
   if ((isa<SIToFPInst>(Op) || isa<UIToFPInst>(Op)) &&
       hasFloatFn(TLI, Ty, LibFunc_ldexp, LibFunc_ldexpf, LibFunc_ldexpl)) {
-    if (Value *Exp = getIntToFPVal(Op, B))
+    if (Value *Exp = getIntToFPVal(Op, B, TLI->getIntSize()))
       return emitBinaryFloatFnCall(ConstantFP::get(Ty, 1.0), Exp, TLI,
                                    LibFunc_ldexp, LibFunc_ldexpf, LibFunc_ldexpl,
                                    B, Attrs);

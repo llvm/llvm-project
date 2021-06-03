@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wall -Wshift-sign-overflow -ffreestanding -fsyntax-only -verify %s
+// RUN: %clang_cc1 -Wall -Wno-unused-but-set-variable -Wshift-sign-overflow -ffreestanding -fsyntax-only -verify %s
 
 #include <limits.h>
 

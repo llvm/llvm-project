@@ -131,12 +131,12 @@ extern "C++" [[]] { } // expected-error {{an attribute list cannot appear here}}
 [[]] static_assert(true, ""); //expected-error {{an attribute list cannot appear here}}
 [[]] asm(""); // expected-error {{an attribute list cannot appear here}}
 
-[[]] using ns::i; // expected-error {{an attribute list cannot appear here}}
+[[]] using ns::i;
 [[unknown]] using namespace ns; // expected-warning {{unknown attribute 'unknown' ignored}}
 [[noreturn]] using namespace ns; // expected-error {{'noreturn' attribute only applies to functions}}
 namespace [[]] ns2 {} // expected-warning {{attributes on a namespace declaration are a C++17 extension}}
 
-using [[]] alignas(4) [[]] ns::i; // expected-error {{an attribute list cannot appear here}}
+using[[]] alignas(4)[[]] ns::i;          // expected-error {{an attribute list cannot appear here}} expected-error {{'alignas' attribute only applies to variables, data members and tag types}} expected-warning {{ISO C++}}
 using [[]] alignas(4) [[]] foobar = int; // expected-error {{an attribute list cannot appear here}} expected-error {{'alignas' attribute only applies to}}
 
 void bad_attributes_in_do_while() {
@@ -157,7 +157,16 @@ void bad_attributes_in_do_while() {
 [[]] using T = int; // expected-error {{an attribute list cannot appear here}}
 using T [[]] = int; // ok
 template<typename T> using U [[]] = T;
-using ns::i [[]]; // expected-error {{an attribute list cannot appear here}}
+using ns::i [[]];
+using ns::i [[]], ns::i [[]]; // expected-warning {{use of multiple declarators in a single using declaration is a C++17 extension}}
+struct using_in_struct_base {
+  typedef int i, j, k, l;
+};
+struct using_in_struct : using_in_struct_base {
+  [[]] using using_in_struct_base::i;
+  using using_in_struct_base::j [[]];
+  [[]] using using_in_struct_base::k [[]], using_in_struct_base::l [[]]; // expected-warning {{use of multiple declarators in a single using declaration is a C++17 extension}}
+};
 using [[]] ns::i; // expected-error {{an attribute list cannot appear here}}
 using T [[unknown]] = int; // expected-warning {{unknown attribute 'unknown' ignored}}
 using T [[noreturn]] = int; // expected-error {{'noreturn' attribute only applies to functions}}

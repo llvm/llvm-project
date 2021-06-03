@@ -743,14 +743,12 @@ define <4 x float> @_Z10testInsEltILj0EDv4_ffET0_S1_T1_(<4 x float> %a, float %b
 ; CHECK-64-LABEL: _Z10testInsEltILj0EDv4_ffET0_S1_T1_:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    xscvdpspn 0, 1
-; CHECK-64-NEXT:    xxsldwi 0, 0, 0, 3
 ; CHECK-64-NEXT:    xxinsertw 34, 0, 0
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: _Z10testInsEltILj0EDv4_ffET0_S1_T1_:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    xscvdpspn 0, 1
-; CHECK-32-NEXT:    xxsldwi 0, 0, 0, 3
 ; CHECK-32-NEXT:    xxinsertw 34, 0, 0
 ; CHECK-32-NEXT:    blr
 entry:
@@ -762,14 +760,12 @@ define <4 x float> @_Z10testInsEltILj1EDv4_ffET0_S1_T1_(<4 x float> %a, float %b
 ; CHECK-64-LABEL: _Z10testInsEltILj1EDv4_ffET0_S1_T1_:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    xscvdpspn 0, 1
-; CHECK-64-NEXT:    xxsldwi 0, 0, 0, 3
 ; CHECK-64-NEXT:    xxinsertw 34, 0, 4
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: _Z10testInsEltILj1EDv4_ffET0_S1_T1_:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    xscvdpspn 0, 1
-; CHECK-32-NEXT:    xxsldwi 0, 0, 0, 3
 ; CHECK-32-NEXT:    xxinsertw 34, 0, 4
 ; CHECK-32-NEXT:    blr
 entry:
@@ -781,14 +777,12 @@ define <4 x float> @_Z10testInsEltILj2EDv4_ffET0_S1_T1_(<4 x float> %a, float %b
 ; CHECK-64-LABEL: _Z10testInsEltILj2EDv4_ffET0_S1_T1_:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    xscvdpspn 0, 1
-; CHECK-64-NEXT:    xxsldwi 0, 0, 0, 3
 ; CHECK-64-NEXT:    xxinsertw 34, 0, 8
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: _Z10testInsEltILj2EDv4_ffET0_S1_T1_:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    xscvdpspn 0, 1
-; CHECK-32-NEXT:    xxsldwi 0, 0, 0, 3
 ; CHECK-32-NEXT:    xxinsertw 34, 0, 8
 ; CHECK-32-NEXT:    blr
 entry:
@@ -800,14 +794,12 @@ define <4 x float> @_Z10testInsEltILj3EDv4_ffET0_S1_T1_(<4 x float> %a, float %b
 ; CHECK-64-LABEL: _Z10testInsEltILj3EDv4_ffET0_S1_T1_:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    xscvdpspn 0, 1
-; CHECK-64-NEXT:    xxsldwi 0, 0, 0, 3
 ; CHECK-64-NEXT:    xxinsertw 34, 0, 12
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: _Z10testInsEltILj3EDv4_ffET0_S1_T1_:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    xscvdpspn 0, 1
-; CHECK-32-NEXT:    xxsldwi 0, 0, 0, 3
 ; CHECK-32-NEXT:    xxinsertw 34, 0, 12
 ; CHECK-32-NEXT:    blr
 entry:

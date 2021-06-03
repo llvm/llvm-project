@@ -24,14 +24,12 @@ def CommonReductionPassOptions {
   ];
 }
 
-def ReductionTree : Pass<"reduction-tree", "ModuleOp"> {
+def ReductionTree : Pass<"reduction-tree"> {
   let summary = "A general reduction tree pass for the MLIR Reduce Tool";
 
   let constructor = "mlir::createReductionTreePass()";
 
   let options = [
-    Option<"opReducerName", "op-reducer", "std::string", /* default */"",
-           "The OpReducer to reduce the module">,
     Option<"traversalModeId", "traversal-mode", "unsigned",
            /* default */"0", "The graph traversal mode">,
   ] # CommonReductionPassOptions.options;

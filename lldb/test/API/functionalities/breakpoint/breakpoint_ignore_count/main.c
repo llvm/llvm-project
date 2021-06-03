@@ -29,9 +29,15 @@ int c(int val)
     return val + 3; // Find the line number of function "c" here.
 }
 
+void spin_a_bit () {
+  for (unsigned int i = 0; i < 10; i++) {
+    printf("Set a breakpoint here, with i = %d.\n", i);
+  }
+}
+
 int main (int argc, char const *argv[])
 {
-    int A1 = a(1);  // a(1) -> b(1) -> c(1)
+    int A1 = a(1);  // a(1) -> b(1) -> c(1) // Stop here at start of main
     printf("a(1) returns %d\n", A1);
     
     int B2 = b(2);  // b(2) -> c(2) Find the call site of b(2).
@@ -42,5 +48,7 @@ int main (int argc, char const *argv[])
     
     int C1 = c(5); // Find the call site of c in main.
     printf ("c(5) returns %d\n", C1);
+
+    spin_a_bit();
     return 0;
 }

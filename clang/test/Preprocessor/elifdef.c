@@ -105,3 +105,9 @@
 #elifdef
 #elifndef
 #endif
+
+/* expected-error@+3 {{#elif after #else}}*/
+#if 1
+#else
+#elif
+#endif

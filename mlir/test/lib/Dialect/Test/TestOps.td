@@ -2113,4 +2113,19 @@ def DataLayoutQueryOp : TEST_Op<"data_layout_query"> {
   let results = (outs AnyType:$res);
 }
 
+//===----------------------------------------------------------------------===//
+// Test Reducer Patterns
+//===----------------------------------------------------------------------===//
+
+def OpCrashLong : TEST_Op<"op_crash_long"> {
+  let arguments = (ins I32, I32, I32);
+  let results = (outs I32);
+}
+
+def OpCrashShort : TEST_Op<"op_crash_short"> {
+  let results = (outs I32);
+}
+
+def : Pat<(OpCrashLong $_, $_, $_), (OpCrashShort)>;
+
 #endif // TEST_OPS
