@@ -29,14 +29,15 @@
 # include <__external_threading>
 #elif !defined(_LIBCPP_HAS_NO_THREADS)
 
+#if defined(__APPLE__) || defined(__MVS__)
+# define _LIBCPP_NO_NATIVE_SEMAPHORES
+#endif
+
 #if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
 # include <pthread.h>
 # include <sched.h>
-# if defined(__APPLE__) || defined(__MVS__)
-#  define _LIBCPP_NO_NATIVE_SEMAPHORES
-# endif
 # ifndef _LIBCPP_NO_NATIVE_SEMAPHORES
-# include <semaphore.h>
+#   include <semaphore.h>
 # endif
 #elif defined(_LIBCPP_HAS_THREAD_API_C11)
 # include <threads.h>
