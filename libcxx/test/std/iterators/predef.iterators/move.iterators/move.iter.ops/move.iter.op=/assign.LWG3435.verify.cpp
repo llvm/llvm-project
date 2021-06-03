@@ -6,30 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-// GCC 5 does not evaluate static assertions dependent on a template parameter.
-// UNSUPPORTED: gcc-5
-
 // <iterator>
 
 // move_iterator
 
-// explicit move_iterator(Iter );
-
-// test explicit
+// template <class U>
+//  requires !same_as<U, Iter> && convertible_to<const U&, Iter> && assignable_from<Iter&, const U&>
+// move_iterator& operator=(const move_iterator<U>& u);
 
 #include <iterator>
 
-template <class It>
-void
-test(It i)
-{
-    std::move_iterator<It> r = i;
-}
+struct Base { };
+struct Derived : Base { };
 
-int main(int, char**)
-{
-    char s[] = "123";
-    test(s);
-
-  return 0;
+void test() {
+    std::move_iterator<Base*> base;
+    std::move_iterator<Derived*> derived;
+    derived = base; // expected-error {{no viable overloaded '='}}
 }
