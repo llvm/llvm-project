@@ -94,9 +94,7 @@ public:
   std::optional<DynamicType> GetType() const;
   int Rank() const;
   std::string AsFortran() const;
-  LLVM_DUMP_METHOD void dump() const {
-    llvm::errs() << "Ev::Expr is <{" << AsFortran() << "}>\n";
-  }
+  LLVM_DUMP_METHOD void dump() const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
   static Derived Rewrite(FoldingContext &, Derived &&);
 };
