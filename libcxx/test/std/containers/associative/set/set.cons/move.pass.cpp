@@ -26,7 +26,7 @@ int main(int, char**)
 {
     {
         typedef int V;
-        typedef test_compare<std::less<int> > C;
+        typedef test_less<int> C;
         typedef test_allocator<V> A;
         std::set<int, C, A> mo(C(5), A(7));
         std::set<int, C, A> m = std::move(mo);
@@ -54,7 +54,7 @@ int main(int, char**)
             3,
             3
         };
-        typedef test_compare<std::less<int> > C;
+        typedef test_less<int> C;
         typedef test_allocator<V> A;
         std::set<int, C, A> mo(ar, ar+sizeof(ar)/sizeof(ar[0]), C(5), A(7));
         std::set<int, C, A> m = std::move(mo);
@@ -85,7 +85,7 @@ int main(int, char**)
             3,
             3
         };
-        typedef test_compare<std::less<int> > C;
+        typedef test_less<int> C;
         typedef min_allocator<V> A;
         std::set<int, C, A> mo(ar, ar+sizeof(ar)/sizeof(ar[0]), C(5), A());
         std::set<int, C, A> m = std::move(mo);

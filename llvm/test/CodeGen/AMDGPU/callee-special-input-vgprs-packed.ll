@@ -494,11 +494,11 @@ define void @too_many_args_use_workitem_id_x_byval(
 
 ; GCN-LABEL: {{^}}kern_call_too_many_args_use_workitem_id_x_byval:
 ; GCN-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x3e7{{$}}
-; GCN-DAG: s_movk_i32 s32, 0x400
 
 ; GCN: buffer_store_dword [[K]], off, s[0:3], 0 offset:4
-; GCN: buffer_store_dword v0, off, s[0:3], s32 offset:4
 ; GCN: buffer_load_dword [[RELOAD_BYVAL:v[0-9]+]], off, s[0:3], 0 offset:4
+; GCN: s_movk_i32 s32, 0x400
+; GCN: buffer_store_dword v0, off, s[0:3], s32 offset:4
 
 ; GCN: buffer_store_dword [[RELOAD_BYVAL]], off, s[0:3], s32{{$}}
 ; GCN: v_mov_b32_e32 [[RELOAD_BYVAL]],

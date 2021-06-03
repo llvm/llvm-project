@@ -10,7 +10,6 @@
 
 #if SCUDO_LINUX
 
-#include "atomic_helpers.h"
 #include "common.h"
 #include "linux.h"
 #include "mutex.h"
@@ -90,41 +89,10 @@ void setMemoryPermission(uptr Addr, uptr Size, uptr Flags,
     dieOnMapUnmapError();
 }
 
-static bool madviseNotNeedFails() {
-  const uptr Size = getPageSizeCached();
-  char *P = reinterpret_cast<char *>(mmap(0, Size, PROT_READ | PROT_WRITE,
-                                          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
-  if (!P)
-    dieOnMapUnmapError(errno == ENOMEM ? Size : 0);
-  *P = 1;
-  while (madvise(P, Size, MADV_DONTNEED) == -1 && errno == EAGAIN) {
-  }
-  const bool R = (*P != 0);
-  if (munmap(P, Size) != 0)
-    dieOnMapUnmapError();
-  return R;
-}
-
-static bool madviseNotNeedFailsCached() {
-  static atomic_u8 Cache;
-  enum State : u8 { Unknown = 0, Yes = 1, No = 2 };
-  State NeedsMemset = static_cast<State>(atomic_load_relaxed(&Cache));
-  if (NeedsMemset == Unknown) {
-    NeedsMemset = madviseNotNeedFails() ? Yes : No;
-    atomic_store_relaxed(&Cache, NeedsMemset);
-  }
-  return NeedsMemset == Yes;
-}
-
 void releasePagesToOS(uptr BaseAddress, uptr Offset, uptr Size,
                       UNUSED MapPlatformData *Data) {
   void *Addr = reinterpret_cast<void *>(BaseAddress + Offset);
-  if (madviseNotNeedFailsCached()) {
-    // Workaround for QEMU-user ignoring MADV_DONTNEED.
-    // https://github.com/qemu/qemu/blob/b1cffefa1b163bce9aebc3416f562c1d3886eeaa/linux-user/syscall.c#L11941
-    // https://bugs.launchpad.net/qemu/+bug/1926521
-    memset(Addr, 0, Size);
-  }
+
   while (madvise(Addr, Size, MADV_DONTNEED) == -1 && errno == EAGAIN) {
   }
 }

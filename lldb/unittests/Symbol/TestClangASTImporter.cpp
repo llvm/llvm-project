@@ -93,7 +93,7 @@ TEST_F(TestClangASTImporter, CompleteFwdDeclWithOtherOrigin) {
   clang_utils::SourceASTWithRecord source_with_definition;
 
   // Create an AST with a type thst is only a forward declaration with the
-  // same name as the one in the the other source.
+  // same name as the one in the other source.
   std::unique_ptr<TypeSystemClang> fwd_decl_source = clang_utils::createAST();
   CompilerType fwd_decl_type = clang_utils::createRecord(
       *fwd_decl_source, source_with_definition.record_decl->getName());

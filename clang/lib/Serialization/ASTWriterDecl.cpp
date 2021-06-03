@@ -68,6 +68,7 @@ namespace clang {
     void VisitTypedefDecl(TypedefDecl *D);
     void VisitTypeAliasDecl(TypeAliasDecl *D);
     void VisitUnresolvedUsingTypenameDecl(UnresolvedUsingTypenameDecl *D);
+    void VisitUnresolvedUsingIfExistsDecl(UnresolvedUsingIfExistsDecl *D);
     void VisitTagDecl(TagDecl *D);
     void VisitEnumDecl(EnumDecl *D);
     void VisitRecordDecl(RecordDecl *D);
@@ -1331,6 +1332,12 @@ void ASTDeclWriter::VisitUnresolvedUsingTypenameDecl(
   Record.AddNestedNameSpecifierLoc(D->getQualifierLoc());
   Record.AddSourceLocation(D->getEllipsisLoc());
   Code = serialization::DECL_UNRESOLVED_USING_TYPENAME;
+}
+
+void ASTDeclWriter::VisitUnresolvedUsingIfExistsDecl(
+    UnresolvedUsingIfExistsDecl *D) {
+  VisitNamedDecl(D);
+  Code = serialization::DECL_UNRESOLVED_USING_IF_EXISTS;
 }
 
 void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {

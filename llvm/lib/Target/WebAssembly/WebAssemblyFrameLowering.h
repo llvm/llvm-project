@@ -43,6 +43,7 @@ public:
 
   bool hasFP(const MachineFunction &MF) const override;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
+  bool isSupportedStackID(TargetStackID::Value ID) const override;
   DwarfFrameBase getDwarfFrameBase(const MachineFunction &MF) const override;
 
   bool needsPrologForEH(const MachineFunction &MF) const;
@@ -52,6 +53,11 @@ public:
                        MachineBasicBlock &MBB,
                        MachineBasicBlock::iterator &InsertStore,
                        const DebugLoc &DL) const;
+
+  // Returns the index of the WebAssembly local to which the stack object
+  // FrameIndex in MF should be allocated, or None.
+  static Optional<unsigned> getLocalForStackObject(MachineFunction &MF,
+                                                   int FrameIndex);
 
   static unsigned getSPReg(const MachineFunction &MF);
   static unsigned getFPReg(const MachineFunction &MF);

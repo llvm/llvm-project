@@ -299,7 +299,8 @@ void ConcatOutputSection::finalize() {
       r.referent = thunkInfo.sym = symtab->addDefined(
           thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0,
           /*size=*/thunkSize, /*isWeakDef=*/false, /*isPrivateExtern=*/true,
-          /*isThumb=*/false, /*isReferencedDynamically=*/false);
+          /*isThumb=*/false, /*isReferencedDynamically=*/false,
+          /*noDeadStrip=*/false);
       target->populateThunk(thunkInfo.isec, funcSym);
       finalizeOne(thunkInfo.isec);
       thunks.push_back(thunkInfo.isec);

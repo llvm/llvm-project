@@ -89,6 +89,7 @@
 # CHECK-NEXT:            "static",
 # CHECK-NEXT:            "abstract",
 # CHECK-NEXT:            "dependentName",
+# CHECK-NEXT:            "defaultLibrary",
 # CHECK-NEXT:            "functionScope",
 # CHECK-NEXT:            "classScope",
 # CHECK-NEXT:            "fileScope",

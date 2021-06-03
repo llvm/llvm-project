@@ -616,7 +616,7 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(SimplifyCFGPass());
   FPM.addPass(InstCombinePass());
   if (EnableLoopFlatten)
-    FPM.addPass(LoopFlattenPass());
+    FPM.addPass(createFunctionToLoopPassAdaptor(LoopFlattenPass()));
   // The loop passes in LPM2 (LoopFullUnrollPass) do not preserve MemorySSA.
   // *All* loop passes must preserve it, in order to be able to use it.
   FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM2),
@@ -791,7 +791,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(SimplifyCFGPass());
   FPM.addPass(InstCombinePass());
   if (EnableLoopFlatten)
-    FPM.addPass(LoopFlattenPass());
+    FPM.addPass(createFunctionToLoopPassAdaptor(LoopFlattenPass()));
   // The loop passes in LPM2 (LoopIdiomRecognizePass, IndVarSimplifyPass,
   // LoopDeletionPass and LoopFullUnrollPass) do not preserve MemorySSA.
   // *All* loop passes must preserve it, in order to be able to use it.
@@ -1246,25 +1246,22 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     FPM.addPass(InstCombinePass());
   }
 
-  if (IsLTO) {
-    FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions().hoistCommonInsts(true)));
-  } else {
-    // Now that we've formed fast to execute loop structures, we do further
-    // optimizations. These are run afterward as they might block doing complex
-    // analyses and transforms such as what are needed for loop vectorization.
+  // Now that we've formed fast to execute loop structures, we do further
+  // optimizations. These are run afterward as they might block doing complex
+  // analyses and transforms such as what are needed for loop vectorization.
 
-    // Cleanup after loop vectorization, etc. Simplification passes like CVP and
-    // GVN, loop transforms, and others have already run, so it's now better to
-    // convert to more optimized IR using more aggressive simplify CFG options.
-    // The extra sinking transform can create larger basic blocks, so do this
-    // before SLP vectorization.
-    FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
-                                    .forwardSwitchCondToPhi(true)
-                                    .convertSwitchToLookupTable(true)
-                                    .needCanonicalLoops(false)
-                                    .hoistCommonInsts(true)
-                                    .sinkCommonInsts(true)));
-  }
+  // Cleanup after loop vectorization, etc. Simplification passes like CVP and
+  // GVN, loop transforms, and others have already run, so it's now better to
+  // convert to more optimized IR using more aggressive simplify CFG options.
+  // The extra sinking transform can create larger basic blocks, so do this
+  // before SLP vectorization.
+  FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
+                                  .forwardSwitchCondToPhi(true)
+                                  .convertSwitchToLookupTable(true)
+                                  .needCanonicalLoops(false)
+                                  .hoistCommonInsts(true)
+                                  .sinkCommonInsts(true)));
+
   if (IsLTO) {
     FPM.addPass(SCCPPass());
     FPM.addPass(InstCombinePass());
@@ -1841,7 +1838,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   // More loops are countable; try to optimize them.
   if (EnableLoopFlatten && Level.getSpeedupLevel() > 1)
-    MainFPM.addPass(LoopFlattenPass());
+    MainFPM.addPass(createFunctionToLoopPassAdaptor(LoopFlattenPass()));
 
   if (EnableConstraintElimination)
     MainFPM.addPass(ConstraintEliminationPass());

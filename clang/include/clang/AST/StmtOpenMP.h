@@ -884,15 +884,43 @@ public:
 
   /// Calls the specified callback function for all the loops in \p CurStmt,
   /// from the outermost to the innermost.
+  static bool doForAllLoops(Stmt *CurStmt, bool TryImperfectlyNestedLoops,
+                            unsigned NumLoops,
+                            llvm::function_ref<bool(unsigned, Stmt *)> Callback,
+                            llvm::function_ref<void(OMPLoopBasedDirective *)>
+                                OnTransformationCallback);
+  static bool
+  doForAllLoops(const Stmt *CurStmt, bool TryImperfectlyNestedLoops,
+                unsigned NumLoops,
+                llvm::function_ref<bool(unsigned, const Stmt *)> Callback,
+                llvm::function_ref<void(const OMPLoopBasedDirective *)>
+                    OnTransformationCallback) {
+    auto &&NewCallback = [Callback](unsigned Cnt, Stmt *CurStmt) {
+      return Callback(Cnt, CurStmt);
+    };
+    auto &&NewTransformCb =
+        [OnTransformationCallback](OMPLoopBasedDirective *A) {
+          OnTransformationCallback(A);
+        };
+    return doForAllLoops(const_cast<Stmt *>(CurStmt), TryImperfectlyNestedLoops,
+                         NumLoops, NewCallback, NewTransformCb);
+  }
+
+  /// Calls the specified callback function for all the loops in \p CurStmt,
+  /// from the outermost to the innermost.
   static bool
   doForAllLoops(Stmt *CurStmt, bool TryImperfectlyNestedLoops,
                 unsigned NumLoops,
-                llvm::function_ref<bool(unsigned, Stmt *)> Callback);
+                llvm::function_ref<bool(unsigned, Stmt *)> Callback) {
+    auto &&TransformCb = [](OMPLoopBasedDirective *) {};
+    return doForAllLoops(CurStmt, TryImperfectlyNestedLoops, NumLoops, Callback,
+                         TransformCb);
+  }
   static bool
   doForAllLoops(const Stmt *CurStmt, bool TryImperfectlyNestedLoops,
                 unsigned NumLoops,
                 llvm::function_ref<bool(unsigned, const Stmt *)> Callback) {
-    auto &&NewCallback = [Callback](unsigned Cnt, Stmt *CurStmt) {
+    auto &&NewCallback = [Callback](unsigned Cnt, const Stmt *CurStmt) {
       return Callback(Cnt, CurStmt);
     };
     return doForAllLoops(const_cast<Stmt *>(CurStmt), TryImperfectlyNestedLoops,

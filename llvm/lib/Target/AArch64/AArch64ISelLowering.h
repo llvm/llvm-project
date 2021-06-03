@@ -956,6 +956,7 @@ private:
   SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCTPOP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCTTZ(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerBitreverse(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
@@ -1100,6 +1101,9 @@ private:
   // to transition between unpacked and packed types of the same element type,
   // with BITCAST used otherwise.
   SDValue getSVESafeBitCast(EVT VT, SDValue Op, SelectionDAG &DAG) const;
+
+  bool isConstantUnsignedBitfieldExtactLegal(unsigned Opc, LLT Ty1,
+                                             LLT Ty2) const override;
 };
 
 namespace AArch64 {

@@ -81,15 +81,18 @@ define i8 @i(<4 x i8> %x, <4 x i8> %y) {
 
 define i8 @j(<4 x i8> %x, <4 x i8> %y) {
 ; CHECK-LABEL: @j(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> [[Y:%.*]], <2 x i32> <i32 0, i32 5>
-; CHECK-NEXT:    [[TMP2:%.*]] = mul <2 x i8> [[TMP1]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i8> [[X]], <4 x i8> [[Y]], <2 x i32> <i32 3, i32 6>
-; CHECK-NEXT:    [[TMP4:%.*]] = mul <2 x i8> [[TMP3]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i8> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i8> [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i8> [[TMP5]], i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = sdiv i8 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    ret i8 [[TMP8]]
+; CHECK-NEXT:    [[X0:%.*]] = extractelement <4 x i8> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[X3:%.*]] = extractelement <4 x i8> [[X]], i32 3
+; CHECK-NEXT:    [[Y1:%.*]] = extractelement <4 x i8> [[Y:%.*]], i32 1
+; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x i8> [[Y]], i32 2
+; CHECK-NEXT:    [[X0X0:%.*]] = mul i8 [[X0]], [[X0]]
+; CHECK-NEXT:    [[X3X3:%.*]] = mul i8 [[X3]], [[X3]]
+; CHECK-NEXT:    [[Y1Y1:%.*]] = mul i8 [[Y1]], [[Y1]]
+; CHECK-NEXT:    [[Y2Y2:%.*]] = mul i8 [[Y2]], [[Y2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X0X0]], [[X3X3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[Y1Y1]], [[Y2Y2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sdiv i8 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i8 [[TMP3]]
 ;
   %x0 = extractelement <4 x i8> %x, i32 0
   %x3 = extractelement <4 x i8> %x, i32 3
@@ -107,15 +110,18 @@ define i8 @j(<4 x i8> %x, <4 x i8> %y) {
 
 define i8 @k(<4 x i8> %x) {
 ; CHECK-LABEL: @k(
-; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i8> [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i8> [[TMP1]], <4 x i8> undef, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i8> [[X]], [[X]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> undef, <2 x i32> <i32 3, i32 2>
-; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i8> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i8> [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i8> [[TMP5]], i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = sdiv i8 [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    ret i8 [[TMP8]]
+; CHECK-NEXT:    [[X0:%.*]] = extractelement <4 x i8> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[X3:%.*]] = extractelement <4 x i8> [[X]], i32 3
+; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i8> [[X]], i32 1
+; CHECK-NEXT:    [[X2:%.*]] = extractelement <4 x i8> [[X]], i32 2
+; CHECK-NEXT:    [[X0X0:%.*]] = mul i8 [[X0]], [[X0]]
+; CHECK-NEXT:    [[X3X3:%.*]] = mul i8 [[X3]], [[X3]]
+; CHECK-NEXT:    [[X1X1:%.*]] = mul i8 [[X1]], [[X1]]
+; CHECK-NEXT:    [[X2X2:%.*]] = mul i8 [[X2]], [[X2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X0X0]], [[X3X3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[X1X1]], [[X2X2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sdiv i8 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i8 [[TMP3]]
 ;
   %x0 = extractelement <4 x i8> %x, i32 0
   %x3 = extractelement <4 x i8> %x, i32 3

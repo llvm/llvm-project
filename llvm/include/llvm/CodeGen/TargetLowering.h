@@ -290,8 +290,8 @@ public:
     bool IsSwiftError : 1;
     bool IsCFGuardTarget : 1;
     MaybeAlign Alignment = None;
-    // Type for byval, inalloca, or preallocated.
-    Type *IndirectType = nullptr;
+    Type *ByValType = nullptr;
+    Type *PreallocatedType = nullptr;
 
     ArgListEntry()
         : IsSExt(false), IsZExt(false), IsInReg(false), IsSRet(false),
@@ -1792,6 +1792,12 @@ public:
   /// returns nullptr. Must be previously inserted by insertSSPDeclarations.
   /// Should be used only when getIRStackGuard returns nullptr.
   virtual Function *getSSPStackGuardCheck(const Module &M) const;
+
+  /// \returns true if a constant G_UBFX is legal on the target.
+  virtual bool isConstantUnsignedBitfieldExtactLegal(unsigned Opc, LLT Ty1,
+                                                     LLT Ty2) const {
+    return false;
+  }
 
 protected:
   Value *getDefaultSafeStackPointerLocation(IRBuilder<> &IRB,

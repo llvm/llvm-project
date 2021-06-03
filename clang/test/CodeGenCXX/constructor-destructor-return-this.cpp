@@ -151,8 +151,10 @@ void test_destructor() {
 
 // Verify that virtual calls to destructors are not marked with a 'returned'
 // this parameter at the call site...
-// CHECKARM,CHECKFUCHSIA: [[VFN:%.*]] = getelementptr inbounds %class.E* (%class.E*)*, %class.E* (%class.E*)**
-// CHECKARM,CHECKFUCHSIA: [[THUNK:%.*]] = load %class.E* (%class.E*)*, %class.E* (%class.E*)** [[VFN]]
+// CHECKARM: [[VFN:%.*]] = getelementptr inbounds %class.E* (%class.E*)*, %class.E* (%class.E*)**
+// CHECKARM: [[THUNK:%.*]] = load %class.E* (%class.E*)*, %class.E* (%class.E*)** [[VFN]]
+// CHECKFUCHSIA: [[THUNK_I8:%.*]] = call i8* @llvm.load.relative.i32(i8* {{.*}}, i32 0)
+// CHECKFUCHSIA: [[THUNK:%.*]] = bitcast i8* [[THUNK_I8]] to %class.E* (%class.E*)*
 // CHECKARM,CHECKFUCHSIA: call %class.E* [[THUNK]](%class.E* {{[^,]*}} %
 
 // ...but static calls create declarations with 'returned' this

@@ -179,11 +179,11 @@ template <class T, class Container, class Compare>
 */
 
 #include <__config>
+#include <algorithm>
 #include <compare>
 #include <deque>
-#include <vector>
 #include <functional>
-#include <algorithm>
+#include <vector>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

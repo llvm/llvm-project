@@ -39,13 +39,13 @@ Context::createDefaultPipeline(const PipelineOptions &Opts, SourceMgr &SrcMgr) {
   auto RCU = std::make_unique<RetireControlUnit>(SM);
   auto PRF = std::make_unique<RegisterFile>(SM, MRI, Opts.RegisterFileSize);
   auto LSU = std::make_unique<LSUnit>(SM, Opts.LoadQueueSize,
-                                       Opts.StoreQueueSize, Opts.AssumeNoAlias);
+                                      Opts.StoreQueueSize, Opts.AssumeNoAlias);
   auto HWS = std::make_unique<Scheduler>(SM, *LSU);
 
   // Create the pipeline stages.
   auto Fetch = std::make_unique<EntryStage>(SrcMgr);
-  auto Dispatch = std::make_unique<DispatchStage>(STI, MRI, Opts.DispatchWidth,
-                                                   *RCU, *PRF);
+  auto Dispatch =
+      std::make_unique<DispatchStage>(STI, MRI, Opts.DispatchWidth, *RCU, *PRF);
   auto Execute =
       std::make_unique<ExecuteStage>(*HWS, Opts.EnableBottleneckAnalysis);
   auto Retire = std::make_unique<RetireStage>(*RCU, *PRF, *LSU);

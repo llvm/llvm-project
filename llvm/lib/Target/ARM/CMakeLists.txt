@@ -74,6 +74,7 @@ add_llvm_target(ARMCodeGen
   AsmPrinter
   CodeGen
   Core
+  IPO
   MC
   Scalar
   SelectionDAG

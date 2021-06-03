@@ -717,7 +717,7 @@ MemoryDependenceResults::getNonLocalCallDependency(CallBase *QueryCall) {
   assert(getDependency(QueryCall).isNonLocal() &&
          "getNonLocalCallDependency should only be used on calls with "
          "non-local deps!");
-  PerInstNLInfo &CacheP = NonLocalDeps[QueryCall];
+  PerInstNLInfo &CacheP = NonLocalDepsMap[QueryCall];
   NonLocalDepInfo &Cache = CacheP.first;
 
   // This is the set of blocks that need to be recomputed.  In the cached case,
@@ -902,7 +902,7 @@ void MemoryDependenceResults::getNonLocalPointerDependency(
 /// info if available).
 ///
 /// If we do a lookup, add the result to the cache.
-MemDepResult MemoryDependenceResults::GetNonLocalInfoForBlock(
+MemDepResult MemoryDependenceResults::getNonLocalInfoForBlock(
     Instruction *QueryInst, const MemoryLocation &Loc, bool isLoad,
     BasicBlock *BB, NonLocalDepInfo *Cache, unsigned NumSortedEntries,
     BatchAAResults &BatchAA) {
@@ -1228,9 +1228,8 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
       // Get the dependency info for Pointer in BB.  If we have cached
       // information, we will use it, otherwise we compute it.
       LLVM_DEBUG(AssertSorted(*Cache, NumSortedEntries));
-      MemDepResult Dep = GetNonLocalInfoForBlock(QueryInst, Loc, isLoad, BB,
-                                                 Cache, NumSortedEntries,
-                                                 BatchAA);
+      MemDepResult Dep = getNonLocalInfoForBlock(
+          QueryInst, Loc, isLoad, BB, Cache, NumSortedEntries, BatchAA);
 
       // If we got a Def or Clobber, add this to the list of results.
       if (!Dep.isNonLocal()) {
@@ -1452,7 +1451,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
 }
 
 /// If P exists in CachedNonLocalPointerInfo or NonLocalDefsCache, remove it.
-void MemoryDependenceResults::RemoveCachedNonLocalPointerDependencies(
+void MemoryDependenceResults::removeCachedNonLocalPointerDependencies(
     ValueIsLoadPair P) {
 
   // Most of the time this cache is empty.
@@ -1501,9 +1500,9 @@ void MemoryDependenceResults::invalidateCachedPointerInfo(Value *Ptr) {
   if (!Ptr->getType()->isPointerTy())
     return;
   // Flush store info for the pointer.
-  RemoveCachedNonLocalPointerDependencies(ValueIsLoadPair(Ptr, false));
+  removeCachedNonLocalPointerDependencies(ValueIsLoadPair(Ptr, false));
   // Flush load info for the pointer.
-  RemoveCachedNonLocalPointerDependencies(ValueIsLoadPair(Ptr, true));
+  removeCachedNonLocalPointerDependencies(ValueIsLoadPair(Ptr, true));
   // Invalidate phis that use the pointer.
   PV.invalidateValue(Ptr);
 }
@@ -1515,13 +1514,13 @@ void MemoryDependenceResults::invalidateCachedPredecessors() {
 void MemoryDependenceResults::removeInstruction(Instruction *RemInst) {
   // Walk through the Non-local dependencies, removing this one as the value
   // for any cached queries.
-  NonLocalDepMapType::iterator NLDI = NonLocalDeps.find(RemInst);
-  if (NLDI != NonLocalDeps.end()) {
+  NonLocalDepMapType::iterator NLDI = NonLocalDepsMap.find(RemInst);
+  if (NLDI != NonLocalDepsMap.end()) {
     NonLocalDepInfo &BlockMap = NLDI->second.first;
     for (auto &Entry : BlockMap)
       if (Instruction *Inst = Entry.getResult().getInst())
         RemoveFromReverseMap(ReverseNonLocalDeps, Inst, RemInst);
-    NonLocalDeps.erase(NLDI);
+    NonLocalDepsMap.erase(NLDI);
   }
 
   // If we have a cached local dependence query for this instruction, remove it.
@@ -1541,8 +1540,8 @@ void MemoryDependenceResults::removeInstruction(Instruction *RemInst) {
   // If the instruction is a pointer, remove it from both the load info and the
   // store info.
   if (RemInst->getType()->isPointerTy()) {
-    RemoveCachedNonLocalPointerDependencies(ValueIsLoadPair(RemInst, false));
-    RemoveCachedNonLocalPointerDependencies(ValueIsLoadPair(RemInst, true));
+    removeCachedNonLocalPointerDependencies(ValueIsLoadPair(RemInst, false));
+    removeCachedNonLocalPointerDependencies(ValueIsLoadPair(RemInst, true));
   } else {
     // Otherwise, if the instructions is in the map directly, it must be a load.
     // Remove it.
@@ -1605,7 +1604,7 @@ void MemoryDependenceResults::removeInstruction(Instruction *RemInst) {
     for (Instruction *I : ReverseDepIt->second) {
       assert(I != RemInst && "Already removed NonLocalDep info for RemInst");
 
-      PerInstNLInfo &INLD = NonLocalDeps[I];
+      PerInstNLInfo &INLD = NonLocalDepsMap[I];
       // The information is now dirty!
       INLD.second = true;
 
@@ -1677,7 +1676,7 @@ void MemoryDependenceResults::removeInstruction(Instruction *RemInst) {
   // Invalidate phis that use the removed instruction.
   PV.invalidateValue(RemInst);
 
-  assert(!NonLocalDeps.count(RemInst) && "RemInst got reinserted?");
+  assert(!NonLocalDepsMap.count(RemInst) && "RemInst got reinserted?");
   LLVM_DEBUG(verifyRemoved(RemInst));
 }
 
@@ -1698,7 +1697,7 @@ void MemoryDependenceResults::verifyRemoved(Instruction *D) const {
       assert(Entry.getResult().getInst() != D && "Inst occurs as NLPD value");
   }
 
-  for (const auto &DepKV : NonLocalDeps) {
+  for (const auto &DepKV : NonLocalDepsMap) {
     assert(DepKV.first != D && "Inst occurs in data structures");
     const PerInstNLInfo &INLD = DepKV.second;
     for (const auto &Entry : INLD.first)

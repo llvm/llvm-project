@@ -59,6 +59,11 @@ lldb_private::ConstString CPlusPlusLanguage::GetPluginNameStatic() {
   return g_name;
 }
 
+bool CPlusPlusLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
+  const char *mangled_name = mangled.GetMangledName().GetCString();
+  return mangled_name && CPlusPlusLanguage::IsCPPMangledName(mangled_name);
+}
+
 // PluginInterface protocol
 
 lldb_private::ConstString CPlusPlusLanguage::GetPluginName() {

@@ -346,7 +346,7 @@ struct ResourceUsage {
 
 /// An instruction descriptor
 struct InstrDesc {
-  SmallVector<WriteDescriptor, 4> Writes; // Implicit writes are at the end.
+  SmallVector<WriteDescriptor, 2> Writes; // Implicit writes are at the end.
   SmallVector<ReadDescriptor, 4> Reads;   // Implicit reads are at the end.
 
   // For every resource used by an instruction of this kind, this vector
@@ -370,16 +370,16 @@ struct InstrDesc {
   // subtarget when computing the reciprocal throughput.
   unsigned SchedClassID;
 
-  bool MayLoad;
-  bool MayStore;
-  bool HasSideEffects;
-  bool BeginGroup;
-  bool EndGroup;
-  bool RetireOOO;
+  unsigned MayLoad : 1;
+  unsigned MayStore : 1;
+  unsigned HasSideEffects : 1;
+  unsigned BeginGroup : 1;
+  unsigned EndGroup : 1;
+  unsigned RetireOOO : 1;
 
   // True if all buffered resources are in-order, and there is at least one
   // buffer which is a dispatch hazard (BufferSize = 0).
-  bool MustIssueImmediately;
+  unsigned MustIssueImmediately : 1;
 
   // A zero latency instruction doesn't consume any scheduler resources.
   bool isZeroLatency() const { return !MaxLatency && Resources.empty(); }
@@ -403,7 +403,7 @@ class InstructionBase {
 
   // Output dependencies.
   // One entry per each implicit and explicit register definition.
-  SmallVector<WriteState, 4> Defs;
+  SmallVector<WriteState, 2> Defs;
 
   // Input dependencies.
   // One entry per each implicit and explicit register use.

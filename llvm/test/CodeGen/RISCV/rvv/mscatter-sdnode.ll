@@ -65,8 +65,8 @@ define void @mscatter_nxv2i32_truncstore_nxv2i8(<vscale x 2 x i32> %val, <vscale
 ; RV32-NEXT:    vsetvli a0, zero, e16,mf2,ta,mu
 ; RV32-NEXT:    vnsrl.wi v25, v8, 0
 ; RV32-NEXT:    vsetvli zero, zero, e8,mf4,ta,mu
-; RV32-NEXT:    vnsrl.wi v26, v25, 0
-; RV32-NEXT:    vsoxei32.v v26, (zero), v9, v0.t
+; RV32-NEXT:    vnsrl.wi v25, v25, 0
+; RV32-NEXT:    vsoxei32.v v25, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mscatter_nxv2i32_truncstore_nxv2i8:
@@ -74,8 +74,8 @@ define void @mscatter_nxv2i32_truncstore_nxv2i8(<vscale x 2 x i32> %val, <vscale
 ; RV64-NEXT:    vsetvli a0, zero, e16,mf2,ta,mu
 ; RV64-NEXT:    vnsrl.wi v25, v8, 0
 ; RV64-NEXT:    vsetvli zero, zero, e8,mf4,ta,mu
-; RV64-NEXT:    vnsrl.wi v26, v25, 0
-; RV64-NEXT:    vsoxei64.v v26, (zero), v10, v0.t
+; RV64-NEXT:    vnsrl.wi v25, v25, 0
+; RV64-NEXT:    vsoxei64.v v25, (zero), v10, v0.t
 ; RV64-NEXT:    ret
   %tval = trunc <vscale x 2 x i32> %val to <vscale x 2 x i8>
   call void @llvm.masked.scatter.nxv2i8.nxv2p0i8(<vscale x 2 x i8> %tval, <vscale x 2 x i8*> %ptrs, i32 1, <vscale x 2 x i1> %m)
@@ -88,9 +88,9 @@ define void @mscatter_nxv2i64_truncstore_nxv2i8(<vscale x 2 x i64> %val, <vscale
 ; RV32-NEXT:    vsetvli a0, zero, e32,m1,ta,mu
 ; RV32-NEXT:    vnsrl.wi v25, v8, 0
 ; RV32-NEXT:    vsetvli zero, zero, e16,mf2,ta,mu
-; RV32-NEXT:    vnsrl.wi v26, v25, 0
+; RV32-NEXT:    vnsrl.wi v25, v25, 0
 ; RV32-NEXT:    vsetvli zero, zero, e8,mf4,ta,mu
-; RV32-NEXT:    vnsrl.wi v25, v26, 0
+; RV32-NEXT:    vnsrl.wi v25, v25, 0
 ; RV32-NEXT:    vsoxei32.v v25, (zero), v10, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -99,9 +99,9 @@ define void @mscatter_nxv2i64_truncstore_nxv2i8(<vscale x 2 x i64> %val, <vscale
 ; RV64-NEXT:    vsetvli a0, zero, e32,m1,ta,mu
 ; RV64-NEXT:    vnsrl.wi v25, v8, 0
 ; RV64-NEXT:    vsetvli zero, zero, e16,mf2,ta,mu
-; RV64-NEXT:    vnsrl.wi v26, v25, 0
+; RV64-NEXT:    vnsrl.wi v25, v25, 0
 ; RV64-NEXT:    vsetvli zero, zero, e8,mf4,ta,mu
-; RV64-NEXT:    vnsrl.wi v25, v26, 0
+; RV64-NEXT:    vnsrl.wi v25, v25, 0
 ; RV64-NEXT:    vsoxei64.v v25, (zero), v10, v0.t
 ; RV64-NEXT:    ret
   %tval = trunc <vscale x 2 x i64> %val to <vscale x 2 x i8>
@@ -257,8 +257,8 @@ define void @mscatter_nxv2i64_truncstore_nxv2i16(<vscale x 2 x i64> %val, <vscal
 ; RV32-NEXT:    vsetvli a0, zero, e32,m1,ta,mu
 ; RV32-NEXT:    vnsrl.wi v25, v8, 0
 ; RV32-NEXT:    vsetvli zero, zero, e16,mf2,ta,mu
-; RV32-NEXT:    vnsrl.wi v26, v25, 0
-; RV32-NEXT:    vsoxei32.v v26, (zero), v10, v0.t
+; RV32-NEXT:    vnsrl.wi v25, v25, 0
+; RV32-NEXT:    vsoxei32.v v25, (zero), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: mscatter_nxv2i64_truncstore_nxv2i16:
@@ -266,8 +266,8 @@ define void @mscatter_nxv2i64_truncstore_nxv2i16(<vscale x 2 x i64> %val, <vscal
 ; RV64-NEXT:    vsetvli a0, zero, e32,m1,ta,mu
 ; RV64-NEXT:    vnsrl.wi v25, v8, 0
 ; RV64-NEXT:    vsetvli zero, zero, e16,mf2,ta,mu
-; RV64-NEXT:    vnsrl.wi v26, v25, 0
-; RV64-NEXT:    vsoxei64.v v26, (zero), v10, v0.t
+; RV64-NEXT:    vnsrl.wi v25, v25, 0
+; RV64-NEXT:    vsoxei64.v v25, (zero), v10, v0.t
 ; RV64-NEXT:    ret
   %tval = trunc <vscale x 2 x i64> %val to <vscale x 2 x i16>
   call void @llvm.masked.scatter.nxv2i16.nxv2p0i16(<vscale x 2 x i16> %tval, <vscale x 2 x i16*> %ptrs, i32 2, <vscale x 2 x i1> %m)

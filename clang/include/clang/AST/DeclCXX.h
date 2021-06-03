@@ -1786,6 +1786,7 @@ public:
   static bool classofKind(Kind K) {
     return K >= firstCXXRecord && K <= lastCXXRecord;
   }
+  void markAbstract() { data().Abstract = true; }
 };
 
 /// Store information needed for an explicit specifier.
@@ -3773,6 +3774,28 @@ public:
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == UnresolvedUsingTypename; }
+};
+
+/// This node is generated when a using-declaration that was annotated with
+/// __attribute__((using_if_exists)) failed to resolve to a known declaration.
+/// In that case, Sema builds a UsingShadowDecl whose target is an instance of
+/// this declaration, adding it to the current scope. Referring to this
+/// declaration in any way is an error.
+class UnresolvedUsingIfExistsDecl final : public NamedDecl {
+  UnresolvedUsingIfExistsDecl(DeclContext *DC, SourceLocation Loc,
+                              DeclarationName Name);
+
+  void anchor() override;
+
+public:
+  static UnresolvedUsingIfExistsDecl *Create(ASTContext &Ctx, DeclContext *DC,
+                                             SourceLocation Loc,
+                                             DeclarationName Name);
+  static UnresolvedUsingIfExistsDecl *CreateDeserialized(ASTContext &Ctx,
+                                                         unsigned ID);
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == Decl::UnresolvedUsingIfExists; }
 };
 
 /// Represents a C++11 static_assert declaration.

@@ -1863,8 +1863,8 @@ Value *SCEVExpander::expandCodeForImpl(const SCEV *SH, Type *Ty, bool Root) {
             cast<Instruction>(Builder.CreateAdd(Inst, Inst, "tmp.lcssa.user"));
       else {
         assert(Inst->getType()->isPointerTy());
-        Tmp = cast<Instruction>(
-            Builder.CreateGEP(Inst, Builder.getInt32(1), "tmp.lcssa.user"));
+        Tmp = cast<Instruction>(Builder.CreatePtrToInt(
+            Inst, Type::getInt32Ty(Inst->getContext()), "tmp.lcssa.user"));
       }
       V = fixupLCSSAFormFor(Tmp, 0);
 
@@ -1887,7 +1887,7 @@ Value *SCEVExpander::expandCodeForImpl(const SCEV *SH, Type *Ty, bool Root) {
 ScalarEvolution::ValueOffsetPair
 SCEVExpander::FindValueInExprValueMap(const SCEV *S,
                                       const Instruction *InsertPt) {
-  SetVector<ScalarEvolution::ValueOffsetPair> *Set = SE.getSCEVValues(S);
+  auto *Set = SE.getSCEVValues(S);
   // If the expansion is not in CanonicalMode, and the SCEV contains any
   // sub scAddRecExpr type SCEV, it is required to expand the SCEV literally.
   if (CanonicalMode || !SE.containsAddRecurrence(S)) {

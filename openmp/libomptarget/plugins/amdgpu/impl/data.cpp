@@ -47,6 +47,14 @@ hsa_status_t register_allocation(void *ptr, size_t size,
     return HSA_STATUS_SUCCESS;
 }
 
+hsa_status_t Runtime::DeviceMalloc(void **ptr, size_t size, int DeviceId) {
+  return Runtime::Malloc(ptr, size, DeviceId, ATMI_DEVTYPE_GPU);
+}
+
+hsa_status_t Runtime::HostMalloc(void **ptr, size_t size) {
+  return Runtime::Malloc(ptr, size, 0, ATMI_DEVTYPE_CPU);
+}
+
 hsa_status_t Runtime::Malloc(void **ptr, size_t size, int DeviceId,
                              atmi_devtype_t DeviceType) {
   hsa_amd_memory_pool_t pool =

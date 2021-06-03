@@ -434,10 +434,14 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     // Look to see if we have a type anywhere in the list of results.
     for (LookupResult::iterator Res = Result.begin(), ResEnd = Result.end();
          Res != ResEnd; ++Res) {
-      if (isa<TypeDecl>(*Res) || isa<ObjCInterfaceDecl>(*Res) ||
-          (AllowDeducedTemplate && getAsTypeTemplateDecl(*Res))) {
-        if (!IIDecl || (*Res)->getLocation() < IIDecl->getLocation())
-          IIDecl = *Res;
+      NamedDecl *RealRes = (*Res)->getUnderlyingDecl();
+      if (isa<TypeDecl, ObjCInterfaceDecl, UnresolvedUsingIfExistsDecl>(
+              RealRes) ||
+          (AllowDeducedTemplate && getAsTypeTemplateDecl(RealRes))) {
+        if (!IIDecl ||
+            // Make the selection of the recovery decl deterministic.
+            RealRes->getLocation() < IIDecl->getLocation())
+          IIDecl = RealRes;
       }
     }
 
@@ -486,6 +490,10 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     (void)DiagnoseUseOfDecl(IDecl, NameLoc);
     if (!HasTrailingDot)
       T = Context.getObjCInterfaceType(IDecl);
+  } else if (auto *UD = dyn_cast<UnresolvedUsingIfExistsDecl>(IIDecl)) {
+    (void)DiagnoseUseOfDecl(UD, NameLoc);
+    // Recover with 'int'
+    T = Context.IntTy;
   } else if (AllowDeducedTemplate) {
     if (auto *TD = getAsTypeTemplateDecl(IIDecl))
       T = Context.getDeducedTemplateSpecializationType(TemplateName(TD),
@@ -502,7 +510,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
   // constructor or destructor name (in such a case, the scope specifier
   // will be attached to the enclosing Expr or Decl node).
   if (SS && SS->isNotEmpty() && !IsCtorOrDtorName &&
-      !isa<ObjCInterfaceDecl>(IIDecl)) {
+      !isa<ObjCInterfaceDecl, UnresolvedUsingIfExistsDecl>(IIDecl)) {
     if (WantNontrivialTypeSourceInfo) {
       // Construct a type with type-source information.
       TypeLocBuilder Builder;
@@ -1160,6 +1168,11 @@ Corrected:
   if (isa<ConceptDecl>(FirstDecl))
     return NameClassification::Concept(
         TemplateName(cast<TemplateDecl>(FirstDecl)));
+
+  if (auto *EmptyD = dyn_cast<UnresolvedUsingIfExistsDecl>(FirstDecl)) {
+    (void)DiagnoseUseOfDecl(EmptyD, NameLoc);
+    return NameClassification::Error();
+  }
 
   // We can have a type template here if we're classifying a template argument.
   if (isa<TemplateDecl>(FirstDecl) && !isa<FunctionTemplateDecl>(FirstDecl) &&
@@ -1906,6 +1919,41 @@ void Sema::DiagnoseUnusedDecl(const NamedDecl *D) {
   Diag(D->getLocation(), DiagID) << D << Hint;
 }
 
+void Sema::DiagnoseUnusedButSetDecl(const VarDecl *VD) {
+  // If it's not referenced, it can't be set.
+  if (!VD->isReferenced() || !VD->getDeclName() || VD->hasAttr<UnusedAttr>())
+    return;
+
+  const auto *Ty = VD->getType().getTypePtr()->getBaseElementTypeUnsafe();
+
+  if (Ty->isReferenceType() || Ty->isDependentType())
+    return;
+
+  if (const TagType *TT = Ty->getAs<TagType>()) {
+    const TagDecl *Tag = TT->getDecl();
+    if (Tag->hasAttr<UnusedAttr>())
+      return;
+    // In C++, don't warn for record types that don't have WarnUnusedAttr, to
+    // mimic gcc's behavior.
+    if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Tag)) {
+      if (!RD->hasAttr<WarnUnusedAttr>())
+        return;
+    }
+  }
+
+  auto iter = RefsMinusAssignments.find(VD);
+  if (iter == RefsMinusAssignments.end())
+    return;
+
+  assert(iter->getSecond() >= 0 &&
+         "Found a negative number of references to a VarDecl");
+  if (iter->getSecond() != 0)
+    return;
+  unsigned DiagID = isa<ParmVarDecl>(VD) ? diag::warn_unused_but_set_parameter
+                                         : diag::warn_unused_but_set_variable;
+  Diag(VD->getLocation(), DiagID) << VD;
+}
+
 static void CheckPoppedLabel(LabelDecl *L, Sema &S) {
   // Verify that we have no forward references left.  If so, there was a goto
   // or address of a label taken, but no definition of it.  Label fwd
@@ -1938,6 +1986,10 @@ void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
       DiagnoseUnusedDecl(D);
       if (const auto *RD = dyn_cast<RecordDecl>(D))
         DiagnoseUnusedNestedTypedefs(RD);
+      if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
+        DiagnoseUnusedButSetDecl(VD);
+        RefsMinusAssignments.erase(VD);
+      }
     }
 
     if (!D->getDeclName()) continue;
@@ -7191,7 +7243,6 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
   case ConstexprSpecKind::Constexpr:
     NewVD->setConstexpr(true);
-    MaybeAddCUDAConstantAttr(NewVD);
     // C++1z [dcl.spec.constexpr]p1:
     //   A static data member declared with the constexpr specifier is
     //   implicitly an inline variable.
@@ -12957,6 +13008,8 @@ Sema::ActOnCXXForRangeIdentifier(Scope *S, SourceLocation IdentLoc,
 void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   if (var->isInvalidDecl()) return;
 
+  MaybeAddCUDAConstantAttr(var);
+
   if (getLangOpts().OpenCL) {
     // OpenCL v2.0 s6.12.5 - Every block variable declaration must have an
     // initialiser
@@ -16456,6 +16509,7 @@ Decl *Sema::ActOnObjCContainerStartDefinition(Decl *IDecl) {
 void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
                                            SourceLocation FinalLoc,
                                            bool IsFinalSpelledSealed,
+                                           bool IsAbstract,
                                            SourceLocation LBraceLoc) {
   AdjustDeclIfTemplate(TagD);
   CXXRecordDecl *Record = cast<CXXRecordDecl>(TagD);
@@ -16465,11 +16519,14 @@ void Sema::ActOnStartCXXMemberDeclarations(Scope *S, Decl *TagD,
   if (!Record->getIdentifier())
     return;
 
-  if (FinalLoc.isValid())
+  if (IsAbstract)
+    Record->markAbstract();
+
+  if (FinalLoc.isValid()) {
     Record->addAttr(FinalAttr::Create(
         Context, FinalLoc, AttributeCommonInfo::AS_Keyword,
         static_cast<FinalAttr::Spelling>(IsFinalSpelledSealed)));
-
+  }
   // C++ [class]p2:
   //   [...] The class-name is also inserted into the scope of the
   //   class itself; this is known as the injected-class-name. For

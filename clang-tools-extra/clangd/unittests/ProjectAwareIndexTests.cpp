@@ -45,8 +45,8 @@ TEST(ProjectAware, Test) {
   EXPECT_THAT(match(*Idx, Req), IsEmpty());
 
   Config C;
-  C.Index.External.emplace();
-  C.Index.External->Location = "test";
+  C.Index.External.Kind = Config::ExternalIndexSpec::File;
+  C.Index.External.Location = "test";
   WithContextValue With(Config::Key, std::move(C));
   EXPECT_THAT(match(*Idx, Req), ElementsAre("1"));
   return;
@@ -71,8 +71,8 @@ TEST(ProjectAware, CreatedOnce) {
   EXPECT_EQ(InvocationCount, 0U);
 
   Config C;
-  C.Index.External.emplace();
-  C.Index.External->Location = "test";
+  C.Index.External.Kind = Config::ExternalIndexSpec::File;
+  C.Index.External.Location = "test";
   WithContextValue With(Config::Key, std::move(C));
   match(*Idx, Req);
   // Now it should be created.

@@ -125,6 +125,36 @@ can signal this by calling `setHasBoundedRewriteRecursion` when initializing the
 pattern. This will signal to the pattern driver that recursive application of
 this pattern may happen, and the pattern is equipped to safely handle it.
 
+### Debug Names and Labels
+
+To aid in debugging, patterns may specify: a debug name (via `setDebugName`),
+which should correspond to an identifier that uniquely identifies the specific
+pattern; and a set of debug labels (via `addDebugLabels`), which correspond to
+identifiers that uniquely identify groups of patterns. This information is used
+by various utilities to aid in the debugging of pattern rewrites, e.g. in debug
+logs, to provide pattern filtering, etc. A simple code example is shown below:
+
+```c++
+class MyPattern : public RewritePattern {
+public:
+  /// Inherit constructors from RewritePattern.
+  using RewritePattern::RewritePattern;
+
+  void initialize() {
+    setDebugName("MyPattern");
+    addDebugLabels("MyRewritePass");
+  }
+
+  // ...
+};
+
+void populateMyPatterns(RewritePatternSet &patterns, MLIRContext *ctx) {
+  // Debug labels may also be attached to patterns during insertion. This allows
+  // for easily attaching common labels to groups of patterns.
+  patterns.addWithLabel<MyPattern, ...>("MyRewritePatterns", ctx);
+}
+```
+
 ### Initialization
 
 Several pieces of pattern state require explicit initialization by the pattern,
@@ -311,3 +341,90 @@ match larger patterns with ambiguous pattern sets.
 
 Note: This driver is the one used by the [canonicalization](Canonicalization.md)
 [pass](Passes.md/#-canonicalize-canonicalize-operations) in MLIR.
+
+## Debugging
+
+### Pattern Filtering
+
+To simplify test case definition and reduction, the `FrozenRewritePatternSet`
+class provides built-in support for filtering which patterns should be provided
+to the pattern driver for application. Filtering behavior is specified by
+providing a `disabledPatterns` and `enabledPatterns` list when constructing the
+`FrozenRewritePatternSet`. The `disabledPatterns` list should contain a set of
+debug names or labels for patterns that are disabled during pattern application,
+i.e. which patterns should be filtered out. The `enabledPatterns` list should
+contain a set of debug names or labels for patterns that are enabled during
+pattern application, patterns that do not satisfy this constraint are filtered
+out. Note that patterns specified by the `disabledPatterns` list will be
+filtered out even if they match criteria in the `enabledPatterns` list. An
+example is shown below:
+
+```c++
+void MyPass::initialize(MLIRContext *context) {
+  // No patterns are explicitly disabled.
+  SmallVector<std::string> disabledPatterns;
+  // Enable only patterns with a debug name or label of `MyRewritePatterns`.
+  SmallVector<std::string> enabledPatterns(1, "MyRewritePatterns");
+
+  RewritePatternSet rewritePatterns(context);
+  // ...
+  frozenPatterns = FrozenRewritePatternSet(rewritePatterns, disabledPatterns,
+                                           enabledPatterns);
+}
+```
+
+### Common Pass Utilities
+
+Passes that utilize rewrite patterns should aim to provide a common set of
+options and toggles to simplify the debugging experience when switching between
+different passes/projects/etc. To aid in this endeavor, MLIR provides a common
+set of utilities that can be easily included when defining a custom pass. These
+are defined in `mlir/RewritePassUtil.td`; an example usage is shown below:
+
+```tablegen
+def MyRewritePass : Pass<"..."> {
+  let summary = "...";
+  let constructor = "createMyRewritePass()";
+
+  // Inherit the common pattern rewrite options from `RewritePassUtils`.
+  let options = RewritePassUtils.options;
+}
+```
+
+#### Rewrite Pass Options
+
+This section documents common pass options that are useful for controlling the
+behavior of rewrite pattern application.
+
+##### Pattern Filtering
+
+Two common pattern filtering options are exposed, `disable-patterns` and
+`enable-patterns`, matching the behavior of the `disabledPatterns` and
+`enabledPatterns` lists described in the [Pattern Filtering](#pattern-filtering)
+section above. A snippet of the tablegen definition of these options is shown
+below:
+
+```tablegen
+ListOption<"disabledPatterns", "disable-patterns", "std::string",
+           "Labels of patterns that should be filtered out during application",
+           "llvm::cl::MiscFlags::CommaSeparated">,
+ListOption<"enabledPatterns", "enable-patterns", "std::string",
+           "Labels of patterns that should be used during application, all "
+           "other patterns are filtered out",
+           "llvm::cl::MiscFlags::CommaSeparated">,
+```
+
+These options may be used to provide filtering behavior when constructing any
+`FrozenRewritePatternSet`s within the pass:
+
+```c++
+void MyRewritePass::initialize(MLIRContext *context) {
+  RewritePatternSet rewritePatterns(context);
+  // ...
+
+  // When constructing the `FrozenRewritePatternSet`, we provide the filter
+  // list options.
+  frozenPatterns = FrozenRewritePatternSet(rewritePatterns, disabledPatterns,
+                                           enabledPatterns);
+}
+```

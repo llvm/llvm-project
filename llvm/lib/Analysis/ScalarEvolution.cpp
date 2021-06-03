@@ -1025,16 +1025,23 @@ static const SCEV *BinomialCoefficient(const SCEV *It, unsigned K,
 /// where BC(It, k) stands for binomial coefficient.
 const SCEV *SCEVAddRecExpr::evaluateAtIteration(const SCEV *It,
                                                 ScalarEvolution &SE) const {
-  const SCEV *Result = getStart();
-  for (unsigned i = 1, e = getNumOperands(); i != e; ++i) {
+  return evaluateAtIteration(makeArrayRef(op_begin(), op_end()), It, SE);
+}
+
+const SCEV *
+SCEVAddRecExpr::evaluateAtIteration(ArrayRef<const SCEV *> Operands,
+                                    const SCEV *It, ScalarEvolution &SE) {
+  assert(Operands.size() > 0);
+  const SCEV *Result = Operands[0];
+  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
     // The computation is correct in the face of overflow provided that the
     // multiplication is performed _after_ the evaluation of the binomial
     // coefficient.
-    const SCEV *Coeff = BinomialCoefficient(It, i, SE, getType());
+    const SCEV *Coeff = BinomialCoefficient(It, i, SE, Result->getType());
     if (isa<SCEVCouldNotCompute>(Coeff))
       return Coeff;
 
-    Result = SE.getAddExpr(Result, SE.getMulExpr(getOperand(i), Coeff));
+    Result = SE.getAddExpr(Result, SE.getMulExpr(Operands[i], Coeff));
   }
   return Result;
 }
@@ -3832,7 +3839,7 @@ static std::pair<const SCEV *, ConstantInt *> splitAddExpr(const SCEV *S) {
 
 /// Return the ValueOffsetPair set for \p S. \p S can be represented
 /// by the value and offset from any ValueOffsetPair in the set.
-SetVector<ScalarEvolution::ValueOffsetPair> *
+ScalarEvolution::ValueOffsetPairSetVector *
 ScalarEvolution::getSCEVValues(const SCEV *S) {
   ExprValueMapType::iterator SI = ExprValueMap.find_as(S);
   if (SI == ExprValueMap.end())
@@ -3855,7 +3862,7 @@ void ScalarEvolution::eraseValueFromMap(Value *V) {
   if (I != ValueExprMap.end()) {
     const SCEV *S = I->second;
     // Remove {V, 0} from the set of ExprValueMap[S]
-    if (SetVector<ValueOffsetPair> *SV = getSCEVValues(S))
+    if (auto *SV = getSCEVValues(S))
       SV->remove({V, nullptr});
 
     // Remove {V, Offset} from the set of ExprValueMap[Stripped]
@@ -3863,7 +3870,7 @@ void ScalarEvolution::eraseValueFromMap(Value *V) {
     ConstantInt *Offset;
     std::tie(Stripped, Offset) = splitAddExpr(S);
     if (Offset != nullptr) {
-      if (SetVector<ValueOffsetPair> *SV = getSCEVValues(Stripped))
+      if (auto *SV = getSCEVValues(Stripped))
         SV->remove({V, Offset});
     }
     ValueExprMap.erase(V);

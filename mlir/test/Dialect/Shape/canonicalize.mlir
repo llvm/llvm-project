@@ -478,6 +478,19 @@ func @assuming_all_to_cstr_eq(%a : !shape.shape, %b : tensor<?xindex>,
 }
 
 // -----
+// `assuming_all` with duplicate operands.
+// CHECK-LABEL: func @assuming_all_duplicate_operands
+// CHECK-SAME: (%[[ARG0:.*]]: tensor<?xindex>, %[[ARG1:.*]]: tensor<?xindex>)
+func @assuming_all_duplicate_operands(%arg0 : tensor<?xindex>,
+    %arg1 : tensor<?xindex>) -> !shape.witness {
+  // CHECK: %[[RES:.*]] = shape.cstr_broadcastable %[[ARG0]], %[[ARG1]]
+  // CHECK: return %[[RES]]
+  %0 = shape.cstr_broadcastable %arg0, %arg1 : tensor<?xindex>, tensor<?xindex>
+  %1 = shape.assuming_all %0, %0, %0
+  return %1 : !shape.witness
+}
+
+// -----
 // `assuming_all` with all `cstr_eq` but disjoint operands cannot be collapsed.
 // CHECK-LABEL: func @assuming_all_to_cstr_eq
 // CHECK-SAME: (%[[A:.*]]: !shape.shape, %[[B:.*]]: tensor<?xindex>, %[[C:.*]]: tensor<3xindex>, %[[D:.*]]: tensor<3xindex>)

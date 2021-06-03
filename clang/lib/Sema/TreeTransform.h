@@ -2401,12 +2401,6 @@ public:
 
   ExprResult RebuildSYCLUniqueStableNameExpr(SourceLocation OpLoc,
                                              SourceLocation LParen,
-                                             SourceLocation RParen, Expr *E) {
-    return getSema().BuildSYCLUniqueStableNameExpr(OpLoc, LParen, RParen, E);
-  }
-
-  ExprResult RebuildSYCLUniqueStableNameExpr(SourceLocation OpLoc,
-                                             SourceLocation LParen,
                                              SourceLocation RParen,
                                              TypeSourceInfo *TSI) {
     return getSema().BuildSYCLUniqueStableNameExpr(OpLoc, LParen, RParen, TSI);
@@ -11592,15 +11586,20 @@ TreeTransform<Derived>::TransformCXXTypeidExpr(CXXTypeidExpr *E) {
                                              TInfo, E->getEndLoc());
   }
 
-  // We don't know whether the subexpression is potentially evaluated until
-  // after we perform semantic analysis.  We speculatively assume it is
-  // unevaluated; it will get fixed later if the subexpression is in fact
-  // potentially evaluated.
-  EnterExpressionEvaluationContext Unevaluated(
-      SemaRef, Sema::ExpressionEvaluationContext::Unevaluated,
-      Sema::ReuseLambdaContextDecl);
+  // Typeid's operand is an unevaluated context, unless it's a polymorphic
+  // type.  We must not unilaterally enter unevaluated context here, as then
+  // semantic processing can re-transform an already transformed operand.
+  Expr *Op = E->getExprOperand();
+  auto EvalCtx = Sema::ExpressionEvaluationContext::Unevaluated;
+  if (E->isGLValue())
+    if (auto *RecordT = Op->getType()->getAs<RecordType>())
+      if (cast<CXXRecordDecl>(RecordT->getDecl())->isPolymorphic())
+        EvalCtx = SemaRef.ExprEvalContexts.back().Context;
 
-  ExprResult SubExpr = getDerived().TransformExpr(E->getExprOperand());
+  EnterExpressionEvaluationContext Unevaluated(SemaRef, EvalCtx,
+                                               Sema::ReuseLambdaContextDecl);
+
+  ExprResult SubExpr = getDerived().TransformExpr(Op);
   if (SubExpr.isInvalid())
     return ExprError();
 
@@ -14389,7 +14388,11 @@ QualType TreeTransform<Derived>::RebuildUnresolvedUsingType(SourceLocation Loc,
 
     // A valid resolved using typename decl points to exactly one type decl.
     assert(++Using->shadow_begin() == Using->shadow_end());
-    Ty = cast<TypeDecl>((*Using->shadow_begin())->getTargetDecl());
+
+    NamedDecl *Target = Using->shadow_begin()->getTargetDecl();
+    if (SemaRef.DiagnoseUseOfDecl(Target, Loc))
+      return QualType();
+    Ty = cast<TypeDecl>(Target);
   } else {
     assert(isa<UnresolvedUsingTypenameDecl>(D) &&
            "UnresolvedUsingTypenameDecl transformed to non-using decl");

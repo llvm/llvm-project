@@ -21,6 +21,8 @@ program openacc_kernels_loop_validity
   real :: reduction_r
   logical :: reduction_l
   real(8), dimension(N, N) :: aa, bb, cc
+  real(8), dimension(:), allocatable :: dd
+  real(8), pointer :: p
   logical :: ifCondition = .TRUE.
   type(atype) :: t
   type(atype), dimension(10) :: ta
@@ -218,7 +220,8 @@ program openacc_kernels_loop_validity
     a(i) = 3.14
   end do
 
-  !$acc kernels loop attach(aa, bb, cc)
+  !ERROR: Argument `aa` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
+  !$acc kernels loop attach(aa, dd, p)
   do i = 1, N
     a(i) = 3.14
   end do

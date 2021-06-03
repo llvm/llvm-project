@@ -58,7 +58,7 @@ define <64 x i8> @fold_to_zero_vector_avx512(<64 x i8> %InVec) {
 
 define <16 x i8> @splat_test(<16 x i8> %InVec) {
 ; CHECK-LABEL: @splat_test(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[INVEC:%.*]], <16 x i8> undef, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i8> [[INVEC:%.*]], <16 x i8> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <16 x i8> [[TMP1]]
 ;
   %1 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %InVec, <16 x i8> zeroinitializer)

@@ -545,11 +545,36 @@ for.end:
 ;     b[i] = ((a[i] + 2) * a[i + 1]);
 ; }
 ;
-; NO-SINK-AFTER-LABEL: no_sink_after
-; NO-SINK-AFTER-NOT:   vector.ph:
-; NO-SINK-AFTER:       }
+; SINK-AFTER-LABEL:  @sink_after_with_multiple_users
+; SINK-AFTER-LABEL:  vector.ph:
+; SINK-AFTER-NEXT:    %n.mod.vf = urem i64 %n, 4
+; SINK-AFTER-NEXT:    %n.vec = sub i64 %n, %n.mod.vf
+; SINK-AFTER-NEXT:    %vector.recur.init = insertelement <4 x i16> poison, i16 %.pre, i32 3
+; SINK-AFTER-NEXT:    br label %vector.body
+
+; SINK-AFTER-LABEL:  vector.body:
+; SINK-AFTER-NEXT:    %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; SINK-AFTER-NEXT:    %vector.recur = phi <4 x i16> [ %vector.recur.init, %vector.ph ], [ %wide.load, %vector.body ]
+; SINK-AFTER-NEXT:    %1 = add i64 %index, 0
+; SINK-AFTER-NEXT:    %2 = add nuw nsw i64 %1, 1
+; SINK-AFTER-NEXT:    %3 = getelementptr inbounds i16, i16* %a, i64 %2
+; SINK-AFTER-NEXT:    %4 = getelementptr inbounds i16, i16* %3, i32 0
+; SINK-AFTER-NEXT:    %5 = bitcast i16* %4 to <4 x i16>*
+; SINK-AFTER-NEXT:    %wide.load = load <4 x i16>, <4 x i16>* %5, align 2, !alias.scope !43
+; SINK-AFTER-NEXT:    %6 = shufflevector <4 x i16> %vector.recur, <4 x i16> %wide.load, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; SINK-AFTER-NEXT:    %7 = sext <4 x i16> %6 to <4 x i32>
+; SINK-AFTER-NEXT:    %8 = add nsw <4 x i32> %7, <i32 2, i32 2, i32 2, i32 2>
+; SINK-AFTER-NEXT:    %9 = sext <4 x i16> %wide.load to <4 x i32>
+; SINK-AFTER-NEXT:    %10 = mul nsw <4 x i32> %8, %9
+; SINK-AFTER-NEXT:    %11 = getelementptr inbounds i32, i32* %b, i64 %1
+; SINK-AFTER-NEXT:    %12 = getelementptr inbounds i32, i32* %11, i32 0
+; SINK-AFTER-NEXT:    %13 = bitcast i32* %12 to <4 x i32>*
+; SINK-AFTER-NEXT:    store <4 x i32> %10, <4 x i32>* %13, align 4, !alias.scope !46, !noalias !43
+; SINK-AFTER-NEXT:    %index.next = add i64 %index, 4
+; SINK-AFTER-NEXT:    %14 = icmp eq i64 %index.next, %n.vec
+; SINK-AFTER-NEXT:    br i1 %14, label %middle.block, label %vector.body, !llvm.loop !48
 ;
-define void @no_sink_after(i16* %a, i32* %b, i64 %n) {
+define void @sink_after_with_multiple_users(i16* %a, i32* %b, i64 %n) {
 entry:
   %.pre = load i16, i16* %a
   br label %for.body
@@ -626,7 +651,7 @@ define void @sink_dead_inst() {
 ; SINK-AFTER-NEXT:    %index.next = add i32 %index, 4
 ; SINK-AFTER-NEXT:    %vec.ind.next = add <4 x i16> %vec.ind, <i16 4, i16 4, i16 4, i16 4>
 ; SINK-AFTER-NEXT:    %6 = icmp eq i32 %index.next, 40
-; SINK-AFTER-NEXT:    br i1 %6, label %middle.block, label %vector.body, !llvm.loop !43
+; SINK-AFTER-NEXT:    br i1 %6, label %middle.block, label %vector.body, !llvm.loop !50
 ;
 entry:
   br label %for.cond
@@ -708,7 +733,7 @@ define i32 @sink_into_replication_region(i32 %y) {
 ; CHECK-NEXT:    [[TMP23]] = add <4 x i32> [[VEC_PHI1]], [[TMP22]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof !45, [[LOOP46:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof !52, [[LOOP46:!llvm.loop !.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP25:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP23]], <4 x i32> [[VEC_PHI1]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP25]])
@@ -719,7 +744,7 @@ define i32 @sink_into_replication_region(i32 %y) {
 ; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ undef, [[BB2]] ], [ [[TMP26]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[TMP]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    br i1 undef, label [[BB1]], label [[BB2]], !prof !47, [[LOOP48:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 undef, label [[BB1]], label [[BB2]], !prof !54, [[LOOP48:!llvm.loop !.*]]
 ;
 bb:
   br label %bb2
@@ -835,7 +860,7 @@ define i32 @sink_into_replication_region_multiple(i32 *%x, i32 %y) {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i32> [[VEC_IND2]], <i32 4, i32 4, i32 4, i32 4>
 ; CHECK-NEXT:    [[TMP39:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP39]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof !45, [[LOOP49:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP39]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !prof !52, [[LOOP49:!llvm.loop !.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP40:%.*]] = select <4 x i1> [[TMP5]], <4 x i32> [[TMP23]], <4 x i32> [[VEC_PHI4]]
 ; CHECK-NEXT:    [[TMP41:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP40]])
@@ -846,7 +871,7 @@ define i32 @sink_into_replication_region_multiple(i32 *%x, i32 %y) {
 ; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ undef, [[BB2]] ], [ [[TMP41]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[TMP]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    br i1 undef, label [[BB1]], label [[BB2]], !prof !47, [[LOOP50:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 undef, label [[BB1]], label [[BB2]], !prof !54, [[LOOP50:!llvm.loop !.*]]
 ;
 bb:
   br label %bb2

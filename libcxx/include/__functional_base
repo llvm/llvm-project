@@ -11,10 +11,10 @@
 #define _LIBCPP_FUNCTIONAL_BASE
 
 #include <__config>
-#include <type_traits>
-#include <typeinfo>
 #include <exception>
 #include <new>
+#include <type_traits>
+#include <typeinfo>
 #include <utility>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -49,6 +49,7 @@ template <class _Tp>
 #endif
 struct _LIBCPP_TEMPLATE_VIS less : binary_function<_Tp, _Tp, bool>
 {
+    typedef bool __result_type;  // used by valarray
     _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
     bool operator()(const _Tp& __x, const _Tp& __y) const
         {return __x < __y;}

@@ -49,11 +49,9 @@ public:
     return instance;
   }
 
-  // machine info
-  static atmi_machine_t *GetMachineInfo();
   // modules
   static hsa_status_t RegisterModuleFromMemory(
-      void *, size_t, atmi_place_t,
+      void *, size_t, int DeviceId,
       hsa_status_t (*on_deserialized_data)(void *data, size_t size,
                                            void *cb_state),
       void *cb_state, std::vector<hsa_executable_t> &HSAExecutables);
@@ -61,11 +59,15 @@ public:
   // data
   static hsa_status_t Memcpy(hsa_signal_t, void *, const void *, size_t);
   static hsa_status_t Memfree(void *);
-  static hsa_status_t Malloc(void **ptr, size_t size, int DeviceId,
-                             atmi_devtype_t DeviceType);
+  static hsa_status_t HostMalloc(void **ptr, size_t size);
+  static hsa_status_t DeviceMalloc(void **ptr, size_t size, int DeviceId);
 
   int getMaxQueueSize() const { return env_.getMaxQueueSize(); }
   int getDebugMode() const { return env_.getDebugMode(); }
+
+private:
+  static hsa_status_t Malloc(void **ptr, size_t size, int DeviceId,
+                             atmi_devtype_t DeviceType);
 
 protected:
   Runtime() = default;

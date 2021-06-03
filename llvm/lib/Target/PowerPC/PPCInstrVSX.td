@@ -1816,8 +1816,7 @@ let PPC970_Single = 1, AddedComplexity = 400 in {
 
 // Output dag used to bitcast f32 to i32 and f64 to i64
 def Bitcast {
-  dag FltToInt = (i32 (MFVSRWZ (EXTRACT_SUBREG (XXSLDWI (XSCVDPSPN $A),
-                      (XSCVDPSPN $A), 3), sub_64)));
+  dag FltToInt = (i32 (MFVSRWZ (EXTRACT_SUBREG (XSCVDPSPN $A), sub_64)));
   dag DblToLong = (i64 (MFVSRD $A));
 }
 
@@ -2212,7 +2211,7 @@ def VectorExtractions {
 }
 
 def AlignValues {
-  dag F32_TO_BE_WORD1 = (v4f32 (XXSLDWI (XSCVDPSPN $B), (XSCVDPSPN $B), 3));
+  dag F32_TO_BE_WORD1 = (v4f32 (XSCVDPSPN $B));
   dag I32_TO_BE_WORD1 = (SUBREG_TO_REG (i64 1), (MTVSRWZ $B), sub_64);
 }
 
@@ -2817,6 +2816,10 @@ defm : ScalToVecWPermute<
   v4i32, FltToUIntLoad.A,
   (XXSPLTW (SUBREG_TO_REG (i64 1), (XSCVDPUXWSs (XFLOADf32 ForceXForm:$A)), sub_64), 1),
   (SUBREG_TO_REG (i64 1), (XSCVDPUXWSs (XFLOADf32 ForceXForm:$A)), sub_64)>;
+def : Pat<(v4f32 (build_vector (f32 (fpround f64:$A)), (f32 (fpround f64:$A)),
+                               (f32 (fpround f64:$A)), (f32 (fpround f64:$A)))),
+          (v4f32 (XXSPLTW (SUBREG_TO_REG (i64 1), (XSCVDPSP f64:$A), sub_64), 0))>;
+
 def : Pat<(v4f32 (build_vector f32:$A, f32:$A, f32:$A, f32:$A)),
           (v4f32 (XXSPLTW (v4f32 (XSCVDPSPN $A)), 0))>;
 def : Pat<(v2f64 (PPCldsplat ForceXForm:$A)),
@@ -4135,6 +4138,19 @@ def : Pat<(v4f32 (insertelt v4f32:$A, f32:$B, 2)),
 def : Pat<(v4f32 (insertelt v4f32:$A, f32:$B, 3)),
           (v4f32 (XXINSERTW v4f32:$A, AlignValues.F32_TO_BE_WORD1, 12))>;
 
+def : Pat<(v4f32 (insertelt v4f32:$A, (f32 (fpround f64:$B)), 0)),
+          (v4f32 (XXINSERTW v4f32:$A,
+                  (SUBREG_TO_REG (i64 1), (XSCVDPSP f64:$B), sub_64), 0))>;
+def : Pat<(v4f32 (insertelt v4f32:$A, (f32 (fpround f64:$B)), 1)),
+          (v4f32 (XXINSERTW v4f32:$A,
+                  (SUBREG_TO_REG (i64 1), (XSCVDPSP f64:$B), sub_64), 4))>;
+def : Pat<(v4f32 (insertelt v4f32:$A, (f32 (fpround f64:$B)), 2)),
+          (v4f32 (XXINSERTW v4f32:$A,
+                  (SUBREG_TO_REG (i64 1), (XSCVDPSP f64:$B), sub_64), 8))>;
+def : Pat<(v4f32 (insertelt v4f32:$A, (f32 (fpround f64:$B)), 3)),
+          (v4f32 (XXINSERTW v4f32:$A,
+                  (SUBREG_TO_REG (i64 1), (XSCVDPSP f64:$B), sub_64), 12))>;
+
 // Scalar stores of i8
 def : Pat<(truncstorei8 (i32 (vector_extract v16i8:$S, 0)), ForceXForm:$dst),
           (STXSIBXv (COPY_TO_REGCLASS (v16i8 (VSLDOI $S, $S, 9)), VSRC), ForceXForm:$dst)>;
@@ -4365,6 +4381,19 @@ def : Pat<(v4f32 (insertelt v4f32:$A, f32:$B, 2)),
           (v4f32 (XXINSERTW v4f32:$A, AlignValues.F32_TO_BE_WORD1, 4))>;
 def : Pat<(v4f32 (insertelt v4f32:$A, f32:$B, 3)),
           (v4f32 (XXINSERTW v4f32:$A, AlignValues.F32_TO_BE_WORD1, 0))>;
+
+def : Pat<(v4f32 (insertelt v4f32:$A, (f32 (fpround f64:$B)), 0)),
+          (v4f32 (XXINSERTW v4f32:$A,
+                  (SUBREG_TO_REG (i64 1), (XSCVDPSP f64:$B), sub_64), 12))>;
+def : Pat<(v4f32 (insertelt v4f32:$A, (f32 (fpround f64:$B)), 1)),
+          (v4f32 (XXINSERTW v4f32:$A,
+                  (SUBREG_TO_REG (i64 1), (XSCVDPSP f64:$B), sub_64), 8))>;
+def : Pat<(v4f32 (insertelt v4f32:$A, (f32 (fpround f64:$B)), 2)),
+          (v4f32 (XXINSERTW v4f32:$A,
+                  (SUBREG_TO_REG (i64 1), (XSCVDPSP f64:$B), sub_64), 4))>;
+def : Pat<(v4f32 (insertelt v4f32:$A, (f32 (fpround f64:$B)), 3)),
+          (v4f32 (XXINSERTW v4f32:$A,
+                  (SUBREG_TO_REG (i64 1), (XSCVDPSP f64:$B), sub_64), 0))>;
 
 def : Pat<(v8i16 (PPCld_vec_be ForceXForm:$src)),
           (COPY_TO_REGCLASS (LXVH8X ForceXForm:$src), VRRC)>;

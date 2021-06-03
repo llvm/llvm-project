@@ -1116,6 +1116,9 @@ namespace llvm {
             HasNest(HasNest), NoMerge(NoMerge) {}
     };
 
+    CCAssignFn *ccAssignFnForCall(CallingConv::ID CC, bool Return,
+                                  bool IsVarArg) const;
+
   private:
     struct ReuseLoadInfo {
       SDValue Ptr;

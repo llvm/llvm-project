@@ -311,8 +311,12 @@ def note_riscv_repeated_interrupt_attribute : Note<
   "repeated RISC-V 'interrupt' attribute is here">;
 def warn_unused_parameter : Warning<"unused parameter %0">,
   InGroup<UnusedParameter>, DefaultIgnore;
+def warn_unused_but_set_parameter : Warning<"parameter %0 set but not used">,
+  InGroup<UnusedButSetParameter>, DefaultIgnore;
 def warn_unused_variable : Warning<"unused variable %0">,
   InGroup<UnusedVariable>, DefaultIgnore;
+def warn_unused_but_set_variable : Warning<"variable %0 set but not used">,
+  InGroup<UnusedButSetVariable>, DefaultIgnore;
 def warn_unused_local_typedef : Warning<
   "unused %select{typedef|type alias}0 %1">,
   InGroup<UnusedLocalTypedef>, DefaultIgnore;
@@ -570,6 +574,12 @@ def err_using_decl_conflict_reverse : Error<
 def note_using_decl : Note<"%select{|previous }0using declaration">;
 def err_using_decl_redeclaration_expansion : Error<
   "using declaration pack expansion at block scope produces multiple values">;
+def err_use_of_empty_using_if_exists : Error<
+  "reference to unresolved using declaration">;
+def note_empty_using_if_exists_here : Note<
+  "using declaration annotated with 'using_if_exists' here">;
+def err_using_if_exists_on_ctor : Error<
+  "'using_if_exists' attribute cannot be applied to an inheriting constructor">;
 
 def warn_access_decl_deprecated : Warning<
   "access declarations are deprecated; use using declarations instead">,
@@ -3956,6 +3966,9 @@ def warn_attribute_sentinel_named_arguments : Warning<
   InGroup<IgnoredAttributes>;
 def warn_attribute_sentinel_not_variadic : Warning<
   "'sentinel' attribute only supported for variadic %select{functions|blocks}0">,
+  InGroup<IgnoredAttributes>;
+def warn_deprecated_ignored_on_using : Warning<
+  "%0 currently has no effect on a using declaration">,
   InGroup<IgnoredAttributes>;
 def err_attribute_sentinel_less_than_zero : Error<
   "'sentinel' parameter 1 less than zero">;
@@ -8321,6 +8334,10 @@ def err_global_call_not_config : Error<
 def err_ref_bad_target : Error<
   "reference to %select{__device__|__global__|__host__|__host__ __device__}0 "
   "%select{function|variable}1 %2 in %select{__device__|__global__|__host__|__host__ __device__}3 function">;
+def note_cuda_const_var_unpromoted : Note<
+  "const variable cannot be emitted on device side due to dynamic initialization">;
+def note_cuda_host_var : Note<
+  "host variable declared here">;
 def err_ref_bad_target_global_initializer : Error<
   "reference to %select{__device__|__global__|__host__|__host__ __device__}0 "
   "function %1 in global initializer">;

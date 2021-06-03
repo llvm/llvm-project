@@ -1932,10 +1932,14 @@ defm fine_grained_bitfield_accesses : BoolOption<"f", "fine-grained-bitfield-acc
   BothFlags<[CC1Option]>>,
   Group<f_clang_Group>;
 
-defm experimental_relative_cxx_abi_vtables : BoolFOption<"experimental-relative-c++-abi-vtables",
-  LangOpts<"RelativeCXXABIVTables">, DefaultFalse,
-  PosFlag<SetTrue, [], "Use">, NegFlag<SetFalse, [], "Do not use">,
-  BothFlags<[CC1Option], " the experimental C++ class ABI for classes with virtual tables">>;
+def fexperimental_relative_cxx_abi_vtables :
+  Flag<["-"], "fexperimental-relative-c++-abi-vtables">,
+  Group<f_clang_Group>, Flags<[CC1Option]>,
+  HelpText<"Use the experimental C++ class ABI for classes with virtual tables">;
+def fno_experimental_relative_cxx_abi_vtables :
+  Flag<["-"], "fno-experimental-relative-c++-abi-vtables">,
+  Group<f_clang_Group>, Flags<[CC1Option]>,
+  HelpText<"Do not use the experimental C++ class ABI for classes with virtual tables">;
 
 def fcxx_abi_EQ : Joined<["-"], "fc++-abi=">,
                   Group<f_clang_Group>, Flags<[CC1Option]>,

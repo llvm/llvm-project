@@ -247,9 +247,13 @@ class X86Subtarget final : public X86GenSubtargetInfo {
   /// True if LZCNT/TZCNT instructions have a false dependency on the destination register.
   bool HasLZCNTFalseDeps = false;
 
-  /// True if its preferable to combine to a single shuffle using a variable
-  /// mask over multiple fixed shuffles.
-  bool HasFastVariableShuffle = false;
+  /// True if its preferable to combine to a single cross-lane shuffle
+  /// using a variable mask over multiple fixed shuffles.
+  bool HasFastVariableCrossLaneShuffle = false;
+
+  /// True if its preferable to combine to a single per-lane shuffle
+  /// using a variable mask over multiple fixed shuffles.
+  bool HasFastVariablePerLaneShuffle = false;
 
   /// True if vzeroupper instructions should be inserted after code that uses
   /// ymm or zmm registers.
@@ -704,8 +708,11 @@ public:
   bool useLeaForSP() const { return UseLeaForSP; }
   bool hasPOPCNTFalseDeps() const { return HasPOPCNTFalseDeps; }
   bool hasLZCNTFalseDeps() const { return HasLZCNTFalseDeps; }
-  bool hasFastVariableShuffle() const {
-    return HasFastVariableShuffle;
+  bool hasFastVariableCrossLaneShuffle() const {
+    return HasFastVariableCrossLaneShuffle;
+  }
+  bool hasFastVariablePerLaneShuffle() const {
+    return HasFastVariablePerLaneShuffle;
   }
   bool insertVZEROUPPER() const { return InsertVZEROUPPER; }
   bool hasFastGather() const { return HasFastGather; }

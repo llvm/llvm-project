@@ -90,7 +90,7 @@ namespace core {
 hsa_status_t RegisterModuleFromMemory(
     std::map<std::string, atl_kernel_info_t> &KernelInfo,
     std::map<std::string, atl_symbol_info_t> &SymbolInfoTable, void *, size_t,
-    atmi_place_t,
+    int DeviceId,
     hsa_status_t (*on_deserialized_data)(void *data, size_t size,
                                          void *cb_state),
     void *cb_state, std::vector<hsa_executable_t> &HSAExecutables);
@@ -242,11 +242,6 @@ struct KernelTy {
 /// FIXME: we may need this to be per device and per library.
 std::list<KernelTy> KernelsList;
 
-// ATMI API to get gpu and gpu memory place
-static atmi_place_t get_gpu_place(int device_id) {
-  return ATMI_PLACE_GPU(0, device_id);
-}
-
 static std::vector<hsa_agent_t> find_gpu_agents() {
   std::vector<hsa_agent_t> res;
 
@@ -351,7 +346,7 @@ public:
 
   struct atmiFreePtrDeletor {
     void operator()(void *p) {
-      atmi_free(p); // ignore failure to free
+      core::Runtime::Memfree(p); // ignore failure to free
     }
   };
 
@@ -1025,14 +1020,14 @@ template <typename C>
 hsa_status_t module_register_from_memory_to_place(
     std::map<std::string, atl_kernel_info_t> &KernelInfoTable,
     std::map<std::string, atl_symbol_info_t> &SymbolInfoTable,
-    void *module_bytes, size_t module_size, atmi_place_t place, C cb,
+    void *module_bytes, size_t module_size, int DeviceId, C cb,
     std::vector<hsa_executable_t> &HSAExecutables) {
   auto L = [](void *data, size_t size, void *cb_state) -> hsa_status_t {
     C *unwrapped = static_cast<C *>(cb_state);
     return (*unwrapped)(data, size);
   };
   return core::RegisterModuleFromMemory(
-      KernelInfoTable, SymbolInfoTable, module_bytes, module_size, place, L,
+      KernelInfoTable, SymbolInfoTable, module_bytes, module_size, DeviceId, L,
       static_cast<void *>(&cb), HSAExecutables);
 }
 } // namespace
@@ -1175,7 +1170,7 @@ struct device_environment {
 static hsa_status_t atmi_calloc(void **ret_ptr, size_t size, int DeviceId) {
   uint64_t rounded = 4 * ((size + 3) / 4);
   void *ptr;
-  hsa_status_t err = atmi_malloc(&ptr, rounded, DeviceId, ATMI_DEVTYPE_GPU);
+  hsa_status_t err = core::Runtime::DeviceMalloc(&ptr, rounded, DeviceId);
   if (err != HSA_STATUS_SUCCESS) {
     return err;
   }
@@ -1183,7 +1178,7 @@ static hsa_status_t atmi_calloc(void **ret_ptr, size_t size, int DeviceId) {
   hsa_status_t rc = hsa_amd_memory_fill(ptr, 0, rounded / 4);
   if (rc != HSA_STATUS_SUCCESS) {
     fprintf(stderr, "zero fill device_state failed with %u\n", rc);
-    atmi_free(ptr);
+    core::Runtime::Memfree(ptr);
     return HSA_STATUS_ERROR;
   }
 
@@ -1239,8 +1234,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t device_id,
     auto &KernelInfo = DeviceInfo.KernelInfoTable[device_id];
     auto &SymbolInfo = DeviceInfo.SymbolInfoTable[device_id];
     hsa_status_t err = module_register_from_memory_to_place(
-        KernelInfo, SymbolInfo, (void *)image->ImageStart, img_size,
-        get_gpu_place(device_id),
+        KernelInfo, SymbolInfo, (void *)image->ImageStart, img_size, device_id,
         [&](void *data, size_t size) {
           if (image_contains_symbol(data, size, "needs_hostcall_buffer")) {
             __atomic_store_n(&DeviceInfo.hostcall_required, true,
@@ -1570,7 +1564,7 @@ void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *, int32_t kind) {
     return NULL;
   }
 
-  hsa_status_t err = atmi_malloc(&ptr, size, device_id, ATMI_DEVTYPE_GPU);
+  hsa_status_t err = core::Runtime::DeviceMalloc(&ptr, size, device_id);
   DP("Tgt alloc data %ld bytes, (tgt:%016llx).\n", size,
      (long long unsigned)(Elf64_Addr)ptr);
   ptr = (err == HSA_STATUS_SUCCESS) ? ptr : NULL;
@@ -1623,7 +1617,7 @@ int32_t __tgt_rtl_data_delete(int device_id, void *tgt_ptr) {
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
   hsa_status_t err;
   DP("Tgt free data (tgt:%016llx).\n", (long long unsigned)(Elf64_Addr)tgt_ptr);
-  err = atmi_free(tgt_ptr);
+  err = core::Runtime::Memfree(tgt_ptr);
   if (err != HSA_STATUS_SUCCESS) {
     DP("Error when freeing CUDA memory\n");
     return OFFLOAD_FAIL;

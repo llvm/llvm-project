@@ -1,8 +1,18 @@
-//===- Dominance.h - Dominator analysis for CFGs ----------------*- C++ -*-===//
+//===- Dominance.h - Dominator analysis for regions -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// The DominanceInfo and PostDominanceInfo class provide routines for performimg
+// simple dominance checks, and expose dominator trees for advanced clients.
+// These classes provide fully region-aware functionality, lazily constructing
+// dominator information for any multi-block regions that need it.
+//
+// For more information about the theory behind dominance in graphs algorithms,
+// see: https://en.wikipedia.org/wiki/Dominator_(graph_theory)
 //
 //===----------------------------------------------------------------------===//
 
@@ -20,51 +30,84 @@ using DominanceInfoNode = llvm::DomTreeNodeBase<Block>;
 class Operation;
 
 namespace detail {
-template <bool IsPostDom> class DominanceInfoBase {
-  using base = llvm::DominatorTreeBase<Block, IsPostDom>;
+template <bool IsPostDom>
+class DominanceInfoBase {
+  using DomTree = llvm::DominatorTreeBase<Block, IsPostDom>;
 
 public:
-  DominanceInfoBase(Operation *op) { recalculate(op); }
+  DominanceInfoBase(Operation *op) {}
   DominanceInfoBase(DominanceInfoBase &&) = default;
   DominanceInfoBase &operator=(DominanceInfoBase &&) = default;
+  ~DominanceInfoBase();
 
   DominanceInfoBase(const DominanceInfoBase &) = delete;
   DominanceInfoBase &operator=(const DominanceInfoBase &) = delete;
 
-  /// Recalculate the dominance info.
-  void recalculate(Operation *op);
+  /// Invalidate dominance info. This can be used by clients that make major
+  /// changes to the CFG and don't have a good way to update it.
+  void invalidate() { dominanceInfos.clear(); }
+  void invalidate(Region *region) { dominanceInfos.erase(region); }
 
   /// Finds the nearest common dominator block for the two given blocks a
   /// and b. If no common dominator can be found, this function will return
   /// nullptr.
   Block *findNearestCommonDominator(Block *a, Block *b) const;
 
-  /// Return true if there is dominanceInfo for the given region.
-  bool hasDominanceInfo(Region *region) {
-    return dominanceInfos.count(region) != 0;
-  }
-
-  /// Get the root dominance node of the given region.
+  /// Get the root dominance node of the given region. Note that this operation
+  /// is only defined for multi-block regions!
   DominanceInfoNode *getRootNode(Region *region) {
-    assert(dominanceInfos.count(region) != 0);
-    return dominanceInfos[region]->getRootNode();
+    auto domInfo = getDominanceInfo(region, /*needsDomTree*/ true).getPointer();
+    assert(domInfo && "Region isn't multiblock");
+    return domInfo->getRootNode();
   }
 
-  /// Return the dominance node from the Region containing block A.
-  DominanceInfoNode *getNode(Block *a);
-
-protected:
-  using super = DominanceInfoBase<IsPostDom>;
-
-  /// Return true if the specified block A properly dominates block B.
-  bool properlyDominates(Block *a, Block *b) const;
+  /// Return the dominance node from the Region containing block A. This only
+  /// works for multi-block regions.
+  DominanceInfoNode *getNode(Block *a) {
+    return getDomTree(a->getParent()).getNode(a);
+  }
 
   /// Return true if the specified block is reachable from the entry
   /// block of its region.
   bool isReachableFromEntry(Block *a) const;
 
-  /// A mapping of regions to their base dominator tree.
-  DenseMap<Region *, std::unique_ptr<base>> dominanceInfos;
+  /// Return true if operations in the specified block are known to obey SSA
+  /// dominance requirements. False if the block is a graph region or unknown.
+  bool hasSSADominance(Block *block) const {
+    return hasSSADominance(block->getParent());
+  }
+  /// Return true if operations in the specified block are known to obey SSA
+  /// dominance requirements. False if the block is a graph region or unknown.
+  bool hasSSADominance(Region *region) const {
+    return getDominanceInfo(region, /*needsDomTree=*/false).getInt();
+  }
+
+  DomTree &getDomTree(Region *region) const {
+    assert(!region->hasOneBlock() &&
+           "Can't get DomTree for single block regions");
+    return *getDominanceInfo(region, /*needsDomTree=*/true).getPointer();
+  }
+
+protected:
+  using super = DominanceInfoBase<IsPostDom>;
+
+  /// Return the dom tree and "hasSSADominance" bit for the given region. The
+  /// DomTree will be null for single-block regions. This lazily constructs the
+  /// DomTree on demand when needsDomTree=true.
+  llvm::PointerIntPair<DomTree *, 1, bool>
+  getDominanceInfo(Region *region, bool needsDomTree) const;
+
+  /// Return true if the specified block A properly dominates block B.
+  bool properlyDominates(Block *a, Block *b) const;
+
+  /// A mapping of regions to their base dominator tree and a cached
+  /// "hasSSADominance" bit. This map does not contain dominator trees for
+  /// single block CFG regions, but we do want to cache the "hasSSADominance"
+  /// bit for them. We may also not have computed the DomTree yet. In either
+  /// case, the DomTree is just null.
+  ///
+  mutable DenseMap<Region *, llvm::PointerIntPair<DomTree *, 1, bool>>
+      dominanceInfos;
 };
 } // end namespace detail
 
@@ -75,21 +118,15 @@ class DominanceInfo : public detail::DominanceInfoBase</*IsPostDom=*/false> {
 public:
   using super::super;
 
-  /// Return true if the specified block is reachable from the entry block of
-  /// its region. In an SSACFG region, a block is reachable from the entry block
-  /// if it is the successor of the entry block or another reachable block. In a
-  /// Graph region, all blocks are reachable.
-  bool isReachableFromEntry(Block *a) const {
-    return super::isReachableFromEntry(a);
-  }
-
   /// Return true if operation A properly dominates operation B, i.e. if A and B
   /// are in the same block and A properly dominates B within the block, or if
   /// the block that contains A properly dominates the block that contains B. In
   /// an SSACFG region, Operation A dominates Operation B in the same block if A
   /// preceeds B. In a Graph region, all operations in a block dominate all
   /// other operations in the same block.
-  bool properlyDominates(Operation *a, Operation *b) const;
+  bool properlyDominates(Operation *a, Operation *b) const {
+    return properlyDominatesImpl(a, b, /*enclosingOpOk=*/true);
+  }
 
   /// Return true if operation A dominates operation B, i.e. if A and B are the
   /// same operation or A properly dominates B.
@@ -97,13 +134,12 @@ public:
     return a == b || properlyDominates(a, b);
   }
 
-  /// Return true if value A properly dominates operation B, i.e if the
-  /// operation that defines A properlyDominates B and the operation that
-  /// defines A does not contain B.
+  /// Return true if the `a` value properly dominates operation `b`, i.e if the
+  /// operation that defines `a` properlyDominates `b` and the operation that
+  /// defines `a` does not contain `b`.
   bool properlyDominates(Value a, Operation *b) const;
 
-  /// Return true if operation A dominates operation B, i.e if the operation
-  /// that defines A dominates B.
+  /// Return true if the `a` value dominates operation `b`.
   bool dominates(Value a, Operation *b) const {
     return (Operation *)a.getDefiningOp() == b || properlyDominates(a, b);
   }
@@ -117,27 +153,25 @@ public:
   /// Return true if the specified block A properly dominates block B, i.e.: if
   /// block A contains block B, or if the region which contains block A also
   /// contains block B or some parent of block B and block A dominates that
-  /// block in that kind of region.  In an SSACFG region, block A dominates
+  /// block in that kind of region. In an SSACFG region, block A dominates
   /// block B if all control flow paths from the entry block to block B flow
   /// through block A. In a Graph region, all blocks dominate all other blocks.
   bool properlyDominates(Block *a, Block *b) const {
     return super::properlyDominates(a, b);
   }
 
-  /// Update the internal DFS numbers for the dominance nodes.
-  void updateDFSNumbers();
+private:
+  // Return true if operation A properly dominates operation B.  The
+  /// 'enclosingOpOk' flag says whether we should return true if the b op is
+  /// enclosed by a region on 'A'.
+  bool properlyDominatesImpl(Operation *a, Operation *b,
+                             bool enclosingOpOk) const;
 };
 
 /// A class for computing basic postdominance information.
 class PostDominanceInfo : public detail::DominanceInfoBase</*IsPostDom=*/true> {
 public:
   using super::super;
-
-  /// Return true if the specified block is reachable from the entry
-  /// block of its region.
-  bool isReachableFromEntry(Block *a) const {
-    return super::isReachableFromEntry(a);
-  }
 
   /// Return true if operation A properly postdominates operation B.
   bool properlyPostDominates(Operation *a, Operation *b);
@@ -164,7 +198,8 @@ namespace llvm {
 
 /// DominatorTree GraphTraits specialization so the DominatorTree can be
 /// iterated by generic graph iterators.
-template <> struct GraphTraits<mlir::DominanceInfoNode *> {
+template <>
+struct GraphTraits<mlir::DominanceInfoNode *> {
   using ChildIteratorType = mlir::DominanceInfoNode::const_iterator;
   using NodeRef = mlir::DominanceInfoNode *;
 
@@ -173,7 +208,8 @@ template <> struct GraphTraits<mlir::DominanceInfoNode *> {
   static inline ChildIteratorType child_end(NodeRef N) { return N->end(); }
 };
 
-template <> struct GraphTraits<const mlir::DominanceInfoNode *> {
+template <>
+struct GraphTraits<const mlir::DominanceInfoNode *> {
   using ChildIteratorType = mlir::DominanceInfoNode::const_iterator;
   using NodeRef = const mlir::DominanceInfoNode *;
 

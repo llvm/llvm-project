@@ -53,7 +53,7 @@ class CodeRegion {
   // An optional descriptor for this region.
   llvm::StringRef Description;
   // Instructions that form this region.
-  llvm::SmallVector<llvm::MCInst, 8> Instructions;
+  llvm::SmallVector<llvm::MCInst, 16> Instructions;
   // Source location range.
   llvm::SMLoc RangeStart;
   llvm::SMLoc RangeEnd;

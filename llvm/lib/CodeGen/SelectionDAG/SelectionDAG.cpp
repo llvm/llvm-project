@@ -5214,7 +5214,7 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   // Scalable vectors should only be SPLAT_VECTOR or UNDEF here. We only need
   // one iteration for that.
   assert((!VT.isScalableVector() || NumOps == 1) &&
-         "Scalar vector should only have one scalar");
+         "Scalable vector should only have one scalar");
 
   for (unsigned I = 0; I != NumOps; ++I) {
     // We can have a fixed length SPLAT_VECTOR and a BUILD_VECTOR so we need

@@ -1442,8 +1442,7 @@ public:
   /// type.
   void setCalledFunction(FunctionType *FTy, Value *Fn) {
     this->FTy = FTy;
-    assert(FTy == cast<FunctionType>(
-                      cast<PointerType>(Fn->getType())->getElementType()));
+    assert(cast<PointerType>(Fn->getType())->isOpaqueOrPointeeTypeMatches(FTy));
     // This function doesn't mutate the return type, only the function
     // type. Seems broken, but I'm just gonna stick an assert in for now.
     assert(getType() == FTy->getReturnType());
@@ -1729,17 +1728,14 @@ public:
 
   /// Extract the byval type for a call or parameter.
   Type *getParamByValType(unsigned ArgNo) const {
-    return Attrs.getParamByValType(ArgNo);
-  }
-
-  /// Extract the inalloca type for a call or parameter.
-  Type *getParamInAllocaType(unsigned ArgNo) const {
-    return Attrs.getParamInAllocaType(ArgNo);
+    Type *Ty = Attrs.getParamByValType(ArgNo);
+    return Ty ? Ty : getArgOperand(ArgNo)->getType()->getPointerElementType();
   }
 
   /// Extract the preallocated type for a call or parameter.
   Type *getParamPreallocatedType(unsigned ArgNo) const {
-    return Attrs.getParamPreallocatedType(ArgNo);
+    Type *Ty = Attrs.getParamPreallocatedType(ArgNo);
+    return Ty ? Ty : getArgOperand(ArgNo)->getType()->getPointerElementType();
   }
 
   /// Extract the number of dereferenceable bytes for a call or

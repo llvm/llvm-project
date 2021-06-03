@@ -237,6 +237,41 @@ ARMFrameLowering::canSimplifyCallFramePseudos(const MachineFunction &MF) const {
   return hasReservedCallFrame(MF) || MF.getFrameInfo().hasVarSizedObjects();
 }
 
+// Returns how much of the incoming argument stack area we should clean up in an
+// epilogue. For the C calling convention this will be 0, for guaranteed tail
+// call conventions it can be positive (a normal return or a tail call to a
+// function that uses less stack space for arguments) or negative (for a tail
+// call to a function that needs more stack space than us for arguments).
+static int getArgumentStackToRestore(MachineFunction &MF,
+                                     MachineBasicBlock &MBB) {
+  MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
+  bool IsTailCallReturn = false;
+  if (MBB.end() != MBBI) {
+    unsigned RetOpcode = MBBI->getOpcode();
+    IsTailCallReturn = RetOpcode == ARM::TCRETURNdi ||
+                       RetOpcode == ARM::TCRETURNri;
+  }
+  ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
+
+  int ArgumentPopSize = 0;
+  if (IsTailCallReturn) {
+    MachineOperand &StackAdjust = MBBI->getOperand(1);
+
+    // For a tail-call in a callee-pops-arguments environment, some or all of
+    // the stack may actually be in use for the call's arguments, this is
+    // calculated during LowerCall and consumed here...
+    ArgumentPopSize = StackAdjust.getImm();
+  } else {
+    // ... otherwise the amount to pop is *all* of the argument space,
+    // conveniently stored in the MachineFunctionInfo by
+    // LowerFormalArguments. This will, of course, be zero for the C calling
+    // convention.
+    ArgumentPopSize = AFI->getArgumentStackToRestore();
+  }
+
+  return ArgumentPopSize;
+}
+
 static void emitRegPlusImmediate(
     bool isARM, MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI,
     const DebugLoc &dl, const ARMBaseInstrInfo &TII, unsigned DestReg,
@@ -868,7 +903,13 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
          "This emitEpilogue does not support Thumb1!");
   bool isARM = !AFI->isThumbFunction();
 
-  unsigned ArgRegsSaveSize = AFI->getArgRegsSaveSize();
+  // Amount of stack space we reserved next to incoming args for either
+  // varargs registers or stack arguments in tail calls made by this function.
+  unsigned ReservedArgStack = AFI->getArgRegsSaveSize();
+
+  // How much of the stack used by incoming arguments this function is expected
+  // to restore in this particular epilogue.
+  int IncomingArgStackToRestore = getArgumentStackToRestore(MF, MBB);
   int NumBytes = (int)MFI.getStackSize();
   Register FramePtr = RegInfo->getFrameRegister(MF);
 
@@ -882,8 +923,8 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
   DebugLoc dl = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   if (!AFI->hasStackFrame()) {
-    if (NumBytes - ArgRegsSaveSize != 0)
-      emitSPUpdate(isARM, MBB, MBBI, dl, TII, NumBytes - ArgRegsSaveSize,
+    if (NumBytes - ReservedArgStack != 0)
+      emitSPUpdate(isARM, MBB, MBBI, dl, TII, NumBytes - ReservedArgStack,
                    MachineInstr::FrameDestroy);
   } else {
     // Unwind MBBI to point to first LDR / VLDRD.
@@ -897,7 +938,7 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
     }
 
     // Move SP to start of FP callee save spill area.
-    NumBytes -= (ArgRegsSaveSize +
+    NumBytes -= (ReservedArgStack +
                  AFI->getFPCXTSaveAreaSize() +
                  AFI->getGPRCalleeSavedArea1Size() +
                  AFI->getGPRCalleeSavedArea2Size() +
@@ -969,9 +1010,13 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
     if (AFI->getFPCXTSaveAreaSize()) MBBI++;
   }
 
-  if (ArgRegsSaveSize)
-    emitSPUpdate(isARM, MBB, MBBI, dl, TII, ArgRegsSaveSize,
+  if (ReservedArgStack || IncomingArgStackToRestore) {
+    assert(ReservedArgStack + IncomingArgStackToRestore >= 0 &&
+           "attempting to restore negative stack amount");
+    emitSPUpdate(isARM, MBB, MBBI, dl, TII,
+                 ReservedArgStack + IncomingArgStackToRestore,
                  MachineInstr::FrameDestroy);
+  }
 }
 
 /// getFrameIndexReference - Provide a base+offset reference to an FI slot for
@@ -2288,31 +2333,37 @@ MachineBasicBlock::iterator ARMFrameLowering::eliminateCallFramePseudoInstr(
     MachineBasicBlock::iterator I) const {
   const ARMBaseInstrInfo &TII =
       *static_cast<const ARMBaseInstrInfo *>(MF.getSubtarget().getInstrInfo());
+  ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
+  bool isARM = !AFI->isThumbFunction();
+  DebugLoc dl = I->getDebugLoc();
+  unsigned Opc = I->getOpcode();
+  bool IsDestroy = Opc == TII.getCallFrameDestroyOpcode();
+  unsigned CalleePopAmount = IsDestroy ? I->getOperand(1).getImm() : 0;
+
+  assert(!AFI->isThumb1OnlyFunction() &&
+         "This eliminateCallFramePseudoInstr does not support Thumb1!");
+
+  int PIdx = I->findFirstPredOperandIdx();
+  ARMCC::CondCodes Pred = (PIdx == -1)
+                              ? ARMCC::AL
+                              : (ARMCC::CondCodes)I->getOperand(PIdx).getImm();
+  unsigned PredReg = TII.getFramePred(*I);
+
   if (!hasReservedCallFrame(MF)) {
+    // Bail early if the callee is expected to do the adjustment.
+    if (IsDestroy && CalleePopAmount != -1U)
+      return MBB.erase(I);
+
     // If we have alloca, convert as follows:
     // ADJCALLSTACKDOWN -> sub, sp, sp, amount
     // ADJCALLSTACKUP   -> add, sp, sp, amount
-    MachineInstr &Old = *I;
-    DebugLoc dl = Old.getDebugLoc();
-    unsigned Amount = TII.getFrameSize(Old);
+    unsigned Amount = TII.getFrameSize(*I);
     if (Amount != 0) {
       // We need to keep the stack aligned properly.  To do this, we round the
       // amount of space needed for the outgoing arguments up to the next
       // alignment boundary.
       Amount = alignSPAdjust(Amount);
 
-      ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
-      assert(!AFI->isThumb1OnlyFunction() &&
-             "This eliminateCallFramePseudoInstr does not support Thumb1!");
-      bool isARM = !AFI->isThumbFunction();
-
-      // Replace the pseudo instruction with a new instruction...
-      unsigned Opc = Old.getOpcode();
-      int PIdx = Old.findFirstPredOperandIdx();
-      ARMCC::CondCodes Pred =
-          (PIdx == -1) ? ARMCC::AL
-                       : (ARMCC::CondCodes)Old.getOperand(PIdx).getImm();
-      unsigned PredReg = TII.getFramePred(Old);
       if (Opc == ARM::ADJCALLSTACKDOWN || Opc == ARM::tADJCALLSTACKDOWN) {
         emitSPUpdate(isARM, MBB, I, dl, TII, -Amount, MachineInstr::NoFlags,
                      Pred, PredReg);
@@ -2322,6 +2373,11 @@ MachineBasicBlock::iterator ARMFrameLowering::eliminateCallFramePseudoInstr(
                      Pred, PredReg);
       }
     }
+  } else if (CalleePopAmount != -1U) {
+    // If the calling convention demands that the callee pops arguments from the
+    // stack, we want to add it back if we have a reserved call frame.
+    emitSPUpdate(isARM, MBB, I, dl, TII, -CalleePopAmount,
+                 MachineInstr::NoFlags, Pred, PredReg);
   }
   return MBB.erase(I);
 }

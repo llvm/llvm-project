@@ -19,7 +19,6 @@
 // to the NFA.
 //
 //===----------------------------------------------------------------------===//
-#define DEBUG_TYPE "dfa-emitter"
 
 #include "DFAEmitter.h"
 #include "CodeGenTarget.h"
@@ -38,6 +37,8 @@
 #include <set>
 #include <string>
 #include <vector>
+
+#define DEBUG_TYPE "dfa-emitter"
 
 using namespace llvm;
 

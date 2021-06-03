@@ -41,8 +41,6 @@
 //      *++p = c;
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "ppc-loop-instr-form-prep"
-
 #include "PPC.h"
 #include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
@@ -78,6 +76,8 @@
 #include <cassert>
 #include <iterator>
 #include <utility>
+
+#define DEBUG_TYPE "ppc-loop-instr-form-prep"
 
 using namespace llvm;
 

@@ -1819,8 +1819,6 @@ static void emitBody(CodeGenFunction &CGF, const Stmt *S, const Stmt *NextLoop,
     return;
   }
   if (SimplifiedS == NextLoop) {
-    OMPTransformDirectiveScopeRAII PossiblyTransformDirectiveScope(CGF,
-                                                                   SimplifiedS);
     if (auto *Dir = dyn_cast<OMPTileDirective>(SimplifiedS))
       SimplifiedS = Dir->getTransformedStmt();
     if (const auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(SimplifiedS))

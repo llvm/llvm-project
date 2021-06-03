@@ -706,6 +706,7 @@ else ()
 
   foreach (arch ${BUILTIN_SUPPORTED_ARCH})
     if (CAN_TARGET_${arch})
+      set(BUILTIN_CFLAGS_${arch} ${BUILTIN_CFLAGS})
       # For ARM archs, exclude any VFP builtins if VFP is not supported
       if (${arch} MATCHES "^(arm|armhf|armv7|armv7s|armv7k|armv7m|armv7em|armv8m.main|armv8.1m.main)$")
         string(REPLACE ";" " " _TARGET_${arch}_CFLAGS "${TARGET_${arch}_CFLAGS}")
@@ -731,13 +732,13 @@ else ()
       # Needed for clear_cache on debug mode, due to r7's usage in inline asm.
       # Release mode already sets it via -O2/3, Debug mode doesn't.
       if (${arch} STREQUAL "armhf")
-        list(APPEND BUILTIN_CFLAGS -fomit-frame-pointer -DCOMPILER_RT_ARMHF_TARGET)
+        list(APPEND BUILTIN_CFLAGS_${arch} -fomit-frame-pointer -DCOMPILER_RT_ARMHF_TARGET)
       endif()
 
       # For RISCV32, we must force enable int128 for compiling long
       # double routines.
       if("${arch}" STREQUAL "riscv32")
-        list(APPEND BUILTIN_CFLAGS -fforce-enable-int128)
+        list(APPEND BUILTIN_CFLAGS_${arch} -fforce-enable-int128)
       endif()
 
       add_compiler_rt_runtime(clang_rt.builtins
@@ -745,7 +746,7 @@ else ()
                               ARCHS ${arch}
                               SOURCES ${${arch}_SOURCES}
                               DEFS ${BUILTIN_DEFS}
-                              CFLAGS ${BUILTIN_CFLAGS}
+                              CFLAGS ${BUILTIN_CFLAGS_${arch}}
                               PARENT_TARGET builtins)
     endif ()
   endforeach ()

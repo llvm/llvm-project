@@ -3529,6 +3529,11 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
   if (Opts.CXXABI)
     GenerateArg(Args, OPT_fcxx_abi_EQ, TargetCXXABI::getSpelling(*Opts.CXXABI),
                 SA);
+
+  if (Opts.RelativeCXXABIVTables)
+    GenerateArg(Args, OPT_fexperimental_relative_cxx_abi_vtables, SA);
+  else
+    GenerateArg(Args, OPT_fno_experimental_relative_cxx_abi_vtables, SA);
 }
 
 bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
@@ -4038,6 +4043,11 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         Opts.CXXABI = Kind;
     }
   }
+
+  Opts.RelativeCXXABIVTables =
+      Args.hasFlag(options::OPT_fexperimental_relative_cxx_abi_vtables,
+                   options::OPT_fno_experimental_relative_cxx_abi_vtables,
+                   TargetCXXABI::usesRelativeVTables(T));
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }

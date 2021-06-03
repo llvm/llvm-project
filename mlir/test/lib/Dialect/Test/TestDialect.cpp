@@ -8,6 +8,7 @@
 
 #include "TestDialect.h"
 #include "TestAttributes.h"
+#include "TestInterfaces.h"
 #include "TestTypes.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -16,6 +17,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Reducer/ReductionPatternInterface.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -170,6 +172,18 @@ struct TestInlinerInterface : public DialectInlinerInterface {
     return builder.create<TestCastOp>(conversionLoc, resultType, input);
   }
 };
+
+struct TestReductionPatternInterface : public DialectReductionPatternInterface {
+public:
+  TestReductionPatternInterface(Dialect *dialect)
+      : DialectReductionPatternInterface(dialect) {}
+
+  virtual void
+  populateReductionPatterns(RewritePatternSet &patterns) const final {
+    populateTestReductionPatterns(patterns);
+  }
+};
+
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -207,7 +221,7 @@ void TestDialect::initialize() {
 #include "TestOps.cpp.inc"
       >();
   addInterfaces<TestOpAsmInterface, TestDialectFoldInterface,
-                TestInlinerInterface>();
+                TestInlinerInterface, TestReductionPatternInterface>();
   allowUnknownOperations();
 
   // Instantiate our fallback op interface that we'll use on specific
@@ -692,6 +706,8 @@ struct TestRemoveOpWithInnerOps
     : public OpRewritePattern<TestOpWithRegionPattern> {
   using OpRewritePattern<TestOpWithRegionPattern>::OpRewritePattern;
 
+  void initialize() { setDebugName("TestRemoveOpWithInnerOps"); }
+
   LogicalResult matchAndRewrite(TestOpWithRegionPattern op,
                                 PatternRewriter &rewriter) const override {
     rewriter.eraseOp(op);
@@ -1004,6 +1020,27 @@ void RegionIfOp::getSuccessorRegions(
   // The then and else regions are the entry regions of this op.
   regions.push_back(RegionSuccessor(&thenRegion(), getThenArgs()));
   regions.push_back(RegionSuccessor(&elseRegion(), getElseArgs()));
+}
+
+//===----------------------------------------------------------------------===//
+// SingleNoTerminatorCustomAsmOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseSingleNoTerminatorCustomAsmOp(OpAsmParser &parser,
+                                                      OperationState &state) {
+  Region *body = state.addRegion();
+  if (parser.parseRegion(*body, /*arguments=*/{}, /*argTypes=*/{}))
+    return failure();
+  return success();
+}
+
+static void print(SingleNoTerminatorCustomAsmOp op, OpAsmPrinter &printer) {
+  printer << op.getOperationName();
+  printer.printRegion(
+      op.getRegion(), /*printEntryBlockArgs=*/false,
+      // This op has a single block without terminators. But explicitly mark
+      // as not printing block terminators for testing.
+      /*printBlockTerminators=*/false);
 }
 
 #include "TestOpEnums.cpp.inc"

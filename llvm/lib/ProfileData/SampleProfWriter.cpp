@@ -252,6 +252,8 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
     addSectionFlag(SecProfSummary, SecProfSummaryFlags::SecFlagFullContext);
   if (Type == SecFuncMetadata && FunctionSamples::ProfileIsCS)
     addSectionFlag(SecFuncMetadata, SecFuncMetadataFlags::SecFlagHasAttribute);
+  if (Type == SecProfSummary && FunctionSamples::ProfileIsFS)
+    addSectionFlag(SecProfSummary, SecProfSummaryFlags::SecFlagFSDiscriminator);
 
   uint64_t SectionStart = markSectionStart(Type, LayoutIdx);
   switch (Type) {

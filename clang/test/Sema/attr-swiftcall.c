@@ -5,6 +5,7 @@
 #define INDIRECT_RESULT __attribute__((swift_indirect_result))
 #define ERROR_RESULT __attribute__((swift_error_result))
 #define CONTEXT __attribute__((swift_context))
+#define ASYNC_CONTEXT __attribute__((swift_async_context))
 
 int notAFunction SWIFTCALL; // expected-warning {{'swiftcall' only applies to function types; type here is 'int'}}
 void variadic(int x, ...) SWIFTCALL; // expected-error {{variadic function cannot use swiftcall calling convention}}
@@ -29,3 +30,10 @@ void context_nonswift(CONTEXT void *context); // expected-error {{'swift_context
 void context_bad_type(CONTEXT int context) SWIFTCALL; // expected-error {{'swift_context' parameter must have pointer type; type here is 'int'}}
 void context_okay(CONTEXT void *context) SWIFTCALL;
 void context_okay2(CONTEXT void *context, void *selfType, char **selfWitnessTable) SWIFTCALL;
+
+void async_context_okay_for_now(ASYNC_CONTEXT void *context);
+void async_context_bad_type(ASYNC_CONTEXT int context) SWIFTCALL; // expected-error {{'swift_async_context' parameter must have pointer type; type here is 'int'}}
+void async_context_bad_pos(int context) ASYNC_CONTEXT SWIFTCALL; // expected-warning {{'swift_async_context' attribute only applies to parameters}}
+void async_context_bad_args(__attribute__((swift_async_context(1))) void *context) SWIFTCALL; // expected-error {{'swift_async_context' attribute takes no arguments}}
+void async_context_okay(ASYNC_CONTEXT void *context) SWIFTCALL;
+void async_context_okay2(ASYNC_CONTEXT void *context, void *selfType, char **selfWitnessTable) SWIFTCALL;

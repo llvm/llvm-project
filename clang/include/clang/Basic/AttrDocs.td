@@ -4529,6 +4529,19 @@ A context parameter must have pointer or reference type.
   }];
 }
 
+def SwiftAsyncContextDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``swift_async_context`` attribute marks a parameter as having the
+special asynchronous context-parameter ABI treatment.
+
+This treatment generally passes the context value in a special register
+which is normally callee-preserved.
+
+A context parameter must have pointer or reference type.
+  }];
+}
+
 def SwiftErrorResultDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
@@ -5759,6 +5772,31 @@ once.
     for (size_t i = 0; i < count; ++i)
       data[i] = 0xFE;
   }
+  }];
+}
+
+def UsingIfExistsDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``using_if_exists`` attribute applies to a using-declaration. It allows
+programmers to import a declaration that potentially does not exist, instead
+deferring any errors to the point of use. For instance:
+
+.. code-block:: c++
+
+  namespace empty_namespace {};
+  __attribute__((using_if_exists))
+  using empty_namespace::does_not_exist; // no error!
+
+  does_not_exist x; // error: use of unresolved 'using_if_exists'
+
+The C++ spelling of the attribte (`[[clang::using_if_exists]]`) is also
+supported as a clang extension, since ISO C++ doesn't support attributes in this
+position. If the entity referred to by the using-declaration is found by name
+lookup, the attribute has no effect. This attribute is useful for libraries
+(primarily, libc++) that wish to redeclare a set of declarations in another
+namespace, when the availability of those declarations is difficult or
+impossible to detect at compile time with the preprocessor.
   }];
 }
 

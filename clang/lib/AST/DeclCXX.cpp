@@ -3150,6 +3150,25 @@ UnresolvedUsingTypenameDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
       SourceLocation(), nullptr, SourceLocation());
 }
 
+UnresolvedUsingIfExistsDecl *
+UnresolvedUsingIfExistsDecl::Create(ASTContext &Ctx, DeclContext *DC,
+                                    SourceLocation Loc, DeclarationName Name) {
+  return new (Ctx, DC) UnresolvedUsingIfExistsDecl(DC, Loc, Name);
+}
+
+UnresolvedUsingIfExistsDecl *
+UnresolvedUsingIfExistsDecl::CreateDeserialized(ASTContext &Ctx, unsigned ID) {
+  return new (Ctx, ID)
+      UnresolvedUsingIfExistsDecl(nullptr, SourceLocation(), DeclarationName());
+}
+
+UnresolvedUsingIfExistsDecl::UnresolvedUsingIfExistsDecl(DeclContext *DC,
+                                                         SourceLocation Loc,
+                                                         DeclarationName Name)
+    : NamedDecl(Decl::UnresolvedUsingIfExists, DC, Loc, Name) {}
+
+void UnresolvedUsingIfExistsDecl::anchor() {}
+
 void StaticAssertDecl::anchor() {}
 
 StaticAssertDecl *StaticAssertDecl::Create(ASTContext &C, DeclContext *DC,

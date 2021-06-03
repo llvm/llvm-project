@@ -43,7 +43,9 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// "attach" GPR-part to the part that was passed via stack.
   unsigned StByValParamsPadding = 0;
 
-  /// VarArgsRegSaveSize - Size of the register save area for vararg functions.
+  /// ArgsRegSaveSize - Size of the register save area for vararg functions or
+  /// those making guaranteed tail calls that need more stack argument space
+  /// than is provided by this functions incoming parameters.
   ///
   unsigned ArgRegsSaveSize = 0;
 
@@ -117,6 +119,10 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// ArgumentStackSize - amount of bytes on stack consumed by the arguments
   /// being passed on the stack
   unsigned ArgumentStackSize = 0;
+
+  /// ArgumentStackToRestore - amount of bytes on stack consumed that we must
+  /// restore on return.
+  unsigned ArgumentStackToRestore = 0;
 
   /// CoalescedWeights - mapping of basic blocks to the rolling counter of
   /// coalesced weights.
@@ -194,6 +200,9 @@ public:
 
   unsigned getArgumentStackSize() const { return ArgumentStackSize; }
   void setArgumentStackSize(unsigned size) { ArgumentStackSize = size; }
+
+  unsigned getArgumentStackToRestore() const { return ArgumentStackToRestore; }
+  void setArgumentStackToRestore(unsigned v) { ArgumentStackToRestore = v; }
 
   void initPICLabelUId(unsigned UId) {
     PICLabelUId = UId;

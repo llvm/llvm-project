@@ -710,7 +710,7 @@ Constant *llvm::ConstantFoldLoadFromConstPtr(Constant *C, Type *Ty,
         // fold it if the resulting pointer operand is a GlobalValue. Otherwise
         // there is nothing else to simplify since the GEP is already in the
         // most simplified form.
-        if (auto *SimplifiedGEP = dyn_cast<GEPOperator>(Simplified)) {
+        if (isa<GEPOperator>(Simplified)) {
           if (auto *GV = dyn_cast<GlobalVariable>(Simplified->getOperand(0))) {
             if (GV->isConstant() && GV->hasDefinitiveInitializer()) {
               if (Constant *V = ConstantFoldLoadThroughGEPConstantExpr(
@@ -885,8 +885,9 @@ Constant *StripPtrCastKeepAS(Constant *Ptr, Type *&ElemTy,
 
   // Preserve the address space number of the pointer.
   if (NewPtrTy->getAddressSpace() != OldPtrTy->getAddressSpace()) {
-    NewPtrTy = ElemTy->getPointerTo(OldPtrTy->getAddressSpace());
-    Ptr = ConstantExpr::getPointerCast(Ptr, NewPtrTy);
+    Ptr = ConstantExpr::getPointerCast(
+        Ptr, PointerType::getWithSamePointeeType(NewPtrTy,
+                                                 OldPtrTy->getAddressSpace()));
   }
   return Ptr;
 }

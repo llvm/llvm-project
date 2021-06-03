@@ -20,7 +20,9 @@
 
 int main(int, char **)
 {
-    with_public_dtor<std::codecvt_byname<char32_t, char, std::mbstate_t>> cvt("", 0); // expected-warning {{'codecvt_byname<char32_t, char, __mbstate_t>' is deprecated}}
+    // Don't test for the exact type since the underlying type of
+    // std::mbstate_t depends on implementation details.
+    with_public_dtor<std::codecvt_byname<char32_t, char, std::mbstate_t>> cvt("", 0); // expected-warning-re {{'codecvt_byname<char32_t, char, {{.*}}>' is deprecated}}
     (void)cvt;
 
     return 0;

@@ -8964,6 +8964,18 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
               }
             }
             return false;
+          },
+          [&SemaRef, &Captures](OMPLoopBasedDirective *Transform) {
+            Stmt *DependentPreInits =
+                cast<OMPTileDirective>(Transform)->getPreInits();
+            if (!DependentPreInits)
+              return;
+            for (Decl *C : cast<DeclStmt>(DependentPreInits)->getDeclGroup()) {
+              auto *D = cast<VarDecl>(C);
+              DeclRefExpr *Ref = buildDeclRefExpr(SemaRef, D, D->getType(),
+                                                  Transform->getBeginLoc());
+              Captures[Ref] = Ref;
+            }
           }))
     return 0;
 
@@ -12564,7 +12576,8 @@ StmtResult Sema::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
   // Verify and diagnose loop nest.
   SmallVector<OMPLoopBasedDirective::HelperExprs, 4> LoopHelpers(NumLoops);
   Stmt *Body = nullptr;
-  SmallVector<Stmt *, 4> OriginalInits;
+  SmallVector<SmallVector<llvm::PointerUnion<Stmt *, Decl *>, 0>, 4>
+      OriginalInits(1);
   if (!OMPLoopBasedDirective::doForAllLoops(
           AStmt->IgnoreContainers(), /*TryImperfectlyNestedLoops=*/false,
           NumLoops,
@@ -12578,16 +12591,23 @@ StmtResult Sema::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
               return true;
             assert(SingleNumLoops == 1 && "Expect single loop iteration space");
             if (auto *For = dyn_cast<ForStmt>(CurStmt)) {
-              OriginalInits.push_back(For->getInit());
+              OriginalInits.back().push_back(For->getInit());
               Body = For->getBody();
             } else {
               assert(isa<CXXForRangeStmt>(CurStmt) &&
                      "Expected canonical for or range-based for loops.");
               auto *CXXFor = cast<CXXForRangeStmt>(CurStmt);
-              OriginalInits.push_back(CXXFor->getBeginStmt());
+              OriginalInits.back().push_back(CXXFor->getBeginStmt());
               Body = CXXFor->getBody();
             }
+            OriginalInits.emplace_back();
             return false;
+          },
+          [&OriginalInits](OMPLoopBasedDirective *Transform) {
+            Stmt *DependentPreInits =
+                cast<OMPTileDirective>(Transform)->getPreInits();
+            for (Decl *C : cast<DeclStmt>(DependentPreInits)->getDeclGroup())
+              OriginalInits.back().push_back(C);
           }))
     return StmtError();
 
@@ -12596,7 +12616,6 @@ StmtResult Sema::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
     return OMPTileDirective::Create(Context, StartLoc, EndLoc, Clauses,
                                     NumLoops, AStmt, nullptr, nullptr);
 
-  // Collection of generated variable declaration.
   SmallVector<Decl *, 4> PreInits;
 
   // Create iteration variables for the generated loops.
@@ -12606,8 +12625,7 @@ StmtResult Sema::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
   TileIndVars.resize(NumLoops);
   for (unsigned I = 0; I < NumLoops; ++I) {
     OMPLoopBasedDirective::HelperExprs &LoopHelper = LoopHelpers[I];
-    if (auto *PI = cast_or_null<DeclStmt>(LoopHelper.PreInits))
-      PreInits.append(PI->decl_begin(), PI->decl_end());
+
     assert(LoopHelper.Counters.size() == 1 &&
            "Expect single-dimensional loop iteration space");
     auto *OrigCntVar = cast<DeclRefExpr>(LoopHelper.Counters.front());
@@ -12636,7 +12654,13 @@ StmtResult Sema::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
       TileCntDecl->setDeclName(&PP.getIdentifierTable().get(TileCntName));
       TileIndVars[I] = TileCntDecl;
     }
-    if (auto *PI = dyn_cast_or_null<DeclStmt>(OriginalInits[I]))
+    for (auto &P : OriginalInits[I]) {
+      if (auto *D = P.dyn_cast<Decl *>())
+        PreInits.push_back(D);
+      else if (auto *PI = dyn_cast_or_null<DeclStmt>(P.dyn_cast<Stmt *>()))
+        PreInits.append(PI->decl_begin(), PI->decl_end());
+    }
+    if (auto *PI = cast_or_null<DeclStmt>(LoopHelper.PreInits))
       PreInits.append(PI->decl_begin(), PI->decl_end());
     // Gather declarations for the data members used as counters.
     for (Expr *CounterRef : LoopHelper.Counters) {

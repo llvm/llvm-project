@@ -51,71 +51,12 @@ extern "C" {
  *
  */
 hsa_status_t atmi_module_register_from_memory_to_place(
-    void *module_bytes, size_t module_size, atmi_place_t place,
+    void *module_bytes, size_t module_size, int DeviceId,
     hsa_status_t (*on_deserialized_data)(void *data, size_t size,
                                          void *cb_state),
     void *cb_state);
 
 /** @} */
-
-/** \defgroup machine ATMI Machine
- * @{
- */
-/**
- * @brief ATMI's device discovery function to get the current machine's
- * topology.
- *
- * @detail The @p atmi_machine_t structure is a tree-based representation of the
- * compute and memory elements in the current node. Once ATMI is initialized,
- * this function can be called to retrieve the pointer to this global structure.
- *
- * @return Returns a pointer to a global structure of tyoe @p atmi_machine_t.
- * Returns NULL if ATMI is not initialized.
- */
-atmi_machine_t *atmi_machine_get_info();
-/** @} */
-
-/** \defgroup memory_functions ATMI Data Management
- * @{
- */
-/**
- * @brief Allocate memory from the specified memory place.
- *
- * @detail This function allocates memory from the specified memory place. If
- * the memory
- * place belongs primarily to the CPU, then the memory will be accessible by
- * other GPUs and CPUs in the system. If the memory place belongs primarily to a
- * GPU,
- * then it cannot be accessed by other devices in the system.
- *
- * @param[in] ptr The pointer to the memory that will be allocated.
- *
- * @param[in] size The size of the allocation in bytes.
- *
- * @param[in] place The memory place in the system to perform the allocation.
- *
- * @retval ::HSA_STATUS_SUCCESS The function has executed successfully.
- *
- * @retval ::HSA_STATUS_ERROR The function encountered errors.
- *
- */
-hsa_status_t atmi_malloc(void **ptr, size_t size, int DeviceId,
-                         atmi_devtype_t DeviceType);
-/**
- * @brief Frees memory that was previously allocated.
- *
- * @detail This function frees memory that was previously allocated by calling
- * @p atmi_malloc. It throws an error otherwise. It is illegal to access a
- * pointer after a call to this function.
- *
- * @param[in] ptr The pointer to the memory that has to be freed.
- *
- * @retval ::HSA_STATUS_SUCCESS The function has executed successfully.
- *
- * @retval ::HSA_STATUS_ERROR The function encountered errors.
- *
- */
-hsa_status_t atmi_free(void *ptr);
 
 hsa_status_t atmi_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
                              const void *hostSrc, size_t size,

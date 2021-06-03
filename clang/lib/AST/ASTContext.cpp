@@ -11750,12 +11750,7 @@ unsigned ASTContext::GetSYCLKernelNamingIndex(const NamedDecl *ND) {
 
   llvm::SmallVector<const CXXRecordDecl *> Decls{Set.begin(), Set.end()};
 
-  // If we are in an itanium situation, the mangling-numbers for a lambda depend
-  // on the mangled signature, so sort by that. Only TargetCXXABI::Microsoft
-  // doesn't use the itanium mangler, and just sets the lambda mangling number
-  // incrementally, with no consideration to the signature.
-  if (Target->getCXXABI().getKind() != TargetCXXABI::Microsoft)
-    FilterSYCLKernelNamingDecls(RD, Decls);
+  FilterSYCLKernelNamingDecls(RD, Decls);
 
   llvm::sort(Decls, [](const CXXRecordDecl *LHS, const CXXRecordDecl *RHS) {
     return LHS->getLambdaManglingNumber() < RHS->getLambdaManglingNumber();

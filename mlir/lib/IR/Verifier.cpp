@@ -52,9 +52,6 @@ private:
   LogicalResult verifyBlock(Block &block);
   LogicalResult verifyOperation(Operation &op);
 
-  /// Verify the dominance property of operations within the given Region.
-  LogicalResult verifyDominance(Region &region);
-
   /// Verify the dominance property of regions contained within the given
   /// Operation.
   LogicalResult verifyDominanceOfContainedRegions(Operation &op);
@@ -302,41 +299,36 @@ static void diagnoseInvalidOperandDominance(Operation &op, unsigned operandNo) {
     note << " neither in a parent nor in a child region)";
 }
 
-LogicalResult OperationVerifier::verifyDominance(Region &region) {
-  // Verify the dominance of each of the held operations.
-  for (Block &block : region) {
-    // Dominance is only meaningful inside reachable blocks.
-    bool isReachable = domInfo->isReachableFromEntry(&block);
-
-    for (Operation &op : block) {
-      if (isReachable) {
-        // Check that operands properly dominate this use.
-        for (unsigned operandNo = 0, e = op.getNumOperands(); operandNo != e;
-             ++operandNo) {
-          if (domInfo->properlyDominates(op.getOperand(operandNo), &op))
-            continue;
-
-          diagnoseInvalidOperandDominance(op, operandNo);
-          return failure();
-        }
-      }
-
-      // Recursively verify dominance within each operation in the
-      // block, even if the block itself is not reachable, or we are in
-      // a region which doesn't respect dominance.
-      if (failed(verifyDominanceOfContainedRegions(op)))
-        return failure();
-    }
-  }
-  return success();
-}
-
 /// Verify the dominance of each of the nested blocks within the given operation
 LogicalResult
 OperationVerifier::verifyDominanceOfContainedRegions(Operation &op) {
   for (Region &region : op.getRegions()) {
-    if (failed(verifyDominance(region)))
-      return failure();
+    // Verify the dominance of each of the held operations.
+    for (Block &block : region) {
+      // Dominance is only meaningful inside reachable blocks.
+      bool isReachable = domInfo->isReachableFromEntry(&block);
+
+      for (Operation &op : block) {
+        if (isReachable) {
+          // Check that operands properly dominate this use.
+          for (unsigned operandNo = 0, e = op.getNumOperands(); operandNo != e;
+               ++operandNo) {
+            if (domInfo->properlyDominates(op.getOperand(operandNo), &op))
+              continue;
+
+            diagnoseInvalidOperandDominance(op, operandNo);
+            return failure();
+          }
+        }
+
+        // Recursively verify dominance within each operation in the
+        // block, even if the block itself is not reachable, or we are in
+        // a region which doesn't respect dominance.
+        if (op.getNumRegions() != 0)
+          if (failed(verifyDominanceOfContainedRegions(op)))
+            return failure();
+      }
+    }
   }
   return success();
 }

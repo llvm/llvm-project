@@ -2457,6 +2457,11 @@ def SwiftContext : ParameterABIAttr {
   let Documentation = [SwiftContextDocs];
 }
 
+def SwiftAsyncContext : ParameterABIAttr {
+  let Spellings = [Clang<"swift_async_context">];
+  let Documentation = [SwiftAsyncContextDocs];
+}
+
 def SwiftErrorResult : ParameterABIAttr {
   let Spellings = [Clang<"swift_error_result">];
   let Documentation = [SwiftErrorResultDocs];
@@ -3743,6 +3748,14 @@ def NoBuiltin : Attr {
   let Args = [VariadicStringArgument<"BuiltinNames">];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [NoBuiltinDocs];
+}
+
+def UsingIfExists : InheritableAttr {
+  let Spellings = [Clang<"using_if_exists", 0>];
+  let Subjects = SubjectList<[Using,
+                              UnresolvedUsingTypename,
+                              UnresolvedUsingValue], ErrorDiag>;
+  let Documentation = [UsingIfExistsDocs];
 }
 
 // FIXME: This attribute is not inheritable, it will not be propagated to

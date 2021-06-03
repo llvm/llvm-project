@@ -369,7 +369,7 @@ static void createResumeEntryBlock(Function &F, coro::Shape &Shape) {
                                  coro::Shape::SwitchFieldIndex::Resume,
                                   "ResumeFn.addr");
       auto *NullPtr = ConstantPointerNull::get(cast<PointerType>(
-          cast<PointerType>(GepIndex->getType())->getElementType()));
+          FrameTy->getTypeAtIndex(coro::Shape::SwitchFieldIndex::Resume)));
       Builder.CreateStore(NullPtr, GepIndex);
     } else {
       auto *GepIndex = Builder.CreateStructGEP(
@@ -477,7 +477,8 @@ static Function *createCloneDeclaration(Function &OrigF, coro::Shape &Shape,
   Function *NewF =
       Function::Create(FnTy, GlobalValue::LinkageTypes::InternalLinkage,
                        OrigF.getName() + Suffix);
-  NewF->addParamAttr(0, Attribute::NonNull);
+  if (Shape.ABI != coro::ABI::Async)
+    NewF->addParamAttr(0, Attribute::NonNull);
 
   // For the async lowering ABI we can't guarantee that the context argument is
   // not access via a different pointer not based on the argument.
@@ -819,6 +820,13 @@ static void addFramePointerAttrs(AttributeList &Attrs, LLVMContext &Context,
   Attrs = Attrs.addParamAttributes(Context, ParamIndex, ParamAttrs);
 }
 
+static void addAsyncContextAttrs(AttributeList &Attrs, LLVMContext &Context,
+                                 unsigned ParamIndex) {
+  AttrBuilder ParamAttrs;
+  ParamAttrs.addAttribute(Attribute::SwiftAsync);
+  Attrs = Attrs.addParamAttributes(Context, ParamIndex, ParamAttrs);
+}
+
 /// Clone the body of the original function into a resume function of
 /// some sort.
 void CoroCloner::create() {
@@ -854,14 +862,17 @@ void CoroCloner::create() {
   auto &Context = NewF->getContext();
 
   // For async functions / continuations, adjust the scope line of the
-  // clone to the line number of the suspend point. The scope line is
+  // clone to the line number of the suspend point. However, only
+  // adjust the scope line when the files are the same. This ensures
+  // line number and file name belong together. The scope line is
   // associated with all pre-prologue instructions. This avoids a jump
   // in the linetable from the function declaration to the suspend point.
   if (DISubprogram *SP = NewF->getSubprogram()) {
     assert(SP != OrigF.getSubprogram() && SP->isDistinct());
     if (ActiveSuspend)
       if (auto DL = ActiveSuspend->getDebugLoc())
-        SP->setScopeLine(DL->getLine());
+        if (SP->getFile() == DL->getFile())
+          SP->setScopeLine(DL->getLine());
     // Update the linkage name to reflect the modified symbol name. It
     // is necessary to update the linkage name in Swift, since the
     // mangling changes for resume functions. It might also be the
@@ -934,8 +945,15 @@ void CoroCloner::create() {
   // followed by a return.
   // Don't change returns to unreachable because that will trip up the verifier.
   // These returns should be unreachable from the clone.
-  case coro::ABI::Async:
+  case coro::ABI::Async: {
+    auto *ActiveAsyncSuspend = cast<CoroSuspendAsyncInst>(ActiveSuspend);
+    if (OrigF.hasParamAttribute(Shape.AsyncLowering.ContextArgNo,
+                                Attribute::SwiftAsync)) {
+      auto ContextArgIndex = ActiveAsyncSuspend->getStorageArgumentIndex();
+      addAsyncContextAttrs(NewAttrs, Context, ContextArgIndex);
+    }
     break;
+  }
   }
 
   NewF->setAttributes(NewAttrs);

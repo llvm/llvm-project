@@ -154,3 +154,18 @@ namespace NoConstantFolding {
   template <class T> concept C = &n + 3 - 3 == &n; // expected-error {{non-constant expression}} expected-note {{cannot refer to element 3 of non-array object}}
   static_assert(C<void>); // expected-note {{while checking}}
 }
+
+namespace PR50337 {
+  template <typename T> concept foo = true;
+  template <typename T> concept foo2 = foo<T> && true;
+  void f(foo auto, auto);
+  void f(foo2 auto, auto);
+  void g() { f(1, 2); }
+}
+
+namespace PR50561 {
+  template<typename> concept C = false;
+  template<typename T, typename U> void f(T, U);
+  template<C T, typename U> void f(T, U) = delete;
+  void g() { f(0, 0); }
+}
