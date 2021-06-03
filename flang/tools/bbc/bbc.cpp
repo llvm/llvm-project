@@ -71,9 +71,10 @@ static llvm::cl::opt<std::string>
 static llvm::cl::list<std::string>
     includeDirs("I", llvm::cl::desc("include search paths"));
 
-static llvm::cl::opt<std::string>
-    intrinsicModuleDir("intrinsic-module-directory",
-                       llvm::cl::desc("intrinsic module directory"));
+static llvm::cl::alias
+    includeAlias("intrinsic-module-directory",
+                 llvm::cl::desc("intrinsic module directory"),
+                 llvm::cl::aliasopt(includeDirs));
 
 static llvm::cl::opt<std::string>
     moduleDir("module", llvm::cl::desc("module output directory (default .)"),
@@ -325,11 +326,16 @@ int main(int argc, char **argv) {
   ProgramName programPrefix;
   programPrefix = argv[0] + ": "s;
 
-  if (includeDirs.size() == 0)
+  if (includeDirs.size() == 0) {
     includeDirs.push_back(".");
-
-  if (!intrinsicModuleDir.empty())
-    includeDirs.insert(includeDirs.begin(), intrinsicModuleDir);
+    // Default Fortran modules should be installed in include/flang (a sibling
+    // to the bin) directory.
+    includeDirs.push_back(
+        llvm::sys::path::parent_path(
+            llvm::sys::fs::getMainExecutable(argv[0], nullptr))
+            .str() +
+        "/../include/flang");
+  }
 
   Fortran::parser::Options options;
   options.predefinitions.emplace_back("__F18", "1");
