@@ -123,7 +123,7 @@ template <>
 struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
 
   // Cache for is hidden property
-  llvm::DenseMap<const BasicBlock *, bool> isHiddenBasicBlock;
+  llvm::DenseMap<const BasicBlock *, bool> isOnDeoptOrUnreachablePath;
 
   DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
 
@@ -296,7 +296,7 @@ struct DOTGraphTraits<DOTFuncInfo *> : public DefaultDOTGraphTraits {
     return Attrs;
   }
   bool isNodeHidden(const BasicBlock *Node, const DOTFuncInfo *CFGInfo);
-  void computeHiddenNodes(const Function *F);
+  void computeDeoptOrUnreachablePaths(const Function *F);
 };
 } // End llvm namespace
 
