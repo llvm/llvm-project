@@ -882,13 +882,14 @@ struct FoldInitTensorWithSubTensorOp : public OpRewritePattern<SubTensorOp> {
   }
 };
 
+template <typename TensorReshapeOp>
 struct FoldInitTensorWithTensorReshapeOp
     : public OpRewritePattern<TensorReshapeOp> {
   using OpRewritePattern<TensorReshapeOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(TensorReshapeOp reshapeOp,
                                 PatternRewriter &rewriter) const override {
-    if (!reshapeOp.src().getDefiningOp<InitTensorOp>())
+    if (!reshapeOp.src().template getDefiningOp<InitTensorOp>())
       return failure();
     Location loc = reshapeOp.getLoc();
     SmallVector<SmallVector<Value>, 4> resultShapes;
@@ -912,7 +913,9 @@ struct FoldInitTensorWithTensorReshapeOp
 
 void InitTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                MLIRContext *context) {
-  results.add<FoldInitTensorWithSubTensorOp, FoldInitTensorWithTensorReshapeOp,
+  results.add<FoldInitTensorWithSubTensorOp,
+              FoldInitTensorWithTensorReshapeOp<TensorExpandShapeOp>,
+              FoldInitTensorWithTensorReshapeOp<TensorCollapseShapeOp>,
               ReplaceStaticShapeDims>(context);
 }
 
@@ -1206,12 +1209,24 @@ static void print(OpAsmPrinter &p, ReshapeLikeOp op) {
   p << ": " << op.src().getType() << " into " << op.getType();
 }
 
-static void print(OpAsmPrinter &p, linalg::ReshapeOp op) {
-  print<linalg::ReshapeOp>(p, op);
+static void print(OpAsmPrinter &p, linalg::ExpandShapeOp op) {
+  print<linalg::ExpandShapeOp>(p, op);
 }
 
-static void print(OpAsmPrinter &p, linalg::TensorReshapeOp op) {
-  print<linalg::TensorReshapeOp>(p, op);
+static void print(OpAsmPrinter &p, linalg::CollapseShapeOp op) {
+  print<linalg::CollapseShapeOp>(p, op);
+}
+
+static void print(OpAsmPrinter &p, linalg::TensorExpandShapeOp op) {
+  print<linalg::TensorExpandShapeOp>(p, op);
+}
+
+static void print(OpAsmPrinter &p, linalg::TensorCollapseShapeOp op) {
+  print<linalg::TensorCollapseShapeOp>(p, op);
+}
+
+static constexpr StringRef getReassociationAttrName() {
+  return "reassociation";
 }
 
 static ParseResult parseReshapeLikeOp(OpAsmParser &parser,
@@ -1253,7 +1268,7 @@ static ParseResult parseReshapeLikeOp(OpAsmParser &parser,
     break;
   }
 
-  result.addAttribute(ReshapeOp::getReassociationAttrName(),
+  result.addAttribute(getReassociationAttrName(),
                       b.getArrayAttr(reassociation));
 
   // Parse optional attributes.
@@ -1334,36 +1349,10 @@ struct CollapseReshapeOps : public OpRewritePattern<ReshapeOpTy> {
     ShapedType srcReshapeSrcType = srcReshapeOp.getSrcType();
     ShapedType intermediateType = reshapeOp.getSrcType();
     ShapedType resultType = reshapeOp.getResultType();
-
-    auto areReshapeOpsFoldable = [](ShapedType largerType,
-                                    ShapedType intermediateType,
-                                    ShapedType smallerType) -> bool {
-      return largerType.getRank() > intermediateType.getRank() &&
-             intermediateType.getRank() > smallerType.getRank();
-    };
     Optional<SmallVector<ReassociationIndices>> reassociationIndices =
-        llvm::None;
-    // Check if producer and consumer are both expanding dims or both collapsing
-    // dims. In this case, try to compose the affine maps. This works for
-    // dynamic shapes too.
-    if (areReshapeOpsFoldable(resultType, intermediateType,
-                              srcReshapeSrcType) ||
-        areReshapeOpsFoldable(srcReshapeSrcType, intermediateType,
-                              resultType)) {
-      reassociationIndices = collapseReassociationIndices(
-          srcReshapeOp.getReassociationMaps(), reshapeOp.getReassociationMaps(),
-          rewriter.getContext());
-    }
-    if (!reassociationIndices) {
-      // If the source reshape can be collapsed/expanded into the target reshape
-      // they can still be folded. This can only be reasoned about statically
-      // for cases where
-      // - either all shapes are static, or
-      // - The number of dynamic dimensions matches in the source of source and
-      //   result with all other dimensions being 1.
-      reassociationIndices =
-          getReassociationIndicesForReshape(srcReshapeSrcType, resultType);
-    }
+        collapseReassociationIndices(srcReshapeOp.getReassociationMaps(),
+                                     reshapeOp.getReassociationMaps(),
+                                     rewriter.getContext());
     if (!reassociationIndices)
       return failure();
     rewriter.replaceOpWithNewOp<ReshapeOpTy>(
@@ -1371,15 +1360,55 @@ struct CollapseReshapeOps : public OpRewritePattern<ReshapeOpTy> {
     return success();
   }
 };
+
+/// Pattern to collapse producer/consumer reshape ops that are both collapsing
+/// dimensions or are both expanding dimensions.
+template <typename ReshapeOpTy, typename InverseReshapeOpTy>
+struct CollapseMixedReshapeOps : public OpRewritePattern<ReshapeOpTy> {
+  using OpRewritePattern<ReshapeOpTy>::OpRewritePattern;
+  LogicalResult matchAndRewrite(ReshapeOpTy reshapeOp,
+                                PatternRewriter &rewriter) const override {
+    auto srcReshapeOp =
+        reshapeOp.src().template getDefiningOp<InverseReshapeOpTy>();
+    if (!srcReshapeOp)
+      return failure();
+
+    ShapedType srcReshapeSrcType = srcReshapeOp.getSrcType();
+    ShapedType intermediateType = reshapeOp.getSrcType();
+    ShapedType resultType = reshapeOp.getResultType();
+
+    // If the source reshape can be collapsed/expanded into the target reshape
+    // they can still be folded. This can only be reasoned about statically
+    // for cases where
+    // - either all shapes are static, or
+    // - The number of dynamic dimensions matches in the source of source and
+    //   result with all other dimensions being 1.
+    Optional<SmallVector<ReassociationIndices>> reassociationIndices =
+        getReassociationIndicesForReshape(srcReshapeSrcType, resultType);
+    if (!reassociationIndices)
+      return failure();
+    bool originalOpExpands =
+        intermediateType.getRank() > srcReshapeSrcType.getRank();
+    bool resultingOpExpands =
+        resultType.getRank() > srcReshapeSrcType.getRank();
+    if (!(resultingOpExpands ^ originalOpExpands))
+      rewriter.replaceOpWithNewOp<InverseReshapeOpTy>(
+          reshapeOp, resultType, srcReshapeOp.src(), *reassociationIndices);
+    else
+      rewriter.replaceOpWithNewOp<ReshapeOpTy>(
+          reshapeOp, resultType, srcReshapeOp.src(), *reassociationIndices);
+    return success();
+  }
+};
 } // namespace
 
-template <typename ReshapeOpTy>
+template <typename ReshapeOpTy, typename InverseReshapeOpTy>
 static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
                                   ArrayRef<Attribute> operands) {
   // Fold producer-consumer reshape ops that where the operand type of the
   // producer is same as the return type of the consumer.
-  ReshapeOpTy reshapeSrcOp =
-      reshapeOp.src().template getDefiningOp<ReshapeOpTy>();
+  auto reshapeSrcOp =
+      reshapeOp.src().template getDefiningOp<InverseReshapeOpTy>();
   if (reshapeSrcOp && reshapeSrcOp.getSrcType() == reshapeOp.getResultType())
     return reshapeSrcOp.src();
   // Reshape of a constant can be replaced with a new constant.
@@ -1564,20 +1593,38 @@ convertReassociationIndicesToExprs(
   return reassociationMaps;
 }
 
-SmallVector<AffineMap, 4> ReshapeOp::getReassociationMaps() {
+SmallVector<AffineMap, 4> CollapseShapeOp::getReassociationMaps() {
   return getSymbolLessAffineMaps(getReassociationExprs());
 }
-SmallVector<ReassociationExprs, 4> ReshapeOp::getReassociationExprs() {
+SmallVector<ReassociationExprs, 4> CollapseShapeOp::getReassociationExprs() {
   OpBuilder b(this->getContext());
   return convertReassociationIndicesToExprs(b, getReassociationIndices());
 }
-SmallVector<AffineMap, 4> TensorReshapeOp::getReassociationMaps() {
+SmallVector<AffineMap, 4> ExpandShapeOp::getReassociationMaps() {
   return getSymbolLessAffineMaps(getReassociationExprs());
 }
-SmallVector<ReassociationExprs, 4> TensorReshapeOp::getReassociationExprs() {
+SmallVector<ReassociationExprs, 4> ExpandShapeOp::getReassociationExprs() {
   OpBuilder b(this->getContext());
   return convertReassociationIndicesToExprs(b, getReassociationIndices());
 }
+
+SmallVector<AffineMap, 4> TensorCollapseShapeOp::getReassociationMaps() {
+  return getSymbolLessAffineMaps(getReassociationExprs());
+}
+SmallVector<ReassociationExprs, 4>
+TensorCollapseShapeOp::getReassociationExprs() {
+  OpBuilder b(this->getContext());
+  return convertReassociationIndicesToExprs(b, getReassociationIndices());
+}
+SmallVector<AffineMap, 4> TensorExpandShapeOp::getReassociationMaps() {
+  return getSymbolLessAffineMaps(getReassociationExprs());
+}
+SmallVector<ReassociationExprs, 4>
+TensorExpandShapeOp::getReassociationExprs() {
+  OpBuilder b(this->getContext());
+  return convertReassociationIndicesToExprs(b, getReassociationIndices());
+}
+
 /// For reshape op compute the shape at dimension `dimIndex` of the output in
 /// terms of shape of the `src`, when the reshape op is a collapsing
 /// operation. It is the product of the shape of the collapsed dimensions of the
@@ -1708,7 +1755,7 @@ getReassociationIndicesAttribute(OpBuilder &b,
   return b.getArrayAttr(reassociationAttr);
 }
 
-void mlir::linalg::ReshapeOp::build(
+void mlir::linalg::ExpandShapeOp::build(
     OpBuilder &b, OperationState &result, Value src,
     ArrayRef<ReassociationIndices> reassociation,
     ArrayRef<NamedAttribute> attrs) {
@@ -1717,20 +1764,26 @@ void mlir::linalg::ReshapeOp::build(
       memRefType, getSymbolLessAffineMaps(
                       convertReassociationIndicesToExprs(b, reassociation)));
   build(b, result, resultType, src, attrs);
-  result.addAttribute(ReshapeOp::getReassociationAttrName(),
+  result.addAttribute(getReassociationAttrName(),
                       getReassociationIndicesAttribute(b, reassociation));
 }
 
-void mlir::linalg::ReshapeOp::build(
-    OpBuilder &b, OperationState &result, Type resultType, Value src,
+Value mlir::linalg::ExpandShapeOp::getViewSource() { return src(); }
+
+void mlir::linalg::CollapseShapeOp::build(
+    OpBuilder &b, OperationState &result, Value src,
     ArrayRef<ReassociationIndices> reassociation,
     ArrayRef<NamedAttribute> attrs) {
+  auto memRefType = src.getType().cast<MemRefType>();
+  auto resultType = computeReshapeCollapsedType(
+      memRefType, getSymbolLessAffineMaps(
+                      convertReassociationIndicesToExprs(b, reassociation)));
   build(b, result, resultType, src, attrs);
-  result.addAttribute(ReshapeOp::getReassociationAttrName(),
+  result.addAttribute(getReassociationAttrName(),
                       getReassociationIndicesAttribute(b, reassociation));
 }
 
-Value mlir::linalg::ReshapeOp::getViewSource() { return src(); }
+Value mlir::linalg::CollapseShapeOp::getViewSource() { return src(); }
 
 /// Verify that shapes of the reshaped types using following rules
 /// 1) if a dimension in the collapsed type is static, then the corresponding
@@ -1785,18 +1838,17 @@ static LogicalResult verifyReshapeLikeShapes(OpTy op, ShapedType collapsedType,
 
 // Common verifier for reshape-like types. Fills `expandedType` and
 // `collapsedType` with the proper `src` or `result` type.
-template <typename Op, typename T>
-static LogicalResult verifyReshapeLikeTypes(Op op, T &expandedType,
-                                            T &collapsedType) {
-  expandedType = op.getSrcType();
-  collapsedType = op.getResultType();
+template <typename Op, typename T,
+          bool isExpansion = std::is_same<Op, TensorExpandShapeOp>::value ||
+                             std::is_same<Op, ExpandShapeOp>::value>
+static LogicalResult verifyReshapeLikeTypes(Op op, T expandedType,
+                                            T collapsedType) {
   unsigned expandedRank = expandedType.getRank();
   unsigned collapsedRank = collapsedType.getRank();
-  bool isCollapse = expandedRank > collapsedRank;
-  if (!isCollapse) {
-    std::swap(expandedRank, collapsedRank);
-    std::swap(expandedType, collapsedType);
-  }
+  if (expandedRank < collapsedRank)
+    return op.emitOpError("expected the type ")
+           << expandedType
+           << " to have higher rank than the type = " << collapsedType;
   if (expandedRank == 0)
     return op.emitOpError("expected non-zero memref ranks");
   if (expandedRank == collapsedRank)
@@ -1825,11 +1877,13 @@ static LogicalResult verifyReshapeLikeTypes(Op op, T &expandedType,
   if (!isReassociationValid(maps, &invalidIdx))
     return op.emitOpError("expected reassociation map #")
            << invalidIdx << " to be valid and contiguous";
-  return verifyReshapeLikeShapes(op, collapsedType, expandedType, !isCollapse);
+  return verifyReshapeLikeShapes(op, collapsedType, expandedType, isExpansion);
 }
 
-static LogicalResult verify(ReshapeOp op) {
-  MemRefType expandedType, collapsedType;
+template <typename TensorReshapeOp>
+static LogicalResult verifyReshapeOp(TensorReshapeOp op,
+                                     MemRefType expandedType,
+                                     MemRefType collapsedType) {
   if (failed(verifyReshapeLikeTypes(op, expandedType, collapsedType)))
     return failure();
   auto maps = op.getReassociationMaps();
@@ -1840,9 +1894,24 @@ static LogicalResult verify(ReshapeOp op) {
   return success();
 }
 
-void ReshapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                            MLIRContext *context) {
-  results.add<CollapseReshapeOps<ReshapeOp>>(context);
+static LogicalResult verify(ExpandShapeOp op) {
+  return verifyReshapeOp(op, op.getResultType(), op.getSrcType());
+}
+
+void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                MLIRContext *context) {
+  results.add<CollapseReshapeOps<ExpandShapeOp>,
+              CollapseMixedReshapeOps<ExpandShapeOp, CollapseShapeOp>>(context);
+}
+
+static LogicalResult verify(CollapseShapeOp op) {
+  return verifyReshapeOp(op, op.getSrcType(), op.getResultType());
+}
+
+void CollapseShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                  MLIRContext *context) {
+  results.add<CollapseReshapeOps<CollapseShapeOp>,
+              CollapseMixedReshapeOps<CollapseShapeOp, ExpandShapeOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1877,7 +1946,7 @@ computeTensorReshapeCollapsedType(RankedTensorType type,
   return RankedTensorType::get(newShape, type.getElementType());
 }
 
-void mlir::linalg::TensorReshapeOp::build(
+void mlir::linalg::TensorCollapseShapeOp::build(
     OpBuilder &b, OperationState &result, Value src,
     ArrayRef<ReassociationIndices> reassociation,
     ArrayRef<NamedAttribute> attrs) {
@@ -1886,21 +1955,27 @@ void mlir::linalg::TensorReshapeOp::build(
       getSymbolLessAffineMaps(
           convertReassociationIndicesToExprs(b, reassociation)));
   build(b, result, resultType, src, attrs);
-  result.addAttribute(ReshapeOp::getReassociationAttrName(),
+  result.addAttribute(getReassociationAttrName(),
                       getReassociationIndicesAttribute(b, reassociation));
 }
 
-void mlir::linalg::TensorReshapeOp::build(
-    OpBuilder &b, OperationState &result, Type resultType, Value src,
+void mlir::linalg::TensorExpandShapeOp::build(
+    OpBuilder &b, OperationState &result, Value src,
     ArrayRef<ReassociationIndices> reassociation,
     ArrayRef<NamedAttribute> attrs) {
+  auto resultType = computeTensorReshapeCollapsedType(
+      src.getType().cast<RankedTensorType>(),
+      getSymbolLessAffineMaps(
+          convertReassociationIndicesToExprs(b, reassociation)));
   build(b, result, resultType, src, attrs);
-  result.addAttribute(ReshapeOp::getReassociationAttrName(),
+  result.addAttribute(getReassociationAttrName(),
                       getReassociationIndicesAttribute(b, reassociation));
 }
 
-static LogicalResult verify(TensorReshapeOp op) {
-  RankedTensorType expandedType, collapsedType;
+template <typename TensorReshapeOp>
+static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
+                                           RankedTensorType expandedType,
+                                           RankedTensorType collapsedType) {
   if (failed(verifyReshapeLikeTypes(op, expandedType, collapsedType)))
     return failure();
 
@@ -1913,9 +1988,18 @@ static LogicalResult verify(TensorReshapeOp op) {
   return success();
 }
 
+static LogicalResult verify(TensorExpandShapeOp op) {
+  return verifyTensorReshapeOp(op, op.getResultType(), op.getSrcType());
+}
+
+static LogicalResult verify(TensorCollapseShapeOp op) {
+  return verifyTensorReshapeOp(op, op.getSrcType(), op.getResultType());
+}
+
 namespace {
 /// Reshape of a splat constant can be replaced with a constant of the result
 /// type.
+template <typename TensorReshapeOp>
 struct FoldReshapeWithConstant : OpRewritePattern<TensorReshapeOp> {
   using OpRewritePattern<TensorReshapeOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(TensorReshapeOp reshapeOp,
@@ -1936,11 +2020,12 @@ struct FoldReshapeWithConstant : OpRewritePattern<TensorReshapeOp> {
 ///
 /// For such op chains, we can create new linalg.fill ops with the result
 /// type of the linalg.tensor_reshape op.
+template <typename TensorReshapeOp>
 struct FoldFillWithTensorReshape : OpRewritePattern<TensorReshapeOp> {
   using OpRewritePattern<TensorReshapeOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(TensorReshapeOp reshapeOp,
                                 PatternRewriter &rewriter) const override {
-    auto oldFill = reshapeOp.src().getDefiningOp<FillOp>();
+    auto oldFill = reshapeOp.src().template getDefiningOp<FillOp>();
     if (!oldFill)
       return failure();
 
@@ -1955,14 +2040,38 @@ struct FoldFillWithTensorReshape : OpRewritePattern<TensorReshapeOp> {
 };
 } // namespace
 
-void TensorReshapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                                  MLIRContext *context) {
-  results.add<CollapseReshapeOps<TensorReshapeOp>, FoldFillWithTensorReshape,
-              FoldInitTensorWithTensorReshapeOp, FoldReshapeWithConstant>(
-      context);
+void TensorExpandShapeOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results
+      .add<CollapseReshapeOps<TensorExpandShapeOp>,
+           CollapseMixedReshapeOps<TensorExpandShapeOp, TensorCollapseShapeOp>,
+           FoldFillWithTensorReshape<TensorExpandShapeOp>,
+           FoldInitTensorWithTensorReshapeOp<TensorExpandShapeOp>,
+           FoldReshapeWithConstant<TensorExpandShapeOp>>(context);
 }
 
-LogicalResult TensorReshapeOp::reifyReturnTypeShapesPerResultDim(
+void TensorCollapseShapeOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results
+      .add<CollapseReshapeOps<TensorCollapseShapeOp>,
+           CollapseMixedReshapeOps<TensorCollapseShapeOp, TensorExpandShapeOp>,
+           FoldFillWithTensorReshape<TensorCollapseShapeOp>,
+           FoldInitTensorWithTensorReshapeOp<TensorCollapseShapeOp>,
+           FoldReshapeWithConstant<TensorCollapseShapeOp>>(context);
+}
+
+LogicalResult TensorExpandShapeOp::reifyReturnTypeShapesPerResultDim(
+    OpBuilder &b, SmallVectorImpl<SmallVector<Value>> &reifiedReturnShapes) {
+  auto resultShape =
+      getAsValues(b, getLoc(),
+                  getReshapeOutputShapeFromInputShape(
+                      b, getLoc(), src(), getResultType().getShape(),
+                      getReassociationMaps()));
+  reifiedReturnShapes.emplace_back(std::move(resultShape));
+  return success();
+}
+
+LogicalResult TensorCollapseShapeOp::reifyReturnTypeShapesPerResultDim(
     OpBuilder &b, SmallVectorImpl<SmallVector<Value>> &reifiedReturnShapes) {
   auto resultShape =
       getAsValues(b, getLoc(),
@@ -2753,13 +2862,23 @@ std::string mlir::linalg::generateLibraryCallName(Operation *op) {
 // TODO: Consider making all this boilerplate easy to autogenerate
 // with Tablegen. This seems a desirable property in the context of
 // OpInterfaces where a Linalg "named" op **isa** LinalgOp.
-OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult ExpandShapeOp::fold(ArrayRef<Attribute> operands) {
   if (succeeded(foldMemRefCast(*this)))
     return getResult();
-  return foldReshapeOp(*this, operands);
+  return foldReshapeOp<ExpandShapeOp, CollapseShapeOp>(*this, operands);
 }
-OpFoldResult TensorReshapeOp::fold(ArrayRef<Attribute> operands) {
-  return foldReshapeOp(*this, operands);
+OpFoldResult CollapseShapeOp::fold(ArrayRef<Attribute> operands) {
+  if (succeeded(foldMemRefCast(*this)))
+    return getResult();
+  return foldReshapeOp<CollapseShapeOp, ExpandShapeOp>(*this, operands);
+}
+OpFoldResult TensorExpandShapeOp::fold(ArrayRef<Attribute> operands) {
+  return foldReshapeOp<TensorExpandShapeOp, TensorCollapseShapeOp>(*this,
+                                                                   operands);
+}
+OpFoldResult TensorCollapseShapeOp::fold(ArrayRef<Attribute> operands) {
+  return foldReshapeOp<TensorCollapseShapeOp, TensorExpandShapeOp>(*this,
+                                                                   operands);
 }
 
 //===----------------------------------------------------------------------===//
