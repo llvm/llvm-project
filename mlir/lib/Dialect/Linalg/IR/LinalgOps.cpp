@@ -1349,8 +1349,6 @@ struct CollapseReshapeOps : public OpRewritePattern<ReshapeOpTy> {
     if (!srcReshapeOp)
       return failure();
 
-    ShapedType srcReshapeSrcType = srcReshapeOp.getSrcType();
-    ShapedType intermediateType = reshapeOp.getSrcType();
     ShapedType resultType = reshapeOp.getResultType();
     Optional<SmallVector<ReassociationIndices>> reassociationIndices =
         collapseReassociationIndices(srcReshapeOp.getReassociationMaps(),
