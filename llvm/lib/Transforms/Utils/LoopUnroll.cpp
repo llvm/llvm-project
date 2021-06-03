@@ -245,18 +245,9 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 /// branch instruction. However, if the trip count (and multiple) are not known,
 /// loop unrolling will mostly produce more code that is no faster.
 ///
-/// TripCount is the upper bound of the iteration on which control exits
-/// LatchBlock. Control may exit the loop prior to TripCount iterations either
-/// via an early branch in other loop block or via LatchBlock terminator. This
-/// is relaxed from the general definition of trip count which is the number of
-/// times the loop header executes. Note that UnrollLoop assumes that the loop
-/// counter test is in LatchBlock in order to remove unnecesssary instances of
-/// the test.  If control can exit the loop from the LatchBlock's terminator
-/// prior to TripCount iterations, flag PreserveCondBr needs to be set.
-///
-/// PreserveCondBr indicates whether the conditional branch of the LatchBlock
-/// needs to be preserved.  It is needed when we use trip count upper bound to
-/// fully unroll the loop.
+/// TripCount is an upper bound on the number of times the loop header runs.
+/// Note that the trip count does not need to be exact, it can be any upper
+/// bound on the true trip count.
 ///
 /// Similarly, TripMultiple divides the number of times that the LatchBlock may
 /// execute without exiting the loop.
@@ -329,18 +320,6 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   assert(ULO.TripMultiple > 0);
   assert(ULO.TripCount == 0 || ULO.TripCount % ULO.TripMultiple == 0);
 
-  // Are we eliminating the loop control altogether?
-  bool CompletelyUnroll = ULO.Count == ULO.TripCount;
-
-  // We assume a run-time trip count if the compiler cannot
-  // figure out the loop trip count and the unroll-runtime
-  // flag is specified.
-  bool RuntimeTripCount =
-      (ULO.TripCount == 0 && ULO.Count > 0 && ULO.AllowRuntime);
-
-  assert((!RuntimeTripCount || !ULO.PeelCount) &&
-         "Did not expect runtime trip-count unrolling "
-         "and peeling for the same loop");
 
   bool Peeled = false;
   if (ULO.PeelCount) {
@@ -359,6 +338,21 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       ULO.TripMultiple = SE->getSmallConstantTripMultiple(L, ExitingBlock);
     }
   }
+
+  // Are we eliminating the loop control altogether?  Note that we can know
+  // we're eliminating the backedge without knowing exactly which iteration
+  // of the unrolled body exits.
+  const bool CompletelyUnroll = ULO.Count == ULO.TripCount;
+
+  // We assume a run-time trip count if the compiler cannot
+  // figure out the loop trip count and the unroll-runtime
+  // flag is specified.
+  bool RuntimeTripCount =
+      (ULO.TripCount == 0 && ULO.Count > 0 && ULO.AllowRuntime);
+
+  assert((!RuntimeTripCount || !ULO.PeelCount) &&
+         "Did not expect runtime trip-count unrolling "
+         "and peeling for the same loop");
 
   // All these values should be taken only after peeling because they might have
   // changed.
@@ -416,6 +410,10 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     else
       dbgs() << "  No single exiting block\n";
   });
+
+  const unsigned ExactTripCount = ExitingBI ?
+    SE->getSmallConstantTripCount(L,ExitingBI->getParent()) : 0;
+  const bool ExactUnroll = (ExactTripCount && ExactTripCount == ULO.Count);
 
   // Loops containing convergent instructions must have a count that divides
   // their TripMultiple.
@@ -759,9 +757,21 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
     auto WillExit = [&](unsigned i, unsigned j) -> Optional<bool> {
       if (CompletelyUnroll) {
-        if (ULO.PreserveCondBr && j && !(PreserveOnlyFirst && i != 0))
-          return None;
-        return j == 0;
+        if (PreserveOnlyFirst) {
+          if (i == 0)
+            return None;
+          return j == 0;
+        }
+        if (ExactUnroll)
+          return j == 0;
+        // Full, but non-exact unrolling
+        if (j == 0)
+          return true;
+        if (MaxTripCount && j >= MaxTripCount)
+          return false;
+        if (ExactTripCount && j != ExactTripCount)
+          return false;
+        return None;
       }
 
       if (RuntimeTripCount && j != 0)
