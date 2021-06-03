@@ -65,6 +65,7 @@
 
 using namespace clang;
 using namespace ento;
+using namespace bugreporter;
 
 //===----------------------------------------------------------------------===//
 // Utility functions.
@@ -2043,6 +2044,53 @@ static void trackRValueExpression(const ExplodedNode *InputNode, const Expr *E,
       trackExpressionValue(InputNode, BO->getLHS(), report, TKind,
                            EnableNullFPSuppression);
   }
+}
+
+//===----------------------------------------------------------------------===//
+//                            Tracker implementation
+//===----------------------------------------------------------------------===//
+
+Tracker::Tracker(PathSensitiveBugReport &Report) : Report(Report) {
+  // TODO: split trackExpressionValue and FindLastStoreBRVisitor into handlers
+  //       and add them here.
+}
+
+Tracker::Result Tracker::track(const Expr *E, const ExplodedNode *N,
+                               TrackingOptions Opts) {
+  if (!E || !N)
+    return {};
+
+  const Expr *Inner = peelOffOuterExpr(E, N);
+  const ExplodedNode *LVNode = findNodeForExpression(N, Inner);
+  if (!LVNode)
+    return {};
+
+  Result CombinedResult;
+  // Iterate through the handlers in the order according to their priorities.
+  for (ExpressionHandlerPtr &Handler : ExpressionHandlers) {
+    CombinedResult.combineWith(Handler->handle(Inner, N, LVNode, Opts));
+    if (CombinedResult.WasInterrupted)
+      break;
+  }
+
+  return CombinedResult;
+}
+
+Tracker::Result Tracker::track(SVal V, const MemRegion *R, TrackingOptions Opts,
+                               const StackFrameContext *Origin) {
+  // TODO: support this operation after dismantling FindLastStoreBRVisitor
+  return {};
+}
+
+PathDiagnosticPieceRef Tracker::handle(StoreInfo SI, TrackingOptions Opts) {
+  // Iterate through the handlers in the order according to their priorities.
+  for (StoreHandlerPtr &Handler : StoreHandlers) {
+    if (PathDiagnosticPieceRef Result = Handler->handle(SI, Opts))
+      // If the handler produced a non-null piece, return it.
+      // There is no need in asking other handlers.
+      return Result;
+  }
+  return {};
 }
 
 bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
