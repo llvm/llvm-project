@@ -119,28 +119,26 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
                                      LinalgOp linalgOp) {
   assert(linalgOp.hasBufferSemantics() &&
          "expected linalg op with buffer semantics");
-  unsigned nInputs = linalgOp.getNumInputs();
-  unsigned nOutputs = linalgOp.getNumOutputs();
   SmallVector<Value> indexedValues;
-  indexedValues.reserve(nInputs + nOutputs);
+  indexedValues.reserve(linalgOp.getNumInputsAndOutputs());
 
   auto allIvsPlusDims = SmallVector<Value>(allIvs.begin(), allIvs.end());
 
   // TODO: Avoid the loads if the corresponding argument of the
   // region has no uses.
   // 1.a. Emit load from input views.
-  for (unsigned i = 0; i < nInputs; ++i) {
+  for (OpOperand *inputOperand : linalgOp.getInputOperands()) {
     auto indexing = makeCanonicalAffineApplies(
-        b, loc, linalgOp.getInputIndexingMap(i), allIvsPlusDims);
+        b, loc, linalgOp.getTiedIndexingMap(inputOperand), allIvsPlusDims);
     indexedValues.push_back(
-        b.create<LoadOpTy>(loc, linalgOp.getInput(i), indexing));
+        b.create<LoadOpTy>(loc, inputOperand->get(), indexing));
   }
   // 1.b. Emit load from output views.
-  for (unsigned i = 0; i < nOutputs; ++i) {
-    auto indexing = makeCanonicalAffineApplies(
-        b, loc, linalgOp.getOutputIndexingMap(i), allIvsPlusDims);
+  for (OpOperand *outputOperand : linalgOp.getOutputOperands()) {
+    SmallVector<Value> indexing = makeCanonicalAffineApplies(
+        b, loc, linalgOp.getTiedIndexingMap(outputOperand), allIvsPlusDims);
     indexedValues.push_back(
-        b.create<LoadOpTy>(loc, linalgOp.getOutputBuffer(i), indexing));
+        b.create<LoadOpTy>(loc, outputOperand->get(), indexing));
   }
 
   // TODO: When a region inliner exists, use it.
@@ -148,10 +146,10 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
   // 3. Emit store.
   SmallVector<SmallVector<Value>, 8> indexing;
   SmallVector<Value> outputBuffers;
-  for (unsigned i = 0; i < nOutputs; ++i) {
+  for (OpOperand *outputOperand : linalgOp.getOutputBufferOperands()) {
     indexing.push_back(makeCanonicalAffineApplies(
-        b, loc, linalgOp.getOutputIndexingMap(i), allIvsPlusDims));
-    outputBuffers.push_back(linalgOp.getOutputBuffer(i));
+        b, loc, linalgOp.getTiedIndexingMap(outputOperand), allIvsPlusDims));
+    outputBuffers.push_back(outputOperand->get());
   }
   inlineRegionAndEmitStore<LoadOpTy, StoreOpTy>(b, loc, linalgOp, indexedValues,
                                                 indexing, outputBuffers);

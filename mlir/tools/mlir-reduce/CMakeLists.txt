@@ -1,27 +1,9 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
-set(LLVM_LINK_COMPONENTS
-  AllTargetsAsmParsers
-  AllTargetsCodeGens
-  AllTargetsDescs
-  AllTargetsInfos
-  AsmParser
-  Core
-  IRReader
-  Support
-  Target
-  TransformUtils
-  )
 
 if(MLIR_INCLUDE_TESTS)
   set(test_libs
-    MLIRAffineTransformsTestPasses
-    MLIRSPIRVTestPasses
     MLIRTestDialect
-    MLIRTestIR
-    MLIRTestPass
-    MLIRTestReducer
-    MLIRTestTransforms
     )
 endif()
 
@@ -29,27 +11,17 @@ set(LIBS
   ${dialect_libs}
   ${conversion_libs}
   ${test_libs}
-  MLIRAnalysis
   MLIRDialect
   MLIRIR
-  MLIRLoopAnalysis
-  MLIROptLib
-  MLIRParser
   MLIRPass
-  MLIRReduce
-  MLIRSupport
-  MLIRTransforms
-  MLIRTransformUtils
+  MLIRReduceLib
   )
 
 add_llvm_tool(mlir-reduce
   mlir-reduce.cpp
 
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Reducer
-
   DEPENDS
-  MLIRReducerIncGen
+  ${LIBS}
   )
 
 target_link_libraries(mlir-reduce PRIVATE ${LIBS})

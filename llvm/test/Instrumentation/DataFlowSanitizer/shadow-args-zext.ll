@@ -41,15 +41,15 @@ entry:
 
 declare zeroext i16 @dfsan_get_label(i64 signext)
 ; CHECK-LABEL: @"dfsw$dfsan_get_label"
-; CHECK: %{{.*}} = call i16 @__dfsw_dfsan_get_label(i64 %0, i[[#SBITS]] zeroext %1, i[[#SBITS]]* %{{.*}})
+; CHECK: %{{.*}} = call zeroext i16 @__dfsw_dfsan_get_label(i64 signext %0, i[[#SBITS]] zeroext %1, i[[#SBITS]]* %{{.*}})
 
 declare zeroext i16 @k2(i64 signext, i64 signext)
 ; CHECK-LABEL: @"dfsw$k2"
-; CHECK: %{{.*}} = call i16 @__dfsw_k2(i64 %{{.*}}, i64 %{{.*}}, i[[#SBITS]] zeroext %{{.*}}, i[[#SBITS]] zeroext %{{.*}}, i[[#SBITS]]* %{{.*}})
+; CHECK: %{{.*}} = call zeroext i16 @__dfsw_k2(i64 signext %{{.*}}, i64 signext %{{.*}}, i[[#SBITS]] zeroext %{{.*}}, i[[#SBITS]] zeroext %{{.*}}, i[[#SBITS]]* %{{.*}})
 
 declare zeroext i16 @k4(i64 signext, i64 signext, i64 signext, i64 signext)
 ; CHECK-LABEL: @"dfsw$k4"
-; CHECK: %{{.*}} = call i16 @__dfsw_k4(i64 %{{.*}}, i64 %{{.*}}, i64  %{{.*}}, i64 %{{.*}}, i[[#SBITS]] zeroext %{{.*}}, i[[#SBITS]] zeroext %{{.*}}, i[[#SBITS]] zeroext %{{.*}}, i[[#SBITS]] zeroext %{{.*}}, i[[#SBITS]]* %{{.*}})
+; CHECK: %{{.*}} = call zeroext i16 @__dfsw_k4(i64 signext %{{.*}}, i64 signext %{{.*}}, i64 signext %{{.*}}, i64 signext %{{.*}}, i[[#SBITS]] zeroext %{{.*}}, i[[#SBITS]] zeroext %{{.*}}, i[[#SBITS]] zeroext %{{.*}}, i[[#SBITS]] zeroext %{{.*}}, i[[#SBITS]]* %{{.*}})
 
 
 ; CHECK: declare zeroext i16 @__dfsw_dfsan_get_label(i64 signext, i[[#SBITS]], i[[#SBITS]]*)

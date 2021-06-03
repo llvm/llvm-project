@@ -843,15 +843,27 @@ RISCVFrameLowering::assignRVVStackObjectOffsets(MachineFrameInfo &MFI) const {
   return Offset;
 }
 
+static bool hasRVVSpillWithFIs(MachineFunction &MF, const RISCVInstrInfo &TII) {
+  if (!MF.getSubtarget<RISCVSubtarget>().hasStdExtV())
+    return false;
+  return any_of(MF, [&TII](const MachineBasicBlock &MBB) {
+    return any_of(MBB, [&TII](const MachineInstr &MI) {
+      return TII.isRVVSpill(MI, /*CheckFIs*/ true);
+    });
+  });
+}
+
 void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
     MachineFunction &MF, RegScavenger *RS) const {
-  const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
+  const RISCVRegisterInfo *RegInfo =
+      MF.getSubtarget<RISCVSubtarget>().getRegisterInfo();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterClass *RC = &RISCV::GPRRegClass;
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
 
   int64_t RVVStackSize = assignRVVStackObjectOffsets(MFI);
   RVFI->setRVVStackSize(RVVStackSize);
+  const RISCVInstrInfo &TII = *MF.getSubtarget<RISCVSubtarget>().getInstrInfo();
 
   // estimateStackSize has been observed to under-estimate the final stack
   // size, so give ourselves wiggle-room by checking for stack size
@@ -859,7 +871,10 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
   // FIXME: It may be possible to craft a function with a small stack that
   // still needs an emergency spill slot for branch relaxation. This case
   // would currently be missed.
-  if (!isInt<11>(MFI.estimateStackSize(MF)) || RVVStackSize != 0) {
+  // RVV loads & stores have no capacity to hold the immediate address offsets
+  // so we must always reserve an emergency spill slot if the MachineFunction
+  // contains any RVV spills.
+  if (!isInt<11>(MFI.estimateStackSize(MF)) || hasRVVSpillWithFIs(MF, TII)) {
     int RegScavFI = MFI.CreateStackObject(RegInfo->getSpillSize(*RC),
                                           RegInfo->getSpillAlign(*RC), false);
     RS->addScavengingFrameIndex(RegScavFI);

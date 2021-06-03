@@ -563,92 +563,92 @@ func @indexed_generic(%arg0: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 
 func @reshape_static(%arg0: memref<3x4x5xf32>, %arg1: tensor<3x4x5xf32>,
                      %arg2: tensor<3x?x5xf32>) {
   // Reshapes that collapse and expand back a contiguous buffer.
-  %0 = linalg.reshape %arg0 [[0, 1], [2]] :
+  %0 = linalg.collapse_shape %arg0 [[0, 1], [2]] :
     memref<3x4x5xf32> into memref<12x5xf32>
-  %r0 = linalg.reshape %0 [[0, 1], [2]] :
+  %r0 = linalg.expand_shape %0 [[0, 1], [2]] :
     memref<12x5xf32> into memref<3x4x5xf32>
-  %1 = linalg.reshape %arg0 [[0], [1, 2]] :
+  %1 = linalg.collapse_shape %arg0 [[0], [1, 2]] :
     memref<3x4x5xf32> into memref<3x20xf32>
-  %r1 = linalg.reshape %1 [[0], [1, 2]] :
+  %r1 = linalg.expand_shape %1 [[0], [1, 2]] :
     memref<3x20xf32> into memref<3x4x5xf32>
-  %2 = linalg.reshape %arg0 [[0, 1, 2]] :
+  %2 = linalg.collapse_shape %arg0 [[0, 1, 2]] :
     memref<3x4x5xf32> into memref<60xf32>
-  %r2 = linalg.reshape %2 [[0, 1, 2]] :
+  %r2 = linalg.expand_shape %2 [[0, 1, 2]] :
     memref<60xf32> into memref<3x4x5xf32>
   // Reshapes that expand and collapse back a contiguous buffer with some 1's.
-  %3 = linalg.reshape %arg0 [[0, 1], [2], [3, 4]] :
+  %3 = linalg.expand_shape %arg0 [[0, 1], [2], [3, 4]] :
     memref<3x4x5xf32> into memref<1x3x4x1x5xf32>
-  %r3 = linalg.reshape %3 [[0, 1], [2], [3, 4]] :
+  %r3 = linalg.collapse_shape %3 [[0, 1], [2], [3, 4]] :
     memref<1x3x4x1x5xf32> into memref<3x4x5xf32>
   // Reshapes on tensors.
-  %t0 = linalg.tensor_reshape %arg1 [[0, 1], [2], [3, 4]] :
+  %t0 = linalg.tensor_expand_shape %arg1 [[0, 1], [2], [3, 4]] :
     tensor<3x4x5xf32> into tensor<1x3x4x1x5xf32>
-  %rt0 = linalg.tensor_reshape %t0 [[0, 1], [2], [3, 4]] :
+  %rt0 = linalg.tensor_collapse_shape %t0 [[0, 1], [2], [3, 4]] :
     tensor<1x3x4x1x5xf32> into tensor<3x4x5xf32>
-  %t1 = linalg.tensor_reshape %arg2 [[0, 1], [2], [3, 4]] :
+  %t1 = linalg.tensor_expand_shape %arg2 [[0, 1], [2], [3, 4]] :
     tensor<3x?x5xf32> into tensor<1x3x?x1x5xf32>
-  %rt1 = linalg.tensor_reshape %t1 [[0], [1, 2], [3, 4]] :
+  %rt1 = linalg.tensor_collapse_shape %t1 [[0], [1, 2], [3, 4]] :
     tensor<1x3x?x1x5xf32> into tensor<1x?x5xf32>
   return
 }
 // CHECK-LABEL: func @reshape_static
-//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1], [2]]
+//       CHECK:   linalg.collapse_shape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<3x4x5xf32> into memref<12x5xf32>
-//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1], [2]]
+//       CHECK:   linalg.expand_shape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<12x5xf32> into memref<3x4x5xf32>
-//       CHECK:   linalg.reshape {{.*}} {{\[}}[0], [1, 2]]
+//       CHECK:   linalg.collapse_shape {{.*}} {{\[}}[0], [1, 2]]
 //  CHECK-SAME:     memref<3x4x5xf32> into memref<3x20xf32>
-//       CHECK:   linalg.reshape {{.*}} {{\[}}[0], [1, 2]]
+//       CHECK:   linalg.expand_shape {{.*}} {{\[}}[0], [1, 2]]
 //  CHECK-SAME:     memref<3x20xf32> into memref<3x4x5xf32>
-//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1, 2]]
+//       CHECK:   linalg.collapse_shape {{.*}} {{\[}}[0, 1, 2]]
 //  CHECK-SAME:     memref<3x4x5xf32> into memref<60xf32>
-//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1, 2]]
+//       CHECK:   linalg.expand_shape {{.*}} {{\[}}[0, 1, 2]]
 //  CHECK-SAME:     memref<60xf32> into memref<3x4x5xf32>
-//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1], [2], [3, 4]]
+//       CHECK:   linalg.expand_shape {{.*}} {{\[}}[0, 1], [2], [3, 4]]
 //  CHECK-SAME:     memref<3x4x5xf32> into memref<1x3x4x1x5xf32>
-//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1], [2], [3, 4]]
+//       CHECK:   linalg.collapse_shape {{.*}} {{\[}}[0, 1], [2], [3, 4]]
 //  CHECK-SAME:     memref<1x3x4x1x5xf32> into memref<3x4x5xf32>
 //
-//       CHECK:   linalg.tensor_reshape {{.*}}: tensor<3x4x5xf32> into tensor<1x3x4x1x5xf32>
-//       CHECK:   linalg.tensor_reshape {{.*}}: tensor<1x3x4x1x5xf32> into tensor<3x4x5xf32>
-//       CHECK:   linalg.tensor_reshape {{.*}}: tensor<3x?x5xf32> into tensor<1x3x?x1x5xf32>
-//       CHECK:   linalg.tensor_reshape {{.*}}: tensor<1x3x?x1x5xf32> into tensor<1x?x5xf32>
+//       CHECK:   linalg.tensor_expand_shape {{.*}}: tensor<3x4x5xf32> into tensor<1x3x4x1x5xf32>
+//       CHECK:   linalg.tensor_collapse_shape {{.*}}: tensor<1x3x4x1x5xf32> into tensor<3x4x5xf32>
+//       CHECK:   linalg.tensor_expand_shape {{.*}}: tensor<3x?x5xf32> into tensor<1x3x?x1x5xf32>
+//       CHECK:   linalg.tensor_collapse_shape {{.*}}: tensor<1x3x?x1x5xf32> into tensor<1x?x5xf32>
 
 // -----
 
 func @reshape_dynamic(%arg0: memref<?x?x?xf32>,
                       %arg1: memref<?x?x?xf32, offset : 0, strides : [?, ?, 1]>,
                       %arg2: memref<?x?x?xf32, offset : ?, strides : [?, ?, 1]>) {
-  %0 = linalg.reshape %arg0 [[0, 1], [2]] :
+  %0 = linalg.collapse_shape %arg0 [[0, 1], [2]] :
     memref<?x?x?xf32> into memref<?x?xf32>
-  %r0 = linalg.reshape %0 [[0, 1], [2]] :
+  %r0 = linalg.expand_shape %0 [[0, 1], [2]] :
     memref<?x?xf32> into memref<?x4x?xf32>
-  %1 = linalg.reshape %arg1 [[0, 1], [2]] :
+  %1 = linalg.collapse_shape %arg1 [[0, 1], [2]] :
     memref<?x?x?xf32, offset : 0, strides : [?, ?, 1]> into
     memref<?x?xf32, offset : 0, strides : [?, 1]>
-  %r1 = linalg.reshape %1 [[0, 1], [2]] :
+  %r1 = linalg.expand_shape %1 [[0, 1], [2]] :
     memref<?x?xf32, offset : 0, strides : [?, 1]> into
     memref<?x4x?xf32, offset : 0, strides : [?, ?, 1]>
-  %2 = linalg.reshape %arg2 [[0, 1], [2]] :
+  %2 = linalg.collapse_shape %arg2 [[0, 1], [2]] :
     memref<?x?x?xf32, offset : ?, strides : [?, ?, 1]> into
     memref<?x?xf32, offset : ?, strides : [?, 1]>
-  %r2 = linalg.reshape %2 [[0, 1], [2]] :
+  %r2 = linalg.expand_shape %2 [[0, 1], [2]] :
     memref<?x?xf32, offset : ?, strides : [?, 1]> into
     memref<?x4x?xf32, offset : ?, strides : [?, ?, 1]>
   return
 }
 // CHECK-LABEL: func @reshape
-//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1], [2]]
+//       CHECK:   linalg.collapse_shape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<?x?x?xf32> into memref<?x?xf32>
-//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1], [2]]
+//       CHECK:   linalg.expand_shape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<?x?xf32> into memref<?x4x?xf32>
-//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1], [2]]
+//       CHECK:   linalg.collapse_shape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<?x?x?xf32, #[[$strided3DOFF0]]> into memref<?x?xf32, #[[$strided2DOFF0]]>
-//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1], [2]]
+//       CHECK:   linalg.expand_shape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<?x?xf32, #[[$strided2DOFF0]]> into memref<?x4x?xf32, #[[$strided3DOFF0]]>
-//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1], [2]]
+//       CHECK:   linalg.collapse_shape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<?x?x?xf32, #[[$strided3D]]> into memref<?x?xf32, #[[$strided2D]]>
-//       CHECK:   linalg.reshape {{.*}} {{\[}}[0, 1], [2]]
+//       CHECK:   linalg.expand_shape {{.*}} {{\[}}[0, 1], [2]]
 //  CHECK-SAME:     memref<?x?xf32, #[[$strided2D]]> into memref<?x4x?xf32, #[[$strided3D]]>
 
 func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?x?xf32>, %c3: memref<?x?x?xf32>,
@@ -679,25 +679,25 @@ func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?x?xf32>, %c3: memref<?x?x
 
 func @tensor_reshape_zero_dim(%arg0 : tensor<1x1xf32>, %arg1 : tensor<f32>) -> (tensor<f32>, tensor<1x1xf32>)
 {
-  %0 = linalg.tensor_reshape %arg0 [] : tensor<1x1xf32> into tensor<f32>
-  %1 = linalg.tensor_reshape %0 [] : tensor<f32> into tensor<1x1xf32>
+  %0 = linalg.tensor_collapse_shape %arg0 [] : tensor<1x1xf32> into tensor<f32>
+  %1 = linalg.tensor_expand_shape %0 [] : tensor<f32> into tensor<1x1xf32>
   return %0, %1 : tensor<f32>, tensor<1x1xf32>
 }
 // CHECK-LABEL: func @tensor_reshape_zero_dim
-//       CHECK:   linalg.tensor_reshape %{{.*}} [] : tensor<1x1xf32> into tensor<f32>
-//       CHECK:   linalg.tensor_reshape %{{.*}} [] : tensor<f32> into tensor<1x1xf32>
+//       CHECK:   linalg.tensor_collapse_shape %{{.*}} [] : tensor<1x1xf32> into tensor<f32>
+//       CHECK:   linalg.tensor_expand_shape %{{.*}} [] : tensor<f32> into tensor<1x1xf32>
 
 // -----
 
 func @memref_reshape_zero_dim(%arg0 : memref<1x1xf32>, %arg1 : memref<f32>) -> (memref<f32>, memref<1x1xf32>)
 {
-  %0 = linalg.reshape %arg0 [] : memref<1x1xf32> into memref<f32>
-  %1 = linalg.reshape %0 [] : memref<f32> into memref<1x1xf32>
+  %0 = linalg.collapse_shape %arg0 [] : memref<1x1xf32> into memref<f32>
+  %1 = linalg.expand_shape %0 [] : memref<f32> into memref<1x1xf32>
   return %0, %1 : memref<f32>, memref<1x1xf32>
 }
 // CHECK-LABEL: func @memref_reshape_zero_dim
-//       CHECK:   linalg.reshape %{{.*}} [] : memref<1x1xf32> into memref<f32>
-//       CHECK:   linalg.reshape %{{.*}} [] : memref<f32> into memref<1x1xf32>
+//       CHECK:   linalg.collapse_shape %{{.*}} [] : memref<1x1xf32> into memref<f32>
+//       CHECK:   linalg.expand_shape %{{.*}} [] : memref<f32> into memref<1x1xf32>
 
 // -----
 
@@ -716,12 +716,12 @@ func @init_tensor(%arg0 : index, %arg1 : index)
 func @legal_collapsing_reshape_dynamic_tensor
   (%arg0: tensor<?x?x?x4x?xf32>) -> tensor<?x?x?xf32>
 {
-  %0 = linalg.tensor_reshape %arg0 [[0], [1], [2, 3, 4]] :
+  %0 = linalg.tensor_collapse_shape %arg0 [[0], [1], [2, 3, 4]] :
     tensor<?x?x?x4x?xf32> into tensor<?x?x?xf32>
   return %0 : tensor<?x?x?xf32>
 }
 //      CHECK: func @legal_collapsing_reshape_dynamic_tensor
-//      CHECK:   linalg.tensor_reshape
+//      CHECK:   linalg.tensor_collapse_shape
 // CHECK-SAME:    [0], [1], [2, 3, 4]
 
 // -----
@@ -729,12 +729,12 @@ func @legal_collapsing_reshape_dynamic_tensor
 func @legal_collapsing_reshape_dynamic_memref
   (%arg0: memref<?x?x?x4x?xf32>) -> memref<?x?x?xf32>
 {
-  %0 = linalg.reshape %arg0 [[0], [1], [2, 3, 4]] :
+  %0 = linalg.collapse_shape %arg0 [[0], [1], [2, 3, 4]] :
     memref<?x?x?x4x?xf32> into memref<?x?x?xf32>
   return %0 : memref<?x?x?xf32>
 }
 //      CHECK: func @legal_collapsing_reshape_dynamic_memref
-//      CHECK:   linalg.reshape
+//      CHECK:   linalg.collapse_shape
 // CHECK-SAME:    [0], [1], [2, 3, 4]
 
 // -----
