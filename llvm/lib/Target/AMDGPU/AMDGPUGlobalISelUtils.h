@@ -9,6 +9,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUGLOBALISELUTILS_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUGLOBALISELUTILS_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/CodeGen/Register.h"
 #include <utility>
 
