@@ -359,19 +359,33 @@ defm V_DOT8_I32_I4  : VOP3PInst<"v_dot8_i32_i4",
 
 let SubtargetPredicate = HasDot8Insts  in {
 
-// TODO-GFX11 considers inputs as signed if imod neg bits are set
-// needs implementation for codegen
-defm V_DOT4_I32_IU8  : VOP3PInst<"v_dot4_i32_iu8",
-  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, null_frag, 1>;
-defm V_DOT8_I32_IU4  : VOP3PInst<"v_dot8_i32_iu4",
-  VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, null_frag, 1>;
 defm V_DOT2_F32_BF16 : VOP3PInst<"v_dot2_f32_bf16",
   VOP3P_Profile<VOP_F32_V2I16_V2I16_F32, VOP3_REGULAR, /*HasDPP*/ 1>,
-  null_frag, 1>;
+  int_amdgcn_fdot2_f32_bf16, 1>;
 
 } // End SubtargetPredicate = HasDot8Insts
 
 } // End let IsDOT = 1
+
+multiclass VOP3PDOTIUInst <string OpName, SDPatternOperator intrinsic_node> {
+  let IsDOT = 1 in
+  defm NAME : VOP3PInst<OpName, VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>,
+                        null_frag, 1>;
+  // Dot-iu instructions consider input as signed if imod neg bits are set. Thus
+  // Dot-iu Intrinsics have extra operands and require separate codegen pattern.
+  def : GCNPat < (intrinsic_node (DotIUVOP3PMods i32:$src0_mods), i32:$src0,
+                                 (DotIUVOP3PMods i32:$src1_mods), i32:$src1,
+                                 i32:$src2, (i1 timm:$clamp)),
+                 (!cast<Instruction>(NAME) $src0_mods, i32:$src0,
+                                           $src1_mods, i32:$src1,
+                                           (i32 8), i32:$src2, i1:$clamp)
+  >;
+}
+
+let SubtargetPredicate = HasDot8Insts  in {
+defm V_DOT4_I32_IU8 : VOP3PDOTIUInst<"v_dot4_i32_iu8", int_amdgcn_iudot4>;
+defm V_DOT8_I32_IU4 : VOP3PDOTIUInst<"v_dot8_i32_iu4", int_amdgcn_iudot8>;
+} // End SubtargetPredicate = HasDot8Insts
 
 def : UDot2Pat<V_DOT2_U32_U16>;
 def : SDot2Pat<V_DOT2_I32_I16>;
