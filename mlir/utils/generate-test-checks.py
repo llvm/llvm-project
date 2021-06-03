@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """A script to generate FileCheck statements for mlir unit tests.
 
+# mlir/utils/generate-test-checks.py
+
 This script is a utility to add FileCheck patterns to an mlir file.
 
 NOTE: The input .mlir is expected to be the output from the parser, not a

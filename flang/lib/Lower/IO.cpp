@@ -15,6 +15,7 @@
 #include "ConvertVariable.h"
 #include "RTBuilder.h"
 #include "StatementContext.h"
+#include "flang/Lower/Allocatable.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/CharacterExpr.h"
 #include "flang/Lower/ComplexExpr.h"
@@ -243,7 +244,7 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
     if (builder.getNamedGlobal(mangleName))
       continue;
     const auto expr = Fortran::evaluate::AsGenericExpr(s);
-    auto boxTy = fir::BoxType::get(converter.genType(s));
+    auto boxTy = fir::BoxType::get(fir::PointerType::get(converter.genType(s)));
     auto descFunc = [&](Fortran::lower::FirOpBuilder &b) {
       auto box =
           Fortran::lower::genInitialDataTarget(converter, loc, boxTy, *expr);
@@ -278,9 +279,14 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
       } else {
         const auto expr = Fortran::evaluate::AsGenericExpr(s);
         auto exv = converter.genExprAddr(*expr, stmtCtx);
-        auto box = builder.createBox(loc, exv);
-        descAddr = builder.createTemporary(loc, box.getType());
-        builder.create<fir::StoreOp>(loc, box, descAddr);
+        auto type = fir::getBase(exv).getType();
+        if (auto baseTy = fir::dyn_cast_ptrOrBoxEleTy(type))
+          type = baseTy;
+        auto boxType = fir::BoxType::get(fir::PointerType::get(type));
+        descAddr = builder.createTemporary(loc, boxType);
+        auto box = fir::MutableBoxValue(descAddr, {}, {});
+        Fortran::lower::associateMutableBoxWithShift(builder, loc, box, exv,
+                                                     {});
       }
       descAddr = builder.createConvert(loc, descRefTy, descAddr);
       list =
