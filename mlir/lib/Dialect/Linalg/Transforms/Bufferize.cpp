@@ -149,17 +149,25 @@ public:
 
 /// Conversion pattern that replaces `linalg.tensor_reshape` with
 /// `linalg.reshape`.
+template <typename TensorReshapeOp,
+          typename Adaptor = typename TensorReshapeOp::Adaptor>
 class BufferizeTensorReshapeOp : public OpConversionPattern<TensorReshapeOp> {
 public:
   using OpConversionPattern<TensorReshapeOp>::OpConversionPattern;
+  using ReshapeOp = typename std::conditional_t<
+      std::is_same<TensorReshapeOp, TensorExpandShapeOp>::value, ExpandShapeOp,
+      CollapseShapeOp>;
 
   LogicalResult
   matchAndRewrite(TensorReshapeOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    linalg::TensorReshapeOpAdaptor adaptor(operands, op->getAttrDictionary());
-    rewriter.replaceOpWithNewOp<linalg::ReshapeOp>(
-        op, getTypeConverter()->convertType(op.getType()).cast<MemRefType>(),
-        adaptor.src(), adaptor.reassociation());
+    Adaptor adaptor(operands, op->getAttrDictionary());
+    rewriter.replaceOpWithNewOp<ReshapeOp>(op,
+                                           this->getTypeConverter()
+                                               ->convertType(op.getType())
+                                               .template cast<MemRefType>(),
+                                           adaptor.src(),
+                                           adaptor.reassociation());
     return success();
   }
 };
@@ -348,7 +356,8 @@ void mlir::linalg::populateLinalgBufferizePatterns(
       BufferizeAnyLinalgOp,
       BufferizeFillOp,
       BufferizeInitTensorOp,
-      BufferizeTensorReshapeOp,
+      BufferizeTensorReshapeOp<TensorExpandShapeOp>,
+      BufferizeTensorReshapeOp<TensorCollapseShapeOp>,
       SubTensorOpConverter,
       SubTensorInsertOpConverter
     >(typeConverter, patterns.getContext());

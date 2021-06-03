@@ -362,10 +362,11 @@ struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOp> {
       for (auto operand : llvm::enumerate(values)) {
         if (operand.value().getType() == newInputOutputTypes[flattenedIdx])
           res.push_back(operand.value());
-        else
-          res.push_back(rewriter.create<linalg::TensorReshapeOp>(
+        else {
+          res.push_back(rewriter.create<TensorCollapseShapeOp>(
               loc, newInputOutputTypes[flattenedIdx], operand.value(),
               convertAffineMapArrayToExprs(reassociationMaps[flattenedIdx])));
+        }
         ++flattenedIdx;
       }
       return res;
@@ -395,11 +396,11 @@ struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOp> {
       RankedTensorType origResultType = genericOp.getResult(result.index())
                                             .getType()
                                             .template cast<RankedTensorType>();
-      if (origResultType != result.value().getType())
-        resultReplacements.push_back(rewriter.create<linalg::TensorReshapeOp>(
+      if (origResultType != result.value().getType()) {
+        resultReplacements.push_back(rewriter.create<TensorExpandShapeOp>(
             loc, origResultType, result.value(),
             convertAffineMapArrayToExprs(reassociationMaps[index])));
-      else
+      } else
         resultReplacements.push_back(result.value());
     }
     rewriter.replaceOp(genericOp, resultReplacements);
@@ -460,8 +461,8 @@ struct UseRankReducedSubTensorOp : public OpRewritePattern<SubTensorOp> {
     Location loc = subTensorOp.getLoc();
     Value newSubTensor = rewriter.create<SubTensorOp>(
         loc, rankReducedType, subTensorOp.source(), offsets, sizes, strides);
-    rewriter.replaceOpWithNewOp<TensorReshapeOp>(subTensorOp, resultType,
-                                                 newSubTensor, *reassociation);
+    rewriter.replaceOpWithNewOp<TensorExpandShapeOp>(
+        subTensorOp, resultType, newSubTensor, *reassociation);
     return success();
   }
 };
@@ -482,7 +483,7 @@ struct UseRankReducedSubTensorInsertOp
         reassociation->size() == static_cast<size_t>(sourceType.getRank()))
       return failure();
     Location loc = insertOp.getLoc();
-    auto reshapedSource = rewriter.create<TensorReshapeOp>(
+    auto reshapedSource = rewriter.create<TensorCollapseShapeOp>(
         loc, insertOp.source(), *reassociation);
     rewriter.replaceOpWithNewOp<SubTensorInsertOp>(
         insertOp, reshapedSource, insertOp.dest(), insertOp.getMixedOffsets(),
@@ -500,7 +501,8 @@ void mlir::linalg::populateFoldUnitExtentDimsPatterns(
   patterns.add<FoldUnitDimLoops, ReplaceUnitExtentTensors,
                UseRankReducedSubTensorOp, UseRankReducedSubTensorInsertOp>(
       context);
-  TensorReshapeOp::getCanonicalizationPatterns(patterns, context);
+  TensorCollapseShapeOp::getCanonicalizationPatterns(patterns, context);
+  TensorExpandShapeOp::getCanonicalizationPatterns(patterns, context);
 }
 
 namespace {
