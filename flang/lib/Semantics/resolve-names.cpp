@@ -5625,10 +5625,10 @@ ConstructVisitor::Selector ConstructVisitor::ResolveSelector(
     const parser::Selector &x) {
   return std::visit(common::visitors{
                         [&](const parser::Expr &expr) {
-                          return Selector{expr.source, EvaluateExpr(expr)};
+                          return Selector{expr.source, EvaluateExpr(x)};
                         },
                         [&](const parser::Variable &var) {
-                          return Selector{var.GetSource(), EvaluateExpr(var)};
+                          return Selector{var.GetSource(), EvaluateExpr(x)};
                         },
                     },
       x.u);

@@ -2758,46 +2758,105 @@ MaybeExpr ExpressionAnalyzer::ExprOrVariable(
   }
   if (AssumedTypeDummy(x)) { // C710
     Say("TYPE(*) dummy argument may only be used as an actual argument"_err_en_US);
-  } else if (MaybeExpr result{Analyze(x.u)}) {
+    ResetExpr(x);
+    return std::nullopt;
+  }
+  MaybeExpr result;
+  if constexpr (common::HasMember<parser::StructureConstructor,
+                    std::decay_t<decltype(x.u)>> &&
+      common::HasMember<common::Indirection<parser::FunctionReference>,
+          std::decay_t<decltype(x.u)>>) {
+    if (const auto *funcRef{
+            std::get_if<common::Indirection<parser::FunctionReference>>(
+                &x.u)}) {
+      // Function references in Exprs might turn out to be misparsed structure
+      // constructors; we have to try generic procedure resolution
+      // first to be sure.
+      std::optional<parser::StructureConstructor> ctor;
+      result = Analyze(funcRef->value(), &ctor);
+      if (result && ctor) {
+        // A misparsed function reference is really a structure
+        // constructor.  Repair the parse tree in situ.
+        const_cast<PARSED &>(x).u = std::move(*ctor);
+      }
+    } else {
+      result = Analyze(x.u);
+    }
+  } else {
+    result = Analyze(x.u);
+  }
+  if (result) {
     SetExpr(x, Fold(std::move(*result)));
     return x.typedExpr->v;
+  } else {
+    ResetExpr(x);
+    if (!context_.AnyFatalError()) {
+      std::string buf;
+      llvm::raw_string_ostream dump{buf};
+      parser::DumpTree(dump, x);
+      Say("Internal error: Expression analysis failed on: %s"_err_en_US,
+          dump.str());
+    }
+    return std::nullopt;
   }
-  ResetExpr(x);
-  if (!context_.AnyFatalError()) {
-    std::string buf;
-    llvm::raw_string_ostream dump{buf};
-    parser::DumpTree(dump, x);
-    Say("Internal error: Expression analysis failed on: %s"_err_en_US,
-        dump.str());
-  }
-  return std::nullopt;
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr &expr) {
-  auto restorer{GetContextualMessages().SetLocation(expr.source)};
   return ExprOrVariable(expr, expr.source);
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Variable &variable) {
-  auto restorer{GetContextualMessages().SetLocation(variable.GetSource())};
   return ExprOrVariable(variable, variable.GetSource());
 }
 
+MaybeExpr ExpressionAnalyzer::Analyze(const parser::Selector &selector) {
+  if (const auto *var{std::get_if<parser::Variable>(&selector.u)}) {
+    if (!useSavedTypedExprs_ || !var->typedExpr) {
+      parser::CharBlock source{var->GetSource()};
+      auto restorer{GetContextualMessages().SetLocation(source)};
+      FixMisparsedFunctionReference(context_, var->u);
+      if (const auto *funcRef{
+              std::get_if<common::Indirection<parser::FunctionReference>>(
+                  &var->u)}) {
+        // A Selector that parsed as a Variable might turn out during analysis
+        // to actually be a structure constructor.  In that case, repair the
+        // Variable parse tree node into an Expr
+        std::optional<parser::StructureConstructor> ctor;
+        if (MaybeExpr result{Analyze(funcRef->value(), &ctor)}) {
+          if (ctor) {
+            auto &writable{const_cast<parser::Selector &>(selector)};
+            writable.u = parser::Expr{std::move(*ctor)};
+            auto &expr{std::get<parser::Expr>(writable.u)};
+            expr.source = source;
+            SetExpr(expr, Fold(std::move(*result)));
+            return expr.typedExpr->v;
+          } else {
+            SetExpr(*var, Fold(std::move(*result)));
+            return var->typedExpr->v;
+          }
+        } else {
+          ResetExpr(*var);
+          if (context_.AnyFatalError()) {
+            return std::nullopt;
+          }
+        }
+      }
+    }
+  }
+  // Not a Variable -> FunctionReference; handle normally as Variable or Expr
+  return Analyze(selector.u);
+}
+
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::DataStmtConstant &x) {
-  auto restorer{GetContextualMessages().SetLocation(x.source)};
   return ExprOrVariable(x, x.source);
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::AllocateObject &x) {
-  parser::CharBlock source{parser::FindSourceLocation(x)};
-  auto restorer{GetContextualMessages().SetLocation(source)};
-  return ExprOrVariable(x, source);
+  return ExprOrVariable(x, parser::FindSourceLocation(x));
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::PointerObject &x) {
-  parser::CharBlock source{parser::FindSourceLocation(x)};
-  auto restorer{GetContextualMessages().SetLocation(source)};
-  return ExprOrVariable(x, source);
+  return ExprOrVariable(x, parser::FindSourceLocation(x));
 }
 
 Expr<SubscriptInteger> ExpressionAnalyzer::AnalyzeKindSelector(
