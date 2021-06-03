@@ -3033,6 +3033,21 @@ the configuration (without a prefix: ``Auto``).
   Add a space in front of an Objective-C protocol list, i.e. use
   ``Foo <Protocol>`` instead of ``Foo<Protocol>``.
 
+**PPIndentWidth** (``int``)
+  The number of columns to use for indentation of preprocessor statements.
+  When set to -1 (default) ``IndentWidth`` is used also for preprocessor
+  statements.
+
+  .. code-block:: c++
+
+     PPIndentWidth: 1
+
+     #ifdef __linux__
+     # define FOO
+     #else
+     # define BAR
+     #endif
+
 **PenaltyBreakAssignment** (``unsigned``)
   The penalty for breaking around an assignment operator.
 

@@ -233,6 +233,9 @@ clang-format
 - Option ``IndentAccessModifiers`` has been added to be able to give access
   modifiers their own indentation level inside records.
 
+- Option ``PPIndentWidth`` has been added to be able to configure pre-processor
+  indentation independent from regular code.
+
 - Option ``ShortNamespaceLines`` has been added to give better control
   over ``FixNamespaceComments`` when determining a namespace length.
 
