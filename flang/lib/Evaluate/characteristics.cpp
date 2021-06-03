@@ -216,12 +216,8 @@ void TypeAndShape::AcquireAttrs(const semantics::Symbol &symbol) {
 }
 
 void TypeAndShape::AcquireLEN() {
-  if (type_.category() == TypeCategory::Character) {
-    if (const auto *param{type_.charLength()}) {
-      if (const auto &intExpr{param->GetExplicit()}) {
-        LEN_ = ConvertToType<SubscriptInteger>(common::Clone(*intExpr));
-      }
-    }
+  if (auto len{type_.GetCharLength()}) {
+    LEN_ = std::move(len);
   }
 }
 
@@ -694,7 +690,9 @@ bool FunctionResult::CanBeReturnedViaImplicitInterface() const {
       const DynamicType &type{typeAndShape->type()};
       switch (type.category()) {
       case TypeCategory::Character:
-        if (const auto *param{type.charLength()}) {
+        if (type.knownLength()) {
+          return true;
+        } else if (const auto *param{type.charLengthParamValue()}) {
           if (const auto &expr{param->GetExplicit()}) {
             return IsConstantExpr(*expr); // 15.4.2.2(4)(c)
           } else if (param->isAssumed()) {
