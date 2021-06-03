@@ -93,8 +93,10 @@ accepted if enabled by command-line options.
 * BOZ literals can be used as INTEGER values in contexts where the type is
   unambiguous: the right hand sides of assigments and initializations
   of INTEGER entities, and as actual arguments to a few intrinsic functions
-  (ACHAR, BTEST, CHAR).  But they cannot be used if the type would not
-  be known (e.g., `IAND(X'1',X'2')`).
+  (ACHAR, BTEST, CHAR).  BOZ literals are interpreted as default INTEGER
+  when they appear as the first items of array constructors with no
+  explicit type.  Otherwise, they generally cannot be used if the type would
+  not be known (e.g., `IAND(X'1',X'2')`).
 * BOZ literals can also be used as REAL values in some contexts where the
   type is unambiguous, such as initializations of REAL parameters.
 * EQUIVALENCE of numeric and character sequences (a ubiquitous extension)
