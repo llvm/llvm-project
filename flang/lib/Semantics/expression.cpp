@@ -3000,6 +3000,8 @@ MaybeExpr ExpressionAnalyzer::MakeFunctionRef(parser::CharBlock callSite,
             DEREF(result.GetTypeAndShape()).type(),
             ProcedureRef{std::move(proc), std::move(arguments)});
       }
+    } else {
+      Say("Function result characteristics are not known"_err_en_US);
     }
   }
   return std::nullopt;
