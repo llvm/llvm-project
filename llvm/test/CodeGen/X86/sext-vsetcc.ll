@@ -283,7 +283,7 @@ define <3 x i32> @cmp_ult_load_const_bad_type(<3 x i8>* %x) nounwind {
   ret <3 x i32> %sext
 }
 
-; negative test - signed cmp (TODO)
+; Signed compare needs signed extend.
 
 define <4 x i32> @cmp_slt_load_const(<4 x i8>* %x) nounwind {
 ; SSE-LABEL: cmp_slt_load_const:
@@ -298,10 +298,9 @@ define <4 x i32> @cmp_slt_load_const(<4 x i8>* %x) nounwind {
 ;
 ; AVX-LABEL: cmp_slt_load_const:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = <42,214,0,255,u,u,u,u,u,u,u,u,u,u,u,u>
-; AVX-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vpmovsxbd %xmm0, %xmm0
+; AVX-NEXT:    vpmovsxbd (%rdi), %xmm0
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [42,4294967254,0,4294967295]
+; AVX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %loadx = load <4 x i8>, <4 x i8>* %x
   %icmp = icmp slt <4 x i8> %loadx, <i8 42, i8 -42, i8 0, i8 -1>
@@ -373,7 +372,7 @@ define <8 x i16> @cmp_ugt_zextload(<8 x i8>* %x, <8 x i8>* %y) nounwind {
   ret <8 x i16> %sext
 }
 
-; negative test - signed cmp (TODO)
+; Signed compare needs signed extends.
 
 define <8 x i16> @cmp_sgt_zextload(<8 x i8>* %x, <8 x i8>* %y) nounwind {
 ; SSE-LABEL: cmp_sgt_zextload:
@@ -387,10 +386,9 @@ define <8 x i16> @cmp_sgt_zextload(<8 x i8>* %x, <8 x i8>* %y) nounwind {
 ;
 ; AVX-LABEL: cmp_sgt_zextload:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpmovsxbw %xmm0, %xmm0
+; AVX-NEXT:    vpmovsxbw (%rdi), %xmm0
+; AVX-NEXT:    vpmovsxbw (%rsi), %xmm1
+; AVX-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %loadx = load <8 x i8>, <8 x i8>* %x
   %loady = load <8 x i8>, <8 x i8>* %y
@@ -571,11 +569,9 @@ define <4 x i64> @PR50055_signed(<2 x i64>* %src, <4 x i64>* %dst) {
 ;
 ; AVX-LABEL: PR50055_signed:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vpmovsxbd %xmm1, %ymm0
-; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpcmpgtb %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpmovsxbd %xmm1, %ymm1
+; AVX-NEXT:    vpmovsxbd (%rdi), %ymm0
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm1
 ; AVX-NEXT:    vmovdqa %ymm1, (%rsi)
 ; AVX-NEXT:    retq
   %t0 = bitcast <2 x i64>* %src to <8 x i8>*

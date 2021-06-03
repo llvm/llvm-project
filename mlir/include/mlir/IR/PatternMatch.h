@@ -133,12 +133,22 @@ public:
     return contextAndHasBoundedRecursion.getPointer();
   }
 
-  /// Return readable pattern name. Should only be used for debugging purposes.
-  /// Can be empty.
+  /// Return a readable name for this pattern. This name should only be used for
+  /// debugging purposes, and may be empty.
   StringRef getDebugName() const { return debugName; }
 
-  /// Set readable pattern name. Should only be used for debugging purposes.
+  /// Set the human readable debug name used for this pattern. This name will
+  /// only be used for debugging purposes.
   void setDebugName(StringRef name) { debugName = name; }
+
+  /// Return the set of debug labels attached to this pattern.
+  ArrayRef<StringRef> getDebugLabels() const { return debugLabels; }
+
+  /// Add the provided debug labels to this pattern.
+  void addDebugLabels(ArrayRef<StringRef> labels) {
+    debugLabels.append(labels.begin(), labels.end());
+  }
+  void addDebugLabels(StringRef label) { debugLabels.push_back(label); }
 
 protected:
   /// This class acts as a special tag that makes the desire to match "any"
@@ -211,8 +221,11 @@ private:
   /// an op with this pattern.
   SmallVector<OperationName, 2> generatedOps;
 
-  /// Readable pattern name. Can be empty.
+  /// A readable name for this pattern. May be empty.
   StringRef debugName;
+
+  /// The set of debug labels attached to this pattern.
+  SmallVector<StringRef, 0> debugLabels;
 };
 
 //===----------------------------------------------------------------------===//
@@ -906,7 +919,26 @@ public:
     // types 'Ts'. This magic is necessary due to a limitation in the places
     // that a parameter pack can be expanded in c++11.
     // FIXME: In c++17 this can be simplified by using 'fold expressions'.
-    (void)std::initializer_list<int>{0, (addImpl<Ts>(arg, args...), 0)...};
+    (void)std::initializer_list<int>{
+        0, (addImpl<Ts>(/*debugLabels=*/llvm::None, arg, args...), 0)...};
+    return *this;
+  }
+  /// An overload of the above `add` method that allows for attaching a set
+  /// of debug labels to the attached patterns. This is useful for labeling
+  /// groups of patterns that may be shared between multiple different
+  /// passes/users.
+  template <typename... Ts, typename ConstructorArg,
+            typename... ConstructorArgs,
+            typename = std::enable_if_t<sizeof...(Ts) != 0>>
+  RewritePatternSet &addWithLabel(ArrayRef<StringRef> debugLabels,
+                                  ConstructorArg &&arg,
+                                  ConstructorArgs &&... args) {
+    // The following expands a call to emplace_back for each of the pattern
+    // types 'Ts'. This magic is necessary due to a limitation in the places
+    // that a parameter pack can be expanded in c++11.
+    // FIXME: In c++17 this can be simplified by using 'fold expressions'.
+    (void)std::initializer_list<int>{
+        0, (addImpl<Ts>(debugLabels, arg, args...), 0)...};
     return *this;
   }
 
@@ -970,7 +1002,8 @@ public:
     // types 'Ts'. This magic is necessary due to a limitation in the places
     // that a parameter pack can be expanded in c++11.
     // FIXME: In c++17 this can be simplified by using 'fold expressions'.
-    (void)std::initializer_list<int>{0, (addImpl<Ts>(arg, args...), 0)...};
+    (void)std::initializer_list<int>{
+        0, (addImpl<Ts>(/*debugLabels=*/llvm::None, arg, args...), 0)...};
     return *this;
   }
 
@@ -1024,13 +1057,17 @@ private:
   /// chaining insertions.
   template <typename T, typename... Args>
   std::enable_if_t<std::is_base_of<RewritePattern, T>::value>
-  addImpl(Args &&... args) {
-    nativePatterns.emplace_back(
-        RewritePattern::create<T>(std::forward<Args>(args)...));
+  addImpl(ArrayRef<StringRef> debugLabels, Args &&... args) {
+    std::unique_ptr<T> pattern =
+        RewritePattern::create<T>(std::forward<Args>(args)...);
+    pattern->addDebugLabels(debugLabels);
+    nativePatterns.emplace_back(std::move(pattern));
   }
   template <typename T, typename... Args>
   std::enable_if_t<std::is_base_of<PDLPatternModule, T>::value>
-  addImpl(Args &&... args) {
+  addImpl(ArrayRef<StringRef> debugLabels, Args &&... args) {
+    // TODO: Add the provided labels to the PDL pattern when PDL supports
+    // labels.
     pdlPatterns.mergeIn(T(std::forward<Args>(args)...));
   }
 

@@ -821,15 +821,10 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
     PD = It->second;
   }
 
-  // Match the linkage and visibility of the name global. COFF supports using
-  // comdats with internal symbols, so do that if we can.
+  // Match the linkage and visibility of the name global.
   Function *Fn = Inc->getParent()->getParent();
   GlobalValue::LinkageTypes Linkage = NamePtr->getLinkage();
   GlobalValue::VisibilityTypes Visibility = NamePtr->getVisibility();
-  if (TT.isOSBinFormatCOFF()) {
-    Linkage = GlobalValue::InternalLinkage;
-    Visibility = GlobalValue::DefaultVisibility;
-  }
 
   // Move the name variable to the right section. Place them in a COMDAT group
   // if the associated function is a COMDAT. This will make sure that only one
@@ -838,23 +833,19 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   // new comdat group for the counters and profiling data. If we use the comdat
   // of the parent function, that will result in relocations against discarded
   // sections.
+  //
+  // For COFF, put the counters, data, and values each into their own
+  // comdats. We can't use a group because the Visual C++ linker will
+  // report duplicate symbol errors if there are multiple external symbols
+  // with the same name marked IMAGE_COMDAT_SELECT_ASSOCIATIVE.
+  //
+  // For ELF, when not using COMDAT, put counters, data and values into a
+  // noduplicates COMDAT which is lowered to a zero-flag section group. This
+  // allows -z start-stop-gc to discard the entire group when the function is
+  // discarded.
   bool NeedComdat = needsComdatForCounter(*Fn, *M);
-  if (NeedComdat) {
-    if (TT.isOSBinFormatCOFF()) {
-      // For COFF, put the counters, data, and values each into their own
-      // comdats. We can't use a group because the Visual C++ linker will
-      // report duplicate symbol errors if there are multiple external symbols
-      // with the same name marked IMAGE_COMDAT_SELECT_ASSOCIATIVE.
-      Linkage = GlobalValue::LinkOnceODRLinkage;
-      Visibility = GlobalValue::HiddenVisibility;
-    }
-  }
   std::string DataVarName = getVarName(Inc, getInstrProfDataVarPrefix());
   auto MaybeSetComdat = [=](GlobalVariable *GV) {
-    // For ELF, when not using COMDAT, put counters, data and values into
-    // a noduplicates COMDAT which is lowered to a zero-flag section group.
-    // This allows linker GC to discard the entire group when the function
-    // is discarded.
     bool UseComdat = (NeedComdat || TT.isOSBinFormatELF());
     if (UseComdat) {
       auto GroupName = TT.isOSBinFormatCOFF() ? GV->getName() : DataVarName;

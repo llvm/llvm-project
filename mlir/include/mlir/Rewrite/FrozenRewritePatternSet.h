@@ -29,9 +29,7 @@ public:
   using OpSpecificNativePatternListT =
       DenseMap<OperationName, std::vector<RewritePattern *>>;
 
-  /// Freeze the patterns held in `patterns`, and take ownership.
   FrozenRewritePatternSet();
-  FrozenRewritePatternSet(RewritePatternSet &&patterns);
   FrozenRewritePatternSet(FrozenRewritePatternSet &&patterns) = default;
   FrozenRewritePatternSet(const FrozenRewritePatternSet &patterns) = default;
   FrozenRewritePatternSet &
@@ -39,6 +37,16 @@ public:
   FrozenRewritePatternSet &
   operator=(FrozenRewritePatternSet &&patterns) = default;
   ~FrozenRewritePatternSet();
+
+  /// Freeze the patterns held in `patterns`, and take ownership.
+  /// `disabledPatternLabels` is a set of labels used to filter out input
+  /// patterns with a label in this set. `enabledPatternLabels` is a set of
+  /// labels used to filter out input patterns that do not have one of the
+  /// lables in this set.
+  FrozenRewritePatternSet(
+      RewritePatternSet &&patterns,
+      ArrayRef<std::string> disabledPatternLabels = llvm::None,
+      ArrayRef<std::string> enabledPatternLabels = llvm::None);
 
   /// Return the op specific native patterns held by this list.
   const OpSpecificNativePatternListT &getOpSpecificNativePatterns() const {

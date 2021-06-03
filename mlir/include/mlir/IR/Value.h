@@ -20,8 +20,10 @@
 
 namespace mlir {
 class AsmState;
+class Block;
 class BlockArgument;
 class Operation;
+class OpOperand;
 class OpResult;
 class Region;
 class Value;
@@ -152,16 +154,15 @@ public:
   // UseLists
   //===--------------------------------------------------------------------===//
 
-  /// Provide the use list that is attached to this value.
-  IRObjectWithUseList<OpOperand> *getUseList() const { return impl; }
-
   /// Drop all uses of this object from their respective owners.
-  void dropAllUses() const { return getUseList()->dropAllUses(); }
+  void dropAllUses() const { return impl->dropAllUses(); }
 
   /// Replace all uses of 'this' value with the new value, updating anything in
   /// the IR that uses 'this' to use the other value instead.  When this returns
   /// there are zero uses of 'this'.
-  void replaceAllUsesWith(Value newValue) const;
+  void replaceAllUsesWith(Value newValue) const {
+    impl->replaceAllUsesWith(newValue);
+  }
 
   /// Replace all uses of 'this' value with 'newValue', updating anything in the
   /// IR that uses 'this' to use the other value instead except if the user is
@@ -190,17 +191,17 @@ public:
   using use_iterator = ValueUseIterator<OpOperand>;
   using use_range = iterator_range<use_iterator>;
 
-  use_iterator use_begin() const { return getUseList()->use_begin(); }
+  use_iterator use_begin() const { return impl->use_begin(); }
   use_iterator use_end() const { return use_iterator(); }
 
   /// Returns a range of all uses, which is useful for iterating over all uses.
   use_range getUses() const { return {use_begin(), use_end()}; }
 
   /// Returns true if this value has exactly one use.
-  bool hasOneUse() const { return getUseList()->hasOneUse(); }
+  bool hasOneUse() const { return impl->hasOneUse(); }
 
   /// Returns true if this value has no uses.
-  bool use_empty() const { return getUseList()->use_empty(); }
+  bool use_empty() const { return impl->use_empty(); }
 
   //===--------------------------------------------------------------------===//
   // Users
@@ -240,6 +241,29 @@ inline raw_ostream &operator<<(raw_ostream &os, Value value) {
   value.print(os);
   return os;
 }
+
+//===----------------------------------------------------------------------===//
+// OpOperand
+//===----------------------------------------------------------------------===//
+
+/// This class represents an operand of an operation. Instances of this class
+/// contain a reference to a specific `Value`.
+class OpOperand : public IROperand<OpOperand, Value> {
+public:
+  /// Provide the use list that is attached to the given value.
+  static IRObjectWithUseList<OpOperand> *getUseList(Value value) {
+    return value.getImpl();
+  }
+
+  /// Return which operand this is in the OpOperand list of the Operation.
+  unsigned getOperandNumber();
+
+private:
+  /// Keep the constructor private and accessible to the OperandStorage class
+  /// only to avoid hard-to-debug typo/programming mistakes.
+  friend class OperandStorage;
+  using IROperand<OpOperand, Value>::IROperand;
+};
 
 //===----------------------------------------------------------------------===//
 // BlockArgument

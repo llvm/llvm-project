@@ -539,7 +539,6 @@ module std [system] {
   module __errc { header "__errc" export * }
   module __functional_base { header "__functional_base" export * }
   module __hash_table { header "__hash_table" export * }
-  module __iterator_iterator_traits { header "__iterator/iterator_traits.h" export * }
   module __locale { header "__locale" export * }
   module __mutex_base { header "__mutex_base" export * }
   module __node_handle { header "__node_handle" export * }
