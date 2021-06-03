@@ -75,6 +75,14 @@ subroutine test_sub()
   call prefoo_sub(sub)
 end subroutine
 
+! CHECK-LABEL: func @_QPpassing_not_defined_in_file()
+subroutine passing_not_defined_in_file()
+  external proc_not_defined_in_file
+  ! CHECK: %[[addr:.*]] = fir.address_of(@_QPproc_not_defined_in_file) : () -> ()
+  ! CHECK: fir.call @_QPprefoo_sub(%[[addr]]) : (() -> ()) -> ()
+  call prefoo_sub(proc_not_defined_in_file)
+end subroutine
+
 ! Test passing unrestricted intrinsics
 
 ! Intrinsic using runtime
@@ -85,6 +93,15 @@ subroutine test_acos(x)
   !CHECK: %[[fcast:.*]] = fir.convert %[[f]] : ((!fir.ref<f32>) -> f32) -> (() -> ())
   !CHECK: fir.call @_QPfoo_acos(%[[fcast]]) : (() -> ()) -> ()
   call foo_acos(acos)
+end subroutine
+
+! CHECK-LABEL: func @_QPtest_atan2
+subroutine test_atan2()
+  intrinsic :: atan2
+  ! CHECK: %[[f:.*]] = fir.address_of(@fir.atan2.f32.ref_f32.ref_f32) : (!fir.ref<f32>, !fir.ref<f32>) -> f32
+  ! CHECK: %[[fcast:.*]] = fir.convert %[[f]] : ((!fir.ref<f32>, !fir.ref<f32>) -> f32) -> (() -> ())
+  ! CHECK: fir.call @_QPfoo_atan2(%[[fcast]]) : (() -> ()) -> ()
+  call foo_atan2(atan2)
 end subroutine
 
 ! Intrinsic implemented inlined
@@ -107,7 +124,6 @@ subroutine test_len()
   call foo_len(len)
 end subroutine
 
-
 ! Intrinsic implemented inlined with specific name different from generic
 ! CHECK-LABEL: func @_QPtest_iabs
 subroutine test_iabs()
@@ -118,14 +134,7 @@ subroutine test_iabs()
   call foo_iabs(iabs)
 end subroutine
 
-
 ! TODO: exhaustive test of unrestricted intrinsic table 16.2 
-
-! FIXME: create funcOp if not defined in file
-!subroutine todo1()
-!  external proc_not_defined_in_file
-!  call prefoo_sub(proc_not_defined_in_file)
-!end subroutine
 
 ! TODO: improve dummy procedure types when interface is given.
 ! CHECK: func @_QPtodo3(%arg0: () -> ())
@@ -139,6 +148,13 @@ end subroutine
   !CHECK: %[[load:.*]] = fir.load %arg0
   !CHECK: %[[res:.*]] = fir.call @__fs_acos_1(%[[load]]) : (f32) -> f32
   !CHECK: return %[[res]] : f32
+
+! CHECK-LABEL: func private @fir.atan2.f32.ref_f32.ref_f32(
+! CHECK-SAME: %[[x:.*]]: !fir.ref<f32>, %[[y:.*]]: !fir.ref<f32>) -> f32
+  ! CHECK-DAG: %[[xload:.*]] = fir.load %[[x]] : !fir.ref<f32>
+  ! CHECK-DAG: %[[yload:.*]] = fir.load %[[y]] : !fir.ref<f32>
+  ! CHECK: %[[atan2:.*]] = fir.call @__fs_atan2_1(%[[xload]], %[[yload]]) : (f32, f32) -> f32
+  ! CHECK: return %[[atan2]] : f32
 
 !CHECK-LABEL: func private @fir.aimag.f32.ref_z4(%arg0: !fir.ref<!fir.complex<4>>)
   !CHECK: %[[load:.*]] = fir.load %arg0
