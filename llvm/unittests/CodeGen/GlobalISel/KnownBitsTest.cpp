@@ -1670,3 +1670,191 @@ TEST_F(AArch64GISelMITest, TestKnownBitsAssertZext) {
   EXPECT_EQ(0u, Res.One.getZExtValue());
   EXPECT_EQ(0xFFFFFFFFFFFFFFF8u, Res.Zero.getZExtValue());
 }
+
+TEST_F(AMDGPUGISelMITest, TestKnownBitsUBFX) {
+  StringRef MIRString = "  %3:_(s32) = G_IMPLICIT_DEF\n"
+                        "  %4:_(s32) = G_CONSTANT i32 12\n"
+                        "  %5:_(s32) = G_CONSTANT i32 8\n"
+                        "  %6:_(s32) = G_UBFX %3, %4(s32), %5\n"
+                        "  %ubfx_copy:_(s32) = COPY %6\n"
+                        "  %7:_(s32) = G_CONSTANT i32 28672\n"
+                        "  %8:_(s32) = G_UBFX %7, %4(s32), %5\n"
+                        "  %ubfx_copy_val:_(s32) = COPY %8\n"
+                        "  %9:_(s32) = G_IMPLICIT_DEF\n"
+                        "  %10:_(s32) = G_IMPLICIT_DEF\n"
+                        "  %11:_(s32) = G_UBFX %3, %9(s32), %10\n"
+                        "  %ubfx_copy_unk:_(s32) = COPY %11\n"
+                        "  %12:_(s32) = G_UBFX %3, %9(s32), %5\n"
+                        "  %ubfx_copy_unk_off:_(s32) = COPY %12\n"
+                        "  %13:_(s32) = G_UBFX %3, %4(s32), %10\n"
+                        "  %ubfx_copy_unk_width:_(s32) = COPY %13\n";
+  setUp(MIRString);
+  if (!TM)
+    return;
+  Register CopyBfxReg = Copies[Copies.size() - 5];
+  Register CopyValBfxReg = Copies[Copies.size() - 4];
+  Register CopyUnkBfxReg = Copies[Copies.size() - 3];
+  Register CopyUnkOffBfxReg = Copies[Copies.size() - 2];
+  Register CopyUnkWidthBfxReg = Copies[Copies.size() - 1];
+
+  MachineInstr *CopyBfx = MRI->getVRegDef(CopyBfxReg);
+  Register SrcReg = CopyBfx->getOperand(1).getReg();
+  MachineInstr *CopyValBfx = MRI->getVRegDef(CopyValBfxReg);
+  Register ValSrcReg = CopyValBfx->getOperand(1).getReg();
+  MachineInstr *CopyUnkBfx = MRI->getVRegDef(CopyUnkBfxReg);
+  Register UnkSrcReg = CopyUnkBfx->getOperand(1).getReg();
+  MachineInstr *CopyUnkOffBfx = MRI->getVRegDef(CopyUnkOffBfxReg);
+  Register UnkOffSrcReg = CopyUnkOffBfx->getOperand(1).getReg();
+  MachineInstr *CopyUnkWidthBfx = MRI->getVRegDef(CopyUnkWidthBfxReg);
+  Register UnkWidthSrcReg = CopyUnkWidthBfx->getOperand(1).getReg();
+
+  GISelKnownBits Info(*MF);
+
+  KnownBits Res1 = Info.getKnownBits(SrcReg);
+  EXPECT_EQ(0u, Res1.One.getZExtValue());
+  EXPECT_EQ(0xffffff00u, Res1.Zero.getZExtValue());
+
+  KnownBits Res2 = Info.getKnownBits(ValSrcReg);
+  EXPECT_EQ(7u, Res2.One.getZExtValue());
+  EXPECT_EQ(0xfffffff8u, Res2.Zero.getZExtValue());
+
+  KnownBits Res3 = Info.getKnownBits(UnkSrcReg);
+  EXPECT_EQ(0u, Res3.One.getZExtValue());
+  EXPECT_EQ(0u, Res3.Zero.getZExtValue());
+
+  KnownBits Res4 = Info.getKnownBits(UnkOffSrcReg);
+  EXPECT_EQ(0u, Res4.One.getZExtValue());
+  EXPECT_EQ(0xffffff00u, Res4.Zero.getZExtValue());
+
+  KnownBits Res5 = Info.getKnownBits(UnkWidthSrcReg);
+  EXPECT_EQ(0u, Res5.One.getZExtValue());
+  EXPECT_EQ(0xfff00000u, Res5.Zero.getZExtValue());
+}
+
+TEST_F(AMDGPUGISelMITest, TestKnownBitsSBFX) {
+  StringRef MIRString = "  %3:_(s32) = G_IMPLICIT_DEF\n"
+                        "  %4:_(s32) = G_CONSTANT i32 8\n"
+                        "  %5:_(s32) = G_CONSTANT i32 4\n"
+                        "  %6:_(s32) = G_SBFX %3, %4(s32), %5\n"
+                        "  %sbfx_copy:_(s32) = COPY %6\n"
+                        "  %7:_(s32) = G_CONSTANT i32 2047\n"
+                        "  %8:_(s32) = G_SBFX %7, %4(s32), %5\n"
+                        "  %sbfx_copy_val:_(s32) = COPY %8\n"
+                        "  %9:_(s32) = G_CONSTANT i32 2048\n"
+                        "  %10:_(s32) = G_SBFX %9, %4(s32), %5\n"
+                        "  %sbfx_copy_neg_val:_(s32) = COPY %10\n"
+                        "  %11:_(s32) = G_IMPLICIT_DEF\n"
+                        "  %12:_(s32) = G_SBFX %7, %11(s32), %5\n"
+                        "  %sbfx_copy_unk_off:_(s32) = COPY %12\n"
+                        "  %13:_(s32) = G_SBFX %9, %4(s32), %11\n"
+                        "  %sbfx_copy_unk_width:_(s32) = COPY %13\n";
+  setUp(MIRString);
+  if (!TM)
+    return;
+  Register CopyBfxReg = Copies[Copies.size() - 5];
+  Register CopyValBfxReg = Copies[Copies.size() - 4];
+  Register CopyNegValBfxReg = Copies[Copies.size() - 3];
+  Register CopyUnkOffBfxReg = Copies[Copies.size() - 2];
+  Register CopyUnkWidthBfxReg = Copies[Copies.size() - 1];
+
+  MachineInstr *CopyBfx = MRI->getVRegDef(CopyBfxReg);
+  Register SrcReg = CopyBfx->getOperand(1).getReg();
+  MachineInstr *CopyValBfx = MRI->getVRegDef(CopyValBfxReg);
+  Register ValSrcReg = CopyValBfx->getOperand(1).getReg();
+  MachineInstr *CopyNegValBfx = MRI->getVRegDef(CopyNegValBfxReg);
+  Register NegValSrcReg = CopyNegValBfx->getOperand(1).getReg();
+  MachineInstr *CopyUnkOffBfx = MRI->getVRegDef(CopyUnkOffBfxReg);
+  Register UnkOffSrcReg = CopyUnkOffBfx->getOperand(1).getReg();
+  MachineInstr *CopyUnkWidthBfx = MRI->getVRegDef(CopyUnkWidthBfxReg);
+  Register UnkWidthSrcReg = CopyUnkWidthBfx->getOperand(1).getReg();
+
+  GISelKnownBits Info(*MF);
+
+  KnownBits Res1 = Info.getKnownBits(SrcReg);
+  EXPECT_EQ(0u, Res1.One.getZExtValue());
+  EXPECT_EQ(0u, Res1.Zero.getZExtValue());
+
+  KnownBits Res2 = Info.getKnownBits(ValSrcReg);
+  EXPECT_EQ(7u, Res2.One.getZExtValue());
+  EXPECT_EQ(0xfffffff8u, Res2.Zero.getZExtValue());
+
+  KnownBits Res3 = Info.getKnownBits(NegValSrcReg);
+  EXPECT_EQ(0xfffffff8u, Res3.One.getZExtValue());
+  EXPECT_EQ(7u, Res3.Zero.getZExtValue());
+
+  KnownBits Res4 = Info.getKnownBits(UnkOffSrcReg);
+  EXPECT_EQ(0u, Res4.One.getZExtValue());
+  EXPECT_EQ(0u, Res4.Zero.getZExtValue());
+
+  KnownBits Res5 = Info.getKnownBits(UnkWidthSrcReg);
+  EXPECT_EQ(0u, Res5.One.getZExtValue());
+  EXPECT_EQ(0u, Res5.Zero.getZExtValue());
+}
+
+TEST_F(AMDGPUGISelMITest, TestNumSignBitsUBFX) {
+  StringRef MIRString = "  %3:_(s32) = G_IMPLICIT_DEF\n"
+                        "  %4:_(s32) = G_CONSTANT i32 12\n"
+                        "  %5:_(s32) = G_CONSTANT i32 8\n"
+                        "  %6:_(s32) = G_UBFX %3, %4(s32), %5\n"
+                        "  %ubfx_copy_unk:_(s32) = COPY %6\n"
+                        "  %7:_(s32) = G_CONSTANT i32 28672\n"
+                        "  %8:_(s32) = G_UBFX %7, %4(s32), %5\n"
+                        "  %ubfx_copy_pos:_(s32) = COPY %8\n"
+                        "  %9:_(s32) = G_CONSTANT i32 -1\n"
+                        "  %10:_(s32) = G_UBFX %9, %4(s32), %5\n"
+                        "  %ubfx_copy_neg:_(s32) = COPY %10\n"
+                        "  %11:_(s32) = G_IMPLICIT_DEF\n"
+                        "  %12:_(s32) = G_UBFX %7, %11(s32), %5\n"
+                        "  %ubfx_copy_unk_off:_(s32) = COPY %12\n"
+                        "  %13:_(s32) = G_UBFX %7, %4(s32), %11\n"
+                        "  %ubfx_copy_unk_width:_(s32) = COPY %13\n";
+  setUp(MIRString);
+  if (!TM)
+    return;
+  Register CopyUnkBfxReg = Copies[Copies.size() - 5];
+  Register CopyPosBfxReg = Copies[Copies.size() - 4];
+  Register CopyNegBfxReg = Copies[Copies.size() - 3];
+  Register CopyUnkOffBfxReg = Copies[Copies.size() - 2];
+  Register CopyUnkWidthBfxReg = Copies[Copies.size() - 1];
+
+  GISelKnownBits Info(*MF);
+  EXPECT_EQ(24u, Info.computeNumSignBits(CopyUnkBfxReg));
+  EXPECT_EQ(29u, Info.computeNumSignBits(CopyPosBfxReg));
+  EXPECT_EQ(24u, Info.computeNumSignBits(CopyNegBfxReg));
+  EXPECT_EQ(24u, Info.computeNumSignBits(CopyUnkOffBfxReg));
+  EXPECT_EQ(29u, Info.computeNumSignBits(CopyUnkWidthBfxReg));
+}
+
+TEST_F(AMDGPUGISelMITest, TestNumSignBitsSBFX) {
+  StringRef MIRString = "  %3:_(s32) = G_CONSTANT i32 -1\n"
+                        "  %4:_(s32) = G_CONSTANT i32 8\n"
+                        "  %5:_(s32) = G_CONSTANT i32 4\n"
+                        "  %6:_(s32) = G_SBFX %3, %4(s32), %5\n"
+                        "  %sbfx_copy_neg:_(s32) = COPY %6\n"
+                        "  %7:_(s32) = G_CONSTANT i32 2047\n"
+                        "  %8:_(s32) = G_SBFX %7, %4(s32), %5\n"
+                        "  %sbfx_copy_pos:_(s32) = COPY %8\n"
+                        "  %9:_(s32) = G_CONSTANT i32 2048\n"
+                        "  %10:_(s32) = G_SBFX %9, %4(s32), %5\n"
+                        "  %sbfx_copy_hiset:_(s32) = COPY %10\n"
+                        "  %11:_(s32) = G_IMPLICIT_DEF\n"
+                        "  %12:_(s32) = G_SBFX %11, %4(s32), %5\n"
+                        "  %sbfx_copy_unk:_(s32) = COPY %12\n"
+                        "  %13:_(s32) = G_SBFX %3, %11(s32), %5\n"
+                        "  %sbfx_copy_unk_off:_(s32) = COPY %13\n";
+  setUp(MIRString);
+  if (!TM)
+    return;
+  Register CopyNegBfxReg = Copies[Copies.size() - 5];
+  Register CopyPosBfxReg = Copies[Copies.size() - 4];
+  Register CopyHiSetBfxReg = Copies[Copies.size() - 3];
+  Register CopyUnkValBfxReg = Copies[Copies.size() - 2];
+  Register CopyUnkOffBfxReg = Copies[Copies.size() - 1];
+
+  GISelKnownBits Info(*MF);
+  EXPECT_EQ(32u, Info.computeNumSignBits(CopyNegBfxReg));
+  EXPECT_EQ(29u, Info.computeNumSignBits(CopyPosBfxReg));
+  EXPECT_EQ(29u, Info.computeNumSignBits(CopyHiSetBfxReg));
+  EXPECT_EQ(1u, Info.computeNumSignBits(CopyUnkValBfxReg));
+  EXPECT_EQ(1u, Info.computeNumSignBits(CopyUnkOffBfxReg));
+}
