@@ -15,8 +15,8 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr() {
 ; GCN-NEXT:     amd_machine_version_stepping = 0
 ; GCN-NEXT:     kernel_code_entry_byte_offset = 256
 ; GCN-NEXT:     kernel_code_prefetch_byte_size = 0
-; GCN-NEXT:     granulated_workitem_vgpr_count = 7
-; GCN-NEXT:     granulated_wavefront_sgpr_count = 5
+; GCN-NEXT:     granulated_workitem_vgpr_count = 15
+; GCN-NEXT:     granulated_wavefront_sgpr_count = 12
 ; GCN-NEXT:     priority = 0
 ; GCN-NEXT:     float_mode = 240
 ; GCN-NEXT:     priv = 0
@@ -59,8 +59,8 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr() {
 ; GCN-NEXT:     gds_segment_byte_size = 0
 ; GCN-NEXT:     kernarg_segment_byte_size = 0
 ; GCN-NEXT:     workgroup_fbarrier_count = 0
-; GCN-NEXT:     wavefront_sgpr_count = 48
-; GCN-NEXT:     workitem_vgpr_count = 32
+; GCN-NEXT:     wavefront_sgpr_count = 102
+; GCN-NEXT:     workitem_vgpr_count = 64
 ; GCN-NEXT:     reserved_vgpr_first = 0
 ; GCN-NEXT:     reserved_vgpr_count = 0
 ; GCN-NEXT:     reserved_sgpr_first = 0
@@ -111,8 +111,8 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg() {
 ; GCN-NEXT:     amd_machine_version_stepping = 0
 ; GCN-NEXT:     kernel_code_entry_byte_offset = 256
 ; GCN-NEXT:     kernel_code_prefetch_byte_size = 0
-; GCN-NEXT:     granulated_workitem_vgpr_count = 7
-; GCN-NEXT:     granulated_wavefront_sgpr_count = 5
+; GCN-NEXT:     granulated_workitem_vgpr_count = 15
+; GCN-NEXT:     granulated_wavefront_sgpr_count = 12
 ; GCN-NEXT:     priority = 0
 ; GCN-NEXT:     float_mode = 240
 ; GCN-NEXT:     priv = 0
@@ -155,8 +155,8 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg() {
 ; GCN-NEXT:     gds_segment_byte_size = 0
 ; GCN-NEXT:     kernarg_segment_byte_size = 0
 ; GCN-NEXT:     workgroup_fbarrier_count = 0
-; GCN-NEXT:     wavefront_sgpr_count = 48
-; GCN-NEXT:     workitem_vgpr_count = 32
+; GCN-NEXT:     wavefront_sgpr_count = 102
+; GCN-NEXT:     workitem_vgpr_count = 64
 ; GCN-NEXT:     reserved_vgpr_first = 0
 ; GCN-NEXT:     reserved_vgpr_count = 0
 ; GCN-NEXT:     reserved_sgpr_first = 0
