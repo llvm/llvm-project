@@ -60,6 +60,8 @@ inline bool operator!=(const Target &LHS, const Architecture &RHS) {
 PlatformSet mapToPlatformSet(ArrayRef<Target> Targets);
 ArchitectureSet mapToArchitectureSet(ArrayRef<Target> Targets);
 
+std::string getTargetTripleName(const Target &Targ);
+
 raw_ostream &operator<<(raw_ostream &OS, const Target &Target);
 
 } // namespace MachO
