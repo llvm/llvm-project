@@ -413,16 +413,15 @@ define <4 x i64> @loadext_4i16_to_4i64(i16* %p0) {
 ; SSE2-NEXT:    [[P3:%.*]] = getelementptr inbounds i16, i16* [[P0]], i64 3
 ; SSE2-NEXT:    [[TMP1:%.*]] = bitcast i16* [[P0]] to <2 x i16>*
 ; SSE2-NEXT:    [[TMP2:%.*]] = load <2 x i16>, <2 x i16>* [[TMP1]], align 1
-; SSE2-NEXT:    [[I2:%.*]] = load i16, i16* [[P2]], align 1
-; SSE2-NEXT:    [[I3:%.*]] = load i16, i16* [[P3]], align 1
-; SSE2-NEXT:    [[TMP3:%.*]] = sext <2 x i16> [[TMP2]] to <2 x i64>
-; SSE2-NEXT:    [[X2:%.*]] = sext i16 [[I2]] to i64
-; SSE2-NEXT:    [[X3:%.*]] = sext i16 [[I3]] to i64
-; SSE2-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; SSE2-NEXT:    [[V11:%.*]] = shufflevector <4 x i64> undef, <4 x i64> [[TMP4]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; SSE2-NEXT:    [[V2:%.*]] = insertelement <4 x i64> [[V11]], i64 [[X2]], i32 2
-; SSE2-NEXT:    [[V3:%.*]] = insertelement <4 x i64> [[V2]], i64 [[X3]], i32 3
-; SSE2-NEXT:    ret <4 x i64> [[V3]]
+; SSE2-NEXT:    [[TMP3:%.*]] = bitcast i16* [[P2]] to <2 x i16>*
+; SSE2-NEXT:    [[TMP4:%.*]] = load <2 x i16>, <2 x i16>* [[TMP3]], align 1
+; SSE2-NEXT:    [[TMP5:%.*]] = sext <2 x i16> [[TMP2]] to <2 x i64>
+; SSE2-NEXT:    [[TMP6:%.*]] = sext <2 x i16> [[TMP4]] to <2 x i64>
+; SSE2-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; SSE2-NEXT:    [[V12:%.*]] = shufflevector <4 x i64> undef, <4 x i64> [[TMP7]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; SSE2-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[TMP6]], <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; SSE2-NEXT:    [[V31:%.*]] = shufflevector <4 x i64> [[V12]], <4 x i64> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; SSE2-NEXT:    ret <4 x i64> [[V31]]
 ;
 ; SLM-LABEL: @loadext_4i16_to_4i64(
 ; SLM-NEXT:    [[P1:%.*]] = getelementptr inbounds i16, i16* [[P0:%.*]], i64 1
