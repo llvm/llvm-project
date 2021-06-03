@@ -104,6 +104,10 @@ public:
     if (isa<FixedVectorType>(DataType) && ST->getMinRVVVectorSizeInBits() == 0)
       return false;
 
+    if (Alignment <
+        DL.getTypeStoreSize(DataType->getScalarType()).getFixedSize())
+      return false;
+
     return isLegalElementTypeForRVV(DataType->getScalarType());
   }
 
@@ -120,6 +124,10 @@ public:
 
     // Only support fixed vectors if we know the minimum vector size.
     if (isa<FixedVectorType>(DataType) && ST->getMinRVVVectorSizeInBits() == 0)
+      return false;
+
+    if (Alignment <
+        DL.getTypeStoreSize(DataType->getScalarType()).getFixedSize())
       return false;
 
     return isLegalElementTypeForRVV(DataType->getScalarType());
@@ -168,6 +176,11 @@ public:
     default:
       return false;
     }
+  }
+
+  bool enableInterleavedAccessVectorization() { return true; }
+  unsigned getMaxInterleaveFactor(unsigned VF) {
+    return ST->getMaxInterleaveFactor();
   }
 };
 

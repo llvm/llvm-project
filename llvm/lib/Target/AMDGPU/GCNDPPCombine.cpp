@@ -115,7 +115,6 @@ FunctionPass *llvm::createGCNDPPCombinePass() {
 }
 
 bool GCNDPPCombine::isShrinkable(MachineInstr &MI) const {
-  // TODO-GFX11 shrink 64bit VOPC
   unsigned Op = MI.getOpcode();
   if (!TII->isVOP3(Op)) {
     return false;
@@ -208,11 +207,11 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
 
   bool Fail = false;
   do {
-    auto *Dst = TII->getNamedOperand(OrigMI, AMDGPU::OpName::vdst);
-    assert(Dst);
-    DPPInst.add(*Dst);
-    int NumOperands = 1;
-    // For VOP3B encoding
+    int NumOperands = 0;
+    if (auto *Dst = TII->getNamedOperand(OrigMI, AMDGPU::OpName::vdst)) {
+      DPPInst.add(*Dst);
+      ++NumOperands;
+    }
     if (auto *SDst = TII->getNamedOperand(OrigMI, AMDGPU::OpName::sdst)) {
       if (TII->isOperandLegal(*DPPInst.getInstr(), NumOperands, SDst)) {
         DPPInst.add(*SDst);
@@ -617,9 +616,16 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
 
     bool IsShrinkable = isShrinkable(OrigMI);
     if (!(IsShrinkable ||
-          ((TII->isVOP3P(OrigOp) || TII->isVOP3(OrigOp)) && ST->hasVOP3DPP()) ||
+          ((TII->isVOP3P(OrigOp) || TII->isVOPC(OrigOp) ||
+            TII->isVOP3(OrigOp)) &&
+           ST->hasVOP3DPP()) ||
           TII->isVOP1(OrigOp) || TII->isVOP2(OrigOp))) {
-      LLVM_DEBUG(dbgs() << "  failed: not VOP1/2/3/3p\n");
+      LLVM_DEBUG(dbgs() << "  failed: not VOP1/2/3/3P/C\n");
+      break;
+    }
+    if (TII->isVOPC(OrigOp) &&
+        OrigMI.modifiesRegister(AMDGPU::EXEC, ST->getRegisterInfo())) {
+      LLVM_DEBUG(dbgs() << "  failed: can't combine v_cmpx\n");
       break;
     }
 

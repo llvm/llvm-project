@@ -488,10 +488,10 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
     if (isWeakDefCanBeHidden)
       isPrivateExtern = true;
 
-    return symtab->addDefined(name, isec->file, isec, value, size,
-                              sym.n_desc & N_WEAK_DEF, isPrivateExtern,
-                              sym.n_desc & N_ARM_THUMB_DEF,
-                              sym.n_desc & REFERENCED_DYNAMICALLY);
+    return symtab->addDefined(
+        name, isec->file, isec, value, size, sym.n_desc & N_WEAK_DEF,
+        isPrivateExtern, sym.n_desc & N_ARM_THUMB_DEF,
+        sym.n_desc & REFERENCED_DYNAMICALLY, sym.n_desc & N_NO_DEAD_STRIP);
   }
 
   assert(!isWeakDefCanBeHidden &&
@@ -499,7 +499,8 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
   return make<Defined>(
       name, isec->file, isec, value, size, sym.n_desc & N_WEAK_DEF,
       /*isExternal=*/false, /*isPrivateExtern=*/false,
-      sym.n_desc & N_ARM_THUMB_DEF, sym.n_desc & REFERENCED_DYNAMICALLY);
+      sym.n_desc & N_ARM_THUMB_DEF, sym.n_desc & REFERENCED_DYNAMICALLY,
+      sym.n_desc & N_NO_DEAD_STRIP);
 }
 
 // Absolute symbols are defined symbols that do not have an associated
@@ -512,13 +513,15 @@ static macho::Symbol *createAbsolute(const NList &sym, InputFile *file,
     return symtab->addDefined(name, file, nullptr, sym.n_value, /*size=*/0,
                               /*isWeakDef=*/false, sym.n_type & N_PEXT,
                               sym.n_desc & N_ARM_THUMB_DEF,
-                              /*isReferencedDynamically=*/false);
+                              /*isReferencedDynamically=*/false,
+                              sym.n_desc & N_NO_DEAD_STRIP);
   }
   return make<Defined>(name, file, nullptr, sym.n_value, /*size=*/0,
                        /*isWeakDef=*/false,
                        /*isExternal=*/false, /*isPrivateExtern=*/false,
                        sym.n_desc & N_ARM_THUMB_DEF,
-                       /*isReferencedDynamically=*/false);
+                       /*isReferencedDynamically=*/false,
+                       sym.n_desc & N_NO_DEAD_STRIP);
 }
 
 template <class NList>
@@ -614,7 +617,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       auto *nextIsec = make<InputSection>(*isec);
       nextIsec->data = isec->data.slice(symbolOffset);
       nextIsec->numRefs = 0;
-      nextIsec->canOmitFromOutput = false;
+      nextIsec->wasCoalesced = false;
       isec->data = isec->data.slice(0, symbolOffset);
 
       // By construction, the symbol will be at offset zero in the new
@@ -640,6 +643,7 @@ OpaqueFile::OpaqueFile(MemoryBufferRef mb, StringRef segName,
   isec->segname = segName.take_front(16);
   const auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   isec->data = {buf, mb.getBufferSize()};
+  isec->live = true;
   subsections.push_back({{0, isec}});
 }
 
@@ -730,11 +734,11 @@ void ObjFile::parseDebugInfo() {
 }
 
 // The path can point to either a dylib or a .tbd file.
-static Optional<DylibFile *> loadDylib(StringRef path, DylibFile *umbrella) {
+static DylibFile *loadDylib(StringRef path, DylibFile *umbrella) {
   Optional<MemoryBufferRef> mbref = readFile(path);
   if (!mbref) {
     error("could not read dylib file at " + path);
-    return {};
+    return nullptr;
   }
   return loadDylib(*mbref, umbrella);
 }
@@ -748,9 +752,8 @@ static Optional<DylibFile *> loadDylib(StringRef path, DylibFile *umbrella) {
 //
 // Re-exports can either refer to on-disk files, or to documents within .tbd
 // files.
-static Optional<DylibFile *>
-findDylib(StringRef path, DylibFile *umbrella,
-          const InterfaceFile *currentTopLevelTapi) {
+DylibFile *findDylib(StringRef path, DylibFile *umbrella,
+                     const InterfaceFile *currentTopLevelTapi) {
   if (path::is_absolute(path, path::Style::posix))
     for (StringRef root : config->systemLibraryRoots)
       if (Optional<std::string> dylibPath =
@@ -771,7 +774,7 @@ findDylib(StringRef path, DylibFile *umbrella,
   if (Optional<std::string> dylibPath = resolveDylibPath(path))
     return loadDylib(*dylibPath, umbrella);
 
-  return {};
+  return nullptr;
 }
 
 // If a re-exported dylib is public (lives in /usr/lib or
@@ -796,12 +799,11 @@ static bool isImplicitlyLinked(StringRef path) {
 
 void loadReexport(StringRef path, DylibFile *umbrella,
                   const InterfaceFile *currentTopLevelTapi) {
-  Optional<DylibFile *> reexport =
-      findDylib(path, umbrella, currentTopLevelTapi);
+  DylibFile *reexport = findDylib(path, umbrella, currentTopLevelTapi);
   if (!reexport)
     error("unable to locate re-export with install name " + path);
   else if (isImplicitlyLinked(path))
-    inputFiles.insert(*reexport);
+    inputFiles.insert(reexport);
 }
 
 DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
@@ -828,11 +830,16 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
     return;
   }
 
+  if (config->printEachFile)
+    message(toString(this));
+
+  deadStrippable = hdr->flags & MH_DEAD_STRIPPABLE_DYLIB;
+
   if (!checkCompatibility(this))
     return;
 
   // Initialize symbols.
-  DylibFile *exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
+  exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
   if (const load_command *cmd = findCommand(hdr, LC_DYLD_INFO_ONLY)) {
     auto *c = reinterpret_cast<const dyld_info_command *>(cmd);
     parseTrie(buf + c->export_off, c->export_size,
@@ -846,9 +853,12 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
     error("LC_DYLD_INFO_ONLY not found in " + toString(this));
     return;
   }
+}
 
-  const uint8_t *p =
-      reinterpret_cast<const uint8_t *>(hdr) + target->headerSize;
+void DylibFile::parseLoadCommands(MemoryBufferRef mb, DylibFile *umbrella) {
+  auto *hdr = reinterpret_cast<const mach_header *>(mb.getBufferStart());
+  const uint8_t *p = reinterpret_cast<const uint8_t *>(mb.getBufferStart()) +
+                     target->headerSize;
   for (uint32_t i = 0, n = hdr->ncmds; i < n; ++i) {
     auto *cmd = reinterpret_cast<const load_command *>(p);
     p += cmd->cmdsize;
@@ -869,13 +879,20 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
       const auto *c = reinterpret_cast<const dylib_command *>(cmd);
       StringRef dylibPath =
           reinterpret_cast<const char *>(c) + read32le(&c->dylib.name);
-      Optional<DylibFile *> dylib = findDylib(dylibPath, umbrella, nullptr);
+      DylibFile *dylib = findDylib(dylibPath, umbrella, nullptr);
       if (!dylib)
         error(Twine("unable to locate library '") + dylibPath +
               "' loaded from '" + toString(this) + "' for -flat_namespace");
     }
   }
 }
+
+// Some versions of XCode ship with .tbd files that don't have the right
+// platform settings.
+static constexpr std::array<StringRef, 3> skipPlatformChecks{
+    "/usr/lib/system/libsystem_kernel.dylib",
+    "/usr/lib/system/libsystem_platform.dylib",
+    "/usr/lib/system/libsystem_pthread.dylib"};
 
 DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
                      bool isBundleLoader)
@@ -890,12 +907,8 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   compatibilityVersion = interface.getCompatibilityVersion().rawValue();
   currentVersion = interface.getCurrentVersion().rawValue();
 
-  // Some versions of XCode ship with .tbd files that don't have the right
-  // platform settings.
-  static constexpr std::array<StringRef, 3> skipPlatformChecks{
-      "/usr/lib/system/libsystem_kernel.dylib",
-      "/usr/lib/system/libsystem_platform.dylib",
-      "/usr/lib/system/libsystem_pthread.dylib"};
+  if (config->printEachFile)
+    message(toString(this));
 
   if (!is_contained(skipPlatformChecks, dylibName) &&
       !is_contained(interface.targets(), config->platformInfo.target)) {
@@ -904,7 +917,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
     return;
   }
 
-  DylibFile *exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
+  exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
   auto addSymbol = [&](const Twine &name) -> void {
     symbols.push_back(symtab->addDylib(saver.save(name), exportingFile,
                                        /*isWeakDef=*/false,
@@ -934,10 +947,11 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
       break;
     }
   }
+}
 
+void DylibFile::parseReexports(const llvm::MachO::InterfaceFile &interface) {
   const InterfaceFile *topLevel =
       interface.getParent() == nullptr ? &interface : interface.getParent();
-
   for (InterfaceFileRef intfRef : interface.reexportedLibraries()) {
     InterfaceFile::const_target_range targets = intfRef.targets();
     if (is_contained(skipPlatformChecks, intfRef.getInstallName()) ||
@@ -1017,7 +1031,8 @@ static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,
   return symtab->addDefined(name, &file, /*isec=*/nullptr, /*value=*/0,
                             /*size=*/0, objSym.isWeak(), isPrivateExtern,
                             /*isThumb=*/false,
-                            /*isReferencedDynamically=*/false);
+                            /*isReferencedDynamically=*/false,
+                            /*noDeadStrip=*/false);
 }
 
 BitcodeFile::BitcodeFile(MemoryBufferRef mbref)

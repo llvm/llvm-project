@@ -15,7 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Reducer/Tester.h"
-
+#include "mlir/IR/Verifier.h"
 #include "llvm/Support/ToolOutputFile.h"
 
 using namespace mlir;
@@ -25,6 +25,12 @@ Tester::Tester(StringRef scriptName, ArrayRef<std::string> scriptArgs)
 
 std::pair<Tester::Interestingness, size_t>
 Tester::isInteresting(ModuleOp module) const {
+  // The reduced module should always be vaild, or we may end up retaining the
+  // error message by an invalid case. Besides, an invalid module may not be
+  // able to print properly.
+  if (failed(verify(module)))
+    return std::make_pair(Interestingness::False, /*size=*/0);
+
   SmallString<128> filepath;
   int fd;
 
@@ -50,7 +56,6 @@ Tester::isInteresting(ModuleOp module) const {
 /// true if the interesting behavior is present in the test case or false
 /// otherwise.
 Tester::Interestingness Tester::isInteresting(StringRef testCase) const {
-
   std::vector<StringRef> testerArgs;
   testerArgs.push_back(testCase);
 

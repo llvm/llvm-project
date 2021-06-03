@@ -1,11 +1,7 @@
-; RUN: llc %s --dwarf-version=4 --basic-block-sections=none -filetype=obj -o %t
-; RUN: llvm-dwarfdump %t | FileCheck %s
-; RUN: llc %s --dwarf-version=4 --basic-block-sections=all -filetype=obj -o %t
-; RUN: llvm-dwarfdump %t | FileCheck %s --check-prefix=CHECK --check-prefix=SECTIONS
-; RUN: llc %s --dwarf-version=5 --basic-block-sections=none -filetype=obj -o %t
-; RUN: llvm-dwarfdump %t | FileCheck %s
-; RUN: llc %s --dwarf-version=5 --basic-block-sections=all -filetype=obj -o %t
-; RUN: llvm-dwarfdump %t | FileCheck %s --check-prefix=CHECK --check-prefix=SECTIONS
+; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=4 --basic-block-sections=none -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
+; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=4 --basic-block-sections=all -filetype=obj -o -  | llvm-dwarfdump - | FileCheck %s --check-prefix=CHECK --check-prefix=SECTIONS
+; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=5 --basic-block-sections=none -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
+; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=5 --basic-block-sections=all -filetype=obj -o -  | llvm-dwarfdump - | FileCheck %s --check-prefix=CHECK --check-prefix=SECTIONS
 
 ; CHECK:         DW_AT_location
 ; CHECK-NEXT:    [0x{{[0-9a-f]+}}, 0x{{[0-9a-f]+}}): DW_OP_constu 0x9d, DW_OP_stack_value

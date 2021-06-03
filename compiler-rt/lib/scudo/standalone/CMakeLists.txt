@@ -52,6 +52,7 @@ set(SCUDO_HEADERS
   checksum.h
   chunk.h
   combined.h
+  common.h
   flags_parser.h
   flags.h
   fuchsia.h
@@ -61,6 +62,7 @@ set(SCUDO_HEADERS
   local_cache.h
   memtag.h
   mutex.h
+  options.h
   platform.h
   primary32.h
   primary64.h
@@ -69,6 +71,7 @@ set(SCUDO_HEADERS
   report.h
   secondary.h
   size_class_map.h
+  stack_depot.h
   stats.h
   string_utils.h
   tsd_exclusive.h

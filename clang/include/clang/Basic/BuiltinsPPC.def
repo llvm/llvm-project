@@ -29,6 +29,23 @@
 #define UNALIASED_CUSTOM_BUILTIN(ID, TYPES, ACCUMULATE) \
    CUSTOM_BUILTIN(ID, ID, TYPES, ACCUMULATE)
 
+// builtins for compatibility with the XL compiler
+BUILTIN(__builtin_ppc_popcntb, "ULiULi", "")
+BUILTIN(__builtin_ppc_eieio, "v", "")
+BUILTIN(__builtin_ppc_iospace_eieio, "v", "")
+BUILTIN(__builtin_ppc_isync, "v", "")
+BUILTIN(__builtin_ppc_lwsync, "v", "")
+BUILTIN(__builtin_ppc_iospace_lwsync, "v", "")
+BUILTIN(__builtin_ppc_sync, "v", "")
+BUILTIN(__builtin_ppc_iospace_sync, "v", "")
+BUILTIN(__builtin_ppc_dcbfl, "vvC*", "")
+BUILTIN(__builtin_ppc_dcbflp, "vvC*", "")
+BUILTIN(__builtin_ppc_dcbst, "vvC*", "")
+BUILTIN(__builtin_ppc_dcbt, "vv*", "")
+BUILTIN(__builtin_ppc_dcbtst, "vv*", "")
+BUILTIN(__builtin_ppc_dcbz, "vv*", "")
+BUILTIN(__builtin_ppc_icbt, "vv*", "")
+
 BUILTIN(__builtin_ppc_get_timebase, "ULLi", "n")
 
 // This is just a placeholder, the types and attributes are wrong.

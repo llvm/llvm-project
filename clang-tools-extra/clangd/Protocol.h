@@ -908,7 +908,7 @@ bool fromJSON(const llvm::json::Value &, CodeActionParams &, llvm::json::Path);
 
 struct WorkspaceEdit {
   /// Holds changes to existing resources.
-  llvm::Optional<std::map<std::string, std::vector<TextEdit>>> changes;
+  std::map<std::string, std::vector<TextEdit>> changes;
 
   /// Note: "documentChanges" is not currently used because currently there is
   /// no support for versioned edits.
@@ -1500,9 +1500,14 @@ enum class InlayHintKind {
   /// which shows the name of the corresponding parameter.
   ParameterHint,
 
+  /// The hint corresponds to information about a deduced type.
+  /// An example of a type hint is a hint in this position:
+  ///    auto var ^ = expr;
+  /// which shows the deduced type of the variable.
+  TypeHint,
+
   /// Other ideas for hints that are not currently implemented:
   ///
-  /// * Type hints, showing deduced types.
   /// * Chaining hints, showing the types of intermediate expressions
   ///   in a chain of function calls.
   /// * Hints indicating implicit conversions or implicit constructor calls.

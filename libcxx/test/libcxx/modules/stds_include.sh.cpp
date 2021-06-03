@@ -28,9 +28,9 @@
 //        the same modules caches were reused across standard dialects.
 // RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++03 -DINVALIDATE_CACHE_CXX03 %s
 // RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++11 -DINVALIDATE_CACHE_CXX11 %s
-// RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++14 -DINVALIDATE_CACHE_CKK14 %s
+// RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++14 -DINVALIDATE_CACHE_CXX14 %s
 // RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++17 -DINVALIDATE_CACHE_CXX17 %s
-// RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++2a -DINVALIDATE_CACHE_CXX2A %s
+// RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++2a -DINVALIDATE_CACHE_CXX20 %s
 
 #include <vector>
 

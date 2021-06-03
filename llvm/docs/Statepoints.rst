@@ -430,6 +430,13 @@ strategy-specific lowering is not present, and all GC transitions are emitted as
 as single no-op before and after the call instruction. These no-ops are often
 removed by the backend during dead machine instruction elimination.
 
+Before the abstract machine model is lowered to the explicit statepoint model
+of relocations by the :ref:`RewriteStatepointsForGC` pass it is possible for
+any derived pointer to get its base pointer and offset from the base pointer
+by using the ``gc.get.pointer.base`` and the ``gc.get.pointer.offset``
+intrinsics respectively. These intrinsics are inlined by the
+:ref:`RewriteStatepointsForGC` pass and must not be used after this pass.
+
 
 .. _statepoint-stackmap-format:
 
@@ -620,12 +627,16 @@ RewriteStatepointsForGC intrinsic lowering
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 As a part of lowering to the explicit model of relocations
-RewriteStatepointsForGC performs GC specific lowering for
-'``llvm.memcpy.element.unordered.atomic.*``',
-'``llvm.memmove.element.unordered.atomic.*``' intrinsics.
+RewriteStatepointsForGC performs GC specific lowering for the following
+intrinsics:
 
-There are two possible lowerings for these copy operations: GC leaf lowering
-and GC parseable lowering. If a call is explicitly marked with
+* ``gc.get.pointer.base``
+* ``gc.get.pointer.offset``
+* ``llvm.memcpy.element.unordered.atomic.*``
+* ``llvm.memmove.element.unordered.atomic.*``
+
+There are two possible lowerings for the memcpy and memmove operations:
+GC leaf lowering and GC parseable lowering. If a call is explicitly marked with
 "gc-leaf-function" attribute the call is lowered to a GC leaf call to
 '``__llvm_memcpy_element_unordered_atomic_*``' or
 '``__llvm_memmove_element_unordered_atomic_*``' symbol. Such a call can not

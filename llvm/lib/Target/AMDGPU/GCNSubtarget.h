@@ -147,6 +147,7 @@ protected:
   bool HasDot5Insts;
   bool HasDot6Insts;
   bool HasDot7Insts;
+  bool HasDot8Insts;
   bool HasMAIInsts;
   bool HasPkFmacF16Inst;
   bool HasAtomicFaddRtnInsts;
@@ -700,6 +701,10 @@ public:
 
   bool hasDot7Insts() const {
     return HasDot7Insts;
+  }
+
+  bool hasDot8Insts() const {
+    return HasDot8Insts;
   }
 
   bool hasMAIInsts() const {

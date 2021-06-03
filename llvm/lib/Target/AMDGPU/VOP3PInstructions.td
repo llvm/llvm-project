@@ -357,7 +357,7 @@ defm V_DOT8_I32_I4  : VOP3PInst<"v_dot8_i32_i4",
 
 } // End SubtargetPredicate = HasDot1Insts
 
-let SubtargetPredicate = isGFX11Plus  in {
+let SubtargetPredicate = HasDot8Insts  in {
 
 // TODO-GFX11 considers inputs as signed if imod neg bits are set
 // needs implementation for codegen
@@ -365,8 +365,11 @@ defm V_DOT4_I32_IU8  : VOP3PInst<"v_dot4_i32_iu8",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, null_frag, 1>;
 defm V_DOT8_I32_IU4  : VOP3PInst<"v_dot8_i32_iu4",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, null_frag, 1>;
+defm V_DOT2_F32_BF16 : VOP3PInst<"v_dot2_f32_bf16",
+  VOP3P_Profile<VOP_F32_V2I16_V2I16_F32, VOP3_REGULAR, /*HasDPP*/ 1>,
+  null_frag, 1>;
 
-} // End SubtargetPredicate = isGFX11Plus
+} // End SubtargetPredicate = HasDot8Insts
 
 } // End let IsDOT = 1
 
@@ -608,9 +611,9 @@ defm V_DOT4_I32_IU8              : VOP3P_Real_gfx11 <0x16>;
 def : MnemonicAlias<"v_dot4_i32_i8", "v_dot4_i32_iu8">, Requires<[isGFX11Plus]>;
 defm V_DOT8_I32_IU4              : VOP3P_Real_gfx11 <0x18>;
 def : MnemonicAlias<"v_dot8_i32_i4", "v_dot8_i32_iu4">, Requires<[isGFX11Plus]>;
+defm V_DOT2_F32_BF16             : VOP3P_Real_gfx11 <0x1a>;
 
 // TODO-GFX11 new instructions
-/*defm V_DOT2_F32_BF16           : VOP3P_Real_gfx11 <0x1a>;*/
 /*defm V_WMMA_F32_16X16X16_F16   : VOP3P_Real_gfx11 <0x040>;*/
 /*defm V_WMMA_F32_16X16X16_BF16  : VOP3P_Real_gfx11 <0x041>;*/
 /*defm V_WMMA_F16_16X16X16_F16   : VOP3P_Real_gfx11 <0x042>;*/

@@ -198,7 +198,6 @@ multiclass VOP2bInst <string opName,
           def _dpp  : VOP2_DPP_Pseudo <opName, P>;
       } // End Uses = !if(useSGPRInput, [VCC, EXEC], [EXEC]), Defs = [VCC]
 
-      // TODO-GFX11 why is the _e64 def not using and defing vcc and exec
       def _e64 : VOP3InstBase <opName, P, node, 0, 1>,
                  Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
 

@@ -155,3 +155,24 @@ ParseResult mlir::parseOperandsOrIntegersSizesList(
   return parseOperandsOrIntegersImpl<ShapedType::kDynamicSize>(parser, values,
                                                                integers);
 }
+
+bool mlir::detail::sameOffsetsSizesAndStrides(
+    OffsetSizeAndStrideOpInterface a, OffsetSizeAndStrideOpInterface b,
+    llvm::function_ref<bool(OpFoldResult, OpFoldResult)> cmp) {
+  if (a.static_offsets().size() != b.static_offsets().size())
+    return false;
+  if (a.static_sizes().size() != b.static_sizes().size())
+    return false;
+  if (a.static_strides().size() != b.static_strides().size())
+    return false;
+  for (auto it : llvm::zip(a.getMixedOffsets(), b.getMixedOffsets()))
+    if (!cmp(std::get<0>(it), std::get<1>(it)))
+      return false;
+  for (auto it : llvm::zip(a.getMixedSizes(), b.getMixedSizes()))
+    if (!cmp(std::get<0>(it), std::get<1>(it)))
+      return false;
+  for (auto it : llvm::zip(a.getMixedStrides(), b.getMixedStrides()))
+    if (!cmp(std::get<0>(it), std::get<1>(it)))
+      return false;
+  return true;
+}

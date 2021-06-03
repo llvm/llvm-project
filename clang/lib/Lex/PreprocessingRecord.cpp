@@ -411,8 +411,25 @@ void PreprocessingRecord::Ifdef(SourceLocation Loc, const Token &MacroNameTok,
                       MacroNameTok.getLocation());
 }
 
+void PreprocessingRecord::Elifdef(SourceLocation Loc, const Token &MacroNameTok,
+                                  const MacroDefinition &MD) {
+  // This is not actually a macro expansion but record it as a macro reference.
+  if (MD)
+    addMacroExpansion(MacroNameTok, MD.getMacroInfo(),
+                      MacroNameTok.getLocation());
+}
+
 void PreprocessingRecord::Ifndef(SourceLocation Loc, const Token &MacroNameTok,
                                  const MacroDefinition &MD) {
+  // This is not actually a macro expansion but record it as a macro reference.
+  if (MD)
+    addMacroExpansion(MacroNameTok, MD.getMacroInfo(),
+                      MacroNameTok.getLocation());
+}
+
+void PreprocessingRecord::Elifndef(SourceLocation Loc,
+                                   const Token &MacroNameTok,
+                                   const MacroDefinition &MD) {
   // This is not actually a macro expansion but record it as a macro reference.
   if (MD)
     addMacroExpansion(MacroNameTok, MD.getMacroInfo(),

@@ -10,8 +10,8 @@ entry:
 ; CHECK-P7: stfs 1,
 ; CHECK-P7: lwa 3,
 ; CHECK: xscvdpspn [[CONVREG:[0-9]+]], 1
-; CHECK: xxsldwi [[SHIFTREG:[0-9]+]], [[CONVREG]], [[CONVREG]], 3
-; CHECK: mffprwz 3, [[SHIFTREG]]
+; CHECK-NOT: xxsldwi
+; CHECK: mffprwz 3, [[CONVREG]]
 }
 
 define i64 @f64toi64(double %a) {
@@ -50,8 +50,8 @@ entry:
 ; CHECK-P7: stfs 1,
 ; CHECK-P7: lwz 3,
 ; CHECK: xscvdpspn [[CONVREG:[0-9]+]], 1
-; CHECK: xxsldwi [[SHIFTREG:[0-9]+]], [[CONVREG]], [[CONVREG]], 3
-; CHECK: mffprwz 3, [[SHIFTREG]]
+; CHECK-NOT: xxsldwi
+; CHECK: mffprwz 3, [[CONVREG]]
 }
 
 define i64 @f64toi64u(double %a) {

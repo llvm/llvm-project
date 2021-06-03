@@ -14,6 +14,7 @@
 #define MLIR_TRANSFORMS_PASSES
 
 include "mlir/Pass/PassBase.td"
+include "mlir/Rewrite/PassUtil.td"
 
 def AffineLoopFusion : FunctionPass<"affine-loop-fusion"> {
   let summary = "Fuse affine loop nests";
@@ -372,7 +373,7 @@ def Canonicalizer : Pass<"canonicalize"> {
     Option<"maxIterations", "max-iterations", "unsigned",
            /*default=*/"10",
            "Seed the worklist in general top-down order">
-  ];
+  ] # RewritePassUtils.options;
 }
 
 def CSE : Pass<"cse"> {

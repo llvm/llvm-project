@@ -174,7 +174,8 @@ def bitfield_extract_from_sext_inreg : GICombineRule<
     [{ return matchBitfieldExtractFromSExtInReg(*${root}, MRI, ${info}); }]),
   (apply [{ return Helper.applyBuildFn(*${root}, ${info}); }])>;
 
-def form_bitfield_extract : GICombineGroup<[bitfield_extract_from_sext_inreg]>;
+def form_bitfield_extract : GICombineGroup<[bitfield_extract_from_sext_inreg,
+                                            bitfield_extract_from_and]>;
 
 def lower_vector_fcmp : GICombineRule<
   (defs root:$root),

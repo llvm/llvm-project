@@ -2,14 +2,10 @@
 ;; function and is emitted as DW_AT_const_value.  Even with basic block
 ;; sections, this can be done as the entire function is represented as ranges.
 
-; RUN: llc %s --dwarf-version=4 --basic-block-sections=none -filetype=obj -o %t
-; RUN: llvm-dwarfdump %t | FileCheck %s
-; RUN: llc %s --dwarf-version=4 --basic-block-sections=all -filetype=obj -o %t
-; RUN: llvm-dwarfdump %t | FileCheck %s
-; RUN: llc %s --dwarf-version=5 --basic-block-sections=none -filetype=obj -o %t
-; RUN: llvm-dwarfdump %t | FileCheck %s
-; RUN: llc %s --dwarf-version=5 --basic-block-sections=all -filetype=obj -o %t
-; RUN: llvm-dwarfdump %t | FileCheck %s
+; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=4 --basic-block-sections=none -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
+; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=4 --basic-block-sections=all -filetype=obj -o -  | llvm-dwarfdump - | FileCheck %s
+; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=5 --basic-block-sections=none -filetype=obj -o - | llvm-dwarfdump - | FileCheck %s
+; RUN: llc %s -mtriple=x86_64-unknown-linux-gnu --dwarf-version=5 --basic-block-sections=all -filetype=obj -o -  | llvm-dwarfdump - | FileCheck %s
 
 ; CHECK:      DW_AT_const_value (157)
 ; CHECK-NEXT: DW_AT_name ("buflen")

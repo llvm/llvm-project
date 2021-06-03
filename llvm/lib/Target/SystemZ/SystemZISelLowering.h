@@ -433,6 +433,10 @@ public:
   }
   bool isCheapToSpeculateCtlz() const override { return true; }
   bool preferZeroCompareBranch() const override { return true; }
+  bool hasBitPreservingFPLogic(EVT VT) const override {
+    EVT ScVT = VT.getScalarType();
+    return ScVT == MVT::f32 || ScVT == MVT::f64 || ScVT == MVT::f128;
+  }
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &,
                          EVT) const override;
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
@@ -569,7 +573,7 @@ public:
                                            unsigned Depth) const override;
 
   ISD::NodeType getExtendForAtomicOps() const override {
-    return ISD::ZERO_EXTEND;
+    return ISD::ANY_EXTEND;
   }
   ISD::NodeType getExtendForAtomicCmpSwapArg() const override {
     return ISD::ZERO_EXTEND;

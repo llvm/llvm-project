@@ -8,13 +8,8 @@ declare <2 x i16> @llvm.bitreverse.v2i16(<2 x i16>) readnone
 define <2 x i16> @f(<2 x i16> %a) {
 ; CHECK-LABEL: f:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    rbit w8, w8
-; CHECK-NEXT:    mov w9, v0.s[1]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    rbit w8, w9
-; CHECK-NEXT:    mov v0.s[1], w8
+; CHECK-NEXT:    rev32 v0.8b, v0.8b
+; CHECK-NEXT:    rbit v0.8b, v0.8b
 ; CHECK-NEXT:    ushr v0.2s, v0.2s, #16
 ; CHECK-NEXT:    ret
   %b = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> %a)
@@ -118,14 +113,8 @@ declare <2 x i32> @llvm.bitreverse.v2i32(<2 x i32>) readnone
 define <2 x i32> @g_vec_2x32(<2 x i32> %a) {
 ; CHECK-LABEL: g_vec_2x32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    rbit w8, w8
-; CHECK-NEXT:    mov w9, v0.s[1]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    rbit w8, w9
-; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    rev32 v0.8b, v0.8b
+; CHECK-NEXT:    rbit v0.8b, v0.8b
 ; CHECK-NEXT:    ret
 
   %b = call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> %a)
@@ -137,18 +126,8 @@ declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>) readnone
 define <4 x i32> @g_vec_4x32(<4 x i32> %a) {
 ; CHECK-LABEL: g_vec_4x32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov w10, s0
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    rbit w10, w10
-; CHECK-NEXT:    mov w9, v0.s[2]
-; CHECK-NEXT:    mov w11, v0.s[3]
-; CHECK-NEXT:    fmov s0, w10
-; CHECK-NEXT:    rbit w8, w8
-; CHECK-NEXT:    rbit w9, w9
-; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    mov v0.s[2], w9
-; CHECK-NEXT:    rbit w8, w11
-; CHECK-NEXT:    mov v0.s[3], w8
+; CHECK-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-NEXT:    rbit v0.16b, v0.16b
 ; CHECK-NEXT:    ret
   %b = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> %a)
   ret <4 x i32> %b
@@ -159,10 +138,8 @@ declare <1 x i64> @llvm.bitreverse.v1i64(<1 x i64>) readnone
 define <1 x i64> @g_vec_1x64(<1 x i64> %a) {
 ; CHECK-LABEL: g_vec_1x64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    rbit x8, x8
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    rev64 v0.8b, v0.8b
+; CHECK-NEXT:    rbit v0.8b, v0.8b
 ; CHECK-NEXT:    ret
   %b = call <1 x i64> @llvm.bitreverse.v1i64(<1 x i64> %a)
   ret <1 x i64> %b
@@ -173,12 +150,8 @@ declare <2 x i64> @llvm.bitreverse.v2i64(<2 x i64>) readnone
 define <2 x i64> @g_vec_2x64(<2 x i64> %a) {
 ; CHECK-LABEL: g_vec_2x64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    rbit x8, x8
-; CHECK-NEXT:    mov x9, v0.d[1]
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    rbit x8, x9
-; CHECK-NEXT:    mov v0.d[1], x8
+; CHECK-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-NEXT:    rbit v0.16b, v0.16b
 ; CHECK-NEXT:    ret
   %b = call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> %a)
   ret <2 x i64> %b

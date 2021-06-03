@@ -42,6 +42,7 @@ bool FunctionSamples::ProfileIsProbeBased = false;
 bool FunctionSamples::ProfileIsCS = false;
 bool FunctionSamples::UseMD5 = false;
 bool FunctionSamples::HasUniqSuffix = true;
+bool FunctionSamples::ProfileIsFS = false;
 } // namespace sampleprof
 } // namespace llvm
 
@@ -232,9 +233,15 @@ const FunctionSamples *FunctionSamples::findFunctionSamples(
 
   const DILocation *PrevDIL = DIL;
   for (DIL = DIL->getInlinedAt(); DIL; DIL = DIL->getInlinedAt()) {
-    S.push_back(std::make_pair(
-        LineLocation(getOffset(DIL), DIL->getBaseDiscriminator()),
-        PrevDIL->getScope()->getSubprogram()->getLinkageName()));
+    unsigned Discriminator;
+    if (ProfileIsFS)
+      Discriminator = DIL->getDiscriminator();
+    else
+      Discriminator = DIL->getBaseDiscriminator();
+
+    S.push_back(
+        std::make_pair(LineLocation(getOffset(DIL), Discriminator),
+                       PrevDIL->getScope()->getSubprogram()->getLinkageName()));
     PrevDIL = DIL;
   }
   if (S.size() == 0)

@@ -11,23 +11,6 @@
 
 using namespace mlir;
 
-/// Given a SMLoc corresponding to an identifier location, return a location
-/// representing the full range of the identifier.
-static llvm::SMRange convertIdLocToRange(llvm::SMLoc loc) {
-  if (!loc.isValid())
-    return llvm::SMRange();
-
-  // Return if the given character is a valid identifier character.
-  auto isIdentifierChar = [](char c) {
-    return isalnum(c) || c == '$' || c == '.' || c == '_' || c == '-';
-  };
-
-  const char *curPtr = loc.getPointer();
-  while (isIdentifierChar(*(++curPtr)))
-    continue;
-  return llvm::SMRange(loc, llvm::SMLoc::getFromPointer(curPtr));
-}
-
 //===----------------------------------------------------------------------===//
 // AsmParserState::Impl
 //===----------------------------------------------------------------------===//
@@ -72,6 +55,23 @@ auto AsmParserState::getBlockDef(Block *block) const
 
 auto AsmParserState::getOpDefs() const -> iterator_range<OperationDefIterator> {
   return llvm::make_pointee_range(llvm::makeArrayRef(impl->operations));
+}
+
+/// Returns (heuristically) the range of an identifier given a SMLoc
+/// corresponding to the start of an identifier location.
+llvm::SMRange AsmParserState::convertIdLocToRange(llvm::SMLoc loc) {
+  if (!loc.isValid())
+    return llvm::SMRange();
+
+  // Return if the given character is a valid identifier character.
+  auto isIdentifierChar = [](char c) {
+    return isalnum(c) || c == '$' || c == '.' || c == '_' || c == '-';
+  };
+
+  const char *curPtr = loc.getPointer();
+  while (isIdentifierChar(*(++curPtr)))
+    continue;
+  return llvm::SMRange(loc, llvm::SMLoc::getFromPointer(curPtr));
 }
 
 //===----------------------------------------------------------------------===//

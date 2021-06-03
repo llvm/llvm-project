@@ -31,7 +31,29 @@ uint64_t Symbol::getStubVA() const { return in.stubs->getVA(stubsIndex); }
 uint64_t Symbol::getGotVA() const { return in.got->getVA(gotIndex); }
 uint64_t Symbol::getTlvVA() const { return in.tlvPointers->getVA(gotIndex); }
 
+bool Symbol::isLive() const {
+  if (isa<DylibSymbol>(this) || isa<Undefined>(this))
+    return used;
+
+  if (auto *d = dyn_cast<Defined>(this)) {
+    // Non-absolute symbols might be alive because their section is
+    // no_dead_strip or live_support. In that case, the section will know
+    // that it's live but `used` might be false. Non-absolute symbols always
+    // have to use the section's `live` bit as source of truth.
+    return d->isAbsolute() ? used : d->isec->live;
+  }
+
+  assert(!isa<CommonSymbol>(this) &&
+         "replaceCommonSymbols() runs before dead code stripping, and isLive() "
+         "should only be called after dead code stripping");
+
+  // Assume any other kind of symbol is live.
+  return true;
+}
+
 uint64_t Defined::getVA() const {
+  assert(isLive() && "this should only be called for live symbols");
+
   if (isAbsolute())
     return value;
 

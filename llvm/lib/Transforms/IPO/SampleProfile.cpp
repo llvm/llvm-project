@@ -1769,6 +1769,7 @@ bool SampleProfileLoader::doInitialization(Module &M,
   // set module before reading the profile so reader may be able to only
   // read the function profiles which are used by the current module.
   Reader->setModule(&M);
+  Reader->setBaseDiscriminatorMask();
   if (std::error_code EC = Reader->read()) {
     std::string Msg = "profile reading failed: " + EC.message();
     Ctx.diagnose(DiagnosticInfoSampleProfile(Filename, Msg));

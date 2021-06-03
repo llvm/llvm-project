@@ -77,6 +77,25 @@ public:
                                    MacroNameTok.getLocation(),
                                    *MD.getMacroInfo());
   }
+
+  using PPCallbacks::Elifdef;
+  using PPCallbacks::Elifndef;
+  void Elifdef(SourceLocation Loc, const Token &MacroNameTok,
+               const MacroDefinition &MD) override {
+    if (!MD.getMacroInfo()) // Ignore non-existent macro.
+      return;
+    IndexCtx->handleMacroReference(*MacroNameTok.getIdentifierInfo(),
+                                   MacroNameTok.getLocation(),
+                                   *MD.getMacroInfo());
+  }
+  void Elifndef(SourceLocation Loc, const Token &MacroNameTok,
+                const MacroDefinition &MD) override {
+    if (!MD.getMacroInfo()) // Ignore non-existent macro.
+      return;
+    IndexCtx->handleMacroReference(*MacroNameTok.getIdentifierInfo(),
+                                   MacroNameTok.getLocation(),
+                                   *MD.getMacroInfo());
+  }
 };
 
 class IndexASTConsumer final : public ASTConsumer {

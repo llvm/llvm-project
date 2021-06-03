@@ -55,7 +55,7 @@ entry:
 }
 
 
-define swiftcc void @my_async_function(i8* %async.ctxt, %async.task* %task, %async.actor* %actor) !dbg !1 {
+define swiftcc void @my_async_function(i8* swiftasync %async.ctxt, %async.task* %task, %async.actor* %actor) !dbg !1 {
 entry:
   %tmp = alloca { i64, i64 }, align 8
   %proj.1 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %tmp, i64 0, i32 0
@@ -119,7 +119,7 @@ define void @my_async_function_pa(i8* %ctxt, %async.task* %task, %async.actor* %
 ; CHECK: @my_async_function_pa_fp = constant <{ i32, i32 }> <{ {{.*}}, i32 176 }
 ; CHECK: @my_async_function2_fp = constant <{ i32, i32 }> <{ {{.*}}, i32 176 }
 
-; CHECK-LABEL: define swiftcc void @my_async_function(i8* %async.ctxt, %async.task* %task, %async.actor* %actor)
+; CHECK-LABEL: define swiftcc void @my_async_function(i8* swiftasync %async.ctxt, %async.task* %task, %async.actor* %actor)
 ; CHECK-SAME: !dbg ![[SP1:[0-9]+]] {
 ; CHECK: entry:
 ; CHECK:   [[FRAMEPTR:%.*]] = getelementptr inbounds i8, i8* %async.ctxt, i64 128
@@ -149,7 +149,7 @@ define void @my_async_function_pa(i8* %ctxt, %async.task* %task, %async.actor* %
 ; CHECK:   ret void
 ; CHECK: }
 
-; CHECK-LABEL: define internal swiftcc void @my_async_function.resume.0(i8* nocapture readonly %0, i8* %1, i8* nocapture readnone %2)
+; CHECK-LABEL: define internal swiftcc void @my_async_function.resume.0(i8* nocapture readonly swiftasync %0, i8* %1, i8* nocapture readnone %2)
 ; CHECK-SAME: !dbg ![[SP2:[0-9]+]] {
 ; CHECK: entryresume.0:
 ; CHECK:   [[CALLER_CONTEXT_ADDR:%.*]] = bitcast i8* %0 to i8**
@@ -187,7 +187,7 @@ define void @my_async_function_pa(i8* %ctxt, %async.task* %task, %async.actor* %
      i32 128    ; Initial async context size without space for frame
   }>
 
-define swiftcc void @my_async_function2(%async.task* %task, %async.actor* %actor, i8* %async.ctxt) "frame-pointer"="all" {
+define swiftcc void @my_async_function2(%async.task* %task, %async.actor* %actor, i8* %async.ctxt) "frame-pointer"="all" !dbg !6 {
 entry:
 
   %id = call token @llvm.coro.id.async(i32 128, i32 16, i32 2, i8* bitcast (<{i32, i32}>* @my_async_function2_fp to i8*))
@@ -210,7 +210,7 @@ entry:
                                                   i8* %resume.func_ptr,
                                                   i8* %resume_proj_fun,
                                                   void (i8*, i8*, %async.task*, %async.actor*)* @my_async_function.my_other_async_function_fp.apply,
-                                                  i8* %callee, i8* %callee_context, %async.task* %task, %async.actor *%actor)
+                                                  i8* %callee, i8* %callee_context, %async.task* %task, %async.actor *%actor), !dbg !9
 
   %continuation_task_arg = extractvalue {i8*, i8*, i8*} %res, 0
   %task.2 =  bitcast i8* %continuation_task_arg to %async.task*
@@ -241,6 +241,7 @@ entry:
 
 ; CHECK-LABEL: define swiftcc void @my_async_function2(%async.task* %task, %async.actor* %actor, i8* %async.ctxt)
 ; CHECK-SAME: #[[FRAMEPOINTER:[0-9]+]]
+; CHECK-SAME: !dbg ![[SP3:[0-9]+]]
 ; CHECK: store i8* %async.ctxt,
 ; CHECK: store %async.actor* %actor,
 ; CHECK: store %async.task* %task,
@@ -253,6 +254,7 @@ entry:
 
 ; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.0(i8* %0, i8* nocapture readnone %1, i8* nocapture readonly %2)
 ; CHECK-SAME: #[[FRAMEPOINTER]]
+; CHECK-SAME: !dbg ![[SP4:[0-9]+]]
 ; CHECK: [[CALLEE_CTXT_ADDR:%.*]] = bitcast i8* %2 to i8**
 ; CHECK: [[CALLEE_CTXT:%.*]] = load i8*, i8** [[CALLEE_CTXT_ADDR]]
 ; CHECK: [[CALLEE_CTXT_SPILL_ADDR:%.*]] = getelementptr inbounds i8, i8* [[CALLEE_CTXT]], i64 152
@@ -554,3 +556,16 @@ declare void @llvm.coro.async.size.replace(i8*, i8*)
 !4 = !DISubroutineType(types: !{})
 !5 = !DILocation(line: 2, column: 0, scope: !1)
 
+; CHECK: ![[SP3]] = distinct !DISubprogram(name: "my_async_function2",
+; CHECK-SAME:                              linkageName: "my_async_function2",
+; CHECK-SAME:                              scopeLine: 1
+!6 = distinct !DISubprogram(name: "my_async_function2",
+                            linkageName: "my_async_function2",
+                            scope: !2, file: !3, line: 1, type: !4,
+                            scopeLine: 1, spFlags: DISPFlagDefinition, unit: !2)
+; CHECK: ![[SP4]] = distinct !DISubprogram(name: "my_async_function2",
+; CHECK-SAME:                              linkageName: "my_async_function2.resume.0",
+; CHECK-SAME:                              scopeLine: 1
+!7 = !DILexicalBlockFile(scope: !6, file: !8, discriminator: 0)
+!8 = !DIFile(filename: "/tmp/fake.cpp", directory: "/")
+!9 = !DILocation(line: 2, column: 0, scope: !7)

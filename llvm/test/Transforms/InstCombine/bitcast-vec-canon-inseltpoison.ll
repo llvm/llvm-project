@@ -51,7 +51,7 @@ define x86_mmx @e(<1 x i64> %y) {
 define <1 x i64> @f(x86_mmx %y) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast x86_mmx [[Y:%.*]] to i64
-; CHECK-NEXT:    [[C:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i32 0
+; CHECK-NEXT:    [[C:%.*]] = insertelement <1 x i64> poison, i64 [[TMP1]], i32 0
 ; CHECK-NEXT:    ret <1 x i64> [[C]]
 ;
   %c = bitcast x86_mmx %y to <1 x i64>

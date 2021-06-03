@@ -201,6 +201,14 @@ static cl::opt<bool> ClCombinePointerLabelsOnStore(
              "storing in memory."),
     cl::Hidden, cl::init(false));
 
+// Controls whether the pass propagates labels of offsets in GEP instructions.
+static cl::opt<bool> ClCombineOffsetLabelsOnGEP(
+    "dfsan-combine-offset-labels-on-gep",
+    cl::desc(
+        "Combine the label of the offset with the label of the pointer when "
+        "doing pointer arithmetic."),
+    cl::Hidden, cl::init(true));
+
 static cl::opt<bool> ClDebugNonzeroLabels(
     "dfsan-debug-nonzero-labels",
     cl::desc("Insert calls to __dfsan_nonzero_label on observing a parameter, "
@@ -771,6 +779,7 @@ public:
 
   void visitUnaryOperator(UnaryOperator &UO);
   void visitBinaryOperator(BinaryOperator &BO);
+  void visitBitCastInst(BitCastInst &BCI);
   void visitCastInst(CastInst &CI);
   void visitCmpInst(CmpInst &CI);
   void visitGetElementPtrInst(GetElementPtrInst &GEPI);
@@ -2766,6 +2775,19 @@ void DFSanVisitor::visitBinaryOperator(BinaryOperator &BO) {
   visitInstOperands(BO);
 }
 
+void DFSanVisitor::visitBitCastInst(BitCastInst &BCI) {
+  if (DFSF.DFS.getInstrumentedABI() == DataFlowSanitizer::IA_TLS) {
+    // Special case: if this is the bitcast (there is exactly 1 allowed) between
+    // a musttail call and a ret, don't instrument. New instructions are not
+    // allowed after a musttail call.
+    if (auto *CI = dyn_cast<CallInst>(BCI.getOperand(0)))
+      if (CI->isMustTailCall())
+        return;
+  }
+  // TODO: handle musttail call returns for IA_Args.
+  visitInstOperands(BCI);
+}
+
 void DFSanVisitor::visitCastInst(CastInst &CI) { visitInstOperands(CI); }
 
 void DFSanVisitor::visitCmpInst(CmpInst &CI) {
@@ -2778,7 +2800,17 @@ void DFSanVisitor::visitCmpInst(CmpInst &CI) {
 }
 
 void DFSanVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
-  visitInstOperands(GEPI);
+  if (ClCombineOffsetLabelsOnGEP) {
+    visitInstOperands(GEPI);
+    return;
+  }
+
+  // Only propagate shadow/origin of base pointer value but ignore those of
+  // offset operands.
+  Value *BasePointer = GEPI.getPointerOperand();
+  DFSF.setShadow(&GEPI, DFSF.getShadow(BasePointer));
+  if (DFSF.DFS.shouldTrackOrigins())
+    DFSF.setOrigin(&GEPI, DFSF.getOrigin(BasePointer));
 }
 
 void DFSanVisitor::visitExtractElementInst(ExtractElementInst &I) {
@@ -2950,10 +2982,25 @@ void DFSanVisitor::visitMemTransferInst(MemTransferInst &I) {
   }
 }
 
+static bool isAMustTailRetVal(Value *RetVal) {
+  // Tail call may have a bitcast between return.
+  if (auto *I = dyn_cast<BitCastInst>(RetVal)) {
+    RetVal = I->getOperand(0);
+  }
+  if (auto *I = dyn_cast<CallInst>(RetVal)) {
+    return I->isMustTailCall();
+  }
+  return false;
+}
+
 void DFSanVisitor::visitReturnInst(ReturnInst &RI) {
   if (!DFSF.IsNativeABI && RI.getReturnValue()) {
     switch (DFSF.IA) {
     case DataFlowSanitizer::IA_TLS: {
+      // Don't emit the instrumentation for musttail call returns.
+      if (isAMustTailRetVal(RI.getReturnValue()))
+        return;
+
       Value *S = DFSF.getShadow(RI.getReturnValue());
       IRBuilder<> IRB(&RI);
       Type *RT = DFSF.F->getFunctionType()->getReturnType();
@@ -2972,6 +3019,8 @@ void DFSanVisitor::visitReturnInst(ReturnInst &RI) {
       break;
     }
     case DataFlowSanitizer::IA_Args: {
+      // TODO: handle musttail call returns for IA_Args.
+
       IRBuilder<> IRB(&RI);
       Type *RT = DFSF.F->getFunctionType()->getReturnType();
       Value *InsVal =
@@ -3247,6 +3296,10 @@ void DFSanVisitor::visitCallBase(CallBase &CB) {
     }
 
     if (DFSF.DFS.getInstrumentedABI() == DataFlowSanitizer::IA_TLS) {
+      // Don't emit the epilogue for musttail call returns.
+      if (isa<CallInst>(CB) && cast<CallInst>(CB).isMustTailCall())
+        return;
+
       // Loads the return value shadow.
       IRBuilder<> NextIRB(Next);
       const DataLayout &DL = getDataLayout();
@@ -3275,6 +3328,8 @@ void DFSanVisitor::visitCallBase(CallBase &CB) {
   // Do all instrumentation for IA_Args down here to defer tampering with the
   // CFG in a way that SplitEdge may be able to detect.
   if (DFSF.DFS.getInstrumentedABI() == DataFlowSanitizer::IA_Args) {
+    // TODO: handle musttail call returns for IA_Args.
+
     FunctionType *NewFT = DFSF.DFS.getArgsFunctionType(FT);
     Value *Func =
         IRB.CreateBitCast(CB.getCalledOperand(), PointerType::getUnqual(NewFT));

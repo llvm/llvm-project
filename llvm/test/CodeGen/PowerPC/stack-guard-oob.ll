@@ -1,7 +1,10 @@
 ; RUN: llc -mtriple=powerpc64le -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff -O0 < %s | FileCheck %s --check-prefix=AIX
+; RUN: llc -mtriple=powerpc-ibm-aix-xcoff -O0 < %s | FileCheck %s --check-prefix=AIX
 
 ; CHECK-LABEL: in_bounds:
 ; CHECK-NOT: __stack_chk_guard
+; AIX-NOT: __ssp_canary_word
 define i32 @in_bounds() #0 {
   %var = alloca i32, align 4
   store i32 0, i32* %var, align 4
@@ -12,6 +15,7 @@ define i32 @in_bounds() #0 {
 
 ; CHECK-LABEL: constant_out_of_bounds:
 ; CHECK: __stack_chk_guard
+; AIX: __ssp_canary_word
 define i32 @constant_out_of_bounds() #0 {
   %var = alloca i32, align 4
   store i32 0, i32* %var, align 4
@@ -22,6 +26,7 @@ define i32 @constant_out_of_bounds() #0 {
 
 ; CHECK-LABEL: nonconstant_out_of_bounds:
 ; CHECK: __stack_chk_guard
+; AIX: __ssp_canary_word
 define i32 @nonconstant_out_of_bounds(i32 %n) #0 {
   %var = alloca i32, align 4
   store i32 0, i32* %var, align 4
@@ -32,6 +37,7 @@ define i32 @nonconstant_out_of_bounds(i32 %n) #0 {
 
 ; CHECK-LABEL: phi_before_gep_in_bounds:
 ; CHECK-NOT: __stack_chk_guard
+; AIX-NOT: __ssp_canary_word
 define i32 @phi_before_gep_in_bounds(i32 %k) #0 {
 entry:
   %var1 = alloca i32, align 4
@@ -53,6 +59,7 @@ then:
 
 ; CHECK-LABEL: phi_before_gep_constant_out_of_bounds:
 ; CHECK: __stack_chk_guard
+; AIX: __ssp_canary_word
 define i32 @phi_before_gep_constant_out_of_bounds(i32 %k) #0 {
 entry:
   %var1 = alloca i32, align 4
@@ -74,6 +81,7 @@ then:
 
 ; CHECK-LABEL: phi_before_gep_nonconstant_out_of_bounds:
 ; CHECK: __stack_chk_guard
+; AIX: __ssp_canary_word
 define i32 @phi_before_gep_nonconstant_out_of_bounds(i32 %k, i32 %n) #0 {
 entry:
   %var1 = alloca i32, align 4
@@ -95,6 +103,7 @@ then:
 
 ; CHECK-LABEL: phi_after_gep_in_bounds:
 ; CHECK-NOT: __stack_chk_guard
+; AIX-NOT: __ssp_canary_word
 define i32 @phi_after_gep_in_bounds(i32 %k) #0 {
 entry:
   %var1 = alloca i32, align 4
@@ -120,6 +129,7 @@ then:
 
 ; CHECK-LABEL: phi_after_gep_constant_out_of_bounds_a:
 ; CHECK: __stack_chk_guard
+; AIX: __ssp_canary_word
 define i32 @phi_after_gep_constant_out_of_bounds_a(i32 %k) #0 {
 entry:
   %var1 = alloca i32, align 4
@@ -145,6 +155,7 @@ then:
 
 ; CHECK-LABEL: phi_after_gep_constant_out_of_bounds_b:
 ; CHECK: __stack_chk_guard
+; AIX: __ssp_canary_word
 define i32 @phi_after_gep_constant_out_of_bounds_b(i32 %k) #0 {
 entry:
   %var1 = alloca i32, align 4
@@ -170,6 +181,7 @@ then:
 
 ; CHECK-LABEL: phi_different_types_a:
 ; CHECK: __stack_chk_guard
+; AIX: __ssp_canary_word
 define i64 @phi_different_types_a(i32 %k) #0 {
 entry:
   %var1 = alloca i64, align 4
@@ -191,6 +203,7 @@ then:
 
 ; CHECK-LABEL: phi_different_types_b:
 ; CHECK: __stack_chk_guard
+; AIX: __ssp_canary_word
 define i64 @phi_different_types_b(i32 %k) #0 {
 entry:
   %var1 = alloca i32, align 4
@@ -212,6 +225,7 @@ then:
 
 ; CHECK-LABEL: phi_after_gep_nonconstant_out_of_bounds_a:
 ; CHECK: __stack_chk_guard
+; AIX: __ssp_canary_word
 define i32 @phi_after_gep_nonconstant_out_of_bounds_a(i32 %k, i32 %n) #0 {
 entry:
   %var1 = alloca i32, align 4
@@ -237,6 +251,7 @@ then:
 
 ; CHECK-LABEL: phi_after_gep_nonconstant_out_of_bounds_b:
 ; CHECK: __stack_chk_guard
+; AIX: __ssp_canary_word
 define i32 @phi_after_gep_nonconstant_out_of_bounds_b(i32 %k, i32 %n) #0 {
 entry:
   %var1 = alloca i32, align 4
@@ -265,6 +280,7 @@ then:
 
 ; CHECK-LABEL: struct_in_bounds:
 ; CHECK-NOT: __stack_chk_guard
+; AIX-NOT: __ssp_canary_word
 define void @struct_in_bounds() #0 {
   %var = alloca %struct.outer, align 4
   %outergep = getelementptr inbounds %struct.outer, %struct.outer* %var, i32 0, i32 1
@@ -275,6 +291,7 @@ define void @struct_in_bounds() #0 {
 
 ; CHECK-LABEL: struct_constant_out_of_bounds_a:
 ; CHECK: __stack_chk_guard
+; AIX: __ssp_canary_word
 define void @struct_constant_out_of_bounds_a() #0 {
   %var = alloca %struct.outer, align 4
   %outergep = getelementptr inbounds %struct.outer, %struct.outer* %var, i32 1, i32 0
@@ -287,6 +304,7 @@ define void @struct_constant_out_of_bounds_a() #0 {
 ; Here the offset is out-of-bounds of the addressed struct.inner member, but
 ; still within bounds of the outer struct so no stack guard is needed.
 ; CHECK-NOT: __stack_chk_guard
+; AIX-NOT: __ssp_canary_word
 define void @struct_constant_out_of_bounds_b() #0 {
   %var = alloca %struct.outer, align 4
   %outergep = getelementptr inbounds %struct.outer, %struct.outer* %var, i32 0, i32 0
@@ -298,6 +316,7 @@ define void @struct_constant_out_of_bounds_b() #0 {
 ; CHECK-LABEL: struct_constant_out_of_bounds_c:
 ; Here we are out-of-bounds of both the inner and outer struct.
 ; CHECK: __stack_chk_guard
+; AIX: __ssp_canary_word
 define void @struct_constant_out_of_bounds_c() #0 {
   %var = alloca %struct.outer, align 4
   %outergep = getelementptr inbounds %struct.outer, %struct.outer* %var, i32 0, i32 1
@@ -308,6 +327,7 @@ define void @struct_constant_out_of_bounds_c() #0 {
 
 ; CHECK-LABEL: struct_nonconstant_out_of_bounds_a:
 ; CHECK: __stack_chk_guard
+; AIX: __ssp_canary_word
 define void @struct_nonconstant_out_of_bounds_a(i32 %n) #0 {
   %var = alloca %struct.outer, align 4
   %outergep = getelementptr inbounds %struct.outer, %struct.outer* %var, i32 %n, i32 0
@@ -318,6 +338,7 @@ define void @struct_nonconstant_out_of_bounds_a(i32 %n) #0 {
 
 ; CHECK-LABEL: struct_nonconstant_out_of_bounds_b:
 ; CHECK: __stack_chk_guard
+; AIX: __ssp_canary_word
 define void @struct_nonconstant_out_of_bounds_b(i32 %n) #0 {
   %var = alloca %struct.outer, align 4
   %outergep = getelementptr inbounds %struct.outer, %struct.outer* %var, i32 0, i32 0
@@ -328,6 +349,7 @@ define void @struct_nonconstant_out_of_bounds_b(i32 %n) #0 {
 
 ; CHECK-LABEL: bitcast_smaller_load
 ; CHECK-NOT: __stack_chk_guard
+; AIX-NOT: __ssp_canary_word
 define i32 @bitcast_smaller_load() #0 {
   %var = alloca i64, align 4
   store i64 0, i64* %var, align 4
@@ -338,6 +360,7 @@ define i32 @bitcast_smaller_load() #0 {
 
 ; CHECK-LABEL: bitcast_same_size_load
 ; CHECK-NOT: __stack_chk_guard
+; AIX-NOT: __ssp_canary_word
 define i32 @bitcast_same_size_load() #0 {
   %var = alloca i64, align 4
   store i64 0, i64* %var, align 4
@@ -349,6 +372,7 @@ define i32 @bitcast_same_size_load() #0 {
 
 ; CHECK-LABEL: bitcast_larger_load
 ; CHECK: __stack_chk_guard
+; AIX: __ssp_canary_word
 define i64 @bitcast_larger_load() #0 {
   %var = alloca i32, align 4
   store i32 0, i32* %var, align 4
@@ -359,6 +383,7 @@ define i64 @bitcast_larger_load() #0 {
 
 ; CHECK-LABEL: bitcast_larger_store
 ; CHECK: __stack_chk_guard
+; AIX: __ssp_canary_word
 define i32 @bitcast_larger_store() #0 {
   %var = alloca i32, align 4
   %bitcast = bitcast i32* %var to i64*
@@ -369,6 +394,7 @@ define i32 @bitcast_larger_store() #0 {
 
 ; CHECK-LABEL: bitcast_larger_cmpxchg
 ; CHECK: __stack_chk_guard
+; AIX: __ssp_canary_word
 define i64 @bitcast_larger_cmpxchg(i64 %desired, i64 %new) #0 {
   %var = alloca i32, align 4
   %bitcast = bitcast i32* %var to i64*
@@ -379,6 +405,7 @@ define i64 @bitcast_larger_cmpxchg(i64 %desired, i64 %new) #0 {
 
 ; CHECK-LABEL: bitcast_larger_atomic_rmw
 ; CHECK: __stack_chk_guard
+; AIX: __ssp_canary_word
 define i64 @bitcast_larger_atomic_rmw() #0 {
   %var = alloca i32, align 4
   %bitcast = bitcast i32* %var to i64*
@@ -390,6 +417,7 @@ define i64 @bitcast_larger_atomic_rmw() #0 {
 
 ; CHECK-LABEL: bitcast_overlap
 ; CHECK: __stack_chk_guard
+; AIX: __ssp_canary_word
 define i32 @bitcast_overlap() #0 {
   %var = alloca i32, align 4
   %bitcast = bitcast i32* %var to %struct.packed*
@@ -402,6 +430,7 @@ define i32 @bitcast_overlap() #0 {
 
 ; CHECK-LABEL: multi_dimensional_array
 ; CHECK: __stack_chk_guard
+; AIX: __ssp_canary_word
 define i32 @multi_dimensional_array() #0 {
   %var = alloca %struct.multi_dimensional, align 4
   %gep1 = getelementptr inbounds %struct.multi_dimensional, %struct.multi_dimensional* %var, i32 0, i32 0

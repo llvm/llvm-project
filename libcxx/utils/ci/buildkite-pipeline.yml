@@ -374,6 +374,17 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
+  - label: "32 bit"
+    command: "libcxx/utils/ci/run-buildbot generic-32bit"
+    artifact_paths:
+      - "**/test-results.xml"
+    agents:
+      queue: "libcxx-builders"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+
   - label: "MacOS C++20"
     command: "libcxx/utils/ci/run-buildbot generic-cxx20"
     artifact_paths:

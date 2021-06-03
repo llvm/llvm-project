@@ -181,16 +181,14 @@ template <class T, class Allocator, class Predicate>
 */
 
 #include <__config>
-
-#include <memory>
-#include <limits>
+#include <__debug>
+#include <algorithm>
 #include <initializer_list>
 #include <iterator>
-#include <algorithm>
+#include <limits>
+#include <memory>
 #include <type_traits>
 #include <version>
-
-#include <__debug>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

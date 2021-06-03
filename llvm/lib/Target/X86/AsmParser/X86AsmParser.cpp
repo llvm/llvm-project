@@ -4776,31 +4776,27 @@ bool X86AsmParser::parseDirectiveFPOProc(SMLoc L) {
     return true;
   if (!isUIntN(32, ParamsSize))
     return Parser.TokError("parameters size out of range");
-  if (Parser.parseEOL("unexpected tokens"))
-    return addErrorSuffix(" in '.cv_fpo_proc' directive");
+  if (parseEOL())
+    return true;
   MCSymbol *ProcSym = getContext().getOrCreateSymbol(ProcName);
   return getTargetStreamer().emitFPOProc(ProcSym, ParamsSize, L);
 }
 
 // .cv_fpo_setframe ebp
 bool X86AsmParser::parseDirectiveFPOSetFrame(SMLoc L) {
-  MCAsmParser &Parser = getParser();
   unsigned Reg;
   SMLoc DummyLoc;
-  if (ParseRegister(Reg, DummyLoc, DummyLoc) ||
-      Parser.parseEOL("unexpected tokens"))
-    return addErrorSuffix(" in '.cv_fpo_setframe' directive");
+  if (ParseRegister(Reg, DummyLoc, DummyLoc) || parseEOL())
+    return true;
   return getTargetStreamer().emitFPOSetFrame(Reg, L);
 }
 
 // .cv_fpo_pushreg ebx
 bool X86AsmParser::parseDirectiveFPOPushReg(SMLoc L) {
-  MCAsmParser &Parser = getParser();
   unsigned Reg;
   SMLoc DummyLoc;
-  if (ParseRegister(Reg, DummyLoc, DummyLoc) ||
-      Parser.parseEOL("unexpected tokens"))
-    return addErrorSuffix(" in '.cv_fpo_pushreg' directive");
+  if (ParseRegister(Reg, DummyLoc, DummyLoc) || parseEOL())
+    return true;
   return getTargetStreamer().emitFPOPushReg(Reg, L);
 }
 
@@ -4808,9 +4804,8 @@ bool X86AsmParser::parseDirectiveFPOPushReg(SMLoc L) {
 bool X86AsmParser::parseDirectiveFPOStackAlloc(SMLoc L) {
   MCAsmParser &Parser = getParser();
   int64_t Offset;
-  if (Parser.parseIntToken(Offset, "expected offset") ||
-      Parser.parseEOL("unexpected tokens"))
-    return addErrorSuffix(" in '.cv_fpo_stackalloc' directive");
+  if (Parser.parseIntToken(Offset, "expected offset") || parseEOL())
+    return true;
   return getTargetStreamer().emitFPOStackAlloc(Offset, L);
 }
 
@@ -4818,25 +4813,24 @@ bool X86AsmParser::parseDirectiveFPOStackAlloc(SMLoc L) {
 bool X86AsmParser::parseDirectiveFPOStackAlign(SMLoc L) {
   MCAsmParser &Parser = getParser();
   int64_t Offset;
-  if (Parser.parseIntToken(Offset, "expected offset") ||
-      Parser.parseEOL("unexpected tokens"))
-    return addErrorSuffix(" in '.cv_fpo_stackalign' directive");
+  if (Parser.parseIntToken(Offset, "expected offset") || parseEOL())
+    return true;
   return getTargetStreamer().emitFPOStackAlign(Offset, L);
 }
 
 // .cv_fpo_endprologue
 bool X86AsmParser::parseDirectiveFPOEndPrologue(SMLoc L) {
   MCAsmParser &Parser = getParser();
-  if (Parser.parseEOL("unexpected tokens"))
-    return addErrorSuffix(" in '.cv_fpo_endprologue' directive");
+  if (Parser.parseEOL())
+    return true;
   return getTargetStreamer().emitFPOEndPrologue(L);
 }
 
 // .cv_fpo_endproc
 bool X86AsmParser::parseDirectiveFPOEndProc(SMLoc L) {
   MCAsmParser &Parser = getParser();
-  if (Parser.parseEOL("unexpected tokens"))
-    return addErrorSuffix(" in '.cv_fpo_endproc' directive");
+  if (Parser.parseEOL())
+    return true;
   return getTargetStreamer().emitFPOEndProc(L);
 }
 

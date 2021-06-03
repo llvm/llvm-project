@@ -356,6 +356,8 @@ class ProcessAPITestCase(TestBase):
         self.assertNotEqual(
             process_info.GetProcessID(), lldb.LLDB_INVALID_PROCESS_ID,
             "Process ID is valid")
+        triple = process_info.GetTriple()
+        self.assertIsNotNone(triple, "Process has a triple")
 
         # Additional process info varies by platform, so just check that
         # whatever info was retrieved is consistent and nothing blows up.

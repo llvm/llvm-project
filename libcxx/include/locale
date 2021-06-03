@@ -188,21 +188,21 @@ template <class charT> class messages_byname;
 */
 
 #include <__config>
-#include <__locale>
 #include <__debug>
+#include <__locale>
 #include <algorithm>
-#include <memory>
-#include <ios>
-#include <streambuf>
-#include <iterator>
-#include <limits>
-#include <version>
 #ifndef __APPLE__
-#include <cstdarg>
+# include <cstdarg>
 #endif
+#include <cstdio>
 #include <cstdlib>
 #include <ctime>
-#include <cstdio>
+#include <ios>
+#include <iterator>
+#include <limits>
+#include <memory>
+#include <streambuf>
+#include <version>
 
 #if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 // Most unix variants have catopen.  These are the specific ones that don't.
@@ -1458,10 +1458,12 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob,
     char __fmt[6] = {'%', 0};
     const char* __len = "l";
     this->__format_int(__fmt+1, __len, true, __iob.flags());
-    const unsigned __nbuf = (numeric_limits<long>::digits / 3)
-                          + ((numeric_limits<long>::digits % 3) != 0)
-                          + ((__iob.flags() & ios_base::showbase) != 0)
-                          + 2;
+    // Worst case is octal, with showbase enabled. Note that octal is always
+    // printed as an unsigned value.
+    const unsigned __nbuf = (numeric_limits<unsigned long>::digits / 3)          // 1 char per 3 bits
+                            + ((numeric_limits<unsigned long>::digits % 3) != 0) // round up
+                            + ((__iob.flags() & ios_base::showbase) != 0)        // base prefix
+                            + 1;                                                 // terminating null character
     char __nar[__nbuf];
     int __nc = __libcpp_snprintf_l(__nar, sizeof(__nar), _LIBCPP_GET_C_LOCALE, __fmt, __v);
     char* __ne = __nar + __nc;
@@ -1485,10 +1487,12 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob,
     char __fmt[8] = {'%', 0};
     const char* __len = "ll";
     this->__format_int(__fmt+1, __len, true, __iob.flags());
-    const unsigned __nbuf = (numeric_limits<long long>::digits / 3)
-                          + ((numeric_limits<long long>::digits % 3) != 0)
-                          + ((__iob.flags() & ios_base::showbase) != 0)
-                          + 2;
+    // Worst case is octal, with showbase enabled. Note that octal is always
+    // printed as an unsigned value.
+    const unsigned __nbuf = (numeric_limits<unsigned long long>::digits / 3)          // 1 char per 3 bits
+                            + ((numeric_limits<unsigned long long>::digits % 3) != 0) // round up
+                            + ((__iob.flags() & ios_base::showbase) != 0)             // base prefix
+                            + 1;                                                      // terminating null character
     char __nar[__nbuf];
     int __nc = __libcpp_snprintf_l(__nar, sizeof(__nar), _LIBCPP_GET_C_LOCALE, __fmt, __v);
     char* __ne = __nar + __nc;
@@ -1512,10 +1516,11 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob,
     char __fmt[6] = {'%', 0};
     const char* __len = "l";
     this->__format_int(__fmt+1, __len, false, __iob.flags());
-    const unsigned __nbuf = (numeric_limits<unsigned long>::digits / 3)
-                          + ((numeric_limits<unsigned long>::digits % 3) != 0)
-                          + ((__iob.flags() & ios_base::showbase) != 0)
-                          + 1;
+    // Worst case is octal, with showbase enabled.
+    const unsigned __nbuf = (numeric_limits<unsigned long>::digits / 3)          // 1 char per 3 bits
+                            + ((numeric_limits<unsigned long>::digits % 3) != 0) // round up
+                            + ((__iob.flags() & ios_base::showbase) != 0)        // base prefix
+                            + 1;                                                 // terminating null character
     char __nar[__nbuf];
     int __nc = __libcpp_snprintf_l(__nar, sizeof(__nar), _LIBCPP_GET_C_LOCALE, __fmt, __v);
     char* __ne = __nar + __nc;
@@ -1539,10 +1544,11 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob,
     char __fmt[8] = {'%', 0};
     const char* __len = "ll";
     this->__format_int(__fmt+1, __len, false, __iob.flags());
-    const unsigned __nbuf = (numeric_limits<unsigned long long>::digits / 3)
-                          + ((numeric_limits<unsigned long long>::digits % 3) != 0)
-                          + ((__iob.flags() & ios_base::showbase) != 0)
-                          + 1;
+    // Worst case is octal, with showbase enabled.
+    const unsigned __nbuf = (numeric_limits<unsigned long long>::digits / 3)          // 1 char per 3 bits
+                            + ((numeric_limits<unsigned long long>::digits % 3) != 0) // round up
+                            + ((__iob.flags() & ios_base::showbase) != 0)             // base prefix
+                            + 1;                                                      // terminating null character
     char __nar[__nbuf];
     int __nc = __libcpp_snprintf_l(__nar, sizeof(__nar), _LIBCPP_GET_C_LOCALE, __fmt, __v);
     char* __ne = __nar + __nc;

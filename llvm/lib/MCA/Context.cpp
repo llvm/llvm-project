@@ -39,13 +39,13 @@ Context::createDefaultPipeline(const PipelineOptions &Opts, SourceMgr &SrcMgr) {
   auto RCU = std::make_unique<RetireControlUnit>(SM);
   auto PRF = std::make_unique<RegisterFile>(SM, MRI, Opts.RegisterFileSize);
   auto LSU = std::make_unique<LSUnit>(SM, Opts.LoadQueueSize,
-                                       Opts.StoreQueueSize, Opts.AssumeNoAlias);
+                                      Opts.StoreQueueSize, Opts.AssumeNoAlias);
   auto HWS = std::make_unique<Scheduler>(SM, *LSU);
 
   // Create the pipeline stages.
   auto Fetch = std::make_unique<EntryStage>(SrcMgr);
-  auto Dispatch = std::make_unique<DispatchStage>(STI, MRI, Opts.DispatchWidth,
-                                                   *RCU, *PRF);
+  auto Dispatch =
+      std::make_unique<DispatchStage>(STI, MRI, Opts.DispatchWidth, *RCU, *PRF);
   auto Execute =
       std::make_unique<ExecuteStage>(*HWS, Opts.EnableBottleneckAnalysis);
   auto Retire = std::make_unique<RetireStage>(*RCU, *PRF, *LSU);
@@ -73,15 +73,17 @@ Context::createInOrderPipeline(const PipelineOptions &Opts, SourceMgr &SrcMgr) {
   const MCSchedModel &SM = STI.getSchedModel();
   auto PRF = std::make_unique<RegisterFile>(SM, MRI, Opts.RegisterFileSize);
 
+  // Create the pipeline stages.
   auto Entry = std::make_unique<EntryStage>(SrcMgr);
-  auto InOrderIssue = std::make_unique<InOrderIssueStage>(*PRF, SM, STI);
-
+  auto InOrderIssue = std::make_unique<InOrderIssueStage>(STI, *PRF);
   auto StagePipeline = std::make_unique<Pipeline>();
-  StagePipeline->appendStage(std::move(Entry));
-  StagePipeline->appendStage(std::move(InOrderIssue));
 
+  // Pass the ownership of all the hardware units to this Context.
   addHardwareUnit(std::move(PRF));
 
+  // Build the pipeline.
+  StagePipeline->appendStage(std::move(Entry));
+  StagePipeline->appendStage(std::move(InOrderIssue));
   return StagePipeline;
 }
 

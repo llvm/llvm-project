@@ -1179,13 +1179,6 @@ void CastOperation::CheckStaticCast() {
       return;
   }
 
-  if (DestType->getAs<MatrixType>() ||
-      SrcExpr.get()->getType()->getAs<MatrixType>()) {
-    if (Self.CheckMatrixCast(OpRange, DestType, SrcExpr.get()->getType(), Kind))
-      SrcExpr = ExprError();
-    return;
-  }
-
   // This test is outside everything else because it's the only case where
   // a non-lvalue-reference target type does not lead to decay.
   // C++ 5.2.9p4: Any expression can be explicitly converted to type "cv void".
@@ -1451,6 +1444,14 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
       if (SrcPointer->getPointeeType()->getAs<RecordType>() &&
           DestPointer->getPointeeType()->getAs<RecordType>())
        msg = diag::err_bad_cxx_cast_unrelated_class;
+
+  if (SrcType->isMatrixType() && DestType->isMatrixType()) {
+    if (Self.CheckMatrixCast(OpRange, DestType, SrcType, Kind)) {
+      SrcExpr = ExprError();
+      return TC_Failed;
+    }
+    return TC_Success;
+  }
 
   // We tried everything. Everything! Nothing works! :-(
   return TC_NotApplicable;
@@ -2663,13 +2664,6 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
     SrcExpr = Self.DefaultFunctionArrayLvalueConversion(SrcExpr.get());
     if (SrcExpr.isInvalid())
       return;
-  }
-
-  if (DestType->getAs<MatrixType>() ||
-      SrcExpr.get()->getType()->getAs<MatrixType>()) {
-    if (Self.CheckMatrixCast(OpRange, DestType, SrcExpr.get()->getType(), Kind))
-      SrcExpr = ExprError();
-    return;
   }
 
   // AltiVec vector initialization with a single literal.

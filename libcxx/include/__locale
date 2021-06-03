@@ -10,8 +10,8 @@
 #ifndef _LIBCPP___LOCALE
 #define _LIBCPP___LOCALE
 
-#include <__config>
 #include <__availability>
+#include <__config>
 #include <string>
 #include <memory>
 #include <utility>

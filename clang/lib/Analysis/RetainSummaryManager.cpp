@@ -145,13 +145,19 @@ static bool isSubclass(const Decl *D,
   return !(match(SubclassM, *D, D->getASTContext()).empty());
 }
 
-static bool isOSObjectSubclass(const Decl *D) {
-  return D && isSubclass(D, "OSMetaClassBase");
+static bool isExactClass(const Decl *D, StringRef ClassName) {
+  using namespace ast_matchers;
+  DeclarationMatcher sameClassM =
+      cxxRecordDecl(hasName(std::string(ClassName)));
+  return !(match(sameClassM, *D, D->getASTContext()).empty());
 }
 
-static bool isOSObjectDynamicCast(StringRef S) {
-  return S == "safeMetaCast";
+static bool isOSObjectSubclass(const Decl *D) {
+  return D && isSubclass(D, "OSMetaClassBase") &&
+         !isExactClass(D, "OSMetaClass");
 }
+
+static bool isOSObjectDynamicCast(StringRef S) { return S == "safeMetaCast"; }
 
 static bool isOSObjectRequiredCast(StringRef S) {
   return S == "requiredMetaCast";

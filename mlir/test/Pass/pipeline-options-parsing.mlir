@@ -15,4 +15,4 @@
 
 // CHECK_1: test-options-pass{list=1,2,3,4,5 string=some_value string-list=a,b,c,d}
 // CHECK_2: test-options-pass{list=1 string= string-list=a,b}
-// CHECK_3: module(func(test-options-pass{list=3 string= string-list=}), func(test-options-pass{list=1,2,3,4 string= string-list=}))
+// CHECK_3: module(func(test-options-pass{list=3 string= }), func(test-options-pass{list=1,2,3,4 string= }))

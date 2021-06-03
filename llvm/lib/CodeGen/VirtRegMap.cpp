@@ -181,6 +181,7 @@ class VirtRegRewriter : public MachineFunctionPass {
   SlotIndexes *Indexes;
   LiveIntervals *LIS;
   VirtRegMap *VRM;
+  LiveDebugVariables *DebugVars;
   DenseSet<Register> RewriteRegs;
   bool ClearVirtRegs;
 
@@ -238,6 +239,10 @@ void VirtRegRewriter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LiveStacks>();
   AU.addPreserved<LiveStacks>();
   AU.addRequired<VirtRegMap>();
+
+  if (!ClearVirtRegs)
+    AU.addPreserved<LiveDebugVariables>();
+
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -249,6 +254,7 @@ bool VirtRegRewriter::runOnMachineFunction(MachineFunction &fn) {
   Indexes = &getAnalysis<SlotIndexes>();
   LIS = &getAnalysis<LiveIntervals>();
   VRM = &getAnalysis<VirtRegMap>();
+  DebugVars = getAnalysisIfAvailable<LiveDebugVariables>();
   LLVM_DEBUG(dbgs() << "********** REWRITE VIRTUAL REGISTERS **********\n"
                     << "********** Function: " << MF->getName() << '\n');
   LLVM_DEBUG(VRM->dump());
@@ -262,10 +268,13 @@ bool VirtRegRewriter::runOnMachineFunction(MachineFunction &fn) {
   // Rewrite virtual registers.
   rewrite();
 
-  // Write out new DBG_VALUE instructions.
-  getAnalysis<LiveDebugVariables>().emitDebugValues(VRM);
+  if (DebugVars && ClearVirtRegs) {
+    // Write out new DBG_VALUE instructions.
 
-  if (ClearVirtRegs) {
+    // We only do this if ClearVirtRegs is specified since this should be the
+    // final run of the pass and we don't want to emit them multiple times.
+    DebugVars->emitDebugValues(VRM);
+
     // All machine operands and other references to virtual registers have been
     // replaced. Remove the virtual registers and release all the transient data.
     VRM->clearAllVirt();

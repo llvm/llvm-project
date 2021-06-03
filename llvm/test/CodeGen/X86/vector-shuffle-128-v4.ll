@@ -5,8 +5,10 @@
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 | FileCheck %s --check-prefixes=SSE,SSE41
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=AVX,AVX1OR2,AVX1
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX1OR2,AVX2OR512VL,AVX2,AVX2-SLOW
-; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-shuffle | FileCheck %s --check-prefixes=AVX,AVX1OR2,AVX2OR512VL,AVX2,AVX2-FAST
-; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+avx512dq,+fast-variable-shuffle | FileCheck %s --check-prefixes=AVX,AVX2OR512VL,AVX512VL
+; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX1OR2,AVX2OR512VL,AVX2,AVX2-FAST
+; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+avx2,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX1OR2,AVX2OR512VL,AVX2,AVX2-FAST
+; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+avx512dq,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2OR512VL,AVX512VL
+; RUN: llc < %s -disable-peephole -mtriple=x86_64-unknown-unknown -mattr=+avx512vl,+avx512dq,+fast-variable-perlane-shuffle | FileCheck %s --check-prefixes=AVX,AVX2OR512VL,AVX512VL
 
 define <4 x i32> @shuffle_v4i32_0001(<4 x i32> %a, <4 x i32> %b) {
 ; SSE-LABEL: shuffle_v4i32_0001:
@@ -1736,17 +1738,17 @@ define <4 x i32> @shuffle_v4i32_01zu(<4 x i32> %a) {
 define <4 x i32> @shuffle_v4i32_0z23(<4 x i32> %a) {
 ; SSE2-LABEL: shuffle_v4i32_0z23:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: shuffle_v4i32_0z23:
 ; SSE3:       # %bb.0:
-; SSE3-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE3-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: shuffle_v4i32_0z23:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSSE3-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: shuffle_v4i32_0z23:
@@ -1767,17 +1769,17 @@ define <4 x i32> @shuffle_v4i32_0z23(<4 x i32> %a) {
 define <4 x i32> @shuffle_v4i32_01z3(<4 x i32> %a) {
 ; SSE2-LABEL: shuffle_v4i32_01z3:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: shuffle_v4i32_01z3:
 ; SSE3:       # %bb.0:
-; SSE3-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE3-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: shuffle_v4i32_01z3:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSSE3-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: shuffle_v4i32_01z3:
@@ -1798,17 +1800,17 @@ define <4 x i32> @shuffle_v4i32_01z3(<4 x i32> %a) {
 define <4 x i32> @shuffle_v4i32_012z(<4 x i32> %a) {
 ; SSE2-LABEL: shuffle_v4i32_012z:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: shuffle_v4i32_012z:
 ; SSE3:       # %bb.0:
-; SSE3-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE3-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: shuffle_v4i32_012z:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSSE3-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: shuffle_v4i32_012z:
@@ -1829,17 +1831,17 @@ define <4 x i32> @shuffle_v4i32_012z(<4 x i32> %a) {
 define <4 x i32> @shuffle_v4i32_0zz3(<4 x i32> %a) {
 ; SSE2-LABEL: shuffle_v4i32_0zz3:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: shuffle_v4i32_0zz3:
 ; SSE3:       # %bb.0:
-; SSE3-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE3-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: shuffle_v4i32_0zz3:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSSE3-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: shuffle_v4i32_0zz3:

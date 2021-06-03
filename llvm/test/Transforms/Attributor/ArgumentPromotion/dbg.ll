@@ -46,7 +46,7 @@ define void @caller(i32** %Y, %struct.pair* %P) {
 ;
   call void @test(i32** %Y), !dbg !1
 
-  call void @test_byval(%struct.pair* %P), !dbg !6
+  call void @test_byval(%struct.pair* byval(%struct.pair) %P), !dbg !6
   ret void
 }
 

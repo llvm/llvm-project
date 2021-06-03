@@ -401,6 +401,11 @@ class Type;
     /// iteration number.
     const SCEV *evaluateAtIteration(const SCEV *It, ScalarEvolution &SE) const;
 
+    /// Return the value of this chain of recurrences at the specified iteration
+    /// number. Takes an explicit list of operands to represent an AddRec.
+    static const SCEV *evaluateAtIteration(ArrayRef<const SCEV *> Operands,
+                                           const SCEV *It, ScalarEvolution &SE);
+
     /// Return the number of iterations of this loop that produce
     /// values in the specified constant range.  Another way of
     /// looking at this is that it returns the first iteration number
@@ -895,13 +900,10 @@ class Type;
         Operands.push_back(visit(Op));
 
       const Loop *L = Expr->getLoop();
-      const SCEV *Res = SE.getAddRecExpr(Operands, L, Expr->getNoWrapFlags());
-
       if (0 == Map.count(L))
-        return Res;
+        return SE.getAddRecExpr(Operands, L, Expr->getNoWrapFlags());
 
-      const SCEVAddRecExpr *Rec = cast<SCEVAddRecExpr>(Res);
-      return Rec->evaluateAtIteration(Map[L], SE);
+      return SCEVAddRecExpr::evaluateAtIteration(Operands, Map[L], SE);
     }
 
   private:

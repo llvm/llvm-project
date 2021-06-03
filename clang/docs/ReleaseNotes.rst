@@ -62,7 +62,9 @@ Improvements to Clang's diagnostics
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
-- ...
+- The default value of _MSC_VER was raised from 1911 to 1914. MSVC 19.14 has the
+  support to overaligned objects on x86_32 which is required for some LLVM 
+  passes.
 
 New Compiler Flags
 ------------------
@@ -110,6 +112,9 @@ Attribute Changes in Clang
 --------------------------
 
 - ...
+
+- Added support for C++11-style ``[[]]`` attributes on using-declarations, as a
+  clang extension.
 
 Windows Support
 ---------------
@@ -247,6 +252,9 @@ clang-format
 - Option ``AllowShortIfStatementsOnASingleLine`` has been improved, it now
   accepts ``AllIfsAndElse`` value that allows to put "else if" and "else" short
   statements on a single line. (Fixes https://llvm.org/PR50019.)
+
+- Option ``BreakInheritanceList`` gets a new style, ``AfterComma``. It breaks
+  only after the commas that separate the base-specifiers.
 
 - ``git-clang-format`` no longer formats changes to symbolic links. (Fixes
   https://llvm.org/PR46992.)

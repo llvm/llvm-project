@@ -165,46 +165,46 @@ void LinalgDependenceGraph::addDependencesBetween(LinalgOp src, LinalgOp dst) {
   LLVM_DEBUG(dbgs() << "addDependencesBetween " << *src.getOperation()
                     << " and " << *dst.getOperation() << "\n");
   if (src.hasTensorSemantics() && dst.hasTensorSemantics()) {
-    for (OpOperand &dstOpOperand : dst.getInputOpOperands()) {
+    for (OpOperand *dstOpOperand : dst.getInputOperands()) {
       // Check if the operand is defined by the src.
-      auto definingOp = dstOpOperand.get().getDefiningOp<LinalgOp>();
+      auto definingOp = dstOpOperand->get().getDefiningOp<LinalgOp>();
       if (definingOp && definingOp == src)
-        addDependenceElem(DependenceType::RAW, dstOpOperand.get(),
-                          &dstOpOperand);
+        addDependenceElem(DependenceType::RAW, dstOpOperand->get(),
+                          dstOpOperand);
     }
-    for (OpOperand &dstOpOperand : dst.getOutputOpOperands()) {
+    for (OpOperand *dstOpOperand : dst.getOutputOperands()) {
       // Check if the operand is defined by the src.
-      auto definingOp = dstOpOperand.get().getDefiningOp<LinalgOp>();
+      auto definingOp = dstOpOperand->get().getDefiningOp<LinalgOp>();
       if (definingOp && definingOp == src) {
-        if (dst.isInitTensor(&dstOpOperand)) {
-          addDependenceElem(DependenceType::RAW, dstOpOperand.get(),
-                            &dstOpOperand);
+        if (dst.isInitTensor(dstOpOperand)) {
+          addDependenceElem(DependenceType::RAW, dstOpOperand->get(),
+                            dstOpOperand);
         }
-        addDependenceElem(DependenceType::WAW, dstOpOperand.get(),
-                          &dstOpOperand);
+        addDependenceElem(DependenceType::WAW, dstOpOperand->get(),
+                          dstOpOperand);
       }
     }
     return;
   }
   assert(src.hasBufferSemantics() && dst.hasBufferSemantics() &&
          "unhandled dependence tracking for mixed buffer/tensor operations");
-  for (OpOperand *srcOpOperand : src.getOutputBuffersOpOperands()) { // W
+  for (OpOperand *srcOpOperand : src.getOutputBufferOperands()) { // W
     // RAW graph
-    for (OpOperand *dstOpOperand : dst.getInputBuffersOpOperands()) // R
-      if (aliases.alias(srcOpOperand->get(), dstOpOperand->get()))  // RAW alias
+    for (OpOperand *dstOpOperand : dst.getInputBufferOperands())   // R
+      if (aliases.alias(srcOpOperand->get(), dstOpOperand->get())) // RAW alias
         addDependenceElem(DependenceType::RAW, srcOpOperand, dstOpOperand);
     // WAW graph
-    for (OpOperand *dstOpOperand : dst.getOutputBuffersOpOperands()) // W
+    for (OpOperand *dstOpOperand : dst.getOutputBufferOperands())  // W
       if (aliases.alias(srcOpOperand->get(), dstOpOperand->get())) // WAW alias
         addDependenceElem(DependenceType::WAW, srcOpOperand, dstOpOperand);
   }
-  for (OpOperand *srcOpOperand : src.getInputBuffersOpOperands()) { // R
+  for (OpOperand *srcOpOperand : src.getInputBufferOperands()) { // R
     // RAR graph
-    for (OpOperand *dstOpOperand : dst.getInputBuffersOpOperands()) // R
-      if (aliases.alias(srcOpOperand->get(), dstOpOperand->get()))  // RAR alias
+    for (OpOperand *dstOpOperand : dst.getInputBufferOperands())   // R
+      if (aliases.alias(srcOpOperand->get(), dstOpOperand->get())) // RAR alias
         addDependenceElem(DependenceType::RAR, srcOpOperand, dstOpOperand);
     // WAR graph
-    for (OpOperand *dstOpOperand : dst.getOutputBuffersOpOperands()) // W
+    for (OpOperand *dstOpOperand : dst.getOutputBufferOperands())  // W
       if (aliases.alias(srcOpOperand->get(), dstOpOperand->get())) // WAR alias
         addDependenceElem(DependenceType::WAR, srcOpOperand, dstOpOperand);
   }

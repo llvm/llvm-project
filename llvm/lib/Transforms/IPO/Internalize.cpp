@@ -124,21 +124,15 @@ bool InternalizePass::maybeInternalize(
     if (auto *GO = dyn_cast<GlobalObject>(&GV)) {
       // If a comdat with one member is not externally visible, we can drop it.
       // Otherwise, the comdat can be used to establish dependencies among the
-      // group of sections. Thus we have to keep the comdat.
-      //
-      // On ELF, GNU ld and gold use the signature name as the comdat
-      // deduplication key. Rename the comdat to suppress deduplication with
-      // other object files. On COFF, non-external selection symbol suppresses
-      // deduplication and thus does not need renaming.
+      // group of sections. Thus we have to keep the comdat but switch it to
+      // noduplicates.
+      // Note: noduplicates is not necessary for COFF. wasm doesn't support
+      // noduplicates.
       ComdatInfo &Info = ComdatMap.find(C)->second;
-      if (Info.Size == 1) {
+      if (Info.Size == 1)
         GO->setComdat(nullptr);
-      } else if (IsELF) {
-        if (Info.Dest == nullptr)
-          Info.Dest = GV.getParent()->getOrInsertComdat(
-              (C->getName() + ModuleId).toStringRef(ComdatName));
-        GO->setComdat(Info.Dest);
-      }
+      else if (!IsWasm)
+        C->setSelectionKind(Comdat::NoDuplicates);
     }
 
     if (GV.hasLocalLinkage())
@@ -202,8 +196,7 @@ bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
   }
 
   // Mark all functions not in the api as internal.
-  ModuleId = getUniqueModuleId(&M);
-  IsELF = Triple(M.getTargetTriple()).isOSBinFormatELF();
+  IsWasm = Triple(M.getTargetTriple()).isOSBinFormatWasm();
   for (Function &I : M) {
     if (!maybeInternalize(I, ComdatMap))
       continue;
@@ -233,7 +226,10 @@ bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
   // FIXME: We should probably add this (and the __stack_chk_guard) via some
   // type of call-back in CodeGen.
   AlwaysPreserved.insert("__stack_chk_fail");
-  AlwaysPreserved.insert("__stack_chk_guard");
+  if (Triple(M.getTargetTriple()).isOSAIX())
+    AlwaysPreserved.insert("__ssp_canary_word");
+  else
+    AlwaysPreserved.insert("__stack_chk_guard");
 
   // Mark all global variables with initializers that are not in the api as
   // internal as well.

@@ -64,6 +64,9 @@ public:
   Block &back() { return blocks.back(); }
   Block &front() { return blocks.front(); }
 
+  /// Return true if this region has exactly one block.
+  bool hasOneBlock() { return !empty() && std::next(begin()) == end(); }
+
   /// getSublistAccess() - Returns pointer to member of region.
   static BlockListType Region::*getSublistAccess(Block *) {
     return &Region::blocks;
@@ -164,13 +167,16 @@ public:
 
   /// Return iterators that walk operations of type 'T' nested directly within
   /// this region.
-  template <typename OpT> op_iterator<OpT> op_begin() {
+  template <typename OpT>
+  op_iterator<OpT> op_begin() {
     return detail::op_filter_iterator<OpT, OpIterator>(op_begin(), op_end());
   }
-  template <typename OpT> op_iterator<OpT> op_end() {
+  template <typename OpT>
+  op_iterator<OpT> op_end() {
     return detail::op_filter_iterator<OpT, OpIterator>(op_end(), op_end());
   }
-  template <typename OpT> iterator_range<op_iterator<OpT>> getOps() {
+  template <typename OpT>
+  iterator_range<op_iterator<OpT>> getOps() {
     auto endIt = op_end();
     return {detail::op_filter_iterator<OpT, OpIterator>(op_begin(), endIt),
             detail::op_filter_iterator<OpT, OpIterator>(endIt, endIt)};
@@ -189,7 +195,8 @@ public:
 
   /// Find the first parent operation of the given type, or nullptr if there is
   /// no ancestor operation.
-  template <typename ParentT> ParentT getParentOfType() {
+  template <typename ParentT>
+  ParentT getParentOfType() {
     auto *region = this;
     do {
       if (auto parent = dyn_cast_or_null<ParentT>(region->container))
@@ -226,16 +233,15 @@ public:
     blocks.splice(blocks.end(), other.getBlocks());
   }
 
-  /// Check that this does not use any value defined outside it.
-  /// Emit errors if `noteLoc` is provided; this location is used to point
-  /// to the operation containing the region, the actual error is reported at
-  /// the operation with an offending use.
-  bool isIsolatedFromAbove(Optional<Location> noteLoc = llvm::None);
-
   /// Returns 'block' if 'block' lies in this region, or otherwise finds the
   /// ancestor of 'block' that lies in this region. Returns nullptr if the
   /// latter fails.
   Block *findAncestorBlockInRegion(Block &block);
+
+  /// Returns 'op' if 'op' lies in this region, or otherwise finds the
+  /// ancestor of 'op' that lies in this region. Returns nullptr if the
+  /// latter fails.
+  Operation *findAncestorOpInRegion(Operation &op);
 
   /// Drop all operand uses from operations within this region, which is
   /// an essential step in breaking cyclic dependences between references when

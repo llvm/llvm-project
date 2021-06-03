@@ -20,7 +20,7 @@ class TestTraceDumpInstructions(TestBase):
             error=True)
 
         # We now check the output when there's a non-running target
-        self.expect("target create " + 
+        self.expect("target create " +
             os.path.join(self.getSourceDir(), "intelpt-trace", "a.out"))
 
         self.expect("thread trace dump instructions",
@@ -42,34 +42,34 @@ class TestTraceDumpInstructions(TestBase):
 
         self.expect("thread trace dump instructions --raw",
             substrs=['''thread #1: tid = 3842849, total instructions = 21
-    [ 1] 0x0000000000400518    
-    [ 2] 0x000000000040051f    
-    [ 3] 0x0000000000400529    
-    [ 4] 0x000000000040052d    
-    [ 5] 0x0000000000400521    
-    [ 6] 0x0000000000400525    
-    [ 7] 0x0000000000400529    
-    [ 8] 0x000000000040052d    
-    [ 9] 0x0000000000400521    
-    [10] 0x0000000000400525    
-    [11] 0x0000000000400529    
-    [12] 0x000000000040052d    
-    [13] 0x0000000000400521    
-    [14] 0x0000000000400525    
-    [15] 0x0000000000400529    
-    [16] 0x000000000040052d    
-    [17] 0x0000000000400521    
-    [18] 0x0000000000400525    
-    [19] 0x0000000000400529    
+    [ 1] 0x0000000000400518
+    [ 2] 0x000000000040051f
+    [ 3] 0x0000000000400529
+    [ 4] 0x000000000040052d
+    [ 5] 0x0000000000400521
+    [ 6] 0x0000000000400525
+    [ 7] 0x0000000000400529
+    [ 8] 0x000000000040052d
+    [ 9] 0x0000000000400521
+    [10] 0x0000000000400525
+    [11] 0x0000000000400529
+    [12] 0x000000000040052d
+    [13] 0x0000000000400521
+    [14] 0x0000000000400525
+    [15] 0x0000000000400529
+    [16] 0x000000000040052d
+    [17] 0x0000000000400521
+    [18] 0x0000000000400525
+    [19] 0x0000000000400529
     [20] 0x000000000040052d'''])
 
         # We check if we can pass count and position
         self.expect("thread trace dump instructions --count 5 --position 10 --raw",
             substrs=['''thread #1: tid = 3842849, total instructions = 21
-    [ 6] 0x0000000000400525    
-    [ 7] 0x0000000000400529    
-    [ 8] 0x000000000040052d    
-    [ 9] 0x0000000000400521    
+    [ 6] 0x0000000000400525
+    [ 7] 0x0000000000400529
+    [ 8] 0x000000000040052d
+    [ 9] 0x0000000000400521
     [10] 0x0000000000400525'''])
 
         # We check if we can access the thread by index id
@@ -83,7 +83,7 @@ class TestTraceDumpInstructions(TestBase):
 
     def testDumpFullInstructionsWithMultipleThreads(self):
         # We load a trace with two threads
-        self.expect("trace load -v " + 
+        self.expect("trace load -v " +
             os.path.join(self.getSourceDir(), "intelpt-trace", "trace_2threads.json"))
 
         # We print the instructions of two threads simultaneously
@@ -181,7 +181,7 @@ thread #2: tid = 3842850, total instructions = 21
         # - Then, the dump continues in the next synchronization point showing
         #   a call to an inlined function, which is displayed as [inlined].
         # - Finally, a call to libfoo is performed, which invokes libbar inside.
-        # 
+        #
         # Whenever there's a line or symbol change, including the inline case, a
         # line is printed showing the symbol context change.
         #
@@ -241,8 +241,8 @@ thread #2: tid = 3842850, total instructions = 21
   libbar.so`bar() + 22 at bar.cpp:4
     [32] 0x00007ffff79d76a6    movl   -0x4(%rbp), %eax
     [33] 0x00007ffff79d76a9    popq   %rbp
-    [34] 0x00007ffff79d76aa    retq   
-  libfoo.so`foo() + 13 at foo.cpp:4
+    [34] 0x00007ffff79d76aa    retq''',
+  '''libfoo.so`foo() + 13 at foo.cpp:4
     [35] 0x00007ffff7bd96ed    movl   %eax, -0x4(%rbp)
   libfoo.so`foo() + 16 at foo.cpp:5
     [36] 0x00007ffff7bd96f0    movl   -0x4(%rbp), %eax
@@ -252,8 +252,8 @@ thread #2: tid = 3842850, total instructions = 21
     [39] 0x00007ffff7bd96fb    movl   -0x4(%rbp), %eax
     [40] 0x00007ffff7bd96fe    addq   $0x10, %rsp
     [41] 0x00007ffff7bd9702    popq   %rbp
-    [42] 0x00007ffff7bd9703    retq   
-  a.out`main + 68 at main.cpp:16
+    [42] 0x00007ffff7bd9703    retq''',
+  '''a.out`main + 68 at main.cpp:16
     [43] 0x00000000004006a4    movl   -0xc(%rbp), %ecx
     [44] 0x00000000004006a7    addl   %eax, %ecx
     [45] 0x00000000004006a9    movl   %ecx, -0xc(%rbp)'''])

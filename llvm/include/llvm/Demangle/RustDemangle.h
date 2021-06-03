@@ -62,7 +62,7 @@ class Demangler {
   size_t MaxRecursionLevel;
   // Current recursion level.
   size_t RecursionLevel;
-
+  size_t BoundLifetimes;
   // Input string that is being demangled with "_R" prefix removed.
   StringView Input;
   // Position in the input string.
@@ -89,6 +89,7 @@ private:
   void demangleGenericArg();
   void demangleType();
   void demangleFnSig();
+  void demangleOptionalBinder();
   void demangleConst();
   void demangleConstInt();
   void demangleConstBool();
@@ -122,6 +123,7 @@ private:
   }
 
   void printBasicType(BasicType);
+  void printLifetime(uint64_t Index);
 
   char look() const {
     if (Error || Position >= Input.size())

@@ -84,6 +84,21 @@ public:
   constexpr size_type size() const noexcept { return Size; }
   constexpr bool empty() const noexcept { return Size == 0; }
 
+  friend bool operator==(const string_view &LHS, const string_view &RHS) {
+    if (LHS.Size != RHS.Size)
+      return false;
+    if (LHS.Data == RHS.Data)
+      return true;
+    for (size_t I = 0; I != LHS.Size; ++I)
+      if (LHS.Data[I] != RHS.Data[I])
+        return false;
+    return true;
+  }
+
+  friend bool operator!=(const string_view &LHS, const string_view &RHS) {
+    return !(LHS == RHS);
+  }
+
 private:
   const char *Data = nullptr;
   size_type Size = 0;

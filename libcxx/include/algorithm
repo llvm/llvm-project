@@ -646,15 +646,15 @@ template <class BidirectionalIterator, class Compare>
 */
 
 #include <__config>
-#include <initializer_list>
-#include <type_traits>
-#include <cstring>
-#include <utility> // needed to provide swap_ranges.
-#include <memory>
-#include <functional>
-#include <iterator>
+#include <__bits> // __libcpp_clz
 #include <cstddef>
-#include <bit>
+#include <cstring>
+#include <functional>
+#include <initializer_list>
+#include <iterator>
+#include <memory>
+#include <type_traits>
+#include <utility> // swap_ranges
 #include <version>
 
 #include <__debug>

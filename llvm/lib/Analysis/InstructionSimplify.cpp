@@ -3852,10 +3852,12 @@ Value *llvm::SimplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   return ::SimplifyFCmpInst(Predicate, LHS, RHS, FMF, Q, RecursionLimit);
 }
 
-static Value *SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
+static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
                                      const SimplifyQuery &Q,
                                      bool AllowRefinement,
                                      unsigned MaxRecurse) {
+  assert(!Op->getType()->isVectorTy() && "This is not safe for vectors");
+
   // Trivial replacement.
   if (V == Op)
     return RepOp;
@@ -3965,10 +3967,10 @@ static Value *SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   return ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI);
 }
 
-Value *llvm::SimplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
+Value *llvm::simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
                                     const SimplifyQuery &Q,
                                     bool AllowRefinement) {
-  return ::SimplifyWithOpReplaced(V, Op, RepOp, Q, AllowRefinement,
+  return ::simplifyWithOpReplaced(V, Op, RepOp, Q, AllowRefinement,
                                   RecursionLimit);
 }
 
@@ -4090,17 +4092,17 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
   // Note that the equivalence/replacement opportunity does not hold for vectors
   // because each element of a vector select is chosen independently.
   if (Pred == ICmpInst::ICMP_EQ && !CondVal->getType()->isVectorTy()) {
-    if (SimplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q,
+    if (simplifyWithOpReplaced(FalseVal, CmpLHS, CmpRHS, Q,
                                /* AllowRefinement */ false, MaxRecurse) ==
             TrueVal ||
-        SimplifyWithOpReplaced(FalseVal, CmpRHS, CmpLHS, Q,
+        simplifyWithOpReplaced(FalseVal, CmpRHS, CmpLHS, Q,
                                /* AllowRefinement */ false, MaxRecurse) ==
             TrueVal)
       return FalseVal;
-    if (SimplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, Q,
+    if (simplifyWithOpReplaced(TrueVal, CmpLHS, CmpRHS, Q,
                                /* AllowRefinement */ true, MaxRecurse) ==
             FalseVal ||
-        SimplifyWithOpReplaced(TrueVal, CmpRHS, CmpLHS, Q,
+        simplifyWithOpReplaced(TrueVal, CmpRHS, CmpLHS, Q,
                                /* AllowRefinement */ true, MaxRecurse) ==
             FalseVal)
       return FalseVal;
@@ -5817,6 +5819,74 @@ Value *llvm::SimplifyFreezeInst(Value *Op0, const SimplifyQuery &Q) {
   return ::SimplifyFreezeInst(Op0, Q);
 }
 
+static Constant *ConstructLoadOperandConstant(Value *Op) {
+  SmallVector<Value *, 4> Worklist;
+  Worklist.push_back(Op);
+  while (true) {
+    Value *CurOp = Worklist.back();
+    if (isa<Constant>(CurOp))
+      break;
+    if (auto *BC = dyn_cast<BitCastOperator>(CurOp)) {
+      Worklist.push_back(BC->getOperand(0));
+    } else if (auto *GEP = dyn_cast<GEPOperator>(CurOp)) {
+      for (unsigned I = 1; I != GEP->getNumOperands(); ++I) {
+        if (!isa<Constant>(GEP->getOperand(I)))
+          return nullptr;
+      }
+      Worklist.push_back(GEP->getOperand(0));
+    } else if (auto *II = dyn_cast<IntrinsicInst>(CurOp)) {
+      if (II->isLaunderOrStripInvariantGroup())
+        Worklist.push_back(II->getOperand(0));
+      else
+        return nullptr;
+    } else {
+      return nullptr;
+    }
+  }
+
+  Constant *NewOp = cast<Constant>(Worklist.pop_back_val());
+  while (!Worklist.empty()) {
+    Value *CurOp = Worklist.pop_back_val();
+    if (isa<BitCastOperator>(CurOp)) {
+      NewOp = ConstantExpr::getBitCast(NewOp, CurOp->getType());
+    } else if (auto *GEP = dyn_cast<GEPOperator>(CurOp)) {
+      SmallVector<Constant *> Idxs;
+      Idxs.reserve(GEP->getNumOperands() - 1);
+      for (unsigned I = 1, E = GEP->getNumOperands(); I != E; ++I) {
+        Idxs.push_back(cast<Constant>(GEP->getOperand(I)));
+      }
+      NewOp = ConstantExpr::getGetElementPtr(GEP->getSourceElementType(), NewOp,
+                                             Idxs, GEP->isInBounds(),
+                                             GEP->getInRangeIndex());
+    } else {
+      assert(isa<IntrinsicInst>(CurOp) &&
+             cast<IntrinsicInst>(CurOp)->isLaunderOrStripInvariantGroup() &&
+             "expected invariant group intrinsic");
+      NewOp = ConstantExpr::getBitCast(NewOp, CurOp->getType());
+    }
+  }
+  return NewOp;
+}
+
+static Value *SimplifyLoadInst(LoadInst *LI, const SimplifyQuery &Q) {
+  if (LI->isVolatile())
+    return nullptr;
+
+  if (auto *C = ConstantFoldInstruction(LI, Q.DL))
+    return C;
+
+  // The following only catches more cases than ConstantFoldInstruction() if the
+  // load operand wasn't a constant. Specifically, invariant.group intrinsics.
+  if (isa<Constant>(LI->getPointerOperand()))
+    return nullptr;
+
+  if (auto *C = dyn_cast_or_null<Constant>(
+          ConstructLoadOperandConstant(LI->getPointerOperand())))
+    return ConstantFoldLoadFromConstPtr(C, LI->getType(), Q.DL);
+
+  return nullptr;
+}
+
 /// See if we can compute a simplified version of this instruction.
 /// If not, this returns null.
 
@@ -5972,6 +6042,9 @@ Value *llvm::SimplifyInstruction(Instruction *I, const SimplifyQuery &SQ,
   case Instruction::Alloca:
     // No simplifications for Alloca and it can't be constant folded.
     Result = nullptr;
+    break;
+  case Instruction::Load:
+    Result = SimplifyLoadInst(cast<LoadInst>(I), Q);
     break;
   }
 

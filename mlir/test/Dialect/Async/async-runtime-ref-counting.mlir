@@ -213,3 +213,79 @@ func @token_defined_in_the_loop() {
   // CHECK:   return
   return
 }
+
+// CHECK-LABEL: @divergent_liveness_one_token
+func @divergent_liveness_one_token(%arg0 : i1) {
+  // CHECK: %[[TOKEN:.*]] = call @token()
+  %token = call @token() : () -> !async.token
+  // CHECK: cond_br %arg0, ^[[LIVE_IN:.*]], ^[[REF_COUNTING:.*]]
+  cond_br %arg0, ^bb1, ^bb2
+^bb1:
+  // CHECK: ^[[LIVE_IN]]:
+  // CHECK:   async.runtime.await %[[TOKEN]]
+  // CHECK:   async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK:   br ^[[RETURN:.*]]
+  async.runtime.await %token : !async.token
+  br ^bb2
+  // CHECK: ^[[REF_COUNTING:.*]]:
+  // CHECK:   async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK:   br ^[[RETURN:.*]]
+^bb2:
+  // CHECK: ^[[RETURN]]:
+  // CHECK:   return
+  return
+}
+
+// CHECK-LABEL: @divergent_liveness_unique_predecessor
+func @divergent_liveness_unique_predecessor(%arg0 : i1) {
+  // CHECK: %[[TOKEN:.*]] = call @token()
+  %token = call @token() : () -> !async.token
+  // CHECK: cond_br %arg0, ^[[LIVE_IN:.*]], ^[[NO_LIVE_IN:.*]]
+  cond_br %arg0, ^bb2, ^bb1
+^bb1:
+  // CHECK: ^[[NO_LIVE_IN]]:
+  // CHECK:   async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK:   br ^[[RETURN:.*]]
+  br ^bb3
+^bb2:
+  // CHECK: ^[[LIVE_IN]]:
+  // CHECK:   async.runtime.await %[[TOKEN]]
+  // CHECK:   async.runtime.drop_ref %[[TOKEN]] {count = 1 : i32}
+  // CHECK:   br ^[[RETURN]]
+  async.runtime.await %token : !async.token
+  br ^bb3
+^bb3:
+  // CHECK: ^[[RETURN]]:
+  // CHECK:  return
+  return
+}
+
+// CHECK-LABEL: @divergent_liveness_two_tokens
+func @divergent_liveness_two_tokens(%arg0 : i1) {
+  // CHECK: %[[TOKEN0:.*]] = call @token()
+  // CHECK: %[[TOKEN1:.*]] = call @token()
+  %token0 = call @token() : () -> !async.token
+  %token1 = call @token() : () -> !async.token
+  // CHECK: cond_br %arg0, ^[[AWAIT0:.*]], ^[[AWAIT1:.*]]
+  cond_br %arg0, ^await0, ^await1
+^await0:
+  // CHECK: ^[[AWAIT0]]:
+  // CHECK:   async.runtime.drop_ref %[[TOKEN1]] {count = 1 : i32}
+  // CHECK:   async.runtime.await %[[TOKEN0]]
+  // CHECK:   async.runtime.drop_ref %[[TOKEN0]] {count = 1 : i32}
+  // CHECK:   br ^[[RETURN:.*]]
+  async.runtime.await %token0 : !async.token
+  br ^ret
+^await1:
+  // CHECK: ^[[AWAIT1]]:
+  // CHECK:   async.runtime.drop_ref %[[TOKEN0]] {count = 1 : i32}
+  // CHECK:   async.runtime.await %[[TOKEN1]]
+  // CHECK:   async.runtime.drop_ref %[[TOKEN1]] {count = 1 : i32}
+  // CHECK:   br ^[[RETURN]]
+  async.runtime.await %token1 : !async.token
+  br ^ret
+^ret:
+  // CHECK: ^[[RETURN]]:
+  // CHECK:   return
+  return
+}
