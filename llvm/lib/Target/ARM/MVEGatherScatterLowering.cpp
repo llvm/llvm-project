@@ -218,8 +218,8 @@ Value *MVEGatherScatterLowering::checkGEP(Value *&Offsets, FixedVectorType *Ty,
                                           GetElementPtrInst *GEP,
                                           IRBuilder<> &Builder) {
   if (!GEP) {
-    LLVM_DEBUG(
-        dbgs() << "masked gathers/scatters: no getelementpointer found\n");
+    LLVM_DEBUG(dbgs() << "masked gathers/scatters: no getelementpointer "
+                      << "found\n");
     return nullptr;
   }
   LLVM_DEBUG(dbgs() << "masked gathers/scatters: getelementpointer found."
@@ -275,8 +275,8 @@ void MVEGatherScatterLowering::lookThroughBitcast(Value *&Ptr) {
     auto *BCTy = cast<FixedVectorType>(BitCast->getType());
     auto *BCSrcTy = cast<FixedVectorType>(BitCast->getOperand(0)->getType());
     if (BCTy->getNumElements() == BCSrcTy->getNumElements()) {
-      LLVM_DEBUG(
-          dbgs() << "masked gathers/scatters: looking through bitcast\n");
+      LLVM_DEBUG(dbgs() << "masked gathers/scatters: looking through "
+                        << "bitcast\n");
       Ptr = BitCast->getOperand(0);
     }
   }
@@ -422,9 +422,8 @@ Value *MVEGatherScatterLowering::tryCreateMaskedGatherBaseWB(
     IntrinsicInst *I, Value *Ptr, IRBuilder<> &Builder, int64_t Increment) {
   using namespace PatternMatch;
   auto *Ty = cast<FixedVectorType>(I->getType());
-  LLVM_DEBUG(
-      dbgs()
-      << "masked gathers: loading from vector of pointers with writeback\n");
+  LLVM_DEBUG(dbgs() << "masked gathers: loading from vector of pointers with "
+                    << "writeback\n");
   if (Ty->getNumElements() != 4 || Ty->getScalarSizeInBits() != 32)
     // Can't build an intrinsic for this
     return nullptr;
@@ -575,9 +574,8 @@ Value *MVEGatherScatterLowering::tryCreateMaskedScatterBaseWB(
   using namespace PatternMatch;
   Value *Input = I->getArgOperand(0);
   auto *Ty = cast<FixedVectorType>(Input->getType());
-  LLVM_DEBUG(
-      dbgs()
-      << "masked scatters: storing to a vector of pointers with writeback\n");
+  LLVM_DEBUG(dbgs() << "masked scatters: storing to a vector of pointers "
+                    << "with writeback\n");
   if (Ty->getNumElements() != 4 || Ty->getScalarSizeInBits() != 32)
     // Can't build an intrinsic for this
     return nullptr;
@@ -1018,8 +1016,8 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
   default:
     return false;
   }
-  LLVM_DEBUG(
-      dbgs() << "masked gathers/scatters: simplified loop variable add/mul\n");
+  LLVM_DEBUG(dbgs() << "masked gathers/scatters: simplified loop variable "
+                    << "add/mul\n");
 
   // The instruction has now been "absorbed" into the phi value
   Offs->replaceAllUsesWith(NewPhi);
