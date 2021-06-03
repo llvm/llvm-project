@@ -1265,6 +1265,13 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("__clang_openmp_device_functions.h");
   }
 
+  // Add include for either -fopenmp= or -fopenmp
+  if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                   options::OPT_fno_openmp, false)){
+    CmdArgs.push_back("-I");
+    CmdArgs.push_back(Args.MakeArgString(D.Dir + "/../include"));
+  }
+
   // Add -i* options, and automatically translate to
   // -include-pch/-include-pth for transparent PCH support. It's
   // wonky, but we include looking for .gch so we can support seamless
