@@ -14,7 +14,7 @@ define void @store_threshold([2 x i64]* %p, [2 x i64] %a) {
   ; CHECK: [[AS1:%.*]] = extractvalue [2 x i[[#SBITS]]] [[AS]], 1
   ; CHECK: [[AS01:%.*]] = or i[[#SBITS]] [[AS0]], [[AS1]]
   ; CHECK: [[ADDR:%.*]] = bitcast [2 x i64]* %p to i8*
-  ; CHECK: call void @__dfsan_maybe_store_origin(i[[#SBITS]] [[AS01]], i8* [[ADDR]], i64 16, i32 [[AO]])
+  ; CHECK: call void @__dfsan_maybe_store_origin(i[[#SBITS]] zeroext [[AS01]], i8* [[ADDR]], i64 16, i32 zeroext [[AO]])
   ; CHECK: store [2 x i64] %a, [2 x i64]* %p, align 8
 
   store [2 x i64] %a, [2 x i64]* %p

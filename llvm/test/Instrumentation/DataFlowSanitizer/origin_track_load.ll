@@ -17,7 +17,7 @@ define i64 @load64(i64* %p) {
   ; CHECK-NEXT: %[[#LABEL_ORIGIN_H32:]] = lshr i64 %[[#LABEL_ORIGIN]], 32
   ; CHECK-NEXT: %[[#LABEL:]] = trunc i64 %[[#LABEL_ORIGIN_H32]] to i[[#SBITS]]
   ; CHECK-NEXT: %[[#ORIGIN:]] = trunc i64 %[[#LABEL_ORIGIN]] to i32
-  ; CHECK-NEXT: %[[#ORIGIN_CHAINED:]] = call i32 @__dfsan_chain_origin_if_tainted(i[[#SBITS]] %[[#LABEL]], i32 %[[#ORIGIN]])
+  ; CHECK-NEXT: %[[#ORIGIN_CHAINED:]] = call zeroext i32 @__dfsan_chain_origin_if_tainted(i[[#SBITS]] zeroext %[[#LABEL]], i32 zeroext %[[#ORIGIN]])
 
   ; CHECK-NEXT: %[[#LABEL:]] = or i[[#SBITS]] %[[#LABEL]], %[[#PS]]
   ; CHECK-NEXT: %[[#NZ:]] = icmp ne i[[#SBITS]] %[[#PS]], 0
