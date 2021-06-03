@@ -54,7 +54,8 @@ allocateBuffersForResults(Location loc, LinalgOp linalgOp, ValueRange outputs,
     Value resultTensor = outputs[resultIndex];
 
     // Clone output buffers whose value is actually used.
-    if (linalgOp.payloadUsesValueFromOutputOperandIndex(resultIndex)) {
+    OpOperand *tiedOpOperand = linalgOp.getOutputOperand(resultIndex);
+    if (linalgOp.payloadUsesValueFromOperand(tiedOpOperand)) {
       resultBuffers.push_back(cloneMemref(loc, resultTensor, b));
       continue;
     }
