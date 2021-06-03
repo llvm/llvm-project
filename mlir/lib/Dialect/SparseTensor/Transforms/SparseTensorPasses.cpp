@@ -32,7 +32,8 @@ namespace {
 struct SparsificationPass : public SparsificationBase<SparsificationPass> {
 
   SparsificationPass() = default;
-  SparsificationPass(const SparsificationPass &pass) {}
+  SparsificationPass(const SparsificationPass &pass)
+      : SparsificationBase<SparsificationPass>() {}
 
   Option<int32_t> parallelization{
       *this, "parallelization-strategy",
