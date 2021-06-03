@@ -4184,6 +4184,7 @@ EVT MipsTargetLowering::getTypeForExtReturn(LLVMContext &Context, EVT VT,
 
 std::pair<unsigned, const TargetRegisterClass *> MipsTargetLowering::
 parseRegForInlineAsmConstraint(StringRef C, MVT VT) const {
+  assert(!Subtarget.hasNanoMips() && "NYI for nanoMIPS");
   const TargetRegisterInfo *TRI =
       Subtarget.getRegisterInfo();
   const TargetRegisterClass *RC;
@@ -4271,6 +4272,8 @@ MipsTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (VT == MVT::i32 || VT == MVT::i16 || VT == MVT::i8) {
         if (Subtarget.inMips16Mode())
           return std::make_pair(0U, &Mips::CPU16RegsRegClass);
+        if (Subtarget.hasNanoMips())
+          return std::make_pair(0U, &Mips::GPR32NMRegClass);
         return std::make_pair(0U, &Mips::GPR32RegClass);
       }
       if (VT == MVT::i64 && !Subtarget.isGP64bit())
@@ -4280,6 +4283,7 @@ MipsTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       // This will generate an error message
       return std::make_pair(0U, nullptr);
     case 'f': // FPU or MSA register
+      assert(!Subtarget.hasNanoMips() && "NYI for nanoMIPS");
       if (VT == MVT::v16i8)
         return std::make_pair(0U, &Mips::MSA128BRegClass);
       else if (VT == MVT::v8i16 || VT == MVT::v8f16)
@@ -4297,6 +4301,7 @@ MipsTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       }
       break;
     case 'c': // register suitable for indirect jump
+      assert(!Subtarget.hasNanoMips() && "NYI for nanoMIPS");
       if (VT == MVT::i32)
         return std::make_pair((unsigned)Mips::T9, &Mips::GPR32RegClass);
       if (VT == MVT::i64)
@@ -4305,6 +4310,7 @@ MipsTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       return std::make_pair(0U, nullptr);
     case 'l': // use the `lo` register to store values
               // that are no bigger than a word
+      assert(!Subtarget.hasNanoMips() && "NYI for nanoMIPS");
       if (VT == MVT::i32 || VT == MVT::i16 || VT == MVT::i8)
         return std::make_pair((unsigned)Mips::LO0, &Mips::LO32RegClass);
       return std::make_pair((unsigned)Mips::LO0_64, &Mips::LO64RegClass);
