@@ -132,7 +132,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, BasicPrimary) {
   }
   Cache.destroy(nullptr);
   Allocator->releaseToOS();
-  scudo::ScopedString Str(1024);
+  scudo::ScopedString Str;
   Allocator->getStats(&Str);
   Str.output();
 }
@@ -178,7 +178,7 @@ TEST(ScudoPrimaryTest, Primary64OOM) {
   }
   Cache.destroy(nullptr);
   Allocator.releaseToOS();
-  scudo::ScopedString Str(1024);
+  scudo::ScopedString Str;
   Allocator.getStats(&Str);
   Str.output();
   EXPECT_EQ(AllocationFailed, true);
@@ -216,7 +216,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
   }
   Cache.destroy(nullptr);
   Allocator->releaseToOS();
-  scudo::ScopedString Str(1024);
+  scudo::ScopedString Str;
   Allocator->getStats(&Str);
   Str.output();
 }
@@ -263,7 +263,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
   for (auto &T : Threads)
     T.join();
   Allocator->releaseToOS();
-  scudo::ScopedString Str(1024);
+  scudo::ScopedString Str;
   Allocator->getStats(&Str);
   Str.output();
 }
