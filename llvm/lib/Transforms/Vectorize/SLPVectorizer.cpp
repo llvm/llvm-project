@@ -635,7 +635,7 @@ public:
 
   /// \returns the vectorization cost of the subtree that starts at \p VL.
   /// A negative number means that this is profitable.
-  InstructionCost getTreeCost();
+  InstructionCost getTreeCost(ArrayRef<Value *> VectorizedVals = None);
 
   /// Construct a vectorizable tree that starts at \p Roots, ignoring users for
   /// the purpose of scheduling and extraction in the \p UserIgnoreLst.
@@ -1549,10 +1549,12 @@ public:
 
 private:
   /// Checks if all users of \p I are the part of the vectorization tree.
-  bool areAllUsersVectorized(Instruction *I) const;
+  bool areAllUsersVectorized(Instruction *I,
+                             ArrayRef<Value *> VectorizedVals) const;
 
   /// \returns the cost of the vectorizable entry.
-  InstructionCost getEntryCost(const TreeEntry *E);
+  InstructionCost getEntryCost(const TreeEntry *E,
+                               ArrayRef<Value *> VectorizedVals);
 
   /// This is the recursive part of buildTree.
   void buildTree_rec(ArrayRef<Value *> Roots, unsigned Depth,
@@ -3505,8 +3507,10 @@ bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL, Value *OpValue,
   return ShouldKeepOrder;
 }
 
-bool BoUpSLP::areAllUsersVectorized(Instruction *I) const {
-  return I->hasOneUse() || llvm::all_of(I->users(), [this](User *U) {
+bool BoUpSLP::areAllUsersVectorized(Instruction *I,
+                                    ArrayRef<Value *> VectorizedVals) const {
+  return (I->hasOneUse() && is_contained(VectorizedVals, I)) ||
+         llvm::all_of(I->users(), [this](User *U) {
            return ScalarToTreeEntry.count(U) > 0;
          });
 }
@@ -3597,7 +3601,8 @@ computeExtractCost(ArrayRef<Value *> VL, FixedVectorType *VecTy,
   return Cost;
 }
 
-InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E) {
+InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
+                                      ArrayRef<Value *> VectorizedVals) {
   ArrayRef<Value*> VL = E->Scalars;
 
   Type *ScalarTy = VL[0]->getType();
@@ -3626,16 +3631,17 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E) {
   }
   // FIXME: it tries to fix a problem with MSVC buildbots.
   TargetTransformInfo &TTIRef = *TTI;
-  auto &&AdjustExtractsCost = [this, &TTIRef, CostKind, VL,
-                               VecTy](InstructionCost &Cost, bool IsGather) {
+  auto &&AdjustExtractsCost = [this, &TTIRef, CostKind, VL, VecTy,
+                               VectorizedVals](InstructionCost &Cost,
+                                               bool IsGather) {
     DenseMap<Value *, int> ExtractVectorsTys;
     for (auto *V : VL) {
       // If all users of instruction are going to be vectorized and this
       // instruction itself is not going to be vectorized, consider this
       // instruction as dead and remove its cost from the final cost of the
       // vectorized tree.
-      if (IsGather && (!areAllUsersVectorized(cast<Instruction>(V)) ||
-                       ScalarToTreeEntry.count(V)))
+      if (!areAllUsersVectorized(cast<Instruction>(V), VectorizedVals) ||
+          (IsGather && ScalarToTreeEntry.count(V)))
         continue;
       auto *EE = cast<ExtractElementInst>(V);
       unsigned Idx = *getExtractIndex(EE);
@@ -4389,7 +4395,7 @@ InstructionCost BoUpSLP::getSpillCost() const {
   return Cost;
 }
 
-InstructionCost BoUpSLP::getTreeCost() {
+InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
   InstructionCost Cost = 0;
   LLVM_DEBUG(dbgs() << "SLP: Calculating cost for tree of size "
                     << VectorizableTree.size() << ".\n");
@@ -4399,7 +4405,7 @@ InstructionCost BoUpSLP::getTreeCost() {
   for (unsigned I = 0, E = VectorizableTree.size(); I < E; ++I) {
     TreeEntry &TE = *VectorizableTree[I].get();
 
-    InstructionCost C = getEntryCost(&TE);
+    InstructionCost C = getEntryCost(&TE, VectorizedVals);
     Cost += C;
     LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
                       << " for bundle that starts with " << *TE.Scalars[0]
@@ -4427,6 +4433,11 @@ InstructionCost BoUpSLP::getTreeCost() {
 
     // No extract cost for vector "scalar"
     if (isa<FixedVectorType>(EU.Scalar->getType()))
+      continue;
+
+    // Already counted the cost for external uses when tried to adjust the cost
+    // for extractelements, no need to add it again.
+    if (isa<ExtractElementInst>(EU.Scalar))
       continue;
 
     // If found user is an insertelement, do not calculate extract cost but try
@@ -5566,7 +5577,14 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
     Value *Lane = Builder.getInt32(ExternalUse.Lane);
     auto ExtractAndExtendIfNeeded = [&](Value *Vec) {
       if (Scalar->getType() != Vec->getType()) {
-        Value *Ex = Builder.CreateExtractElement(Vec, Lane);
+        Value *Ex;
+        // "Reuse" the existing extract to improve final codegen.
+        if (auto *ES = dyn_cast<ExtractElementInst>(Scalar)) {
+          Ex = Builder.CreateExtractElement(ES->getOperand(0),
+                                            ES->getOperand(1));
+        } else {
+          Ex = Builder.CreateExtractElement(Vec, Lane);
+        }
         // If necessary, sign-extend or zero-extend ScalarRoot
         // to the larger type.
         if (!MinBWs.count(ScalarRoot))
@@ -5574,12 +5592,11 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
         if (MinBWs[ScalarRoot].second)
           return Builder.CreateSExt(Ex, Scalar->getType());
         return Builder.CreateZExt(Ex, Scalar->getType());
-      } else {
-        assert(isa<FixedVectorType>(Scalar->getType()) &&
-               isa<InsertElementInst>(Scalar) &&
-               "In-tree scalar of vector type is not insertelement?");
-        return Vec;
       }
+      assert(isa<FixedVectorType>(Scalar->getType()) &&
+             isa<InsertElementInst>(Scalar) &&
+             "In-tree scalar of vector type is not insertelement?");
+      return Vec;
     };
     // If User == nullptr, the Scalar is used as extra arg. Generate
     // ExtractElement instruction and update the record for this scalar in
@@ -7651,7 +7668,8 @@ public:
       V.computeMinimumValueSizes();
 
       // Estimate cost.
-      InstructionCost TreeCost = V.getTreeCost();
+      InstructionCost TreeCost =
+          V.getTreeCost(makeArrayRef(&ReducedVals[i], ReduxWidth));
       InstructionCost ReductionCost =
           getReductionCost(TTI, ReducedVals[i], ReduxWidth);
       InstructionCost Cost = TreeCost + ReductionCost;
