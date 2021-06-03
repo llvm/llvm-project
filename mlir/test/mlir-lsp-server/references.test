@@ -23,7 +23,7 @@
 // CHECK-NEXT:          "line": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "start": {
-// CHECK-NEXT:          "character": 1,
+// CHECK-NEXT:          "character": 0,
 // CHECK-NEXT:          "line": 1
 // CHECK-NEXT:        }
 // CHECK-NEXT:      },
@@ -36,8 +36,31 @@
 // CHECK-NEXT:          "line": 2
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "start": {
-// CHECK-NEXT:          "character": 8,
+// CHECK-NEXT:          "character": 7,
 // CHECK-NEXT:          "line": 2
+// CHECK-NEXT:        }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "uri": "{{.*}}/foo.mlir"
+// CHECK-NEXT:    }
+// CHECK-NEXT:  ]
+// -----
+{"jsonrpc":"2.0","id":2,"method":"textDocument/references","params":{
+  "textDocument":{"uri":"test:///foo.mlir"},
+  "position":{"line":0,"character":7},
+  "context":{"includeDeclaration": false}
+}}
+//      CHECK:  "id": 2
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": [
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "range": {
+// CHECK-NEXT:        "end": {
+// CHECK-NEXT:          "character": 9,
+// CHECK-NEXT:          "line": 0
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "start": {
+// CHECK-NEXT:          "character": 5,
+// CHECK-NEXT:          "line": 0
 // CHECK-NEXT:        }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "uri": "{{.*}}/foo.mlir"

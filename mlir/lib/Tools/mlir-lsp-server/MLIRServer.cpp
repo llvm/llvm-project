@@ -21,7 +21,7 @@ static lsp::Position getPosFromLoc(llvm::SourceMgr &mgr, llvm::SMLoc loc) {
   std::pair<unsigned, unsigned> lineAndCol = mgr.getLineAndColumn(loc);
   lsp::Position pos;
   pos.line = lineAndCol.first - 1;
-  pos.character = lineAndCol.second;
+  pos.character = lineAndCol.second - 1;
   return pos;
 }
 
@@ -33,10 +33,7 @@ static llvm::SMLoc getPosFromLoc(llvm::SourceMgr &mgr, lsp::Position pos) {
 
 /// Returns a language server range for the given source range.
 static lsp::Range getRangeFromLoc(llvm::SourceMgr &mgr, llvm::SMRange range) {
-  // lsp::Range is an inclusive range, SMRange is half-open.
-  llvm::SMLoc inclusiveEnd =
-      llvm::SMLoc::getFromPointer(range.End.getPointer() - 1);
-  return {getPosFromLoc(mgr, range.Start), getPosFromLoc(mgr, inclusiveEnd)};
+  return {getPosFromLoc(mgr, range.Start), getPosFromLoc(mgr, range.End)};
 }
 
 /// Returns a language server location from the given source range.
@@ -365,6 +362,12 @@ void MLIRDocument::getLocationsOf(const lsp::URIForFile &uri,
     for (const auto &result : op.resultGroups)
       if (containsPosition(result.second))
         return collectLocationsFromLoc(op.op->getLoc(), locations, uri);
+    for (const auto &symUse : op.symbolUses) {
+      if (contains(symUse, posLoc)) {
+        locations.push_back(getLocationFromLoc(sourceMgr, op.loc, uri));
+        return collectLocationsFromLoc(op.op->getLoc(), locations, uri);
+      }
+    }
   }
 
   // Check all definitions related to blocks.
@@ -395,11 +398,21 @@ void MLIRDocument::findReferencesOf(const lsp::URIForFile &uri,
     if (contains(op.loc, posLoc)) {
       for (const auto &result : op.resultGroups)
         appendSMDef(result.second);
+      for (const auto &symUse : op.symbolUses)
+        if (contains(symUse, posLoc))
+          references.push_back(getLocationFromLoc(sourceMgr, symUse, uri));
       return;
     }
     for (const auto &result : op.resultGroups)
       if (isDefOrUse(result.second, posLoc))
         return appendSMDef(result.second);
+    for (const auto &symUse : op.symbolUses) {
+      if (!contains(symUse, posLoc))
+        continue;
+      for (const auto &symUse : op.symbolUses)
+        references.push_back(getLocationFromLoc(sourceMgr, symUse, uri));
+      return;
+    }
   }
 
   // Check all definitions related to blocks.
