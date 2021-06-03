@@ -2617,7 +2617,8 @@ SDValue MipsTargetLowering::lowerRETURNADDR(SDValue Op,
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MVT VT = Op.getSimpleValueType();
-  unsigned RA = ABI.IsN64() ? Mips::RA_64 : Mips::RA;
+  unsigned RA =
+      ABI.IsN64() ? Mips::RA_64 : ABI.IsP32() ? Mips::RA_NM : Mips::RA;
   MFI.setReturnAddressIsTaken(true);
 
   // Return RA, which contains the return address. Mark it an implicit live-in.
