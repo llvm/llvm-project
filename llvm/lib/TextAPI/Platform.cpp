@@ -105,5 +105,34 @@ PlatformKind getPlatformFromName(StringRef Name) {
       .Default(PlatformKind::unknown);
 }
 
+std::string getOSAndEnvironmentName(PlatformKind Platform,
+                                    std::string Version) {
+  switch (Platform) {
+  case PlatformKind::unknown:
+    return "darwin" + Version;
+  case PlatformKind::macOS:
+    return "macos" + Version;
+  case PlatformKind::iOS:
+    return "ios" + Version;
+  case PlatformKind::tvOS:
+    return "tvos" + Version;
+  case PlatformKind::watchOS:
+    return "watchos" + Version;
+  case PlatformKind::bridgeOS:
+    return "bridgeos" + Version;
+  case PlatformKind::macCatalyst:
+    return "ios" + Version + "-macabi";
+  case PlatformKind::iOSSimulator:
+    return "ios" + Version + "-simulator";
+  case PlatformKind::tvOSSimulator:
+    return "tvos" + Version + "-simulator";
+  case PlatformKind::watchOSSimulator:
+    return "watchos" + Version + "-simulator";
+  case PlatformKind::driverKit:
+    return "driverkit" + Version;
+  }
+  llvm_unreachable("Unknown llvm::MachO::PlatformKind enum");
+}
+
 } // end namespace MachO.
 } // end namespace llvm.

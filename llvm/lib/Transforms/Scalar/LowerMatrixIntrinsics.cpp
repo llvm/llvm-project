@@ -403,6 +403,18 @@ class LowerMatrixIntrinsics {
   /// Map from instructions to their produced column matrix.
   MapVector<Value *, MatrixTy> Inst2ColumnMatrix;
 
+private:
+  static FastMathFlags getFastMathFlags(Instruction *Inst) {
+    FastMathFlags FMF;
+
+    if (isa<FPMathOperator>(*Inst))
+      FMF = Inst->getFastMathFlags();
+
+    FMF.setAllowContract(AllowContractEnabled || FMF.allowContract());
+
+    return FMF;
+  }
+
 public:
   LowerMatrixIntrinsics(Function &F, TargetTransformInfo &TTI,
                         AliasAnalysis *AA, DominatorTree *DT, LoopInfo *LI,
@@ -1149,9 +1161,8 @@ public:
   /// column-major.  If \p IsScalarMatrixTransposed we assume the appropriate
   /// operand is transposed.
   void emitMatrixMultiply(MatrixTy &Result, const MatrixTy &A,
-                          const MatrixTy &B, bool AllowContraction,
-                          IRBuilder<> &Builder, bool IsTiled,
-                          bool IsScalarMatrixTransposed) {
+                          const MatrixTy &B, IRBuilder<> &Builder, bool IsTiled,
+                          bool IsScalarMatrixTransposed, FastMathFlags FMF) {
     const unsigned VF = std::max<unsigned>(
         TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
                 .getFixedSize() /
@@ -1166,6 +1177,9 @@ public:
            Result.isColumnMajor() == A.isColumnMajor() &&
            "operands must agree on matrix layout");
     unsigned NumComputeOps = 0;
+
+    Builder.setFastMathFlags(FMF);
+
     if (A.isColumnMajor()) {
       // Multiply columns from the first operand with scalars from the second
       // operand. Then move along the K axes and accumulate the columns.  With
@@ -1188,9 +1202,9 @@ public:
                 B.getColumn(IsScalarMatrixTransposed ? K : J),
                 IsScalarMatrixTransposed ? J : K);
             Value *Splat = Builder.CreateVectorSplat(BlockSize, RH, "splat");
-            Sum = createMulAdd(isSumZero && K == 0 ? nullptr : Sum, L, Splat,
-                               Result.getElementType()->isFloatingPointTy(),
-                               Builder, AllowContraction, NumComputeOps);
+            Sum =
+                createMulAdd(isSumZero && K == 0 ? nullptr : Sum, L, Splat,
+                             IsFP, Builder, FMF.allowContract(), NumComputeOps);
           }
           Result.setVector(J,
                            insertVector(Result.getVector(J), I, Sum, Builder));
@@ -1215,8 +1229,9 @@ public:
                 A.getVector(IsScalarMatrixTransposed ? K : I),
                 IsScalarMatrixTransposed ? I : K);
             Value *Splat = Builder.CreateVectorSplat(BlockSize, LH, "splat");
-            Sum = createMulAdd(isSumZero && K == 0 ? nullptr : Sum, Splat, R,
-                               IsFP, Builder, AllowContraction, NumComputeOps);
+            Sum =
+                createMulAdd(isSumZero && K == 0 ? nullptr : Sum, Splat, R,
+                             IsFP, Builder, FMF.allowContract(), NumComputeOps);
           }
           Result.setVector(I,
                            insertVector(Result.getVector(I), J, Sum, Builder));
@@ -1354,8 +1369,7 @@ public:
   }
 
   void createTiledLoops(CallInst *MatMul, Value *LPtr, ShapeInfo LShape,
-                        Value *RPtr, ShapeInfo RShape, StoreInst *Store,
-                        bool AllowContract) {
+                        Value *RPtr, ShapeInfo RShape, StoreInst *Store) {
     auto *EltType = cast<VectorType>(MatMul->getType())->getElementType();
 
     // Create the main tiling loop nest.
@@ -1391,7 +1405,8 @@ public:
                             {TileSize, TileSize}, EltType, Builder);
     MatrixTy B = loadMatrix(RPtr, {}, false, RShape, TI.CurrentK, TI.CurrentCol,
                             {TileSize, TileSize}, EltType, Builder);
-    emitMatrixMultiply(TileResult, A, B, AllowContract, Builder, true, false);
+    emitMatrixMultiply(TileResult, A, B, Builder, true, false,
+                       getFastMathFlags(MatMul));
     // Store result after the inner loop is done.
     Builder.SetInsertPoint(TI.RowLoopLatch->getTerminator());
     storeMatrix(TileResult, Store->getPointerOperand(), Store->getAlign(),
@@ -1430,11 +1445,8 @@ public:
     Value *BPtr = getNonAliasingPointer(LoadOp1, Store, MatMul);
     Value *CPtr = Store->getPointerOperand();
 
-    bool AllowContract = AllowContractEnabled || (isa<FPMathOperator>(MatMul) &&
-                                                  MatMul->hasAllowContract());
     if (TileUseLoops && (R % TileSize == 0 && C % TileSize == 0))
-      createTiledLoops(MatMul, APtr, LShape, BPtr, RShape, Store,
-                       AllowContract);
+      createTiledLoops(MatMul, APtr, LShape, BPtr, RShape, Store);
     else {
       IRBuilder<> Builder(Store);
       for (unsigned J = 0; J < C; J += TileSize)
@@ -1453,7 +1465,8 @@ public:
                 loadMatrix(BPtr, LoadOp1->getAlign(), LoadOp1->isVolatile(),
                            RShape, Builder.getInt64(K), Builder.getInt64(J),
                            {TileM, TileC}, EltType, Builder);
-            emitMatrixMultiply(Res, A, B, AllowContract, Builder, true, false);
+            emitMatrixMultiply(Res, A, B, Builder, true, false,
+                               getFastMathFlags(MatMul));
           }
           storeMatrix(Res, CPtr, Store->getAlign(), Store->isVolatile(), {R, M},
                       Builder.getInt64(I), Builder.getInt64(J), EltType,
@@ -1520,10 +1533,8 @@ public:
       // Initialize the output
       MatrixTy Result(R, C, EltType);
 
-      bool AllowContract =
-          AllowContractEnabled ||
-          (isa<FPMathOperator>(MatMul) && MatMul->hasAllowContract());
-      emitMatrixMultiply(Result, MA, MB, AllowContract, Builder, false, true);
+      emitMatrixMultiply(Result, MA, MB, Builder, false, true,
+                         getFastMathFlags(MatMul));
 
       FusedInsts.insert(MatMul);
       FusedInsts.insert(cast<Instruction>(Transpose));
@@ -1578,9 +1589,8 @@ public:
     assert(Lhs.getElementType() == Result.getElementType() &&
            "Matrix multiply result element type does not match arguments.");
 
-    bool AllowContract = AllowContractEnabled || (isa<FPMathOperator>(MatMul) &&
-                                                  MatMul->hasAllowContract());
-    emitMatrixMultiply(Result, Lhs, Rhs, AllowContract, Builder, false, false);
+    emitMatrixMultiply(Result, Lhs, Rhs, Builder, false, false,
+                       getFastMathFlags(MatMul));
     finalizeLowering(MatMul, Result, Builder);
   }
 
@@ -1665,6 +1675,8 @@ public:
            Result.isColumnMajor() == A.isColumnMajor() &&
            "operands must agree on matrix layout");
 
+    Builder.setFastMathFlags(getFastMathFlags(Inst));
+
     // Helper to perform binary op on vectors.
     auto BuildVectorOp = [&Builder, Inst](Value *LHS, Value *RHS) {
       switch (Inst->getOpcode()) {
@@ -1708,6 +1720,8 @@ public:
 
     MatrixTy Result;
     MatrixTy M = getMatrix(Op, Shape, Builder);
+
+    Builder.setFastMathFlags(getFastMathFlags(Inst));
 
     // Helper to perform unary op on vectors.
     auto BuildVectorOp = [&Builder, Inst](Value *Op) {

@@ -871,6 +871,15 @@ void populateLinalgDistributeTiledLoopPattern(
 // Op-specific patterns.
 //===----------------------------------------------------------------------===//
 
+/// PadTensorOp is not canonicalized away yet, so we provide a transformation to
+/// `linalg.generic`.
+struct PadTensorOpTransformationPattern : public OpRewritePattern<PadTensorOp> {
+  using OpRewritePattern<PadTensorOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(PadTensorOp padOp,
+                                PatternRewriter &rewriter) const override;
+};
+
 /// PadTensorOp does not implement the LinalgStructuredOpInterface `LinalgOp`,
 /// it needs a specific pattern to vectorize.
 struct PadTensorOpVectorizationPattern : public OpRewritePattern<PadTensorOp> {

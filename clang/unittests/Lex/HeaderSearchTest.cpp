@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Lex/HeaderSearch.h"
+#include "HeaderMapTestUtils.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
@@ -45,6 +46,21 @@ protected:
     Search.AddSearchPath(DL, /*isAngled=*/false);
   }
 
+  void addHeaderMap(llvm::StringRef Filename,
+                    std::unique_ptr<llvm::MemoryBuffer> Buf) {
+    VFS->addFile(Filename, 0, std::move(Buf), /*User=*/None, /*Group=*/None,
+                 llvm::sys::fs::file_type::regular_file);
+    auto FE = FileMgr.getFile(Filename, true);
+    assert(FE);
+
+    // Test class supports only one HMap at a time.
+    assert(!HMap);
+    HMap = HeaderMap::Create(*FE, FileMgr);
+    auto DL =
+        DirectoryLookup(HMap.get(), SrcMgr::C_User, /*isFramework=*/false);
+    Search.AddSearchPath(DL, /*isAngled=*/false);
+  }
+
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS;
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
@@ -55,6 +71,7 @@ protected:
   std::shared_ptr<TargetOptions> TargetOpts;
   IntrusiveRefCntPtr<TargetInfo> Target;
   HeaderSearch Search;
+  std::unique_ptr<HeaderMap> HMap;
 };
 
 TEST_F(HeaderSearchTest, NoSearchDir) {
@@ -134,6 +151,32 @@ TEST_F(HeaderSearchTest, IncludeFromSameDirectory) {
                                                    /*WorkingDir=*/"",
                                                    /*MainFile=*/"/y/a.cc"),
             "y/z/t.h");
+}
+
+// Helper struct with null terminator character to make MemoryBuffer happy.
+template <class FileTy, class PaddingTy>
+struct NullTerminatedFile : public FileTy {
+  PaddingTy Padding = 0;
+};
+
+TEST_F(HeaderSearchTest, HeaderMapReverseLookup) {
+  typedef NullTerminatedFile<test::HMapFileMock<2, 32>, char> FileTy;
+  FileTy File;
+  File.init();
+
+  test::HMapFileMockMaker<FileTy> Maker(File);
+  auto a = Maker.addString("d.h");
+  auto b = Maker.addString("b/");
+  auto c = Maker.addString("c.h");
+  Maker.addBucket("d.h", a, b, c);
+
+  addHeaderMap("/x/y/z.hmap", File.getBuffer());
+  addSearchDir("/a");
+
+  EXPECT_EQ(Search.suggestPathToFileForDiagnostics("/a/b/c.h",
+                                                   /*WorkingDir=*/"",
+                                                   /*MainFile=*/""),
+            "d.h");
 }
 
 } // namespace

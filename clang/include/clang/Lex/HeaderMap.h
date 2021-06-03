@@ -16,6 +16,7 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <memory>
@@ -29,6 +30,7 @@ struct HMapHeader;
 class HeaderMapImpl {
   std::unique_ptr<const llvm::MemoryBuffer> FileBuffer;
   bool NeedsBSwap;
+  mutable llvm::StringMap<StringRef> ReverseMap;
 
 public:
   HeaderMapImpl(std::unique_ptr<const llvm::MemoryBuffer> File, bool NeedsBSwap)
@@ -47,6 +49,9 @@ public:
 
   /// Print the contents of this headermap to stderr.
   void dump() const;
+
+  /// Return key for specifed path.
+  StringRef reverseLookupFilename(StringRef DestPath) const;
 
 private:
   unsigned getEndianAdjustedWord(unsigned X) const;
@@ -79,9 +84,10 @@ public:
   /// ".." and a filename "../file.h" this would be "../../file.h".
   Optional<FileEntryRef> LookupFile(StringRef Filename, FileManager &FM) const;
 
-  using HeaderMapImpl::lookupFilename;
-  using HeaderMapImpl::getFileName;
   using HeaderMapImpl::dump;
+  using HeaderMapImpl::getFileName;
+  using HeaderMapImpl::lookupFilename;
+  using HeaderMapImpl::reverseLookupFilename;
 };
 
 } // end namespace clang.

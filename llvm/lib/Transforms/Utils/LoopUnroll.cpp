@@ -256,8 +256,7 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 ///
 /// PreserveCondBr indicates whether the conditional branch of the LatchBlock
 /// needs to be preserved.  It is needed when we use trip count upper bound to
-/// fully unroll the loop. If PreserveOnlyFirst is also set then only the first
-/// conditional branch needs to be preserved.
+/// fully unroll the loop.
 ///
 /// Similarly, TripMultiple divides the number of times that the LatchBlock may
 /// execute without exiting the loop.
@@ -380,6 +379,11 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       PreserveLCSSA && CompletelyUnroll &&
       any_of(ExitBlocks,
              [](const BasicBlock *BB) { return isa<PHINode>(BB->begin()); });
+
+  const unsigned MaxTripCount = SE->getSmallConstantMaxTripCount(L);
+  const bool MaxOrZero = SE->isBackedgeTakenCountMaxOrZero(L);
+
+  const bool PreserveOnlyFirst = ULO.Count == MaxTripCount && MaxOrZero;
 
   // The current loop unroll pass can unroll loops that have
   // (1) single latch; and
@@ -708,26 +712,54 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     Latches[i]->getTerminator()->replaceSuccessorWith(Headers[i], Headers[j]);
   }
 
+  // Update dominators of blocks we might reach through exits.
+  // Immediate dominator of such block might change, because we add more
+  // routes which can lead to the exit: we can now reach it from the copied
+  // iterations too.
+  if (ULO.Count > 1) {
+    for (auto *BB : OriginalLoopBlocks) {
+      auto *BBDomNode = DT->getNode(BB);
+      SmallVector<BasicBlock *, 16> ChildrenToUpdate;
+      for (auto *ChildDomNode : BBDomNode->children()) {
+        auto *ChildBB = ChildDomNode->getBlock();
+        if (!L->contains(ChildBB))
+          ChildrenToUpdate.push_back(ChildBB);
+      }
+      // The new idom of the block will be the nearest common dominator
+      // of all copies of the previous idom. This is equivalent to the
+      // nearest common dominator of the previous idom and the first latch,
+      // which dominates all copies of the previous idom.
+      BasicBlock *NewIDom = DT->findNearestCommonDominator(BB, LatchBlock);
+      for (auto *ChildBB : ChildrenToUpdate)
+        DT->changeImmediateDominator(ChildBB, NewIDom);
+    }
+  }
+
+  assert(!UnrollVerifyDomtree ||
+         DT->verify(DominatorTree::VerificationLevel::Fast));
+
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+
   if (ExitingBI) {
-    auto SetDest = [](BasicBlock *Src, bool WillExit, bool ExitOnTrue) {
+    auto SetDest = [&](BasicBlock *Src, bool WillExit, bool ExitOnTrue) {
       auto *Term = cast<BranchInst>(Src->getTerminator());
-      BasicBlock *Dest = Term->getSuccessor(ExitOnTrue ^ WillExit);
+      const unsigned Idx = ExitOnTrue ^ WillExit;
+      BasicBlock *Dest = Term->getSuccessor(Idx);
+      BasicBlock *DeadSucc = Term->getSuccessor(1-Idx);
 
       // Remove predecessors from all non-Dest successors.
-      for (BasicBlock *Succ : successors(Src)) {
-        if (Succ == Dest)
-          continue;
-        Succ->removePredecessor(Src, /* KeepOneInputPHIs */ true);
-      }
+      DeadSucc->removePredecessor(Src, /* KeepOneInputPHIs */ true);
 
       // Replace the conditional branch with an unconditional one.
       BranchInst::Create(Dest, Term);
       Term->eraseFromParent();
+
+      DTU.applyUpdates({{DominatorTree::Delete, Src, DeadSucc}});
     };
 
     auto WillExit = [&](unsigned i, unsigned j) -> Optional<bool> {
       if (CompletelyUnroll) {
-        if (ULO.PreserveCondBr && j && !(ULO.PreserveOnlyFirst && i != 0))
+        if (ULO.PreserveCondBr && j && !(PreserveOnlyFirst && i != 0))
           return None;
         return j == 0;
       }
@@ -762,55 +794,6 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     }
   }
 
-  // Update dominators of blocks we might reach through exits.
-  // Immediate dominator of such block might change, because we add more
-  // routes which can lead to the exit: we can now reach it from the copied
-  // iterations too.
-  if (ULO.Count > 1) {
-    for (auto *BB : OriginalLoopBlocks) {
-      auto *BBDomNode = DT->getNode(BB);
-      SmallVector<BasicBlock *, 16> ChildrenToUpdate;
-      for (auto *ChildDomNode : BBDomNode->children()) {
-        auto *ChildBB = ChildDomNode->getBlock();
-        if (!L->contains(ChildBB))
-          ChildrenToUpdate.push_back(ChildBB);
-      }
-      BasicBlock *NewIDom;
-      if (ExitingBI && BB == ExitingBlocks[0]) {
-        // The latch is special because we emit unconditional branches in
-        // some cases where the original loop contained a conditional branch.
-        // Since the latch is always at the bottom of the loop, if the latch
-        // dominated an exit before unrolling, the new dominator of that exit
-        // must also be a latch.  Specifically, the dominator is the first
-        // latch which ends in a conditional branch, or the last latch if
-        // there is no such latch.
-        // For loops exiting from non latch exiting block, we limit the
-        // branch simplification to single exiting block loops.
-        NewIDom = ExitingBlocks.back();
-        for (unsigned i = 0, e = ExitingBlocks.size(); i != e; ++i) {
-          Instruction *Term = ExitingBlocks[i]->getTerminator();
-          if (isa<BranchInst>(Term) && cast<BranchInst>(Term)->isConditional()) {
-            NewIDom =
-                DT->findNearestCommonDominator(ExitingBlocks[i], Latches[i]);
-            break;
-          }
-        }
-      } else {
-        // The new idom of the block will be the nearest common dominator
-        // of all copies of the previous idom. This is equivalent to the
-        // nearest common dominator of the previous idom and the first latch,
-        // which dominates all copies of the previous idom.
-        NewIDom = DT->findNearestCommonDominator(BB, LatchBlock);
-      }
-      for (auto *ChildBB : ChildrenToUpdate)
-        DT->changeImmediateDominator(ChildBB, NewIDom);
-    }
-  }
-
-  assert(!UnrollVerifyDomtree ||
-         DT->verify(DominatorTree::VerificationLevel::Fast));
-
-  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
   // When completely unrolling, the last latch becomes unreachable.
   if (!LatchIsExiting && CompletelyUnroll)

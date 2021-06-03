@@ -40,6 +40,8 @@ PlatformKind mapToPlatformKind(const Triple &Target);
 PlatformSet mapToPlatformSet(ArrayRef<Triple> Targets);
 StringRef getPlatformName(PlatformKind Platform);
 PlatformKind getPlatformFromName(StringRef Name);
+std::string getOSAndEnvironmentName(PlatformKind Platform,
+                                    std::string Version = "");
 
 } // end namespace MachO.
 } // end namespace llvm.

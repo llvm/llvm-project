@@ -9,6 +9,7 @@
 #ifndef LLD_ELF_THUNKS_H
 #define LLD_ELF_THUNKS_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "Relocations.h"
 
 namespace lld {

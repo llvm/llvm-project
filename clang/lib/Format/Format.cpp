@@ -665,6 +665,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("PenaltyIndentedWhitespace",
                    Style.PenaltyIndentedWhitespace);
     IO.mapOptional("PointerAlignment", Style.PointerAlignment);
+    IO.mapOptional("PPIndentWidth", Style.PPIndentWidth);
     IO.mapOptional("RawStringFormats", Style.RawStringFormats);
     IO.mapOptional("ReflowComments", Style.ReflowComments);
     IO.mapOptional("ShortNamespaceLines", Style.ShortNamespaceLines);
@@ -1022,6 +1023,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.IndentRequires = false;
   LLVMStyle.IndentWrappedFunctionNames = false;
   LLVMStyle.IndentWidth = 2;
+  LLVMStyle.PPIndentWidth = -1;
   LLVMStyle.InsertTrailingCommas = FormatStyle::TCS_None;
   LLVMStyle.JavaScriptQuotes = FormatStyle::JSQS_Leave;
   LLVMStyle.JavaScriptWrapImports = true;

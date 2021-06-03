@@ -260,6 +260,7 @@ module std [system] {
     export *
   }
   module compare {
+    requires cplusplus20
     header "compare"
     export *
   }
@@ -268,6 +269,7 @@ module std [system] {
     export *
   }
   module concepts {
+    requires cplusplus20
     header "concepts"
     export *
   }
@@ -293,8 +295,14 @@ module std [system] {
     export *
   }
   module format {
+    requires cplusplus20
     header "format"
     export *
+
+    module __format {
+      module format_error         { header "__format/format_error.h"         }
+      module format_parse_context { header "__format/format_parse_context.h" }
+    }
   }
   module forward_list {
     header "forward_list"
@@ -346,6 +354,20 @@ module std [system] {
   module iterator {
     header "iterator"
     export *
+
+    module __iterator {
+      module advance              { header "__iterator/advance.h"              }
+      module concepts             { header "__iterator/concepts.h"             }
+      module default_sentinel     { header "__iterator/default_sentinel.h"     }
+      module incrementable_traits { header "__iterator/incrementable_traits.h" }
+      module indirect_concepts    { header "__iterator/indirect_concepts.h"    }
+      module iter_move            { header "__iterator/iter_move.h"            }
+      module iterator_traits      { header "__iterator/iterator_traits.h"      }
+      module next                 { header "__iterator/next.h"                 }
+      module prev                 { header "__iterator/prev.h"                 }
+      module projected            { header "__iterator/projected.h"            }
+      module readable_traits      { header "__iterator/readable_traits.h"      }
+    }
   }
   module latch {
     requires cplusplus14
@@ -373,6 +395,23 @@ module std [system] {
   module memory {
     header "memory"
     export *
+
+    module __memory {
+      module addressof                { header "__memory/addressof.h"                }
+      module allocation_guard         { header "__memory/allocation_guard.h"         }
+      module allocator_traits         { header "__memory/allocator_traits.h"         }
+      module allocator                { header "__memory/allocator.h"                }
+      module auto_ptr                 { header "__memory/auto_ptr.h"                 }
+      module compressed_pair          { header "__memory/compressed_pair.h"          }
+      module construct_at             { header "__memory/construct_at.h"             }
+      module pointer_safety           { header "__memory/pointer_safety.h"           }
+      module pointer_traits           { header "__memory/pointer_traits.h"           }
+      module raw_storage_iterator     { header "__memory/raw_storage_iterator.h"     }
+      module shared_ptr               { header "__memory/shared_ptr.h"               }
+      module temporary_buffer         { header "__memory/temporary_buffer.h"         }
+      module uninitialized_algorithms { header "__memory/uninitialized_algorithms.h" }
+      module unique_ptr               { header "__memory/unique_ptr.h"               }
+    }
   }
   module mutex {
     header "mutex"
@@ -410,11 +449,23 @@ module std [system] {
     export *
   }
   module ranges {
+    requires cplusplus20
     header "ranges"
     export compare
     export initializer_list
     export iterator
     export *
+
+    module __ranges {
+      module access                 { header "__ranges/access.h"                 }
+      module concepts               { header "__ranges/concepts.h"               }
+      module data                   { header "__ranges/data.h"                   }
+      module empty                  { header "__ranges/empty.h"                  }
+      module enabled_borrowed_range { header "__ranges/enabled_borrowed_range.h" }
+      module size                   { header "__ranges/size.h"                   }
+      module view_interface         { header "__ranges/view_interface.h"         }
+      module view                   { header "__ranges/view.h"                   }
+    }
   }
   module ratio {
     header "ratio"
@@ -512,6 +563,12 @@ module std [system] {
     header "utility"
     export initializer_list
     export *
+
+    module __utility {
+      module to_underlying {
+        header "__utility/to_underlying.h"
+      }
+    }
   }
   module valarray {
     header "valarray"
@@ -533,22 +590,28 @@ module std [system] {
   }
 
   // FIXME: These should be private.
-  module __bit_reference { header "__bit_reference" export * }
-  module __bits { header "__bits" export * }
-  module __debug { header "__debug" export * }
-  module __errc { header "__errc" export * }
-  module __functional_base { header "__functional_base" export * }
-  module __hash_table { header "__hash_table" export * }
-  module __locale { header "__locale" export * }
-  module __mutex_base { header "__mutex_base" export * }
-  module __node_handle { header "__node_handle" export * }
-  module __split_buffer { header "__split_buffer" export * }
-  module __std_stream { header "__std_stream" export * }
-  module __string { header "__string" export * }
-  module __threading_support { header "__threading_support" export * }
-  module __tree { header "__tree" export * }
-  module __tuple { header "__tuple" export * }
-  module __undef_macros { header "__undef_macros" export * }
+  module __availability       { header "__availability"       export * }
+  module __bit_reference      { header "__bit_reference"      export * }
+  module __bits               { header "__bits"               export * }
+  module __config             { header "__config"             export * }
+  module __debug              { header "__debug"              export * }
+  module __errc               { header "__errc"               export * }
+  module __function_like      { header "__function_like.h"    export * }
+  module __functional_base    { header "__functional_base" export * }
+  // TODO: modularise __functional_(base_)?03
+  module __hash_table         { header "__hash_table"         export * }
+  // libcpp_version not modularised since it's just a version number
+  module __locale             { header "__locale"             export * }
+  module __mutex_base         { header "__mutex_base"         export * }
+  module __node_handle        { header "__node_handle"        export * }
+  module __nullptr            { header "__nullptr"            export * }
+  module __split_buffer       { header "__split_buffer"       export * }
+  module __std_stream         { header "__std_stream"         export * }
+  module __string             { header "__string"             export * }
+  module __threading_support  { header "__threading_support"  export * }
+  module __tree               { header "__tree"               export * }
+  module __tuple              { header "__tuple"              export * }
+  module __undef_macros       { header "__undef_macros"       export * }
 
   module experimental {
     requires cplusplus11
