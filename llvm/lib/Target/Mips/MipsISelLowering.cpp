@@ -523,7 +523,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setMinStackArgumentAlignment((ABI.IsN32() || ABI.IsN64()) ? Align(8)
                                                             : Align(4));
 
-  setStackPointerRegisterToSaveRestore(ABI.IsN64() ? Mips::SP_64 : Mips::SP);
+  setStackPointerRegisterToSaveRestore(
+      ABI.IsN64() ? Mips::SP_64 : ABI.IsP32() ? Mips::SP_NM : Mips::SP);
 
   MaxStoresPerMemcpy = 16;
 
