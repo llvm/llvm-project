@@ -13,9 +13,8 @@ declare void @usevec4(<2 x i4>)
 
 define i16 @t0(i8 %x) {
 ; CHECK-LABEL: @t0(
-; CHECK-NEXT:    [[A:%.*]] = lshr i8 [[X:%.*]], 4
-; CHECK-NEXT:    [[B:%.*]] = trunc i8 [[A]] to i4
-; CHECK-NEXT:    [[C:%.*]] = sext i4 [[B]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[C:%.*]] = sext i8 [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[C]]
 ;
   %a = lshr i8 %x, 4
@@ -26,9 +25,8 @@ define i16 @t0(i8 %x) {
 
 define i16 @t1(i8 %x) {
 ; CHECK-LABEL: @t1(
-; CHECK-NEXT:    [[A:%.*]] = lshr i8 [[X:%.*]], 5
-; CHECK-NEXT:    [[B:%.*]] = trunc i8 [[A]] to i3
-; CHECK-NEXT:    [[C:%.*]] = sext i3 [[B]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[C:%.*]] = sext i8 [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[C]]
 ;
   %a = lshr i8 %x, 5
@@ -39,9 +37,8 @@ define i16 @t1(i8 %x) {
 
 define i16 @t2(i7 %x) {
 ; CHECK-LABEL: @t2(
-; CHECK-NEXT:    [[A:%.*]] = lshr i7 [[X:%.*]], 3
-; CHECK-NEXT:    [[B:%.*]] = trunc i7 [[A]] to i4
-; CHECK-NEXT:    [[C:%.*]] = sext i4 [[B]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i7 [[X:%.*]], 3
+; CHECK-NEXT:    [[C:%.*]] = sext i7 [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[C]]
 ;
   %a = lshr i7 %x, 3
@@ -65,9 +62,8 @@ define i16 @n3(i8 %x) {
 
 define <2 x i16> @t4_vec_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @t4_vec_splat(
-; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 4, i8 4>
-; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i8> [[A]] to <2 x i4>
-; CHECK-NEXT:    [[C:%.*]] = sext <2 x i4> [[B]] to <2 x i16>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 4, i8 4>
+; CHECK-NEXT:    [[C:%.*]] = sext <2 x i8> [[TMP1]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[C]]
 ;
   %a = lshr <2 x i8> %x, <i8 4, i8 4>
@@ -78,9 +74,8 @@ define <2 x i16> @t4_vec_splat(<2 x i8> %x) {
 
 define <2 x i16> @t5_vec_undef(<2 x i8> %x) {
 ; CHECK-LABEL: @t5_vec_undef(
-; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 4, i8 undef>
-; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i8> [[A]] to <2 x i4>
-; CHECK-NEXT:    [[C:%.*]] = sext <2 x i4> [[B]] to <2 x i16>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 4, i8 4>
+; CHECK-NEXT:    [[C:%.*]] = sext <2 x i8> [[TMP1]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[C]]
 ;
   %a = lshr <2 x i8> %x, <i8 4, i8 undef>
@@ -88,6 +83,8 @@ define <2 x i16> @t5_vec_undef(<2 x i8> %x) {
   %c = sext <2 x i4> %b to <2 x i16>
   ret <2 x i16> %c
 }
+
+; TODO: We could convert both uses of %a to ashr.
 
 define i16 @t6_extrause0(i8 %x) {
 ; CHECK-LABEL: @t6_extrause0(
@@ -103,6 +100,9 @@ define i16 @t6_extrause0(i8 %x) {
   %c = sext i4 %b to i16
   ret i16 %c
 }
+
+; TODO: We could convert both uses of %a to ashr.
+
 define <2 x i16> @t7_extrause0_vec_undef(<2 x i8> %x) {
 ; CHECK-LABEL: @t7_extrause0_vec_undef(
 ; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 4, i8 undef>
@@ -117,12 +117,15 @@ define <2 x i16> @t7_extrause0_vec_undef(<2 x i8> %x) {
   %c = sext <2 x i4> %b to <2 x i16>
   ret <2 x i16> %c
 }
+
+; TODO: We could convert both uses of %a to ashr.
+
 define i16 @t8_extrause1(i8 %x) {
 ; CHECK-LABEL: @t8_extrause1(
 ; CHECK-NEXT:    [[A:%.*]] = lshr i8 [[X:%.*]], 4
 ; CHECK-NEXT:    call void @use8(i8 [[A]])
-; CHECK-NEXT:    [[B:%.*]] = trunc i8 [[A]] to i4
-; CHECK-NEXT:    [[C:%.*]] = sext i4 [[B]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i8 [[X]], 4
+; CHECK-NEXT:    [[C:%.*]] = sext i8 [[TMP1]] to i16
 ; CHECK-NEXT:    ret i16 [[C]]
 ;
   %a = lshr i8 %x, 4 ; has extra use, but we can deal with that
@@ -131,12 +134,15 @@ define i16 @t8_extrause1(i8 %x) {
   %c = sext i4 %b to i16
   ret i16 %c
 }
+
+; TODO: We could convert both uses of %a to ashr.
+
 define <2 x i16> @t9_extrause1_vec_undef(<2 x i8> %x) {
 ; CHECK-LABEL: @t9_extrause1_vec_undef(
 ; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 4, i8 undef>
 ; CHECK-NEXT:    call void @usevec8(<2 x i8> [[A]])
-; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i8> [[A]] to <2 x i4>
-; CHECK-NEXT:    [[C:%.*]] = sext <2 x i4> [[B]] to <2 x i16>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i8> [[X]], <i8 4, i8 4>
+; CHECK-NEXT:    [[C:%.*]] = sext <2 x i8> [[TMP1]] to <2 x i16>
 ; CHECK-NEXT:    ret <2 x i16> [[C]]
 ;
   %a = lshr <2 x i8> %x, <i8 4, i8 undef>
@@ -180,9 +186,8 @@ define <2 x i16> @t11_extrause2_vec_undef(<2 x i8> %x) {
 
 define <2 x i10> @wide_source_shifted_signbit(<2 x i32> %x) {
 ; CHECK-LABEL: @wide_source_shifted_signbit(
-; CHECK-NEXT:    [[A:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 24, i32 24>
-; CHECK-NEXT:    [[B:%.*]] = trunc <2 x i32> [[A]] to <2 x i8>
-; CHECK-NEXT:    [[C:%.*]] = sext <2 x i8> [[B]] to <2 x i10>
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i32> [[X:%.*]], <i32 24, i32 24>
+; CHECK-NEXT:    [[C:%.*]] = trunc <2 x i32> [[TMP1]] to <2 x i10>
 ; CHECK-NEXT:    ret <2 x i10> [[C]]
 ;
   %a = lshr <2 x i32> %x, <i32 24, i32 24>
@@ -195,8 +200,8 @@ define i10 @wide_source_shifted_signbit_use1(i32 %x) {
 ; CHECK-LABEL: @wide_source_shifted_signbit_use1(
 ; CHECK-NEXT:    [[A:%.*]] = lshr i32 [[X:%.*]], 24
 ; CHECK-NEXT:    call void @use32(i32 [[A]])
-; CHECK-NEXT:    [[B:%.*]] = trunc i32 [[A]] to i8
-; CHECK-NEXT:    [[C:%.*]] = sext i8 [[B]] to i10
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X]], 24
+; CHECK-NEXT:    [[C:%.*]] = trunc i32 [[TMP1]] to i10
 ; CHECK-NEXT:    ret i10 [[C]]
 ;
   %a = lshr i32 %x, 24
