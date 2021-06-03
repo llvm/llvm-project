@@ -27,6 +27,7 @@ class Optional;
 
 namespace mlir {
 class Location;
+class Value;
 }
 
 namespace fir {
@@ -73,6 +74,16 @@ void genDateAndTime(FirOpBuilder &, mlir::Location,
                     llvm::Optional<fir::CharBoxValue> date,
                     llvm::Optional<fir::CharBoxValue> time,
                     llvm::Optional<fir::CharBoxValue> zone);
+
+/// generate runtime call to transfer intrinsic with no size argument
+void genTransfer(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+                 mlir::Value resultBox, mlir::Value sourceBox,
+                 mlir::Value moldBox);
+
+/// generate runtime call to transfer intrinsic with size argument
+void genTransferSize(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+                     mlir::Value resultBox, mlir::Value sourceBox,
+                     mlir::Value moldBox, mlir::Value size);
 
 } // namespace lower
 } // namespace Fortran

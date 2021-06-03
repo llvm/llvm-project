@@ -436,6 +436,8 @@ struct IntrinsicLibrary {
   mlir::Value genSpacing(mlir::Type resultType,
                          llvm::ArrayRef<mlir::Value> args);
   fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genTransfer(mlir::Type,
+                                 llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genVerify(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   /// Implement all conversion functions like DBLE, the first argument is
@@ -642,6 +644,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"sum",
      &I::genSum,
      {{{"array", asAddr}, {"dim", asValue}, {"mask", asAddr}}},
+     /*isElemental=*/false},
+    {"transfer",
+     &I::genTransfer,
+     {{{"source", asAddr}, {"mold", asAddr}, {"size", asValue}}},
      /*isElemental=*/false},
     {"trim", &I::genTrim, {{{"string", asAddr}}}, /*isElemental=*/false},
     {"verify",
@@ -2134,6 +2140,80 @@ IntrinsicLibrary::genSum(mlir::Type resultType,
   return genProdOrSum(Fortran::lower::genSum, Fortran::lower::genSumDim,
                       resultType, builder, loc, stmtCtx,
                       "unexpected result for Sum", args);
+}
+
+// TRANSFER
+fir::ExtendedValue
+IntrinsicLibrary::genTransfer(mlir::Type resultType,
+                              llvm::ArrayRef<fir::ExtendedValue> args) {
+
+  assert(args.size() >= 2); // args.size() == 2 when size argument is omitted.
+
+  // Handle source argument
+  auto source = builder.createBox(loc, args[0]);
+
+  // Handle mold argument
+  auto mold = builder.createBox(loc, args[1]);
+  fir::BoxValue moldTmp = mold;
+  auto moldRank = moldTmp.rank();
+
+  bool absentSize = (args.size() == 2);
+
+  // Create mutable fir.box to be passed to the runtime for the result.
+  auto type = (moldRank == 0 && absentSize)
+                  ? resultType
+                  : builder.getVarLenSeqTy(resultType, 1);
+  auto resultMutableBox =
+      Fortran::lower::createTempMutableBox(builder, loc, type);
+
+  if (moldRank == 0 && absentSize) {
+    // This result is a scalar in this case.
+    auto resultIrBox =
+        Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
+
+    Fortran::lower::genTransfer(builder, loc, resultIrBox, source, mold);
+  } else {
+    // The result is a rank one array in this case.
+    auto resultIrBox =
+        Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
+
+    if (absentSize) {
+      Fortran::lower::genTransfer(builder, loc, resultIrBox, source, mold);
+    } else {
+      auto sizeArg = fir::getBase(args[2]);
+      Fortran::lower::genTransferSize(builder, loc, resultIrBox, source, mold,
+                                      sizeArg);
+    }
+  }
+
+  // Handle cleanup of allocatable result descriptor and return
+  auto res = Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox);
+  return res.match(
+      [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
+        // Add cleanup code
+        addCleanUpForTemp(loc, box.getAddr());
+        return box;
+      },
+      [&](const fir::CharArrayBoxValue &box) -> fir::ExtendedValue {
+        // Add cleanup code
+        addCleanUpForTemp(loc, box.getAddr());
+        return box;
+      },
+      [&](const Fortran::lower::SymbolBox::Intrinsic &box)
+          -> fir::ExtendedValue {
+        // Add cleanup code
+        auto temp = box.getAddr();
+        addCleanUpForTemp(loc, temp);
+        return builder.create<fir::LoadOp>(loc, resultType, temp);
+      },
+      [&](const fir::CharBoxValue &box) -> fir::ExtendedValue {
+        // Add cleanup code
+        addCleanUpForTemp(loc, box.getAddr());
+        return box;
+      },
+      [&](const auto &) -> fir::ExtendedValue {
+        fir::emitFatalError(loc, "unexpected result for TRANSFER");
+      });
 }
 
 // TRIM
