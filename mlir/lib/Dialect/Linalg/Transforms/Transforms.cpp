@@ -167,9 +167,9 @@ static LogicalResult rewriteAsPaddedOp(PatternRewriter &rewriter,
 
   // If the op is fully static, it does not need padding.
   // TODO: there are cases where we may still want to pad to larger sizes.
-  if (llvm::all_of(opToPad.getShapedOperands(), [](Value v) {
-        return v.getType().cast<RankedTensorType>().hasStaticShape();
-      }))
+  assert(opToPad.hasTensorSemantics() &&
+         "expected operation to have tensor semantics");
+  if (!opToPad.hasDynamicShape())
     return success();
 
   OpBuilder::InsertionGuard g(rewriter);
@@ -177,16 +177,16 @@ static LogicalResult rewriteAsPaddedOp(PatternRewriter &rewriter,
   rewriter.setInsertionPointAfter(opToPad);
   // Make a copy of the shaped operands and update it.
   SmallVector<Value> newOperands;
-  newOperands.reserve(opToPad.getNumShapedOperands());
-  for (OpOperand &operand : opToPad.getShapedOpOperands()) {
+  newOperands.reserve(opToPad.getNumInputsAndOutputs());
+  for (OpOperand *opOperand : opToPad.getInputAndOutputOperands()) {
     Value paddedOperand;
     // If padding was requested but the shape cannot be bounded statically then
     // the pattern fails to apply.
-    if (failed(padOperandToSmallestStaticBoundingBox(rewriter, opToPad, operand,
-                                                     options, paddedOperand))) {
+    if (failed(padOperandToSmallestStaticBoundingBox(
+            rewriter, opToPad, *opOperand, options, paddedOperand))) {
       return failure();
     }
-    newOperands.push_back(paddedOperand ? paddedOperand : operand.get());
+    newOperands.push_back(paddedOperand ? paddedOperand : opOperand->get());
   }
 
   // Clone `opToPad` to operate on the statically padded shapes.
