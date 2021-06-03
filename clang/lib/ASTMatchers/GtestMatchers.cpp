@@ -53,6 +53,7 @@ static DeclarationMatcher getComparisonDecl(GtestCmp Cmp) {
   case GtestCmp::Lt:
     return functionDecl(hasName("::testing::internal::CmpHelperLT"));
   }
+  llvm_unreachable("Unhandled GtestCmp enum");
 }
 
 static llvm::StringRef getMacroTypeName(MacroType Macro) {
@@ -64,6 +65,7 @@ static llvm::StringRef getMacroTypeName(MacroType Macro) {
   case MacroType::On:
     return "ON";
   }
+  llvm_unreachable("Unhandled MacroType enum");
 }
 
 static llvm::StringRef getComparisonTypeName(GtestCmp Cmp) {
@@ -81,6 +83,7 @@ static llvm::StringRef getComparisonTypeName(GtestCmp Cmp) {
   case GtestCmp::Lt:
     return "LT";
   }
+  llvm_unreachable("Unhandled GtestCmp enum");
 }
 
 static std::string getMacroName(MacroType Macro, GtestCmp Cmp) {
@@ -104,6 +107,7 @@ static llvm::StringRef getSpecSetterName(MacroType Macro) {
   default:
     llvm_unreachable("Unhandled MacroType enum");
   }
+  llvm_unreachable("Unhandled MacroType enum");
 }
 
 // In general, AST matchers cannot match calls to macros. However, we can
@@ -170,6 +174,7 @@ gtestCallInternal(MacroType Macro, StatementMatcher MockCall, MockArgs Args) {
             hasOverloadedOperatorName("()"), argumentCountIs(3),
             hasArgument(0, ignoringImplicit(MockCall))))));
   }
+  llvm_unreachable("Unhandled MockArgs enum");
 }
 
 static internal::BindableMatcher<Stmt>
