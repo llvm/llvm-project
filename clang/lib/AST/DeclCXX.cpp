@@ -2234,7 +2234,7 @@ CXXMethodDecl *CXXMethodDecl::getDevirtualizedMethod(const Expr *Base,
   // If the base expression (after skipping derived-to-base conversions) is a
   // class prvalue, then we can devirtualize.
   Base = Base->getBestDynamicClassTypeExpr();
-  if (Base->isRValue() && Base->getType()->isRecordType())
+  if (Base->isPRValue() && Base->getType()->isRecordType())
     return this;
 
   // If we don't even know what we would call, we can't devirtualize.

@@ -903,7 +903,6 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  }
 // CHECK-NEXT: }
 
-
 // CHECK:  "kind": "EnumConstantDecl",
 // CHECK-NEXT:  "loc": {
 // CHECK-NEXT:   "offset": 835,
@@ -947,7 +946,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    },
-// CHECK-NEXT:    "valueCategory": "rvalue",
+// CHECK-NEXT:    "valueCategory": "prvalue",
 // CHECK-NEXT:    "value": "1",
 // CHECK-NEXT:    "inner": [
 // CHECK-NEXT:     {
@@ -968,14 +967,13 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
 // CHECK-NEXT:      },
-// CHECK-NEXT:      "valueCategory": "rvalue",
+// CHECK-NEXT:      "valueCategory": "prvalue",
 // CHECK-NEXT:      "value": "1"
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
-
 
 // CHECK:  "kind": "RecordDecl",
 // CHECK-NEXT:  "loc": {
@@ -1107,7 +1105,6 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
-
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
@@ -1243,7 +1240,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "int"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "castKind": "LValueToRValue",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
@@ -1282,7 +1279,6 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
-
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
@@ -1388,7 +1384,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "int"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "castKind": "IntegralCast",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
@@ -1410,7 +1406,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:           "desugaredQualType": "enum Enum",
 // CHECK-NEXT:           "qualType": "enum Enum"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "castKind": "LValueToRValue",
 // CHECK-NEXT:          "inner": [
 // CHECK-NEXT:           {
@@ -1453,7 +1449,6 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
-
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
@@ -1623,7 +1618,6 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  }
 // CHECK-NEXT: }
 
-
 // CHECK:  "kind": "FieldDecl",
 // CHECK-NEXT:  "loc": {
 // CHECK-NEXT:   "offset": 1351,
@@ -1668,7 +1662,7 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    },
-// CHECK-NEXT:    "valueCategory": "rvalue",
+// CHECK-NEXT:    "valueCategory": "prvalue",
 // CHECK-NEXT:    "value": "1",
 // CHECK-NEXT:    "inner": [
 // CHECK-NEXT:     {
@@ -1689,14 +1683,13 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
 // CHECK-NEXT:      },
-// CHECK-NEXT:      "valueCategory": "rvalue",
+// CHECK-NEXT:      "valueCategory": "prvalue",
 // CHECK-NEXT:      "value": "1"
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
-
 
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
@@ -1783,7 +1776,6 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:  "tls": "static"
 // CHECK-NEXT: }
 
-
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
 // CHECK-NEXT:   "offset": 1458,
@@ -1829,12 +1821,11 @@ void testParmVarDecl(int TestParmVarDecl);
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
 // CHECK-NEXT:    },
-// CHECK-NEXT:    "valueCategory": "rvalue",
+// CHECK-NEXT:    "valueCategory": "prvalue",
 // CHECK-NEXT:    "value": "0"
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
-
 
 // CHECK:  "kind": "ParmVarDecl",
 // CHECK-NEXT:  "loc": {

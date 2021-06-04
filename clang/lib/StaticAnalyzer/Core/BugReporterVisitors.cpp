@@ -2013,7 +2013,7 @@ static void trackRValueExpression(const ExplodedNode *InputNode, const Expr *E,
                                   PathSensitiveBugReport &report,
                                   bugreporter::TrackingKind TKind,
                                   bool EnableNullFPSuppression) {
-  assert(E->isRValue() && "The expression is not an rvalue!");
+  assert(E->isPRValue() && "The expression is not a prvalue!");
   const ExplodedNode *RVNode = findNodeForExpression(InputNode, E);
   if (!RVNode)
     return;
@@ -2187,7 +2187,7 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
     }
   }
 
-  if (Inner->isRValue())
+  if (Inner->isPRValue())
     trackRValueExpression(LVNode, Inner, report, TKind,
                           EnableNullFPSuppression);
 

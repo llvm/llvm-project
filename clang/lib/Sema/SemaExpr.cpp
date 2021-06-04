@@ -707,7 +707,7 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   // C++ [conv.lval]p3:
   //   If T is cv std::nullptr_t, the result is a null pointer constant.
   CastKind CK = T->isNullPtrType() ? CK_NullToPointer : CK_LValueToRValue;
-  Res = ImplicitCastExpr::Create(Context, T, CK, E, nullptr, VK_RValue,
+  Res = ImplicitCastExpr::Create(Context, T, CK, E, nullptr, VK_PRValue,
                                  CurFPFeatureOverrides());
 
   // C11 6.3.2.1p2:
@@ -716,7 +716,7 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   if (const AtomicType *Atomic = T->getAs<AtomicType>()) {
     T = Atomic->getValueType().getUnqualifiedType();
     Res = ImplicitCastExpr::Create(Context, T, CK_AtomicToNonAtomic, Res.get(),
-                                   nullptr, VK_RValue, FPOptionsOverride());
+                                   nullptr, VK_PRValue, FPOptionsOverride());
   }
 
   return Res;
@@ -3249,7 +3249,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
     QualType type = VD->getType();
     if (type.isNull())
       return ExprError();
-    ExprValueKind valueKind = VK_RValue;
+    ExprValueKind valueKind = VK_PRValue;
 
     // In 'T ...V;', the type of the declaration 'V' is 'T...', but the type of
     // a reference to 'V' is simply (unexpanded) 'T'. The type, like the value,
@@ -3275,7 +3275,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
     case Decl::UnresolvedUsingValue:
     case Decl::OMPDeclareReduction:
     case Decl::OMPDeclareMapper:
-      valueKind = VK_RValue;
+      valueKind = VK_PRValue;
       break;
 
     // Fields and indirect fields that got here must be for
@@ -3316,7 +3316,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
 
       // For non-references, we need to strip qualifiers just in case
       // the template parameter was declared as 'const int' or whatever.
-      valueKind = VK_RValue;
+      valueKind = VK_PRValue;
       type = type.getUnqualifiedType();
       break;
     }
@@ -3330,7 +3330,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
       if (!getLangOpts().CPlusPlus &&
           !type.hasQualifiers() &&
           type->isVoidType()) {
-        valueKind = VK_RValue;
+        valueKind = VK_PRValue;
         break;
       }
       LLVM_FALLTHROUGH;
@@ -3372,7 +3372,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
       if (unsigned BID = cast<FunctionDecl>(VD)->getBuiltinID()) {
         if (!Context.BuiltinInfo.isPredefinedLibFunction(BID)) {
           type = Context.BuiltinFnTy;
-          valueKind = VK_RValue;
+          valueKind = VK_PRValue;
           break;
         }
       }
@@ -3383,7 +3383,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
       // result type, make the entire expression __unknown_anytype.
       if (fty->getReturnType() == Context.UnknownAnyTy) {
         type = Context.UnknownAnyTy;
-        valueKind = VK_RValue;
+        valueKind = VK_PRValue;
         break;
       }
 
@@ -3404,7 +3404,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
                                               fty->getExtInfo());
 
       // Functions are r-values in C.
-      valueKind = VK_RValue;
+      valueKind = VK_PRValue;
       break;
     }
 
@@ -3427,7 +3427,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
             = dyn_cast<FunctionProtoType>(VD->getType()))
         if (proto->getReturnType() == Context.UnknownAnyTy) {
           type = Context.UnknownAnyTy;
-          valueKind = VK_RValue;
+          valueKind = VK_PRValue;
           break;
         }
 
@@ -3441,7 +3441,7 @@ ExprResult Sema::BuildDeclarationNameExpr(
     case Decl::CXXConversion:
     case Decl::CXXDestructor:
     case Decl::CXXConstructor:
-      valueKind = VK_RValue;
+      valueKind = VK_PRValue;
       break;
     }
 
@@ -5541,14 +5541,14 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
     BaseExpr = LHSExp;    // vectors: V[123]
     IndexExpr = RHSExp;
     // We apply C++ DR1213 to vector subscripting too.
-    if (getLangOpts().CPlusPlus11 && LHSExp->getValueKind() == VK_RValue) {
+    if (getLangOpts().CPlusPlus11 && LHSExp->getValueKind() == VK_PRValue) {
       ExprResult Materialized = TemporaryMaterializationConversion(LHSExp);
       if (Materialized.isInvalid())
         return ExprError();
       LHSExp = Materialized.get();
     }
     VK = LHSExp->getValueKind();
-    if (VK != VK_RValue)
+    if (VK != VK_PRValue)
       OK = OK_VectorComponent;
 
     ResultType = VTy->getElementType();
@@ -5615,14 +5615,15 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
 
     // C forbids expressions of unqualified void type from being l-values.
     // See IsCForbiddenLValueType.
-    if (!ResultType.hasQualifiers()) VK = VK_RValue;
+    if (!ResultType.hasQualifiers())
+      VK = VK_PRValue;
   } else if (!ResultType->isDependentType() &&
              RequireCompleteSizedType(
                  LLoc, ResultType,
                  diag::err_subscript_incomplete_or_sizeless_type, BaseExpr))
     return ExprError();
 
-  assert(VK == VK_RValue || LangOpts.CPlusPlus ||
+  assert(VK == VK_PRValue || LangOpts.CPlusPlus ||
          !ResultType.isCForbiddenLValueType());
 
   if (LHSExp->IgnoreParenImpCasts()->getType()->isVariablyModifiedType() &&
@@ -6429,7 +6430,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
       }
 
       return CallExpr::Create(Context, Fn, /*Args=*/{}, Context.VoidTy,
-                              VK_RValue, RParenLoc, CurFPFeatureOverrides());
+                              VK_PRValue, RParenLoc, CurFPFeatureOverrides());
     }
     if (Fn->getType() == Context.PseudoObjectTy) {
       ExprResult result = CheckPlaceholderExpr(Fn);
@@ -6441,9 +6442,10 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
     // in which case we won't do any semantic analysis now.
     if (Fn->isTypeDependent() || Expr::hasAnyTypeDependentArguments(ArgExprs)) {
       if (ExecConfig) {
-        return CUDAKernelCallExpr::Create(
-            Context, Fn, cast<CallExpr>(ExecConfig), ArgExprs,
-            Context.DependentTy, VK_RValue, RParenLoc, CurFPFeatureOverrides());
+        return CUDAKernelCallExpr::Create(Context, Fn,
+                                          cast<CallExpr>(ExecConfig), ArgExprs,
+                                          Context.DependentTy, VK_PRValue,
+                                          RParenLoc, CurFPFeatureOverrides());
       } else {
 
         tryImplicitlyCaptureThisIfImplicitMemberFunctionAccessWithDependentArgs(
@@ -6451,7 +6453,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
             Fn->getBeginLoc());
 
         return CallExpr::Create(Context, Fn, ArgExprs, Context.DependentTy,
-                                VK_RValue, RParenLoc, CurFPFeatureOverrides());
+                                VK_PRValue, RParenLoc, CurFPFeatureOverrides());
       }
     }
 
@@ -6480,7 +6482,7 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
     if (!find.HasFormOfMemberPointer) {
       if (Expr::hasAnyTypeDependentArguments(ArgExprs))
         return CallExpr::Create(Context, Fn, ArgExprs, Context.DependentTy,
-                                VK_RValue, RParenLoc, CurFPFeatureOverrides());
+                                VK_PRValue, RParenLoc, CurFPFeatureOverrides());
       OverloadExpr *ovl = find.Expression;
       if (UnresolvedLookupExpr *ULE = dyn_cast<UnresolvedLookupExpr>(ovl))
         return BuildOverloadedCallExpr(
@@ -6571,7 +6573,7 @@ ExprResult Sema::ActOnAsTypeExpr(Expr *E, ParsedType ParsedDestTy,
 ExprResult Sema::BuildAsTypeExpr(Expr *E, QualType DestTy,
                                  SourceLocation BuiltinLoc,
                                  SourceLocation RParenLoc) {
-  ExprValueKind VK = VK_RValue;
+  ExprValueKind VK = VK_PRValue;
   ExprObjectKind OK = OK_Ordinary;
   QualType SrcTy = E->getType();
   if (!SrcTy->isDependentType() &&
@@ -6703,11 +6705,11 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
     assert(UsesADL == ADLCallKind::NotADL &&
            "CUDAKernelCallExpr should not use ADL");
     TheCall = CUDAKernelCallExpr::Create(Context, Fn, cast<CallExpr>(Config),
-                                         Args, ResultTy, VK_RValue, RParenLoc,
+                                         Args, ResultTy, VK_PRValue, RParenLoc,
                                          CurFPFeatureOverrides(), NumParams);
   } else {
     TheCall =
-        CallExpr::Create(Context, Fn, Args, ResultTy, VK_RValue, RParenLoc,
+        CallExpr::Create(Context, Fn, Args, ResultTy, VK_PRValue, RParenLoc,
                          CurFPFeatureOverrides(), NumParams, UsesADL);
   }
 
@@ -6734,11 +6736,11 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
     if (CorrectedTypos && Args.size() < NumParams) {
       if (Config)
         TheCall = CUDAKernelCallExpr::Create(
-            Context, Fn, cast<CallExpr>(Config), Args, ResultTy, VK_RValue,
+            Context, Fn, cast<CallExpr>(Config), Args, ResultTy, VK_PRValue,
             RParenLoc, CurFPFeatureOverrides(), NumParams);
       else
         TheCall =
-            CallExpr::Create(Context, Fn, Args, ResultTy, VK_RValue, RParenLoc,
+            CallExpr::Create(Context, Fn, Args, ResultTy, VK_PRValue, RParenLoc,
                              CurFPFeatureOverrides(), NumParams, UsesADL);
     }
     // We can now handle the nulled arguments for the default arguments.
@@ -6947,7 +6949,7 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
   // obviously have a value kind derived from the kind of reference involved.
   ExprValueKind VK =
       (getLangOpts().CPlusPlus && !(isFileScope && literalType->isArrayType()))
-          ? VK_RValue
+          ? VK_PRValue
           : VK_LValue;
 
   if (isFileScope)
@@ -7098,14 +7100,14 @@ Sema::BuildInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
 /// Do an explicit extend of the given block pointer if we're in ARC.
 void Sema::maybeExtendBlockObject(ExprResult &E) {
   assert(E.get()->getType()->isBlockPointerType());
-  assert(E.get()->isRValue());
+  assert(E.get()->isPRValue());
 
   // Only do this in an r-value context.
   if (!getLangOpts().ObjCAutoRefCount) return;
 
   E = ImplicitCastExpr::Create(
       Context, E.get()->getType(), CK_ARCExtendBlockObject, E.get(),
-      /*base path*/ nullptr, VK_RValue, FPOptionsOverride());
+      /*base path*/ nullptr, VK_PRValue, FPOptionsOverride());
   Cleanup.setExprNeedsCleanups(true);
 }
 
@@ -8261,7 +8263,7 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   if (getLangOpts().CPlusPlus)
     return CXXCheckConditionalOperands(Cond, LHS, RHS, VK, OK, QuestionLoc);
 
-  VK = VK_RValue;
+  VK = VK_PRValue;
   OK = OK_Ordinary;
 
   if (Context.isDependenceAllowed() &&
@@ -8799,8 +8801,8 @@ ExprResult Sema::ActOnConditionalOp(SourceLocation QuestionLoc,
 
     // If the common expression is a class or array prvalue, materialize it
     // so that we can safely refer to it multiple times.
-    if (commonExpr->isRValue() && (commonExpr->getType()->isRecordType() ||
-                                   commonExpr->getType()->isArrayType())) {
+    if (commonExpr->isPRValue() && (commonExpr->getType()->isRecordType() ||
+                                    commonExpr->getType()->isArrayType())) {
       ExprResult MatExpr = TemporaryMaterializationConversion(commonExpr);
       if (MatExpr.isInvalid())
         return ExprError();
@@ -8816,7 +8818,7 @@ ExprResult Sema::ActOnConditionalOp(SourceLocation QuestionLoc,
   }
 
   QualType LHSTy = LHSExpr->getType(), RHSTy = RHSExpr->getType();
-  ExprValueKind VK = VK_RValue;
+  ExprValueKind VK = VK_PRValue;
   ExprObjectKind OK = OK_Ordinary;
   ExprResult Cond = CondExpr, LHS = LHSExpr, RHS = RHSExpr;
   QualType result = CheckConditionalOperands(Cond, LHS, RHS,
@@ -9100,7 +9102,7 @@ Sema::CheckAssignmentConstraints(SourceLocation Loc,
   // cast operations are required, so if CheckAssignmentConstraints
   // adds casts to this they'll be wasted, but fortunately that doesn't
   // usually happen on valid code.
-  OpaqueValueExpr RHSExpr(Loc, RHSType, VK_RValue);
+  OpaqueValueExpr RHSExpr(Loc, RHSType, VK_PRValue);
   ExprResult RHSPtr = &RHSExpr;
   CastKind K;
 
@@ -9469,7 +9471,7 @@ static void ConstructTransparentUnion(Sema &S, ASTContext &C,
   // union type from this initializer list.
   TypeSourceInfo *unionTInfo = C.getTrivialTypeSourceInfo(UnionType);
   EResult = new (C) CompoundLiteralExpr(SourceLocation(), unionTInfo, UnionType,
-                                        VK_RValue, Initializer, false);
+                                        VK_PRValue, Initializer, false);
 }
 
 Sema::AssignConvertType
@@ -9608,7 +9610,7 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
       CheckPointerConversion(RHS.get(), LHSType, Kind, Path,
                              /*IgnoreBaseAccess=*/false, Diagnose);
       if (ConvertRHS)
-        RHS = ImpCastExprToType(RHS.get(), LHSType, Kind, VK_RValue, &Path);
+        RHS = ImpCastExprToType(RHS.get(), LHSType, Kind, VK_PRValue, &Path);
     }
     return Compatible;
   }
@@ -13354,7 +13356,7 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
     OK = Op->getObjectKind();
     return ResType;
   } else {
-    VK = VK_RValue;
+    VK = VK_PRValue;
     return ResType.getUnqualifiedType();
   }
 }
@@ -13741,7 +13743,7 @@ static QualType CheckIndirectionOperand(Sema &S, Expr *Op, ExprValueKind &VK,
 
   // ...except that certain expressions are never l-values in C.
   if (!S.getLangOpts().CPlusPlus && Result.isCForbiddenLValueType())
-    VK = VK_RValue;
+    VK = VK_PRValue;
 
   return Result;
 }
@@ -14010,7 +14012,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   // The following two variables are used for compound assignment operators
   QualType CompLHSTy;    // Type of LHS after promotions for computation
   QualType CompResultTy; // Type of computation result
-  ExprValueKind VK = VK_RValue;
+  ExprValueKind VK = VK_PRValue;
   ExprObjectKind OK = OK_Ordinary;
   bool ConvertHalfVec = false;
 
@@ -14629,7 +14631,7 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
       // assignment, but is not an lvalue.
       return CompoundAssignOperator::Create(
           Context, LHSExpr, RHSExpr, Opc,
-          LHSExpr->getType().getUnqualifiedType(), VK_RValue, OK_Ordinary,
+          LHSExpr->getType().getUnqualifiedType(), VK_PRValue, OK_Ordinary,
           OpLoc, CurFPFeatureOverrides());
     QualType ResultType;
     switch (Opc) {
@@ -14655,7 +14657,7 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
       break;
     }
     return BinaryOperator::Create(Context, LHSExpr, RHSExpr, Opc, ResultType,
-                                  VK_RValue, OK_Ordinary, OpLoc,
+                                  VK_PRValue, OK_Ordinary, OpLoc,
                                   CurFPFeatureOverrides());
   }
 
@@ -14677,7 +14679,7 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
                                       UnaryOperatorKind Opc,
                                       Expr *InputExpr) {
   ExprResult Input = InputExpr;
-  ExprValueKind VK = VK_RValue;
+  ExprValueKind VK = VK_PRValue;
   ExprObjectKind OK = OK_Ordinary;
   QualType resultType;
   bool CanOverflow = false;
@@ -14850,7 +14852,7 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
     // complex l-values to ordinary l-values and all other values to r-values.
     if (Input.isInvalid()) return ExprError();
     if (Opc == UO_Real || Input.get()->getType()->isAnyComplexType()) {
-      if (Input.get()->getValueKind() != VK_RValue &&
+      if (Input.get()->getValueKind() != VK_PRValue &&
           Input.get()->getObjectKind() == OK_Ordinary)
         VK = Input.get()->getValueKind();
     } else if (!getLangOpts().CPlusPlus) {
@@ -15269,7 +15271,7 @@ ExprResult Sema::ActOnChooseExpr(SourceLocation BuiltinLoc,
                                  SourceLocation RPLoc) {
   assert((CondExpr && LHSExpr && RHSExpr) && "Missing type argument(s)");
 
-  ExprValueKind VK = VK_RValue;
+  ExprValueKind VK = VK_PRValue;
   ExprObjectKind OK = OK_Ordinary;
   QualType resType;
   bool CondIsTrue = false;
@@ -19047,7 +19049,7 @@ namespace {
       Expr *SubExpr = SubResult.get();
       E->setSubExpr(SubExpr);
       E->setType(S.Context.getPointerType(SubExpr->getType()));
-      assert(E->getValueKind() == VK_RValue);
+      assert(E->getValueKind() == VK_PRValue);
       assert(E->getObjectKind() == OK_Ordinary);
       return E;
     }
@@ -19057,7 +19059,7 @@ namespace {
 
       E->setType(VD->getType());
 
-      assert(E->getValueKind() == VK_RValue);
+      assert(E->getValueKind() == VK_PRValue);
       if (S.getLangOpts().CPlusPlus &&
           !(isa<CXXMethodDecl>(VD) &&
             cast<CXXMethodDecl>(VD)->isInstance()))
@@ -19148,7 +19150,7 @@ namespace {
         return ExprError();
       }
 
-      assert(E->getValueKind() == VK_RValue);
+      assert(E->getValueKind() == VK_PRValue);
       assert(E->getObjectKind() == OK_Ordinary);
       E->setType(DestType);
 
@@ -19308,7 +19310,7 @@ ExprResult RebuildUnknownAnyExpr::VisitObjCMessageExpr(ObjCMessageExpr *E) {
 ExprResult RebuildUnknownAnyExpr::VisitImplicitCastExpr(ImplicitCastExpr *E) {
   // The only case we should ever see here is a function-to-pointer decay.
   if (E->getCastKind() == CK_FunctionToPointerDecay) {
-    assert(E->getValueKind() == VK_RValue);
+    assert(E->getValueKind() == VK_PRValue);
     assert(E->getObjectKind() == OK_Ordinary);
 
     E->setType(DestType);
@@ -19322,7 +19324,7 @@ ExprResult RebuildUnknownAnyExpr::VisitImplicitCastExpr(ImplicitCastExpr *E) {
     E->setSubExpr(Result.get());
     return E;
   } else if (E->getCastKind() == CK_LValueToRValue) {
-    assert(E->getValueKind() == VK_RValue);
+    assert(E->getValueKind() == VK_PRValue);
     assert(E->getObjectKind() == OK_Ordinary);
 
     assert(isa<BlockPointerType>(E->getType()));
@@ -19354,8 +19356,8 @@ ExprResult RebuildUnknownAnyExpr::resolveDecl(Expr *E, ValueDecl *VD) {
       DestType = Ptr->getPointeeType();
       ExprResult Result = resolveDecl(E, VD);
       if (Result.isInvalid()) return ExprError();
-      return S.ImpCastExprToType(Result.get(), Type,
-                                 CK_FunctionToPointerDecay, VK_RValue);
+      return S.ImpCastExprToType(Result.get(), Type, CK_FunctionToPointerDecay,
+                                 VK_PRValue);
     }
 
     if (!Type->isFunctionType()) {
@@ -19397,13 +19399,13 @@ ExprResult RebuildUnknownAnyExpr::resolveDecl(Expr *E, ValueDecl *VD) {
 
     if (CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD))
       if (MD->isInstance()) {
-        ValueKind = VK_RValue;
+        ValueKind = VK_PRValue;
         Type = S.Context.BoundMemberTy;
       }
 
     // Function references aren't l-values in C.
     if (!S.getLangOpts().CPlusPlus)
-      ValueKind = VK_RValue;
+      ValueKind = VK_PRValue;
 
   //  - variables
   } else if (isa<VarDecl>(VD)) {
@@ -19602,7 +19604,7 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
                               CK_BuiltinFnToFnPtr)
                 .get();
         return CallExpr::Create(Context, E, /*Args=*/{}, Context.IntTy,
-                                VK_RValue, SourceLocation(),
+                                VK_PRValue, SourceLocation(),
                                 FPOptionsOverride());
       }
     }

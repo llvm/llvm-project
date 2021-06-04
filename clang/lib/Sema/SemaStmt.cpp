@@ -867,7 +867,7 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc, bool IsConstexpr,
     Cond = ConditionResult(
         *this, nullptr,
         MakeFullExpr(new (Context) OpaqueValueExpr(SourceLocation(),
-                                                   Context.BoolTy, VK_RValue),
+                                                   Context.BoolTy, VK_PRValue),
                      IfLoc),
         false);
 
@@ -2271,7 +2271,7 @@ Sema::ActOnObjCForCollectionStmt(SourceLocation ForLoc,
       // If the type contained 'auto', deduce the 'auto' to 'id'.
       if (FirstType->getContainedAutoType()) {
         OpaqueValueExpr OpaqueId(D->getLocation(), Context.getObjCIdType(),
-                                 VK_RValue);
+                                 VK_PRValue);
         Expr *DeducedInit = &OpaqueId;
         if (DeduceAutoType(D->getTypeSourceInfo(), DeducedInit, FirstType) ==
                 DAR_Failed)
