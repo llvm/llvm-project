@@ -158,6 +158,7 @@ public:
 };
 
 inline uptr selectRandomTag(uptr Ptr, uptr ExcludeMask) {
+  ExcludeMask |= 1; // Always exclude Tag 0.
   uptr TaggedPtr;
   __asm__ __volatile__(
       R"(

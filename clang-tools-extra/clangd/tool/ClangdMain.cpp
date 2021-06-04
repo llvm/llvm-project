@@ -62,7 +62,8 @@ namespace clangd {
 // Implemented in Check.cpp.
 bool check(const llvm::StringRef File,
            llvm::function_ref<bool(const Position &)> ShouldCheckLine,
-           const ThreadsafeFS &TFS, const ClangdLSPServer::Options &Opts);
+           const ThreadsafeFS &TFS, const ClangdLSPServer::Options &Opts,
+           bool EnableCodeCompletion);
 
 namespace {
 
@@ -929,7 +930,11 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
       uint32_t Line = Pos.line + 1; // Position::line is 0-based.
       return Line >= Begin && Line <= End;
     };
-    return check(Path, ShouldCheckLine, TFS, Opts)
+    // For now code completion is enabled any time the range is limited via
+    // --check-lines. If it turns out to be to slow, we can introduce a
+    // dedicated flag for that instead.
+    return check(Path, ShouldCheckLine, TFS, Opts,
+                 /*EnableCodeCompletion=*/!CheckFileLines.empty())
                ? 0
                : static_cast<int>(ErrorResultCode::CheckFailed);
   }

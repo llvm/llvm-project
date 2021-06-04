@@ -76,6 +76,12 @@ void return_temporary_buffer(_Tp* __p) _NOEXCEPT
   _VSTD::__libcpp_deallocate_unsized((void*)__p, _LIBCPP_ALIGNOF(_Tp));
 }
 
+struct __return_temporary_buffer
+{
+    template <class _Tp>
+    _LIBCPP_INLINE_VISIBILITY void operator()(_Tp* __p) const {_VSTD::return_temporary_buffer(__p);}
+};
+
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

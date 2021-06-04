@@ -65,7 +65,7 @@ const int var_host_only = 7;
 // NEG-NOT: @_ZN1BIiE1yE
 // NEG-NOT: @_Z1bIdE
 // NEG-NOT: @_ZL13var_host_only
-// NEG-NOT: external
+// NEG-NOT: {{^}}@{{.*}} = external
 
 // CHECK-LABEL: define{{.*}}@_Z7dev_funPiPPKi
 // CHECK: store i32 1
