@@ -768,9 +768,9 @@ static Value genLoad(CodeGen &codegen, PatternRewriter &rewriter, Location loc,
     // zero extend the vector to an index width. For 8-bit and 16-bit values,
     // an 32-bit index width suffices. For 32-bit values, zero extending the
     // elements into 64-bit loses some performance since the 32-bit indexed
-    // gather/scatter is more efficient than the 64-bit index variant (in
-    // the future, we could introduce a flag that states the negative space
-    // of 32-bit indices is unused). For 64-bit values, there is no good way
+    // gather/scatter is more efficient than the 64-bit index variant (if the
+    // negative 32-bit index space is unused, the enableSIMDIndex32 flag can
+    // preserve this performance)). For 64-bit values, there is no good way
     // to state that the indices are unsigned, with creates the potential of
     // incorrect address calculations in the unlikely case we need such
     // extremely large offsets.
@@ -780,7 +780,8 @@ static Value genLoad(CodeGen &codegen, PatternRewriter &rewriter, Location loc,
       if (etp.getIntOrFloatBitWidth() < 32)
         vload = rewriter.create<ZeroExtendIOp>(
             loc, vload, vectorType(codegen, rewriter.getIntegerType(32)));
-      else if (etp.getIntOrFloatBitWidth() < 64)
+      else if (etp.getIntOrFloatBitWidth() < 64 &&
+               !codegen.options.enableSIMDIndex32)
         vload = rewriter.create<ZeroExtendIOp>(
             loc, vload, vectorType(codegen, rewriter.getIntegerType(64)));
     }
