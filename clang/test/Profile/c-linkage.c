@@ -4,7 +4,7 @@
 // CHECK: @__profc_foo = private global
 // CHECK: @__profd_foo = private global
 // CHECK: @__profc_foo_weak = weak hidden global
-// CHECK: @__profd_foo_weak = private global
+// CHECK: @__profd_foo_weak = weak hidden global
 // CHECK: @__profc_main = private global
 // CHECK: @__profd_main = private global
 // CHECK: @__profc_c_linkage.c_foo_internal = private global
