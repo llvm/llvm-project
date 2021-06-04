@@ -425,6 +425,10 @@ def : Pat<(brcond (i32 GPR32NM:$lhs), bb:$dst),
 
 let isCodeGenOnly = 1 in {
 
+// TODO: addruimm12 and addrsimm9 need to be looked into again. Currently
+//       addruimm12 needs to come before addrsimm9, because addrsimm9 handles
+//       loads/store that do not fit the offset. If we put the same handling in
+//       addruimm12, this will cause addrsimm9 to never get selected.
 def LW_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem, load, addruimm12, II_LW>, InstSize32;
 def LWs9_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem, load, addrsimm9, II_LW>, InstSize32;
 def SW_NM : StoreMemoryNM<"sw", GPR32NMOpnd, mem, store, addruimm12, II_SW>, InstSize32;
