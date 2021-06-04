@@ -1,4 +1,0 @@
-; RUN: llvm-tapi-diff %S/Inputs/v4A.tbd %S/Inputs/v4A.tbd 2>&1 | FileCheck %s --allow-empty
-
-; CHECK-NOT: error:
-; CHECK-NOT: warning:
