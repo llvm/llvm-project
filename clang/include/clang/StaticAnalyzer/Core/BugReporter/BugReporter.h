@@ -489,10 +489,15 @@ public:
   ///
   /// The visitors should be used when the default trace is not sufficient.
   /// For example, they allow constructing a more elaborate trace.
-  /// \sa registerConditionVisitor(), registerTrackNullOrUndefValue(),
-  /// registerFindLastStore(), registerNilReceiverVisitor(), and
-  /// registerVarDeclsLastStore().
+  /// @{
   void addVisitor(std::unique_ptr<BugReporterVisitor> visitor);
+
+  template <class VisitorType, class... Args>
+  void addVisitor(Args &&... ConstructorArgs) {
+    addVisitor(
+        std::make_unique<VisitorType>(std::forward<Args>(ConstructorArgs)...));
+  }
+  /// @}
 
   /// Remove all visitors attached to this bug report.
   void clearVisitors();

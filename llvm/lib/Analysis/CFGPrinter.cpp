@@ -270,31 +270,37 @@ FunctionPass *llvm::createCFGOnlyPrinterLegacyPassPass() {
   return new CFGOnlyPrinterLegacyPass();
 }
 
-void DOTGraphTraits<DOTFuncInfo *>::computeHiddenNodes(const Function *F) {
+/// Find all blocks on the paths which terminate with a deoptimize or 
+/// unreachable (i.e. all blocks which are post-dominated by a deoptimize 
+/// or unreachable). These paths are hidden if the corresponding cl::opts
+/// are enabled.
+void DOTGraphTraits<DOTFuncInfo *>::computeDeoptOrUnreachablePaths(
+    const Function *F) {
   auto evaluateBB = [&](const BasicBlock *Node) {
     if (succ_empty(Node)) {
       const Instruction *TI = Node->getTerminator();
-      isHiddenBasicBlock[Node] =
+      isOnDeoptOrUnreachablePath[Node] =
           (HideUnreachablePaths && isa<UnreachableInst>(TI)) ||
           (HideDeoptimizePaths && Node->getTerminatingDeoptimizeCall());
       return;
     }
-    isHiddenBasicBlock[Node] =
+    isOnDeoptOrUnreachablePath[Node] =
         llvm::all_of(successors(Node), [this](const BasicBlock *BB) {
-          return isHiddenBasicBlock[BB];
+          return isOnDeoptOrUnreachablePath[BB];
         });
   };
   /// The post order traversal iteration is done to know the status of
-  /// isHiddenBasicBlock for all the successors on the current BB.
+  /// isOnDeoptOrUnreachablePath for all the successors on the current BB.
   llvm::for_each(post_order(&F->getEntryBlock()), evaluateBB);
 }
 
 bool DOTGraphTraits<DOTFuncInfo *>::isNodeHidden(const BasicBlock *Node,
                                                  const DOTFuncInfo *CFGInfo) {
-  // If both restricting flags are false, all nodes are displayed.
-  if (!HideUnreachablePaths && !HideDeoptimizePaths)
-    return false;
-  if (isHiddenBasicBlock.find(Node) == isHiddenBasicBlock.end())
-    computeHiddenNodes(Node->getParent());
-  return isHiddenBasicBlock[Node];
+  if (HideUnreachablePaths || HideDeoptimizePaths) {
+    if (isOnDeoptOrUnreachablePath.find(Node) == 
+        isOnDeoptOrUnreachablePath.end())
+      computeDeoptOrUnreachablePaths(Node->getParent());
+    return isOnDeoptOrUnreachablePath[Node];
+  }
+  return false;
 }

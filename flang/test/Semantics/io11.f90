@@ -364,3 +364,253 @@ contains
     stop 'fail'
   end subroutine
 end module m16
+
+module m17
+  ! Test the same defined input/output procedure specified as a generic
+  type t
+    integer c
+  contains
+    procedure :: formattedReadProc
+  end type
+
+  interface read(formatted)
+    module procedure formattedReadProc
+  end interface
+
+contains
+  subroutine formattedReadProc(dtv,unit,iotype,v_list,iostat,iomsg)
+    class(t),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    character(*),intent(in) :: iotype
+    integer,intent(in) :: v_list(:)
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+    print *,v_list
+  end subroutine
+end module
+
+module m18
+  ! Test the same defined input/output procedure specified as a type-bound 
+  ! procedure and as a generic
+  type t
+    integer c
+  contains
+    procedure :: formattedReadProc
+    generic :: read(formatted) => formattedReadProc
+  end type
+  interface read(formatted)
+    module procedure formattedReadProc
+  end interface
+contains
+  subroutine formattedReadProc(dtv,unit,iotype,v_list,iostat,iomsg)
+    class(t),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    character(*),intent(in) :: iotype
+    integer,intent(in) :: v_list(:)
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+    print *,v_list
+  end subroutine
+end module
+
+module m19
+  ! Test two different defined input/output procedures specified as a 
+  ! type-bound procedure and as a generic for the same derived type
+  type t
+    integer c
+  contains
+    procedure :: unformattedReadProc1
+    generic :: read(unformatted) => unformattedReadProc1
+  end type
+  interface read(unformatted)
+    module procedure unformattedReadProc
+  end interface
+contains
+  subroutine unformattedReadProc1(dtv,unit,iostat,iomsg)
+    class(t),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+    print *,v_list
+  end subroutine
+  !ERROR: Derived type 't' already has defined input/output procedure 'READUNFORMATTED'
+  subroutine unformattedReadProc(dtv,unit,iostat,iomsg)
+    class(t),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+    print *,v_list
+  end subroutine
+end module
+
+module m20
+  ! Test read and write defined input/output procedures specified as a 
+  ! type-bound procedure and as a generic for the same derived type
+  type t
+    integer c
+  contains
+    procedure :: unformattedReadProc
+    generic :: read(unformatted) => unformattedReadProc
+  end type
+  interface read(unformatted)
+    module procedure unformattedReadProc
+  end interface
+  interface write(unformatted)
+    module procedure unformattedWriteProc
+  end interface
+contains
+  subroutine unformattedReadProc(dtv,unit,iostat,iomsg)
+    class(t),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+    print *,v_list
+  end subroutine
+  subroutine unformattedWriteProc(dtv,unit,iostat,iomsg)
+    class(t),intent(in) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    write(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+    print *,v_list
+  end subroutine
+end module
+
+module m21
+  ! Test read and write defined input/output procedures specified as a 
+  ! type-bound procedure and as a generic for the same derived type with a
+  ! KIND type parameter where they both have the same value
+  type t(typeParam)
+    integer, kind :: typeParam = 4
+    integer c
+  contains
+    procedure :: unformattedReadProc
+    generic :: read(unformatted) => unformattedReadProc
+  end type
+  interface read(unformatted)
+    module procedure unformattedReadProc1
+  end interface
+contains
+  subroutine unformattedReadProc(dtv,unit,iostat,iomsg)
+    class(t),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+    print *,v_list
+  end subroutine
+  !ERROR: Derived type 't' already has defined input/output procedure 'READUNFORMATTED'
+  subroutine unformattedReadProc1(dtv,unit,iostat,iomsg)
+    class(t(4)),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+    print *,v_list
+  end subroutine
+end module
+
+module m22
+  ! Test read and write defined input/output procedures specified as a 
+  ! type-bound procedure and as a generic for the same derived type with a
+  ! KIND type parameter where they have different values
+  type t(typeParam)
+    integer, kind :: typeParam = 4
+    integer c
+  contains
+    procedure :: unformattedReadProc
+    generic :: read(unformatted) => unformattedReadProc
+  end type
+  interface read(unformatted)
+    module procedure unformattedReadProc1
+  end interface
+contains
+  subroutine unformattedReadProc(dtv,unit,iostat,iomsg)
+    class(t),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+    print *,v_list
+  end subroutine
+  subroutine unformattedReadProc1(dtv,unit,iostat,iomsg)
+    class(t(3)),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+    print *,v_list
+  end subroutine
+end module
+
+module m23
+  type t(typeParam)
+  ! Test read and write defined input/output procedures specified as a 
+  ! type-bound procedure and as a generic for the same derived type with a
+  ! LEN type parameter where they have different values
+    integer, len :: typeParam = 4
+    integer c
+  contains
+    procedure :: unformattedReadProc
+    generic :: read(unformatted) => unformattedReadProc
+  end type
+  interface read(unformatted)
+    module procedure unformattedReadProc1
+  end interface
+contains
+  subroutine unformattedReadProc(dtv,unit,iostat,iomsg)
+    class(t(*)),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+    print *,v_list
+  end subroutine
+  subroutine unformattedReadProc1(dtv,unit,iostat,iomsg)
+    class(t(3)),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+    print *,v_list
+  end subroutine
+end module
+
+module m24
+  ! Test read and write defined input/output procedures specified as a 
+  ! type-bound procedure and as a generic for the same derived type with a
+  ! LEN type parameter where they have the same value
+  type t(typeParam)
+    integer, len :: typeParam = 4
+    integer c
+  contains
+    procedure :: unformattedReadProc
+    generic :: read(unformatted) => unformattedReadProc
+  end type
+  interface read(unformatted)
+    module procedure unformattedReadProc1
+  end interface
+contains
+  subroutine unformattedReadProc(dtv,unit,iostat,iomsg)
+    class(t(*)),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+    print *,v_list
+  end subroutine
+  !ERROR: Derived type 't' already has defined input/output procedure 'READUNFORMATTED'
+  subroutine unformattedReadProc1(dtv,unit,iostat,iomsg)
+    class(t(*)),intent(inout) :: dtv
+    integer,intent(in) :: unit
+    integer,intent(out) :: iostat
+    character(*),intent(inout) :: iomsg
+    read(unit,iotype,iostat=iostat,iomsg=iomsg) dtv%c
+    print *,v_list
+  end subroutine
+end module

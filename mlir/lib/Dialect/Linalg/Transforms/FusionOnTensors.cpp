@@ -815,8 +815,6 @@ struct FoldProducerReshapeOpByLinearization
       if (!reshapeOp)
         continue;
 
-      Value src = reshapeOp.src();
-      RankedTensorType operandType = reshapeOp.getSrcType();
       RankedTensorType returnType = reshapeOp.getResultType();
 
       if (!isTensorReshapeOpFoldableByLinearization(

@@ -488,13 +488,16 @@ define void @test44(i8* %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  .LBB44_1:
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
-; PPC64LE-NEXT:    bne 0, .LBB44_3
+; PPC64LE-NEXT:    bne 0, .LBB44_4
 ; PPC64LE-NEXT:  # %bb.2:
 ; PPC64LE-NEXT:    stbcx. 5, 0, 3
-; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB44_1
-; PPC64LE-NEXT:  .LBB44_3:
+; PPC64LE-NEXT:    bne 0, .LBB44_1
+; PPC64LE-NEXT:  # %bb.3:
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
+; PPC64LE-NEXT:  .LBB44_4:
 ; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg i8* %ptr, i8 %cmp, i8 %val release acquire
   ret void
@@ -706,13 +709,16 @@ define void @test54(i16* %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  .LBB54_1:
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
-; PPC64LE-NEXT:    bne 0, .LBB54_3
+; PPC64LE-NEXT:    bne 0, .LBB54_4
 ; PPC64LE-NEXT:  # %bb.2:
 ; PPC64LE-NEXT:    sthcx. 5, 0, 3
-; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB54_1
-; PPC64LE-NEXT:  .LBB54_3:
+; PPC64LE-NEXT:    bne 0, .LBB54_1
+; PPC64LE-NEXT:  # %bb.3:
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
+; PPC64LE-NEXT:  .LBB54_4:
 ; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg i16* %ptr, i16 %cmp, i16 %val release acquire
   ret void
@@ -919,13 +925,16 @@ define void @test64(i32* %ptr, i32 %cmp, i32 %val) {
 ; PPC64LE-NEXT:  .LBB64_1:
 ; PPC64LE-NEXT:    lwarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
-; PPC64LE-NEXT:    bne 0, .LBB64_3
+; PPC64LE-NEXT:    bne 0, .LBB64_4
 ; PPC64LE-NEXT:  # %bb.2:
 ; PPC64LE-NEXT:    stwcx. 5, 0, 3
-; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB64_1
-; PPC64LE-NEXT:  .LBB64_3:
+; PPC64LE-NEXT:    bne 0, .LBB64_1
+; PPC64LE-NEXT:  # %bb.3:
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
+; PPC64LE-NEXT:  .LBB64_4:
 ; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg i32* %ptr, i32 %cmp, i32 %val release acquire
   ret void
@@ -1127,13 +1136,16 @@ define void @test74(i64* %ptr, i64 %cmp, i64 %val) {
 ; PPC64LE-NEXT:  .LBB74_1:
 ; PPC64LE-NEXT:    ldarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpd 4, 6
-; PPC64LE-NEXT:    bne 0, .LBB74_3
+; PPC64LE-NEXT:    bne 0, .LBB74_4
 ; PPC64LE-NEXT:  # %bb.2:
 ; PPC64LE-NEXT:    stdcx. 5, 0, 3
-; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB74_1
-; PPC64LE-NEXT:  .LBB74_3:
+; PPC64LE-NEXT:    bne 0, .LBB74_1
+; PPC64LE-NEXT:  # %bb.3:
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
+; PPC64LE-NEXT:  .LBB74_4:
 ; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg i64* %ptr, i64 %cmp, i64 %val release acquire
   ret void
@@ -1340,13 +1352,16 @@ define void @test84(i8* %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:  .LBB84_1:
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
-; PPC64LE-NEXT:    bne 0, .LBB84_3
+; PPC64LE-NEXT:    bne 0, .LBB84_4
 ; PPC64LE-NEXT:  # %bb.2:
 ; PPC64LE-NEXT:    stbcx. 5, 0, 3
-; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB84_1
-; PPC64LE-NEXT:  .LBB84_3:
+; PPC64LE-NEXT:    bne 0, .LBB84_1
+; PPC64LE-NEXT:  # %bb.3:
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
+; PPC64LE-NEXT:  .LBB84_4:
 ; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg i8* %ptr, i8 %cmp, i8 %val syncscope("singlethread") release acquire
   ret void
@@ -1558,13 +1573,16 @@ define void @test94(i16* %ptr, i16 %cmp, i16 %val) {
 ; PPC64LE-NEXT:  .LBB94_1:
 ; PPC64LE-NEXT:    lharx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
-; PPC64LE-NEXT:    bne 0, .LBB94_3
+; PPC64LE-NEXT:    bne 0, .LBB94_4
 ; PPC64LE-NEXT:  # %bb.2:
 ; PPC64LE-NEXT:    sthcx. 5, 0, 3
-; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB94_1
-; PPC64LE-NEXT:  .LBB94_3:
+; PPC64LE-NEXT:    bne 0, .LBB94_1
+; PPC64LE-NEXT:  # %bb.3:
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
+; PPC64LE-NEXT:  .LBB94_4:
 ; PPC64LE-NEXT:    sthcx. 6, 0, 3
+; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg i16* %ptr, i16 %cmp, i16 %val syncscope("singlethread") release acquire
   ret void
@@ -1771,13 +1789,16 @@ define void @test104(i32* %ptr, i32 %cmp, i32 %val) {
 ; PPC64LE-NEXT:  .LBB104_1:
 ; PPC64LE-NEXT:    lwarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpw 4, 6
-; PPC64LE-NEXT:    bne 0, .LBB104_3
+; PPC64LE-NEXT:    bne 0, .LBB104_4
 ; PPC64LE-NEXT:  # %bb.2:
 ; PPC64LE-NEXT:    stwcx. 5, 0, 3
-; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB104_1
-; PPC64LE-NEXT:  .LBB104_3:
+; PPC64LE-NEXT:    bne 0, .LBB104_1
+; PPC64LE-NEXT:  # %bb.3:
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
+; PPC64LE-NEXT:  .LBB104_4:
 ; PPC64LE-NEXT:    stwcx. 6, 0, 3
+; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg i32* %ptr, i32 %cmp, i32 %val syncscope("singlethread") release acquire
   ret void
@@ -1979,13 +2000,16 @@ define void @test114(i64* %ptr, i64 %cmp, i64 %val) {
 ; PPC64LE-NEXT:  .LBB114_1:
 ; PPC64LE-NEXT:    ldarx 6, 0, 3
 ; PPC64LE-NEXT:    cmpd 4, 6
-; PPC64LE-NEXT:    bne 0, .LBB114_3
+; PPC64LE-NEXT:    bne 0, .LBB114_4
 ; PPC64LE-NEXT:  # %bb.2:
 ; PPC64LE-NEXT:    stdcx. 5, 0, 3
-; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB114_1
-; PPC64LE-NEXT:  .LBB114_3:
+; PPC64LE-NEXT:    bne 0, .LBB114_1
+; PPC64LE-NEXT:  # %bb.3:
+; PPC64LE-NEXT:    lwsync
+; PPC64LE-NEXT:    blr
+; PPC64LE-NEXT:  .LBB114_4:
 ; PPC64LE-NEXT:    stdcx. 6, 0, 3
+; PPC64LE-NEXT:    lwsync
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg i64* %ptr, i64 %cmp, i64 %val syncscope("singlethread") release acquire
   ret void

@@ -81,15 +81,16 @@ static constexpr bool IsValidKindOfIntrinsicType(
 // directly hold anything requiring a destructor, such as an arbitrary
 // CHARACTER length type parameter expression.  Those must be derived
 // via LEN() member functions, packaged elsewhere (e.g. as in
-// ArrayConstructor), or copied from a parameter spec in the symbol table
-// if one is supplied.
+// ArrayConstructor), copied from a parameter spec in the symbol table
+// if one is supplied, or a known integer value.
 class DynamicType {
 public:
   constexpr DynamicType(TypeCategory cat, int k) : category_{cat}, kind_{k} {
     CHECK(IsValidKindOfIntrinsicType(category_, kind_));
   }
-  constexpr DynamicType(int k, const semantics::ParamValue &pv)
-      : category_{TypeCategory::Character}, kind_{k}, charLength_{&pv} {
+  DynamicType(int charKind, const semantics::ParamValue &len);
+  constexpr DynamicType(int k, std::int64_t len)
+      : category_{TypeCategory::Character}, kind_{k}, knownLength_{len} {
     CHECK(IsValidKindOfIntrinsicType(category_, kind_));
   }
   explicit constexpr DynamicType(
@@ -137,8 +138,11 @@ public:
     CHECK(kind_ > 0);
     return kind_;
   }
-  constexpr const semantics::ParamValue *charLength() const {
-    return charLength_;
+  constexpr const semantics::ParamValue *charLengthParamValue() const {
+    return charLengthParamValue_;
+  }
+  constexpr std::optional<std::int64_t> knownLength() const {
+    return knownLength_;
   }
   std::optional<Expr<SubscriptInteger>> GetCharLength() const;
 
@@ -212,7 +216,8 @@ private:
 
   TypeCategory category_{TypeCategory::Derived}; // overridable default
   int kind_{0};
-  const semantics::ParamValue *charLength_{nullptr};
+  const semantics::ParamValue *charLengthParamValue_{nullptr};
+  std::optional<std::int64_t> knownLength_;
   const semantics::DerivedTypeSpec *derived_{nullptr}; // TYPE(T), CLASS(T)
 };
 

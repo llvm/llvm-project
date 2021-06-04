@@ -193,7 +193,8 @@ struct ExtractFromReshapeFromElements
 /// @see LinalgDetensorize in Linalg/Passes.td for more details.
 struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
   LinalgDetensorize() = default;
-  LinalgDetensorize(const LinalgDetensorize &pass) {}
+  LinalgDetensorize(const LinalgDetensorize &pass)
+      : LinalgDetensorizeBase<LinalgDetensorize>() {}
 
   class CostModel {
   public:

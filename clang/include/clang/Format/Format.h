@@ -2666,6 +2666,20 @@ struct FormatStyle {
   /// Pointer and reference alignment style.
   PointerAlignmentStyle PointerAlignment;
 
+  /// The number of columns to use for indentation of preprocessor statements.
+  /// When set to -1 (default) ``IndentWidth`` is used also for preprocessor
+  /// statements.
+  /// \code
+  ///    PPIndentWidth: 1
+  ///
+  ///    #ifdef __linux__
+  ///    # define FOO
+  ///    #else
+  ///    # define BAR
+  ///    #endif
+  /// \endcode
+  int PPIndentWidth;
+
   /// See documentation of ``RawStringFormats``.
   struct RawStringFormat {
     /// The language of this raw string.

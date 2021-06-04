@@ -234,7 +234,7 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
     // in previous block for why this means we must copy `file` here.
     newFile = file;
     if (newFile->exportingFile)
-      newFile->parseLoadCommands(mbref, umbrella);
+      newFile->parseLoadCommands(mbref);
   }
   return newFile;
 }

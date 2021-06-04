@@ -2123,7 +2123,7 @@ void MallocChecker::HandleMismatchedDealloc(CheckerContext &C,
                                                       os.str(), N);
     R->markInteresting(Sym);
     R->addRange(Range);
-    R->addVisitor(std::make_unique<MallocBugVisitor>(Sym));
+    R->addVisitor<MallocBugVisitor>(Sym);
     C.emitReport(std::move(R));
   }
 }
@@ -2216,7 +2216,7 @@ void MallocChecker::HandleUseAfterFree(CheckerContext &C, SourceRange Range,
 
     R->markInteresting(Sym);
     R->addRange(Range);
-    R->addVisitor(std::make_unique<MallocBugVisitor>(Sym));
+    R->addVisitor<MallocBugVisitor>(Sym);
 
     if (AF == AF_InnerBuffer)
       R->addVisitor(allocation_state::getInnerPointerBRVisitor(Sym));
@@ -2252,7 +2252,7 @@ void MallocChecker::HandleDoubleFree(CheckerContext &C, SourceRange Range,
     R->markInteresting(Sym);
     if (PrevSym)
       R->markInteresting(PrevSym);
-    R->addVisitor(std::make_unique<MallocBugVisitor>(Sym));
+    R->addVisitor<MallocBugVisitor>(Sym);
     C.emitReport(std::move(R));
   }
 }
@@ -2278,7 +2278,7 @@ void MallocChecker::HandleDoubleDelete(CheckerContext &C, SymbolRef Sym) const {
         *BT_DoubleDelete, "Attempt to delete released memory", N);
 
     R->markInteresting(Sym);
-    R->addVisitor(std::make_unique<MallocBugVisitor>(Sym));
+    R->addVisitor<MallocBugVisitor>(Sym);
     C.emitReport(std::move(R));
   }
 }
@@ -2308,7 +2308,7 @@ void MallocChecker::HandleUseZeroAlloc(CheckerContext &C, SourceRange Range,
     R->addRange(Range);
     if (Sym) {
       R->markInteresting(Sym);
-      R->addVisitor(std::make_unique<MallocBugVisitor>(Sym));
+      R->addVisitor<MallocBugVisitor>(Sym);
     }
     C.emitReport(std::move(R));
   }
@@ -2578,7 +2578,7 @@ void MallocChecker::HandleLeak(SymbolRef Sym, ExplodedNode *N,
       *BT_Leak[*CheckKind], os.str(), N, LocUsedForUniqueing,
       AllocNode->getLocationContext()->getDecl());
   R->markInteresting(Sym);
-  R->addVisitor(std::make_unique<MallocBugVisitor>(Sym, true));
+  R->addVisitor<MallocBugVisitor>(Sym, true);
   C.emitReport(std::move(R));
 }
 

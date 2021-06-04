@@ -16,6 +16,7 @@
 #include <chrono>
 #include <map>
 #include <memory>
+#include <vector>
 
 namespace lld {
 

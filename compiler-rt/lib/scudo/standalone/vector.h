@@ -19,14 +19,13 @@ namespace scudo {
 // small vectors. The current implementation supports only POD types.
 template <typename T> class VectorNoCtor {
 public:
-  void init(uptr InitialCapacity) {
-    CapacityBytes = 0;
-    Size = 0;
-    Data = nullptr;
+  void init(uptr InitialCapacity = 0) {
+    Data = reinterpret_cast<T *>(&LocalData[0]);
+    CapacityBytes = sizeof(LocalData);
     reserve(InitialCapacity);
   }
   void destroy() {
-    if (Data)
+    if (Data != reinterpret_cast<T *>(&LocalData[0]))
       unmap(Data, CapacityBytes);
   }
   T &operator[](uptr I) {
@@ -82,26 +81,24 @@ private:
   void reallocate(uptr NewCapacity) {
     DCHECK_GT(NewCapacity, 0);
     DCHECK_LE(Size, NewCapacity);
-    const uptr NewCapacityBytes =
-        roundUpTo(NewCapacity * sizeof(T), getPageSizeCached());
+    NewCapacity = roundUpTo(NewCapacity * sizeof(T), getPageSizeCached());
     T *NewData =
-        reinterpret_cast<T *>(map(nullptr, NewCapacityBytes, "scudo:vector"));
-    if (Data) {
-      memcpy(NewData, Data, Size * sizeof(T));
-      unmap(Data, CapacityBytes);
-    }
+        reinterpret_cast<T *>(map(nullptr, NewCapacity, "scudo:vector"));
+    memcpy(NewData, Data, Size * sizeof(T));
+    destroy();
     Data = NewData;
-    CapacityBytes = NewCapacityBytes;
+    CapacityBytes = NewCapacity;
   }
 
-  T *Data;
-  uptr CapacityBytes;
-  uptr Size;
+  T *Data = nullptr;
+  u8 LocalData[256] = {};
+  uptr CapacityBytes = 0;
+  uptr Size = 0;
 };
 
 template <typename T> class Vector : public VectorNoCtor<T> {
 public:
-  Vector() { VectorNoCtor<T>::init(1); }
+  Vector() { VectorNoCtor<T>::init(); }
   explicit Vector(uptr Count) {
     VectorNoCtor<T>::init(Count);
     this->resize(Count);

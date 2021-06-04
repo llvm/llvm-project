@@ -177,17 +177,7 @@ public:
         return true;
     }
 
-    // VTypes must match.
-    if (!hasSameVTYPE(Other))
-      return false;
-
-    if (hasAVLImm() != Other.hasAVLImm())
-      return false;
-
-    if (hasAVLImm())
-      return getAVLImm() == Other.getAVLImm();
-
-    return getAVLReg() == Other.getAVLReg();
+    return hasSameVTYPE(Other) && hasSameAVL(Other);
   }
 
   bool operator==(const VSETVLIInfo &Other) const {
