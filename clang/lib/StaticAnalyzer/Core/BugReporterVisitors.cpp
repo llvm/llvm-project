@@ -2088,6 +2088,34 @@ public:
   }
 };
 
+class ControlDependencyHandler final : public ExpressionHandler {
+public:
+  using ExpressionHandler::ExpressionHandler;
+
+  Tracker::Result handle(const Expr *Inner, const ExplodedNode *InputNode,
+                         const ExplodedNode *LVNode,
+                         TrackingOptions Opts) override {
+    PathSensitiveBugReport &Report = getParentTracker().getReport();
+
+    // We only track expressions if we believe that they are important. Chances
+    // are good that control dependencies to the tracking point are also
+    // important because of this, let's explain why we believe control reached
+    // this point.
+    // TODO: Shouldn't we track control dependencies of every bug location,
+    // rather than only tracked expressions?
+    if (LVNode->getState()
+            ->getAnalysisManager()
+            .getAnalyzerOptions()
+            .ShouldTrackConditions) {
+      Report.addVisitor<TrackControlDependencyCondBRVisitor>(
+          &getParentTracker(), InputNode);
+      return {/*FoundSomethingToTrack=*/true};
+    }
+
+    return {};
+  }
+};
+
 class DefaultExpressionHandler final : public ExpressionHandler {
 public:
   using ExpressionHandler::ExpressionHandler;
@@ -2099,20 +2127,6 @@ public:
     const StackFrameContext *SFC = LVNode->getStackFrame();
     PathSensitiveBugReport &Report = getParentTracker().getReport();
     Tracker::Result Result;
-
-    // We only track expressions if we believe that they are important. Chances
-    // are good that control dependencies to the tracking point are also
-    // important because of this, let's explain why we believe control reached
-    // this point.
-    // TODO: Shouldn't we track control dependencies of every bug location,
-    // rather than only tracked expressions?
-    if (LVState->getAnalysisManager()
-            .getAnalyzerOptions()
-            .ShouldTrackConditions) {
-      Report.addVisitor<TrackControlDependencyCondBRVisitor>(
-          &getParentTracker(), InputNode);
-      Result.FoundSomethingToTrack = true;
-    }
 
     // The message send could be nil due to the receiver being nil.
     // At this point in the path, the receiver should be live since we are at
@@ -2293,7 +2307,8 @@ public:
 
 Tracker::Tracker(PathSensitiveBugReport &Report) : Report(Report) {
   // Default expression handlers.
-  addHighPriorityHandler<DefaultExpressionHandler>();
+  addLowPriorityHandler<ControlDependencyHandler>();
+  addLowPriorityHandler<DefaultExpressionHandler>();
   addLowPriorityHandler<PRValueHandler>();
   // Default store handlers.
   addHighPriorityHandler<DefaultStoreHandler>();
