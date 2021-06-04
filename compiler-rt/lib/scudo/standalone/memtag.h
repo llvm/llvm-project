@@ -156,6 +156,7 @@ inline uptr selectRandomTag(uptr Ptr, uptr ExcludeMask) {
 
 inline uptr addFixedTag(uptr Ptr, uptr Tag) {
   DCHECK_LT(Tag, 16);
+  DCHECK_EQ(untagPointer(Ptr), Ptr);
   return Ptr | (Tag << 56);
 }
 
