@@ -64,11 +64,10 @@ public:
     Value multiplier32 = op.multiplier();
     Value shift8 = op.shift();
     bool doubleRound = op.double_round();
+    Type inType = op.value().getType();
 
     Value one8 = rewriter.create<ConstantOp>(
         loc, rewriter.getIntegerAttr(rewriter.getIntegerType(8), 1));
-    Value one32 = rewriter.create<ConstantOp>(
-        loc, rewriter.getIntegerAttr(rewriter.getI32Type(), 1));
     Value one64 = rewriter.create<ConstantOp>(
         loc, rewriter.getIntegerAttr(rewriter.getI64Type(), 1));
 
@@ -83,9 +82,6 @@ public:
     //
     // Note that minimal bitwidth operators are used throughout the block.
 
-    Value shift32 = rewriter.create<mlir::SignExtendIOp>(
-        loc, rewriter.getI32Type(), shift8);
-
     Value round64 = rewriter.create<mlir::ShiftLeftOp>(
         loc, one64,
         rewriter.create<SignExtendIOp>(loc, rewriter.getI64Type(),
@@ -93,8 +89,10 @@ public:
 
     // Double rounding is performing a round operation before the shift
     if (doubleRound) {
-      Value zero32 = rewriter.create<ConstantOp>(
-          loc, rewriter.getZeroAttr(rewriter.getI32Type()));
+      Value one32 = rewriter.create<ConstantOp>(
+          loc, rewriter.getIntegerAttr(rewriter.getI32Type(), 1));
+      Value shift32 = rewriter.create<mlir::SignExtendIOp>(
+          loc, rewriter.getI32Type(), shift8);
       Value thirty32 = rewriter.create<ConstantOp>(
           loc, rewriter.getIntegerAttr(rewriter.getI32Type(), 30));
 
@@ -110,6 +108,8 @@ public:
       Value roundSub64 =
           rewriter.create<mlir::SubIOp>(loc, round64, shiftThirty64);
 
+      Value zero32 =
+          rewriter.create<ConstantOp>(loc, rewriter.getZeroAttr(inType));
       Value valueGreaterThanZero = rewriter.create<mlir::CmpIOp>(
           loc, CmpIPredicate::sge, value32, zero32);
 
