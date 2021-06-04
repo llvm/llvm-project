@@ -55,13 +55,9 @@ struct DynamicTypeWithLength : public DynamicType {
 std::optional<Expr<SubscriptInteger>> DynamicTypeWithLength::LEN() const {
   if (length) {
     return length;
+  } else {
+    return GetCharLength();
   }
-  if (auto *lengthParam{charLength()}) {
-    if (const auto &len{lengthParam->GetExplicit()}) {
-      return ConvertToType<SubscriptInteger>(common::Clone(*len));
-    }
-  }
-  return std::nullopt; // assumed or deferred length
 }
 
 static std::optional<DynamicTypeWithLength> AnalyzeTypeSpec(
@@ -1171,9 +1167,7 @@ public:
   template <typename T> Result Test() {
     if (type_ && type_->category() == T::category) {
       if constexpr (T::category == TypeCategory::Derived) {
-        if (type_->IsUnlimitedPolymorphic()) {
-          return std::nullopt;
-        } else {
+        if (!type_->IsUnlimitedPolymorphic()) {
           return AsMaybeExpr(ArrayConstructor<T>{type_->GetDerivedTypeSpec(),
               MakeSpecific<T>(std::move(values_))});
         }
@@ -1262,8 +1256,8 @@ void ArrayConstructorContext::Push(MaybeExpr &&x) {
       constantLength_ = ToInt64(type_->length);
       values_.Push(std::move(*x));
     } else if (!explicitType_) {
-      if (static_cast<const DynamicType &>(*type_) ==
-          static_cast<const DynamicType &>(xType)) {
+      if (type_->IsTkCompatibleWith(xType) &&
+          xType.IsTkCompatibleWith(*type_)) {
         values_.Push(std::move(*x));
         if (auto thisLen{ToInt64(xType.LEN())}) {
           if (constantLength_) {
