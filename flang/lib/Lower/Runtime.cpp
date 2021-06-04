@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/Runtime.h"
+#include "../../runtime/misc-intrinsic.h"
 #include "../runtime/clock.h"
 #include "../runtime/stop.h"
 #include "RTBuilder.h"
@@ -219,4 +220,36 @@ void Fortran::lower::genDateAndTime(Fortran::lower::FirOpBuilder &builder,
   for (auto [fst, snd] : llvm::zip(args, callee.getType().getInputs()))
     operands.emplace_back(builder.createConvert(loc, snd, fst));
   builder.create<fir::CallOp>(loc, callee, operands);
+}
+
+/// generate runtime call to transfer intrinsic with no size argument
+void Fortran::lower::genTransfer(Fortran::lower::FirOpBuilder &builder,
+                                 mlir::Location loc, mlir::Value resultBox,
+                                 mlir::Value sourceBox, mlir::Value moldBox) {
+
+  auto func = Fortran::lower::getRuntimeFunc<mkRTKey(Transfer)>(loc, builder);
+  auto fTy = func.getType();
+  auto sourceFile = Fortran::lower::locationToFilename(builder, loc);
+  auto sourceLine =
+      Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(4));
+  auto args = Fortran::lower::createArguments(
+      builder, loc, fTy, resultBox, sourceBox, moldBox, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, func, args);
+}
+
+/// generate runtime call to transfer intrinsic with size argument
+void Fortran::lower::genTransferSize(Fortran::lower::FirOpBuilder &builder,
+                                     mlir::Location loc, mlir::Value resultBox,
+                                     mlir::Value sourceBox, mlir::Value moldBox,
+                                     mlir::Value size) {
+  auto func =
+      Fortran::lower::getRuntimeFunc<mkRTKey(TransferSize)>(loc, builder);
+  auto fTy = func.getType();
+  auto sourceFile = Fortran::lower::locationToFilename(builder, loc);
+  auto sourceLine =
+      Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(4));
+  auto args =
+      Fortran::lower::createArguments(builder, loc, fTy, resultBox, sourceBox,
+                                      moldBox, sourceFile, sourceLine, size);
+  builder.create<fir::CallOp>(loc, func, args);
 }
