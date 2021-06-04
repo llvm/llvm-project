@@ -525,8 +525,10 @@ let SubtargetPredicate = isGFX11Plus in {
   // TODO-GFX11 select new insts
   defm V_MOV_B16        : VOP1Inst<"v_mov_b16", VOP_I16_I16>;
   // Restrict src0 to be VGPR
-  defm V_PERMLANE64_B32 : VOP1Inst<"v_permlane64_b32", VOP_MOVRELS,
-                                   int_amdgcn_permlane64>;
+  def V_PERMLANE64_B32 : VOP1_Pseudo<"v_permlane64_b32", VOP_MOVRELS,
+                                      getVOP1Pat64<int_amdgcn_permlane64,
+                                                   VOP_MOVRELS>.ret,
+                                      /*VOP1Only=*/ 1>;
   defm V_NOT_B16        : VOP1Inst<"v_not_b16", VOP_I16_I16>;
   defm V_CVT_I32_I16    : VOP1Inst<"v_cvt_i32_i16", VOP_I32_I16>;
   defm V_CVT_U32_U16    : VOP1Inst<"v_cvt_u32_u16", VOP_I16_I16>;
@@ -577,9 +579,10 @@ class VOP1_DPP8<bits<8> op, VOP1_Pseudo ps, VOPProfile p = ps.Pfl> :
 
 let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
   multiclass VOP1Only_Real_gfx11<bits<9> op> {
-    def _gfx11 :
-      VOP1_Real<!cast<VOP1_Pseudo>(NAME), SIEncodingFamily.GFX11>,
-      VOP1e<op{7-0}, !cast<VOP1_Pseudo>(NAME).Pfl>;
+    let IsSingle = 1 in
+      def _gfx11 :
+        VOP1_Real<!cast<VOP1_Pseudo>(NAME), SIEncodingFamily.GFX11>,
+        VOP1e<op{7-0}, !cast<VOP1_Pseudo>(NAME).Pfl>;
   }
   multiclass VOP1_Real_e32_gfx11<bits<9> op, string opName = NAME> {
     defvar ps = !cast<VOP1_Pseudo>(opName#"_e32");
@@ -670,7 +673,7 @@ defm V_CLS_I32             : VOP1_Real_FULL_with_name_gfx11<0x03b,
   "V_FFBH_I32", "v_cls_i32">;
 // TODO-GFX11 new inst
 /*defm V_SWAP_B16            : VOP1Only_Real_gfx11<0x066>;*/
-defm V_PERMLANE64_B32      : VOP1_Real_e32_gfx11<0x067>;
+defm V_PERMLANE64_B32      : VOP1Only_Real_gfx11<0x067>;
 defm V_NOT_B16             : VOP1_Real_FULL_gfx11<0x069>;
 defm V_CVT_I32_I16         : VOP1_Real_FULL_gfx11<0x06a>;
 defm V_CVT_U32_U16         : VOP1_Real_FULL_gfx11<0x06b>;

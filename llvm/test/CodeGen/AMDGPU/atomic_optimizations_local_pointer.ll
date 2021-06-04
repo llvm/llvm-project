@@ -973,7 +973,7 @@ define amdgpu_kernel void @add_i32_varying_nouse() {
 ; GFX1164-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX1164-NEXT:    v_permlanex16_b32 v2, v2, -1, -1
 ; GFX1164-NEXT:    v_add_nc_u32_e32 v1, v1, v2
-; GFX1164-NEXT:    v_permlane64_b32_e32 v2, v1
+; GFX1164-NEXT:    v_permlane64_b32 v2, v1
 ; GFX1164-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
 ; GFX1164-NEXT:    s_or_saveexec_b64 s[0:1], -1
@@ -2602,7 +2602,7 @@ define amdgpu_kernel void @sub_i32_varying_nouse() {
 ; GFX1164-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX1164-NEXT:    v_permlanex16_b32 v2, v2, -1, -1
 ; GFX1164-NEXT:    v_add_nc_u32_e32 v1, v1, v2
-; GFX1164-NEXT:    v_permlane64_b32_e32 v2, v1
+; GFX1164-NEXT:    v_permlane64_b32 v2, v1
 ; GFX1164-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX1164-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, exec_lo, 0
 ; GFX1164-NEXT:    s_or_saveexec_b64 s[0:1], -1

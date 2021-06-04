@@ -1041,6 +1041,10 @@ let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
       VOP2_Real<!cast<VOP2_Pseudo>(NAME#"_e32"), SIEncodingFamily.GFX11>,
       VOP2e<op{5-0}, !cast<VOP2_Pseudo>(NAME#"_e32").Pfl>;
   }
+  multiclass VOP2Only_Real_e32_gfx11<bits<6> op> {
+    let IsSingle = 1 in
+      defm NAME: VOP2_Real_e32_gfx11<op>;
+  }
   multiclass VOP2_Real_e64_gfx11<bits<6> op> {
     def _e64_gfx11 :
       VOP3_Real<!cast<VOP3_Pseudo>(NAME#"_e64"), SIEncodingFamily.GFX11>,
@@ -1185,6 +1189,11 @@ multiclass VOP2e_Real_gfx11<bits<6> op, string opName, string asmName> :
   VOP2be_Real_dpp_gfx11<op, opName, asmName>,
   VOP2be_Real_dpp8_gfx11<op, opName, asmName>;
 
+multiclass VOP2Only_Real_gfx11<bits<6> op> :
+  VOP2Only_Real_e32_gfx11<op>,
+  VOP2_Real_dpp_gfx11<op>,
+  VOP2_Real_dpp8_gfx11<op>;
+
 multiclass VOP2_Real_NO_VOP3_gfx11<bits<6> op> :
   VOP2_Real_e32_gfx11<op>, VOP2_Real_dpp_gfx11<op>, VOP2_Real_dpp8_gfx11<op>;
 
@@ -1232,7 +1241,7 @@ defm V_SUBREV_CO_CI_U32 :
 
 defm V_CVT_PK_RTZ_F16_F32  : VOP2_Real_FULL_with_name_gfx11<0x02f,
   "V_CVT_PKRTZ_F16_F32", "v_cvt_pk_rtz_f16_f32">;
-defm V_PK_FMAC_F16     : VOP2_Real_NO_VOP3_gfx11<0x03c>;
+defm V_PK_FMAC_F16     : VOP2Only_Real_gfx11<0x03c>;
 
 // VOP3 only.
 defm V_CNDMASK_B16        : VOP3_Realtriple_gfx11<0x25d>;
