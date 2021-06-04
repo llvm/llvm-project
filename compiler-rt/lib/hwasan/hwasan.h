@@ -136,6 +136,7 @@ void InstallAtExitHandler();
 
 void HwasanTSDInit();
 void HwasanTSDThreadInit();
+void HwasanAtExit();
 
 void HwasanOnDeadlySignal(int signo, void *info, void *context);
 
@@ -144,6 +145,26 @@ void UpdateMemoryUsage();
 void AppendToErrorMessageBuffer(const char *buffer);
 
 void AndroidTestTlsSlot();
+
+// This is a compiler-generated struct that can be shared between hwasan
+// implementations.
+struct AccessInfo {
+  uptr addr;
+  uptr size;
+  bool is_store;
+  bool is_load;
+  bool recover;
+};
+
+// Given access info and frame information, unwind the stack and report the tag
+// mismatch.
+void HandleTagMismatch(AccessInfo ai, uptr pc, uptr frame, void *uc,
+                       uptr *registers_frame = nullptr);
+
+// This dispatches to HandleTagMismatch but sets up the AccessInfo, program
+// counter, and frame pointer.
+void HwasanTagMismatch(uptr addr, uptr access_info, uptr *registers_frame,
+                       size_t outsize);
 
 }  // namespace __hwasan
 
