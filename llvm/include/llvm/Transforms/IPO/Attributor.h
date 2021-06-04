@@ -1137,7 +1137,8 @@ struct Attributor {
     if (!shouldPropagateCallBaseContext(IRP))
       IRP = IRP.stripCallBaseContext();
 
-    if (AAType *AAPtr = lookupAAFor<AAType>(IRP, QueryingAA, DepClass)) {
+    if (AAType *AAPtr = lookupAAFor<AAType>(IRP, QueryingAA, DepClass,
+                                            /* AllowInvalidState */ true)) {
       if (ForceUpdate && Phase == AttributorPhase::UPDATE)
         updateAA(*AAPtr);
       return *AAPtr;
@@ -1218,12 +1219,13 @@ struct Attributor {
                                     DepClassTy::NONE);
   }
 
-  /// Return the attribute of \p AAType for \p IRP if existing. This also allows
-  /// non-AA users lookup.
+  /// Return the attribute of \p AAType for \p IRP if existing and valid. This
+  /// also allows non-AA users lookup.
   template <typename AAType>
   AAType *lookupAAFor(const IRPosition &IRP,
                       const AbstractAttribute *QueryingAA = nullptr,
-                      DepClassTy DepClass = DepClassTy::OPTIONAL) {
+                      DepClassTy DepClass = DepClassTy::OPTIONAL,
+                      bool AllowInvalidState = false) {
     static_assert(std::is_base_of<AbstractAttribute, AAType>::value,
                   "Cannot query an attribute with a type not derived from "
                   "'AbstractAttribute'!");
@@ -1240,6 +1242,10 @@ struct Attributor {
         AA->getState().isValidState())
       recordDependence(*AA, const_cast<AbstractAttribute &>(*QueryingAA),
                        DepClass);
+
+    // Return nullptr if this attribute has an invalid state.
+    if (!AllowInvalidState && !AA->getState().isValidState())
+      return nullptr;
     return AA;
   }
 
