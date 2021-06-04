@@ -1,7 +1,7 @@
 // RUN: not %clang_cc1 -triple armv5--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix ARM
 // ARM: error: unknown target CPU 'not-a-cpu'
 // ARM: note: valid target CPU values are:
-// ARM-SAME: arm2
+// ARM-SAME: arm8
 
 // RUN: not %clang_cc1 -triple arm64--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix AARCH64
 // AARCH64: error: unknown target CPU 'not-a-cpu'

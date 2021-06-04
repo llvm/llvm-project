@@ -52,6 +52,7 @@ getDimLevelTypeEncoding(SparseTensorEncodingAttr::DimLevelType dlt) {
   case SparseTensorEncodingAttr::DimLevelType::Singleton:
     return 2;
   }
+  llvm_unreachable("Unknown SparseTensorEncodingAttr::DimLevelType");
 }
 
 /// Returns integers of given width and values as a constant tensor.

@@ -33,13 +33,10 @@ define i32 @f1(<4 x i1>* %a0, <4 x i8> %a1) #0 {
 ; CHECK-NEXT:     r0 = memub(r0+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = #0
+; CHECK-NEXT:     r3:2 = combine(#0,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r5:4 = vsxtbh(r1)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r3:2 = vsxtbh(r2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = r0
@@ -142,16 +139,13 @@ define void @f5(<4 x i1>* %a0, i32 %a1) #0 {
 ; CHECK-LABEL: f5:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = #0
+; CHECK-NEXT:     r3:2 = vsxtbh(r1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r5:4 = vsxtbh(r1)
+; CHECK-NEXT:     r5:4 = combine(#0,#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r3:2 = vsxtbh(r2)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = vcmph.eq(r5:4,r3:2)
+; CHECK-NEXT:     p0 = vcmph.eq(r3:2,r5:4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r1 = mux(p0,#0,#1)

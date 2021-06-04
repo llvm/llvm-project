@@ -245,19 +245,9 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 /// branch instruction. However, if the trip count (and multiple) are not known,
 /// loop unrolling will mostly produce more code that is no faster.
 ///
-/// TripCount is the upper bound of the iteration on which control exits
-/// LatchBlock. Control may exit the loop prior to TripCount iterations either
-/// via an early branch in other loop block or via LatchBlock terminator. This
-/// is relaxed from the general definition of trip count which is the number of
-/// times the loop header executes. Note that UnrollLoop assumes that the loop
-/// counter test is in LatchBlock in order to remove unnecesssary instances of
-/// the test.  If control can exit the loop from the LatchBlock's terminator
-/// prior to TripCount iterations, flag PreserveCondBr needs to be set.
-///
-/// PreserveCondBr indicates whether the conditional branch of the LatchBlock
-/// needs to be preserved.  It is needed when we use trip count upper bound to
-/// fully unroll the loop. If PreserveOnlyFirst is also set then only the first
-/// conditional branch needs to be preserved.
+/// TripCount is an upper bound on the number of times the loop header runs.
+/// Note that the trip count does not need to be exact, it can be any upper
+/// bound on the true trip count.
 ///
 /// Similarly, TripMultiple divides the number of times that the LatchBlock may
 /// execute without exiting the loop.
@@ -330,18 +320,6 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   assert(ULO.TripMultiple > 0);
   assert(ULO.TripCount == 0 || ULO.TripCount % ULO.TripMultiple == 0);
 
-  // Are we eliminating the loop control altogether?
-  bool CompletelyUnroll = ULO.Count == ULO.TripCount;
-
-  // We assume a run-time trip count if the compiler cannot
-  // figure out the loop trip count and the unroll-runtime
-  // flag is specified.
-  bool RuntimeTripCount =
-      (ULO.TripCount == 0 && ULO.Count > 0 && ULO.AllowRuntime);
-
-  assert((!RuntimeTripCount || !ULO.PeelCount) &&
-         "Did not expect runtime trip-count unrolling "
-         "and peeling for the same loop");
 
   bool Peeled = false;
   if (ULO.PeelCount) {
@@ -360,6 +338,21 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       ULO.TripMultiple = SE->getSmallConstantTripMultiple(L, ExitingBlock);
     }
   }
+
+  // Are we eliminating the loop control altogether?  Note that we can know
+  // we're eliminating the backedge without knowing exactly which iteration
+  // of the unrolled body exits.
+  const bool CompletelyUnroll = ULO.Count == ULO.TripCount;
+
+  // We assume a run-time trip count if the compiler cannot
+  // figure out the loop trip count and the unroll-runtime
+  // flag is specified.
+  bool RuntimeTripCount =
+      (ULO.TripCount == 0 && ULO.Count > 0 && ULO.AllowRuntime);
+
+  assert((!RuntimeTripCount || !ULO.PeelCount) &&
+         "Did not expect runtime trip-count unrolling "
+         "and peeling for the same loop");
 
   // All these values should be taken only after peeling because they might have
   // changed.
@@ -380,6 +373,11 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       PreserveLCSSA && CompletelyUnroll &&
       any_of(ExitBlocks,
              [](const BasicBlock *BB) { return isa<PHINode>(BB->begin()); });
+
+  const unsigned MaxTripCount = SE->getSmallConstantMaxTripCount(L);
+  const bool MaxOrZero = SE->isBackedgeTakenCountMaxOrZero(L);
+
+  const bool PreserveOnlyFirst = ULO.Count == MaxTripCount && MaxOrZero;
 
   // The current loop unroll pass can unroll loops that have
   // (1) single latch; and
@@ -412,6 +410,13 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     else
       dbgs() << "  No single exiting block\n";
   });
+
+  // Warning: ExactTripCount is the exact trip count for the block ending in
+  // ExitingBI, not neccessarily an exact exit count *for the loop*.  The
+  // distinction comes when we have an exiting latch, but the loop exits
+  // through another exit first.
+  const unsigned ExactTripCount = ExitingBI ?
+    SE->getSmallConstantTripCount(L,ExitingBI->getParent()) : 0;
 
   // Loops containing convergent instructions must have a count that divides
   // their TripMultiple.
@@ -708,28 +713,68 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     Latches[i]->getTerminator()->replaceSuccessorWith(Headers[i], Headers[j]);
   }
 
+  // Update dominators of blocks we might reach through exits.
+  // Immediate dominator of such block might change, because we add more
+  // routes which can lead to the exit: we can now reach it from the copied
+  // iterations too.
+  if (ULO.Count > 1) {
+    for (auto *BB : OriginalLoopBlocks) {
+      auto *BBDomNode = DT->getNode(BB);
+      SmallVector<BasicBlock *, 16> ChildrenToUpdate;
+      for (auto *ChildDomNode : BBDomNode->children()) {
+        auto *ChildBB = ChildDomNode->getBlock();
+        if (!L->contains(ChildBB))
+          ChildrenToUpdate.push_back(ChildBB);
+      }
+      // The new idom of the block will be the nearest common dominator
+      // of all copies of the previous idom. This is equivalent to the
+      // nearest common dominator of the previous idom and the first latch,
+      // which dominates all copies of the previous idom.
+      BasicBlock *NewIDom = DT->findNearestCommonDominator(BB, LatchBlock);
+      for (auto *ChildBB : ChildrenToUpdate)
+        DT->changeImmediateDominator(ChildBB, NewIDom);
+    }
+  }
+
+  assert(!UnrollVerifyDomtree ||
+         DT->verify(DominatorTree::VerificationLevel::Fast));
+
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+
   if (ExitingBI) {
-    auto SetDest = [](BasicBlock *Src, bool WillExit, bool ExitOnTrue) {
+    auto SetDest = [&](BasicBlock *Src, bool WillExit, bool ExitOnTrue) {
       auto *Term = cast<BranchInst>(Src->getTerminator());
-      BasicBlock *Dest = Term->getSuccessor(ExitOnTrue ^ WillExit);
+      const unsigned Idx = ExitOnTrue ^ WillExit;
+      BasicBlock *Dest = Term->getSuccessor(Idx);
+      BasicBlock *DeadSucc = Term->getSuccessor(1-Idx);
 
       // Remove predecessors from all non-Dest successors.
-      for (BasicBlock *Succ : successors(Src)) {
-        if (Succ == Dest)
-          continue;
-        Succ->removePredecessor(Src, /* KeepOneInputPHIs */ true);
-      }
+      DeadSucc->removePredecessor(Src, /* KeepOneInputPHIs */ true);
 
       // Replace the conditional branch with an unconditional one.
       BranchInst::Create(Dest, Term);
       Term->eraseFromParent();
+
+      DTU.applyUpdates({{DominatorTree::Delete, Src, DeadSucc}});
     };
 
     auto WillExit = [&](unsigned i, unsigned j) -> Optional<bool> {
       if (CompletelyUnroll) {
-        if (ULO.PreserveCondBr && j && !(ULO.PreserveOnlyFirst && i != 0))
-          return None;
-        return j == 0;
+        if (PreserveOnlyFirst) {
+          if (i == 0)
+            return None;
+          return j == 0;
+        }
+        // Complete (but possibly inexact) unrolling
+        if (j == 0)
+          return true;
+        if (MaxTripCount && j >= MaxTripCount)
+          return false;
+        // Warning: ExactTripCount is the trip count of the exiting
+        // block which ends in ExitingBI, not neccessarily the loop.
+        if (ExactTripCount && j != ExactTripCount)
+          return false;
+        return None;
       }
 
       if (RuntimeTripCount && j != 0)
@@ -762,55 +807,6 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     }
   }
 
-  // Update dominators of blocks we might reach through exits.
-  // Immediate dominator of such block might change, because we add more
-  // routes which can lead to the exit: we can now reach it from the copied
-  // iterations too.
-  if (ULO.Count > 1) {
-    for (auto *BB : OriginalLoopBlocks) {
-      auto *BBDomNode = DT->getNode(BB);
-      SmallVector<BasicBlock *, 16> ChildrenToUpdate;
-      for (auto *ChildDomNode : BBDomNode->children()) {
-        auto *ChildBB = ChildDomNode->getBlock();
-        if (!L->contains(ChildBB))
-          ChildrenToUpdate.push_back(ChildBB);
-      }
-      BasicBlock *NewIDom;
-      if (ExitingBI && BB == ExitingBlocks[0]) {
-        // The latch is special because we emit unconditional branches in
-        // some cases where the original loop contained a conditional branch.
-        // Since the latch is always at the bottom of the loop, if the latch
-        // dominated an exit before unrolling, the new dominator of that exit
-        // must also be a latch.  Specifically, the dominator is the first
-        // latch which ends in a conditional branch, or the last latch if
-        // there is no such latch.
-        // For loops exiting from non latch exiting block, we limit the
-        // branch simplification to single exiting block loops.
-        NewIDom = ExitingBlocks.back();
-        for (unsigned i = 0, e = ExitingBlocks.size(); i != e; ++i) {
-          Instruction *Term = ExitingBlocks[i]->getTerminator();
-          if (isa<BranchInst>(Term) && cast<BranchInst>(Term)->isConditional()) {
-            NewIDom =
-                DT->findNearestCommonDominator(ExitingBlocks[i], Latches[i]);
-            break;
-          }
-        }
-      } else {
-        // The new idom of the block will be the nearest common dominator
-        // of all copies of the previous idom. This is equivalent to the
-        // nearest common dominator of the previous idom and the first latch,
-        // which dominates all copies of the previous idom.
-        NewIDom = DT->findNearestCommonDominator(BB, LatchBlock);
-      }
-      for (auto *ChildBB : ChildrenToUpdate)
-        DT->changeImmediateDominator(ChildBB, NewIDom);
-    }
-  }
-
-  assert(!UnrollVerifyDomtree ||
-         DT->verify(DominatorTree::VerificationLevel::Fast));
-
-  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
   // When completely unrolling, the last latch becomes unreachable.
   if (!LatchIsExiting && CompletelyUnroll)

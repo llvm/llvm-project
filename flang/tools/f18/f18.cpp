@@ -253,8 +253,8 @@ std::string CompileFortran(std::string path, Fortran::parser::Options options,
   if (!driver.debugNoSemantics || driver.dumpSymbols ||
       driver.dumpUnparseWithSymbols || driver.getDefinition ||
       driver.getSymbolsSources) {
-    Fortran::semantics::Semantics semantics{semanticsContext, parseTree,
-        parsing.cooked().AsCharBlock(), driver.debugModuleWriter};
+    Fortran::semantics::Semantics semantics{
+        semanticsContext, parseTree, driver.debugModuleWriter};
     semantics.Perform();
     Fortran::semantics::RuntimeDerivedTypeTables tables;
     if (!semantics.AnyFatalError()) {

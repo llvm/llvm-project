@@ -220,6 +220,9 @@ template <class _Tp, class _Up>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 bool operator!=(const allocator<_Tp>&, const allocator<_Up>&) _NOEXCEPT {return false;}
 
+template <class _Tp>
+struct __is_default_allocator<allocator<_Tp> > : true_type { };
+
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

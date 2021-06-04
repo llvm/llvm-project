@@ -147,14 +147,14 @@ static LogicalResult fuseLinalgOpsGreedily(FuncOp f) {
   // Tile and Fuse for tensors inputs (TODO: all tensor operands).
   bool changed = false;
   for (LinalgOp linalgOp : llvm::reverse(linalgOps)) {
-    for (OpOperand &opOperand : linalgOp.getShapedOpOperands()) {
-      if (opOperand.get().getType().isa<MemRefType>()) {
+    for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands()) {
+      if (opOperand->get().getType().isa<MemRefType>()) {
         // TODO: LinalgDependenceGraph should be able to update itself.
         // The current naive and expensive reconstruction of the graph should be
         // removed.
         linalg::Aliases aliases;
         linalg::LinalgDependenceGraph graph(aliases, linalgOps);
-        if (auto info = fuseProducerOfBuffer(b, opOperand, graph)) {
+        if (auto info = fuseProducerOfBuffer(b, *opOperand, graph)) {
           auto *originalOp = info->originalProducer.getOperation();
           eraseSet.insert(originalOp);
           auto *originalOpInLinalgOpsVector =
@@ -163,11 +163,11 @@ static LogicalResult fuseLinalgOpsGreedily(FuncOp f) {
           changed = true;
         }
       } else {
-        assert(opOperand.get().getType().isa<RankedTensorType>());
+        assert(opOperand->get().getType().isa<RankedTensorType>());
         // Tile and Fuse tensor input.
-        if (opOperand.getOperandNumber() >= linalgOp.getNumInputs())
+        if (opOperand->getOperandNumber() >= linalgOp.getNumInputs())
           continue;
-        if (auto info = fuseProducerOfTensor(b, opOperand)) {
+        if (auto info = fuseProducerOfTensor(b, *opOperand)) {
           auto *originalOp = info->originalProducer.getOperation();
           auto *originalOpInLinalgOpsVector =
               std::find(linalgOps.begin(), linalgOps.end(), originalOp);

@@ -26,6 +26,8 @@
 
 namespace llvm {
 
+  template<typename T> struct DenseMapInfo;
+
   /// ArrayRef - Represent a constant reference to an array (0 or more elements
   /// consecutively in memory), i.e. a start pointer and a length.  It allows
   /// various APIs to take consecutive elements easily and conveniently.
@@ -568,6 +570,35 @@ namespace llvm {
   template <typename T> hash_code hash_value(ArrayRef<T> S) {
     return hash_combine_range(S.begin(), S.end());
   }
+
+  // Provide DenseMapInfo for ArrayRefs.
+  template <typename T> struct DenseMapInfo<ArrayRef<T>> {
+    static inline ArrayRef<T> getEmptyKey() {
+      return ArrayRef<T>(
+          reinterpret_cast<const T *>(~static_cast<uintptr_t>(0)), size_t(0));
+    }
+
+    static inline ArrayRef<T> getTombstoneKey() {
+      return ArrayRef<T>(
+          reinterpret_cast<const T *>(~static_cast<uintptr_t>(1)), size_t(0));
+    }
+
+    static unsigned getHashValue(ArrayRef<T> Val) {
+      assert(Val.data() != getEmptyKey().data() &&
+             "Cannot hash the empty key!");
+      assert(Val.data() != getTombstoneKey().data() &&
+             "Cannot hash the tombstone key!");
+      return (unsigned)(hash_value(Val));
+    }
+
+    static bool isEqual(ArrayRef<T> LHS, ArrayRef<T> RHS) {
+      if (RHS.data() == getEmptyKey().data())
+        return LHS.data() == getEmptyKey().data();
+      if (RHS.data() == getTombstoneKey().data())
+        return LHS.data() == getTombstoneKey().data();
+      return LHS == RHS;
+    }
+  };
 
 } // end namespace llvm
 

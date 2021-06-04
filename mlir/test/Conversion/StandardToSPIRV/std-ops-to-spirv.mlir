@@ -53,6 +53,10 @@ func @float32_unary_scalar(%arg0: f32) {
   %3 = math.exp %arg0 : f32
   // CHECK: spv.GLSL.Log %{{.*}}: f32
   %4 = math.log %arg0 : f32
+  // CHECK: %[[ONE:.+]] = spv.Constant 1.000000e+00 : f32
+  // CHECK: %[[ADDONE:.+]] = spv.FAdd %[[ONE]], %{{.+}}
+  // CHECK: spv.GLSL.Log %[[ADDONE]]
+  %40 = math.log1p %arg0 : f32
   // CHECK: spv.FNegate %{{.*}}: f32
   %5 = negf %arg0 : f32
   // CHECK: spv.GLSL.InverseSqrt %{{.*}}: f32

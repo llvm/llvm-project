@@ -330,7 +330,12 @@ class Linalg_ReshapeLikeOp<string mnemonic, list<OpTrait> traits = []> :
     // be either a contracting or expanding reshape.
     OpBuilder<(ins "Type":$resultType, "Value":$src,
       "ArrayRef<ReassociationIndices>":$reassociation,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
+    [{
+      build($_builder, $_state, resultType, src, attrs);
+      $_state.addAttribute("reassociation",
+                          getReassociationIndicesAttribute($_builder, reassociation));
+    }]>,
     OpBuilder<(ins "Type":$resultType, "Value":$src,
       "ArrayRef<ReassociationExprs>":$reassociation,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs),
@@ -355,21 +360,33 @@ class Linalg_ReshapeLikeOp<string mnemonic, list<OpTrait> traits = []> :
       return reassociationIndices;
     };
   }];
+
+  let parser = [{ return ::parseReshapeLikeOp(parser, result); }];
 }
 
 def IndexListArrayAttr :
   TypedArrayAttrBase<I64ArrayAttr, "Array of 64-bit integer array attributes">;
 
-def Linalg_ReshapeOp : Linalg_ReshapeLikeOp<"reshape",
+class Linalg_ReshapeOp<string mnemonic> : Linalg_ReshapeLikeOp<mnemonic,
     [DeclareOpInterfaceMethods<ViewLikeOpInterface>]>,
     Arguments<(ins AnyStridedMemRef:$src, IndexListArrayAttr:$reassociation)>,
     Results<(outs AnyStridedMemRef:$result)> {
-  let summary = "linalg.reshape produces a new view into the operand view";
+  let extraClassDeclaration = commonExtraClassDeclaration # [{
+    MemRefType getSrcType() { return src().getType().cast<MemRefType>(); }
+    MemRefType getResultType() { return result().getType().cast<MemRefType>(); }
+  }];
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
+  let printer = [{ return ::print(p, *this); }];
+}
+
+def Linalg_ExpandShapeOp : Linalg_ReshapeOp<"expand_shape"> {
+  let summary = "operation to produce a memref with a higher rank.";
   let description = [{
-    The `linalg.reshape` op produces a new view whose sizes are a reassociation
-    of the original `view`. Depending on whether or not the reassociated
-    MemRefType is contiguous, the resulting memref may require explicit alloc
-    and copies.
+    The `linalg.expand_shape` op produces a new view with a higher rank whose
+    sizes are a reassociation of the original `view`. Depending on whether or
+    not the reassociated MemRefType is contiguous, the resulting memref may
+    require explicit alloc and copies.
 
     A reassociation is defined as a continuous grouping of dimensions and is
     represented with an array of I64ArrayAttr attribute.
@@ -381,85 +398,67 @@ def Linalg_ReshapeOp : Linalg_ReshapeLikeOp<"reshape",
     All other cases are undefined behavior and a reshape op may not lower to
     LLVM if it cannot be proven statically that it does not require alloc+copy.
 
-    A reshape may either collapse or expand dimensions, depending on the
-    relationship between source and target memref ranks. The verification rule
-    is that the reassociation maps are applied to the memref with the larger
-    rank to obtain the memref with the smaller rank. In the case of a dimension
-    expansion, the reassociation maps can be interpreted as inverse maps.
+    The operand memref type when dimensions can be zero-ranked if the result
+    memref type is statically shaped with all dimensions being unit extent. In
+    such case the reassociation map is empty.
 
-    The result memref type of a reshape when dimensions are collapsed
-    (operand memref type when dimensions are expanded) can be
-    zero-ranked if the operand memref type (or the result memref type
-    when dimensions are expanded) is statically shaped with all
-    dimensions being unit extent. In such cases the reassociation map
-    is empty.
+    The verification rule is that the reassociation maps are applied to the
+    result memref with the larger rank to obtain the operand memref with the
+    smaller rank.
+
+    Example:
+
+    ```mlir
+    // Dimension expansion i -> (i', j') and (k) -> (k')
+    %1 = linalg.expand_shape %0 [[0, 1], [2]] :
+      memref<?x?xf32, stride_spec> into memref<?x?x?xf32, stride_spec_2>
+    ```
+  }];
+}
+
+def Linalg_CollapseShapeOp : Linalg_ReshapeOp<"collapse_shape"> {
+  let summary = "operation to produce a memref with a smaller rank.";
+  let description = [{
+    The `linalg.collapse_shape` op produces a new view with a smaller rank
+    whose sizes are a reassociation of the original `view`. Depending on
+    whether or not the reassociated MemRefType is contiguous, the resulting
+    memref may require explicit alloc and copies.
+
+    A reassociation is defined as a continuous grouping of dimensions and is
+    represented with an array of I64ArrayAttr attribute.
+
+    For now, it is assumed that either:
+      1. a reassociation produces and consumes contiguous MemRefType or,
+      2. the reshape op will be folded into its consumers (by changing the shape
+         of the computations).
+    All other cases are undefined behavior and a reshape op may not lower to
+    LLVM if it cannot be proven statically that it does not require alloc+copy.
+
+    The result memref type of a reshape can be zero-ranked if the operand
+    memref type is statically shaped with all dimensions being unit extent. In
+    such case the reassociation map is empty.
+
+    The verification rule is that the reassociation maps are applied to the
+    operand memref with the larger rank to obtain the result memref with the
+    smaller rank.
 
     Examples:
 
     ```mlir
     // Dimension collapse (i, j) -> i' and k -> k'
-    %1 = linalg.reshape %0 [[0, 1], [2]] :
+    %1 = linalg.collapse_shape %0 [[0, 1], [2]] :
       memref<?x?x?xf32, stride_spec> into memref<?x?xf32, stride_spec_2>
     ```
-
-    ```mlir
-    // Dimension expansion i -> (i', j') and (k) -> (k')
-    %1 = linalg.reshape %0 [[0, 1], [2]] :
-      memref<?x?xf32, stride_spec> into memref<?x?x?xf32, stride_spec_2>
-    ```
   }];
-  let extraClassDeclaration = commonExtraClassDeclaration # [{
-    MemRefType getSrcType() { return src().getType().cast<MemRefType>(); }
-    MemRefType getResultType() { return result().getType().cast<MemRefType>(); }
-  }];
-  let hasFolder = 1;
-  let hasCanonicalizer = 1;
-  let printer = [{ return ::print(p, *this); }];
-  let parser = [{ return ::parseReshapeLikeOp(parser, result); }];
 }
 
-def Linalg_TensorReshapeOp : Linalg_ReshapeLikeOp<
-    "tensor_reshape",
+class Linalg_TensorReshapeOp<string mnemonic> : Linalg_ReshapeLikeOp<
+    mnemonic,
     [DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
       ["reifyReturnTypeShapesPerResultDim"]>]>,
     Arguments<(ins AnyTensor:$src,
                    IndexListArrayAttr:$reassociation)>,
     Results<(outs AnyTensor:$result)> {
-  let summary = "linalg.tensor_reshape produces a new reshaped tensor.";
-  let description = [{
-    The `linalg.reshape` op produces a new tensor whose sizes are a
-    reassociation of the original `src`.
-
-    A reassociation is defined as a continuous grouping of dimensions and is
-    represented with an array of I64ArrayAttr attribute.
-
-    A reshape may either collapse or expand dimensions, depending on the
-    relationship between source and target tensor ranks. The verification rule
-    is that the reassociation maps are applied to the tensor with the larger
-    rank to obtain the tensor with the smaller rank. In the case of a dimension
-    expansion, the reassociation maps can be interpreted as inverse maps.
-
-    The result tensor type of a reshape when dimensions are collapsed
-    (operand tensor type when dimensions are expanded) can be
-    zero-ranked if the operand tensor type (or the result tensor type
-    when dimensions are expanded) is statically shaped with all
-    dimensions being unit extent. In such cases the reassociation map
-    is empty.
-
-    Examples:
-
-    ```mlir
-    // Dimension collapse (i, j) -> i' and k -> k'
-    %b = linalg.tensor_reshape %a [[0, 1], [2]]
-        : tensor<?x?x?xf32> into tensor<?x?xf32>
-    ```
-
-    ```mlir
-    // Dimension expansion i -> (i', j') and (k) -> (k')
-    %b = linalg.tensor_reshape %a [[0, 1], [2]]
-        : tensor<?x?xf32> into tensor<?x?x?xf32>
-    ```
-  }];
   let extraClassDeclaration = commonExtraClassDeclaration # [{
     RankedTensorType getSrcType() {
       return src().getType().cast<RankedTensorType>();
@@ -472,6 +471,60 @@ def Linalg_TensorReshapeOp : Linalg_ReshapeLikeOp<
   let hasCanonicalizer = 1;
   let printer = [{ return ::print(p, *this); }];
   let parser = [{ return ::parseReshapeLikeOp(parser, result); }];
+}
+
+def Linalg_TensorExpandShapeOp : Linalg_TensorReshapeOp<"tensor_expand_shape"> {
+  let summary = "operation to produce a tensor with a higher rank";
+  let description = [{
+    The `linalg.tensor_expand_shape` op produces a new tensor with a higher
+    rank whose sizes are a reassociation of the original `src`.
+
+    A reassociation is defined as a continuous grouping of dimensions and is
+    represented with an array of I64ArrayAttr attribute.
+
+    The verification rule is that the reassociation maps are applied to the
+    result tensor with the higher rank to obtain the operand tensor with the
+    smaller rank.
+
+    The operand tensor type of a reshape can be zero-ranked if the result
+    tensor type is statically shaped with all dimensions being unit extent. In
+    such cases the reassociation map is empty.
+
+    Examples:
+
+    ```mlir
+    // Dimension expansion i -> (i', j') and (k) -> (k')
+    %b = linalg.tensor_expand_shape %a [[0, 1], [2]]
+        : tensor<?x?xf32> into tensor<?x?x?xf32>
+    ```
+  }];
+}
+
+def Linalg_TensorCollapseShapeOp : Linalg_TensorReshapeOp<"tensor_collapse_shape"> {
+  let summary = "operation to produce a tensor with a smaller rank";
+  let description = [{
+    The `linalg.tensor_collapse_shape` op produces a new tensor with a smaller
+    rank whose sizes are a reassociation of the original `src`.
+
+    A reassociation is defined as a continuous grouping of dimensions and is
+    represented with an array of I64ArrayAttr attribute.
+
+    The verification rule is that the reassociation maps are applied to the
+    operand tensor with the higher rank to obtain the result tensor with the
+    smaller rank.
+
+    The result tensor type of a reshape can be zero-ranked if the operand
+    tensor type is statically shaped with all dimensions being unit extent. In
+    such case the reassociation map is empty.
+
+    Examples:
+
+    ```mlir
+    // Dimension collapse (i, j) -> i' and k -> k'
+    %b = linalg.tensor_collapse_shape %a [[0, 1], [2]]
+        : tensor<?x?x?xf32> into tensor<?x?xf32>
+    ```
+  }];
 }
 
 def Linalg_YieldOp : Linalg_Op<"yield", [NoSideEffect, ReturnLike, Terminator]>,

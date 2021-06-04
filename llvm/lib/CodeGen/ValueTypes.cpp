@@ -24,8 +24,7 @@ EVT EVT::changeExtendedVectorElementTypeToInteger() const {
   assert(isExtended() && "Type is not extended!");
   LLVMContext &Context = LLVMTy->getContext();
   EVT IntTy = getIntegerVT(Context, getScalarSizeInBits());
-  return getVectorVT(Context, IntTy, getVectorNumElements(),
-                     isScalableVector());
+  return getVectorVT(Context, IntTy, getVectorElementCount());
 }
 
 EVT EVT::changeExtendedVectorElementType(EVT EltVT) const {

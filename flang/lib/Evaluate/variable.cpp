@@ -265,18 +265,11 @@ static std::optional<Expr<SubscriptInteger>> SymbolLEN(const Symbol &symbol) {
       return chExpr->LEN();
     }
   } else if (auto dyType{DynamicType::From(ultimate)}) {
-    if (const semantics::ParamValue * len{dyType->charLength()}) {
-      if (len->isExplicit()) {
-        if (auto intExpr{len->GetExplicit()}) {
-          if (IsConstantExpr(*intExpr)) {
-            return ConvertToType<SubscriptInteger>(*std::move(intExpr));
-          }
-        }
-      }
-      if (IsDescriptor(ultimate) && !ultimate.owner().IsDerivedType()) {
-        return Expr<SubscriptInteger>{DescriptorInquiry{
-            NamedEntity{ultimate}, DescriptorInquiry::Field::Len}};
-      }
+    if (auto len{dyType->GetCharLength()}) {
+      return len;
+    } else if (IsDescriptor(ultimate) && !ultimate.owner().IsDerivedType()) {
+      return Expr<SubscriptInteger>{DescriptorInquiry{
+          NamedEntity{ultimate}, DescriptorInquiry::Field::Len}};
     }
   }
   return std::nullopt;
@@ -351,12 +344,16 @@ std::optional<Expr<SubscriptInteger>> ProcedureDesignator::LEN() const {
             return c.value().LEN();
           },
           [](const SpecificIntrinsic &i) -> T {
-            if (i.name == "char") {
-              return Expr<SubscriptInteger>{1};
-            }
-            // Some other cases whose results' lengths can be determined
+            // Some cases whose results' lengths can be determined
             // from the lengths of their arguments are handled in
-            // ProcedureRef::LEN().
+            // ProcedureRef::LEN() before coming here.
+            if (const auto &result{i.characteristics.value().functionResult}) {
+              if (const auto *type{result->GetTypeAndShape()}) {
+                if (auto length{type->type().GetCharLength()}) {
+                  return std::move(*length);
+                }
+              }
+            }
             return std::nullopt;
           },
       },
