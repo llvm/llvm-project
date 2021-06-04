@@ -39,4 +39,10 @@ using Test = ::testing::Test;
 #define SKIP_ON_FUCHSIA(T) T
 #endif
 
+#if SCUDO_DEBUG
+#define SKIP_NO_DEBUG(T) T
+#else
+#define SKIP_NO_DEBUG(T) DISABLED_##T
+#endif
+
 extern bool UseQuarantine;

@@ -3165,6 +3165,7 @@ static bool haveIncompatibleLanguageLinkages(const T *Old, const T *New) {
 
 template<typename T> static bool isExternC(T *D) { return D->isExternC(); }
 static bool isExternC(VarTemplateDecl *) { return false; }
+static bool isExternC(FunctionTemplateDecl *) { return false; }
 
 /// Check whether a redeclaration of an entity introduced by a
 /// using-declaration is valid, given that we know it's not an overload
@@ -3289,10 +3290,20 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
         return true;
       }
 
-      // Check whether the two declarations might declare the same function.
-      if (checkUsingShadowRedecl<FunctionDecl>(*this, Shadow, New))
-        return true;
-      OldD = Old = cast<FunctionDecl>(Shadow->getTargetDecl());
+      // Check whether the two declarations might declare the same function or
+      // function template.
+      if (FunctionTemplateDecl *NewTemplate =
+              New->getDescribedFunctionTemplate()) {
+        if (checkUsingShadowRedecl<FunctionTemplateDecl>(*this, Shadow,
+                                                         NewTemplate))
+          return true;
+        OldD = Old = cast<FunctionTemplateDecl>(Shadow->getTargetDecl())
+                         ->getAsFunction();
+      } else {
+        if (checkUsingShadowRedecl<FunctionDecl>(*this, Shadow, New))
+          return true;
+        OldD = Old = cast<FunctionDecl>(Shadow->getTargetDecl());
+      }
     } else {
       Diag(New->getLocation(), diag::err_redefinition_different_kind)
         << New->getDeclName();

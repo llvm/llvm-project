@@ -772,17 +772,20 @@ bool SimplifyIndvar::strengthenOverflowingOperation(BinaryOperator *BO,
   if (!BO->hasNoUnsignedWrap() &&
       willNotOverflow(SE, BO->getOpcode(), /* Signed */ false, LHS, RHS)) {
     BO->setHasNoUnsignedWrap();
-    SE->forgetValue(BO);
     Changed = true;
   }
 
   if (!BO->hasNoSignedWrap() &&
       willNotOverflow(SE, BO->getOpcode(), /* Signed */ true, LHS, RHS)) {
     BO->setHasNoSignedWrap();
-    SE->forgetValue(BO);
     Changed = true;
   }
 
+  // The willNotOverflow() check might infer additional nowrap flags on addrecs
+  // while performing zero/sign extensions. We could call forgetValue() here
+  // to make sure those flags also propagate to any other SCEV expressions
+  // based on the addrec. However, this can have pathological compile-time
+  // impact, see https://bugs.llvm.org/show_bug.cgi?id=50384.
   return Changed;
 }
 
