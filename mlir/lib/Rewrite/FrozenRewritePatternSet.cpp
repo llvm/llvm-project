@@ -53,8 +53,16 @@ static LogicalResult convertPDLToPDLInterp(ModuleOp pdlModule) {
 FrozenRewritePatternSet::FrozenRewritePatternSet()
     : impl(std::make_shared<Impl>()) {}
 
-FrozenRewritePatternSet::FrozenRewritePatternSet(RewritePatternSet &&patterns)
+FrozenRewritePatternSet::FrozenRewritePatternSet(
+    RewritePatternSet &&patterns, ArrayRef<std::string> disabledPatternLabels,
+    ArrayRef<std::string> enabledPatternLabels)
     : impl(std::make_shared<Impl>()) {
+  DenseSet<StringRef> disabledPatterns, enabledPatterns;
+  disabledPatterns.insert(disabledPatternLabels.begin(),
+                          disabledPatternLabels.end());
+  enabledPatterns.insert(enabledPatternLabels.begin(),
+                         enabledPatternLabels.end());
+
   // Functor used to walk all of the operations registered in the context. This
   // is useful for patterns that get applied to multiple operations, such as
   // interface and trait based patterns.
@@ -73,6 +81,25 @@ FrozenRewritePatternSet::FrozenRewritePatternSet(RewritePatternSet &&patterns)
   };
 
   for (std::unique_ptr<RewritePattern> &pat : patterns.getNativePatterns()) {
+    // Don't add patterns that haven't been enabled by the user.
+    if (!enabledPatterns.empty()) {
+      auto isEnabledFn = [&](StringRef label) {
+        return enabledPatterns.count(label);
+      };
+      if (!isEnabledFn(pat->getDebugName()) &&
+          llvm::none_of(pat->getDebugLabels(), isEnabledFn))
+        continue;
+    }
+    // Don't add patterns that have been disabled by the user.
+    if (!disabledPatterns.empty()) {
+      auto isDisabledFn = [&](StringRef label) {
+        return disabledPatterns.count(label);
+      };
+      if (isDisabledFn(pat->getDebugName()) ||
+          llvm::any_of(pat->getDebugLabels(), isDisabledFn))
+        continue;
+    }
+
     if (Optional<OperationName> rootName = pat->getRootKind()) {
       impl->nativeOpSpecificPatternMap[*rootName].push_back(pat.get());
       impl->nativeOpSpecificPatternList.push_back(std::move(pat));

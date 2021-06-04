@@ -4,5 +4,5 @@
 
 # CHECK: error: compile unit exceeds .debug_info section range: 20 >= 6
     .section	.debug_info.dwo,"e",@progbits
-	  .long	16      # Length of Unit
+    .long 16      # Length of Unit
     .short 5      # Version

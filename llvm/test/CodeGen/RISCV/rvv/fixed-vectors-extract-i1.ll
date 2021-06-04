@@ -151,10 +151,10 @@ define i1 @extractelt_v128i1(<128 x i8>* %x, i64 %idx) nounwind {
 define i1 @extractelt_v256i1(<256 x i8>* %x, i64 %idx) nounwind {
 ; RV32-LABEL: extractelt_v256i1:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -384
-; RV32-NEXT:    sw ra, 380(sp) # 4-byte Folded Spill
-; RV32-NEXT:    sw s0, 376(sp) # 4-byte Folded Spill
-; RV32-NEXT:    addi s0, sp, 384
+; RV32-NEXT:    addi sp, sp, -512
+; RV32-NEXT:    sw ra, 508(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 504(sp) # 4-byte Folded Spill
+; RV32-NEXT:    addi s0, sp, 512
 ; RV32-NEXT:    andi sp, sp, -128
 ; RV32-NEXT:    andi a1, a1, 255
 ; RV32-NEXT:    addi a2, a0, 128
@@ -162,30 +162,31 @@ define i1 @extractelt_v256i1(<256 x i8>* %x, i64 %idx) nounwind {
 ; RV32-NEXT:    vsetvli zero, a3, e8,m8,ta,mu
 ; RV32-NEXT:    vle8.v v8, (a0)
 ; RV32-NEXT:    vle8.v v16, (a2)
-; RV32-NEXT:    mv a0, sp
+; RV32-NEXT:    addi a0, sp, 128
 ; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    vmseq.vi v25, v8, 0
 ; RV32-NEXT:    vmseq.vi v0, v16, 0
 ; RV32-NEXT:    vmv.v.i v8, 0
 ; RV32-NEXT:    vmerge.vim v16, v8, 1, v0
-; RV32-NEXT:    addi a1, sp, 128
+; RV32-NEXT:    addi a1, sp, 256
 ; RV32-NEXT:    vse8.v v16, (a1)
 ; RV32-NEXT:    vmv1r.v v0, v25
 ; RV32-NEXT:    vmerge.vim v8, v8, 1, v0
-; RV32-NEXT:    vse8.v v8, (sp)
+; RV32-NEXT:    addi a1, sp, 128
+; RV32-NEXT:    vse8.v v8, (a1)
 ; RV32-NEXT:    lb a0, 0(a0)
-; RV32-NEXT:    addi sp, s0, -384
-; RV32-NEXT:    lw s0, 376(sp) # 4-byte Folded Reload
-; RV32-NEXT:    lw ra, 380(sp) # 4-byte Folded Reload
-; RV32-NEXT:    addi sp, sp, 384
+; RV32-NEXT:    addi sp, s0, -512
+; RV32-NEXT:    lw s0, 504(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw ra, 508(sp) # 4-byte Folded Reload
+; RV32-NEXT:    addi sp, sp, 512
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: extractelt_v256i1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -384
-; RV64-NEXT:    sd ra, 376(sp) # 8-byte Folded Spill
-; RV64-NEXT:    sd s0, 368(sp) # 8-byte Folded Spill
-; RV64-NEXT:    addi s0, sp, 384
+; RV64-NEXT:    addi sp, sp, -512
+; RV64-NEXT:    sd ra, 504(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 496(sp) # 8-byte Folded Spill
+; RV64-NEXT:    addi s0, sp, 512
 ; RV64-NEXT:    andi sp, sp, -128
 ; RV64-NEXT:    andi a1, a1, 255
 ; RV64-NEXT:    addi a2, a0, 128
@@ -193,22 +194,23 @@ define i1 @extractelt_v256i1(<256 x i8>* %x, i64 %idx) nounwind {
 ; RV64-NEXT:    vsetvli zero, a3, e8,m8,ta,mu
 ; RV64-NEXT:    vle8.v v8, (a0)
 ; RV64-NEXT:    vle8.v v16, (a2)
-; RV64-NEXT:    mv a0, sp
+; RV64-NEXT:    addi a0, sp, 128
 ; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    vmseq.vi v25, v8, 0
 ; RV64-NEXT:    vmseq.vi v0, v16, 0
 ; RV64-NEXT:    vmv.v.i v8, 0
 ; RV64-NEXT:    vmerge.vim v16, v8, 1, v0
-; RV64-NEXT:    addi a1, sp, 128
+; RV64-NEXT:    addi a1, sp, 256
 ; RV64-NEXT:    vse8.v v16, (a1)
 ; RV64-NEXT:    vmv1r.v v0, v25
 ; RV64-NEXT:    vmerge.vim v8, v8, 1, v0
-; RV64-NEXT:    vse8.v v8, (sp)
+; RV64-NEXT:    addi a1, sp, 128
+; RV64-NEXT:    vse8.v v8, (a1)
 ; RV64-NEXT:    lb a0, 0(a0)
-; RV64-NEXT:    addi sp, s0, -384
-; RV64-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
-; RV64-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
-; RV64-NEXT:    addi sp, sp, 384
+; RV64-NEXT:    addi sp, s0, -512
+; RV64-NEXT:    ld s0, 496(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld ra, 504(sp) # 8-byte Folded Reload
+; RV64-NEXT:    addi sp, sp, 512
 ; RV64-NEXT:    ret
   %a = load <256 x i8>, <256 x i8>* %x
   %b = icmp eq <256 x i8> %a, zeroinitializer

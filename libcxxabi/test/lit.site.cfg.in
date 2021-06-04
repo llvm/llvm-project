@@ -30,6 +30,7 @@ if "@TARGET_TRIPLE@":
 config.sysroot                  = "@LIBCXXABI_SYSROOT@"
 config.gcc_toolchain            = "@LIBCXXABI_GCC_TOOLCHAIN@"
 config.cxx_ext_threads          = @LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY@
+config.enable_experimental      = False
 
 config.pstl_src_root            = "@ParallelSTL_SOURCE_DIR@" if @LIBCXX_ENABLE_PARALLEL_ALGORITHMS@ else None
 config.pstl_obj_root            = "@ParallelSTL_BINARY_DIR@" if @LIBCXX_ENABLE_PARALLEL_ALGORITHMS@ else None

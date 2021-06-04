@@ -144,13 +144,14 @@ public:
   // the root dylib to ensure symbols in the child library are correctly bound
   // to the root. On the other hand, if a dylib is being directly loaded
   // (through an -lfoo flag), then `umbrella` should be a nullptr.
-  void parseLoadCommands(MemoryBufferRef mb, DylibFile *umbrella);
+  void parseLoadCommands(MemoryBufferRef mb);
   void parseReexports(const llvm::MachO::InterfaceFile &interface);
 
   static bool classof(const InputFile *f) { return f->kind() == DylibKind; }
 
   StringRef dylibName;
   DylibFile *exportingFile = nullptr;
+  DylibFile *umbrella;
   uint32_t compatibilityVersion = 0;
   uint32_t currentVersion = 0;
   int64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel

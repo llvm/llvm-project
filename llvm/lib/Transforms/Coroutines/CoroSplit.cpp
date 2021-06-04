@@ -862,14 +862,17 @@ void CoroCloner::create() {
   auto &Context = NewF->getContext();
 
   // For async functions / continuations, adjust the scope line of the
-  // clone to the line number of the suspend point. The scope line is
+  // clone to the line number of the suspend point. However, only
+  // adjust the scope line when the files are the same. This ensures
+  // line number and file name belong together. The scope line is
   // associated with all pre-prologue instructions. This avoids a jump
   // in the linetable from the function declaration to the suspend point.
   if (DISubprogram *SP = NewF->getSubprogram()) {
     assert(SP != OrigF.getSubprogram() && SP->isDistinct());
     if (ActiveSuspend)
       if (auto DL = ActiveSuspend->getDebugLoc())
-        SP->setScopeLine(DL->getLine());
+        if (SP->getFile() == DL->getFile())
+          SP->setScopeLine(DL->getLine());
     // Update the linkage name to reflect the modified symbol name. It
     // is necessary to update the linkage name in Swift, since the
     // mangling changes for resume functions. It might also be the

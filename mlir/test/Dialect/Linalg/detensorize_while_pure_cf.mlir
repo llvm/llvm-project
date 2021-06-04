@@ -10,10 +10,10 @@
 func @main() -> () attributes {} {
   %c0 = constant 0 : i32
   %0 = tensor.from_elements %c0 : tensor<1xi32>
-  %reshaped0 = linalg.tensor_reshape %0 [] : tensor<1xi32> into tensor<i32>
+  %reshaped0 = linalg.tensor_collapse_shape %0 [] : tensor<1xi32> into tensor<i32>
   %c10 = constant 10 : i32
   %1 = tensor.from_elements %c10 : tensor<1xi32>
-  %reshaped1 = linalg.tensor_reshape %1 [] : tensor<1xi32> into tensor<i32>
+  %reshaped1 = linalg.tensor_collapse_shape %1 [] : tensor<1xi32> into tensor<i32>
   br ^bb1(%reshaped0 : tensor<i32>)
 
 ^bb1(%2: tensor<i32>):  // 2 preds: ^bb0, ^bb2

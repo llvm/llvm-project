@@ -1,0 +1,38 @@
+; RUN: not llvm-tapi-diff %S/Inputs/v4B.tbd %S/Inputs/v4E.tbd 2>&1 | FileCheck %s
+
+; CHECK:< {{.*}}/Inputs/v4B.tbd
+; CHECK:> {{.*}}/Inputs/v4E.tbd
+
+; CHECK:Swift ABI Version
+; CHECK-NEXT:< 5
+; CHECK-NEXT:> 4
+; CHECK-NEXT:Reexported Libraries
+; CHECK-NEXT:        x86_64-apple-ios-simulator
+; CHECK-NEXT:               > Alpine.framework/Alpine
+; CHECK-NEXT:Allowable Clients
+; CHECK-NEXT:        i386-apple-macos
+; CHECK-NEXT:               < ClientA
+; CHECK-NEXT:               > ClientC
+; CHECK-NEXT:Symbols
+; CHECK-NEXT:        i386-apple-macos
+; CHECK-NEXT:                < _symC - Weak-Defined
+; CHECK-NEXT:                > _symQ - Weak-Defined
+; CHECK-NEXT:Inlined Reexported Frameworks/Libraries
+; CHECK-NEXT:        Alpine.framework/Alpine
+; CHECK-NEXT:                Current Version
+; CHECK-NEXT:                   < 1.2.3
+; CHECK-NEXT:                   > 1.4.3
+; CHECK-NEXT:                Swift ABI Version
+; CHECK-NEXT:                   < 5
+; CHECK-NEXT:                   > 3
+; CHECK-NEXT:                Allowable Clients
+; CHECK-NEXT:                        i386-apple-macos
+; CHECK-NEXT:                               < ClientD
+; CHECK-NEXT:                               > ClientB
+; CHECK-NEXT:                Symbols
+; CHECK-NEXT:                        i386-apple-macos
+; CHECK-NEXT:                                < _symA
+; CHECK-NEXT:                                > _symE
+
+; CHECK-NOT: error:
+; CHECK-NOT: warning:

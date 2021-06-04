@@ -19,7 +19,11 @@ using namespace mlir;
 using namespace detail;
 
 /// Static mapping of all of the registered passes.
-static llvm::ManagedStatic<DenseMap<TypeID, PassInfo>> passRegistry;
+static llvm::ManagedStatic<llvm::StringMap<PassInfo>> passRegistry;
+
+/// A mapping of the above pass registry entries to the corresponding TypeID
+/// of the pass that they generate.
+static llvm::ManagedStatic<llvm::StringMap<TypeID>> passRegistryTypeIDs;
 
 /// Static mapping of all of the registered pass pipelines.
 static llvm::ManagedStatic<llvm::StringMap<PassPipelineInfo>>
@@ -94,7 +98,7 @@ void mlir::registerPassPipeline(
 // PassInfo
 //===----------------------------------------------------------------------===//
 
-PassInfo::PassInfo(StringRef arg, StringRef description, TypeID passID,
+PassInfo::PassInfo(StringRef arg, StringRef description,
                    const PassAllocatorFunction &allocator)
     : PassRegistryEntry(
           arg, description, buildDefaultRegistryFn(allocator),
@@ -105,18 +109,23 @@ PassInfo::PassInfo(StringRef arg, StringRef description, TypeID passID,
 
 void mlir::registerPass(StringRef arg, StringRef description,
                         const PassAllocatorFunction &function) {
-  // TODO: We should use the 'arg' as the lookup key instead of the pass id.
-  TypeID passID = function()->getTypeID();
-  PassInfo passInfo(arg, description, passID, function);
-  passRegistry->try_emplace(passID, passInfo);
+  PassInfo passInfo(arg, description, function);
+  passRegistry->try_emplace(arg, passInfo);
+
+  // Verify that the registered pass has the same ID as any registered to this
+  // arg before it.
+  TypeID entryTypeID = function()->getTypeID();
+  auto it = passRegistryTypeIDs->try_emplace(arg, entryTypeID).first;
+  if (it->second != entryTypeID) {
+    llvm_unreachable("pass allocator creates a different pass than previously "
+                     "registered");
+  }
 }
 
-/// Returns the pass info for the specified pass class or null if unknown.
-const PassInfo *mlir::Pass::lookupPassInfo(TypeID passID) {
-  auto it = passRegistry->find(passID);
-  if (it == passRegistry->end())
-    return nullptr;
-  return &it->getSecond();
+/// Returns the pass info for the specified pass argument or null if unknown.
+const PassInfo *mlir::Pass::lookupPassInfo(StringRef passArg) {
+  auto it = passRegistry->find(passArg);
+  return it == passRegistry->end() ? nullptr : &it->second;
 }
 
 //===----------------------------------------------------------------------===//
@@ -433,12 +442,8 @@ TextualPipeline::resolvePipelineElement(PipelineElement &element,
   }
 
   // If not, then this must be a specific pass name.
-  for (auto &passIt : *passRegistry) {
-    if (passIt.second.getPassArgument() == element.name) {
-      element.registryEntry = &passIt.second;
-      return success();
-    }
-  }
+  if ((element.registryEntry = Pass::lookupPassInfo(element.name)))
+    return success();
 
   // Emit an error for the unknown pass.
   auto *rawLoc = element.name.data();

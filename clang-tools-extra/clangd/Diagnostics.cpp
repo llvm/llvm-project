@@ -372,8 +372,7 @@ CodeAction toCodeAction(const Fix &F, const URIForFile &File) {
   Action.title = F.Message;
   Action.kind = std::string(CodeAction::QUICKFIX_KIND);
   Action.edit.emplace();
-  Action.edit->changes.emplace();
-  (*Action.edit->changes)[File.uri()] = {F.Edits.begin(), F.Edits.end()};
+  Action.edit->changes[File.uri()] = {F.Edits.begin(), F.Edits.end()};
   return Action;
 }
 

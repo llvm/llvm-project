@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <chrono>
+#include <string>
 
 namespace clang {
 namespace clangd {
@@ -341,6 +342,9 @@ private:
   // asynchronously.
   llvm::Optional<AsyncTaskRunner> PreambleTasks;
   llvm::Optional<AsyncTaskRunner> WorkerThreads;
+  // Used to create contexts for operations that are not bound to a particular
+  // file (e.g. index queries).
+  std::string LastActiveFile;
 };
 
 } // namespace clangd

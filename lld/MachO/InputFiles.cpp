@@ -766,8 +766,11 @@ DylibFile *findDylib(StringRef path, DylibFile *umbrella,
     for (InterfaceFile &child :
          make_pointee_range(currentTopLevelTapi->documents())) {
       assert(child.documents().empty());
-      if (path == child.getInstallName())
-        return make<DylibFile>(child, umbrella);
+      if (path == child.getInstallName()) {
+        auto file = make<DylibFile>(child, umbrella);
+        file->parseReexports(child);
+        return file;
+      }
     }
   }
 
@@ -813,6 +816,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
   assert(!isBundleLoader || !umbrella);
   if (umbrella == nullptr)
     umbrella = this;
+  this->umbrella = umbrella;
 
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   auto *hdr = reinterpret_cast<const mach_header *>(mb.getBufferStart());
@@ -839,7 +843,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
     return;
 
   // Initialize symbols.
-  exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
+  exportingFile = isImplicitlyLinked(dylibName) ? this : this->umbrella;
   if (const load_command *cmd = findCommand(hdr, LC_DYLD_INFO_ONLY)) {
     auto *c = reinterpret_cast<const dyld_info_command *>(cmd);
     parseTrie(buf + c->export_off, c->export_size,
@@ -855,7 +859,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
   }
 }
 
-void DylibFile::parseLoadCommands(MemoryBufferRef mb, DylibFile *umbrella) {
+void DylibFile::parseLoadCommands(MemoryBufferRef mb) {
   auto *hdr = reinterpret_cast<const mach_header *>(mb.getBufferStart());
   const uint8_t *p = reinterpret_cast<const uint8_t *>(mb.getBufferStart()) +
                      target->headerSize;
@@ -902,6 +906,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
 
   if (umbrella == nullptr)
     umbrella = this;
+  this->umbrella = umbrella;
 
   dylibName = saver.save(interface.getInstallName());
   compatibilityVersion = interface.getCompatibilityVersion().rawValue();
@@ -949,7 +954,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   }
 }
 
-void DylibFile::parseReexports(const llvm::MachO::InterfaceFile &interface) {
+void DylibFile::parseReexports(const InterfaceFile &interface) {
   const InterfaceFile *topLevel =
       interface.getParent() == nullptr ? &interface : interface.getParent();
   for (InterfaceFileRef intfRef : interface.reexportedLibraries()) {

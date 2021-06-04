@@ -908,7 +908,7 @@ bool fromJSON(const llvm::json::Value &, CodeActionParams &, llvm::json::Path);
 
 struct WorkspaceEdit {
   /// Holds changes to existing resources.
-  llvm::Optional<std::map<std::string, std::vector<TextEdit>>> changes;
+  std::map<std::string, std::vector<TextEdit>> changes;
 
   /// Note: "documentChanges" is not currently used because currently there is
   /// no support for versioned edits.

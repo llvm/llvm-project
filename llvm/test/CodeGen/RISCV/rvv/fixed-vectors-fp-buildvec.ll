@@ -35,23 +35,24 @@ define void @buildvec_no_vid_v4f32(<4 x float>* %x) {
 define <4 x float> @hang_when_merging_stores_after_legalization(<8 x float> %x, <8 x float> %y) optsize {
 ; LMULMAX1-LABEL: hang_when_merging_stores_after_legalization:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    addi sp, sp, -16
-; LMULMAX1-NEXT:    .cfi_def_cfa_offset 16
+; LMULMAX1-NEXT:    addi sp, sp, -32
+; LMULMAX1-NEXT:    .cfi_def_cfa_offset 32
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e32,m2,ta,mu
 ; LMULMAX1-NEXT:    vfmv.f.s ft0, v10
-; LMULMAX1-NEXT:    fsw ft0, 8(sp)
+; LMULMAX1-NEXT:    fsw ft0, 24(sp)
 ; LMULMAX1-NEXT:    vfmv.f.s ft0, v8
-; LMULMAX1-NEXT:    fsw ft0, 0(sp)
+; LMULMAX1-NEXT:    fsw ft0, 16(sp)
 ; LMULMAX1-NEXT:    vsetivli zero, 1, e32,m2,ta,mu
 ; LMULMAX1-NEXT:    vslidedown.vi v26, v10, 7
 ; LMULMAX1-NEXT:    vfmv.f.s ft0, v26
-; LMULMAX1-NEXT:    fsw ft0, 12(sp)
+; LMULMAX1-NEXT:    fsw ft0, 28(sp)
 ; LMULMAX1-NEXT:    vslidedown.vi v26, v8, 7
 ; LMULMAX1-NEXT:    vfmv.f.s ft0, v26
-; LMULMAX1-NEXT:    fsw ft0, 4(sp)
+; LMULMAX1-NEXT:    fsw ft0, 20(sp)
 ; LMULMAX1-NEXT:    vsetivli zero, 4, e32,m1,ta,mu
-; LMULMAX1-NEXT:    vle32.v v8, (sp)
-; LMULMAX1-NEXT:    addi sp, sp, 16
+; LMULMAX1-NEXT:    addi a0, sp, 16
+; LMULMAX1-NEXT:    vle32.v v8, (a0)
+; LMULMAX1-NEXT:    addi sp, sp, 32
 ; LMULMAX1-NEXT:    ret
 ;
 ; LMULMAX2-LABEL: hang_when_merging_stores_after_legalization:

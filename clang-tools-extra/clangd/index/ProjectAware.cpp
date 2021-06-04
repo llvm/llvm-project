@@ -128,9 +128,9 @@ ProjectAwareIndex::indexedFiles() const {
 
 SymbolIndex *ProjectAwareIndex::getIndex() const {
   const auto &C = Config::current();
-  if (!C.Index.External)
+  if (C.Index.External.Kind == Config::ExternalIndexSpec::None)
     return nullptr;
-  const auto &External = *C.Index.External;
+  const auto &External = C.Index.External;
   std::lock_guard<std::mutex> Lock(Mu);
   auto Entry = IndexForSpec.try_emplace(External, nullptr);
   if (Entry.second)

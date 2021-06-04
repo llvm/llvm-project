@@ -72,5 +72,11 @@ ArchitectureSet mapToArchitectureSet(ArrayRef<Target> Targets) {
   return Result;
 }
 
+std::string getTargetTripleName(const Target &Targ) {
+  return (getArchitectureName(Targ.Arch) + "-apple-" +
+          getOSAndEnvironmentName(Targ.Platform))
+      .str();
+}
+
 } // end namespace MachO.
 } // end namespace llvm.

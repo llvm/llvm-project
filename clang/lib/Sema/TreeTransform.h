@@ -2401,12 +2401,6 @@ public:
 
   ExprResult RebuildSYCLUniqueStableNameExpr(SourceLocation OpLoc,
                                              SourceLocation LParen,
-                                             SourceLocation RParen, Expr *E) {
-    return getSema().BuildSYCLUniqueStableNameExpr(OpLoc, LParen, RParen, E);
-  }
-
-  ExprResult RebuildSYCLUniqueStableNameExpr(SourceLocation OpLoc,
-                                             SourceLocation LParen,
                                              SourceLocation RParen,
                                              TypeSourceInfo *TSI) {
     return getSema().BuildSYCLUniqueStableNameExpr(OpLoc, LParen, RParen, TSI);

@@ -124,11 +124,15 @@ OMPLoopBasedDirective::tryToFindNextInnerLoop(Stmt *CurStmt,
 
 bool OMPLoopBasedDirective::doForAllLoops(
     Stmt *CurStmt, bool TryImperfectlyNestedLoops, unsigned NumLoops,
-    llvm::function_ref<bool(unsigned, Stmt *)> Callback) {
+    llvm::function_ref<bool(unsigned, Stmt *)> Callback,
+    llvm::function_ref<void(OMPLoopBasedDirective *)>
+        OnTransformationCallback) {
   CurStmt = CurStmt->IgnoreContainers();
   for (unsigned Cnt = 0; Cnt < NumLoops; ++Cnt) {
-    if (auto *Dir = dyn_cast<OMPTileDirective>(CurStmt))
+    while (auto *Dir = dyn_cast<OMPTileDirective>(CurStmt)) {
+      OnTransformationCallback(Dir);
       CurStmt = Dir->getTransformedStmt();
+    }
     if (auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(CurStmt))
       CurStmt = CanonLoop->getLoopStmt();
     if (Callback(Cnt, CurStmt))

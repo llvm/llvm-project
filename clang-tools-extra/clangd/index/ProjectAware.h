@@ -20,6 +20,7 @@ namespace clangd {
 /// A functor to create an index for an external index specification. Functor
 /// should perform any high latency operation in a separate thread through
 /// AsyncTaskRunner, if set.
+/// Spec is never `None`.
 using IndexFactory = std::function<std::unique_ptr<SymbolIndex>(
     const Config::ExternalIndexSpec &, AsyncTaskRunner *)>;
 
