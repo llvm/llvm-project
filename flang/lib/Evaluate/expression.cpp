@@ -107,6 +107,9 @@ template <typename A> int ExpressionBase<A>::Rank() const {
       derived().u);
 }
 
+template <typename A> LLVM_DUMP_METHOD void ExpressionBase<A>::dump() const {
+  llvm::errs() << "Ev::Expr is <{" << AsFortran() << "}>\n";
+}
 // Equality testing
 
 bool ImpliedDoIndex::operator==(const ImpliedDoIndex &that) const {
