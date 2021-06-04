@@ -95,6 +95,13 @@ private:
   bool selectIntAddrSImm10Lsl3(SDValue Addr, SDValue &Base,
                                SDValue &Offset) const override;
 
+  bool selectAddrFrameIndexUOffset(SDValue Addr, SDValue &Base, SDValue &Offset,
+                                   unsigned OffsetBits,
+                                   unsigned ShiftAmount) const override;
+
+  bool selectIntAddrUImm12(SDValue Addr, SDValue &Base,
+                           SDValue &Offset) const override;
+
   /// Select constant vector splats.
   bool selectVSplat(SDNode *N, APInt &Imm,
                     unsigned MinSizeInBits) const override;

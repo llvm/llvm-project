@@ -49,6 +49,7 @@ def uimm5_nm : Operand<i32> {
 def uimm16_simm12 : Operand<i32>;
 
 def addrsimm9 : ComplexPattern<iPTR, 2, "selectIntAddrSImm9", [frameindex]>;
+def addruimm12 : ComplexPattern<iPTR, 2, "selectIntAddrUImm12", [frameindex]>;
 
 //===----------------------------------------------------------------------===//
 //
@@ -424,23 +425,23 @@ def : Pat<(brcond (i32 GPR32NM:$lhs), bb:$dst),
 
 let isCodeGenOnly = 1 in {
 
-def LW_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem, load, addrimm12, II_LW>, InstSize32;
+def LW_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem, load, addruimm12, II_LW>, InstSize32;
 def LWs9_NM : LoadMemoryNM<"lw", GPR32NMOpnd, mem, load, addrsimm9, II_LW>, InstSize32;
-def SW_NM : StoreMemoryNM<"sw", GPR32NMOpnd, mem, store, addrimm12, II_SW>, InstSize32;
+def SW_NM : StoreMemoryNM<"sw", GPR32NMOpnd, mem, store, addruimm12, II_SW>, InstSize32;
 def SWs9_NM : StoreMemoryNM<"sw", GPR32NMOpnd, mem, store, addrsimm9, II_SW>, InstSize32;
 
-def LHU_NM : LoadMemoryNM<"lhu", GPR32NMOpnd, mem, zextloadi16, addrimm12, II_LHU>, InstSize32;
+def LHU_NM : LoadMemoryNM<"lhu", GPR32NMOpnd, mem, zextloadi16, addruimm12, II_LHU>, InstSize32;
 def LHUs9_NM : LoadMemoryNM<"lhu", GPR32NMOpnd, mem, zextloadi16, addrsimm9, II_LHU>, InstSize32;
-def LH_NM : LoadMemoryNM<"lh", GPR32NMOpnd, mem, sextloadi16, addrimm12, II_LH>, InstSize32;
+def LH_NM : LoadMemoryNM<"lh", GPR32NMOpnd, mem, sextloadi16, addruimm12, II_LH>, InstSize32;
 def LHs9_NM : LoadMemoryNM<"lh", GPR32NMOpnd, mem, sextloadi16, addrsimm9, II_LH>, InstSize32;
-def SH_NM : StoreMemoryNM<"sh", GPR32NMOpnd, mem, truncstorei16, addrimm12, II_SH>, InstSize32;
+def SH_NM : StoreMemoryNM<"sh", GPR32NMOpnd, mem, truncstorei16, addruimm12, II_SH>, InstSize32;
 def SHs9_NM : StoreMemoryNM<"sh", GPR32NMOpnd, mem, truncstorei16, addrsimm9, II_SH>, InstSize32;
 
-def LBU_NM : LoadMemoryNM<"lbu", GPR32NMOpnd, mem, zextloadi8, addrimm12, II_LBU>, InstSize32;
+def LBU_NM : LoadMemoryNM<"lbu", GPR32NMOpnd, mem, zextloadi8, addruimm12, II_LBU>, InstSize32;
 def LBUs9_NM : LoadMemoryNM<"lbu", GPR32NMOpnd, mem, zextloadi8, addrsimm9, II_LBU>, InstSize32;
-def LB_NM : LoadMemoryNM<"lb", GPR32NMOpnd, mem, sextloadi8, addrimm12, II_LB>, InstSize32;
+def LB_NM : LoadMemoryNM<"lb", GPR32NMOpnd, mem, sextloadi8, addruimm12, II_LB>, InstSize32;
 def LBs9_NM : LoadMemoryNM<"lb", GPR32NMOpnd, mem, sextloadi8, addrsimm9, II_LB>, InstSize32;
-def SB_NM : StoreMemoryNM<"sb", GPR32NMOpnd, mem, truncstorei8, addrimm12, II_SB>, InstSize32;
+def SB_NM : StoreMemoryNM<"sb", GPR32NMOpnd, mem, truncstorei8, addruimm12, II_SB>, InstSize32;
 def SBs9_NM : StoreMemoryNM<"sb", GPR32NMOpnd, mem, truncstorei8, addrsimm9, II_SB>, InstSize32;
 
 // TODO: Halfword load/store is never selected, this needs to be looked into.
@@ -455,11 +456,14 @@ def UASW_NM : UnalignedStore<"uasw", NMUnalignedSW>;
 }
 
 // Any-extending loads
-def : Pat<(i32 (extloadi8 addrimm12:$addr)),
-          (LBU_NM addrimm12:$addr)>, ISA_NANOMIPS;
-def : Pat<(i32 (extloadi16 addrimm12:$addr)),
-          (LHU_NM addrimm12:$addr)>, ISA_NANOMIPS;
-
+def : Pat<(i32 (extloadi8 addruimm12:$addr)),
+          (LBU_NM addruimm12:$addr)>, ISA_NANOMIPS;
+def : Pat<(i32 (extloadi8 addrsimm9:$addr)),
+          (LBUs9_NM addrsimm9:$addr)>, ISA_NANOMIPS;
+def : Pat<(i32 (extloadi16 addruimm12:$addr)),
+          (LHU_NM addruimm12:$addr)>, ISA_NANOMIPS;
+def : Pat<(i32 (extloadi16 addrsimm9:$addr)),
+          (LHUs9_NM addrsimm9:$addr)>, ISA_NANOMIPS;
 
 // Conditional Moves
 def MOVZ_NM : InstNM<(outs GPR32NMOpnd:$rd),

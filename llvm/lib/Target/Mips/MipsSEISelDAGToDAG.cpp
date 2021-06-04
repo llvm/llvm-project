@@ -511,6 +511,40 @@ bool MipsSEDAGToDAGISel::selectIntAddrSImm10Lsl3(SDValue Addr, SDValue &Base,
   return selectAddrDefault(Addr, Base, Offset);
 }
 
+bool MipsSEDAGToDAGISel::selectAddrFrameIndexUOffset(
+    SDValue Addr, SDValue &Base, SDValue &Offset, unsigned OffsetBits,
+    unsigned ShiftAmount = 0) const {
+  if (CurDAG->isBaseWithConstantOffset(Addr)) {
+    ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1));
+    if (isUIntN(OffsetBits + ShiftAmount, CN->getZExtValue())) {
+      EVT ValTy = Addr.getValueType();
+
+      // If the first operand is a FI, get the TargetFI Node
+      if (FrameIndexSDNode *FIN =
+              dyn_cast<FrameIndexSDNode>(Addr.getOperand(0)))
+        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
+      else {
+        Base = Addr.getOperand(0);
+        // If base is a FI, additional offset calculation is done in
+        // eliminateFrameIndex, otherwise we need to check the alignment
+        const Align Alignment(1ULL << ShiftAmount);
+        if (!isAligned(Alignment, CN->getZExtValue()))
+          return false;
+      }
+
+      Offset =
+          CurDAG->getTargetConstant(CN->getZExtValue(), SDLoc(Addr), ValTy);
+      return true;
+    }
+  }
+  return false;
+}
+
+bool MipsSEDAGToDAGISel::selectIntAddrUImm12(SDValue Addr, SDValue &Base,
+                                             SDValue &Offset) const {
+  return selectAddrFrameIndexUOffset(Addr, Base, Offset, 12, 0);
+}
+
 // Select constant vector splats.
 //
 // Returns true and sets Imm if:

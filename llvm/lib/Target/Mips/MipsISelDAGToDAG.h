@@ -97,6 +97,13 @@ private:
   virtual bool selectAddr16(SDValue Addr, SDValue &Base, SDValue &Offset);
   virtual bool selectAddr16SP(SDValue Addr, SDValue &Base, SDValue &Offset);
 
+  virtual bool selectAddrFrameIndexUOffset(SDValue Addr, SDValue &Base,
+                                           SDValue &Offset, unsigned OffsetBits,
+                                           unsigned ShiftAmount) const;
+
+  virtual bool selectIntAddrUImm12(SDValue Addr, SDValue &Base,
+                                   SDValue &Offset) const;
+
   /// Select constant vector splats.
   virtual bool selectVSplat(SDNode *N, APInt &Imm,
                             unsigned MinSizeInBits) const;
