@@ -172,29 +172,6 @@ private:
       return false;
     }
 
-    // Increase the alignment of LDS globals if necessary to maximise the chance
-    // that we can use aligned LDS instructions to access them.
-    for (auto *GV : FoundLocalVars) {
-      Align Alignment(GV->getAlignment());
-      TypeSize GVSize = DL.getTypeAllocSize(GV->getValueType());
-
-      if (GVSize > 8) {
-        // We might want to use a b96 or b128 load/store
-        Alignment = std::max(Alignment, Align(16));
-      } else if (GVSize > 4) {
-        // We might want to use a b64 load/store
-        Alignment = std::max(Alignment, Align(8));
-      } else if (GVSize > 2) {
-        // We might want to use a b32 load/store
-        Alignment = std::max(Alignment, Align(4));
-      } else if (GVSize > 1) {
-        // We might want to use a b16 load/store
-        Alignment = std::max(Alignment, Align(2));
-      }
-
-      GV->setAlignment(Alignment);
-    }
-
     // Sort by alignment, descending, to minimise padding.
     // On ties, sort by size, descending, then by name, lexicographical.
     llvm::stable_sort(

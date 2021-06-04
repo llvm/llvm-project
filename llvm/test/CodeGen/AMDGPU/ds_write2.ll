@@ -820,32 +820,33 @@ define amdgpu_kernel void @store_constant_disjoint_offsets() {
 define amdgpu_kernel void @store_misaligned64_constant_offsets() {
 ; CI-LABEL: store_misaligned64_constant_offsets:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_movk_i32 s0, 0x7b
-; CI-NEXT:    s_mov_b32 s1, 0
-; CI-NEXT:    v_mov_b32_e32 v0, s0
-; CI-NEXT:    v_mov_b32_e32 v2, 0
-; CI-NEXT:    v_mov_b32_e32 v1, s1
+; CI-NEXT:    v_mov_b32_e32 v0, 0
+; CI-NEXT:    v_mov_b32_e32 v1, 0x7b
 ; CI-NEXT:    s_mov_b32 m0, -1
-; CI-NEXT:    ds_write2_b64 v2, v[0:1], v[0:1] offset1:1
+; CI-NEXT:    ds_write2_b32 v0, v1, v0 offset1:1
+; CI-NEXT:    ds_write2_b32 v0, v1, v0 offset0:2 offset1:3
 ; CI-NEXT:    s_endpgm
 ;
 ; GFX9-ALIGNED-LABEL: store_misaligned64_constant_offsets:
 ; GFX9-ALIGNED:       ; %bb.0:
-; GFX9-ALIGNED-NEXT:    s_movk_i32 s0, 0x7b
-; GFX9-ALIGNED-NEXT:    s_mov_b32 s1, 0
-; GFX9-ALIGNED-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-ALIGNED-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-ALIGNED-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-ALIGNED-NEXT:    ds_write2_b64 v2, v[0:1], v[0:1] offset1:1
+; GFX9-ALIGNED-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-ALIGNED-NEXT:    v_mov_b32_e32 v1, 0x7b
+; GFX9-ALIGNED-NEXT:    ds_write2_b32 v0, v1, v0 offset1:1
+; GFX9-ALIGNED-NEXT:    ds_write2_b32 v0, v1, v0 offset0:2 offset1:3
 ; GFX9-ALIGNED-NEXT:    s_endpgm
 ;
 ; GFX9-UNALIGNED-LABEL: store_misaligned64_constant_offsets:
 ; GFX9-UNALIGNED:       ; %bb.0:
-; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v0, 0x7b
-; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v1, 0
-; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v2, v0
-; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v3, v1
-; GFX9-UNALIGNED-NEXT:    ds_write_b128 v1, v[0:3]
+; GFX9-UNALIGNED-NEXT:    s_movk_i32 s0, 0x7b
+; GFX9-UNALIGNED-NEXT:    s_mov_b32 s1, 0
+; GFX9-UNALIGNED-NEXT:    s_mov_b32 s2, s0
+; GFX9-UNALIGNED-NEXT:    s_mov_b32 s3, s1
+; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v2, s2
+; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v1, s1
+; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v3, s3
+; GFX9-UNALIGNED-NEXT:    ds_write2_b64 v4, v[0:1], v[2:3] offset1:1
 ; GFX9-UNALIGNED-NEXT:    s_endpgm
   store i64 123, i64 addrspace(3)* getelementptr inbounds ([4 x i64], [4 x i64] addrspace(3)* @bar, i32 0, i32 0), align 4
   store i64 123, i64 addrspace(3)* getelementptr inbounds ([4 x i64], [4 x i64] addrspace(3)* @bar, i32 0, i32 1), align 4
@@ -857,25 +858,23 @@ define amdgpu_kernel void @store_misaligned64_constant_offsets() {
 define amdgpu_kernel void @store_misaligned64_constant_large_offsets() {
 ; CI-LABEL: store_misaligned64_constant_large_offsets:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_movk_i32 s0, 0x7b
-; CI-NEXT:    s_mov_b32 s1, 0
-; CI-NEXT:    v_mov_b32_e32 v0, s0
+; CI-NEXT:    v_mov_b32_e32 v0, 0x4000
+; CI-NEXT:    v_mov_b32_e32 v1, 0x7b
 ; CI-NEXT:    v_mov_b32_e32 v2, 0
-; CI-NEXT:    v_mov_b32_e32 v1, s1
 ; CI-NEXT:    s_mov_b32 m0, -1
-; CI-NEXT:    ds_write_b64 v2, v[0:1] offset:16384
-; CI-NEXT:    ds_write_b64 v2, v[0:1] offset:32760
+; CI-NEXT:    ds_write2_b32 v0, v1, v2 offset1:1
+; CI-NEXT:    v_mov_b32_e32 v0, 0x7ff8
+; CI-NEXT:    ds_write2_b32 v0, v1, v2 offset1:1
 ; CI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: store_misaligned64_constant_large_offsets:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_movk_i32 s0, 0x7b
-; GFX9-NEXT:    s_mov_b32 s1, 0
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0x4000
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0x7b
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-NEXT:    ds_write_b64 v2, v[0:1] offset:16384
-; GFX9-NEXT:    ds_write_b64 v2, v[0:1] offset:32760
+; GFX9-NEXT:    ds_write2_b32 v0, v1, v2 offset1:1
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0x7ff8
+; GFX9-NEXT:    ds_write2_b32 v0, v1, v2 offset1:1
 ; GFX9-NEXT:    s_endpgm
   store i64 123, i64 addrspace(3)* getelementptr inbounds ([4096 x i64], [4096 x i64] addrspace(3)* @bar.large, i32 0, i32 2048), align 4
   store i64 123, i64 addrspace(3)* getelementptr inbounds ([4096 x i64], [4096 x i64] addrspace(3)* @bar.large, i32 0, i32 4095), align 4
