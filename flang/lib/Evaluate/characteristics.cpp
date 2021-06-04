@@ -367,7 +367,7 @@ static std::optional<Procedure> CharacterizeProcedure(
     const semantics::Symbol &original, FoldingContext &context,
     semantics::UnorderedSymbolSet &seenProcs) {
   Procedure result;
-  const auto &symbol{original.GetUltimate()};
+  const auto &symbol{ResolveAssociations(original)};
   if (seenProcs.find(symbol) != seenProcs.end()) {
     std::string procsList{GetSeenProcs(seenProcs)};
     context.messages().Say(symbol.name(),
@@ -417,6 +417,11 @@ static std::optional<Procedure> CharacterizeProcedure(
           [&](const semantics::ProcEntityDetails &proc)
               -> std::optional<Procedure> {
             if (symbol.attrs().test(semantics::Attr::INTRINSIC)) {
+              // Fails when the intrinsic is not a specific intrinsic function
+              // from F'2018 table 16.2.  In order to handle forward references,
+              // attempts to use impermissible intrinsic procedures as the
+              // interfaces of procedure pointers are caught and flagged in
+              // declaration checking in Semantics.
               return context.intrinsics().IsSpecificIntrinsicFunction(
                   symbol.name().ToString());
             }
@@ -786,7 +791,7 @@ std::optional<Procedure> Procedure::Characterize(
     const ProcedureDesignator &proc, FoldingContext &context) {
   if (const auto *symbol{proc.GetSymbol()}) {
     if (auto result{characteristics::Procedure::Characterize(
-            symbol->GetUltimate(), context)}) {
+            ResolveAssociations(*symbol), context)}) {
       return result;
     }
   } else if (const auto *intrinsic{proc.GetSpecificIntrinsic()}) {
