@@ -2645,6 +2645,18 @@ bool ModuleAddressSanitizer::instrumentModule(Module &M) {
       appendToGlobalDtors(M, AsanDtorFunction, Priority);
   }
 
+#if !SANITIZER_WINDOWS
+  assert(ClUseAfterReturn != AsanDetectStackUseAfterReturnMode::Invalid);
+  if (ClUseAfterReturn == AsanDetectStackUseAfterReturnMode::Always) {
+    Type *IntTy = Type::getInt32Ty(*C);
+    M.getOrInsertGlobal("__asan_detect_use_after_return_always", IntTy, [&] {
+      return new GlobalVariable(
+          M, IntTy, /*isConstant=*/true, GlobalValue::WeakODRLinkage,
+          ConstantInt::get(IntTy, 1), "__asan_detect_use_after_return_always");
+    });
+  }
+#endif // !SANITIZER_WINDOWS
+
   return true;
 }
 
