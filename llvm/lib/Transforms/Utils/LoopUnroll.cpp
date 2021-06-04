@@ -411,6 +411,10 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       dbgs() << "  No single exiting block\n";
   });
 
+  // Warning: ExactTripCount is the exact trip count for the block ending in
+  // ExitingBI, not neccessarily an exact exit count *for the loop*.  The
+  // distinction comes when we have an exiting latch, but the loop exits
+  // through another exit first.
   const unsigned ExactTripCount = ExitingBI ?
     SE->getSmallConstantTripCount(L,ExitingBI->getParent()) : 0;
   const bool ExactUnroll = (ExactTripCount && ExactTripCount == ULO.Count);
@@ -762,13 +766,13 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
             return None;
           return j == 0;
         }
-        if (ExactUnroll)
-          return j == 0;
-        // Full, but non-exact unrolling
+        // Complete (but possibly inexact) unrolling
         if (j == 0)
           return true;
         if (MaxTripCount && j >= MaxTripCount)
           return false;
+        // Warning: ExactTripCount is the trip count of the exiting
+        // block which ends in ExitingBI, not neccessarily the loop.
         if (ExactTripCount && j != ExactTripCount)
           return false;
         return None;
