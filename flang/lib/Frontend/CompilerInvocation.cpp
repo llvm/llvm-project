@@ -501,6 +501,13 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
   llvm::opt::InputArgList args = opts.ParseArgs(
       commandLineArgs, missingArgIndex, missingArgCount, includedFlagsBitmask);
 
+  // Check for missing argument error.
+  if (missingArgCount) {
+    diags.Report(clang::diag::err_drv_missing_argument)
+        << args.getArgString(missingArgIndex) << missingArgCount;
+    success = false;
+  }
+
   // Issue errors on unknown arguments
   for (const auto *a : args.filtered(clang::driver::options::OPT_UNKNOWN)) {
     auto argString = a->getAsString(args);
