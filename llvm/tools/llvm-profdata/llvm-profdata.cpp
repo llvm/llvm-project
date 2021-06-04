@@ -20,6 +20,7 @@
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Discriminator.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
@@ -451,6 +452,25 @@ static void updateInstrProfileEntry(InstrProfileEntry &IFE,
 const uint64_t ColdPercentileIdx = 15;
 const uint64_t HotPercentileIdx = 11;
 
+using sampleprof::FSDiscriminatorPass;
+
+// Internal options to set FSDiscriminatorPass. Used in merge and show
+// commands.
+static cl::opt<FSDiscriminatorPass> FSDiscriminatorPassOption(
+    "fs-discriminator-pass", cl::init(PassLast), cl::Hidden,
+    cl::desc("Zero out the discriminator bits for the FS discrimiantor "
+             "pass beyond this value. The enum values are defined in "
+             "Support/Discriminator.h"),
+    cl::values(clEnumVal(Base, "Use base discriminators only"),
+               clEnumVal(Pass1, "Use base and pass 1 discriminators"),
+               clEnumVal(Pass2, "Use base and pass 1-2 discriminators"),
+               clEnumVal(Pass3, "Use base and pass 1-3 discriminators"),
+               clEnumVal(PassLast, "Use all discriminator bits (default)")));
+
+static unsigned getDiscriminatorMask() {
+  return getN1Bits(getFSPassBitEnd(FSDiscriminatorPassOption.getValue()));
+}
+
 /// Adjust the instr profile in \p WC based on the sample profile in
 /// \p Reader.
 static void
@@ -542,8 +562,8 @@ static void supplementInstrProfile(
 
   // Read sample profile.
   LLVMContext Context;
-  auto ReaderOrErr =
-      sampleprof::SampleProfileReader::create(SampleFilename.str(), Context);
+  auto ReaderOrErr = sampleprof::SampleProfileReader::create(
+      SampleFilename.str(), Context, FSDiscriminatorPassOption);
   if (std::error_code EC = ReaderOrErr.getError())
     exitWithErrorCode(EC, SampleFilename);
   auto Reader = std::move(ReaderOrErr.get());
@@ -574,12 +594,13 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
   Result.addTotalSamples(Samples.getTotalSamples());
   Result.addHeadSamples(Samples.getHeadSamples());
   for (const auto &BodySample : Samples.getBodySamples()) {
-    Result.addBodySamples(BodySample.first.LineOffset,
-                          BodySample.first.Discriminator,
+    uint32_t MaskedDiscriminator =
+        BodySample.first.Discriminator & getDiscriminatorMask();
+    Result.addBodySamples(BodySample.first.LineOffset, MaskedDiscriminator,
                           BodySample.second.getSamples());
     for (const auto &Target : BodySample.second.getCallTargets()) {
       Result.addCalledTargetSamples(BodySample.first.LineOffset,
-                                    BodySample.first.Discriminator,
+                                    MaskedDiscriminator,
                                     Remapper(Target.first()), Target.second);
     }
   }
@@ -677,7 +698,8 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
   Optional<bool> ProfileIsProbeBased;
   Optional<bool> ProfileIsCS;
   for (const auto &Input : Inputs) {
-    auto ReaderOrErr = SampleProfileReader::create(Input.Filename, Context);
+    auto ReaderOrErr = SampleProfileReader::create(Input.Filename, Context,
+                                                   FSDiscriminatorPassOption);
     if (std::error_code EC = ReaderOrErr.getError()) {
       warnOrExitGivenError(FailMode, EC, Input.Filename);
       continue;
@@ -907,16 +929,16 @@ static int merge_main(int argc, const char *argv[]) {
                "sample profile, if the ratio of the number of zero counters "
                "divided by the the total number of counters is above the "
                "threshold, the profile of the function will be regarded as "
-               "being harmful for performance and will be dropped. "));
+               "being harmful for performance and will be dropped."));
   cl::opt<unsigned> SupplMinSizeThreshold(
       "suppl-min-size-threshold", cl::init(10), cl::Hidden,
       cl::desc("If the size of a function is smaller than the threshold, "
                "assume it can be inlined by PGO early inliner and it won't "
-               "be adjusted based on sample profile. "));
+               "be adjusted based on sample profile."));
   cl::opt<unsigned> InstrProfColdThreshold(
       "instr-prof-cold-threshold", cl::init(0), cl::Hidden,
       cl::desc("User specified cold threshold for instr profile which will "
-               "override the cold threshold got from profile summary. "));
+               "override the cold threshold got from profile summary."));
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data merger\n");
 
@@ -1859,11 +1881,13 @@ std::error_code SampleOverlapAggregator::loadProfiles() {
   using namespace sampleprof;
 
   LLVMContext Context;
-  auto BaseReaderOrErr = SampleProfileReader::create(BaseFilename, Context);
+  auto BaseReaderOrErr = SampleProfileReader::create(BaseFilename, Context,
+                                                     FSDiscriminatorPassOption);
   if (std::error_code EC = BaseReaderOrErr.getError())
     exitWithErrorCode(EC, BaseFilename);
 
-  auto TestReaderOrErr = SampleProfileReader::create(TestFilename, Context);
+  auto TestReaderOrErr = SampleProfileReader::create(TestFilename, Context,
+                                                     FSDiscriminatorPassOption);
   if (std::error_code EC = TestReaderOrErr.getError())
     exitWithErrorCode(EC, TestFilename);
 
@@ -2375,12 +2399,12 @@ static int showSampleProfile(const std::string &Filename, bool ShowCounts,
                              raw_fd_ostream &OS) {
   using namespace sampleprof;
   LLVMContext Context;
-  auto ReaderOrErr = SampleProfileReader::create(Filename, Context);
+  auto ReaderOrErr =
+      SampleProfileReader::create(Filename, Context, FSDiscriminatorPassOption);
   if (std::error_code EC = ReaderOrErr.getError())
     exitWithErrorCode(EC, Filename);
 
   auto Reader = std::move(ReaderOrErr.get());
-
   if (ShowSectionInfoOnly) {
     showSectionInfo(Reader.get(), OS);
     return 0;

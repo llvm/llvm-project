@@ -217,6 +217,82 @@ module std [system] {
     header "algorithm"
     export initializer_list
     export *
+
+    module __algorithm {
+      module adjacent_find { header "__algorithm/adjacent_find.h" }
+      module all_of { header "__algorithm/all_of.h" }
+      module any_of { header "__algorithm/any_of.h" }
+      module binary_search { header "__algorithm/binary_search.h" }
+      module clamp { header "__algorithm/clamp.h" }
+      module comp { header "__algorithm/comp.h" }
+      module comp_ref_type { header "__algorithm/comp_ref_type.h" }
+      module copy { header "__algorithm/copy.h" }
+      module count { header "__algorithm/count.h" }
+      module count_if { header "__algorithm/count_if.h" }
+      module equal { header "__algorithm/equal.h" }
+      module equal_range { header "__algorithm/equal_range.h" }
+      module fill { header "__algorithm/fill.h" }
+      module find { header "__algorithm/find.h" }
+      module find_end { header "__algorithm/find_end.h" }
+      module find_first_of { header "__algorithm/find_first_of.h" }
+      module find_if { header "__algorithm/find_if.h" }
+      module find_if_not { header "__algorithm/find_if_not.h" }
+      module for_each { header "__algorithm/for_each.h" }
+      module for_each_n { header "__algorithm/for_each_n.h" }
+      module generate { header "__algorithm/generate.h" }
+      module half_positive { header "__algorithm/half_positive.h" }
+      module includes { header "__algorithm/includes.h" }
+      module inplace_merge { header "__algorithm/inplace_merge.h" }
+      module is_heap { header "__algorithm/is_heap.h" }
+      module is_heap_until { header "__algorithm/is_heap_until.h" }
+      module is_partitioned { header "__algorithm/is_partitioned.h" }
+      module is_permutation { header "__algorithm/is_permutation.h" }
+      module is_sorted { header "__algorithm/is_sorted.h" }
+      module lexicographical_compare { header "__algorithm/lexicographical_compare.h" }
+      module lower_bound { header "__algorithm/lower_bound.h" }
+      module make_heap { header "__algorithm/make_heap.h" }
+      module max { header "__algorithm/max.h" }
+      module max_element { header "__algorithm/max_element.h" }
+      module merge { header "__algorithm/merge.h" }
+      module min { header "__algorithm/min.h" }
+      module min_element { header "__algorithm/min_element.h" }
+      module minmax { header "__algorithm/minmax.h" }
+      module minmax_element { header "__algorithm/minmax_element.h" }
+      module mismatch { header "__algorithm/mismatch.h" }
+      module move { header "__algorithm/move.h" }
+      module next_permutation { header "__algorithm/next_permutation.h" }
+      module none_of { header "__algorithm/none_of.h" }
+      module nth_element { header "__algorithm/nth_element.h" }
+      module partial_sort { header "__algorithm/partial_sort.h" }
+      module partition { header "__algorithm/partition.h" }
+      module partition_point { header "__algorithm/partition_point.h" }
+      module pop_heap { header "__algorithm/pop_heap.h" }
+      module prev_permutation { header "__algorithm/prev_permutation.h" }
+      module push_heap { header "__algorithm/push_heap.h" }
+      module remove { header "__algorithm/remove.h" }
+      module replace { header "__algorithm/replace.h" }
+      module reverse { header "__algorithm/reverse.h" }
+      module rotate { header "__algorithm/rotate.h" }
+      module sample { header "__algorithm/sample.h" }
+      module search { header "__algorithm/search.h" }
+      module search_n { header "__algorithm/search_n.h" }
+      module set_difference { header "__algorithm/set_difference.h" }
+      module set_intersection { header "__algorithm/set_intersection.h" }
+      module set_symmetric_difference { header "__algorithm/set_symmetric_difference.h" }
+      module set_union { header "__algorithm/set_union.h" }
+      module shift { header "__algorithm/shift.h" }
+      module shuffle { header "__algorithm/shuffle.h" }
+      module sift_down { header "__algorithm/sift_down.h" }
+      module sort { header "__algorithm/sort.h" }
+      module sort_heap { header "__algorithm/sort_heap.h" }
+      module stable_partition { header "__algorithm/stable_partition.h" }
+      module stable_sort { header "__algorithm/stable_sort.h" }
+      module transform { header "__algorithm/transform.h" }
+      module uniform_int_distribution { header "__algorithm/uniform_int_distribution.h" }
+      module unique { header "__algorithm/unique.h" }
+      module unwrap_iter { header "__algorithm/unwrap_iter.h" }
+      module upper_bound { header "__algorithm/upper_bound.h" }
+    }
   }
   module any {
     header "any"
@@ -316,6 +392,9 @@ module std [system] {
   module functional {
     header "functional"
     export *
+    module __functional {
+      module search { header "__functional/search.h" }
+    }
   }
   module future {
     header "future"

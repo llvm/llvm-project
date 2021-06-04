@@ -1,0 +1,54 @@
+Basic tests for sample profiles using fs discriminators.
+
+1- Show command and keep all the discrimiantor bits
+RUN: llvm-profdata show --sample %p/Inputs/sample-fs.proftext -profile-isfs | FileCheck %s --check-prefix=SHOW1
+RUN: llvm-profdata show --sample %p/Inputs/sample-fs.proftext -profile-isfs -fs-discriminator-pass=PassLast | FileCheck %s --check-prefix=SHOW1
+SHOW1: Function: main: 6436, 0, 6 sampled lines
+SHOW1: Samples collected in the function's body {
+SHOW1:   4: 534
+SHOW1:   4.2: 534
+SHOW1:   4.738209026: 1068
+SHOW1:   5: 1075
+SHOW1:   5.1: 1075
+SHOW1:   5.738209025: 2150
+SHOW1: }
+
+2- Show command and keep only the base discriminator bits
+RUN: llvm-profdata show --sample %p/Inputs/sample-fs.proftext -profile-isfs -fs-discriminator-pass=Base | FileCheck %s --check-prefix=SHOW2
+SHOW2: Function: main: 6436, 0, 4 sampled lines
+SHOW2: Samples collected in the function's body {
+SHOW2:   4: 534
+SHOW2:   4.2: 1602
+SHOW2:   5: 1075
+SHOW2:   5.1: 3225
+SHOW2: }
+
+3- Show command and keep only the base discriminator bits and first pass of FS discriminator
+RUN: llvm-profdata show --sample %p/Inputs/sample-fs.proftext -profile-isfs -fs-discriminator-pass=Pass1 | FileCheck %s --check-prefix=SHOW3
+Function: main: 6436, 0, 6 sampled lines
+SHOW3: Samples collected in the function's body {
+SHOW3:   4: 534
+SHOW3:   4.2: 534
+SHOW3:   4.11522: 1068
+SHOW3:   5: 1075
+SHOW3:   5.1: 1075
+SHOW3:   5.11521: 2150
+SHOW3: }
+
+4- Merge command and keep all the discrimiantor bits
+RUN: llvm-profdata merge --sample %p/Inputs/sample-fs.proftext -profile-isfs -fs-discriminator-pass=PassLast --binary -o - | llvm-profdata show --sample - -o %t1-binary_1
+RUN: llvm-profdata merge --sample %p/Inputs/sample-fs.proftext -profile-isfs --binary -o - | llvm-profdata show --sample - -o %t1-binary_2
+RUN: llvm-profdata show --sample %p/Inputs/sample-fs.proftext -profile-isfs -o %t1-text
+RUN: diff %t1-binary_1 %t1-text
+RUN: diff %t1-binary_2 %t1-text
+
+2- Merge command and keep only the base discriminator bits
+RUN: llvm-profdata merge --sample %p/Inputs/sample-fs.proftext -profile-isfs -fs-discriminator-pass=Base --binary -o - | llvm-profdata show --sample - -o %t2-binary
+RUN: llvm-profdata show --sample %p/Inputs/sample-fs.proftext -profile-isfs -fs-discriminator-pass=Base -o %t2-text
+RUN: diff %t2-binary %t2-text
+
+3- Merge command and keep only the base discriminator bits and first pass of FS discriminator
+RUN: llvm-profdata merge --sample %p/Inputs/sample-fs.proftext -profile-isfs -fs-discriminator-pass=Pass1 --binary -o - | llvm-profdata show --sample - -o %t3-binary
+RUN: llvm-profdata show --sample %p/Inputs/sample-fs.proftext -profile-isfs -fs-discriminator-pass=Pass1 -o %t3-text
+RUN: diff %t3-binary %t3-text
+

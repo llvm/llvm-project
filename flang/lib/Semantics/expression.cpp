@@ -1655,17 +1655,21 @@ MaybeExpr ExpressionAnalyzer::Analyze(
                         "Rank-%d array value is not compatible with scalar component '%s'"_err_en_US,
                         GetRank(*valueShape), symbol->name()),
                     *symbol);
-              } else if (CheckConformance(messages, *componentShape,
-                             *valueShape, "component", "value", false,
-                             true /* can expand scalar value */)) {
-                if (GetRank(*componentShape) > 0 && GetRank(*valueShape) == 0 &&
+              } else {
+                auto checked{
+                    CheckConformance(messages, *componentShape, *valueShape,
+                        CheckConformanceFlags::RightIsExpandableDeferred,
+                        "component", "value")};
+                if (checked && *checked && GetRank(*componentShape) > 0 &&
+                    GetRank(*valueShape) == 0 &&
                     !IsExpandableScalar(*converted)) {
                   AttachDeclaration(
                       Say(expr.source,
                           "Scalar value cannot be expanded to shape of array component '%s'"_err_en_US,
                           symbol->name()),
                       *symbol);
-                } else {
+                }
+                if (checked.value_or(true)) {
                   result.Add(*symbol, std::move(*converted));
                 }
               }
@@ -3146,8 +3150,9 @@ bool ArgumentAnalyzer::CheckConformance() const {
       auto rhShape{GetShape(foldingContext, *rhs)};
       if (lhShape && rhShape) {
         return evaluate::CheckConformance(foldingContext.messages(), *lhShape,
-            *rhShape, "left operand", "right operand", true,
-            true /* scalar expansion is allowed */);
+            *rhShape, CheckConformanceFlags::EitherScalarExpandable,
+            "left operand", "right operand")
+            .value_or(false /*fail when conformance is not known now*/);
       }
     }
   }

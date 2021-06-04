@@ -6351,6 +6351,7 @@ void CGOpenMPRuntime::emitCancellationPointCall(
               CGM.getModule(), OMPRTL___kmpc_cancellationpoint),
           Args);
       // if (__kmpc_cancellationpoint()) {
+      //   call i32 @__kmpc_cancel_barrier( // for parallel cancellation only
       //   exit from construct;
       // }
       llvm::BasicBlock *ExitBB = CGF.createBasicBlock(".cancel.exit");
@@ -6358,6 +6359,8 @@ void CGOpenMPRuntime::emitCancellationPointCall(
       llvm::Value *Cmp = CGF.Builder.CreateIsNotNull(Result);
       CGF.Builder.CreateCondBr(Cmp, ExitBB, ContBB);
       CGF.EmitBlock(ExitBB);
+      if (CancelRegion == OMPD_parallel)
+        emitBarrierCall(CGF, Loc, OMPD_unknown, /*EmitChecks=*/false);
       // exit from construct;
       CodeGenFunction::JumpDest CancelDest =
           CGF.getOMPCancelDestination(OMPRegionInfo->getDirectiveKind());
@@ -6387,6 +6390,7 @@ void CGOpenMPRuntime::emitCancelCall(CodeGenFunction &CGF, SourceLocation Loc,
       llvm::Value *Result = CGF.EmitRuntimeCall(
           OMPBuilder.getOrCreateRuntimeFunction(M, OMPRTL___kmpc_cancel), Args);
       // if (__kmpc_cancel()) {
+      //   call i32 @__kmpc_cancel_barrier( // for parallel cancellation only
       //   exit from construct;
       // }
       llvm::BasicBlock *ExitBB = CGF.createBasicBlock(".cancel.exit");
@@ -6394,6 +6398,8 @@ void CGOpenMPRuntime::emitCancelCall(CodeGenFunction &CGF, SourceLocation Loc,
       llvm::Value *Cmp = CGF.Builder.CreateIsNotNull(Result);
       CGF.Builder.CreateCondBr(Cmp, ExitBB, ContBB);
       CGF.EmitBlock(ExitBB);
+      if (CancelRegion == OMPD_parallel)
+        RT.emitBarrierCall(CGF, Loc, OMPD_unknown, /*EmitChecks=*/false);
       // exit from construct;
       CodeGenFunction::JumpDest CancelDest =
           CGF.getOMPCancelDestination(OMPRegionInfo->getDirectiveKind());

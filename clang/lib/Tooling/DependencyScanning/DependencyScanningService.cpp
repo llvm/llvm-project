@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
+#include "llvm/Support/TargetSelect.h"
 
 using namespace clang;
 using namespace tooling;
@@ -16,4 +17,10 @@ DependencyScanningService::DependencyScanningService(
     ScanningMode Mode, ScanningOutputFormat Format, bool ReuseFileManager,
     bool SkipExcludedPPRanges)
     : Mode(Mode), Format(Format), ReuseFileManager(ReuseFileManager),
-      SkipExcludedPPRanges(SkipExcludedPPRanges) {}
+      SkipExcludedPPRanges(SkipExcludedPPRanges) {
+  // Initialize targets for object file support.
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmPrinters();
+  llvm::InitializeAllAsmParsers();
+}

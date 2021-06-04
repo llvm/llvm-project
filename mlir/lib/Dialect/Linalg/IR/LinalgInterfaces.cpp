@@ -194,21 +194,18 @@ SmallVector<Value, 4> mlir::linalg::applyMapToValues(OpBuilder &b, Location loc,
 SmallVector<Value, 4> LinalgOp::createFlatListOfOperandDims(OpBuilder &b,
                                                             Location loc) {
   SmallVector<Value, 4> res;
-  for (Value v : getShapedOperands()) {
-    ShapedType t = v.getType().template cast<ShapedType>();
-    for (unsigned i = 0, e = t.getRank(); i < e; ++i)
-      res.push_back(b.createOrFold<memref::DimOp>(loc, v, i));
+  for (OpOperand *opOperand : getInputAndOutputOperands()) {
+    for (int64_t i = 0, e = getRank(opOperand); i < e; ++i)
+      res.push_back(b.createOrFold<memref::DimOp>(loc, opOperand->get(), i));
   }
   return res;
 }
 
 SmallVector<int64_t, 4> LinalgOp::createFlatListOfOperandStaticDims() {
   SmallVector<int64_t, 4> res;
-  for (Value v : getShapedOperands()) {
-    ShapedType t = v.getType().template cast<ShapedType>();
-    assert(t.hasStaticShape() && "expected operands to have static shapes");
-    llvm::append_range(res, t.getShape());
-  }
+  assert(!hasDynamicShape() && "expected operands to have static shapes");
+  for (OpOperand *opOperand : getInputAndOutputOperands())
+    llvm::append_range(res, getShape(opOperand));
   return res;
 }
 
@@ -302,15 +299,14 @@ LogicalResult LinalgOp::reifyReturnTypeShapesPerResultDim(
   auto allResultDimValues =
       applyMapToValues(b, loc, resultShapesFromInputShapesMap,
                        createFlatListOfOperandDims(b, loc));
-  unsigned pos = 0;
+  int64_t pos = 0;
   ArrayRef<AffineExpr> shapeExprs = resultShapesFromInputShapesMap.getResults();
-  for (auto resultIdx : llvm::seq<unsigned>(0, getNumOutputs())) {
-    ShapedType resultType = getOutputShapedType(resultIdx);
+  for (OpOperand *opOperand : getOutputOperands()) {
     SmallVector<Value> shapes;
-    for (unsigned dim : llvm::seq<unsigned>(0, resultType.getRank())) {
+    for (int64_t dim : llvm::seq<int64_t>(0, getRank(opOperand))) {
       if (checkDimExpr.visit(shapeExprs[pos]))
         shapes.push_back(
-            b.createOrFold<memref::DimOp>(loc, getOutput(resultIdx), dim));
+            b.createOrFold<memref::DimOp>(loc, opOperand->get(), dim));
       else
         shapes.push_back(allResultDimValues[pos]);
       pos++;

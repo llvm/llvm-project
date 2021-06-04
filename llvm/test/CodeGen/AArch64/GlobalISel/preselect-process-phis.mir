@@ -108,3 +108,88 @@ body:             |
     G_BR %bb.2
 
 ...
+---
+name:            multiple_phis
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+
+  ; The copy we insert in bb.4 should appear after all the phi instructions.
+
+  ; CHECK-LABEL: name: multiple_phis
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.1(0x40000000), %bb.5(0x40000000)
+  ; CHECK:   liveins: $w0, $w1, $x2
+  ; CHECK:   %ptr:gpr64sp = COPY $x2
+  ; CHECK:   %cond_1:gpr32 = IMPLICIT_DEF
+  ; CHECK:   %gpr_1:gpr32 = IMPLICIT_DEF
+  ; CHECK:   [[COPY:%[0-9]+]]:fpr32 = COPY %gpr_1
+  ; CHECK:   [[COPY1:%[0-9]+]]:fpr16 = COPY [[COPY]].hsub
+  ; CHECK:   TBNZW %cond_1, 0, %bb.5
+  ; CHECK:   B %bb.1
+  ; CHECK: bb.1:
+  ; CHECK:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; CHECK:   %cond_2:gpr32 = IMPLICIT_DEF
+  ; CHECK:   TBNZW %cond_2, 0, %bb.3
+  ; CHECK:   B %bb.2
+  ; CHECK: bb.2:
+  ; CHECK:   successors: %bb.4(0x80000000)
+  ; CHECK:   %gpr_2:gpr32 = IMPLICIT_DEF
+  ; CHECK:   B %bb.4
+  ; CHECK: bb.3:
+  ; CHECK:   successors: %bb.4(0x80000000)
+  ; CHECK:   %fpr:fpr16 = IMPLICIT_DEF
+  ; CHECK: bb.4:
+  ; CHECK:   successors: %bb.5(0x80000000)
+  ; CHECK:   %fp_phi:fpr16 = PHI %fpr, %bb.3, [[COPY1]], %bb.2
+  ; CHECK:   %gp_phi1:gpr32 = PHI %gpr_1, %bb.3, %gpr_2, %bb.2
+  ; CHECK:   %gp_phi2:gpr32 = PHI %gpr_1, %bb.3, %gpr_2, %bb.2
+  ; CHECK:   %gp_phi3:gpr32 = PHI %gpr_1, %bb.3, %gpr_2, %bb.2
+  ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, %fp_phi, %subreg.hsub
+  ; CHECK:   [[COPY2:%[0-9]+]]:gpr32all = COPY [[SUBREG_TO_REG]]
+  ; CHECK: bb.5:
+  ; CHECK:   %use_fp_phi:gpr32 = PHI %gpr_1, %bb.0, [[COPY2]], %bb.4
+  ; CHECK:   %use_gp_phi1:gpr32 = PHI %gpr_1, %bb.0, %gp_phi1, %bb.4
+  ; CHECK:   %use_gp_phi2:gpr32 = PHI %gpr_1, %bb.0, %gp_phi2, %bb.4
+  ; CHECK:   %use_gp_phi3:gpr32 = PHI %gpr_1, %bb.0, %gp_phi3, %bb.4
+  ; CHECK:   STRHHui %use_fp_phi, %ptr, 0 :: (store 2)
+  ; CHECK:   STRHHui %use_gp_phi1, %ptr, 0 :: (store 2)
+  ; CHECK:   STRHHui %use_gp_phi2, %ptr, 0 :: (store 2)
+  ; CHECK:   STRHHui %use_gp_phi3, %ptr, 0 :: (store 2)
+  ; CHECK:   RET_ReallyLR
+  bb.1:
+    successors: %bb.2, %bb.6
+    liveins: $w0, $w1, $x2
+    %ptr:gpr(p0) = COPY $x2
+    %cond_1:gpr(s1) = G_IMPLICIT_DEF
+    %gpr_1:gpr(s16) = G_IMPLICIT_DEF
+    G_BRCOND %cond_1(s1), %bb.6
+    G_BR %bb.2
+  bb.2:
+    successors: %bb.3, %bb.4
+    %cond_2:gpr(s1) = G_IMPLICIT_DEF
+    G_BRCOND %cond_2(s1), %bb.4
+    G_BR %bb.3
+  bb.3:
+    %gpr_2:gpr(s16) = G_IMPLICIT_DEF
+    G_BR %bb.5
+  bb.4:
+    %fpr:fpr(s16) = G_IMPLICIT_DEF
+  bb.5:
+    %fp_phi:fpr(s16) = G_PHI %fpr(s16), %bb.4, %gpr_1(s16), %bb.3
+    %gp_phi1:gpr(s16) = G_PHI %gpr_1(s16), %bb.4, %gpr_2(s16), %bb.3
+    %gp_phi2:gpr(s16) = G_PHI %gpr_1(s16), %bb.4, %gpr_2(s16), %bb.3
+    %gp_phi3:gpr(s16) = G_PHI %gpr_1(s16), %bb.4, %gpr_2(s16), %bb.3
+  bb.6:
+    %use_fp_phi:gpr(s16) = G_PHI %gpr_1(s16), %bb.1, %fp_phi(s16), %bb.5
+    %use_gp_phi1:gpr(s16) = G_PHI %gpr_1(s16), %bb.1, %gp_phi1(s16), %bb.5
+    %use_gp_phi2:gpr(s16) = G_PHI %gpr_1(s16), %bb.1, %gp_phi2(s16), %bb.5
+    %use_gp_phi3:gpr(s16) = G_PHI %gpr_1(s16), %bb.1, %gp_phi3(s16), %bb.5
+    G_STORE %use_fp_phi(s16), %ptr(p0) :: (store 2)
+    G_STORE %use_gp_phi1(s16), %ptr(p0) :: (store 2)
+    G_STORE %use_gp_phi2(s16), %ptr(p0) :: (store 2)
+    G_STORE %use_gp_phi3(s16), %ptr(p0) :: (store 2)
+    RET_ReallyLR
+...

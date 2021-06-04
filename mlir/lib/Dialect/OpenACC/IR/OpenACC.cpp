@@ -652,6 +652,20 @@ static LogicalResult verify(acc::DataOp dataOp) {
   return success();
 }
 
+unsigned DataOp::getNumDataOperands() {
+  return copyOperands().size() + copyinOperands().size() +
+         copyinReadonlyOperands().size() + copyoutOperands().size() +
+         copyoutZeroOperands().size() + createOperands().size() +
+         createZeroOperands().size() + noCreateOperands().size() +
+         presentOperands().size() + deviceptrOperands().size() +
+         attachOperands().size();
+}
+
+Value DataOp::getDataOperand(unsigned i) {
+  unsigned numOptional = ifCond() ? 1 : 0;
+  return getOperand(numOptional + i);
+}
+
 //===----------------------------------------------------------------------===//
 // ExitDataOp
 //===----------------------------------------------------------------------===//
