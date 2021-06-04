@@ -140,7 +140,7 @@ def CopyOp : LinalgStructured_Op<"copy", [CopyOpInterface]> {
     // Rank-polymorphic.
     //   filling_value -> O(ivs) with parallel iterators.
     ArrayAttr iterator_types() {
-      unsigned nPar = getInputShapedType(0).getRank();
+      int64_t nPar = getRank(getInputOperand(0));
       return Builder(getContext()).getStrArrayAttr(
         SmallVector<StringRef, 8>(nPar, getParallelIteratorTypeName()));
     }
@@ -150,8 +150,8 @@ def CopyOp : LinalgStructured_Op<"copy", [CopyOpInterface]> {
       MLIRContext *context = getContext();
       auto maybeInputMap = inputPermutation();
       auto maybeOutputMap = outputPermutation();
-      unsigned inputRank = getInputShapedType(0).getRank();
-      unsigned outputRank = getOutputShapedType(0).getRank();
+      int64_t inputRank = getRank(getInputOperand(0));
+      int64_t outputRank = getRank(getOutputOperand(0));
       return Builder(getContext()).getAffineMapArrayAttr({
           extractOrIdentityMap(maybeInputMap, inputRank, context),
           extractOrIdentityMap(maybeOutputMap, outputRank, context)});
@@ -195,7 +195,7 @@ def FillOp : LinalgStructured_Op<"fill", []> {
     // Rank-polymorphic.
     //   filling_value -> O(ivs) with parallel iterators.
     ArrayAttr iterator_types() {
-      unsigned nPar = getOutputShapedType(0).getRank();
+      int64_t nPar = getRank(getOutputOperand(0));
       return Builder(getContext()).getStrArrayAttr(
         SmallVector<StringRef, 8>(nPar, getParallelIteratorTypeName()));
     }
@@ -351,14 +351,14 @@ def ConvOp : PoolingBase_Op<"conv", []> {
     unsigned getNumOutputFeatureDimensions() { return 1; }
 
     unsigned getNumSpatialDimensions() {
-      return getOutputShapedType(0).getRank() - getNumBatchDimensions() -
+      return getRank(getOutputOperand(0)) - getNumBatchDimensions() -
              getNumOutputFeatureDimensions();
     }
 
     ArrayAttr iterator_types() {
       // Outer parallel loops are always the number of output dimensions; i.e.
       // [b, xs, q] in the TF notation above.
-      unsigned nPar = getOutputShapedType(0).getRank();
+      int64_t nPar = getRank(getOutputOperand(0));
       unsigned nRed = getNumInputFeatureDimensions();
       // Window loops are a special kind of reduction that is never tiled or
       // parallelized across; i.e. [zs] in the TF notation above whose number
@@ -457,7 +457,7 @@ class SingleInputPoolingBase_Op<string mnemonic>
 
     ArrayAttr iterator_types() {
       // Outer parallel loops are always the number of output dimensions.
-      unsigned nPar = getOutputShapedType(0).getRank();
+      int64_t nPar = getRank(getOutputOperand(0));
       // The window loops has the same number loops with output dimensions.
       unsigned nWin = nPar;
       SmallVector<StringRef, 8> iters(nPar, getParallelIteratorTypeName());

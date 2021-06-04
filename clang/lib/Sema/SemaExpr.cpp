@@ -8393,7 +8393,7 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
 
   // Allow ?: operations in which both operands have the same
   // built-in sizeless type.
-  if (LHSTy->isSizelessBuiltinType() && LHSTy == RHSTy)
+  if (LHSTy->isSizelessBuiltinType() && Context.hasSameType(LHSTy, RHSTy))
     return LHSTy;
 
   // Emit a better diagnostic if one of the expressions is a null pointer
