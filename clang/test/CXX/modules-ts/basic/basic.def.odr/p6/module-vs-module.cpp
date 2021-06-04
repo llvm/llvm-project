@@ -34,9 +34,9 @@ struct str; // expected-error {{declaration of 'str' in module N follows declara
 using type = int;
 
 template<typename> extern int var_tpl; // expected-error {{declaration of 'var_tpl' in module N follows declaration in module M}} expected-note@global-vs-module.cpp:43 {{previous}}
-template<typename> int func_tpl(); // expected-error {{declaration of 'func_tpl' in module N follows declaration in module M}} expected-note@global-vs-module.cpp:45 {{previous}}
-template<typename> struct str_tpl; // expected-error {{declaration of 'str_tpl' in module N follows declaration in module M}} expected-note@global-vs-module.cpp:46 {{previous}}
-template<typename> using type_tpl = int; // expected-error {{declaration of 'type_tpl' in module N follows declaration in module M}} expected-note@global-vs-module.cpp:47 {{previous}}
+template<typename> int func_tpl(); // expected-error {{declaration of 'func_tpl' in module N follows declaration in module M}} expected-note@global-vs-module.cpp:44 {{previous}}
+template<typename> struct str_tpl; // expected-error {{declaration of 'str_tpl' in module N follows declaration in module M}} expected-note@global-vs-module.cpp:45 {{previous}}
+template<typename> using type_tpl = int; // expected-error {{declaration of 'type_tpl' in module N follows declaration in module M}} expected-note@global-vs-module.cpp:46 {{previous}}
 
 typedef int type;
 namespace ns { using ::func; }
