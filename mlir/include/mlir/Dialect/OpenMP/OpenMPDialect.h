@@ -21,6 +21,7 @@
 
 #include "mlir/Dialect/OpenMP/OpenMPOpsDialect.h.inc"
 #include "mlir/Dialect/OpenMP/OpenMPOpsEnums.h.inc"
+#include "mlir/Dialect/OpenMP/OpenMPOpsInterfaces.h.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOps.h.inc"

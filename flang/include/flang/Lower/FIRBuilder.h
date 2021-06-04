@@ -72,6 +72,11 @@ public:
   /// Get the entry block of the current Function
   mlir::Block *getEntryBlock() { return &getFunction().front(); }
 
+  /// Get the block for adding Allocas. If OpenMP is enabled then get the
+  /// the alloca block from an Operation which can be Outlined. Otherwise
+  /// use the entry block of the current Function
+  mlir::Block *getAllocaBlock();
+
   /// Safely create a reference type to the type `eleTy`.
   mlir::Type getRefType(mlir::Type eleTy);
 
@@ -125,8 +130,7 @@ public:
                               llvm::StringRef name = {},
                               mlir::ValueRange shape = {},
                               mlir::ValueRange lenParams = {},
-                              llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
-                              bool isPinned = false);
+                              llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
 
   /// Create an unnamed and untracked temporary on the stack.
   mlir::Value createTemporary(mlir::Location loc, mlir::Type type,

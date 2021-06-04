@@ -19,6 +19,7 @@
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Semantics/symbol.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
@@ -161,23 +162,30 @@ elideLengthsAlreadyInType(mlir::Type type, mlir::ValueRange lenParams) {
   return {};
 }
 
+/// Get the block for adding Allocas.
+mlir::Block *Fortran::lower::FirOpBuilder::getAllocaBlock() {
+  auto iface =
+      getRegion().getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
+  return iface ? iface.getAllocaBlock() : getEntryBlock();
+}
+
 /// Create a temporary variable on the stack. Anonymous temporaries have no
 /// `name` value.
 mlir::Value Fortran::lower::FirOpBuilder::createTemporary(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::ValueRange shape, mlir::ValueRange lenParams,
-    llvm::ArrayRef<mlir::NamedAttribute> attrs, bool isPinned) {
+    llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   llvm::SmallVector<mlir::Value> dynamicShape =
       elideExtentsAlreadyInType(type, shape);
   llvm::SmallVector<mlir::Value> dynamicLength =
       elideLengthsAlreadyInType(type, lenParams);
   InsertPoint insPt;
-  const bool hoistAlloc =
-      !isPinned && dynamicShape.empty() && dynamicLength.empty();
+  const bool hoistAlloc = dynamicShape.empty() && dynamicLength.empty();
   if (hoistAlloc) {
     insPt = saveInsertionPoint();
-    setInsertionPointToStart(getEntryBlock());
+    setInsertionPointToStart(getAllocaBlock());
   }
+
   assert(!type.isa<fir::ReferenceType>() && "cannot be a reference");
   auto ae = create<fir::AllocaOp>(loc, type, name, dynamicLength, dynamicShape,
                                   attrs);

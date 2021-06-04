@@ -23,6 +23,7 @@
 #include <cstddef>
 
 #include "mlir/Dialect/OpenMP/OpenMPOpsEnums.cpp.inc"
+#include "mlir/Dialect/OpenMP/OpenMPOpsInterfaces.cpp.inc"
 
 using namespace mlir;
 using namespace mlir::omp;
