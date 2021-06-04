@@ -2015,6 +2015,13 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     Observer.changedInstr(MI);
     return Legalized;
 
+  case TargetOpcode::G_ABS:
+    Observer.changingInstr(MI);
+    widenScalarSrc(MI, WideTy, 1, TargetOpcode::G_SEXT);
+    widenScalarDst(MI, WideTy);
+    Observer.changedInstr(MI);
+    return Legalized;
+
   case TargetOpcode::G_ADD:
   case TargetOpcode::G_AND:
   case TargetOpcode::G_MUL:
@@ -3200,22 +3207,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_SSHLSAT:
   case G_USHLSAT:
     return lowerShlSat(MI);
-  case G_ABS: {
-    // Expand %res = G_ABS %a into:
-    // %v1 = G_ASHR %a, scalar_size-1
-    // %v2 = G_ADD %a, %v1
-    // %res = G_XOR %v2, %v1
-    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-    Register OpReg = MI.getOperand(1).getReg();
-    auto ShiftAmt =
-        MIRBuilder.buildConstant(DstTy, DstTy.getScalarSizeInBits() - 1);
-    auto Shift =
-        MIRBuilder.buildAShr(DstTy, OpReg, ShiftAmt);
-    auto Add = MIRBuilder.buildAdd(DstTy, OpReg, Shift);
-    MIRBuilder.buildXor(MI.getOperand(0).getReg(), Add, Shift);
-    MI.eraseFromParent();
-    return Legalized;
-  }
+  case G_ABS:
+    return lowerAbsToAddXor(MI);
   case G_SELECT:
     return lowerSelect(MI);
   case G_SDIVREM:
@@ -4160,6 +4153,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_SMAX:
   case G_UMIN:
   case G_UMAX:
+  case G_ABS:
   case G_FMINNUM:
   case G_FMAXNUM:
   case G_FMINNUM_IEEE:
@@ -7007,6 +7001,38 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerDIVREM(MachineInstr &MI) {
       Opcode == TargetOpcode::G_SDIVREM ? TargetOpcode::G_SREM
                                         : TargetOpcode::G_UREM,
       {MI.getOperand(1).getReg()}, {MI.getOperand(2), MI.getOperand(3)});
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerAbsToAddXor(MachineInstr &MI) {
+  // Expand %res = G_ABS %a into:
+  // %v1 = G_ASHR %a, scalar_size-1
+  // %v2 = G_ADD %a, %v1
+  // %res = G_XOR %v2, %v1
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  Register OpReg = MI.getOperand(1).getReg();
+  auto ShiftAmt =
+      MIRBuilder.buildConstant(DstTy, DstTy.getScalarSizeInBits() - 1);
+  auto Shift = MIRBuilder.buildAShr(DstTy, OpReg, ShiftAmt);
+  auto Add = MIRBuilder.buildAdd(DstTy, OpReg, Shift);
+  MIRBuilder.buildXor(MI.getOperand(0).getReg(), Add, Shift);
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerAbsToMaxNeg(MachineInstr &MI) {
+  // Expand %res = G_ABS %a into:
+  // %v1 = G_CONSTANT 0
+  // %v2 = G_SUB %v1, %a
+  // %res = G_SMAX %a, %v2
+  Register SrcReg = MI.getOperand(1).getReg();
+  LLT Ty = MRI.getType(SrcReg);
+  auto Zero = MIRBuilder.buildConstant(Ty, 0).getReg(0);
+  auto Sub = MIRBuilder.buildSub(Ty, Zero, SrcReg).getReg(0);
+  MIRBuilder.buildSMax(MI.getOperand(0), SrcReg, Sub);
   MI.eraseFromParent();
   return Legalized;
 }
