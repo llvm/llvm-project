@@ -18,14 +18,12 @@ namespace scudo {
 
 class ScopedString {
 public:
-  explicit ScopedString() : String() {
-    if (String.capacity() > 0)
-      String[0] = '\0';
-  }
+  explicit ScopedString() : String() {}
   uptr length() { return Length; }
   const char *data() { return String.data(); }
   void clear() {
-    String[0] = '\0';
+    if (!String.empty())
+      String[0] = '\0';
     Length = 0;
   }
   void append(const char *Format, va_list Args);

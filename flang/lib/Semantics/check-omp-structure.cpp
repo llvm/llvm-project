@@ -297,6 +297,10 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
       llvm::omp::teamSet.test(GetContextParent().directive)) {
     HasInvalidTeamsNesting(beginDir.v, beginDir.source);
   }
+  if ((beginDir.v == llvm::omp::Directive::OMPD_distribute_parallel_do_simd) ||
+      (beginDir.v == llvm::omp::Directive::OMPD_distribute_simd)) {
+    CheckDistLinear(x);
+  }
 }
 const parser::Name OmpStructureChecker::GetLoopIndex(
     const parser::DoConstruct *x) {
@@ -463,6 +467,77 @@ void OmpStructureChecker::CheckCycleConstraints(
   std::int64_t ordCollapseLevel{GetOrdCollapseLevel(x)};
   OmpCycleChecker ompCycleChecker{context_, ordCollapseLevel};
   parser::Walk(x, ompCycleChecker);
+}
+
+void OmpStructureChecker::CheckDistLinear(
+    const parser::OpenMPLoopConstruct &x) {
+
+  const auto &beginLoopDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
+  const auto &clauses{std::get<parser::OmpClauseList>(beginLoopDir.t)};
+
+  semantics::UnorderedSymbolSet indexVars;
+
+  // Collect symbols of all the variables from linear clauses
+  for (const auto &clause : clauses.v) {
+    if (const auto *linearClause{
+            std::get_if<parser::OmpClause::Linear>(&clause.u)}) {
+
+      std::list<parser::Name> values;
+      // Get the variant type
+      if (std::holds_alternative<parser::OmpLinearClause::WithModifier>(
+              linearClause->v.u)) {
+        const auto &withM{
+            std::get<parser::OmpLinearClause::WithModifier>(linearClause->v.u)};
+        values = withM.names;
+      } else {
+        const auto &withOutM{std::get<parser::OmpLinearClause::WithoutModifier>(
+            linearClause->v.u)};
+        values = withOutM.names;
+      }
+      for (auto const &v : values) {
+        indexVars.insert(*(v.symbol));
+      }
+    }
+  }
+
+  if (!indexVars.empty()) {
+    // Get collapse level, if given, to find which loops are "associated."
+    std::int64_t collapseVal{GetOrdCollapseLevel(x)};
+    // Include the top loop if no collapse is specified
+    if (collapseVal == 0)
+      collapseVal = 1;
+
+    // Match the loop index variables with the collected symbols from linear
+    // clauses.
+    if (const auto &loopConstruct{
+            std::get<std::optional<parser::DoConstruct>>(x.t)}) {
+      for (const parser::DoConstruct *loop{&*loopConstruct}; loop;) {
+        if (loop->IsDoNormal()) {
+          const parser::Name &itrVal{GetLoopIndex(loop)};
+          if (itrVal.symbol) {
+            // Remove the symbol from the collcted set
+            indexVars.erase(*(itrVal.symbol));
+          }
+          collapseVal--;
+          if (collapseVal == 0)
+            break;
+        }
+        // Get the next DoConstruct if block is not empty.
+        const auto &block{std::get<parser::Block>(loop->t)};
+        const auto it{block.begin()};
+        loop = it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it)
+                                 : nullptr;
+      }
+    }
+
+    // Show error for the remaining variables
+    for (auto var : indexVars) {
+      const Symbol &root{GetAssociationRoot(var)};
+      context_.Say(parser::FindSourceLocation(x),
+          "Variable '%s' not allowed in `LINEAR` clause, only loop iterator can be specified in `LINEAR` clause of a construct combined with `DISTRIBUTE`"_err_en_US,
+          root.name());
+    }
+  }
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &) {

@@ -219,6 +219,7 @@ private:
   void CheckLoopItrVariableIsInt(const parser::OpenMPLoopConstruct &x);
   void CheckDoWhile(const parser::OpenMPLoopConstruct &x);
   void CheckCycleConstraints(const parser::OpenMPLoopConstruct &x);
+  void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
   void CheckSIMDNest(const parser::OpenMPConstruct &x);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
   void CheckIfDoOrderedClause(const parser::OmpBlockDirective &blkDirectiv);

@@ -845,6 +845,10 @@ void CheckHelper::CheckSubprogram(
 
 void CheckHelper::CheckDerivedType(
     const Symbol &derivedType, const DerivedTypeDetails &details) {
+  if (details.isForwardReferenced() && !context_.HasError(derivedType)) {
+    messages_.Say("The derived type '%s' has not been defined"_err_en_US,
+        derivedType.name());
+  }
   const Scope *scope{derivedType.scope()};
   if (!scope) {
     CHECK(details.isForwardReferenced());

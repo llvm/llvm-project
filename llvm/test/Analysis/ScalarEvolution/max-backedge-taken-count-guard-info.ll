@@ -832,7 +832,7 @@ define void @guard_pessimizes_analysis_step1(i1 %c, i32 %N) {
 ; CHECK-NEXT:    --> {%init,+,1}<%loop> U: [2,11) S: [2,11) Exits: 9 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, 1
 ; CHECK-NEXT:    --> {(1 + %init)<nuw><nsw>,+,1}<%loop> U: [3,12) S: [3,12) Exits: 10 LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:  Determining loop execution counts for: @guard_pessimizes_analysis
+; CHECK-NEXT:  Determining loop execution counts for: @guard_pessimizes_analysis_step1
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (9 + (-1 * %init)<nsw>)<nsw>
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is 7
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (9 + (-1 * %init)<nsw>)<nsw>
@@ -864,19 +864,21 @@ exit:
 }
 
 define void @guard_pessimizes_analysis_step2(i1 %c, i32 %N) {
-; CHECK-LABEL: guard_pessimizes_analysis_step2
-; CHECK-NEXT: Classifying expressions for: @guard_pessimizes_analysis_step2
-; CHECK-NEXT:   %init = phi i32 [ 2, %entry ], [ 3, %bb1 ]
-; CHECK-NEXT:   -->  %init U: [2,4) S: [2,4)
-; CHECK-NEXT:   %iv = phi i32 [ %iv.next, %loop ], [ %init, %loop.ph ]
-; CHECK-NEXT:   -->  {%init,+,2}<nuw><nsw><%loop> U: [2,10) S: [2,10)		Exits: ((2 * ((8 + (-1 * %init)<nsw>)<nsw> /u 2))<nuw><nsw> + %init) LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:   %iv.next = add nuw nsw i32 %iv, 2
- ; CHECK-NEXT:  -->  {(2 + %init)<nuw><nsw>,+,2}<nuw><nsw><%loop> U: [4,12) S: [4,12)		Exits: (2 + (2 * ((8 + (-1 * %init)<nsw>)<nsw> /u 2))<nuw><nsw> + %init)		LoopDispositions: { %loop: Computable }
-; CHECK-NEXT: Determining loop execution counts for: @guard_pessimizes_analysis_step2
-; CHECK-NEXT: Loop %loop: backedge-taken count is ((8 + (-1 * %init)<nsw>)<nsw> /u 2)
-; CHECK-NEXT: Loop %loop: max backedge-taken count is 3
-; CHECK-NEXT: Loop %loop: Predicated backedge-taken count is ((8 + (-1 * %init)<nsw>)<nsw> /u 2)
-; CHECK:      Loop %loop: Trip multiple is 1
+; CHECK-LABEL: 'guard_pessimizes_analysis_step2'
+; CHECK-NEXT:  Classifying expressions for: @guard_pessimizes_analysis_step2
+; CHECK-NEXT:    %init = phi i32 [ 2, %entry ], [ 3, %bb1 ]
+; CHECK-NEXT:    --> %init U: [2,4) S: [2,4)
+; CHECK-NEXT:    %iv = phi i32 [ %iv.next, %loop ], [ %init, %loop.ph ]
+; CHECK-NEXT:    --> {%init,+,2}<nuw><nsw><%loop> U: [2,10) S: [2,10) Exits: ((2 * ((8 + (-1 * %init)<nsw>)<nsw> /u 2))<nuw><nsw> + %init) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 2
+; CHECK-NEXT:    --> {(2 + %init)<nuw><nsw>,+,2}<nuw><nsw><%loop> U: [4,12) S: [4,12) Exits: (2 + (2 * ((8 + (-1 * %init)<nsw>)<nsw> /u 2))<nuw><nsw> + %init) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @guard_pessimizes_analysis_step2
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((8 + (-1 * %init)<nsw>)<nsw> /u 2)
+; CHECK-NEXT:  Loop %loop: max backedge-taken count is 3
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((8 + (-1 * %init)<nsw>)<nsw> /u 2)
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 1
+;
 entry:
   br i1 %c, label %bb1, label %guard
 
@@ -1107,7 +1109,16 @@ while.end:
 
 define void @test_guard_slt_sgt_1(i32* nocapture %a, i64 %N) {
 ; CHECK-LABEL: 'test_guard_slt_sgt_1'
-; CHECK:       Determining loop execution counts for: @test_guard_slt_sgt
+; CHECK-NEXT:  Classifying expressions for: @test_guard_slt_sgt_1
+; CHECK-NEXT:    %and = and i1 %c.0, %c.1
+; CHECK-NEXT:    --> %and U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-9223372036854775808) S: [0,-9223372036854775808) Exits: (-1 + %N) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %a, i64 %iv
+; CHECK-NEXT:    --> {%a,+,4}<nuw><%loop> U: full-set S: full-set Exits: (-4 + (4 * %N) + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-9223372036854775808) S: [1,-9223372036854775808) Exits: %N LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_guard_slt_sgt_1
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is -2
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %N)
@@ -1134,7 +1145,16 @@ exit:
 
 define void @test_guard_slt_sgt_2(i32* nocapture %a, i64 %i) {
 ; CHECK-LABEL: 'test_guard_slt_sgt_2'
-; CHECK:       Determining loop execution counts for: @test_guard_slt_sgt
+; CHECK-NEXT:  Classifying expressions for: @test_guard_slt_sgt_2
+; CHECK-NEXT:    %and = and i1 %c.0, %c.1
+; CHECK-NEXT:    --> %and U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ %i, %entry ]
+; CHECK-NEXT:    --> {%i,+,1}<nuw><nsw><%loop> U: full-set S: full-set Exits: 17 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %a, i64 %iv
+; CHECK-NEXT:    --> {((4 * %i) + %a),+,4}<nw><%loop> U: full-set S: full-set Exits: (68 + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    --> {(1 + %i),+,1}<nuw><nsw><%loop> U: full-set S: full-set Exits: 18 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_guard_slt_sgt_2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (17 + (-1 * %i))
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (17 + (-1 * %i))
@@ -1161,7 +1181,16 @@ exit:
 
 define void @test_guard_sle_sge_1(i32* nocapture %a, i64 %N) {
 ; CHECK-LABEL: 'test_guard_sle_sge_1'
-; CHECK:       Determining loop execution counts for: @test_guard_sle_sge_1
+; CHECK-NEXT:  Classifying expressions for: @test_guard_sle_sge_1
+; CHECK-NEXT:    %and = and i1 %c.0, %c.1
+; CHECK-NEXT:    --> %and U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-9223372036854775808) S: [0,-9223372036854775808) Exits: (-1 + %N) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %a, i64 %iv
+; CHECK-NEXT:    --> {%a,+,4}<nuw><%loop> U: full-set S: full-set Exits: (-4 + (4 * %N) + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-9223372036854775808) S: [1,-9223372036854775808) Exits: %N LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_guard_sle_sge_1
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %N)
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is -2
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (-1 + %N)
@@ -1188,7 +1217,16 @@ exit:
 
 define void @test_guard_sle_sge_2(i32* nocapture %a, i64 %i) {
 ; CHECK-LABEL: 'test_guard_sle_sge_2'
-; CHECK:       Determining loop execution counts for: @test_guard_sle_sge
+; CHECK-NEXT:  Classifying expressions for: @test_guard_sle_sge_2
+; CHECK-NEXT:    %and = and i1 %c.0, %c.1
+; CHECK-NEXT:    --> %and U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i64 [ %iv.next, %loop ], [ %i, %entry ]
+; CHECK-NEXT:    --> {%i,+,1}<nuw><nsw><%loop> U: full-set S: full-set Exits: 17 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %idx = getelementptr inbounds i32, i32* %a, i64 %iv
+; CHECK-NEXT:    --> {((4 * %i) + %a),+,4}<nw><%loop> U: full-set S: full-set Exits: (68 + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    --> {(1 + %i),+,1}<nuw><nsw><%loop> U: full-set S: full-set Exits: 18 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @test_guard_sle_sge_2
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (17 + (-1 * %i))
 ; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (17 + (-1 * %i))
