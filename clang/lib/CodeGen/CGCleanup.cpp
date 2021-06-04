@@ -195,7 +195,7 @@ void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
     Scope->setLifetimeMarker();
 
   // With Windows -EHa, Invoke llvm.seh.scope.begin() for EHCleanup
-  if (CGF->getLangOpts().EHAsynch && IsEHCleanup &&
+  if (CGF->getLangOpts().EHAsynch && IsEHCleanup && !IsLifetimeMarker &&
       CGF->getTarget().getCXXABI().isMicrosoft())
     CGF->EmitSehCppScopeBegin();
 
