@@ -939,14 +939,17 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
       addFlag(Buffer, dwarf::DW_AT_APPLE_objc_complete_type);
 
     // Add the type's non-standard calling convention.
-    uint8_t CC = 0;
-    if (CTy->isTypePassByValue())
-      CC = dwarf::DW_CC_pass_by_value;
-    else if (CTy->isTypePassByReference())
-      CC = dwarf::DW_CC_pass_by_reference;
-    if (CC)
-      addUInt(Buffer, dwarf::DW_AT_calling_convention, dwarf::DW_FORM_data1,
-              CC);
+    // DW_CC_pass_by_value/DW_CC_pass_by_reference are introduced in DWARF 5.
+    if (!Asm->TM.Options.DebugStrictDwarf || DD->getDwarfVersion() >= 5) {
+      uint8_t CC = 0;
+      if (CTy->isTypePassByValue())
+        CC = dwarf::DW_CC_pass_by_value;
+      else if (CTy->isTypePassByReference())
+        CC = dwarf::DW_CC_pass_by_reference;
+      if (CC)
+        addUInt(Buffer, dwarf::DW_AT_calling_convention, dwarf::DW_FORM_data1,
+                CC);
+    }
     break;
   }
   default:
