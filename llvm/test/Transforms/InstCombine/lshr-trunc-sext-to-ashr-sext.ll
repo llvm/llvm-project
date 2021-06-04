@@ -47,6 +47,8 @@ define i16 @t2(i7 %x) {
   ret i16 %c
 }
 
+; negative test - shift amount doesn't match trunc amount
+
 define i16 @n3(i8 %x) {
 ; CHECK-LABEL: @n3(
 ; CHECK-NEXT:    [[A:%.*]] = lshr i8 [[X:%.*]], 3
@@ -84,7 +86,7 @@ define <2 x i16> @t5_vec_undef(<2 x i8> %x) {
   ret <2 x i16> %c
 }
 
-; TODO: We could convert both uses of %a to ashr.
+; TODO: We could convert %a to ashr and eliminate 2nd use of %b.
 
 define i16 @t6_extrause0(i8 %x) {
 ; CHECK-LABEL: @t6_extrause0(
@@ -101,7 +103,7 @@ define i16 @t6_extrause0(i8 %x) {
   ret i16 %c
 }
 
-; TODO: We could convert both uses of %a to ashr.
+; TODO: We could convert %a to ashr and eliminate 2nd use of %b.
 
 define <2 x i16> @t7_extrause0_vec_undef(<2 x i8> %x) {
 ; CHECK-LABEL: @t7_extrause0_vec_undef(
@@ -118,7 +120,7 @@ define <2 x i16> @t7_extrause0_vec_undef(<2 x i8> %x) {
   ret <2 x i16> %c
 }
 
-; TODO: We could convert both uses of %a to ashr.
+; TODO: We could convert %a to ashr + mask (and) and eliminate %b.
 
 define i16 @t8_extrause1(i8 %x) {
 ; CHECK-LABEL: @t8_extrause1(
@@ -135,7 +137,7 @@ define i16 @t8_extrause1(i8 %x) {
   ret i16 %c
 }
 
-; TODO: We could convert both uses of %a to ashr.
+; TODO: We could convert %a to ashr + mask (and) and eliminate %b.
 
 define <2 x i16> @t9_extrause1_vec_undef(<2 x i8> %x) {
 ; CHECK-LABEL: @t9_extrause1_vec_undef(

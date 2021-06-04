@@ -294,7 +294,9 @@ def S_CBRANCH_JOIN : SOP1_0_32R <"s_cbranch_join">;
 } // End SubtargetPredicate = isGFX6GFX7GFX8GFX9
 
 let Defs = [SCC] in {
-def S_ABS_I32 : SOP1_32 <"s_abs_i32">;
+def S_ABS_I32 : SOP1_32 <"s_abs_i32",
+    [(set i32:$sdst, (abs i32:$src0))]
+  >;
 } // End Defs = [SCC]
 
 let SubtargetPredicate = HasVGPRIndexMode in {
