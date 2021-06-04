@@ -341,7 +341,7 @@ private:
       if (UNLIKELY(RegionBase + MappedUser + MapSize > RegionSize)) {
         if (!Region->Exhausted) {
           Region->Exhausted = true;
-          ScopedString Str(1024);
+          ScopedString Str;
           getStats(&Str);
           Str.append(
               "Scudo OOM: The process has exhausted %zuM for size class %zu.\n",

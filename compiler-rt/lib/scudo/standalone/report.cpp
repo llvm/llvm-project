@@ -17,7 +17,7 @@ namespace scudo {
 
 class ScopedErrorReport {
 public:
-  ScopedErrorReport() : Message(512) { Message.append("Scudo ERROR: "); }
+  ScopedErrorReport() : Message() { Message.append("Scudo ERROR: "); }
   void append(const char *Format, ...) {
     va_list Args;
     va_start(Args, Format);

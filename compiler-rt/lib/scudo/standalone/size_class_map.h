@@ -309,7 +309,7 @@ struct SvelteSizeClassConfig {
 typedef FixedSizeClassMap<SvelteSizeClassConfig> SvelteSizeClassMap;
 
 template <typename SCMap> inline void printMap() {
-  ScopedString Buffer(1024);
+  ScopedString Buffer;
   uptr PrevS = 0;
   uptr TotalCached = 0;
   for (uptr I = 0; I < SCMap::NumClasses; I++) {

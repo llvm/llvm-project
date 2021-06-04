@@ -1481,12 +1481,6 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       CHECK(FloatingType.test(*category));
       resultType = DynamicType{*category, defaults.doublePrecisionKind()};
       break;
-    case KindCode::defaultCharKind:
-      CHECK(result.categorySet == CharType);
-      CHECK(*category == TypeCategory::Character);
-      resultType = DynamicType{TypeCategory::Character,
-          defaults.GetDefaultKind(TypeCategory::Character)};
-      break;
     case KindCode::defaultLogicalKind:
       CHECK(result.categorySet == LogicalType);
       CHECK(*category == TypeCategory::Logical);
@@ -1516,7 +1510,11 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           CHECK(expr->Rank() == 0);
           if (auto code{ToInt64(*expr)}) {
             if (IsValidKindOfIntrinsicType(*category, *code)) {
-              resultType = DynamicType{*category, static_cast<int>(*code)};
+              if (*category == TypeCategory::Character) { // ACHAR & CHAR
+                resultType = DynamicType{static_cast<int>(*code), 1};
+              } else {
+                resultType = DynamicType{*category, static_cast<int>(*code)};
+              }
               break;
             }
           }
@@ -1535,7 +1533,12 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       } else {
         CHECK(kindDummyArg->optionality ==
             Optionality::defaultsToDefaultForResult);
-        resultType = DynamicType{*category, defaults.GetDefaultKind(*category)};
+        int kind{defaults.GetDefaultKind(*category)};
+        if (*category == TypeCategory::Character) { // ACHAR & CHAR
+          resultType = DynamicType{kind, 1};
+        } else {
+          resultType = DynamicType{*category, kind};
+        }
       }
       break;
     case KindCode::likeMultiply:
@@ -1557,6 +1560,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       resultType =
           DynamicType{TypeCategory::Integer, defaults.sizeIntegerKind()};
       break;
+    case KindCode::defaultCharKind:
     case KindCode::typeless:
     case KindCode::teamType:
     case KindCode::any:
