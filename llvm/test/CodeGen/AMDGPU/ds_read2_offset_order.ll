@@ -6,10 +6,10 @@
 ; offset0 is larger than offset1
 
 ; SI-LABEL: {{^}}offset_order:
-; SI-DAG: ds_read2_b32 v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}} offset1:14{{$}}
-; SI-DAG: ds_read2_b32 v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}} offset0:2 offset1:3
-; SI-DAG: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:1024
+; SI-DAG: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}}
+; SI-DAG: ds_read_b64 v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}} offset:8
 ; SI-DAG: ds_read2_b32 v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}} offset0:11 offset1:12
+; SI-DAG: ds_read2_b32 v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}} offset0:6 offset1:248
 define amdgpu_kernel void @offset_order(float addrspace(1)* %out) {
 entry:
   %ptr0 = getelementptr inbounds [512 x float], [512 x float] addrspace(3)* @lds, i32 0, i32 0
