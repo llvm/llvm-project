@@ -4522,6 +4522,9 @@ def fdebug_module_writer : Flag<["-"],"fdebug-module-writer">,
 def fget_symbols_sources : Flag<["-"], "fget-symbols-sources">, Group<Action_Group>,
   HelpText<"Dump symbols and their source code locations">;
 
+def module_suffix : Separate<["-"], "module-suffix">,  Group<f_Group>, MetaVarName<"<suffix>">,
+  HelpText<"Use <suffix> as the suffix for module files (the default value is `.mod`)">;
+
 }
 
 //===----------------------------------------------------------------------===//

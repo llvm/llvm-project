@@ -392,6 +392,12 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     res.SetDebugModuleDir(true);
   }
 
+  // -module-suffix
+  if (const auto *moduleSuffix =
+          args.getLastArg(clang::driver::options::OPT_module_suffix)) {
+    res.SetModuleFileSuffix(moduleSuffix->getValue());
+  }
+
   return diags.getNumErrors() == numErrorsBefore;
 }
 
@@ -639,5 +645,6 @@ void CompilerInvocation::setSemanticsOpts(
   semanticsContext_->set_moduleDirectory(moduleDir())
       .set_searchDirectories(fortranOptions.searchDirectories)
       .set_warnOnNonstandardUsage(enableConformanceChecks())
-      .set_warningsAreErrors(warnAsErr());
+      .set_warningsAreErrors(warnAsErr())
+      .set_moduleFileSuffix(moduleFileSuffix());
 }
