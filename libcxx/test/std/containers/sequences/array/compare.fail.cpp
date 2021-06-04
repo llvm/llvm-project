@@ -50,7 +50,7 @@ int main(int, char**)
     typedef NoCompare<0> T;
     typedef std::array<T, 3> C;
     C c1 = {{}};
-    // expected-error@algorithm:* 2 {{invalid operands to binary expression}}
+    // expected-error@*:* 2 {{invalid operands to binary expression}}
     TEST_IGNORE_NODISCARD (c1 == c1);
     TEST_IGNORE_NODISCARD (c1 < c1);
   }
@@ -58,7 +58,7 @@ int main(int, char**)
     typedef NoCompare<1> T;
     typedef std::array<T, 3> C;
     C c1 = {{}};
-    // expected-error@algorithm:* 2 {{invalid operands to binary expression}}
+    // expected-error@*:* 2 {{invalid operands to binary expression}}
     TEST_IGNORE_NODISCARD (c1 != c1);
     TEST_IGNORE_NODISCARD (c1 > c1);
   }
@@ -66,7 +66,7 @@ int main(int, char**)
     typedef NoCompare<2> T;
     typedef std::array<T, 0> C;
     C c1 = {{}};
-    // expected-error@algorithm:* 2 {{invalid operands to binary expression}}
+    // expected-error@*:* 2 {{invalid operands to binary expression}}
     TEST_IGNORE_NODISCARD (c1 == c1);
     TEST_IGNORE_NODISCARD (c1 < c1);
   }
