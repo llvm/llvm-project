@@ -328,7 +328,8 @@ subroutine test14(a,b)
   end interface
   real :: a(100), b(100)
   ! CHECK: %[[loop:.*]] = fir.do_loop %[[i:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[bth:.*]] = %[[barr]]) -> (!fir.array<100xf32>) {
-  ! CHECK: %[[tmp:.*]] = fir.array_coor %[[a]](%{{.*}}) %[[i]] : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+  ! CHECK: %[[ishift:.*]] = addi %[[i]], %c1{{.*}} : index
+  ! CHECK: %[[tmp:.*]] = fir.array_coor %[[a]](%{{.*}}) %[[ishift]] : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
   ! CHECK: %[[fres:.*]] = fir.call @_QPf1(%[[tmp]]) : (!fir.ref<f32>) -> f32
   ! CHECK: %[[res:.*]] = fir.array_update %[[bth]], %[[fres]], %[[i]] : (!fir.array<100xf32>, f32, index) -> !fir.array<100xf32>
   ! CHECK: fir.result %[[res]] : !fir.array<100xf32>
@@ -385,18 +386,21 @@ end subroutine test16
 ! CHECK-SAME: %[[c:.*]]: !fir.ref<!fir.array<100xf32>>)
 subroutine test17(a,b,c)
   ! CHECK-DAG: %[[aarr:.*]] = fir.array_load %[[a]](%{{.*}}) : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
-  ! CHECK-DAG: %[[barr:.*]] = fir.array_load %[[b]](%{{.*}}) : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> !fir.array<100xf32>
+  ! CHECK-DAG: %[[barr:.*]] = fir.array_load %[[b]](%{{.*}}) : (!fir.ref<!fir.array<100xf32>>, !fir.shapeshift<1>) -> !fir.array<100xf32>
   interface
      real elemental impure function f3(i,j,k)
        real, intent(inout) :: i, j, k
      end function f3
   end interface
-  real :: a(100), b(100), c(100)
+  real :: a(100), b(2:101), c(3:102)
   ! CHECK: %[[loop:.*]] = fir.do_loop %[[i:.*]] = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[bth:.*]] = %[[barr]]) -> (!fir.array<100xf32>) {
   ! CHECK-DAG: %[[val:.*]] = fir.array_fetch %[[aarr]], %[[i]] : (!fir.array<100xf32>, index) -> f32
-  ! CHECK-DAG: %[[ccoor:.*]] = fir.array_coor %[[c]](%{{.*}}) %[[i]] : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
-  ! CHECK-DAG: %[[bcoor:.*]] = fir.array_coor %[[b]](%{{.*}}) %[[i]] : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
-  ! CHECK-DAG: %[[acoor:.*]] = fir.array_coor %[[a]](%{{.*}}) %[[i]] : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+  ! CHECK-DAG: %[[ic:.*]] = addi %[[i]], %c3{{.*}} : index
+  ! CHECK-DAG: %[[ccoor:.*]] = fir.array_coor %[[c]](%{{.*}}) %[[ic]] : (!fir.ref<!fir.array<100xf32>>, !fir.shapeshift<1>, index) -> !fir.ref<f32>
+  ! CHECK-DAG: %[[ib:.*]] = addi %[[i]], %c2{{.*}} : index
+  ! CHECK-DAG: %[[bcoor:.*]] = fir.array_coor %[[b]](%{{.*}}) %[[ib]] : (!fir.ref<!fir.array<100xf32>>, !fir.shapeshift<1>, index) -> !fir.ref<f32>
+  ! CHECK-DAG: %[[ia:.*]] = addi %[[i]], %c1{{.*}} : index
+  ! CHECK-DAG: %[[acoor:.*]] = fir.array_coor %[[a]](%{{.*}}) %[[ia]] : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
   ! CHECK: %[[fres:.*]] = fir.call @_QPf3(%[[ccoor]], %[[bcoor]], %[[acoor]]) : (!fir.ref<f32>, !fir.ref<f32>, !fir.ref<f32>) -> f32
   ! CHECK: %[[fadd:.*]] = addf %[[val]], %[[fres]] : f32
   ! CHECK: %[[res:.*]] = fir.array_update %[[bth]], %[[fadd]], %[[i]] : (!fir.array<100xf32>, f32, index) -> !fir.array<100xf32>
@@ -593,11 +597,13 @@ subroutine test_elemental_character_intrinsic(c1, c2)
   ! CHECK-DAG: %[[addr1:.*]] = fir.convert %[[u1]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<10x!fir.char<1,?>>>
   ! CHECK-DAG: %[[u2:.*]]:2 = fir.unboxchar %[[c2]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   ! CHECK-DAG: %[[addr2:.*]] = fir.convert %[[u2]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<10x!fir.char<1,?>>>
-  character(*) :: c1(10), c2(10)
+  character(*) :: c1(10), c2(2:11)
 
   ! CHECK: fir.do_loop %[[i:.*]] = %c0{{.*}} to {{.*}} -> (!fir.array<10xi32>) {
-    ! CHECK: %[[coor1:.*]] = fir.array_coor %[[addr1]](%{{.*}}) %[[i]] typeparams %[[u1]]#1 : (!fir.ref<!fir.array<10x!fir.char<1,?>>>, !fir.shape<1>, index, index) -> !fir.ref<!fir.char<1,?>>
-    ! CHECK: %[[coor2:.*]] = fir.array_coor %[[addr2]](%{{.*}}) %[[i]] typeparams %[[u2]]#1 : (!fir.ref<!fir.array<10x!fir.char<1,?>>>, !fir.shape<1>, index, index) -> !fir.ref<!fir.char<1,?>>
+    ! CHECK: %[[i1:.*]] = addi %[[i]], %c1{{.*}} : index
+    ! CHECK: %[[coor1:.*]] = fir.array_coor %[[addr1]](%{{.*}}) %[[i1]] typeparams %[[u1]]#1 : (!fir.ref<!fir.array<10x!fir.char<1,?>>>, !fir.shape<1>, index, index) -> !fir.ref<!fir.char<1,?>>
+    ! CHECK: %[[i2:.*]] = addi %[[i]], %c2{{.*}} : index
+    ! CHECK: %[[coor2:.*]] = fir.array_coor %[[addr2]](%{{.*}}) %[[i2]] typeparams %[[u2]]#1 : (!fir.ref<!fir.array<10x!fir.char<1,?>>>, !fir.shapeshift<1>, index, index) -> !fir.ref<!fir.char<1,?>>
     ! CHECK-DAG: %[[a1:.*]] = fir.convert %[[coor1]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
     ! CHECK-DAG: %[[l1:.*]] = fir.convert %[[u1]]#1 : (index) -> i64
     ! CHECK-DAG: %[[a2:.*]] = fir.convert %[[coor2]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>

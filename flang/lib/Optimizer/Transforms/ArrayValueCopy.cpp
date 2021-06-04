@@ -414,39 +414,6 @@ static mlir::Type getEleTy(mlir::Type ty) {
   return ReferenceType::get(ty);
 }
 
-/// Get origins from fir.shape_shit/fir.shift op. Empty result if
-/// \p shapeVal is empty or is a fir.shape.
-static std::vector<mlir::Value> getOrigins(mlir::Value shapeVal) {
-  if (shapeVal)
-    if (auto *shapeOp = shapeVal.getDefiningOp()) {
-      if (auto shOp = mlir::dyn_cast<fir::ShapeShiftOp>(shapeOp))
-        return shOp.getOrigins();
-      else if (auto shOp = mlir::dyn_cast<fir::ShiftOp>(shapeOp))
-        return shOp.getOrigins();
-    }
-  return {};
-}
-
-/// Convert the normalized indices on array_fetch and array_update to the
-/// dynamic (and non-zero) origin required by array_coor.
-static std::vector<mlir::Value>
-originateIndices(mlir::Location loc, mlir::PatternRewriter &rewriter,
-                 mlir::Value shapeVal, mlir::ValueRange indices) {
-  std::vector<mlir::Value> result;
-  auto origins = getOrigins(shapeVal);
-  if (!origins.empty()) {
-    assert(indices.size() == origins.size());
-    for (auto [i, lb] : llvm::zip(indices, origins))
-      result.push_back(rewriter.create<mlir::AddIOp>(loc, i, lb));
-    return result;
-  }
-  assert(!shapeVal || mlir::isa<fir::ShapeOp>(shapeVal.getDefiningOp()));
-  auto one = rewriter.create<mlir::ConstantIndexOp>(loc, 1);
-  for (auto v : indices)
-    result.push_back(rewriter.create<mlir::AddIOp>(loc, one, v));
-  return result;
-}
-
 // Extract extents from the ShapeOp/ShapeShiftOp into the result vector.
 static void getExtents(llvm::SmallVectorImpl<mlir::Value> &result,
                        mlir::Value shape) {
@@ -550,7 +517,8 @@ public:
       rewriter.setInsertionPoint(op);
       auto coor = rewriter.create<ArrayCoorOp>(
           loc, getEleTy(load.getType()), allocmem, shapeOp, load.slice(),
-          originateIndices(loc, rewriter, shapeOp, update.indices()),
+          fir::factory::originateIndices(loc, rewriter, shapeOp,
+                                         update.indices()),
           load.typeparams());
       copyElement(coor);
       auto *storeOp = useMap.lookup(loadOp);
@@ -568,7 +536,8 @@ public:
       auto coorTy = getEleTy(load.getType());
       auto coor = rewriter.create<ArrayCoorOp>(
           loc, coorTy, load.memref(), load.shape(), load.slice(),
-          originateIndices(loc, rewriter, load.shape(), update.indices()),
+          fir::factory::originateIndices(loc, rewriter, load.shape(),
+                                         update.indices()),
           load.typeparams());
       copyElement(coor);
     }
@@ -626,11 +595,13 @@ public:
     auto ty = getEleTy(arrTy);
     auto fromAddr = rewriter.create<fir::ArrayCoorOp>(
         loc, ty, src, shapeOp, mlir::Value{},
-        originateIndices(loc, rewriter, shapeOp, indices), mlir::ValueRange{});
+        fir::factory::originateIndices(loc, rewriter, shapeOp, indices),
+        mlir::ValueRange{});
     auto load = rewriter.create<fir::LoadOp>(loc, fromAddr);
     auto toAddr = rewriter.create<fir::ArrayCoorOp>(
         loc, ty, dst, shapeOp, mlir::Value{},
-        originateIndices(loc, rewriter, shapeOp, indices), mlir::ValueRange{});
+        fir::factory::originateIndices(loc, rewriter, shapeOp, indices),
+        mlir::ValueRange{});
     rewriter.create<fir::StoreOp>(loc, load, toAddr);
     rewriter.restoreInsertionPoint(insPt);
   }
@@ -656,7 +627,8 @@ public:
     auto coor = rewriter.create<ArrayCoorOp>(
         loc, getEleTy(load.getType()), load.memref(), load.shape(),
         load.slice(),
-        originateIndices(loc, rewriter, load.shape(), fetch.indices()),
+        fir::factory::originateIndices(loc, rewriter, load.shape(),
+                                       fetch.indices()),
         load.typeparams());
     if (fir::isa_ref_type(fetch.getType()))
       rewriter.replaceOp(fetch, coor.getResult());
