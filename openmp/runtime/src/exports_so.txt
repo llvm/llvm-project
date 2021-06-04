@@ -27,9 +27,6 @@ VERSION {
         #
         ompt_start_tool;     # OMPT start interface
 
-        # icc drops weak attribute at linking step without the following line:
-        Annotate*;           # TSAN annotation
-
         ompc_*;    # omp.h renames some standard functions to ompc_*.
         kmp_*;     # Intel extensions.
         kmpc_*;    # Intel extensions.

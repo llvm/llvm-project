@@ -47,8 +47,6 @@ static char *ProfileTraceFile = nullptr;
 #include <process.h>
 #endif
 
-#include "tsan_annotations.h"
-
 #if KMP_OS_WINDOWS
 // windows does not need include files as it doesn't use shared memory
 #else
@@ -5959,7 +5957,6 @@ static void __kmp_reap_thread(kmp_info_t *thread, int is_root) {
                gtid));
       /* Need release fence here to prevent seg faults for tree forkjoin barrier
        * (GEH) */
-      ANNOTATE_HAPPENS_BEFORE(thread);
       kmp_flag_64<> flag(&thread->th.th_bar[bs_forkjoin_barrier].bb.b_go,
                          thread);
       __kmp_release_64(&flag);
