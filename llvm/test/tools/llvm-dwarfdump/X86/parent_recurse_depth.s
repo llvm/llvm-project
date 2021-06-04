@@ -1,8 +1,10 @@
 # RUN: yaml2obj %s -o %t.o
-# RUN: llvm-dwarfdump --debug-info=0x00000020 -p -parent-recurse-depth 0 %t.o | FileCheck %s --check-prefix=ALL
-# RUN: llvm-dwarfdump --debug-info=0x00000020 -p -parent-recurse-depth 1 %t.o | FileCheck %s --check-prefix=ONE
-# RUN: llvm-dwarfdump --debug-info=0x00000020 -p -parent-recurse-depth 2 %t.o | FileCheck %s --check-prefix=TWO
-# RUN: llvm-dwarfdump --debug-info=0x00000020 -p -parent-recurse-depth 3 %t.o | FileCheck %s --check-prefix=ALL
+# RUN: llvm-dwarfdump --debug-info=0x00000020 -p -parent-recurse-depth 0 %t.o | FileCheck %s --check-prefixes=COMMON,ALL
+# RUN: llvm-dwarfdump --debug-info=0x00000020 -p -parent-recurse-depth 1 %t.o | FileCheck %s --check-prefixes=COMMON,ONE
+# RUN: llvm-dwarfdump --debug-info=0x00000020 -p -parent-recurse-depth 2 %t.o | FileCheck %s --check-prefixes=COMMON,TWO
+# RUN: llvm-dwarfdump --debug-info=0x00000020 -p -parent-recurse-depth 3 %t.o | FileCheck %s --check-prefixes=COMMON,ALL
+
+# COMMON: .o: file format
 
 # ALL: by_hand
 # ALL: main
