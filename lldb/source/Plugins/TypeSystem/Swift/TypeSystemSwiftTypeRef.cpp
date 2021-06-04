@@ -2990,6 +2990,7 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     case Node::Kind::DependentGenericParamType:
     case Node::Kind::FunctionType:
     case Node::Kind::NoEscapeFunctionType:
+    case Node::Kind::CFunctionPointer:
     case Node::Kind::ImplFunctionType: {
       uint32_t item_count = 1;
       // A few formats, we might need to modify our size and count for
