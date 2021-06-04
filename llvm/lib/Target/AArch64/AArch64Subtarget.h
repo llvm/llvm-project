@@ -261,6 +261,9 @@ protected:
 
   bool IsLittle;
 
+  unsigned MinSVEVectorSizeInBits;
+  unsigned MaxSVEVectorSizeInBits;
+
   /// TargetTriple - What processor and OS we're targeting.
   Triple TargetTriple;
 
@@ -291,7 +294,9 @@ public:
   /// of the specified triple.
   AArch64Subtarget(const Triple &TT, const std::string &CPU,
                    const std::string &FS, const TargetMachine &TM,
-                   bool LittleEndian);
+                   bool LittleEndian,
+                   unsigned MinSVEVectorSizeInBitsOverride = 0,
+                   unsigned MaxSVEVectorSizeInBitsOverride = 0);
 
   const AArch64SelectionDAGInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
@@ -585,8 +590,16 @@ public:
   // Return the known range for the bit length of SVE data registers. A value
   // of 0 means nothing is known about that particular limit beyong what's
   // implied by the architecture.
-  unsigned getMaxSVEVectorSizeInBits() const;
-  unsigned getMinSVEVectorSizeInBits() const;
+  unsigned getMaxSVEVectorSizeInBits() const {
+    assert(HasSVE && "Tried to get SVE vector length without SVE support!");
+    return MaxSVEVectorSizeInBits;
+  }
+
+  unsigned getMinSVEVectorSizeInBits() const {
+    assert(HasSVE && "Tried to get SVE vector length without SVE support!");
+    return MinSVEVectorSizeInBits;
+  }
+
   bool useSVEForFixedLengthVectors() const;
 };
 } // End llvm namespace
