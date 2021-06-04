@@ -71,18 +71,6 @@ std::optional<TypeAndShape> TypeAndShape::Characterize(
   const auto &ultimate{symbol.GetUltimate()};
   return std::visit(
       common::visitors{
-          [&](const semantics::ObjectEntityDetails &object)
-              -> std::optional<TypeAndShape> {
-            if (auto type{DynamicType::From(object.type())}) {
-              TypeAndShape result{
-                  std::move(*type), GetShape(context, ultimate)};
-              result.AcquireAttrs(ultimate);
-              result.AcquireLEN(ultimate);
-              return std::move(result.Rewrite(context));
-            } else {
-              return std::nullopt;
-            }
-          },
           [&](const semantics::ProcEntityDetails &proc) {
             const semantics::ProcInterface &interface{proc.interface()};
             if (interface.type()) {
@@ -93,20 +81,29 @@ std::optional<TypeAndShape> TypeAndShape::Characterize(
               return std::optional<TypeAndShape>{};
             }
           },
-          [&](const semantics::TypeParamDetails &tp) {
-            if (auto type{DynamicType::From(tp.type())}) {
-              return std::optional<TypeAndShape>{std::move(*type)};
-            } else {
-              return std::optional<TypeAndShape>{};
-            }
-          },
           [&](const semantics::AssocEntityDetails &assoc) {
             return Characterize(assoc, context);
           },
           [&](const semantics::ProcBindingDetails &binding) {
             return Characterize(binding.symbol(), context);
           },
-          [](const auto &) { return std::optional<TypeAndShape>{}; },
+          [&](const auto &x) -> std::optional<TypeAndShape> {
+            using Ty = std::decay_t<decltype(x)>;
+            if constexpr (std::is_same_v<Ty, semantics::EntityDetails> ||
+                std::is_same_v<Ty, semantics::ObjectEntityDetails> ||
+                std::is_same_v<Ty, semantics::TypeParamDetails>) {
+              if (const semantics::DeclTypeSpec * type{ultimate.GetType()}) {
+                if (auto dyType{DynamicType::From(*type)}) {
+                  TypeAndShape result{
+                      std::move(*dyType), GetShape(context, ultimate)};
+                  result.AcquireAttrs(ultimate);
+                  result.AcquireLEN(ultimate);
+                  return std::move(result.Rewrite(context));
+                }
+              }
+            }
+            return std::nullopt;
+          },
       },
       // GetUltimate() used here, not ResolveAssociations(), because
       // we need the type/rank of an associate entity from TYPE IS,
@@ -272,7 +269,8 @@ static common::Intent GetIntent(const semantics::Attrs &attrs) {
 
 std::optional<DummyDataObject> DummyDataObject::Characterize(
     const semantics::Symbol &symbol, FoldingContext &context) {
-  if (symbol.has<semantics::ObjectEntityDetails>()) {
+  if (symbol.has<semantics::ObjectEntityDetails>() ||
+      symbol.has<semantics::EntityDetails>()) {
     if (auto type{TypeAndShape::Characterize(symbol, context)}) {
       std::optional<DummyDataObject> result{std::move(*type)};
       using semantics::Attr;
@@ -399,7 +397,11 @@ static std::optional<Procedure> CharacterizeProcedure(
             }
             for (const semantics::Symbol *arg : subp.dummyArgs()) {
               if (!arg) {
-                result.dummyArguments.emplace_back(AlternateReturn{});
+                if (subp.isFunction()) {
+                  return std::nullopt;
+                } else {
+                  result.dummyArguments.emplace_back(AlternateReturn{});
+                }
               } else if (auto argCharacteristics{CharacterizeDummyArgument(
                              *arg, context, seenProcs)}) {
                 result.dummyArguments.emplace_back(
@@ -518,7 +520,8 @@ static std::optional<DummyArgument> CharacterizeDummyArgument(
     const semantics::Symbol &symbol, FoldingContext &context,
     semantics::UnorderedSymbolSet &seenProcs) {
   auto name{symbol.name().ToString()};
-  if (symbol.has<semantics::ObjectEntityDetails>()) {
+  if (symbol.has<semantics::ObjectEntityDetails>() ||
+      symbol.has<semantics::EntityDetails>()) {
     if (auto obj{DummyDataObject::Characterize(symbol, context)}) {
       return DummyArgument{std::move(name), std::move(obj.value())};
     }

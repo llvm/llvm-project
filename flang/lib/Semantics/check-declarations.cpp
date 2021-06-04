@@ -1505,19 +1505,26 @@ void CheckHelper::CheckProcBinding(
     const Symbol &symbol, const ProcBindingDetails &binding) {
   const Scope &dtScope{symbol.owner()};
   CHECK(dtScope.kind() == Scope::Kind::DerivedType);
-  if (const Symbol * dtSymbol{dtScope.symbol()}) {
-    if (symbol.attrs().test(Attr::DEFERRED)) {
+  if (symbol.attrs().test(Attr::DEFERRED)) {
+    if (const Symbol * dtSymbol{dtScope.symbol()}) {
       if (!dtSymbol->attrs().test(Attr::ABSTRACT)) { // C733
         SayWithDeclaration(*dtSymbol,
             "Procedure bound to non-ABSTRACT derived type '%s' may not be DEFERRED"_err_en_US,
             dtSymbol->name());
       }
-      if (symbol.attrs().test(Attr::NON_OVERRIDABLE)) {
-        messages_.Say(
-            "Type-bound procedure '%s' may not be both DEFERRED and NON_OVERRIDABLE"_err_en_US,
-            symbol.name());
-      }
     }
+    if (symbol.attrs().test(Attr::NON_OVERRIDABLE)) {
+      messages_.Say(
+          "Type-bound procedure '%s' may not be both DEFERRED and NON_OVERRIDABLE"_err_en_US,
+          symbol.name());
+    }
+  }
+  if (binding.symbol().attrs().test(Attr::INTRINSIC) &&
+      !context_.intrinsics().IsSpecificIntrinsicFunction(
+          binding.symbol().name().ToString())) {
+    messages_.Say(
+        "Intrinsic procedure '%s' is not a specific intrinsic permitted for use in the definition of binding '%s'"_err_en_US,
+        binding.symbol().name(), symbol.name());
   }
   if (const Symbol * overridden{FindOverriddenBinding(symbol)}) {
     if (overridden->attrs().test(Attr::NON_OVERRIDABLE)) {
