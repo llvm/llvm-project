@@ -23,17 +23,29 @@
 #include "asan_stats.h"
 #include "asan_suppressions.h"
 #include "asan_thread.h"
+#include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
-#include "lsan/lsan_common.h"
 #include "ubsan/ubsan_init.h"
 #include "ubsan/ubsan_platform.h"
 
 uptr __asan_shadow_memory_dynamic_address;  // Global interface symbol.
 int __asan_option_detect_stack_use_after_return;  // Global interface symbol.
 uptr *__asan_test_only_reported_buggy_pointer;  // Used only for testing asan.
+
+#if !SANITIZER_WINDOWS
+// Instrumented code can set this value in terms of -asan_use_after_return
+//  * __asan_detect_use_after_return_always is undefined: all instrumented
+//    modules either compiled with asan_use_after_return 1 (runtime) or 0
+//    (never)
+//  * __asan_detect_use_after_return_always is defined: at least one of modules
+//    compiled with asan_use_after_return 2 (always)
+extern "C" SANITIZER_WEAK_ATTRIBUTE const int
+    __asan_detect_use_after_return_always;
+#endif  // !SANITIZER_WINDOWS
 
 namespace __asan {
 
@@ -386,6 +398,17 @@ static bool UNUSED __local_asan_dyninit = [] {
 }();
 #endif
 
+static void InitAsanOptionDetectStackUseAfterReturn() {
+  __asan_option_detect_stack_use_after_return =
+      flags()->detect_stack_use_after_return;
+  if (!SANITIZER_WINDOWS) {
+    if (&__asan_detect_use_after_return_always) {
+      CHECK_EQ(1, __asan_detect_use_after_return_always);
+      __asan_option_detect_stack_use_after_return = 1;
+    }
+  }
+}
+
 static void AsanInitInternal() {
   if (LIKELY(asan_inited)) return;
   SanitizerToolName = "AddressSanitizer";
@@ -427,8 +450,7 @@ static void AsanInitInternal() {
 
   __sanitizer_set_report_path(common_flags()->log_path);
 
-  __asan_option_detect_stack_use_after_return =
-      flags()->detect_stack_use_after_return;
+  InitAsanOptionDetectStackUseAfterReturn();
 
   __sanitizer::InitializePlatformEarly();
 
