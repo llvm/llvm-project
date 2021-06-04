@@ -1,7 +1,7 @@
 ; RUN: llvm-as < %s -o - | llvm-dis - | FileCheck %s
 
 ;CHECK-LABEL: main
-;CHECK: store ppc_fp128 0xM0000000000000000000000000000000
+;CHECK: store ppc_fp128 0xM0000000000000000FFFFFFFFFFFFFFFF
 
 define i32 @main() local_unnamed_addr {
 _main_entry:
