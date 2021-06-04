@@ -19,12 +19,11 @@ namespace scudo {
 class ScopedString {
 public:
   explicit ScopedString() { String.push_back('\0'); }
-  uptr length() { return Length; }
+  uptr length() { return String.size() - 1; }
   const char *data() { return String.data(); }
   void clear() {
     String.clear();
     String.push_back('\0');
-    Length = 0;
   }
   void append(const char *Format, va_list Args);
   void append(const char *Format, ...);
@@ -32,7 +31,6 @@ public:
 
 private:
   Vector<char> String;
-  uptr Length = 0;
 };
 
 int formatString(char *Buffer, uptr BufferLength, const char *Format, ...);
