@@ -695,6 +695,9 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_MAX_ACTIVE_LEVELS)(void) {
   return 0;
 #else
   /* TO DO: We want per-task implementation of this internal control */
+  if (!TCR_4(__kmp_init_middle)) {
+    __kmp_middle_initialize();
+  }
   return __kmp_get_max_active_levels(__kmp_entry_gtid());
 #endif
 }
