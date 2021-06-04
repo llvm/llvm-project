@@ -1,6 +1,5 @@
-; RUN: opt < %s -dfsan -S | FileCheck %s --check-prefixes=CHECK,CHECK_NO_ORIGIN -DSHADOW_MASK=-123145302310913
-; RUN: opt < %s -dfsan -dfsan-track-origins=1 -dfsan-fast-16-labels=true -S | FileCheck %s --check-prefixes=CHECK,CHECK_ORIGIN -DSHADOW_MASK=-123145302310913
-; RUN: opt < %s -dfsan -dfsan-track-origins=1 -dfsan-fast-8-labels=true  -S | FileCheck %s --check-prefixes=CHECK,CHECK_ORIGIN -DSHADOW_MASK=-105553116266497
+; RUN: opt < %s -dfsan -S | FileCheck %s --check-prefixes=CHECK,CHECK_NO_ORIGIN -DSHADOW_MASK=-105553116266497   --dump-input-context=100
+; RUN: opt < %s -dfsan -dfsan-track-origins=1  -S | FileCheck %s --check-prefixes=CHECK,CHECK_ORIGIN -DSHADOW_MASK=-105553116266497  --dump-input-context=100
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -35,20 +34,11 @@ define void @store(i8* %p) {
 ; CHECK: declare void @__dfsan_mem_transfer_callback(i[[#SBITS]]*, i64)
 ; CHECK: declare void @__dfsan_cmp_callback(i[[#SBITS]])
 
-; CHECK: ; Function Attrs: nounwind readnone
-; CHECK-NEXT: declare zeroext i[[#SBITS]] @__dfsan_union(i[[#SBITS]] zeroext, i[[#SBITS]] zeroext) #0
-
-; CHECK: ; Function Attrs: nounwind readnone
-; CHECK-NEXT: declare zeroext i[[#SBITS]] @dfsan_union(i[[#SBITS]] zeroext, i[[#SBITS]] zeroext) #0
+; CHECK: ; Function Attrs: nounwind readonly
+; CHECK-NEXT: declare zeroext i[[#SBITS]] @__dfsan_union_load(i[[#SBITS]]*, i64)
 
 ; CHECK: ; Function Attrs: nounwind readonly
-; CHECK-NEXT: declare zeroext i[[#SBITS]] @__dfsan_union_load(i[[#SBITS]]*, i64) #1
-
-; CHECK: ; Function Attrs: nounwind readonly
-; CHECK-NEXT: declare zeroext i[[#SBITS]] @__dfsan_union_load_fast16labels(i[[#SBITS]]*, i64) #1
-
-; CHECK: ; Function Attrs: nounwind readonly
-; CHECK-NEXT: declare zeroext i64 @__dfsan_load_label_and_origin(i8*, i64) #1
+; CHECK-NEXT: declare zeroext i64 @__dfsan_load_label_and_origin(i8*, i64)
 
 ; CHECK: declare void @__dfsan_unimplemented(i8*)
 ; CHECK: declare void @__dfsan_set_label(i[[#SBITS]] zeroext, i32 zeroext, i8*, i64)

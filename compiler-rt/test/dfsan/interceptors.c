@@ -1,5 +1,5 @@
-// RUN: %clang_dfsan -mllvm -dfsan-fast-16-labels -mllvm -dfsan-combine-pointer-labels-on-load=false %s -o %t && %run %t
-// RUN: %clang_dfsan -DORIGIN_TRACKING -mllvm -dfsan-fast-16-labels -mllvm -dfsan-track-origins=1 -mllvm -dfsan-combine-pointer-labels-on-load=false %s -o %t && %run %t
+// RUN: %clang_dfsan -mllvm -dfsan-combine-pointer-labels-on-load=false %s -o %t && %run %t
+// RUN: %clang_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -mllvm -dfsan-combine-pointer-labels-on-load=false %s -o %t && %run %t
 //
 // Tests custom implementations of various glibc functions.
 //

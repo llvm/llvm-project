@@ -1,6 +1,5 @@
-// RUN: %clang_dfsan -DUSE_SIGNAL_ACTION -mllvm -dfsan-fast-16-labels=true %s -o %t && \
-// RUN:     %run %t
-// RUN: %clang_dfsan -mllvm -dfsan-fast-16-labels=true %s -o %t && %run %t
+// RUN: %clang_dfsan -DUSE_SIGNAL_ACTION %s -o %t && %run %t
+// RUN: %clang_dfsan %s -o %t && %run %t
 //
 // REQUIRES: x86_64-target-arch
 
