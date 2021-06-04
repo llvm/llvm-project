@@ -663,6 +663,12 @@ template <typename OpTy>
 struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
   using VectorToSCFPattern<OpTy>::VectorToSCFPattern;
 
+  void initialize() {
+    // This pattern recursively unpacks one dimension at a time. The recursion
+    // bounded as the rank is strictly decreasing.
+    this->setHasBoundedRewriteRecursion();
+  }
+
   LogicalResult matchAndRewrite(OpTy xferOp,
                                 PatternRewriter &rewriter) const override {
     if (!xferOp->hasAttr(kPassLabel))
@@ -826,6 +832,12 @@ struct UnrollTransferReadConversion
     : public VectorToSCFPattern<TransferReadOp> {
   using VectorToSCFPattern<TransferReadOp>::VectorToSCFPattern;
 
+  void initialize() {
+    // This pattern recursively unpacks one dimension at a time. The recursion
+    // bounded as the rank is strictly decreasing.
+    setHasBoundedRewriteRecursion();
+  }
+
   /// Return the vector into which the newly created TransferReadOp results
   /// are inserted.
   Value getResultVector(TransferReadOp xferOp,
@@ -956,6 +968,12 @@ struct UnrollTransferReadConversion
 struct UnrollTransferWriteConversion
     : public VectorToSCFPattern<TransferWriteOp> {
   using VectorToSCFPattern<TransferWriteOp>::VectorToSCFPattern;
+
+  void initialize() {
+    // This pattern recursively unpacks one dimension at a time. The recursion
+    // bounded as the rank is strictly decreasing.
+    setHasBoundedRewriteRecursion();
+  }
 
   /// Return the vector from which newly generated ExtracOps will extract.
   Value getDataVector(TransferWriteOp xferOp) const {
