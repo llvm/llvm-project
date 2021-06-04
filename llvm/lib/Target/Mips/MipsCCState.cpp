@@ -148,8 +148,10 @@ void MipsCCState::PreAnalyzeCallOperands(
     TargetLowering::ArgListEntry FuncArg = FuncArgs[Outs[i].OrigArgIndex];
 
     OriginalArgWas64BitLo.push_back(
-        Outs[i].ArgVT.getSimpleVT().getFixedSizeInBits() == 64 &&
-        Outs[i].PartOffset == 0);
+        Outs[i].ArgVT.isSimple()
+            ? (Outs[i].ArgVT.getSimpleVT().getFixedSizeInBits() == 64 &&
+               Outs[i].PartOffset == 0)
+            : false);
     OriginalArgWasF128.push_back(originalTypeIsF128(FuncArg.Ty, Func));
     OriginalArgWasFloat.push_back(FuncArg.Ty->isFloatingPointTy());
     OriginalArgWasFloatVector.push_back(FuncArg.Ty->isVectorTy());
@@ -210,12 +212,17 @@ void MipsCCState::PreAnalyzeFormalArgumentsForF128(
   }
 }
 
-// Find all arguments which are lower parts of a 64-bit value.
-void MipsCCState::PreAnalyzeFormalArgumentsFor64BitLo(
+// Find all arguments which are lower parts of a 64-bit value. This is necessary
+// because nanoMIPS needs to put those arguments in the even register (a0, a2,
+// a4 or a6). Higher parts will naturally come into the next register, so they
+// need no special handling. Assumes little-endian.
+void MipsCCState::preAnalyzeFormalArgumentsFor64BitLo(
     const SmallVectorImpl<ISD::InputArg> &Ins) {
-  for (unsigned i = 0; i < Ins.size(); ++i) {
+  for (const auto &IArg : Ins) {
     OriginalArgWas64BitLo.push_back(
-        Ins[i].ArgVT.getSimpleVT().getFixedSizeInBits() == 64 &&
-        Ins[i].PartOffset == 0);
+        IArg.ArgVT.isSimple()
+            ? (IArg.ArgVT.getSimpleVT().getFixedSizeInBits() == 64 &&
+               IArg.PartOffset == 0)
+            : false);
   }
 }
