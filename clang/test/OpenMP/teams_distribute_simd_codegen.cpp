@@ -4345,7 +4345,7 @@ int main (int argc, char **argv) {
 // CHECK21-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK21-NEXT:    store i32 [[ADD]], i32* [[I]], align 4
 // CHECK21-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS:%.*]], %struct.SS* [[TMP0]], i32 0, i32 1
-// CHECK21-NEXT:    [[TMP10:%.*]] = load float, float* [[B]], align 4, !nontemporal !3
+// CHECK21-NEXT:    [[TMP10:%.*]] = load float, float* [[B]], align 4, !nontemporal !4, !llvm.access.group !3
 // CHECK21-NEXT:    [[CONV2:%.*]] = fptosi float [[TMP10]] to i32
 // CHECK21-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[TMP0]], i32 0, i32 0
 // CHECK21-NEXT:    [[TMP11:%.*]] = load i32, i32* [[I]], align 4
@@ -4567,7 +4567,7 @@ int main (int argc, char **argv) {
 // CHECK22-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK22-NEXT:    store i32 [[ADD]], i32* [[I]], align 4
 // CHECK22-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS:%.*]], %struct.SS* [[TMP0]], i32 0, i32 1
-// CHECK22-NEXT:    [[TMP10:%.*]] = load float, float* [[B]], align 4, !nontemporal !3
+// CHECK22-NEXT:    [[TMP10:%.*]] = load float, float* [[B]], align 4, !nontemporal !4, !llvm.access.group !3
 // CHECK22-NEXT:    [[CONV2:%.*]] = fptosi float [[TMP10]] to i32
 // CHECK22-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[TMP0]], i32 0, i32 0
 // CHECK22-NEXT:    [[TMP11:%.*]] = load i32, i32* [[I]], align 4
@@ -4789,7 +4789,7 @@ int main (int argc, char **argv) {
 // CHECK23-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK23-NEXT:    store i32 [[ADD]], i32* [[I]], align 4
 // CHECK23-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS:%.*]], %struct.SS* [[TMP0]], i32 0, i32 1
-// CHECK23-NEXT:    [[TMP10:%.*]] = load float, float* [[B]], align 4, !nontemporal !4
+// CHECK23-NEXT:    [[TMP10:%.*]] = load float, float* [[B]], align 4, !nontemporal !5, !llvm.access.group !4
 // CHECK23-NEXT:    [[CONV2:%.*]] = fptosi float [[TMP10]] to i32
 // CHECK23-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[TMP0]], i32 0, i32 0
 // CHECK23-NEXT:    [[TMP11:%.*]] = load i32, i32* [[I]], align 4
@@ -5009,7 +5009,7 @@ int main (int argc, char **argv) {
 // CHECK24-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK24-NEXT:    store i32 [[ADD]], i32* [[I]], align 4
 // CHECK24-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS:%.*]], %struct.SS* [[TMP0]], i32 0, i32 1
-// CHECK24-NEXT:    [[TMP10:%.*]] = load float, float* [[B]], align 4, !nontemporal !4
+// CHECK24-NEXT:    [[TMP10:%.*]] = load float, float* [[B]], align 4, !nontemporal !5, !llvm.access.group !4
 // CHECK24-NEXT:    [[CONV2:%.*]] = fptosi float [[TMP10]] to i32
 // CHECK24-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_SS]], %struct.SS* [[TMP0]], i32 0, i32 0
 // CHECK24-NEXT:    [[TMP11:%.*]] = load i32, i32* [[I]], align 4
