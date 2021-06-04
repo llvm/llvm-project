@@ -1,5 +1,6 @@
 ! RUN: bbc -emit-fir -o - %s | FileCheck %s
 
+! CHECK-LABEL: loop_test
 subroutine loop_test
   ! CHECK-DAG: fir.alloca i16 {{{.*}}uniq_name = "i"}
   ! CHECK-DAG: fir.alloca i8 {{{.*}}uniq_name = "k"}
@@ -84,5 +85,19 @@ subroutine loop_test
   print '(" F:",X,F3.1,A,I2)', x, ' -', xsum
 end subroutine loop_test
 
+! CHECK-LABEL: print_nothing
+subroutine print_nothing(k1, k2)
+  if (k1 > 0) then
+    ! CHECK: br [[header:\^bb[0-9]+]]
+    ! CHECK: [[header]]
+    do while (k1 > k2)
+      print*, k1, k2 ! no output
+      k2 = k2 + 1
+      ! CHECK: br [[header]]
+    end do
+  end if
+end
+
   call loop_test
+  call print_nothing(2, 2)
 end

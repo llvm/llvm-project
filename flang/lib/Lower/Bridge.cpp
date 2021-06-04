@@ -823,6 +823,7 @@ private:
                     std::get_if<Fortran::parser::ScalarLogicalExpr>(
                         &loopControl->u))) {
       assert(unstructuredContext && "while loop must be unstructured");
+      maybeStartBlock(preheaderBlock); // no block or empty block
       startBlock(headerBlock);
       genFIRConditionalBranch(*whileCondition, bodyBlock, exitBlock);
     } else if (const auto *bounds =
