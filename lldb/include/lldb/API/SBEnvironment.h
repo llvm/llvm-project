@@ -122,6 +122,7 @@ public:
 protected:
   friend class SBPlatform;
   friend class SBTarget;
+  friend class SBProcessInfo;
   friend class SBLaunchInfo;
 
   SBEnvironment(lldb_private::Environment rhs);

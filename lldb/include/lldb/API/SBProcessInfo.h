@@ -53,6 +53,19 @@ public:
   /// Return the target triple (arch-vendor-os) for the described process.
   const char *GetTriple();
 
+  // Return the number of arguments given to the described process.
+  uint32_t GetNumArguments();
+
+  // Return the specified argument given to the described process.
+  const char *GetArgumentAtIndex(uint32_t index);
+
+  /// Return the environment variables for the described process.
+  ///
+  /// \return
+  ///     An lldb::SBEnvironment object which is a copy of the process
+  ///     environment.
+  SBEnvironment GetEnvironment();
+
 private:
   friend class SBProcess;
 
