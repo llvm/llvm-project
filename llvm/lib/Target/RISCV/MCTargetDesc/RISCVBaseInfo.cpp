@@ -123,7 +123,7 @@ unsigned RISCVVType::encodeVTYPE(RISCVII::VLMUL VLMUL, unsigned SEW,
 
 std::pair<unsigned, bool> RISCVVType::decodeVLMUL(RISCVII::VLMUL VLMUL) {
   switch (VLMUL) {
-  case RISCVII::VLMUL::LMUL_RESERVED:
+  default:
     llvm_unreachable("Unexpected LMUL value!");
   case RISCVII::VLMUL::LMUL_1:
   case RISCVII::VLMUL::LMUL_2:
