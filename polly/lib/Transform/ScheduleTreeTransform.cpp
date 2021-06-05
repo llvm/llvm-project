@@ -480,6 +480,23 @@ static isl::basic_set isDivisibleBySet(isl::ctx &Ctx, long Factor,
   return Modulo.domain();
 }
 
+/// Make the last dimension of Set to take values from 0 to VectorWidth - 1.
+///
+/// @param Set         A set, which should be modified.
+/// @param VectorWidth A parameter, which determines the constraint.
+static isl::set addExtentConstraints(isl::set Set, int VectorWidth) {
+  unsigned Dims = Set.dim(isl::dim::set);
+  isl::space Space = Set.get_space();
+  isl::local_space LocalSpace = isl::local_space(Space);
+  isl::constraint ExtConstr = isl::constraint::alloc_inequality(LocalSpace);
+  ExtConstr = ExtConstr.set_constant_si(0);
+  ExtConstr = ExtConstr.set_coefficient_si(isl::dim::set, Dims - 1, 1);
+  Set = Set.add_constraint(ExtConstr);
+  ExtConstr = isl::constraint::alloc_inequality(LocalSpace);
+  ExtConstr = ExtConstr.set_constant_si(VectorWidth - 1);
+  ExtConstr = ExtConstr.set_coefficient_si(isl::dim::set, Dims - 1, -1);
+  return Set.add_constraint(ExtConstr);
+}
 } // namespace
 
 bool polly::isBandMark(const isl::schedule_node &Node) {
@@ -630,4 +647,77 @@ isl::schedule polly::applyPartialUnroll(isl::schedule_node BandToUnroll,
     NewLoop = insertMark(NewLoop, NewBandId);
 
   return NewLoop.get_schedule();
+}
+
+isl::set polly::getPartialTilePrefixes(isl::set ScheduleRange,
+                                       int VectorWidth) {
+  isl_size Dims = ScheduleRange.dim(isl::dim::set);
+  isl::set LoopPrefixes =
+      ScheduleRange.drop_constraints_involving_dims(isl::dim::set, Dims - 1, 1);
+  auto ExtentPrefixes = addExtentConstraints(LoopPrefixes, VectorWidth);
+  isl::set BadPrefixes = ExtentPrefixes.subtract(ScheduleRange);
+  BadPrefixes = BadPrefixes.project_out(isl::dim::set, Dims - 1, 1);
+  LoopPrefixes = LoopPrefixes.project_out(isl::dim::set, Dims - 1, 1);
+  return LoopPrefixes.subtract(BadPrefixes);
+}
+
+isl::union_set polly::getIsolateOptions(isl::set IsolateDomain,
+                                        isl_size OutDimsNum) {
+  isl_size Dims = IsolateDomain.dim(isl::dim::set);
+  assert(OutDimsNum <= Dims &&
+         "The isl::set IsolateDomain is used to describe the range of schedule "
+         "dimensions values, which should be isolated. Consequently, the "
+         "number of its dimensions should be greater than or equal to the "
+         "number of the schedule dimensions.");
+  isl::map IsolateRelation = isl::map::from_domain(IsolateDomain);
+  IsolateRelation = IsolateRelation.move_dims(isl::dim::out, 0, isl::dim::in,
+                                              Dims - OutDimsNum, OutDimsNum);
+  isl::set IsolateOption = IsolateRelation.wrap();
+  isl::id Id = isl::id::alloc(IsolateOption.get_ctx(), "isolate", nullptr);
+  IsolateOption = IsolateOption.set_tuple_id(Id);
+  return isl::union_set(IsolateOption);
+}
+
+isl::union_set polly::getDimOptions(isl::ctx Ctx, const char *Option) {
+  isl::space Space(Ctx, 0, 1);
+  auto DimOption = isl::set::universe(Space);
+  auto Id = isl::id::alloc(Ctx, Option, nullptr);
+  DimOption = DimOption.set_tuple_id(Id);
+  return isl::union_set(DimOption);
+}
+
+isl::schedule_node polly::tileNode(isl::schedule_node Node,
+                                   const char *Identifier,
+                                   ArrayRef<int> TileSizes,
+                                   int DefaultTileSize) {
+  auto Space = isl::manage(isl_schedule_node_band_get_space(Node.get()));
+  auto Dims = Space.dim(isl::dim::set);
+  auto Sizes = isl::multi_val::zero(Space);
+  std::string IdentifierString(Identifier);
+  for (auto i : seq<isl_size>(0, Dims)) {
+    auto tileSize =
+        i < (isl_size)TileSizes.size() ? TileSizes[i] : DefaultTileSize;
+    Sizes = Sizes.set_val(i, isl::val(Node.get_ctx(), tileSize));
+  }
+  auto TileLoopMarkerStr = IdentifierString + " - Tiles";
+  auto TileLoopMarker =
+      isl::id::alloc(Node.get_ctx(), TileLoopMarkerStr, nullptr);
+  Node = Node.insert_mark(TileLoopMarker);
+  Node = Node.child(0);
+  Node =
+      isl::manage(isl_schedule_node_band_tile(Node.release(), Sizes.release()));
+  Node = Node.child(0);
+  auto PointLoopMarkerStr = IdentifierString + " - Points";
+  auto PointLoopMarker =
+      isl::id::alloc(Node.get_ctx(), PointLoopMarkerStr, nullptr);
+  Node = Node.insert_mark(PointLoopMarker);
+  return Node.child(0);
+}
+
+isl::schedule_node polly::applyRegisterTiling(isl::schedule_node Node,
+                                              ArrayRef<int> TileSizes,
+                                              int DefaultTileSize) {
+  Node = tileNode(Node, "Register tiling", TileSizes, DefaultTileSize);
+  auto Ctx = Node.get_ctx();
+  return Node.band_set_ast_build_options(isl::union_set(Ctx, "{unroll[x]}"));
 }
