@@ -401,12 +401,12 @@ static bool UNUSED __local_asan_dyninit = [] {
 static void InitAsanOptionDetectStackUseAfterReturn() {
   __asan_option_detect_stack_use_after_return =
       flags()->detect_stack_use_after_return;
-  if (!SANITIZER_WINDOWS) {
-    if (&__asan_detect_use_after_return_always) {
-      CHECK_EQ(1, __asan_detect_use_after_return_always);
-      __asan_option_detect_stack_use_after_return = 1;
-    }
+#if !SANITIZER_WINDOWS
+  if (&__asan_detect_use_after_return_always) {
+    CHECK_EQ(1, __asan_detect_use_after_return_always);
+    __asan_option_detect_stack_use_after_return = 1;
   }
+#endif  // !SANITIZER_WINDOWS
 }
 
 static void AsanInitInternal() {
