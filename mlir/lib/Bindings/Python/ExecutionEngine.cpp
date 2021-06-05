@@ -59,20 +59,26 @@ void mlir::python::populateExecutionEngineSubmodule(py::module &m) {
   // Mapping of the top-level PassManager
   //----------------------------------------------------------------------------
   py::class_<PyExecutionEngine>(m, "ExecutionEngine")
-      .def(py::init<>([](PyModule &module, int optLevel) {
-             MlirExecutionEngine executionEngine =
-                 mlirExecutionEngineCreate(module.get(), optLevel);
+      .def(py::init<>([](PyModule &module, int optLevel,
+                         const std::vector<std::string> &sharedLibPaths) {
+             llvm::SmallVector<MlirStringRef, 4> libPaths;
+             for (const std::string &path : sharedLibPaths)
+               libPaths.push_back({path.c_str(), path.length()});
+             MlirExecutionEngine executionEngine = mlirExecutionEngineCreate(
+                 module.get(), optLevel, libPaths.size(), libPaths.data());
              if (mlirExecutionEngineIsNull(executionEngine))
                throw std::runtime_error(
                    "Failure while creating the ExecutionEngine.");
              return new PyExecutionEngine(executionEngine);
            }),
            py::arg("module"), py::arg("opt_level") = 2,
+           py::arg("shared_libs") = py::list(),
            "Create a new ExecutionEngine instance for the given Module. The "
            "module must contain only dialects that can be translated to LLVM. "
            "Perform transformations and code generation at the optimization "
            "level `opt_level` if specified, or otherwise at the default "
-           "level of two (-O2).")
+           "level of two (-O2). Load a list of libraries specified in "
+           "`shared_libs`.")
       .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR,
                              &PyExecutionEngine::getCapsule)
       .def("_testing_release", &PyExecutionEngine::release,
