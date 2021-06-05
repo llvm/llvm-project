@@ -9,6 +9,7 @@
 #include "lldb/API/SBProcessInfo.h"
 #include "SBReproducerPrivate.h"
 #include "Utils.h"
+#include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/Utility/ProcessInfo.h"
 
@@ -194,6 +195,38 @@ const char *SBProcessInfo::GetTriple() {
   return triple;
 }
 
+uint32_t SBProcessInfo::GetNumArguments() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBProcessInfo, GetNumArguments);
+
+  uint32_t num = 0;
+  if (m_opaque_up) {
+    num = m_opaque_up->GetArguments().size();
+  }
+  return num;
+}
+
+const char *SBProcessInfo::GetArgumentAtIndex(uint32_t index) {
+  LLDB_RECORD_METHOD(const char *, SBProcessInfo, GetArgumentAtIndex,
+                     (uint32_t), index);
+
+  const char *argument = nullptr;
+  if (m_opaque_up) {
+    argument = m_opaque_up->GetArguments().GetArgumentAtIndex(index);
+  }
+  return argument;
+}
+
+SBEnvironment SBProcessInfo::GetEnvironment() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBEnvironment, SBProcessInfo,
+                             GetEnvironment);
+
+  if (m_opaque_up) {
+    return LLDB_RECORD_RESULT(SBEnvironment(m_opaque_up->GetEnvironment()));
+  }
+
+  return LLDB_RECORD_RESULT(SBEnvironment());
+}
+
 namespace lldb_private {
 namespace repro {
 
@@ -220,6 +253,10 @@ void RegisterMethods<SBProcessInfo>(Registry &R) {
   LLDB_REGISTER_METHOD(bool, SBProcessInfo, EffectiveGroupIDIsValid, ());
   LLDB_REGISTER_METHOD(lldb::pid_t, SBProcessInfo, GetParentProcessID, ());
   LLDB_REGISTER_METHOD(const char *, SBProcessInfo, GetTriple, ());
+  LLDB_REGISTER_METHOD(uint32_t, SBProcessInfo, GetNumArguments, ());
+  LLDB_REGISTER_METHOD(const char *, SBProcessInfo, GetArgumentAtIndex,
+                       (uint32_t));
+  LLDB_REGISTER_METHOD(lldb::SBEnvironment, SBProcessInfo, GetEnvironment, ());
 }
 
 }
