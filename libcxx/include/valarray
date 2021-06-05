@@ -413,7 +413,7 @@ template <class _Op, class _A0>
 struct _UnaryOp
 {
     typedef typename _Op::__result_type __result_type;
-    typedef typename _A0::value_type value_type;
+    typedef typename decay<__result_type>::type value_type;
 
     _Op __op_;
     _A0 __a0_;
@@ -432,7 +432,7 @@ template <class _Op, class _A0, class _A1>
 struct _BinaryOp
 {
     typedef typename _Op::__result_type __result_type;
-    typedef typename _A0::value_type value_type;
+    typedef typename decay<__result_type>::type value_type;
 
     _Op __op_;
     _A0 __a0_;
@@ -443,7 +443,7 @@ struct _BinaryOp
         : __op_(__op), __a0_(__a0), __a1_(__a1) {}
 
     _LIBCPP_INLINE_VISIBILITY
-    value_type operator[](size_t __i) const {return __op_(__a0_[__i], __a1_[__i]);}
+    __result_type operator[](size_t __i) const {return __op_(__a0_[__i], __a1_[__i]);}
 
     _LIBCPP_INLINE_VISIBILITY
     size_t size() const {return __a0_.size();}
@@ -1087,7 +1087,7 @@ template <class _Op, class _Tp>
 struct _UnaryOp<_Op, valarray<_Tp> >
 {
     typedef typename _Op::__result_type __result_type;
-    typedef _Tp value_type;
+    typedef typename decay<__result_type>::type value_type;
 
     _Op __op_;
     const valarray<_Tp>& __a0_;
@@ -1106,7 +1106,7 @@ template <class _Op, class _Tp, class _A1>
 struct _BinaryOp<_Op, valarray<_Tp>, _A1>
 {
     typedef typename _Op::__result_type __result_type;
-    typedef _Tp value_type;
+    typedef typename decay<__result_type>::type value_type;
 
     _Op __op_;
     const valarray<_Tp>& __a0_;
@@ -1117,7 +1117,7 @@ struct _BinaryOp<_Op, valarray<_Tp>, _A1>
         : __op_(__op), __a0_(__a0), __a1_(__a1) {}
 
     _LIBCPP_INLINE_VISIBILITY
-    value_type operator[](size_t __i) const {return __op_(__a0_[__i], __a1_[__i]);}
+    __result_type operator[](size_t __i) const {return __op_(__a0_[__i], __a1_[__i]);}
 
     _LIBCPP_INLINE_VISIBILITY
     size_t size() const {return __a0_.size();}
@@ -1127,7 +1127,7 @@ template <class _Op, class _A0, class _Tp>
 struct _BinaryOp<_Op, _A0, valarray<_Tp> >
 {
     typedef typename _Op::__result_type __result_type;
-    typedef _Tp value_type;
+    typedef typename decay<__result_type>::type value_type;
 
     _Op __op_;
     _A0 __a0_;
@@ -1138,7 +1138,7 @@ struct _BinaryOp<_Op, _A0, valarray<_Tp> >
         : __op_(__op), __a0_(__a0), __a1_(__a1) {}
 
     _LIBCPP_INLINE_VISIBILITY
-    value_type operator[](size_t __i) const {return __op_(__a0_[__i], __a1_[__i]);}
+    __result_type operator[](size_t __i) const {return __op_(__a0_[__i], __a1_[__i]);}
 
     _LIBCPP_INLINE_VISIBILITY
     size_t size() const {return __a0_.size();}
@@ -1148,7 +1148,7 @@ template <class _Op, class _Tp>
 struct _BinaryOp<_Op, valarray<_Tp>, valarray<_Tp> >
 {
     typedef typename _Op::__result_type __result_type;
-    typedef _Tp value_type;
+    typedef typename decay<__result_type>::type value_type;
 
     _Op __op_;
     const valarray<_Tp>& __a0_;
@@ -1159,7 +1159,7 @@ struct _BinaryOp<_Op, valarray<_Tp>, valarray<_Tp> >
         : __op_(__op), __a0_(__a0), __a1_(__a1) {}
 
     _LIBCPP_INLINE_VISIBILITY
-    value_type operator[](size_t __i) const {return __op_(__a0_[__i], __a1_[__i]);}
+    __result_type operator[](size_t __i) const {return __op_(__a0_[__i], __a1_[__i]);}
 
     _LIBCPP_INLINE_VISIBILITY
     size_t size() const {return __a0_.size();}
