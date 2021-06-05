@@ -74,7 +74,7 @@ TEST_F(MemtagTest, ExtractTag) {
   // expected range.
   for (u64 Top = 0; Top < 0x100; ++Top)
     Tags = Tags | (1u << extractTag(Addr | (Top << 56)));
-  EXPECT_EQ(0xffff, Tags);
+  EXPECT_EQ(0xffffull, Tags);
 }
 
 TEST_F(MemtagTest, AddFixedTag) {
@@ -109,7 +109,7 @@ TEST_F(MemtagTest, SelectRandomTag) {
     uptr Tags = 0;
     for (uptr I = 0; I < 100000; ++I)
       Tags = Tags | (1u << extractTag(selectRandomTag(Ptr, 0)));
-    EXPECT_EQ(0xfffe, Tags);
+    EXPECT_EQ(0xfffeull, Tags);
   }
 }
 
