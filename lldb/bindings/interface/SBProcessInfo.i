@@ -68,25 +68,6 @@ public:
     ) GetTriple;
     const char *
     GetTriple ();
-
-    %feature("docstring",
-    "Return the number of arguments given to the described process."
-    ) GetNumArguments;
-    uint32_t
-    GetNumArguments ();
-
-    %feature("autodoc", "
-    GetArgumentAtIndex(int index) -> string
-    Return the specified argument given to the described process."
-    ) GetArgumentAtIndex;
-    const char *
-    GetArgumentAtIndex (uint32_t index);
-
-    %feature("docstring",
-    "Return the environment variables for the described process."
-    ) GetEnvironment;
-    SBEnvironment
-    GetEnvironment ();
 };
 
 } // namespace lldb
