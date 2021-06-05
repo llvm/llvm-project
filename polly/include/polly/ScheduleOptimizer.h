@@ -37,26 +37,6 @@ struct IslScheduleOptimizerPrinterPass
 private:
   llvm::raw_ostream &OS;
 };
-
-/// Build the desired set of partial tile prefixes.
-///
-/// We build a set of partial tile prefixes, which are prefixes of the vector
-/// loop that have exactly VectorWidth iterations.
-///
-/// 1. Drop all constraints involving the dimension that represents the
-///    vector loop.
-/// 2. Constrain the last dimension to get a set, which has exactly VectorWidth
-///    iterations.
-/// 3. Subtract loop domain from it, project out the vector loop dimension and
-///    get a set that contains prefixes, which do not have exactly VectorWidth
-///    iterations.
-/// 4. Project out the vector loop dimension of the set that was build on the
-///    first step and subtract the set built on the previous step to get the
-///    desired set of prefixes.
-///
-/// @param ScheduleRange A range of a map, which describes a prefix schedule
-///                      relation.
-isl::set getPartialTilePrefixes(isl::set ScheduleRange, int VectorWidth);
 } // namespace polly
 
 namespace llvm {

@@ -1,4 +1,4 @@
-//===- ScheduleOptimizerTest.cpp ------------------------------------------===//
+//===- ScheduleTreeTransformTest.cpp --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "polly/ScheduleOptimizer.h"
+#include "polly/ScheduleTreeTransform.h"
 #include "gtest/gtest.h"
-#include "isl/stream.h"
-#include "isl/val.h"
+#include "isl/ctx.h"
 
 using namespace isl;
 using namespace polly;
 
 namespace {
 
-TEST(ScheduleOptimizer, getPartialTilePrefixes) {
-
+TEST(ScheduleTreeTransform, getPartialTilePrefixes) {
   isl_ctx *ctx = isl_ctx_alloc();
 
   {
