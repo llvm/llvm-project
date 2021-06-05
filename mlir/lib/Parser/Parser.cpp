@@ -166,18 +166,12 @@ namespace {
 /// operations.
 class OperationParser : public Parser {
 public:
-  OperationParser(ParserState &state, Operation *topLevelOp)
-      : Parser(state), opBuilder(topLevelOp->getRegion(0)),
-        topLevelOp(topLevelOp) {
-    // The top level operation starts a new name scope.
-    pushSSANameScope(/*isIsolated=*/true);
-  }
-
+  OperationParser(ParserState &state, Operation *topLevelOp);
   ~OperationParser();
 
   /// After parsing is finished, this function must be called to see if there
   /// are any remaining issues.
-  ParseResult finalize();
+  ParseResult finalize(Operation *topLevelOp);
 
   //===--------------------------------------------------------------------===//
   // SSA Value Handling
@@ -281,7 +275,10 @@ public:
                           bool isIsolatedNameScope = false);
 
   /// Parse a region body into 'region'.
-  ParseResult parseRegionBody(Region &region);
+  ParseResult
+  parseRegionBody(Region &region, llvm::SMLoc startLoc,
+                  ArrayRef<std::pair<SSAUseInfo, Type>> entryArguments,
+                  bool isIsolatedNameScope);
 
   //===--------------------------------------------------------------------===//
   // Block Parsing
@@ -402,6 +399,17 @@ private:
 };
 } // end anonymous namespace
 
+OperationParser::OperationParser(ParserState &state, Operation *topLevelOp)
+    : Parser(state), opBuilder(topLevelOp->getRegion(0)),
+      topLevelOp(topLevelOp) {
+  // The top level operation starts a new name scope.
+  pushSSANameScope(/*isIsolated=*/true);
+
+  // If we are populating the parser state, prepare it for parsing.
+  if (state.asmState)
+    state.asmState->initialize(topLevelOp);
+}
+
 OperationParser::~OperationParser() {
   for (auto &fwd : forwardRefPlaceholders) {
     // Drop all uses of undefined forward declared reference and destroy
@@ -421,7 +429,7 @@ OperationParser::~OperationParser() {
 
 /// After parsing is finished, this function must be called to see if there are
 /// any remaining issues.
-ParseResult OperationParser::finalize() {
+ParseResult OperationParser::finalize(Operation *topLevelOp) {
   // Check for any forward references that are left.  If we find any, error
   // out.
   if (!forwardRefPlaceholders.empty()) {
@@ -457,6 +465,10 @@ ParseResult OperationParser::finalize() {
     else
       opOrArgument.get<BlockArgument>().setLoc(locAttr);
   }
+
+  // If we are populating the parser state, finalize the top-level operation.
+  if (state.asmState)
+    state.asmState->finalize(topLevelOp);
 
   // Pop the top level name scope.
   return popSSANameScope();
@@ -809,7 +821,8 @@ ParseResult OperationParser::parseOperation() {
         asmResultGroups.emplace_back(resultIt, std::get<2>(record));
         resultIt += std::get<1>(record);
       }
-      state.asmState->addDefinition(op, nameTok.getLocRange(), asmResultGroups);
+      state.asmState->finalizeOperationDefinition(op, nameTok.getLocRange(),
+                                                  asmResultGroups);
     }
 
     // Add definitions for each of the result groups.
@@ -824,7 +837,7 @@ ParseResult OperationParser::parseOperation() {
 
     // Add this operation to the assembly state if it was provided to populate.
   } else if (state.asmState) {
-    state.asmState->addDefinition(op, nameTok.getLocRange());
+    state.asmState->finalizeOperationDefinition(op, nameTok.getLocRange());
   }
 
   return success();
@@ -902,6 +915,10 @@ Operation *OperationParser::parseGenericOperation() {
       result.name = OperationName(name, getContext());
     }
   }
+
+  // If we are populating the parser state, start a new operation definition.
+  if (state.asmState)
+    state.asmState->startOperationDefinition(result.name);
 
   // Parse the operand list.
   SmallVector<SSAUseInfo, 8> operandInfos;
@@ -981,9 +998,19 @@ Operation *OperationParser::parseGenericOperation() {
 
 Operation *OperationParser::parseGenericOperation(Block *insertBlock,
                                                   Block::iterator insertPt) {
+  Token nameToken = getToken();
+
   OpBuilder::InsertionGuard restoreInsertionPoint(opBuilder);
   opBuilder.setInsertionPoint(insertBlock, insertPt);
-  return parseGenericOperation();
+  Operation *op = parseGenericOperation();
+  if (!op)
+    return nullptr;
+
+  // If we are populating the parser asm state, finalize this operation
+  // definition.
+  if (state.asmState)
+    state.asmState->finalizeOperationDefinition(op, nameToken.getLocRange());
+  return op;
 }
 
 namespace {
@@ -1367,6 +1394,14 @@ public:
     result = getBuilder().getStringAttr(atToken.getSymbolReference());
     attrs.push_back(getBuilder().getNamedAttr(attrName, result));
     parser.consumeToken();
+
+    // If we are populating the assembly parser state, record this as a symbol
+    // reference.
+    if (parser.getState().asmState) {
+      parser.getState().asmState->addUses(
+          getBuilder().getSymbolRefAttr(result.getValue()),
+          atToken.getLocRange());
+    }
     return success();
   }
 
@@ -1858,9 +1893,13 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
 
   // Get location information for the operation.
   auto srcLocation = getEncodedSourceLocation(opLoc);
+  OperationState opState(srcLocation, opName);
+
+  // If we are populating the parser state, start a new operation definition.
+  if (state.asmState)
+    state.asmState->startOperationDefinition(opState.name);
 
   // Have the op implementation take a crack and parsing this.
-  OperationState opState(srcLocation, opName);
   CleanupOpStateRegions guard{opState};
   CustomOpAsmParser opAsmParser(opLoc, resultIDs, parseAssemblyFn,
                                 isIsolatedFromAbove, opName, *this);
@@ -1931,10 +1970,6 @@ OperationParser::parseTrailingLocationSpecifier(OpOrArgument opOrArgument) {
 // Region Parsing
 //===----------------------------------------------------------------------===//
 
-/// Region.
-///
-///   region ::= '{' region-body
-///
 ParseResult OperationParser::parseRegion(
     Region &region,
     ArrayRef<std::pair<OperationParser::SSAUseInfo, Type>> entryArguments,
@@ -1944,9 +1979,29 @@ ParseResult OperationParser::parseRegion(
   if (parseToken(Token::l_brace, "expected '{' to begin a region"))
     return failure();
 
-  // Check for an empty region.
-  if (entryArguments.empty() && consumeIf(Token::r_brace))
-    return success();
+  // If we are populating the parser state, start a new region definition.
+  if (state.asmState)
+    state.asmState->startRegionDefinition();
+
+  // Parse the region body.
+  if ((!entryArguments.empty() || getToken().isNot(Token::r_brace)) &&
+      parseRegionBody(region, lBraceTok.getLoc(), entryArguments,
+                      isIsolatedNameScope)) {
+    return failure();
+  }
+  consumeToken(Token::r_brace);
+
+  // If we are populating the parser state, finalize this region.
+  if (state.asmState)
+    state.asmState->finalizeRegionDefinition();
+
+  return success();
+}
+
+ParseResult OperationParser::parseRegionBody(
+    Region &region, llvm::SMLoc startLoc,
+    ArrayRef<std::pair<OperationParser::SSAUseInfo, Type>> entryArguments,
+    bool isIsolatedNameScope) {
   auto currentPt = opBuilder.saveInsertionPoint();
 
   // Push a new named value scope.
@@ -1960,7 +2015,7 @@ ParseResult OperationParser::parseRegion(
   // now in the assembly state. Blocks with a name will be defined when the name
   // is parsed.
   if (state.asmState && getToken().isNot(Token::caret_identifier))
-    state.asmState->addDefinition(block, lBraceTok.getLoc());
+    state.asmState->addDefinition(block, startLoc);
 
   // Add arguments to the entry block.
   if (!entryArguments.empty()) {
@@ -2002,8 +2057,12 @@ ParseResult OperationParser::parseRegion(
 
   // Parse the rest of the region.
   region.push_back(owning_block.release());
-  if (parseRegionBody(region))
-    return failure();
+  while (getToken().isNot(Token::r_brace)) {
+    Block *newBlock = nullptr;
+    if (parseBlock(newBlock))
+      return failure();
+    region.push_back(newBlock);
+  }
 
   // Pop the SSA value scope for this region.
   if (popSSANameScope())
@@ -2011,21 +2070,6 @@ ParseResult OperationParser::parseRegion(
 
   // Reset the original insertion point.
   opBuilder.restoreInsertionPoint(currentPt);
-  return success();
-}
-
-/// Region.
-///
-///   region-body ::= block* '}'
-///
-ParseResult OperationParser::parseRegionBody(Region &region) {
-  // Parse the list of blocks.
-  while (!consumeIf(Token::r_brace)) {
-    Block *newBlock = nullptr;
-    if (parseBlock(newBlock))
-      return failure();
-    region.push_back(newBlock);
-  }
   return success();
 }
 
@@ -2278,7 +2322,7 @@ ParseResult TopLevelOperationParser::parse(Block *topLevelBlock,
 
     // If we got to the end of the file, then we're done.
     case Token::eof: {
-      if (opParser.finalize())
+      if (opParser.finalize(topLevelOp.get()))
         return failure();
 
       // Verify that the parsed operations are valid.

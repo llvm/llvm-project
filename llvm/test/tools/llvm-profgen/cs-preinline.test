@@ -1,13 +1,13 @@
 ; Test default llvm-profgen with preinline off
-; RUN: llvm-profgen --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-DEFAULT
 
 ; Test llvm-profgen with preinliner on will merge not inlinable profile into base profile.
-; RUN: llvm-profgen --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --csspgo-preinliner=1
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --csspgo-preinliner=1
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-PREINL
 
 ; Test preinliner threshold that prevents all possible inlining and merges everything into base profile.
-; RUN: llvm-profgen --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --csspgo-preinliner=1  -sample-profile-cold-inline-threshold=0
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-noprobe.perfscript --binary=%S/Inputs/inline-cs-noprobe.perfbin --output=%t --csspgo-preinliner=1  -sample-profile-cold-inline-threshold=0
 ; RUN: FileCheck %s --input-file %t --check-prefix=CHECK-NO-PREINL
 
 ; CHECK-DEFAULT:     [main:1 @ foo]:309:0

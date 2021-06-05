@@ -12,10 +12,10 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos -o %t/main.o %t/main.s
 
-# With flat_namespace, the linker automatically looks in foo.dylib and
-# bar.dylib too, but it doesn't add a LC_LOAD_DYLIB for it.
-# RUN: %lld -flat_namespace -lSystem %t/main.o %t/baz.dylib -o %t/out -t | \
-# RUN:   FileCheck --check-prefix=T %s
+## With flat_namespace, the linker automatically looks in foo.dylib and
+## bar.dylib too, but it doesn't add a LC_LOAD_DYLIB for it.
+# RUN: %lld -flat_namespace -lSystem %t/main.o %t/baz.dylib -o %t/out -t \
+# RUN:  --reproduce %t/repro.tar | FileCheck --check-prefix=T %s
 ## FIXME: The `bar.dylib` line should use `T-NEXT`, but on Windows we load
 ## libSystem.tbd with different slash styles and end up loading it twice
 ## for that reason.
@@ -29,6 +29,11 @@
 # RUN:     | FileCheck --check-prefix=FLAT %s
 # RUN: llvm-nm -m %t/out | FileCheck --check-prefix=FLATSYM %s
 # RUN: llvm-readobj --syms %t/out | FileCheck --check-prefix=FLATSYM-READOBJ %s
+# RUN: cd %t
+# RUN: tar -tf repro.tar | FileCheck -DPATH='%:t.dir' --check-prefix=REPRO %s
+# RUN: tar -xf repro.tar repro/response.txt
+# RUN: FileCheck --implicit-check-not=dylib --check-prefix=RESPONSE %s \
+# RUN:     < %t/repro/response.txt
 
 # HEADERBITS-NOT: NOUNDEFS
 # HEADERBITS-NOT: TWOLEVEL
@@ -43,14 +48,22 @@
 # FLAT-DAG: __DATA   __la_symbol_ptr    0x{{[0-9a-f]*}} flat-namespace   _baz
 # FLAT-DAG: __DATA   __la_symbol_ptr    0x{{[0-9a-f]*}} flat-namespace   _foo
 
-# No "(dynamically looked up)" because llvm-nm -m doesn't print that
-# for files without MH_TWOLEVEL for some reason.
+## No "(dynamically looked up)" because llvm-nm -m doesn't print that
+## for files without MH_TWOLEVEL for some reason.
 # FLATSYM: (undefined) external _bar
 # FLATSYM: (undefined) external _baz
 # FLATSYM: (undefined) external _foo
 
-# ...but `llvm-readobj --syms` does, so verify we put the right thing there.
+## ...but `llvm-readobj --syms` does, so verify we put the right thing there.
 # FLATSYM-READOBJ: Flags [ (0xFE00)
+
+## All 3 .dylibs should be in a --reproduce archive.
+# REPRO: baz.dylib
+# REPRO: bar.dylib
+# REPRO: foo.dylib
+
+## ...but only baz.dylib should be in the response file:
+# RESPONSE: baz.dylib
 
 # Undefined symbols should still cause errors by default.
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \

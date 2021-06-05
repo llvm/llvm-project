@@ -5019,6 +5019,16 @@ struct AAHeapToStackImpl : public AAHeapToStack {
     return "[H2S] Mallocs: " + std::to_string(MallocCalls.size());
   }
 
+  bool isAssumedHeapToStack(CallBase &CB) const override {
+    return isValidState() && MallocCalls.contains(&CB) &&
+           !BadMallocCalls.count(&CB);
+  }
+
+  bool isKnownHeapToStack(CallBase &CB) const override {
+    return isValidState() && MallocCalls.contains(&CB) &&
+           !BadMallocCalls.count(&CB);
+  }
+
   ChangeStatus manifest(Attributor &A) override {
     assert(getState().isValidState() &&
            "Attempted to manifest an invalid state!");

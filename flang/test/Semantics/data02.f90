@@ -6,7 +6,7 @@ subroutine s1
     character(1) :: c
   end type
   type(t) :: x
-  !ERROR: Value in structure constructor of type INTEGER(4) is incompatible with component 'c' of type CHARACTER(KIND=1,LEN=1_4)
+  !ERROR: Value in structure constructor of type INTEGER(4) is incompatible with component 'c' of type CHARACTER(KIND=1,LEN=1_8)
   data x /t(1)/
 end
 

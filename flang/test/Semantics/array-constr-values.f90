@@ -83,3 +83,9 @@ subroutine checkOkDuplicates
        (0.0, iDuplicate = j,3 ), &
         j = 1,5 ) ]
 end subroutine
+subroutine charLengths(c, array)
+  character(3) :: c
+  character(3) :: array(2)
+  !No error should ensue for distinct but compatible DynamicTypes
+  array = ["abc", c]
+end subroutine

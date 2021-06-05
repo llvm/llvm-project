@@ -9,6 +9,11 @@
 // This file defines the AMDGPU-specific builtin function database. Users of
 // this file must define the BUILTIN macro to make use of this information.
 //
+// Note: (unsigned) long int type should be avoided in builtin definitions
+// since it has different size on Linux (64 bit) and Windows (32 bit).
+// (unsigned) long long int type should also be avoided, which is 64 bit for
+// C/C++/HIP but is 128 bit for OpenCL. Use `W` as width modifier in builtin
+// definitions since it is fixed for 64 bit.
 //===----------------------------------------------------------------------===//
 
 // The format of this database matches clang/Basic/Builtins.def.
@@ -44,14 +49,14 @@ BUILTIN(__builtin_amdgcn_grid_size_z, "Ui", "nc")
 BUILTIN(__builtin_amdgcn_mbcnt_hi, "UiUiUi", "nc")
 BUILTIN(__builtin_amdgcn_mbcnt_lo, "UiUiUi", "nc")
 
-TARGET_BUILTIN(__builtin_amdgcn_s_memtime, "LUi", "n", "s-memtime-inst")
+TARGET_BUILTIN(__builtin_amdgcn_s_memtime, "WUi", "n", "s-memtime-inst")
 
 //===----------------------------------------------------------------------===//
 // Instruction builtins.
 //===----------------------------------------------------------------------===//
 BUILTIN(__builtin_amdgcn_s_getreg, "UiIi", "n")
 BUILTIN(__builtin_amdgcn_s_setreg, "vIiUi", "n")
-BUILTIN(__builtin_amdgcn_s_getpc, "LUi", "n")
+BUILTIN(__builtin_amdgcn_s_getpc, "WUi", "n")
 BUILTIN(__builtin_amdgcn_s_waitcnt, "vIi", "n")
 BUILTIN(__builtin_amdgcn_s_sendmsg, "vIiUi", "n")
 BUILTIN(__builtin_amdgcn_s_sendmsghalt, "vIiUi", "n")
@@ -111,12 +116,12 @@ BUILTIN(__builtin_amdgcn_cubema, "ffff", "nc")
 BUILTIN(__builtin_amdgcn_s_sleep, "vIi", "n")
 BUILTIN(__builtin_amdgcn_s_incperflevel, "vIi", "n")
 BUILTIN(__builtin_amdgcn_s_decperflevel, "vIi", "n")
-BUILTIN(__builtin_amdgcn_uicmp, "LUiUiUiIi", "nc")
-BUILTIN(__builtin_amdgcn_uicmpl, "LUiLUiLUiIi", "nc")
-BUILTIN(__builtin_amdgcn_sicmp, "LUiiiIi", "nc")
-BUILTIN(__builtin_amdgcn_sicmpl, "LUiLiLiIi", "nc")
-BUILTIN(__builtin_amdgcn_fcmp, "LUiddIi", "nc")
-BUILTIN(__builtin_amdgcn_fcmpf, "LUiffIi", "nc")
+BUILTIN(__builtin_amdgcn_uicmp, "WUiUiUiIi", "nc")
+BUILTIN(__builtin_amdgcn_uicmpl, "WUiWUiWUiIi", "nc")
+BUILTIN(__builtin_amdgcn_sicmp, "WUiiiIi", "nc")
+BUILTIN(__builtin_amdgcn_sicmpl, "WUiWiWiIi", "nc")
+BUILTIN(__builtin_amdgcn_fcmp, "WUiddIi", "nc")
+BUILTIN(__builtin_amdgcn_fcmpf, "WUiffIi", "nc")
 BUILTIN(__builtin_amdgcn_ds_swizzle, "iiIi", "nc")
 BUILTIN(__builtin_amdgcn_ds_permute, "iii", "nc")
 BUILTIN(__builtin_amdgcn_ds_bpermute, "iii", "nc")
@@ -142,9 +147,9 @@ BUILTIN(__builtin_amdgcn_sad_u8, "UiUiUiUi", "nc")
 BUILTIN(__builtin_amdgcn_msad_u8, "UiUiUiUi", "nc")
 BUILTIN(__builtin_amdgcn_sad_hi_u8, "UiUiUiUi", "nc")
 BUILTIN(__builtin_amdgcn_sad_u16, "UiUiUiUi", "nc")
-BUILTIN(__builtin_amdgcn_qsad_pk_u16_u8, "LUiLUiUiLUi", "nc")
-BUILTIN(__builtin_amdgcn_mqsad_pk_u16_u8, "LUiLUiUiLUi", "nc")
-BUILTIN(__builtin_amdgcn_mqsad_u32_u8, "V4UiLUiUiV4Ui", "nc")
+BUILTIN(__builtin_amdgcn_qsad_pk_u16_u8, "WUiWUiUiWUi", "nc")
+BUILTIN(__builtin_amdgcn_mqsad_pk_u16_u8, "WUiWUiUiWUi", "nc")
+BUILTIN(__builtin_amdgcn_mqsad_u32_u8, "V4UiWUiUiV4Ui", "nc")
 
 //===----------------------------------------------------------------------===//
 // CI+ only builtins.
@@ -179,7 +184,7 @@ TARGET_BUILTIN(__builtin_amdgcn_frexp_manth, "hh", "nc", "16-bit-insts")
 TARGET_BUILTIN(__builtin_amdgcn_frexp_exph, "sh", "nc", "16-bit-insts")
 TARGET_BUILTIN(__builtin_amdgcn_fracth, "hh", "nc", "16-bit-insts")
 TARGET_BUILTIN(__builtin_amdgcn_classh, "bhi", "nc", "16-bit-insts")
-TARGET_BUILTIN(__builtin_amdgcn_s_memrealtime, "LUi", "n", "s-memrealtime")
+TARGET_BUILTIN(__builtin_amdgcn_s_memrealtime, "WUi", "n", "s-memrealtime")
 TARGET_BUILTIN(__builtin_amdgcn_mov_dpp, "iiIiIiIiIb", "nc", "dpp")
 TARGET_BUILTIN(__builtin_amdgcn_update_dpp, "iiiIiIiIiIb", "nc", "dpp")
 TARGET_BUILTIN(__builtin_amdgcn_s_dcache_wb, "v", "n", "gfx8-insts")
@@ -213,7 +218,7 @@ TARGET_BUILTIN(__builtin_amdgcn_mov_dpp8, "UiUiIUi", "nc", "gfx10-insts")
 //===----------------------------------------------------------------------===//
 // Special builtins.
 //===----------------------------------------------------------------------===//
-BUILTIN(__builtin_amdgcn_read_exec, "LUi", "nc")
+BUILTIN(__builtin_amdgcn_read_exec, "WUi", "nc")
 BUILTIN(__builtin_amdgcn_read_exec_lo, "Ui", "nc")
 BUILTIN(__builtin_amdgcn_read_exec_hi, "Ui", "nc")
 

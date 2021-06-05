@@ -1612,42 +1612,37 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_LLVM_def_aspace_cfa) {
   const dwarf::UnwindTable &Rows = RowsOrErr.get();
   EXPECT_EQ(Rows.size(), 5u);
   EXPECT_EQ(Rows[0].getAddress(), 0x1000u);
-  EXPECT_EQ(Rows[0].getCFAAddressSpace(), AddrSpace);
-  EXPECT_EQ(
-      Rows[0].getCFAValue(),
-      dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg1, CFAOff1));
+  EXPECT_EQ(Rows[0].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg1, CFAOff1,
+                                                              AddrSpace));
   EXPECT_EQ(Rows[0].getRegisterLocations().size(), 1u);
   EXPECT_EQ(Rows[0].getRegisterLocations(), VerifyLocs);
 
   EXPECT_EQ(Rows[1].getAddress(), 0x1004u);
-  EXPECT_EQ(Rows[0].getCFAAddressSpace(), AddrSpace);
-  EXPECT_EQ(
-      Rows[1].getCFAValue(),
-      dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg2, CFAOff1));
+  EXPECT_EQ(Rows[1].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg2, CFAOff1,
+                                                              AddrSpace));
   EXPECT_EQ(Rows[1].getRegisterLocations().size(), 1u);
   EXPECT_EQ(Rows[1].getRegisterLocations(), VerifyLocs);
 
   EXPECT_EQ(Rows[2].getAddress(), 0x1008u);
-  EXPECT_EQ(Rows[0].getCFAAddressSpace(), AddrSpace);
-  EXPECT_EQ(
-      Rows[2].getCFAValue(),
-      dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg2, CFAOff2));
+  EXPECT_EQ(Rows[2].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg2, CFAOff2,
+                                                              AddrSpace));
   EXPECT_EQ(Rows[2].getRegisterLocations().size(), 1u);
   EXPECT_EQ(Rows[2].getRegisterLocations(), VerifyLocs);
 
   EXPECT_EQ(Rows[3].getAddress(), 0x100cu);
-  EXPECT_EQ(Rows[0].getCFAAddressSpace(), AddrSpace);
-  EXPECT_EQ(
-      Rows[3].getCFAValue(),
-      dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg2, CFAOff1));
+  EXPECT_EQ(Rows[3].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg2, CFAOff1,
+                                                              AddrSpace));
   EXPECT_EQ(Rows[3].getRegisterLocations().size(), 1u);
   EXPECT_EQ(Rows[3].getRegisterLocations(), VerifyLocs);
 
   EXPECT_EQ(Rows[4].getAddress(), 0x1010u);
-  EXPECT_EQ(Rows[0].getCFAAddressSpace(), AddrSpace);
-  EXPECT_EQ(
-      Rows[4].getCFAValue(),
-      dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg1, CFAOff2));
+  EXPECT_EQ(Rows[4].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg1, CFAOff2,
+                                                              AddrSpace));
   EXPECT_EQ(Rows[4].getRegisterLocations().size(), 1u);
   EXPECT_EQ(Rows[4].getRegisterLocations(), VerifyLocs);
 }

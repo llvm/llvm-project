@@ -60,13 +60,30 @@
 // Check -foffload-lto=thin translated correctly.
 
 // RUN: %clang -### -target x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
-// RUN:   --cuda-gpu-arch=gfx906 -foffload-lto=thin %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=THINLTO %s
+// RUN:   --cuda-gpu-arch=gfx906 -foffload-lto=thin -fwhole-program-vtables %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=HIPTHINLTO %s
 
 // RUN: %clang -### -target x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
-// RUN:   --cuda-gpu-arch=gfx906 -fgpu-rdc -foffload-lto=thin %s 2>&1 \
+// RUN:   --cuda-gpu-arch=gfx906 -fgpu-rdc -foffload-lto=thin -fwhole-program-vtables %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=HIPTHINLTO %s
+
+// Ensure we don't error about -fwhole-program-vtables for the non-device offload compile.
+// HIPTHINLTO-NOT: error: invalid argument '-fwhole-program-vtables' only allowed with '-flto'
+// HIPTHINLTO-NOT: clang{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-flto-unit"
+// HIPTHINLTO: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-flto=thin" "-flto-unit" {{.*}} "-fwhole-program-vtables"
+// HIPTHINLTO-NOT: clang{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-flto-unit"
+// HIPTHINLTO: lld{{.*}}"-plugin-opt=mcpu=gfx906" "-plugin-opt=thinlto" "-plugin-opt=-force-import-all"
+
+// Check that -flto=thin is handled correctly, particularly with -fwhole-program-vtables.
+//
+// RUN: %clang -### -target x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
+// RUN:   --cuda-gpu-arch=gfx906 -flto=thin -fwhole-program-vtables %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=THINLTO %s
 
-// THINLTO-NOT: clang{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-flto-unit"
-// THINLTO: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-flto=thin" "-flto-unit"
-// THINLTO: lld{{.*}}"-plugin-opt=mcpu=gfx906" "-plugin-opt=thinlto" "-plugin-opt=-force-import-all"
+// Ensure we don't error about -fwhole-program-vtables for the device offload compile. We should
+// drop -fwhole-program-vtables for the device offload compile and pass it through for the
+// non-device offload compile along with -flto=thin.
+// THINLTO-NOT: error: invalid argument '-fwhole-program-vtables' only allowed with '-flto'
+// THINLTO-NOT: clang{{.*}}" "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fwhole-program-vtables"
+// THINLTO: clang{{.*}}" "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-flto=thin" {{.*}} "-fwhole-program-vtables"
+// THINLTO-NOT: clang{{.*}}" "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fwhole-program-vtables"

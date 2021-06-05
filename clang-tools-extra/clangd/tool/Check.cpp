@@ -193,10 +193,15 @@ public:
 
   // Run AST-based features at each token in the file.
   void testLocationFeatures(
-      llvm::function_ref<bool(const Position &)> ShouldCheckLine) {
+      llvm::function_ref<bool(const Position &)> ShouldCheckLine,
+      const bool EnableCodeCompletion) {
     log("Testing features at each token (may be slow in large files)");
     auto &SM = AST->getSourceManager();
     auto SpelledTokens = AST->getTokens().spelledTokens(SM.getMainFileID());
+
+    CodeCompleteOptions CCOpts = Opts.CodeComplete;
+    CCOpts.Index = &Index;
+
     for (const auto &Tok : SpelledTokens) {
       unsigned Start = AST->getSourceManager().getFileOffset(Tok.location());
       unsigned End = Start + Tok.length();
@@ -233,8 +238,12 @@ public:
       auto Hover = getHover(*AST, Pos, Style, &Index);
       vlog("    hover: {0}", Hover.hasValue());
 
-      // FIXME: it'd be nice to include code completion, but it's too slow.
-      // Maybe in combination with a line restriction?
+      if (EnableCodeCompletion) {
+        Position EndPos = offsetToPosition(Inputs.Contents, End);
+        auto CC = codeComplete(File, EndPos, Preamble.get(), Inputs, CCOpts);
+        vlog("    code completion: {0}",
+             CC.Completions.empty() ? "<empty>" : CC.Completions[0].Name);
+      }
     }
   }
 };
@@ -243,7 +252,8 @@ public:
 
 bool check(llvm::StringRef File,
            llvm::function_ref<bool(const Position &)> ShouldCheckLine,
-           const ThreadsafeFS &TFS, const ClangdLSPServer::Options &Opts) {
+           const ThreadsafeFS &TFS, const ClangdLSPServer::Options &Opts,
+           bool EnableCodeCompletion) {
   llvm::SmallString<0> FakeFile;
   llvm::Optional<std::string> Contents;
   if (File.empty()) {
@@ -267,7 +277,7 @@ bool check(llvm::StringRef File,
   if (!C.buildCommand(TFS) || !C.buildInvocation(TFS, Contents) ||
       !C.buildAST())
     return false;
-  C.testLocationFeatures(ShouldCheckLine);
+  C.testLocationFeatures(ShouldCheckLine, EnableCodeCompletion);
 
   log("All checks completed, {0} errors", C.ErrCount);
   return C.ErrCount == 0;

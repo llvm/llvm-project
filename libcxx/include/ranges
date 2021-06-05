@@ -83,6 +83,11 @@ namespace std::ranges {
   template<class D>
     requires is_class_v<D> && same_as<D, remove_cv_t<D>>
   class view_interface;
+
+  // [range.empty], empty view
+  template<class T>
+    requires is_object_v<T>
+  class empty_view;
 }
 
 */
@@ -92,6 +97,7 @@ namespace std::ranges {
 #include <__ranges/concepts.h>
 #include <__ranges/data.h>
 #include <__ranges/empty.h>
+#include <__ranges/empty_view.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>

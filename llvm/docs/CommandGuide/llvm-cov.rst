@@ -52,9 +52,7 @@ To use :program:`llvm-cov gcov`, you must first build an instrumented version
 of your application that collects coverage data as it runs. Compile with the
 ``-fprofile-arcs`` and ``-ftest-coverage`` options to add the
 instrumentation. (Alternatively, you can use the ``--coverage`` option, which
-includes both of those other options.) You should compile with debugging
-information (``-g``) and without optimization (``-O0``); otherwise, the
-coverage data cannot be accurately mapped back to the source code.
+includes both of those other options.)
 
 At the time you compile the instrumented code, a ``.gcno`` data file will be
 generated for each object file. These ``.gcno`` files contain half of the
@@ -105,6 +103,10 @@ OPTIONS
 
  Display branch counts instead of probabilities (requires -b).
 
+.. option:: -m, --demangled-names
+
+ Demangle function names.
+
 .. option:: -f, --function-summaries
 
  Show a summary of coverage for each function instead of just one summary for
@@ -142,6 +144,19 @@ OPTIONS
  removed and ``..`` directories replaced by ``^`` characters. When used with
  the --long-file-names option, this applies to both the main file name and the
  included file name.
+
+.. option:: -r
+
+ Only dump files with relative paths or absolute paths with the prefix specified
+ by ``-s``.
+
+.. option:: -s=<string>
+
+ Source prefix to elide.
+
+.. option:: -t, --stdout
+
+ Print to stdout instead of producing ``.gcov`` files.
 
 .. option:: -u, --unconditional-branches
 

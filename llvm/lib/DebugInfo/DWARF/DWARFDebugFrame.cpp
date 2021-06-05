@@ -49,24 +49,27 @@ UnwindLocation UnwindLocation::createUndefined() { return {Undefined}; }
 UnwindLocation UnwindLocation::createSame() { return {Same}; }
 
 UnwindLocation UnwindLocation::createIsConstant(int32_t Value) {
-  return {Constant, InvalidRegisterNumber, Value, false};
+  return {Constant, InvalidRegisterNumber, Value, None, false};
 }
 
 UnwindLocation UnwindLocation::createIsCFAPlusOffset(int32_t Offset) {
-  return {CFAPlusOffset, InvalidRegisterNumber, Offset, false};
+  return {CFAPlusOffset, InvalidRegisterNumber, Offset, None, false};
 }
 
 UnwindLocation UnwindLocation::createAtCFAPlusOffset(int32_t Offset) {
-  return {CFAPlusOffset, InvalidRegisterNumber, Offset, true};
+  return {CFAPlusOffset, InvalidRegisterNumber, Offset, None, true};
 }
 
-UnwindLocation UnwindLocation::createIsRegisterPlusOffset(uint32_t RegNum,
-                                                          int32_t Offset) {
-  return {RegPlusOffset, RegNum, Offset, false};
+UnwindLocation
+UnwindLocation::createIsRegisterPlusOffset(uint32_t RegNum, int32_t Offset,
+                                           Optional<uint32_t> AddrSpace) {
+  return {RegPlusOffset, RegNum, Offset, AddrSpace, false};
 }
-UnwindLocation UnwindLocation::createAtRegisterPlusOffset(uint32_t RegNum,
-                                                          int32_t Offset) {
-  return {RegPlusOffset, RegNum, Offset, true};
+
+UnwindLocation
+UnwindLocation::createAtRegisterPlusOffset(uint32_t RegNum, int32_t Offset,
+                                           Optional<uint32_t> AddrSpace) {
+  return {RegPlusOffset, RegNum, Offset, AddrSpace, true};
 }
 
 UnwindLocation UnwindLocation::createIsDWARFExpression(DWARFExpression Expr) {
@@ -101,11 +104,13 @@ void UnwindLocation::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
     break;
   case RegPlusOffset:
     printRegister(OS, MRI, IsEH, RegNum);
-    if (Offset == 0)
+    if (Offset == 0 && !AddrSpace)
       break;
-    if (Offset > 0)
+    if (Offset >= 0)
       OS << "+";
     OS << Offset;
+    if (AddrSpace)
+      OS << " in addrspace" << *AddrSpace;
     break;
   case DWARFExpr:
     Expr->print(OS, DIDumpOptions(), MRI, nullptr, IsEH);
@@ -172,12 +177,6 @@ void UnwindRow::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
     OS << format("0x%" PRIx64 ": ", *Address);
   OS << "CFA=";
   CFAValue.dump(OS, MRI, IsEH);
-  if (CFAAddressSpace != 0) {
-    auto Offset = CFAValue.getOffset();
-    if (Offset == 0)
-      OS << " +" << Offset;
-    OS << " as" << CFAAddressSpace;
-  }
   if (RegLocs.hasLocations()) {
     OS << ": ";
     RegLocs.dump(OS, MRI, IsEH);
@@ -416,7 +415,7 @@ const char *CFIProgram::operandTypeString(CFIProgram::OperandType OT) {
 llvm::Expected<uint64_t>
 CFIProgram::Instruction::getOperandAsUnsigned(const CFIProgram &CFIP,
                                               uint32_t OperandIdx) const {
-  if (OperandIdx >= 3)
+  if (OperandIdx >= MaxOperands)
     return createStringError(errc::invalid_argument,
                              "operand index %" PRIu32 " is not valid",
                              OperandIdx);
@@ -461,7 +460,7 @@ CFIProgram::Instruction::getOperandAsUnsigned(const CFIProgram &CFIP,
 llvm::Expected<int64_t>
 CFIProgram::Instruction::getOperandAsSigned(const CFIProgram &CFIP,
                                             uint32_t OperandIdx) const {
-  if (OperandIdx >= 3)
+  if (OperandIdx >= MaxOperands)
     return createStringError(errc::invalid_argument,
                              "operand index %" PRIu32 " is not valid",
                              OperandIdx);
@@ -773,13 +772,12 @@ Error UnwindTable::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
       llvm::Expected<int64_t> Offset = Inst.getOperandAsSigned(CFIP, 1);
       if (!Offset)
         return Offset.takeError();
-      llvm::Expected<uint64_t> CFAAddrSpace =
+      llvm::Expected<uint32_t> CFAAddrSpace =
           Inst.getOperandAsUnsigned(CFIP, 2);
       if (!CFAAddrSpace)
         return CFAAddrSpace.takeError();
-      Row.getCFAValue() =
-          UnwindLocation::createIsRegisterPlusOffset(*RegNum, *Offset);
-      Row.setCFAAddressSpace(*CFAAddrSpace);
+      Row.getCFAValue() = UnwindLocation::createIsRegisterPlusOffset(
+          *RegNum, *Offset, *CFAAddrSpace);
       break;
     }
 
@@ -792,11 +790,12 @@ Error UnwindTable::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
   return Error::success();
 }
 
-ArrayRef<CFIProgram::OperandType[3]> CFIProgram::getOperandTypes() {
-  static OperandType OpTypes[DW_CFA_restore + 1][3];
+ArrayRef<CFIProgram::OperandType[CFIProgram::MaxOperands]>
+CFIProgram::getOperandTypes() {
+  static OperandType OpTypes[DW_CFA_restore + 1][MaxOperands];
   static bool Initialized = false;
   if (Initialized) {
-    return ArrayRef<OperandType[3]>(&OpTypes[0], DW_CFA_restore + 1);
+    return ArrayRef<OperandType[MaxOperands]>(&OpTypes[0], DW_CFA_restore + 1);
   }
   Initialized = true;
 
@@ -849,7 +848,7 @@ ArrayRef<CFIProgram::OperandType[3]> CFIProgram::getOperandTypes() {
 #undef DECLARE_OP1
 #undef DECLARE_OP2
 
-  return ArrayRef<OperandType[3]>(&OpTypes[0], DW_CFA_restore + 1);
+  return ArrayRef<OperandType[MaxOperands]>(&OpTypes[0], DW_CFA_restore + 1);
 }
 
 /// Print \p Opcode's operand number \p OperandIdx which has value \p Operand.
@@ -857,7 +856,7 @@ void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
                               const MCRegisterInfo *MRI, bool IsEH,
                               const Instruction &Instr, unsigned OperandIdx,
                               uint64_t Operand) const {
-  assert(OperandIdx < 3);
+  assert(OperandIdx < MaxOperands);
   uint8_t Opcode = Instr.Opcode;
   OperandType Type = getOperandTypes()[Opcode][OperandIdx];
 
@@ -905,7 +904,7 @@ void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
     printRegister(OS, MRI, IsEH, Operand);
     break;
   case OT_AddressSpace:
-    OS << format(" as%" PRId64, Operand);
+    OS << format(" in addrspace%" PRId64, Operand);
     break;
   case OT_Expression:
     assert(Instr.Expression && "missing DWARFExpression object");

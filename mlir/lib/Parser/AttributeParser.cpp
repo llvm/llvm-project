@@ -15,6 +15,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/IntegerSet.h"
+#include "mlir/Parser/AsmParserState.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Endian.h"
 
@@ -153,6 +154,13 @@ Attribute Parser::parseAttribute(Type type) {
 
   // Parse a symbol reference attribute.
   case Token::at_identifier: {
+    // When populating the parser state, this is a list of locations for all of
+    // the nested references.
+    SmallVector<llvm::SMRange> referenceLocations;
+    if (state.asmState)
+      referenceLocations.push_back(getToken().getLocRange());
+
+    // Parse the top-level reference.
     std::string nameStr = getToken().getSymbolReference();
     consumeToken(Token::at_identifier);
 
@@ -174,12 +182,21 @@ Attribute Parser::parseAttribute(Type type) {
         return Attribute();
       }
 
+      // If we are populating the assembly state, add the location for this
+      // reference.
+      if (state.asmState)
+        referenceLocations.push_back(getToken().getLocRange());
+
       std::string nameStr = getToken().getSymbolReference();
       consumeToken(Token::at_identifier);
       nestedRefs.push_back(SymbolRefAttr::get(getContext(), nameStr));
     }
+    SymbolRefAttr symbolRefAttr = builder.getSymbolRefAttr(nameStr, nestedRefs);
 
-    return builder.getSymbolRefAttr(nameStr, nestedRefs);
+    // If we are populating the assembly state, record this symbol reference.
+    if (state.asmState)
+      state.asmState->addUses(symbolRefAttr, referenceLocations);
+    return symbolRefAttr;
   }
 
   // Parse a 'unit' attribute.

@@ -4,7 +4,7 @@
 # CHECK:      .eh_frame contents:
 # CHECK:          FDE
 # CHECK-NEXT:     Format:       DWARF32
-# CHECK-NEXT:     DW_CFA_LLVM_def_aspace_cfa: EDX +0 as6
+# CHECK-NEXT:     DW_CFA_LLVM_def_aspace_cfa: EDX +0 in addrspace6
 # CHECK-NEXT:     DW_CFA_nop:
 
 .text
@@ -12,5 +12,5 @@
 .type  foo,@function
 foo:
  .cfi_startproc
-.cfi_llvm_def_aspace_cfa %edx, 0, 6
+ .cfi_llvm_def_aspace_cfa %edx, 0, 6
  .cfi_endproc

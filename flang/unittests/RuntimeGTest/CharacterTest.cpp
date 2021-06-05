@@ -19,6 +19,35 @@
 
 using namespace Fortran::runtime;
 
+using CharacterTypes = ::testing::Types<char, char16_t, char32_t>;
+
+// Helper for creating, allocating and filling up a descriptor with data from
+// raw character literals, converted to the CHAR type used by the test.
+template <typename CHAR>
+OwningPtr<Descriptor> CreateDescriptor(const std::vector<SubscriptValue> &shape,
+    const std::vector<const char *> &raw_strings) {
+  std::size_t length{std::strlen(raw_strings[0])};
+
+  OwningPtr<Descriptor> descriptor{Descriptor::Create(sizeof(CHAR), length,
+      nullptr, shape.size(), nullptr, CFI_attribute_allocatable)};
+  if ((shape.empty() ? descriptor->Allocate()
+                     : descriptor->Allocate(
+                           std::vector<SubscriptValue>(shape.size(), 1).data(),
+                           shape.data())) != 0) {
+    return nullptr;
+  }
+
+  std::size_t offset = 0;
+  for (const char *raw : raw_strings) {
+    std::basic_string<CHAR> converted{raw, raw + length};
+    std::copy(converted.begin(), converted.end(),
+        descriptor->OffsetElement<CHAR>(offset * length * sizeof(CHAR)));
+    ++offset;
+  }
+
+  return descriptor;
+}
+
 TEST(CharacterTests, AppendAndPad) {
   static constexpr int limitMax{8};
   static char buffer[limitMax];
@@ -51,6 +80,60 @@ TEST(CharacterTests, CharacterAppend1Overrun) {
   offset = RTNAME(CharacterAppend1)(buffer, limit, offset, "1234", bufferSize);
   ASSERT_EQ(offset, limit) << "CharacterAppend1 did not halt at limit = "
                            << limit << ", but at offset = " << offset;
+}
+
+// Test ADJUSTL() and ADJUSTR()
+template <typename CHAR> struct AdjustLRTests : public ::testing::Test {};
+TYPED_TEST_SUITE(AdjustLRTests, CharacterTypes, );
+
+struct AdjustLRTestCase {
+  const char *input, *output;
+};
+
+template <typename CHAR>
+void RunAdjustLRTest(const char *which,
+    const std::function<void(
+        Descriptor &, const Descriptor &, const char *, int)> &adjust,
+    const char *inputRaw, const char *outputRaw) {
+  OwningPtr<Descriptor> input{CreateDescriptor<CHAR>({}, {inputRaw})};
+  ASSERT_NE(input, nullptr);
+  ASSERT_TRUE(input->IsAllocated());
+
+  StaticDescriptor<1> outputStaticDescriptor;
+  Descriptor &output{outputStaticDescriptor.descriptor()};
+
+  adjust(output, *input, /*sourceFile=*/nullptr, /*sourceLine=*/0);
+  std::basic_string<CHAR> got{
+      output.OffsetElement<CHAR>(), std::strlen(inputRaw)};
+  std::basic_string<CHAR> expect{outputRaw, outputRaw + std::strlen(outputRaw)};
+  ASSERT_EQ(got, expect) << which << "('" << inputRaw
+                         << "') for CHARACTER(kind=" << sizeof(CHAR) << ")";
+}
+
+TYPED_TEST(AdjustLRTests, AdjustL) {
+  static std::vector<AdjustLRTestCase> testcases{
+      {"     where should the spaces be?", "where should the spaces be?     "},
+      {"   leading and trailing whitespaces   ",
+          "leading and trailing whitespaces      "},
+      {"shouldn't change", "shouldn't change"},
+  };
+
+  for (const auto &t : testcases) {
+    RunAdjustLRTest<TypeParam>("Adjustl", RTNAME(Adjustl), t.input, t.output);
+  }
+}
+
+TYPED_TEST(AdjustLRTests, AdjustR) {
+  static std::vector<AdjustLRTestCase> testcases{
+      {"where should the spaces be?   ", "   where should the spaces be?"},
+      {" leading and trailing whitespaces ",
+          "  leading and trailing whitespaces"},
+      {"shouldn't change", "shouldn't change"},
+  };
+
+  for (const auto &t : testcases) {
+    RunAdjustLRTest<TypeParam>("Adjustr", RTNAME(Adjustr), t.input, t.output);
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -110,7 +193,6 @@ struct CharacterComparisonTests : public ::testing::Test {
   ComparisonFuncTy<CHAR> characterComparisonFunc;
 };
 
-using CharacterTypes = ::testing::Types<char, char16_t, char32_t>;
 TYPED_TEST_SUITE(CharacterComparisonTests, CharacterTypes, );
 
 TYPED_TEST(CharacterComparisonTests, CompareCharacters) {
@@ -145,33 +227,6 @@ struct ExtremumTestCase {
   std::vector<SubscriptValue> shape; // Empty = scalar, non-empty = array.
   std::vector<const char *> x, y, expect;
 };
-
-// Helper for creating, allocating and filling up a descriptor with data from
-// raw character literals, converted to the CHAR type used by the test.
-template <typename CHAR>
-OwningPtr<Descriptor> CreateDescriptor(const std::vector<SubscriptValue> &shape,
-    const std::vector<const char *> &raw_strings) {
-  std::size_t length{std::strlen(raw_strings[0])};
-
-  OwningPtr<Descriptor> descriptor{Descriptor::Create(sizeof(CHAR), length,
-      nullptr, shape.size(), nullptr, CFI_attribute_allocatable)};
-  if ((shape.empty() ? descriptor->Allocate()
-                     : descriptor->Allocate(
-                           std::vector<SubscriptValue>(shape.size(), 1).data(),
-                           shape.data())) != 0) {
-    return nullptr;
-  }
-
-  std::size_t offset = 0;
-  for (const char *raw : raw_strings) {
-    std::basic_string<CHAR> converted{raw, raw + length};
-    std::copy(converted.begin(), converted.end(),
-        descriptor->OffsetElement<CHAR>(offset * length * sizeof(CHAR)));
-    ++offset;
-  }
-
-  return descriptor;
-}
 
 template <typename CHAR>
 void RunExtremumTests(const char *which,

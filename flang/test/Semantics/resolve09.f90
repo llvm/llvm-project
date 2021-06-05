@@ -18,6 +18,7 @@ subroutine s
   !ERROR: Cannot call function 'f' like a subroutine
   call f
   !ERROR: Cannot call subroutine 's' like a function
+  !ERROR: Function result characteristics are not known
   i = s()
 contains
   function f()

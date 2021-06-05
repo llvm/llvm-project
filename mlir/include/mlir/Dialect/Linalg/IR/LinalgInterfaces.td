@@ -1424,7 +1424,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     /// `linalgOp`.
     Operation::operand_range getAssumedNonShapedOperands() {
       Operation::operand_range res{
-        getOperation()->getOperands().begin() + getNumShapedOperands(),
+        getOperation()->getOperands().begin() + getNumInputsAndOutputs(),
         getOperation()->getOperands().end()};
       for (Type t : TypeRange{res}) {
         (void)t;

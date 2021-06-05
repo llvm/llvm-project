@@ -1189,4 +1189,139 @@ define void @atomic_store_relaxed_64(i64* %p, i32 %off32, i64 %val) #0 {
   ret void
 }
 
+define i32 @load_zext(i8* %p8, i16* %p16) {
+; CHECK-NOLSE-O1-LABEL: load_zext:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:    ldarb w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    ldrh w9, [x1]
+; CHECK-NOLSE-O1-NEXT:    add w0, w9, w8, uxtb
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: load_zext:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    ldarb w9, [x0]
+; CHECK-NOLSE-O0-NEXT:    ldrh w8, [x1]
+; CHECK-NOLSE-O0-NEXT:    add w0, w8, w9, uxtb
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: load_zext:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    ldarb w8, [x0]
+; CHECK-LSE-O1-NEXT:    ldrh w9, [x1]
+; CHECK-LSE-O1-NEXT:    add w0, w9, w8, uxtb
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: load_zext:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    ldarb w9, [x0]
+; CHECK-LSE-O0-NEXT:    ldrh w8, [x1]
+; CHECK-LSE-O0-NEXT:    add w0, w8, w9, uxtb
+; CHECK-LSE-O0-NEXT:    ret
+  %val1.8 = load atomic i8, i8* %p8 acquire, align 1
+  %val1 = zext i8 %val1.8 to i32
+
+  %val2.16 = load atomic i16, i16* %p16 unordered, align 2
+  %val2 = zext i16 %val2.16 to i32
+
+  %res = add i32 %val1, %val2
+  ret i32 %res
+}
+
+define { i32, i64 } @load_acq(i32* %p32, i64* %p64) {
+; CHECK-NOLSE-LABEL: load_acq:
+; CHECK-NOLSE:       ; %bb.0:
+; CHECK-NOLSE-NEXT:    ldar w0, [x0]
+; CHECK-NOLSE-NEXT:    ldar x1, [x1]
+; CHECK-NOLSE-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: load_acq:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    ldar w0, [x0]
+; CHECK-LSE-O1-NEXT:    ldar x1, [x1]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: load_acq:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    ldar w0, [x0]
+; CHECK-LSE-O0-NEXT:    ldar x1, [x1]
+; CHECK-LSE-O0-NEXT:    ret
+  %val32 = load atomic i32, i32* %p32 seq_cst, align 4
+  %tmp = insertvalue { i32, i64 } undef, i32 %val32, 0
+
+  %val64 = load atomic i64, i64* %p64 acquire, align 8
+  %res = insertvalue { i32, i64 } %tmp, i64 %val64, 1
+
+  ret { i32, i64 } %res
+}
+
+define i32 @load_sext(i8* %p8, i16* %p16) {
+; CHECK-NOLSE-O1-LABEL: load_sext:
+; CHECK-NOLSE-O1:       ; %bb.0:
+; CHECK-NOLSE-O1-NEXT:    ldarb w8, [x0]
+; CHECK-NOLSE-O1-NEXT:    ldrh w9, [x1]
+; CHECK-NOLSE-O1-NEXT:    sxth w9, w9
+; CHECK-NOLSE-O1-NEXT:    add w0, w9, w8, sxtb
+; CHECK-NOLSE-O1-NEXT:    ret
+;
+; CHECK-NOLSE-O0-LABEL: load_sext:
+; CHECK-NOLSE-O0:       ; %bb.0:
+; CHECK-NOLSE-O0-NEXT:    ldarb w9, [x0]
+; CHECK-NOLSE-O0-NEXT:    ldrh w8, [x1]
+; CHECK-NOLSE-O0-NEXT:    sxth w8, w8
+; CHECK-NOLSE-O0-NEXT:    add w0, w8, w9, sxtb
+; CHECK-NOLSE-O0-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: load_sext:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    ldarb w8, [x0]
+; CHECK-LSE-O1-NEXT:    ldrh w9, [x1]
+; CHECK-LSE-O1-NEXT:    sxth w9, w9
+; CHECK-LSE-O1-NEXT:    add w0, w9, w8, sxtb
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: load_sext:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    ldarb w9, [x0]
+; CHECK-LSE-O0-NEXT:    ldrh w8, [x1]
+; CHECK-LSE-O0-NEXT:    sxth w8, w8
+; CHECK-LSE-O0-NEXT:    add w0, w8, w9, sxtb
+; CHECK-LSE-O0-NEXT:    ret
+  %val1.8 = load atomic i8, i8* %p8 acquire, align 1
+  %val1 = sext i8 %val1.8 to i32
+
+  %val2.16 = load atomic i16, i16* %p16 unordered, align 2
+  %val2 = sext i16 %val2.16 to i32
+
+  %res = add i32 %val1, %val2
+  ret i32 %res
+}
+
+define void @store_trunc(i32 %val, i8* %p8, i16* %p16) {
+; CHECK-NOLSE-LABEL: store_trunc:
+; CHECK-NOLSE:       ; %bb.0:
+; CHECK-NOLSE-NEXT:    stlrb w0, [x1]
+; CHECK-NOLSE-NEXT:    strh w0, [x2]
+; CHECK-NOLSE-NEXT:    ret
+;
+; CHECK-LSE-O1-LABEL: store_trunc:
+; CHECK-LSE-O1:       ; %bb.0:
+; CHECK-LSE-O1-NEXT:    stlrb w0, [x1]
+; CHECK-LSE-O1-NEXT:    strh w0, [x2]
+; CHECK-LSE-O1-NEXT:    ret
+;
+; CHECK-LSE-O0-LABEL: store_trunc:
+; CHECK-LSE-O0:       ; %bb.0:
+; CHECK-LSE-O0-NEXT:    stlrb w0, [x1]
+; CHECK-LSE-O0-NEXT:    strh w0, [x2]
+; CHECK-LSE-O0-NEXT:    ret
+  %val8 = trunc i32 %val to i8
+  store atomic i8 %val8, i8* %p8 seq_cst, align 1
+
+  %val16 = trunc i32 %val to i16
+  store atomic i16 %val16, i16* %p16 monotonic, align 2
+
+  ret void
+}
+
+
 attributes #0 = { nounwind }

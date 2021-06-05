@@ -4742,41 +4742,37 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   }
 
   // Constant fold unary operations with a vector integer or float operand.
-  if (BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(Operand)) {
-    if (BV->isConstant()) {
-      switch (Opcode) {
-      default:
-        // FIXME: Entirely reasonable to perform folding of other unary
-        // operations here as the need arises.
-        break;
-      case ISD::FNEG:
-      case ISD::FABS:
-      case ISD::FCEIL:
-      case ISD::FTRUNC:
-      case ISD::FFLOOR:
-      case ISD::FP_EXTEND:
-      case ISD::FP_TO_SINT:
-      case ISD::FP_TO_UINT:
-      case ISD::TRUNCATE:
-      case ISD::ANY_EXTEND:
-      case ISD::ZERO_EXTEND:
-      case ISD::SIGN_EXTEND:
-      case ISD::UINT_TO_FP:
-      case ISD::SINT_TO_FP:
-      case ISD::ABS:
-      case ISD::BITREVERSE:
-      case ISD::BSWAP:
-      case ISD::CTLZ:
-      case ISD::CTLZ_ZERO_UNDEF:
-      case ISD::CTTZ:
-      case ISD::CTTZ_ZERO_UNDEF:
-      case ISD::CTPOP: {
-        SDValue Ops = { Operand };
-        if (SDValue Fold = FoldConstantVectorArithmetic(Opcode, DL, VT, Ops))
-          return Fold;
-      }
-      }
-    }
+  switch (Opcode) {
+  default:
+    // FIXME: Entirely reasonable to perform folding of other unary
+    // operations here as the need arises.
+    break;
+  case ISD::FNEG:
+  case ISD::FABS:
+  case ISD::FCEIL:
+  case ISD::FTRUNC:
+  case ISD::FFLOOR:
+  case ISD::FP_EXTEND:
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
+  case ISD::TRUNCATE:
+  case ISD::ANY_EXTEND:
+  case ISD::ZERO_EXTEND:
+  case ISD::SIGN_EXTEND:
+  case ISD::UINT_TO_FP:
+  case ISD::SINT_TO_FP:
+  case ISD::ABS:
+  case ISD::BITREVERSE:
+  case ISD::BSWAP:
+  case ISD::CTLZ:
+  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTTZ:
+  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTPOP: {
+    SDValue Ops = {Operand};
+    if (SDValue Fold = FoldConstantVectorArithmetic(Opcode, DL, VT, Ops))
+      return Fold;
+  }
   }
 
   unsigned OpOpcode = Operand.getNode()->getOpcode();
@@ -5292,30 +5288,26 @@ SDValue SelectionDAG::FoldConstantVectorArithmetic(unsigned Opcode,
   if (!VT.isVector())
     return SDValue();
 
-  // TODO: All the folds below are performed lane-by-lane and assume a fixed
-  // vector width, however we should be able to do constant folds involving
-  // splat vector nodes too.
-  if (VT.isScalableVector())
-    return SDValue();
+  ElementCount NumElts = VT.getVectorElementCount();
 
-  // From this point onwards all vectors are assumed to be fixed width.
-  unsigned NumElts = VT.getVectorNumElements();
-
-  auto IsScalarOrSameVectorSize = [&](const SDValue &Op) {
+  auto IsScalarOrSameVectorSize = [NumElts](const SDValue &Op) {
     return !Op.getValueType().isVector() ||
-           Op.getValueType().getVectorNumElements() == NumElts;
+           Op.getValueType().getVectorElementCount() == NumElts;
   };
 
-  auto IsConstantBuildVectorOrUndef = [&](const SDValue &Op) {
+  auto IsConstantBuildVectorSplatVectorOrUndef = [](const SDValue &Op) {
+    APInt SplatVal;
     BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(Op);
-    return (Op.isUndef()) || (Op.getOpcode() == ISD::CONDCODE) ||
-           (BV && BV->isConstant());
+    return Op.isUndef() || Op.getOpcode() == ISD::CONDCODE ||
+           (BV && BV->isConstant()) ||
+           (Op.getOpcode() == ISD::SPLAT_VECTOR &&
+            ISD::isConstantSplatVector(Op.getNode(), SplatVal));
   };
 
   // All operands must be vector types with the same number of elements as
   // the result type and must be either UNDEF or a build vector of constant
   // or UNDEF scalars.
-  if (!llvm::all_of(Ops, IsConstantBuildVectorOrUndef) ||
+  if (!llvm::all_of(Ops, IsConstantBuildVectorSplatVectorOrUndef) ||
       !llvm::all_of(Ops, IsScalarOrSameVectorSize))
     return SDValue();
 
@@ -5332,14 +5324,19 @@ SDValue SelectionDAG::FoldConstantVectorArithmetic(unsigned Opcode,
       return SDValue();
   }
 
+  // For scalable vector types we know we're dealing with SPLAT_VECTORs. We
+  // only have one operand to check. For fixed-length vector types we may have
+  // a combination of BUILD_VECTOR and SPLAT_VECTOR.
+  unsigned NumOperands = NumElts.isScalable() ? 1 : NumElts.getFixedValue();
+
   // Constant fold each scalar lane separately.
   SmallVector<SDValue, 4> ScalarResults;
-  for (unsigned i = 0; i != NumElts; i++) {
+  for (unsigned I = 0; I != NumOperands; I++) {
     SmallVector<SDValue, 4> ScalarOps;
     for (SDValue Op : Ops) {
       EVT InSVT = Op.getValueType().getScalarType();
-      BuildVectorSDNode *InBV = dyn_cast<BuildVectorSDNode>(Op);
-      if (!InBV) {
+      if (Op.getOpcode() != ISD::BUILD_VECTOR &&
+          Op.getOpcode() != ISD::SPLAT_VECTOR) {
         // We've checked that this is UNDEF or a constant of some kind.
         if (Op.isUndef())
           ScalarOps.push_back(getUNDEF(InSVT));
@@ -5348,7 +5345,8 @@ SDValue SelectionDAG::FoldConstantVectorArithmetic(unsigned Opcode,
         continue;
       }
 
-      SDValue ScalarOp = InBV->getOperand(i);
+      SDValue ScalarOp =
+          Op.getOperand(Op.getOpcode() == ISD::SPLAT_VECTOR ? 0 : I);
       EVT ScalarVT = ScalarOp.getValueType();
 
       // Build vector (integer) scalar operands may need implicit
@@ -5373,7 +5371,8 @@ SDValue SelectionDAG::FoldConstantVectorArithmetic(unsigned Opcode,
     ScalarResults.push_back(ScalarResult);
   }
 
-  SDValue V = getBuildVector(VT, DL, ScalarResults);
+  SDValue V = NumElts.isScalable() ? getSplatVector(VT, DL, ScalarResults[0])
+                                   : getBuildVector(VT, DL, ScalarResults);
   NewSDValueDbgMsg(V, "New node fold constant vector: ", this);
   return V;
 }

@@ -357,10 +357,6 @@ public:
   void setDiscriminatorMaskedBitFrom(FSDiscriminatorPass P) {
     MaskedBitFrom = getFSPassBitEnd(P);
   }
-  /// Set the bits for using base discriminators.
-  void setBaseDiscriminatorMask() {
-    setDiscriminatorMaskedBitFrom(FSDiscriminatorPass::Base);
-  }
 
   /// Get the bitmask the discriminators: For FS profiles, return the bit
   /// mask for this pass. For non FS profiles, return (unsigned) -1.
@@ -443,14 +439,18 @@ public:
 
   /// Create a sample profile reader appropriate to the file format.
   /// Create a remapper underlying if RemapFilename is not empty.
+  /// Parameter P specifies the FSDiscriminatorPass.
   static ErrorOr<std::unique_ptr<SampleProfileReader>>
   create(const std::string Filename, LLVMContext &C,
+         FSDiscriminatorPass P = FSDiscriminatorPass::Base,
          const std::string RemapFilename = "");
 
   /// Create a sample profile reader from the supplied memory buffer.
   /// Create a remapper underlying if RemapFilename is not empty.
+  /// Parameter P specifies the FSDiscriminatorPass.
   static ErrorOr<std::unique_ptr<SampleProfileReader>>
   create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C,
+         FSDiscriminatorPass P = FSDiscriminatorPass::Base,
          const std::string RemapFilename = "");
 
   /// Return the profile summary.

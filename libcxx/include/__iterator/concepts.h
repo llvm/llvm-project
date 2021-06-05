@@ -168,6 +168,10 @@ concept contiguous_iterator =
     { _VSTD::to_address(__i) } -> same_as<add_pointer_t<iter_reference_t<_Ip>>>;
   };
 
+
+template<class _Ip>
+concept __has_arrow = input_iterator<_Ip> && (is_pointer_v<_Ip> || requires(_Ip __i) { __i.operator->(); });
+
 // clang-format on
 
 #endif // !defined(_LIBCPP_HAS_NO_RANGES)

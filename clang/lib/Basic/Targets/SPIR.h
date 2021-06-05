@@ -117,6 +117,11 @@ public:
     return TargetInfo::VoidPtrBuiltinVaList;
   }
 
+  Optional<unsigned>
+  getDWARFAddressSpace(unsigned AddressSpace) const override {
+    return AddressSpace;
+  }
+
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
     return (CC == CC_SpirFunction || CC == CC_OpenCLKernel) ? CCCR_OK
                                                             : CCCR_Warning;

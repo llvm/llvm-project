@@ -20,10 +20,6 @@ target_link_libraries(lld
   lldWasm
   )
 
-if(LLVM_HAVE_LIBXAR)
-  target_link_libraries(lld PRIVATE ${XAR_LIB})
-endif()
-
 install(TARGETS lld
   RUNTIME DESTINATION bin)
 
