@@ -48,15 +48,16 @@ enum class SparseVectorizationStrategy {
 /// Sparsification options.
 struct SparsificationOptions {
   SparsificationOptions(SparseParallelizationStrategy p,
-                        SparseVectorizationStrategy v, unsigned vl)
-      : parallelizationStrategy(p), vectorizationStrategy(v), vectorLength(vl) {
-  }
+                        SparseVectorizationStrategy v, unsigned vl, bool e)
+      : parallelizationStrategy(p), vectorizationStrategy(v), vectorLength(vl),
+        enableSIMDIndex32(e) {}
   SparsificationOptions()
       : SparsificationOptions(SparseParallelizationStrategy::kNone,
-                              SparseVectorizationStrategy::kNone, 1u) {}
+                              SparseVectorizationStrategy::kNone, 1u, false) {}
   SparseParallelizationStrategy parallelizationStrategy;
   SparseVectorizationStrategy vectorizationStrategy;
   unsigned vectorLength;
+  bool enableSIMDIndex32;
 };
 
 /// Sets up sparsification rewriting rules with the given options.

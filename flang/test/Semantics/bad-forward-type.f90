@@ -90,3 +90,10 @@ subroutine s9
     integer, kind :: n = 3
   end type
 end subroutine s9
+
+subroutine s10
+  type t
+    !ERROR: The derived type 'undef' has not been defined
+    type(undef), pointer :: y
+  end type
+end subroutine s10

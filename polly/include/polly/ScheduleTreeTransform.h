@@ -13,6 +13,7 @@
 #ifndef POLLY_SCHEDULETREETRANSFORM_H
 #define POLLY_SCHEDULETREETRANSFORM_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "isl/isl-noexceptions.h"
 #include <cassert>
@@ -163,6 +164,65 @@ isl::schedule applyFullUnroll(isl::schedule_node BandToUnroll);
 
 /// Replace the AST band @p BandToUnroll by a partially unrolled equivalent.
 isl::schedule applyPartialUnroll(isl::schedule_node BandToUnroll, int Factor);
+
+/// Build the desired set of partial tile prefixes.
+///
+/// We build a set of partial tile prefixes, which are prefixes of the vector
+/// loop that have exactly VectorWidth iterations.
+///
+/// 1. Drop all constraints involving the dimension that represents the
+///    vector loop.
+/// 2. Constrain the last dimension to get a set, which has exactly VectorWidth
+///    iterations.
+/// 3. Subtract loop domain from it, project out the vector loop dimension and
+///    get a set that contains prefixes, which do not have exactly VectorWidth
+///    iterations.
+/// 4. Project out the vector loop dimension of the set that was build on the
+///    first step and subtract the set built on the previous step to get the
+///    desired set of prefixes.
+///
+/// @param ScheduleRange A range of a map, which describes a prefix schedule
+///                      relation.
+isl::set getPartialTilePrefixes(isl::set ScheduleRange, int VectorWidth);
+
+/// Create an isl::union_set, which describes the isolate option based on
+/// IsolateDomain.
+///
+/// @param IsolateDomain An isl::set whose @p OutDimsNum last dimensions should
+///                      belong to the current band node.
+/// @param OutDimsNum    A number of dimensions that should belong to
+///                      the current band node.
+isl::union_set getIsolateOptions(isl::set IsolateDomain, isl_size OutDimsNum);
+
+/// Create an isl::union_set, which describes the specified option for the
+/// dimension of the current node.
+///
+/// @param Ctx    An isl::ctx, which is used to create the isl::union_set.
+/// @param Option The name of the option.
+isl::union_set getDimOptions(isl::ctx Ctx, const char *Option);
+
+/// Tile a schedule node.
+///
+/// @param Node            The node to tile.
+/// @param Identifier      An name that identifies this kind of tiling and
+///                        that is used to mark the tiled loops in the
+///                        generated AST.
+/// @param TileSizes       A vector of tile sizes that should be used for
+///                        tiling.
+/// @param DefaultTileSize A default tile size that is used for dimensions
+///                        that are not covered by the TileSizes vector.
+isl::schedule_node tileNode(isl::schedule_node Node, const char *Identifier,
+                            llvm::ArrayRef<int> TileSizes, int DefaultTileSize);
+
+/// Tile a schedule node and unroll point loops.
+///
+/// @param Node            The node to register tile.
+/// @param TileSizes       A vector of tile sizes that should be used for
+///                        tiling.
+/// @param DefaultTileSize A default tile size that is used for dimensions
+isl::schedule_node applyRegisterTiling(isl::schedule_node Node,
+                                       llvm::ArrayRef<int> TileSizes,
+                                       int DefaultTileSize);
 
 } // namespace polly
 

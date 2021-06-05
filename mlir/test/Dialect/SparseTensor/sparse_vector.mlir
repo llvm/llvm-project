@@ -4,6 +4,8 @@
 // RUN:   FileCheck %s --check-prefix=CHECK-VEC1
 // RUN: mlir-opt %s -sparsification="vectorization-strategy=2 vl=16" | \
 // RUN:   FileCheck %s --check-prefix=CHECK-VEC2
+// RUN: mlir-opt %s -sparsification="vectorization-strategy=2 vl=16 enable-simd-index32=true" | \
+// RUN:   FileCheck %s --check-prefix=CHECK-VEC3
 
 #DenseVector = #sparse_tensor.encoding<{ dimLevelType = [ "dense" ] }>
 
@@ -147,6 +149,27 @@ func @scale_d(%arga: tensor<1024xf32, #DenseVector>, %b: f32, %argx: tensor<1024
 // CHECK-VEC2:         vector.scatter %{{.*}}[%[[c0]]] [%[[zi]]], %[[mask]], %[[m]] : memref<1024xf32>, vector<16xi64>, vector<16xi1>, vector<16xf32>
 // CHECK-VEC2:       }
 // CHECK-VEC2:       return
+//
+// CHECK-VEC3-LABEL: func @mul_s
+// CHECK-VEC3-DAG:   %[[c0:.*]] = constant 0 : index
+// CHECK-VEC3-DAG:   %[[c1:.*]] = constant 1 : index
+// CHECK-VEC3-DAG:   %[[c16:.*]] = constant 16 : index
+// CHECK-VEC3:       %[[p:.*]] = memref.load %{{.*}}[%[[c0]]] : memref<?xi32>
+// CHECK-VEC3:       %[[a:.*]] = zexti %[[p]] : i32 to i64
+// CHECK-VEC3:       %[[q:.*]] = index_cast %[[a]] : i64 to index
+// CHECK-VEC3:       %[[r:.*]] = memref.load %{{.*}}[%[[c1]]] : memref<?xi32>
+// CHECK-VEC3:       %[[b:.*]] = zexti %[[r]] : i32 to i64
+// CHECK-VEC3:       %[[s:.*]] = index_cast %[[b]] : i64 to index
+// CHECK-VEC3:       scf.for %[[i:.*]] = %[[q]] to %[[s]] step %[[c16]] {
+// CHECK-VEC3:         %[[sub:.*]] = subi %{{.*}}, %[[i]] : index
+// CHECK-VEC3:         %[[mask:.*]] = vector.create_mask %[[sub]] : vector<16xi1>
+// CHECK-VEC3:         %[[li:.*]] = vector.maskedload %{{.*}}[%[[i]]], %[[mask]], %{{.*}} : memref<?xi32>, vector<16xi1>, vector<16xi32> into vector<16xi32>
+// CHECK-VEC3:         %[[la:.*]] = vector.maskedload %{{.*}}[%[[i]]], %[[mask]], %{{.*}} : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+// CHECK-VEC3:         %[[lb:.*]] = vector.gather %{{.*}}[%[[c0]]] [%[[li]]], %[[mask]], %{{.*}} : memref<1024xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+// CHECK-VEC3:         %[[m:.*]] = mulf %[[la]], %[[lb]] : vector<16xf32>
+// CHECK-VEC3:         vector.scatter %{{.*}}[%[[c0]]] [%[[li]]], %[[mask]], %[[m]] : memref<1024xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
+// CHECK-VEC3:       }
+// CHECK-VEC3:       return
 //
 func @mul_s(%arga: tensor<1024xf32, #SparseVector>, %argb: tensor<1024xf32>, %argx: tensor<1024xf32>) -> tensor<1024xf32> {
   %0 = linalg.generic #trait_mul_s
@@ -309,6 +332,31 @@ func @reduction_d(%arga: tensor<1024xf32, #DenseVector>, %argb: tensor<1024xf32>
 // CHECK-VEC2:         }
 // CHECK-VEC2:       }
 // CHECK-VEC2:       return
+//
+// CHECK-VEC3-LABEL: func @mul_ds
+// CHECK-VEC3-DAG:   %[[c0:.*]] = constant 0 : index
+// CHECK-VEC3-DAG:   %[[c1:.*]] = constant 1 : index
+// CHECK-VEC3-DAG:   %[[c16:.*]] = constant 16 : index
+// CHECK-VEC3-DAG:   %[[c512:.*]] = constant 512 : index
+// CHECK-VEC3:       scf.for %[[i:.*]] = %[[c0]] to %[[c512]] step %[[c1]] {
+// CHECK-VEC3:         %[[p:.*]] = memref.load %{{.*}}[%[[i]]] : memref<?xi32>
+// CHECK-VEC3:         %[[a:.*]] = zexti %[[p]] : i32 to i64
+// CHECK-VEC3:         %[[q:.*]] = index_cast %[[a]] : i64 to index
+// CHECK-VEC3:         %[[a:.*]] = addi %[[i]], %[[c1]] : index
+// CHECK-VEC3:         %[[r:.*]] = memref.load %{{.*}}[%[[a]]] : memref<?xi32>
+// CHECK-VEC3:         %[[b:.*]] = zexti %[[r]] : i32 to i64
+// CHECK-VEC3:         %[[s:.*]] = index_cast %[[b]] : i64 to index
+// CHECK-VEC3:         scf.for %[[j:.*]] = %[[q]] to %[[s]] step %[[c16]] {
+// CHECK-VEC3:           %[[sub:.*]] = subi %[[s]], %[[j]] : index
+// CHECK-VEC3:           %[[mask:.*]] = vector.create_mask %[[sub]] : vector<16xi1>
+// CHECK-VEC3:           %[[lj:.*]] = vector.maskedload %{{.*}}[%[[j]]], %[[mask]], %{{.*}} : memref<?xi32>, vector<16xi1>, vector<16xi32> into vector<16xi32>
+// CHECK-VEC3:           %[[la:.*]] = vector.maskedload %{{.*}}[%[[j]]], %[[mask]], %{{.*}} : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+// CHECK-VEC3:           %[[lb:.*]] = vector.gather %{{.*}}[%[[i]], %[[c0]]] [%[[lj]]], %[[mask]], %{{.*}} : memref<512x1024xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+// CHECK-VEC3:           %[[m:.*]] = mulf %[[la]], %[[lb]] : vector<16xf32>
+// CHECK-VEC3:           vector.scatter %{{.*}}[%[[i]], %[[c0]]] [%[[lj]]], %[[mask]], %[[m]] : memref<512x1024xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32>
+// CHECK-VEC3:         }
+// CHECK-VEC3:       }
+// CHECK-VEC3:       return
 //
 func @mul_ds(%arga: tensor<512x1024xf32, #SparseMatrix>, %argb: tensor<512x1024xf32>, %argx: tensor<512x1024xf32>) -> tensor<512x1024xf32> {
   %0 = linalg.generic #trait_mul_ds
