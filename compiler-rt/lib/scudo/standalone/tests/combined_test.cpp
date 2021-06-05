@@ -559,15 +559,6 @@ TEST(ScudoCombinedTest, DeathCombined) {
   EXPECT_DEATH(Allocator->getUsableSize(P), "");
 }
 
-// Ensure that releaseToOS can be called prior to any other allocator
-// operation without issue.
-TEST(ScudoCombinedTest, ReleaseToOS) {
-  using AllocatorT = TestAllocator<DeathConfig>;
-  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
-
-  Allocator->releaseToOS();
-}
-
 // Verify that when a region gets full, the allocator will still manage to
 // fulfill the allocation through a larger size class.
 TEST(ScudoCombinedTest, FullRegion) {
@@ -600,10 +591,15 @@ TEST(ScudoCombinedTest, FullRegion) {
   EXPECT_EQ(FailedAllocationsCount, 0U);
 }
 
-TEST(ScudoCombinedTest, OddEven) {
-  using AllocatorT = TestAllocator<scudo::AndroidConfig>;
-  using SizeClassMap = AllocatorT::PrimaryT::SizeClassMap;
-  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+// Ensure that releaseToOS can be called prior to any other allocator
+// operation without issue.
+SCUDO_TYPED_TEST(ScudoCombinedTest, ReleaseToOS) {
+  auto *Allocator = this->Allocator.get();
+  Allocator->releaseToOS();
+}
+
+SCUDO_TYPED_TEST(ScudoCombinedTest, OddEven) {
+  auto *Allocator = this->Allocator.get();
 
   if (!Allocator->useMemoryTaggingTestOnly())
     return;
@@ -614,6 +610,7 @@ TEST(ScudoCombinedTest, OddEven) {
     EXPECT_NE(Tag1 % 2, Tag2 % 2);
   };
 
+  using SizeClassMap = typename TypeParam::Primary::SizeClassMap;
   for (scudo::uptr ClassId = 1U; ClassId <= SizeClassMap::LargestClassId;
        ClassId++) {
     const scudo::uptr Size = SizeClassMap::getSizeByClassId(ClassId);
@@ -639,10 +636,8 @@ TEST(ScudoCombinedTest, OddEven) {
   }
 }
 
-TEST(ScudoCombinedTest, DisableMemInit) {
-  using AllocatorT = TestAllocator<scudo::AndroidConfig>;
-  using SizeClassMap = AllocatorT::PrimaryT::SizeClassMap;
-  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+SCUDO_TYPED_TEST(ScudoCombinedTest, DisableMemInit) {
+  auto *Allocator = this->Allocator.get();
 
   std::vector<void *> Ptrs(65536, nullptr);
 
@@ -654,6 +649,7 @@ TEST(ScudoCombinedTest, DisableMemInit) {
   // expected. This is tricky to ensure when MTE is enabled, so this test tries
   // to exercise the relevant code on our MTE path.
   for (scudo::uptr ClassId = 1U; ClassId <= 8; ClassId++) {
+    using SizeClassMap = typename TypeParam::Primary::SizeClassMap;
     const scudo::uptr Size =
         SizeClassMap::getSizeByClassId(ClassId) - scudo::Chunk::getHeaderSize();
     if (Size < 8)
