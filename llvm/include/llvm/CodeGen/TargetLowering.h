@@ -40,7 +40,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -72,6 +71,7 @@ class FunctionLoweringInfo;
 class GlobalValue;
 class GISelKnownBits;
 class IntrinsicInst;
+class IRBuilderBase;
 struct KnownBits;
 class LegacyDivergenceAnalysis;
 class LLVMContext;
@@ -1770,7 +1770,7 @@ public:
   /// returns the address of that location. Otherwise, returns nullptr.
   /// DEPRECATED: please override useLoadStackGuardNode and customize
   ///             LOAD_STACK_GUARD, or customize \@llvm.stackguard().
-  virtual Value *getIRStackGuard(IRBuilder<> &IRB) const;
+  virtual Value *getIRStackGuard(IRBuilderBase &IRB) const;
 
   /// Inserts necessary declarations for SSP (stack protection) purpose.
   /// Should be used only when getIRStackGuard returns nullptr.
@@ -1800,12 +1800,12 @@ public:
   }
 
 protected:
-  Value *getDefaultSafeStackPointerLocation(IRBuilder<> &IRB,
+  Value *getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
                                             bool UseTLS) const;
 
 public:
   /// Returns the target-specific address of the unsafe stack pointer.
-  virtual Value *getSafeStackPointerLocation(IRBuilder<> &IRB) const;
+  virtual Value *getSafeStackPointerLocation(IRBuilderBase &IRB) const;
 
   /// Returns the name of the symbol used to emit stack probes or the empty
   /// string if not applicable.
@@ -1879,14 +1879,14 @@ public:
   /// corresponding pointee type. This may entail some non-trivial operations to
   /// truncate or reconstruct types that will be illegal in the backend. See
   /// ARMISelLowering for an example implementation.
-  virtual Value *emitLoadLinked(IRBuilder<> &Builder, Value *Addr,
+  virtual Value *emitLoadLinked(IRBuilderBase &Builder, Value *Addr,
                                 AtomicOrdering Ord) const {
     llvm_unreachable("Load linked unimplemented on this target");
   }
 
   /// Perform a store-conditional operation to Addr. Return the status of the
   /// store. This should be 0 if the store succeeded, non-zero otherwise.
-  virtual Value *emitStoreConditional(IRBuilder<> &Builder, Value *Val,
+  virtual Value *emitStoreConditional(IRBuilderBase &Builder, Value *Val,
                                       Value *Addr, AtomicOrdering Ord) const {
     llvm_unreachable("Store conditional unimplemented on this target");
   }
@@ -1894,7 +1894,7 @@ public:
   /// Perform a masked atomicrmw using a target-specific intrinsic. This
   /// represents the core LL/SC loop which will be lowered at a late stage by
   /// the backend.
-  virtual Value *emitMaskedAtomicRMWIntrinsic(IRBuilder<> &Builder,
+  virtual Value *emitMaskedAtomicRMWIntrinsic(IRBuilderBase &Builder,
                                               AtomicRMWInst *AI,
                                               Value *AlignedAddr, Value *Incr,
                                               Value *Mask, Value *ShiftAmt,
@@ -1906,7 +1906,7 @@ public:
   /// represents the core LL/SC loop which will be lowered at a late stage by
   /// the backend.
   virtual Value *emitMaskedAtomicCmpXchgIntrinsic(
-      IRBuilder<> &Builder, AtomicCmpXchgInst *CI, Value *AlignedAddr,
+      IRBuilderBase &Builder, AtomicCmpXchgInst *CI, Value *AlignedAddr,
       Value *CmpVal, Value *NewVal, Value *Mask, AtomicOrdering Ord) const {
     llvm_unreachable("Masked cmpxchg expansion unimplemented on this target");
   }
@@ -1944,10 +1944,11 @@ public:
   ///  seq_cst. But if they are lowered to monotonic accesses, no amount of
   ///  IR-level fences can prevent it.
   /// @{
-  virtual Instruction *emitLeadingFence(IRBuilder<> &Builder, Instruction *Inst,
+  virtual Instruction *emitLeadingFence(IRBuilderBase &Builder,
+                                        Instruction *Inst,
                                         AtomicOrdering Ord) const;
 
-  virtual Instruction *emitTrailingFence(IRBuilder<> &Builder,
+  virtual Instruction *emitTrailingFence(IRBuilderBase &Builder,
                                          Instruction *Inst,
                                          AtomicOrdering Ord) const;
   /// @}
@@ -1958,7 +1959,7 @@ public:
   // a dedicated instruction, if desired.
   // E.g., on ARM, if ldrex isn't followed by strex, the exclusive monitor would
   // be unnecessarily held, except if clrex, inserted by this hook, is executed.
-  virtual void emitAtomicCmpXchgNoStoreLLBalance(IRBuilder<> &Builder) const {}
+  virtual void emitAtomicCmpXchgNoStoreLLBalance(IRBuilderBase &Builder) const {}
 
   /// Returns true if the given (atomic) store should be expanded by the
   /// IR-level AtomicExpand pass into an "atomic xchg" which ignores its input.

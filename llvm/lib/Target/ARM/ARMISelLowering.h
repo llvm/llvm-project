@@ -627,17 +627,18 @@ class VectorType;
     Register
     getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
-    Instruction *makeDMB(IRBuilder<> &Builder, ARM_MB::MemBOpt Domain) const;
-    Value *emitLoadLinked(IRBuilder<> &Builder, Value *Addr,
+    Instruction *makeDMB(IRBuilderBase &Builder, ARM_MB::MemBOpt Domain) const;
+    Value *emitLoadLinked(IRBuilderBase &Builder, Value *Addr,
                           AtomicOrdering Ord) const override;
-    Value *emitStoreConditional(IRBuilder<> &Builder, Value *Val,
-                                Value *Addr, AtomicOrdering Ord) const override;
+    Value *emitStoreConditional(IRBuilderBase &Builder, Value *Val, Value *Addr,
+                                AtomicOrdering Ord) const override;
 
-    void emitAtomicCmpXchgNoStoreLLBalance(IRBuilder<> &Builder) const override;
+    void
+    emitAtomicCmpXchgNoStoreLLBalance(IRBuilderBase &Builder) const override;
 
-    Instruction *emitLeadingFence(IRBuilder<> &Builder, Instruction *Inst,
+    Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
                                   AtomicOrdering Ord) const override;
-    Instruction *emitTrailingFence(IRBuilder<> &Builder, Instruction *Inst,
+    Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
                                    AtomicOrdering Ord) const override;
 
     unsigned getMaxSupportedInterleaveFactor() const override;
