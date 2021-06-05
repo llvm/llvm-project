@@ -335,8 +335,6 @@ class ProcessAPITestCase(TestBase):
         # Launch the process and stop at the entry point.
         launch_info = target.GetLaunchInfo()
         launch_info.SetWorkingDirectory(self.get_process_working_directory())
-        launch_info.SetEnvironmentEntries(["FOO=BAR"], False)
-        launch_info.SetArguments(["--abc"], False)
         launch_flags = launch_info.GetLaunchFlags()
         launch_flags |= lldb.eLaunchFlagStopAtEntry
         launch_info.SetLaunchFlags(launch_flags)
@@ -360,11 +358,6 @@ class ProcessAPITestCase(TestBase):
             "Process ID is valid")
         triple = process_info.GetTriple()
         self.assertIsNotNone(triple, "Process has a triple")
-        env = process_info.GetEnvironment()
-        self.assertGreater(env.GetNumValues(), 0)
-        self.assertEqual("BAR", env.Get("FOO"))
-        self.assertEqual(process_info.GetNumArguments(), 1)
-        self.assertEqual("--abc", process_info.GetArgumentAtIndex(0))
 
         # Additional process info varies by platform, so just check that
         # whatever info was retrieved is consistent and nothing blows up.
