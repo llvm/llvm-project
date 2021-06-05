@@ -753,7 +753,10 @@ const AbstractType &AbstractType::lookup(TypeID typeID, MLIRContext *context) {
 //===----------------------------------------------------------------------===//
 
 /// Return an identifier for the specified string.
-Identifier Identifier::get(StringRef str, MLIRContext *context) {
+Identifier Identifier::get(const Twine &string, MLIRContext *context) {
+  SmallString<32> tempStr;
+  StringRef str = string.toStringRef(tempStr);
+
   // Check invariants after seeing if we already have something in the
   // identifier table - if we already had it in the table, then it already
   // passed invariant checks.

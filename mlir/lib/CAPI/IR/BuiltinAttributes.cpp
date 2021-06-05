@@ -70,9 +70,8 @@ MlirAttribute mlirDictionaryAttrGet(MlirContext ctx, intptr_t numElements,
   SmallVector<NamedAttribute, 8> attributes;
   attributes.reserve(numElements);
   for (intptr_t i = 0; i < numElements; ++i)
-    attributes.emplace_back(
-        Identifier::get(unwrap(elements[i].name), unwrap(ctx)),
-        unwrap(elements[i].attribute));
+    attributes.emplace_back(unwrap(elements[i].name),
+                            unwrap(elements[i].attribute));
   return wrap(DictionaryAttr::get(unwrap(ctx), attributes));
 }
 
