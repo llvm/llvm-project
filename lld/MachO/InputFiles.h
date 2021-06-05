@@ -175,7 +175,9 @@ public:
   bool isBundleLoader;
 
 private:
-  bool handleLdSymbol(StringRef name);
+  bool handleLDSymbol(StringRef originalName);
+  void handleLDPreviousSymbol(StringRef name, StringRef originalName);
+  void handleLDInstallNameSymbol(StringRef name, StringRef originalName);
 };
 
 // .a file
