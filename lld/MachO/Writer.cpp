@@ -359,12 +359,6 @@ private:
   StringRef path;
 };
 
-static uint32_t encodeVersion(const VersionTuple &version) {
-  return ((version.getMajor() << 020) |
-          (version.getMinor().getValueOr(0) << 010) |
-          version.getSubminor().getValueOr(0));
-}
-
 class LCMinVersion : public LoadCommand {
 public:
   explicit LCMinVersion(const PlatformInfo &platformInfo)
