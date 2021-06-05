@@ -596,60 +596,80 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
             IsUnsigned ? RISCV::PseudoVMSLTU_VX_MF8 : RISCV::PseudoVMSLT_VX_MF8;
         VMSLTMaskOpcode = IsUnsigned ? RISCV::PseudoVMSLTU_VX_MF8_MASK
                                      : RISCV::PseudoVMSLT_VX_MF8_MASK;
-        VMXOROpcode = RISCV::PseudoVMXOR_MM_MF8;
-        VMANDNOTOpcode = RISCV::PseudoVMANDNOT_MM_MF8;
         break;
       case RISCVII::VLMUL::LMUL_F4:
         VMSLTOpcode =
             IsUnsigned ? RISCV::PseudoVMSLTU_VX_MF4 : RISCV::PseudoVMSLT_VX_MF4;
         VMSLTMaskOpcode = IsUnsigned ? RISCV::PseudoVMSLTU_VX_MF4_MASK
                                      : RISCV::PseudoVMSLT_VX_MF4_MASK;
-        VMXOROpcode = RISCV::PseudoVMXOR_MM_MF4;
-        VMANDNOTOpcode = RISCV::PseudoVMANDNOT_MM_MF4;
         break;
       case RISCVII::VLMUL::LMUL_F2:
         VMSLTOpcode =
             IsUnsigned ? RISCV::PseudoVMSLTU_VX_MF2 : RISCV::PseudoVMSLT_VX_MF2;
         VMSLTMaskOpcode = IsUnsigned ? RISCV::PseudoVMSLTU_VX_MF2_MASK
                                      : RISCV::PseudoVMSLT_VX_MF2_MASK;
-        VMXOROpcode = RISCV::PseudoVMXOR_MM_MF2;
-        VMANDNOTOpcode = RISCV::PseudoVMANDNOT_MM_MF2;
         break;
       case RISCVII::VLMUL::LMUL_1:
         VMSLTOpcode =
             IsUnsigned ? RISCV::PseudoVMSLTU_VX_M1 : RISCV::PseudoVMSLT_VX_M1;
         VMSLTMaskOpcode = IsUnsigned ? RISCV::PseudoVMSLTU_VX_M1_MASK
                                      : RISCV::PseudoVMSLT_VX_M1_MASK;
-        VMXOROpcode = RISCV::PseudoVMXOR_MM_M1;
-        VMANDNOTOpcode = RISCV::PseudoVMANDNOT_MM_M1;
         break;
       case RISCVII::VLMUL::LMUL_2:
         VMSLTOpcode =
             IsUnsigned ? RISCV::PseudoVMSLTU_VX_M2 : RISCV::PseudoVMSLT_VX_M2;
         VMSLTMaskOpcode = IsUnsigned ? RISCV::PseudoVMSLTU_VX_M2_MASK
                                      : RISCV::PseudoVMSLT_VX_M2_MASK;
-        VMXOROpcode = RISCV::PseudoVMXOR_MM_M2;
-        VMANDNOTOpcode = RISCV::PseudoVMANDNOT_MM_M2;
         break;
       case RISCVII::VLMUL::LMUL_4:
         VMSLTOpcode =
             IsUnsigned ? RISCV::PseudoVMSLTU_VX_M4 : RISCV::PseudoVMSLT_VX_M4;
         VMSLTMaskOpcode = IsUnsigned ? RISCV::PseudoVMSLTU_VX_M4_MASK
                                      : RISCV::PseudoVMSLT_VX_M4_MASK;
-        VMXOROpcode = RISCV::PseudoVMXOR_MM_M4;
-        VMANDNOTOpcode = RISCV::PseudoVMANDNOT_MM_M4;
         break;
       case RISCVII::VLMUL::LMUL_8:
         VMSLTOpcode =
             IsUnsigned ? RISCV::PseudoVMSLTU_VX_M8 : RISCV::PseudoVMSLT_VX_M8;
         VMSLTMaskOpcode = IsUnsigned ? RISCV::PseudoVMSLTU_VX_M8_MASK
                                      : RISCV::PseudoVMSLT_VX_M8_MASK;
+        break;
+      }
+      // Mask operations use the LMUL from the mask type.
+      switch (RISCVTargetLowering::getLMUL(VT)) {
+      default:
+        llvm_unreachable("Unexpected LMUL!");
+      case RISCVII::VLMUL::LMUL_F8:
+        VMXOROpcode = RISCV::PseudoVMXOR_MM_MF8;
+        VMANDNOTOpcode = RISCV::PseudoVMANDNOT_MM_MF8;
+        break;
+      case RISCVII::VLMUL::LMUL_F4:
+        VMXOROpcode = RISCV::PseudoVMXOR_MM_MF4;
+        VMANDNOTOpcode = RISCV::PseudoVMANDNOT_MM_MF4;
+        break;
+      case RISCVII::VLMUL::LMUL_F2:
+        VMXOROpcode = RISCV::PseudoVMXOR_MM_MF2;
+        VMANDNOTOpcode = RISCV::PseudoVMANDNOT_MM_MF2;
+        break;
+      case RISCVII::VLMUL::LMUL_1:
+        VMXOROpcode = RISCV::PseudoVMXOR_MM_M1;
+        VMANDNOTOpcode = RISCV::PseudoVMANDNOT_MM_M1;
+        break;
+      case RISCVII::VLMUL::LMUL_2:
+        VMXOROpcode = RISCV::PseudoVMXOR_MM_M2;
+        VMANDNOTOpcode = RISCV::PseudoVMANDNOT_MM_M2;
+        break;
+      case RISCVII::VLMUL::LMUL_4:
+        VMXOROpcode = RISCV::PseudoVMXOR_MM_M4;
+        VMANDNOTOpcode = RISCV::PseudoVMANDNOT_MM_M4;
+        break;
+      case RISCVII::VLMUL::LMUL_8:
         VMXOROpcode = RISCV::PseudoVMXOR_MM_M8;
         VMANDNOTOpcode = RISCV::PseudoVMANDNOT_MM_M8;
         break;
       }
       SDValue SEW = CurDAG->getTargetConstant(
           Log2_32(Src1VT.getScalarSizeInBits()), DL, XLenVT);
+      SDValue MaskSEW = CurDAG->getTargetConstant(0, DL, XLenVT);
       SDValue VL;
       selectVLOp(Node->getOperand(5), VL);
       SDValue MaskedOff = Node->getOperand(1);
@@ -662,7 +682,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
             CurDAG->getMachineNode(VMSLTOpcode, DL, VT, {Src1, Src2, VL, SEW}),
             0);
         ReplaceNode(Node, CurDAG->getMachineNode(VMANDNOTOpcode, DL, VT,
-                                                 {Mask, Cmp, VL, SEW}));
+                                                 {Mask, Cmp, VL, MaskSEW}));
         return;
       }
 
@@ -673,7 +693,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
                                  {MaskedOff, Src1, Src2, Mask, VL, SEW}),
           0);
       ReplaceNode(Node, CurDAG->getMachineNode(VMXOROpcode, DL, VT,
-                                               {Cmp, Mask, VL, SEW}));
+                                               {Cmp, Mask, VL, MaskSEW}));
       return;
     }
     }

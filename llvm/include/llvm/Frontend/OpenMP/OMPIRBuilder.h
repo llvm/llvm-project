@@ -531,8 +531,10 @@ public:
   ///
   /// \param CancelFlag Flag indicating if the cancellation is performed.
   /// \param CanceledDirective The kind of directive that is cancled.
+  /// \param ExitCB Extra code to be generated in the exit block.
   void emitCancelationCheckImpl(Value *CancelFlag,
-                                omp::Directive CanceledDirective);
+                                omp::Directive CanceledDirective,
+                                FinalizeCallbackTy ExitCB = {});
 
   /// Generate a barrier runtime call.
   ///

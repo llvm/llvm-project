@@ -186,6 +186,14 @@ def OpenACC_DataOp : OpenACC_Op<"data",
 
   let regions = (region AnyRegion:$region);
 
+  let extraClassDeclaration = [{
+    /// The number of data operands.
+    unsigned getNumDataOperands();
+
+    /// The i-th data operand passed.
+    Value getDataOperand(unsigned i);
+  }];
+
   let assemblyFormat = [{
     ( `if` `(` $ifCond^ `)` )?
     ( `copy` `(` $copyOperands^ `:` type($copyOperands) `)` )?

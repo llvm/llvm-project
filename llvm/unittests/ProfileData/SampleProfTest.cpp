@@ -58,11 +58,11 @@ struct SampleProfTest : ::testing::Test {
   void readProfile(const Module &M, StringRef Profile,
                    StringRef RemapFile = "") {
     auto ReaderOrErr = SampleProfileReader::create(
-        std::string(Profile), Context, std::string(RemapFile));
+        std::string(Profile), Context, FSDiscriminatorPass::Base,
+        std::string(RemapFile));
     ASSERT_TRUE(NoError(ReaderOrErr.getError()));
     Reader = std::move(ReaderOrErr.get());
     Reader->setModule(&M);
-    Reader->setBaseDiscriminatorMask();
   }
 
   TempFile createRemapFile() {

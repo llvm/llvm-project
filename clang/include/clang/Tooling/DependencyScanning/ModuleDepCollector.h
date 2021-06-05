@@ -42,6 +42,16 @@ struct ModuleID {
   /// Modules with the same name but a different \c ContextHash should be
   /// treated as separate modules for the purpose of a build.
   std::string ContextHash;
+
+  bool operator==(const ModuleID &Other) const {
+    return ModuleName == Other.ModuleName && ContextHash == Other.ContextHash;
+  }
+};
+
+struct ModuleIDHasher {
+  std::size_t operator()(const ModuleID &MID) const {
+    return llvm::hash_combine(MID.ModuleName, MID.ContextHash);
+  }
 };
 
 struct ModuleDeps {

@@ -1537,9 +1537,10 @@ public:
                          getFastMathFlags(MatMul));
 
       FusedInsts.insert(MatMul);
-      FusedInsts.insert(cast<Instruction>(Transpose));
-      if (Transpose->hasOneUse())
+      if (Transpose->hasOneUse()) {
+        FusedInsts.insert(cast<Instruction>(Transpose));
         ToRemove.push_back(cast<Instruction>(Transpose));
+      }
       finalizeLowering(MatMul, Result, Builder);
       // TODO: add a fake entry for the folded instruction so that this is
       // included in the expression in the remark.

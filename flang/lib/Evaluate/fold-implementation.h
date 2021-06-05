@@ -1030,8 +1030,9 @@ auto ApplyElementwise(FoldingContext &context,
         if (rightExpr.Rank() > 0) {
           if (std::optional<Shape> rightShape{GetShape(context, rightExpr)}) {
             if (auto right{AsFlatArrayConstructor(rightExpr)}) {
-              if (CheckConformance(
-                      context.messages(), *leftShape, *rightShape)) {
+              if (CheckConformance(context.messages(), *leftShape, *rightShape,
+                      CheckConformanceFlags::EitherScalarExpandable)
+                      .value_or(false /*fail if not known now to conform*/)) {
                 return MapOperation(context, std::move(f), *leftShape,
                     std::move(*left), std::move(*right));
               } else {

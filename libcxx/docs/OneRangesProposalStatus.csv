@@ -53,7 +53,7 @@ bidirectional_range: `D100278 <https://llvm.org/D100278>`_",
 [range.iota],iota_view,[range.all],Louis Dionne,,
 [range.take],take_view,[range.all],Zoe Carver,,
 [range.join],join_view,[range.all],Christopher Di Bella,,
-[range.empty],empty_view,[view.interface],Zoe Carver,,
+[range.empty],empty_view,[view.interface],Zoe Carver,,✅
 [range.single],single_view,[view.interface],,,
 [range.split],split_view,[range.all],,,
 [range.counted],view::counted,[range.subrange],,,

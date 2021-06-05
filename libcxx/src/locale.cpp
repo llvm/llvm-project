@@ -4597,7 +4597,10 @@ void
 __num_put_base::__format_int(char* __fmtp, const char* __len, bool __signd,
                              ios_base::fmtflags __flags)
 {
-    if (__flags & ios_base::showpos)
+    if ((__flags & ios_base::showpos) &&
+        (__flags & ios_base::basefield) != ios_base::oct &&
+        (__flags & ios_base::basefield) != ios_base::hex &&
+	__signd)
         *__fmtp++ = '+';
     if (__flags & ios_base::showbase)
         *__fmtp++ = '#';

@@ -551,8 +551,10 @@ LogicalResult {0}::fold(ArrayRef<Attribute>,
 }
 void {0}::getEffects(SmallVectorImpl<
     SideEffects::EffectInstance<MemoryEffects::Effect> >&effects) {{
-  getGenericEffectsImpl(effects,
-    getOperation()->getResults(), getInputBuffers(), getOutputBuffers());
+      SmallVector<Value> inputBuffers = getInputBufferOperands();
+      SmallVector<Value> outputBuffers = getOutputBufferOperands();
+      getGenericEffectsImpl(effects,
+        getOperation()->getResults(), inputBuffers, outputBuffers);
 }
 )FMT";
 

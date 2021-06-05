@@ -3503,6 +3503,8 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   for (auto *Param : Parameters) {
     Param->setOwningFunction(ToFunction);
     ToFunction->addDeclInternal(Param);
+    if (ASTImporterLookupTable *LT = Importer.SharedState->getLookupTable())
+      LT->update(Param, Importer.getToContext().getTranslationUnitDecl());
   }
   ToFunction->setParams(Parameters);
 

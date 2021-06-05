@@ -824,12 +824,12 @@ void RTNAME(CharacterPad1)(char *lhs, std::size_t bytes, std::size_t offset) {
 
 // Intrinsic function entry points
 
-void RTNAME(AdjustL)(Descriptor &result, const Descriptor &string,
+void RTNAME(Adjustl)(Descriptor &result, const Descriptor &string,
     const char *sourceFile, int sourceLine) {
   AdjustLR<false>(result, string, sourceFile, sourceLine);
 }
 
-void RTNAME(AdjustR)(Descriptor &result, const Descriptor &string,
+void RTNAME(Adjustr)(Descriptor &result, const Descriptor &string,
     const char *sourceFile, int sourceLine) {
   AdjustLR<true>(result, string, sourceFile, sourceLine);
 }

@@ -160,7 +160,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       // Let CheckConformance accept scalars; storage association
       // cases are checked here below.
       CheckConformance(messages, dummy.type.shape(), actualType.shape(),
-          "dummy argument", "actual argument", true, true);
+          evaluate::CheckConformanceFlags::EitherScalarExpandable,
+          "dummy argument", "actual argument");
     }
   } else {
     const auto &len{actualType.LEN()};

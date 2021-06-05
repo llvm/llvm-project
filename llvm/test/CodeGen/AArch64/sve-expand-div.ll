@@ -73,11 +73,8 @@ define <vscale x 16 x i8> @udiv_i8(<vscale x 16 x i8> %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z1.b, #-85 // =0xffffffffffffffab
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    mov z2.b, #1 // =0x1
-; CHECK-NEXT:    umulh z1.b, p0/m, z1.b, z0.b
-; CHECK-NEXT:    lsr z1.b, z1.b, #1
-; CHECK-NEXT:    cmpeq p0.b, p0/z, z2.b, #3
-; CHECK-NEXT:    sel z0.b, p0, z0.b, z1.b
+; CHECK-NEXT:    umulh z0.b, p0/m, z0.b, z1.b
+; CHECK-NEXT:    lsr z0.b, z0.b, #1
 ; CHECK-NEXT:    ret
   %div = udiv <vscale x 16 x i8> %a, shufflevector (<vscale x 16 x i8> insertelement (<vscale x 16 x i8> undef, i8 3, i32 0), <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer)
   ret <vscale x 16 x i8> %div
@@ -87,13 +84,10 @@ define <vscale x 8 x i16> @udiv_i16(<vscale x 8 x i16> %a) #0 {
 ; CHECK-LABEL: udiv_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #-21845
+; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    mov z2.h, w8
-; CHECK-NEXT:    mov z1.h, #1 // =0x1
-; CHECK-NEXT:    umulh z2.h, p0/m, z2.h, z0.h
-; CHECK-NEXT:    lsr z2.h, z2.h, #1
-; CHECK-NEXT:    cmpeq p0.h, p0/z, z1.h, #3
-; CHECK-NEXT:    sel z0.h, p0, z0.h, z2.h
+; CHECK-NEXT:    umulh z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    lsr z0.h, z0.h, #1
 ; CHECK-NEXT:    ret
   %div = udiv <vscale x 8 x i16> %a, shufflevector (<vscale x 8 x i16> insertelement (<vscale x 8 x i16> undef, i16 3, i32 0), <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer)
   ret <vscale x 8 x i16> %div
@@ -104,13 +98,10 @@ define <vscale x 4 x i32> @udiv_i32(<vscale x 4 x i32> %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #43691
 ; CHECK-NEXT:    movk w8, #43690, lsl #16
+; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    mov z2.s, w8
-; CHECK-NEXT:    mov z1.s, #3 // =0x3
-; CHECK-NEXT:    umulh z2.s, p0/m, z2.s, z0.s
-; CHECK-NEXT:    lsr z2.s, z2.s, #1
-; CHECK-NEXT:    cmpeq p0.s, p0/z, z1.s, #1
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z2.s
+; CHECK-NEXT:    umulh z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    lsr z0.s, z0.s, #1
 ; CHECK-NEXT:    ret
   %div = udiv <vscale x 4 x i32> %a, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 3, i32 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer)
   ret <vscale x 4 x i32> %div
@@ -121,13 +112,10 @@ define <vscale x 2 x i64> @udiv_i64(<vscale x 2 x i64> %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #-6148914691236517206
 ; CHECK-NEXT:    movk x8, #43691
+; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    mov z1.d, #3 // =0x3
-; CHECK-NEXT:    umulh z2.d, p0/m, z2.d, z0.d
-; CHECK-NEXT:    lsr z2.d, z2.d, #1
-; CHECK-NEXT:    cmpeq p0.d, p0/z, z1.d, #1
-; CHECK-NEXT:    sel z0.d, p0, z0.d, z2.d
+; CHECK-NEXT:    umulh z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    lsr z0.d, z0.d, #1
 ; CHECK-NEXT:    ret
   %div = udiv <vscale x 2 x i64> %a, shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 3, i32 0), <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer)
   ret <vscale x 2 x i64> %div
