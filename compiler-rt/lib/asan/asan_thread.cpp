@@ -339,8 +339,8 @@ bool AsanThread::GetStackFrameAccessByAddr(uptr addr,
   uptr bottom = 0;
   if (AddrIsInStack(addr)) {
     bottom = stack_bottom();
-  } else if (has_fake_stack()) {
-    bottom = fake_stack()->AddrIsInFakeStack(addr);
+  } else if (FakeStack *fake_stack = get_fake_stack()) {
+    bottom = fake_stack->AddrIsInFakeStack(addr);
     CHECK(bottom);
     access->offset = addr - bottom;
     access->frame_pc = ((uptr*)bottom)[2];
@@ -380,8 +380,8 @@ uptr AsanThread::GetStackVariableShadowStart(uptr addr) {
   uptr bottom = 0;
   if (AddrIsInStack(addr)) {
     bottom = stack_bottom();
-  } else if (has_fake_stack()) {
-    bottom = fake_stack()->AddrIsInFakeStack(addr);
+  } else if (FakeStack *fake_stack = get_fake_stack()) {
+    bottom = fake_stack->AddrIsInFakeStack(addr);
     if (bottom == 0) {
       return 0;
     }
@@ -415,9 +415,10 @@ static bool ThreadStackContainsAddress(ThreadContextBase *tctx_base,
     return false;
   if (t->AddrIsInStack((uptr)addr))
     return true;
-  if (t->has_fake_stack() && t->fake_stack()->AddrIsInFakeStack((uptr)addr))
-    return true;
-  return false;
+  FakeStack *fake_stack = t->get_fake_stack();
+  if (!fake_stack)
+    return false;
+  return fake_stack->AddrIsInFakeStack((uptr)addr);
 }
 
 AsanThread *GetCurrentThread() {
@@ -505,8 +506,12 @@ void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches) {}
 void ForEachExtraStackRange(tid_t os_id, RangeIteratorCallback callback,
                             void *arg) {
   __asan::AsanThread *t = __asan::GetAsanThreadByOsIDLocked(os_id);
-  if (t && t->has_fake_stack())
-    t->fake_stack()->ForEachFakeFrame(callback, arg);
+  if (!t)
+    return;
+  __asan::FakeStack *fake_stack = t->get_fake_stack();
+  if (!fake_stack)
+    return;
+  fake_stack->ForEachFakeFrame(callback, arg);
 }
 
 void LockThreadRegistry() {

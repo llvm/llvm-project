@@ -104,17 +104,18 @@ class AsanThread {
   void FinishSwitchFiber(FakeStack *fake_stack_save, uptr *bottom_old,
                          uptr *size_old);
 
-  bool has_fake_stack() {
-    return !atomic_load(&stack_switching_, memory_order_relaxed) &&
-           (reinterpret_cast<uptr>(fake_stack_) > 1);
-  }
-
-  FakeStack *fake_stack() {
-    if (!__asan_option_detect_stack_use_after_return)
-      return nullptr;
+  FakeStack *get_fake_stack() {
     if (atomic_load(&stack_switching_, memory_order_relaxed))
       return nullptr;
-    if (!has_fake_stack())
+    if (reinterpret_cast<uptr>(fake_stack_) <= 1)
+      return nullptr;
+    return fake_stack_;
+  }
+
+  FakeStack *get_or_create_fake_stack() {
+    if (atomic_load(&stack_switching_, memory_order_relaxed))
+      return nullptr;
+    if (reinterpret_cast<uptr>(fake_stack_) <= 1)
       return AsyncSignalSafeLazyInitFakeStack();
     return fake_stack_;
   }
