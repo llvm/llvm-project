@@ -409,10 +409,12 @@ bool AsanThread::AddrIsInStack(uptr addr) {
 
 static bool ThreadStackContainsAddress(ThreadContextBase *tctx_base,
                                        void *addr) {
-  AsanThreadContext *tctx = static_cast<AsanThreadContext*>(tctx_base);
+  AsanThreadContext *tctx = static_cast<AsanThreadContext *>(tctx_base);
   AsanThread *t = tctx->thread;
-  if (!t) return false;
-  if (t->AddrIsInStack((uptr)addr)) return true;
+  if (!t)
+    return false;
+  if (t->AddrIsInStack((uptr)addr))
+    return true;
   if (t->has_fake_stack() && t->fake_stack()->AddrIsInFakeStack((uptr)addr))
     return true;
   return false;
