@@ -159,6 +159,7 @@ template <class Stream, class T>
 */
 
 #include <__config>
+#include <__utility/forward.h>
 #include <ostream>
 #include <version>
 

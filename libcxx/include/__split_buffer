@@ -3,6 +3,7 @@
 #define _LIBCPP_SPLIT_BUFFER
 
 #include <__config>
+#include <__utility/forward.h>
 #include <algorithm>
 #include <type_traits>
 

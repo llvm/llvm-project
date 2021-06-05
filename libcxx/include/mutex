@@ -189,6 +189,7 @@ template<class Callable, class ...Args>
 #include <__config>
 #include <__mutex_base>
 #include <__threading_support>
+#include <__utility/forward.h>
 #include <cstdint>
 #include <functional>
 #include <memory>

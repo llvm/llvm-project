@@ -20,6 +20,7 @@
 #include <__memory/compressed_pair.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/unique_ptr.h>
+#include <__utility/forward.h>
 #include <cstddef>
 #include <cstdlib> // abort
 #include <iosfwd>
