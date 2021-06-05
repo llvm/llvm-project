@@ -14,14 +14,14 @@
 ## Case 2: special symbol $ld$previous does not affect the install name / compatibility version
 ## since the specified version 2.0.0 is lower than the affected range [3.0, 14.0).
 
-# RUN: %lld -o %t/libfoo2.dylib %t/libLDPreviousInstallName.tbd %t.o -dylib -platform_version macos 2.0.0 2.0.0
+# RUN: %lld -o %t/libfoo2.dylib %t/libLDPreviousInstallName.tbd %t/foo.o -dylib -platform_version macos 2.0.0 2.0.0
 # RUN: llvm-objdump --macho --dylibs-used %t/libfoo2.dylib | FileCheck --check-prefix=CASE2 %s
 # CASE2: /Old (compatibility version 1.1.1, current version 5.0.0)
 
 ## Case 3: special symbol $ld$previous does not affect the install name / compatibility version
 ## since the specified version 14.0.0 is higher than the affected range [3.0, 14.0).
 
-# RUN: %lld -o %t/libfoo3.dylib %t/libLDPreviousInstallName.tbd %t.o -dylib -platform_version macos 2.0.0 2.0.0
+# RUN: %lld -o %t/libfoo3.dylib %t/libLDPreviousInstallName.tbd %t/foo.o -dylib -platform_version macos 2.0.0 2.0.0
 # RUN: llvm-objdump --macho --dylibs-used %t/libfoo3.dylib | FileCheck --check-prefix=CASE3 %s
 # CASE3: /Old (compatibility version 1.1.1, current version 5.0.0)
 
