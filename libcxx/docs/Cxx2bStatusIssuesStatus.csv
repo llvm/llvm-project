@@ -36,7 +36,7 @@
 "`3448 <https://wg21.link/LWG3448>`__","``transform_view``'s sentinel<false> not comparable with ``iterator<true>``","November 2020","",""
 "`3449 <https://wg21.link/LWG3449>`__","take_view and take_while_view's ``sentinel<false>`` not comparable with their const iterator","November 2020","",""
 "`3453 <https://wg21.link/LWG3453>`__","Generic code cannot call ``ranges::advance(i, s)``","November 2020","",""
-"`3455 <https://wg21.link/LWG3455>`__","Incorrect Postconditions on ``unique_ptr`` move assignment","November 2020","",""
+"`3455 <https://wg21.link/LWG3455>`__","Incorrect Postconditions on ``unique_ptr`` move assignment","November 2020","|Nothing To Do|",""
 "`3460 <https://wg21.link/LWG3460>`__","Unimplementable ``noop_coroutine_handle`` guarantees","November 2020","",""
 "`3461 <https://wg21.link/LWG3461>`__","``convertible_to``'s description mishandles cv-qualified void","November 2020","",""
 "`3465 <https://wg21.link/LWG3465>`__","compare_partial_order_fallback requires ``F < E``","November 2020","",""
