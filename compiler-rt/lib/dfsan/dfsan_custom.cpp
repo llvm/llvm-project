@@ -461,24 +461,6 @@ SANITIZER_INTERFACE_ATTRIBUTE int __dfso_strncasecmp(
   return r;
 }
 
-SANITIZER_INTERFACE_ATTRIBUTE void *__dfsw_calloc(size_t nmemb, size_t size,
-                                                  dfsan_label nmemb_label,
-                                                  dfsan_label size_label,
-                                                  dfsan_label *ret_label) {
-  void *p = calloc(nmemb, size);
-  dfsan_set_label(0, p, nmemb * size);
-  *ret_label = 0;
-  return p;
-}
-
-SANITIZER_INTERFACE_ATTRIBUTE void *__dfso_calloc(
-    size_t nmemb, size_t size, dfsan_label nmemb_label, dfsan_label size_label,
-    dfsan_label *ret_label, dfsan_origin nmemb_origin, dfsan_origin size_origin,
-    dfsan_origin *ret_origin) {
-  void *p = __dfsw_calloc(nmemb, size, nmemb_label, size_label, ret_label);
-  *ret_origin = 0;
-  return p;
-}
 
 SANITIZER_INTERFACE_ATTRIBUTE size_t
 __dfsw_strlen(const char *s, dfsan_label s_label, dfsan_label *ret_label) {

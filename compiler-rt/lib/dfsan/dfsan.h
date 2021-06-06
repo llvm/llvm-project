@@ -65,7 +65,7 @@ namespace __dfsan {
 extern bool dfsan_inited;
 extern bool dfsan_init_is_running;
 
-void InitializeInterceptors();
+void initialize_interceptors();
 
 inline dfsan_label *shadow_for(void *ptr) {
   return (dfsan_label *) ((((uptr) ptr) & ShadowMask()) << 1);
