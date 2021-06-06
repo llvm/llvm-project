@@ -84,7 +84,7 @@ std::string lld::toString(const InputFile *f) {
   // Multiple dylibs can be defined in one .tbd file.
   if (auto dylibFile = dyn_cast<DylibFile>(f))
     if (f->getName().endswith(".tbd"))
-      return (f->getName() + "(" + dylibFile->dylibName + ")").str();
+      return (f->getName() + "(" + dylibFile->installName + ")").str();
 
   if (f->archiveName.empty())
     return std::string(f->getName());
@@ -821,12 +821,13 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   auto *hdr = reinterpret_cast<const mach_header *>(mb.getBufferStart());
 
-  // Initialize dylibName.
+  // Initialize installName.
   if (const load_command *cmd = findCommand(hdr, LC_ID_DYLIB)) {
     auto *c = reinterpret_cast<const dylib_command *>(cmd);
     currentVersion = read32le(&c->dylib.current_version);
     compatibilityVersion = read32le(&c->dylib.compatibility_version);
-    dylibName = reinterpret_cast<const char *>(cmd) + read32le(&c->dylib.name);
+    installName =
+        reinterpret_cast<const char *>(cmd) + read32le(&c->dylib.name);
   } else if (!isBundleLoader) {
     // macho_executable and macho_bundle don't have LC_ID_DYLIB,
     // so it's OK.
@@ -843,7 +844,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
     return;
 
   // Initialize symbols.
-  exportingFile = isImplicitlyLinked(dylibName) ? this : this->umbrella;
+  exportingFile = isImplicitlyLinked(installName) ? this : this->umbrella;
   if (const load_command *cmd = findCommand(hdr, LC_DYLD_INFO_ONLY)) {
     auto *c = reinterpret_cast<const dyld_info_command *>(cmd);
     parseTrie(buf + c->export_off, c->export_size,
@@ -911,21 +912,21 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
     umbrella = this;
   this->umbrella = umbrella;
 
-  dylibName = saver.save(interface.getInstallName());
+  installName = saver.save(interface.getInstallName());
   compatibilityVersion = interface.getCompatibilityVersion().rawValue();
   currentVersion = interface.getCurrentVersion().rawValue();
 
   if (config->printEachFile)
     message(toString(this));
 
-  if (!is_contained(skipPlatformChecks, dylibName) &&
+  if (!is_contained(skipPlatformChecks, installName) &&
       !is_contained(interface.targets(), config->platformInfo.target)) {
     error(toString(this) + " is incompatible with " +
           std::string(config->platformInfo.target));
     return;
   }
 
-  exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
+  exportingFile = isImplicitlyLinked(installName) ? this : umbrella;
   auto addSymbol = [&](const Twine &name) -> void {
     symbols.push_back(symtab->addDylib(saver.save(name), exportingFile,
                                        /*isWeakDef=*/false,
@@ -1028,7 +1029,7 @@ void DylibFile::handleLDPreviousSymbol(StringRef name, StringRef originalName) {
       config->platformInfo.minimum >= end)
     return;
 
-  dylibName = saver.save(installName);
+  this->installName = saver.save(installName);
 
   if (!compatVersion.empty()) {
     VersionTuple cVersion;
@@ -1050,7 +1051,7 @@ void DylibFile::handleLDInstallNameSymbol(StringRef name,
   if (!condition.consume_front("os") || version.tryParse(condition))
     warn("failed to parse os version, symbol '" + originalName + "' ignored");
   else if (version == config->platformInfo.minimum)
-    dylibName = saver.save(installName);
+    this->installName = saver.save(installName);
 }
 
 ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f)
