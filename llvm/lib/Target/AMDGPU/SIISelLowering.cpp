@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/Support/CommandLine.h"
