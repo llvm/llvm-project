@@ -5122,7 +5122,7 @@ matchRISCVBitmanipPat(SDValue Op, ArrayRef<uint64_t> BitmanipMasks) {
   uint64_t ShAmt = Op.getConstantOperandVal(1);
 
   unsigned Width = Op.getValueType() == MVT::i64 ? 64 : 32;
-  if (ShAmt >= Width && !isPowerOf2_64(ShAmt))
+  if (ShAmt >= Width || !isPowerOf2_64(ShAmt))
     return None;
   // If we don't have enough masks for 64 bit, then we must be trying to
   // match SHFL so we're only allowed to shift 1/4 of the width.
