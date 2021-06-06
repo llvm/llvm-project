@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "memtag.h"
 #include "scudo/interface.h"
 #include "tests/scudo_unit_test.h"
 
@@ -277,6 +278,10 @@ static uintptr_t BoundaryP;
 static size_t Count;
 
 static void callback(uintptr_t Base, size_t Size, void *Arg) {
+  if (scudo::archSupportsMemoryTagging()) {
+    Base = scudo::untagPointer(Base);
+    BoundaryP = scudo::untagPointer(BoundaryP);
+  }
   if (Base == BoundaryP)
     Count++;
 }

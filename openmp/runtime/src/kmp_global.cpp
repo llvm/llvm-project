@@ -548,4 +548,9 @@ kmp_target_offload_kind_t __kmp_target_offload = tgt_default;
 // OMP Pause Resources
 kmp_pause_status_t __kmp_pause_status = kmp_not_paused;
 
+// Nesting mode
+int __kmp_nesting_mode = 0;
+int __kmp_nesting_mode_nlevels = 1;
+int *__kmp_nesting_nth_level;
+
 // end of file //

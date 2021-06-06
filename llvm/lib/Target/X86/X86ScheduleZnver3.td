@@ -35,10 +35,11 @@ def Znver3Model : SchedMachineModel {
   // The maximum capacity of the op cache is 4K ops.
   // Agner, 22.5 µop cache
   // The size of the µop cache is big enough for holding most critical loops.
-  // FIXME: PR50384: IndVars has quadradic complexity, with large values here
-  //        the compilation of certain loops ends up taking way too long.
+  // FIXME: PR50584: MachineScheduler/PostRAScheduler have quadradic complexity,
+  //        with large values here the compilation of certain loops
+  //        ends up taking way too long.
   // let LoopMicroOpBufferSize = 4096;
-  let LoopMicroOpBufferSize = 256;
+  let LoopMicroOpBufferSize = 512;
   // AMD SOG 19h, 2.6.2 L1 Data Cache
   // The L1 data cache has a 4- or 5- cycle integer load-to-use latency.
   // AMD SOG 19h, 2.12 L1 Data Cache

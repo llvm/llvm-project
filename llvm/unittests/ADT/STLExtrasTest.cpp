@@ -140,32 +140,37 @@ template <> struct CanCopy<false> {
 };
 
 template <bool Moveable, bool Copyable>
-struct Range : CanMove<Moveable>, CanCopy<Copyable> {
-  explicit Range(int &C, int &M, int &D) : C(C), M(M), D(D) {}
-  Range(const Range &R) : CanCopy<Copyable>(R), C(R.C), M(R.M), D(R.D) { ++C; }
-  Range(Range &&R) : CanMove<Moveable>(std::move(R)), C(R.C), M(R.M), D(R.D) {
-    ++M;
-  }
-  ~Range() { ++D; }
-
+class Counted : CanMove<Moveable>, CanCopy<Copyable> {
   int &C;
   int &M;
   int &D;
 
+public:
+  explicit Counted(int &C, int &M, int &D) : C(C), M(M), D(D) {}
+  Counted(const Counted &O) : CanCopy<Copyable>(O), C(O.C), M(O.M), D(O.D) {
+    ++C;
+  }
+  Counted(Counted &&O)
+      : CanMove<Moveable>(std::move(O)), C(O.C), M(O.M), D(O.D) {
+    ++M;
+  }
+  ~Counted() { ++D; }
+};
+
+template <bool Moveable, bool Copyable>
+struct Range : Counted<Moveable, Copyable> {
+  using Counted<Moveable, Copyable>::Counted;
   int *begin() { return nullptr; }
   int *end() { return nullptr; }
 };
 
-TEST(STLExtrasTest, EnumerateLifetimeSemantics) {
-  // Test that when enumerating lvalues and rvalues, there are no surprise
-  // copies or moves.
-
-  // With an rvalue, it should not be destroyed until the end of the scope.
+TEST(STLExtrasTest, EnumerateLifetimeSemanticsPRValue) {
   int Copies = 0;
   int Moves = 0;
   int Destructors = 0;
   {
-    auto E1 = enumerate(Range<true, false>(Copies, Moves, Destructors));
+    auto E = enumerate(Range<true, false>(Copies, Moves, Destructors));
+    (void)E;
     // Doesn't compile.  rvalue ranges must be moveable.
     // auto E2 = enumerate(Range<false, true>(Copies, Moves, Destructors));
     EXPECT_EQ(0, Copies);
@@ -175,21 +180,55 @@ TEST(STLExtrasTest, EnumerateLifetimeSemantics) {
   EXPECT_EQ(0, Copies);
   EXPECT_EQ(1, Moves);
   EXPECT_EQ(2, Destructors);
+}
 
-  Copies = Moves = Destructors = 0;
+TEST(STLExtrasTest, EnumerateLifetimeSemanticsRValue) {
+  // With an rvalue, it should not be destroyed until the end of the scope.
+  int Copies = 0;
+  int Moves = 0;
+  int Destructors = 0;
+  {
+    Range<true, false> R(Copies, Moves, Destructors);
+    {
+      auto E = enumerate(std::move(R));
+      (void)E;
+      // Doesn't compile.  rvalue ranges must be moveable.
+      // auto E2 = enumerate(Range<false, true>(Copies, Moves, Destructors));
+      EXPECT_EQ(0, Copies);
+      EXPECT_EQ(1, Moves);
+      EXPECT_EQ(0, Destructors);
+    }
+    EXPECT_EQ(0, Copies);
+    EXPECT_EQ(1, Moves);
+    EXPECT_EQ(1, Destructors);
+  }
+  EXPECT_EQ(0, Copies);
+  EXPECT_EQ(1, Moves);
+  EXPECT_EQ(2, Destructors);
+}
+
+TEST(STLExtrasTest, EnumerateLifetimeSemanticsLValue) {
   // With an lvalue, it should not be destroyed even after the end of the scope.
   // lvalue ranges need be neither copyable nor moveable.
-  Range<false, false> R(Copies, Moves, Destructors);
+  int Copies = 0;
+  int Moves = 0;
+  int Destructors = 0;
   {
-    auto Enumerator = enumerate(R);
-    (void)Enumerator;
+    Range<false, false> R(Copies, Moves, Destructors);
+    {
+      auto E = enumerate(R);
+      (void)E;
+      EXPECT_EQ(0, Copies);
+      EXPECT_EQ(0, Moves);
+      EXPECT_EQ(0, Destructors);
+    }
     EXPECT_EQ(0, Copies);
     EXPECT_EQ(0, Moves);
     EXPECT_EQ(0, Destructors);
   }
   EXPECT_EQ(0, Copies);
   EXPECT_EQ(0, Moves);
-  EXPECT_EQ(0, Destructors);
+  EXPECT_EQ(1, Destructors);
 }
 
 TEST(STLExtrasTest, ApplyTuple) {
