@@ -631,11 +631,19 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::FADD,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
     { ISD::FSUB,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
     { ISD::FMUL,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::f64,        4 }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v2f64,      4 }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v4f64,      8 }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v8f64,     16 }, // Skylake from http://www.agner.org/
 
     { ISD::FNEG,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
     { ISD::FADD,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
     { ISD::FSUB,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
     { ISD::FMUL,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::f32,        3 }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v4f32,      3 }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v8f32,      5 }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v16f32,    10 }, // Skylake from http://www.agner.org/
   };
 
   if (ST->hasAVX512())
