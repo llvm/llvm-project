@@ -460,15 +460,20 @@ public:
   /// directive). Returns nullptr if no clause of this kind is associated with
   /// the directive.
   template <typename SpecificClause>
-  const SpecificClause *getSingleClause() const {
-    auto Clauses = getClausesOfKind<SpecificClause>();
+  static const SpecificClause *getSingleClause(ArrayRef<OMPClause *> Clauses) {
+    auto ClausesOfKind = getClausesOfKind<SpecificClause>(Clauses);
 
-    if (Clauses.begin() != Clauses.end()) {
-      assert(std::next(Clauses.begin()) == Clauses.end() &&
+    if (ClausesOfKind.begin() != ClausesOfKind.end()) {
+      assert(std::next(ClausesOfKind.begin()) == ClausesOfKind.end() &&
              "There are at least 2 clauses of the specified kind");
-      return *Clauses.begin();
+      return *ClausesOfKind.begin();
     }
     return nullptr;
+  }
+
+  template <typename SpecificClause>
+  const SpecificClause *getSingleClause() const {
+    return getSingleClause<SpecificClause>(clauses());
   }
 
   /// Returns true if the current directive has one or more clauses of a

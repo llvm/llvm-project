@@ -1320,8 +1320,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // across the loop nests.
     // We do UnrollAndJam in a separate LPM to ensure it happens before unroll
     if (EnableUnrollAndJam && PTO.LoopUnrolling)
-      FPM.addPass(createFunctionToLoopPassAdaptor(
-          LoopUnrollAndJamPass(Level.getSpeedupLevel())));
+      FPM.addPass(LoopUnrollAndJamPass(Level.getSpeedupLevel()));
     FPM.addPass(LoopUnrollPass(LoopUnrollOptions(
         Level.getSpeedupLevel(), /*OnlyWhenForced=*/!PTO.LoopUnrolling,
         PTO.ForgetAllSCEVInLoopUnroll)));
@@ -1401,8 +1400,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // across the loop nests.
     // We do UnrollAndJam in a separate LPM to ensure it happens before unroll
     if (EnableUnrollAndJam && PTO.LoopUnrolling) {
-      FPM.addPass(createFunctionToLoopPassAdaptor(
-          LoopUnrollAndJamPass(Level.getSpeedupLevel())));
+      FPM.addPass(LoopUnrollAndJamPass(Level.getSpeedupLevel()));
     }
     FPM.addPass(LoopUnrollPass(LoopUnrollOptions(
         Level.getSpeedupLevel(), /*OnlyWhenForced=*/!PTO.LoopUnrolling,

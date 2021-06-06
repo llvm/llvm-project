@@ -39,13 +39,13 @@ define i32 @test() {
 ; CHECK-NEXT:    [[TMP4]] = add nsw i32 [[TMP3]], [[TMP]]
 ; CHECK-NEXT:    br label [[BB5:%.*]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    br i1 false, label [[BB7:%.*]], label [[BB15_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 undef, label [[BB7:%.*]], label [[BB15_LOOPEXIT:%.*]]
 ; CHECK:       bb7:
 ; CHECK-NEXT:    br i1 undef, label [[BB10:%.*]], label [[BB10]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    br i1 false, label [[BB12]], label [[BB17_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 undef, label [[BB12]], label [[BB17_LOOPEXIT:%.*]]
 ; CHECK:       bb12:
-; CHECK-NEXT:    br i1 false, label [[BB13_LOOPEXIT:%.*]], label [[BB2]], !llvm.loop !0
+; CHECK-NEXT:    br i1 false, label [[BB13_LOOPEXIT:%.*]], label [[BB2]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       bb13.loopexit:
 ; CHECK-NEXT:    br label [[BB13]]
 ; CHECK:       bb13:

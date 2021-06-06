@@ -849,7 +849,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
     parseTrie(buf + c->export_off, c->export_size,
               [&](const Twine &name, uint64_t flags) {
                 StringRef savedName = saver.save(name);
-                if (handleLdSymbol(savedName))
+                if (handleLDSymbol(savedName))
                   return;
                 bool isWeakDef = flags & EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION;
                 bool isTlv = flags & EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL;
@@ -937,7 +937,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
     if (!symbol->getArchitectures().has(config->arch()))
       continue;
 
-    if (handleLdSymbol(symbol->getName()))
+    if (handleLDSymbol(symbol->getName()))
       continue;
 
     switch (symbol->getKind()) {
@@ -974,18 +974,23 @@ void DylibFile::parseReexports(const InterfaceFile &interface) {
 // $ld$ symbols modify the properties/behavior of the library (e.g. its install
 // name, compatibility version or hide/add symbols) for specific target
 // versions.
-bool DylibFile::handleLdSymbol(StringRef originalName) {
-  // $ld$ previous $ <installname> $ <compatversion> $ <platformstr> $
-  // <startversion> $ <endversion> $ <symbol-name> $
+bool DylibFile::handleLDSymbol(StringRef originalName) {
   if (!originalName.startswith("$ld$"))
     return false;
 
   StringRef action;
   StringRef name;
   std::tie(action, name) = originalName.drop_front(4 /* $ld$ */).split('$');
-  if (action.empty() || action != "previous")
-    return true;
+  if (action == "previous")
+    handleLDPreviousSymbol(name, originalName);
+  else if (action == "install_name")
+    handleLDInstallNameSymbol(name, originalName);
+  return true;
+}
 
+void DylibFile::handleLDPreviousSymbol(StringRef name, StringRef originalName) {
+  // originalName: $ld$ previous $ <installname> $ <compatversion> $
+  // <platformstr> $ <startversion> $ <endversion> $ <symbol-name> $
   StringRef installName;
   StringRef compatVersion;
   StringRef platformStr;
@@ -1002,26 +1007,26 @@ bool DylibFile::handleLdSymbol(StringRef originalName) {
   std::tie(symbolName, rest) = symbolName.split('$');
   // TODO: ld64 contains some logic for non-empty symbolName as well.
   if (!symbolName.empty())
-    return true;
+    return;
   unsigned platform;
   if (platformStr.getAsInteger(10, platform) ||
       platform != static_cast<unsigned>(config->platform()))
-    return true;
+    return;
 
   VersionTuple start;
   if (start.tryParse(startVersion)) {
     warn("failed to parse start version, symbol '" + originalName +
          "' ignored");
-    return true;
+    return;
   }
   VersionTuple end;
   if (end.tryParse(endVersion)) {
     warn("failed to parse end version, symbol '" + originalName + "' ignored");
-    return true;
+    return;
   }
   if (config->platformInfo.minimum < start ||
       config->platformInfo.minimum >= end)
-    return true;
+    return;
 
   dylibName = saver.save(installName);
 
@@ -1030,12 +1035,26 @@ bool DylibFile::handleLdSymbol(StringRef originalName) {
     if (cVersion.tryParse(compatVersion)) {
       warn("failed to parse compatibility version, symbol '" + originalName +
            "' ignored");
-      return true;
+      return;
     }
     compatibilityVersion = encodeVersion(cVersion);
   }
+}
 
-  return true;
+void DylibFile::handleLDInstallNameSymbol(StringRef name,
+                                          StringRef originalName) {
+  // originalName: $ld$ install_name $ os<version> $ install_name
+  StringRef condition, installName;
+  std::tie(condition, installName) = name.split('$');
+  VersionTuple version;
+  if (!condition.startswith("os") ||
+      version.tryParse(condition.drop_front(2 /* os */))) {
+    warn("failed to parse os version, symbol '" + originalName + "' ignored");
+    return;
+  }
+  if (version != config->platformInfo.minimum)
+    return;
+  dylibName = saver.save(installName);
 }
 
 ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f)

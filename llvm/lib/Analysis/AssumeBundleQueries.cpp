@@ -130,10 +130,10 @@ bool llvm::isAssumeWithEmptyBundle(AssumeInst &Assume) {
 }
 
 static CallInst::BundleOpInfo *getBundleFromUse(const Use *U) {
-  auto *Intr = dyn_cast<IntrinsicInst>(U->getUser());
   if (!match(U->getUser(),
              m_Intrinsic<Intrinsic::assume>(m_Unless(m_Specific(U->get())))))
     return nullptr;
+  auto *Intr = cast<IntrinsicInst>(U->getUser());
   return &Intr->getBundleOpInfoForOperand(U->getOperandNo());
 }
 

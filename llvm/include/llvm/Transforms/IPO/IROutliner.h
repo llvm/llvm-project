@@ -63,7 +63,7 @@ class OptimizationRemarkEmitter;
 /// mapping from the extracted function arguments to overall function arguments.
 struct OutlinableRegion {
   /// Describes the region of code.
-  IRSimilarityCandidate *Candidate;
+  IRSimilarityCandidate *Candidate = nullptr;
 
   /// If this region is outlined, the front and back IRInstructionData could
   /// potentially become invalidated if the only new instruction is a call.
@@ -72,11 +72,11 @@ struct OutlinableRegion {
   IRInstructionData *NewBack = nullptr;
 
   /// The number of extracted inputs from the CodeExtractor.
-  unsigned NumExtractedInputs;
+  unsigned NumExtractedInputs = 0;
 
   /// The corresponding BasicBlock with the appropriate stores for this
   /// OutlinableRegion in the overall function.
-  unsigned OutputBlockNum;
+  unsigned OutputBlockNum = -1;
 
   /// Mapping the extracted argument number to the argument number in the
   /// overall function.  Since there will be inputs, such as elevated constants

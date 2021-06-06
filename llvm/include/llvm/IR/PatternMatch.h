@@ -1168,10 +1168,10 @@ struct OverflowingBinaryOp_match {
     if (auto *Op = dyn_cast<OverflowingBinaryOperator>(V)) {
       if (Op->getOpcode() != Opcode)
         return false;
-      if (WrapFlags & OverflowingBinaryOperator::NoUnsignedWrap &&
+      if ((WrapFlags & OverflowingBinaryOperator::NoUnsignedWrap) &&
           !Op->hasNoUnsignedWrap())
         return false;
-      if (WrapFlags & OverflowingBinaryOperator::NoSignedWrap &&
+      if ((WrapFlags & OverflowingBinaryOperator::NoSignedWrap) &&
           !Op->hasNoSignedWrap())
         return false;
       return L.match(Op->getOperand(0)) && R.match(Op->getOperand(1));
