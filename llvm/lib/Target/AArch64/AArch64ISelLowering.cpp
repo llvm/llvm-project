@@ -17223,7 +17223,8 @@ AArch64TargetLowering::shouldExpandAtomicCmpXchgInIR(
   return AtomicExpansionKind::LLSC;
 }
 
-Value *AArch64TargetLowering::emitLoadLinked(IRBuilder<> &Builder, Value *Addr,
+Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
+                                             Value *Addr,
                                              AtomicOrdering Ord) const {
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
   Type *ValTy = cast<PointerType>(Addr->getType())->getElementType();
@@ -17263,12 +17264,12 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilder<> &Builder, Value *Addr,
 }
 
 void AArch64TargetLowering::emitAtomicCmpXchgNoStoreLLBalance(
-    IRBuilder<> &Builder) const {
+    IRBuilderBase &Builder) const {
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
   Builder.CreateCall(Intrinsic::getDeclaration(M, Intrinsic::aarch64_clrex));
 }
 
-Value *AArch64TargetLowering::emitStoreConditional(IRBuilder<> &Builder,
+Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,
                                                    Value *Val, Value *Addr,
                                                    AtomicOrdering Ord) const {
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
@@ -17321,7 +17322,7 @@ bool AArch64TargetLowering::shouldNormalizeToSelectSequence(LLVMContext &,
   return false;
 }
 
-static Value *UseTlsOffset(IRBuilder<> &IRB, unsigned Offset) {
+static Value *UseTlsOffset(IRBuilderBase &IRB, unsigned Offset) {
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   Function *ThreadPointerFunc =
       Intrinsic::getDeclaration(M, Intrinsic::thread_pointer);
@@ -17331,7 +17332,7 @@ static Value *UseTlsOffset(IRBuilder<> &IRB, unsigned Offset) {
       IRB.getInt8PtrTy()->getPointerTo(0));
 }
 
-Value *AArch64TargetLowering::getIRStackGuard(IRBuilder<> &IRB) const {
+Value *AArch64TargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
   // Android provides a fixed TLS slot for the stack cookie. See the definition
   // of TLS_SLOT_STACK_GUARD in
   // https://android.googlesource.com/platform/bionic/+/master/libc/private/bionic_tls.h
@@ -17380,7 +17381,8 @@ Function *AArch64TargetLowering::getSSPStackGuardCheck(const Module &M) const {
   return TargetLowering::getSSPStackGuardCheck(M);
 }
 
-Value *AArch64TargetLowering::getSafeStackPointerLocation(IRBuilder<> &IRB) const {
+Value *
+AArch64TargetLowering::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
   // Android provides a fixed TLS slot for the SafeStack pointer. See the
   // definition of TLS_SLOT_SAFESTACK in
   // https://android.googlesource.com/platform/bionic/+/master/libc/private/bionic_tls.h
