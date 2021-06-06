@@ -10,21 +10,15 @@
 
 // <atomic>
 
-// template <class Integral>
-//     Integral
-//     atomic_fetch_add_explicit(volatile atomic<Integral>* obj, Integral op,
-//                               memory_order m);
-// template <class Integral>
-//     Integral
-//     atomic_fetch_add_explicit(atomic<Integral>* obj, Integral op,
-//                               memory_order m);
-// template <class T>
-//     T*
-//     atomic_fetch_add_explicit(volatile atomic<T*>* obj, ptrdiff_t op,
-//                               memory_order m);
-// template <class T>
-//     T*
-//     atomic_fetch_add_explicit(atomic<T*>* obj, ptrdiff_t op, memory_order m);
+// template<class T>
+//     T
+//     atomic_fetch_add_explicit(volatile atomic<T>*, atomic<T>::difference_type,
+//                               memory_order) noexcept;
+//
+// template<class T>
+//     T
+//     atomic_fetch_add_explicit(atomic<T>*, atomic<T>::difference_type,
+//                               memory_order) noexcept;
 
 #include <atomic>
 #include <type_traits>
