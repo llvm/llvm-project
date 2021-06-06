@@ -16,6 +16,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemAlloc.h"
 #include "llvm/Support/type_traits.h"
 #include <algorithm>
