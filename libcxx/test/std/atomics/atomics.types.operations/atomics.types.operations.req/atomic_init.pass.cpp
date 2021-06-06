@@ -9,6 +9,7 @@
 // UNSUPPORTED: libcpp-has-no-threads
 // XFAIL: !non-lockfree-atomics
 //  ... assertion fails line 36
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 // <atomic>
 
