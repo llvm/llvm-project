@@ -7863,8 +7863,13 @@ private:
             return Result::deleted();
           }
         } else {
+          QualType T = Best->BuiltinParamTypes[0];
+          assert(T == Best->BuiltinParamTypes[1] &&
+                 "builtin comparison for different types?");
+          assert(Best->BuiltinParamTypes[2].isNull() &&
+                 "invalid builtin comparison");
           Optional<ComparisonCategoryType> Cat =
-              getComparisonCategoryForBuiltinCmp(Args[0]->getType());
+              getComparisonCategoryForBuiltinCmp(T);
           assert(Cat && "no category for builtin comparison?");
           R.Category = *Cat;
         }

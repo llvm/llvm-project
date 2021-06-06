@@ -172,3 +172,23 @@ namespace PR48856 {
     int C::*x;                                   // expected-note {{because there is no viable three-way comparison function for member 'x'}}
   };
 }
+
+namespace PR50591 {
+  struct a1 {
+    operator int() const;
+  };
+  struct b1 {
+    auto operator<=>(b1 const &) const = default;
+    a1 f;
+  };
+  std::strong_ordering cmp_b1 = b1() <=> b1();
+
+  struct a2 {
+    operator float() const;
+  };
+  struct b2 {
+    auto operator<=>(b2 const &) const = default;
+    a2 f;
+  };
+  std::partial_ordering cmp_b2 = b2() <=> b2();
+}
