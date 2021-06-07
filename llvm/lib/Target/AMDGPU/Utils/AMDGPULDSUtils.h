@@ -17,6 +17,8 @@
 
 namespace llvm {
 
+class ConstantExpr;
+
 namespace AMDGPU {
 
 bool isKernelCC(const Function *Func);
@@ -39,9 +41,8 @@ findVariablesToLower(Module &M, const SmallPtrSetImpl<GlobalValue *> &UsedList,
 
 SmallPtrSet<GlobalValue *, 32> getUsedList(Module &M);
 
-/// \returns true if all uses of \p U end up in a function \p F.
-bool isUsedOnlyFromFunction(const User *U, const Function *F);
-
+/// Replace all uses of constant \p C with instructions in \p F.
+void replaceConstantUsesInFunction(ConstantExpr *C, const Function *F);
 } // end namespace AMDGPU
 
 } // end namespace llvm
