@@ -292,8 +292,18 @@ private:
       Constant *GEPIdx[] = {ConstantInt::get(I32, 0), ConstantInt::get(I32, I)};
       Constant *GEP = ConstantExpr::getGetElementPtr(LDSTy, SGV, GEPIdx);
       if (F) {
+        // Replace all constant uses with instructions if they belong to the
+        // current kernel.
+        for (User *U : make_early_inc_range(GV->users())) {
+          if (ConstantExpr *C = dyn_cast<ConstantExpr>(U))
+            AMDGPU::replaceConstantUsesInFunction(C, F);
+        }
+
+        GV->removeDeadConstantUsers();
+
         GV->replaceUsesWithIf(GEP, [F](Use &U) {
-          return AMDGPU::isUsedOnlyFromFunction(U.getUser(), F);
+          Instruction *I = dyn_cast<Instruction>(U.getUser());
+          return I && I->getFunction() == F;
         });
       } else {
         GV->replaceAllUsesWith(GEP);
