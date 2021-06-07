@@ -24,16 +24,13 @@ svbfloat16_t test_svdupq_lane_bf16(svbfloat16_t data, uint64_t index) {
 svbfloat16_t test_svdupq_n_bf16(bfloat16_t x0, bfloat16_t x1, bfloat16_t x2, bfloat16_t x3,
                                 bfloat16_t x4, bfloat16_t x5, bfloat16_t x6, bfloat16_t x7) {
   // CHECK-LABEL: test_svdupq_n_bf16
-  // CHECK: %[[ALLOCA:.*]] = alloca [8 x bfloat], align 16
-  // CHECK-DAG: %[[BASE:.*]] = getelementptr inbounds [8 x bfloat], [8 x bfloat]* %[[ALLOCA]], i64 0, i64 0
-  // CHECK-DAG: store bfloat %x0, bfloat* %[[BASE]], align 16
-  // <assume other stores>
-  // CHECK-DAG: %[[GEP:.*]] = getelementptr inbounds [8 x bfloat], [8 x bfloat]* %[[ALLOCA]], i64 0, i64 7
-  // CHECK: store bfloat %x7, bfloat* %[[GEP]], align 2
-  // CHECK-NOT: store
-  // CHECK: call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  // CHECK: %[[LOAD:.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.ld1rq.nxv8bf16(<vscale x 8 x i1> %{{.*}}, bfloat* nonnull %[[BASE]])
-  // CHECK: ret <vscale x 8 x bfloat> %[[LOAD]]
+  // CHECK: insertelement <8 x bfloat> undef, bfloat %x0, i32 0
+  // <assume other insertelement>
+  // CHECK: %[[VEC:.*]] = insertelement <8 x bfloat> %[[X:.*]], bfloat %x7, i32 7
+  // CHECK-NOT: insertelement
+  // CHECK: %[[INS:.*]] = call <vscale x 8 x bfloat> @llvm.experimental.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> undef, <8 x bfloat> %[[VEC]], i64 0)
+  // CHECK: %[[DUPQ:.*]] = call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> %[[INS]], i64 0)
+  // CHECK: ret <vscale x 8 x bfloat> %[[DUPQ]]
   // expected-warning@+1 {{implicit declaration of function 'svdupq_n_bf16'}}
   return SVE_ACLE_FUNC(svdupq, _n, _bf16, )(x0, x1, x2, x3, x4, x5, x6, x7);
 }

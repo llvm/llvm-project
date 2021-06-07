@@ -1594,7 +1594,6 @@ def int_aarch64_sve_prfd_gather_scalar_offset : SVE_gather_prf_VS;
 def int_aarch64_sve_dup : AdvSIMD_SVE_DUP_Intrinsic;
 def int_aarch64_sve_dup_x : AdvSIMD_SVE_DUP_Unpred_Intrinsic;
 
-
 def int_aarch64_sve_index : AdvSIMD_SVE_Index_Intrinsic;
 
 //
