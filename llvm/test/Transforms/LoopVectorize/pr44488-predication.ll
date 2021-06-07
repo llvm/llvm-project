@@ -49,7 +49,7 @@ define i16 @test_true_and_false_branch_equal() {
 ; CHECK-NEXT:    store i16 [[TMP14]], i16* @v_39, align 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i16> [[PREDPHI]], i32 1
 ; CHECK-NEXT:    store i16 [[TMP15]], i16* @v_39, align 1
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[INDEX_NEXT]], 12
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; CHECK:       middle.block:

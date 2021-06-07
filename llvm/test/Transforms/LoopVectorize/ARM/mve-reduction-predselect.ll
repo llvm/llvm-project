@@ -451,7 +451,7 @@ define i32 @reduction_min(i32* nocapture %A, i32* nocapture %B) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP3]] = select <4 x i1> [[TMP2]], <4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP18:!llvm.loop !.*]]
 ; CHECK:       middle.block:
@@ -508,7 +508,7 @@ define i32 @reduction_max(i32* nocapture %A, i32* nocapture %B) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP3]] = select <4 x i1> [[TMP2]], <4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP20:!llvm.loop !.*]]
 ; CHECK:       middle.block:

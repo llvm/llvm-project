@@ -23,7 +23,8 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // -----
 
-def SPV_AddressOfOp : SPV_Op<"mlir.addressof", [InFunctionScope, NoSideEffect]> {
+def SPV_AddressOfOp : SPV_Op<"mlir.addressof",
+    [DeclareOpInterfaceMethods<OpAsmOpInterface>, InFunctionScope, NoSideEffect]> {
   let summary = "Get the address of a global variable.";
 
   let description = [{

@@ -24,7 +24,7 @@
 ; CHECKUF1: store <vscale x 4 x double> %[[FADD]], <vscale x 4 x double>* %[[IDXA_CAST]], align 8, !alias.scope !3, !noalias !0
 ; CHECKUF1: %[[VSCALE:.*]] = call i64 @llvm.vscale.i64()
 ; CHECKUF1: %[[VSCALEX4:.*]] = shl i64 %[[VSCALE]], 2
-; CHECKUF1: %index.next = add i64 %index, %[[VSCALEX4]]
+; CHECKUF1: %index.next = add nuw i64 %index, %[[VSCALEX4]]
 ; CHECKUF1: %[[CMP:.*]] = icmp eq i64 %index.next, %n.vec
 ; CHECKUF1: br i1 %[[CMP]], label %middle.block, label %vector.body, !llvm.loop !5
 
@@ -68,7 +68,7 @@
 ; CHECKUF2: store <vscale x 4 x double> %[[FADD_NEXT]], <vscale x 4 x double>* %[[IDXA_NEXT_CAST]], align 8, !alias.scope !3, !noalias !0
 ; CHECKUF2: %[[VSCALE:.*]] = call i64 @llvm.vscale.i64()
 ; CHECKUF2: %[[VSCALEX8:.*]] = shl i64 %[[VSCALE]], 3
-; CHECKUF2: %index.next = add i64 %index, %[[VSCALEX8]]
+; CHECKUF2: %index.next = add nuw i64 %index, %[[VSCALEX8]]
 ; CHECKUF2: %[[CMP:.*]] = icmp eq i64 %index.next, %n.vec
 ; CHECKUF2: br i1 %[[CMP]], label %middle.block, label %vector.body, !llvm.loop !5
 

@@ -9061,33 +9061,32 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     if (IsBoolTy)
       EltTy = IntegerType::get(getLLVMContext(), SVEBitsPerBlock / NumOpnds);
 
-    Address Alloca = CreateTempAlloca(llvm::ArrayType::get(EltTy, NumOpnds),
-                                     CharUnits::fromQuantity(16));
+    SmallVector<llvm::Value *, 16> VecOps;
     for (unsigned I = 0; I < NumOpnds; ++I)
-      Builder.CreateDefaultAlignedStore(
-          IsBoolTy ? Builder.CreateZExt(Ops[I], EltTy) : Ops[I],
-          Builder.CreateGEP(Alloca.getElementType(), Alloca.getPointer(),
-                            {Builder.getInt64(0), Builder.getInt64(I)}));
+        VecOps.push_back(Builder.CreateZExt(Ops[I], EltTy));
+    Value *Vec = BuildVector(VecOps);
 
     SVETypeFlags TypeFlags(Builtin->TypeModifier);
     Value *Pred = EmitSVEAllTruePred(TypeFlags);
 
     llvm::Type *OverloadedTy = getSVEVectorForElementType(EltTy);
-    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_sve_ld1rq, OverloadedTy);
-    Value *Alloca0 = Builder.CreateGEP(
-        Alloca.getElementType(), Alloca.getPointer(),
-        {Builder.getInt64(0), Builder.getInt64(0)});
-    Value *LD1RQ = Builder.CreateCall(F, {Pred, Alloca0});
+    Value *InsertSubVec = Builder.CreateInsertVector(
+        OverloadedTy, UndefValue::get(OverloadedTy), Vec, Builder.getInt64(0));
+
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::aarch64_sve_dupq_lane, OverloadedTy);
+    Value *DupQLane =
+        Builder.CreateCall(F, {InsertSubVec, Builder.getInt64(0)});
 
     if (!IsBoolTy)
-      return LD1RQ;
+      return DupQLane;
 
     // For svdupq_n_b* we need to add an additional 'cmpne' with '0'.
     F = CGM.getIntrinsic(NumOpnds == 2 ? Intrinsic::aarch64_sve_cmpne
                                        : Intrinsic::aarch64_sve_cmpne_wide,
                          OverloadedTy);
-    Value *Call =
-        Builder.CreateCall(F, {Pred, LD1RQ, EmitSVEDupX(Builder.getInt64(0))});
+    Value *Call = Builder.CreateCall(
+        F, {Pred, DupQLane, EmitSVEDupX(Builder.getInt64(0))});
     return EmitSVEPredicateCast(Call, cast<llvm::ScalableVectorType>(Ty));
   }
 

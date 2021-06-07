@@ -25,7 +25,7 @@ define arm_aapcs_vfpcc i32 @minmaxval4(i32* nocapture readonly %x, i32* nocaptur
 ; CHECK-NEXT:    [[TMP3]] = select <4 x i1> [[TMP2]], <4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP5]] = select <4 x i1> [[TMP4]], <4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; CHECK:       middle.block:

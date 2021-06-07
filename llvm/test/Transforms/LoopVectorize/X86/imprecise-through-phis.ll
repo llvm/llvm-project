@@ -106,7 +106,7 @@ define double @sumIfVector(double* nocapture readonly %arr) {
 ; AVX-NEXT:    [[TMP5:%.*]] = fadd fast <4 x double> [[VEC_PHI]], [[WIDE_LOAD]]
 ; AVX-NEXT:    [[TMP6:%.*]] = xor <4 x i1> [[TMP4]], <i1 true, i1 true, i1 true, i1 true>
 ; AVX-NEXT:    [[PREDPHI]] = select <4 x i1> [[TMP4]], <4 x double> [[TMP5]], <4 x double> [[VEC_PHI]]
-; AVX-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; AVX-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; AVX-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], 32
 ; AVX-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; AVX:       middle.block:

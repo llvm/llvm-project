@@ -56,7 +56,7 @@ define i8 @widget(i8* %arr, i8 %t9) {
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, i8* [[TMP16]], i32 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = bitcast i8* [[TMP19]] to <4 x i8>*
 ; CHECK-NEXT:    store <4 x i8> [[TMP18]], <4 x i8>* [[TMP20]], align 1
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], <i8 4, i8 4, i8 4, i8 4>
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

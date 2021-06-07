@@ -124,7 +124,7 @@ OpResult getMatchingOpResult(LinalgOp linalgOp, OpOperand &opOperand) {
       opOperand.getOperandNumber() - linalgOp.getNumInputs();
   int64_t numOutputBuffers = 0;
   for (unsigned idx = 0; idx < outputOperandIndex; ++idx)
-    if (!linalgOp.getOutputShapedType(idx).isa<TensorType>())
+    if (!linalgOp.getOutputOperand(idx)->get().getType().isa<TensorType>())
       ++numOutputBuffers;
   return linalgOp->getResult(outputOperandIndex - numOutputBuffers);
 }
@@ -414,9 +414,9 @@ allocateBuffersForResults(OpBuilder &b, Location loc, LinalgOp op,
   SmallVector<Range, 4> loopRanges;
 
   // Linalg invariant: output tensors and result match 1-1.
-  assert(op.getNumOutputTensors() == op->getNumResults());
-  for (auto &opOperand : op.getOutputOpOperands()) {
-    Value output = opOperand.get();
+  assert(op.getOutputTensorOperands().size() == op->getNumResults());
+  for (OpOperand *opOperand : op.getOutputOperands()) {
+    Value output = opOperand->get();
     if (output.getType().isa<MemRefType>()) {
       resultBuffers.push_back(output);
       continue;
@@ -425,7 +425,7 @@ allocateBuffersForResults(OpBuilder &b, Location loc, LinalgOp op,
     // If output tensor is marked inPlace, just use the buffer.
     // The following uses internal knowledge of the position of tied operand /
     // results.
-    OpResult tiedResult = getMatchingOpResult(op, opOperand);
+    OpResult tiedResult = getMatchingOpResult(op, *opOperand);
     if (getInPlace(tiedResult) == InPlaceSpec::True) {
       Value v = lookup(bvm, output);
       if (!v)
@@ -440,7 +440,7 @@ allocateBuffersForResults(OpBuilder &b, Location loc, LinalgOp op,
     resultBuffers.push_back(alloc);
 
     // Additionally, if the output buffer is used, clone its value for now.
-    if (op.payloadUsesValueFromOpOperand(&opOperand)) {
+    if (op.payloadUsesValueFromOperand(opOperand)) {
       Value v = lookup(bvm, output);
       if (!v)
         return failure();
@@ -486,8 +486,8 @@ static LogicalResult bufferize(OpBuilder &b, LinalgOp op,
   Location loc = op.getLoc();
   SmallVector<Value, 2> newInputBuffers;
   newInputBuffers.reserve(op.getNumInputs());
-  for (Value in : op.getInputs()) {
-    Value v = lookup(bvm, in);
+  for (OpOperand *opOperand : op.getInputOperands()) {
+    Value v = lookup(bvm, opOperand->get());
     if (!v)
       return failure();
     newInputBuffers.push_back(v);

@@ -56,7 +56,7 @@ define void @foo(i8 addrspace(1)* align 8 dereferenceable_or_null(16), i8 addrsp
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* [[TMP13]], i64 12
 ; CHECK-NEXT:    [[TMP20:%.*]] = bitcast i8 addrspace(1)* addrspace(1)* [[TMP19]] to <4 x i8 addrspace(1)*> addrspace(1)*
 ; CHECK-NEXT:    store <4 x i8 addrspace(1)*> [[WIDE_LOAD5]], <4 x i8 addrspace(1)*> addrspace(1)* [[TMP20]], align 8, !alias.scope !3, !noalias !0
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP5:!llvm.loop !.*]]
 ; CHECK:       middle.block:

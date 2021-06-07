@@ -29,6 +29,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
@@ -5121,7 +5122,7 @@ matchRISCVBitmanipPat(SDValue Op, ArrayRef<uint64_t> BitmanipMasks) {
   uint64_t ShAmt = Op.getConstantOperandVal(1);
 
   unsigned Width = Op.getValueType() == MVT::i64 ? 64 : 32;
-  if (ShAmt >= Width && !isPowerOf2_64(ShAmt))
+  if (ShAmt >= Width || !isPowerOf2_64(ShAmt))
     return None;
   // If we don't have enough masks for 64 bit, then we must be trying to
   // match SHFL so we're only allowed to shift 1/4 of the width.
@@ -8238,7 +8239,7 @@ void RISCVTargetLowering::LowerAsmOperandForConstraint(
   TargetLowering::LowerAsmOperandForConstraint(Op, Constraint, Ops, DAG);
 }
 
-Instruction *RISCVTargetLowering::emitLeadingFence(IRBuilder<> &Builder,
+Instruction *RISCVTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                    Instruction *Inst,
                                                    AtomicOrdering Ord) const {
   if (isa<LoadInst>(Inst) && Ord == AtomicOrdering::SequentiallyConsistent)
@@ -8248,7 +8249,7 @@ Instruction *RISCVTargetLowering::emitLeadingFence(IRBuilder<> &Builder,
   return nullptr;
 }
 
-Instruction *RISCVTargetLowering::emitTrailingFence(IRBuilder<> &Builder,
+Instruction *RISCVTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
                                                     Instruction *Inst,
                                                     AtomicOrdering Ord) const {
   if (isa<LoadInst>(Inst) && isAcquireOrStronger(Ord))
@@ -8322,7 +8323,7 @@ getIntrinsicForMaskedAtomicRMWBinOp(unsigned XLen, AtomicRMWInst::BinOp BinOp) {
 }
 
 Value *RISCVTargetLowering::emitMaskedAtomicRMWIntrinsic(
-    IRBuilder<> &Builder, AtomicRMWInst *AI, Value *AlignedAddr, Value *Incr,
+    IRBuilderBase &Builder, AtomicRMWInst *AI, Value *AlignedAddr, Value *Incr,
     Value *Mask, Value *ShiftAmt, AtomicOrdering Ord) const {
   unsigned XLen = Subtarget.getXLen();
   Value *Ordering =
@@ -8374,7 +8375,7 @@ RISCVTargetLowering::shouldExpandAtomicCmpXchgInIR(
 }
 
 Value *RISCVTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
-    IRBuilder<> &Builder, AtomicCmpXchgInst *CI, Value *AlignedAddr,
+    IRBuilderBase &Builder, AtomicCmpXchgInst *CI, Value *AlignedAddr,
     Value *CmpVal, Value *NewVal, Value *Mask, AtomicOrdering Ord) const {
   unsigned XLen = Subtarget.getXLen();
   Value *Ordering = Builder.getIntN(XLen, static_cast<uint64_t>(Ord));

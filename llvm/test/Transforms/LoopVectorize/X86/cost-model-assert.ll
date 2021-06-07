@@ -69,7 +69,7 @@ define void @cff_index_load_offsets(i1 %cond, i8 %x, i8* %p) #0 {
 ; CHECK-NEXT:    store i32 [[TMP28]], i32* undef, align 4, !tbaa [[TBAA4]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <4 x i32> [[TMP21]], i32 3
 ; CHECK-NEXT:    store i32 [[TMP29]], i32* undef, align 4, !tbaa [[TBAA4]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
