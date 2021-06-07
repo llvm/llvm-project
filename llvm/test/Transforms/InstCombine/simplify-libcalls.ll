@@ -190,7 +190,7 @@ define double @fake_exp2(double %x) {
 }
 define double @fake_ldexp(i32 %x) {
 ; CHECK32-LABEL: @fake_ldexp(
-; CHECK32-NEXT:    [[Z:%.*]] = call double @ldexp(double 1.0{{.*}}, i32 signext %x)
+; CHECK32-NEXT:    [[Z:%.*]] = call double @ldexp(double 1.0{{.*}}, i32 %x)
 ; CHECK32-NEXT:    ret double [[Z]]
 
 ; CHECK16-LABEL: @fake_ldexp(
@@ -205,19 +205,17 @@ define double @fake_ldexp(i32 %x) {
 define double @fake_ldexp_16(i16 %x) {
 ; CHECK32-LABEL: @fake_ldexp_16(
 ; CHECK32-NEXT:    [[Y:%.*]] = sext i16 %x to i32
-; CHECK32-NEXT:    [[Z:%.*]] = call double @ldexp(double 1.0{{.*}}, i32 signext [[Y]])
+; CHECK32-NEXT:    [[Z:%.*]] = call double @ldexp(double 1.0{{.*}}, i32 [[Y]])
 ; CHECK32-NEXT:    ret double [[Z]]
 
 ; CHECK16-LABEL: @fake_ldexp_16(
-; CHECK16-NEXT:    [[Z:%.*]] = call double @ldexp(double 1.0{{.*}}, i16 signext %x)
+; CHECK16-NEXT:    [[Z:%.*]] = call double @ldexp(double 1.0{{.*}}, i16 %x)
 ; CHECK16-NEXT:    ret double [[Z]]
 
   %y = sitofp i16 %x to double
   %z = call inreg double @exp2(double %y)
   ret double %z
 }
-
-; CHECK: declare double @ldexp(double, i{{16|32}} signext)
 
 
 attributes #0 = { nobuiltin }
