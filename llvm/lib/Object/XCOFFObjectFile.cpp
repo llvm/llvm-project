@@ -440,7 +440,7 @@ SubtargetFeatures XCOFFObjectFile::getFeatures() const {
 
 bool XCOFFObjectFile::isRelocatableObject() const {
   if (is64Bit())
-    report_fatal_error("64-bit support not implemented yet");
+    return !(fileHeader64()->Flags & NoRelMask);
   return !(fileHeader32()->Flags & NoRelMask);
 }
 
