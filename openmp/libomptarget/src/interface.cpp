@@ -61,7 +61,7 @@ static void HandleTargetOutcome(bool success, ident_t *loc = nullptr) {
         for (auto &Device : PM->Devices)
           dumpTargetPointerMappings(loc, Device);
       else
-        FAILURE_MESSAGE("Run with LIBOMPTARGET_DEBUG=%d to dump host-target "
+        FAILURE_MESSAGE("Run with LIBOMPTARGET_INFO=%d to dump host-target "
                         "pointer mappings.\n",
                         OMP_INFOTYPE_DUMP_TABLE);
 
