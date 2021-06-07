@@ -1690,6 +1690,14 @@ void mlir::spirv::ConstantOp::getAsmResultNames(
   setNameFn(getResult(), specialName.str());
 }
 
+void mlir::spirv::AddressOfOp::getAsmResultNames(
+    llvm::function_ref<void(mlir::Value, llvm::StringRef)> setNameFn) {
+  SmallString<32> specialNameBuffer;
+  llvm::raw_svector_ostream specialName(specialNameBuffer);
+  specialName << variable() << "_addr";
+  setNameFn(getResult(), specialName.str());
+}
+
 //===----------------------------------------------------------------------===//
 // spv.EntryPoint
 //===----------------------------------------------------------------------===//
