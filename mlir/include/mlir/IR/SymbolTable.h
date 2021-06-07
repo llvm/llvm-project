@@ -212,6 +212,8 @@ private:
   unsigned uniquingCounter = 0;
 };
 
+raw_ostream &operator<<(raw_ostream &os, SymbolTable::Visibility visibility);
+
 //===----------------------------------------------------------------------===//
 // SymbolTableCollection
 //===----------------------------------------------------------------------===//
