@@ -637,6 +637,11 @@ class TargetRegisterClass;
     ConstraintWeight getSingleConstraintMatchWeight(
       AsmOperandInfo &info, const char *constraint) const override;
 
+    /// This function parses nanoMIPS registers that appear in inline-asm
+    /// constraints. It returns pair (0, nullptr) on failure.
+    std::pair<unsigned, const TargetRegisterClass *>
+    parseRegForInlineAsmConstraintNM(StringRef C, MVT VT) const;
+
     /// This function parses registers that appear in inline-asm constraints.
     /// It returns pair (0, 0) on failure.
     std::pair<unsigned, const TargetRegisterClass *>

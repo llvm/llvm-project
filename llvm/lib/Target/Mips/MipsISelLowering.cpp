@@ -4184,6 +4184,26 @@ EVT MipsTargetLowering::getTypeForExtReturn(LLVMContext &Context, EVT VT,
   return VT.bitsLT(MinVT) ? MinVT : VT;
 }
 
+std::pair<unsigned, const TargetRegisterClass *>
+MipsTargetLowering::parseRegForInlineAsmConstraintNM(StringRef C,
+                                                     MVT VT) const {
+  // Register constraint has to contain {, $, and } (e.g. {$at_nm}).
+  if ((C.size() < 3) || (C.front() != '{') || (C.back() != '}') ||
+      (C[1] != '$'))
+    return std::make_pair(0U, nullptr);
+
+  // Strip {, $, and }.
+  const StringRef RegName = C.substr(2, C.size() - 3);
+  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
+  const auto *RC = getRegClassFor(MVT::i32);
+
+  for (const auto &V : *RC)
+    if (RegName.equals_lower(TRI->getRegAsmName(V)))
+      return std::make_pair(V, RC);
+
+  return std::make_pair(0U, nullptr);
+}
+
 std::pair<unsigned, const TargetRegisterClass *> MipsTargetLowering::
 parseRegForInlineAsmConstraint(StringRef C, MVT VT) const {
   assert(!Subtarget.hasNanoMips() && "NYI for nanoMIPS");
@@ -4192,6 +4212,9 @@ parseRegForInlineAsmConstraint(StringRef C, MVT VT) const {
   const TargetRegisterClass *RC;
   StringRef Prefix;
   unsigned long long Reg;
+
+  if (Subtarget.hasNanoMips())
+    return parseRegForInlineAsmConstraintNM(C, VT);
 
   std::pair<bool, bool> R = parsePhysicalReg(C, Prefix, Reg);
 
