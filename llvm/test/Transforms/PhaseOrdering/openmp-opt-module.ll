@@ -3,6 +3,8 @@ target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 
 @.str = private unnamed_addr constant [13 x i8] c"Alloc Shared\00", align 1
 
+@S = external local_unnamed_addr global i8*
+
 ; MODULE: remark: openmp_opt_module.c:5:7: Found thread data sharing on the GPU. Expect degraded performance due to data globalization.
 
 define void @foo() {
@@ -18,11 +20,11 @@ entry:
 define void @use(i8* %0) {
 entry:
   %.addr = alloca i8*, align 8
-  store i8* %0, i8** %.addr, align 8
+  store i8* %0, i8** @S
   ret void
 }
 
-define internal i8* @__kmpc_alloc_shared(i64 %DataSize) {
+define weak i8* @__kmpc_alloc_shared(i64 %DataSize) {
 entry:
   %call = call i8* @_Z10SafeMallocmPKc(i64 %DataSize, i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str, i64 0, i64 0)) #11
   ret i8* %call
