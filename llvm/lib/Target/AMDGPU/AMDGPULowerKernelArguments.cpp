@@ -15,6 +15,7 @@
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Target/TargetMachine.h"
 #define DEBUG_TYPE "amdgpu-lower-kernel-arguments"

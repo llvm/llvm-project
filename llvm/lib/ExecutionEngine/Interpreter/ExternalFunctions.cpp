@@ -166,6 +166,7 @@ static void *ffiValueFor(Type *Ty, const GenericValue &AV,
           return ArgDataPtr;
         }
       }
+      break;
     case Type::FloatTyID: {
       float *FloatPtr = (float *) ArgDataPtr;
       *FloatPtr = AV.FloatVal;

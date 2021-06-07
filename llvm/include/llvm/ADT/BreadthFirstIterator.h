@@ -64,7 +64,7 @@ private:
   std::queue<Optional<QueueElement>> VisitQueue;
 
   // Current level.
-  unsigned Level;
+  unsigned Level = 0;
 
   inline bf_iterator(NodeRef Node) {
     this->Visited.insert(Node);
