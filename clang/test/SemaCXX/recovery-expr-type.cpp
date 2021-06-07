@@ -136,3 +136,9 @@ void baz() {
   bar(S(123)); // expected-error {{no matching conversion}}
 }
 } // namespace test11
+
+namespace test12 {
+// Verify we do not crash.
+void fun(int *foo = no_such_function()); // expected-error {{undeclared identifier}}
+void baz() { fun(); }
+} // namespace test12
