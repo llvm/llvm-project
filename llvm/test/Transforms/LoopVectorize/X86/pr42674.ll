@@ -22,7 +22,7 @@ define zeroext i8 @sum() {
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <64 x i8>, <64 x i8>* [[TMP3]], align 16
 ; CHECK-NEXT:    [[TMP4]] = add <64 x i8> [[WIDE_LOAD]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP5]] = add <64 x i8> [[WIDE_LOAD2]], [[VEC_PHI1]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 128
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 128
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX]], 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
 ; CHECK:       middle.block:

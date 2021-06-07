@@ -9,7 +9,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK:       [[LATCH]]:
 ; CHECK:         [[TMP13:%.*]] = and <4 x i32> [[VEC_PHI]], <i32 255, i32 255, i32 255, i32 255>
 ; CHECK-NEXT:    [[TMP14:%.*]] = add <4 x i32> [[TMP13]], {{.*}}
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK:         [[TMP16:%.*]] = trunc <4 x i32> [[TMP14]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP17]] = zext <4 x i8> [[TMP16]] to <4 x i32>
 ; CHECK-NEXT:    br i1 {{.*}}, label %middle.block, label %vector.body
@@ -49,7 +49,7 @@ for.end:
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ [[TMP3]], %vector.ph ], [ [[TMP9:%.*]], %vector.body ]
 ; CHECK:         [[TMP5:%.*]] = and <4 x i32> [[VEC_PHI]], <i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[TMP5]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK:         [[TMP8:%.*]] = trunc <4 x i32> [[TMP6]] to <4 x i1>
 ; CHECK-NEXT:    [[TMP9]] = sext <4 x i1> [[TMP8]] to <4 x i32>
 ; CHECK-NEXT:    br i1 {{.*}}, label %middle.block, label %vector.body

@@ -33,7 +33,7 @@
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, i32* [[TMP9]], i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32* [[TMP10]] to <8 x i32>*
 ; CHECK-NEXT:    store <8 x i32> %vec.ind, <8 x i32>* [[TMP11]], align 4
-; CHECK:         %index.next = add i64 %index, 8
+; CHECK:         %index.next = add nuw i64 %index, 8
 ; CHECK-NEXT:    %vec.ind.next = add <8 x i32> %vec.ind, [[DOTSPLAT6]]
 ; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
 
@@ -104,7 +104,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[TMP7]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[TMP8]] to <8 x i32>*
 ; CHECK-NEXT:    store <8 x i32> %vec.ind, <8 x i32>* [[TMP9]], align 4
-; CHECK:         %index.next = add i64 %index, 8
+; CHECK:         %index.next = add nuw i64 %index, 8
 ; CHECK-NEXT:    %vec.ind.next = add <8 x i32> %vec.ind, [[DOTSPLAT6]]
 ; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
 
@@ -177,7 +177,7 @@ for.end6:                                         ; preds = %for.end6.loopexit, 
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[TMP7]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[TMP8]] to <8 x i32>*
 ; CHECK-NEXT:    store <8 x i32> [[VEC_IND10]], <8 x i32>* [[TMP9]], align 4
-; CHECK-NEXT:    %index.next = add i64 %index, 8
+; CHECK-NEXT:    %index.next = add nuw i64 %index, 8
 ; CHECK:         [[VEC_IND_NEXT11]] = add <8 x i32> [[VEC_IND10]], [[DOTSPLAT9]]
 ; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
 

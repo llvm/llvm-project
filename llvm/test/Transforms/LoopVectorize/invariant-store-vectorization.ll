@@ -22,7 +22,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK:         %wide.load = load <4 x i32>
 ; CHECK:         [[ADD]] = add <4 x i32> %vec.phi, %wide.load
 ; CHECK-NEXT:    store i32 %ntrunc, i32* %a
-; CHECK-NEXT:    %index.next = add i64 %index, 4
+; CHECK-NEXT:    %index.next = add nuw i64 %index, 4
 ; CHECK-NEXT:    icmp eq i64 %index.next, %n.vec
 ; CHECK-NEXT:    br i1
 
@@ -53,7 +53,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK-LABEL: vector.body:
 ; CHECK:         store i32 %ntrunc, i32* %a
 ; CHECK:         store <4 x i32>
-; CHECK-NEXT:    %index.next = add i64 %index, 4
+; CHECK-NEXT:    %index.next = add nuw i64 %index, 4
 ; CHECK-NEXT:    icmp eq i64 %index.next, %n.vec
 ; CHECK-NEXT:    br i1
 define void @inv_val_store_to_inv_address(i32* %a, i64 %n, i32* %b) {
@@ -197,7 +197,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP4]], <4 x i32> [[BROADCAST_SPLAT8]], <4 x i32> [[BROADCAST_SPLAT6]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[PREDPHI]], i32 3
 ; CHECK-NEXT:    store i32 [[TMP6]], i32* [[A]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]]
 ; CHECK:       middle.block:
@@ -298,7 +298,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP6]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[BROADCAST_SPLAT6]], <4 x i32>* [[TMP7]], align 4
 ; CHECK-NEXT:    store i32 [[TMP5]], i32* [[A]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]]
 ; CHECK:       middle.block:
@@ -388,7 +388,7 @@ define i32 @variant_val_store_to_inv_address(i32* %a, i64 %n, i32* %b, i32 %k) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[WIDE_LOAD]], i32 3
 ; CHECK-NEXT:    store i32 [[TMP4]], i32* [[A]], align 4, !alias.scope !39, !noalias !36
 ; CHECK-NEXT:    [[TMP5]] = add <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP41:!llvm.loop !.*]]
 ; CHECK:       middle.block:

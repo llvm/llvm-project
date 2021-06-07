@@ -14,7 +14,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i1> [[TMP5]] to <2 x i32>
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = add <2 x i32> [[WIDE_LOAD]], [[TMP6]]
 ; CHECK:         store <2 x i32> [[PREDPHI]], <2 x i32>* {{.*}}
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ;
 define void @phi_two_incoming_values(i32* %a, i32* %b, i64 %n) {
 entry:
@@ -51,7 +51,7 @@ for.end:
 ; CHECK:         [[PREDPHI:%.*]] = select <2 x i1> {{.*}}, <2 x i32> <i32 3, i32 3>, <2 x i32> <i32 9, i32 9>
 ; CHECK:         [[PREDPHI7:%.*]] = select <2 x i1> {{.*}}, <2 x i32> {{.*}}, <2 x i32> [[PREDPHI]]
 ; CHECK:         store <2 x i32> [[PREDPHI7]], <2 x i32>* {{.*}}
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ;
 define void @phi_three_incoming_values(i32* %a, i32* %b, i64 %n) {
 entry:

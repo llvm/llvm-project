@@ -38,7 +38,7 @@ define void @arm_abs_q7(i8* nocapture readonly %pSrc, i8* nocapture %pDst, i32 %
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <16 x i1> [[TMP1]], <16 x i8> [[WIDE_LOAD]], <16 x i8> [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i8* [[NEXT_GEP6]] to <16 x i8>*
 ; CHECK-NEXT:    store <16 x i8> [[TMP5]], <16 x i8>* [[TMP6]], align 1, !alias.scope !3, !noalias !0
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 16
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP5:!llvm.loop !.*]]
 ; CHECK:       middle.block:
@@ -133,7 +133,7 @@ define void @arm_abs_q15(i16* nocapture readonly %pSrc, i16* nocapture %pDst, i3
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <8 x i1> [[TMP1]], <8 x i16> [[WIDE_LOAD]], <8 x i16> [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i16* [[NEXT_GEP10]] to <8 x i16>*
 ; CHECK-NEXT:    store <8 x i16> [[TMP5]], <8 x i16>* [[TMP6]], align 2, !alias.scope !11, !noalias !8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP13:!llvm.loop !.*]]
 ; CHECK:       middle.block:
@@ -228,7 +228,7 @@ define void @arm_abs_q31(i32* nocapture readonly %pSrc, i32* nocapture %pDst, i3
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[WIDE_LOAD]], <4 x i32> [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[NEXT_GEP10]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], <4 x i32>* [[TMP6]], align 4, !alias.scope !18, !noalias !15
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP20:!llvm.loop !.*]]
 ; CHECK:       middle.block:

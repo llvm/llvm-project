@@ -45,7 +45,7 @@ define float @test(float* nocapture readonly %pA, float* nocapture readonly %pB,
 ; CHECK-NEXT:    [[TMP10:%.*]] = fdiv fast <4 x float> [[TMP9]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd fast <4 x float> [[TMP10]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[PREDPHI]] = select <4 x i1> [[TMP4]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP11]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
