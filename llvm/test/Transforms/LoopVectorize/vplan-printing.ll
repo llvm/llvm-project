@@ -128,6 +128,7 @@ define void @print_replicate_predicated_phi(i64 %n, i64* %x) {
 ; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<%3> = ir<%tmp4>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): if.then.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: if.then.0:
 ; CHECK-NEXT: Successor(s): for.inc
