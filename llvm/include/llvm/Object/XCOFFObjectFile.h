@@ -97,68 +97,113 @@ struct XCOFFSectionHeader64 : XCOFFSectionHeader<XCOFFSectionHeader64> {
   char Padding[4];
 };
 
-struct XCOFFSymbolEntry {
-  enum { NAME_IN_STR_TBL_MAGIC = 0x0 };
-  typedef struct {
-    support::big32_t Magic; // Zero indicates name in string table.
-    support::ubig32_t Offset;
-  } NameInStrTblType;
-
-  typedef struct {
-    uint8_t LanguageId;
-    uint8_t CpuTypeId;
-  } CFileLanguageIdAndTypeIdType;
-
-  union {
-    char SymbolName[XCOFF::NameSize];
-    NameInStrTblType NameInStrTbl;
-  };
-
-  support::ubig32_t Value; // Symbol value; storage class-dependent.
-  support::big16_t SectionNumber;
-
-  union {
-    support::ubig16_t SymbolType;
-    CFileLanguageIdAndTypeIdType CFileLanguageIdAndTypeId;
-  };
-
-  XCOFF::StorageClass StorageClass;
-  uint8_t NumberOfAuxEntries;
-};
-
 struct XCOFFStringTable {
   uint32_t Size;
   const char *Data;
 };
 
 struct XCOFFCsectAuxEnt32 {
-  static constexpr uint8_t SymbolTypeMask = 0x07;
-  static constexpr uint8_t SymbolAlignmentMask = 0xF8;
-  static constexpr size_t SymbolAlignmentBitOffset = 3;
-
-  support::ubig32_t
-      SectionOrLength; // If the symbol type is XTY_SD or XTY_CM, the csect
-                       // length.
-                       // If the symbol type is XTY_LD, the symbol table
-                       // index of the containing csect.
-                       // If the symbol type is XTY_ER, 0.
+  support::ubig32_t SectionOrLength;
   support::ubig32_t ParameterHashIndex;
   support::ubig16_t TypeChkSectNum;
   uint8_t SymbolAlignmentAndType;
   XCOFF::StorageMappingClass StorageMappingClass;
   support::ubig32_t StabInfoIndex;
   support::ubig16_t StabSectNum;
+};
+
+struct XCOFFCsectAuxEnt64 {
+  support::ubig32_t SectionOrLengthLowByte;
+  support::ubig32_t ParameterHashIndex;
+  support::ubig16_t TypeChkSectNum;
+  uint8_t SymbolAlignmentAndType;
+  XCOFF::StorageMappingClass StorageMappingClass;
+  support::ubig32_t SectionOrLengthHighByte;
+  uint8_t Pad;
+  XCOFF::SymbolAuxType AuxType;
+};
+
+class XCOFFCsectAuxRef {
+public:
+  static constexpr uint8_t SymbolTypeMask = 0x07;
+  static constexpr uint8_t SymbolAlignmentMask = 0xF8;
+  static constexpr size_t SymbolAlignmentBitOffset = 3;
+
+  XCOFFCsectAuxRef(const XCOFFCsectAuxEnt32 *Entry32) : Entry32(Entry32) {}
+  XCOFFCsectAuxRef(const XCOFFCsectAuxEnt64 *Entry64) : Entry64(Entry64) {}
+
+  // For getSectionOrLength(),
+  // If the symbol type is XTY_SD or XTY_CM, the csect length.
+  // If the symbol type is XTY_LD, the symbol table
+  // index of the containing csect.
+  // If the symbol type is XTY_ER, 0.
+  uint64_t getSectionOrLength() const {
+    return Entry32 ? getSectionOrLength32() : getSectionOrLength64();
+  }
+
+  uint32_t getSectionOrLength32() const {
+    assert(Entry32 && "32-bit interface called on 64-bit object file.");
+    return Entry32->SectionOrLength;
+  }
+
+  uint64_t getSectionOrLength64() const {
+    assert(Entry64 && "64-bit interface called on 32-bit object file.");
+    return (static_cast<uint64_t>(Entry64->SectionOrLengthHighByte) << 32) |
+           Entry64->SectionOrLengthLowByte;
+  }
+
+#define GETVALUE(X) Entry32 ? Entry32->X : Entry64->X
+
+  uint32_t getParameterHashIndex() const {
+    return GETVALUE(ParameterHashIndex);
+  }
+
+  uint16_t getTypeChkSectNum() const { return GETVALUE(TypeChkSectNum); }
+
+  XCOFF::StorageMappingClass getStorageMappingClass() const {
+    return GETVALUE(StorageMappingClass);
+  }
+
+  uintptr_t getEntryAddress() const {
+    return Entry32 ? reinterpret_cast<uintptr_t>(Entry32)
+                   : reinterpret_cast<uintptr_t>(Entry64);
+  }
 
   uint16_t getAlignmentLog2() const {
-    return (SymbolAlignmentAndType & SymbolAlignmentMask) >>
+    return (getSymbolAlignmentAndType() & SymbolAlignmentMask) >>
            SymbolAlignmentBitOffset;
   }
 
   uint8_t getSymbolType() const {
-    return SymbolAlignmentAndType & SymbolTypeMask;
+    return getSymbolAlignmentAndType() & SymbolTypeMask;
   }
 
   bool isLabel() const { return getSymbolType() == XCOFF::XTY_LD; }
+
+  uint32_t getStabInfoIndex32() const {
+    assert(Entry32 && "32-bit interface called on 64-bit object file.");
+    return Entry32->StabInfoIndex;
+  }
+
+  uint16_t getStabSectNum32() const {
+    assert(Entry32 && "32-bit interface called on 64-bit object file.");
+    return Entry32->StabSectNum;
+  }
+
+  XCOFF::SymbolAuxType getAuxType64() const {
+    assert(Entry64 && "64-bit interface called on 32-bit object file.");
+    return Entry64->AuxType;
+  }
+
+private:
+  uint8_t getSymbolAlignmentAndType() const {
+    return GETVALUE(SymbolAlignmentAndType);
+  }
+
+#undef GETVALUE
+
+  const XCOFFCsectAuxEnt32 *Entry32 = nullptr;
+  const XCOFFCsectAuxEnt64 *Entry64 = nullptr;
 };
 
 struct XCOFFFileAuxEnt {
@@ -173,7 +218,7 @@ struct XCOFFFileAuxEnt {
   };
   XCOFF::CFileStringType Type;
   uint8_t ReservedZeros[2];
-  uint8_t AuxType; // 64-bit XCOFF file only.
+  XCOFF::SymbolAuxType AuxType; // 64-bit XCOFF file only.
 };
 
 struct XCOFFSectAuxEntForStat {
@@ -181,7 +226,7 @@ struct XCOFFSectAuxEntForStat {
   support::ubig16_t NumberOfRelocEnt;
   support::ubig16_t NumberOfLineNum;
   uint8_t Pad[10];
-};
+}; // 32-bit XCOFF file only.
 
 struct XCOFFRelocation32 {
   // Masks for packing/unpacking the r_rsize field of relocations.
@@ -215,12 +260,14 @@ public:
   uint8_t getRelocatedLength() const;
 };
 
+class XCOFFSymbolRef;
+
 class XCOFFObjectFile : public ObjectFile {
 private:
   const void *FileHeader = nullptr;
   const void *SectionHeaderTable = nullptr;
 
-  const XCOFFSymbolEntry *SymbolTblPtr = nullptr;
+  const void *SymbolTblPtr = nullptr;
   XCOFFStringTable StringTable = {0, nullptr};
 
   const XCOFFFileHeader32 *fileHeader32() const;
@@ -241,9 +288,6 @@ private:
   // the 32-bit or 64-bit SectionHeader struct. This string is *not* necessarily
   // null-terminated.
   const char *getSectionNameInternal(DataRefImpl Sec) const;
-
-  // This function returns string table entry.
-  Expected<StringRef> getStringTableEntry(uint32_t Offset) const;
 
   static bool isReservedSectionNumber(int16_t SectionNumber);
 
@@ -323,15 +367,11 @@ public:
   // Below here is the non-inherited interface.
   bool is64Bit() const;
 
-  const XCOFFSymbolEntry *getPointerToSymbolTable() const {
-    assert(!is64Bit() && "Symbol table handling not supported yet.");
-    return SymbolTblPtr;
-  }
+  const void *getPointerToSymbolTable() const { return SymbolTblPtr; }
 
-  Expected<StringRef>
-  getSymbolSectionName(const XCOFFSymbolEntry *SymEntPtr) const;
+  Expected<StringRef> getSymbolSectionName(XCOFFSymbolRef Ref) const;
 
-  const XCOFFSymbolEntry *toSymbolEntry(DataRefImpl Ref) const;
+  XCOFFSymbolRef toSymbolRef(DataRefImpl Ref) const;
 
   // File header related interfaces.
   uint16_t getMagic() const;
@@ -351,7 +391,13 @@ public:
   uint32_t getLogicalNumberOfSymbolTableEntries32() const;
 
   uint32_t getNumberOfSymbolTableEntries64() const;
+
+  // Return getLogicalNumberOfSymbolTableEntries32 or
+  // getNumberOfSymbolTableEntries64 depending on the object mode.
+  uint32_t getNumberOfSymbolTableEntries() const;
+
   uint32_t getSymbolIndex(uintptr_t SymEntPtr) const;
+  uintptr_t getSymbolEntryAddressByIndex(uint32_t SymbolTableIndex) const;
   Expected<StringRef> getSymbolNameByIndex(uint32_t SymbolTableIndex) const;
 
   Expected<StringRef> getCFileName(const XCOFFFileAuxEnt *CFileEntPtr) const;
@@ -374,26 +420,120 @@ public:
   Expected<ArrayRef<XCOFFRelocation32>>
   relocations(const XCOFFSectionHeader32 &) const;
 
+  // This function returns string table entry.
+  Expected<StringRef> getStringTableEntry(uint32_t Offset) const;
+
+  const XCOFF::SymbolAuxType *getSymbolAuxType(uintptr_t AuxEntryAddress) const;
+
+  static uintptr_t getAdvancedSymbolEntryAddress(uintptr_t CurrentAddress,
+                                                 uint32_t Distance);
+
   static bool classof(const Binary *B) { return B->isXCOFF(); }
 }; // XCOFFObjectFile
 
-class XCOFFSymbolRef {
-  const DataRefImpl SymEntDataRef;
-  const XCOFFObjectFile *const OwningObjectPtr;
+typedef struct {
+  uint8_t LanguageId;
+  uint8_t CpuTypeId;
+} CFileLanguageIdAndTypeIdType;
 
+struct XCOFFSymbolEntry32 {
+  typedef struct {
+    support::big32_t Magic; // Zero indicates name in string table.
+    support::ubig32_t Offset;
+  } NameInStrTblType;
+
+  union {
+    char SymbolName[XCOFF::NameSize];
+    NameInStrTblType NameInStrTbl;
+  };
+
+  support::ubig32_t Value; // Symbol value; storage class-dependent.
+  support::big16_t SectionNumber;
+
+  union {
+    support::ubig16_t SymbolType;
+    CFileLanguageIdAndTypeIdType CFileLanguageIdAndTypeId;
+  };
+
+  XCOFF::StorageClass StorageClass;
+  uint8_t NumberOfAuxEntries;
+};
+
+struct XCOFFSymbolEntry64 {
+  support::ubig64_t Value; // Symbol value; storage class-dependent.
+  support::ubig32_t Offset;
+  support::big16_t SectionNumber;
+
+  union {
+    support::ubig16_t SymbolType;
+    CFileLanguageIdAndTypeIdType CFileLanguageIdAndTypeId;
+  };
+
+  XCOFF::StorageClass StorageClass;
+  uint8_t NumberOfAuxEntries;
+};
+
+class XCOFFSymbolRef {
 public:
+  enum { NAME_IN_STR_TBL_MAGIC = 0x0 };
+
   XCOFFSymbolRef(DataRefImpl SymEntDataRef,
                  const XCOFFObjectFile *OwningObjectPtr)
-      : SymEntDataRef(SymEntDataRef), OwningObjectPtr(OwningObjectPtr){};
+      : OwningObjectPtr(OwningObjectPtr) {
+    assert(OwningObjectPtr && "OwningObjectPtr cannot be nullptr!");
+    assert(SymEntDataRef.p != 0 &&
+           "Symbol table entry pointer cannot be nullptr!");
 
-  XCOFF::StorageClass getStorageClass() const;
-  uint8_t getNumberOfAuxEntries() const;
-  const XCOFFCsectAuxEnt32 *getXCOFFCsectAuxEnt32() const;
-  uint16_t getType() const;
-  int16_t getSectionNumber() const;
+    if (OwningObjectPtr->is64Bit())
+      Entry64 = reinterpret_cast<const XCOFFSymbolEntry64 *>(SymEntDataRef.p);
+    else
+      Entry32 = reinterpret_cast<const XCOFFSymbolEntry32 *>(SymEntDataRef.p);
+  }
 
-  bool hasCsectAuxEnt() const;
+  uint64_t getValue() const { return Entry32 ? getValue32() : getValue64(); }
+
+  uint32_t getValue32() const { return Entry32->Value; }
+
+  uint64_t getValue64() const { return Entry64->Value; }
+
+#define GETVALUE(X) Entry32 ? Entry32->X : Entry64->X
+
+  int16_t getSectionNumber() const { return GETVALUE(SectionNumber); }
+
+  uint16_t getSymbolType() const { return GETVALUE(SymbolType); }
+
+  uint8_t getLanguageIdForCFile() const {
+    assert(getStorageClass() == XCOFF::C_FILE &&
+           "This interface is for C_FILE only.");
+    return GETVALUE(CFileLanguageIdAndTypeId.LanguageId);
+  }
+
+  uint8_t getCPUTypeIddForCFile() const {
+    assert(getStorageClass() == XCOFF::C_FILE &&
+           "This interface is for C_FILE only.");
+    return GETVALUE(CFileLanguageIdAndTypeId.CpuTypeId);
+  }
+
+  XCOFF::StorageClass getStorageClass() const { return GETVALUE(StorageClass); }
+
+  uint8_t getNumberOfAuxEntries() const { return GETVALUE(NumberOfAuxEntries); }
+
+#undef GETVALUE
+
+  uintptr_t getEntryAddress() const {
+    return Entry32 ? reinterpret_cast<uintptr_t>(Entry32)
+                   : reinterpret_cast<uintptr_t>(Entry64);
+  }
+
+  Expected<StringRef> getName() const;
   bool isFunction() const;
+  bool isCsectSymbol() const;
+  Expected<XCOFFCsectAuxRef> getXCOFFCsectAuxRef() const;
+
+private:
+  const XCOFFObjectFile *OwningObjectPtr;
+  const XCOFFSymbolEntry32 *Entry32 = nullptr;
+  const XCOFFSymbolEntry64 *Entry64 = nullptr;
 };
 
 class TBVectorExt {
