@@ -3,7 +3,6 @@
 
 declare void @bar()
 
-; TODO: We should unroll by 10, not 20 here
 define void @test1() {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
@@ -54,46 +53,6 @@ define void @test1() {
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br i1 false, label [[LATCH_10:%.*]], label [[EXIT]]
 ; CHECK:       latch.10:
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 false, label [[LATCH_11:%.*]], label [[EXIT]]
-; CHECK:       latch.11:
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 false, label [[LATCH_12:%.*]], label [[EXIT]]
-; CHECK:       latch.12:
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 false, label [[LATCH_13:%.*]], label [[EXIT]]
-; CHECK:       latch.13:
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 false, label [[LATCH_14:%.*]], label [[EXIT]]
-; CHECK:       latch.14:
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 false, label [[LATCH_15:%.*]], label [[EXIT]]
-; CHECK:       latch.15:
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 false, label [[LATCH_16:%.*]], label [[EXIT]]
-; CHECK:       latch.16:
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 false, label [[LATCH_17:%.*]], label [[EXIT]]
-; CHECK:       latch.17:
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 false, label [[LATCH_18:%.*]], label [[EXIT]]
-; CHECK:       latch.18:
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 false, label [[LATCH_19:%.*]], label [[EXIT]]
-; CHECK:       latch.19:
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 false, label [[LATCH_20:%.*]], label [[EXIT]]
-; CHECK:       latch.20:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[EXIT]]
 ;
