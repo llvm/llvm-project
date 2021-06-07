@@ -581,14 +581,14 @@ define i32 @fdiv(i32 %arg) {
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512-LABEL: 'fdiv'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %F32 = fdiv float undef, undef
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V4F32 = fdiv <4 x float> undef, undef
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V8F32 = fdiv <8 x float> undef, undef
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V16F32 = fdiv <16 x float> undef, undef
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %F64 = fdiv double undef, undef
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V2F64 = fdiv <2 x double> undef, undef
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V4F64 = fdiv <4 x double> undef, undef
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8F64 = fdiv <8 x double> undef, undef
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %F32 = fdiv float undef, undef
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4F32 = fdiv <4 x float> undef, undef
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8F32 = fdiv <8 x float> undef, undef
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V16F32 = fdiv <16 x float> undef, undef
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %F64 = fdiv double undef, undef
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V2F64 = fdiv <2 x double> undef, undef
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V4F64 = fdiv <4 x double> undef, undef
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V8F64 = fdiv <8 x double> undef, undef
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SLM-LABEL: 'fdiv'
