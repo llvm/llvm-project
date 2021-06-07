@@ -85,6 +85,9 @@ ModuleDeps::getAdditionalArgsWithoutModulePaths() const {
   if (IsSystem)
     Ret.push_back("-fsystem-module");
 
+  if (Invocation.getLangOpts()->NeededByPCHOrCompilationUsesPCH)
+    Ret.push_back("-fmodule-related-to-pch");
+
   return Ret;
 }
 
