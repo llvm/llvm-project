@@ -89,6 +89,7 @@ private:
   void demangleGenericArg();
   void demangleType();
   void demangleFnSig();
+  void demangleDynBounds();
   void demangleOptionalBinder();
   void demangleConst();
   void demangleConstInt();
