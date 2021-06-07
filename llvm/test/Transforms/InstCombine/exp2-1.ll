@@ -15,7 +15,7 @@ declare float @exp2f(float)
 
 define double @test_simplify1(i32 %x) {
 ; LDEXP32-LABEL: @test_simplify1(
-; LDEXP32-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 signext [[X:%.*]])
+; LDEXP32-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 [[X:%.*]])
 ; LDEXP32-NEXT:    ret double [[LDEXP]]
 ;
 ; LDEXP16-LABEL: @test_simplify1(
@@ -24,7 +24,7 @@ define double @test_simplify1(i32 %x) {
 ; LDEXP16-NEXT:    ret double [[RET]]
 ;
 ; NOLDEXPF-LABEL: @test_simplify1(
-; NOLDEXPF-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 signext [[X:%.*]])
+; NOLDEXPF-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 [[X:%.*]])
 ; NOLDEXPF-NEXT:    ret double [[LDEXP]]
 ;
 ; NOLDEXP-LABEL: @test_simplify1(
@@ -40,16 +40,16 @@ define double @test_simplify1(i32 %x) {
 define double @test_simplify2(i16 signext %x) {
 ; LDEXP32-LABEL: @test_simplify2(
 ; LDEXP32-NEXT:    [[TMP1:%.*]] = sext i16 [[X:%.*]] to i32
-; LDEXP32-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 signext [[TMP1]])
+; LDEXP32-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 [[TMP1]])
 ; LDEXP32-NEXT:    ret double [[LDEXP]]
 ;
 ; LDEXP16-LABEL: @test_simplify2(
-; LDEXP16-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i16 signext [[X:%.*]])
+; LDEXP16-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i16 [[X:%.*]])
 ; LDEXP16-NEXT:    ret double [[LDEXP]]
 ;
 ; NOLDEXPF-LABEL: @test_simplify2(
 ; NOLDEXPF-NEXT:    [[TMP1:%.*]] = sext i16 [[X:%.*]] to i32
-; NOLDEXPF-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 signext [[TMP1]])
+; NOLDEXPF-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 [[TMP1]])
 ; NOLDEXPF-NEXT:    ret double [[LDEXP]]
 ;
 ; NOLDEXP-LABEL: @test_simplify2(
@@ -65,17 +65,17 @@ define double @test_simplify2(i16 signext %x) {
 define double @test_simplify3(i8 signext %x) {
 ; LDEXP32-LABEL: @test_simplify3(
 ; LDEXP32-NEXT:    [[TMP1:%.*]] = sext i8 [[X:%.*]] to i32
-; LDEXP32-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 signext [[TMP1]])
+; LDEXP32-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 [[TMP1]])
 ; LDEXP32-NEXT:    ret double [[LDEXP]]
 ;
 ; LDEXP16-LABEL: @test_simplify3(
 ; LDEXP16-NEXT:    [[TMP1:%.*]] = sext i8 [[X:%.*]] to i16
-; LDEXP16-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i16 signext [[TMP1]])
+; LDEXP16-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i16 [[TMP1]])
 ; LDEXP16-NEXT:    ret double [[LDEXP]]
 ;
 ; NOLDEXPF-LABEL: @test_simplify3(
 ; NOLDEXPF-NEXT:    [[TMP1:%.*]] = sext i8 [[X:%.*]] to i32
-; NOLDEXPF-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 signext [[TMP1]])
+; NOLDEXPF-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 [[TMP1]])
 ; NOLDEXPF-NEXT:    ret double [[LDEXP]]
 ;
 ; NOLDEXP-LABEL: @test_simplify3(
@@ -90,7 +90,7 @@ define double @test_simplify3(i8 signext %x) {
 
 define float @test_simplify4(i32 %x) {
 ; LDEXP32-LABEL: @test_simplify4(
-; LDEXP32-NEXT:    [[LDEXPF:%.*]] = call float @ldexpf(float 1.000000e+00, i32 signext [[X:%.*]])
+; LDEXP32-NEXT:    [[LDEXPF:%.*]] = call float @ldexpf(float 1.000000e+00, i32 [[X:%.*]])
 ; LDEXP32-NEXT:    ret float [[LDEXPF]]
 ;
 ; LDEXP16-LABEL: @test_simplify4(
@@ -144,7 +144,7 @@ define double @test_no_simplify1(i32 %x) {
 define double @test_simplify6(i16 zeroext %x) {
 ; LDEXP32-LABEL: @test_simplify6(
 ; LDEXP32-NEXT:    [[TMP1:%.*]] = zext i16 [[X:%.*]] to i32
-; LDEXP32-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 signext [[TMP1]])
+; LDEXP32-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 [[TMP1]])
 ; LDEXP32-NEXT:    ret double [[LDEXP]]
 ;
 ; LDEXP16-LABEL: @test_simplify6(
@@ -154,7 +154,7 @@ define double @test_simplify6(i16 zeroext %x) {
 ;
 ; NOLDEXPF-LABEL: @test_simplify6(
 ; NOLDEXPF-NEXT:    [[TMP1:%.*]] = zext i16 [[X:%.*]] to i32
-; NOLDEXPF-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 signext [[TMP1]])
+; NOLDEXPF-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 [[TMP1]])
 ; NOLDEXPF-NEXT:    ret double [[LDEXP]]
 ;
 ; NOLDEXP-LABEL: @test_simplify6(
@@ -170,17 +170,17 @@ define double @test_simplify6(i16 zeroext %x) {
 define double @test_simplify7(i8 zeroext %x) {
 ; LDEXP32-LABEL: @test_simplify7(
 ; LDEXP32-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i32
-; LDEXP32-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 signext [[TMP1]])
+; LDEXP32-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 [[TMP1]])
 ; LDEXP32-NEXT:    ret double [[LDEXP]]
 ;
 ; LDEXP16-LABEL: @test_simplify7(
 ; LDEXP16-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i16
-; LDEXP16-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i16 signext [[TMP1]])
+; LDEXP16-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i16 [[TMP1]])
 ; LDEXP16-NEXT:    ret double [[LDEXP]]
 ;
 ; NOLDEXPF-LABEL: @test_simplify7(
 ; NOLDEXPF-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i32
-; NOLDEXPF-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 signext [[TMP1]])
+; NOLDEXPF-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 [[TMP1]])
 ; NOLDEXPF-NEXT:    ret double [[LDEXP]]
 ;
 ; NOLDEXP-LABEL: @test_simplify7(
@@ -196,12 +196,12 @@ define double @test_simplify7(i8 zeroext %x) {
 define float @test_simplify8(i8 zeroext %x) {
 ; LDEXP32-LABEL: @test_simplify8(
 ; LDEXP32-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i32
-; LDEXP32-NEXT:    [[LDEXPF:%.*]] = call float @ldexpf(float 1.000000e+00, i32 signext [[TMP1]])
+; LDEXP32-NEXT:    [[LDEXPF:%.*]] = call float @ldexpf(float 1.000000e+00, i32 [[TMP1]])
 ; LDEXP32-NEXT:    ret float [[LDEXPF]]
 ;
 ; LDEXP16-LABEL: @test_simplify8(
 ; LDEXP16-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i16
-; LDEXP16-NEXT:    [[LDEXPF:%.*]] = call float @ldexpf(float 1.000000e+00, i16 signext [[TMP1]])
+; LDEXP16-NEXT:    [[LDEXPF:%.*]] = call float @ldexpf(float 1.000000e+00, i16 [[TMP1]])
 ; LDEXP16-NEXT:    ret float [[LDEXPF]]
 ;
 ; NOLDEXPF-LABEL: @test_simplify8(
@@ -225,17 +225,17 @@ declare float @llvm.exp2.f32(float)
 define double @test_simplify9(i8 zeroext %x) {
 ; LDEXP32-LABEL: @test_simplify9(
 ; LDEXP32-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i32
-; LDEXP32-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 signext [[TMP1]])
+; LDEXP32-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 [[TMP1]])
 ; LDEXP32-NEXT:    ret double [[LDEXP]]
 ;
 ; LDEXP16-LABEL: @test_simplify9(
 ; LDEXP16-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i16
-; LDEXP16-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i16 signext [[TMP1]])
+; LDEXP16-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i16 [[TMP1]])
 ; LDEXP16-NEXT:    ret double [[LDEXP]]
 ;
 ; NOLDEXPF-LABEL: @test_simplify9(
 ; NOLDEXPF-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i32
-; NOLDEXPF-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 signext [[TMP1]])
+; NOLDEXPF-NEXT:    [[LDEXP:%.*]] = call double @ldexp(double 1.000000e+00, i32 [[TMP1]])
 ; NOLDEXPF-NEXT:    ret double [[LDEXP]]
 ;
 ; NOLDEXP-LABEL: @test_simplify9(
@@ -251,12 +251,12 @@ define double @test_simplify9(i8 zeroext %x) {
 define float @test_simplify10(i8 zeroext %x) {
 ; LDEXP32-LABEL: @test_simplify10(
 ; LDEXP32-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i32
-; LDEXP32-NEXT:    [[LDEXPF:%.*]] = call float @ldexpf(float 1.000000e+00, i32 signext [[TMP1]])
+; LDEXP32-NEXT:    [[LDEXPF:%.*]] = call float @ldexpf(float 1.000000e+00, i32 [[TMP1]])
 ; LDEXP32-NEXT:    ret float [[LDEXPF]]
 ;
 ; LDEXP16-LABEL: @test_simplify10(
 ; LDEXP16-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i16
-; LDEXP16-NEXT:    [[LDEXPF:%.*]] = call float @ldexpf(float 1.000000e+00, i16 signext [[TMP1]])
+; LDEXP16-NEXT:    [[LDEXPF:%.*]] = call float @ldexpf(float 1.000000e+00, i16 [[TMP1]])
 ; LDEXP16-NEXT:    ret float [[LDEXPF]]
 ;
 ; NOLDEXPF-LABEL: @test_simplify10(
