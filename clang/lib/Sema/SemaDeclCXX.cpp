@@ -14344,10 +14344,7 @@ CXXMethodDecl *Sema::DeclareImplicitMoveAssignment(CXXRecordDecl *ClassDecl) {
                                             /* Diagnose */ false);
   }
 
-  // Build an exception specification pointing back at this member.
-  FunctionProtoType::ExtProtoInfo EPI =
-      getImplicitMethodEPI(*this, MoveAssignment);
-  MoveAssignment->setType(Context.getFunctionType(RetType, ArgType, EPI));
+  setupImplicitSpecialMemberType(MoveAssignment, RetType, ArgType);
 
   // Add the parameter to the operator.
   ParmVarDecl *FromParam = ParmVarDecl::Create(Context, MoveAssignment,
