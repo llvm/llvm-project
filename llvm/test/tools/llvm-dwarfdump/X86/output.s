@@ -12,10 +12,10 @@
 
 # RUN: touch %t3.txt
 # RUN: chmod 444 %t3.txt
-# RUN: not llvm-dwarfdump -o=%t3.txt %t.o 2>&1 | FileCheck %s  --check-prefix=ERROR1 -DFILE=%t3.txt
+# RUN: not llvm-dwarfdump -o=%t3.txt %t.o 2>&1 | FileCheck %s  --check-prefix=ERROR1 -DFILE=%t3.txt -DMSG=%errc_EACCES
 
-# RUN: not llvm-dwarfdump -o= %t.o 2>&1 | FileCheck %s  --check-prefix=ERROR2
+# RUN: not llvm-dwarfdump -o= %t.o 2>&1 | FileCheck %s  --check-prefix=ERROR2 -DMSG=%errc_ENOENT
 
 # CHECK: DW_TAG_compile_unit
-# ERROR1: unable to open output file [[FILE]]: {{[pP]}}ermission denied
-# ERROR2: unable to open output file : {{[nN]}}o such file or directory
+# ERROR1: unable to open output file [[FILE]]: [[MSG]]
+# ERROR2: unable to open output file : [[MSG]]
