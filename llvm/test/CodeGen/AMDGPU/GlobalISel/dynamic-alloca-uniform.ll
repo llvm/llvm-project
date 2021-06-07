@@ -55,7 +55,7 @@ define void @func_dynamic_stackalloc_sgpr_align4() {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s6, s33
 ; GFX9-NEXT:    s_mov_b32 s33, s32
-; GFX9-NEXT:    s_add_u32 s32, s32, 0x400
+; GFX9-NEXT:    s_addk_i32 s32, 0x400
 ; GFX9-NEXT:    s_getpc_b64 s[4:5]
 ; GFX9-NEXT:    s_add_u32 s4, s4, gv@gotpcrel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s5, s5, gv@gotpcrel32@hi+12
@@ -71,7 +71,7 @@ define void @func_dynamic_stackalloc_sgpr_align4() {
 ; GFX9-NEXT:    s_add_u32 s4, s32, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
-; GFX9-NEXT:    s_sub_u32 s32, s32, 0x400
+; GFX9-NEXT:    s_addk_i32 s32, 0xfc00
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -81,7 +81,7 @@ define void @func_dynamic_stackalloc_sgpr_align4() {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s6, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
-; GFX10-NEXT:    s_add_u32 s32, s32, 0x200
+; GFX10-NEXT:    s_addk_i32 s32, 0x200
 ; GFX10-NEXT:    s_getpc_b64 s[4:5]
 ; GFX10-NEXT:    s_add_u32 s4, s4, gv@gotpcrel32@lo+4
 ; GFX10-NEXT:    s_addc_u32 s5, s5, gv@gotpcrel32@hi+12
@@ -95,7 +95,7 @@ define void @func_dynamic_stackalloc_sgpr_align4() {
 ; GFX10-NEXT:    s_and_b32 s4, s4, -16
 ; GFX10-NEXT:    s_lshl_b32 s4, s4, 5
 ; GFX10-NEXT:    s_add_u32 s4, s32, s4
-; GFX10-NEXT:    s_sub_u32 s32, s32, 0x200
+; GFX10-NEXT:    s_addk_i32 s32, 0xfe00
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX10-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -157,7 +157,7 @@ define void @func_dynamic_stackalloc_sgpr_align16() {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s6, s33
 ; GFX9-NEXT:    s_mov_b32 s33, s32
-; GFX9-NEXT:    s_add_u32 s32, s32, 0x400
+; GFX9-NEXT:    s_addk_i32 s32, 0x400
 ; GFX9-NEXT:    s_getpc_b64 s[4:5]
 ; GFX9-NEXT:    s_add_u32 s4, s4, gv@gotpcrel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s5, s5, gv@gotpcrel32@hi+12
@@ -173,7 +173,7 @@ define void @func_dynamic_stackalloc_sgpr_align16() {
 ; GFX9-NEXT:    s_add_u32 s4, s32, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
-; GFX9-NEXT:    s_sub_u32 s32, s32, 0x400
+; GFX9-NEXT:    s_addk_i32 s32, 0xfc00
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -183,7 +183,7 @@ define void @func_dynamic_stackalloc_sgpr_align16() {
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s6, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
-; GFX10-NEXT:    s_add_u32 s32, s32, 0x200
+; GFX10-NEXT:    s_addk_i32 s32, 0x200
 ; GFX10-NEXT:    s_getpc_b64 s[4:5]
 ; GFX10-NEXT:    s_add_u32 s4, s4, gv@gotpcrel32@lo+4
 ; GFX10-NEXT:    s_addc_u32 s5, s5, gv@gotpcrel32@hi+12
@@ -197,7 +197,7 @@ define void @func_dynamic_stackalloc_sgpr_align16() {
 ; GFX10-NEXT:    s_and_b32 s4, s4, -16
 ; GFX10-NEXT:    s_lshl_b32 s4, s4, 5
 ; GFX10-NEXT:    s_add_u32 s4, s32, s4
-; GFX10-NEXT:    s_sub_u32 s32, s32, 0x200
+; GFX10-NEXT:    s_addk_i32 s32, 0xfe00
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX10-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -260,9 +260,9 @@ define void @func_dynamic_stackalloc_sgpr_align32(i32 addrspace(1)* %out) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s6, s33
-; GFX9-NEXT:    s_add_u32 s33, s32, 0x7c0
+; GFX9-NEXT:    s_add_i32 s33, s32, 0x7c0
 ; GFX9-NEXT:    s_and_b32 s33, s33, 0xfffff800
-; GFX9-NEXT:    s_add_u32 s32, s32, 0x1000
+; GFX9-NEXT:    s_addk_i32 s32, 0x1000
 ; GFX9-NEXT:    s_getpc_b64 s[4:5]
 ; GFX9-NEXT:    s_add_u32 s4, s4, gv@gotpcrel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s5, s5, gv@gotpcrel32@hi+12
@@ -279,7 +279,7 @@ define void @func_dynamic_stackalloc_sgpr_align32(i32 addrspace(1)* %out) {
 ; GFX9-NEXT:    s_and_b32 s4, s4, 0xfffff800
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
-; GFX9-NEXT:    s_sub_u32 s32, s32, 0x1000
+; GFX9-NEXT:    s_addk_i32 s32, 0xf000
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -288,10 +288,10 @@ define void @func_dynamic_stackalloc_sgpr_align32(i32 addrspace(1)* %out) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s6, s33
-; GFX10-NEXT:    s_add_u32 s33, s32, 0x3e0
+; GFX10-NEXT:    s_add_i32 s33, s32, 0x3e0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_and_b32 s33, s33, 0xfffffc00
-; GFX10-NEXT:    s_add_u32 s32, s32, 0x800
+; GFX10-NEXT:    s_addk_i32 s32, 0x800
 ; GFX10-NEXT:    s_getpc_b64 s[4:5]
 ; GFX10-NEXT:    s_add_u32 s4, s4, gv@gotpcrel32@lo+4
 ; GFX10-NEXT:    s_addc_u32 s5, s5, gv@gotpcrel32@hi+12
@@ -305,7 +305,7 @@ define void @func_dynamic_stackalloc_sgpr_align32(i32 addrspace(1)* %out) {
 ; GFX10-NEXT:    s_lshl_b32 s4, s4, 5
 ; GFX10-NEXT:    s_add_u32 s4, s32, s4
 ; GFX10-NEXT:    s_and_b32 s4, s4, 0xfffffc00
-; GFX10-NEXT:    s_sub_u32 s32, s32, 0x800
+; GFX10-NEXT:    s_addk_i32 s32, 0xf800
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX10-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0

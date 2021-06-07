@@ -703,7 +703,7 @@ Register SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
     .addFrameIndex(FrameIdx);
 
   if (ST.enableFlatScratch() ) {
-    BuildMI(*MBB, Ins, DL, TII->get(AMDGPU::S_ADD_U32), BaseReg)
+    BuildMI(*MBB, Ins, DL, TII->get(AMDGPU::S_ADD_I32), BaseReg)
         .addReg(OffsetReg, RegState::Kill)
         .addReg(FIReg);
     return BaseReg;
@@ -1113,7 +1113,7 @@ void SIRegisterInfo::buildSpillLoadStore(
     if (ScratchOffsetReg == AMDGPU::NoRegister) {
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), SOffset).addImm(Offset);
     } else {
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_ADD_U32), SOffset)
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), SOffset)
           .addReg(ScratchOffsetReg)
           .addImm(Offset);
     }
@@ -1262,9 +1262,9 @@ void SIRegisterInfo::buildSpillLoadStore(
 
   if (ScratchOffsetRegDelta != 0) {
     // Subtract the offset we added to the ScratchOffset register.
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_SUB_U32), SOffset)
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), SOffset)
         .addReg(SOffset)
-        .addImm(ScratchOffsetRegDelta);
+        .addImm(-ScratchOffsetRegDelta);
   }
 }
 
@@ -1707,9 +1707,9 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           FIOp.setIsKill(false);
         }
 
-        BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADD_U32), TmpSReg)
-          .addReg(FrameReg)
-          .addImm(Offset);
+        BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), TmpSReg)
+            .addReg(FrameReg)
+            .addImm(Offset);
 
         if (!UseSGPR)
           BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_MOV_B32_e32), TmpReg)
@@ -1717,10 +1717,10 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
         if (TmpSReg == FrameReg) {
           // Undo frame register modification.
-          BuildMI(*MBB, std::next(MI), DL, TII->get(AMDGPU::S_SUB_U32),
+          BuildMI(*MBB, std::next(MI), DL, TII->get(AMDGPU::S_ADD_I32),
                   FrameReg)
-            .addReg(FrameReg)
-            .addImm(Offset);
+              .addReg(FrameReg)
+              .addImm(-Offset);
         }
 
         return;
@@ -1794,17 +1794,17 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_LSHR_B32), ScaledReg)
               .addReg(FrameReg)
               .addImm(ST.getWavefrontSizeLog2());
-            BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADD_U32), ScaledReg)
-              .addReg(ScaledReg, RegState::Kill)
-              .addImm(Offset);
+            BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), ScaledReg)
+                .addReg(ScaledReg, RegState::Kill)
+                .addImm(Offset);
             BuildMI(*MBB, MI, DL, TII->get(AMDGPU::COPY), ResultReg)
               .addReg(ScaledReg, RegState::Kill);
 
             // If there were truly no free SGPRs, we need to undo everything.
             if (!TmpScaledReg.isValid()) {
-              BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_SUB_U32), ScaledReg)
-                .addReg(ScaledReg, RegState::Kill)
-                .addImm(Offset);
+              BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), ScaledReg)
+                  .addReg(ScaledReg, RegState::Kill)
+                  .addImm(-Offset);
               BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_LSHL_B32), ScaledReg)
                 .addReg(FrameReg)
                 .addImm(ST.getWavefrontSizeLog2());

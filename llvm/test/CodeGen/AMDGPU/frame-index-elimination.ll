@@ -37,7 +37,7 @@ define void @func_mov_fi_i32() #0 {
 
 ; GFX9-MUBUF-NEXT:   v_lshrrev_b32_e64 v0, 6, s32
 ; GFX9-FLATSCR:      v_mov_b32_e32 v0, s32
-; GFX9-FLATSCR:      s_add_u32 [[ADD:[^,]+]], s32, 4
+; GFX9-FLATSCR:      s_add_i32 [[ADD:[^,]+]], s32, 4
 ; GFX9-NEXT:         ds_write_b32 v0, v0
 ; GFX9-MUBUF-NEXT:   v_lshrrev_b32_e64 [[SCALED:v[0-9]+]], 6, s32
 ; GFX9-MUBUF-NEXT:   v_add_u32_e32 v0, 4, [[SCALED]]
@@ -196,7 +196,7 @@ ret:
 ; GFX9-MUBUF-DAG: v_lshrrev_b32_e64 [[SCALED:v[0-9]+]], 6, s32
 ; GFX9-MUBUF:     v_add_u32_e32 [[VZ:v[0-9]+]], 0x200, [[SCALED]]
 
-; GFX9-FLATSCR-DAG: s_add_u32 [[SZ:[^,]+]], s32, 0x200
+; GFX9-FLATSCR-DAG: s_add_i32 [[SZ:[^,]+]], s32, 0x200
 ; GFX9-FLATSCR:     v_mov_b32_e32 [[VZ:v[0-9]+]], [[SZ]]
 
 ; GCN: v_mul_lo_u32 [[VZ]], [[VZ]], 9
@@ -222,7 +222,7 @@ define void @func_other_fi_user_non_inline_imm_offset_i32() #0 {
 ; GFX9-MUBUF-DAG: v_lshrrev_b32_e64 [[SCALED:v[0-9]+]], 6, s32
 ; GFX9-MUBUF:     v_add_u32_e32 [[VZ:v[0-9]+]], 0x200, [[SCALED]]
 
-; GFX9-FLATSCR-DAG: s_add_u32 [[SZ:[^,]+]], s32, 0x200
+; GFX9-FLATSCR-DAG: s_add_i32 [[SZ:[^,]+]], s32, 0x200
 ; GFX9-FLATSCR:     v_mov_b32_e32 [[VZ:v[0-9]+]], [[SZ]]
 
 ; GCN: v_mul_lo_u32 [[VZ]], [[VZ]], 9
