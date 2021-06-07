@@ -14,12 +14,13 @@
 
 #ifndef LLVM_CLANG_AST_ASTCONCEPT_H
 #define LLVM_CLANG_AST_ASTCONCEPT_H
+
 #include "clang/AST/Expr.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
-#include <string>
 #include <utility>
+
 namespace clang {
 class ConceptDecl;
 class ConceptSpecializationExpr;
