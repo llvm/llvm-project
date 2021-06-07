@@ -203,4 +203,12 @@ typedef struct __hw_jmp_buf_struct __hw_jmp_buf[1];
 typedef struct __hw_jmp_buf_struct __hw_sigjmp_buf[1];
 #endif // HWASAN_WITH_INTERCEPTORS && __aarch64__
 
+#define ENSURE_HWASAN_INITED()      \
+  do {                              \
+    CHECK(!hwasan_init_is_running); \
+    if (!hwasan_inited) {           \
+      __hwasan_init();              \
+    }                               \
+  } while (0)
+
 #endif  // HWASAN_H
