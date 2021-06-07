@@ -15,6 +15,7 @@
 #include "ARMTargetMachine.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "Utils/ARMBaseInfo.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -195,6 +196,7 @@ private:
   bool tryT1IndexedLoad(SDNode *N);
   bool tryT2IndexedLoad(SDNode *N);
   bool tryMVEIndexedLoad(SDNode *N);
+  bool tryFMULFixed(SDNode *N, SDLoc dl);
 
   /// SelectVLD - Select NEON load intrinsics.  NumVecs should be
   /// 1, 2, 3 or 4.  The opcode arrays specify the instructions used for
@@ -3148,6 +3150,101 @@ bool ARMDAGToDAGISel::tryInsertVectorElt(SDNode *N) {
   return false;
 }
 
+bool ARMDAGToDAGISel::tryFMULFixed(SDNode *N, SDLoc dl) {
+  // Transform a fixed-point to floating-point conversion to a VCVT
+  if (!Subtarget->hasMVEFloatOps())
+    return false;
+  auto Type = N->getValueType(0);
+  if (!Type.isVector())
+    return false;
+
+  auto ScalarType = Type.getVectorElementType();
+  unsigned ScalarBits = ScalarType.getSizeInBits();
+  auto LHS = N->getOperand(0);
+  auto RHS = N->getOperand(1);
+
+  if (ScalarBits > 32)
+    return false;
+
+  if (RHS.getOpcode() == ISD::BITCAST) {
+    if (RHS.getValueType().getVectorElementType().getSizeInBits() != ScalarBits)
+      return false;
+    RHS = RHS.getOperand(0);
+  }
+  if (RHS.getValueType().getVectorElementType().getSizeInBits() != ScalarBits)
+    return false;
+  if (LHS.getOpcode() != ISD::SINT_TO_FP && LHS.getOpcode() != ISD::UINT_TO_FP)
+    return false;
+
+  bool IsUnsigned = LHS.getOpcode() == ISD::UINT_TO_FP;
+  SDNodeFlags FMulFlags = N->getFlags();
+  // The fixed-point vcvt and vcvt+vmul are not always equivalent if inf is
+  // allowed in 16 bit unsigned floats
+  if (ScalarBits == 16 && !FMulFlags.hasNoInfs() && IsUnsigned)
+    return false;
+
+  APFloat ImmAPF(0.0f);
+  switch (RHS.getOpcode()) {
+  case ARMISD::VMOVIMM:
+  case ARMISD::VDUP: {
+    if (!isa<ConstantSDNode>(RHS.getOperand(0)))
+      return false;
+    unsigned Imm = RHS.getConstantOperandVal(0);
+    if (RHS.getOpcode() == ARMISD::VMOVIMM)
+      Imm = ARM_AM::decodeVMOVModImm(Imm, ScalarBits);
+    ImmAPF =
+        APFloat(ScalarBits == 32 ? APFloat::IEEEsingle() : APFloat::IEEEhalf(),
+                APInt(ScalarBits, Imm));
+    break;
+  }
+  case ARMISD::VMOVFPIMM: {
+    ImmAPF = APFloat(ARM_AM::getFPImmFloat(RHS.getConstantOperandVal(0)));
+    break;
+  }
+  default:
+    return false;
+  }
+
+  // Multiplying by a factor of 2^(-n) will convert from fixed point to
+  // floating point, where n is the number of fractional bits in the fixed
+  // point number. Taking the inverse and log2 of the factor will give n
+  APFloat Inverse(0.0f);
+  if (!ImmAPF.getExactInverse(&Inverse))
+    return false;
+
+  APSInt Converted(64, 0);
+  bool IsExact;
+  Inverse.convertToInteger(Converted, llvm::RoundingMode::NearestTiesToEven,
+                           &IsExact);
+  if (!IsExact || !Converted.isPowerOf2())
+    return false;
+
+  unsigned FracBits = Converted.logBase2();
+  if (FracBits > ScalarBits)
+    return false;
+
+  auto SintToFpOperand = LHS.getOperand(0);
+  SmallVector<SDValue, 3> Ops{SintToFpOperand,
+                              CurDAG->getConstant(FracBits, dl, MVT::i32)};
+  AddEmptyMVEPredicateToOps(Ops, dl, Type);
+
+  unsigned int Opcode;
+  switch (ScalarBits) {
+  case 16:
+    Opcode = IsUnsigned ? ARM::MVE_VCVTf16u16_fix : ARM::MVE_VCVTf16s16_fix;
+    break;
+  case 32:
+    Opcode = IsUnsigned ? ARM::MVE_VCVTf32u32_fix : ARM::MVE_VCVTf32s32_fix;
+    break;
+  default:
+    llvm_unreachable("unexpected number of scalar bits");
+    break;
+  }
+
+  ReplaceNode(N, CurDAG->getMachineNode(Opcode, dl, Type, Ops));
+  return true;
+}
+
 bool ARMDAGToDAGISel::tryV6T2BitfieldExtractOp(SDNode *N, bool isSigned) {
   if (!Subtarget->hasV6T2Ops())
     return false;
@@ -3581,6 +3678,10 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
   case ISD::SIGN_EXTEND_INREG:
   case ISD::SRA:
     if (tryV6T2BitfieldExtractOp(N, true))
+      return;
+    break;
+  case ISD::FMUL:
+    if (tryFMULFixed(N, dl))
       return;
     break;
   case ISD::MUL:
