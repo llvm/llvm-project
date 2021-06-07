@@ -13,7 +13,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32*, i32** %a, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32** [[TMP2]] to <2 x i32*>*
 ; CHECK-NEXT:    store <2 x i32*> [[TMP1]], <2 x i32*>* [[TMP3]], align 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], <i64 2, i64 2>
 ; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
 ;
@@ -49,7 +49,7 @@ for.end:
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32*, i32** %a, i64 [[TMP4]]
 ; CHECK-NEXT:    store i32* [[TMP5]], i32** [[TMP7]], align 8
 ; CHECK-NEXT:    store i32* [[TMP6]], i32** [[TMP8]], align 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 define void @scalar_store(i32** %a, i32 *%b, i64 %n) {
@@ -88,7 +88,7 @@ for.end:
 ; CHECK-NEXT:    store i64* [[TMP5]], i64** [[TMP9]], align 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i32** [[TMP8]] to i64**
 ; CHECK-NEXT:    store i64* [[TMP6]], i64** [[TMP10]], align 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 define void @expansion(i32** %a, i64 *%b, i64 %n) {
@@ -123,7 +123,7 @@ for.end:
 ; CHECK-NEXT:    store i32 0, i32* [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32*> [[WIDE_LOAD]], i32 1
 ; CHECK-NEXT:    store i32 0, i32* [[TMP4]], align 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 define void @no_gep_or_bitcast(i32** noalias %a, i64 %n) {

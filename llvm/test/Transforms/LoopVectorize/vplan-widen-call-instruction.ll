@@ -33,7 +33,7 @@ define void @widen_call_instruction(double* noalias nocapture readonly %a.in, do
 ; CHECK-NEXT: %[[VEC_INDEX_NEXT:.*]] = add nuw nsw <4 x i64> %[[VEC_INDEX]], <i64 1, i64 1, i64 1, i64 1>
 ; CHECK-NEXT: %[[VEC_PTR:.*]] = icmp eq <4 x i64> %[[VEC_INDEX_NEXT]], <i64 1000, i64 1000, i64 1000, i64 1000>
 ; CHECK-NEXT: %{{.*}} = extractelement <4 x i1> %[[VEC_PTR]], i32 0
-; CHECK-NEXT: %[[FOR1_INDEX_NEXT:.*]] = add i64 %[[FOR1_INDEX]], 4
+; CHECK-NEXT: %[[FOR1_INDEX_NEXT:.*]] = add nuw i64 %[[FOR1_INDEX]], 4
 ; CHECK-NEXT: %{{.*}} = add <4 x i64> %[[VEC_INDEX]], <i64 4, i64 4, i64 4, i64 4>
 ; CHECK-NEXT: %[[EXIT_COND:.*]] = icmp eq i64 %[[FOR1_INDEX_NEXT]], 1000
 ; CHECK-NEXT: br i1 %[[EXIT_COND]], label %{{.*}}, label %vector.body

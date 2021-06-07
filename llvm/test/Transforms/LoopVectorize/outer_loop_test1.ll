@@ -38,7 +38,7 @@
 ; CHECK: br i1 %[[InnerCond]], label %[[ForInc]], label %[[InnerLoop]]
 
 ; CHECK: [[ForInc]]:
-; CHECK: %[[IndNext]] = add i64 %[[Ind]], 4
+; CHECK: %[[IndNext]] = add nuw i64 %[[Ind]], 4
 ; CHECK: %[[VecIndNext]] = add <4 x i64> %[[VecInd]], <i64 4, i64 4, i64 4, i64 4>
 ; CHECK: %[[Cmp:.*]] = icmp eq i64 %[[IndNext]], 8
 ; CHECK: br i1 %[[Cmp]], label %middle.block, label %vector.body

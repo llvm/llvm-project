@@ -466,7 +466,7 @@ for.end:
 ; INTER-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, i8* %B, i64 [[INDEX]]
 ; INTER-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to <4 x i8>*
 ; INTER-NEXT:    store <4 x i8> [[TMP6]], <4 x i8>* [[TMP8]], align 1
-; INTER-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; INTER-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; INTER:         br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 define void @bitcast_pointer_operand(i64* %A, i8* %B, i64 %n) {

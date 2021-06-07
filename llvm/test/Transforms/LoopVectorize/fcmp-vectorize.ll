@@ -6,7 +6,7 @@ define void @test1() {
 ; CHECK-LABEL: test1(
 ; CHECK-LABEL: vector.body:
 ; CHECK-NEXT:    %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK:         %index.next = add i32 %index, 4
+; CHECK:         %index.next = add nuw i32 %index, 4
 
 entry:
   br label %loop

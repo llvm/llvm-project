@@ -25,7 +25,7 @@ define dso_local void @_Z3fooi(i32 %M) local_unnamed_addr {
 ; CHECK-LABEL: @_Z3fooi(
 ; CHECK:       [[VECTOR_BODY:vector\.body]]:
 ; CHECK:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ;
 entry:
   %cmp8 = icmp sgt i32 %M, 0

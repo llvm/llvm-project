@@ -59,7 +59,7 @@ define i16 @test(i16** %arg, i64 %N) {
 ; CHECK-NEXT:    store i16 [[TMP8]], i16* [[TMP7]], align 2, !alias.scope !3, !noalias !0
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i16> [[WIDE_LOAD]], i32 1
 ; CHECK-NEXT:    store i16 [[TMP9]], i16* [[TMP7]], align 2, !alias.scope !3, !noalias !0
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP5:!llvm.loop !.*]]
 ; CHECK:       middle.block:
