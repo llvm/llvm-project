@@ -1097,6 +1097,10 @@ enum NodeType {
   /// specifier.
   PREFETCH,
 
+  /// ARITH_FENCE - This corresponds to a arithmetic fence intrinsic. Both its
+  /// operand and output are the same floating type.
+  ARITH_FENCE,
+
   /// OUTCHAIN = ATOMIC_FENCE(INCHAIN, ordering, scope)
   /// This corresponds to the fence instruction. It takes an input chain, and
   /// two integer constants: an AtomicOrdering and a SynchronizationScope.
