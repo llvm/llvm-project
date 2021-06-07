@@ -113,7 +113,10 @@ bool Demangler::demangle(StringView Mangled) {
 
   demanglePath(rust_demangle::InType::No);
 
-  // FIXME parse optional <instantiating-crate>.
+  if (Position != Input.size()) {
+    SwapAndRestore<bool> SavePrint(Print, false);
+    demanglePath(InType::No);
+  }
 
   if (Position != Input.size())
     Error = true;
