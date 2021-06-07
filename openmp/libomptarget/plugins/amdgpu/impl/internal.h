@@ -181,8 +181,6 @@ private:
   };
 };
 
-extern std::vector<hsa_amd_memory_pool_t> atl_gpu_kernarg_pools;
-
 namespace core {
 hsa_status_t atl_init_gpu_context();
 
