@@ -142,13 +142,6 @@ static const std::map<std::string, KernelArgMD::ValueKind> ArgValueKind = {
 
 ATLMachine g_atl_machine;
 
-/*
-   atlc is all internal global values.
-   The structure atl_context_t is defined in atl_internal.h
-   Most references will use the global structure prefix atlc.
-*/
-atl_context_t atlc = {.struct_initialized = false};
-
 namespace core {
 
 hsa_status_t allow_access_to_all_gpu_agents(void *ptr) {
@@ -159,13 +152,6 @@ hsa_status_t allow_access_to_all_gpu_agents(void *ptr) {
     agents.push_back(gpu_procs[i].agent());
   }
   return hsa_amd_agents_allow_access(agents.size(), &agents[0], NULL, ptr);
-}
-
-static void atmi_init_context_structs() {
-  atlc.struct_initialized = true; /* This only gets called one time */
-  atlc.g_hsa_initialized = false;
-  atlc.g_gpu_initialized = false;
-  atlc.g_tasks_initialized = false;
 }
 
 // Implement memory_pool iteration function
@@ -447,42 +433,27 @@ static hsa_status_t init_compute_and_memory() {
 }
 
 hsa_status_t init_hsa() {
-  if (atlc.g_hsa_initialized == false) {
-    DEBUG_PRINT("Initializing HSA...");
-    hsa_status_t err = hsa_init();
-    if (err != HSA_STATUS_SUCCESS) {
-      printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-             "Initializing the hsa runtime", get_error_string(err));
-      return err;
-    }
-    if (err != HSA_STATUS_SUCCESS)
-      return err;
-
-    err = init_compute_and_memory();
-    if (err != HSA_STATUS_SUCCESS)
-      return err;
-    if (err != HSA_STATUS_SUCCESS) {
-      printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-             "After initializing compute and memory", get_error_string(err));
-      return err;
-    }
-
-    atlc.g_hsa_initialized = true;
-    DEBUG_PRINT("done\n");
+  DEBUG_PRINT("Initializing HSA...");
+  hsa_status_t err = hsa_init();
+  if (err != HSA_STATUS_SUCCESS) {
+    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
+           "Initializing the hsa runtime", get_error_string(err));
+    return err;
   }
+  if (err != HSA_STATUS_SUCCESS)
+    return err;
+
+  err = init_compute_and_memory();
+  if (err != HSA_STATUS_SUCCESS)
+    return err;
+  if (err != HSA_STATUS_SUCCESS) {
+    printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
+           "After initializing compute and memory", get_error_string(err));
+    return err;
+  }
+
+  DEBUG_PRINT("done\n");
   return HSA_STATUS_SUCCESS;
-}
-
-void init_tasks() {
-  if (atlc.g_tasks_initialized != false)
-    return;
-  std::vector<hsa_agent_t> gpu_agents;
-  int gpu_count = g_atl_machine.processorCount<ATLGPUProcessor>();
-  for (int gpu = 0; gpu < gpu_count; gpu++) {
-    ATLGPUProcessor &proc = get_processor<ATLGPUProcessor>(gpu);
-    gpu_agents.push_back(proc.agent());
-  }
-  atlc.g_tasks_initialized = true;
 }
 
 hsa_status_t callbackEvent(const hsa_amd_event_t *event, void *data) {
@@ -526,11 +497,6 @@ hsa_status_t callbackEvent(const hsa_amd_event_t *event, void *data) {
 }
 
 hsa_status_t atl_init_gpu_context() {
-  if (atlc.struct_initialized == false)
-    atmi_init_context_structs();
-  if (atlc.g_gpu_initialized != false)
-    return HSA_STATUS_SUCCESS;
-
   hsa_status_t err;
   err = init_hsa();
   if (err != HSA_STATUS_SUCCESS)
@@ -543,8 +509,6 @@ hsa_status_t atl_init_gpu_context() {
     return HSA_STATUS_ERROR;
   }
 
-  init_tasks();
-  atlc.g_gpu_initialized = true;
   return HSA_STATUS_SUCCESS;
 }
 
