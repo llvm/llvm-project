@@ -3453,7 +3453,26 @@ static AttrBuilder getParameterABIAttributes(int I, AttributeList Attrs) {
   return Copy;
 }
 
+static cl::opt<bool>
+EnableSwiftTailCCMustTailCheck("enable-swifttailcc-musttail-check",
+cl::init(false), cl::desc("Check that tail calls from swifttailcc functions to"
+                          " swifttailcc functions are marked musttail."));
+
 void Verifier::verifyMustTailCall(CallInst &CI) {
+  if (!CI.isMustTailCall()) {
+#ifndef NDEBUG
+    if (EnableSwiftTailCCMustTailCheck &&
+        CI.getCallingConv() == CallingConv::SwiftTail &&
+        CI.getCaller()->getCallingConv() == CallingConv::SwiftTail &&
+        isa_and_nonnull<ReturnInst>(CI.getNextNode())) {
+      Assert(
+        false, "tail call from swifttail->swiftail should be marked musttail",
+        &CI);
+    }
+#endif
+    return;
+  }
+
   Assert(!CI.isInlineAsm(), "cannot use musttail call with inline asm", &CI);
 
   Function *F = CI.getParent()->getParent();
@@ -3538,9 +3557,7 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
 
 void Verifier::visitCallInst(CallInst &CI) {
   visitCallBase(CI);
-
-  if (CI.isMustTailCall())
-    verifyMustTailCall(CI);
+  verifyMustTailCall(CI);
 }
 
 void Verifier::visitInvokeInst(InvokeInst &II) {
