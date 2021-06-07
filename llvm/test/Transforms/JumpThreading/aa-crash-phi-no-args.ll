@@ -1,4 +1,3 @@
-; XFAIL: *
 ; REQUIRES: asserts
 ; RUN: opt -jump-threading -aa-pipeline basic-aa -S -disable-output %s
 ; RUN: opt -passes=jump-threading -aa-pipeline basic-aa -S -disable-output %s
