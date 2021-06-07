@@ -9143,6 +9143,9 @@ def note_defaulted_comparison_cannot_deduce_undeduced_auto : Note<
   "%select{|member|base class}0 %1 declared here">;
 def note_defaulted_comparison_cannot_deduce_callee : Note<
   "selected 'operator<=>' for %select{|member|base class}0 %1 declared here">;
+def note_defaulted_comparison_selected_invalid : Note<
+  "would compare %select{|member|base class}0 %1 "
+  "as %2, which does not support relational comparisons">;
 def err_incorrect_defaulted_comparison_constexpr : Error<
   "defaulted definition of %select{%sub{select_defaulted_comparison_kind}1|"
   "three-way comparison operator}0 "
