@@ -3732,7 +3732,7 @@ NamedDecl *VisibleDeclsRecord::checkHidden(NamedDecl *ND) {
       // A shadow declaration that's created by a resolved using declaration
       // is not hidden by the same using declaration.
       if (isa<UsingShadowDecl>(ND) && isa<UsingDecl>(D) &&
-          cast<UsingShadowDecl>(ND)->getUsingDecl() == D)
+          cast<UsingShadowDecl>(ND)->getIntroducer() == D)
         continue;
 
       // We've found a declaration that hides this one.

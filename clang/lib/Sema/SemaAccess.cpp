@@ -1308,17 +1308,18 @@ static bool IsMicrosoftUsingDeclarationAccessBug(Sema& S,
                                                  SourceLocation AccessLoc,
                                                  AccessTarget &Entity) {
   if (UsingShadowDecl *Shadow =
-                         dyn_cast<UsingShadowDecl>(Entity.getTargetDecl())) {
-    const NamedDecl *OrigDecl = Entity.getTargetDecl()->getUnderlyingDecl();
-    if (Entity.getTargetDecl()->getAccess() == AS_private &&
-        (OrigDecl->getAccess() == AS_public ||
-         OrigDecl->getAccess() == AS_protected)) {
-      S.Diag(AccessLoc, diag::ext_ms_using_declaration_inaccessible)
-        << Shadow->getUsingDecl()->getQualifiedNameAsString()
-        << OrigDecl->getQualifiedNameAsString();
-      return true;
+          dyn_cast<UsingShadowDecl>(Entity.getTargetDecl()))
+    if (UsingDecl *UD = dyn_cast<UsingDecl>(Shadow->getIntroducer())) {
+      const NamedDecl *OrigDecl = Entity.getTargetDecl()->getUnderlyingDecl();
+      if (Entity.getTargetDecl()->getAccess() == AS_private &&
+          (OrigDecl->getAccess() == AS_public ||
+           OrigDecl->getAccess() == AS_protected)) {
+        S.Diag(AccessLoc, diag::ext_ms_using_declaration_inaccessible)
+            << UD->getQualifiedNameAsString()
+            << OrigDecl->getQualifiedNameAsString();
+        return true;
+      }
     }
-  }
   return false;
 }
 
