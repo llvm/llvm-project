@@ -9665,8 +9665,8 @@ namespace {
     std::vector<EVT> VTs;
 
     EVTArray() {
-      VTs.reserve(MVT::LAST_VALUETYPE);
-      for (unsigned i = 0; i < MVT::LAST_VALUETYPE; ++i)
+      VTs.reserve(MVT::VALUETYPE_SIZE);
+      for (unsigned i = 0; i < MVT::VALUETYPE_SIZE; ++i)
         VTs.push_back(MVT((MVT::SimpleValueType)i));
     }
   };
@@ -9684,7 +9684,7 @@ const EVT *SDNode::getValueTypeList(EVT VT) {
     sys::SmartScopedLock<true> Lock(*VTMutex);
     return &(*EVTs->insert(VT).first);
   }
-  assert(VT.getSimpleVT() < MVT::LAST_VALUETYPE && "Value type out of range!");
+  assert(VT.getSimpleVT() < MVT::VALUETYPE_SIZE && "Value type out of range!");
   return &SimpleVTArray->VTs[VT.getSimpleVT().SimpleTy];
 }
 
