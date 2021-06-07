@@ -1867,8 +1867,8 @@ TypeSystemClang::CreateUsingDeclaration(clang::DeclContext *current_decl_ctx,
         clang::NestedNameSpecifierLoc(), clang::DeclarationNameInfo(), false);
     SetOwningModule(using_decl, owning_module);
     clang::UsingShadowDecl *shadow_decl = clang::UsingShadowDecl::Create(
-        getASTContext(), current_decl_ctx, clang::SourceLocation(), using_decl,
-        target);
+        getASTContext(), current_decl_ctx, clang::SourceLocation(),
+        target->getDeclName(), using_decl, target);
     SetOwningModule(shadow_decl, owning_module);
     using_decl->addShadowDecl(shadow_decl);
     current_decl_ctx->addDecl(using_decl);
