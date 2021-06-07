@@ -29,10 +29,17 @@ struct AllocateStmt;
 struct DeallocateStmt;
 } // namespace Fortran::parser
 
+namespace Fortran::evaluate {
+template <typename T>
+class Expr;
+struct SomeType;
+} // namespace Fortran::evaluate
+
 namespace Fortran::lower {
 struct SymbolBox;
 class AbstractConverter;
 class FirOpBuilder;
+class StatementContext;
 
 namespace pft {
 struct Variable;
@@ -89,6 +96,16 @@ void associateMutableBoxWithShift(Fortran::lower::FirOpBuilder &,
                                   mlir::Location, const fir::MutableBoxValue &,
                                   const fir::ExtendedValue &source,
                                   mlir::ValueRange lbounds);
+
+/// Update a MutableBoxValue to describe the entity designated by the expression
+/// \p source. This version takes care of \p source lowering.
+/// If \lbounds is not empty, it is used to defined the MutableBoxValue
+/// lower bounds, otherwise, the lower bounds from \p source are used.
+void associateMutableBoxWithShift(
+    Fortran::lower::AbstractConverter &, mlir::Location,
+    const fir::MutableBoxValue &,
+    const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &source,
+    mlir::ValueRange lbounds, Fortran::lower::StatementContext &);
 
 /// Update a MutableBoxValue to describe entity \p source (that must be in
 /// memory) with a new array layout given by \p lbounds and \p ubounds.

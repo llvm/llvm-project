@@ -14,6 +14,7 @@
 #include "flang/Lower/ComplexExpr.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/Support/BoxValue.h"
+#include "flang/Lower/Todo.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
@@ -593,4 +594,57 @@ Fortran::lower::createStringLiteral(Fortran::lower::FirOpBuilder &builder,
   auto len = builder.createIntegerConstant(
       loc, builder.getCharacterLengthType(), str.size());
   return fir::CharBoxValue{addr, len};
+}
+
+fir::ExtendedValue Fortran::lower::componentToExtendedValue(
+    Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+    const fir::ExtendedValue &obj, mlir::Value component) {
+  auto fieldTy = fir::dyn_cast_ptrEleTy(component.getType());
+  if (fieldTy.isa<fir::BoxType>()) {
+    llvm::SmallVector<mlir::Value> nonDeferredTypeParams;
+    auto eleTy = fir::unwrapSequenceType(fir::dyn_cast_ptrOrBoxEleTy(fieldTy));
+    if (auto charTy = eleTy.dyn_cast<fir::CharacterType>()) {
+      auto lenTy = builder.getCharacterLengthType();
+      if (charTy.hasConstantLen())
+        nonDeferredTypeParams.emplace_back(
+            builder.createIntegerConstant(loc, lenTy, charTy.getLen()));
+      // TODO: Starting, F2003, the dynamic character length might be dependent
+      // on a PDT length parameter. There is no way to make a difference with
+      // deferred length here yet.
+    }
+    if (auto recTy = eleTy.dyn_cast<fir::RecordType>())
+      if (recTy.getNumLenParams() > 0)
+        TODO(loc, "allocatable and pointer components non deferred length "
+                  "parameters");
+
+    return fir::MutableBoxValue(component, nonDeferredTypeParams,
+                                /*mutableProperties=*/{});
+  }
+  llvm::SmallVector<mlir::Value> extents;
+  if (auto seqTy = fieldTy.dyn_cast<fir::SequenceType>()) {
+    fieldTy = seqTy.getEleTy();
+    auto idxTy = builder.getIndexType();
+    for (auto extent : seqTy.getShape()) {
+      if (extent == fir::SequenceType::getUnknownExtent())
+        TODO(loc, "array component shape depending on length parameters");
+      extents.emplace_back(builder.createIntegerConstant(loc, idxTy, extent));
+    }
+  }
+  if (auto charTy = fieldTy.dyn_cast<fir::CharacterType>()) {
+    auto cstLen = charTy.getLen();
+    if (cstLen == fir::CharacterType::unknownLen())
+      TODO(loc, "get character component length from length type parameters");
+    auto len = builder.createIntegerConstant(
+        loc, builder.getCharacterLengthType(), cstLen);
+    if (!extents.empty())
+      return fir::CharArrayBoxValue{component, len, extents};
+    return fir::CharBoxValue{component, len};
+  }
+  if (auto recordTy = fieldTy.dyn_cast<fir::RecordType>())
+    if (recordTy.getNumLenParams() != 0)
+      TODO(loc,
+           "lower component ref that is a derived type with length parameter");
+  if (!extents.empty())
+    return fir::ArrayBoxValue{component, extents};
+  return component;
 }
