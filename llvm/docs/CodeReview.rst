@@ -78,9 +78,10 @@ author, for example, might no longer be an active contributor to the project.
 What Tools Are Used for Code Review?
 ------------------------------------
 
-Code reviews are conducted, in order of preference, on our web-based
-code-review tool (see :doc:`Phabricator`), by email on the relevant project's
-commit mailing list, on the project's development list, or on the bug tracker.
+Pre-commit code reviews are conducted on our web-based code-review tool (see
+:doc:`Phabricator`). Post-commit reviews can be done on Phabricator, by email
+on the relevant project's commit mailing list, on the project's development
+list, or on the bug tracker.
 
 When Is an RFC Required?
 ------------------------
