@@ -32,7 +32,7 @@ class XCOFFWriter {
 public:
   XCOFFWriter(XCOFFYAML::Object &Obj, raw_ostream &OS, yaml::ErrorHandler EH)
       : Obj(Obj), W(OS, support::big), ErrHandler(EH) {
-    Is64Bit = Obj.Header.Magic == XCOFF::XCOFF64;
+    Is64Bit = Obj.Header.Magic == (llvm::yaml::Hex16)XCOFF::XCOFF64;
   }
   bool writeXCOFF();
 
