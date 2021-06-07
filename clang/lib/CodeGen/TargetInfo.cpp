@@ -7995,7 +7995,17 @@ ABIArgInfo MipsABIInfo::classifyReturnType(QualType RetTy) const {
     return ABIArgInfo::getIgnore();
 
   if (isAggregateTypeForABI(RetTy) || RetTy->isVectorType()) {
-    if (Size <= 128) {
+    bool IsNanoMips = getTarget().getTriple().isNanoMips();
+    if (IsNanoMips && Size <= 64) {
+      if (RetTy->isAnyComplexType())
+        return ABIArgInfo::getDirect();
+
+      auto RetInfo = ABIArgInfo::getDirect(returnAggregateInRegs(RetTy, Size));
+      RetInfo.setInReg(true);
+      return RetInfo;
+    }
+
+    if (!IsNanoMips && Size <= 128) {
       if (RetTy->isAnyComplexType())
         return ABIArgInfo::getDirect();
 
@@ -8009,12 +8019,6 @@ ABIArgInfo MipsABIInfo::classifyReturnType(QualType RetTy) const {
         return ArgInfo;
       }
     }
-    if (getTarget().getTriple().isNanoMips() && Size <= 64) {
-      auto RetInfo = ABIArgInfo::getDirect(returnAggregateInRegs(RetTy, Size));
-      RetInfo.setInReg(true);
-      return RetInfo;
-    }
-
     return getNaturalAlignIndirect(RetTy);
   }
 
