@@ -122,6 +122,15 @@ bool applyCmpPredicate(CmpIPredicate predicate, const APInt &lhs,
 bool applyCmpPredicate(CmpFPredicate predicate, const APFloat &lhs,
                        const APFloat &rhs);
 
+/// If ofr is a constant integer, i.e., an IntegerAttr or a ConstantOp with an
+/// IntegerAttr, return the integer.
+llvm::Optional<int64_t> getConstantIntValue(OpFoldResult ofr);
+
+/// Return true if ofr and value are the same integer.
+/// Ignore integer bitwidth and type mismatch that come from the fact there is
+/// no IndexAttr and that IndexType has no bitwidth.
+bool isEqualConstantInt(OpFoldResult ofr, int64_t value);
+
 /// Return true if ofr1 and ofr2 are the same integer constant attribute values
 /// or the same SSA value.
 /// Ignore integer bitwitdh and type mismatch that come from the fact there is
