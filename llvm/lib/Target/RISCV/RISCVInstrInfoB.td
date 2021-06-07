@@ -128,6 +128,49 @@ def BSETINVORIMaskLow : SDNodeXForm<imm, [{
                                    SDLoc(N), N->getValueType(0));
 }]>;
 
+// Check if (and r, i) can be optimized to (BCLRI (BCLRI r, i0), i1),
+// in which i = ~((1<<i0) | (1<<i1)).
+def BCLRITwoBitsMask : PatLeaf<(imm), [{
+  if (!N->hasOneUse())
+    return false;
+  // The immediate should not be a simm12.
+  if (isInt<12>(N->getSExtValue()))
+    return false;
+  // The immediate must have exactly two bits clear.
+  return countPopulation(N->getZExtValue()) == Subtarget->getXLen() - 2;
+}]>;
+
+def BCLRITwoBitsMaskLow : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(countTrailingZeros(~N->getZExtValue()),
+                                   SDLoc(N), N->getValueType(0));
+}]>;
+
+def BCLRITwoBitsMaskHigh : SDNodeXForm<imm, [{
+  uint64_t I = N->getSExtValue();
+  if (!Subtarget->is64Bit())
+    I |= 0xffffffffull << 32;
+  return CurDAG->getTargetConstant(63 - countLeadingZeros(~I), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
+// Check if (and r, i) can be optimized to (BCLRI (ANDI r, i0), i1),
+// in which i = i0 & ~(1<<i1).
+def BCLRIANDIMask : PatLeaf<(imm), [{
+  if (!N->hasOneUse())
+    return false;
+  // The immediate should not be a simm12.
+  if (isInt<12>(N->getSExtValue()))
+    return false;
+  // There should be only one clear bit from bit 11 to the top.
+  uint64_t I = N->getZExtValue() | 0x7ff;
+  return Subtarget->is64Bit() ? isPowerOf2_64(~I) : isPowerOf2_32(~I);
+}]>;
+
+def BCLRIANDIMaskLow : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant((N->getZExtValue() & 0x7ff) | ~0x7ffull,
+                                   SDLoc(N), N->getValueType(0));
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction class templates
 //===----------------------------------------------------------------------===//
@@ -777,6 +820,12 @@ def : Pat<(or GPR:$r, BSETINVORIMask:$i),
 def : Pat<(xor GPR:$r, BSETINVORIMask:$i),
           (BINVI (XORI GPR:$r, (BSETINVORIMaskLow BSETINVORIMask:$i)),
                  (BSETINVTwoBitsMaskHigh BSETINVORIMask:$i))>;
+def : Pat<(and GPR:$r, BCLRITwoBitsMask:$i),
+          (BCLRI (BCLRI GPR:$r, (BCLRITwoBitsMaskLow BCLRITwoBitsMask:$i)),
+                 (BCLRITwoBitsMaskHigh BCLRITwoBitsMask:$i))>;
+def : Pat<(and GPR:$r, BCLRIANDIMask:$i),
+          (BCLRI (ANDI GPR:$r, (BCLRIANDIMaskLow BCLRIANDIMask:$i)),
+                 (BCLRITwoBitsMaskHigh BCLRIANDIMask:$i))>;
 }
 
 // There's no encoding for roli in the the 'B' extension as it can be
