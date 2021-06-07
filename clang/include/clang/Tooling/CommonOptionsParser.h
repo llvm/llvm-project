@@ -64,8 +64,11 @@ namespace tooling {
 /// \endcode
 class CommonOptionsParser {
 
-protected:
-  /// Parses command-line, initializes a compilation database.
+// protected:
+  
+
+public:
+/// Parses command-line, initializes a compilation database.
   ///
   /// This constructor can change argc and argv contents, e.g. consume
   /// command-line options used for creating FixedCompilationDatabase.
@@ -78,7 +81,6 @@ protected:
       llvm::cl::NumOccurrencesFlag OccurrencesFlag = llvm::cl::OneOrMore,
       const char *Overview = nullptr);
 
-public:
   /// A factory method that is similar to the above constructor, except
   /// this returns an error instead exiting the program on error.
   static llvm::Expected<CommonOptionsParser>
