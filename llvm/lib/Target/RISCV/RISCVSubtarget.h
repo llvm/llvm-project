@@ -135,7 +135,9 @@ public:
     assert(i < RISCV::NUM_TARGET_REGS && "Register out of range");
     return UserReservedRegister[i];
   }
-  unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
+  unsigned getMaxInterleaveFactor() const {
+    return hasStdExtV() ? MaxInterleaveFactor : 1;
+  }
 
 protected:
   // GlobalISel related APIs.
