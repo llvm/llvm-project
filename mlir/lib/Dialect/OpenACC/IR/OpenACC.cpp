@@ -448,6 +448,26 @@ static void print(OpAsmPrinter &printer, ParallelOp &op) {
       op->getAttrs(), ParallelOp::getOperandSegmentSizeAttr());
 }
 
+unsigned ParallelOp::getNumDataOperands() {
+  return reductionOperands().size() + copyOperands().size() +
+         copyinOperands().size() + copyinReadonlyOperands().size() +
+         copyoutOperands().size() + copyoutZeroOperands().size() +
+         createOperands().size() + createZeroOperands().size() +
+         noCreateOperands().size() + presentOperands().size() +
+         devicePtrOperands().size() + attachOperands().size() +
+         gangPrivateOperands().size() + gangFirstPrivateOperands().size();
+}
+
+Value ParallelOp::getDataOperand(unsigned i) {
+  unsigned numOptional = async() ? 1 : 0;
+  numOptional += numGangs() ? 1 : 0;
+  numOptional += numWorkers() ? 1 : 0;
+  numOptional += vectorLength() ? 1 : 0;
+  numOptional += ifCond() ? 1 : 0;
+  numOptional += selfCond() ? 1 : 0;
+  return getOperand(waitOperands().size() + numOptional + i);
+}
+
 //===----------------------------------------------------------------------===//
 // LoopOp
 //===----------------------------------------------------------------------===//

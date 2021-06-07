@@ -139,6 +139,12 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
     static StringRef getAttachKeyword() { return "attach"; }
     static StringRef getPrivateKeyword() { return "private"; }
     static StringRef getFirstPrivateKeyword() { return "firstprivate"; }
+
+    /// The number of data operands.
+    unsigned getNumDataOperands();
+
+    /// The i-th data operand passed.
+    Value getDataOperand(unsigned i);
   }];
 
   let verifier = ?;
