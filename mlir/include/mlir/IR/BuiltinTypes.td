@@ -313,6 +313,7 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "BaseMemRefType"> {
     - built-in index type;
     - built-in floating point types;
     - built-in vector types with elements of the above types;
+    - another memref type;
     - any other type implementing `MemRefElementTypeInterface`.
 
     ##### Codegen of Unranked Memref

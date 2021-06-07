@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../PassDetail.h"
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
@@ -101,14 +102,16 @@ LogicalResult mlir::barePtrFuncArgTypeConverter(LLVMTypeConverter &converter,
 }
 
 /// Create an LLVMTypeConverter using default LowerToLLVMOptions.
-LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx)
-    : LLVMTypeConverter(ctx, LowerToLLVMOptions(ctx)) {}
+LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
+                                     const DataLayoutAnalysis *analysis)
+    : LLVMTypeConverter(ctx, LowerToLLVMOptions(ctx), analysis) {}
 
 /// Create an LLVMTypeConverter using custom LowerToLLVMOptions.
 LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
-                                     const LowerToLLVMOptions &options)
-    : llvmDialect(ctx->getOrLoadDialect<LLVM::LLVMDialect>()),
-      options(options) {
+                                     const LowerToLLVMOptions &options,
+                                     const DataLayoutAnalysis *analysis)
+    : llvmDialect(ctx->getOrLoadDialect<LLVM::LLVMDialect>()), options(options),
+      dataLayoutAnalysis(analysis) {
   assert(llvmDialect && "LLVM IR dialect is not registered");
 
   // Register conversions for the builtin types.
@@ -342,6 +345,14 @@ LLVMTypeConverter::getMemRefDescriptorFields(MemRefType type,
   return results;
 }
 
+unsigned LLVMTypeConverter::getMemRefDescriptorSize(MemRefType type,
+                                                    const DataLayout &layout) {
+  // Compute the descriptor size given that of its components indicated above.
+  unsigned space = type.getMemorySpaceAsInt();
+  return 2 * llvm::divideCeil(getPointerBitwidth(space), 8) +
+         (1 + 2 * type.getRank()) * layout.getTypeSize(getIndexType());
+}
+
 /// Converts MemRefType to LLVMType. A MemRefType is converted to a struct that
 /// packs the descriptor fields as defined by `getMemRefDescriptorFields`.
 Type LLVMTypeConverter::convertMemRefType(MemRefType type) {
@@ -367,6 +378,15 @@ static constexpr unsigned kPtrInUnrankedMemRefDescriptor = 1;
 SmallVector<Type, 2> LLVMTypeConverter::getUnrankedMemRefDescriptorFields() {
   return {getIndexType(),
           LLVM::LLVMPointerType::get(IntegerType::get(&getContext(), 8))};
+}
+
+unsigned
+LLVMTypeConverter::getUnrankedMemRefDescriptorSize(UnrankedMemRefType type,
+                                                   const DataLayout &layout) {
+  // Compute the descriptor size given that of its components indicated above.
+  unsigned space = type.getMemorySpaceAsInt();
+  return layout.getTypeSize(getIndexType()) +
+         llvm::divideCeil(getPointerBitwidth(space), 8);
 }
 
 Type LLVMTypeConverter::convertUnrankedMemRefType(UnrankedMemRefType type) {
@@ -1900,26 +1920,30 @@ struct AlignedAllocOpLowering : public AllocLikeOpLLVMLowering {
       : AllocLikeOpLLVMLowering(memref::AllocOp::getOperationName(),
                                 converter) {}
 
-  /// Returns the memref's element size in bytes.
+  /// Returns the memref's element size in bytes using the data layout active at
+  /// `op`.
   // TODO: there are other places where this is used. Expose publicly?
-  static unsigned getMemRefEltSizeInBytes(MemRefType memRefType) {
-    auto elementType = memRefType.getElementType();
-
-    unsigned sizeInBits;
-    if (elementType.isIntOrFloat()) {
-      sizeInBits = elementType.getIntOrFloatBitWidth();
-    } else {
-      auto vectorType = elementType.cast<VectorType>();
-      sizeInBits =
-          vectorType.getElementTypeBitWidth() * vectorType.getNumElements();
+  unsigned getMemRefEltSizeInBytes(MemRefType memRefType, Operation *op) const {
+    const DataLayout *layout = &defaultLayout;
+    if (const DataLayoutAnalysis *analysis =
+            getTypeConverter()->getDataLayoutAnalysis()) {
+      layout = &analysis->getAbove(op);
     }
-    return llvm::divideCeil(sizeInBits, 8);
+    Type elementType = memRefType.getElementType();
+    if (auto memRefElementType = elementType.dyn_cast<MemRefType>())
+      return getTypeConverter()->getMemRefDescriptorSize(memRefElementType,
+                                                         *layout);
+    if (auto memRefElementType = elementType.dyn_cast<UnrankedMemRefType>())
+      return getTypeConverter()->getUnrankedMemRefDescriptorSize(
+          memRefElementType, *layout);
+    return layout->getTypeSize(elementType);
   }
 
   /// Returns true if the memref size in bytes is known to be a multiple of
-  /// factor.
-  static bool isMemRefSizeMultipleOf(MemRefType type, uint64_t factor) {
-    uint64_t sizeDivisor = getMemRefEltSizeInBytes(type);
+  /// factor assuming the data layout active at `op`.
+  bool isMemRefSizeMultipleOf(MemRefType type, uint64_t factor,
+                              Operation *op) const {
+    uint64_t sizeDivisor = getMemRefEltSizeInBytes(type, op);
     for (unsigned i = 0, e = type.getRank(); i < e; i++) {
       if (type.isDynamic(type.getDimSize(i)))
         continue;
@@ -1938,7 +1962,7 @@ struct AlignedAllocOpLowering : public AllocLikeOpLLVMLowering {
     // Whenever we don't have alignment set, we will use an alignment
     // consistent with the element type; since the allocation size has to be a
     // power of two, we will bump to the next power of two if it already isn't.
-    auto eltSizeBytes = getMemRefEltSizeInBytes(allocOp.getType());
+    auto eltSizeBytes = getMemRefEltSizeInBytes(allocOp.getType(), allocOp);
     return std::max(kMinAlignedAllocAlignment,
                     llvm::PowerOf2Ceil(eltSizeBytes));
   }
@@ -1954,7 +1978,7 @@ struct AlignedAllocOpLowering : public AllocLikeOpLLVMLowering {
 
     // aligned_alloc requires size to be a multiple of alignment; we will pad
     // the size to the next multiple if necessary.
-    if (!isMemRefSizeMultipleOf(memRefType, alignment))
+    if (!isMemRefSizeMultipleOf(memRefType, alignment, op))
       sizeBytes = createAligned(rewriter, loc, sizeBytes, allocAlignment);
 
     Type elementPtrType = this->getElementPtrType(memRefType);
@@ -1971,6 +1995,9 @@ struct AlignedAllocOpLowering : public AllocLikeOpLLVMLowering {
 
   /// The minimum alignment to use with aligned_alloc (has to be a power of 2).
   static constexpr uint64_t kMinAlignedAllocAlignment = 16UL;
+
+  /// Default layout to use in absence of the corresponding analysis.
+  DataLayout defaultLayout;
 };
 
 // Out of line definition, required till C++17.
@@ -4068,8 +4095,10 @@ struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
     }
 
     ModuleOp m = getOperation();
+    const auto &dataLayoutAnalysis = getAnalysis<DataLayoutAnalysis>();
 
-    LowerToLLVMOptions options(&getContext(), DataLayout(m));
+    LowerToLLVMOptions options(&getContext(),
+                               dataLayoutAnalysis.getAtOrAbove(m));
     options.useBarePtrCallConv = useBarePtrCallConv;
     options.emitCWrappers = emitCWrappers;
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
@@ -4078,7 +4107,9 @@ struct LLVMLoweringPass : public ConvertStandardToLLVMBase<LLVMLoweringPass> {
         (useAlignedAlloc ? LowerToLLVMOptions::AllocLowering::AlignedAlloc
                          : LowerToLLVMOptions::AllocLowering::Malloc);
     options.dataLayout = llvm::DataLayout(this->dataLayout);
-    LLVMTypeConverter typeConverter(&getContext(), options);
+
+    LLVMTypeConverter typeConverter(&getContext(), options,
+                                    &dataLayoutAnalysis);
 
     RewritePatternSet patterns(&getContext());
     populateStdToLLVMConversionPatterns(typeConverter, patterns);
@@ -4102,10 +4133,12 @@ Value AllocLikeOpLLVMLowering::createAligned(
   return rewriter.create<LLVM::SubOp>(loc, bumped, mod);
 }
 
-void AllocLikeOpLLVMLowering::rewrite(
+LogicalResult AllocLikeOpLLVMLowering::matchAndRewrite(
     Operation *op, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
   MemRefType memRefType = getMemRefResultType(op);
+  if (!isConvertibleAndHasIdentityMaps(memRefType))
+    return rewriter.notifyMatchFailure(op, "incompatible memref type");
   auto loc = op->getLoc();
 
   // Get actual sizes of the memref as values: static sizes are constant
@@ -4129,6 +4162,7 @@ void AllocLikeOpLLVMLowering::rewrite(
 
   // Return the final value of the descriptor.
   rewriter.replaceOp(op, {memRefDescriptor});
+  return success();
 }
 
 mlir::LLVMConversionTarget::LLVMConversionTarget(MLIRContext &ctx)
@@ -4159,6 +4193,6 @@ mlir::LowerToLLVMOptions::LowerToLLVMOptions(MLIRContext *ctx)
     : LowerToLLVMOptions(ctx, DataLayout()) {}
 
 mlir::LowerToLLVMOptions::LowerToLLVMOptions(MLIRContext *ctx,
-                                             mlir::DataLayout dl) {
+                                             const DataLayout &dl) {
   indexBitwidth = dl.getTypeSizeInBits(IndexType::get(ctx));
 }
