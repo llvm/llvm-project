@@ -11470,7 +11470,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     //   A[i] = i;
     //
     if (PredicatedIV || !NoWrap || isKnownNonPositive(Stride) ||
-        !loopHasNoSideEffects(L))
+        !loopIsFiniteByAssumption(L))
       return getCouldNotCompute();
   } else if (!Stride->isOne() && !NoWrap) {
     auto isUBOnWrap = [&]() {
