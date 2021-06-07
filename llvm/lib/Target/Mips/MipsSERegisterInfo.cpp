@@ -107,6 +107,14 @@ static inline unsigned getLoadStoreOffsetSizeInBits(const unsigned Opcode,
   case Mips::SC_R6:
   case Mips::LL_MMR6:
   case Mips::SC_MMR6:
+  case Mips::LWs9_NM:
+  case Mips::LHUs9_NM:
+  case Mips::LHs9_NM:
+  case Mips::LBUs9_NM:
+  case Mips::LBs9_NM:
+  case Mips::SWs9_NM:
+  case Mips::SHs9_NM:
+  case Mips::SBs9_NM:
   case Mips::UALW_NM:
   case Mips::UASW_NM:
   case Mips::UALH_NM:
