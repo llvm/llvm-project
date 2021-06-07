@@ -752,21 +752,24 @@ static DylibFile *loadDylib(StringRef path, DylibFile *umbrella) {
 //
 // Re-exports can either refer to on-disk files, or to documents within .tbd
 // files.
-DylibFile *findDylib(StringRef path, DylibFile *umbrella,
-                     const InterfaceFile *currentTopLevelTapi) {
+static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
+                            const InterfaceFile *currentTopLevelTapi) {
   if (path::is_absolute(path, path::Style::posix))
     for (StringRef root : config->systemLibraryRoots)
       if (Optional<std::string> dylibPath =
               resolveDylibPath((root + path).str()))
         return loadDylib(*dylibPath, umbrella);
 
-  // TODO: Expand @loader_path, @rpath etc, handle -dylib_file
+  // TODO: Expand @rpath, handle -dylib_file
   SmallString<128> newPath;
   if (config->outputType == MH_EXECUTE &&
       path.consume_front("@executable_path/")) {
     // ld64 allows overriding this with the undocumented flag -executable_path.
     // lld doesn't currently implement that flag.
     path::append(newPath, sys::path::parent_path(config->outputFile), path);
+    path = newPath;
+  } else if (path.consume_front("@loader_path/")) {
+    path::append(newPath, sys::path::parent_path(umbrella->getName()), path);
     path = newPath;
   }
 
@@ -808,8 +811,8 @@ static bool isImplicitlyLinked(StringRef path) {
   return false;
 }
 
-void loadReexport(StringRef path, DylibFile *umbrella,
-                  const InterfaceFile *currentTopLevelTapi) {
+static void loadReexport(StringRef path, DylibFile *umbrella,
+                         const InterfaceFile *currentTopLevelTapi) {
   DylibFile *reexport = findDylib(path, umbrella, currentTopLevelTapi);
   if (!reexport)
     error("unable to locate re-export with install name " + path);
