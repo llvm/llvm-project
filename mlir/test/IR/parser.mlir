@@ -178,6 +178,9 @@ func private @memref_with_complex_elems(memref<1x?xcomplex<f32>>)
 // CHECK: func private @memref_with_vector_elems(memref<1x?xvector<10xf32>>)
 func private @memref_with_vector_elems(memref<1x?xvector<10xf32>>)
 
+// CHECK: func private @memref_with_custom_elem(memref<1x?x!test.memref_element>)
+func private @memref_with_custom_elem(memref<1x?x!test.memref_element>)
+
 // CHECK: func private @unranked_memref_with_complex_elems(memref<*xcomplex<f32>>)
 func private @unranked_memref_with_complex_elems(memref<*xcomplex<f32>>)
 

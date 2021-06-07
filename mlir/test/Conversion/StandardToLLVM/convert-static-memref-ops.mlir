@@ -427,3 +427,23 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32>> } {
     return
   }
 }
+
+// -----
+
+// Should not convert memrefs with unsupported types in any convention.
+
+// CHECK: @unsupported_memref_element_type
+// CHECK-SAME: memref<
+// CHECK-NOT: !llvm.struct
+// BAREPTR: @unsupported_memref_element_type
+// BAREPTR-SAME: memref<
+// BAREPTR-NOT: !llvm.ptr
+func private @unsupported_memref_element_type() -> memref<42 x !test.memref_element>
+
+// CHECK: @unsupported_unranked_memref_element_type
+// CHECK-SAME: memref<
+// CHECK-NOT: !llvm.struct
+// BAREPTR: @unsupported_unranked_memref_element_type
+// BAREPTR-SAME: memref<
+// BAREPTR-NOT: !llvm.ptr
+func private @unsupported_unranked_memref_element_type() -> memref<* x !test.memref_element>
