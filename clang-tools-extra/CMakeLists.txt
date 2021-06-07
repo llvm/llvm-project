@@ -15,6 +15,7 @@ add_subdirectory(clang-move)
 add_subdirectory(clang-query)
 add_subdirectory(pp-trace)
 add_subdirectory(tool-template)
+add_subdirectory(graph-builder)
 
 # Add the common testsuite after all the tools.
 if(CLANG_INCLUDE_TESTS)
