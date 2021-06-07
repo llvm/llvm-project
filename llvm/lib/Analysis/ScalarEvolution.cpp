@@ -6573,6 +6573,17 @@ ScalarEvolution::getLoopProperties(const Loop *L) {
   return Itr->second;
 }
 
+bool ScalarEvolution::loopIsFiniteByAssumption(const Loop *L) {
+  // TODO: Use the loop metadata form of mustprogress as well.
+  if (!L->getHeader()->getParent()->mustProgress())
+    return false;
+
+  // A loop without side effects must be finite.
+  // TODO: The check used here is very conservative.  It's only *specific*
+  // side effects which are well defined in infinite loops.
+  return loopHasNoSideEffects(L);
+}
+
 const SCEV *ScalarEvolution::createSCEV(Value *V) {
   if (!isSCEVable(V->getType()))
     return getUnknown(V);
@@ -11462,11 +11473,45 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
         !loopHasNoSideEffects(L))
       return getCouldNotCompute();
   } else if (!Stride->isOne() && !NoWrap) {
+    auto isUBOnWrap = [&]() {
+      // Can we prove this loop *must* be UB if overflow of IV occurs?
+      // Reasoning goes as follows:
+      // * Suppose the IV did self wrap.
+      // * If Stride evenly divides the iteration space, then once wrap
+      //   occurs, the loop must revisit the same values.
+      // * We know that RHS is invariant, and that none of those values
+      //   caused this exit to be taken previously.  Thus, this exit is
+      //   dynamically dead.
+      // * If this is the sole exit, then a dead exit implies the loop
+      //   must be infinite if there are no abnormal exits.
+      // * If the loop were infinite, then it must either not be mustprogress
+      //   or have side effects. Otherwise, it must be UB.
+      // * It can't (by assumption), be UB so we have contradicted our
+      //   premise and can conclude the IV did not in fact self-wrap.
+      // From no-self-wrap, we need to then prove no-(un)signed-wrap.  This
+      // follows trivially from the fact that every (un)signed-wrapped, but
+      // not self-wrapped value must be LT than the last value before
+      // (un)signed wrap.  Since we know that last value didn't exit, nor
+      // will any smaller one.
+
+      if (!isLoopInvariant(RHS, L))
+        return false;
+
+      auto *StrideC = dyn_cast<SCEVConstant>(Stride);
+      if (!StrideC || !StrideC->getAPInt().isPowerOf2())
+        return false;
+
+      if (!ControlsExit || !loopHasNoAbnormalExits(L))
+        return false;
+
+      return loopIsFiniteByAssumption(L);
+    };
+
     // Avoid proven overflow cases: this will ensure that the backedge taken
     // count will not generate any unsigned overflow. Relaxed no-overflow
     // conditions exploit NoWrapFlags, allowing to optimize in presence of
     // undefined behaviors like the case of C language.
-    if (canIVOverflowOnLT(RHS, Stride, IsSigned))
+    if (canIVOverflowOnLT(RHS, Stride, IsSigned) && !isUBOnWrap())
       return getCouldNotCompute();
   }
 
