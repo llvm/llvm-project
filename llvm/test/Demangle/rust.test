@@ -243,6 +243,15 @@ CHECK: trait::<dyn for<'a> >
 CHECK: trait::<for<'a> fn(dyn for<'b> + 'a)>
        _RIC5traitFG_DG_EL0_EuE
 
+CHECK: trait::<dyn Display>
+       _RIC5traitDC7DisplayEL_E
+
+CHECK: trait::<dyn Display + Send + Sync>
+       _RIC5traitDC7DisplayC4SendC4SyncEL_E
+
+CHECK: trait::<dyn for<'a> Display>
+       _RIC5traitDG_C7DisplayEL_E
+
 ; Invalid trait object, missing lifetime.
 
 CHECK: _RIC5traitDEE
