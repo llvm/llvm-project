@@ -4206,7 +4206,6 @@ MipsTargetLowering::parseRegForInlineAsmConstraintNM(StringRef C,
 
 std::pair<unsigned, const TargetRegisterClass *> MipsTargetLowering::
 parseRegForInlineAsmConstraint(StringRef C, MVT VT) const {
-  assert(!Subtarget.hasNanoMips() && "NYI for nanoMIPS");
   const TargetRegisterInfo *TRI =
       Subtarget.getRegisterInfo();
   const TargetRegisterClass *RC;
