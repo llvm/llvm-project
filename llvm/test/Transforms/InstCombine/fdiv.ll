@@ -85,6 +85,15 @@ define <2 x float> @exact_inverse_splat(<2 x float> %x) {
   ret <2 x float> %div
 }
 
+define <vscale x 2 x float> @exact_inverse_scalable_splat(<vscale x 2 x float> %x) {
+; CHECK-LABEL: @exact_inverse_scalable_splat(
+; CHECK-NEXT:    [[DIV:%.*]] = fmul <vscale x 2 x float> [[X:%.*]], shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> undef, float 2.500000e-01, i32 0), <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x float> [[DIV]]
+;
+  %div = fdiv <vscale x 2 x float> %x, shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> undef, float 4.0, i32 0), <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer)
+  ret <vscale x 2 x float> %div
+}
+
 ; Fast math allows us to replace this fdiv.
 
 define <2 x float> @not_exact_but_allow_recip_splat(<2 x float> %x) {

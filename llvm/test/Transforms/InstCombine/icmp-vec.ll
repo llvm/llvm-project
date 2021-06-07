@@ -373,3 +373,29 @@ define <4 x i1> @not_splat_icmp2(<4 x i8> %x) {
   %cmp = icmp sgt <4 x i8> %splatx, <i8 43, i8 42, i8 42, i8 42>
   ret <4 x i1> %cmp
 }
+
+; Check that we don't absorb the compare into the select, which is in the
+; canonical form of logical or.
+define <2 x i1> @icmp_logical_or_vec(<2 x i64> %x, <2 x i64> %y, <2 x i1> %falseval) {
+; CHECK-LABEL: @icmp_logical_or_vec(
+; CHECK-NEXT:    [[CMP_NE:%.*]] = icmp ne <2 x i64> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP_NE]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[FALSEVAL:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[SEL]]
+;
+  %cmp.ne = icmp ne <2 x i64> %x, zeroinitializer
+  %sel = select <2 x i1> %cmp.ne, <2 x i1> shufflevector (<2 x i1> insertelement (<2 x i1> undef, i1 true, i32 0), <2 x i1> undef, <2 x i32> zeroinitializer), <2 x i1> %falseval
+  ret <2 x i1> %sel
+}
+
+; The above, but for scalable vectors. Absorbing the compare into the select
+; and breaking the canonical form led to an infinite loop.
+define <vscale x 2 x i1> @icmp_logical_or_scalablevec(<vscale x 2 x i64> %x, <vscale x 2 x i64> %y, <vscale x 2 x i1> %falseval) {
+; CHECK-LABEL: @icmp_logical_or_scalablevec(
+; CHECK-NEXT:    [[CMP_NE:%.*]] = icmp ne <vscale x 2 x i64> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[SEL:%.*]] = select <vscale x 2 x i1> [[CMP_NE]], <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> [[FALSEVAL:%.*]]
+; CHECK-NEXT:    ret <vscale x 2 x i1> [[SEL]]
+;
+  %cmp.ne = icmp ne <vscale x 2 x i64> %x, zeroinitializer
+  %sel = select <vscale x 2 x i1> %cmp.ne, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), <vscale x 2 x i1> %falseval
+  ret <vscale x 2 x i1> %sel
+}

@@ -1045,3 +1045,45 @@ define <2 x i8> @sdiv_by_int_min_vec_splat_undef(<2 x i8> %x) {
   %d = sdiv <2 x i8> %x, <i8 -128, i8 undef>
   ret <2 x i8> %d
 }
+
+define <2 x i8> @sdiv_by_negconst_v2i8(<2 x i8> %x) {
+; CHECK-LABEL: @sdiv_by_negconst_v2i8(
+; CHECK-NEXT:    [[DIV_NEG:%.*]] = sdiv <2 x i8> [[X:%.*]], <i8 108, i8 108>
+; CHECK-NEXT:    ret <2 x i8> [[DIV_NEG]]
+;
+  %div = sdiv <2 x i8> %x, <i8 -108, i8 -108>
+  %sub = sub <2 x i8> zeroinitializer, %div
+  ret <2 x i8> %sub
+}
+
+define <vscale x 2 x i8> @sdiv_by_negconst_nxv2i8(<vscale x 2 x i8> %x) {
+; CHECK-LABEL: @sdiv_by_negconst_nxv2i8(
+; CHECK-NEXT:    [[DIV_NEG:%.*]] = sdiv <vscale x 2 x i8> [[X:%.*]], shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> undef, i8 108, i32 0), <vscale x 2 x i8> undef, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i8> [[DIV_NEG]]
+;
+  %div = sdiv <vscale x 2 x i8> %x, shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> undef, i8 -108, i32 0), <vscale x 2 x i8> undef, <vscale x 2 x i32> zeroinitializer)
+  %sub = sub <vscale x 2 x i8> zeroinitializer, %div
+  ret <vscale x 2 x i8> %sub
+}
+
+define <2 x i8> @sdiv_by_minSigned_v2i8(<2 x i8> %x) {
+; CHECK-LABEL: @sdiv_by_minSigned_v2i8(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 -128, i8 -128>
+; CHECK-NEXT:    [[DIV_NEG:%.*]] = sext <2 x i1> [[TMP1]] to <2 x i8>
+; CHECK-NEXT:    ret <2 x i8> [[DIV_NEG]]
+;
+  %div = sdiv <2 x i8> %x, <i8 -128, i8 -128>
+  %sub = sub <2 x i8> zeroinitializer, %div
+  ret <2 x i8> %sub
+}
+
+define <vscale x 2 x i8> @sdiv_by_minSigned_nxv2i8(<vscale x 2 x i8> %x) {
+; CHECK-LABEL: @sdiv_by_minSigned_nxv2i8(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <vscale x 2 x i8> [[X:%.*]], shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> undef, i8 -128, i32 0), <vscale x 2 x i8> undef, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[DIV_NEG:%.*]] = sext <vscale x 2 x i1> [[TMP1]] to <vscale x 2 x i8>
+; CHECK-NEXT:    ret <vscale x 2 x i8> [[DIV_NEG]]
+;
+  %div = sdiv <vscale x 2 x i8> %x, shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> undef, i8 -128, i32 0), <vscale x 2 x i8> undef, <vscale x 2 x i32> zeroinitializer)
+  %sub = sub <vscale x 2 x i8> zeroinitializer, %div
+  ret <vscale x 2 x i8> %sub
+}
