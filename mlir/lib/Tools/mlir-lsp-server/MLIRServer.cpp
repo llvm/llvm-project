@@ -286,7 +286,8 @@ struct MLIRDocument {
   Optional<lsp::Hover> findHover(const lsp::URIForFile &uri,
                                  const lsp::Position &hoverPos);
   Optional<lsp::Hover>
-  buildHoverForOperation(const AsmParserState::OperationDefinition &op);
+  buildHoverForOperation(llvm::SMRange hoverRange,
+                         const AsmParserState::OperationDefinition &op);
   lsp::Hover buildHoverForOperationResult(llvm::SMRange hoverRange,
                                           Operation *op, unsigned resultStart,
                                           unsigned resultEnd,
@@ -439,7 +440,12 @@ Optional<lsp::Hover> MLIRDocument::findHover(const lsp::URIForFile &uri,
   for (const AsmParserState::OperationDefinition &op : asmState.getOpDefs()) {
     // Check if the position points at this operation.
     if (contains(op.loc, posLoc))
-      return buildHoverForOperation(op);
+      return buildHoverForOperation(op.loc, op);
+
+    // Check if the position points at the symbol name.
+    for (auto &use : op.symbolUses)
+      if (contains(use, posLoc))
+        return buildHoverForOperation(use, op);
 
     // Check if the position points at a result group.
     for (unsigned i = 0, e = op.resultGroups.size(); i < e; ++i) {
@@ -473,8 +479,8 @@ Optional<lsp::Hover> MLIRDocument::findHover(const lsp::URIForFile &uri,
 }
 
 Optional<lsp::Hover> MLIRDocument::buildHoverForOperation(
-    const AsmParserState::OperationDefinition &op) {
-  lsp::Hover hover(getRangeFromLoc(sourceMgr, op.loc));
+    llvm::SMRange hoverRange, const AsmParserState::OperationDefinition &op) {
+  lsp::Hover hover(getRangeFromLoc(sourceMgr, hoverRange));
   llvm::raw_string_ostream os(hover.contents.value);
 
   // Add the operation name to the hover.
