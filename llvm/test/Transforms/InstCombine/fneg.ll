@@ -237,7 +237,7 @@ define float @fdiv_op0_constant_fneg_fast_fast(float %x) {
 
 define float @fdiv_op0_constant_fneg_fast(float %x) {
 ; CHECK-LABEL: @fdiv_op0_constant_fneg_fast(
-; CHECK-NEXT:    [[R:%.*]] = fdiv fast float -4.200000e+01, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc nnan arcp contract afn float -4.200000e+01, [[X:%.*]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %d = fdiv float 42.0, %x
@@ -257,7 +257,7 @@ define float @fdiv_op0_constant_fneg_nsz_nsz(float %x) {
 
 define float @fdiv_op0_constant_fneg_nsz(float %x) {
 ; CHECK-LABEL: @fdiv_op0_constant_fneg_nsz(
-; CHECK-NEXT:    [[R:%.*]] = fdiv nsz float -4.200000e+01, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv float -4.200000e+01, [[X:%.*]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %d = fdiv float 42.0, %x
@@ -277,7 +277,7 @@ define float @fdiv_op0_constant_fneg_ninf_ninf(float %x) {
 
 define float @fdiv_op0_constant_fneg_ninf(float %x) {
 ; CHECK-LABEL: @fdiv_op0_constant_fneg_ninf(
-; CHECK-NEXT:    [[R:%.*]] = fdiv ninf float -4.200000e+01, [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fdiv float -4.200000e+01, [[X:%.*]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %d = fdiv float 42.0, %x
