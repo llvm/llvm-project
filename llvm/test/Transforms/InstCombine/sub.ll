@@ -839,11 +839,9 @@ define <2 x i32> @test44vec(<2 x i32> %x) {
   ret <2 x i32> %sub
 }
 
-; FIXME: We're not giving this new 'add' a nsw flag as in the fixed-length case
-; above. We need to be able catch the splat with dyn_castNegVal.
 define <vscale x 2 x i32> @test44scalablevec(<vscale x 2 x i32> %x) {
 ; CHECK-LABEL: @test44scalablevec(
-; CHECK-NEXT:    [[SUB:%.*]] = add <vscale x 2 x i32> [[X:%.*]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> undef, i32 -32768, i32 0), <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw <vscale x 2 x i32> [[X:%.*]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> undef, i32 -32768, i32 0), <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[SUB]]
 ;
   %sub = sub nsw <vscale x 2 x i32> %x, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> undef, i32 32768, i32 0), <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer)
