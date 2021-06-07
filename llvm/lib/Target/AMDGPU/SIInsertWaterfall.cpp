@@ -588,7 +588,9 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
     } IdxInfo;
 
     std::vector<IdxInfo> IndexList;
+#ifndef NDEBUG
     bool IsUniform = true;
+#endif
     for (auto BeginMI : Item.BeginList) {
       IdxInfo CurrIdx;
       CurrIdx.Index = TII->getNamedOperand(*(BeginMI), AMDGPU::OpName::idx);
@@ -598,15 +600,14 @@ bool SIInsertWaterfall::processWaterfall(MachineBasicBlock &MBB) {
       CurrIdx.IndexSRC = RI->getEquivalentSGPRClass(CurrIdx.IndexRC);
       IndexList.push_back(CurrIdx);
 
-      if (RI->hasVGPRs(CurrIdx.IndexRC))
-        IsUniform = false;
+      LLVM_DEBUG(if (RI->hasVGPRs(CurrIdx.IndexRC))
+        IsUniform = false;);
     }
 
     LLVM_DEBUG(if (IsUniform) {
       // Waterfall loop index is uniform! Loop can be removed
       // TODO:: Implement loop removal
-      LLVM_DEBUG(
-          dbgs() << "Uniform loop detected - waterfall loop is redundant\n");
+      dbgs() << "Uniform loop detected - waterfall loop is redundant\n";
     });
 
     MachineBasicBlock::iterator I(Item.BeginList.back());
