@@ -252,6 +252,15 @@ CHECK: trait::<dyn Display + Send + Sync>
 CHECK: trait::<dyn for<'a> Display>
        _RIC5traitDG_C7DisplayEL_E
 
+CHECK: trait::<dyn IntoIterator<_, Item = _>>
+       _RIC5traitDIC12IntoIteratorpEp4ItempEL_E
+
+CHECK: trait::<dyn IntoIterator<Item = _>>
+       _RIC5traitDC12IntoIteratorp4ItempEL_E
+
+CHECK: trait::<dyn IntoIterator<Item = _, IntoIter = _>>
+       _RIC5traitDC12IntoIteratorp4Itempp8IntoIterpEL_E
+
 ; Invalid trait object, missing lifetime.
 
 CHECK: _RIC5traitDEE
