@@ -316,11 +316,10 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
   default:
     error(path + ": unhandled file type");
   }
-  if (newFile) {
+  if (newFile && !isa<DylibFile>(newFile)) {
     // printArchiveMemberLoad() prints both .a and .o names, so no need to
     // print the .a name here.
-    if (config->printEachFile && magic != file_magic::archive &&
-        !isa<DylibFile>(newFile))
+    if (config->printEachFile && magic != file_magic::archive)
       message(toString(newFile));
     inputFiles.insert(newFile);
   }
