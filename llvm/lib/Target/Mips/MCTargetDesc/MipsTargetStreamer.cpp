@@ -70,6 +70,7 @@ void MipsTargetStreamer::emitDirectiveEnd(StringRef Name) {}
 void MipsTargetStreamer::emitDirectiveEnt(const MCSymbol &Symbol) {}
 void MipsTargetStreamer::emitDirectiveAbiCalls() {}
 void MipsTargetStreamer::emitDirectiveNaN2008() {}
+void MipsTargetStreamer::emitDirectiveLinkRelax() {}
 void MipsTargetStreamer::emitDirectiveNaNLegacy() {}
 void MipsTargetStreamer::emitDirectiveOptionPic0() {}
 void MipsTargetStreamer::emitDirectiveOptionPic2() {}
@@ -486,6 +487,7 @@ void MipsTargetAsmStreamer::emitDirectiveEnt(const MCSymbol &Symbol) {
 void MipsTargetAsmStreamer::emitDirectiveAbiCalls() { OS << "\t.abicalls\n"; }
 
 void MipsTargetAsmStreamer::emitDirectiveNaN2008() { OS << "\t.nan\t2008\n"; }
+void MipsTargetAsmStreamer::emitDirectiveLinkRelax() { OS << "\t.linkrelax\n"; }
 
 void MipsTargetAsmStreamer::emitDirectiveNaNLegacy() {
   OS << "\t.nan\tlegacy\n";

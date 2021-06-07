@@ -55,6 +55,7 @@ public:
   virtual void emitDirectiveEnt(const MCSymbol &Symbol);
   virtual void emitDirectiveAbiCalls();
   virtual void emitDirectiveNaN2008();
+  virtual void emitDirectiveLinkRelax();
   virtual void emitDirectiveNaNLegacy();
   virtual void emitDirectiveOptionPic0();
   virtual void emitDirectiveOptionPic2();
@@ -237,6 +238,7 @@ public:
   void emitDirectiveEnt(const MCSymbol &Symbol) override;
   void emitDirectiveAbiCalls() override;
   void emitDirectiveNaN2008() override;
+  void emitDirectiveLinkRelax() override;
   void emitDirectiveNaNLegacy() override;
   void emitDirectiveOptionPic0() override;
   void emitDirectiveOptionPic2() override;

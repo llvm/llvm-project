@@ -812,6 +812,8 @@ void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
   OutStreamer->SwitchSection(
       OutContext.getELFSection(SectionName, ELF::SHT_PROGBITS, 0));
 
+  if (STI.isABI_P32())
+    TS.emitDirectiveLinkRelax();
   if (!STI.isABI_P32())
     // NaN: At the moment we only support:
     // 1. .nan legacy (default)
