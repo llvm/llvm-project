@@ -760,7 +760,8 @@ static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
               resolveDylibPath((root + path).str()))
         return loadDylib(*dylibPath, umbrella);
 
-  // TODO: Expand @rpath, handle -dylib_file
+  // TODO: Handle -dylib_file
+
   SmallString<128> newPath;
   if (config->outputType == MH_EXECUTE &&
       path.consume_front("@executable_path/")) {
@@ -771,6 +772,15 @@ static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
   } else if (path.consume_front("@loader_path/")) {
     path::append(newPath, sys::path::parent_path(umbrella->getName()), path);
     path = newPath;
+  } else if (path.startswith("@rpath/")) {
+    for (StringRef rpath : umbrella->rpaths) {
+      newPath.clear();
+      if (rpath.consume_front("@loader_path/"))
+        path::append(newPath, sys::path::parent_path(umbrella->getName()));
+      path::append(newPath, rpath, path.drop_front(strlen("@rpath/")));
+      if (Optional<std::string> dylibPath = resolveDylibPath(newPath))
+        return loadDylib(*dylibPath, umbrella);
+    }
   }
 
   if (currentTopLevelTapi) {
@@ -853,6 +863,11 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
 
   if (!checkCompatibility(this))
     return;
+
+  for (auto *cmd : findCommands<rpath_command>(hdr, LC_RPATH)) {
+    StringRef rpath{reinterpret_cast<const char *>(cmd) + cmd->path};
+    rpaths.push_back(rpath);
+  }
 
   // Initialize symbols.
   exportingFile = isImplicitlyLinked(installName) ? this : this->umbrella;
