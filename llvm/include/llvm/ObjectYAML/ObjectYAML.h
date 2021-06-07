@@ -15,6 +15,7 @@
 #include "llvm/ObjectYAML/MachOYAML.h"
 #include "llvm/ObjectYAML/MinidumpYAML.h"
 #include "llvm/ObjectYAML/WasmYAML.h"
+#include "llvm/ObjectYAML/XCOFFYAML.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <memory>
 
@@ -31,6 +32,7 @@ struct YamlObjectFile {
   std::unique_ptr<MachOYAML::UniversalBinary> FatMachO;
   std::unique_ptr<MinidumpYAML::Object> Minidump;
   std::unique_ptr<WasmYAML::Object> Wasm;
+  std::unique_ptr<XCOFFYAML::Object> Xcoff;
 };
 
 template <> struct MappingTraits<YamlObjectFile> {
