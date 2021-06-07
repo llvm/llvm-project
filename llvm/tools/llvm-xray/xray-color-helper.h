@@ -13,9 +13,8 @@
 #ifndef XRAY_COLOR_HELPER_H
 #define XRAY_COLOR_HELPER_H
 
-#include <tuple>
-
 #include "llvm/ADT/ArrayRef.h"
+#include <tuple>
 
 namespace llvm {
 namespace xray {

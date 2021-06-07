@@ -2,10 +2,10 @@
 // we get the same profile regardless of whether the memory is deallocated
 // before exit.
 
-// RUN: %clangxx_memprof -O0 %s -o %t
+// RUN: %clang_memprof -O0 %s -o %t
 // RUN: %env_memprof_opts=log_path=stderr %run %t 2>&1 | FileCheck %s
 
-// RUN: %clangxx_memprof -DFREE -O0 %s -o %t
+// RUN: %clang_memprof -DFREE -O0 %s -o %t
 // RUN: %env_memprof_opts=log_path=stderr %run %t 2>&1 | FileCheck %s
 
 // This is actually:

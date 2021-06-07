@@ -1620,16 +1620,19 @@ setupMemoryBuffer(const Twine &Filename) {
 ///
 /// \param C The LLVM context to use to emit diagnostics.
 ///
+/// \param P The FSDiscriminatorPass.
+///
 /// \param RemapFilename The file used for profile remapping.
 ///
 /// \returns an error code indicating the status of the created reader.
 ErrorOr<std::unique_ptr<SampleProfileReader>>
 SampleProfileReader::create(const std::string Filename, LLVMContext &C,
+                            FSDiscriminatorPass P,
                             const std::string RemapFilename) {
   auto BufferOrError = setupMemoryBuffer(Filename);
   if (std::error_code EC = BufferOrError.getError())
     return EC;
-  return create(BufferOrError.get(), C, RemapFilename);
+  return create(BufferOrError.get(), C, P, RemapFilename);
 }
 
 /// Create a sample profile remapper from the given input, to remap the
@@ -1687,11 +1690,14 @@ SampleProfileReaderItaniumRemapper::create(std::unique_ptr<MemoryBuffer> &B,
 ///
 /// \param C The LLVM context to use to emit diagnostics.
 ///
+/// \param P The FSDiscriminatorPass.
+///
 /// \param RemapFilename The file used for profile remapping.
 ///
 /// \returns an error code indicating the status of the created reader.
 ErrorOr<std::unique_ptr<SampleProfileReader>>
 SampleProfileReader::create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C,
+                            FSDiscriminatorPass P,
                             const std::string RemapFilename) {
   std::unique_ptr<SampleProfileReader> Reader;
   if (SampleProfileReaderRawBinary::hasFormat(*B))
@@ -1722,6 +1728,8 @@ SampleProfileReader::create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C,
   if (std::error_code EC = Reader->readHeader()) {
     return EC;
   }
+
+  Reader->setDiscriminatorMaskedBitFrom(P);
 
   return std::move(Reader);
 }

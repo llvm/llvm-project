@@ -880,6 +880,12 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_EXPLICIT
 #endif
 
+#if __has_attribute(using_if_exists)
+# define _LIBCPP_USING_IF_EXISTS __attribute__((using_if_exists))
+#else
+# define _LIBCPP_USING_IF_EXISTS
+#endif
+
 #ifdef _LIBCPP_HAS_NO_STRONG_ENUMS
 #  define _LIBCPP_DECLARE_STRONG_ENUM(x) struct _LIBCPP_TYPE_VIS x { enum __lx
 #  define _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(x) \

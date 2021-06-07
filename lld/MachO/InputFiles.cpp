@@ -848,10 +848,13 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
     auto *c = reinterpret_cast<const dyld_info_command *>(cmd);
     parseTrie(buf + c->export_off, c->export_size,
               [&](const Twine &name, uint64_t flags) {
+                StringRef savedName = saver.save(name);
+                if (handleLDSymbol(savedName))
+                  return;
                 bool isWeakDef = flags & EXPORT_SYMBOL_FLAGS_WEAK_DEFINITION;
                 bool isTlv = flags & EXPORT_SYMBOL_FLAGS_KIND_THREAD_LOCAL;
-                symbols.push_back(symtab->addDylib(
-                    saver.save(name), exportingFile, isWeakDef, isTlv));
+                symbols.push_back(symtab->addDylib(savedName, exportingFile,
+                                                   isWeakDef, isTlv));
               });
   } else {
     error("LC_DYLD_INFO_ONLY not found in " + toString(this));
@@ -934,6 +937,9 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
     if (!symbol->getArchitectures().has(config->arch()))
       continue;
 
+    if (handleLDSymbol(symbol->getName()))
+      continue;
+
     switch (symbol->getKind()) {
     case SymbolKind::GlobalSymbol:
       addSymbol(symbol->getName());
@@ -963,6 +969,92 @@ void DylibFile::parseReexports(const InterfaceFile &interface) {
         is_contained(targets, config->platformInfo.target))
       loadReexport(intfRef.getInstallName(), exportingFile, topLevel);
   }
+}
+
+// $ld$ symbols modify the properties/behavior of the library (e.g. its install
+// name, compatibility version or hide/add symbols) for specific target
+// versions.
+bool DylibFile::handleLDSymbol(StringRef originalName) {
+  if (!originalName.startswith("$ld$"))
+    return false;
+
+  StringRef action;
+  StringRef name;
+  std::tie(action, name) = originalName.drop_front(4 /* $ld$ */).split('$');
+  if (action == "previous")
+    handleLDPreviousSymbol(name, originalName);
+  else if (action == "install_name")
+    handleLDInstallNameSymbol(name, originalName);
+  return true;
+}
+
+void DylibFile::handleLDPreviousSymbol(StringRef name, StringRef originalName) {
+  // originalName: $ld$ previous $ <installname> $ <compatversion> $
+  // <platformstr> $ <startversion> $ <endversion> $ <symbol-name> $
+  StringRef installName;
+  StringRef compatVersion;
+  StringRef platformStr;
+  StringRef startVersion;
+  StringRef endVersion;
+  StringRef symbolName;
+  StringRef rest;
+
+  std::tie(installName, name) = name.split('$');
+  std::tie(compatVersion, name) = name.split('$');
+  std::tie(platformStr, name) = name.split('$');
+  std::tie(startVersion, name) = name.split('$');
+  std::tie(endVersion, symbolName) = name.split('$');
+  std::tie(symbolName, rest) = symbolName.split('$');
+  // TODO: ld64 contains some logic for non-empty symbolName as well.
+  if (!symbolName.empty())
+    return;
+  unsigned platform;
+  if (platformStr.getAsInteger(10, platform) ||
+      platform != static_cast<unsigned>(config->platform()))
+    return;
+
+  VersionTuple start;
+  if (start.tryParse(startVersion)) {
+    warn("failed to parse start version, symbol '" + originalName +
+         "' ignored");
+    return;
+  }
+  VersionTuple end;
+  if (end.tryParse(endVersion)) {
+    warn("failed to parse end version, symbol '" + originalName + "' ignored");
+    return;
+  }
+  if (config->platformInfo.minimum < start ||
+      config->platformInfo.minimum >= end)
+    return;
+
+  dylibName = saver.save(installName);
+
+  if (!compatVersion.empty()) {
+    VersionTuple cVersion;
+    if (cVersion.tryParse(compatVersion)) {
+      warn("failed to parse compatibility version, symbol '" + originalName +
+           "' ignored");
+      return;
+    }
+    compatibilityVersion = encodeVersion(cVersion);
+  }
+}
+
+void DylibFile::handleLDInstallNameSymbol(StringRef name,
+                                          StringRef originalName) {
+  // originalName: $ld$ install_name $ os<version> $ install_name
+  StringRef condition, installName;
+  std::tie(condition, installName) = name.split('$');
+  VersionTuple version;
+  if (!condition.startswith("os") ||
+      version.tryParse(condition.drop_front(2 /* os */))) {
+    warn("failed to parse os version, symbol '" + originalName + "' ignored");
+    return;
+  }
+  if (version != config->platformInfo.minimum)
+    return;
+  dylibName = saver.save(installName);
 }
 
 ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f)

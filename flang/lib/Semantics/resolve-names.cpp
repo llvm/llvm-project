@@ -3957,6 +3957,7 @@ bool DeclarationVisitor::Pre(const parser::DerivedTypeDef &x) {
   CHECK(scope.symbol());
   CHECK(scope.symbol()->scope() == &scope);
   auto &details{scope.symbol()->get<DerivedTypeDetails>()};
+  details.set_isForwardReferenced(false);
   std::set<SourceName> paramNames;
   for (auto &paramName : std::get<std::list<parser::Name>>(stmt.statement.t)) {
     details.add_paramName(paramName.source);
@@ -5027,7 +5028,7 @@ std::optional<DerivedTypeSpec> DeclarationVisitor::ResolveDerivedType(
         Resolve(name, *symbol);
       };
       DerivedTypeDetails details;
-      details.set_isForwardReferenced();
+      details.set_isForwardReferenced(true);
       symbol->set_details(std::move(details));
     } else { // C732
       Say(name, "Derived type '%s' not found"_err_en_US);

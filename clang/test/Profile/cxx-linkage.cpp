@@ -3,11 +3,11 @@
 // CHECK: @__profc__Z3foov = private global
 // CHECK: @__profd__Z3foov = private global
 // CHECK: @__profc__Z8foo_weakv = weak hidden global
-// CHECK: @__profd__Z8foo_weakv = private global
+// CHECK: @__profd__Z8foo_weakv = weak hidden global
 // CHECK: @__profc_main = private global
 // CHECK: @__profd_main = private global
 // CHECK: @__profc__Z10foo_inlinev = linkonce_odr hidden global
-// CHECK: @__profd__Z10foo_inlinev = private global
+// CHECK: @__profd__Z10foo_inlinev = linkonce_odr hidden global
 
 void foo(void) { }
 

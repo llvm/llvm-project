@@ -929,8 +929,10 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
 #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Init,
 #include "llvm/ProfileData/InstrProfData.inc"
   };
-  // Data variables can be private if not referenced by code.
-  if (!DataReferencedByCode) {
+  // If code never references data variables (the symbol is unneeded), and
+  // linker GC cannot discard data variables while the text section is retained,
+  // data variables can be private. This optimization applies on COFF and ELF.
+  if (!DataReferencedByCode && !TT.isOSBinFormatMachO()) {
     Linkage = GlobalValue::PrivateLinkage;
     Visibility = GlobalValue::DefaultVisibility;
   }

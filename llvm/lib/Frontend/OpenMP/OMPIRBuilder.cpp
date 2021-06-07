@@ -417,9 +417,18 @@ OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
   Value *Args[] = {Ident, getOrCreateThreadID(Ident), CancelKind};
   Value *Result = Builder.CreateCall(
       getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_cancel), Args);
+  auto ExitCB = [this, CanceledDirective, Loc](InsertPointTy IP) {
+    if (CanceledDirective == OMPD_parallel) {
+      IRBuilder<>::InsertPointGuard IPG(Builder);
+      Builder.restoreIP(IP);
+      createBarrier(LocationDescription(Builder.saveIP(), Loc.DL),
+                    omp::Directive::OMPD_unknown, /* ForceSimpleCall */ false,
+                    /* CheckCancelFlag */ false);
+    }
+  };
 
   // The actual cancel logic is shared with others, e.g., cancel_barriers.
-  emitCancelationCheckImpl(Result, CanceledDirective);
+  emitCancelationCheckImpl(Result, CanceledDirective, ExitCB);
 
   // Update the insertion point and remove the terminator we introduced.
   Builder.SetInsertPoint(UI->getParent());
@@ -428,8 +437,9 @@ OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
   return Builder.saveIP();
 }
 
-void OpenMPIRBuilder::emitCancelationCheckImpl(
-    Value *CancelFlag, omp::Directive CanceledDirective) {
+void OpenMPIRBuilder::emitCancelationCheckImpl(Value *CancelFlag,
+                                               omp::Directive CanceledDirective,
+                                               FinalizeCallbackTy ExitCB) {
   assert(isLastFinalizationInfoCancellable(CanceledDirective) &&
          "Unexpected cancellation!");
 
@@ -457,6 +467,8 @@ void OpenMPIRBuilder::emitCancelationCheckImpl(
   // From the cancellation block we finalize all variables and go to the
   // post finalization block that is known to the FiniCB callback.
   Builder.SetInsertPoint(CancellationBlock);
+  if (ExitCB)
+    ExitCB(Builder.saveIP());
   auto &FI = FinalizationStack.back();
   FI.FiniCB(Builder.saveIP());
 

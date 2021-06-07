@@ -267,9 +267,10 @@ class GetIntVTypeInfo<VTypeInfo vti>
 class MTypeInfo<ValueType Mas, LMULInfo M, string Bx> {
   ValueType Mask = Mas;
   // {SEW, VLMul} values set a valid VType to deal with this mask type.
-  // we assume SEW=8 and set corresponding LMUL.
-  int SEW = 8;
-  int Log2SEW = 3;
+  // we assume SEW=1 and set corresponding LMUL. vsetvli insertion will
+  // look for SEW=1 to optimize based on surrounding instructions.
+  int SEW = 1;
+  int Log2SEW = 0;
   LMULInfo LMul = M;
   string BX = Bx; // Appendix of mask operations.
   // The pattern fragment which produces the AVL operand, representing the
@@ -2308,7 +2309,7 @@ class VPatTiedBinaryMask<string intrinsic_name,
                    (result_type result_reg_class:$merge),
                    (op2_type op2_kind:$rs2),
                    (mask_type V0),
-                   (XLenVT (VLOp GPR:$vl)))),
+                   VLOpFrag)),
                    (!cast<Instruction>(inst#"_MASK_TIED")
                    (result_type result_reg_class:$merge),
                    (op2_type op2_kind:$rs2),

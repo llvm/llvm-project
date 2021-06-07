@@ -397,6 +397,8 @@ public:
   LegalizeResult lowerSMULH_UMULH(MachineInstr &MI);
   LegalizeResult lowerSelect(MachineInstr &MI);
   LegalizeResult lowerDIVREM(MachineInstr &MI);
+  LegalizeResult lowerAbsToAddXor(MachineInstr &MI);
+  LegalizeResult lowerAbsToMaxNeg(MachineInstr &MI);
 };
 
 /// Helper function that creates a libcall to the given \p Name using the given

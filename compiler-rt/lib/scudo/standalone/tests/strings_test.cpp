@@ -12,6 +12,12 @@
 
 #include <limits.h>
 
+TEST(ScudoStringsTest, Constructor) {
+  scudo::ScopedString Str;
+  EXPECT_EQ(0ul, Str.length());
+  EXPECT_EQ('\0', *Str.data());
+}
+
 TEST(ScudoStringsTest, Basic) {
   scudo::ScopedString Str;
   Str.append("a%db%zdc%ue%zuf%xh%zxq%pe%sr", static_cast<int>(-1),
@@ -26,6 +32,23 @@ TEST(ScudoStringsTest, Basic) {
   expectedString += "123e_string_r";
   EXPECT_EQ(Str.length(), strlen(Str.data()));
   EXPECT_STREQ(expectedString.c_str(), Str.data());
+}
+
+TEST(ScudoStringsTest, Clear) {
+  scudo::ScopedString Str;
+  Str.append("123");
+  Str.clear();
+  EXPECT_EQ(0ul, Str.length());
+  EXPECT_EQ('\0', *Str.data());
+}
+
+TEST(ScudoStringsTest, ClearLarge) {
+  scudo::ScopedString Str;
+  for (int i = 0; i < 10000; ++i)
+    Str.append("123");
+  Str.clear();
+  EXPECT_EQ(0ul, Str.length());
+  EXPECT_EQ('\0', *Str.data());
 }
 
 TEST(ScudoStringsTest, Precision) {

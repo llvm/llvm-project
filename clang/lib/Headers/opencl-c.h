@@ -6400,8 +6400,7 @@ size_t __ovld __cnfn get_local_id(uint dimindx);
  * Returns the number of work-groups that will execute a
  * kernel for dimension identified by dimindx.
  * Valid values of dimindx are 0 to get_work_dim() - 1.
- * For other values of dimindx, get_num_groups () returns
- * 1.
+ * For other values of dimindx, get_num_groups() returns 1.
  * For clEnqueueTask, this always returns 1.
  */
 size_t __ovld __cnfn get_num_groups(uint dimindx);

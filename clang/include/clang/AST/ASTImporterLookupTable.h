@@ -63,8 +63,24 @@ public:
   ASTImporterLookupTable(TranslationUnitDecl &TU);
   void add(NamedDecl *ND);
   void remove(NamedDecl *ND);
+  // Sometimes a declaration is created first with a temporarily value of decl
+  // context (often the translation unit) and later moved to the final context.
+  // This happens for declarations that are created before the final declaration
+  // context. In such cases the lookup table needs to be updated.
+  // (The declaration is in these cases not added to the temporary decl context,
+  // only its parent is set.)
+  // FIXME: It would be better to not add the declaration to the temporary
+  // context at all in the lookup table, but this requires big change in
+  // ASTImporter.
+  // The function should be called when the old context is definitely different
+  // from the new.
+  void update(NamedDecl *ND, DeclContext *OldDC);
   using LookupResult = DeclList;
   LookupResult lookup(DeclContext *DC, DeclarationName Name) const;
+  // Check if the `ND` is within the lookup table (with its current name) in
+  // context `DC`. This is intended for debug purposes when the DeclContext of a
+  // NamedDecl is changed.
+  bool contains(DeclContext *DC, NamedDecl *ND) const;
   void dump(DeclContext *DC) const;
   void dump() const;
 };

@@ -173,6 +173,11 @@ public:
   // implemented in the bundle. When used like this, it is very similar
   // to a Dylib, so we re-used the same class to represent it.
   bool isBundleLoader;
+
+private:
+  bool handleLDSymbol(StringRef originalName);
+  void handleLDPreviousSymbol(StringRef name, StringRef originalName);
+  void handleLDInstallNameSymbol(StringRef name, StringRef originalName);
 };
 
 // .a file

@@ -56,8 +56,9 @@ public:
 // CHECK: #pragma omp declare mapper (id : dat<double>::datin v) map(tofrom: v.in){{$}}
 // CHECK: };
 
-#pragma omp declare mapper(default : N1::vec kk) map(kk.len) map(kk.data[0:2])
-// CHECK: #pragma omp declare mapper (default : N1::vec kk) map(tofrom: kk.len) map(tofrom: kk.data[0:2]){{$}}
+constexpr int N = 2;
+#pragma omp declare mapper(default : N1::vec kk) map(kk.len) map(kk.data[0:N])
+// CHECK: #pragma omp declare mapper (default : N1::vec kk) map(tofrom: kk.len) map(tofrom: kk.data[0:N]){{$}}
 #pragma omp declare mapper(dat<double> d) map(to: d.d)
 // CHECK: #pragma omp declare mapper (default : dat<double> d) map(to: d.d){{$}}
 

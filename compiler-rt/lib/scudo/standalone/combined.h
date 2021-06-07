@@ -727,6 +727,8 @@ public:
   void iterateOverChunks(uptr Base, uptr Size, iterate_callback Callback,
                          void *Arg) {
     initThreadMaybe();
+    if (archSupportsMemoryTagging())
+      Base = untagPointer(Base);
     const uptr From = Base;
     const uptr To = Base + Size;
     bool MayHaveTaggedPrimary = allocatorSupportsMemoryTagging<Params>() &&

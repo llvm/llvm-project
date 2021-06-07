@@ -759,18 +759,16 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
   return std::nullopt;
 }
 
-// Check conformance of the passed shapes.  Only return true if we can verify
-// that they conform
-bool CheckConformance(parser::ContextualMessages &messages, const Shape &left,
-    const Shape &right, const char *leftIs, const char *rightIs,
-    bool leftScalarExpandable, bool rightScalarExpandable,
-    bool leftIsDeferredShape, bool rightIsDeferredShape) {
+// Check conformance of the passed shapes.
+std::optional<bool> CheckConformance(parser::ContextualMessages &messages,
+    const Shape &left, const Shape &right, CheckConformanceFlags::Flags flags,
+    const char *leftIs, const char *rightIs) {
   int n{GetRank(left)};
-  if (n == 0 && leftScalarExpandable) {
+  if (n == 0 && (flags & CheckConformanceFlags::LeftScalarExpandable)) {
     return true;
   }
   int rn{GetRank(right)};
-  if (rn == 0 && rightScalarExpandable) {
+  if (rn == 0 && (flags & CheckConformanceFlags::RightScalarExpandable)) {
     return true;
   }
   if (n != rn) {
@@ -787,11 +785,11 @@ bool CheckConformance(parser::ContextualMessages &messages, const Shape &left,
               j + 1, leftIs, *leftDim, rightIs, *rightDim);
           return false;
         }
-      } else if (!rightIsDeferredShape) {
-        return false;
+      } else if (!(flags & CheckConformanceFlags::RightIsDeferredShape)) {
+        return std::nullopt;
       }
-    } else if (!leftIsDeferredShape) {
-      return false;
+    } else if (!(flags & CheckConformanceFlags::LeftIsDeferredShape)) {
+      return std::nullopt;
     }
   }
   return true;

@@ -39,7 +39,7 @@ define void @foo() {
 ; ELF: @__profc_foo_weak = weak hidden global{{.*}}section "__llvm_prf_cnts", comdat, align 8
 ; ELF: @__profd_foo_weak = private global{{.*}}section "__llvm_prf_data", comdat($__profc_foo_weak)
 ; MACHO: @__profc_foo_weak = weak hidden global
-; MACHO: @__profd_foo_weak = private global
+; MACHO: @__profd_foo_weak = weak hidden global
 ; COFF: @__profc_foo_weak = weak hidden global
 ; COFF: @__profd_foo_weak = private global
 define weak void @foo_weak() {
@@ -61,7 +61,7 @@ define internal void @foo_internal() {
 ; ELF: @__profc_foo_inline = linkonce_odr hidden global{{.*}}section "__llvm_prf_cnts", comdat, align 8
 ; ELF: @__profd_foo_inline = private global{{.*}}section "__llvm_prf_data", comdat($__profc_foo_inline), align 8
 ; MACHO: @__profc_foo_inline = linkonce_odr hidden global
-; MACHO: @__profd_foo_inline = private global
+; MACHO: @__profd_foo_inline = linkonce_odr hidden global
 ; COFF: @__profc_foo_inline = linkonce_odr hidden global{{.*}} section ".lprfc$M", align 8
 ; COFF: @__profd_foo_inline = private global{{.*}} section ".lprfd$M", align 8
 define linkonce_odr void @foo_inline() {
@@ -72,7 +72,7 @@ define linkonce_odr void @foo_inline() {
 ; ELF: @__profc_foo_extern = linkonce_odr hidden global {{.*}}section "__llvm_prf_cnts", comdat, align 8
 ; ELF: @__profd_foo_extern = private global {{.*}}section "__llvm_prf_data", comdat($__profc_foo_extern), align 8
 ; MACHO: @__profc_foo_extern = linkonce_odr hidden global
-; MACHO: @__profd_foo_extern = private global
+; MACHO: @__profd_foo_extern = linkonce_odr hidden global
 ; COFF: @__profc_foo_extern = linkonce_odr hidden global {{.*}}section ".lprfc$M", comdat, align 8
 ; COFF: @__profd_foo_extern = private global {{.*}}section ".lprfd$M", comdat($__profc_foo_extern), align 8
 define available_externally void @foo_extern() {

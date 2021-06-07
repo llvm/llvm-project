@@ -21,6 +21,16 @@ def Sparsification : Pass<"sparsification", "ModuleOp"> {
     "sparse_tensor::SparseTensorDialect",
     "vector::VectorDialect",
   ];
+  let options = [
+    Option<"parallelization", "parallelization-strategy", "int32_t", "0",
+           "Set the parallelization strategy">,
+    Option<"vectorization", "vectorization-strategy", "int32_t", "0",
+           "Set the vectorization strategy">,
+    Option<"vectorLength", "vl", "int32_t", "1",
+           "Set the vector length">,
+    Option<"enableSIMDIndex32", "enable-simd-index32", "bool", "false",
+           "Enable i32 indexing into vectors (for efficiency)">
+  ];
 }
 
 def SparseTensorConversion : Pass<"sparse-tensor-conversion", "ModuleOp"> {

@@ -6018,7 +6018,14 @@ static void fixupPHIOpBanks(MachineInstr &MI, MachineRegisterInfo &MRI,
       // Insert a cross-bank copy.
       auto *OpDef = MRI.getVRegDef(OpReg);
       const LLT &Ty = MRI.getType(OpReg);
-      MIB.setInsertPt(*OpDef->getParent(), std::next(OpDef->getIterator()));
+      MachineBasicBlock &OpDefBB = *OpDef->getParent();
+
+      // Any instruction we insert must appear after all PHIs in the block
+      // for the block to be valid MIR.
+      MachineBasicBlock::iterator InsertPt = std::next(OpDef->getIterator());
+      if (InsertPt != OpDefBB.end() && InsertPt->isPHI())
+        InsertPt = OpDefBB.getFirstNonPHI();
+      MIB.setInsertPt(*OpDef->getParent(), InsertPt);
       auto Copy = MIB.buildCopy(Ty, OpReg);
       MRI.setRegBank(Copy.getReg(0), *DstRB);
       MO.setReg(Copy.getReg(0));

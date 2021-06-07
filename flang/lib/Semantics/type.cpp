@@ -244,6 +244,7 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
     foldingContext.messages().Say(typeSymbol_.name(),
         "The derived type '%s' was forward-referenced but not defined"_err_en_US,
         typeSymbol_.name());
+    context.SetError(typeSymbol_);
     return;
   }
   EvaluateParameters(context);

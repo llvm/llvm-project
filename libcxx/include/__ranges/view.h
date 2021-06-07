@@ -40,6 +40,11 @@ concept view =
   default_initializable<_Tp> &&
   enable_view<_Tp>;
 
+template<class _Range>
+concept __simple_view =
+  view<_Range> && range<const _Range> &&
+  same_as<iterator_t<_Range>, iterator_t<const _Range>> &&
+  same_as<sentinel_t<_Range>, iterator_t<const _Range>>;
 } // end namespace ranges
 
 #endif // !_LIBCPP_HAS_NO_RANGES

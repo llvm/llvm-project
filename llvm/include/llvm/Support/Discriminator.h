@@ -54,7 +54,7 @@ static inline unsigned encodingBits(unsigned C) {
 //
 namespace llvm {
 namespace sampleprof {
-enum class FSDiscriminatorPass : unsigned {
+enum FSDiscriminatorPass {
   Base = 0,
   Pass0 = 0,
   Pass1 = 1,
