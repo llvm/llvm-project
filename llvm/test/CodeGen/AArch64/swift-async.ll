@@ -50,7 +50,6 @@ define swifttailcc void @more_csrs(i8* swiftasync %ctx) "frame-pointer"="all" {
 ; CHECK: .cfi_offset w30, -8
 ; CHECK: .cfi_offset w29, -16
 ; CHECK: .cfi_offset w23, -32
-; CHECK: .cfi_offset w24, -40
 
 ; [...]
 
@@ -146,7 +145,6 @@ define swifttailcc void @large_frame(i8* swiftasync %ctx) "frame-pointer"="all" 
 ; CHECK: add sp, sp, #1024
 ; CHECK: ldp x29, x30, [sp, #16]
 ; CHECK: ldr x28, [sp], #32
-; CHECK: add sp, sp, #48
 ; CHECK: ret
   %var = alloca i8, i32 1024
   ret void
