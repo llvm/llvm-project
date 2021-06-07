@@ -88,6 +88,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyRegNumberingPass(PR);
   initializeWebAssemblyDebugFixupPass(PR);
   initializeWebAssemblyPeepholePass(PR);
+  initializeWebAssemblyMCLowerPrePassPass(PR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -507,6 +508,9 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   // Fix debug_values whose defs have been stackified.
   if (!WasmDisableExplicitLocals)
     addPass(createWebAssemblyDebugFixup());
+
+  // Collect information to prepare for MC lowering / asm printing.
+  addPass(createWebAssemblyMCLowerPrePass());
 }
 
 yaml::MachineFunctionInfo *

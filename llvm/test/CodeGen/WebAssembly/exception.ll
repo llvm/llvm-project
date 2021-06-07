@@ -9,6 +9,8 @@ target triple = "wasm32-unknown-unknown"
 
 @_ZTIi = external dso_local constant i8*
 
+; CHECK: .tagtype  __cpp_exception i32
+
 ; CHECK-LABEL: test_throw:
 ; CHECK:     throw __cpp_exception, $0
 ; CHECK-NOT: unreachable
@@ -372,4 +374,3 @@ attributes #0 = { nounwind }
 attributes #1 = { noreturn }
 
 ; CHECK: __cpp_exception:
-; CHECK: .tagtype  __cpp_exception i32

@@ -1,6 +1,8 @@
 # Like Inputs/ctor-start.s, except it calls `lib_func` from a ctor
 # instead of from `_start`.
 
+.functype       lib_func () -> ()
+
 	.globl	_start
 _start:
 	.functype	_start () -> ()
@@ -16,4 +18,3 @@ setup:
 	.p2align	2
 	.int32	setup
 
-        .functype       lib_func () -> ()

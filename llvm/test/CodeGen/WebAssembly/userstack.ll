@@ -4,6 +4,8 @@
 declare void @ext_func(i64* %ptr)
 declare void @ext_func_i32(i32* %ptr)
 
+; CHECK: .globaltype	__stack_pointer, i[[PTR]]{{$}}
+
 ; CHECK-LABEL: alloca32:
 ; Check that there is an extra local for the stack pointer.
 ; CHECK: .local i[[PTR]]{{$}}
@@ -343,7 +345,5 @@ define i8 @frame_offset_with_global_address() {
   %5 = and i8 %4, 67
   ret i8 %5
 }
-
-; CHECK: .globaltype	__stack_pointer, i[[PTR]]{{$}}
 
 ; TODO: test over-aligned alloca

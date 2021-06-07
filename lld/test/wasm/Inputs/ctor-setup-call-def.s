@@ -1,6 +1,8 @@
 # Like Inputs/ctor-setup.s, except it calls `def` instead of `lib_func`,
 # so it pulls in the .o file containing `ctor`.
 
+.functype       def () -> ()
+
 	.section	.text._start,"",@
 	.globl	_start
 _start:
@@ -17,5 +19,3 @@ setup:
 	.section	.init_array,"",@
 	.p2align	2
 	.int32 setup
-
-.functype       def () -> ()

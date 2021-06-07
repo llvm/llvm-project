@@ -235,6 +235,19 @@ def getStackOpcode : InstrMapping {
 }
 
 //===----------------------------------------------------------------------===//
+// WebAssembly Stack to Register instruction mapping
+//===----------------------------------------------------------------------===//
+
+class RegisterRel;
+def getRegisterOpcode : InstrMapping {
+  let FilterClass = "RegisterRel";
+  let RowFields = ["BaseName"];
+  let ColFields = ["StackBased"];
+  let KeyCol = ["true"];
+  let ValueCols = [["false"]];
+}
+
+//===----------------------------------------------------------------------===//
 // WebAssembly 32 to 64-bit instruction mapping
 //===----------------------------------------------------------------------===//
 

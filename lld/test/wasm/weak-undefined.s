@@ -5,6 +5,8 @@
 # Test that undefined weak externals (global_var) and (foo) don't cause
 # link failures and resolve to zero.
 
+.functype foo () -> (i32)
+
 .globl  get_address_of_foo
 get_address_of_foo:
   .functype get_address_of_foo () -> (i32)
@@ -30,7 +32,6 @@ _start:
 
 .weak foo
 .weak global_var
-.functype foo () -> (i32)
 
 
 # CHECK:      --- !WASM
