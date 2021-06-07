@@ -1894,7 +1894,7 @@ static SDValue SelectSAddrFI(SelectionDAG *CurDAG, SDValue SAddr) {
     auto FI = cast<FrameIndexSDNode>(SAddr.getOperand(0));
     SDValue TFI = CurDAG->getTargetFrameIndex(FI->getIndex(),
                                               FI->getValueType(0));
-    SAddr = SDValue(CurDAG->getMachineNode(AMDGPU::S_ADD_U32, SDLoc(SAddr),
+    SAddr = SDValue(CurDAG->getMachineNode(AMDGPU::S_ADD_I32, SDLoc(SAddr),
                                            MVT::i32, TFI, SAddr.getOperand(1)),
                     0);
   }
@@ -1936,8 +1936,9 @@ bool AMDGPUDAGToDAGISel::SelectScratchSAddr(SDNode *Parent, SDValue Addr,
         SAddr.getOpcode() == ISD::TargetFrameIndex
             ? getMaterializedScalarImm32(Lo_32(RemainderOffset), DL)
             : CurDAG->getTargetConstant(RemainderOffset, DL, MVT::i32);
-    SAddr = SDValue(CurDAG->getMachineNode(AMDGPU::S_ADD_U32, DL, MVT::i32,
-                                           SAddr, AddOffset), 0);
+    SAddr = SDValue(CurDAG->getMachineNode(AMDGPU::S_ADD_I32, DL, MVT::i32,
+                                           SAddr, AddOffset),
+                    0);
   }
 
   Offset = CurDAG->getTargetConstant(COffsetVal, DL, MVT::i16);

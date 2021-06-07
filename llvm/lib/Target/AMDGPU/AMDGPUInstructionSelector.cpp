@@ -3694,9 +3694,9 @@ AMDGPUInstructionSelector::selectScratchSAddr(MachineOperand &Root) const {
       const DebugLoc &DL = I.getDebugLoc();
       SAddr = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
 
-      BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_ADD_U32), SAddr)
-        .addFrameIndex(FI)
-        .addReg(RHSDef->Reg);
+      BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_ADD_I32), SAddr)
+          .addFrameIndex(FI)
+          .addReg(RHSDef->Reg);
     }
   }
 

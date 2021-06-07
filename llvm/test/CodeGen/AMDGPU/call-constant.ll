@@ -5,7 +5,7 @@
 
 ; GCN-LABEL: {{^}}test_call_undef:
 ; SDAG: s_mov_b32 flat_scratch_lo, s13
-; SDAG: s_add_u32 s12, s12, s17
+; SDAG: s_add_i32 s12, s12, s17
 ; SDAG: s_lshr_b32
 ; GCN: s_endpgm
 define amdgpu_kernel void @test_call_undef() #0 {
@@ -27,7 +27,7 @@ define i32 @test_tail_call_undef() #0 {
 
 ; GCN-LABEL: {{^}}test_call_null:
 ; SDAG: s_mov_b32 flat_scratch_lo, s13
-; SDAG: s_add_u32 s12, s12, s17
+; SDAG: s_add_i32 s12, s12, s17
 ; SDAG: s_lshr_b32
 
 ; GISEL: s_swappc_b64 s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}

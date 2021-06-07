@@ -22,7 +22,7 @@ entry:
 define amdgpu_kernel void @test_kern_stack() local_unnamed_addr #0 {
 ; GFX803-LABEL: test_kern_stack:
 ; GFX803:       ; %bb.0: ; %entry
-; GFX803-NEXT:    s_add_u32 s4, s4, s7
+; GFX803-NEXT:    s_add_i32 s4, s4, s7
 ; GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
 ; GFX803-NEXT:    s_add_u32 s0, s0, s7
 ; GFX803-NEXT:    s_addc_u32 s1, s1, 0
@@ -64,7 +64,7 @@ entry:
 define amdgpu_kernel void @test_kern_call() local_unnamed_addr #0 {
 ; GFX803-LABEL: test_kern_call:
 ; GFX803:       ; %bb.0: ; %entry
-; GFX803-NEXT:    s_add_u32 s4, s4, s7
+; GFX803-NEXT:    s_add_i32 s4, s4, s7
 ; GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
 ; GFX803-NEXT:    s_add_u32 s0, s0, s7
 ; GFX803-NEXT:    s_addc_u32 s1, s1, 0
@@ -111,7 +111,7 @@ entry:
 define amdgpu_kernel void @test_kern_stack_and_call() local_unnamed_addr #0 {
 ; GFX803-LABEL: test_kern_stack_and_call:
 ; GFX803:       ; %bb.0: ; %entry
-; GFX803-NEXT:    s_add_u32 s4, s4, s7
+; GFX803-NEXT:    s_add_i32 s4, s4, s7
 ; GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
 ; GFX803-NEXT:    s_add_u32 s0, s0, s7
 ; GFX803-NEXT:    s_addc_u32 s1, s1, 0
@@ -188,7 +188,7 @@ entry:
 define amdgpu_kernel void @test_force_fp_kern_stack() local_unnamed_addr #2 {
 ; GFX803-LABEL: test_force_fp_kern_stack:
 ; GFX803:       ; %bb.0: ; %entry
-; GFX803-NEXT:    s_add_u32 s4, s4, s7
+; GFX803-NEXT:    s_add_i32 s4, s4, s7
 ; GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
 ; GFX803-NEXT:    s_add_u32 s0, s0, s7
 ; GFX803-NEXT:    s_mov_b32 s33, 0
@@ -233,7 +233,7 @@ entry:
 define amdgpu_kernel void @test_force_fp_kern_call() local_unnamed_addr #2 {
 ; GFX803-LABEL: test_force_fp_kern_call:
 ; GFX803:       ; %bb.0: ; %entry
-; GFX803-NEXT:    s_add_u32 s4, s4, s7
+; GFX803-NEXT:    s_add_i32 s4, s4, s7
 ; GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
 ; GFX803-NEXT:    s_add_u32 s0, s0, s7
 ; GFX803-NEXT:    s_addc_u32 s1, s1, 0
@@ -283,7 +283,7 @@ entry:
 define amdgpu_kernel void @test_force_fp_kern_stack_and_call() local_unnamed_addr #2 {
 ; GFX803-LABEL: test_force_fp_kern_stack_and_call:
 ; GFX803:       ; %bb.0: ; %entry
-; GFX803-NEXT:    s_add_u32 s4, s4, s7
+; GFX803-NEXT:    s_add_i32 s4, s4, s7
 ; GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
 ; GFX803-NEXT:    s_add_u32 s0, s0, s7
 ; GFX803-NEXT:    s_mov_b32 s33, 0
@@ -344,7 +344,7 @@ entry:
 define amdgpu_kernel void @test_sgpr_offset_kernel() #1 {
 ; GFX803-LABEL: test_sgpr_offset_kernel:
 ; GFX803:       ; %bb.0: ; %entry
-; GFX803-NEXT:    s_add_u32 s4, s4, s7
+; GFX803-NEXT:    s_add_i32 s4, s4, s7
 ; GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
 ; GFX803-NEXT:    s_add_u32 s0, s0, s7
 ; GFX803-NEXT:    s_addc_u32 s1, s1, 0
