@@ -73,6 +73,9 @@ static std::unique_ptr<FrontendAction> CreateFrontendBaseAction(
   case GetSymbolsSources:
     return std::make_unique<GetSymbolsSourcesAction>();
     break;
+  case InitOnly:
+    return std::make_unique<InitOnlyAction>();
+    break;
   default:
     break;
     // TODO:
