@@ -232,8 +232,12 @@ bool Demangler::demanglePath(InType InType, LeaveOpen LeaveOpen) {
       print(">");
     break;
   }
+  case 'B': {
+    bool IsOpen = false;
+    demangleBackref([&] { IsOpen = demanglePath(InType, LeaveOpen); });
+    return IsOpen;
+  }
   default:
-    // FIXME parse remaining productions.
     Error = true;
     break;
   }
