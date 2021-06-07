@@ -303,6 +303,8 @@ def : MipsPat<(MipsFullAddr tjumptable:$in),
 def : MipsPat<(not (or GPR32NM:$rs, GPR32NM:$rt)),
               (NOR_NM GPR32NM:$rs, GPR32NM:$rt)>, ISA_NANOMIPS;
 
+def : MipsPat<(trap), (TEQ_NM ZERO_NM, ZERO_NM, 0)>, ISA_NANOMIPS;
+
 // SetCC patterns.
 def : MipsPat<(seteq GPR32NM:$lhs, GPR32NM:$rhs),
               (SLTIU_NM (XOR_NM GPR32NM:$lhs, GPR32NM:$rhs), 1)>;
