@@ -11751,11 +11751,11 @@ bool Sema::CheckUsingShadowDecl(BaseUsingDecl *BUD, NamedDecl *Orig,
       (isa_and_nonnull<UnresolvedUsingIfExistsDecl>(NonTag))) {
     if (!NonTag && !Tag)
       return false;
-    Diag(Using->getLocation(), diag::err_using_decl_conflict);
+    Diag(BUD->getLocation(), diag::err_using_decl_conflict);
     Diag(Target->getLocation(), diag::note_using_decl_target);
     Diag((NonTag ? NonTag : Tag)->getLocation(),
          diag::note_using_decl_conflict);
-    Using->setInvalidDecl();
+    BUD->setInvalidDecl();
     return true;
   }
 
