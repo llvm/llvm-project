@@ -206,4 +206,14 @@ func @dim_of_sized_view(%arg : memref<?xi8>, %size: index) -> index {
   return %1 : index
 }
 
+// -----
+
+// CHECK-LABEL: func @no_fold_of_store
+//  CHECK:   %[[cst:.+]] = memref.cast %arg
+//  CHECK:   memref.store %[[cst]]
+func @no_fold_of_store(%arg : memref<32xi8>, %holder: memref<memref<?xi8>>) {
+  %0 = memref.cast %arg : memref<32xi8> to memref<?xi8>
+  memref.store %0, %holder[] : memref<memref<?xi8>>
+  return
+}
 
