@@ -33,7 +33,6 @@ class TestSwiftPrivateImport(TestBase):
         lldbutil.run_to_source_breakpoint(
             self, 'break here', lldb.SBFileSpec('main.swift'),
             extra_images=['Library'])
-        # We should not be able to resolve the types.
-        self.expect("fr var -d run -- x", substrs=["(Any)"])
+        self.expect("fr var -d run -- x", substrs=["(Invisible.InvisibleStruct)"])
         # FIXME: This crashes LLDB with a Swift DESERIALIZATION FAILURE.
         # self.expect("fr var -d run -- y", substrs=["(Any)"])

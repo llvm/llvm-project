@@ -166,6 +166,10 @@ public:
                   Target *target = nullptr);
 
   SwiftASTContext(const SwiftASTContext &rhs) = delete;
+  
+  TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() override {
+    return m_typeref_typesystem;
+  }
 
   ~SwiftASTContext();
 

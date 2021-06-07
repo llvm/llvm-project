@@ -50,6 +50,7 @@ public:
 
   TypeSystemSwiftTypeRef(SwiftASTContext *swift_ast_context);
   SwiftASTContext *GetSwiftASTContext() override { return m_swift_ast_context; }
+  TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() override { return *this; }
 
   Module *GetModule() const override;
   swift::CanType GetCanonicalSwiftType(CompilerType compiler_type);
