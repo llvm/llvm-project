@@ -80,7 +80,7 @@ end:
   br label %block
 }
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: %{{[0-9]+}}:gpr32(s32), %{{[0-9]+}}:gpr(s1) = G_UADDE %{{[0-9]+}}:gpr, %{{[0-9]+}}:gpr, %{{[0-9]+}}:gpr (in function: nonpow2_add_narrowing)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: %{{[0-9]+}}:gpr(s32), %{{[0-9]+}}:gpr(s32) = G_UNMERGE_VALUES %{{[0-9]+}}:gpr(s64) (in function: nonpow2_add_narrowing)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_add_narrowing
 ; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_add_narrowing:
 define void @nonpow2_add_narrowing(i128 %x, i128 %y) {

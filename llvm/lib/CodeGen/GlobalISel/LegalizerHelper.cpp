@@ -220,29 +220,16 @@ void LegalizerHelper::insertParts(Register DstReg,
     return;
   }
 
-  unsigned PartSize = PartTy.getSizeInBits();
-  unsigned LeftoverPartSize = LeftoverTy.getSizeInBits();
+  SmallVector<Register> GCDRegs;
+  LLT GCDTy;
+  for (Register PartReg : PartRegs)
+    GCDTy = extractGCDType(GCDRegs, ResultTy, LeftoverTy, PartReg);
 
-  Register CurResultReg = MRI.createGenericVirtualRegister(ResultTy);
-  MIRBuilder.buildUndef(CurResultReg);
+  for (Register PartReg : LeftoverRegs)
+    extractGCDType(GCDRegs, ResultTy, LeftoverTy, PartReg);
 
-  unsigned Offset = 0;
-  for (Register PartReg : PartRegs) {
-    Register NewResultReg = MRI.createGenericVirtualRegister(ResultTy);
-    MIRBuilder.buildInsert(NewResultReg, CurResultReg, PartReg, Offset);
-    CurResultReg = NewResultReg;
-    Offset += PartSize;
-  }
-
-  for (unsigned I = 0, E = LeftoverRegs.size(); I != E; ++I) {
-    // Use the original output register for the final insert to avoid a copy.
-    Register NewResultReg = (I + 1 == E) ?
-      DstReg : MRI.createGenericVirtualRegister(ResultTy);
-
-    MIRBuilder.buildInsert(NewResultReg, CurResultReg, LeftoverRegs[I], Offset);
-    CurResultReg = NewResultReg;
-    Offset += LeftoverPartSize;
-  }
+  LLT ResultLCMTy = buildLCMMergePieces(ResultTy, LeftoverTy, GCDTy, GCDRegs);
+  buildWidenedRemergeToDst(DstReg, ResultLCMTy, GCDRegs);
 }
 
 /// Append the result registers of G_UNMERGE_VALUES \p MI to \p Regs.

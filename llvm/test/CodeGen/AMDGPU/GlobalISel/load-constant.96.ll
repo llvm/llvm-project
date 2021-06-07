@@ -432,16 +432,16 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align1(<3 x i32> addrspace(4)*
 ; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v3, 24, v4
 ; GFX9-NOUNALIGNED-NEXT:    v_and_or_b32 v4, v5, s0, v6
 ; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v5, 16, v7
-; GFX9-NOUNALIGNED-NEXT:    v_and_or_b32 v7, v9, v0, v10
 ; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v6, 24, v8
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v8, 16, v11
-; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v9, 24, v12
-; GFX9-NOUNALIGNED-NEXT:    v_or3_b32 v0, v1, v2, v3
-; GFX9-NOUNALIGNED-NEXT:    v_or3_b32 v1, v4, v5, v6
-; GFX9-NOUNALIGNED-NEXT:    v_or3_b32 v2, v7, v8, v9
-; GFX9-NOUNALIGNED-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX9-NOUNALIGNED-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX9-NOUNALIGNED-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX9-NOUNALIGNED-NEXT:    v_and_or_b32 v0, v9, v0, v10
+; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v7, 16, v11
+; GFX9-NOUNALIGNED-NEXT:    v_lshlrev_b32_e32 v8, 24, v12
+; GFX9-NOUNALIGNED-NEXT:    v_or3_b32 v1, v1, v2, v3
+; GFX9-NOUNALIGNED-NEXT:    v_or3_b32 v2, v4, v5, v6
+; GFX9-NOUNALIGNED-NEXT:    v_or3_b32 v0, v0, v7, v8
+; GFX9-NOUNALIGNED-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX9-NOUNALIGNED-NEXT:    v_readfirstlane_b32 s1, v2
+; GFX9-NOUNALIGNED-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX9-NOUNALIGNED-NEXT:    ; return to shader part epilog
 ;
 ; GFX7-UNALIGNED-LABEL: s_load_constant_v3i32_align1:

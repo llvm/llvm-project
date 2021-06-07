@@ -147,10 +147,9 @@ body: |
     ; CHECK: [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[COPY1]](s96), 64
     ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[EXTRACT]], [[EXTRACT2]]
     ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[EXTRACT1]], [[EXTRACT3]]
-    ; CHECK: [[DEF:%[0-9]+]]:_(s96) = G_IMPLICIT_DEF
-    ; CHECK: [[INSERT:%[0-9]+]]:_(s96) = G_INSERT [[DEF]], [[AND]](s64), 0
-    ; CHECK: [[INSERT1:%[0-9]+]]:_(s96) = G_INSERT [[INSERT]], [[AND1]](s32), 64
-    ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[INSERT1]](s96)
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AND]](s64)
+    ; CHECK: [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32), [[AND1]](s32)
+    ; CHECK: $vgpr0_vgpr1_vgpr2 = COPY [[MV]](s96)
     %0:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     %1:_(s96) = COPY $vgpr3_vgpr4_vgpr5
     %2:_(s96) = G_AND %0, %1
