@@ -110,7 +110,8 @@ static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
   {LibFunc_vec_realloc,         {ReallocLike, 2, 1,  -1}},
   {LibFunc_reallocf,            {ReallocLike, 2, 1,  -1}},
   {LibFunc_strdup,              {StrDupLike,  1, -1, -1}},
-  {LibFunc_strndup,             {StrDupLike,  2, 1,  -1}}
+  {LibFunc_strndup,             {StrDupLike,  2, 1,  -1}},
+  {LibFunc___kmpc_alloc_shared, {MallocLike,  1, 0,  -1}}
   // TODO: Handle "int posix_memalign(void **, size_t, size_t)"
 };
 
@@ -434,6 +435,7 @@ const CallInst *llvm::extractCallocCall(const Value *I,
 bool llvm::isLibFreeFunction(const Function *F, const LibFunc TLIFn) {
   unsigned ExpectedNumParams;
   if (TLIFn == LibFunc_free ||
+      TLIFn == LibFunc___kmpc_free_shared || // OpenMP Offloading RTL free
       TLIFn == LibFunc_ZdlPv || // operator delete(void*)
       TLIFn == LibFunc_ZdaPv || // operator delete[](void*)
       TLIFn == LibFunc_msvc_delete_ptr32 || // operator delete(void*)
