@@ -98,7 +98,7 @@ struct VLSEGPseudo {
   uint8_t Masked;
   uint8_t Strided;
   uint8_t FF;
-  uint8_t SEW;
+  uint8_t Log2SEW;
   uint8_t LMUL;
   uint16_t Pseudo;
 };
@@ -107,7 +107,7 @@ struct VLXSEGPseudo {
   uint8_t NF;
   uint8_t Masked;
   uint8_t Ordered;
-  uint8_t SEW;
+  uint8_t Log2SEW;
   uint8_t LMUL;
   uint8_t IndexLMUL;
   uint16_t Pseudo;
@@ -117,7 +117,7 @@ struct VSSEGPseudo {
   uint8_t NF;
   uint8_t Masked;
   uint8_t Strided;
-  uint8_t SEW;
+  uint8_t Log2SEW;
   uint8_t LMUL;
   uint16_t Pseudo;
 };
@@ -126,7 +126,7 @@ struct VSXSEGPseudo {
   uint8_t NF;
   uint8_t Masked;
   uint8_t Ordered;
-  uint8_t SEW;
+  uint8_t Log2SEW;
   uint8_t LMUL;
   uint8_t IndexLMUL;
   uint16_t Pseudo;
@@ -136,7 +136,7 @@ struct VLEPseudo {
   uint8_t Masked;
   uint8_t Strided;
   uint8_t FF;
-  uint8_t SEW;
+  uint8_t Log2SEW;
   uint8_t LMUL;
   uint16_t Pseudo;
 };
@@ -144,7 +144,7 @@ struct VLEPseudo {
 struct VSEPseudo {
   uint8_t Masked;
   uint8_t Strided;
-  uint8_t SEW;
+  uint8_t Log2SEW;
   uint8_t LMUL;
   uint16_t Pseudo;
 };
@@ -152,7 +152,7 @@ struct VSEPseudo {
 struct VLX_VSXPseudo {
   uint8_t Masked;
   uint8_t Ordered;
-  uint8_t SEW;
+  uint8_t Log2SEW;
   uint8_t LMUL;
   uint8_t IndexLMUL;
   uint16_t Pseudo;
