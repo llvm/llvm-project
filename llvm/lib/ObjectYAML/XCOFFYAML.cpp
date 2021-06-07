@@ -23,6 +23,25 @@ Object::Object() { memset(&Header, 0, sizeof(Header)); }
 
 namespace yaml {
 
+void ScalarBitSetTraits<XCOFF::SectionTypeFlags>::bitset(
+    IO &IO, XCOFF::SectionTypeFlags &Value) {
+#define ECase(X) IO.bitSetCase(Value, #X, XCOFF::X)
+  ECase(STYP_PAD);
+  ECase(STYP_DWARF);
+  ECase(STYP_TEXT);
+  ECase(STYP_DATA);
+  ECase(STYP_BSS);
+  ECase(STYP_EXCEPT);
+  ECase(STYP_INFO);
+  ECase(STYP_TDATA);
+  ECase(STYP_TBSS);
+  ECase(STYP_LOADER);
+  ECase(STYP_DEBUG);
+  ECase(STYP_TYPCHK);
+  ECase(STYP_OVRFLO);
+#undef ECase
+}
+
 void ScalarEnumerationTraits<XCOFF::StorageClass>::enumeration(
     IO &IO, XCOFF::StorageClass &Value) {
 #define ECase(X) IO.enumCase(Value, #X, XCOFF::X)
@@ -79,30 +98,64 @@ void ScalarEnumerationTraits<XCOFF::StorageClass>::enumeration(
 #undef ECase
 }
 
+struct NSectionFlags {
+  NSectionFlags(IO &) : Flags(XCOFF::SectionTypeFlags(0)) {}
+  NSectionFlags(IO &, uint32_t C) : Flags(XCOFF::SectionTypeFlags(C)) {}
+
+  uint32_t denormalize(IO &) { return Flags; }
+
+  XCOFF::SectionTypeFlags Flags;
+};
+
 void MappingTraits<XCOFFYAML::FileHeader>::mapping(
     IO &IO, XCOFFYAML::FileHeader &FileHdr) {
-  IO.mapRequired("MagicNumber", FileHdr.Magic);
-  IO.mapRequired("NumberOfSections", FileHdr.NumberOfSections);
-  IO.mapRequired("CreationTime", FileHdr.TimeStamp);
-  IO.mapRequired("OffsetToSymbolTable", FileHdr.SymbolTableOffset);
-  IO.mapRequired("EntriesInSymbolTable", FileHdr.NumberOfSymTableEntries);
-  IO.mapRequired("AuxiliaryHeaderSize", FileHdr.AuxHeaderSize);
-  IO.mapRequired("Flags", FileHdr.Flags);
+  IO.mapOptional("MagicNumber", FileHdr.Magic);
+  IO.mapOptional("NumberOfSections", FileHdr.NumberOfSections);
+  IO.mapOptional("CreationTime", FileHdr.TimeStamp);
+  IO.mapOptional("OffsetToSymbolTable", FileHdr.SymbolTableOffset);
+  IO.mapOptional("EntriesInSymbolTable", FileHdr.NumberOfSymTableEntries);
+  IO.mapOptional("AuxiliaryHeaderSize", FileHdr.AuxHeaderSize);
+  IO.mapOptional("Flags", FileHdr.Flags);
+}
+
+void MappingTraits<XCOFFYAML::Relocation>::mapping(IO &IO,
+                                                   XCOFFYAML::Relocation &R) {
+  IO.mapOptional("Address", R.VirtualAddress);
+  IO.mapOptional("Symbol", R.SymbolIndex);
+  IO.mapOptional("Info", R.Info);
+  IO.mapOptional("Type", R.Type);
+}
+
+void MappingTraits<XCOFFYAML::Section>::mapping(IO &IO,
+                                                XCOFFYAML::Section &Sec) {
+  MappingNormalization<NSectionFlags, uint32_t> NC(IO, Sec.Flags);
+  IO.mapOptional("Name", Sec.SectionName);
+  IO.mapOptional("Address", Sec.Address);
+  IO.mapOptional("Size", Sec.Size);
+  IO.mapOptional("FileOffsetToData", Sec.FileOffsetToData);
+  IO.mapOptional("FileOffsetToRelocations", Sec.FileOffsetToRelocations);
+  IO.mapOptional("FileOffsetToLineNumbers", Sec.FileOffsetToLineNumbers);
+  IO.mapOptional("NumberOfRelocations", Sec.NumberOfRelocations);
+  IO.mapOptional("NumberOfLineNumbers", Sec.NumberOfLineNumbers);
+  IO.mapOptional("Flags", NC->Flags);
+  IO.mapOptional("SectionData", Sec.SectionData);
+  IO.mapOptional("Relocations", Sec.Relocations);
 }
 
 void MappingTraits<XCOFFYAML::Symbol>::mapping(IO &IO, XCOFFYAML::Symbol &S) {
   IO.mapRequired("Name", S.SymbolName);
-  IO.mapRequired("Value", S.Value);
-  IO.mapRequired("Section", S.SectionName);
-  IO.mapRequired("Type", S.Type);
-  IO.mapRequired("StorageClass", S.StorageClass);
-  IO.mapRequired("NumberOfAuxEntries", S.NumberOfAuxEntries);
+  IO.mapOptional("Value", S.Value);
+  IO.mapOptional("Section", S.SectionName);
+  IO.mapOptional("Type", S.Type);
+  IO.mapOptional("StorageClass", S.StorageClass);
+  IO.mapOptional("NumberOfAuxEntries", S.NumberOfAuxEntries);
 }
 
 void MappingTraits<XCOFFYAML::Object>::mapping(IO &IO, XCOFFYAML::Object &Obj) {
   IO.mapTag("!XCOFF", true);
   IO.mapRequired("FileHeader", Obj.Header);
-  IO.mapRequired("Symbols", Obj.Symbols);
+  IO.mapOptional("Sections", Obj.Sections);
+  IO.mapOptional("Symbols", Obj.Symbols);
 }
 
 } // namespace yaml
