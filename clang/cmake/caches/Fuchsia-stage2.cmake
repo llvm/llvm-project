@@ -15,10 +15,6 @@ if(NOT APPLE)
 endif()
 set(LLVM_ENABLE_LTO ON CACHE BOOL "")
 set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ON CACHE BOOL "")
-if(NOT APPLE)
-  # TODO: Remove this once we switch to ld64.lld.
-  set(LLVM_ENABLE_PIC OFF CACHE BOOL "")
-endif()
 set(LLVM_ENABLE_LIBCXX ON CACHE BOOL "")
 set(LLVM_ENABLE_TERMINFO OFF CACHE BOOL "")
 set(LLVM_ENABLE_UNWIND_TABLES OFF CACHE BOOL "")
@@ -126,7 +122,6 @@ foreach(target aarch64-unknown-linux-gnu;armv7-unknown-linux-gnueabihf;i386-unkn
     set(RUNTIMES_${target}_CMAKE_SHARED_LINKER_FLAGS "-fuse-ld=lld" CACHE STRING "")
     set(RUNTIMES_${target}_CMAKE_MODULE_LINKER_FLAGS "-fuse-ld=lld" CACHE STRING "")
     set(RUNTIMES_${target}_CMAKE_EXE_LINKER_FLAGS "-fuse-ld=lld" CACHE STRING "")
-    set(RUNTIMES_${target}_CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "")
     set(RUNTIMES_${target}_COMPILER_RT_USE_BUILTINS_LIBRARY ON CACHE BOOL "")
     set(RUNTIMES_${target}_LIBUNWIND_ENABLE_SHARED OFF CACHE BOOL "")
     set(RUNTIMES_${target}_LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
@@ -141,7 +136,6 @@ foreach(target aarch64-unknown-linux-gnu;armv7-unknown-linux-gnueabihf;i386-unkn
     set(RUNTIMES_${target}_LIBCXX_ENABLE_STATIC_ABI_LIBRARY ON CACHE BOOL "")
     set(RUNTIMES_${target}_LIBCXX_ABI_VERSION 2 CACHE STRING "")
     set(RUNTIMES_${target}_LLVM_ENABLE_ASSERTIONS OFF CACHE BOOL "")
-    set(RUNTIMES_${target}_LLVM_ENABLE_PIC ON CACHE BOOL "")
     set(RUNTIMES_${target}_SANITIZER_CXX_ABI "libc++" CACHE STRING "")
     set(RUNTIMES_${target}_SANITIZER_CXX_ABI_INTREE ON CACHE BOOL "")
     set(RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
@@ -189,7 +183,6 @@ if(FUCHSIA_SDK)
     set(RUNTIMES_${target}_CMAKE_MODULE_LINKER_FLAGS ${FUCHSIA_${target}_LINKER_FLAGS} CACHE STRING "")
     set(RUNTIMES_${target}_CMAKE_EXE_LINKER_FLAGS ${FUCHSIA_${target}_LINKER_FLAGS} CACHE STRING "")
     set(RUNTIMES_${target}_CMAKE_SYSROOT ${FUCHSIA_${target}_SYSROOT} CACHE PATH "")
-    set(RUNTIMES_${target}_CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "")
     set(RUNTIMES_${target}_COMPILER_RT_USE_BUILTINS_LIBRARY ON CACHE BOOL "")
     set(RUNTIMES_${target}_LIBUNWIND_USE_COMPILER_RT ON CACHE BOOL "")
     set(RUNTIMES_${target}_LIBUNWIND_HIDE_SYMBOLS ON CACHE BOOL "")
@@ -206,7 +199,6 @@ if(FUCHSIA_SDK)
     set(RUNTIMES_${target}_LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY OFF CACHE BOOL "")
     set(RUNTIMES_${target}_LIBCXX_ABI_VERSION 2 CACHE STRING "")
     set(RUNTIMES_${target}_LLVM_ENABLE_ASSERTIONS OFF CACHE BOOL "")
-    set(RUNTIMES_${target}_LLVM_ENABLE_PIC ON CACHE BOOL "")
     set(RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "")
 
     # Compat multilibs.
@@ -302,14 +294,10 @@ set(LLVM_TOOLCHAIN_TOOLS
   sancov
   CACHE STRING "")
 
-if(APPLE)
-  # TODO: Remove this once we switch to ld64.lld.
-  set(target_components LTO)
-endif()
-
 set(LLVM_DISTRIBUTION_COMPONENTS
   clang
   lld
+  LTO
   clang-apply-replacements
   clang-doc
   clang-format
@@ -321,6 +309,5 @@ set(LLVM_DISTRIBUTION_COMPONENTS
   clangd
   builtins
   runtimes
-  ${target_components}
   ${LLVM_TOOLCHAIN_TOOLS}
   CACHE STRING "")
