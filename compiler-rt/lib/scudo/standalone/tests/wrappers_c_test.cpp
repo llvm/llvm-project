@@ -371,7 +371,7 @@ TEST(ScudoWrappersCTest, MallocInfo) {
 TEST(ScudoWrappersCTest, Fork) {
   void *P;
   pid_t Pid = fork();
-  EXPECT_GE(Pid, 0);
+  EXPECT_GE(Pid, 0) << strerror(errno);
   if (Pid == 0) {
     P = malloc(Size);
     EXPECT_NE(P, nullptr);
