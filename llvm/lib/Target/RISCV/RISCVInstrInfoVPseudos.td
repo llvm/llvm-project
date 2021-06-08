@@ -909,6 +909,24 @@ class VPseudoBinaryNoMask<VReg RetClass,
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
+class VPseudoTiedBinaryNoMask<VReg RetClass,
+                              DAGOperand Op2Class,
+                              string Constraint> :
+        Pseudo<(outs RetClass:$rd),
+               (ins RetClass:$rs2, Op2Class:$rs1, AVL:$vl, ixlenimm:$sew), []>,
+        RISCVVPseudo {
+  let mayLoad = 0;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let Constraints = Join<[Constraint, "$rd = $rs2"], ",">.ret;
+  let HasVLOp = 1;
+  let HasSEWOp = 1;
+  let HasDummyMask = 1;
+  let ForceTailAgnostic = 1;
+  let isConvertibleToThreeAddress = 1;
+  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+}
+
 class VPseudoIStoreNoMask<VReg StClass, VReg IdxClass, int EEW, bits<3> LMUL,
                           bit Ordered>:
       Pseudo<(outs),
@@ -1511,6 +1529,8 @@ multiclass VPseudoTiedBinary<VReg RetClass,
                              LMULInfo MInfo,
                              string Constraint = ""> {
   let VLMul = MInfo.value in {
+    def "_" # MInfo.MX # "_TIED": VPseudoTiedBinaryNoMask<RetClass, Op2Class,
+                                                          Constraint>;
     def "_" # MInfo.MX # "_MASK_TIED" : VPseudoTiedBinaryMask<RetClass, Op2Class,
                                                          Constraint>;
   }
@@ -2296,6 +2316,22 @@ class VPatBinaryMaskSwapped<string intrinsic_name,
                    (op2_type op2_kind:$rs2),
                    (mask_type V0), GPR:$vl, sew)>;
 
+class VPatTiedBinaryNoMask<string intrinsic_name,
+                           string inst,
+                           ValueType result_type,
+                           ValueType op2_type,
+                           int sew,
+                           VReg result_reg_class,
+                           DAGOperand op2_kind> :
+  Pat<(result_type (!cast<Intrinsic>(intrinsic_name)
+                   (result_type result_reg_class:$rs1),
+                   (op2_type op2_kind:$rs2),
+                   VLOpFrag)),
+                   (!cast<Instruction>(inst#"_TIED")
+                   (result_type result_reg_class:$rs1),
+                   (op2_type op2_kind:$rs2),
+                   GPR:$vl, sew)>;
+
 class VPatTiedBinaryMask<string intrinsic_name,
                          string inst,
                          ValueType result_type,
@@ -2697,14 +2733,17 @@ multiclass VPatBinaryW_WV<string intrinsic, string instruction,
   foreach VtiToWti = vtilist in {
     defvar Vti = VtiToWti.Vti;
     defvar Wti = VtiToWti.Wti;
+    def : VPatTiedBinaryNoMask<intrinsic, instruction # "_WV_" # Vti.LMul.MX,
+                               Wti.Vector, Vti.Vector,
+                               Vti.Log2SEW, Wti.RegClass, Vti.RegClass>;
     let AddedComplexity = 1 in
     def : VPatTiedBinaryMask<intrinsic, instruction # "_WV_" # Vti.LMul.MX,
                              Wti.Vector, Vti.Vector, Vti.Mask,
                              Vti.Log2SEW, Wti.RegClass, Vti.RegClass>;
-    defm : VPatBinary<intrinsic, instruction # "_WV_" # Vti.LMul.MX,
-                      Wti.Vector, Wti.Vector, Vti.Vector, Vti.Mask,
-                      Vti.Log2SEW, Wti.RegClass,
-                      Wti.RegClass, Vti.RegClass>;
+    def : VPatBinaryMask<intrinsic, instruction # "_WV_" # Vti.LMul.MX,
+                         Wti.Vector, Wti.Vector, Vti.Vector, Vti.Mask,
+                         Vti.Log2SEW, Wti.RegClass,
+                         Wti.RegClass, Vti.RegClass>;
   }
 }
 

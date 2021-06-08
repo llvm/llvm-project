@@ -143,6 +143,10 @@ public:
                                        unsigned OpIdx1,
                                        unsigned OpIdx2) const override;
 
+  MachineInstr *convertToThreeAddress(MachineFunction::iterator &MBB,
+                                      MachineInstr &MI,
+                                      LiveVariables *LV) const override;
+
   Register getVLENFactoredAmount(MachineFunction &MF, MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator II,
                                  const DebugLoc &DL, int64_t Amount) const;
