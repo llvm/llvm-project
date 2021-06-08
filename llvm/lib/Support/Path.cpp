@@ -1288,11 +1288,12 @@ Error TempFile::keep() {
   return Error::success();
 }
 
-Expected<TempFile> TempFile::create(const Twine &Model, unsigned Mode) {
+Expected<TempFile> TempFile::create(const Twine &Model, unsigned Mode,
+                                    OpenFlags ExtraFlags) {
   int FD;
   SmallString<128> ResultPath;
   if (std::error_code EC =
-          createUniqueFile(Model, FD, ResultPath, OF_Delete, Mode))
+          createUniqueFile(Model, FD, ResultPath, OF_Delete | ExtraFlags, Mode))
     return errorCodeToError(EC);
 
   TempFile Ret(ResultPath, FD);
