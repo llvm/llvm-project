@@ -588,6 +588,30 @@ define <2 x float> @select_fneg_false(<2 x float> %x, <2 x float> %y, <2 x i1> %
   ret <2 x float> %r
 }
 
+define float @select_fneg_false_no_nsz(float %x, float %y, i1 %b) {
+; CHECK-LABEL: @select_fneg_false_no_nsz(
+; CHECK-NEXT:    [[X_NEG:%.*]] = fneg nnan ninf nsz float [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select nnan ninf nsz i1 [[B:%.*]], float [[X_NEG]], float [[Y:%.*]]
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %ny = fneg float %y
+  %s = select i1 %b, float %x, float %ny
+  %r = fneg ninf nnan nsz float %s
+  ret float %r
+}
+
+define float @select_fneg_false_nsz(float %x, float %y, i1 %b) {
+; CHECK-LABEL: @select_fneg_false_nsz(
+; CHECK-NEXT:    [[X_NEG:%.*]] = fneg nnan ninf nsz float [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select nnan ninf nsz i1 [[B:%.*]], float [[X_NEG]], float [[Y:%.*]]
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %ny = fneg float %y
+  %s = select nsz i1 %b, float %x, float %ny
+  %r = fneg ninf nnan nsz float %s
+  ret float %r
+}
+
 define float @select_fneg_both(float %x, float %y, i1 %b) {
 ; CHECK-LABEL: @select_fneg_both(
 ; CHECK-NEXT:    [[S_V:%.*]] = select i1 [[B:%.*]], float [[X:%.*]], float [[Y:%.*]]
