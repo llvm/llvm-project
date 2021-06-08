@@ -2116,6 +2116,24 @@ public:
   }
 };
 
+class NilReceiverHandler final : public ExpressionHandler {
+public:
+  using ExpressionHandler::ExpressionHandler;
+
+  Tracker::Result handle(const Expr *Inner, const ExplodedNode *InputNode,
+                         const ExplodedNode *LVNode,
+                         TrackingOptions Opts) override {
+    // The message send could be nil due to the receiver being nil.
+    // At this point in the path, the receiver should be live since we are at
+    // the message send expr. If it is nil, start tracking it.
+    if (const Expr *Receiver =
+            NilReceiverBRVisitor::getNilReceiver(Inner, LVNode))
+      return getParentTracker().track(Receiver, LVNode, Opts);
+
+    return {};
+  }
+};
+
 class DefaultExpressionHandler final : public ExpressionHandler {
 public:
   using ExpressionHandler::ExpressionHandler;
@@ -2127,13 +2145,6 @@ public:
     const StackFrameContext *SFC = LVNode->getStackFrame();
     PathSensitiveBugReport &Report = getParentTracker().getReport();
     Tracker::Result Result;
-
-    // The message send could be nil due to the receiver being nil.
-    // At this point in the path, the receiver should be live since we are at
-    // the message send expr. If it is nil, start tracking it.
-    if (const Expr *Receiver =
-            NilReceiverBRVisitor::getNilReceiver(Inner, LVNode))
-      Result.combineWith(getParentTracker().track(Receiver, LVNode, Opts));
 
     // Track the index if this is an array subscript.
     if (const auto *Arr = dyn_cast<ArraySubscriptExpr>(Inner))
@@ -2308,6 +2319,7 @@ public:
 Tracker::Tracker(PathSensitiveBugReport &Report) : Report(Report) {
   // Default expression handlers.
   addLowPriorityHandler<ControlDependencyHandler>();
+  addLowPriorityHandler<NilReceiverHandler>();
   addLowPriorityHandler<DefaultExpressionHandler>();
   addLowPriorityHandler<PRValueHandler>();
   // Default store handlers.
