@@ -249,6 +249,31 @@ def Builtin_Integer : Builtin_Type<"Integer"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MemRefElementTypeInterface
+//===----------------------------------------------------------------------===//
+
+def MemRefElementTypeInterface : TypeInterface<"MemRefElementTypeInterface"> {
+  let cppNamespace = "::mlir";
+  let description = [{
+    Indication that this type can be used as element in memref types.
+
+    Implementing this interface establishes a contract between this type and the
+    memref type indicating that this type can be used as element of ranked or
+    unranked memrefs. The type is expected to:
+
+      - model an entity stored in memory;
+      - have non-zero size.
+
+    For example, scalar values such as integers can implement this interface,
+    but indicator types such as `void` or `unit` should not.
+
+    The interface currently has no methods and is used by types to opt into
+    being memref elements. This may change in the future, in particular to
+    require types to provide their size or alignment given a data layout.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // MemRefType
 //===----------------------------------------------------------------------===//
 
@@ -281,6 +306,14 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "BaseMemRefType"> {
     receive memref arguments of any rank without versioning the functions based
     on the rank. Other uses of this type are disallowed or will have undefined
     behavior.
+
+    Are accepted as elements:
+
+    - built-in integer types;
+    - built-in index type;
+    - built-in floating point types;
+    - built-in vector types with elements of the above types;
+    - any other type implementing `MemRefElementTypeInterface`.
 
     ##### Codegen of Unranked Memref
 
