@@ -80,9 +80,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx1012 < %s | FileCheck --check-prefixes=V3-GFX1012-XNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx1012 -mattr=-xnack < %s | FileCheck --check-prefixes=V3-GFX1012-NOXNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx1012 -mattr=+xnack < %s | FileCheck --check-prefixes=V3-GFX1012-XNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx1013 < %s | FileCheck --check-prefixes=V3-GFX1013-XNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx1013 -mattr=-xnack < %s | FileCheck --check-prefixes=V3-GFX1013-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx1013 -mattr=+xnack < %s | FileCheck --check-prefixes=V3-GFX1013-XNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx1030 < %s | FileCheck --check-prefixes=V3-GFX1030 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx1031 < %s | FileCheck --check-prefixes=V3-GFX1031 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=3 -mcpu=gfx1032 < %s | FileCheck --check-prefixes=V3-GFX1032 %s
@@ -171,9 +168,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1012 < %s | FileCheck --check-prefixes=GFX1012 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1012 -mattr=-xnack < %s | FileCheck --check-prefixes=GFX1012-NOXNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1012 -mattr=+xnack < %s | FileCheck --check-prefixes=GFX1012-XNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1013 < %s | FileCheck --check-prefixes=GFX1013 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1013 -mattr=-xnack < %s | FileCheck --check-prefixes=GFX1013-NOXNACK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1013 -mattr=+xnack < %s | FileCheck --check-prefixes=GFX1013-XNACK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 < %s | FileCheck --check-prefixes=GFX1030 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1031 < %s | FileCheck --check-prefixes=GFX1031 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1032 < %s | FileCheck --check-prefixes=GFX1032 %s
@@ -220,8 +214,6 @@
 ; V3-GFX1011-XNACK: .amdgcn_target "amdgcn-amd-amdhsa--gfx1011+xnack"
 ; V3-GFX1012-NOXNACK: .amdgcn_target "amdgcn-amd-amdhsa--gfx1012"
 ; V3-GFX1012-XNACK: .amdgcn_target "amdgcn-amd-amdhsa--gfx1012+xnack"
-; V3-GFX1013-NOXNACK: .amdgcn_target "amdgcn-amd-amdhsa--gfx1013"
-; V3-GFX1013-XNACK: .amdgcn_target "amdgcn-amd-amdhsa--gfx1013+xnack"
 ; V3-GFX1030: .amdgcn_target "amdgcn-amd-amdhsa--gfx1030"
 ; V3-GFX1031: .amdgcn_target "amdgcn-amd-amdhsa--gfx1031"
 ; V3-GFX1032: .amdgcn_target "amdgcn-amd-amdhsa--gfx1032"
@@ -288,9 +280,6 @@
 ; GFX1012: .amdgcn_target "amdgcn-amd-amdhsa--gfx1012"
 ; GFX1012-NOXNACK: .amdgcn_target "amdgcn-amd-amdhsa--gfx1012:xnack-"
 ; GFX1012-XNACK: .amdgcn_target "amdgcn-amd-amdhsa--gfx1012:xnack+"
-; GFX1013: .amdgcn_target "amdgcn-amd-amdhsa--gfx1013"
-; GFX1013-NOXNACK: .amdgcn_target "amdgcn-amd-amdhsa--gfx1013:xnack-"
-; GFX1013-XNACK: .amdgcn_target "amdgcn-amd-amdhsa--gfx1013:xnack+"
 ; GFX1030: .amdgcn_target "amdgcn-amd-amdhsa--gfx1030"
 ; GFX1031: .amdgcn_target "amdgcn-amd-amdhsa--gfx1031"
 ; GFX1032: .amdgcn_target "amdgcn-amd-amdhsa--gfx1032"
