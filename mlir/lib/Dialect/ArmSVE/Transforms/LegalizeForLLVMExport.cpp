@@ -143,24 +143,6 @@ configureBasicSVEArithmeticLegalizations(LLVMConversionTarget &target) {
   // clang-format on
 }
 
-static void
-populateSVEMaskGenerationExportPatterns(LLVMTypeConverter &converter,
-                                        OwningRewritePatternList &patterns) {
-  // clang-format off
-  patterns.add<OneToOneConvertToLLVMPattern<ScalableCmpFOp, LLVM::FCmpOp>,
-               OneToOneConvertToLLVMPattern<ScalableCmpIOp, LLVM::ICmpOp>
-              >(converter);
-  // clang-format on
-}
-
-static void
-configureSVEMaskGenerationLegalizations(LLVMConversionTarget &target) {
-  // clang-format off
-  target.addIllegalOp<ScalableCmpFOp,
-                      ScalableCmpIOp>();
-  // clang-format on
-}
-
 /// Populate the given list with patterns that convert from ArmSVE to LLVM.
 void mlir::populateArmSVELegalizeForLLVMExportPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
@@ -193,7 +175,6 @@ void mlir::populateArmSVELegalizeForLLVMExportPatterns(
                ScalableMaskedDivFOpLowering>(converter);
   // clang-format on
   populateBasicSVEArithmeticExportPatterns(converter, patterns);
-  populateSVEMaskGenerationExportPatterns(converter, patterns);
 }
 
 void mlir::configureArmSVELegalizeForExportTarget(
@@ -244,5 +225,4 @@ void mlir::configureArmSVELegalizeForExportTarget(
                !hasScalableVectorType(op->getResultTypes());
       });
   configureBasicSVEArithmeticLegalizations(target);
-  configureSVEMaskGenerationLegalizations(target);
 }
