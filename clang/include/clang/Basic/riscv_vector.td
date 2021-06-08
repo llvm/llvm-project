@@ -1169,6 +1169,50 @@ multiclass RVVStridedSegStore<string op> {
   }
 }
 
+multiclass RVVIndexedSegStore<string op> {
+  foreach type = TypeList in {
+    foreach eew_info = EEWList in {
+      defvar eew = eew_info[0];
+      defvar eew_type = eew_info[1];
+      foreach nf = NFList in {
+        let Name = op # nf # "ei" # eew # "_v",
+            IRName = op # nf,
+            IRNameMask = op # nf # "_mask",
+            NF = nf,
+            HasMaskedOffOperand = false,
+            ManualCodegen = [{
+    {
+      // Builtin: (ptr, index, val0, val1, ..., vl)
+      // Intrinsic: (val0, val1, ..., ptr, index, vl)
+      std::rotate(Ops.begin(), Ops.begin() + 2, Ops.end() - 1);
+      IntrinsicTypes = {Ops[0]->getType(),
+                        Ops[NF + 1]->getType(), Ops[NF + 2]->getType()};
+      assert(Ops.size() == NF + 3);
+    }
+            }],
+            ManualCodegenMask = [{
+    {
+      // Builtin: (mask, ptr, index, val0, val1, ..., vl)
+      // Intrinsic: (val0, val1, ..., ptr, index, mask, vl)
+      std::rotate(Ops.begin(), Ops.begin() + 3, Ops.end() - 1);
+      std::rotate(Ops.begin() + NF, Ops.begin() + NF + 1, Ops.begin() + NF + 3);
+      IntrinsicTypes = {Ops[0]->getType(),
+                        Ops[NF + 1]->getType(), Ops[NF + 3]->getType()};
+      assert(Ops.size() == NF + 4);
+    }
+            }] in {
+          defvar V = VString<nf, /*signed=*/true>.S;
+          defvar UV = VString<nf, /*signed=*/false>.S;
+          def : RVVBuiltin<"v", "0Pe" # eew_type # "Uv" # V, type>;
+          if !not(IsFloat<type>.val) then {
+            def : RVVBuiltin<"Uv", "0PUe" # eew_type # "Uv" # UV, type>;
+          }
+        }
+      }
+    }
+  }
+}
+
 multiclass RVVAMOBuiltinSet<bit has_signed = false, bit has_unsigned = false,
                             bit has_fp = false> {
   defvar type_list = !if(has_fp, ["i","l","f","d"], ["i","l"]);
@@ -1493,6 +1537,8 @@ defm : RVVIndexedSegLoad<"vluxseg">;
 defm : RVVIndexedSegLoad<"vloxseg">;
 defm : RVVUnitStridedSegStore<"vsseg">;
 defm : RVVStridedSegStore<"vssseg">;
+defm : RVVIndexedSegStore<"vsuxseg">;
+defm : RVVIndexedSegStore<"vsoxseg">;
 }
 
 // 8. Vector AMO Operations
