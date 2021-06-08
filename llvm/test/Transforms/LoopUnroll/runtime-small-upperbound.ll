@@ -100,67 +100,45 @@ define dso_local void @hoge_5(i8 %arg) {
 ; UPPER-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[X]], 17
 ; UPPER-NEXT:    br i1 [[TMP0]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; UPPER:       loop.preheader:
-; UPPER-NEXT:    [[TMP1:%.*]] = sub i32 16, [[X]]
-; UPPER-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 2
-; UPPER-NEXT:    [[TMP3:%.*]] = add nuw nsw i32 [[TMP2]], 1
-; UPPER-NEXT:    [[TMP4:%.*]] = urem i32 [[TMP2]], 6
-; UPPER-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], 1
-; UPPER-NEXT:    [[XTRAITER:%.*]] = urem i32 [[TMP5]], 6
-; UPPER-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i32 [[XTRAITER]], 0
-; UPPER-NEXT:    br i1 [[LCMP_MOD]], label [[LOOP_PROL_PREHEADER:%.*]], label [[LOOP_PROL_LOOPEXIT:%.*]]
-; UPPER:       loop.prol.preheader:
-; UPPER-NEXT:    br label [[LOOP_PROL:%.*]]
-; UPPER:       loop.prol:
-; UPPER-NEXT:    [[IV_PROL:%.*]] = phi i32 [ [[IV_NEXT_PROL:%.*]], [[LOOP_PROL]] ], [ [[X]], [[LOOP_PROL_PREHEADER]] ]
-; UPPER-NEXT:    [[PTR_PROL:%.*]] = phi i8* [ [[PTR_NEXT_PROL:%.*]], [[LOOP_PROL]] ], [ [[Y]], [[LOOP_PROL_PREHEADER]] ]
-; UPPER-NEXT:    [[PROL_ITER:%.*]] = phi i32 [ [[XTRAITER]], [[LOOP_PROL_PREHEADER]] ], [ [[PROL_ITER_SUB:%.*]], [[LOOP_PROL]] ]
-; UPPER-NEXT:    [[IV_NEXT_PROL]] = add nuw i32 [[IV_PROL]], 4
-; UPPER-NEXT:    [[PTR_NEXT_PROL]] = getelementptr inbounds i8, i8* [[PTR_PROL]], i32 1
-; UPPER-NEXT:    store i8 [[ARG:%.*]], i8* [[PTR_NEXT_PROL]], align 1
-; UPPER-NEXT:    [[TMP6:%.*]] = icmp ult i32 [[IV_NEXT_PROL]], 17
-; UPPER-NEXT:    [[PROL_ITER_SUB]] = sub i32 [[PROL_ITER]], 1
-; UPPER-NEXT:    [[PROL_ITER_CMP:%.*]] = icmp ne i32 [[PROL_ITER_SUB]], 0
-; UPPER-NEXT:    br i1 [[PROL_ITER_CMP]], label [[LOOP_PROL]], label [[LOOP_PROL_LOOPEXIT_UNR_LCSSA:%.*]], [[LOOP0:!llvm.loop !.*]]
-; UPPER:       loop.prol.loopexit.unr-lcssa:
-; UPPER-NEXT:    [[IV_UNR_PH:%.*]] = phi i32 [ [[IV_NEXT_PROL]], [[LOOP_PROL]] ]
-; UPPER-NEXT:    [[PTR_UNR_PH:%.*]] = phi i8* [ [[PTR_NEXT_PROL]], [[LOOP_PROL]] ]
-; UPPER-NEXT:    br label [[LOOP_PROL_LOOPEXIT]]
-; UPPER:       loop.prol.loopexit:
-; UPPER-NEXT:    [[IV_UNR:%.*]] = phi i32 [ [[X]], [[LOOP_PREHEADER]] ], [ [[IV_UNR_PH]], [[LOOP_PROL_LOOPEXIT_UNR_LCSSA]] ]
-; UPPER-NEXT:    [[PTR_UNR:%.*]] = phi i8* [ [[Y]], [[LOOP_PREHEADER]] ], [ [[PTR_UNR_PH]], [[LOOP_PROL_LOOPEXIT_UNR_LCSSA]] ]
-; UPPER-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[TMP2]], 5
-; UPPER-NEXT:    br i1 [[TMP7]], label [[EXIT_LOOPEXIT:%.*]], label [[LOOP_PREHEADER_NEW:%.*]]
-; UPPER:       loop.preheader.new:
 ; UPPER-NEXT:    br label [[LOOP:%.*]]
 ; UPPER:       loop:
-; UPPER-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_UNR]], [[LOOP_PREHEADER_NEW]] ], [ [[IV_NEXT_5:%.*]], [[LOOP]] ]
-; UPPER-NEXT:    [[PTR:%.*]] = phi i8* [ [[PTR_UNR]], [[LOOP_PREHEADER_NEW]] ], [ [[PTR_NEXT_5:%.*]], [[LOOP]] ]
-; UPPER-NEXT:    [[IV_NEXT:%.*]] = add nuw i32 [[IV]], 4
-; UPPER-NEXT:    [[PTR_NEXT:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i32 1
-; UPPER-NEXT:    store i8 [[ARG]], i8* [[PTR_NEXT]], align 1
-; UPPER-NEXT:    [[IV_NEXT_1:%.*]] = add nuw i32 [[IV_NEXT]], 4
-; UPPER-NEXT:    [[PTR_NEXT_1:%.*]] = getelementptr inbounds i8, i8* [[PTR_NEXT]], i32 1
-; UPPER-NEXT:    store i8 [[ARG]], i8* [[PTR_NEXT_1]], align 1
-; UPPER-NEXT:    [[IV_NEXT_2:%.*]] = add nuw i32 [[IV_NEXT_1]], 4
-; UPPER-NEXT:    [[PTR_NEXT_2:%.*]] = getelementptr inbounds i8, i8* [[PTR_NEXT_1]], i32 1
-; UPPER-NEXT:    store i8 [[ARG]], i8* [[PTR_NEXT_2]], align 1
-; UPPER-NEXT:    [[IV_NEXT_3:%.*]] = add nuw i32 [[IV_NEXT_2]], 4
-; UPPER-NEXT:    [[PTR_NEXT_3:%.*]] = getelementptr inbounds i8, i8* [[PTR_NEXT_2]], i32 1
-; UPPER-NEXT:    store i8 [[ARG]], i8* [[PTR_NEXT_3]], align 1
-; UPPER-NEXT:    [[IV_NEXT_4:%.*]] = add nuw i32 [[IV_NEXT_3]], 4
-; UPPER-NEXT:    [[PTR_NEXT_4:%.*]] = getelementptr inbounds i8, i8* [[PTR_NEXT_3]], i32 1
-; UPPER-NEXT:    store i8 [[ARG]], i8* [[PTR_NEXT_4]], align 1
-; UPPER-NEXT:    [[IV_NEXT_5]] = add nuw i32 [[IV_NEXT_4]], 4
-; UPPER-NEXT:    [[PTR_NEXT_5]] = getelementptr inbounds i8, i8* [[PTR_NEXT_4]], i32 1
-; UPPER-NEXT:    store i8 [[ARG]], i8* [[PTR_NEXT_5]], align 1
-; UPPER-NEXT:    [[TMP8:%.*]] = icmp ult i32 [[IV_NEXT_5]], 17
-; UPPER-NEXT:    br i1 [[TMP8]], label [[LOOP]], label [[EXIT_LOOPEXIT_UNR_LCSSA:%.*]]
-; UPPER:       exit.loopexit.unr-lcssa:
-; UPPER-NEXT:    br label [[EXIT_LOOPEXIT]]
+; UPPER-NEXT:    [[IV_NEXT:%.*]] = add nuw i32 [[X]], 4
+; UPPER-NEXT:    [[PTR_NEXT:%.*]] = getelementptr inbounds i8, i8* [[Y]], i32 1
+; UPPER-NEXT:    store i8 [[ARG:%.*]], i8* [[PTR_NEXT]], align 1
+; UPPER-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[IV_NEXT]], 17
+; UPPER-NEXT:    br i1 [[TMP1]], label [[LOOP_1:%.*]], label [[EXIT_LOOPEXIT:%.*]]
 ; UPPER:       exit.loopexit:
 ; UPPER-NEXT:    br label [[EXIT]]
 ; UPPER:       exit:
 ; UPPER-NEXT:    ret void
+; UPPER:       loop.1:
+; UPPER-NEXT:    [[IV_NEXT_1:%.*]] = add nuw i32 [[IV_NEXT]], 4
+; UPPER-NEXT:    [[PTR_NEXT_1:%.*]] = getelementptr inbounds i8, i8* [[PTR_NEXT]], i32 1
+; UPPER-NEXT:    store i8 [[ARG]], i8* [[PTR_NEXT_1]], align 1
+; UPPER-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[IV_NEXT_1]], 17
+; UPPER-NEXT:    br i1 [[TMP2]], label [[LOOP_2:%.*]], label [[EXIT_LOOPEXIT]]
+; UPPER:       loop.2:
+; UPPER-NEXT:    [[IV_NEXT_2:%.*]] = add nuw i32 [[IV_NEXT_1]], 4
+; UPPER-NEXT:    [[PTR_NEXT_2:%.*]] = getelementptr inbounds i8, i8* [[PTR_NEXT_1]], i32 1
+; UPPER-NEXT:    store i8 [[ARG]], i8* [[PTR_NEXT_2]], align 1
+; UPPER-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[IV_NEXT_2]], 17
+; UPPER-NEXT:    br i1 [[TMP3]], label [[LOOP_3:%.*]], label [[EXIT_LOOPEXIT]]
+; UPPER:       loop.3:
+; UPPER-NEXT:    [[IV_NEXT_3:%.*]] = add nuw i32 [[IV_NEXT_2]], 4
+; UPPER-NEXT:    [[PTR_NEXT_3:%.*]] = getelementptr inbounds i8, i8* [[PTR_NEXT_2]], i32 1
+; UPPER-NEXT:    store i8 [[ARG]], i8* [[PTR_NEXT_3]], align 1
+; UPPER-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[IV_NEXT_3]], 17
+; UPPER-NEXT:    br i1 [[TMP4]], label [[LOOP_4:%.*]], label [[EXIT_LOOPEXIT]]
+; UPPER:       loop.4:
+; UPPER-NEXT:    [[IV_NEXT_4:%.*]] = add nuw i32 [[IV_NEXT_3]], 4
+; UPPER-NEXT:    [[PTR_NEXT_4:%.*]] = getelementptr inbounds i8, i8* [[PTR_NEXT_3]], i32 1
+; UPPER-NEXT:    store i8 [[ARG]], i8* [[PTR_NEXT_4]], align 1
+; UPPER-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[IV_NEXT_4]], 17
+; UPPER-NEXT:    br i1 [[TMP5]], label [[LOOP_5:%.*]], label [[EXIT_LOOPEXIT]]
+; UPPER:       loop.5:
+; UPPER-NEXT:    [[PTR_NEXT_5:%.*]] = getelementptr inbounds i8, i8* [[PTR_NEXT_4]], i32 1
+; UPPER-NEXT:    store i8 [[ARG]], i8* [[PTR_NEXT_5]], align 1
+; UPPER-NEXT:    br label [[EXIT_LOOPEXIT]]
 ;
 entry:
   %x = load i32, i32* @global, align 4

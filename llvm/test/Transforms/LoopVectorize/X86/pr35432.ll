@@ -40,16 +40,16 @@ define i32 @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i32 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP6]], i32 [[TMP2]], i32 [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[TMP5]], [[UMIN]]
+; CHECK-NEXT:    [[UMIN1:%.*]] = select i1 [[TMP6]], i32 [[TMP2]], i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[TMP5]], [[UMIN1]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP7]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i8 [[CONV3]], -1
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i8 [[TMP8]] to i32
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult i32 [[TMP2]], [[TMP9]]
-; CHECK-NEXT:    [[UMIN1:%.*]] = select i1 [[TMP10]], i32 [[TMP2]], i32 [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP9]], [[UMIN1]]
+; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP10]], i32 [[TMP2]], i32 [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP9]], [[UMIN]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = trunc i32 [[TMP11]] to i8
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 1, i8 [[TMP12]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
@@ -85,9 +85,9 @@ define i32 @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP29:%.*]] = add i8 [[TMP25]], -1
 ; CHECK-NEXT:    [[TMP30:%.*]] = zext i8 [[TMP28]] to i32
 ; CHECK-NEXT:    [[TMP31:%.*]] = zext i8 [[TMP29]] to i32
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP32]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP32]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP27]], [[TMP26]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
@@ -104,7 +104,7 @@ define i32 @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[DEC]] = add i8 [[C_04]], -1
 ; CHECK-NEXT:    [[CONV5:%.*]] = zext i8 [[DEC]] to i32
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP2]], [[CONV5]]
-; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY8]], label [[FOR_COND4_FOR_INC9_CRIT_EDGE]], [[LOOP2:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY8]], label [[FOR_COND4_FOR_INC9_CRIT_EDGE]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       for.cond4.for.inc9_crit_edge:
 ; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], [[FOR_BODY8]] ], [ [[TMP33]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    store i32 [[INC_LCSSA]], i32* getelementptr inbounds ([192 x [192 x i32]], [192 x [192 x i32]]* @a, i64 0, i64 0, i64 0), align 16

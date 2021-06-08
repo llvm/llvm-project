@@ -36,6 +36,7 @@ static_library("Scalar") {
     "JumpThreading.cpp",
     "LICM.cpp",
     "LoopAccessAnalysisPrinter.cpp",
+    "LoopBoundSplit.cpp",
     "LoopDataPrefetch.cpp",
     "LoopDeletion.cpp",
     "LoopDistribute.cpp",

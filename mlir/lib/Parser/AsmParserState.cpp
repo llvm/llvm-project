@@ -18,7 +18,8 @@ using namespace mlir;
 
 struct AsmParserState::Impl {
   /// A map from a SymbolRefAttr to a range of uses.
-  using SymbolUseMap = DenseMap<Attribute, SmallVector<llvm::SMRange>>;
+  using SymbolUseMap =
+      DenseMap<Attribute, SmallVector<SmallVector<llvm::SMRange>, 0>>;
 
   struct PartialOpDef {
     explicit PartialOpDef(const OperationName &opName) {
@@ -73,10 +74,12 @@ void AsmParserState::Impl::resolveSymbolUses(Operation *op,
                                           symbolOps)))
       continue;
 
-    for (const auto &symIt : llvm::zip(symbolOps, it.second)) {
-      auto opIt = operationToIdx.find(std::get<0>(symIt));
-      if (opIt != operationToIdx.end())
-        operations[opIt->second]->symbolUses.push_back(std::get<1>(symIt));
+    for (ArrayRef<llvm::SMRange> useRange : it.second) {
+      for (const auto &symIt : llvm::zip(symbolOps, useRange)) {
+        auto opIt = operationToIdx.find(std::get<0>(symIt));
+        if (opIt != operationToIdx.end())
+          operations[opIt->second]->symbolUses.push_back(std::get<1>(symIt));
+      }
     }
   }
 }
@@ -282,8 +285,8 @@ void AsmParserState::addUses(SymbolRefAttr refAttr,
 
   assert((refAttr.getNestedReferences().size() + 1) == locations.size() &&
          "expected the same number of references as provided locations");
-  (*impl->symbolUseScopes.back())[refAttr].append(locations.begin(),
-                                                  locations.end());
+  (*impl->symbolUseScopes.back())[refAttr].emplace_back(locations.begin(),
+                                                        locations.end());
 }
 
 void AsmParserState::refineDefinition(Value oldValue, Value newValue) {

@@ -30,6 +30,8 @@ struct Range {
 
 class OffsetSizeAndStrideOpInterface;
 
+bool isEqualConstantInt(OpFoldResult ofr, int64_t value);
+
 namespace detail {
 LogicalResult verifyOffsetSizeAndStrideOp(OffsetSizeAndStrideOpInterface op);
 

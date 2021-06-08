@@ -63,7 +63,7 @@ define i32 @test(float* nocapture readonly %x) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = fpext <2 x float> [[WIDE_LOAD2]] to <2 x double>
 ; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast <2 x double> [[TMP10]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP16]] = fsub fast <2 x double> [[VEC_PHI]], [[TMP15]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; CHECK:       middle.block:

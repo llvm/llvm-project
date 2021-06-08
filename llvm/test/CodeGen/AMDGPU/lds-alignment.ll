@@ -46,9 +46,9 @@ define amdgpu_kernel void @test_round_size_2(i8 addrspace(1)* %out, i8 addrspace
   ret void
 }
 
-; 38 + (2 pad) + 38
+; 38 + (10 pad) + 38  (= 86)
 ; HSA-LABEL: {{^}}test_round_size_2_align_8:
-; HSA: workgroup_group_segment_byte_size = 78
+; HSA: workgroup_group_segment_byte_size = 86
 ; HSA: group_segment_alignment = 4
 define amdgpu_kernel void @test_round_size_2_align_8(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
   %lds.align16.0.bc = bitcast [38 x i8] addrspace(3)* @lds.align16.0 to i8 addrspace(3)*
@@ -94,7 +94,6 @@ define amdgpu_kernel void @test_high_align_lds_arg(i8 addrspace(1)* %out, i8 add
   ret void
 }
 
-; FIXME: missign alignment can be improved.
 ; (39 * 4) + (4 pad) + (7 * 8) = 216
 ; HSA-LABEL: {{^}}test_missing_alignment_size_2_order0:
 ; HSA: workgroup_group_segment_byte_size = 216
@@ -127,10 +126,10 @@ define amdgpu_kernel void @test_missing_alignment_size_2_order1(i8 addrspace(1)*
   ret void
 }
 
-; align 32, 16, 8
-; 38 + (10 pad) + 38 + (2 pad) + 38 = 126
+; align 32, 16, 16
+; 38 + (10 pad) + 38 + (10 pad) + 38  ( = 134)
 ; HSA-LABEL: {{^}}test_round_size_3_order0:
-; HSA: workgroup_group_segment_byte_size = 126
+; HSA: workgroup_group_segment_byte_size = 134
 ; HSA: group_segment_alignment = 4
 define amdgpu_kernel void @test_round_size_3_order0(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
   %lds.align32.0.bc = bitcast [38 x i8] addrspace(3)* @lds.align32.0 to i8 addrspace(3)*
@@ -148,10 +147,10 @@ define amdgpu_kernel void @test_round_size_3_order0(i8 addrspace(1)* %out, i8 ad
   ret void
 }
 
-; align 32, 8, 16
-; 38 (+ 10 pad) + 38 + (2 pad) + 38 = 126
+; align 32, 16, 16
+; 38 (+ 10 pad) + 38 + (10 pad) + 38 ( = 134)
 ; HSA-LABEL: {{^}}test_round_size_3_order1:
-; HSA: workgroup_group_segment_byte_size = 126
+; HSA: workgroup_group_segment_byte_size = 134
 ; HSA: group_segment_alignment = 4
 define amdgpu_kernel void @test_round_size_3_order1(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
   %lds.align32.0.bc = bitcast [38 x i8] addrspace(3)* @lds.align32.0 to i8 addrspace(3)*
@@ -169,10 +168,10 @@ define amdgpu_kernel void @test_round_size_3_order1(i8 addrspace(1)* %out, i8 ad
   ret void
 }
 
-; align 16, 32, 8
-; 38 + (10 pad) + 38 + (2 pad) + 38 = 126
+; align 32, 16, 16
+; 38 + (10 pad) + 38 + (10 pad) + 38  ( = 126)
 ; HSA-LABEL: {{^}}test_round_size_3_order2:
-; HSA: workgroup_group_segment_byte_size = 126
+; HSA: workgroup_group_segment_byte_size = 134
 ; HSA: group_segment_alignment = 4
 define amdgpu_kernel void @test_round_size_3_order2(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
   %lds.align16.0.bc = bitcast [38 x i8] addrspace(3)* @lds.align16.0 to i8 addrspace(3)*
@@ -190,11 +189,10 @@ define amdgpu_kernel void @test_round_size_3_order2(i8 addrspace(1)* %out, i8 ad
   ret void
 }
 
-; FIXME: Improve alignment
-; align 16, 8, 32
-; 38 + (10 pad) + 38 + (2 pad) + 38
+; align 32, 16, 16
+; 38 + (10 pad) + 38 + (10 pad) + 38 ( = 134)
 ; HSA-LABEL: {{^}}test_round_size_3_order3:
-; HSA: workgroup_group_segment_byte_size = 126
+; HSA: workgroup_group_segment_byte_size = 134
 ; HSA: group_segment_alignment = 4
 define amdgpu_kernel void @test_round_size_3_order3(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
   %lds.align16.0.bc = bitcast [38 x i8] addrspace(3)* @lds.align16.0 to i8 addrspace(3)*
@@ -212,10 +210,10 @@ define amdgpu_kernel void @test_round_size_3_order3(i8 addrspace(1)* %out, i8 ad
   ret void
 }
 
-; align 8, 32, 16
-; 38 + (10 pad) + 38 + (2 pad) + 38 = 126
+; align 32, 16, 16
+; 38 + (10 pad) + 38 + (10 pad) + 38  (= 134)
 ; HSA-LABEL: {{^}}test_round_size_3_order4:
-; HSA: workgroup_group_segment_byte_size = 126
+; HSA: workgroup_group_segment_byte_size = 134
 ; HSA: group_segment_alignment = 4
 define amdgpu_kernel void @test_round_size_3_order4(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
   %lds.align8.0.bc = bitcast [38 x i8] addrspace(3)* @lds.align8.0 to i8 addrspace(3)*
@@ -233,10 +231,10 @@ define amdgpu_kernel void @test_round_size_3_order4(i8 addrspace(1)* %out, i8 ad
   ret void
 }
 
-; align 8, 16, 32
-; 38 + (10 pad) + 38 + (2 pad) + 38 = 126
+; align 32, 16, 16
+; 38 + (10 pad) + 38 + (10 pad) + 38  (= 134)
 ; HSA-LABEL: {{^}}test_round_size_3_order5:
-; HSA: workgroup_group_segment_byte_size = 126
+; HSA: workgroup_group_segment_byte_size = 134
 ; HSA: group_segment_alignment = 4
 define amdgpu_kernel void @test_round_size_3_order5(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #1 {
   %lds.align8.0.bc = bitcast [38 x i8] addrspace(3)* @lds.align8.0 to i8 addrspace(3)*

@@ -51,9 +51,9 @@ define half @vectorize_v2f16_loop(half addrspace(1)* noalias %s) {
 ; GFX9-NEXT:    [[TMP21]] = fadd fast <2 x half> [[VEC_PHI5]], [[WIDE_LOAD12]]
 ; GFX9-NEXT:    [[TMP22]] = fadd fast <2 x half> [[VEC_PHI6]], [[WIDE_LOAD13]]
 ; GFX9-NEXT:    [[TMP23]] = fadd fast <2 x half> [[VEC_PHI7]], [[WIDE_LOAD14]]
-; GFX9-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
+; GFX9-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; GFX9-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
-; GFX9-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
+; GFX9-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; GFX9:       middle.block:
 ; GFX9-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x half> [[TMP17]], [[TMP16]]
 ; GFX9-NEXT:    [[BIN_RDX15:%.*]] = fadd fast <2 x half> [[TMP18]], [[BIN_RDX]]
@@ -67,7 +67,7 @@ define half @vectorize_v2f16_loop(half addrspace(1)* noalias %s) {
 ; GFX9:       scalar.ph:
 ; GFX9-NEXT:    br label [[FOR_BODY:%.*]]
 ; GFX9:       for.body:
-; GFX9-NEXT:    br i1 undef, label [[FOR_END]], label [[FOR_BODY]], [[LOOP2:!llvm.loop !.*]]
+; GFX9-NEXT:    br i1 undef, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; GFX9:       for.end:
 ; GFX9-NEXT:    [[ADD_LCSSA:%.*]] = phi half [ undef, [[FOR_BODY]] ], [ [[TMP25]], [[MIDDLE_BLOCK]] ]
 ; GFX9-NEXT:    ret half [[ADD_LCSSA]]
@@ -119,9 +119,9 @@ define half @vectorize_v2f16_loop(half addrspace(1)* noalias %s) {
 ; VI-NEXT:    [[TMP21]] = fadd fast <2 x half> [[VEC_PHI5]], [[WIDE_LOAD12]]
 ; VI-NEXT:    [[TMP22]] = fadd fast <2 x half> [[VEC_PHI6]], [[WIDE_LOAD13]]
 ; VI-NEXT:    [[TMP23]] = fadd fast <2 x half> [[VEC_PHI7]], [[WIDE_LOAD14]]
-; VI-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
+; VI-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VI-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
-; VI-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
+; VI-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VI:       middle.block:
 ; VI-NEXT:    [[BIN_RDX:%.*]] = fadd fast <2 x half> [[TMP17]], [[TMP16]]
 ; VI-NEXT:    [[BIN_RDX15:%.*]] = fadd fast <2 x half> [[TMP18]], [[BIN_RDX]]
@@ -135,7 +135,7 @@ define half @vectorize_v2f16_loop(half addrspace(1)* noalias %s) {
 ; VI:       scalar.ph:
 ; VI-NEXT:    br label [[FOR_BODY:%.*]]
 ; VI:       for.body:
-; VI-NEXT:    br i1 undef, label [[FOR_END]], label [[FOR_BODY]], [[LOOP2:!llvm.loop !.*]]
+; VI-NEXT:    br i1 undef, label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; VI:       for.end:
 ; VI-NEXT:    [[ADD_LCSSA:%.*]] = phi half [ undef, [[FOR_BODY]] ], [ [[TMP25]], [[MIDDLE_BLOCK]] ]
 ; VI-NEXT:    ret half [[ADD_LCSSA]]

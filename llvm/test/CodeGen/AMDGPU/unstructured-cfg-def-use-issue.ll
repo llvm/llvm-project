@@ -11,7 +11,7 @@ define hidden void @widget() {
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    v_writelane_b32 v40, s33, 2
 ; GCN-NEXT:    s_mov_b32 s33, s32
-; GCN-NEXT:    s_add_u32 s32, s32, 0x400
+; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    flat_load_dword v0, v[0:1]
@@ -53,7 +53,7 @@ define hidden void @widget() {
 ; GCN-NEXT:  BB0_7: ; %UnifiedReturnBlock
 ; GCN-NEXT:    v_readlane_b32 s4, v40, 0
 ; GCN-NEXT:    v_readlane_b32 s5, v40, 1
-; GCN-NEXT:    s_sub_u32 s32, s32, 0x400
+; GCN-NEXT:    s_addk_i32 s32, 0xfc00
 ; GCN-NEXT:    v_readlane_b32 s33, v40, 2
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s32 ; 4-byte Folded Reload
@@ -191,7 +191,7 @@ define hidden void @blam() {
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    v_writelane_b32 v43, s33, 4
 ; GCN-NEXT:    s_mov_b32 s33, s32
-; GCN-NEXT:    s_add_u32 s32, s32, 0x800
+; GCN-NEXT:    s_addk_i32 s32, 0x800
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v42, off, s[0:3], s33 ; 4-byte Folded Spill

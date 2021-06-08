@@ -555,22 +555,30 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
       }
     }
 
-    // exp(X) * exp(Y) -> exp(X + Y)
-    if (match(Op0, m_Intrinsic<Intrinsic::exp>(m_Value(X))) &&
-        match(Op1, m_Intrinsic<Intrinsic::exp>(m_Value(Y))) &&
-        I.isOnlyUserOfAnyOperand()) {
-      Value *XY = Builder.CreateFAddFMF(X, Y, &I);
-      Value *Exp = Builder.CreateUnaryIntrinsic(Intrinsic::exp, XY, &I);
-      return replaceInstUsesWith(I, Exp);
-    }
+    if (I.isOnlyUserOfAnyOperand()) {
+      // pow(x, y) * pow(x, z) -> pow(x, y + z)
+      if (match(Op0, m_Intrinsic<Intrinsic::pow>(m_Value(X), m_Value(Y))) &&
+          match(Op1, m_Intrinsic<Intrinsic::pow>(m_Specific(X), m_Value(Z)))) {
+        auto *YZ = Builder.CreateFAddFMF(Y, Z, &I);
+        auto *NewPow = Builder.CreateBinaryIntrinsic(Intrinsic::pow, X, YZ, &I);
+        return replaceInstUsesWith(I, NewPow);
+      }
 
-    // exp2(X) * exp2(Y) -> exp2(X + Y)
-    if (match(Op0, m_Intrinsic<Intrinsic::exp2>(m_Value(X))) &&
-        match(Op1, m_Intrinsic<Intrinsic::exp2>(m_Value(Y))) &&
-        I.isOnlyUserOfAnyOperand()) {
-      Value *XY = Builder.CreateFAddFMF(X, Y, &I);
-      Value *Exp2 = Builder.CreateUnaryIntrinsic(Intrinsic::exp2, XY, &I);
-      return replaceInstUsesWith(I, Exp2);
+      // exp(X) * exp(Y) -> exp(X + Y)
+      if (match(Op0, m_Intrinsic<Intrinsic::exp>(m_Value(X))) &&
+          match(Op1, m_Intrinsic<Intrinsic::exp>(m_Value(Y)))) {
+        Value *XY = Builder.CreateFAddFMF(X, Y, &I);
+        Value *Exp = Builder.CreateUnaryIntrinsic(Intrinsic::exp, XY, &I);
+        return replaceInstUsesWith(I, Exp);
+      }
+
+      // exp2(X) * exp2(Y) -> exp2(X + Y)
+      if (match(Op0, m_Intrinsic<Intrinsic::exp2>(m_Value(X))) &&
+          match(Op1, m_Intrinsic<Intrinsic::exp2>(m_Value(Y)))) {
+        Value *XY = Builder.CreateFAddFMF(X, Y, &I);
+        Value *Exp2 = Builder.CreateUnaryIntrinsic(Intrinsic::exp2, XY, &I);
+        return replaceInstUsesWith(I, Exp2);
+      }
     }
 
     // (X*Y) * X => (X*X) * Y where Y != X

@@ -1542,6 +1542,10 @@ private:
     return getLoopProperties(L).HasNoAbnormalExits;
   }
 
+  /// Return true if this loop is finite by assumption.  That is,
+  /// to be infinite, it must also be undefined.
+  bool loopIsFiniteByAssumption(const Loop *L);
+
   /// Compute a LoopDisposition value.
   LoopDisposition computeLoopDisposition(const SCEV *S, const Loop *L);
 

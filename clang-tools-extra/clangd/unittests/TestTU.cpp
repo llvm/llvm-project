@@ -17,7 +17,9 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/Utils.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "gtest/gtest.h"
+#include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cstdlib>
 
 namespace clang {
 namespace clangd {
@@ -69,14 +71,19 @@ ParseInputs TestTU::inputs(MockFS &FS) const {
 
 void initializeModuleCache(CompilerInvocation &CI) {
   llvm::SmallString<128> ModuleCachePath;
-  ASSERT_FALSE(
-      llvm::sys::fs::createUniqueDirectory("module-cache", ModuleCachePath));
+  if (llvm::sys::fs::createUniqueDirectory("module-cache", ModuleCachePath)) {
+    llvm::errs() << "Failed to create temp directory for module-cache";
+    std::abort();
+  }
   CI.getHeaderSearchOpts().ModuleCachePath = ModuleCachePath.c_str();
 }
 
 void deleteModuleCache(const std::string ModuleCachePath) {
   if (!ModuleCachePath.empty()) {
-    ASSERT_FALSE(llvm::sys::fs::remove_directories(ModuleCachePath));
+    if (llvm::sys::fs::remove_directories(ModuleCachePath)) {
+      llvm::errs() << "Failed to delete temp directory for module-cache";
+      std::abort();
+    }
   }
 }
 
@@ -112,14 +119,11 @@ ParsedAST TestTU::build() const {
   auto AST = ParsedAST::build(testPath(Filename), Inputs, std::move(CI),
                               Diags.take(), Preamble);
   if (!AST.hasValue()) {
-    ADD_FAILURE() << "Failed to build code:\n" << Code;
-    llvm_unreachable("Failed to build TestTU!");
+    llvm::errs() << "Failed to build code:\n" << Code;
+    std::abort();
   }
-  if (!AST->getDiagnostics()) {
-    ADD_FAILURE() << "TestTU should always build an AST with a fresh Preamble"
-                  << Code;
-    return std::move(*AST);
-  }
+  assert(AST->getDiagnostics() &&
+         "TestTU should always build an AST with a fresh Preamble");
   // Check for error diagnostics and report gtest failures (unless expected).
   // This guards against accidental syntax errors silently subverting tests.
   // error-ok is awfully primitive - using clang -verify would be nicer.
@@ -138,11 +142,11 @@ ParsedAST TestTU::build() const {
     // We always build AST with a fresh preamble in TestTU.
     for (const auto &D : *AST->getDiagnostics())
       if (D.Severity >= DiagnosticsEngine::Error) {
-        ADD_FAILURE()
+        llvm::errs()
             << "TestTU failed to build (suppress with /*error-ok*/): \n"
             << D << "\n\nFor code:\n"
             << Code;
-        break; // Just report first error for simplicity.
+        std::abort(); // Stop after first error for simplicity.
       }
   }
   return std::move(*AST);
@@ -176,16 +180,16 @@ const Symbol &findSymbol(const SymbolSlab &Slab, llvm::StringRef QName) {
     if (QName != (S.Scope + S.Name).str())
       continue;
     if (Result) {
-      ADD_FAILURE() << "Multiple symbols named " << QName << ":\n"
-                    << *Result << "\n---\n"
-                    << S;
+      llvm::errs() << "Multiple symbols named " << QName << ":\n"
+                   << *Result << "\n---\n"
+                   << S;
       assert(false && "QName is not unique");
     }
     Result = &S;
   }
   if (!Result) {
-    ADD_FAILURE() << "No symbol named " << QName << " in "
-                  << ::testing::PrintToString(Slab);
+    llvm::errs() << "No symbol named " << QName << " in "
+                 << llvm::to_string(Slab);
     assert(false && "No symbol with QName");
   }
   return *Result;
@@ -225,7 +229,7 @@ const NamedDecl &findDecl(ParsedAST &AST,
   Visitor.F = Filter;
   Visitor.TraverseDecl(AST.getASTContext().getTranslationUnitDecl());
   if (Visitor.Decls.size() != 1) {
-    ADD_FAILURE() << Visitor.Decls.size() << " symbols matched.";
+    llvm::errs() << Visitor.Decls.size() << " symbols matched.";
     assert(Visitor.Decls.size() == 1);
   }
   return *Visitor.Decls.front();

@@ -12,7 +12,7 @@ target triple = "x86_64-apple-macosx"
 define i32 @test(i32* readonly %p, i32* readnone %q) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK: vector.body:
-; CHECK:   %index.next = add i64 %index, 8
+; CHECK:   %index.next = add nuw i64 %index, 8
 ; CHECK: middle.block:
 ;
 entry:

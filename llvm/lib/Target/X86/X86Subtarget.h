@@ -610,14 +610,12 @@ public:
 
   /// Is this x86_64 with the ILP32 programming model (x32 ABI)?
   bool isTarget64BitILP32() const {
-    return In64BitMode && (TargetTriple.getEnvironment() == Triple::GNUX32 ||
-                           TargetTriple.isOSNaCl());
+    return In64BitMode && (TargetTriple.isX32() || TargetTriple.isOSNaCl());
   }
 
   /// Is this x86_64 with the LP64 programming model (standard AMD64, no x32)?
   bool isTarget64BitLP64() const {
-    return In64BitMode && (TargetTriple.getEnvironment() != Triple::GNUX32 &&
-                           !TargetTriple.isOSNaCl());
+    return In64BitMode && (!TargetTriple.isX32() && !TargetTriple.isOSNaCl());
   }
 
   PICStyles::Style getPICStyle() const { return PICStyle; }

@@ -216,10 +216,10 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
     file = make<DylibFile>(**result, umbrella, isBundleLoader);
 
     // parseReexports() can recursively call loadDylib(). That's fine since
-    // we wrote DylibFile we just loaded to the loadDylib cache via the `file`
-    // reference. But the recursive load can grow loadDylibs, so the `file`
-    // reference might become invalid after parseReexports() -- so copy the
-    // pointer it refers to before going on.
+    // we wrote the DylibFile we just loaded to the loadDylib cache via the
+    // `file` reference. But the recursive load can grow loadDylibs, so the
+    // `file` reference might become invalid after parseReexports() -- so copy
+    // the pointer it refers to before continuing.
     newFile = file;
     if (newFile->exportingFile)
       newFile->parseReexports(**result);

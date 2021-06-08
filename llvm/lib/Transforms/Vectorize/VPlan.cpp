@@ -397,6 +397,18 @@ VPBasicBlock *VPBasicBlock::splitAt(iterator SplitAt) {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPBlockBase::printSuccessors(raw_ostream &O, const Twine &Indent) const {
+  if (getSuccessors().empty()) {
+    O << Indent << "No successors\n";
+  } else {
+    O << Indent << "Successor(s): ";
+    ListSeparator LS;
+    for (auto *Succ : getSuccessors())
+      O << LS << Succ->getName();
+    O << '\n';
+  }
+}
+
 void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
                          VPSlotTracker &SlotTracker) const {
   O << Indent << getName() << ":\n";
@@ -414,15 +426,7 @@ void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
     O << '\n';
   }
 
-  if (getSuccessors().empty()) {
-    O << Indent << "No successors\n";
-  } else {
-    O << Indent << "Successor(s): ";
-    ListSeparator LS;
-    for (auto *Succ : getSuccessors())
-      O << LS << Succ->getName();
-    O << '\n';
-  }
+  printSuccessors(O, Indent);
 
   if (const VPValue *CBV = getCondBit()) {
     O << Indent << "CondBit: ";
@@ -500,6 +504,8 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
     BlockBase->print(O, NewIndent, SlotTracker);
   }
   O << Indent << "}\n";
+
+  printSuccessors(O, Indent);
 }
 #endif
 

@@ -38,7 +38,7 @@ define signext i32 @f1(i32* noalias %A, i32* noalias %B, i32 signext %n) {
 ; VF-TWO-CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[TMP5]] to <2 x i32>*
 ; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, <2 x i32>* [[TMP6]], align 4
 ; VF-TWO-CHECK-NEXT:    [[TMP7:%.*]] = add nsw <2 x i32> [[WIDE_LOAD]], [[WIDE_LOAD2]]
-; VF-TWO-CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; VF-TWO-CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF-TWO-CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VF-TWO-CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; VF-TWO-CHECK:       middle.block:
@@ -66,7 +66,7 @@ define signext i32 @f1(i32* noalias %A, i32* noalias %B, i32 signext %n) {
 ; VF-TWO-CHECK-NEXT:    [[TMP16:%.*]] = bitcast i32* [[TMP15]] to <2 x i32>*
 ; VF-TWO-CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <2 x i32>, <2 x i32>* [[TMP16]], align 4
 ; VF-TWO-CHECK-NEXT:    [[TMP17:%.*]] = add nsw <2 x i32> [[WIDE_LOAD9]], [[WIDE_LOAD10]]
-; VF-TWO-CHECK-NEXT:    [[INDEX_NEXT7]] = add i64 [[INDEX6]], 2
+; VF-TWO-CHECK-NEXT:    [[INDEX_NEXT7]] = add nuw i64 [[INDEX6]], 2
 ; VF-TWO-CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT7]], [[N_VEC5]]
 ; VF-TWO-CHECK-NEXT:    br i1 [[TMP18]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], [[LOOP2:!llvm.loop !.*]]
 ; VF-TWO-CHECK:       vec.epilog.middle.block:

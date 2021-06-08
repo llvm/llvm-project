@@ -542,10 +542,10 @@ declare hidden void @ex() #0
 
 ; CHECK-NOT: .cfi_{{.*}}
 
-; CHECK: s_sub_u32 s32, s32,
-; CHECK-NEXT: v_readlane_b32 s33, v40, 2
+; CHECK: s_addk_i32 s32,
+; CHECK: v_readlane_b32 s33, v40, 2
 ; SGPR32 = 64
-; CHECK-NEXT: .cfi_def_cfa_register 64
+; CHECK: .cfi_def_cfa_register 64
 
 ; CHECK-NOT: .cfi_{{.*}}
 

@@ -52,14 +52,14 @@ int main(int argc, char **argv) {
 // CHECK: [[SZ_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 1
 // CHECK: store i64 4, i64* [[SZ_ADDR]],
 // CHECK: [[FLAGS_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 2
-// CHECK: store i8 3, i8* [[FLAGS_ADDR]],
+// CHECK: store i32 3, i32* [[FLAGS_ADDR]],
 // CHECK: [[BASE_ADDR:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP_ADDR]], i{{.+}} 2
 // CHECK: [[ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 0
 // CHECK: store i64 %{{.+}}, i64* [[ADDR]],
 // CHECK: [[SZ_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 1
 // CHECK: store i64 8, i64* [[SZ_ADDR]],
 // CHECK: [[FLAGS_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 2
-// CHECK: store i8 3, i8* [[FLAGS_ADDR]],
+// CHECK: store i32 3, i32* [[FLAGS_ADDR]],
 // CHECK: [[BASE_ADDR:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP_ADDR]], i{{.+}} 1
 // CHECK: [[DEP:%.+]] = bitcast %struct.kmp_depend_info* [[BASE_ADDR]] to i8*
 // CHECK: store i8* [[DEP]], i8** [[MAIN_A]],
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
 // CHECK: [[BODY]]:
 // CHECK: [[EL:%.+]] = phi %struct.kmp_depend_info* [ [[B_BASE]], %{{.+}} ], [ [[EL_NEXT:%.+]], %[[BODY]] ]
 // CHECK: [[FLAG_BASE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[EL]], i{{.+}} 0, i{{.+}} 2
-// CHECK: store i8 4, i8* [[FLAG_BASE]],
+// CHECK: store i32 4, i32* [[FLAG_BASE]],
 // CHECK: [[EL_NEXT]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[EL]], i{{.+}} 1
 // CHECK: [[IS_DONE:%.+]] = icmp eq %struct.kmp_depend_info* [[EL_NEXT]], [[END]]
 // CHECK: br i1 [[IS_DONE]], label %[[DONE:.+]], label %[[BODY]]
@@ -173,7 +173,7 @@ int main(int argc, char **argv) {
 // CHECK: store i64 1, i64* [[DEP_IC_SIZE]],
 // dep[ITERATOR_COUNTER].flags = in_out;
 // CHECK: [[DEP_IC_FLAGS:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP_IC]], i{{.+}} 0, i{{.+}} 2
-// CHECK: store i8 3, i8* [[DEP_IC_FLAGS]],
+// CHECK: store i32 3, i32* [[DEP_IC_FLAGS]],
 
 // ITERATOR_COUNTER = ITERATOR_COUNTER + 1;
 // CHECK: [[ITERATOR_COUNTER:%.+]] = load i64, i64* [[ITERATOR_COUNTER_ADDR]],
@@ -206,7 +206,7 @@ int main(int argc, char **argv) {
 // CHECK: [[SZ_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 1
 // CHECK: store i64 8, i64* [[SZ_ADDR]],
 // CHECK: [[FLAGS_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 2
-// CHECK: store i8 1, i8* [[FLAGS_ADDR]],
+// CHECK: store i32 1, i32* [[FLAGS_ADDR]],
 // CHECK: [[SHAPE_ADDR:%.+]] = load i32*, i32** [[ARGV_ADDR:%.+]],
 // CHECK: [[SZ1:%.+]] = mul nuw i64 12, %{{.+}}
 // CHECK: [[SZ:%.+]] = mul nuw i64 [[SZ1]], 4
@@ -217,7 +217,7 @@ int main(int argc, char **argv) {
 // CHECK: [[SZ_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 1
 // CHECK: store i64 [[SZ]], i64* [[SZ_ADDR]],
 // CHECK: [[FLAGS_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[BASE_ADDR]], i{{.+}} 0, i{{.+}} 2
-// CHECK: store i8 1, i8* [[FLAGS_ADDR]],
+// CHECK: store i32 1, i32* [[FLAGS_ADDR]],
 // CHECK: [[BASE_ADDR:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[DEP_ADDR]], i{{.+}} 1
 // CHECK: [[DEP:%.+]] = bitcast %struct.kmp_depend_info* [[BASE_ADDR]] to i8*
 // CHECK: store i8* [[DEP]], i8** [[TMAIN_A]],
@@ -236,7 +236,7 @@ int main(int argc, char **argv) {
 // CHECK: [[BODY]]:
 // CHECK: [[EL:%.+]] = phi %struct.kmp_depend_info* [ [[ARGC_BASE]], %{{.+}} ], [ [[EL_NEXT:%.+]], %[[BODY]] ]
 // CHECK: [[FLAG_BASE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[EL]], i{{.+}} 0, i{{.+}} 2
-// CHECK: store i8 3, i8* [[FLAG_BASE]],
+// CHECK: store i32 3, i32* [[FLAG_BASE]],
 // CHECK: [[EL_NEXT]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[EL]], i{{.+}} 1
 // CHECK: [[IS_DONE:%.+]] = icmp eq %struct.kmp_depend_info* [[EL_NEXT]], [[END]]
 // CHECK: br i1 [[IS_DONE]], label %[[DONE:.+]], label %[[BODY]]

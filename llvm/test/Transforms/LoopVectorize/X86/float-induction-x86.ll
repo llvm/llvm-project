@@ -107,7 +107,7 @@ define void @fp_iv_loop1(float* noalias nocapture %A, i32 %N) #0 {
 ; AUTO_VEC-NEXT:    [[TMP35:%.*]] = getelementptr inbounds float, float* [[TMP29]], i64 24
 ; AUTO_VEC-NEXT:    [[TMP36:%.*]] = bitcast float* [[TMP35]] to <8 x float>*
 ; AUTO_VEC-NEXT:    store <8 x float> [[STEP_ADD3_3]], <8 x float>* [[TMP36]], align 4
-; AUTO_VEC-NEXT:    [[INDEX_NEXT_3]] = add i64 [[INDEX]], 128
+; AUTO_VEC-NEXT:    [[INDEX_NEXT_3]] = add nuw i64 [[INDEX]], 128
 ; AUTO_VEC-NEXT:    [[VEC_IND_NEXT_3]] = fadd fast <8 x float> [[VEC_IND]], <float 6.400000e+01, float 6.400000e+01, float 6.400000e+01, float 6.400000e+01, float 6.400000e+01, float 6.400000e+01, float 6.400000e+01, float 6.400000e+01>
 ; AUTO_VEC-NEXT:    [[NITER_NSUB_3]] = add i64 [[NITER]], -4
 ; AUTO_VEC-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i64 [[NITER_NSUB_3]], 0
@@ -136,7 +136,7 @@ define void @fp_iv_loop1(float* noalias nocapture %A, i32 %N) #0 {
 ; AUTO_VEC-NEXT:    [[TMP43:%.*]] = getelementptr inbounds float, float* [[TMP37]], i64 24
 ; AUTO_VEC-NEXT:    [[TMP44:%.*]] = bitcast float* [[TMP43]] to <8 x float>*
 ; AUTO_VEC-NEXT:    store <8 x float> [[STEP_ADD3_EPIL]], <8 x float>* [[TMP44]], align 4
-; AUTO_VEC-NEXT:    [[INDEX_NEXT_EPIL]] = add i64 [[INDEX_EPIL]], 32
+; AUTO_VEC-NEXT:    [[INDEX_NEXT_EPIL]] = add nuw i64 [[INDEX_EPIL]], 32
 ; AUTO_VEC-NEXT:    [[VEC_IND_NEXT_EPIL]] = fadd fast <8 x float> [[VEC_IND_EPIL]], <float 1.600000e+01, float 1.600000e+01, float 1.600000e+01, float 1.600000e+01, float 1.600000e+01, float 1.600000e+01, float 1.600000e+01, float 1.600000e+01>
 ; AUTO_VEC-NEXT:    [[EPIL_ITER_SUB]] = add i64 [[EPIL_ITER]], -1
 ; AUTO_VEC-NEXT:    [[EPIL_ITER_CMP_NOT:%.*]] = icmp eq i64 [[EPIL_ITER_SUB]], 0
@@ -378,7 +378,7 @@ define double @external_use_with_fast_math(double* %a, i64 %n) {
 ; AUTO_VEC-NEXT:    [[TMP36:%.*]] = getelementptr double, double* [[TMP30]], i64 12
 ; AUTO_VEC-NEXT:    [[TMP37:%.*]] = bitcast double* [[TMP36]] to <4 x double>*
 ; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD3_3]], <4 x double>* [[TMP37]], align 8
-; AUTO_VEC-NEXT:    [[INDEX_NEXT_3]] = add i64 [[INDEX]], 64
+; AUTO_VEC-NEXT:    [[INDEX_NEXT_3]] = add nuw i64 [[INDEX]], 64
 ; AUTO_VEC-NEXT:    [[VEC_IND_NEXT_3]] = fadd fast <4 x double> [[VEC_IND]], <double 1.920000e+02, double 1.920000e+02, double 1.920000e+02, double 1.920000e+02>
 ; AUTO_VEC-NEXT:    [[NITER_NSUB_3]] = add i64 [[NITER]], -4
 ; AUTO_VEC-NEXT:    [[NITER_NCMP_3:%.*]] = icmp eq i64 [[NITER_NSUB_3]], 0
@@ -407,7 +407,7 @@ define double @external_use_with_fast_math(double* %a, i64 %n) {
 ; AUTO_VEC-NEXT:    [[TMP44:%.*]] = getelementptr double, double* [[TMP38]], i64 12
 ; AUTO_VEC-NEXT:    [[TMP45:%.*]] = bitcast double* [[TMP44]] to <4 x double>*
 ; AUTO_VEC-NEXT:    store <4 x double> [[STEP_ADD3_EPIL]], <4 x double>* [[TMP45]], align 8
-; AUTO_VEC-NEXT:    [[INDEX_NEXT_EPIL]] = add i64 [[INDEX_EPIL]], 16
+; AUTO_VEC-NEXT:    [[INDEX_NEXT_EPIL]] = add nuw i64 [[INDEX_EPIL]], 16
 ; AUTO_VEC-NEXT:    [[VEC_IND_NEXT_EPIL]] = fadd fast <4 x double> [[VEC_IND_EPIL]], <double 4.800000e+01, double 4.800000e+01, double 4.800000e+01, double 4.800000e+01>
 ; AUTO_VEC-NEXT:    [[EPIL_ITER_SUB]] = add i64 [[EPIL_ITER]], -1
 ; AUTO_VEC-NEXT:    [[EPIL_ITER_CMP_NOT:%.*]] = icmp eq i64 [[EPIL_ITER_SUB]], 0
@@ -630,7 +630,7 @@ define void @fadd_reassoc_FMF(float* nocapture %p, i32 %N) {
 ; AUTO_VEC-NEXT:    store <8 x float> [[TMP32]], <8 x float>* [[TMP36]], align 4
 ; AUTO_VEC-NEXT:    [[TMP37:%.*]] = bitcast float* [[TMP28]] to <8 x float>*
 ; AUTO_VEC-NEXT:    store <8 x float> [[TMP33]], <8 x float>* [[TMP37]], align 4
-; AUTO_VEC-NEXT:    [[INDEX_NEXT_1]] = add i64 [[INDEX]], 64
+; AUTO_VEC-NEXT:    [[INDEX_NEXT_1]] = add nuw i64 [[INDEX]], 64
 ; AUTO_VEC-NEXT:    [[VEC_IND_NEXT_1]] = fadd reassoc <8 x float> [[STEP_ADD3_1]], <float 3.360000e+02, float 3.360000e+02, float 3.360000e+02, float 3.360000e+02, float 3.360000e+02, float 3.360000e+02, float 3.360000e+02, float 3.360000e+02>
 ; AUTO_VEC-NEXT:    [[NITER_NSUB_1]] = add i64 [[NITER]], -2
 ; AUTO_VEC-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i64 [[NITER_NSUB_1]], 0

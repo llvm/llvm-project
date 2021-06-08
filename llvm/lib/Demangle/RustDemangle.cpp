@@ -113,7 +113,10 @@ bool Demangler::demangle(StringView Mangled) {
 
   demanglePath(rust_demangle::InType::No);
 
-  // FIXME parse optional <instantiating-crate>.
+  if (Position != Input.size()) {
+    SwapAndRestore<bool> SavePrint(Print, false);
+    demanglePath(InType::No);
+  }
 
   if (Position != Input.size())
     Error = true;
@@ -121,7 +124,10 @@ bool Demangler::demangle(StringView Mangled) {
   return !Error;
 }
 
-// Demangles a path. InType indicates whether a path is inside a type.
+// Demangles a path. InType indicates whether a path is inside a type. When
+// LeaveOpen is true, a closing `>` after generic arguments is omitted from the
+// output. Return value indicates whether generics arguments have been left
+// open.
 //
 // <path> = "C" <identifier>               // crate root
 //        | "M" <impl-path> <type>         // <T> (inherent impl)
@@ -135,10 +141,10 @@ bool Demangler::demangle(StringView Mangled) {
 //      | "S"      // shim
 //      | <A-Z>    // other special namespaces
 //      | <a-z>    // internal namespaces
-void Demangler::demanglePath(InType InType) {
+bool Demangler::demanglePath(InType InType, LeaveOpen LeaveOpen) {
   if (Error || RecursionLevel >= MaxRecursionLevel) {
     Error = true;
-    return;
+    return false;
   }
   SwapAndRestore<size_t> SaveRecursionLevel(RecursionLevel, RecursionLevel + 1);
 
@@ -220,7 +226,10 @@ void Demangler::demanglePath(InType InType) {
         print(", ");
       demangleGenericArg();
     }
-    print(">");
+    if (LeaveOpen == rust_demangle::LeaveOpen::Yes)
+      return true;
+    else
+      print(">");
     break;
   }
   default:
@@ -228,6 +237,8 @@ void Demangler::demanglePath(InType InType) {
     Error = true;
     break;
   }
+
+  return false;
 }
 
 // <impl-path> = [<disambiguator>] <path>
@@ -480,6 +491,17 @@ void Demangler::demangleType() {
   case 'F':
     demangleFnSig();
     break;
+  case 'D':
+    demangleDynBounds();
+    if (consumeIf('L')) {
+      if (auto Lifetime = parseBase62Number()) {
+        print(" + ");
+        printLifetime(Lifetime);
+      }
+    } else {
+      Error = true;
+    }
+    break;
   default:
     Position = Start;
     demanglePath(rust_demangle::InType::Yes);
@@ -527,6 +549,37 @@ void Demangler::demangleFnSig() {
     print(" -> ");
     demangleType();
   }
+}
+
+// <dyn-bounds> = [<binder>] {<dyn-trait>} "E"
+void Demangler::demangleDynBounds() {
+  SwapAndRestore<size_t> SaveBoundLifetimes(BoundLifetimes, BoundLifetimes);
+  print("dyn ");
+  demangleOptionalBinder();
+  for (size_t I = 0; !Error && !consumeIf('E'); ++I) {
+    if (I > 0)
+      print(" + ");
+    demangleDynTrait();
+  }
+}
+
+// <dyn-trait> = <path> {<dyn-trait-assoc-binding>}
+// <dyn-trait-assoc-binding> = "p" <undisambiguated-identifier> <type>
+void Demangler::demangleDynTrait() {
+  bool IsOpen = demanglePath(InType::Yes, LeaveOpen::Yes);
+  while (!Error && consumeIf('p')) {
+    if (!IsOpen) {
+      IsOpen = true;
+      print('<');
+    } else {
+      print(", ");
+    }
+    print(parseIdentifier().Name);
+    print(" = ");
+    demangleType();
+  }
+  if (IsOpen)
+    print(">");
 }
 
 // Demangles optional binder and updates the number of bound lifetimes.

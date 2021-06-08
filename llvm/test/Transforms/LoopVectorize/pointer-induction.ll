@@ -63,7 +63,7 @@ define void @a(i8* readnone %b) {
 ; CHECK-NEXT:    store i8 95, i8* [[TMP17]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE7]]
 ; CHECK:       pred.store.continue7:
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, i8* [[POINTER_PHI]], i64 -4
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

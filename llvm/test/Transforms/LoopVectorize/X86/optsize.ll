@@ -301,7 +301,7 @@ define void @scev4stride1(i32* noalias nocapture %a, i32* noalias nocapture read
 ; CHECK-NEXT:    [[TMP67:%.*]] = getelementptr inbounds i32, i32* [[TMP66]], i32 0
 ; CHECK-NEXT:    [[TMP68:%.*]] = bitcast i32* [[TMP67]] to <64 x i32>*
 ; CHECK-NEXT:    store <64 x i32> [[WIDE_MASKED_GATHER]], <64 x i32>* [[TMP68]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 64
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 64
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <64 x i32> [[VEC_IND]], <i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64>
 ; CHECK-NEXT:    [[TMP69:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP69]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP6:!llvm.loop !.*]]
@@ -349,7 +349,7 @@ define void @scev4stride1(i32* noalias nocapture %a, i32* noalias nocapture read
 ; AUTOVF-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, i32* [[TMP10]], i32 0
 ; AUTOVF-NEXT:    [[TMP12:%.*]] = bitcast i32* [[TMP11]] to <8 x i32>*
 ; AUTOVF-NEXT:    store <8 x i32> [[WIDE_MASKED_GATHER]], <8 x i32>* [[TMP12]], align 4
-; AUTOVF-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
+; AUTOVF-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; AUTOVF-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], <i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
 ; AUTOVF-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
 ; AUTOVF-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP6:!llvm.loop !.*]]

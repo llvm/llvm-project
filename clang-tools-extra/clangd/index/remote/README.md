@@ -35,7 +35,7 @@ can easily uninstall gRPC or use different versions.
 
 ```bash
 # Get source code.
-$ git clone -b v1.33.2 https://github.com/grpc/grpc
+$ git clone -b v1.36.3 https://github.com/grpc/grpc
 $ cd grpc
 $ git submodule update --init
 # Choose directory where you want gRPC installation to live.

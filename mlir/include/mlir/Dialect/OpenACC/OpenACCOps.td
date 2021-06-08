@@ -139,6 +139,12 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
     static StringRef getAttachKeyword() { return "attach"; }
     static StringRef getPrivateKeyword() { return "private"; }
     static StringRef getFirstPrivateKeyword() { return "firstprivate"; }
+
+    /// The number of data operands.
+    unsigned getNumDataOperands();
+
+    /// The i-th data operand passed.
+    Value getDataOperand(unsigned i);
   }];
 
   let verifier = ?;
@@ -277,6 +283,8 @@ def OpenACC_EnterDataOp : OpenACC_Op<"enter_data", [AttrSizedOperandSegments]> {
     ( `attach` `(` $attachOperands^ `:` type($attachOperands) `)` )?
     attr-dict-with-keyword
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -325,6 +333,8 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data", [AttrSizedOperandSegments]> {
     ( `detach` `(` $detachOperands^ `:` type($detachOperands) `)` )?
     attr-dict-with-keyword
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -493,13 +503,13 @@ def OpenACC_UpdateOp : OpenACC_Op<"update", [AttrSizedOperandSegments]> {
     ```
   }];
 
-  let arguments = (ins Optional<IntOrIndex>:$asyncOperand,
+  let arguments = (ins Optional<I1>:$ifCond,
+                       Optional<IntOrIndex>:$asyncOperand,
                        Optional<IntOrIndex>:$waitDevnum,
                        Variadic<IntOrIndex>:$waitOperands,
                        UnitAttr:$async,
                        UnitAttr:$wait,
                        Variadic<IntOrIndex>:$deviceTypeOperands,
-                       Optional<I1>:$ifCond,
                        Variadic<AnyType>:$hostOperands,
                        Variadic<AnyType>:$deviceOperands,
                        UnitAttr:$ifPresent);
@@ -523,6 +533,8 @@ def OpenACC_UpdateOp : OpenACC_Op<"update", [AttrSizedOperandSegments]> {
     ( `device` `(` $deviceOperands^ `:` type($deviceOperands) `)` )?
     attr-dict-with-keyword
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

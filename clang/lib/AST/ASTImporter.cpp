@@ -4624,9 +4624,9 @@ ExpectedDecl ASTNodeImporter::VisitUsingShadowDecl(UsingShadowDecl *D) {
   if (ToD)
     return ToD;
 
-  Expected<UsingDecl *> ToUsingOrErr = import(D->getUsingDecl());
-  if (!ToUsingOrErr)
-    return ToUsingOrErr.takeError();
+  Expected<BaseUsingDecl *> ToIntroducerOrErr = import(D->getIntroducer());
+  if (!ToIntroducerOrErr)
+    return ToIntroducerOrErr.takeError();
 
   Expected<NamedDecl *> ToTargetOrErr = import(D->getTargetDecl());
   if (!ToTargetOrErr)
@@ -4634,7 +4634,7 @@ ExpectedDecl ASTNodeImporter::VisitUsingShadowDecl(UsingShadowDecl *D) {
 
   UsingShadowDecl *ToShadow;
   if (GetImportedOrCreateDecl(ToShadow, D, Importer.getToContext(), DC, Loc,
-                              *ToUsingOrErr, *ToTargetOrErr))
+                              Name, *ToIntroducerOrErr, *ToTargetOrErr))
     return ToShadow;
 
   ToShadow->setLexicalDeclContext(LexicalDC);

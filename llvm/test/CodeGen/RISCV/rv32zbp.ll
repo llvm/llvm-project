@@ -2353,14 +2353,12 @@ define zeroext i16 @bswap_i16(i16 zeroext %a) nounwind {
 ;
 ; RV32IB-LABEL: bswap_i16:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    rev8 a0, a0
-; RV32IB-NEXT:    srli a0, a0, 16
+; RV32IB-NEXT:    rev8.h a0, a0
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBP-LABEL: bswap_i16:
 ; RV32IBP:       # %bb.0:
-; RV32IBP-NEXT:    rev8 a0, a0
-; RV32IBP-NEXT:    srli a0, a0, 16
+; RV32IBP-NEXT:    rev8.h a0, a0
 ; RV32IBP-NEXT:    ret
   %1 = tail call i16 @llvm.bswap.i16(i16 %a)
   ret i16 %1
@@ -2467,14 +2465,12 @@ define zeroext i8 @bitreverse_i8(i8 zeroext %a) nounwind {
 ;
 ; RV32IB-LABEL: bitreverse_i8:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    rev a0, a0
-; RV32IB-NEXT:    srli a0, a0, 24
+; RV32IB-NEXT:    rev.b a0, a0
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBP-LABEL: bitreverse_i8:
 ; RV32IBP:       # %bb.0:
-; RV32IBP-NEXT:    rev a0, a0
-; RV32IBP-NEXT:    srli a0, a0, 24
+; RV32IBP-NEXT:    rev.b a0, a0
 ; RV32IBP-NEXT:    ret
   %1 = tail call i8 @llvm.bitreverse.i8(i8 %a)
   ret i8 %1
@@ -2519,14 +2515,12 @@ define zeroext i16 @bitreverse_i16(i16 zeroext %a) nounwind {
 ;
 ; RV32IB-LABEL: bitreverse_i16:
 ; RV32IB:       # %bb.0:
-; RV32IB-NEXT:    rev a0, a0
-; RV32IB-NEXT:    srli a0, a0, 16
+; RV32IB-NEXT:    rev.h a0, a0
 ; RV32IB-NEXT:    ret
 ;
 ; RV32IBP-LABEL: bitreverse_i16:
 ; RV32IBP:       # %bb.0:
-; RV32IBP-NEXT:    rev a0, a0
-; RV32IBP-NEXT:    srli a0, a0, 16
+; RV32IBP-NEXT:    rev.h a0, a0
 ; RV32IBP-NEXT:    ret
   %1 = tail call i16 @llvm.bitreverse.i16(i16 %a)
   ret i16 %1
