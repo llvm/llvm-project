@@ -48,11 +48,10 @@ std::vector<SyntheticSection *> macho::syntheticSections;
 
 SyntheticSection::SyntheticSection(const char *segname, const char *name)
     : OutputSection(SyntheticKind, name), segname(segname) {
-  isec = make<InputSection>();
+  isec = make<ConcatInputSection>();
   isec->segname = segname;
   isec->name = name;
   isec->parent = this;
-  isec->outSecOff = 0;
   syntheticSections.push_back(this);
 }
 
@@ -202,10 +201,10 @@ void RebaseSection::finalizeContents() {
   os << static_cast<uint8_t>(REBASE_OPCODE_SET_TYPE_IMM | REBASE_TYPE_POINTER);
 
   llvm::sort(locations, [](const Location &a, const Location &b) {
-    return a.isec->getVA() < b.isec->getVA();
+    return a.isec->getVA(a.offset) < b.isec->getVA(b.offset);
   });
   for (const Location &loc : locations)
-    encodeRebase(loc.isec->parent, loc.isec->outSecOff + loc.offset, lastRebase,
+    encodeRebase(loc.isec->parent, loc.isec->getOffset(loc.offset), lastRebase,
                  os);
   if (lastRebase.consecutiveCount != 0)
     encodeDoRebase(lastRebase, os);
@@ -367,7 +366,7 @@ void BindingSection::finalizeContents() {
       lastBinding.ordinal = ordinal;
     }
     encodeBinding(b.dysym, b.target.isec->parent,
-                  b.target.isec->outSecOff + b.target.offset, b.addend,
+                  b.target.isec->getOffset(b.target.offset), b.addend,
                   /*isWeakBinding=*/false, lastBinding, os);
   }
   if (!bindings.empty())
@@ -396,7 +395,7 @@ void WeakBindingSection::finalizeContents() {
              });
   for (const WeakBindingEntry &b : bindings)
     encodeBinding(b.symbol, b.target.isec->parent,
-                  b.target.isec->outSecOff + b.target.offset, b.addend,
+                  b.target.isec->getOffset(b.target.offset), b.addend,
                   /*isWeakBinding=*/true, lastBinding, os);
   if (!bindings.empty() || !definitions.empty())
     os << static_cast<uint8_t>(BIND_OPCODE_DONE);
@@ -1074,6 +1073,63 @@ void BitcodeBundleSection::writeTo(uint8_t *buf) const {
 
   closeFile(handle);
   remove(xarPath);
+}
+
+// Mergeable cstring literals are found under the __TEXT,__cstring section. In
+// contrast to ELF, which puts strings that need different alignments into
+// different sections, clang's Mach-O backend puts them all in one section.
+// Strings that need to be aligned have the .p2align directive emitted before
+// them, which simply translates into zero padding in the object file.
+//
+// I *think* ld64 extracts the desired per-string alignment from this data by
+// preserving each string's offset from the last section-aligned address. I'm
+// not entirely certain since it doesn't seem consistent about doing this, and
+// in fact doesn't seem to be correct in general: we can in fact can induce ld64
+// to produce a crashing binary just by linking in an additional object file
+// that only contains a duplicate cstring at a different alignment. See PR50563
+// for details.
+//
+// In practice, the cstrings we've seen so far that require special aligment are
+// all accessed by x86_64 SIMD operations -- x86_64 requires SIMD accesses to be
+// 16-byte-aligned. So for now, I'm just aligning all strings to 16 bytes on
+// x86_64. This is indeed wasteful, but implementation-wise it's simpler than
+// preserving per-string alignment+offsets. It also avoids the aforementioned
+// crash after deduplication of differently-aligned strings. Finally, the
+// overhead is not huge: using 16-byte alignment (vs no alignment) is only a
+// 0.5% size overhead when linking chromium_framework.
+CStringSection::CStringSection()
+    : SyntheticSection(segment_names::text, section_names::cString),
+      builder(StringTableBuilder::RAW,
+              /*Alignment=*/target->cpuType == CPU_TYPE_X86_64 ? 16 : 1) {
+  align = target->cpuType == CPU_TYPE_X86_64 ? 16 : 1;
+  flags = S_CSTRING_LITERALS;
+}
+
+void CStringSection::addInput(CStringInputSection *isec) {
+  isec->parent = this;
+  inputs.push_back(isec);
+}
+
+void CStringSection::finalize() {
+  // Add all string pieces to the string table builder to create section
+  // contents.
+  for (const CStringInputSection *isec : inputs)
+    for (size_t i = 0, e = isec->pieces.size(); i != e; ++i)
+      builder.add(isec->getCachedHashStringRef(i));
+
+  // Fix the string table content. After this, the contents will never change.
+  builder.finalizeInOrder();
+
+  // finalize() fixed tail-optimized strings, so we can now get
+  // offsets of strings. Get an offset for each string and save it
+  // to a corresponding SectionPiece for easy access.
+  for (CStringInputSection *isec : inputs) {
+    for (size_t i = 0, e = isec->pieces.size(); i != e; ++i) {
+      isec->pieces[i].outSecOff =
+          builder.getOffset(isec->getCachedHashStringRef(i));
+      isec->isFinal = true;
+    }
+  }
 }
 
 void macho::createSyntheticSymbols() {

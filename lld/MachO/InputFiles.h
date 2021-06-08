@@ -39,7 +39,7 @@ namespace lld {
 namespace macho {
 
 struct PlatformInfo;
-class InputSection;
+class ConcatInputSection;
 class Symbol;
 struct Reloc;
 enum class RefState : uint8_t;
@@ -103,7 +103,7 @@ public:
 
   llvm::DWARFUnit *compileUnit = nullptr;
   const uint32_t modTime;
-  std::vector<InputSection *> debugSections;
+  std::vector<ConcatInputSection *> debugSections;
 
 private:
   template <class LP> void parse();
