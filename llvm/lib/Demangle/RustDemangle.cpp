@@ -438,8 +438,13 @@ void Demangler::printBasicType(BasicType Type) {
 //          | "D" <dyn-bounds> <lifetime> // dyn Trait<Assoc = X> + Send + 'a
 //          | <backref>                   // backref
 void Demangler::demangleType() {
-  size_t Start = Position;
+  if (Error || RecursionLevel >= MaxRecursionLevel) {
+    Error = true;
+    return;
+  }
+  SwapAndRestore<size_t> SaveRecursionLevel(RecursionLevel, RecursionLevel + 1);
 
+  size_t Start = Position;
   char C = consume();
   BasicType Type;
   if (parseBasicType(C, Type))
@@ -505,6 +510,9 @@ void Demangler::demangleType() {
     } else {
       Error = true;
     }
+    break;
+  case 'B':
+    demangleBackref([&] { demangleType(); });
     break;
   default:
     Position = Start;
