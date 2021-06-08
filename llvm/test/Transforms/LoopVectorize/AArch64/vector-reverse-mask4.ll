@@ -67,7 +67,7 @@ define void @vector_reverse_mask_v4i1(double* %a, double* %cond, i64 %N) #0 {
 ; CHECK-NEXT:    call void @llvm.masked.store.v4f64.p0v4f64(<4 x double> [[TMP16]], <4 x double>* [[TMP18]], i32 8, <4 x i1> [[REVERSE8]]), !alias.scope !3, !noalias !0
 ; CHECK-NEXT:    [[TMP19:%.*]] = bitcast double* [[TMP14]] to <4 x double>*
 ; CHECK-NEXT:    call void @llvm.masked.store.v4f64.p0v4f64(<4 x double> [[TMP17]], <4 x double>* [[TMP19]], i32 8, <4 x i1> [[REVERSE10]]), !alias.scope !3, !noalias !0
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:

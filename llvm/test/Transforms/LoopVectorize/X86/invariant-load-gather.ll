@@ -37,7 +37,7 @@ define i32 @inv_load_conditional(i32* %a, i64 %n, i32* %b, i32 %k) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <16 x i32*> [[BROADCAST_SPLAT]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TMP0]] to <16 x i32>*
 ; CHECK-NEXT:    store <16 x i32> [[BROADCAST_SPLAT7]], <16 x i32>* [[TMP2]], align 4, !alias.scope !0, !noalias !3
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP5:!llvm.loop !.*]]
 ; CHECK:       middle.block:
@@ -65,7 +65,7 @@ define i32 @inv_load_conditional(i32* %a, i64 %n, i32* %b, i32 %k) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <8 x i32*> [[BROADCAST_SPLAT17]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP5]] to <8 x i32>*
 ; CHECK-NEXT:    store <8 x i32> [[BROADCAST_SPLAT19]], <8 x i32>* [[TMP7]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT13]] = add i64 [[INDEX12]], 8
+; CHECK-NEXT:    [[INDEX_NEXT13]] = add nuw i64 [[INDEX12]], 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT13]], [[N_VEC11]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], [[LOOP7:!llvm.loop !.*]]
 ; CHECK:       vec.epilog.middle.block:

@@ -60,24 +60,35 @@ static void dispatchIndexOpFoldResults(ArrayRef<OpFoldResult> ofrs,
     dispatchIndexOpFoldResult(ofr, dynamicVec, staticVec, sentinel);
 }
 
+/// If ofr is a constant integer, i.e., an IntegerAttr or a ConstantOp with an
+/// IntegerAttr, return the integer.
+llvm::Optional<int64_t> mlir::getConstantIntValue(OpFoldResult ofr) {
+  Attribute attr = ofr.dyn_cast<Attribute>();
+  // Note: isa+cast-like pattern allows writing the condition below as 1 line.
+  if (!attr && ofr.get<Value>().getDefiningOp<ConstantOp>())
+    attr = ofr.get<Value>().getDefiningOp<ConstantOp>().getValue();
+  if (auto intAttr = attr.dyn_cast_or_null<IntegerAttr>())
+    return intAttr.getValue().getSExtValue();
+  return llvm::None;
+}
+
+/// Return true if ofr and value are the same integer.
+/// Ignore integer bitwidth and type mismatch that come from the fact there is
+/// no IndexAttr and that IndexType has no bitwidth.
+bool mlir::isEqualConstantInt(OpFoldResult ofr, int64_t value) {
+  auto ofrValue = getConstantIntValue(ofr);
+  return ofrValue && *ofrValue == value;
+}
+
 /// Return true if ofr1 and ofr2 are the same integer constant attribute values
 /// or the same SSA value.
-/// Ignore integer bitwitdh and type mismatch that come from the fact there is
-/// no IndexAttr and that IndexType have no bitwidth.
-bool mlir::isEqualConstantIntOrValue(OpFoldResult op1, OpFoldResult op2) {
-  auto getConstantIntValue = [](OpFoldResult ofr) -> llvm::Optional<int64_t> {
-    Attribute attr = ofr.dyn_cast<Attribute>();
-    // Note: isa+cast-like pattern allows writing the condition below as 1 line.
-    if (!attr && ofr.get<Value>().getDefiningOp<ConstantOp>())
-      attr = ofr.get<Value>().getDefiningOp<ConstantOp>().getValue();
-    if (auto intAttr = attr.dyn_cast_or_null<IntegerAttr>())
-      return intAttr.getValue().getSExtValue();
-    return llvm::None;
-  };
-  auto cst1 = getConstantIntValue(op1), cst2 = getConstantIntValue(op2);
+/// Ignore integer bitwidth and type mismatch that come from the fact there is
+/// no IndexAttr and that IndexType has no bitwidth.
+bool mlir::isEqualConstantIntOrValue(OpFoldResult ofr1, OpFoldResult ofr2) {
+  auto cst1 = getConstantIntValue(ofr1), cst2 = getConstantIntValue(ofr2);
   if (cst1 && cst2 && *cst1 == *cst2)
     return true;
-  auto v1 = op1.dyn_cast<Value>(), v2 = op2.dyn_cast<Value>();
+  auto v1 = ofr1.dyn_cast<Value>(), v2 = ofr2.dyn_cast<Value>();
   return v1 && v2 && v1 == v2;
 }
 

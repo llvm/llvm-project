@@ -107,7 +107,7 @@ define void @test_stride-1_4i32(i32* readonly %data, i32* noalias nocapture %dst
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i32, i32* [[TMP16]], i32 0
 ; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i32* [[TMP17]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP15]], <4 x i32>* [[TMP18]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP4:!llvm.loop !.*]]
 ; CHECK:       middle.block:
@@ -176,7 +176,7 @@ define void @test_stride2_4i32(i32* readonly %data, i32* noalias nocapture %dst,
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, i32* [[TMP9]], i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32* [[TMP10]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP8]], <4 x i32>* [[TMP11]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP6:!llvm.loop !.*]]
 ; CHECK:       middle.block:
@@ -454,7 +454,7 @@ define void @test_stride_noninvar_4i32(i32* readonly %data, i32* noalias nocaptu
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, i32* [[TMP9]], i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32* [[TMP10]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP8]], <4 x i32>* [[TMP11]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
 ; CHECK-NEXT:    [[VEC_IND_NEXT3]] = add <4 x i32> [[VEC_IND2]], <i32 32, i32 32, i32 32, i32 32>
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
@@ -579,7 +579,7 @@ define void @test_stride_noninvar3_4i32(i32* readonly %data, i32* noalias nocapt
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[TMP11]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast i32* [[TMP12]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP10]], <4 x i32>* [[TMP13]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
 ; CHECK-NEXT:    [[VEC_IND_NEXT5]] = add <4 x i32> [[VEC_IND4]], [[DOTSPLAT3]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]

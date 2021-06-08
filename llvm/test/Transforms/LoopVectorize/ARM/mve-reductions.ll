@@ -64,9 +64,9 @@ define i64 @add_i32_i64(i32* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <4 x i32> [[WIDE_LOAD]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP2]])
 ; CHECK-NEXT:    [[TMP4]] = add i64 [[TMP3]], [[VEC_PHI]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_VEC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP]], label [[SCALAR_PH]]
@@ -83,7 +83,7 @@ define i64 @add_i32_i64(i32* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[ADD]] = add nsw i64 [[R_07]], [[CONV]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], [[LOOP2:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[ADD]], [[FOR_BODY]] ], [ [[TMP4]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[R_0_LCSSA]]
@@ -130,9 +130,9 @@ define i64 @add_i16_i64(i16* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <4 x i16> [[WIDE_LOAD]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP2]])
 ; CHECK-NEXT:    [[TMP4]] = add i64 [[TMP3]], [[VEC_PHI]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP4:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_VEC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP]], label [[SCALAR_PH]]
@@ -149,7 +149,7 @@ define i64 @add_i16_i64(i16* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[ADD]] = add nsw i64 [[R_07]], [[CONV]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], [[LOOP5:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[ADD]], [[FOR_BODY]] ], [ [[TMP4]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[R_0_LCSSA]]
@@ -196,9 +196,9 @@ define i64 @add_i8_i64(i8* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[WIDE_LOAD]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP2]])
 ; CHECK-NEXT:    [[TMP4]] = add i64 [[TMP3]], [[VEC_PHI]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP6:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_VEC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP]], label [[SCALAR_PH]]
@@ -215,7 +215,7 @@ define i64 @add_i8_i64(i8* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i64 [[R_07]], [[CONV]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], [[LOOP7:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[ADD]], [[FOR_BODY]] ], [ [[TMP4]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[R_0_LCSSA]]
@@ -262,7 +262,7 @@ define i32 @add_i32_i32(i32* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP4]] = add i32 [[TMP3]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP5]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], [[LOOP8:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP4]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    ret i32 [[R_0_LCSSA]]
@@ -309,7 +309,7 @@ define i32 @add_i16_i32(i16* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP5]] = add i32 [[TMP4]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP6]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], [[LOOP9:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP5]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    ret i32 [[R_0_LCSSA]]
@@ -357,7 +357,7 @@ define i32 @add_i8_i32(i8* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP5]] = add i32 [[TMP4]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP6]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], [[LOOP10:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP5]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    ret i32 [[R_0_LCSSA]]
@@ -404,7 +404,7 @@ define signext i16 @add_i16_i16(i16* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP4]] = add i16 [[TMP3]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP5]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], [[LOOP11:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[TMP4]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    ret i16 [[R_0_LCSSA]]
@@ -451,7 +451,7 @@ define signext i16 @add_i8_i16(i8* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP5]] = add i16 [[TMP4]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP6]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], [[LOOP12:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[TMP5]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    ret i16 [[R_0_LCSSA]]
@@ -498,7 +498,7 @@ define zeroext i8 @add_i8_i8(i8* nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[TMP4]] = add i8 [[TMP3]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP5]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], [[LOOP13:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[TMP4]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    ret i8 [[R_0_LCSSA]]
@@ -592,9 +592,9 @@ define i64 @mla_i32_i64(i32* nocapture readonly %x, i32* nocapture readonly %y, 
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext <4 x i32> [[TMP4]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7]] = add i64 [[TMP6]], [[VEC_PHI]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP14:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_VEC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP]], label [[SCALAR_PH]]
@@ -614,7 +614,7 @@ define i64 @mla_i32_i64(i32* nocapture readonly %x, i32* nocapture readonly %y, 
 ; CHECK-NEXT:    [[ADD]] = add nsw i64 [[R_09]], [[CONV]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_010]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], [[LOOP15:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[ADD]], [[FOR_BODY]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[R_0_LCSSA]]
@@ -670,9 +670,9 @@ define i64 @mla_i16_i64(i16* nocapture readonly %x, i16* nocapture readonly %y, 
 ; CHECK-NEXT:    [[TMP7:%.*]] = sext <8 x i32> [[TMP6]] to <8 x i64>
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.add.v8i64(<8 x i64> [[TMP7]])
 ; CHECK-NEXT:    [[TMP9]] = add i64 [[TMP8]], [[VEC_PHI]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP16:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_VEC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP]], label [[SCALAR_PH]]
@@ -694,7 +694,7 @@ define i64 @mla_i16_i64(i16* nocapture readonly %x, i16* nocapture readonly %y, 
 ; CHECK-NEXT:    [[ADD]] = add nsw i64 [[R_011]], [[CONV3]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_012]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], [[LOOP17:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[ADD]], [[FOR_BODY]] ], [ [[TMP9]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[R_0_LCSSA]]
@@ -752,9 +752,9 @@ define i64 @mla_i8_i64(i8* nocapture readonly %x, i8* nocapture readonly %y, i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <16 x i32> [[TMP6]] to <16 x i64>
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vector.reduce.add.v16i64(<16 x i64> [[TMP7]])
 ; CHECK-NEXT:    [[TMP9]] = add i64 [[TMP8]], [[VEC_PHI]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 16
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP18:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_VEC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP]], label [[SCALAR_PH]]
@@ -776,7 +776,7 @@ define i64 @mla_i8_i64(i8* nocapture readonly %x, i8* nocapture readonly %y, i32
 ; CHECK-NEXT:    [[ADD]] = add nuw nsw i64 [[R_011]], [[CONV3]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_012]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], [[LOOP19:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[ADD]], [[FOR_BODY]] ], [ [[TMP9]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[R_0_LCSSA]]
@@ -832,7 +832,7 @@ define i32 @mla_i32_i32(i32* nocapture readonly %x, i32* nocapture readonly %y, 
 ; CHECK-NEXT:    [[TMP7]] = add i32 [[TMP6]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], [[LOOP20:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP7]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    ret i32 [[R_0_LCSSA]]
@@ -887,7 +887,7 @@ define i32 @mla_i16_i32(i16* nocapture readonly %x, i16* nocapture readonly %y, 
 ; CHECK-NEXT:    [[TMP9]] = add i32 [[TMP8]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP10]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], [[LOOP21:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP9]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    ret i32 [[R_0_LCSSA]]
@@ -944,7 +944,7 @@ define i32 @mla_i8_i32(i8* nocapture readonly %x, i8* nocapture readonly %y, i32
 ; CHECK-NEXT:    [[TMP9]] = add i32 [[TMP8]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP10]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], [[LOOP22:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP9]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    ret i32 [[R_0_LCSSA]]
@@ -999,7 +999,7 @@ define signext i16 @mla_i16_i16(i16* nocapture readonly %x, i16* nocapture reado
 ; CHECK-NEXT:    [[TMP7]] = add i16 [[TMP6]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], [[LOOP23:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[TMP7]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    ret i16 [[R_0_LCSSA]]
@@ -1054,7 +1054,7 @@ define signext i16 @mla_i8_i16(i8* nocapture readonly %x, i8* nocapture readonly
 ; CHECK-NEXT:    [[TMP9]] = add i16 [[TMP8]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP10]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], [[LOOP24:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[TMP9]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    ret i16 [[R_0_LCSSA]]
@@ -1109,7 +1109,7 @@ define zeroext i8 @mla_i8_i8(i8* nocapture readonly %x, i8* nocapture readonly %
 ; CHECK-NEXT:    [[TMP7]] = add i8 [[TMP6]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP8]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], [[LOOP25:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[FOR_COND_CLEANUP]], label [[VECTOR_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[TMP7]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    ret i8 [[R_0_LCSSA]]
@@ -1167,9 +1167,9 @@ define i32 @reduction_interleave_group(i32 %n, i32* %arr) #0 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[STRIDED_VEC]])
 ; CHECK-NEXT:    [[TMP10]] = add i32 [[TMP9]], [[TMP8]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP26:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT]], label [[SCALAR_PH]]
@@ -1189,7 +1189,7 @@ define i32 @reduction_interleave_group(i32 %n, i32* %arr) #0 {
 ; CHECK-NEXT:    [[RED_2]] = add i32 [[RED_1]], [[L_1]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[EXIT]], [[LOOP27:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[EXIT]], !llvm.loop [[LOOP27:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[RET_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[RED_2]], [[FOR_BODY]] ], [ [[TMP10]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[RET_LCSSA]]

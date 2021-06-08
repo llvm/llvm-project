@@ -43,7 +43,7 @@ define void @foo(i32* noalias nocapture %a, i32* noalias nocapture readonly %b) 
 ; AVX-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDEX]]
 ; AVX-NEXT:    [[TMP5:%.*]] = bitcast i32* [[TMP4]] to <4 x i32>*
 ; AVX-NEXT:    store <4 x i32> [[TMP3]], <4 x i32>* [[TMP5]], align 4
-; AVX-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; AVX-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; AVX-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; AVX-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; AVX:       middle.block:

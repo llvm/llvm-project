@@ -5,7 +5,7 @@
 ; CHECK-NEXT:    %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; CHECK-NEXT:    %0 = add i32 %index, 0
 ; CHECK-NEXT:    %1 = call <4 x i16> @llvm.fshl.v4i16(<4 x i16> undef, <4 x i16> undef, <4 x i16> <i16 15, i16 15, i16 15, i16 15>)
-; CHECK-NEXT:    %index.next = add i32 %index, 4
+; CHECK-NEXT:    %index.next = add nuw i32 %index, 4
 ; CHECK-NEXT:    %2 = icmp eq i32 %index.next, %n.vec
 ; CHECK-NEXT:     br i1 %2, label %middle.block, label %vector.body, !llvm.loop !0
 ;

@@ -1612,7 +1612,7 @@ define i32 @nopragma(i32* noalias nocapture %a, i32* noalias nocapture readonly 
 ; O1VEC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP5]], i32 0
 ; O1VEC2-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP6]] to <4 x i32>*
 ; O1VEC2-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* [[TMP7]], align 4
-; O1VEC2-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; O1VEC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; O1VEC2-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; O1VEC2-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; O1VEC2:       middle.block:
@@ -1654,7 +1654,7 @@ define i32 @nopragma(i32* noalias nocapture %a, i32* noalias nocapture readonly 
 ; OzVEC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP5]], i32 0
 ; OzVEC2-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP6]] to <4 x i32>*
 ; OzVEC2-NEXT:    store <4 x i32> [[TMP4]], <4 x i32>* [[TMP7]], align 4
-; OzVEC2-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; OzVEC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; OzVEC2-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; OzVEC2-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; OzVEC2:       middle.block:

@@ -10946,7 +10946,7 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
 //  Other Lowering Code
 //===----------------------------------------------------------------------===//
 
-static Instruction* callIntrinsic(IRBuilder<> &Builder, Intrinsic::ID Id) {
+static Instruction *callIntrinsic(IRBuilderBase &Builder, Intrinsic::ID Id) {
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
   Function *Func = Intrinsic::getDeclaration(M, Id);
   return Builder.CreateCall(Func, {});
@@ -10954,7 +10954,7 @@ static Instruction* callIntrinsic(IRBuilder<> &Builder, Intrinsic::ID Id) {
 
 // The mappings for emitLeading/TrailingFence is taken from
 // http://www.cl.cam.ac.uk/~pes20/cpp/cpp0xmappings.html
-Instruction *PPCTargetLowering::emitLeadingFence(IRBuilder<> &Builder,
+Instruction *PPCTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                  Instruction *Inst,
                                                  AtomicOrdering Ord) const {
   if (Ord == AtomicOrdering::SequentiallyConsistent)
@@ -10964,7 +10964,7 @@ Instruction *PPCTargetLowering::emitLeadingFence(IRBuilder<> &Builder,
   return nullptr;
 }
 
-Instruction *PPCTargetLowering::emitTrailingFence(IRBuilder<> &Builder,
+Instruction *PPCTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
                                                   Instruction *Inst,
                                                   AtomicOrdering Ord) const {
   if (Inst->hasAtomicLoad() && isAcquireOrStronger(Ord)) {

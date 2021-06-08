@@ -30,7 +30,7 @@
 ; FORCED-NEXT:    %11 = getelementptr i64, i64* %9, i32 0
 ; FORCED-NEXT:    %12 = bitcast i64* %11 to <2 x i64>*
 ; FORCED-NEXT:    store <2 x i64> %10, <2 x i64>* %12, align 4
-; FORCED-NEXT:    %index.next = add i32 %index, 2
+; FORCED-NEXT:    %index.next = add nuw i32 %index, 2
 ; FORCED-NEXT:    %13 = icmp eq i32 %index.next, 0
 ; FORCED-NEXT:    br i1 %13, label %middle.block, label %vector.body, !llvm.loop !0
 
@@ -79,7 +79,7 @@ declare float @pow(float, float) readnone nounwind
 ; FORCED-NEXT:    %11 = getelementptr float, float* %9, i32 0
 ; FORCED-NEXT:    %12 = bitcast float* %11 to <2 x float>*
 ; FORCED-NEXT:    store <2 x float> %10, <2 x float>* %12, align 4
-; FORCED-NEXT:    %index.next = add i32 %index, 2
+; FORCED-NEXT:    %index.next = add nuw i32 %index, 2
 ; FORCED-NEXT:    %13 = icmp eq i32 %index.next, 0
 ; FORCED-NEXT:    br i1 %13, label %middle.block, label %vector.body, !llvm.loop !4
 

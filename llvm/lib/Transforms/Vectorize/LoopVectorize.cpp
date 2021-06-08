@@ -3073,7 +3073,15 @@ PHINode *InnerLoopVectorizer::createInductionVariable(Loop *L, Value *Start,
   setDebugLocFromInst(Builder, OldInst);
 
   // Create i+1 and fill the PHINode.
-  Value *Next = Builder.CreateAdd(Induction, Step, "index.next");
+  //
+  // If the tail is not folded, we know that End - Start >= Step (either
+  // statically or through the minimum iteration checks). We also know that both
+  // Start % Step == 0 and End % Step == 0. We exit the vector loop if %IV +
+  // %Step == %End. Hence we must exit the loop before %IV + %Step unsigned
+  // overflows and we can mark the induction increment as NUW.
+  Value *Next =
+      Builder.CreateAdd(Induction, Step, "index.next",
+                        /*NUW=*/!Cost->foldTailByMasking(), /*NSW=*/false);
   Induction->addIncoming(Start, L->getLoopPreheader());
   Induction->addIncoming(Next, Latch);
   // Create the compare.

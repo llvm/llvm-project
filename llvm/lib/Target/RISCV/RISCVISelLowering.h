@@ -369,9 +369,9 @@ public:
   bool shouldInsertFencesForAtomic(const Instruction *I) const override {
     return isa<LoadInst>(I) || isa<StoreInst>(I);
   }
-  Instruction *emitLeadingFence(IRBuilder<> &Builder, Instruction *Inst,
+  Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
                                 AtomicOrdering Ord) const override;
-  Instruction *emitTrailingFence(IRBuilder<> &Builder, Instruction *Inst,
+  Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
                                  AtomicOrdering Ord) const override;
 
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
@@ -442,13 +442,13 @@ public:
 
   TargetLowering::AtomicExpansionKind
   shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
-  Value *emitMaskedAtomicRMWIntrinsic(IRBuilder<> &Builder, AtomicRMWInst *AI,
+  Value *emitMaskedAtomicRMWIntrinsic(IRBuilderBase &Builder, AtomicRMWInst *AI,
                                       Value *AlignedAddr, Value *Incr,
                                       Value *Mask, Value *ShiftAmt,
                                       AtomicOrdering Ord) const override;
   TargetLowering::AtomicExpansionKind
   shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CI) const override;
-  Value *emitMaskedAtomicCmpXchgIntrinsic(IRBuilder<> &Builder,
+  Value *emitMaskedAtomicCmpXchgIntrinsic(IRBuilderBase &Builder,
                                           AtomicCmpXchgInst *CI,
                                           Value *AlignedAddr, Value *CmpVal,
                                           Value *NewVal, Value *Mask,

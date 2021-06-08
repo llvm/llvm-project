@@ -32,9 +32,9 @@ define i32 @test(i32* nocapture %f) #0 {
 ; UNROLL-NEXT:    store i32 [[TMP7]], i32* [[TMP1]], align 4
 ; UNROLL-NEXT:    br label [[PRED_STORE_CONTINUE3]]
 ; UNROLL:       pred.store.continue3:
-; UNROLL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; UNROLL-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; UNROLL-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
+; UNROLL-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; UNROLL:       middle.block:
 ; UNROLL-NEXT:    [[CMP_N:%.*]] = icmp eq i64 128, 128
 ; UNROLL-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[FOR_BODY:%.*]]
@@ -51,7 +51,7 @@ define i32 @test(i32* nocapture %f) #0 {
 ; UNROLL:       for.inc:
 ; UNROLL-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; UNROLL-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 128
-; UNROLL-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], [[LOOP2:!llvm.loop !.*]]
+; UNROLL-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; UNROLL:       for.end:
 ; UNROLL-NEXT:    ret i32 0
 ;
@@ -82,9 +82,9 @@ define i32 @test(i32* nocapture %f) #0 {
 ; UNROLL-NOSIMPLIFY-NEXT:    store i32 [[TMP7]], i32* [[TMP1]], align 4
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[PRED_STORE_CONTINUE3]]
 ; UNROLL-NOSIMPLIFY:       pred.store.continue3:
-; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; UNROLL-NOSIMPLIFY:       middle.block:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[CMP_N:%.*]] = icmp eq i64 128, 128
 ; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -104,7 +104,7 @@ define i32 @test(i32* nocapture %f) #0 {
 ; UNROLL-NOSIMPLIFY:       for.inc:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; UNROLL-NOSIMPLIFY-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 128
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], [[LOOP2:!llvm.loop !.*]]
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; UNROLL-NOSIMPLIFY:       for.end:
 ; UNROLL-NOSIMPLIFY-NEXT:    ret i32 0
 ;
@@ -137,9 +137,9 @@ define i32 @test(i32* nocapture %f) #0 {
 ; VEC-NEXT:    store i32 [[TMP12]], i32* [[TMP10]], align 4
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; VEC:       pred.store.continue2:
-; VEC-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VEC-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
-; VEC-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
+; VEC-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VEC:       middle.block:
 ; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 128, 128
 ; VEC-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[FOR_BODY:%.*]]
@@ -156,7 +156,7 @@ define i32 @test(i32* nocapture %f) #0 {
 ; VEC:       for.inc:
 ; VEC-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; VEC-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 128
-; VEC-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], [[LOOP2:!llvm.loop !.*]]
+; VEC-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; VEC:       for.end:
 ; VEC-NEXT:    ret i32 0
 ;
@@ -227,9 +227,9 @@ define void @bug18724(i1 %cond) {
 ; UNROLL-NEXT:    [[TMP9:%.*]] = add i32 [[VEC_PHI2]], 1
 ; UNROLL-NEXT:    [[PREDPHI]] = select i1 undef, i32 [[VEC_PHI]], i32 [[TMP8]]
 ; UNROLL-NEXT:    [[PREDPHI5]] = select i1 undef, i32 [[VEC_PHI2]], i32 [[TMP9]]
-; UNROLL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; UNROLL-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; UNROLL-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP3:!llvm.loop !.*]]
+; UNROLL-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; UNROLL:       middle.block:
 ; UNROLL-NEXT:    [[BIN_RDX:%.*]] = add i32 [[PREDPHI5]], [[PREDPHI]]
 ; UNROLL-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
@@ -300,9 +300,9 @@ define void @bug18724(i1 %cond) {
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP8:%.*]] = add i32 [[VEC_PHI2]], 1
 ; UNROLL-NOSIMPLIFY-NEXT:    [[PREDPHI]] = select i1 undef, i32 [[VEC_PHI]], i32 [[TMP7]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[PREDPHI5]] = select i1 undef, i32 [[VEC_PHI2]], i32 [[TMP8]]
-; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP3:!llvm.loop !.*]]
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; UNROLL-NOSIMPLIFY:       middle.block:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[BIN_RDX:%.*]] = add i32 [[PREDPHI5]], [[PREDPHI]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
@@ -326,7 +326,7 @@ define void @bug18724(i1 %cond) {
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDVARS_IV_NEXT4]] = add nsw i64 [[INDVARS_IV3]], 1
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV3]] to i32
 ; UNROLL-NOSIMPLIFY-NEXT:    [[CMP13:%.*]] = icmp slt i32 [[TMP1]], 0
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[CMP13]], label [[FOR_BODY14]], label [[FOR_INC26_LOOPEXIT]], [[LOOP4:!llvm.loop !.*]]
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[CMP13]], label [[FOR_BODY14]], label [[FOR_INC26_LOOPEXIT]], !llvm.loop [[LOOP4:![0-9]+]]
 ; UNROLL-NOSIMPLIFY:       for.inc26.loopexit:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INEWCHUNKS_2_LCSSA:%.*]] = phi i32 [ [[INEWCHUNKS_2]], [[FOR_INC23]] ], [ [[BIN_RDX]], [[MIDDLE_BLOCK]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[FOR_INC26]]
@@ -365,9 +365,9 @@ define void @bug18724(i1 %cond) {
 ; VEC:       pred.store.continue2:
 ; VEC-NEXT:    [[TMP8:%.*]] = add <2 x i32> [[VEC_PHI]], <i32 1, i32 1>
 ; VEC-NEXT:    [[PREDPHI]] = select <2 x i1> undef, <2 x i32> [[VEC_PHI]], <2 x i32> [[TMP8]]
-; VEC-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VEC-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; VEC-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP4:!llvm.loop !.*]]
+; VEC-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VEC:       middle.block:
 ; VEC-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[PREDPHI]])
 ; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
@@ -455,9 +455,9 @@ define void @minimal_bit_widths(i1 %c) {
 ; UNROLL-NEXT:    store i8 [[TMP7]], i8* [[TMP4]], align 1
 ; UNROLL-NEXT:    br label [[PRED_STORE_CONTINUE6]]
 ; UNROLL:       pred.store.continue6:
-; UNROLL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; UNROLL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; UNROLL-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], undef
-; UNROLL-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP4:!llvm.loop !.*]]
+; UNROLL-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; UNROLL:       middle.block:
 ; UNROLL-NEXT:    [[CMP_N:%.*]] = icmp eq i64 undef, undef
 ; UNROLL-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[FOR_BODY:%.*]]
@@ -476,7 +476,7 @@ define void @minimal_bit_widths(i1 %c) {
 ; UNROLL-NEXT:    [[TMP6]] = add nuw nsw i64 [[TMP0]], 1
 ; UNROLL-NEXT:    [[TMP7]] = add i64 [[TMP1]], -1
 ; UNROLL-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 0
-; UNROLL-NEXT:    br i1 [[TMP8]], label [[FOR_END]], label [[FOR_BODY]], [[LOOP5:!llvm.loop !.*]]
+; UNROLL-NEXT:    br i1 [[TMP8]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; UNROLL:       for.end:
 ; UNROLL-NEXT:    ret void
 ;
@@ -510,9 +510,9 @@ define void @minimal_bit_widths(i1 %c) {
 ; UNROLL-NOSIMPLIFY-NEXT:    store i8 [[TMP7]], i8* [[TMP4]], align 1
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[PRED_STORE_CONTINUE6]]
 ; UNROLL-NOSIMPLIFY:       pred.store.continue6:
-; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], undef
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP5:!llvm.loop !.*]]
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; UNROLL-NOSIMPLIFY:       middle.block:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[CMP_N:%.*]] = icmp eq i64 undef, undef
 ; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -535,7 +535,7 @@ define void @minimal_bit_widths(i1 %c) {
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP6]] = add nuw nsw i64 [[TMP0]], 1
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP7]] = add i64 [[TMP1]], -1
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 0
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP8]], label [[FOR_END]], label [[FOR_BODY]], [[LOOP6:!llvm.loop !.*]]
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP8]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; UNROLL-NOSIMPLIFY:       for.end:
 ; UNROLL-NOSIMPLIFY-NEXT:    ret void
 ;
@@ -573,9 +573,9 @@ define void @minimal_bit_widths(i1 %c) {
 ; VEC-NEXT:    store i8 [[TMP14]], i8* [[TMP11]], align 1
 ; VEC-NEXT:    br label [[PRED_STORE_CONTINUE3]]
 ; VEC:       pred.store.continue3:
-; VEC-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VEC-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], undef
-; VEC-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP5:!llvm.loop !.*]]
+; VEC-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; VEC:       middle.block:
 ; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 undef, undef
 ; VEC-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[FOR_BODY:%.*]]
@@ -594,7 +594,7 @@ define void @minimal_bit_widths(i1 %c) {
 ; VEC-NEXT:    [[TMP6]] = add nuw nsw i64 [[TMP0]], 1
 ; VEC-NEXT:    [[TMP7]] = add i64 [[TMP1]], -1
 ; VEC-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 0
-; VEC-NEXT:    br i1 [[TMP8]], label [[FOR_END]], label [[FOR_BODY]], [[LOOP6:!llvm.loop !.*]]
+; VEC-NEXT:    br i1 [[TMP8]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VEC:       for.end:
 ; VEC-NEXT:    ret void
 ;
@@ -680,7 +680,7 @@ define void @minimal_bit_widths_with_aliasing_store(i1 %c, i8* %ptr) {
 ; UNROLL-NOSIMPLIFY-NEXT:    store i8 [[TMP7]], i8* [[TMP1]], align 1
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[PRED_STORE_CONTINUE6]]
 ; UNROLL-NOSIMPLIFY:       pred.store.continue6:
-; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
 ; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; UNROLL-NOSIMPLIFY:       middle.block:

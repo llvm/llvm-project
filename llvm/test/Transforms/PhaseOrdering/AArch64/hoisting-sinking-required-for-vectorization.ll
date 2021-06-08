@@ -70,7 +70,7 @@ define void @loop(double* %X, double* %Y) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds double, double* [[TMP13]], i64 2
 ; CHECK-NEXT:    [[TMP16:%.*]] = bitcast double* [[TMP15]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP12]], <2 x double>* [[TMP16]], align 8, !alias.scope !3, !noalias !0
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], 20000
 ; CHECK-NEXT:    br i1 [[TMP17]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
@@ -159,7 +159,7 @@ define void @loop2(float* %A, float* %B, i32* %C, float %x) {
 ; CHECK-NEXT:    [[DOT0:%.*]] = getelementptr inbounds i32, i32* [[C]], i64 0
 ; CHECK-NEXT:    [[DOT017:%.*]] = getelementptr inbounds float, float* [[A]], i64 0
 ; CHECK-NEXT:    [[DOT018:%.*]] = getelementptr inbounds float, float* [[B]], i64 0
-; CHECK-NEXT:    [[INDEX_NEXT_0:%.*]] = add i64 0, 4
+; CHECK-NEXT:    [[INDEX_NEXT_0:%.*]] = add nuw i64 0, 4
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX_NEXT_PHI:%.*]] = phi i64 [ [[INDEX_NEXT_0]], [[VECTOR_PH]] ], [ [[INDEX_NEXT_1:%.*]], [[VECTOR_BODY_VECTOR_BODY_CRIT_EDGE:%.*]] ]
@@ -184,7 +184,7 @@ define void @loop2(float* %A, float* %B, i32* %C, float %x) {
 ; CHECK-NEXT:    [[DOT1]] = getelementptr inbounds i32, i32* [[C]], i64 [[INDEX_NEXT_PHI]]
 ; CHECK-NEXT:    [[DOT119]] = getelementptr inbounds float, float* [[A]], i64 [[INDEX_NEXT_PHI]]
 ; CHECK-NEXT:    [[DOT120]] = getelementptr inbounds float, float* [[B]], i64 [[INDEX_NEXT_PHI]]
-; CHECK-NEXT:    [[INDEX_NEXT_1]] = add i64 [[INDEX_NEXT_PHI]], 4
+; CHECK-NEXT:    [[INDEX_NEXT_1]] = add nuw i64 [[INDEX_NEXT_PHI]], 4
 ; CHECK-NEXT:    br label [[VECTOR_BODY]]
 ; CHECK:       loop.body:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]

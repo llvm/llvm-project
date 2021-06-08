@@ -36,7 +36,7 @@ define void @can_sink_after_store(i32 %x, i32* %ptr, i64 %tc) local_unnamed_addr
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[TMP7]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[TMP8]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], <4 x i32>* [[TMP9]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1996
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; CHECK:       middle.block:
@@ -120,7 +120,7 @@ define void @sink_sdiv(i32 %x, i32* %ptr, i64 %tc) local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[TMP7]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[TMP8]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], <4 x i32>* [[TMP9]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1996
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP4:!llvm.loop !.*]]
 ; CHECK:       middle.block:
@@ -205,7 +205,7 @@ define void @can_sink_with_additional_user(i32 %x, i32* %ptr, i64 %tc) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, i32* [[TMP9]], i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32* [[TMP10]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP8]], <4 x i32>* [[TMP11]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1996
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
@@ -499,7 +499,7 @@ define i16 @multiple_exit(i16* %p, i32 %n) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i16> [[VECTOR_RECUR]], <4 x i16> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i16* [[TMP9]] to <4 x i16>*
 ; CHECK-NEXT:    store <4 x i16> [[TMP11]], <4 x i16>* [[TMP12]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP6:!llvm.loop !.*]]
@@ -584,7 +584,7 @@ define i16 @multiple_exit2(i16* %p, i32 %n) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i16> [[VECTOR_RECUR]], <4 x i16> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i16* [[TMP9]] to <4 x i16>*
 ; CHECK-NEXT:    store <4 x i16> [[TMP11]], <4 x i16>* [[TMP12]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP8:!llvm.loop !.*]]
@@ -677,7 +677,7 @@ define void @sink_dominance(i32* %ptr, i32 %N) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <4 x i1> [[TMP15]], <4 x i32> [[TMP14]], <4 x i32> <i32 22, i32 22, i32 22, i32 22>
 ; CHECK-NEXT:    [[TMP17:%.*]] = bitcast i32* [[TMP10]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP16]], <4 x i32>* [[TMP17]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
@@ -772,7 +772,7 @@ define void @sink_dominance_2(i32* %ptr, i32 %N) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = select <4 x i1> [[TMP17]], <4 x i32> [[TMP14]], <4 x i32> [[TMP16]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = bitcast i32* [[TMP10]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP18]], <4 x i32>* [[TMP19]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       middle.block:

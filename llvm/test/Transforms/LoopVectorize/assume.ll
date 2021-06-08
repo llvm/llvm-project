@@ -39,7 +39,7 @@ define void @test1(float* noalias nocapture %a, float* noalias nocapture readonl
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds float, float* [[TMP16]], i32 2
 ; CHECK-NEXT:    [[TMP21:%.*]] = bitcast float* [[TMP20]] to <2 x float>*
 ; CHECK-NEXT:    store <2 x float> [[TMP15]], <2 x float>* [[TMP21]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1600
 ; CHECK-NEXT:    br i1 [[TMP22]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
@@ -148,7 +148,7 @@ define void @test2(%struct.data* nocapture readonly %d) {
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, float* [[TMP14]], i32 2
 ; CHECK-NEXT:    [[TMP19:%.*]] = bitcast float* [[TMP18]] to <2 x float>*
 ; CHECK-NEXT:    store <2 x float> [[TMP13]], <2 x float>* [[TMP19]], align 4, !alias.scope !7, !noalias !4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1600
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       middle.block:
@@ -254,7 +254,7 @@ define void @predicated_assume(float* noalias nocapture readonly %a, float* noal
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds float, float* [[TMP19]], i32 2
 ; CHECK-NEXT:    [[TMP24:%.*]] = bitcast float* [[TMP23]] to <2 x float>*
 ; CHECK-NEXT:    store <2 x float> [[TMP18]], <2 x float>* [[TMP24]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[STEP_ADD]], <i64 2, i64 2>
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
