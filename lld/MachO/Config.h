@@ -89,6 +89,7 @@ struct Configuration {
   bool hasReexports = false;
   bool allLoad = false;
   bool forceLoadObjC = false;
+  bool forceLoadSwift = false;
   bool staticLink = false;
   bool implicitDylibs = false;
   bool isPic = false;
