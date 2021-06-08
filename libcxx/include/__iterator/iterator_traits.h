@@ -193,8 +193,8 @@ concept __cpp17_bidirectional_iterator =
 
 template<class _Ip>
 concept __cpp17_random_access_iterator =
-  __cpp17_bidirectional_iterator<_Ip> and
-  totally_ordered<_Ip> and
+  __cpp17_bidirectional_iterator<_Ip> &&
+  totally_ordered<_Ip> &&
   requires(_Ip __i, typename incrementable_traits<_Ip>::difference_type __n) {
     { __i += __n } -> same_as<_Ip&>;
     { __i -= __n } -> same_as<_Ip&>;

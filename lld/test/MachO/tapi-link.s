@@ -25,18 +25,10 @@
 # CHECK-DAG: __DATA __data {{.*}} pointer 0 libc++abi      ___gxx_personality_v0
 # CHECK-DAG: __DATA __data {{.*}} pointer 0 libNested3     _deeply_nested
 
-# RUN: llvm-objdump --macho --all-headers %t/test | \
-# RUN:     FileCheck --check-prefix=LOAD %s
+# RUN: llvm-otool -l %t/test | FileCheck --check-prefix=LOAD %s
 
-# RUN: llvm-objdump --macho --all-headers %t/with-reexport | \
-# RUN:     FileCheck --check-prefixes=LOAD,LOAD-REEXPORT %s
-
-# LOAD:          cmd LC_LOAD_DYLIB
-# LOAD-NEXT:               cmdsize
-# LOAD-NEXT:                  name /usr/lib/libSystem.dylib
-# LOAD-NEXT:            time stamp
-# LOAD-NEXT:       current version 1.1.1
-# LOAD-NEXT: compatibility version
+# RUN: llvm-otool -l %t/with-reexport | \
+# RUN:     FileCheck --check-prefixes=LOAD-REEXPORT,LOAD %s
 
 # LOAD-REEXPORT:          cmd LC_LOAD_DYLIB
 # LOAD-REEXPORT-NEXT:               cmdsize
@@ -44,6 +36,13 @@
 # LOAD-REEXPORT-NEXT:            time stamp
 # LOAD-REEXPORT-NEXT:       current version 1.0.0
 # LOAD-REEXPORT-NEXT: compatibility version
+
+# LOAD:          cmd LC_LOAD_DYLIB
+# LOAD-NEXT:               cmdsize
+# LOAD-NEXT:                  name /usr/lib/libSystem.dylib
+# LOAD-NEXT:            time stamp
+# LOAD-NEXT:       current version 1.1.1
+# LOAD-NEXT: compatibility version
 
 #--- test.s
 .section __TEXT,__text

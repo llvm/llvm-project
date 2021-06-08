@@ -447,3 +447,11 @@ void EmitObjAction::ExecuteAction() {
       clang::DiagnosticsEngine::Error, "code-generation is not available yet");
   ci.diagnostics().Report(DiagID);
 }
+
+void InitOnlyAction::ExecuteAction() {
+  CompilerInstance &ci = this->instance();
+  unsigned DiagID =
+      ci.diagnostics().getCustomDiagID(clang::DiagnosticsEngine::Warning,
+          "Use `-init-only` for testing purposes only");
+  ci.diagnostics().Report(DiagID);
+}

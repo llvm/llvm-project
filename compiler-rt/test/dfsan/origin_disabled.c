@@ -1,6 +1,5 @@
-// RUN: %clang_dfsan -gmlt -mllvm -dfsan-fast-16-labels=true %s -o %t && \
-// RUN:     %run %t >%t.out 2>&1
-// RUN: FileCheck %s --check-prefix=CHECK < %t.out
+// RUN: %clang_dfsan -gmlt %s -o %t && %run %t >%t.out 2>&1
+// RUN: FileCheck %s < %t.out
 //
 // REQUIRES: x86_64-target-arch
 

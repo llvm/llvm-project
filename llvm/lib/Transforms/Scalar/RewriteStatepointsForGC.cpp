@@ -522,6 +522,14 @@ static BaseDefiningValueResult findBaseDefiningValue(Value *I) {
         ConstantPointerNull::get(cast<PointerType>(I->getType())), true);
   }
 
+  // inttoptrs in an integral address space are currently ill-defined.  We
+  // treat them as defining base pointers here for consistency with the
+  // constant rule above and because we don't really have a better semantic
+  // to give them.  Note that the optimizer is always free to insert undefined
+  // behavior on dynamically dead paths as well.
+  if (isa<IntToPtrInst>(I))
+    return BaseDefiningValueResult(I, true);
+
   if (CastInst *CI = dyn_cast<CastInst>(I)) {
     Value *Def = CI->stripPointerCasts();
     // If stripping pointer casts changes the address space there is an

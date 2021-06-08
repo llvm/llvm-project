@@ -1231,8 +1231,7 @@ bool X86MCCodeEmitter::emitREXPrefix(int MemOperand, const MCInst &MI,
           // FIXME: The caller of determineREXPrefix slaps this prefix onto
           // anything that returns non-zero.
           REX |= 0x40; // REX fixed encoding prefix
-      } else if (MO.isExpr() &&
-                 STI.getTargetTriple().getEnvironment() == Triple::GNUX32) {
+      } else if (MO.isExpr() && STI.getTargetTriple().isX32()) {
         // GOTTPOFF and TLSDESC relocations require a REX prefix to allow
         // linker optimizations: even if the instructions we see may not require
         // any prefix, they may be replaced by instructions that do. This is

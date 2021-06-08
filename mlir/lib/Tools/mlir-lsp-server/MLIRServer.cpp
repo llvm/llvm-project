@@ -286,7 +286,8 @@ struct MLIRDocument {
   Optional<lsp::Hover> findHover(const lsp::URIForFile &uri,
                                  const lsp::Position &hoverPos);
   Optional<lsp::Hover>
-  buildHoverForOperation(const AsmParserState::OperationDefinition &op);
+  buildHoverForOperation(llvm::SMRange hoverRange,
+                         const AsmParserState::OperationDefinition &op);
   lsp::Hover buildHoverForOperationResult(llvm::SMRange hoverRange,
                                           Operation *op, unsigned resultStart,
                                           unsigned resultEnd,
@@ -439,7 +440,12 @@ Optional<lsp::Hover> MLIRDocument::findHover(const lsp::URIForFile &uri,
   for (const AsmParserState::OperationDefinition &op : asmState.getOpDefs()) {
     // Check if the position points at this operation.
     if (contains(op.loc, posLoc))
-      return buildHoverForOperation(op);
+      return buildHoverForOperation(op.loc, op);
+
+    // Check if the position points at the symbol name.
+    for (auto &use : op.symbolUses)
+      if (contains(use, posLoc))
+        return buildHoverForOperation(use, op);
 
     // Check if the position points at a result group.
     for (unsigned i = 0, e = op.resultGroups.size(); i < e; ++i) {
@@ -473,21 +479,34 @@ Optional<lsp::Hover> MLIRDocument::findHover(const lsp::URIForFile &uri,
 }
 
 Optional<lsp::Hover> MLIRDocument::buildHoverForOperation(
-    const AsmParserState::OperationDefinition &op) {
-  // Don't show hovers for operations with regions to avoid huge hover  blocks.
-  // TODO: Should we add support for printing an op without its regions?
-  if (llvm::any_of(op.op->getRegions(),
-                   [](Region &region) { return !region.empty(); }))
-    return llvm::None;
-
-  lsp::Hover hover(getRangeFromLoc(sourceMgr, op.loc));
+    llvm::SMRange hoverRange, const AsmParserState::OperationDefinition &op) {
+  lsp::Hover hover(getRangeFromLoc(sourceMgr, hoverRange));
   llvm::raw_string_ostream os(hover.contents.value);
 
-  // For hovers on an operation, show the generic form.
-  os << "```mlir\n";
+  // Add the operation name to the hover.
+  os << "\"" << op.op->getName() << "\"";
+  if (SymbolOpInterface symbol = dyn_cast<SymbolOpInterface>(op.op))
+    os << " : " << symbol.getVisibility() << " @" << symbol.getName() << "";
+  os << "\n\n";
+
+  os << "Generic Form:\n\n```mlir\n";
+
+  // Temporary drop the regions of this operation so that they don't get
+  // printed in the output. This helps keeps the size of the output hover
+  // small.
+  SmallVector<std::unique_ptr<Region>> regions;
+  for (Region &region : op.op->getRegions()) {
+    regions.emplace_back(std::make_unique<Region>());
+    regions.back()->takeBody(region);
+  }
+
   op.op->print(
       os, OpPrintingFlags().printGenericOpForm().elideLargeElementsAttrs());
   os << "\n```\n";
+
+  // Move the regions back to the current operation.
+  for (Region &region : op.op->getRegions())
+    region.takeBody(*regions.back());
 
   return hover;
 }

@@ -14,7 +14,7 @@ int f(int i) {
 
 int main(void) {
   int i = 1;
-  dfsan_label i_label = dfsan_create_label("i", 0);
+  dfsan_label i_label = 2;
   dfsan_set_label(i_label, &i, sizeof(i));
 
   // CHECK: WARNING: DataFlowSanitizer: call to uninstrumented function f

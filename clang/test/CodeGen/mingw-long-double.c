@@ -45,3 +45,19 @@ long double _Complex TestLDC(long double _Complex x) {
 // GNU32: declare dso_local void @__mulxc3
 // GNU64: declare dso_local void @__mulxc3
 // MSC64: declare dso_local void @__muldc3
+
+void VarArgLD(int a, ...) {
+  // GNU32-LABEL: define{{.*}} void @VarArgLD
+  // GNU64-LABEL: define{{.*}} void @VarArgLD
+  // MSC64-LABEL: define{{.*}} void @VarArgLD
+  __builtin_va_list ap;
+  __builtin_va_start(ap, a);
+  long double LD = __builtin_va_arg(ap, long double);
+  // GNU32-NOT: load x86_fp80*, x86_fp80**
+  // GNU32: load x86_fp80, x86_fp80*
+  // GNU64: load x86_fp80*, x86_fp80**
+  // GNU64: load x86_fp80, x86_fp80*
+  // MSC64-NOT: load double*, double**
+  // MSC64: load double, double*
+  __builtin_va_end(ap);
+}

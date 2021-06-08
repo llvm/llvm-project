@@ -132,6 +132,9 @@ public:
   iterator_range<relocation_iterator> relocations() const {
     return make_range(relocation_begin(), relocation_end());
   }
+
+  /// Returns the related section if this section contains relocations. The
+  /// returned section may or may not have applied its relocations.
   Expected<section_iterator> getRelocatedSection() const;
 
   DataRefImpl getRawDataRefImpl() const;

@@ -174,13 +174,13 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_d_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dsdv, float %s, float %clamp) {
 ; GFX10-LABEL: sample_c_d_cl_1d:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    image_sample_c_d_cl_g16 v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D ; encoding: [0x01,0x0f,0xac,0xf0,0x00,0x00,0x40,0x00]
+; GFX10-NEXT:    image_sample_c_d_cl_g16 v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D ; encoding: [0x01,0x0f,0xac,0xf0,0x00,0x00,0x40,0x00]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: sample_c_d_cl_1d:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    image_sample_c_d_cl_g16 v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D ; encoding: [0x00,0x0f,0x50,0xf1,0x00,0x00,0x00,0x08]
+; GFX11-NEXT:    image_sample_c_d_cl_g16 v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D ; encoding: [0x00,0x0f,0x50,0xf1,0x00,0x00,0x00,0x08]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0xf7,0x03,0x89,0xbf]
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:

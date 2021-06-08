@@ -35,11 +35,11 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_contig_nsa:
-; GFX10-NONSA: image_sample_c_l v5, v[0:7],
-; GFX11-NONSA: image_sample_c_l v0, v[0:7],
-; GFX10-NSA: image_sample_c_l v8, v[0:7],
+; GFX10-NONSA: image_sample_c_l v5, v[0:4],
+; GFX11-NONSA: image_sample_c_l v0, v[0:4],
+; GFX10-NSA: image_sample_c_l v8, v[0:4],
 ; GFX10-NSA: image_sample v9, [v6, v7, v5],
-; GFX11-NSA: image_sample_c_l v0, v[0:7],
+; GFX11-NSA: image_sample_c_l v0, v[0:4],
 ; GFX11-NSA: image_sample v1, [v6, v7, v5],
 define amdgpu_ps <2 x float> @sample_contig_nsa(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, float %s1, float %t1, float %r1, float %lod, float %r2, float %s2, float %t2) {
 main_body:
@@ -79,13 +79,13 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_contig_contig:
-; GFX10-NSA: image_sample_c_l v8, v[0:7],
+; GFX10-NSA: image_sample_c_l v8, v[0:4],
 ; GFX10-NSA: image_sample v9, v[5:7],
-; GFX11-NSA: image_sample_c_l v0, v[0:7],
+; GFX11-NSA: image_sample_c_l v0, v[0:4],
 ; GFX11-NSA: image_sample v1, v[5:7],
-; GFX10-NONSA: image_sample_c_l v8, v[0:7],
+; GFX10-NONSA: image_sample_c_l v8, v[0:4],
 ; GFX10-NONSA: image_sample v9, v[5:7],
-; GFX11-NONSA: image_sample_c_l v0, v[0:7],
+; GFX11-NONSA: image_sample_c_l v0, v[0:4],
 ; GFX11-NONSA: image_sample v1, v[5:7],
 define amdgpu_ps <2 x float> @sample_contig_contig(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, float %s1, float %t1, float %r1, float %lod, float %s2, float %t2, float %r2) {
 main_body:

@@ -162,9 +162,12 @@ static bool ParseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     case clang::driver::options::OPT_fget_definition:
       opts.programAction_ = GetDefinition;
       break;
+    case clang::driver::options::OPT_init_only:
+      opts.programAction_ = InitOnly;
+      break;
 
       // TODO:
-      // case calng::driver::options::OPT_emit_llvm:
+      // case clang::driver::options::OPT_emit_llvm:
       // case clang::driver::options::OPT_emit_llvm_only:
       // case clang::driver::options::OPT_emit_codegen_only:
       // case clang::driver::options::OPT_emit_module:

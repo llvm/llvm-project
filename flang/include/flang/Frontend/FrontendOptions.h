@@ -71,7 +71,10 @@ enum ActionKind {
   GetDefinition,
 
   /// Parse, run semantics and then dump symbol sources map
-  GetSymbolsSources
+  GetSymbolsSources,
+
+  /// Only execute frontend initialization
+  InitOnly
 
   /// TODO: RunPreprocessor, EmitLLVM, EmitLLVMOnly,
   /// EmitCodeGenOnly, EmitAssembly, (...)

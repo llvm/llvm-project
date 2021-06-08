@@ -1,16 +1,10 @@
-; RUN: opt < %s -dfsan -S | FileCheck %s --check-prefixes=CHECK,LEGACY
-; RUN: opt < %s -dfsan -dfsan-fast-16-labels=true -dfsan-event-callbacks=true -S | FileCheck %s --check-prefixes=CHECK,EVENT_CALLBACKS
+; RUN: opt < %s -dfsan -dfsan-event-callbacks=true -S | FileCheck %s --check-prefixes=CHECK,EVENT_CALLBACKS
 ; RUN: opt < %s -dfsan -dfsan-args-abi -S | FileCheck %s --check-prefixes=CHECK,ARGS_ABI
-; RUN: opt < %s -dfsan -dfsan-fast-16-labels=true -S | FileCheck %s --check-prefixes=CHECK,FAST
-; RUN: opt < %s -dfsan -dfsan-fast-16-labels=true -dfsan-combine-pointer-labels-on-load=false -S | FileCheck %s --check-prefixes=CHECK,NO_COMBINE_LOAD_PTR
-; RUN: opt < %s -dfsan -dfsan-fast-16-labels=true -dfsan-combine-pointer-labels-on-store=true -S | FileCheck %s --check-prefixes=CHECK,COMBINE_STORE_PTR
-; RUN: opt < %s -dfsan -dfsan-fast-16-labels=true -dfsan-track-select-control-flow=false -S | FileCheck %s --check-prefixes=CHECK,NO_SELECT_CONTROL
-; RUN: opt < %s -dfsan -dfsan-fast-16-labels=true -dfsan-debug-nonzero-labels -S | FileCheck %s --check-prefixes=CHECK,DEBUG_NONZERO_LABELS
-; RUN: opt < %s -dfsan -dfsan-fast-8-labels=true -S | FileCheck %s --check-prefixes=CHECK,FAST
-; RUN: opt < %s -dfsan -dfsan-fast-8-labels=true -dfsan-combine-pointer-labels-on-load=false -S | FileCheck %s --check-prefixes=CHECK,NO_COMBINE_LOAD_PTR
-; RUN: opt < %s -dfsan -dfsan-fast-8-labels=true -dfsan-combine-pointer-labels-on-store=true -S | FileCheck %s --check-prefixes=CHECK,COMBINE_STORE_PTR
-; RUN: opt < %s -dfsan -dfsan-fast-8-labels=true -dfsan-track-select-control-flow=false -S | FileCheck %s --check-prefixes=CHECK,NO_SELECT_CONTROL
-; RUN: opt < %s -dfsan -dfsan-fast-8-labels=true -dfsan-debug-nonzero-labels -S | FileCheck %s --check-prefixes=CHECK,DEBUG_NONZERO_LABELS
+; RUN: opt < %s -dfsan -S | FileCheck %s --check-prefixes=CHECK,FAST
+; RUN: opt < %s -dfsan -dfsan-combine-pointer-labels-on-load=false -S | FileCheck %s --check-prefixes=CHECK,NO_COMBINE_LOAD_PTR
+; RUN: opt < %s -dfsan -dfsan-combine-pointer-labels-on-store=true -S | FileCheck %s --check-prefixes=CHECK,COMBINE_STORE_PTR
+; RUN: opt < %s -dfsan -dfsan-track-select-control-flow=false -S | FileCheck %s --check-prefixes=CHECK,NO_SELECT_CONTROL
+; RUN: opt < %s -dfsan -dfsan-debug-nonzero-labels -S | FileCheck %s --check-prefixes=CHECK,DEBUG_NONZERO_LABELS
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -91,11 +85,6 @@ define {i1, i32} @select_struct(i1 %c, {i1, i32} %a, {i1, i32} %b) {
   ; FAST: %[[#R+9]] = insertvalue { i[[#SBITS]], i[[#SBITS]] } %[[#R+8]], i[[#SBITS]] %[[#R+7]], 1
   ; FAST: store { i[[#SBITS]], i[[#SBITS]] } %[[#R+9]], { i[[#SBITS]], i[[#SBITS]] }* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
 
-  ; LEGACY: @"dfs$select_struct"
-  ; LEGACY: [[U:%.*]] = call zeroext i[[#SBITS]] @__dfsan_union
-  ; LEGACY: [[P:%.*]] = phi i[[#SBITS]] [ [[U]],
-  ; LEGACY: store i[[#SBITS]] [[P]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align 2
-
   %s = select i1 %c, {i1, i32} %a, {i1, i32} %b
   ret {i1, i32} %s
 }
@@ -109,13 +98,6 @@ define { i32, i32 } @asm_struct(i32 %0, i32 %1) {
   ; FAST: [[S1:%.*]] = insertvalue { i[[#SBITS]], i[[#SBITS]] } [[S0]], i[[#SBITS]] [[E01]], 1
   ; FAST: store { i[[#SBITS]], i[[#SBITS]] } [[S1]], { i[[#SBITS]], i[[#SBITS]] }* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
 
-  ; LEGACY: @"dfs$asm_struct"
-  ; LEGACY: [[E1:%.*]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align [[ALIGN:2]]
-  ; LEGACY: [[E0:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
-  ; LEGACY: [[E01:%.*]] = call zeroext i[[#SBITS]] @__dfsan_union(i[[#SBITS]] zeroext [[E0]], i[[#SBITS]] zeroext [[E1]])
-  ; LEGACY: [[P:%.*]] = phi i[[#SBITS]] [ [[E01]], {{.*}} ], [ [[E0]], {{.*}} ]
-  ; LEGACY: store i[[#SBITS]] [[P]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
-
 entry:
   %a = call { i32, i32 } asm "", "=r,=r,r,r,~{dirflag},~{fpsr},~{flags}"(i32 %0, i32 %1)
   ret { i32, i32 } %a
@@ -124,9 +106,6 @@ entry:
 define {i32, i32} @const_struct() {
   ; FAST: @"dfs$const_struct"
   ; FAST: store { i[[#SBITS]], i[[#SBITS]] } zeroinitializer, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to { i[[#SBITS]], i[[#SBITS]] }*), align 2
-
-  ; LEGACY: @"dfs$const_struct"
-  ; LEGACY: store i[[#SBITS]] 0, i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align 2
   ret {i32, i32} { i32 42, i32 11 }
 }
 
@@ -136,9 +115,6 @@ define i1 @extract_struct({i1, i5} %s) {
   ; FAST: [[EM:%.*]] = extractvalue { i[[#SBITS]], i[[#SBITS]] } [[SM]], 0
   ; FAST: store i[[#SBITS]] [[EM]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
 
-  ; LEGACY: @"dfs$extract_struct"
-  ; LEGACY: [[SM:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN:2]]
-  ; LEGACY: store i[[#SBITS]] [[SM]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
   %e2 = extractvalue {i1, i5} %s, 0
   ret i1 %e2
 }
@@ -149,13 +125,6 @@ define {i1, i5} @insert_struct({i1, i5} %s, i5 %e1) {
   ; FAST: [[SM:%.*]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
   ; FAST: [[SM1:%.*]] = insertvalue { i[[#SBITS]], i[[#SBITS]] } [[SM]], i[[#SBITS]] [[EM]], 1
   ; FAST: store { i[[#SBITS]], i[[#SBITS]] } [[SM1]], { i[[#SBITS]], i[[#SBITS]] }* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
-
-  ; LEGACY: @"dfs$insert_struct"
-  ; LEGACY: [[EM:%.*]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align [[ALIGN:2]]
-  ; LEGACY: [[SM:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
-  ; LEGACY: [[U:%.*]] = call zeroext i[[#SBITS]] @__dfsan_union(i[[#SBITS]] zeroext [[SM]], i[[#SBITS]] zeroext [[EM]])
-  ; LEGACY: [[P:%.*]] = phi i[[#SBITS]] [ [[U]], {{.*}} ], [ [[SM]], {{.*}} ]
-  ; LEGACY: store i[[#SBITS]] [[P]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
   %s1 = insertvalue {i1, i5} %s, i5 %e1, 1
   ret {i1, i5} %s1
 }

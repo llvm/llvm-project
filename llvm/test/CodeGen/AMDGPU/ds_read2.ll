@@ -947,7 +947,7 @@ define amdgpu_kernel void @load_constant_adjacent_offsets(i32 addrspace(1)* %out
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_mov_b32_e32 v0, 0
 ; CI-NEXT:    s_mov_b32 m0, -1
-; CI-NEXT:    ds_read2_b32 v[0:1], v0 offset1:1
+; CI-NEXT:    ds_read_b64 v[0:1], v0
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
 ; CI-NEXT:    s_mov_b32 s3, 0xf000
 ; CI-NEXT:    s_mov_b32 s2, -1
@@ -959,7 +959,7 @@ define amdgpu_kernel void @load_constant_adjacent_offsets(i32 addrspace(1)* %out
 ; GFX9-LABEL: load_constant_adjacent_offsets:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    ds_read2_b32 v[0:1], v2 offset1:1
+; GFX9-NEXT:    ds_read_b64 v[0:1], v2
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_add_u32_e32 v0, v0, v1

@@ -77,7 +77,7 @@ static inline int __kmp_get_monotonicity(ident_t *loc, enum sched_type schedule,
 
   // Let default be monotonic for executables
   // compiled with OpenMP* 4.5 or less compilers
-  if (loc->get_openmp_version() < 50)
+  if (loc != NULL && loc->get_openmp_version() < 50)
     monotonicity = SCHEDULE_MONOTONIC;
 
   if (use_hier || __kmp_force_monotonic)

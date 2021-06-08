@@ -590,3 +590,68 @@ Sections:
   DoCheck(OverLimitNumBlocks,
           "ULEB128 value at offset 0x8 exceeds UINT32_MAX (0x100000000)");
 }
+
+// Test for ObjectFile::getRelocatedSection: check that it returns a relocated
+// section for executable and relocatable files.
+TEST(ELFObjectFileTest, ExecutableWithRelocs) {
+  StringRef HeaderString(R"(
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+)");
+  StringRef ContentsString(R"(
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name:  .rela.text
+    Type:  SHT_RELA
+    Flags: [ SHF_INFO_LINK ]
+    Info:  .text
+)");
+
+  auto DoCheck = [&](StringRef YamlString) {
+    SmallString<0> Storage;
+    Expected<ELFObjectFile<ELF64LE>> ElfOrErr =
+        toBinary<ELF64LE>(Storage, YamlString);
+    ASSERT_THAT_EXPECTED(ElfOrErr, Succeeded());
+    const ELFObjectFile<ELF64LE> &Obj = *ElfOrErr;
+
+    bool FoundRela;
+
+    for (SectionRef Sec : Obj.sections()) {
+      Expected<StringRef> SecNameOrErr = Sec.getName();
+      ASSERT_THAT_EXPECTED(SecNameOrErr, Succeeded());
+      StringRef SecName = *SecNameOrErr;
+      if (SecName != ".rela.text")
+        continue;
+      FoundRela = true;
+      Expected<section_iterator> RelSecOrErr = Sec.getRelocatedSection();
+      ASSERT_THAT_EXPECTED(RelSecOrErr, Succeeded());
+      section_iterator RelSec = *RelSecOrErr;
+      ASSERT_NE(RelSec, Obj.section_end());
+      Expected<StringRef> TextSecNameOrErr = RelSec->getName();
+      ASSERT_THAT_EXPECTED(TextSecNameOrErr, Succeeded());
+      StringRef TextSecName = *TextSecNameOrErr;
+      EXPECT_EQ(TextSecName, ".text");
+    }
+    ASSERT_TRUE(FoundRela);
+  };
+
+  // Check ET_EXEC file (`ld --emit-relocs` use-case).
+  SmallString<128> ExecFileYamlString(HeaderString);
+  ExecFileYamlString += R"(
+  Type:  ET_EXEC
+)";
+  ExecFileYamlString += ContentsString;
+  DoCheck(ExecFileYamlString);
+
+  // Check ET_REL file.
+  SmallString<128> RelocatableFileYamlString(HeaderString);
+  RelocatableFileYamlString += R"(
+  Type:  ET_REL
+)";
+  RelocatableFileYamlString += ContentsString;
+  DoCheck(RelocatableFileYamlString);
+}

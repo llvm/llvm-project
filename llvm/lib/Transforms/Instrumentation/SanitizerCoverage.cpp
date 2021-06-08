@@ -840,9 +840,8 @@ void ModuleSanitizerCoverage::InjectTraceForDiv(
         TypeSize == 64 ? 1 : -1;
     if (CallbackIdx < 0) continue;
     auto Ty = Type::getIntNTy(*C, TypeSize);
-    auto *CB = IRB.CreateCall(SanCovTraceDivFunction[CallbackIdx],
-                              {IRB.CreateIntCast(A1, Ty, true)});
-    CB->setAttributes(CB->getCalledFunction()->getAttributes());
+    IRB.CreateCall(SanCovTraceDivFunction[CallbackIdx],
+                   {IRB.CreateIntCast(A1, Ty, true)});
   }
 }
 
@@ -886,10 +885,8 @@ void ModuleSanitizerCoverage::InjectTraceForCmp(
       }
 
       auto Ty = Type::getIntNTy(*C, TypeSize);
-      auto *CB =
-          IRB.CreateCall(CallbackFunc, {IRB.CreateIntCast(A0, Ty, true),
-                                        IRB.CreateIntCast(A1, Ty, true)});
-      CB->setAttributes(CB->getCalledFunction()->getAttributes());
+      IRB.CreateCall(CallbackFunc, {IRB.CreateIntCast(A0, Ty, true),
+              IRB.CreateIntCast(A1, Ty, true)});
     }
   }
 }

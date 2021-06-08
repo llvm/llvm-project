@@ -193,9 +193,9 @@ public:
       }
       Flags |= Rel::Alias; // continue with the alias
     } else if (const UsingShadowDecl *USD = dyn_cast<UsingShadowDecl>(D)) {
-      // Include the using decl, but don't traverse it. This may end up
+      // Include the Introducing decl, but don't traverse it. This may end up
       // including *all* shadows, which we don't want.
-      report(USD->getUsingDecl(), Flags | Rel::Alias);
+      report(USD->getIntroducer(), Flags | Rel::Alias);
       // Shadow decls are synthetic and not themselves interesting.
       // Record the underlying decl instead, if allowed.
       D = USD->getTargetDecl();
