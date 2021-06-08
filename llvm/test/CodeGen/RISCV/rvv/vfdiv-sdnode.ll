@@ -7,7 +7,7 @@
 define <vscale x 1 x half> @vfdiv_vv_nxv1f16(<vscale x 1 x half> %va, <vscale x 1 x half> %vb) {
 ; CHECK-LABEL: vfdiv_vv_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
 ; CHECK-NEXT:    vfdiv.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %vc = fdiv <vscale x 1 x half> %va, %vb
@@ -17,7 +17,7 @@ define <vscale x 1 x half> @vfdiv_vv_nxv1f16(<vscale x 1 x half> %va, <vscale x 
 define <vscale x 1 x half> @vfdiv_vf_nxv1f16(<vscale x 1 x half> %va, half %b) {
 ; CHECK-LABEL: vfdiv_vf_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
 ; CHECK-NEXT:    vfdiv.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x half> undef, half %b, i32 0
@@ -29,7 +29,7 @@ define <vscale x 1 x half> @vfdiv_vf_nxv1f16(<vscale x 1 x half> %va, half %b) {
 define <vscale x 2 x half> @vfdiv_vv_nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x half> %vb) {
 ; CHECK-LABEL: vfdiv_vv_nxv2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vfdiv.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %vc = fdiv <vscale x 2 x half> %va, %vb
@@ -39,7 +39,7 @@ define <vscale x 2 x half> @vfdiv_vv_nxv2f16(<vscale x 2 x half> %va, <vscale x 
 define <vscale x 2 x half> @vfdiv_vf_nxv2f16(<vscale x 2 x half> %va, half %b) {
 ; CHECK-LABEL: vfdiv_vf_nxv2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vfdiv.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x half> undef, half %b, i32 0
@@ -51,7 +51,7 @@ define <vscale x 2 x half> @vfdiv_vf_nxv2f16(<vscale x 2 x half> %va, half %b) {
 define <vscale x 4 x half> @vfdiv_vv_nxv4f16(<vscale x 4 x half> %va, <vscale x 4 x half> %vb) {
 ; CHECK-LABEL: vfdiv_vv_nxv4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vfdiv.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %vc = fdiv <vscale x 4 x half> %va, %vb
@@ -61,7 +61,7 @@ define <vscale x 4 x half> @vfdiv_vv_nxv4f16(<vscale x 4 x half> %va, <vscale x 
 define <vscale x 4 x half> @vfdiv_vf_nxv4f16(<vscale x 4 x half> %va, half %b) {
 ; CHECK-LABEL: vfdiv_vf_nxv4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vfdiv.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x half> undef, half %b, i32 0
@@ -73,7 +73,7 @@ define <vscale x 4 x half> @vfdiv_vf_nxv4f16(<vscale x 4 x half> %va, half %b) {
 define <vscale x 8 x half> @vfdiv_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x 8 x half> %vb) {
 ; CHECK-LABEL: vfdiv_vv_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vfdiv.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %vc = fdiv <vscale x 8 x half> %va, %vb
@@ -83,7 +83,7 @@ define <vscale x 8 x half> @vfdiv_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x 
 define <vscale x 8 x half> @vfdiv_vf_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: vfdiv_vf_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vfdiv.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x half> undef, half %b, i32 0
@@ -95,7 +95,7 @@ define <vscale x 8 x half> @vfdiv_vf_nxv8f16(<vscale x 8 x half> %va, half %b) {
 define <vscale x 8 x half> @vfdiv_fv_nxv8f16(<vscale x 8 x half> %va, half %b) {
 ; CHECK-LABEL: vfdiv_fv_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vfrdiv.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x half> undef, half %b, i32 0
@@ -107,7 +107,7 @@ define <vscale x 8 x half> @vfdiv_fv_nxv8f16(<vscale x 8 x half> %va, half %b) {
 define <vscale x 16 x half> @vfdiv_vv_nxv16f16(<vscale x 16 x half> %va, <vscale x 16 x half> %vb) {
 ; CHECK-LABEL: vfdiv_vv_nxv16f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16,m4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
 ; CHECK-NEXT:    vfdiv.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %vc = fdiv <vscale x 16 x half> %va, %vb
@@ -117,7 +117,7 @@ define <vscale x 16 x half> @vfdiv_vv_nxv16f16(<vscale x 16 x half> %va, <vscale
 define <vscale x 16 x half> @vfdiv_vf_nxv16f16(<vscale x 16 x half> %va, half %b) {
 ; CHECK-LABEL: vfdiv_vf_nxv16f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16,m4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
 ; CHECK-NEXT:    vfdiv.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x half> undef, half %b, i32 0
@@ -129,7 +129,7 @@ define <vscale x 16 x half> @vfdiv_vf_nxv16f16(<vscale x 16 x half> %va, half %b
 define <vscale x 32 x half> @vfdiv_vv_nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x half> %vb) {
 ; CHECK-LABEL: vfdiv_vv_nxv32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16,m8,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
 ; CHECK-NEXT:    vfdiv.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %vc = fdiv <vscale x 32 x half> %va, %vb
@@ -139,7 +139,7 @@ define <vscale x 32 x half> @vfdiv_vv_nxv32f16(<vscale x 32 x half> %va, <vscale
 define <vscale x 32 x half> @vfdiv_vf_nxv32f16(<vscale x 32 x half> %va, half %b) {
 ; CHECK-LABEL: vfdiv_vf_nxv32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16,m8,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
 ; CHECK-NEXT:    vfdiv.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 32 x half> undef, half %b, i32 0
@@ -151,7 +151,7 @@ define <vscale x 32 x half> @vfdiv_vf_nxv32f16(<vscale x 32 x half> %va, half %b
 define <vscale x 1 x float> @vfdiv_vv_nxv1f32(<vscale x 1 x float> %va, <vscale x 1 x float> %vb) {
 ; CHECK-LABEL: vfdiv_vv_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vfdiv.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %vc = fdiv <vscale x 1 x float> %va, %vb
@@ -161,7 +161,7 @@ define <vscale x 1 x float> @vfdiv_vv_nxv1f32(<vscale x 1 x float> %va, <vscale 
 define <vscale x 1 x float> @vfdiv_vf_nxv1f32(<vscale x 1 x float> %va, float %b) {
 ; CHECK-LABEL: vfdiv_vf_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vfdiv.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x float> undef, float %b, i32 0
@@ -173,7 +173,7 @@ define <vscale x 1 x float> @vfdiv_vf_nxv1f32(<vscale x 1 x float> %va, float %b
 define <vscale x 2 x float> @vfdiv_vv_nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x float> %vb) {
 ; CHECK-LABEL: vfdiv_vv_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vfdiv.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %vc = fdiv <vscale x 2 x float> %va, %vb
@@ -183,7 +183,7 @@ define <vscale x 2 x float> @vfdiv_vv_nxv2f32(<vscale x 2 x float> %va, <vscale 
 define <vscale x 2 x float> @vfdiv_vf_nxv2f32(<vscale x 2 x float> %va, float %b) {
 ; CHECK-LABEL: vfdiv_vf_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vfdiv.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x float> undef, float %b, i32 0
@@ -195,7 +195,7 @@ define <vscale x 2 x float> @vfdiv_vf_nxv2f32(<vscale x 2 x float> %va, float %b
 define <vscale x 4 x float> @vfdiv_vv_nxv4f32(<vscale x 4 x float> %va, <vscale x 4 x float> %vb) {
 ; CHECK-LABEL: vfdiv_vv_nxv4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    vfdiv.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %vc = fdiv <vscale x 4 x float> %va, %vb
@@ -205,7 +205,7 @@ define <vscale x 4 x float> @vfdiv_vv_nxv4f32(<vscale x 4 x float> %va, <vscale 
 define <vscale x 4 x float> @vfdiv_vf_nxv4f32(<vscale x 4 x float> %va, float %b) {
 ; CHECK-LABEL: vfdiv_vf_nxv4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    vfdiv.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x float> undef, float %b, i32 0
@@ -217,7 +217,7 @@ define <vscale x 4 x float> @vfdiv_vf_nxv4f32(<vscale x 4 x float> %va, float %b
 define <vscale x 8 x float> @vfdiv_vv_nxv8f32(<vscale x 8 x float> %va, <vscale x 8 x float> %vb) {
 ; CHECK-LABEL: vfdiv_vv_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vfdiv.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %vc = fdiv <vscale x 8 x float> %va, %vb
@@ -227,7 +227,7 @@ define <vscale x 8 x float> @vfdiv_vv_nxv8f32(<vscale x 8 x float> %va, <vscale 
 define <vscale x 8 x float> @vfdiv_vf_nxv8f32(<vscale x 8 x float> %va, float %b) {
 ; CHECK-LABEL: vfdiv_vf_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vfdiv.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x float> undef, float %b, i32 0
@@ -239,7 +239,7 @@ define <vscale x 8 x float> @vfdiv_vf_nxv8f32(<vscale x 8 x float> %va, float %b
 define <vscale x 8 x float> @vfdiv_fv_nxv8f32(<vscale x 8 x float> %va, float %b) {
 ; CHECK-LABEL: vfdiv_fv_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vfrdiv.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x float> undef, float %b, i32 0
@@ -251,7 +251,7 @@ define <vscale x 8 x float> @vfdiv_fv_nxv8f32(<vscale x 8 x float> %va, float %b
 define <vscale x 16 x float> @vfdiv_vv_nxv16f32(<vscale x 16 x float> %va, <vscale x 16 x float> %vb) {
 ; CHECK-LABEL: vfdiv_vv_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32,m8,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
 ; CHECK-NEXT:    vfdiv.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %vc = fdiv <vscale x 16 x float> %va, %vb
@@ -261,7 +261,7 @@ define <vscale x 16 x float> @vfdiv_vv_nxv16f32(<vscale x 16 x float> %va, <vsca
 define <vscale x 16 x float> @vfdiv_vf_nxv16f32(<vscale x 16 x float> %va, float %b) {
 ; CHECK-LABEL: vfdiv_vf_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32,m8,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
 ; CHECK-NEXT:    vfdiv.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x float> undef, float %b, i32 0
@@ -273,7 +273,7 @@ define <vscale x 16 x float> @vfdiv_vf_nxv16f32(<vscale x 16 x float> %va, float
 define <vscale x 1 x double> @vfdiv_vv_nxv1f64(<vscale x 1 x double> %va, <vscale x 1 x double> %vb) {
 ; CHECK-LABEL: vfdiv_vv_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vfdiv.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %vc = fdiv <vscale x 1 x double> %va, %vb
@@ -283,7 +283,7 @@ define <vscale x 1 x double> @vfdiv_vv_nxv1f64(<vscale x 1 x double> %va, <vscal
 define <vscale x 1 x double> @vfdiv_vf_nxv1f64(<vscale x 1 x double> %va, double %b) {
 ; CHECK-LABEL: vfdiv_vf_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
 ; CHECK-NEXT:    vfdiv.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x double> undef, double %b, i32 0
@@ -295,7 +295,7 @@ define <vscale x 1 x double> @vfdiv_vf_nxv1f64(<vscale x 1 x double> %va, double
 define <vscale x 2 x double> @vfdiv_vv_nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x double> %vb) {
 ; CHECK-LABEL: vfdiv_vv_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
 ; CHECK-NEXT:    vfdiv.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %vc = fdiv <vscale x 2 x double> %va, %vb
@@ -305,7 +305,7 @@ define <vscale x 2 x double> @vfdiv_vv_nxv2f64(<vscale x 2 x double> %va, <vscal
 define <vscale x 2 x double> @vfdiv_vf_nxv2f64(<vscale x 2 x double> %va, double %b) {
 ; CHECK-LABEL: vfdiv_vf_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64,m2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
 ; CHECK-NEXT:    vfdiv.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x double> undef, double %b, i32 0
@@ -317,7 +317,7 @@ define <vscale x 2 x double> @vfdiv_vf_nxv2f64(<vscale x 2 x double> %va, double
 define <vscale x 4 x double> @vfdiv_vv_nxv4f64(<vscale x 4 x double> %va, <vscale x 4 x double> %vb) {
 ; CHECK-LABEL: vfdiv_vv_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64,m4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
 ; CHECK-NEXT:    vfdiv.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %vc = fdiv <vscale x 4 x double> %va, %vb
@@ -327,7 +327,7 @@ define <vscale x 4 x double> @vfdiv_vv_nxv4f64(<vscale x 4 x double> %va, <vscal
 define <vscale x 4 x double> @vfdiv_vf_nxv4f64(<vscale x 4 x double> %va, double %b) {
 ; CHECK-LABEL: vfdiv_vf_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64,m4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
 ; CHECK-NEXT:    vfdiv.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x double> undef, double %b, i32 0
@@ -339,7 +339,7 @@ define <vscale x 4 x double> @vfdiv_vf_nxv4f64(<vscale x 4 x double> %va, double
 define <vscale x 8 x double> @vfdiv_vv_nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x double> %vb) {
 ; CHECK-LABEL: vfdiv_vv_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vfdiv.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %vc = fdiv <vscale x 8 x double> %va, %vb
@@ -349,7 +349,7 @@ define <vscale x 8 x double> @vfdiv_vv_nxv8f64(<vscale x 8 x double> %va, <vscal
 define <vscale x 8 x double> @vfdiv_vf_nxv8f64(<vscale x 8 x double> %va, double %b) {
 ; CHECK-LABEL: vfdiv_vf_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vfdiv.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x double> undef, double %b, i32 0
@@ -361,7 +361,7 @@ define <vscale x 8 x double> @vfdiv_vf_nxv8f64(<vscale x 8 x double> %va, double
 define <vscale x 8 x double> @vfdiv_fv_nxv8f64(<vscale x 8 x double> %va, double %b) {
 ; CHECK-LABEL: vfdiv_fv_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vfrdiv.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x double> undef, double %b, i32 0

@@ -9,7 +9,7 @@ define <512 x i8> @bitcast_1024B(<256 x i16> %a, <512 x i8> %b) {
 ; VLEN256:       # %bb.0:
 ; VLEN256-NEXT:    addi a1, a0, 256
 ; VLEN256-NEXT:    addi a2, zero, 256
-; VLEN256-NEXT:    vsetvli zero, a2, e8,m8,ta,mu
+; VLEN256-NEXT:    vsetvli zero, a2, e8, m8, ta, mu
 ; VLEN256-NEXT:    vle8.v v24, (a0)
 ; VLEN256-NEXT:    vle8.v v0, (a1)
 ; VLEN256-NEXT:    vadd.vv v8, v24, v8
@@ -53,7 +53,7 @@ define <512 x i8> @bitcast_1024B(<256 x i16> %a, <512 x i8> %b) {
 ; VLEN512-NEXT:    sub sp, sp, a0
 ; VLEN512-NEXT:    andi sp, sp, -256
 ; VLEN512-NEXT:    addi a0, zero, 32
-; VLEN512-NEXT:    vsetivli zero, 1, e64,m8,ta,mu
+; VLEN512-NEXT:    vsetivli zero, 1, e64, m8, ta, mu
 ; VLEN512-NEXT:    vslidedown.vx v24, v8, a0
 ; VLEN512-NEXT:    vmv.x.s a6, v24
 ; VLEN512-NEXT:    addi a0, zero, 33
@@ -1177,7 +1177,7 @@ define <512 x i8> @bitcast_1024B(<256 x i16> %a, <512 x i8> %b) {
 ; VLEN512-NEXT:    srli a0, a0, 8
 ; VLEN512-NEXT:    sb a0, 521(sp)
 ; VLEN512-NEXT:    addi a0, zero, 256
-; VLEN512-NEXT:    vsetvli zero, a0, e8,m4,ta,mu
+; VLEN512-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
 ; VLEN512-NEXT:    addi a0, sp, 512
 ; VLEN512-NEXT:    vle8.v v28, (a0)
 ; VLEN512-NEXT:    addi a0, sp, 256
