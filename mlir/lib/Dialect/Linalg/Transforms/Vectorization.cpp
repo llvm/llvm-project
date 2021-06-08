@@ -302,8 +302,8 @@ static VectorizationResult vectorizeLinalgIndex(OpBuilder &b, Operation *op,
   // Compute the static loop sizes of the index op.
   auto targetShape = linalgOp.computeStaticLoopSizes();
   // Compute a one-dimensional index vector for the index op dimension.
-  SmallVector<int64_t> constantSeq(
-      llvm::seq<int64_t>(0, targetShape[indexOp.dim()]));
+  auto seq1 = llvm::seq<int64_t>(0, targetShape[indexOp.dim()]);
+  SmallVector<int64_t> constantSeq(seq1.begin(), seq1.end());
   ConstantOp constantOp =
       b.create<ConstantOp>(loc, b.getIndexVectorAttr(constantSeq));
   // Return the one-dimensional index vector if it lives in the trailing
@@ -317,8 +317,8 @@ static VectorizationResult vectorizeLinalgIndex(OpBuilder &b, Operation *op,
   std::swap(targetShape[indexOp.dim()], targetShape.back());
   auto broadCastOp = b.create<vector::BroadcastOp>(
       loc, VectorType::get(targetShape, b.getIndexType()), constantOp);
-  SmallVector<int64_t> transposition(
-      llvm::seq<int64_t>(0, linalgOp.getNumLoops()));
+  auto seq2 = llvm::seq<int64_t>(0, linalgOp.getNumLoops());
+  SmallVector<int64_t> transposition(seq2.begin(), seq2.end());
   std::swap(transposition.back(), transposition[indexOp.dim()]);
   auto transposeOp =
       b.create<vector::TransposeOp>(loc, broadCastOp, transposition);
