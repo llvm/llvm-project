@@ -1336,6 +1336,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   OutStreamer->AddComment("number of basic blocks");
   OutStreamer->emitULEB128IntValue(MF.size());
   const MCSymbol *PrevMBBEndSymbol = FunctionSymbol;
+  const Function &F = MF.getFunction();
   // Emit BB Information for each basic block in the funciton.
   for (const MachineBasicBlock &MBB : MF) {
     const MCSymbol *MBBSymbol =
@@ -1348,6 +1349,16 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), MBBSymbol);
     OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
     PrevMBBEndSymbol = MBB.getEndSymbol();
+    // Emit the index of the corresponding LLVMIR basic block.
+    size_t i = 0;
+    for (auto It = F.begin(); It != F.end(); It++) {
+      const BasicBlock *BB = &*It;
+      if (BB == MBB.getBasicBlock()) {
+          break;
+      }
+      i++;
+    }
+    OutStreamer->emitULEB128IntValue(i);
   }
   OutStreamer->popSection();
 }
