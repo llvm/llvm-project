@@ -447,3 +447,4 @@ func private @unsupported_memref_element_type() -> memref<42 x !test.memref_elem
 // BAREPTR-SAME: memref<
 // BAREPTR-NOT: !llvm.ptr
 func private @unsupported_unranked_memref_element_type() -> memref<* x !test.memref_element>
+

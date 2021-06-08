@@ -272,7 +272,8 @@ inline bool BaseMemRefType::classof(Type type) {
 }
 
 inline bool BaseMemRefType::isValidElementType(Type type) {
-  return type.isIntOrIndexOrFloat() || type.isa<ComplexType, VectorType>() ||
+  return type.isIntOrIndexOrFloat() ||
+         type.isa<ComplexType, MemRefType, VectorType, UnrankedMemRefType>() ||
          type.isa<MemRefElementTypeInterface>();
 }
 

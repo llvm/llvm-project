@@ -5,6 +5,7 @@ set(LLVM_OPTIONAL_SOURCES
   BufferViewFlowAnalysis.cpp
   CallGraph.cpp
   DataFlowAnalysis.cpp
+  DataLayoutAnalysis.cpp
   LinearTransform.cpp
   Liveness.cpp
   LoopAnalysis.cpp
@@ -22,6 +23,7 @@ add_mlir_library(MLIRAnalysis
   BufferViewFlowAnalysis.cpp
   CallGraph.cpp
   DataFlowAnalysis.cpp
+  DataLayoutAnalysis.cpp
   Liveness.cpp
   NumberOfExecutions.cpp
   SliceAnalysis.cpp
