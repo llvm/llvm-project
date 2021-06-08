@@ -420,6 +420,22 @@ CHECK: char::<'\u{10ffff}'>
 CHECK: _RIC4charKc1234567_E
        _RIC4charKc1234567_E
 
+; Backreferences
+
+CHECK: backref::<backref::ident>
+       _RIC7backrefNvB0_5identE
+
+; Invalid backreferences
+
+CHECK: _RB_
+       _RB_
+
+CHECK: _RB5_
+       _RB5_
+
+CHECK: _RNvB_1a
+       _RNvB_1a
+
 ; Invalid mangled characters
 
 CHECK: _RNvC2a.1c
