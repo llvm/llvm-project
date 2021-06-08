@@ -631,11 +631,19 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::FADD,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
     { ISD::FSUB,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
     { ISD::FMUL,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::f64,        4 }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v2f64,      4 }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v4f64,      8 }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v8f64,     16 }, // Skylake from http://www.agner.org/
 
     { ISD::FNEG,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
     { ISD::FADD,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
     { ISD::FSUB,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
     { ISD::FMUL,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::f32,        3 }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v4f32,      3 }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v8f32,      5 }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v16f32,    10 }, // Skylake from http://www.agner.org/
   };
 
   if (ST->hasAVX512())
@@ -2440,6 +2448,9 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::BITREVERSE, MVT::v16i32,  5 },
     { ISD::BITREVERSE, MVT::v32i16,  5 },
     { ISD::BITREVERSE, MVT::v64i8,   5 },
+    { ISD::BSWAP,      MVT::v8i64,   1 },
+    { ISD::BSWAP,      MVT::v16i32,  1 },
+    { ISD::BSWAP,      MVT::v32i16,  1 },
     { ISD::CTLZ,       MVT::v8i64,  23 },
     { ISD::CTLZ,       MVT::v16i32, 22 },
     { ISD::CTLZ,       MVT::v32i16, 18 },
@@ -2480,6 +2491,9 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::BITREVERSE, MVT::v16i32, 24 },
     { ISD::BITREVERSE, MVT::v32i16, 10 },
     { ISD::BITREVERSE, MVT::v64i8,  10 },
+    { ISD::BSWAP,      MVT::v8i64,   4 },
+    { ISD::BSWAP,      MVT::v16i32,  4 },
+    { ISD::BSWAP,      MVT::v32i16,  4 },
     { ISD::CTLZ,       MVT::v8i64,  29 },
     { ISD::CTLZ,       MVT::v16i32, 35 },
     { ISD::CTLZ,       MVT::v32i16, 28 },
