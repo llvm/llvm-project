@@ -713,8 +713,9 @@ class MIMGAddrSize<int dw, bit enable_disasm> {
                            !if(!eq(NumWords, 2), VReg_64,
                            !if(!eq(NumWords, 3), VReg_96,
                            !if(!eq(NumWords, 4), VReg_128,
+                           !if(!eq(NumWords, 5), VReg_160,
                            !if(!le(NumWords, 8), VReg_256,
-                           !if(!le(NumWords, 16), VReg_512, ?)))))));
+                           !if(!le(NumWords, 16), VReg_512, ?))))))));
 
   // Whether the instruction variant with this vaddr size should be enabled for
   // the auto-generated disassembler.
@@ -755,11 +756,12 @@ class MIMG_Sampler_AddrSizes<AMDGPUSampleVariant sample> {
   // required numbers of address words. The disassembler defaults to the
   // smallest register class.
   list<MIMGAddrSize> MachineInstrs =
-    !foldl(MIMGAddrSizes_tmp<[], 0>, [1, 2, 3, 4, 8, 16], lhs, dw,
+    !foldl(MIMGAddrSizes_tmp<[], 0>, [1, 2, 3, 4, 5, 8, 16], lhs, dw,
            !if(isRangeInList<lhs.Min, dw, AllNumAddrWords>.ret,
                MIMGAddrSizes_tmp<
                   !listconcat(lhs.List, [MIMGAddrSize<dw, !empty(lhs.List)>]),
-                  !if(!eq(dw, 3), 3, !add(dw, 1))>, // we still need _V4 for codegen w/ 3 dwords
+                  !if(!or(!eq(dw, 3), !eq(dw, 5)), dw, !add(dw, 1))>,
+                  // we still want _V4/_V8 for codegen with 3/5 dwords
                lhs)).List;
 
   // For NSA, generate machine instructions for all possible numbers of words
