@@ -470,29 +470,11 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @shl_qiv_int8_t(<16 x i8> %src1) {
 ; CHECK-LABEL: shl_qiv_int8_t:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adr r0, .LCPI36_0
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    movw r0, #513
+; CHECK-NEXT:    movt r0, #1027
+; CHECK-NEXT:    vdup.32 q1, r0
 ; CHECK-NEXT:    vshl.u8 q0, q0, q1
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI36_0:
-; CHECK-NEXT:    .byte 1 @ 0x1
-; CHECK-NEXT:    .byte 2 @ 0x2
-; CHECK-NEXT:    .byte 3 @ 0x3
-; CHECK-NEXT:    .byte 4 @ 0x4
-; CHECK-NEXT:    .byte 1 @ 0x1
-; CHECK-NEXT:    .byte 2 @ 0x2
-; CHECK-NEXT:    .byte 3 @ 0x3
-; CHECK-NEXT:    .byte 4 @ 0x4
-; CHECK-NEXT:    .byte 1 @ 0x1
-; CHECK-NEXT:    .byte 2 @ 0x2
-; CHECK-NEXT:    .byte 3 @ 0x3
-; CHECK-NEXT:    .byte 4 @ 0x4
-; CHECK-NEXT:    .byte 1 @ 0x1
-; CHECK-NEXT:    .byte 2 @ 0x2
-; CHECK-NEXT:    .byte 3 @ 0x3
-; CHECK-NEXT:    .byte 4 @ 0x4
 entry:
   %0 = shl <16 x i8> %src1, <i8 1, i8 2, i8 3, i8 4, i8 1, i8 2, i8 3, i8 4, i8 1, i8 2, i8 3, i8 4, i8 1, i8 2, i8 3, i8 4>
   ret <16 x i8> %0

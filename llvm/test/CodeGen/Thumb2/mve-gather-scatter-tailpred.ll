@@ -221,161 +221,89 @@ end:                                 ; preds = %middle.block
 define void @justoffsets(i8* noalias nocapture readonly %r, i8* noalias nocapture %w, i32 %N) {
 ; CHECK-LABEL: justoffsets:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
-; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    .pad #216
-; CHECK-NEXT:    sub sp, #216
+; CHECK-NEXT:    .pad #32
+; CHECK-NEXT:    sub sp, #32
 ; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    beq.w .LBB3_3
+; CHECK-NEXT:    beq .LBB3_3
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph
+; CHECK-NEXT:    adr r5, .LCPI3_2
+; CHECK-NEXT:    vldrw.u32 q1, [r5]
+; CHECK-NEXT:    adr r4, .LCPI3_1
+; CHECK-NEXT:    movw r5, #50417
+; CHECK-NEXT:    adr r3, .LCPI3_0
+; CHECK-NEXT:    movw r7, #32769
+; CHECK-NEXT:    vldrw.u32 q2, [r4]
+; CHECK-NEXT:    movw r4, #47888
+; CHECK-NEXT:    vldrw.u32 q3, [r3]
+; CHECK-NEXT:    vstrw.32 q1, [sp, #16] @ 16-byte Spill
+; CHECK-NEXT:    vmov.i32 q1, #0x7fff
 ; CHECK-NEXT:    vmov.i32 q0, #0x8000
-; CHECK-NEXT:    adr r7, .LCPI3_5
-; CHECK-NEXT:    vstrw.32 q0, [sp, #160] @ 16-byte Spill
-; CHECK-NEXT:    vldrw.u32 q0, [r7]
-; CHECK-NEXT:    adr r6, .LCPI3_4
-; CHECK-NEXT:    adr r5, .LCPI3_3
-; CHECK-NEXT:    vstrw.32 q0, [sp, #176] @ 16-byte Spill
-; CHECK-NEXT:    vldrw.u32 q0, [r6]
-; CHECK-NEXT:    adr.w r8, .LCPI3_2
-; CHECK-NEXT:    vstrw.32 q0, [sp, #144] @ 16-byte Spill
-; CHECK-NEXT:    vldrw.u32 q0, [r5]
-; CHECK-NEXT:    adr.w lr, .LCPI3_1
-; CHECK-NEXT:    vstrw.32 q0, [sp, #128] @ 16-byte Spill
-; CHECK-NEXT:    vldrw.u32 q0, [r8]
-; CHECK-NEXT:    vstrw.32 q0, [sp, #112] @ 16-byte Spill
-; CHECK-NEXT:    vldrw.u32 q0, [lr]
-; CHECK-NEXT:    adr.w r12, .LCPI3_0
-; CHECK-NEXT:    vstrw.32 q0, [sp, #96] @ 16-byte Spill
-; CHECK-NEXT:    vldrw.u32 q0, [r12]
-; CHECK-NEXT:    adr r7, .LCPI3_7
-; CHECK-NEXT:    adr r5, .LCPI3_10
-; CHECK-NEXT:    vstrw.32 q0, [sp, #80] @ 16-byte Spill
-; CHECK-NEXT:    vmov.i32 q0, #0x7fff
-; CHECK-NEXT:    vstrw.32 q0, [sp, #64] @ 16-byte Spill
-; CHECK-NEXT:    vldrw.u32 q0, [r7]
-; CHECK-NEXT:    adr r6, .LCPI3_9
-; CHECK-NEXT:    adr r4, .LCPI3_6
-; CHECK-NEXT:    vstrw.32 q0, [sp, #48] @ 16-byte Spill
-; CHECK-NEXT:    vldrw.u32 q0, [r5]
-; CHECK-NEXT:    adr r7, .LCPI3_8
-; CHECK-NEXT:    vldrw.u32 q1, [r4]
-; CHECK-NEXT:    vstrw.32 q0, [sp, #32] @ 16-byte Spill
-; CHECK-NEXT:    vldrw.u32 q0, [r6]
-; CHECK-NEXT:    vstrw.32 q1, [sp, #192] @ 16-byte Spill
-; CHECK-NEXT:    vstrw.32 q0, [sp, #16] @ 16-byte Spill
-; CHECK-NEXT:    vldrw.u32 q0, [r7]
-; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
+; CHECK-NEXT:    movw r12, #7471
+; CHECK-NEXT:    movw r9, #19595
+; CHECK-NEXT:    movw r8, #38470
+; CHECK-NEXT:    movt r4, #65535
+; CHECK-NEXT:    movt r5, #65535
+; CHECK-NEXT:    movw r6, #19485
+; CHECK-NEXT:    movt r7, #65535
+; CHECK-NEXT:    movw r3, #13282
+; CHECK-NEXT:    vstrw.32 q1, [sp] @ 16-byte Spill
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB3_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q0, [sp, #192] @ 16-byte Reload
-; CHECK-NEXT:    vldrb.u32 q4, [r0, q0]
-; CHECK-NEXT:    vldrw.u32 q0, [sp, #176] @ 16-byte Reload
-; CHECK-NEXT:    vldrb.u32 q7, [r0, q0]
-; CHECK-NEXT:    vldrw.u32 q0, [sp, #144] @ 16-byte Reload
-; CHECK-NEXT:    vldrw.u32 q5, [sp, #112] @ 16-byte Reload
-; CHECK-NEXT:    vmul.i32 q6, q7, q0
-; CHECK-NEXT:    vldrw.u32 q0, [sp, #128] @ 16-byte Reload
-; CHECK-NEXT:    vldrb.u32 q1, [r0, q5]
-; CHECK-NEXT:    vldrw.u32 q2, [sp, #80] @ 16-byte Reload
-; CHECK-NEXT:    vmul.i32 q3, q4, q0
-; CHECK-NEXT:    vldrw.u32 q0, [sp, #96] @ 16-byte Reload
-; CHECK-NEXT:    vadd.i32 q3, q3, q6
+; CHECK-NEXT:    vldrw.u32 q1, [sp, #16] @ 16-byte Reload
+; CHECK-NEXT:    vldrb.u32 q7, [r0, q1]
+; CHECK-NEXT:    vldrb.u32 q5, [r0, q2]
+; CHECK-NEXT:    vmul.i32 q4, q5, r8
+; CHECK-NEXT:    vmla.u32 q4, q7, r9
+; CHECK-NEXT:    vldrb.u32 q6, [r0, q3]
+; CHECK-NEXT:    vmla.u32 q4, q6, r12
 ; CHECK-NEXT:    adds r0, #12
-; CHECK-NEXT:    vmul.i32 q6, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [sp, #160] @ 16-byte Reload
-; CHECK-NEXT:    vadd.i32 q3, q3, q6
-; CHECK-NEXT:    vadd.i32 q3, q3, q0
-; CHECK-NEXT:    vshr.u32 q6, q3, #16
-; CHECK-NEXT:    vmul.i32 q3, q7, q2
-; CHECK-NEXT:    vldrw.u32 q2, [sp, #64] @ 16-byte Reload
-; CHECK-NEXT:    vmul.i32 q2, q4, q2
-; CHECK-NEXT:    vadd.i32 q2, q2, q3
-; CHECK-NEXT:    vldrw.u32 q3, [sp, #48] @ 16-byte Reload
-; CHECK-NEXT:    vmul.i32 q3, q1, q3
-; CHECK-NEXT:    vadd.i32 q2, q2, q3
-; CHECK-NEXT:    vldrw.u32 q3, [sp, #32] @ 16-byte Reload
-; CHECK-NEXT:    vadd.i32 q2, q2, q0
-; CHECK-NEXT:    vmul.i32 q3, q7, q3
-; CHECK-NEXT:    vldrw.u32 q7, [sp, #16] @ 16-byte Reload
-; CHECK-NEXT:    vshr.u32 q2, q2, #16
-; CHECK-NEXT:    vmul.i32 q4, q4, q7
-; CHECK-NEXT:    vadd.i32 q3, q4, q3
-; CHECK-NEXT:    vldrw.u32 q4, [sp] @ 16-byte Reload
-; CHECK-NEXT:    vmul.i32 q1, q1, q4
-; CHECK-NEXT:    vadd.i32 q1, q3, q1
+; CHECK-NEXT:    vadd.i32 q4, q4, q0
+; CHECK-NEXT:    vshr.u32 q4, q4, #16
+; CHECK-NEXT:    vstrb.32 q4, [r1, q1]
+; CHECK-NEXT:    vldrw.u32 q1, [sp] @ 16-byte Reload
+; CHECK-NEXT:    vmul.i32 q4, q7, q1
+; CHECK-NEXT:    vmul.i32 q1, q5, r7
+; CHECK-NEXT:    vmla.u32 q1, q7, r3
+; CHECK-NEXT:    vmla.u32 q4, q5, r5
+; CHECK-NEXT:    vmla.u32 q1, q6, r6
+; CHECK-NEXT:    vmla.u32 q4, q6, r4
 ; CHECK-NEXT:    vadd.i32 q1, q1, q0
-; CHECK-NEXT:    vldrw.u32 q0, [sp, #192] @ 16-byte Reload
+; CHECK-NEXT:    vadd.i32 q4, q4, q0
 ; CHECK-NEXT:    vshr.u32 q1, q1, #16
-; CHECK-NEXT:    vstrb.32 q1, [r1, q0]
-; CHECK-NEXT:    vldrw.u32 q0, [sp, #176] @ 16-byte Reload
-; CHECK-NEXT:    vstrb.32 q2, [r1, q0]
-; CHECK-NEXT:    vstrb.32 q6, [r1, q5]
+; CHECK-NEXT:    vshr.u32 q4, q4, #16
+; CHECK-NEXT:    vstrb.32 q4, [r1, q2]
+; CHECK-NEXT:    vstrb.32 q1, [r1, q3]
 ; CHECK-NEXT:    adds r1, #12
 ; CHECK-NEXT:    letp lr, .LBB3_2
 ; CHECK-NEXT:  .LBB3_3: @ %for.cond.cleanup
-; CHECK-NEXT:    add sp, #216
+; CHECK-NEXT:    add sp, #32
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
+; CHECK-NEXT:    add sp, #4
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.4:
 ; CHECK-NEXT:  .LCPI3_0:
-; CHECK-NEXT:    .long 4294952177 @ 0xffffc4f1
-; CHECK-NEXT:    .long 4294952177 @ 0xffffc4f1
-; CHECK-NEXT:    .long 4294952177 @ 0xffffc4f1
-; CHECK-NEXT:    .long 4294952177 @ 0xffffc4f1
-; CHECK-NEXT:  .LCPI3_1:
-; CHECK-NEXT:    .long 19485 @ 0x4c1d
-; CHECK-NEXT:    .long 19485 @ 0x4c1d
-; CHECK-NEXT:    .long 19485 @ 0x4c1d
-; CHECK-NEXT:    .long 19485 @ 0x4c1d
-; CHECK-NEXT:  .LCPI3_2:
 ; CHECK-NEXT:    .long 2 @ 0x2
 ; CHECK-NEXT:    .long 5 @ 0x5
 ; CHECK-NEXT:    .long 8 @ 0x8
 ; CHECK-NEXT:    .long 11 @ 0xb
-; CHECK-NEXT:  .LCPI3_3:
-; CHECK-NEXT:    .long 13282 @ 0x33e2
-; CHECK-NEXT:    .long 13282 @ 0x33e2
-; CHECK-NEXT:    .long 13282 @ 0x33e2
-; CHECK-NEXT:    .long 13282 @ 0x33e2
-; CHECK-NEXT:  .LCPI3_4:
-; CHECK-NEXT:    .long 4294934529 @ 0xffff8001
-; CHECK-NEXT:    .long 4294934529 @ 0xffff8001
-; CHECK-NEXT:    .long 4294934529 @ 0xffff8001
-; CHECK-NEXT:    .long 4294934529 @ 0xffff8001
-; CHECK-NEXT:  .LCPI3_5:
+; CHECK-NEXT:  .LCPI3_1:
 ; CHECK-NEXT:    .long 1 @ 0x1
 ; CHECK-NEXT:    .long 4 @ 0x4
 ; CHECK-NEXT:    .long 7 @ 0x7
 ; CHECK-NEXT:    .long 10 @ 0xa
-; CHECK-NEXT:  .LCPI3_6:
+; CHECK-NEXT:  .LCPI3_2:
 ; CHECK-NEXT:    .long 0 @ 0x0
 ; CHECK-NEXT:    .long 3 @ 0x3
 ; CHECK-NEXT:    .long 6 @ 0x6
 ; CHECK-NEXT:    .long 9 @ 0x9
-; CHECK-NEXT:  .LCPI3_7:
-; CHECK-NEXT:    .long 4294949648 @ 0xffffbb10
-; CHECK-NEXT:    .long 4294949648 @ 0xffffbb10
-; CHECK-NEXT:    .long 4294949648 @ 0xffffbb10
-; CHECK-NEXT:    .long 4294949648 @ 0xffffbb10
-; CHECK-NEXT:  .LCPI3_8:
-; CHECK-NEXT:    .long 7471 @ 0x1d2f
-; CHECK-NEXT:    .long 7471 @ 0x1d2f
-; CHECK-NEXT:    .long 7471 @ 0x1d2f
-; CHECK-NEXT:    .long 7471 @ 0x1d2f
-; CHECK-NEXT:  .LCPI3_9:
-; CHECK-NEXT:    .long 19595 @ 0x4c8b
-; CHECK-NEXT:    .long 19595 @ 0x4c8b
-; CHECK-NEXT:    .long 19595 @ 0x4c8b
-; CHECK-NEXT:    .long 19595 @ 0x4c8b
-; CHECK-NEXT:  .LCPI3_10:
-; CHECK-NEXT:    .long 38470 @ 0x9646
-; CHECK-NEXT:    .long 38470 @ 0x9646
-; CHECK-NEXT:    .long 38470 @ 0x9646
-; CHECK-NEXT:    .long 38470 @ 0x9646
 entry:
   %cmp47.not = icmp eq i32 %N, 0
   br i1 %cmp47.not, label %for.cond.cleanup, label %vector.ph
