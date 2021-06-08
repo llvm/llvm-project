@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=x86_64-apple-macosx -mattr=+cx16 -x86-use-base-pointer=true -stackrealign -stack-alignment=32  %s -o - | FileCheck --check-prefix=CHECK --check-prefix=USE_BASE --check-prefix=USE_BASE_64 %s
-; RUN: llc -mtriple=x86_64-apple-macosx -mattr=+cx16 -x86-use-base-pointer=false -stackrealign -stack-alignment=32  %s -o - | FileCheck --check-prefix=CHECK --check-prefix=DONT_USE_BASE %s
-; RUN: llc -mtriple=x86_64-linux-gnux32 -mattr=+cx16 -x86-use-base-pointer=true -stackrealign -stack-alignment=32  %s -o - | FileCheck --check-prefix=CHECK --check-prefix=USE_BASE --check-prefix=USE_BASE_32 %s
-; RUN: llc -mtriple=x86_64-linux-gnux32 -mattr=+cx16 -x86-use-base-pointer=false -stackrealign -stack-alignment=32  %s -o - | FileCheck --check-prefix=CHECK --check-prefix=DONT_USE_BASE %s
+; RUN: llc -mtriple=x86_64-apple-macosx -mattr=+cx16 -x86-use-base-pointer=true -stackrealign %s -o - | FileCheck --check-prefix=CHECK --check-prefix=USE_BASE --check-prefix=USE_BASE_64 %s
+; RUN: llc -mtriple=x86_64-apple-macosx -mattr=+cx16 -x86-use-base-pointer=false -stackrealign %s -o - | FileCheck --check-prefix=CHECK --check-prefix=DONT_USE_BASE %s
+; RUN: llc -mtriple=x86_64-linux-gnux32 -mattr=+cx16 -x86-use-base-pointer=true -stackrealign %s -o - | FileCheck --check-prefix=CHECK --check-prefix=USE_BASE --check-prefix=USE_BASE_32 %s
+; RUN: llc -mtriple=x86_64-linux-gnux32 -mattr=+cx16 -x86-use-base-pointer=false -stackrealign %s -o - | FileCheck --check-prefix=CHECK --check-prefix=DONT_USE_BASE %s
 
 ; This function uses dynamic allocated stack to force the use
 ; of a frame pointer.
@@ -49,3 +49,5 @@ tail call void asm sideeffect "nop", "~{rax},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},
   store i32 %n, i32* %idx
   ret i1 %res
 }
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"override-stack-alignment", i32 32}
