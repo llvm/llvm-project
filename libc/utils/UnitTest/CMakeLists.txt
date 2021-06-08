@@ -1,4 +1,4 @@
-add_llvm_library(
+add_library(
   LibcUnitTest
   Test.h
   LibcTest.cpp
