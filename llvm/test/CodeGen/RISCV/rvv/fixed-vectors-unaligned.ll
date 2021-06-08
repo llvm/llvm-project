@@ -356,7 +356,7 @@ define <2 x i16> @mgather_v2i16_align1(<2 x i16*> %ptrs, <2 x i1> %m, <2 x i16> 
 ; RV32-NEXT:    lbu a1, 0(a1)
 ; RV32-NEXT:    slli a2, a2, 8
 ; RV32-NEXT:    or a1, a2, a1
-; RV32-NEXT:    vsetivli zero, 2, e16,mf4,ta,mu
+; RV32-NEXT:    vsetivli zero, 2, e16,mf4,tu,mu
 ; RV32-NEXT:    vmv.s.x v9, a1
 ; RV32-NEXT:  .LBB4_2: # %else
 ; RV32-NEXT:    andi a0, a0, 2
@@ -403,7 +403,7 @@ define <2 x i16> @mgather_v2i16_align1(<2 x i16*> %ptrs, <2 x i1> %m, <2 x i16> 
 ; RV64-NEXT:    lbu a1, 0(a1)
 ; RV64-NEXT:    slli a2, a2, 8
 ; RV64-NEXT:    or a1, a2, a1
-; RV64-NEXT:    vsetivli zero, 2, e16,mf4,ta,mu
+; RV64-NEXT:    vsetivli zero, 2, e16,mf4,tu,mu
 ; RV64-NEXT:    vmv.s.x v9, a1
 ; RV64-NEXT:  .LBB4_2: # %else
 ; RV64-NEXT:    andi a0, a0, 2
@@ -503,7 +503,7 @@ define <2 x i64> @mgather_v2i64_align4(<2 x i64*> %ptrs, <2 x i1> %m, <2 x i64> 
 ; RV64-NEXT:    lwu a1, 0(a1)
 ; RV64-NEXT:    slli a2, a2, 32
 ; RV64-NEXT:    or a1, a2, a1
-; RV64-NEXT:    vsetivli zero, 2, e64,m1,ta,mu
+; RV64-NEXT:    vsetivli zero, 2, e64,m1,tu,mu
 ; RV64-NEXT:    vmv.s.x v9, a1
 ; RV64-NEXT:  .LBB5_2: # %else
 ; RV64-NEXT:    andi a0, a0, 2

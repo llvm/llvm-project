@@ -116,7 +116,9 @@ define void @buildvec_dominant2_v2i8(<2 x i8>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vmv.v.i v25, -1
+; CHECK-NEXT:    vsetvli zero, zero, e8,mf8,tu,mu
 ; CHECK-NEXT:    vmv.s.x v25, zero
+; CHECK-NEXT:    vsetvli zero, zero, e8,mf8,ta,mu
 ; CHECK-NEXT:    vse8.v v25, (a0)
 ; CHECK-NEXT:    ret
   store <2 x i8> <i8 0, i8 -1>, <2 x i8>* %x
@@ -145,7 +147,9 @@ define void @buildvec_dominant0_v2i32(<2 x i64>* %x) {
 ; RV64-NEXT:    addi a1, a1, -455
 ; RV64-NEXT:    slli a1, a1, 13
 ; RV64-NEXT:    addi a1, a1, -910
+; RV64-NEXT:    vsetvli zero, zero, e64,m1,tu,mu
 ; RV64-NEXT:    vmv.s.x v25, a1
+; RV64-NEXT:    vsetvli zero, zero, e64,m1,ta,mu
 ; RV64-NEXT:    vse64.v v25, (a0)
 ; RV64-NEXT:    ret
   store <2 x i64> <i64 2049638230412172402, i64 -1>, <2 x i64>* %x
