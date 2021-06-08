@@ -201,6 +201,9 @@ namespace llvm {
     /// as their parent function, etc.), using an alternate ABI if necessary.
     unsigned GuaranteedTailCallOpt : 1;
 
+    /// StackAlignmentOverride - Override default stack alignment for target.
+    unsigned StackAlignmentOverride = 0;
+
     /// StackSymbolOrdering - When true, this will allow CodeGen to order
     /// the local stack symbols (for code size, code locality, or any other
     /// heuristics). When false, the local symbols are left in whatever order
