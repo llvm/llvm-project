@@ -10,11 +10,15 @@ set(LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "
 set(LLVM_ENABLE_BACKTRACES OFF CACHE BOOL "")
 set(LLVM_ENABLE_DIA_SDK OFF CACHE BOOL "")
 if(NOT APPLE)
+  # TODO: Remove this once we switch to ld64.lld.
   set(LLVM_ENABLE_LLD ON CACHE BOOL "")
 endif()
 set(LLVM_ENABLE_LTO ON CACHE BOOL "")
 set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ON CACHE BOOL "")
-set(LLVM_ENABLE_PIC OFF CACHE BOOL "")
+if(NOT APPLE)
+  # TODO: Remove this once we switch to ld64.lld.
+  set(LLVM_ENABLE_PIC OFF CACHE BOOL "")
+endif()
 set(LLVM_ENABLE_LIBCXX ON CACHE BOOL "")
 set(LLVM_ENABLE_TERMINFO OFF CACHE BOOL "")
 set(LLVM_ENABLE_UNWIND_TABLES OFF CACHE BOOL "")
@@ -32,6 +36,7 @@ endif()
 
 set(CLANG_DEFAULT_CXX_STDLIB libc++ CACHE STRING "")
 if(NOT APPLE)
+  # TODO: Remove this once we switch to ld64.lld.
   set(CLANG_DEFAULT_LINKER lld CACHE STRING "")
   set(CLANG_DEFAULT_OBJCOPY llvm-objcopy CACHE STRING "")
 endif()
@@ -292,10 +297,14 @@ set(LLVM_TOOLCHAIN_TOOLS
   sancov
   CACHE STRING "")
 
+if(APPLE)
+  # TODO: Remove this once we switch to ld64.lld.
+  set(target_components LTO)
+endif()
+
 set(LLVM_DISTRIBUTION_COMPONENTS
   clang
   lld
-  LTO
   clang-apply-replacements
   clang-doc
   clang-format
@@ -307,5 +316,6 @@ set(LLVM_DISTRIBUTION_COMPONENTS
   clangd
   builtins
   runtimes
+  ${target_components}
   ${LLVM_TOOLCHAIN_TOOLS}
   CACHE STRING "")
