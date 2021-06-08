@@ -539,7 +539,7 @@ func @nvvm_invalid_mma_7(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
 // -----
 
 func @atomicrmw_expected_ptr(%f32 : f32) {
-  // expected-error@+1 {{operand #0 must be LLVM pointer to floating point LLVM type or LLVM integer type}}
+  // expected-error@+1 {{operand #0 must be LLVM pointer to floating point LLVM type or integer}}
   %0 = "llvm.atomicrmw"(%f32, %f32) {bin_op=11, ordering=1} : (f32, f32) -> f32
   llvm.return
 }
@@ -587,7 +587,7 @@ func @atomicrmw_expected_int(%f32_ptr : !llvm.ptr<f32>, %f32 : f32) {
 // -----
 
 func @cmpxchg_expected_ptr(%f32_ptr : !llvm.ptr<f32>, %f32 : f32) {
-  // expected-error@+1 {{op operand #0 must be LLVM pointer to LLVM integer type or LLVM pointer type}}
+  // expected-error@+1 {{op operand #0 must be LLVM pointer to integer or LLVM pointer type}}
   %0 = "llvm.cmpxchg"(%f32, %f32, %f32) {success_ordering=2,failure_ordering=2} : (f32, f32, f32) -> !llvm.struct<(f32, i1)>
   llvm.return
 }
