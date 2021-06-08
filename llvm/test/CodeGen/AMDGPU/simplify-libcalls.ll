@@ -1,8 +1,8 @@
 ; RUN: opt -S -O1 -mtriple=amdgcn-- -amdgpu-simplify-libcall < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-POSTLINK %s
-; RUN: opt -S -O1 -mtriple=amdgcn-- -amdgpu-simplify-libcall -amdgpu-prelink  <%s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-PRELINK %s
+; RUN: opt -S -O1 -mtriple=amdgcn-- -amdgpu-simplify-libcall -amdgpu-prelink -amdgpu-enable-ocl-mangling-mismatch-workaround=0 <%s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-PRELINK %s
 ; RUN: opt -S -O1 -mtriple=amdgcn-- -amdgpu-use-native -amdgpu-prelink < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-NATIVE %s
 ; RUN: opt -S -passes='default<O1>' -mtriple=amdgcn-- -amdgpu-simplify-libcall < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-POSTLINK %s
-; RUN: opt -S -passes='default<O1>' -mtriple=amdgcn-- -amdgpu-simplify-libcall -amdgpu-prelink  <%s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-PRELINK %s
+; RUN: opt -S -passes='default<O1>' -mtriple=amdgcn-- -amdgpu-simplify-libcall -amdgpu-prelink -amdgpu-enable-ocl-mangling-mismatch-workaround=0 <%s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-PRELINK %s
 ; RUN: opt -S -passes='default<O1>' -mtriple=amdgcn-- -amdgpu-use-native -amdgpu-prelink < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-NATIVE %s
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_sincos
