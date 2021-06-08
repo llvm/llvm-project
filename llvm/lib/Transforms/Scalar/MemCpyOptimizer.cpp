@@ -1275,7 +1275,7 @@ static bool hasUndefContentsMSSA(MemorySSA *MSSA, AliasAnalysis *AA, Value *V,
       // The size also doesn't matter, as an out-of-bounds access would be UB.
       AllocaInst *Alloca = dyn_cast<AllocaInst>(getUnderlyingObject(V));
       if (getUnderlyingObject(II->getArgOperand(1)) == Alloca) {
-        DataLayout DL = Alloca->getModule()->getDataLayout();
+        const DataLayout &DL = Alloca->getModule()->getDataLayout();
         if (Optional<TypeSize> AllocaSize = Alloca->getAllocationSizeInBits(DL))
           if (*AllocaSize == LTSize->getValue() * 8)
             return true;
