@@ -208,6 +208,7 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
     PersonalityEncoding = dwarf::DW_EH_PE_absptr;
     TTypeEncoding = dwarf::DW_EH_PE_absptr;
     break;
+  case Triple::nanomips:
   case Triple::mips:
   case Triple::mipsel:
   case Triple::mips64:
@@ -230,6 +231,8 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
       PersonalityEncoding |= dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
       LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
     }
+    if (TgtM.getTargetTriple().isNanoMips())
+      CallSiteEncoding = dwarf::DW_EH_PE_udata4;
     break;
   case Triple::ppc64:
   case Triple::ppc64le:
