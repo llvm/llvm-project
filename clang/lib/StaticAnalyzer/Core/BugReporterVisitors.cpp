@@ -2151,7 +2151,8 @@ public:
   }
 };
 
-class DefaultExpressionHandler final : public ExpressionHandler {
+// TODO: extract it into more handlers
+class InterestingLValueHandler final : public ExpressionHandler {
 public:
   using ExpressionHandler::ExpressionHandler;
 
@@ -2219,12 +2220,25 @@ public:
             // previously.
             Report.addVisitor<SuppressInlineDefensiveChecksVisitor>(*DV,
                                                                     InputNode);
-
         getParentTracker().track(V, R, Opts, SFC);
-
-        return Result;
       }
     }
+
+    return Result;
+  }
+};
+
+class DefaultExpressionHandler final : public ExpressionHandler {
+public:
+  using ExpressionHandler::ExpressionHandler;
+
+  Tracker::Result handle(const Expr *Inner, const ExplodedNode *InputNode,
+                         const ExplodedNode *LVNode,
+                         TrackingOptions Opts) override {
+    ProgramStateRef LVState = LVNode->getState();
+    const StackFrameContext *SFC = LVNode->getStackFrame();
+    PathSensitiveBugReport &Report = getParentTracker().getReport();
+    Tracker::Result Result;
 
     // If the expression is not an "lvalue expression", we can still
     // track the constraints on its contents.
@@ -2332,6 +2346,7 @@ Tracker::Tracker(PathSensitiveBugReport &Report) : Report(Report) {
   addLowPriorityHandler<ControlDependencyHandler>();
   addLowPriorityHandler<NilReceiverHandler>();
   addLowPriorityHandler<ArrayIndexHandler>();
+  addLowPriorityHandler<InterestingLValueHandler>();
   addLowPriorityHandler<DefaultExpressionHandler>();
   addLowPriorityHandler<PRValueHandler>();
   // Default store handlers.
