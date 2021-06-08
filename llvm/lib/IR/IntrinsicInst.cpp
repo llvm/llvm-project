@@ -421,6 +421,17 @@ bool VPIntrinsic::canIgnoreVectorLengthParam() const {
   return false;
 }
 
+Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
+                                               ArrayRef<Value *> Params) {
+  assert(isVPIntrinsic(VPID) && "not a VP intrinsic");
+
+  // TODO: Extend this for other VP intrinsics as they are upstreamed. This
+  // works for binary arithmetic VP intrinsics.
+  auto *VPFunc = Intrinsic::getDeclaration(M, VPID, Params[0]->getType());
+  assert(VPFunc && "Could not declare VP intrinsic");
+  return VPFunc;
+}
+
 Instruction::BinaryOps BinaryOpIntrinsic::getBinaryOp() const {
   switch (getIntrinsicID()) {
   case Intrinsic::uadd_with_overflow:
