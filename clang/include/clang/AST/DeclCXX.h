@@ -3366,7 +3366,7 @@ public:
   void removeShadowDecl(UsingShadowDecl *S);
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
-  static bool classofKind(Kind K) { return K == Using; }
+  static bool classofKind(Kind K) { return K == Using || K == UsingEnum; }
 };
 
 /// Represents a C++ using-declaration.
@@ -3566,6 +3566,65 @@ public:
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == ConstructorUsingShadow; }
+};
+
+/// Represents a C++ using-enum-declaration.
+///
+/// For example:
+/// \code
+///    using enum SomeEnumTag ;
+/// \endcode
+
+class UsingEnumDecl : public BaseUsingDecl, public Mergeable<UsingEnumDecl> {
+  /// The source location of the 'using' keyword itself.
+  SourceLocation UsingLocation;
+
+  /// Location of the 'enum' keyword.
+  SourceLocation EnumLocation;
+
+  /// The enum
+  EnumDecl *Enum;
+
+  UsingEnumDecl(DeclContext *DC, DeclarationName DN, SourceLocation UL,
+                SourceLocation EL, SourceLocation NL, EnumDecl *ED)
+      : BaseUsingDecl(UsingEnum, DC, NL, DN), UsingLocation(UL),
+        EnumLocation(EL), Enum(ED) {}
+
+  void anchor() override;
+
+public:
+  friend class ASTDeclReader;
+  friend class ASTDeclWriter;
+
+  /// The source location of the 'using' keyword.
+  SourceLocation getUsingLoc() const { return UsingLocation; }
+  void setUsingLoc(SourceLocation L) { UsingLocation = L; }
+
+  /// The source location of the 'enum' keyword.
+  SourceLocation getEnumLoc() const { return EnumLocation; }
+  void setEnumLoc(SourceLocation L) { EnumLocation = L; }
+
+public:
+  EnumDecl *getEnumDecl() const { return Enum; }
+
+  static UsingEnumDecl *Create(ASTContext &C, DeclContext *DC,
+                               SourceLocation UsingL, SourceLocation EnumL,
+                               SourceLocation NameL, EnumDecl *ED);
+
+  static UsingEnumDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+
+  SourceRange getSourceRange() const override LLVM_READONLY;
+
+  /// Retrieves the canonical declaration of this declaration.
+  UsingEnumDecl *getCanonicalDecl() override {
+    return cast<UsingEnumDecl>(getFirstDecl());
+  }
+  const UsingEnumDecl *getCanonicalDecl() const {
+    return cast<UsingEnumDecl>(getFirstDecl());
+  }
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == UsingEnum; }
 };
 
 /// Represents a pack of using declarations that a single

@@ -1370,6 +1370,7 @@ LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
     case Decl::NamespaceAlias:
     case Decl::ParmVar:
     case Decl::Using:
+    case Decl::UsingEnum:
     case Decl::UsingShadow:
     case Decl::UsingDirective:
       return LinkageInfo::none();

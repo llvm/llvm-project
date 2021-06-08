@@ -77,6 +77,7 @@ enum class SymbolSubKind : uint8_t {
   AccessorSetter,
   UsingTypename,
   UsingValue,
+  UsingEnum,
 
   // Swift sub-kinds
 
