@@ -774,21 +774,19 @@ define amdgpu_kernel void @simple_write2_two_val_f64(double addrspace(1)* %C, do
 define amdgpu_kernel void @store_constant_adjacent_offsets() {
 ; CI-LABEL: store_constant_adjacent_offsets:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_movk_i32 s0, 0x7b
-; CI-NEXT:    v_mov_b32_e32 v0, 0
-; CI-NEXT:    v_mov_b32_e32 v1, s0
-; CI-NEXT:    v_mov_b32_e32 v2, s0
+; CI-NEXT:    v_mov_b32_e32 v0, 0x7b
+; CI-NEXT:    v_mov_b32_e32 v1, v0
+; CI-NEXT:    v_mov_b32_e32 v2, 0
 ; CI-NEXT:    s_mov_b32 m0, -1
-; CI-NEXT:    ds_write2_b32 v0, v1, v2 offset1:1
+; CI-NEXT:    ds_write_b64 v2, v[0:1]
 ; CI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: store_constant_adjacent_offsets:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_movk_i32 s0, 0x7b
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NEXT:    v_mov_b32_e32 v1, s0
-; GFX9-NEXT:    v_mov_b32_e32 v2, s0
-; GFX9-NEXT:    ds_write2_b32 v0, v1, v2 offset1:1
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0x7b
+; GFX9-NEXT:    v_mov_b32_e32 v1, v0
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0
+; GFX9-NEXT:    ds_write_b64 v2, v[0:1]
 ; GFX9-NEXT:    s_endpgm
   store i32 123, i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @foo, i32 0, i32 0), align 4
   store i32 123, i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @foo, i32 0, i32 1), align 4

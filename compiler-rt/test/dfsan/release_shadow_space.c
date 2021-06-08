@@ -1,7 +1,7 @@
 // DFSAN_OPTIONS=no_huge_pages_for_shadow=false RUN: %clang_dfsan %s -o %t && setarch `uname -m` -R %run %t
 // DFSAN_OPTIONS=no_huge_pages_for_shadow=true RUN: %clang_dfsan %s -o %t && setarch `uname -m` -R %run %t
-// DFSAN_OPTIONS=no_huge_pages_for_shadow=false RUN: %clang_dfsan %s -DORIGIN_TRACKING -mllvm -dfsan-fast-16-labels -mllvm -dfsan-track-origins=1 -o %t && setarch `uname -m` -R %run %t
-// DFSAN_OPTIONS=no_huge_pages_for_shadow=true RUN: %clang_dfsan %s -DORIGIN_TRACKING -mllvm -dfsan-fast-16-labels -mllvm -dfsan-track-origins=1 -o %t && setarch `uname -m` -R %run %t
+// DFSAN_OPTIONS=no_huge_pages_for_shadow=false RUN: %clang_dfsan %s -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -o %t && setarch `uname -m` -R %run %t
+// DFSAN_OPTIONS=no_huge_pages_for_shadow=true RUN: %clang_dfsan %s -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -o %t && setarch `uname -m` -R %run %t
 //
 // REQUIRES: x86_64-target-arch
 
@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
   size_t after_mmap = get_rss_kb();
 
   // store labels to all addresses. The overhead is 2x.
-  const dfsan_label label = dfsan_create_label("l", 0);
+  const dfsan_label label = 8;
   char val = 0xff;
   dfsan_set_label(label, &val, sizeof(val));
   memset(p, val, map_size);

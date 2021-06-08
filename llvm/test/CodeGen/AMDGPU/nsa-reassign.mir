@@ -8,7 +8,7 @@
 ...
 
 # GCN-LABEL: name: nsa_reassign
-# GCN: IMAGE_SAMPLE_C_L_V1_V8_gfx10
+# GCN: IMAGE_SAMPLE_C_L_V1_V5_gfx10
 ---
 name:            nsa_reassign
 tracksRegLiveness: true

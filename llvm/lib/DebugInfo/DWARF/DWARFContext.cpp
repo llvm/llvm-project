@@ -1687,7 +1687,8 @@ public:
       // Try to obtain an already relocated version of this section.
       // Else use the unrelocated section from the object file. We'll have to
       // apply relocations ourselves later.
-      section_iterator RelocatedSection = *SecOrErr;
+      section_iterator RelocatedSection =
+          Obj.isRelocatableObject() ? *SecOrErr : Obj.section_end();
       if (!L || !L->getLoadedSectionContents(*RelocatedSection, Data)) {
         Expected<StringRef> E = Section.getContents();
         if (E)

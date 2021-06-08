@@ -1,6 +1,6 @@
-// RUN: %clangxx_dfsan -mllvm -dfsan-fast-16-labels=true %s -o %t && %run %t
-// RUN: %clangxx_dfsan -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && %run %t
-// RUN: %clangxx_dfsan -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true -mllvm -dfsan-instrument-with-call-threshold=0 %s -o %t && %run %t
+// RUN: %clangxx_dfsan %s -o %t && %run %t
+// RUN: %clangxx_dfsan -mllvm -dfsan-track-origins=1 %s -o %t && %run %t
+// RUN: %clangxx_dfsan -mllvm -dfsan-track-origins=1 -mllvm -dfsan-instrument-with-call-threshold=0 %s -o %t && %run %t
 //
 // Test that the state of shadows from a sigaction handler are consistent.
 //
