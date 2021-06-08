@@ -1780,6 +1780,8 @@ private:
     return &verifyInvariants;
   }
   static LogicalResult verifyInvariants(Operation *op) {
+    static_assert(sizeof(ConcreteType) == sizeof(OpState),
+                  "Op class aren't allowed to have data members");
     return failure(
         failed(op_definition_impl::verifyTraits<VerifiableTraitsTupleT>(op)) ||
         failed(cast<ConcreteType>(op).verify()));
