@@ -133,7 +133,7 @@ isl::union_map polly::betweenScatter(isl::union_map From, isl::union_map To,
 
 isl::map polly::singleton(isl::union_map UMap, isl::space ExpectedSpace) {
   if (!UMap)
-    return nullptr;
+    return {};
 
   if (isl_union_map_n_map(UMap.get()) == 0)
     return isl::map::empty(ExpectedSpace);
@@ -146,7 +146,7 @@ isl::map polly::singleton(isl::union_map UMap, isl::space ExpectedSpace) {
 
 isl::set polly::singleton(isl::union_set USet, isl::space ExpectedSpace) {
   if (!USet)
-    return nullptr;
+    return {};
 
   if (isl_union_set_n_set(USet.get()) == 0)
     return isl::set::empty(ExpectedSpace);
@@ -170,7 +170,7 @@ isl_size polly::getNumScatterDims(const isl::union_map &Schedule) {
 
 isl::space polly::getScatterSpace(const isl::union_map &Schedule) {
   if (!Schedule)
-    return nullptr;
+    return {};
   unsigned Dims = getNumScatterDims(Schedule);
   isl::space ScatterSpace = Schedule.get_space().set_from_params();
   return ScatterSpace.add_dims(isl::dim::set, Dims);
