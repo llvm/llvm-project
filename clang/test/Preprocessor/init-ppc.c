@@ -723,6 +723,16 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-ibm-aix7.1.0.0 -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPC-AIX-NOTHREADSAFE %s
 // PPC-AIX-NOTHREADSAFE-NOT:#define _THREAD_SAFE 1
 
+// RUN: %clang_cc1 -x c -std=c11 -E -dM -ffreestanding -triple=powerpc-ibm-aix7.1.0.0 -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPC-AIX-STDC %s
+// RUN: %clang_cc1 -x c -std=gnu11 -E -dM -ffreestanding -triple=powerpc-ibm-aix7.1.0.0 -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPC-AIX-STDC %s
+// RUN: %clang_cc1 -x c -std=c17 -E -dM -ffreestanding -triple=powerpc-ibm-aix7.1.0.0 -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPC-AIX-STDC %s
+// PPC-AIX-STDC:#define __STDC_NO_ATOMICS__ 1
+// PPC-AIX-STDC:#define __STDC_NO_THREADS__ 1
+
+// RUN: %clang_cc1 -x c -std=c99 -E -dM -ffreestanding -triple=powerpc-ibm-aix7.1.0.0 -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPC-AIX-STDC-N %s
+// PPC-AIX-STDC-N-NOT:#define __STDC_NO_ATOMICS__ 1
+// PPC-AIX-STDC-N-NOT:#define __STDC_NO_THREADS__ 1
+
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-unknown-linux-gnu -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPC-LINUX %s
 //
 // PPC-LINUX:#define _ARCH_PPC 1
