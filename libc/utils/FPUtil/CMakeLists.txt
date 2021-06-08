@@ -35,13 +35,13 @@ add_header_library(
     libc.utils.CPP.standalone_cpp
 )
 
-add_llvm_library(
+add_library(
   LibcFPTestHelpers
     TestHelpers.cpp
     TestHelpers.h
 )
 target_include_directories(LibcFPTestHelpers PUBLIC ${LIBC_SOURCE_DIR})
-target_link_libraries(LibcFPTestHelpers LibcUnitTest LLVMSupport)
+target_link_libraries(LibcFPTestHelpers LibcUnitTest)
 add_dependencies(
   LibcFPTestHelpers
   LibcUnitTest
