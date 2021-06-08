@@ -1,7 +1,11 @@
-; RUN: llc -mtriple=i386-unknown-freebsd -mcpu=core2 -stack-alignment=4 -relocation-model=pic < %s | FileCheck %s -check-prefix=UNALIGNED
-; RUN: llc -mtriple=i386-unknown-freebsd -mcpu=core2 -stack-alignment=16 -relocation-model=pic < %s | FileCheck %s -check-prefix=ALIGNED
-; RUN: llc -mtriple=i386-unknown-freebsd -mcpu=core2 -stack-alignment=4 -stackrealign -relocation-model=pic < %s | FileCheck %s -check-prefix=FORCEALIGNED
+; RUN: split-file %s %t
+; RUN: cat %t/main.ll %t/align4.ll > %t/a2.ll
+; RUN: cat %t/main.ll %t/align16.ll > %t/b2.ll
+; RUN: llc -mtriple=i386-unknown-freebsd -mcpu=core2 -relocation-model=pic < %t/a2.ll | FileCheck %s -check-prefix=UNALIGNED
+; RUN: llc -mtriple=i386-unknown-freebsd -mcpu=core2 -relocation-model=pic < %t/b2.ll | FileCheck %s -check-prefix=ALIGNED
+; RUN: llc -mtriple=i386-unknown-freebsd -mcpu=core2 -stackrealign -relocation-model=pic < %t/a2.ll | FileCheck %s -check-prefix=FORCEALIGNED
 
+;--- main.ll
 @arr = internal unnamed_addr global [32 x i32] zeroinitializer, align 16
 
 ; PR12250
@@ -47,3 +51,8 @@ middle.block:
 ; FORCEALIGNED: movdqa {{.*}} # 16-byte Spill
 ; FORCEALIGNED: paddd {{.*}} # 16-byte Folded Reload
 }
+!llvm.module.flags = !{!0}
+;--- align4.ll
+!0 = !{i32 2, !"override-stack-alignment", i32 4}
+;--- align16.ll
+!0 = !{i32 2, !"override-stack-alignment", i32 16}
