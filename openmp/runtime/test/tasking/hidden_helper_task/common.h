@@ -13,11 +13,15 @@ using kmp_intptr_t = intptr_t;
 typedef struct kmp_depend_info {
   kmp_intptr_t base_addr;
   size_t len;
-  struct {
-    bool in : 1;
-    bool out : 1;
-    bool mtx : 1;
-  } flags;
+  union {
+    int flag;
+    struct {
+      unsigned in : 1;
+      unsigned out : 1;
+      unsigned mtx : 1;
+      unsigned reserved : 29; // 32 bits in total
+    } flags;
+  };
 } kmp_depend_info_t;
 
 typedef union kmp_cmplrdata {

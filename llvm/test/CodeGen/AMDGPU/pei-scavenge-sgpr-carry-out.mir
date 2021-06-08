@@ -29,25 +29,25 @@ body:             |
     ; CHECK-LABEL: name: scavenge_sgpr_pei_no_sgprs
     ; CHECK: liveins: $vgpr1, $vgpr2
     ; CHECK: $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def $scc, implicit $exec
-    ; CHECK: $sgpr6 = S_ADD_U32 $sgpr32, 524544, implicit-def $scc
+    ; CHECK: $sgpr6 = S_ADD_I32 $sgpr32, 524544, implicit-def $scc
     ; CHECK: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr6, 0, 0, 0, 0, implicit $exec :: (store 4 into %stack.3, addrspace 5)
     ; CHECK: $exec = S_MOV_B64 killed $sgpr4_sgpr5
     ; CHECK: $vgpr2 = V_WRITELANE_B32 $sgpr33, 0, undef $vgpr2
-    ; CHECK: $sgpr33 = frame-setup S_ADD_U32 $sgpr32, 524224, implicit-def $scc
+    ; CHECK: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; CHECK: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def $scc
-    ; CHECK: $sgpr32 = frame-setup S_ADD_U32 $sgpr32, 1572864, implicit-def $scc
+    ; CHECK: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 1572864, implicit-def $scc
     ; CHECK: S_NOP 0, implicit-def $sgpr4, implicit-def $sgpr5, implicit-def $sgpr6, implicit-def $sgpr7, implicit-def $sgpr8, implicit-def $sgpr9, implicit-def $sgpr10, implicit-def $sgpr11, implicit-def $sgpr12, implicit-def $sgpr13, implicit-def $sgpr14, implicit-def $sgpr15, implicit-def $sgpr16, implicit-def $sgpr17, implicit-def $sgpr18, implicit-def $sgpr19, implicit-def $sgpr20, implicit-def $sgpr21, implicit-def $sgpr22, implicit-def $sgpr23, implicit-def $sgpr24, implicit-def $sgpr25, implicit-def $sgpr26, implicit-def $sgpr27, implicit-def $sgpr28, implicit-def $sgpr29, implicit-def $sgpr30, implicit-def $sgpr31, implicit-def $vcc
     ; CHECK: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; CHECK: $sgpr33 = S_LSHR_B32 $sgpr33, 6, implicit-def $scc
-    ; CHECK: $sgpr33 = S_ADD_U32 killed $sgpr33, 8192, implicit-def $scc
+    ; CHECK: $sgpr33 = S_ADD_I32 killed $sgpr33, 8192, implicit-def $scc
     ; CHECK: $vgpr3 = COPY killed $sgpr33
-    ; CHECK: $sgpr33 = S_SUB_U32 killed $sgpr33, 8192, implicit-def $scc
+    ; CHECK: $sgpr33 = S_ADD_I32 killed $sgpr33, -8192, implicit-def $scc
     ; CHECK: $sgpr33 = S_LSHL_B32 $sgpr33, 6, implicit-def $scc
     ; CHECK: $vgpr0 = V_OR_B32_e32 killed $vgpr3, $vgpr1, implicit $exec, implicit $sgpr4, implicit $sgpr5, implicit $sgpr6, implicit $sgpr7, implicit $sgpr8, implicit $sgpr9, implicit $sgpr10, implicit $sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $sgpr16, implicit $sgpr17, implicit $sgpr18, implicit $sgpr19, implicit $sgpr20, implicit $sgpr21, implicit $sgpr22, implicit $sgpr23, implicit $sgpr24, implicit $sgpr25, implicit $sgpr26, implicit $sgpr27, implicit $sgpr28, implicit $sgpr29, implicit $sgpr30, implicit $sgpr31
-    ; CHECK: $sgpr32 = frame-destroy S_SUB_U32 $sgpr32, 1572864, implicit-def $scc
+    ; CHECK: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -1572864, implicit-def $scc
     ; CHECK: $sgpr33 = V_READLANE_B32 $vgpr2, 0
     ; CHECK: $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def $scc, implicit $exec
-    ; CHECK: $sgpr6 = S_ADD_U32 $sgpr32, 524544, implicit-def $scc
+    ; CHECK: $sgpr6 = S_ADD_I32 $sgpr32, 524544, implicit-def $scc
     ; CHECK: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, killed $sgpr6, 0, 0, 0, 0, implicit $exec :: (load 4 from %stack.3, addrspace 5)
     ; CHECK: $exec = S_MOV_B64 killed $sgpr4_sgpr5
     ; CHECK: S_ENDPGM 0, implicit $vcc
@@ -81,18 +81,18 @@ body:             |
     ; CHECK-LABEL: name: scavenge_sgpr_pei_one_sgpr
     ; CHECK: liveins: $sgpr29, $vgpr1
     ; CHECK: $sgpr29 = frame-setup COPY $sgpr33
-    ; CHECK: $sgpr33 = frame-setup S_ADD_U32 $sgpr32, 524224, implicit-def $scc
+    ; CHECK: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; CHECK: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def $scc
-    ; CHECK: $sgpr32 = frame-setup S_ADD_U32 $sgpr32, 1572864, implicit-def $scc
+    ; CHECK: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 1572864, implicit-def $scc
     ; CHECK: S_NOP 0, implicit-def $sgpr4, implicit-def $sgpr5, implicit-def $sgpr6, implicit-def $sgpr7, implicit-def $sgpr8, implicit-def $sgpr9, implicit-def $sgpr10, implicit-def $sgpr11, implicit-def $sgpr12, implicit-def $sgpr13, implicit-def $sgpr14, implicit-def $sgpr15, implicit-def $sgpr16, implicit-def $sgpr17, implicit-def $sgpr18, implicit-def $sgpr19, implicit-def $sgpr20, implicit-def $sgpr21, implicit-def $sgpr22, implicit-def $sgpr23, implicit-def $sgpr24, implicit-def $sgpr25, implicit-def $sgpr26, implicit-def $sgpr27, implicit-def $sgpr28, implicit-def $sgpr30, implicit-def $sgpr31, implicit-def $vcc
     ; CHECK: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; CHECK: $sgpr33 = S_LSHR_B32 $sgpr33, 6, implicit-def $scc
-    ; CHECK: $sgpr33 = S_ADD_U32 killed $sgpr33, 8192, implicit-def $scc
+    ; CHECK: $sgpr33 = S_ADD_I32 killed $sgpr33, 8192, implicit-def $scc
     ; CHECK: $vgpr2 = COPY killed $sgpr33
-    ; CHECK: $sgpr33 = S_SUB_U32 killed $sgpr33, 8192, implicit-def $scc
+    ; CHECK: $sgpr33 = S_ADD_I32 killed $sgpr33, -8192, implicit-def $scc
     ; CHECK: $sgpr33 = S_LSHL_B32 $sgpr33, 6, implicit-def $scc
     ; CHECK: $vgpr0 = V_OR_B32_e32 killed $vgpr2, $vgpr1, implicit $exec, implicit $sgpr4, implicit $sgpr5, implicit $sgpr6, implicit $sgpr7, implicit $sgpr8, implicit $sgpr9, implicit $sgpr10, implicit $sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $sgpr16, implicit $sgpr17, implicit $sgpr18, implicit $sgpr19, implicit $sgpr20, implicit $sgpr21, implicit $sgpr22, implicit $sgpr23, implicit $sgpr24, implicit $sgpr25, implicit $sgpr26, implicit $sgpr27, implicit $sgpr28, implicit $sgpr31
-    ; CHECK: $sgpr32 = frame-destroy S_SUB_U32 $sgpr32, 1572864, implicit-def $scc
+    ; CHECK: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -1572864, implicit-def $scc
     ; CHECK: $sgpr33 = frame-destroy COPY $sgpr29
     ; CHECK: S_ENDPGM 0, implicit $vcc
     S_NOP 0, implicit-def $sgpr4, implicit-def $sgpr5, implicit-def $sgpr6, implicit-def $sgpr7, implicit-def $sgpr8, implicit-def $sgpr9, implicit-def $sgpr10, implicit-def $sgpr11, implicit-def $sgpr12, implicit-def $sgpr13, implicit-def $sgpr14, implicit-def $sgpr15, implicit-def $sgpr16, implicit-def $sgpr17, implicit-def $sgpr18, implicit-def $sgpr19, implicit-def $sgpr20, implicit-def $sgpr21, implicit-def $sgpr22, implicit-def $sgpr23, implicit-def $sgpr24, implicit-def $sgpr25, implicit-def $sgpr26, implicit-def $sgpr27, implicit-def $sgpr28, implicit-def $sgpr30, implicit-def $sgpr31, implicit-def $vcc
@@ -125,16 +125,16 @@ body:             |
     ; CHECK-LABEL: name: scavenge_sgpr_pei_one_sgpr_64
     ; CHECK: liveins: $sgpr28, $vgpr1
     ; CHECK: $sgpr28 = frame-setup COPY $sgpr33
-    ; CHECK: $sgpr33 = frame-setup S_ADD_U32 $sgpr32, 524224, implicit-def $scc
+    ; CHECK: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; CHECK: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def $scc
-    ; CHECK: $sgpr32 = frame-setup S_ADD_U32 $sgpr32, 1572864, implicit-def $scc
+    ; CHECK: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 1572864, implicit-def $scc
     ; CHECK: S_NOP 0, implicit-def $sgpr4, implicit-def $sgpr5, implicit-def $sgpr6, implicit-def $sgpr7, implicit-def $sgpr8, implicit-def $sgpr9, implicit-def $sgpr10, implicit-def $sgpr11, implicit-def $sgpr12, implicit-def $sgpr13, implicit-def $sgpr14, implicit-def $sgpr15, implicit-def $sgpr16, implicit-def $sgpr17, implicit-def $sgpr18, implicit-def $sgpr19, implicit-def $sgpr20, implicit-def $sgpr21, implicit-def $sgpr22, implicit-def $sgpr23, implicit-def $sgpr24, implicit-def $sgpr25, implicit-def $sgpr26, implicit-def $sgpr27, implicit-def $sgpr30, implicit-def $sgpr31, implicit-def $vcc
     ; CHECK: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; CHECK: $sgpr29 = S_LSHR_B32 $sgpr33, 6, implicit-def $scc
-    ; CHECK: $sgpr29 = S_ADD_U32 killed $sgpr29, 8192, implicit-def $scc
+    ; CHECK: $sgpr29 = S_ADD_I32 killed $sgpr29, 8192, implicit-def $scc
     ; CHECK: $vgpr2 = COPY killed $sgpr29
     ; CHECK: $vgpr0 = V_OR_B32_e32 killed $vgpr2, $vgpr1, implicit $exec, implicit $sgpr4, implicit $sgpr5, implicit $sgpr6, implicit $sgpr7, implicit $sgpr8, implicit $sgpr9, implicit $sgpr10, implicit $sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $sgpr16, implicit $sgpr17, implicit $sgpr18, implicit $sgpr19, implicit $sgpr20, implicit $sgpr21, implicit $sgpr22, implicit $sgpr23, implicit $sgpr24, implicit $sgpr25, implicit $sgpr26, implicit $sgpr27, implicit $sgpr31
-    ; CHECK: $sgpr32 = frame-destroy S_SUB_U32 $sgpr32, 1572864, implicit-def $scc
+    ; CHECK: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -1572864, implicit-def $scc
     ; CHECK: $sgpr33 = frame-destroy COPY $sgpr28
     ; CHECK: S_ENDPGM 0, implicit $vcc
     S_NOP 0, implicit-def $sgpr4, implicit-def $sgpr5, implicit-def $sgpr6, implicit-def $sgpr7, implicit-def $sgpr8, implicit-def $sgpr9, implicit-def $sgpr10, implicit-def $sgpr11, implicit-def $sgpr12, implicit-def $sgpr13, implicit-def $sgpr14, implicit-def $sgpr15, implicit-def $sgpr16, implicit-def $sgpr17, implicit-def $sgpr18, implicit-def $sgpr19, implicit-def $sgpr20, implicit-def $sgpr21, implicit-def $sgpr22, implicit-def $sgpr23, implicit-def $sgpr24, implicit-def $sgpr25, implicit-def $sgpr26, implicit-def $sgpr27, implicit-def $sgpr30, implicit-def $sgpr31, implicit-def $vcc
@@ -166,16 +166,16 @@ body:             |
     ; CHECK-LABEL: name: scavenge_sgpr_pei_prefer_vcc
     ; CHECK: liveins: $sgpr28, $vgpr1
     ; CHECK: $sgpr28 = frame-setup COPY $sgpr33
-    ; CHECK: $sgpr33 = frame-setup S_ADD_U32 $sgpr32, 524224, implicit-def $scc
+    ; CHECK: $sgpr33 = frame-setup S_ADD_I32 $sgpr32, 524224, implicit-def $scc
     ; CHECK: $sgpr33 = frame-setup S_AND_B32 killed $sgpr33, 4294443008, implicit-def $scc
-    ; CHECK: $sgpr32 = frame-setup S_ADD_U32 $sgpr32, 1572864, implicit-def $scc
+    ; CHECK: $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 1572864, implicit-def $scc
     ; CHECK: S_NOP 0, implicit-def $sgpr4, implicit-def $sgpr5, implicit-def $sgpr6, implicit-def $sgpr7, implicit-def $sgpr8, implicit-def $sgpr9, implicit-def $sgpr10, implicit-def $sgpr11, implicit-def $sgpr12, implicit-def $sgpr13, implicit-def $sgpr14, implicit-def $sgpr15, implicit-def $sgpr16, implicit-def $sgpr17, implicit-def $sgpr18, implicit-def $sgpr19, implicit-def $sgpr20, implicit-def $sgpr21, implicit-def $sgpr22, implicit-def $sgpr23, implicit-def $sgpr24, implicit-def $sgpr25, implicit-def $sgpr26, implicit-def $sgpr27, implicit-def $sgpr30, implicit-def $sgpr31
     ; CHECK: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; CHECK: $vgpr2 = V_LSHRREV_B32_e64 6, $sgpr33, implicit $exec
     ; CHECK: $vcc_lo = S_MOV_B32 8192
     ; CHECK: $vgpr2, dead $vcc = V_ADD_CO_U32_e64 killed $vcc_lo, killed $vgpr2, 0, implicit $exec
     ; CHECK: $vgpr0 = V_OR_B32_e32 killed $vgpr2, $vgpr1, implicit $exec, implicit $sgpr4, implicit $sgpr5, implicit $sgpr6, implicit $sgpr7, implicit $sgpr8, implicit $sgpr9, implicit $sgpr10, implicit $sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $sgpr16, implicit $sgpr17, implicit $sgpr18, implicit $sgpr19, implicit $sgpr20, implicit $sgpr21, implicit $sgpr22, implicit $sgpr23, implicit $sgpr24, implicit $sgpr25, implicit $sgpr26, implicit $sgpr27, implicit $sgpr31
-    ; CHECK: $sgpr32 = frame-destroy S_SUB_U32 $sgpr32, 1572864, implicit-def $scc
+    ; CHECK: $sgpr32 = frame-destroy S_ADD_I32 $sgpr32, -1572864, implicit-def $scc
     ; CHECK: $sgpr33 = frame-destroy COPY $sgpr28
     ; CHECK: S_ENDPGM 0
     S_NOP 0, implicit-def $sgpr4, implicit-def $sgpr5, implicit-def $sgpr6, implicit-def $sgpr7, implicit-def $sgpr8, implicit-def $sgpr9, implicit-def $sgpr10, implicit-def $sgpr11, implicit-def $sgpr12, implicit-def $sgpr13, implicit-def $sgpr14, implicit-def $sgpr15, implicit-def $sgpr16, implicit-def $sgpr17, implicit-def $sgpr18, implicit-def $sgpr19, implicit-def $sgpr20, implicit-def $sgpr21, implicit-def $sgpr22, implicit-def $sgpr23, implicit-def $sgpr24, implicit-def $sgpr25, implicit-def $sgpr26, implicit-def $sgpr27, implicit-def $sgpr30, implicit-def $sgpr31

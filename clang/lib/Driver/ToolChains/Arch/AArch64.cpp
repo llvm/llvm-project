@@ -185,12 +185,20 @@ getAArch64MicroArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
 void aarch64::getAArch64TargetFeatures(const Driver &D,
                                        const llvm::Triple &Triple,
                                        const ArgList &Args,
-                                       std::vector<StringRef> &Features) {
+                                       std::vector<StringRef> &Features,
+                                       bool ForAS) {
   Arg *A;
   bool success = true;
   // Enable NEON by default.
   Features.push_back("+neon");
-  if ((A = Args.getLastArg(options::OPT_march_EQ)))
+  if (ForAS &&
+      (A = Args.getLastArg(options::OPT_Wa_COMMA, options::OPT_Xassembler))) {
+    llvm::StringRef WaMArch;
+    for (StringRef Value : A->getValues())
+      if (Value.startswith("-march="))
+        WaMArch = Value.substr(7);
+    success = getAArch64ArchFeaturesFromMarch(D, WaMArch, Args, Features);
+  } else if ((A = Args.getLastArg(options::OPT_march_EQ)))
     success = getAArch64ArchFeaturesFromMarch(D, A->getValue(), Args, Features);
   else if ((A = Args.getLastArg(options::OPT_mcpu_EQ)))
     success = getAArch64ArchFeaturesFromMcpu(D, A->getValue(), Args, Features);

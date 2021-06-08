@@ -490,12 +490,12 @@ typedef __char32_t char32_t;
 #define _LIBCPP_HAS_NO_NOEXCEPT
 #endif
 
-#if !defined(_LIBCPP_HAS_NO_ASAN) && !__has_feature(address_sanitizer)
+#if !__has_feature(address_sanitizer)
 #define _LIBCPP_HAS_NO_ASAN
 #endif
 
 // Allow for build-time disabling of unsigned integer sanitization
-#if !defined(_LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK) && __has_attribute(no_sanitize)
+#if __has_attribute(no_sanitize)
 #define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK __attribute__((__no_sanitize__("unsigned-integer-overflow")))
 #endif
 
@@ -542,7 +542,7 @@ typedef __char32_t char32_t;
 #define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
 #endif
 
-#if !defined(_LIBCPP_HAS_NO_ASAN) && !defined(__SANITIZE_ADDRESS__)
+#if !defined(__SANITIZE_ADDRESS__)
 #define _LIBCPP_HAS_NO_ASAN
 #endif
 
@@ -807,10 +807,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 
 #define _VSTD_FS _VSTD::__fs::filesystem
 
-#ifndef _LIBCPP_PREFERRED_OVERLOAD
-#  if __has_attribute(__enable_if__)
-#    define _LIBCPP_PREFERRED_OVERLOAD __attribute__ ((__enable_if__(true, "")))
-#  endif
+#if __has_attribute(__enable_if__)
+#   define _LIBCPP_PREFERRED_OVERLOAD __attribute__ ((__enable_if__(true, "")))
 #endif
 
 #ifndef _LIBCPP_HAS_NO_NOEXCEPT
@@ -938,9 +936,7 @@ typedef unsigned int   char32_t;
 # define _LIBCPP_EXTERN_TEMPLATE_EVEN_IN_DEBUG_MODE(...) extern template __VA_ARGS__;
 #endif
 
-#ifndef _LIBCPP_EXTERN_TEMPLATE_DEFINE
 #define _LIBCPP_EXTERN_TEMPLATE_DEFINE(...) template __VA_ARGS__;
-#endif
 
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(_LIBCPP_MSVCRT_LIKE) || \
     defined(__sun__) || defined(__NetBSD__) || defined(__CloudABI__)
@@ -970,9 +966,8 @@ typedef unsigned int   char32_t;
 #  endif
 #endif // defined(__APPLE__)
 
-#if !defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION) && \
-    (defined(_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION) || \
-    (!defined(__cpp_aligned_new) || __cpp_aligned_new < 201606))
+#if defined(_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION) || \
+    (!defined(__cpp_aligned_new) || __cpp_aligned_new < 201606)
 #  define _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
 #endif
 
@@ -1035,17 +1030,15 @@ typedef unsigned int   char32_t;
 #endif
 
 // Macros to enter and leave a state where deprecation warnings are suppressed.
-#if !defined(_LIBCPP_SUPPRESS_DEPRECATED_PUSH) &&                              \
-    (defined(_LIBCPP_COMPILER_CLANG_BASED) || defined(_LIBCPP_COMPILER_GCC))
-#  define _LIBCPP_SUPPRESS_DEPRECATED_PUSH \
-    _Pragma("GCC diagnostic push") \
-    _Pragma("GCC diagnostic ignored \"-Wdeprecated\"")
-#  define _LIBCPP_SUPPRESS_DEPRECATED_POP \
-    _Pragma("GCC diagnostic pop")
-#endif
-#if !defined(_LIBCPP_SUPPRESS_DEPRECATED_PUSH)
-#  define _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-#  define _LIBCPP_SUPPRESS_DEPRECATED_POP
+#if defined(_LIBCPP_COMPILER_CLANG_BASED) || defined(_LIBCPP_COMPILER_GCC)
+#   define _LIBCPP_SUPPRESS_DEPRECATED_PUSH \
+        _Pragma("GCC diagnostic push") \
+        _Pragma("GCC diagnostic ignored \"-Wdeprecated\"")
+#   define _LIBCPP_SUPPRESS_DEPRECATED_POP \
+        _Pragma("GCC diagnostic pop")
+#else
+#   define _LIBCPP_SUPPRESS_DEPRECATED_PUSH
+#   define _LIBCPP_SUPPRESS_DEPRECATED_POP
 #endif
 
 #if _LIBCPP_STD_VER <= 11
@@ -1106,12 +1099,10 @@ typedef unsigned int   char32_t;
 #  define _LIBCPP_INLINE_VAR
 #endif
 
-#ifndef _LIBCPP_CONSTEXPR_IF_NODEBUG
 #if defined(_LIBCPP_DEBUG) || defined(_LIBCPP_HAS_NO_CXX14_CONSTEXPR)
-#define _LIBCPP_CONSTEXPR_IF_NODEBUG
+#   define _LIBCPP_CONSTEXPR_IF_NODEBUG
 #else
-#define _LIBCPP_CONSTEXPR_IF_NODEBUG constexpr
-#endif
+#   define _LIBCPP_CONSTEXPR_IF_NODEBUG constexpr
 #endif
 
 #if __has_attribute(no_destroy)
@@ -1241,12 +1232,10 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #endif
 
 // Some systems do not provide gets() in their C library, for security reasons.
-#ifndef _LIBCPP_C_HAS_NO_GETS
-#  if defined(_LIBCPP_MSVCRT) || \
-      (defined(__FreeBSD_version) && __FreeBSD_version >= 1300043) || \
-      defined(__OpenBSD__)
-#    define _LIBCPP_C_HAS_NO_GETS
-#  endif
+#if defined(_LIBCPP_MSVCRT) || \
+    (defined(__FreeBSD_version) && __FreeBSD_version >= 1300043) || \
+    defined(__OpenBSD__)
+#   define _LIBCPP_C_HAS_NO_GETS
 #endif
 
 #if defined(__BIONIC__) || defined(__CloudABI__) || defined(__NuttX__) ||      \
@@ -1296,13 +1285,11 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #  endif
 #endif
 
-#ifndef _LIBCPP_THREAD_SAFETY_ANNOTATION
-#  ifdef _LIBCPP_HAS_THREAD_SAFETY_ANNOTATIONS
-#    define _LIBCPP_THREAD_SAFETY_ANNOTATION(x) __attribute__((x))
-#  else
-#    define _LIBCPP_THREAD_SAFETY_ANNOTATION(x)
-#  endif
-#endif // _LIBCPP_THREAD_SAFETY_ANNOTATION
+#ifdef _LIBCPP_HAS_THREAD_SAFETY_ANNOTATIONS
+#   define _LIBCPP_THREAD_SAFETY_ANNOTATION(x) __attribute__((x))
+#else
+#   define _LIBCPP_THREAD_SAFETY_ANNOTATION(x)
+#endif
 
 #if __has_attribute(require_constant_initialization)
 #  define _LIBCPP_SAFE_STATIC __attribute__((__require_constant_initialization__))
@@ -1345,14 +1332,11 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_NODEBUG
 #endif
 
-#ifndef _LIBCPP_NODEBUG_TYPE
-#if __has_attribute(__nodebug__) && \
-    (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 900)
-#define _LIBCPP_NODEBUG_TYPE __attribute__((nodebug))
+#if __has_attribute(__nodebug__) && (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 900)
+#   define _LIBCPP_NODEBUG_TYPE __attribute__((nodebug))
 #else
-#define _LIBCPP_NODEBUG_TYPE
+#   define _LIBCPP_NODEBUG_TYPE
 #endif
-#endif // !defined(_LIBCPP_NODEBUG_TYPE)
 
 #if __has_attribute(__standalone_debug__)
 #define _LIBCPP_STANDALONE_DEBUG __attribute__((__standalone_debug__))

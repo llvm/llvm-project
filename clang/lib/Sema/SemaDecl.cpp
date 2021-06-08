@@ -3200,7 +3200,7 @@ static bool checkUsingShadowRedecl(Sema &S, UsingShadowDecl *OldS,
   if (!Old) {
     S.Diag(New->getLocation(), diag::err_using_decl_conflict_reverse);
     S.Diag(OldS->getTargetDecl()->getLocation(), diag::note_using_decl_target);
-    S.Diag(OldS->getUsingDecl()->getLocation(), diag::note_using_decl) << 0;
+    S.Diag(OldS->getIntroducer()->getLocation(), diag::note_using_decl) << 0;
     return true;
   }
   return false;
@@ -3285,8 +3285,8 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
         Diag(New->getLocation(), diag::err_using_decl_friend);
         Diag(Shadow->getTargetDecl()->getLocation(),
              diag::note_using_decl_target);
-        Diag(Shadow->getUsingDecl()->getLocation(),
-             diag::note_using_decl) << 0;
+        Diag(Shadow->getIntroducer()->getLocation(), diag::note_using_decl)
+            << 0;
         return true;
       }
 
@@ -15988,7 +15988,7 @@ Decl *Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
         Diag(KWLoc, diag::err_using_decl_conflict_reverse);
         Diag(Shadow->getTargetDecl()->getLocation(),
              diag::note_using_decl_target);
-        Diag(Shadow->getUsingDecl()->getLocation(), diag::note_using_decl)
+        Diag(Shadow->getIntroducer()->getLocation(), diag::note_using_decl)
             << 0;
         // Recover by ignoring the old declaration.
         Previous.clear();

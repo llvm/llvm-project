@@ -2800,14 +2800,14 @@ LegalizerHelper::lowerLoad(MachineInstr &MI) {
         LLT::scalar(PtrTy.getSizeInBits()), LargeSplitSize / 8);
       Register PtrAddReg = MRI.createGenericVirtualRegister(PtrTy);
       auto SmallPtr =
-        MIRBuilder.buildPtrAdd(PtrAddReg, PtrReg, OffsetCst.getReg(0));
-      auto SmallLoad = MIRBuilder.buildLoad(SmallLdReg, SmallPtr.getReg(0),
+        MIRBuilder.buildPtrAdd(PtrAddReg, PtrReg, OffsetCst);
+      auto SmallLoad = MIRBuilder.buildLoad(SmallLdReg, SmallPtr,
                                             *SmallMMO);
 
       auto ShiftAmt = MIRBuilder.buildConstant(AnyExtTy, LargeSplitSize);
       auto Shift = MIRBuilder.buildShl(AnyExtTy, SmallLoad, ShiftAmt);
       auto Or = MIRBuilder.buildOr(AnyExtTy, Shift, LargeLoad);
-      MIRBuilder.buildTrunc(DstReg, {Or.getReg(0)});
+      MIRBuilder.buildTrunc(DstReg, {Or});
       MI.eraseFromParent();
       return Legalized;
     }
@@ -2855,15 +2855,15 @@ LegalizerHelper::lowerStore(MachineInstr &MI) {
     LLT::scalar(PtrTy.getSizeInBits()), LargeSplitSize / 8);
   Register PtrAddReg = MRI.createGenericVirtualRegister(PtrTy);
   auto SmallPtr =
-    MIRBuilder.buildPtrAdd(PtrAddReg, PtrReg, OffsetCst.getReg(0));
+    MIRBuilder.buildPtrAdd(PtrAddReg, PtrReg, OffsetCst);
 
   MachineFunction &MF = MIRBuilder.getMF();
   MachineMemOperand *LargeMMO =
     MF.getMachineMemOperand(&MMO, 0, LargeSplitSize / 8);
   MachineMemOperand *SmallMMO =
     MF.getMachineMemOperand(&MMO, LargeSplitSize / 8, SmallSplitSize / 8);
-  MIRBuilder.buildStore(ExtVal.getReg(0), PtrReg, *LargeMMO);
-  MIRBuilder.buildStore(SmallVal.getReg(0), SmallPtr.getReg(0), *SmallMMO);
+  MIRBuilder.buildStore(ExtVal, PtrReg, *LargeMMO);
+  MIRBuilder.buildStore(SmallVal, SmallPtr, *SmallMMO);
   MI.eraseFromParent();
   return Legalized;
 }

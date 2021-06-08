@@ -13,6 +13,7 @@
 #include "mlir/Dialect/GPU/GPUDialect.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -1064,6 +1065,26 @@ static LogicalResult verify(SubgroupMmaComputeOp op) {
     return op.emitError("operand shapes do not satisfy matmul constraints");
 
   return success();
+}
+
+/// This is a common class used for patterns of the form
+/// "someop(memrefcast) -> someop".  It folds the source of any memref.cast
+/// into the root operation directly.
+static LogicalResult foldMemRefCast(Operation *op) {
+  bool folded = false;
+  for (OpOperand &operand : op->getOpOperands()) {
+    auto cast = operand.get().getDefiningOp<mlir::memref::CastOp>();
+    if (cast) {
+      operand.set(cast.getOperand());
+      folded = true;
+    }
+  }
+  return success(folded);
+}
+
+LogicalResult MemcpyOp::fold(ArrayRef<Attribute> operands,
+                             SmallVectorImpl<::mlir::OpFoldResult> &results) {
+  return foldMemRefCast(*this);
 }
 
 #include "mlir/Dialect/GPU/GPUOpInterfaces.cpp.inc"

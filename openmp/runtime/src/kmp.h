@@ -2244,15 +2244,24 @@ typedef union kmp_depnode kmp_depnode_t;
 typedef struct kmp_depnode_list kmp_depnode_list_t;
 typedef struct kmp_dephash_entry kmp_dephash_entry_t;
 
+#define KMP_DEP_IN 0x1
+#define KMP_DEP_OUT 0x2
+#define KMP_DEP_INOUT 0x3
+#define KMP_DEP_MTX 0x4
+#define KMP_DEP_SET 0x8
 // Compiler sends us this info:
 typedef struct kmp_depend_info {
   kmp_intptr_t base_addr;
   size_t len;
-  struct {
-    bool in : 1;
-    bool out : 1;
-    bool mtx : 1;
-  } flags;
+  union {
+    kmp_uint32 flag;
+    struct {
+      unsigned in : 1;
+      unsigned out : 1;
+      unsigned mtx : 1;
+      unsigned set : 1;
+    } flags;
+  };
 } kmp_depend_info_t;
 
 // Internal structures to work with task dependencies:
@@ -2286,8 +2295,8 @@ union KMP_ALIGN_CACHE kmp_depnode {
 struct kmp_dephash_entry {
   kmp_intptr_t addr;
   kmp_depnode_t *last_out;
-  kmp_depnode_list_t *last_ins;
-  kmp_depnode_list_t *last_mtxs;
+  kmp_depnode_list_t *last_set;
+  kmp_depnode_list_t *prev_set;
   kmp_int32 last_flag;
   kmp_lock_t *mtx_lock; /* is referenced by depnodes w/mutexinoutset dep */
   kmp_dephash_entry_t *next_in_bucket;

@@ -522,7 +522,7 @@ define hidden void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
 
 ; GCN-LABEL: {{^}}func_use_every_sgpr_input_call_use_workgroup_id_xyz_spill:
 ; GCN-DAG: s_mov_b32 s33, s32
-; GCN-DAG: s_add_u32 s32, s32, 0x400
+; GCN-DAG: s_addk_i32 s32, 0x400
 ; GCN-DAG: s_mov_b64 s{{\[}}[[LO_X:[0-9]+]]{{\:}}[[HI_X:[0-9]+]]{{\]}}, s[4:5]
 ; GCN-DAG: s_mov_b64 s{{\[}}[[LO_Y:[0-9]+]]{{\:}}[[HI_Y:[0-9]+]]{{\]}}, s[6:7]
 

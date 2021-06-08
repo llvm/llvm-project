@@ -193,7 +193,7 @@ define void @slsr1_1(i32 %b.arg, i32 %s.arg) #0 {
 ; GFX9-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX9-NEXT:    v_writelane_b32 v43, s33, 4
 ; GFX9-NEXT:    s_mov_b32 s33, s32
-; GFX9-NEXT:    s_add_u32 s32, s32, 0x800
+; GFX9-NEXT:    s_addk_i32 s32, 0x800
 ; GFX9-NEXT:    v_writelane_b32 v43, s34, 0
 ; GFX9-NEXT:    s_getpc_b64 s[4:5]
 ; GFX9-NEXT:    s_add_u32 s4, s4, foo@gotpcrel32@lo+4
@@ -223,7 +223,7 @@ define void @slsr1_1(i32 %b.arg, i32 %s.arg) #0 {
 ; GFX9-NEXT:    v_readlane_b32 s5, v43, 3
 ; GFX9-NEXT:    v_readlane_b32 s35, v43, 1
 ; GFX9-NEXT:    v_readlane_b32 s34, v43, 0
-; GFX9-NEXT:    s_sub_u32 s32, s32, 0x800
+; GFX9-NEXT:    s_addk_i32 s32, 0xf800
 ; GFX9-NEXT:    v_readlane_b32 s33, v43, 4
 ; GFX9-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX9-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload

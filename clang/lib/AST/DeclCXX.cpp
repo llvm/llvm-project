@@ -2983,10 +2983,10 @@ APValue *LifetimeExtendedTemporaryDecl::getOrCreateValue(bool MayCreate) const {
 void UsingShadowDecl::anchor() {}
 
 UsingShadowDecl::UsingShadowDecl(Kind K, ASTContext &C, DeclContext *DC,
-                                 SourceLocation Loc, UsingDecl *Using,
-                                 NamedDecl *Target)
-    : NamedDecl(K, DC, Loc, Using ? Using->getDeclName() : DeclarationName()),
-      redeclarable_base(C), UsingOrNextShadow(cast<NamedDecl>(Using)) {
+                                 SourceLocation Loc, DeclarationName Name,
+                                 BaseUsingDecl *Introducer, NamedDecl *Target)
+    : NamedDecl(K, DC, Loc, Name), redeclarable_base(C),
+      UsingOrNextShadow(Introducer) {
   if (Target)
     setTargetDecl(Target);
   setImplicit();
@@ -3001,12 +3001,12 @@ UsingShadowDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
   return new (C, ID) UsingShadowDecl(UsingShadow, C, EmptyShell());
 }
 
-UsingDecl *UsingShadowDecl::getUsingDecl() const {
+BaseUsingDecl *UsingShadowDecl::getIntroducer() const {
   const UsingShadowDecl *Shadow = this;
   while (const auto *NextShadow =
              dyn_cast<UsingShadowDecl>(Shadow->UsingOrNextShadow))
     Shadow = NextShadow;
-  return cast<UsingDecl>(Shadow->UsingOrNextShadow);
+  return cast<BaseUsingDecl>(Shadow->UsingOrNextShadow);
 }
 
 void ConstructorUsingShadowDecl::anchor() {}
@@ -3025,25 +3025,25 @@ ConstructorUsingShadowDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
 }
 
 CXXRecordDecl *ConstructorUsingShadowDecl::getNominatedBaseClass() const {
-  return getUsingDecl()->getQualifier()->getAsRecordDecl();
+  return getIntroducer()->getQualifier()->getAsRecordDecl();
 }
 
-void UsingDecl::anchor() {}
+void BaseUsingDecl::anchor() {}
 
-void UsingDecl::addShadowDecl(UsingShadowDecl *S) {
+void BaseUsingDecl::addShadowDecl(UsingShadowDecl *S) {
   assert(std::find(shadow_begin(), shadow_end(), S) == shadow_end() &&
          "declaration already in set");
-  assert(S->getUsingDecl() == this);
+  assert(S->getIntroducer() == this);
 
   if (FirstUsingShadow.getPointer())
     S->UsingOrNextShadow = FirstUsingShadow.getPointer();
   FirstUsingShadow.setPointer(S);
 }
 
-void UsingDecl::removeShadowDecl(UsingShadowDecl *S) {
+void BaseUsingDecl::removeShadowDecl(UsingShadowDecl *S) {
   assert(std::find(shadow_begin(), shadow_end(), S) != shadow_end() &&
          "declaration not in set");
-  assert(S->getUsingDecl() == this);
+  assert(S->getIntroducer() == this);
 
   // Remove S from the shadow decl chain. This is O(n) but hopefully rare.
 
@@ -3060,6 +3060,8 @@ void UsingDecl::removeShadowDecl(UsingShadowDecl *S) {
   Prev->UsingOrNextShadow = S->UsingOrNextShadow;
   S->UsingOrNextShadow = this;
 }
+
+void UsingDecl::anchor() {}
 
 UsingDecl *UsingDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation UL,
                              NestedNameSpecifierLoc QualifierLoc,

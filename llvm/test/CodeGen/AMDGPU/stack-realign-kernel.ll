@@ -6,7 +6,7 @@
 define amdgpu_kernel void @max_alignment_128() #0 {
 ; VI-LABEL: max_alignment_128:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_add_u32 s4, s4, s7
+; VI-NEXT:    s_add_i32 s4, s4, s7
 ; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
 ; VI-NEXT:    s_add_u32 s0, s0, s7
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
@@ -110,7 +110,7 @@ define amdgpu_kernel void @max_alignment_128() #0 {
 define amdgpu_kernel void @stackrealign_attr() #1 {
 ; VI-LABEL: stackrealign_attr:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_add_u32 s4, s4, s7
+; VI-NEXT:    s_add_i32 s4, s4, s7
 ; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
 ; VI-NEXT:    s_add_u32 s0, s0, s7
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
@@ -214,7 +214,7 @@ define amdgpu_kernel void @stackrealign_attr() #1 {
 define amdgpu_kernel void @alignstack_attr() #2 {
 ; VI-LABEL: alignstack_attr:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_add_u32 s4, s4, s7
+; VI-NEXT:    s_add_i32 s4, s4, s7
 ; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s4, 8
 ; VI-NEXT:    s_add_u32 s0, s0, s7
 ; VI-NEXT:    s_addc_u32 s1, s1, 0
