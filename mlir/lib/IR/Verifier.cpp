@@ -31,9 +31,8 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/RegionKindInterface.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Regex.h"
 
 using namespace mlir;
 
@@ -41,7 +40,8 @@ namespace {
 /// This class encapsulates all the state used to verify an operation region.
 class OperationVerifier {
 public:
-  explicit OperationVerifier() {}
+  explicit OperationVerifier(MLIRContext *context)
+      : parallelismEnabled(context->isMultithreadingEnabled()) {}
 
   /// Verify the given operation.
   LogicalResult verifyOpAndDominance(Operation &op);
@@ -54,7 +54,8 @@ private:
 
   /// Verify the dominance property of regions contained within the given
   /// Operation.
-  LogicalResult verifyDominanceOfContainedRegions(Operation &op);
+  LogicalResult verifyDominanceOfContainedRegions(Operation &op,
+                                                  DominanceInfo &domInfo);
 
   /// Emit an error for the given block.
   InFlightDiagnostic emitError(Block &bb, const Twine &message) {
@@ -66,8 +67,8 @@ private:
     return mlir::emitError(bb.getParent()->getLoc(), message);
   }
 
-  /// Dominance information for this operation, when checking dominance.
-  DominanceInfo *domInfo = nullptr;
+  /// This is true if parallelism is enabled on the MLIRContext.
+  const bool parallelismEnabled;
 };
 } // end anonymous namespace
 
@@ -81,12 +82,11 @@ LogicalResult OperationVerifier::verifyOpAndDominance(Operation &op) {
   // check for any nested regions. We do this as a second pass since malformed
   // CFG's can cause dominator analysis constructure to crash and we want the
   // verifier to be resilient to malformed code.
-  DominanceInfo theDomInfo(&op);
-  domInfo = &theDomInfo;
-  if (failed(verifyDominanceOfContainedRegions(op)))
-    return failure();
-
-  domInfo = nullptr;
+  if (op.getNumRegions() != 0) {
+    DominanceInfo domInfo;
+    if (failed(verifyDominanceOfContainedRegions(op, /*domInfo*/ domInfo)))
+      return failure();
+  }
   return success();
 }
 
@@ -299,34 +299,83 @@ static void diagnoseInvalidOperandDominance(Operation &op, unsigned operandNo) {
     note << " neither in a parent nor in a child region)";
 }
 
-/// Verify the dominance of each of the nested blocks within the given operation
+/// Verify the dominance of each of the nested blocks within the given
+/// operation.  domInfo may be present or absent (null), depending on whether
+/// the caller computed it for a higher level.
 LogicalResult
-OperationVerifier::verifyDominanceOfContainedRegions(Operation &op) {
-  for (Region &region : op.getRegions()) {
-    // Verify the dominance of each of the held operations.
+OperationVerifier::verifyDominanceOfContainedRegions(Operation &opWithRegions,
+                                                     DominanceInfo &domInfo) {
+  // This vector keeps track of ops that have regions which should be checked
+  // in parallel.
+  SmallVector<Operation *> opsWithRegionsToCheckInParallel;
+
+  // Get information about the requirements on the regions in this op.
+  for (Region &region : opWithRegions.getRegions()) {
     for (Block &block : region) {
       // Dominance is only meaningful inside reachable blocks.
-      bool isReachable = domInfo->isReachableFromEntry(&block);
+      bool isReachable = domInfo.isReachableFromEntry(&block);
+
+      // Check each operation in this block, and any operations in regions
+      // that these operations contain.
+      opsWithRegionsToCheckInParallel.clear();
 
       for (Operation &op : block) {
         if (isReachable) {
           // Check that operands properly dominate this use.
-          for (unsigned operandNo = 0, e = op.getNumOperands(); operandNo != e;
-               ++operandNo) {
-            if (domInfo->properlyDominates(op.getOperand(operandNo), &op))
-              continue;
-
-            diagnoseInvalidOperandDominance(op, operandNo);
-            return failure();
+          for (auto &operand : op.getOpOperands()) {
+            // If the operand doesn't dominate the user, then emit an error.
+            if (!domInfo.properlyDominates(operand.get(), &op)) {
+              diagnoseInvalidOperandDominance(op, operand.getOperandNumber());
+              return failure();
+            }
           }
         }
 
-        // Recursively verify dominance within each operation in the
-        // block, even if the block itself is not reachable, or we are in
-        // a region which doesn't respect dominance.
-        if (op.getNumRegions() != 0)
-          if (failed(verifyDominanceOfContainedRegions(op)))
+        // If this operation has any regions, we need to recursively verify
+        // dominance of the ops within it.
+        if (op.getNumRegions() == 0)
+          continue;
+
+        // If this is a non-isolated region (e.g. an affine for loop), pass down
+        // the current dominator information.
+        if (!op.hasTrait<OpTrait::IsIsolatedFromAbove>()) {
+          if (failed(verifyDominanceOfContainedRegions(op, domInfo)))
             return failure();
+        } else if (parallelismEnabled) {
+          // If this is an IsolatedFromAbove op and parallelism is enabled, then
+          // enqueue this for processing later.
+          opsWithRegionsToCheckInParallel.push_back(&op);
+        } else {
+          // If not, just verify inline with a local dom scope.
+          DominanceInfo localDomInfo;
+          if (failed(verifyDominanceOfContainedRegions(op, localDomInfo)))
+            return failure();
+        }
+      }
+
+      // If we have multiple parallelizable subregions, check them in parallel.
+      if (opsWithRegionsToCheckInParallel.size() == 1) {
+        // Each isolated operation gets its own dom info.
+        Operation *op = opsWithRegionsToCheckInParallel[0];
+        DominanceInfo localDomInfo;
+        if (failed(verifyDominanceOfContainedRegions(*op, localDomInfo)))
+          return failure();
+      } else if (!opsWithRegionsToCheckInParallel.empty()) {
+        ParallelDiagnosticHandler handler(opWithRegions.getContext());
+        std::atomic<bool> passFailed(false);
+        llvm::parallelForEachN(
+            0, opsWithRegionsToCheckInParallel.size(), [&](size_t opIdx) {
+              handler.setOrderIDForThread(opIdx);
+              Operation *op = opsWithRegionsToCheckInParallel[opIdx];
+
+              // Each isolated operation gets its own dom info.
+              DominanceInfo localDomInfo;
+              if (failed(verifyDominanceOfContainedRegions(*op, localDomInfo)))
+                passFailed = true;
+              handler.eraseOrderIDForThread();
+            });
+        if (passFailed)
+          return failure();
       }
     }
   }
@@ -338,8 +387,8 @@ OperationVerifier::verifyDominanceOfContainedRegions(Operation &op) {
 //===----------------------------------------------------------------------===//
 
 /// Perform (potentially expensive) checks of invariants, used to detect
-/// compiler bugs.  On error, this reports the error through the MLIRContext and
-/// returns failure.
+/// compiler bugs.  On error, this reports the error through the MLIRContext
+/// and returns failure.
 LogicalResult mlir::verify(Operation *op) {
-  return OperationVerifier().verifyOpAndDominance(*op);
+  return OperationVerifier(op->getContext()).verifyOpAndDominance(*op);
 }
