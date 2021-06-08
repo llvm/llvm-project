@@ -610,6 +610,30 @@ DEFINE_REAL(int, vfork)
 DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork)
 #endif
 
+#if SANITIZER_AMDGPU
+INTERCEPTOR(hsa_status_t, hsa_amd_memory_pool_allocate,
+  hsa_amd_memory_pool_t memory_pool, size_t size, uint32_t flags, void **ptr) {
+  ENSURE_ASAN_INITED();
+  GET_STACK_TRACE_MALLOC;
+  return asan_hsa_amd_memory_pool_allocate(memory_pool, size, flags, ptr,
+    &stack);
+}
+
+INTERCEPTOR(hsa_status_t, hsa_amd_memory_pool_free, void *ptr) {
+  ENSURE_ASAN_INITED();
+  GET_STACK_TRACE_FREE;
+  return asan_hsa_amd_memory_pool_free(ptr, &stack);
+}
+
+INTERCEPTOR(hsa_status_t, hsa_amd_agents_allow_access, uint32_t num_agents,
+  const hsa_agent_t *agents, const uint32_t *flags, const void *ptr) {
+  ENSURE_ASAN_INITED();
+  GET_STACK_TRACE_FREE;
+  return asan_hsa_amd_agents_allow_access(num_agents, agents, flags, ptr,
+    &stack);
+}
+#endif
+
 // ---------------------- InitializeAsanInterceptors ---------------- {{{1
 namespace __asan {
 void InitializeAsanInterceptors() {
@@ -698,6 +722,12 @@ void InitializeAsanInterceptors() {
 
 #if ASAN_INTERCEPT_VFORK
   ASAN_INTERCEPT_FUNC(vfork);
+#endif
+
+#if SANITIZER_AMDGPU
+  ASAN_INTERCEPT_FUNC(hsa_amd_memory_pool_allocate);
+  ASAN_INTERCEPT_FUNC(hsa_amd_memory_pool_free);
+  ASAN_INTERCEPT_FUNC(hsa_amd_agents_allow_access);
 #endif
 
   InitializePlatformInterceptors();
