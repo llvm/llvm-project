@@ -29,8 +29,7 @@ define <vscale x 1 x i8> @vdiv_vi_nxv1i8_0(<vscale x 1 x i8> %va) {
 ; CHECK-NEXT:    addi a0, zero, 109
 ; CHECK-NEXT:    vsetvli a1, zero, e8,mf8,ta,mu
 ; CHECK-NEXT:    vmulh.vx v25, v8, a0
-; CHECK-NEXT:    vrsub.vi v26, v8, 0
-; CHECK-NEXT:    vadd.vv v25, v25, v26
+; CHECK-NEXT:    vsub.vv v25, v25, v8
 ; CHECK-NEXT:    vsra.vi v25, v25, 2
 ; CHECK-NEXT:    vsrl.vi v26, v25, 7
 ; CHECK-NEXT:    vadd.vv v8, v25, v26
@@ -93,8 +92,7 @@ define <vscale x 2 x i8> @vdiv_vi_nxv2i8_0(<vscale x 2 x i8> %va) {
 ; CHECK-NEXT:    addi a0, zero, 109
 ; CHECK-NEXT:    vsetvli a1, zero, e8,mf4,ta,mu
 ; CHECK-NEXT:    vmulh.vx v25, v8, a0
-; CHECK-NEXT:    vrsub.vi v26, v8, 0
-; CHECK-NEXT:    vadd.vv v25, v25, v26
+; CHECK-NEXT:    vsub.vv v25, v25, v8
 ; CHECK-NEXT:    vsra.vi v25, v25, 2
 ; CHECK-NEXT:    vsrl.vi v26, v25, 7
 ; CHECK-NEXT:    vadd.vv v8, v25, v26
@@ -133,8 +131,7 @@ define <vscale x 4 x i8> @vdiv_vi_nxv4i8_0(<vscale x 4 x i8> %va) {
 ; CHECK-NEXT:    addi a0, zero, 109
 ; CHECK-NEXT:    vsetvli a1, zero, e8,mf2,ta,mu
 ; CHECK-NEXT:    vmulh.vx v25, v8, a0
-; CHECK-NEXT:    vrsub.vi v26, v8, 0
-; CHECK-NEXT:    vadd.vv v25, v25, v26
+; CHECK-NEXT:    vsub.vv v25, v25, v8
 ; CHECK-NEXT:    vsra.vi v25, v25, 2
 ; CHECK-NEXT:    vsrl.vi v26, v25, 7
 ; CHECK-NEXT:    vadd.vv v8, v25, v26
@@ -173,8 +170,7 @@ define <vscale x 8 x i8> @vdiv_vi_nxv8i8_0(<vscale x 8 x i8> %va) {
 ; CHECK-NEXT:    addi a0, zero, 109
 ; CHECK-NEXT:    vsetvli a1, zero, e8,m1,ta,mu
 ; CHECK-NEXT:    vmulh.vx v25, v8, a0
-; CHECK-NEXT:    vrsub.vi v26, v8, 0
-; CHECK-NEXT:    vadd.vv v25, v25, v26
+; CHECK-NEXT:    vsub.vv v25, v25, v8
 ; CHECK-NEXT:    vsra.vi v25, v25, 2
 ; CHECK-NEXT:    vsrl.vi v26, v25, 7
 ; CHECK-NEXT:    vadd.vv v8, v25, v26
@@ -213,8 +209,7 @@ define <vscale x 16 x i8> @vdiv_vi_nxv16i8_0(<vscale x 16 x i8> %va) {
 ; CHECK-NEXT:    addi a0, zero, 109
 ; CHECK-NEXT:    vsetvli a1, zero, e8,m2,ta,mu
 ; CHECK-NEXT:    vmulh.vx v26, v8, a0
-; CHECK-NEXT:    vrsub.vi v28, v8, 0
-; CHECK-NEXT:    vadd.vv v26, v26, v28
+; CHECK-NEXT:    vsub.vv v26, v26, v8
 ; CHECK-NEXT:    vsra.vi v26, v26, 2
 ; CHECK-NEXT:    vsrl.vi v28, v26, 7
 ; CHECK-NEXT:    vadd.vv v8, v26, v28
@@ -253,8 +248,7 @@ define <vscale x 32 x i8> @vdiv_vi_nxv32i8_0(<vscale x 32 x i8> %va) {
 ; CHECK-NEXT:    addi a0, zero, 109
 ; CHECK-NEXT:    vsetvli a1, zero, e8,m4,ta,mu
 ; CHECK-NEXT:    vmulh.vx v28, v8, a0
-; CHECK-NEXT:    vrsub.vi v8, v8, 0
-; CHECK-NEXT:    vadd.vv v28, v28, v8
+; CHECK-NEXT:    vsub.vv v28, v28, v8
 ; CHECK-NEXT:    vsra.vi v28, v28, 2
 ; CHECK-NEXT:    vsrl.vi v8, v28, 7
 ; CHECK-NEXT:    vadd.vv v8, v28, v8
@@ -293,8 +287,7 @@ define <vscale x 64 x i8> @vdiv_vi_nxv64i8_0(<vscale x 64 x i8> %va) {
 ; CHECK-NEXT:    addi a0, zero, 109
 ; CHECK-NEXT:    vsetvli a1, zero, e8,m8,ta,mu
 ; CHECK-NEXT:    vmulh.vx v16, v8, a0
-; CHECK-NEXT:    vrsub.vi v8, v8, 0
-; CHECK-NEXT:    vadd.vv v8, v16, v8
+; CHECK-NEXT:    vsub.vv v8, v16, v8
 ; CHECK-NEXT:    vsra.vi v8, v8, 2
 ; CHECK-NEXT:    vsrl.vi v16, v8, 7
 ; CHECK-NEXT:    vadd.vv v8, v8, v16
