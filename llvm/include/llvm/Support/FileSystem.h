@@ -857,7 +857,8 @@ public:
   /// This creates a temporary file with createUniqueFile and schedules it for
   /// deletion with sys::RemoveFileOnSignal.
   static Expected<TempFile> create(const Twine &Model,
-                                   unsigned Mode = all_read | all_write);
+                                   unsigned Mode = all_read | all_write,
+                                   OpenFlags ExtraFlags = OF_None);
   TempFile(TempFile &&Other);
   TempFile &operator=(TempFile &&Other);
 
