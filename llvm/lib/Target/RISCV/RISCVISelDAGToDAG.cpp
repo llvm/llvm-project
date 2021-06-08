@@ -899,9 +899,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
           IntNo == Intrinsic::riscv_vlse || IntNo == Intrinsic::riscv_vlse_mask;
 
       MVT VT = Node->getSimpleValueType(0);
-      unsigned Log2EEW = Log2_32(VT.getScalarSizeInBits());
-      // VLE1 uses an SEW of 8.
-      unsigned Log2SEW = (IntNo == Intrinsic::riscv_vle1) ? 3 : Log2EEW;
+      unsigned Log2SEW = Log2_32(VT.getScalarSizeInBits());
 
       unsigned CurOp = 2;
       SmallVector<SDValue, 8> Operands;
@@ -913,7 +911,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
       RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
       const RISCV::VLEPseudo *P =
-          RISCV::getVLEPseudo(IsMasked, IsStrided, /*FF*/ false, Log2EEW,
+          RISCV::getVLEPseudo(IsMasked, IsStrided, /*FF*/ false, Log2SEW,
                               static_cast<unsigned>(LMUL));
       MachineSDNode *Load =
           CurDAG->getMachineNode(P->Pseudo, DL, Node->getVTList(), Operands);
@@ -1090,9 +1088,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
           IntNo == Intrinsic::riscv_vsse || IntNo == Intrinsic::riscv_vsse_mask;
 
       MVT VT = Node->getOperand(2)->getSimpleValueType(0);
-      unsigned Log2EEW = Log2_32(VT.getScalarSizeInBits());
-      // VSE1 uses an SEW of 8.
-      unsigned Log2SEW = (IntNo == Intrinsic::riscv_vse1) ? 3 : Log2EEW;
+      unsigned Log2SEW = Log2_32(VT.getScalarSizeInBits());
 
       unsigned CurOp = 2;
       SmallVector<SDValue, 8> Operands;
@@ -1103,7 +1099,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
       RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
       const RISCV::VSEPseudo *P = RISCV::getVSEPseudo(
-          IsMasked, IsStrided, Log2EEW, static_cast<unsigned>(LMUL));
+          IsMasked, IsStrided, Log2SEW, static_cast<unsigned>(LMUL));
       MachineSDNode *Store =
           CurDAG->getMachineNode(P->Pseudo, DL, Node->getVTList(), Operands);
       if (auto *MemOp = dyn_cast<MemSDNode>(Node))
