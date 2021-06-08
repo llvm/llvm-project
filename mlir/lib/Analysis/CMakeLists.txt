@@ -40,6 +40,7 @@ add_mlir_library(MLIRAnalysis
   MLIRAffine
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
+  MLIRDataLayoutInterfaces
   MLIRInferTypeOpInterface
   MLIRLinalg
   MLIRSCF
