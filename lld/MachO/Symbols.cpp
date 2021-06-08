@@ -68,7 +68,7 @@ uint64_t Defined::getVA() const {
     // expedient to return a contrived out-of-range address.
     return TargetInfo::outOfRangeVA;
   }
-  return isec->getVA() + value;
+  return isec->getVA(value);
 }
 
 uint64_t Defined::getFileOffset() const {
@@ -77,7 +77,7 @@ uint64_t Defined::getFileOffset() const {
           " does not have a file offset");
     return 0;
   }
-  return isec->getFileOffset() + value;
+  return isec->getFileOffset(value);
 }
 
 uint64_t DylibSymbol::getVA() const {
