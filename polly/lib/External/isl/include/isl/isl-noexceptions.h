@@ -236,6 +236,7 @@ class aff {
 public:
   inline /* implicit */ aff();
   inline /* implicit */ aff(const aff &obj);
+  inline /* implicit */ aff(std::nullptr_t);
   inline explicit aff(ctx ctx, const std::string &str);
   inline explicit aff(local_space ls, val val);
   inline explicit aff(local_space ls);
@@ -342,6 +343,7 @@ class aff_list {
 public:
   inline /* implicit */ aff_list();
   inline /* implicit */ aff_list(const aff_list &obj);
+  inline /* implicit */ aff_list(std::nullptr_t);
   inline aff_list &operator=(aff_list obj);
   inline ~aff_list();
   inline __isl_give isl_aff_list *copy() const &;
@@ -386,6 +388,7 @@ class ast_build {
 public:
   inline /* implicit */ ast_build();
   inline /* implicit */ ast_build(const ast_build &obj);
+  inline /* implicit */ ast_build(std::nullptr_t);
   inline explicit ast_build(ctx ctx);
   inline ast_build &operator=(ast_build obj);
   inline ~ast_build();
@@ -427,6 +430,7 @@ class ast_expr {
 public:
   inline /* implicit */ ast_expr();
   inline /* implicit */ ast_expr(const ast_expr &obj);
+  inline /* implicit */ ast_expr(std::nullptr_t);
   inline ast_expr &operator=(ast_expr obj);
   inline ~ast_expr();
   inline __isl_give isl_ast_expr *copy() const &;
@@ -485,6 +489,7 @@ class ast_expr_list {
 public:
   inline /* implicit */ ast_expr_list();
   inline /* implicit */ ast_expr_list(const ast_expr_list &obj);
+  inline /* implicit */ ast_expr_list(std::nullptr_t);
   inline ast_expr_list &operator=(ast_expr_list obj);
   inline ~ast_expr_list();
   inline __isl_give isl_ast_expr_list *copy() const &;
@@ -529,6 +534,7 @@ class ast_node {
 public:
   inline /* implicit */ ast_node();
   inline /* implicit */ ast_node(const ast_node &obj);
+  inline /* implicit */ ast_node(std::nullptr_t);
   inline ast_node &operator=(ast_node obj);
   inline ~ast_node();
   inline __isl_give isl_ast_node *copy() const &;
@@ -579,6 +585,7 @@ class ast_node_list {
 public:
   inline /* implicit */ ast_node_list();
   inline /* implicit */ ast_node_list(const ast_node_list &obj);
+  inline /* implicit */ ast_node_list(std::nullptr_t);
   inline ast_node_list &operator=(ast_node_list obj);
   inline ~ast_node_list();
   inline __isl_give isl_ast_node_list *copy() const &;
@@ -623,6 +630,7 @@ class basic_map {
 public:
   inline /* implicit */ basic_map();
   inline /* implicit */ basic_map(const basic_map &obj);
+  inline /* implicit */ basic_map(std::nullptr_t);
   inline explicit basic_map(ctx ctx, const std::string &str);
   inline basic_map &operator=(basic_map obj);
   inline ~basic_map();
@@ -757,6 +765,7 @@ class basic_map_list {
 public:
   inline /* implicit */ basic_map_list();
   inline /* implicit */ basic_map_list(const basic_map_list &obj);
+  inline /* implicit */ basic_map_list(std::nullptr_t);
   inline basic_map_list &operator=(basic_map_list obj);
   inline ~basic_map_list();
   inline __isl_give isl_basic_map_list *copy() const &;
@@ -801,6 +810,7 @@ class basic_set {
 public:
   inline /* implicit */ basic_set();
   inline /* implicit */ basic_set(const basic_set &obj);
+  inline /* implicit */ basic_set(std::nullptr_t);
   inline /* implicit */ basic_set(point pnt);
   inline explicit basic_set(ctx ctx, const std::string &str);
   inline basic_set &operator=(basic_set obj);
@@ -907,6 +917,7 @@ class basic_set_list {
 public:
   inline /* implicit */ basic_set_list();
   inline /* implicit */ basic_set_list(const basic_set_list &obj);
+  inline /* implicit */ basic_set_list(std::nullptr_t);
   inline basic_set_list &operator=(basic_set_list obj);
   inline ~basic_set_list();
   inline __isl_give isl_basic_set_list *copy() const &;
@@ -952,6 +963,7 @@ class constraint {
 public:
   inline /* implicit */ constraint();
   inline /* implicit */ constraint(const constraint &obj);
+  inline /* implicit */ constraint(std::nullptr_t);
   inline constraint &operator=(constraint obj);
   inline ~constraint();
   inline __isl_give isl_constraint *copy() const &;
@@ -1000,6 +1012,7 @@ class constraint_list {
 public:
   inline /* implicit */ constraint_list();
   inline /* implicit */ constraint_list(const constraint_list &obj);
+  inline /* implicit */ constraint_list(std::nullptr_t);
   inline constraint_list &operator=(constraint_list obj);
   inline ~constraint_list();
   inline __isl_give isl_constraint_list *copy() const &;
@@ -1044,6 +1057,7 @@ class fixed_box {
 public:
   inline /* implicit */ fixed_box();
   inline /* implicit */ fixed_box(const fixed_box &obj);
+  inline /* implicit */ fixed_box(std::nullptr_t);
   inline fixed_box &operator=(fixed_box obj);
   inline ~fixed_box();
   inline __isl_give isl_fixed_box *copy() const &;
@@ -1077,6 +1091,7 @@ class id {
 public:
   inline /* implicit */ id();
   inline /* implicit */ id(const id &obj);
+  inline /* implicit */ id(std::nullptr_t);
   inline explicit id(ctx ctx, const std::string &str);
   inline id &operator=(id obj);
   inline ~id();
@@ -1111,6 +1126,7 @@ class id_list {
 public:
   inline /* implicit */ id_list();
   inline /* implicit */ id_list(const id_list &obj);
+  inline /* implicit */ id_list(std::nullptr_t);
   inline id_list &operator=(id_list obj);
   inline ~id_list();
   inline __isl_give isl_id_list *copy() const &;
@@ -1155,6 +1171,7 @@ class id_to_ast_expr {
 public:
   inline /* implicit */ id_to_ast_expr();
   inline /* implicit */ id_to_ast_expr(const id_to_ast_expr &obj);
+  inline /* implicit */ id_to_ast_expr(std::nullptr_t);
   inline id_to_ast_expr &operator=(id_to_ast_expr obj);
   inline ~id_to_ast_expr();
   inline __isl_give isl_id_to_ast_expr *copy() const &;
@@ -1189,6 +1206,7 @@ class local_space {
 public:
   inline /* implicit */ local_space();
   inline /* implicit */ local_space(const local_space &obj);
+  inline /* implicit */ local_space(std::nullptr_t);
   inline explicit local_space(space space);
   inline local_space &operator=(local_space obj);
   inline ~local_space();
@@ -1242,6 +1260,7 @@ class map {
 public:
   inline /* implicit */ map();
   inline /* implicit */ map(const map &obj);
+  inline /* implicit */ map(std::nullptr_t);
   inline /* implicit */ map(basic_map bmap);
   inline explicit map(ctx ctx, const std::string &str);
   inline map &operator=(map obj);
@@ -1458,6 +1477,7 @@ class map_list {
 public:
   inline /* implicit */ map_list();
   inline /* implicit */ map_list(const map_list &obj);
+  inline /* implicit */ map_list(std::nullptr_t);
   inline map_list &operator=(map_list obj);
   inline ~map_list();
   inline __isl_give isl_map_list *copy() const &;
@@ -1502,6 +1522,7 @@ class mat {
 public:
   inline /* implicit */ mat();
   inline /* implicit */ mat(const mat &obj);
+  inline /* implicit */ mat(std::nullptr_t);
   inline mat &operator=(mat obj);
   inline ~mat();
   inline __isl_give isl_mat *copy() const &;
@@ -1570,6 +1591,7 @@ class multi_aff {
 public:
   inline /* implicit */ multi_aff();
   inline /* implicit */ multi_aff(const multi_aff &obj);
+  inline /* implicit */ multi_aff(std::nullptr_t);
   inline /* implicit */ multi_aff(aff aff);
   inline explicit multi_aff(space space, aff_list list);
   inline explicit multi_aff(ctx ctx, const std::string &str);
@@ -1677,6 +1699,7 @@ class multi_id {
 public:
   inline /* implicit */ multi_id();
   inline /* implicit */ multi_id(const multi_id &obj);
+  inline /* implicit */ multi_id(std::nullptr_t);
   inline explicit multi_id(space space, id_list list);
   inline explicit multi_id(ctx ctx, const std::string &str);
   inline multi_id &operator=(multi_id obj);
@@ -1728,6 +1751,7 @@ class multi_pw_aff {
 public:
   inline /* implicit */ multi_pw_aff();
   inline /* implicit */ multi_pw_aff(const multi_pw_aff &obj);
+  inline /* implicit */ multi_pw_aff(std::nullptr_t);
   inline /* implicit */ multi_pw_aff(aff aff);
   inline /* implicit */ multi_pw_aff(multi_aff ma);
   inline /* implicit */ multi_pw_aff(pw_aff pa);
@@ -1846,6 +1870,7 @@ class multi_union_pw_aff {
 public:
   inline /* implicit */ multi_union_pw_aff();
   inline /* implicit */ multi_union_pw_aff(const multi_union_pw_aff &obj);
+  inline /* implicit */ multi_union_pw_aff(std::nullptr_t);
   inline /* implicit */ multi_union_pw_aff(multi_pw_aff mpa);
   inline /* implicit */ multi_union_pw_aff(union_pw_aff upa);
   inline explicit multi_union_pw_aff(space space, union_pw_aff_list list);
@@ -1945,6 +1970,7 @@ class multi_val {
 public:
   inline /* implicit */ multi_val();
   inline /* implicit */ multi_val(const multi_val &obj);
+  inline /* implicit */ multi_val(std::nullptr_t);
   inline explicit multi_val(space space, val_list list);
   inline explicit multi_val(ctx ctx, const std::string &str);
   inline multi_val &operator=(multi_val obj);
@@ -2029,6 +2055,7 @@ class point {
 public:
   inline /* implicit */ point();
   inline /* implicit */ point(const point &obj);
+  inline /* implicit */ point(std::nullptr_t);
   inline explicit point(space dim);
   inline point &operator=(point obj);
   inline ~point();
@@ -2065,6 +2092,7 @@ class pw_aff {
 public:
   inline /* implicit */ pw_aff();
   inline /* implicit */ pw_aff(const pw_aff &obj);
+  inline /* implicit */ pw_aff(std::nullptr_t);
   inline /* implicit */ pw_aff(aff aff);
   inline explicit pw_aff(ctx ctx, const std::string &str);
   inline explicit pw_aff(set domain, val v);
@@ -2190,6 +2218,7 @@ class pw_aff_list {
 public:
   inline /* implicit */ pw_aff_list();
   inline /* implicit */ pw_aff_list(const pw_aff_list &obj);
+  inline /* implicit */ pw_aff_list(std::nullptr_t);
   inline pw_aff_list &operator=(pw_aff_list obj);
   inline ~pw_aff_list();
   inline __isl_give isl_pw_aff_list *copy() const &;
@@ -2242,6 +2271,7 @@ class pw_multi_aff {
 public:
   inline /* implicit */ pw_multi_aff();
   inline /* implicit */ pw_multi_aff(const pw_multi_aff &obj);
+  inline /* implicit */ pw_multi_aff(std::nullptr_t);
   inline /* implicit */ pw_multi_aff(multi_aff ma);
   inline /* implicit */ pw_multi_aff(pw_aff pa);
   inline explicit pw_multi_aff(ctx ctx, const std::string &str);
@@ -2351,6 +2381,7 @@ class pw_multi_aff_list {
 public:
   inline /* implicit */ pw_multi_aff_list();
   inline /* implicit */ pw_multi_aff_list(const pw_multi_aff_list &obj);
+  inline /* implicit */ pw_multi_aff_list(std::nullptr_t);
   inline pw_multi_aff_list &operator=(pw_multi_aff_list obj);
   inline ~pw_multi_aff_list();
   inline __isl_give isl_pw_multi_aff_list *copy() const &;
@@ -2395,6 +2426,7 @@ class pw_qpolynomial {
 public:
   inline /* implicit */ pw_qpolynomial();
   inline /* implicit */ pw_qpolynomial(const pw_qpolynomial &obj);
+  inline /* implicit */ pw_qpolynomial(std::nullptr_t);
   inline explicit pw_qpolynomial(ctx ctx, const std::string &str);
   inline pw_qpolynomial &operator=(pw_qpolynomial obj);
   inline ~pw_qpolynomial();
@@ -2475,6 +2507,7 @@ class pw_qpolynomial_fold_list {
 public:
   inline /* implicit */ pw_qpolynomial_fold_list();
   inline /* implicit */ pw_qpolynomial_fold_list(const pw_qpolynomial_fold_list &obj);
+  inline /* implicit */ pw_qpolynomial_fold_list(std::nullptr_t);
   inline pw_qpolynomial_fold_list &operator=(pw_qpolynomial_fold_list obj);
   inline ~pw_qpolynomial_fold_list();
   inline __isl_give isl_pw_qpolynomial_fold_list *copy() const &;
@@ -2504,6 +2537,7 @@ class pw_qpolynomial_list {
 public:
   inline /* implicit */ pw_qpolynomial_list();
   inline /* implicit */ pw_qpolynomial_list(const pw_qpolynomial_list &obj);
+  inline /* implicit */ pw_qpolynomial_list(std::nullptr_t);
   inline pw_qpolynomial_list &operator=(pw_qpolynomial_list obj);
   inline ~pw_qpolynomial_list();
   inline __isl_give isl_pw_qpolynomial_list *copy() const &;
@@ -2548,6 +2582,7 @@ class qpolynomial {
 public:
   inline /* implicit */ qpolynomial();
   inline /* implicit */ qpolynomial(const qpolynomial &obj);
+  inline /* implicit */ qpolynomial(std::nullptr_t);
   inline qpolynomial &operator=(qpolynomial obj);
   inline ~qpolynomial();
   inline __isl_give isl_qpolynomial *copy() const &;
@@ -2616,6 +2651,7 @@ class qpolynomial_list {
 public:
   inline /* implicit */ qpolynomial_list();
   inline /* implicit */ qpolynomial_list(const qpolynomial_list &obj);
+  inline /* implicit */ qpolynomial_list(std::nullptr_t);
   inline qpolynomial_list &operator=(qpolynomial_list obj);
   inline ~qpolynomial_list();
   inline __isl_give isl_qpolynomial_list *copy() const &;
@@ -2660,6 +2696,7 @@ class schedule {
 public:
   inline /* implicit */ schedule();
   inline /* implicit */ schedule(const schedule &obj);
+  inline /* implicit */ schedule(std::nullptr_t);
   inline explicit schedule(ctx ctx, const std::string &str);
   inline schedule &operator=(schedule obj);
   inline ~schedule();
@@ -2705,6 +2742,7 @@ class schedule_constraints {
 public:
   inline /* implicit */ schedule_constraints();
   inline /* implicit */ schedule_constraints(const schedule_constraints &obj);
+  inline /* implicit */ schedule_constraints(std::nullptr_t);
   inline explicit schedule_constraints(ctx ctx, const std::string &str);
   inline schedule_constraints &operator=(schedule_constraints obj);
   inline ~schedule_constraints();
@@ -2750,6 +2788,7 @@ class schedule_node {
 public:
   inline /* implicit */ schedule_node();
   inline /* implicit */ schedule_node(const schedule_node &obj);
+  inline /* implicit */ schedule_node(std::nullptr_t);
   inline schedule_node &operator=(schedule_node obj);
   inline ~schedule_node();
   inline __isl_give isl_schedule_node *copy() const &;
@@ -2839,6 +2878,7 @@ class set {
 public:
   inline /* implicit */ set();
   inline /* implicit */ set(const set &obj);
+  inline /* implicit */ set(std::nullptr_t);
   inline /* implicit */ set(basic_set bset);
   inline /* implicit */ set(point pnt);
   inline explicit set(union_set uset);
@@ -3025,6 +3065,7 @@ class set_list {
 public:
   inline /* implicit */ set_list();
   inline /* implicit */ set_list(const set_list &obj);
+  inline /* implicit */ set_list(std::nullptr_t);
   inline set_list &operator=(set_list obj);
   inline ~set_list();
   inline __isl_give isl_set_list *copy() const &;
@@ -3070,6 +3111,7 @@ class space {
 public:
   inline /* implicit */ space();
   inline /* implicit */ space(const space &obj);
+  inline /* implicit */ space(std::nullptr_t);
   inline explicit space(ctx ctx, unsigned int nparam, unsigned int n_in, unsigned int n_out);
   inline explicit space(ctx ctx, unsigned int nparam, unsigned int dim);
   inline space &operator=(space obj);
@@ -3175,6 +3217,7 @@ class term {
 public:
   inline /* implicit */ term();
   inline /* implicit */ term(const term &obj);
+  inline /* implicit */ term(std::nullptr_t);
   inline term &operator=(term obj);
   inline ~term();
   inline __isl_give isl_term *copy() const &;
@@ -3206,6 +3249,7 @@ class union_access_info {
 public:
   inline /* implicit */ union_access_info();
   inline /* implicit */ union_access_info(const union_access_info &obj);
+  inline /* implicit */ union_access_info(std::nullptr_t);
   inline explicit union_access_info(union_map sink);
   inline union_access_info &operator=(union_access_info obj);
   inline ~union_access_info();
@@ -3241,6 +3285,7 @@ class union_flow {
 public:
   inline /* implicit */ union_flow();
   inline /* implicit */ union_flow(const union_flow &obj);
+  inline /* implicit */ union_flow(std::nullptr_t);
   inline union_flow &operator=(union_flow obj);
   inline ~union_flow();
   inline __isl_give isl_union_flow *copy() const &;
@@ -3275,6 +3320,7 @@ class union_map {
 public:
   inline /* implicit */ union_map();
   inline /* implicit */ union_map(const union_map &obj);
+  inline /* implicit */ union_map(std::nullptr_t);
   inline /* implicit */ union_map(basic_map bmap);
   inline /* implicit */ union_map(map map);
   inline explicit union_map(union_pw_multi_aff upma);
@@ -3419,6 +3465,7 @@ class union_map_list {
 public:
   inline /* implicit */ union_map_list();
   inline /* implicit */ union_map_list(const union_map_list &obj);
+  inline /* implicit */ union_map_list(std::nullptr_t);
   inline union_map_list &operator=(union_map_list obj);
   inline ~union_map_list();
   inline __isl_give isl_union_map_list *copy() const &;
@@ -3463,6 +3510,7 @@ class union_pw_aff {
 public:
   inline /* implicit */ union_pw_aff();
   inline /* implicit */ union_pw_aff(const union_pw_aff &obj);
+  inline /* implicit */ union_pw_aff(std::nullptr_t);
   inline /* implicit */ union_pw_aff(aff aff);
   inline /* implicit */ union_pw_aff(pw_aff pa);
   inline explicit union_pw_aff(ctx ctx, const std::string &str);
@@ -3539,6 +3587,7 @@ class union_pw_aff_list {
 public:
   inline /* implicit */ union_pw_aff_list();
   inline /* implicit */ union_pw_aff_list(const union_pw_aff_list &obj);
+  inline /* implicit */ union_pw_aff_list(std::nullptr_t);
   inline union_pw_aff_list &operator=(union_pw_aff_list obj);
   inline ~union_pw_aff_list();
   inline __isl_give isl_union_pw_aff_list *copy() const &;
@@ -3583,6 +3632,7 @@ class union_pw_multi_aff {
 public:
   inline /* implicit */ union_pw_multi_aff();
   inline /* implicit */ union_pw_multi_aff(const union_pw_multi_aff &obj);
+  inline /* implicit */ union_pw_multi_aff(std::nullptr_t);
   inline /* implicit */ union_pw_multi_aff(aff aff);
   inline explicit union_pw_multi_aff(union_set uset);
   inline /* implicit */ union_pw_multi_aff(multi_aff ma);
@@ -3668,6 +3718,7 @@ class union_pw_multi_aff_list {
 public:
   inline /* implicit */ union_pw_multi_aff_list();
   inline /* implicit */ union_pw_multi_aff_list(const union_pw_multi_aff_list &obj);
+  inline /* implicit */ union_pw_multi_aff_list(std::nullptr_t);
   inline union_pw_multi_aff_list &operator=(union_pw_multi_aff_list obj);
   inline ~union_pw_multi_aff_list();
   inline __isl_give isl_union_pw_multi_aff_list *copy() const &;
@@ -3712,6 +3763,7 @@ class union_pw_qpolynomial {
 public:
   inline /* implicit */ union_pw_qpolynomial();
   inline /* implicit */ union_pw_qpolynomial(const union_pw_qpolynomial &obj);
+  inline /* implicit */ union_pw_qpolynomial(std::nullptr_t);
   inline explicit union_pw_qpolynomial(ctx ctx, const std::string &str);
   inline union_pw_qpolynomial &operator=(union_pw_qpolynomial obj);
   inline ~union_pw_qpolynomial();
@@ -3779,6 +3831,7 @@ class union_set {
 public:
   inline /* implicit */ union_set();
   inline /* implicit */ union_set(const union_set &obj);
+  inline /* implicit */ union_set(std::nullptr_t);
   inline /* implicit */ union_set(basic_set bset);
   inline /* implicit */ union_set(point pnt);
   inline /* implicit */ union_set(set set);
@@ -3873,6 +3926,7 @@ class union_set_list {
 public:
   inline /* implicit */ union_set_list();
   inline /* implicit */ union_set_list(const union_set_list &obj);
+  inline /* implicit */ union_set_list(std::nullptr_t);
   inline union_set_list &operator=(union_set_list obj);
   inline ~union_set_list();
   inline __isl_give isl_union_set_list *copy() const &;
@@ -3918,6 +3972,7 @@ class val {
 public:
   inline /* implicit */ val();
   inline /* implicit */ val(const val &obj);
+  inline /* implicit */ val(std::nullptr_t);
   inline explicit val(ctx ctx, long i);
   inline explicit val(ctx ctx, const std::string &str);
   inline val &operator=(val obj);
@@ -4003,6 +4058,7 @@ class val_list {
 public:
   inline /* implicit */ val_list();
   inline /* implicit */ val_list(const val_list &obj);
+  inline /* implicit */ val_list(std::nullptr_t);
   inline val_list &operator=(val_list obj);
   inline ~val_list();
   inline __isl_give isl_val_list *copy() const &;
@@ -4047,6 +4103,7 @@ class vec {
 public:
   inline /* implicit */ vec();
   inline /* implicit */ vec(const vec &obj);
+  inline /* implicit */ vec(std::nullptr_t);
   inline vec &operator=(vec obj);
   inline ~vec();
   inline __isl_give isl_vec *copy() const &;
@@ -4101,6 +4158,8 @@ aff::aff(const aff &obj)
 {
   ptr = obj.copy();
 }
+aff::aff(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 aff::aff(__isl_take isl_aff *ptr)
@@ -4634,6 +4693,8 @@ aff_list::aff_list(const aff_list &obj)
 {
   ptr = obj.copy();
 }
+aff_list::aff_list(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 aff_list::aff_list(__isl_take isl_aff_list *ptr)
@@ -4805,6 +4866,8 @@ ast_build::ast_build(const ast_build &obj)
 {
   ptr = obj.copy();
 }
+ast_build::ast_build(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 ast_build::ast_build(__isl_take isl_ast_build *ptr)
@@ -4948,6 +5011,8 @@ ast_expr::ast_expr(const ast_expr &obj)
 {
   ptr = obj.copy();
 }
+ast_expr::ast_expr(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 ast_expr::ast_expr(__isl_take isl_ast_expr *ptr)
@@ -5197,6 +5262,8 @@ ast_expr_list::ast_expr_list(const ast_expr_list &obj)
 {
   ptr = obj.copy();
 }
+ast_expr_list::ast_expr_list(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 ast_expr_list::ast_expr_list(__isl_take isl_ast_expr_list *ptr)
@@ -5368,6 +5435,8 @@ ast_node::ast_node(const ast_node &obj)
 {
   ptr = obj.copy();
 }
+ast_node::ast_node(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 ast_node::ast_node(__isl_take isl_ast_node *ptr)
@@ -5569,6 +5638,8 @@ ast_node_list::ast_node_list(const ast_node_list &obj)
 {
   ptr = obj.copy();
 }
+ast_node_list::ast_node_list(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 ast_node_list::ast_node_list(__isl_take isl_ast_node_list *ptr)
@@ -5740,6 +5811,8 @@ basic_map::basic_map(const basic_map &obj)
 {
   ptr = obj.copy();
 }
+basic_map::basic_map(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 basic_map::basic_map(__isl_take isl_basic_map *ptr)
@@ -6452,6 +6525,8 @@ basic_map_list::basic_map_list(const basic_map_list &obj)
 {
   ptr = obj.copy();
 }
+basic_map_list::basic_map_list(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 basic_map_list::basic_map_list(__isl_take isl_basic_map_list *ptr)
@@ -6623,6 +6698,8 @@ basic_set::basic_set(const basic_set &obj)
 {
   ptr = obj.copy();
 }
+basic_set::basic_set(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 basic_set::basic_set(__isl_take isl_basic_set *ptr)
@@ -7174,6 +7251,8 @@ basic_set_list::basic_set_list(const basic_set_list &obj)
 {
   ptr = obj.copy();
 }
+basic_set_list::basic_set_list(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 basic_set_list::basic_set_list(__isl_take isl_basic_set_list *ptr)
@@ -7351,6 +7430,8 @@ constraint::constraint(const constraint &obj)
 {
   ptr = obj.copy();
 }
+constraint::constraint(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 constraint::constraint(__isl_take isl_constraint *ptr)
@@ -7536,6 +7617,8 @@ constraint_list::constraint_list(const constraint_list &obj)
 {
   ptr = obj.copy();
 }
+constraint_list::constraint_list(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 constraint_list::constraint_list(__isl_take isl_constraint_list *ptr)
@@ -7707,6 +7790,8 @@ fixed_box::fixed_box(const fixed_box &obj)
 {
   ptr = obj.copy();
 }
+fixed_box::fixed_box(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 fixed_box::fixed_box(__isl_take isl_fixed_box *ptr)
@@ -7804,6 +7889,8 @@ id::id(const id &obj)
 {
   ptr = obj.copy();
 }
+id::id(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 id::id(__isl_take isl_id *ptr)
@@ -7907,6 +7994,8 @@ id_list::id_list(const id_list &obj)
 {
   ptr = obj.copy();
 }
+id_list::id_list(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 id_list::id_list(__isl_take isl_id_list *ptr)
@@ -8078,6 +8167,8 @@ id_to_ast_expr::id_to_ast_expr(const id_to_ast_expr &obj)
 {
   ptr = obj.copy();
 }
+id_to_ast_expr::id_to_ast_expr(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 id_to_ast_expr::id_to_ast_expr(__isl_take isl_id_to_ast_expr *ptr)
@@ -8186,6 +8277,8 @@ local_space::local_space(const local_space &obj)
 {
   ptr = obj.copy();
 }
+local_space::local_space(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 local_space::local_space(__isl_take isl_local_space *ptr)
@@ -8400,6 +8493,8 @@ map::map(const map &obj)
 {
   ptr = obj.copy();
 }
+map::map(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 map::map(__isl_take isl_map *ptr)
@@ -9603,6 +9698,8 @@ map_list::map_list(const map_list &obj)
 {
   ptr = obj.copy();
 }
+map_list::map_list(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 map_list::map_list(__isl_take isl_map_list *ptr)
@@ -9774,6 +9871,8 @@ mat::mat(const mat &obj)
 {
   ptr = obj.copy();
 }
+mat::mat(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 mat::mat(__isl_take isl_mat *ptr)
@@ -10078,6 +10177,8 @@ multi_aff::multi_aff(const multi_aff &obj)
 {
   ptr = obj.copy();
 }
+multi_aff::multi_aff(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 multi_aff::multi_aff(__isl_take isl_multi_aff *ptr)
@@ -10617,6 +10718,8 @@ multi_id::multi_id(const multi_id &obj)
 {
   ptr = obj.copy();
 }
+multi_id::multi_id(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 multi_id::multi_id(__isl_take isl_multi_id *ptr)
@@ -10820,6 +10923,8 @@ multi_pw_aff::multi_pw_aff(const multi_pw_aff &obj)
 {
   ptr = obj.copy();
 }
+multi_pw_aff::multi_pw_aff(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 multi_pw_aff::multi_pw_aff(__isl_take isl_multi_pw_aff *ptr)
@@ -11422,6 +11527,8 @@ multi_union_pw_aff::multi_union_pw_aff(const multi_union_pw_aff &obj)
 {
   ptr = obj.copy();
 }
+multi_union_pw_aff::multi_union_pw_aff(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 multi_union_pw_aff::multi_union_pw_aff(__isl_take isl_multi_union_pw_aff *ptr)
@@ -11911,6 +12018,8 @@ multi_val::multi_val(const multi_val &obj)
 {
   ptr = obj.copy();
 }
+multi_val::multi_val(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 multi_val::multi_val(__isl_take isl_multi_val *ptr)
@@ -12313,6 +12422,8 @@ point::point(const point &obj)
 {
   ptr = obj.copy();
 }
+point::point(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 point::point(__isl_take isl_point *ptr)
@@ -12427,6 +12538,8 @@ pw_aff::pw_aff(const pw_aff &obj)
 {
   ptr = obj.copy();
 }
+pw_aff::pw_aff(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 pw_aff::pw_aff(__isl_take isl_pw_aff *ptr)
@@ -13081,6 +13194,8 @@ pw_aff_list::pw_aff_list(const pw_aff_list &obj)
 {
   ptr = obj.copy();
 }
+pw_aff_list::pw_aff_list(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 pw_aff_list::pw_aff_list(__isl_take isl_pw_aff_list *ptr)
@@ -13300,6 +13415,8 @@ pw_multi_aff::pw_multi_aff(const pw_multi_aff &obj)
 {
   ptr = obj.copy();
 }
+pw_multi_aff::pw_multi_aff(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 pw_multi_aff::pw_multi_aff(__isl_take isl_pw_multi_aff *ptr)
@@ -13860,6 +13977,8 @@ pw_multi_aff_list::pw_multi_aff_list(const pw_multi_aff_list &obj)
 {
   ptr = obj.copy();
 }
+pw_multi_aff_list::pw_multi_aff_list(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 pw_multi_aff_list::pw_multi_aff_list(__isl_take isl_pw_multi_aff_list *ptr)
@@ -14031,6 +14150,8 @@ pw_qpolynomial::pw_qpolynomial(const pw_qpolynomial &obj)
 {
   ptr = obj.copy();
 }
+pw_qpolynomial::pw_qpolynomial(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 pw_qpolynomial::pw_qpolynomial(__isl_take isl_pw_qpolynomial *ptr)
@@ -14417,6 +14538,8 @@ pw_qpolynomial_fold_list::pw_qpolynomial_fold_list(const pw_qpolynomial_fold_lis
 {
   ptr = obj.copy();
 }
+pw_qpolynomial_fold_list::pw_qpolynomial_fold_list(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 pw_qpolynomial_fold_list::pw_qpolynomial_fold_list(__isl_take isl_pw_qpolynomial_fold_list *ptr)
@@ -14491,6 +14614,8 @@ pw_qpolynomial_list::pw_qpolynomial_list(const pw_qpolynomial_list &obj)
 {
   ptr = obj.copy();
 }
+pw_qpolynomial_list::pw_qpolynomial_list(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 pw_qpolynomial_list::pw_qpolynomial_list(__isl_take isl_pw_qpolynomial_list *ptr)
@@ -14662,6 +14787,8 @@ qpolynomial::qpolynomial(const qpolynomial &obj)
 {
   ptr = obj.copy();
 }
+qpolynomial::qpolynomial(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 qpolynomial::qpolynomial(__isl_take isl_qpolynomial *ptr)
@@ -14982,6 +15109,8 @@ qpolynomial_list::qpolynomial_list(const qpolynomial_list &obj)
 {
   ptr = obj.copy();
 }
+qpolynomial_list::qpolynomial_list(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 qpolynomial_list::qpolynomial_list(__isl_take isl_qpolynomial_list *ptr)
@@ -15153,6 +15282,8 @@ schedule::schedule(const schedule &obj)
 {
   ptr = obj.copy();
 }
+schedule::schedule(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 schedule::schedule(__isl_take isl_schedule *ptr)
@@ -15321,6 +15452,8 @@ schedule_constraints::schedule_constraints(const schedule_constraints &obj)
 {
   ptr = obj.copy();
 }
+schedule_constraints::schedule_constraints(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 schedule_constraints::schedule_constraints(__isl_take isl_schedule_constraints *ptr)
@@ -15489,6 +15622,8 @@ schedule_node::schedule_node(const schedule_node &obj)
 {
   ptr = obj.copy();
 }
+schedule_node::schedule_node(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 schedule_node::schedule_node(__isl_take isl_schedule_node *ptr)
@@ -15930,6 +16065,8 @@ set::set(const set &obj)
 {
   ptr = obj.copy();
 }
+set::set(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 set::set(__isl_take isl_set *ptr)
@@ -16959,6 +17096,8 @@ set_list::set_list(const set_list &obj)
 {
   ptr = obj.copy();
 }
+set_list::set_list(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 set_list::set_list(__isl_take isl_set_list *ptr)
@@ -17136,6 +17275,8 @@ space::space(const space &obj)
 {
   ptr = obj.copy();
 }
+space::space(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 space::space(__isl_take isl_space *ptr)
@@ -17665,6 +17806,8 @@ term::term(const term &obj)
 {
   ptr = obj.copy();
 }
+term::term(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 term::term(__isl_take isl_term *ptr)
@@ -17749,6 +17892,8 @@ union_access_info::union_access_info(const union_access_info &obj)
 {
   ptr = obj.copy();
 }
+union_access_info::union_access_info(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 union_access_info::union_access_info(__isl_take isl_union_access_info *ptr)
@@ -17859,6 +18004,8 @@ union_flow::union_flow(const union_flow &obj)
 {
   ptr = obj.copy();
 }
+union_flow::union_flow(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 union_flow::union_flow(__isl_take isl_union_flow *ptr)
@@ -17964,6 +18111,8 @@ union_map::union_map(const union_map &obj)
 {
   ptr = obj.copy();
 }
+union_map::union_map(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 union_map::union_map(__isl_take isl_union_map *ptr)
@@ -18731,6 +18880,8 @@ union_map_list::union_map_list(const union_map_list &obj)
 {
   ptr = obj.copy();
 }
+union_map_list::union_map_list(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 union_map_list::union_map_list(__isl_take isl_union_map_list *ptr)
@@ -18902,6 +19053,8 @@ union_pw_aff::union_pw_aff(const union_pw_aff &obj)
 {
   ptr = obj.copy();
 }
+union_pw_aff::union_pw_aff(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 union_pw_aff::union_pw_aff(__isl_take isl_union_pw_aff *ptr)
@@ -19261,6 +19414,8 @@ union_pw_aff_list::union_pw_aff_list(const union_pw_aff_list &obj)
 {
   ptr = obj.copy();
 }
+union_pw_aff_list::union_pw_aff_list(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 union_pw_aff_list::union_pw_aff_list(__isl_take isl_union_pw_aff_list *ptr)
@@ -19432,6 +19587,8 @@ union_pw_multi_aff::union_pw_multi_aff(const union_pw_multi_aff &obj)
 {
   ptr = obj.copy();
 }
+union_pw_multi_aff::union_pw_multi_aff(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 union_pw_multi_aff::union_pw_multi_aff(__isl_take isl_union_pw_multi_aff *ptr)
@@ -19841,6 +19998,8 @@ union_pw_multi_aff_list::union_pw_multi_aff_list(const union_pw_multi_aff_list &
 {
   ptr = obj.copy();
 }
+union_pw_multi_aff_list::union_pw_multi_aff_list(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 union_pw_multi_aff_list::union_pw_multi_aff_list(__isl_take isl_union_pw_multi_aff_list *ptr)
@@ -20012,6 +20171,8 @@ union_pw_qpolynomial::union_pw_qpolynomial(const union_pw_qpolynomial &obj)
 {
   ptr = obj.copy();
 }
+union_pw_qpolynomial::union_pw_qpolynomial(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 union_pw_qpolynomial::union_pw_qpolynomial(__isl_take isl_union_pw_qpolynomial *ptr)
@@ -20322,6 +20483,8 @@ union_set::union_set(const union_set &obj)
 {
   ptr = obj.copy();
 }
+union_set::union_set(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 union_set::union_set(__isl_take isl_union_set *ptr)
@@ -20797,6 +20960,8 @@ union_set_list::union_set_list(const union_set_list &obj)
 {
   ptr = obj.copy();
 }
+union_set_list::union_set_list(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 union_set_list::union_set_list(__isl_take isl_union_set_list *ptr)
@@ -20974,6 +21139,8 @@ val::val(const val &obj)
 {
   ptr = obj.copy();
 }
+val::val(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 val::val(__isl_take isl_val *ptr)
@@ -21381,6 +21548,8 @@ val_list::val_list(const val_list &obj)
 {
   ptr = obj.copy();
 }
+val_list::val_list(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 val_list::val_list(__isl_take isl_val_list *ptr)
@@ -21552,6 +21721,8 @@ vec::vec(const vec &obj)
 {
   ptr = obj.copy();
 }
+vec::vec(std::nullptr_t)
+    : ptr(nullptr) {}
 
 
 vec::vec(__isl_take isl_vec *ptr)

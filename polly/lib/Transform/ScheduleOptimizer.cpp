@@ -547,6 +547,8 @@ public:
 
   explicit IslScheduleOptimizerWrapperPass() : ScopPass(ID) {}
 
+  ~IslScheduleOptimizerWrapperPass() override { releaseMemory(); }
+
   /// Optimize the schedule of the SCoP @p S.
   bool runOnScop(Scop &S) override;
 
@@ -558,7 +560,7 @@ public:
 
   /// Release the internal memory.
   void releaseMemory() override {
-    LastSchedule = {};
+    LastSchedule = nullptr;
     IslCtx.reset();
   }
 
