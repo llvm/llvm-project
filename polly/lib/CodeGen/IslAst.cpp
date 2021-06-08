@@ -623,7 +623,7 @@ bool IslAstInfo::isExecutedInParallel(const isl::ast_node &Node) {
 isl::union_map IslAstInfo::getSchedule(const isl::ast_node &Node) {
   IslAstUserPayload *Payload = getNodePayload(Node);
   if (!Payload)
-    return {};
+    return nullptr;
 
   isl::ast_build Build = isl::manage_copy(Payload->Build);
   return Build.get_schedule();
@@ -632,7 +632,7 @@ isl::union_map IslAstInfo::getSchedule(const isl::ast_node &Node) {
 isl::pw_aff
 IslAstInfo::getMinimalDependenceDistance(const isl::ast_node &Node) {
   IslAstUserPayload *Payload = getNodePayload(Node);
-  return Payload ? Payload->MinimalDependenceDistance : isl::pw_aff();
+  return Payload ? Payload->MinimalDependenceDistance : nullptr;
 }
 
 IslAstInfo::MemoryAccessSet *

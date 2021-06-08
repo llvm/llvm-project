@@ -90,7 +90,7 @@ public:
   }
 
   virtual void releaseMemory() override {
-    OldSchedule = {};
+    OldSchedule = nullptr;
     IslCtx.reset();
   }
 };

@@ -80,13 +80,13 @@ typedef struct {
 
 isl::union_set parseSetOrNull(isl_ctx *Ctx, const char *Str) {
   if (!Str)
-    return {};
+    return nullptr;
   return isl::union_set(Ctx, Str);
 }
 
 isl::union_map parseMapOrNull(isl_ctx *Ctx, const char *Str) {
   if (!Str)
-    return {};
+    return nullptr;
   return isl::union_map(Ctx, Str);
 }
 
