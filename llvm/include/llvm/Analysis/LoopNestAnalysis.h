@@ -30,7 +30,6 @@ public:
   LoopNest(Loop &Root, ScalarEvolution &SE);
 
   LoopNest() = delete;
-  LoopNest &operator=(const LoopNest &) = delete;
 
   /// Construct a LoopNest object.
   static std::unique_ptr<LoopNest> getLoopNest(Loop &Root, ScalarEvolution &SE);
