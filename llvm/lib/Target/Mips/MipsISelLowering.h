@@ -358,14 +358,14 @@ class TargetRegisterClass;
     /// exception address on entry to an EH pad.
     Register
     getExceptionPointerRegister(const Constant *PersonalityFn) const override {
-      return ABI.IsN64() ? Mips::A0_64 : Mips::A0;
+      return ABI.IsN64() ? Mips::A0_64 : ABI.IsP32() ? Mips::A0_NM : Mips::A0;
     }
 
     /// If a physical register, this returns the register that receives the
     /// exception typeid on entry to a landing pad.
     Register
     getExceptionSelectorRegister(const Constant *PersonalityFn) const override {
-      return ABI.IsN64() ? Mips::A1_64 : Mips::A1;
+      return ABI.IsN64() ? Mips::A1_64 : ABI.IsP32() ? Mips::A1_NM : Mips::A1;
     }
 
     bool isJumpTableRelative() const override {
