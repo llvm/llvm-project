@@ -465,12 +465,6 @@ def FeatureExtendedImageInsts : SubtargetFeature<"extended-image-insts",
   "Support mips != 0, lod != 0, gather4, and get_lod"
 >;
 
-def FeatureGFX10_AEncoding : SubtargetFeature<"gfx10_a-encoding",
-  "GFX10_AEncoding",
-  "true",
-  "Has BVH ray tracing instructions"
->;
-
 def FeatureGFX10_BEncoding : SubtargetFeature<"gfx10_b-encoding",
   "GFX10_BEncoding",
   "true",
@@ -1083,26 +1077,8 @@ def FeatureISAVersion10_1_2 : FeatureSet<
      FeatureLdsMisalignedBug,
      FeatureSupportsXNACK])>;
 
-def FeatureISAVersion10_1_3 : FeatureSet<
-  !listconcat(FeatureGroup.GFX10_1_Bugs,
-    [FeatureGFX10,
-     FeatureGFX10_AEncoding,
-     FeatureLDSBankCount32,
-     FeatureDLInsts,
-     FeatureNSAEncoding,
-     FeatureWavefrontSize32,
-     FeatureScalarStores,
-     FeatureScalarAtomics,
-     FeatureScalarFlatScratchInsts,
-     FeatureGetWaveIdInst,
-     FeatureMadMacF32Insts,
-     FeatureDsSrc2Insts,
-     FeatureLdsMisalignedBug,
-     FeatureSupportsXNACK])>;
-
 def FeatureISAVersion10_3_0 : FeatureSet<
   [FeatureGFX10,
-   FeatureGFX10_AEncoding,
    FeatureGFX10_BEncoding,
    FeatureGFX10_3Insts,
    FeatureLDSBankCount32,
@@ -1314,9 +1290,6 @@ def HasD16LoadStore : Predicate<"Subtarget->hasD16LoadStore()">,
 
 def HasFlatScratchSTMode : Predicate<"Subtarget->hasFlatScratchSTMode()">,
   AssemblerPredicate<(any_of FeatureGFX10_3Insts)>;
-
-def HasGFX10_AEncoding : Predicate<"Subtarget->hasGFX10_AEncoding()">,
-  AssemblerPredicate<(all_of FeatureGFX10_AEncoding)>;
 
 def HasGFX10_BEncoding : Predicate<"Subtarget->hasGFX10_BEncoding()">,
   AssemblerPredicate<(all_of FeatureGFX10_BEncoding)>;

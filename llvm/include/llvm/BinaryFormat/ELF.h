@@ -742,11 +742,10 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX90A        = 0x03f,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X40 = 0x040,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X41 = 0x041,
-  EF_AMDGPU_MACH_AMDGCN_GFX1013       = 0x042,
 
   // First/last AMDGCN-based processors.
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
-  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX1013,
+  EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX90A,
 
   // Indicates if the "xnack" target feature is enabled for all code contained
   // in the object.

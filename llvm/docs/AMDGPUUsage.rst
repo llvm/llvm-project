@@ -386,13 +386,6 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
      ``gfx1012``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 5500
                                                     - wavefrontsize64   flat          - *pal-amdhsa*  - Radeon RX 5500 XT
                                                     - xnack             scratch       - *pal-amdpal*
-     ``gfx1013``                 ``amdgcn``   APU   - cumode          - Absolute      - *rocm-amdhsa* *TBA*
-                                                    - wavefrontsize64   flat          - *pal-amdhsa*
-                                                    - xnack             scratch       - *pal-amdpal*  .. TODO::
-
-                                                                                                        Add product
-                                                                                                        names.
-
      **GCN GFX10 (RDNA 2)** [AMD-GCN-GFX10-RDNA2]_
      -----------------------------------------------------------------------------------------------------------------------
      ``gfx1030``                 ``amdgcn``   dGPU  - cumode          - Absolute      - *rocm-amdhsa* - Radeon RX 6800
@@ -1156,7 +1149,6 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX90A``     0x03f      ``gfx90a``
      *reserved*                           0x040      Reserved.
      *reserved*                           0x041      Reserved.
-     ``EF_AMDGPU_MACH_AMDGCN_GFX1013``    0x042      ``gfx1013``
      ==================================== ========== =============================
 
 Sections
