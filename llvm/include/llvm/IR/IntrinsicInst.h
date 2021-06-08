@@ -389,6 +389,11 @@ public:
 /// This is the common base class for vector predication intrinsics.
 class VPIntrinsic : public IntrinsicInst {
 public:
+  /// \brief Declares a llvm.vp.* intrinsic in \p M that matches the parameters
+  /// \p Params.
+  static Function *getDeclarationForParams(Module *M, Intrinsic::ID,
+                                           ArrayRef<Value *> Params);
+
   static Optional<unsigned> getMaskParamPos(Intrinsic::ID IntrinsicID);
   static Optional<unsigned> getVectorLengthParamPos(Intrinsic::ID IntrinsicID);
 
