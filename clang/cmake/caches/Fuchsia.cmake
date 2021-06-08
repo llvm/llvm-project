@@ -9,7 +9,10 @@ set(LLVM_ENABLE_PROJECTS "clang;clang-tools-extra;lld;llvm;polly" CACHE STRING "
 set(LLVM_ENABLE_BACKTRACES OFF CACHE BOOL "")
 set(LLVM_ENABLE_DIA_SDK OFF CACHE BOOL "")
 set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ON CACHE BOOL "")
-set(LLVM_ENABLE_PIC OFF CACHE BOOL "")
+if(NOT APPLE)
+  # TODO: Remove this once we switch to ld64.lld.
+  set(LLVM_ENABLE_PIC OFF CACHE BOOL "")
+endif()
 set(LLVM_ENABLE_TERMINFO OFF CACHE BOOL "")
 set(LLVM_ENABLE_UNWIND_TABLES OFF CACHE BOOL "")
 set(LLVM_ENABLE_Z3_SOLVER OFF CACHE BOOL "")
@@ -24,6 +27,7 @@ endif()
 
 set(CLANG_DEFAULT_CXX_STDLIB libc++ CACHE STRING "")
 if(NOT APPLE)
+  # TODO: Remove this once we switch to ld64.lld.
   set(CLANG_DEFAULT_LINKER lld CACHE STRING "")
   set(CLANG_DEFAULT_OBJCOPY llvm-objcopy CACHE STRING "")
 endif()
@@ -114,6 +118,7 @@ endif()
 
 set(BOOTSTRAP_LLVM_ENABLE_LTO ON CACHE BOOL "")
 if(NOT APPLE)
+  # TODO: Remove this once we switch to ld64.lld.
   set(BOOTSTRAP_LLVM_ENABLE_LLD ON CACHE BOOL "")
 endif()
 
