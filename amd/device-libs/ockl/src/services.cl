@@ -388,10 +388,21 @@ __ockl_printf_append_string_n(ulong msg_desc, const char *data, ulong length,
 
 /*---------------- SANITIZER SERVICE ---------------------------------*/
 
-void __ockl_sanitizer_report(ulong addr, ulong pc, ulong wgidx, ulong wgidy,
+void
+__ockl_sanitizer_report(ulong addr, ulong pc, ulong wgidx, ulong wgidy,
                         ulong wgidz, ulong wave_id, ulong is_read, ulong access_size)
 {
    long2 value =  __ockl_hostcall_preview(SERVICE_SANITIZER, addr, pc,
                                    wgidx, wgidy, wgidz, wave_id, is_read, access_size);
    (void)value;
 }
+
+/*===---  DEVMEM  ----------------------------------------------------------*/
+
+ulong
+__ockl_devmem_request(ulong addr, ulong size)
+{
+    long2 result = __ockl_hostcall_preview(SERVICE_DEVMEM, addr, size, 0, 0, 0, 0, 0, 0);
+    return (ulong)result.x;
+}
+
