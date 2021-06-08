@@ -7,6 +7,5 @@
 # CHECK-NEXT: foo foo
 # CHECK-NEXT: foo bar
 # CHECK-NEXT: foo bar
-# CHECK-NEXT: foo bar
 # CHECK: script
 # CHECK-NEXT: bar bar

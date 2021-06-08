@@ -2306,6 +2306,7 @@ void CommandInterpreter::HandleCommands(const StringList &commands,
 
     CommandReturnObject tmp_result(m_debugger.GetUseColor());
     tmp_result.SetInteractive(result.GetInteractive());
+    tmp_result.SetSuppressImmediateOutput(true);
 
     // We might call into a regex or alias command, in which case the
     // add_to_history will get lost.  This m_command_source_depth dingus is the
