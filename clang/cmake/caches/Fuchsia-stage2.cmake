@@ -285,6 +285,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-nm
   llvm-objcopy
   llvm-objdump
+  llvm-otool
   llvm-profdata
   llvm-rc
   llvm-ranlib
