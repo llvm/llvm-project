@@ -428,9 +428,20 @@
 // RUN:     /clr:pure \
 // RUN:     /d2FH4 \
 // RUN:     /docname \
+// RUN:     /experimental:external \
 // RUN:     /experimental:module \
 // RUN:     /experimental:preprocessor \
 // RUN:     /exportHeader /headerName:foo \
+// RUN:     /external:anglebrackets \
+// RUN:     /external:Ipath \
+// RUN:     /external:I path \
+// RUN:     /external:env:var \
+// RUN:     /external:W0 \
+// RUN:     /external:W1 \
+// RUN:     /external:W2 \
+// RUN:     /external:W3 \
+// RUN:     /external:W4 \
+// RUN:     /external:templates- \
 // RUN:     /headerUnit foo.h=foo.ifc /headerUnit:quote foo.h=foo.ifc /headerUnit:angle foo.h=foo.ifc \
 // RUN:     /EHsc \
 // RUN:     /F 42 \
