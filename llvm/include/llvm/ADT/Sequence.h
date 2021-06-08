@@ -15,7 +15,8 @@
 #ifndef LLVM_ADT_SEQUENCE_H
 #define LLVM_ADT_SEQUENCE_H
 
-#include <iterator>
+#include <cstddef>  // std::ptrdiff_t
+#include <iterator> // std::random_access_iterator_tag
 
 namespace llvm {
 
@@ -24,7 +25,7 @@ namespace detail {
 template <typename T, bool IsReversed> struct iota_range_iterator {
   using iterator_category = std::random_access_iterator_tag;
   using value_type = T;
-  using difference_type = ptrdiff_t;
+  using difference_type = std::ptrdiff_t;
   using pointer = T *;
   using reference = T &;
 
