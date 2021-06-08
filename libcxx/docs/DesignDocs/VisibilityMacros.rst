@@ -130,7 +130,7 @@ Visibility Macros
 
 **_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS**
   Mark the member functions, typeinfo, and vtable of the type named in
-  a `_LIBCPP_EXTERN_TEMPLATE` declaration as being exported by the libc++ library.
+  an extern template declaration as being exported by the libc++ library.
   This attribute must be specified on all extern class template declarations.
 
   This macro is used to override the `_LIBCPP_TEMPLATE_VIS` attribute
