@@ -34,6 +34,8 @@
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/PrettyStackTrace.h"
 
+#include <atomic>
+
 using namespace mlir;
 
 namespace {
