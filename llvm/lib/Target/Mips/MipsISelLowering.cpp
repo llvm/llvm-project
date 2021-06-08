@@ -4301,7 +4301,9 @@ MipsTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
         return std::make_pair(0U, &Mips::GPR32RegClass);
       }
       if (VT == MVT::i64 && !Subtarget.isGP64bit())
-        return std::make_pair(0U, &Mips::GPR32RegClass);
+        return std::make_pair(0U, Subtarget.hasNanoMips()
+                                      ? &Mips::GPR32NMRegClass
+                                      : &Mips::GPR32RegClass);
       if (VT == MVT::i64 && Subtarget.isGP64bit())
         return std::make_pair(0U, &Mips::GPR64RegClass);
       // This will generate an error message
