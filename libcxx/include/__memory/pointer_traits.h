@@ -11,7 +11,6 @@
 #define _LIBCPP___MEMORY_POINTER_TRAITS_H
 
 #include <__config>
-#include <__memory/addressof.h>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
