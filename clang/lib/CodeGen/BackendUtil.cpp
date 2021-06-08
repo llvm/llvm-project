@@ -530,7 +530,6 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.NoNaNsFPMath = LangOpts.NoHonorNaNs;
   Options.NoZerosInBSS = CodeGenOpts.NoZeroInitializedInBSS;
   Options.UnsafeFPMath = LangOpts.UnsafeFPMath;
-  Options.StackAlignmentOverride = CodeGenOpts.StackAlignment;
 
   Options.BBSections =
       llvm::StringSwitch<llvm::BasicBlockSection>(CodeGenOpts.BBSections)
