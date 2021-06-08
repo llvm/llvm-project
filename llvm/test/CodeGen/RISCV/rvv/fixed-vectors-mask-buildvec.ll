@@ -37,7 +37,9 @@ define <2 x i1> @buildvec_mask_nonconst_v2i1(i1 %x, i1 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8,mf8,ta,mu
 ; CHECK-NEXT:    vmv.v.x v25, a1
+; CHECK-NEXT:    vsetvli zero, zero, e8,mf8,tu,mu
 ; CHECK-NEXT:    vmv.s.x v25, a0
+; CHECK-NEXT:    vsetvli zero, zero, e8,mf8,ta,mu
 ; CHECK-NEXT:    vand.vi v25, v25, 1
 ; CHECK-NEXT:    vmsne.vi v0, v25, 0
 ; CHECK-NEXT:    ret
