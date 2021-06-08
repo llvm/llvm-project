@@ -804,7 +804,7 @@ public:
     SK_ResolveAddressOfOverloadedFunction,
 
     /// Perform a derived-to-base cast, producing an rvalue.
-    SK_CastDerivedToBaseRValue,
+    SK_CastDerivedToBasePRValue,
 
     /// Perform a derived-to-base cast, producing an xvalue.
     SK_CastDerivedToBaseXValue,
