@@ -3434,22 +3434,28 @@ bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst) {
   unsigned Dim = Inst.getOperand(DimIdx).getImm();
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfoByEncoding(Dim);
   bool IsNSA = SrsrcIdx - VAddr0Idx > 1;
-  unsigned VAddrSize =
+  unsigned ActualAddrSize =
       IsNSA ? SrsrcIdx - VAddr0Idx
             : AMDGPU::getRegOperandSize(getMRI(), Desc, VAddr0Idx) / 4;
   bool IsA16 = (A16Idx != -1 && Inst.getOperand(A16Idx).getImm());
 
-  unsigned AddrSize =
+  unsigned ExpectedAddrSize =
       AMDGPU::getAddrSizeMIMGOp(BaseOpcode, DimInfo, IsA16, hasG16());
 
   if (!IsNSA) {
-    if (AddrSize > 8)
-      AddrSize = 16;
-    else if (AddrSize > 5)
-      AddrSize = 8;
+    if (ExpectedAddrSize > 8)
+      ExpectedAddrSize = 16;
+    else if (ExpectedAddrSize > 5)
+      ExpectedAddrSize = 8;
+
+    // Allow oversized 8 VGPR vaddr when only 5 VGPR are required.
+    // This provides backward compatibility for assembly created
+    // before 160b types were directly supported.
+    if (ExpectedAddrSize == 5 && ActualAddrSize == 8)
+      return true;
   }
 
-  return VAddrSize == AddrSize;
+  return ActualAddrSize == ExpectedAddrSize;
 }
 
 bool AMDGPUAsmParser::validateMIMGAtomicDMask(const MCInst &Inst) {

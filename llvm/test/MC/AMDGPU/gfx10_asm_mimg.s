@@ -525,3 +525,9 @@ image_sample_c_d_o_g16 v0, [v0, v1, v2, v4, v6, v7, v8], s[0:7], s[8:11] dmask:0
 
 image_sample_c_d_o_g16 v[0:1], [v0, v1, v2, v4, v6, v7, v8], s[0:7], s[8:11] dmask:0x6 dim:SQ_RSRC_IMG_2D_ARRAY
 ; GFX10: image_sample_c_d_o_g16 v[0:1], [v0, v1, v2, v4, v6, v7, v8], s[0:7], s[8:11] dmask:0x6 dim:SQ_RSRC_IMG_2D_ARRAY ; encoding: [0x2d,0x06,0xe8,0xf0,0x00,0x00,0x40,0x00,0x01,0x02,0x04,0x06,0x07,0x08,0x00,0x00]
+
+
+; Test that wider than required vaddr registers are accepted by assembler for 5 VGPR forms
+
+image_sample_d v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX10: image_sample_d v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16 ; encoding: [0x08,0x0f,0x88,0xf0,0x00,0x00,0x40,0x40]
