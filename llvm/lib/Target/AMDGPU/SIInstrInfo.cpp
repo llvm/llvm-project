@@ -4233,12 +4233,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         VAddrWords = MRI.getTargetRegisterInfo()->getRegSizeInBits(*RC) / 32;
         if (AddrWords > 8)
           AddrWords = 16;
-        else if (AddrWords > 4)
+        else if (AddrWords > 5)
           AddrWords = 8;
-        else if (AddrWords == 4)
-          AddrWords = 4;
-        else if (AddrWords == 3)
-          AddrWords = 3;
       }
 
       if (VAddrWords != AddrWords) {
