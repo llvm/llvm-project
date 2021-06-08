@@ -74,8 +74,8 @@ public:
   /// For all of the arithmetic operators provided here any invalid state is
   /// perpetuated and cannot be removed. Once a cost becomes invalid it stays
   /// invalid, and it also inherits any invalid state from the RHS. Regardless
-  /// of the state, arithmetic and comparisons work on the actual values in the
-  /// same way as they would on a basic type, such as integer.
+  /// of the state, arithmetic work on the actual values in the same way as they
+  /// would on a basic type, such as integer.
 
   InstructionCost &operator+=(const InstructionCost &RHS) {
     propagateState(RHS);
