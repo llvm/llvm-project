@@ -140,58 +140,13 @@ For example:
 Example
 =======
 
+DataFlowSanitizer supports up to 8 labels, to achieve low CPU and code
+size overhead. Base labels are simply 8-bit unsigned integers that are
+powers of 2 (i.e. 1, 2, 4, 8, ..., 128), and union labels are created
+by ORing base labels.
+
 The following program demonstrates label propagation by checking that
 the correct labels are propagated.
-
-.. code-block:: c++
-
-  #include <sanitizer/dfsan_interface.h>
-  #include <assert.h>
-
-  int main(void) {
-    int i = 1;
-    dfsan_label i_label = dfsan_create_label("i", 0);
-    dfsan_set_label(i_label, &i, sizeof(i));
-
-    int j = 2;
-    dfsan_label j_label = dfsan_create_label("j", 0);
-    dfsan_set_label(j_label, &j, sizeof(j));
-
-    int k = 3;
-    dfsan_label k_label = dfsan_create_label("k", 0);
-    dfsan_set_label(k_label, &k, sizeof(k));
-
-    dfsan_label ij_label = dfsan_get_label(i + j);
-    assert(dfsan_has_label(ij_label, i_label));
-    assert(dfsan_has_label(ij_label, j_label));
-    assert(!dfsan_has_label(ij_label, k_label));
-
-    dfsan_label ijk_label = dfsan_get_label(i + j + k);
-    assert(dfsan_has_label(ijk_label, i_label));
-    assert(dfsan_has_label(ijk_label, j_label));
-    assert(dfsan_has_label(ijk_label, k_label));
-
-    return 0;
-  }
-
-fast16labels mode
-=================
-
-If you need 16 or fewer labels, you can use fast16labels instrumentation for
-less CPU and code size overhead.  To use fast16labels instrumentation, you'll
-need to specify `-fsanitize=dataflow -mllvm -dfsan-fast-16-labels` in your
-compile and link commands and use a modified API for creating and managing
-labels.
-
-In fast16labels mode, base labels are simply 16-bit unsigned integers that are
-powers of 2 (i.e. 1, 2, 4, 8, ..., 32768), and union labels are created by ORing
-base labels.  In this mode DFSan does not manage any label metadata, so the
-functions `dfsan_create_label`, `dfsan_union`, `dfsan_get_label_info`,
-`dfsan_has_label`, `dfsan_has_label_with_desc`, `dfsan_get_label_count`, and
-`dfsan_dump_labels` are unsupported.  Instead of using them, the user should
-maintain any necessary metadata about base labels themselves.
-
-For example:
 
 .. code-block:: c++
 
@@ -216,12 +171,22 @@ For example:
     assert(!(ij_label & k_label));  // ij_label doesn't have k_label
     assert(ij_label == 3);  // Verifies all of the above
 
+    // Or, equivalently:
+    assert(dfsan_has_label(ij_label, i_label));
+    assert(dfsan_has_label(ij_label, j_label));
+    assert(!dfsan_has_label(ij_label, k_label));
+
     dfsan_label ijk_label = dfsan_get_label(i + j + k);
 
     assert(ijk_label & i_label);  // ijk_label has i_label
     assert(ijk_label & j_label);  // ijk_label has j_label
     assert(ijk_label & k_label);  // ijk_label has k_label
     assert(ijk_label == 7);  // Verifies all of the above
+
+    // Or, equivalently:
+    assert(dfsan_has_label(ijk_label, i_label));
+    assert(dfsan_has_label(ijk_label, j_label));
+    assert(dfsan_has_label(ijk_label, k_label));
 
     return 0;
   }
