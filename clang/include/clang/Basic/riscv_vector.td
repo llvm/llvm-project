@@ -1124,6 +1124,51 @@ multiclass RVVUnitStridedSegStore<string op> {
   }
 }
 
+multiclass RVVStridedSegStore<string op> {
+  foreach type = TypeList in {
+    defvar eew = !cond(!eq(type, "c") : "8",
+                       !eq(type, "s") : "16",
+                       !eq(type, "i") : "32",
+                       !eq(type, "l") : "64",
+                       !eq(type, "x") : "16",
+                       !eq(type, "f") : "32",
+                       !eq(type, "d") : "64");
+      foreach nf = NFList in {
+        let Name = op # nf # "e" # eew # "_v",
+            IRName = op # nf,
+            IRNameMask = op # nf # "_mask",
+            NF = nf,
+            HasMaskedOffOperand = false,
+            ManualCodegen = [{
+    {
+      // Builtin: (ptr, stride, val0, val1, ..., vl).
+      // Intrinsic: (val0, val1, ..., ptr, stride, vl)
+      std::rotate(Ops.begin(), Ops.begin() + 2, Ops.end() - 1);
+      IntrinsicTypes = {Ops[0]->getType(), Ops[NF + 1]->getType()};
+      assert(Ops.size() == NF + 3);
+    }
+            }],
+            ManualCodegenMask = [{
+    {
+      // Builtin: (mask, ptr, stride, val0, val1, ..., vl).
+      // Intrinsic: (val0, val1, ..., ptr, stride, mask, vl)
+      std::rotate(Ops.begin(), Ops.begin() + 3, Ops.end() - 1);
+      std::rotate(Ops.begin() + NF, Ops.begin() + NF + 1, Ops.begin() + NF + 3);
+      IntrinsicTypes = {Ops[0]->getType(), Ops[NF + 1]->getType()};
+      assert(Ops.size() == NF + 4);
+    }
+            }] in {
+          defvar V = VString<nf, /*signed=*/true>.S;
+          defvar UV = VString<nf, /*signed=*/false>.S;
+          def : RVVBuiltin<"v", "0Pet" # V, type>;
+          if !not(IsFloat<type>.val) then {
+            def : RVVBuiltin<"Uv", "0PUet" # UV, type>;
+        }
+      }
+    }
+  }
+}
+
 multiclass RVVAMOBuiltinSet<bit has_signed = false, bit has_unsigned = false,
                             bit has_fp = false> {
   defvar type_list = !if(has_fp, ["i","l","f","d"], ["i","l"]);
@@ -1447,6 +1492,7 @@ defm : RVVStridedSegLoad<"vlsseg">;
 defm : RVVIndexedSegLoad<"vluxseg">;
 defm : RVVIndexedSegLoad<"vloxseg">;
 defm : RVVUnitStridedSegStore<"vsseg">;
+defm : RVVStridedSegStore<"vssseg">;
 }
 
 // 8. Vector AMO Operations
