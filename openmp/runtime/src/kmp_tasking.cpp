@@ -1603,6 +1603,11 @@ static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
       __ompt_task_start(task, current_task, gtid);
 #endif
 
+#if OMPD_SUPPORT
+    if (ompd_state & OMPD_ENABLE_BP)
+      ompd_bp_task_begin();
+#endif
+
 #if USE_ITT_BUILD && USE_ITT_NOTIFY
     kmp_uint64 cur_time;
     kmp_int32 kmp_itt_count_task =
@@ -1638,6 +1643,11 @@ static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
     KMP_FSYNC_RELEASING(taskdata->td_parent); // releasing parent
 #endif
   }
+
+#if OMPD_SUPPORT
+  if (ompd_state & OMPD_ENABLE_BP)
+    ompd_bp_task_end();
+#endif
 
   // Proxy tasks are not handled by the runtime
   if (taskdata->td_flags.proxy != TASK_PROXY) {
