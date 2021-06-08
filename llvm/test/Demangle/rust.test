@@ -428,6 +428,9 @@ CHECK: backref::<backref::ident>
 CHECK: backref::<(), ()>
        _RIC7backrefuB9_E
 
+CHECK: backref::<7, 7>
+       _RIC7backrefKi7_KBa_E
+
 ; Invalid backreferences
 
 CHECK: _RB_
@@ -441,6 +444,9 @@ CHECK: _RNvB_1a
 
 CHECK: _RIC7backrefSB9_E
        _RIC7backrefSB9_E
+
+CHECK: _RIC7backrefKBa_E
+       _RIC7backrefKBa_E
 
 ; Invalid mangled characters
 
