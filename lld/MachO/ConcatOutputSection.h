@@ -52,7 +52,7 @@ public:
   }
 
 private:
-  void mergeFlags(InputSection *input);
+  void finalizeFlags(InputSection *input);
 
   size_t size = 0;
   uint64_t fileSize = 0;
