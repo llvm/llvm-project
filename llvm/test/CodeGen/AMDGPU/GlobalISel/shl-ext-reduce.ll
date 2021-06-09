@@ -56,8 +56,7 @@ define i64 @v_shl_i64_zext_i32(i32 %x) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_and_b32_e32 v0, 0x3fffffff, v0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3fffffff, v0
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %and = and i32 %x, 1073741823
@@ -115,8 +114,7 @@ define i64 @v_shl_i64_sext_i32(i32 %x) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_and_b32_e32 v0, 0x1fffffff, v0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x1fffffff, v0
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %and = and i32 %x, 536870911
@@ -190,8 +188,7 @@ define i64 @v_shl_i64_zext_i32_overflow(i32 %x) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x7fffffff, v0
 ; GFX11-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %and = and i32 %x, 2147483647
@@ -337,8 +334,7 @@ define amdgpu_kernel void @mulu24_shl64(i32 addrspace(1)* nocapture %arg) {
 ; GFX11-LABEL: mulu24_shl64:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11-NEXT:    v_and_b32_e32 v0, 6, v0
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 6, v0
 ; GFX11-NEXT:    v_mul_u32_u24_e32 v0, 7, v0
 ; GFX11-NEXT:    v_lshlrev_b64 v[2:3], 2, v[0:1]
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -437,8 +433,7 @@ define amdgpu_kernel void @muli24_shl64(i64 addrspace(1)* nocapture %arg, i32 ad
 ; GFX11-LABEL: muli24_shl64:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
-; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 2, v0
-; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_lshlrev_b32 v1, 2, v0
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_load_b32 v1, v1, s[2:3]
@@ -558,11 +553,9 @@ define <2 x i64> @v_shl_v2i64_zext_v2i32(<2 x i32> %x) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX11-NEXT:    s_brev_b32 s0, -4
-; GFX11-NEXT:    v_and_b32_e32 v2, s0, v0
-; GFX11-NEXT:    v_and_b32_e32 v4, s0, v1
-; GFX11-NEXT:    v_mov_b32_e32 v5, v3
+; GFX11-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_and_b32 v2, s0, v0
+; GFX11-NEXT:    v_dual_mov_b32 v5, v3 :: v_dual_and_b32 v4, s0, v1
 ; GFX11-NEXT:    v_lshlrev_b64 v[0:1], 2, v[2:3]
 ; GFX11-NEXT:    v_lshlrev_b64 v[2:3], 2, v[4:5]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]

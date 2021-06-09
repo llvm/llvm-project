@@ -110,12 +110,16 @@ class getVOP1Pat64 <SDPatternOperator node, VOPProfile P> : LetDummies {
 }
 
 multiclass VOP1Inst <string opName, VOPProfile P,
-                     SDPatternOperator node = null_frag> {
+                     SDPatternOperator node = null_frag, int VOPDOp = -1> {
   // We only want to set this on the basic, non-SDWA or DPP forms.
   defvar should_mov_imm = !eq(opName, "v_mov_b32");
 
   let isMoveImm = should_mov_imm in {
-    def _e32 : VOP1_Pseudo <opName, P>;
+    if !eq(VOPDOp, -1) then
+      def _e32 : VOP1_Pseudo <opName, P>;
+    else
+      // Only for V_MOV_B32
+      def _e32 : VOP1_Pseudo <opName, P>, VOPD_Component<VOPDOp, "v_mov_b32">;
     def _e64 : VOP3InstBase <opName, P, node>;
   }
 
@@ -182,9 +186,14 @@ let VOPAsmPrefer32Bit = 1 in {
 defm V_NOP : VOP1Inst <"v_nop", VOP_NOP_PROFILE>;
 }
 
+def VOPProfile_MOV : VOPProfile <[i32, i32, untyped, untyped]> {
+  let InsVOPDX = (ins Src0RC32:$src0X);
+  let InsVOPDY = (ins Src0RC32:$src0Y);
+}
+
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 // TODO-GFX11 should allow Modifiers even before gfx11
-defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOP_I32_I32>;
+defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOPProfile_MOV, null_frag, 0x8>;
 } // End isMoveImm = 1
 
 // FIXME: Specify SchedRW for READFIRSTLANE_B32

@@ -481,11 +481,11 @@ define <4 x half> @v_roundeven_v4f16(<4 x half> %x) {
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
-; GFX11-NEXT:    v_mov_b32_e32 v4, 0xffff
 ; GFX11-NEXT:    v_rndne_f16_e32 v0, v0
 ; GFX11-NEXT:    v_rndne_f16_e32 v1, v1
 ; GFX11-NEXT:    v_rndne_f16_e32 v2, v2
 ; GFX11-NEXT:    v_rndne_f16_e32 v3, v3
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0xffff
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX11-NEXT:    v_and_or_b32 v0, v0, v4, v2

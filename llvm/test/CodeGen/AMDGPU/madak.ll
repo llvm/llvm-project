@@ -63,8 +63,7 @@ define amdgpu_kernel void @madak_f32(float addrspace(1)* noalias %out, float add
 ; FMA-DAG:      v_fmac_f32_e32 [[VK]], [[VA]], [[VC]]
 ; GFX11-MAD:    v_mul_f32_e32 [[VMULAB:v[0-9]+]], [[VA]], [[VB]]
 ; GFX11-MAD:    v_mul_f32_e32 [[VMULAC:v[0-9]+]], [[VA]], [[VC]]
-; GFX11-MAD:    v_add_f32_e32 {{v[0-9]+}}, [[SK]], [[VMULAB]]
-; GFX11-MAD:    v_add_f32_e32 {{v[0-9]+}}, [[SK]], [[VMULAC]]
+; GFX11-MAD:    v_dual_add_f32 {{v[0-9]+}}, [[SK]], [[VMULAC]] :: v_dual_add_f32 {{v[0-9]+}}, [[SK]], [[VMULAB]]
 ; GCN:          s_endpgm
 define amdgpu_kernel void @madak_2_use_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in) #0 {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
@@ -195,7 +194,7 @@ define amdgpu_kernel void @v_s_madak_f32(float addrspace(1)* noalias %out, float
 ; GFX10-MAD: v_mac_f32_e64 {{v[0-9]+}}, {{s[0-9]+}}, {{s[0-9]+}}
 ; FMA:       v_fmac_f32_e64 {{v[0-9]+}}, {{s[0-9]+}}, {{s[0-9]+}}
 ; GFX11-MAD: v_mul_f32_e64 [[VMUL:v[0-9]+]], {{s[0-9]+}}, {{s[0-9]+}}
-; GFX11-MAD: v_add_f32_e32 {{v[0-9]+}}, 0x41200000, [[VMUL]]
+; GFX11-MAD: v_dual_mov_b32 {{v[0-9]+}}, 0 :: v_dual_add_f32 {{v[0-9]+}}, 0x41200000, [[VMUL]]
 define amdgpu_kernel void @s_s_madak_f32(float addrspace(1)* %out, float %a, float %b) #0 {
   %mul = fmul float %a, %b
   %madak = fadd float %mul, 10.0

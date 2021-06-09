@@ -675,6 +675,12 @@ class SubtargetFeatureNSAMaxSize <int Value> : SubtargetFeature <
 def FeatureNSAMaxSize5 : SubtargetFeatureNSAMaxSize<5>;
 def FeatureNSAMaxSize13 : SubtargetFeatureNSAMaxSize<13>;
 
+def FeatureVOPD : SubtargetFeature<"vopd",
+  "HasVOPDInsts",
+  "true",
+  "Has VOPD dual issue wave32 instructions"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -878,7 +884,7 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureInv2PiInlineImm, FeatureApertureRegs,
    FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
    FeatureGFX10_AEncoding, FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
-   FeatureGFX11Insts, FeatureVOP3P,
+   FeatureGFX11Insts, FeatureVOP3P, FeatureVOPD,
    FeatureMovrel, FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
    FeatureAddNoCarryInsts, FeatureFmaMixInsts,

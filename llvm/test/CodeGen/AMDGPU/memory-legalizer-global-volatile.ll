@@ -176,8 +176,7 @@ define amdgpu_kernel void @global_volatile_load_1(
 ; GFX11-WGP-LABEL: global_volatile_load_1:
 ; GFX11-WGP:       ; %bb.0: ; %entry
 ; GFX11-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
-; GFX11-WGP-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-WGP-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-WGP-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    global_load_b32 v0, v0, s[0:1] glc dlc
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
@@ -187,8 +186,7 @@ define amdgpu_kernel void @global_volatile_load_1(
 ; GFX11-CU-LABEL: global_volatile_load_1:
 ; GFX11-CU:       ; %bb.0: ; %entry
 ; GFX11-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
-; GFX11-CU-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX11-CU-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-CU-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    global_load_b32 v0, v0, s[0:1] glc dlc
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
@@ -376,11 +374,10 @@ define amdgpu_kernel void @global_volatile_store_1(
 ; GFX11-WGP-LABEL: global_volatile_store_1:
 ; GFX11-WGP:       ; %bb.0: ; %entry
 ; GFX11-WGP-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
-; GFX11-WGP-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-WGP-NEXT:    v_mov_b32_e32 v1, s0
+; GFX11-WGP-NEXT:    v_dual_mov_b32 v1, s0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-WGP-NEXT:    global_store_b32 v0, v1, s[2:3]
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-WGP-NEXT:    s_endpgm
@@ -388,11 +385,10 @@ define amdgpu_kernel void @global_volatile_store_1(
 ; GFX11-CU-LABEL: global_volatile_store_1:
 ; GFX11-CU:       ; %bb.0: ; %entry
 ; GFX11-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
-; GFX11-CU-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-CU-NEXT:    v_mov_b32_e32 v1, s0
+; GFX11-CU-NEXT:    v_dual_mov_b32 v1, s0 :: v_dual_lshlrev_b32 v0, 2, v0
 ; GFX11-CU-NEXT:    global_store_b32 v0, v1, s[2:3]
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    s_endpgm

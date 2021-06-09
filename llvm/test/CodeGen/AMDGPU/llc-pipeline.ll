@@ -128,6 +128,7 @@
 ; GCN-O0-NEXT:        SI post-RA bundler
 ; GCN-O0-NEXT:        Insert fentry calls
 ; GCN-O0-NEXT:        Insert XRay ops
+; GCN-O0-NEXT:        GCN Create VOPD Instructions
 ; GCN-O0-NEXT:        SI Memory Legalizer
 ; GCN-O0-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O0-NEXT:        SI insert wait instructions
@@ -376,6 +377,7 @@
 ; GCN-O1-NEXT:        Branch Probability Basic Block Placement
 ; GCN-O1-NEXT:        Insert fentry calls
 ; GCN-O1-NEXT:        Insert XRay ops
+; GCN-O1-NEXT:        GCN Create VOPD Instructions
 ; GCN-O1-NEXT:        SI Memory Legalizer
 ; GCN-O1-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-NEXT:        SI insert wait instructions
@@ -661,6 +663,7 @@
 ; GCN-O1-OPTS-NEXT:        Branch Probability Basic Block Placement
 ; GCN-O1-OPTS-NEXT:        Insert fentry calls
 ; GCN-O1-OPTS-NEXT:        Insert XRay ops
+; GCN-O1-OPTS-NEXT:        GCN Create VOPD Instructions
 ; GCN-O1-OPTS-NEXT:        SI Memory Legalizer
 ; GCN-O1-OPTS-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        SI insert wait instructions
@@ -949,6 +952,7 @@
 ; GCN-O2-NEXT:        Branch Probability Basic Block Placement
 ; GCN-O2-NEXT:        Insert fentry calls
 ; GCN-O2-NEXT:        Insert XRay ops
+; GCN-O2-NEXT:        GCN Create VOPD Instructions
 ; GCN-O2-NEXT:        SI Memory Legalizer
 ; GCN-O2-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O2-NEXT:        SI insert wait instructions
@@ -1250,6 +1254,7 @@
 ; GCN-O3-NEXT:        Branch Probability Basic Block Placement
 ; GCN-O3-NEXT:        Insert fentry calls
 ; GCN-O3-NEXT:        Insert XRay ops
+; GCN-O3-NEXT:        GCN Create VOPD Instructions
 ; GCN-O3-NEXT:        SI Memory Legalizer
 ; GCN-O3-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O3-NEXT:        SI insert wait instructions

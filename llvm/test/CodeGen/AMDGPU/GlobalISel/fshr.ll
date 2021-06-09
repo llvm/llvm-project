@@ -1792,8 +1792,7 @@ define i24 @v_fshr_i24(i24 %lhs, i24 %rhs, i24 %amt) {
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v3, v3
 ; GFX11-NEXT:    v_mul_lo_u32 v4, 0xffffffe8, v3
 ; GFX11-NEXT:    v_mul_hi_u32 v4, v3, v4
-; GFX11-NEXT:    v_add_nc_u32_e32 v3, v3, v4
-; GFX11-NEXT:    v_mov_b32_e32 v4, 0xffffff
+; GFX11-NEXT:    v_dual_mov_b32 v4, 0xffffff :: v_dual_add_nc_u32 v3, v3, v4
 ; GFX11-NEXT:    v_mul_hi_u32 v3, v2, v3
 ; GFX11-NEXT:    v_and_b32_e32 v1, v1, v4
 ; GFX11-NEXT:    v_mul_lo_u32 v3, v3, 24
@@ -2351,8 +2350,7 @@ define amdgpu_ps i48 @s_fshr_v2i24(i48 inreg %lhs.arg, i48 inreg %rhs.arg, i48 i
 ; GFX11-NEXT:    s_or_b32 s13, s15, s13
 ; GFX11-NEXT:    s_bfe_u32 s14, s14, 0x100000
 ; GFX11-NEXT:    s_bfe_u32 s13, s13, 0x100000
-; GFX11-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
-; GFX11-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v1
+; GFX11-NEXT:    v_dual_mul_f32 v0, 0x4f7ffffe, v0 :: v_dual_mul_f32 v1, 0x4f7ffffe, v1
 ; GFX11-NEXT:    s_lshl_b32 s14, s14, 16
 ; GFX11-NEXT:    s_lshr_b32 s15, s5, 8
 ; GFX11-NEXT:    s_or_b32 s13, s13, s14
@@ -2708,8 +2706,7 @@ define <2 x i24> @v_fshr_v2i24(<2 x i24> %lhs, <2 x i24> %rhs, <2 x i24> %amt) {
 ; GFX11-NEXT:    v_and_b32_e32 v5, v5, v10
 ; GFX11-NEXT:    v_and_b32_e32 v2, v2, v10
 ; GFX11-NEXT:    v_and_b32_e32 v3, v3, v10
-; GFX11-NEXT:    v_lshlrev_b32_e32 v1, 1, v1
-; GFX11-NEXT:    v_mul_f32_e32 v6, 0x4f7ffffe, v6
+; GFX11-NEXT:    v_dual_mul_f32 v6, 0x4f7ffffe, v6 :: v_dual_lshlrev_b32 v1, 1, v1
 ; GFX11-NEXT:    v_mul_f32_e32 v7, 0x4f7ffffe, v7
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v6, v6
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v7, v7
@@ -7157,10 +7154,9 @@ define i128 @v_fshr_i128_65(i128 %lhs, i128 %rhs) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_mov_b32_e32 v8, v2
+; GFX11-NEXT:    v_dual_mov_b32 v8, v2 :: v_dual_lshlrev_b32 v9, 31, v0
 ; GFX11-NEXT:    v_lshrrev_b64 v[4:5], 1, v[6:7]
 ; GFX11-NEXT:    v_lshrrev_b64 v[2:3], 1, v[0:1]
-; GFX11-NEXT:    v_lshlrev_b32_e32 v9, 31, v0
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 31, v8
 ; GFX11-NEXT:    v_or_b32_e32 v1, v9, v5
 ; GFX11-NEXT:    v_or_b32_e32 v3, v0, v3

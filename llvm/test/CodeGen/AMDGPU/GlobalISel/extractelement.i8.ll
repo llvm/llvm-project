@@ -3089,16 +3089,16 @@ define amdgpu_ps i8 @extractelement_vgpr_v16i8_sgpr_idx(<16 x i8> addrspace(1)* 
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX11-NEXT:    s_movk_i32 s0, 0xff
-; GFX11-NEXT:    v_mov_b32_e32 v4, 0xff
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_bfe_u32 v9, v0, 8, 8
 ; GFX11-NEXT:    v_bfe_u32 v11, v1, 8, 8
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0xff
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v5, 24, v0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v6, 24, v1
+; GFX11-NEXT:    v_lshlrev_b32_e32 v9, 8, v9
 ; GFX11-NEXT:    v_bfe_u32 v10, v0, 16, 8
 ; GFX11-NEXT:    v_bfe_u32 v12, v1, 16, 8
 ; GFX11-NEXT:    v_bfe_u32 v13, v2, 8, 8
-; GFX11-NEXT:    v_lshlrev_b32_e32 v9, 8, v9
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v11, 8, v11
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v7, 24, v2
 ; GFX11-NEXT:    v_bfe_u32 v14, v2, 16, 8
@@ -3353,19 +3353,19 @@ define i8 @extractelement_vgpr_v16i8_vgpr_idx(<16 x i8> addrspace(1)* %ptr, i32 
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b128 v[3:6], v[0:1], off
 ; GFX11-NEXT:    s_movk_i32 s0, 0xff
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0xff
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 2, v2
 ; GFX11-NEXT:    v_and_b32_e32 v2, 3, v2
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_bfe_u32 v11, v3, 8, 8
 ; GFX11-NEXT:    v_bfe_u32 v13, v4, 8, 8
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0xff
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v7, 24, v3
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v8, 24, v4
+; GFX11-NEXT:    v_lshlrev_b32_e32 v11, 8, v11
 ; GFX11-NEXT:    v_bfe_u32 v12, v3, 16, 8
 ; GFX11-NEXT:    v_bfe_u32 v14, v4, 16, 8
 ; GFX11-NEXT:    v_bfe_u32 v15, v5, 8, 8
-; GFX11-NEXT:    v_lshlrev_b32_e32 v11, 8, v11
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v13, 8, v13
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v9, 24, v5
 ; GFX11-NEXT:    v_bfe_u32 v16, v5, 16, 8

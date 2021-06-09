@@ -724,13 +724,11 @@ define amdgpu_ps i128 @extractelement_sgpr_v4i128_vgpr_idx(<4 x i128> addrspace(
 ; GFX11-LABEL: extractelement_sgpr_v4i128_vgpr_idx:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_load_b512 s[4:19], s[2:3], 0x0
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
-; GFX11-NEXT:    v_add_nc_u32_e32 v1, 1, v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_dual_mov_b32 v3, s7 :: v_dual_lshlrev_b32 v0, 1, v0
+; GFX11-NEXT:    v_dual_mov_b32 v2, s6 :: v_dual_add_nc_u32 v1, 1, v0
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX11-NEXT:    v_cmp_eq_u32_e64 s0, 1, v1
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v2, s6
-; GFX11-NEXT:    v_mov_b32_e32 v3, s7
 ; GFX11-NEXT:    v_cndmask_b32_e32 v4, s4, v2, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e32 v5, s5, v3, vcc_lo
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 2, v0

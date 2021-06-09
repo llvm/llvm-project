@@ -51,9 +51,8 @@ define i64 @zextload_global_i1_to_i64(i1 addrspace(1)* %ptr) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off
-; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 1, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %load = load i1, i1 addrspace(1)* %ptr
   %ext = zext i1 %load to i64
