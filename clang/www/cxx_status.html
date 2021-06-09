@@ -90,12 +90,11 @@ each language mode.</p>
 
 <p>Clang 3.3 and later implement all of the <a
   href="https://www.iso.org/standard/50372.html">ISO
-  C++ 2011 standard</a>.
+  C++ 2011 standard</a>.</p>
 
-<p>By default, Clang builds C++ code according to the C++98 standard, with many
-C++11 features accepted as extensions. You can use Clang in C++11 mode with the
-<code>-std=c++11</code> option. Clang's C++11 mode can be used
-with <a href="https://libcxx.llvm.org/">libc++</a> or with gcc's libstdc++.
+<p>You can use Clang in C++11 mode with the <code>-std=c++11</code>
+option. Clang's C++11 mode can be used with
+<a href="https://libcxx.llvm.org/">libc++</a> or with gcc's libstdc++.</p>
 
 <details>
 <summary>List of features and minimum Clang version with support</summary>
@@ -497,9 +496,10 @@ change.</span>
 
 <p>Clang 3.4 and later implement all of the <a
     href="https://www.iso.org/standard/64029.html">ISO
-    C++ 2014 standard</a>.
+    C++ 2014 standard</a>.</p>
 
-<p>You can use Clang in C++14 mode with the <code>-std=c++14</code> option
+<p>By default, Clang builds C++ code according to the C++14 standard.
+You can use Clang in C++14 mode with the <code>-std=c++14</code> option
 (use <code>-std=c++1y</code> in Clang 3.4 and earlier).</p>
 
 <details>
@@ -591,7 +591,7 @@ version 3.7.
 <h2 id="cxx17">C++17 implementation status</h2>
 
 <p>Clang 5 and later implement all the features of the
-<a href="https://www.iso.org/standard/68564.html">ISO C++ 2017 standard</a>.
+<a href="https://www.iso.org/standard/68564.html">ISO C++ 2017 standard</a>.</p>
 
 <p>You can use Clang in C++17 mode with the <code>-std=c++17</code> option
 (use <code>-std=c++1z</code> in Clang 4 and earlier).</p>
@@ -856,7 +856,7 @@ code. This issue is expected to be rectified soon.
 <h2 id="cxx20">C++20 implementation status</h2>
 
 <p>Clang has support for some of the features of the
-<a href="https://www.iso.org/standard/79358.html">ISO C++ 2020 standard</a>.
+<a href="https://www.iso.org/standard/79358.html">ISO C++ 2020 standard</a>.</p>
 
 <p>You can use Clang in C++20 mode with the <code>-std=c++20</code> option
 (use <code>-std=c++2a</code> in Clang 9 and earlier).</p>
@@ -1253,7 +1253,7 @@ code. This issue is expected to be rectified soon.
 <h2 id="cxx23">C++2b implementation status</h2>
 
 <p>Clang has support for some of the features of the C++ standard following
-C++20, informally referred to as C++2b.
+C++20, informally referred to as C++2b.</p>
 
 <p>You can use Clang in C++2b mode with the <code>-std=c++2b</code> option.</p>
 
