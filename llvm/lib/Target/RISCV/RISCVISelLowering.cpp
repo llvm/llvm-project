@@ -1171,11 +1171,11 @@ static bool useRVVForFixedLengthVectorVT(MVT VT,
   if (!Subtarget.useRVVForFixedLengthVectors())
     return false;
 
-  // We only support a set of vector types with an equivalent number of
-  // elements to avoid legalization issues. Therefore -- since we don't have
-  // v512i8/v512i16/etc -- the longest fixed-length vector type we support has
-  // 256 elements.
-  if (VT.getVectorNumElements() > 256)
+  // We only support a set of vector types with a consistent maximum fixed size
+  // across all supported vector element types to avoid legalization issues.
+  // Therefore -- since the largest is v1024i8/v512i16/etc -- the largest
+  // fixed-length vector type we support is 1024 bytes.
+  if (VT.getFixedSizeInBits() > 1024 * 8)
     return false;
 
   unsigned MinVLen = Subtarget.getMinRVVVectorSizeInBits();
