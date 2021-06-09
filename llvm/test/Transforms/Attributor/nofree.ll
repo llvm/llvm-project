@@ -347,7 +347,7 @@ declare double @cos(double) nobuiltin nounwind nofree
 define noalias i32* @test13(i64* nocapture readonly %a) {
 ; CHECK: Function Attrs: nounwind
 ; CHECK-LABEL: define {{[^@]+}}@test13
-; CHECK-SAME: (i64* nocapture noundef nonnull readonly align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (i64* nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, i64* [[A]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @malloc(i64 [[TMP0]]) #[[ATTR2]]
