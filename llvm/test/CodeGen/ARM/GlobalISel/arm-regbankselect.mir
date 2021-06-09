@@ -400,8 +400,7 @@ selected:        false
 # CHECK: - { id: 2, class: gprb, preferred-register: '' }
 # CHECK: - { id: 3, class: gprb, preferred-register: '' }
 # CHECK: - { id: 4, class: gprb, preferred-register: '' }
-# CHECK: - { id: 5, class: gprb, preferred-register: '' }
-# CHECK: - { id: 6, class: fprb, preferred-register: '' }
+# CHECK: - { id: 5, class: fprb, preferred-register: '' }
 
 registers:
   - { id: 0, class: _ }
@@ -415,12 +414,11 @@ body:             |
   bb.0:
     liveins: $r0
     %0(p0) = COPY $r0
-    %6(s64) = G_LOAD %0 :: (load (s64))
+    %5(s64) = G_LOAD %0 :: (load (s64))
     %1(s32) = G_LOAD %0 :: (load (s32))
     %2(s16) = G_LOAD %0 :: (load (s16))
     %3(s8)  = G_LOAD %0 :: (load (s8))
-    %4(s1)  = G_LOAD %0 :: (load (s1))
-    %5(p0)  = G_LOAD %0 :: (load (p0))
+    %4(p0)  = G_LOAD %0 :: (load (p0))
     BX_RET 14, $noreg, implicit $r0
 
 ...
@@ -435,10 +433,7 @@ selected:        false
 # CHECK: - { id: 1, class: gprb, preferred-register: '' }
 # CHECK: - { id: 2, class: gprb, preferred-register: '' }
 # CHECK: - { id: 3, class: gprb, preferred-register: '' }
-# CHECK: - { id: 4, class: gprb, preferred-register: '' }
-# CHECK: - { id: 5, class: gprb, preferred-register: '' }
-# CHECK: - { id: 6, class: fprb, preferred-register: '' }
-
+# CHECK: - { id: 4, class: fprb, preferred-register: '' }
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -457,12 +452,8 @@ body:             |
     G_STORE %2(s16), %0 :: (store (s16))
     %3(s8) = G_TRUNC %1(s32)
     G_STORE %3(s8), %0 :: (store (s8))
-    %4(s1) = G_TRUNC %1(s32)
-    G_STORE %4(s1), %0 :: (store (s1))
-    %5(p0) = COPY $r5
-    G_STORE %5(p0), %0 :: (store (p0))
-    %6(s64) = COPY $d6
-    G_STORE %6(s64), %0 :: (store (s64))
+    %4(s64) = COPY $d6
+    G_STORE %4(s64), %0 :: (store (s64))
     BX_RET 14, $noreg, implicit $r0
 
 ...

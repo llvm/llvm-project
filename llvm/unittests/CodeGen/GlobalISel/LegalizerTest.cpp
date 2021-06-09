@@ -31,10 +31,11 @@ namespace {
 
 DefineLegalizerInfo(ALegalizer, {
   auto p0 = LLT::pointer(0, 64);
+  auto s8 = LLT::scalar(8);
   auto v2s8 = LLT::fixed_vector(2, 8);
   auto v2s16 = LLT::fixed_vector(2, 16);
   getActionDefinitionsBuilder(G_LOAD)
-      .legalForTypesWithMemDesc({{s16, p0, 8, 8}})
+      .legalForTypesWithMemDesc({{s16, p0, s8, 8}})
       .scalarize(0)
       .clampScalar(0, s16, s16);
   getActionDefinitionsBuilder(G_PTR_ADD).legalFor({{p0, s64}});

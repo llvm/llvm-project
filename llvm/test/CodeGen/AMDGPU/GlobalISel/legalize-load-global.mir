@@ -19,42 +19,42 @@ body: |
 
     ; SI-LABEL: name: test_load_global_s1_align1
     ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; SI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s1), addrspace 1)
+    ; SI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; SI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; SI: $vgpr0 = COPY [[AND]](s32)
     ; CI-HSA-LABEL: name: test_load_global_s1_align1
     ; CI-HSA: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; CI-HSA: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s1), addrspace 1)
+    ; CI-HSA: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; CI-HSA: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CI-HSA: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; CI-HSA: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; CI-HSA: $vgpr0 = COPY [[AND]](s32)
     ; CI-MESA-LABEL: name: test_load_global_s1_align1
     ; CI-MESA: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; CI-MESA: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s1), addrspace 1)
+    ; CI-MESA: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; CI-MESA: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CI-MESA: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; CI-MESA: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; CI-MESA: $vgpr0 = COPY [[AND]](s32)
     ; VI-LABEL: name: test_load_global_s1_align1
     ; VI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s1), addrspace 1)
+    ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; VI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; VI: $vgpr0 = COPY [[AND]](s32)
     ; GFX9-HSA-LABEL: name: test_load_global_s1_align1
     ; GFX9-HSA: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX9-HSA: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s1), addrspace 1)
+    ; GFX9-HSA: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; GFX9-HSA: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX9-HSA: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; GFX9-HSA: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; GFX9-HSA: $vgpr0 = COPY [[AND]](s32)
     ; GFX9-MESA-LABEL: name: test_load_global_s1_align1
     ; GFX9-MESA: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX9-MESA: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s1), addrspace 1)
+    ; GFX9-MESA: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; GFX9-MESA: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX9-MESA: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; GFX9-MESA: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
@@ -73,42 +73,42 @@ body: |
 
     ; SI-LABEL: name: test_load_global_s2_align1
     ; SI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; SI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s2), addrspace 1)
+    ; SI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; SI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
     ; SI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; SI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; SI: $vgpr0 = COPY [[AND]](s32)
     ; CI-HSA-LABEL: name: test_load_global_s2_align1
     ; CI-HSA: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; CI-HSA: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s2), addrspace 1)
+    ; CI-HSA: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; CI-HSA: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
     ; CI-HSA: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; CI-HSA: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; CI-HSA: $vgpr0 = COPY [[AND]](s32)
     ; CI-MESA-LABEL: name: test_load_global_s2_align1
     ; CI-MESA: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; CI-MESA: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s2), addrspace 1)
+    ; CI-MESA: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; CI-MESA: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
     ; CI-MESA: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; CI-MESA: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; CI-MESA: $vgpr0 = COPY [[AND]](s32)
     ; VI-LABEL: name: test_load_global_s2_align1
     ; VI: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s2), addrspace 1)
+    ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; VI: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
     ; VI: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; VI: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; VI: $vgpr0 = COPY [[AND]](s32)
     ; GFX9-HSA-LABEL: name: test_load_global_s2_align1
     ; GFX9-HSA: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX9-HSA: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s2), addrspace 1)
+    ; GFX9-HSA: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; GFX9-HSA: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
     ; GFX9-HSA: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; GFX9-HSA: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
     ; GFX9-HSA: $vgpr0 = COPY [[AND]](s32)
     ; GFX9-MESA-LABEL: name: test_load_global_s2_align1
     ; GFX9-MESA: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; GFX9-MESA: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s2), addrspace 1)
+    ; GFX9-MESA: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; GFX9-MESA: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
     ; GFX9-MESA: [[COPY1:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
     ; GFX9-MESA: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
