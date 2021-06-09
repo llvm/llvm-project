@@ -101,8 +101,6 @@ public:
     return make_range(begin_objects(), end_objects());
   }
 
-  const MachO::InterfaceFile &getInterfaceFile() { return *ParsedFile; }
-
   uint32_t getNumberOfObjects() const { return Libraries.size(); }
 
   static bool classof(const Binary *v) { return v->isTapiUniversal(); }

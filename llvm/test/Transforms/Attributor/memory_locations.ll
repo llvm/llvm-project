@@ -178,7 +178,7 @@ return:                                           ; preds = %if.end, %if.then
 define dso_local i8* @internal_argmem_only_read(i32* %arg) {
 ; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
 ; CHECK-LABEL: define {{[^@]+}}@internal_argmem_only_read
-; CHECK-SAME: (i32* nocapture noundef nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* [[ARG]], align 4
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP]] to i64
@@ -195,7 +195,7 @@ entry:
 define dso_local i8* @internal_argmem_only_write(i32* %arg) {
 ; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
 ; CHECK-LABEL: define {{[^@]+}}@internal_argmem_only_write
-; CHECK-SAME: (i32* nocapture noundef nonnull writeonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 10, i32* [[ARG]], align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = call noalias dereferenceable_or_null(10) i8* @malloc(i64 noundef 10)
@@ -210,16 +210,16 @@ entry:
 define dso_local i8* @internal_argmem_only_rec(i32* %arg) {
 ; IS__TUNIT____: Function Attrs: inaccessiblemem_or_argmemonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@internal_argmem_only_rec
-; IS__TUNIT____-SAME: (i32* nocapture [[ARG:%.*]]) #[[ATTR1]] {
+; IS__TUNIT____-SAME: (i32* nocapture nofree [[ARG:%.*]]) #[[ATTR1]] {
 ; IS__TUNIT____-NEXT:  entry:
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_argmem_only_rec_1(i32* nocapture align 4 [[ARG]])
+; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_argmem_only_rec_1(i32* nocapture nofree align 4 [[ARG]])
 ; IS__TUNIT____-NEXT:    ret i8* [[CALL]]
 ;
 ; IS__CGSCC____: Function Attrs: inaccessiblemem_or_argmemonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@internal_argmem_only_rec
-; IS__CGSCC____-SAME: (i32* nocapture noundef nonnull align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
+; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC____-NEXT:  entry:
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_argmem_only_rec_1(i32* nocapture noundef nonnull align 4 dereferenceable(4) [[ARG]])
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_argmem_only_rec_1(i32* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[ARG]])
 ; IS__CGSCC____-NEXT:    ret i8* [[CALL]]
 ;
 entry:
@@ -230,7 +230,7 @@ entry:
 define internal i8* @internal_argmem_only_rec_1(i32* %arg) {
 ; IS__TUNIT____: Function Attrs: inaccessiblemem_or_argmemonly
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@internal_argmem_only_rec_1
-; IS__TUNIT____-SAME: (i32* nocapture noundef nonnull align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
+; IS__TUNIT____-SAME: (i32* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
 ; IS__TUNIT____-NEXT:  entry:
 ; IS__TUNIT____-NEXT:    [[TMP:%.*]] = load i32, i32* [[ARG]], align 4
 ; IS__TUNIT____-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP]], 0
@@ -243,7 +243,7 @@ define internal i8* @internal_argmem_only_rec_1(i32* %arg) {
 ; IS__TUNIT____-NEXT:    br i1 [[CMP1]], label [[IF_THEN2:%.*]], label [[IF_END3:%.*]]
 ; IS__TUNIT____:       if.then2:
 ; IS__TUNIT____-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARG]], i64 -1
-; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_argmem_only_rec_2(i32* nocapture nonnull align 4 dereferenceable(4) [[ADD_PTR]])
+; IS__TUNIT____-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_argmem_only_rec_2(i32* nocapture nofree nonnull align 4 dereferenceable(4) [[ADD_PTR]])
 ; IS__TUNIT____-NEXT:    br label [[RETURN]]
 ; IS__TUNIT____:       if.end3:
 ; IS__TUNIT____-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARG]], align 4
@@ -256,7 +256,7 @@ define internal i8* @internal_argmem_only_rec_1(i32* %arg) {
 ;
 ; IS__CGSCC____: Function Attrs: inaccessiblemem_or_argmemonly
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@internal_argmem_only_rec_1
-; IS__CGSCC____-SAME: (i32* nocapture noundef nonnull align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
+; IS__CGSCC____-SAME: (i32* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[TMP:%.*]] = load i32, i32* [[ARG]], align 4
 ; IS__CGSCC____-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP]], 0
@@ -269,7 +269,7 @@ define internal i8* @internal_argmem_only_rec_1(i32* %arg) {
 ; IS__CGSCC____-NEXT:    br i1 [[CMP1]], label [[IF_THEN2:%.*]], label [[IF_END3:%.*]]
 ; IS__CGSCC____:       if.then2:
 ; IS__CGSCC____-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARG]], i64 -1
-; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_argmem_only_rec_2(i32* nocapture noundef nonnull align 4 dereferenceable(4) [[ADD_PTR]])
+; IS__CGSCC____-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_argmem_only_rec_2(i32* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[ADD_PTR]])
 ; IS__CGSCC____-NEXT:    br label [[RETURN]]
 ; IS__CGSCC____:       if.end3:
 ; IS__CGSCC____-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARG]], align 4
@@ -312,11 +312,11 @@ return:                                           ; preds = %if.end3, %if.then2,
 define internal i8* @internal_argmem_only_rec_2(i32* %arg) {
 ; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
 ; CHECK-LABEL: define {{[^@]+}}@internal_argmem_only_rec_2
-; CHECK-SAME: (i32* nocapture noundef nonnull align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (i32* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 0, i32* [[ARG]], align 4
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, i32* [[ARG]], i64 -1
-; CHECK-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_argmem_only_rec_1(i32* nocapture nonnull align 4 dereferenceable(4) [[ADD_PTR]])
+; CHECK-NEXT:    [[CALL:%.*]] = call noalias i8* @internal_argmem_only_rec_1(i32* nocapture nofree nonnull align 4 dereferenceable(4) [[ADD_PTR]])
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
 entry:

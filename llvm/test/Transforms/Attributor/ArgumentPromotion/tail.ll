@@ -52,19 +52,28 @@ define void @zed(%pair* byval(%pair) %Data) {
 ; IS__TUNIT_OPM-NEXT:    call void @bar(%pair* noalias nocapture nonnull readonly byval([[PAIR]]) dereferenceable(8) [[DATA]])
 ; IS__TUNIT_OPM-NEXT:    ret void
 ;
-; IS________NPM-LABEL: define {{[^@]+}}@zed
-; IS________NPM-SAME: (%pair* noalias nocapture nonnull readonly byval([[PAIR:%.*]]) dereferenceable(8) [[DATA:%.*]]) {
-; IS________NPM-NEXT:    [[DATA_CAST:%.*]] = bitcast %pair* [[DATA]] to i32*
-; IS________NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[DATA_CAST]], align 1
-; IS________NPM-NEXT:    [[DATA_0_1:%.*]] = getelementptr [[PAIR]], %pair* [[DATA]], i32 0, i32 1
-; IS________NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DATA_0_1]], align 1
-; IS________NPM-NEXT:    call void @bar(i32 [[TMP1]], i32 [[TMP2]])
-; IS________NPM-NEXT:    ret void
+; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@zed
+; IS__TUNIT_NPM-SAME: (%pair* noalias nocapture nonnull readonly byval([[PAIR:%.*]]) dereferenceable(8) [[DATA:%.*]]) {
+; IS__TUNIT_NPM-NEXT:    [[DATA_CAST:%.*]] = bitcast %pair* [[DATA]] to i32*
+; IS__TUNIT_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[DATA_CAST]], align 1
+; IS__TUNIT_NPM-NEXT:    [[DATA_0_1:%.*]] = getelementptr [[PAIR]], %pair* [[DATA]], i32 0, i32 1
+; IS__TUNIT_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DATA_0_1]], align 1
+; IS__TUNIT_NPM-NEXT:    call void @bar(i32 [[TMP1]], i32 [[TMP2]])
+; IS__TUNIT_NPM-NEXT:    ret void
 ;
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@zed
 ; IS__CGSCC_OPM-SAME: (%pair* noalias nocapture noundef nonnull readonly byval([[PAIR:%.*]]) dereferenceable(8) [[DATA:%.*]]) {
 ; IS__CGSCC_OPM-NEXT:    call void @bar(%pair* noalias nocapture noundef nonnull readonly byval([[PAIR]]) dereferenceable(8) [[DATA]])
 ; IS__CGSCC_OPM-NEXT:    ret void
+;
+; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@zed
+; IS__CGSCC_NPM-SAME: (%pair* noalias nocapture nofree nonnull readonly byval([[PAIR:%.*]]) dereferenceable(8) [[DATA:%.*]]) {
+; IS__CGSCC_NPM-NEXT:    [[DATA_CAST:%.*]] = bitcast %pair* [[DATA]] to i32*
+; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = load i32, i32* [[DATA_CAST]], align 1
+; IS__CGSCC_NPM-NEXT:    [[DATA_0_1:%.*]] = getelementptr [[PAIR]], %pair* [[DATA]], i32 0, i32 1
+; IS__CGSCC_NPM-NEXT:    [[TMP2:%.*]] = load i32, i32* [[DATA_0_1]], align 1
+; IS__CGSCC_NPM-NEXT:    call void @bar(i32 [[TMP1]], i32 [[TMP2]])
+; IS__CGSCC_NPM-NEXT:    ret void
 ;
   call void @bar(%pair* byval(%pair) %Data)
   ret void

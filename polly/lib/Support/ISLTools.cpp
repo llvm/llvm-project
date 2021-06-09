@@ -176,13 +176,18 @@ isl::space polly::getScatterSpace(const isl::union_map &Schedule) {
   return ScatterSpace.add_dims(isl::dim::set, Dims);
 }
 
+isl::map polly::makeIdentityMap(const isl::set &Set, bool RestrictDomain) {
+  isl::map Result = isl::map::identity(Set.get_space().map_from_set());
+  if (RestrictDomain)
+    Result = Result.intersect_domain(Set);
+  return Result;
+}
+
 isl::union_map polly::makeIdentityMap(const isl::union_set &USet,
                                       bool RestrictDomain) {
   isl::union_map Result = isl::union_map::empty(USet.get_space());
   for (isl::set Set : USet.get_set_list()) {
-    isl::map IdentityMap = isl::map::identity(Set.get_space().map_from_set());
-    if (RestrictDomain)
-      IdentityMap = IdentityMap.intersect_domain(Set);
+    isl::map IdentityMap = makeIdentityMap(Set, RestrictDomain);
     Result = Result.add_map(IdentityMap);
   }
   return Result;
