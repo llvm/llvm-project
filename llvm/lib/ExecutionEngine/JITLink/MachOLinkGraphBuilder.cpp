@@ -655,9 +655,20 @@ Error MachOLinkGraphBuilder::graphifyCStringSection(
                << " for \"" << StringRef(B.getContent().data()) << "\"\n";
       });
 
-      // Process any symbols that point into this block.
-      JITTargetAddress LastCanonicalAddr = BlockEnd;
-      Symbol *BlockStartSymbol = nullptr;
+      // If there's no symbol at the start of this block then create one.
+      if (NSyms.empty() || NSyms.back()->Value != B.getAddress()) {
+        auto &S = G->addAnonymousSymbol(B, 0, BlockSize, false, false);
+        setCanonicalSymbol(S);
+        LLVM_DEBUG({
+          dbgs() << "      Adding anonymous symbol for c-string block "
+                 << formatv("{0:x16} -- {1:x16}", S.getAddress(),
+                            S.getAddress() + BlockSize)
+                 << "\n";
+        });
+      }
+
+      // Process any remaining symbols that point into this block.
+      JITTargetAddress LastCanonicalAddr = B.getAddress() + BlockEnd;
       while (!NSyms.empty() &&
              NSyms.back()->Value < (B.getAddress() + BlockSize)) {
         auto &NSym = *NSyms.back();
@@ -665,25 +676,16 @@ Error MachOLinkGraphBuilder::graphifyCStringSection(
         bool SymLive =
             (NSym.Desc & MachO::N_NO_DEAD_STRIP) || SectionIsNoDeadStrip;
 
-        auto &S =
-            createStandardGraphSymbol(NSym, B, SymSize, SectionIsText, SymLive,
-                                      NSym.Value != LastCanonicalAddr);
+        bool IsCanonical = false;
+        if (LastCanonicalAddr != NSym.Value) {
+          IsCanonical = true;
+          LastCanonicalAddr = NSym.Value;
+        }
 
-        if (S.getAddress() == B.getAddress() && !BlockStartSymbol)
-          BlockStartSymbol = &S;
+        createStandardGraphSymbol(NSym, B, SymSize, SectionIsText, SymLive,
+                                  IsCanonical);
 
         NSyms.pop_back();
-      }
-
-      if (!BlockStartSymbol) {
-        auto &S = G->addAnonymousSymbol(B, 0, BlockSize, false, false);
-        setCanonicalSymbol(S);
-        LLVM_DEBUG({
-          dbgs() << "      Adding anonymous symbol for "
-                 << formatv("{0:x16} -- {1:x16}", S.getAddress(),
-                            S.getAddress() + BlockSize)
-                 << "\n";
-        });
       }
 
       BlockStart += BlockSize;
