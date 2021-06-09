@@ -121,7 +121,15 @@ Where:
       ============= ==============================================================
 
 **target-triple**
-  The target triple of the code object.
+    The target triple of the code object:
+
+.. code::
+
+  <Architecture>-<Vendor>-<OS>-<Environment>
+
+It is required to have all four components present, if target-id is present.
+Components are hyphen separated. If a component is not specified then the
+empty string must be used in its place.
 
 **target-id**
   The canonical target ID of the code object. Present only if the target
