@@ -2219,9 +2219,7 @@ protected:
 
 class ValueObjectListDelegate : public WindowDelegate {
 public:
-  ValueObjectListDelegate()
-      : m_rows(), m_selected_row(nullptr), m_selected_row_idx(0),
-        m_first_visible_row(0), m_num_rows(0), m_max_x(0), m_max_y(0) {}
+  ValueObjectListDelegate() : m_rows() {}
 
   ValueObjectListDelegate(ValueObjectList &valobj_list)
       : m_rows(), m_selected_row(nullptr), m_selected_row_idx(0),
@@ -2409,14 +2407,14 @@ public:
 
 protected:
   std::vector<Row> m_rows;
-  Row *m_selected_row;
-  uint32_t m_selected_row_idx;
-  uint32_t m_first_visible_row;
-  uint32_t m_num_rows;
+  Row *m_selected_row = nullptr;
+  uint32_t m_selected_row_idx = 0;
+  uint32_t m_first_visible_row = 0;
+  uint32_t m_num_rows = 0;
   int m_min_x;
   int m_min_y;
-  int m_max_x;
-  int m_max_y;
+  int m_max_x = 0;
+  int m_max_y = 0;
 
   static Format FormatForChar(int c) {
     switch (c) {

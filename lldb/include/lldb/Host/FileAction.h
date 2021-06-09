@@ -46,9 +46,9 @@ public:
   void Dump(Stream &stream) const;
 
 protected:
-  Action m_action; // The action for this file
-  int m_fd;        // An existing file descriptor
-  int m_arg; // oflag for eFileActionOpen*, dup_fd for eFileActionDuplicate
+  Action m_action = eFileActionNone; // The action for this file
+  int m_fd = -1;                     // An existing file descriptor
+  int m_arg = -1; // oflag for eFileActionOpen*, dup_fd for eFileActionDuplicate
   FileSpec
       m_file_spec; // A file spec to use for opening after fork or posix_spawn
 };

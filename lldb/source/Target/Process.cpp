@@ -3843,9 +3843,7 @@ thread_result_t Process::RunPrivateStateThread(bool is_secondary_thread) {
 
 // Process Event Data
 
-Process::ProcessEventData::ProcessEventData()
-    : EventData(), m_process_wp(), m_state(eStateInvalid), m_restarted(false),
-      m_update_state(0), m_interrupted(false) {}
+Process::ProcessEventData::ProcessEventData() : EventData(), m_process_wp() {}
 
 Process::ProcessEventData::ProcessEventData(const ProcessSP &process_sp,
                                             StateType state)

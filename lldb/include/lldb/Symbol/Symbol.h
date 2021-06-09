@@ -233,8 +233,9 @@ protected:
       lldb_private::ModuleSpec &module_spec,
       lldb_private::ModuleList &seen_modules) const;
 
-  uint32_t m_uid;       // User ID (usually the original symbol table index)
-  uint16_t m_type_data; // data specific to m_type
+  uint32_t m_uid =
+      UINT32_MAX;           // User ID (usually the original symbol table index)
+  uint16_t m_type_data = 0; // data specific to m_type
   uint16_t m_type_data_resolved : 1, // True if the data in m_type_data has
                                      // already been calculated
       m_is_synthetic : 1, // non-zero if this symbol is not actually in the
@@ -261,8 +262,8 @@ protected:
   AddressRange m_addr_range; // Contains the value, or the section offset
                              // address when the value is an address in a
                              // section, and the size (if any)
-  uint32_t m_flags; // A copy of the flags from the original symbol table, the
-                    // ObjectFile plug-in can interpret these
+  uint32_t m_flags = 0; // A copy of the flags from the original symbol table,
+                        // the ObjectFile plug-in can interpret these
 };
 
 } // namespace lldb_private

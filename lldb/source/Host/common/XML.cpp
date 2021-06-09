@@ -17,7 +17,7 @@ using namespace lldb_private;
 
 #pragma mark-- XMLDocument
 
-XMLDocument::XMLDocument() : m_document(nullptr) {}
+XMLDocument::XMLDocument() {}
 
 XMLDocument::~XMLDocument() { Clear(); }
 
@@ -91,7 +91,7 @@ bool XMLDocument::XMLEnabled() {
 
 #pragma mark-- XMLNode
 
-XMLNode::XMLNode() : m_node(nullptr) {}
+XMLNode::XMLNode() {}
 
 XMLNode::XMLNode(XMLNodeImpl node) : m_node(node) {}
 

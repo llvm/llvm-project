@@ -79,7 +79,7 @@ protected:
 
 private:
   mutable lldb::EventSP m_event_sp;
-  mutable lldb_private::Event *m_opaque_ptr;
+  mutable lldb_private::Event *m_opaque_ptr = nullptr;
 };
 
 } // namespace lldb

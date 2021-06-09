@@ -37,7 +37,7 @@ class raw_ostream;
 using namespace lldb;
 using namespace lldb_private;
 
-Status::Status() : m_code(0), m_type(eErrorTypeInvalid), m_string() {}
+Status::Status() : m_string() {}
 
 Status::Status(ValueType err, ErrorType type)
     : m_code(err), m_type(type), m_string() {}

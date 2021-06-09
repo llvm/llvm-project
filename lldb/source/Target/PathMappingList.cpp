@@ -37,8 +37,7 @@ namespace {
   }
 }
 // PathMappingList constructor
-PathMappingList::PathMappingList()
-    : m_pairs(), m_callback(nullptr), m_callback_baton(nullptr), m_mod_id(0) {}
+PathMappingList::PathMappingList() : m_pairs() {}
 
 PathMappingList::PathMappingList(ChangedCallback callback, void *callback_baton)
     : m_pairs(), m_callback(callback), m_callback_baton(callback_baton),

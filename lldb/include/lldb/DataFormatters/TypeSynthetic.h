@@ -133,7 +133,7 @@ class SyntheticChildren {
 public:
   class Flags {
   public:
-    Flags() : m_flags(lldb::eTypeOptionCascade) {}
+    Flags() {}
 
     Flags(const Flags &other) : m_flags(other.m_flags) {}
 
@@ -225,7 +225,7 @@ public:
     void SetValue(uint32_t value) { m_flags = value; }
 
   private:
-    uint32_t m_flags;
+    uint32_t m_flags = lldb::eTypeOptionCascade;
   };
 
   SyntheticChildren(const Flags &flags) : m_flags(flags) {}
