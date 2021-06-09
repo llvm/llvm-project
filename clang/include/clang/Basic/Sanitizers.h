@@ -16,7 +16,6 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include <cassert>
 #include <cstdint>
@@ -60,12 +59,7 @@ public:
     return SanitizerMask(mask1, mask2);
   }
 
-  unsigned countPopulation() const {
-    unsigned total = 0;
-    for (const auto &Val : maskLoToHigh)
-      total += llvm::countPopulation(Val);
-    return total;
-  }
+  unsigned countPopulation() const;
 
   void flipAllBits() {
     for (auto &Val : maskLoToHigh)
