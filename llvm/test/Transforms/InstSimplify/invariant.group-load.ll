@@ -9,7 +9,11 @@ declare i8* @llvm.launder.invariant.group.p0i8(i8* %p)
 
 define i64 @f() {
 ; CHECK-LABEL: @f(
-; CHECK-NEXT:    ret i64 3
+; CHECK-NEXT:    [[A:%.*]] = call i8* @llvm.strip.invariant.group.p0i8(i8* bitcast ({ i64, i64 }* @A to i8*))
+; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, i8* [[A]], i32 8
+; CHECK-NEXT:    [[C:%.*]] = bitcast i8* [[B]] to i64*
+; CHECK-NEXT:    [[D:%.*]] = load i64, i64* [[C]], align 4
+; CHECK-NEXT:    ret i64 [[D]]
 ;
   %p = bitcast { i64, i64 }* @A to i8*
   %a = call i8* @llvm.strip.invariant.group.p0i8(i8* %p)
@@ -21,7 +25,11 @@ define i64 @f() {
 
 define i64 @g() {
 ; CHECK-LABEL: @g(
-; CHECK-NEXT:    ret i64 3
+; CHECK-NEXT:    [[A:%.*]] = call i8* @llvm.launder.invariant.group.p0i8(i8* bitcast ({ i64, i64 }* @A to i8*))
+; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, i8* [[A]], i32 8
+; CHECK-NEXT:    [[C:%.*]] = bitcast i8* [[B]] to i64*
+; CHECK-NEXT:    [[D:%.*]] = load i64, i64* [[C]], align 4
+; CHECK-NEXT:    ret i64 [[D]]
 ;
   %p = bitcast { i64, i64 }* @A to i8*
   %a = call i8* @llvm.launder.invariant.group.p0i8(i8* %p)
