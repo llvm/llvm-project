@@ -14,7 +14,7 @@ define zeroext i1 @opeq1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[S]], %S* [[B:%.*]], i64 0, i32 0
 ; CHECK-NEXT:    [[CSTR:%.*]] = bitcast i32* [[TMP0]] to i8*
 ; CHECK-NEXT:    [[CSTR3:%.*]] = bitcast i32* [[TMP1]] to i8*
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* [[CSTR]], i8* [[CSTR3]], i64 8)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture [[CSTR]], i8* nocapture [[CSTR3]], i64 8) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[ENTRY2:%.*]], label [[OPEQ1_EXIT:%.*]]
 ; CHECK:       entry2:

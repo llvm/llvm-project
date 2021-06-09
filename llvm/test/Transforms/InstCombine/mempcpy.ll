@@ -13,7 +13,7 @@ define i8* @memcpy_nonconst_n(i8* %d, i8* nocapture readonly %s, i64 %n) {
 
 define i8* @memcpy_nonconst_n_copy_attrs(i8* %d, i8* nocapture readonly %s, i64 %n) {
 ; CHECK-LABEL: @memcpy_nonconst_n_copy_attrs(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 dereferenceable(16) [[D:%.*]], i8* align 1 [[S:%.*]], i64 [[N:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 [[D:%.*]], i8* align 1 [[S:%.*]], i64 [[N:%.*]], i1 false)
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, i8* [[D]], i64 [[N]]
 ; CHECK-NEXT:    ret i8* [[TMP1]]
 ;

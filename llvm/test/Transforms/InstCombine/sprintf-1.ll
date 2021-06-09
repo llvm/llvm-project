@@ -69,7 +69,7 @@ define void @test_simplify4(i8* %dst) {
 
 define void @test_simplify5(i8* %dst, i8* %str) {
 ; CHECK-LABEL: @test_simplify5(
-; CHECK-NEXT:    [[STRCPY:%.*]] = call i8* @strcpy(i8* noundef nonnull dereferenceable(1) [[DST:%.*]], i8* noundef nonnull dereferenceable(1) [[STR:%.*]])
+; CHECK-NEXT:    [[STRCPY:%.*]] = call i8* @strcpy(i8* noalias noundef nonnull returned writeonly dereferenceable(1) [[DST:%.*]], i8* noalias nocapture noundef nonnull readonly dereferenceable(1) [[STR:%.*]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %fmt = getelementptr [3 x i8], [3 x i8]* @percent_s, i32 0, i32 0
@@ -97,14 +97,14 @@ define void @test_simplify6(i8* %dst) {
 
 define i32 @test_simplify7(i8* %dst, i8* %str) {
 ; CHECK-IPRINTF-LABEL: @test_simplify7(
-; CHECK-IPRINTF-NEXT:    [[STPCPY:%.*]] = call i8* @stpcpy(i8* [[DST:%.*]], i8* [[STR:%.*]])
+; CHECK-IPRINTF-NEXT:    [[STPCPY:%.*]] = call i8* @stpcpy(i8* noalias writeonly [[DST:%.*]], i8* noalias nocapture readonly [[STR:%.*]]) #[[ATTR1]]
 ; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = ptrtoint i8* [[STPCPY]] to i32
 ; CHECK-IPRINTF-NEXT:    [[TMP2:%.*]] = ptrtoint i8* [[DST]] to i32
 ; CHECK-IPRINTF-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP1]], [[TMP2]]
 ; CHECK-IPRINTF-NEXT:    ret i32 [[TMP3]]
 ;
 ; WIN-LABEL: @test_simplify7(
-; WIN-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(i8* noundef nonnull dereferenceable(1) [[STR:%.*]])
+; WIN-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(i8* nocapture noundef nonnull dereferenceable(1) [[STR:%.*]]) #[[ATTR2:[0-9]+]]
 ; WIN-NEXT:    [[LENINC:%.*]] = add i32 [[STRLEN]], 1
 ; WIN-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[DST:%.*]], i8* align 1 [[STR]], i32 [[LENINC]], i1 false)
 ; WIN-NEXT:    ret i32 [[STRLEN]]
@@ -130,14 +130,14 @@ define i32 @test_simplify8(i8* %dst) {
 
 define i32 @test_simplify9(i8* %dst, i8* %str) {
 ; CHECK-IPRINTF-LABEL: @test_simplify9(
-; CHECK-IPRINTF-NEXT:    [[STPCPY:%.*]] = call i8* @stpcpy(i8* [[DST:%.*]], i8* [[STR:%.*]])
+; CHECK-IPRINTF-NEXT:    [[STPCPY:%.*]] = call i8* @stpcpy(i8* noalias writeonly [[DST:%.*]], i8* noalias nocapture readonly [[STR:%.*]]) #[[ATTR1]]
 ; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = ptrtoint i8* [[STPCPY]] to i32
 ; CHECK-IPRINTF-NEXT:    [[TMP2:%.*]] = ptrtoint i8* [[DST]] to i32
 ; CHECK-IPRINTF-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP1]], [[TMP2]]
 ; CHECK-IPRINTF-NEXT:    ret i32 [[TMP3]]
 ;
 ; WIN-LABEL: @test_simplify9(
-; WIN-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(i8* noundef nonnull dereferenceable(1) [[STR:%.*]])
+; WIN-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(i8* nocapture noundef nonnull dereferenceable(1) [[STR:%.*]]) #[[ATTR2]]
 ; WIN-NEXT:    [[LENINC:%.*]] = add i32 [[STRLEN]], 1
 ; WIN-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[DST:%.*]], i8* align 1 [[STR]], i32 [[LENINC]], i1 false)
 ; WIN-NEXT:    ret i32 [[STRLEN]]
@@ -168,7 +168,7 @@ define void @test_no_simplify2(i8* %dst, i8* %fmt, double %d) {
 
 define i32 @test_no_simplify3(i8* %dst, i8* %str) minsize {
 ; CHECK-IPRINTF-LABEL: @test_no_simplify3(
-; CHECK-IPRINTF-NEXT:    [[STPCPY:%.*]] = call i8* @stpcpy(i8* [[DST:%.*]], i8* [[STR:%.*]])
+; CHECK-IPRINTF-NEXT:    [[STPCPY:%.*]] = call i8* @stpcpy(i8* noalias writeonly [[DST:%.*]], i8* noalias nocapture readonly [[STR:%.*]]) #[[ATTR1]]
 ; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = ptrtoint i8* [[STPCPY]] to i32
 ; CHECK-IPRINTF-NEXT:    [[TMP2:%.*]] = ptrtoint i8* [[DST]] to i32
 ; CHECK-IPRINTF-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP1]], [[TMP2]]

@@ -29,7 +29,7 @@ define double @fdiv_strict_cos_strict_sin_reassoc(double %a) {
 
 define double @fdiv_reassoc_cos_strict_sin_strict(double %a, i32* dereferenceable(2) %dummy) {
 ; CHECK-LABEL: @fdiv_reassoc_cos_strict_sin_strict(
-; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @tan(double [[A:%.*]]) #1
+; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @tan(double [[A:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv reassoc double 1.000000e+00, [[TAN]]
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
@@ -41,7 +41,7 @@ define double @fdiv_reassoc_cos_strict_sin_strict(double %a, i32* dereferenceabl
 
 define double @fdiv_reassoc_cos_reassoc_sin_strict(double %a) {
 ; CHECK-LABEL: @fdiv_reassoc_cos_reassoc_sin_strict(
-; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @tan(double [[A:%.*]]) #1
+; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @tan(double [[A:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv reassoc double 1.000000e+00, [[TAN]]
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
@@ -68,7 +68,7 @@ define double @fdiv_cos_sin_reassoc_multiple_uses(double %a) {
 
 define double @fdiv_cos_sin_reassoc(double %a) {
 ; CHECK-LABEL: @fdiv_cos_sin_reassoc(
-; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @tan(double [[A:%.*]]) #1
+; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @tan(double [[A:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv reassoc double 1.000000e+00, [[TAN]]
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
@@ -93,7 +93,7 @@ define half @fdiv_cosf16_sinf16_reassoc(half %a) {
 
 define float @fdiv_cosf_sinf_reassoc(float %a) {
 ; CHECK-LABEL: @fdiv_cosf_sinf_reassoc(
-; CHECK-NEXT:    [[TANF:%.*]] = call reassoc float @tanf(float [[A:%.*]]) #1
+; CHECK-NEXT:    [[TANF:%.*]] = call reassoc float @tanf(float [[A:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv reassoc float 1.000000e+00, [[TANF]]
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
@@ -105,7 +105,7 @@ define float @fdiv_cosf_sinf_reassoc(float %a) {
 
 define fp128 @fdiv_cosfp128_sinfp128_reassoc(fp128 %a) {
 ; CHECK-LABEL: @fdiv_cosfp128_sinfp128_reassoc(
-; CHECK-NEXT:    [[TANL:%.*]] = call reassoc fp128 @tanl(fp128 [[A:%.*]]) #1
+; CHECK-NEXT:    [[TANL:%.*]] = call reassoc fp128 @tanl(fp128 [[A:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv reassoc fp128 0xL00000000000000003FFF000000000000, [[TANL]]
 ; CHECK-NEXT:    ret fp128 [[TMP1]]
 ;

@@ -17,7 +17,7 @@ define void @test_simplify1(%FILE* %fp) {
 ; CHECK-LABEL: @test_simplify1(
   %str = getelementptr inbounds [1 x i8], [1 x i8]* @str, i64 0, i64 0
   call i64 @fwrite(i8* %str, i64 1, i64 1, %FILE* %fp)
-; CHECK-NEXT: call i32 @fputc(i32 0, %FILE* %fp)
+; CHECK-NEXT: call noundef i32 @fputc(i32 noundef 0, %FILE* nocapture noundef %fp) #0
   ret void
 ; CHECK-NEXT: ret void
 }
