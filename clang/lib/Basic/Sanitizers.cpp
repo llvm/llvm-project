@@ -14,6 +14,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace clang;
 
@@ -57,6 +58,13 @@ llvm::hash_code SanitizerMask::hash_value() const {
 }
 
 namespace clang {
+unsigned SanitizerMask::countPopulation() const {
+  unsigned total = 0;
+  for (const auto &Val : maskLoToHigh)
+    total += llvm::countPopulation(Val);
+  return total;
+}
+
 llvm::hash_code hash_value(const clang::SanitizerMask &Arg) {
   return Arg.hash_value();
 }
