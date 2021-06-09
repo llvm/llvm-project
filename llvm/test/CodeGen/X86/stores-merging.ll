@@ -614,14 +614,15 @@ define dso_local void @be_i64_to_i32_order(i64 %x, i32* %p0) {
 }
 
 ; https://llvm.org/PR50623
-; FIXME:
 ; It is a miscompile to merge the stores if we are not
 ; writing all of the bytes from the source value.
 
 define void @merge_hole(i32 %x, i8* %p) {
 ; CHECK-LABEL: merge_hole:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, (%rsi)
+; CHECK-NEXT:    movb %dil, (%rsi)
+; CHECK-NEXT:    shrl $16, %edi
+; CHECK-NEXT:    movw %di, 2(%rsi)
 ; CHECK-NEXT:    retq
   %pcast = bitcast i8* %p to i16*
   %p2 = getelementptr inbounds i16, i16* %pcast, i64 1
@@ -678,15 +679,15 @@ define void @merge_hole3(i32 %x, i8* %p) {
 }
 
 ; Change offset.
-; FIXME:
 ; It is a miscompile to merge the stores if we are not
 ; writing all of the bytes from the source value.
 
 define void @merge_hole4(i32 %x, i8* %p) {
 ; CHECK-LABEL: merge_hole4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rorl $16, %edi
-; CHECK-NEXT:    movl %edi, (%rsi)
+; CHECK-NEXT:    movb %dil, 2(%rsi)
+; CHECK-NEXT:    shrl $16, %edi
+; CHECK-NEXT:    movw %di, (%rsi)
 ; CHECK-NEXT:    retq
   %pcast = bitcast i8* %p to i16*
   %p2 = getelementptr inbounds i8, i8* %p, i64 2
