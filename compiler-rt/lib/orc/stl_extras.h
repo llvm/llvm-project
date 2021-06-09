@@ -14,6 +14,7 @@
 #define ORC_RT_STL_EXTRAS_H
 
 #include <utility>
+#include <tuple>
 
 namespace __orc_rt {
 
