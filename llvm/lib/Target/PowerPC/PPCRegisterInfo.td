@@ -173,7 +173,7 @@ let SubRegIndices = [sub_vsx0, sub_vsx1] in {
   foreach Index = { 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 } in {
     def VSRp#!srl(Index, 1) : VSRPair<!srl(Index, 1), "vsp"#Index,
                                       [!cast<VSRL>("VSL"#Index), !cast<VSRL>("VSL"#!add(Index, 1))]>,
-                              DwarfRegNum<[0, 0]>;
+                              DwarfRegNum<[-1, -1]>;
   }
 
   // VSR pairs 16 - 31 (corresponding to VSRs 32 - 62 paired with 33 - 63).
@@ -181,7 +181,7 @@ let SubRegIndices = [sub_vsx0, sub_vsx1] in {
     def VSRp#!add(!srl(Index, 1), 16) :
       VSRPair<!add(!srl(Index, 1), 16), "vsp"#!add(Index, 32),
               [!cast<VR>("V"#Index), !cast<VR>("V"#!add(Index, 1))]>,
-      DwarfRegNum<[0, 0]>;
+      DwarfRegNum<[-1, -1]>;
   }
 }
 
@@ -422,14 +422,14 @@ def CARRYRC : RegisterClass<"PPC", [i32], 32, (add CARRY, XER)> {
 }
 
 let SubRegIndices = [sub_pair0, sub_pair1] in {
-  def ACC0 : ACC<0, "acc0", [VSRp0, VSRp1]>, DwarfRegNum<[0, 0]>;
-  def ACC1 : ACC<1, "acc1", [VSRp2, VSRp3]>, DwarfRegNum<[0, 0]>;
-  def ACC2 : ACC<2, "acc2", [VSRp4, VSRp5]>, DwarfRegNum<[0, 0]>;
-  def ACC3 : ACC<3, "acc3", [VSRp6, VSRp7]>, DwarfRegNum<[0, 0]>;
-  def ACC4 : ACC<4, "acc4", [VSRp8, VSRp9]>, DwarfRegNum<[0, 0]>;
-  def ACC5 : ACC<5, "acc5", [VSRp10, VSRp11]>, DwarfRegNum<[0, 0]>;
-  def ACC6 : ACC<6, "acc6", [VSRp12, VSRp13]>, DwarfRegNum<[0, 0]>;
-  def ACC7 : ACC<7, "acc7", [VSRp14, VSRp15]>, DwarfRegNum<[0, 0]>;
+  def ACC0 : ACC<0, "acc0", [VSRp0, VSRp1]>, DwarfRegNum<[-1, -1]>;
+  def ACC1 : ACC<1, "acc1", [VSRp2, VSRp3]>, DwarfRegNum<[-1, -1]>;
+  def ACC2 : ACC<2, "acc2", [VSRp4, VSRp5]>, DwarfRegNum<[-1, -1]>;
+  def ACC3 : ACC<3, "acc3", [VSRp6, VSRp7]>, DwarfRegNum<[-1, -1]>;
+  def ACC4 : ACC<4, "acc4", [VSRp8, VSRp9]>, DwarfRegNum<[-1, -1]>;
+  def ACC5 : ACC<5, "acc5", [VSRp10, VSRp11]>, DwarfRegNum<[-1, -1]>;
+  def ACC6 : ACC<6, "acc6", [VSRp12, VSRp13]>, DwarfRegNum<[-1, -1]>;
+  def ACC7 : ACC<7, "acc7", [VSRp14, VSRp15]>, DwarfRegNum<[-1, -1]>;
 }
 def ACCRC : RegisterClass<"PPC", [v512i1], 128, (add ACC0, ACC1, ACC2, ACC3,
                                                       ACC4, ACC5, ACC6, ACC7)> {
@@ -437,14 +437,14 @@ def ACCRC : RegisterClass<"PPC", [v512i1], 128, (add ACC0, ACC1, ACC2, ACC3,
 }
 
 let SubRegIndices = [sub_pair0, sub_pair1] in {
-  def UACC0 : UACC<0, "acc0", [VSRp0, VSRp1]>, DwarfRegNum<[0, 0]>;
-  def UACC1 : UACC<1, "acc1", [VSRp2, VSRp3]>, DwarfRegNum<[0, 0]>;
-  def UACC2 : UACC<2, "acc2", [VSRp4, VSRp5]>, DwarfRegNum<[0, 0]>;
-  def UACC3 : UACC<3, "acc3", [VSRp6, VSRp7]>, DwarfRegNum<[0, 0]>;
-  def UACC4 : UACC<4, "acc4", [VSRp8, VSRp9]>, DwarfRegNum<[0, 0]>;
-  def UACC5 : UACC<5, "acc5", [VSRp10, VSRp11]>, DwarfRegNum<[0, 0]>;
-  def UACC6 : UACC<6, "acc6", [VSRp12, VSRp13]>, DwarfRegNum<[0, 0]>;
-  def UACC7 : UACC<7, "acc7", [VSRp14, VSRp15]>, DwarfRegNum<[0, 0]>;
+  def UACC0 : UACC<0, "acc0", [VSRp0, VSRp1]>, DwarfRegNum<[-1, -1]>;
+  def UACC1 : UACC<1, "acc1", [VSRp2, VSRp3]>, DwarfRegNum<[-1, -1]>;
+  def UACC2 : UACC<2, "acc2", [VSRp4, VSRp5]>, DwarfRegNum<[-1, -1]>;
+  def UACC3 : UACC<3, "acc3", [VSRp6, VSRp7]>, DwarfRegNum<[-1, -1]>;
+  def UACC4 : UACC<4, "acc4", [VSRp8, VSRp9]>, DwarfRegNum<[-1, -1]>;
+  def UACC5 : UACC<5, "acc5", [VSRp10, VSRp11]>, DwarfRegNum<[-1, -1]>;
+  def UACC6 : UACC<6, "acc6", [VSRp12, VSRp13]>, DwarfRegNum<[-1, -1]>;
+  def UACC7 : UACC<7, "acc7", [VSRp14, VSRp15]>, DwarfRegNum<[-1, -1]>;
 }
 def UACCRC : RegisterClass<"PPC", [v512i1], 128,
                            (add UACC0, UACC1, UACC2, UACC3,
