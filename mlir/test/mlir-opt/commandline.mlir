@@ -8,6 +8,7 @@
 // CHECK-NEXT: async
 // CHECK-NEXT: complex
 // CHECK-NEXT: dlti
+// CHECK-NEXT: emitc
 // CHECK-NEXT: gpu
 // CHECK-NEXT: linalg
 // CHECK-NEXT: llvm
