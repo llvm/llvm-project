@@ -71,7 +71,7 @@ public:
         isDWARFExpression  // reg = eval(dwarf_expr)
       };
 
-      RegisterLocation() : m_type(unspecified), m_location() {}
+      RegisterLocation() : m_location() {}
 
       bool operator==(const RegisterLocation &rhs) const;
 
@@ -181,7 +181,7 @@ public:
                 const UnwindPlan::Row *row, Thread *thread, bool verbose) const;
 
     private:
-      RestoreType m_type; // How do we locate this register?
+      RestoreType m_type = unspecified; // How do we locate this register?
       union {
         // For m_type == atCFAPlusOffset or m_type == isCFAPlusOffset
         int32_t offset;
@@ -205,7 +205,7 @@ public:
         isRaSearch,             // FA = SP + offset + ???
       };
 
-      FAValue() : m_type(unspecified), m_value() {}
+      FAValue() : m_value() {}
 
       bool operator==(const FAValue &rhs) const;
 
@@ -301,7 +301,7 @@ public:
       void Dump(Stream &s, const UnwindPlan *unwind_plan, Thread *thread) const;
 
     private:
-      ValueType m_type; // How do we compute CFA value?
+      ValueType m_type = unspecified; // How do we compute CFA value?
       union {
         struct {
           // For m_type == isRegisterPlusOffset or m_type ==
@@ -384,12 +384,12 @@ public:
 
   protected:
     typedef std::map<uint32_t, RegisterLocation> collection;
-    lldb::addr_t m_offset; // Offset into the function for this row
+    lldb::addr_t m_offset = 0; // Offset into the function for this row
 
     FAValue m_cfa_value;
     FAValue m_afa_value;
     collection m_register_locations;
-    bool m_unspecified_registers_are_undefined;
+    bool m_unspecified_registers_are_undefined = false;
   }; // class Row
 
   typedef std::shared_ptr<Row> RowSP;

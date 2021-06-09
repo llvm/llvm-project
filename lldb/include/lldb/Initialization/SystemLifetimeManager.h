@@ -30,7 +30,7 @@ public:
 private:
   std::recursive_mutex m_mutex;
   std::unique_ptr<SystemInitializer> m_initializer;
-  bool m_initialized;
+  bool m_initialized = false;
 
   // Noncopyable.
   SystemLifetimeManager(const SystemLifetimeManager &other) = delete;

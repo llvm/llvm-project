@@ -997,15 +997,15 @@ protected:
   }
 
   // Member variables
-  const uint8_t *m_start; ///< A pointer to the first byte of data.
-  const uint8_t
-      *m_end; ///< A pointer to the byte that is past the end of the data.
+  const uint8_t *m_start = nullptr; ///< A pointer to the first byte of data.
+  const uint8_t *m_end =
+      nullptr; ///< A pointer to the byte that is past the end of the data.
   lldb::ByteOrder
       m_byte_order;     ///< The byte order of the data we are extracting from.
   uint32_t m_addr_size; ///< The address size to use when extracting addresses.
   /// The shared pointer to data that can be shared among multiple instances
   lldb::DataBufferSP m_data_sp;
-  const uint32_t m_target_byte_size;
+  const uint32_t m_target_byte_size = 1;
 };
 
 } // namespace lldb_private

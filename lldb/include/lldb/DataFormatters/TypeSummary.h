@@ -38,8 +38,8 @@ public:
   TypeSummaryOptions &SetCapping(lldb::TypeSummaryCapping);
 
 private:
-  lldb::LanguageType m_lang;
-  lldb::TypeSummaryCapping m_capping;
+  lldb::LanguageType m_lang = lldb::eLanguageTypeUnknown;
+  lldb::TypeSummaryCapping m_capping = lldb::eTypeSummaryCapped;
 };
 
 class TypeSummaryImpl {
@@ -52,7 +52,7 @@ public:
 
   class Flags {
   public:
-    Flags() : m_flags(lldb::eTypeOptionCascade) {}
+    Flags() {}
 
     Flags(const Flags &other) : m_flags(other.m_flags) {}
 
@@ -196,7 +196,7 @@ public:
     void SetValue(uint32_t value) { m_flags = value; }
 
   private:
-    uint32_t m_flags;
+    uint32_t m_flags = lldb::eTypeOptionCascade;
   };
 
   bool Cascades() const { return m_flags.GetCascades(); }

@@ -318,7 +318,7 @@ public:
     ProcessModID m_mod_id; // This is the stop id when this ValueObject was last
                            // evaluated.
     ExecutionContextRef m_exe_ctx_ref;
-    bool m_needs_update;
+    bool m_needs_update = true;
   };
 
   virtual ~ValueObject();
@@ -795,7 +795,7 @@ protected:
 
   class ChildrenManager {
   public:
-    ChildrenManager() : m_mutex(), m_children(), m_children_count(0) {}
+    ChildrenManager() : m_mutex(), m_children() {}
 
     bool HasChildAtIndex(size_t idx) {
       std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -831,7 +831,7 @@ protected:
     typedef ChildrenMap::value_type ChildrenPair;
     std::recursive_mutex m_mutex;
     ChildrenMap m_children;
-    size_t m_children_count;
+    size_t m_children_count = 0;
   };
 
   // Classes that inherit from ValueObject can see and modify these

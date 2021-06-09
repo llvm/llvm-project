@@ -178,8 +178,7 @@ TypeSystem::CreateUtilityFunction(std::string text, std::string name) {
 
 #pragma mark TypeSystemMap
 
-TypeSystemMap::TypeSystemMap()
-    : m_mutex(), m_map(), m_clear_in_progress(false) {}
+TypeSystemMap::TypeSystemMap() : m_mutex(), m_map() {}
 
 TypeSystemMap::~TypeSystemMap() {}
 

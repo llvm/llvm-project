@@ -46,7 +46,7 @@ protected:
   ThreadCreateTrampoline(lldb::thread_arg_t arg);
 
   lldb::thread_t m_thread;
-  lldb::thread_result_t m_result;
+  lldb::thread_result_t m_result = 0;
 };
 }
 

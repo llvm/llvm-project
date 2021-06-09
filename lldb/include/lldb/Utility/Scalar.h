@@ -49,7 +49,7 @@ public:
   };
 
   // Constructors and Destructors
-  Scalar() : m_type(e_void), m_float(0.0f) {}
+  Scalar() : m_float(0.0f) {}
   Scalar(int v) : m_type(e_int), m_integer(MakeAPSInt(v)), m_float(0.0f) {}
   Scalar(unsigned int v)
       : m_type(e_int), m_integer(MakeAPSInt(v)), m_float(0.0f) {}
@@ -187,7 +187,7 @@ public:
                           size_t byte_size);
 
 protected:
-  Scalar::Type m_type;
+  Scalar::Type m_type = e_void;
   llvm::APSInt m_integer;
   llvm::APFloat m_float;
 

@@ -116,19 +116,19 @@ public:
   /// The following values should not live beyond parsing
   class ParserVars {
   public:
-    ParserVars()
-        : m_named_decl(nullptr), m_llvm_value(nullptr),
-          m_lldb_value(), m_lldb_var(), m_lldb_sym(nullptr) {}
+    ParserVars() : m_lldb_value(), m_lldb_var() {}
 
-    const clang::NamedDecl
-        *m_named_decl;         ///< The Decl corresponding to this variable
-    llvm::Value *m_llvm_value; ///< The IR value corresponding to this variable;
-                               ///usually a GlobalValue
+    const clang::NamedDecl *m_named_decl =
+        nullptr; ///< The Decl corresponding to this variable
+    llvm::Value *m_llvm_value =
+        nullptr; ///< The IR value corresponding to this variable;
+                 /// usually a GlobalValue
     lldb_private::Value
         m_lldb_value;            ///< The value found in LLDB for this variable
     lldb::VariableSP m_lldb_var; ///< The original variable for this variable
-    const lldb_private::Symbol *m_lldb_sym; ///< The original symbol for this
-                                            ///variable, if it was a symbol
+    const lldb_private::Symbol *m_lldb_sym =
+        nullptr; ///< The original symbol for this
+                 /// variable, if it was a symbol
   };
 
 private:
@@ -157,13 +157,13 @@ public:
 
   /// The following values are valid if the variable is used by JIT code
   struct JITVars {
-    JITVars() : m_alignment(0), m_size(0), m_offset(0) {}
+    JITVars() {}
 
-    lldb::offset_t
-        m_alignment; ///< The required alignment of the variable, in bytes
-    size_t m_size;   ///< The space required for the variable, in bytes
-    lldb::offset_t
-        m_offset; ///< The offset of the variable in the struct, in bytes
+    lldb::offset_t m_alignment =
+        0;             ///< The required alignment of the variable, in bytes
+    size_t m_size = 0; ///< The space required for the variable, in bytes
+    lldb::offset_t m_offset =
+        0; ///< The offset of the variable in the struct, in bytes
   };
 
 private:

@@ -714,8 +714,7 @@ protected:
   friend llvm::optional_detail::OptionalStorage<InstrumentationData, true>;
   friend llvm::Optional<InstrumentationData>;
 
-  InstrumentationData()
-      : m_serializer(nullptr), m_deserializer(nullptr), m_registry(nullptr) {}
+  InstrumentationData() {}
   InstrumentationData(Serializer &serializer, Registry &registry)
       : m_serializer(&serializer), m_deserializer(nullptr),
         m_registry(&registry) {}
@@ -726,9 +725,9 @@ protected:
 private:
   static llvm::Optional<InstrumentationData> &InstanceImpl();
 
-  Serializer *m_serializer;
-  Deserializer *m_deserializer;
-  Registry *m_registry;
+  Serializer *m_serializer = nullptr;
+  Deserializer *m_deserializer = nullptr;
+  Registry *m_registry = nullptr;
 };
 
 struct EmptyArg {};
@@ -888,17 +887,17 @@ private:
   }
 #endif
 
-  Serializer *m_serializer;
+  Serializer *m_serializer = nullptr;
 
   /// Pretty function for logging.
   llvm::StringRef m_pretty_func;
   std::string m_pretty_args;
 
   /// Whether this function call was the one crossing the API boundary.
-  bool m_local_boundary;
+  bool m_local_boundary = false;
 
   /// Whether the return value was recorded explicitly.
-  bool m_result_recorded;
+  bool m_result_recorded = true;
 
   /// The sequence number for this pair of function and result.
   unsigned m_sequence;

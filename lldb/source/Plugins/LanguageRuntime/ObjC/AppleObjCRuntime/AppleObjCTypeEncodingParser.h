@@ -29,7 +29,7 @@ private:
   struct StructElement {
     std::string name;
     clang::QualType type;
-    uint32_t bitfield;
+    uint32_t bitfield = 0;
 
     StructElement();
     ~StructElement() = default;
