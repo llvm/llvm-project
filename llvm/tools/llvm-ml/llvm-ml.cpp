@@ -36,6 +36,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
@@ -263,8 +264,21 @@ int main(int Argc, char **Argv) {
   SrcMgr.AddNewSourceBuffer(std::move(*BufferPtr), SMLoc());
 
   // Record the location of the include directories so that the lexer can find
-  // it later.
-  SrcMgr.setIncludeDirs(InputArgs.getAllArgValues(OPT_include_path));
+  // included files later.
+  std::vector<std::string> IncludeDirs =
+      InputArgs.getAllArgValues(OPT_include_path);
+  if (!InputArgs.hasArg(OPT_ignore_include_envvar)) {
+    if (llvm::Optional<std::string> cl_include_dir =
+            llvm::sys::Process::GetEnv("INCLUDE")) {
+      SmallVector<StringRef, 8> Dirs;
+      StringRef(*cl_include_dir)
+          .split(Dirs, ";", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+      IncludeDirs.reserve(IncludeDirs.size() + Dirs.size());
+      for (StringRef Dir : Dirs)
+        IncludeDirs.push_back(Dir.str());
+    }
+  }
+  SrcMgr.setIncludeDirs(IncludeDirs);
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TripleName));
   assert(MRI && "Unable to create target register info!");
