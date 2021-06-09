@@ -10,7 +10,7 @@ define void @local_var_mf8() {
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 1
 ; RV64IV-NEXT:    sub sp, sp, a0
-; RV64IV-NEXT:    vsetvli a0, zero, e8,mf8,ta,mu
+; RV64IV-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    add a0, sp, a0
 ; RV64IV-NEXT:    addi a0, a0, 16

@@ -6,7 +6,7 @@ define void @combine_fp_zero_stores_crash(float* %ptr)  {
 ; CHECK-LABEL: combine_fp_zero_stores_crash:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    vsetivli zero, 2, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v25, 0
 ; CHECK-NEXT:    vse32.v v25, (a0)
 ; CHECK-NEXT:    ret

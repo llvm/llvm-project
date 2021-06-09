@@ -9,7 +9,7 @@ declare <vscale x 1 x i1> @llvm.riscv.vmnor.nxv1i1(
 define <vscale x 1 x i1> @intrinsic_vmnor_mm_nxv1i1(<vscale x 1 x i1> %0, <vscale x 1 x i1> %1, i64 %2) nounwind {
 ; CHECK-LABEL: intrinsic_vmnor_mm_nxv1i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmnor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
 entry:
@@ -29,7 +29,7 @@ declare <vscale x 2 x i1> @llvm.riscv.vmnor.nxv2i1(
 define <vscale x 2 x i1> @intrinsic_vmnor_mm_nxv2i1(<vscale x 2 x i1> %0, <vscale x 2 x i1> %1, i64 %2) nounwind {
 ; CHECK-LABEL: intrinsic_vmnor_mm_nxv2i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
 ; CHECK-NEXT:    vmnor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
 entry:
@@ -49,7 +49,7 @@ declare <vscale x 4 x i1> @llvm.riscv.vmnor.nxv4i1(
 define <vscale x 4 x i1> @intrinsic_vmnor_mm_nxv4i1(<vscale x 4 x i1> %0, <vscale x 4 x i1> %1, i64 %2) nounwind {
 ; CHECK-LABEL: intrinsic_vmnor_mm_nxv4i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmnor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
 entry:
@@ -69,7 +69,7 @@ declare <vscale x 8 x i1> @llvm.riscv.vmnor.nxv8i1(
 define <vscale x 8 x i1> @intrinsic_vmnor_mm_nxv8i1(<vscale x 8 x i1> %0, <vscale x 8 x i1> %1, i64 %2) nounwind {
 ; CHECK-LABEL: intrinsic_vmnor_mm_nxv8i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
 ; CHECK-NEXT:    vmnor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
 entry:
@@ -89,7 +89,7 @@ declare <vscale x 16 x i1> @llvm.riscv.vmnor.nxv16i1(
 define <vscale x 16 x i1> @intrinsic_vmnor_mm_nxv16i1(<vscale x 16 x i1> %0, <vscale x 16 x i1> %1, i64 %2) nounwind {
 ; CHECK-LABEL: intrinsic_vmnor_mm_nxv16i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8,m2,ta,mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
 ; CHECK-NEXT:    vmnor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
 entry:
@@ -109,7 +109,7 @@ declare <vscale x 32 x i1> @llvm.riscv.vmnor.nxv32i1(
 define <vscale x 32 x i1> @intrinsic_vmnor_mm_nxv32i1(<vscale x 32 x i1> %0, <vscale x 32 x i1> %1, i64 %2) nounwind {
 ; CHECK-LABEL: intrinsic_vmnor_mm_nxv32i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8,m4,ta,mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
 ; CHECK-NEXT:    vmnor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
 entry:
@@ -129,7 +129,7 @@ declare <vscale x 64 x i1> @llvm.riscv.vmnor.nxv64i1(
 define <vscale x 64 x i1> @intrinsic_vmnor_mm_nxv64i1(<vscale x 64 x i1> %0, <vscale x 64 x i1> %1, i64 %2) nounwind {
 ; CHECK-LABEL: intrinsic_vmnor_mm_nxv64i1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8,m8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, mu
 ; CHECK-NEXT:    vmnor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
 entry:

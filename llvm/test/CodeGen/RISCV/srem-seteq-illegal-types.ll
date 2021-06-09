@@ -712,9 +712,9 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV32MV-NEXT:    sw a1, 44(sp)
 ; RV32MV-NEXT:    sw a0, 40(sp)
 ; RV32MV-NEXT:    addi a0, zero, 85
-; RV32MV-NEXT:    vsetivli zero, 1, e8,mf8,ta,mu
+; RV32MV-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; RV32MV-NEXT:    vmv.s.x v0, a0
-; RV32MV-NEXT:    vsetivli zero, 8, e32,m2,ta,mu
+; RV32MV-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; RV32MV-NEXT:    vmv.v.i v26, 1
 ; RV32MV-NEXT:    addi a0, sp, 32
 ; RV32MV-NEXT:    vle32.v v28, (a0)
@@ -723,14 +723,14 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV32MV-NEXT:    vle32.v v30, (a0)
 ; RV32MV-NEXT:    vmerge.vim v26, v26, -1, v0
 ; RV32MV-NEXT:    vand.vv v26, v28, v26
-; RV32MV-NEXT:    vsetivli zero, 4, e64,m2,ta,mu
+; RV32MV-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; RV32MV-NEXT:    vmsne.vv v0, v26, v30
 ; RV32MV-NEXT:    vmv.v.i v26, 0
 ; RV32MV-NEXT:    vmerge.vim v26, v26, -1, v0
-; RV32MV-NEXT:    vsetvli zero, zero, e32,m2,ta,mu
+; RV32MV-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
 ; RV32MV-NEXT:    vmv.x.s a0, v26
 ; RV32MV-NEXT:    sw a0, 0(s1)
-; RV32MV-NEXT:    vsetivli zero, 1, e32,m2,ta,mu
+; RV32MV-NEXT:    vsetivli zero, 1, e32, m2, ta, mu
 ; RV32MV-NEXT:    vslidedown.vi v28, v26, 1
 ; RV32MV-NEXT:    vmv.x.s a0, v28
 ; RV32MV-NEXT:    vslidedown.vi v28, v26, 2
@@ -838,7 +838,7 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV64MV-NEXT:    sub a1, a1, a2
 ; RV64MV-NEXT:    add a1, a4, a1
 ; RV64MV-NEXT:    sd a1, 40(sp)
-; RV64MV-NEXT:    vsetivli zero, 4, e64,m2,ta,mu
+; RV64MV-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; RV64MV-NEXT:    addi a1, sp, 32
 ; RV64MV-NEXT:    vle64.v v26, (a1)
 ; RV64MV-NEXT:    lui a1, %hi(.LCPI3_0)
@@ -849,7 +849,7 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV64MV-NEXT:    vmsne.vv v0, v26, v28
 ; RV64MV-NEXT:    vmv.v.i v26, 0
 ; RV64MV-NEXT:    vmerge.vim v26, v26, -1, v0
-; RV64MV-NEXT:    vsetivli zero, 1, e64,m2,ta,mu
+; RV64MV-NEXT:    vsetivli zero, 1, e64, m2, ta, mu
 ; RV64MV-NEXT:    vslidedown.vi v28, v26, 2
 ; RV64MV-NEXT:    vmv.x.s a2, v28
 ; RV64MV-NEXT:    srli a3, a2, 30
