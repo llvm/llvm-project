@@ -87,7 +87,8 @@ fir::MutableBoxValue createTempMutableBox(Fortran::lower::FirOpBuilder &,
 /// to be null).
 Fortran::lower::SymbolBox genMutableBoxRead(Fortran::lower::FirOpBuilder &,
                                             mlir::Location,
-                                            const fir::MutableBoxValue &);
+                                            const fir::MutableBoxValue &,
+                                            bool mayBePolymorphic = true);
 
 /// Update a MutableBoxValue to describe entity \p source (that must be in
 /// memory). If \lbounds is not empty, it is used to defined the MutableBoxValue
@@ -123,6 +124,21 @@ void associateMutableBoxWithRemap(Fortran::lower::FirOpBuilder &,
 /// address field of the MutableBoxValue to zero.
 void disassociateMutableBox(Fortran::lower::FirOpBuilder &, mlir::Location,
                             const fir::MutableBoxValue &);
+
+/// Generate code to conditionally reallocate a MutableBoxValue with a new
+/// shape, lower bounds, and length parameters if it is unallocated or if its
+/// current shape or deferred  length parameters do not match the provided ones.
+/// Lower bounds are only used if the entity needs to be allocated, otherwise,
+/// the MutableBoxValue will keep its current lower bounds.
+/// If the MutableBoxValue is an array, the provided shape can be empty, in
+/// which case the MutableBoxValue must already be allocated at runtime and its
+/// shape and lower bounds will be kept. If \p shape is empty, only a length
+/// parameter mismatch can trigger a reallocation. See Fortran 10.2.1.3 point 3
+/// that this function is implementing for more details. The polymorphic
+/// requirements are not yet covered by this function.
+void genReallocIfNeeded(Fortran::lower::FirOpBuilder &, mlir::Location,
+                        const fir::MutableBoxValue &, mlir::ValueRange lbounds,
+                        mlir::ValueRange shape, mlir::ValueRange lengthParams);
 
 /// Returns the fir.ref<fir.box<T>> of a MutableBoxValue filled with the current
 /// association / allocation properties. If the fir.ref<fir.box> already exists

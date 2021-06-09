@@ -49,17 +49,17 @@ contains
   subroutine t_to_t(a1,b1)
     type(t), intent(out) :: a1
     type(t), intent(in) :: b1
-    ! CHECK: %[[a:.*]] = fir.field_index a, !fir.type<_QMm2Tt{a:i32,b:i32}>
-    ! CHECK: %[[a1a:.*]] = fir.coordinate_of %[[a1]], %[[a]] : (!fir.ref<!fir.type<_QMm2Tt{a:i32,b:i32}>>, !fir.field) -> !fir.ref<i32>
     ! CHECK: %[[b:.*]] = fir.field_index b, !fir.type<_QMm2Tt{a:i32,b:i32}>
     ! CHECK: %[[b1b:.*]] = fir.coordinate_of %[[b1]], %[[b]] : (!fir.ref<!fir.type<_QMm2Tt{a:i32,b:i32}>>, !fir.field) -> !fir.ref<i32>
     ! CHECK: %[[v:.*]] = fir.load %[[b1b]] : !fir.ref<i32>
+    ! CHECK: %[[a:.*]] = fir.field_index a, !fir.type<_QMm2Tt{a:i32,b:i32}>
+    ! CHECK: %[[a1a:.*]] = fir.coordinate_of %[[a1]], %[[a]] : (!fir.ref<!fir.type<_QMm2Tt{a:i32,b:i32}>>, !fir.field) -> !fir.ref<i32>
     ! CHECK: fir.store %[[v]] to %[[a1a]] : !fir.ref<i32>
-    ! CHECK: %[[b:.*]] = fir.field_index b, !fir.type<_QMm2Tt{a:i32,b:i32}>
-    ! CHECK: %[[a1b:.*]] = fir.coordinate_of %[[a1]], %[[b]] : (!fir.ref<!fir.type<_QMm2Tt{a:i32,b:i32}>>, !fir.field) -> !fir.ref<i32>
     ! CHECK: %[[a:.*]] = fir.field_index a, !fir.type<_QMm2Tt{a:i32,b:i32}>
     ! CHECK: %[[b1a:.*]] = fir.coordinate_of %[[b1]], %[[a]] : (!fir.ref<!fir.type<_QMm2Tt{a:i32,b:i32}>>, !fir.field) -> !fir.ref<i32>
     ! CHECK: %[[v:.*]] = fir.load %[[b1a]] : !fir.ref<i32>
+    ! CHECK: %[[b:.*]] = fir.field_index b, !fir.type<_QMm2Tt{a:i32,b:i32}>
+    ! CHECK: %[[a1b:.*]] = fir.coordinate_of %[[a1]], %[[b]] : (!fir.ref<!fir.type<_QMm2Tt{a:i32,b:i32}>>, !fir.field) -> !fir.ref<i32>
     ! CHECK: fir.store %[[v]] to %[[a1b]] : !fir.ref<i32>
     a1%a = b1%b
     a1%b = b1%a
