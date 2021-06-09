@@ -99,7 +99,7 @@ LogicalResult Serializer::serialize() {
 
   // Iterate over the module body to serialize it. Assumptions are that there is
   // only one basic block in the moduleOp
-  for (auto &op : module.getBlock()) {
+  for (auto &op : *module.getBody()) {
     if (failed(processOperation(&op))) {
       return failure();
     }
@@ -1090,7 +1090,6 @@ LogicalResult Serializer::processOperation(Operation *opInst) {
         return processGlobalVariableOp(op);
       })
       .Case([&](spirv::LoopOp op) { return processLoopOp(op); })
-      .Case([&](spirv::ModuleEndOp) { return success(); })
       .Case([&](spirv::ReferenceOfOp op) { return processReferenceOfOp(op); })
       .Case([&](spirv::SelectionOp op) { return processSelectionOp(op); })
       .Case([&](spirv::SpecConstantOp op) { return processSpecConstantOp(op); })
