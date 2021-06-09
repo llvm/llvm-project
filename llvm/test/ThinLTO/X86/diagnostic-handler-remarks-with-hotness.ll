@@ -5,6 +5,7 @@
 ; with -lto-pass-remarks-with-hotness.
 
 ; RUN: llvm-lto -thinlto-action=run \
+; RUN:          -use-new-pm=false \
 ; RUN:          -lto-pass-remarks-output=%t.yaml \
 ; RUN:          -lto-pass-remarks-with-hotness \
 ; RUN:          -exported-symbol _func2 \
