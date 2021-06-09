@@ -41,12 +41,12 @@ typedef struct ident {
 } ident_t;
 
 typedef struct kmp_depend_info {
-  kmp_intptr_t base_addr;
-  size_t len;
-//  struct {
-//    bool in:1;
-//    bool out:1; }
-  int flags;
+     kmp_intptr_t               base_addr;
+     size_t                     len;
+     struct {
+         bool                   in:1;
+         bool                   out:1;
+     } flags;
 } kmp_depend_info_t;
 
 struct kmp_task;
@@ -109,7 +109,8 @@ int main()
     dep_info.base_addr = (long) &dep;
     dep_info.len = sizeof(int);
     // out = inout per spec and runtime expects this
-    dep_info.flags = 3; // inout
+    dep_info.flags.in = 1;
+    dep_info.flags.out = 1;
 
     kmp_int32 gtid = __kmpc_global_thread_num(NULL);
     kmp_task_t *proxy_task = __kmpc_omp_task_alloc(NULL,gtid,17,sizeof(kmp_task_t),0,&task_entry);
