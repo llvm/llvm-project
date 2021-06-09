@@ -5934,6 +5934,9 @@ bool ARMBaseInstrInfo::checkAndUpdateStackOffset(MachineInstr *MI,
       || AddrMode == ARMII::AddrModeT2_so // SP can't be used as based register
       || AddrMode == ARMII::AddrModeT2_pc // PCrel access
       || AddrMode == ARMII::AddrMode2     // Used by PRE and POST indexed LD/ST
+      || AddrMode == ARMII::AddrModeT2_i7 // v8.1-M MVE
+      || AddrMode == ARMII::AddrModeT2_i7s2 // v8.1-M MVE
+      || AddrMode == ARMII::AddrModeT2_i7s4 // v8.1-M sys regs VLDR/VSTR
       || AddrMode == ARMII::AddrModeNone)
     return false;
 
@@ -5976,6 +5979,10 @@ bool ARMBaseInstrInfo::checkAndUpdateStackOffset(MachineInstr *MI,
     NumBits = 8;
     break;
   case ARMII::AddrModeT2_i8s4:
+    // FIXME: Values are already scaled in this addressing mode.
+    assert((Fixup & 3) == 0 && "Can't encode this offset!");
+    NumBits = 10;
+    break;
   case ARMII::AddrModeT2_ldrex:
     NumBits = 8;
     Scale = 4;
@@ -5983,17 +5990,6 @@ bool ARMBaseInstrInfo::checkAndUpdateStackOffset(MachineInstr *MI,
   case ARMII::AddrModeT2_i12:
   case ARMII::AddrMode_i12:
     NumBits = 12;
-    break;
-  case ARMII::AddrModeT2_i7:
-    NumBits = 7;
-    break;
-  case ARMII::AddrModeT2_i7s2:
-    NumBits = 7;
-    Scale = 2;
-    break;
-  case ARMII::AddrModeT2_i7s4:
-    NumBits = 7;
-    Scale = 4;
     break;
   case ARMII::AddrModeT1_s: // SP-relative LD/ST
     NumBits = 8;
@@ -6004,8 +6000,8 @@ bool ARMBaseInstrInfo::checkAndUpdateStackOffset(MachineInstr *MI,
   }
   // Make sure the offset is encodable for instructions that scale the
   // immediate.
-  if (((OffVal * Scale + Fixup) & (Scale - 1)) != 0)
-    return false;
+  assert(((OffVal * Scale + Fixup) & (Scale - 1)) == 0 &&
+         "Can't encode this offset!");
   OffVal += Fixup / Scale;
 
   unsigned Mask = (1 << NumBits) - 1;
