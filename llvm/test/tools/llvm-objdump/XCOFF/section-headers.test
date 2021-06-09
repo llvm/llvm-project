@@ -41,9 +41,9 @@ Sections:
 
 # LONG:      Sections:
 # LONG-NEXT: Idx Name          Size     VMA      Type
-# LONG-NEXT:   0 .dwarnge      00000004 00000000 
-# LONG-NEXT:   1 .dwpbnms      00000004 00000000 
-# LONG-NEXT:   2 .dwpbtyp      00000004 00000000 
+# LONG-NEXT:   0 .dwarnge      00000004 00000000
+# LONG-NEXT:   1 .dwpbnms      00000004 00000000
+# LONG-NEXT:   2 .dwpbtyp      00000004 00000000
 
 --- !XCOFF
 FileHeader:
