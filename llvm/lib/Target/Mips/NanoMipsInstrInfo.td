@@ -28,6 +28,10 @@ def NMUnalignedSH : SDNode<"MipsISD::UASH", SDTStore, [SDNPHasChain, SDNPMayStor
 def imm32ZExt12 : IntImmLeaf<i32, [{ return isUInt<12>(Imm.getZExtValue()); }]>;
 def imm32ZExt5  : IntImmLeaf<i32, [{ return isUInt<5>(Imm.getZExtValue()); }]>;
 def imm32SExt12  : IntImmLeaf<i32, [{ return isInt<12>(Imm.getSExtValue()); }]>;
+// True if (N + 1) fits in 12-bit field.
+def immZExt12Plus1 : PatLeaf<(imm), [{
+  return isUInt<13>(N->getZExtValue()) && isUInt<12>(N->getZExtValue() + 1);
+}]>;
 // Immediate range covering both signed 12-bit and unsigned 16-bit immediates.
 def imm32SExt12OrZExt16 : IntImmLeaf<i32, [{ return isInt<12>(Imm.getSExtValue())
                                            || isUInt<16>(Imm.getZExtValue()); }]>;
@@ -486,9 +490,41 @@ def MOVN_NM : InstNM<(outs GPR32NMOpnd:$rd),
     let Constraints = "$F = $rd";
 }
 
+multiclass MovzPats2NM<RegisterClass CRC, RegisterClass DRC,
+                     Instruction MOVZInst, Instruction XORiOp> {
+  def : MipsPat<
+            (select (i32 (seteq CRC:$lhs, imm32ZExt12:$uimm12_nm)), DRC:$T, DRC:$F),
+            (MOVZInst DRC:$T, (XORiOp CRC:$lhs, imm32ZExt12:$uimm12_nm), DRC:$F)>;
+}
+
+multiclass MovzPats0NM<RegisterClass CRC, RegisterClass DRC,
+                       Instruction MOVZInst, Instruction SLTOp,
+                       Instruction SLTuOp, Instruction SLTiOp,
+                       Instruction SLTiuOp> {
+  def : MipsPat<(select (i32 (setge CRC:$lhs, CRC:$rhs)), DRC:$T, DRC:$F),
+                (MOVZInst DRC:$T, (SLTOp CRC:$lhs, CRC:$rhs), DRC:$F)>;
+  def : MipsPat<(select (i32 (setuge CRC:$lhs, CRC:$rhs)), DRC:$T, DRC:$F),
+                (MOVZInst DRC:$T, (SLTuOp CRC:$lhs, CRC:$rhs), DRC:$F)>;
+  def : MipsPat<(select (i32 (setge CRC:$lhs, imm32ZExt12:$rhs)), DRC:$T, DRC:$F),
+                (MOVZInst DRC:$T, (SLTiOp CRC:$lhs, imm32ZExt12:$rhs), DRC:$F)>;
+  def : MipsPat<(select (i32 (setuge CRC:$lh, imm32ZExt12:$rh)), DRC:$T, DRC:$F),
+                (MOVZInst DRC:$T, (SLTiuOp CRC:$lh, imm32ZExt12:$rh), DRC:$F)>;
+  def : MipsPat<(select (i32 (setle CRC:$lhs, CRC:$rhs)), DRC:$T, DRC:$F),
+                (MOVZInst DRC:$T, (SLTOp CRC:$rhs, CRC:$lhs), DRC:$F)>;
+  def : MipsPat<(select (i32 (setule CRC:$lhs, CRC:$rhs)), DRC:$T, DRC:$F),
+                (MOVZInst DRC:$T, (SLTuOp CRC:$rhs, CRC:$lhs), DRC:$F)>;
+  def : MipsPat<(select (i32 (setgt CRC:$lhs, immZExt12Plus1:$rhs)),
+                        DRC:$T, DRC:$F),
+                (MOVZInst DRC:$T, (SLTiOp CRC:$lhs, (Plus1 imm:$rhs)), DRC:$F)>;
+  def : MipsPat<(select (i32 (setugt CRC:$lhs, immZExt12Plus1:$rhs)),
+                        DRC:$T, DRC:$F),
+                (MOVZInst DRC:$T, (SLTiuOp CRC:$lhs, (Plus1 imm:$rhs)),
+                          DRC:$F)>;
+}
+
 // Use MIPS conditional instruction definitions
-defm : MovzPats0<GPR32NM, GPR32NM, MOVZ_NM, SLT_NM, SLTU_NM, SLTI_NM,
-                 SLTIU_NM>, ISA_NANOMIPS;
+defm : MovzPats0NM<GPR32NM, GPR32NM, MOVZ_NM, SLT_NM, SLTU_NM, SLTI_NM,
+                   SLTIU_NM>, ISA_NANOMIPS;
 defm : MovzPats1<GPR32NM, GPR32NM, MOVZ_NM, XOR_NM>, ISA_NANOMIPS;
-defm : MovzPats2<GPR32NM, GPR32NM, MOVZ_NM, XORI_NM>, ISA_NANOMIPS;
+defm : MovzPats2NM<GPR32NM, GPR32NM, MOVZ_NM, XORI_NM>, ISA_NANOMIPS;
 defm : MovnPats<GPR32NM, GPR32NM, MOVN_NM, XOR_NM>, ISA_NANOMIPS;
