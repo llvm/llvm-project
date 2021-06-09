@@ -2170,7 +2170,7 @@ void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
         if (!CtorD || !CtorD->hasAttrs())
           continue;
         handleCall(E, CtorD, VD);
-      } else if (isa<CallExpr>(E) && E->isRValue()) {
+      } else if (isa<CallExpr>(E) && E->isPRValue()) {
         // If the object is initialized by a function call that returns a
         // scoped lockable by value, use the attributes on the copy or move
         // constructor to figure out what effect that should have on the
