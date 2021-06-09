@@ -52,7 +52,7 @@ define void @phiUsingLoads(i32* noalias nocapture readonly %A, i32* noalias noca
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ undef, [[ENTRY]] ], [ [[TMP26]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ poison, [[ENTRY]] ], [ [[TMP26]], [[FOR_INC]] ]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV]]
