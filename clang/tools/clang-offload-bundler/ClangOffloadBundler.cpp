@@ -1404,9 +1404,6 @@ static Error UnbundleArchive() {
                                              CodeObjectInfo.TargetID))
                   .str();
           // Replace ':' in optional target feature list with '_' to ensure
-          // cross-platform validity.
-          std::replace(OutputBundleName.begin(), OutputBundleName.end(), ':',
-                       '_');
 
           std::unique_ptr<MemoryBuffer> MemBuf = MemoryBuffer::getMemBufferCopy(
               DataStream.str(), OutputBundleName);
@@ -1442,7 +1439,7 @@ static Error UnbundleArchive() {
     } // End of processing of all bundle entries of this child of input archive.
   }   // End of while over children of input archive.
 
-  assert(!ArchiveErr);
+  assert(!ArchiveErr && "Error occured while reading archive!");
 
   /// Write out an archive for each target
   for (auto &Target : TargetNames) {
