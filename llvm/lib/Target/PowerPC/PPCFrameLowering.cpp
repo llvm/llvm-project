@@ -859,15 +859,15 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
     BuildMI(MBB, MBBI, dl,
             TII.get(isPPC64 ? PPC::PROBED_STACKALLOC_64
                             : PPC::PROBED_STACKALLOC_32))
-        .addDef(ScratchReg)
-        .addDef(TempReg) // TempReg stores the old sp.
+        .addDef(TempReg)
+        .addDef(ScratchReg) // ScratchReg stores the old sp.
         .addImm(NegFrameSize);
     // FIXME: HasSTUX is only read if HasRedZone is not set, in such case, we
     // update the ScratchReg to meet the assumption that ScratchReg contains
     // the NegFrameSize. This solution is rather tricky.
     if (!HasRedZone) {
       BuildMI(MBB, MBBI, dl, TII.get(PPC::SUBF), ScratchReg)
-          .addReg(TempReg)
+          .addReg(ScratchReg)
           .addReg(SPReg);
       HasSTUX = true;
     }
@@ -1187,7 +1187,6 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
 
 void PPCFrameLowering::inlineStackProbe(MachineFunction &MF,
                                         MachineBasicBlock &PrologMBB) const {
-  // TODO: Generate CFI instructions.
   bool isPPC64 = Subtarget.isPPC64();
   const PPCTargetLowering &TLI = *Subtarget.getTargetLowering();
   const PPCInstrInfo &TII = *Subtarget.getInstrInfo();
@@ -1219,6 +1218,7 @@ void PPCFrameLowering::inlineStackProbe(MachineFunction &MF,
   bool HasBP = RegInfo->hasBasePointer(MF);
   Register BPReg = RegInfo->getBaseRegister(MF);
   Align MaxAlign = MFI.getMaxAlign();
+  bool HasRedZone = Subtarget.isPPC64() || !Subtarget.isSVR4ABI();
   const MCInstrDesc &CopyInst = TII.get(isPPC64 ? PPC::OR8 : PPC::OR);
   // Subroutines to generate .cfi_* directives.
   auto buildDefCFAReg = [&](MachineBasicBlock &MBB,
@@ -1272,212 +1272,221 @@ void PPCFrameLowering::inlineStackProbe(MachineFunction &MF,
           .addReg(SPReg)
           .addReg(NegSizeReg);
   };
-  // Used to probe realignment gap [stackptr - (stackptr % align), stackptr)
-  // when HasBP && isPPC64. In such scenario, normally we have r0, r1, r12, r30
-  // available and r1 is already copied to r30 which is BPReg. So BPReg stores
-  // the value of stackptr.
-  // First we have to probe tail interval whose size is less than probesize,
-  // i.e., [stackptr - (stackptr % align) % probesize, stackptr). At this stage,
-  // ScratchReg stores the value of ((stackptr % align) % probesize). Then we
-  // probe each block sized probesize until stackptr meets
-  // (stackptr - (stackptr % align)). At this stage, ScratchReg is materialized
-  // as negprobesize. At both stages, TempReg stores the value of
-  // (stackptr - (stackptr % align)).
-  auto dynamicProbe = [&](MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator MBBI, Register ScratchReg,
-                          Register TempReg) {
-    assert(HasBP && isPPC64 && "Probe alignment part not available");
+  // Used to probe stack when realignment is required.
+  // Note that, according to ABI's requirement, *sp must always equals the
+  // value of back-chain pointer, only st(w|d)u(x) can be used to update sp.
+  // Following is pseudo code:
+  // final_sp = (sp & align) + negframesize;
+  // neg_gap = final_sp - sp;
+  // while (neg_gap < negprobesize) {
+  //   stdu fp, negprobesize(sp);
+  //   neg_gap -= negprobesize;
+  // }
+  // stdux fp, sp, neg_gap
+  //
+  // When HasBP & HasRedzone, back-chain pointer is already saved in BPReg
+  // before probe code, we don't need to save it, so we get one additional reg
+  // that can be used to materialize the probeside if needed to use xform.
+  // Otherwise, we can NOT materialize probeside, so we can only use Dform for
+  // now.
+  //
+  // The allocations are:
+  // if (HasBP && HasRedzone) {
+  //   r0: materialize the probesize if needed so that we can use xform.
+  //   r12: `neg_gap`
+  // } else {
+  //   r0: back-chain pointer
+  //   r12: `neg_gap`.
+  // }
+  auto probeRealignedStack = [&](MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator MBBI,
+                                 Register ScratchReg, Register TempReg) {
+    assert(HasBP && "The function is supposed to have base pointer when its "
+                    "stack is realigned.");
     assert(isPowerOf2_64(ProbeSize) && "Probe size should be power of 2");
-    // ScratchReg = stackptr % align
-    BuildMI(MBB, MBBI, DL, TII.get(PPC::RLDICL), ScratchReg)
-        .addReg(BPReg)
-        .addImm(0)
-        .addImm(64 - Log2(MaxAlign));
-    // TempReg = stackptr - (stackptr % align)
-    BuildMI(MBB, MBBI, DL, TII.get(PPC::SUBFC8), TempReg)
-        .addReg(ScratchReg)
-        .addReg(BPReg);
-    // ScratchReg = (stackptr % align) % probesize
-    BuildMI(MBB, MBBI, DL, TII.get(PPC::RLDICL), ScratchReg)
-        .addReg(ScratchReg)
-        .addImm(0)
-        .addImm(64 - Log2(ProbeSize));
+
+    // FIXME: We can eliminate this limitation if we get more infomation about
+    // which part of redzone are already used. Used redzone can be treated
+    // probed. But there might be `holes' in redzone probed, this could
+    // complicate the implementation.
+    assert(ProbeSize >= Subtarget.getRedZoneSize() &&
+           "Probe size should be larger or equal to the size of red-zone so "
+           "that red-zone is not clobbered by probing.");
+
+    Register &FinalStackPtr = TempReg;
+    // FIXME: We only support NegProbeSize materializable by DForm currently.
+    // When HasBP && HasRedzone, we can use xform if we have an additional idle
+    // register.
+    NegProbeSize = std::max(NegProbeSize, -((int64_t)1 << 15));
+    assert(isInt<16>(NegProbeSize) &&
+           "NegProbeSize should be materializable by DForm");
     Register CRReg = PPC::CR0;
-    // If (stackptr % align) % probesize == 0, we should not generate probe
-    // code. Layout of output assembly kinda like:
+    // Layout of output assembly kinda like:
     // bb.0:
     //   ...
-    //   cmpldi $scratchreg, 0
-    //   beq bb.2
-    // bb.1: # Probe tail interval
-    //   neg $scratchreg, $scratchreg
-    //   stdux $bpreg, r1, $scratchreg
+    //   sub $scratchreg, $finalsp, r1
+    //   cmpdi $scratchreg, <negprobesize>
+    //   bge bb.2
+    // bb.1:
+    //   stdu <backchain>, <negprobesize>(r1)
+    //   sub $scratchreg, $scratchreg, negprobesize
+    //   cmpdi $scratchreg, <negprobesize>
+    //   blt bb.1
     // bb.2:
-    //   <materialize negprobesize into $scratchreg>
-    //   cmpd r1, $tempreg
-    //   beq bb.4
-    // bb.3: # Loop to probe each block
-    //   stdux $bpreg, r1, $scratchreg
-    //   cmpd r1, $tempreg
-    //   bne bb.3
-    // bb.4:
-    //   ...
+    //   stdux <backchain>, r1, $scratchreg
     MachineFunction::iterator MBBInsertPoint = std::next(MBB.getIterator());
-    MachineBasicBlock *ProbeResidualMBB = MF.CreateMachineBasicBlock(ProbedBB);
-    MF.insert(MBBInsertPoint, ProbeResidualMBB);
-    MachineBasicBlock *ProbeLoopPreHeaderMBB =
-        MF.CreateMachineBasicBlock(ProbedBB);
-    MF.insert(MBBInsertPoint, ProbeLoopPreHeaderMBB);
     MachineBasicBlock *ProbeLoopBodyMBB = MF.CreateMachineBasicBlock(ProbedBB);
     MF.insert(MBBInsertPoint, ProbeLoopBodyMBB);
     MachineBasicBlock *ProbeExitMBB = MF.CreateMachineBasicBlock(ProbedBB);
     MF.insert(MBBInsertPoint, ProbeExitMBB);
-    // bb.4
-    ProbeExitMBB->splice(ProbeExitMBB->end(), &MBB, MBBI, MBB.end());
-    ProbeExitMBB->transferSuccessorsAndUpdatePHIs(&MBB);
-    // bb.0
-    BuildMI(&MBB, DL, TII.get(PPC::CMPDI), CRReg).addReg(ScratchReg).addImm(0);
-    BuildMI(&MBB, DL, TII.get(PPC::BCC))
-        .addImm(PPC::PRED_EQ)
-        .addReg(CRReg)
-        .addMBB(ProbeLoopPreHeaderMBB);
-    MBB.addSuccessor(ProbeResidualMBB);
-    MBB.addSuccessor(ProbeLoopPreHeaderMBB);
-    // bb.1
-    BuildMI(ProbeResidualMBB, DL, TII.get(PPC::NEG8), ScratchReg)
-        .addReg(ScratchReg);
-    allocateAndProbe(*ProbeResidualMBB, ProbeResidualMBB->end(), 0, ScratchReg,
-                     false, BPReg);
-    ProbeResidualMBB->addSuccessor(ProbeLoopPreHeaderMBB);
     // bb.2
-    MaterializeImm(*ProbeLoopPreHeaderMBB, ProbeLoopPreHeaderMBB->end(),
-                   NegProbeSize, ScratchReg);
-    BuildMI(ProbeLoopPreHeaderMBB, DL, TII.get(PPC::CMPD), CRReg)
-        .addReg(SPReg)
-        .addReg(TempReg);
-    BuildMI(ProbeLoopPreHeaderMBB, DL, TII.get(PPC::BCC))
-        .addImm(PPC::PRED_EQ)
-        .addReg(CRReg)
-        .addMBB(ProbeExitMBB);
-    ProbeLoopPreHeaderMBB->addSuccessor(ProbeLoopBodyMBB);
-    ProbeLoopPreHeaderMBB->addSuccessor(ProbeExitMBB);
-    // bb.3
-    allocateAndProbe(*ProbeLoopBodyMBB, ProbeLoopBodyMBB->end(), 0, ScratchReg,
-                     false, BPReg);
-    BuildMI(ProbeLoopBodyMBB, DL, TII.get(PPC::CMPD), CRReg)
-        .addReg(SPReg)
-        .addReg(TempReg);
-    BuildMI(ProbeLoopBodyMBB, DL, TII.get(PPC::BCC))
-        .addImm(PPC::PRED_NE)
-        .addReg(CRReg)
-        .addMBB(ProbeLoopBodyMBB);
-    ProbeLoopBodyMBB->addSuccessor(ProbeExitMBB);
-    ProbeLoopBodyMBB->addSuccessor(ProbeLoopBodyMBB);
+    {
+      Register BackChainPointer = HasRedZone ? BPReg : TempReg;
+      allocateAndProbe(*ProbeExitMBB, ProbeExitMBB->end(), 0, ScratchReg, false,
+                       BackChainPointer);
+      if (HasRedZone)
+        // PROBED_STACKALLOC_64 assumes Operand(1) stores the old sp, copy BPReg
+        // to TempReg to satisfy it.
+        BuildMI(*ProbeExitMBB, ProbeExitMBB->end(), DL, CopyInst, TempReg)
+            .addReg(BPReg)
+            .addReg(BPReg);
+      ProbeExitMBB->splice(ProbeExitMBB->end(), &MBB, MBBI, MBB.end());
+      ProbeExitMBB->transferSuccessorsAndUpdatePHIs(&MBB);
+    }
+    // bb.0
+    {
+      BuildMI(&MBB, DL, TII.get(isPPC64 ? PPC::SUBF8 : PPC::SUBF), ScratchReg)
+          .addReg(SPReg)
+          .addReg(FinalStackPtr);
+      if (!HasRedZone)
+        BuildMI(&MBB, DL, CopyInst, TempReg).addReg(SPReg).addReg(SPReg);
+      BuildMI(&MBB, DL, TII.get(isPPC64 ? PPC::CMPDI : PPC::CMPWI), CRReg)
+          .addReg(ScratchReg)
+          .addImm(NegProbeSize);
+      BuildMI(&MBB, DL, TII.get(PPC::BCC))
+          .addImm(PPC::PRED_GE)
+          .addReg(CRReg)
+          .addMBB(ProbeExitMBB);
+      MBB.addSuccessor(ProbeLoopBodyMBB);
+      MBB.addSuccessor(ProbeExitMBB);
+    }
+    // bb.1
+    {
+      Register BackChainPointer = HasRedZone ? BPReg : TempReg;
+      allocateAndProbe(*ProbeLoopBodyMBB, ProbeLoopBodyMBB->end(), NegProbeSize,
+                       0, true /*UseDForm*/, BackChainPointer);
+      BuildMI(ProbeLoopBodyMBB, DL, TII.get(isPPC64 ? PPC::ADDI8 : PPC::ADDI),
+              ScratchReg)
+          .addReg(ScratchReg)
+          .addImm(-NegProbeSize);
+      BuildMI(ProbeLoopBodyMBB, DL, TII.get(isPPC64 ? PPC::CMPDI : PPC::CMPWI),
+              CRReg)
+          .addReg(ScratchReg)
+          .addImm(NegProbeSize);
+      BuildMI(ProbeLoopBodyMBB, DL, TII.get(PPC::BCC))
+          .addImm(PPC::PRED_LT)
+          .addReg(CRReg)
+          .addMBB(ProbeLoopBodyMBB);
+      ProbeLoopBodyMBB->addSuccessor(ProbeExitMBB);
+      ProbeLoopBodyMBB->addSuccessor(ProbeLoopBodyMBB);
+    }
     // Update liveins.
-    recomputeLiveIns(*ProbeResidualMBB);
-    recomputeLiveIns(*ProbeLoopPreHeaderMBB);
     recomputeLiveIns(*ProbeLoopBodyMBB);
     recomputeLiveIns(*ProbeExitMBB);
     return ProbeExitMBB;
   };
   // For case HasBP && MaxAlign > 1, we have to realign the SP by performing
-  // SP = SP - SP % MaxAlign.
+  // SP = SP - SP % MaxAlign, thus make the probe more like dynamic probe since
+  // the offset subtracted from SP is determined by SP's runtime value.
   if (HasBP && MaxAlign > 1) {
-    // FIXME: Currently only probe the gap [stackptr & alignmask, stackptr) in
-    // 64-bit mode.
-    if (isPPC64) {
-      // Use BPReg to calculate CFA.
-      if (needsCFI)
-        buildDefCFA(*CurrentMBB, {MI}, BPReg, 0);
-      // Since we have SPReg copied to BPReg at the moment, FPReg can be used as
-      // TempReg.
-      Register TempReg = FPReg;
-      CurrentMBB = dynamicProbe(*CurrentMBB, {MI}, ScratchReg, TempReg);
-      // Copy BPReg to FPReg to meet the definition of PROBED_STACKALLOC_64.
-      BuildMI(*CurrentMBB, {MI}, DL, CopyInst, FPReg)
-          .addReg(BPReg)
-          .addReg(BPReg);
-    } else {
-      // Initialize current frame pointer.
-      BuildMI(*CurrentMBB, {MI}, DL, CopyInst, FPReg)
+    // Calculate final stack pointer.
+    if (isPPC64)
+      BuildMI(*CurrentMBB, {MI}, DL, TII.get(PPC::RLDICL), ScratchReg)
           .addReg(SPReg)
-          .addReg(SPReg);
-      // Use FPReg to calculate CFA.
-      if (needsCFI)
-        buildDefCFA(*CurrentMBB, {MI}, FPReg, 0);
+          .addImm(0)
+          .addImm(64 - Log2(MaxAlign));
+    else
       BuildMI(*CurrentMBB, {MI}, DL, TII.get(PPC::RLWINM), ScratchReg)
-          .addReg(FPReg)
+          .addReg(SPReg)
           .addImm(0)
           .addImm(32 - Log2(MaxAlign))
           .addImm(31);
-      BuildMI(*CurrentMBB, {MI}, DL, TII.get(PPC::SUBFC), SPReg)
-          .addReg(ScratchReg)
-          .addReg(SPReg);
-    }
+    BuildMI(*CurrentMBB, {MI}, DL, TII.get(isPPC64 ? PPC::SUBF8 : PPC::SUBF),
+            FPReg)
+        .addReg(ScratchReg)
+        .addReg(SPReg);
+    MaterializeImm(*CurrentMBB, {MI}, NegFrameSize, ScratchReg);
+    BuildMI(*CurrentMBB, {MI}, DL, TII.get(isPPC64 ? PPC::ADD8 : PPC::ADD4),
+            FPReg)
+        .addReg(ScratchReg)
+        .addReg(FPReg);
+    CurrentMBB = probeRealignedStack(*CurrentMBB, {MI}, ScratchReg, FPReg);
+    if (needsCFI)
+      buildDefCFAReg(*CurrentMBB, {MI}, FPReg);
   } else {
     // Initialize current frame pointer.
     BuildMI(*CurrentMBB, {MI}, DL, CopyInst, FPReg).addReg(SPReg).addReg(SPReg);
     // Use FPReg to calculate CFA.
     if (needsCFI)
       buildDefCFA(*CurrentMBB, {MI}, FPReg, 0);
-  }
-  // Probe residual part.
-  if (NegResidualSize) {
-    bool ResidualUseDForm = CanUseDForm(NegResidualSize);
-    if (!ResidualUseDForm)
-      MaterializeImm(*CurrentMBB, {MI}, NegResidualSize, ScratchReg);
-    allocateAndProbe(*CurrentMBB, {MI}, NegResidualSize, ScratchReg,
-                     ResidualUseDForm, FPReg);
-  }
-  bool UseDForm = CanUseDForm(NegProbeSize);
-  // If number of blocks is small, just probe them directly.
-  if (NumBlocks < 3) {
-    if (!UseDForm)
-      MaterializeImm(*CurrentMBB, {MI}, NegProbeSize, ScratchReg);
-    for (int i = 0; i < NumBlocks; ++i)
-      allocateAndProbe(*CurrentMBB, {MI}, NegProbeSize, ScratchReg, UseDForm,
-                       FPReg);
-    if (needsCFI) {
-      // Restore using SPReg to calculate CFA.
-      buildDefCFAReg(*CurrentMBB, {MI}, SPReg);
+    // Probe residual part.
+    if (NegResidualSize) {
+      bool ResidualUseDForm = CanUseDForm(NegResidualSize);
+      if (!ResidualUseDForm)
+        MaterializeImm(*CurrentMBB, {MI}, NegResidualSize, ScratchReg);
+      allocateAndProbe(*CurrentMBB, {MI}, NegResidualSize, ScratchReg,
+                       ResidualUseDForm, FPReg);
     }
-  } else {
-    // Since CTR is a volatile register and current shrinkwrap implementation
-    // won't choose an MBB in a loop as the PrologMBB, it's safe to synthesize a
-    // CTR loop to probe.
-    // Calculate trip count and stores it in CTRReg.
-    MaterializeImm(*CurrentMBB, {MI}, NumBlocks, ScratchReg);
-    BuildMI(*CurrentMBB, {MI}, DL, TII.get(isPPC64 ? PPC::MTCTR8 : PPC::MTCTR))
-        .addReg(ScratchReg, RegState::Kill);
-    if (!UseDForm)
-      MaterializeImm(*CurrentMBB, {MI}, NegProbeSize, ScratchReg);
-    // Create MBBs of the loop.
-    MachineFunction::iterator MBBInsertPoint =
-        std::next(CurrentMBB->getIterator());
-    MachineBasicBlock *LoopMBB = MF.CreateMachineBasicBlock(ProbedBB);
-    MF.insert(MBBInsertPoint, LoopMBB);
-    MachineBasicBlock *ExitMBB = MF.CreateMachineBasicBlock(ProbedBB);
-    MF.insert(MBBInsertPoint, ExitMBB);
-    // Synthesize the loop body.
-    allocateAndProbe(*LoopMBB, LoopMBB->end(), NegProbeSize, ScratchReg,
-                     UseDForm, FPReg);
-    BuildMI(LoopMBB, DL, TII.get(isPPC64 ? PPC::BDNZ8 : PPC::BDNZ))
-        .addMBB(LoopMBB);
-    LoopMBB->addSuccessor(ExitMBB);
-    LoopMBB->addSuccessor(LoopMBB);
-    // Synthesize the exit MBB.
-    ExitMBB->splice(ExitMBB->end(), CurrentMBB,
-                    std::next(MachineBasicBlock::iterator(MI)),
-                    CurrentMBB->end());
-    ExitMBB->transferSuccessorsAndUpdatePHIs(CurrentMBB);
-    CurrentMBB->addSuccessor(LoopMBB);
-    if (needsCFI) {
-      // Restore using SPReg to calculate CFA.
-      buildDefCFAReg(*ExitMBB, ExitMBB->begin(), SPReg);
+    bool UseDForm = CanUseDForm(NegProbeSize);
+    // If number of blocks is small, just probe them directly.
+    if (NumBlocks < 3) {
+      if (!UseDForm)
+        MaterializeImm(*CurrentMBB, {MI}, NegProbeSize, ScratchReg);
+      for (int i = 0; i < NumBlocks; ++i)
+        allocateAndProbe(*CurrentMBB, {MI}, NegProbeSize, ScratchReg, UseDForm,
+                         FPReg);
+      if (needsCFI) {
+        // Restore using SPReg to calculate CFA.
+        buildDefCFAReg(*CurrentMBB, {MI}, SPReg);
+      }
+    } else {
+      // Since CTR is a volatile register and current shrinkwrap implementation
+      // won't choose an MBB in a loop as the PrologMBB, it's safe to synthesize a
+      // CTR loop to probe.
+      // Calculate trip count and stores it in CTRReg.
+      MaterializeImm(*CurrentMBB, {MI}, NumBlocks, ScratchReg);
+      BuildMI(*CurrentMBB, {MI}, DL, TII.get(isPPC64 ? PPC::MTCTR8 : PPC::MTCTR))
+          .addReg(ScratchReg, RegState::Kill);
+      if (!UseDForm)
+        MaterializeImm(*CurrentMBB, {MI}, NegProbeSize, ScratchReg);
+      // Create MBBs of the loop.
+      MachineFunction::iterator MBBInsertPoint =
+          std::next(CurrentMBB->getIterator());
+      MachineBasicBlock *LoopMBB = MF.CreateMachineBasicBlock(ProbedBB);
+      MF.insert(MBBInsertPoint, LoopMBB);
+      MachineBasicBlock *ExitMBB = MF.CreateMachineBasicBlock(ProbedBB);
+      MF.insert(MBBInsertPoint, ExitMBB);
+      // Synthesize the loop body.
+      allocateAndProbe(*LoopMBB, LoopMBB->end(), NegProbeSize, ScratchReg,
+                       UseDForm, FPReg);
+      BuildMI(LoopMBB, DL, TII.get(isPPC64 ? PPC::BDNZ8 : PPC::BDNZ))
+          .addMBB(LoopMBB);
+      LoopMBB->addSuccessor(ExitMBB);
+      LoopMBB->addSuccessor(LoopMBB);
+      // Synthesize the exit MBB.
+      ExitMBB->splice(ExitMBB->end(), CurrentMBB,
+                      std::next(MachineBasicBlock::iterator(MI)),
+                      CurrentMBB->end());
+      ExitMBB->transferSuccessorsAndUpdatePHIs(CurrentMBB);
+      CurrentMBB->addSuccessor(LoopMBB);
+      if (needsCFI) {
+        // Restore using SPReg to calculate CFA.
+        buildDefCFAReg(*ExitMBB, ExitMBB->begin(), SPReg);
+      }
+      // Update liveins.
+      recomputeLiveIns(*LoopMBB);
+      recomputeLiveIns(*ExitMBB);
     }
-    // Update liveins.
-    recomputeLiveIns(*LoopMBB);
-    recomputeLiveIns(*ExitMBB);
   }
   ++NumPrologProbed;
   MI.eraseFromParent();
