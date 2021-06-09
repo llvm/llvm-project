@@ -420,6 +420,7 @@
 // (/Zs is for syntax-only)
 // RUN: %clang_cl /Zs \
 // RUN:     /await \
+// RUN:     /await:strict \
 // RUN:     /constexpr:depth1000 /constexpr:backtrace1000 /constexpr:steps1000 \
 // RUN:     /AIfoo \
 // RUN:     /AI foo_does_not_exist \
