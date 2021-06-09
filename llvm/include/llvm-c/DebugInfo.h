@@ -42,7 +42,7 @@ typedef enum {
   LLVMDIFlagStaticMember = 1 << 12,
   LLVMDIFlagLValueReference = 1 << 13,
   LLVMDIFlagRValueReference = 1 << 14,
-  LLVMDIFlagExportSymbols = 1 << 15,
+  LLVMDIFlagReserved = 1 << 15,
   LLVMDIFlagSingleInheritance = 1 << 16,
   LLVMDIFlagMultipleInheritance = 2 << 16,
   LLVMDIFlagVirtualInheritance = 3 << 16,
@@ -57,7 +57,6 @@ typedef enum {
   LLVMDIFlagNonTrivial = 1 << 26,
   LLVMDIFlagBigEndian = 1 << 27,
   LLVMDIFlagLittleEndian = 1 << 28,
-  LLVMDIFlagAllCallsDescribed = 1 << 29,
   LLVMDIFlagIndirectVirtualBase = (1 << 2) | (1 << 5),
   LLVMDIFlagAccessibility = LLVMDIFlagPrivate | LLVMDIFlagProtected |
                             LLVMDIFlagPublic,
