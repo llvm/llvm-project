@@ -32,6 +32,9 @@ TEST(TwineTest, Construction) {
   EXPECT_EQ("hi", Twine(StringRef("hithere", 2)).str());
   EXPECT_EQ("hi", Twine(SmallString<4>("hi")).str());
   EXPECT_EQ("hi", Twine(formatv("{0}", "hi")).str());
+#if __cplusplus > 201402L
+  EXPECT_EQ("hi", Twine(std::string_view("hi")).str());
+#endif
 }
 
 TEST(TwineTest, Numbers) {
@@ -73,6 +76,10 @@ TEST(TwineTest, Concat) {
             repr(Twine().concat(Twine(formatv("howdy")))));
   EXPECT_EQ("(Twine smallstring:\"hey\" cstring:\"there\")", 
             repr(Twine(SmallString<7>("hey")).concat(Twine("there"))));
+#if __cplusplus > 201402L
+  EXPECT_EQ("(Twine std::string_view:\"hey\" cstring:\"there\")",
+            repr(Twine(std::string_view("hey")).concat(Twine("there"))));
+#endif
 
   // Concatenation of unary ropes.
   EXPECT_EQ("(Twine cstring:\"a\" cstring:\"b\")", 
