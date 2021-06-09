@@ -2105,14 +2105,26 @@ public:
     // Since `a` is not itself a valid referent, determine its value and
     // create a temporary location at the begining of the function for
     // referencing.
+    auto val = valBase;
+    if constexpr (!Fortran::common::HasMember<
+                      A, Fortran::evaluate::TypelessExpression>) {
+      if constexpr (A::Result::category ==
+                    Fortran::common::TypeCategory::Logical) {
+        // Ensure logicals that may have been lowered to `i1` are cast to the
+        // Fortran logical type before being placed in memory.
+        auto type = converter.genType(A::Result::category, A::Result::kind);
+        val = builder.createConvert(getLoc(), type, valBase);
+      }
+    }
     auto func = builder.getFunction();
     auto initPos = builder.saveInsertionPoint();
     builder.setInsertionPointToStart(&func.front());
-    auto mem = builder.create<fir::AllocaOp>(getLoc(), valBase.getType());
+    auto mem = builder.create<fir::AllocaOp>(getLoc(), val.getType());
     builder.restoreInsertionPoint(initPos);
-    builder.create<fir::StoreOp>(getLoc(), valBase, mem);
+    builder.create<fir::StoreOp>(getLoc(), val, mem);
     return fir::substBase(exv, mem.getResult());
   }
+
   template <typename A, template <typename> typename T,
             typename B = std::decay_t<T<A>>,
             std::enable_if_t<
