@@ -239,19 +239,18 @@ static ALWAYS_INLINE void OnFree(uptr ptr, uptr class_id, uptr size) {
 
 // ---------------------- Interface ---------------- {{{1
 using namespace __asan;
-#define DEFINE_STACK_MALLOC_FREE_WITH_CLASS_ID(class_id)                       \
-  extern "C" SANITIZER_INTERFACE_ATTRIBUTE uptr                                \
-      __asan_stack_malloc_##class_id(uptr size) {                              \
-    return OnMalloc(class_id, size);                                           \
-  }                                                                            \
-  extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __asan_stack_free_##class_id(  \
-      uptr ptr, uptr size) {                                                   \
-    OnFree(ptr, class_id, size);                                               \
-  }
-#define DEFINE_STACK_MALLOC_ALWAYS_WITH_CLASS_ID(class_id) \
-  extern "C" SANITIZER_INTERFACE_ATTRIBUTE uptr            \
-      __asan_stack_malloc_always_##class_id(uptr size) {   \
-    return OnMallocAlways(class_id, size);                 \
+#define DEFINE_STACK_MALLOC_FREE_WITH_CLASS_ID(class_id)                      \
+  extern "C" SANITIZER_INTERFACE_ATTRIBUTE uptr                               \
+      __asan_stack_malloc_##class_id(uptr size) {                             \
+    return OnMalloc(class_id, size);                                          \
+  }                                                                           \
+  extern "C" SANITIZER_INTERFACE_ATTRIBUTE uptr                               \
+      __asan_stack_malloc_always_##class_id(uptr size) {                      \
+    return OnMallocAlways(class_id, size);                                    \
+  }                                                                           \
+  extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __asan_stack_free_##class_id( \
+      uptr ptr, uptr size) {                                                  \
+    OnFree(ptr, class_id, size);                                              \
   }
 
 DEFINE_STACK_MALLOC_FREE_WITH_CLASS_ID(0)
@@ -265,18 +264,6 @@ DEFINE_STACK_MALLOC_FREE_WITH_CLASS_ID(7)
 DEFINE_STACK_MALLOC_FREE_WITH_CLASS_ID(8)
 DEFINE_STACK_MALLOC_FREE_WITH_CLASS_ID(9)
 DEFINE_STACK_MALLOC_FREE_WITH_CLASS_ID(10)
-
-DEFINE_STACK_MALLOC_ALWAYS_WITH_CLASS_ID(0)
-DEFINE_STACK_MALLOC_ALWAYS_WITH_CLASS_ID(1)
-DEFINE_STACK_MALLOC_ALWAYS_WITH_CLASS_ID(2)
-DEFINE_STACK_MALLOC_ALWAYS_WITH_CLASS_ID(3)
-DEFINE_STACK_MALLOC_ALWAYS_WITH_CLASS_ID(4)
-DEFINE_STACK_MALLOC_ALWAYS_WITH_CLASS_ID(5)
-DEFINE_STACK_MALLOC_ALWAYS_WITH_CLASS_ID(6)
-DEFINE_STACK_MALLOC_ALWAYS_WITH_CLASS_ID(7)
-DEFINE_STACK_MALLOC_ALWAYS_WITH_CLASS_ID(8)
-DEFINE_STACK_MALLOC_ALWAYS_WITH_CLASS_ID(9)
-DEFINE_STACK_MALLOC_ALWAYS_WITH_CLASS_ID(10)
 
 extern "C" {
 // TODO: remove this method and fix tests that use it by setting
