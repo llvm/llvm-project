@@ -30,3 +30,7 @@ Operations.
 ## Types
 
 [include "Dialects/BuiltinTypes.md"]
+
+## Type Interfaces
+
+[include "Dialects/BuiltinTypeInterfaces.md"]

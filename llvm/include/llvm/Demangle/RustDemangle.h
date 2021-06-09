@@ -102,6 +102,21 @@ private:
   void demangleConstBool();
   void demangleConstChar();
 
+  template <typename Callable> void demangleBackref(Callable Demangler) {
+    uint64_t Backref = parseBase62Number();
+    if (Error || Backref >= Position) {
+      Error = true;
+      return;
+    }
+
+    if (!Print)
+      return;
+
+    SwapAndRestore<size_t> SavePosition(Position, Position);
+    Position = Backref;
+    Demangler();
+  }
+
   Identifier parseIdentifier();
   uint64_t parseOptionalBase62Number(char Tag);
   uint64_t parseBase62Number();

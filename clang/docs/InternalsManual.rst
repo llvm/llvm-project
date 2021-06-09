@@ -2830,7 +2830,7 @@ semantic) type, or one of its derivatives. Most attributes will derive from the
 later redeclarations of the ``Decl`` it is associated with.
 ``InheritableParamAttr`` is similar to ``InheritableAttr``, except that the
 attribute is written on a parameter instead of a declaration. If the attribute
-applies to statements, it should inherit from ``StmtAttr`. If the attribute is
+applies to statements, it should inherit from ``StmtAttr``. If the attribute is
 intended to apply to a type instead of a declaration, such an attribute should
 derive from ``TypeAttr``, and will generally not be given an AST representation.
 (Note that this document does not cover the creation of type attributes.) An

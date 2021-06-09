@@ -204,11 +204,6 @@ public:
 
   void replaceVariableLocationOp(Value *OldValue, Value *NewValue);
   void replaceVariableLocationOp(unsigned OpIdx, Value *NewValue);
-  /// Adding a new location operand will always result in this intrinsic using
-  /// an ArgList, and must always be accompanied by a new expression that uses
-  /// the new operand.
-  void addVariableLocationOps(ArrayRef<Value *> NewValues,
-                              DIExpression *NewExpr);
 
   void setVariable(DILocalVariable *NewVar) {
     setArgOperand(1, MetadataAsValue::get(NewVar->getContext(), NewVar));
@@ -389,6 +384,11 @@ public:
 /// This is the common base class for vector predication intrinsics.
 class VPIntrinsic : public IntrinsicInst {
 public:
+  /// \brief Declares a llvm.vp.* intrinsic in \p M that matches the parameters
+  /// \p Params.
+  static Function *getDeclarationForParams(Module *M, Intrinsic::ID,
+                                           ArrayRef<Value *> Params);
+
   static Optional<unsigned> getMaskParamPos(Intrinsic::ID IntrinsicID);
   static Optional<unsigned> getVectorLengthParamPos(Intrinsic::ID IntrinsicID);
 

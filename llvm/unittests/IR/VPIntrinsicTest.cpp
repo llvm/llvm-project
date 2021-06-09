@@ -222,4 +222,36 @@ TEST_F(VPIntrinsicTest, IntrinsicIDRoundTrip) {
   ASSERT_NE(FullTripCounts, 0u);
 }
 
+/// Check that VPIntrinsic::getDeclarationForParams works.
+TEST_F(VPIntrinsicTest, VPIntrinsicDeclarationForParams) {
+  std::unique_ptr<Module> M = CreateVPDeclarationModule();
+  assert(M);
+
+  auto OutM = std::make_unique<Module>("", M->getContext());
+
+  for (auto &F : *M) {
+    auto *FuncTy = F.getFunctionType();
+
+    // Declare intrinsic anew with explicit types.
+    std::vector<Value *> Values;
+    for (auto *ParamTy : FuncTy->params())
+      Values.push_back(UndefValue::get(ParamTy));
+
+    ASSERT_NE(F.getIntrinsicID(), Intrinsic::not_intrinsic);
+    auto *NewDecl = VPIntrinsic::getDeclarationForParams(
+        OutM.get(), F.getIntrinsicID(), Values);
+    ASSERT_TRUE(NewDecl);
+
+    // Check that 'old decl' == 'new decl'.
+    ASSERT_EQ(F.getIntrinsicID(), NewDecl->getIntrinsicID());
+    auto ItNewParams = NewDecl->getFunctionType()->param_begin();
+    auto EndItNewParams = NewDecl->getFunctionType()->param_end();
+    for (auto *ParamTy : FuncTy->params()) {
+      ASSERT_NE(ItNewParams, EndItNewParams);
+      ASSERT_EQ(*ItNewParams, ParamTy);
+      ++ItNewParams;
+    }
+  }
+}
+
 } // end anonymous namespace

@@ -667,10 +667,48 @@ bool Parser::ParseUsingDeclarator(DeclaratorContext Context,
 ///     alias-declaration: C++11 [dcl.dcl]p1
 ///       'using' identifier attribute-specifier-seq[opt] = type-id ;
 ///
-Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
+///     using-enum-declaration: [C++20, dcl.enum]
+///       'using' elaborated-enum-specifier ;
+///
+///     elaborated-enum-specifier:
+///       'enum' nested-name-specifier[opt] identifier
+Parser::DeclGroupPtrTy
+Parser::ParseUsingDeclaration(
     DeclaratorContext Context, const ParsedTemplateInfo &TemplateInfo,
     SourceLocation UsingLoc, SourceLocation &DeclEnd,
     ParsedAttributesWithRange &PrefixAttrs, AccessSpecifier AS) {
+  SourceLocation UELoc;
+  if (TryConsumeToken(tok::kw_enum, UELoc)) {
+    // C++20 using-enum
+    Diag(UELoc, getLangOpts().CPlusPlus20
+                    ? diag::warn_cxx17_compat_using_enum_declaration
+                    : diag::ext_using_enum_declaration);
+
+    DiagnoseCXX11AttributeExtension(PrefixAttrs);
+
+    DeclSpec DS(AttrFactory);
+    ParseEnumSpecifier(UELoc, DS, TemplateInfo, AS,
+                       // DSC_trailing has the semantics we desire
+                       DeclSpecContext::DSC_trailing);
+
+    if (TemplateInfo.Kind) {
+      SourceRange R = TemplateInfo.getSourceRange();
+      Diag(UsingLoc, diag::err_templated_using_directive_declaration)
+          << 1 /* declaration */ << R << FixItHint::CreateRemoval(R);
+
+      return nullptr;
+    }
+
+    Decl *UED = Actions.ActOnUsingEnumDeclaration(getCurScope(), AS, UsingLoc,
+                                                  UELoc, DS);
+    DeclEnd = Tok.getLocation();
+    if (ExpectAndConsume(tok::semi, diag::err_expected_after,
+                         "using-enum declaration"))
+      SkipUntil(tok::semi);
+
+    return Actions.ConvertDeclToDeclGroup(UED);
+  }
+
   // Check for misplaced attributes before the identifier in an
   // alias-declaration.
   ParsedAttributesWithRange MisplacedAttrs(AttrFactory);
@@ -768,8 +806,9 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
   // Eat ';'.
   DeclEnd = Tok.getLocation();
   if (ExpectAndConsume(tok::semi, diag::err_expected_after,
-                       !Attrs.empty() ? "attributes list"
-                                      : "using declaration"))
+                       !Attrs.empty()    ? "attributes list"
+                       : UELoc.isValid() ? "using-enum declaration"
+                                         : "using declaration"))
     SkipUntil(tok::semi);
 
   return Actions.BuildDeclaratorGroup(DeclsInGroup);

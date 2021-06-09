@@ -16,7 +16,6 @@
 #ifndef LLVM_CLANG_AST_INTERP_CONTEXT_H
 #define LLVM_CLANG_AST_INTERP_CONTEXT_H
 
-#include "Context.h"
 #include "InterpStack.h"
 #include "clang/AST/APValue.h"
 #include "llvm/ADT/PointerIntPair.h"

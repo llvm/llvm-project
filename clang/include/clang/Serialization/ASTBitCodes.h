@@ -1339,6 +1339,9 @@ enum DeclCode {
   /// A UsingDecl record.
   DECL_USING,
 
+  /// A UsingEnumDecl record.
+  DECL_USING_ENUM,
+
   /// A UsingPackDecl record.
   DECL_USING_PACK,
 

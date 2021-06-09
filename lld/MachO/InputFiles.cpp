@@ -53,6 +53,7 @@
 #include "OutputSegment.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "SyntheticSections.h"
 #include "Target.h"
 
 #include "lld/Common/DWARF.h"
@@ -241,36 +242,54 @@ InputFile::InputFile(Kind kind, const InterfaceFile &interface)
     : id(idCount++), fileKind(kind), name(saver.save(interface.getPath())) {}
 
 template <class Section>
+static void parseSection(ObjFile *file, const uint8_t *buf, const Section &sec,
+                         InputSection *isec) {
+  isec->file = file;
+  isec->name =
+      StringRef(sec.sectname, strnlen(sec.sectname, sizeof(sec.sectname)));
+  isec->segname =
+      StringRef(sec.segname, strnlen(sec.segname, sizeof(sec.segname)));
+  isec->data = {isZeroFill(sec.flags) ? nullptr : buf + sec.offset,
+                static_cast<size_t>(sec.size)};
+  if (sec.align >= 32)
+    error("alignment " + std::to_string(sec.align) + " of section " +
+          isec->name + " is too large");
+  else
+    isec->align = 1 << sec.align;
+  isec->flags = sec.flags;
+}
+
+template <class Section>
 void ObjFile::parseSections(ArrayRef<Section> sections) {
   subsections.reserve(sections.size());
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
 
   for (const Section &sec : sections) {
-    InputSection *isec = make<InputSection>();
-    isec->file = this;
-    isec->name =
-        StringRef(sec.sectname, strnlen(sec.sectname, sizeof(sec.sectname)));
-    isec->segname =
-        StringRef(sec.segname, strnlen(sec.segname, sizeof(sec.segname)));
-    isec->data = {isZeroFill(sec.flags) ? nullptr : buf + sec.offset,
-                  static_cast<size_t>(sec.size)};
-    if (sec.align >= 32)
-      error("alignment " + std::to_string(sec.align) + " of section " +
-            isec->name + " is too large");
-    else
-      isec->align = 1 << sec.align;
-    isec->flags = sec.flags;
+    if (config->dedupLiterals && sectionType(sec.flags) == S_CSTRING_LITERALS) {
+      if (sec.nreloc)
+        fatal(toString(this) + " contains relocations in " + sec.segname + "," +
+              sec.sectname +
+              ", so LLD cannot deduplicate literals. Try re-running without "
+              "--deduplicate-literals.");
 
-    if (!(isDebugSection(isec->flags) &&
-          isec->segname == segment_names::dwarf)) {
+      auto *isec = make<CStringInputSection>();
+      parseSection(this, buf, sec, isec);
+      isec->splitIntoPieces(); // FIXME: parallelize this?
       subsections.push_back({{0, isec}});
     } else {
-      // Instead of emitting DWARF sections, we emit STABS symbols to the
-      // object files that contain them. We filter them out early to avoid
-      // parsing their relocations unnecessarily. But we must still push an
-      // empty map to ensure the indices line up for the remaining sections.
-      subsections.push_back({});
-      debugSections.push_back(isec);
+      auto *isec = make<ConcatInputSection>();
+      parseSection(this, buf, sec, isec);
+      if (!(isDebugSection(isec->flags) &&
+            isec->segname == segment_names::dwarf)) {
+        subsections.push_back({{0, isec}});
+      } else {
+        // Instead of emitting DWARF sections, we emit STABS symbols to the
+        // object files that contain them. We filter them out early to avoid
+        // parsing their relocations unnecessarily. But we must still push an
+        // empty map to ensure the indices line up for the remaining sections.
+        subsections.push_back({});
+        debugSections.push_back(isec);
+      }
     }
   }
 }
@@ -601,20 +620,22 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
           j + 1 < symbolIndices.size()
               ? nList[symbolIndices[j + 1]].n_value - sym.n_value
               : isec->data.size() - symbolOffset;
-      // There are 3 cases where we do not need to create a new subsection:
+      // There are 4 cases where we do not need to create a new subsection:
       //   1. If the input file does not use subsections-via-symbols.
       //   2. Multiple symbols at the same address only induce one subsection.
       //      (The symbolOffset == 0 check covers both this case as well as
       //      the first loop iteration.)
       //   3. Alternative entry points do not induce new subsections.
+      //   4. If we have a literal section (e.g. __cstring and __literal4).
       if (!subsectionsViaSymbols || symbolOffset == 0 ||
-          sym.n_desc & N_ALT_ENTRY) {
+          sym.n_desc & N_ALT_ENTRY || !isa<ConcatInputSection>(isec)) {
         symbols[symIndex] =
             createDefined(sym, name, isec, symbolOffset, symbolSize);
         continue;
       }
+      auto *concatIsec = cast<ConcatInputSection>(isec);
 
-      auto *nextIsec = make<InputSection>(*isec);
+      auto *nextIsec = make<ConcatInputSection>(*concatIsec);
       nextIsec->data = isec->data.slice(symbolOffset);
       nextIsec->numRefs = 0;
       nextIsec->wasCoalesced = false;
@@ -637,7 +658,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
 OpaqueFile::OpaqueFile(MemoryBufferRef mb, StringRef segName,
                        StringRef sectName)
     : InputFile(OpaqueKind, mb) {
-  InputSection *isec = make<InputSection>();
+  ConcatInputSection *isec = make<ConcatInputSection>();
   isec->file = this;
   isec->name = sectName.take_front(16);
   isec->segname = segName.take_front(16);

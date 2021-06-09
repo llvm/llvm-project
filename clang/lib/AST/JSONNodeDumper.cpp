@@ -756,6 +756,10 @@ void JSONNodeDumper::VisitUsingDecl(const UsingDecl *UD) {
   JOS.attribute("name", Name);
 }
 
+void JSONNodeDumper::VisitUsingEnumDecl(const UsingEnumDecl *UED) {
+  JOS.attribute("target", createBareDeclRef(UED->getEnumDecl()));
+}
+
 void JSONNodeDumper::VisitUsingShadowDecl(const UsingShadowDecl *USD) {
   JOS.attribute("target", createBareDeclRef(USD->getTargetDecl()));
 }

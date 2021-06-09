@@ -13,6 +13,7 @@
 
 #include "fuchsia.h"
 #include "linux.h"
+#include "trusty.h"
 
 #include <stddef.h>
 #include <string.h>

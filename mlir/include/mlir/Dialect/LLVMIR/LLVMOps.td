@@ -129,7 +129,7 @@ class LLVM_ArithmeticOpBase<Type type, string mnemonic,
 }
 class LLVM_IntArithmeticOp<string mnemonic, string builderFunc,
                            list<OpTrait> traits = []> :
-    LLVM_ArithmeticOpBase<LLVM_AnyInteger, mnemonic, builderFunc, traits> {
+    LLVM_ArithmeticOpBase<AnyInteger, mnemonic, builderFunc, traits> {
   let arguments = commonArgs;
 }
 class LLVM_FloatArithmeticOp<string mnemonic, string builderFunc,
@@ -190,8 +190,8 @@ def ICmpPredicate : I64EnumAttr<
 // Other integer operations.
 def LLVM_ICmpOp : LLVM_Op<"icmp", [NoSideEffect]> {
   let arguments = (ins ICmpPredicate:$predicate,
-                   AnyTypeOf<[LLVM_ScalarOrVectorOf<LLVM_AnyInteger>, LLVM_ScalarOrVectorOf<LLVM_AnyPointer>]>:$lhs,
-                   AnyTypeOf<[LLVM_ScalarOrVectorOf<LLVM_AnyInteger>, LLVM_ScalarOrVectorOf<LLVM_AnyPointer>]>:$rhs);
+                   AnyTypeOf<[LLVM_ScalarOrVectorOf<AnyInteger>, LLVM_ScalarOrVectorOf<LLVM_AnyPointer>]>:$lhs,
+                   AnyTypeOf<[LLVM_ScalarOrVectorOf<AnyInteger>, LLVM_ScalarOrVectorOf<LLVM_AnyPointer>]>:$rhs);
   let results = (outs LLVM_ScalarOrVectorOf<I1>:$res);
   let llvmBuilder = [{
     $res = builder.CreateICmp(getLLVMCmpPredicate($predicate), $lhs, $rhs);
@@ -290,7 +290,7 @@ class MemoryOpWithAlignmentAndAttributes : MemoryOpWithAlignmentBase {
 
 // Memory-related operations.
 def LLVM_AllocaOp : LLVM_Op<"alloca">, MemoryOpWithAlignmentBase {
-  let arguments = (ins LLVM_AnyInteger:$arraySize,
+  let arguments = (ins AnyInteger:$arraySize,
                    OptionalAttr<I64Attr>:$alignment);
   let results = (outs LLVM_AnyPointer:$res);
   string llvmBuilder = [{
@@ -318,7 +318,7 @@ def LLVM_GEPOp
           "$res = builder.CreateGEP("
           " $base->getType()->getPointerElementType(), $base, $indices);"> {
   let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$base,
-                   Variadic<LLVM_ScalarOrVectorOf<LLVM_AnyInteger>>:$indices);
+                   Variadic<LLVM_ScalarOrVectorOf<AnyInteger>>:$indices);
   let results = (outs LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = [{
@@ -389,32 +389,32 @@ def LLVM_AddrSpaceCastOp : LLVM_CastOp<"addrspacecast", "CreateAddrSpaceCast",
                                        LLVM_ScalarOrVectorOf<LLVM_AnyPointer>,
                                        LLVM_ScalarOrVectorOf<LLVM_AnyPointer>>;
 def LLVM_IntToPtrOp : LLVM_CastOp<"inttoptr", "CreateIntToPtr",
-                                  LLVM_ScalarOrVectorOf<LLVM_AnyInteger>,
+                                  LLVM_ScalarOrVectorOf<AnyInteger>,
                                   LLVM_ScalarOrVectorOf<LLVM_AnyPointer>>;
 def LLVM_PtrToIntOp : LLVM_CastOp<"ptrtoint", "CreatePtrToInt",
                                   LLVM_ScalarOrVectorOf<LLVM_AnyPointer>,
-                                  LLVM_ScalarOrVectorOf<LLVM_AnyInteger>>;
+                                  LLVM_ScalarOrVectorOf<AnyInteger>>;
 def LLVM_SExtOp : LLVM_CastOp<"sext", "CreateSExt",
-                              LLVM_ScalarOrVectorOf<LLVM_AnyInteger>,
-                              LLVM_ScalarOrVectorOf<LLVM_AnyInteger>>;
+                              LLVM_ScalarOrVectorOf<AnyInteger>,
+                              LLVM_ScalarOrVectorOf<AnyInteger>>;
 def LLVM_ZExtOp : LLVM_CastOp<"zext", "CreateZExt",
-                              LLVM_ScalarOrVectorOf<LLVM_AnyInteger>,
-                              LLVM_ScalarOrVectorOf<LLVM_AnyInteger>>;
+                              LLVM_ScalarOrVectorOf<AnyInteger>,
+                              LLVM_ScalarOrVectorOf<AnyInteger>>;
 def LLVM_TruncOp : LLVM_CastOp<"trunc", "CreateTrunc",
-                               LLVM_ScalarOrVectorOf<LLVM_AnyInteger>,
-                               LLVM_ScalarOrVectorOf<LLVM_AnyInteger>>;
+                               LLVM_ScalarOrVectorOf<AnyInteger>,
+                               LLVM_ScalarOrVectorOf<AnyInteger>>;
 def LLVM_SIToFPOp : LLVM_CastOp<"sitofp", "CreateSIToFP",
-                                LLVM_ScalarOrVectorOf<LLVM_AnyInteger>,
+                                LLVM_ScalarOrVectorOf<AnyInteger>,
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
 def LLVM_UIToFPOp : LLVM_CastOp<"uitofp", "CreateUIToFP",
-                                LLVM_ScalarOrVectorOf<LLVM_AnyInteger>,
+                                LLVM_ScalarOrVectorOf<AnyInteger>,
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
 def LLVM_FPToSIOp : LLVM_CastOp<"fptosi", "CreateFPToSI",
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
-                                LLVM_ScalarOrVectorOf<LLVM_AnyInteger>>;
+                                LLVM_ScalarOrVectorOf<AnyInteger>>;
 def LLVM_FPToUIOp : LLVM_CastOp<"fptoui", "CreateFPToUI",
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
-                                LLVM_ScalarOrVectorOf<LLVM_AnyInteger>>;
+                                LLVM_ScalarOrVectorOf<AnyInteger>>;
 def LLVM_FPExtOp : LLVM_CastOp<"fpext", "CreateFPExt",
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
@@ -514,7 +514,7 @@ def LLVM_CallOp : LLVM_Op<"call",
   let printer = [{ printCallOp(p, *this); }];
 }
 def LLVM_ExtractElementOp : LLVM_Op<"extractelement", [NoSideEffect]> {
-  let arguments = (ins LLVM_AnyVector:$vector, LLVM_AnyInteger:$position);
+  let arguments = (ins LLVM_AnyVector:$vector, AnyInteger:$position);
   let results = (outs LLVM_Type:$res);
   string llvmBuilder = [{
     $res = builder.CreateExtractElement($vector, $position);
@@ -537,7 +537,7 @@ def LLVM_ExtractValueOp : LLVM_Op<"extractvalue", [NoSideEffect]> {
 }
 def LLVM_InsertElementOp : LLVM_Op<"insertelement", [NoSideEffect]> {
   let arguments = (ins LLVM_AnyVector:$vector, LLVM_PrimitiveType:$value,
-                   LLVM_AnyInteger:$position);
+                   AnyInteger:$position);
   let results = (outs LLVM_AnyVector:$res);
   string llvmBuilder = [{
     $res = builder.CreateInsertElement($vector, $value, $position);
@@ -1616,7 +1616,7 @@ def AtomicOrdering : I64EnumAttr<
   let cppNamespace = "::mlir::LLVM";
 }
 
-def LLVM_AtomicRMWType : AnyTypeOf<[LLVM_AnyFloat, LLVM_AnyInteger]>;
+def LLVM_AtomicRMWType : AnyTypeOf<[LLVM_AnyFloat, AnyInteger]>;
 
 // FIXME: Need to add alignment attribute to MLIR atomicrmw operation.
 def LLVM_AtomicRMWOp : LLVM_Op<"atomicrmw"> {
@@ -1634,7 +1634,7 @@ def LLVM_AtomicRMWOp : LLVM_Op<"atomicrmw"> {
   let verifier = "return ::verify(*this);";
 }
 
-def LLVM_AtomicCmpXchgType : AnyTypeOf<[LLVM_AnyInteger, LLVM_AnyPointer]>;
+def LLVM_AtomicCmpXchgType : AnyTypeOf<[AnyInteger, LLVM_AnyPointer]>;
 def LLVM_AtomicCmpXchgResultType : Type<And<[
   LLVM_AnyStruct.predicate,
   CPred<"$_self.cast<::mlir::LLVM::LLVMStructType>().getBody().size() == 2">,

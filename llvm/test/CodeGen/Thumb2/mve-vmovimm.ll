@@ -21,6 +21,27 @@ entry:
   ret <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
 }
 
+; This has 0x01020304 or 0x04030201 vdup.32'd to q reg depending on endianness.
+; The big endian is different as there is an implicit vrev64.8 out of the
+; function, which gets constant folded away.
+define arm_aapcs_vfpcc <16 x i8> @mov_int8_1234() {
+; CHECKLE-LABEL: mov_int8_1234:
+; CHECKLE:       @ %bb.0: @ %entry
+; CHECKLE-NEXT:    movw r0, #513
+; CHECKLE-NEXT:    movt r0, #1027
+; CHECKLE-NEXT:    vdup.32 q0, r0
+; CHECKLE-NEXT:    bx lr
+;
+; CHECKBE-LABEL: mov_int8_1234:
+; CHECKBE:       @ %bb.0: @ %entry
+; CHECKBE-NEXT:    movw r0, #772
+; CHECKBE-NEXT:    movt r0, #258
+; CHECKBE-NEXT:    vdup.32 q0, r0
+; CHECKBE-NEXT:    bx lr
+entry:
+  ret <16 x i8> <i8 1, i8 2, i8 3, i8 4, i8 1, i8 2, i8 3, i8 4, i8 1, i8 2, i8 3, i8 4, i8 1, i8 2, i8 3, i8 4>
+}
+
 define arm_aapcs_vfpcc <8 x i16> @mov_int16_1() {
 ; CHECK-LABEL: mov_int16_1:
 ; CHECK:       @ %bb.0: @ %entry
@@ -58,32 +79,11 @@ entry:
 }
 
 define arm_aapcs_vfpcc <8 x i16> @mov_int16_258() {
-; CHECKLE-LABEL: mov_int16_258:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    adr r0, .LCPI6_0
-; CHECKLE-NEXT:    vldrw.u32 q0, [r0]
-; CHECKLE-NEXT:    bx lr
-; CHECKLE-NEXT:    .p2align 4
-; CHECKLE-NEXT:  @ %bb.1:
-; CHECKLE-NEXT:  .LCPI6_0:
-; CHECKLE-NEXT:    .long 16908546 @ double 8.204306265173532E-304
-; CHECKLE-NEXT:    .long 16908546
-; CHECKLE-NEXT:    .long 16908546 @ double 8.204306265173532E-304
-; CHECKLE-NEXT:    .long 16908546
-;
-; CHECKBE-LABEL: mov_int16_258:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    adr r0, .LCPI6_0
-; CHECKBE-NEXT:    vldrb.u8 q1, [r0]
-; CHECKBE-NEXT:    vrev64.8 q0, q1
-; CHECKBE-NEXT:    bx lr
-; CHECKBE-NEXT:    .p2align 4
-; CHECKBE-NEXT:  @ %bb.1:
-; CHECKBE-NEXT:  .LCPI6_0:
-; CHECKBE-NEXT:    .long 16908546 @ double 8.204306265173532E-304
-; CHECKBE-NEXT:    .long 16908546
-; CHECKBE-NEXT:    .long 16908546 @ double 8.204306265173532E-304
-; CHECKBE-NEXT:    .long 16908546
+; CHECK-LABEL: mov_int16_258:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    mov.w r0, #258
+; CHECK-NEXT:    vdup.16 q0, r0
+; CHECK-NEXT:    bx lr
 entry:
   ret <8 x i16> <i16 258, i16 258, i16 258, i16 258, i16 258, i16 258, i16 258, i16 258>
 }
@@ -125,32 +125,12 @@ entry:
 }
 
 define arm_aapcs_vfpcc <4 x i32> @mov_int32_16777217() {
-; CHECKLE-LABEL: mov_int32_16777217:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    adr r0, .LCPI11_0
-; CHECKLE-NEXT:    vldrw.u32 q0, [r0]
-; CHECKLE-NEXT:    bx lr
-; CHECKLE-NEXT:    .p2align 4
-; CHECKLE-NEXT:  @ %bb.1:
-; CHECKLE-NEXT:  .LCPI11_0:
-; CHECKLE-NEXT:    .long 16777217 @ double 7.2911290000737531E-304
-; CHECKLE-NEXT:    .long 16777217
-; CHECKLE-NEXT:    .long 16777217 @ double 7.2911290000737531E-304
-; CHECKLE-NEXT:    .long 16777217
-;
-; CHECKBE-LABEL: mov_int32_16777217:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    adr r0, .LCPI11_0
-; CHECKBE-NEXT:    vldrb.u8 q1, [r0]
-; CHECKBE-NEXT:    vrev64.8 q0, q1
-; CHECKBE-NEXT:    bx lr
-; CHECKBE-NEXT:    .p2align 4
-; CHECKBE-NEXT:  @ %bb.1:
-; CHECKBE-NEXT:  .LCPI11_0:
-; CHECKBE-NEXT:    .long 16777217 @ double 7.2911290000737531E-304
-; CHECKBE-NEXT:    .long 16777217
-; CHECKBE-NEXT:    .long 16777217 @ double 7.2911290000737531E-304
-; CHECKBE-NEXT:    .long 16777217
+; CHECK-LABEL: mov_int32_16777217:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    movs r0, #1
+; CHECK-NEXT:    movt r0, #256
+; CHECK-NEXT:    vdup.32 q0, r0
+; CHECK-NEXT:    bx lr
 entry:
   ret <4 x i32> <i32 16777217, i32 16777217, i32 16777217, i32 16777217>
 }
@@ -192,32 +172,12 @@ entry:
 }
 
 define arm_aapcs_vfpcc <4 x i32> @mov_int32_4278190335() {
-; CHECKLE-LABEL: mov_int32_4278190335:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    adr r0, .LCPI16_0
-; CHECKLE-NEXT:    vldrw.u32 q0, [r0]
-; CHECKLE-NEXT:    bx lr
-; CHECKLE-NEXT:    .p2align 4
-; CHECKLE-NEXT:  @ %bb.1:
-; CHECKLE-NEXT:  .LCPI16_0:
-; CHECKLE-NEXT:    .long 4278190335 @ double -5.4874634341155774E+303
-; CHECKLE-NEXT:    .long 4278190335
-; CHECKLE-NEXT:    .long 4278190335 @ double -5.4874634341155774E+303
-; CHECKLE-NEXT:    .long 4278190335
-;
-; CHECKBE-LABEL: mov_int32_4278190335:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    adr r0, .LCPI16_0
-; CHECKBE-NEXT:    vldrb.u8 q1, [r0]
-; CHECKBE-NEXT:    vrev64.8 q0, q1
-; CHECKBE-NEXT:    bx lr
-; CHECKBE-NEXT:    .p2align 4
-; CHECKBE-NEXT:  @ %bb.1:
-; CHECKBE-NEXT:  .LCPI16_0:
-; CHECKBE-NEXT:    .long 4278190335 @ double -5.4874634341155774E+303
-; CHECKBE-NEXT:    .long 4278190335
-; CHECKBE-NEXT:    .long 4278190335 @ double -5.4874634341155774E+303
-; CHECKBE-NEXT:    .long 4278190335
+; CHECK-LABEL: mov_int32_4278190335:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    movs r0, #255
+; CHECK-NEXT:    movt r0, #65280
+; CHECK-NEXT:    vdup.32 q0, r0
+; CHECK-NEXT:    bx lr
 entry:
   ret <4 x i32> <i32 4278190335, i32 4278190335, i32 4278190335, i32 4278190335>
 }
@@ -231,15 +191,25 @@ entry:
   ret <4 x i32> <i32 4278255615, i32 4278255615, i32 4278255615, i32 4278255615>
 }
 
+define arm_aapcs_vfpcc <4 x i32> @mov_int32_16908546() {
+; CHECK-LABEL: mov_int32_16908546:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    mov.w r0, #258
+; CHECK-NEXT:    vdup.16 q0, r0
+; CHECK-NEXT:    bx lr
+entry:
+  ret <4 x i32> <i32 16908546, i32 16908546, i32 16908546, i32 16908546>
+}
+
 define arm_aapcs_vfpcc <2 x i64> @mov_int64_1() {
 ; CHECKLE-LABEL: mov_int64_1:
 ; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    adr r0, .LCPI18_0
+; CHECKLE-NEXT:    adr r0, .LCPI20_0
 ; CHECKLE-NEXT:    vldrw.u32 q0, [r0]
 ; CHECKLE-NEXT:    bx lr
 ; CHECKLE-NEXT:    .p2align 4
 ; CHECKLE-NEXT:  @ %bb.1:
-; CHECKLE-NEXT:  .LCPI18_0:
+; CHECKLE-NEXT:  .LCPI20_0:
 ; CHECKLE-NEXT:    .long 1 @ double 4.9406564584124654E-324
 ; CHECKLE-NEXT:    .long 0
 ; CHECKLE-NEXT:    .long 1 @ double 4.9406564584124654E-324
@@ -247,13 +217,13 @@ define arm_aapcs_vfpcc <2 x i64> @mov_int64_1() {
 ;
 ; CHECKBE-LABEL: mov_int64_1:
 ; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    adr r0, .LCPI18_0
+; CHECKBE-NEXT:    adr r0, .LCPI20_0
 ; CHECKBE-NEXT:    vldrb.u8 q1, [r0]
 ; CHECKBE-NEXT:    vrev64.8 q0, q1
 ; CHECKBE-NEXT:    bx lr
 ; CHECKBE-NEXT:    .p2align 4
 ; CHECKBE-NEXT:  @ %bb.1:
-; CHECKBE-NEXT:  .LCPI18_0:
+; CHECKBE-NEXT:  .LCPI20_0:
 ; CHECKBE-NEXT:    .long 0 @ double 4.9406564584124654E-324
 ; CHECKBE-NEXT:    .long 1
 ; CHECKBE-NEXT:    .long 0 @ double 4.9406564584124654E-324
@@ -292,12 +262,12 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @mov_int64_f_0() {
 ; CHECKLE-LABEL: mov_int64_f_0:
 ; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    adr r0, .LCPI22_0
+; CHECKLE-NEXT:    adr r0, .LCPI24_0
 ; CHECKLE-NEXT:    vldrw.u32 q0, [r0]
 ; CHECKLE-NEXT:    bx lr
 ; CHECKLE-NEXT:    .p2align 4
 ; CHECKLE-NEXT:  @ %bb.1:
-; CHECKLE-NEXT:  .LCPI22_0:
+; CHECKLE-NEXT:  .LCPI24_0:
 ; CHECKLE-NEXT:    .long 255 @ double 1.2598673968951787E-321
 ; CHECKLE-NEXT:    .long 0
 ; CHECKLE-NEXT:    .long 0 @ double 0
@@ -305,13 +275,13 @@ define arm_aapcs_vfpcc <2 x i64> @mov_int64_f_0() {
 ;
 ; CHECKBE-LABEL: mov_int64_f_0:
 ; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    adr r0, .LCPI22_0
+; CHECKBE-NEXT:    adr r0, .LCPI24_0
 ; CHECKBE-NEXT:    vldrb.u8 q1, [r0]
 ; CHECKBE-NEXT:    vrev64.8 q0, q1
 ; CHECKBE-NEXT:    bx lr
 ; CHECKBE-NEXT:    .p2align 4
 ; CHECKBE-NEXT:  @ %bb.1:
-; CHECKBE-NEXT:  .LCPI22_0:
+; CHECKBE-NEXT:  .LCPI24_0:
 ; CHECKBE-NEXT:    .long 0 @ double 1.2598673968951787E-321
 ; CHECKBE-NEXT:    .long 255
 ; CHECKBE-NEXT:    .long 0 @ double 0
@@ -363,63 +333,22 @@ entry:
 }
 
 define arm_aapcs_vfpcc <4 x float> @mov_float_1() {
-; CHECKLE-LABEL: mov_float_1:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    adr r0, .LCPI26_0
-; CHECKLE-NEXT:    vldrw.u32 q0, [r0]
-; CHECKLE-NEXT:    bx lr
-; CHECKLE-NEXT:    .p2align 4
-; CHECKLE-NEXT:  @ %bb.1:
-; CHECKLE-NEXT:  .LCPI26_0:
-; CHECKLE-NEXT:    .long 1065353216 @ double 0.007812501848093234
-; CHECKLE-NEXT:    .long 1065353216
-; CHECKLE-NEXT:    .long 1065353216 @ double 0.007812501848093234
-; CHECKLE-NEXT:    .long 1065353216
-;
-; CHECKBE-LABEL: mov_float_1:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    adr r0, .LCPI26_0
-; CHECKBE-NEXT:    vldrb.u8 q1, [r0]
-; CHECKBE-NEXT:    vrev64.8 q0, q1
-; CHECKBE-NEXT:    bx lr
-; CHECKBE-NEXT:    .p2align 4
-; CHECKBE-NEXT:  @ %bb.1:
-; CHECKBE-NEXT:  .LCPI26_0:
-; CHECKBE-NEXT:    .long 1065353216 @ double 0.007812501848093234
-; CHECKBE-NEXT:    .long 1065353216
-; CHECKBE-NEXT:    .long 1065353216 @ double 0.007812501848093234
-; CHECKBE-NEXT:    .long 1065353216
+; CHECK-LABEL: mov_float_1:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    mov.w r0, #1065353216
+; CHECK-NEXT:    vdup.32 q0, r0
+; CHECK-NEXT:    bx lr
 entry:
   ret <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
 }
 
 define arm_aapcs_vfpcc <4 x float> @mov_float_m3() {
-; CHECKLE-LABEL: mov_float_m3:
-; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    adr r0, .LCPI27_0
-; CHECKLE-NEXT:    vldrw.u32 q0, [r0]
-; CHECKLE-NEXT:    bx lr
-; CHECKLE-NEXT:    .p2align 4
-; CHECKLE-NEXT:  @ %bb.1:
-; CHECKLE-NEXT:  .LCPI27_0:
-; CHECKLE-NEXT:    .long 3225419776 @ double -32.000022917985916
-; CHECKLE-NEXT:    .long 3225419776
-; CHECKLE-NEXT:    .long 3225419776 @ double -32.000022917985916
-; CHECKLE-NEXT:    .long 3225419776
-;
-; CHECKBE-LABEL: mov_float_m3:
-; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    adr r0, .LCPI27_0
-; CHECKBE-NEXT:    vldrb.u8 q1, [r0]
-; CHECKBE-NEXT:    vrev64.8 q0, q1
-; CHECKBE-NEXT:    bx lr
-; CHECKBE-NEXT:    .p2align 4
-; CHECKBE-NEXT:  @ %bb.1:
-; CHECKBE-NEXT:  .LCPI27_0:
-; CHECKBE-NEXT:    .long 3225419776 @ double -32.000022917985916
-; CHECKBE-NEXT:    .long 3225419776
-; CHECKBE-NEXT:    .long 3225419776 @ double -32.000022917985916
-; CHECKBE-NEXT:    .long 3225419776
+; CHECK-LABEL: mov_float_m3:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    movt r0, #49216
+; CHECK-NEXT:    vdup.32 q0, r0
+; CHECK-NEXT:    bx lr
 entry:
   ret <4 x float> <float -3.000000e+00, float -3.000000e+00, float -3.000000e+00, float -3.000000e+00>
 }
@@ -447,12 +376,12 @@ entry:
 define arm_aapcs_vfpcc <2 x double> @mov_double_1() {
 ; CHECKLE-LABEL: mov_double_1:
 ; CHECKLE:       @ %bb.0: @ %entry
-; CHECKLE-NEXT:    adr r0, .LCPI30_0
+; CHECKLE-NEXT:    adr r0, .LCPI32_0
 ; CHECKLE-NEXT:    vldrw.u32 q0, [r0]
 ; CHECKLE-NEXT:    bx lr
 ; CHECKLE-NEXT:    .p2align 4
 ; CHECKLE-NEXT:  @ %bb.1:
-; CHECKLE-NEXT:  .LCPI30_0:
+; CHECKLE-NEXT:  .LCPI32_0:
 ; CHECKLE-NEXT:    .long 0 @ double 1
 ; CHECKLE-NEXT:    .long 1072693248
 ; CHECKLE-NEXT:    .long 0 @ double 1
@@ -460,13 +389,13 @@ define arm_aapcs_vfpcc <2 x double> @mov_double_1() {
 ;
 ; CHECKBE-LABEL: mov_double_1:
 ; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    adr r0, .LCPI30_0
+; CHECKBE-NEXT:    adr r0, .LCPI32_0
 ; CHECKBE-NEXT:    vldrb.u8 q1, [r0]
 ; CHECKBE-NEXT:    vrev64.8 q0, q1
 ; CHECKBE-NEXT:    bx lr
 ; CHECKBE-NEXT:    .p2align 4
 ; CHECKBE-NEXT:  @ %bb.1:
-; CHECKBE-NEXT:  .LCPI30_0:
+; CHECKBE-NEXT:  .LCPI32_0:
 ; CHECKBE-NEXT:    .long 1072693248 @ double 1
 ; CHECKBE-NEXT:    .long 0
 ; CHECKBE-NEXT:    .long 1072693248 @ double 1

@@ -114,13 +114,13 @@ def Builtin_ArrayAttr : Builtin_Attr<"Array"> {
 
   public:
     template <typename AttrTy>
-    iterator_range<attr_value_iterator<AttrTy>> getAsRange() {
+    iterator_range<attr_value_iterator<AttrTy>> getAsRange() const {
       return llvm::make_range(attr_value_iterator<AttrTy>(begin()),
                               attr_value_iterator<AttrTy>(end()));
     }
     template <typename AttrTy,
               typename UnderlyingTy = typename AttrTy::ValueType>
-    auto getAsValueRange() {
+    auto getAsValueRange() const {
       return llvm::map_range(getAsRange<AttrTy>(), [](AttrTy attr) {
         return static_cast<UnderlyingTy>(attr.getValue());
       });
@@ -345,9 +345,9 @@ def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary"> {
 
     /// Return the specified attribute if present and is an instance of
     /// `AttrClass`, null otherwise.
-    template<typename AttrClass>
-    AttrClass getAs(StringRef name) {
-      return get(name).dyn_cast_or_null<AttrClass>();
+    template<typename AttrClass, typename NameClass>
+    AttrClass getAs(NameClass name) const {
+      return get(name).template dyn_cast_or_null<AttrClass>();
     }
 
   private:
@@ -812,16 +812,9 @@ def Builtin_StringAttr : Builtin_Attr<"String"> {
   let parameters = (ins StringRefParameter<"">:$value,
                         AttributeSelfTypeParameter<"">:$type);
   let builders = [
-    AttrBuilderWithInferredContext<(ins "StringRef":$bytes,
-                                        "Type":$type), [{
-      return $_get(type.getContext(), bytes, type);
-    }]>,
-    AttrBuilder<(ins "StringRef":$bytes), [{
-      if (bytes.empty())
-        return get($_ctxt);
-      return $_get($_ctxt, bytes, NoneType::get($_ctxt));
-    }]>,
-
+    AttrBuilderWithInferredContext<(ins "const Twine &":$bytes, "Type":$type)>,
+    /// Build an string attr with NoneType.
+    AttrBuilder<(ins "const Twine &":$bytes)>,
     /// Build an empty string attr with NoneType.
     AttrBuilder<(ins)>
   ];

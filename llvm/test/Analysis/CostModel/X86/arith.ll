@@ -990,9 +990,9 @@ define i32 @mul(i32 %arg) {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I8 = mul <2 x i8> undef, undef
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I8 = mul <4 x i8> undef, undef
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I8 = mul <8 x i8> undef, undef
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V16I8 = mul <16 x i8> undef, undef
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I8 = mul <32 x i8> undef, undef
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V64I8 = mul <64 x i8> undef, undef
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V16I8 = mul <16 x i8> undef, undef
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V32I8 = mul <32 x i8> undef, undef
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V64I8 = mul <64 x i8> undef, undef
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX2-LABEL: 'mul'
@@ -1012,9 +1012,9 @@ define i32 @mul(i32 %arg) {
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I8 = mul <2 x i8> undef, undef
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I8 = mul <4 x i8> undef, undef
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I8 = mul <8 x i8> undef, undef
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16I8 = mul <16 x i8> undef, undef
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V32I8 = mul <32 x i8> undef, undef
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V64I8 = mul <64 x i8> undef, undef
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I8 = mul <16 x i8> undef, undef
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V32I8 = mul <32 x i8> undef, undef
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V64I8 = mul <64 x i8> undef, undef
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512F-LABEL: 'mul'
@@ -1144,9 +1144,9 @@ define i32 @mul(i32 %arg) {
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I8 = mul <2 x i8> undef, undef
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I8 = mul <4 x i8> undef, undef
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I8 = mul <8 x i8> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V16I8 = mul <16 x i8> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I8 = mul <32 x i8> undef, undef
-; BTVER2-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V64I8 = mul <64 x i8> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V16I8 = mul <16 x i8> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V32I8 = mul <32 x i8> undef, undef
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V64I8 = mul <64 x i8> undef, undef
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
   %I64 = mul i64 undef, undef

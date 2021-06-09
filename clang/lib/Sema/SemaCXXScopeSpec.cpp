@@ -240,7 +240,6 @@ bool Sema::RequireCompleteDeclContext(CXXScopeSpec &SS,
 ///
 bool Sema::RequireCompleteEnumDecl(EnumDecl *EnumD, SourceLocation L,
                                    CXXScopeSpec *SS) {
-  assert (SS && "missing scope");
   if (EnumD->isCompleteDefinition()) {
     // If we know about the definition but it is not visible, complain.
     NamedDecl *SuggestedDef = nullptr;
@@ -264,16 +263,22 @@ bool Sema::RequireCompleteEnumDecl(EnumDecl *EnumD, SourceLocation L,
       if (InstantiateEnum(L, EnumD, Pattern,
                           getTemplateInstantiationArgs(EnumD),
                           TSK_ImplicitInstantiation)) {
-        SS->SetInvalid(SS->getRange());
+        if (SS)
+          SS->SetInvalid(SS->getRange());
         return true;
       }
       return false;
     }
   }
 
-  Diag(L, diag::err_incomplete_nested_name_spec)
-      << QualType(EnumD->getTypeForDecl(), 0) << SS->getRange();
-  SS->SetInvalid(SS->getRange());
+  if (SS) {
+    Diag(L, diag::err_incomplete_nested_name_spec)
+        << QualType(EnumD->getTypeForDecl(), 0) << SS->getRange();
+    SS->SetInvalid(SS->getRange());
+  } else {
+    Diag(L, diag::err_incomplete_enum) << QualType(EnumD->getTypeForDecl(), 0);
+    Diag(EnumD->getLocation(), diag::note_declared_at);
+  }
 
   return true;
 }

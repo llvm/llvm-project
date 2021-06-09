@@ -420,6 +420,34 @@ CHECK: char::<'\u{10ffff}'>
 CHECK: _RIC4charKc1234567_E
        _RIC4charKc1234567_E
 
+; Backreferences
+
+CHECK: backref::<backref::ident>
+       _RIC7backrefNvB0_5identE
+
+CHECK: backref::<(), ()>
+       _RIC7backrefuB9_E
+
+CHECK: backref::<7, 7>
+       _RIC7backrefKi7_KBa_E
+
+; Invalid backreferences
+
+CHECK: _RB_
+       _RB_
+
+CHECK: _RB5_
+       _RB5_
+
+CHECK: _RNvB_1a
+       _RNvB_1a
+
+CHECK: _RIC7backrefSB9_E
+       _RIC7backrefSB9_E
+
+CHECK: _RIC7backrefKBa_E
+       _RIC7backrefKBa_E
+
 ; Invalid mangled characters
 
 CHECK: _RNvC2a.1c

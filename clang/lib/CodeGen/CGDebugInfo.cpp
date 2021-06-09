@@ -5002,6 +5002,17 @@ void CGDebugInfo::EmitUsingDecl(const UsingDecl &UD) {
   }
 }
 
+void CGDebugInfo::EmitUsingEnumDecl(const UsingEnumDecl &UD) {
+  if (!CGM.getCodeGenOpts().hasReducedDebugInfo())
+    return;
+  assert(UD.shadow_size() &&
+         "We shouldn't be codegening an invalid UsingEnumDecl"
+         " containing no decls");
+
+  for (const auto *USD : UD.shadows())
+    EmitUsingShadowDecl(*USD);
+}
+
 void CGDebugInfo::EmitImportDecl(const ImportDecl &ID) {
   if (CGM.getCodeGenOpts().getDebuggerTuning() != llvm::DebuggerKind::LLDB)
     return;
