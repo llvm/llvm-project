@@ -1132,3 +1132,19 @@ func @indexed_generic(%arg0: memref<?x?xindex>, %arg1: memref<?x?xindex>) {
 // CHECK-NEXT:     %[[SUM1:.+]] = addi %[[SUM0]], %[[ARG2]] : index
 // CHECK-NEXT:     %[[SUM2:.+]] = addi %[[SUM1]], %[[ARG3]] : index
 // CHECK-NEXT:     linalg.yield %[[SUM2]] : index
+
+// -----
+
+func @tensor_pad_cast_fold(%arg0: tensor<4x4xf32>) -> tensor<4x4xf32> {
+  %c0 = constant 0 : index
+  %cst = constant 0.0 : f32
+  %0 = tensor.cast %arg0 : tensor<4x4xf32> to tensor<?x?xf32>
+  %1 = linalg.pad_tensor %0 low[%c0, %c0] high[%c0, %c0]  {
+    ^bb0(%arg1: index, %arg2: index):  // no predecessors
+      linalg.yield %cst : f32
+  } : tensor<?x?xf32> to tensor<4x4xf32>
+  return %1 : tensor<4x4xf32>
+}
+// CHECK-LABEL: @tensor_pad_cast
+// CHECK-SAME: %[[ARG0:.+]]: tensor<4x4xf32>
+// CHECK: return %[[ARG0]]
