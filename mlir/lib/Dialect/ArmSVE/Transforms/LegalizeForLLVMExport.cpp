@@ -111,6 +111,80 @@ using ScalableMaskedDivFOpLowering =
     OneToOneConvertToLLVMPattern<ScalableMaskedDivFOp,
                                  ScalableMaskedDivFIntrOp>;
 
+// Load operation is lowered to code that obtains a pointer to the indexed
+// element and loads from it.
+struct ScalableLoadOpLowering : public ConvertOpToLLVMPattern<ScalableLoadOp> {
+  using ConvertOpToLLVMPattern<ScalableLoadOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(ScalableLoadOp loadOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto type = loadOp.getMemRefType();
+    if (!isConvertibleAndHasIdentityMaps(type))
+      return failure();
+
+    ScalableLoadOp::Adaptor transformed(operands);
+    LLVMTypeConverter converter(loadOp.getContext());
+
+    auto resultType = loadOp.result().getType();
+    LLVM::LLVMPointerType llvmDataTypePtr;
+    if (resultType.isa<VectorType>()) {
+      llvmDataTypePtr =
+          LLVM::LLVMPointerType::get(resultType.cast<VectorType>());
+    } else if (resultType.isa<ScalableVectorType>()) {
+      llvmDataTypePtr = LLVM::LLVMPointerType::get(
+          convertScalableVectorTypeToLLVM(resultType.cast<ScalableVectorType>(),
+                                          converter)
+              .getValue());
+    }
+    Value dataPtr =
+        getStridedElementPtr(loadOp.getLoc(), type, transformed.base(),
+                             transformed.index(), rewriter);
+    Value bitCastedPtr = rewriter.create<LLVM::BitcastOp>(
+        loadOp.getLoc(), llvmDataTypePtr, dataPtr);
+    rewriter.replaceOpWithNewOp<LLVM::LoadOp>(loadOp, bitCastedPtr);
+    return success();
+  }
+};
+
+// Store operation is lowered to code that obtains a pointer to the indexed
+// element, and stores the given value to it.
+struct ScalableStoreOpLowering
+    : public ConvertOpToLLVMPattern<ScalableStoreOp> {
+  using ConvertOpToLLVMPattern<ScalableStoreOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(ScalableStoreOp storeOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto type = storeOp.getMemRefType();
+    if (!isConvertibleAndHasIdentityMaps(type))
+      return failure();
+
+    ScalableStoreOp::Adaptor transformed(operands);
+    LLVMTypeConverter converter(storeOp.getContext());
+
+    auto resultType = storeOp.value().getType();
+    LLVM::LLVMPointerType llvmDataTypePtr;
+    if (resultType.isa<VectorType>()) {
+      llvmDataTypePtr =
+          LLVM::LLVMPointerType::get(resultType.cast<VectorType>());
+    } else if (resultType.isa<ScalableVectorType>()) {
+      llvmDataTypePtr = LLVM::LLVMPointerType::get(
+          convertScalableVectorTypeToLLVM(resultType.cast<ScalableVectorType>(),
+                                          converter)
+              .getValue());
+    }
+    Value dataPtr =
+        getStridedElementPtr(storeOp.getLoc(), type, transformed.base(),
+                             transformed.index(), rewriter);
+    Value bitCastedPtr = rewriter.create<LLVM::BitcastOp>(
+        storeOp.getLoc(), llvmDataTypePtr, dataPtr);
+    rewriter.replaceOpWithNewOp<LLVM::StoreOp>(storeOp, transformed.value(),
+                                               bitCastedPtr);
+    return success();
+  }
+};
+
 static void
 populateBasicSVEArithmeticExportPatterns(LLVMTypeConverter &converter,
                                          OwningRewritePatternList &patterns) {
@@ -191,6 +265,8 @@ void mlir::populateArmSVELegalizeForLLVMExportPatterns(
                ScalableMaskedSDivIOpLowering,
                ScalableMaskedUDivIOpLowering,
                ScalableMaskedDivFOpLowering>(converter);
+  patterns.add<ScalableLoadOpLowering,
+               ScalableStoreOpLowering>(converter);
   // clang-format on
   populateBasicSVEArithmeticExportPatterns(converter, patterns);
   populateSVEMaskGenerationExportPatterns(converter, patterns);
@@ -226,7 +302,9 @@ void mlir::configureArmSVELegalizeForExportTarget(
                       ScalableMaskedMulFOp,
                       ScalableMaskedSDivIOp,
                       ScalableMaskedUDivIOp,
-                      ScalableMaskedDivFOp>();
+                      ScalableMaskedDivFOp,
+                      ScalableLoadOp,
+                      ScalableStoreOp>();
   // clang-format on
   auto hasScalableVectorType = [](TypeRange types) {
     for (Type type : types)
