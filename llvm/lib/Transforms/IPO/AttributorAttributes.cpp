@@ -1499,7 +1499,8 @@ struct AANoFreeFloating : AANoFreeImpl {
         Follow = true;
         return true;
       }
-      if (isa<ReturnInst>(UserI))
+      if (isa<StoreInst>(UserI) || isa<LoadInst>(UserI) ||
+          isa<ReturnInst>(UserI))
         return true;
 
       // Unknown user.

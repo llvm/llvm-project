@@ -909,7 +909,7 @@ f:
 
 define i8 @parent6(i8* %a, i8* %b) {
 ; CHECK-LABEL: define {{[^@]+}}@parent6
-; CHECK-SAME: (i8* nonnull [[A:%.*]], i8* noundef [[B:%.*]]) {
+; CHECK-SAME: (i8* nonnull [[A:%.*]], i8* nofree noundef [[B:%.*]]) {
 ; CHECK-NEXT:    [[C:%.*]] = load volatile i8, i8* [[B]], align 1
 ; CHECK-NEXT:    call void @use1nonnull(i8* nonnull [[A]])
 ; CHECK-NEXT:    ret i8 [[C]]

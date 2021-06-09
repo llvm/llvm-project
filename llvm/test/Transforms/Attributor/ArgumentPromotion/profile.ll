@@ -11,7 +11,7 @@ define void @caller() #0 {
 ; IS________OPM-LABEL: define {{[^@]+}}@caller() {
 ; IS________OPM-NEXT:    [[X:%.*]] = alloca i32, align 4
 ; IS________OPM-NEXT:    store i32 42, i32* [[X]], align 4
-; IS________OPM-NEXT:    call void @promote_i32_ptr(i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(4) [[X]]), !prof [[PROF0:![0-9]+]]
+; IS________OPM-NEXT:    call void @promote_i32_ptr(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[X]]), !prof [[PROF0:![0-9]+]]
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@caller() {
@@ -29,7 +29,7 @@ define void @caller() #0 {
 
 define internal void @promote_i32_ptr(i32* %xp) {
 ; IS________OPM-LABEL: define {{[^@]+}}@promote_i32_ptr
-; IS________OPM-SAME: (i32* noalias nocapture noundef nonnull readonly align 4 dereferenceable(4) [[XP:%.*]]) {
+; IS________OPM-SAME: (i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[XP:%.*]]) {
 ; IS________OPM-NEXT:    [[X:%.*]] = load i32, i32* [[XP]], align 4
 ; IS________OPM-NEXT:    call void @use_i32(i32 [[X]])
 ; IS________OPM-NEXT:    ret void

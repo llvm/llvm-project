@@ -2419,7 +2419,7 @@ f:
 
 define void @spam(i32* %arg, i32* %arg1) {
 ; CHECK-LABEL: define {{[^@]+}}@spam
-; CHECK-SAME: (i32* nocapture noundef nonnull readonly align 8 dereferenceable(4) [[ARG:%.*]], i32* nocapture nofree readnone [[ARG1:%.*]]) {
+; CHECK-SAME: (i32* nocapture nofree noundef nonnull readonly align 8 dereferenceable(4) [[ARG:%.*]], i32* nocapture nofree readnone [[ARG1:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* [[ARG]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP]], 4
