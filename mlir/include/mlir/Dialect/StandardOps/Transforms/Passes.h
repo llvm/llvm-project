@@ -19,6 +19,7 @@
 
 namespace mlir {
 
+class GlobalCreator;
 class RewritePatternSet;
 using OwningRewritePatternList = RewritePatternSet;
 
@@ -30,6 +31,12 @@ std::unique_ptr<Pass> createStdBufferizePass();
 
 /// Creates an instance of func bufferization pass.
 std::unique_ptr<Pass> createFuncBufferizePass();
+
+/// Add patterns to bufferize tensor constants into global memrefs to the given
+/// pattern list.
+void populateTensorConstantBufferizePatterns(
+    GlobalCreator &globalCreator, BufferizeTypeConverter &typeConverter,
+    RewritePatternSet &patterns);
 
 /// Creates an instance of tensor constant bufferization pass.
 std::unique_ptr<Pass> createTensorConstantBufferizePass();
