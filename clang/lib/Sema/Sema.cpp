@@ -576,13 +576,14 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
                                    const CXXCastPath *BasePath,
                                    CheckedConversionKind CCK) {
 #ifndef NDEBUG
-  if (VK == VK_RValue && !E->isRValue()) {
+  if (VK == VK_PRValue && !E->isPRValue()) {
     switch (Kind) {
     default:
-      llvm_unreachable(("can't implicitly cast lvalue to rvalue with this cast "
-                        "kind: " +
-                        std::string(CastExpr::getCastKindName(Kind)))
-                           .c_str());
+      llvm_unreachable(
+          ("can't implicitly cast glvalue to prvalue with this cast "
+           "kind: " +
+           std::string(CastExpr::getCastKindName(Kind)))
+              .c_str());
     case CK_Dependent:
     case CK_LValueToRValue:
     case CK_ArrayToPointerDecay:
@@ -592,8 +593,8 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
       break;
     }
   }
-  assert((VK == VK_RValue || Kind == CK_Dependent || !E->isRValue()) &&
-         "can't cast rvalue to lvalue");
+  assert((VK == VK_PRValue || Kind == CK_Dependent || !E->isPRValue()) &&
+         "can't cast prvalue to glvalue");
 #endif
 
   diagnoseNullableToNonnullConversion(Ty, E->getType(), E->getBeginLoc());
@@ -608,7 +609,7 @@ ExprResult Sema::ImpCastExprToType(Expr *E, QualType Ty,
   // C++1z [conv.array]: The temporary materialization conversion is applied.
   // We also use this to fuel C++ DR1213, which applies to C++11 onwards.
   if (Kind == CK_ArrayToPointerDecay && getLangOpts().CPlusPlus &&
-      E->getValueKind() == VK_RValue) {
+      E->getValueKind() == VK_PRValue) {
     // The temporary is an lvalue in C++98 and an xvalue otherwise.
     ExprResult Materialized = CreateMaterializeTemporaryExpr(
         E->getType(), E, !getLangOpts().CPlusPlus11);

@@ -6363,7 +6363,7 @@ ExprResult Sema::SemaBuiltinShuffleVector(CallExpr *TheCall) {
 ExprResult Sema::SemaConvertVectorExpr(Expr *E, TypeSourceInfo *TInfo,
                                        SourceLocation BuiltinLoc,
                                        SourceLocation RParenLoc) {
-  ExprValueKind VK = VK_RValue;
+  ExprValueKind VK = VK_PRValue;
   ExprObjectKind OK = OK_Ordinary;
   QualType DstTy = TInfo->getType();
   QualType SrcTy = E->getType();

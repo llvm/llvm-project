@@ -544,3 +544,183 @@ body:             |
     RET undef $lr
 
 ...
+
+# During ISel, the order of load/store pairs can be optimized and changed
+# which prevents STPs from being generated. These tests check that an STP 
+# instruction is generated after register renaming.
+... 
+---
+#
+# CHECK-LABEL: name: memcpy32
+# CHECK: liveins: $x0, $x1
+# CHECK: $q1 = LDRQui renamable $x1, 1 :: (load 16)
+# CHECK: renamable $q0 = LDRQui killed renamable $x1, 0 :: (load 16, align 32)
+# CHECK: STPQi killed renamable $q0, killed $q1, killed renamable $x0, 0 :: (store 16, align 32)
+# CHECK: RET undef $lr
+#
+name:            memcpy32
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:
+  - { reg: '$x0', virtual-reg: '' }
+  - { reg: '$x1', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1
+    renamable $q0 = LDRQui renamable $x1, 1 :: (load 16)
+    STRQui killed renamable $q0, renamable $x0, 1 :: (store 16, basealign 32)
+    renamable $q0 = LDRQui killed renamable $x1, 0 :: (load 16, align 32)
+    STRQui killed renamable $q0, killed renamable $x0, 0 :: (store 16, align 32)
+    RET undef $lr
+
+...
+---
+#
+# CHECK-LABEL: name: memcpy64
+# CHECK: liveins: $x0, $x1
+# CHECK: $q1 = LDRQui renamable $x1, 1 :: (load 16)
+# CHECK: renamable $q0 = LDRQui killed renamable $x1, 0 :: (load 16, align 64)
+# CHECK: STPQi killed renamable $q0, killed $q1, killed renamable $x0, 0 :: (store 16, align 64)
+# CHECK: RET undef $lr
+#
+name:            memcpy64
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:
+  - { reg: '$x0', virtual-reg: '' }
+  - { reg: '$x1', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1
+    renamable $q0 = LDRQui renamable $x1, 1 :: (load 16)
+    STRQui killed renamable $q0, renamable $x0, 1 :: (store 16, basealign 64)
+    renamable $q0 = LDRQui killed renamable $x1, 0 :: (load 16, align 64)
+    STRQui killed renamable $q0, killed renamable $x0, 0 :: (store 16, align 64)
+    RET undef $lr
+
+...
+---
+#
+# CHECK-LABEL: name: memcpy128
+# CHECK: liveins: $x0, $x1
+# CHECK: $q1 = LDRQui renamable $x1, 1 :: (load 16)
+# CHECK: renamable $q0 = LDRQui killed renamable $x1, 0 :: (load 16, align 128)
+# CHECK: STPQi killed renamable $q0, killed $q1, killed renamable $x0, 0 :: (store 16, align 128)
+# CHECK: RET undef $lr
+#
+name:            memcpy128
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:
+  - { reg: '$x0', virtual-reg: '' }
+  - { reg: '$x1', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1
+    renamable $q0 = LDRQui renamable $x1, 1 :: (load 16)
+    STRQui killed renamable $q0, renamable $x0, 1 :: (store 16, basealign 128)
+    renamable $q0 = LDRQui killed renamable $x1, 0 :: (load 16, align 128)
+    STRQui killed renamable $q0, killed renamable $x0, 0 :: (store 16, align 128)
+    RET undef $lr

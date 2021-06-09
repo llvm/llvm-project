@@ -429,7 +429,7 @@ static bool usagesAreConst(ASTContext *Context, const UsageResult &Usages) {
 /// by reference.
 static bool usagesReturnRValues(const UsageResult &Usages) {
   for (const auto &U : Usages) {
-    if (U.Expression && !U.Expression->isRValue())
+    if (U.Expression && !U.Expression->isPRValue())
       return false;
   }
   return true;

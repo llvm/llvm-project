@@ -315,7 +315,7 @@ Sema::ActOnParamDefaultArgument(Decl *param, SourceLocation EqualLoc,
   auto Fail = [&] {
     Param->setInvalidDecl();
     Param->setDefaultArg(new (Context) OpaqueValueExpr(
-        EqualLoc, Param->getType().getNonReferenceType(), VK_RValue));
+        EqualLoc, Param->getType().getNonReferenceType(), VK_PRValue));
   };
 
   // Default arguments are only permitted in C++
@@ -380,10 +380,8 @@ void Sema::ActOnParamDefaultArgumentError(Decl *param,
   ParmVarDecl *Param = cast<ParmVarDecl>(param);
   Param->setInvalidDecl();
   UnparsedDefaultArgLocs.erase(Param);
-  Param->setDefaultArg(new(Context)
-                       OpaqueValueExpr(EqualLoc,
-                                       Param->getType().getNonReferenceType(),
-                                       VK_RValue));
+  Param->setDefaultArg(new (Context) OpaqueValueExpr(
+      EqualLoc, Param->getType().getNonReferenceType(), VK_PRValue));
 }
 
 /// CheckExtraCXXDefaultArguments - Check for any extra default
@@ -8327,7 +8325,7 @@ private:
     assert(!R->isUndeducedType() && "type should have been deduced already");
 
     // Don't bother forming a no-op cast in the common case.
-    if (E->isRValue() && S.Context.hasSameType(E->getType(), R))
+    if (E->isPRValue() && S.Context.hasSameType(E->getType(), R))
       return E;
     return S.BuildCXXNamedCast(Loc, tok::kw_static_cast,
                                S.Context.getTrivialTypeSourceInfo(R, Loc), E,
@@ -13823,11 +13821,11 @@ buildMemcpyForAssignmentOp(Sema &S, SourceLocation Loc, QualType T,
   Expr *From = FromB.build(S, Loc);
   From = UnaryOperator::Create(
       S.Context, From, UO_AddrOf, S.Context.getPointerType(From->getType()),
-      VK_RValue, OK_Ordinary, Loc, false, S.CurFPFeatureOverrides());
+      VK_PRValue, OK_Ordinary, Loc, false, S.CurFPFeatureOverrides());
   Expr *To = ToB.build(S, Loc);
   To = UnaryOperator::Create(
       S.Context, To, UO_AddrOf, S.Context.getPointerType(To->getType()),
-      VK_RValue, OK_Ordinary, Loc, false, S.CurFPFeatureOverrides());
+      VK_PRValue, OK_Ordinary, Loc, false, S.CurFPFeatureOverrides());
 
   const Type *E = T->getBaseElementTypeUnsafe();
   bool NeedsCollectableMemCpy =
@@ -13849,7 +13847,7 @@ buildMemcpyForAssignmentOp(Sema &S, SourceLocation Loc, QualType T,
     return StmtError();
 
   ExprResult MemCpyRef = S.BuildDeclRefExpr(MemCpy, S.Context.BuiltinFnTy,
-                                            VK_RValue, Loc, nullptr);
+                                            VK_PRValue, Loc, nullptr);
   assert(MemCpyRef.isUsable() && "Builtin reference cannot fail");
 
   Expr *CallArgs[] = {
@@ -14064,7 +14062,8 @@ buildSingleCopyAssignRecursively(Sema &S, SourceLocation Loc, QualType T,
   Expr *Comparison = BinaryOperator::Create(
       S.Context, IterationVarRefRVal.build(S, Loc),
       IntegerLiteral::Create(S.Context, Upper, SizeType, Loc), BO_NE,
-      S.Context.BoolTy, VK_RValue, OK_Ordinary, Loc, S.CurFPFeatureOverrides());
+      S.Context.BoolTy, VK_PRValue, OK_Ordinary, Loc,
+      S.CurFPFeatureOverrides());
 
   // Create the pre-increment of the iteration variable. We can determine
   // whether the increment will overflow based on the value of the array
@@ -15167,7 +15166,7 @@ void Sema::DefineImplicitLambdaToBlockPointerConversion(
   if (!BuildBlock.isInvalid() && !getLangOpts().ObjCAutoRefCount)
     BuildBlock = ImplicitCastExpr::Create(
         Context, BuildBlock.get()->getType(), CK_CopyAndAutoreleaseBlockObject,
-        BuildBlock.get(), nullptr, VK_RValue, FPOptionsOverride());
+        BuildBlock.get(), nullptr, VK_PRValue, FPOptionsOverride());
 
   if (BuildBlock.isInvalid()) {
     Diag(CurrentLocation, diag::note_lambda_to_block_conv);

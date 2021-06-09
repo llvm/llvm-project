@@ -346,8 +346,9 @@ def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary"> {
     /// Return the specified attribute if present and is an instance of
     /// `AttrClass`, null otherwise.
     template<typename AttrClass, typename NameClass>
-    AttrClass getAs(NameClass name) const {
-      return get(name).template dyn_cast_or_null<AttrClass>();
+    AttrClass getAs(NameClass &&name) const {
+      return get(std::forward<NameClass>(name))
+        .template dyn_cast_or_null<AttrClass>();
     }
 
   private:

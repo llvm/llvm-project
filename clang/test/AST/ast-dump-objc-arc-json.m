@@ -26,7 +26,7 @@ id TestCompoundLiteral(id a) {
 // CHECK-NEXT:   "qualType": "id",
 // CHECK-NEXT:   "typeAliasDeclId": "0x{{.*}}"
 // CHECK-NEXT:  },
-// CHECK-NEXT:  "valueCategory": "rvalue",
+// CHECK-NEXT:  "valueCategory": "prvalue",
 // CHECK-NEXT:  "cleanupsHaveSideEffects": true,
 // CHECK-NEXT:  "cleanups": [
 // CHECK-NEXT:   {

@@ -61,7 +61,7 @@ Sections:
 
 ## Truncate the file to end before the section header table ends.
 # RUN: yaml2obj %s --docnum=3 -o %t-truncate.o
-# RUN: %python -c "with open('%t-truncate.o', 'r+b') as input: input.truncate(20)"
+# RUN: %python -c "with open('%/t-truncate.o', 'r+b') as input: input.truncate(20)"
 # RUN: not llvm-objdump --section-headers %t-truncate.o 2>&1 \
 # RUN:  | FileCheck --check-prefix=ERROR %s
 

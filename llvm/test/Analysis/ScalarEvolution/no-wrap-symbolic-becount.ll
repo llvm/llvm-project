@@ -91,3 +91,31 @@ loop:                                             ; preds = %backedge, %entry
 exit:                                             ; preds = %loop
   ret i32 0
 }
+
+define void @pointer_iv_nowrap(i8* %startptr, i8* %endptr) local_unnamed_addr {
+; CHECK-LABEL: Classifying expressions for: @pointer_iv_nowrap
+; CHECK-NEXT:  %init = getelementptr inbounds i8, i8* %startptr, i64 2000
+; CHECK-NEXT:  -->  (2000 + %startptr)<nuw> U: [2000,0) S: [2000,0)
+; CHECK-NEXT:  %iv = phi i8* [ %init, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:  -->  {(2000 + %startptr)<nuw>,+,1}<nuw><%loop> U: [2000,0) S: [2000,0)
+; CHECK-NEXT:  %iv.next = getelementptr inbounds i8, i8* %iv, i64 1
+; CHECK-NEXT:  -->  {(2001 + %startptr),+,1}<nuw><%loop> U: full-set S: full-set
+
+; CHECK-NEXT:Determining loop execution counts for: @pointer_iv_nowrap
+; CHECK-NEXT:Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:Loop %loop: Unpredictable max backedge-taken count.
+; CHECK-NEXT:Loop %loop: Unpredictable predicated backedge-taken count.
+;
+entry:
+  %init = getelementptr inbounds i8, i8* %startptr, i64 2000
+  br label %loop
+
+loop:
+  %iv = phi i8* [ %init, %entry ], [ %iv.next, %loop ]
+  %iv.next = getelementptr inbounds i8, i8* %iv, i64 1
+  %ec = icmp ugt i8* %iv.next, %endptr
+  br i1 %ec, label %end, label %loop
+
+end:
+  ret void
+}

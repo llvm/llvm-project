@@ -63,11 +63,11 @@ two values. The LLVM IR that we want for this example looks like this:
       br i1 %Condition, label %cond_true, label %cond_false
 
     cond_true:
-      %X.0 = load i32* @G
+      %X.0 = load i32, i32* @G
       br label %cond_next
 
     cond_false:
-      %X.1 = load i32* @H
+      %X.1 = load i32, i32* @H
       br label %cond_next
 
     cond_next:
@@ -126,7 +126,7 @@ instruction <../../LangRef.html#alloca-instruction>`_:
     entry:
       %X = alloca i32           ; type of %X is i32*.
       ...
-      %tmp = load i32* %X       ; load the stack value %X from the stack.
+      %tmp = load i32, i32* %X  ; load the stack value %X from the stack.
       %tmp2 = add i32 %tmp, 1   ; increment it
       store i32 %tmp2, i32* %X  ; store it back
       ...
@@ -149,17 +149,17 @@ using a PHI node:
       br i1 %Condition, label %cond_true, label %cond_false
 
     cond_true:
-      %X.0 = load i32* @G
+      %X.0 = load i32, i32* @G
       store i32 %X.0, i32* %X   ; Update X
       br label %cond_next
 
     cond_false:
-      %X.1 = load i32* @H
+      %X.1 = load i32, i32* @H
       store i32 %X.1, i32* %X   ; Update X
       br label %cond_next
 
     cond_next:
-      %X.2 = load i32* %X       ; Read X
+      %X.2 = load i32, i32* %X  ; Read X
       ret i32 %X.2
     }
 
@@ -191,11 +191,11 @@ example through the pass, for example, you'll get:
       br i1 %Condition, label %cond_true, label %cond_false
 
     cond_true:
-      %X.0 = load i32* @G
+      %X.0 = load i32, i32* @G
       br label %cond_next
 
     cond_false:
-      %X.1 = load i32* @H
+      %X.1 = load i32, i32* @H
       br label %cond_next
 
     cond_next:
