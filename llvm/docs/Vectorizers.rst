@@ -254,7 +254,7 @@ The Loop Vectorizer can vectorize loops that count backwards.
 
 .. code-block:: c++
 
-  int foo(int *A, int n) {
+  void foo(int *A, int n) {
     for (int i = n; i > 0; --i)
       A[i] +=1;
   }
