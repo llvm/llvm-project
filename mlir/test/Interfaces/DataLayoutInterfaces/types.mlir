@@ -7,6 +7,13 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
 
 // -----
 
+// expected-error@below {{the 'test' dialect does not support identifier data layout entries}}
+"test.op_with_data_layout"() { dlti.dl_spec = #dlti.dl_spec<
+  #dlti.dl_entry<index, 32>,
+  #dlti.dl_entry<"test.foo", [32]>>} : () -> ()
+
+// -----
+
 // CHECK-LABEL: @index
 module @index attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<index, 32>>} {
