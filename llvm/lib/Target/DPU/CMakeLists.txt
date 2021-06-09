@@ -1,3 +1,5 @@
+add_llvm_component_group(DPU)
+
 set(LLVM_TARGET_DEFINITIONS DPU.td)
 
 tablegen(LLVM DPUGenRegisterInfo.inc -gen-register-info)
@@ -26,6 +28,24 @@ add_llvm_target(DPUCodeGen
         DPUResolveMacroInstrPass.cpp
         DPUMacroFusion.cpp
         DPUSelectionDAGInfo.cpp
+
+        DEPENDS
+        intrinsics_gen
+
+        LINK_COMPONENTS
+        AsmPrinter
+        CodeGen
+        Core
+        DPUDesc
+        DPUInfo
+        DPUAsmParser
+        MC
+        SelectionDAG
+        Support
+        Target
+
+        ADD_TO_COMPONENT
+        DPU
         )
 
 add_subdirectory(AsmParser)
