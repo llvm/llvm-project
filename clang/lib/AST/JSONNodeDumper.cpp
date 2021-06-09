@@ -1414,9 +1414,10 @@ void JSONNodeDumper::VisitCXXDependentScopeMemberExpr(
 }
 
 void JSONNodeDumper::VisitIntegerLiteral(const IntegerLiteral *IL) {
-  JOS.attribute("value",
-                IL->getValue().toString(
-                    /*Radix=*/10, IL->getType()->isSignedIntegerType()));
+  llvm::SmallString<16> Buffer;
+  IL->getValue().toString(Buffer,
+                          /*Radix=*/10, IL->getType()->isSignedIntegerType());
+  JOS.attribute("value", Buffer);
 }
 void JSONNodeDumper::VisitCharacterLiteral(const CharacterLiteral *CL) {
   // FIXME: This should probably print the character literal as a string,
