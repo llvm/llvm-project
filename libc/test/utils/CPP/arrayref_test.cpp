@@ -21,7 +21,7 @@ TYPED_TEST(LlvmLibcArrayRefTest, ConstructFromElement, Types) {
   value_type element = 5;
   ParamType arrayref(element);
   EXPECT_FALSE(arrayref.empty());
-  EXPECT_EQ(arrayref.size(), 1UL);
+  EXPECT_EQ(arrayref.size(), size_t(1));
   EXPECT_EQ(arrayref[0], 5);
   EXPECT_EQ((const_pointer)arrayref.data(), (const_pointer)&element);
 }
@@ -32,7 +32,7 @@ TYPED_TEST(LlvmLibcArrayRefTest, ConstructFromPointerAndSize, Types) {
   value_type values[] = {1, 2};
   ParamType arrayref(values, 2);
   EXPECT_FALSE(arrayref.empty());
-  EXPECT_EQ(arrayref.size(), 2UL);
+  EXPECT_EQ(arrayref.size(), size_t(2));
   EXPECT_EQ(arrayref[0], 1);
   EXPECT_EQ(arrayref[1], 2);
   EXPECT_EQ((const_pointer)arrayref.data(), (const_pointer)values);
@@ -44,7 +44,7 @@ TYPED_TEST(LlvmLibcArrayRefTest, ConstructFromIterator, Types) {
   value_type values[] = {1, 2};
   ParamType arrayref(&values[0], &values[2]);
   EXPECT_FALSE(arrayref.empty());
-  EXPECT_EQ(arrayref.size(), 2UL);
+  EXPECT_EQ(arrayref.size(), size_t(2));
   EXPECT_EQ(arrayref[0], 1);
   EXPECT_EQ(arrayref[1], 2);
   EXPECT_EQ((const_pointer)arrayref.data(), (const_pointer)&values[0]);
@@ -56,7 +56,7 @@ TYPED_TEST(LlvmLibcArrayRefTest, ConstructFromCArray, Types) {
   value_type values[] = {1, 2};
   ParamType arrayref(values);
   EXPECT_FALSE(arrayref.empty());
-  EXPECT_EQ(arrayref.size(), 2UL);
+  EXPECT_EQ(arrayref.size(), size_t(2));
   EXPECT_EQ(arrayref[0], 1);
   EXPECT_EQ(arrayref[1], 2);
   EXPECT_EQ((const_pointer)arrayref.data(), (const_pointer)values);
@@ -68,7 +68,7 @@ TYPED_TEST(LlvmLibcArrayRefTest, ConstructFromLibcArray, Types) {
   Array<value_type, 2> values = {1, 2};
   ParamType arrayref(values);
   EXPECT_FALSE(arrayref.empty());
-  EXPECT_EQ(arrayref.size(), 2UL);
+  EXPECT_EQ(arrayref.size(), size_t(2));
   EXPECT_EQ(arrayref[0], 1);
   EXPECT_EQ(arrayref[1], 2);
   EXPECT_EQ((const_pointer)arrayref.data(), (const_pointer)values.data());
