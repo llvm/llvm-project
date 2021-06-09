@@ -473,13 +473,9 @@ static constexpr OptionDefinition g_enable_option_table[] = {
 class EnableOptions : public Options {
 public:
   EnableOptions()
-      : Options(), m_include_debug_level(false), m_include_info_level(false),
-        m_include_any_process(false),
+      : Options(),
         m_filter_fall_through_accepts(DEFAULT_FILTER_FALLTHROUGH_ACCEPTS),
-        m_echo_to_stderr(false), m_display_timestamp_relative(false),
-        m_display_subsystem(false), m_display_category(false),
-        m_display_activity_chain(false), m_broadcast_events(true),
-        m_live_stream(true), m_filter_rules() {}
+        m_filter_rules() {}
 
   void OptionParsingStarting(ExecutionContext *execution_context) override {
     m_include_debug_level = false;
@@ -728,17 +724,17 @@ private:
     return -1;
   }
 
-  bool m_include_debug_level;
-  bool m_include_info_level;
-  bool m_include_any_process;
+  bool m_include_debug_level = false;
+  bool m_include_info_level = false;
+  bool m_include_any_process = false;
   bool m_filter_fall_through_accepts;
-  bool m_echo_to_stderr;
-  bool m_display_timestamp_relative;
-  bool m_display_subsystem;
-  bool m_display_category;
-  bool m_display_activity_chain;
-  bool m_broadcast_events;
-  bool m_live_stream;
+  bool m_echo_to_stderr = false;
+  bool m_display_timestamp_relative = false;
+  bool m_display_subsystem = false;
+  bool m_display_category = false;
+  bool m_display_activity_chain = false;
+  bool m_broadcast_events = true;
+  bool m_live_stream = true;
   FilterRules m_filter_rules;
 };
 

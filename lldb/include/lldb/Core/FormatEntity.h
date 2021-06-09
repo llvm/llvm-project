@@ -128,7 +128,7 @@ public:
 
       constexpr Definition(const char *name, const FormatEntity::Entry::Type t,
                            const uint64_t data)
-          : name(name), string(nullptr), type(t), data(data) {}
+          : name(name), type(t), data(data) {}
 
       constexpr Definition(const char *name, const FormatEntity::Entry::Type t,
                            const uint64_t num_children,
@@ -148,8 +148,7 @@ public:
 
     Entry(Type t = Type::Invalid, const char *s = nullptr,
           const char *f = nullptr)
-        : string(s ? s : ""), printf_format(f ? f : ""), children(), type(t),
-          fmt(lldb::eFormatDefault), number(0), deref(false) {}
+        : string(s ? s : ""), printf_format(f ? f : ""), children(), type(t) {}
 
     Entry(llvm::StringRef s);
     Entry(char ch);
@@ -202,9 +201,9 @@ public:
     std::string printf_format;
     std::vector<Entry> children;
     Type type;
-    lldb::Format fmt;
-    lldb::addr_t number;
-    bool deref;
+    lldb::Format fmt = lldb::eFormatDefault;
+    lldb::addr_t number = 0;
+    bool deref = false;
   };
 
   static bool Format(const Entry &entry, Stream &s, const SymbolContext *sc,

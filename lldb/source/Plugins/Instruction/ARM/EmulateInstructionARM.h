@@ -19,7 +19,7 @@ namespace lldb_private {
 // ITSession - Keep track of the IT Block progression.
 class ITSession {
 public:
-  ITSession() : ITCounter(0), ITState(0) {}
+  ITSession() {}
   ~ITSession() {}
 
   // InitIT - Initializes ITCounter/ITState.
@@ -39,8 +39,8 @@ public:
   uint32_t GetCond();
 
 private:
-  uint32_t ITCounter; // Possible values: 0, 1, 2, 3, 4.
-  uint32_t ITState;   // A2.5.2 Consists of IT[7:5] and IT[4:0] initially.
+  uint32_t ITCounter = 0; // Possible values: 0, 1, 2, 3, 4.
+  uint32_t ITState = 0;   // A2.5.2 Consists of IT[7:5] and IT[4:0] initially.
 };
 
 class EmulateInstructionARM : public EmulateInstruction {

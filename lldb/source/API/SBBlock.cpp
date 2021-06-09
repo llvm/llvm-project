@@ -25,9 +25,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBBlock::SBBlock() : m_opaque_ptr(nullptr) {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBBlock);
-}
+SBBlock::SBBlock() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBBlock); }
 
 SBBlock::SBBlock(lldb_private::Block *lldb_object_ptr)
     : m_opaque_ptr(lldb_object_ptr) {}

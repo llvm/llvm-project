@@ -43,8 +43,7 @@ public:
     eTypeBytes
   };
 
-  RegisterValue()
-      : m_type(eTypeInvalid), m_scalar(static_cast<unsigned long>(0)) {}
+  RegisterValue() : m_scalar(static_cast<unsigned long>(0)) {}
 
   explicit RegisterValue(uint8_t inst) : m_type(eTypeUInt8) { m_scalar = inst; }
 
@@ -257,7 +256,7 @@ public:
   void Clear();
 
 protected:
-  RegisterValue::Type m_type;
+  RegisterValue::Type m_type = eTypeInvalid;
   Scalar m_scalar;
 
   struct {

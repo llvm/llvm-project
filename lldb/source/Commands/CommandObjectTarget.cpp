@@ -1969,7 +1969,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options(), m_sort_order(eSortOrderNone) {}
+    CommandOptions() : Options() {}
 
     ~CommandOptions() override = default;
 
@@ -2005,7 +2005,7 @@ public:
       return llvm::makeArrayRef(g_target_modules_dump_symtab_options);
     }
 
-    SortOrder m_sort_order;
+    SortOrder m_sort_order = eSortOrderNone;
     OptionValueBoolean m_prefer_mangled = {false, false};
   };
 
@@ -2902,9 +2902,7 @@ class CommandObjectTargetModulesList : public CommandObjectParsed {
 public:
   class CommandOptions : public Options {
   public:
-    CommandOptions()
-        : Options(), m_format_array(), m_use_global_module_list(false),
-          m_module_addr(LLDB_INVALID_ADDRESS) {}
+    CommandOptions() : Options(), m_format_array() {}
 
     ~CommandOptions() override = default;
 
@@ -2939,8 +2937,8 @@ public:
     // Instance variables to hold the values for command options.
     typedef std::vector<std::pair<char, uint32_t>> FormatWidthCollection;
     FormatWidthCollection m_format_array;
-    bool m_use_global_module_list;
-    lldb::addr_t m_module_addr;
+    bool m_use_global_module_list = false;
+    lldb::addr_t m_module_addr = LLDB_INVALID_ADDRESS;
   };
 
   CommandObjectTargetModulesList(CommandInterpreter &interpreter)
@@ -3253,9 +3251,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions()
-        : Options(), m_type(eLookupTypeInvalid), m_str(),
-          m_addr(LLDB_INVALID_ADDRESS) {}
+    CommandOptions() : Options(), m_str() {}
 
     ~CommandOptions() override = default;
 
@@ -3301,9 +3297,10 @@ public:
 
     // Instance variables to hold the values for command options.
 
-    int m_type;        // Should be a eLookupTypeXXX enum after parsing options
+    int m_type = eLookupTypeInvalid; // Should be a eLookupTypeXXX enum after
+                                     // parsing options
     std::string m_str; // Holds name lookup
-    lldb::addr_t m_addr; // Holds the address to lookup
+    lldb::addr_t m_addr = LLDB_INVALID_ADDRESS; // Holds the address to lookup
   };
 
   CommandObjectTargetModulesShowUnwind(CommandInterpreter &interpreter)
@@ -4424,11 +4421,7 @@ class CommandObjectTargetStopHookAdd : public CommandObjectParsed,
 public:
   class CommandOptions : public OptionGroup {
   public:
-    CommandOptions()
-        : OptionGroup(), m_line_start(0), m_line_end(UINT_MAX),
-          m_func_name_type_mask(eFunctionNameTypeAuto),
-          m_sym_ctx_specified(false), m_thread_specified(false),
-          m_use_one_liner(false), m_one_liner() {}
+    CommandOptions() : OptionGroup(), m_line_end(UINT_MAX), m_one_liner() {}
 
     ~CommandOptions() override = default;
 
@@ -4555,20 +4548,21 @@ public:
 
     std::string m_class_name;
     std::string m_function_name;
-    uint32_t m_line_start;
+    uint32_t m_line_start = 0;
     uint32_t m_line_end;
     std::string m_file_name;
     std::string m_module_name;
-    uint32_t m_func_name_type_mask; // A pick from lldb::FunctionNameType.
+    uint32_t m_func_name_type_mask =
+        eFunctionNameTypeAuto; // A pick from lldb::FunctionNameType.
     lldb::tid_t m_thread_id;
     uint32_t m_thread_index;
     std::string m_thread_name;
     std::string m_queue_name;
-    bool m_sym_ctx_specified;
+    bool m_sym_ctx_specified = false;
     bool m_no_inlines;
-    bool m_thread_specified;
+    bool m_thread_specified = false;
     // Instance variables to hold the values for one_liner options.
-    bool m_use_one_liner;
+    bool m_use_one_liner = false;
     std::vector<std::string> m_one_liner;
 
     bool m_auto_continue;

@@ -33,8 +33,7 @@ class CommandInterpreter;
 
 class CommandInterpreterRunResult {
 public:
-  CommandInterpreterRunResult()
-      : m_num_errors(0), m_result(lldb::eCommandInterpreterResultSuccess) {}
+  CommandInterpreterRunResult() {}
 
   uint32_t GetNumErrors() const { return m_num_errors; }
 
@@ -52,8 +51,9 @@ protected:
   void SetResult(lldb::CommandInterpreterResult result) { m_result = result; }
 
 private:
-  int m_num_errors;
-  lldb::CommandInterpreterResult m_result;
+  int m_num_errors = 0;
+  lldb::CommandInterpreterResult m_result =
+      lldb::eCommandInterpreterResultSuccess;
 };
 
 class CommandInterpreterRunOptions {
@@ -101,13 +101,8 @@ public:
         m_print_errors(print_errors), m_add_to_history(add_to_history) {}
 
   CommandInterpreterRunOptions()
-      : m_stop_on_continue(eLazyBoolCalculate),
-        m_stop_on_error(eLazyBoolCalculate),
-        m_stop_on_crash(eLazyBoolCalculate),
-        m_echo_commands(eLazyBoolCalculate),
-        m_echo_comment_commands(eLazyBoolCalculate),
-        m_print_results(eLazyBoolCalculate), m_print_errors(eLazyBoolCalculate),
-        m_add_to_history(eLazyBoolCalculate) {}
+
+  {}
 
   void SetSilent(bool silent) {
     LazyBool value = silent ? eLazyBoolNo : eLazyBoolYes;
@@ -187,14 +182,14 @@ public:
     m_spawn_thread = spawn_thread ? eLazyBoolYes : eLazyBoolNo;
   }
 
-  LazyBool m_stop_on_continue;
-  LazyBool m_stop_on_error;
-  LazyBool m_stop_on_crash;
-  LazyBool m_echo_commands;
-  LazyBool m_echo_comment_commands;
-  LazyBool m_print_results;
-  LazyBool m_print_errors;
-  LazyBool m_add_to_history;
+  LazyBool m_stop_on_continue = eLazyBoolCalculate;
+  LazyBool m_stop_on_error = eLazyBoolCalculate;
+  LazyBool m_stop_on_crash = eLazyBoolCalculate;
+  LazyBool m_echo_commands = eLazyBoolCalculate;
+  LazyBool m_echo_comment_commands = eLazyBoolCalculate;
+  LazyBool m_print_results = eLazyBoolCalculate;
+  LazyBool m_print_errors = eLazyBoolCalculate;
+  LazyBool m_add_to_history = eLazyBoolCalculate;
   LazyBool m_auto_handle_events;
   LazyBool m_spawn_thread;
 

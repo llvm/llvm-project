@@ -18,9 +18,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-OptionValueFileSpec::OptionValueFileSpec(bool resolve)
-    : m_completion_mask(CommandCompletions::eDiskFileCompletion),
-      m_resolve(resolve) {}
+OptionValueFileSpec::OptionValueFileSpec(bool resolve) : m_resolve(resolve) {}
 
 OptionValueFileSpec::OptionValueFileSpec(const FileSpec &value, bool resolve)
     : m_current_value(value), m_default_value(value),

@@ -49,9 +49,7 @@ public:
   // implementations of the runtime, and more might come
   class ClassDescriptor {
   public:
-    ClassDescriptor()
-        : m_is_kvo(eLazyBoolCalculate), m_is_cf(eLazyBoolCalculate),
-          m_type_wp() {}
+    ClassDescriptor() : m_type_wp() {}
 
     virtual ~ClassDescriptor() = default;
 
@@ -145,8 +143,8 @@ public:
                         bool check_version_specific = false) const;
 
   private:
-    LazyBool m_is_kvo;
-    LazyBool m_is_cf;
+    LazyBool m_is_kvo = eLazyBoolCalculate;
+    LazyBool m_is_cf = eLazyBoolCalculate;
     lldb::TypeWP m_type_wp;
   };
 

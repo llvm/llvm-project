@@ -42,9 +42,7 @@ using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(ObjectContainerBSDArchive)
 
-ObjectContainerBSDArchive::Object::Object()
-    : ar_name(), modification_time(0), uid(0), gid(0), mode(0), size(0),
-      file_offset(0), file_size(0) {}
+ObjectContainerBSDArchive::Object::Object() : ar_name() {}
 
 void ObjectContainerBSDArchive::Object::Clear() {
   ar_name.Clear();

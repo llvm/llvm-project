@@ -1032,11 +1032,7 @@ bool AppleObjCRuntimeV2::IsTaggedPointer(addr_t ptr) {
 
 class RemoteNXMapTable {
 public:
-  RemoteNXMapTable()
-      : m_count(0), m_num_buckets_minus_one(0),
-        m_buckets_ptr(LLDB_INVALID_ADDRESS), m_process(nullptr),
-        m_end_iterator(*this, -1), m_load_addr(LLDB_INVALID_ADDRESS),
-        m_map_pair_size(0), m_invalid_key(0) {}
+  RemoteNXMapTable() : m_end_iterator(*this, -1) {}
 
   void Dump() {
     printf("RemoteNXMapTable.m_load_addr = 0x%" PRIx64 "\n", m_load_addr);
@@ -1210,18 +1206,17 @@ public:
 
 private:
   // contents of _NXMapTable struct
-  uint32_t m_count;
-  uint32_t m_num_buckets_minus_one;
-  lldb::addr_t m_buckets_ptr;
-  lldb_private::Process *m_process;
+  uint32_t m_count = 0;
+  uint32_t m_num_buckets_minus_one = 0;
+  lldb::addr_t m_buckets_ptr = LLDB_INVALID_ADDRESS;
+  lldb_private::Process *m_process = nullptr;
   const_iterator m_end_iterator;
-  lldb::addr_t m_load_addr;
-  size_t m_map_pair_size;
-  lldb::addr_t m_invalid_key;
+  lldb::addr_t m_load_addr = LLDB_INVALID_ADDRESS;
+  size_t m_map_pair_size = 0;
+  lldb::addr_t m_invalid_key = 0;
 };
 
-AppleObjCRuntimeV2::HashTableSignature::HashTableSignature()
-    : m_count(0), m_num_buckets(0), m_buckets_ptr(0) {}
+AppleObjCRuntimeV2::HashTableSignature::HashTableSignature() {}
 
 void AppleObjCRuntimeV2::HashTableSignature::UpdateSignature(
     const RemoteNXMapTable &hash_table) {

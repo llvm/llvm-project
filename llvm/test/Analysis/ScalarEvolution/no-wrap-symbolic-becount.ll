@@ -99,12 +99,12 @@ define void @pointer_iv_nowrap(i8* %startptr, i8* %endptr) local_unnamed_addr {
 ; CHECK-NEXT:  %iv = phi i8* [ %init, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:  -->  {(2000 + %startptr)<nuw>,+,1}<nuw><%loop> U: [2000,0) S: [2000,0)
 ; CHECK-NEXT:  %iv.next = getelementptr inbounds i8, i8* %iv, i64 1
-; CHECK-NEXT:  -->  {(2001 + %startptr),+,1}<nuw><%loop> U: full-set S: full-set
+; CHECK-NEXT:  -->  {(2001 + %startptr)<nuw>,+,1}<nuw><%loop> U: [2001,0) S: [2001,0)
 
 ; CHECK-NEXT:Determining loop execution counts for: @pointer_iv_nowrap
-; CHECK-NEXT:Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:Loop %loop: Unpredictable max backedge-taken count.
-; CHECK-NEXT:Loop %loop: Unpredictable predicated backedge-taken count.
+; CHECK-NEXT:Loop %loop: backedge-taken count is (-2000 + (-1 * %startptr) + ((2000 + %startptr)<nuw> umax %endptr))
+; CHECK-NEXT:Loop %loop: max backedge-taken count is -2001
+; CHECK-NEXT:Loop %loop: Predicated backedge-taken count is (-2000 + (-1 * %startptr) + ((2000 + %startptr)<nuw> umax %endptr))
 ;
 entry:
   %init = getelementptr inbounds i8, i8* %startptr, i64 2000
