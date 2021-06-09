@@ -105,11 +105,16 @@ public:
 #endif
 
   bool operator==(const Symbol &O) const {
-    return (Kind == O.Kind) && (Name == O.Name) && (Targets == O.Targets) &&
-           (Flags == O.Flags);
+    return std::tie(Name, Kind, Targets, Flags) ==
+           std::tie(O.Name, O.Kind, O.Targets, O.Flags);
   }
 
   bool operator!=(const Symbol &O) const { return !(*this == O); }
+
+  bool operator<(const Symbol &O) const {
+    return std::tie(Name, Kind, Targets, Flags) <
+           std::tie(O.Name, O.Kind, O.Targets, O.Flags);
+  }
 
 private:
   StringRef Name;
