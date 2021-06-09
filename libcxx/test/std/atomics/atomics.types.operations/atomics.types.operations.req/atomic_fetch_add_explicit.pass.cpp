@@ -42,6 +42,7 @@ struct TestFn {
         assert(std::atomic_fetch_add_explicit(&t, T(2),
                                             std::memory_order_seq_cst) == T(1));
         assert(t == T(3));
+        ASSERT_NOEXCEPT(std::atomic_fetch_add_explicit(&t, 0, std::memory_order_relaxed));
     }
     {
         typedef std::atomic<T> A;
@@ -49,6 +50,7 @@ struct TestFn {
         assert(std::atomic_fetch_add_explicit(&t, T(2),
                                             std::memory_order_seq_cst) == T(1));
         assert(t == T(3));
+        ASSERT_NOEXCEPT(std::atomic_fetch_add_explicit(&t, 0, std::memory_order_relaxed));
     }
   }
 };
@@ -60,28 +62,22 @@ testp()
     {
         typedef std::atomic<T> A;
         typedef typename std::remove_pointer<T>::type X;
-        A t(T(1 * sizeof(X)));
-        assert(std::atomic_fetch_add_explicit(&t, 2,
-                                  std::memory_order_seq_cst) == T(1*sizeof(X)));
-#ifdef _LIBCPP_VERSION // libc++ is not conforming
-        std::atomic_fetch_add_explicit<X>(&t, 0, std::memory_order_relaxed);
-#else
+        X a[3] = {0};
+        A t(&a[0]);
+        assert(std::atomic_fetch_add_explicit(&t, 2, std::memory_order_seq_cst) == &a[0]);
         std::atomic_fetch_add_explicit<T>(&t, 0, std::memory_order_relaxed);
-#endif // _LIBCPP_VERSION
-        assert(t == T(3*sizeof(X)));
+        assert(t == &a[2]);
+        ASSERT_NOEXCEPT(std::atomic_fetch_add_explicit(&t, 0, std::memory_order_relaxed));
     }
     {
         typedef std::atomic<T> A;
         typedef typename std::remove_pointer<T>::type X;
-        volatile A t(T(1 * sizeof(X)));
-        assert(std::atomic_fetch_add_explicit(&t, 2,
-                                  std::memory_order_seq_cst) == T(1*sizeof(X)));
-#ifdef _LIBCPP_VERSION // libc++ is not conforming
-        std::atomic_fetch_add_explicit<X>(&t, 0, std::memory_order_relaxed);
-#else
+        X a[3] = {0};
+        volatile A t(&a[0]);
+        assert(std::atomic_fetch_add_explicit(&t, 2, std::memory_order_seq_cst) == &a[0]);
         std::atomic_fetch_add_explicit<T>(&t, 0, std::memory_order_relaxed);
-#endif // _LIBCPP_VERSION
-        assert(t == T(3*sizeof(X)));
+        assert(t == &a[2]);
+        ASSERT_NOEXCEPT(std::atomic_fetch_add_explicit(&t, 0, std::memory_order_relaxed));
     }
 }
 
