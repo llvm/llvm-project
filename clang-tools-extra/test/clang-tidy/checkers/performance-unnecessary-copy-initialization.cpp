@@ -4,6 +4,7 @@ struct ExpensiveToCopyType {
   ExpensiveToCopyType();
   virtual ~ExpensiveToCopyType();
   const ExpensiveToCopyType &reference() const;
+  const ExpensiveToCopyType *pointer() const;
   void nonConstMethod();
   bool constMethod() const;
 };
@@ -544,6 +545,25 @@ void positiveCopiedFromReferenceToConstVar() {
 void negativeCopiedFromGetterOfReferenceToModifiedVar() {
   ExpensiveToCopyType Orig;
   const auto &Ref = Orig.reference();
+  const auto NecessaryCopy = Ref.reference();
+  Orig.nonConstMethod();
+}
+
+void negativeAliasNonCanonicalPointerType() {
+  ExpensiveToCopyType Orig;
+  // The use of auto here hides that the type is a pointer type. The check needs
+  // to look at the canonical type to detect the aliasing through this pointer.
+  const auto Pointer = Orig.pointer();
+  const auto NecessaryCopy = Pointer->reference();
+  Orig.nonConstMethod();
+}
+
+void negativeAliasTypedefedType() {
+  typedef const ExpensiveToCopyType &ReferenceType;
+  ExpensiveToCopyType Orig;
+  // The typedef hides the fact that this is a reference type. The check needs
+  // to look at the canonical type to detect the aliasing.
+  ReferenceType Ref = Orig.reference();
   const auto NecessaryCopy = Ref.reference();
   Orig.nonConstMethod();
 }

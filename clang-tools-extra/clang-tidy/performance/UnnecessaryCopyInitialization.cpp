@@ -100,7 +100,7 @@ static bool isInitializingVariableImmutable(const VarDecl &InitializingVar,
   if (!isOnlyUsedAsConst(InitializingVar, BlockStmt, Context))
     return false;
 
-  QualType T = InitializingVar.getType();
+  QualType T = InitializingVar.getType().getCanonicalType();
   // The variable is a value type and we know it is only used as const. Safe
   // to reference it and avoid the copy.
   if (!isa<ReferenceType, PointerType>(T))
