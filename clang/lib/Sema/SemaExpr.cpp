@@ -15752,8 +15752,46 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
     QualType PromoteType;
     if (TInfo->getType()->isPromotableIntegerType()) {
       PromoteType = Context.getPromotedIntegerType(TInfo->getType());
-      if (Context.typesAreCompatible(PromoteType, TInfo->getType()))
+      // [cstdarg.syn]p1 defers the C++ behavior to what the C standard says,
+      // and C2x 7.16.1.1p2 says, in part:
+      //   If type is not compatible with the type of the actual next argument
+      //   (as promoted according to the default argument promotions), the
+      //   behavior is undefined, except for the following cases:
+      //     - both types are pointers to qualified or unqualified versions of
+      //       compatible types;
+      //     - one type is a signed integer type, the other type is the
+      //       corresponding unsigned integer type, and the value is
+      //       representable in both types;
+      //     - one type is pointer to qualified or unqualified void and the
+      //       other is a pointer to a qualified or unqualified character type.
+      // Given that type compatibility is the primary requirement (ignoring
+      // qualifications), you would think we could call typesAreCompatible()
+      // directly to test this. However, in C++, that checks for *same type*,
+      // which causes false positives when passing an enumeration type to
+      // va_arg. Instead, get the underlying type of the enumeration and pass
+      // that.
+      QualType UnderlyingType = TInfo->getType();
+      if (const auto *ET = UnderlyingType->getAs<EnumType>())
+        UnderlyingType = ET->getDecl()->getIntegerType();
+      if (Context.typesAreCompatible(PromoteType, UnderlyingType,
+                                     /*CompareUnqualified*/ true))
         PromoteType = QualType();
+
+      // If the types are still not compatible, we need to test whether the
+      // promoted type and the underlying type are the same except for
+      // signedness. Ask the AST for the correctly corresponding type and see
+      // if that's compatible.
+      if (!PromoteType.isNull() &&
+          PromoteType->isUnsignedIntegerType() !=
+              UnderlyingType->isUnsignedIntegerType()) {
+        UnderlyingType =
+            UnderlyingType->isUnsignedIntegerType()
+                ? Context.getCorrespondingSignedType(UnderlyingType)
+                : Context.getCorrespondingUnsignedType(UnderlyingType);
+        if (Context.typesAreCompatible(PromoteType, UnderlyingType,
+                                       /*CompareUnqualified*/ true))
+          PromoteType = QualType();
+      }
     }
     if (TInfo->getType()->isSpecificBuiltinType(BuiltinType::Float))
       PromoteType = Context.DoubleTy;
