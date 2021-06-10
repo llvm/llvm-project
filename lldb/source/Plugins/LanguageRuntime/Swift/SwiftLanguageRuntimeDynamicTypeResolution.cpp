@@ -356,8 +356,7 @@ public:
     if (sc_list.GetSize() == 1 && sc_list.GetContextAtIndex(0, sym_ctx)) {
       if (sym_ctx.symbol) {
         auto load_addr = sym_ctx.symbol->GetLoadAddress(&m_process.GetTarget());
-        LLDB_LOGV(log, "[MemoryReader] symbol resolved to 0x%" PRIx64,
-                  load_addr);
+        LLDB_LOGV(log, "[MemoryReader] symbol resolved to {0:x}", load_addr);
         return swift::remote::RemoteAddress(load_addr);
       }
     }
@@ -403,9 +402,7 @@ public:
 
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
-    LLDB_LOGV(log,
-              "[MemoryReader] asked to read %" PRIu64
-              " bytes at address 0x%" PRIx64,
+    LLDB_LOGV(log, "[MemoryReader] asked to read {0} bytes at address {1:x}",
               size, address.getAddressData());
 
     if (size > m_max_read_amount) {
@@ -421,7 +418,8 @@ public:
       return false;
     }
     if (error.Fail()) {
-      LLDB_LOGV(log, "[MemoryReader] memory read returned error: %s", error.AsCString());
+      LLDB_LOGV(log, "[MemoryReader] memory read returned error: {0}",
+                error.AsCString());
       return false;
     }
 
@@ -433,7 +431,7 @@ public:
       }
       return stream.GetData();
     };
-    LLDB_LOGV(log, "[MemoryReader] memory read returned data: %s",
+    LLDB_LOGV(log, "[MemoryReader] memory read returned data: {0}",
               format_data(dest, size));
 
     return true;
@@ -443,8 +441,7 @@ public:
                   std::string &dest) override {
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
-    LLDB_LOGV(log,
-              "[MemoryReader] asked to read string data at address 0x%" PRIx64,
+    LLDB_LOGV(log, "[MemoryReader] asked to read string data at address {0x}",
               address.getAddressData());
 
     Target &target(m_process.GetTarget());
@@ -464,11 +461,11 @@ public:
         }
         return stream.GetData();
       };
-      LLDB_LOGV(log, "[MemoryReader] memory read returned data: \"%s\"",
+      LLDB_LOGV(log, "[MemoryReader] memory read returned data: \"{0}\"",
                 format_string(dest));
       return true;
     } else {
-      LLDB_LOGV(log, "[MemoryReader] memory read returned error: %s",
+      LLDB_LOGV(log, "[MemoryReader] memory read returned error: {0}",
                 error.AsCString());
       return false;
     }
