@@ -36,9 +36,69 @@ int main(int argc, char **argv) {
   mlir::DialectRegistry registry;
   registerMyDialects(registry);
   registerMyPasses();
-  return failed(mlir::MlirLspServerMain(argc, argv, registry));
+  return mlir::failed(mlir::MlirLspServerMain(argc, argv, registry));
 }
 ```
+
+### Features
+
+This section details a few of the features that the MLIR language server
+provides. The screenshots are shown in [VSCode](https://code.visualstudio.com/),
+but the exact feature set available will depend on your editor client.
+
+#### Diagnostics
+
+The language server runs actively runs verification on the IR as you type,
+showing any generate diagnostics in-place.
+
+![IMG](/mlir-lsp-server/diagnostics.png)
+
+#### Cross-references
+
+Cross references allow for navigating the use/def chains of SSA values (i.e.
+operation results and block arguments), [Symbols](../SymbolsAndSymbolTables.md),
+and Blocks.
+
+##### Find definition
+
+Jump to the definition of the IR entity under the cursor. A few examples are
+shown below:
+
+*   SSA Values
+
+![SSA](/mlir-lsp-server/goto_def_ssa.gif)
+
+*   Symbol References
+
+![Symbols](/mlir-lsp-server/goto_def_symbol.gif)
+
+The definition of an operation will also take into account the source location
+attached, allowing for navigating into the source file that generated the
+operation.
+
+![External Locations](/mlir-lsp-server/goto_def_external.gif)
+
+##### Find references
+
+Show all references of the IR entity under the cursor.
+
+![IMG](/mlir-lsp-server/find_references.gif)
+
+#### Hover
+
+Hover over an IR entity to see more information about it. The exact information
+displayed is dependent on the type of IR entity under the cursor. For example,
+hovering over an `Operation` may show its generic format.
+
+![IMG](/mlir-lsp-server/hover.png)
+
+#### Navigation
+
+The language server will also inform the editor about the structure of symbol
+tables within the IR. This allows for jumping directly to the definition of a
+symbol, such as a `func`, within the file.
+
+![IMG](/mlir-lsp-server/navigation.gif)
 
 ### Design
 
