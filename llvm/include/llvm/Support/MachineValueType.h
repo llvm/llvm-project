@@ -1026,6 +1026,11 @@ namespace llvm {
       }
     }
 
+    /// Test if the given MVT has zero size
+    bool isZeroSized() const {
+      return !getSizeInBits().isScalable() && getFixedSizeInBits() == 0;
+    }
+
     /// Return the size of the specified fixed width value type in bits. The
     /// function will assert if the type is scalable.
     uint64_t getFixedSizeInBits() const {
