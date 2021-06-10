@@ -44,6 +44,18 @@ mlir::Value genAll(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genAny(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
                    mlir::Value maskBox, mlir::Value dim);
 
+/// Generate call to Count runtime routine. This routine is a specialized
+/// version when mask is a rank one array or the dim argument is not
+/// specified by the user.
+mlir::Value genCount(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+                     mlir::Value maskBox, mlir::Value dim);
+
+/// Generate call to general CountDim runtime routine. This routine has a
+/// descriptor result.
+void genCountDim(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+                 mlir::Value resultBox, mlir::Value maskBox, mlir::Value dim,
+                 mlir::Value kind);
+
 /// Generate call to Maxloc intrinsic runtime routine. This is the version
 /// that does not take a dim argument.
 void genMaxloc(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,

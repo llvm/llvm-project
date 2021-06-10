@@ -406,6 +406,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genCharacterCompare(mlir::Type,
                                          llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genConjg(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genDateAndTime(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genDim(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genDprod(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -565,6 +566,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"ceiling", &I::genCeiling},
     {"char", &I::genChar},
     {"conjg", &I::genConjg},
+    {"count",
+     &I::genCount,
+     {{{"mask", asAddr}, {"dim", asValue}, {"kind", asValue}}},
+     /*isElemental=*/false},
     {"date_and_time",
      &I::genDateAndTime,
      {{{"date", asAddr},
@@ -1703,6 +1708,65 @@ mlir::Value IntrinsicLibrary::genConjg(mlir::Type resultType,
   auto negImag = builder.create<fir::NegfOp>(loc, imag);
   return Fortran::lower::ComplexExprHelper{builder, loc}.insertComplexPart(
       cplx, negImag, /*isImagPart=*/true);
+}
+
+// COUNT
+fir::ExtendedValue
+IntrinsicLibrary::genCount(mlir::Type resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+
+  // Handle mask argument
+  fir::BoxValue mask = builder.createBox(loc, args[0]);
+  auto maskRank = mask.rank();
+
+  assert(maskRank > 0);
+
+  // Handle optional dim argument
+  bool absentDim = isAbsent(args[1]);
+  auto dim = absentDim
+                 ? builder.createIntegerConstant(loc, builder.getIndexType(), 0)
+                 : fir::getBase(args[1]);
+
+  if (absentDim || maskRank == 1) {
+    // Result is scalar if no dim argument or mask is rank 1.
+    // So, call specialized Count runtime routine.
+    return builder.createConvert(
+        loc, resultType,
+        Fortran::lower::genCount(builder, loc, fir::getBase(mask), dim));
+  }
+
+  // Call general CountDim runtime routine.
+
+  // Handle optional kind argument
+  bool absentKind = isAbsent(args[2]);
+  auto kind = absentKind ? builder.createIntegerConstant(
+                               loc, builder.getIndexType(),
+                               builder.getKindMap().defaultIntegerKind())
+                         : fir::getBase(args[2]);
+
+  // Create mutable fir.box to be passed to the runtime for the result.
+  auto type = builder.getVarLenSeqTy(resultType, maskRank - 1);
+  auto resultMutableBox =
+      Fortran::lower::createTempMutableBox(builder, loc, type);
+
+  auto resultIrBox =
+      Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
+
+  Fortran::lower::genCountDim(builder, loc, resultIrBox, fir::getBase(mask),
+                              dim, kind);
+
+  // Handle cleanup of allocatable result descriptor and return
+  auto res = Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox);
+  return res.match(
+      [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
+        // Add cleanup code
+        addCleanUpForTemp(loc, box.getAddr());
+        return box;
+      },
+      [&](const auto &) -> fir::ExtendedValue {
+        fir::emitFatalError(loc, "unexpected result for COUNT");
+      });
 }
 
 // DATE_AND_TIME
