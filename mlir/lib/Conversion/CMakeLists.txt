@@ -1,4 +1,5 @@
 add_subdirectory(AffineToStandard)
+add_subdirectory(ArmNeon2dToIntr)
 add_subdirectory(AsyncToLLVM)
 add_subdirectory(ComplexToLLVM)
 add_subdirectory(ComplexToStandard)
