@@ -113,12 +113,6 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM,
   return *RM;
 }
 
-// Check for reference types in Feature String, in order to extend target
-// description string
-static bool hasReferenceTypes(const StringRef &FS) {
-  return FS.find("+reference-types") != StringRef::npos;
-}
-
 /// Create an WebAssembly architecture model.
 ///
 WebAssemblyTargetMachine::WebAssemblyTargetMachine(
@@ -127,12 +121,8 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
     Optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(T,
                         TT.isArch64Bit()
-                            ? (hasReferenceTypes(FS)
-                                   ? "e-m:e-p:64:64-i64:64-n32:64-S128-ni:1:10:20"
-                                   : "e-m:e-p:64:64-i64:64-n32:64-S128-ni:1")
-                            : (hasReferenceTypes(FS)
-                                   ? "e-m:e-p:32:32-i64:64-n32:64-S128-ni:1:10:20"
-                                   : "e-m:e-p:32:32-i64:64-n32:64-S128-ni:1"),
+                            ? "e-m:e-p:64:64-i64:64-n32:64-S128-ni:1"
+                            : "e-m:e-p:32:32-i64:64-n32:64-S128-ni:1",
                         TT, CPU, FS, Options, getEffectiveRelocModel(RM, TT),
                         getEffectiveCodeModel(CM, CodeModel::Large), OL),
       TLOF(new WebAssemblyTargetObjectFile()) {

@@ -26,6 +26,8 @@ namespace XCOFF {
 
 constexpr size_t FileNamePadSize = 6;
 constexpr size_t NameSize = 8;
+constexpr size_t FileHeaderSize32 = 20;
+constexpr size_t SectionHeaderSize32 = 40;
 constexpr size_t SymbolTableEntrySize = 18;
 constexpr size_t RelocationSerializationSize32 = 10;
 constexpr uint16_t RelocOverflow = 65535;
@@ -253,29 +255,6 @@ enum RelocationType : uint8_t {
                  ///< a large code model TOC-relative relocation.
   R_TOCL = 0x31 ///< Relative to TOC lower. Specifies the low-order 16 bits of a
                 ///< large code model TOC-relative relocation.
-};
-
-struct FileHeader32 {
-  uint16_t Magic;
-  uint16_t NumberOfSections;
-  int32_t TimeStamp;
-  uint32_t SymbolTableFileOffset;
-  int32_t NumberOfSymbolTableEntries;
-  uint16_t AuxiliaryHeaderSize;
-  uint16_t Flags;
-};
-
-struct SectionHeader32 {
-  char Name[XCOFF::NameSize];
-  uint32_t PhysicalAddress;
-  uint32_t VirtualAddress;
-  uint32_t Size;
-  uint32_t FileOffsetToData;
-  uint32_t FileOffsetToRelocations;
-  uint32_t FileOffsetToLineNumbers;
-  uint16_t NumberOfRelocations;
-  uint16_t NumberOfLineNumbers;
-  int32_t Flags;
 };
 
 enum CFileStringType : uint8_t {

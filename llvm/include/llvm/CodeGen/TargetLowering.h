@@ -350,7 +350,7 @@ public:
   /// Return the in-memory pointer type for the given address space, defaults to
   /// the pointer type from the data layout.  FIXME: The default needs to be
   /// removed once all the code is updated.
-  virtual MVT getPointerMemTy(const DataLayout &DL, uint32_t AS = 0) const {
+  MVT getPointerMemTy(const DataLayout &DL, uint32_t AS = 0) const {
     return MVT::getIntegerVT(DL.getPointerSizeInBits(AS));
   }
 
@@ -1520,10 +1520,10 @@ public:
     return getNumRegisters(Context, VT);
   }
 
-  /// Certain targets have context senstive alignment requirements, where one
+  /// Certain targets have context sensitive alignment requirements, where one
   /// type has the alignment requirement of another type.
   virtual Align getABIAlignmentForCallingConv(Type *ArgTy,
-                                              DataLayout DL) const {
+                                              const DataLayout &DL) const {
     return DL.getABITypeAlign(ArgTy);
   }
 

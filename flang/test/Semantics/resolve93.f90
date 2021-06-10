@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 subroutine s1()
   character(10) str
   character(10) str1

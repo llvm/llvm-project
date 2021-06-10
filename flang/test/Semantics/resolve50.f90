@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Test coarray association in CHANGE TEAM statement
 
 subroutine s1

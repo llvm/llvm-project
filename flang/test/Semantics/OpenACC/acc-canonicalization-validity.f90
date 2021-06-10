@@ -1,4 +1,5 @@
 ! RUN: %S/../test_errors.sh %s %t %flang -fopenacc
+! REQUIRES: shell
 
 ! Check OpenACC canonalization validity for the construct defined below:
 !   2.9 Loop

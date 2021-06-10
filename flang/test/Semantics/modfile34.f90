@@ -1,4 +1,5 @@
 ! RUN: %S/test_modfile.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Test resolution of type-bound generics.
 
 module m1

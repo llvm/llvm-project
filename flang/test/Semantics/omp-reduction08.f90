@@ -1,4 +1,5 @@
 ! RUN: %S/test_symbols.sh %s %t %flang_fc1 -fopenmp
+! REQUIRES: shell
 ! OpenMP Version 4.5
 ! 2.15.3.6 Reduction Clause Positive cases
 

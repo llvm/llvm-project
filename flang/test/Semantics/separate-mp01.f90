@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 
 ! case 1: ma_create_new_fun' was not declared a separate module procedure
 module m1

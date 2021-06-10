@@ -8021,7 +8021,7 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
        ElementCount::isKnownLE(VF, MaxFactors.ScalableVF); VF *= 2)
     VFCandidates.insert(VF);
 
-  for (const auto VF : VFCandidates) {
+  for (const auto &VF : VFCandidates) {
     // Collect Uniform and Scalar instructions after vectorization with VF.
     CM.collectUniformsAndScalars(VF);
 

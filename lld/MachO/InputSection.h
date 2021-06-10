@@ -104,7 +104,7 @@ struct StringPiece {
   uint32_t inSecOff;
   uint32_t hash;
   // Offset from the start of the containing output section.
-  uint64_t outSecOff;
+  uint64_t outSecOff = 0;
 
   StringPiece(uint64_t off, uint32_t hash) : inSecOff(off), hash(hash) {}
 };

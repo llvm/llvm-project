@@ -4571,8 +4571,9 @@ void Sema::CheckArgAlignment(SourceLocation Loc, NamedDecl *FDecl,
 
   // Find expected alignment, and the actual alignment of the passed object.
   // getTypeAlignInChars requires complete types
-  if (ParamTy->isIncompleteType() || ArgTy->isIncompleteType() ||
-      ParamTy->isUndeducedType() || ArgTy->isUndeducedType())
+  if (ArgTy.isNull() || ParamTy->isIncompleteType() ||
+      ArgTy->isIncompleteType() || ParamTy->isUndeducedType() ||
+      ArgTy->isUndeducedType())
     return;
 
   CharUnits ParamAlign = Context.getTypeAlignInChars(ParamTy);
@@ -4654,6 +4655,9 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     for (unsigned ArgIdx = 0; ArgIdx < N; ++ArgIdx) {
       // Args[ArgIdx] can be null in malformed code.
       if (const Expr *Arg = Args[ArgIdx]) {
+        if (Arg->containsErrors())
+          continue;
+
         QualType ParamTy = Proto->getParamType(ArgIdx);
         QualType ArgTy = Arg->getType();
         CheckArgAlignment(Arg->getExprLoc(), FDecl, std::to_string(ArgIdx + 1),

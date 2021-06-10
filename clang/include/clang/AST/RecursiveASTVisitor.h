@@ -2841,6 +2841,9 @@ DEF_TRAVERSE_STMT(OMPSimdDirective,
 DEF_TRAVERSE_STMT(OMPTileDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
+DEF_TRAVERSE_STMT(OMPUnrollDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
 DEF_TRAVERSE_STMT(OMPForDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
@@ -3094,6 +3097,17 @@ template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPSizesClause(OMPSizesClause *C) {
   for (Expr *E : C->getSizesRefs())
     TRY_TO(TraverseStmt(E));
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPFullClause(OMPFullClause *C) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPPartialClause(OMPPartialClause *C) {
+  TRY_TO(TraverseStmt(C->getFactor()));
   return true;
 }
 

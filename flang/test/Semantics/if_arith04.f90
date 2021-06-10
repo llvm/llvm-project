@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Make sure arithmetic if expressions are non-complex numeric exprs.
 
 INTEGER I

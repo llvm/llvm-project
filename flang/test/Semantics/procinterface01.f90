@@ -1,4 +1,5 @@
 ! RUN: %S/test_symbols.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Tests for "proc-interface" semantics.
 ! These cases are all valid.
 

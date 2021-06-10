@@ -28,6 +28,7 @@ enum class Operation : int {
   Cos,
   Exp,
   Exp2,
+  Expm1,
   Floor,
   Round,
   Sin,

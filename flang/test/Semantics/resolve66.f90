@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Test that user-defined assignment is used in the right places
 
 module m1

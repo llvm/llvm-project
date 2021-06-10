@@ -668,6 +668,11 @@ void StmtPrinter::VisitOMPTileDirective(OMPTileDirective *Node) {
   PrintOMPExecutableDirective(Node);
 }
 
+void StmtPrinter::VisitOMPUnrollDirective(OMPUnrollDirective *Node) {
+  Indent() << "#pragma omp unroll";
+  PrintOMPExecutableDirective(Node);
+}
+
 void StmtPrinter::VisitOMPForDirective(OMPForDirective *Node) {
   Indent() << "#pragma omp for";
   PrintOMPExecutableDirective(Node);

@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Ensure that references to functions that return pointers can serve as
 ! "variables" in actual arguments.  All of these uses are conforming and
 ! no errors should be reported.

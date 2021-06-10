@@ -28,7 +28,7 @@ define i32 @var_bitreverse_i32(i32 %a) {
 
 define i16 @var_bitreverse_i16(i16 %a) {
 ; CHECK-LABEL: 'var_bitreverse_i16'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i16 %bitreverse
 ;
   %bitreverse = call i16 @llvm.bitreverse.i16(i16 %a)
@@ -37,7 +37,7 @@ define i16 @var_bitreverse_i16(i16 %a) {
 
 define i8 @var_bitreverse_i8(i8 %a) {
 ; CHECK-LABEL: 'var_bitreverse_i8'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i8 %bitreverse
 ;
   %bitreverse = call i8 @llvm.bitreverse.i8(i8 %a)
@@ -45,6 +45,11 @@ define i8 @var_bitreverse_i8(i8 %a) {
 }
 
 ; Verify the cost of vector bitreverse instructions.
+
+declare <1 x i64> @llvm.bitreverse.v1i64(<1 x i64>)
+declare <2 x i32> @llvm.bitreverse.v2i32(<2 x i32>)
+declare <4 x i16> @llvm.bitreverse.v4i16(<4 x i16>)
+declare <8 x i8> @llvm.bitreverse.v8i8(<8 x i8>)
 
 declare <2 x i64> @llvm.bitreverse.v2i64(<2 x i64>)
 declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>)
@@ -55,6 +60,15 @@ declare <4 x i64> @llvm.bitreverse.v4i64(<4 x i64>)
 declare <8 x i32> @llvm.bitreverse.v8i32(<8 x i32>)
 declare <16 x i16> @llvm.bitreverse.v16i16(<16 x i16>)
 declare <32 x i8> @llvm.bitreverse.v32i8(<32 x i8>)
+
+define <1 x i64> @var_bitreverse_v1i64(<1 x i64> %a) {
+; CHECK-LABEL: 'var_bitreverse_v1i64'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bitreverse = call <1 x i64> @llvm.bitreverse.v1i64(<1 x i64> %a)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <1 x i64> %bitreverse
+;
+  %bitreverse = call <1 x i64> @llvm.bitreverse.v1i64(<1 x i64> %a)
+  ret <1 x i64> %bitreverse
+}
 
 define <2 x i64> @var_bitreverse_v2i64(<2 x i64> %a) {
 ; CHECK-LABEL: 'var_bitreverse_v2i64'
@@ -72,6 +86,15 @@ define <4 x i64> @var_bitreverse_v4i64(<4 x i64> %a) {
 ;
   %bitreverse = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> %a)
   ret <4 x i64> %bitreverse
+}
+
+define <2 x i32> @var_bitreverse_v2i32(<2 x i32> %a) {
+; CHECK-LABEL: 'var_bitreverse_v2i32'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bitreverse = call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> %a)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i32> %bitreverse
+;
+  %bitreverse = call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> %a)
+  ret <2 x i32> %bitreverse
 }
 
 define <4 x i32> @var_bitreverse_v4i32(<4 x i32> %a) {
@@ -92,9 +115,18 @@ define <8 x i32> @var_bitreverse_v8i32(<8 x i32> %a) {
   ret <8 x i32> %bitreverse
 }
 
+define <4 x i16> @var_bitreverse_v4i16(<4 x i16> %a) {
+; CHECK-LABEL: 'var_bitreverse_v4i16'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bitreverse = call <4 x i16> @llvm.bitreverse.v4i16(<4 x i16> %a)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i16> %bitreverse
+;
+  %bitreverse = call <4 x i16> @llvm.bitreverse.v4i16(<4 x i16> %a)
+  ret <4 x i16> %bitreverse
+}
+
 define <8 x i16> @var_bitreverse_v8i16(<8 x i16> %a) {
 ; CHECK-LABEL: 'var_bitreverse_v8i16'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %bitreverse = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> %a)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bitreverse = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> %a)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %bitreverse
 ;
   %bitreverse = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> %a)
@@ -103,11 +135,20 @@ define <8 x i16> @var_bitreverse_v8i16(<8 x i16> %a) {
 
 define <16 x i16> @var_bitreverse_v16i16(<16 x i16> %a) {
 ; CHECK-LABEL: 'var_bitreverse_v16i16'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 100 for instruction: %bitreverse = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> %a)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> %a)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i16> %bitreverse
 ;
   %bitreverse = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> %a)
   ret <16 x i16> %bitreverse
+}
+
+define <8 x i8> @var_bitreverse_v8i8(<8 x i8> %a) {
+; CHECK-LABEL: 'var_bitreverse_v8i8'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bitreverse = call <8 x i8> @llvm.bitreverse.v8i8(<8 x i8> %a)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i8> %bitreverse
+;
+  %bitreverse = call <8 x i8> @llvm.bitreverse.v8i8(<8 x i8> %a)
+  ret <8 x i8> %bitreverse
 }
 
 define <16 x i8> @var_bitreverse_v16i8(<16 x i8> %a) {
@@ -121,7 +162,7 @@ define <16 x i8> @var_bitreverse_v16i8(<16 x i8> %a) {
 
 define <32 x i8> @var_bitreverse_v32i8(<32 x i8> %a) {
 ; CHECK-LABEL: 'var_bitreverse_v32i8'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bitreverse = call <32 x i8> @llvm.bitreverse.v32i8(<32 x i8> %a)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bitreverse = call <32 x i8> @llvm.bitreverse.v32i8(<32 x i8> %a)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <32 x i8> %bitreverse
 ;
   %bitreverse = call <32 x i8> @llvm.bitreverse.v32i8(<32 x i8> %a)

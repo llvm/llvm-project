@@ -5067,6 +5067,78 @@ public:
   }
 };
 
+/// This represents the '#pragma omp unroll' loop transformation directive.
+///
+/// \code
+/// #pragma omp unroll
+/// for (int i = 0; i < 64; ++i)
+/// \endcode
+class OMPUnrollDirective final : public OMPLoopBasedDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+
+  /// Default list of offsets.
+  enum {
+    PreInitsOffset = 0,
+    TransformedStmtOffset,
+  };
+
+  explicit OMPUnrollDirective(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPLoopBasedDirective(OMPUnrollDirectiveClass, llvm::omp::OMPD_unroll,
+                              StartLoc, EndLoc, 1) {}
+
+  /// Set the pre-init statements.
+  void setPreInits(Stmt *PreInits) {
+    Data->getChildren()[PreInitsOffset] = PreInits;
+  }
+
+  /// Set the de-sugared statement.
+  void setTransformedStmt(Stmt *S) {
+    Data->getChildren()[TransformedStmtOffset] = S;
+  }
+
+public:
+  /// Create a new AST node representation for '#pragma omp unroll'.
+  ///
+  /// \param C         Context of the AST.
+  /// \param StartLoc  Location of the introducer (e.g. the 'omp' token).
+  /// \param EndLoc    Location of the directive's end (e.g. the tok::eod).
+  /// \param Clauses   The directive's clauses.
+  /// \param AssociatedStmt The outermost associated loop.
+  /// \param TransformedStmt The loop nest after tiling, or nullptr in
+  ///                        dependent contexts.
+  /// \param PreInits   Helper preinits statements for the loop nest.
+  static OMPUnrollDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt,
+         Stmt *TransformedStmt, Stmt *PreInits);
+
+  /// Build an empty '#pragma omp unroll' AST node for deserialization.
+  ///
+  /// \param C          Context of the AST.
+  /// \param NumClauses Number of clauses to allocate.
+  static OMPUnrollDirective *CreateEmpty(const ASTContext &C,
+                                         unsigned NumClauses);
+
+  /// Get the de-sugared associated loops after unrolling.
+  ///
+  /// This is only used if the unrolled loop becomes an associated loop of
+  /// another directive, otherwise the loop is emitted directly using loop
+  /// transformation metadata. When the unrolled loop cannot be used by another
+  /// directive (e.g. because of the full clause), the transformed stmt can also
+  /// be nullptr.
+  Stmt *getTransformedStmt() const {
+    return Data->getChildren()[TransformedStmtOffset];
+  }
+
+  /// Return the pre-init statements.
+  Stmt *getPreInits() const { return Data->getChildren()[PreInitsOffset]; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPUnrollDirectiveClass;
+  }
+};
+
 /// This represents '#pragma omp scan' directive.
 ///
 /// \code

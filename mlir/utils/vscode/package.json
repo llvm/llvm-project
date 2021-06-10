@@ -66,5 +66,8 @@
 		"vscode-languageclient": "^5.2.1",
 		"vscode-test": "^1.3.0"
 	},
-	"dependencies": {}
+	"dependencies": {
+		"vscode-languageclient": "^5.2.1",
+		"vscode-languageserver-types": "3.16.0"
+	}
 }

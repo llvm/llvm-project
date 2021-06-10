@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! C718 Each named constant in a complex literal constant shall be of type 
 ! integer or real.
 subroutine s()

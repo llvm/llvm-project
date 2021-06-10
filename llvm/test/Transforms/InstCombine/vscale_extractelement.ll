@@ -179,3 +179,94 @@ define i32 @ossfuzz_25272(float %f) {
   %E = extractelement <vscale x 4 x i32> %vec_int, i32 2147483647
   ret i32 %E
 }
+
+; Step vector optimization
+
+define i64 @ext_lane0_from_stepvec() {
+; CHECK-LABEL: @ext_lane0_from_stepvec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i64 0
+;
+entry:
+  %0 = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+  %1 = extractelement <vscale x 4 x i64> %0, i32 0
+  ret i64 %1
+}
+
+define i32 @ext_lane3_from_stepvec() {
+; CHECK-LABEL: @ext_lane3_from_stepvec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 3
+;
+entry:
+  %0 = call <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
+  %1 = extractelement <vscale x 4 x i32> %0, i64 3
+  ret i32 %1
+}
+
+define i64 @ext_lane_out_of_range_from_stepvec() {
+; CHECK-LABEL: @ext_lane_out_of_range_from_stepvec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <vscale x 4 x i64> [[TMP0]], i32 4
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+entry:
+  %0 = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+  %1 = extractelement <vscale x 4 x i64> %0, i32 4
+  ret i64 %1
+}
+
+define i64 @ext_lane_invalid_from_stepvec() {
+; CHECK-LABEL: @ext_lane_invalid_from_stepvec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <vscale x 4 x i64> [[TMP0]], i32 -1
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+entry:
+  %0 = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+  %1 = extractelement <vscale x 4 x i64> %0, i32 -1
+  ret i64 %1
+}
+
+define i64 @ext_lane_unknown_from_stepvec(i32 %v) {
+; CHECK-LABEL: @ext_lane_unknown_from_stepvec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <vscale x 4 x i64> [[TMP0]], i32 [[V:%.*]]
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+entry:
+  %0 = call <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+  %1 = extractelement <vscale x 4 x i64> %0, i32 %v
+  ret i64 %1
+}
+
+; Check that undef is returned when the extracted element has wrapped.
+
+define i8 @ext_lane256_from_stepvec() {
+; CHECK-LABEL: @ext_lane256_from_stepvec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i8 undef
+;
+entry:
+  %0 = call <vscale x 512 x i8> @llvm.experimental.stepvector.nxv512i8()
+  %1 = extractelement <vscale x 512 x i8> %0, i64 256
+  ret i8 %1
+}
+
+define i8 @ext_lane255_from_stepvec() {
+; CHECK-LABEL: @ext_lane255_from_stepvec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i8 -1
+;
+entry:
+  %0 = call <vscale x 512 x i8> @llvm.experimental.stepvector.nxv512i8()
+  %1 = extractelement <vscale x 512 x i8> %0, i64 255
+  ret i8 %1
+}
+
+declare <vscale x 4 x i64> @llvm.experimental.stepvector.nxv4i64()
+declare <vscale x 4 x i32> @llvm.experimental.stepvector.nxv4i32()
+declare <vscale x 512 x i8> @llvm.experimental.stepvector.nxv512i8()

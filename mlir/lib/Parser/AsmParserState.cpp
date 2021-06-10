@@ -36,8 +36,8 @@ struct AsmParserState::Impl {
     std::unique_ptr<SymbolUseMap> symbolTable;
   };
 
-  /// Resolve any symbol table uses under the given partial operation.
-  void resolveSymbolUses(Operation *op, PartialOpDef &opDef);
+  /// Resolve any symbol table uses in the IR.
+  void resolveSymbolUses();
 
   /// A mapping from operations in the input source file to their parser state.
   SmallVector<std::unique_ptr<OperationDefinition>> operations;
@@ -51,6 +51,10 @@ struct AsmParserState::Impl {
   /// This map should be empty if the parser finishes successfully.
   DenseMap<Value, SmallVector<llvm::SMLoc>> placeholderValueUses;
 
+  /// The symbol table operations within the IR.
+  SmallVector<std::pair<Operation *, std::unique_ptr<SymbolUseMap>>>
+      symbolTableOperations;
+
   /// A stack of partial operation definitions that have been started but not
   /// yet finalized.
   SmallVector<PartialOpDef> partialOperations;
@@ -63,22 +67,21 @@ struct AsmParserState::Impl {
   SymbolTableCollection symbolTable;
 };
 
-void AsmParserState::Impl::resolveSymbolUses(Operation *op,
-                                             PartialOpDef &opDef) {
-  assert(opDef.isSymbolTable() && "expected op to be a symbol table");
-
+void AsmParserState::Impl::resolveSymbolUses() {
   SmallVector<Operation *> symbolOps;
-  for (auto &it : *opDef.symbolTable) {
-    symbolOps.clear();
-    if (failed(symbolTable.lookupSymbolIn(op, it.first.cast<SymbolRefAttr>(),
-                                          symbolOps)))
-      continue;
+  for (auto &opAndUseMapIt : symbolTableOperations) {
+    for (auto &it : *opAndUseMapIt.second) {
+      symbolOps.clear();
+      if (failed(symbolTable.lookupSymbolIn(
+              opAndUseMapIt.first, it.first.cast<SymbolRefAttr>(), symbolOps)))
+        continue;
 
-    for (ArrayRef<llvm::SMRange> useRange : it.second) {
-      for (const auto &symIt : llvm::zip(symbolOps, useRange)) {
-        auto opIt = operationToIdx.find(std::get<0>(symIt));
-        if (opIt != operationToIdx.end())
-          operations[opIt->second]->symbolUses.push_back(std::get<1>(symIt));
+      for (ArrayRef<llvm::SMRange> useRange : it.second) {
+        for (const auto &symIt : llvm::zip(symbolOps, useRange)) {
+          auto opIt = operationToIdx.find(std::get<0>(symIt));
+          if (opIt != operationToIdx.end())
+            operations[opIt->second]->symbolUses.push_back(std::get<1>(symIt));
+        }
       }
     }
   }
@@ -112,8 +115,13 @@ auto AsmParserState::getOpDefs() const -> iterator_range<OperationDefIterator> {
   return llvm::make_pointee_range(llvm::makeArrayRef(impl->operations));
 }
 
-/// Returns (heuristically) the range of an identifier given a SMLoc
-/// corresponding to the start of an identifier location.
+auto AsmParserState::getOpDef(Operation *op) const
+    -> const OperationDefinition * {
+  auto it = impl->operationToIdx.find(op);
+  return it == impl->operationToIdx.end() ? nullptr
+                                          : &*impl->operations[it->second];
+}
+
 llvm::SMRange AsmParserState::convertIdLocToRange(llvm::SMLoc loc) {
   if (!loc.isValid())
     return llvm::SMRange();
@@ -124,7 +132,7 @@ llvm::SMRange AsmParserState::convertIdLocToRange(llvm::SMLoc loc) {
   };
 
   const char *curPtr = loc.getPointer();
-  while (isIdentifierChar(*(++curPtr)))
+  while (*curPtr && isIdentifierChar(*(++curPtr)))
     continue;
   return llvm::SMRange(loc, llvm::SMLoc::getFromPointer(curPtr));
 }
@@ -147,8 +155,11 @@ void AsmParserState::finalize(Operation *topLevelOp) {
   Impl::PartialOpDef partialOpDef = impl->partialOperations.pop_back_val();
 
   // If this operation is a symbol table, resolve any symbol uses.
-  if (partialOpDef.isSymbolTable())
-    impl->resolveSymbolUses(topLevelOp, partialOpDef);
+  if (partialOpDef.isSymbolTable()) {
+    impl->symbolTableOperations.emplace_back(
+        topLevelOp, std::move(partialOpDef.symbolTable));
+  }
+  impl->resolveSymbolUses();
 }
 
 void AsmParserState::startOperationDefinition(const OperationName &opName) {
@@ -156,7 +167,7 @@ void AsmParserState::startOperationDefinition(const OperationName &opName) {
 }
 
 void AsmParserState::finalizeOperationDefinition(
-    Operation *op, llvm::SMRange nameLoc,
+    Operation *op, llvm::SMRange nameLoc, llvm::SMLoc endLoc,
     ArrayRef<std::pair<unsigned, llvm::SMLoc>> resultGroups) {
   assert(!impl->partialOperations.empty() &&
          "expected valid partial operation definition");
@@ -164,7 +175,7 @@ void AsmParserState::finalizeOperationDefinition(
 
   // Build the full operation definition.
   std::unique_ptr<OperationDefinition> def =
-      std::make_unique<OperationDefinition>(op, nameLoc);
+      std::make_unique<OperationDefinition>(op, nameLoc, endLoc);
   for (auto &resultGroup : resultGroups)
     def->resultGroups.emplace_back(resultGroup.first,
                                    convertIdLocToRange(resultGroup.second));
@@ -172,8 +183,10 @@ void AsmParserState::finalizeOperationDefinition(
   impl->operations.emplace_back(std::move(def));
 
   // If this operation is a symbol table, resolve any symbol uses.
-  if (partialOpDef.isSymbolTable())
-    impl->resolveSymbolUses(op, partialOpDef);
+  if (partialOpDef.isSymbolTable()) {
+    impl->symbolTableOperations.emplace_back(
+        op, std::move(partialOpDef.symbolTable));
+  }
 }
 
 void AsmParserState::startRegionDefinition() {

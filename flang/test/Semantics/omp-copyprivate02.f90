@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1 -fopenmp
+! REQUIRES: shell
 ! OpenMP Version 4.5
 ! 2.15.4.2 copyprivate Clause
 ! Pointers with the INTENT(IN) attribute may not appear in a copyprivate clause.

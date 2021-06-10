@@ -1,4 +1,5 @@
 ! RUN: %S/../test_errors.sh %s %t %flang -fopenacc
+! REQUIRES: shell
 
 ! Check OpenACC clause validity for the following construct and directive:
 !   2.6.5 Data

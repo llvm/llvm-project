@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Tests for the 14 items that specify a "specification expression" in section
 ! 10.1.11
 

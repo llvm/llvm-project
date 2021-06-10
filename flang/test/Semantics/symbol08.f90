@@ -1,4 +1,5 @@
 ! RUN: %S/test_symbols.sh %s %t %flang_fc1
+! REQUIRES: shell
 !DEF: /main MainProgram
 program main
  !DEF: /main/x POINTER ObjectEntity REAL(4)

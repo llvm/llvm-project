@@ -27,6 +27,7 @@ add_header_library(
     ManipulationFunctions.h
     NearestIntegerOperations.h
     NormalFloat.h
+    PolyEval.h
   DEPENDS
     libc.include.math
     libc.include.errno

@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! C1003 - can't parenthesize function call returning procedure pointer
 module m1
   type :: dt

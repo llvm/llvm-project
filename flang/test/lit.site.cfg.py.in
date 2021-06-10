@@ -3,6 +3,7 @@
 import sys
 
 config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
+config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.flang_obj_root = "@FLANG_BINARY_DIR@"
 config.flang_src_dir = "@FLANG_SOURCE_DIR@"
 config.flang_tools_dir = "@FLANG_TOOLS_DIR@"

@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! C746, C747, and C748
 module m
   use ISO_FORTRAN_ENV

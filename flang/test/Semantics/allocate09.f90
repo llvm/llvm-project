@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Check for semantic errors in ALLOCATE statements
 
 subroutine C946(param_ca_4_assumed, param_ta_4_assumed, param_ca_4_deferred)

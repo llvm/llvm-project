@@ -298,6 +298,18 @@ struct MLIRDocument {
   buildHoverForBlockArgument(llvm::SMRange hoverRange, BlockArgument arg,
                              const AsmParserState::BlockDefinition &block);
 
+  //===--------------------------------------------------------------------===//
+  // Document Symbols
+  //===--------------------------------------------------------------------===//
+
+  void findDocumentSymbols(std::vector<lsp::DocumentSymbol> &symbols);
+  void findDocumentSymbols(Operation *op,
+                           std::vector<lsp::DocumentSymbol> &symbols);
+
+  //===--------------------------------------------------------------------===//
+  // Fields
+  //===--------------------------------------------------------------------===//
+
   /// The context used to hold the state contained by the parsed document.
   MLIRContext context;
 
@@ -595,6 +607,50 @@ lsp::Hover MLIRDocument::buildHoverForBlockArgument(
 }
 
 //===----------------------------------------------------------------------===//
+// MLIRDocument: Document Symbols
+//===----------------------------------------------------------------------===//
+
+void MLIRDocument::findDocumentSymbols(
+    std::vector<lsp::DocumentSymbol> &symbols) {
+  for (Operation &op : parsedIR)
+    findDocumentSymbols(&op, symbols);
+}
+
+void MLIRDocument::findDocumentSymbols(
+    Operation *op, std::vector<lsp::DocumentSymbol> &symbols) {
+  std::vector<lsp::DocumentSymbol> *childSymbols = &symbols;
+
+  // Check for the source information of this operation.
+  if (const AsmParserState::OperationDefinition *def = asmState.getOpDef(op)) {
+    // If this operation defines a symbol, record it.
+    if (SymbolOpInterface symbol = dyn_cast<SymbolOpInterface>(op)) {
+      symbols.emplace_back(symbol.getName(),
+                           op->hasTrait<OpTrait::FunctionLike>()
+                               ? lsp::SymbolKind::Function
+                               : lsp::SymbolKind::Class,
+                           getRangeFromLoc(sourceMgr, def->scopeLoc),
+                           getRangeFromLoc(sourceMgr, def->loc));
+      childSymbols = &symbols.back().children;
+
+    } else if (op->hasTrait<OpTrait::SymbolTable>()) {
+      // Otherwise, if this is a symbol table push an anonymous document symbol.
+      symbols.emplace_back("<" + op->getName().getStringRef() + ">",
+                           lsp::SymbolKind::Namespace,
+                           getRangeFromLoc(sourceMgr, def->scopeLoc),
+                           getRangeFromLoc(sourceMgr, def->loc));
+      childSymbols = &symbols.back().children;
+    }
+  }
+
+  // Recurse into the regions of this operation.
+  if (!op->getNumRegions())
+    return;
+  for (Region &region : op->getRegions())
+    for (Operation &childOp : region.getOps())
+      findDocumentSymbols(&childOp, *childSymbols);
+}
+
+//===----------------------------------------------------------------------===//
 // MLIRTextFileChunk
 //===----------------------------------------------------------------------===//
 
@@ -649,6 +705,7 @@ public:
                         std::vector<lsp::Location> &references);
   Optional<lsp::Hover> findHover(const lsp::URIForFile &uri,
                                  lsp::Position hoverPos);
+  void findDocumentSymbols(std::vector<lsp::DocumentSymbol> &symbols);
 
 private:
   /// Find the MLIR document that contains the given position, and update the
@@ -662,6 +719,9 @@ private:
   /// The version of this file.
   int64_t version;
 
+  /// The number of lines in the file.
+  int64_t totalNumLines;
+
   /// The chunks of this file. The order of these chunks is the order in which
   /// they appear in the text file.
   std::vector<std::unique_ptr<MLIRTextFileChunk>> chunks;
@@ -671,7 +731,7 @@ private:
 MLIRTextFile::MLIRTextFile(const lsp::URIForFile &uri, StringRef fileContents,
                            int64_t version, DialectRegistry &registry,
                            std::vector<lsp::Diagnostic> &diagnostics)
-    : contents(fileContents.str()), version(version) {
+    : contents(fileContents.str()), version(version), totalNumLines(0) {
   // Split the file into separate MLIR documents.
   // TODO: Find a way to share the split file marker with other tools. We don't
   // want to use `splitAndProcessBuffer` here, but we do want to make sure this
@@ -702,6 +762,7 @@ MLIRTextFile::MLIRTextFile(const lsp::URIForFile &uri, StringRef fileContents,
     }
     chunks.emplace_back(std::move(chunk));
   }
+  totalNumLines = lineOffset;
 }
 
 void MLIRTextFile::getLocationsOf(const lsp::URIForFile &uri,
@@ -741,6 +802,45 @@ Optional<lsp::Hover> MLIRTextFile::findHover(const lsp::URIForFile &uri,
   if (chunk.lineOffset != 0 && hoverInfo && hoverInfo->range)
     chunk.adjustLocForChunkOffset(*hoverInfo->range);
   return hoverInfo;
+}
+
+void MLIRTextFile::findDocumentSymbols(
+    std::vector<lsp::DocumentSymbol> &symbols) {
+  if (chunks.size() == 1)
+    return chunks.front()->document.findDocumentSymbols(symbols);
+
+  // If there are multiple chunks in this file, we create top-level symbols for
+  // each chunk.
+  for (unsigned i = 0, e = chunks.size(); i < e; ++i) {
+    MLIRTextFileChunk &chunk = *chunks[i];
+    lsp::Position startPos(chunk.lineOffset);
+    lsp::Position endPos((i == e - 1) ? totalNumLines - 1
+                                      : chunks[i + 1]->lineOffset);
+    lsp::DocumentSymbol symbol("<file-split-" + Twine(i) + ">",
+                               lsp::SymbolKind::Namespace,
+                               /*range=*/lsp::Range(startPos, endPos),
+                               /*selectionRange=*/lsp::Range(startPos));
+    chunk.document.findDocumentSymbols(symbol.children);
+
+    // Fixup the locations of document symbols within this chunk.
+    if (i != 0) {
+      SmallVector<lsp::DocumentSymbol *> symbolsToFix;
+      for (lsp::DocumentSymbol &childSymbol : symbol.children)
+        symbolsToFix.push_back(&childSymbol);
+
+      while (!symbolsToFix.empty()) {
+        lsp::DocumentSymbol *symbol = symbolsToFix.pop_back_val();
+        chunk.adjustLocForChunkOffset(symbol->range);
+        chunk.adjustLocForChunkOffset(symbol->selectionRange);
+
+        for (lsp::DocumentSymbol &childSymbol : symbol->children)
+          symbolsToFix.push_back(&childSymbol);
+      }
+    }
+
+    // Push the symbol for this chunk.
+    symbols.emplace_back(std::move(symbol));
+  }
 }
 
 MLIRTextFileChunk &MLIRTextFile::getChunkFor(lsp::Position &pos) {
@@ -820,4 +920,11 @@ Optional<lsp::Hover> lsp::MLIRServer::findHover(const URIForFile &uri,
   if (fileIt != impl->files.end())
     return fileIt->second->findHover(uri, hoverPos);
   return llvm::None;
+}
+
+void lsp::MLIRServer::findDocumentSymbols(
+    const URIForFile &uri, std::vector<DocumentSymbol> &symbols) {
+  auto fileIt = impl->files.find(uri.file());
+  if (fileIt != impl->files.end())
+    fileIt->second->findDocumentSymbols(symbols);
 }

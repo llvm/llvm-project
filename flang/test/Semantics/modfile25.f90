@@ -1,4 +1,5 @@
 ! RUN: %S/test_modfile.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Test compile-time analysis of shapes.
 
 module m1

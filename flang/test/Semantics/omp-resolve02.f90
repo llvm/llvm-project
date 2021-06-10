@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang -fopenmp
+! REQUIRES: shell
 
 ! Test the effect to name resolution from illegal clause
 
