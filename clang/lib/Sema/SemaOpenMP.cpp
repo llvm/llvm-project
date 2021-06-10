@@ -3810,6 +3810,11 @@ public:
     VisitStmt(S);
   }
 
+  void VisitOMPUnrollDirective(OMPUnrollDirective *S) {
+    // #pragma omp unroll does not introduce data sharing.
+    VisitStmt(S);
+  }
+
   void VisitStmt(Stmt *S) {
     for (Stmt *C : S->children()) {
       if (C) {
@@ -3976,6 +3981,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   case OMPD_master:
   case OMPD_masked:
   case OMPD_tile:
+  case OMPD_unroll:
     break;
   case OMPD_simd:
   case OMPD_for:
@@ -5846,6 +5852,10 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
   case OMPD_tile:
     Res =
         ActOnOpenMPTileDirective(ClausesWithImplicit, AStmt, StartLoc, EndLoc);
+    break;
+  case OMPD_unroll:
+    Res = ActOnOpenMPUnrollDirective(ClausesWithImplicit, AStmt, StartLoc,
+                                     EndLoc);
     break;
   case OMPD_for:
     Res = ActOnOpenMPForDirective(ClausesWithImplicit, AStmt, StartLoc, EndLoc,
@@ -8967,8 +8977,14 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
             return false;
           },
           [&SemaRef, &Captures](OMPLoopBasedDirective *Transform) {
-            Stmt *DependentPreInits =
-                cast<OMPTileDirective>(Transform)->getPreInits();
+            Stmt *DependentPreInits;
+            if (auto *Dir = dyn_cast<OMPTileDirective>(Transform)) {
+              DependentPreInits = Dir->getPreInits();
+            } else if (auto *Dir = dyn_cast<OMPUnrollDirective>(Transform)) {
+              DependentPreInits = Dir->getPreInits();
+            } else {
+              llvm_unreachable("Unexpected loop transformation");
+            }
             if (!DependentPreInits)
               return;
             for (Decl *C : cast<DeclStmt>(DependentPreInits)->getDeclGroup()) {
@@ -12543,6 +12559,55 @@ StmtResult Sema::ActOnOpenMPTargetTeamsDistributeSimdDirective(
       Context, StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
 }
 
+bool Sema::checkTransformableLoopNest(
+    OpenMPDirectiveKind Kind, Stmt *AStmt, int NumLoops,
+    SmallVectorImpl<OMPLoopBasedDirective::HelperExprs> &LoopHelpers,
+    Stmt *&Body,
+    SmallVectorImpl<SmallVector<llvm::PointerUnion<Stmt *, Decl *>, 0>>
+        &OriginalInits) {
+  OriginalInits.emplace_back();
+  bool Result = OMPLoopBasedDirective::doForAllLoops(
+      AStmt->IgnoreContainers(), /*TryImperfectlyNestedLoops=*/false, NumLoops,
+      [this, &LoopHelpers, &Body, &OriginalInits, Kind](unsigned Cnt,
+                                                        Stmt *CurStmt) {
+        VarsWithInheritedDSAType TmpDSA;
+        unsigned SingleNumLoops =
+            checkOpenMPLoop(Kind, nullptr, nullptr, CurStmt, *this, *DSAStack,
+                            TmpDSA, LoopHelpers[Cnt]);
+        if (SingleNumLoops == 0)
+          return true;
+        assert(SingleNumLoops == 1 && "Expect single loop iteration space");
+        if (auto *For = dyn_cast<ForStmt>(CurStmt)) {
+          OriginalInits.back().push_back(For->getInit());
+          Body = For->getBody();
+        } else {
+          assert(isa<CXXForRangeStmt>(CurStmt) &&
+                 "Expected canonical for or range-based for loops.");
+          auto *CXXFor = cast<CXXForRangeStmt>(CurStmt);
+          OriginalInits.back().push_back(CXXFor->getBeginStmt());
+          Body = CXXFor->getBody();
+        }
+        OriginalInits.emplace_back();
+        return false;
+      },
+      [&OriginalInits](OMPLoopBasedDirective *Transform) {
+        Stmt *DependentPreInits;
+        if (auto *Dir = dyn_cast<OMPTileDirective>(Transform))
+          DependentPreInits = Dir->getPreInits();
+        else if (auto *Dir = dyn_cast<OMPUnrollDirective>(Transform))
+          DependentPreInits = Dir->getPreInits();
+        else
+          llvm_unreachable("Unhandled loop transformation");
+        if (!DependentPreInits)
+          return;
+        for (Decl *C : cast<DeclStmt>(DependentPreInits)->getDeclGroup())
+          OriginalInits.back().push_back(C);
+      });
+  assert(OriginalInits.back().empty() && "No preinit after innermost loop");
+  OriginalInits.pop_back();
+  return Result;
+}
+
 StmtResult Sema::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
                                           Stmt *AStmt, SourceLocation StartLoc,
                                           SourceLocation EndLoc) {
@@ -12563,38 +12628,9 @@ StmtResult Sema::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
   SmallVector<OMPLoopBasedDirective::HelperExprs, 4> LoopHelpers(NumLoops);
   Stmt *Body = nullptr;
   SmallVector<SmallVector<llvm::PointerUnion<Stmt *, Decl *>, 0>, 4>
-      OriginalInits(1);
-  if (!OMPLoopBasedDirective::doForAllLoops(
-          AStmt->IgnoreContainers(), /*TryImperfectlyNestedLoops=*/false,
-          NumLoops,
-          [this, &LoopHelpers, &Body, &OriginalInits](unsigned Cnt,
-                                                      Stmt *CurStmt) {
-            VarsWithInheritedDSAType TmpDSA;
-            unsigned SingleNumLoops =
-                checkOpenMPLoop(OMPD_tile, nullptr, nullptr, CurStmt, *this,
-                                *DSAStack, TmpDSA, LoopHelpers[Cnt]);
-            if (SingleNumLoops == 0)
-              return true;
-            assert(SingleNumLoops == 1 && "Expect single loop iteration space");
-            if (auto *For = dyn_cast<ForStmt>(CurStmt)) {
-              OriginalInits.back().push_back(For->getInit());
-              Body = For->getBody();
-            } else {
-              assert(isa<CXXForRangeStmt>(CurStmt) &&
-                     "Expected canonical for or range-based for loops.");
-              auto *CXXFor = cast<CXXForRangeStmt>(CurStmt);
-              OriginalInits.back().push_back(CXXFor->getBeginStmt());
-              Body = CXXFor->getBody();
-            }
-            OriginalInits.emplace_back();
-            return false;
-          },
-          [&OriginalInits](OMPLoopBasedDirective *Transform) {
-            Stmt *DependentPreInits =
-                cast<OMPTileDirective>(Transform)->getPreInits();
-            for (Decl *C : cast<DeclStmt>(DependentPreInits)->getDeclGroup())
-              OriginalInits.back().push_back(C);
-          }))
+      OriginalInits;
+  if (!checkTransformableLoopNest(OMPD_tile, AStmt, NumLoops, LoopHelpers, Body,
+                                  OriginalInits))
     return StmtError();
 
   // Delay tiling to when template is completely instantiated.
@@ -12783,6 +12819,282 @@ StmtResult Sema::ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
                                   buildPreInits(Context, PreInits));
 }
 
+StmtResult Sema::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
+                                            Stmt *AStmt,
+                                            SourceLocation StartLoc,
+                                            SourceLocation EndLoc) {
+  // Empty statement should only be possible if there already was an error.
+  if (!AStmt)
+    return StmtError();
+
+  if (checkMutuallyExclusiveClauses(*this, Clauses, {OMPC_partial, OMPC_full}))
+    return StmtError();
+
+  const OMPFullClause *FullClause =
+      OMPExecutableDirective::getSingleClause<OMPFullClause>(Clauses);
+  const OMPPartialClause *PartialClause =
+      OMPExecutableDirective::getSingleClause<OMPPartialClause>(Clauses);
+  assert(!(FullClause && PartialClause) &&
+         "mutual exclusivity must have been checked before");
+
+  constexpr unsigned NumLoops = 1;
+  Stmt *Body = nullptr;
+  SmallVector<OMPLoopBasedDirective::HelperExprs, NumLoops> LoopHelpers(
+      NumLoops);
+  SmallVector<SmallVector<llvm::PointerUnion<Stmt *, Decl *>, 0>, NumLoops + 1>
+      OriginalInits;
+  if (!checkTransformableLoopNest(OMPD_unroll, AStmt, NumLoops, LoopHelpers,
+                                  Body, OriginalInits))
+    return StmtError();
+
+  // Delay unrolling to when template is completely instantiated.
+  if (CurContext->isDependentContext())
+    return OMPUnrollDirective::Create(Context, StartLoc, EndLoc, Clauses, AStmt,
+                                      nullptr, nullptr);
+
+  OMPLoopBasedDirective::HelperExprs &LoopHelper = LoopHelpers.front();
+
+  if (FullClause) {
+    if (!VerifyPositiveIntegerConstantInClause(
+             LoopHelper.NumIterations, OMPC_full, /*StrictlyPositive=*/false,
+             /*SuppressExprDigs=*/true)
+             .isUsable()) {
+      Diag(AStmt->getBeginLoc(), diag::err_omp_unroll_full_variable_trip_count);
+      Diag(FullClause->getBeginLoc(), diag::note_omp_directive_here)
+          << "#pragma omp unroll full";
+      return StmtError();
+    }
+  }
+
+  // The generated loop may only be passed to other loop-associated directive
+  // when a partial clause is specified. Without the requirement it is
+  // sufficient to generate loop unroll metadata at code-generation.
+  if (!PartialClause)
+    return OMPUnrollDirective::Create(Context, StartLoc, EndLoc, Clauses, AStmt,
+                                      nullptr, nullptr);
+
+  // Otherwise, we need to provide a de-sugared/transformed AST that can be
+  // associated with another loop directive.
+  //
+  // The canonical loop analysis return by checkTransformableLoopNest assumes
+  // the following structure to be the same loop without transformations or
+  // directives applied: \code OriginalInits; LoopHelper.PreInits;
+  // LoopHelper.Counters;
+  // for (; IV < LoopHelper.NumIterations; ++IV) {
+  //   LoopHelper.Updates;
+  //   Body;
+  // }
+  // \endcode
+  // where IV is a variable declared and initialized to 0 in LoopHelper.PreInits
+  // and referenced by LoopHelper.IterationVarRef.
+  //
+  // The unrolling directive transforms this into the following loop:
+  // \code
+  // OriginalInits;         \
+  // LoopHelper.PreInits;    > NewPreInits
+  // LoopHelper.Counters;   /
+  // for (auto UIV = 0; UIV < LoopHelper.NumIterations; UIV+=Factor) {
+  //   #pragma clang loop unroll_count(Factor)
+  //   for (IV = UIV; IV < UIV + Factor && UIV < LoopHelper.NumIterations; ++IV)
+  //   {
+  //     LoopHelper.Updates;
+  //     Body;
+  //   }
+  // }
+  // \endcode
+  // where UIV is a new logical iteration counter. IV must be the same VarDecl
+  // as the original LoopHelper.IterationVarRef because LoopHelper.Updates
+  // references it. If the partially unrolled loop is associated with another
+  // loop directive (like an OMPForDirective), it will use checkOpenMPLoop to
+  // analyze this loop, i.e. the outer loop must fulfill the constraints of an
+  // OpenMP canonical loop. The inner loop is not an associable canonical loop
+  // and only exists to defer its unrolling to LLVM's LoopUnroll instead of
+  // doing it in the frontend (by adding loop metadata). NewPreInits becomes a
+  // property of the OMPLoopBasedDirective instead of statements in
+  // CompoundStatement. This is to allow the loop to become a non-outermost loop
+  // of a canonical loop nest where these PreInits are emitted before the
+  // outermost directive.
+
+  // Determine the PreInit declarations.
+  SmallVector<Decl *, 4> PreInits;
+  assert(OriginalInits.size() == 1 &&
+         "Expecting a single-dimensional loop iteration space");
+  for (auto &P : OriginalInits[0]) {
+    if (auto *D = P.dyn_cast<Decl *>())
+      PreInits.push_back(D);
+    else if (auto *PI = dyn_cast_or_null<DeclStmt>(P.dyn_cast<Stmt *>()))
+      PreInits.append(PI->decl_begin(), PI->decl_end());
+  }
+  if (auto *PI = cast_or_null<DeclStmt>(LoopHelper.PreInits))
+    PreInits.append(PI->decl_begin(), PI->decl_end());
+  // Gather declarations for the data members used as counters.
+  for (Expr *CounterRef : LoopHelper.Counters) {
+    auto *CounterDecl = cast<DeclRefExpr>(CounterRef)->getDecl();
+    if (isa<OMPCapturedExprDecl>(CounterDecl))
+      PreInits.push_back(CounterDecl);
+  }
+
+  auto *IterationVarRef = cast<DeclRefExpr>(LoopHelper.IterationVarRef);
+  QualType IVTy = IterationVarRef->getType();
+  assert(LoopHelper.Counters.size() == 1 &&
+         "Expecting a single-dimensional loop iteration space");
+  auto *OrigVar = cast<DeclRefExpr>(LoopHelper.Counters.front());
+
+  // Determine the unroll factor.
+  uint64_t Factor;
+  SourceLocation FactorLoc;
+  if (Expr *FactorVal = PartialClause->getFactor()) {
+    Factor =
+        FactorVal->getIntegerConstantExpr(Context).getValue().getZExtValue();
+    FactorLoc = FactorVal->getExprLoc();
+  } else {
+    // TODO: Use a better profitability model.
+    Factor = 2;
+  }
+  assert(Factor > 0 && "Expected positive unroll factor");
+  auto MakeFactorExpr = [this, Factor, IVTy, FactorLoc]() {
+    return IntegerLiteral::Create(
+        Context, llvm::APInt(Context.getIntWidth(IVTy), Factor), IVTy,
+        FactorLoc);
+  };
+
+  // Iteration variable SourceLocations.
+  SourceLocation OrigVarLoc = OrigVar->getExprLoc();
+  SourceLocation OrigVarLocBegin = OrigVar->getBeginLoc();
+  SourceLocation OrigVarLocEnd = OrigVar->getEndLoc();
+
+  // Internal variable names.
+  std::string OrigVarName = OrigVar->getNameInfo().getAsString();
+  std::string OuterIVName = (Twine(".unrolled.iv.") + OrigVarName).str();
+  std::string InnerIVName = (Twine(".unroll_inner.iv.") + OrigVarName).str();
+  std::string InnerTripCountName =
+      (Twine(".unroll_inner.tripcount.") + OrigVarName).str();
+
+  // Create the iteration variable for the unrolled loop.
+  VarDecl *OuterIVDecl =
+      buildVarDecl(*this, {}, IVTy, OuterIVName, nullptr, OrigVar);
+  auto MakeOuterRef = [this, OuterIVDecl, IVTy, OrigVarLoc]() {
+    return buildDeclRefExpr(*this, OuterIVDecl, IVTy, OrigVarLoc);
+  };
+
+  // Iteration variable for the inner loop: Reuse the iteration variable created
+  // by checkOpenMPLoop.
+  auto *InnerIVDecl = cast<VarDecl>(IterationVarRef->getDecl());
+  InnerIVDecl->setDeclName(&PP.getIdentifierTable().get(InnerIVName));
+  auto MakeInnerRef = [this, InnerIVDecl, IVTy, OrigVarLoc]() {
+    return buildDeclRefExpr(*this, InnerIVDecl, IVTy, OrigVarLoc);
+  };
+
+  // Make a copy of the NumIterations expression for each use: By the AST
+  // constraints, every expression object in a DeclContext must be unique.
+  CaptureVars CopyTransformer(*this);
+  auto MakeNumIterations = [&CopyTransformer, &LoopHelper]() -> Expr * {
+    return AssertSuccess(
+        CopyTransformer.TransformExpr(LoopHelper.NumIterations));
+  };
+
+  // Inner For init-statement: auto .unroll_inner.iv = .unrolled.iv
+  ExprResult LValueConv = DefaultLvalueConversion(MakeOuterRef());
+  AddInitializerToDecl(InnerIVDecl, LValueConv.get(), /*DirectInit=*/false);
+  StmtResult InnerInit = new (Context)
+      DeclStmt(DeclGroupRef(InnerIVDecl), OrigVarLocBegin, OrigVarLocEnd);
+  if (!InnerInit.isUsable())
+    return StmtError();
+
+  // Inner For cond-expression:
+  // \code
+  //   .unroll_inner.iv < .unrolled.iv + Factor &&
+  //   .unroll_inner.iv < NumIterations
+  // \endcode
+  // This conjunction of two conditions allows ScalarEvolution to derive the
+  // maximum trip count of the inner loop.
+  ExprResult EndOfTile = BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(),
+                                    BO_Add, MakeOuterRef(), MakeFactorExpr());
+  if (!EndOfTile.isUsable())
+    return StmtError();
+  ExprResult InnerCond1 = BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(),
+                                     BO_LE, MakeInnerRef(), EndOfTile.get());
+  if (!InnerCond1.isUsable())
+    return StmtError();
+  ExprResult InnerCond2 =
+      BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LE, MakeInnerRef(),
+                 MakeNumIterations());
+  if (!InnerCond2.isUsable())
+    return StmtError();
+  ExprResult InnerCond =
+      BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LAnd,
+                 InnerCond1.get(), InnerCond2.get());
+  if (!InnerCond.isUsable())
+    return StmtError();
+
+  // Inner For incr-statement: ++.unroll_inner.iv
+  ExprResult InnerIncr = BuildUnaryOp(CurScope, LoopHelper.Inc->getExprLoc(),
+                                      UO_PreInc, MakeInnerRef());
+  if (!InnerIncr.isUsable())
+    return StmtError();
+
+  // Inner For statement.
+  SmallVector<Stmt *> InnerBodyStmts;
+  InnerBodyStmts.append(LoopHelper.Updates.begin(), LoopHelper.Updates.end());
+  InnerBodyStmts.push_back(Body);
+  CompoundStmt *InnerBody = CompoundStmt::Create(
+      Context, InnerBodyStmts, Body->getBeginLoc(), Body->getEndLoc());
+  ForStmt *InnerFor = new (Context)
+      ForStmt(Context, InnerInit.get(), InnerCond.get(), nullptr,
+              InnerIncr.get(), InnerBody, LoopHelper.Init->getBeginLoc(),
+              LoopHelper.Init->getBeginLoc(), LoopHelper.Inc->getEndLoc());
+
+  // Unroll metadata for the inner loop.
+  // This needs to take into account the remainder portion of the unrolled loop,
+  // hence `unroll(full)` does not apply here, even though the LoopUnroll pass
+  // supports multiple loop exits. Instead, unroll using a factor equivalent to
+  // the maximum trip count, which will also generate a remainder loop. Just
+  // `unroll(enable)` (which could have been useful if the user has not
+  // specified a concrete factor; even though the outer loop cannot be
+  // influenced anymore, would avoid more code bloat than necessary) will refuse
+  // the loop because "Won't unroll; remainder loop could not be generated when
+  // assuming runtime trip count". Even if it did work, it must not choose a
+  // larger unroll factor than the maximum loop length, or it would always just
+  // execute the remainder loop.
+  LoopHintAttr *UnrollHintAttr =
+      LoopHintAttr::CreateImplicit(Context, LoopHintAttr::UnrollCount,
+                                   LoopHintAttr::Numeric, MakeFactorExpr());
+  AttributedStmt *InnerUnrolled =
+      AttributedStmt::Create(Context, StartLoc, {UnrollHintAttr}, InnerFor);
+
+  // Outer For init-statement: auto .unrolled.iv = 0
+  AddInitializerToDecl(
+      OuterIVDecl, ActOnIntegerConstant(LoopHelper.Init->getExprLoc(), 0).get(),
+      /*DirectInit=*/false);
+  StmtResult OuterInit = new (Context)
+      DeclStmt(DeclGroupRef(OuterIVDecl), OrigVarLocBegin, OrigVarLocEnd);
+  if (!OuterInit.isUsable())
+    return StmtError();
+
+  // Outer For cond-expression: .unrolled.iv < NumIterations
+  ExprResult OuterConde =
+      BuildBinOp(CurScope, LoopHelper.Cond->getExprLoc(), BO_LT, MakeOuterRef(),
+                 MakeNumIterations());
+  if (!OuterConde.isUsable())
+    return StmtError();
+
+  // Outer For incr-statement: .unrolled.iv += Factor
+  ExprResult OuterIncr =
+      BuildBinOp(CurScope, LoopHelper.Inc->getExprLoc(), BO_AddAssign,
+                 MakeOuterRef(), MakeFactorExpr());
+  if (!OuterIncr.isUsable())
+    return StmtError();
+
+  // Outer For statement.
+  ForStmt *OuterFor = new (Context)
+      ForStmt(Context, OuterInit.get(), OuterConde.get(), nullptr,
+              OuterIncr.get(), InnerUnrolled, LoopHelper.Init->getBeginLoc(),
+              LoopHelper.Init->getBeginLoc(), LoopHelper.Inc->getEndLoc());
+
+  return OMPUnrollDirective::Create(Context, StartLoc, EndLoc, Clauses, AStmt,
+                                    OuterFor, buildPreInits(Context, PreInits));
+}
+
 OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
                                              SourceLocation StartLoc,
                                              SourceLocation LParenLoc,
@@ -12842,6 +13154,9 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
     break;
   case OMPC_filter:
     Res = ActOnOpenMPFilterClause(Expr, StartLoc, LParenLoc, EndLoc);
+    break;
+  case OMPC_partial:
+    Res = ActOnOpenMPPartialClause(Expr, StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_device:
   case OMPC_if:
@@ -13045,6 +13360,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_end_declare_target:
     case OMPD_teams:
     case OMPD_tile:
+    case OMPD_unroll:
     case OMPD_for:
     case OMPD_sections:
     case OMPD_section:
@@ -13123,6 +13439,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_teams:
     case OMPD_simd:
     case OMPD_tile:
+    case OMPD_unroll:
     case OMPD_for:
     case OMPD_for_simd:
     case OMPD_sections:
@@ -13204,6 +13521,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_end_declare_target:
     case OMPD_simd:
     case OMPD_tile:
+    case OMPD_unroll:
     case OMPD_for:
     case OMPD_for_simd:
     case OMPD_sections:
@@ -13283,6 +13601,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_end_declare_target:
     case OMPD_simd:
     case OMPD_tile:
+    case OMPD_unroll:
     case OMPD_for:
     case OMPD_for_simd:
     case OMPD_sections:
@@ -13363,6 +13682,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_end_declare_target:
     case OMPD_simd:
     case OMPD_tile:
+    case OMPD_unroll:
     case OMPD_sections:
     case OMPD_section:
     case OMPD_single:
@@ -13442,6 +13762,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_end_declare_target:
     case OMPD_simd:
     case OMPD_tile:
+    case OMPD_unroll:
     case OMPD_for:
     case OMPD_for_simd:
     case OMPD_sections:
@@ -13522,6 +13843,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_end_declare_target:
     case OMPD_simd:
     case OMPD_tile:
+    case OMPD_unroll:
     case OMPD_for:
     case OMPD_for_simd:
     case OMPD_sections:
@@ -13603,6 +13925,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_end_declare_target:
     case OMPD_simd:
     case OMPD_tile:
+    case OMPD_unroll:
     case OMPD_for:
     case OMPD_for_simd:
     case OMPD_sections:
@@ -13886,17 +14209,33 @@ OMPClause *Sema::ActOnOpenMPNumThreadsClause(Expr *NumThreads,
 
 ExprResult Sema::VerifyPositiveIntegerConstantInClause(Expr *E,
                                                        OpenMPClauseKind CKind,
-                                                       bool StrictlyPositive) {
+                                                       bool StrictlyPositive,
+                                                       bool SuppressExprDiags) {
   if (!E)
     return ExprError();
   if (E->isValueDependent() || E->isTypeDependent() ||
       E->isInstantiationDependent() || E->containsUnexpandedParameterPack())
     return E;
+
   llvm::APSInt Result;
-  ExprResult ICE =
-      VerifyIntegerConstantExpression(E, &Result, /*FIXME*/ AllowFold);
+  ExprResult ICE;
+  if (SuppressExprDiags) {
+    // Use a custom diagnoser that suppresses 'note' diagnostics about the
+    // expression.
+    struct SuppressedDiagnoser : public Sema::VerifyICEDiagnoser {
+      SuppressedDiagnoser() : VerifyICEDiagnoser(/*Suppress=*/true) {}
+      Sema::SemaDiagnosticBuilder diagnoseNotICE(Sema &S,
+                                                 SourceLocation Loc) override {
+        llvm_unreachable("Diagnostic suppressed");
+      }
+    } Diagnoser;
+    ICE = VerifyIntegerConstantExpression(E, &Result, Diagnoser, AllowFold);
+  } else {
+    ICE = VerifyIntegerConstantExpression(E, &Result, /*FIXME*/ AllowFold);
+  }
   if (ICE.isInvalid())
     return ExprError();
+
   if ((StrictlyPositive && !Result.isStrictlyPositive()) ||
       (!StrictlyPositive && !Result.isNonNegative())) {
     Diag(E->getExprLoc(), diag::err_omp_negative_expression_in_clause)
@@ -14301,6 +14640,29 @@ OMPClause *Sema::ActOnOpenMPSizesClause(ArrayRef<Expr *> SizeExprs,
                                 SizeExprs);
 }
 
+OMPClause *Sema::ActOnOpenMPFullClause(SourceLocation StartLoc,
+                                       SourceLocation EndLoc) {
+  return OMPFullClause::Create(Context, StartLoc, EndLoc);
+}
+
+OMPClause *Sema::ActOnOpenMPPartialClause(Expr *FactorExpr,
+                                          SourceLocation StartLoc,
+                                          SourceLocation LParenLoc,
+                                          SourceLocation EndLoc) {
+  if (FactorExpr) {
+    // If an argument is specified, it must be a constant (or an unevaluated
+    // template expression).
+    ExprResult FactorResult = VerifyPositiveIntegerConstantInClause(
+        FactorExpr, OMPC_partial, /*StrictlyPositive=*/true);
+    if (FactorResult.isInvalid())
+      return nullptr;
+    FactorExpr = FactorResult.get();
+  }
+
+  return OMPPartialClause::Create(Context, StartLoc, LParenLoc, EndLoc,
+                                  FactorExpr);
+}
+
 OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
     OpenMPClauseKind Kind, ArrayRef<unsigned> Argument, Expr *Expr,
     SourceLocation StartLoc, SourceLocation LParenLoc,
@@ -14602,6 +14964,12 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
     Res = ActOnOpenMPDestroyClause(/*InteropVar=*/nullptr, StartLoc,
                                    /*LParenLoc=*/SourceLocation(),
                                    /*VarLoc=*/SourceLocation(), EndLoc);
+    break;
+  case OMPC_full:
+    Res = ActOnOpenMPFullClause(StartLoc, EndLoc);
+    break;
+  case OMPC_partial:
+    Res = ActOnOpenMPPartialClause(nullptr, StartLoc, /*LParenLoc=*/{}, EndLoc);
     break;
   case OMPC_if:
   case OMPC_final:
