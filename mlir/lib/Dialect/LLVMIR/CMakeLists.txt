@@ -24,6 +24,7 @@ add_mlir_dialect_library(MLIRLLVMIR
   LINK_LIBS PUBLIC
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
+  MLIRDataLayoutInterfaces
   MLIRIR
   MLIRSideEffectInterfaces
   MLIRSupport
