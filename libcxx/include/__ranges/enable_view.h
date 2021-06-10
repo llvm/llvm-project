@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_VIEW_H
-#define _LIBCPP___RANGES_VIEW_H
+#ifndef _LIBCPP___RANGES_ENABLE_VIEW_H
+#define _LIBCPP___RANGES_ENABLE_VIEW_H
 
 #include <__config>
 #include <__ranges/concepts.h>
@@ -33,18 +33,6 @@ struct view_base { };
 template <class _Tp>
 inline constexpr bool enable_view = derived_from<_Tp, view_base>;
 
-template <class _Tp>
-concept view =
-  range<_Tp> &&
-  movable<_Tp> &&
-  default_initializable<_Tp> &&
-  enable_view<_Tp>;
-
-template<class _Range>
-concept __simple_view =
-  view<_Range> && range<const _Range> &&
-  same_as<iterator_t<_Range>, iterator_t<const _Range>> &&
-  same_as<sentinel_t<_Range>, iterator_t<const _Range>>;
 } // end namespace ranges
 
 #endif // !_LIBCPP_HAS_NO_RANGES
@@ -53,4 +41,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANGES_VIEW_H
+#endif // _LIBCPP___RANGES_ENABLE_VIEW_H
