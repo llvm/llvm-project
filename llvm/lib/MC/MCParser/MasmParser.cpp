@@ -1122,8 +1122,22 @@ const AsmToken &MasmParser::Lex() {
   }
 
   const AsmToken *tok = &Lexer.Lex();
+  bool StartOfStatement = Lexer.isAtStartOfStatement();
 
   while (tok->is(AsmToken::Identifier)) {
+    if (StartOfStatement) {
+      AsmToken NextTok;
+
+      MutableArrayRef<AsmToken> Buf(NextTok);
+      size_t ReadCount = Lexer.peekTokens(Buf);
+      if (ReadCount && NextTok.is(AsmToken::Identifier) &&
+          (NextTok.getString().equals_lower("equ") ||
+           NextTok.getString().equals_lower("textequ"))) {
+        // This looks like an EQU or TEXTEQU directive; don't expand the
+        // identifier, allowing for redefinitions.
+        break;
+      }
+    }
     auto it = Variables.find(tok->getIdentifier().lower());
     const llvm::MCAsmMacro *M =
         getContext().lookupMacro(tok->getIdentifier().lower());
@@ -3327,34 +3341,37 @@ bool MasmParser::parseIdentifier(StringRef &Res) {
 ///  ::= name "=" expression
 ///    | name "equ" expression    (not redefinable)
 ///    | name "equ" text-list
-///    | name "textequ" text-list
+///    | name "textequ" text-list (redefinability unspecified)
 bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
                                       DirectiveKind DirKind) {
   Variable &Var = Variables[Name.lower()];
   if (Var.Name.empty()) {
     Var.Name = Name;
-  } else if (!Var.Redefinable) {
-    return TokError("invalid variable redefinition");
   }
-  Var.Redefinable = (DirKind != DK_EQU);
 
   SMLoc StartLoc = Lexer.getLoc();
   if (DirKind == DK_EQU || DirKind == DK_TEXTEQU) {
     // "equ" and "textequ" both allow text expressions.
     std::string Value;
-    if (!parseTextItem(Value)) {
-      Var.IsText = true;
-      Var.TextValue = Value;
+    std::string TextItem;
+    if (!parseTextItem(TextItem)) {
+      Value += TextItem;
 
       // Accept a text-list, not just one text-item.
       auto parseItem = [&]() -> bool {
-        if (parseTextItem(Value))
+        if (parseTextItem(TextItem))
           return TokError("expected text item");
-        Var.TextValue += Value;
+        Value += TextItem;
         return false;
       };
       if (parseOptionalToken(AsmToken::Comma) && parseMany(parseItem))
         return addErrorSuffix(" in '" + Twine(IDVal) + "' directive");
+
+      if (!Var.Redefinable && (!Var.IsText || Var.TextValue != Value))
+        return Error(getTok().getLoc(), "invalid variable redefinition");
+      Var.IsText = true;
+      Var.TextValue = Value;
+      Var.Redefinable = true;
 
       return false;
     }
@@ -3367,19 +3384,28 @@ bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
   SMLoc EndLoc;
   if (parseExpression(Expr, EndLoc))
     return addErrorSuffix(" in '" + Twine(IDVal) + "' directive");
+
+  int64_t Value;
+  if (!Expr->evaluateAsAbsolute(Value, getStreamer().getAssemblerPtr())) {
+    // Not an absolute expression; define as a text replacement.
+    StringRef ExprAsString = StringRef(
+        StartLoc.getPointer(), EndLoc.getPointer() - StartLoc.getPointer());
+    if (!Var.Redefinable && (!Var.IsText && Var.TextValue != ExprAsString))
+      return Error(getTok().getLoc(), "invalid variable redefinition");
+    Var.IsText = true;
+    Var.TextValue = ExprAsString.str();
+  } else {
+    if (!Var.Redefinable && (Var.IsText || Var.NumericValue != Value))
+      return Error(getTok().getLoc(), "invalid variable redefinition");
+    Var.NumericValue = Value;
+  }
+  Var.Redefinable = (DirKind == DK_ASSIGN);
+
   MCSymbol *Sym = getContext().getOrCreateSymbol(Var.Name);
   Sym->setRedefinable(Var.Redefinable);
   Sym->setVariableValue(Expr);
   Sym->setExternal(false);
 
-  if (Expr->evaluateAsAbsolute(Var.NumericValue,
-                               getStreamer().getAssemblerPtr()))
-    return false;
-
-  // Not an absolute expression; define as a text replacement.
-  Var.IsText = true;
-  Var.TextValue = StringRef(StartLoc.getPointer(),
-                            EndLoc.getPointer() - StartLoc.getPointer()).str();
   return false;
 }
 
