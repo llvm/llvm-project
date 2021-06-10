@@ -732,6 +732,17 @@ void Module::setOverrideStackAlignment(unsigned Align) {
   addModuleFlag(ModFlagBehavior::Error, "override-stack-alignment", Align);
 }
 
+unsigned Module::getWarnStackSize() const {
+  Metadata *MD = getModuleFlag("warn-stack-size");
+  if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+    return CI->getZExtValue();
+  return UINT_MAX;
+}
+
+void Module::setWarnStackSize(unsigned Threshold) {
+  addModuleFlag(ModFlagBehavior::Error, "warn-stack-size", Threshold);
+}
+
 void Module::setSDKVersion(const VersionTuple &V) {
   SmallVector<unsigned, 3> Entries;
   Entries.push_back(V.getMajor());
