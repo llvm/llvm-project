@@ -171,7 +171,7 @@ private:
 
     // Find variables to move into new struct instance
     std::vector<GlobalVariable *> FoundLocalVars =
-        AMDGPU::findVariablesToLower(M, UsedList, F);
+        AMDGPU::findVariablesToLower(M, F);
 
     if (FoundLocalVars.empty()) {
       // No variables to rewrite, no changes made.
