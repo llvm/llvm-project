@@ -54,7 +54,7 @@ private:
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         CCValAssign &VA) override;
 
-  void assignValueToAddress(Register ValVReg, Register Addr, uint64_t Size,
+  void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
                             MachinePointerInfo &MPO, CCValAssign &VA) override;
 
   Register getStackAddress(uint64_t Size, int64_t Offset,

@@ -74,11 +74,11 @@ void M68kIncomingValueHandler::assignValueToReg(Register ValVReg,
 
 void M68kIncomingValueHandler::assignValueToAddress(Register ValVReg,
                                                     Register Addr,
-                                                    uint64_t Size,
+                                                    LLT MemTy,
                                                     MachinePointerInfo &MPO,
                                                     CCValAssign &VA) {
   MachineFunction &MF = MIRBuilder.getMF();
-  auto *MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, Size,
+  auto *MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, MemTy,
                                       inferAlignFromPtrInfo(MF, MPO));
   MIRBuilder.buildLoad(ValVReg, Addr, *MMO);
 }
