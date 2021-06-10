@@ -1214,136 +1214,146 @@ static bool isInitializationOfVar(const ExplodedNode *N, const VarRegion *VR) {
   return FrameSpace->getStackFrame() == LCtx->getStackFrame();
 }
 
+static bool isObjCPointer(const MemRegion *R) {
+  if (R->isBoundable())
+    if (const auto *TR = dyn_cast<TypedValueRegion>(R))
+      return TR->getValueType()->isObjCObjectPointerType();
+
+  return false;
+}
+
+static bool isObjCPointer(const ValueDecl *D) {
+  return D->getType()->isObjCObjectPointerType();
+}
+
 /// Show diagnostics for initializing or declaring a region \p R with a bad value.
-static void showBRDiagnostics(const char *action, llvm::raw_svector_ostream &os,
-                              const MemRegion *NewR, SVal V,
-                              const MemRegion *OldR, const DeclStmt *DS) {
-  if (NewR->canPrintPretty()) {
-    NewR->printPretty(os);
-    os << " ";
+static void showBRDiagnostics(llvm::raw_svector_ostream &OS, StoreInfo SI) {
+  const bool HasPrefix = SI.Dest->canPrintPretty();
+
+  if (HasPrefix) {
+    SI.Dest->printPretty(OS);
+    OS << " ";
   }
 
-  if (V.getAs<loc::ConcreteInt>()) {
-    bool b = false;
-    if (NewR->isBoundable()) {
-      if (const auto *TR = dyn_cast<TypedValueRegion>(NewR)) {
-        if (TR->getValueType()->isObjCObjectPointerType()) {
-          os << action << "nil";
-          b = true;
-        }
-      }
-    }
-    if (!b)
-      os << action << "a null pointer value";
+  const char *Action = nullptr;
 
-  } else if (auto CVal = V.getAs<nonloc::ConcreteInt>()) {
-    os << action << CVal->getValue();
-  } else if (OldR && OldR->canPrintPretty()) {
-    os << action << "the value of ";
-    OldR->printPretty(os);
-  } else if (DS) {
-    if (V.isUndef()) {
-      if (isa<VarRegion>(NewR)) {
+  switch (SI.StoreKind) {
+  case StoreInfo::Initialization:
+    Action = HasPrefix ? "initialized to " : "Initializing to ";
+    break;
+  case StoreInfo::BlockCapture:
+    Action = HasPrefix ? "captured by block as " : "Captured by block as ";
+    break;
+  default:
+    llvm_unreachable("Unexpected store kind");
+  }
+
+  if (SI.Value.getAs<loc::ConcreteInt>()) {
+    OS << Action << (isObjCPointer(SI.Dest) ? "nil" : "a null pointer value");
+
+  } else if (auto CVal = SI.Value.getAs<nonloc::ConcreteInt>()) {
+    OS << Action << CVal->getValue();
+
+  } else if (SI.Origin && SI.Origin->canPrintPretty()) {
+    OS << Action << "the value of ";
+    SI.Origin->printPretty(OS);
+
+  } else if (SI.StoreKind == StoreInfo::Initialization) {
+    // We don't need to check here, all these conditions were
+    // checked by StoreSiteFinder, when it figured out that it is
+    // initialization.
+    const auto *DS =
+        cast<DeclStmt>(SI.StoreSite->getLocationAs<PostStmt>()->getStmt());
+
+    if (SI.Value.isUndef()) {
+      if (isa<VarRegion>(SI.Dest)) {
         const auto *VD = cast<VarDecl>(DS->getSingleDecl());
+
         if (VD->getInit()) {
-          os << (NewR->canPrintPretty() ? "initialized" : "Initializing")
+          OS << (HasPrefix ? "initialized" : "Initializing")
              << " to a garbage value";
         } else {
-          os << (NewR->canPrintPretty() ? "declared" : "Declaring")
+          OS << (HasPrefix ? "declared" : "Declaring")
              << " without an initial value";
         }
       }
     } else {
-      os << (NewR->canPrintPretty() ? "initialized" : "Initialized") << " here";
+      OS << (HasPrefix ? "initialized" : "Initialized") << " here";
     }
   }
 }
 
 /// Display diagnostics for passing bad region as a parameter.
-static void showBRParamDiagnostics(llvm::raw_svector_ostream &os,
-                                   const VarRegion *VR, SVal V,
-                                   const MemRegion *ValueR) {
+static void showBRParamDiagnostics(llvm::raw_svector_ostream &OS,
+                                   StoreInfo SI) {
+  const auto *VR = cast<VarRegion>(SI.Dest);
   const auto *Param = cast<ParmVarDecl>(VR->getDecl());
 
-  os << "Passing ";
+  OS << "Passing ";
 
-  if (V.getAs<loc::ConcreteInt>()) {
-    if (Param->getType()->isObjCObjectPointerType())
-      os << "nil object reference";
-    else
-      os << "null pointer value";
-  } else if (V.isUndef()) {
-    os << "uninitialized value";
-  } else if (auto CI = V.getAs<nonloc::ConcreteInt>()) {
-    os << "the value " << CI->getValue();
-  } else if (ValueR && ValueR->canPrintPretty()) {
-    ValueR->printPretty(os);
+  if (SI.Value.getAs<loc::ConcreteInt>()) {
+    OS << (isObjCPointer(Param) ? "nil object reference"
+                                : "null pointer value");
+
+  } else if (SI.Value.isUndef()) {
+    OS << "uninitialized value";
+
+  } else if (auto CI = SI.Value.getAs<nonloc::ConcreteInt>()) {
+    OS << "the value " << CI->getValue();
+
+  } else if (SI.Origin && SI.Origin->canPrintPretty()) {
+    SI.Origin->printPretty(OS);
+
   } else {
-    os << "value";
+    OS << "value";
   }
 
   // Printed parameter indexes are 1-based, not 0-based.
   unsigned Idx = Param->getFunctionScopeIndex() + 1;
-  os << " via " << Idx << llvm::getOrdinalSuffix(Idx) << " parameter";
+  OS << " via " << Idx << llvm::getOrdinalSuffix(Idx) << " parameter";
   if (VR->canPrintPretty()) {
-    os << " ";
-    VR->printPretty(os);
+    OS << " ";
+    VR->printPretty(OS);
   }
 }
 
 /// Show default diagnostics for storing bad region.
-static void showBRDefaultDiagnostics(llvm::raw_svector_ostream &os,
-                                     const MemRegion *NewR, SVal V,
-                                     const MemRegion *OldR) {
-  if (V.getAs<loc::ConcreteInt>()) {
-    bool b = false;
-    if (NewR->isBoundable()) {
-      if (const auto *TR = dyn_cast<TypedValueRegion>(NewR)) {
-        if (TR->getValueType()->isObjCObjectPointerType()) {
-          os << "nil object reference stored";
-          b = true;
-        }
-      }
-    }
-    if (!b) {
-      if (NewR->canPrintPretty())
-        os << "Null pointer value stored";
-      else
-        os << "Storing null pointer value";
-    }
+static void showBRDefaultDiagnostics(llvm::raw_svector_ostream &OS,
+                                     StoreInfo SI) {
+  const bool HasSuffix = SI.Dest->canPrintPretty();
 
-  } else if (V.isUndef()) {
-    if (NewR->canPrintPretty())
-      os << "Uninitialized value stored";
+  if (SI.Value.getAs<loc::ConcreteInt>()) {
+    OS << (isObjCPointer(SI.Dest) ? "nil object reference stored"
+                                  : (HasSuffix ? "Null pointer value stored"
+                                               : "Storing null pointer value"));
+
+  } else if (SI.Value.isUndef()) {
+    OS << (HasSuffix ? "Uninitialized value stored"
+                     : "Storing uninitialized value");
+
+  } else if (auto CV = SI.Value.getAs<nonloc::ConcreteInt>()) {
+    if (HasSuffix)
+      OS << "The value " << CV->getValue() << " is assigned";
     else
-      os << "Storing uninitialized value";
+      OS << "Assigning " << CV->getValue();
 
-  } else if (auto CV = V.getAs<nonloc::ConcreteInt>()) {
-    if (NewR->canPrintPretty())
-      os << "The value " << CV->getValue() << " is assigned";
-    else
-      os << "Assigning " << CV->getValue();
-
-  } else if (OldR && OldR->canPrintPretty()) {
-    if (NewR->canPrintPretty()) {
-      os << "The value of ";
-      OldR->printPretty(os);
-      os << " is assigned";
+  } else if (SI.Origin && SI.Origin->canPrintPretty()) {
+    if (HasSuffix) {
+      OS << "The value of ";
+      SI.Origin->printPretty(OS);
+      OS << " is assigned";
     } else {
-      os << "Assigning the value of ";
-      OldR->printPretty(os);
+      OS << "Assigning the value of ";
+      SI.Origin->printPretty(OS);
     }
 
   } else {
-    if (NewR->canPrintPretty())
-      os << "Value assigned";
-    else
-      os << "Assigning value";
+    OS << (HasSuffix ? "Value assigned" : "Assigning value");
   }
 
-  if (NewR->canPrintPretty()) {
-    os << " to ";
-    NewR->printPretty(os);
+  if (HasSuffix) {
+    OS << " to ";
+    SI.Dest->printPretty(OS);
   }
 }
 
@@ -1948,6 +1958,25 @@ static const ExplodedNode* findNodeForExpression(const ExplodedNode *N,
 //                            Tracker implementation
 //===----------------------------------------------------------------------===//
 
+PathDiagnosticPieceRef StoreHandler::constructNote(StoreInfo SI,
+                                                   BugReporterContext &BRC,
+                                                   StringRef NodeText) {
+  // Construct a new PathDiagnosticPiece.
+  ProgramPoint P = SI.StoreSite->getLocation();
+  PathDiagnosticLocation L;
+  if (P.getAs<CallEnter>() && SI.SourceOfTheValue)
+    L = PathDiagnosticLocation(SI.SourceOfTheValue, BRC.getSourceManager(),
+                               P.getLocationContext());
+
+  if (!L.isValid() || !L.asLocation().isValid())
+    L = PathDiagnosticLocation::create(P, BRC.getSourceManager());
+
+  if (!L.isValid() || !L.asLocation().isValid())
+    return nullptr;
+
+  return std::make_shared<PathDiagnosticEventPiece>(L, NodeText);
+}
+
 class DefaultStoreHandler final : public StoreHandler {
 public:
   using StoreHandler::StoreHandler;
@@ -1957,49 +1986,24 @@ public:
     // Okay, we've found the binding. Emit an appropriate message.
     SmallString<256> Buffer;
     llvm::raw_svector_ostream OS(Buffer);
-    const char *Action = nullptr;
 
     switch (SI.StoreKind) {
     case StoreInfo::Initialization:
-      // We don't need to check here, all these conditions were
-      // checked by StoreSiteFinder, when it figured out that it is
-      // initialization.
-      Action =
-          SI.Dest->canPrintPretty() ? "initialized to " : "Initializing to ";
-      showBRDiagnostics(
-          Action, OS, SI.Dest, SI.Value, SI.Origin,
-          cast<DeclStmt>(SI.StoreSite->getLocationAs<PostStmt>()->getStmt()));
-      break;
     case StoreInfo::BlockCapture:
-      Action = SI.Dest->canPrintPretty() ? "captured by block as "
-                                         : "Captured by block as ";
-      showBRDiagnostics(Action, OS, SI.Dest, SI.Value, SI.Origin, nullptr);
+      showBRDiagnostics(OS, SI);
       break;
     case StoreInfo::CallArgument:
-      showBRParamDiagnostics(OS, cast<VarRegion>(SI.Dest), SI.Value, SI.Origin);
+      showBRParamDiagnostics(OS, SI);
       break;
     case StoreInfo::Assignment:
-      showBRDefaultDiagnostics(OS, SI.Dest, SI.Value, SI.Origin);
+      showBRDefaultDiagnostics(OS, SI);
       break;
     }
 
     if (Opts.Kind == bugreporter::TrackingKind::Condition)
       OS << WillBeUsedForACondition;
 
-    // Construct a new PathDiagnosticPiece.
-    ProgramPoint P = SI.StoreSite->getLocation();
-    PathDiagnosticLocation L;
-    if (P.getAs<CallEnter>() && SI.SourceOfTheValue)
-      L = PathDiagnosticLocation(SI.SourceOfTheValue, BRC.getSourceManager(),
-                                 P.getLocationContext());
-
-    if (!L.isValid() || !L.asLocation().isValid())
-      L = PathDiagnosticLocation::create(P, BRC.getSourceManager());
-
-    if (!L.isValid() || !L.asLocation().isValid())
-      return nullptr;
-
-    return std::make_shared<PathDiagnosticEventPiece>(L, OS.str());
+    return constructNote(SI, BRC, OS.str());
   }
 };
 

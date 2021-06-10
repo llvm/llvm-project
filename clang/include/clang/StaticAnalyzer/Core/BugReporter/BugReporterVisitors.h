@@ -330,6 +330,10 @@ public:
                                         TrackingOptions Opts) = 0;
 
   Tracker &getParentTracker() { return ParentTracker; }
+
+protected:
+  PathDiagnosticPieceRef constructNote(StoreInfo SI, BugReporterContext &BRC,
+                                       StringRef NodeText);
 };
 
 /// Visitor that tracks expressions and values.
