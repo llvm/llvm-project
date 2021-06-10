@@ -40,3 +40,6 @@ d8f0e6caa91e230a486c948ab643174e40bdf215
 
 # Wiped out some non-ascii characters that snuck into the copyright.
 5b08a8a43254ed30bd953e869b0fd9fc1e8b82d0
+
+# Use C++11 default member initializers in LLDB. NFC.
+9494c510af56d9c8593ab69017dcaa232210b235
