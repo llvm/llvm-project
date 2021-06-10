@@ -1,0 +1,41 @@
+
+// Test that the we can resolve the dynamic type of existential correctly.
+// REQUIRES: swift
+
+// RUN: %lldb --repl < %s | FileCheck %s
+
+protocol A {}
+
+class B: A {}
+
+struct C: A {}
+
+enum D: A {
+  case empty
+}
+
+class E: Error, A {}
+
+struct F: Error, A {}
+
+enum G: Error, A { 
+  case empty 
+}
+
+let b: A = B()
+// CHECK: {{b}}: B = {}
+
+let c: A = C()
+// CHECK: {{c}}: C = {}
+
+let d: A = D.empty
+// CHECK: {{d}}: D = empty
+
+let e: A = E()
+// CHECK: {{e}}: E = {}
+
+let f: A = F()
+// CHECK: {{f}}: F = {}
+
+let g: A = G.empty
+// CHECK: {{g}}: G = empty
