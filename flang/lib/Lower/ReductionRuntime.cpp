@@ -285,6 +285,21 @@ struct ForcedSumComplex16 {
   }
 };
 
+/// Generate call to specialized runtime function that takes a mask and
+/// dim argument. The All, Any, and Count intrinsics use this pattern.
+template <typename FN>
+mlir::Value genSpecial2Args(FN func, Fortran::lower::FirOpBuilder &builder,
+                            mlir::Location loc, mlir::Value maskBox,
+                            mlir::Value dim) {
+  auto fTy = func.getType();
+  auto sourceFile = Fortran::lower::locationToFilename(builder, loc);
+  auto sourceLine =
+      Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(2));
+  auto args = Fortran::lower::createArguments(builder, loc, fTy, maskBox,
+                                              sourceFile, sourceLine, dim);
+  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+
 /// Generate calls to reduction intrinsics such as All and Any.
 /// These are the descriptor based implementations that take two
 /// arguments (mask, dim).
@@ -380,13 +395,7 @@ mlir::Value Fortran::lower::genAll(Fortran::lower::FirOpBuilder &builder,
                                    mlir::Location loc, mlir::Value maskBox,
                                    mlir::Value dim) {
   auto allFunc = Fortran::lower::getRuntimeFunc<mkRTKey(All)>(loc, builder);
-  auto fTy = allFunc.getType();
-  auto sourceFile = Fortran::lower::locationToFilename(builder, loc);
-  auto sourceLine =
-      Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(2));
-  auto args = Fortran::lower::createArguments(builder, loc, fTy, maskBox,
-                                              sourceFile, sourceLine, dim);
-  return builder.create<fir::CallOp>(loc, allFunc, args).getResult(0);
+  return genSpecial2Args(allFunc, builder, loc, maskBox, dim);
 }
 
 /// Generate call to Any intrinsic runtime routine. This routine is
@@ -395,13 +404,33 @@ mlir::Value Fortran::lower::genAny(Fortran::lower::FirOpBuilder &builder,
                                    mlir::Location loc, mlir::Value maskBox,
                                    mlir::Value dim) {
   auto anyFunc = Fortran::lower::getRuntimeFunc<mkRTKey(Any)>(loc, builder);
-  auto fTy = anyFunc.getType();
+  return genSpecial2Args(anyFunc, builder, loc, maskBox, dim);
+}
+
+/// Generate call to Count runtime routine. This routine is a specialized
+/// version when mask is a rank one array or the dim argument is not
+/// specified by the user.
+mlir::Value Fortran::lower::genCount(Fortran::lower::FirOpBuilder &builder,
+                                     mlir::Location loc, mlir::Value maskBox,
+                                     mlir::Value dim) {
+  auto countFunc = Fortran::lower::getRuntimeFunc<mkRTKey(Count)>(loc, builder);
+  return genSpecial2Args(countFunc, builder, loc, maskBox, dim);
+}
+
+/// Generate call to general CountDim runtime routine. This routine has a
+/// descriptor result.
+void Fortran::lower::genCountDim(Fortran::lower::FirOpBuilder &builder,
+                                 mlir::Location loc, mlir::Value resultBox,
+                                 mlir::Value maskBox, mlir::Value dim,
+                                 mlir::Value kind) {
+  auto func = Fortran::lower::getRuntimeFunc<mkRTKey(CountDim)>(loc, builder);
+  auto fTy = func.getType();
   auto sourceFile = Fortran::lower::locationToFilename(builder, loc);
   auto sourceLine =
-      Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(2));
-  auto args = Fortran::lower::createArguments(builder, loc, fTy, maskBox,
-                                              sourceFile, sourceLine, dim);
-  return builder.create<fir::CallOp>(loc, anyFunc, args).getResult(0);
+      Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(5));
+  auto args = Fortran::lower::createArguments(
+      builder, loc, fTy, resultBox, maskBox, dim, kind, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, func, args);
 }
 
 /// Generate call to Maxloc intrinsic runtime routine. This is the version

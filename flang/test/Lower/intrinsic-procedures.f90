@@ -229,6 +229,52 @@ subroutine conjg_test(z1, z2)
   z2 = conjg(z1)
 end subroutine
 
+! COUNT
+! CHECK-LABEL: test_count1
+! CHECK-SAME: %[[arg0:.*]]: !fir.ref<i32>, %[[arg1:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>>)
+subroutine test_count1(rslt, mask)
+  integer :: rslt
+  logical :: mask(:)
+! CHECK-DAG:  %[[c1:.*]] = constant 0 : index
+! CHECK-DAG:  %[[a2:.*]] = fir.convert %[[arg1]] : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
+! CHECK-DAG:  %[[a4:.*]] = fir.convert %[[c1]] : (index) -> i32
+  rslt = count(mask)
+! CHECK:  %[[a5:.*]] = fir.call @_FortranACount(%[[a2]], %{{.*}}, %{{.*}}, %[[a4]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i64
+end subroutine
+
+! COUNT
+! CHECK-LABEL: test_count2
+! CHECK-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?xi32>>, %[[arg1:.*]]: !fir.box<!fir.array<?x?x!fir.logical<4>>>) 
+subroutine test_count2(rslt, mask)
+  integer :: rslt(:)
+  logical :: mask(:,:)
+! CHECK-DAG:  %[[c1_i32:.*]] = constant 1 : i32
+! CHECK-DAG:  %[[c4:.*]] = constant 4 : index
+! CHECK-DAG:  %[[a0:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {uniq_name = ""}
+! CHECK-DAG:  %[[a5:.*]] = fir.convert %[[a0]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:  %[[a6:.*]] = fir.convert %[[arg1]] : (!fir.box<!fir.array<?x?x!fir.logical<4>>>) -> !fir.box<none>
+! CHECK:  %[[a7:.*]] = fir.convert %[[c4]] : (index) -> i32
+  rslt = count(mask, dim=1)
+! CHECK:  %{{.*}} = fir.call @_FortranACountDim(%[[a5]], %[[a6]], %[[c1_i32]], %[[a7]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32) -> none
+! CHECK:  %[[a10:.*]] = fir.load %[[a0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK-DAG:  %[[a12:.*]] = fir.box_addr %[[a10]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+! CHECK-DAG:  fir.freemem %[[a12]] : !fir.heap<!fir.array<?xi32>>
+end subroutine
+
+! COUNT
+! CHECK-LABEL: test_count3
+! CHRECK-SAME: %[[arg0:.*]]: !fir.ref<i32>, %[[arg1:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>>) 
+subroutine test_count3(rslt, mask)
+  integer :: rslt
+  logical :: mask(:)
+! CHECK-DAG:  %[[c0:.*]] = constant 0 : index
+! CHECK-DAG:  %[[a1:.*]] = fir.convert %[[arg1]] : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
+! CHECK-DAG:  %[[a3:.*]] = fir.convert %[[c0]] : (index) -> i32
+  call bar(count(mask, kind=2))
+! CHECK:  %[[a4:.*]] = fir.call @_FortranACount(%[[a1]], %{{.*}}, %{{.*}}, %3) : (!fir.box<none>, !fir.ref<i8>, i32, i32) -> i64
+! CHECK:  %{{.*}} = fir.convert %[[a4]] : (i64) -> i16
+end subroutine
+
 ! FLOOR
 ! CHECK-LABEL: floor_test1
 subroutine floor_test1(i, a)
