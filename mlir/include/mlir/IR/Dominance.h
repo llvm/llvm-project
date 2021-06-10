@@ -35,7 +35,7 @@ class DominanceInfoBase {
   using DomTree = llvm::DominatorTreeBase<Block, IsPostDom>;
 
 public:
-  DominanceInfoBase(Operation *op = nullptr) {}
+  DominanceInfoBase(Operation *op) {}
   DominanceInfoBase(DominanceInfoBase &&) = default;
   DominanceInfoBase &operator=(DominanceInfoBase &&) = default;
   ~DominanceInfoBase();

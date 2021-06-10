@@ -2362,7 +2362,7 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
   }
 
   if (auto *Op1 = dyn_cast<ConstantFP>(Operands[0])) {
-    if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
+    if (!Ty->isFloatingPointTy())
       return nullptr;
     APFloat Op1V = Op1->getValueAPF();
 
@@ -2374,8 +2374,6 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
       switch (IntrinsicID) {
       default:
         break;
-      case Intrinsic::pow:
-        return ConstantFoldBinaryFP(pow, Op1V, Op2V, Ty);
       case Intrinsic::copysign:
         return ConstantFP::get(Ty->getContext(), APFloat::copySign(Op1V, Op2V));
       case Intrinsic::minnum:
@@ -2386,6 +2384,16 @@ static Constant *ConstantFoldScalarCall2(StringRef Name,
         return ConstantFP::get(Ty->getContext(), minimum(Op1V, Op2V));
       case Intrinsic::maximum:
         return ConstantFP::get(Ty->getContext(), maximum(Op1V, Op2V));
+      }
+
+      if (!Ty->isHalfTy() && !Ty->isFloatTy() && !Ty->isDoubleTy())
+        return nullptr;
+
+      switch (IntrinsicID) {
+      default:
+        break;
+      case Intrinsic::pow:
+        return ConstantFoldBinaryFP(pow, Op1V, Op2V, Ty);
       case Intrinsic::amdgcn_fmul_legacy:
         // The legacy behaviour is that multiplying +/- 0.0 by anything, even
         // NaN or infinity, gives +0.0.

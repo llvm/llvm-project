@@ -45,6 +45,33 @@ public:
   WebAssemblyTargetLowering(const TargetMachine &TM,
                             const WebAssemblySubtarget &STI);
 
+  enum WasmAddressSpace : unsigned {
+    // WebAssembly uses the following address spaces:
+    // AS 0 : is the default address space for values in linear memory
+    DEFAULT = 0,
+    // AS 1 : is a non-integral address space for global variables
+    GLOBAL = 1,
+    // AS 10 : is a non-integral address space for externref values
+    EXTERNREF = 10,
+    // AS 20 : is a non-integral address space for funcref values
+    FUNCREF = 20,
+  };
+
+  MVT getPointerTy(const DataLayout &DL, uint32_t AS = 0) const override {
+    if (AS == WasmAddressSpace::EXTERNREF)
+      return MVT::externref;
+    else if (AS == WasmAddressSpace::FUNCREF)
+      return MVT::funcref;
+    return TargetLowering::getPointerTy(DL, AS);
+  }
+  MVT getPointerMemTy(const DataLayout &DL, uint32_t AS = 0) const override {
+    if (AS == WasmAddressSpace::EXTERNREF)
+      return MVT::externref;
+    else if (AS == WasmAddressSpace::FUNCREF)
+      return MVT::funcref;
+    return TargetLowering::getPointerMemTy(DL, AS);
+  }
+
 private:
   /// Keep a pointer to the WebAssemblySubtarget around so that we can make the
   /// right decision when generating code for different targets.
@@ -66,6 +93,7 @@ private:
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
                              unsigned AS,
                              Instruction *I = nullptr) const override;
+  bool isFuncref(const Value *Op) const;
   bool allowsMisalignedMemoryAccesses(EVT, unsigned AddrSpace, Align Alignment,
                                       MachineMemOperand::Flags Flags,
                                       bool *Fast) const override;

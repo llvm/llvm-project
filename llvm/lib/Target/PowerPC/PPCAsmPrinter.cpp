@@ -78,6 +78,10 @@ using namespace llvm::XCOFF;
 
 #define DEBUG_TYPE "asmprinter"
 
+static cl::opt<bool> EnableSSPCanaryBitInTB(
+    "aix-ssp-tb-bit", cl::init(false),
+    cl::desc("Enable Passing SSP Canary info in Trackback on AIX"), cl::Hidden);
+
 // Specialize DenseMapInfo to allow
 // std::pair<const MCSymbol *, MCSymbolRefExpr::VariantKind> in DenseMap.
 // This specialization is needed here because that type is used as keys in the
@@ -2120,6 +2124,9 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
   if (SecondHalfOfMandatoryField & TracebackTable::HasExtensionTableMask) {
     if (ShouldEmitEHBlock)
       ExtensionTableFlag |= ExtendedTBTableFlag::TB_EH_INFO;
+    if (EnableSSPCanaryBitInTB &&
+        TargetLoweringObjectFileXCOFF::ShouldSetSSPCanaryBitInTB(MF))
+      ExtensionTableFlag |= ExtendedTBTableFlag::TB_SSP_CANARY;
 
     CommentOS << "ExtensionTableFlag = "
               << getExtendedTBTableFlagString(ExtensionTableFlag);
