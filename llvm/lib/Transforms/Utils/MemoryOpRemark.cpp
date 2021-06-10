@@ -285,8 +285,23 @@ void MemoryOpRemark::visitSizeOperand(Value *V, OptimizationRemarkMissed &R) {
   }
 }
 
+static Optional<StringRef> nameOrNone(const Value *V) {
+  if (V->hasName())
+    return V->getName();
+  return None;
+}
+
 void MemoryOpRemark::visitVariable(const Value *V,
                                    SmallVectorImpl<VariableInfo> &Result) {
+  if (auto *GV = dyn_cast<GlobalVariable>(V)) {
+    auto *Ty = cast<PointerType>(GV->getType())->getElementType();
+    int64_t Size = DL.getTypeSizeInBits(Ty).getFixedSize();
+    VariableInfo Var{nameOrNone(GV), Size};
+    if (!Var.isEmpty())
+      Result.push_back(std::move(Var));
+    return;
+  }
+
   // If we find some information in the debug info, take that.
   bool FoundDI = false;
   // Try to get an llvm.dbg.declare, which has a DILocalVariable giving us the
@@ -312,12 +327,10 @@ void MemoryOpRemark::visitVariable(const Value *V,
     return;
 
   // If not, get it from the alloca.
-  Optional<StringRef> Name = AI->hasName() ? Optional<StringRef>(AI->getName())
-                                           : Optional<StringRef>(None);
   Optional<TypeSize> TySize = AI->getAllocationSizeInBits(DL);
   Optional<uint64_t> Size =
       TySize ? getSizeInBytes(TySize->getFixedSize()) : None;
-  VariableInfo Var{Name, Size};
+  VariableInfo Var{nameOrNone(AI), Size};
   if (!Var.isEmpty())
     Result.push_back(std::move(Var));
 }
