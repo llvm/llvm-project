@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -std=c++2b -verify %s
-// RUN: %clang_cc1 -verify -std=c++20 -verify %s
-// RUN: %clang_cc1 -verify -std=c++14 -verify %s
+// RUN: %clang_cc1 -verify -std=c++2b -verify=expected,cxx2b    %s
+// RUN: %clang_cc1 -verify -std=c++20 -verify=expected,cxx14_20 %s
+// RUN: %clang_cc1 -verify -std=c++14 -verify=expected,cxx14_20 %s
 
 namespace std {
   template<typename T> struct initializer_list {
@@ -30,7 +30,7 @@ using Int = decltype(x3d);
 auto x4a = (i);
 decltype(auto) x4d = (i);
 using Int = decltype(x4a);
-using IntLRef = decltype(x4d);
+using IntLRef = decltype(x4d); // cxx2b-note {{previous definition is here}}
 
 auto x5a = f();
 decltype(auto) x5d = f();
@@ -81,7 +81,7 @@ using Int = decltype(f2d(0));
 auto f3a(int n) { return (n); }
 decltype(auto) f3d(int n) { return (n); } // expected-warning {{reference to stack memory}}
 using Int = decltype(f3a(0));
-using IntLRef = decltype(f3d(0));
+using IntLRef = decltype(f3d(0)); // cxx2b-error {{type alias redefinition with different types ('decltype(f3d(0))' (aka 'int &&') vs 'decltype(x4d)' (aka 'int &'))}}
 
 auto f4a(int n) { return f(); }
 decltype(auto) f4d(int n) { return f(); }
@@ -91,7 +91,7 @@ using IntRRef = decltype(f4d(0));
 auto f5aa(int n) { auto x = f(); return x; }
 auto f5ad(int n) { decltype(auto) x = f(); return x; }
 decltype(auto) f5da(int n) { auto x = f(); return x; }
-decltype(auto) f5dd(int n) { decltype(auto) x = f(); return x; } // expected-error {{rvalue reference to type 'int' cannot bind to lvalue}}
+decltype(auto) f5dd(int n) { decltype(auto) x = f(); return x; } // cxx14_20-error {{rvalue reference to type 'int' cannot bind to lvalue}}
 using Int = decltype(f5aa(0));
 using Int = decltype(f5ad(0));
 using Int = decltype(f5da(0));
