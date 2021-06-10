@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1 -fopenmp
+! REQUIRES: shell
 ! OpenMP Version 4.5
 ! 2.15.3.4 firstprivate Clause
 ! Variables that appear in a firstprivate clause on a distribute or

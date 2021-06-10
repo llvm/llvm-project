@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
   character(kind=1,len=100) msg1
   character(kind=2,len=200) msg2
   character, parameter :: const_msg = 'doof'

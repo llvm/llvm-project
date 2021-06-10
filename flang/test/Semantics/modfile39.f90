@@ -1,4 +1,5 @@
 ! RUN: %S/test_modfile.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Resolution of specification expression references to generic interfaces
 ! that resolve to private specific functions.
 

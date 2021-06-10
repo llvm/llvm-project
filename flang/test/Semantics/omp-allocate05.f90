@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1 -fopenmp
+! REQUIRES: shell
 ! OpenMP Version 5.0
 ! 2.11.3 allocate Directive
 ! allocate directives that appear in a target region must specify an allocator

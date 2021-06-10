@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! C1140 -- A statement that might result in the deallocation of a polymorphic 
 ! entity shall not appear within a DO CONCURRENT construct.
 module m1

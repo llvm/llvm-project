@@ -1,4 +1,5 @@
 ! RUN: %S/test_folding.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Test operation folding edge case (both expected value and messages)
 ! These tests make assumptions regarding real(4) and integer(4) extrema.
 

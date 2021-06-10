@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Invalid operand types when user-defined operator is available
 module m1
   type :: t

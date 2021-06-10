@@ -1,4 +1,5 @@
 ! RUN: %S/../test_errors.sh %s %t %flang -fopenacc
+! REQUIRES: shell
 
 ! Data-Mapping Attribute Clauses
 ! 2.15.14 default Clause

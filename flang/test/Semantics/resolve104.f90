@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Test constant folding of type parameter values both a base value and a
 ! parameter name are supplied.
 ! 

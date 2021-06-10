@@ -1,4 +1,5 @@
 ! RUN: %S/../test_errors.sh %s %t %flang -fopenacc
+! REQUIRES: shell
 
 subroutine compute()
   integer :: a(3), c, i

@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 !Testing data constraints : C876, C877
 module m
   integer :: first

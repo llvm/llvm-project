@@ -1,4 +1,5 @@
 ! RUN: not %flang -fsyntax-only -fopenmp %s 2>&1 | FileCheck %s
+! REQUIRES: shell
 ! OpenMP Version 4.5
 ! Check invalid branches into or out of OpenMP structured blocks.
 

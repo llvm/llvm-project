@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Test 15.5.2.4 constraints and restrictions for non-POINTER non-ALLOCATABLE
 ! dummy arguments.
 

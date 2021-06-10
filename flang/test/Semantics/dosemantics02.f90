@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! C1121 -- any procedure referenced in a concurrent header must be pure
 
 ! Also, check that the step expressions are not zero.  This is prohibited by
