@@ -311,6 +311,11 @@ bool XCOFFObjectFile::isSectionBSS(DataRefImpl Sec) const {
   return Flags & (XCOFF::STYP_BSS | XCOFF::STYP_TBSS);
 }
 
+bool XCOFFObjectFile::isDebugSection(DataRefImpl Sec) const {
+  uint32_t Flags = getSectionFlags(Sec);
+  return Flags & (XCOFF::STYP_DEBUG | XCOFF::STYP_DWARF);
+}
+
 bool XCOFFObjectFile::isSectionVirtual(DataRefImpl Sec) const {
   return is64Bit() ? toSection64(Sec)->FileOffsetToRawData == 0
                    : toSection32(Sec)->FileOffsetToRawData == 0;
