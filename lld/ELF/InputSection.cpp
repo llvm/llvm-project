@@ -569,6 +569,20 @@ static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t type, uint64_t a,
   llvm_unreachable("AArch64 pc-relative relocation expected\n");
 }
 
+static uint64_t getRISCVUndefinedRelativeWeakVA(uint64_t type, uint64_t p) {
+  switch (type) {
+  case R_RISCV_BRANCH:
+  case R_RISCV_JAL:
+  case R_RISCV_CALL:
+  case R_RISCV_CALL_PLT:
+  case R_RISCV_RVC_BRANCH:
+  case R_RISCV_RVC_JUMP:
+    return p;
+  default:
+    return 0;
+  }
+}
+
 // ARM SBREL relocations are of the form S + A - B where B is the static base
 // The ARM ABI defines base to be "addressing origin of the output segment
 // defining the symbol S". We defined the "addressing origin"/static base to be
@@ -765,14 +779,18 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
       // Some PC relative ARM (Thumb) relocations align down the place.
       p = p & 0xfffffffc;
     if (sym.isUndefWeak()) {
-      // On ARM and AArch64 a branch to an undefined weak resolves to the
-      // next instruction, otherwise the place.
+      // On ARM and AArch64 a branch to an undefined weak resolves to the next
+      // instruction, otherwise the place. On RISCV, resolve an undefined weak
+      // to the same instruction to cause an infinite loop (making the user
+      // aware of the issue) while ensuring no overflow.
       if (config->emachine == EM_ARM)
         dest = getARMUndefinedRelativeWeakVA(type, a, p);
       else if (config->emachine == EM_AARCH64)
         dest = getAArch64UndefinedRelativeWeakVA(type, a, p);
       else if (config->emachine == EM_PPC)
         dest = p;
+      else if (config->emachine == EM_RISCV)
+        dest = getRISCVUndefinedRelativeWeakVA(type, p) + a;
       else
         dest = sym.getVA(a);
     } else {
