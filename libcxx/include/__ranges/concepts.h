@@ -73,7 +73,6 @@ namespace ranges {
   concept view =
     range<_Tp> &&
     movable<_Tp> &&
-    default_initializable<_Tp> &&
     enable_view<_Tp>;
 
   template<class _Range>

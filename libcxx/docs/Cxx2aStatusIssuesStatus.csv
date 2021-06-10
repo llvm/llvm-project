@@ -246,7 +246,7 @@
 "`3323 <https://wg21.link/LWG3323>`__","``*has-tuple-element*``\  helper concept needs ``convertible_to``\ ","Prague","",""
 "`3324 <https://wg21.link/LWG3324>`__","Special-case ``std::strong/weak/partial_order``\  for pointers","Prague","",""
 "`3325 <https://wg21.link/LWG3325>`__","Constrain return type of transformation function for ``transform_view``\ ","Prague","",""
-"`3326 <https://wg21.link/LWG3326>`__","``enable_view``\  has false positives","Prague","",""
+"`3326 <https://wg21.link/LWG3326>`__","``enable_view``\  has false positives","Prague","|In progress|",""
 "`3327 <https://wg21.link/LWG3327>`__","Format alignment specifiers vs. text direction","Prague","|Nothing To Do|",""
 "`3328 <https://wg21.link/LWG3328>`__","Clarify that ``std::string``\  is not good for UTF-8","Prague","",""
 "`3329 <https://wg21.link/LWG3329>`__","``totally_ordered_with``\  both directly and indirectly requires ``common_reference_with``\ ","Prague","|Complete|","13.0"
