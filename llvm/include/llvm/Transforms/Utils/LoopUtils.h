@@ -210,18 +210,6 @@ SmallVector<DomTreeNode *, 16> collectChildrenInLoop(DomTreeNode *N,
 /// Returns the instructions that use values defined in the loop.
 SmallVector<Instruction *, 8> findDefsUsedOutsideOfLoop(Loop *L);
 
-/// Find string metadata for loop
-///
-/// If it has a value (e.g. {"llvm.distribute", 1} return the value as an
-/// operand or null otherwise.  If the string metadata is not found return
-/// Optional's not-a-value.
-Optional<const MDOperand *> findStringMetadataForLoop(const Loop *TheLoop,
-                                                      StringRef Name);
-
-/// Find named metadata for a loop with an integer value.
-llvm::Optional<int> getOptionalIntLoopAttribute(const Loop *TheLoop,
-                                                StringRef Name);
-
 /// Find a combination of metadata ("llvm.loop.vectorize.width" and
 /// "llvm.loop.vectorize.scalable.enable") for a loop and use it to construct a
 /// ElementCount. If the metadata "llvm.loop.vectorize.width" cannot be found
@@ -264,9 +252,6 @@ bool hasDisableAllTransformsHint(const Loop *L);
 /// Look for the loop attribute that disables the LICM transformation heuristics.
 bool hasDisableLICMTransformsHint(const Loop *L);
 
-/// Look for the loop attribute that requires progress within the loop.
-bool hasMustProgress(const Loop *L);
-
 /// The mode sets how eager a transformation should be applied.
 enum TransformationMode {
   /// The pass can use heuristics to determine whether a transformation should
@@ -308,9 +293,6 @@ TransformationMode hasLICMVersioningTransformation(const Loop *L);
 /// different.
 void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
                              unsigned V = 0);
-
-/// Returns true if Name is applied to TheLoop and enabled.
-bool getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name);
 
 /// Returns a loop's estimated trip count based on branch weight metadata.
 /// In addition if \p EstimatedLoopInvocationWeight is not null it is
