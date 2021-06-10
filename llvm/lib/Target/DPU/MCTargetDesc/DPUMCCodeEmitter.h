@@ -16,6 +16,7 @@
 
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include <cstdint>
 

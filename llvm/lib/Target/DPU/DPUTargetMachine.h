@@ -49,6 +49,11 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
+
+  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
+    return (SrcAS == DPUADDR_SPACE::WRAM && DestAS == DPUADDR_SPACE::MRAM) ||
+           (SrcAS == DPUADDR_SPACE::MRAM && DestAS == DPUADDR_SPACE::WRAM);
+  }
 };
 } // namespace llvm
 #endif

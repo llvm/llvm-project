@@ -96,7 +96,8 @@ void DPUFrameLowering::emitPrologue(MachineFunction &MF,
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   if (!CSI.empty()) {
     for (std::vector<CalleeSavedInfo>::const_iterator I = CSI.begin(),
-           E = CSI.end(); I != E; ++I) {
+                                                      E = CSI.end();
+         I != E; ++I) {
       int64_t Offset = MFI.getObjectOffset(I->getFrameIdx());
       unsigned Reg = I->getReg();
       unsigned Reg0 =
@@ -139,12 +140,13 @@ MachineBasicBlock::iterator DPUFrameLowering::eliminateCallFramePseudoInstr(
   return MBB.erase(MI);
 }
 
-int DPUFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
-                                             Register &FrameReg) const {
+StackOffset DPUFrameLowering::getFrameIndexReference(const MachineFunction &MF,
+                                                     int FI,
+                                                     Register &FrameReg) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // Because we use no register but permanently adjust the stack pointer, the
   // frame index reference is directly the frame index.
   FrameReg = DPU::R22;
-  return MFI.getObjectOffset(FI);
+  return StackOffset::getFixed(MFI.getObjectOffset(FI));
 }

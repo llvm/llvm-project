@@ -219,7 +219,7 @@ void DPU::relocate(uint8_t *loc, const Relocation &rel, const uint64_t val) cons
 
 #define UNKNOWN_E_FLAGS (0xffffffff)
 static uint32_t getEFlags(InputFile *File) {
-  return cast<ObjFile<ELF32LE>>(File)->getObj().getHeader()->e_flags;
+  return cast<ObjFile<ELF32LE>>(File)->getObj().getHeader().e_flags;
 }
 
 static uint32_t getEABI(uint32_t e_flags) {

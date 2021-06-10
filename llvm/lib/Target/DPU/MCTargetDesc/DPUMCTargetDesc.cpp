@@ -75,7 +75,7 @@ static MCInstrInfo *createDPUMCInstrInfo() {
 
 static MCSubtargetInfo *createDPUMCSubtargetInfo(const Triple &TT,
                                                  StringRef CPU, StringRef FS) {
-  return createDPUMCSubtargetInfoImpl(TT, CPU, FS);
+  return createDPUMCSubtargetInfoImpl(TT, CPU, CPU, FS);
 }
 
 class DPUTargetStreamer : public MCTargetStreamer {
@@ -90,8 +90,8 @@ public:
   }
 };
 
-static MCTargetStreamer *
-createDPUTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
+static MCTargetStreamer *createDPUTargetStreamer(MCStreamer &S,
+                                                 const MCSubtargetInfo &STI) {
   return new DPUTargetStreamer(S);
 }
 

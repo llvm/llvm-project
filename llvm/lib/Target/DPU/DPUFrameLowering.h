@@ -35,8 +35,8 @@ public:
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
 
-  int getFrameIndexReference(const MachineFunction &MF, int FI,
-                             Register &FrameReg) const override;
+  StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
+                                     Register &FrameReg) const override;
 
 private:
   const DPUSubtarget &STI;

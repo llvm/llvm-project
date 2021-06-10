@@ -92,11 +92,6 @@ public:
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
 
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
-    return (SrcAS == DPUADDR_SPACE::WRAM && DestAS == DPUADDR_SPACE::MRAM) ||
-           (SrcAS == DPUADDR_SPACE::MRAM && DestAS == DPUADDR_SPACE::WRAM);
-  }
-
   SDValue LowerDMAUnchecked(SelectionDAG &DAG, const SDLoc &dl, const EVT &evt,
                             SDValue Chain, SDValue ra, SDValue rb, SDValue Size,
                             bool CanFetchConstant, uint64_t Length,

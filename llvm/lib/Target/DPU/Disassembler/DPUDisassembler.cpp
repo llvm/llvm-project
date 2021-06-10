@@ -17,6 +17,7 @@
 #include "MCTargetDesc/DPUMCTargetDesc.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -90,8 +91,8 @@ bool DPUSymbolizer::tryAddingSymbolicOperand(MCInst &Inst,
     return false;
 
   auto Result = std::find_if(Symbols->begin(), Symbols->end(),
-                             [Value](const SymbolInfoTy& Val) {
-                                return Val.Addr == static_cast<uint64_t>(Value);
+                             [Value](const SymbolInfoTy &Val) {
+                               return Val.Addr == static_cast<uint64_t>(Value);
                              });
   if (Result != Symbols->end()) {
     auto *Sym = Ctx.getOrCreateSymbol(Result->Name);
@@ -115,12 +116,13 @@ static MCDisassembler *createDPUDisassembler(const Target &T,
 }
 
 static MCSymbolizer *
-createDPUSymbolizer(const Triple & TT, LLVMOpInfoCallback GetOpInfo,
+createDPUSymbolizer(const Triple &TT, LLVMOpInfoCallback GetOpInfo,
                     LLVMSymbolLookupCallback SymbolLookUp, void *DisInfo,
                     MCContext *Ctx,
                     std::unique_ptr<MCRelocationInfo> &&RelInfo) {
   if (SymbolLookUp)
-    return llvm::createMCSymbolizer(TT, GetOpInfo, SymbolLookUp, DisInfo, Ctx, std::move(RelInfo));
+    return llvm::createMCSymbolizer(TT, GetOpInfo, SymbolLookUp, DisInfo, Ctx,
+                                    std::move(RelInfo));
   return new DPUSymbolizer(*Ctx, std::move(RelInfo), DisInfo);
 }
 
