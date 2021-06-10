@@ -82,3 +82,29 @@ for.body:                                         ; preds = %entry, %for.body
 for.end:                                          ; preds = %for.body, %entry
   ret void
 }
+
+; Same as foo2, but with mustprogress on loop, not function
+; CHECK: Determining loop execution counts for: @foo4
+; CHECK: backedge-taken count is ((-1 + (%n smax %s)) /u %s)
+; CHECK: max backedge-taken count is -1
+
+define void @foo4(i32* nocapture %A, i32 %n, i32 %s) {
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.05 = phi i32 [ %add, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %i.05
+  %0 = load i32, i32* %arrayidx, align 4
+  %inc = add nsw i32 %0, 1
+  store i32 %inc, i32* %arrayidx, align 4
+  %add = add nsw i32 %i.05, %s
+  %cmp = icmp slt i32 %add, %n
+  br i1 %cmp, label %for.body, label %for.end, !llvm.loop !8
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
+!8 = distinct !{!8, !9}
+!9 = !{!"llvm.loop.mustprogress"}
