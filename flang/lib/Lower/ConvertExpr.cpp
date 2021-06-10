@@ -1706,6 +1706,34 @@ public:
     llvm_unreachable("anyFuncArgsHaveAttr failed");
   }
 
+  /// Create a contiguous temporary array with the same shape,
+  /// length parameters and type as mold
+  ExtValue genTempFromMold(const ExtValue &mold, llvm::StringRef tempName) {
+    auto type = fir::dyn_cast_ptrOrBoxEleTy(fir::getBase(mold).getType());
+    assert(type && "expected descriptor or memory type");
+    auto loc = getLoc();
+    auto extents = Fortran::lower::getExtents(builder, loc, mold);
+    auto typeParams = fir::getTypeParams(mold);
+    mlir::Value temp = builder.create<fir::AllocMemOp>(loc, type, tempName,
+                                                       typeParams, extents);
+    auto *bldr = &converter.getFirOpBuilder();
+    // TODO: call finalizer if needed.
+    stmtCtx.attachCleanup([=]() { bldr->create<fir::FreeMemOp>(loc, temp); });
+    if (fir::unwrapSequenceType(type).isa<fir::CharacterType>()) {
+      auto len = typeParams.empty()
+                     ? Fortran::lower::readCharLen(builder, loc, mold)
+                     : typeParams[0];
+      return fir::CharArrayBoxValue{temp, len, extents};
+    }
+    return fir::ArrayBoxValue{temp, extents};
+  }
+
+  /// Copy \p source array into \p dest array. Both arrays must be
+  /// conforming, but neither array must be contiguous.
+  void genArrayCopy(ExtValue dest, ExtValue source) {
+    return createSomeArrayAssignment(converter, dest, source, symMap, stmtCtx);
+  }
+
   ExtValue genProcedureRef(const Fortran::evaluate::ProcedureRef &procRef,
                            llvm::Optional<mlir::Type> resultType) {
     if (const auto *intrinsic = procRef.proc().GetSpecificIntrinsic())
@@ -1719,6 +1747,8 @@ public:
     using PassBy = Fortran::lower::CallerInterface::PassEntityBy;
 
     llvm::SmallVector<fir::MutableBoxValue> mutableModifiedByCall;
+    // List of <var, temp> where temp must be copied into var after the call.
+    llvm::SmallVector<std::pair<ExtValue, ExtValue>, 4> copyOutPairs;
 
     auto callSiteType = caller.genFunctionType();
     for (const auto &arg : caller.getPassedArguments()) {
@@ -1746,40 +1776,56 @@ public:
         auto mutableBox = genMutableBoxValue(*expr);
         auto irBox = Fortran::lower::getMutableIRBox(builder, loc, mutableBox);
         caller.placeInput(arg, irBox);
-        // TODO: no need to add this to the list if intent(in)
-        mutableModifiedByCall.emplace_back(std::move(mutableBox));
+        if (arg.mayBeModifiedByCall())
+          mutableModifiedByCall.emplace_back(std::move(mutableBox));
         continue;
       }
 
-      if (arg.passBy == PassBy::BaseAddress) {
-        auto baseAddr = fir::getBase(genExtAddr(*expr));
-        if (baseAddr.getType().isa<fir::BoxType>())
-          TODO(loc, "copy-in copy-out around F77 calls");
-        caller.placeInput(arg, baseAddr);
-      } else if (arg.passBy == PassBy::BoxChar) {
-        auto helper = Fortran::lower::CharacterExprHelper{builder, loc};
-        auto boxChar = genExtAddr(*expr).match(
-            [&](const fir::CharBoxValue &x) { return helper.createEmbox(x); },
-            [&](const fir::CharArrayBoxValue &x) {
-              return helper.createEmbox(x);
-            },
-            [&](const fir::BoxValue &x) -> mlir::Value {
-              // Beware, descriptor content might have to be copied before
-              // and after the call to a contiguous character argument.
-              TODO(loc, "lowering actual arguments descriptor to boxchar");
-            },
-            [&](const auto &) -> mlir::Value {
-              fir::emitFatalError(
-                  loc, "internal error: actual argument is not a character");
-            });
-        caller.placeInput(arg, boxChar);
+      if (arg.passBy == PassBy::BaseAddress || arg.passBy == PassBy::BoxChar) {
+        auto argAddr = [&]() -> ExtValue {
+          // Non contiguous variable need to be copied into a contiguous temp,
+          // and the temp need to be copied back after the call in case it was
+          // modified.
+          if (Fortran::evaluate::IsVariable(*expr) && expr->Rank() > 0 &&
+              !Fortran::evaluate::IsSimplyContiguous(
+                  *expr, converter.getFoldingContext())) {
+            auto box = genBoxArg(*expr);
+            auto temp = genTempFromMold(box, ".copyinout");
+            if (arg.mayBeReadByCall())
+              genArrayCopy(temp, box);
+            if (arg.mayBeModifiedByCall())
+              copyOutPairs.emplace_back(box, temp);
+            return temp;
+          }
+          auto baseAddr = genExtAddr(*expr);
+          if (fir::getBase(baseAddr).getType().isa<fir::BoxType>())
+            fir::emitFatalError(
+                loc, "contiguous argument was not lowered to an address");
+          return baseAddr;
+        }();
+        if (arg.passBy == PassBy::BaseAddress) {
+          caller.placeInput(arg, fir::getBase(argAddr));
+        } else {
+          assert(arg.passBy == PassBy::BoxChar);
+          auto helper = Fortran::lower::CharacterExprHelper{builder, loc};
+          auto boxChar = argAddr.match(
+              [&](const fir::CharBoxValue &x) { return helper.createEmbox(x); },
+              [&](const fir::CharArrayBoxValue &x) {
+                return helper.createEmbox(x);
+              },
+              [&](const auto &) -> mlir::Value {
+                fir::emitFatalError(
+                    loc, "internal error: actual argument is not a character");
+              });
+          caller.placeInput(arg, boxChar);
+        }
       } else if (arg.passBy == PassBy::Box) {
         // Before lowering to an address, handle the allocatable/pointer actual
         // argument to optional fir.box dummy. It is legal to pass
         // unallocated/disassociated entity to an optional. In this case, an
         // absent fir.box must be created instead of a fir.box with a null value
         // (Fortran 2018 15.5.2.12 point 1).
-        if (arg.isOptional && isAllocatableOrPointer(*expr)) {
+        if (arg.isOptional() && isAllocatableOrPointer(*expr)) {
           // Note that passing an absent allocatable to a non-allocatable
           // optional dummy argument is illegal (15.5.2.12 point 3 (8)). So
           // nothing has to be done to generate an absent argument in this case,
@@ -1808,7 +1854,7 @@ public:
         caller.placeAddressAndLengthInput(arg, fir::getBase(argRef),
                                           fir::getLen(argRef));
       } else {
-        llvm_unreachable("pass by value not handled here");
+        TODO(loc, "pass by value in non elemental function call");
       }
     }
 
@@ -1967,6 +2013,11 @@ public:
     for (const auto &mutableBox : mutableModifiedByCall)
       Fortran::lower::syncMutableBoxFromIRBox(builder, loc, mutableBox);
     // Handle case where result was passed as argument
+
+    // Copy-out temps that were created for non contiguous variable arguments if
+    // needed.
+    for (auto [var, temp] : copyOutPairs)
+      genArrayCopy(var, temp);
 
     if (allocatedResult) {
       return allocatedResult->match(

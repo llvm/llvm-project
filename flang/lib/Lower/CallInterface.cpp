@@ -473,6 +473,8 @@ class Fortran::lower::CallInterfaceImpl {
   using FirPlaceHolder = typename CallInterface::FirPlaceHolder;
   using Property = typename CallInterface::Property;
   using TypeAndShape = Fortran::evaluate::characteristics::TypeAndShape;
+  using DummyCharacteristics =
+      Fortran::evaluate::characteristics::DummyArgument;
 
 public:
   CallInterfaceImpl(CallInterface &i)
@@ -490,17 +492,18 @@ public:
     const auto &argumentEntities =
         getEntityContainer(interface.side().getCallDescription());
     for (auto pair : llvm::zip(procedure.dummyArguments, argumentEntities)) {
+      const auto &argCharacteristics = std::get<0>(pair);
       std::visit(
           Fortran::common::visitors{
               [&](const auto &dummy) {
                 const auto &entity = getDataObjectEntity(std::get<1>(pair));
-                handleImplicitDummy(dummy, entity);
+                handleImplicitDummy(&argCharacteristics, dummy, entity);
               },
               [&](const Fortran::evaluate::characteristics::AlternateReturn &) {
                 // nothing to do
               },
           },
-          std::get<0>(pair).u);
+          argCharacteristics.u);
     }
   }
 
@@ -520,26 +523,27 @@ public:
     const auto &argumentEntities =
         getEntityContainer(interface.side().getCallDescription());
     for (auto pair : llvm::zip(procedure.dummyArguments, argumentEntities)) {
+      const auto &argCharacteristics = std::get<0>(pair);
       std::visit(
           Fortran::common::visitors{
               [&](const Fortran::evaluate::characteristics::DummyDataObject
                       &dummy) {
                 const auto &entity = getDataObjectEntity(std::get<1>(pair));
                 if (dummy.CanBePassedViaImplicitInterface())
-                  handleImplicitDummy(dummy, entity);
+                  handleImplicitDummy(&argCharacteristics, dummy, entity);
                 else
-                  handleExplicitDummy(dummy, entity);
+                  handleExplicitDummy(&argCharacteristics, dummy, entity);
               },
               [&](const Fortran::evaluate::characteristics::DummyProcedure
                       &dummy) {
                 const auto &entity = getDataObjectEntity(std::get<1>(pair));
-                handleImplicitDummy(dummy, entity);
+                handleImplicitDummy(&argCharacteristics, dummy, entity);
               },
               [&](const Fortran::evaluate::characteristics::AlternateReturn &) {
                 // nothing to do
               },
           },
-          std::get<0>(pair).u);
+          argCharacteristics.u);
     }
   }
 
@@ -600,13 +604,14 @@ private:
   }
 
   void handleImplicitDummy(
+      const DummyCharacteristics *characteristics,
       const Fortran::evaluate::characteristics::DummyDataObject &obj,
       const FortranEntity &entity) {
     auto dynamicType = obj.type.type();
     if (dynamicType.category() == Fortran::common::TypeCategory::Character) {
       auto boxCharTy = fir::BoxCharType::get(&mlirContext, dynamicType.kind());
       addFirOperand(boxCharTy, nextPassedArgPosition(), Property::BoxChar);
-      addPassedArg(PassEntityBy::BoxChar, entity);
+      addPassedArg(PassEntityBy::BoxChar, entity, characteristics);
     } else {
       // non-PDT derived type allowed in implicit interface.
       auto type = translateDynamicType(dynamicType);
@@ -616,7 +621,7 @@ private:
       auto refType = fir::ReferenceType::get(type);
 
       addFirOperand(refType, nextPassedArgPosition(), Property::BaseAddress);
-      addPassedArg(PassEntityBy::BaseAddress, entity);
+      addPassedArg(PassEntityBy::BaseAddress, entity, characteristics);
     }
   }
 
@@ -656,11 +661,11 @@ private:
   }
 
   void handleExplicitDummy(
+      const DummyCharacteristics *characteristics,
       const Fortran::evaluate::characteristics::DummyDataObject &obj,
       const FortranEntity &entity) {
     using Attrs = Fortran::evaluate::characteristics::DummyDataObject::Attr;
 
-    bool isOptional = false;
     bool isValueAttr = false;
     [[maybe_unused]] auto loc = interface.converter.genLocation();
     llvm::SmallVector<mlir::NamedAttribute> attrs;
@@ -668,10 +673,8 @@ private:
       attrs.emplace_back(mlir::Identifier::get(attr, &mlirContext),
                          UnitAttr::get(&mlirContext));
     };
-    if (obj.attrs.test(Attrs::Optional)) {
+    if (obj.attrs.test(Attrs::Optional))
       addMLIRAttr(fir::getOptionalAttrName());
-      isOptional = true;
-    }
     if (obj.attrs.test(Attrs::Asynchronous))
       TODO(loc, "Asynchronous in procedure interface");
     if (obj.attrs.test(Attrs::Contiguous))
@@ -711,11 +714,11 @@ private:
       auto boxRefType = fir::ReferenceType::get(boxType);
       addFirOperand(boxRefType, nextPassedArgPosition(), Property::MutableBox,
                     attrs);
-      addPassedArg(PassEntityBy::MutableBox, entity, isOptional);
+      addPassedArg(PassEntityBy::MutableBox, entity, characteristics);
     } else if (dummyRequiresBox(obj)) {
       // Pass as fir.box
       addFirOperand(boxType, nextPassedArgPosition(), Property::Box, attrs);
-      addPassedArg(PassEntityBy::Box, entity, isOptional);
+      addPassedArg(PassEntityBy::Box, entity, characteristics);
     } else if (dynamicType.category() ==
                Fortran::common::TypeCategory::Character) {
       // Pass as fir.box_char
@@ -724,7 +727,7 @@ private:
                     attrs);
       addPassedArg(isValueAttr ? PassEntityBy::CharBoxValueAttribute
                                : PassEntityBy::BoxChar,
-                   entity, isOptional);
+                   entity, characteristics);
     } else {
       // Pass as fir.ref
       auto refType = fir::ReferenceType::get(type);
@@ -732,11 +735,12 @@ private:
                     attrs);
       addPassedArg(isValueAttr ? PassEntityBy::BaseAddressValueAttribute
                                : PassEntityBy::BaseAddress,
-                   entity, isOptional);
+                   entity, characteristics);
     }
   }
 
   void handleImplicitDummy(
+      const DummyCharacteristics *characteristics,
       const Fortran::evaluate::characteristics::DummyProcedure &proc,
       const FortranEntity &entity) {
     if (proc.attrs.test(
@@ -754,7 +758,7 @@ private:
     auto funcType =
         mlir::FunctionType::get(&mlirContext, llvm::None, llvm::None);
     addFirOperand(funcType, nextPassedArgPosition(), Property::BaseAddress);
-    addPassedArg(PassEntityBy::BaseAddress, entity);
+    addPassedArg(PassEntityBy::BaseAddress, entity, characteristics);
   }
 
   void handleExplicitResult(
@@ -824,9 +828,9 @@ private:
         FirPlaceHolder{type, entityPosition, p, attributes});
   }
   void addPassedArg(PassEntityBy p, FortranEntity entity,
-                    bool isOptional = false) {
+                    const DummyCharacteristics *characteristics) {
     interface.passedArguments.emplace_back(
-        PassedEntity{p, entity, emptyValue(), emptyValue(), isOptional});
+        PassedEntity{p, entity, emptyValue(), emptyValue(), characteristics});
   }
   void setPassedResult(PassEntityBy p, FortranEntity entity) {
     interface.passedResult =
@@ -849,6 +853,26 @@ private:
   CallInterface &interface;
   mlir::MLIRContext &mlirContext;
 };
+
+template <typename T>
+bool Fortran::lower::CallInterface<T>::PassedEntity::isOptional() const {
+  if (!characteristics)
+    return false;
+  return characteristics->IsOptional();
+}
+template <typename T>
+bool Fortran::lower::CallInterface<T>::PassedEntity::mayBeModifiedByCall()
+    const {
+  if (!characteristics)
+    return true;
+  return characteristics->GetIntent() != Fortran::common::Intent::In;
+}
+template <typename T>
+bool Fortran::lower::CallInterface<T>::PassedEntity::mayBeReadByCall() const {
+  if (!characteristics)
+    return true;
+  return characteristics->GetIntent() != Fortran::common::Intent::Out;
+}
 
 template <typename T>
 void Fortran::lower::CallInterface<T>::determineInterface(

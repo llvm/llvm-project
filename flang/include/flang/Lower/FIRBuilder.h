@@ -324,33 +324,34 @@ private:
 // ExtendedValue inquiry helpers
 //===--------------------------------------------------------------------===//
 
-/// Read or get character length from an ExtendedValue containing a character
+/// Read or get character length from \p box that must contain a character
 /// entity. If the length value is contained in the ExtendedValue, this will
 /// not generate any code, otherwise this will generate a read of the fir.box
 /// describing the entity.
-mlir::Value readCharLen(FirOpBuilder &, mlir::Location,
-                        const fir::ExtendedValue &);
+mlir::Value readCharLen(FirOpBuilder &builder, mlir::Location loc,
+                        const fir::ExtendedValue &box);
 
-/// Read or get the extent in dimension \p dim of the array described by an
-/// ExtendedValue.
-mlir::Value readExtent(FirOpBuilder &, mlir::Location,
-                       const fir::ExtendedValue &, unsigned dim);
+/// Read or get the extent in dimension \p dim of the array described by \p box.
+mlir::Value readExtent(FirOpBuilder &builder, mlir::Location loc,
+                       const fir::ExtendedValue &box, unsigned dim);
 
 /// Read or get the lower bound in dimension \p dim of the array described by
-/// an ExtendedValue. If the lower bound is left default in the ExtendedValue,
-/// the defaultValue will be returned.
-mlir::Value readLowerBound(FirOpBuilder &, mlir::Location,
-                           const fir::ExtendedValue &, unsigned dim,
+/// \p box. If the lower bound is left default in the ExtendedValue,
+/// \p defaultValue will be returned.
+mlir::Value readLowerBound(FirOpBuilder &builder, mlir::Location loc,
+                           const fir::ExtendedValue &box, unsigned dim,
                            mlir::Value defaultValue);
 
-/// Read extents from an BoxValue.
-llvm::SmallVector<mlir::Value> readExtents(FirOpBuilder &, mlir::Location,
-                                           const fir::BoxValue &);
+/// Read extents from \p box.
+llvm::SmallVector<mlir::Value> readExtents(FirOpBuilder &builder,
+                                           mlir::Location loc,
+                                           const fir::BoxValue &box);
 
-/// Get extents from an ExtentdedValue. For fir::BoxValue and
+/// Get extents from \p box. For fir::BoxValue and
 /// fir::MutableBoxValue, this will generate code to read the extents.
-llvm::SmallVector<mlir::Value> getExtents(FirOpBuilder &, mlir::Location,
-                                          const fir::ExtendedValue &);
+llvm::SmallVector<mlir::Value> getExtents(FirOpBuilder &builder,
+                                          mlir::Location loc,
+                                          const fir::ExtendedValue &box);
 
 //===--------------------------------------------------------------------===//
 // String literal helper helpers
