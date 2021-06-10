@@ -40,25 +40,21 @@ int main(int, char**)
         typedef int T;
         static_assert(std::is_trivially_destructible<T>::value, "");
         static_assert(std::is_trivially_destructible<optional<T>>::value, "");
-        static_assert(std::is_literal_type<optional<T>>::value, "");
     }
     {
         typedef double T;
         static_assert(std::is_trivially_destructible<T>::value, "");
         static_assert(std::is_trivially_destructible<optional<T>>::value, "");
-        static_assert(std::is_literal_type<optional<T>>::value, "");
     }
     {
         typedef PODType T;
         static_assert(std::is_trivially_destructible<T>::value, "");
         static_assert(std::is_trivially_destructible<optional<T>>::value, "");
-        static_assert(std::is_literal_type<optional<T>>::value, "");
     }
     {
         typedef X T;
         static_assert(!std::is_trivially_destructible<T>::value, "");
         static_assert(!std::is_trivially_destructible<optional<T>>::value, "");
-        static_assert(!std::is_literal_type<optional<T>>::value, "");
         {
             X x;
             optional<X> opt{x};

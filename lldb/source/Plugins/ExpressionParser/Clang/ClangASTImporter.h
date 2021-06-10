@@ -216,7 +216,7 @@ public:
   void ForgetSource(clang::ASTContext *dst_ctx, clang::ASTContext *src_ctx);
 
   struct DeclOrigin {
-    DeclOrigin() : ctx(nullptr), decl(nullptr) {}
+    DeclOrigin() {}
 
     DeclOrigin(clang::ASTContext *_ctx, clang::Decl *_decl)
         : ctx(_ctx), decl(_decl) {
@@ -236,8 +236,8 @@ public:
 
     bool Valid() const { return (ctx != nullptr || decl != nullptr); }
 
-    clang::ASTContext *ctx;
-    clang::Decl *decl;
+    clang::ASTContext *ctx = nullptr;
+    clang::Decl *decl = nullptr;
   };
 
   /// Listener interface used by the ASTImporterDelegate to inform other code

@@ -187,14 +187,14 @@ processOperands(llvm::IRBuilderBase &builder,
 }
 
 /// Process data operands from acc::EnterDataOp
-static LogicalResult
-processDataOperands(llvm::IRBuilderBase &builder,
-                    LLVM::ModuleTranslation &moduleTranslation,
-                    acc::EnterDataOp op, SmallVector<uint64_t> &flags,
-                    SmallVector<llvm::Constant *> &names, unsigned &index,
-                    llvm::AllocaInst *argsBase, llvm::AllocaInst *args,
-                    llvm::AllocaInst *argSizes) {
+static LogicalResult processDataOperands(
+    llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation,
+    acc::EnterDataOp op, SmallVector<uint64_t> &flags,
+    SmallVector<llvm::Constant *> &names, llvm::AllocaInst *argsBase,
+    llvm::AllocaInst *args, llvm::AllocaInst *argSizes) {
   // TODO add `create_zero` and `attach` operands
+
+  unsigned index = 0;
 
   // Create operands are handled as `alloc` call.
   if (failed(processOperands(builder, moduleTranslation, op,
@@ -214,14 +214,14 @@ processDataOperands(llvm::IRBuilderBase &builder,
 }
 
 /// Process data operands from acc::ExitDataOp
-static LogicalResult
-processDataOperands(llvm::IRBuilderBase &builder,
-                    LLVM::ModuleTranslation &moduleTranslation,
-                    acc::ExitDataOp op, SmallVector<uint64_t> &flags,
-                    SmallVector<llvm::Constant *> &names, unsigned &index,
-                    llvm::AllocaInst *argsBase, llvm::AllocaInst *args,
-                    llvm::AllocaInst *argSizes) {
+static LogicalResult processDataOperands(
+    llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation,
+    acc::ExitDataOp op, SmallVector<uint64_t> &flags,
+    SmallVector<llvm::Constant *> &names, llvm::AllocaInst *argsBase,
+    llvm::AllocaInst *args, llvm::AllocaInst *argSizes) {
   // TODO add `detach` operands
+
+  unsigned index = 0;
 
   // Delete operands are handled as `delete` call.
   if (failed(processOperands(builder, moduleTranslation, op,
@@ -241,13 +241,12 @@ processDataOperands(llvm::IRBuilderBase &builder,
 }
 
 /// Process data operands from acc::UpdateOp
-static LogicalResult
-processDataOperands(llvm::IRBuilderBase &builder,
-                    LLVM::ModuleTranslation &moduleTranslation,
-                    acc::UpdateOp op, SmallVector<uint64_t> &flags,
-                    SmallVector<llvm::Constant *> &names, unsigned &index,
-                    llvm::AllocaInst *argsBase, llvm::AllocaInst *args,
-                    llvm::AllocaInst *argSizes) {
+static LogicalResult processDataOperands(
+    llvm::IRBuilderBase &builder, LLVM::ModuleTranslation &moduleTranslation,
+    acc::UpdateOp op, SmallVector<uint64_t> &flags,
+    SmallVector<llvm::Constant *> &names, llvm::AllocaInst *argsBase,
+    llvm::AllocaInst *args, llvm::AllocaInst *argSizes) {
+  unsigned index = 0;
 
   // Host operands are handled as `from` call.
   if (failed(processOperands(builder, moduleTranslation, op, op.hostOperands(),
@@ -305,10 +304,9 @@ convertStandaloneDataOp(OpTy &op, llvm::IRBuilderBase &builder,
 
   SmallVector<uint64_t> flags;
   SmallVector<llvm::Constant *> names;
-  unsigned index = 0;
 
   if (failed(processDataOperands(builder, moduleTranslation, op, flags, names,
-                                 index, argsBase, args, argSizes)))
+                                 argsBase, args, argSizes)))
     return failure();
 
   llvm::GlobalVariable *maptypes =

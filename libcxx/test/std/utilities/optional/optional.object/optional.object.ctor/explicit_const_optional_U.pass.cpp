@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: gcc-10
 // <optional>
 
 // template <class U>
@@ -21,7 +22,7 @@
 using std::optional;
 
 template <class T, class U>
-void
+TEST_CONSTEXPR_CXX20 void
 test(const optional<U>& rhs, bool is_going_to_throw = false)
 {
     static_assert(!(std::is_convertible<const optional<U>&, optional<T>>::value), "");
@@ -52,17 +53,17 @@ class X
 {
     int i_;
 public:
-    explicit X(int i) : i_(i) {}
-    X(const X& x) : i_(x.i_) {}
-    ~X() {i_ = 0;}
-    friend bool operator==(const X& x, const X& y) {return x.i_ == y.i_;}
+    constexpr explicit X(int i) : i_(i) {}
+    constexpr X(const X& x) : i_(x.i_) {}
+    TEST_CONSTEXPR_CXX20 ~X() {i_ = 0;}
+    friend constexpr bool operator==(const X& x, const X& y) {return x.i_ == y.i_;}
 };
 
 class Y
 {
     int i_;
 public:
-    explicit Y(int i) : i_(i) {}
+    constexpr explicit Y(int i) : i_(i) {}
 
     friend constexpr bool operator==(const Y& x, const Y& y) {return x.i_ == y.i_;}
 };
@@ -73,38 +74,34 @@ class Z
 {
     int i_;
 public:
-    explicit Z(int i) : i_(i) { TEST_THROW(6);}
+    constexpr explicit Z(int i) : i_(i) { TEST_THROW(6);}
 
     friend constexpr bool operator==(const Z& x, const Z& y) {return x.i_ == y.i_;}
 };
 
+template<class T, class U>
+constexpr bool test_all()
+{
+  {
+    optional<U> rhs;
+    test<T>(rhs);
+  }
+  {
+    optional<U> rhs(3);
+    test<T>(rhs);
+  }
+  return true;
+}
+
 
 int main(int, char**)
 {
-    {
-        typedef X T;
-        typedef int U;
-        optional<U> rhs;
-        test<T>(rhs);
-    }
-    {
-        typedef X T;
-        typedef int U;
-        optional<U> rhs(3);
-        test<T>(rhs);
-    }
-    {
-        typedef Y T;
-        typedef int U;
-        optional<U> rhs;
-        test<T>(rhs);
-    }
-    {
-        typedef Y T;
-        typedef int U;
-        optional<U> rhs(3);
-        test<T>(rhs);
-    }
+    test_all<X, int>();
+    test_all<Y, int>();
+#if TEST_STD_VER > 17
+    static_assert(test_all<X, int>());
+    static_assert(test_all<Y, int>());
+#endif
     {
         typedef Z T;
         typedef int U;

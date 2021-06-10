@@ -208,6 +208,10 @@ def : ProcessorModel<"gfx1012", GFX10SpeedModel,
   FeatureISAVersion10_1_2.Features
 >;
 
+def : ProcessorModel<"gfx1013", GFX10SpeedModel,
+  FeatureISAVersion10_1_3.Features
+>;
+
 def : ProcessorModel<"gfx1030", GFX10SpeedModel,
   FeatureISAVersion10_3_0.Features
 >;

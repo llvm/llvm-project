@@ -12,7 +12,7 @@ define dso_local i32 @g() local_unnamed_addr {
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT19]], label [[WHILE_END:%.*]], label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
 ; CHECK-NEXT:    [[C_022:%.*]] = phi i32* [ [[C_022_BE:%.*]], [[WHILE_BODY_BACKEDGE:%.*]] ], [ undef, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32*> [ [[TMP14:%.*]], [[WHILE_BODY_BACKEDGE]] ], [ undef, [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32*> [ [[TMP14:%.*]], [[WHILE_BODY_BACKEDGE]] ], [ poison, [[ENTRY]] ]
 ; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, i32* [[C_022]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint i32* [[C_022]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32

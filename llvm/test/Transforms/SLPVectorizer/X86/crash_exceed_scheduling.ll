@@ -35,9 +35,8 @@ define void @exceed(double %0, double %1) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = fmul fast <2 x double> [[TMP10]], [[TMP11]]
 ; CHECK-NEXT:    [[IXX101:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x double> poison, double [[TMP7]], i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> [[TMP13]], double undef, i32 1
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x double> <double undef, double poison>, double [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP16:%.*]] = fmul fast <2 x double> [[TMP14]], [[TMP15]]
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast <2 x double> [[TMP13]], [[TMP14]]
 ; CHECK-NEXT:    switch i32 undef, label [[BB1:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[BB2:%.*]]
 ; CHECK-NEXT:    ]
@@ -46,7 +45,7 @@ define void @exceed(double %0, double %1) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[LABEL]]
 ; CHECK:       label:
-; CHECK-NEXT:    [[TMP17:%.*]] = phi <2 x double> [ [[TMP12]], [[BB1]] ], [ [[TMP16]], [[BB2]] ]
+; CHECK-NEXT:    [[TMP16:%.*]] = phi <2 x double> [ [[TMP12]], [[BB1]] ], [ [[TMP15]], [[BB2]] ]
 ; CHECK-NEXT:    ret void
 ;
 entry:

@@ -262,6 +262,8 @@ bool Test::testMatch(bool MatchResult, MatcherBase &Matcher, const char *LHSStr,
   return false;
 }
 
+#ifdef ENABLE_SUBPROCESS_TESTS
+
 bool Test::testProcessKilled(testutils::FunctionCaller *Func, int Signal,
                              const char *LHSStr, const char *RHSStr,
                              const char *File, unsigned long Line) {
@@ -344,6 +346,7 @@ bool Test::testProcessExits(testutils::FunctionCaller *Func, int ExitCode,
   return false;
 }
 
+#endif // ENABLE_SUBPROCESS_TESTS
 } // namespace testing
 } // namespace __llvm_libc
 

@@ -26,7 +26,7 @@ static inline int xdigit_to_sint(char ch) {
 }
 
 // StringExtractor constructor
-StringExtractor::StringExtractor() : m_packet(), m_index(0) {}
+StringExtractor::StringExtractor() : m_packet() {}
 
 StringExtractor::StringExtractor(llvm::StringRef packet_str)
     : m_packet(), m_index(0) {

@@ -7,7 +7,7 @@ declare i32 @llvm.riscv.vsetvlimax.i32(i32, i32)
 define void @test_vsetvli_e64mf8(i32 %avl) nounwind {
 ; CHECK-LABEL: test_vsetvli_e64mf8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e64,mf8,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e64, mf8, ta, mu
 ; CHECK-NEXT:    ret
   call i32 @llvm.riscv.vsetvli.i32(i32 %avl, i32 3, i32 5)
   ret void
@@ -16,7 +16,7 @@ define void @test_vsetvli_e64mf8(i32 %avl) nounwind {
 define void @test_vsetvli_e8mf2_zero_avl() nounwind {
 ; CHECK-LABEL: test_vsetvli_e8mf2_zero_avl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli a0, 0, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetivli a0, 0, e8, mf2, ta, mu
 ; CHECK-NEXT:    ret
   call i32 @llvm.riscv.vsetvli.i32(i32 0, i32 0, i32 7)
   ret void
@@ -25,7 +25,7 @@ define void @test_vsetvli_e8mf2_zero_avl() nounwind {
 define void @test_vsetvlimax_e64m8() nounwind {
 ; CHECK-LABEL: test_vsetvlimax_e64m8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    ret
   call i32 @llvm.riscv.vsetvlimax.i32(i32 3, i32 3)
   ret void
@@ -37,7 +37,7 @@ declare <vscale x 4 x i32> @llvm.riscv.vle.nxv4i32.i32(<vscale x 4 x i32>*, i32)
 define <vscale x 4 x i32> @redundant_vsetvli(i32 %avl, <vscale x 4 x i32>* %ptr) nounwind {
 ; CHECK-LABEL: redundant_vsetvli:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e32, m2, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    ret
   %vl = call i32 @llvm.riscv.vsetvli.i32(i32 %avl, i32 2, i32 1)
@@ -52,8 +52,8 @@ define <vscale x 4 x i32> @redundant_vsetvli(i32 %avl, <vscale x 4 x i32>* %ptr)
 define <vscale x 4 x i32> @repeated_vsetvli(i32 %avl, <vscale x 4 x i32>* %ptr) nounwind {
 ; CHECK-LABEL: repeated_vsetvli:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, a0, e32,m2,ta,mu
-; CHECK-NEXT:    vsetvli a0, a0, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli a0, a0, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, a0, e32, m2, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    ret
   %vl0 = call i32 @llvm.riscv.vsetvli.i32(i32 %avl, i32 2, i32 1)

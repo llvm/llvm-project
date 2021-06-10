@@ -922,8 +922,8 @@ void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
   SymbolTableEntryCount = SymbolTableIndex;
 
   // Calculate the RawPointer value for each section.
-  uint64_t RawPointer = sizeof(XCOFF::FileHeader32) + auxiliaryHeaderSize() +
-                        SectionCount * sizeof(XCOFF::SectionHeader32);
+  uint64_t RawPointer = XCOFF::FileHeaderSize32 + auxiliaryHeaderSize() +
+                        SectionCount * XCOFF::SectionHeaderSize32;
   for (auto *Sec : Sections) {
     if (Sec->Index == Section::UninitializedIndex || Sec->IsVirtual)
       continue;

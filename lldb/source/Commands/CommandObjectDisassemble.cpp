@@ -31,10 +31,7 @@ using namespace lldb_private;
 #include "CommandOptions.inc"
 
 CommandObjectDisassemble::CommandOptions::CommandOptions()
-    : Options(), num_lines_context(0), num_instructions(0), func_name(),
-      current_function(false), start_addr(), end_addr(), at_pc(false),
-      frame_line(false), plugin_name(), flavor_string(), arch(),
-      some_location_specified(false), symbol_containing_addr() {
+    : Options(), func_name(), plugin_name(), flavor_string(), arch() {
   OptionParsingStarting(nullptr);
 }
 

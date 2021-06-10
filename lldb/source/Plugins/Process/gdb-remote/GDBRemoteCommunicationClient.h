@@ -522,42 +522,42 @@ public:
   SendTraceGetBinaryData(const TraceGetBinaryDataRequest &request);
 
 protected:
-  LazyBool m_supports_not_sending_acks;
-  LazyBool m_supports_thread_suffix;
-  LazyBool m_supports_threads_in_stop_reply;
-  LazyBool m_supports_vCont_all;
-  LazyBool m_supports_vCont_any;
-  LazyBool m_supports_vCont_c;
-  LazyBool m_supports_vCont_C;
-  LazyBool m_supports_vCont_s;
-  LazyBool m_supports_vCont_S;
-  LazyBool m_qHostInfo_is_valid;
-  LazyBool m_curr_pid_is_valid;
-  LazyBool m_qProcessInfo_is_valid;
-  LazyBool m_qGDBServerVersion_is_valid;
-  LazyBool m_supports_alloc_dealloc_memory;
-  LazyBool m_supports_memory_region_info;
-  LazyBool m_supports_watchpoint_support_info;
-  LazyBool m_supports_detach_stay_stopped;
-  LazyBool m_watchpoints_trigger_after_instruction;
-  LazyBool m_attach_or_wait_reply;
-  LazyBool m_prepare_for_reg_writing_reply;
-  LazyBool m_supports_p;
-  LazyBool m_supports_x;
-  LazyBool m_avoid_g_packets;
-  LazyBool m_supports_QSaveRegisterState;
-  LazyBool m_supports_qXfer_auxv_read;
-  LazyBool m_supports_qXfer_libraries_read;
-  LazyBool m_supports_qXfer_libraries_svr4_read;
-  LazyBool m_supports_qXfer_features_read;
-  LazyBool m_supports_qXfer_memory_map_read;
-  LazyBool m_supports_augmented_libraries_svr4_read;
-  LazyBool m_supports_jThreadExtendedInfo;
-  LazyBool m_supports_jLoadedDynamicLibrariesInfos;
-  LazyBool m_supports_jGetSharedCacheInfo;
-  LazyBool m_supports_QPassSignals;
-  LazyBool m_supports_error_string_reply;
-  LazyBool m_supports_multiprocess;
+  LazyBool m_supports_not_sending_acks = eLazyBoolCalculate;
+  LazyBool m_supports_thread_suffix = eLazyBoolCalculate;
+  LazyBool m_supports_threads_in_stop_reply = eLazyBoolCalculate;
+  LazyBool m_supports_vCont_all = eLazyBoolCalculate;
+  LazyBool m_supports_vCont_any = eLazyBoolCalculate;
+  LazyBool m_supports_vCont_c = eLazyBoolCalculate;
+  LazyBool m_supports_vCont_C = eLazyBoolCalculate;
+  LazyBool m_supports_vCont_s = eLazyBoolCalculate;
+  LazyBool m_supports_vCont_S = eLazyBoolCalculate;
+  LazyBool m_qHostInfo_is_valid = eLazyBoolCalculate;
+  LazyBool m_curr_pid_is_valid = eLazyBoolCalculate;
+  LazyBool m_qProcessInfo_is_valid = eLazyBoolCalculate;
+  LazyBool m_qGDBServerVersion_is_valid = eLazyBoolCalculate;
+  LazyBool m_supports_alloc_dealloc_memory = eLazyBoolCalculate;
+  LazyBool m_supports_memory_region_info = eLazyBoolCalculate;
+  LazyBool m_supports_watchpoint_support_info = eLazyBoolCalculate;
+  LazyBool m_supports_detach_stay_stopped = eLazyBoolCalculate;
+  LazyBool m_watchpoints_trigger_after_instruction = eLazyBoolCalculate;
+  LazyBool m_attach_or_wait_reply = eLazyBoolCalculate;
+  LazyBool m_prepare_for_reg_writing_reply = eLazyBoolCalculate;
+  LazyBool m_supports_p = eLazyBoolCalculate;
+  LazyBool m_supports_x = eLazyBoolCalculate;
+  LazyBool m_avoid_g_packets = eLazyBoolCalculate;
+  LazyBool m_supports_QSaveRegisterState = eLazyBoolCalculate;
+  LazyBool m_supports_qXfer_auxv_read = eLazyBoolCalculate;
+  LazyBool m_supports_qXfer_libraries_read = eLazyBoolCalculate;
+  LazyBool m_supports_qXfer_libraries_svr4_read = eLazyBoolCalculate;
+  LazyBool m_supports_qXfer_features_read = eLazyBoolCalculate;
+  LazyBool m_supports_qXfer_memory_map_read = eLazyBoolCalculate;
+  LazyBool m_supports_augmented_libraries_svr4_read = eLazyBoolCalculate;
+  LazyBool m_supports_jThreadExtendedInfo = eLazyBoolCalculate;
+  LazyBool m_supports_jLoadedDynamicLibrariesInfos = eLazyBoolCalculate;
+  LazyBool m_supports_jGetSharedCacheInfo = eLazyBoolCalculate;
+  LazyBool m_supports_QPassSignals = eLazyBoolCalculate;
+  LazyBool m_supports_error_string_reply = eLazyBoolCalculate;
+  LazyBool m_supports_multiprocess = eLazyBoolCalculate;
 
   bool m_supports_qProcessInfoPID : 1, m_supports_qfProcessInfo : 1,
       m_supports_qUserName : 1, m_supports_qGroupName : 1,
@@ -568,14 +568,16 @@ protected:
       m_supports_qModuleInfo : 1, m_supports_jThreadsInfo : 1,
       m_supports_jModulesInfo : 1;
 
-  lldb::pid_t m_curr_pid;
-  lldb::tid_t m_curr_tid; // Current gdb remote protocol thread index for all
-                          // other operations
-  lldb::tid_t m_curr_tid_run; // Current gdb remote protocol thread index for
+  lldb::pid_t m_curr_pid = LLDB_INVALID_PROCESS_ID;
+  lldb::tid_t m_curr_tid =
+      LLDB_INVALID_THREAD_ID; // Current gdb remote protocol thread index for
+                              // all other operations
+  lldb::tid_t m_curr_tid_run =
+      LLDB_INVALID_THREAD_ID; // Current gdb remote protocol thread index for
                               // continue, step, etc
 
-  uint32_t m_num_supported_hardware_watchpoints;
-  uint32_t m_addressing_bits;
+  uint32_t m_num_supported_hardware_watchpoints = 0;
+  uint32_t m_addressing_bits = 0;
 
   ArchSpec m_host_arch;
   ArchSpec m_process_arch;
@@ -586,17 +588,18 @@ protected:
   std::string m_hostname;
   std::string m_gdb_server_name; // from reply to qGDBServerVersion, empty if
                                  // qGDBServerVersion is not supported
-  uint32_t m_gdb_server_version; // from reply to qGDBServerVersion, zero if
-                                 // qGDBServerVersion is not supported
+  uint32_t m_gdb_server_version =
+      UINT32_MAX; // from reply to qGDBServerVersion, zero if
+                  // qGDBServerVersion is not supported
   std::chrono::seconds m_default_packet_timeout;
-  uint64_t m_max_packet_size;        // as returned by qSupported
+  uint64_t m_max_packet_size = 0;    // as returned by qSupported
   std::string m_qSupported_response; // the complete response to qSupported
 
-  bool m_supported_async_json_packets_is_valid;
+  bool m_supported_async_json_packets_is_valid = false;
   lldb_private::StructuredData::ObjectSP m_supported_async_json_packets_sp;
 
   std::vector<MemoryRegionInfo> m_qXfer_memory_map;
-  bool m_qXfer_memory_map_loaded;
+  bool m_qXfer_memory_map_loaded = false;
 
   bool GetCurrentProcessInfo(bool allow_lazy_pid = true);
 

@@ -346,8 +346,9 @@ def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary"> {
     /// Return the specified attribute if present and is an instance of
     /// `AttrClass`, null otherwise.
     template<typename AttrClass, typename NameClass>
-    AttrClass getAs(NameClass name) const {
-      return get(name).template dyn_cast_or_null<AttrClass>();
+    AttrClass getAs(NameClass &&name) const {
+      return get(std::forward<NameClass>(name))
+        .template dyn_cast_or_null<AttrClass>();
     }
 
   private:
@@ -707,7 +708,7 @@ def Builtin_SparseElementsAttr
   let extraClassDeclaration = [{
     template <typename T>
     using iterator =
-        llvm::mapped_iterator<llvm::detail::value_sequence_iterator<ptrdiff_t>,
+        llvm::mapped_iterator<typename decltype(llvm::seq<ptrdiff_t>(0, 0))::iterator,
                               std::function<T(ptrdiff_t)>>;
 
     /// Return the values of this attribute in the form of the given type 'T'.

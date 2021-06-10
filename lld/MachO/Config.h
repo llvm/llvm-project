@@ -96,6 +96,7 @@ struct Configuration {
   bool headerPadMaxInstallNames = false;
   bool ltoNewPassManager = LLVM_ENABLE_NEW_PASS_MANAGER;
   bool markDeadStrippableDylib = false;
+  bool printDylibSearch = false;
   bool printEachFile = false;
   bool printWhyLoad = false;
   bool searchDylibsFirst = false;

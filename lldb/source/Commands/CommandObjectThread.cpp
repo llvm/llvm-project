@@ -802,12 +802,10 @@ class CommandObjectThreadUntil : public CommandObjectParsed {
 public:
   class CommandOptions : public Options {
   public:
-    uint32_t m_thread_idx;
-    uint32_t m_frame_idx;
+    uint32_t m_thread_idx = LLDB_INVALID_THREAD_ID;
+    uint32_t m_frame_idx = LLDB_INVALID_FRAME_ID;
 
-    CommandOptions()
-        : Options(), m_thread_idx(LLDB_INVALID_THREAD_ID),
-          m_frame_idx(LLDB_INVALID_FRAME_ID) {
+    CommandOptions() : Options() {
       // Keep default values of all options in one place: OptionParsingStarting
       // ()
       OptionParsingStarting(nullptr);
@@ -1374,7 +1372,7 @@ class CommandObjectThreadReturn : public CommandObjectRaw {
 public:
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options(), m_from_expression(false) {
+    CommandOptions() : Options() {
       // Keep default values of all options in one place: OptionParsingStarting
       // ()
       OptionParsingStarting(nullptr);
@@ -1414,7 +1412,7 @@ public:
       return llvm::makeArrayRef(g_thread_return_options);
     }
 
-    bool m_from_expression;
+    bool m_from_expression = false;
 
     // Instance variables to hold the values for command options.
   };

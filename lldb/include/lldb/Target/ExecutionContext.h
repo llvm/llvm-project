@@ -263,8 +263,9 @@ protected:
   lldb::TargetWP m_target_wp;         ///< A weak reference to a target
   lldb::ProcessWP m_process_wp;       ///< A weak reference to a process
   mutable lldb::ThreadWP m_thread_wp; ///< A weak reference to a thread
-  lldb::tid_t m_tid;  ///< The thread ID that this object refers to in case the
-                      ///backing object changes
+  lldb::tid_t m_tid = LLDB_INVALID_THREAD_ID; ///< The thread ID that this
+                                              ///< object refers to in case the
+                                              /// backing object changes
   StackID m_stack_id; ///< The stack ID that this object refers to in case the
                       ///backing object changes
 };

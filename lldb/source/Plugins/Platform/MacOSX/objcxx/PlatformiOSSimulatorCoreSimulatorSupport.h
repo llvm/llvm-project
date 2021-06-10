@@ -93,7 +93,7 @@ public:
   ProductFamilyID GetProductFamilyID();
 
 private:
-  id m_dev;
+  id m_dev = nullptr;
   llvm::Optional<ModelIdentifier> m_model_identifier;
 };
 
@@ -129,7 +129,7 @@ public:
   bool IsAvailable();
 
 private:
-  id m_dev;
+  id m_dev = nullptr;
   llvm::Optional<OSVersion> m_os_version;
 };
 
@@ -169,7 +169,7 @@ public:
   Process Spawn(lldb_private::ProcessLaunchInfo &launch_info);
 
 private:
-  id m_dev;
+  id m_dev = nullptr;
   llvm::Optional<DeviceType> m_dev_type;
   llvm::Optional<DeviceRuntime> m_dev_runtime;
 

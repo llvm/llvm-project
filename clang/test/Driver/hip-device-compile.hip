@@ -79,7 +79,7 @@
 // BCBUN: {{".*clang-offload-bundler"}}{{.*}}"-outputs=a.bc"
 // LLBUN: {{".*clang-offload-bundler"}}{{.*}}"-outputs=a.ll"
 // ASMBUN: {{".*clang-offload-bundler"}}{{.*}}"-outputs=a.s"
-// CHECK-NOT: {{".*ld.*"}}
+// CHECK-NOT: {{".*ld.*"}}{{.*}}"-o"
 
 // If neither -emit-llvm nor -S is used in device only compilation,
 // the output should be bundled except --no-gpu-bundle-output is

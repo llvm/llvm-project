@@ -15,6 +15,9 @@
 #include <cassert>
 #include <cstdint>
 #include <string>
+#if __cplusplus > 201402L
+#include <string_view>
+#endif
 
 namespace llvm {
 
@@ -99,6 +102,11 @@ namespace llvm {
       /// A pointer to a StringRef instance.
       StringRefKind,
 
+#if __cplusplus > 201402L
+      // A pointer to a std::string_view instance.
+      StdStringViewKind,
+#endif
+
       /// A pointer to a SmallString instance.
       SmallStringKind,
 
@@ -139,6 +147,9 @@ namespace llvm {
       const char *cString;
       const std::string *stdString;
       const StringRef *stringRef;
+#if __cplusplus > 201402L
+      const std::string_view *stdStringView;
+#endif
       const SmallVectorImpl<char> *smallString;
       const formatv_object_base *formatvObject;
       char character;
@@ -283,6 +294,15 @@ namespace llvm {
       assert(isValid() && "Invalid twine!");
     }
 
+#if __cplusplus > 201402L
+    /// Construct from an std::string_view.
+    /*implicit*/ Twine(const std::string_view &Str)
+        : LHSKind(StdStringViewKind) {
+      LHS.stdStringView = &Str;
+      assert(isValid() && "Invalid twine!");
+    }
+#endif
+
     /// Construct from a StringRef.
     /*implicit*/ Twine(const StringRef &Str) : LHSKind(StringRefKind) {
       LHS.stringRef = &Str;
@@ -410,6 +430,9 @@ namespace llvm {
       case EmptyKind:
       case CStringKind:
       case StdStringKind:
+#if __cplusplus > 201402L
+      case StdStringViewKind:
+#endif
       case StringRefKind:
       case SmallStringKind:
         return true;
@@ -440,10 +463,18 @@ namespace llvm {
       assert(isSingleStringRef() &&"This cannot be had as a single stringref!");
       switch (getLHSKind()) {
       default: llvm_unreachable("Out of sync with isSingleStringRef");
-      case EmptyKind:      return StringRef();
-      case CStringKind:    return StringRef(LHS.cString);
-      case StdStringKind:  return StringRef(*LHS.stdString);
-      case StringRefKind:  return *LHS.stringRef;
+      case EmptyKind:
+        return StringRef();
+      case CStringKind:
+        return StringRef(LHS.cString);
+      case StdStringKind:
+        return StringRef(*LHS.stdString);
+#if __cplusplus > 201402L
+      case StdStringViewKind:
+        return StringRef(*LHS.stdStringView);
+#endif
+      case StringRefKind:
+        return *LHS.stringRef;
       case SmallStringKind:
         return StringRef(LHS.smallString->data(), LHS.smallString->size());
       }

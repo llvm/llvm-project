@@ -134,7 +134,7 @@ combine(llvm::MutableArrayRef<spirv::ModuleOp> modules,
 
   auto combinedModule = combinedModuleBuilder.create<spirv::ModuleOp>(
       modules[0].getLoc(), addressingModel, memoryModel);
-  combinedModuleBuilder.setInsertionPointToStart(&*combinedModule.getBody());
+  combinedModuleBuilder.setInsertionPointToStart(combinedModule.getBody());
 
   // In some cases, a symbol in the (current state of the) combined module is
   // renamed in order to maintain the conflicting symbol in the input module
@@ -160,7 +160,7 @@ combine(llvm::MutableArrayRef<spirv::ModuleOp> modules,
     // for spv.funcs. This way, if the conflicting op in the input module is
     // non-spv.func, we rename that symbol instead and maintain the spv.func in
     // the combined module name as it is.
-    for (auto &op : combinedModule.getBlock().without_terminator()) {
+    for (auto &op : *combinedModule.getBody()) {
       if (auto symbolOp = dyn_cast<SymbolOpInterface>(op)) {
         StringRef oldSymName = symbolOp.getName();
 
@@ -195,7 +195,7 @@ combine(llvm::MutableArrayRef<spirv::ModuleOp> modules,
 
     // In the current input module, rename all symbols that conflict with
     // symbols from the combined module. This includes renaming spv.funcs.
-    for (auto &op : moduleClone.getBlock().without_terminator()) {
+    for (auto &op : *moduleClone.getBody()) {
       if (auto symbolOp = dyn_cast<SymbolOpInterface>(op)) {
         StringRef oldSymName = symbolOp.getName();
 
@@ -225,7 +225,7 @@ combine(llvm::MutableArrayRef<spirv::ModuleOp> modules,
     }
 
     // Clone all the module's ops to the combined module.
-    for (auto &op : moduleClone.getBlock().without_terminator())
+    for (auto &op : *moduleClone.getBody())
       combinedModuleBuilder.insert(op.clone());
   }
 
@@ -233,7 +233,7 @@ combine(llvm::MutableArrayRef<spirv::ModuleOp> modules,
   DenseMap<llvm::hash_code, SymbolOpInterface> hashToSymbolOp;
   SmallVector<SymbolOpInterface, 0> eraseList;
 
-  for (auto &op : combinedModule.getBlock().without_terminator()) {
+  for (auto &op : *combinedModule.getBody()) {
     llvm::hash_code hashCode(0);
     SymbolOpInterface symbolOp = dyn_cast<SymbolOpInterface>(op);
 

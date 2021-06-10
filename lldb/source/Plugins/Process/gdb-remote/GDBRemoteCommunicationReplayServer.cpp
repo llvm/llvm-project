@@ -74,7 +74,7 @@ GDBRemoteCommunicationReplayServer::GDBRemoteCommunicationReplayServer()
       m_async_broadcaster(nullptr, "lldb.gdb-replay.async-broadcaster"),
       m_async_listener_sp(
           Listener::MakeListener("lldb.gdb-replay.async-listener")),
-      m_async_thread_state_mutex(), m_skip_acks(false) {
+      m_async_thread_state_mutex() {
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncContinue,
                                    "async thread continue");
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncThreadShouldExit,

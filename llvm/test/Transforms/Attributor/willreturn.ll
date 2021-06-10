@@ -399,7 +399,7 @@ define void @only_exit() local_unnamed_addr #0 {
 define void @conditional_exit(i32 %0, i32* nocapture readonly %1) local_unnamed_addr #0 {
 ; IS__TUNIT____: Function Attrs: noinline nounwind uwtable
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@conditional_exit
-; IS__TUNIT____-SAME: (i32 [[TMP0:%.*]], i32* nocapture readonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR6:[0-9]+]] {
+; IS__TUNIT____-SAME: (i32 [[TMP0:%.*]], i32* nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR6:[0-9]+]] {
 ; IS__TUNIT____-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0]], 0
 ; IS__TUNIT____-NEXT:    br i1 [[TMP3]], label [[TMP5:%.*]], label [[TMP4:%.*]]
 ; IS__TUNIT____:       4:
@@ -417,7 +417,7 @@ define void @conditional_exit(i32 %0, i32* nocapture readonly %1) local_unnamed_
 ;
 ; IS__CGSCC____: Function Attrs: noinline nounwind uwtable
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@conditional_exit
-; IS__CGSCC____-SAME: (i32 [[TMP0:%.*]], i32* nocapture readonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
+; IS__CGSCC____-SAME: (i32 [[TMP0:%.*]], i32* nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
 ; IS__CGSCC____-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0]], 0
 ; IS__CGSCC____-NEXT:    br i1 [[TMP3]], label [[TMP5:%.*]], label [[TMP4:%.*]]
 ; IS__CGSCC____:       4:

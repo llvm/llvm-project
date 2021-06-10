@@ -291,6 +291,8 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
       "ArrayRef<OpFoldResult>":$low, "ArrayRef<OpFoldResult>":$high,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
+
+  let hasCanonicalizer = 1;
 }
 
 def Linalg_RangeOp :

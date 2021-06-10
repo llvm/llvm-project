@@ -166,13 +166,13 @@ public:
                            lldb::user_id_t watch_id);
 
   struct CommandData {
-    CommandData() : user_source(), script_source(), stop_on_error(true) {}
+    CommandData() : user_source(), script_source() {}
 
     ~CommandData() = default;
 
     StringList user_source;
     std::string script_source;
-    bool stop_on_error;
+    bool stop_on_error = true;
   };
 
   class CommandBaton : public TypedBaton<CommandData> {
@@ -191,7 +191,7 @@ private:
   // For WatchpointOptions only
   WatchpointHitCallback m_callback;  // This is the callback function pointer
   lldb::BatonSP m_callback_baton_sp; // This is the client data for the callback
-  bool m_callback_is_synchronous;
+  bool m_callback_is_synchronous = false;
   std::unique_ptr<ThreadSpec>
       m_thread_spec_up; // Thread for which this watchpoint will take
 };

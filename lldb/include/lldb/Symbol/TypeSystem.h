@@ -524,7 +524,7 @@ protected:
   mutable std::mutex m_mutex; ///< A mutex to keep this object happy in
                               ///multi-threaded environments.
   collection m_map;
-  bool m_clear_in_progress;
+  bool m_clear_in_progress = false;
 
 private:
   typedef llvm::function_ref<lldb::TypeSystemSP()> CreateCallback;

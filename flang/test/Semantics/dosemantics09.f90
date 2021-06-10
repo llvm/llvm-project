@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 !C1129 
 !A variable that is referenced by the scalar-mask-expr of a
 !concurrent-header or by any concurrent-limit or concurrent-step in that

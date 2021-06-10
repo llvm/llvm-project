@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "endian.h"
+#include "endianness.h"
 #include "gtest/gtest.h"
 
 using namespace __orc_rt;

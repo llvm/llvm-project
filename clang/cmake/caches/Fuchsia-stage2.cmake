@@ -30,7 +30,9 @@ if(WIN32)
   set(LLVM_USE_CRT_RELEASE "MT" CACHE STRING "")
 endif()
 
-set(CLANG_DEFAULT_CXX_STDLIB libc++ CACHE STRING "")
+if(NOT WIN32)
+  set(CLANG_DEFAULT_CXX_STDLIB libc++ CACHE STRING "")
+endif()
 if(NOT APPLE)
   # TODO: Remove this once we switch to ld64.lld.
   set(CLANG_DEFAULT_LINKER lld CACHE STRING "")
@@ -93,7 +95,6 @@ if(WIN32)
   set(RUNTIMES_${target}_LIBCXX_ENABLE_FILESYSTEM OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_ABI_LINKER_SCRIPT OFF CACHE BOOL "")
   set(RUNTIMES_${target}_LIBCXX_ENABLE_SHARED OFF CACHE BOOL "")
-  set(RUNTIMES_${target}_LIBCXX_NO_VCRUNTIME ON CACHE BOOL "")
   set(RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx" CACHE STRING "")
 endif()
 

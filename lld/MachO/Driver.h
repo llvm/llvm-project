@@ -81,11 +81,6 @@ public:
   explicit DependencyTracker(llvm::StringRef path);
 
   // Adds the given path to the set of not-found files.
-  inline void logFileNotFound(std::string path) {
-    if (active)
-      notFounds.insert(std::move(path));
-  }
-
   inline void logFileNotFound(const Twine &path) {
     if (active)
       notFounds.insert(path.str());

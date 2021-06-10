@@ -52,6 +52,8 @@ enum OpenMPInfoType : uint32_t {
   OMP_INFOTYPE_MAPPING_CHANGED = 0x0008,
   // Print kernel information from target device plugins.
   OMP_INFOTYPE_PLUGIN_KERNEL = 0x0010,
+  // Print whenever data is transferred to the device
+  OMP_INFOTYPE_DATA_TRANSFER = 0x0020,
   // Enable every flag.
   OMP_INFOTYPE_ALL = 0xffffffff,
 };

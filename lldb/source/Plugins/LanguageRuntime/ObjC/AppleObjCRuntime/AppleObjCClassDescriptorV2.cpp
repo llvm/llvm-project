@@ -514,8 +514,7 @@ uint64_t ClassDescriptorV2::GetInstanceSize() {
   return 0;
 }
 
-ClassDescriptorV2::iVarsStorage::iVarsStorage()
-    : m_filled(false), m_ivars(), m_mutex() {}
+ClassDescriptorV2::iVarsStorage::iVarsStorage() : m_ivars(), m_mutex() {}
 
 size_t ClassDescriptorV2::iVarsStorage::size() { return m_ivars.size(); }
 

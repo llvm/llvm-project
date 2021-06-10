@@ -1,4 +1,5 @@
 ! RUN: %S/test_symbols.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Test host association in internal subroutine of main program.
 
 !DEF: /main MainProgram

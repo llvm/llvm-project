@@ -853,9 +853,7 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
       consumeError(std::move(E));
     } else {
       Temp = std::move(ExpectedFile.get());
-      OS.reset(new llvm::raw_fd_ostream(Temp->FD, /*shouldClose=*/false,
-                                        Binary ? llvm::sys::fs::OF_None
-                                               : llvm::sys::fs::OF_Text));
+      OS.reset(new llvm::raw_fd_ostream(Temp->FD, /*shouldClose=*/false));
       OSFile = Temp->TmpName;
     }
     // If we failed to create the temporary, fallback to writing to the file

@@ -51,7 +51,7 @@ static inline bool isFnEntryBlock(Block *block) {
 spirv::Deserializer::Deserializer(ArrayRef<uint32_t> binary,
                                   MLIRContext *context)
     : binary(binary), context(context), unknownLoc(UnknownLoc::get(context)),
-      module(createModuleOp()), opBuilder(module->body()) {}
+      module(createModuleOp()), opBuilder(module->getRegion()) {}
 
 LogicalResult spirv::Deserializer::deserialize() {
   LLVM_DEBUG(llvm::dbgs() << "+++ starting deserialization +++\n");

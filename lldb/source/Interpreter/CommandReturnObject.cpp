@@ -44,8 +44,6 @@ CommandReturnObject::CommandReturnObject(bool colors)
     : m_out_stream(colors), m_err_stream(colors) {}
 
 void CommandReturnObject::AppendErrorWithFormat(const char *format, ...) {
-  SetStatus(eReturnStatusFailed);
-
   if (!format)
     return;
   va_list args;
@@ -100,7 +98,6 @@ void CommandReturnObject::AppendWarning(llvm::StringRef in_string) {
 void CommandReturnObject::AppendError(llvm::StringRef in_string) {
   if (in_string.empty())
     return;
-  SetStatus(eReturnStatusFailed);
   error(GetErrorStream()) << in_string.rtrim() << '\n';
 }
 
@@ -117,6 +114,7 @@ void CommandReturnObject::SetError(llvm::StringRef error_str) {
     return;
 
   AppendError(error_str);
+  SetStatus(eReturnStatusFailed);
 }
 
 // Similar to AppendError, but do not prepend 'Status: ' to message, and don't
@@ -126,7 +124,6 @@ void CommandReturnObject::AppendRawError(llvm::StringRef in_string) {
   if (in_string.empty())
     return;
   GetErrorStream() << in_string;
-  SetStatus(eReturnStatusFailed);
 }
 
 void CommandReturnObject::SetStatus(ReturnStatus status) { m_status = status; }

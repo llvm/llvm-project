@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 module m
 ! C743 No component-attr-spec shall appear more than once in a 
 ! given component-def-stmt.

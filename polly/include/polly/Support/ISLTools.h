@@ -170,6 +170,19 @@ isl::space getScatterSpace(const isl::union_map &Schedule);
 
 /// Construct an identity map for the given domain values.
 ///
+/// @param USet           { Space[] }
+///                       The returned map's domain and range.
+/// @param RestrictDomain If true, the returned map only maps elements contained
+///                       in @p Set and no other. If false, it returns an
+///                       overapproximation with the identity maps of any space
+///                       in @p Set, not just the elements in it.
+///
+/// @return { Space[] -> Space[] }
+///         A map that maps each value of @p Set to itself.
+isl::map makeIdentityMap(const isl::set &Set, bool RestrictDomain);
+
+/// Construct an identity map for the given domain values.
+///
 /// There is no type resembling isl_union_space, hence we have to pass an
 /// isl_union_set as the map's domain and range space.
 ///

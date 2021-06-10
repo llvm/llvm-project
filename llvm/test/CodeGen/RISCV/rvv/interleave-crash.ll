@@ -6,31 +6,31 @@ define void @interleave256(<256 x i16>* %agg.result, <128 x i16>* %0, <128 x i16
 ; RV64-1024-LABEL: interleave256:
 ; RV64-1024:       # %bb.0: # %entry
 ; RV64-1024-NEXT:    addi a3, zero, 128
-; RV64-1024-NEXT:    vsetvli zero, a3, e16,m2,ta,mu
+; RV64-1024-NEXT:    vsetvli zero, a3, e16, m2, ta, mu
 ; RV64-1024-NEXT:    vle16.v v12, (a1)
 ; RV64-1024-NEXT:    vle16.v v8, (a2)
 ; RV64-1024-NEXT:    addi a1, zero, 256
-; RV64-1024-NEXT:    vsetvli zero, a1, e16,m4,ta,mu
+; RV64-1024-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
 ; RV64-1024-NEXT:    vmv.v.i v28, 0
-; RV64-1024-NEXT:    vsetvli zero, a3, e16,m4,tu,mu
+; RV64-1024-NEXT:    vsetvli zero, a3, e16, m4, tu, mu
 ; RV64-1024-NEXT:    vmv4r.v v16, v28
 ; RV64-1024-NEXT:    vslideup.vi v16, v12, 0
-; RV64-1024-NEXT:    vsetvli zero, a3, e16,m2,ta,mu
+; RV64-1024-NEXT:    vsetvli zero, a3, e16, m2, ta, mu
 ; RV64-1024-NEXT:    vmv.v.i v12, 0
-; RV64-1024-NEXT:    vsetvli zero, a1, e16,m4,tu,mu
+; RV64-1024-NEXT:    vsetvli zero, a1, e16, m4, tu, mu
 ; RV64-1024-NEXT:    vslideup.vx v16, v12, a3
 ; RV64-1024-NEXT:    lui a2, %hi(.LCPI0_0)
 ; RV64-1024-NEXT:    addi a2, a2, %lo(.LCPI0_0)
-; RV64-1024-NEXT:    vsetvli zero, zero, e16,m4,ta,mu
+; RV64-1024-NEXT:    vsetvli zero, zero, e16, m4, ta, mu
 ; RV64-1024-NEXT:    vle16.v v20, (a2)
 ; RV64-1024-NEXT:    vrgather.vv v24, v16, v20
-; RV64-1024-NEXT:    vsetvli zero, a3, e16,m4,tu,mu
+; RV64-1024-NEXT:    vsetvli zero, a3, e16, m4, tu, mu
 ; RV64-1024-NEXT:    vslideup.vi v28, v8, 0
-; RV64-1024-NEXT:    vsetvli zero, a1, e16,m4,tu,mu
+; RV64-1024-NEXT:    vsetvli zero, a1, e16, m4, tu, mu
 ; RV64-1024-NEXT:    vslideup.vx v28, v12, a3
 ; RV64-1024-NEXT:    lui a2, %hi(.LCPI0_1)
 ; RV64-1024-NEXT:    addi a2, a2, %lo(.LCPI0_1)
-; RV64-1024-NEXT:    vsetvli zero, zero, e16,m4,ta,mu
+; RV64-1024-NEXT:    vsetvli zero, zero, e16, m4, ta, mu
 ; RV64-1024-NEXT:    vle16.v v12, (a2)
 ; RV64-1024-NEXT:    vrgather.vv v8, v24, v12
 ; RV64-1024-NEXT:    lui a2, 1026731
@@ -41,53 +41,53 @@ define void @interleave256(<256 x i16>* %agg.result, <128 x i16>* %0, <128 x i16
 ; RV64-1024-NEXT:    addi a2, a2, -1365
 ; RV64-1024-NEXT:    slli a2, a2, 12
 ; RV64-1024-NEXT:    addi a2, a2, -1366
-; RV64-1024-NEXT:    vsetivli zero, 4, e64,m1,ta,mu
+; RV64-1024-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
 ; RV64-1024-NEXT:    vmv.s.x v25, a2
-; RV64-1024-NEXT:    vsetivli zero, 2, e64,m1,tu,mu
+; RV64-1024-NEXT:    vsetivli zero, 2, e64, m1, tu, mu
 ; RV64-1024-NEXT:    vmv1r.v v0, v25
 ; RV64-1024-NEXT:    vslideup.vi v0, v25, 1
-; RV64-1024-NEXT:    vsetivli zero, 3, e64,m1,tu,mu
+; RV64-1024-NEXT:    vsetivli zero, 3, e64, m1, tu, mu
 ; RV64-1024-NEXT:    vslideup.vi v0, v25, 2
-; RV64-1024-NEXT:    vsetivli zero, 4, e64,m1,tu,mu
+; RV64-1024-NEXT:    vsetivli zero, 4, e64, m1, tu, mu
 ; RV64-1024-NEXT:    vslideup.vi v0, v25, 3
 ; RV64-1024-NEXT:    lui a2, %hi(.LCPI0_2)
 ; RV64-1024-NEXT:    addi a2, a2, %lo(.LCPI0_2)
-; RV64-1024-NEXT:    vsetvli zero, a1, e16,m4,ta,mu
+; RV64-1024-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
 ; RV64-1024-NEXT:    vle16.v v12, (a2)
-; RV64-1024-NEXT:    vsetvli zero, zero, e16,m4,tu,mu
+; RV64-1024-NEXT:    vsetvli zero, zero, e16, m4, tu, mu
 ; RV64-1024-NEXT:    vrgather.vv v8, v28, v12, v0.t
-; RV64-1024-NEXT:    vsetvli zero, zero, e16,m4,ta,mu
+; RV64-1024-NEXT:    vsetvli zero, zero, e16, m4, ta, mu
 ; RV64-1024-NEXT:    vse16.v v8, (a0)
 ; RV64-1024-NEXT:    ret
 ;
 ; RV64-2048-LABEL: interleave256:
 ; RV64-2048:       # %bb.0: # %entry
 ; RV64-2048-NEXT:    addi a3, zero, 128
-; RV64-2048-NEXT:    vsetvli zero, a3, e16,m1,ta,mu
+; RV64-2048-NEXT:    vsetvli zero, a3, e16, m1, ta, mu
 ; RV64-2048-NEXT:    vle16.v v28, (a1)
 ; RV64-2048-NEXT:    vle16.v v30, (a2)
 ; RV64-2048-NEXT:    addi a1, zero, 256
-; RV64-2048-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
+; RV64-2048-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
 ; RV64-2048-NEXT:    vmv.v.i v26, 0
-; RV64-2048-NEXT:    vsetvli zero, a3, e16,m2,tu,mu
+; RV64-2048-NEXT:    vsetvli zero, a3, e16, m2, tu, mu
 ; RV64-2048-NEXT:    vmv2r.v v8, v26
 ; RV64-2048-NEXT:    vslideup.vi v8, v28, 0
-; RV64-2048-NEXT:    vsetvli zero, a3, e16,m1,ta,mu
+; RV64-2048-NEXT:    vsetvli zero, a3, e16, m1, ta, mu
 ; RV64-2048-NEXT:    vmv.v.i v28, 0
-; RV64-2048-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
+; RV64-2048-NEXT:    vsetvli zero, a1, e16, m2, tu, mu
 ; RV64-2048-NEXT:    vslideup.vx v8, v28, a3
 ; RV64-2048-NEXT:    lui a2, %hi(.LCPI0_0)
 ; RV64-2048-NEXT:    addi a2, a2, %lo(.LCPI0_0)
-; RV64-2048-NEXT:    vsetvli zero, zero, e16,m2,ta,mu
+; RV64-2048-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
 ; RV64-2048-NEXT:    vle16.v v10, (a2)
 ; RV64-2048-NEXT:    vrgather.vv v12, v8, v10
-; RV64-2048-NEXT:    vsetvli zero, a3, e16,m2,tu,mu
+; RV64-2048-NEXT:    vsetvli zero, a3, e16, m2, tu, mu
 ; RV64-2048-NEXT:    vslideup.vi v26, v30, 0
-; RV64-2048-NEXT:    vsetvli zero, a1, e16,m2,tu,mu
+; RV64-2048-NEXT:    vsetvli zero, a1, e16, m2, tu, mu
 ; RV64-2048-NEXT:    vslideup.vx v26, v28, a3
 ; RV64-2048-NEXT:    lui a2, %hi(.LCPI0_1)
 ; RV64-2048-NEXT:    addi a2, a2, %lo(.LCPI0_1)
-; RV64-2048-NEXT:    vsetvli zero, zero, e16,m2,ta,mu
+; RV64-2048-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
 ; RV64-2048-NEXT:    vle16.v v28, (a2)
 ; RV64-2048-NEXT:    vrgather.vv v30, v12, v28
 ; RV64-2048-NEXT:    lui a2, 1026731
@@ -98,22 +98,22 @@ define void @interleave256(<256 x i16>* %agg.result, <128 x i16>* %0, <128 x i16
 ; RV64-2048-NEXT:    addi a2, a2, -1365
 ; RV64-2048-NEXT:    slli a2, a2, 12
 ; RV64-2048-NEXT:    addi a2, a2, -1366
-; RV64-2048-NEXT:    vsetivli zero, 4, e64,m1,ta,mu
+; RV64-2048-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
 ; RV64-2048-NEXT:    vmv.s.x v25, a2
-; RV64-2048-NEXT:    vsetivli zero, 2, e64,m1,tu,mu
+; RV64-2048-NEXT:    vsetivli zero, 2, e64, m1, tu, mu
 ; RV64-2048-NEXT:    vmv1r.v v0, v25
 ; RV64-2048-NEXT:    vslideup.vi v0, v25, 1
-; RV64-2048-NEXT:    vsetivli zero, 3, e64,m1,tu,mu
+; RV64-2048-NEXT:    vsetivli zero, 3, e64, m1, tu, mu
 ; RV64-2048-NEXT:    vslideup.vi v0, v25, 2
-; RV64-2048-NEXT:    vsetivli zero, 4, e64,m1,tu,mu
+; RV64-2048-NEXT:    vsetivli zero, 4, e64, m1, tu, mu
 ; RV64-2048-NEXT:    vslideup.vi v0, v25, 3
 ; RV64-2048-NEXT:    lui a2, %hi(.LCPI0_2)
 ; RV64-2048-NEXT:    addi a2, a2, %lo(.LCPI0_2)
-; RV64-2048-NEXT:    vsetvli zero, a1, e16,m2,ta,mu
+; RV64-2048-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
 ; RV64-2048-NEXT:    vle16.v v28, (a2)
-; RV64-2048-NEXT:    vsetvli zero, zero, e16,m2,tu,mu
+; RV64-2048-NEXT:    vsetvli zero, zero, e16, m2, tu, mu
 ; RV64-2048-NEXT:    vrgather.vv v30, v26, v28, v0.t
-; RV64-2048-NEXT:    vsetvli zero, zero, e16,m2,ta,mu
+; RV64-2048-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
 ; RV64-2048-NEXT:    vse16.v v30, (a0)
 ; RV64-2048-NEXT:    ret
 entry:
@@ -129,1792 +129,167 @@ entry:
 define void @interleave512(<512 x i16>* %agg.result, <256 x i16>* %0, <256 x i16>* %1) local_unnamed_addr {
 ; RV64-1024-LABEL: interleave512:
 ; RV64-1024:       # %bb.0: # %entry
-; RV64-1024-NEXT:    addi sp, sp, -2032
-; RV64-1024-NEXT:    .cfi_def_cfa_offset 2032
-; RV64-1024-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    sd s0, 2016(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    sd s1, 2008(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    sd s2, 2000(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    sd s3, 1992(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    sd s4, 1984(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    sd s5, 1976(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    sd s6, 1968(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    sd s7, 1960(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    sd s8, 1952(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    sd s9, 1944(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    sd s10, 1936(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    sd s11, 1928(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    .cfi_offset ra, -8
-; RV64-1024-NEXT:    .cfi_offset s0, -16
-; RV64-1024-NEXT:    .cfi_offset s1, -24
-; RV64-1024-NEXT:    .cfi_offset s2, -32
-; RV64-1024-NEXT:    .cfi_offset s3, -40
-; RV64-1024-NEXT:    .cfi_offset s4, -48
-; RV64-1024-NEXT:    .cfi_offset s5, -56
-; RV64-1024-NEXT:    .cfi_offset s6, -64
-; RV64-1024-NEXT:    .cfi_offset s7, -72
-; RV64-1024-NEXT:    .cfi_offset s8, -80
-; RV64-1024-NEXT:    .cfi_offset s9, -88
-; RV64-1024-NEXT:    .cfi_offset s10, -96
-; RV64-1024-NEXT:    .cfi_offset s11, -104
-; RV64-1024-NEXT:    addi s0, sp, 2032
-; RV64-1024-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-1024-NEXT:    addi sp, sp, -16
+; RV64-1024-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-1024-NEXT:    csrr a3, vlenb
-; RV64-1024-NEXT:    addi a4, zero, 12
+; RV64-1024-NEXT:    addi a4, zero, 24
 ; RV64-1024-NEXT:    mul a3, a3, a4
 ; RV64-1024-NEXT:    sub sp, sp, a3
-; RV64-1024-NEXT:    andi sp, sp, -512
 ; RV64-1024-NEXT:    addi a3, zero, 256
-; RV64-1024-NEXT:    vsetvli zero, a3, e16,m4,ta,mu
-; RV64-1024-NEXT:    addi a3, zero, 256
-; RV64-1024-NEXT:    vle16.v v16, (a1)
-; RV64-1024-NEXT:    lui a1, %hi(.LCPI1_0)
-; RV64-1024-NEXT:    addi a1, a1, %lo(.LCPI1_0)
-; RV64-1024-NEXT:    vle16.v v20, (a1)
-; RV64-1024-NEXT:    vle16.v v28, (a2)
+; RV64-1024-NEXT:    vsetvli zero, a3, e16, m4, ta, mu
+; RV64-1024-NEXT:    vle16.v v24, (a1)
+; RV64-1024-NEXT:    vle16.v v8, (a2)
 ; RV64-1024-NEXT:    csrr a1, vlenb
-; RV64-1024-NEXT:    slli a1, a1, 3
+; RV64-1024-NEXT:    slli a1, a1, 4
 ; RV64-1024-NEXT:    add a1, sp, a1
-; RV64-1024-NEXT:    addi a1, a1, 1944
-; RV64-1024-NEXT:    vs4r.v v28, (a1) # Unknown-size Folded Spill
-; RV64-1024-NEXT:    vrgather.vv v0, v16, v20
-; RV64-1024-NEXT:    vsetvli zero, zero, e32,m8,ta,mu
+; RV64-1024-NEXT:    addi a1, a1, 16
+; RV64-1024-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
+; RV64-1024-NEXT:    addi a1, zero, 512
+; RV64-1024-NEXT:    vsetvli zero, a1, e16, m8, ta, mu
 ; RV64-1024-NEXT:    vmv.v.i v8, 0
-; RV64-1024-NEXT:    addi a1, zero, 128
-; RV64-1024-NEXT:    vsetvli zero, a1, e32,m8,tu,mu
-; RV64-1024-NEXT:    vslideup.vi v8, v0, 0
+; RV64-1024-NEXT:    vsetvli zero, a3, e16, m8, tu, mu
+; RV64-1024-NEXT:    vmv8r.v v0, v8
+; RV64-1024-NEXT:    vslideup.vi v0, v24, 0
+; RV64-1024-NEXT:    vsetvli zero, a3, e16, m4, ta, mu
+; RV64-1024-NEXT:    vmv.v.i v16, 0
+; RV64-1024-NEXT:    addi a2, sp, 16
+; RV64-1024-NEXT:    vs8r.v v16, (a2) # Unknown-size Folded Spill
+; RV64-1024-NEXT:    vsetvli zero, a1, e16, m8, tu, mu
+; RV64-1024-NEXT:    vslideup.vx v0, v16, a3
+; RV64-1024-NEXT:    lui a2, %hi(.LCPI1_0)
+; RV64-1024-NEXT:    addi a2, a2, %lo(.LCPI1_0)
+; RV64-1024-NEXT:    vsetvli zero, zero, e16, m8, ta, mu
+; RV64-1024-NEXT:    vle16.v v16, (a2)
+; RV64-1024-NEXT:    vrgather.vv v24, v0, v16
+; RV64-1024-NEXT:    csrr a2, vlenb
+; RV64-1024-NEXT:    slli a2, a2, 3
+; RV64-1024-NEXT:    add a2, sp, a2
+; RV64-1024-NEXT:    addi a2, a2, 16
+; RV64-1024-NEXT:    vs8r.v v24, (a2) # Unknown-size Folded Spill
+; RV64-1024-NEXT:    vsetvli zero, a3, e16, m8, tu, mu
+; RV64-1024-NEXT:    csrr a2, vlenb
+; RV64-1024-NEXT:    slli a2, a2, 4
+; RV64-1024-NEXT:    add a2, sp, a2
+; RV64-1024-NEXT:    addi a2, a2, 16
+; RV64-1024-NEXT:    vl8re8.v v16, (a2) # Unknown-size Folded Reload
+; RV64-1024-NEXT:    vslideup.vi v8, v16, 0
+; RV64-1024-NEXT:    vsetvli zero, a1, e16, m8, tu, mu
+; RV64-1024-NEXT:    addi a2, sp, 16
+; RV64-1024-NEXT:    vl8re8.v v16, (a2) # Unknown-size Folded Reload
+; RV64-1024-NEXT:    vslideup.vx v8, v16, a3
 ; RV64-1024-NEXT:    lui a2, %hi(.LCPI1_1)
 ; RV64-1024-NEXT:    addi a2, a2, %lo(.LCPI1_1)
-; RV64-1024-NEXT:    vsetvli zero, a3, e16,m4,ta,mu
+; RV64-1024-NEXT:    vsetvli zero, zero, e16, m8, ta, mu
 ; RV64-1024-NEXT:    vle16.v v24, (a2)
-; RV64-1024-NEXT:    vrgather.vv v0, v16, v24
-; RV64-1024-NEXT:    vrgather.vv v24, v0, v20
-; RV64-1024-NEXT:    vsetvli zero, zero, e32,m8,tu,mu
-; RV64-1024-NEXT:    vslideup.vx v8, v24, a1
-; RV64-1024-NEXT:    addi a1, zero, 127
-; RV64-1024-NEXT:    vsetivli zero, 1, e64,m8,ta,mu
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s t5, v16
-; RV64-1024-NEXT:    addi a1, zero, 126
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s t6, v16
-; RV64-1024-NEXT:    addi a1, zero, 125
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s2, v16
-; RV64-1024-NEXT:    addi a1, zero, 124
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s3, v16
-; RV64-1024-NEXT:    addi a1, zero, 123
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s4, v16
-; RV64-1024-NEXT:    addi a1, zero, 122
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s5, v16
-; RV64-1024-NEXT:    addi a1, zero, 121
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s6, v16
-; RV64-1024-NEXT:    addi a1, zero, 120
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s7, v16
-; RV64-1024-NEXT:    addi a1, zero, 119
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s8, v16
-; RV64-1024-NEXT:    addi a1, zero, 118
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s9, v16
-; RV64-1024-NEXT:    addi a1, zero, 117
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s10, v16
-; RV64-1024-NEXT:    addi a1, zero, 116
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s11, v16
-; RV64-1024-NEXT:    addi a1, zero, 115
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s t4, v16
-; RV64-1024-NEXT:    addi a1, zero, 114
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s ra, v16
-; RV64-1024-NEXT:    addi a1, zero, 113
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s a6, v16
-; RV64-1024-NEXT:    addi a1, zero, 112
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s a7, v16
-; RV64-1024-NEXT:    addi a1, zero, 111
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s t0, v16
-; RV64-1024-NEXT:    addi a1, zero, 110
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s t1, v16
-; RV64-1024-NEXT:    addi a1, zero, 109
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s a5, v16
-; RV64-1024-NEXT:    addi a1, zero, 108
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s a3, v16
-; RV64-1024-NEXT:    addi a1, zero, 107
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    addi a2, zero, 106
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a2
-; RV64-1024-NEXT:    vmv.x.s a2, v16
-; RV64-1024-NEXT:    sd a2, 504(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    addi a4, zero, 105
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a4
-; RV64-1024-NEXT:    vmv.x.s a2, v16
-; RV64-1024-NEXT:    addi s1, zero, 104
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, s1
-; RV64-1024-NEXT:    vmv.x.s a4, v16
-; RV64-1024-NEXT:    addi s1, zero, 103
-; RV64-1024-NEXT:    vslidedown.vx v24, v8, s1
-; RV64-1024-NEXT:    addi s1, zero, 102
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, s1
-; RV64-1024-NEXT:    addi s1, zero, 101
-; RV64-1024-NEXT:    vslidedown.vx v0, v8, s1
-; RV64-1024-NEXT:    vmv.x.s s1, v24
-; RV64-1024-NEXT:    sd s1, 496(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    sh t5, 1016(sp)
-; RV64-1024-NEXT:    srli s1, t5, 32
-; RV64-1024-NEXT:    sh s1, 1020(sp)
-; RV64-1024-NEXT:    addi s1, zero, 100
-; RV64-1024-NEXT:    vslidedown.vx v24, v8, s1
-; RV64-1024-NEXT:    vmv.x.s t5, v16
-; RV64-1024-NEXT:    sh t6, 1008(sp)
-; RV64-1024-NEXT:    srli s1, t6, 32
-; RV64-1024-NEXT:    sh s1, 1012(sp)
-; RV64-1024-NEXT:    addi s1, zero, 99
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, s1
-; RV64-1024-NEXT:    vmv.x.s t6, v0
-; RV64-1024-NEXT:    sh s2, 1000(sp)
-; RV64-1024-NEXT:    srli s1, s2, 32
-; RV64-1024-NEXT:    sh s1, 1004(sp)
-; RV64-1024-NEXT:    addi s1, zero, 98
-; RV64-1024-NEXT:    vslidedown.vx v0, v8, s1
-; RV64-1024-NEXT:    vmv.x.s s2, v24
-; RV64-1024-NEXT:    sh s3, 992(sp)
-; RV64-1024-NEXT:    srli s1, s3, 32
-; RV64-1024-NEXT:    sh s1, 996(sp)
-; RV64-1024-NEXT:    addi s1, zero, 97
-; RV64-1024-NEXT:    vslidedown.vx v24, v8, s1
-; RV64-1024-NEXT:    vmv.x.s s3, v16
-; RV64-1024-NEXT:    sh s4, 984(sp)
-; RV64-1024-NEXT:    srli s1, s4, 32
-; RV64-1024-NEXT:    sh s1, 988(sp)
-; RV64-1024-NEXT:    addi s1, zero, 96
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, s1
-; RV64-1024-NEXT:    vmv.x.s s4, v0
-; RV64-1024-NEXT:    sh s5, 976(sp)
-; RV64-1024-NEXT:    srli s1, s5, 32
-; RV64-1024-NEXT:    sh s1, 980(sp)
-; RV64-1024-NEXT:    addi s1, zero, 95
-; RV64-1024-NEXT:    vslidedown.vx v0, v8, s1
-; RV64-1024-NEXT:    vmv.x.s s5, v24
-; RV64-1024-NEXT:    sh s6, 968(sp)
-; RV64-1024-NEXT:    srli s1, s6, 32
-; RV64-1024-NEXT:    sh s1, 972(sp)
-; RV64-1024-NEXT:    addi s1, zero, 94
-; RV64-1024-NEXT:    vslidedown.vx v24, v8, s1
-; RV64-1024-NEXT:    vmv.x.s s6, v16
-; RV64-1024-NEXT:    sh s7, 960(sp)
-; RV64-1024-NEXT:    srli s1, s7, 32
-; RV64-1024-NEXT:    sh s1, 964(sp)
-; RV64-1024-NEXT:    addi s1, zero, 93
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, s1
-; RV64-1024-NEXT:    vmv.x.s s7, v0
-; RV64-1024-NEXT:    sh s8, 952(sp)
-; RV64-1024-NEXT:    srli s1, s8, 32
-; RV64-1024-NEXT:    sh s1, 956(sp)
-; RV64-1024-NEXT:    addi s1, zero, 92
-; RV64-1024-NEXT:    vslidedown.vx v0, v8, s1
-; RV64-1024-NEXT:    vmv.x.s s8, v24
-; RV64-1024-NEXT:    sh s9, 944(sp)
-; RV64-1024-NEXT:    srli s1, s9, 32
-; RV64-1024-NEXT:    sh s1, 948(sp)
-; RV64-1024-NEXT:    addi s1, zero, 91
-; RV64-1024-NEXT:    vslidedown.vx v24, v8, s1
-; RV64-1024-NEXT:    vmv.x.s s9, v16
-; RV64-1024-NEXT:    sh s10, 936(sp)
-; RV64-1024-NEXT:    srli s1, s10, 32
-; RV64-1024-NEXT:    sh s1, 940(sp)
-; RV64-1024-NEXT:    addi s1, zero, 90
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, s1
-; RV64-1024-NEXT:    vmv.x.s s10, v0
-; RV64-1024-NEXT:    sh s11, 928(sp)
-; RV64-1024-NEXT:    srli s1, s11, 32
-; RV64-1024-NEXT:    sh s1, 932(sp)
-; RV64-1024-NEXT:    addi s1, zero, 89
-; RV64-1024-NEXT:    vslidedown.vx v0, v8, s1
-; RV64-1024-NEXT:    vmv.x.s s11, v24
-; RV64-1024-NEXT:    sh t4, 920(sp)
-; RV64-1024-NEXT:    srli s1, t4, 32
-; RV64-1024-NEXT:    sh s1, 924(sp)
-; RV64-1024-NEXT:    addi s1, zero, 88
-; RV64-1024-NEXT:    vslidedown.vx v24, v8, s1
-; RV64-1024-NEXT:    vmv.x.s s1, v16
-; RV64-1024-NEXT:    sd s1, 488(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    sh ra, 912(sp)
-; RV64-1024-NEXT:    srli s1, ra, 32
-; RV64-1024-NEXT:    sh s1, 916(sp)
-; RV64-1024-NEXT:    addi s1, zero, 87
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, s1
-; RV64-1024-NEXT:    vmv.x.s s1, v0
-; RV64-1024-NEXT:    sd s1, 480(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    sh a6, 904(sp)
-; RV64-1024-NEXT:    srli s1, a6, 32
-; RV64-1024-NEXT:    sh s1, 908(sp)
-; RV64-1024-NEXT:    addi s1, zero, 86
-; RV64-1024-NEXT:    vslidedown.vx v0, v8, s1
-; RV64-1024-NEXT:    vmv.x.s s1, v24
-; RV64-1024-NEXT:    sd s1, 472(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    sh a7, 896(sp)
-; RV64-1024-NEXT:    srli s1, a7, 32
-; RV64-1024-NEXT:    sh s1, 900(sp)
-; RV64-1024-NEXT:    addi s1, zero, 85
-; RV64-1024-NEXT:    vslidedown.vx v24, v8, s1
-; RV64-1024-NEXT:    vmv.x.s s1, v16
-; RV64-1024-NEXT:    sd s1, 464(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    sh t0, 888(sp)
-; RV64-1024-NEXT:    srli s1, t0, 32
-; RV64-1024-NEXT:    sh s1, 892(sp)
-; RV64-1024-NEXT:    addi s1, zero, 84
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, s1
-; RV64-1024-NEXT:    vmv.x.s s1, v0
-; RV64-1024-NEXT:    sd s1, 456(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    sh t1, 880(sp)
-; RV64-1024-NEXT:    srli s1, t1, 32
-; RV64-1024-NEXT:    sh s1, 884(sp)
-; RV64-1024-NEXT:    addi s1, zero, 83
-; RV64-1024-NEXT:    vslidedown.vx v0, v8, s1
-; RV64-1024-NEXT:    vmv.x.s t1, v24
-; RV64-1024-NEXT:    sh a5, 872(sp)
-; RV64-1024-NEXT:    srli a5, a5, 32
-; RV64-1024-NEXT:    sh a5, 876(sp)
-; RV64-1024-NEXT:    addi a5, zero, 82
-; RV64-1024-NEXT:    vslidedown.vx v24, v8, a5
-; RV64-1024-NEXT:    vmv.x.s t2, v16
-; RV64-1024-NEXT:    sh a3, 864(sp)
-; RV64-1024-NEXT:    srli a3, a3, 32
-; RV64-1024-NEXT:    sh a3, 868(sp)
-; RV64-1024-NEXT:    addi a3, zero, 81
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a3
-; RV64-1024-NEXT:    vmv.x.s t3, v0
-; RV64-1024-NEXT:    sh a1, 856(sp)
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 860(sp)
-; RV64-1024-NEXT:    addi a1, zero, 80
-; RV64-1024-NEXT:    vslidedown.vx v0, v8, a1
-; RV64-1024-NEXT:    vmv.x.s t4, v24
-; RV64-1024-NEXT:    ld a1, 504(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    sh a1, 848(sp)
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 852(sp)
-; RV64-1024-NEXT:    addi a1, zero, 79
-; RV64-1024-NEXT:    vslidedown.vx v24, v8, a1
-; RV64-1024-NEXT:    vmv.x.s ra, v16
-; RV64-1024-NEXT:    sh a2, 840(sp)
-; RV64-1024-NEXT:    srli a2, a2, 32
-; RV64-1024-NEXT:    sh a2, 844(sp)
-; RV64-1024-NEXT:    addi a2, zero, 78
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a2
-; RV64-1024-NEXT:    vmv.x.s a6, v0
-; RV64-1024-NEXT:    sh a4, 832(sp)
-; RV64-1024-NEXT:    srli a4, a4, 32
-; RV64-1024-NEXT:    sh a4, 836(sp)
-; RV64-1024-NEXT:    addi a4, zero, 77
-; RV64-1024-NEXT:    vslidedown.vx v0, v8, a4
-; RV64-1024-NEXT:    vmv.x.s a7, v24
-; RV64-1024-NEXT:    ld a1, 496(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    sh a1, 824(sp)
-; RV64-1024-NEXT:    srli s1, a1, 32
-; RV64-1024-NEXT:    sh s1, 828(sp)
-; RV64-1024-NEXT:    addi s1, zero, 76
-; RV64-1024-NEXT:    vslidedown.vx v24, v8, s1
-; RV64-1024-NEXT:    vmv.x.s t0, v16
-; RV64-1024-NEXT:    sh t5, 816(sp)
-; RV64-1024-NEXT:    srli a5, t5, 32
-; RV64-1024-NEXT:    sh a5, 820(sp)
-; RV64-1024-NEXT:    addi a5, zero, 75
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a5
-; RV64-1024-NEXT:    vmv.x.s t5, v0
-; RV64-1024-NEXT:    sh t6, 808(sp)
-; RV64-1024-NEXT:    srli a3, t6, 32
-; RV64-1024-NEXT:    sh a3, 812(sp)
-; RV64-1024-NEXT:    addi a3, zero, 74
-; RV64-1024-NEXT:    vslidedown.vx v0, v8, a3
-; RV64-1024-NEXT:    vmv.x.s t6, v24
-; RV64-1024-NEXT:    sh s2, 800(sp)
-; RV64-1024-NEXT:    srli a1, s2, 32
-; RV64-1024-NEXT:    sh a1, 804(sp)
-; RV64-1024-NEXT:    addi a1, zero, 73
-; RV64-1024-NEXT:    vslidedown.vx v24, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s2, v16
-; RV64-1024-NEXT:    sh s3, 792(sp)
-; RV64-1024-NEXT:    srli a2, s3, 32
-; RV64-1024-NEXT:    sh a2, 796(sp)
-; RV64-1024-NEXT:    addi a2, zero, 72
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a2
-; RV64-1024-NEXT:    vmv.x.s s3, v0
-; RV64-1024-NEXT:    sh s4, 784(sp)
-; RV64-1024-NEXT:    srli a4, s4, 32
-; RV64-1024-NEXT:    sh a4, 788(sp)
-; RV64-1024-NEXT:    addi a4, zero, 71
-; RV64-1024-NEXT:    vslidedown.vx v0, v8, a4
-; RV64-1024-NEXT:    vmv.x.s s4, v24
-; RV64-1024-NEXT:    sh s5, 776(sp)
-; RV64-1024-NEXT:    srli s1, s5, 32
-; RV64-1024-NEXT:    sh s1, 780(sp)
-; RV64-1024-NEXT:    addi s1, zero, 70
-; RV64-1024-NEXT:    vslidedown.vx v24, v8, s1
-; RV64-1024-NEXT:    vmv.x.s s5, v16
-; RV64-1024-NEXT:    sh s6, 768(sp)
-; RV64-1024-NEXT:    srli a5, s6, 32
-; RV64-1024-NEXT:    sh a5, 772(sp)
-; RV64-1024-NEXT:    addi a5, zero, 69
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a5
-; RV64-1024-NEXT:    vmv.x.s s6, v0
-; RV64-1024-NEXT:    sh s7, 760(sp)
-; RV64-1024-NEXT:    srli a3, s7, 32
-; RV64-1024-NEXT:    sh a3, 764(sp)
-; RV64-1024-NEXT:    addi a3, zero, 68
-; RV64-1024-NEXT:    vslidedown.vx v0, v8, a3
-; RV64-1024-NEXT:    vmv.x.s s7, v24
-; RV64-1024-NEXT:    sh s8, 752(sp)
-; RV64-1024-NEXT:    srli a1, s8, 32
-; RV64-1024-NEXT:    sh a1, 756(sp)
-; RV64-1024-NEXT:    addi a1, zero, 67
-; RV64-1024-NEXT:    vslidedown.vx v24, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s8, v16
-; RV64-1024-NEXT:    sh s9, 744(sp)
-; RV64-1024-NEXT:    srli a2, s9, 32
-; RV64-1024-NEXT:    sh a2, 748(sp)
-; RV64-1024-NEXT:    addi a2, zero, 66
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a2
-; RV64-1024-NEXT:    vmv.x.s s9, v0
-; RV64-1024-NEXT:    sh s10, 736(sp)
-; RV64-1024-NEXT:    srli a4, s10, 32
-; RV64-1024-NEXT:    sh a4, 740(sp)
-; RV64-1024-NEXT:    addi a4, zero, 65
-; RV64-1024-NEXT:    vslidedown.vx v0, v8, a4
-; RV64-1024-NEXT:    addi a1, sp, 1944
-; RV64-1024-NEXT:    vs8r.v v0, (a1) # Unknown-size Folded Spill
-; RV64-1024-NEXT:    vmv.x.s s10, v24
-; RV64-1024-NEXT:    sh s11, 728(sp)
-; RV64-1024-NEXT:    srli s1, s11, 32
-; RV64-1024-NEXT:    sh s1, 732(sp)
-; RV64-1024-NEXT:    addi s1, zero, 64
-; RV64-1024-NEXT:    vslidedown.vx v0, v8, s1
-; RV64-1024-NEXT:    vmv.x.s s11, v16
-; RV64-1024-NEXT:    ld a1, 488(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    sh a1, 720(sp)
-; RV64-1024-NEXT:    ld a3, 480(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    sh a3, 712(sp)
-; RV64-1024-NEXT:    ld a2, 472(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    sh a2, 704(sp)
-; RV64-1024-NEXT:    ld a4, 464(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    sh a4, 696(sp)
-; RV64-1024-NEXT:    ld s1, 456(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    sh s1, 688(sp)
-; RV64-1024-NEXT:    sh t1, 680(sp)
-; RV64-1024-NEXT:    sh t2, 672(sp)
-; RV64-1024-NEXT:    sh t3, 664(sp)
-; RV64-1024-NEXT:    sh t4, 656(sp)
-; RV64-1024-NEXT:    sh ra, 648(sp)
-; RV64-1024-NEXT:    sh a6, 640(sp)
-; RV64-1024-NEXT:    sh a7, 632(sp)
-; RV64-1024-NEXT:    sh t0, 624(sp)
-; RV64-1024-NEXT:    sh t5, 616(sp)
-; RV64-1024-NEXT:    sh t6, 608(sp)
-; RV64-1024-NEXT:    sh s2, 600(sp)
-; RV64-1024-NEXT:    sh s3, 592(sp)
-; RV64-1024-NEXT:    sh s4, 584(sp)
-; RV64-1024-NEXT:    sh s5, 576(sp)
-; RV64-1024-NEXT:    sh s6, 568(sp)
-; RV64-1024-NEXT:    sh s7, 560(sp)
-; RV64-1024-NEXT:    sh s8, 552(sp)
-; RV64-1024-NEXT:    sh s9, 544(sp)
-; RV64-1024-NEXT:    sh s10, 536(sp)
-; RV64-1024-NEXT:    sh s11, 528(sp)
-; RV64-1024-NEXT:    srli a5, a1, 32
-; RV64-1024-NEXT:    sh a5, 724(sp)
-; RV64-1024-NEXT:    addi a1, sp, 1944
-; RV64-1024-NEXT:    vl8re8.v v16, (a1) # Unknown-size Folded Reload
-; RV64-1024-NEXT:    vmv.x.s a5, v16
-; RV64-1024-NEXT:    sh a5, 520(sp)
-; RV64-1024-NEXT:    srli a3, a3, 32
-; RV64-1024-NEXT:    sh a3, 716(sp)
-; RV64-1024-NEXT:    vmv.x.s a3, v0
-; RV64-1024-NEXT:    sh a3, 512(sp)
-; RV64-1024-NEXT:    srli a1, a2, 32
-; RV64-1024-NEXT:    sh a1, 708(sp)
-; RV64-1024-NEXT:    srli a1, a4, 32
-; RV64-1024-NEXT:    sh a1, 700(sp)
-; RV64-1024-NEXT:    srli a1, s1, 32
-; RV64-1024-NEXT:    sh a1, 692(sp)
-; RV64-1024-NEXT:    srli a1, t1, 32
-; RV64-1024-NEXT:    sh a1, 684(sp)
-; RV64-1024-NEXT:    srli a1, t2, 32
-; RV64-1024-NEXT:    sh a1, 676(sp)
-; RV64-1024-NEXT:    srli a1, t3, 32
-; RV64-1024-NEXT:    sh a1, 668(sp)
-; RV64-1024-NEXT:    srli a1, t4, 32
-; RV64-1024-NEXT:    sh a1, 660(sp)
-; RV64-1024-NEXT:    srli a1, ra, 32
-; RV64-1024-NEXT:    sh a1, 652(sp)
-; RV64-1024-NEXT:    srli a1, a6, 32
-; RV64-1024-NEXT:    sh a1, 644(sp)
-; RV64-1024-NEXT:    srli a1, a7, 32
-; RV64-1024-NEXT:    sh a1, 636(sp)
-; RV64-1024-NEXT:    srli a1, t0, 32
-; RV64-1024-NEXT:    sh a1, 628(sp)
-; RV64-1024-NEXT:    srli a1, t5, 32
-; RV64-1024-NEXT:    sh a1, 620(sp)
-; RV64-1024-NEXT:    srli a1, t6, 32
-; RV64-1024-NEXT:    sh a1, 612(sp)
-; RV64-1024-NEXT:    srli a1, s2, 32
-; RV64-1024-NEXT:    sh a1, 604(sp)
-; RV64-1024-NEXT:    srli a1, s3, 32
-; RV64-1024-NEXT:    sh a1, 596(sp)
-; RV64-1024-NEXT:    srli a1, s4, 32
-; RV64-1024-NEXT:    sh a1, 588(sp)
-; RV64-1024-NEXT:    srli a1, s5, 32
-; RV64-1024-NEXT:    sh a1, 580(sp)
-; RV64-1024-NEXT:    srli a1, s6, 32
-; RV64-1024-NEXT:    sh a1, 572(sp)
-; RV64-1024-NEXT:    srli a1, s7, 32
-; RV64-1024-NEXT:    sh a1, 564(sp)
-; RV64-1024-NEXT:    srli a1, s8, 32
-; RV64-1024-NEXT:    sh a1, 556(sp)
-; RV64-1024-NEXT:    srli a1, s9, 32
-; RV64-1024-NEXT:    sh a1, 548(sp)
-; RV64-1024-NEXT:    srli a1, s10, 32
-; RV64-1024-NEXT:    sh a1, 540(sp)
-; RV64-1024-NEXT:    srli a1, s11, 32
-; RV64-1024-NEXT:    sh a1, 532(sp)
-; RV64-1024-NEXT:    srli a1, a5, 32
-; RV64-1024-NEXT:    sh a1, 524(sp)
-; RV64-1024-NEXT:    srli a1, a3, 32
-; RV64-1024-NEXT:    sh a1, 516(sp)
-; RV64-1024-NEXT:    addi a1, zero, 63
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s5, v16
-; RV64-1024-NEXT:    addi a1, zero, 62
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s4, v16
-; RV64-1024-NEXT:    addi a1, zero, 61
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s2, v16
-; RV64-1024-NEXT:    addi a1, zero, 60
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s t5, v16
-; RV64-1024-NEXT:    addi a1, zero, 59
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sd a1, 488(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    addi a1, zero, 58
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sd a1, 504(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    addi a1, zero, 57
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sd a1, 496(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    addi a1, zero, 56
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sd a1, 480(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    addi a1, zero, 55
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sd a1, 472(sp) # 8-byte Folded Spill
-; RV64-1024-NEXT:    addi a1, zero, 54
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s t4, v16
-; RV64-1024-NEXT:    addi a1, zero, 53
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s t6, v16
-; RV64-1024-NEXT:    addi a1, zero, 52
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s3, v16
-; RV64-1024-NEXT:    addi a1, zero, 51
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s6, v16
-; RV64-1024-NEXT:    addi a1, zero, 50
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s7, v16
-; RV64-1024-NEXT:    addi a1, zero, 49
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s8, v16
-; RV64-1024-NEXT:    addi a1, zero, 48
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s9, v16
-; RV64-1024-NEXT:    addi a1, zero, 47
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s10, v16
-; RV64-1024-NEXT:    addi a1, zero, 46
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s s11, v16
-; RV64-1024-NEXT:    addi a1, zero, 45
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s ra, v16
-; RV64-1024-NEXT:    addi a1, zero, 44
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s a6, v16
-; RV64-1024-NEXT:    addi a1, zero, 43
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s a7, v16
-; RV64-1024-NEXT:    addi a1, zero, 42
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s t0, v16
-; RV64-1024-NEXT:    addi a1, zero, 41
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s t1, v16
-; RV64-1024-NEXT:    addi a1, zero, 40
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a1
-; RV64-1024-NEXT:    vmv.x.s t2, v16
-; RV64-1024-NEXT:    addi s1, zero, 39
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, s1
-; RV64-1024-NEXT:    addi s1, zero, 38
-; RV64-1024-NEXT:    vslidedown.vx v0, v8, s1
-; RV64-1024-NEXT:    vmv.x.s s1, v8
-; RV64-1024-NEXT:    sh s1, 1024(sp)
-; RV64-1024-NEXT:    srli s1, s1, 32
-; RV64-1024-NEXT:    sh s1, 1028(sp)
-; RV64-1024-NEXT:    addi s1, zero, 37
-; RV64-1024-NEXT:    vslidedown.vx v24, v8, s1
-; RV64-1024-NEXT:    vmv.x.s t3, v16
-; RV64-1024-NEXT:    sh s5, 1528(sp)
-; RV64-1024-NEXT:    srli a2, s5, 32
-; RV64-1024-NEXT:    sh a2, 1532(sp)
-; RV64-1024-NEXT:    addi a2, zero, 36
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a2
-; RV64-1024-NEXT:    vmv.x.s a2, v0
-; RV64-1024-NEXT:    sh s4, 1520(sp)
-; RV64-1024-NEXT:    srli a3, s4, 32
-; RV64-1024-NEXT:    sh a3, 1524(sp)
-; RV64-1024-NEXT:    addi a3, zero, 35
-; RV64-1024-NEXT:    vslidedown.vx v0, v8, a3
-; RV64-1024-NEXT:    vmv.x.s a3, v24
-; RV64-1024-NEXT:    sh s2, 1512(sp)
-; RV64-1024-NEXT:    srli a4, s2, 32
-; RV64-1024-NEXT:    sh a4, 1516(sp)
-; RV64-1024-NEXT:    addi a4, zero, 34
-; RV64-1024-NEXT:    vslidedown.vx v24, v8, a4
-; RV64-1024-NEXT:    vmv.x.s a4, v16
-; RV64-1024-NEXT:    sh t5, 1504(sp)
-; RV64-1024-NEXT:    srli a5, t5, 32
-; RV64-1024-NEXT:    sh a5, 1508(sp)
-; RV64-1024-NEXT:    addi a5, zero, 33
-; RV64-1024-NEXT:    vslidedown.vx v16, v8, a5
-; RV64-1024-NEXT:    vmv.x.s a5, v0
-; RV64-1024-NEXT:    ld a1, 488(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    sh a1, 1496(sp)
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1500(sp)
-; RV64-1024-NEXT:    addi a1, zero, 32
-; RV64-1024-NEXT:    vslidedown.vx v0, v8, a1
-; RV64-1024-NEXT:    vmv.x.s a1, v24
-; RV64-1024-NEXT:    ld s1, 504(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    sh s1, 1488(sp)
-; RV64-1024-NEXT:    srli s1, s1, 32
-; RV64-1024-NEXT:    sh s1, 1492(sp)
-; RV64-1024-NEXT:    ld s1, 496(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    sh s1, 1480(sp)
-; RV64-1024-NEXT:    srli s1, s1, 32
-; RV64-1024-NEXT:    sh s1, 1484(sp)
-; RV64-1024-NEXT:    ld s1, 480(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    sh s1, 1472(sp)
-; RV64-1024-NEXT:    srli s1, s1, 32
-; RV64-1024-NEXT:    sh s1, 1476(sp)
-; RV64-1024-NEXT:    ld s1, 472(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    sh s1, 1464(sp)
-; RV64-1024-NEXT:    srli s1, s1, 32
-; RV64-1024-NEXT:    sh s1, 1468(sp)
-; RV64-1024-NEXT:    sh t4, 1456(sp)
-; RV64-1024-NEXT:    srli s1, t4, 32
-; RV64-1024-NEXT:    sh s1, 1460(sp)
-; RV64-1024-NEXT:    sh t6, 1448(sp)
-; RV64-1024-NEXT:    srli s1, t6, 32
-; RV64-1024-NEXT:    sh s1, 1452(sp)
-; RV64-1024-NEXT:    sh s3, 1440(sp)
-; RV64-1024-NEXT:    srli s1, s3, 32
-; RV64-1024-NEXT:    sh s1, 1444(sp)
-; RV64-1024-NEXT:    sh s6, 1432(sp)
-; RV64-1024-NEXT:    srli s1, s6, 32
-; RV64-1024-NEXT:    sh s1, 1436(sp)
-; RV64-1024-NEXT:    sh s7, 1424(sp)
-; RV64-1024-NEXT:    srli s1, s7, 32
-; RV64-1024-NEXT:    sh s1, 1428(sp)
-; RV64-1024-NEXT:    sh s8, 1416(sp)
-; RV64-1024-NEXT:    srli s1, s8, 32
-; RV64-1024-NEXT:    sh s1, 1420(sp)
-; RV64-1024-NEXT:    sh s9, 1408(sp)
-; RV64-1024-NEXT:    srli s1, s9, 32
-; RV64-1024-NEXT:    sh s1, 1412(sp)
-; RV64-1024-NEXT:    sh s10, 1400(sp)
-; RV64-1024-NEXT:    srli s1, s10, 32
-; RV64-1024-NEXT:    sh s1, 1404(sp)
-; RV64-1024-NEXT:    sh s11, 1392(sp)
-; RV64-1024-NEXT:    srli s1, s11, 32
-; RV64-1024-NEXT:    sh s1, 1396(sp)
-; RV64-1024-NEXT:    sh ra, 1384(sp)
-; RV64-1024-NEXT:    srli s1, ra, 32
-; RV64-1024-NEXT:    sh s1, 1388(sp)
-; RV64-1024-NEXT:    sh a6, 1376(sp)
-; RV64-1024-NEXT:    srli s1, a6, 32
-; RV64-1024-NEXT:    sh s1, 1380(sp)
-; RV64-1024-NEXT:    sh a7, 1368(sp)
-; RV64-1024-NEXT:    srli s1, a7, 32
-; RV64-1024-NEXT:    sh s1, 1372(sp)
-; RV64-1024-NEXT:    sh t0, 1360(sp)
-; RV64-1024-NEXT:    srli s1, t0, 32
-; RV64-1024-NEXT:    sh s1, 1364(sp)
-; RV64-1024-NEXT:    sh t1, 1352(sp)
-; RV64-1024-NEXT:    srli s1, t1, 32
-; RV64-1024-NEXT:    sh s1, 1356(sp)
-; RV64-1024-NEXT:    sh t2, 1344(sp)
-; RV64-1024-NEXT:    srli s1, t2, 32
-; RV64-1024-NEXT:    sh s1, 1348(sp)
-; RV64-1024-NEXT:    sh t3, 1336(sp)
-; RV64-1024-NEXT:    srli s1, t3, 32
-; RV64-1024-NEXT:    sh s1, 1340(sp)
-; RV64-1024-NEXT:    sh a2, 1328(sp)
-; RV64-1024-NEXT:    srli a2, a2, 32
-; RV64-1024-NEXT:    sh a2, 1332(sp)
-; RV64-1024-NEXT:    sh a3, 1320(sp)
-; RV64-1024-NEXT:    srli a2, a3, 32
-; RV64-1024-NEXT:    sh a2, 1324(sp)
-; RV64-1024-NEXT:    sh a4, 1312(sp)
-; RV64-1024-NEXT:    srli a2, a4, 32
-; RV64-1024-NEXT:    sh a2, 1316(sp)
-; RV64-1024-NEXT:    sh a5, 1304(sp)
-; RV64-1024-NEXT:    srli a2, a5, 32
-; RV64-1024-NEXT:    sh a2, 1308(sp)
-; RV64-1024-NEXT:    sh a1, 1296(sp)
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1300(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1288(sp)
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1292(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v0
-; RV64-1024-NEXT:    sh a1, 1280(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 31
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1284(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1272(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 30
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1276(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1264(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 29
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1268(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1256(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 28
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1260(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1248(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 27
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1252(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1240(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 26
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1244(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1232(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 25
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1236(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1224(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 24
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1228(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1216(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 23
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1220(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1208(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 22
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1212(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1200(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 21
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1204(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1192(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 20
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1196(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1184(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 19
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1188(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1176(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 18
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1180(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1168(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 17
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1172(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1160(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 16
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1164(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1152(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 15
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1156(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1144(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 14
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1148(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1136(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 13
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1140(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1128(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 12
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1132(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1120(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 11
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1124(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1112(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 10
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1116(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1104(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 9
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1108(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1096(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 8
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1100(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1088(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 7
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1092(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1080(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 6
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1084(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1072(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 5
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1076(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1064(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 4
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1068(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1056(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 3
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1060(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1048(sp)
-; RV64-1024-NEXT:    vslidedown.vi v16, v8, 2
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1052(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v16
-; RV64-1024-NEXT:    sh a1, 1040(sp)
-; RV64-1024-NEXT:    vslidedown.vi v8, v8, 1
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1044(sp)
-; RV64-1024-NEXT:    vmv.x.s a1, v8
-; RV64-1024-NEXT:    sh a1, 1032(sp)
-; RV64-1024-NEXT:    srli a1, a1, 32
-; RV64-1024-NEXT:    sh a1, 1036(sp)
-; RV64-1024-NEXT:    addi a2, zero, 256
-; RV64-1024-NEXT:    vsetvli zero, a2, e16,m4,ta,mu
-; RV64-1024-NEXT:    addi a1, sp, 512
-; RV64-1024-NEXT:    vle16.v v8, (a1)
-; RV64-1024-NEXT:    addi a1, sp, 1024
-; RV64-1024-NEXT:    vle16.v v28, (a1)
-; RV64-1024-NEXT:    lui a1, 1026731
-; RV64-1024-NEXT:    addiw a1, a1, -1365
-; RV64-1024-NEXT:    slli a1, a1, 12
-; RV64-1024-NEXT:    addi a1, a1, -1365
-; RV64-1024-NEXT:    slli a1, a1, 12
-; RV64-1024-NEXT:    addi a1, a1, -1365
-; RV64-1024-NEXT:    slli a1, a1, 12
-; RV64-1024-NEXT:    addi a1, a1, -1366
-; RV64-1024-NEXT:    vsetivli zero, 4, e64,m1,ta,mu
-; RV64-1024-NEXT:    vmv.s.x v25, a1
-; RV64-1024-NEXT:    vsetivli zero, 2, e64,m1,tu,mu
+; RV64-1024-NEXT:    csrr a2, vlenb
+; RV64-1024-NEXT:    slli a2, a2, 3
+; RV64-1024-NEXT:    add a2, sp, a2
+; RV64-1024-NEXT:    addi a2, a2, 16
+; RV64-1024-NEXT:    vl8re8.v v0, (a2) # Unknown-size Folded Reload
+; RV64-1024-NEXT:    vrgather.vv v16, v0, v24
+; RV64-1024-NEXT:    lui a2, 1026731
+; RV64-1024-NEXT:    addiw a2, a2, -1365
+; RV64-1024-NEXT:    slli a2, a2, 12
+; RV64-1024-NEXT:    addi a2, a2, -1365
+; RV64-1024-NEXT:    slli a2, a2, 12
+; RV64-1024-NEXT:    addi a2, a2, -1365
+; RV64-1024-NEXT:    slli a2, a2, 12
+; RV64-1024-NEXT:    addi a2, a2, -1366
+; RV64-1024-NEXT:    vsetivli zero, 8, e64, m1, ta, mu
+; RV64-1024-NEXT:    vmv.s.x v25, a2
+; RV64-1024-NEXT:    vsetivli zero, 2, e64, m1, tu, mu
 ; RV64-1024-NEXT:    vmv1r.v v0, v25
 ; RV64-1024-NEXT:    vslideup.vi v0, v25, 1
-; RV64-1024-NEXT:    vsetivli zero, 3, e64,m1,tu,mu
+; RV64-1024-NEXT:    vsetivli zero, 3, e64, m1, tu, mu
 ; RV64-1024-NEXT:    vslideup.vi v0, v25, 2
-; RV64-1024-NEXT:    vsetivli zero, 4, e64,m1,tu,mu
+; RV64-1024-NEXT:    vsetivli zero, 4, e64, m1, tu, mu
 ; RV64-1024-NEXT:    vslideup.vi v0, v25, 3
-; RV64-1024-NEXT:    vsetvli zero, a2, e16,m4,ta,mu
-; RV64-1024-NEXT:    lui a1, %hi(.LCPI1_2)
-; RV64-1024-NEXT:    addi a1, a1, %lo(.LCPI1_2)
-; RV64-1024-NEXT:    vle16.v v12, (a1)
-; RV64-1024-NEXT:    lui a1, %hi(.LCPI1_3)
-; RV64-1024-NEXT:    addi a1, a1, %lo(.LCPI1_3)
-; RV64-1024-NEXT:    vle16.v v16, (a1)
-; RV64-1024-NEXT:    vrgather.vv v20, v28, v12
-; RV64-1024-NEXT:    vsetvli zero, zero, e16,m4,tu,mu
-; RV64-1024-NEXT:    csrr a1, vlenb
-; RV64-1024-NEXT:    slli a1, a1, 3
-; RV64-1024-NEXT:    add a1, sp, a1
-; RV64-1024-NEXT:    addi a1, a1, 1944
-; RV64-1024-NEXT:    vl4re8.v v24, (a1) # Unknown-size Folded Reload
-; RV64-1024-NEXT:    vrgather.vv v20, v24, v16, v0.t
-; RV64-1024-NEXT:    vsetvli zero, zero, e16,m4,ta,mu
-; RV64-1024-NEXT:    lui a1, %hi(.LCPI1_4)
-; RV64-1024-NEXT:    addi a1, a1, %lo(.LCPI1_4)
-; RV64-1024-NEXT:    vle16.v v28, (a1)
-; RV64-1024-NEXT:    vrgather.vv v16, v8, v12
-; RV64-1024-NEXT:    vsetvli zero, zero, e16,m4,tu,mu
-; RV64-1024-NEXT:    vrgather.vv v16, v24, v28, v0.t
-; RV64-1024-NEXT:    addi a1, a0, 512
-; RV64-1024-NEXT:    vsetvli zero, zero, e16,m4,ta,mu
-; RV64-1024-NEXT:    vse16.v v16, (a1)
-; RV64-1024-NEXT:    vse16.v v20, (a0)
-; RV64-1024-NEXT:    addi sp, s0, -2048
+; RV64-1024-NEXT:    vsetivli zero, 5, e64, m1, tu, mu
+; RV64-1024-NEXT:    vslideup.vi v0, v25, 4
+; RV64-1024-NEXT:    vsetivli zero, 6, e64, m1, tu, mu
+; RV64-1024-NEXT:    vslideup.vi v0, v25, 5
+; RV64-1024-NEXT:    vsetivli zero, 7, e64, m1, tu, mu
+; RV64-1024-NEXT:    vslideup.vi v0, v25, 6
+; RV64-1024-NEXT:    vsetivli zero, 8, e64, m1, tu, mu
+; RV64-1024-NEXT:    vslideup.vi v0, v25, 7
+; RV64-1024-NEXT:    lui a2, %hi(.LCPI1_2)
+; RV64-1024-NEXT:    addi a2, a2, %lo(.LCPI1_2)
+; RV64-1024-NEXT:    vsetvli zero, a1, e16, m8, ta, mu
+; RV64-1024-NEXT:    vle16.v v24, (a2)
+; RV64-1024-NEXT:    vsetvli zero, zero, e16, m8, tu, mu
+; RV64-1024-NEXT:    vrgather.vv v16, v8, v24, v0.t
+; RV64-1024-NEXT:    vsetvli zero, zero, e16, m8, ta, mu
+; RV64-1024-NEXT:    vse16.v v16, (a0)
+; RV64-1024-NEXT:    csrr a0, vlenb
+; RV64-1024-NEXT:    addi a1, zero, 24
+; RV64-1024-NEXT:    mul a0, a0, a1
+; RV64-1024-NEXT:    add sp, sp, a0
 ; RV64-1024-NEXT:    addi sp, sp, 16
-; RV64-1024-NEXT:    ld s11, 1928(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    ld s10, 1936(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    ld s9, 1944(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    ld s8, 1952(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    ld s7, 1960(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    ld s6, 1968(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    ld s5, 1976(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    ld s4, 1984(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    ld s3, 1992(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    ld s2, 2000(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    ld s1, 2008(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
-; RV64-1024-NEXT:    addi sp, sp, 2032
 ; RV64-1024-NEXT:    ret
 ;
 ; RV64-2048-LABEL: interleave512:
 ; RV64-2048:       # %bb.0: # %entry
-; RV64-2048-NEXT:    addi sp, sp, -2032
-; RV64-2048-NEXT:    .cfi_def_cfa_offset 2032
-; RV64-2048-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    sd s0, 2016(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    sd s1, 2008(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    sd s2, 2000(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    sd s3, 1992(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    sd s4, 1984(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    sd s5, 1976(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    sd s6, 1968(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    sd s7, 1960(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    sd s8, 1952(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    sd s9, 1944(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    sd s10, 1936(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    sd s11, 1928(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    .cfi_offset ra, -8
-; RV64-2048-NEXT:    .cfi_offset s0, -16
-; RV64-2048-NEXT:    .cfi_offset s1, -24
-; RV64-2048-NEXT:    .cfi_offset s2, -32
-; RV64-2048-NEXT:    .cfi_offset s3, -40
-; RV64-2048-NEXT:    .cfi_offset s4, -48
-; RV64-2048-NEXT:    .cfi_offset s5, -56
-; RV64-2048-NEXT:    .cfi_offset s6, -64
-; RV64-2048-NEXT:    .cfi_offset s7, -72
-; RV64-2048-NEXT:    .cfi_offset s8, -80
-; RV64-2048-NEXT:    .cfi_offset s9, -88
-; RV64-2048-NEXT:    .cfi_offset s10, -96
-; RV64-2048-NEXT:    .cfi_offset s11, -104
-; RV64-2048-NEXT:    addi s0, sp, 2032
-; RV64-2048-NEXT:    .cfi_def_cfa s0, 0
-; RV64-2048-NEXT:    addi sp, sp, -16
-; RV64-2048-NEXT:    csrr a3, vlenb
-; RV64-2048-NEXT:    addi a4, zero, 6
-; RV64-2048-NEXT:    mul a3, a3, a4
-; RV64-2048-NEXT:    sub sp, sp, a3
-; RV64-2048-NEXT:    andi sp, sp, -512
 ; RV64-2048-NEXT:    addi a3, zero, 256
-; RV64-2048-NEXT:    vsetvli zero, a3, e16,m2,ta,mu
-; RV64-2048-NEXT:    addi a3, zero, 256
-; RV64-2048-NEXT:    vle16.v v26, (a1)
-; RV64-2048-NEXT:    lui a1, %hi(.LCPI1_0)
-; RV64-2048-NEXT:    addi a1, a1, %lo(.LCPI1_0)
-; RV64-2048-NEXT:    vle16.v v8, (a1)
-; RV64-2048-NEXT:    vle16.v v28, (a2)
-; RV64-2048-NEXT:    csrr a1, vlenb
-; RV64-2048-NEXT:    slli a1, a1, 2
-; RV64-2048-NEXT:    add a1, sp, a1
-; RV64-2048-NEXT:    addi a1, a1, 1944
-; RV64-2048-NEXT:    vs2r.v v28, (a1) # Unknown-size Folded Spill
-; RV64-2048-NEXT:    vrgather.vv v12, v26, v8
-; RV64-2048-NEXT:    vsetvli zero, zero, e32,m4,ta,mu
+; RV64-2048-NEXT:    vsetvli zero, a3, e16, m2, ta, mu
+; RV64-2048-NEXT:    vle16.v v12, (a1)
+; RV64-2048-NEXT:    vle16.v v8, (a2)
+; RV64-2048-NEXT:    addi a1, zero, 512
+; RV64-2048-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
 ; RV64-2048-NEXT:    vmv.v.i v28, 0
-; RV64-2048-NEXT:    addi a1, zero, 128
-; RV64-2048-NEXT:    vsetvli zero, a1, e32,m4,tu,mu
-; RV64-2048-NEXT:    vslideup.vi v28, v12, 0
+; RV64-2048-NEXT:    vsetvli zero, a3, e16, m4, tu, mu
+; RV64-2048-NEXT:    vmv4r.v v16, v28
+; RV64-2048-NEXT:    vslideup.vi v16, v12, 0
+; RV64-2048-NEXT:    vsetvli zero, a3, e16, m2, ta, mu
+; RV64-2048-NEXT:    vmv.v.i v12, 0
+; RV64-2048-NEXT:    vsetvli zero, a1, e16, m4, tu, mu
+; RV64-2048-NEXT:    vslideup.vx v16, v12, a3
+; RV64-2048-NEXT:    lui a2, %hi(.LCPI1_0)
+; RV64-2048-NEXT:    addi a2, a2, %lo(.LCPI1_0)
+; RV64-2048-NEXT:    vsetvli zero, zero, e16, m4, ta, mu
+; RV64-2048-NEXT:    vle16.v v20, (a2)
+; RV64-2048-NEXT:    vrgather.vv v24, v16, v20
+; RV64-2048-NEXT:    vsetvli zero, a3, e16, m4, tu, mu
+; RV64-2048-NEXT:    vslideup.vi v28, v8, 0
+; RV64-2048-NEXT:    vsetvli zero, a1, e16, m4, tu, mu
+; RV64-2048-NEXT:    vslideup.vx v28, v12, a3
 ; RV64-2048-NEXT:    lui a2, %hi(.LCPI1_1)
 ; RV64-2048-NEXT:    addi a2, a2, %lo(.LCPI1_1)
-; RV64-2048-NEXT:    vsetvli zero, a3, e16,m2,ta,mu
-; RV64-2048-NEXT:    vle16.v v10, (a2)
-; RV64-2048-NEXT:    vrgather.vv v12, v26, v10
-; RV64-2048-NEXT:    vrgather.vv v16, v12, v8
-; RV64-2048-NEXT:    vsetvli zero, zero, e32,m4,tu,mu
-; RV64-2048-NEXT:    vslideup.vx v28, v16, a1
-; RV64-2048-NEXT:    addi a1, zero, 127
-; RV64-2048-NEXT:    vsetivli zero, 1, e64,m4,ta,mu
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s a6, v8
-; RV64-2048-NEXT:    addi a1, zero, 126
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s3, v8
-; RV64-2048-NEXT:    addi a1, zero, 125
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s4, v8
-; RV64-2048-NEXT:    addi a1, zero, 124
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s5, v8
-; RV64-2048-NEXT:    addi a1, zero, 123
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s6, v8
-; RV64-2048-NEXT:    addi a1, zero, 122
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s7, v8
-; RV64-2048-NEXT:    addi a1, zero, 121
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s8, v8
-; RV64-2048-NEXT:    addi a1, zero, 120
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s9, v8
-; RV64-2048-NEXT:    addi a1, zero, 119
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s t4, v8
-; RV64-2048-NEXT:    addi a1, zero, 118
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s t5, v8
-; RV64-2048-NEXT:    addi a1, zero, 117
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s t6, v8
-; RV64-2048-NEXT:    addi a1, zero, 116
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s10, v8
-; RV64-2048-NEXT:    addi a1, zero, 115
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s11, v8
-; RV64-2048-NEXT:    addi a1, zero, 114
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s t0, v8
-; RV64-2048-NEXT:    addi a1, zero, 113
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s t1, v8
-; RV64-2048-NEXT:    addi a1, zero, 112
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s t2, v8
-; RV64-2048-NEXT:    addi a1, zero, 111
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s a3, v8
-; RV64-2048-NEXT:    addi a1, zero, 110
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    addi a2, zero, 109
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a2
-; RV64-2048-NEXT:    vmv.x.s a2, v8
-; RV64-2048-NEXT:    addi a4, zero, 108
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a4
-; RV64-2048-NEXT:    vmv.x.s a4, v8
-; RV64-2048-NEXT:    addi s1, zero, 107
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, s1
-; RV64-2048-NEXT:    vmv.x.s s2, v8
-; RV64-2048-NEXT:    addi a5, zero, 106
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a5
-; RV64-2048-NEXT:    vmv.x.s a5, v8
-; RV64-2048-NEXT:    sd a5, 504(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    addi a5, zero, 105
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a5
-; RV64-2048-NEXT:    vmv.x.s a5, v8
-; RV64-2048-NEXT:    sd a5, 496(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    addi a5, zero, 104
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a5
-; RV64-2048-NEXT:    vmv.x.s a5, v8
-; RV64-2048-NEXT:    sd a5, 488(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    addi a5, zero, 103
-; RV64-2048-NEXT:    vslidedown.vx v24, v28, a5
-; RV64-2048-NEXT:    addi a5, zero, 102
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a5
-; RV64-2048-NEXT:    addi a5, zero, 101
-; RV64-2048-NEXT:    vslidedown.vx v12, v28, a5
-; RV64-2048-NEXT:    addi a5, zero, 100
-; RV64-2048-NEXT:    vslidedown.vx v16, v28, a5
-; RV64-2048-NEXT:    addi a5, zero, 99
-; RV64-2048-NEXT:    vslidedown.vx v20, v28, a5
-; RV64-2048-NEXT:    addi a5, zero, 98
-; RV64-2048-NEXT:    vslidedown.vx v0, v28, a5
-; RV64-2048-NEXT:    addi a5, zero, 97
-; RV64-2048-NEXT:    vslidedown.vx v4, v28, a5
-; RV64-2048-NEXT:    vmv.x.s a5, v24
-; RV64-2048-NEXT:    sd a5, 480(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    sh a6, 1016(sp)
-; RV64-2048-NEXT:    srli a5, a6, 32
-; RV64-2048-NEXT:    sh a5, 1020(sp)
-; RV64-2048-NEXT:    addi a5, zero, 96
-; RV64-2048-NEXT:    vslidedown.vx v24, v28, a5
-; RV64-2048-NEXT:    vmv.x.s s1, v8
-; RV64-2048-NEXT:    sh s3, 1008(sp)
-; RV64-2048-NEXT:    srli a5, s3, 32
-; RV64-2048-NEXT:    sh a5, 1012(sp)
-; RV64-2048-NEXT:    addi a5, zero, 95
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a5
-; RV64-2048-NEXT:    vmv.x.s ra, v12
-; RV64-2048-NEXT:    sh s4, 1000(sp)
-; RV64-2048-NEXT:    srli a5, s4, 32
-; RV64-2048-NEXT:    sh a5, 1004(sp)
-; RV64-2048-NEXT:    addi a5, zero, 94
-; RV64-2048-NEXT:    vslidedown.vx v12, v28, a5
-; RV64-2048-NEXT:    vmv.x.s a6, v16
-; RV64-2048-NEXT:    sh s5, 992(sp)
-; RV64-2048-NEXT:    srli a5, s5, 32
-; RV64-2048-NEXT:    sh a5, 996(sp)
-; RV64-2048-NEXT:    addi a5, zero, 93
-; RV64-2048-NEXT:    vslidedown.vx v16, v28, a5
-; RV64-2048-NEXT:    vmv.x.s s5, v20
-; RV64-2048-NEXT:    sh s6, 984(sp)
-; RV64-2048-NEXT:    srli a5, s6, 32
-; RV64-2048-NEXT:    sh a5, 988(sp)
-; RV64-2048-NEXT:    addi a5, zero, 92
-; RV64-2048-NEXT:    vslidedown.vx v20, v28, a5
-; RV64-2048-NEXT:    vmv.x.s s6, v0
-; RV64-2048-NEXT:    sh s7, 976(sp)
-; RV64-2048-NEXT:    srli a5, s7, 32
-; RV64-2048-NEXT:    sh a5, 980(sp)
-; RV64-2048-NEXT:    addi a5, zero, 91
-; RV64-2048-NEXT:    vslidedown.vx v0, v28, a5
-; RV64-2048-NEXT:    vmv.x.s s7, v4
-; RV64-2048-NEXT:    sh s8, 968(sp)
-; RV64-2048-NEXT:    srli a5, s8, 32
-; RV64-2048-NEXT:    sh a5, 972(sp)
-; RV64-2048-NEXT:    addi a5, zero, 90
-; RV64-2048-NEXT:    vslidedown.vx v4, v28, a5
-; RV64-2048-NEXT:    vmv.x.s s8, v24
-; RV64-2048-NEXT:    sh s9, 960(sp)
-; RV64-2048-NEXT:    srli a5, s9, 32
-; RV64-2048-NEXT:    sh a5, 964(sp)
-; RV64-2048-NEXT:    addi a5, zero, 89
-; RV64-2048-NEXT:    vslidedown.vx v24, v28, a5
-; RV64-2048-NEXT:    vmv.x.s s9, v8
-; RV64-2048-NEXT:    sh t4, 952(sp)
-; RV64-2048-NEXT:    srli a5, t4, 32
-; RV64-2048-NEXT:    sh a5, 956(sp)
-; RV64-2048-NEXT:    addi a5, zero, 88
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a5
-; RV64-2048-NEXT:    vmv.x.s a5, v12
-; RV64-2048-NEXT:    sd a5, 440(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    sh t5, 944(sp)
-; RV64-2048-NEXT:    srli a5, t5, 32
-; RV64-2048-NEXT:    sh a5, 948(sp)
-; RV64-2048-NEXT:    addi a5, zero, 87
-; RV64-2048-NEXT:    vslidedown.vx v12, v28, a5
-; RV64-2048-NEXT:    vmv.x.s a5, v16
-; RV64-2048-NEXT:    sd a5, 472(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    sh t6, 936(sp)
-; RV64-2048-NEXT:    srli a5, t6, 32
-; RV64-2048-NEXT:    sh a5, 940(sp)
-; RV64-2048-NEXT:    addi a5, zero, 86
-; RV64-2048-NEXT:    vslidedown.vx v16, v28, a5
-; RV64-2048-NEXT:    vmv.x.s a5, v20
-; RV64-2048-NEXT:    sd a5, 464(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    sh s10, 928(sp)
-; RV64-2048-NEXT:    srli a5, s10, 32
-; RV64-2048-NEXT:    sh a5, 932(sp)
-; RV64-2048-NEXT:    addi a5, zero, 85
-; RV64-2048-NEXT:    vslidedown.vx v20, v28, a5
-; RV64-2048-NEXT:    vmv.x.s a5, v0
-; RV64-2048-NEXT:    sd a5, 456(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    sh s11, 920(sp)
-; RV64-2048-NEXT:    srli a5, s11, 32
-; RV64-2048-NEXT:    sh a5, 924(sp)
-; RV64-2048-NEXT:    addi a5, zero, 84
-; RV64-2048-NEXT:    vslidedown.vx v0, v28, a5
-; RV64-2048-NEXT:    vmv.x.s a5, v4
-; RV64-2048-NEXT:    sd a5, 448(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    sh t0, 912(sp)
-; RV64-2048-NEXT:    srli a5, t0, 32
-; RV64-2048-NEXT:    sh a5, 916(sp)
-; RV64-2048-NEXT:    addi a5, zero, 83
-; RV64-2048-NEXT:    vslidedown.vx v4, v28, a5
-; RV64-2048-NEXT:    vmv.x.s a5, v24
-; RV64-2048-NEXT:    sd a5, 432(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    sh t1, 904(sp)
-; RV64-2048-NEXT:    srli a5, t1, 32
-; RV64-2048-NEXT:    sh a5, 908(sp)
-; RV64-2048-NEXT:    addi a5, zero, 82
-; RV64-2048-NEXT:    vslidedown.vx v24, v28, a5
-; RV64-2048-NEXT:    vmv.x.s a7, v8
-; RV64-2048-NEXT:    sh t2, 896(sp)
-; RV64-2048-NEXT:    srli a5, t2, 32
-; RV64-2048-NEXT:    sh a5, 900(sp)
-; RV64-2048-NEXT:    addi a5, zero, 81
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a5
-; RV64-2048-NEXT:    vmv.x.s t0, v12
-; RV64-2048-NEXT:    sh a3, 888(sp)
-; RV64-2048-NEXT:    srli a3, a3, 32
-; RV64-2048-NEXT:    sh a3, 892(sp)
-; RV64-2048-NEXT:    addi a3, zero, 80
-; RV64-2048-NEXT:    vslidedown.vx v12, v28, a3
-; RV64-2048-NEXT:    vmv.x.s t1, v16
-; RV64-2048-NEXT:    sh a1, 880(sp)
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 884(sp)
-; RV64-2048-NEXT:    addi a1, zero, 79
-; RV64-2048-NEXT:    vslidedown.vx v16, v28, a1
-; RV64-2048-NEXT:    vmv.x.s t2, v20
-; RV64-2048-NEXT:    sh a2, 872(sp)
-; RV64-2048-NEXT:    srli a2, a2, 32
-; RV64-2048-NEXT:    sh a2, 876(sp)
-; RV64-2048-NEXT:    addi a2, zero, 78
-; RV64-2048-NEXT:    vslidedown.vx v20, v28, a2
-; RV64-2048-NEXT:    vmv.x.s t3, v0
-; RV64-2048-NEXT:    sh a4, 864(sp)
-; RV64-2048-NEXT:    srli a4, a4, 32
-; RV64-2048-NEXT:    sh a4, 868(sp)
-; RV64-2048-NEXT:    addi a4, zero, 77
-; RV64-2048-NEXT:    vslidedown.vx v0, v28, a4
-; RV64-2048-NEXT:    vmv.x.s t4, v4
-; RV64-2048-NEXT:    sh s2, 856(sp)
-; RV64-2048-NEXT:    srli a5, s2, 32
-; RV64-2048-NEXT:    sh a5, 860(sp)
-; RV64-2048-NEXT:    addi a5, zero, 76
-; RV64-2048-NEXT:    vslidedown.vx v4, v28, a5
-; RV64-2048-NEXT:    vmv.x.s t5, v24
-; RV64-2048-NEXT:    ld a1, 504(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    sh a1, 848(sp)
-; RV64-2048-NEXT:    srli a5, a1, 32
-; RV64-2048-NEXT:    sh a5, 852(sp)
-; RV64-2048-NEXT:    addi a5, zero, 75
-; RV64-2048-NEXT:    vslidedown.vx v24, v28, a5
-; RV64-2048-NEXT:    vmv.x.s t6, v8
-; RV64-2048-NEXT:    ld a1, 496(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    sh a1, 840(sp)
-; RV64-2048-NEXT:    srli a3, a1, 32
-; RV64-2048-NEXT:    sh a3, 844(sp)
-; RV64-2048-NEXT:    addi a3, zero, 74
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a3
-; RV64-2048-NEXT:    vmv.x.s s10, v12
-; RV64-2048-NEXT:    ld a1, 488(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    sh a1, 832(sp)
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 836(sp)
-; RV64-2048-NEXT:    addi a1, zero, 73
-; RV64-2048-NEXT:    vslidedown.vx v12, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s11, v16
-; RV64-2048-NEXT:    ld a1, 480(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    sh a1, 824(sp)
-; RV64-2048-NEXT:    srli a2, a1, 32
-; RV64-2048-NEXT:    sh a2, 828(sp)
-; RV64-2048-NEXT:    addi a2, zero, 72
-; RV64-2048-NEXT:    vslidedown.vx v16, v28, a2
-; RV64-2048-NEXT:    vmv.x.s s2, v20
-; RV64-2048-NEXT:    sh s1, 816(sp)
-; RV64-2048-NEXT:    srli a4, s1, 32
-; RV64-2048-NEXT:    sh a4, 820(sp)
-; RV64-2048-NEXT:    addi a4, zero, 71
-; RV64-2048-NEXT:    vslidedown.vx v20, v28, a4
-; RV64-2048-NEXT:    vmv.x.s s3, v0
-; RV64-2048-NEXT:    sh ra, 808(sp)
-; RV64-2048-NEXT:    srli s1, ra, 32
-; RV64-2048-NEXT:    sh s1, 812(sp)
-; RV64-2048-NEXT:    addi s1, zero, 70
-; RV64-2048-NEXT:    vslidedown.vx v0, v28, s1
-; RV64-2048-NEXT:    vmv.x.s s4, v4
-; RV64-2048-NEXT:    sh a6, 800(sp)
-; RV64-2048-NEXT:    srli a5, a6, 32
-; RV64-2048-NEXT:    sh a5, 804(sp)
-; RV64-2048-NEXT:    addi a5, zero, 69
-; RV64-2048-NEXT:    vslidedown.vx v4, v28, a5
-; RV64-2048-NEXT:    addi a1, sp, 1944
-; RV64-2048-NEXT:    vs4r.v v4, (a1) # Unknown-size Folded Spill
-; RV64-2048-NEXT:    vmv.x.s a5, v24
-; RV64-2048-NEXT:    sd a5, 504(sp) # 8-byte Folded Spill
-; RV64-2048-NEXT:    sh s5, 792(sp)
-; RV64-2048-NEXT:    srli a3, s5, 32
-; RV64-2048-NEXT:    sh a3, 796(sp)
-; RV64-2048-NEXT:    addi a3, zero, 68
-; RV64-2048-NEXT:    vslidedown.vx v4, v28, a3
-; RV64-2048-NEXT:    vmv.x.s s5, v8
-; RV64-2048-NEXT:    sh s6, 784(sp)
-; RV64-2048-NEXT:    srli a1, s6, 32
-; RV64-2048-NEXT:    sh a1, 788(sp)
-; RV64-2048-NEXT:    addi a1, zero, 67
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s6, v12
-; RV64-2048-NEXT:    sh s7, 776(sp)
-; RV64-2048-NEXT:    srli a2, s7, 32
-; RV64-2048-NEXT:    sh a2, 780(sp)
-; RV64-2048-NEXT:    addi a2, zero, 66
-; RV64-2048-NEXT:    vslidedown.vx v12, v28, a2
-; RV64-2048-NEXT:    vmv.x.s s7, v16
-; RV64-2048-NEXT:    sh s8, 768(sp)
-; RV64-2048-NEXT:    srli a4, s8, 32
-; RV64-2048-NEXT:    sh a4, 772(sp)
-; RV64-2048-NEXT:    addi a4, zero, 65
-; RV64-2048-NEXT:    vslidedown.vx v24, v28, a4
-; RV64-2048-NEXT:    vmv.x.s s8, v20
-; RV64-2048-NEXT:    sh s9, 760(sp)
-; RV64-2048-NEXT:    srli s1, s9, 32
-; RV64-2048-NEXT:    sh s1, 764(sp)
-; RV64-2048-NEXT:    addi s1, zero, 64
-; RV64-2048-NEXT:    vslidedown.vx v16, v28, s1
-; RV64-2048-NEXT:    vmv.x.s s9, v0
-; RV64-2048-NEXT:    ld ra, 440(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    sh ra, 752(sp)
-; RV64-2048-NEXT:    ld a1, 472(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    sh a1, 744(sp)
-; RV64-2048-NEXT:    ld a2, 464(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    sh a2, 736(sp)
-; RV64-2048-NEXT:    ld a4, 456(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    sh a4, 728(sp)
-; RV64-2048-NEXT:    ld s1, 448(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    sh s1, 720(sp)
-; RV64-2048-NEXT:    ld a6, 432(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    sh a6, 712(sp)
-; RV64-2048-NEXT:    sh a7, 704(sp)
-; RV64-2048-NEXT:    sh t0, 696(sp)
-; RV64-2048-NEXT:    sh t1, 688(sp)
-; RV64-2048-NEXT:    sh t2, 680(sp)
-; RV64-2048-NEXT:    sh t3, 672(sp)
-; RV64-2048-NEXT:    sh t4, 664(sp)
-; RV64-2048-NEXT:    sh t5, 656(sp)
-; RV64-2048-NEXT:    sh t6, 648(sp)
-; RV64-2048-NEXT:    sh s10, 640(sp)
-; RV64-2048-NEXT:    sh s11, 632(sp)
-; RV64-2048-NEXT:    sh s2, 624(sp)
-; RV64-2048-NEXT:    sh s3, 616(sp)
-; RV64-2048-NEXT:    sh s4, 608(sp)
-; RV64-2048-NEXT:    sh a5, 600(sp)
-; RV64-2048-NEXT:    sh s5, 592(sp)
-; RV64-2048-NEXT:    sh s6, 584(sp)
-; RV64-2048-NEXT:    sh s7, 576(sp)
-; RV64-2048-NEXT:    sh s8, 568(sp)
-; RV64-2048-NEXT:    sh s9, 560(sp)
-; RV64-2048-NEXT:    srli a5, ra, 32
-; RV64-2048-NEXT:    sh a5, 756(sp)
-; RV64-2048-NEXT:    addi a3, sp, 1944
-; RV64-2048-NEXT:    vl4re8.v v20, (a3) # Unknown-size Folded Reload
-; RV64-2048-NEXT:    vmv.x.s ra, v20
-; RV64-2048-NEXT:    sh ra, 552(sp)
-; RV64-2048-NEXT:    srli a3, a1, 32
-; RV64-2048-NEXT:    sh a3, 748(sp)
-; RV64-2048-NEXT:    vmv.x.s a3, v4
-; RV64-2048-NEXT:    sh a3, 544(sp)
-; RV64-2048-NEXT:    srli a1, a2, 32
-; RV64-2048-NEXT:    sh a1, 740(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 536(sp)
-; RV64-2048-NEXT:    srli a2, a4, 32
-; RV64-2048-NEXT:    sh a2, 732(sp)
-; RV64-2048-NEXT:    vmv.x.s a2, v12
-; RV64-2048-NEXT:    sh a2, 528(sp)
-; RV64-2048-NEXT:    srli a4, s1, 32
-; RV64-2048-NEXT:    sh a4, 724(sp)
-; RV64-2048-NEXT:    vmv.x.s a4, v24
-; RV64-2048-NEXT:    sh a4, 520(sp)
-; RV64-2048-NEXT:    srli s1, a6, 32
-; RV64-2048-NEXT:    sh s1, 716(sp)
-; RV64-2048-NEXT:    vmv.x.s s1, v16
-; RV64-2048-NEXT:    sh s1, 512(sp)
-; RV64-2048-NEXT:    srli a5, a7, 32
-; RV64-2048-NEXT:    sh a5, 708(sp)
-; RV64-2048-NEXT:    srli a5, t0, 32
-; RV64-2048-NEXT:    sh a5, 700(sp)
-; RV64-2048-NEXT:    srli a5, t1, 32
-; RV64-2048-NEXT:    sh a5, 692(sp)
-; RV64-2048-NEXT:    srli a5, t2, 32
-; RV64-2048-NEXT:    sh a5, 684(sp)
-; RV64-2048-NEXT:    srli a5, t3, 32
-; RV64-2048-NEXT:    sh a5, 676(sp)
-; RV64-2048-NEXT:    srli a5, t4, 32
-; RV64-2048-NEXT:    sh a5, 668(sp)
-; RV64-2048-NEXT:    srli a5, t5, 32
-; RV64-2048-NEXT:    sh a5, 660(sp)
-; RV64-2048-NEXT:    srli a5, t6, 32
-; RV64-2048-NEXT:    sh a5, 652(sp)
-; RV64-2048-NEXT:    srli a5, s10, 32
-; RV64-2048-NEXT:    sh a5, 644(sp)
-; RV64-2048-NEXT:    srli a5, s11, 32
-; RV64-2048-NEXT:    sh a5, 636(sp)
-; RV64-2048-NEXT:    srli a5, s2, 32
-; RV64-2048-NEXT:    sh a5, 628(sp)
-; RV64-2048-NEXT:    srli a5, s3, 32
-; RV64-2048-NEXT:    sh a5, 620(sp)
-; RV64-2048-NEXT:    srli a5, s4, 32
-; RV64-2048-NEXT:    sh a5, 612(sp)
-; RV64-2048-NEXT:    ld a5, 504(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    srli a5, a5, 32
-; RV64-2048-NEXT:    sh a5, 604(sp)
-; RV64-2048-NEXT:    srli a5, s5, 32
-; RV64-2048-NEXT:    sh a5, 596(sp)
-; RV64-2048-NEXT:    srli a5, s6, 32
-; RV64-2048-NEXT:    sh a5, 588(sp)
-; RV64-2048-NEXT:    srli a5, s7, 32
-; RV64-2048-NEXT:    sh a5, 580(sp)
-; RV64-2048-NEXT:    srli a5, s8, 32
-; RV64-2048-NEXT:    sh a5, 572(sp)
-; RV64-2048-NEXT:    srli a5, s9, 32
-; RV64-2048-NEXT:    sh a5, 564(sp)
-; RV64-2048-NEXT:    srli a5, ra, 32
-; RV64-2048-NEXT:    sh a5, 556(sp)
-; RV64-2048-NEXT:    srli a3, a3, 32
-; RV64-2048-NEXT:    sh a3, 548(sp)
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 540(sp)
-; RV64-2048-NEXT:    srli a1, a2, 32
-; RV64-2048-NEXT:    sh a1, 532(sp)
-; RV64-2048-NEXT:    srli a1, a4, 32
-; RV64-2048-NEXT:    sh a1, 524(sp)
-; RV64-2048-NEXT:    srli a1, s1, 32
-; RV64-2048-NEXT:    sh a1, 516(sp)
-; RV64-2048-NEXT:    addi a1, zero, 63
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s t1, v8
-; RV64-2048-NEXT:    addi a1, zero, 62
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s a4, v8
-; RV64-2048-NEXT:    addi a1, zero, 61
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s t0, v8
-; RV64-2048-NEXT:    addi a1, zero, 60
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s t2, v8
-; RV64-2048-NEXT:    addi a1, zero, 59
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s t3, v8
-; RV64-2048-NEXT:    addi a1, zero, 58
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s3, v8
-; RV64-2048-NEXT:    addi a1, zero, 57
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s t4, v8
-; RV64-2048-NEXT:    addi a1, zero, 56
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s t5, v8
-; RV64-2048-NEXT:    addi a1, zero, 55
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s t6, v8
-; RV64-2048-NEXT:    addi a1, zero, 54
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s2, v8
-; RV64-2048-NEXT:    addi a1, zero, 53
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s4, v8
-; RV64-2048-NEXT:    addi a1, zero, 52
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s5, v8
-; RV64-2048-NEXT:    addi a1, zero, 51
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s6, v8
-; RV64-2048-NEXT:    addi a1, zero, 50
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s7, v8
-; RV64-2048-NEXT:    addi a1, zero, 49
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s8, v8
-; RV64-2048-NEXT:    addi a1, zero, 48
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s9, v8
-; RV64-2048-NEXT:    addi a1, zero, 47
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s10, v8
-; RV64-2048-NEXT:    addi a1, zero, 46
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s11, v8
-; RV64-2048-NEXT:    addi a1, zero, 45
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s ra, v8
-; RV64-2048-NEXT:    addi a1, zero, 44
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s a6, v8
-; RV64-2048-NEXT:    addi a1, zero, 43
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s a7, v8
-; RV64-2048-NEXT:    addi a1, zero, 42
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s s1, v8
-; RV64-2048-NEXT:    addi a1, zero, 41
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s a5, v8
-; RV64-2048-NEXT:    addi a1, zero, 40
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a1
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    addi a2, zero, 39
-; RV64-2048-NEXT:    vslidedown.vx v0, v28, a2
-; RV64-2048-NEXT:    addi a2, zero, 38
-; RV64-2048-NEXT:    vslidedown.vx v4, v28, a2
-; RV64-2048-NEXT:    addi a2, zero, 37
-; RV64-2048-NEXT:    vslidedown.vx v8, v28, a2
-; RV64-2048-NEXT:    addi a2, zero, 36
-; RV64-2048-NEXT:    vslidedown.vx v12, v28, a2
-; RV64-2048-NEXT:    addi a2, zero, 35
-; RV64-2048-NEXT:    vslidedown.vx v16, v28, a2
-; RV64-2048-NEXT:    addi a2, zero, 34
-; RV64-2048-NEXT:    vslidedown.vx v20, v28, a2
-; RV64-2048-NEXT:    vmv.x.s a2, v28
-; RV64-2048-NEXT:    sh a2, 1024(sp)
-; RV64-2048-NEXT:    srli a2, a2, 32
-; RV64-2048-NEXT:    sh a2, 1028(sp)
-; RV64-2048-NEXT:    addi a2, zero, 33
-; RV64-2048-NEXT:    vslidedown.vx v24, v28, a2
-; RV64-2048-NEXT:    vmv.x.s a2, v0
-; RV64-2048-NEXT:    sh t1, 1528(sp)
-; RV64-2048-NEXT:    srli a3, t1, 32
-; RV64-2048-NEXT:    sh a3, 1532(sp)
-; RV64-2048-NEXT:    addi a3, zero, 32
-; RV64-2048-NEXT:    vslidedown.vx v0, v28, a3
-; RV64-2048-NEXT:    vmv.x.s a3, v4
-; RV64-2048-NEXT:    sh a4, 1520(sp)
-; RV64-2048-NEXT:    srli a4, a4, 32
-; RV64-2048-NEXT:    sh a4, 1524(sp)
-; RV64-2048-NEXT:    sh t0, 1512(sp)
-; RV64-2048-NEXT:    srli a4, t0, 32
-; RV64-2048-NEXT:    sh a4, 1516(sp)
-; RV64-2048-NEXT:    sh t2, 1504(sp)
-; RV64-2048-NEXT:    srli a4, t2, 32
-; RV64-2048-NEXT:    sh a4, 1508(sp)
-; RV64-2048-NEXT:    sh t3, 1496(sp)
-; RV64-2048-NEXT:    srli a4, t3, 32
-; RV64-2048-NEXT:    sh a4, 1500(sp)
-; RV64-2048-NEXT:    sh s3, 1488(sp)
-; RV64-2048-NEXT:    srli a4, s3, 32
-; RV64-2048-NEXT:    sh a4, 1492(sp)
-; RV64-2048-NEXT:    sh t4, 1480(sp)
-; RV64-2048-NEXT:    srli a4, t4, 32
-; RV64-2048-NEXT:    sh a4, 1484(sp)
-; RV64-2048-NEXT:    sh t5, 1472(sp)
-; RV64-2048-NEXT:    srli a4, t5, 32
-; RV64-2048-NEXT:    sh a4, 1476(sp)
-; RV64-2048-NEXT:    sh t6, 1464(sp)
-; RV64-2048-NEXT:    srli a4, t6, 32
-; RV64-2048-NEXT:    sh a4, 1468(sp)
-; RV64-2048-NEXT:    sh s2, 1456(sp)
-; RV64-2048-NEXT:    srli a4, s2, 32
-; RV64-2048-NEXT:    sh a4, 1460(sp)
-; RV64-2048-NEXT:    sh s4, 1448(sp)
-; RV64-2048-NEXT:    srli a4, s4, 32
-; RV64-2048-NEXT:    sh a4, 1452(sp)
-; RV64-2048-NEXT:    sh s5, 1440(sp)
-; RV64-2048-NEXT:    srli a4, s5, 32
-; RV64-2048-NEXT:    sh a4, 1444(sp)
-; RV64-2048-NEXT:    sh s6, 1432(sp)
-; RV64-2048-NEXT:    srli a4, s6, 32
-; RV64-2048-NEXT:    sh a4, 1436(sp)
-; RV64-2048-NEXT:    sh s7, 1424(sp)
-; RV64-2048-NEXT:    srli a4, s7, 32
-; RV64-2048-NEXT:    sh a4, 1428(sp)
-; RV64-2048-NEXT:    sh s8, 1416(sp)
-; RV64-2048-NEXT:    srli a4, s8, 32
-; RV64-2048-NEXT:    sh a4, 1420(sp)
-; RV64-2048-NEXT:    sh s9, 1408(sp)
-; RV64-2048-NEXT:    srli a4, s9, 32
-; RV64-2048-NEXT:    sh a4, 1412(sp)
-; RV64-2048-NEXT:    sh s10, 1400(sp)
-; RV64-2048-NEXT:    srli a4, s10, 32
-; RV64-2048-NEXT:    sh a4, 1404(sp)
-; RV64-2048-NEXT:    sh s11, 1392(sp)
-; RV64-2048-NEXT:    srli a4, s11, 32
-; RV64-2048-NEXT:    sh a4, 1396(sp)
-; RV64-2048-NEXT:    sh ra, 1384(sp)
-; RV64-2048-NEXT:    srli a4, ra, 32
-; RV64-2048-NEXT:    sh a4, 1388(sp)
-; RV64-2048-NEXT:    sh a6, 1376(sp)
-; RV64-2048-NEXT:    srli a4, a6, 32
-; RV64-2048-NEXT:    sh a4, 1380(sp)
-; RV64-2048-NEXT:    sh a7, 1368(sp)
-; RV64-2048-NEXT:    srli a4, a7, 32
-; RV64-2048-NEXT:    sh a4, 1372(sp)
-; RV64-2048-NEXT:    sh s1, 1360(sp)
-; RV64-2048-NEXT:    srli a4, s1, 32
-; RV64-2048-NEXT:    sh a4, 1364(sp)
-; RV64-2048-NEXT:    sh a5, 1352(sp)
-; RV64-2048-NEXT:    srli a4, a5, 32
-; RV64-2048-NEXT:    sh a4, 1356(sp)
-; RV64-2048-NEXT:    sh a1, 1344(sp)
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1348(sp)
-; RV64-2048-NEXT:    sh a2, 1336(sp)
-; RV64-2048-NEXT:    srli a1, a2, 32
-; RV64-2048-NEXT:    sh a1, 1340(sp)
-; RV64-2048-NEXT:    sh a3, 1328(sp)
-; RV64-2048-NEXT:    srli a1, a3, 32
-; RV64-2048-NEXT:    sh a1, 1332(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1320(sp)
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1324(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v12
-; RV64-2048-NEXT:    sh a1, 1312(sp)
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1316(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v16
-; RV64-2048-NEXT:    sh a1, 1304(sp)
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1308(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v20
-; RV64-2048-NEXT:    sh a1, 1296(sp)
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1300(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v24
-; RV64-2048-NEXT:    sh a1, 1288(sp)
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1292(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v0
-; RV64-2048-NEXT:    sh a1, 1280(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 31
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1284(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1272(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 30
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1276(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1264(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 29
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1268(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1256(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 28
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1260(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1248(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 27
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1252(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1240(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 26
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1244(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1232(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 25
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1236(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1224(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 24
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1228(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1216(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 23
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1220(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1208(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 22
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1212(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1200(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 21
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1204(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1192(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 20
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1196(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1184(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 19
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1188(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1176(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 18
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1180(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1168(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 17
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1172(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1160(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 16
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1164(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1152(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 15
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1156(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1144(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 14
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1148(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1136(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 13
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1140(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1128(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 12
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1132(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1120(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 11
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1124(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1112(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 10
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1116(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1104(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 9
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1108(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1096(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 8
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1100(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1088(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 7
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1092(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1080(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 6
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1084(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1072(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 5
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1076(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1064(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 4
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1068(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1056(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 3
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1060(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1048(sp)
-; RV64-2048-NEXT:    vslidedown.vi v8, v28, 2
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1052(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v8
-; RV64-2048-NEXT:    sh a1, 1040(sp)
-; RV64-2048-NEXT:    vslidedown.vi v28, v28, 1
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1044(sp)
-; RV64-2048-NEXT:    vmv.x.s a1, v28
-; RV64-2048-NEXT:    sh a1, 1032(sp)
-; RV64-2048-NEXT:    srli a1, a1, 32
-; RV64-2048-NEXT:    sh a1, 1036(sp)
-; RV64-2048-NEXT:    addi a2, zero, 256
-; RV64-2048-NEXT:    vsetvli zero, a2, e16,m2,ta,mu
-; RV64-2048-NEXT:    addi a1, sp, 512
-; RV64-2048-NEXT:    vle16.v v26, (a1)
-; RV64-2048-NEXT:    addi a1, sp, 1024
-; RV64-2048-NEXT:    vle16.v v28, (a1)
-; RV64-2048-NEXT:    lui a1, 1026731
-; RV64-2048-NEXT:    addiw a1, a1, -1365
-; RV64-2048-NEXT:    slli a1, a1, 12
-; RV64-2048-NEXT:    addi a1, a1, -1365
-; RV64-2048-NEXT:    slli a1, a1, 12
-; RV64-2048-NEXT:    addi a1, a1, -1365
-; RV64-2048-NEXT:    slli a1, a1, 12
-; RV64-2048-NEXT:    addi a1, a1, -1366
-; RV64-2048-NEXT:    vsetivli zero, 4, e64,m1,ta,mu
-; RV64-2048-NEXT:    vmv.s.x v25, a1
-; RV64-2048-NEXT:    vsetivli zero, 2, e64,m1,tu,mu
+; RV64-2048-NEXT:    vsetvli zero, zero, e16, m4, ta, mu
+; RV64-2048-NEXT:    vle16.v v12, (a2)
+; RV64-2048-NEXT:    vrgather.vv v8, v24, v12
+; RV64-2048-NEXT:    lui a2, 1026731
+; RV64-2048-NEXT:    addiw a2, a2, -1365
+; RV64-2048-NEXT:    slli a2, a2, 12
+; RV64-2048-NEXT:    addi a2, a2, -1365
+; RV64-2048-NEXT:    slli a2, a2, 12
+; RV64-2048-NEXT:    addi a2, a2, -1365
+; RV64-2048-NEXT:    slli a2, a2, 12
+; RV64-2048-NEXT:    addi a2, a2, -1366
+; RV64-2048-NEXT:    vsetivli zero, 8, e64, m1, ta, mu
+; RV64-2048-NEXT:    vmv.s.x v25, a2
+; RV64-2048-NEXT:    vsetivli zero, 2, e64, m1, tu, mu
 ; RV64-2048-NEXT:    vmv1r.v v0, v25
 ; RV64-2048-NEXT:    vslideup.vi v0, v25, 1
-; RV64-2048-NEXT:    vsetivli zero, 3, e64,m1,tu,mu
+; RV64-2048-NEXT:    vsetivli zero, 3, e64, m1, tu, mu
 ; RV64-2048-NEXT:    vslideup.vi v0, v25, 2
-; RV64-2048-NEXT:    vsetivli zero, 4, e64,m1,tu,mu
+; RV64-2048-NEXT:    vsetivli zero, 4, e64, m1, tu, mu
 ; RV64-2048-NEXT:    vslideup.vi v0, v25, 3
-; RV64-2048-NEXT:    vsetvli zero, a2, e16,m2,ta,mu
-; RV64-2048-NEXT:    lui a1, %hi(.LCPI1_2)
-; RV64-2048-NEXT:    addi a1, a1, %lo(.LCPI1_2)
-; RV64-2048-NEXT:    vle16.v v30, (a1)
-; RV64-2048-NEXT:    lui a1, %hi(.LCPI1_3)
-; RV64-2048-NEXT:    addi a1, a1, %lo(.LCPI1_3)
-; RV64-2048-NEXT:    vle16.v v8, (a1)
-; RV64-2048-NEXT:    vrgather.vv v10, v28, v30
-; RV64-2048-NEXT:    vsetvli zero, zero, e16,m2,tu,mu
-; RV64-2048-NEXT:    csrr a1, vlenb
-; RV64-2048-NEXT:    slli a1, a1, 2
-; RV64-2048-NEXT:    add a1, sp, a1
-; RV64-2048-NEXT:    addi a1, a1, 1944
-; RV64-2048-NEXT:    vl2re8.v v12, (a1) # Unknown-size Folded Reload
-; RV64-2048-NEXT:    vrgather.vv v10, v12, v8, v0.t
-; RV64-2048-NEXT:    vsetvli zero, zero, e16,m2,ta,mu
-; RV64-2048-NEXT:    lui a1, %hi(.LCPI1_4)
-; RV64-2048-NEXT:    addi a1, a1, %lo(.LCPI1_4)
-; RV64-2048-NEXT:    vle16.v v28, (a1)
-; RV64-2048-NEXT:    vrgather.vv v8, v26, v30
-; RV64-2048-NEXT:    vsetvli zero, zero, e16,m2,tu,mu
-; RV64-2048-NEXT:    vrgather.vv v8, v12, v28, v0.t
-; RV64-2048-NEXT:    addi a1, a0, 512
-; RV64-2048-NEXT:    vsetvli zero, zero, e16,m2,ta,mu
-; RV64-2048-NEXT:    vse16.v v8, (a1)
-; RV64-2048-NEXT:    vse16.v v10, (a0)
-; RV64-2048-NEXT:    addi sp, s0, -2048
-; RV64-2048-NEXT:    addi sp, sp, 16
-; RV64-2048-NEXT:    ld s11, 1928(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    ld s10, 1936(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    ld s9, 1944(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    ld s8, 1952(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    ld s7, 1960(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    ld s6, 1968(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    ld s5, 1976(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    ld s4, 1984(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    ld s3, 1992(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    ld s2, 2000(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    ld s1, 2008(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    ld s0, 2016(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    ld ra, 2024(sp) # 8-byte Folded Reload
-; RV64-2048-NEXT:    addi sp, sp, 2032
+; RV64-2048-NEXT:    vsetivli zero, 5, e64, m1, tu, mu
+; RV64-2048-NEXT:    vslideup.vi v0, v25, 4
+; RV64-2048-NEXT:    vsetivli zero, 6, e64, m1, tu, mu
+; RV64-2048-NEXT:    vslideup.vi v0, v25, 5
+; RV64-2048-NEXT:    vsetivli zero, 7, e64, m1, tu, mu
+; RV64-2048-NEXT:    vslideup.vi v0, v25, 6
+; RV64-2048-NEXT:    vsetivli zero, 8, e64, m1, tu, mu
+; RV64-2048-NEXT:    vslideup.vi v0, v25, 7
+; RV64-2048-NEXT:    lui a2, %hi(.LCPI1_2)
+; RV64-2048-NEXT:    addi a2, a2, %lo(.LCPI1_2)
+; RV64-2048-NEXT:    vsetvli zero, a1, e16, m4, ta, mu
+; RV64-2048-NEXT:    vle16.v v12, (a2)
+; RV64-2048-NEXT:    vsetvli zero, zero, e16, m4, tu, mu
+; RV64-2048-NEXT:    vrgather.vv v8, v28, v12, v0.t
+; RV64-2048-NEXT:    vsetvli zero, zero, e16, m4, ta, mu
+; RV64-2048-NEXT:    vse16.v v8, (a0)
 ; RV64-2048-NEXT:    ret
 entry:
   %ve = load <256 x i16>, <256 x i16>* %0, align 512

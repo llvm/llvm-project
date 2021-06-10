@@ -24,7 +24,7 @@ namespace lldb_private {
 class Declaration {
 public:
   /// Default constructor.
-  Declaration() : m_file(), m_line(0), m_column(LLDB_INVALID_COLUMN_NUMBER) {}
+  Declaration() : m_file() {}
 
   /// Construct with file specification, and optional line and column.
   ///
@@ -182,10 +182,10 @@ protected:
   FileSpec m_file;
   /// Non-zero values indicates a valid line number, zero indicates no line
   /// number information is available.
-  uint32_t m_line;
+  uint32_t m_line = 0;
   /// Non-zero values indicates a valid column number, zero indicates no column
   /// information is available.
-  uint16_t m_column;
+  uint16_t m_column = LLDB_INVALID_COLUMN_NUMBER;
 };
 
 bool operator==(const Declaration &lhs, const Declaration &rhs);

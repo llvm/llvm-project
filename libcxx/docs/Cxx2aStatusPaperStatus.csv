@@ -193,3 +193,4 @@
 "`P2102 <https://wg21.link/P2102>`__","LWG","Make 'implicit expression variations' more explicit (Wording for US185)","Prague","* *",""
 "`P2106 <https://wg21.link/P2106>`__","LWG","Alternative wording for GB315 and GB316","Prague","* *",""
 "`P2116 <https://wg21.link/P2116>`__","LWG","Remove tuple-like protocol support from fixed-extent span","Prague","|Complete|","11.0"
+"`P2231 <https://wg21.link/P2231>`__","LWG","Missing constexpr in std::optional and std::variant","February 2021","|In progress|","13.0"

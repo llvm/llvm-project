@@ -17,9 +17,7 @@ const char *ThreadSpec::g_option_names[static_cast<uint32_t>(
     ThreadSpec::OptionNames::LastOptionName)]{"Index", "ID", "Name",
                                               "QueueName"};
 
-ThreadSpec::ThreadSpec()
-    : m_index(UINT32_MAX), m_tid(LLDB_INVALID_THREAD_ID), m_name(),
-      m_queue_name() {}
+ThreadSpec::ThreadSpec() : m_name(), m_queue_name() {}
 
 std::unique_ptr<ThreadSpec> ThreadSpec::CreateFromStructuredData(
     const StructuredData::Dictionary &spec_dict, Status &error) {

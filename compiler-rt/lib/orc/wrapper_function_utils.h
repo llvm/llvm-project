@@ -37,7 +37,7 @@
 #include "adt.h"
 #include "c_api.h"
 #include "common.h"
-#include "endian.h"
+#include "endianness.h"
 #include "error.h"
 #include "stl_extras.h"
 

@@ -20,7 +20,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBListener::SBListener() : m_opaque_sp(), m_unused_ptr(nullptr) {
+SBListener::SBListener() : m_opaque_sp() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBListener);
 }
 

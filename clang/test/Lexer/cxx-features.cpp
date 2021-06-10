@@ -98,8 +98,7 @@
 #error "wrong value for __cpp_modules"
 #endif
 
-#if check(using_enum, 0, 0, 0, 0, 0, 0)
-// FIXME: 201907 in C++20
+#if check(using_enum, 0, 0, 0, 0, 201907, 201907)
 #error "wrong value for __cpp_using_enum"
 #endif
 

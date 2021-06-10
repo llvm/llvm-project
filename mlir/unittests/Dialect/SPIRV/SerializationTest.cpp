@@ -59,7 +59,7 @@ protected:
   }
 
   Type getFloatStructType() {
-    OpBuilder opBuilder(module->body());
+    OpBuilder opBuilder(module->getRegion());
     llvm::SmallVector<Type, 1> elementTypes{opBuilder.getF32Type()};
     llvm::SmallVector<spirv::StructType::OffsetInfo, 1> offsetInfo{0};
     auto structType = spirv::StructType::get(elementTypes, offsetInfo);
@@ -67,7 +67,7 @@ protected:
   }
 
   void addGlobalVar(Type type, llvm::StringRef name) {
-    OpBuilder opBuilder(module->body());
+    OpBuilder opBuilder(module->getRegion());
     auto ptrType = spirv::PointerType::get(type, spirv::StorageClass::Uniform);
     opBuilder.create<spirv::GlobalVariableOp>(
         UnknownLoc::get(&context), TypeAttr::get(ptrType),

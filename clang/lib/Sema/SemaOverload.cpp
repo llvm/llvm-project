@@ -5434,8 +5434,8 @@ Sema::PerformObjectArgumentInitialization(Expr *From,
     DestType = ImplicitParamRecordType;
     FromClassification = From->Classify(Context);
 
-    // When performing member access on an rvalue, materialize a temporary.
-    if (From->isRValue()) {
+    // When performing member access on a prvalue, materialize a temporary.
+    if (From->isPRValue()) {
       From = CreateMaterializeTemporaryExpr(FromRecordType, From,
                                             Method->getRefQualifier() !=
                                                 RefQualifierKind::RQ_RValue);
@@ -7371,7 +7371,7 @@ void Sema::AddConversionCandidate(
   ImplicitCastExpr ConversionFn(ImplicitCastExpr::OnStack,
                                 Context.getPointerType(Conversion->getType()),
                                 CK_FunctionToPointerDecay, &ConversionRef,
-                                VK_RValue, FPOptionsOverride());
+                                VK_PRValue, FPOptionsOverride());
 
   QualType ConversionType = Conversion->getConversionType();
   if (!isCompleteType(From->getBeginLoc(), ConversionType)) {
@@ -12983,7 +12983,7 @@ bool Sema::buildOverloadedCallSet(Scope *S, Expr *Fn,
       // lookup to instantiation time to be able to search into type dependent
       // base classes.
       CallExpr *CE =
-          CallExpr::Create(Context, Fn, Args, Context.DependentTy, VK_RValue,
+          CallExpr::Create(Context, Fn, Args, Context.DependentTy, VK_PRValue,
                            RParenLoc, CurFPFeatureOverrides());
       CE->markDependentForPostponedNameLookup();
       *Result = CE;
@@ -13241,7 +13241,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
   if (Input->isTypeDependent()) {
     if (Fns.empty())
       return UnaryOperator::Create(Context, Input, Opc, Context.DependentTy,
-                                   VK_RValue, OK_Ordinary, OpLoc, false,
+                                   VK_PRValue, OK_Ordinary, OpLoc, false,
                                    CurFPFeatureOverrides());
 
     CXXRecordDecl *NamingClass = nullptr; // lookup ignores member operators
@@ -13250,7 +13250,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
     if (Fn.isInvalid())
       return ExprError();
     return CXXOperatorCallExpr::Create(Context, Op, Fn.get(), ArgsArray,
-                                       Context.DependentTy, VK_RValue, OpLoc,
+                                       Context.DependentTy, VK_PRValue, OpLoc,
                                        CurFPFeatureOverrides());
   }
 
@@ -13498,9 +13498,9 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
             Context, Args[0], Args[1], Opc, Context.DependentTy, VK_LValue,
             OK_Ordinary, OpLoc, CurFPFeatureOverrides(), Context.DependentTy,
             Context.DependentTy);
-      return BinaryOperator::Create(Context, Args[0], Args[1], Opc,
-                                    Context.DependentTy, VK_RValue, OK_Ordinary,
-                                    OpLoc, CurFPFeatureOverrides());
+      return BinaryOperator::Create(
+          Context, Args[0], Args[1], Opc, Context.DependentTy, VK_PRValue,
+          OK_Ordinary, OpLoc, CurFPFeatureOverrides());
     }
 
     // FIXME: save results of ADL from here?
@@ -13513,7 +13513,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
     if (Fn.isInvalid())
       return ExprError();
     return CXXOperatorCallExpr::Create(Context, Op, Fn.get(), Args,
-                                       Context.DependentTy, VK_RValue, OpLoc,
+                                       Context.DependentTy, VK_PRValue, OpLoc,
                                        CurFPFeatureOverrides());
   }
 
@@ -13992,7 +13992,7 @@ Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
     // Can't add any actual overloads yet
 
     return CXXOperatorCallExpr::Create(Context, OO_Subscript, Fn.get(), Args,
-                                       Context.DependentTy, VK_RValue, RLoc,
+                                       Context.DependentTy, VK_PRValue, RLoc,
                                        CurFPFeatureOverrides());
   }
 
@@ -14215,7 +14215,7 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
                               Type);
   };
   if (isa<CXXPseudoDestructorExpr>(NakedMemExpr))
-    return CallExpr::Create(Context, MemExprE, Args, Context.VoidTy, VK_RValue,
+    return CallExpr::Create(Context, MemExprE, Args, Context.VoidTy, VK_PRValue,
                             RParenLoc, CurFPFeatureOverrides());
 
   UnbridgedCastsSet UnbridgedCasts;
@@ -14600,7 +14600,7 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
     // Record usage of conversion in an implicit cast.
     Call = ImplicitCastExpr::Create(
         Context, Call.get()->getType(), CK_UserDefinedConversion, Call.get(),
-        nullptr, VK_RValue, CurFPFeatureOverrides());
+        nullptr, VK_PRValue, CurFPFeatureOverrides());
 
     return BuildCallExpr(S, Call.get(), LParenLoc, Args, RParenLoc);
   }
@@ -15068,7 +15068,7 @@ Expr *Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
           (void)isCompleteType(UnOp->getOperatorLoc(), MemPtrType);
 
         return UnaryOperator::Create(
-            Context, SubExpr, UO_AddrOf, MemPtrType, VK_RValue, OK_Ordinary,
+            Context, SubExpr, UO_AddrOf, MemPtrType, VK_PRValue, OK_Ordinary,
             UnOp->getOperatorLoc(), false, CurFPFeatureOverrides());
       }
     }
@@ -15077,10 +15077,10 @@ Expr *Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
     if (SubExpr == UnOp->getSubExpr())
       return UnOp;
 
-    return UnaryOperator::Create(Context, SubExpr, UO_AddrOf,
-                                 Context.getPointerType(SubExpr->getType()),
-                                 VK_RValue, OK_Ordinary, UnOp->getOperatorLoc(),
-                                 false, CurFPFeatureOverrides());
+    return UnaryOperator::Create(
+        Context, SubExpr, UO_AddrOf, Context.getPointerType(SubExpr->getType()),
+        VK_PRValue, OK_Ordinary, UnOp->getOperatorLoc(), false,
+        CurFPFeatureOverrides());
   }
 
   if (UnresolvedLookupExpr *ULE = dyn_cast<UnresolvedLookupExpr>(E)) {
@@ -15135,7 +15135,7 @@ Expr *Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
       valueKind = VK_LValue;
       type = Fn->getType();
     } else {
-      valueKind = VK_RValue;
+      valueKind = VK_PRValue;
       type = Context.BoundMemberTy;
     }
 

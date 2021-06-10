@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang -fopenmp
+! REQUIRES: shell
 
 ! 2.17.8 Flush construct [OpenMP 5.0]
 !        memory-order-clause ->

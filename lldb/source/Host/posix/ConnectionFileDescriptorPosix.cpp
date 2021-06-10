@@ -76,7 +76,7 @@ llvm::Optional<llvm::StringRef> GetURLAddress(llvm::StringRef url,
 
 ConnectionFileDescriptor::ConnectionFileDescriptor(bool child_processes_inherit)
     : Connection(), m_pipe(), m_mutex(), m_shutting_down(false),
-      m_waiting_for_accept(false),
+
       m_child_processes_inherit(child_processes_inherit) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION |
                                                   LIBLLDB_LOG_OBJECT));

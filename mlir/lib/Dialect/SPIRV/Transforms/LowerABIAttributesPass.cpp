@@ -115,7 +115,7 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
 
   OpBuilder::InsertionGuard moduleInsertionGuard(builder);
   auto spirvModule = funcOp->getParentOfType<spirv::ModuleOp>();
-  builder.setInsertionPoint(spirvModule.body().front().getTerminator());
+  builder.setInsertionPointToEnd(spirvModule.getBody());
 
   // Adds the spv.EntryPointOp after collecting all the interface variables
   // needed.
