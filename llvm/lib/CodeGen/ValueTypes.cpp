@@ -198,6 +198,10 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   case MVT::ppcf128: return Type::getPPC_FP128Ty(Context);
   case MVT::x86mmx:  return Type::getX86_MMXTy(Context);
   case MVT::x86amx:  return Type::getX86_AMXTy(Context);
+  case MVT::externref:
+    return PointerType::get(StructType::create(Context), 10);
+  case MVT::funcref:
+    return PointerType::get(StructType::create(Context), 20);
   case MVT::v1i1:
     return FixedVectorType::get(Type::getInt1Ty(Context), 1);
   case MVT::v2i1:
