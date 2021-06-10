@@ -195,6 +195,19 @@ const Symbol &findSymbol(const SymbolSlab &Slab, llvm::StringRef QName) {
   return *Result;
 }
 
+// RAII scoped class to disable TraversalScope for a ParsedAST.
+class TraverseHeadersToo {
+  ASTContext &Ctx;
+  std::vector<Decl *> ScopeToRestore;
+
+public:
+  TraverseHeadersToo(ParsedAST &AST)
+      : Ctx(AST.getASTContext()), ScopeToRestore(Ctx.getTraversalScope()) {
+    Ctx.setTraversalScope({Ctx.getTranslationUnitDecl()});
+  }
+  ~TraverseHeadersToo() { Ctx.setTraversalScope(std::move(ScopeToRestore)); }
+};
+
 const NamedDecl &findDecl(ParsedAST &AST, llvm::StringRef QName) {
   auto &Ctx = AST.getASTContext();
   auto LookupDecl = [&Ctx](const DeclContext &Scope,
@@ -217,6 +230,7 @@ const NamedDecl &findDecl(ParsedAST &AST, llvm::StringRef QName) {
 
 const NamedDecl &findDecl(ParsedAST &AST,
                           std::function<bool(const NamedDecl &)> Filter) {
+  TraverseHeadersToo Too(AST);
   struct Visitor : RecursiveASTVisitor<Visitor> {
     decltype(Filter) F;
     llvm::SmallVector<const NamedDecl *, 1> Decls;
