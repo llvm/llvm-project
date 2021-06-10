@@ -2188,6 +2188,17 @@ bool TargetLoweringObjectFileXCOFF::ShouldEmitEHBlock(
   return true;
 }
 
+bool TargetLoweringObjectFileXCOFF::ShouldSetSSPCanaryBitInTB(
+    const MachineFunction *MF) {
+  const Function &F = MF->getFunction();
+  if (!F.hasStackProtectorFnAttr())
+    return false;
+  // FIXME: check presence of canary word
+  // There are cases that the stack protectors are not really inserted even if
+  // the attributes are on.
+  return true;
+}
+
 MCSymbol *
 TargetLoweringObjectFileXCOFF::getEHInfoTableSymbol(const MachineFunction *MF) {
   return MF->getMMI().getContext().getOrCreateSymbol(
