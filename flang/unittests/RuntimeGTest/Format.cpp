@@ -153,7 +153,7 @@ TEST(InvalidFormatFailure, ParenMismatch) {
 
   ASSERT_DEATH(
       context.Report(/*edit=*/control.GetNextDataEdit(context, repeat)),
-      "FORMAT missing at least one ')'");
+      R"(FORMAT missing at least one '\)')");
 }
 
 TEST(InvalidFormatFailure, MissingPrecision) {
@@ -166,7 +166,7 @@ TEST(InvalidFormatFailure, MissingPrecision) {
 
   ASSERT_DEATH(
       context.Report(/*edit=*/control.GetNextDataEdit(context, repeat)),
-      "Invalid FORMAT: integer expected at ')'");
+      R"(Invalid FORMAT: integer expected at '\)')");
 }
 
 TEST(InvalidFormatFailure, MissingFormatWidth) {
