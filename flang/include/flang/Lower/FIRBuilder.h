@@ -343,9 +343,14 @@ mlir::Value readLowerBound(FirOpBuilder &, mlir::Location,
                            const fir::ExtendedValue &, unsigned dim,
                            mlir::Value defaultValue);
 
-/// Read extents from an BoxValue into \p result.
+/// Read extents from an BoxValue.
 llvm::SmallVector<mlir::Value> readExtents(FirOpBuilder &, mlir::Location,
                                            const fir::BoxValue &);
+
+/// Get extents from an ExtentdedValue. For fir::BoxValue and
+/// fir::MutableBoxValue, this will generate code to read the extents.
+llvm::SmallVector<mlir::Value> getExtents(FirOpBuilder &, mlir::Location,
+                                          const fir::ExtendedValue &);
 
 //===--------------------------------------------------------------------===//
 // String literal helper helpers
