@@ -15,26 +15,37 @@ using namespace llvm;
 
 namespace {
 
-TEST(SequenceTest, Basic) {
-  int x = 0;
-  for (int i : seq(0, 10)) {
-    EXPECT_EQ(x, i);
-    x++;
+TEST(SequenceTest, Forward) {
+  int X = 0;
+  for (int I : seq(0, 10)) {
+    EXPECT_EQ(X, I);
+    ++X;
   }
-  EXPECT_EQ(10, x);
+  EXPECT_EQ(10, X);
+}
 
-  auto my_seq = seq(0, 4);
-  EXPECT_EQ(4, my_seq.end() - my_seq.begin());
-  for (int i : {0, 1, 2, 3})
-    EXPECT_EQ(i, (int)my_seq.begin()[i]);
+TEST(SequenceTest, Backward) {
+  int X = 9;
+  for (int I : reverse(seq(0, 10))) {
+    EXPECT_EQ(X, I);
+    --X;
+  }
+  EXPECT_EQ(-1, X);
+}
 
-  EXPECT_TRUE(my_seq.begin() < my_seq.end());
+TEST(SequenceTest, Distance) {
+  const auto Forward = seq(0, 10);
+  EXPECT_EQ(std::distance(Forward.begin(), Forward.end()), 10);
+  EXPECT_EQ(std::distance(Forward.rbegin(), Forward.rend()), 10);
+}
 
-  auto adjusted_begin = my_seq.begin() + 2;
-  auto adjusted_end = my_seq.end() - 2;
-  EXPECT_TRUE(adjusted_begin == adjusted_end);
-  EXPECT_EQ(2, *adjusted_begin);
-  EXPECT_EQ(2, *adjusted_end);
+TEST(SequenceTest, Dereference) {
+  const auto Forward = seq(0, 10).begin();
+  EXPECT_EQ(Forward[0], 0);
+  EXPECT_EQ(Forward[2], 2);
+  const auto Backward = seq(0, 10).rbegin();
+  EXPECT_EQ(Backward[0], 9);
+  EXPECT_EQ(Backward[2], 7);
 }
 
 } // anonymous namespace
