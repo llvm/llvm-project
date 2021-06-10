@@ -10,7 +10,7 @@
 /// AMX register need to be configured before use. Before FastRegAllocation pass
 /// the ldtilecfg instruction is inserted, however at that time we don't
 /// know the shape of each physical tile registers, because the register
-/// allocation is not done yet. This pass runs after egister allocation
+/// allocation is not done yet. This pass runs after register allocation
 /// pass. It collects the shape information of each physical tile register
 /// and store the shape in the stack slot that is allocated for load config
 /// to tile config register.
