@@ -708,7 +708,7 @@ def Builtin_SparseElementsAttr
   let extraClassDeclaration = [{
     template <typename T>
     using iterator =
-        llvm::mapped_iterator<llvm::detail::value_sequence_iterator<ptrdiff_t>,
+        llvm::mapped_iterator<typename decltype(llvm::seq<ptrdiff_t>(0, 0))::iterator,
                               std::function<T(ptrdiff_t)>>;
 
     /// Return the values of this attribute in the form of the given type 'T'.
