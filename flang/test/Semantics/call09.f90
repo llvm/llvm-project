@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Test 15.5.2.9(2,3,5) dummy procedure requirements
 ! C843
 !   An entity with the INTENT attribute shall be a dummy data object or a 

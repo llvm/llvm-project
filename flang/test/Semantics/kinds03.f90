@@ -1,4 +1,5 @@
 ! RUN: %S/test_symbols.sh %s %t %flang_fc1
+! REQUIRES: shell
  !DEF: /MainProgram1/ipdt DerivedType
  !DEF: /MainProgram1/ipdt/k TypeParam INTEGER(4)
  type :: ipdt(k)

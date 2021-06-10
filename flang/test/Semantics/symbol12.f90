@@ -1,4 +1,5 @@
 ! RUN: %S/test_symbols.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Verify that SAVE attribute is propagated by EQUIVALENCE
 
 !DEF: /s1 (Subroutine) Subprogram

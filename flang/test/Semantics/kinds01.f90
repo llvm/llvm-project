@@ -1,4 +1,5 @@
 ! RUN: %S/test_symbols.sh %s %t %flang_fc1
+! REQUIRES: shell
  !DEF: /MainProgram1/jk1 ObjectEntity INTEGER(1)
  integer(kind=1) jk1
  !DEF: /MainProgram1/js1 ObjectEntity INTEGER(1)

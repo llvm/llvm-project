@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Error tests for structure constructors.
 ! Errors caught by expression resolution are tested elsewhere; these are the
 ! errors meant to be caught by name resolution, as well as acceptable use

@@ -1,4 +1,6 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
+
 ! Ensure that spurious errors do not arise from FinishSpecificationPart
 ! checking on a nested specification part.
 real, save :: x

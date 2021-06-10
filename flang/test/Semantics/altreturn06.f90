@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Test alternat return argument passing for internal and external subprograms
 ! Both of the following are OK
   call extSubprogram (*100)

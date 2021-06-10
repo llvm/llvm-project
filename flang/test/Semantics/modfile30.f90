@@ -1,4 +1,5 @@
 ! RUN: %S/test_modfile.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Verify miscellaneous bugs
 
 ! The function result must be declared after the dummy arguments

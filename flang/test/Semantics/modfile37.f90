@@ -1,4 +1,5 @@
 ! RUN: %S/test_modfile.sh %s %t %flang_fc1
+! REQUIRES: shell
 
 ! Ensure that a dummy procedure's interface's imports
 ! appear in the module file.

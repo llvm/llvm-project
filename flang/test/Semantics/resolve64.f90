@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang -flogical-abbreviations -fxor-operator
+! REQUIRES: shell
 
 ! Like m4 in resolve63 but compiled with different options.
 ! Alternate operators are enabled so treat these as intrinsic.

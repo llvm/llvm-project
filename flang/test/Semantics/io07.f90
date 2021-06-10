@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 1001 format(A)
 
      !ERROR: Format statement must be labeled
