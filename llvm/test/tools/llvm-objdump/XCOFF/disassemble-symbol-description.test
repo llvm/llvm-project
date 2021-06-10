@@ -1,5 +1,3 @@
-# REQUIRES: powerpc-registered-target
-
 # RUN: llvm-objdump -D %p/Inputs/xcoff-section-headers.o | \
 # RUN:   FileCheck --check-prefixes=COMMON,PLAIN %s
 
