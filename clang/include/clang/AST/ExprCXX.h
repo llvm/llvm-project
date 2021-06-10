@@ -1257,7 +1257,7 @@ class CXXDefaultArgExpr final : public Expr {
              Param->getDefaultArg()->getObjectKind()),
         Param(Param), UsedContext(UsedContext) {
     CXXDefaultArgExprBits.Loc = Loc;
-    setDependence(ExprDependence::None);
+    setDependence(computeDependence(this));
   }
 
 public:
