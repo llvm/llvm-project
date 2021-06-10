@@ -15648,7 +15648,13 @@ PPCTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   } else if ((Constraint == "wa" || Constraint == "wd" ||
              Constraint == "wf" || Constraint == "wi") &&
              Subtarget.hasVSX()) {
-    return std::make_pair(0U, &PPC::VSRCRegClass);
+    // A VSX register for either a scalar (FP) or vector. There is no
+    // support for single precision scalars on subtargets prior to Power8.
+    if (VT.isVector())
+      return std::make_pair(0U, &PPC::VSRCRegClass);
+    if (VT == MVT::f32 && Subtarget.hasP8Vector())
+      return std::make_pair(0U, &PPC::VSSRCRegClass);
+    return std::make_pair(0U, &PPC::VSFRCRegClass);
   } else if ((Constraint == "ws" || Constraint == "ww") && Subtarget.hasVSX()) {
     if (VT == MVT::f32 && Subtarget.hasP8Vector())
       return std::make_pair(0U, &PPC::VSSRCRegClass);
