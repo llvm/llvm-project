@@ -70,8 +70,6 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vqdmulh_i16_c(<8 x i16> %s0, <8 x i16> %s1) {
 ; CHECK-LABEL: vqdmulh_i16_c:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    vmov q2, q0
 ; CHECK-NEXT:    vmov.u16 r0, q0[2]
 ; CHECK-NEXT:    vmov.u16 r1, q0[0]
@@ -87,35 +85,32 @@ define arm_aapcs_vfpcc <8 x i16> @vqdmulh_i16_c(<8 x i16> %s0, <8 x i16> %s1) {
 ; CHECK-NEXT:    vmov q3[3], q3[1], r1, r0
 ; CHECK-NEXT:    vmov.u16 r1, q2[4]
 ; CHECK-NEXT:    vmullb.s16 q0, q3, q0
-; CHECK-NEXT:    vmov.i32 q3, #0x7fff
 ; CHECK-NEXT:    vshl.i32 q0, q0, #10
 ; CHECK-NEXT:    vshr.s32 q0, q0, #10
-; CHECK-NEXT:    vshr.s32 q0, q0, #15
-; CHECK-NEXT:    vmin.s32 q4, q0, q3
-; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    vshr.s32 q3, q0, #15
+; CHECK-NEXT:    vmov r0, s12
 ; CHECK-NEXT:    vmov.16 q0[0], r0
-; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    vmov r0, s13
 ; CHECK-NEXT:    vmov.16 q0[1], r0
-; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    vmov r0, s14
 ; CHECK-NEXT:    vmov.16 q0[2], r0
-; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    vmov r0, s15
 ; CHECK-NEXT:    vmov.16 q0[3], r0
 ; CHECK-NEXT:    vmov.u16 r0, q2[6]
-; CHECK-NEXT:    vmov q4[2], q4[0], r1, r0
+; CHECK-NEXT:    vmov q3[2], q3[0], r1, r0
 ; CHECK-NEXT:    vmov.u16 r0, q2[7]
 ; CHECK-NEXT:    vmov.u16 r1, q2[5]
-; CHECK-NEXT:    vmov q4[3], q4[1], r1, r0
+; CHECK-NEXT:    vmov q3[3], q3[1], r1, r0
 ; CHECK-NEXT:    vmov.u16 r0, q1[6]
 ; CHECK-NEXT:    vmov.u16 r1, q1[4]
 ; CHECK-NEXT:    vmov q2[2], q2[0], r1, r0
 ; CHECK-NEXT:    vmov.u16 r0, q1[7]
 ; CHECK-NEXT:    vmov.u16 r1, q1[5]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r1, r0
-; CHECK-NEXT:    vmullb.s16 q1, q2, q4
+; CHECK-NEXT:    vmullb.s16 q1, q2, q3
 ; CHECK-NEXT:    vshl.i32 q1, q1, #10
 ; CHECK-NEXT:    vshr.s32 q1, q1, #10
 ; CHECK-NEXT:    vshr.s32 q1, q1, #15
-; CHECK-NEXT:    vmin.s32 q1, q1, q3
 ; CHECK-NEXT:    vmov r0, s4
 ; CHECK-NEXT:    vmov.16 q0[4], r0
 ; CHECK-NEXT:    vmov r0, s5
@@ -124,7 +119,6 @@ define arm_aapcs_vfpcc <8 x i16> @vqdmulh_i16_c(<8 x i16> %s0, <8 x i16> %s1) {
 ; CHECK-NEXT:    vmov.16 q0[6], r0
 ; CHECK-NEXT:    vmov r0, s7
 ; CHECK-NEXT:    vmov.16 q0[7], r0
-; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    bx lr
 entry:
   %l2 = sext <8 x i16> %s0 to <8 x i22>

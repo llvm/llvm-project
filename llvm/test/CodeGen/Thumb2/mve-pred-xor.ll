@@ -170,8 +170,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @cmpugez_v4i1(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: cmpugez_v4i1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcmp.i32 ne, q0, zr
-; CHECK-NEXT:    vpsel q0, q0, q1
+; CHECK-NEXT:    vcmp.i32 eq, q0, zr
+; CHECK-NEXT:    vpsel q0, q1, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %c1 = icmp eq <4 x i32> %a, zeroinitializer
