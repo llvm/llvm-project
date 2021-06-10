@@ -43,8 +43,8 @@ MCOperand DPUMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
                                              MCSymbol *Sym) const {
 
   const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
-  LLVM_DEBUG(dbgs() << "DPU/Lower - Lowering symbol operand of type "
-                    << MO.getType() << "\n");
+  LLVM_DEBUG(dbgs() << "DPU/Lower - Lowering symbol operand of type " << MO
+                    << "\n");
 
   // Supported operands: register, immediate (32/64), Frame Index,
   // Constant Pool Index, Target Index=index+offset,

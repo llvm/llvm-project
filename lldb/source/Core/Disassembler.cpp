@@ -551,16 +551,23 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
     range.GetBaseAddress() = frame.GetFrameCodeAddress();
   }
 
-    if (range.GetBaseAddress().IsValid() && range.GetByteSize() == 0)
-      range.SetByteSize(DEFAULT_DISASM_BYTE_SIZE);
+  if (range.GetBaseAddress().IsValid() && range.GetByteSize() == 0)
+    range.SetByteSize(DEFAULT_DISASM_BYTE_SIZE);
 
-  Limit limit = (num_instructions == 0)
-                    ? Limit{Limit::Bytes, range.GetByteSize()}
-                    : Limit{Limit::Instructions, num_instructions};
+  Disassembler::Limit limit = {Disassembler::Limit::Bytes, range.GetByteSize()};
+  // Note, this was previously the following definition (with num_instructions
+  // defined here separately) I am unsure as to whether we need this, or whether
+  // the "new" check is correct for the DPU backend size_t
+  // num_instructions_found = GetInstructionList().GetSize();
 
-  return Disassemble(debugger, arch, plugin_name, flavor, exe_ctx,
-                     range.GetBaseAddress(), limit, mixed_source_and_assembly,
-                     num_mixed_context_lines, options, strm);
+  // Limit limit = (num_instructions == 0)
+  //                   ? Limit{Limit::Bytes, range.GetByteSize()}
+  //                   : Limit{Limit::Instructions, num_instructions};
+  if (limit.value == 0)
+    limit.value = DEFAULT_DISASM_BYTE_SIZE;
+
+  return Disassemble(debugger, arch, nullptr, nullptr, frame,
+                     range.GetBaseAddress(), limit, false, 0, 0, strm);
 }
 
 Instruction::Instruction(const Address &address, AddressClass addr_class)
@@ -647,9 +654,7 @@ bool Instruction::DumpEmulation(const ArchSpec &arch) {
   return false;
 }
 
-bool Instruction::CanSetBreakpoint () {
-  return !HasDelaySlot();
-}
+bool Instruction::CanSetBreakpoint() { return !HasDelaySlot(); }
 
 bool Instruction::HasDelaySlot() {
   // Default is false.
@@ -988,14 +993,12 @@ void InstructionList::Append(lldb::InstructionSP &inst_sp) {
     m_instructions.push_back(inst_sp);
 }
 
-uint32_t
-InstructionList::GetIndexOfNextBranchInstruction(uint32_t start,
-                                                 bool ignore_calls,
-                                                 bool *found_calls) const {
+uint32_t InstructionList::GetIndexOfNextBranchInstruction(
+    uint32_t start, bool ignore_calls, bool *found_calls) const {
   size_t num_instructions = m_instructions.size();
 
   uint32_t next_branch = UINT32_MAX;
-  
+
   if (found_calls)
     *found_calls = false;
   for (size_t i = start; i < num_instructions; i++) {

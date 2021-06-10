@@ -179,8 +179,7 @@ ProcessDpu::Factory::Attach(
   sprintf(profile, "backend=hw,rankPath=%s,ignoreVpd=true", rank_path);
 
   PseudoTerminal pseudo_terminal;
-  if (!pseudo_terminal.OpenFirstAvailablePrimary(O_RDWR | O_NOCTTY, nullptr,
-                                                0)) {
+  if (pseudo_terminal.OpenFirstAvailablePrimary(O_RDWR | O_NOCTTY)) {
     return Status("Cannot open first available master on pseudo terminal ")
         .ToError();
   }
@@ -255,13 +254,11 @@ lldb_private::ConstString ProcessDpu::GetPluginNameStatic() {
   return g_name;
 }
 
-const char *ProcessDpu::GetPluginDescriptionStatic() {
-  return "dpu plug-in.";
-}
+const char *ProcessDpu::GetPluginDescriptionStatic() { return "dpu plug-in."; }
 
-lldb::ProcessSP
-ProcessDpu::CreateInstance(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
-               const lldb_private::FileSpec *crash_file_path) {
+lldb::ProcessSP ProcessDpu::CreateInstance(
+    lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
+    const lldb_private::FileSpec *crash_file_path, bool can_connect) {
   lldb::ProcessSP process_sp;
   return process_sp;
 }
@@ -277,6 +274,7 @@ void ProcessDpu::Initialize() {
 }
 
 void ProcessDpu::Terminate() {
+  // TODO: Work out if it is safe to do this.
   PluginManager::UnregisterPlugin(ProcessDpu::CreateInstance);
 }
 
@@ -536,13 +534,15 @@ Status ProcessDpu::GetMemoryRegionInfo(lldb::addr_t load_addr,
   return Status();
 }
 
-Status ProcessDpu::AllocateMemory(size_t size, uint32_t permissions,
-                                  lldb::addr_t &addr) {
-  return DpuErrorStatus("AllocateMemory: not implemented");
+llvm::Expected<lldb::addr_t> ProcessDpu::AllocateMemory(size_t size,
+                                                        uint32_t permissions) {
+  // return DpuErrorStatus("AllocateMemory: not implemented");
+  return llvm::make_error<UnimplementedError>();
 }
 
-Status ProcessDpu::DeallocateMemory(lldb::addr_t addr) {
-  return DpuErrorStatus("DeallocateMemory: not implemented");
+llvm::Error ProcessDpu::DeallocateMemory(lldb::addr_t addr) {
+  // return DpuErrorStatus("DeallocateMemory: not implemented");
+  return llvm::make_error<UnimplementedError>();
 }
 
 lldb::addr_t ProcessDpu::GetSharedLibraryInfoAddress() {
