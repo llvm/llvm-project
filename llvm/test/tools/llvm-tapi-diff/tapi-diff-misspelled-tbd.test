@@ -1,0 +1,5 @@
+; RUN: not llvm-tapi-diff %S/Inputs/v4A.tbd %S/Inputs/v4.tbd 2>&1 | FileCheck %s
+
+; CHECK: {{.*}}: error: {{.*}}v4.tbd: {{[Nn]}}o such file or directory
+; CHECK-NOT: error:
+; CHECK-NOT: warning:
