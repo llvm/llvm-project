@@ -10748,6 +10748,9 @@ def err_omp_interop_var_multiple_actions : Error<
 def err_omp_dispatch_statement_call
     : Error<"statement after '#pragma omp dispatch' must be a direct call"
             " to a target function or an assignment to one">;
+def err_omp_unroll_full_variable_trip_count : Error<
+  "loop to be fully unrolled must have a constant trip count">;
+def note_omp_directive_here : Note<"'%0' directive found here">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

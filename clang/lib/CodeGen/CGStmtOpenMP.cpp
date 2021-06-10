@@ -176,6 +176,8 @@ class OMPLoopScope : public CodeGenFunction::RunCleanupsScope {
       PreInits = cast_or_null<DeclStmt>(LD->getPreInits());
     } else if (const auto *Tile = dyn_cast<OMPTileDirective>(&S)) {
       PreInits = cast_or_null<DeclStmt>(Tile->getPreInits());
+    } else if (const auto *Unroll = dyn_cast<OMPUnrollDirective>(&S)) {
+      PreInits = cast_or_null<DeclStmt>(Unroll->getPreInits());
     } else {
       llvm_unreachable("Unknown loop-based directive kind.");
     }
@@ -1821,6 +1823,8 @@ static void emitBody(CodeGenFunction &CGF, const Stmt *S, const Stmt *NextLoop,
   if (SimplifiedS == NextLoop) {
     if (auto *Dir = dyn_cast<OMPTileDirective>(SimplifiedS))
       SimplifiedS = Dir->getTransformedStmt();
+    if (auto *Dir = dyn_cast<OMPUnrollDirective>(SimplifiedS))
+      SimplifiedS = Dir->getTransformedStmt();
     if (const auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(SimplifiedS))
       SimplifiedS = CanonLoop->getLoopStmt();
     if (const auto *For = dyn_cast<ForStmt>(SimplifiedS)) {
@@ -2577,6 +2581,28 @@ void CodeGenFunction::EmitOMPTileDirective(const OMPTileDirective &S) {
   // Emit the de-sugared statement.
   OMPTransformDirectiveScopeRAII TileScope(*this, &S);
   EmitStmt(S.getTransformedStmt());
+}
+
+void CodeGenFunction::EmitOMPUnrollDirective(const OMPUnrollDirective &S) {
+  // This function is only called if the unrolled loop is not consumed by any
+  // other loop-associated construct. Such a loop-associated construct will have
+  // used the transformed AST.
+
+  // Set the unroll metadata for the next emitted loop.
+  LoopStack.setUnrollState(LoopAttributes::Enable);
+
+  if (S.hasClausesOfKind<OMPFullClause>()) {
+    LoopStack.setUnrollState(LoopAttributes::Full);
+  } else if (auto *PartialClause = S.getSingleClause<OMPPartialClause>()) {
+    if (Expr *FactorExpr = PartialClause->getFactor()) {
+      uint64_t Factor =
+          FactorExpr->EvaluateKnownConstInt(getContext()).getZExtValue();
+      assert(Factor >= 1 && "Only positive factors are valid");
+      LoopStack.setUnrollCount(Factor);
+    }
+  }
+
+  EmitStmt(S.getAssociatedStmt());
 }
 
 void CodeGenFunction::EmitOMPOuterLoop(
@@ -5762,6 +5788,8 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
   case OMPC_safelen:
   case OMPC_simdlen:
   case OMPC_sizes:
+  case OMPC_full:
+  case OMPC_partial:
   case OMPC_allocator:
   case OMPC_allocate:
   case OMPC_collapse:

@@ -468,6 +468,13 @@ void OMPClauseProfiler::VisitOMPSizesClause(const OMPSizesClause *C) {
       Profiler->VisitExpr(E);
 }
 
+void OMPClauseProfiler::VisitOMPFullClause(const OMPFullClause *C) {}
+
+void OMPClauseProfiler::VisitOMPPartialClause(const OMPPartialClause *C) {
+  if (const Expr *Factor = C->getFactor())
+    Profiler->VisitExpr(Factor);
+}
+
 void OMPClauseProfiler::VisitOMPAllocatorClause(const OMPAllocatorClause *C) {
   if (C->getAllocator())
     Profiler->VisitStmt(C->getAllocator());
@@ -905,6 +912,10 @@ void StmtProfiler::VisitOMPSimdDirective(const OMPSimdDirective *S) {
 }
 
 void StmtProfiler::VisitOMPTileDirective(const OMPTileDirective *S) {
+  VisitOMPLoopBasedDirective(S);
+}
+
+void StmtProfiler::VisitOMPUnrollDirective(const OMPUnrollDirective *S) {
   VisitOMPLoopBasedDirective(S);
 }
 
