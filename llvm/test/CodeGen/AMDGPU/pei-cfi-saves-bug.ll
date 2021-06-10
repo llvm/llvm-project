@@ -36,7 +36,7 @@ define fastcc void @callee_no_fp() #0 {
 ; CHECK-NEXT:    v_writelane_b32 v1, exec_hi, 3
 ; CHECK-NEXT:    v_writelane_b32 v1, s33, 4
 ; CHECK-NEXT:    s_mov_b32 s33, s32
-; CHECK-NEXT:    s_add_u32 s32, s32, 0x400
+; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, tail_callee@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, tail_callee@gotpcrel32@hi+12
@@ -93,7 +93,7 @@ define dso_local fastcc void @func_needs_fp() unnamed_addr #0 {
 ; CHECK-NEXT:    v_writelane_b32 v40, exec_hi, 3
 ; CHECK-NEXT:    v_writelane_b32 v40, s33, 4
 ; CHECK-NEXT:    s_mov_b32 s33, s32
-; CHECK-NEXT:    s_add_u32 s32, s32, 0x400
+; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    s_getpc_b64 s[4:5]
 ; CHECK-NEXT:    s_add_u32 s4, s4, tail_callee_fp@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s5, s5, tail_callee_fp@rel32@hi+12

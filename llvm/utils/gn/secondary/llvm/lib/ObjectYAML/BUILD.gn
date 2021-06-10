@@ -26,6 +26,7 @@ static_library("ObjectYAML") {
     "ObjectYAML.cpp",
     "WasmEmitter.cpp",
     "WasmYAML.cpp",
+    "XCOFFEmitter.cpp",
     "XCOFFYAML.cpp",
     "YAML.cpp",
     "yaml2obj.cpp",

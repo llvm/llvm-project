@@ -606,7 +606,7 @@ let MinVersion = CL12 in {
 }
 let MinVersion = CL20 in {
   foreach name = ["ctz"] in {
-    def : Builtin<name, [AIGenTypeN, AIGenTypeN]>;
+    def : Builtin<name, [AIGenTypeN, AIGenTypeN], Attr.Const>;
   }
 }
 

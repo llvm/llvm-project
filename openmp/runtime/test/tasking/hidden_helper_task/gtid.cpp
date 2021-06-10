@@ -82,6 +82,7 @@ int main(int argc, char *argv[]) {
 
     kmp_depend_info_t depinfo1;
     depinfo1.base_addr = reinterpret_cast<intptr_t>(&depvar);
+    depinfo1.flag = 0;
     depinfo1.flags.in = 1;
     depinfo1.flags.out = 1;
     depinfo1.len = 4;
@@ -97,6 +98,7 @@ int main(int argc, char *argv[]) {
 
     kmp_depend_info_t depinfo2;
     depinfo2.base_addr = reinterpret_cast<intptr_t>(&depvar);
+    depinfo2.flag = 0;
     depinfo2.flags.in = 1;
     depinfo2.flags.out = 1;
     depinfo2.len = 4;
@@ -112,6 +114,7 @@ int main(int argc, char *argv[]) {
 
     kmp_depend_info_t depinfo3;
     depinfo3.base_addr = reinterpret_cast<intptr_t>(&depvar);
+    depinfo3.flag = 0;
     depinfo3.flags.in = 1;
     depinfo3.flags.out = 1;
     depinfo3.len = 4;

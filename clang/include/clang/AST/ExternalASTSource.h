@@ -24,14 +24,12 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
-#include <string>
 #include <utility>
 
 namespace clang {

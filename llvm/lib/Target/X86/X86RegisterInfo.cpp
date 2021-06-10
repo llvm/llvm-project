@@ -62,7 +62,7 @@ X86RegisterInfo::X86RegisterInfo(const Triple &TT)
     // This matches the simplified 32-bit pointer code in the data layout
     // computation.
     // FIXME: Should use the data layout?
-    bool Use64BitReg = TT.getEnvironment() != Triple::GNUX32;
+    bool Use64BitReg = !TT.isX32();
     StackPtr = Use64BitReg ? X86::RSP : X86::ESP;
     FramePtr = Use64BitReg ? X86::RBP : X86::EBP;
     BasePtr = Use64BitReg ? X86::RBX : X86::EBX;

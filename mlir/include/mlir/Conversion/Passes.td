@@ -256,6 +256,16 @@ def ConvertMathToLibm : Pass<"convert-math-to-libm", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// OpenACCToSCF
+//===----------------------------------------------------------------------===//
+
+def ConvertOpenACCToSCF : Pass<"convert-openacc-to-scf", "ModuleOp"> {
+  let summary = "Convert the OpenACC ops to OpenACC with SCF dialect";
+  let constructor = "mlir::createConvertOpenACCToSCFPass()";
+  let dependentDialects = ["scf::SCFDialect", "acc::OpenACCDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // OpenACCToLLVM
 //===----------------------------------------------------------------------===//
 

@@ -192,9 +192,9 @@ define dso_local void @f1(float* noalias %aa, float* noalias %bb, float* noalias
 ; VF-TWO-CHECK-NEXT:    [[TMP130:%.*]] = getelementptr inbounds float, float* [[TMP96]], i32 44
 ; VF-TWO-CHECK-NEXT:    [[TMP131:%.*]] = bitcast float* [[TMP130]] to <4 x float>*
 ; VF-TWO-CHECK-NEXT:    store <4 x float> [[TMP95]], <4 x float>* [[TMP131]], align 4
-; VF-TWO-CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 48
+; VF-TWO-CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 48
 ; VF-TWO-CHECK-NEXT:    [[TMP132:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; VF-TWO-CHECK-NEXT:    br i1 [[TMP132]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
+; VF-TWO-CHECK-NEXT:    br i1 [[TMP132]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF-TWO-CHECK:       middle.block:
 ; VF-TWO-CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; VF-TWO-CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
@@ -223,9 +223,9 @@ define dso_local void @f1(float* noalias %aa, float* noalias %bb, float* noalias
 ; VF-TWO-CHECK-NEXT:    [[TMP142:%.*]] = getelementptr inbounds float, float* [[TMP141]], i32 0
 ; VF-TWO-CHECK-NEXT:    [[TMP143:%.*]] = bitcast float* [[TMP142]] to <2 x float>*
 ; VF-TWO-CHECK-NEXT:    store <2 x float> [[TMP140]], <2 x float>* [[TMP143]], align 4
-; VF-TWO-CHECK-NEXT:    [[INDEX_NEXT28]] = add i64 [[INDEX27]], 2
+; VF-TWO-CHECK-NEXT:    [[INDEX_NEXT28]] = add nuw i64 [[INDEX27]], 2
 ; VF-TWO-CHECK-NEXT:    [[TMP144:%.*]] = icmp eq i64 [[INDEX_NEXT28]], [[N_VEC26]]
-; VF-TWO-CHECK-NEXT:    br i1 [[TMP144]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], [[LOOP2:!llvm.loop !.*]]
+; VF-TWO-CHECK-NEXT:    br i1 [[TMP144]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; VF-TWO-CHECK:       vec.epilog.middle.block:
 ; VF-TWO-CHECK-NEXT:    [[CMP_N29:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC26]]
 ; VF-TWO-CHECK-NEXT:    br i1 [[CMP_N29]], label [[FOR_END_LOOPEXIT_LOOPEXIT:%.*]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -243,7 +243,7 @@ define dso_local void @f1(float* noalias %aa, float* noalias %bb, float* noalias
 ; VF-TWO-CHECK-NEXT:    store float [[ADD]], float* [[ARRAYIDX4]], align 4
 ; VF-TWO-CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; VF-TWO-CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; VF-TWO-CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT_LOOPEXIT]], [[LOOP4:!llvm.loop !.*]]
+; VF-TWO-CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF-TWO-CHECK:       for.end.loopexit.loopexit:
 ; VF-TWO-CHECK-NEXT:    br label [[FOR_END_LOOPEXIT]]
 ; VF-TWO-CHECK:       for.end.loopexit:
@@ -436,9 +436,9 @@ define dso_local void @f1(float* noalias %aa, float* noalias %bb, float* noalias
 ; VF-FOUR-CHECK-NEXT:    [[TMP130:%.*]] = getelementptr inbounds float, float* [[TMP96]], i32 44
 ; VF-FOUR-CHECK-NEXT:    [[TMP131:%.*]] = bitcast float* [[TMP130]] to <4 x float>*
 ; VF-FOUR-CHECK-NEXT:    store <4 x float> [[TMP95]], <4 x float>* [[TMP131]], align 4
-; VF-FOUR-CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 48
+; VF-FOUR-CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 48
 ; VF-FOUR-CHECK-NEXT:    [[TMP132:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; VF-FOUR-CHECK-NEXT:    br i1 [[TMP132]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
+; VF-FOUR-CHECK-NEXT:    br i1 [[TMP132]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF-FOUR-CHECK:       middle.block:
 ; VF-FOUR-CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; VF-FOUR-CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
@@ -467,9 +467,9 @@ define dso_local void @f1(float* noalias %aa, float* noalias %bb, float* noalias
 ; VF-FOUR-CHECK-NEXT:    [[TMP142:%.*]] = getelementptr inbounds float, float* [[TMP141]], i32 0
 ; VF-FOUR-CHECK-NEXT:    [[TMP143:%.*]] = bitcast float* [[TMP142]] to <4 x float>*
 ; VF-FOUR-CHECK-NEXT:    store <4 x float> [[TMP140]], <4 x float>* [[TMP143]], align 4
-; VF-FOUR-CHECK-NEXT:    [[INDEX_NEXT28]] = add i64 [[INDEX27]], 4
+; VF-FOUR-CHECK-NEXT:    [[INDEX_NEXT28]] = add nuw i64 [[INDEX27]], 4
 ; VF-FOUR-CHECK-NEXT:    [[TMP144:%.*]] = icmp eq i64 [[INDEX_NEXT28]], [[N_VEC26]]
-; VF-FOUR-CHECK-NEXT:    br i1 [[TMP144]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], [[LOOP2:!llvm.loop !.*]]
+; VF-FOUR-CHECK-NEXT:    br i1 [[TMP144]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; VF-FOUR-CHECK:       vec.epilog.middle.block:
 ; VF-FOUR-CHECK-NEXT:    [[CMP_N29:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC26]]
 ; VF-FOUR-CHECK-NEXT:    br i1 [[CMP_N29]], label [[FOR_END_LOOPEXIT_LOOPEXIT:%.*]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -487,7 +487,7 @@ define dso_local void @f1(float* noalias %aa, float* noalias %bb, float* noalias
 ; VF-FOUR-CHECK-NEXT:    store float [[ADD]], float* [[ARRAYIDX4]], align 4
 ; VF-FOUR-CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; VF-FOUR-CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; VF-FOUR-CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT_LOOPEXIT]], [[LOOP4:!llvm.loop !.*]]
+; VF-FOUR-CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF-FOUR-CHECK:       for.end.loopexit.loopexit:
 ; VF-FOUR-CHECK-NEXT:    br label [[FOR_END_LOOPEXIT]]
 ; VF-FOUR-CHECK:       for.end.loopexit:
@@ -689,9 +689,9 @@ define dso_local signext i32 @f2(float* noalias %A, float* noalias %B, i32 signe
 ; VF-TWO-CHECK-NEXT:    [[TMP114:%.*]] = getelementptr inbounds float, float* [[TMP92]], i32 28
 ; VF-TWO-CHECK-NEXT:    [[TMP115:%.*]] = bitcast float* [[TMP114]] to <4 x float>*
 ; VF-TWO-CHECK-NEXT:    store <4 x float> [[TMP91]], <4 x float>* [[TMP115]], align 4
-; VF-TWO-CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 32
+; VF-TWO-CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; VF-TWO-CHECK-NEXT:    [[TMP116:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; VF-TWO-CHECK-NEXT:    br i1 [[TMP116]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP5:!llvm.loop !.*]]
+; VF-TWO-CHECK-NEXT:    br i1 [[TMP116]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; VF-TWO-CHECK:       middle.block:
 ; VF-TWO-CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; VF-TWO-CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
@@ -725,9 +725,9 @@ define dso_local signext i32 @f2(float* noalias %A, float* noalias %B, i32 signe
 ; VF-TWO-CHECK-NEXT:    [[TMP128:%.*]] = getelementptr inbounds float, float* [[TMP127]], i32 0
 ; VF-TWO-CHECK-NEXT:    [[TMP129:%.*]] = bitcast float* [[TMP128]] to <2 x float>*
 ; VF-TWO-CHECK-NEXT:    store <2 x float> [[TMP126]], <2 x float>* [[TMP129]], align 4
-; VF-TWO-CHECK-NEXT:    [[INDEX_NEXT19]] = add i64 [[INDEX18]], 2
+; VF-TWO-CHECK-NEXT:    [[INDEX_NEXT19]] = add nuw i64 [[INDEX18]], 2
 ; VF-TWO-CHECK-NEXT:    [[TMP130:%.*]] = icmp eq i64 [[INDEX_NEXT19]], [[N_VEC17]]
-; VF-TWO-CHECK-NEXT:    br i1 [[TMP130]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], [[LOOP6:!llvm.loop !.*]]
+; VF-TWO-CHECK-NEXT:    br i1 [[TMP130]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF-TWO-CHECK:       vec.epilog.middle.block:
 ; VF-TWO-CHECK-NEXT:    [[CMP_N22:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC17]]
 ; VF-TWO-CHECK-NEXT:    br i1 [[CMP_N22]], label [[FOR_END_LOOPEXIT_LOOPEXIT:%.*]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -749,7 +749,7 @@ define dso_local signext i32 @f2(float* noalias %A, float* noalias %B, i32 signe
 ; VF-TWO-CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; VF-TWO-CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_014]], 1
 ; VF-TWO-CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; VF-TWO-CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT_LOOPEXIT]], [[LOOP7:!llvm.loop !.*]]
+; VF-TWO-CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP7:![0-9]+]]
 ; VF-TWO-CHECK:       for.end.loopexit.loopexit:
 ; VF-TWO-CHECK-NEXT:    br label [[FOR_END_LOOPEXIT]]
 ; VF-TWO-CHECK:       for.end.loopexit:
@@ -920,9 +920,9 @@ define dso_local signext i32 @f2(float* noalias %A, float* noalias %B, i32 signe
 ; VF-FOUR-CHECK-NEXT:    [[TMP114:%.*]] = getelementptr inbounds float, float* [[TMP92]], i32 28
 ; VF-FOUR-CHECK-NEXT:    [[TMP115:%.*]] = bitcast float* [[TMP114]] to <4 x float>*
 ; VF-FOUR-CHECK-NEXT:    store <4 x float> [[TMP91]], <4 x float>* [[TMP115]], align 4
-; VF-FOUR-CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 32
+; VF-FOUR-CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; VF-FOUR-CHECK-NEXT:    [[TMP116:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; VF-FOUR-CHECK-NEXT:    br i1 [[TMP116]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP5:!llvm.loop !.*]]
+; VF-FOUR-CHECK-NEXT:    br i1 [[TMP116]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; VF-FOUR-CHECK:       middle.block:
 ; VF-FOUR-CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; VF-FOUR-CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_END_LOOPEXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
@@ -956,9 +956,9 @@ define dso_local signext i32 @f2(float* noalias %A, float* noalias %B, i32 signe
 ; VF-FOUR-CHECK-NEXT:    [[TMP128:%.*]] = getelementptr inbounds float, float* [[TMP127]], i32 0
 ; VF-FOUR-CHECK-NEXT:    [[TMP129:%.*]] = bitcast float* [[TMP128]] to <4 x float>*
 ; VF-FOUR-CHECK-NEXT:    store <4 x float> [[TMP126]], <4 x float>* [[TMP129]], align 4
-; VF-FOUR-CHECK-NEXT:    [[INDEX_NEXT19]] = add i64 [[INDEX18]], 4
+; VF-FOUR-CHECK-NEXT:    [[INDEX_NEXT19]] = add nuw i64 [[INDEX18]], 4
 ; VF-FOUR-CHECK-NEXT:    [[TMP130:%.*]] = icmp eq i64 [[INDEX_NEXT19]], [[N_VEC17]]
-; VF-FOUR-CHECK-NEXT:    br i1 [[TMP130]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], [[LOOP6:!llvm.loop !.*]]
+; VF-FOUR-CHECK-NEXT:    br i1 [[TMP130]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF-FOUR-CHECK:       vec.epilog.middle.block:
 ; VF-FOUR-CHECK-NEXT:    [[CMP_N22:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC17]]
 ; VF-FOUR-CHECK-NEXT:    br i1 [[CMP_N22]], label [[FOR_END_LOOPEXIT_LOOPEXIT:%.*]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -980,7 +980,7 @@ define dso_local signext i32 @f2(float* noalias %A, float* noalias %B, i32 signe
 ; VF-FOUR-CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; VF-FOUR-CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_014]], 1
 ; VF-FOUR-CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; VF-FOUR-CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT_LOOPEXIT]], [[LOOP7:!llvm.loop !.*]]
+; VF-FOUR-CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP7:![0-9]+]]
 ; VF-FOUR-CHECK:       for.end.loopexit.loopexit:
 ; VF-FOUR-CHECK-NEXT:    br label [[FOR_END_LOOPEXIT]]
 ; VF-FOUR-CHECK:       for.end.loopexit:

@@ -33,6 +33,8 @@ constexpr uint8_t AllocRegNo = 31;
 
 enum ReservedSectionNum : int16_t { N_DEBUG = -2, N_ABS = -1, N_UNDEF = 0 };
 
+enum MagicNumber : uint16_t { XCOFF32 = 0x01DF, XCOFF64 = 0x01F7 };
+
 // x_smclas field of x_csect from system header: /usr/include/syms.h
 /// Storage Mapping Class definitions.
 enum StorageMappingClass : uint8_t {
@@ -293,6 +295,15 @@ enum CFileCpuId : uint8_t {
   TCPU_COM = 3,   ///< POWER and PowerPC architecture common.
   TCPU_970 = 19   ///< PPC970 - PowerPC 64-bit architecture.
 };
+
+enum SymbolAuxType : uint8_t {
+  AUX_EXCEPT = 255, ///< Identifies an exception auxiliary entry.
+  AUX_FCN = 254,    ///< Identifies a function auxiliary entry.
+  AUX_SYM = 253,    ///< Identifies a symbol auxiliary entry.
+  AUX_FILE = 252,   ///< Identifies a file auxiliary entry.
+  AUX_CSECT = 251,  ///< Identifies a csect auxiliary entry.
+  AUX_SECT = 250    ///< Identifies a SECT auxiliary entry.
+};                  // 64-bit XCOFF file only.
 
 StringRef getMappingClassString(XCOFF::StorageMappingClass SMC);
 StringRef getRelocationTypeString(XCOFF::RelocationType Type);

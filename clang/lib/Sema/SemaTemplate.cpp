@@ -1870,7 +1870,7 @@ DeclResult Sema::CheckClassTemplate(
       Diag(KWLoc, diag::err_using_decl_conflict_reverse);
       Diag(Shadow->getTargetDecl()->getLocation(),
            diag::note_using_decl_target);
-      Diag(Shadow->getUsingDecl()->getLocation(), diag::note_using_decl) << 0;
+      Diag(Shadow->getIntroducer()->getLocation(), diag::note_using_decl) << 0;
       // Recover by ignoring the old declaration.
       PrevDecl = PrevClassTemplate = nullptr;
     }

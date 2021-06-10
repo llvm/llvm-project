@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s | FileCheck %s
+// RUN: mlir-opt %s -split-input-file | FileCheck %s
 
 func @const() -> () {
   // CHECK: %true
@@ -26,3 +26,16 @@ func @const() -> () {
 
   return
 }
+
+// -----
+
+spv.module Logical GLSL450 {
+  spv.GlobalVariable @global_var : !spv.ptr<f32, Input>
+
+  spv.func @addressof() -> () "None" {
+    // CHECK: %global_var_addr = spv.mlir.addressof 
+    %0 = spv.mlir.addressof @global_var : !spv.ptr<f32, Input>
+    spv.Return
+  }
+}
+

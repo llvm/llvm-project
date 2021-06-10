@@ -8,9 +8,11 @@
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCOpsEnums.cpp.inc"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
 using namespace acc;
@@ -152,6 +154,31 @@ static OptionalParseResult parserOptionalOperandAndTypeWithPrefix(
 static bool isComputeOperation(Operation *op) {
   return isa<acc::ParallelOp>(op) || isa<acc::LoopOp>(op);
 }
+
+namespace {
+/// Pattern to remove operation without region that have constant false `ifCond`
+/// and remove the condition from the operation if the `ifCond` is a true
+/// constant.
+template <typename OpTy>
+struct RemoveConstantIfCondition : public OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OpTy op,
+                                PatternRewriter &rewriter) const override {
+    // Early return if there is no condition.
+    if (!op.ifCond())
+      return success();
+
+    auto constOp = op.ifCond().template getDefiningOp<ConstantOp>();
+    if (constOp && constOp.getValue().template cast<IntegerAttr>().getInt())
+      rewriter.updateRootInPlace(op, [&]() { op.ifCondMutable().erase(0); });
+    else if (constOp)
+      rewriter.eraseOp(op);
+
+    return success();
+  }
+};
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // ParallelOp
@@ -448,6 +475,26 @@ static void print(OpAsmPrinter &printer, ParallelOp &op) {
       op->getAttrs(), ParallelOp::getOperandSegmentSizeAttr());
 }
 
+unsigned ParallelOp::getNumDataOperands() {
+  return reductionOperands().size() + copyOperands().size() +
+         copyinOperands().size() + copyinReadonlyOperands().size() +
+         copyoutOperands().size() + copyoutZeroOperands().size() +
+         createOperands().size() + createZeroOperands().size() +
+         noCreateOperands().size() + presentOperands().size() +
+         devicePtrOperands().size() + attachOperands().size() +
+         gangPrivateOperands().size() + gangFirstPrivateOperands().size();
+}
+
+Value ParallelOp::getDataOperand(unsigned i) {
+  unsigned numOptional = async() ? 1 : 0;
+  numOptional += numGangs() ? 1 : 0;
+  numOptional += numWorkers() ? 1 : 0;
+  numOptional += vectorLength() ? 1 : 0;
+  numOptional += ifCond() ? 1 : 0;
+  numOptional += selfCond() ? 1 : 0;
+  return getOperand(waitOperands().size() + numOptional + i);
+}
+
 //===----------------------------------------------------------------------===//
 // LoopOp
 //===----------------------------------------------------------------------===//
@@ -708,6 +755,11 @@ Value ExitDataOp::getDataOperand(unsigned i) {
   return getOperand(waitOperands().size() + numOptional + i);
 }
 
+void ExitDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                             MLIRContext *context) {
+  results.add<RemoveConstantIfCondition<ExitDataOp>>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // EnterDataOp
 //===----------------------------------------------------------------------===//
@@ -748,6 +800,11 @@ Value EnterDataOp::getDataOperand(unsigned i) {
   numOptional += asyncOperand() ? 1 : 0;
   numOptional += waitDevnum() ? 1 : 0;
   return getOperand(waitOperands().size() + numOptional + i);
+}
+
+void EnterDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                              MLIRContext *context) {
+  results.add<RemoveConstantIfCondition<EnterDataOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -814,6 +871,11 @@ Value UpdateOp::getDataOperand(unsigned i) {
   numOptional += ifCond() ? 1 : 0;
   return getOperand(waitOperands().size() + deviceTypeOperands().size() +
                     numOptional + i);
+}
+
+void UpdateOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                           MLIRContext *context) {
+  results.add<RemoveConstantIfCondition<UpdateOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//

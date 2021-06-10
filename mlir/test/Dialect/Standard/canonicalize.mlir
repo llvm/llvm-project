@@ -429,8 +429,6 @@ func @truncConstant(%arg0: i8) -> i16 {
   return %tr : i16
 }
 
-// -----
-
 // CHECK-LABEL: @tripleAddAdd
 //       CHECK:   %[[cres:.+]] = constant 59 : index 
 //       CHECK:   %[[add:.+]] = addi %arg0, %[[cres]] : index 
@@ -647,4 +645,26 @@ func @notCmpUGE(%arg0: i8, %arg1: i8) -> i1 {
   %cmp = cmpi "uge", %arg0, %arg1 : i8
   %ncmp = xor %cmp, %true : i1
   return %ncmp : i1
+}
+
+// -----
+
+// CHECK-LABEL: @branchCondProp
+//       CHECK:       %[[trueval:.+]] = constant true
+//       CHECK:       %[[falseval:.+]] = constant false
+//       CHECK:       "test.consumer1"(%[[trueval]]) : (i1) -> ()
+//       CHECK:       "test.consumer2"(%[[falseval]]) : (i1) -> ()
+func @branchCondProp(%arg0: i1) {
+  cond_br %arg0, ^trueB, ^falseB
+
+^trueB:
+  "test.consumer1"(%arg0) : (i1) -> ()
+  br ^exit
+
+^falseB:
+  "test.consumer2"(%arg0) : (i1) -> ()
+  br ^exit
+
+^exit:
+  return
 }

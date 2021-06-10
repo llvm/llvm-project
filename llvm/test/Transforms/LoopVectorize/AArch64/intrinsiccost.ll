@@ -52,9 +52,9 @@ define void @saddsat(i16* nocapture readonly %pSrc, i16 signext %offset, i16* no
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i16, i16* [[NEXT_GEP6]], i64 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i16* [[TMP10]] to <8 x i16>*
 ; CHECK-NEXT:    store <8 x i16> [[TMP8]], <8 x i16>* [[TMP11]], align 2
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END]], label [[SCALAR_PH]]
@@ -74,7 +74,7 @@ define void @saddsat(i16* nocapture readonly %pSrc, i16 signext %offset, i16* no
 ; CHECK-NEXT:    store i16 [[TMP14]], i16* [[PDST_ADDR_07]], align 2
 ; CHECK-NEXT:    [[DEC]] = add i32 [[BLKCNT_09]], -1
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[DEC]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END]], label [[WHILE_BODY]], [[LOOP2:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END]], label [[WHILE_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       while.end:
 ; CHECK-NEXT:    ret void
 ;
@@ -145,9 +145,9 @@ define void @umin(i8* nocapture readonly %pSrc, i8 signext %offset, i8* nocaptur
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, i8* [[NEXT_GEP3]], i64 16
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i8* [[TMP10]] to <16 x i8>*
 ; CHECK-NEXT:    store <16 x i8> [[TMP8]], <16 x i8>* [[TMP11]], align 2
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 32
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP4:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
@@ -182,9 +182,9 @@ define void @umin(i8* nocapture readonly %pSrc, i8 signext %offset, i8* nocaptur
 ; CHECK-NEXT:    [[TMP18:%.*]] = call <8 x i8> @llvm.umin.v8i8(<8 x i8> [[WIDE_LOAD24]], <8 x i8> [[BROADCAST_SPLAT26]])
 ; CHECK-NEXT:    [[TMP19:%.*]] = bitcast i8* [[NEXT_GEP23]] to <8 x i8>*
 ; CHECK-NEXT:    store <8 x i8> [[TMP18]], <8 x i8>* [[TMP19]], align 2
-; CHECK-NEXT:    [[INDEX_NEXT11]] = add i64 [[INDEX10]], 8
+; CHECK-NEXT:    [[INDEX_NEXT11]] = add nuw i64 [[INDEX10]], 8
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT11]], [[N_VEC9]]
-; CHECK-NEXT:    br i1 [[TMP20]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], [[LOOP5:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[TMP20]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[CMP_N20:%.*]] = icmp eq i32 [[TMP16]], 0
 ; CHECK-NEXT:    br i1 [[CMP_N20]], label [[WHILE_END]], label [[VEC_EPILOG_SCALAR_PH]]
@@ -204,7 +204,7 @@ define void @umin(i8* nocapture readonly %pSrc, i8 signext %offset, i8* nocaptur
 ; CHECK-NEXT:    store i8 [[TMP22]], i8* [[PDST_ADDR_07]], align 2
 ; CHECK-NEXT:    [[DEC]] = add i32 [[BLKCNT_09]], -1
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[DEC]], 0
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END]], label [[WHILE_BODY]], [[LOOP6:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END]], label [[WHILE_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       while.end:
 ; CHECK-NEXT:    ret void
 ;

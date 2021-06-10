@@ -45,11 +45,12 @@ entry:
 }
 
 ; CHECK-LABEL: test_limited_sgpr
-; GFX6: s_add_u32 s32, s32, 0x[[OFFSET:[0-9a-f]+]]
-; GFX6: s_add_u32 s32, s32, 0x[[OFFSET:[0-9a-f]+]]
+; GFX6: s_add_i32 s32, s32, 0x[[OFFSET:[0-9a-f]+]]
+; GFX6: s_add_i32 s32, s32, 0x[[OFFSET:[0-9a-f]+]]
+; GFX6: s_add_i32 s32, s32, 0x[[OFFSET:[0-9a-f]+]]
 ; GFX6-NEXT: s_waitcnt expcnt(0)
 ; GFX6-NEXT: buffer_load_dword v{{[0-9]+}}, off, s[{{[0-9:]+}}], s32
-; GFX6-NEXT: s_sub_u32 s32, s32, 0x[[OFFSET:[0-9a-f]+]]
+; GFX6-NEXT: s_add_i32 s32, s32, 0x[[OFFSET:[0-9a-f]+]]
 ; GFX6: NumSgprs: 48
 ; GFX6: ScratchSize: 8608
 

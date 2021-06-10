@@ -12,7 +12,9 @@
 
 #include "AMDGPULDSUtils.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/ReplaceConstant.h"
 
 using namespace llvm;
 
@@ -29,17 +31,33 @@ Align getAlign(DataLayout const &DL, const GlobalVariable *GV) {
                                        GV->getValueType());
 }
 
-bool isUsedOnlyFromFunction(const User *U, const Function *F) {
-  if (auto *I = dyn_cast<Instruction>(U)) {
-    return I->getFunction() == F;
-  }
+static void collectFunctionUses(User *U, const Function *F,
+                                SetVector<Instruction *> &InstUsers) {
+  SmallVector<User *> Stack{U};
 
-  if (isa<ConstantExpr>(U)) {
-    return all_of(U->users(),
-                  [F](const User *U) { return isUsedOnlyFromFunction(U, F); });
-  }
+  while (!Stack.empty()) {
+    U = Stack.pop_back_val();
 
-  return false;
+    if (auto *I = dyn_cast<Instruction>(U)) {
+      if (I->getFunction() == F)
+        InstUsers.insert(I);
+      continue;
+    }
+
+    if (!isa<ConstantExpr>(U))
+      continue;
+
+    append_range(Stack, U->users());
+  }
+}
+
+void replaceConstantUsesInFunction(ConstantExpr *C, const Function *F) {
+  SetVector<Instruction *> InstUsers;
+
+  collectFunctionUses(C, F, InstUsers);
+  for (Instruction *I : InstUsers) {
+    convertConstantExprsToInstructions(I, C);
+  }
 }
 
 bool shouldLowerLDSToStruct(const SmallPtrSetImpl<GlobalValue *> &UsedList,
@@ -76,14 +94,6 @@ bool shouldLowerLDSToStruct(const SmallPtrSetImpl<GlobalValue *> &UsedList,
     }
 
     if (auto *E = dyn_cast<ConstantExpr>(V)) {
-      if (F) {
-        // Any use which does not end up an instruction disqualifies a
-        // variable to be put into a kernel's LDS structure because later
-        // we will need to replace only this kernel's uses for which we
-        // need to identify a using function.
-        if (!isUsedOnlyFromFunction(E, F))
-          return false;
-      }
       for (const User *U : E->users()) {
         if (Visited.insert(U).second) {
           Stack.push_back(U);

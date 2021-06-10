@@ -38,6 +38,10 @@ class EmitObjAction : public FrontendAction {
   void ExecuteAction() override;
 };
 
+class InitOnlyAction : public FrontendAction {
+  void ExecuteAction() override;
+};
+
 //===----------------------------------------------------------------------===//
 // Prescan Actions
 //===----------------------------------------------------------------------===//

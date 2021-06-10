@@ -58,7 +58,7 @@ define i32 @matrix_row_col([100 x i32]* nocapture readonly %data, i32 %i, i32 %j
 ; CHECK-NEXT:    [[TMP35:%.*]] = mul nsw <8 x i32> [[TMP34]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = add <8 x i32> [[VEC_PHI]], <i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
 ; CHECK-NEXT:    [[TMP37]] = add <8 x i32> [[TMP36]], [[TMP35]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP38:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
 ; CHECK-NEXT:    br i1 [[TMP38]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP5:!llvm.loop !.*]]
 ; CHECK:       middle.block:

@@ -70,7 +70,7 @@ define void @uaddsat(i16* nocapture readonly %pSrc, i16 signext %offset, i16* no
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i16, i16* [[NEXT_GEP5]], i64 48
 ; CHECK-NEXT:    [[TMP21:%.*]] = bitcast i16* [[TMP20]] to <16 x i16>*
 ; CHECK-NEXT:    store <16 x i16> [[TMP14]], <16 x i16>* [[TMP21]], align 2
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 64
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 64
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP22]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
@@ -107,7 +107,7 @@ define void @uaddsat(i16* nocapture readonly %pSrc, i16 signext %offset, i16* no
 ; CHECK-NEXT:    [[TMP28:%.*]] = call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> [[WIDE_LOAD34]], <8 x i16> [[BROADCAST_SPLAT36]])
 ; CHECK-NEXT:    [[TMP29:%.*]] = bitcast i16* [[NEXT_GEP33]] to <8 x i16>*
 ; CHECK-NEXT:    store <8 x i16> [[TMP28]], <8 x i16>* [[TMP29]], align 2
-; CHECK-NEXT:    [[INDEX_NEXT21]] = add i64 [[INDEX20]], 8
+; CHECK-NEXT:    [[INDEX_NEXT21]] = add nuw i64 [[INDEX20]], 8
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT21]], [[N_VEC19]]
 ; CHECK-NEXT:    br i1 [[TMP30]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
@@ -219,7 +219,7 @@ define void @cttz(i8* nocapture readonly %pSrc, i8 signext %offset, i8* nocaptur
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i8, i8* [[NEXT_GEP5]], i64 96
 ; CHECK-NEXT:    [[TMP21:%.*]] = bitcast i8* [[TMP20]] to <32 x i8>*
 ; CHECK-NEXT:    store <32 x i8> [[TMP14]], <32 x i8>* [[TMP21]], align 2
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 128
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 128
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP22]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
@@ -256,7 +256,7 @@ define void @cttz(i8* nocapture readonly %pSrc, i8 signext %offset, i8* nocaptur
 ; CHECK-NEXT:    [[TMP28:%.*]] = call <16 x i8> @llvm.fshl.v16i8(<16 x i8> [[WIDE_LOAD34]], <16 x i8> [[WIDE_LOAD34]], <16 x i8> [[BROADCAST_SPLAT36]])
 ; CHECK-NEXT:    [[TMP29:%.*]] = bitcast i8* [[NEXT_GEP33]] to <16 x i8>*
 ; CHECK-NEXT:    store <16 x i8> [[TMP28]], <16 x i8>* [[TMP29]], align 2
-; CHECK-NEXT:    [[INDEX_NEXT21]] = add i64 [[INDEX20]], 16
+; CHECK-NEXT:    [[INDEX_NEXT21]] = add nuw i64 [[INDEX20]], 16
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT21]], [[N_VEC19]]
 ; CHECK-NEXT:    br i1 [[TMP30]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:

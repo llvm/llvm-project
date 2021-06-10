@@ -994,6 +994,10 @@ def gpu_instrument_lib_EQ : Joined<["--"], "gpu-instrument-lib=">,
 def fgpu_sanitize : Flag<["-"], "fgpu-sanitize">, Group<f_Group>,
   HelpText<"Enable sanitizer for AMDGPU target">;
 def fno_gpu_sanitize : Flag<["-"], "fno-gpu-sanitize">, Group<f_Group>;
+def gpu_bundle_output : Flag<["--"], "gpu-bundle-output">,
+  Group<f_Group>, HelpText<"Bundle output files of HIP device compilation">;
+def no_gpu_bundle_output : Flag<["--"], "no-gpu-bundle-output">,
+  Group<f_Group>, HelpText<"Do not bundle output files of HIP device compilation">;
 def cuid_EQ : Joined<["-"], "cuid=">, Flags<[CC1Option]>,
   HelpText<"An ID for compilation unit, which should be the same for the same "
            "compilation unit but different for different compilation units. "
@@ -5418,8 +5422,6 @@ def analyze : Flag<["-"], "analyze">,
   HelpText<"Run static analysis engine">;
 def dump_tokens : Flag<["-"], "dump-tokens">,
   HelpText<"Run preprocessor, dump internal rep of tokens">;
-def init_only : Flag<["-"], "init-only">,
-  HelpText<"Only execute frontend initialization">;
 def fixit : Flag<["-"], "fixit">,
   HelpText<"Apply fix-it advice to the input source">;
 def fixit_EQ : Joined<["-"], "fixit=">,
@@ -5885,6 +5887,8 @@ let Group = Action_Group in {
 
 def emit_obj : Flag<["-"], "emit-obj">,
   HelpText<"Emit native object files">;
+def init_only : Flag<["-"], "init-only">,
+  HelpText<"Only execute frontend initialization">;
 
 } // let Group = Action_Group
 } // let Flags = [CC1Option, FC1Option, NoDriverOption]

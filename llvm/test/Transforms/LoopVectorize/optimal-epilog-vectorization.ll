@@ -44,7 +44,7 @@ define dso_local void @f1(float* noalias %aa, float* noalias %bb, float* noalias
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, float* [[TMP8]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast float* [[TMP9]] to <4 x float>*
 ; CHECK-NEXT:    store <4 x float> [[TMP7]], <4 x float>* [[TMP10]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; CHECK:       middle.block:
@@ -75,7 +75,7 @@ define dso_local void @f1(float* noalias %aa, float* noalias %bb, float* noalias
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, float* [[TMP20]], i32 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = bitcast float* [[TMP21]] to <4 x float>*
 ; CHECK-NEXT:    store <4 x float> [[TMP19]], <4 x float>* [[TMP22]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT6]] = add i64 [[INDEX5]], 4
+; CHECK-NEXT:    [[INDEX_NEXT6]] = add nuw i64 [[INDEX5]], 4
 ; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC4]]
 ; CHECK-NEXT:    br i1 [[TMP23]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], [[LOOP2:!llvm.loop !.*]]
 ; CHECK:       vec.epilog.middle.block:
@@ -207,7 +207,7 @@ define dso_local signext i32 @f2(float* noalias %A, float* noalias %B, i32 signe
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds float, float* [[TMP22]], i32 0
 ; CHECK-NEXT:    [[TMP24:%.*]] = bitcast float* [[TMP23]] to <4 x float>*
 ; CHECK-NEXT:    store <4 x float> [[TMP21]], <4 x float>* [[TMP24]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP5:!llvm.loop !.*]]
 ; CHECK:       middle.block:
@@ -243,7 +243,7 @@ define dso_local signext i32 @f2(float* noalias %A, float* noalias %B, i32 signe
 ; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds float, float* [[TMP36]], i32 0
 ; CHECK-NEXT:    [[TMP38:%.*]] = bitcast float* [[TMP37]] to <4 x float>*
 ; CHECK-NEXT:    store <4 x float> [[TMP35]], <4 x float>* [[TMP38]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT5]] = add i64 [[INDEX4]], 4
+; CHECK-NEXT:    [[INDEX_NEXT5]] = add nuw i64 [[INDEX4]], 4
 ; CHECK-NEXT:    [[TMP39:%.*]] = icmp eq i64 [[INDEX_NEXT5]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[TMP39]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], [[LOOP6:!llvm.loop !.*]]
 ; CHECK:       vec.epilog.middle.block:
@@ -354,7 +354,7 @@ define void @f3(i8* noalias %A, i64 %n) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8* [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to <4 x i8>*
 ; CHECK-NEXT:    store <4 x i8> <i8 1, i8 1, i8 1, i8 1>, <4 x i8>* [[TMP3]], align 1
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP8:!llvm.loop !.*]]
 ; CHECK:       middle.block:
@@ -376,7 +376,7 @@ define void @f3(i8* noalias %A, i64 %n) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, i8* [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to <4 x i8>*
 ; CHECK-NEXT:    store <4 x i8> <i8 1, i8 1, i8 1, i8 1>, <4 x i8>* [[TMP8]], align 1
-; CHECK-NEXT:    [[INDEX_NEXT5]] = add i64 [[INDEX4]], 4
+; CHECK-NEXT:    [[INDEX_NEXT5]] = add nuw i64 [[INDEX4]], 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT5]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], [[LOOP9:!llvm.loop !.*]]
 ; CHECK:       vec.epilog.middle.block:
@@ -417,7 +417,7 @@ define void @f3(i8* noalias %A, i64 %n) {
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, i8* [[TMP1]], i32 0
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to <4 x i8>*
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    store <4 x i8> <i8 1, i8 1, i8 1, i8 1>, <4 x i8>* [[TMP3]], align 1
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       middle.block:
@@ -439,7 +439,7 @@ define void @f3(i8* noalias %A, i64 %n) {
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, i8* [[TMP6]], i32 0
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP8:%.*]] = bitcast i8* [[TMP7]] to <2 x i8>*
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    store <2 x i8> <i8 1, i8 1>, <2 x i8>* [[TMP8]], align 1
-; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX_NEXT5]] = add i64 [[INDEX4]], 2
+; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[INDEX_NEXT5]] = add nuw i64 [[INDEX4]], 2
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT5]], [[N_VEC3]]
 ; CHECK-PROFITABLE-BY-DEFAULT-NEXT:    br i1 [[TMP9]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], [[LOOP2:!llvm.loop !.*]]
 ; CHECK-PROFITABLE-BY-DEFAULT:       vec.epilog.middle.block:

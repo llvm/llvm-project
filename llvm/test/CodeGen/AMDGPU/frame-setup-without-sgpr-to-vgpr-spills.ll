@@ -18,7 +18,7 @@ define void @callee_with_stack_and_call() #0 {
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s33, 2
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_mov_b32 s33, s32
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s30, 0
-; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_add_u32 s32, s32, 0x400
+; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_addk_i32 s32, 0x400
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, 0
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_getpc_b64 s[4:5]
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
@@ -29,7 +29,7 @@ define void @callee_with_stack_and_call() #0 {
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_readlane_b32 s4, v40, 0
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_readlane_b32 s5, v40, 1
-; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_sub_u32 s32, s32, 0x400
+; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_addk_i32 s32, 0xfc00
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_readlane_b32 s33, v40, 2
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; NO-CFI-SAVES-SPILL-TO-VGPR-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
@@ -50,7 +50,7 @@ define void @callee_with_stack_and_call() #0 {
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s33, 6
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_mov_b32 s33, s32
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s30, 0
-; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_add_u32 s32, s32, 0x400
+; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_addk_i32 s32, 0x400
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, 0
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_getpc_b64 s[4:5]
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
@@ -61,7 +61,7 @@ define void @callee_with_stack_and_call() #0 {
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_readlane_b32 s4, v40, 0
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_readlane_b32 s5, v40, 1
-; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_sub_u32 s32, s32, 0x400
+; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_addk_i32 s32, 0xfc00
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    v_readlane_b32 s33, v40, 6
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; CFI-SAVES-SPILL-TO-VGPR-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
@@ -75,7 +75,7 @@ define void @callee_with_stack_and_call() #0 {
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, s33
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_mov_b32 s33, s32
-; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_add_u32 s32, s32, 0x800
+; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_addk_i32 s32, 0x800
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 s[6:7], exec
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, 3
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    buffer_store_dword v1, off, s[0:3], s33 offset:16
@@ -102,7 +102,7 @@ define void @callee_with_stack_and_call() #0 {
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    buffer_load_dword v1, off, s[0:3], s33 offset:16
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, s[6:7]
-; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_sub_u32 s32, s32, 0x800
+; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_addk_i32 s32, 0xf800
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; NO-CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    v_readfirstlane_b32 s33, v0
@@ -124,7 +124,7 @@ define void @callee_with_stack_and_call() #0 {
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, s33
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_mov_b32 s33, s32
-; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_add_u32 s32, s32, 0xc00
+; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_addk_i32 s32, 0xc00
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 s[6:7], exec
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, 3
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    buffer_store_dword v1, off, s[0:3], s33 offset:32
@@ -151,7 +151,7 @@ define void @callee_with_stack_and_call() #0 {
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    buffer_load_dword v1, off, s[0:3], s33 offset:32
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, s[6:7]
-; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_sub_u32 s32, s32, 0xc00
+; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_addk_i32 s32, 0xf400
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:28 ; 4-byte Folded Reload
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
 ; CFI-SAVES-NO-SPILL-TO-VGPR-NEXT:    v_readfirstlane_b32 s33, v0
