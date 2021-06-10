@@ -6579,14 +6579,10 @@ ScalarEvolution::getLoopProperties(const Loop *L) {
 }
 
 bool ScalarEvolution::loopIsFiniteByAssumption(const Loop *L) {
-  if (!L->getHeader()->getParent()->mustProgress() &&
-      !hasMustProgress(L))
-    return false;
-
-  // A loop without side effects must be finite.
+  // A mustprogress loop without side effects must be finite.
   // TODO: The check used here is very conservative.  It's only *specific*
   // side effects which are well defined in infinite loops.
-  return loopHasNoSideEffects(L);
+  return isMustProgress(L) && loopHasNoSideEffects(L);
 }
 
 const SCEV *ScalarEvolution::createSCEV(Value *V) {

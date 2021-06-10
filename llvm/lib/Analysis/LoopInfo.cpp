@@ -1108,6 +1108,10 @@ bool llvm::hasMustProgress(const Loop *L) {
   return getBooleanLoopAttribute(L, LLVMLoopMustProgress);
 }
 
+bool llvm::isMustProgress(const Loop *L) {
+  return L->getHeader()->getParent()->mustProgress() || hasMustProgress(L);
+}
+
 bool llvm::isValidAsAccessGroup(MDNode *Node) {
   return Node->getNumOperands() == 0 && Node->isDistinct();
 }
