@@ -104,6 +104,104 @@ bb:
   ret void
 }
 
+; Apply different operand orders for the nested add sequences
+define void @ld_v4i8_add_nsw_operand_orders(i32 %v0, i32 %v1, i8* %src, <4 x i8>* %dst) {
+; CHECK-LABEL: @ld_v4i8_add_nsw_operand_orders(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP:%.*]] = add nsw i32 [[V0:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[V1:%.*]], [[TMP]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, i8* [[SRC:%.*]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[TMP3]] to <4 x i8>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, <4 x i8>* [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <4 x i8> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <4 x i8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP133:%.*]] = extractelement <4 x i8> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP184:%.*]] = extractelement <4 x i8> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> undef, i8 [[TMP41]], i32 0
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[TMP82]], i32 1
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i8> [[TMP20]], i8 [[TMP133]], i32 2
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i8> [[TMP21]], i8 [[TMP184]], i32 3
+; CHECK-NEXT:    store <4 x i8> [[TMP22]], <4 x i8>* [[DST:%.*]]
+; CHECK-NEXT:    ret void
+;
+bb:
+  %tmp = add nsw i32 %v0, -1
+  %tmp1 = add nsw i32 %v1, %tmp
+  %tmp2 = sext i32 %tmp1 to i64
+  %tmp3 = getelementptr inbounds i8, i8* %src, i64 %tmp2
+  %tmp4 = load i8, i8* %tmp3, align 1
+  %tmp5 = add nsw i32 %v0, %v1
+  %tmp6 = sext i32 %tmp5 to i64
+  %tmp7 = getelementptr inbounds i8, i8* %src, i64 %tmp6
+  %tmp8 = load i8, i8* %tmp7, align 1
+  %tmp9 = add nsw i32 %v0, 1
+  %tmp10 = add nsw i32 %tmp9, %v1
+  %tmp11 = sext i32 %tmp10 to i64
+  %tmp12 = getelementptr inbounds i8, i8* %src, i64 %tmp11
+  %tmp13 = load i8, i8* %tmp12, align 1
+  %tmp14 = add nsw i32 %v0, 2
+  %tmp15 = add nsw i32 %v1, %tmp14
+  %tmp16 = sext i32 %tmp15 to i64
+  %tmp17 = getelementptr inbounds i8, i8* %src, i64 %tmp16
+  %tmp18 = load i8, i8* %tmp17, align 1
+  %tmp19 = insertelement <4 x i8> undef, i8 %tmp4, i32 0
+  %tmp20 = insertelement <4 x i8> %tmp19, i8 %tmp8, i32 1
+  %tmp21 = insertelement <4 x i8> %tmp20, i8 %tmp13, i32 2
+  %tmp22 = insertelement <4 x i8> %tmp21, i8 %tmp18, i32 3
+  store <4 x i8> %tmp22, <4 x i8>* %dst
+  ret void
+}
+
+; Apply different operand orders for the nested add sequences
+define void @ld_v4i8_add_nuw_operand_orders(i32 %v0, i32 %v1, i8* %src, <4 x i8>* %dst) {
+; CHECK-LABEL: @ld_v4i8_add_nuw_operand_orders(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[TMP:%.*]] = add nuw i32 [[V0:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[V1:%.*]], [[TMP]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, i8* [[SRC:%.*]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[TMP3]] to <4 x i8>*
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, <4 x i8>* [[TMP0]], align 1
+; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <4 x i8> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <4 x i8> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP133:%.*]] = extractelement <4 x i8> [[TMP1]], i32 2
+; CHECK-NEXT:    [[TMP184:%.*]] = extractelement <4 x i8> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x i8> undef, i8 [[TMP41]], i32 0
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP19]], i8 [[TMP82]], i32 1
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i8> [[TMP20]], i8 [[TMP133]], i32 2
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i8> [[TMP21]], i8 [[TMP184]], i32 3
+; CHECK-NEXT:    store <4 x i8> [[TMP22]], <4 x i8>* [[DST:%.*]]
+; CHECK-NEXT:    ret void
+;
+bb:
+  %tmp = add nuw i32 %v0, -1
+  %tmp1 = add nuw i32 %v1, %tmp
+  %tmp2 = zext i32 %tmp1 to i64
+  %tmp3 = getelementptr inbounds i8, i8* %src, i64 %tmp2
+  %tmp4 = load i8, i8* %tmp3, align 1
+  %tmp5 = add nuw i32 %v0, %v1
+  %tmp6 = zext i32 %tmp5 to i64
+  %tmp7 = getelementptr inbounds i8, i8* %src, i64 %tmp6
+  %tmp8 = load i8, i8* %tmp7, align 1
+  %tmp9 = add nuw i32 %v0, 1
+  %tmp10 = add nuw i32 %tmp9, %v1
+  %tmp11 = zext i32 %tmp10 to i64
+  %tmp12 = getelementptr inbounds i8, i8* %src, i64 %tmp11
+  %tmp13 = load i8, i8* %tmp12, align 1
+  %tmp14 = add nuw i32 %v0, 2
+  %tmp15 = add nuw i32 %v1, %tmp14
+  %tmp16 = zext i32 %tmp15 to i64
+  %tmp17 = getelementptr inbounds i8, i8* %src, i64 %tmp16
+  %tmp18 = load i8, i8* %tmp17, align 1
+  %tmp19 = insertelement <4 x i8> undef, i8 %tmp4, i32 0
+  %tmp20 = insertelement <4 x i8> %tmp19, i8 %tmp8, i32 1
+  %tmp21 = insertelement <4 x i8> %tmp20, i8 %tmp13, i32 2
+  %tmp22 = insertelement <4 x i8> %tmp21, i8 %tmp18, i32 3
+  store <4 x i8> %tmp22, <4 x i8>* %dst
+  ret void
+}
+
 define void @ld_v4i8_add_known_bits(i32 %ind0, i32 %ind1, i8* %src, <4 x i8>* %dst) {
 ; CHECK-LABEL: @ld_v4i8_add_known_bits(
 ; CHECK-NEXT:  bb:

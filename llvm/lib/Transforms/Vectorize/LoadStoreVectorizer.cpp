@@ -384,6 +384,81 @@ bool Vectorizer::areConsecutivePointers(Value *PtrA, Value *PtrB,
   return lookThroughComplexAddresses(PtrA, PtrB, BaseDelta, Depth);
 }
 
+static bool checkNoWrapFlags(Instruction *I, bool Signed) {
+  BinaryOperator *BinOpI = cast<BinaryOperator>(I);
+  return (Signed && BinOpI->hasNoSignedWrap()) ||
+         (!Signed && BinOpI->hasNoUnsignedWrap());
+}
+
+static bool checkIfSafeAddSequence(const APInt &IdxDiff, Instruction *AddOpA,
+                                   unsigned MatchingOpIdxA, Instruction *AddOpB,
+                                   unsigned MatchingOpIdxB, bool Signed) {
+  // If both OpA and OpB is an add with NSW/NUW and with
+  // one of the operands being the same, we can guarantee that the
+  // transformation is safe if we can prove that OpA won't overflow when
+  // IdxDiff added to the other operand of OpA.
+  // For example:
+  //  %tmp7 = add nsw i32 %tmp2, %v0
+  //  %tmp8 = sext i32 %tmp7 to i64
+  //  ...
+  //  %tmp11 = add nsw i32 %v0, 1
+  //  %tmp12 = add nsw i32 %tmp2, %tmp11
+  //  %tmp13 = sext i32 %tmp12 to i64
+  //
+  //  Both %tmp7 and %tmp2 has the nsw flag and the first operand
+  //  is %tmp2. It's guaranteed that adding 1 to %tmp7 won't overflow
+  //  because %tmp11 adds 1 to %v0 and both %tmp11 and %tmp12 has the
+  //  nsw flag.
+  assert(AddOpA->getOpcode() == Instruction::Add &&
+         AddOpB->getOpcode() == Instruction::Add &&
+         checkNoWrapFlags(AddOpA, Signed) && checkNoWrapFlags(AddOpB, Signed));
+  if (AddOpA->getOperand(MatchingOpIdxA) ==
+      AddOpB->getOperand(MatchingOpIdxB)) {
+    Value *OtherOperandA = AddOpA->getOperand(MatchingOpIdxA == 1 ? 0 : 1);
+    Value *OtherOperandB = AddOpB->getOperand(MatchingOpIdxB == 1 ? 0 : 1);
+    Instruction *OtherInstrA = dyn_cast<Instruction>(OtherOperandA);
+    Instruction *OtherInstrB = dyn_cast<Instruction>(OtherOperandB);
+    // Match `x +nsw/nuw y` and `x +nsw/nuw (y +nsw/nuw IdxDiff)`.
+    if (OtherInstrB && OtherInstrB->getOpcode() == Instruction::Add &&
+        checkNoWrapFlags(OtherInstrB, Signed) &&
+        isa<ConstantInt>(OtherInstrB->getOperand(1))) {
+      int64_t CstVal =
+          cast<ConstantInt>(OtherInstrB->getOperand(1))->getSExtValue();
+      if (OtherInstrB->getOperand(0) == OtherOperandA &&
+          IdxDiff.getSExtValue() == CstVal)
+        return true;
+    }
+    // Match `x +nsw/nuw (y +nsw/nuw -Idx)` and `x +nsw/nuw (y +nsw/nuw x)`.
+    if (OtherInstrA && OtherInstrA->getOpcode() == Instruction::Add &&
+        checkNoWrapFlags(OtherInstrA, Signed) &&
+        isa<ConstantInt>(OtherInstrA->getOperand(1))) {
+      int64_t CstVal =
+          cast<ConstantInt>(OtherInstrA->getOperand(1))->getSExtValue();
+      if (OtherInstrA->getOperand(0) == OtherOperandB &&
+          IdxDiff.getSExtValue() == -CstVal)
+        return true;
+    }
+    // Match `x +nsw/nuw (y +nsw/nuw c)` and
+    // `x +nsw/nuw (y +nsw/nuw (c + IdxDiff))`.
+    if (OtherInstrA && OtherInstrB &&
+        OtherInstrA->getOpcode() == Instruction::Add &&
+        OtherInstrB->getOpcode() == Instruction::Add &&
+        checkNoWrapFlags(OtherInstrA, Signed) &&
+        checkNoWrapFlags(OtherInstrB, Signed) &&
+        isa<ConstantInt>(OtherInstrA->getOperand(1)) &&
+        isa<ConstantInt>(OtherInstrB->getOperand(1))) {
+      int64_t CstValA =
+          cast<ConstantInt>(OtherInstrA->getOperand(1))->getSExtValue();
+      int64_t CstValB =
+          cast<ConstantInt>(OtherInstrB->getOperand(1))->getSExtValue();
+      if (OtherInstrA->getOperand(0) == OtherInstrB->getOperand(0) &&
+          IdxDiff.getSExtValue() == (CstValB - CstValA))
+        return true;
+    }
+  }
+  return false;
+}
+
 bool Vectorizer::lookThroughComplexAddresses(Value *PtrA, Value *PtrB,
                                              APInt PtrDelta,
                                              unsigned Depth) const {
@@ -438,73 +513,30 @@ bool Vectorizer::lookThroughComplexAddresses(Value *PtrA, Value *PtrB,
 
   // Now we need to prove that adding IdxDiff to ValA won't overflow.
   bool Safe = false;
-  auto CheckFlags = [](Instruction *I, bool Signed) {
-    BinaryOperator *BinOpI = cast<BinaryOperator>(I);
-    return (Signed && BinOpI->hasNoSignedWrap()) ||
-           (!Signed && BinOpI->hasNoUnsignedWrap());
-  };
 
   // First attempt: if OpB is an add with NSW/NUW, and OpB is IdxDiff added to
   // ValA, we're okay.
   if (OpB->getOpcode() == Instruction::Add &&
       isa<ConstantInt>(OpB->getOperand(1)) &&
       IdxDiff.sle(cast<ConstantInt>(OpB->getOperand(1))->getSExtValue()) &&
-      CheckFlags(OpB, Signed))
+      checkNoWrapFlags(OpB, Signed))
     Safe = true;
 
-  // Second attempt: If both OpA and OpB is an add with NSW/NUW and with
-  // the same LHS operand, we can guarantee that the transformation is safe
-  // if we can prove that OpA won't overflow when IdxDiff added to the RHS
-  // of OpA.
-  // For example:
-  //  %tmp7 = add nsw i32 %tmp2, %v0
-  //  %tmp8 = sext i32 %tmp7 to i64
-  //  ...
-  //  %tmp11 = add nsw i32 %v0, 1
-  //  %tmp12 = add nsw i32 %tmp2, %tmp11
-  //  %tmp13 = sext i32 %tmp12 to i64
-  //
-  //  Both %tmp7 and %tmp2 has the nsw flag and the first operand
-  //  is %tmp2. It's guaranteed that adding 1 to %tmp7 won't overflow
-  //  because %tmp11 adds 1 to %v0 and both %tmp11 and %tmp12 has the
-  //  nsw flag.
+  // Second attempt: check if we have eligible add NSW/NUW instruction
+  // sequences.
   OpA = dyn_cast<Instruction>(ValA);
   if (!Safe && OpA && OpA->getOpcode() == Instruction::Add &&
-      OpB->getOpcode() == Instruction::Add &&
-      OpA->getOperand(0) == OpB->getOperand(0) && CheckFlags(OpA, Signed) &&
-      CheckFlags(OpB, Signed)) {
-    Value *RHSA = OpA->getOperand(1);
-    Value *RHSB = OpB->getOperand(1);
-    Instruction *OpRHSA = dyn_cast<Instruction>(RHSA);
-    Instruction *OpRHSB = dyn_cast<Instruction>(RHSB);
-    // Match `x +nsw/nuw y` and `x +nsw/nuw (y +nsw/nuw IdxDiff)`.
-    if (OpRHSB && OpRHSB->getOpcode() == Instruction::Add &&
-        CheckFlags(OpRHSB, Signed) && isa<ConstantInt>(OpRHSB->getOperand(1))) {
-      int64_t CstVal = cast<ConstantInt>(OpRHSB->getOperand(1))->getSExtValue();
-      if (OpRHSB->getOperand(0) == RHSA && IdxDiff.getSExtValue() == CstVal)
-        Safe = true;
-    }
-    // Match `x +nsw/nuw (y +nsw/nuw -Idx)` and `x +nsw/nuw (y +nsw/nuw x)`.
-    if (OpRHSA && OpRHSA->getOpcode() == Instruction::Add &&
-        CheckFlags(OpRHSA, Signed) && isa<ConstantInt>(OpRHSA->getOperand(1))) {
-      int64_t CstVal = cast<ConstantInt>(OpRHSA->getOperand(1))->getSExtValue();
-      if (OpRHSA->getOperand(0) == RHSB && IdxDiff.getSExtValue() == -CstVal)
-        Safe = true;
-    }
-    // Match `x +nsw/nuw (y +nsw/nuw c)` and
-    // `x +nsw/nuw (y +nsw/nuw (c + IdxDiff))`.
-    if (OpRHSA && OpRHSB && OpRHSA->getOpcode() == Instruction::Add &&
-        OpRHSB->getOpcode() == Instruction::Add && CheckFlags(OpRHSA, Signed) &&
-        CheckFlags(OpRHSB, Signed) && isa<ConstantInt>(OpRHSA->getOperand(1)) &&
-        isa<ConstantInt>(OpRHSB->getOperand(1))) {
-      int64_t CstValA =
-          cast<ConstantInt>(OpRHSA->getOperand(1))->getSExtValue();
-      int64_t CstValB =
-          cast<ConstantInt>(OpRHSB->getOperand(1))->getSExtValue();
-      if (OpRHSA->getOperand(0) == OpRHSB->getOperand(0) &&
-          IdxDiff.getSExtValue() == (CstValB - CstValA))
-        Safe = true;
-    }
+      OpB->getOpcode() == Instruction::Add && checkNoWrapFlags(OpA, Signed) &&
+      checkNoWrapFlags(OpB, Signed)) {
+    // In the checks below a matching operand in OpA and OpB is
+    // an operand which is the same in those two instructions.
+    // Below we account for possible orders of the operands of
+    // these add instructions.
+    for (unsigned MatchingOpIdxA : {0, 1})
+      for (unsigned MatchingOpIdxB : {0, 1})
+        if (!Safe)
+          Safe = checkIfSafeAddSequence(IdxDiff, OpA, MatchingOpIdxA, OpB,
+                                        MatchingOpIdxB, Signed);
   }
 
   unsigned BitWidth = ValA->getType()->getScalarSizeInBits();
