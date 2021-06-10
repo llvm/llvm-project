@@ -229,6 +229,7 @@ public:
   ~TargetLoweringObjectFileXCOFF() override = default;
 
   static bool ShouldEmitEHBlock(const MachineFunction *MF);
+  static bool ShouldSetSSPCanaryBitInTB(const MachineFunction *MF);
 
   static MCSymbol *getEHInfoTableSymbol(const MachineFunction *MF);
 
