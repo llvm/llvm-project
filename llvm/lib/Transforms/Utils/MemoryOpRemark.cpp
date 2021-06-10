@@ -295,7 +295,7 @@ void MemoryOpRemark::visitVariable(const Value *V,
                                    SmallVectorImpl<VariableInfo> &Result) {
   if (auto *GV = dyn_cast<GlobalVariable>(V)) {
     auto *Ty = cast<PointerType>(GV->getType())->getElementType();
-    int64_t Size = DL.getTypeSizeInBits(Ty).getFixedSize();
+    uint64_t Size = DL.getTypeSizeInBits(Ty).getFixedSize();
     VariableInfo Var{nameOrNone(GV), Size};
     if (!Var.isEmpty())
       Result.push_back(std::move(Var));
