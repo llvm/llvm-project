@@ -1311,7 +1311,13 @@ Optional<const MDOperand *> findStringMetadataForLoop(const Loop *TheLoop,
                                                       StringRef Name);
 
 /// Look for the loop attribute that requires progress within the loop.
+/// Note: Most consumers probably want "isMustProgress" which checks
+/// the containing function attribute too.
 bool hasMustProgress(const Loop *L);
+
+/// Return true if this loop can be assumed to make progress.  (i.e. can't
+/// be infinite without side effects without also being undefined)
+bool isMustProgress(const Loop *L);
 
 /// Return whether an MDNode might represent an access group.
 ///

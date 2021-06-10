@@ -1781,8 +1781,7 @@ Optional<IVConditionInfo> llvm::hasPartialIVCondition(Loop &L,
 
     // We could also allow loops with known trip counts without mustprogress,
     // but ScalarEvolution may not be available.
-    Info.PathIsNoop &=
-        L.getHeader()->getParent()->mustProgress() || hasMustProgress(&L);
+    Info.PathIsNoop &= isMustProgress(&L);
 
     // If the path is considered a no-op so far, check if it reaches a
     // single exit block without any phis. This ensures no values from the
