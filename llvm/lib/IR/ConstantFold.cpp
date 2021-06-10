@@ -907,14 +907,10 @@ Constant *llvm::ConstantFoldExtractElementInstruction(Constant *Val,
     }
   }
 
-  // CAZ of type ScalableVectorType and n < CAZ->getMinNumElements() =>
-  //   extractelt CAZ, n -> 0
-  if (auto *ValSVTy = dyn_cast<ScalableVectorType>(Val->getType())) {
-    if (!CIdx->uge(ValSVTy->getMinNumElements())) {
-      if (auto *CAZ = dyn_cast<ConstantAggregateZero>(Val))
-        return CAZ->getElementValue(CIdx->getZExtValue());
-    }
-    return nullptr;
+  // Lane < Splat minimum vector width => extractelt Splat(x), Lane -> x
+  if (CIdx->getValue().ult(ValVTy->getElementCount().getKnownMinValue())) {
+    if (Constant *SplatVal = Val->getSplatValue())
+      return SplatVal;
   }
 
   return Val->getAggregateElement(CIdx);
