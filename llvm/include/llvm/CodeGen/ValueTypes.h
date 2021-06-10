@@ -120,6 +120,9 @@ namespace llvm {
       return changeExtendedTypeToInteger();
     }
 
+    /// Test if the given EVT has zero size
+    bool isZeroSized() const { return getSizeInBits() == 0; }
+
     /// Test if the given EVT is simple (as opposed to being extended).
     bool isSimple() const {
       return V.SimpleTy != MVT::INVALID_SIMPLE_VALUE_TYPE;
@@ -207,7 +210,9 @@ namespace llvm {
     }
 
     /// Return true if the bit size is a multiple of 8.
-    bool isByteSized() const { return getSizeInBits().isKnownMultipleOf(8); }
+    bool isByteSized() const {
+      return !isZeroSized() && getSizeInBits().isKnownMultipleOf(8);
+    }
 
     /// Return true if the size is a power-of-two number of bytes.
     bool isRound() const {
