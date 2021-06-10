@@ -3206,8 +3206,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     }
 
     case STMT_OMP_UNROLL_DIRECTIVE: {
-      unsigned NumLoops = Record[ASTStmtReader::NumStmtFields];
-      assert(NumLoops == 1 && "Unroll directive accepts only a single loop");
+      assert(Record[ASTStmtReader::NumStmtFields] == 1 && "Unroll directive accepts only a single loop");
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
       S = OMPUnrollDirective::CreateEmpty(Context, NumClauses);
       break;
