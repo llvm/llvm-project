@@ -109,7 +109,7 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
     unsigned NVK = 0;
 
     unsigned NC = SrcData->NumCounters;
-    if (NC == 0 || (const char *)SrcCountersStart >= SrcNameStart)
+    if (NC == 0)
       return 1;
     uint64_t *SrcCounters = SrcCountersStart + ((size_t)SrcData->CounterPtr -
                                                 Header->CountersDelta) /
