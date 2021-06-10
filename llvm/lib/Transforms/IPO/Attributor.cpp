@@ -148,6 +148,11 @@ static cl::opt<bool> EnableCallSiteSpecific(
     cl::desc("Allow the Attributor to do call site specific analysis"),
     cl::init(false));
 
+static cl::opt<bool>
+    PrintCallGraph("attributor-print-call-graph", cl::Hidden,
+                   cl::desc("Print Attributor's internal call graph"),
+                   cl::init(false));
+
 /// Logic operators for the change status enum class.
 ///
 ///{
@@ -1466,6 +1471,10 @@ ChangeStatus Attributor::cleanupIR() {
 
 ChangeStatus Attributor::run() {
   TimeTraceScope TimeScope("Attributor::run");
+  AttributorCallGraph ACallGraph(*this);
+
+  if (PrintCallGraph)
+    ACallGraph.populateAll();
 
   Phase = AttributorPhase::UPDATE;
   runTillFixpoint();
@@ -1485,6 +1494,9 @@ ChangeStatus Attributor::run() {
 
   Phase = AttributorPhase::CLEANUP;
   ChangeStatus CleanupChange = cleanupIR();
+
+  if (PrintCallGraph)
+    ACallGraph.print();
 
   return ManifestChange | CleanupChange;
 }

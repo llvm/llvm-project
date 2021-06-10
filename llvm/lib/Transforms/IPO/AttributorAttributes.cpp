@@ -30,9 +30,10 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/ArgumentPromotion.h"
 #include "llvm/Transforms/Utils/Local.h"
-
 #include <cassert>
 
 using namespace llvm;
@@ -134,6 +135,7 @@ PIPE_OPERATOR(AAPrivatizablePtr)
 PIPE_OPERATOR(AAUndefinedBehavior)
 PIPE_OPERATOR(AAPotentialValues)
 PIPE_OPERATOR(AANoUndef)
+PIPE_OPERATOR(AACallEdges)
 
 #undef PIPE_OPERATOR
 } // namespace llvm
@@ -8133,7 +8135,120 @@ struct AANoUndefCallSiteReturned final
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(noundef) }
 };
+
+struct AACallEdgesFunction : public AACallEdges {
+  AACallEdgesFunction(const IRPosition &IRP, Attributor &A)
+      : AACallEdges(IRP, A) {}
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    ChangeStatus Change = ChangeStatus::UNCHANGED;
+    bool OldHasUnknownCallee = HasUnknownCallee;
+
+    auto AddCalledFunction = [&](Function *Fn) {
+      if (CalledFunctions.insert(Fn)) {
+        Change = ChangeStatus::CHANGED;
+        LLVM_DEBUG(dbgs() << "[AACallEdges] New call edge: " << Fn->getName()
+                          << "\n");
+      }
+    };
+
+    auto VisitValue = [&](Value &V, const Instruction *CtxI, bool &HasUnknown,
+                          bool Stripped) -> bool {
+      if (Function *Fn = dyn_cast<Function>(&V)) {
+        AddCalledFunction(Fn);
+      } else {
+        LLVM_DEBUG(dbgs() << "[AACallEdges] Unrecognized value: " << V << "\n");
+        HasUnknown = true;
+      }
+
+      // Explore all values.
+      return true;
+    };
+
+    // Process any value that we might call.
+    auto ProcessCalledOperand = [&](Value *V, Instruction *Ctx) {
+      if (!genericValueTraversal<AACallEdges, bool>(A, IRPosition::value(*V),
+                                                    *this, HasUnknownCallee,
+                                                    VisitValue, nullptr, false))
+        // If we haven't gone through all values, assume that there are unknown
+        // callees.
+        HasUnknownCallee = true;
+    };
+
+    auto ProcessCallInst = [&](Instruction &Inst) {
+      CallBase &CB = static_cast<CallBase &>(Inst);
+
+      // Process callee metadata if available.
+      if (auto *MD = Inst.getMetadata(LLVMContext::MD_callees)) {
+        for (auto &Op : MD->operands()) {
+          Function *Callee = mdconst::extract_or_null<Function>(Op);
+          if (Callee)
+            AddCalledFunction(Callee);
+        }
+        // Callees metadata grantees that the called function is one of its
+        // operands, So we are done.
+        return true;
+      }
+
+      // The most simple case.
+      ProcessCalledOperand(CB.getCalledOperand(), &Inst);
+
+      // Process callback functions.
+      SmallVector<const Use *, 4u> CallbackUses;
+      AbstractCallSite::getCallbackUses(CB, CallbackUses);
+      for (const Use *U : CallbackUses)
+        ProcessCalledOperand(U->get(), &Inst);
+
+      return true;
+    };
+
+    // Visit all callable instructions.
+    if (!A.checkForAllCallLikeInstructions(ProcessCallInst, *this))
+      // If we haven't looked at all call like instructions, assume that there
+      // are unknown callees.
+      HasUnknownCallee = true;
+    // Track changes.
+    if (OldHasUnknownCallee != HasUnknownCallee)
+      Change = ChangeStatus::CHANGED;
+
+    return Change;
+  }
+
+  virtual const SetVector<Function *> &getOptimisticEdges() const override {
+    return CalledFunctions;
+  };
+
+  virtual bool hasUnknownCallee() const override { return HasUnknownCallee; }
+
+  const std::string getAsStr() const override {
+    return "CallEdges[" + std::to_string(HasUnknownCallee) + "," +
+           std::to_string(CalledFunctions.size()) + "]";
+  }
+
+  void trackStatistics() const override {}
+
+  /// Optimistic set of functions that might be called by this function.
+  SetVector<Function *> CalledFunctions;
+
+  /// Does this function have a call to a function that we don't know about.
+  bool HasUnknownCallee;
+};
+
 } // namespace
+
+AACallGraphNode *AACallEdgeIterator::operator*() const {
+  return static_cast<AACallGraphNode *>(const_cast<AACallEdges *>(
+      &A.getOrCreateAAFor<AACallEdges>(IRPosition::function(**I))));
+}
+
+void AttributorCallGraph::print() {
+  std::string Filename = "AttributorCallGraph.dot";
+  std::error_code EC;
+
+  raw_fd_ostream File(Filename, EC, sys::fs::OF_TextWithCRLF);
+  llvm::WriteGraph(File, this);
+}
 
 const char AAReturnedValues::ID = 0;
 const char AANoUnwind::ID = 0;
@@ -8158,6 +8273,7 @@ const char AAMemoryLocation::ID = 0;
 const char AAValueConstantRange::ID = 0;
 const char AAPotentialValues::ID = 0;
 const char AANoUndef::ID = 0;
+const char AACallEdges::ID = 0;
 
 // Macro magic to create the static generator function for attributes that
 // follow the naming scheme.
@@ -8277,6 +8393,7 @@ CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoFree)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAHeapToStack)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAReachability)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAUndefinedBehavior)
+CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AACallEdges)
 
 CREATE_NON_RET_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAMemoryBehavior)
 
