@@ -6357,7 +6357,7 @@ bool X86InstrInfo::unfoldMemoryOperand(
   case X86::CMP8ri: {
     MachineOperand &MO0 = DataMI->getOperand(0);
     MachineOperand &MO1 = DataMI->getOperand(1);
-    if (MO1.getImm() == 0) {
+    if (MO1.isImm() && MO1.getImm() == 0) {
       unsigned NewOpc;
       switch (DataMI->getOpcode()) {
       default: llvm_unreachable("Unreachable!");
