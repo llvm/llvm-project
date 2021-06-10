@@ -19,6 +19,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/RangedConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <list>
@@ -147,6 +148,9 @@ struct StoreInfo {
   const MemRegion *Dest, *Origin;
 };
 
+class Tracker;
+using TrackerRef = llvm::IntrusiveRefCntPtr<Tracker>;
+
 class ExpressionHandler;
 class StoreHandler;
 
@@ -155,7 +159,7 @@ class StoreHandler;
 /// Tracker aimes at providing a sensible set of default behaviors that can be
 /// used by any checker, while providing mechanisms to hook into any part of the
 /// tracking process and insert checker-specific logic.
-class Tracker {
+class Tracker : public llvm::RefCountedBase<Tracker> {
 private:
   using ExpressionHandlerPtr = std::unique_ptr<ExpressionHandler>;
   using StoreHandlerPtr = std::unique_ptr<StoreHandler>;
@@ -164,10 +168,16 @@ private:
   std::list<ExpressionHandlerPtr> ExpressionHandlers;
   std::list<StoreHandlerPtr> StoreHandlers;
 
-public:
+protected:
   /// \param Report The bug report to which visitors should be attached.
   Tracker(PathSensitiveBugReport &Report);
+
+public:
   virtual ~Tracker() = default;
+
+  static TrackerRef create(PathSensitiveBugReport &Report) {
+    return new Tracker(Report);
+  }
 
   PathSensitiveBugReport &getReport() { return Report; }
 
@@ -318,6 +328,18 @@ public:
   Tracker &getParentTracker() { return ParentTracker; }
 };
 
+/// Visitor that tracks expressions and values.
+class TrackingBugReporterVisitor : public BugReporterVisitor {
+private:
+  TrackerRef ParentTracker;
+
+public:
+  TrackingBugReporterVisitor(TrackerRef ParentTracker)
+      : ParentTracker(ParentTracker) {}
+
+  Tracker &getParentTracker() { return *ParentTracker; }
+};
+
 /// Attempts to add visitors to track expression value back to its point of
 /// origin.
 ///
@@ -335,13 +357,31 @@ bool trackExpressionValue(const ExplodedNode *N, const Expr *E,
                           TrackingKind TKind = TrackingKind::Thorough,
                           bool EnableNullFPSuppression = true);
 
+/// Track how the value got stored into the given region and where it came
+/// from.
+///
+/// \param V We're searching for the store where \c R received this value.
+/// \param R The region we're tracking.
+/// \param Opts Tracking options specifying how we want to track the value.
+/// \param Origin Only adds notes when the last store happened in a
+///        different stackframe to this one. Disregarded if the tracking kind
+///        is thorough.
+///        This is useful, because for non-tracked regions, notes about
+///        changes to its value in a nested stackframe could be pruned, and
+///        this visitor can prevent that without polluting the bugpath too
+///        much.
+void trackStoredValue(KnownSVal V, const MemRegion *R,
+                      PathSensitiveBugReport &Report, TrackingOptions Opts = {},
+                      const StackFrameContext *Origin = nullptr);
+
 const Expr *getDerefExpr(const Stmt *S);
 
 } // namespace bugreporter
 
 /// Finds last store into the given region,
 /// which is different from a given symbolic value.
-class FindLastStoreBRVisitor final : public BugReporterVisitor {
+class FindLastStoreBRVisitor final
+    : public bugreporter::TrackingBugReporterVisitor {
   const MemRegion *R;
   SVal V;
   bool Satisfied = false;
@@ -365,11 +405,13 @@ public:
   ///        changes to its value in a nested stackframe could be pruned, and
   ///        this visitor can prevent that without polluting the bugpath too
   ///        much.
-  FindLastStoreBRVisitor(KnownSVal V, const MemRegion *R,
-                         bool InEnableNullFPSuppression, TrackingKind TKind,
+  FindLastStoreBRVisitor(bugreporter::TrackerRef ParentTracker, KnownSVal V,
+                         const MemRegion *R, bool InEnableNullFPSuppression,
+                         TrackingKind TKind,
                          const StackFrameContext *OriginSFC = nullptr)
-      : R(R), V(V), EnableNullFPSuppression(InEnableNullFPSuppression),
-        TKind(TKind), OriginSFC(OriginSFC) {
+      : TrackingBugReporterVisitor(ParentTracker), R(R), V(V),
+        EnableNullFPSuppression(InEnableNullFPSuppression), TKind(TKind),
+        OriginSFC(OriginSFC) {
     assert(R);
   }
 

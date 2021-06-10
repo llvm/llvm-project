@@ -1488,8 +1488,8 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
     if (!IsParam)
       InitE = InitE->IgnoreParenCasts();
 
-    bugreporter::trackExpressionValue(StoreSite, InitE, BR, TKind,
-                                      EnableNullFPSuppression);
+    getParentTracker().track(InitE, StoreSite,
+                             {TKind, EnableNullFPSuppression});
   }
 
   // Let's try to find the region where the value came from.
@@ -1588,8 +1588,8 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
               dyn_cast_or_null<BlockDataRegion>(V.getAsRegion())) {
           if (const VarRegion *OriginalR = BDR->getOriginalRegion(VR)) {
             if (auto KV = State->getSVal(OriginalR).getAs<KnownSVal>())
-              BR.addVisitor<FindLastStoreBRVisitor>(
-                  *KV, OriginalR, EnableNullFPSuppression, TKind, OriginSFC);
+              getParentTracker().track(
+                  *KV, OriginalR, {TKind, EnableNullFPSuppression}, OriginSFC);
           }
         }
       }
@@ -2239,7 +2239,7 @@ Tracker::Result Tracker::track(SVal V, const MemRegion *R, TrackingOptions Opts,
                                const StackFrameContext *Origin) {
   if (auto KV = V.getAs<KnownSVal>()) {
     Report.addVisitor<FindLastStoreBRVisitor>(
-        *KV, R, Opts.EnableNullFPSuppression, Opts.Kind, Origin);
+        this, *KV, R, Opts.EnableNullFPSuppression, Opts.Kind, Origin);
     return {true};
   }
   return {};
@@ -2261,9 +2261,16 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
                                        PathSensitiveBugReport &report,
                                        bugreporter::TrackingKind TKind,
                                        bool EnableNullFPSuppression) {
-  return Tracker(report)
-      .track(E, InputNode, {TKind, EnableNullFPSuppression})
+  return Tracker::create(report)
+      ->track(E, InputNode, {TKind, EnableNullFPSuppression})
       .FoundSomethingToTrack;
+}
+
+void bugreporter::trackStoredValue(KnownSVal V, const MemRegion *R,
+                                   PathSensitiveBugReport &Report,
+                                   TrackingOptions Opts,
+                                   const StackFrameContext *Origin) {
+  Tracker::create(Report)->track(V, R, Opts, Origin);
 }
 
 //===----------------------------------------------------------------------===//
