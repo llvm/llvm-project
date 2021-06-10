@@ -2,6 +2,7 @@
 // RUN:   -fsyntax-only -triple=spir64 -fdeclare-opencl-builtins -finclude-default-header
 // RUN: %clang_cc1 %s -cl-std=CL2.0 -verify -fsyntax-only \
 // RUN:   -triple=amdgcn-amd-amdhsa -fdeclare-opencl-builtins -finclude-default-header
+// TODO: add -cl-std=CL3.0 line when generic and psv are supported.
 
 // Basic parsing/Sema tests for __opencl_atomic_*
 
@@ -161,6 +162,11 @@ void synchscope_checks(atomic_int *Ap, int scope) {
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, memory_scope_work_group);
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, memory_scope_device);
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, memory_scope_all_svm_devices);
+  (void)__opencl_atomic_load(Ap, memory_order_relaxed, memory_scope_all_devices);
+#if __OPENCL_C_VERSION__ < CL_VERSION_3_0
+  // expected-error@-2{{use of undeclared identifier 'memory_scope_all_devices'}}
+  // expected-note@* {{'memory_scope_all_svm_devices' declared here}}
+#endif
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, memory_scope_sub_group);
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, scope);
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, 10);    //expected-error{{synchronization scope argument to atomic operation is invalid}}

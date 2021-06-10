@@ -1,8 +1,8 @@
-// RUN: %clang_dfsan -gmlt -DOFFSET=0 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
+// RUN: %clang_dfsan -gmlt -DOFFSET=0 -mllvm -dfsan-track-origins=1 %s -o %t && \
 // RUN:     %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK0 < %t.out
 // 
-// RUN: %clang_dfsan -gmlt -DOFFSET=10 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
+// RUN: %clang_dfsan -gmlt -DOFFSET=10 -mllvm -dfsan-track-origins=1 %s -o %t && \
 // RUN:     %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK10 < %t.out
 //

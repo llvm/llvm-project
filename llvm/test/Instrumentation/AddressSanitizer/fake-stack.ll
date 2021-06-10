@@ -103,7 +103,7 @@ define void @Simple() uwtable sanitize_address {
 ; ALWAYS-LABEL: @Simple(
 ; ALWAYS-NEXT:  entry:
 ; ALWAYS-NEXT:    [[ASAN_LOCAL_STACK_BASE:%.*]] = alloca i64, align 8
-; ALWAYS-NEXT:    [[TMP0:%.*]] = call i64 @__asan_stack_malloc_0(i64 64)
+; ALWAYS-NEXT:    [[TMP0:%.*]] = call i64 @__asan_stack_malloc_always_0(i64 64)
 ; ALWAYS-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 0
 ; ALWAYS-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP4:%.*]]
 ; ALWAYS:       2:

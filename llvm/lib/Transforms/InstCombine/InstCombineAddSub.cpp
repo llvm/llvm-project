@@ -2200,22 +2200,32 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
   if (Instruction *R = hoistFNegAboveFMulFDiv(I, Builder))
     return R;
 
+  // Try to eliminate fneg if at least 1 arm of the select is negated.
   Value *Cond;
   if (match(Op, m_OneUse(m_Select(m_Value(Cond), m_Value(X), m_Value(Y))))) {
+    // Unlike most transforms, this one is not safe to propagate nsz unless
+    // it is present on the original select. (We are conservatively intersecting
+    // the nsz flags from the select and root fneg instruction.)
+    auto propagateSelectFMF = [&](SelectInst *S) {
+      S->copyFastMathFlags(&I);
+      if (auto *OldSel = dyn_cast<SelectInst>(Op))
+        if (!OldSel->hasNoSignedZeros())
+          S->setHasNoSignedZeros(false);
+    };
+    // -(Cond ? -P : Y) --> Cond ? P : -Y
     Value *P;
     if (match(X, m_FNeg(m_Value(P)))) {
-      IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-      Builder.setFastMathFlags(I.getFastMathFlags());
       Value *NegY = Builder.CreateFNegFMF(Y, &I, Y->getName() + ".neg");
-      Value *NewSel = Builder.CreateSelect(Cond, P, NegY);
-      return replaceInstUsesWith(I, NewSel);
+      SelectInst *NewSel = SelectInst::Create(Cond, P, NegY);
+      propagateSelectFMF(NewSel);
+      return NewSel;
     }
+    // -(Cond ? X : -P) --> Cond ? -X : P
     if (match(Y, m_FNeg(m_Value(P)))) {
-      IRBuilder<>::FastMathFlagGuard FMFG(Builder);
-      Builder.setFastMathFlags(I.getFastMathFlags());
       Value *NegX = Builder.CreateFNegFMF(X, &I, X->getName() + ".neg");
-      Value *NewSel = Builder.CreateSelect(Cond, NegX, P);
-      return replaceInstUsesWith(I, NewSel);
+      SelectInst *NewSel = SelectInst::Create(Cond, NegX, P);
+      propagateSelectFMF(NewSel);
+      return NewSel;
     }
   }
 

@@ -588,8 +588,11 @@ bool MipsCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   }
 
   unsigned NextStackOffset = CCInfo.getNextStackOffset();
-  const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
-  unsigned StackAlignment = TFL->getStackAlignment();
+  unsigned StackAlignment = F.getParent()->getOverrideStackAlignment();
+  if (!StackAlignment) {
+    const TargetFrameLowering *TFL = MF.getSubtarget().getFrameLowering();
+    StackAlignment = TFL->getStackAlignment();
+  }
   NextStackOffset = alignTo(NextStackOffset, StackAlignment);
   CallSeqStart.addImm(NextStackOffset).addImm(0);
 

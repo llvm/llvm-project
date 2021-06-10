@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt, multicpu
 // UNSUPPORTED: gcc

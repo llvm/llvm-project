@@ -598,9 +598,9 @@ ds_swizzle_b32 v8, v2 offset:swizzle(BROADCAST,1,0)
 //==============================================================================
 // image address size does not match dim and a16
 
-image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D
+image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D
 // CHECK: error: image address size does not match dim and a16
-// CHECK-NEXT:{{^}}image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D
+// CHECK-NEXT:{{^}}image_load v[0:3], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D
 // CHECK-NEXT:{{^}}^
 
 //==============================================================================

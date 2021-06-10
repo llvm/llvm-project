@@ -42,6 +42,10 @@ static cl::opt<bool> HideUnreachablePaths("cfg-hide-unreachable-paths",
 static cl::opt<bool> HideDeoptimizePaths("cfg-hide-deoptimize-paths",
                                          cl::init(false));
 
+static cl::opt<double> HideColdPaths(
+    "cfg-hide-cold-paths", cl::init(0.0),
+    cl::desc("Hide blocks with relative frequency below the given value"));
+
 static cl::opt<bool> ShowHeatColors("cfg-heat-colors", cl::init(true),
                                     cl::Hidden,
                                     cl::desc("Show heat colors in CFG"));
@@ -296,6 +300,14 @@ void DOTGraphTraits<DOTFuncInfo *>::computeDeoptOrUnreachablePaths(
 
 bool DOTGraphTraits<DOTFuncInfo *>::isNodeHidden(const BasicBlock *Node,
                                                  const DOTFuncInfo *CFGInfo) {
+  if (HideColdPaths.getNumOccurrences() > 0)
+    if (auto *BFI = CFGInfo->getBFI()) {
+      uint64_t NodeFreq = BFI->getBlockFreq(Node).getFrequency();
+      uint64_t EntryFreq = BFI->getEntryFreq();
+      // Hide blocks with relative frequency below HideColdPaths threshold.
+      if ((double)NodeFreq / EntryFreq < HideColdPaths)
+        return true;
+    }
   if (HideUnreachablePaths || HideDeoptimizePaths) {
     if (isOnDeoptOrUnreachablePath.find(Node) == 
         isOnDeoptOrUnreachablePath.end())

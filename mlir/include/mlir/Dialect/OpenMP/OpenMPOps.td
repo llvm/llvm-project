@@ -28,9 +28,8 @@ def OpenMP_Dialect : Dialect {
 class OpenMP_Op<string mnemonic, list<OpTrait> traits = []> :
       Op<OpenMP_Dialect, mnemonic, traits>;
 
-// Type which can be constraint accepting standard integers, indices and
-// LLVM integer types.
-def IntLikeType : AnyTypeOf<[AnyInteger, Index, LLVM_AnyInteger]>;
+// Type which can be constraint accepting standard integers and indices.
+def IntLikeType : AnyTypeOf<[AnyInteger, Index]>;
 
 //===----------------------------------------------------------------------===//
 // 2.6 parallel Construct

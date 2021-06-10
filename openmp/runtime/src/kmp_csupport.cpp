@@ -604,10 +604,9 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
     }
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
 
-    __kmp_pop_current_task_from_thread(this_thr);
 #if OMPD_SUPPORT
-    if ( ompd_state & OMPD_ENABLE_BP )
-      ompd_bp_parallel_end ();
+    if (ompd_state & OMPD_ENABLE_BP)
+      ompd_bp_parallel_end();
 #endif
 
     this_thr->th.th_team = serial_team->t.t_parent;
@@ -623,6 +622,7 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
     this_thr->th.th_dispatch =
         &this_thr->th.th_team->t.t_dispatch[serial_team->t.t_master_tid];
 
+    __kmp_pop_current_task_from_thread(this_thr);
 
     KMP_ASSERT(this_thr->th.th_current_task->td_flags.executing == 0);
     this_thr->th.th_current_task->td_flags.executing = 1;

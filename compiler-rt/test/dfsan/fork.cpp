@@ -2,10 +2,10 @@
 // Run a number of threads that create new chained origins, then fork
 // and verify that origin reads do not deadlock in the child process.
 //
-// RUN: %clangxx_dfsan -mllvm -dfsan-fast-16-labels=true %s -o %t
+// RUN: %clangxx_dfsan %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 //
-// RUN: %clangxx_dfsan -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t
+// RUN: %clangxx_dfsan -mllvm -dfsan-track-origins=1 %s -o %t
 // RUN: DFSAN_OPTIONS=store_context_size=1000,origin_history_size=0,origin_history_per_stack_limit=0 %run %t 2>&1 | FileCheck %s
 //
 // REQUIRES: x86_64-target-arch

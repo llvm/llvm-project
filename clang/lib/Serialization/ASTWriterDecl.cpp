@@ -114,6 +114,7 @@ namespace clang {
     void VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D);
     void VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D);
     void VisitUsingDecl(UsingDecl *D);
+    void VisitUsingEnumDecl(UsingEnumDecl *D);
     void VisitUsingPackDecl(UsingPackDecl *D);
     void VisitUsingShadowDecl(UsingShadowDecl *D);
     void VisitConstructorUsingShadowDecl(ConstructorUsingShadowDecl *D);
@@ -1276,6 +1277,16 @@ void ASTDeclWriter::VisitUsingDecl(UsingDecl *D) {
   Record.push_back(D->hasTypename());
   Record.AddDeclRef(Context.getInstantiatedFromUsingDecl(D));
   Code = serialization::DECL_USING;
+}
+
+void ASTDeclWriter::VisitUsingEnumDecl(UsingEnumDecl *D) {
+  VisitNamedDecl(D);
+  Record.AddSourceLocation(D->getUsingLoc());
+  Record.AddSourceLocation(D->getEnumLoc());
+  Record.AddDeclRef(D->getEnumDecl());
+  Record.AddDeclRef(D->FirstUsingShadow.getPointer());
+  Record.AddDeclRef(Context.getInstantiatedFromUsingEnumDecl(D));
+  Code = serialization::DECL_USING_ENUM;
 }
 
 void ASTDeclWriter::VisitUsingPackDecl(UsingPackDecl *D) {

@@ -1,15 +1,9 @@
-; RUN: opt < %s -dfsan -S | FileCheck %s --check-prefixes=CHECK,LEGACY
-; RUN: opt < %s -dfsan -dfsan-fast-16-labels=true -dfsan-event-callbacks=true -S | FileCheck %s --check-prefixes=CHECK,EVENT_CALLBACKS
-; RUN: opt < %s -dfsan -dfsan-fast-8-labels=true -dfsan-event-callbacks=true -S | FileCheck %s --check-prefixes=CHECK,EVENT_CALLBACKS
+; RUN: opt < %s -dfsan -dfsan-event-callbacks=true -S | FileCheck %s --check-prefixes=CHECK,EVENT_CALLBACKS
 ; RUN: opt < %s -dfsan -dfsan-args-abi -S | FileCheck %s --check-prefixes=CHECK,ARGS_ABI
-; RUN: opt < %s -dfsan -dfsan-fast-16-labels=true -S | FileCheck %s --check-prefixes=CHECK,FAST
-; RUN: opt < %s -dfsan -dfsan-fast-16-labels=true -dfsan-combine-pointer-labels-on-load=false -S | FileCheck %s --check-prefixes=CHECK,NO_COMBINE_LOAD_PTR
-; RUN: opt < %s -dfsan -dfsan-fast-16-labels=true -dfsan-combine-pointer-labels-on-store=true -S | FileCheck %s --check-prefixes=CHECK,COMBINE_STORE_PTR
-; RUN: opt < %s -dfsan -dfsan-fast-16-labels=true -dfsan-debug-nonzero-labels -S | FileCheck %s --check-prefixes=CHECK,DEBUG_NONZERO_LABELS
-; RUN: opt < %s -dfsan -dfsan-fast-8-labels=true -S | FileCheck %s --check-prefixes=CHECK,FAST
-; RUN: opt < %s -dfsan -dfsan-fast-8-labels=true -dfsan-combine-pointer-labels-on-load=false -S | FileCheck %s --check-prefixes=CHECK,NO_COMBINE_LOAD_PTR
-; RUN: opt < %s -dfsan -dfsan-fast-8-labels=true -dfsan-combine-pointer-labels-on-store=true -S | FileCheck %s --check-prefixes=CHECK,COMBINE_STORE_PTR
-; RUN: opt < %s -dfsan -dfsan-fast-8-labels=true -dfsan-debug-nonzero-labels -S | FileCheck %s --check-prefixes=CHECK,DEBUG_NONZERO_LABELS
+; RUN: opt < %s -dfsan -S | FileCheck %s --check-prefixes=CHECK,FAST
+; RUN: opt < %s -dfsan -dfsan-combine-pointer-labels-on-load=false -S | FileCheck %s --check-prefixes=CHECK,NO_COMBINE_LOAD_PTR
+; RUN: opt < %s -dfsan -dfsan-combine-pointer-labels-on-store=true -S | FileCheck %s --check-prefixes=CHECK,COMBINE_STORE_PTR
+; RUN: opt < %s -dfsan -dfsan-debug-nonzero-labels -S | FileCheck %s --check-prefixes=CHECK,DEBUG_NONZERO_LABELS
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -102,13 +96,6 @@ define [1 x i1] @load_array1([1 x i1]* %p) {
   ; FAST: [[S1:%.*]] = insertvalue [1 x i[[#SBITS]]] undef, i[[#SBITS]] [[U]], 0
   ; FAST: store [1 x i[[#SBITS]]] [[S1]], [1 x i[[#SBITS]]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to [1 x i[[#SBITS]]]*), align [[ALIGN]]
 
-  ; LEGACY: @"dfs$load_array1"
-  ; LEGACY: [[P:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN:2]]
-  ; LEGACY: [[L:%.*]] = load i[[#SBITS]], i[[#SBITS]]* {{.*}}, align [[#SBYTES]]
-  ; LEGACY: [[U:%.*]] = call zeroext i[[#SBITS]] @__dfsan_union(i[[#SBITS]] zeroext [[L]], i[[#SBITS]] zeroext [[P]])
-  ; LEGACY: [[PH:%.*]] = phi i[[#SBITS]] [ [[U]], {{.*}} ], [ [[L]], {{.*}} ]
-  ; LEGACY: store i[[#SBITS]] [[PH]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
-
   %a = load [1 x i1], [1 x i1]* %p
   ret [1 x i1] %a
 }
@@ -164,13 +151,6 @@ define [4 x i1] @load_array4([4 x i1]* %p) {
   ; FAST: [[S4:%.*]] = insertvalue [4 x i[[#SBITS]]] [[S3]], i[[#SBITS]] [[O]], 3
   ; FAST: store [4 x i[[#SBITS]]] [[S4]], [4 x i[[#SBITS]]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to [4 x i[[#SBITS]]]*), align 2
 
-  ; LEGACY: @"dfs$load_array4"
-  ; LEGACY: [[P:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN:2]]
-  ; LEGACY: [[PH1:%.*]] = phi i[[#SBITS]]
-  ; LEGACY: [[U:%.*]] = call zeroext i[[#SBITS]] @__dfsan_union(i[[#SBITS]] zeroext [[PH1]], i[[#SBITS]] zeroext [[P]])
-  ; LEGACY: [[PH:%.*]] = phi i[[#SBITS]] [ [[U]], {{.*}} ], [ [[PH1]], {{.*}} ]
-  ; LEGACY: store i[[#SBITS]] [[PH]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
-
   %a = load [4 x i1], [4 x i1]* %p
   ret [4 x i1] %a
 }
@@ -220,13 +200,6 @@ define void @store_zero_array([4 x i1]* %p) {
 }
 
 define void @store_array2([2 x i1] %a, [2 x i1]* %p) {
-  ; LEGACY: @"dfs$store_array2"
-  ; LEGACY: [[S:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN:2]]
-  ; LEGACY: [[SP0:%.*]] = getelementptr i[[#SBITS]], i[[#SBITS]]* [[SP:%.*]], i32 0
-  ; LEGACY: store i[[#SBITS]] [[S]], i[[#SBITS]]* [[SP0]], align [[#SBYTES]]
-  ; LEGACY: [[SP1:%.*]] = getelementptr i[[#SBITS]], i[[#SBITS]]* [[SP]], i32 1
-  ; LEGACY: store i[[#SBITS]] [[S]], i[[#SBITS]]* [[SP1]], align [[#SBYTES]]
-
   ; EVENT_CALLBACKS: @"dfs$store_array2"
   ; EVENT_CALLBACKS: [[E12:%.*]] = or i[[#SBITS]]
   ; EVENT_CALLBACKS: [[P:%.*]] = bitcast [2 x i1]* %p to i8*

@@ -80,35 +80,13 @@ end:
   br label %block
 }
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %{{[0-9]+}}:_(s96) = G_ADD %{{[0-9]+}}:_, %{{[0-9]+}}:_ (in function: nonpow2_add_narrowing)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: %{{[0-9]+}}:gpr(s32), %{{[0-9]+}}:gpr(s32) = G_UNMERGE_VALUES %{{[0-9]+}}:gpr(s64) (in function: nonpow2_add_narrowing)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_add_narrowing
 ; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_add_narrowing:
 define void @nonpow2_add_narrowing(i128 %x, i128 %y) {
   %a = add i128 %x, %y
   %b = trunc i128 %a to i96
   %dummy = add i96 %b, %b
-  store i96 %dummy, i96* undef
-  ret void
-}
-
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %{{[0-9]+}}:_(s96) = G_INSERT %{{[0-9]+}}:_, %{{[0-9]+}}:_(s32), 64 (in function: nonpow2_or_narrowing)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_or_narrowing
-; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_or_narrowing:
-define void @nonpow2_or_narrowing() {
-  %a = add i128 undef, undef
-  %b = trunc i128 %a to i96
-  %a2 = add i128 undef, undef
-  %b2 = trunc i128 %a2 to i96
-  %dummy = or i96 %b, %b2
-  store i96 %dummy, i96* undef
-  ret void
-}
-
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %0:_(s96) = G_INSERT %10:_, %8:_(s32), 64 (in function: nonpow2_load_narrowing)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_load_narrowing
-; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_load_narrowing:
-define void @nonpow2_load_narrowing() {
-  %dummy = load i96, i96* undef
   store i96 %dummy, i96* undef
   ret void
 }

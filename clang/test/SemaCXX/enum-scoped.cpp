@@ -301,8 +301,8 @@ namespace PR18044 {
   int E::*p; // expected-error {{does not point into a class}}
   using E::f; // expected-error {{no member named 'f'}}
 
-  using E::a; // expected-error {{using declaration cannot refer to a scoped enumerator}}
-  E b = a; // expected-error {{undeclared}}
+  using E::a; // expected-warning {{using declaration naming a scoped enumerator is a C++20 extension}}
+  E b = a;
 }
 
 namespace test11 {

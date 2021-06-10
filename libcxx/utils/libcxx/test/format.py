@@ -225,7 +225,7 @@ class CxxStandardLibraryTest(lit.formats.TestFormat):
         #                split the part that does a death test outside of the
         #                test, and only disable that part when modules are
         #                enabled.
-        if '-fmodules' in test.config.available_features and self._disableWithModules(test):
+        if 'modules-build' in test.config.available_features and self._disableWithModules(test):
             return lit.Test.Result(lit.Test.UNSUPPORTED, 'Test {} is unsupported when modules are enabled')
 
         if re.search('[.]sh[.][^.]+$', filename):

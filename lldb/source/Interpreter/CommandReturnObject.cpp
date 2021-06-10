@@ -41,11 +41,11 @@ static void DumpStringToStreamWithNewline(Stream &strm, const std::string &s) {
 }
 
 CommandReturnObject::CommandReturnObject(bool colors)
-    : m_out_stream(colors), m_err_stream(colors),
-      m_status(eReturnStatusStarted), m_did_change_process_state(false),
-      m_interactive(true) {}
+    : m_out_stream(colors), m_err_stream(colors) {}
 
 void CommandReturnObject::AppendErrorWithFormat(const char *format, ...) {
+  SetStatus(eReturnStatusFailed);
+
   if (!format)
     return;
   va_list args;
@@ -100,6 +100,7 @@ void CommandReturnObject::AppendWarning(llvm::StringRef in_string) {
 void CommandReturnObject::AppendError(llvm::StringRef in_string) {
   if (in_string.empty())
     return;
+  SetStatus(eReturnStatusFailed);
   error(GetErrorStream()) << in_string.rtrim() << '\n';
 }
 
@@ -116,7 +117,6 @@ void CommandReturnObject::SetError(llvm::StringRef error_str) {
     return;
 
   AppendError(error_str);
-  SetStatus(eReturnStatusFailed);
 }
 
 // Similar to AppendError, but do not prepend 'Status: ' to message, and don't
@@ -126,6 +126,7 @@ void CommandReturnObject::AppendRawError(llvm::StringRef in_string) {
   if (in_string.empty())
     return;
   GetErrorStream() << in_string;
+  SetStatus(eReturnStatusFailed);
 }
 
 void CommandReturnObject::SetStatus(ReturnStatus status) { m_status = status; }
@@ -151,6 +152,7 @@ void CommandReturnObject::Clear() {
     static_cast<StreamString *>(stream_sp.get())->Clear();
   m_status = eReturnStatusStarted;
   m_did_change_process_state = false;
+  m_suppress_immediate_output = false;
   m_interactive = true;
 }
 
@@ -165,3 +167,11 @@ void CommandReturnObject::SetDidChangeProcessState(bool b) {
 bool CommandReturnObject::GetInteractive() const { return m_interactive; }
 
 void CommandReturnObject::SetInteractive(bool b) { m_interactive = b; }
+
+bool CommandReturnObject::GetSuppressImmediateOutput() const {
+  return m_suppress_immediate_output;
+}
+
+void CommandReturnObject::SetSuppressImmediateOutput(bool b) {
+  m_suppress_immediate_output = b;
+}

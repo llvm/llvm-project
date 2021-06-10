@@ -10,7 +10,9 @@ define <1 x i1> @insertelt_v1i1(<1 x i1> %x, i1 %elt) nounwind {
 ; CHECK-NEXT:    vsetivli zero, 1, e8,mf8,ta,mu
 ; CHECK-NEXT:    vmv.v.i v25, 0
 ; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
+; CHECK-NEXT:    vsetvli zero, zero, e8,mf8,tu,mu
 ; CHECK-NEXT:    vmv.s.x v25, a0
+; CHECK-NEXT:    vsetvli zero, zero, e8,mf8,ta,mu
 ; CHECK-NEXT:    vand.vi v25, v25, 1
 ; CHECK-NEXT:    vmsne.vi v0, v25, 0
 ; CHECK-NEXT:    ret

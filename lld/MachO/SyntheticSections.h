@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -154,7 +155,7 @@ struct Location {
 
   Location(const InputSection *isec, uint64_t offset)
       : isec(isec), offset(offset) {}
-  uint64_t getVA() const { return isec->getVA() + offset; }
+  uint64_t getVA() const { return isec->getVA(offset); }
 };
 
 // Stores rebase opcodes, which tell dyld where absolute addresses have been
@@ -326,7 +327,7 @@ public:
 // to cache an address to the image loader it uses. Note that unlike the other
 // synthetic sections, which are OutputSections, the ImageLoaderCacheSection is
 // an InputSection that gets merged into the __data OutputSection.
-class ImageLoaderCacheSection : public InputSection {
+class ImageLoaderCacheSection : public ConcatInputSection {
 public:
   ImageLoaderCacheSection();
   uint64_t getSize() const override { return target->wordSize; }
@@ -515,8 +516,24 @@ private:
   uint64_t xarSize;
 };
 
+class CStringSection : public SyntheticSection {
+public:
+  CStringSection();
+  void addInput(CStringInputSection *);
+  uint64_t getSize() const override { return builder.getSize(); }
+  void finalize() override;
+  bool isNeeded() const override { return !inputs.empty(); }
+  void writeTo(uint8_t *buf) const override { builder.write(buf); }
+
+  std::vector<CStringInputSection *> inputs;
+
+private:
+  llvm::StringTableBuilder builder;
+};
+
 struct InStruct {
   MachHeaderSection *header = nullptr;
+  CStringSection *cStringSection = nullptr;
   RebaseSection *rebase = nullptr;
   BindingSection *binding = nullptr;
   WeakBindingSection *weakBinding = nullptr;

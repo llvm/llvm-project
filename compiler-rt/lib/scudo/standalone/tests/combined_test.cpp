@@ -521,6 +521,8 @@ struct DeathConfig {
   static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
   typedef scudo::uptr PrimaryCompactPtrT;
   static const scudo::uptr PrimaryCompactPtrScale = 0;
+  static const bool PrimaryEnableRandomOffset = true;
+  static const scudo::uptr PrimaryMapSizeIncrement = 1UL << 18;
 
   typedef scudo::MapAllocatorNoCache SecondaryCache;
   template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 1U, 1U>;

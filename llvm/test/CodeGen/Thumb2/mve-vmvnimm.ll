@@ -68,16 +68,10 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @mov_int32_4278386688() {
 ; CHECK-LABEL: mov_int32_4278386688:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adr r0, .LCPI7_0
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    movt r0, #65283
+; CHECK-NEXT:    vdup.32 q0, r0
 ; CHECK-NEXT:    bx lr
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI7_0:
-; CHECK-NEXT:    .long 4278386688 @ double -6.5147775434702224E+303
-; CHECK-NEXT:    .long 4278386688
-; CHECK-NEXT:    .long 4278386688 @ double -6.5147775434702224E+303
-; CHECK-NEXT:    .long 4278386688
 entry:
   ret <4 x i32> <i32 4278386688, i32 4278386688, i32 4278386688, i32 4278386688>
 }

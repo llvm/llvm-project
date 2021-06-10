@@ -546,7 +546,7 @@ isl::union_map ZoneAlgorithm::computePerPHI(const ScopArrayInfo *SAI) {
   // flow.
   isl::set DefinedContext = S->getDefinedBehaviorContext();
   if (!DefinedContext)
-    return nullptr;
+    return {};
 
   assert(SAI->isPHIKind());
 
@@ -729,7 +729,7 @@ isl::map ZoneAlgorithm::makeUnknownForDomain(ScopStmt *Stmt) const {
 
 isl::id ZoneAlgorithm::makeValueId(Value *V) {
   if (!V)
-    return nullptr;
+    return {};
 
   auto &Id = ValueIds[V];
   if (Id.is_null()) {

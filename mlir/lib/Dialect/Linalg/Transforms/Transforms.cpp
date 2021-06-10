@@ -95,7 +95,7 @@ void mlir::linalg::LinalgTransformationFilter::
                                       Operation *op) const {
   if (replacement.hasValue())
     op->setAttr(LinalgTransforms::kLinalgTransformMarker,
-                rewriter.getStringAttr(replacement.getValue()));
+                rewriter.getStringAttr(replacement.getValue().strref()));
   else
     op->removeAttr(Identifier::get(LinalgTransforms::kLinalgTransformMarker,
                                    rewriter.getContext()));

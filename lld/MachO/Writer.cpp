@@ -863,15 +863,23 @@ template <class LP> void Writer::createOutputSections() {
     InputSection *isec = p.value();
     if (isec->shouldOmitFromOutput())
       continue;
-    NamePair names = maybeRenameSection({isec->segname, isec->name});
-    ConcatOutputSection *&osec = concatOutputSections[names];
-    if (osec == nullptr) {
-      osec = make<ConcatOutputSection>(names.second);
-      osec->inputOrder = p.index();
+    if (auto *concatIsec = dyn_cast<ConcatInputSection>(isec)) {
+      NamePair names = maybeRenameSection({isec->segname, isec->name});
+      ConcatOutputSection *&osec = concatOutputSections[names];
+      if (osec == nullptr) {
+        osec = make<ConcatOutputSection>(names.second);
+        osec->inputOrder = p.index();
+      }
+      osec->addInput(concatIsec);
+    } else if (auto *cStringIsec = dyn_cast<CStringInputSection>(isec)) {
+      if (in.cStringSection->inputs.empty())
+        in.cStringSection->inputOrder = p.index();
+      in.cStringSection->addInput(cStringIsec);
     }
-    osec->addInput(isec);
   }
 
+  // Once all the inputs are added, we can finalize the output section
+  // properties and create the corresponding output segments.
   for (const auto &it : concatOutputSections) {
     StringRef segname = it.first.first;
     ConcatOutputSection *osec = it.second;
@@ -885,13 +893,14 @@ template <class LP> void Writer::createOutputSections() {
 
   for (SyntheticSection *ssec : syntheticSections) {
     auto it = concatOutputSections.find({ssec->segname, ssec->name});
-    if (it == concatOutputSections.end()) {
-      if (ssec->isNeeded())
+    if (ssec->isNeeded()) {
+      if (it == concatOutputSections.end()) {
         getOrCreateOutputSegment(ssec->segname)->addOutputSection(ssec);
-    } else {
-      error("section from " + toString(it->second->firstSection()->file) +
-            " conflicts with synthetic section " + ssec->segname + "," +
-            ssec->name);
+      } else {
+        fatal("section from " + toString(it->second->firstSection()->file) +
+              " conflicts with synthetic section " + ssec->segname + "," +
+              ssec->name);
+      }
     }
   }
 
@@ -1040,6 +1049,7 @@ template <class LP> void macho::writeResult() { Writer().run<LP>(); }
 
 void macho::createSyntheticSections() {
   in.header = make<MachHeaderSection>();
+  in.cStringSection = config->dedupLiterals ? make<CStringSection>() : nullptr;
   in.rebase = make<RebaseSection>();
   in.binding = make<BindingSection>();
   in.weakBinding = make<WeakBindingSection>();

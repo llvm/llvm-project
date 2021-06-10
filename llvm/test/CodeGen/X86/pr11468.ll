@@ -1,4 +1,4 @@
-; RUN: llc < %s -stackrealign -stack-alignment=32 -mattr=+avx -mtriple=x86_64-apple-darwin10 | FileCheck %s
+; RUN: llc < %s -stackrealign -mattr=+avx -mtriple=x86_64-apple-darwin10 | FileCheck %s
 ; PR11468
 
 define void @f(i64 %sz) uwtable {
@@ -29,5 +29,6 @@ entry:
 ; CHECK: popq %rbp
 }
 
+!llvm.module.flags = !{!1}
 !0 = !{i32 125}
-
+!1 = !{i32 2, !"override-stack-alignment", i32 32}

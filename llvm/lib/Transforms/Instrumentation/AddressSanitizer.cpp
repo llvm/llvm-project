@@ -154,6 +154,8 @@ const char kAsanPtrSub[] = "__sanitizer_ptr_sub";
 const char kAsanHandleNoReturnName[] = "__asan_handle_no_return";
 static const int kMaxAsanStackMallocSizeClass = 10;
 const char kAsanStackMallocNameTemplate[] = "__asan_stack_malloc_";
+const char kAsanStackMallocAlwaysNameTemplate[] =
+    "__asan_stack_malloc_always_";
 const char kAsanStackFreeNameTemplate[] = "__asan_stack_free_";
 const char kAsanGenPrefix[] = "___asan_gen_";
 const char kODRGenPrefix[] = "__odr_asan_gen_";
@@ -2951,13 +2953,33 @@ bool AddressSanitizer::LooksLikeCodeInBug11395(Instruction *I) {
 
 void FunctionStackPoisoner::initializeCallbacks(Module &M) {
   IRBuilder<> IRB(*C);
-  for (int i = 0; i <= kMaxAsanStackMallocSizeClass; i++) {
-    std::string Suffix = itostr(i);
-    AsanStackMallocFunc[i] = M.getOrInsertFunction(
-        kAsanStackMallocNameTemplate + Suffix, IntptrTy, IntptrTy);
-    AsanStackFreeFunc[i] =
-        M.getOrInsertFunction(kAsanStackFreeNameTemplate + Suffix,
-                              IRB.getVoidTy(), IntptrTy, IntptrTy);
+  switch (ClUseAfterReturn) {
+  case AsanDetectStackUseAfterReturnMode::Always:
+    for (int i = 0; i <= kMaxAsanStackMallocSizeClass; i++) {
+      std::string Suffix = itostr(i);
+      AsanStackMallocFunc[i] = M.getOrInsertFunction(
+          kAsanStackMallocAlwaysNameTemplate + Suffix, IntptrTy, IntptrTy);
+      AsanStackFreeFunc[i] =
+          M.getOrInsertFunction(kAsanStackFreeNameTemplate + Suffix,
+                                IRB.getVoidTy(), IntptrTy, IntptrTy);
+    }
+    break;
+  case AsanDetectStackUseAfterReturnMode::Runtime:
+    for (int i = 0; i <= kMaxAsanStackMallocSizeClass; i++) {
+      std::string Suffix = itostr(i);
+      AsanStackMallocFunc[i] = M.getOrInsertFunction(
+          kAsanStackMallocNameTemplate + Suffix, IntptrTy, IntptrTy);
+      AsanStackFreeFunc[i] =
+          M.getOrInsertFunction(kAsanStackFreeNameTemplate + Suffix,
+                                IRB.getVoidTy(), IntptrTy, IntptrTy);
+    }
+    break;
+  case AsanDetectStackUseAfterReturnMode::Never:
+    // Do Nothing
+    break;
+  case AsanDetectStackUseAfterReturnMode::Invalid:
+    // Do Nothing
+    break;
   }
   if (ASan.UseAfterScope) {
     AsanPoisonStackMemoryFunc = M.getOrInsertFunction(

@@ -17,8 +17,8 @@ mlir_tablegen(TestAttrDefs.cpp.inc -gen-attrdef-defs)
 add_public_tablegen_target(MLIRTestAttrDefIncGen)
 
 set(LLVM_TARGET_DEFINITIONS TestTypeDefs.td)
-mlir_tablegen(TestTypeDefs.h.inc -gen-typedef-decls)
-mlir_tablegen(TestTypeDefs.cpp.inc -gen-typedef-defs)
+mlir_tablegen(TestTypeDefs.h.inc -gen-typedef-decls -typedefs-dialect=test)
+mlir_tablegen(TestTypeDefs.cpp.inc -gen-typedef-defs -typedefs-dialect=test)
 add_public_tablegen_target(MLIRTestTypeDefIncGen)
 
 

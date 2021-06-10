@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: %libomp-compile-and-run | FileCheck %s
 // REQUIRES: ompt
 // UNSUPPORTED: gcc

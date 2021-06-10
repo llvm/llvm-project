@@ -152,7 +152,7 @@ define i32 @zext_sext(<8 x i1> %in) {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %D5 = zext <16 x i1> undef to <16 x i32>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %E = trunc <4 x i64> undef to <4 x i32>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %F = trunc <8 x i32> undef to <8 x i16>
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %F1 = trunc <16 x i16> undef to <16 x i8>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F1 = trunc <16 x i16> undef to <16 x i8>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %F2 = trunc <8 x i32> undef to <8 x i8>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %F3 = trunc <4 x i64> undef to <4 x i8>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %G = trunc <8 x i64> undef to <8 x i32>
@@ -180,9 +180,9 @@ define i32 @zext_sext(<8 x i1> %in) {
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %D3 = zext <16 x i16> undef to <16 x i32>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %D4 = zext <16 x i8> undef to <16 x i32>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %D5 = zext <16 x i1> undef to <16 x i32>
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %E = trunc <4 x i64> undef to <4 x i32>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %E = trunc <4 x i64> undef to <4 x i32>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F = trunc <8 x i32> undef to <8 x i16>
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %F1 = trunc <16 x i16> undef to <16 x i8>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %F1 = trunc <16 x i16> undef to <16 x i8>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %F2 = trunc <8 x i32> undef to <8 x i8>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %F3 = trunc <4 x i64> undef to <4 x i8>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %G = trunc <8 x i64> undef to <8 x i32>

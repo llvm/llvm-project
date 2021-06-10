@@ -232,8 +232,12 @@ bool Demangler::demanglePath(InType InType, LeaveOpen LeaveOpen) {
       print(">");
     break;
   }
+  case 'B': {
+    bool IsOpen = false;
+    demangleBackref([&] { IsOpen = demanglePath(InType, LeaveOpen); });
+    return IsOpen;
+  }
   default:
-    // FIXME parse remaining productions.
     Error = true;
     break;
   }
@@ -434,8 +438,13 @@ void Demangler::printBasicType(BasicType Type) {
 //          | "D" <dyn-bounds> <lifetime> // dyn Trait<Assoc = X> + Send + 'a
 //          | <backref>                   // backref
 void Demangler::demangleType() {
-  size_t Start = Position;
+  if (Error || RecursionLevel >= MaxRecursionLevel) {
+    Error = true;
+    return;
+  }
+  SwapAndRestore<size_t> SaveRecursionLevel(RecursionLevel, RecursionLevel + 1);
 
+  size_t Start = Position;
   char C = consume();
   BasicType Type;
   if (parseBasicType(C, Type))
@@ -501,6 +510,9 @@ void Demangler::demangleType() {
     } else {
       Error = true;
     }
+    break;
+  case 'B':
+    demangleBackref([&] { demangleType(); });
     break;
   default:
     Position = Start;
@@ -613,8 +625,15 @@ void Demangler::demangleOptionalBinder() {
 //         | "p"                          // placeholder
 //         | <backref>
 void Demangler::demangleConst() {
+  if (Error || RecursionLevel >= MaxRecursionLevel) {
+    Error = true;
+    return;
+  }
+  SwapAndRestore<size_t> SaveRecursionLevel(RecursionLevel, RecursionLevel + 1);
+
+  char C = consume();
   BasicType Type;
-  if (parseBasicType(consume(), Type)) {
+  if (parseBasicType(C, Type)) {
     switch (Type) {
     case BasicType::I8:
     case BasicType::I16:
@@ -640,10 +659,11 @@ void Demangler::demangleConst() {
       print('_');
       break;
     default:
-      // FIXME demangle backreferences.
       Error = true;
       break;
     }
+  } else if (C == 'B') {
+    demangleBackref([&] { demangleConst(); });
   } else {
     Error = true;
   }

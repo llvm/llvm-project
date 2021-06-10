@@ -991,12 +991,21 @@ public:
   ///
   /// Notes:
   ///
-  /// 1. The newly introduced block will have a new ordinal which will be
+  /// 1. splitBlock must be used with care. Splitting a block may cause
+  ///    incoming edges to become invalid if the edge target subexpression
+  ///    points outside the bounds of the newly split target block (E.g. an
+  ///    edge 'S + 10 : Pointer64' where S points to a newly split block
+  ///    whose size is less than 10). No attempt is made to detect invalidation
+  ///    of incoming edges, as in general this requires context that the
+  ///    LinkGraph does not have. Clients are responsible for ensuring that
+  ///    splitBlock is not used in a way that invalidates edges.
+  ///
+  /// 2. The newly introduced block will have a new ordinal which will be
   ///    higher than any other ordinals in the section. Clients are responsible
   ///    for re-assigning block ordinals to restore a compatible order if
   ///    needed.
   ///
-  /// 2. The cache is not automatically updated if new symbols are introduced
+  /// 3. The cache is not automatically updated if new symbols are introduced
   ///    between calls to splitBlock. Any newly introduced symbols may be
   ///    added to the cache manually (descending offset order must be
   ///    preserved), or the cache can be set to None and rebuilt by

@@ -1,5 +1,4 @@
 ; RUN: llc < %s -stack-symbol-ordering=0 -mcpu=generic -mattr=+avx -mtriple=x86_64-apple-darwin10 | FileCheck %s
-; RUN: llc < %s -stack-symbol-ordering=0 -mcpu=generic -stackrealign -stack-alignment=32 -mattr=+avx -mtriple=x86_64-apple-darwin10 | FileCheck %s -check-prefix=FORCE-ALIGN
 ; rdar://11496434
 
 ; no VLAs or dynamic alignment
@@ -184,44 +183,3 @@ declare i8* @llvm.stacksave() nounwind
 declare void @bar(i32, i32*, %struct.struct_t* byval(%struct.struct_t) align 8)
 
 declare void @llvm.stackrestore(i8*) nounwind
-
-
-; Test when forcing stack alignment
-define i32 @t8() nounwind uwtable {
-entry:
-  %a = alloca i32, align 4
-  call void @t1_helper(i32* %a) nounwind
-  %0 = load i32, i32* %a, align 4
-  %add = add nsw i32 %0, 13
-  ret i32 %add
-
-; FORCE-ALIGN: _t8
-; FORCE-ALIGN:      movq %rsp, %rbp
-; FORCE-ALIGN:      andq $-32, %rsp
-; FORCE-ALIGN-NEXT: subq $32, %rsp
-; FORCE-ALIGN:      movq %rbp, %rsp
-; FORCE-ALIGN:      popq %rbp
-}
-
-; VLAs
-define i32 @t9(i64 %sz) nounwind uwtable {
-entry:
-  %a = alloca i32, align 4
-  %vla = alloca i32, i64 %sz, align 16
-  call void @t3_helper(i32* %a, i32* %vla) nounwind
-  %0 = load i32, i32* %a, align 4
-  %add = add nsw i32 %0, 13
-  ret i32 %add
-
-; FORCE-ALIGN: _t9
-; FORCE-ALIGN: pushq %rbp
-; FORCE-ALIGN: movq %rsp, %rbp
-; FORCE-ALIGN: pushq %rbx
-; FORCE-ALIGN: andq $-32, %rsp
-; FORCE-ALIGN: subq $32, %rsp
-; FORCE-ALIGN: movq %rsp, %rbx
-
-; FORCE-ALIGN: leaq -8(%rbp), %rsp
-; FORCE-ALIGN: popq %rbx
-; FORCE-ALIGN: popq %rbp
-}
