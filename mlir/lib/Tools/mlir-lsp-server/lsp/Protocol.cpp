@@ -247,6 +247,28 @@ raw_ostream &mlir::lsp::operator<<(raw_ostream &os, const URIForFile &value) {
 }
 
 //===----------------------------------------------------------------------===//
+// ClientCapabilities
+//===----------------------------------------------------------------------===//
+
+bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+                         ClientCapabilities &result, llvm::json::Path path) {
+  const llvm::json::Object *o = value.getAsObject();
+  if (!o) {
+    path.report("expected object");
+    return false;
+  }
+  if (const llvm::json::Object *textDocument = o->getObject("textDocument")) {
+    if (const llvm::json::Object *documentSymbol =
+            textDocument->getObject("documentSymbol")) {
+      if (Optional<bool> hierarchicalSupport =
+              documentSymbol->getBoolean("hierarchicalDocumentSymbolSupport"))
+        result.hierarchicalDocumentSymbol = *hierarchicalSupport;
+    }
+  }
+  return true;
+}
+
+//===----------------------------------------------------------------------===//
 // InitializeParams
 //===----------------------------------------------------------------------===//
 
@@ -275,6 +297,7 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
   if (!o)
     return false;
   // We deliberately don't fail if we can't parse individual fields.
+  o.map("capabilities", result.capabilities);
   o.map("trace", result.trace);
   return true;
 }
@@ -492,6 +515,33 @@ llvm::json::Value mlir::lsp::toJSON(const Hover &hover) {
   if (hover.range.hasValue())
     result["range"] = toJSON(*hover.range);
   return std::move(result);
+}
+
+//===----------------------------------------------------------------------===//
+// DocumentSymbol
+//===----------------------------------------------------------------------===//
+
+llvm::json::Value mlir::lsp::toJSON(const DocumentSymbol &symbol) {
+  llvm::json::Object result{{"name", symbol.name},
+                            {"kind", static_cast<int>(symbol.kind)},
+                            {"range", symbol.range},
+                            {"selectionRange", symbol.selectionRange}};
+
+  if (!symbol.detail.empty())
+    result["detail"] = symbol.detail;
+  if (!symbol.children.empty())
+    result["children"] = symbol.children;
+  return std::move(result);
+}
+
+//===----------------------------------------------------------------------===//
+// DocumentSymbolParams
+//===----------------------------------------------------------------------===//
+
+bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+                         DocumentSymbolParams &result, llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  return o && o.map("textDocument", result.textDocument);
 }
 
 //===----------------------------------------------------------------------===//

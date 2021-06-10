@@ -56,6 +56,16 @@ struct LSPServer::Impl {
   void onHover(const TextDocumentPositionParams &params,
                Callback<Optional<Hover>> reply);
 
+  //===--------------------------------------------------------------------===//
+  // Document Symbols
+
+  void onDocumentSymbol(const DocumentSymbolParams &params,
+                        Callback<std::vector<DocumentSymbol>> reply);
+
+  //===--------------------------------------------------------------------===//
+  // Fields
+  //===--------------------------------------------------------------------===//
+
   MLIRServer &server;
   JSONTransport &transport;
 
@@ -73,6 +83,7 @@ struct LSPServer::Impl {
 
 void LSPServer::Impl::onInitialize(const InitializeParams &params,
                                    Callback<llvm::json::Value> reply) {
+  // Send a response with the capabilities of this server.
   llvm::json::Object serverCaps{
       {"textDocumentSync",
        llvm::json::Object{
@@ -83,6 +94,11 @@ void LSPServer::Impl::onInitialize(const InitializeParams &params,
       {"definitionProvider", true},
       {"referencesProvider", true},
       {"hoverProvider", true},
+
+      // For now we only support documenting symbols when the client supports
+      // hierarchical symbols.
+      {"documentSymbolProvider",
+       params.capabilities.hierarchicalDocumentSymbol},
   };
 
   llvm::json::Object result{
@@ -166,6 +182,17 @@ void LSPServer::Impl::onHover(const TextDocumentPositionParams &params,
 }
 
 //===----------------------------------------------------------------------===//
+// Document Symbols
+
+void LSPServer::Impl::onDocumentSymbol(
+    const DocumentSymbolParams &params,
+    Callback<std::vector<DocumentSymbol>> reply) {
+  std::vector<DocumentSymbol> symbols;
+  server.findDocumentSymbols(params.textDocument.uri, symbols);
+  reply(std::move(symbols));
+}
+
+//===----------------------------------------------------------------------===//
 // LSPServer
 //===----------------------------------------------------------------------===//
 
@@ -197,6 +224,10 @@ LogicalResult LSPServer::run() {
 
   // Hover
   messageHandler.method("textDocument/hover", impl.get(), &Impl::onHover);
+
+  // Document Symbols
+  messageHandler.method("textDocument/documentSymbol", impl.get(),
+                        &Impl::onDocumentSymbol);
 
   // Diagnostics
   impl->publishDiagnostics =

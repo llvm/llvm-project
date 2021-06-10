@@ -53,13 +53,18 @@ public:
       SMDefinition definition;
     };
 
-    OperationDefinition(Operation *op, llvm::SMRange loc) : op(op), loc(loc) {}
+    OperationDefinition(Operation *op, llvm::SMRange loc, llvm::SMLoc endLoc)
+        : op(op), loc(loc), scopeLoc(loc.Start, endLoc) {}
 
     /// The operation representing this definition.
     Operation *op;
 
     /// The source location for the operation, i.e. the location of its name.
     llvm::SMRange loc;
+
+    /// The full source range of the operation definition, i.e. a range
+    /// encompassing the start and end of the full operation definition.
+    llvm::SMRange scopeLoc;
 
     /// Source definitions for any result groups of this operation.
     SmallVector<std::pair<unsigned, SMDefinition>> resultGroups;
@@ -110,6 +115,10 @@ public:
   /// state.
   iterator_range<OperationDefIterator> getOpDefs() const;
 
+  /// Return the definition for the given operation, or nullptr if the given
+  /// operation does not have a definition.
+  const OperationDefinition *getOpDef(Operation *op) const;
+
   /// Returns (heuristically) the range of an identifier given a SMLoc
   /// corresponding to the start of an identifier location.
   static llvm::SMRange convertIdLocToRange(llvm::SMLoc loc);
@@ -130,7 +139,7 @@ public:
 
   /// Finalize the most recently started operation definition.
   void finalizeOperationDefinition(
-      Operation *op, llvm::SMRange nameLoc,
+      Operation *op, llvm::SMRange nameLoc, llvm::SMLoc endLoc,
       ArrayRef<std::pair<unsigned, llvm::SMLoc>> resultGroups = llvm::None);
 
   /// Start a definition for a region nested under the current operation.
