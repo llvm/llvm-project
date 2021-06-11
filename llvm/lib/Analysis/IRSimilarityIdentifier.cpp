@@ -702,7 +702,7 @@ void IRSimilarityIdentifier::populateMapper(
 /// \param [out] CandsForRepSubstring - The vector to store the generated
 /// IRSimilarityCandidates.
 static void createCandidatesFromSuffixTree(
-    IRInstructionMapper Mapper, std::vector<IRInstructionData *> &InstrList,
+    const IRInstructionMapper& Mapper, std::vector<IRInstructionData *> &InstrList,
     std::vector<unsigned> &IntegerMapping, SuffixTree::RepeatedSubstring &RS,
     std::vector<IRSimilarityCandidate> &CandsForRepSubstring) {
 
