@@ -750,7 +750,7 @@ define amdgpu_ps <4 x float> @sample_c_d_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX9-NEXT:    v_lshl_or_b32 v10, v6, 16, v5
 ; GFX9-NEXT:    v_lshl_or_b32 v9, v4, 16, v3
 ; GFX9-NEXT:    v_lshl_or_b32 v8, v2, 16, v0
-; GFX9-NEXT:    image_sample_c_d_cl v[0:3], v[7:14], s[0:7], s[8:11] dmask:0xf a16
+; GFX9-NEXT:    image_sample_c_d_cl v[0:3], v[7:11], s[0:7], s[8:11] dmask:0xf a16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
@@ -954,7 +954,7 @@ define amdgpu_ps <4 x float> @sample_c_cd_cl_2d(<8 x i32> inreg %rsrc, <4 x i32>
 ; GFX9-NEXT:    v_lshl_or_b32 v10, v6, 16, v5
 ; GFX9-NEXT:    v_lshl_or_b32 v9, v4, 16, v3
 ; GFX9-NEXT:    v_lshl_or_b32 v8, v2, 16, v0
-; GFX9-NEXT:    image_sample_c_cd_cl v[0:3], v[7:14], s[0:7], s[8:11] dmask:0xf a16
+; GFX9-NEXT:    image_sample_c_cd_cl v[0:3], v[7:11], s[0:7], s[8:11] dmask:0xf a16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    ; return to shader part epilog
 ;

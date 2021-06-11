@@ -1,4 +1,4 @@
-; RUN: llc < %s -stack-symbol-ordering=0 -tailcallopt -code-model=medium -stack-alignment=4 -mtriple=i686-linux-gnu -mcpu=pentium | FileCheck %s
+; RUN: llc < %s -stack-symbol-ordering=0 -tailcallopt -code-model=medium -mtriple=i686-linux-gnu -mcpu=pentium | FileCheck %s
 
 ; Check the HiPE calling convention works (x86-32)
 
@@ -89,3 +89,6 @@ define cc 11 { i32, i32, i32 } @tailcaller(i32 %hp, i32 %p) nounwind {
 @clos = external dso_local constant i32
 declare cc 11 void @bar(i32, i32, i32, i32, i32)
 declare cc 11 { i32, i32, i32 } @tailcallee(i32, i32, i32, i32, i32, i32)
+
+!llvm.module.flags = !{!3}
+!3 = !{i32 2, !"override-stack-alignment", i32 4}

@@ -39,6 +39,14 @@
 #define __opencl_c_images 1
 #endif
 
+// Define header-only feature macros for OpenCL C 3.0.
+#if (__OPENCL_C_VERSION__ == 300)
+// For the SPIR target all features are supported.
+#if defined(__SPIR__)
+#define __opencl_c_atomic_scope_all_devices 1
+#endif // defined(__SPIR__)
+#endif // (__OPENCL_C_VERSION__ == 300)
+
 // built-in scalar data types:
 
 /**
@@ -312,7 +320,12 @@ typedef enum memory_scope {
   memory_scope_work_item = __OPENCL_MEMORY_SCOPE_WORK_ITEM,
   memory_scope_work_group = __OPENCL_MEMORY_SCOPE_WORK_GROUP,
   memory_scope_device = __OPENCL_MEMORY_SCOPE_DEVICE,
+#if defined(__opencl_c_atomic_scope_all_devices)
   memory_scope_all_svm_devices = __OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES,
+#if (__OPENCL_C_VERSION__ >= CL_VERSION_3_0)
+  memory_scope_all_devices = memory_scope_all_svm_devices,
+#endif // __OPENCL_C_VERSION__ >= CL_VERSION_3_0
+#endif // defined(__opencl_c_atomic_scope_all_devices)
 #if defined(cl_intel_subgroups) || defined(cl_khr_subgroups)
   memory_scope_sub_group = __OPENCL_MEMORY_SCOPE_SUB_GROUP
 #endif

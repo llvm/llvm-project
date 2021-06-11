@@ -1,26 +1,26 @@
-// RUN: %clang_dfsan -gmlt -DTEST64 -DALIGN=8 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
+// RUN: %clang_dfsan -gmlt -DTEST64 -DALIGN=8 -mllvm -dfsan-track-origins=1 %s -o %t && \
 // RUN:     %run %t >%t.out 2>&1
-// RUN: FileCheck %s --check-prefix=CHECK < %t.out
+// RUN: FileCheck %s < %t.out
 //
-// RUN: %clang_dfsan -gmlt -DTEST32 -DALIGN=4 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
+// RUN: %clang_dfsan -gmlt -DTEST32 -DALIGN=4 -mllvm -dfsan-track-origins=1 %s -o %t && \
 // RUN:     %run %t >%t.out 2>&1
-// RUN: FileCheck %s --check-prefix=CHECK < %t.out
+// RUN: FileCheck %s < %t.out
 //
-// RUN: %clang_dfsan -gmlt -DALIGN=2 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
+// RUN: %clang_dfsan -gmlt -DALIGN=2 -mllvm -dfsan-track-origins=1 %s -o %t && \
 // RUN:     %run %t >%t.out 2>&1
-// RUN: FileCheck %s --check-prefix=CHECK < %t.out
+// RUN: FileCheck %s < %t.out
 //
-// rUN: %clang_dfsan -DTEST64 -DALIGN=5 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
-// rUN:     %run %t >%t.out 2>&1
-// rUN: FileCheck %s --check-prefix=CHECK < %t.out
-//
-// rUN: %clang_dfsan -DTEST32 -DALIGN=3 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
-// rUN:     %run %t >%t.out 2>&1
-// rUN: FileCheck %s --check-prefix=CHECK < %t.out
-//
-// RUN: %clang_dfsan -gmlt -DALIGN=1 -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t && \
+// RUN: %clang_dfsan -gmlt -DTEST64 -DALIGN=4 -mllvm -dfsan-track-origins=1 %s -o %t && \
 // RUN:     %run %t >%t.out 2>&1
-// RUN: FileCheck %s --check-prefix=CHECK < %t.out
+// RUN: FileCheck %s < %t.out
+//
+// RUN: %clang_dfsan -gmlt -DTEST32 -DALIGN=2 -mllvm -dfsan-track-origins=1 %s -o %t && \
+// RUN:     %run %t >%t.out 2>&1
+// RUN: FileCheck %s < %t.out
+//
+// RUN: %clang_dfsan -gmlt -DALIGN=1 -mllvm -dfsan-track-origins=1 %s -o %t && \
+// RUN:     %run %t >%t.out 2>&1
+// RUN: FileCheck %s < %t.out
 //
 // REQUIRES: x86_64-target-arch
 //

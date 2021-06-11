@@ -3082,6 +3082,23 @@ SourceRange UsingDecl::getSourceRange() const {
   return SourceRange(Begin, getNameInfo().getEndLoc());
 }
 
+void UsingEnumDecl::anchor() {}
+
+UsingEnumDecl *UsingEnumDecl::Create(ASTContext &C, DeclContext *DC,
+                                     SourceLocation UL, SourceLocation EL,
+                                     SourceLocation NL, EnumDecl *Enum) {
+  return new (C, DC) UsingEnumDecl(DC, Enum->getDeclName(), UL, EL, NL, Enum);
+}
+
+UsingEnumDecl *UsingEnumDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+  return new (C, ID) UsingEnumDecl(nullptr, DeclarationName(), SourceLocation(),
+                                   SourceLocation(), SourceLocation(), nullptr);
+}
+
+SourceRange UsingEnumDecl::getSourceRange() const {
+  return SourceRange(EnumLocation, getLocation());
+}
+
 void UsingPackDecl::anchor() {}
 
 UsingPackDecl *UsingPackDecl::Create(ASTContext &C, DeclContext *DC,

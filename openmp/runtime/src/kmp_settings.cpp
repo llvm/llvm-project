@@ -5080,7 +5080,7 @@ static void __kmp_stg_print_omp_tool_libraries(kmp_str_buf_t *buffer,
   }
 } // __kmp_stg_print_omp_tool_libraries
 
-static char *__kmp_tool_verbose_init = NULL;
+char *__kmp_tool_verbose_init = NULL;
 
 static void __kmp_stg_parse_omp_tool_verbose_init(char const *name,
                                                   char const *value,

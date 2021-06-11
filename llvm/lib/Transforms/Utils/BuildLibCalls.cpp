@@ -11,10 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -24,6 +22,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
 
 using namespace llvm;
 
@@ -1499,15 +1498,9 @@ static Value *emitBinaryFloatFnCallHelper(Value *Op1, Value *Op2,
   // The incoming attribute set may have come from a speculatable intrinsic, but
   // is being replaced with a library call which is not allowed to be
   // speculatable.
-  // We also need to merge with the callee's attributes, which may contain ABI
-  // attributes.
-  AttributeList NewAttrs = AttributeList::get(
-      B.getContext(),
-      makeArrayRef(
-          {Attrs.removeAttribute(B.getContext(), AttributeList::FunctionIndex,
-                                 Attribute::Speculatable),
-           CI->getCalledFunction()->getAttributes()}));
-  CI->setAttributes(NewAttrs);
+  CI->setAttributes(Attrs.removeAttribute(B.getContext(),
+                                          AttributeList::FunctionIndex,
+                                          Attribute::Speculatable));
   if (const Function *F =
           dyn_cast<Function>(Callee.getCallee()->stripPointerCasts()))
     CI->setCallingConv(F->getCallingConv());

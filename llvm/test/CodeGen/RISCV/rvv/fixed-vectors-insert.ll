@@ -53,6 +53,7 @@ define void @insertelt_v3i64(<3 x i64>* %x, i64 %y) {
 ; RV32-NEXT:    addi a4, a0, 20
 ; RV32-NEXT:    vsetivli zero, 4, e32,m1,ta,mu
 ; RV32-NEXT:    vlse32.v v26, (a4), zero
+; RV32-NEXT:    vsetvli zero, zero, e32,m1,tu,mu
 ; RV32-NEXT:    vmv.s.x v26, a3
 ; RV32-NEXT:    vsetvli zero, zero, e64,m2,tu,mu
 ; RV32-NEXT:    vslideup.vi v28, v26, 2
@@ -165,7 +166,9 @@ define void @insertelt_v8i64_0(<8 x i64>* %x) {
 ; CHECK-NEXT:    vsetivli zero, 8, e64,m4,ta,mu
 ; CHECK-NEXT:    vle64.v v28, (a0)
 ; CHECK-NEXT:    addi a1, zero, -1
+; CHECK-NEXT:    vsetvli zero, zero, e64,m4,tu,mu
 ; CHECK-NEXT:    vmv.s.x v28, a1
+; CHECK-NEXT:    vsetvli zero, zero, e64,m4,ta,mu
 ; CHECK-NEXT:    vse64.v v28, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i64>, <8 x i64>* %x
@@ -213,7 +216,9 @@ define void @insertelt_c6_v8i64_0(<8 x i64>* %x) {
 ; CHECK-NEXT:    vsetivli zero, 8, e64,m4,ta,mu
 ; CHECK-NEXT:    vle64.v v28, (a0)
 ; CHECK-NEXT:    addi a1, zero, 6
+; CHECK-NEXT:    vsetvli zero, zero, e64,m4,tu,mu
 ; CHECK-NEXT:    vmv.s.x v28, a1
+; CHECK-NEXT:    vsetvli zero, zero, e64,m4,ta,mu
 ; CHECK-NEXT:    vse64.v v28, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i64>, <8 x i64>* %x
@@ -262,9 +267,11 @@ define void @insertelt_c6_v8i64_0_add(<8 x i64>* %x, <8 x i64>* %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e64,m4,ta,mu
 ; CHECK-NEXT:    vle64.v v28, (a0)
+; CHECK-NEXT:    addi a2, zero, 6
+; CHECK-NEXT:    vsetvli zero, zero, e64,m4,tu,mu
+; CHECK-NEXT:    vmv.s.x v28, a2
+; CHECK-NEXT:    vsetvli zero, zero, e64,m4,ta,mu
 ; CHECK-NEXT:    vle64.v v8, (a1)
-; CHECK-NEXT:    addi a1, zero, 6
-; CHECK-NEXT:    vmv.s.x v28, a1
 ; CHECK-NEXT:    vadd.vv v28, v28, v8
 ; CHECK-NEXT:    vse64.v v28, (a0)
 ; CHECK-NEXT:    ret

@@ -540,6 +540,8 @@ public:
   /// }
 
 private:
+  const AsmToken peekTok(bool ShouldSkipSpace = true);
+
   bool parseStatement(ParseStatementInfo &Info,
                       MCAsmParserSemaCallback *SI);
   bool parseCurlyBlockScope(SmallVectorImpl<AsmRewrite>& AsmStrRewrites);
@@ -1138,7 +1140,7 @@ const AsmToken &MasmParser::Lex() {
                       /*EndStatementAtEOF=*/false);
       EndStatementAtEOFStack.push_back(false);
       tok = &Lexer.Lex();
-    } else if (M && M->IsFunction && Lexer.peekTok().is(AsmToken::LParen)) {
+    } else if (M && M->IsFunction && peekTok().is(AsmToken::LParen)) {
       // This is a macro function invocation; expand it in place.
       const AsmToken MacroTok = *tok;
       tok = &Lexer.Lex();
@@ -1161,7 +1163,7 @@ const AsmToken &MasmParser::Lex() {
 
   // Recognize and bypass line continuations.
   while (tok->is(AsmToken::BackSlash) &&
-         Lexer.peekTok().is(AsmToken::EndOfStatement)) {
+         peekTok().is(AsmToken::EndOfStatement)) {
     // Eat both the backslash and the end of statement.
     Lexer.Lex();
     tok = &Lexer.Lex();
@@ -1181,6 +1183,29 @@ const AsmToken &MasmParser::Lex() {
   }
 
   return *tok;
+}
+
+const AsmToken MasmParser::peekTok(bool ShouldSkipSpace) {
+  AsmToken Tok;
+
+  MutableArrayRef<AsmToken> Buf(Tok);
+  size_t ReadCount = Lexer.peekTokens(Buf, ShouldSkipSpace);
+
+  if (ReadCount == 0) {
+    // If this is the end of an included file, pop the parent file off the
+    // include stack.
+    SMLoc ParentIncludeLoc = SrcMgr.getParentIncludeLoc(CurBuffer);
+    if (ParentIncludeLoc != SMLoc()) {
+      EndStatementAtEOFStack.pop_back();
+      jumpToLoc(ParentIncludeLoc, 0, EndStatementAtEOFStack.back());
+      return peekTok(ShouldSkipSpace);
+    }
+    EndStatementAtEOFStack.pop_back();
+    assert(EndStatementAtEOFStack.empty());
+  }
+
+  assert(ReadCount == 1);
+  return Tok;
 }
 
 bool MasmParser::enabledGenDwarfForAssembly() {
@@ -2440,6 +2465,8 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
   const StringRef nextVal = nextTok.getString();
   const SMLoc nextLoc = nextTok.getLoc();
 
+  const AsmToken afterNextTok = peekTok();
+
   // There are several entities interested in parsing infix directives:
   //
   // 1. Asm parser extensions. For example, platform-specific parsers
@@ -2483,25 +2510,55 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     Lex();
     return parseDirectiveEquate(nextVal, IDVal, DirKind);
   case DK_BYTE:
+    if (afterNextTok.is(AsmToken::Identifier) &&
+        afterNextTok.getString().equals_lower("ptr")) {
+      // Size directive; part of an instruction.
+      break;
+    }
+    LLVM_FALLTHROUGH;
   case DK_SBYTE:
   case DK_DB:
     Lex();
     return parseDirectiveNamedValue(nextVal, 1, IDVal, IDLoc);
   case DK_WORD:
+    if (afterNextTok.is(AsmToken::Identifier) &&
+        afterNextTok.getString().equals_lower("ptr")) {
+      // Size directive; part of an instruction.
+      break;
+    }
+    LLVM_FALLTHROUGH;
   case DK_SWORD:
   case DK_DW:
     Lex();
     return parseDirectiveNamedValue(nextVal, 2, IDVal, IDLoc);
   case DK_DWORD:
+    if (afterNextTok.is(AsmToken::Identifier) &&
+        afterNextTok.getString().equals_lower("ptr")) {
+      // Size directive; part of an instruction.
+      break;
+    }
+    LLVM_FALLTHROUGH;
   case DK_SDWORD:
   case DK_DD:
     Lex();
     return parseDirectiveNamedValue(nextVal, 4, IDVal, IDLoc);
   case DK_FWORD:
+    if (afterNextTok.is(AsmToken::Identifier) &&
+        afterNextTok.getString().equals_lower("ptr")) {
+      // Size directive; part of an instruction.
+      break;
+    }
+    LLVM_FALLTHROUGH;
   case DK_DF:
     Lex();
     return parseDirectiveNamedValue(nextVal, 6, IDVal, IDLoc);
   case DK_QWORD:
+    if (afterNextTok.is(AsmToken::Identifier) &&
+        afterNextTok.getString().equals_lower("ptr")) {
+      // Size directive; part of an instruction.
+      break;
+    }
+    LLVM_FALLTHROUGH;
   case DK_SQWORD:
   case DK_DQ:
     Lex();
@@ -3007,7 +3064,7 @@ bool MasmParser::parseMacroArguments(const MCAsmMacro *M,
     SMLoc IDLoc = Lexer.getLoc();
     MCAsmMacroParameter FA;
 
-    if (Lexer.is(AsmToken::Identifier) && Lexer.peekTok().is(AsmToken::Equal)) {
+    if (Lexer.is(AsmToken::Identifier) && peekTok().is(AsmToken::Equal)) {
       if (parseIdentifier(FA.Name))
         return Error(IDLoc, "invalid argument identifier for formal argument");
 
@@ -3238,14 +3295,13 @@ bool MasmParser::parseIdentifier(StringRef &Res) {
 
     // Consume the prefix character, and check for a following identifier.
 
-    AsmToken Buf[1];
-    Lexer.peekTokens(Buf, false);
+    AsmToken nextTok = peekTok(false);
 
-    if (Buf[0].isNot(AsmToken::Identifier))
+    if (nextTok.isNot(AsmToken::Identifier))
       return true;
 
     // We have a '$' or '@' followed by an identifier, make sure they are adjacent.
-    if (PrefixLoc.getPointer() + 1 != Buf[0].getLoc().getPointer())
+    if (PrefixLoc.getPointer() + 1 != nextTok.getLoc().getPointer())
       return true;
 
     // eat $ or @
@@ -3675,7 +3731,7 @@ bool MasmParser::parseRealInstList(const fltSemantics &Semantics,
   while (getTok().isNot(EndToken) ||
          (EndToken == AsmToken::Greater &&
           getTok().isNot(AsmToken::GreaterGreater))) {
-    const AsmToken NextTok = Lexer.peekTok();
+    const AsmToken NextTok = peekTok();
     if (NextTok.is(AsmToken::Identifier) &&
         NextTok.getString().equals_lower("dup")) {
       const MCExpr *Value;
@@ -4039,7 +4095,7 @@ bool MasmParser::parseStructInstList(
   while (getTok().isNot(EndToken) ||
          (EndToken == AsmToken::Greater &&
           getTok().isNot(AsmToken::GreaterGreater))) {
-    const AsmToken NextTok = Lexer.peekTok();
+    const AsmToken NextTok = peekTok();
     if (NextTok.is(AsmToken::Identifier) &&
         NextTok.getString().equals_lower("dup")) {
       const MCExpr *Value;
@@ -5608,8 +5664,7 @@ bool MasmParser::parseDirectiveMacro(StringRef Name, SMLoc NameLoc) {
           --MacroDepth;
         }
       } else if (getTok().getIdentifier().equals_lower("exitm")) {
-        if (MacroDepth == 0 &&
-            getLexer().peekTok().isNot(AsmToken::EndOfStatement)) {
+        if (MacroDepth == 0 && peekTok().isNot(AsmToken::EndOfStatement)) {
           IsMacroFunction = true;
         }
       } else if (isMacroLikeDirective()) {
@@ -6513,8 +6568,8 @@ bool MasmParser::isMacroLikeDirective() {
     if (IsMacroLike)
       return true;
   }
-  if (getLexer().peekTok().is(AsmToken::Identifier) &&
-      getLexer().peekTok().getIdentifier().equals_lower("macro"))
+  if (peekTok().is(AsmToken::Identifier) &&
+      peekTok().getIdentifier().equals_lower("macro"))
     return true;
 
   return false;

@@ -924,3 +924,15 @@ func @compose_into_affine_vector_load_vector_store(%A : memref<1024xf32>, %u : i
   }
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @no_fold_of_store
+//  CHECK:   %[[cst:.+]] = memref.cast %arg
+//  CHECK:   affine.store %[[cst]]
+func @no_fold_of_store(%arg : memref<32xi8>, %holder: memref<memref<?xi8>>) {
+  %0 = memref.cast %arg : memref<32xi8> to memref<?xi8>
+  affine.store %0, %holder[] : memref<memref<?xi8>>
+  return
+}
+

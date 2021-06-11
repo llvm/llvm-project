@@ -1304,7 +1304,7 @@ ompd_enumerate_states(ompd_address_space_handle_t *address_space_handle,
                       const char **next_state_name, ompd_word_t *more_enums);
 
 ompd_rc_t ompd_get_state(ompd_thread_handle_t *thread_handle,
-                         ompd_word_t *state, ompt_wait_id_t *wait_id);
+                         ompd_word_t *state, ompd_wait_id_t *wait_id);
 
 ompd_rc_t
 ompd_get_display_control_vars(ompd_address_space_handle_t *address_space_handle,

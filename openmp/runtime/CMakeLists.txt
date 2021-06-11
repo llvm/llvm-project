@@ -333,9 +333,18 @@ if(LIBOMP_TSAN_SUPPORT AND (NOT LIBOMP_HAVE_TSAN_SUPPORT))
 endif()
 
 # OMPD-support
-# TODO: Make this a real feature check
-set(LIBOMP_OMPD_SUPPORT FALSE CACHE BOOL
+# Enable if OMPT SUPPORT is ON
+set(OMPD_DEFAULT FALSE)
+if (LIBOMP_HAVE_OMPT_SUPPORT AND ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux"))
+  set(OMPD_DEFAULT TRUE)
+endif()
+
+set(LIBOMP_OMPD_SUPPORT ${OMPD_DEFAULT} CACHE BOOL
   "OMPD-support?")
+
+if(LIBOMP_OMPD_SUPPORT AND ((NOT LIBOMP_OMPT_SUPPORT) OR (NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")))
+  libomp_error_say("OpenMP Debug Interface(OMPD) requested but not available in this implementation")
+endif()
 
 # Error check hwloc support after config-ix has run
 if(LIBOMP_USE_HWLOC AND (NOT LIBOMP_HAVE_HWLOC))
@@ -410,3 +419,4 @@ add_subdirectory(test)
 # make these variables available for tools/libompd:
 set(LIBOMP_LIBRARY_DIR ${LIBOMP_LIBRARY_DIR} PARENT_SCOPE)
 set(LIBOMP_INCLUDE_DIR ${LIBOMP_INCLUDE_DIR} PARENT_SCOPE)
+set(LIBOMP_SRC_DIR ${LIBOMP_SRC_DIR} PARENT_SCOPE)

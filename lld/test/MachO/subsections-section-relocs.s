@@ -39,10 +39,13 @@ _bar_str:
 
 ## References to this generate a section relocation
 ## N.B.: ld64 doesn't actually reorder symbols in __cstring based on the order
-##       file. Only our implementation does. However, I'm not sure how else to
-##       test section relocations that target an address inside a relocated
-##       symbol: using a non-__cstring section would cause llvm-mc to emit a
-##       symbol relocation instead using the nearest symbol.
+##       file. Our implementation only does does so if --no-literal-merge is
+##       specified. I'm not sure how else to test section relocations that
+##       target an address inside a relocated symbol: using a non-__cstring
+##       section would cause llvm-mc to emit a symbol relocation instead using
+##       the nearest symbol. It might be more consistent for LLD to disable
+##       symbol-based cstring reordering altogether and leave this functionality
+##       untested, at least until we find a real-world use case...
 L_.str:
   .asciz "Private symbol"
 

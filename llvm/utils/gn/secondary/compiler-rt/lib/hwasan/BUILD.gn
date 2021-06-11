@@ -46,6 +46,7 @@ source_set("sources") {
   sources = [
     "hwasan.cpp",
     "hwasan.h",
+    "hwasan_allocation_functions.cpp",
     "hwasan_allocator.cpp",
     "hwasan_allocator.h",
     "hwasan_dynamic_shadow.cpp",

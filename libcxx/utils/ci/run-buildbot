@@ -248,6 +248,13 @@ generic-noexceptions)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-noexceptions.cmake"
     check-cxx-cxxabi
 ;;
+generic-modules)
+    export CC=clang
+    export CXX=clang++
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-modules.cmake"
+    check-cxx-cxxabi
+;;
 generic-static)
     export CC=clang
     export CXX=clang++

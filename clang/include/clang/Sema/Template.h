@@ -537,6 +537,8 @@ enum class TemplateSubstitutionKind : char {
     Decl *VisitDecl(Decl *D);
     Decl *VisitVarDecl(VarDecl *D, bool InstantiatingVarTemplate,
                        ArrayRef<BindingDecl *> *Bindings = nullptr);
+    Decl *VisitBaseUsingDecls(BaseUsingDecl *D, BaseUsingDecl *Inst,
+                              LookupResult *Lookup);
 
     // Enable late instantiation of attributes.  Late instantiated attributes
     // will be stored in LA.

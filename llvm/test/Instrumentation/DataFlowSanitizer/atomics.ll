@@ -1,9 +1,6 @@
-; RUN: opt < %s -dfsan -dfsan-fast-8-labels=true -S | FileCheck %s
-; RUN: opt < %s -dfsan -dfsan-fast-16-labels=true -S | FileCheck %s --check-prefixes=CHECK,CHECK16
-; RUN: opt < %s -dfsan -dfsan-track-origins=1 -dfsan-fast-8-labels=true -S | FileCheck %s --check-prefixes=CHECK,CHECK_ORIGIN
-; RUN: opt < %s -dfsan -dfsan-track-origins=1 -dfsan-fast-8-labels=true -dfsan-instrument-with-call-threshold=0 -S | FileCheck %s --check-prefixes=CHECK,CHECK_ORIGIN
-; RUN: opt < %s -dfsan -dfsan-track-origins=1 -dfsan-fast-16-labels=true -S | FileCheck %s --check-prefixes=CHECK,CHECK16,CHECK_ORIGIN
-; RUN: opt < %s -dfsan -dfsan-track-origins=1 -dfsan-fast-16-labels=true -dfsan-instrument-with-call-threshold=0 -S | FileCheck %s --check-prefixes=CHECK,CHECK16,CHECK_ORIGIN
+; RUN: opt < %s -dfsan -S | FileCheck %s
+; RUN: opt < %s -dfsan -dfsan-track-origins=1 -S | FileCheck %s --check-prefixes=CHECK,CHECK_ORIGIN
+; RUN: opt < %s -dfsan -dfsan-track-origins=1 -dfsan-instrument-with-call-threshold=0 -S | FileCheck %s --check-prefixes=CHECK,CHECK_ORIGIN
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -21,7 +18,6 @@ entry:
   ; CHECK-NOT:         @__dfsan_arg_tls
   ; CHECK:             %[[#INTP:]] = ptrtoint i32* %p to i64
   ; CHECK-NEXT:        %[[#SHADOW_ADDR:INTP+1]] = and i64 %[[#INTP]], [[#%.10d,MASK:]]
-  ; CHECK16-NEXT:      %[[#SHADOW_ADDR:INTP+2]] = mul i64 %[[#INTP+1]], 2
   ; CHECK-NEXT:        %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_ADDR]] to i[[#SBITS]]*
   ; CHECK-NEXT:        %[[#SHADOW_PTR64:]] = bitcast i[[#SBITS]]* %[[#SHADOW_PTR]] to i[[#NUM_BITS:mul(SBITS,4)]]*
   ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, i[[#NUM_BITS]]* %[[#SHADOW_PTR64]], align [[#SBYTES]]
@@ -42,7 +38,6 @@ define i32 @AtomicRmwMax(i32* %p, i32 %x) {
   ; CHECK-NOT:         @__dfsan_arg_tls
   ; CHECK:             %[[#INTP:]] = ptrtoint i32* %p to i64
   ; CHECK-NEXT:        %[[#SHADOW_ADDR:INTP+1]] = and i64 %[[#INTP]], [[#%.10d,MASK:]]
-  ; CHECK16-NEXT:      %[[#SHADOW_ADDR:INTP+2]] = mul i64 %[[#INTP+1]], 2
   ; CHECK-NEXT:        %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_ADDR]] to i[[#SBITS]]*
   ; CHECK-NEXT:        %[[#SHADOW_PTR64:]] = bitcast i[[#SBITS]]* %[[#SHADOW_PTR]] to i[[#NUM_BITS:mul(SBITS,4)]]*
   ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, i[[#NUM_BITS]]* %[[#SHADOW_PTR64]], align [[#SBYTES]]
@@ -65,7 +60,6 @@ define i32 @Cmpxchg(i32* %p, i32 %a, i32 %b) {
   ; CHECK-NOT:         @__dfsan_arg_tls
   ; CHECK:             %[[#INTP:]] = ptrtoint i32* %p to i64
   ; CHECK-NEXT:        %[[#SHADOW_ADDR:INTP+1]] = and i64 %[[#INTP]], [[#%.10d,MASK:]]
-  ; CHECK16-NEXT:      %[[#SHADOW_ADDR:INTP+2]] = mul i64 %[[#INTP+1]], 2
   ; CHECK-NEXT:        %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_ADDR]] to i[[#SBITS]]*
   ; CHECK-NEXT:        %[[#SHADOW_PTR64:]] = bitcast i[[#SBITS]]* %[[#SHADOW_PTR]] to i[[#NUM_BITS:mul(SBITS,4)]]*
   ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, i[[#NUM_BITS]]* %[[#SHADOW_PTR64]], align [[#SBYTES]]
@@ -89,7 +83,6 @@ define i32 @CmpxchgMonotonic(i32* %p, i32 %a, i32 %b) {
   ; CHECK-NOT:         @__dfsan_arg_tls
   ; CHECK:             %[[#INTP:]] = ptrtoint i32* %p to i64
   ; CHECK-NEXT:        %[[#SHADOW_ADDR:INTP+1]] = and i64 %[[#INTP]], [[#%.10d,MASK:]]
-  ; CHECK16-NEXT:      %[[#SHADOW_ADDR:INTP+2]] = mul i64 %[[#INTP+1]], 2
   ; CHECK-NEXT:        %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_ADDR]] to i[[#SBITS]]*
   ; CHECK-NEXT:        %[[#SHADOW_PTR64:]] = bitcast i[[#SBITS]]* %[[#SHADOW_PTR]] to i[[#NUM_BITS:mul(SBITS,4)]]*
   ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, i[[#NUM_BITS]]* %[[#SHADOW_PTR64]], align [[#SBYTES]]
@@ -213,7 +206,6 @@ define void @AtomicStore(i32* %p, i32 %x) {
   ; CHECK_ORIGIN-NOT:  35184372088832
   ; CHECK:             %[[#INTP:]] = ptrtoint i32* %p to i64
   ; CHECK-NEXT:        %[[#SHADOW_ADDR:INTP+1]] = and i64 %[[#INTP]], [[#%.10d,MASK:]]
-  ; CHECK16-NEXT:      %[[#SHADOW_ADDR:INTP+2]] = mul i64 %[[#INTP+1]], 2
   ; CHECK-NEXT:        %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_ADDR]] to i[[#SBITS]]*
   ; CHECK-NEXT:        %[[#SHADOW_PTR64:]] = bitcast i[[#SBITS]]* %[[#SHADOW_PTR]] to i[[#NUM_BITS:mul(SBITS,4)]]*
   ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, i[[#NUM_BITS]]* %[[#SHADOW_PTR64]], align [[#SBYTES]]
@@ -234,7 +226,6 @@ define void @AtomicStoreRelease(i32* %p, i32 %x) {
   ; CHECK_ORIGIN-NOT:  35184372088832
   ; CHECK:             %[[#INTP:]] = ptrtoint i32* %p to i64
   ; CHECK-NEXT:        %[[#SHADOW_ADDR:INTP+1]] = and i64 %[[#INTP]], [[#%.10d,MASK:]]
-  ; CHECK16-NEXT:      %[[#SHADOW_ADDR:INTP+2]] = mul i64 %[[#INTP+1]], 2
   ; CHECK-NEXT:        %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_ADDR]] to i[[#SBITS]]*
   ; CHECK-NEXT:        %[[#SHADOW_PTR64:]] = bitcast i[[#SBITS]]* %[[#SHADOW_PTR]] to i[[#NUM_BITS:mul(SBITS,4)]]*
   ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, i[[#NUM_BITS]]* %[[#SHADOW_PTR64]], align [[#SBYTES]]
@@ -255,7 +246,6 @@ define void @AtomicStoreMonotonic(i32* %p, i32 %x) {
   ; CHECK_ORIGIN-NOT:  35184372088832
   ; CHECK:             %[[#INTP:]] = ptrtoint i32* %p to i64
   ; CHECK-NEXT:        %[[#SHADOW_ADDR:INTP+1]] = and i64 %[[#INTP]], [[#%.10d,MASK:]]
-  ; CHECK16-NEXT:      %[[#SHADOW_ADDR:INTP+2]] = mul i64 %[[#INTP+1]], 2
   ; CHECK-NEXT:        %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_ADDR]] to i[[#SBITS]]*
   ; CHECK-NEXT:        %[[#SHADOW_PTR64:]] = bitcast i[[#SBITS]]* %[[#SHADOW_PTR]] to i[[#NUM_BITS:mul(SBITS,4)]]*
   ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, i[[#NUM_BITS]]* %[[#SHADOW_PTR64]], align [[#SBYTES]]
@@ -276,7 +266,6 @@ define void @AtomicStoreUnordered(i32* %p, i32 %x) {
   ; CHECK_ORIGIN-NOT:  35184372088832
   ; CHECK:             %[[#INTP:]] = ptrtoint i32* %p to i64
   ; CHECK-NEXT:        %[[#SHADOW_ADDR:INTP+1]] = and i64 %[[#INTP]], [[#%.10d,MASK:]]
-  ; CHECK16-NEXT:      %[[#SHADOW_ADDR:INTP+2]] = mul i64 %[[#INTP+1]], 2
   ; CHECK-NEXT:        %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_ADDR]] to i[[#SBITS]]*
   ; CHECK-NEXT:        %[[#SHADOW_PTR64:]] = bitcast i[[#SBITS]]* %[[#SHADOW_PTR]] to i[[#NUM_BITS:mul(SBITS,4)]]*
   ; CHECK-NEXT:        store i[[#NUM_BITS]] 0, i[[#NUM_BITS]]* %[[#SHADOW_PTR64]], align [[#SBYTES]]

@@ -25,8 +25,9 @@ namespace scudo {
 //
 // It starts by reserving NumClasses * 2^RegionSizeLog bytes, equally divided in
 // Regions, specific to each size class. Note that the base of that mapping is
-// random (based to the platform specific map() capabilities), and that each
-// Region actually starts at a random offset from its base.
+// random (based to the platform specific map() capabilities). If
+// PrimaryEnableRandomOffset is set, each Region actually starts at a random
+// offset from its base.
 //
 // Regions are mapped incrementally on demand to fulfill allocation requests,
 // those mappings being split into equally sized Blocks based on the size class
@@ -70,9 +71,12 @@ public:
     const uptr PageSize = getPageSizeCached();
     for (uptr I = 0; I < NumClasses; I++) {
       RegionInfo *Region = getRegionInfo(I);
-      // The actual start of a region is offseted by a random number of pages.
-      Region->RegionBeg =
-          getRegionBaseByClassId(I) + (getRandomModN(&Seed, 16) + 1) * PageSize;
+      // The actual start of a region is offset by a random number of pages
+      // when PrimaryEnableRandomOffset is set.
+      Region->RegionBeg = getRegionBaseByClassId(I) +
+                          (Config::PrimaryEnableRandomOffset
+                               ? ((getRandomModN(&Seed, 16) + 1) * PageSize)
+                               : 0);
       Region->RandState = getRandomU32(&Seed);
       Region->ReleaseInfo.LastReleaseAtNs = Time;
     }
@@ -267,8 +271,7 @@ private:
   static const uptr NumClasses = SizeClassMap::NumClasses;
   static const uptr PrimarySize = RegionSize * NumClasses;
 
-  // Call map for user memory with at least this size.
-  static const uptr MapSizeIncrement = 1UL << 18;
+  static const uptr MapSizeIncrement = Config::PrimaryMapSizeIncrement;
   // Fill at most this number of batches from the newly map'd memory.
   static const u32 MaxNumBatches = SCUDO_ANDROID ? 4U : 8U;
 

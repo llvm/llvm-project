@@ -17,11 +17,9 @@
 // and also provides basic-block coverage for every input.
 //
 // Build:
-//   1. Compile this file (DataFlow.cpp) with -fsanitize=dataflow -mllvm
-//       -dfsan-fast-16-labels and -O2.
+//   1. Compile this file (DataFlow.cpp) with -fsanitize=dataflow and -O2.
 //   2. Compile DataFlowCallbacks.cpp with -O2 -fPIC.
 //   3. Build the fuzz target with -g -fsanitize=dataflow
-//       -mllvm -dfsan-fast-16-labels
 //       -fsanitize-coverage=trace-pc-guard,pc-table,bb,trace-cmp
 //   4. Link those together with -fsanitize=dataflow
 //
@@ -82,7 +80,7 @@ static inline bool BlockIsEntry(size_t BlockIdx) {
   return __dft.PCsBeg[BlockIdx * 2 + 1] & PCFLAG_FUNC_ENTRY;
 }
 
-const int kNumLabels = 16;
+const int kNumLabels = 8;
 
 // Prints all instrumented functions.
 static int PrintFunctions() {

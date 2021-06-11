@@ -31,6 +31,9 @@
 #if OMPT_SUPPORT
 #include "ompt-specific.h"
 #endif
+#if OMPD_SUPPORT
+#include "ompd-specific.h"
+#endif
 
 #if OMP_PROFILING_SUPPORT
 #include "llvm/Support/TimeProfiler.h"
@@ -1473,6 +1476,10 @@ int __kmp_fork_call(ident_t *loc, int gtid,
           return TRUE;
         }
 
+#if OMPD_SUPPORT
+        parent_team->t.t_pkfn = microtask;
+#endif
+
 #if OMPT_SUPPORT
         void *dummy;
         void **exit_frame_p;
@@ -2028,8 +2035,8 @@ int __kmp_fork_call(ident_t *loc, int gtid,
     // Update the floating point rounding in the team if required.
     propagateFPControl(team);
 #if OMPD_SUPPORT
-    if ( ompd_state & OMPD_ENABLE_BP )
-      ompd_bp_parallel_begin ();
+    if (ompd_state & OMPD_ENABLE_BP)
+      ompd_bp_parallel_begin();
 #endif
 
     if (__kmp_tasking_mode != tskm_immediate_exec) {
@@ -2223,7 +2230,6 @@ int __kmp_fork_call(ident_t *loc, int gtid,
   KMP_MB(); /* Flush all pending memory write invalidates.  */
 
   KA_TRACE(20, ("__kmp_fork_call: parallel exit T#%d\n", gtid));
-
 #if OMPT_SUPPORT
   if (ompt_enabled.enabled) {
     master_th->th.ompt_thread_info.state = ompt_state_overhead;
@@ -2500,8 +2506,8 @@ void __kmp_join_call(ident_t *loc, int gtid
   master_th->th.th_def_allocator = team->t.t_def_allocator;
 
 #if OMPD_SUPPORT
-  if ( ompd_state & OMPD_ENABLE_BP )
-    ompd_bp_parallel_end ();
+  if (ompd_state & OMPD_ENABLE_BP)
+    ompd_bp_parallel_end();
 #endif
   updateHWFPControl(team);
 
@@ -3857,8 +3863,8 @@ int __kmp_register_root(int initial_thread) {
   }
 #endif
 #if OMPD_SUPPORT
-    if ( ompd_state & OMPD_ENABLE_BP )
-        ompd_bp_thread_begin ();
+  if (ompd_state & OMPD_ENABLE_BP)
+    ompd_bp_thread_begin();
 #endif
 
   KMP_MB();
@@ -3944,8 +3950,8 @@ static int __kmp_reset_root(int gtid, kmp_root_t *root) {
 #endif /* KMP_OS_WINDOWS */
 
 #if OMPD_SUPPORT
-    if ( ompd_state & OMPD_ENABLE_BP )
-        ompd_bp_thread_end ();
+  if (ompd_state & OMPD_ENABLE_BP)
+    ompd_bp_thread_end();
 #endif
 
 #if OMPT_SUPPORT
@@ -5778,8 +5784,8 @@ void *__kmp_launch_thread(kmp_info_t *this_thr) {
   }
 
 #if OMPD_SUPPORT
-    if ( ompd_state & OMPD_ENABLE_BP )
-        ompd_bp_thread_begin ();
+  if (ompd_state & OMPD_ENABLE_BP)
+    ompd_bp_thread_begin();
 #endif
 
 #if OMPT_SUPPORT
@@ -5860,8 +5866,8 @@ void *__kmp_launch_thread(kmp_info_t *this_thr) {
   TCR_SYNC_PTR((intptr_t)__kmp_global.g.g_done);
 
 #if OMPD_SUPPORT
-    if ( ompd_state & OMPD_ENABLE_BP )
-        ompd_bp_thread_end ();
+  if (ompd_state & OMPD_ENABLE_BP)
+    ompd_bp_thread_end();
 #endif
 
 #if OMPT_SUPPORT
@@ -6727,7 +6733,7 @@ static void __kmp_do_serial_initialize(void) {
 #endif
 #if OMPD_SUPPORT
   __kmp_env_dump();
-    ompd_init();
+  ompd_init();
 #endif
 
   __kmp_validate_locks();

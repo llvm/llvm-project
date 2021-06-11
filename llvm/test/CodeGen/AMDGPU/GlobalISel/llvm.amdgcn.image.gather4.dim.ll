@@ -526,7 +526,7 @@ define amdgpu_ps <4 x float> @gather4_c_b_cl_2d(<8 x i32> inreg %rsrc, <4 x i32>
 ; GFX10NSA-NEXT:    s_mov_b32 s9, s11
 ; GFX10NSA-NEXT:    s_mov_b32 s10, s12
 ; GFX10NSA-NEXT:    s_mov_b32 s11, s13
-; GFX10NSA-NEXT:    image_gather4_c_b_cl v[0:3], v[0:7], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D
+; GFX10NSA-NEXT:    image_gather4_c_b_cl v[0:3], v[0:4], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D
 ; GFX10NSA-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10NSA-NEXT:    ; return to shader part epilog
 main_body:

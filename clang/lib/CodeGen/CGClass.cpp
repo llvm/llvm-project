@@ -2518,8 +2518,10 @@ void CodeGenFunction::InitializeVTablePointer(const VPtr &Vptr) {
       llvm::FunctionType::get(CGM.Int32Ty, /*isVarArg=*/true)
           ->getPointerTo(ProgAS)
           ->getPointerTo(GlobalsAS);
+  // vtable field is is derived from `this` pointer, therefore it should be in
+  // default address space.
   VTableField = Builder.CreatePointerBitCastOrAddrSpaceCast(
-      VTableField, VTablePtrTy->getPointerTo(GlobalsAS));
+      VTableField, VTablePtrTy->getPointerTo());
   VTableAddressPoint = Builder.CreatePointerBitCastOrAddrSpaceCast(
       VTableAddressPoint, VTablePtrTy);
 

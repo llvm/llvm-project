@@ -29,22 +29,22 @@ public:
   explicit ConcatOutputSection(StringRef name)
       : OutputSection(ConcatKind, name) {}
 
-  const InputSection *firstSection() const { return inputs.front(); }
-  const InputSection *lastSection() const { return inputs.back(); }
+  const ConcatInputSection *firstSection() const { return inputs.front(); }
+  const ConcatInputSection *lastSection() const { return inputs.back(); }
 
   // These accessors will only be valid after finalizing the section
   uint64_t getSize() const override { return size; }
   uint64_t getFileSize() const override { return fileSize; }
 
-  void addInput(InputSection *input);
+  void addInput(ConcatInputSection *input);
   void finalize() override;
   bool needsThunks() const;
   uint64_t estimateStubsInRangeVA(size_t callIdx) const;
 
   void writeTo(uint8_t *buf) const override;
 
-  std::vector<InputSection *> inputs;
-  std::vector<InputSection *> thunks;
+  std::vector<ConcatInputSection *> inputs;
+  std::vector<ConcatInputSection *> thunks;
 
   static bool classof(const OutputSection *sec) {
     return sec->kind() == ConcatKind;
@@ -69,8 +69,8 @@ private:
 
 struct ThunkInfo {
   // These denote the active thunk:
-  Defined *sym = nullptr;       // private-extern symbol for active thunk
-  InputSection *isec = nullptr; // input section for active thunk
+  Defined *sym = nullptr;             // private-extern symbol for active thunk
+  ConcatInputSection *isec = nullptr; // input section for active thunk
 
   // The following values are cumulative across all thunks on this function
   uint32_t callSiteCount = 0;  // how many calls to the real function?

@@ -1480,6 +1480,9 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
   for (auto &Def : ThinLTO.CombinedIndex.cfiFunctionDefs())
     ExportedGUIDs.insert(
         GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Def)));
+  for (auto &Decl : ThinLTO.CombinedIndex.cfiFunctionDecls())
+    ExportedGUIDs.insert(
+        GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Decl)));
 
   auto isExported = [&](StringRef ModuleIdentifier, ValueInfo VI) {
     const auto &ExportList = ExportLists.find(ModuleIdentifier);

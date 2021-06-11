@@ -721,6 +721,17 @@ void Module::setStackProtectorGuardOffset(int Offset) {
   addModuleFlag(ModFlagBehavior::Error, "stack-protector-guard-offset", Offset);
 }
 
+unsigned Module::getOverrideStackAlignment() const {
+  Metadata *MD = getModuleFlag("override-stack-alignment");
+  if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+    return CI->getZExtValue();
+  return 0;
+}
+
+void Module::setOverrideStackAlignment(unsigned Align) {
+  addModuleFlag(ModFlagBehavior::Error, "override-stack-alignment", Align);
+}
+
 void Module::setSDKVersion(const VersionTuple &V) {
   SmallVector<unsigned, 3> Entries;
   Entries.push_back(V.getMajor());
