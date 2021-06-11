@@ -1239,63 +1239,65 @@ void Fortran::lower::genReallocIfNeeded(Fortran::lower::FirOpBuilder &builder,
   auto reader = MutablePropertyReader(builder, loc, box);
   auto addr = reader.readBaseAddress();
   auto isAllocated = genIsNonNull(builder, loc, addr);
-  auto ifAllocated = builder.create<fir::IfOp>(
-      loc, mlir::TypeRange{}, isAllocated, /*withElseRegion=*/true);
-  builder.setInsertionPointToStart(&ifAllocated.thenRegion().front());
-  { // If the box is allocated check if it must be reallocated and reallocate.
-    mlir::Value mustReallocate = builder.createBool(loc, false);
-    auto compareProperty = [&](mlir::Value previous, mlir::Value required) {
-      auto castPrevious =
-          builder.createConvert(loc, required.getType(), previous);
-      // reallocate = reallocate || previous != required
-      auto cmp = builder.create<mlir::CmpIOp>(loc, mlir::CmpIPredicate::ne,
-                                              castPrevious, required);
-      mustReallocate =
-          builder.create<mlir::SelectOp>(loc, cmp, cmp, mustReallocate);
-    };
-    llvm::SmallVector<mlir::Value> previousLbounds;
-    llvm::SmallVector<mlir::Value> previousExtents =
-        reader.readShape(&previousLbounds);
-    if (!shape.empty())
-      for (auto [previousExtent, requested] : llvm::zip(previousExtents, shape))
-        compareProperty(previousExtent, requested);
+  builder.genIfThenElse(loc, isAllocated)
+      .genThen([&]() {
+        // The box is allocated. Check if it must be reallocated and reallocate.
+        mlir::Value mustReallocate = builder.createBool(loc, false);
+        auto compareProperty = [&](mlir::Value previous, mlir::Value required) {
+          auto castPrevious =
+              builder.createConvert(loc, required.getType(), previous);
+          // reallocate = reallocate || previous != required
+          auto cmp = builder.create<mlir::CmpIOp>(loc, mlir::CmpIPredicate::ne,
+                                                  castPrevious, required);
+          mustReallocate =
+              builder.create<mlir::SelectOp>(loc, cmp, cmp, mustReallocate);
+        };
+        llvm::SmallVector<mlir::Value> previousLbounds;
+        llvm::SmallVector<mlir::Value> previousExtents =
+            reader.readShape(&previousLbounds);
+        if (!shape.empty())
+          for (auto [previousExtent, requested] :
+               llvm::zip(previousExtents, shape))
+            compareProperty(previousExtent, requested);
 
-    if (box.isCharacter() && !box.hasNonDeferredLenParams()) {
-      // When the allocatable length is not deferred, it must not be reallocated
-      // in case of length mismatch, instead, padding/trimming will ocur in
-      // later assignment to it.
-      assert(!lengthParams.empty() &&
-             "must provide length parameters for character");
-      compareProperty(reader.readCharacterLength(), lengthParams[0]);
-    } else if (box.isDerivedWithLengthParameters()) {
-      TODO(loc, "automatic allocation of derived type allocatable with length "
-                "parameters");
-    }
-
-    auto ifReallocate = builder.create<fir::IfOp>(
-        loc, mlir::TypeRange{}, mustReallocate, /*withElseRegion=*/false);
-    builder.setInsertionPointToStart(&ifReallocate.thenRegion().front());
-    { // If shape or length mismatch, deallocate and reallocate.
-      genFinalizeAndFree(builder, loc, addr);
-      // When rhs is a scalar, keep the previous shape
-      auto extents = shape.empty() ? mlir::ValueRange(previousExtents) : shape;
-      auto lbs = shape.empty() ? mlir::ValueRange(previousLbounds) : lbounds;
-      genInlinedAllocation(builder, loc, box, lbs, extents, lengthParams,
-                           ".auto.alloc");
-    }
-  } // Else, the box is not yet allocated, simply allocate it.
-  {
-    builder.setInsertionPointToStart(&ifAllocated.elseRegion().front());
-    if (shape.empty() && box.rank() != 0) {
-      // TODO:
-      // runtime error: right hand side must be allocated if right hand side
-      // is a scalar.
-    } else {
-      genInlinedAllocation(builder, loc, box, lbounds, shape, lengthParams,
-                           ".auto.alloc");
-    }
-  } // end if (is allocated)
-  builder.setInsertionPointAfter(ifAllocated);
+        if (box.isCharacter() && !box.hasNonDeferredLenParams()) {
+          // When the allocatable length is not deferred, it must not be
+          // reallocated in case of length mismatch, instead, padding/trimming
+          // will ocur in later assignment to it.
+          assert(!lengthParams.empty() &&
+                 "must provide length parameters for character");
+          compareProperty(reader.readCharacterLength(), lengthParams[0]);
+        } else if (box.isDerivedWithLengthParameters()) {
+          TODO(loc,
+               "automatic allocation of derived type allocatable with length "
+               "parameters");
+        }
+        builder.genIfThen(loc, mustReallocate)
+            .genThen([&]() {
+              // If shape or length mismatch, deallocate and reallocate.
+              genFinalizeAndFree(builder, loc, addr);
+              // When rhs is a scalar, keep the previous shape
+              auto extents =
+                  shape.empty() ? mlir::ValueRange(previousExtents) : shape;
+              auto lbs =
+                  shape.empty() ? mlir::ValueRange(previousLbounds) : lbounds;
+              genInlinedAllocation(builder, loc, box, lbs, extents,
+                                   lengthParams, ".auto.alloc");
+            })
+            .end();
+      })
+      .genElse([&]() {
+        // The box is not yet allocated, simply allocate it.
+        if (shape.empty() && box.rank() != 0) {
+          // TODO:
+          // runtime error: right hand side must be allocated if right hand
+          // side is a scalar and the box is an array.
+        } else {
+          genInlinedAllocation(builder, loc, box, lbounds, shape, lengthParams,
+                               ".auto.alloc");
+        }
+      })
+      .end();
 }
 
 //===----------------------------------------------------------------------===//
