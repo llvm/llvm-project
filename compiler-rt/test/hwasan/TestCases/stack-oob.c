@@ -9,7 +9,7 @@
 
 // REQUIRES: stable-runtime
 
-// Stack aliasing is not implemented on x86.
+// Stack short granules are currently not implemented on x86.
 // XFAIL: x86_64
 
 #include <stdlib.h>

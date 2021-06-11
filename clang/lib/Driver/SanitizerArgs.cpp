@@ -1059,6 +1059,11 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     CmdArgs.push_back("-tsan-instrument-atomics=0");
   }
 
+  if (HwasanUseAliases) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-hwasan-experimental-use-page-aliases=1");
+  }
+
   if (CfiCrossDso)
     CmdArgs.push_back("-fsanitize-cfi-cross-dso");
 
