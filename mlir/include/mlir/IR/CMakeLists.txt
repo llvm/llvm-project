@@ -31,6 +31,13 @@ mlir_tablegen(BuiltinTypeInterfaces.h.inc -gen-type-interface-decls)
 mlir_tablegen(BuiltinTypeInterfaces.cpp.inc -gen-type-interface-defs)
 add_public_tablegen_target(MLIRBuiltinTypeInterfacesIncGen)
 
+set(LLVM_TARGET_DEFINITIONS SubElementInterfaces.td)
+mlir_tablegen(SubElementAttrInterfaces.h.inc -gen-attr-interface-decls)
+mlir_tablegen(SubElementAttrInterfaces.cpp.inc -gen-attr-interface-defs)
+mlir_tablegen(SubElementTypeInterfaces.h.inc -gen-type-interface-decls)
+mlir_tablegen(SubElementTypeInterfaces.cpp.inc -gen-type-interface-defs)
+add_public_tablegen_target(MLIRSubElementInterfacesIncGen)
+
 set(LLVM_TARGET_DEFINITIONS TensorEncoding.td)
 mlir_tablegen(TensorEncInterfaces.h.inc -gen-attr-interface-decls)
 mlir_tablegen(TensorEncInterfaces.cpp.inc -gen-attr-interface-defs)
