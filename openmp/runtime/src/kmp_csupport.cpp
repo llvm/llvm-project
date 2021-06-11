@@ -4392,6 +4392,38 @@ void __kmpc_error(ident_t *loc, int severity, const char *message) {
   __kmp_str_free(&src_loc);
 }
 
+// Mark begin of scope directive.
+void __kmpc_scope(ident_t *loc, kmp_int32 gtid, void *reserved) {
+// reserved is for extension of scope directive and not used.
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  if (ompt_enabled.enabled && ompt_enabled.ompt_callback_work) {
+    kmp_team_t *team = __kmp_threads[gtid]->th.th_team;
+    int tid = __kmp_tid_from_gtid(gtid);
+    ompt_callbacks.ompt_callback(ompt_callback_work)(
+        ompt_work_scope, ompt_scope_begin,
+        &(team->t.ompt_team_info.parallel_data),
+        &(team->t.t_implicit_task_taskdata[tid].ompt_task_info.task_data), 1,
+        OMPT_GET_RETURN_ADDRESS(0));
+  }
+#endif // OMPT_SUPPORT && OMPT_OPTIONAL
+}
+
+// Mark end of scope directive
+void __kmpc_end_scope(ident_t *loc, kmp_int32 gtid, void *reserved) {
+// reserved is for extension of scope directive and not used.
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  if (ompt_enabled.enabled && ompt_enabled.ompt_callback_work) {
+    kmp_team_t *team = __kmp_threads[gtid]->th.th_team;
+    int tid = __kmp_tid_from_gtid(gtid);
+    ompt_callbacks.ompt_callback(ompt_callback_work)(
+        ompt_work_scope, ompt_scope_end,
+        &(team->t.ompt_team_info.parallel_data),
+        &(team->t.t_implicit_task_taskdata[tid].ompt_task_info.task_data), 1,
+        OMPT_GET_RETURN_ADDRESS(0));
+  }
+#endif // OMPT_SUPPORT && OMPT_OPTIONAL
+}
+
 #ifdef KMP_USE_VERSION_SYMBOLS
 // For GOMP compatibility there are two versions of each omp_* API.
 // One is the plain C symbol and one is the Fortran symbol with an appended
