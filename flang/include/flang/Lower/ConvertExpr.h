@@ -117,6 +117,14 @@ void createMaskedArrayAssignment(AbstractConverter &converter,
                                  Fortran::lower::MaskExpr &masks,
                                  SymMap &symMap, StatementContext &stmtCtx);
 
+/// Lower an assignment to an allocatable array, allocating the array if
+/// it is not allocated yet or reallocation it if it does not conform
+/// with the right hand side.
+void createAllocatableArrayAssignment(
+    AbstractConverter &converter, const fir::MutableBoxValue &lhs,
+    const evaluate::Expr<evaluate::SomeType> &rhs, SymMap &symMap,
+    StatementContext &stmtCtx);
+
 /// Lower an array expression with "parallel" semantics. Such a rhs expression
 /// is fully evaluated prior to being assigned back to a temporary array.
 fir::ExtendedValue

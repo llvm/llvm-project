@@ -1612,8 +1612,9 @@ private:
                            const fir::ExtendedValue &rhs,
                            Fortran::lower::StatementContext &stmtCtx) {
     auto loc = genLocation();
-    auto lhsTy = fir::dyn_cast_ptrEleTy(fir::getBase(lhs).getType())
-                     .dyn_cast<fir::RecordType>();
+    auto baseTy = fir::dyn_cast_ptrEleTy(fir::getBase(lhs).getType());
+    assert(baseTy && "must be a memory type");
+    auto lhsTy = baseTy.dyn_cast<fir::RecordType>();
     assert(lhsTy && "must be a record type");
     auto fieldTy = fir::FieldType::get(lhsTy.getContext());
     for (auto [fldName, fldType] : lhsTy.getTypeList()) {
@@ -1694,31 +1695,66 @@ private:
               if (!sym)
                 TODO(loc, "assignment to pointer result of function reference");
 
-              // Assignment of allocatable are more complex, the lhs may need to
-              // be deallocated/reallocated. See Fortran 2018 10.2.1.3 p3
-              if (isWholeAllocatable(assign.lhs)) {
-                TODO(loc, "assignment to allocatable not implemented");
-              }
-              // Nothing to do for pointers, the target will be assigned.
-              // as per 2018 10.2.1.3 p2. genExprAddr on a pointer returns
-              // the target address.
+              auto lhsType = assign.lhs.GetType();
+              assert(lhsType && "lhs cannot be typeless");
+              // Assignment to polymorphic allocatables may require changing the
+              // variable dynamic type (See Fortran 2018 10.2.1.3 p3).
+              if (lhsType->IsPolymorphic() && isWholeAllocatable(assign.lhs))
+                TODO(loc, "assignment to polymorphic allocatable");
+
+              // Note: no ad-hoc handling for pointers is require here, the
+              // target will be assigned as per 2018 10.2.1.3 p2. genExprAddr
+              // on a pointer returns the target address.
+
               if (assign.lhs.Rank() > 0) {
                 // Array assignment
-                // See Fortran 2018 10.2.1.3 p5, p6, and p7
-                genArrayAssignment(assign, stmtCtx);
+                if (isWholeAllocatable(assign.lhs)) {
+                  // Assignment to allocatables may require the lhs to be
+                  // deallocated/reallocated. See Fortran 2018 10.2.1.3 p3
+                  auto lhs = genExprMutableBox(loc, assign.lhs);
+                  Fortran::lower::createAllocatableArrayAssignment(
+                      *this, lhs, assign.rhs, localSymbols, stmtCtx);
+                } else {
+                  // See Fortran 2018 10.2.1.3 p5, p6, and p7
+                  genArrayAssignment(assign, stmtCtx);
+                }
                 return;
               }
 
               // Scalar assignment
-              auto lhsType = assign.lhs.GetType();
-              assert(lhsType && "lhs cannot be typeless");
-              if (isNumericScalarCategory(lhsType->category())) {
+              const bool isNumericScalar =
+                  isNumericScalarCategory(lhsType->category());
+              auto rhs = isNumericScalar ? genExprValue(assign.rhs, stmtCtx)
+                                         : genExprAddr(assign.rhs, stmtCtx);
+              auto lowerAllocatableLHS = [&]() -> fir::ExtendedValue {
+                auto lhs = genExprMutableBox(loc, assign.lhs);
+                llvm::SmallVector<mlir::Value> lengthParams;
+                if (auto *charBox = rhs.getCharBox())
+                  lengthParams.push_back(charBox->getLen());
+                else if (lhs.isDerivedWithLengthParameters())
+                  TODO(loc, "assignment to derived type allocatable with "
+                            "length parameters");
+                Fortran::lower::genReallocIfNeeded(
+                    *builder, loc, lhs, /*lbounds=*/llvm::None,
+                    /*shape=*/llvm::None, lengthParams);
+                // Assume lhs is not polymorphic for now given TODO above,
+                // otherwise, the read would is conservative and returns
+                // BoxValue for derived types.
+                return Fortran::lower::genMutableBoxRead(
+                           *builder, loc, lhs, /*mayBePolymorphic=*/false)
+                    .toExtendedValue();
+              };
+              auto lhs = isWholeAllocatable(assign.lhs)
+                             ? lowerAllocatableLHS()
+                             : genExprAddr(assign.lhs, stmtCtx);
+
+              if (isNumericScalar) {
                 // Fortran 2018 10.2.1.3 p8 and p9
                 // Conversions should have been inserted by semantic analysis,
                 // but they can be incorrect between the rhs and lhs. Correct
                 // that here.
-                auto addr = fir::getBase(genExprAddr(assign.lhs, stmtCtx));
-                auto val = createFIRExpr(loc, &assign.rhs, stmtCtx);
+                auto addr = fir::getBase(lhs);
+                auto val = fir::getBase(rhs);
                 // A function with multiple entry points returning different
                 // types tags all result variables with one of the largest
                 // types to allow them to share the same storage.  Assignment
@@ -1736,12 +1772,6 @@ private:
               }
               if (isCharacterCategory(lhsType->category())) {
                 // Fortran 2018 10.2.1.3 p10 and p11
-                auto lhs = genExprAddr(assign.lhs, stmtCtx);
-                // Current character assignment only works with in memory
-                // characters since !fir.array<> cannot be addressed with
-                // fir.coordinate_of without being inside a !fir.ref<> or other
-                // memory types. So use genExprAddr for rhs.
-                auto rhs = genExprAddr(assign.rhs, stmtCtx);
                 Fortran::lower::CharacterExprHelper{*builder, loc}.createAssign(
                     lhs, rhs);
                 return;
@@ -1749,8 +1779,6 @@ private:
               if (isDerivedCategory(lhsType->category())) {
                 // Fortran 2018 10.2.1.3 p13 and p14
                 // Recursively gen an assignment on each element pair.
-                auto lhs = genExprAddr(assign.lhs, stmtCtx);
-                auto rhs = genExprAddr(assign.rhs, stmtCtx);
                 genRecordAssignment(lhs, rhs, stmtCtx);
                 return;
               }

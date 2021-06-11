@@ -2267,6 +2267,31 @@ public:
     ael.lowerArrayAssignment(lhs, rhs);
   }
 
+  /// Entry point for assignment to allocatable array.
+  static void lowerAllocatableArrayAssignment(
+      Fortran::lower::AbstractConverter &converter,
+      Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
+      const fir::MutableBoxValue &lhs,
+      const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &rhs) {
+    // The allocatable must take lower bounds from the expr if reallocated.
+    // An expr has lbounds only if it is an array symbol or component.
+    auto takeLboundsIfRealloc =
+        Fortran::evaluate::UnwrapWholeSymbolOrComponentDataRef(rhs) != nullptr;
+    ArrayExprLowering ael{converter, stmtCtx,
+                          symMap,    ConstituentSemantics::CopyInCopyOut,
+                          lhs,       takeLboundsIfRealloc};
+    ael.lowerAllocatableArrayAssignment(rhs);
+  }
+  template <typename TR>
+  void lowerAllocatableArrayAssignment(const TR &rhs) {
+    auto loc = getLoc();
+    semant = ConstituentSemantics::RefTransparent;
+    auto exv = lowerArrayExpression(rhs);
+    builder.create<fir::ArrayMergeStoreOp>(
+        loc, destination, fir::getBase(exv), destination.memref(),
+        destination.slice(), destination.typeparams());
+  }
+
   /// Entry point for when an array expression appears on the lhs of an
   /// assignment. In the default case, the rhs is fully evaluated prior to any
   /// of the results being written back to the lhs. (CopyInCopyOut semantics.)
@@ -2484,7 +2509,9 @@ public:
       return getShape(destination);
     if (!arrayOperandLoads.empty())
       return getShape(arrayOperandLoads[0]);
-    fir::emitFatalError(loc, "failed to compute the array expression shape");
+    assert(destinationMutableBox && "shape must have been deduced if this is "
+                                    "not an allocatable assignment");
+    return {};
   }
 
   /// Build the iteration space into which the array expression will be lowered.
@@ -2508,9 +2535,46 @@ public:
     }
 
     auto shape = genIterationShape();
-    // Allocate a storage for the result is it is not already provided.
-    if (!destination)
+    if (destinationMutableBox) {
+      // Assignment to allocatable array.
+      llvm::SmallVector<mlir::Value> lengthParams;
+      // Currently no safe way to gather length from rhs (at least for
+      // character, it cannot be taken from array_loads since it may be
+      // changed by concatenations).
+      if ((destinationMutableBox->isCharacter() &&
+           !destinationMutableBox->hasNonDeferredLenParams()) ||
+          destinationMutableBox->isDerivedWithLengthParameters())
+        TODO(loc, "gather rhs length parameters in assignment to allocatable");
+
+      llvm::SmallVector<mlir::Value> lbounds;
+      if (takeLboundsIfRealloc && !arrayOperandLoads.empty()) {
+        assert(arrayOperandLoads.size() == 1 &&
+               "lbounds can only come from one array");
+        auto lbs = fir::factory::getOrigins(arrayOperandLoads[0].shape());
+        lbounds.append(lbs.begin(), lbs.end());
+      }
+      Fortran::lower::genReallocIfNeeded(builder, loc, *destinationMutableBox,
+                                         lbounds, shape, lengthParams);
+      // Create ArrayLoad for the rhs and save it into `destination`.
+      PushSemantics(ConstituentSemantics::ProjectedCopyInCopyOut);
+      lowerArrayAssignmentLhs(Fortran::lower::genMutableBoxRead(
+                                  builder, loc, *destinationMutableBox)
+                                  .toExtendedValue());
+      assert(destination && "destination must have been set");
+      // If the rhs is scalar, get shape from the allocatable arrayload.
+      if (shape.empty())
+        shape = getShape(destination);
+    } else if (!destination) {
+      assert(
+          !shape.empty() &&
+          "array expression must have a shape if it has no array destination");
+      // Allocate a storage for the result is it is not already provided.
       destination = createAndLoadSomeArrayTemp(resultType, shape);
+    }
+
+    if (shape.empty())
+      fir::emitFatalError(loc, "failed to compute the array expression shape");
+
     // Convert the shape to closed interval form.
     for (auto extent : shape) {
       auto ub = builder.createConvert(loc, idxTy, extent);
@@ -4137,6 +4201,17 @@ private:
                              Fortran::lower::StatementContext &stmtCtx,
                              Fortran::lower::SymMap &symMap,
                              ConstituentSemantics sem,
+                             const fir::MutableBoxValue &destinationBox,
+                             bool takeLbounds)
+      : converter{converter}, builder{converter.getFirOpBuilder()},
+        stmtCtx{stmtCtx}, symMap{symMap},
+        destinationMutableBox{&destinationBox}, semant{sem},
+        takeLboundsIfRealloc{takeLbounds} {}
+
+  explicit ArrayExprLowering(Fortran::lower::AbstractConverter &converter,
+                             Fortran::lower::StatementContext &stmtCtx,
+                             Fortran::lower::SymMap &symMap,
+                             ConstituentSemantics sem,
                              fir::ArrayLoadOp dst = {})
       : converter{converter}, builder{converter.getFirOpBuilder()},
         stmtCtx{stmtCtx}, symMap{symMap}, destination{dst}, semant{sem} {}
@@ -4184,6 +4259,11 @@ private:
   Fortran::lower::SymMap &symMap;
   llvm::Optional<CC> ccDest;
   fir::ArrayLoadOp destination;
+  /// Keep track of lhs mutable box for allocatable assignments.
+  /// Nullptr otherwise. If it is set, `destination` should not be
+  /// set on construction and will be set after the conditional
+  /// reallocation was generated.
+  const fir::MutableBoxValue *destinationMutableBox{};
   std::optional<Fortran::evaluate::Shape> destShape;
   llvm::SmallVector<fir::ArrayLoadOp> arrayOperandLoads;
   llvm::SmallVector<mlir::Value> sliceTriple;
@@ -4191,6 +4271,8 @@ private:
   Fortran::lower::MaskExpr *masks{};
   ConstituentSemantics semant{ConstituentSemantics::RefTransparent};
   bool inSlice{false};
+  // Does the lhs, if any, must take lbounds from rhs if lhs is reallocated ?
+  bool takeLboundsIfRealloc{false};
 };
 } // namespace
 
@@ -4258,6 +4340,17 @@ void Fortran::lower::createMaskedArrayAssignment(
              << " given mask conditions\n";);
   ArrayExprLowering::lowerMaskedArrayAssignment(converter, symMap, stmtCtx, lhs,
                                                 rhs, masks);
+}
+
+void Fortran::lower::createAllocatableArrayAssignment(
+    Fortran::lower::AbstractConverter &converter,
+    const fir::MutableBoxValue &lhs,
+    const Fortran::evaluate::Expr<Fortran::evaluate::SomeType> &rhs,
+    Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
+  LLVM_DEBUG(llvm::dbgs() << "onto array: " << lhs << '\n';
+             rhs.AsFortran(llvm::dbgs() << "assign expression: ") << '\n';);
+  ArrayExprLowering::lowerAllocatableArrayAssignment(converter, symMap, stmtCtx,
+                                                     lhs, rhs);
 }
 
 fir::ExtendedValue Fortran::lower::createSomeArrayTempValue(

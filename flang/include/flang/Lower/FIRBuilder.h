@@ -264,6 +264,58 @@ public:
     return createIntegerConstant(loc, getIntegerType(1), b ? 1 : 0);
   }
 
+  //===--------------------------------------------------------------------===//
+  // If-Then-Else generation helper
+  //===--------------------------------------------------------------------===//
+
+  /// Helper class to create if-then-else in a structured way:
+  /// Usage: genIfOp().then([&](){...}).else([&](){...}).end();
+  class IfBuilder {
+  public:
+    IfBuilder(fir::IfOp ifOp, FirOpBuilder &builder)
+        : ifOp{ifOp}, builder{builder} {}
+    template <typename CC>
+    IfBuilder &genThen(CC func) {
+      builder.setInsertionPointToStart(&ifOp.thenRegion().front());
+      func();
+      return *this;
+    }
+    template <typename CC>
+    IfBuilder &genElse(CC func) {
+      assert(!ifOp.elseRegion().empty() && "must have else region");
+      builder.setInsertionPointToStart(&ifOp.elseRegion().front());
+      func();
+      return *this;
+    }
+    void end() { builder.setInsertionPointAfter(ifOp); }
+
+  private:
+    fir::IfOp ifOp;
+    FirOpBuilder &builder;
+  };
+
+  /// Create an IfOp and returns an IfBuilder that can generate the else/then
+  /// bodies.
+  IfBuilder genIfOp(mlir::Location loc, mlir::TypeRange results,
+                    mlir::Value cdt, bool withElseRegion) {
+    auto op = create<fir::IfOp>(loc, results, cdt, withElseRegion);
+    return IfBuilder(op, *this);
+  }
+
+  /// Create an IfOp with no "else" region, and no result values.
+  /// Usage: genIfThen(loc, cdt).genThen(lambda).end();
+  IfBuilder genIfThen(mlir::Location loc, mlir::Value cdt) {
+    auto op = create<fir::IfOp>(loc, llvm::None, cdt, false);
+    return IfBuilder(op, *this);
+  }
+
+  /// Create an IfOp with an "else" region, and no result values.
+  /// Usage: genIfThenElse(loc, cdt).genThen(lambda).genElse(lambda).end();
+  IfBuilder genIfThenElse(mlir::Location loc, mlir::Value cdt) {
+    auto op = create<fir::IfOp>(loc, llvm::None, cdt, true);
+    return IfBuilder(op, *this);
+  }
+
 private:
   const fir::KindMapping &kindMap;
 };
