@@ -2053,44 +2053,6 @@ static const ExplodedNode* findNodeForExpression(const ExplodedNode *N,
   return N;
 }
 
-/// Attempts to add visitors to track an RValue expression back to its point of
-/// origin. Works similarly to trackExpressionValue, but accepts only RValues.
-static void trackRValueExpression(const ExplodedNode *InputNode, const Expr *E,
-                                  PathSensitiveBugReport &report,
-                                  bugreporter::TrackingKind TKind,
-                                  bool EnableNullFPSuppression) {
-  assert(E->isPRValue() && "The expression is not a prvalue!");
-  const ExplodedNode *RVNode = findNodeForExpression(InputNode, E);
-  if (!RVNode)
-    return;
-  ProgramStateRef RVState = RVNode->getState();
-  SVal V = RVState->getSValAsScalarOrLoc(E, RVNode->getLocationContext());
-  const auto *BO = dyn_cast<BinaryOperator>(E);
-  if (!BO)
-    return;
-  if (!V.isZeroConstant())
-    return;
-  if (!BO->isMultiplicativeOp())
-    return;
-
-  SVal RHSV = RVState->getSVal(BO->getRHS(), RVNode->getLocationContext());
-  SVal LHSV = RVState->getSVal(BO->getLHS(), RVNode->getLocationContext());
-
-  // Track both LHS and RHS of a multiplication.
-  if (BO->getOpcode() == BO_Mul) {
-    if (LHSV.isZeroConstant())
-      trackExpressionValue(InputNode, BO->getLHS(), report, TKind,
-                           EnableNullFPSuppression);
-    if (RHSV.isZeroConstant())
-      trackExpressionValue(InputNode, BO->getRHS(), report, TKind,
-                           EnableNullFPSuppression);
-  } else { // Track only the LHS of a division or a modulo.
-    if (LHSV.isZeroConstant())
-      trackExpressionValue(InputNode, BO->getLHS(), report, TKind,
-                           EnableNullFPSuppression);
-  }
-}
-
 //===----------------------------------------------------------------------===//
 //                            Tracker implementation
 //===----------------------------------------------------------------------===//
@@ -2245,17 +2207,61 @@ public:
       }
     }
 
-    if (Inner->isPRValue())
-      // TODO: Incorporate as Handler
-      trackRValueExpression(LVNode, Inner, Report, Opts.Kind,
-                            Opts.EnableNullFPSuppression);
-
     return Result;
+  }
+};
+
+/// Attempts to add visitors to track an RValue expression back to its point of
+/// origin.
+class PRValueHandler final : public ExpressionHandler {
+public:
+  using ExpressionHandler::ExpressionHandler;
+
+  Tracker::Result handle(const Expr *E, const ExplodedNode *InputNode,
+                         const ExplodedNode *ExprNode,
+                         TrackingOptions Opts) override {
+    if (!E->isPRValue())
+      return {};
+
+    const ExplodedNode *RVNode = findNodeForExpression(ExprNode, E);
+    if (!RVNode)
+      return {};
+
+    ProgramStateRef RVState = RVNode->getState();
+    SVal V = RVState->getSValAsScalarOrLoc(E, RVNode->getLocationContext());
+    const auto *BO = dyn_cast<BinaryOperator>(E);
+
+    if (!BO || !BO->isMultiplicativeOp() || !V.isZeroConstant())
+      return {};
+
+    SVal RHSV = RVState->getSVal(BO->getRHS(), RVNode->getLocationContext());
+    SVal LHSV = RVState->getSVal(BO->getLHS(), RVNode->getLocationContext());
+
+    // Track both LHS and RHS of a multiplication.
+    Tracker::Result CombinedResult;
+    Tracker &Parent = getParentTracker();
+
+    const auto track = [&CombinedResult, &Parent, ExprNode, Opts](Expr *Inner) {
+      CombinedResult.combineWith(Parent.track(Inner, ExprNode, Opts));
+    };
+
+    if (BO->getOpcode() == BO_Mul) {
+      if (LHSV.isZeroConstant())
+        track(BO->getLHS());
+      if (RHSV.isZeroConstant())
+        track(BO->getRHS());
+    } else { // Track only the LHS of a division or a modulo.
+      if (LHSV.isZeroConstant())
+        track(BO->getLHS());
+    }
+
+    return CombinedResult;
   }
 };
 
 Tracker::Tracker(PathSensitiveBugReport &Report) : Report(Report) {
   addHighPriorityHandler<DefaultExpressionHandler>();
+  addLowPriorityHandler<PRValueHandler>();
   // TODO: split trackExpressionValue and FindLastStoreBRVisitor into handlers
   //       and add them here.
 }
