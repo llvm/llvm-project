@@ -27,7 +27,7 @@ end module
 ! CHECK-LABEL: fir.global linkonce @_QMmodeq1Ey1 : tuple<!fir.array<16xi8>, f32, !fir.array<20xi8>> {
   ! CHECK: %[[undef:.*]] = fir.undefined tuple<!fir.array<16xi8>, f32, !fir.array<20xi8>>
   ! CHECK: %[[cst:.*]] = constant 4.200000e+01 : f32
-  ! CHECK: %[[init:.*]] = fir.insert_value %[[undef]], %[[cst]], %c1{{.*}} : (tuple<!fir.array<16xi8>, f32, !fir.array<20xi8>>, f32, index) -> tuple<!fir.array<16xi8>, f32, !fir.array<20xi8>>
+  ! CHECK: %[[init:.*]] = fir.insert_value %[[undef]], %[[cst]], [1 : index] : (tuple<!fir.array<16xi8>, f32, !fir.array<20xi8>>, f32) -> tuple<!fir.array<16xi8>, f32, !fir.array<20xi8>>
   ! CHECK: fir.has_value %[[init]] : tuple<!fir.array<16xi8>, f32, !fir.array<20xi8>>
 
 ! Module defines variable in common block without initializer
@@ -48,5 +48,5 @@ module modCommonInit1
   common /named2/ i_named2
 end module
 ! CHECK-LABEL: fir.global @_QBnamed2 : tuple<i32> {
-  ! CHECK: %[[init:.*]] = fir.insert_value %{{.*}}, %c42{{.*}}, %c0{{.*}} : (tuple<i32>, i32, index) -> tuple<i32>
+  ! CHECK: %[[init:.*]] = fir.insert_value %{{.*}}, %c42{{.*}}, [0 : index] : (tuple<i32>, i32) -> tuple<i32>
   ! CHECK: fir.has_value %[[init]] : tuple<i32>

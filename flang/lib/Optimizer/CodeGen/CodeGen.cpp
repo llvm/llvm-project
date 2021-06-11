@@ -1635,6 +1635,24 @@ struct ValueOpCommon {
     }
   }
 
+  static llvm::SmallVector<mlir::Attribute>
+  collectIndices(mlir::ConversionPatternRewriter &rewriter,
+                 mlir::ArrayAttr arrAttr) {
+    llvm::SmallVector<mlir::Attribute> attrs;
+    for (auto i = arrAttr.begin(), e = arrAttr.end(); i != e; ++i) {
+      if (i->isa<mlir::IntegerAttr>()) {
+        attrs.push_back(*i);
+      } else {
+        auto fieldName = i->cast<mlir::StringAttr>().getValue();
+        ++i;
+        auto ty = i->cast<mlir::TypeAttr>().getValue();
+        auto index = ty.cast<fir::RecordType>().getFieldIndex(fieldName);
+        attrs.push_back(mlir::IntegerAttr::get(rewriter.getI32Type(), index));
+      }
+    }
+    return attrs;
+  }
+
 private:
   static unsigned getDimension(mlir::LLVM::LLVMArrayType ty) {
     unsigned result = 1;
@@ -1664,10 +1682,7 @@ struct ExtractValueOpConversion
             mlir::ConversionPatternRewriter &rewriter) const override {
     if (!fir::allConstants(operands.drop_front(1)))
       llvm_unreachable("fir.extract_value incorrectly formed");
-    // since all indices are constants use LLVM's extractvalue instruction
-    SmallVector<mlir::Attribute> attrs;
-    for (std::size_t i = 1, end = operands.size(); i < end; ++i)
-      attrs.push_back(getValue(operands[i]));
+    auto attrs = collectIndices(rewriter, extractVal.coor());
     toRowMajor(attrs, operands[0].getType());
     auto position = mlir::ArrayAttr::get(extractVal.getContext(), attrs);
     rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractValueOp>(
@@ -1687,10 +1702,7 @@ struct InsertValueOpConversion
   doRewrite(fir::InsertValueOp insertVal, mlir::Type ty, OperandTy operands,
             mlir::ConversionPatternRewriter &rewriter) const override {
     assert(fir::allConstants(operands.drop_front(2)));
-    // since all indices must be constants use LLVM's insertvalue instruction
-    SmallVector<mlir::Attribute> attrs;
-    for (std::size_t i = 2, end = operands.size(); i < end; ++i)
-      attrs.push_back(getValue(operands[i]));
+    auto attrs = collectIndices(rewriter, insertVal.coor());
     toRowMajor(attrs, operands[0].getType());
     auto position = mlir::ArrayAttr::get(insertVal.getContext(), attrs);
     rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(
@@ -1733,9 +1745,9 @@ struct InsertOnRangeOpConversion
     }
 
     // Unzip the upper and lower bound subscripts.
-    for (std::size_t i = 2; i + 1 < operands.size(); i += 2) {
-      lowerBound.push_back(ExtractValueOpConversion::getValue(operands[i]));
-      upperBound.push_back(ExtractValueOpConversion::getValue(operands[i + 1]));
+    for (auto i = range.coor().begin(), e = range.coor().end(); i != e; ++i) {
+      lowerBound.push_back(*i++);
+      upperBound.push_back(*i);
     }
 
     SmallVector<std::uint64_t> lBounds;
