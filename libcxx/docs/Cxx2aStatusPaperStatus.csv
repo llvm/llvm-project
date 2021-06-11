@@ -194,3 +194,4 @@
 "`P2106 <https://wg21.link/P2106>`__","LWG","Alternative wording for GB315 and GB316","Prague","* *",""
 "`P2116 <https://wg21.link/P2116>`__","LWG","Remove tuple-like protocol support from fixed-extent span","Prague","|Complete|","11.0"
 "`P2231 <https://wg21.link/P2231>`__","LWG","Missing constexpr in std::optional and std::variant","February 2021","|In progress|","13.0"
+"`P2325 <https://wg21.link/P2325>`__","LWG","Views should not be required to be default constructible","June Telecon","|In progress|",""

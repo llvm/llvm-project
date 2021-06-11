@@ -19370,7 +19370,9 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
       unsigned SplitSize = NearestPow2 / 2;
       EVT SplitVT = EVT::getVectorVT(*DAG.getContext(),
                                      InVT.getVectorElementType(), SplitSize);
-      if (TLI.isTypeLegal(SplitVT)) {
+      if (TLI.isTypeLegal(SplitVT) &&
+          SplitSize + SplitVT.getVectorNumElements() <=
+              InVT.getVectorNumElements()) {
         SDValue VecIn2 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SplitVT, Vec,
                                      DAG.getVectorIdxConstant(SplitSize, DL));
         SDValue VecIn1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SplitVT, Vec,

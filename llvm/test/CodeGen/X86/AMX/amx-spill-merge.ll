@@ -10,12 +10,12 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    subq $4056, %rsp # imm = 0xFD8
+; CHECK-NEXT:    subq $2120, %rsp # imm = 0x848
 ; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movl %edi, %ebp
 ; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
-; CHECK-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vmovdqu64 %zmm0, (%rsp)
+; CHECK-NEXT:    movb $1, (%rsp)
 ; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
@@ -30,7 +30,7 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    movb %bpl, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw %bx, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %bpl, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    ldtilecfg (%rsp)
 ; CHECK-NEXT:    movl $32, %r14d
 ; CHECK-NEXT:    movl $buf+2048, %r15d
 ; CHECK-NEXT:    tileloadd (%r15,%r14), %tmm5
@@ -44,16 +44,16 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    movl $buf+1024, %eax
 ; CHECK-NEXT:    tileloadd (%rax,%r14), %tmm1
 ; CHECK-NEXT:    movabsq $64, %rax
-; CHECK-NEXT:    tilestored %tmm5, 2048(%rsp,%rax) # 1024-byte Folded Spill
+; CHECK-NEXT:    tilestored %tmm5, 1088(%rsp,%rax) # 1024-byte Folded Spill
 ; CHECK-NEXT:    tdpbssd %tmm1, %tmm0, %tmm5
 ; CHECK-NEXT:    movabsq $64, %rax
-; CHECK-NEXT:    tilestored %tmm5, 1024(%rsp,%rax) # 1024-byte Folded Spill
+; CHECK-NEXT:    tilestored %tmm5, 64(%rsp,%rax) # 1024-byte Folded Spill
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
-; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    ldtilecfg (%rsp)
 ; CHECK-NEXT:    movabsq $64, %rax
-; CHECK-NEXT:    tileloadd 1024(%rsp,%rax), %tmm6 # 1024-byte Folded Reload
+; CHECK-NEXT:    tileloadd 64(%rsp,%rax), %tmm6 # 1024-byte Folded Reload
 ; CHECK-NEXT:    jmp .LBB0_3
 ; CHECK-NEXT:  .LBB0_2: # %if.false
 ; CHECK-NEXT:    movl $buf, %eax
@@ -62,16 +62,16 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    movl $buf+1024, %eax
 ; CHECK-NEXT:    tileloadd (%rax,%r14), %tmm3
 ; CHECK-NEXT:    movabsq $64, %rax
-; CHECK-NEXT:    tilestored %tmm5, 2048(%rsp,%rax) # 1024-byte Folded Spill
+; CHECK-NEXT:    tilestored %tmm5, 1088(%rsp,%rax) # 1024-byte Folded Spill
 ; CHECK-NEXT:    tdpbssd %tmm3, %tmm2, %tmm5
 ; CHECK-NEXT:    movabsq $64, %rax
-; CHECK-NEXT:    tilestored %tmm5, 1024(%rsp,%rax) # 1024-byte Folded Spill
+; CHECK-NEXT:    tilestored %tmm5, 64(%rsp,%rax) # 1024-byte Folded Spill
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
-; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    ldtilecfg (%rsp)
 ; CHECK-NEXT:    movabsq $64, %rax
-; CHECK-NEXT:    tileloadd 1024(%rsp,%rax), %tmm6 # 1024-byte Folded Reload
+; CHECK-NEXT:    tileloadd 64(%rsp,%rax), %tmm6 # 1024-byte Folded Reload
 ; CHECK-NEXT:    tilestored %tmm6, (%r15,%r14)
 ; CHECK-NEXT:  .LBB0_3: # %exit
 ; CHECK-NEXT:    movl $buf, %eax
@@ -79,11 +79,11 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; CHECK-NEXT:    movw $8, %dx
 ; CHECK-NEXT:    tileloadd (%rax,%rcx), %tmm4
 ; CHECK-NEXT:    movabsq $64, %rax
-; CHECK-NEXT:    tileloadd 2048(%rsp,%rax), %tmm5 # 1024-byte Folded Reload
+; CHECK-NEXT:    tileloadd 1088(%rsp,%rax), %tmm5 # 1024-byte Folded Reload
 ; CHECK-NEXT:    tdpbssd %tmm4, %tmm6, %tmm5
 ; CHECK-NEXT:    movl $buf+2048, %eax
 ; CHECK-NEXT:    tilestored %tmm5, (%rax,%rcx)
-; CHECK-NEXT:    addq $4056, %rsp # imm = 0xFD8
+; CHECK-NEXT:    addq $2120, %rsp # imm = 0x848
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15

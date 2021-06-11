@@ -11,8 +11,7 @@ declare <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8>, <16 x i8>, <16 x i8>, <
 declare void @foo()
 define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i8> %vc4, i8* %ptr) {
 ; CHECK-LABEL: intrinsics1:
-; CHECK:         .localentry intrinsics1, 1
-; CHECK-NEXT:  # %bb.0:
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    .cfi_def_cfa_offset 176
 ; CHECK-NEXT:    .cfi_offset lr, 16
@@ -46,11 +45,11 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-NEXT:    li r3, 32
 ; CHECK-NEXT:    lxvp vsp2, r1(r3)
 ; CHECK-NEXT:    li r3, 128
-; CHECK-NEXT:    lxvp vsp34, r1(r3) # 32-byte Folded Reload
+; CHECK-NEXT:    lxvp vsp4, r1(r3) # 32-byte Folded Reload
 ; CHECK-NEXT:    li r3, 96
-; CHECK-NEXT:    lxvp vsp36, r1(r3) # 32-byte Folded Reload
+; CHECK-NEXT:    lxvp vsp6, r1(r3) # 32-byte Folded Reload
 ; CHECK-NEXT:    xxmtacc acc0
-; CHECK-NEXT:    xvf16ger2pp acc0, v2, v4
+; CHECK-NEXT:    xvf16ger2pp acc0, vs4, vs6
 ; CHECK-NEXT:    xxmfacc acc0
 ; CHECK-NEXT:    stxv vs0, 48(r30)
 ; CHECK-NEXT:    stxv vs1, 32(r30)
@@ -98,11 +97,11 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-BE-NEXT:    li r3, 144
 ; CHECK-BE-NEXT:    lxvp vsp2, r1(r3)
 ; CHECK-BE-NEXT:    li r3, 208
-; CHECK-BE-NEXT:    lxvp vsp34, r1(r3) # 32-byte Folded Reload
+; CHECK-BE-NEXT:    lxvp vsp4, r1(r3) # 32-byte Folded Reload
 ; CHECK-BE-NEXT:    li r3, 176
-; CHECK-BE-NEXT:    lxvp vsp36, r1(r3) # 32-byte Folded Reload
+; CHECK-BE-NEXT:    lxvp vsp6, r1(r3) # 32-byte Folded Reload
 ; CHECK-BE-NEXT:    xxmtacc acc0
-; CHECK-BE-NEXT:    xvf16ger2pp acc0, v2, v4
+; CHECK-BE-NEXT:    xvf16ger2pp acc0, vs4, vs6
 ; CHECK-BE-NEXT:    xxmfacc acc0
 ; CHECK-BE-NEXT:    stxv vs1, 16(r30)
 ; CHECK-BE-NEXT:    stxvx vs0, 0, r30

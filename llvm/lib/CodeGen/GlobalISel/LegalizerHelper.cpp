@@ -2746,58 +2746,55 @@ LegalizerHelper::lowerLoad(MachineInstr &MI) {
   LLT DstTy = MRI.getType(DstReg);
   auto &MMO = **MI.memoperands_begin();
 
-  if (DstTy.getSizeInBits() == MMO.getSizeInBits()) {
-    if (MI.getOpcode() == TargetOpcode::G_LOAD) {
-      // This load needs splitting into power of 2 sized loads.
-      if (DstTy.isVector())
-        return UnableToLegalize;
-      if (isPowerOf2_32(DstTy.getSizeInBits()))
-        return UnableToLegalize; // Don't know what we're being asked to do.
+  if (DstTy.getSizeInBits() != MMO.getSizeInBits())
+    return UnableToLegalize;
 
-      // Our strategy here is to generate anyextending loads for the smaller
-      // types up to next power-2 result type, and then combine the two larger
-      // result values together, before truncating back down to the non-pow-2
-      // type.
-      // E.g. v1 = i24 load =>
-      // v2 = i32 zextload (2 byte)
-      // v3 = i32 load (1 byte)
-      // v4 = i32 shl v3, 16
-      // v5 = i32 or v4, v2
-      // v1 = i24 trunc v5
-      // By doing this we generate the correct truncate which should get
-      // combined away as an artifact with a matching extend.
-      uint64_t LargeSplitSize = PowerOf2Floor(DstTy.getSizeInBits());
-      uint64_t SmallSplitSize = DstTy.getSizeInBits() - LargeSplitSize;
+  if (MI.getOpcode() == TargetOpcode::G_LOAD) {
+    // This load needs splitting into power of 2 sized loads.
+    if (DstTy.isVector())
+      return UnableToLegalize;
+    if (isPowerOf2_32(DstTy.getSizeInBits()))
+      return UnableToLegalize; // Don't know what we're being asked to do.
 
-      MachineFunction &MF = MIRBuilder.getMF();
-      MachineMemOperand *LargeMMO =
-        MF.getMachineMemOperand(&MMO, 0, LargeSplitSize / 8);
-      MachineMemOperand *SmallMMO = MF.getMachineMemOperand(
-        &MMO, LargeSplitSize / 8, SmallSplitSize / 8);
+    // Our strategy here is to generate anyextending loads for the smaller
+    // types up to next power-2 result type, and then combine the two larger
+    // result values together, before truncating back down to the non-pow-2
+    // type.
+    // E.g. v1 = i24 load =>
+    // v2 = i32 zextload (2 byte)
+    // v3 = i32 load (1 byte)
+    // v4 = i32 shl v3, 16
+    // v5 = i32 or v4, v2
+    // v1 = i24 trunc v5
+    // By doing this we generate the correct truncate which should get
+    // combined away as an artifact with a matching extend.
+    uint64_t LargeSplitSize = PowerOf2Floor(DstTy.getSizeInBits());
+    uint64_t SmallSplitSize = DstTy.getSizeInBits() - LargeSplitSize;
 
-      LLT PtrTy = MRI.getType(PtrReg);
-      unsigned AnyExtSize = NextPowerOf2(DstTy.getSizeInBits());
-      LLT AnyExtTy = LLT::scalar(AnyExtSize);
-      auto LargeLoad = MIRBuilder.buildLoadInstr(
-        TargetOpcode::G_ZEXTLOAD, AnyExtTy, PtrReg, *LargeMMO);
+    MachineFunction &MF = MIRBuilder.getMF();
+    MachineMemOperand *LargeMMO =
+      MF.getMachineMemOperand(&MMO, 0, LargeSplitSize / 8);
+    MachineMemOperand *SmallMMO = MF.getMachineMemOperand(
+      &MMO, LargeSplitSize / 8, SmallSplitSize / 8);
 
-      auto OffsetCst = MIRBuilder.buildConstant(
-        LLT::scalar(PtrTy.getSizeInBits()), LargeSplitSize / 8);
-      Register PtrAddReg = MRI.createGenericVirtualRegister(PtrTy);
-      auto SmallPtr =
-        MIRBuilder.buildPtrAdd(PtrAddReg, PtrReg, OffsetCst);
-      auto SmallLoad = MIRBuilder.buildLoad(AnyExtTy, SmallPtr,
-                                            *SmallMMO);
+    LLT PtrTy = MRI.getType(PtrReg);
+    unsigned AnyExtSize = NextPowerOf2(DstTy.getSizeInBits());
+    LLT AnyExtTy = LLT::scalar(AnyExtSize);
+    auto LargeLoad = MIRBuilder.buildLoadInstr(
+      TargetOpcode::G_ZEXTLOAD, AnyExtTy, PtrReg, *LargeMMO);
 
-      auto ShiftAmt = MIRBuilder.buildConstant(AnyExtTy, LargeSplitSize);
-      auto Shift = MIRBuilder.buildShl(AnyExtTy, SmallLoad, ShiftAmt);
-      auto Or = MIRBuilder.buildOr(AnyExtTy, Shift, LargeLoad);
-      MIRBuilder.buildTrunc(DstReg, {Or});
-      MI.eraseFromParent();
-      return Legalized;
-    }
+    auto OffsetCst = MIRBuilder.buildConstant(
+      LLT::scalar(PtrTy.getSizeInBits()), LargeSplitSize / 8);
+    Register PtrAddReg = MRI.createGenericVirtualRegister(PtrTy);
+    auto SmallPtr =
+      MIRBuilder.buildPtrAdd(PtrAddReg, PtrReg, OffsetCst);
+    auto SmallLoad = MIRBuilder.buildLoad(AnyExtTy, SmallPtr,
+                                          *SmallMMO);
 
-    MIRBuilder.buildLoad(DstReg, PtrReg, MMO);
+    auto ShiftAmt = MIRBuilder.buildConstant(AnyExtTy, LargeSplitSize);
+    auto Shift = MIRBuilder.buildShl(AnyExtTy, SmallLoad, ShiftAmt);
+    auto Or = MIRBuilder.buildOr(AnyExtTy, Shift, LargeLoad);
+    MIRBuilder.buildTrunc(DstReg, {Or});
     MI.eraseFromParent();
     return Legalized;
   }

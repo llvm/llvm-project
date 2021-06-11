@@ -780,7 +780,7 @@ public:
             I->eraseFromParent();
           if (A->use_empty())
             cast<Instruction>(A)->eraseFromParent();
-          if (B->use_empty())
+          if (A != B && B->use_empty())
             cast<Instruction>(B)->eraseFromParent();
         }
       }

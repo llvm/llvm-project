@@ -69,6 +69,4 @@ static inline cpp::EnableIfType<cpp::IsSame<T, float>::Value, T> fma(T x, T y,
 } // namespace fputil
 } // namespace __llvm_libc
 
-#endif // Generic fma implementations
-
 #endif // LLVM_LIBC_UTILS_FPUTIL_GENERIC_FMA_H

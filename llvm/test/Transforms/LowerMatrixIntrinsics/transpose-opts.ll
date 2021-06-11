@@ -936,10 +936,62 @@ entry:
   ret void
 }
 
+define <4 x float> @mult_tt_same_op(<4 x float> %a) {
+; CHECK-LABEL: @mult_tt_same_op(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <4 x float> [[A]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[SPLIT2:%.*]] = shufflevector <4 x float> [[A]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[SPLIT3:%.*]] = shufflevector <4 x float> [[A]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x float> [[SPLIT]], <2 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x float> [[SPLIT2]], i64 0
+; CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i32 0
+; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x float> [[SPLAT_SPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x float> [[BLOCK]], [[SPLAT_SPLAT]]
+; CHECK-NEXT:    [[BLOCK4:%.*]] = shufflevector <2 x float> [[SPLIT1]], <2 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[SPLIT2]], i64 1
+; CHECK-NEXT:    [[SPLAT_SPLATINSERT5:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i32 0
+; CHECK-NEXT:    [[SPLAT_SPLAT6:%.*]] = shufflevector <2 x float> [[SPLAT_SPLATINSERT5]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x float> [[BLOCK4]], [[SPLAT_SPLAT6]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x float> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> undef, <2 x float> [[TMP5]], <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[BLOCK7:%.*]] = shufflevector <2 x float> [[SPLIT]], <2 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[SPLIT3]], i64 0
+; CHECK-NEXT:    [[SPLAT_SPLATINSERT8:%.*]] = insertelement <2 x float> poison, float [[TMP7]], i32 0
+; CHECK-NEXT:    [[SPLAT_SPLAT9:%.*]] = shufflevector <2 x float> [[SPLAT_SPLATINSERT8]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x float> [[BLOCK7]], [[SPLAT_SPLAT9]]
+; CHECK-NEXT:    [[BLOCK10:%.*]] = shufflevector <2 x float> [[SPLIT1]], <2 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[SPLIT3]], i64 1
+; CHECK-NEXT:    [[SPLAT_SPLATINSERT11:%.*]] = insertelement <2 x float> poison, float [[TMP9]], i32 0
+; CHECK-NEXT:    [[SPLAT_SPLAT12:%.*]] = shufflevector <2 x float> [[SPLAT_SPLATINSERT11]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul <2 x float> [[BLOCK10]], [[SPLAT_SPLAT12]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x float> [[TMP8]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x float> [[TMP11]], <2 x float> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x float> undef, <2 x float> [[TMP12]], <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x float> [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> undef, float [[TMP14]], i64 0
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[TMP13]], i64 0
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <2 x float> [[TMP15]], float [[TMP16]], i64 1
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x float> [[TMP6]], i64 1
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x float> undef, float [[TMP18]], i64 0
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <2 x float> [[TMP13]], i64 1
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <2 x float> [[TMP19]], float [[TMP20]], i64 1
+; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <2 x float> [[TMP17]], <2 x float> [[TMP21]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[TMP22]]
+;
+entry:
+  %t = call <4 x float> @llvm.matrix.transpose.v4f32(<4 x float> %a, i32 2, i32 2)
+  %m = call <4 x float> @llvm.matrix.multiply.v4f32.v4f32.v4f32(<4 x float> %t, <4 x float> %t, i32 2, i32 2, i32 2)
+  ret <4 x float> %m
+}
+
 declare <9 x double> @llvm.matrix.multiply.v9f64.v9f64.v9f64(<9 x double>, <9 x double>, i32, i32, i32)
 declare <12 x double> @llvm.matrix.multiply.v12f64.v6f64.v8f64(<6 x double>, <8 x double>, i32, i32, i32)
 declare <8 x double> @llvm.matrix.multiply.v8f64.v6f64.v12f64(<6 x double> %a, <12 x double>, i32, i32, i32)
+declare <4 x float> @llvm.matrix.multiply.v4f32.v4f32.v4f32(<4 x float>, <4 x float>, i32, i32, i32)
 declare <9 x double> @llvm.matrix.transpose.v9f64.v9f64(<9 x double>, i32, i32)
 declare <6 x double> @llvm.matrix.transpose.v6f64.v6f64(<6 x double>, i32, i32)
 declare <8 x double> @llvm.matrix.transpose.v8f64.v8f64(<8 x double>, i32, i32)
 declare <12 x double> @llvm.matrix.transpose.v12f64.v12f64(<12 x double>, i32, i32)
+declare <4 x float> @llvm.matrix.transpose.v4f32(<4 x float>, i32, i32)

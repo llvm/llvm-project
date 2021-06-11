@@ -26,7 +26,9 @@ using namespace lldb_private;
 
 namespace {
 struct HostInfoLinuxFields {
+  llvm::once_flag m_distribution_once_flag;
   std::string m_distribution_id;
+  llvm::once_flag m_os_version_once_flag;
   llvm::VersionTuple m_os_version;
 };
 
@@ -39,9 +41,16 @@ void HostInfoLinux::Initialize(SharedLibraryDirectoryHelper *helper) {
   g_fields = new HostInfoLinuxFields();
 }
 
+void HostInfoLinux::Terminate() {
+  assert(g_fields && "Missing call to Initialize?");
+  delete g_fields;
+  g_fields = nullptr;
+  HostInfoBase::Terminate();
+}
+
 llvm::VersionTuple HostInfoLinux::GetOSVersion() {
-  static llvm::once_flag g_once_flag;
-  llvm::call_once(g_once_flag, []() {
+  assert(g_fields && "Missing call to Initialize?");
+  llvm::call_once(g_fields->m_os_version_once_flag, []() {
     struct utsname un;
     if (uname(&un) != 0)
       return;
@@ -82,10 +91,10 @@ bool HostInfoLinux::GetOSKernelDescription(std::string &s) {
 }
 
 llvm::StringRef HostInfoLinux::GetDistributionId() {
+  assert(g_fields && "Missing call to Initialize?");
   // Try to run 'lbs_release -i', and use that response for the distribution
   // id.
-  static llvm::once_flag g_once_flag;
-  llvm::call_once(g_once_flag, []() {
+  llvm::call_once(g_fields->m_distribution_once_flag, []() {
 
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST));
     LLDB_LOGF(log, "attempting to determine Linux distribution...");

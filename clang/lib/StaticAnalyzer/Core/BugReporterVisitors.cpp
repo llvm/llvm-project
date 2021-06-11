@@ -65,6 +65,7 @@
 
 using namespace clang;
 using namespace ento;
+using namespace bugreporter;
 
 //===----------------------------------------------------------------------===//
 // Utility functions.
@@ -905,7 +906,7 @@ namespace {
 ///
 /// This visitor is intended to be used when another visitor discovers that an
 /// interesting value comes from an inlined function call.
-class ReturnVisitor : public BugReporterVisitor {
+class ReturnVisitor : public TrackingBugReporterVisitor {
   const StackFrameContext *CalleeSFC;
   enum {
     Initial,
@@ -919,10 +920,11 @@ class ReturnVisitor : public BugReporterVisitor {
   bugreporter::TrackingKind TKind;
 
 public:
-  ReturnVisitor(const StackFrameContext *Frame, bool Suppressed,
-                AnalyzerOptions &Options, bugreporter::TrackingKind TKind)
-      : CalleeSFC(Frame), EnableNullFPSuppression(Suppressed),
-        Options(Options), TKind(TKind) {}
+  ReturnVisitor(TrackerRef ParentTracker, const StackFrameContext *Frame,
+                bool Suppressed, AnalyzerOptions &Options,
+                bugreporter::TrackingKind TKind)
+      : TrackingBugReporterVisitor(ParentTracker), CalleeSFC(Frame),
+        EnableNullFPSuppression(Suppressed), Options(Options), TKind(TKind) {}
 
   static void *getTag() {
     static int Tag = 0;
@@ -942,7 +944,8 @@ public:
   /// node, looking for when the given statement was processed. If it turns out
   /// the statement is a call that was inlined, we add the visitor to the
   /// bug report, so it can print a note later.
-  static void addVisitorIfNecessary(const ExplodedNode *Node, const Stmt *S,
+  static void addVisitorIfNecessary(TrackerRef ParentTracker,
+                                    const ExplodedNode *Node, const Stmt *S,
                                     PathSensitiveBugReport &BR,
                                     bool InEnableNullFPSuppression,
                                     bugreporter::TrackingKind TKind) {
@@ -1015,8 +1018,8 @@ public:
       if (Optional<Loc> RetLoc = RetVal.getAs<Loc>())
         EnableNullFPSuppression = State->isNull(*RetLoc).isConstrainedTrue();
 
-    BR.addVisitor<ReturnVisitor>(CalleeContext, EnableNullFPSuppression,
-                                 Options, TKind);
+    BR.addVisitor<ReturnVisitor>(ParentTracker, CalleeContext,
+                                 EnableNullFPSuppression, Options, TKind);
   }
 
   PathDiagnosticPieceRef visitNodeInitial(const ExplodedNode *N,
@@ -1065,8 +1068,7 @@ public:
     RetE = RetE->IgnoreParenCasts();
 
     // Let's track the return value.
-    bugreporter::trackExpressionValue(
-        N, RetE, BR, TKind, EnableNullFPSuppression);
+    getParentTracker().track(RetE, N, {TKind, EnableNullFPSuppression});
 
     // Build an appropriate message based on the return value.
     SmallString<64> Msg;
@@ -1182,7 +1184,9 @@ public:
       if (!State->isNull(*ArgV).isConstrainedTrue())
         continue;
 
-      if (trackExpressionValue(N, ArgE, BR, TKind, EnableNullFPSuppression))
+      if (getParentTracker()
+              .track(ArgE, N, {TKind, EnableNullFPSuppression})
+              .FoundSomethingToTrack)
         ShouldInvalidate = false;
 
       // If we /can't/ track the null pointer, we should err on the side of
@@ -1218,10 +1222,53 @@ public:
 } // end of anonymous namespace
 
 //===----------------------------------------------------------------------===//
-// Implementation of FindLastStoreBRVisitor.
+//                               StoreSiteFinder
 //===----------------------------------------------------------------------===//
 
-void FindLastStoreBRVisitor::Profile(llvm::FoldingSetNodeID &ID) const {
+/// Finds last store into the given region,
+/// which is different from a given symbolic value.
+class StoreSiteFinder final : public TrackingBugReporterVisitor {
+  const MemRegion *R;
+  SVal V;
+  bool Satisfied = false;
+
+  /// If the visitor is tracking the value directly responsible for the
+  /// bug, we are going to employ false positive suppression.
+  bool EnableNullFPSuppression;
+
+  using TrackingKind = bugreporter::TrackingKind;
+  TrackingKind TKind;
+  const StackFrameContext *OriginSFC;
+
+public:
+  /// \param V We're searching for the store where \c R received this value.
+  /// \param R The region we're tracking.
+  /// \param TKind May limit the amount of notes added to the bug report.
+  /// \param OriginSFC Only adds notes when the last store happened in a
+  ///        different stackframe to this one. Disregarded if the tracking kind
+  ///        is thorough.
+  ///        This is useful, because for non-tracked regions, notes about
+  ///        changes to its value in a nested stackframe could be pruned, and
+  ///        this visitor can prevent that without polluting the bugpath too
+  ///        much.
+  StoreSiteFinder(bugreporter::TrackerRef ParentTracker, KnownSVal V,
+                  const MemRegion *R, bool InEnableNullFPSuppression,
+                  TrackingKind TKind,
+                  const StackFrameContext *OriginSFC = nullptr)
+      : TrackingBugReporterVisitor(ParentTracker), R(R), V(V),
+        EnableNullFPSuppression(InEnableNullFPSuppression), TKind(TKind),
+        OriginSFC(OriginSFC) {
+    assert(R);
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const override;
+
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                   BugReporterContext &BRC,
+                                   PathSensitiveBugReport &BR) override;
+};
+
+void StoreSiteFinder::Profile(llvm::FoldingSetNodeID &ID) const {
   static int tag = 0;
   ID.AddPointer(&tag);
   ID.AddPointer(R);
@@ -1392,10 +1439,9 @@ static void showBRDefaultDiagnostics(llvm::raw_svector_ostream &os,
   }
 }
 
-PathDiagnosticPieceRef
-FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
-                                  BugReporterContext &BRC,
-                                  PathSensitiveBugReport &BR) {
+PathDiagnosticPieceRef StoreSiteFinder::VisitNode(const ExplodedNode *Succ,
+                                                  BugReporterContext &BRC,
+                                                  PathSensitiveBugReport &BR) {
   if (Satisfied)
     return nullptr;
 
@@ -1487,8 +1533,8 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
     if (!IsParam)
       InitE = InitE->IgnoreParenCasts();
 
-    bugreporter::trackExpressionValue(StoreSite, InitE, BR, TKind,
-                                      EnableNullFPSuppression);
+    getParentTracker().track(InitE, StoreSite,
+                             {TKind, EnableNullFPSuppression});
   }
 
   // Let's try to find the region where the value came from.
@@ -1587,8 +1633,8 @@ FindLastStoreBRVisitor::VisitNode(const ExplodedNode *Succ,
               dyn_cast_or_null<BlockDataRegion>(V.getAsRegion())) {
           if (const VarRegion *OriginalR = BDR->getOriginalRegion(VR)) {
             if (auto KV = State->getSVal(OriginalR).getAs<KnownSVal>())
-              BR.addVisitor<FindLastStoreBRVisitor>(
-                  *KV, OriginalR, EnableNullFPSuppression, TKind, OriginSFC);
+              getParentTracker().track(
+                  *KV, OriginalR, {TKind, EnableNullFPSuppression}, OriginSFC);
           }
         }
       }
@@ -1809,14 +1855,17 @@ namespace {
 /// An error is emitted at line 3. This visitor realizes that the branch
 /// on line 2 is a control dependency of line 3, and tracks it's condition via
 /// trackExpressionValue().
-class TrackControlDependencyCondBRVisitor final : public BugReporterVisitor {
+class TrackControlDependencyCondBRVisitor final
+    : public TrackingBugReporterVisitor {
   const ExplodedNode *Origin;
   ControlDependencyCalculator ControlDeps;
   llvm::SmallSet<const CFGBlock *, 32> VisitedBlocks;
 
 public:
-  TrackControlDependencyCondBRVisitor(const ExplodedNode *O)
-  : Origin(O), ControlDeps(&O->getCFG()) {}
+  TrackControlDependencyCondBRVisitor(TrackerRef ParentTracker,
+                                      const ExplodedNode *O)
+      : TrackingBugReporterVisitor(ParentTracker), Origin(O),
+        ControlDeps(&O->getCFG()) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     static int x = 0;
@@ -1914,9 +1963,9 @@ TrackControlDependencyCondBRVisitor::VisitNode(const ExplodedNode *N,
       // isn't sufficient, because a new visitor is created for each tracked
       // expression, hence the BugReport level set.
       if (BR.addTrackedCondition(N)) {
-        bugreporter::trackExpressionValue(
-            N, Condition, BR, bugreporter::TrackingKind::Condition,
-            /*EnableNullFPSuppression=*/false);
+        getParentTracker().track(Condition, N,
+                                 {bugreporter::TrackingKind::Condition,
+                                  /*EnableNullFPSuppression=*/false});
         return constructDebugPieceForTrackedCondition(Condition, N, BRC);
       }
     }
@@ -2007,191 +2056,277 @@ static const ExplodedNode* findNodeForExpression(const ExplodedNode *N,
   return N;
 }
 
-/// Attempts to add visitors to track an RValue expression back to its point of
-/// origin. Works similarly to trackExpressionValue, but accepts only RValues.
-static void trackRValueExpression(const ExplodedNode *InputNode, const Expr *E,
-                                  PathSensitiveBugReport &report,
-                                  bugreporter::TrackingKind TKind,
-                                  bool EnableNullFPSuppression) {
-  assert(E->isPRValue() && "The expression is not a prvalue!");
-  const ExplodedNode *RVNode = findNodeForExpression(InputNode, E);
-  if (!RVNode)
-    return;
-  ProgramStateRef RVState = RVNode->getState();
-  SVal V = RVState->getSValAsScalarOrLoc(E, RVNode->getLocationContext());
-  const auto *BO = dyn_cast<BinaryOperator>(E);
-  if (!BO)
-    return;
-  if (!V.isZeroConstant())
-    return;
-  if (!BO->isMultiplicativeOp())
-    return;
+//===----------------------------------------------------------------------===//
+//                            Tracker implementation
+//===----------------------------------------------------------------------===//
 
-  SVal RHSV = RVState->getSVal(BO->getRHS(), RVNode->getLocationContext());
-  SVal LHSV = RVState->getSVal(BO->getLHS(), RVNode->getLocationContext());
+class DefaultExpressionHandler final : public ExpressionHandler {
+public:
+  using ExpressionHandler::ExpressionHandler;
 
-  // Track both LHS and RHS of a multiplication.
-  if (BO->getOpcode() == BO_Mul) {
-    if (LHSV.isZeroConstant())
-      trackExpressionValue(InputNode, BO->getLHS(), report, TKind,
-                           EnableNullFPSuppression);
-    if (RHSV.isZeroConstant())
-      trackExpressionValue(InputNode, BO->getRHS(), report, TKind,
-                           EnableNullFPSuppression);
-  } else { // Track only the LHS of a division or a modulo.
-    if (LHSV.isZeroConstant())
-      trackExpressionValue(InputNode, BO->getLHS(), report, TKind,
-                           EnableNullFPSuppression);
+  Tracker::Result handle(const Expr *Inner, const ExplodedNode *InputNode,
+                         const ExplodedNode *LVNode,
+                         TrackingOptions Opts) override {
+    ProgramStateRef LVState = LVNode->getState();
+    const StackFrameContext *SFC = LVNode->getStackFrame();
+    PathSensitiveBugReport &Report = getParentTracker().getReport();
+    Tracker::Result Result;
+
+    // We only track expressions if we believe that they are important. Chances
+    // are good that control dependencies to the tracking point are also
+    // important because of this, let's explain why we believe control reached
+    // this point.
+    // TODO: Shouldn't we track control dependencies of every bug location,
+    // rather than only tracked expressions?
+    if (LVState->getAnalysisManager()
+            .getAnalyzerOptions()
+            .ShouldTrackConditions) {
+      Report.addVisitor<TrackControlDependencyCondBRVisitor>(
+          &getParentTracker(), InputNode);
+      Result.FoundSomethingToTrack = true;
+    }
+
+    // The message send could be nil due to the receiver being nil.
+    // At this point in the path, the receiver should be live since we are at
+    // the message send expr. If it is nil, start tracking it.
+    if (const Expr *Receiver =
+            NilReceiverBRVisitor::getNilReceiver(Inner, LVNode))
+      Result.combineWith(getParentTracker().track(Receiver, LVNode, Opts));
+
+    // Track the index if this is an array subscript.
+    if (const auto *Arr = dyn_cast<ArraySubscriptExpr>(Inner))
+      Result.combineWith(getParentTracker().track(
+          Arr->getIdx(), LVNode,
+          {Opts.Kind, /*EnableNullFPSuppression*/ false}));
+
+    // See if the expression we're interested refers to a variable.
+    // If so, we can track both its contents and constraints on its value.
+    if (ExplodedGraph::isInterestingLValueExpr(Inner)) {
+      SVal LVal = LVNode->getSVal(Inner);
+
+      const MemRegion *RR = getLocationRegionIfReference(Inner, LVNode);
+      bool LVIsNull = LVState->isNull(LVal).isConstrainedTrue();
+
+      // If this is a C++ reference to a null pointer, we are tracking the
+      // pointer. In addition, we should find the store at which the reference
+      // got initialized.
+      if (RR && !LVIsNull)
+        Result.combineWith(getParentTracker().track(LVal, RR, Opts, SFC));
+
+      // In case of C++ references, we want to differentiate between a null
+      // reference and reference to null pointer.
+      // If the LVal is null, check if we are dealing with null reference.
+      // For those, we want to track the location of the reference.
+      const MemRegion *R =
+          (RR && LVIsNull) ? RR : LVNode->getSVal(Inner).getAsRegion();
+
+      if (R) {
+
+        // Mark both the variable region and its contents as interesting.
+        SVal V = LVState->getRawSVal(loc::MemRegionVal(R));
+        Report.addVisitor<NoStoreFuncVisitor>(cast<SubRegion>(R), Opts.Kind);
+
+        // When we got here, we do have something to track, and we will
+        // interrupt.
+        Result.FoundSomethingToTrack = true;
+        Result.WasInterrupted = true;
+
+        MacroNullReturnSuppressionVisitor::addMacroVisitorIfNecessary(
+            LVNode, R, Opts.EnableNullFPSuppression, Report, V);
+
+        Report.markInteresting(V, Opts.Kind);
+        Report.addVisitor<UndefOrNullArgVisitor>(R);
+
+        // If the contents are symbolic and null, find out when they became
+        // null.
+        if (V.getAsLocSymbol(/*IncludeBaseRegions=*/true))
+          if (LVState->isNull(V).isConstrainedTrue())
+            Report.addVisitor<TrackConstraintBRVisitor>(V.castAs<DefinedSVal>(),
+                                                        false);
+
+        // Add visitor, which will suppress inline defensive checks.
+        if (auto DV = V.getAs<DefinedSVal>())
+          if (!DV->isZeroConstant() && Opts.EnableNullFPSuppression)
+            // Note that LVNode may be too late (i.e., too far from the
+            // InputNode) because the lvalue may have been computed before the
+            // inlined call was evaluated. InputNode may as well be too early
+            // here, because the symbol is already dead; this, however, is fine
+            // because we can still find the node in which it collapsed to null
+            // previously.
+            Report.addVisitor<SuppressInlineDefensiveChecksVisitor>(*DV,
+                                                                    InputNode);
+
+        getParentTracker().track(V, R, Opts, SFC);
+
+        return Result;
+      }
+    }
+
+    // If the expression is not an "lvalue expression", we can still
+    // track the constraints on its contents.
+    SVal V = LVState->getSValAsScalarOrLoc(Inner, LVNode->getLocationContext());
+
+    ReturnVisitor::addVisitorIfNecessary(&getParentTracker(), LVNode, Inner,
+                                         Report, Opts.EnableNullFPSuppression,
+                                         Opts.Kind);
+
+    // Is it a symbolic value?
+    if (auto L = V.getAs<loc::MemRegionVal>()) {
+      // FIXME: this is a hack for fixing a later crash when attempting to
+      // dereference a void* pointer.
+      // We should not try to dereference pointers at all when we don't care
+      // what is written inside the pointer.
+      bool CanDereference = true;
+      if (const auto *SR = L->getRegionAs<SymbolicRegion>()) {
+        if (SR->getSymbol()->getType()->getPointeeType()->isVoidType())
+          CanDereference = false;
+      } else if (L->getRegionAs<AllocaRegion>())
+        CanDereference = false;
+
+      // At this point we are dealing with the region's LValue.
+      // However, if the rvalue is a symbolic region, we should track it as
+      // well. Try to use the correct type when looking up the value.
+      SVal RVal;
+      if (ExplodedGraph::isInterestingLValueExpr(Inner))
+        RVal = LVState->getRawSVal(L.getValue(), Inner->getType());
+      else if (CanDereference)
+        RVal = LVState->getSVal(L->getRegion());
+
+      if (CanDereference) {
+        Report.addVisitor<UndefOrNullArgVisitor>(L->getRegion());
+        Result.FoundSomethingToTrack = true;
+
+        if (auto KV = RVal.getAs<KnownSVal>())
+          Result.combineWith(
+              getParentTracker().track(*KV, L->getRegion(), Opts, SFC));
+      }
+
+      const MemRegion *RegionRVal = RVal.getAsRegion();
+      if (isa_and_nonnull<SymbolicRegion>(RegionRVal)) {
+        Report.markInteresting(RegionRVal, Opts.Kind);
+        Report.addVisitor<TrackConstraintBRVisitor>(
+            loc::MemRegionVal(RegionRVal),
+            /*assumption=*/false);
+        Result.FoundSomethingToTrack = true;
+      }
+    }
+
+    return Result;
   }
+};
+
+/// Attempts to add visitors to track an RValue expression back to its point of
+/// origin.
+class PRValueHandler final : public ExpressionHandler {
+public:
+  using ExpressionHandler::ExpressionHandler;
+
+  Tracker::Result handle(const Expr *E, const ExplodedNode *InputNode,
+                         const ExplodedNode *ExprNode,
+                         TrackingOptions Opts) override {
+    if (!E->isPRValue())
+      return {};
+
+    const ExplodedNode *RVNode = findNodeForExpression(ExprNode, E);
+    if (!RVNode)
+      return {};
+
+    ProgramStateRef RVState = RVNode->getState();
+    SVal V = RVState->getSValAsScalarOrLoc(E, RVNode->getLocationContext());
+    const auto *BO = dyn_cast<BinaryOperator>(E);
+
+    if (!BO || !BO->isMultiplicativeOp() || !V.isZeroConstant())
+      return {};
+
+    SVal RHSV = RVState->getSVal(BO->getRHS(), RVNode->getLocationContext());
+    SVal LHSV = RVState->getSVal(BO->getLHS(), RVNode->getLocationContext());
+
+    // Track both LHS and RHS of a multiplication.
+    Tracker::Result CombinedResult;
+    Tracker &Parent = getParentTracker();
+
+    const auto track = [&CombinedResult, &Parent, ExprNode, Opts](Expr *Inner) {
+      CombinedResult.combineWith(Parent.track(Inner, ExprNode, Opts));
+    };
+
+    if (BO->getOpcode() == BO_Mul) {
+      if (LHSV.isZeroConstant())
+        track(BO->getLHS());
+      if (RHSV.isZeroConstant())
+        track(BO->getRHS());
+    } else { // Track only the LHS of a division or a modulo.
+      if (LHSV.isZeroConstant())
+        track(BO->getLHS());
+    }
+
+    return CombinedResult;
+  }
+};
+
+Tracker::Tracker(PathSensitiveBugReport &Report) : Report(Report) {
+  addHighPriorityHandler<DefaultExpressionHandler>();
+  addLowPriorityHandler<PRValueHandler>();
+  // TODO: split trackExpressionValue and FindLastStoreBRVisitor into handlers
+  //       and add them here.
+}
+
+Tracker::Result Tracker::track(const Expr *E, const ExplodedNode *N,
+                               TrackingOptions Opts) {
+  if (!E || !N)
+    return {};
+
+  const Expr *Inner = peelOffOuterExpr(E, N);
+  const ExplodedNode *LVNode = findNodeForExpression(N, Inner);
+  if (!LVNode)
+    return {};
+
+  Result CombinedResult;
+  // Iterate through the handlers in the order according to their priorities.
+  for (ExpressionHandlerPtr &Handler : ExpressionHandlers) {
+    CombinedResult.combineWith(Handler->handle(Inner, N, LVNode, Opts));
+    if (CombinedResult.WasInterrupted)
+      break;
+  }
+
+  return CombinedResult;
+}
+
+Tracker::Result Tracker::track(SVal V, const MemRegion *R, TrackingOptions Opts,
+                               const StackFrameContext *Origin) {
+  if (auto KV = V.getAs<KnownSVal>()) {
+    Report.addVisitor<StoreSiteFinder>(
+        this, *KV, R, Opts.EnableNullFPSuppression, Opts.Kind, Origin);
+    return {true};
+  }
+  return {};
+}
+
+PathDiagnosticPieceRef Tracker::handle(StoreInfo SI, TrackingOptions Opts) {
+  // Iterate through the handlers in the order according to their priorities.
+  for (StoreHandlerPtr &Handler : StoreHandlers) {
+    if (PathDiagnosticPieceRef Result = Handler->handle(SI, Opts))
+      // If the handler produced a non-null piece, return it.
+      // There is no need in asking other handlers.
+      return Result;
+  }
+  return {};
 }
 
 bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
                                        const Expr *E,
-                                       PathSensitiveBugReport &report,
-                                       bugreporter::TrackingKind TKind,
-                                       bool EnableNullFPSuppression) {
 
-  if (!E || !InputNode)
-    return false;
+                                       PathSensitiveBugReport &Report,
+                                       TrackingOptions Opts) {
+  return Tracker::create(Report)
+      ->track(E, InputNode, Opts)
+      .FoundSomethingToTrack;
+}
 
-  const Expr *Inner = peelOffOuterExpr(E, InputNode);
-  const ExplodedNode *LVNode = findNodeForExpression(InputNode, Inner);
-  if (!LVNode)
-    return false;
-
-  ProgramStateRef LVState = LVNode->getState();
-  const StackFrameContext *SFC = LVNode->getStackFrame();
-
-  // We only track expressions if we believe that they are important. Chances
-  // are good that control dependencies to the tracking point are also important
-  // because of this, let's explain why we believe control reached this point.
-  // TODO: Shouldn't we track control dependencies of every bug location, rather
-  // than only tracked expressions?
-  if (LVState->getAnalysisManager().getAnalyzerOptions().ShouldTrackConditions)
-    report.addVisitor<TrackControlDependencyCondBRVisitor>(InputNode);
-
-  // The message send could be nil due to the receiver being nil.
-  // At this point in the path, the receiver should be live since we are at the
-  // message send expr. If it is nil, start tracking it.
-  if (const Expr *Receiver = NilReceiverBRVisitor::getNilReceiver(Inner, LVNode))
-    trackExpressionValue(
-        LVNode, Receiver, report, TKind, EnableNullFPSuppression);
-
-  // Track the index if this is an array subscript.
-  if (const auto *Arr = dyn_cast<ArraySubscriptExpr>(Inner))
-    trackExpressionValue(
-        LVNode, Arr->getIdx(), report, TKind, /*EnableNullFPSuppression*/false);
-
-  // See if the expression we're interested refers to a variable.
-  // If so, we can track both its contents and constraints on its value.
-  if (ExplodedGraph::isInterestingLValueExpr(Inner)) {
-    SVal LVal = LVNode->getSVal(Inner);
-
-    const MemRegion *RR = getLocationRegionIfReference(Inner, LVNode);
-    bool LVIsNull = LVState->isNull(LVal).isConstrainedTrue();
-
-    // If this is a C++ reference to a null pointer, we are tracking the
-    // pointer. In addition, we should find the store at which the reference
-    // got initialized.
-    if (RR && !LVIsNull)
-      if (auto KV = LVal.getAs<KnownSVal>())
-        report.addVisitor<FindLastStoreBRVisitor>(
-            *KV, RR, EnableNullFPSuppression, TKind, SFC);
-
-    // In case of C++ references, we want to differentiate between a null
-    // reference and reference to null pointer.
-    // If the LVal is null, check if we are dealing with null reference.
-    // For those, we want to track the location of the reference.
-    const MemRegion *R = (RR && LVIsNull) ? RR :
-        LVNode->getSVal(Inner).getAsRegion();
-
-    if (R) {
-
-      // Mark both the variable region and its contents as interesting.
-      SVal V = LVState->getRawSVal(loc::MemRegionVal(R));
-      report.addVisitor<NoStoreFuncVisitor>(cast<SubRegion>(R), TKind);
-
-      MacroNullReturnSuppressionVisitor::addMacroVisitorIfNecessary(
-          LVNode, R, EnableNullFPSuppression, report, V);
-
-      report.markInteresting(V, TKind);
-      report.addVisitor<UndefOrNullArgVisitor>(R);
-
-      // If the contents are symbolic and null, find out when they became null.
-      if (V.getAsLocSymbol(/*IncludeBaseRegions=*/true))
-        if (LVState->isNull(V).isConstrainedTrue())
-          report.addVisitor<TrackConstraintBRVisitor>(V.castAs<DefinedSVal>(),
-                                                      false);
-
-      // Add visitor, which will suppress inline defensive checks.
-      if (auto DV = V.getAs<DefinedSVal>())
-        if (!DV->isZeroConstant() && EnableNullFPSuppression) {
-          // Note that LVNode may be too late (i.e., too far from the InputNode)
-          // because the lvalue may have been computed before the inlined call
-          // was evaluated. InputNode may as well be too early here, because
-          // the symbol is already dead; this, however, is fine because we can
-          // still find the node in which it collapsed to null previously.
-          report.addVisitor<SuppressInlineDefensiveChecksVisitor>(*DV,
-                                                                  InputNode);
-        }
-
-      if (auto KV = V.getAs<KnownSVal>())
-        report.addVisitor<FindLastStoreBRVisitor>(
-            *KV, R, EnableNullFPSuppression, TKind, SFC);
-      return true;
-    }
-  }
-
-  // If the expression is not an "lvalue expression", we can still
-  // track the constraints on its contents.
-  SVal V = LVState->getSValAsScalarOrLoc(Inner, LVNode->getLocationContext());
-
-  ReturnVisitor::addVisitorIfNecessary(
-    LVNode, Inner, report, EnableNullFPSuppression, TKind);
-
-  // Is it a symbolic value?
-  if (auto L = V.getAs<loc::MemRegionVal>()) {
-    // FIXME: this is a hack for fixing a later crash when attempting to
-    // dereference a void* pointer.
-    // We should not try to dereference pointers at all when we don't care
-    // what is written inside the pointer.
-    bool CanDereference = true;
-    if (const auto *SR = L->getRegionAs<SymbolicRegion>()) {
-      if (SR->getSymbol()->getType()->getPointeeType()->isVoidType())
-        CanDereference = false;
-    } else if (L->getRegionAs<AllocaRegion>())
-      CanDereference = false;
-
-    // At this point we are dealing with the region's LValue.
-    // However, if the rvalue is a symbolic region, we should track it as well.
-    // Try to use the correct type when looking up the value.
-    SVal RVal;
-    if (ExplodedGraph::isInterestingLValueExpr(Inner))
-      RVal = LVState->getRawSVal(L.getValue(), Inner->getType());
-    else if (CanDereference)
-      RVal = LVState->getSVal(L->getRegion());
-
-    if (CanDereference) {
-      report.addVisitor<UndefOrNullArgVisitor>(L->getRegion());
-
-      if (auto KV = RVal.getAs<KnownSVal>())
-        report.addVisitor<FindLastStoreBRVisitor>(
-            *KV, L->getRegion(), EnableNullFPSuppression, TKind, SFC);
-    }
-
-    const MemRegion *RegionRVal = RVal.getAsRegion();
-    if (isa_and_nonnull<SymbolicRegion>(RegionRVal)) {
-      report.markInteresting(RegionRVal, TKind);
-      report.addVisitor<TrackConstraintBRVisitor>(loc::MemRegionVal(RegionRVal),
-                                                  /*assumption=*/false);
-    }
-  }
-
-  if (Inner->isPRValue())
-    trackRValueExpression(LVNode, Inner, report, TKind,
-                          EnableNullFPSuppression);
-
-  return true;
+void bugreporter::trackStoredValue(KnownSVal V, const MemRegion *R,
+                                   PathSensitiveBugReport &Report,
+                                   TrackingOptions Opts,
+                                   const StackFrameContext *Origin) {
+  Tracker::create(Report)->track(V, R, Opts, Origin);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2240,9 +2375,9 @@ NilReceiverBRVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
   // The receiver was nil, and hence the method was skipped.
   // Register a BugReporterVisitor to issue a message telling us how
   // the receiver was null.
-  bugreporter::trackExpressionValue(
-      N, Receiver, BR, bugreporter::TrackingKind::Thorough,
-      /*EnableNullFPSuppression*/ false);
+  bugreporter::trackExpressionValue(N, Receiver, BR,
+                                    {bugreporter::TrackingKind::Thorough,
+                                     /*EnableNullFPSuppression*/ false});
   // Issue a message saying that the method was skipped.
   PathDiagnosticLocation L(Receiver, BRC.getSourceManager(),
                                      N->getLocationContext());

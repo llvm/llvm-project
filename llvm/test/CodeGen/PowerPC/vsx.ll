@@ -1366,8 +1366,7 @@ define <2 x float> @test44(<2 x i64> %a) {
 ; CHECK-LE-LABEL: test44:
 ; CHECK-LE:       # %bb.0:
 ; CHECK-LE-NEXT:    xxswapd vs0, v2
-; CHECK-LE-NEXT:    xxlor vs1, v2, v2
-; CHECK-LE-NEXT:    xscvuxdsp f1, f1
+; CHECK-LE-NEXT:    xscvuxdsp f1, v2
 ; CHECK-LE-NEXT:    xscvuxdsp f0, f0
 ; CHECK-LE-NEXT:    xscvdpspn v3, f1
 ; CHECK-LE-NEXT:    xscvdpspn v2, f0
@@ -1446,8 +1445,7 @@ define <2 x float> @test45(<2 x i64> %a) {
 ; CHECK-LE-LABEL: test45:
 ; CHECK-LE:       # %bb.0:
 ; CHECK-LE-NEXT:    xxswapd vs0, v2
-; CHECK-LE-NEXT:    xxlor vs1, v2, v2
-; CHECK-LE-NEXT:    xscvsxdsp f1, f1
+; CHECK-LE-NEXT:    xscvsxdsp f1, v2
 ; CHECK-LE-NEXT:    xscvsxdsp f0, f0
 ; CHECK-LE-NEXT:    xscvdpspn v3, f1
 ; CHECK-LE-NEXT:    xscvdpspn v2, f0

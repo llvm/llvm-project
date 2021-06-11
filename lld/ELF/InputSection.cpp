@@ -547,8 +547,7 @@ static uint32_t getARMUndefinedRelativeWeakVA(RelType type, uint32_t a,
 }
 
 // The comment above getARMUndefinedRelativeWeakVA applies to this function.
-static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t type, uint64_t a,
-                                                  uint64_t p) {
+static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t type, uint64_t p) {
   switch (type) {
   // Unresolved branch relocations to weak references resolve to next
   // instruction, this is 4 bytes on from P.
@@ -556,7 +555,7 @@ static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t type, uint64_t a,
   case R_AARCH64_CONDBR19:
   case R_AARCH64_JUMP26:
   case R_AARCH64_TSTBR14:
-    return p + 4 + a;
+    return p + 4;
   // Unresolved non branch pc-relative relocations
   case R_AARCH64_PREL16:
   case R_AARCH64_PREL32:
@@ -564,9 +563,23 @@ static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t type, uint64_t a,
   case R_AARCH64_ADR_PREL_LO21:
   case R_AARCH64_LD_PREL_LO19:
   case R_AARCH64_PLT32:
-    return p + a;
+    return p;
   }
   llvm_unreachable("AArch64 pc-relative relocation expected\n");
+}
+
+static uint64_t getRISCVUndefinedRelativeWeakVA(uint64_t type, uint64_t p) {
+  switch (type) {
+  case R_RISCV_BRANCH:
+  case R_RISCV_JAL:
+  case R_RISCV_CALL:
+  case R_RISCV_CALL_PLT:
+  case R_RISCV_RVC_BRANCH:
+  case R_RISCV_RVC_JUMP:
+    return p;
+  default:
+    return 0;
+  }
 }
 
 // ARM SBREL relocations are of the form S + A - B where B is the static base
@@ -765,14 +778,18 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
       // Some PC relative ARM (Thumb) relocations align down the place.
       p = p & 0xfffffffc;
     if (sym.isUndefWeak()) {
-      // On ARM and AArch64 a branch to an undefined weak resolves to the
-      // next instruction, otherwise the place.
+      // On ARM and AArch64 a branch to an undefined weak resolves to the next
+      // instruction, otherwise the place. On RISCV, resolve an undefined weak
+      // to the same instruction to cause an infinite loop (making the user
+      // aware of the issue) while ensuring no overflow.
       if (config->emachine == EM_ARM)
         dest = getARMUndefinedRelativeWeakVA(type, a, p);
       else if (config->emachine == EM_AARCH64)
-        dest = getAArch64UndefinedRelativeWeakVA(type, a, p);
+        dest = getAArch64UndefinedRelativeWeakVA(type, p) + a;
       else if (config->emachine == EM_PPC)
         dest = p;
+      else if (config->emachine == EM_RISCV)
+        dest = getRISCVUndefinedRelativeWeakVA(type, p) + a;
       else
         dest = sym.getVA(a);
     } else {

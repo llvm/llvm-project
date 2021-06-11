@@ -32,56 +32,56 @@ define <4 x float> @test00(<4 x float> %a, <4 x float> %b) nounwind {
 define <8 x float> @test01(<4 x float> %a, <4 x float> %b, <8 x float> %c) nounwind {
 ; VZ-LABEL: test01:
 ; VZ:       # %bb.0:
-; VZ-NEXT:    subq $56, %rsp
+; VZ-NEXT:    subq $40, %rsp
 ; VZ-NEXT:    vmovups %ymm2, (%rsp) # 32-byte Spill
-; VZ-NEXT:    vmovaps {{.*}}(%rip), %xmm0
+; VZ-NEXT:    vmovaps x(%rip), %xmm0
 ; VZ-NEXT:    vzeroupper
 ; VZ-NEXT:    callq do_sse
-; VZ-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; VZ-NEXT:    vmovaps %xmm0, x(%rip)
 ; VZ-NEXT:    callq do_sse
-; VZ-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; VZ-NEXT:    vmovaps %xmm0, x(%rip)
 ; VZ-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
-; VZ-NEXT:    addq $56, %rsp
+; VZ-NEXT:    addq $40, %rsp
 ; VZ-NEXT:    retq
 ;
 ; DISABLE-VZ-LABEL: test01:
 ; DISABLE-VZ:       # %bb.0:
-; DISABLE-VZ-NEXT:    subq $56, %rsp
+; DISABLE-VZ-NEXT:    subq $40, %rsp
 ; DISABLE-VZ-NEXT:    vmovups %ymm2, (%rsp) # 32-byte Spill
-; DISABLE-VZ-NEXT:    vmovaps {{.*}}(%rip), %xmm0
+; DISABLE-VZ-NEXT:    vmovaps x(%rip), %xmm0
 ; DISABLE-VZ-NEXT:    callq do_sse
-; DISABLE-VZ-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; DISABLE-VZ-NEXT:    vmovaps %xmm0, x(%rip)
 ; DISABLE-VZ-NEXT:    callq do_sse
-; DISABLE-VZ-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; DISABLE-VZ-NEXT:    vmovaps %xmm0, x(%rip)
 ; DISABLE-VZ-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
-; DISABLE-VZ-NEXT:    addq $56, %rsp
+; DISABLE-VZ-NEXT:    addq $40, %rsp
 ; DISABLE-VZ-NEXT:    retq
 ;
 ; BDVER2-LABEL: test01:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    subq $56, %rsp
-; BDVER2-NEXT:    vmovaps {{.*}}(%rip), %xmm0
+; BDVER2-NEXT:    subq $40, %rsp
+; BDVER2-NEXT:    vmovaps x(%rip), %xmm0
 ; BDVER2-NEXT:    vmovups %ymm2, (%rsp) # 32-byte Spill
 ; BDVER2-NEXT:    vzeroupper
 ; BDVER2-NEXT:    callq do_sse
-; BDVER2-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; BDVER2-NEXT:    vmovaps %xmm0, x(%rip)
 ; BDVER2-NEXT:    callq do_sse
-; BDVER2-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; BDVER2-NEXT:    vmovaps %xmm0, x(%rip)
 ; BDVER2-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
-; BDVER2-NEXT:    addq $56, %rsp
+; BDVER2-NEXT:    addq $40, %rsp
 ; BDVER2-NEXT:    retq
 ;
 ; BTVER2-LABEL: test01:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    subq $56, %rsp
-; BTVER2-NEXT:    vmovaps {{.*}}(%rip), %xmm0
+; BTVER2-NEXT:    subq $40, %rsp
+; BTVER2-NEXT:    vmovaps x(%rip), %xmm0
 ; BTVER2-NEXT:    vmovups %ymm2, (%rsp) # 32-byte Spill
 ; BTVER2-NEXT:    callq do_sse
-; BTVER2-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; BTVER2-NEXT:    vmovaps %xmm0, x(%rip)
 ; BTVER2-NEXT:    callq do_sse
-; BTVER2-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; BTVER2-NEXT:    vmovaps %xmm0, x(%rip)
 ; BTVER2-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
-; BTVER2-NEXT:    addq $56, %rsp
+; BTVER2-NEXT:    addq $40, %rsp
 ; BTVER2-NEXT:    retq
   %tmp = load <4 x float>, <4 x float>* @x, align 16
   %call = tail call <4 x float> @do_sse(<4 x float> %tmp) nounwind
@@ -145,7 +145,7 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; VZ-NEXT:    # =>This Inner Loop Header: Depth=1
 ; VZ-NEXT:    callq do_sse
 ; VZ-NEXT:    callq do_sse
-; VZ-NEXT:    vmovaps g+{{.*}}(%rip), %xmm0
+; VZ-NEXT:    vmovaps g+16(%rip), %xmm0
 ; VZ-NEXT:    callq do_sse
 ; VZ-NEXT:    decl %ebx
 ; VZ-NEXT:    jne .LBB3_3
@@ -174,7 +174,7 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; DISABLE-VZ-NEXT:    # =>This Inner Loop Header: Depth=1
 ; DISABLE-VZ-NEXT:    callq do_sse
 ; DISABLE-VZ-NEXT:    callq do_sse
-; DISABLE-VZ-NEXT:    vmovaps g+{{.*}}(%rip), %xmm0
+; DISABLE-VZ-NEXT:    vmovaps g+16(%rip), %xmm0
 ; DISABLE-VZ-NEXT:    callq do_sse
 ; DISABLE-VZ-NEXT:    decl %ebx
 ; DISABLE-VZ-NEXT:    jne .LBB3_3
@@ -203,7 +203,7 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; BDVER2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; BDVER2-NEXT:    callq do_sse
 ; BDVER2-NEXT:    callq do_sse
-; BDVER2-NEXT:    vmovaps g+{{.*}}(%rip), %xmm0
+; BDVER2-NEXT:    vmovaps g+16(%rip), %xmm0
 ; BDVER2-NEXT:    callq do_sse
 ; BDVER2-NEXT:    decl %ebx
 ; BDVER2-NEXT:    jne .LBB3_3
@@ -232,7 +232,7 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; BTVER2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; BTVER2-NEXT:    callq do_sse
 ; BTVER2-NEXT:    callq do_sse
-; BTVER2-NEXT:    vmovaps g+{{.*}}(%rip), %xmm0
+; BTVER2-NEXT:    vmovaps g+16(%rip), %xmm0
 ; BTVER2-NEXT:    callq do_sse
 ; BTVER2-NEXT:    decl %ebx
 ; BTVER2-NEXT:    jne .LBB3_3

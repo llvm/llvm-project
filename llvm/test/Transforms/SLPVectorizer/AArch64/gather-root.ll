@@ -187,9 +187,9 @@ define void @PR32038(i32 %n) {
 ; MAX-COST:       for.body:
 ; MAX-COST-NEXT:    [[P17:%.*]] = phi i32 [ [[P34:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; MAX-COST-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i32 1
-; MAX-COST-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i1> [[TMP1]], <2 x i1> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; MAX-COST-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i1> [[TMP1]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; MAX-COST-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i1> poison, <4 x i1> [[TMP5]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; MAX-COST-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i1> [[TMP3]], <2 x i1> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; MAX-COST-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i1> [[TMP3]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; MAX-COST-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i1> [[TMP6]], <4 x i1> [[TMP7]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; MAX-COST-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP8]], <4 x i32> <i32 -720, i32 -720, i32 -720, i32 -720>, <4 x i32> <i32 -80, i32 -80, i32 -80, i32 -80>
 ; MAX-COST-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP3]], i32 0

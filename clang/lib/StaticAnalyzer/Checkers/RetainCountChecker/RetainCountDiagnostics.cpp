@@ -980,13 +980,12 @@ void RefLeakReport::findBindingToReport(CheckerContext &Ctx,
     // got from one to another.
     //
     // NOTE: We use the actual SVal stored in AllocBindingToReport here because
-    //       FindLastStoreBRVisitor compares SVal's and it can get trickier for
+    //       trackStoredValue compares SVal's and it can get trickier for
     //       something like derived regions if we want to construct SVal from
     //       Sym. Instead, we take the value that is definitely stored in that
-    //       region, thus guaranteeing that FindLastStoreBRVisitor will work.
-    addVisitor<FindLastStoreBRVisitor>(
-        AllVarBindings[0].second.castAs<KnownSVal>(), AllocBindingToReport,
-        false, bugreporter::TrackingKind::Thorough);
+    //       region, thus guaranteeing that trackStoredValue will work.
+    bugreporter::trackStoredValue(AllVarBindings[0].second.castAs<KnownSVal>(),
+                                  AllocBindingToReport, *this);
   } else {
     AllocBindingToReport = AllocFirstBinding;
   }

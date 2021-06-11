@@ -14,9 +14,9 @@ func @bar() {
   return
 }
 
-// BEFORE: *** IR Dump Before{{.*}}CSE ***
+// BEFORE: // -----// IR Dump Before{{.*}}CSE //----- //
 // BEFORE-NEXT: func @foo()
-// BEFORE: *** IR Dump Before{{.*}}CSE ***
+// BEFORE: // -----// IR Dump Before{{.*}}CSE //----- //
 // BEFORE-NEXT: func @bar()
-// BEFORE-NOT: *** IR Dump Before{{.*}}Canonicalizer ***
-// BEFORE-NOT: *** IR Dump After
+// BEFORE-NOT: // -----// IR Dump Before{{.*}}Canonicalizer //----- //
+// BEFORE-NOT: // -----// IR Dump After

@@ -80,6 +80,10 @@ namespace vector {
 class VectorDialect;
 } // end namespace vector
 
+namespace arm_neon {
+class ArmNeonDialect;
+} // end namespace arm_neon
+
 #define GEN_PASS_CLASSES
 #include "mlir/Conversion/Passes.h.inc"
 

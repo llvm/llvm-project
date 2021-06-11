@@ -276,6 +276,11 @@ Other
  This option allows for MRI scripts to be read through the standard input
  stream. No other options are compatible with this option.
 
+.. option:: --rsp-quoting=<type>
+ This option selects the quoting style ``<type>`` for response files, either 
+ ``posix`` or ``windows``. The default when on Windows is ``windows``, otherwise the
+ default is ``posix``.
+
 .. option:: --version
 
  Display the version of the :program:`llvm-ar` executable.

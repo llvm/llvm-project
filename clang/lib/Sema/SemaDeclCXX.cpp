@@ -908,8 +908,8 @@ static bool checkSimpleDecomposition(
   if ((int64_t)Bindings.size() != NumElems) {
     S.Diag(Src->getLocation(), diag::err_decomp_decl_wrong_number_bindings)
         << DecompType << (unsigned)Bindings.size()
-        << (unsigned)NumElems.getLimitedValue(UINT_MAX) << NumElems.toString(10)
-        << (NumElems < Bindings.size());
+        << (unsigned)NumElems.getLimitedValue(UINT_MAX)
+        << toString(NumElems, 10) << (NumElems < Bindings.size());
     return true;
   }
 
@@ -1164,7 +1164,7 @@ static bool checkTupleLikeDecomposition(Sema &S,
     S.Diag(Src->getLocation(), diag::err_decomp_decl_wrong_number_bindings)
         << DecompType << (unsigned)Bindings.size()
         << (unsigned)TupleSize.getLimitedValue(UINT_MAX)
-        << TupleSize.toString(10) << (TupleSize < Bindings.size());
+        << toString(TupleSize, 10) << (TupleSize < Bindings.size());
     return true;
   }
 

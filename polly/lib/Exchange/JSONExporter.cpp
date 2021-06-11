@@ -219,7 +219,7 @@ static bool importContext(Scop &S, const json::Object &JScop) {
                                  JScop.getString("context").getValue().str()};
 
   // Check whether the context was parsed successfully.
-  if (!NewContext) {
+  if (NewContext.is_null()) {
     errs() << "The context was not parsed successfully by ISL.\n";
     return false;
   }

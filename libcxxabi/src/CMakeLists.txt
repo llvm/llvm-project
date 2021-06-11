@@ -201,10 +201,6 @@ if (LIBCXXABI_ENABLE_SHARED)
                           DEFINE_SYMBOL
                             "")
 
-  if(LIBCXXABI_ENABLE_PIC)
-    set_target_properties(cxxabi_shared PROPERTIES POSITION_INDEPENDENT_CODE ON)
-  endif()
-
   list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_shared")
   if (LIBCXXABI_INSTALL_SHARED_LIBRARY)
     list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_shared")
@@ -261,10 +257,6 @@ if (LIBCXXABI_ENABLE_STATIC)
                             "${LIBCXXABI_LINK_FLAGS}"
                           OUTPUT_NAME
                             "c++abi")
-
-  if(LIBCXXABI_ENABLE_PIC)
-    set_target_properties(cxxabi_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
-  endif()
 
   if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
     append_flags_if_supported(CXXABI_STATIC_LIBRARY_FLAGS -fvisibility=hidden)

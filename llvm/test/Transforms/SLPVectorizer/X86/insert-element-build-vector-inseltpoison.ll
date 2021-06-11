@@ -197,12 +197,10 @@ define <4 x float> @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> 
 ; doesn't matter
 define <4 x float> @simple_select_insert_out_of_order(<4 x float> %a, <4 x float> %b, <4 x i32> %c) #0 {
 ; CHECK-LABEL: @simple_select_insert_out_of_order(
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[C:%.*]], <4 x i32> poison, <4 x i32> <i32 2, i32 1, i32 0, i32 3>
-; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <4 x float> [[A:%.*]], <4 x float> poison, <4 x i32> <i32 2, i32 1, i32 0, i32 3>
-; CHECK-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <4 x float> [[B:%.*]], <4 x float> poison, <4 x i32> <i32 2, i32 1, i32 0, i32 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[SHUFFLE]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[SHUFFLE1]], <4 x float> [[SHUFFLE2]]
-; CHECK-NEXT:    ret <4 x float> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <4 x i32> [[C:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP1]], <4 x float> [[A:%.*]], <4 x float> [[B:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 2, i32 1, i32 0, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[TMP3]]
 ;
   %c0 = extractelement <4 x i32> %c, i32 0
   %c1 = extractelement <4 x i32> %c, i32 1
@@ -301,9 +299,9 @@ define <4 x float> @simple_select_no_users(<4 x float> %a, <4 x float> %b, <4 x 
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> poison, float [[B2]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> [[TMP14]], float [[B3]], i32 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP6]], <2 x float> [[TMP13]], <2 x float> [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x float> [[TMP11]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x float> [[TMP11]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[RB2:%.*]] = shufflevector <4 x float> poison, <4 x float> [[TMP17]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x float> [[TMP16]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x float> [[TMP16]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[RD1:%.*]] = shufflevector <4 x float> poison, <4 x float> [[TMP18]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    ret <4 x float> [[RD1]]
 ;
@@ -448,14 +446,14 @@ define <4 x float> @reschedule_extract(<4 x float> %a, <4 x float> %b) {
 ; MINTREESIZE-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[A]], i32 0
 ; MINTREESIZE-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> poison, float [[TMP8]], i32 0
 ; MINTREESIZE-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> [[TMP9]], float [[TMP4]], i32 1
-; MINTREESIZE-NEXT:    [[TMP11:%.*]] = insertelement <2 x float> poison, float [[TMP7]], i32 0
-; MINTREESIZE-NEXT:    [[TMP12:%.*]] = insertelement <2 x float> [[TMP11]], float [[TMP3]], i32 1
-; MINTREESIZE-NEXT:    [[TMP13:%.*]] = insertelement <2 x float> poison, float [[TMP6]], i32 0
-; MINTREESIZE-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> [[TMP13]], float [[TMP2]], i32 1
-; MINTREESIZE-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> poison, float [[TMP5]], i32 0
-; MINTREESIZE-NEXT:    [[TMP16:%.*]] = insertelement <2 x float> [[TMP15]], float [[TMP1]], i32 1
-; MINTREESIZE-NEXT:    [[TMP17:%.*]] = fadd <4 x float> [[A]], [[B]]
-; MINTREESIZE-NEXT:    ret <4 x float> [[TMP17]]
+; MINTREESIZE-NEXT:    [[TMP11:%.*]] = fadd <4 x float> [[A]], [[B]]
+; MINTREESIZE-NEXT:    [[TMP12:%.*]] = insertelement <2 x float> poison, float [[TMP7]], i32 0
+; MINTREESIZE-NEXT:    [[TMP13:%.*]] = insertelement <2 x float> [[TMP12]], float [[TMP3]], i32 1
+; MINTREESIZE-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> poison, float [[TMP6]], i32 0
+; MINTREESIZE-NEXT:    [[TMP15:%.*]] = insertelement <2 x float> [[TMP14]], float [[TMP2]], i32 1
+; MINTREESIZE-NEXT:    [[TMP16:%.*]] = insertelement <2 x float> poison, float [[TMP5]], i32 0
+; MINTREESIZE-NEXT:    [[TMP17:%.*]] = insertelement <2 x float> [[TMP16]], float [[TMP1]], i32 1
+; MINTREESIZE-NEXT:    ret <4 x float> [[TMP11]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
   %b0 = extractelement <4 x float> %b, i32 0

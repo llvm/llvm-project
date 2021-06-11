@@ -135,6 +135,20 @@ bool fromJSON(const llvm::json::Value &value, URIForFile &result,
 raw_ostream &operator<<(raw_ostream &os, const URIForFile &value);
 
 //===----------------------------------------------------------------------===//
+// ClientCapabilities
+//===----------------------------------------------------------------------===//
+
+struct ClientCapabilities {
+  /// Client supports hierarchical document symbols.
+  /// textDocument.documentSymbol.hierarchicalDocumentSymbolSupport
+  bool hierarchicalDocumentSymbol = false;
+};
+
+/// Add support for JSON serialization.
+bool fromJSON(const llvm::json::Value &value, ClientCapabilities &result,
+              llvm::json::Path path);
+
+//===----------------------------------------------------------------------===//
 // InitializeParams
 //===----------------------------------------------------------------------===//
 
@@ -149,6 +163,9 @@ bool fromJSON(const llvm::json::Value &value, TraceLevel &result,
               llvm::json::Path path);
 
 struct InitializeParams {
+  /// The capabilities provided by the client (editor or tool).
+  ClientCapabilities capabilities;
+
   /// The initial trace setting. If omitted trace is disabled ('off').
   Optional<TraceLevel> trace;
 };
@@ -224,6 +241,9 @@ bool fromJSON(const llvm::json::Value &value,
 //===----------------------------------------------------------------------===//
 
 struct Position {
+  Position(int line = 0, int character = 0)
+      : line(line), character(character) {}
+
   /// Line position in a document (zero-based).
   int line = 0;
 
@@ -448,6 +468,94 @@ struct Hover {
 
 /// Add support for JSON serialization.
 llvm::json::Value toJSON(const Hover &hover);
+
+//===----------------------------------------------------------------------===//
+// SymbolKind
+//===----------------------------------------------------------------------===//
+
+enum class SymbolKind {
+  File = 1,
+  Module = 2,
+  Namespace = 3,
+  Package = 4,
+  Class = 5,
+  Method = 6,
+  Property = 7,
+  Field = 8,
+  Constructor = 9,
+  Enum = 10,
+  Interface = 11,
+  Function = 12,
+  Variable = 13,
+  Constant = 14,
+  String = 15,
+  Number = 16,
+  Boolean = 17,
+  Array = 18,
+  Object = 19,
+  Key = 20,
+  Null = 21,
+  EnumMember = 22,
+  Struct = 23,
+  Event = 24,
+  Operator = 25,
+  TypeParameter = 26
+};
+
+//===----------------------------------------------------------------------===//
+// DocumentSymbol
+//===----------------------------------------------------------------------===//
+
+/// Represents programming constructs like variables, classes, interfaces etc.
+/// that appear in a document. Document symbols can be hierarchical and they
+/// have two ranges: one that encloses its definition and one that points to its
+/// most interesting range, e.g. the range of an identifier.
+struct DocumentSymbol {
+  DocumentSymbol() = default;
+  DocumentSymbol(DocumentSymbol &&) = default;
+  DocumentSymbol(const Twine &name, SymbolKind kind, Range range,
+                 Range selectionRange)
+      : name(name.str()), kind(kind), range(range),
+        selectionRange(selectionRange) {}
+
+  /// The name of this symbol.
+  std::string name;
+
+  /// More detail for this symbol, e.g the signature of a function.
+  std::string detail;
+
+  /// The kind of this symbol.
+  SymbolKind kind;
+
+  /// The range enclosing this symbol not including leading/trailing whitespace
+  /// but everything else like comments. This information is typically used to
+  /// determine if the clients cursor is inside the symbol to reveal in the
+  /// symbol in the UI.
+  Range range;
+
+  /// The range that should be selected and revealed when this symbol is being
+  /// picked, e.g the name of a function. Must be contained by the `range`.
+  Range selectionRange;
+
+  /// Children of this symbol, e.g. properties of a class.
+  std::vector<DocumentSymbol> children;
+};
+
+/// Add support for JSON serialization.
+llvm::json::Value toJSON(const DocumentSymbol &symbol);
+
+//===----------------------------------------------------------------------===//
+// DocumentSymbolParams
+//===----------------------------------------------------------------------===//
+
+struct DocumentSymbolParams {
+  // The text document to find symbols in.
+  TextDocumentIdentifier textDocument;
+};
+
+/// Add support for JSON serialization.
+bool fromJSON(const llvm::json::Value &value, DocumentSymbolParams &result,
+              llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
 // DiagnosticRelatedInformation

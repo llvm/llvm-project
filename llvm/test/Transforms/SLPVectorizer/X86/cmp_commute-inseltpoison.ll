@@ -272,7 +272,7 @@ define <4 x i32> @fcmp_ord_uno_v4i32(<4 x float> %a, float* %b) {
 ; AVX-NEXT:    [[TMP4:%.*]] = fcmp uno <2 x float> [[TMP2]], [[TMP3]]
 ; AVX-NEXT:    [[C3:%.*]] = fcmp ord float [[A3]], [[B3]]
 ; AVX-NEXT:    [[D0:%.*]] = insertelement <4 x i1> poison, i1 [[C0]], i32 0
-; AVX-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i1> [[TMP4]], <2 x i1> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; AVX-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i1> [[TMP4]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; AVX-NEXT:    [[D21:%.*]] = shufflevector <4 x i1> [[D0]], <4 x i1> [[TMP5]], <4 x i32> <i32 0, i32 4, i32 5, i32 undef>
 ; AVX-NEXT:    [[D3:%.*]] = insertelement <4 x i1> [[D21]], i1 [[C3]], i32 3
 ; AVX-NEXT:    [[R:%.*]] = sext <4 x i1> [[D3]] to <4 x i32>
