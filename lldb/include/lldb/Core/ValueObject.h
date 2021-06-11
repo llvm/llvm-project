@@ -364,7 +364,7 @@ public:
 
   // Subclasses can implement the functions below.
   virtual ConstString GetMangledTypeName() {
-    GetCompilerType().GetMangledTypeName();
+    return GetCompilerType().GetMangledTypeName();
   }
 
   virtual ConstString GetTypeName() { return GetCompilerType().GetTypeName(); }
