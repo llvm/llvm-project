@@ -1890,11 +1890,17 @@ struct XArrayCoorOpConversion
       // No subcomponent.
       if (!coor.lenParams().empty()) {
         // Type parameters. Adjust element size explicitly.
-        if (fir::characterWithDynamicLen(
-                fir::dyn_cast_ptrEleTy(coor.getType()))) {
+        auto eleTy = fir::dyn_cast_ptrEleTy(coor.getType());
+        assert(eleTy && "result must be a refence-like type");
+        if (fir::characterWithDynamicLen(eleTy)) {
           assert(coor.lenParams().size() == 1);
+          auto bitsInChar = lowerTy().getKindMap().getCharacterBitsize(
+              eleTy.cast<fir::CharacterType>().getFKind());
+          auto scaling = genConstantIndex(loc, idxTy, rewriter, bitsInChar / 8);
+          auto scaledBySize =
+              rewriter.create<mlir::LLVM::MulOp>(loc, idxTy, off, scaling);
           off = rewriter.create<mlir::LLVM::MulOp>(
-              loc, idxTy, off, operands[coor.lenParamsOffset()]);
+              loc, idxTy, scaledBySize, operands[coor.lenParamsOffset()]);
         } else {
           TODO(loc, "compute size of derived type with type parameters");
         }
