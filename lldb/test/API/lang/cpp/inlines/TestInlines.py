@@ -19,7 +19,6 @@ class InlinesTestCase(TestBase):
             'inlines.cpp',
             '// Set break point at this line.')
 
-    @expectedFailureAll("llvm.org/pr26710", oslist=["linux"], compiler="gcc")
     def test(self):
         """Test that local variables are visible in expressions."""
         self.build()
