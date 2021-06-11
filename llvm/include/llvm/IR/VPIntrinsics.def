@@ -33,8 +33,9 @@
 #endif
 
 // Register a new VP SDNode and begin its property scope.
-// When the SDNode scope is nested within a VP intrinsic scope, it is implicitly registered as the canonical SDNode for this VP intrinsic.
-// There is one VP intrinsic that maps directly to one SDNode that goes by the
+// When the SDNode scope is nested within a VP intrinsic scope, it is
+// implicitly registered as the canonical SDNode for this VP intrinsic. There
+// is one VP intrinsic that maps directly to one SDNode that goes by the
 // same name.  Since the operands are also the same, we open the property
 // scopes for both the VPIntrinsic and the SDNode at once.
 // \p SDOPC     The SelectionDAG Node id (eg VP_ADD).
