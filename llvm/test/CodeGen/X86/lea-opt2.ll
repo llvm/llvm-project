@@ -182,3 +182,32 @@ endif:
   %sub1 = sub i64 %ld, %b
   ret i64 %sub1
 }
+
+; PR50615
+; The sub register usage of lea dest should block the transformation.
+define void @test9(i64 %p, i64 %s) {
+; CHECK-LABEL: test9:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    leaq (%rsi,%rdi), %rax
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    testl $4095, %eax # imm = 0xFFF
+; CHECK-NEXT:    setne %cl
+; CHECK-NEXT:    shlq $12, %rcx
+; CHECK-NEXT:    addq %rax, %rcx
+; CHECK-NEXT:    andq $-4096, %rcx # imm = 0xF000
+; CHECK-NEXT:    addq %rcx, %rdi
+; CHECK-NEXT:    jmp bar@PLT # TAILCALL
+entry:
+  %add = add i64 %s, %p
+  %rem = and i64 %add, 4095
+  %cmp.not = icmp eq i64 %rem, 0
+  %add18 = select i1 %cmp.not, i64 0, i64 4096
+  %div9 = add i64 %add18, %add
+  %mul = and i64 %div9, -4096
+  %add2 = add i64 %mul, %p
+  tail call void @bar(i64 %add2, i64 %s)
+  ret void
+}
+
+declare void @bar(i64, i64)
+
