@@ -65,22 +65,25 @@ bool AccStructureChecker::IsComputeConstruct(
 }
 
 bool AccStructureChecker::IsInsideComputeConstruct() const {
-  if (dirContext_.size() <= 1)
+  if (dirContext_.size() <= 1) {
     return false;
+  }
 
   // Check all nested context skipping the first one.
   for (std::size_t i = dirContext_.size() - 1; i > 0; --i) {
-    if (IsComputeConstruct(dirContext_[i - 1].directive))
+    if (IsComputeConstruct(dirContext_[i - 1].directive)) {
       return true;
+    }
   }
   return false;
 }
 
 void AccStructureChecker::CheckNotInComputeConstruct() {
-  if (IsInsideComputeConstruct())
+  if (IsInsideComputeConstruct()) {
     context_.Say(GetContext().directiveSource,
         "Directive %s may not be called within a compute region"_err_en_US,
         ContextDirectiveAsFortran());
+  }
 }
 
 void AccStructureChecker::Enter(const parser::AccClause &x) {
@@ -148,7 +151,7 @@ void AccStructureChecker::Leave(
       if (cl != llvm::acc::Clause::ACCC_create &&
           cl != llvm::acc::Clause::ACCC_copyin &&
           cl != llvm::acc::Clause::ACCC_device_resident &&
-          cl != llvm::acc::Clause::ACCC_link)
+          cl != llvm::acc::Clause::ACCC_link) {
         context_.Say(GetContext().directiveSource,
             "%s clause is not allowed on the %s directive in module "
             "declaration "
@@ -156,6 +159,7 @@ void AccStructureChecker::Leave(
             parser::ToUpperCaseLetters(
                 llvm::acc::getOpenACCClauseName(cl).str()),
             ContextDirectiveAsFortran());
+      }
     }
   }
   dirContext_.pop_back();
@@ -368,8 +372,9 @@ void AccStructureChecker::Enter(const parser::AccClause::Copyin &c) {
   const auto &modifierClause{c.v};
   if (const auto &modifier{
           std::get<std::optional<parser::AccDataModifier>>(modifierClause.t)}) {
-    if (CheckAllowedModifier(llvm::acc::Clause::ACCC_copyin))
+    if (CheckAllowedModifier(llvm::acc::Clause::ACCC_copyin)) {
       return;
+    }
     if (modifier->v != parser::AccDataModifier::Modifier::ReadOnly) {
       context_.Say(GetContext().clauseSource,
           "Only the READONLY modifier is allowed for the %s clause "
@@ -387,8 +392,9 @@ void AccStructureChecker::Enter(const parser::AccClause::Copyout &c) {
   const auto &modifierClause{c.v};
   if (const auto &modifier{
           std::get<std::optional<parser::AccDataModifier>>(modifierClause.t)}) {
-    if (CheckAllowedModifier(llvm::acc::Clause::ACCC_copyout))
+    if (CheckAllowedModifier(llvm::acc::Clause::ACCC_copyout)) {
       return;
+    }
     if (modifier->v != parser::AccDataModifier::Modifier::Zero) {
       context_.Say(GetContext().clauseSource,
           "Only the ZERO modifier is allowed for the %s clause "
