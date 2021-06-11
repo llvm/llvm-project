@@ -124,8 +124,8 @@ public:
         includeInSymtab(true), thumb(isThumb),
         referencedDynamically(isReferencedDynamically),
         noDeadStrip(noDeadStrip), weakDef(isWeakDef), external(isExternal) {
-    if (isec)
-      isec->numRefs++;
+    if (auto concatIsec = dyn_cast_or_null<ConcatInputSection>(isec))
+      concatIsec->numRefs++;
   }
 
   bool isWeakDef() const override { return weakDef; }
