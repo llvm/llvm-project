@@ -8,6 +8,37 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// These backends consume the definitions of OpenCL builtin functions in
+// clang/lib/Sema/OpenCLBuiltins.td and produce builtin handling code for
+// inclusion in SemaLookup.cpp, or a test file that calls all declared builtins.
+//
+//===----------------------------------------------------------------------===//
+
+#include "TableGenBackends.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/Error.h"
+#include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/StringMatcher.h"
+#include "llvm/TableGen/TableGenBackend.h"
+
+using namespace llvm;
+
+namespace {
+
+// A list of signatures that are shared by one or more builtin functions.
+struct BuiltinTableEntries {
+  SmallVector<StringRef, 4> Names;
+  std::vector<std::pair<const Record *, unsigned>> Signatures;
+};
+
 // This tablegen backend emits code for checking whether a function is an
 // OpenCL builtin function. If so, all overloads of this function are
 // added to the LookupResult. The generated include file is used by
@@ -53,33 +84,6 @@
 //    One OpenCLTypeStruct can represent multiple types, primarily when using
 //    GenTypes.
 //
-//===----------------------------------------------------------------------===//
-
-#include "TableGenBackends.h"
-#include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/TableGen/Error.h"
-#include "llvm/TableGen/Record.h"
-#include "llvm/TableGen/StringMatcher.h"
-#include "llvm/TableGen/TableGenBackend.h"
-
-using namespace llvm;
-
-namespace {
-
-// A list of signatures that are shared by one or more builtin functions.
-struct BuiltinTableEntries {
-  SmallVector<StringRef, 4> Names;
-  std::vector<std::pair<const Record *, unsigned>> Signatures;
-};
-
 class BuiltinNameEmitter {
 public:
   BuiltinNameEmitter(RecordKeeper &Records, raw_ostream &OS)
