@@ -18,6 +18,7 @@
 #include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/TargetParser.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include <memory>
 
 using namespace clang;
@@ -841,6 +842,18 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       AsanDtorKind = parsedAsanDtorKind;
     }
 
+    if (const auto *Arg = Args.getLastArg(
+            options::OPT_sanitize_address_use_after_return_EQ)) {
+      auto parsedAsanUseAfterReturn =
+          AsanDetectStackUseAfterReturnModeFromString(Arg->getValue());
+      if (parsedAsanUseAfterReturn ==
+          llvm::AsanDetectStackUseAfterReturnMode::Invalid) {
+        TC.getDriver().Diag(clang::diag::err_drv_unsupported_option_argument)
+            << Arg->getOption().getName() << Arg->getValue();
+      }
+      AsanUseAfterReturn = parsedAsanUseAfterReturn;
+    }
+
   } else {
     AsanUseAfterScope = false;
     // -fsanitize=pointer-compare/pointer-subtract requires -fsanitize=address.
@@ -1110,6 +1123,12 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (AsanDtorKind != llvm::AsanDtorKind::Invalid) {
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-address-destructor=" +
                                          AsanDtorKindToString(AsanDtorKind)));
+  }
+
+  if (AsanUseAfterReturn != llvm::AsanDetectStackUseAfterReturnMode::Invalid) {
+    CmdArgs.push_back(Args.MakeArgString(
+        "-fsanitize-address-use-after-return=" +
+        AsanDetectStackUseAfterReturnModeToString(AsanUseAfterReturn)));
   }
 
   if (!HwasanAbi.empty()) {
