@@ -435,22 +435,17 @@ private:
   bool canVectorizeOuterLoop();
 
   /// Return true if all of the instructions in the block can be speculatively
-  /// executed, and record the loads/stores that require masking. If's that
-  /// guard loads can be ignored under "assume safety" unless \p PreserveGuards
-  /// is true. This can happen when we introduces guards for which the original
-  /// "unguarded-loads are safe" assumption does not hold. For example, the
-  /// vectorizer's fold-tail transformation changes the loop to execute beyond
-  /// its original trip-count, under a proper guard, which should be preserved.
+  /// executed, and record the loads/stores that require masking.
   /// \p SafePtrs is a list of addresses that are known to be legal and we know
   /// that we can read from them without segfault.
   /// \p MaskedOp is a list of instructions that have to be transformed into
   /// calls to the appropriate masked intrinsic when the loop is vectorized.
   /// \p ConditionalAssumes is a list of assume instructions in predicated
   /// blocks that must be dropped if the CFG gets flattened.
-  bool blockCanBePredicated(BasicBlock *BB, SmallPtrSetImpl<Value *> &SafePtrs,
-                            SmallPtrSetImpl<const Instruction *> &MaskedOp,
-                            SmallPtrSetImpl<Instruction *> &ConditionalAssumes,
-                            bool PreserveGuards = false) const;
+  bool blockCanBePredicated(
+      BasicBlock *BB, SmallPtrSetImpl<Value *> &SafePtrs,
+      SmallPtrSetImpl<const Instruction *> &MaskedOp,
+      SmallPtrSetImpl<Instruction *> &ConditionalAssumes) const;
 
   /// Updates the vectorization state by adding \p Phi to the inductions list.
   /// This can set \p Phi as the main induction of the loop if \p Phi is a

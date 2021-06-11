@@ -82,13 +82,13 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
 }
 
 COMPILER_RT_VISIBILITY
-void __llvm_profile_merge_from_buffer(const char *ProfileData,
-                                      uint64_t ProfileSize) {
+int __llvm_profile_merge_from_buffer(const char *ProfileData,
+                                     uint64_t ProfileSize) {
   __llvm_profile_data *SrcDataStart, *SrcDataEnd, *SrcData, *DstData;
   __llvm_profile_header *Header = (__llvm_profile_header *)ProfileData;
   uint64_t *SrcCountersStart;
   const char *SrcNameStart;
-  ValueProfData *SrcValueProfDataStart, *SrcValueProfData;
+  const char *SrcValueProfDataStart, *SrcValueProfData;
 
   SrcDataStart =
       (__llvm_profile_data *)(ProfileData + sizeof(__llvm_profile_header));
@@ -96,37 +96,47 @@ void __llvm_profile_merge_from_buffer(const char *ProfileData,
   SrcCountersStart = (uint64_t *)SrcDataEnd;
   SrcNameStart = (const char *)(SrcCountersStart + Header->CountersSize);
   SrcValueProfDataStart =
-      (ValueProfData *)(SrcNameStart + Header->NamesSize +
-                        __llvm_profile_get_num_padding_bytes(
-                            Header->NamesSize));
+      SrcNameStart + Header->NamesSize +
+      __llvm_profile_get_num_padding_bytes(Header->NamesSize);
+  if (SrcNameStart < (const char *)SrcCountersStart)
+    return 1;
 
   for (SrcData = SrcDataStart,
       DstData = (__llvm_profile_data *)__llvm_profile_begin_data(),
       SrcValueProfData = SrcValueProfDataStart;
        SrcData < SrcDataEnd; ++SrcData, ++DstData) {
-    uint64_t *SrcCounters;
     uint64_t *DstCounters = (uint64_t *)DstData->CounterPtr;
-    unsigned I, NC, NVK = 0;
+    unsigned NVK = 0;
 
-    NC = SrcData->NumCounters;
-    SrcCounters = SrcCountersStart +
-                  ((size_t)SrcData->CounterPtr - Header->CountersDelta) /
-                      sizeof(uint64_t);
-    for (I = 0; I < NC; I++)
+    unsigned NC = SrcData->NumCounters;
+    if (NC == 0)
+      return 1;
+    uint64_t *SrcCounters = SrcCountersStart + ((size_t)SrcData->CounterPtr -
+                                                Header->CountersDelta) /
+                                                   sizeof(uint64_t);
+    if (SrcCounters < SrcCountersStart ||
+        (const char *)SrcCounters >= SrcNameStart ||
+        (const char *)(SrcCounters + NC) > SrcNameStart)
+      return 1;
+    for (unsigned I = 0; I < NC; I++)
       DstCounters[I] += SrcCounters[I];
 
-    /* Now merge value profile data.  */
+    /* Now merge value profile data. */
     if (!VPMergeHook)
       continue;
 
-    for (I = 0; I <= IPVK_Last; I++)
+    for (unsigned I = 0; I <= IPVK_Last; I++)
       NVK += (SrcData->NumValueSites[I] != 0);
 
     if (!NVK)
       continue;
 
-    VPMergeHook(SrcValueProfData, DstData);
-    SrcValueProfData = (ValueProfData *)((char *)SrcValueProfData +
-                                         SrcValueProfData->TotalSize);
+    if (SrcValueProfData >= ProfileData + ProfileSize)
+      return 1;
+    VPMergeHook((ValueProfData *)SrcValueProfData, DstData);
+    SrcValueProfData =
+        SrcValueProfData + ((ValueProfData *)SrcValueProfData)->TotalSize;
   }
+
+  return 0;
 }

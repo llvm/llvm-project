@@ -254,7 +254,6 @@ public:
     typedef void                        reference;
     typedef void                        pointer;
 
-    constexpr back_insert_iterator() noexcept = default; // since C++20
     explicit back_insert_iterator(Container& x);  // constexpr in C++20
     back_insert_iterator& operator=(const typename Container::value_type& value);  // constexpr in C++20
     back_insert_iterator& operator*();  // constexpr in C++20
@@ -278,7 +277,6 @@ public:
     typedef void                         reference;
     typedef void                         pointer;
 
-    constexpr front_insert_iterator() noexcept = default; // since C++20
     explicit front_insert_iterator(Container& x);  // constexpr in C++20
     front_insert_iterator& operator=(const typename Container::value_type& value);  // constexpr in C++20
     front_insert_iterator& operator*();  // constexpr in C++20
@@ -303,7 +301,6 @@ public:
     typedef void                   reference;
     typedef void                   pointer;
 
-    insert_iterator() = default; // since C++20
     insert_iterator(Container& x, typename Container::iterator i);  // constexpr in C++20
     insert_iterator& operator=(const typename Container::value_type& value);  // constexpr in C++20
     insert_iterator& operator*();  // constexpr in C++20
@@ -436,7 +433,6 @@ public:
     typedef traits traits_type;
     typedef basic_ostream<charT,traits> ostream_type;
 
-    constexpr ostream_iterator() noexcept = default; // since C++20
     ostream_iterator(ostream_type& s);
     ostream_iterator(ostream_type& s, const charT* delimiter);
     ostream_iterator(const ostream_iterator& x);
@@ -502,7 +498,6 @@ public:
     typedef basic_streambuf<charT, traits> streambuf_type;
     typedef basic_ostream<charT, traits>   ostream_type;
 
-    constexpr ostreambuf_iterator() noexcept = default; // since C++20
     ostreambuf_iterator(ostream_type& s) noexcept;
     ostreambuf_iterator(streambuf_type* s) noexcept;
     ostreambuf_iterator& operator=(charT c);
@@ -849,9 +844,6 @@ public:
     typedef void reference;
     typedef _Container container_type;
 
-#if _LIBCPP_STD_VER > 17
-    _LIBCPP_INLINE_VISIBILITY constexpr back_insert_iterator() noexcept = default;
-#endif
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 explicit back_insert_iterator(_Container& __x) : container(_VSTD::addressof(__x)) {}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 back_insert_iterator& operator=(const typename _Container::value_type& __value_)
         {container->push_back(__value_); return *this;}
@@ -894,9 +886,6 @@ public:
     typedef void reference;
     typedef _Container container_type;
 
-#if _LIBCPP_STD_VER > 17
-    _LIBCPP_INLINE_VISIBILITY constexpr front_insert_iterator() noexcept = default;
-#endif
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 explicit front_insert_iterator(_Container& __x) : container(_VSTD::addressof(__x)) {}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 front_insert_iterator& operator=(const typename _Container::value_type& __value_)
         {container->push_front(__value_); return *this;}
@@ -927,7 +916,7 @@ class _LIBCPP_TEMPLATE_VIS insert_iterator
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 protected:
     _Container* container;
-    typename _Container::iterator iter;
+    typename _Container::iterator iter; // FIXME: `ranges::iterator_t<Container>` in C++20 mode
 public:
     typedef output_iterator_tag iterator_category;
     typedef void value_type;
@@ -940,9 +929,6 @@ public:
     typedef void reference;
     typedef _Container container_type;
 
-#if _LIBCPP_STD_VER > 17
-    _LIBCPP_INLINE_VISIBILITY insert_iterator() = default;
-#endif
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 insert_iterator(_Container& __x, typename _Container::iterator __i)
         : container(_VSTD::addressof(__x)), iter(__i) {}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 insert_iterator& operator=(const typename _Container::value_type& __value_)
@@ -1061,9 +1047,6 @@ private:
     ostream_type* __out_stream_;
     const char_type* __delim_;
 public:
-#if _LIBCPP_STD_VER > 17
-    _LIBCPP_INLINE_VISIBILITY constexpr ostream_iterator() noexcept = default;
-#endif
     _LIBCPP_INLINE_VISIBILITY ostream_iterator(ostream_type& __s) _NOEXCEPT
         : __out_stream_(_VSTD::addressof(__s)), __delim_(nullptr) {}
     _LIBCPP_INLINE_VISIBILITY ostream_iterator(ostream_type& __s, const _CharT* __delimiter) _NOEXCEPT
@@ -1186,9 +1169,6 @@ public:
 private:
     streambuf_type* __sbuf_;
 public:
-#if _LIBCPP_STD_VER > 17
-    _LIBCPP_INLINE_VISIBILITY constexpr ostreambuf_iterator() noexcept = default;
-#endif
     _LIBCPP_INLINE_VISIBILITY ostreambuf_iterator(ostream_type& __s) _NOEXCEPT
         : __sbuf_(__s.rdbuf()) {}
     _LIBCPP_INLINE_VISIBILITY ostreambuf_iterator(streambuf_type* __s) _NOEXCEPT

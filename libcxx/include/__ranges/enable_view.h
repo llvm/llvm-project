@@ -11,9 +11,7 @@
 #define _LIBCPP___RANGES_ENABLE_VIEW_H
 
 #include <__config>
-#include <__ranges/concepts.h>
 #include <concepts>
-
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

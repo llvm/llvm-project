@@ -1488,6 +1488,9 @@ defm cxx_static_destructors : BoolFOption<"c++-static-destructors",
   PosFlag<SetTrue>>;
 def fsymbol_partition_EQ : Joined<["-"], "fsymbol-partition=">, Group<f_Group>,
   Flags<[CC1Option]>, MarshallingInfoString<CodeGenOpts<"SymbolPartition">>;
+def fwarn_stack_size_EQ : Joined<["-"], "fwarn-stack-size=">, Group<f_Group>,
+  Flags<[CC1Option]>,
+  MarshallingInfoInt<CodeGenOpts<"WarnStackSize">, "UINT_MAX">;
 
 defm memory_profile : OptInFFlag<"memory-profile", "Enable", "Disable", " heap memory profiling">;
 def fmemory_profile_EQ : Joined<["-"], "fmemory-profile=">,

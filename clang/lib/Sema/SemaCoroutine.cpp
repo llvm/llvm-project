@@ -994,26 +994,10 @@ StmtResult Sema::BuildCoreturnStmt(SourceLocation Loc, Expr *E,
     E = R.get();
   }
 
-  // Move the return value if we can
-  if (E) {
-    const VarDecl *NRVOCandidate = this->getCopyElisionCandidate(
-        E->getType(), E, CES_ImplicitlyMovableCXX20);
-    if (NRVOCandidate) {
-      InitializedEntity Entity =
-          InitializedEntity::InitializeResult(Loc, E->getType(), NRVOCandidate);
-      ExprResult MoveResult = this->PerformMoveOrCopyInitialization(
-          Entity, NRVOCandidate, E->getType(), E);
-      if (MoveResult.get())
-        E = MoveResult.get();
-    }
-  }
-
-  // FIXME: If the operand is a reference to a variable that's about to go out
-  // of scope, we should treat the operand as an xvalue for this overload
-  // resolution.
   VarDecl *Promise = FSI->CoroutinePromise;
   ExprResult PC;
   if (E && (isa<InitListExpr>(E) || !E->getType()->isVoidType())) {
+    getNamedReturnInfo(E, /*ForceCXX2b=*/true);
     PC = buildPromiseCall(*this, Promise, Loc, "return_value", E);
   } else {
     E = MakeFullDiscardedValueExpr(E).get();
@@ -1570,7 +1554,7 @@ bool CoroutineStmtBuilder::makeGroDeclAndReturnStmt() {
     // Trigger a nice error message.
     InitializedEntity Entity =
         InitializedEntity::InitializeResult(Loc, FnRetType, false);
-    S.PerformMoveOrCopyInitialization(Entity, nullptr, FnRetType, ReturnValue);
+    S.PerformCopyInitialization(Entity, SourceLocation(), ReturnValue);
     noteMemberDeclaredHere(S, ReturnValue, Fn);
     return false;
   }
@@ -1586,8 +1570,8 @@ bool CoroutineStmtBuilder::makeGroDeclAndReturnStmt() {
     return false;
 
   InitializedEntity Entity = InitializedEntity::InitializeVariable(GroDecl);
-  ExprResult Res = S.PerformMoveOrCopyInitialization(Entity, nullptr, GroType,
-                                                     this->ReturnValue);
+  ExprResult Res =
+      S.PerformCopyInitialization(Entity, SourceLocation(), ReturnValue);
   if (Res.isInvalid())
     return false;
 

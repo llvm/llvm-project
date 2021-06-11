@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify %s
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -std=c++98 -fsyntax-only -verify %s
-// RUN: %clang_cc1            -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected,cxx2b    %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx98_20 %s
+// RUN: %clang_cc1 -std=c++98 -fsyntax-only -verify=expected,cxx98_20 %s
+// RUN: %clang_cc1            -fsyntax-only -verify=expected,cxx98_20 %s
 
 struct A {
   template <class T> operator T*();
@@ -67,8 +67,10 @@ struct X0 {
 
   template<typename T> operator const T*() const {
     T x = T();
-    return x; // expected-error{{cannot initialize return object of type 'const char *' with an lvalue of type 'char'}} \
-    // expected-error{{cannot initialize return object of type 'const int *' with an lvalue of type 'int'}}
+    return x; // cxx98_20-error{{cannot initialize return object of type 'const char *' with an lvalue of type 'char'}} \
+    // cxx98_20-error{{cannot initialize return object of type 'const int *' with an lvalue of type 'int'}} \
+    // cxx2b-error{{cannot initialize return object of type 'const char *' with an rvalue of type 'char'}} \
+    // cxx2b-error{{cannot initialize return object of type 'const int *' with an rvalue of type 'int'}}
   }
 };
 

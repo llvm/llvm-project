@@ -98,7 +98,7 @@ static void printIR(Operation *op, bool printModuleScope, raw_ostream &out,
                     OpPrintingFlags flags) {
   // Otherwise, check to see if we are not printing at module scope.
   if (!printModuleScope)
-    return op->print(out << "\n",
+    return op->print(out << " //----- //\n",
                      op->getBlock() ? flags.useLocalScope() : flags);
 
   // Otherwise, we are printing at module scope.
@@ -106,7 +106,7 @@ static void printIR(Operation *op, bool printModuleScope, raw_ostream &out,
   if (auto symbolName =
           op->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName()))
     out << ": @" << symbolName.getValue();
-  out << ")\n";
+  out << ") //----- //\n";
 
   // Find the top-level operation.
   auto *topLevelOp = op;
@@ -124,7 +124,7 @@ void IRPrinterInstrumentation::runBeforePass(Pass *pass, Operation *op) {
     beforePassFingerPrints.try_emplace(pass, op);
 
   config->printBeforeIfEnabled(pass, op, [&](raw_ostream &out) {
-    out << formatv("// *** IR Dump Before {0} ***", pass->getName());
+    out << "// -----// IR Dump Before " << pass->getName();
     printIR(op, config->shouldPrintAtModuleScope(), out,
             config->getOpPrintingFlags());
     out << "\n\n";
@@ -154,7 +154,7 @@ void IRPrinterInstrumentation::runAfterPass(Pass *pass, Operation *op) {
   }
 
   config->printAfterIfEnabled(pass, op, [&](raw_ostream &out) {
-    out << formatv("// *** IR Dump After {0} ***", pass->getName());
+    out << "// -----// IR Dump After " << pass->getName();
     printIR(op, config->shouldPrintAtModuleScope(), out,
             config->getOpPrintingFlags());
     out << "\n\n";
@@ -168,7 +168,7 @@ void IRPrinterInstrumentation::runAfterPassFailed(Pass *pass, Operation *op) {
     beforePassFingerPrints.erase(pass);
 
   config->printAfterIfEnabled(pass, op, [&](raw_ostream &out) {
-    out << formatv("// *** IR Dump After {0} Failed ***", pass->getName());
+    out << formatv("// -----// IR Dump After {0} Failed", pass->getName());
     printIR(op, config->shouldPrintAtModuleScope(), out,
             OpPrintingFlags().printGenericOpForm());
     out << "\n\n";

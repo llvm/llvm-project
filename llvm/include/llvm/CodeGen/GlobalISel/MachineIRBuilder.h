@@ -1868,6 +1868,11 @@ public:
     return buildInstr(TargetOpcode::G_ROTL, {Dst}, {Src, Amt});
   }
 
+  /// Build and insert \p Dst = G_BITREVERSE \p Src
+  MachineInstrBuilder buildBitReverse(const DstOp &Dst, const SrcOp &Src) {
+    return buildInstr(TargetOpcode::G_BITREVERSE, {Dst}, {Src});
+  }
+
   virtual MachineInstrBuilder buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
                                          ArrayRef<SrcOp> SrcOps,
                                          Optional<unsigned> Flags = None);

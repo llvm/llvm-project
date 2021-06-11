@@ -787,6 +787,8 @@ void CodeGenModule::Release() {
         getCodeGenOpts().StackProtectorGuardOffset);
   if (getCodeGenOpts().StackAlignment)
     getModule().setOverrideStackAlignment(getCodeGenOpts().StackAlignment);
+  if (getCodeGenOpts().WarnStackSize != UINT_MAX)
+    getModule().setWarnStackSize(getCodeGenOpts().WarnStackSize);
 
   getTargetCodeGenInfo().emitTargetMetadata(*this, MangledDeclNames);
 
