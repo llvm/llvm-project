@@ -370,12 +370,13 @@ Value *createSimpleTargetReduction(IRBuilderBase &B,
 /// required to implement the reduction.
 /// Fast-math-flags are propagated using the RecurrenceDescriptor.
 Value *createTargetReduction(IRBuilderBase &B, const TargetTransformInfo *TTI,
-                             RecurrenceDescriptor &Desc, Value *Src);
+                             const RecurrenceDescriptor &Desc, Value *Src);
 
 /// Create an ordered reduction intrinsic using the given recurrence
 /// descriptor \p Desc.
-Value *createOrderedReduction(IRBuilderBase &B, RecurrenceDescriptor &Desc,
-                              Value *Src, Value *Start);
+Value *createOrderedReduction(IRBuilderBase &B,
+                              const RecurrenceDescriptor &Desc, Value *Src,
+                              Value *Start);
 
 /// Get the intersection (logical and) of all of the potential IR flags
 /// of each scalar operation (VL) that will be converted into a vector (I).
