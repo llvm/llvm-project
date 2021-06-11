@@ -41,6 +41,13 @@ void HostInfoLinux::Initialize(SharedLibraryDirectoryHelper *helper) {
   g_fields = new HostInfoLinuxFields();
 }
 
+void HostInfoLinux::Terminate() {
+  assert(g_fields && "Missing call to Initialize?");
+  delete g_fields;
+  g_fields = nullptr;
+  HostInfoBase::Terminate();
+}
+
 llvm::VersionTuple HostInfoLinux::GetOSVersion() {
   assert(g_fields && "Missing call to Initialize?");
   llvm::call_once(g_fields->m_os_version_once_flag, []() {
