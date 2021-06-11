@@ -108,13 +108,17 @@ void CStringInputSection::splitIntoPieces() {
   }
 }
 
-const StringPiece &CStringInputSection::getStringPiece(uint64_t off) const {
+StringPiece &CStringInputSection::getStringPiece(uint64_t off) {
   if (off >= data.size())
     fatal(toString(this) + ": offset is outside the section");
 
   auto it =
       partition_point(pieces, [=](StringPiece p) { return p.inSecOff <= off; });
   return it[-1];
+}
+
+const StringPiece &CStringInputSection::getStringPiece(uint64_t off) const {
+  return const_cast<CStringInputSection *>(this)->getStringPiece(off);
 }
 
 uint64_t CStringInputSection::getFileOffset(uint64_t off) const {
@@ -132,7 +136,23 @@ WordLiteralInputSection::WordLiteralInputSection(StringRef segname,
                                                  InputFile *file,
                                                  ArrayRef<uint8_t> data,
                                                  uint32_t align, uint32_t flags)
-    : InputSection(WordLiteralKind, segname, name, file, data, align, flags) {}
+    : InputSection(WordLiteralKind, segname, name, file, data, align, flags) {
+  switch (sectionType(flags)) {
+  case S_4BYTE_LITERALS:
+    power2LiteralSize = 2;
+    break;
+  case S_8BYTE_LITERALS:
+    power2LiteralSize = 3;
+    break;
+  case S_16BYTE_LITERALS:
+    power2LiteralSize = 4;
+    break;
+  default:
+    llvm_unreachable("invalid literal section type");
+  }
+
+  live.resize(data.size() >> power2LiteralSize, !config->deadStrip);
+}
 
 uint64_t WordLiteralInputSection::getFileOffset(uint64_t off) const {
   return parent->fileOff + getOffset(off);
