@@ -378,50 +378,6 @@ const Expr *getDerefExpr(const Stmt *S);
 
 } // namespace bugreporter
 
-/// Finds last store into the given region,
-/// which is different from a given symbolic value.
-class FindLastStoreBRVisitor final
-    : public bugreporter::TrackingBugReporterVisitor {
-  const MemRegion *R;
-  SVal V;
-  bool Satisfied = false;
-
-  /// If the visitor is tracking the value directly responsible for the
-  /// bug, we are going to employ false positive suppression.
-  bool EnableNullFPSuppression;
-
-  using TrackingKind = bugreporter::TrackingKind;
-  TrackingKind TKind;
-  const StackFrameContext *OriginSFC;
-
-public:
-  /// \param V We're searching for the store where \c R received this value.
-  /// \param R The region we're tracking.
-  /// \param TKind May limit the amount of notes added to the bug report.
-  /// \param OriginSFC Only adds notes when the last store happened in a
-  ///        different stackframe to this one. Disregarded if the tracking kind
-  ///        is thorough.
-  ///        This is useful, because for non-tracked regions, notes about
-  ///        changes to its value in a nested stackframe could be pruned, and
-  ///        this visitor can prevent that without polluting the bugpath too
-  ///        much.
-  FindLastStoreBRVisitor(bugreporter::TrackerRef ParentTracker, KnownSVal V,
-                         const MemRegion *R, bool InEnableNullFPSuppression,
-                         TrackingKind TKind,
-                         const StackFrameContext *OriginSFC = nullptr)
-      : TrackingBugReporterVisitor(ParentTracker), R(R), V(V),
-        EnableNullFPSuppression(InEnableNullFPSuppression), TKind(TKind),
-        OriginSFC(OriginSFC) {
-    assert(R);
-  }
-
-  void Profile(llvm::FoldingSetNodeID &ID) const override;
-
-  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
-                                   BugReporterContext &BRC,
-                                   PathSensitiveBugReport &BR) override;
-};
-
 class TrackConstraintBRVisitor final : public BugReporterVisitor {
   DefinedSVal Constraint;
   bool Assumption;
