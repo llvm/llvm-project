@@ -24,9 +24,12 @@ add_public_tablegen_target(MLIRBuiltinOpsIncGen)
 set(LLVM_TARGET_DEFINITIONS BuiltinTypes.td)
 mlir_tablegen(BuiltinTypes.h.inc -gen-typedef-decls)
 mlir_tablegen(BuiltinTypes.cpp.inc -gen-typedef-defs)
+add_public_tablegen_target(MLIRBuiltinTypesIncGen)
+
+set(LLVM_TARGET_DEFINITIONS BuiltinTypeInterfaces.td)
 mlir_tablegen(BuiltinTypeInterfaces.h.inc -gen-type-interface-decls)
 mlir_tablegen(BuiltinTypeInterfaces.cpp.inc -gen-type-interface-defs)
-add_public_tablegen_target(MLIRBuiltinTypesIncGen)
+add_public_tablegen_target(MLIRBuiltinTypeInterfacesIncGen)
 
 set(LLVM_TARGET_DEFINITIONS TensorEncoding.td)
 mlir_tablegen(TensorEncInterfaces.h.inc -gen-attr-interface-decls)
