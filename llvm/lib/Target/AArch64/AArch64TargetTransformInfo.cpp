@@ -1664,8 +1664,8 @@ bool AArch64TTIImpl::shouldConsiderAddressTypePromotion(
   return Considerable;
 }
 
-bool AArch64TTIImpl::isLegalToVectorizeReduction(RecurrenceDescriptor RdxDesc,
-                                                 ElementCount VF) const {
+bool AArch64TTIImpl::isLegalToVectorizeReduction(
+    const RecurrenceDescriptor &RdxDesc, ElementCount VF) const {
   if (!VF.isScalable())
     return true;
 
