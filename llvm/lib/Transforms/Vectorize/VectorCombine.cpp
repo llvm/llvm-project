@@ -936,15 +936,10 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     auto *NewLoad = cast<LoadInst>(Builder.CreateLoad(
         FixedVT->getElementType(), GEP, EI->getName() + ".scalar"));
 
-    // Set the alignment for the new load. For index 0, we can use the original
-    // alignment. Otherwise choose the common alignment of the load's align and
-    // the alignment for the scalar type.
-    auto *ConstIdx = dyn_cast<ConstantInt>(EI->getOperand(1));
-    if (ConstIdx && ConstIdx->isNullValue())
-      NewLoad->setAlignment(LI->getAlign());
-    else
-      NewLoad->setAlignment(commonAlignment(
-          DL.getABITypeAlign(NewLoad->getType()), LI->getAlign()));
+    Align ScalarOpAlignment = computeAlignmentAfterScalarization(
+        LI->getAlign(), FixedVT->getElementType(), Idx, DL);
+    NewLoad->setAlignment(ScalarOpAlignment);
+
     replaceValue(*EI, *NewLoad);
   }
 
