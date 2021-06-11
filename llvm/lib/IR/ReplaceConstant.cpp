@@ -20,53 +20,9 @@ namespace llvm {
 // Replace a constant expression by instructions with equivalent operations at
 // a specified location.
 Instruction *createReplacementInstr(ConstantExpr *CE, Instruction *Instr) {
-  IRBuilder<NoFolder> Builder(Instr);
-  unsigned OpCode = CE->getOpcode();
-  switch (OpCode) {
-  case Instruction::GetElementPtr: {
-    SmallVector<Value *, 4> CEOpVec(CE->operands());
-    ArrayRef<Value *> CEOps(CEOpVec);
-    return dyn_cast<Instruction>(
-        Builder.CreateInBoundsGEP(cast<GEPOperator>(CE)->getSourceElementType(),
-                                  CEOps[0], CEOps.slice(1)));
-  }
-  case Instruction::Add:
-  case Instruction::Sub:
-  case Instruction::Mul:
-  case Instruction::UDiv:
-  case Instruction::SDiv:
-  case Instruction::FDiv:
-  case Instruction::URem:
-  case Instruction::SRem:
-  case Instruction::FRem:
-  case Instruction::Shl:
-  case Instruction::LShr:
-  case Instruction::AShr:
-  case Instruction::And:
-  case Instruction::Or:
-  case Instruction::Xor:
-    return dyn_cast<Instruction>(
-        Builder.CreateBinOp((Instruction::BinaryOps)OpCode, CE->getOperand(0),
-                            CE->getOperand(1), CE->getName()));
-  case Instruction::Trunc:
-  case Instruction::ZExt:
-  case Instruction::SExt:
-  case Instruction::FPToUI:
-  case Instruction::FPToSI:
-  case Instruction::UIToFP:
-  case Instruction::SIToFP:
-  case Instruction::FPTrunc:
-  case Instruction::FPExt:
-  case Instruction::PtrToInt:
-  case Instruction::IntToPtr:
-  case Instruction::BitCast:
-  case Instruction::AddrSpaceCast:
-    return dyn_cast<Instruction>(
-        Builder.CreateCast((Instruction::CastOps)OpCode, CE->getOperand(0),
-                           CE->getType(), CE->getName()));
-  default:
-    llvm_unreachable("Unhandled constant expression!\n");
-  }
+  auto *CEInstr = CE->getAsInstruction();
+  CEInstr->insertBefore(Instr);
+  return CEInstr;
 }
 
 void convertConstantExprsToInstructions(Instruction *I, ConstantExpr *CE,
