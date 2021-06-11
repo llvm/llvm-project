@@ -339,8 +339,8 @@ void ConcatOutputSection::writeTo(uint8_t *buf) const {
 // are actually merged. The logic presented here was written without
 // any form of informed research.
 void ConcatOutputSection::mergeFlags(InputSection *input) {
-  uint8_t baseType = flags & SECTION_TYPE;
-  uint8_t inputType = input->flags & SECTION_TYPE;
+  uint8_t baseType = sectionType(flags);
+  uint8_t inputType = sectionType(input->flags);
   if (baseType != inputType)
     error("Cannot merge section " + input->name + " (type=0x" +
           to_hexString(inputType) + ") into " + name + " (type=0x" +
