@@ -2216,13 +2216,19 @@ lowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const
   } else {
     // Local Exec TLS Model
     assert(model == TLSModel::LocalExec);
-    SDValue TGAHi = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0,
-                                               MipsII::MO_TPREL_HI);
-    SDValue TGALo = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0,
-                                               MipsII::MO_TPREL_LO);
-    SDValue Hi = DAG.getNode(MipsISD::TlsHi, DL, PtrVT, TGAHi);
-    SDValue Lo = DAG.getNode(MipsISD::Lo, DL, PtrVT, TGALo);
-    Offset = DAG.getNode(ISD::ADD, DL, PtrVT, Hi, Lo);
+    if (ABI.IsP32()) {
+      SDValue Addr =
+          DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, MipsII::MO_NO_FLAG);
+      Offset = DAG.getNode(MipsISD::FullAddr, DL, PtrVT, Addr);
+    } else {
+      SDValue TGAHi =
+          DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, MipsII::MO_TPREL_HI);
+      SDValue TGALo =
+          DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, MipsII::MO_TPREL_LO);
+      SDValue Hi = DAG.getNode(MipsISD::TlsHi, DL, PtrVT, TGAHi);
+      SDValue Lo = DAG.getNode(MipsISD::Lo, DL, PtrVT, TGALo);
+      Offset = DAG.getNode(ISD::ADD, DL, PtrVT, Hi, Lo);
+    }
   }
 
   SDValue ThreadPointer = DAG.getNode(MipsISD::ThreadPointer, DL, PtrVT);

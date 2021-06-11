@@ -190,6 +190,12 @@ class UnalignedStore<string opstr, SDNode OpNode,
   let mayStore = 1;
 }
 
+class ReadHardwareNM<RegisterOperand CPURegOperand, RegisterOperand RO> :
+  InstNM<(outs CPURegOperand:$rt), (ins RO:$hs, uimm5:$sel),
+  "rdhwr\t$rt, $hs, $sel", []>, InstSize32 {
+  let isCodeGenOnly = 1;
+}
+
 //===----------------------------------------------------------------------===//
 //
 // Instruction Definitions
@@ -253,6 +259,7 @@ def Li_NM : RegImmNM<"li", simm32_relaxed, GPR32NMOpnd>, InstSize48;
 
 def LEA_ADDiu_NM : EffectiveAddressNM<"addiu", GPR32NMOpnd>, InstSize32;
 
+def RDHWR_NM : ReadHardwareNM<GPR32NMOpnd, HWRegsOpnd>;
 
 def ADJCALLSTACKDOWN_NM : AdjustStack<callseq_start>;
 def ADJCALLSTACKUP_NM   : AdjustStack<callseq_end>;
@@ -299,6 +306,8 @@ def : MipsPat<(MipsJmpLink (i32 texternalsym:$dst)),
 
 def : MipsPat<(MipsFullAddr tglobaladdr:$in),
               (Li_NM tglobaladdr:$in)>, ISA_NANOMIPS;
+def : MipsPat<(MipsFullAddr tglobaltlsaddr:$in),
+              (Li_NM tglobaltlsaddr:$in)>, ISA_NANOMIPS;
 def : MipsPat<(MipsFullAddr tblockaddress:$in),
               (Li_NM tblockaddress:$in)>, ISA_NANOMIPS;
 def : MipsPat<(MipsFullAddr tjumptable:$in),
