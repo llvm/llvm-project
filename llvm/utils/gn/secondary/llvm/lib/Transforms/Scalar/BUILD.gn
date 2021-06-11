@@ -24,7 +24,6 @@ static_library("Scalar") {
     "EarlyCSE.cpp",
     "FlattenCFGPass.cpp",
     "Float2Int.cpp",
-    "FunctionSpecialization.cpp",
     "GVN.cpp",
     "GVNHoist.cpp",
     "GVNSink.cpp",
