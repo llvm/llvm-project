@@ -266,20 +266,11 @@ static cl::opt<AsanDetectStackUseAfterReturnMode> ClUseAfterReturn(
     cl::values(
         clEnumValN(AsanDetectStackUseAfterReturnMode::Never, "never",
                    "Never detect stack use after return."),
-        clEnumValN(AsanDetectStackUseAfterReturnMode::Never,
-                   "0", // only needed to keep unit tests passing
-                   "Redundant with 'never'."),
         clEnumValN(
             AsanDetectStackUseAfterReturnMode::Runtime, "runtime",
             "Detect stack use after return if "
             "binary flag 'ASAN_OPTIONS=detect_stack_use_after_return' is set."),
-        clEnumValN(AsanDetectStackUseAfterReturnMode::Runtime,
-                   "1", // only needed to keep unit tests passing
-                   "redundant with 'runtime'."),
         clEnumValN(AsanDetectStackUseAfterReturnMode::Always, "always",
-                   "Always detect stack use after return."),
-        clEnumValN(AsanDetectStackUseAfterReturnMode::Always,
-                   "2", // only needed to keep unit tests passing
                    "Always detect stack use after return.")),
     cl::Hidden, cl::init(AsanDetectStackUseAfterReturnMode::Runtime));
 
