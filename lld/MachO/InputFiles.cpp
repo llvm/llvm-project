@@ -265,16 +265,25 @@ void ObjFile::parseSections(ArrayRef<Section> sections) {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
 
   for (const Section &sec : sections) {
-    if (config->dedupLiterals && sectionType(sec.flags) == S_CSTRING_LITERALS) {
+    if (config->dedupLiterals &&
+        (sectionType(sec.flags) == S_CSTRING_LITERALS ||
+         isWordLiteralSection(sec.flags))) {
       if (sec.nreloc)
         fatal(toString(this) + " contains relocations in " + sec.segname + "," +
               sec.sectname +
               ", so LLD cannot deduplicate literals. Try re-running without "
               "--deduplicate-literals.");
 
-      auto *isec = make<CStringInputSection>();
-      parseSection(this, buf, sec, isec);
-      isec->splitIntoPieces(); // FIXME: parallelize this?
+      InputSection *isec;
+      if (sectionType(sec.flags) == S_CSTRING_LITERALS) {
+        isec = make<CStringInputSection>();
+        parseSection(this, buf, sec, isec);
+        // FIXME: parallelize this?
+        cast<CStringInputSection>(isec)->splitIntoPieces();
+      } else {
+        isec = make<WordLiteralInputSection>();
+        parseSection(this, buf, sec, isec);
+      }
       subsections.push_back({{0, isec}});
     } else {
       auto *isec = make<ConcatInputSection>();

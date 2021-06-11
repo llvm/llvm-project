@@ -22,6 +22,8 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <unordered_map>
+
 namespace llvm {
 class DWARFUnit;
 } // namespace llvm
@@ -297,6 +299,7 @@ public:
   // have a corresponding entry in the LazyPointerSection.
   bool addEntry(Symbol *);
   uint64_t getVA(uint32_t stubsIndex) const {
+    assert(isFinal || target->usesThunks());
     // ConcatOutputSection::finalize() can seek the address of a
     // stub before its address is assigned. Before __stubs is
     // finalized, return a contrived out-of-range address.
@@ -531,9 +534,61 @@ private:
   llvm::StringTableBuilder builder;
 };
 
+/*
+ * This section contains deduplicated literal values. The 16-byte values are
+ * laid out first, followed by the 8- and then the 4-byte ones.
+ */
+class WordLiteralSection : public SyntheticSection {
+public:
+  using UInt128 = std::pair<uint64_t, uint64_t>;
+  // I don't think the standard guarantees the size of a pair, so let's make
+  // sure it's exact -- that way we can construct it via `mmap`.
+  static_assert(sizeof(UInt128) == 16, "");
+
+  WordLiteralSection();
+  void addInput(WordLiteralInputSection *);
+  void writeTo(uint8_t *buf) const override;
+
+  uint64_t getSize() const override {
+    return literal16Map.size() * 16 + literal8Map.size() * 8 +
+           literal4Map.size() * 4;
+  }
+
+  bool isNeeded() const override {
+    return !literal16Map.empty() || !literal4Map.empty() ||
+           !literal8Map.empty();
+  }
+
+  uint64_t getLiteral16Offset(const uint8_t *buf) const {
+    return literal16Map.at(*reinterpret_cast<const UInt128 *>(buf)) * 16;
+  }
+
+  uint64_t getLiteral8Offset(const uint8_t *buf) const {
+    return literal16Map.size() * 16 +
+           literal8Map.at(*reinterpret_cast<const uint64_t *>(buf)) * 8;
+  }
+
+  uint64_t getLiteral4Offset(const uint8_t *buf) const {
+    return literal16Map.size() * 16 + literal8Map.size() * 8 +
+           literal4Map.at(*reinterpret_cast<const uint32_t *>(buf)) * 4;
+  }
+
+private:
+  template <class T> struct Hasher {
+    llvm::hash_code operator()(T v) const { return llvm::hash_value(v); }
+  };
+  // We're using unordered_map instead of DenseMap here because we need to
+  // support all possible integer values -- there are no suitable tombstone
+  // values for DenseMap.
+  std::unordered_map<UInt128, uint64_t, Hasher<UInt128>> literal16Map;
+  std::unordered_map<uint64_t, uint64_t> literal8Map;
+  std::unordered_map<uint32_t, uint64_t> literal4Map;
+};
+
 struct InStruct {
   MachHeaderSection *header = nullptr;
   CStringSection *cStringSection = nullptr;
+  WordLiteralSection *wordLiteralSection = nullptr;
   RebaseSection *rebase = nullptr;
   BindingSection *binding = nullptr;
   WeakBindingSection *weakBinding = nullptr;
