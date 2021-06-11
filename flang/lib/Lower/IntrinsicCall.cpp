@@ -430,6 +430,7 @@ struct IntrinsicLibrary {
   mlir::Value genNint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genPresent(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genProduct(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genRepeat(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genRRSpacing(mlir::Type resultType,
                            llvm::ArrayRef<mlir::Value> args);
   fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -635,6 +636,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"product",
      &I::genProduct,
      {{{"array", asAddr}, {"dim", asValue}, {"mask", asAddr}}},
+     /*isElemental=*/false},
+    {"repeat",
+     &I::genRepeat,
+     {{{"string", asAddr}, {"ncopies", asValue}}},
      /*isElemental=*/false},
     {"rrspacing", &I::genRRSpacing},
     {"scan",
@@ -2071,6 +2076,34 @@ IntrinsicLibrary::genProduct(mlir::Type resultType,
                       resultType, builder, loc, stmtCtx,
                       "unexpected result for Product", args);
 }
+
+// REPEAT
+fir::ExtendedValue
+IntrinsicLibrary::genRepeat(mlir::Type resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  auto string = builder.createBox(loc, args[0]);
+  auto ncopies = fir::getBase(args[1]);
+  // Create mutable fir.box to be passed to the runtime for the result.
+  auto resultMutableBox =
+      Fortran::lower::createTempMutableBox(builder, loc, resultType);
+  auto resultIrBox =
+      Fortran::lower::getMutableIRBox(builder, loc, resultMutableBox);
+  // Call runtime. The runtime is allocating the result.
+  Fortran::lower::genRepeat(builder, loc, resultIrBox, string, ncopies);
+  // Read result from mutable fir.box and add it to the list of temps to be
+  // finalized by the StatementContext.
+  auto res = Fortran::lower::genMutableBoxRead(builder, loc, resultMutableBox);
+  return res.match(
+      [&](const fir::CharBoxValue &box) -> fir::ExtendedValue {
+        addCleanUpForTemp(loc, fir::getBase(box));
+        return box;
+      },
+      [&](const auto &) -> fir::ExtendedValue {
+        fir::emitFatalError(loc, "result of REPEAT is not a scalar character");
+      });
+}
+
 // RRSPACING
 mlir::Value IntrinsicLibrary::genRRSpacing(mlir::Type resultType,
                                            llvm::ArrayRef<mlir::Value> args) {

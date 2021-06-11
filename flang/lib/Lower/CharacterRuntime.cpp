@@ -131,6 +131,20 @@ void Fortran::lower::genIndexDescriptor(Fortran::lower::FirOpBuilder &builder,
                      substringBox, backOpt, kind);
 }
 
+void Fortran::lower::genRepeat(Fortran::lower::FirOpBuilder &builder,
+                               mlir::Location loc, mlir::Value resultBox,
+                               mlir::Value stringBox, mlir::Value ncopies) {
+  auto repeatFunc = getRuntimeFunc<mkRTKey(Repeat)>(loc, builder);
+  auto fTy = repeatFunc.getType();
+  auto sourceFile = Fortran::lower::locationToFilename(builder, loc);
+  auto sourceLine =
+      Fortran::lower::locationToLineNo(builder, loc, fTy.getInput(4));
+
+  auto args = Fortran::lower::createArguments(
+      builder, loc, fTy, resultBox, stringBox, ncopies, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, repeatFunc, args);
+}
+
 void Fortran::lower::genTrim(Fortran::lower::FirOpBuilder &builder,
                              mlir::Location loc, mlir::Value resultBox,
                              mlir::Value stringBox) {
