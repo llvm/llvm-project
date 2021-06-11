@@ -913,6 +913,10 @@ public:
   unsigned getOverrideStackAlignment() const;
   void setOverrideStackAlignment(unsigned Align);
 
+  /// Get/set the stack frame size threshold to warn on.
+  unsigned getWarnStackSize() const;
+  void setWarnStackSize(unsigned Threshold);
+
   /// @name Utility functions for querying and setting the build SDK version
   /// @{
 
