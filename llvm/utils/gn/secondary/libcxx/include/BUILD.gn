@@ -112,6 +112,7 @@ if (current_toolchain == default_toolchain) {
       "__ranges/enable_borrowed_range.h",
       "__ranges/enable_view.h",
       "__ranges/size.h",
+      "__ranges/subrange.h",
       "__ranges/view_interface.h",
       "__split_buffer",
       "__std_stream",
