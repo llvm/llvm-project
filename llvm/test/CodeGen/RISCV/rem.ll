@@ -232,7 +232,7 @@ define i8 @srem8(i8 %a, i8 %b) nounwind {
 ; RV64IM-NEXT:    srai a1, a1, 56
 ; RV64IM-NEXT:    slli a0, a0, 56
 ; RV64IM-NEXT:    srai a0, a0, 56
-; RV64IM-NEXT:    rem a0, a0, a1
+; RV64IM-NEXT:    remw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = srem i8 %a, %b
   ret i8 %1
@@ -328,7 +328,7 @@ define i16 @srem16(i16 %a, i16 %b) nounwind {
 ; RV64IM-NEXT:    srai a1, a1, 48
 ; RV64IM-NEXT:    slli a0, a0, 48
 ; RV64IM-NEXT:    srai a0, a0, 48
-; RV64IM-NEXT:    rem a0, a0, a1
+; RV64IM-NEXT:    remw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = srem i16 %a, %b
   ret i16 %1

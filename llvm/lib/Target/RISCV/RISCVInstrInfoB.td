@@ -1029,7 +1029,7 @@ def : Pat<(riscv_fslw GPR:$rs3, GPR:$rs1, uimm5:$shamt),
 let Predicates = [HasStdExtZbb, IsRV64] in {
 def : PatGpr<riscv_clzw, CLZW>;
 def : PatGpr<riscv_ctzw, CTZW>;
-def : Pat<(i64 (ctpop (and GPR:$rs1, 0xFFFFFFFF))), (CPOPW GPR:$rs1)>;
+def : Pat<(i64 (ctpop (i64 (zexti32 (i64 GPR:$rs1))))), (CPOPW GPR:$rs1)>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
 let Predicates = [HasStdExtZbp, IsRV64] in {

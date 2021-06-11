@@ -854,6 +854,10 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
     Diag(OpLoc, diag::err_omp_simd_region_cannot_use_stmt) << "throw";
 
   if (Ex && !Ex->isTypeDependent()) {
+    QualType ExceptionObjectTy = Context.getExceptionObjectType(Ex->getType());
+    if (CheckCXXThrowOperand(OpLoc, ExceptionObjectTy, Ex))
+      return ExprError();
+
     // Initialize the exception result.  This implicitly weeds out
     // abstract types or types with inaccessible copy constructors.
 
@@ -869,17 +873,15 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
     //       operation from the operand to the exception object (15.1) can be
     //       omitted by constructing the automatic object directly into the
     //       exception object
-    NamedReturnInfo NRInfo =
-        IsThrownVarInScope ? getNamedReturnInfo(Ex) : NamedReturnInfo();
-
-    QualType ExceptionObjectTy = Context.getExceptionObjectType(Ex->getType());
-    if (CheckCXXThrowOperand(OpLoc, ExceptionObjectTy, Ex))
-      return ExprError();
+    const VarDecl *NRVOVariable = nullptr;
+    if (IsThrownVarInScope)
+      NRVOVariable = getCopyElisionCandidate(QualType(), Ex, CES_Strict);
 
     InitializedEntity Entity = InitializedEntity::InitializeException(
         OpLoc, ExceptionObjectTy,
-        /*NRVO=*/NRInfo.isCopyElidable());
-    ExprResult Res = PerformMoveOrCopyInitialization(Entity, NRInfo, Ex);
+        /*NRVO=*/NRVOVariable != nullptr);
+    ExprResult Res = PerformMoveOrCopyInitialization(
+        Entity, NRVOVariable, QualType(), Ex, IsThrownVarInScope);
     if (Res.isInvalid())
       return ExprError();
     Ex = Res.get();

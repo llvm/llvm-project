@@ -30,9 +30,7 @@ if(WIN32)
   set(LLVM_USE_CRT_RELEASE "MT" CACHE STRING "")
 endif()
 
-if(NOT WIN32)
-  set(CLANG_DEFAULT_CXX_STDLIB libc++ CACHE STRING "")
-endif()
+set(CLANG_DEFAULT_CXX_STDLIB libc++ CACHE STRING "")
 if(NOT APPLE)
   # TODO: Remove this once we switch to ld64.lld.
   set(CLANG_DEFAULT_LINKER lld CACHE STRING "")

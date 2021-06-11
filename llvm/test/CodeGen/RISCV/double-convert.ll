@@ -206,7 +206,7 @@ define double @fcvt_d_w_load(i32* %p) nounwind {
 ; RV64IFD-LABEL: fcvt_d_w_load:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    lw a0, 0(a0)
-; RV64IFD-NEXT:    fcvt.d.l ft0, a0
+; RV64IFD-NEXT:    fcvt.d.w ft0, a0
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
 ; RV64IFD-NEXT:    ret
   %a = load i32, i32* %p
@@ -249,7 +249,7 @@ define double @fcvt_d_wu_load(i32* %p) nounwind {
 ; RV64IFD-LABEL: fcvt_d_wu_load:
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    lwu a0, 0(a0)
-; RV64IFD-NEXT:    fcvt.d.lu ft0, a0
+; RV64IFD-NEXT:    fcvt.d.wu ft0, a0
 ; RV64IFD-NEXT:    fmv.x.d a0, ft0
 ; RV64IFD-NEXT:    ret
   %a = load i32, i32* %p

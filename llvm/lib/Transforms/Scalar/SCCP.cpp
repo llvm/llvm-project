@@ -97,9 +97,6 @@ static bool isOverdefined(const ValueLatticeElement &LV) {
   return !LV.isUnknownOrUndef() && !isConstant(LV);
 }
 
-
-
-
 static bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V) {
   Constant *Const = nullptr;
   if (V->getType()->isStructTy()) {
@@ -162,7 +159,7 @@ static bool simplifyInstsInBlock(SCCPSolver &Solver, BasicBlock &BB,
     if (tryToReplaceWithConstant(Solver, &Inst)) {
       if (Inst.isSafeToRemove())
         Inst.eraseFromParent();
-      // Hey, we just changed something!
+
       MadeChanges = true;
       ++InstRemovedStat;
     } else if (isa<SExtInst>(&Inst)) {
