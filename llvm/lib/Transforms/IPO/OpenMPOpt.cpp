@@ -585,7 +585,7 @@ struct OpenMPOpt {
           return ORA << "OpenMP ICV " << ore::NV("OpenMPICV", ICVInfo.Name)
                      << " Value: "
                      << (ICVInfo.InitValue
-                             ? ICVInfo.InitValue->getValue().toString(10, true)
+                             ? toString(ICVInfo.InitValue->getValue(), 10, true)
                              : "IMPLEMENTATION_DEFINED");
         };
 

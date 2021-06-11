@@ -4581,7 +4581,7 @@ std::string CompilerInvocation::getModuleHash() const {
   if (!SanHash.empty())
     code = hash_combine(code, SanHash.Mask);
 
-  return llvm::APInt(64, code).toString(36, /*Signed=*/false);
+  return toString(llvm::APInt(64, code), 36, /*Signed=*/false);
 }
 
 void CompilerInvocation::generateCC1CommandLine(
