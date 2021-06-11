@@ -35,6 +35,7 @@ static_library("IPO") {
     "ForceFunctionAttrs.cpp",
     "FunctionAttrs.cpp",
     "FunctionImport.cpp",
+    "FunctionSpecialization.cpp",
     "GlobalDCE.cpp",
     "GlobalOpt.cpp",
     "GlobalSplit.cpp",
