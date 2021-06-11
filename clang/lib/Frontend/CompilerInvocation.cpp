@@ -4800,7 +4800,7 @@ std::string CompilerInvocation::getModuleHash(DiagnosticsEngine &Diags) const {
     }
   }
 
-  return llvm::APInt(64, code).toString(36, /*Signed=*/false);
+  return toString(llvm::APInt(64, code), 36, /*Signed=*/false);
 }
 
 void CompilerInvocation::generateCC1CommandLine(

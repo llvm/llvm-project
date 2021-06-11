@@ -1107,8 +1107,8 @@ static void checkCaseValue(Sema &S, SourceLocation Loc, const llvm::APSInt &Val,
     // type versus "switch expression cannot have this value". Use proper
     // IntRange checking rather than just looking at the unpromoted type here.
     if (ConvVal != Val)
-      S.Diag(Loc, diag::warn_case_value_overflow) << Val.toString(10)
-                                                  << ConvVal.toString(10);
+      S.Diag(Loc, diag::warn_case_value_overflow) << toString(Val, 10)
+                                                  << toString(ConvVal, 10);
   }
 }
 
@@ -1433,7 +1433,7 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
         if (OverlapStmt) {
           // If we have a duplicate, report it.
           Diag(CR->getLHS()->getBeginLoc(), diag::err_duplicate_case)
-              << OverlapVal.toString(10);
+              << toString(OverlapVal, 10);
           Diag(OverlapStmt->getLHS()->getBeginLoc(),
                diag::note_duplicate_case_prev);
           // FIXME: We really want to remove the bogus case stmt from the
@@ -1449,7 +1449,7 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
       // TODO: it would be nice if we printed enums as enums, chars as
       // chars, etc.
       Diag(CondExpr->getExprLoc(), diag::warn_missing_case_for_condition)
-        << ConstantCondValue.toString(10)
+        << toString(ConstantCondValue, 10)
         << CondExpr->getSourceRange();
     }
 

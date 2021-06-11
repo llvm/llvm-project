@@ -2167,7 +2167,7 @@ static void addConstantComments(const MachineInstr *MI,
       const MachineOperand &DstOp = MI->getOperand(0);
       CS << X86ATTInstPrinter::getRegisterName(DstOp.getReg()) << " = ";
       if (auto *CF = dyn_cast<ConstantFP>(C)) {
-        CS << "0x" << CF->getValueAPF().bitcastToAPInt().toString(16, false);
+        CS << "0x" << toString(CF->getValueAPF().bitcastToAPInt(), 16, false);
         OutStreamer.AddComment(CS.str());
       }
     }

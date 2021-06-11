@@ -9965,14 +9965,14 @@ StmtResult Sema::ActOnOpenMPCriticalDirective(
       Diag(StartLoc, diag::err_omp_critical_with_hint);
       if (HintLoc.isValid())
         Diag(HintLoc, diag::note_omp_critical_hint_here)
-            << 0 << Hint.toString(/*Radix=*/10, /*Signed=*/false);
+            << 0 << toString(Hint, /*Radix=*/10, /*Signed=*/false);
       else
         Diag(StartLoc, diag::note_omp_critical_no_hint) << 0;
       if (const auto *C = Pair.first->getSingleClause<OMPHintClause>()) {
         Diag(C->getBeginLoc(), diag::note_omp_critical_hint_here)
             << 1
-            << C->getHint()->EvaluateKnownConstInt(Context).toString(
-                   /*Radix=*/10, /*Signed=*/false);
+            << toString(C->getHint()->EvaluateKnownConstInt(Context),
+                        /*Radix=*/10, /*Signed=*/false);
       } else {
         Diag(Pair.first->getBeginLoc(), diag::note_omp_critical_no_hint) << 1;
       }
