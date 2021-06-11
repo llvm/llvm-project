@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -94,6 +95,12 @@ void VirtRegMap::assignVirt2Phys(Register virtReg, MCPhysReg physReg) {
 unsigned VirtRegMap::createSpillSlot(const TargetRegisterClass *RC) {
   unsigned Size = TRI->getSpillSize(*RC);
   Align Alignment = TRI->getSpillAlign(*RC);
+  // Set preferred alignment if we are still able to realign the stack
+  auto &ST = MF->getSubtarget();
+  Align CurrentAlign = ST.getFrameLowering()->getStackAlign();
+  if (Alignment > CurrentAlign && !ST.getRegisterInfo()->canRealignStack(*MF)) {
+    Alignment = CurrentAlign;
+  }
   int SS = MF->getFrameInfo().CreateSpillStackObject(Size, Alignment);
   ++NumSpillSlots;
   return SS;
