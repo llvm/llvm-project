@@ -137,17 +137,17 @@ define void @extract_reverse_order(<2 x double>* %ptr.1, <4 x double>* %ptr.2) {
 ; CHECK-LABEL: @extract_reverse_order(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[V_1:%.*]] = load <2 x double>, <2 x double>* [[PTR_1:%.*]], align 8
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[V_1]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, <4 x double>* [[PTR_2:%.*]], align 16
 ; CHECK-NEXT:    [[V2_LANE_2:%.*]] = extractelement <4 x double> [[V_2]], i32 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V2_LANE_2]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V2_LANE_2]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[SHUFFLE]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[V_1]], i32 0
-; CHECK-NEXT:    call void @use(double [[TMP3]])
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[V_1]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[V_1]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[V_1]], i32 0
 ; CHECK-NEXT:    call void @use(double [[TMP4]])
-; CHECK-NEXT:    store <2 x double> [[TMP2]], <2 x double>* [[PTR_1]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[V_1]], i32 1
+; CHECK-NEXT:    call void @use(double [[TMP5]])
+; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
