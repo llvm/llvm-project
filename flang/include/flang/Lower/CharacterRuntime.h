@@ -51,6 +51,15 @@ void genIndexDescriptor(FirOpBuilder &builder, mlir::Location loc,
                         mlir::Value substringBox, mlir::Value backOpt,
                         mlir::Value kind);
 
+/// Generate call to repeat runtime.
+///   \p resultBox must be an unallocated allocatable used for the temporary
+///   result. \p stringBox must be a fir.box describing repeat string argument.
+///   \p ncopies must be a value representing the number of copies.
+/// The runtime will always allocate the resultBox.
+void genRepeat(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,
+               mlir::Value resultBox, mlir::Value stringBox,
+               mlir::Value ncopies);
+
 /// Generate call to trim runtime.
 ///   \p resultBox must be an unallocated allocatable used for the temporary
 ///   result. \p stringBox must be a fir.box describing trim string argument.
