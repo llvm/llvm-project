@@ -431,6 +431,17 @@ TEST_F(SortImportsTestJS, RespectsClangFormatOff) {
              "// clang-format off\n");
 }
 
+TEST_F(SortImportsTestJS, RespectsClangFormatOffInNamedImports) {
+  verifySort("// clang-format off\n"
+             "import {B, A} from './b';\n"
+             "// clang-format on\n"
+             "const x = 1;",
+             "// clang-format off\n"
+             "import {B, A} from './b';\n"
+             "// clang-format on\n"
+             "const x =   1;");
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang
