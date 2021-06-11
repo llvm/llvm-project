@@ -53,6 +53,7 @@ set(files
   __ranges/enable_view.h
   __ranges/view_interface.h
   __ranges/size.h
+  __ranges/subrange.h
   __split_buffer
   __std_stream
   __string

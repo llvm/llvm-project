@@ -101,6 +101,7 @@ namespace std::ranges {
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/enable_view.h>
 #include <__ranges/size.h>
+#include <__ranges/subrange.h>
 #include <__ranges/view_interface.h>
 #include <compare>          // Required by the standard.
 #include <initializer_list> // Required by the standard.
