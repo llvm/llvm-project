@@ -15,11 +15,13 @@
 #include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/Analysis/HeatUtils.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/Dominators.h"
 #include <sstream>
 
 using namespace llvm;
 
-void traverse(Function &F) {
+void traverseCFG(Function &F) {
   outs() << "===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in df_iterator:\n";
   for (auto iterator = df_begin(&F.getEntryBlock()),
@@ -92,7 +94,7 @@ void traverse(Function &F) {
   outs() << "\n\n";
 }
 
-void traverseBasicBlock(Function &F, int nestedLevel) {
+void traverseCheckpoints(Function &F, int nestedLevel) {
   std::string prefix = "";
   for (int i = 0; i < nestedLevel; i++) {
     prefix.append(">>");
@@ -118,7 +120,7 @@ void traverseBasicBlock(Function &F, int nestedLevel) {
         // use this hack to check if function is external
         if (call != nullptr && call->getCalledFunction() != nullptr && !call->getCalledFunction()->empty()) {
           outs() << prefix << "Traversing nestedLevel function " << call->getCalledFunction()->getName() << " Instruction '" << i << "'\n";
-          traverseBasicBlock(*(call->getCalledFunction()), nestedLevel + 1);
+          traverseCheckpoints(*(call->getCalledFunction()), nestedLevel + 1);
           outs() << prefix << "Finished traversing nestedLevel function " << call->getCalledFunction()->getName() << "\n";
         } else {
           // The function is outside of the translation unit, hence it is an exit point
@@ -138,12 +140,10 @@ void traverseBasicBlock(Function &F, int nestedLevel) {
       outs() << prefix << "This basic block:'" << name << "' is thread start checkpoint\n";
       name.append(" - Thread Start");
       isThreadStartCheckpoint = false;
-    }
-    if (isThreadEndCheckpoint) {
+    } else if (isThreadEndCheckpoint) {
       name.append(" - Thread End");
       outs() << prefix << "This basic block:'" << name << "' is thread end checkpoint\n";
-    }
-    if (isExitPointCheckpoint) {
+    } else if (isExitPointCheckpoint) {
       name.append(" - Exit Point");
       outs() << prefix << "This basic block:'" << name << "' is exit-point checkpoint\n";
     }
@@ -154,14 +154,40 @@ void traverseBasicBlock(Function &F, int nestedLevel) {
   }
 }
 
+void findLoopHeader(Function &F) {
+  outs() << "==================================================\n";
+  outs() << "Analyzing loop\n";
+  DominatorTree* DT = new DominatorTree();
+  DT->recalculate(F);
+  // generate the LoopInfoBase for the current function
+  LoopInfoBase<BasicBlock, Loop>* KLoop = new LoopInfoBase<BasicBlock, Loop>();
+  KLoop->releaseMemory();
+  KLoop->analyze(*DT);
+  for (auto &bb : F) {
+    auto loop = KLoop->getLoopFor(&bb);
+    if (loop != nullptr) {
+      auto loopHeader = loop->getHeader();
+      outs() << "Loop header: '" << loopHeader << "' Instructions: '" << *loopHeader << "'\n";
+
+      std::ostringstream st;
+      st << &bb;
+
+      std::string name = st.str();
+      name.append(" - Virtual Checkpoint");
+      loopHeader->setName(name);
+    }
+  }
+}
+
 PreservedAnalyses MyCFGPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (F.getName() == "main") {
     outs() << "==================================================\n";
   }
   outs() << "Function '" << F.getName() << "'\n";
-  traverseBasicBlock(F, 0);
+  traverseCheckpoints(F, 0);
 
-  traverse(F);
+  findLoopHeader(F);
 
+  traverseCFG(F);
   return PreservedAnalyses::all();
 }
