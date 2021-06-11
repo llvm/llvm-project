@@ -40,13 +40,13 @@ define fastcc void @_ZN12_GLOBAL__N_127PolynomialMultiplyRecognize9recognizeEv()
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP10]], i32 3
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <16 x i32> poison, i32 [[SUB_I]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <16 x i32> [[TMP12]], i32 [[SHR_I_I]], i32 1
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> undef, <16 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <16 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <16 x i32> [[TMP13]], <16 x i32> [[TMP14]], <16 x i32> <i32 0, i32 1, i32 16, i32 17, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <16 x i32> [[TMP15]], <16 x i32> [[TMP16]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 16, i32 17, i32 18, i32 19, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <4 x i32> [[TMP9]], <4 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <4 x i32> [[TMP9]], <4 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <16 x i32> [[TMP17]], <16 x i32> [[TMP18]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <16 x i32> [[TMP19]], <16 x i32> [[TMP20]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19>
 ; CHECK-NEXT:    [[TMP22:%.*]] = trunc <16 x i32> [[TMP21]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i32> [[TMP10]], i32 2

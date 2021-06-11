@@ -248,7 +248,7 @@ define <3 x i16> @uadd_sat_v3i16(<3 x i16> %arg0, <3 x i16> %arg1) {
 ; GFX8-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i16> [[ARG1]], <3 x i16> undef, <2 x i32> <i32 0, i32 1>
 ; GFX8-NEXT:    [[TMP2:%.*]] = call <2 x i16> @llvm.uadd.sat.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
 ; GFX8-NEXT:    [[ADD_2:%.*]] = call i16 @llvm.uadd.sat.i16(i16 [[ARG0_2]], i16 [[ARG1_2]])
-; GFX8-NEXT:    [[INS_11:%.*]] = shufflevector <2 x i16> [[TMP2]], <2 x i16> undef, <3 x i32> <i32 0, i32 1, i32 undef>
+; GFX8-NEXT:    [[INS_11:%.*]] = shufflevector <2 x i16> [[TMP2]], <2 x i16> poison, <3 x i32> <i32 0, i32 1, i32 undef>
 ; GFX8-NEXT:    [[INS_2:%.*]] = insertelement <3 x i16> [[INS_11]], i16 [[ADD_2]], i64 2
 ; GFX8-NEXT:    ret <3 x i16> [[INS_2]]
 ;
