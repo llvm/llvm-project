@@ -20,9 +20,10 @@ int main() {
 // location independent.
 
 // CHECK: inc
-// CHECK: print_context.c:3
-// CHECK: 1  : #include
-// CHECK: 2  :
-// CHECK: 3 >: int inc
-// CHECK: 4  :   return
-// CHECK: 5  : }
+// CHECK-NEXT: print_context.c:3
+// CHECK-NEXT: 1  : #include
+// CHECK-NEXT: 2  :
+// CHECK-NEXT: 3 >: int inc
+// CHECK-NEXT: 4  :   return
+// CHECK-NEXT: 5  : }
+// CHECK-NOT:  6
