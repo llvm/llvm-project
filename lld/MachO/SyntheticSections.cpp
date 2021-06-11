@@ -48,9 +48,7 @@ std::vector<SyntheticSection *> macho::syntheticSections;
 
 SyntheticSection::SyntheticSection(const char *segname, const char *name)
     : OutputSection(SyntheticKind, name), segname(segname) {
-  isec = make<ConcatInputSection>();
-  isec->segname = segname;
-  isec->name = name;
+  isec = make<ConcatInputSection>(segname, name);
   isec->parent = this;
   syntheticSections.push_back(this);
 }
@@ -479,9 +477,8 @@ void StubHelperSection::setup() {
                     /*noDeadStrip=*/false);
 }
 
-ImageLoaderCacheSection::ImageLoaderCacheSection() {
-  segname = segment_names::data;
-  name = section_names::data;
+ImageLoaderCacheSection::ImageLoaderCacheSection()
+    : ConcatInputSection(segment_names::data, section_names::data) {
   uint8_t *arr = bAlloc.Allocate<uint8_t>(target->wordSize);
   memset(arr, 0, target->wordSize);
   data = {arr, target->wordSize};

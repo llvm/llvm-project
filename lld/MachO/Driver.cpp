@@ -533,10 +533,9 @@ static void replaceCommonSymbols() {
     if (common == nullptr)
       continue;
 
-    auto *isec = make<ConcatInputSection>();
+    auto *isec =
+        make<ConcatInputSection>(segment_names::data, section_names::common);
     isec->file = common->getFile();
-    isec->name = section_names::common;
-    isec->segname = segment_names::data;
     isec->align = common->align;
     // Casting to size_t will truncate large values on 32-bit architectures,
     // but it's not really worth supporting the linking of 64-bit programs on
