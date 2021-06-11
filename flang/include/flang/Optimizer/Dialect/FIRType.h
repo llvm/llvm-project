@@ -33,6 +33,7 @@ class DialectAsmParser;
 class DialectAsmPrinter;
 class ComplexType;
 class FloatType;
+class ValueRange;
 } // namespace mlir
 
 namespace fir {
@@ -109,6 +110,7 @@ inline bool isa_complex(mlir::Type t) {
   return t.isa<fir::ComplexType>() || t.isa<mlir::ComplexType>();
 }
 
+/// Is `t` a CHARACTER type? Does not check the length.
 inline bool isa_char(mlir::Type t) { return t.isa<fir::CharacterType>(); }
 
 /// Is `t` a trivial intrinsic type? CHARACTER is <em>excluded</em> because it
@@ -118,13 +120,17 @@ inline bool isa_trivial(mlir::Type t) {
          t.isa<fir::LogicalType>();
 }
 
+/// Is `t` a CHARACTER type with a LEN other than 1?
 inline bool isa_char_string(mlir::Type t) {
   if (auto ct = t.dyn_cast_or_null<fir::CharacterType>())
     return ct.getLen() != fir::CharacterType::singleton();
   return false;
 }
 
-/// Is `t` a box type for which it is not possible to deduce the box size.
+/// Is `t` a derived (record) type?
+inline bool isa_derived(mlir::Type t) { return t.isa<fir::RecordType>(); }
+
+/// Is `t` a box type for which it is not possible to deduce the box size?
 /// It is not possible to deduce the size of a box that describes an entity
 /// of unknown rank or type.
 bool isa_unknown_size_box(mlir::Type t);
@@ -173,6 +179,11 @@ bool isUnlimitedPolymorphicType(mlir::Type ty);
 
 /// Return true iff `ty` is a RecordType with members that are allocatable.
 bool isRecordWithAllocatableMember(mlir::Type ty);
+
+/// Apply the components specified by `path` to `rootTy` to determine the type
+/// of the resulting component element. `rootTy` should be an aggregate type.
+/// Returns null on error.
+mlir::Type applyPathToType(mlir::Type rootTy, mlir::ValueRange path);
 
 } // namespace fir
 

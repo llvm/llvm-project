@@ -2201,13 +2201,23 @@ class ArrayExprLowering {
     llvm::SmallVector<mlir::Value> indices;
   };
 
-public:
   using ExtValue = fir::ExtendedValue;
   using IterSpace = const IterationSpace &;      // active iteration space
   using CC = std::function<ExtValue(IterSpace)>; // current continuation
   using PC =
       std::function<IterationSpace(IterSpace)>; // projection continuation
 
+  struct ComponentCollection {
+    ComponentCollection() : pc{[=](IterSpace s) { return s; }} {}
+    ComponentCollection(const ComponentCollection &) = delete;
+    ComponentCollection &operator=(const ComponentCollection &) = delete;
+
+    llvm::SmallVector<mlir::Value> trips;
+    llvm::SmallVector<mlir::Value> components;
+    PC pc;
+  };
+
+public:
   /// Entry point for array assignments. Both the left-hand and right-hand sides
   /// can either be ExtendedValue or evaluate::Expr.
   template <typename TL, typename TR>
@@ -2238,9 +2248,9 @@ public:
     lowerArrayAssignmentLhs(lhs);
     semant = ConstituentSemantics::RefTransparent;
     auto exv = lowerArrayExpression(rhs);
-    builder.create<fir::ArrayMergeStoreOp>(loc, destination, fir::getBase(exv),
-                                           destination.memref(),
-                                           destination.typeparams());
+    builder.create<fir::ArrayMergeStoreOp>(
+        loc, destination, fir::getBase(exv), destination.memref(),
+        destination.slice(), destination.typeparams());
   }
 
   /// Entry point for masked array assignment, Fortran's WHERE. This has the
@@ -2323,7 +2333,8 @@ public:
     auto &builder = converter.getFirOpBuilder();
     auto loc = converter.getCurrentLocation();
     builder.create<fir::ArrayMergeStoreOp>(loc, dest, fir::getBase(loopRes),
-                                           tempRes, dest.typeparams());
+                                           tempRes, dest.slice(),
+                                           dest.typeparams());
 
     auto arrTy =
         fir::dyn_cast_ptrEleTy(tempRes.getType()).cast<fir::SequenceType>();
@@ -2371,7 +2382,11 @@ public:
     auto exv = f(iterSpace);
     auto element = exv.match(
         [&](const fir::UnboxedValue &v) {
-          return builder.createConvert(loc, eleTy, v);
+          return builder.createConvert(loc,
+                                       isAdjustedArrayElementType(eleTy)
+                                           ? builder.getRefType(eleTy)
+                                           : eleTy,
+                                       v);
         },
         [&](const fir::CharBoxValue &v) {
           return builder.createConvert(loc, builder.getRefType(eleTy),
@@ -2615,7 +2630,7 @@ public:
       idxShape.push_back(builder.createConvert(loc, idxTy, s));
     auto shapeTy = fir::ShapeType::get(builder.getContext(), idxShape.size());
     auto shapeOp = builder.create<fir::ShapeOp>(loc, shapeTy, idxShape);
-    mlir::Value slice;
+    mlir::Value slice; // no slice
     return builder.create<fir::ArrayLoadOp>(loc, seqTy, temp, shapeOp, slice,
                                             llvm::None);
   }
@@ -3173,36 +3188,57 @@ public:
     return Fortran::lower::readExtent(builder, getLoc(), x, dim);
   }
 
-  /// Array reference with subscripts. Since this has rank > 0, this is a form
-  /// of an array section (slice).
-  ///
-  /// There are two "slicing" primitives that may be applied on a dimension by
-  /// dimension basis: (1) triple notation and (2) vector addressing. Since
-  /// dimensions can be selectively sliced, some dimensions may contain
-  /// regular scalar expressions and those dimensions do not participate in
-  /// the array expression evaluation.
-  CC genarr(const Fortran::evaluate::ArrayRef &x) {
-    llvm::SmallVector<mlir::Value> trips;
+  // Build a components path for a component that is type Ev::ArrayRef. The base
+  // of `x` must be an Ev::Component, and that base must be a trailing array
+  // expression. The left-most ranked expression will not be part of a sliced
+  // path expression.
+  std::tuple<ExtValue, mlir::Type>
+  buildComponentsPathArrayRef(ComponentCollection &cmptData,
+                              const Fortran::evaluate::ArrayRef &x) {
+    auto loc = getLoc();
+    const auto &arrBase = x.base();
+    assert(!arrBase.IsSymbol());
+    const auto &cmpt = arrBase.GetComponent();
+    assert(cmpt.base().Rank() > 0);
+    llvm::SmallVector<mlir::Value> subs;
+    // All subscripts must be present, complete, and cannot be vectors nor
+    // slice operations.
+    for (const auto &ss : x.subscript())
+      std::visit(
+          Fortran::common::visitors{
+              [&](const Fortran::evaluate::IndirectSubscriptIntegerExpr &ie) {
+                const auto &e = ie.value(); // get rid of bonus dereference
+                if (isArray(e))
+                  fir::emitFatalError(loc,
+                                      "multiple components along single path "
+                                      "generating array subexpressions");
+                // Lower scalar index expression, append it to subs.
+                subs.push_back(fir::getBase(asScalar(e)));
+              },
+              [&](const auto &) {
+                fir::emitFatalError(loc,
+                                    "multiple components along single path "
+                                    "generating array subexpressions");
+              }},
+          ss.u);
+    auto tup = buildComponentsPath(cmptData, cmpt);
+    cmptData.components.append(subs.begin(), subs.end());
+    return tup;
+  }
+
+  std::tuple<ExtValue, mlir::Type>
+  genSliceIndices(ComponentCollection &cmptData,
+                  const Fortran::evaluate::ArrayRef &x) {
     auto loc = getLoc();
     auto idxTy = builder.getIndexType();
     auto one = builder.createIntegerConstant(loc, idxTy, 1);
-    auto arrExt = [&]() {
-      auto arrBase = x.base();
-      if (arrBase.IsSymbol())
-        return symMap.lookupSymbol(arrBase.GetFirstSymbol())
-            .match(
-                [=](const Fortran::lower::SymbolBox::None &) -> ExtValue {
-                  fir::emitFatalError(loc, "symbol not available");
-                },
-                [=](const fir::AbstractBox &x) -> ExtValue {
-                  fir::emitFatalError(loc, "array has incorrect symbol box");
-                },
-                [](const auto &x) -> ExtValue { return x; });
-      llvm::SmallVector<mlir::Value> components;
-      return buildComponentsPath(components, arrBase.GetComponent()).first;
-    }();
+    auto &trips = cmptData.trips;
+    auto base = x.base();
+    ScalarExprLowering sel{loc, converter, symMap, stmtCtx};
+    auto arrExt = base.IsSymbol() ? sel.gen(base.GetFirstSymbol())
+                                  : sel.gen(base.GetComponent());
     LLVM_DEBUG(llvm::dbgs() << "array: " << arrExt << '\n');
-    PC pc = [=](IterSpace s) { return s; };
+    auto &pc = cmptData.pc;
     for (auto sub : llvm::enumerate(x.subscript())) {
       std::visit(
           Fortran::common::visitors{
@@ -3314,7 +3350,40 @@ public:
               }},
           sub.value().u);
     }
-    auto lambda = genSlice(x.base(), trips);
+    auto ty = fir::dyn_cast_ptrOrBoxEleTy(fir::getBase(arrExt).getType());
+    return {arrExt, ty};
+  }
+
+  /// Array reference with subscripts. Since this has rank > 0, this is a form
+  /// of an array section (slice).
+  ///
+  /// There are two "slicing" primitives that may be applied on a dimension by
+  /// dimension basis: (1) triple notation and (2) vector addressing. Since
+  /// dimensions can be selectively sliced, some dimensions may contain
+  /// regular scalar expressions and those dimensions do not participate in
+  /// the array expression evaluation.
+  CC genarr(const Fortran::evaluate::ArrayRef &x) {
+    const auto &arrBase = x.base();
+    if (!arrBase.IsSymbol()) {
+      // `x` is a component with rank.
+      const auto &cmpt = arrBase.GetComponent();
+      if (cmpt.base().Rank() > 0) {
+        // `x` is right of the base/component giving rise to the ranked expr. In
+        // this case, the array in question is to the left of this component.
+        // This component is an intraobject slice.
+        ComponentCollection cmptData;
+        auto tup = buildComponentsPathArrayRef(cmptData, x);
+        auto lambda = genSlicePath(std::get<ExtValue>(tup), cmptData.trips,
+                                   cmptData.components);
+        auto pc = cmptData.pc;
+        return [=](IterSpace iters) { return lambda(pc(iters)); };
+      }
+    }
+    ComponentCollection cmptData;
+    auto tup = genSliceIndices(cmptData, x);
+    auto lambda = genSlicePath(std::get<ExtValue>(tup), cmptData.trips,
+                               cmptData.components);
+    auto pc = cmptData.pc;
     return [=](IterSpace iters) { return lambda(pc(iters)); };
   }
   CC genarr(const Fortran::evaluate::NamedEntity &entity) {
@@ -3337,33 +3406,13 @@ public:
       slice = builder.createSlice(loc, extMemref, sliceTriple, slicePath);
       if (!slicePath.empty()) {
         auto seqTy = arrTy.cast<fir::SequenceType>();
-        auto eleTy = seqTy.getEleTy();
-        for (auto i = slicePath.begin(), e = slicePath.end(); i != e; ++i) {
-          llvm::TypeSwitch<mlir::Type>(eleTy)
-              .Case<fir::ComplexType>([&](fir::ComplexType ty) {
-                eleTy = Fortran::lower::ComplexExprHelper{builder, loc}
-                            .getComplexPartType(ty);
-              })
-              .Case<fir::RecordType>([&](fir::RecordType ty) {
-                auto op = i->getDefiningOp();
-                if (auto off = mlir::dyn_cast<fir::FieldIndexOp>(op)) {
-                  eleTy = ty.getType(off.getFieldName());
-                  return;
-                }
-                auto off = mlir::cast<mlir::ConstantOp>(op);
-                eleTy = ty.getType(fir::toInt(off));
-              })
-              .Case<fir::SequenceType>([&](fir::SequenceType ty) {
-                auto rank = ty.getDimension();
-                if (std::distance(i, e) < rank)
-                  fir::emitFatalError(loc, "slicing path is ill-formed");
-                i += rank;
-                eleTy = ty.getEleTy();
-              })
-              .Default([&](auto) {
-                fir::emitFatalError(loc, "invalid slice subtype");
-              });
-        }
+        auto eleTy = fir::applyPathToType(seqTy.getEleTy(), slicePath);
+        if (!eleTy)
+          fir::emitFatalError(loc, "slicing path is ill-formed");
+        if (auto realTy = eleTy.dyn_cast<fir::RealType>())
+          eleTy = Fortran::lower::convertReal(realTy.getContext(),
+                                              realTy.getFKind());
+
         // create the type of the projected array.
         arrTy = fir::SequenceType::get(seqTy.getShape(), eleTy);
         LLVM_DEBUG(llvm::dbgs()
@@ -3454,19 +3503,22 @@ public:
 
   /// Example: <code>array%baz%qux%waldo</code>
   CC genarr(const Fortran::evaluate::Component &x) {
-    llvm::SmallVector<mlir::Value> components;
-    auto pair = buildComponentsPath(components, x);
-    auto lambda = genPathSlice(pair.first, components);
-    return [=](IterSpace iters) { return lambda(iters); };
+    ComponentCollection cmptData;
+    auto tup = buildComponentsPath(cmptData, x);
+    auto lambda = genSlicePath(std::get<ExtValue>(tup), cmptData.trips,
+                               cmptData.components);
+    auto pc = cmptData.pc;
+    return [=](IterSpace iters) { return lambda(pc(iters)); };
   }
 
   /// The `Ev::Component` structure is tailmost down to head, so the expression
   /// <code>a%b%c</code> will be presented as <code>(component (dataref
   /// (component (dataref (symbol 'a)) (symbol 'b))) (symbol 'c))</code>.
-  std::pair<ExtValue, mlir::Type>
-  buildComponentsPath(llvm::SmallVectorImpl<mlir::Value> &components,
+  std::tuple<ExtValue, mlir::Type>
+  buildComponentsPath(ComponentCollection &cmptData,
                       const Fortran::evaluate::Component &x) {
-    using RT = std::pair<ExtValue, mlir::Type>;
+    using RT = std::tuple<ExtValue, mlir::Type>;
+    auto loc = getLoc();
     auto dr = x.base();
     if (dr.Rank() == 0) {
       auto exv = asScalarRef(x);
@@ -3479,35 +3531,41 @@ public:
       auto recTy = arrTy.getEleTy();
       auto eleTy = recTy.cast<fir::RecordType>().getType(name);
       auto fldTy = fir::FieldType::get(eleTy.getContext());
-      components.push_back(builder.create<fir::FieldIndexOp>(
+      cmptData.components.push_back(builder.create<fir::FieldIndexOp>(
           getLoc(), fldTy, name, recTy, fir::getTypeParams(exv)));
-      return RT{exv, builder.getRefType(
-                         fir::SequenceType::get(arrTy.getShape(), eleTy))};
+      auto refOfTy = eleTy.isa<fir::SequenceType>()
+                         ? eleTy
+                         : fir::SequenceType::get(arrTy.getShape(), eleTy);
+      return RT{exv, builder.getRefType(refOfTy)};
     };
-    return std::visit(Fortran::common::visitors{
-                          [&](const Fortran::evaluate::Component &c) {
-                            auto [exv, refTy] =
-                                buildComponentsPath(components, c);
-                            auto ty = fir::dyn_cast_ptrOrBoxEleTy(refTy);
-                            return addComponent(exv, ty);
-                          },
-                          [&](const Fortran::semantics::SymbolRef &y) {
-                            auto exv = asScalarRef(y);
-                            auto ty = fir::dyn_cast_ptrOrBoxEleTy(
-                                fir::getBase(exv).getType());
-                            return addComponent(exv, ty);
-                          },
-                          [&](const Fortran::evaluate::ArrayRef &r) {
-                            // Must be scalar per C919 and C925
-                            auto exv = asScalarRef(r);
-                            return RT{exv, fir::getBase(exv).getType()};
-                          },
-                          [&](const Fortran::evaluate::CoarrayRef &r) {
-                            // Must be scalar per C919 and C925
-                            auto exv = asScalarRef(r);
-                            return RT{exv, fir::getBase(exv).getType()};
-                          }},
-                      dr.u);
+    return std::visit(
+        Fortran::common::visitors{
+            [&](const Fortran::evaluate::Component &c) {
+              auto [exv, refTy] = buildComponentsPath(cmptData, c);
+              auto ty = fir::dyn_cast_ptrOrBoxEleTy(refTy);
+              return addComponent(exv, ty);
+            },
+            [&](const Fortran::semantics::SymbolRef &y) {
+              auto exv = asScalarRef(y);
+              auto ty =
+                  fir::dyn_cast_ptrOrBoxEleTy(fir::getBase(exv).getType());
+              return addComponent(exv, ty);
+            },
+            [&](const Fortran::evaluate::ArrayRef &r) -> RT {
+              auto arrBase = r.base();
+              if (arrBase.Rank() > 0 && !arrBase.IsSymbol())
+                if (const auto &cmpt = arrBase.GetComponent();
+                    cmpt.base().Rank() > 0) {
+                  auto [exv, refTy] = buildComponentsPathArrayRef(cmptData, r);
+                  auto ty = fir::dyn_cast_ptrOrBoxEleTy(refTy);
+                  return addComponent(exv, ty);
+                }
+              return genSliceIndices(cmptData, r);
+            },
+            [&](const Fortran::evaluate::CoarrayRef &r) -> RT {
+              TODO(loc, "");
+            }},
+        dr.u);
   }
 
   /// Example: <code>array%RE</code>
@@ -3517,30 +3575,22 @@ public:
     auto offset = builder.createIntegerConstant(
         loc, i32Ty,
         x.part() == Fortran::evaluate::ComplexPart::Part::RE ? 0 : 1);
-    auto lambda = genPathSlice(x.complex(), {offset});
+    auto lambda = genSlicePath(x.complex(), {}, {offset});
     return [=](IterSpace iters) { return lambda(iters); };
   }
 
   template <typename A>
-  CC genPathSlice(const A &x, mlir::ValueRange path) {
-    auto saveInSlice = inSlice;
-    inSlice = true;
-    auto sz = slicePath.size();
-    slicePath.append(path.begin(), path.end());
-    auto result = genarr(x);
-    slicePath.resize(sz);
-    inSlice = saveInSlice;
-    return result;
-  }
-  template <typename A>
-  CC genSlice(const A &x, mlir::ValueRange trips) {
-    if (sliceTriple.size() != 0)
+  CC genSlicePath(const A &x, mlir::ValueRange trips, mlir::ValueRange path) {
+    if (!sliceTriple.empty())
       fir::emitFatalError(getLoc(), "multiple slices");
     auto saveInSlice = inSlice;
     inSlice = true;
+    auto sz = slicePath.size();
     sliceTriple.append(trips.begin(), trips.end());
+    slicePath.append(path.begin(), path.end());
     auto result = genarr(x);
     sliceTriple.clear();
+    slicePath.resize(sz);
     inSlice = saveInSlice;
     return result;
   }

@@ -114,7 +114,7 @@ subroutine test_array_comp(t1, t2)
   ! CHECK:   %[[fetch:.*]] = fir.array_fetch %[[x2load]], %[[idx]] : (!fir.array<10xf32>, index) -> f32
   ! CHECK:   %[[update:.*]] = fir.array_update %[[res]], %[[fetch]], %[[idx]] : (!fir.array<10xf32>, f32, index) -> !fir.array<10xf32>
   ! CHECK:   fir.result %[[update]] : !fir.array<10xf32>
-  ! CHECK: fir.array_merge_store %[[x1load]], %[[loop]] to %[[x1coor]] : !fir.ref<!fir.array<10xf32>>
+  ! CHECK: fir.array_merge_store %[[x1load]], %[[loop]] to %[[x1coor]] : !fir.array<10xf32>, !fir.array<10xf32>, !fir.ref<!fir.array<10xf32>>
 
   ! CHECK: fir.field_index m_i, !fir.type<_QFtest_array_compTt{m_x:!fir.array<10xf32>,m_i:i32}>
   t1 = t2

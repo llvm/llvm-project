@@ -14,11 +14,9 @@
 #define FORTRAN_LOWER_SUPPORT_UTILS_H
 
 #include "flang/Common/indirection.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Parser/char-block.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/IR/BuiltinAttributes.h"
 #include "llvm/ADT/StringRef.h"
-#include <cstdint>
 
 //===----------------------------------------------------------------------===//
 // Small inline helper functions to deal with repetitive, clumsy conversions.
@@ -28,13 +26,6 @@
 inline llvm::StringRef toStringRef(const Fortran::parser::CharBlock &cb) {
   return {cb.begin(), cb.size()};
 }
-
-namespace fir {
-/// Return the integer value of a ConstantOp.
-inline std::int64_t toInt(mlir::ConstantOp cop) {
-  return cop.getValue().cast<mlir::IntegerAttr>().getValue().getSExtValue();
-}
-} // namespace fir
 
 /// Template helper to remove Fortran::common::Indirection wrappers.
 template <typename A>

@@ -85,7 +85,7 @@ subroutine arr_ptr_target_write(p)
   ! CHECK-DAG: %[[slice:.*]] = fir.slice %c2{{.*}}, %c601{{.*}}, %c6{{.*}}
   ! CHECK: %[[arrayld:.*]] = fir.array_load %[[boxload]](%[[lb]]) [%[[slice]]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.shift<1>, !fir.slice<1>) -> !fir.array<?xf32>
   p(2:601:6) = x
-  ! CHECK: fir.array_merge_store %[[arrayld]], %{{.*}} to %[[boxload]] : !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  ! CHECK: fir.array_merge_store %[[arrayld]], %{{.*}} to %[[boxload]][%{{.*}}] : !fir.array<?xf32>, !fir.array<?xf32>, !fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.slice<1>
 end subroutine
 
 ! Assigning to contiguous pointer target in array expression
@@ -101,5 +101,5 @@ subroutine arr_contig_ptr_target_write(p)
   ! CHECK-DAG: %[[slice:.*]] = fir.slice %c2{{.*}}, %c601{{.*}}, %c6{{.*}}
   ! CHECK: %[[arrayld:.*]] = fir.array_load %[[addr]](%[[shape]]) [%[[slice]]] : (!fir.ptr<!fir.array<?xf32>>, !fir.shapeshift<1>, !fir.slice<1>) -> !fir.array<?xf32>
   p(2:601:6) = x
-  ! CHECK: fir.array_merge_store %[[arrayld]], %{{.*}} to %[[addr]] : !fir.ptr<!fir.array<?xf32>>
+  ! CHECK: fir.array_merge_store %[[arrayld]], %{{.*}} to %[[addr]][%{{.*}}] : !fir.array<?xf32>, !fir.array<?xf32>, !fir.ptr<!fir.array<?xf32>>, !fir.slice<1>
 end subroutine

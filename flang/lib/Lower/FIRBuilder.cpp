@@ -258,8 +258,10 @@ mlir::Value Fortran::lower::FirOpBuilder::convertWithSemantics(
 mlir::Value Fortran::lower::FirOpBuilder::createConvert(mlir::Location loc,
                                                         mlir::Type toTy,
                                                         mlir::Value val) {
-  if (val.getType() != toTy)
+  if (val.getType() != toTy) {
+    assert(!fir::isa_derived(toTy));
     return create<fir::ConvertOp>(loc, toTy, val);
+  }
   return val;
 }
 

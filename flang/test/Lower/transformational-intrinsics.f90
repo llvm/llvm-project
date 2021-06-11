@@ -88,7 +88,7 @@ subroutine in_assignment(x, y)
     ! CHECK: %[[res_elt:.*]] = fir.array_fetch %[[res_load]], %[[idx]] : (!fir.array<?x!fir.logical<1>>, index) -> !fir.logical<1>
     ! CHECK: fir.array_update %{{.*}} %[[res_elt]], %[[idx]] : (!fir.array<?x!fir.logical<1>>, !fir.logical<1>, index) -> !fir.array<?x!fir.logical<1>>
   ! CHECK: }
-  ! CHECK: fir.array_merge_store %[[y_load]], %[[assign]] to %[[arg1]] : !fir.box<!fir.array<?x!fir.logical<1>>>
+  ! CHECK: fir.array_merge_store %[[y_load]], %[[assign]] to %[[arg1]] : !fir.array<?x!fir.logical<1>>, !fir.array<?x!fir.logical<1>>, !fir.box<!fir.array<?x!fir.logical<1>>>
   y = all(x, 1)
   ! CHECK: fir.freemem %[[res_addr]] : !fir.heap<!fir.array<?x!fir.logical<1>>>
 end subroutine
@@ -119,7 +119,7 @@ subroutine in_elem_expr(x, y, z)
     ! CHECK: %[[neqv:.*]] = fir.convert %[[neqv_i1]] : (i1) -> !fir.logical<1>
     ! CHECK: fir.array_update %{{.*}} %[[neqv]], %[[idx]] : (!fir.array<?x!fir.logical<1>>, !fir.logical<1>, index) -> !fir.array<?x!fir.logical<1>>
   ! CHECK: }
-  ! CHECK: fir.array_merge_store %[[z_load]], %[[elem_expr]] to %[[arg2]] : !fir.box<!fir.array<?x!fir.logical<1>>>
+  ! CHECK: fir.array_merge_store %[[z_load]], %[[elem_expr]] to %[[arg2]] : !fir.array<?x!fir.logical<1>>, !fir.array<?x!fir.logical<1>>, !fir.box<!fir.array<?x!fir.logical<1>>>
   z = y .neqv. all(x, 1)
   ! CHECK: fir.freemem %[[res_addr]] : !fir.heap<!fir.array<?x!fir.logical<1>>>
 end subroutine

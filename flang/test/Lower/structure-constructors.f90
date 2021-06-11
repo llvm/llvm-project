@@ -79,7 +79,7 @@ contains
     ! CHECK:   %[[ival:.*]] = muli %c2{{.*}}, %[[jval]] : i32
     ! CHECK:   %[[iupdate:.*]] = fir.array_update %[[res]], %[[ival]], %[[idx]] : (!fir.array<5xi32>, i32, index) -> !fir.array<5xi32>
     ! CHECK:   fir.result %[[iupdate]] : !fir.array<5xi32>
-    ! CHECK: fir.array_merge_store %[[iload]], %[[loop]] to %[[icoor]] : !fir.ref<!fir.array<5xi32>>
+    ! CHECK: fir.array_merge_store %[[iload]], %[[loop]] to %[[icoor]] : !fir.array<5xi32>, !fir.array<5xi32>, !fir.ref<!fir.array<5xi32>>
 
   end subroutine
 
@@ -101,7 +101,7 @@ contains
     ! CHECK:   %[[fetch:.*]] = fir.array_fetch %[[c1load]], %[[idx]] : (!fir.array<5x!fir.char<1,3>>, index) -> !fir.ref<!fir.char<1,3>>
     ! CHECK:   %[[update:.*]] = fir.array_update %[[res]], %[[fetch]], %[[idx]] : (!fir.array<5x!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>, index) -> !fir.array<5x!fir.char<1,3>>
     ! CHECK:   fir.result %[[update]] : !fir.array<5x!fir.char<1,3>>
-    ! CHECK: fir.array_merge_store %[[cload]], %[[loop]] to %[[ccoor]] : !fir.ref<!fir.array<5x!fir.char<1,3>>>
+    ! CHECK: fir.array_merge_store %[[cload]], %[[loop]] to %[[ccoor]] : !fir.array<5x!fir.char<1,3>>, !fir.array<5x!fir.char<1,3>>, !fir.ref<!fir.array<5x!fir.char<1,3>>>
 
     call print_char_array(t_char_array(x=x, c=c1))
   end subroutine

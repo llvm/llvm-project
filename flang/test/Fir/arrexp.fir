@@ -17,7 +17,7 @@ func @f1(%a : !fir.ref<!fir.array<?x?xf32>>, %n : index, %m : index, %o : index,
     }
     fir.result %r : !fir.array<?x?xf32>
   }
-  fir.array_merge_store %vIn, %r to %a : !fir.ref<!fir.array<?x?xf32>>
+  fir.array_merge_store %vIn, %r to %a : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
   // CHECK: ret void
   return
 }
@@ -41,7 +41,7 @@ func @f2(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.array<?x?xf32>>,
     }
     fir.result %r : !fir.array<?x?xf32>
   }
-  fir.array_merge_store %vIn, %r to %a : !fir.ref<!fir.array<?x?xf32>>
+  fir.array_merge_store %vIn, %r to %a : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
   // CHECK: ret void
   return
 }
@@ -66,7 +66,7 @@ func @f3(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.array<?x?xf32>>,
     }
     fir.result %r : !fir.array<?x?xf32>
   }
-  fir.array_merge_store %vIn, %r to %a : !fir.ref<!fir.array<?x?xf32>>
+  fir.array_merge_store %vIn, %r to %a : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
   // CHECK: ret void
   return
 }
@@ -93,7 +93,7 @@ func @f4(%a : !fir.ref<!fir.array<?x?xf32>>, %b : !fir.ref<!fir.array<?x?xf32>>,
     }
     fir.result %r : !fir.array<?x?xf32>
   }
-  fir.array_merge_store %vIn, %r to %a : !fir.ref<!fir.array<?x?xf32>>
+  fir.array_merge_store %vIn, %r to %a : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>
   // CHECK: ret void
   return
 }
@@ -128,7 +128,7 @@ func @f5(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>,
     %7 = fir.array_update %arg4, %6, %arg3 : (!fir.array<?xf32>, f32, index) -> !fir.array<?xf32>
     fir.result %7 : !fir.array<?xf32>
   }
-  fir.array_merge_store %2, %4 to %arg0 : !fir.box<!fir.array<?xf32>>
+  fir.array_merge_store %2, %4 to %arg0 : !fir.array<?xf32>, !fir.array<?xf32>, !fir.box<!fir.array<?xf32>>
   // CHECK: ret void
   return
 }
@@ -162,7 +162,7 @@ func @f6(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: f32) {
     %8 = fir.array_update %arg3, %7, %arg2 : (!fir.array<?xf32>, f32, index) -> !fir.array<?xf32>
     fir.result %8 : !fir.array<?xf32>
   }
-  fir.array_merge_store %2, %5 to %arg0 : !fir.box<!fir.array<?xf32>>
+  fir.array_merge_store %2, %5 to %arg0[%1] : !fir.array<?xf32>, !fir.array<?xf32>, !fir.box<!fir.array<?xf32>>, !fir.slice<1>
   // CHECK: ret void
   return
 }

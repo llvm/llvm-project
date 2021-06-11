@@ -1699,14 +1699,8 @@ def fir_ArrayUpdateOp : fir_Op<"array_update", [AttrSizedOperandSegments,
   }];
 }
 
-def fir_ArrayMergeStoreOp : fir_Op<"array_merge_store", [
-    TypesMatchWith<"type of 'original' matches element type of 'memref'",
-                     "memref", "original",
-                     "fir::dyn_cast_ptrOrBoxEleTy($_self)">,
-    TypesMatchWith<"type of 'sequence' matches element type of 'memref'",
-                     "memref", "sequence",
-                     "fir::dyn_cast_ptrOrBoxEleTy($_self)">]> {
-
+def fir_ArrayMergeStoreOp : fir_Op<"array_merge_store",
+    [AttrSizedOperandSegments]> {
   let summary = "Store merged array value to memory.";
 
   let description = [{
@@ -1735,19 +1729,16 @@ def fir_ArrayMergeStoreOp : fir_Op<"array_merge_store", [
     fir_SequenceType:$original,
     fir_SequenceType:$sequence,
     Arg<AnyRefOrBox, "", [MemWrite]>:$memref,
+    Optional<fir_SliceType>:$slice,
     Variadic<AnyIntegerType>:$typeparams
   );
 
   let assemblyFormat = [{
-    $original `,` $sequence `to` $memref (`typeparams` $typeparams^)?
-      attr-dict `:` type($memref) (`,` type($typeparams)^)?
+    $original `,` $sequence `to` $memref (`[` $slice^ `]`)? (`typeparams`
+      $typeparams^)? attr-dict `:` type(operands)
   }];
 
-  let verifier = [{
-    if (!isa<ArrayLoadOp>(original().getDefiningOp()))
-       return emitOpError("operand #0 must be result of a fir.array_load op");
-    return mlir::success();
-  }];
+  let verifier = "return ::verify(*this);";
 }
 
 //===----------------------------------------------------------------------===//
