@@ -121,6 +121,7 @@ std::pair<Value *, Value *> X86LowerAMXType::getShape(IntrinsicInst *II,
   default:
     llvm_unreachable("Expect amx intrinsics");
   case Intrinsic::x86_tileloadd64_internal:
+  case Intrinsic::x86_tileloaddt164_internal:
   case Intrinsic::x86_tilestored64_internal: {
     Row = II->getArgOperand(0);
     Col = II->getArgOperand(1);

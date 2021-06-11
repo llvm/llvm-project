@@ -5050,6 +5050,11 @@ let TargetPrefix = "x86" in {
               Intrinsic<[llvm_x86amx_ty],
                         [llvm_i16_ty, llvm_i16_ty, llvm_ptr_ty, llvm_i64_ty],
                         []>;
+  def int_x86_tileloaddt164_internal :
+              GCCBuiltin<"__builtin_ia32_tileloaddt164_internal">,
+              Intrinsic<[llvm_x86amx_ty],
+                        [llvm_i16_ty, llvm_i16_ty, llvm_ptr_ty, llvm_i64_ty],
+                        []>;
   def int_x86_tdpbssd_internal :
               GCCBuiltin<"__builtin_ia32_tdpbssd_internal">,
               Intrinsic<[llvm_x86amx_ty],
