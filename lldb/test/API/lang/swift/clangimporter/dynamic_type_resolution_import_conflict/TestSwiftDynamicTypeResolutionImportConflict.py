@@ -69,4 +69,4 @@ class TestSwiftDynamicTypeResolutionImportConflict(TestBase):
         self.expect("fr v -d run-target -- input",
                     substrs=['(Dylib.LibraryProtocol) input'])
         self.expect("expr -d run-target -- input",
-                    substrs=['(Dylib.LibraryProtocol)'])
+                    substrs=['(a.FromMainModule)'])
