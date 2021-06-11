@@ -274,7 +274,7 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $ymm0
 ; KNL-NEXT:    callq _func8xi1
-; KNL-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; KNL-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; KNL-NEXT:    popq %rax
 ; KNL-NEXT:    retq
 ;
@@ -286,7 +286,7 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; SKX-NEXT:    vpmovm2w %k0, %xmm0
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    callq _func8xi1
-; SKX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; SKX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; SKX-NEXT:    popq %rax
 ; SKX-NEXT:    retq
 ;
@@ -298,7 +298,7 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; KNL_X32-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL_X32-NEXT:    ## kill: def $xmm0 killed $xmm0 killed $ymm0
 ; KNL_X32-NEXT:    calll _func8xi1
-; KNL_X32-NEXT:    vandps LCPI7_0, %xmm0, %xmm0
+; KNL_X32-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; KNL_X32-NEXT:    addl $12, %esp
 ; KNL_X32-NEXT:    retl
 ;
@@ -310,7 +310,7 @@ define <8 x i1> @test7a(<8 x i32>%a, <8 x i32>%b) {
 ; FASTISEL-NEXT:    vpmovm2w %k0, %xmm0
 ; FASTISEL-NEXT:    vzeroupper
 ; FASTISEL-NEXT:    callq _func8xi1
-; FASTISEL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; FASTISEL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FASTISEL-NEXT:    popq %rax
 ; FASTISEL-NEXT:    retq
   %cmpRes = icmp sgt <8 x i32>%a, %b

@@ -11,7 +11,7 @@ define void @func(<4 x float> %vx) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movd %xmm0, %r8d
 ; CHECK-NEXT:    leaq stuff(%r8), %rdi
 ; CHECK-NEXT:    pextrd $1, %xmm0, %eax
@@ -22,7 +22,7 @@ define void @func(<4 x float> %vx) {
 ; CHECK-NEXT:    leaq stuff(%rcx), %rcx
 ; CHECK-NEXT:    leaq stuff+8(%r8), %r8
 ; CHECK-NEXT:    leaq stuff+8(%rax), %r9
-; CHECK-NEXT:    callq toto
+; CHECK-NEXT:    callq toto@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq

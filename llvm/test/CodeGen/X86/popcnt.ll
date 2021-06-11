@@ -253,7 +253,7 @@ define i64 @cnt64(i64 %x) nounwind readnone {
 ; X86-SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; X86-SSE2-NEXT:    psrlw $1, %xmm1
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    psubb %xmm1, %xmm0
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm2
@@ -264,7 +264,7 @@ define i64 @cnt64(i64 %x) nounwind readnone {
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; X86-SSE2-NEXT:    psrlw $4, %xmm1
 ; X86-SSE2-NEXT:    paddb %xmm0, %xmm1
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    pxor %xmm0, %xmm0
 ; X86-SSE2-NEXT:    psadbw %xmm1, %xmm0
 ; X86-SSE2-NEXT:    movd %xmm0, %eax
@@ -749,7 +749,7 @@ define i64 @cnt64_optsize(i64 %x) nounwind readnone optsize {
 ; X86-SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; X86-SSE2-NEXT:    psrlw $1, %xmm1
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    psubb %xmm1, %xmm0
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm2
@@ -760,7 +760,7 @@ define i64 @cnt64_optsize(i64 %x) nounwind readnone optsize {
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; X86-SSE2-NEXT:    psrlw $4, %xmm1
 ; X86-SSE2-NEXT:    paddb %xmm0, %xmm1
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    pxor %xmm0, %xmm0
 ; X86-SSE2-NEXT:    psadbw %xmm1, %xmm0
 ; X86-SSE2-NEXT:    movd %xmm0, %eax
@@ -1178,7 +1178,7 @@ define i64 @cnt64_pgso(i64 %x) nounwind readnone !prof !14 {
 ; X86-SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; X86-SSE2-NEXT:    psrlw $1, %xmm1
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    psubb %xmm1, %xmm0
 ; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm2
@@ -1189,7 +1189,7 @@ define i64 @cnt64_pgso(i64 %x) nounwind readnone !prof !14 {
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; X86-SSE2-NEXT:    psrlw $4, %xmm1
 ; X86-SSE2-NEXT:    paddb %xmm0, %xmm1
-; X86-SSE2-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    pxor %xmm0, %xmm0
 ; X86-SSE2-NEXT:    psadbw %xmm1, %xmm0
 ; X86-SSE2-NEXT:    movd %xmm0, %eax

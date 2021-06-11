@@ -598,12 +598,12 @@ define <8 x i32> @V111(<8 x i32> %in) nounwind uwtable readnone ssp {
 ;
 ; X32-AVX512VL-LABEL: V111:
 ; X32-AVX512VL:       ## %bb.0: ## %entry
-; X32-AVX512VL-NEXT:    vpaddd LCPI29_0{1to8}, %ymm0, %ymm0
+; X32-AVX512VL-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %ymm0, %ymm0
 ; X32-AVX512VL-NEXT:    retl
 ;
 ; X64-AVX512VL-LABEL: V111:
 ; X64-AVX512VL:       ## %bb.0: ## %entry
-; X64-AVX512VL-NEXT:    vpaddd {{.*}}(%rip){1to8}, %ymm0, %ymm0
+; X64-AVX512VL-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; X64-AVX512VL-NEXT:    retq
 entry:
   %g = add <8 x i32> %in, <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
@@ -625,12 +625,12 @@ define <8 x float> @V113(<8 x float> %in) nounwind uwtable readnone ssp {
 ;
 ; X32-AVX512VL-LABEL: V113:
 ; X32-AVX512VL:       ## %bb.0: ## %entry
-; X32-AVX512VL-NEXT:    vaddps LCPI30_0{1to8}, %ymm0, %ymm0
+; X32-AVX512VL-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %ymm0, %ymm0
 ; X32-AVX512VL-NEXT:    retl
 ;
 ; X64-AVX512VL-LABEL: V113:
 ; X64-AVX512VL:       ## %bb.0: ## %entry
-; X64-AVX512VL-NEXT:    vaddps {{.*}}(%rip){1to8}, %ymm0, %ymm0
+; X64-AVX512VL-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; X64-AVX512VL-NEXT:    retq
 entry:
   %g = fadd <8 x float> %in, <float 0xbf80000000000000, float 0xbf80000000000000, float 0xbf80000000000000, float 0xbf80000000000000, float 0xbf80000000000000, float 0xbf80000000000000, float 0xbf80000000000000, float 0xbf80000000000000>

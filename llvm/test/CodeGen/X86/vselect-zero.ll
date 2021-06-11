@@ -145,7 +145,7 @@ define <2 x double> @vsel_nonzero_constants(<2 x double> %x, <2 x double> %y) {
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    movapd %xmm1, %xmm2
 ; SSE2-NEXT:    andnpd %xmm0, %xmm2
-; SSE2-NEXT:    andpd {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    andpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    orpd %xmm2, %xmm1
 ; SSE2-NEXT:    movapd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
@@ -155,7 +155,7 @@ define <2 x double> @vsel_nonzero_constants(<2 x double> %x, <2 x double> %y) {
 ; SSE42-NEXT:    cmplepd %xmm0, %xmm1
 ; SSE42-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
 ; SSE42-NEXT:    movapd %xmm1, %xmm0
-; SSE42-NEXT:    blendvpd %xmm0, {{.*}}(%rip), %xmm2
+; SSE42-NEXT:    blendvpd %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE42-NEXT:    movapd %xmm2, %xmm0
 ; SSE42-NEXT:    retq
 ;
@@ -163,7 +163,7 @@ define <2 x double> @vsel_nonzero_constants(<2 x double> %x, <2 x double> %y) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmplepd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vblendvpd %xmm0, {{.*}}(%rip), %xmm1, %xmm0
+; AVX-NEXT:    vblendvpd %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %cond = fcmp oge <2 x double> %x, %y
   %r = select <2 x i1> %cond, <2 x double> <double 12.0, double -1.0>, <2 x double> <double 42.0, double 0.0>

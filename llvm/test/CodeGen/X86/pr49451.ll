@@ -47,9 +47,9 @@ define void @func_6(i8 %uc_8, i64 %uli_10) nounwind {
 ; X64-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; X64-NEXT:    testb %cl, %cl
 ; X64-NEXT:    addl %esi, %edx
-; X64-NEXT:    movw %dx, {{.*}}(%rip)
+; X64-NEXT:    movw %dx, s_2(%rip)
 ; X64-NEXT:    leal -23090(%rax), %edi
-; X64-NEXT:    movw %di, {{.*}}(%rip)
+; X64-NEXT:    movw %di, s_0(%rip)
 ; X64-NEXT:    incq %rax
 ; X64-NEXT:    leal -23091(%rax), %edi
 ; X64-NEXT:    cmpw $73, %di

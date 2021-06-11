@@ -55,12 +55,12 @@ define <16 x i8> @vpperm_shuffle_binary_zero(<16 x i8> %a0, <16 x i8> %a1) {
 define <16 x i8> @vpperm_shuffle_general(<16 x i8> %a0, <16 x i8> %a1) {
 ; X86-LABEL: vpperm_shuffle_general:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpperm {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
+; X86-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vpperm_shuffle_general:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpperm {{.*}}(%rip), %xmm0, %xmm0, %xmm0
+; X64-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = tail call <16 x i8> @llvm.x86.xop.vpperm(<16 x i8> %a0, <16 x i8> %a0, <16 x i8> <i8 31, i8 14, i8 29, i8 12, i8 27, i8 10, i8 25, i8 8, i8 23, i8 6, i8 21, i8 4, i8 179, i8 162, i8 177, i8 160>)
   ret <16 x i8> %1

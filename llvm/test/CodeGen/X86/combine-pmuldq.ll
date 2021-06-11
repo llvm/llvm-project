@@ -140,13 +140,13 @@ define <8 x i64> @combine_zext_pmuludq_256(<8 x i32> %a) {
 ; AVX512VL-LABEL: combine_zext_pmuludq_256:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
-; AVX512VL-NEXT:    vpmuludq {{.*}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512VL-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512DQVL-LABEL: combine_zext_pmuludq_256:
 ; AVX512DQVL:       # %bb.0:
 ; AVX512DQVL-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
-; AVX512DQVL-NEXT:    vpmuludq {{.*}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512DQVL-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
 ; AVX512DQVL-NEXT:    retq
   %1 = zext <8 x i32> %a to <8 x i64>
   %2 = mul nuw nsw <8 x i64> %1, <i64 715827883, i64 715827883, i64 715827883, i64 715827883, i64 715827883, i64 715827883, i64 715827883, i64 715827883>
@@ -214,7 +214,7 @@ define i32 @PR43159(<4 x i32>* %a0) {
 ; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm3[2,3],xmm1[4,5],xmm3[6,7]
 ; SSE-NEXT:    psubd %xmm3, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE-NEXT:    pmuludq {{.*}}(%rip), %xmm0
+; SSE-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    pxor %xmm2, %xmm2
 ; SSE-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm0[2,3],xmm2[4,5],xmm0[6,7]
 ; SSE-NEXT:    paddd %xmm1, %xmm2
@@ -241,7 +241,7 @@ define i32 @PR43159(<4 x i32>* %a0) {
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
 ; AVX1-NEXT:    vpsubd %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; AVX1-NEXT:    vpmuludq {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm2[0,1],xmm0[2,3],xmm2[4,5],xmm0[6,7]
 ; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
@@ -258,7 +258,7 @@ define i32 @PR43159(<4 x i32>* %a0) {
 ; AVX2-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [1645975491,344322273,2164392969,1916962805]
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; AVX2-NEXT:    vpsrlvd {{.*}}(%rip), %xmm0, %xmm3
+; AVX2-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm3
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[1,1,3,3]
 ; AVX2-NEXT:    vpmuludq %xmm2, %xmm4, %xmm2
 ; AVX2-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
@@ -271,7 +271,7 @@ define i32 @PR43159(<4 x i32>* %a0) {
 ; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm2[0],xmm0[1],xmm2[2],xmm0[3]
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpsrlvd {{.*}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %edi
 ; AVX2-NEXT:    vpextrd $1, %xmm0, %esi
 ; AVX2-NEXT:    vpextrd $2, %xmm0, %edx
@@ -283,7 +283,7 @@ define i32 @PR43159(<4 x i32>* %a0) {
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm1 = [1645975491,344322273,2164392969,1916962805]
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; AVX512VL-NEXT:    vpsrlvd {{.*}}(%rip), %xmm0, %xmm3
+; AVX512VL-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm3
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[1,1,3,3]
 ; AVX512VL-NEXT:    vpmuludq %xmm2, %xmm4, %xmm2
 ; AVX512VL-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
@@ -296,7 +296,7 @@ define i32 @PR43159(<4 x i32>* %a0) {
 ; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512VL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm2[0],xmm0[1],xmm2[2],xmm0[3]
 ; AVX512VL-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpsrlvd {{.*}}(%rip), %xmm0, %xmm0
+; AVX512VL-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512VL-NEXT:    vmovd %xmm0, %edi
 ; AVX512VL-NEXT:    vpextrd $1, %xmm0, %esi
 ; AVX512VL-NEXT:    vpextrd $2, %xmm0, %edx
@@ -308,7 +308,7 @@ define i32 @PR43159(<4 x i32>* %a0) {
 ; AVX512DQVL-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512DQVL-NEXT:    vmovdqa {{.*#+}} xmm1 = [1645975491,344322273,2164392969,1916962805]
 ; AVX512DQVL-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; AVX512DQVL-NEXT:    vpsrlvd {{.*}}(%rip), %xmm0, %xmm3
+; AVX512DQVL-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm3
 ; AVX512DQVL-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[1,1,3,3]
 ; AVX512DQVL-NEXT:    vpmuludq %xmm2, %xmm4, %xmm2
 ; AVX512DQVL-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
@@ -321,7 +321,7 @@ define i32 @PR43159(<4 x i32>* %a0) {
 ; AVX512DQVL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512DQVL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm2[0],xmm0[1],xmm2[2],xmm0[3]
 ; AVX512DQVL-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX512DQVL-NEXT:    vpsrlvd {{.*}}(%rip), %xmm0, %xmm0
+; AVX512DQVL-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512DQVL-NEXT:    vmovd %xmm0, %edi
 ; AVX512DQVL-NEXT:    vpextrd $1, %xmm0, %esi
 ; AVX512DQVL-NEXT:    vpextrd $2, %xmm0, %edx

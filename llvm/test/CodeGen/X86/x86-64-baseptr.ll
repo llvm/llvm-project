@@ -20,7 +20,7 @@ define void @base() #0 {
 ; CHECK-NEXT:    andq $-32, %rsp
 ; CHECK-NEXT:    subq $32, %rsp
 ; CHECK-NEXT:    movq %rsp, %rbx
-; CHECK-NEXT:    callq helper
+; CHECK-NEXT:    callq helper@PLT
 ; CHECK-NEXT:    movq %rsp, %rcx
 ; CHECK-NEXT:    movl %eax, %eax
 ; CHECK-NEXT:    leaq 31(,%rax,4), %rax
@@ -43,7 +43,7 @@ define void @base() #0 {
 ; X32ABI-NEXT:    andl $-32, %esp
 ; X32ABI-NEXT:    subl $32, %esp
 ; X32ABI-NEXT:    movl %esp, %ebx
-; X32ABI-NEXT:    callq helper
+; X32ABI-NEXT:    callq helper@PLT
 ; X32ABI-NEXT:    # kill: def $eax killed $eax def $rax
 ; X32ABI-NEXT:    leal 31(,%rax,4), %eax
 ; X32ABI-NEXT:    andl $-32, %eax

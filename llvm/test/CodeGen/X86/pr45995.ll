@@ -23,13 +23,13 @@ define void @extracter0([4 x <4 x i1>] %matrix) {
 ; CHECK-NEXT:    mov ebx, edi
 ; CHECK-NEXT:    and bl, 2
 ; CHECK-NEXT:    shr bl
-; CHECK-NEXT:    call print_i1
+; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    movzx edi, bl
-; CHECK-NEXT:    call print_i1
+; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    movzx edi, r14b
-; CHECK-NEXT:    call print_i1
+; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    movzx edi, bpl
-; CHECK-NEXT:    call print_i1
+; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    pop rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    pop r14
@@ -93,21 +93,21 @@ define void @extracter1([4 x <4 x i1>] %matrix) {
 ; CHECK-NEXT:    mov r14d, edi
 ; CHECK-NEXT:    and r14b, 2
 ; CHECK-NEXT:    shr r14b
-; CHECK-NEXT:    call print_i1
+; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    movzx edi, r14b
-; CHECK-NEXT:    call print_i1
+; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    movzx edi, bl
-; CHECK-NEXT:    call print_i1
+; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    movzx edi, r12b
-; CHECK-NEXT:    call print_i1
+; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    mov edi, ebp
-; CHECK-NEXT:    call print_i1
+; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    movzx edi, r13b
-; CHECK-NEXT:    call print_i1
+; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    movzx edi, r15b
-; CHECK-NEXT:    call print_i1
+; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    movzx edi, byte ptr [rsp + 7] # 1-byte Folded Reload
-; CHECK-NEXT:    call print_i1
+; CHECK-NEXT:    call print_i1@PLT
 ; CHECK-NEXT:    add rsp, 8
 ; CHECK-NEXT:    .cfi_def_cfa_offset 56
 ; CHECK-NEXT:    pop rbx

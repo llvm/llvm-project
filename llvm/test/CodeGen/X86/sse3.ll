@@ -266,7 +266,7 @@ define void @t10() nounwind {
 ; X64-NEXT:    pshuflw {{.*#+}} xmm0 = mem[0,2,2,3,4,5,6,7]
 ; X64-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X64-NEXT:    movq %xmm0, {{.*}}(%rip)
+; X64-NEXT:    movq %xmm0, g2(%rip)
 ; X64-NEXT:    retq
   load <4 x i32>, <4 x i32>* @g1, align 16
   bitcast <4 x i32> %1 to <8 x i16>
@@ -397,13 +397,13 @@ define <4 x i32> @t17() nounwind {
 ; X86-LABEL: t17:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,1,0,1]
-; X86-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t17:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,1,0,1]
-; X64-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    retq
 entry:
   %tmp1 = load <4 x float>, <4 x float>* undef, align 16

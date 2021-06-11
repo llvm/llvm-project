@@ -6,7 +6,7 @@
 define i32 @get_a() nounwind {
 ; CHECK-LABEL: get_a:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl {{.*}}(%rip), %eax
+; CHECK-NEXT:    movl a(%rip), %eax
 ; CHECK-NEXT:    retq
 entry:
 	%tmp1 = load i32, i32* @a, align 4

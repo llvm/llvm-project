@@ -8,13 +8,13 @@
 define dso_local void @PR35761(i32 %call) {
 ; CHECK-LABEL: PR35761:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzbl {{.*}}(%rip), %eax
+; CHECK-NEXT:    movzbl x(%rip), %eax
 ; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    movzbl {{.*}}(%rip), %ecx
+; CHECK-NEXT:    movzbl y(%rip), %ecx
 ; CHECK-NEXT:    xorl $255, %ecx
 ; CHECK-NEXT:    orl %eax, %ecx
-; CHECK-NEXT:    movw %cx, {{.*}}(%rip)
-; CHECK-NEXT:    movb $0, z+{{.*}}(%rip)
+; CHECK-NEXT:    movw %cx, z(%rip)
+; CHECK-NEXT:    movb $0, z+2(%rip)
 ; CHECK-NEXT:    retq
 entry:
   %0 = load i8, i8* @x, align 1

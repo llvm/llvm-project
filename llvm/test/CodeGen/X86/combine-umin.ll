@@ -27,28 +27,28 @@ declare i8 @llvm.umin.i8(i8, i8)
 define <8 x i16> @test_v8i16_nosignbit(<8 x i16> %a, <8 x i16> %b) {
 ; SSE2-LABEL: test_v8i16_nosignbit:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    psrlw $1, %xmm1
 ; SSE2-NEXT:    pmaxsw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_v8i16_nosignbit:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    psrlw $1, %xmm1
 ; SSE41-NEXT:    pmaxuw %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE42-LABEL: test_v8i16_nosignbit:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE42-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE42-NEXT:    psrlw $1, %xmm1
 ; SSE42-NEXT:    pmaxuw %xmm1, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: test_v8i16_nosignbit:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vpsrlw $1, %xmm1, %xmm1
 ; AVX-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq

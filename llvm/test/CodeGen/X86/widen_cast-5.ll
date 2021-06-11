@@ -9,7 +9,7 @@ define void @convert(<2 x i32>* %dst.addr, i64 %src) nounwind {
 ; X86:       ## %bb.0: ## %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    xorps LCPI0_0, %xmm0
+; X86-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movlps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;

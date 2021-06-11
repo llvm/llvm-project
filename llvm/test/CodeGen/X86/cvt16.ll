@@ -28,7 +28,7 @@ define void @test1(float %src, i16* %dest) {
 ; LIBCALL-NEXT:    .cfi_def_cfa_offset 16
 ; LIBCALL-NEXT:    .cfi_offset %rbx, -16
 ; LIBCALL-NEXT:    movq %rdi, %rbx
-; LIBCALL-NEXT:    callq __gnu_f2h_ieee
+; LIBCALL-NEXT:    callq __gnu_f2h_ieee@PLT
 ; LIBCALL-NEXT:    movw %ax, (%rbx)
 ; LIBCALL-NEXT:    popq %rbx
 ; LIBCALL-NEXT:    .cfi_def_cfa_offset 8
@@ -46,7 +46,7 @@ define void @test1(float %src, i16* %dest) {
 ; SOFTFLOAT-NEXT:    .cfi_def_cfa_offset 16
 ; SOFTFLOAT-NEXT:    .cfi_offset %rbx, -16
 ; SOFTFLOAT-NEXT:    movq %rsi, %rbx
-; SOFTFLOAT-NEXT:    callq __gnu_f2h_ieee
+; SOFTFLOAT-NEXT:    callq __gnu_f2h_ieee@PLT
 ; SOFTFLOAT-NEXT:    movw %ax, (%rbx)
 ; SOFTFLOAT-NEXT:    popq %rbx
 ; SOFTFLOAT-NEXT:    .cfi_def_cfa_offset 8
@@ -74,7 +74,7 @@ define float @test2(i16* nocapture %src) {
 ; SOFTFLOAT-NEXT:    pushq %rax
 ; SOFTFLOAT-NEXT:    .cfi_def_cfa_offset 16
 ; SOFTFLOAT-NEXT:    movzwl (%rdi), %edi
-; SOFTFLOAT-NEXT:    callq __gnu_h2f_ieee
+; SOFTFLOAT-NEXT:    callq __gnu_h2f_ieee@PLT
 ; SOFTFLOAT-NEXT:    popq %rcx
 ; SOFTFLOAT-NEXT:    .cfi_def_cfa_offset 8
 ; SOFTFLOAT-NEXT:    retq
@@ -88,7 +88,7 @@ define float @test3(float %src) nounwind uwtable readnone {
 ; LIBCALL:       # %bb.0:
 ; LIBCALL-NEXT:    pushq %rax
 ; LIBCALL-NEXT:    .cfi_def_cfa_offset 16
-; LIBCALL-NEXT:    callq __gnu_f2h_ieee
+; LIBCALL-NEXT:    callq __gnu_f2h_ieee@PLT
 ; LIBCALL-NEXT:    movzwl %ax, %edi
 ; LIBCALL-NEXT:    popq %rax
 ; LIBCALL-NEXT:    .cfi_def_cfa_offset 8
@@ -104,9 +104,9 @@ define float @test3(float %src) nounwind uwtable readnone {
 ; SOFTFLOAT:       # %bb.0:
 ; SOFTFLOAT-NEXT:    pushq %rax
 ; SOFTFLOAT-NEXT:    .cfi_def_cfa_offset 16
-; SOFTFLOAT-NEXT:    callq __gnu_f2h_ieee
+; SOFTFLOAT-NEXT:    callq __gnu_f2h_ieee@PLT
 ; SOFTFLOAT-NEXT:    movzwl %ax, %edi
-; SOFTFLOAT-NEXT:    callq __gnu_h2f_ieee
+; SOFTFLOAT-NEXT:    callq __gnu_h2f_ieee@PLT
 ; SOFTFLOAT-NEXT:    popq %rcx
 ; SOFTFLOAT-NEXT:    .cfi_def_cfa_offset 8
 ; SOFTFLOAT-NEXT:    retq
@@ -121,7 +121,7 @@ define double @test4(i16* nocapture %src) {
 ; LIBCALL-NEXT:    pushq %rax
 ; LIBCALL-NEXT:    .cfi_def_cfa_offset 16
 ; LIBCALL-NEXT:    movzwl (%rdi), %edi
-; LIBCALL-NEXT:    callq __gnu_h2f_ieee
+; LIBCALL-NEXT:    callq __gnu_h2f_ieee@PLT
 ; LIBCALL-NEXT:    cvtss2sd %xmm0, %xmm0
 ; LIBCALL-NEXT:    popq %rax
 ; LIBCALL-NEXT:    .cfi_def_cfa_offset 8
@@ -140,9 +140,9 @@ define double @test4(i16* nocapture %src) {
 ; SOFTFLOAT-NEXT:    pushq %rax
 ; SOFTFLOAT-NEXT:    .cfi_def_cfa_offset 16
 ; SOFTFLOAT-NEXT:    movzwl (%rdi), %edi
-; SOFTFLOAT-NEXT:    callq __gnu_h2f_ieee
+; SOFTFLOAT-NEXT:    callq __gnu_h2f_ieee@PLT
 ; SOFTFLOAT-NEXT:    movl %eax, %edi
-; SOFTFLOAT-NEXT:    callq __extendsfdf2
+; SOFTFLOAT-NEXT:    callq __extendsfdf2@PLT
 ; SOFTFLOAT-NEXT:    popq %rcx
 ; SOFTFLOAT-NEXT:    .cfi_def_cfa_offset 8
 ; SOFTFLOAT-NEXT:    retq
@@ -164,7 +164,7 @@ define i16 @test5(double %src) {
 ; SOFTFLOAT:       # %bb.0:
 ; SOFTFLOAT-NEXT:    pushq %rax
 ; SOFTFLOAT-NEXT:    .cfi_def_cfa_offset 16
-; SOFTFLOAT-NEXT:    callq __truncdfhf2
+; SOFTFLOAT-NEXT:    callq __truncdfhf2@PLT
 ; SOFTFLOAT-NEXT:    popq %rcx
 ; SOFTFLOAT-NEXT:    .cfi_def_cfa_offset 8
 ; SOFTFLOAT-NEXT:    retq

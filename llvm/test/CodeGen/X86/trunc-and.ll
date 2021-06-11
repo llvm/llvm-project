@@ -33,7 +33,7 @@ declare <2 x double> @llvm.fabs.v2f64(<2 x double>)
 define dso_local i32 @d() {
 ; CHECK-LABEL: d:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl b+{{.*}}(%rip), %ecx
+; CHECK-NEXT:    movzbl b+8(%rip), %ecx
 ; CHECK-NEXT:    andl $7, %ecx
 ; CHECK-NEXT:    movl $d, %eax
 ; CHECK-NEXT:    addl %ecx, %eax

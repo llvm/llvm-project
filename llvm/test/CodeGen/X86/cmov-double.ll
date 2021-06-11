@@ -54,7 +54,7 @@ define dso_local i32 @select_noopt(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4) 
 ; CHECK-NEXT:    setb %dl
 ; CHECK-NEXT:    orb %cl, %dl
 ; CHECK-NEXT:    movzbl %dl, %ecx
-; CHECK-NEXT:    movl %ecx, {{.*}}(%rip)
+; CHECK-NEXT:    movl %ecx, var32(%rip)
 ; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    cmovel %r8d, %eax
 ; CHECK-NEXT:    retq

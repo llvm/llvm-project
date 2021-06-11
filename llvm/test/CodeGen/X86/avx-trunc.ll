@@ -29,7 +29,7 @@ define <8 x i16> @trunc_32_16(<8 x i32> %A) nounwind uwtable readnone ssp{
 define <16 x i8> @trunc_16_8(<16 x i16> %A) nounwind uwtable readnone ssp{
 ; CHECK-LABEL: trunc_16_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper

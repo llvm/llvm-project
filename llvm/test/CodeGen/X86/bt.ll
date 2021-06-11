@@ -29,7 +29,7 @@ define void @test2(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jb .LBB0_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB0_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -39,7 +39,7 @@ define void @test2(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jb .LBB0_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB0_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -67,7 +67,7 @@ define void @test2b(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:  # %bb.2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB1_1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test2b:
@@ -78,7 +78,7 @@ define void @test2b(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB1_1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
@@ -103,7 +103,7 @@ define void @atest2(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jb .LBB2_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB2_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -113,7 +113,7 @@ define void @atest2(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jb .LBB2_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB2_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -141,7 +141,7 @@ define void @atest2b(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:  # %bb.2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB3_1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: atest2b:
@@ -152,7 +152,7 @@ define void @atest2b(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB3_1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
@@ -179,7 +179,7 @@ define void @test3(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:  # %bb.2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB4_1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test3:
@@ -190,7 +190,7 @@ define void @test3(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB4_1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
@@ -217,7 +217,7 @@ define void @test3b(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:  # %bb.2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB5_1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test3b:
@@ -228,7 +228,7 @@ define void @test3b(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB5_1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
@@ -253,7 +253,7 @@ define void @testne2(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jae .LBB6_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB6_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -263,7 +263,7 @@ define void @testne2(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jae .LBB6_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB6_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -289,7 +289,7 @@ define void @testne2b(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jae .LBB7_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB7_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -299,7 +299,7 @@ define void @testne2b(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jae .LBB7_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB7_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -325,7 +325,7 @@ define void @atestne2(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jae .LBB8_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB8_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -335,7 +335,7 @@ define void @atestne2(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jae .LBB8_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB8_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -361,7 +361,7 @@ define void @atestne2b(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jae .LBB9_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB9_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -371,7 +371,7 @@ define void @atestne2b(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jae .LBB9_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB9_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -397,7 +397,7 @@ define void @testne3(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jae .LBB10_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB10_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -407,7 +407,7 @@ define void @testne3(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jae .LBB10_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB10_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -433,7 +433,7 @@ define void @testne3b(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jae .LBB11_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB11_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -443,7 +443,7 @@ define void @testne3b(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jae .LBB11_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB11_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -469,7 +469,7 @@ define void @query2(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jae .LBB12_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB12_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -479,7 +479,7 @@ define void @query2(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jae .LBB12_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB12_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -505,7 +505,7 @@ define void @query2b(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jae .LBB13_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB13_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -515,7 +515,7 @@ define void @query2b(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jae .LBB13_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB13_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -541,7 +541,7 @@ define void @aquery2(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jae .LBB14_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB14_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -551,7 +551,7 @@ define void @aquery2(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jae .LBB14_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB14_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -577,7 +577,7 @@ define void @aquery2b(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jae .LBB15_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB15_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -587,7 +587,7 @@ define void @aquery2b(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jae .LBB15_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB15_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -613,7 +613,7 @@ define void @query3(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jae .LBB16_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB16_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -623,7 +623,7 @@ define void @query3(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jae .LBB16_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB16_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -649,7 +649,7 @@ define void @query3b(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jae .LBB17_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB17_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -659,7 +659,7 @@ define void @query3b(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jae .LBB17_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB17_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -685,7 +685,7 @@ define void @query3x(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jae .LBB18_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB18_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -695,7 +695,7 @@ define void @query3x(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jae .LBB18_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB18_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -721,7 +721,7 @@ define void @query3bx(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jae .LBB19_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB19_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -731,7 +731,7 @@ define void @query3bx(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jae .LBB19_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB19_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -757,7 +757,7 @@ define void @queryne2(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jb .LBB20_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB20_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -767,7 +767,7 @@ define void @queryne2(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jb .LBB20_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB20_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -793,7 +793,7 @@ define void @queryne2b(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jb .LBB21_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB21_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -803,7 +803,7 @@ define void @queryne2b(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jb .LBB21_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB21_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -829,7 +829,7 @@ define void @aqueryne2(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jb .LBB22_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB22_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -839,7 +839,7 @@ define void @aqueryne2(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jb .LBB22_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB22_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -865,7 +865,7 @@ define void @aqueryne2b(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jb .LBB23_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB23_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -875,7 +875,7 @@ define void @aqueryne2b(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jb .LBB23_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB23_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -901,7 +901,7 @@ define void @queryne3(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jb .LBB24_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB24_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -911,7 +911,7 @@ define void @queryne3(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jb .LBB24_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB24_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -937,7 +937,7 @@ define void @queryne3b(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jb .LBB25_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB25_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -947,7 +947,7 @@ define void @queryne3b(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jb .LBB25_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB25_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -973,7 +973,7 @@ define void @queryne3x(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jb .LBB26_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB26_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -983,7 +983,7 @@ define void @queryne3x(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jb .LBB26_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB26_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq
@@ -1009,7 +1009,7 @@ define void @queryne3bx(i32 %x, i32 %n) nounwind {
 ; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    jb .LBB27_2
 ; X86-NEXT:  # %bb.1: # %bb
-; X86-NEXT:    calll foo
+; X86-NEXT:    calll foo@PLT
 ; X86-NEXT:  .LBB27_2: # %UnifiedReturnBlock
 ; X86-NEXT:    retl
 ;
@@ -1019,7 +1019,7 @@ define void @queryne3bx(i32 %x, i32 %n) nounwind {
 ; X64-NEXT:    jb .LBB27_2
 ; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:  .LBB27_2: # %UnifiedReturnBlock
 ; X64-NEXT:    retq

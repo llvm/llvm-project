@@ -15,14 +15,14 @@ define dso_local i32 @main(i32 %argc, i8** %argv, ...) #0 {
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    subq $320, %rsp ## imm = 0x140
-; CHECK-NEXT:    movq ___security_cookie@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq ___security_cookie@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movq (%rax), %rax
 ; CHECK-NEXT:    movq %rax, -8(%rbp)
 ; CHECK-NEXT:    movl %ecx, -276(%rbp)
 ; CHECK-NEXT:    movq %rdx, -288(%rbp)
 ; CHECK-NEXT:    movslq -276(%rbp), %rax
 ; CHECK-NEXT:    movb $1, -272(%rbp,%rax)
-; CHECK-NEXT:    leaq {{.*}}(%rip), %rcx
+; CHECK-NEXT:    leaq L_.str(%rip), %rcx
 ; CHECK-NEXT:    callq _printf
 ; CHECK-NEXT:    movq -8(%rbp), %rcx
 ; CHECK-NEXT:    callq ___security_check_cookie

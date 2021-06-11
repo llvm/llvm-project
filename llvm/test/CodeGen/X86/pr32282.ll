@@ -36,7 +36,7 @@ define dso_local void @foo(i64 %x) nounwind {
 ; X64-LABEL: foo:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    movq {{.*}}(%rip), %rcx
+; X64-NEXT:    movq d(%rip), %rcx
 ; X64-NEXT:    movabsq $3013716102212485120, %rdx # imm = 0x29D2DED3DE400000
 ; X64-NEXT:    andnq %rdx, %rcx, %rcx
 ; X64-NEXT:    shrq $21, %rcx

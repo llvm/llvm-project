@@ -11,7 +11,7 @@
 define <4 x float> @combine_vec_fcopysign_pos_constant0(<4 x float> %x) {
 ; SSE-LABEL: combine_vec_fcopysign_pos_constant0:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fcopysign_pos_constant0:
@@ -26,7 +26,7 @@ define <4 x float> @combine_vec_fcopysign_pos_constant0(<4 x float> %x) {
 define <4 x float> @combine_vec_fcopysign_pos_constant1(<4 x float> %x) {
 ; SSE-LABEL: combine_vec_fcopysign_pos_constant1:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fcopysign_pos_constant1:
@@ -41,7 +41,7 @@ define <4 x float> @combine_vec_fcopysign_pos_constant1(<4 x float> %x) {
 define <4 x float> @combine_vec_fcopysign_fabs_sgn(<4 x float> %x, <4 x float> %y) {
 ; SSE-LABEL: combine_vec_fcopysign_fabs_sgn:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fcopysign_fabs_sgn:
@@ -58,7 +58,7 @@ define <4 x float> @combine_vec_fcopysign_fabs_sgn(<4 x float> %x, <4 x float> %
 define <4 x float> @combine_vec_fcopysign_neg_constant0(<4 x float> %x) {
 ; SSE-LABEL: combine_vec_fcopysign_neg_constant0:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    orps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fcopysign_neg_constant0:
@@ -73,7 +73,7 @@ define <4 x float> @combine_vec_fcopysign_neg_constant0(<4 x float> %x) {
 define <4 x float> @combine_vec_fcopysign_neg_constant1(<4 x float> %x) {
 ; SSE-LABEL: combine_vec_fcopysign_neg_constant1:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    orps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fcopysign_neg_constant1:
@@ -88,7 +88,7 @@ define <4 x float> @combine_vec_fcopysign_neg_constant1(<4 x float> %x) {
 define <4 x float> @combine_vec_fcopysign_fneg_fabs_sgn(<4 x float> %x, <4 x float> %y) {
 ; SSE-LABEL: combine_vec_fcopysign_fneg_fabs_sgn:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    orps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fcopysign_fneg_fabs_sgn:
@@ -106,8 +106,8 @@ define <4 x float> @combine_vec_fcopysign_fneg_fabs_sgn(<4 x float> %x, <4 x flo
 define <4 x float> @combine_vec_fcopysign_fabs_mag(<4 x float> %x, <4 x float> %y) {
 ; SSE-LABEL: combine_vec_fcopysign_fabs_mag:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    orps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -128,8 +128,8 @@ define <4 x float> @combine_vec_fcopysign_fabs_mag(<4 x float> %x, <4 x float> %
 define <4 x float> @combine_vec_fcopysign_fneg_mag(<4 x float> %x, <4 x float> %y) {
 ; SSE-LABEL: combine_vec_fcopysign_fneg_mag:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    orps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -150,8 +150,8 @@ define <4 x float> @combine_vec_fcopysign_fneg_mag(<4 x float> %x, <4 x float> %
 define <4 x float> @combine_vec_fcopysign_fcopysign_mag(<4 x float> %x, <4 x float> %y, <4 x float> %z) {
 ; SSE-LABEL: combine_vec_fcopysign_fcopysign_mag:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    orps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -172,8 +172,8 @@ define <4 x float> @combine_vec_fcopysign_fcopysign_mag(<4 x float> %x, <4 x flo
 define <4 x float> @combine_vec_fcopysign_fcopysign_sgn(<4 x float> %x, <4 x float> %y, <4 x float> %z) {
 ; SSE-LABEL: combine_vec_fcopysign_fcopysign_sgn:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm2
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    orps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -228,8 +228,8 @@ define <4 x float> @combine_vec_fcopysign_fptrunc_sgn(<4 x float> %x, <4 x doubl
 ; SSE-NEXT:    cvtpd2ps %xmm2, %xmm2
 ; SSE-NEXT:    cvtpd2ps %xmm1, %xmm1
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; SSE-NEXT:    andpd {{.*}}(%rip), %xmm1
-; SSE-NEXT:    andpd {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    andpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    orpd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;

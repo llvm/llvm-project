@@ -19,7 +19,7 @@ define i32 @test_calls_and_rets(i32 *%ptr) nounwind {
 ; X64-NOPIC-NEXT:    sarq $63, %rax
 ; X64-NOPIC-NEXT:    shlq $47, %rax
 ; X64-NOPIC-NEXT:    orq %rax, %rsp
-; X64-NOPIC-NEXT:    callq f
+; X64-NOPIC-NEXT:    callq f@PLT
 ; X64-NOPIC-NEXT:  .Lslh_ret_addr0:
 ; X64-NOPIC-NEXT:    movq %rsp, %rax
 ; X64-NOPIC-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -29,7 +29,7 @@ define i32 @test_calls_and_rets(i32 *%ptr) nounwind {
 ; X64-NOPIC-NEXT:    movl (%rbx), %ebp
 ; X64-NOPIC-NEXT:    shlq $47, %rax
 ; X64-NOPIC-NEXT:    orq %rax, %rsp
-; X64-NOPIC-NEXT:    callq f
+; X64-NOPIC-NEXT:    callq f@PLT
 ; X64-NOPIC-NEXT:  .Lslh_ret_addr1:
 ; X64-NOPIC-NEXT:    movq %rsp, %rcx
 ; X64-NOPIC-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
@@ -57,7 +57,7 @@ define i32 @test_calls_and_rets(i32 *%ptr) nounwind {
 ; X64-NOPIC-MCM-NEXT:    sarq $63, %rax
 ; X64-NOPIC-MCM-NEXT:    shlq $47, %rax
 ; X64-NOPIC-MCM-NEXT:    orq %rax, %rsp
-; X64-NOPIC-MCM-NEXT:    callq f
+; X64-NOPIC-MCM-NEXT:    callq f@PLT
 ; X64-NOPIC-MCM-NEXT:  .Lslh_ret_addr0:
 ; X64-NOPIC-MCM-NEXT:    movq %rsp, %rax
 ; X64-NOPIC-MCM-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
@@ -68,7 +68,7 @@ define i32 @test_calls_and_rets(i32 *%ptr) nounwind {
 ; X64-NOPIC-MCM-NEXT:    movl (%rbx), %ebp
 ; X64-NOPIC-MCM-NEXT:    shlq $47, %rax
 ; X64-NOPIC-MCM-NEXT:    orq %rax, %rsp
-; X64-NOPIC-MCM-NEXT:    callq f
+; X64-NOPIC-MCM-NEXT:    callq f@PLT
 ; X64-NOPIC-MCM-NEXT:  .Lslh_ret_addr1:
 ; X64-NOPIC-MCM-NEXT:    movq %rsp, %rcx
 ; X64-NOPIC-MCM-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
@@ -149,7 +149,7 @@ define i32 @test_calls_and_rets_noredzone(i32 *%ptr) nounwind noredzone {
 ; X64-NOPIC-NEXT:    shlq $47, %rax
 ; X64-NOPIC-NEXT:    orq %rax, %rsp
 ; X64-NOPIC-NEXT:    movq $.Lslh_ret_addr2, %rbp
-; X64-NOPIC-NEXT:    callq f
+; X64-NOPIC-NEXT:    callq f@PLT
 ; X64-NOPIC-NEXT:  .Lslh_ret_addr2:
 ; X64-NOPIC-NEXT:    movq %rsp, %rax
 ; X64-NOPIC-NEXT:    sarq $63, %rax
@@ -159,7 +159,7 @@ define i32 @test_calls_and_rets_noredzone(i32 *%ptr) nounwind noredzone {
 ; X64-NOPIC-NEXT:    shlq $47, %rax
 ; X64-NOPIC-NEXT:    orq %rax, %rsp
 ; X64-NOPIC-NEXT:    movq $.Lslh_ret_addr3, %r15
-; X64-NOPIC-NEXT:    callq f
+; X64-NOPIC-NEXT:    callq f@PLT
 ; X64-NOPIC-NEXT:  .Lslh_ret_addr3:
 ; X64-NOPIC-NEXT:    movq %rsp, %rcx
 ; X64-NOPIC-NEXT:    sarq $63, %rcx
@@ -191,7 +191,7 @@ define i32 @test_calls_and_rets_noredzone(i32 *%ptr) nounwind noredzone {
 ; X64-NOPIC-MCM-NEXT:    shlq $47, %rax
 ; X64-NOPIC-MCM-NEXT:    orq %rax, %rsp
 ; X64-NOPIC-MCM-NEXT:    leaq .Lslh_ret_addr2(%rip), %rbp
-; X64-NOPIC-MCM-NEXT:    callq f
+; X64-NOPIC-MCM-NEXT:    callq f@PLT
 ; X64-NOPIC-MCM-NEXT:  .Lslh_ret_addr2:
 ; X64-NOPIC-MCM-NEXT:    movq %rsp, %rax
 ; X64-NOPIC-MCM-NEXT:    sarq $63, %rax
@@ -202,7 +202,7 @@ define i32 @test_calls_and_rets_noredzone(i32 *%ptr) nounwind noredzone {
 ; X64-NOPIC-MCM-NEXT:    shlq $47, %rax
 ; X64-NOPIC-MCM-NEXT:    orq %rax, %rsp
 ; X64-NOPIC-MCM-NEXT:    leaq .Lslh_ret_addr3(%rip), %r15
-; X64-NOPIC-MCM-NEXT:    callq f
+; X64-NOPIC-MCM-NEXT:    callq f@PLT
 ; X64-NOPIC-MCM-NEXT:  .Lslh_ret_addr3:
 ; X64-NOPIC-MCM-NEXT:    movq %rsp, %rcx
 ; X64-NOPIC-MCM-NEXT:    sarq $63, %rcx
@@ -296,7 +296,7 @@ define i32 @test_call_setjmp(i32 *%ptr) nounwind {
 ; X64-NOPIC-NEXT:    movq %r14, %rdi
 ; X64-NOPIC-NEXT:    orq %rax, %rsp
 ; X64-NOPIC-NEXT:    movq $.Lslh_ret_addr4, %rbp
-; X64-NOPIC-NEXT:    callq setjmp
+; X64-NOPIC-NEXT:    callq setjmp@PLT
 ; X64-NOPIC-NEXT:  .Lslh_ret_addr4:
 ; X64-NOPIC-NEXT:    movq %rsp, %rax
 ; X64-NOPIC-NEXT:    sarq $63, %rax
@@ -309,7 +309,7 @@ define i32 @test_call_setjmp(i32 *%ptr) nounwind {
 ; X64-NOPIC-NEXT:    movl %r12d, %esi
 ; X64-NOPIC-NEXT:    orq %rax, %rsp
 ; X64-NOPIC-NEXT:    movq $.Lslh_ret_addr5, %r13
-; X64-NOPIC-NEXT:    callq sigsetjmp
+; X64-NOPIC-NEXT:    callq sigsetjmp@PLT
 ; X64-NOPIC-NEXT:  .Lslh_ret_addr5:
 ; X64-NOPIC-NEXT:    movq %rsp, %rax
 ; X64-NOPIC-NEXT:    sarq $63, %rax
@@ -322,7 +322,7 @@ define i32 @test_call_setjmp(i32 *%ptr) nounwind {
 ; X64-NOPIC-NEXT:    movl %r12d, %edx
 ; X64-NOPIC-NEXT:    orq %rax, %rsp
 ; X64-NOPIC-NEXT:    movq $.Lslh_ret_addr6, %r14
-; X64-NOPIC-NEXT:    callq __sigsetjmp
+; X64-NOPIC-NEXT:    callq __sigsetjmp@PLT
 ; X64-NOPIC-NEXT:  .Lslh_ret_addr6:
 ; X64-NOPIC-NEXT:    movq %rsp, %rax
 ; X64-NOPIC-NEXT:    sarq $63, %rax
@@ -361,7 +361,7 @@ define i32 @test_call_setjmp(i32 *%ptr) nounwind {
 ; X64-NOPIC-MCM-NEXT:    movq %r14, %rdi
 ; X64-NOPIC-MCM-NEXT:    orq %rax, %rsp
 ; X64-NOPIC-MCM-NEXT:    leaq .Lslh_ret_addr4(%rip), %rbp
-; X64-NOPIC-MCM-NEXT:    callq setjmp
+; X64-NOPIC-MCM-NEXT:    callq setjmp@PLT
 ; X64-NOPIC-MCM-NEXT:  .Lslh_ret_addr4:
 ; X64-NOPIC-MCM-NEXT:    movq %rsp, %rax
 ; X64-NOPIC-MCM-NEXT:    sarq $63, %rax
@@ -375,7 +375,7 @@ define i32 @test_call_setjmp(i32 *%ptr) nounwind {
 ; X64-NOPIC-MCM-NEXT:    movl %r12d, %esi
 ; X64-NOPIC-MCM-NEXT:    orq %rax, %rsp
 ; X64-NOPIC-MCM-NEXT:    leaq .Lslh_ret_addr5(%rip), %r13
-; X64-NOPIC-MCM-NEXT:    callq sigsetjmp
+; X64-NOPIC-MCM-NEXT:    callq sigsetjmp@PLT
 ; X64-NOPIC-MCM-NEXT:  .Lslh_ret_addr5:
 ; X64-NOPIC-MCM-NEXT:    movq %rsp, %rax
 ; X64-NOPIC-MCM-NEXT:    sarq $63, %rax
@@ -389,7 +389,7 @@ define i32 @test_call_setjmp(i32 *%ptr) nounwind {
 ; X64-NOPIC-MCM-NEXT:    movl %r12d, %edx
 ; X64-NOPIC-MCM-NEXT:    orq %rax, %rsp
 ; X64-NOPIC-MCM-NEXT:    leaq .Lslh_ret_addr6(%rip), %r14
-; X64-NOPIC-MCM-NEXT:    callq __sigsetjmp
+; X64-NOPIC-MCM-NEXT:    callq __sigsetjmp@PLT
 ; X64-NOPIC-MCM-NEXT:  .Lslh_ret_addr6:
 ; X64-NOPIC-MCM-NEXT:    movq %rsp, %rax
 ; X64-NOPIC-MCM-NEXT:    sarq $63, %rax

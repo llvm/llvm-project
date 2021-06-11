@@ -27,7 +27,7 @@ define dso_local void @n(i32* %o, i32 %p, i32 %u) nounwind {
 ; CHECK-NEXT:    jne .LBB0_10
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    movl %ebx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    cmpl $0, {{.*}}(%rip)
+; CHECK-NEXT:    cmpl $0, e(%rip)
 ; CHECK-NEXT:    # implicit-def: $ebx
 ; CHECK-NEXT:    # implicit-def: $r14d
 ; CHECK-NEXT:    je .LBB0_4
@@ -59,7 +59,7 @@ define dso_local void @n(i32* %o, i32 %p, i32 %u) nounwind {
 ; CHECK-NEXT:    jmp .LBB0_10
 ; CHECK-NEXT:  .Ltmp0: # Block address taken
 ; CHECK-NEXT:  # %bb.8: # %if.then20.critedge
-; CHECK-NEXT:    movl {{.*}}(%rip), %edi
+; CHECK-NEXT:    movl j(%rip), %edi
 ; CHECK-NEXT:    movslq %eax, %rcx
 ; CHECK-NEXT:    movl $1, %esi
 ; CHECK-NEXT:    movq %r15, %rdx
