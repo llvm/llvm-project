@@ -514,6 +514,8 @@ const TargetRegisterClass *
 PPCRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
                                            const MachineFunction &MF) const {
   const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
+  const auto *DefaultSuperclass =
+      TargetRegisterInfo::getLargestLegalSuperClass(RC, MF);
   if (Subtarget.hasVSX()) {
     // With VSX, we can inflate various sub-register classes to the full VSX
     // register set.
@@ -530,15 +532,27 @@ PPCRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
       if (RC == &PPC::GPRCRegClass && EnableGPRToVecSpills)
         InflateGPRC++;
     }
-    if (RC == &PPC::F8RCRegClass)
-      return &PPC::VSFRCRegClass;
-    else if (RC == &PPC::VRRCRegClass)
-      return &PPC::VSRCRegClass;
-    else if (RC == &PPC::F4RCRegClass && Subtarget.hasP8Vector())
-      return &PPC::VSSRCRegClass;
+
+    for (const auto *I = RC->getSuperClasses(); *I; ++I) {
+      if (getRegSizeInBits(**I) != getRegSizeInBits(*RC))
+        continue;
+
+      switch ((*I)->getID()) {
+      case PPC::VSSRCRegClassID:
+        return Subtarget.hasP8Vector() ? *I : DefaultSuperclass;
+      case PPC::VSFRCRegClassID:
+      case PPC::VSRCRegClassID:
+        return *I;
+      case PPC::VSRpRCRegClassID:
+        return Subtarget.pairedVectorMemops() ? *I : DefaultSuperclass;
+      case PPC::ACCRCRegClassID:
+      case PPC::UACCRCRegClassID:
+        return Subtarget.hasMMA() ? *I : DefaultSuperclass;
+      }
+    }
   }
 
-  return TargetRegisterInfo::getLargestLegalSuperClass(RC, MF);
+  return DefaultSuperclass;
 }
 
 //===----------------------------------------------------------------------===//
