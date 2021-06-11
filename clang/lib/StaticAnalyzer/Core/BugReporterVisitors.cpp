@@ -906,7 +906,7 @@ namespace {
 ///
 /// This visitor is intended to be used when another visitor discovers that an
 /// interesting value comes from an inlined function call.
-class ReturnVisitor : public BugReporterVisitor {
+class ReturnVisitor : public TrackingBugReporterVisitor {
   const StackFrameContext *CalleeSFC;
   enum {
     Initial,
@@ -920,10 +920,11 @@ class ReturnVisitor : public BugReporterVisitor {
   bugreporter::TrackingKind TKind;
 
 public:
-  ReturnVisitor(const StackFrameContext *Frame, bool Suppressed,
-                AnalyzerOptions &Options, bugreporter::TrackingKind TKind)
-      : CalleeSFC(Frame), EnableNullFPSuppression(Suppressed),
-        Options(Options), TKind(TKind) {}
+  ReturnVisitor(TrackerRef ParentTracker, const StackFrameContext *Frame,
+                bool Suppressed, AnalyzerOptions &Options,
+                bugreporter::TrackingKind TKind)
+      : TrackingBugReporterVisitor(ParentTracker), CalleeSFC(Frame),
+        EnableNullFPSuppression(Suppressed), Options(Options), TKind(TKind) {}
 
   static void *getTag() {
     static int Tag = 0;
@@ -943,7 +944,8 @@ public:
   /// node, looking for when the given statement was processed. If it turns out
   /// the statement is a call that was inlined, we add the visitor to the
   /// bug report, so it can print a note later.
-  static void addVisitorIfNecessary(const ExplodedNode *Node, const Stmt *S,
+  static void addVisitorIfNecessary(TrackerRef ParentTracker,
+                                    const ExplodedNode *Node, const Stmt *S,
                                     PathSensitiveBugReport &BR,
                                     bool InEnableNullFPSuppression,
                                     bugreporter::TrackingKind TKind) {
@@ -1016,8 +1018,8 @@ public:
       if (Optional<Loc> RetLoc = RetVal.getAs<Loc>())
         EnableNullFPSuppression = State->isNull(*RetLoc).isConstrainedTrue();
 
-    BR.addVisitor<ReturnVisitor>(CalleeContext, EnableNullFPSuppression,
-                                 Options, TKind);
+    BR.addVisitor<ReturnVisitor>(ParentTracker, CalleeContext,
+                                 EnableNullFPSuppression, Options, TKind);
   }
 
   PathDiagnosticPieceRef visitNodeInitial(const ExplodedNode *N,
@@ -1066,8 +1068,7 @@ public:
     RetE = RetE->IgnoreParenCasts();
 
     // Let's track the return value.
-    bugreporter::trackExpressionValue(
-        N, RetE, BR, TKind, EnableNullFPSuppression);
+    getParentTracker().track(RetE, N, {TKind, EnableNullFPSuppression});
 
     // Build an appropriate message based on the return value.
     SmallString<64> Msg;
@@ -1183,7 +1184,9 @@ public:
       if (!State->isNull(*ArgV).isConstrainedTrue())
         continue;
 
-      if (trackExpressionValue(N, ArgE, BR, TKind, EnableNullFPSuppression))
+      if (getParentTracker()
+              .track(ArgE, N, {TKind, EnableNullFPSuppression})
+              .FoundSomethingToTrack)
         ShouldInvalidate = false;
 
       // If we /can't/ track the null pointer, we should err on the side of
@@ -2197,8 +2200,9 @@ public:
     // track the constraints on its contents.
     SVal V = LVState->getSValAsScalarOrLoc(Inner, LVNode->getLocationContext());
 
-    ReturnVisitor::addVisitorIfNecessary(
-        LVNode, Inner, Report, Opts.EnableNullFPSuppression, Opts.Kind);
+    ReturnVisitor::addVisitorIfNecessary(&getParentTracker(), LVNode, Inner,
+                                         Report, Opts.EnableNullFPSuppression,
+                                         Opts.Kind);
 
     // Is it a symbolic value?
     if (auto L = V.getAs<loc::MemRegionVal>()) {
