@@ -420,7 +420,6 @@ bool ClangExpressionSourceCode::GetText(
                          module_imports.c_str(), m_name.c_str(),
                          lldb_local_var_decls.GetData(), tagged_body.c_str());
       break;
-    case WrapKind::CppStaticMemberFunction:
     case WrapKind::CppMemberFunction:
       wrap_stream.Printf("%s"
                          "void                                   \n"
