@@ -29,7 +29,7 @@ define <4 x float> @int_sin_4x(<4 x float>* %a) {
 ; NOACCELERATE-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[VECEXT_2]], i32 0
 ; NOACCELERATE-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[VECEXT_3]], i32 1
 ; NOACCELERATE-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.sin.v2f32(<2 x float> [[TMP4]])
-; NOACCELERATE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; NOACCELERATE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; NOACCELERATE-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[VECINS_1]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; NOACCELERATE-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
@@ -225,7 +225,7 @@ define <4 x float> @exp_4x(<4 x float>* %a) {
 ; NOACCELERATE-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[VECEXT_2]], i32 0
 ; NOACCELERATE-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[VECEXT_3]], i32 1
 ; NOACCELERATE-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.exp.v2f32(<2 x float> [[TMP4]])
-; NOACCELERATE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; NOACCELERATE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; NOACCELERATE-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[VECINS_1]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; NOACCELERATE-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
@@ -308,7 +308,7 @@ define <4 x float> @log_4x(<4 x float>* %a) {
 ; NOACCELERATE-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[VECEXT_2]], i32 0
 ; NOACCELERATE-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[VECEXT_3]], i32 1
 ; NOACCELERATE-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.log.v2f32(<2 x float> [[TMP4]])
-; NOACCELERATE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; NOACCELERATE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; NOACCELERATE-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[VECINS_1]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; NOACCELERATE-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
@@ -484,7 +484,7 @@ define <4 x float> @sin_4x(<4 x float>* %a) {
 ; NOACCELERATE-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[VECEXT_2]], i32 0
 ; NOACCELERATE-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[VECEXT_3]], i32 1
 ; NOACCELERATE-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.sin.v2f32(<2 x float> [[TMP4]])
-; NOACCELERATE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; NOACCELERATE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; NOACCELERATE-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[VECINS_1]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; NOACCELERATE-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
@@ -526,7 +526,7 @@ define <4 x float> @cos_4x(<4 x float>* %a) {
 ; NOACCELERATE-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[VECEXT_2]], i32 0
 ; NOACCELERATE-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[VECEXT_3]], i32 1
 ; NOACCELERATE-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.cos.v2f32(<2 x float> [[TMP4]])
-; NOACCELERATE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; NOACCELERATE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; NOACCELERATE-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[VECINS_1]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; NOACCELERATE-NEXT:    ret <4 x float> [[VECINS_31]]
 ;
@@ -1017,7 +1017,7 @@ define <4 x float> @int_cos_4x(<4 x float>* %a) {
 ; NOACCELERATE-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[VECEXT_2]], i32 0
 ; NOACCELERATE-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[VECEXT_3]], i32 1
 ; NOACCELERATE-NEXT:    [[TMP5:%.*]] = call fast <2 x float> @llvm.cos.v2f32(<2 x float> [[TMP4]])
-; NOACCELERATE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; NOACCELERATE-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; NOACCELERATE-NEXT:    [[VECINS_31:%.*]] = shufflevector <4 x float> [[VECINS_1]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; NOACCELERATE-NEXT:    ret <4 x float> [[VECINS_31]]
 ;

@@ -5213,7 +5213,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         std::iota(Mask.begin(), std::next(Mask.begin(), NumScalars), 0);
       }
       if (!IsIdentity || NumElts != NumScalars)
-        V = Builder.CreateShuffleVector(V, UndefValue::get(V->getType()), Mask);
+        V = Builder.CreateShuffleVector(V, Mask);
 
       if (NumElts != NumScalars) {
         SmallVector<int> InsertMask(NumElts);
