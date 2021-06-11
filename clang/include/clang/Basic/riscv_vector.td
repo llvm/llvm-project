@@ -1535,8 +1535,7 @@ defm vrgatherei16 : RVVOutBuiltinSet<"vrgatherei16_vv", "csil",
 let HasMask = false,
     ManualCodegen = [{
       std::rotate(Ops.begin(), Ops.begin() + 1, Ops.begin() + 3);
-      ID = Intrinsic::riscv_vcompress;
-       IntrinsicTypes = {ResultType, Ops[3]->getType()};
+      IntrinsicTypes = {ResultType, Ops[3]->getType()};
     }] in {
   // signed and floating type
   defm vcompress : RVVOutBuiltinSet<"vcompress", "csilfd",

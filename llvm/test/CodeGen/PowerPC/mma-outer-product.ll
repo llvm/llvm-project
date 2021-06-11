@@ -12,51 +12,51 @@ define void @intrinsics1(<16 x i8> %vc1, <16 x i8> %vc2, <16 x i8> %vc3, <16 x i
 ; CHECK-LABEL: intrinsics1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $v5 killed $v5 killed $vsrp18 def $vsrp18
-; CHECK-NEXT:    vmr v1, v4
+; CHECK-NEXT:    xxlor vs1, v4, v4
 ; CHECK-NEXT:    vmr v4, v3
 ; CHECK-NEXT:    ld r3, 96(r1)
-; CHECK-NEXT:    vmr v0, v2
-; CHECK-NEXT:    xxlor vs5, v2, v2
-; CHECK-NEXT:    xxlor vs4, v5, v5
-; CHECK-NEXT:    xxlor vs0, v0, v0
-; CHECK-NEXT:    xxlor vs1, v1, v1
-; CHECK-NEXT:    xxlor vs2, v4, v4
-; CHECK-NEXT:    xxlor vs3, v5, v5
-; CHECK-NEXT:    xxmtacc acc0
-; CHECK-NEXT:    xvi4ger8pp acc0, v2, v3
-; CHECK-NEXT:    xvf16ger2pp acc0, v2, v1
-; CHECK-NEXT:    pmxvf32gerpn acc0, v3, v5, 0, 0
-; CHECK-NEXT:    pmxvf64gernp acc0, vsp4, v0, 0, 0
-; CHECK-NEXT:    xxmfacc acc0
-; CHECK-NEXT:    stxv vs0, 48(r3)
-; CHECK-NEXT:    stxv vs1, 32(r3)
-; CHECK-NEXT:    stxv vs2, 16(r3)
-; CHECK-NEXT:    stxvx vs3, 0, r3
+; CHECK-NEXT:    xxlor vs0, v2, v2
+; CHECK-NEXT:    xxlor vs3, v2, v2
+; CHECK-NEXT:    xxlor vs2, v5, v5
+; CHECK-NEXT:    xxlor vs4, vs0, vs0
+; CHECK-NEXT:    xxlor vs5, vs1, vs1
+; CHECK-NEXT:    xxlor vs6, v4, v4
+; CHECK-NEXT:    xxlor vs7, v5, v5
+; CHECK-NEXT:    xxmtacc acc1
+; CHECK-NEXT:    xvi4ger8pp acc1, v2, v3
+; CHECK-NEXT:    xvf16ger2pp acc1, v2, vs1
+; CHECK-NEXT:    pmxvf32gerpn acc1, v3, v5, 0, 0
+; CHECK-NEXT:    pmxvf64gernp acc1, vsp2, vs0, 0, 0
+; CHECK-NEXT:    xxmfacc acc1
+; CHECK-NEXT:    stxv vs4, 48(r3)
+; CHECK-NEXT:    stxv vs5, 32(r3)
+; CHECK-NEXT:    stxv vs6, 16(r3)
+; CHECK-NEXT:    stxvx vs7, 0, r3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: intrinsics1:
 ; CHECK-BE:       # %bb.0:
 ; CHECK-BE-NEXT:    # kill: def $v5 killed $v5 killed $vsrp18 def $vsrp18
-; CHECK-BE-NEXT:    vmr v1, v4
+; CHECK-BE-NEXT:    xxlor vs1, v4, v4
 ; CHECK-BE-NEXT:    vmr v4, v3
 ; CHECK-BE-NEXT:    ld r3, 112(r1)
-; CHECK-BE-NEXT:    vmr v0, v2
-; CHECK-BE-NEXT:    xxlor vs5, v2, v2
-; CHECK-BE-NEXT:    xxlor vs4, v5, v5
-; CHECK-BE-NEXT:    xxlor vs0, v0, v0
-; CHECK-BE-NEXT:    xxlor vs1, v1, v1
-; CHECK-BE-NEXT:    xxlor vs2, v4, v4
-; CHECK-BE-NEXT:    xxlor vs3, v5, v5
-; CHECK-BE-NEXT:    xxmtacc acc0
-; CHECK-BE-NEXT:    xvi4ger8pp acc0, v2, v3
-; CHECK-BE-NEXT:    xvf16ger2pp acc0, v2, v1
-; CHECK-BE-NEXT:    pmxvf32gerpn acc0, v3, v5, 0, 0
-; CHECK-BE-NEXT:    pmxvf64gernp acc0, vsp4, v0, 0, 0
-; CHECK-BE-NEXT:    xxmfacc acc0
-; CHECK-BE-NEXT:    stxv vs1, 16(r3)
-; CHECK-BE-NEXT:    stxvx vs0, 0, r3
-; CHECK-BE-NEXT:    stxv vs3, 48(r3)
-; CHECK-BE-NEXT:    stxv vs2, 32(r3)
+; CHECK-BE-NEXT:    xxlor vs0, v2, v2
+; CHECK-BE-NEXT:    xxlor vs3, v2, v2
+; CHECK-BE-NEXT:    xxlor vs2, v5, v5
+; CHECK-BE-NEXT:    xxlor vs4, vs0, vs0
+; CHECK-BE-NEXT:    xxlor vs5, vs1, vs1
+; CHECK-BE-NEXT:    xxlor vs6, v4, v4
+; CHECK-BE-NEXT:    xxlor vs7, v5, v5
+; CHECK-BE-NEXT:    xxmtacc acc1
+; CHECK-BE-NEXT:    xvi4ger8pp acc1, v2, v3
+; CHECK-BE-NEXT:    xvf16ger2pp acc1, v2, vs1
+; CHECK-BE-NEXT:    pmxvf32gerpn acc1, v3, v5, 0, 0
+; CHECK-BE-NEXT:    pmxvf64gernp acc1, vsp2, vs0, 0, 0
+; CHECK-BE-NEXT:    xxmfacc acc1
+; CHECK-BE-NEXT:    stxv vs5, 16(r3)
+; CHECK-BE-NEXT:    stxvx vs4, 0, r3
+; CHECK-BE-NEXT:    stxv vs7, 48(r3)
+; CHECK-BE-NEXT:    stxv vs6, 32(r3)
 ; CHECK-BE-NEXT:    blr
   %1 = tail call <512 x i1> @llvm.ppc.mma.assemble.acc(<16 x i8> %vc1, <16 x i8> %vc3, <16 x i8> %vc2, <16 x i8> %vc4)
   %2 = tail call <512 x i1> @llvm.ppc.mma.xvi4ger8pp(<512 x i1> %1, <16 x i8> %vc1, <16 x i8> %vc2)
