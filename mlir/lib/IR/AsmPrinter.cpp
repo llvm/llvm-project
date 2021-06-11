@@ -22,6 +22,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/SubElementInterfaces.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
@@ -626,14 +627,10 @@ void AliasInitializer::visit(Attribute attr, bool canBeDeferred) {
     return;
   }
 
-  if (auto arrayAttr = attr.dyn_cast<ArrayAttr>()) {
-    for (Attribute element : arrayAttr.getValue())
-      visit(element);
-  } else if (auto dictAttr = attr.dyn_cast<DictionaryAttr>()) {
-    for (const NamedAttribute &attr : dictAttr)
-      visit(attr.second);
-  } else if (auto typeAttr = attr.dyn_cast<TypeAttr>()) {
-    visit(typeAttr.getValue());
+  // Check for any sub elements.
+  if (auto subElementInterface = attr.dyn_cast<SubElementAttrInterface>()) {
+    subElementInterface.walkSubElements([&](Attribute attr) { visit(attr); },
+                                        [&](Type type) { visit(type); });
   }
 }
 
@@ -645,20 +642,10 @@ void AliasInitializer::visit(Type type) {
   if (succeeded(generateAlias(type, aliasToType)))
     return;
 
-  // Visit several subtypes that contain types or attributes.
-  if (auto funcType = type.dyn_cast<FunctionType>()) {
-    // Visit input and result types for functions.
-    for (auto input : funcType.getInputs())
-      visit(input);
-    for (auto result : funcType.getResults())
-      visit(result);
-  } else if (auto shapedType = type.dyn_cast<ShapedType>()) {
-    visit(shapedType.getElementType());
-
-    // Visit affine maps in memref type.
-    if (auto memref = type.dyn_cast<MemRefType>())
-      for (auto map : memref.getAffineMaps())
-        visit(AffineMapAttr::get(map));
+  // Check for any sub elements.
+  if (auto subElementInterface = type.dyn_cast<SubElementTypeInterface>()) {
+    subElementInterface.walkSubElements([&](Attribute attr) { visit(attr); },
+                                        [&](Type type) { visit(type); });
   }
 }
 

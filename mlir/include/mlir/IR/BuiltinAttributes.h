@@ -9,7 +9,7 @@
 #ifndef MLIR_IR_BUILTINATTRIBUTES_H
 #define MLIR_IR_BUILTINATTRIBUTES_H
 
-#include "mlir/IR/Attributes.h"
+#include "SubElementInterfaces.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Sequence.h"
 #include <complex>
