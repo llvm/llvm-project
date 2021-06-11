@@ -169,14 +169,8 @@ static Type *getMemoryParamAllocType(AttributeSet ParamAttrs, Type *ArgTy) {
     return PreAllocTy;
   if (Type *InAllocaTy = ParamAttrs.getInAllocaType())
     return InAllocaTy;
-
-  // FIXME: sret and inalloca always depends on pointee element type. It's also
-  // possible for byval to miss it.
-  if (ParamAttrs.hasAttribute(Attribute::InAlloca) ||
-      ParamAttrs.hasAttribute(Attribute::ByVal) ||
-      ParamAttrs.hasAttribute(Attribute::StructRet) ||
-      ParamAttrs.hasAttribute(Attribute::Preallocated))
-    return cast<PointerType>(ArgTy)->getElementType();
+  if (Type *SRetTy = ParamAttrs.getStructRetType())
+    return SRetTy;
 
   return nullptr;
 }
