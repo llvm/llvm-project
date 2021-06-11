@@ -41,7 +41,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "function-specialization"
 
-STATISTIC(NumFuncSpecialized, "Number of Functions Specialized");
+STATISTIC(NumFuncSpecialized, "Number of functions specialized");
 
 static cl::opt<bool> ForceFunctionSpecialization(
     "force-function-specialization", cl::init(false), cl::Hidden,
@@ -121,6 +121,8 @@ public:
           LLVM_DEBUG(dbgs() << "FnSpecialization: Replaced constant argument: "
                             << Arg.getName() << "\n");
     }
+
+    NumFuncSpecialized += NbFunctionsSpecialized;
     return Changed;
   }
 
@@ -142,6 +144,10 @@ public:
   }
 
 private:
+  // The number of functions specialised, used for collecting statistics and
+  // also in the cost model.
+  unsigned NbFunctionsSpecialized = 0;
+
   /// This function decides whether to specialize function \p F based on the
   /// known constant values its arguments can take on. Specialization is
   /// performed on the first interesting argument. Specializations based on
@@ -218,7 +224,7 @@ private:
 
         // Mark all the specialized functions
         Specializations.push_back(Clone);
-        NumFuncSpecialized++;
+        NbFunctionsSpecialized++;
       }
 
       // TODO: if we want to support specialize specialized functions, and if
@@ -248,7 +254,7 @@ private:
 
     // Otherwise, set the specialization cost to be the cost of all the
     // instructions in the function and penalty for specializing more functions.
-    unsigned Penalty = NumFuncSpecialized + 1;
+    unsigned Penalty = NbFunctionsSpecialized + 1;
     return Metrics.NumInsts * InlineConstants::InstrCost * Penalty;
   }
 
@@ -632,6 +638,5 @@ bool llvm::runFunctionSpecialization(
 
   // Clean up the IR by removing ssa_copy intrinsics.
   cleanup(M);
-
   return Changed;
 }
