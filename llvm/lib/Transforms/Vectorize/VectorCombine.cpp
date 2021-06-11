@@ -831,8 +831,15 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
     Builder.Insert(GEP);
     StoreInst *NSI = Builder.CreateStore(NewElement, GEP);
     NSI->copyMetadata(*SI);
-    if (SI->getAlign() < NSI->getAlign())
-      NSI->setAlignment(SI->getAlign());
+    Align NewAlignment = std::max(SI->getAlign(), Load->getAlign());
+    if (auto *C = dyn_cast<ConstantInt>(Idx))
+      NewAlignment = commonAlignment(
+          NewAlignment,
+          C->getZExtValue() * DL.getTypeStoreSize(NewElement->getType()));
+    else
+      NewAlignment = commonAlignment(
+          NewAlignment, DL.getTypeStoreSize(NewElement->getType()));
+    NSI->setAlignment(NewAlignment);
     replaceValue(I, *NSI);
     // Need erasing the store manually.
     I.eraseFromParent();

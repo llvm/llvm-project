@@ -20,7 +20,7 @@ define void @insert_store_i16_align1(<8 x i16>* %q, i16 zeroext %s) {
 ; CHECK-LABEL: @insert_store_i16_align1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x i16>, <8 x i16>* [[Q:%.*]], i32 0, i32 3
-; CHECK-NEXT:    store i16 [[S:%.*]], i16* [[TMP0]], align 1
+; CHECK-NEXT:    store i16 [[S:%.*]], i16* [[TMP0]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -125,6 +125,7 @@ entry:
   ret void
 }
 
+; To verify align here is narrowed to scalar store size
 define void @insert_store_nonconst_large_alignment(<4 x i32>* %q, i32 zeroext %s, i32 %idx) {
 ; CHECK-LABEL: @insert_store_nonconst_large_alignment(
 ; CHECK-NEXT:  entry:
@@ -148,7 +149,7 @@ define void @insert_store_nonconst_align_maximum_8(<8 x i64>* %q, i64 %s, i32 %i
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i64>, <8 x i64>* [[Q:%.*]], i32 0, i32 [[IDX]]
-; CHECK-NEXT:    store i64 [[S:%.*]], i64* [[TMP1]], align 4
+; CHECK-NEXT:    store i64 [[S:%.*]], i64* [[TMP1]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %cmp = icmp ult i32 %idx, 2
@@ -180,7 +181,7 @@ define void @insert_store_nonconst_align_larger(<8 x i64>* %q, i64 %s, i32 %idx)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i64>, <8 x i64>* [[Q:%.*]], i32 0, i32 [[IDX]]
-; CHECK-NEXT:    store i64 [[S:%.*]], i64* [[TMP1]], align 2
+; CHECK-NEXT:    store i64 [[S:%.*]], i64* [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %cmp = icmp ult i32 %idx, 2
