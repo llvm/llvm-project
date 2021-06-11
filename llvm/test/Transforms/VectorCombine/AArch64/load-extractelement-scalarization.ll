@@ -41,7 +41,7 @@ define i32 @load_extract_idx_1(<4 x i32>* %x) {
 define i32 @load_extract_idx_2(<4 x i32>* %x) {
 ; CHECK-LABEL: @load_extract_idx_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, <4 x i32>* [[X:%.*]], i32 0, i32 2
-; CHECK-NEXT:    [[R:%.*]] = load i32, i32* [[TMP1]], align 4
+; CHECK-NEXT:    [[R:%.*]] = load i32, i32* [[TMP1]], align 8
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %lv = load <4 x i32>, <4 x i32>* %x
@@ -252,7 +252,7 @@ define i32 @load_extract_clobber_call_before(<4 x i32>* %x) {
 ; CHECK-LABEL: @load_extract_clobber_call_before(
 ; CHECK-NEXT:    call void @clobber()
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, <4 x i32>* [[X:%.*]], i32 0, i32 2
-; CHECK-NEXT:    [[R:%.*]] = load i32, i32* [[TMP1]], align 4
+; CHECK-NEXT:    [[R:%.*]] = load i32, i32* [[TMP1]], align 8
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   call void @clobber()
@@ -277,7 +277,7 @@ define i32 @load_extract_clobber_call_between(<4 x i32>* %x) {
 define i32 @load_extract_clobber_call_after(<4 x i32>* %x) {
 ; CHECK-LABEL: @load_extract_clobber_call_after(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, <4 x i32>* [[X:%.*]], i32 0, i32 2
-; CHECK-NEXT:    [[R:%.*]] = load i32, i32* [[TMP1]], align 4
+; CHECK-NEXT:    [[R:%.*]] = load i32, i32* [[TMP1]], align 8
 ; CHECK-NEXT:    call void @clobber()
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -291,7 +291,7 @@ define i32 @load_extract_clobber_store_before(<4 x i32>* %x, i8* %y) {
 ; CHECK-LABEL: @load_extract_clobber_store_before(
 ; CHECK-NEXT:    store i8 0, i8* [[Y:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, <4 x i32>* [[X:%.*]], i32 0, i32 2
-; CHECK-NEXT:    [[R:%.*]] = load i32, i32* [[TMP1]], align 4
+; CHECK-NEXT:    [[R:%.*]] = load i32, i32* [[TMP1]], align 8
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   store i8 0, i8* %y
@@ -358,7 +358,7 @@ define i32 @load_extract_clobber_store_after_limit(<4 x i32>* %x, i8* %y, <8 x i
 ; LIMIT-DEFAULT-NEXT:    [[Z_4:%.*]] = extractelement <8 x i32> [[Z]], i32 4
 ; LIMIT-DEFAULT-NEXT:    [[ADD_3:%.*]] = add i32 [[ADD_2]], [[Z_4]]
 ; LIMIT-DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, <4 x i32>* [[X:%.*]], i32 0, i32 2
-; LIMIT-DEFAULT-NEXT:    [[R:%.*]] = load i32, i32* [[TMP1]], align 4
+; LIMIT-DEFAULT-NEXT:    [[R:%.*]] = load i32, i32* [[TMP1]], align 8
 ; LIMIT-DEFAULT-NEXT:    store i8 0, i8* [[Y:%.*]], align 1
 ; LIMIT-DEFAULT-NEXT:    [[ADD_4:%.*]] = add i32 [[ADD_3]], [[R]]
 ; LIMIT-DEFAULT-NEXT:    ret i32 [[ADD_4]]
@@ -454,7 +454,7 @@ define i32 @load_multiple_extracts_with_constant_idx_profitable(<8 x i32>* %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i32>, <8 x i32>* [[X:%.*]], i32 0, i32 0
 ; CHECK-NEXT:    [[E_0:%.*]] = load i32, i32* [[TMP1]], align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i32>, <8 x i32>* [[X]], i32 0, i32 6
-; CHECK-NEXT:    [[E_1:%.*]] = load i32, i32* [[TMP2]], align 4
+; CHECK-NEXT:    [[E_1:%.*]] = load i32, i32* [[TMP2]], align 8
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[E_0]], [[E_1]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
