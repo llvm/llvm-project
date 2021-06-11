@@ -39,6 +39,7 @@ add_mlir_library(MLIRIR
   MLIRBuiltinLocationAttributesIncGen
   MLIRBuiltinOpsIncGen
   MLIRBuiltinTypesIncGen
+  MLIRBuiltinTypeInterfacesIncGen
   MLIRCallInterfacesIncGen
   MLIRCastInterfacesIncGen
   MLIRDataLayoutInterfacesIncGen

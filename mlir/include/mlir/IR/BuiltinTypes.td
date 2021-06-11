@@ -15,6 +15,7 @@
 #define BUILTIN_TYPES
 
 include "mlir/IR/BuiltinDialect.td"
+include "mlir/IR/BuiltinTypeInterfaces.td"
 
 // TODO: Currently the types defined in this file are prefixed with `Builtin_`.
 // This is to differentiate the types here with the ones in OpBase.td. We should
@@ -245,31 +246,6 @@ def Builtin_Integer : Builtin_Type<"Integer"> {
     /// Integer representation maximal bitwidth.
     /// Note: This is aligned with the maximum width of llvm::IntegerType.
     static constexpr unsigned kMaxWidth = (1 << 24) - 1;
-  }];
-}
-
-//===----------------------------------------------------------------------===//
-// MemRefElementTypeInterface
-//===----------------------------------------------------------------------===//
-
-def MemRefElementTypeInterface : TypeInterface<"MemRefElementTypeInterface"> {
-  let cppNamespace = "::mlir";
-  let description = [{
-    Indication that this type can be used as element in memref types.
-
-    Implementing this interface establishes a contract between this type and the
-    memref type indicating that this type can be used as element of ranked or
-    unranked memrefs. The type is expected to:
-
-      - model an entity stored in memory;
-      - have non-zero size.
-
-    For example, scalar values such as integers can implement this interface,
-    but indicator types such as `void` or `unit` should not.
-
-    The interface currently has no methods and is used by types to opt into
-    being memref elements. This may change in the future, in particular to
-    require types to provide their size or alignment given a data layout.
   }];
 }
 
