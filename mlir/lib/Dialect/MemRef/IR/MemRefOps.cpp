@@ -230,6 +230,65 @@ void AllocaOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 //===----------------------------------------------------------------------===//
+// AllocaScopeOp
+//===----------------------------------------------------------------------===//
+
+static void print(OpAsmPrinter &p, AllocaScopeOp &op) {
+  bool printBlockTerminators = false;
+
+  p << AllocaScopeOp::getOperationName() << " ";
+  if (!op.results().empty()) {
+    p << " -> (" << op.getResultTypes() << ")";
+    printBlockTerminators = true;
+  }
+  p.printRegion(op.bodyRegion(),
+                /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/printBlockTerminators);
+  p.printOptionalAttrDict(op->getAttrs());
+}
+
+static ParseResult parseAllocaScopeOp(OpAsmParser &parser,
+                                      OperationState &result) {
+  // Create a region for the body.
+  result.regions.reserve(1);
+  Region *bodyRegion = result.addRegion();
+
+  // Parse optional results type list.
+  if (parser.parseOptionalArrowTypeList(result.types))
+    return failure();
+
+  // Parse the body region.
+  if (parser.parseRegion(*bodyRegion, /*arguments=*/{}, /*argTypes=*/{}))
+    return failure();
+  AllocaScopeOp::ensureTerminator(*bodyRegion, parser.getBuilder(),
+                                  result.location);
+
+  // Parse the optional attribute list.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return success();
+}
+
+static LogicalResult verify(AllocaScopeOp op) {
+  if (failed(RegionBranchOpInterface::verifyTypes(op)))
+    return failure();
+
+  return success();
+}
+
+void AllocaScopeOp::getSuccessorRegions(
+    Optional<unsigned> index, ArrayRef<Attribute> operands,
+    SmallVectorImpl<RegionSuccessor> &regions) {
+  if (index.hasValue()) {
+    regions.push_back(RegionSuccessor(getResults()));
+    return;
+  }
+
+  regions.push_back(RegionSuccessor(&bodyRegion()));
+}
+
+//===----------------------------------------------------------------------===//
 // AssumeAlignmentOp
 //===----------------------------------------------------------------------===//
 

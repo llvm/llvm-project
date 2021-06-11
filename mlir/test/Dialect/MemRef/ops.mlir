@@ -76,3 +76,12 @@ func @memref_dealloc() {
   memref.dealloc %1 : memref<*xf32>
   return
 }
+
+
+// CHECK-LABEL: func @memref_alloca_scope
+func @memref_alloca_scope() {
+  memref.alloca_scope {
+    memref.alloca_scope.return
+  }
+  return
+}
