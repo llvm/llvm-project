@@ -317,8 +317,7 @@ public:
 
   /// Handle the given store and produce the node.
   ///
-  /// \param E The expression value which we are tracking
-  /// \param N A node where the evaluation of \c E actually happens.
+  /// \param SI The information fully describing the store.
   /// \param Opts Tracking options specifying how we are tracking the value.
   ///
   /// \return the produced note, null if the handler doesn't support this kind
@@ -346,8 +345,7 @@ public:
 /// \param N A node "downstream" from the evaluation of the statement.
 /// \param E The expression value which we are tracking
 /// \param R The bug report to which visitors should be attached.
-/// \param EnableNullFPSuppression Whether we should employ false positive
-///         suppression (inlined defensive checks, returned null).
+/// \param Opts Tracking options specifying how we are tracking the value.
 ///
 /// \return Whether or not the function was able to add visitors for this
 ///         statement. Note that returning \c true does not actually imply
