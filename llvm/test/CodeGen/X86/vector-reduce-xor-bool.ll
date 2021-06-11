@@ -367,7 +367,7 @@ define i1 @trunc_v16i16_v16i1(<16 x i16>) {
 ;
 ; AVX1-LABEL: trunc_v16i16_v16i1:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsllw $7, %xmm0, %xmm0
@@ -379,7 +379,7 @@ define i1 @trunc_v16i16_v16i1(<16 x i16>) {
 ;
 ; AVX2-LABEL: trunc_v16i16_v16i1:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpsllw $7, %xmm0, %xmm0
@@ -736,7 +736,7 @@ define i1 @trunc_v32i16_v32i1(<32 x i16>) {
 ; AVX1-LABEL: trunc_v32i16_v32i1:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vxorps %ymm1, %ymm0, %ymm0
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsllw $7, %xmm0, %xmm0

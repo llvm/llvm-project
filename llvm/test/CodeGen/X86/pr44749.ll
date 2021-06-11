@@ -10,18 +10,18 @@ define i32 @a() {
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    callq _b
 ; CHECK-NEXT:    cvtsi2sd %eax, %xmm0
-; CHECK-NEXT:    movq _calloc@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq _calloc@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    subq $-1, %rax
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    leaq {{.*}}(%rip), %rax
+; CHECK-NEXT:    leaq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; CHECK-NEXT:    ucomisd %xmm1, %xmm0
 ; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    leaq {{.*}}(%rip), %rax
+; CHECK-NEXT:    leaq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    cvttsd2si %xmm0, %eax
 ; CHECK-NEXT:    popq %rcx

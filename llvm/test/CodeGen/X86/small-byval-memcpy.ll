@@ -23,8 +23,8 @@ define void @copy16bytes(i8* nocapture %a, i8* nocapture readonly %b) {
 ;
 ; BDVER2-LABEL: copy16bytes:
 ; BDVER2:       ## %bb.0:
-; BDVER2-NEXT:    movups (%rsi), %xmm0
-; BDVER2-NEXT:    movups %xmm0, (%rdi)
+; BDVER2-NEXT:    vmovups (%rsi), %xmm0
+; BDVER2-NEXT:    vmovups %xmm0, (%rdi)
 ; BDVER2-NEXT:    retq
 ;
 ; BTVER2-LABEL: copy16bytes:

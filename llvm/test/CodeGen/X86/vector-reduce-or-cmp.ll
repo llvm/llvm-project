@@ -832,13 +832,13 @@ define i1 @trunc_v2i64(<2 x i64> %a0) {
 ;
 ; SSE41-LABEL: trunc_v2i64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    ptest {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    ptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: trunc_v2i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vptest {{.*}}(%rip), %xmm0
+; AVX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
   %1 = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> %a0)
@@ -851,7 +851,7 @@ define i1 @mask_v8i32(<8 x i32> %a0) {
 ; SSE2-LABEL: mask_v8i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
 ; SSE2-NEXT:    pmovmskb %xmm1, %eax
@@ -862,13 +862,13 @@ define i1 @mask_v8i32(<8 x i32> %a0) {
 ; SSE41-LABEL: mask_v8i32:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    por %xmm1, %xmm0
-; SSE41-NEXT:    ptest {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    ptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: mask_v8i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vptest {{.*}}(%rip), %ymm0
+; AVX1-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
 ; AVX1-NEXT:    sete %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -898,7 +898,7 @@ define i1 @trunc_v16i16(<16 x i16> %a0) {
 ; SSE2-LABEL: trunc_v16i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
 ; SSE2-NEXT:    pmovmskb %xmm1, %eax
@@ -909,13 +909,13 @@ define i1 @trunc_v16i16(<16 x i16> %a0) {
 ; SSE41-LABEL: trunc_v16i16:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    por %xmm1, %xmm0
-; SSE41-NEXT:    ptest {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    ptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    setne %al
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc_v16i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vptest {{.*}}(%rip), %ymm0
+; AVX1-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
 ; AVX1-NEXT:    setne %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -951,7 +951,7 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 ; SSE2-NEXT:    por %xmm4, %xmm2
 ; SSE2-NEXT:    por %xmm3, %xmm2
 ; SSE2-NEXT:    por %xmm0, %xmm2
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm2
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    pcmpeqb %xmm2, %xmm0
 ; SSE2-NEXT:    pmovmskb %xmm0, %eax
@@ -968,7 +968,7 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 ; SSE41-NEXT:    por %xmm4, %xmm2
 ; SSE41-NEXT:    por %xmm3, %xmm2
 ; SSE41-NEXT:    por %xmm0, %xmm2
-; SSE41-NEXT:    ptest {{.*}}(%rip), %xmm2
+; SSE41-NEXT:    ptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
@@ -977,7 +977,7 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 ; AVX1-NEXT:    vorps %ymm3, %ymm1, %ymm1
 ; AVX1-NEXT:    vorps %ymm1, %ymm2, %ymm1
 ; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
-; AVX1-NEXT:    vptest {{.*}}(%rip), %ymm0
+; AVX1-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
 ; AVX1-NEXT:    sete %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -1014,7 +1014,7 @@ define zeroext i1 @PR44781(%struct.Box* %0) {
 ; SSE2-LABEL: PR44781:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqu (%rdi), %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
 ; SSE2-NEXT:    pmovmskb %xmm1, %eax
@@ -1025,14 +1025,14 @@ define zeroext i1 @PR44781(%struct.Box* %0) {
 ; SSE41-LABEL: PR44781:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqu (%rdi), %xmm0
-; SSE41-NEXT:    ptest {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    ptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: PR44781:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX-NEXT:    vptest {{.*}}(%rip), %xmm0
+; AVX-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
   %2 = bitcast %struct.Box* %0 to <4 x i32>*

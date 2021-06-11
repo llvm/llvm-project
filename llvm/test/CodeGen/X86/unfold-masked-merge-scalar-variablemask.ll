@@ -908,7 +908,7 @@ define i32 @in_multiuse_A(i32 %x, i32 %y, i32 %z, i32 %mask) nounwind {
 ; CHECK-NOBMI-NEXT:    xorl %esi, %ebp
 ; CHECK-NOBMI-NEXT:    andl %ecx, %ebp
 ; CHECK-NOBMI-NEXT:    movl %ebp, %edi
-; CHECK-NOBMI-NEXT:    callq use32
+; CHECK-NOBMI-NEXT:    callq use32@PLT
 ; CHECK-NOBMI-NEXT:    xorl %ebx, %ebp
 ; CHECK-NOBMI-NEXT:    movl %ebp, %eax
 ; CHECK-NOBMI-NEXT:    addq $8, %rsp
@@ -926,7 +926,7 @@ define i32 @in_multiuse_A(i32 %x, i32 %y, i32 %z, i32 %mask) nounwind {
 ; CHECK-BMI-NEXT:    xorl %esi, %ebp
 ; CHECK-BMI-NEXT:    andl %ecx, %ebp
 ; CHECK-BMI-NEXT:    movl %ebp, %edi
-; CHECK-BMI-NEXT:    callq use32
+; CHECK-BMI-NEXT:    callq use32@PLT
 ; CHECK-BMI-NEXT:    xorl %ebx, %ebp
 ; CHECK-BMI-NEXT:    movl %ebp, %eax
 ; CHECK-BMI-NEXT:    addq $8, %rsp
@@ -949,7 +949,7 @@ define i32 @in_multiuse_B(i32 %x, i32 %y, i32 %z, i32 %mask) nounwind {
 ; CHECK-NOBMI-NEXT:    movl %esi, %ebp
 ; CHECK-NOBMI-NEXT:    xorl %esi, %edi
 ; CHECK-NOBMI-NEXT:    andl %edi, %ebx
-; CHECK-NOBMI-NEXT:    callq use32
+; CHECK-NOBMI-NEXT:    callq use32@PLT
 ; CHECK-NOBMI-NEXT:    xorl %ebp, %ebx
 ; CHECK-NOBMI-NEXT:    movl %ebx, %eax
 ; CHECK-NOBMI-NEXT:    addq $8, %rsp
@@ -966,7 +966,7 @@ define i32 @in_multiuse_B(i32 %x, i32 %y, i32 %z, i32 %mask) nounwind {
 ; CHECK-BMI-NEXT:    movl %esi, %ebp
 ; CHECK-BMI-NEXT:    xorl %esi, %edi
 ; CHECK-BMI-NEXT:    andl %edi, %ebx
-; CHECK-BMI-NEXT:    callq use32
+; CHECK-BMI-NEXT:    callq use32@PLT
 ; CHECK-BMI-NEXT:    xorl %ebp, %ebx
 ; CHECK-BMI-NEXT:    movl %ebx, %eax
 ; CHECK-BMI-NEXT:    addq $8, %rsp

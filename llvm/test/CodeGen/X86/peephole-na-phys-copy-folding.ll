@@ -29,8 +29,8 @@ define i1 @plus_one() nounwind {
 ;
 ; CHECK64-LABEL: plus_one:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    movb {{.*}}(%rip), %al
-; CHECK64-NEXT:    incl {{.*}}(%rip)
+; CHECK64-NEXT:    movb M(%rip), %al
+; CHECK64-NEXT:    incl L(%rip)
 ; CHECK64-NEXT:    jne .LBB0_2
 ; CHECK64-NEXT:  # %bb.1: # %entry
 ; CHECK64-NEXT:    andb $8, %al
@@ -77,8 +77,8 @@ define i1 @plus_forty_two() nounwind {
 ;
 ; CHECK64-LABEL: plus_forty_two:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    movb {{.*}}(%rip), %al
-; CHECK64-NEXT:    addl $42, {{.*}}(%rip)
+; CHECK64-NEXT:    movb M(%rip), %al
+; CHECK64-NEXT:    addl $42, L(%rip)
 ; CHECK64-NEXT:    jne .LBB1_2
 ; CHECK64-NEXT:  # %bb.1: # %entry
 ; CHECK64-NEXT:    andb $8, %al
@@ -125,8 +125,8 @@ define i1 @minus_one() nounwind {
 ;
 ; CHECK64-LABEL: minus_one:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    movb {{.*}}(%rip), %al
-; CHECK64-NEXT:    decl {{.*}}(%rip)
+; CHECK64-NEXT:    movb M(%rip), %al
+; CHECK64-NEXT:    decl L(%rip)
 ; CHECK64-NEXT:    jne .LBB2_2
 ; CHECK64-NEXT:  # %bb.1: # %entry
 ; CHECK64-NEXT:    andb $8, %al
@@ -173,8 +173,8 @@ define i1 @minus_forty_two() nounwind {
 ;
 ; CHECK64-LABEL: minus_forty_two:
 ; CHECK64:       # %bb.0: # %entry
-; CHECK64-NEXT:    movb {{.*}}(%rip), %al
-; CHECK64-NEXT:    addl $-42, {{.*}}(%rip)
+; CHECK64-NEXT:    movb M(%rip), %al
+; CHECK64-NEXT:    addl $-42, L(%rip)
 ; CHECK64-NEXT:    jne .LBB3_2
 ; CHECK64-NEXT:  # %bb.1: # %entry
 ; CHECK64-NEXT:    andb $8, %al
@@ -219,7 +219,7 @@ define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) nounwind {
 ; CHECK32-NEXT:    subl $8, %esp
 ; CHECK32-NEXT:    pushl %edx
 ; CHECK32-NEXT:    pushl %eax
-; CHECK32-NEXT:    calll bar
+; CHECK32-NEXT:    calll bar@PLT
 ; CHECK32-NEXT:    addl $16, %esp
 ; CHECK32-NEXT:    testb %bl, %bl
 ; CHECK32-NEXT:    jne .LBB4_3
@@ -242,7 +242,7 @@ define i64 @test_intervening_call(i64* %foo, i64 %bar, i64 %baz) nounwind {
 ; CHECK64-NEXT:    lock cmpxchgq %rdx, (%rdi)
 ; CHECK64-NEXT:    setne %bl
 ; CHECK64-NEXT:    movq %rax, %rdi
-; CHECK64-NEXT:    callq bar
+; CHECK64-NEXT:    callq bar@PLT
 ; CHECK64-NEXT:    testb %bl, %bl
 ; CHECK64-NEXT:    jne .LBB4_2
 ; CHECK64-NEXT:  # %bb.1: # %t

@@ -39,12 +39,12 @@ define half @freeze_half() {
 ; X86ASM-NEXT:    pushq %rax
 ; X86ASM-NEXT:    .cfi_def_cfa_offset 16
 ; X86ASM-NEXT:    xorl %edi, %edi
-; X86ASM-NEXT:    callq __gnu_h2f_ieee
-; X86ASM-NEXT:    callq __gnu_f2h_ieee
+; X86ASM-NEXT:    callq __gnu_h2f_ieee@PLT
+; X86ASM-NEXT:    callq __gnu_f2h_ieee@PLT
 ; X86ASM-NEXT:    movzwl %ax, %edi
-; X86ASM-NEXT:    callq __gnu_h2f_ieee
+; X86ASM-NEXT:    callq __gnu_h2f_ieee@PLT
 ; X86ASM-NEXT:    addss %xmm0, %xmm0
-; X86ASM-NEXT:    callq __gnu_f2h_ieee
+; X86ASM-NEXT:    callq __gnu_f2h_ieee@PLT
 ; X86ASM-NEXT:    popq %rcx
 ; X86ASM-NEXT:    .cfi_def_cfa_offset 8
 ; X86ASM-NEXT:    retq

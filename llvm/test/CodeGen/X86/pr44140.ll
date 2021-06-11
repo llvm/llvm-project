@@ -41,7 +41,7 @@ define i32 @main() {
 ; CHECK-NEXT:    vmovups %ymm5, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovups %ymm4, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq opaque
+; CHECK-NEXT:    callq opaque@PLT
 ; CHECK-NEXT:    vmovaps %xmm6, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    testb %sil, %sil
 ; CHECK-NEXT:    jne .LBB1_1

@@ -12,7 +12,7 @@ define dso_local signext i32 @test1(i32* %b) local_unnamed_addr  {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movslq {{.*}}(%rip), %rax
+; CHECK-NEXT:    movslq a(%rip), %rax
 ; CHECK-NEXT:    cmpq %rdi, %rax
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
@@ -76,7 +76,7 @@ define dso_local signext i32 @test2(i32* %p1) local_unnamed_addr  {
 ; CHECK-NEXT:    je .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    movslq {{.*}}(%rip), %rax
+; CHECK-NEXT:    movslq a(%rip), %rax
 ; CHECK-NEXT:    cmpq %rdi, %rax
 ; CHECK-NEXT:    je .LBB1_3
 ; CHECK-NEXT:  .LBB1_2: # %return

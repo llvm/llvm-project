@@ -10,7 +10,7 @@ define void @foo(i32 %n, double* nocapture %p) nounwind {
 ; CHECK-NEXT:  .LBB0_1: # %bb
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    fldl (%eax,%ecx,8)
-; CHECK-NEXT:    fmull {{\.LCPI[0-9]+_[0-9]+}}
+; CHECK-NEXT:    fmull {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    fstpl (%eax,%ecx,8)
 ; CHECK-NEXT:    decl %ecx
 ; CHECK-NEXT:    js .LBB0_1

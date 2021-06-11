@@ -563,19 +563,19 @@ define <2 x double> @test_2f64_fmsub_load(<2 x double>* %a0, <2 x double> %a1, <
 define <4 x float> @test_v4f32_mul_add_x_one_y(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_add_x_one_y:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_add_x_one_y:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA4-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    retq
 ;
 ; AVX512-INFS-LABEL: test_v4f32_mul_add_x_one_y:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vaddps {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    retq
 ;
@@ -601,19 +601,19 @@ define <4 x float> @test_v4f32_mul_add_x_one_y(<4 x float> %x, <4 x float> %y) {
 define <4 x float> @test_v4f32_mul_y_add_x_one(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_y_add_x_one:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_y_add_x_one:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA4-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA4-INFS-NEXT:    retq
 ;
 ; AVX512-INFS-LABEL: test_v4f32_mul_y_add_x_one:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vaddps {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; AVX512-INFS-NEXT:    retq
 ;
@@ -639,19 +639,19 @@ define <4 x float> @test_v4f32_mul_y_add_x_one(<4 x float> %x, <4 x float> %y) {
 define <4 x float> @test_v4f32_mul_y_add_x_one_undefs(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_y_add_x_one_undefs:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_y_add_x_one_undefs:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA4-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA4-INFS-NEXT:    retq
 ;
 ; AVX512-INFS-LABEL: test_v4f32_mul_y_add_x_one_undefs:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vaddps {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; AVX512-INFS-NEXT:    retq
 ;
@@ -677,19 +677,19 @@ define <4 x float> @test_v4f32_mul_y_add_x_one_undefs(<4 x float> %x, <4 x float
 define <4 x float> @test_v4f32_mul_add_x_negone_y(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_add_x_negone_y:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_add_x_negone_y:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA4-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    retq
 ;
 ; AVX512-INFS-LABEL: test_v4f32_mul_add_x_negone_y:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vaddps {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    retq
 ;
@@ -715,19 +715,19 @@ define <4 x float> @test_v4f32_mul_add_x_negone_y(<4 x float> %x, <4 x float> %y
 define <4 x float> @test_v4f32_mul_y_add_x_negone(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_y_add_x_negone:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_y_add_x_negone:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA4-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA4-INFS-NEXT:    retq
 ;
 ; AVX512-INFS-LABEL: test_v4f32_mul_y_add_x_negone:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vaddps {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; AVX512-INFS-NEXT:    retq
 ;
@@ -753,19 +753,19 @@ define <4 x float> @test_v4f32_mul_y_add_x_negone(<4 x float> %x, <4 x float> %y
 define <4 x float> @test_v4f32_mul_y_add_x_negone_undefs(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_y_add_x_negone_undefs:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_y_add_x_negone_undefs:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA4-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA4-INFS-NEXT:    retq
 ;
 ; AVX512-INFS-LABEL: test_v4f32_mul_y_add_x_negone_undefs:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vaddps {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; AVX512-INFS-NEXT:    retq
 ;
@@ -1037,19 +1037,19 @@ define <4 x float> @test_v4f32_mul_y_sub_negone_x_undefs(<4 x float> %x, <4 x fl
 define <4 x float> @test_v4f32_mul_sub_x_one_y(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_sub_x_one_y:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_sub_x_one_y:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA4-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    retq
 ;
 ; AVX512-INFS-LABEL: test_v4f32_mul_sub_x_one_y:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vaddps {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    retq
 ;
@@ -1075,19 +1075,19 @@ define <4 x float> @test_v4f32_mul_sub_x_one_y(<4 x float> %x, <4 x float> %y) {
 define <4 x float> @test_v4f32_mul_y_sub_x_one(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_y_sub_x_one:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_y_sub_x_one:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA4-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA4-INFS-NEXT:    retq
 ;
 ; AVX512-INFS-LABEL: test_v4f32_mul_y_sub_x_one:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vaddps {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; AVX512-INFS-NEXT:    retq
 ;
@@ -1113,19 +1113,19 @@ define <4 x float> @test_v4f32_mul_y_sub_x_one(<4 x float> %x, <4 x float> %y) {
 define <4 x float> @test_v4f32_mul_y_sub_x_one_undefs(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_y_sub_x_one_undefs:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_y_sub_x_one_undefs:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA4-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA4-INFS-NEXT:    retq
 ;
 ; AVX512-INFS-LABEL: test_v4f32_mul_y_sub_x_one_undefs:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vaddps {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; AVX512-INFS-NEXT:    retq
 ;
@@ -1151,19 +1151,19 @@ define <4 x float> @test_v4f32_mul_y_sub_x_one_undefs(<4 x float> %x, <4 x float
 define <4 x float> @test_v4f32_mul_sub_x_negone_y(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_sub_x_negone_y:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_sub_x_negone_y:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA4-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    retq
 ;
 ; AVX512-INFS-LABEL: test_v4f32_mul_sub_x_negone_y:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vaddps {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    retq
 ;
@@ -1189,19 +1189,19 @@ define <4 x float> @test_v4f32_mul_sub_x_negone_y(<4 x float> %x, <4 x float> %y
 define <4 x float> @test_v4f32_mul_y_sub_x_negone(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_y_sub_x_negone:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_y_sub_x_negone:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA4-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA4-INFS-NEXT:    retq
 ;
 ; AVX512-INFS-LABEL: test_v4f32_mul_y_sub_x_negone:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vaddps {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; AVX512-INFS-NEXT:    retq
 ;
@@ -1227,19 +1227,19 @@ define <4 x float> @test_v4f32_mul_y_sub_x_negone(<4 x float> %x, <4 x float> %y
 define <4 x float> @test_v4f32_mul_y_sub_x_negone_undefs(<4 x float> %x, <4 x float> %y) {
 ; FMA-INFS-LABEL: test_v4f32_mul_y_sub_x_negone_undefs:
 ; FMA-INFS:       # %bb.0:
-; FMA-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA-INFS-NEXT:    retq
 ;
 ; FMA4-INFS-LABEL: test_v4f32_mul_y_sub_x_negone_undefs:
 ; FMA4-INFS:       # %bb.0:
-; FMA4-INFS-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; FMA4-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA4-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; FMA4-INFS-NEXT:    retq
 ;
 ; AVX512-INFS-LABEL: test_v4f32_mul_y_sub_x_negone_undefs:
 ; AVX512-INFS:       # %bb.0:
-; AVX512-INFS-NEXT:    vaddps {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-INFS-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-INFS-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; AVX512-INFS-NEXT:    retq
 ;
@@ -1657,17 +1657,17 @@ define <4 x double> @test_v4f64_fneg_fnmsub(<4 x double> %a0, <4 x double> %a1, 
 define <4 x float> @test_v4f32_fma_x_c1_fmul_x_c2(<4 x float> %x) #0 {
 ; FMA-LABEL: test_v4f32_fma_x_c1_fmul_x_c2:
 ; FMA:       # %bb.0:
-; FMA-NEXT:    vmulps {{.*}}(%rip), %xmm0, %xmm0
+; FMA-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA-NEXT:    retq
 ;
 ; FMA4-LABEL: test_v4f32_fma_x_c1_fmul_x_c2:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vmulps {{.*}}(%rip), %xmm0, %xmm0
+; FMA4-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FMA4-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v4f32_fma_x_c1_fmul_x_c2:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmulps {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %m0 = fmul <4 x float> %x, <float 1.0, float 2.0, float 3.0, float 4.0>
   %m1 = fmul <4 x float> %x, <float 4.0, float 3.0, float 2.0, float 1.0>
@@ -1775,19 +1775,19 @@ define <4 x double> @test_v4f64_fneg_fmul_no_nsz(<4 x double> %x, <4 x double> %
 ; FMA-LABEL: test_v4f64_fneg_fmul_no_nsz:
 ; FMA:       # %bb.0:
 ; FMA-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
-; FMA-NEXT:    vxorpd {{.*}}(%rip), %ymm0, %ymm0
+; FMA-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; FMA-NEXT:    retq
 ;
 ; FMA4-LABEL: test_v4f64_fneg_fmul_no_nsz:
 ; FMA4:       # %bb.0:
 ; FMA4-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
-; FMA4-NEXT:    vxorpd {{.*}}(%rip), %ymm0, %ymm0
+; FMA4-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; FMA4-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v4f64_fneg_fmul_no_nsz:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vxorpd {{.*}}(%rip){1to4}, %ymm0, %ymm0
+; AVX512-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %m = fmul <4 x double> %x, %y
   %n = fsub <4 x double> <double -0.0, double -0.0, double -0.0, double -0.0>, %m

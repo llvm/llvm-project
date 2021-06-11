@@ -200,7 +200,7 @@ define void @memset_256_nonzero_bytes(i8* %x) {
 ; SSE-NEXT:    .cfi_def_cfa_offset 16
 ; SSE-NEXT:    movl $256, %edx # imm = 0x100
 ; SSE-NEXT:    movl $42, %esi
-; SSE-NEXT:    callq memset
+; SSE-NEXT:    callq memset@PLT
 ; SSE-NEXT:    popq %rax
 ; SSE-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-NEXT:    retq

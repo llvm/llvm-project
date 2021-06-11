@@ -154,23 +154,23 @@ define <4 x float> @pow_v4f32_one_fourth_not_enough_fmf(<4 x float> %x) nounwind
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq powf
+; CHECK-NEXT:    callq powf@PLT
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq powf
+; CHECK-NEXT:    callq powf@PLT
 ; CHECK-NEXT:    unpcklps (%rsp), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq powf
+; CHECK-NEXT:    callq powf@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq powf
+; CHECK-NEXT:    callq powf@PLT
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; CHECK-NEXT:    unpcklpd (%rsp), %xmm1 # 16-byte Folded Reload
@@ -188,12 +188,12 @@ define <2 x double> @pow_v2f64_one_fourth_not_enough_fmf(<2 x double> %x) nounwi
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    callq pow
+; CHECK-NEXT:    callq pow@PLT
 ; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    callq pow
+; CHECK-NEXT:    callq pow@PLT
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; CHECK-NEXT:    movaps %xmm1, %xmm0
@@ -232,10 +232,10 @@ define x86_fp80 @pow_f80_one_third_fmf(x86_fp80 %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    fldt {{.*}}(%rip)
+; CHECK-NEXT:    fldt {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
 ; CHECK-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstpt (%rsp)
-; CHECK-NEXT:    callq powl
+; CHECK-NEXT:    callq powl@PLT
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    retq
   %one = uitofp i32 1 to x86_fp80

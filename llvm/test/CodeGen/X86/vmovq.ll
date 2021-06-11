@@ -5,14 +5,14 @@
 define <2 x i64> @PR25554(<2 x i64> %v0, <2 x i64> %v1) {
 ; SSE-LABEL: PR25554:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    por {{.*}}(%rip), %xmm0
-; SSE-NEXT:    paddq {{.*}}(%rip), %xmm0
+; SSE-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR25554:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpaddq {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 
   %c1 = or <2 x i64> %v0, <i64 1, i64 0>

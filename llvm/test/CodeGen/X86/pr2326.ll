@@ -12,7 +12,7 @@ define i32 @func_59(i32 %p_60) nounwind  {
 ; CHECK-NEXT:    sete %cl
 ; CHECK-NEXT:    pushl $0
 ; CHECK-NEXT:    pushl %ecx
-; CHECK-NEXT:    calll func_15
+; CHECK-NEXT:    calll func_15@PLT
 entry:
 	%l_108 = alloca i32		; <i32*> [#uses=2]
 	%tmp15 = load i32, i32* null, align 4		; <i32> [#uses=1]

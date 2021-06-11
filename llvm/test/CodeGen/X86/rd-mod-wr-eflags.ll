@@ -39,15 +39,15 @@ define dso_local i32 @test() nounwind uwtable ssp {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    movq {{.*}}(%rip), %rsi
+; CHECK-NEXT:    movq c(%rip), %rsi
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    decq %rsi
-; CHECK-NEXT:    movq %rsi, {{.*}}(%rip)
+; CHECK-NEXT:    movq %rsi, c(%rip)
 ; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    movl %eax, a(%rip)
 ; CHECK-NEXT:    movl $.L.str, %edi
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    callq printf
+; CHECK-NEXT:    callq printf@PLT
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -68,15 +68,15 @@ define dso_local i32 @test2() nounwind uwtable ssp {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    movq {{.*}}(%rip), %rsi
+; CHECK-NEXT:    movq c(%rip), %rsi
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addq $-1, %rsi
 ; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    movq %rsi, {{.*}}(%rip)
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    movq %rsi, c(%rip)
+; CHECK-NEXT:    movl %eax, a(%rip)
 ; CHECK-NEXT:    movl $.L.str, %edi
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    callq printf
+; CHECK-NEXT:    callq printf@PLT
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -231,7 +231,7 @@ return:
 define dso_local void @test3() nounwind ssp {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq {{.*}}(%rip), %rax
+; CHECK-NEXT:    movq foo(%rip), %rax
 ; CHECK-NEXT:    decq 16(%rax)
 ; CHECK-NEXT:    je .LBB5_2
 ; CHECK-NEXT:  # %bb.1: # %if.end
@@ -269,12 +269,12 @@ define dso_local void @test4() nounwind uwtable ssp {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    decl {{.*}}(%rip)
+; CHECK-NEXT:    decl y(%rip)
 ; CHECK-NEXT:    je .LBB6_2
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    movl {{.*}}(%rip), %eax
+; CHECK-NEXT:    movl x(%rip), %eax
 ; CHECK-NEXT:  .LBB6_2: # %entry
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    movl %eax, z(%rip)
 ; CHECK-NEXT:    retq
 entry:
   %0 = load i32, i32* @x, align 4

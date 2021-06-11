@@ -68,13 +68,13 @@ define void @foo() local_unnamed_addr {
 ;
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movsbl {{.*}}(%rip), %r9d
-; X64-NEXT:    movzwl {{.*}}(%rip), %r8d
-; X64-NEXT:    movl {{.*}}(%rip), %ecx
+; X64-NEXT:    movsbl var_27(%rip), %r9d
+; X64-NEXT:    movzwl var_2(%rip), %r8d
+; X64-NEXT:    movl var_310(%rip), %ecx
 ; X64-NEXT:    imull %r9d, %ecx
-; X64-NEXT:    addl {{.*}}(%rip), %ecx
+; X64-NEXT:    addl var_24(%rip), %ecx
 ; X64-NEXT:    movl $4194303, %esi # imm = 0x3FFFFF
-; X64-NEXT:    andl {{.*}}(%rip), %esi
+; X64-NEXT:    andl obj(%rip), %esi
 ; X64-NEXT:    leal (%rsi,%rsi), %edi
 ; X64-NEXT:    subl %r9d, %edi
 ; X64-NEXT:    movl %edi, %edx
@@ -84,11 +84,11 @@ define void @foo() local_unnamed_addr {
 ; X64-NEXT:    movl $9, %eax
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shlq %cl, %rax
-; X64-NEXT:    movq %rax, {{.*}}(%rip)
+; X64-NEXT:    movq %rax, var_50(%rip)
 ; X64-NEXT:    cmpl %esi, %edx
-; X64-NEXT:    setge {{.*}}(%rip)
+; X64-NEXT:    setge var_205(%rip)
 ; X64-NEXT:    imull %r9d, %edi
-; X64-NEXT:    movb %dil, {{.*}}(%rip)
+; X64-NEXT:    movb %dil, var_218(%rip)
 ; X64-NEXT:    retq
   entry:
   %bf.load = load i32, i32* bitcast (%struct.AA* @obj to i32*), align 8

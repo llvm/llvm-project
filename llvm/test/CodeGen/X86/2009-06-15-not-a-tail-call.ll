@@ -9,13 +9,13 @@ define fastcc i8* @_D3gcx2GC12callocNoSyncMFmkZPv() nounwind {
 ; CHECK-LABEL: _D3gcx2GC12callocNoSyncMFmkZPv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    calll _D3gcx2GC12mallocNoSyncMFmkZPv
+; CHECK-NEXT:    calll _D3gcx2GC12mallocNoSyncMFmkZPv@PLT
 ; CHECK-NEXT:    movl %eax, %esi
 ; CHECK-NEXT:    pushl $0
 ; CHECK-NEXT:    pushl $2
 ; CHECK-NEXT:    pushl $0
 ; CHECK-NEXT:    pushl %eax
-; CHECK-NEXT:    calll memset
+; CHECK-NEXT:    calll memset@PLT
 ; CHECK-NEXT:    addl $16, %esp
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    popl %esi

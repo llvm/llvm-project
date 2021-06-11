@@ -1841,9 +1841,9 @@ define void @store_v16i1(<16 x i1> %c , <16 x i1>* %ptr) {
 define void @f1(i32 %c) {
 ; CHECK-LABEL: f1:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    movzbl {{.*}}(%rip), %edi
+; CHECK-NEXT:    movzbl _f1.v(%rip), %edi
 ; CHECK-NEXT:    xorl $1, %edi
-; CHECK-NEXT:    movb %dil, {{.*}}(%rip)
+; CHECK-NEXT:    movb %dil, _f1.v(%rip)
 ; CHECK-NEXT:    jmp _f2 ## TAILCALL
 ;
 ; X86-LABEL: f1:
@@ -1909,27 +1909,27 @@ define void @store_i8_i1(i8 %x, i1 *%y) {
 define <32 x i16> @test_build_vec_v32i1(<32 x i16> %x) {
 ; KNL-LABEL: test_build_vec_v32i1:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
+; KNL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_build_vec_v32i1:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
+; SKX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; SKX-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_build_vec_v32i1:
 ; AVX512BW:       ## %bb.0:
-; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
+; AVX512BW-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: test_build_vec_v32i1:
 ; AVX512DQ:       ## %bb.0:
-; AVX512DQ-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
+; AVX512DQ-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; X86-LABEL: test_build_vec_v32i1:
 ; X86:       ## %bb.0:
-; X86-NEXT:    vandps LCPI40_0, %zmm0, %zmm0
+; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm0
 ; X86-NEXT:    retl
   %ret = select <32 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false>, <32 x i16> %x, <32 x i16> zeroinitializer
   ret <32 x i16> %ret
@@ -1938,7 +1938,7 @@ define <32 x i16> @test_build_vec_v32i1(<32 x i16> %x) {
 define <32 x i16> @test_build_vec_v32i1_optsize(<32 x i16> %x) optsize {
 ; KNL-LABEL: test_build_vec_v32i1_optsize:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
+; KNL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_build_vec_v32i1_optsize:
@@ -1957,7 +1957,7 @@ define <32 x i16> @test_build_vec_v32i1_optsize(<32 x i16> %x) optsize {
 ;
 ; AVX512DQ-LABEL: test_build_vec_v32i1_optsize:
 ; AVX512DQ:       ## %bb.0:
-; AVX512DQ-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
+; AVX512DQ-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; X86-LABEL: test_build_vec_v32i1_optsize:
@@ -1973,7 +1973,7 @@ define <32 x i16> @test_build_vec_v32i1_optsize(<32 x i16> %x) optsize {
 define <32 x i16> @test_build_vec_v32i1_pgso(<32 x i16> %x) !prof !14 {
 ; KNL-LABEL: test_build_vec_v32i1_pgso:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
+; KNL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_build_vec_v32i1_pgso:
@@ -1992,7 +1992,7 @@ define <32 x i16> @test_build_vec_v32i1_pgso(<32 x i16> %x) !prof !14 {
 ;
 ; AVX512DQ-LABEL: test_build_vec_v32i1_pgso:
 ; AVX512DQ:       ## %bb.0:
-; AVX512DQ-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
+; AVX512DQ-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; X86-LABEL: test_build_vec_v32i1_pgso:
@@ -2008,27 +2008,27 @@ define <32 x i16> @test_build_vec_v32i1_pgso(<32 x i16> %x) !prof !14 {
 define <64 x i8> @test_build_vec_v64i1(<64 x i8> %x) {
 ; KNL-LABEL: test_build_vec_v64i1:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
+; KNL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_build_vec_v64i1:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
+; SKX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; SKX-NEXT:    retq
 ;
 ; AVX512BW-LABEL: test_build_vec_v64i1:
 ; AVX512BW:       ## %bb.0:
-; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
+; AVX512BW-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: test_build_vec_v64i1:
 ; AVX512DQ:       ## %bb.0:
-; AVX512DQ-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
+; AVX512DQ-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; X86-LABEL: test_build_vec_v64i1:
 ; X86:       ## %bb.0:
-; X86-NEXT:    vandps LCPI43_0, %zmm0, %zmm0
+; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm0
 ; X86-NEXT:    retl
   %ret = select <64 x i1> <i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 true, i1 false, i1 true, i1 false>, <64 x i8> %x, <64 x i8> zeroinitializer
   ret <64 x i8> %ret

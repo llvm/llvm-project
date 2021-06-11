@@ -699,13 +699,13 @@ define <16 x i16> @eq_1_v16i16(<16 x i16> %0) {
 ; BITALG_NOVLX:       # %bb.0:
 ; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; BITALG_NOVLX-NEXT:    vpopcntw %zmm0, %zmm0
-; BITALG_NOVLX-NEXT:    vpcmpeqw {{.*}}(%rip), %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; BITALG_NOVLX-NEXT:    retq
 ;
 ; BITALG-LABEL: eq_1_v16i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %ymm0, %ymm0
-; BITALG-NEXT:    vpcmpeqw {{.*}}(%rip), %ymm0, %ymm0
+; BITALG-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; BITALG-NEXT:    retq
   %2 = tail call <16 x i16> @llvm.ctpop.v16i16(<16 x i16> %0)
   %3 = icmp eq <16 x i16> %2, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
@@ -773,7 +773,7 @@ define <16 x i16> @ne_1_v16i16(<16 x i16> %0) {
 ; BITALG_NOVLX:       # %bb.0:
 ; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; BITALG_NOVLX-NEXT:    vpopcntw %zmm0, %zmm0
-; BITALG_NOVLX-NEXT:    vpcmpeqw {{.*}}(%rip), %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; BITALG_NOVLX-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
 ; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; BITALG_NOVLX-NEXT:    retq
@@ -781,7 +781,7 @@ define <16 x i16> @ne_1_v16i16(<16 x i16> %0) {
 ; BITALG-LABEL: ne_1_v16i16:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntw %ymm0, %ymm0
-; BITALG-NEXT:    vpcmpeqw {{.*}}(%rip), %ymm0, %ymm0
+; BITALG-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; BITALG-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm0
 ; BITALG-NEXT:    retq
   %2 = tail call <16 x i16> @llvm.ctpop.v16i16(<16 x i16> %0)
@@ -846,13 +846,13 @@ define <32 x i8> @eq_1_v32i8(<32 x i8> %0) {
 ; BITALG_NOVLX:       # %bb.0:
 ; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; BITALG_NOVLX-NEXT:    vpopcntb %zmm0, %zmm0
-; BITALG_NOVLX-NEXT:    vpcmpeqb {{.*}}(%rip), %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; BITALG_NOVLX-NEXT:    retq
 ;
 ; BITALG-LABEL: eq_1_v32i8:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
-; BITALG-NEXT:    vpcmpeqb {{.*}}(%rip), %ymm0, %ymm0
+; BITALG-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; BITALG-NEXT:    retq
   %2 = tail call <32 x i8> @llvm.ctpop.v32i8(<32 x i8> %0)
   %3 = icmp eq <32 x i8> %2, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
@@ -920,7 +920,7 @@ define <32 x i8> @ne_1_v32i8(<32 x i8> %0) {
 ; BITALG_NOVLX:       # %bb.0:
 ; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; BITALG_NOVLX-NEXT:    vpopcntb %zmm0, %zmm0
-; BITALG_NOVLX-NEXT:    vpcmpeqb {{.*}}(%rip), %ymm0, %ymm0
+; BITALG_NOVLX-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; BITALG_NOVLX-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
 ; BITALG_NOVLX-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; BITALG_NOVLX-NEXT:    retq
@@ -928,7 +928,7 @@ define <32 x i8> @ne_1_v32i8(<32 x i8> %0) {
 ; BITALG-LABEL: ne_1_v32i8:
 ; BITALG:       # %bb.0:
 ; BITALG-NEXT:    vpopcntb %ymm0, %ymm0
-; BITALG-NEXT:    vpcmpeqb {{.*}}(%rip), %ymm0, %ymm0
+; BITALG-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; BITALG-NEXT:    vpternlogq $15, %ymm0, %ymm0, %ymm0
 ; BITALG-NEXT:    retq
   %2 = tail call <32 x i8> @llvm.ctpop.v32i8(<32 x i8> %0)

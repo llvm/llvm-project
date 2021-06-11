@@ -7,7 +7,7 @@ define dso_local void @gather_mask_dps(<16 x i32> %ind, <16 x float> %src, i16 %
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    kmovq %k1, %k2
 ; CHECK-NEXT:    vgatherdps (%rsi,%zmm0,4), %zmm1 {%k2}
-; CHECK-NEXT:    vpaddd {{.*}}(%rip), %zmm0, %zmm0
+; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; CHECK-NEXT:    vscatterdps %zmm1, (%rdx,%zmm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -24,7 +24,7 @@ define dso_local void @gather_mask_dpd(<8 x i32> %ind, <8 x double> %src, i8 %ma
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    kmovq %k1, %k2
 ; CHECK-NEXT:    vgatherdpd (%rsi,%ymm0,4), %zmm1 {%k2}
-; CHECK-NEXT:    vpaddd {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    vscatterdpd %zmm1, (%rdx,%ymm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -41,7 +41,7 @@ define dso_local void @gather_mask_qps(<8 x i64> %ind, <8 x float> %src, i8 %mas
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    kmovq %k1, %k2
 ; CHECK-NEXT:    vgatherqps (%rsi,%zmm0,4), %ymm1 {%k2}
-; CHECK-NEXT:    vpaddq {{.*}}(%rip), %zmm0, %zmm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; CHECK-NEXT:    vscatterqps %ymm1, (%rdx,%zmm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -58,7 +58,7 @@ define dso_local void @gather_mask_qpd(<8 x i64> %ind, <8 x double> %src, i8 %ma
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    kmovq %k1, %k2
 ; CHECK-NEXT:    vgatherqpd (%rsi,%zmm0,4), %zmm1 {%k2}
-; CHECK-NEXT:    vpaddq {{.*}}(%rip), %zmm0, %zmm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; CHECK-NEXT:    vscatterqpd %zmm1, (%rdx,%zmm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -78,7 +78,7 @@ define dso_local void @gather_mask_dd(<16 x i32> %ind, <16 x i32> %src, i16 %mas
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    kmovq %k1, %k2
 ; CHECK-NEXT:    vpgatherdd (%rsi,%zmm0,4), %zmm1 {%k2}
-; CHECK-NEXT:    vpaddd {{.*}}(%rip), %zmm0, %zmm0
+; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; CHECK-NEXT:    vpscatterdd %zmm1, (%rdx,%zmm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -95,7 +95,7 @@ define dso_local void @gather_mask_qd(<8 x i64> %ind, <8 x i32> %src, i8 %mask, 
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    kmovq %k1, %k2
 ; CHECK-NEXT:    vpgatherqd (%rsi,%zmm0,4), %ymm1 {%k2}
-; CHECK-NEXT:    vpaddq {{.*}}(%rip), %zmm0, %zmm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; CHECK-NEXT:    vpscatterqd %ymm1, (%rdx,%zmm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -112,7 +112,7 @@ define dso_local void @gather_mask_qq(<8 x i64> %ind, <8 x i64> %src, i8 %mask, 
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    kmovq %k1, %k2
 ; CHECK-NEXT:    vpgatherqq (%rsi,%zmm0,4), %zmm1 {%k2}
-; CHECK-NEXT:    vpaddq {{.*}}(%rip), %zmm0, %zmm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; CHECK-NEXT:    vpscatterqq %zmm1, (%rdx,%zmm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -129,7 +129,7 @@ define dso_local void @gather_mask_dq(<8 x i32> %ind, <8 x i64> %src, i8 %mask, 
 ; CHECK-NEXT:    kmovd %edi, %k1
 ; CHECK-NEXT:    kmovq %k1, %k2
 ; CHECK-NEXT:    vpgatherdq (%rsi,%ymm0,4), %zmm1 {%k2}
-; CHECK-NEXT:    vpaddd {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    vpscatterdq %zmm1, (%rdx,%ymm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -255,7 +255,7 @@ define dso_local void @gather_qps(<8 x i64> %ind, <8 x float> %src, i8* %base, i
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    kxnorw %k0, %k0, %k2
 ; CHECK-NEXT:    vgatherqps (%rdi,%zmm0,4), %ymm1 {%k2}
-; CHECK-NEXT:    vpaddq {{.*}}(%rip), %zmm0, %zmm0
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; CHECK-NEXT:    vscatterqps %ymm1, (%rsi,%zmm0,4) {%k1}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

@@ -548,7 +548,7 @@ entry:
 define i8 @test_mm_aesenc256kl_u8_global(<2 x i64> %data, <2 x i64>* %out) {
 ; X64-LABEL: test_mm_aesenc256kl_u8_global:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    aesenc256kl {{.*}}(%rip), %xmm0
+; X64-NEXT:    aesenc256kl foo(%rip), %xmm0
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    movaps %xmm0, (%rdi)
 ; X64-NEXT:    retq
@@ -574,7 +574,7 @@ define i8 @test_mm_aesdecwide256kl_u8_global(<2 x i64> %v0, <2 x i64> %v1, <2 x 
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %r11
-; X64-NEXT:    aesdecwide256kl {{.*}}(%rip)
+; X64-NEXT:    aesdecwide256kl foo(%rip)
 ; X64-NEXT:    sete %al
 ; X64-NEXT:    movaps %xmm0, (%rdi)
 ; X64-NEXT:    movaps %xmm1, (%rsi)

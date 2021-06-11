@@ -2758,12 +2758,12 @@ define <8 x i16> @shuffle_v8i16_01u3zzuz(<8 x i16> %a) {
 define <8 x i16> @shuffle_v8i16_0z234567(<8 x i16> %a) {
 ; SSE2-LABEL: shuffle_v8i16_0z234567:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: shuffle_v8i16_0z234567:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSSE3-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: shuffle_v8i16_0z234567:
@@ -2784,12 +2784,12 @@ define <8 x i16> @shuffle_v8i16_0z234567(<8 x i16> %a) {
 define <8 x i16> @shuffle_v8i16_0zzzz5z7(<8 x i16> %a) {
 ; SSE2-LABEL: shuffle_v8i16_0zzzz5z7:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: shuffle_v8i16_0zzzz5z7:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSSE3-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: shuffle_v8i16_0zzzz5z7:
@@ -2810,12 +2810,12 @@ define <8 x i16> @shuffle_v8i16_0zzzz5z7(<8 x i16> %a) {
 define <8 x i16> @shuffle_v8i16_0123456z(<8 x i16> %a) {
 ; SSE2-LABEL: shuffle_v8i16_0123456z:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: shuffle_v8i16_0123456z:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSSE3-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: shuffle_v8i16_0123456z:

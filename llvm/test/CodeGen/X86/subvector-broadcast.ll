@@ -870,10 +870,10 @@ define dso_local void @fallback_broadcast_v4i64_to_v8i64(<4 x i64> %a, <8 x i64>
 ; X64-AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm1, %ymm1
 ; X64-AVX1-NEXT:    vandps %ymm6, %ymm1, %ymm1
 ; X64-AVX1-NEXT:    vandps %ymm6, %ymm2, %ymm2
-; X64-AVX1-NEXT:    vmovdqu %xmm0, ga4+{{.*}}(%rip)
-; X64-AVX1-NEXT:    vmovdqu %xmm4, {{.*}}(%rip)
-; X64-AVX1-NEXT:    vmovups %ymm2, gb4+{{.*}}(%rip)
-; X64-AVX1-NEXT:    vmovups %ymm1, {{.*}}(%rip)
+; X64-AVX1-NEXT:    vmovdqu %xmm0, ga4+16(%rip)
+; X64-AVX1-NEXT:    vmovdqu %xmm4, ga4(%rip)
+; X64-AVX1-NEXT:    vmovups %ymm2, gb4+32(%rip)
+; X64-AVX1-NEXT:    vmovups %ymm1, gb4(%rip)
 ; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
@@ -885,9 +885,9 @@ define dso_local void @fallback_broadcast_v4i64_to_v8i64(<4 x i64> %a, <8 x i64>
 ; X64-AVX2-NEXT:    vpaddq %ymm3, %ymm1, %ymm1
 ; X64-AVX2-NEXT:    vpand %ymm3, %ymm1, %ymm1
 ; X64-AVX2-NEXT:    vpand %ymm3, %ymm2, %ymm2
-; X64-AVX2-NEXT:    vmovdqu %ymm0, {{.*}}(%rip)
-; X64-AVX2-NEXT:    vmovdqu %ymm2, gb4+{{.*}}(%rip)
-; X64-AVX2-NEXT:    vmovdqu %ymm1, {{.*}}(%rip)
+; X64-AVX2-NEXT:    vmovdqu %ymm0, ga4(%rip)
+; X64-AVX2-NEXT:    vmovdqu %ymm2, gb4+32(%rip)
+; X64-AVX2-NEXT:    vmovdqu %ymm1, gb4(%rip)
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 ;
@@ -898,8 +898,8 @@ define dso_local void @fallback_broadcast_v4i64_to_v8i64(<4 x i64> %a, <8 x i64>
 ; X64-AVX512-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
 ; X64-AVX512-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
 ; X64-AVX512-NEXT:    vpandq %zmm2, %zmm1, %zmm1
-; X64-AVX512-NEXT:    vmovdqu %ymm0, {{.*}}(%rip)
-; X64-AVX512-NEXT:    vmovdqu64 %zmm1, {{.*}}(%rip)
+; X64-AVX512-NEXT:    vmovdqu %ymm0, ga4(%rip)
+; X64-AVX512-NEXT:    vmovdqu64 %zmm1, gb4(%rip)
 ; X64-AVX512-NEXT:    vzeroupper
 ; X64-AVX512-NEXT:    retq
 entry:
@@ -950,9 +950,9 @@ define dso_local void @fallback_broadcast_v4f64_to_v8f64(<4 x double> %a, <8 x d
 ; X64-AVX-NEXT:    vaddpd %ymm3, %ymm1, %ymm1
 ; X64-AVX-NEXT:    vdivpd %ymm3, %ymm1, %ymm1
 ; X64-AVX-NEXT:    vdivpd %ymm3, %ymm2, %ymm2
-; X64-AVX-NEXT:    vmovupd %ymm0, {{.*}}(%rip)
-; X64-AVX-NEXT:    vmovupd %ymm2, gb2+{{.*}}(%rip)
-; X64-AVX-NEXT:    vmovupd %ymm1, {{.*}}(%rip)
+; X64-AVX-NEXT:    vmovupd %ymm0, ga2(%rip)
+; X64-AVX-NEXT:    vmovupd %ymm2, gb2+32(%rip)
+; X64-AVX-NEXT:    vmovupd %ymm1, gb2(%rip)
 ; X64-AVX-NEXT:    vzeroupper
 ; X64-AVX-NEXT:    retq
 ;
@@ -963,8 +963,8 @@ define dso_local void @fallback_broadcast_v4f64_to_v8f64(<4 x double> %a, <8 x d
 ; X64-AVX512-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
 ; X64-AVX512-NEXT:    vaddpd %zmm2, %zmm1, %zmm1
 ; X64-AVX512-NEXT:    vdivpd %zmm2, %zmm1, %zmm1
-; X64-AVX512-NEXT:    vmovupd %ymm0, {{.*}}(%rip)
-; X64-AVX512-NEXT:    vmovupd %zmm1, {{.*}}(%rip)
+; X64-AVX512-NEXT:    vmovupd %ymm0, ga2(%rip)
+; X64-AVX512-NEXT:    vmovupd %zmm1, gb2(%rip)
 ; X64-AVX512-NEXT:    vzeroupper
 ; X64-AVX512-NEXT:    retq
 entry:
@@ -1072,10 +1072,10 @@ define dso_local void @fallback_broadcast_v4i32_v8i32_v16i32(<4 x i32> %a, <8 x 
 ; X64-AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm2, %ymm2
 ; X64-AVX1-NEXT:    vandps %ymm4, %ymm2, %ymm2
 ; X64-AVX1-NEXT:    vandps %ymm4, %ymm3, %ymm3
-; X64-AVX1-NEXT:    vmovdqu %xmm0, {{.*}}(%rip)
-; X64-AVX1-NEXT:    vmovups %ymm1, {{.*}}(%rip)
-; X64-AVX1-NEXT:    vmovups %ymm3, hc4+{{.*}}(%rip)
-; X64-AVX1-NEXT:    vmovups %ymm2, {{.*}}(%rip)
+; X64-AVX1-NEXT:    vmovdqu %xmm0, ha4(%rip)
+; X64-AVX1-NEXT:    vmovups %ymm1, hb4(%rip)
+; X64-AVX1-NEXT:    vmovups %ymm3, hc4+32(%rip)
+; X64-AVX1-NEXT:    vmovups %ymm2, hc4(%rip)
 ; X64-AVX1-NEXT:    vzeroupper
 ; X64-AVX1-NEXT:    retq
 ;
@@ -1090,10 +1090,10 @@ define dso_local void @fallback_broadcast_v4i32_v8i32_v16i32(<4 x i32> %a, <8 x 
 ; X64-AVX2-NEXT:    vpaddd %ymm4, %ymm2, %ymm2
 ; X64-AVX2-NEXT:    vpand %ymm4, %ymm2, %ymm2
 ; X64-AVX2-NEXT:    vpand %ymm4, %ymm3, %ymm3
-; X64-AVX2-NEXT:    vmovdqu %xmm0, {{.*}}(%rip)
-; X64-AVX2-NEXT:    vmovdqu %ymm1, {{.*}}(%rip)
-; X64-AVX2-NEXT:    vmovdqu %ymm3, hc4+{{.*}}(%rip)
-; X64-AVX2-NEXT:    vmovdqu %ymm2, {{.*}}(%rip)
+; X64-AVX2-NEXT:    vmovdqu %xmm0, ha4(%rip)
+; X64-AVX2-NEXT:    vmovdqu %ymm1, hb4(%rip)
+; X64-AVX2-NEXT:    vmovdqu %ymm3, hc4+32(%rip)
+; X64-AVX2-NEXT:    vmovdqu %ymm2, hc4(%rip)
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 ;
@@ -1106,9 +1106,9 @@ define dso_local void @fallback_broadcast_v4i32_v8i32_v16i32(<4 x i32> %a, <8 x 
 ; X64-AVX512-NEXT:    vpand %ymm3, %ymm1, %ymm1
 ; X64-AVX512-NEXT:    vpaddd %zmm3, %zmm2, %zmm2
 ; X64-AVX512-NEXT:    vpandd %zmm3, %zmm2, %zmm2
-; X64-AVX512-NEXT:    vmovdqu %xmm0, {{.*}}(%rip)
-; X64-AVX512-NEXT:    vmovdqu %ymm1, {{.*}}(%rip)
-; X64-AVX512-NEXT:    vmovdqu64 %zmm2, {{.*}}(%rip)
+; X64-AVX512-NEXT:    vmovdqu %xmm0, ha4(%rip)
+; X64-AVX512-NEXT:    vmovdqu %ymm1, hb4(%rip)
+; X64-AVX512-NEXT:    vmovdqu64 %zmm2, hc4(%rip)
 ; X64-AVX512-NEXT:    vzeroupper
 ; X64-AVX512-NEXT:    retq
 entry:

@@ -10,19 +10,19 @@
 define dso_local void @PR35763() {
 ; CHECK-LABEL: PR35763:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl {{.*}}(%rip), %eax
-; CHECK-NEXT:    orl z+{{.*}}(%rip), %eax
+; CHECK-NEXT:    movl z(%rip), %eax
+; CHECK-NEXT:    orl z+2(%rip), %eax
 ; CHECK-NEXT:    movzwl %ax, %eax
-; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
-; CHECK-NEXT:    movl z+{{.*}}(%rip), %eax
-; CHECK-NEXT:    movzbl z+{{.*}}(%rip), %ecx
+; CHECK-NEXT:    movq %rax, tf_3_var_136(%rip)
+; CHECK-NEXT:    movl z+6(%rip), %eax
+; CHECK-NEXT:    movzbl z+10(%rip), %ecx
 ; CHECK-NEXT:    shlq $32, %rcx
 ; CHECK-NEXT:    orq %rax, %rcx
 ; CHECK-NEXT:    movabsq $1090921758719, %rax # imm = 0xFE0000FFFF
 ; CHECK-NEXT:    andq %rcx, %rax
-; CHECK-NEXT:    movl %eax, z+{{.*}}(%rip)
+; CHECK-NEXT:    movl %eax, z+6(%rip)
 ; CHECK-NEXT:    shrq $32, %rax
-; CHECK-NEXT:    movb %al, z+{{.*}}(%rip)
+; CHECK-NEXT:    movb %al, z+10(%rip)
 ; CHECK-NEXT:    retq
 entry:
   %0 = load i16, i16* getelementptr inbounds (%struct.S, %struct.S* bitcast ({ i16, i8, i8, i8, i8, i8, i8, i8, i8, i8, [5 x i8] }* @z to %struct.S*), i32 0, i32 0), align 8

@@ -102,7 +102,7 @@ define x86_fp80 @test_fmaxl(x86_fp80 %x, x86_fp80 %y) {
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstpt (%rsp)
-; CHECK-NEXT:    callq fmaxl
+; CHECK-NEXT:    callq fmaxl@PLT
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -181,7 +181,7 @@ define x86_fp80 @test_intrinsic_fmaxl(x86_fp80 %x, x86_fp80 %y) {
 ; CHECK-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fstpt (%rsp)
-; CHECK-NEXT:    callq fmaxl
+; CHECK-NEXT:    callq fmaxl@PLT
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -584,12 +584,12 @@ define <2 x double> @maxnum_intrinsic_nnan_attr_f64(<2 x double> %a, <2 x double
 define float @test_maxnum_const_op1(float %x) {
 ; SSE-LABEL: test_maxnum_const_op1:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    maxss {{.*}}(%rip), %xmm0
+; SSE-NEXT:    maxss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_maxnum_const_op1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmaxss {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vmaxss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %r = call float @llvm.maxnum.f32(float 1.0, float %x)
   ret float %r
@@ -598,12 +598,12 @@ define float @test_maxnum_const_op1(float %x) {
 define float @test_maxnum_const_op2(float %x) {
 ; SSE-LABEL: test_maxnum_const_op2:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    maxss {{.*}}(%rip), %xmm0
+; SSE-NEXT:    maxss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_maxnum_const_op2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmaxss {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vmaxss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %r = call float @llvm.maxnum.f32(float %x, float 1.0)
   ret float %r

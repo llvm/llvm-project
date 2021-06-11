@@ -10,8 +10,8 @@
 define void @foo() {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl a+{{.*}}(%rip), %eax
-; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
+; CHECK-NEXT:    movzwl a+6(%rip), %eax
+; CHECK-NEXT:    movq %rax, b(%rip)
 ; CHECK-NEXT:    retq
 entry:
   %0 = load i64, i64* @a, align 8

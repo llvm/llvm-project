@@ -702,7 +702,7 @@ define void @addr_func() gc "statepoint-example" {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movq _bar@{{.*}}(%rip), %rbx
+; CHECK-NEXT:    movq _bar@GOTPCREL(%rip), %rbx
 ; CHECK-NEXT:    callq _bar
 ; CHECK-NEXT:  Ltmp15:
 ; CHECK-NEXT:    popq %rbx
@@ -720,7 +720,7 @@ define void @addr_global() gc "statepoint-example" {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movq _G@{{.*}}(%rip), %rbx
+; CHECK-NEXT:    movq _G@GOTPCREL(%rip), %rbx
 ; CHECK-NEXT:    callq _bar
 ; CHECK-NEXT:  Ltmp16:
 ; CHECK-NEXT:    popq %rbx

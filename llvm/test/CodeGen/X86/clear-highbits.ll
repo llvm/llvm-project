@@ -996,7 +996,7 @@ define i32 @oneuse32(i32 %val, i32 %numhighbits) nounwind {
 ; X86-NOBMI2-NEXT:    movl $-1, %esi
 ; X86-NOBMI2-NEXT:    shrl %cl, %esi
 ; X86-NOBMI2-NEXT:    movl %esi, (%esp)
-; X86-NOBMI2-NEXT:    calll use32
+; X86-NOBMI2-NEXT:    calll use32@PLT
 ; X86-NOBMI2-NEXT:    andl {{[0-9]+}}(%esp), %esi
 ; X86-NOBMI2-NEXT:    movl %esi, %eax
 ; X86-NOBMI2-NEXT:    addl $8, %esp
@@ -1011,7 +1011,7 @@ define i32 @oneuse32(i32 %val, i32 %numhighbits) nounwind {
 ; X86-BMI2-NEXT:    movl $-1, %ecx
 ; X86-BMI2-NEXT:    shrxl %eax, %ecx, %esi
 ; X86-BMI2-NEXT:    movl %esi, (%esp)
-; X86-BMI2-NEXT:    calll use32
+; X86-BMI2-NEXT:    calll use32@PLT
 ; X86-BMI2-NEXT:    andl {{[0-9]+}}(%esp), %esi
 ; X86-BMI2-NEXT:    movl %esi, %eax
 ; X86-BMI2-NEXT:    addl $8, %esp
@@ -1029,7 +1029,7 @@ define i32 @oneuse32(i32 %val, i32 %numhighbits) nounwind {
 ; X64-NOBMI2-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NOBMI2-NEXT:    shrl %cl, %ebp
 ; X64-NOBMI2-NEXT:    movl %ebp, %edi
-; X64-NOBMI2-NEXT:    callq use32
+; X64-NOBMI2-NEXT:    callq use32@PLT
 ; X64-NOBMI2-NEXT:    andl %ebx, %ebp
 ; X64-NOBMI2-NEXT:    movl %ebp, %eax
 ; X64-NOBMI2-NEXT:    addq $8, %rsp
@@ -1046,7 +1046,7 @@ define i32 @oneuse32(i32 %val, i32 %numhighbits) nounwind {
 ; X64-BMI2-NEXT:    movl $-1, %eax
 ; X64-BMI2-NEXT:    shrxl %esi, %eax, %ebp
 ; X64-BMI2-NEXT:    movl %ebp, %edi
-; X64-BMI2-NEXT:    callq use32
+; X64-BMI2-NEXT:    callq use32@PLT
 ; X64-BMI2-NEXT:    andl %ebx, %ebp
 ; X64-BMI2-NEXT:    movl %ebp, %eax
 ; X64-BMI2-NEXT:    addq $8, %rsp
@@ -1078,7 +1078,7 @@ define i64 @oneuse64(i64 %val, i64 %numhighbits) nounwind {
 ; X86-FALLBACK0-NEXT:    subl $8, %esp
 ; X86-FALLBACK0-NEXT:    pushl %edi
 ; X86-FALLBACK0-NEXT:    pushl %esi
-; X86-FALLBACK0-NEXT:    calll use64
+; X86-FALLBACK0-NEXT:    calll use64@PLT
 ; X86-FALLBACK0-NEXT:    addl $16, %esp
 ; X86-FALLBACK0-NEXT:    andl {{[0-9]+}}(%esp), %esi
 ; X86-FALLBACK0-NEXT:    andl {{[0-9]+}}(%esp), %edi
@@ -1105,7 +1105,7 @@ define i64 @oneuse64(i64 %val, i64 %numhighbits) nounwind {
 ; X86-FALLBACK1-NEXT:    subl $8, %esp
 ; X86-FALLBACK1-NEXT:    pushl %edi
 ; X86-FALLBACK1-NEXT:    pushl %esi
-; X86-FALLBACK1-NEXT:    calll use64
+; X86-FALLBACK1-NEXT:    calll use64@PLT
 ; X86-FALLBACK1-NEXT:    addl $16, %esp
 ; X86-FALLBACK1-NEXT:    andl {{[0-9]+}}(%esp), %esi
 ; X86-FALLBACK1-NEXT:    andl {{[0-9]+}}(%esp), %edi
@@ -1132,7 +1132,7 @@ define i64 @oneuse64(i64 %val, i64 %numhighbits) nounwind {
 ; X86-FALLBACK2-NEXT:    subl $8, %esp
 ; X86-FALLBACK2-NEXT:    pushl %edi
 ; X86-FALLBACK2-NEXT:    pushl %esi
-; X86-FALLBACK2-NEXT:    calll use64
+; X86-FALLBACK2-NEXT:    calll use64@PLT
 ; X86-FALLBACK2-NEXT:    addl $16, %esp
 ; X86-FALLBACK2-NEXT:    andl {{[0-9]+}}(%esp), %esi
 ; X86-FALLBACK2-NEXT:    andl {{[0-9]+}}(%esp), %edi
@@ -1158,7 +1158,7 @@ define i64 @oneuse64(i64 %val, i64 %numhighbits) nounwind {
 ; X86-BMI2-NEXT:    subl $8, %esp
 ; X86-BMI2-NEXT:    pushl %edi
 ; X86-BMI2-NEXT:    pushl %esi
-; X86-BMI2-NEXT:    calll use64
+; X86-BMI2-NEXT:    calll use64@PLT
 ; X86-BMI2-NEXT:    addl $16, %esp
 ; X86-BMI2-NEXT:    andl {{[0-9]+}}(%esp), %esi
 ; X86-BMI2-NEXT:    andl {{[0-9]+}}(%esp), %edi
@@ -1180,7 +1180,7 @@ define i64 @oneuse64(i64 %val, i64 %numhighbits) nounwind {
 ; X64-NOBMI2-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-NOBMI2-NEXT:    shrq %cl, %rbx
 ; X64-NOBMI2-NEXT:    movq %rbx, %rdi
-; X64-NOBMI2-NEXT:    callq use64
+; X64-NOBMI2-NEXT:    callq use64@PLT
 ; X64-NOBMI2-NEXT:    andq %r14, %rbx
 ; X64-NOBMI2-NEXT:    movq %rbx, %rax
 ; X64-NOBMI2-NEXT:    addq $8, %rsp
@@ -1197,7 +1197,7 @@ define i64 @oneuse64(i64 %val, i64 %numhighbits) nounwind {
 ; X64-BMI2-NEXT:    movq $-1, %rax
 ; X64-BMI2-NEXT:    shrxq %rsi, %rax, %rbx
 ; X64-BMI2-NEXT:    movq %rbx, %rdi
-; X64-BMI2-NEXT:    callq use64
+; X64-BMI2-NEXT:    callq use64@PLT
 ; X64-BMI2-NEXT:    andq %r14, %rbx
 ; X64-BMI2-NEXT:    movq %rbx, %rax
 ; X64-BMI2-NEXT:    addq $8, %rsp

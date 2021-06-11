@@ -11,31 +11,31 @@ define void @test32(i32* %base, i32 %idx) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    btl %edx, (%rcx)
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    setb {{.*}}(%rip)
+; CHECK-NEXT:    setb sink(%rip)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    btcl %edx, (%rcx)
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    setb {{.*}}(%rip)
+; CHECK-NEXT:    setb sink(%rip)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    btrl %edx, (%rcx)
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    setb {{.*}}(%rip)
+; CHECK-NEXT:    setb sink(%rip)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    btsl %edx, (%rcx)
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    setb {{.*}}(%rip)
+; CHECK-NEXT:    setb sink(%rip)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    lock btrl %edx, (%rcx)
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    setb {{.*}}(%rip)
+; CHECK-NEXT:    setb sink(%rip)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    lock btsl %edx, (%rcx)
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    setb {{.*}}(%rip)
+; CHECK-NEXT:    setb sink(%rip)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    lock btsl %edx, (%rcx)
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    setb {{.*}}(%rip)
+; CHECK-NEXT:    setb sink(%rip)
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call i8 asm sideeffect "btl $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i32* %base, i32 %idx)
@@ -62,27 +62,27 @@ define void @test64(i64* %base, i64 %idx) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    btq %rdx, (%rcx)
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    setb {{.*}}(%rip)
+; CHECK-NEXT:    setb sink(%rip)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    btcq %rdx, (%rcx)
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    setb {{.*}}(%rip)
+; CHECK-NEXT:    setb sink(%rip)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    btrq %rdx, (%rcx)
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    setb {{.*}}(%rip)
+; CHECK-NEXT:    setb sink(%rip)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    btsq %rdx, (%rcx)
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    setb {{.*}}(%rip)
+; CHECK-NEXT:    setb sink(%rip)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    lock btrq %rdx, (%rcx)
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    setb {{.*}}(%rip)
+; CHECK-NEXT:    setb sink(%rip)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    lock btsq %rdx, (%rcx)
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    setb {{.*}}(%rip)
+; CHECK-NEXT:    setb sink(%rip)
 ; CHECK-NEXT:    retq
 entry:
   %0 = tail call i8 asm sideeffect "btq $2, ($1)", "={@ccc},r,r,~{cc},~{memory},~{dirflag},~{fpsr},~{flags}"(i64* %base, i64 %idx)

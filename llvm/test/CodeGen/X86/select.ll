@@ -137,14 +137,14 @@ define float @test3(i32 %x) nounwind readnone {
 ; GENERIC-NEXT:    xorl %eax, %eax
 ; GENERIC-NEXT:    testl %edi, %edi
 ; GENERIC-NEXT:    sete %al
-; GENERIC-NEXT:    leaq {{.*}}(%rip), %rcx
+; GENERIC-NEXT:    leaq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rcx
 ; GENERIC-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; GENERIC-NEXT:    retq
 ;
 ; ATOM-LABEL: test3:
 ; ATOM:       ## %bb.0: ## %entry
 ; ATOM-NEXT:    xorl %eax, %eax
-; ATOM-NEXT:    leaq {{.*}}(%rip), %rcx
+; ATOM-NEXT:    leaq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rcx
 ; ATOM-NEXT:    testl %edi, %edi
 ; ATOM-NEXT:    sete %al
 ; ATOM-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -155,7 +155,7 @@ define float @test3(i32 %x) nounwind readnone {
 ; ATHLON-NEXT:    xorl %eax, %eax
 ; ATHLON-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; ATHLON-NEXT:    sete %al
-; ATHLON-NEXT:    flds LCPI2_0(,%eax,4)
+; ATHLON-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(,%eax,4)
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: test3:
@@ -163,7 +163,7 @@ define float @test3(i32 %x) nounwind readnone {
 ; MCU-NEXT:    xorl %ecx, %ecx
 ; MCU-NEXT:    testl %eax, %eax
 ; MCU-NEXT:    sete %cl
-; MCU-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}(,%ecx,4)
+; MCU-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(,%ecx,4)
 ; MCU-NEXT:    retl
 entry:
   %0 = icmp eq i32 %x, 0
@@ -185,7 +185,7 @@ define signext i8 @test4(i8* nocapture %P, double %F) nounwind readonly {
 ; ATHLON:       ## %bb.0: ## %entry
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; ATHLON-NEXT:    fldl {{[0-9]+}}(%esp)
-; ATHLON-NEXT:    flds LCPI3_0
+; ATHLON-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; ATHLON-NEXT:    xorl %ecx, %ecx
 ; ATHLON-NEXT:    fucompi %st(1), %st
 ; ATHLON-NEXT:    fstp %st(0)
@@ -197,7 +197,7 @@ define signext i8 @test4(i8* nocapture %P, double %F) nounwind readonly {
 ; MCU:       # %bb.0: # %entry
 ; MCU-NEXT:    movl %eax, %ecx
 ; MCU-NEXT:    fldl {{[0-9]+}}(%esp)
-; MCU-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
+; MCU-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; MCU-NEXT:    fucompp
 ; MCU-NEXT:    fnstsw %ax
 ; MCU-NEXT:    xorl %edx, %edx
@@ -394,14 +394,14 @@ define x86_fp80 @test7(i32 %tmp8) nounwind {
 ; GENERIC-NEXT:    testl %edi, %edi
 ; GENERIC-NEXT:    setns %al
 ; GENERIC-NEXT:    shlq $4, %rax
-; GENERIC-NEXT:    leaq {{.*}}(%rip), %rcx
+; GENERIC-NEXT:    leaq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rcx
 ; GENERIC-NEXT:    fldt (%rax,%rcx)
 ; GENERIC-NEXT:    retq
 ;
 ; ATOM-LABEL: test7:
 ; ATOM:       ## %bb.0:
 ; ATOM-NEXT:    xorl %eax, %eax
-; ATOM-NEXT:    leaq {{.*}}(%rip), %rcx
+; ATOM-NEXT:    leaq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rcx
 ; ATOM-NEXT:    testl %edi, %edi
 ; ATOM-NEXT:    setns %al
 ; ATOM-NEXT:    shlq $4, %rax
@@ -414,7 +414,7 @@ define x86_fp80 @test7(i32 %tmp8) nounwind {
 ; ATHLON-NEXT:    notl %eax
 ; ATHLON-NEXT:    shrl $27, %eax
 ; ATHLON-NEXT:    andl $-16, %eax
-; ATHLON-NEXT:    fldt LCPI6_0(%eax)
+; ATHLON-NEXT:    fldt {{\.?LCPI[0-9]+_[0-9]+}}(%eax)
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: test7:
@@ -422,7 +422,7 @@ define x86_fp80 @test7(i32 %tmp8) nounwind {
 ; MCU-NEXT:    notl %eax
 ; MCU-NEXT:    shrl $27, %eax
 ; MCU-NEXT:    andl $-16, %eax
-; MCU-NEXT:    fldt {{\.LCPI[0-9]+_[0-9]+}}(%eax)
+; MCU-NEXT:    fldt {{\.?LCPI[0-9]+_[0-9]+}}(%eax)
 ; MCU-NEXT:    retl
   %tmp9 = icmp sgt i32 %tmp8, -1
   %retval = select i1 %tmp9, x86_fp80 0xK4005B400000000000000, x86_fp80 0xK40078700000000000000

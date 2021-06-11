@@ -107,13 +107,13 @@ entry:
 define dso_local i32 @test5(double %A) nounwind {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    ucomisd {{.*}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 4, value: {{\.LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
+; CHECK-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    ja .LBB5_3 # encoding: [0x77,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB5_3-1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ucomisd {{.*}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
-; CHECK-NEXT:    # fixup A - offset: 4, value: {{\.LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # encoding: [0x66,0x0f,0x2e,0x05,A,A,A,A]
+; CHECK-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    jb .LBB5_3 # encoding: [0x72,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: .LBB5_3-1, kind: FK_PCRel_1
 ; CHECK-NEXT:  # %bb.2: # %bb12
@@ -386,7 +386,7 @@ define dso_local void @test20(i32 %bf.load, i8 %x1, i8* %b_addr) {
 ; CHECK-NEXT:    setne (%rdx) # encoding: [0x0f,0x95,0x02]
 ; CHECK-NEXT:    testl $16777215, %edi # encoding: [0xf7,0xc7,0xff,0xff,0xff,0x00]
 ; CHECK-NEXT:    # imm = 0xFFFFFF
-; CHECK-NEXT:    setne {{.*}}(%rip) # encoding: [0x0f,0x95,0x05,A,A,A,A]
+; CHECK-NEXT:    setne d(%rip) # encoding: [0x0f,0x95,0x05,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 3, value: d-4, kind: reloc_riprel_4byte
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
