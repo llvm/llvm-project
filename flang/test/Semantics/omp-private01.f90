@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang -fopenmp
+! REQUIRES: shell
 ! OpenMP Version 4.5
 ! 2.15.3.3 private Clause
 ! Pointers with the INTENT(IN) attribute may not appear in a private clause.

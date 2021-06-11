@@ -130,6 +130,7 @@ static ffi_type *ffiTypeFor(Type *Ty) {
         case 32: return &ffi_type_sint32;
         case 64: return &ffi_type_sint64;
       }
+      llvm_unreachable("Unhandled integer type bitwidth");
     case Type::FloatTyID:   return &ffi_type_float;
     case Type::DoubleTyID:  return &ffi_type_double;
     case Type::PointerTyID: return &ffi_type_pointer;
@@ -166,7 +167,7 @@ static void *ffiValueFor(Type *Ty, const GenericValue &AV,
           return ArgDataPtr;
         }
       }
-      break;
+      llvm_unreachable("Unhandled integer type bitwidth");
     case Type::FloatTyID: {
       float *FloatPtr = (float *) ArgDataPtr;
       *FloatPtr = AV.FloatVal;

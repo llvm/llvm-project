@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=cxx20_2b -fcxx-exceptions -Wreturn-std-move %s
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=cxx20_2b -fcxx-exceptions -Wreturn-std-move %s
-// RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify=cxx11_17 -fcxx-exceptions -Wreturn-std-move %s
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=cxx11_17 -fcxx-exceptions -Wreturn-std-move %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify=cxx11_17 -fcxx-exceptions -Wreturn-std-move %s
+// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=cxx20_2b,cxx2b -fcxx-exceptions -Wreturn-std-move %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=cxx20_2b       -fcxx-exceptions -Wreturn-std-move %s
+// RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify=cxx11_17       -fcxx-exceptions -Wreturn-std-move %s
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=cxx11_17       -fcxx-exceptions -Wreturn-std-move %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify=cxx11_17       -fcxx-exceptions -Wreturn-std-move %s
 
 // RUN: %clang_cc1 -std=c++17 -fsyntax-only -fcxx-exceptions -Wreturn-std-move -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s -check-prefix=CHECK
 // RUN: %clang_cc1 -std=c++14 -fsyntax-only -fcxx-exceptions -Wreturn-std-move -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s -check-prefix=CHECK
@@ -217,8 +217,8 @@ ConvertFromBase testRParam6(Derived&& d) {
 }
 
 // But if the return type is a reference type, then moving would be wrong.
-Derived& testRetRef1(Derived&& d) { return d; }
-Base& testRetRef2(Derived&& d) { return d; }
+Derived &testRetRef1(Derived &&d) { return d; } // cxx2b-error {{non-const lvalue reference to type 'Derived' cannot bind to a temporary of type 'Derived'}}
+Base &testRetRef2(Derived &&d) { return d; }    // cxx2b-error {{non-const lvalue reference to type 'Base' cannot bind to a temporary of type 'Derived'}}
 #if __cplusplus >= 201402L
 auto&& testRetRef3(Derived&& d) { return d; }
 decltype(auto) testRetRef4(Derived&& d) { return (d); }

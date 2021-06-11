@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Check that if constructs only accept scalar logical expressions.
 ! TODO: expand the test to check this restriction for more types.
 

@@ -721,7 +721,7 @@ public:
 class CXXBoolLiteralExpr : public Expr {
 public:
   CXXBoolLiteralExpr(bool Val, QualType Ty, SourceLocation Loc)
-      : Expr(CXXBoolLiteralExprClass, Ty, VK_RValue, OK_Ordinary) {
+      : Expr(CXXBoolLiteralExprClass, Ty, VK_PRValue, OK_Ordinary) {
     CXXBoolLiteralExprBits.Value = Val;
     CXXBoolLiteralExprBits.Loc = Loc;
     setDependence(ExprDependence::None);
@@ -759,7 +759,7 @@ public:
 class CXXNullPtrLiteralExpr : public Expr {
 public:
   CXXNullPtrLiteralExpr(QualType Ty, SourceLocation Loc)
-      : Expr(CXXNullPtrLiteralExprClass, Ty, VK_RValue, OK_Ordinary) {
+      : Expr(CXXNullPtrLiteralExprClass, Ty, VK_PRValue, OK_Ordinary) {
     CXXNullPtrLiteralExprBits.Loc = Loc;
     setDependence(ExprDependence::None);
   }
@@ -799,7 +799,7 @@ public:
   friend class ASTStmtReader;
 
   CXXStdInitializerListExpr(QualType Ty, Expr *SubExpr)
-      : Expr(CXXStdInitializerListExprClass, Ty, VK_RValue, OK_Ordinary),
+      : Expr(CXXStdInitializerListExprClass, Ty, VK_PRValue, OK_Ordinary),
         SubExpr(SubExpr) {
     setDependence(computeDependence(this));
   }
@@ -1142,7 +1142,7 @@ public:
 class CXXThisExpr : public Expr {
 public:
   CXXThisExpr(SourceLocation L, QualType Ty, bool IsImplicit)
-      : Expr(CXXThisExprClass, Ty, VK_RValue, OK_Ordinary) {
+      : Expr(CXXThisExprClass, Ty, VK_PRValue, OK_Ordinary) {
     CXXThisExprBits.IsImplicit = IsImplicit;
     CXXThisExprBits.Loc = L;
     setDependence(computeDependence(this));
@@ -1191,7 +1191,7 @@ public:
   // null if not present.
   CXXThrowExpr(Expr *Operand, QualType Ty, SourceLocation Loc,
                bool IsThrownVariableInScope)
-      : Expr(CXXThrowExprClass, Ty, VK_RValue, OK_Ordinary), Operand(Operand) {
+      : Expr(CXXThrowExprClass, Ty, VK_PRValue, OK_Ordinary), Operand(Operand) {
     CXXThrowExprBits.ThrowLoc = Loc;
     CXXThrowExprBits.IsThrownVariableInScope = IsThrownVariableInScope;
     setDependence(computeDependence(this));
@@ -1257,7 +1257,7 @@ class CXXDefaultArgExpr final : public Expr {
              Param->getDefaultArg()->getObjectKind()),
         Param(Param), UsedContext(UsedContext) {
     CXXDefaultArgExprBits.Loc = Loc;
-    setDependence(ExprDependence::None);
+    setDependence(computeDependence(this));
   }
 
 public:
@@ -1414,7 +1414,7 @@ class CXXBindTemporaryExpr : public Expr {
   Stmt *SubExpr = nullptr;
 
   CXXBindTemporaryExpr(CXXTemporary *temp, Expr *SubExpr)
-      : Expr(CXXBindTemporaryExprClass, SubExpr->getType(), VK_RValue,
+      : Expr(CXXBindTemporaryExprClass, SubExpr->getType(), VK_PRValue,
              OK_Ordinary),
         Temp(temp), SubExpr(SubExpr) {
     setDependence(computeDependence(this));
@@ -1669,7 +1669,7 @@ public:
   CXXInheritedCtorInitExpr(SourceLocation Loc, QualType T,
                            CXXConstructorDecl *Ctor, bool ConstructsVirtualBase,
                            bool InheritedFromVirtualBase)
-      : Expr(CXXInheritedCtorInitExprClass, T, VK_RValue, OK_Ordinary),
+      : Expr(CXXInheritedCtorInitExprClass, T, VK_PRValue, OK_Ordinary),
         Constructor(Ctor), Loc(Loc),
         ConstructsVirtualBase(ConstructsVirtualBase),
         InheritedFromVirtualBase(InheritedFromVirtualBase) {
@@ -2100,7 +2100,7 @@ public:
   /// expression.
   CXXScalarValueInitExpr(QualType Type, TypeSourceInfo *TypeInfo,
                          SourceLocation RParenLoc)
-      : Expr(CXXScalarValueInitExprClass, Type, VK_RValue, OK_Ordinary),
+      : Expr(CXXScalarValueInitExprClass, Type, VK_PRValue, OK_Ordinary),
         TypeInfo(TypeInfo) {
     CXXScalarValueInitExprBits.RParenLoc = RParenLoc;
     setDependence(computeDependence(this));
@@ -2408,7 +2408,7 @@ public:
   CXXDeleteExpr(QualType Ty, bool GlobalDelete, bool ArrayForm,
                 bool ArrayFormAsWritten, bool UsualArrayDeleteWantsSize,
                 FunctionDecl *OperatorDelete, Expr *Arg, SourceLocation Loc)
-      : Expr(CXXDeleteExprClass, Ty, VK_RValue, OK_Ordinary),
+      : Expr(CXXDeleteExprClass, Ty, VK_PRValue, OK_Ordinary),
         OperatorDelete(OperatorDelete), Argument(Arg) {
     CXXDeleteExprBits.GlobalDelete = GlobalDelete;
     CXXDeleteExprBits.ArrayForm = ArrayForm;
@@ -2775,7 +2775,7 @@ public:
   ArrayTypeTraitExpr(SourceLocation loc, ArrayTypeTrait att,
                      TypeSourceInfo *queried, uint64_t value, Expr *dimension,
                      SourceLocation rparen, QualType ty)
-      : Expr(ArrayTypeTraitExprClass, ty, VK_RValue, OK_Ordinary), ATT(att),
+      : Expr(ArrayTypeTraitExprClass, ty, VK_PRValue, OK_Ordinary), ATT(att),
         Value(value), Dimension(dimension), Loc(loc), RParen(rparen),
         QueriedType(queried) {
     assert(att <= ATT_Last && "invalid enum value!");
@@ -2841,7 +2841,7 @@ public:
 
   ExpressionTraitExpr(SourceLocation loc, ExpressionTrait et, Expr *queried,
                       bool value, SourceLocation rparen, QualType resultType)
-      : Expr(ExpressionTraitExprClass, resultType, VK_RValue, OK_Ordinary),
+      : Expr(ExpressionTraitExprClass, resultType, VK_PRValue, OK_Ordinary),
         ET(et), Value(value), Loc(loc), RParen(rparen),
         QueriedExpression(queried) {
     assert(et <= ET_Last && "invalid enum value!");
@@ -4003,7 +4003,7 @@ class CXXNoexceptExpr : public Expr {
 public:
   CXXNoexceptExpr(QualType Ty, Expr *Operand, CanThrowResult Val,
                   SourceLocation Keyword, SourceLocation RParen)
-      : Expr(CXXNoexceptExprClass, Ty, VK_RValue, OK_Ordinary),
+      : Expr(CXXNoexceptExprClass, Ty, VK_PRValue, OK_Ordinary),
         Operand(Operand), Range(Keyword, RParen) {
     CXXNoexceptExprBits.Value = Val == CT_Cannot;
     setDependence(computeDependence(this, Val));
@@ -4161,7 +4161,7 @@ class SizeOfPackExpr final
                  SourceLocation PackLoc, SourceLocation RParenLoc,
                  Optional<unsigned> Length,
                  ArrayRef<TemplateArgument> PartialArgs)
-      : Expr(SizeOfPackExprClass, SizeType, VK_RValue, OK_Ordinary),
+      : Expr(SizeOfPackExprClass, SizeType, VK_PRValue, OK_Ordinary),
         OperatorLoc(OperatorLoc), PackLoc(PackLoc), RParenLoc(RParenLoc),
         Length(Length ? *Length : PartialArgs.size()), Pack(Pack) {
     assert((!Length || PartialArgs.empty()) &&
@@ -4593,8 +4593,8 @@ public:
               SourceLocation LParenLoc, Expr *LHS, BinaryOperatorKind Opcode,
               SourceLocation EllipsisLoc, Expr *RHS, SourceLocation RParenLoc,
               Optional<unsigned> NumExpansions)
-      : Expr(CXXFoldExprClass, T, VK_RValue, OK_Ordinary), LParenLoc(LParenLoc),
-        EllipsisLoc(EllipsisLoc), RParenLoc(RParenLoc),
+      : Expr(CXXFoldExprClass, T, VK_PRValue, OK_Ordinary),
+        LParenLoc(LParenLoc), EllipsisLoc(EllipsisLoc), RParenLoc(RParenLoc),
         NumExpansions(NumExpansions ? *NumExpansions + 1 : 0), Opcode(Opcode) {
     SubExprs[SubExpr::Callee] = Callee;
     SubExprs[SubExpr::LHS] = LHS;
@@ -4704,7 +4704,7 @@ public:
 
   CoroutineSuspendExpr(StmtClass SC, SourceLocation KeywordLoc, QualType Ty,
                        Expr *Common)
-      : Expr(SC, Ty, VK_RValue, OK_Ordinary), KeywordLoc(KeywordLoc) {
+      : Expr(SC, Ty, VK_PRValue, OK_Ordinary), KeywordLoc(KeywordLoc) {
     assert(Common->isTypeDependent() && Ty->isDependentType() &&
            "wrong constructor for non-dependent co_await/co_yield expression");
     SubExprs[SubExpr::Common] = Common;
@@ -4808,7 +4808,7 @@ class DependentCoawaitExpr : public Expr {
 public:
   DependentCoawaitExpr(SourceLocation KeywordLoc, QualType Ty, Expr *Op,
                        UnresolvedLookupExpr *OpCoawait)
-      : Expr(DependentCoawaitExprClass, Ty, VK_RValue, OK_Ordinary),
+      : Expr(DependentCoawaitExprClass, Ty, VK_PRValue, OK_Ordinary),
         KeywordLoc(KeywordLoc) {
     // NOTE: A co_await expression is dependent on the coroutines promise
     // type and may be dependent even when the `Op` expression is not.

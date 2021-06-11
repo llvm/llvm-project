@@ -302,6 +302,19 @@ define void @known_call_with_dereferenceable_bytes(i8* dereferenceable(42) %dst,
   ret void
 }
 
+@dropbear = external unnamed_addr constant [3 x i8], align 1
+@koala = external unnamed_addr constant [7 x i8], align 1
+
+define void @slicePun() {
+bb:
+; GISEL: remark: <unknown>:0:0: Call to memcpy. Memory operation size: 24 bytes.{{$}}
+; GISEL-NEXT: Read Variables: koala (56 bytes).
+; GISEL-NEXT: Written Variables: dropbear (24 bytes).
+  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 getelementptr inbounds ([3 x i8], [3 x i8]* @dropbear, i64 0, i64 0),
+                                            i8* getelementptr inbounds ([7 x i8], [7 x i8]* @koala, i64 0, i64 0), i64 24, i1 false)
+  ret void
+}
+
 attributes #0 = { noinline nounwind ssp uwtable "frame-pointer"="non-leaf" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-a7" "target-features"="+aes,+crypto,+fp-armv8,+neon,+sha2,+zcm,+zcz" }
 attributes #1 = { nounwind "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-a7" "target-features"="+aes,+crypto,+fp-armv8,+neon,+sha2,+zcm,+zcz" }
 attributes #2 = { nofree nosync nounwind readnone speculatable willreturn }

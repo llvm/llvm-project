@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Test SELECT CASE Constraints: C1145, C1146, C1147, C1148, C1149
 program selectCaseProg
    implicit none

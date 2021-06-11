@@ -371,7 +371,7 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
   // Replace IV's start value of post-loop by NewBound.
   for (PHINode &PN : L.getHeader()->phis()) {
     // Find PHI with exiting condition from pre-loop.
-    if (isa<SCEVAddRecExpr>(SE.getSCEV(&PN))) {
+    if (SE.isSCEVable(PN.getType()) && isa<SCEVAddRecExpr>(SE.getSCEV(&PN))) {
       for (Value *Op : PN.incoming_values()) {
         if (Op == ExitingCond.AddRecValue) {
           // Find cloned PHI for post-loop.

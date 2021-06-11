@@ -1,4 +1,5 @@
 ! RUN: %S/test_symbols.sh %s %t %flang_fc1
+! REQUIRES: shell
 !DEF: /s1 (Subroutine) Subprogram
 subroutine s1
  implicit none

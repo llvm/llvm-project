@@ -2712,8 +2712,7 @@ protected:
 
   class CommandOptions : public OptionGroup {
   public:
-    CommandOptions()
-        : OptionGroup(), m_show_help(false), m_language(eLanguageTypeUnknown) {}
+    CommandOptions() : OptionGroup() {}
 
     ~CommandOptions() override = default;
 
@@ -2750,8 +2749,8 @@ protected:
 
     // Options table: Required for subclasses of Options.
 
-    bool m_show_help;
-    lldb::LanguageType m_language;
+    bool m_show_help = false;
+    lldb::LanguageType m_language = eLanguageTypeUnknown;
   };
 
   OptionGroupOptions m_option_group;

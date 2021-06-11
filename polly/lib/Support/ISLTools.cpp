@@ -133,7 +133,7 @@ isl::union_map polly::betweenScatter(isl::union_map From, isl::union_map To,
 
 isl::map polly::singleton(isl::union_map UMap, isl::space ExpectedSpace) {
   if (!UMap)
-    return nullptr;
+    return {};
 
   if (isl_union_map_n_map(UMap.get()) == 0)
     return isl::map::empty(ExpectedSpace);
@@ -146,7 +146,7 @@ isl::map polly::singleton(isl::union_map UMap, isl::space ExpectedSpace) {
 
 isl::set polly::singleton(isl::union_set USet, isl::space ExpectedSpace) {
   if (!USet)
-    return nullptr;
+    return {};
 
   if (isl_union_set_n_set(USet.get()) == 0)
     return isl::set::empty(ExpectedSpace);
@@ -170,19 +170,24 @@ isl_size polly::getNumScatterDims(const isl::union_map &Schedule) {
 
 isl::space polly::getScatterSpace(const isl::union_map &Schedule) {
   if (!Schedule)
-    return nullptr;
+    return {};
   unsigned Dims = getNumScatterDims(Schedule);
   isl::space ScatterSpace = Schedule.get_space().set_from_params();
   return ScatterSpace.add_dims(isl::dim::set, Dims);
+}
+
+isl::map polly::makeIdentityMap(const isl::set &Set, bool RestrictDomain) {
+  isl::map Result = isl::map::identity(Set.get_space().map_from_set());
+  if (RestrictDomain)
+    Result = Result.intersect_domain(Set);
+  return Result;
 }
 
 isl::union_map polly::makeIdentityMap(const isl::union_set &USet,
                                       bool RestrictDomain) {
   isl::union_map Result = isl::union_map::empty(USet.get_space());
   for (isl::set Set : USet.get_set_list()) {
-    isl::map IdentityMap = isl::map::identity(Set.get_space().map_from_set());
-    if (RestrictDomain)
-      IdentityMap = IdentityMap.intersect_domain(Set);
+    isl::map IdentityMap = makeIdentityMap(Set, RestrictDomain);
     Result = Result.add_map(IdentityMap);
   }
   return Result;

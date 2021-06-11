@@ -1250,7 +1250,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options(), m_verbose(false) {}
+    CommandOptions() : Options() {}
 
     ~CommandOptions() override = default;
 
@@ -1278,7 +1278,7 @@ public:
     }
 
     // Instance variables to hold the values for command options.
-    bool m_verbose;
+    bool m_verbose = false;
   };
 
 protected:

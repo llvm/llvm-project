@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1 -fopenmp
+! REQUIRES: shell
 ! OpenMP Version 4.5
 ! 2.7.3 single Construct
 ! Copyprivate variable is not thread private or private in outer context

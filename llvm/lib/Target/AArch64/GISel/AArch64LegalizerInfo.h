@@ -56,6 +56,7 @@ private:
                      LegalizerHelper &Helper) const;
   bool legalizeAtomicCmpxchg128(MachineInstr &MI, MachineRegisterInfo &MRI,
                                 LegalizerHelper &Helper) const;
+  bool legalizeCTTZ(MachineInstr &MI, LegalizerHelper &Helper) const;
   const AArch64Subtarget *ST;
 };
 } // End llvm namespace.

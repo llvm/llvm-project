@@ -126,9 +126,10 @@ static void print(OpAsmPrinter &p, ExecuteOp op) {
   // (%value as %unwrapped: !async.value<!arg.type>, ...)
   if (!op.operands().empty()) {
     p << " (";
+    Block *entry = op.body().empty() ? nullptr : &op.body().front();
     llvm::interleaveComma(op.operands(), p, [&, n = 0](Value operand) mutable {
-      p << operand << " as " << op.body().front().getArgument(n++) << ": "
-        << operand.getType();
+      Value argument = entry ? entry->getArgument(n++) : Value();
+      p << operand << " as " << argument << ": " << operand.getType();
     });
     p << ")";
   }

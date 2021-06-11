@@ -15,6 +15,7 @@
 
 // To get the test dialect def.
 include "TestOps.td"
+include "mlir/IR/BuiltinTypes.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 
 // All of the types will extend this class.
@@ -174,6 +175,11 @@ def TestTypeWithLayoutType : Test_Type<"TestTypeWithLayout", [
 
   public:
   }];
+}
+
+def TestMemRefElementType : Test_Type<"TestMemRefElementType",
+                                      [MemRefElementTypeInterface]> {
+  let mnemonic = "memref_element";
 }
 
 #endif // TEST_TYPEDEFS

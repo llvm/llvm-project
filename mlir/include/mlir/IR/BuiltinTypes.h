@@ -9,8 +9,7 @@
 #ifndef MLIR_IR_BUILTINTYPES_H
 #define MLIR_IR_BUILTINTYPES_H
 
-#include "mlir/IR/Attributes.h"
-#include "mlir/IR/Types.h"
+#include "SubElementInterfaces.h"
 
 namespace llvm {
 struct fltSemantics;
@@ -192,6 +191,12 @@ public:
 #define GET_TYPEDEF_CLASSES
 #include "mlir/IR/BuiltinTypes.h.inc"
 
+//===----------------------------------------------------------------------===//
+// Tablegen Interface Declarations
+//===----------------------------------------------------------------------===//
+
+#include "mlir/IR/BuiltinTypeInterfaces.h.inc"
+
 namespace mlir {
 //===----------------------------------------------------------------------===//
 // MemRefType
@@ -266,7 +271,9 @@ inline bool BaseMemRefType::classof(Type type) {
 }
 
 inline bool BaseMemRefType::isValidElementType(Type type) {
-  return type.isIntOrIndexOrFloat() || type.isa<ComplexType, VectorType>();
+  return type.isIntOrIndexOrFloat() ||
+         type.isa<ComplexType, MemRefType, VectorType, UnrankedMemRefType>() ||
+         type.isa<MemRefElementTypeInterface>();
 }
 
 inline bool FloatType::classof(Type type) {

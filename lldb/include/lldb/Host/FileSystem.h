@@ -33,7 +33,7 @@ public:
 
   FileSystem()
       : m_fs(llvm::vfs::getRealFileSystem()), m_collector(nullptr),
-        m_home_directory(), m_mapped(false) {}
+        m_home_directory() {}
   FileSystem(std::shared_ptr<llvm::FileCollectorBase> collector)
       : m_fs(llvm::vfs::getRealFileSystem()), m_collector(std::move(collector)),
         m_home_directory(), m_mapped(false) {}
@@ -201,7 +201,7 @@ private:
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> m_fs;
   std::shared_ptr<llvm::FileCollectorBase> m_collector;
   std::string m_home_directory;
-  bool m_mapped;
+  bool m_mapped = false;
 };
 } // namespace lldb_private
 

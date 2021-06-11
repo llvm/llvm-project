@@ -2234,7 +2234,7 @@ CXXMethodDecl *CXXMethodDecl::getDevirtualizedMethod(const Expr *Base,
   // If the base expression (after skipping derived-to-base conversions) is a
   // class prvalue, then we can devirtualize.
   Base = Base->getBestDynamicClassTypeExpr();
-  if (Base->isRValue() && Base->getType()->isRecordType())
+  if (Base->isPRValue() && Base->getType()->isRecordType())
     return this;
 
   // If we don't even know what we would call, we can't devirtualize.
@@ -3080,6 +3080,23 @@ SourceRange UsingDecl::getSourceRange() const {
   SourceLocation Begin = isAccessDeclaration()
     ? getQualifierLoc().getBeginLoc() : UsingLocation;
   return SourceRange(Begin, getNameInfo().getEndLoc());
+}
+
+void UsingEnumDecl::anchor() {}
+
+UsingEnumDecl *UsingEnumDecl::Create(ASTContext &C, DeclContext *DC,
+                                     SourceLocation UL, SourceLocation EL,
+                                     SourceLocation NL, EnumDecl *Enum) {
+  return new (C, DC) UsingEnumDecl(DC, Enum->getDeclName(), UL, EL, NL, Enum);
+}
+
+UsingEnumDecl *UsingEnumDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+  return new (C, ID) UsingEnumDecl(nullptr, DeclarationName(), SourceLocation(),
+                                   SourceLocation(), SourceLocation(), nullptr);
+}
+
+SourceRange UsingEnumDecl::getSourceRange() const {
+  return SourceRange(EnumLocation, getLocation());
 }
 
 void UsingPackDecl::anchor() {}

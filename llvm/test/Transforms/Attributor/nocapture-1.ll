@@ -854,13 +854,13 @@ declare void @val_use(i8 %ptr) readonly nounwind willreturn
 define void @ptr_uses(i8* %ptr, i8* %wptr) {
 ; IS__TUNIT____: Function Attrs: nounwind willreturn
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@ptr_uses
-; IS__TUNIT____-SAME: (i8* [[PTR:%.*]], i8* nocapture noundef nonnull writeonly dereferenceable(1) [[WPTR:%.*]]) #[[ATTR12:[0-9]+]] {
+; IS__TUNIT____-SAME: (i8* [[PTR:%.*]], i8* nocapture nofree noundef nonnull writeonly dereferenceable(1) [[WPTR:%.*]]) #[[ATTR12:[0-9]+]] {
 ; IS__TUNIT____-NEXT:    store i8 0, i8* [[WPTR]], align 1
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____: Function Attrs: nounwind willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@ptr_uses
-; IS__CGSCC____-SAME: (i8* [[PTR:%.*]], i8* nocapture noundef nonnull writeonly dereferenceable(1) [[WPTR:%.*]]) #[[ATTR14]] {
+; IS__CGSCC____-SAME: (i8* [[PTR:%.*]], i8* nocapture nofree noundef nonnull writeonly dereferenceable(1) [[WPTR:%.*]]) #[[ATTR14]] {
 ; IS__CGSCC____-NEXT:    store i8 0, i8* [[WPTR]], align 1
 ; IS__CGSCC____-NEXT:    ret void
 ;

@@ -338,6 +338,7 @@ public:
   bool isSectionText(DataRefImpl Sec) const override;
   bool isSectionData(DataRefImpl Sec) const override;
   bool isSectionBSS(DataRefImpl Sec) const override;
+  bool isDebugSection(DataRefImpl Sec) const override;
 
   bool isSectionVirtual(DataRefImpl Sec) const override;
   relocation_iterator section_rel_begin(DataRefImpl Sec) const override;
@@ -370,7 +371,7 @@ public:
   const void *getPointerToSymbolTable() const { return SymbolTblPtr; }
 
   Expected<StringRef> getSymbolSectionName(XCOFFSymbolRef Ref) const;
-
+  unsigned getSymbolSectionID(SymbolRef Sym) const;
   XCOFFSymbolRef toSymbolRef(DataRefImpl Ref) const;
 
   // File header related interfaces.

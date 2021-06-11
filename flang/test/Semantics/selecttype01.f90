@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Test for checking select type constraints,
 module m1
   use ISO_C_BINDING

@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Test that associations constructs can be correctly combined. The intrinsic
 ! functions are not what is tested here, they are only use to reveal the types
 ! of local variables.

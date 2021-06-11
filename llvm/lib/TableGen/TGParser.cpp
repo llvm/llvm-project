@@ -2787,10 +2787,7 @@ VarInit *TGParser::ParseForeachDeclaration(Init *&ForeachListValue) {
       break;
     }
 
-    std::string Type;
-    if (TI)
-      Type = (Twine("' of type '") + TI->getType()->getAsString()).str();
-    Error(ValueLoc, "expected a list, got '" + I->getAsString() + Type + "'");
+    Error(ValueLoc, "expected a list, got '" + I->getAsString() + "'");
     if (CurMultiClass) {
       PrintNote({}, "references to multiclass template arguments cannot be "
                 "resolved at this time");

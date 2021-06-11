@@ -73,6 +73,7 @@ def Named : DeclNode<Decl, "named declarations", 1>;
     def Concept : DeclNode<Template>;
   def BaseUsing : DeclNode<Named, "", 1>;
     def Using : DeclNode<BaseUsing>;
+    def UsingEnum : DeclNode<BaseUsing>;
   def UsingPack : DeclNode<Named>;
   def UsingShadow : DeclNode<Named>;
     def ConstructorUsingShadow : DeclNode<UsingShadow>;

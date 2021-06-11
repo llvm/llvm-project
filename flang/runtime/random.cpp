@@ -103,7 +103,7 @@ void RTNAME(RandomNumber)(
     Generate<CppTypeFor<TypeCategory::Real, 10>, 64>(harvest);
     break;
 #elif LONG_DOUBLE == 128
-  case 4:
+  case 16:
     Generate<CppTypeFor<TypeCategory::Real, 16>, 113>(harvest);
     break;
 #endif

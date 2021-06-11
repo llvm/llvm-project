@@ -1,4 +1,5 @@
 ! RUN: %S/test_modfile.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Ensure that intrinsics in module files retain their 'private' attribute,
 ! if they are private.
 

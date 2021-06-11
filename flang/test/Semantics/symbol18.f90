@@ -1,4 +1,5 @@
 ! RUN: %S/test_symbols.sh %s %t %flang_fc1
+! REQUIRES: shell
 
 ! Intrinsic function in type declaration statement: type is ignored
 

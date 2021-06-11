@@ -1,4 +1,5 @@
 ! RUN: %S/test_symbols.sh %s %t %flang_fc1 -fopenmp
+! REQUIRES: shell
 ! OpenMP Version 4.5
 ! 2.7.1 Schedule Clause
 ! Test that does not catch non constant integer expressions like xx - yy.

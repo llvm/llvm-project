@@ -5,9 +5,9 @@
 define <vscale x 4 x i5> @trunc_nxv4i32_to_nxv4i5(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: trunc_nxv4i32_to_nxv4i5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vnsrl.wi v25, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, mu
 ; CHECK-NEXT:    vnsrl.wi v8, v25, 0
 ; CHECK-NEXT:    ret
   %v = trunc <vscale x 4 x i32> %a to <vscale x 4 x i5>
@@ -17,9 +17,9 @@ define <vscale x 4 x i5> @trunc_nxv4i32_to_nxv4i5(<vscale x 4 x i32> %a) {
 define <vscale x 1 x i5> @trunc_nxv1i32_to_nxv1i5(<vscale x 1 x i32> %a) {
 ; CHECK-LABEL: trunc_nxv1i32_to_nxv1i5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
 ; CHECK-NEXT:    vnsrl.wi v25, v8, 0
-; CHECK-NEXT:    vsetvli zero, zero, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, ta, mu
 ; CHECK-NEXT:    vnsrl.wi v8, v25, 0
 ; CHECK-NEXT:    ret
   %v = trunc <vscale x 1 x i32> %a to <vscale x 1 x i5>

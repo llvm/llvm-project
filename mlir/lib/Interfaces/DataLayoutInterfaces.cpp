@@ -440,6 +440,11 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
 
     const auto *iface =
         dialect->getRegisteredInterface<DataLayoutDialectInterface>();
+    if (!iface) {
+      return emitError(loc)
+             << "the '" << dialect->getNamespace()
+             << "' dialect does not support identifier data layout entries";
+    }
     if (failed(iface->verifyEntry(kvp.second, loc)))
       return failure();
   }

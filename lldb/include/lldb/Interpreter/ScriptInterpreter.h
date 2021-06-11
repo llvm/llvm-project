@@ -94,8 +94,7 @@ public:
 
   struct ExecuteScriptOptions {
   public:
-    ExecuteScriptOptions()
-        : m_enable_io(true), m_set_lldb_globals(true), m_maskout_errors(true) {}
+    ExecuteScriptOptions() {}
 
     bool GetEnableIO() const { return m_enable_io; }
 
@@ -122,9 +121,9 @@ public:
     }
 
   private:
-    bool m_enable_io;
-    bool m_set_lldb_globals;
-    bool m_maskout_errors;
+    bool m_enable_io = true;
+    bool m_set_lldb_globals = true;
+    bool m_maskout_errors = true;
   };
 
   virtual bool Interrupt() { return false; }

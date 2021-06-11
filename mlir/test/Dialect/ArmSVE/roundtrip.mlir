@@ -103,6 +103,33 @@ func @arm_sve_masked_arithf(%a: !arm_sve.vector<4xf32>,
   return %3 : !arm_sve.vector<4xf32>
 }
 
+func @arm_sve_mask_genf(%a: !arm_sve.vector<4xf32>,
+                        %b: !arm_sve.vector<4xf32>)
+                        -> !arm_sve.vector<4xi1> {
+  // CHECK: arm_sve.cmpf oeq, {{.*}}: !arm_sve.vector<4xf32>
+  %0 = arm_sve.cmpf oeq, %a, %b : !arm_sve.vector<4xf32>
+  return %0 : !arm_sve.vector<4xi1>
+}
+
+func @arm_sve_mask_geni(%a: !arm_sve.vector<4xi32>,
+                        %b: !arm_sve.vector<4xi32>)
+                        -> !arm_sve.vector<4xi1> {
+  // CHECK: arm_sve.cmpi uge, {{.*}}: !arm_sve.vector<4xi32>
+  %0 = arm_sve.cmpi uge, %a, %b : !arm_sve.vector<4xi32>
+  return %0 : !arm_sve.vector<4xi1>
+}
+
+func @arm_sve_memory(%v: !arm_sve.vector<4xi32>,
+                     %m: memref<?xi32>)
+                     -> !arm_sve.vector<4xi32> {
+  %c0 = constant 0 : index
+  // CHECK: arm_sve.load {{.*}}: !arm_sve.vector<4xi32> from memref<?xi32>
+  %0 = arm_sve.load %m[%c0] : !arm_sve.vector<4xi32> from memref<?xi32>
+  // CHECK: arm_sve.store {{.*}}: !arm_sve.vector<4xi32> to memref<?xi32>
+  arm_sve.store %v, %m[%c0] : !arm_sve.vector<4xi32> to memref<?xi32>
+  return %0 : !arm_sve.vector<4xi32>
+}
+
 func @get_vector_scale() -> index {
   // CHECK: arm_sve.vector_scale : index
   %0 = arm_sve.vector_scale : index

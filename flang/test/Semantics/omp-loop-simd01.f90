@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang -fopenmp
+! REQUIRES: shell
 
 ! OpenMP Version 4.5
 ! 2.8.3 Loop simd Construct

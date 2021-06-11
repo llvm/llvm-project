@@ -64,6 +64,9 @@ public:
     if (SCUDO_FUCHSIA)
       reportError("SizeClassAllocator32 is not supported on Fuchsia");
 
+    if (SCUDO_TRUSTY)
+      reportError("SizeClassAllocator32 is not supported on Trusty");
+
     PossibleRegions.init();
 
     u32 Seed;

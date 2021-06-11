@@ -23,9 +23,7 @@ pthread_key_t g_thread_create_key = 0;
 
 class MacOSXDarwinThread {
 public:
-  MacOSXDarwinThread() : m_pool(nil) {
-    m_pool = [[NSAutoreleasePool alloc] init];
-  }
+  MacOSXDarwinThread() { m_pool = [[NSAutoreleasePool alloc] init]; }
 
   ~MacOSXDarwinThread() {
     if (m_pool) {
@@ -41,7 +39,7 @@ public:
   }
 
 protected:
-  NSAutoreleasePool *m_pool;
+  NSAutoreleasePool *m_pool = nil;
 
 private:
   MacOSXDarwinThread(const MacOSXDarwinThread &) = delete;

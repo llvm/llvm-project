@@ -103,11 +103,11 @@ define void @pr35497() local_unnamed_addr #0 {
 ; AVX-NEXT:    [[ADD:%.*]] = add i64 undef, undef
 ; AVX-NEXT:    store i64 [[ADD]], i64* undef, align 1
 ; AVX-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 5
-; AVX-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> <i64 undef, i64 poison>, i64 [[TMP0]], i32 1
+; AVX-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> poison, i64 [[TMP0]], i32 1
 ; AVX-NEXT:    [[TMP2:%.*]] = shl <2 x i64> [[TMP1]], <i64 2, i64 2>
 ; AVX-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], <i64 20, i64 20>
 ; AVX-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 4
-; AVX-NEXT:    [[TMP4:%.*]] = add nuw nsw <2 x i64> [[TMP3]], zeroinitializer
+; AVX-NEXT:    [[TMP4:%.*]] = add nuw nsw <2 x i64> [[TMP3]], poison
 ; AVX-NEXT:    [[ARRAYIDX2_5:%.*]] = getelementptr inbounds [0 x i64], [0 x i64]* undef, i64 0, i64 1
 ; AVX-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP4]], i32 1
 ; AVX-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> poison, i64 [[TMP5]], i32 0

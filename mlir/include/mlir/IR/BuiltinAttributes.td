@@ -15,6 +15,7 @@
 #define BUILTIN_ATTRIBUTES
 
 include "mlir/IR/BuiltinDialect.td"
+include "mlir/IR/SubElementInterfaces.td"
 
 // TODO: Currently the attributes defined in this file are prefixed with
 // `Builtin_`.  This is to differentiate the attributes here with the ones in
@@ -22,8 +23,9 @@ include "mlir/IR/BuiltinDialect.td"
 // to this file instead.
 
 // Base class for Builtin dialect attributes.
-class Builtin_Attr<string name, string baseCppClass = "::mlir::Attribute">
-    : AttrDef<Builtin_Dialect, name, [], baseCppClass> {
+class Builtin_Attr<string name, list<Trait> traits = [],
+                   string baseCppClass = "::mlir::Attribute">
+    : AttrDef<Builtin_Dialect, name, traits, baseCppClass> {
   let mnemonic = ?;
 }
 
@@ -62,7 +64,9 @@ def Builtin_AffineMapAttr : Builtin_Attr<"AffineMap"> {
 // ArrayAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_ArrayAttr : Builtin_Attr<"Array"> {
+def Builtin_ArrayAttr : Builtin_Attr<"Array", [
+    DeclareAttrInterfaceMethods<SubElementAttrInterface>
+  ]> {
   let summary = "A collection of other Attribute values";
   let description = [{
     Syntax:
@@ -114,13 +118,13 @@ def Builtin_ArrayAttr : Builtin_Attr<"Array"> {
 
   public:
     template <typename AttrTy>
-    iterator_range<attr_value_iterator<AttrTy>> getAsRange() {
+    iterator_range<attr_value_iterator<AttrTy>> getAsRange() const {
       return llvm::make_range(attr_value_iterator<AttrTy>(begin()),
                               attr_value_iterator<AttrTy>(end()));
     }
     template <typename AttrTy,
               typename UnderlyingTy = typename AttrTy::ValueType>
-    auto getAsValueRange() {
+    auto getAsValueRange() const {
       return llvm::map_range(getAsRange<AttrTy>(), [](AttrTy attr) {
         return static_cast<UnderlyingTy>(attr.getValue());
       });
@@ -133,7 +137,7 @@ def Builtin_ArrayAttr : Builtin_Attr<"Array"> {
 //===----------------------------------------------------------------------===//
 
 def Builtin_DenseIntOrFPElementsAttr
-    : Builtin_Attr<"DenseIntOrFPElements", "DenseElementsAttr"> {
+    : Builtin_Attr<"DenseIntOrFPElements", /*traits=*/[], "DenseElementsAttr"> {
   let summary = "An Attribute containing a dense multi-dimensional array of "
                 "integer or floating-point values";
   let description = [{
@@ -228,7 +232,7 @@ def Builtin_DenseIntOrFPElementsAttr
 //===----------------------------------------------------------------------===//
 
 def Builtin_DenseStringElementsAttr
-    : Builtin_Attr<"DenseStringElements", "DenseElementsAttr"> {
+    : Builtin_Attr<"DenseStringElements", /*traits=*/[], "DenseElementsAttr"> {
   let summary = "An Attribute containing a dense multi-dimensional array of "
                 "strings";
   let description = [{
@@ -277,7 +281,9 @@ def Builtin_DenseStringElementsAttr
 // DictionaryAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary"> {
+def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary", [
+    DeclareAttrInterfaceMethods<SubElementAttrInterface>
+  ]> {
   let summary = "An dictionary of named Attribute values";
   let description = [{
     Syntax:
@@ -345,9 +351,10 @@ def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary"> {
 
     /// Return the specified attribute if present and is an instance of
     /// `AttrClass`, null otherwise.
-    template<typename AttrClass>
-    AttrClass getAs(StringRef name) {
-      return get(name).dyn_cast_or_null<AttrClass>();
+    template<typename AttrClass, typename NameClass>
+    AttrClass getAs(NameClass &&name) const {
+      return get(std::forward<NameClass>(name))
+        .template dyn_cast_or_null<AttrClass>();
     }
 
   private:
@@ -588,7 +595,7 @@ def Builtin_OpaqueAttr : Builtin_Attr<"Opaque"> {
 //===----------------------------------------------------------------------===//
 
 def Builtin_OpaqueElementsAttr
-    : Builtin_Attr<"OpaqueElements", "ElementsAttr"> {
+    : Builtin_Attr<"OpaqueElements", /*traits=*/[], "ElementsAttr"> {
   let summary = "An opaque representation of a multi-dimensional array";
   let description = [{
     Syntax:
@@ -654,7 +661,7 @@ def Builtin_OpaqueElementsAttr
 //===----------------------------------------------------------------------===//
 
 def Builtin_SparseElementsAttr
-    : Builtin_Attr<"SparseElements", "ElementsAttr"> {
+    : Builtin_Attr<"SparseElements", /*traits=*/[], "ElementsAttr"> {
   let summary = "An opaque representation of a multi-dimensional array";
   let description = [{
     Syntax:
@@ -707,7 +714,7 @@ def Builtin_SparseElementsAttr
   let extraClassDeclaration = [{
     template <typename T>
     using iterator =
-        llvm::mapped_iterator<llvm::detail::value_sequence_iterator<ptrdiff_t>,
+        llvm::mapped_iterator<typename decltype(llvm::seq<ptrdiff_t>(0, 0))::iterator,
                               std::function<T(ptrdiff_t)>>;
 
     /// Return the values of this attribute in the form of the given type 'T'.
@@ -812,16 +819,9 @@ def Builtin_StringAttr : Builtin_Attr<"String"> {
   let parameters = (ins StringRefParameter<"">:$value,
                         AttributeSelfTypeParameter<"">:$type);
   let builders = [
-    AttrBuilderWithInferredContext<(ins "StringRef":$bytes,
-                                        "Type":$type), [{
-      return $_get(type.getContext(), bytes, type);
-    }]>,
-    AttrBuilder<(ins "StringRef":$bytes), [{
-      if (bytes.empty())
-        return get($_ctxt);
-      return $_get($_ctxt, bytes, NoneType::get($_ctxt));
-    }]>,
-
+    AttrBuilderWithInferredContext<(ins "const Twine &":$bytes, "Type":$type)>,
+    /// Build an string attr with NoneType.
+    AttrBuilder<(ins "const Twine &":$bytes)>,
     /// Build an empty string attr with NoneType.
     AttrBuilder<(ins)>
   ];
@@ -898,7 +898,9 @@ def Builtin_SymbolRefAttr : Builtin_Attr<"SymbolRef"> {
 // TypeAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_TypeAttr : Builtin_Attr<"Type"> {
+def Builtin_TypeAttr : Builtin_Attr<"Type", [
+    DeclareAttrInterfaceMethods<SubElementAttrInterface>
+  ]> {
   let summary = "An Attribute containing a Type";
   let description = [{
     Syntax:

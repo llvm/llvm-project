@@ -1,4 +1,5 @@
 ! RUN: %S/test_folding.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Test implementations of IEEE inquiry functions
 module m
   use ieee_arithmetic

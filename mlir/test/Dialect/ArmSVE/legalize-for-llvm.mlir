@@ -121,6 +121,46 @@ func @arm_sve_arithf_masked(%a: !arm_sve.vector<4xf32>,
   return %3 : !arm_sve.vector<4xf32>
 }
 
+func @arm_sve_mask_genf(%a: !arm_sve.vector<4xf32>,
+                        %b: !arm_sve.vector<4xf32>)
+                        -> !arm_sve.vector<4xi1> {
+  // CHECK: llvm.fcmp "oeq" {{.*}}: !llvm.vec<? x 4 x f32>
+  %0 = arm_sve.cmpf oeq, %a, %b : !arm_sve.vector<4xf32>
+  return %0 : !arm_sve.vector<4xi1>
+}
+
+func @arm_sve_mask_geni(%a: !arm_sve.vector<4xi32>,
+                        %b: !arm_sve.vector<4xi32>)
+                        -> !arm_sve.vector<4xi1> {
+  // CHECK: llvm.icmp "uge" {{.*}}: !llvm.vec<? x 4 x i32>
+  %0 = arm_sve.cmpi uge, %a, %b : !arm_sve.vector<4xi32>
+  return %0 : !arm_sve.vector<4xi1>
+}
+
+func @arm_sve_abs_diff(%a: !arm_sve.vector<4xi32>,
+                       %b: !arm_sve.vector<4xi32>)
+                       -> !arm_sve.vector<4xi32> {
+  // CHECK: llvm.sub {{.*}}: !llvm.vec<? x 4 x i32>
+  %z = arm_sve.subi %a, %a : !arm_sve.vector<4xi32>
+  // CHECK: llvm.icmp "sge" {{.*}}: !llvm.vec<? x 4 x i32>
+  %agb = arm_sve.cmpi sge, %a, %b : !arm_sve.vector<4xi32>
+  // CHECK: llvm.icmp "slt" {{.*}}: !llvm.vec<? x 4 x i32>
+  %bga = arm_sve.cmpi slt, %a, %b : !arm_sve.vector<4xi32>
+  // CHECK: "arm_sve.intr.sub"{{.*}}: (!llvm.vec<? x 4 x i1>, !llvm.vec<? x 4 x i32>, !llvm.vec<? x 4 x i32>) -> !llvm.vec<? x 4 x i32>
+  %0 = arm_sve.masked.subi %agb, %a, %b : !arm_sve.vector<4xi1>,
+                                          !arm_sve.vector<4xi32>
+  // CHECK: "arm_sve.intr.sub"{{.*}}: (!llvm.vec<? x 4 x i1>, !llvm.vec<? x 4 x i32>, !llvm.vec<? x 4 x i32>) -> !llvm.vec<? x 4 x i32>
+  %1 = arm_sve.masked.subi %bga, %b, %a : !arm_sve.vector<4xi1>,
+                                          !arm_sve.vector<4xi32>
+  // CHECK: "arm_sve.intr.add"{{.*}}: (!llvm.vec<? x 4 x i1>, !llvm.vec<? x 4 x i32>, !llvm.vec<? x 4 x i32>) -> !llvm.vec<? x 4 x i32>
+  %2 = arm_sve.masked.addi %agb, %z, %0 : !arm_sve.vector<4xi1>,
+                                          !arm_sve.vector<4xi32>
+  // CHECK: "arm_sve.intr.add"{{.*}}: (!llvm.vec<? x 4 x i1>, !llvm.vec<? x 4 x i32>, !llvm.vec<? x 4 x i32>) -> !llvm.vec<? x 4 x i32>
+  %3 = arm_sve.masked.addi %bga, %2, %1 : !arm_sve.vector<4xi1>,
+                                          !arm_sve.vector<4xi32>
+  return %3 : !arm_sve.vector<4xi32>
+}
+
 func @get_vector_scale() -> index {
   // CHECK: arm_sve.vscale
   %0 = arm_sve.vector_scale : index

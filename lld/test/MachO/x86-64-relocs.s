@@ -4,7 +4,7 @@
 # RUN: llvm-objdump --section-headers --syms -d %t | FileCheck %s
 
 # CHECK-LABEL: Sections:
-# CHECK:       __cstring {{[0-9a-z]+}} [[#%x, CSTRING_ADDR:]]
+# CHECK:       __data {{[0-9a-z]+}} [[#%x, DATA_ADDR:]]
 
 # CHECK-LABEL: SYMBOL TABLE:
 # CHECK:       [[#%x, F_ADDR:]] {{.*}} _f
@@ -13,15 +13,15 @@
 ## Test X86_64_RELOC_BRANCH
 # CHECK:       callq 0x[[#%x, F_ADDR]] <_f>
 ## Test extern (symbol) X86_64_RELOC_SIGNED
-# CHECK:       leaq [[#%u, STR_OFF:]](%rip), %rsi
-# CHECK-NEXT:  [[#%x, CSTRING_ADDR - STR_OFF]]
+# CHECK:       leaq [[#%u, LOCAL_OFF:]](%rip), %rsi
+# CHECK-NEXT:  [[#%x, DATA_ADDR - LOCAL_OFF]]
 ## Test non-extern (section) X86_64_RELOC_SIGNED
-# CHECK:       leaq [[#%u, LSTR_OFF:]](%rip), %rsi
-# CHECK-NEXT:  [[#%x, CSTRING_ADDR + 22 - LSTR_OFF]]
+# CHECK:       leaq [[#%u, PRIVATE_OFF:]](%rip), %rsi
+# CHECK-NEXT:  [[#%x, DATA_ADDR + 8 - PRIVATE_OFF]]
 
 # RUN: llvm-objdump --section=__const --full-contents %t | FileCheck %s --check-prefix=NONPCREL
 # NONPCREL:      Contents of section __DATA_CONST,__const:
-# NONPCREL-NEXT: 100001000 18040000 01000000 18040000 01000000
+# NONPCREL-NEXT: 100001000 08200000 01000000 08200000 01000000
 
 .section __TEXT,__text
 .globl _main, _f
@@ -31,36 +31,22 @@ _main:
   ret
 
 _f:
-  movl $0x2000004, %eax # write() syscall
-  mov $1, %rdi # stdout
-  leaq _str(%rip), %rsi # Generates a X86_64_RELOC_SIGNED pcrel symbol relocation
-  mov $21, %rdx # length of str
-  syscall
-
-  movl $0x2000004, %eax # write() syscall
-  mov $1, %rdi # stdout
-  leaq L_.str(%rip), %rsi # Generates a X86_64_RELOC_SIGNED pcrel section relocation
-  mov $15, %rdx # length of str
-  syscall
-
-  movl $0x2000004, %eax # write() syscall
-  mov $1, %rdi # stdout
-  movq L_.ptr_1_to_str(%rip), %rsi
-  mov $15, %rdx # length of str
-  syscall
+  leaq _local(%rip), %rsi # Generates a X86_64_RELOC_SIGNED pcrel symbol relocation
+  leaq L_.private(%rip), %rsi # Generates a X86_64_RELOC_SIGNED pcrel section relocation
+  movq L_.ptr_1(%rip), %rsi
   ret
 
-.section __TEXT,__cstring
+.data
 ## References to this generate a symbol relocation
-_str:
-  .asciz "Local defined symbol\n"
+_local:
+  .quad 123
 ## References to this generate a section relocation
-L_.str:
-  .asciz "Private symbol\n"
+L_.private:
+  .quad 123
 
 .section __DATA,__const
 ## These generate X86_64_RELOC_UNSIGNED non-pcrel section relocations
-L_.ptr_1_to_str:
-  .quad L_.str
-L_.ptr_2_to_str:
-  .quad L_.str
+L_.ptr_1:
+  .quad L_.private
+L_.ptr_2:
+  .quad L_.private

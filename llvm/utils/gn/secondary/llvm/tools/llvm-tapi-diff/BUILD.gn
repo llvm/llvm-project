@@ -1,0 +1,11 @@
+executable("llvm-tapi-diff") {
+  deps = [
+    "//llvm/lib/Object",
+    "//llvm/lib/Support",
+    "//llvm/lib/TextAPI",
+  ]
+  sources = [
+    "llvm-tapi-diff.cpp",
+    "DiffEngine.cpp",
+  ]
+}

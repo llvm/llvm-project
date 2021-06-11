@@ -385,6 +385,7 @@ raw_ostream &mlir::operator<<(raw_ostream &os,
   case SymbolTable::Visibility::Nested:
     return os << "nested";
   }
+  llvm_unreachable("Unexpected visibility");
 }
 
 //===----------------------------------------------------------------------===//

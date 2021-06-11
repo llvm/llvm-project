@@ -4,6 +4,7 @@
 ; Optimization records are collected regardless of the diagnostic handler
 ; RUN: rm -f %t.yaml.thin.0.yaml %t.yaml.thin.1.yaml
 ; RUN: llvm-lto -thinlto-action=run \
+; RUN:          -use-new-pm=false \
 ; RUN:          -lto-pass-remarks-output=%t.yaml \
 ; RUN:          -lto-pass-remarks-filter=inline \
 ; RUN:          -lto-pass-remarks-format=yaml \

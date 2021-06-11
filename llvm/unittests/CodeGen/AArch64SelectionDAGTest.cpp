@@ -573,9 +573,11 @@ TEST_F(AArch64SelectionDAGTest, getTypeConversion_WidenScalableEVT) {
   EXPECT_EQ(getTypeToTransformTo(FromVT), ToVT);
 }
 
-TEST_F(AArch64SelectionDAGTest, getTypeConversion_NoScalarizeEVT_nxv1f128) {
-  EVT FromVT = EVT::getVectorVT(Context, MVT::f128, 1, true);
-  EXPECT_DEATH(getTypeAction(FromVT), "Cannot legalize this vector");
+TEST_F(AArch64SelectionDAGTest,
+       getTypeConversion_ScalarizeScalableEVT_nxv1f128) {
+  EVT VT = EVT::getVectorVT(Context, MVT::f128, ElementCount::getScalable(1));
+  EXPECT_EQ(getTypeAction(VT), TargetLoweringBase::TypeScalarizeScalableVector);
+  EXPECT_EQ(getTypeToTransformTo(VT), MVT::f128);
 }
 
 TEST_F(AArch64SelectionDAGTest, TestFold_STEP_VECTOR) {

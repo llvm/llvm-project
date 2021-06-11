@@ -1,4 +1,5 @@
 ! RUN: %S/test_symbols.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Forward references in pointer initializers and TBP bindings.
 
 !DEF: /m Module

@@ -34,6 +34,7 @@ struct smart_ref {
 
 struct OtherType {
   ~OtherType();
+  void constMethod() const;
 };
 
 template <typename T> struct SomeComplexTemplate {
@@ -89,6 +90,7 @@ void positiveOtherType() {
   const auto O = getOtherType();
   // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'O' is copy-constructed from a const reference; consider making it a const reference [performance-unnecessary-copy-initialization]
   // CHECK-FIXES: const auto& O = getOtherType();
+  O.constMethod();
 }
 
 void negativeNotTooComplexRef() {

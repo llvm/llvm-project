@@ -208,13 +208,13 @@ def Tosa_MatMulOp : Tosa_Op<"matmul", [NoSideEffect]> {
   }];
 
   let arguments = (ins
-    Tosa_Tensor2D:$a,
-    Tosa_Tensor2D:$b,
+    Tosa_Tensor2Dto3D:$a,
+    Tosa_Tensor2Dto3D:$b,
     OptionalAttr<Tosa_MatMulOpQuantizationAttr>:$quantization_info
   );
 
   let results = (outs
-    Tosa_Tensor2D:$c
+    Tosa_Tensor2Dto3D:$c
   );
 
   let builders = [Tosa_MatMulOpQuantInfoBuilder];

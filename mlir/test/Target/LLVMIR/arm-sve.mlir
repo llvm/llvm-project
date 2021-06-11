@@ -139,6 +139,135 @@ llvm.func @arm_sve_arithf_masked(%arg0: !llvm.vec<? x 4 x f32>,
   llvm.return %3 : !llvm.vec<? x 4 x f32>
 }
 
+// CHECK-LABEL: define <vscale x 4 x i1> @arm_sve_mask_genf
+llvm.func @arm_sve_mask_genf(%arg0: !llvm.vec<? x 4 x f32>,
+                             %arg1: !llvm.vec<? x 4 x f32>)
+                             -> !llvm.vec<? x 4 x i1> {
+  // CHECK: fcmp oeq <vscale x 4 x float>
+  %0 = llvm.fcmp "oeq" %arg0, %arg1 : !llvm.vec<? x 4 x f32>
+  llvm.return %0 : !llvm.vec<? x 4 x i1>
+}
+
+// CHECK-LABEL: define <vscale x 4 x i1> @arm_sve_mask_geni
+llvm.func @arm_sve_mask_geni(%arg0: !llvm.vec<? x 4 x i32>,
+                             %arg1: !llvm.vec<? x 4 x i32>)
+                             -> !llvm.vec<? x 4 x i1> {
+  // CHECK: icmp uge <vscale x 4 x i32>
+  %0 = llvm.icmp "uge" %arg0, %arg1 : !llvm.vec<? x 4 x i32>
+  llvm.return %0 : !llvm.vec<? x 4 x i1>
+}
+
+// CHECK-LABEL: define <vscale x 4 x i32> @arm_sve_abs_diff
+llvm.func @arm_sve_abs_diff(%arg0: !llvm.vec<? x 4 x i32>,
+                            %arg1: !llvm.vec<? x 4 x i32>)
+                            -> !llvm.vec<? x 4 x i32> {
+  // CHECK: sub <vscale x 4 x i32>
+  %0 = llvm.sub %arg0, %arg0  : !llvm.vec<? x 4 x i32>
+  // CHECK: icmp sge <vscale x 4 x i32>
+  %1 = llvm.icmp "sge" %arg0, %arg1 : !llvm.vec<? x 4 x i32>
+  // CHECK: icmp slt <vscale x 4 x i32>
+  %2 = llvm.icmp "slt" %arg0, %arg1 : !llvm.vec<? x 4 x i32>
+  // CHECK: call <vscale x 4 x i32> @llvm.aarch64.sve.sub.nxv4i32
+  %3 = "arm_sve.intr.sub"(%1, %arg0, %arg1) : (!llvm.vec<? x 4 x i1>,
+                                               !llvm.vec<? x 4 x i32>,
+                                               !llvm.vec<? x 4 x i32>)
+                                               -> !llvm.vec<? x 4 x i32>
+  // CHECK: call <vscale x 4 x i32> @llvm.aarch64.sve.sub.nxv4i32
+  %4 = "arm_sve.intr.sub"(%2, %arg1, %arg0) : (!llvm.vec<? x 4 x i1>,
+                                               !llvm.vec<? x 4 x i32>,
+                                               !llvm.vec<? x 4 x i32>)
+                                               -> !llvm.vec<? x 4 x i32>
+  // CHECK: call <vscale x 4 x i32> @llvm.aarch64.sve.add.nxv4i32
+  %5 = "arm_sve.intr.add"(%1, %0, %3) : (!llvm.vec<? x 4 x i1>,
+                                         !llvm.vec<? x 4 x i32>,
+                                         !llvm.vec<? x 4 x i32>)
+                                         -> !llvm.vec<? x 4 x i32>
+  // CHECK: call <vscale x 4 x i32> @llvm.aarch64.sve.add.nxv4i32
+  %6 = "arm_sve.intr.add"(%2, %5, %4) : (!llvm.vec<? x 4 x i1>,
+                                         !llvm.vec<? x 4 x i32>,
+                                         !llvm.vec<? x 4 x i32>)
+                                         -> !llvm.vec<? x 4 x i32>
+  llvm.return %6 : !llvm.vec<? x 4 x i32>
+}
+
+// CHECK-LABEL: define void @memcopy
+llvm.func @memcopy(%arg0: !llvm.ptr<f32>, %arg1: !llvm.ptr<f32>,
+                   %arg2: i64, %arg3: i64, %arg4: i64,
+                   %arg5: !llvm.ptr<f32>, %arg6: !llvm.ptr<f32>,
+                   %arg7: i64, %arg8: i64, %arg9: i64,
+                   %arg10: i64) {
+  %0 = llvm.mlir.undef : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+                                       array<1 x i64>, array<1 x i64>)>
+  %1 = llvm.insertvalue %arg0, %0[0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+                                                     array<1 x i64>,
+                                                     array<1 x i64>)>
+  %2 = llvm.insertvalue %arg1, %1[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+                                                     array<1 x i64>,
+                                                     array<1 x i64>)>
+  %3 = llvm.insertvalue %arg2, %2[2] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+                                                     array<1 x i64>,
+                                                     array<1 x i64>)>
+  %4 = llvm.insertvalue %arg3, %3[3, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+                                                        array<1 x i64>,
+                                                        array<1 x i64>)>
+  %5 = llvm.insertvalue %arg4, %4[4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+                                                        array<1 x i64>,
+                                                        array<1 x i64>)>
+  %6 = llvm.mlir.undef : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+                                       array<1 x i64>,
+                                       array<1 x i64>)>
+  %7 = llvm.insertvalue %arg5, %6[0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+                                                     array<1 x i64>,
+                                                     array<1 x i64>)>
+  %8 = llvm.insertvalue %arg6, %7[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+                                                     array<1 x i64>,
+                                                     array<1 x i64>)>
+  %9 = llvm.insertvalue %arg7, %8[2] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+                                                     array<1 x i64>,
+                                                     array<1 x i64>)>
+  %10 = llvm.insertvalue %arg8, %9[3, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+                                                         array<1 x i64>,
+                                                         array<1 x i64>)>
+  %11 = llvm.insertvalue %arg9, %10[4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+                                                         array<1 x i64>,
+                                                         array<1 x i64>)>
+  %12 = llvm.mlir.constant(0 : index) : i64
+  %13 = llvm.mlir.constant(4 : index) : i64
+  // CHECK: [[VL:%[0-9]+]] = call i64 @llvm.vscale.i64()
+  %14 = "arm_sve.vscale"() : () -> i64
+  // CHECK: mul i64 [[VL]], 4
+  %15 = llvm.mul %14, %13  : i64
+  llvm.br ^bb1(%12 : i64)
+^bb1(%16: i64):
+  %17 = llvm.icmp "slt" %16, %arg10 : i64
+  llvm.cond_br %17, ^bb2, ^bb3
+^bb2:
+  // CHECK: extractvalue { float*, float*, i64, [1 x i64], [1 x i64] }
+  %18 = llvm.extractvalue %5[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+                                                array<1 x i64>,
+                                                array<1 x i64>)>
+  // CHECK: etelementptr float, float*
+  %19 = llvm.getelementptr %18[%16] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+  // CHECK: bitcast float* %{{[0-9]+}} to <vscale x 4 x float>*
+  %20 = llvm.bitcast %19 : !llvm.ptr<f32> to !llvm.ptr<vec<? x 4 x f32>>
+  // CHECK: load <vscale x 4 x float>, <vscale x 4 x float>*
+  %21 = llvm.load %20 : !llvm.ptr<vec<? x 4 x f32>>
+  // CHECK: extractvalue { float*, float*, i64, [1 x i64], [1 x i64] }
+  %22 = llvm.extractvalue %11[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64,
+                                                 array<1 x i64>,
+                                                 array<1 x i64>)>
+  // CHECK: getelementptr float, float* %32
+  %23 = llvm.getelementptr %22[%16] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+  // CHECK: bitcast float* %33 to <vscale x 4 x float>*
+  %24 = llvm.bitcast %23 : !llvm.ptr<f32> to !llvm.ptr<vec<? x 4 x f32>>
+  // CHECK: store <vscale x 4 x float> %{{[0-9]+}}, <vscale x 4 x float>* %{{[0-9]+}}
+  llvm.store %21, %24 : !llvm.ptr<vec<? x 4 x f32>>
+  %25 = llvm.add %16, %15  : i64
+  llvm.br ^bb1(%25 : i64)
+^bb3:
+  llvm.return
+}
+
 // CHECK-LABEL: define i64 @get_vector_scale()
 llvm.func @get_vector_scale() -> i64 {
   // CHECK: call i64 @llvm.vscale.i64()

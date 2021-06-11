@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-std-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -convert-std-to-llvm -split-input-file %s | FileCheck %s
 // RUN: mlir-opt -convert-std-to-llvm='use-bare-ptr-memref-call-conv=1' -split-input-file %s | FileCheck %s --check-prefix=BAREPTR
 
 // BAREPTR-LABEL: func @check_noalias
@@ -402,3 +402,49 @@ func @check_unranked_memref_func_call(%in: memref<*xi8>) -> memref<*xi8> {
   // BAREPTR-NEXT: return %{{.*}} : memref<*xi8>
   return %res : memref<*xi8>
 }
+
+// -----
+
+// Check that consistent types are emitted in address arithemic in presence of
+// a data layout specification.
+module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32>> } {
+  func @address() {
+    %c1 = constant 1 : index
+    %0 = memref.alloc(%c1) : memref<? x vector<2xf32>>
+    // CHECK: %[[CST:.*]] = llvm.mlir.constant(1 : index) : i32
+    // CHECK: llvm.mlir.null
+    // CHECK: llvm.getelementptr %{{.*}}[[CST]]
+    // CHECK: llvm.ptrtoint %{{.*}} : !llvm.ptr<{{.*}}> to i32
+    // CHECK: llvm.ptrtoint %{{.*}} : !llvm.ptr<{{.*}}> to i32
+    // CHECK: llvm.add %{{.*}} : i32
+    // CHECK: llvm.call @malloc(%{{.*}}) : (i32) -> !llvm.ptr
+    // CHECK: llvm.ptrtoint %{{.*}} : !llvm.ptr<{{.*}}> to i32
+    // CHECK: llvm.sub {{.*}} : i32
+    // CHECK: llvm.add {{.*}} : i32
+    // CHECK: llvm.urem {{.*}} : i32
+    // CHECK: llvm.sub {{.*}} : i32
+    // CHECK: llvm.inttoptr %{{.*}} : i32 to !llvm.ptr
+    return
+  }
+}
+
+// -----
+
+// Should not convert memrefs with unsupported types in any convention.
+
+// CHECK: @unsupported_memref_element_type
+// CHECK-SAME: memref<
+// CHECK-NOT: !llvm.struct
+// BAREPTR: @unsupported_memref_element_type
+// BAREPTR-SAME: memref<
+// BAREPTR-NOT: !llvm.ptr
+func private @unsupported_memref_element_type() -> memref<42 x !test.memref_element>
+
+// CHECK: @unsupported_unranked_memref_element_type
+// CHECK-SAME: memref<
+// CHECK-NOT: !llvm.struct
+// BAREPTR: @unsupported_unranked_memref_element_type
+// BAREPTR-SAME: memref<
+// BAREPTR-NOT: !llvm.ptr
+func private @unsupported_unranked_memref_element_type() -> memref<* x !test.memref_element>
+

@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 
 ! Tests for defined input/output.  See 12.6.4.8 and 15.4.3.2, and C777
 module m1

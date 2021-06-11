@@ -33,7 +33,7 @@ public:
   void SetID(lldb::break_id_t bid);
 
 protected:
-  lldb::break_id_t m_bid;
+  lldb::break_id_t m_bid = LLDB_INVALID_BREAK_ID;
 
 private:
   // For Stoppoint only

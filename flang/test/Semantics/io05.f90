@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
   character*20 c(25), cv
   character(kind=1,len=59) msg
   character, parameter :: const_round = "c'est quoi?"

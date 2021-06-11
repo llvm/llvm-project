@@ -118,9 +118,9 @@ protected:
   const_iterator FindIteratorForPath(ConstString path) const;
 
   collection m_pairs;
-  ChangedCallback m_callback;
-  void *m_callback_baton;
-  uint32_t m_mod_id; // Incremented anytime anything is added or removed.
+  ChangedCallback m_callback = nullptr;
+  void *m_callback_baton = nullptr;
+  uint32_t m_mod_id = 0; // Incremented anytime anything is added or removed.
 };
 
 } // namespace lldb_private

@@ -43,6 +43,17 @@ void BuiltinDialect::registerAttributes() {
 }
 
 //===----------------------------------------------------------------------===//
+// ArrayAttr
+//===----------------------------------------------------------------------===//
+
+void ArrayAttr::walkImmediateSubElements(
+    function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  for (Attribute attr : getValue())
+    walkAttrsFn(attr);
+}
+
+//===----------------------------------------------------------------------===//
 // DictionaryAttr
 //===----------------------------------------------------------------------===//
 
@@ -197,8 +208,34 @@ DictionaryAttr DictionaryAttr::getEmptyUnchecked(MLIRContext *context) {
   return Base::get(context, ArrayRef<NamedAttribute>());
 }
 
+void DictionaryAttr::walkImmediateSubElements(
+    function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  for (Attribute attr : llvm::make_second_range(getValue()))
+    walkAttrsFn(attr);
+}
+
+//===----------------------------------------------------------------------===//
+// StringAttr
+//===----------------------------------------------------------------------===//
+
 StringAttr StringAttr::getEmptyStringAttrUnchecked(MLIRContext *context) {
   return Base::get(context, "", NoneType::get(context));
+}
+
+/// Twine support for StringAttr.
+StringAttr StringAttr::get(MLIRContext *context, const Twine &twine) {
+  // Fast-path empty twine.
+  if (twine.isTriviallyEmpty())
+    return get(context);
+  SmallVector<char, 32> tempStr;
+  return Base::get(context, twine.toStringRef(tempStr), NoneType::get(context));
+}
+
+/// Twine support for StringAttr.
+StringAttr StringAttr::get(const Twine &twine, Type type) {
+  SmallVector<char, 32> tempStr;
+  return Base::get(type.getContext(), twine.toStringRef(tempStr), type);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1350,4 +1387,14 @@ std::vector<ptrdiff_t> SparseElementsAttr::getFlattenedSparseIndices() const {
     flatSparseIndices.push_back(getFlattenedIndex(
         {&*std::next(sparseIndexValues.begin(), i * rank), rank}));
   return flatSparseIndices;
+}
+
+//===----------------------------------------------------------------------===//
+// TypeAttr
+//===----------------------------------------------------------------------===//
+
+void TypeAttr::walkImmediateSubElements(
+    function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  walkTypesFn(getValue());
 }

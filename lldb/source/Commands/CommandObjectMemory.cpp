@@ -46,8 +46,8 @@ using namespace lldb_private;
 class OptionGroupReadMemory : public OptionGroup {
 public:
   OptionGroupReadMemory()
-      : m_num_per_line(1, 1), m_output_as_binary(false), m_view_as_type(),
-        m_offset(0, 0), m_language_for_type(eLanguageTypeUnknown) {}
+      : m_num_per_line(1, 1), m_view_as_type(), m_offset(0, 0),
+        m_language_for_type(eLanguageTypeUnknown) {}
 
   ~OptionGroupReadMemory() override = default;
 
@@ -270,7 +270,7 @@ public:
   }
 
   OptionValueUInt64 m_num_per_line;
-  bool m_output_as_binary;
+  bool m_output_as_binary = false;
   OptionValueString m_view_as_type;
   bool m_force;
   OptionValueUInt64 m_offset;

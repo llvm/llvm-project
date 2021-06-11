@@ -182,8 +182,8 @@ public:
   } InfoType;
 
   struct Context {
-    ContextType type;
-    enum InfoType info_type;
+    ContextType type = eContextInvalid;
+    enum InfoType info_type = eInfoTypeNoArgs;
     union {
       struct RegisterPlusOffset {
         RegisterInfo reg;      // base register
@@ -237,7 +237,7 @@ public:
       uint32_t isa;
     } info;
 
-    Context() : type(eContextInvalid), info_type(eInfoTypeNoArgs) {}
+    Context() {}
 
     void SetRegisterPlusOffset(RegisterInfo base_reg, int64_t signed_offset) {
       info_type = eInfoTypeRegisterPlusOffset;

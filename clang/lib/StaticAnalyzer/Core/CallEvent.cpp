@@ -86,7 +86,7 @@ QualType CallEvent::getResultType() const {
   case VK_XValue:
     ResultTy = Ctx.getRValueReferenceType(ResultTy);
     break;
-  case VK_RValue:
+  case VK_PRValue:
     // No adjustment is necessary.
     break;
   }

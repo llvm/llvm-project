@@ -450,4 +450,85 @@ exit:
   ret void
 }
 
+; LoopBoundSplit pass should ignore phi which is not scevable phi.
+define void @split_loop_bound_inc_with_sgt_and_is_not_scevable_phi(i64 %a, i64* noalias %src, i64* noalias %dst, i64 %n) {
+; CHECK-LABEL: @split_loop_bound_inc_with_sgt_and_is_not_scevable_phi(
+; CHECK-NEXT:  loop.ph:
+; CHECK-NEXT:    br label [[LOOP_PH_SPLIT:%.*]]
+; CHECK:       loop.ph.split:
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N:%.*]], i64 0)
+; CHECK-NEXT:    [[NEW_BOUND:%.*]] = call i64 @llvm.smin.i64(i64 [[A:%.*]], i64 [[SMAX]])
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IS_NOT_SCEVABLE_PHI:%.*]] = phi double [ 1.000000e+00, [[FOR_INC:%.*]] ], [ 2.000000e+00, [[LOOP_PH_SPLIT]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_INC]] ], [ 0, [[LOOP_PH_SPLIT]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[IV]], [[A]]
+; CHECK-NEXT:    br i1 true, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[SRC_ARRAYIDX:%.*]] = getelementptr inbounds i64, i64* [[SRC:%.*]], i64 [[IV]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i64, i64* [[SRC_ARRAYIDX]], align 4
+; CHECK-NEXT:    [[DST_ARRAYIDX:%.*]] = getelementptr inbounds i64, i64* [[DST:%.*]], i64 [[IV]]
+; CHECK-NEXT:    store i64 [[VAL]], i64* [[DST_ARRAYIDX]], align 4
+; CHECK-NEXT:    br label [[FOR_INC]]
+; CHECK:       if.else:
+; CHECK-NEXT:    br label [[FOR_INC]]
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i64 [[INC]], [[NEW_BOUND]]
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP_PH_SPLIT_SPLIT:%.*]], label [[LOOP]]
+; CHECK:       loop.ph.split.split:
+; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i64 [ [[INC]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i64 [[INC_LCSSA]], [[N]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP_SPLIT_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.split.preheader:
+; CHECK-NEXT:    br label [[LOOP_SPLIT:%.*]]
+; CHECK:       loop.split:
+; CHECK-NEXT:    [[IS_NOT_SCEVABLE_PHI_SPLIT:%.*]] = phi double [ 1.000000e+00, [[FOR_INC_SPLIT:%.*]] ], [ 2.000000e+00, [[LOOP_SPLIT_PREHEADER]] ]
+; CHECK-NEXT:    [[IV_SPLIT:%.*]] = phi i64 [ [[INC_SPLIT:%.*]], [[FOR_INC_SPLIT]] ], [ [[NEW_BOUND]], [[LOOP_SPLIT_PREHEADER]] ]
+; CHECK-NEXT:    [[CMP_SPLIT:%.*]] = icmp slt i64 [[IV_SPLIT]], [[A]]
+; CHECK-NEXT:    br i1 false, label [[IF_THEN_SPLIT:%.*]], label [[IF_ELSE_SPLIT:%.*]]
+; CHECK:       if.else.split:
+; CHECK-NEXT:    br label [[FOR_INC_SPLIT]]
+; CHECK:       if.then.split:
+; CHECK-NEXT:    [[SRC_ARRAYIDX_SPLIT:%.*]] = getelementptr inbounds i64, i64* [[SRC]], i64 [[IV_SPLIT]]
+; CHECK-NEXT:    [[VAL_SPLIT:%.*]] = load i64, i64* [[SRC_ARRAYIDX_SPLIT]], align 4
+; CHECK-NEXT:    [[DST_ARRAYIDX_SPLIT:%.*]] = getelementptr inbounds i64, i64* [[DST]], i64 [[IV_SPLIT]]
+; CHECK-NEXT:    store i64 [[VAL_SPLIT]], i64* [[DST_ARRAYIDX_SPLIT]], align 4
+; CHECK-NEXT:    br label [[FOR_INC_SPLIT]]
+; CHECK:       for.inc.split:
+; CHECK-NEXT:    [[INC_SPLIT]] = add nuw nsw i64 [[IV_SPLIT]], 1
+; CHECK-NEXT:    [[COND_SPLIT:%.*]] = icmp sgt i64 [[INC_SPLIT]], [[N]]
+; CHECK-NEXT:    br i1 [[COND_SPLIT]], label [[EXIT_LOOPEXIT:%.*]], label [[LOOP_SPLIT]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+loop.ph:
+  br label %loop
+
+loop:
+  %is_not_scevable_phi = phi double [ 1.0, %for.inc ], [ 2.0, %loop.ph ]
+  %iv = phi i64 [ %inc, %for.inc ], [ 0, %loop.ph ]
+  %cmp = icmp slt i64 %iv, %a
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %src.arrayidx = getelementptr inbounds i64, i64* %src, i64 %iv
+  %val = load i64, i64* %src.arrayidx
+  %dst.arrayidx = getelementptr inbounds i64, i64* %dst, i64 %iv
+  store i64 %val, i64* %dst.arrayidx
+  br label %for.inc
+
+if.else:
+  br label %for.inc
+
+for.inc:
+  %inc = add nuw nsw i64 %iv, 1
+  %cond = icmp sgt i64 %inc, %n
+  br i1 %cond, label %exit, label %loop
+
+exit:
+  ret void
+}
 

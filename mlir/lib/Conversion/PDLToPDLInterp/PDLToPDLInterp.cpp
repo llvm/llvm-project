@@ -380,8 +380,9 @@ void PatternLowering::generateSwitch(SwitchNode *switchNode,
   if (kind == Predicates::OperandCountAtLeastQuestion ||
       kind == Predicates::ResultCountAtLeastQuestion) {
     // Order the children such that the cases are in reverse numerical order.
-    SmallVector<unsigned> sortedChildren(
-        llvm::seq<unsigned>(0, switchNode->getChildren().size()));
+    SmallVector<unsigned> sortedChildren =
+        llvm::seq<unsigned>(0, switchNode->getChildren().size())
+            .asSmallVector();
     llvm::sort(sortedChildren, [&](unsigned lhs, unsigned rhs) {
       return cast<UnsignedAnswer>(switchNode->getChild(lhs).first)->getValue() >
              cast<UnsignedAnswer>(switchNode->getChild(rhs).first)->getValue();

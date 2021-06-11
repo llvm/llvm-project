@@ -435,6 +435,11 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!C.getDriver().IsCLMode() && Args.hasArg(options::OPT_L))
     for (const auto &LibPath : Args.getAllArgValues(options::OPT_L))
       CmdArgs.push_back(Args.MakeArgString("-libpath:" + LibPath));
+  // Add library directories for standard library shipped with the toolchain.
+  for (const auto &LibPath : TC.getFilePaths()) {
+    if (TC.getVFS().exists(LibPath))
+      CmdArgs.push_back(Args.MakeArgString("-libpath:" + LibPath));
+  }
 
   CmdArgs.push_back("-nologo");
 
@@ -1323,7 +1328,36 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
 void MSVCToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
                                                  ArgStringList &CC1Args) const {
-  // FIXME: There should probably be logic here to find libc++ on Windows.
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
+      DriverArgs.hasArg(options::OPT_nostdincxx))
+    return;
+
+  switch (GetCXXStdlibType(DriverArgs)) {
+  case ToolChain::CST_Libcxx: {
+    SmallString<128> P(getDriver().Dir);
+    llvm::sys::path::append(P, "..", "include");
+
+    std::string Version = detectLibcxxVersion(P);
+    if (Version.empty())
+      return;
+
+    // First add the per-target include path if it exists.
+    SmallString<128> TargetDir(P);
+    llvm::sys::path::append(TargetDir, getTripleString(), "c++", Version);
+    if (getVFS().exists(TargetDir))
+      addSystemInclude(DriverArgs, CC1Args, TargetDir);
+
+    // Second add the generic one.
+    SmallString<128> Dir(P);
+    llvm::sys::path::append(Dir, "c++", Version);
+    addSystemInclude(DriverArgs, CC1Args, Dir);
+    break;
+  }
+
+  default:
+    // TODO: Shall we report an error for other C++ standard libraries?
+    break;
+  }
 }
 
 VersionTuple MSVCToolChain::computeMSVCVersion(const Driver *D,
@@ -1489,6 +1523,20 @@ static void TranslateDArg(Arg *A, llvm::opt::DerivedArgList &DAL,
   DAL.AddJoinedArg(A, Opts.getOption(options::OPT_D), NewVal);
 }
 
+static void TranslatePermissive(Arg *A, llvm::opt::DerivedArgList &DAL,
+                                const OptTable &Opts) {
+  DAL.AddFlagArg(A, Opts.getOption(options::OPT__SLASH_Zc_twoPhase_));
+  DAL.AddFlagArg(A, Opts.getOption(options::OPT_fno_operator_names));
+  // There is currently no /Zc:strictStrings- in clang-cl
+}
+
+static void TranslatePermissiveMinus(Arg *A, llvm::opt::DerivedArgList &DAL,
+                                     const OptTable &Opts) {
+  DAL.AddFlagArg(A, Opts.getOption(options::OPT__SLASH_Zc_twoPhase));
+  DAL.AddFlagArg(A, Opts.getOption(options::OPT_foperator_names));
+  DAL.AddFlagArg(A, Opts.getOption(options::OPT__SLASH_Zc_strictStrings));
+}
+
 llvm::opt::DerivedArgList *
 MSVCToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
                              StringRef BoundArch,
@@ -1531,6 +1579,12 @@ MSVCToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     } else if (A->getOption().matches(options::OPT_D)) {
       // Translate -Dfoo#bar into -Dfoo=bar.
       TranslateDArg(A, *DAL, Opts);
+    } else if (A->getOption().matches(options::OPT__SLASH_permissive)) {
+      // Expand /permissive
+      TranslatePermissive(A, *DAL, Opts);
+    } else if (A->getOption().matches(options::OPT__SLASH_permissive_)) {
+      // Expand /permissive-
+      TranslatePermissiveMinus(A, *DAL, Opts);
     } else if (OFK != Action::OFK_HIP) {
       // HIP Toolchain translates input args by itself.
       DAL->append(A);
@@ -1538,4 +1592,14 @@ MSVCToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   }
 
   return DAL;
+}
+
+void MSVCToolChain::addClangTargetOptions(
+    const ArgList &DriverArgs, ArgStringList &CC1Args,
+    Action::OffloadKind DeviceOffloadKind) const {
+  // MSVC STL kindly allows removing all usages of typeid by defining
+  // _HAS_STATIC_RTTI to 0. Do so, when compiling with -fno-rtti
+  if (DriverArgs.hasArg(options::OPT_fno_rtti, options::OPT_frtti,
+                        /*Default=*/false))
+    CC1Args.push_back("-D_HAS_STATIC_RTTI=0");
 }

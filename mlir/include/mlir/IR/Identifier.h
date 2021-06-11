@@ -13,6 +13,7 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringMapEntry.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
 namespace mlir {
@@ -38,7 +39,8 @@ class Identifier {
 
 public:
   /// Return an identifier for the specified string.
-  static Identifier get(StringRef str, MLIRContext *context);
+  static Identifier get(const Twine &string, MLIRContext *context);
+
   Identifier(const Identifier &) = default;
   Identifier &operator=(const Identifier &other) = default;
 

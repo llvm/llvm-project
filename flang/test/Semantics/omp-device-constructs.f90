@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang -fopenmp
+! REQUIRES: shell
 ! Check OpenMP clause validity for the following directives:
 !     2.10 Device constructs
 program main

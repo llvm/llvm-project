@@ -201,8 +201,12 @@ module attributes {gpu.container_module} {
     // CHECK: %[[wg:.*]] = memref.alloca()
     %i = constant 16 : index
     // CHECK: %[[i:.*]] = constant 16 : index
+     %cst = constant 1.000000e+00 : f32
+    // CHECK: %[[cst:.*]] = constant 1.000000e+00 : f32
     %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xf16, "AOp">
     // CHECK: gpu.subgroup_mma_load_matrix %[[wg]][%[[i]], %[[i]]] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xf16, "AOp">
+    %1 = gpu.subgroup_mma_constant_matrix %cst : !gpu.mma_matrix<16x16xf32, "COp">
+    // CHECK: gpu.subgroup_mma_constant_matrix %[[cst]] : !gpu.mma_matrix<16x16xf32, "COp">
     return
   }
 }

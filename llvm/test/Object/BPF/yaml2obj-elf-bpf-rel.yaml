@@ -1,0 +1,86 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj -r --stack-sizes %t | FileCheck %s
+
+# CHECK:      Relocations [
+# CHECK-NEXT:   Section (3) .rel.text {
+# CHECK-NEXT:     0x0 R_BPF_64_64 g
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Section (5) .rel.stack_sizes {
+# CHECK-NEXT:     0x0 R_BPF_64_ABS64 .text
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+# CHECK:      StackSizes [
+# CHECK-NEXT:   Entry {
+# CHECK-NEXT:     Function: test
+# CHECK-NEXT:     Size: 0x0
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_BPF
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x8
+    Content:         '1801000000000000000000000000000061100000000000009500000000000000'
+  - Name:            .stack_sizes
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_LINK_ORDER ]
+    Link:            .text
+    AddressAlign:    0x1
+    Entries:
+      - Size:            0x0
+  - Name:            .bss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    AddressAlign:    0x4
+    Size:            0x4
+  - Name:            .rel.text
+    Type:            SHT_REL
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Symbol:          g
+        Type:            R_BPF_64_64
+  - Name:            .rel.stack_sizes
+    Type:            SHT_REL
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .stack_sizes
+    Relocations:
+      - Symbol:          .text
+        Type:            R_BPF_64_ABS64
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .text
+      - Name:            .rel.text
+      - Name:            .stack_sizes
+      - Name:            .rel.stack_sizes
+      - Name:            .bss
+      - Name:            .symtab
+      - Name:            .shstrtab
+Symbols:
+  - Name:            t.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+  - Name:            test
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Size:            0x20
+  - Name:            g
+    Type:            STT_OBJECT
+    Section:         .bss
+    Binding:         STB_GLOBAL
+    Size:            0x4
+...

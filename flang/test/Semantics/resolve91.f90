@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Tests for duplicate definitions and initializations, mostly of procedures
 module m
   procedure(real), pointer :: p

@@ -16,23 +16,23 @@
 define <2 x i16> @fixedlen(<2 x i32> %x) {
 ; RV32-LABEL: fixedlen:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e32,mf2,ta,mu
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; RV32-NEXT:    vsrl.vi v25, v8, 16
 ; RV32-NEXT:    lui a0, 1048568
 ; RV32-NEXT:    vand.vx v25, v25, a0
-; RV32-NEXT:    vsetvli zero, zero, e16,mf4,ta,mu
+; RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
 ; RV32-NEXT:    vnsrl.wi v8, v25, 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: fixedlen:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e32,mf2,ta,mu
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; RV64-NEXT:    vsrl.vi v25, v8, 16
 ; RV64-NEXT:    lui a0, 32
 ; RV64-NEXT:    addiw a0, a0, -1
 ; RV64-NEXT:    slli a0, a0, 15
 ; RV64-NEXT:    vand.vx v25, v25, a0
-; RV64-NEXT:    vsetvli zero, zero, e16,mf4,ta,mu
+; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
 ; RV64-NEXT:    vnsrl.wi v8, v25, 0
 ; RV64-NEXT:    ret
   %v41 = insertelement <2 x i32> undef, i32 16, i32 0
@@ -49,9 +49,9 @@ define <2 x i16> @fixedlen(<2 x i32> %x) {
 define <vscale x 2 x i16> @scalable(<vscale x 2 x i32> %x) {
 ; CHECK-LABEL: scalable:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vsrl.vi v25, v8, 16
-; CHECK-NEXT:    vsetvli zero, zero, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vnsrl.wi v25, v25, 0
 ; CHECK-NEXT:    lui a0, 1048568
 ; CHECK-NEXT:    vand.vx v8, v25, a0

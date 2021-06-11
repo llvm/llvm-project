@@ -148,9 +148,9 @@ public:
 protected:
   Scalar m_value;
   CompilerType m_compiler_type;
-  void *m_context;
-  ValueType m_value_type;
-  ContextType m_context_type;
+  void *m_context = nullptr;
+  ValueType m_value_type = ValueType::Scalar;
+  ContextType m_context_type = ContextType::Invalid;
   DataBufferHeap m_data_buffer;
 };
 

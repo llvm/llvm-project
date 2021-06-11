@@ -1106,8 +1106,8 @@ class MIMG_IntersectRay_nsa_gfx11<mimgopc op, string opcode, int num_addrs, bit 
 
 multiclass MIMG_IntersectRay<mimgopc op, string opcode, int num_addrs, bit A16> {
   def "" : MIMGBaseOpcode;
-  let SubtargetPredicate = HasGFX10_BEncoding,
-      AssemblerPredicate = HasGFX10_BEncoding,
+  let SubtargetPredicate = HasGFX10_AEncoding,
+      AssemblerPredicate = HasGFX10_AEncoding,
       AsmMatchConverter = !if(A16, "cvtIntersectRay", ""),
       dmask = 0xf,
       unorm = 1,
@@ -1279,7 +1279,7 @@ defm IMAGE_SAMPLE_C_CD_CL_O_G16 : MIMG_Sampler <mimgopc<MIMG.NOP, 0xef>, AMDGPUS
 let SubtargetPredicate = isGFX10Only, OtherPredicates = [HasGFX10_BEncoding] in
 defm IMAGE_MSAA_LOAD_X : MIMG_NoSampler <mimgopc<MIMG.NOP, 0x80>, "image_msaa_load", 1, 0, 0, 1>;
 
-let SubtargetPredicate = isGFX11Plus in
+let SubtargetPredicate = HasGFX10_AEncoding in
 defm IMAGE_MSAA_LOAD : MIMG_MSAA_Load <mimgopc<0x18, MIMG.NOP>, "image_msaa_load">;
 
 // GFX11 TODO: implement

@@ -2,16 +2,32 @@
 ; RUN: opt -instsimplify -S < %s | FileCheck %s
 
 declare float @llvm.minnum.f32(float, float)
+declare bfloat @llvm.minnum.bf16(bfloat, bfloat)
+declare half @llvm.minnum.f16(half, half)
 declare <4 x float> @llvm.minnum.v4f32(<4 x float>, <4 x float>)
+declare <4 x bfloat> @llvm.minnum.v4bf16(<4 x bfloat>, <4 x bfloat>)
+declare <4 x half> @llvm.minnum.v4f16(<4 x half>, <4 x half>)
 
 declare float @llvm.maxnum.f32(float, float)
+declare bfloat @llvm.maxnum.bf16(bfloat, bfloat)
+declare half @llvm.maxnum.f16(half, half)
 declare <4 x float> @llvm.maxnum.v4f32(<4 x float>, <4 x float>)
+declare <4 x bfloat> @llvm.maxnum.v4bf16(<4 x bfloat>, <4 x bfloat>)
+declare <4 x half> @llvm.maxnum.v4f16(<4 x half>, <4 x half>)
 
 declare float @llvm.minimum.f32(float, float)
+declare bfloat @llvm.minimum.bf16(bfloat, bfloat)
+declare half @llvm.minimum.f16(half, half)
 declare <4 x float> @llvm.minimum.v4f32(<4 x float>, <4 x float>)
+declare <4 x bfloat> @llvm.minimum.v4bf16(<4 x bfloat>, <4 x bfloat>)
+declare <4 x half> @llvm.minimum.v4f16(<4 x half>, <4 x half>)
 
 declare float @llvm.maximum.f32(float, float)
+declare bfloat @llvm.maximum.bf16(bfloat, bfloat)
+declare half @llvm.maximum.f16(half, half)
 declare <4 x float> @llvm.maximum.v4f32(<4 x float>, <4 x float>)
+declare <4 x bfloat> @llvm.maximum.v4bf16(<4 x bfloat>, <4 x bfloat>)
+declare <4 x half> @llvm.maximum.v4f16(<4 x half>, <4 x half>)
 
 declare i8 @llvm.smax.i8(i8, i8)
 declare <5 x i8> @llvm.smax.v5i8(<5 x i8>, <5 x i8>)
@@ -33,6 +49,22 @@ define float @minnum_float() {
   ret float %1
 }
 
+define bfloat @minnum_bfloat() {
+; CHECK-LABEL: @minnum_bfloat(
+; CHECK-NEXT:    ret bfloat 0xR40A0
+;
+  %1 = call bfloat @llvm.minnum.bf16(bfloat 5.0, bfloat 42.0)
+  ret bfloat %1
+}
+
+define half @minnum_half() {
+; CHECK-LABEL: @minnum_half(
+; CHECK-NEXT:    ret half 0xH4500
+;
+  %1 = call half @llvm.minnum.f16(half 5.0, half 42.0)
+  ret half %1
+}
+
 ; Check that minnum constant folds to propagate non-NaN or smaller argument
 
 define <4 x float> @minnum_float_vec() {
@@ -41,6 +73,22 @@ define <4 x float> @minnum_float_vec() {
 ;
   %1 = call <4 x float> @llvm.minnum.v4f32(<4 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000, float 42., float 42.>, <4 x float> <float 0x7FF8000000000000, float 5., float 0x7FF8000000000000, float 5.>)
   ret <4 x float> %1
+}
+
+define <4 x bfloat> @minnum_bfloat_vec() {
+; CHECK-LABEL: @minnum_bfloat_vec(
+; CHECK-NEXT:    ret <4 x bfloat> <bfloat 0xR7FC0, bfloat 0xR40A0, bfloat 0xR4228, bfloat 0xR40A0>
+;
+  %1 = call <4 x bfloat> @llvm.minnum.v4bf16(<4 x bfloat> <bfloat 0x7FF8000000000000, bfloat 0x7FF8000000000000, bfloat 42., bfloat 42.>, <4 x bfloat> <bfloat 0x7FF8000000000000, bfloat 5., bfloat 0x7FF8000000000000, bfloat 5.>)
+  ret <4 x bfloat> %1
+}
+
+define <4 x half> @minnum_half_vec() {
+; CHECK-LABEL: @minnum_half_vec(
+; CHECK-NEXT:    ret <4 x half> <half 0xH7E00, half 0xH4500, half 0xH5140, half 0xH4500>
+;
+  %1 = call <4 x half> @llvm.minnum.v4f16(<4 x half> <half 0x7FF8000000000000, half 0x7FF8000000000000, half 42., half 42.>, <4 x half> <half 0x7FF8000000000000, half 5., half 0x7FF8000000000000, half 5.>)
+  ret <4 x half> %1
 }
 
 ; Check that minnum constant folds to propagate one of its argument zeros
@@ -61,6 +109,22 @@ define float @maxnum_float() {
   ret float %1
 }
 
+define bfloat @maxnum_bfloat() {
+; CHECK-LABEL: @maxnum_bfloat(
+; CHECK-NEXT:    ret bfloat 0xR4228
+;
+  %1 = call bfloat @llvm.maxnum.bf16(bfloat 5.0, bfloat 42.0)
+  ret bfloat %1
+}
+
+define half @maxnum_half() {
+; CHECK-LABEL: @maxnum_half(
+; CHECK-NEXT:    ret half 0xH5140
+;
+  %1 = call half @llvm.maxnum.f16(half 5.0, half 42.0)
+  ret half %1
+}
+
 ; Check that maxnum constant folds to propagate non-NaN or greater argument
 
 define <4 x float> @maxnum_float_vec() {
@@ -69,6 +133,22 @@ define <4 x float> @maxnum_float_vec() {
 ;
   %1 = call <4 x float> @llvm.maxnum.v4f32(<4 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000, float 42., float 42.>, <4 x float> <float 0x7FF8000000000000, float 5., float 0x7FF8000000000000, float 5.>)
   ret <4 x float> %1
+}
+
+define <4 x bfloat> @maxnum_bfloat_vec() {
+; CHECK-LABEL: @maxnum_bfloat_vec(
+; CHECK-NEXT:    ret <4 x bfloat> <bfloat 0xR7FC0, bfloat 0xR40A0, bfloat 0xR4228, bfloat 0xR4228>
+;
+  %1 = call <4 x bfloat> @llvm.maxnum.v4bf16(<4 x bfloat> <bfloat 0x7FF8000000000000, bfloat 0x7FF8000000000000, bfloat 42., bfloat 42.>, <4 x bfloat> <bfloat 0x7FF8000000000000, bfloat 5., bfloat 0x7FF8000000000000, bfloat 5.>)
+  ret <4 x bfloat> %1
+}
+
+define <4 x half> @maxnum_half_vec() {
+; CHECK-LABEL: @maxnum_half_vec(
+; CHECK-NEXT:    ret <4 x half> <half 0xH7E00, half 0xH4500, half 0xH5140, half 0xH5140>
+;
+  %1 = call <4 x half> @llvm.maxnum.v4f16(<4 x half> <half 0x7FF8000000000000, half 0x7FF8000000000000, half 42., half 42.>, <4 x half> <half 0x7FF8000000000000, half 5., half 0x7FF8000000000000, half 5.>)
+  ret <4 x half> %1
 }
 
 ; Check that maxnum constant folds to propagate one of its argument zeros
@@ -89,6 +169,22 @@ define float @minimum_float() {
   ret float %1
 }
 
+define bfloat @minimum_bfloat() {
+; CHECK-LABEL: @minimum_bfloat(
+; CHECK-NEXT:    ret bfloat 0xR40A0
+;
+  %1 = call bfloat @llvm.minimum.bf16(bfloat 5.0, bfloat 42.0)
+  ret bfloat %1
+}
+
+define half @minimum_half() {
+; CHECK-LABEL: @minimum_half(
+; CHECK-NEXT:    ret half 0xH4500
+;
+  %1 = call half @llvm.minimum.f16(half 5.0, half 42.0)
+  ret half %1
+}
+
 ; Check that minimum propagates its NaN or smaller argument
 
 define <4 x float> @minimum_float_vec() {
@@ -97,6 +193,22 @@ define <4 x float> @minimum_float_vec() {
 ;
   %1 = call <4 x float> @llvm.minimum.v4f32(<4 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000, float 42., float 42.>, <4 x float> <float 0x7FF8000000000000, float 5., float 0x7FF8000000000000, float 5.>)
   ret <4 x float> %1
+}
+
+define <4 x bfloat> @minimum_bfloat_vec() {
+; CHECK-LABEL: @minimum_bfloat_vec(
+; CHECK-NEXT:    ret <4 x bfloat> <bfloat 0xR7FC0, bfloat 0xR7FC0, bfloat 0xR7FC0, bfloat 0xR40A0>
+;
+  %1 = call <4 x bfloat> @llvm.minimum.v4bf16(<4 x bfloat> <bfloat 0x7FF8000000000000, bfloat 0x7FF8000000000000, bfloat 42., bfloat 42.>, <4 x bfloat> <bfloat 0x7FF8000000000000, bfloat 5., bfloat 0x7FF8000000000000, bfloat 5.>)
+  ret <4 x bfloat> %1
+}
+
+define <4 x half> @minimum_half_vec() {
+; CHECK-LABEL: @minimum_half_vec(
+; CHECK-NEXT:    ret <4 x half> <half 0xH7E00, half 0xH7E00, half 0xH7E00, half 0xH4500>
+;
+  %1 = call <4 x half> @llvm.minimum.v4f16(<4 x half> <half 0x7FF8000000000000, half 0x7FF8000000000000, half 42., half 42.>, <4 x half> <half 0x7FF8000000000000, half 5., half 0x7FF8000000000000, half 5.>)
+  ret <4 x half> %1
 }
 
 ; Check that minimum treats -0.0 as smaller than 0.0 while constant folding
@@ -117,6 +229,22 @@ define float @maximum_float() {
   ret float %1
 }
 
+define bfloat @maximum_bfloat() {
+; CHECK-LABEL: @maximum_bfloat(
+; CHECK-NEXT:    ret bfloat 0xR4228
+;
+  %1 = call bfloat @llvm.maximum.bf16(bfloat 5.0, bfloat 42.0)
+  ret bfloat %1
+}
+
+define half @maximum_half() {
+; CHECK-LABEL: @maximum_half(
+; CHECK-NEXT:    ret half 0xH5140
+;
+  %1 = call half @llvm.maximum.f16(half 5.0, half 42.0)
+  ret half %1
+}
+
 ; Check that maximum propagates its NaN or greater argument
 
 define <4 x float> @maximum_float_vec() {
@@ -125,6 +253,22 @@ define <4 x float> @maximum_float_vec() {
 ;
   %1 = call <4 x float> @llvm.maximum.v4f32(<4 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000, float 42., float 42.>, <4 x float> <float 0x7FF8000000000000, float 5., float 0x7FF8000000000000, float 5.>)
   ret <4 x float> %1
+}
+
+define <4 x bfloat> @maximum_bfloat_vec() {
+; CHECK-LABEL: @maximum_bfloat_vec(
+; CHECK-NEXT:    ret <4 x bfloat> <bfloat 0xR7FC0, bfloat 0xR7FC0, bfloat 0xR7FC0, bfloat 0xR4228>
+;
+  %1 = call <4 x bfloat> @llvm.maximum.v4bf16(<4 x bfloat> <bfloat 0x7FF8000000000000, bfloat 0x7FF8000000000000, bfloat 42., bfloat 42.>, <4 x bfloat> <bfloat 0x7FF8000000000000, bfloat 5., bfloat 0x7FF8000000000000, bfloat 5.>)
+  ret <4 x bfloat> %1
+}
+
+define <4 x half> @maximum_half_vec() {
+; CHECK-LABEL: @maximum_half_vec(
+; CHECK-NEXT:    ret <4 x half> <half 0xH7E00, half 0xH7E00, half 0xH7E00, half 0xH5140>
+;
+  %1 = call <4 x half> @llvm.maximum.v4f16(<4 x half> <half 0x7FF8000000000000, half 0x7FF8000000000000, half 42., half 42.>, <4 x half> <half 0x7FF8000000000000, half 5., half 0x7FF8000000000000, half 5.>)
+  ret <4 x half> %1
 }
 
 ; Check that maximum treats -0.0 as smaller than 0.0 while constant folding

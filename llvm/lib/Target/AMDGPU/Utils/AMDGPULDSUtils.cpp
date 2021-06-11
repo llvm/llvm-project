@@ -60,15 +60,34 @@ void replaceConstantUsesInFunction(ConstantExpr *C, const Function *F) {
   }
 }
 
-bool shouldLowerLDSToStruct(const SmallPtrSetImpl<GlobalValue *> &UsedList,
-                            const GlobalVariable &GV, const Function *F) {
-  // Any LDS variable can be lowered by moving into the created struct
-  // Each variable so lowered is allocated in every kernel, so variables
-  // whose users are all known to be safe to lower without the transform
-  // are left unchanged.
+bool hasUserInstruction(const GlobalValue *GV) {
+  SmallPtrSet<const User *, 8> Visited;
+  SmallVector<const User *, 16> Stack(GV->users());
+
+  while (!Stack.empty()) {
+    const User *U = Stack.pop_back_val();
+
+    if (!Visited.insert(U).second)
+      continue;
+
+    if (isa<Instruction>(U))
+      return true;
+
+    append_range(Stack, U->users());
+  }
+
+  return false;
+}
+
+bool shouldLowerLDSToStruct(const GlobalVariable &GV, const Function *F) {
+  // We are not interested in kernel LDS lowering for module LDS itself.
+  if (F && GV.getName() == "llvm.amdgcn.module.lds")
+    return false;
+
   bool Ret = false;
   SmallPtrSet<const User *, 8> Visited;
   SmallVector<const User *, 16> Stack(GV.users());
+  SmallPtrSet<const GlobalValue *, 8> GlobalUsers;
 
   assert(!F || isKernelCC(F));
 
@@ -76,10 +95,16 @@ bool shouldLowerLDSToStruct(const SmallPtrSetImpl<GlobalValue *> &UsedList,
     const User *V = Stack.pop_back_val();
     Visited.insert(V);
 
-    if (auto *G = dyn_cast<GlobalValue>(V->stripPointerCasts())) {
-      if (UsedList.contains(G)) {
-        continue;
+    if (auto *G = dyn_cast<GlobalValue>(V)) {
+      StringRef GName = G->getName();
+      if (F && GName != "llvm.used" && GName != "llvm.compiler.used") {
+        // For kernel LDS lowering, if G is not a compiler.used list, then we
+        // cannot lower the lds GV since we cannot replace the use of GV within
+        // G.
+        return false;
       }
+      GlobalUsers.insert(G);
+      continue;
     }
 
     if (auto *I = dyn_cast<Instruction>(V)) {
@@ -88,32 +113,32 @@ bool shouldLowerLDSToStruct(const SmallPtrSetImpl<GlobalValue *> &UsedList,
         // Used from this kernel, we want to put it into the structure.
         Ret = true;
       } else if (!F) {
+        // For module LDS lowering, lowering is required if the user instruction
+        // is from non-kernel function.
         Ret |= !isKernelCC(UF);
       }
       continue;
     }
 
-    if (auto *E = dyn_cast<ConstantExpr>(V)) {
-      for (const User *U : E->users()) {
-        if (Visited.insert(U).second) {
-          Stack.push_back(U);
-        }
-      }
-      continue;
-    }
+    // User V should be a constant, recursively visit users of V.
+    assert(isa<Constant>(V) && "Expected a constant.");
+    append_range(Stack, V->users());
+  }
 
-    // Unknown user, conservatively lower the variable.
-    // For module LDS conservatively means place it into the module LDS struct.
-    // For kernel LDS it means lower as a standalone variable.
-    return !F;
+  if (!F && !Ret) {
+    // For module LDS lowering, we have not yet decided if we should lower GV or
+    // not. Explore all global users of GV, and check if atleast one of these
+    // global users appear as an use within an instruction (possibly nested use
+    // via constant expression), if so, then conservately lower LDS.
+    for (auto *G : GlobalUsers)
+      Ret |= hasUserInstruction(G);
   }
 
   return Ret;
 }
 
-std::vector<GlobalVariable *>
-findVariablesToLower(Module &M, const SmallPtrSetImpl<GlobalValue *> &UsedList,
-                     const Function *F) {
+std::vector<GlobalVariable *> findVariablesToLower(Module &M,
+                                                   const Function *F) {
   std::vector<llvm::GlobalVariable *> LocalVars;
   for (auto &GV : M.globals()) {
     if (GV.getType()->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS) {
@@ -137,7 +162,7 @@ findVariablesToLower(Module &M, const SmallPtrSetImpl<GlobalValue *> &UsedList,
       // dropped by the back end if not. This pass skips over it.
       continue;
     }
-    if (!shouldLowerLDSToStruct(UsedList, GV, F)) {
+    if (!shouldLowerLDSToStruct(GV, F)) {
       continue;
     }
     LocalVars.push_back(&GV);

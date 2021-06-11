@@ -275,6 +275,31 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     return Cost;
   }
+  case Intrinsic::bitreverse: {
+    static const CostTblEntry BitreverseTbl[] = {
+        {Intrinsic::bitreverse, MVT::i32, 1},
+        {Intrinsic::bitreverse, MVT::i64, 1},
+        {Intrinsic::bitreverse, MVT::v8i8, 1},
+        {Intrinsic::bitreverse, MVT::v16i8, 1},
+        {Intrinsic::bitreverse, MVT::v4i16, 2},
+        {Intrinsic::bitreverse, MVT::v8i16, 2},
+        {Intrinsic::bitreverse, MVT::v2i32, 2},
+        {Intrinsic::bitreverse, MVT::v4i32, 2},
+        {Intrinsic::bitreverse, MVT::v1i64, 2},
+        {Intrinsic::bitreverse, MVT::v2i64, 2},
+    };
+    const auto LegalisationCost = TLI->getTypeLegalizationCost(DL, RetTy);
+    const auto *Entry =
+        CostTableLookup(BitreverseTbl, ICA.getID(), LegalisationCost.second);
+    // Cost Model is using the legal type(i32) that i8 and i16 will be converted
+    // to +1 so that we match the actual lowering cost
+    if (TLI->getValueType(DL, RetTy, true) == MVT::i8 ||
+        TLI->getValueType(DL, RetTy, true) == MVT::i16)
+      return LegalisationCost.first * Entry->Cost + 1;
+    if (Entry)
+      return LegalisationCost.first * Entry->Cost;
+    break;
+  }
   default:
     break;
   }
@@ -1288,6 +1313,8 @@ AArch64TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src,
     return BaseT::getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                         CostKind);
   auto LT = TLI->getTypeLegalizationCost(DL, Src);
+  if (!LT.first.isValid())
+    return InstructionCost::getInvalid();
   return LT.first * 2;
 }
 
@@ -1300,6 +1327,9 @@ InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
                                          Alignment, CostKind, I);
   auto *VT = cast<VectorType>(DataTy);
   auto LT = TLI->getTypeLegalizationCost(DL, DataTy);
+  if (!LT.first.isValid())
+    return InstructionCost::getInvalid();
+
   ElementCount LegalVF = LT.second.getVectorElementCount();
   Optional<unsigned> MaxNumVScale = getMaxVScale();
   assert(MaxNumVScale && "Expected valid max vscale value");
@@ -1326,6 +1356,8 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
                                   CostKind);
 
   auto LT = TLI->getTypeLegalizationCost(DL, Ty);
+  if (!LT.first.isValid())
+    return InstructionCost::getInvalid();
 
   // TODO: consider latency as well for TCK_SizeAndLatency.
   if (CostKind == TTI::TCK_CodeSize || CostKind == TTI::TCK_SizeAndLatency)
