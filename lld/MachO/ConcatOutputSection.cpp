@@ -290,9 +290,7 @@ void ConcatOutputSection::finalize() {
         // unfinalized inputs[finalIdx].
         fatal(Twine(__FUNCTION__) + ": FIXME: thunk range overrun");
       }
-      thunkInfo.isec = make<ConcatInputSection>();
-      thunkInfo.isec->name = isec->name;
-      thunkInfo.isec->segname = isec->segname;
+      thunkInfo.isec = make<ConcatInputSection>(isec->segname, isec->name);
       thunkInfo.isec->parent = this;
       StringRef thunkName = saver.save(funcSym->getName() + ".thunk." +
                                        std::to_string(thunkInfo.sequence++));
