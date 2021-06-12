@@ -7736,6 +7736,8 @@ public:
   void computeInfo(CGFunctionInfo &FI) const override;
   Address EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                     QualType Ty) const override;
+  Address EmitVAArgNanoMips(CodeGenFunction &CGF, Address VAListAddr,
+                            QualType Ty) const;
   ABIArgInfo extendType(QualType Ty) const;
 };
 
@@ -8055,8 +8057,129 @@ void MipsABIInfo::computeInfo(CGFunctionInfo &FI) const {
     I.info = classifyArgumentType(I.type, Offset);
 }
 
+
+Address MipsABIInfo::EmitVAArgNanoMips(CodeGenFunction &CGF,
+                                       Address VAListAddr,
+                                       QualType OrigTy) const {
+  QualType Ty = OrigTy;
+  CharUnits Align = CGF.getContext().getTypeAlignInChars(Ty);
+  CharUnits Size = CGF.getContext().getTypeSizeInChars(Ty);
+  uint64_t OSize, RSize;
+  CGBuilderTy &Builder = CGF.Builder;
+  CharUnits RegWidth = CharUnits::fromQuantity(4);
+  uint64_t RegBits = 32;
+  llvm::Type *AddressTy = CGF.ConvertTypeForMem(OrigTy)->getPointerTo();
+  llvm::Type *PtrArithTy;
+  if (RegWidth.getQuantity() == 4)
+    PtrArithTy = llvm::Type::getInt32Ty(getVMContext());
+  else
+    PtrArithTy = llvm::Type::getInt64Ty(getVMContext());
+
+  // Control flow structure we want:
+  // if (offset > 0) {
+  //   OffsetGtZeroBB:
+  //   // Original offset is within GPR area.
+  //   // Update offset and align.
+  //   if (new_off >= 0) {
+  //     // Updated offset is in the GPR area. Use it.
+  //     // (this is the normal expected case)
+  //     OffsetGeZeroBB: // -> ContinueBB
+  //     goto ContinueBB;
+  //   }
+  // }
+  // OverflowBB:
+  // // Use pointer in overflow area
+  // // update pointer
+  // ContinueBB:
+  //
+
+  // We only handle GPRs and not FPRs since NanoMips has no hardware FP support
+  Address GPRTopAddr = Builder.CreateStructGEP(VAListAddr, 1, "__gpr_top");
+  llvm::Value *GPRTop = Builder.CreateLoad(GPRTopAddr, "gpr_top");
+
+  Address OffsetAddr = Builder.CreateStructGEP(VAListAddr, 3, "__gpr_offset");
+  llvm::Value *Offset = Builder.CreateLoad(OffsetAddr, "off");
+  llvm::Type *OffsetTy = Offset->getType();
+  Offset = Builder.CreateSExtOrBitCast(Offset, PtrArithTy);
+
+  Size = Size.alignTo(RegWidth);
+  OSize = RSize = Size.getQuantity();
+
+  llvm::BasicBlock *OffsetGtZeroBB = CGF.createBasicBlock("va_arg_offset_ok");
+  llvm::BasicBlock *ContinueBB = CGF.createBasicBlock("va_arg_continue");
+  llvm::BasicBlock *OverflowBB = CGF.createBasicBlock("va_arg_use_overflow");
+  llvm::BasicBlock *OffsetGEZeroBB =
+    CGF.createBasicBlock("va_arg_use_gpr_area");
+
+  // If offset > 0 (else use overflow area)
+  llvm::Value *CC = Builder.CreateICmpSGT(Offset, Builder.getIntN(RegBits, 0));
+  Builder.CreateCondBr(CC, OffsetGtZeroBB, OverflowBB);
+
+  CGF.EmitBlock(OffsetGtZeroBB);
+  // Align if necessary before moving offset down
+  if (Align > RegWidth) {
+    Offset = Builder.CreateAnd(Offset, Builder.getIntN(RegBits,
+                                                       -Align.getQuantity()));
+  }
+  llvm::Value *CurOff = Offset;
+
+  // Post-decrement offset
+  Offset = Builder.CreateSub(Offset, Builder.getIntN(RegBits, RSize));
+
+  // Store offset back to va_list structure
+  Builder.CreateStore(Builder.CreateTrunc(Offset, OffsetTy), OffsetAddr);
+
+  // If offset >= 0 use normal GPR area, else use overflow area
+  Builder.CreateCondBr(Builder.CreateICmpSGE(Offset,
+                                             Builder.getIntN(RegBits, 0)),
+                       OffsetGEZeroBB, OverflowBB);
+
+  CGF.EmitBlock(OffsetGEZeroBB);
+  // Subtract offset from the top of the GPR area
+  llvm::Value *NegativeOff = Builder.CreateSub(Builder.getIntN(RegBits, 0),
+                                               CurOff);
+  llvm::Value *Addr = Builder.CreateGEP(GPRTop, NegativeOff);
+  Addr = Builder.CreatePointerCast(Addr, AddressTy);
+  Builder.CreateBr(ContinueBB);
+
+  CGF.EmitBlock(OverflowBB);
+  // Find address in the overflow area
+  Address OverflowPtrAddress = Builder.CreateStructGEP(VAListAddr, 0,
+                                                       "__overflow_argptr");
+  llvm::Value *Ovfl = Builder.CreateLoad(OverflowPtrAddress);
+  llvm::Type *OvflTy = Ovfl->getType();
+  Ovfl = Builder.CreateBitOrPointerCast(Ovfl, PtrArithTy);
+  if (Align > RegWidth) {
+    // Type has alignment requirements, so align to that.
+    Ovfl = Builder.CreateAdd(Ovfl,
+                             Builder.getIntN(RegBits,
+                                             RegWidth.getQuantity() * 2 -1));
+    Ovfl = Builder.CreateAnd(Ovfl,
+                             Builder.getIntN(RegBits,
+                                             -2 * RegWidth.getQuantity()));
+  }
+  llvm::Value *AddrOverflow = Builder.CreateBitOrPointerCast(Ovfl, AddressTy);
+
+  // Increment overflow area pointer
+  Ovfl = Builder.CreateAdd(Ovfl, Builder.getIntN(RegBits, OSize));
+  Builder.CreateStore(Builder.CreateBitOrPointerCast(Ovfl, OvflTy),
+                      OverflowPtrAddress);
+
+  CGF.EmitBlock(ContinueBB);
+
+  // Create a phi for address to return
+  Address ArgAddress = emitMergePHI(CGF,
+                                    Address(Addr, Align), OffsetGEZeroBB,
+                                    Address(AddrOverflow, Align),OverflowBB,
+                                    "addr");
+  return ArgAddress;
+}
+
 Address MipsABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                QualType OrigTy) const {
+  if (getTarget().getTriple().isNanoMips())
+    return EmitVAArgNanoMips(CGF, VAListAddr, OrigTy);
+
   QualType Ty = OrigTy;
 
   // Integer arguments are promoted to 32-bit on O32 and 64-bit on N32/N64.
