@@ -588,20 +588,24 @@ FunctionStartsSection::FunctionStartsSection()
 
 void FunctionStartsSection::finalizeContents() {
   raw_svector_ostream os{contents};
-  uint64_t addr = in.header->addr;
+  std::vector<uint64_t> addrs;
   for (const Symbol *sym : symtab->getSymbols()) {
     if (const auto *defined = dyn_cast<Defined>(sym)) {
       if (!defined->isec || !isCodeSection(defined->isec) || !defined->isLive())
         continue;
       // TODO: Add support for thumbs, in that case
       // the lowest bit of nextAddr needs to be set to 1.
-      uint64_t nextAddr = defined->getVA();
-      uint64_t delta = nextAddr - addr;
-      if (delta == 0)
-        continue;
-      encodeULEB128(delta, os);
-      addr = nextAddr;
+      addrs.push_back(defined->getVA());
     }
+  }
+  llvm::sort(addrs);
+  uint64_t addr = in.header->addr;
+  for (uint64_t nextAddr : addrs) {
+    uint64_t delta = nextAddr - addr;
+    if (delta == 0)
+      continue;
+    encodeULEB128(delta, os);
+    addr = nextAddr;
   }
   os << '\0';
 }
