@@ -122,3 +122,26 @@ define i64 @freeze_array() {
   %t1 = add i64 %v1, %v2
   ret i64 %t1
 }
+
+; Make sure we emit a movl to zext the input before the imulq. This previously
+; failed because freeze was not listed in the instructions that don't zext their
+; result in the def32 pattern X86InstrCompiler.td.
+define i32 @freeze_zext(i64 %a) nounwind {
+; X86ASM-LABEL: freeze_zext:
+; X86ASM:       # %bb.0: # %entry
+; X86ASM-NEXT:    movq %rdi, %rax
+; X86ASM-NEXT:    movl %eax, %ecx
+; X86ASM-NEXT:    movl $3435973837, %edx # imm = 0xCCCCCCCD
+; X86ASM-NEXT:    imulq %rcx, %rdx
+; X86ASM-NEXT:    shrq $35, %rdx
+; X86ASM-NEXT:    addl %edx, %edx
+; X86ASM-NEXT:    leal (%rdx,%rdx,4), %ecx
+; X86ASM-NEXT:    subl %ecx, %eax
+; X86ASM-NEXT:    # kill: def $eax killed $eax killed $rax
+; X86ASM-NEXT:    retq
+entry:
+  %x = trunc i64 %a to i32
+  %y = freeze i32 %x
+  %z = urem i32 %y, 10
+  ret i32 %z
+}

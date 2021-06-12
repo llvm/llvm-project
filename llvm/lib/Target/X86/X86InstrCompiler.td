@@ -1344,15 +1344,18 @@ def : Pat<(i32 (anyext_sdiv GR8:$src)), (MOVSX32rr8 GR8:$src)>;
 
 // Any instruction that defines a 32-bit result leaves the high half of the
 // register. Truncate can be lowered to EXTRACT_SUBREG. CopyFromReg may
-// be copying from a truncate. Any other 32-bit operation will zero-extend
-// up to 64 bits. AssertSext/AssertZext aren't saying anything about the upper
-// 32 bits, they're probably just qualifying a CopyFromReg.
+// be copying from a truncate. AssertSext/AssertZext/AssertAlign aren't saying
+// anything about the upper 32 bits, they're probably just qualifying a
+// CopyFromReg. FREEZE may be coming from a a truncate. Any other 32-bit
+// operation will zero-extend up to 64 bits.
 def def32 : PatLeaf<(i32 GR32:$src), [{
   return N->getOpcode() != ISD::TRUNCATE &&
          N->getOpcode() != TargetOpcode::EXTRACT_SUBREG &&
          N->getOpcode() != ISD::CopyFromReg &&
          N->getOpcode() != ISD::AssertSext &&
-         N->getOpcode() != ISD::AssertZext;
+         N->getOpcode() != ISD::AssertZext &&
+         N->getOpcode() != ISD::AssertAlign &&
+         N->getOpcode() != ISD::FREEZE;
 }]>;
 
 // In the case of a 32-bit def that is known to implicitly zero-extend,
