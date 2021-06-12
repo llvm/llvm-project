@@ -863,19 +863,24 @@ template <class LP> void Writer::createOutputSections() {
     InputSection *isec = p.value();
     if (isec->shouldOmitFromOutput())
       continue;
+    OutputSection *osec;
     if (auto *concatIsec = dyn_cast<ConcatInputSection>(isec)) {
       NamePair names = maybeRenameSection({isec->segname, isec->name});
-      ConcatOutputSection *&osec = concatOutputSections[names];
-      if (osec == nullptr) {
-        osec = make<ConcatOutputSection>(names.second);
-        osec->inputOrder = p.index();
-      }
-      osec->addInput(concatIsec);
+      ConcatOutputSection *&concatOsec = concatOutputSections[names];
+      if (concatOsec == nullptr)
+        concatOsec = make<ConcatOutputSection>(names.second);
+      concatOsec->addInput(concatIsec);
+      osec = concatOsec;
     } else if (auto *cStringIsec = dyn_cast<CStringInputSection>(isec)) {
-      if (in.cStringSection->inputs.empty())
-        in.cStringSection->inputOrder = p.index();
       in.cStringSection->addInput(cStringIsec);
+      osec = in.cStringSection;
+    } else if (auto *litIsec = dyn_cast<WordLiteralInputSection>(isec)) {
+      in.wordLiteralSection->addInput(litIsec);
+      osec = in.wordLiteralSection;
+    } else {
+      llvm_unreachable("unhandled InputSection type");
     }
+    osec->inputOrder = std::min(osec->inputOrder, static_cast<int>(p.index()));
   }
 
   // Once all the inputs are added, we can finalize the output section
@@ -1050,6 +1055,8 @@ template <class LP> void macho::writeResult() { Writer().run<LP>(); }
 void macho::createSyntheticSections() {
   in.header = make<MachHeaderSection>();
   in.cStringSection = config->dedupLiterals ? make<CStringSection>() : nullptr;
+  in.wordLiteralSection =
+      config->dedupLiterals ? make<WordLiteralSection>() : nullptr;
   in.rebase = make<RebaseSection>();
   in.binding = make<BindingSection>();
   in.weakBinding = make<WeakBindingSection>();
