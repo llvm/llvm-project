@@ -381,6 +381,7 @@ private:
   size_t size = 0;
 };
 
+// Stores ULEB128 delta encoded addresses of functions.
 class FunctionStartsSection : public LinkEditSection {
 public:
   FunctionStartsSection();
