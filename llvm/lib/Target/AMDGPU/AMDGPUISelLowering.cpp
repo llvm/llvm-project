@@ -848,9 +848,9 @@ bool AMDGPUTargetLowering::isFAbsFree(EVT VT) const {
 
 bool AMDGPUTargetLowering::isFNegFree(EVT VT) const {
   assert(VT.isFloatingPoint());
-  return VT == MVT::f32 || VT == MVT::f64 ||
-         (Subtarget->has16BitInsts() && VT == MVT::f16) ||
-         (Subtarget->hasVOP3PInsts() && VT == MVT::v2f16);
+  // Report this based on the end legalized type.
+  VT = VT.getScalarType();
+  return VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f16;
 }
 
 bool AMDGPUTargetLowering:: storeOfVectorConstantIsCheap(EVT MemVT,
