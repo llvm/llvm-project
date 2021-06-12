@@ -140,6 +140,15 @@ genFuncDim(FD funcDim, mlir::Type resultType,
             [=]() { bldr->create<fir::FreeMemOp>(loc, temp); });
         return box;
       },
+      [&](const fir::CharArrayBoxValue &box) -> fir::ExtendedValue {
+        // Add cleanup code
+        assert(stmtCtx);
+        auto *bldr = &builder;
+        auto temp = box.getAddr();
+        stmtCtx->attachCleanup(
+            [=]() { bldr->create<fir::FreeMemOp>(loc, temp); });
+        return box;
+      },
       [&](const auto &) -> fir::ExtendedValue {
         fir::emitFatalError(loc, errMsg);
       });
