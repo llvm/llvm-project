@@ -14,6 +14,7 @@
 
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/BinaryFormat/MachO.h"
 
@@ -43,6 +44,7 @@ public:
   uint64_t getVA(uint64_t off) const;
   // Whether the data at \p off in this InputSection is live.
   virtual bool isLive(uint64_t off) const = 0;
+  virtual void markLive(uint64_t off) = 0;
 
   void writeTo(uint8_t *buf);
 
@@ -91,6 +93,7 @@ public:
   uint64_t getVA() const { return InputSection::getVA(0); }
   // ConcatInputSections are entirely live or dead, so the offset is irrelevant.
   bool isLive(uint64_t off) const override { return live; }
+  void markLive(uint64_t off) override { live = true; }
   bool isCoalescedWeak() const { return wasCoalesced && numRefs == 0; }
   bool shouldOmitFromOutput() const { return !live || isCoalescedWeak(); }
 
@@ -112,16 +115,20 @@ public:
 };
 
 // We allocate a lot of these and binary search on them, so they should be as
-// compact as possible. Hence the use of 32 rather than 64 bits for the hash.
+// compact as possible. Hence the use of 31 rather than 64 bits for the hash.
 struct StringPiece {
   // Offset from the start of the containing input section.
   uint32_t inSecOff;
-  uint32_t hash;
+  uint32_t live : 1;
+  uint32_t hash : 31;
   // Offset from the start of the containing output section.
   uint64_t outSecOff = 0;
 
-  StringPiece(uint64_t off, uint32_t hash) : inSecOff(off), hash(hash) {}
+  StringPiece(uint64_t off, uint32_t hash)
+      : inSecOff(off), live(!config->deadStrip), hash(hash) {}
 };
+
+static_assert(sizeof(StringPiece) == 16, "StringPiece is too big!");
 
 // CStringInputSections are composed of multiple null-terminated string
 // literals, which we represent using StringPieces. These literals can be
@@ -141,9 +148,10 @@ public:
                      flags) {}
   uint64_t getFileOffset(uint64_t off) const override;
   uint64_t getOffset(uint64_t off) const override;
-  // FIXME implement this
-  bool isLive(uint64_t off) const override { return true; }
+  bool isLive(uint64_t off) const override { return getStringPiece(off).live; }
+  void markLive(uint64_t off) override { getStringPiece(off).live = true; }
   // Find the StringPiece that contains this offset.
+  StringPiece &getStringPiece(uint64_t off);
   const StringPiece &getStringPiece(uint64_t off) const;
   // Split at each null byte.
   void splitIntoPieces();
@@ -172,12 +180,19 @@ public:
                           uint32_t flags);
   uint64_t getFileOffset(uint64_t off) const override;
   uint64_t getOffset(uint64_t off) const override;
-  // FIXME implement this
-  bool isLive(uint64_t off) const override { return true; }
+  bool isLive(uint64_t off) const override {
+    return live[off >> power2LiteralSize];
+  }
+  void markLive(uint64_t off) override { live[off >> power2LiteralSize] = 1; }
 
   static bool classof(const InputSection *isec) {
     return isec->kind() == WordLiteralKind;
   }
+
+private:
+  unsigned power2LiteralSize;
+  // The liveness of data[off] is tracked by live[off >> power2LiteralSize].
+  llvm::BitVector live;
 };
 
 inline uint8_t sectionType(uint32_t flags) {
