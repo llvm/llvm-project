@@ -2668,7 +2668,8 @@ Error IHexWriter::checkSection(const SectionBase &Sec) {
 Error IHexWriter::finalize() {
   bool UseSegments = false;
   auto ShouldWrite = [](const SectionBase &Sec) {
-    return (Sec.Flags & ELF::SHF_ALLOC) && (Sec.Type != ELF::SHT_NOBITS);
+    return (Sec.Flags & ELF::SHF_ALLOC) && Sec.Type != ELF::SHT_NOBITS &&
+           Sec.Size > 0;
   };
   auto IsInPtLoad = [](const SectionBase &Sec) {
     return Sec.ParentSegment && Sec.ParentSegment->Type == ELF::PT_LOAD;
