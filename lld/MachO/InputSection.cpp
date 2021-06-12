@@ -48,7 +48,7 @@ static uint64_t resolveSymbolVA(const Symbol *sym, uint8_t type) {
   return sym->getVA();
 }
 
-void InputSection::writeTo(uint8_t *buf) {
+void ConcatInputSection::writeTo(uint8_t *buf) {
   assert(!shouldOmitFromOutput());
 
   if (getFileSize() == 0)
@@ -68,7 +68,6 @@ void InputSection::writeTo(uint8_t *buf) {
         minuendVA = toSym->getVA() + minuend.addend;
       else {
         auto *referentIsec = minuend.referent.get<InputSection *>();
-        assert(!referentIsec->shouldOmitFromOutput());
         minuendVA = referentIsec->getVA(minuend.addend);
       }
       referentVA = minuendVA - fromSym->getVA();
@@ -87,10 +86,9 @@ void InputSection::writeTo(uint8_t *buf) {
           referentVA -= firstTLVDataSection->addr;
       }
     } else if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
-      assert(!referentIsec->shouldOmitFromOutput());
       referentVA = referentIsec->getVA(r.addend);
     }
-    target->relocateOne(loc, r, referentVA, getVA(r.offset));
+    target->relocateOne(loc, r, referentVA, getVA() + r.offset);
   }
 }
 
