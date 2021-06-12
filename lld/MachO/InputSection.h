@@ -41,6 +41,8 @@ public:
   // The offset from the beginning of the file.
   virtual uint64_t getFileOffset(uint64_t off) const = 0;
   uint64_t getVA(uint64_t off) const;
+  // Whether the data at \p off in this InputSection is live.
+  virtual bool isLive(uint64_t off) const = 0;
 
   void writeTo(uint8_t *buf);
 
@@ -55,20 +57,6 @@ public:
   uint32_t callSiteCount = 0;
   bool isFinal = false; // is address assigned?
 
-  // How many symbols refer to this InputSection.
-  uint32_t numRefs = 0;
-
-  // With subsections_via_symbols, most symbols have their own InputSection,
-  // and for weak symbols (e.g. from inline functions), only the
-  // InputSection from one translation unit will make it to the output,
-  // while all copies in other translation units are coalesced into the
-  // first and not copied to the output.
-  bool wasCoalesced = false;
-
-  bool isCoalescedWeak() const { return wasCoalesced && numRefs == 0; }
-  bool shouldOmitFromOutput() const { return !live || isCoalescedWeak(); }
-
-  bool live = !config->deadStrip;
 
   ArrayRef<uint8_t> data;
   std::vector<Reloc> relocs;
@@ -89,11 +77,24 @@ public:
   uint64_t getFileOffset(uint64_t off) const override;
   uint64_t getOffset(uint64_t off) const override { return outSecOff + off; }
   uint64_t getVA() const { return InputSection::getVA(0); }
+  // ConcatInputSections are entirely live or dead, so the offset is irrelevant.
+  bool isLive(uint64_t off) const override { return live; }
+  bool isCoalescedWeak() const { return wasCoalesced && numRefs == 0; }
+  bool shouldOmitFromOutput() const { return !live || isCoalescedWeak(); }
 
   static bool classof(const InputSection *isec) {
     return isec->kind() == ConcatKind;
   }
 
+  // With subsections_via_symbols, most symbols have their own InputSection,
+  // and for weak symbols (e.g. from inline functions), only the
+  // InputSection from one translation unit will make it to the output,
+  // while all copies in other translation units are coalesced into the
+  // first and not copied to the output.
+  bool wasCoalesced = false;
+  bool live = !config->deadStrip;
+  // How many symbols refer to this InputSection.
+  uint32_t numRefs = 0;
   uint64_t outSecOff = 0;
   uint64_t outSecFileOff = 0;
 };
@@ -125,6 +126,8 @@ public:
   CStringInputSection() : InputSection(CStringLiteralKind) {}
   uint64_t getFileOffset(uint64_t off) const override;
   uint64_t getOffset(uint64_t off) const override;
+  // FIXME implement this
+  bool isLive(uint64_t off) const override { return true; }
   // Find the StringPiece that contains this offset.
   const StringPiece &getStringPiece(uint64_t off) const;
   // Split at each null byte.
@@ -152,6 +155,8 @@ public:
   WordLiteralInputSection() : InputSection(WordLiteralKind) {}
   uint64_t getFileOffset(uint64_t off) const override;
   uint64_t getOffset(uint64_t off) const override;
+  // FIXME implement this
+  bool isLive(uint64_t off) const override { return true; }
 
   static bool classof(const InputSection *isec) {
     return isec->kind() == WordLiteralKind;

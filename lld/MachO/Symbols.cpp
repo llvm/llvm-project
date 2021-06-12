@@ -40,7 +40,7 @@ bool Symbol::isLive() const {
     // no_dead_strip or live_support. In that case, the section will know
     // that it's live but `used` might be false. Non-absolute symbols always
     // have to use the section's `live` bit as source of truth.
-    return d->isAbsolute() ? used : d->isec->live;
+    return d->isAbsolute() ? used : d->isec->isLive(d->value);
   }
 
   assert(!isa<CommonSymbol>(this) &&

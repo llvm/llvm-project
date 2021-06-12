@@ -1293,9 +1293,14 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       TimeTraceScope timeScope("Gathering input sections");
       // Gather all InputSections into one vector.
       for (const InputFile *file : inputFiles) {
-        for (const SubsectionMap &map : file->subsections)
-          for (const SubsectionEntry &subsectionEntry : map)
-            inputSections.push_back(subsectionEntry.isec);
+        for (const SubsectionMap &map : file->subsections) {
+          for (const SubsectionEntry &entry : map) {
+            if (auto concatIsec = dyn_cast<ConcatInputSection>(entry.isec))
+              if (concatIsec->isCoalescedWeak())
+                continue;
+            inputSections.push_back(entry.isec);
+          }
+        }
       }
     }
 

@@ -566,11 +566,15 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
 void Writer::scanRelocations() {
   TimeTraceScope timeScope("Scan relocations");
   for (InputSection *isec : inputSections) {
-    if (isec->shouldOmitFromOutput())
+    if (!isa<ConcatInputSection>(isec))
+      continue;
+    auto concatIsec = cast<ConcatInputSection>(isec);
+
+    if (concatIsec->shouldOmitFromOutput())
       continue;
 
-    if (isec->segname == segment_names::ld) {
-      in.unwindInfo->prepareRelocations(isec);
+    if (concatIsec->segname == segment_names::ld) {
+      in.unwindInfo->prepareRelocations(concatIsec);
       continue;
     }
 
@@ -591,7 +595,6 @@ void Writer::scanRelocations() {
           prepareSymbolRelocation(sym, isec, r);
       } else {
         assert(r.referent.is<InputSection *>());
-        assert(!r.referent.get<InputSection *>()->shouldOmitFromOutput());
         if (!r.pcrel)
           in.rebase->addEntry(isec, r.offset);
       }
@@ -861,10 +864,10 @@ template <class LP> void Writer::createOutputSections() {
   DenseMap<NamePair, ConcatOutputSection *> concatOutputSections;
   for (const auto &p : enumerate(inputSections)) {
     InputSection *isec = p.value();
-    if (isec->shouldOmitFromOutput())
-      continue;
     OutputSection *osec;
     if (auto *concatIsec = dyn_cast<ConcatInputSection>(isec)) {
+      if (concatIsec->shouldOmitFromOutput())
+        continue;
       NamePair names = maybeRenameSection({isec->segname, isec->name});
       ConcatOutputSection *&concatOsec = concatOutputSections[names];
       if (concatOsec == nullptr)
