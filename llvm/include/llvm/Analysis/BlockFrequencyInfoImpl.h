@@ -42,7 +42,9 @@
 #include <iterator>
 #include <limits>
 #include <list>
+#include <queue>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -50,6 +52,10 @@
 
 namespace llvm {
 extern llvm::cl::opt<bool> CheckBFIUnknownBlockQueries;
+
+extern llvm::cl::opt<bool> UseIterativeBFIInference;
+extern llvm::cl::opt<unsigned> IterativeBFIMaxIterationsPerBlock;
+extern llvm::cl::opt<double> IterativeBFIPrecision;
 
 class BranchProbabilityInfo;
 class Function;
@@ -967,6 +973,45 @@ template <class BT> class BlockFrequencyInfoImpl : BlockFrequencyInfoImplBase {
     return bfi_detail::getBlockName(getBlock(Node));
   }
 
+  /// The current implementation for computing relative block frequencies does
+  /// not handle correctly control-flow graphs containing irreducible loops. To
+  /// resolve the problem, we apply a post-processing step, which iteratively
+  /// updates block frequencies based on the frequencies of their predesessors.
+  /// This corresponds to finding the stationary point of the Markov chain by
+  /// an iterative method aka "PageRank computation".
+  /// The algorithm takes at most O(|E| * IterativeBFIMaxIterations) steps but
+  /// typically converges faster.
+  ///
+  /// Decide whether we want to apply iterative inference for a given function.
+  bool needIterativeInference() const;
+
+  /// Apply an iterative post-processing to infer correct counts for irr loops.
+  void applyIterativeInference();
+
+  using ProbMatrixType = std::vector<std::vector<std::pair<size_t, Scaled64>>>;
+
+  /// Run iterative inference for a probability matrix and initial frequencies.
+  void iterativeInference(const ProbMatrixType &ProbMatrix,
+                          std::vector<Scaled64> &Freq) const;
+
+  /// Find all blocks to apply inference on, that is, reachable from the entry
+  /// and backward reachable from exists along edges with positive probability.
+  void findReachableBlocks(std::vector<const BlockT *> &Blocks) const;
+
+  /// Build a matrix of probabilities with transitions (edges) between the
+  /// blocks: ProbMatrix[I] holds pairs (J, P), where Pr[J -> I | J] = P
+  void initTransitionProbabilities(
+      const std::vector<const BlockT *> &Blocks,
+      const DenseMap<const BlockT *, size_t> &BlockIndex,
+      ProbMatrixType &ProbMatrix) const;
+
+#ifndef NDEBUG
+  /// Compute the discrepancy between current block frequencies and the
+  /// probability matrix.
+  Scaled64 discrepancy(const ProbMatrixType &ProbMatrix,
+                       const std::vector<Scaled64> &Freq) const;
+#endif
+
 public:
   BlockFrequencyInfoImpl() = default;
 
@@ -1093,6 +1138,10 @@ void BlockFrequencyInfoImpl<BT>::calculate(const FunctionT &F,
   computeMassInLoops();
   computeMassInFunction();
   unwrapLoops();
+  // Apply a post-processing step improving computed frequencies for functions
+  // with irreducible loops.
+  if (needIterativeInference())
+    applyIterativeInference();
   finalizeMetrics();
 
   if (CheckBFIUnknownBlockQueries) {
@@ -1312,6 +1361,294 @@ template <class BT> void BlockFrequencyInfoImpl<BT>::computeMassInFunction() {
     return;
   llvm_unreachable("unhandled irreducible control flow");
 }
+
+template <class BT>
+bool BlockFrequencyInfoImpl<BT>::needIterativeInference() const {
+  if (!UseIterativeBFIInference)
+    return false;
+  if (!F->getFunction().hasProfileData())
+    return false;
+  // Apply iterative inference only if the function contains irreducible loops;
+  // otherwise, computed block frequencies are reasonably correct.
+  for (auto L = Loops.rbegin(), E = Loops.rend(); L != E; ++L) {
+    if (L->isIrreducible())
+      return true;
+  }
+  return false;
+}
+
+template <class BT> void BlockFrequencyInfoImpl<BT>::applyIterativeInference() {
+  // Extract blocks for processing: a block is considered for inference iff it
+  // can be reached from the entry by edges with a positive probability.
+  // Non-processed blocks are assigned with the zero frequency and are ignored
+  // in the computation
+  std::vector<const BlockT *> ReachableBlocks;
+  findReachableBlocks(ReachableBlocks);
+  if (ReachableBlocks.empty())
+    return;
+
+  // The map is used to to index successors/predecessors of reachable blocks in
+  // the ReachableBlocks vector
+  DenseMap<const BlockT *, size_t> BlockIndex;
+  // Extract initial frequencies for the reachable blocks
+  auto Freq = std::vector<Scaled64>(ReachableBlocks.size());
+  Scaled64 SumFreq;
+  for (size_t I = 0; I < ReachableBlocks.size(); I++) {
+    const BlockT *BB = ReachableBlocks[I];
+    BlockIndex[BB] = I;
+    Freq[I] = getFloatingBlockFreq(BB);
+    SumFreq += Freq[I];
+  }
+  assert(!SumFreq.isZero() && "empty initial block frequencies");
+
+  LLVM_DEBUG(dbgs() << "Applying iterative inference for " << F->getName()
+                    << " with " << ReachableBlocks.size() << " blocks\n");
+
+  // Normalizing frequencies so they sum up to 1.0
+  for (auto &Value : Freq) {
+    Value /= SumFreq;
+  }
+
+  // Setting up edge probabilities using sparse matrix representation:
+  // ProbMatrix[I] holds a vector of pairs (J, P) where Pr[J -> I | J] = P
+  ProbMatrixType ProbMatrix;
+  initTransitionProbabilities(ReachableBlocks, BlockIndex, ProbMatrix);
+
+  // Run the propagation
+  iterativeInference(ProbMatrix, Freq);
+
+  // Assign computed frequency values
+  for (const BlockT &BB : *F) {
+    auto Node = getNode(&BB);
+    if (!Node.isValid())
+      continue;
+    if (BlockIndex.count(&BB)) {
+      Freqs[Node.Index].Scaled = Freq[BlockIndex[&BB]];
+    } else {
+      Freqs[Node.Index].Scaled = Scaled64::getZero();
+    }
+  }
+}
+
+template <class BT>
+void BlockFrequencyInfoImpl<BT>::iterativeInference(
+    const ProbMatrixType &ProbMatrix, std::vector<Scaled64> &Freq) const {
+  assert(0.0 < IterativeBFIPrecision && IterativeBFIPrecision < 1.0 &&
+         "incorrectly specified precision");
+  // Convert double precision to Scaled64
+  const auto Precision =
+      Scaled64::getInverse(static_cast<uint64_t>(1.0 / IterativeBFIPrecision));
+  const size_t MaxIterations = IterativeBFIMaxIterationsPerBlock * Freq.size();
+
+#ifndef NDEBUG
+  LLVM_DEBUG(dbgs() << "  Initial discrepancy = "
+                    << discrepancy(ProbMatrix, Freq).toString() << "\n");
+#endif
+
+  // Successors[I] holds unique sucessors of the I-th block
+  auto Successors = std::vector<std::vector<size_t>>(Freq.size());
+  for (size_t I = 0; I < Freq.size(); I++) {
+    for (auto &Jump : ProbMatrix[I]) {
+      Successors[Jump.first].push_back(I);
+    }
+  }
+
+  // To speedup computation, we maintain a set of "active" blocks whose
+  // frequencies need to be updated based on the incoming edges.
+  // The set is dynamic and changes after every update. Initially all blocks
+  // with a positive frequency are active
+  auto IsActive = std::vector<bool>(Freq.size(), false);
+  std::queue<size_t> ActiveSet;
+  for (size_t I = 0; I < Freq.size(); I++) {
+    if (Freq[I] > 0) {
+      ActiveSet.push(I);
+      IsActive[I] = true;
+    }
+  }
+
+  // Iterate over the blocks propagating frequencies
+  size_t It = 0;
+  while (It++ < MaxIterations && !ActiveSet.empty()) {
+    size_t I = ActiveSet.front();
+    ActiveSet.pop();
+    IsActive[I] = false;
+
+    // Compute a new frequency for the block: NewFreq := Freq \times ProbMatrix.
+    // A special care is taken for self-edges that needs to be scaled by
+    // (1.0 - SelfProb), where SelfProb is the sum of probabilities on the edges
+    Scaled64 NewFreq;
+    Scaled64 OneMinusSelfProb = Scaled64::getOne();
+    for (auto &Jump : ProbMatrix[I]) {
+      if (Jump.first == I) {
+        OneMinusSelfProb -= Jump.second;
+      } else {
+        NewFreq += Freq[Jump.first] * Jump.second;
+      }
+    }
+    if (OneMinusSelfProb != Scaled64::getOne())
+      NewFreq /= OneMinusSelfProb;
+
+    // If the block's frequency has changed enough, then
+    // make sure the block and its successors are in the active set
+    auto Change = Freq[I] >= NewFreq ? Freq[I] - NewFreq : NewFreq - Freq[I];
+    if (Change > Precision) {
+      ActiveSet.push(I);
+      IsActive[I] = true;
+      for (size_t Succ : Successors[I]) {
+        if (!IsActive[Succ]) {
+          ActiveSet.push(Succ);
+          IsActive[Succ] = true;
+        }
+      }
+    }
+
+    // Update the frequency for the block
+    Freq[I] = NewFreq;
+  }
+
+  LLVM_DEBUG(dbgs() << "  Completed " << It << " inference iterations"
+                    << format(" (%0.0f per block)", double(It) / Freq.size())
+                    << "\n");
+#ifndef NDEBUG
+  LLVM_DEBUG(dbgs() << "  Final   discrepancy = "
+                    << discrepancy(ProbMatrix, Freq).toString() << "\n");
+#endif
+}
+
+template <class BT>
+void BlockFrequencyInfoImpl<BT>::findReachableBlocks(
+    std::vector<const BlockT *> &Blocks) const {
+  // Find all blocks to apply inference on, that is, reachable from the entry
+  // along edges with non-zero probablities
+  std::queue<const BlockT *> Queue;
+  std::unordered_set<const BlockT *> Reachable;
+  const BlockT *Entry = &F->front();
+  Queue.push(Entry);
+  Reachable.insert(Entry);
+  while (!Queue.empty()) {
+    const BlockT *SrcBB = Queue.front();
+    Queue.pop();
+    for (const BlockT *DstBB : children<const BlockT *>(SrcBB)) {
+      auto EP = BPI->getEdgeProbability(SrcBB, DstBB);
+      if (EP.isZero())
+        continue;
+      if (Reachable.find(DstBB) == Reachable.end()) {
+        Queue.push(DstBB);
+        Reachable.insert(DstBB);
+      }
+    }
+  }
+
+  // Find all blocks to apply inference on, that is, backward reachable from
+  // the entry along (backward) edges with non-zero probablities
+  std::unordered_set<const BlockT *> InverseReachable;
+  for (const BlockT &BB : *F) {
+    // An exit block is a block without any successors
+    bool HasSucc = GraphTraits<const BlockT *>::child_begin(&BB) !=
+                   GraphTraits<const BlockT *>::child_end(&BB);
+    if (!HasSucc && Reachable.count(&BB)) {
+      Queue.push(&BB);
+      InverseReachable.insert(&BB);
+    }
+  }
+  while (!Queue.empty()) {
+    const BlockT *SrcBB = Queue.front();
+    Queue.pop();
+    for (const BlockT *DstBB : children<Inverse<const BlockT *>>(SrcBB)) {
+      auto EP = BPI->getEdgeProbability(DstBB, SrcBB);
+      if (EP.isZero())
+        continue;
+      if (InverseReachable.find(DstBB) == InverseReachable.end()) {
+        Queue.push(DstBB);
+        InverseReachable.insert(DstBB);
+      }
+    }
+  }
+
+  // Collect the result
+  Blocks.reserve(F->size());
+  for (const BlockT &BB : *F) {
+    if (Reachable.count(&BB) && InverseReachable.count(&BB)) {
+      Blocks.push_back(&BB);
+    }
+  }
+}
+
+template <class BT>
+void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
+    const std::vector<const BlockT *> &Blocks,
+    const DenseMap<const BlockT *, size_t> &BlockIndex,
+    ProbMatrixType &ProbMatrix) const {
+  const size_t NumBlocks = Blocks.size();
+  auto Succs = std::vector<std::vector<std::pair<size_t, Scaled64>>>(NumBlocks);
+  auto SumProb = std::vector<Scaled64>(NumBlocks);
+
+  // Find unique successors and corresponding probabilities for every block
+  for (size_t Src = 0; Src < NumBlocks; Src++) {
+    const BlockT *BB = Blocks[Src];
+    std::unordered_set<const BlockT *> UniqueSuccs;
+    for (const auto SI : children<const BlockT *>(BB)) {
+      // Ignore cold blocks
+      if (BlockIndex.find(SI) == BlockIndex.end())
+        continue;
+      // Ignore parallel edges between BB and SI blocks
+      if (UniqueSuccs.find(SI) != UniqueSuccs.end())
+        continue;
+      UniqueSuccs.insert(SI);
+      // Ignore jumps with zero probability
+      auto EP = BPI->getEdgeProbability(BB, SI);
+      if (EP.isZero())
+        continue;
+
+      auto EdgeProb =
+          Scaled64::getFraction(EP.getNumerator(), EP.getDenominator());
+      size_t Dst = BlockIndex.find(SI)->second;
+      Succs[Src].push_back(std::make_pair(Dst, EdgeProb));
+      SumProb[Src] += EdgeProb;
+    }
+  }
+
+  // Add transitions for every jump with positive branch probability
+  ProbMatrix = ProbMatrixType(NumBlocks);
+  for (size_t Src = 0; Src < NumBlocks; Src++) {
+    // Ignore blocks w/o successors
+    if (Succs[Src].empty())
+      continue;
+
+    assert(!SumProb[Src].isZero() && "Zero sum probability of non-exit block");
+    for (auto &Jump : Succs[Src]) {
+      size_t Dst = Jump.first;
+      Scaled64 Prob = Jump.second;
+      ProbMatrix[Dst].push_back(std::make_pair(Src, Prob / SumProb[Src]));
+    }
+  }
+
+  // Add transitions from sinks to the source
+  size_t EntryIdx = BlockIndex.find(&F->front())->second;
+  for (size_t Src = 0; Src < NumBlocks; Src++) {
+    if (Succs[Src].empty()) {
+      ProbMatrix[EntryIdx].push_back(std::make_pair(Src, Scaled64::getOne()));
+    }
+  }
+}
+
+#ifndef NDEBUG
+template <class BT>
+BlockFrequencyInfoImplBase::Scaled64 BlockFrequencyInfoImpl<BT>::discrepancy(
+    const ProbMatrixType &ProbMatrix, const std::vector<Scaled64> &Freq) const {
+  assert(Freq[0] > 0 && "Incorrectly computed frequency of the entry block");
+  Scaled64 Discrepancy;
+  for (size_t I = 0; I < ProbMatrix.size(); I++) {
+    Scaled64 Sum;
+    for (const auto &Jump : ProbMatrix[I]) {
+      Sum += Freq[Jump.first] * Jump.second;
+    }
+    Discrepancy += Freq[I] >= Sum ? Freq[I] - Sum : Sum - Freq[I];
+  }
+  // Normalizing by the frequency of the entry block
+  return Discrepancy / Freq[0];
+}
+#endif
 
 /// \note This should be a lambda, but that crashes GCC 4.7.
 namespace bfi_detail {
