@@ -46,6 +46,20 @@ cl::opt<bool> CheckBFIUnknownBlockQueries(
     cl::init(false), cl::Hidden,
     cl::desc("Check if block frequency is queried for an unknown block "
              "for debugging missed BFI updates"));
+
+cl::opt<bool> UseIterativeBFIInference(
+    "use-iterative-bfi-inference", cl::init(false), cl::Hidden,
+    cl::desc("Apply an iterative post-processing to infer correct BFI counts"));
+
+cl::opt<unsigned> IterativeBFIMaxIterationsPerBlock(
+    "iterative-bfi-max-iterations-per-block", cl::init(1000), cl::Hidden,
+    cl::desc("Iterative inference: maximum number of update iterations "
+             "per block"));
+
+cl::opt<double> IterativeBFIPrecision(
+    "iterative-bfi-precision", cl::init(1e-12), cl::Hidden,
+    cl::desc("Iterative inference: delta convergence precision; smaller values "
+             "typically lead to better results at the cost of worsen runtime"));
 }
 
 ScaledNumber<uint64_t> BlockMass::toScaled() const {
