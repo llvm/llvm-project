@@ -46,8 +46,6 @@ public:
   virtual bool isLive(uint64_t off) const = 0;
   virtual void markLive(uint64_t off) = 0;
 
-  void writeTo(uint8_t *buf);
-
   InputFile *file = nullptr;
   StringRef name;
   StringRef segname;
@@ -96,6 +94,7 @@ public:
   void markLive(uint64_t off) override { live = true; }
   bool isCoalescedWeak() const { return wasCoalesced && numRefs == 0; }
   bool shouldOmitFromOutput() const { return !live || isCoalescedWeak(); }
+  void writeTo(uint8_t *buf);
 
   static bool classof(const InputSection *isec) {
     return isec->kind() == ConcatKind;
