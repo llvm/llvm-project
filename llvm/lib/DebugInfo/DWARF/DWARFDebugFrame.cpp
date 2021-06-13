@@ -24,7 +24,6 @@
 #include <cassert>
 #include <cinttypes>
 #include <cstdint>
-#include <string>
 
 using namespace llvm;
 using namespace dwarf;
