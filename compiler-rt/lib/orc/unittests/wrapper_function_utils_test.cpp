@@ -13,8 +13,6 @@
 #include "wrapper_function_utils.h"
 #include "gtest/gtest.h"
 
-#include <stdio.h>
-
 using namespace __orc_rt;
 
 namespace {
