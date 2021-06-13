@@ -9,49 +9,49 @@ define void @test1() {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 true, label [[LATCH:%.*]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br label [[LATCH:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 true, label [[LATCH_1:%.*]], label [[EXIT]]
+; CHECK-NEXT:    br label [[LATCH_1:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       latch.1:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 true, label [[LATCH_2:%.*]], label [[EXIT]]
+; CHECK-NEXT:    br label [[LATCH_2:%.*]]
 ; CHECK:       latch.2:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 true, label [[LATCH_3:%.*]], label [[EXIT]]
+; CHECK-NEXT:    br label [[LATCH_3:%.*]]
 ; CHECK:       latch.3:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 true, label [[LATCH_4:%.*]], label [[EXIT]]
+; CHECK-NEXT:    br label [[LATCH_4:%.*]]
 ; CHECK:       latch.4:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 true, label [[LATCH_5:%.*]], label [[EXIT]]
+; CHECK-NEXT:    br label [[LATCH_5:%.*]]
 ; CHECK:       latch.5:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 true, label [[LATCH_6:%.*]], label [[EXIT]]
+; CHECK-NEXT:    br label [[LATCH_6:%.*]]
 ; CHECK:       latch.6:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 true, label [[LATCH_7:%.*]], label [[EXIT]]
+; CHECK-NEXT:    br label [[LATCH_7:%.*]]
 ; CHECK:       latch.7:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 true, label [[LATCH_8:%.*]], label [[EXIT]]
+; CHECK-NEXT:    br label [[LATCH_8:%.*]]
 ; CHECK:       latch.8:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 true, label [[LATCH_9:%.*]], label [[EXIT]]
+; CHECK-NEXT:    br label [[LATCH_9:%.*]]
 ; CHECK:       latch.9:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    br i1 false, label [[LATCH_10:%.*]], label [[EXIT]]
+; CHECK-NEXT:    br i1 false, label [[LATCH_10:%.*]], label [[EXIT:%.*]]
 ; CHECK:       latch.10:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[EXIT]]
