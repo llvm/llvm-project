@@ -634,8 +634,7 @@ define dso_local void @arm_mat_mult_q15(i16* noalias nocapture readonly %A, i16*
 ; CHECK-NEXT:    @ in Loop: Header=BB10_5 Depth=1
 ; CHECK-NEXT:    ldr r0, [sp, #28] @ 4-byte Reload
 ; CHECK-NEXT:    add.w r3, r0, r5, lsl #1
-; CHECK-NEXT:    mov r5, r6
-; CHECK-NEXT:    wlstp.8 lr, r5, .LBB10_4
+; CHECK-NEXT:    wlstp.8 lr, r6, .LBB10_4
 ; CHECK-NEXT:    b .LBB10_15
 ; CHECK-NEXT:  .LBB10_4: @ %for.cond1.for.cond.cleanup3_crit_edge.us
 ; CHECK-NEXT:    @ in Loop: Header=BB10_5 Depth=1
