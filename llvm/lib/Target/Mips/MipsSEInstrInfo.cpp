@@ -722,7 +722,14 @@ unsigned MipsSEInstrInfo::getAnalyzableBrOpc(unsigned Opc) const {
           Opc == Mips::BLTUC_MMR6 || Opc == Mips::BGEUC_MMR6 ||
           Opc == Mips::BGTZC_MMR6 || Opc == Mips::BLEZC_MMR6 ||
           Opc == Mips::BGEZC_MMR6 || Opc == Mips::BLTZC_MMR6 ||
-          Opc == Mips::BEQZC_MMR6 || Opc == Mips::BNEZC_MMR6) ? Opc : 0;
+          Opc == Mips::BEQZC_MMR6 || Opc == Mips::BNEZC_MMR6 ||
+          Opc == Mips::BEQC_NM || Opc == Mips::BEQIC_NM || Opc == Mips::BEQZC_NM ||
+          Opc == Mips::BNEC_NM || Opc == Mips::BNEIC_NM || Opc == Mips::BNEZC_NM ||
+          Opc == Mips::BGEC_NM || Opc == Mips::BGEIC_NM ||
+          Opc == Mips::BGEUC_NM || Opc == Mips::BGEIUC_NM ||
+          Opc == Mips::BLTC_NM || Opc == Mips::BLTIC_NM ||
+          Opc == Mips::BLTUC_NM || Opc == Mips::BLTIUC_NM ||
+          Opc == Mips::BC_NM ) ? Opc : 0;
 }
 
 void MipsSEInstrInfo::expandRetRA(MachineBasicBlock &MBB,
