@@ -75,7 +75,7 @@ private:
 };
 
 // ConcatInputSections are combined into (Concat)OutputSections through simple
-// concatentation, in contrast with literal sections which may have their
+// concatenation, in contrast with literal sections which may have their
 // contents merged before output.
 class ConcatInputSection : public InputSection {
 public:

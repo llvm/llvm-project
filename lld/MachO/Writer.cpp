@@ -715,7 +715,7 @@ template <class LP> void Writer::createLoadCommands() {
       //   command line and implicitly as a reexport from a different
       //   framework. The re-export will usually point to the tbd file
       //   in Foo.framework/Versions/A/Foo.tbd, while the explicit link will
-      //   usually find Foo.framwork/Foo.tbd. These are usually symlinks,
+      //   usually find Foo.framework/Foo.tbd. These are usually symlinks,
       //   but in a --reproduce archive they will be identical but distinct
       //   files.
       // In the first case, *semantically distinct* DylibFiles will have the
