@@ -1480,7 +1480,7 @@ public:
 
   /// Returns true if the class destructor, or any implicitly invoked
   /// destructors are marked noreturn.
-  bool isAnyDestructorNoReturn() const;
+  bool isAnyDestructorNoReturn() const { return data().IsAnyDestructorNoReturn; }
 
   /// If the class is a local class [class.local], returns
   /// the enclosing function declaration.
