@@ -16,6 +16,14 @@ func @extract_too_many_indices(%arg0: tensor<?xf32>) {
 
 // -----
 
+func @insert_too_many_indices(%arg0: f32, %arg1: tensor<?xf32>) {
+  // expected-error@+1 {{incorrect number of indices}}
+  %0 = tensor.insert %arg0 into %arg1[] : tensor<?xf32>
+  return
+}
+
+// -----
+
 func @tensor.from_elements_wrong_result_type() {
   // expected-error@+2 {{'result' must be 1D tensor of any type values, but got 'tensor<*xi32>'}}
   %c0 = constant 0 : i32

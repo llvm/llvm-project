@@ -96,6 +96,19 @@ func @fold_extract(%arg0 : index) -> (f32, f16, f16, i32) {
 
 // -----
 
+// CHECK-LABEL: func @fold_insert
+func @fold_insert(%arg0 : index) -> (tensor<4xf32>) {
+  // Fold an insert into a splat.
+  // CHECK-DAG: %[[C4:.+]] = constant dense<4.{{0*}}e+00> : tensor<4xf32>
+  %0 = constant dense<4.0> : tensor<4xf32>
+  %1 = constant 4.0 : f32
+  %ins_1 = tensor.insert %1 into %0[%arg0] : tensor<4xf32>
+  // CHECK-NEXT: return %[[C4]]
+  return %ins_1 : tensor<4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @extract_from_tensor.cast
 // CHECK-SAME: %[[TENSOR:.*]]: tensor<*xf32>
 func @extract_from_tensor.cast(%tensor: tensor<*xf32>) -> f32 {
