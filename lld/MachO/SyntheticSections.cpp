@@ -774,7 +774,7 @@ uint32_t SymtabSection::getNumSymbols() const {
 }
 
 // This serves to hide (type-erase) the template parameter from SymtabSection.
-template <class LP> class SymtabSectionImpl : public SymtabSection {
+template <class LP> class SymtabSectionImpl final : public SymtabSection {
 public:
   SymtabSectionImpl(StringTableSection &stringTableSection)
       : SymtabSection(stringTableSection) {}

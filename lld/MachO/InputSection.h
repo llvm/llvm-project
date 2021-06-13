@@ -76,7 +76,7 @@ private:
 // ConcatInputSections are combined into (Concat)OutputSections through simple
 // concatenation, in contrast with literal sections which may have their
 // contents merged before output.
-class ConcatInputSection : public InputSection {
+class ConcatInputSection final : public InputSection {
 public:
   ConcatInputSection(StringRef segname, StringRef name)
       : InputSection(ConcatKind, segname, name) {}
@@ -136,7 +136,7 @@ static_assert(sizeof(StringPiece) == 16, "StringPiece is too big!");
 // ld64 is more conservative and does not do that. This was mostly done for
 // implementation simplicity; if we find programs that need the more
 // conservative behavior we can certainly implement that.
-class CStringInputSection : public InputSection {
+class CStringInputSection final : public InputSection {
 public:
   CStringInputSection(StringRef segname, StringRef name, InputFile *file,
                       ArrayRef<uint8_t> data, uint32_t align, uint32_t flags)
@@ -168,7 +168,7 @@ public:
   std::vector<StringPiece> pieces;
 };
 
-class WordLiteralInputSection : public InputSection {
+class WordLiteralInputSection final : public InputSection {
 public:
   WordLiteralInputSection(StringRef segname, StringRef name, InputFile *file,
                           ArrayRef<uint8_t> data, uint32_t align,
