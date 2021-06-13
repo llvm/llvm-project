@@ -138,7 +138,7 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
   assert(!isec->shouldOmitFromOutput() &&
          "__compact_unwind section should not be omitted");
 
-  // FIXME: This could skip relocations for CompactUnwindEntries that
+  // FIXME: Make this skip relocations for CompactUnwindEntries that
   // point to dead-stripped functions. That might save some amount of
   // work. But since there are usually just few personality functions
   // that are referenced from many places, at least some of them likely
