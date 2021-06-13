@@ -77,6 +77,7 @@ private:
   void readOutput();
   void readOutputArch();
   void readOutputFormat();
+  void readOverwriteSections();
   void readPhdrs();
   void readRegionAlias();
   void readSearchDir();
@@ -251,6 +252,8 @@ void ScriptParser::readLinkerScript() {
       readOutputArch();
     } else if (tok == "OUTPUT_FORMAT") {
       readOutputFormat();
+    } else if (tok == "OVERWRITE_SECTIONS") {
+      readOverwriteSections();
     } else if (tok == "PHDRS") {
       readPhdrs();
     } else if (tok == "REGION_ALIAS") {
@@ -553,6 +556,12 @@ std::vector<BaseCommand *> ScriptParser::readOverlay() {
   return v;
 }
 
+void ScriptParser::readOverwriteSections() {
+  expect("{");
+  while (!errorCount() && !consume("}"))
+    script->overwriteSections.push_back(readOutputSectionDescription(next()));
+}
+
 void ScriptParser::readSections() {
   expect("{");
   std::vector<BaseCommand *> v;
@@ -588,7 +597,7 @@ void ScriptParser::readSections() {
   StringRef where = next();
   for (BaseCommand *cmd : v)
     if (auto *os = dyn_cast<OutputSection>(cmd))
-      script->insertCommands.push_back({os, isAfter, where});
+      script->insertCommands.push_back({os->name, isAfter, where});
 }
 
 void ScriptParser::readTarget() {
