@@ -50,7 +50,6 @@
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include <cassert>
 #include <cstdint>
-#include <vector>
 
 namespace llvm {
 class Instruction;
