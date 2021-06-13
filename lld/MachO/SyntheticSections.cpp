@@ -477,15 +477,6 @@ void StubHelperSection::setup() {
                     /*noDeadStrip=*/false);
 }
 
-ImageLoaderCacheSection::ImageLoaderCacheSection()
-    : ConcatInputSection(segment_names::data, section_names::data) {
-  uint8_t *arr = bAlloc.Allocate<uint8_t>(target->wordSize);
-  memset(arr, 0, target->wordSize);
-  data = {arr, target->wordSize};
-  align = target->wordSize;
-  live = true;
-}
-
 LazyPointerSection::LazyPointerSection()
     : SyntheticSection(segment_names::data, section_names::lazySymbolPtr) {
   align = target->wordSize;
