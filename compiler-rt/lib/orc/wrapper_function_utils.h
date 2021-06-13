@@ -60,7 +60,7 @@ public:
     return Tmp;
   }
 
-  /// Get an ArrayRef covering the data in the result.
+  /// Get a pointer to the data contained in this instance.
   const char *data() const { return __orc_rt_CWrapperFunctionResultData(&R); }
 
   /// Returns the size of the data contained in this instance.
