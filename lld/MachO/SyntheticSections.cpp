@@ -1099,14 +1099,14 @@ void BitcodeBundleSection::writeTo(uint8_t *buf) const {
 // that only contains a duplicate cstring at a different alignment. See PR50563
 // for details.
 //
-// In practice, the cstrings we've seen so far that require special aligment are
-// all accessed by x86_64 SIMD operations -- x86_64 requires SIMD accesses to be
-// 16-byte-aligned. So for now, I'm just aligning all strings to 16 bytes on
-// x86_64. This is indeed wasteful, but implementation-wise it's simpler than
-// preserving per-string alignment+offsets. It also avoids the aforementioned
-// crash after deduplication of differently-aligned strings. Finally, the
-// overhead is not huge: using 16-byte alignment (vs no alignment) is only a
-// 0.5% size overhead when linking chromium_framework.
+// In practice, the cstrings we've seen so far that require special alignment
+// are all accessed by x86_64 SIMD operations -- x86_64 requires SIMD accesses
+// to be 16-byte-aligned. So for now, I'm just aligning all strings to 16 bytes
+// on x86_64. This is indeed wasteful, but implementation-wise it's simpler
+// than preserving per-string alignment+offsets. It also avoids the
+// aforementioned crash after deduplication of differently-aligned strings.
+// Finally, the overhead is not huge: using 16-byte alignment (vs no alignment)
+// is only a 0.5% size overhead when linking chromium_framework.
 CStringSection::CStringSection()
     : SyntheticSection(segment_names::text, section_names::cString),
       builder(StringTableBuilder::RAW,
