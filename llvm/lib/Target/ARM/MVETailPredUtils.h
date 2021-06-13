@@ -68,11 +68,26 @@ static inline bool isVCTP(const MachineInstr *MI) {
   return false;
 }
 
-static inline bool isLoopStart(MachineInstr &MI) {
+static inline bool isDoLoopStart(const MachineInstr &MI) {
   return MI.getOpcode() == ARM::t2DoLoopStart ||
-         MI.getOpcode() == ARM::t2DoLoopStartTP ||
-         MI.getOpcode() == ARM::t2WhileLoopStart ||
-         MI.getOpcode() == ARM::t2WhileLoopStartLR;
+         MI.getOpcode() == ARM::t2DoLoopStartTP;
+}
+
+static inline bool isWhileLoopStart(const MachineInstr &MI) {
+  return MI.getOpcode() == ARM::t2WhileLoopStart ||
+         MI.getOpcode() == ARM::t2WhileLoopStartLR ||
+         MI.getOpcode() == ARM::t2WhileLoopStartTP;
+}
+
+static inline bool isLoopStart(const MachineInstr &MI) {
+  return isDoLoopStart(MI) || isWhileLoopStart(MI);
+}
+
+// Return the TargetBB stored in a t2WhileLoopStartLR/t2WhileLoopStartTP.
+inline MachineBasicBlock *getWhileLoopStartTargetBB(const MachineInstr &MI) {
+  assert(isWhileLoopStart(MI) && "Expected WhileLoopStart!");
+  unsigned Op = MI.getOpcode() == ARM::t2WhileLoopStartTP ? 3 : 2;
+  return MI.getOperand(Op).getMBB();
 }
 
 // WhileLoopStart holds the exit block, so produce a subs Op0, Op1, 0 and then a
@@ -84,8 +99,9 @@ inline void RevertWhileLoopStartLR(MachineInstr *MI, const TargetInstrInfo *TII,
                                    unsigned BrOpc = ARM::t2Bcc,
                                    bool UseCmp = false) {
   MachineBasicBlock *MBB = MI->getParent();
-  assert(MI->getOpcode() == ARM::t2WhileLoopStartLR &&
-         "Only expected a t2WhileLoopStartLR in RevertWhileLoopStartLR!");
+  assert((MI->getOpcode() == ARM::t2WhileLoopStartLR ||
+          MI->getOpcode() == ARM::t2WhileLoopStartTP) &&
+         "Only expected a t2WhileLoopStartLR/TP in RevertWhileLoopStartLR!");
 
   // Subs/Cmp
   if (UseCmp) {
@@ -109,8 +125,8 @@ inline void RevertWhileLoopStartLR(MachineInstr *MI, const TargetInstrInfo *TII,
   // Branch
   MachineInstrBuilder MIB =
       BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(BrOpc));
-  MIB.add(MI->getOperand(2)); // branch target
-  MIB.addImm(ARMCC::EQ);      // condition code
+  MIB.addMBB(getWhileLoopStartTargetBB(*MI)); // branch target
+  MIB.addImm(ARMCC::EQ);                      // condition code
   MIB.addReg(ARM::CPSR);
 
   MI->eraseFromParent();
