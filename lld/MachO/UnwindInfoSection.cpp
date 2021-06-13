@@ -218,7 +218,7 @@ relocateCompactUnwind(ConcatOutputSection *compactUnwindSection,
     assert(isec->parent == compactUnwindSection);
 
     uint8_t *buf =
-        reinterpret_cast<uint8_t *>(cuVector.data()) + isec->outSecFileOff;
+        reinterpret_cast<uint8_t *>(cuVector.data()) + isec->outSecOff;
     memcpy(buf, isec->data.data(), isec->data.size());
 
     for (const Reloc &r : isec->relocs) {
