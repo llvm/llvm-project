@@ -34,7 +34,7 @@ int main(int, char**)
         typedef int P;
         typedef test_allocator<int> A;
         typedef std::unordered_set<int,
-                                   test_hash<std::hash<int> >,
+                                   test_hash<int>,
                                    test_equal_to<int>,
                                    A
                                    > C;
@@ -49,7 +49,7 @@ int main(int, char**)
         };
         C c0(a, a + sizeof(a)/sizeof(a[0]),
             7,
-            test_hash<std::hash<int> >(8),
+            test_hash<int>(8),
             test_equal_to<int>(9),
             A(10)
            );
@@ -60,7 +60,7 @@ int main(int, char**)
         assert(c.count(2) == 1);
         assert(c.count(3) == 1);
         assert(c.count(4) == 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
+        assert(c.hash_function() == test_hash<int>(8));
         assert(c.key_eq() == test_equal_to<int>(9));
         assert(c.get_allocator() == A(12));
         assert(!c.empty());
@@ -75,7 +75,7 @@ int main(int, char**)
         typedef int P;
         typedef test_allocator<int> A;
         typedef std::unordered_set<int,
-                                   test_hash<std::hash<int> >,
+                                   test_hash<int>,
                                    test_equal_to<int>,
                                    A
                                    > C;
@@ -90,7 +90,7 @@ int main(int, char**)
         };
         C c0(a, a + sizeof(a)/sizeof(a[0]),
             7,
-            test_hash<std::hash<int> >(8),
+            test_hash<int>(8),
             test_equal_to<int>(9),
             A(10)
            );
@@ -101,7 +101,7 @@ int main(int, char**)
         assert(c.count(2) == 1);
         assert(c.count(3) == 1);
         assert(c.count(4) == 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
+        assert(c.hash_function() == test_hash<int>(8));
         assert(c.key_eq() == test_equal_to<int>(9));
         assert(c.get_allocator() == A(10));
         assert(!c.empty());
@@ -116,7 +116,7 @@ int main(int, char**)
         typedef int P;
         typedef min_allocator<int> A;
         typedef std::unordered_set<int,
-                                   test_hash<std::hash<int> >,
+                                   test_hash<int>,
                                    test_equal_to<int>,
                                    A
                                    > C;
@@ -131,7 +131,7 @@ int main(int, char**)
         };
         C c0(a, a + sizeof(a)/sizeof(a[0]),
             7,
-            test_hash<std::hash<int> >(8),
+            test_hash<int>(8),
             test_equal_to<int>(9),
             A()
            );
@@ -142,7 +142,7 @@ int main(int, char**)
         assert(c.count(2) == 1);
         assert(c.count(3) == 1);
         assert(c.count(4) == 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
+        assert(c.hash_function() == test_hash<int>(8));
         assert(c.key_eq() == test_equal_to<int>(9));
         assert(c.get_allocator() == A());
         assert(!c.empty());
