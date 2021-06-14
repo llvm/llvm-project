@@ -19266,20 +19266,21 @@ static SDValue reduceBuildVecToShuffleWithZero(SDNode *BV, SelectionDAG &DAG) {
   return DAG.getBitcast(VT, Shuf);
 }
 
+// FIXME: promote to STLExtras.
+template <typename R, typename T>
+static auto getFirstIndexOf(R &&Range, const T &Val) {
+  auto I = find(Range, Val);
+  if (I == Range.end())
+    return -1L;
+  return std::distance(Range.begin(), I);
+}
+
 // Check to see if this is a BUILD_VECTOR of a bunch of EXTRACT_VECTOR_ELT
 // operations. If the types of the vectors we're extracting from allow it,
 // turn this into a vector_shuffle node.
 SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
-
-  // FIXME: promote to STLExtras.
-  auto getFirstIndexOf = [](auto &&Range, const auto &Val) {
-    auto I = find(Range, Val);
-    if (I == Range.end())
-      return -1L;
-    return std::distance(Range.begin(), I);
-  };
 
   // Only type-legal BUILD_VECTOR nodes are converted to shuffle nodes.
   if (!isTypeLegal(VT))
