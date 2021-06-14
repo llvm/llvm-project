@@ -85,6 +85,8 @@ public:
 
     // Don't print 'X warnings and Y errors generated'.
     Compiler.getDiagnosticOpts().ShowCarets = false;
+    // Don't write out diagnostic file.
+    Compiler.getDiagnosticOpts().DiagnosticSerializationFile.clear();
     // Create the compiler's actual diagnostics engine.
     Compiler.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
     if (!Compiler.hasDiagnostics())
