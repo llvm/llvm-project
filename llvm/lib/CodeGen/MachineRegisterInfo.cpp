@@ -582,8 +582,9 @@ bool MachineRegisterInfo::isPhysRegModified(MCRegister PhysReg,
   return false;
 }
 
-bool MachineRegisterInfo::isPhysRegUsed(MCRegister PhysReg) const {
-  if (UsedPhysRegMask.test(PhysReg))
+bool MachineRegisterInfo::isPhysRegUsed(MCRegister PhysReg,
+                                        bool SkipRegMaskTest) const {
+  if (!SkipRegMaskTest && UsedPhysRegMask.test(PhysReg))
     return true;
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   for (MCRegAliasIterator AliasReg(PhysReg, TRI, true); AliasReg.isValid();

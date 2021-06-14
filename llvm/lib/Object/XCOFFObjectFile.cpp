@@ -900,15 +900,34 @@ bool doesXCOFFTracebackTableBegin(ArrayRef<uint8_t> Bytes) {
   return support::endian::read32be(Bytes.data()) == 0;
 }
 
-TBVectorExt::TBVectorExt(StringRef TBvectorStrRef) {
-  const uint8_t *Ptr = reinterpret_cast<const uint8_t *>(TBvectorStrRef.data());
-  Data = support::endian::read16be(Ptr);
-  VecParmsInfo = support::endian::read32be(Ptr + 2);
-}
-
 #define GETVALUEWITHMASK(X) (Data & (TracebackTable::X))
 #define GETVALUEWITHMASKSHIFT(X, S)                                            \
   ((Data & (TracebackTable::X)) >> (TracebackTable::S))
+
+Expected<TBVectorExt> TBVectorExt::create(StringRef TBvectorStrRef) {
+  Error Err = Error::success();
+  TBVectorExt TBTVecExt(TBvectorStrRef, Err);
+  if (Err)
+    return std::move(Err);
+  return TBTVecExt;
+}
+
+TBVectorExt::TBVectorExt(StringRef TBvectorStrRef, Error &Err) {
+  const uint8_t *Ptr = reinterpret_cast<const uint8_t *>(TBvectorStrRef.data());
+  Data = support::endian::read16be(Ptr);
+  uint32_t VecParmsTypeValue = support::endian::read32be(Ptr + 2);
+  unsigned ParmsNum =
+      GETVALUEWITHMASKSHIFT(NumberOfVectorParmsMask, NumberOfVectorParmsShift);
+
+  ErrorAsOutParameter EAO(&Err);
+  Expected<SmallString<32>> VecParmsTypeOrError =
+      parseVectorParmsType(VecParmsTypeValue, ParmsNum);
+  if (!VecParmsTypeOrError)
+    Err = VecParmsTypeOrError.takeError();
+  else
+    VecParmsInfo = VecParmsTypeOrError.get();
+}
+
 uint8_t TBVectorExt::getNumberOfVRSaved() const {
   return GETVALUEWITHMASKSHIFT(NumberOfVRSavedMask, NumberOfVRSavedShift);
 }
@@ -920,6 +939,7 @@ bool TBVectorExt::isVRSavedOnStack() const {
 bool TBVectorExt::hasVarArgs() const {
   return GETVALUEWITHMASK(HasVarArgsMask);
 }
+
 uint8_t TBVectorExt::getNumberOfVectorParms() const {
   return GETVALUEWITHMASKSHIFT(NumberOfVectorParmsMask,
                                NumberOfVectorParmsShift);
@@ -930,72 +950,6 @@ bool TBVectorExt::hasVMXInstruction() const {
 }
 #undef GETVALUEWITHMASK
 #undef GETVALUEWITHMASKSHIFT
-
-SmallString<32> TBVectorExt::getVectorParmsInfoString() const {
-  SmallString<32> ParmsType;
-  uint32_t Value = VecParmsInfo;
-  for (uint8_t I = 0; I < getNumberOfVectorParms(); ++I) {
-    if (I != 0)
-      ParmsType += ", ";
-    switch (Value & TracebackTable::ParmTypeMask) {
-    case TracebackTable::ParmTypeIsVectorCharBit:
-      ParmsType += "vc";
-      break;
-
-    case TracebackTable::ParmTypeIsVectorShortBit:
-      ParmsType += "vs";
-      break;
-
-    case TracebackTable::ParmTypeIsVectorIntBit:
-      ParmsType += "vi";
-      break;
-
-    case TracebackTable::ParmTypeIsVectorFloatBit:
-      ParmsType += "vf";
-      break;
-    }
-    Value <<= 2;
-  }
-  return ParmsType;
-}
-
-static SmallString<32> parseParmsTypeWithVecInfo(uint32_t Value,
-                                                 unsigned int ParmsNum) {
-  SmallString<32> ParmsType;
-  unsigned I = 0;
-  bool Begin = false;
-  while (I < ParmsNum || Value) {
-    if (Begin)
-      ParmsType += ", ";
-    else
-      Begin = true;
-
-    switch (Value & TracebackTable::ParmTypeMask) {
-    case TracebackTable::ParmTypeIsFixedBits:
-      ParmsType += "i";
-      ++I;
-      break;
-    case TracebackTable::ParmTypeIsVectorBits:
-      ParmsType += "v";
-      break;
-    case TracebackTable::ParmTypeIsFloatingBits:
-      ParmsType += "f";
-      ++I;
-      break;
-    case TracebackTable::ParmTypeIsDoubleBits:
-      ParmsType += "d";
-      ++I;
-      break;
-    default:
-      assert(false && "Unrecognized bits in ParmsType.");
-    }
-    Value <<= 2;
-  }
-  assert(I == ParmsNum &&
-         "The total parameters number of fixed-point or floating-point "
-         "parameters not equal to the number in the parameter type!");
-  return ParmsType;
-}
 
 Expected<XCOFFTracebackTable> XCOFFTracebackTable::create(const uint8_t *Ptr,
                                                           uint64_t &Size) {
@@ -1017,21 +971,13 @@ XCOFFTracebackTable::XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size,
   // Skip 8 bytes of mandatory fields.
   DE.getU64(Cur);
 
-  // Begin to parse optional fields.
-  if (Cur) {
-    unsigned ParmNum = getNumberOfFixedParms() + getNumberOfFPParms();
+  unsigned FixedParmsNum = getNumberOfFixedParms();
+  unsigned FloatingParmsNum = getNumberOfFPParms();
+  uint32_t ParamsTypeValue = 0;
 
-    // As long as there are no "fixed-point" or floating-point parameters, this
-    // field remains not present even when hasVectorInfo gives true and
-    // indicates the presence of vector parameters.
-    if (ParmNum > 0) {
-      uint32_t ParamsTypeValue = DE.getU32(Cur);
-      if (Cur)
-        ParmsType = hasVectorInfo()
-                        ? parseParmsTypeWithVecInfo(ParamsTypeValue, ParmNum)
-                        : parseParmsType(ParamsTypeValue, ParmNum);
-    }
-  }
+  // Begin to parse optional fields.
+  if (Cur && (FixedParmsNum + FloatingParmsNum) > 0)
+    ParamsTypeValue = DE.getU32(Cur);
 
   if (Cur && hasTraceBackTableOffset())
     TraceBackTableOffset = DE.getU32(Cur);
@@ -1060,10 +1006,35 @@ XCOFFTracebackTable::XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size,
   if (Cur && isAllocaUsed())
     AllocaRegister = DE.getU8(Cur);
 
+  unsigned VectorParmsNum = 0;
   if (Cur && hasVectorInfo()) {
     StringRef VectorExtRef = DE.getBytes(Cur, 6);
-    if (Cur)
-      VecExt = TBVectorExt(VectorExtRef);
+    if (Cur) {
+      Expected<TBVectorExt> TBVecExtOrErr = TBVectorExt::create(VectorExtRef);
+      if (!TBVecExtOrErr) {
+        Err = TBVecExtOrErr.takeError();
+        return;
+      }
+      VecExt = TBVecExtOrErr.get();
+      VectorParmsNum = VecExt.getValue().getNumberOfVectorParms();
+    }
+  }
+
+  // As long as there is no fixed-point or floating-point parameter, this
+  // field remains not present even when hasVectorInfo gives true and
+  // indicates the presence of vector parameters.
+  if (Cur && (FixedParmsNum + FloatingParmsNum) > 0) {
+    Expected<SmallString<32>> ParmsTypeOrError =
+        hasVectorInfo()
+            ? parseParmsTypeWithVecInfo(ParamsTypeValue, FixedParmsNum,
+                                        FloatingParmsNum, VectorParmsNum)
+            : parseParmsType(ParamsTypeValue, FixedParmsNum, FloatingParmsNum);
+
+    if (!ParmsTypeOrError) {
+      Err = ParmsTypeOrError.takeError();
+      return;
+    }
+    ParmsType = ParmsTypeOrError.get();
   }
 
   if (Cur && hasExtensionTable())
@@ -1071,6 +1042,7 @@ XCOFFTracebackTable::XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size,
 
   if (!Cur)
     Err = Cur.takeError();
+
   Size = Cur.tell();
 }
 
