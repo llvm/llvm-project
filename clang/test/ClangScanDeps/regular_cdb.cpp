@@ -58,14 +58,14 @@
 
 #include "header.h"
 
-// CHECK1: regular_cdb_input2.cpp
+// CHECK1: regular_cdb_input2.o:
 // CHECK1-NEXT: regular_cdb_input2.cpp
 // CHECK1-NEXT: Inputs{{/|\\}}header.h
 // CHECK1-NEXT: Inputs{{/|\\}}header2.h
 
-// CHECK3: regular_cdb_input.o
-// CHECK2: regular_cdb_input.cpp
+// CHECK2: regular_cdb_input.o:
+// CHECK2-NEXT: regular_cdb_input.cpp
 // CHECK2-NEXT: Inputs{{/|\\}}header.h
 // CHECK2NO-NOT: header2
 
-// CHECK3: adena.o
+// CHECK3: adena.o:
