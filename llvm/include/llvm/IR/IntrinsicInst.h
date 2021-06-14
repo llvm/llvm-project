@@ -448,6 +448,28 @@ public:
   static Optional<unsigned> getFunctionalOpcodeForVP(Intrinsic::ID ID);
 };
 
+/// This represents vector predication reduction intrinsics.
+class VPReductionIntrinsic : public VPIntrinsic {
+public:
+  static bool isVPReduction(Intrinsic::ID ID);
+
+  unsigned getStartParamPos() const;
+  unsigned getVectorParamPos() const;
+
+  static Optional<unsigned> getStartParamPos(Intrinsic::ID ID);
+  static Optional<unsigned> getVectorParamPos(Intrinsic::ID ID);
+
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
+  /// @{
+  static bool classof(const IntrinsicInst *I) {
+    return VPReductionIntrinsic::isVPReduction(I->getIntrinsicID());
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+  /// @}
+};
+
 /// This is the common base class for constrained floating point intrinsics.
 class ConstrainedFPIntrinsic : public IntrinsicInst {
 public:
