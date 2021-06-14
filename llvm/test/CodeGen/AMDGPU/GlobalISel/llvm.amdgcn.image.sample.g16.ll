@@ -137,7 +137,7 @@ define amdgpu_ps <4 x float> @sample_c_d_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GCN-NEXT:    s_lshl_b32 s12, s0, 16
 ; GCN-NEXT:    v_and_or_b32 v1, v1, v5, s12
 ; GCN-NEXT:    v_and_or_b32 v2, v2, v5, s12
-; GCN-NEXT:    image_sample_c_d_cl_g16 v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GCN-NEXT:    image_sample_c_d_cl_g16 v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
 main_body:

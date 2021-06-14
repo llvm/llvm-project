@@ -5235,14 +5235,18 @@ Node *AbstractManglingParser<Derived, Alloc>::parseEncoding() {
   class SaveTemplateParams {
     AbstractManglingParser *Parser;
     decltype(TemplateParams) OldParams;
+    decltype(OuterTemplateParams) OldOuterParams;
 
   public:
     SaveTemplateParams(AbstractManglingParser *TheParser) : Parser(TheParser) {
       OldParams = std::move(Parser->TemplateParams);
+      OldOuterParams = std::move(Parser->OuterTemplateParams);
       Parser->TemplateParams.clear();
+      Parser->OuterTemplateParams.clear();
     }
     ~SaveTemplateParams() {
       Parser->TemplateParams = std::move(OldParams);
+      Parser->OuterTemplateParams = std::move(OldOuterParams);
     }
   } SaveTemplateParams(this);
 

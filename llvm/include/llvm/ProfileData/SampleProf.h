@@ -845,7 +845,7 @@ public:
     if (!UseMD5)
       return Name;
 
-    assert(GUIDToFuncNameMap && "GUIDToFuncNameMap needs to be popluated first");
+    assert(GUIDToFuncNameMap && "GUIDToFuncNameMap needs to be populated first");
     return GUIDToFuncNameMap->lookup(std::stoull(Name.data()));
   }
 

@@ -713,7 +713,7 @@ define void @test16a(i8 %v, i8** %P) {
 
 define void @test16b(i8 %v, i8** %P) {
 ; CHECK-LABEL: define {{[^@]+}}@test16b
-; CHECK-SAME: (i8 [[V:%.*]], i8** nocapture writeonly [[P:%.*]]) {
+; CHECK-SAME: (i8 [[V:%.*]], i8** nocapture nofree writeonly [[P:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
 ; CHECK-NEXT:    store i8* [[TMP1]], i8** [[P]], align 8
 ; CHECK-NEXT:    tail call void @no_sync_func(i8* nocapture nofree [[TMP1]])
@@ -729,7 +729,7 @@ define void @test16b(i8 %v, i8** %P) {
 
 define void @test16c(i8 %v, i8** %P) {
 ; IS________OPM-LABEL: define {{[^@]+}}@test16c
-; IS________OPM-SAME: (i8 [[V:%.*]], i8** nocapture writeonly [[P:%.*]]) {
+; IS________OPM-SAME: (i8 [[V:%.*]], i8** nocapture nofree writeonly [[P:%.*]]) {
 ; IS________OPM-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
 ; IS________OPM-NEXT:    store i8* [[TMP1]], i8** [[P]], align 8
 ; IS________OPM-NEXT:    tail call void @no_sync_func(i8* nocapture nofree [[TMP1]]) #[[ATTR5]]
@@ -737,7 +737,7 @@ define void @test16c(i8 %v, i8** %P) {
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@test16c
-; IS________NPM-SAME: (i8 [[V:%.*]], i8** nocapture writeonly [[P:%.*]]) {
+; IS________NPM-SAME: (i8 [[V:%.*]], i8** nocapture nofree writeonly [[P:%.*]]) {
 ; IS________NPM-NEXT:    [[TMP1:%.*]] = alloca i8, i64 4, align 1
 ; IS________NPM-NEXT:    store i8* [[TMP1]], i8** [[P]], align 8
 ; IS________NPM-NEXT:    tail call void @no_sync_func(i8* nocapture nofree [[TMP1]]) #[[ATTR6]]
@@ -752,7 +752,7 @@ define void @test16c(i8 %v, i8** %P) {
 
 define void @test16d(i8 %v, i8** %P) {
 ; CHECK-LABEL: define {{[^@]+}}@test16d
-; CHECK-SAME: (i8 [[V:%.*]], i8** nocapture writeonly [[P:%.*]]) {
+; CHECK-SAME: (i8 [[V:%.*]], i8** nocapture nofree writeonly [[P:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @malloc(i64 noundef 4)
 ; CHECK-NEXT:    store i8* [[TMP1]], i8** [[P]], align 8
 ; CHECK-NEXT:    ret void

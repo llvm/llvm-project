@@ -15,14 +15,17 @@
 #define BUILTIN_TYPES
 
 include "mlir/IR/BuiltinDialect.td"
+include "mlir/IR/BuiltinTypeInterfaces.td"
+include "mlir/IR/SubElementInterfaces.td"
 
 // TODO: Currently the types defined in this file are prefixed with `Builtin_`.
 // This is to differentiate the types here with the ones in OpBase.td. We should
 // remove the definitions in OpBase.td, and repoint users to this file instead.
 
 // Base class for Builtin dialect types.
-class Builtin_Type<string name, string baseCppClass = "::mlir::Type">
-    : TypeDef<Builtin_Dialect, name, [], baseCppClass> {
+class Builtin_Type<string name, list<Trait> traits = [],
+                   string baseCppClass = "::mlir::Type">
+    : TypeDef<Builtin_Dialect, name, traits, baseCppClass> {
   let mnemonic = ?;
 }
 
@@ -65,7 +68,8 @@ def Builtin_Complex : Builtin_Type<"Complex"> {
 //===----------------------------------------------------------------------===//
 
 // Base class for Builtin dialect float types.
-class Builtin_FloatType<string name> : Builtin_Type<name, "::mlir::FloatType"> {
+class Builtin_FloatType<string name>
+    : Builtin_Type<name, /*traits=*/[], "::mlir::FloatType"> {
   let extraClassDeclaration = [{
     static }] # name # [{Type get(MLIRContext *context);
   }];
@@ -117,7 +121,9 @@ def Builtin_Float128 : Builtin_FloatType<"Float128"> {
 // FunctionType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Function : Builtin_Type<"Function"> {
+def Builtin_Function : Builtin_Type<"Function", [
+    DeclareTypeInterfaceMethods<SubElementTypeInterface>
+  ]> {
   let summary = "Map from a list of inputs to a list of results";
   let description = [{
     Syntax:
@@ -252,7 +258,9 @@ def Builtin_Integer : Builtin_Type<"Integer"> {
 // MemRefType
 //===----------------------------------------------------------------------===//
 
-def Builtin_MemRef : Builtin_Type<"MemRef", "BaseMemRefType"> {
+def Builtin_MemRef : Builtin_Type<"MemRef", [
+    DeclareTypeInterfaceMethods<SubElementTypeInterface>
+  ], "BaseMemRefType"> {
   let summary = "Shaped reference to a region of memory";
   let description = [{
     Syntax:
@@ -281,6 +289,15 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "BaseMemRefType"> {
     receive memref arguments of any rank without versioning the functions based
     on the rank. Other uses of this type are disallowed or will have undefined
     behavior.
+
+    Are accepted as elements:
+
+    - built-in integer types;
+    - built-in index type;
+    - built-in floating point types;
+    - built-in vector types with elements of the above types;
+    - another memref type;
+    - any other type implementing `MemRefElementTypeInterface`.
 
     ##### Codegen of Unranked Memref
 
@@ -628,7 +645,9 @@ def Builtin_Opaque : Builtin_Type<"Opaque"> {
 // RankedTensorType
 //===----------------------------------------------------------------------===//
 
-def Builtin_RankedTensor : Builtin_Type<"RankedTensor", "TensorType"> {
+def Builtin_RankedTensor : Builtin_Type<"RankedTensor", [
+    DeclareTypeInterfaceMethods<SubElementTypeInterface>
+  ], "TensorType"> {
   let summary = "Multi-dimensional array with a fixed number of dimensions";
   let description = [{
     Syntax:
@@ -716,7 +735,9 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", "TensorType"> {
 // TupleType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Tuple : Builtin_Type<"Tuple"> {
+def Builtin_Tuple : Builtin_Type<"Tuple", [
+    DeclareTypeInterfaceMethods<SubElementTypeInterface>
+  ]> {
   let summary = "Fixed-sized collection of other types";
   let description = [{
     Syntax:
@@ -783,7 +804,9 @@ def Builtin_Tuple : Builtin_Type<"Tuple"> {
 // UnrankedMemRefType
 //===----------------------------------------------------------------------===//
 
-def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", "BaseMemRefType"> {
+def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", [
+    DeclareTypeInterfaceMethods<SubElementTypeInterface>
+  ], "BaseMemRefType"> {
   let summary = "Shaped reference, with unknown rank, to a region of memory";
   let description = [{
     Syntax:
@@ -843,7 +866,9 @@ def Builtin_UnrankedMemRef : Builtin_Type<"UnrankedMemRef", "BaseMemRefType"> {
 // UnrankedTensorType
 //===----------------------------------------------------------------------===//
 
-def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", "TensorType"> {
+def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", [
+    DeclareTypeInterfaceMethods<SubElementTypeInterface>
+  ], "TensorType"> {
   let summary = "Multi-dimensional array with unknown dimensions";
   let description = [{
     Syntax:
@@ -880,7 +905,9 @@ def Builtin_UnrankedTensor : Builtin_Type<"UnrankedTensor", "TensorType"> {
 // VectorType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Vector : Builtin_Type<"Vector", "ShapedType"> {
+def Builtin_Vector : Builtin_Type<"Vector", [
+    DeclareTypeInterfaceMethods<SubElementTypeInterface>
+  ], "ShapedType"> {
   let summary = "Multi-dimensional SIMD vector type";
   let description = [{
     Syntax:

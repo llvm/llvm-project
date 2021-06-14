@@ -14,9 +14,8 @@
 using namespace lldb_private;
 
 LineEntry::LineEntry()
-    : range(), file(), line(LLDB_INVALID_LINE_NUMBER), column(0),
-      is_start_of_statement(0), is_start_of_basic_block(0), is_prologue_end(0),
-      is_epilogue_begin(0), is_terminal_entry(0) {}
+    : range(), file(), is_start_of_statement(0), is_start_of_basic_block(0),
+      is_prologue_end(0), is_epilogue_begin(0), is_terminal_entry(0) {}
 
 LineEntry::LineEntry(const lldb::SectionSP &section_sp,
                      lldb::addr_t section_offset, lldb::addr_t byte_size,

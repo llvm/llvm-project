@@ -13,11 +13,14 @@ struct TT {
   ty Y;
 };
 
-// TCHECK-DAG:  [[TT:%.+]] = type { i64, i8 }
 // TCHECK-DAG:  [[TTII:%.+]] = type { i32, i32 }
+// TCHECK-DAG:  [[TTIC:%.+]] = type { i8, i8 }
+// TCHECK-DAG:  [[TT:%.+]] = type { i64, i8 }
 // TCHECK-DAG:  [[S1:%.+]] = type { double }
 
-// TCHECK: @__omp_offloading_firstprivate__{{.+}}_e_l27 = internal addrspace(4) global [[TTII]] zeroinitializer
+// TCHECK: @__omp_offloading_firstprivate__{{.+}}_e_l30 = internal addrspace(4) global [[TTII]] zeroinitializer
+// TCHECK: @__omp_offloading_firstprivate__{{.+}}_ZTSK2TTIiiE_t_l143 = internal addrspace(4) global [[TTII]] zeroinitializer
+// TCHECK: @__omp_offloading_firstprivate__{{.+}}_ZTSK2TTIccE_t_l143 = internal addrspace(4) global [[TTIC]] zeroinitializer
 int foo(int n, double *ptr) {
   int a = 0;
   short aa = 0;
@@ -136,6 +139,12 @@ static int fstatic(int n) {
   return a;
 }
 
+template <typename tx>
+void fconst(const tx t) {
+#pragma omp target firstprivate(t)
+  { }
+}
+
 // TCHECK: define {{.*}}void @__omp_offloading_{{.+}}(i{{[0-9]+}}{{.*}} [[A_IN:%.+]], i{{[0-9]+}}{{.*}} [[A3_IN:%.+]], [10 x i{{[0-9]+}}]*{{.+}} [[B_IN:%.+]])
 // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},
 // TCHECK:  [[A3_ADDR:%.+]] = alloca i{{[0-9]+}},
@@ -198,6 +207,9 @@ int bar(int n, double *ptr) {
   a += S.r1(n);
   a += fstatic(n);
   a += ftemplate<int>(n);
+
+  fconst(TT<int, int>{0, 0});
+  fconst(TT<char, char>{0, 0});
 
   return a;
 }

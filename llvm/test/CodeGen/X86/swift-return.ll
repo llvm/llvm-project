@@ -12,7 +12,7 @@ define i16 @test(i32 %key) {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    callq gen
+; CHECK-NEXT:    callq gen@PLT
 ; CHECK-NEXT:    # kill: def $ax killed $ax def $eax
 ; CHECK-NEXT:    movsbl %dl, %ecx
 ; CHECK-NEXT:    addl %ecx, %eax
@@ -27,7 +27,7 @@ define i16 @test(i32 %key) {
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-O0-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %edi
-; CHECK-O0-NEXT:    callq gen
+; CHECK-O0-NEXT:    callq gen@PLT
 ; CHECK-O0-NEXT:    cwtl
 ; CHECK-O0-NEXT:    movsbl %dl, %ecx
 ; CHECK-O0-NEXT:    addl %ecx, %eax
@@ -61,7 +61,7 @@ define dso_local i32 @test2(i32 %key) #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rsp, %rax
-; CHECK-NEXT:    callq gen2
+; CHECK-NEXT:    callq gen2@PLT
 ; CHECK-NEXT:    movl (%rsp), %eax
 ; CHECK-NEXT:    addl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    addl {{[0-9]+}}(%rsp), %eax
@@ -78,7 +78,7 @@ define dso_local i32 @test2(i32 %key) #0 {
 ; CHECK-O0-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %edi
 ; CHECK-O0-NEXT:    movq %rsp, %rax
-; CHECK-O0-NEXT:    callq gen2
+; CHECK-O0-NEXT:    callq gen2@PLT
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %edx
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %esi
@@ -146,7 +146,7 @@ define dso_local i32 @test3(i32 %key) #0 {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    callq gen3
+; CHECK-NEXT:    callq gen3@PLT
 ; CHECK-NEXT:    addl %edx, %eax
 ; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    addl %r8d, %eax
@@ -160,7 +160,7 @@ define dso_local i32 @test3(i32 %key) #0 {
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-O0-NEXT:    movl %edi, {{[0-9]+}}(%rsp)
 ; CHECK-O0-NEXT:    movl {{[0-9]+}}(%rsp), %edi
-; CHECK-O0-NEXT:    callq gen3
+; CHECK-O0-NEXT:    callq gen3@PLT
 ; CHECK-O0-NEXT:    addl %edx, %eax
 ; CHECK-O0-NEXT:    addl %ecx, %eax
 ; CHECK-O0-NEXT:    addl %r8d, %eax
@@ -194,7 +194,7 @@ define dso_local float @test4(float %key) #0 {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movss %xmm0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    callq gen4
+; CHECK-NEXT:    callq gen4@PLT
 ; CHECK-NEXT:    addss %xmm1, %xmm0
 ; CHECK-NEXT:    addss %xmm2, %xmm0
 ; CHECK-NEXT:    addss %xmm3, %xmm0
@@ -208,7 +208,7 @@ define dso_local float @test4(float %key) #0 {
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-O0-NEXT:    movss %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-O0-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-O0-NEXT:    callq gen4
+; CHECK-O0-NEXT:    callq gen4@PLT
 ; CHECK-O0-NEXT:    addss %xmm1, %xmm0
 ; CHECK-O0-NEXT:    addss %xmm2, %xmm0
 ; CHECK-O0-NEXT:    addss %xmm3, %xmm0
@@ -239,19 +239,19 @@ define dso_local void @consume_i1_ret() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq produce_i1_ret
+; CHECK-NEXT:    callq produce_i1_ret@PLT
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    movl %eax, var(%rip)
 ; CHECK-NEXT:    movzbl %dl, %eax
 ; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    movl %eax, var(%rip)
 ; CHECK-NEXT:    movzbl %cl, %eax
 ; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    movl %eax, var(%rip)
 ; CHECK-NEXT:    movzbl %r8b, %eax
 ; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    movl %eax, var(%rip)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -260,7 +260,7 @@ define dso_local void @consume_i1_ret() {
 ; CHECK-O0:       # %bb.0:
 ; CHECK-O0-NEXT:    pushq %rax
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-NEXT:    callq produce_i1_ret
+; CHECK-O0-NEXT:    callq produce_i1_ret@PLT
 ; CHECK-O0-NEXT:    andb $1, %al
 ; CHECK-O0-NEXT:    movzbl %al, %eax
 ; CHECK-O0-NEXT:    movl %eax, var
@@ -313,7 +313,7 @@ define swiftcc double @test5() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq gen5
+; CHECK-NEXT:    callq gen5@PLT
 ; CHECK-NEXT:    addsd %xmm1, %xmm0
 ; CHECK-NEXT:    addsd %xmm2, %xmm0
 ; CHECK-NEXT:    addsd %xmm3, %xmm0
@@ -325,7 +325,7 @@ define swiftcc double @test5() #0 {
 ; CHECK-O0:       # %bb.0: # %entry
 ; CHECK-O0-NEXT:    pushq %rax
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-NEXT:    callq gen5
+; CHECK-O0-NEXT:    callq gen5@PLT
 ; CHECK-O0-NEXT:    addsd %xmm1, %xmm0
 ; CHECK-O0-NEXT:    addsd %xmm2, %xmm0
 ; CHECK-O0-NEXT:    addsd %xmm3, %xmm0
@@ -354,7 +354,7 @@ define swiftcc { double, i64 } @test6() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq gen6
+; CHECK-NEXT:    callq gen6@PLT
 ; CHECK-NEXT:    addsd %xmm1, %xmm0
 ; CHECK-NEXT:    addsd %xmm2, %xmm0
 ; CHECK-NEXT:    addsd %xmm3, %xmm0
@@ -369,7 +369,7 @@ define swiftcc { double, i64 } @test6() #0 {
 ; CHECK-O0:       # %bb.0: # %entry
 ; CHECK-O0-NEXT:    pushq %rax
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-NEXT:    callq gen6
+; CHECK-O0-NEXT:    callq gen6@PLT
 ; CHECK-O0-NEXT:    addsd %xmm1, %xmm0
 ; CHECK-O0-NEXT:    addsd %xmm2, %xmm0
 ; CHECK-O0-NEXT:    addsd %xmm3, %xmm0
@@ -514,7 +514,7 @@ define swiftcc <4 x float> @test11() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq gen11
+; CHECK-NEXT:    callq gen11@PLT
 ; CHECK-NEXT:    addps %xmm1, %xmm0
 ; CHECK-NEXT:    addps %xmm2, %xmm0
 ; CHECK-NEXT:    addps %xmm3, %xmm0
@@ -526,7 +526,7 @@ define swiftcc <4 x float> @test11() #0 {
 ; CHECK-O0:       # %bb.0: # %entry
 ; CHECK-O0-NEXT:    pushq %rax
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-O0-NEXT:    callq gen11
+; CHECK-O0-NEXT:    callq gen11@PLT
 ; CHECK-O0-NEXT:    addps %xmm1, %xmm0
 ; CHECK-O0-NEXT:    addps %xmm2, %xmm0
 ; CHECK-O0-NEXT:    addps %xmm3, %xmm0
@@ -554,7 +554,7 @@ define swiftcc { <4 x float>, float } @test12() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq gen12
+; CHECK-NEXT:    callq gen12@PLT
 ; CHECK-NEXT:    addps %xmm1, %xmm0
 ; CHECK-NEXT:    addps %xmm2, %xmm0
 ; CHECK-NEXT:    movaps %xmm3, %xmm1
@@ -566,7 +566,7 @@ define swiftcc { <4 x float>, float } @test12() #0 {
 ; CHECK-O0:       # %bb.0: # %entry
 ; CHECK-O0-NEXT:    subq $24, %rsp
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-O0-NEXT:    callq gen12
+; CHECK-O0-NEXT:    callq gen12@PLT
 ; CHECK-O0-NEXT:    movaps %xmm1, (%rsp) # 16-byte Spill
 ; CHECK-O0-NEXT:    movaps %xmm3, %xmm1
 ; CHECK-O0-NEXT:    movaps (%rsp), %xmm3 # 16-byte Reload

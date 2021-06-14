@@ -40,8 +40,6 @@ ${PROGNAME} [options]
                              created from that.
 
 --version X[.Y[.Z]]          The version of the library to encode in the dylib.
-
---cache <PATH>               The CMake cache to use to control how the library gets built.
 EOF
 }
 
@@ -79,17 +77,13 @@ while [[ $# -gt 0 ]]; do
             version="${2}"
             shift; shift
             ;;
-        --cache)
-            cache="${2}"
-            shift; shift
-            ;;
         *)
             error "Unknown argument '${1}'"
             ;;
     esac
 done
 
-for arg in llvm_root build_dir symbols_dir install_dir sdk architectures version cache; do
+for arg in llvm_root build_dir symbols_dir install_dir sdk architectures version; do
     if [ -z ${!arg+x} ]; then
         error "Missing required argument '--${arg//_/-}'"
     elif [ "${!arg}" == "" ]; then
@@ -101,7 +95,7 @@ done
 function realpath() {
     if [[ $1 = /* ]]; then echo "$1"; else echo "$(pwd)/${1#./}"; fi
 }
-for arg in llvm_root build_dir symbols_dir install_dir cache; do
+for arg in llvm_root build_dir symbols_dir install_dir; do
     path="$(realpath "${!arg}")"
     eval "${arg}=\"${path}\""
 done
@@ -114,11 +108,6 @@ function step() {
     echo "${separator}"
 }
 
-install_name_dir="/usr/lib"
-dylib_name="libc++.1.dylib"
-make_symlink="yes"
-headers_prefix="${install_dir}"
-
 for arch in ${architectures}; do
     step "Building libc++.dylib and libc++abi.dylib for architecture ${arch}"
     mkdir -p "${build_dir}/${arch}"
@@ -127,13 +116,12 @@ for arch in ${architectures}; do
             -GNinja \
             -DCMAKE_MAKE_PROGRAM="$(xcrun --sdk "${sdk}" --find ninja)" \
             -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi" \
-            -C "${cache}" \
+            -C "${llvm_root}/libcxx/cmake/caches/Apple.cmake" \
             -DCMAKE_INSTALL_PREFIX="${build_dir}/${arch}-install" \
-            -DCMAKE_INSTALL_NAME_DIR="${install_name_dir}" \
+            -DCMAKE_INSTALL_NAME_DIR="/usr/lib" \
             -DCMAKE_OSX_ARCHITECTURES="${arch}" \
             -DLIBCXXABI_LIBRARY_VERSION="${version}" \
-            -DLIBCXX_INCLUDE_BENCHMARKS=OFF \
-            -DLIBCXX_INCLUDE_TESTS=OFF
+            -DLIBCXX_INCLUDE_BENCHMARKS=OFF
     )
 
     xcrun --sdk "${sdk}" cmake --build "${build_dir}/${arch}" --target install-cxx install-cxxabi -- -v
@@ -157,31 +145,30 @@ function universal_dylib() {
     cp "${build_dir}/${dylib}" "${symbols_dir}/${dylib}"
 }
 
-universal_dylib ${dylib_name}
+universal_dylib libc++.1.dylib
 universal_dylib libc++abi.dylib
-
-if [[ "${make_symlink}" == "yes" ]]; then
-    (cd "${install_dir}/usr/lib" && ln -s "${dylib_name}" libc++.dylib)
-fi
+(cd "${install_dir}/usr/lib" && ln -s "libc++.1.dylib" libc++.dylib)
 
 # Install the headers by copying the headers from one of the built architectures
 # into the install directory. Headers from all architectures should be the same.
-step "Installing the libc++ and libc++abi headers to ${headers_prefix}/usr/include"
+step "Installing the libc++ and libc++abi headers to ${install_dir}/usr/include"
 any_arch=$(echo ${architectures} | cut -d ' ' -f 1)
-mkdir -p "${headers_prefix}/usr/include"
-ditto "${build_dir}/${any_arch}-install/include" "${headers_prefix}/usr/include"
-ditto "${llvm_root}/libcxxabi/include" "${headers_prefix}/usr/include" # TODO: libcxxabi should install its headers in CMake
+mkdir -p "${install_dir}/usr/include"
+ditto "${build_dir}/${any_arch}-install/include" "${install_dir}/usr/include"
+ditto "${llvm_root}/libcxxabi/include" "${install_dir}/usr/include" # TODO: libcxxabi should install its headers in CMake
 if [[ $EUID -eq 0 ]]; then # Only chown if we're running as root
-    chown -R root:wheel "${headers_prefix}/usr/include"
+    chown -R root:wheel "${install_dir}/usr/include"
 fi
 
 step "Installing the libc++ and libc++abi licenses"
-mkdir -p "${headers_prefix}/usr/local/OpenSourceLicenses"
-cp "${llvm_root}/libcxx/LICENSE.TXT" "${headers_prefix}/usr/local/OpenSourceLicenses/libcxx.txt"
-cp "${llvm_root}/libcxxabi/LICENSE.TXT" "${headers_prefix}/usr/local/OpenSourceLicenses/libcxxabi.txt"
+mkdir -p "${install_dir}/usr/local/OpenSourceLicenses"
+cp "${llvm_root}/libcxx/LICENSE.TXT" "${install_dir}/usr/local/OpenSourceLicenses/libcxx.txt"
+cp "${llvm_root}/libcxxabi/LICENSE.TXT" "${install_dir}/usr/local/OpenSourceLicenses/libcxxabi.txt"
 
-# Also install a static archive for libc++abi
+# Also install universal static archives for libc++ and libc++abi
+libcxx_archives=$(for arch in ${architectures}; do echo "${build_dir}/${arch}-install/lib/libc++.a"; done)
 libcxxabi_archives=$(for arch in ${architectures}; do echo "${build_dir}/${arch}-install/lib/libc++abi.a"; done)
-step "Creating a universal libc++abi static archive from the static archives for each architecture"
+step "Creating universal static archives for libc++ and libc++abi from the static archives for each architecture"
 mkdir -p "${install_dir}/usr/local/lib/libcxx"
+xcrun --sdk "${sdk}" libtool -static ${libcxx_archives} -o "${install_dir}/usr/local/lib/libcxx/libc++-static.a"
 xcrun --sdk "${sdk}" libtool -static ${libcxxabi_archives} -o "${install_dir}/usr/local/lib/libcxx/libc++abi-static.a"

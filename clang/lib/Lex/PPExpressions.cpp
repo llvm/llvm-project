@@ -666,13 +666,13 @@ static bool EvaluateDirectiveSubExpr(PPValue &LHS, unsigned MinPrec,
       if (ValueLive && Res.isUnsigned()) {
         if (!LHS.isUnsigned() && LHS.Val.isNegative())
           PP.Diag(OpLoc, diag::warn_pp_convert_to_positive) << 0
-            << LHS.Val.toString(10, true) + " to " +
-               LHS.Val.toString(10, false)
+            << toString(LHS.Val, 10, true) + " to " +
+               toString(LHS.Val, 10, false)
             << LHS.getRange() << RHS.getRange();
         if (!RHS.isUnsigned() && RHS.Val.isNegative())
           PP.Diag(OpLoc, diag::warn_pp_convert_to_positive) << 1
-            << RHS.Val.toString(10, true) + " to " +
-               RHS.Val.toString(10, false)
+            << toString(RHS.Val, 10, true) + " to " +
+               toString(RHS.Val, 10, false)
             << LHS.getRange() << RHS.getRange();
       }
       LHS.Val.setIsUnsigned(Res.isUnsigned());

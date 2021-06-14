@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include <cassert>
+#include <limits>
 
 namespace llvm {
 

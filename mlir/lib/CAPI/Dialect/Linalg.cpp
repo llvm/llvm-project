@@ -34,8 +34,8 @@ void mlirLinalgFillBuiltinNamedOpRegion(MlirDialect linalgDialect,
 
   SmallVector<Type, 8> argTypes;
   auto linalgOp = cast<LinalgOp>(op);
-  for (auto t : linalgOp.getShapedOperandTypes())
-    argTypes.push_back(getElementTypeOrSelf(t));
+  for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands())
+    argTypes.push_back(getElementTypeOrSelf(opOperand->get().getType()));
 
   ImplicitLocOpBuilder b(op->getLoc(), op->getContext());
   Region &region = op->getRegion(0);

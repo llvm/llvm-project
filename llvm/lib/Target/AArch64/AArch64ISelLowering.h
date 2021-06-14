@@ -172,9 +172,6 @@ enum NodeType : unsigned {
   // element must be identical.
   BSP,
 
-  // Vector arithmetic negation
-  NEG,
-
   // Vector shuffles
   ZIP1,
   ZIP2,
@@ -650,12 +647,12 @@ public:
     return TargetLowering::shouldFormOverflowOp(Opcode, VT, true);
   }
 
-  Value *emitLoadLinked(IRBuilder<> &Builder, Value *Addr,
+  Value *emitLoadLinked(IRBuilderBase &Builder, Value *Addr,
                         AtomicOrdering Ord) const override;
-  Value *emitStoreConditional(IRBuilder<> &Builder, Value *Val,
-                              Value *Addr, AtomicOrdering Ord) const override;
+  Value *emitStoreConditional(IRBuilderBase &Builder, Value *Val, Value *Addr,
+                              AtomicOrdering Ord) const override;
 
-  void emitAtomicCmpXchgNoStoreLLBalance(IRBuilder<> &Builder) const override;
+  void emitAtomicCmpXchgNoStoreLLBalance(IRBuilderBase &Builder) const override;
 
   TargetLoweringBase::AtomicExpansionKind
   shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
@@ -672,7 +669,7 @@ public:
 
   /// If the target has a standard location for the stack protector cookie,
   /// returns the address of that location. Otherwise, returns nullptr.
-  Value *getIRStackGuard(IRBuilder<> &IRB) const override;
+  Value *getIRStackGuard(IRBuilderBase &IRB) const override;
 
   void insertSSPDeclarations(Module &M) const override;
   Value *getSDagStackGuard(const Module &M) const override;
@@ -680,7 +677,7 @@ public:
 
   /// If the target has a standard location for the unsafe stack pointer,
   /// returns the address of that location. Otherwise, returns nullptr.
-  Value *getSafeStackPointerLocation(IRBuilder<> &IRB) const override;
+  Value *getSafeStackPointerLocation(IRBuilderBase &IRB) const override;
 
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.

@@ -41,6 +41,48 @@ func @add_mul_fusion(%arg0: tensor<?x?xf32>, %arg1 : tensor<?x?xf32>, %arg2 : te
 // -----
 
 // CHECK-DAG: [[$MAP0:#[a-zA-Z0-9_]*]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK-DAG: [[$MAP1:#[a-zA-Z0-9_]*]] = affine_map<(d0, d1) -> ()>
+#map0 = affine_map<(d0, d1) -> (d0, d1)>
+#map1 = affine_map<(d0, d1) -> ()>
+
+// CHECK-LABEL: @scalar_add_mul_fusion
+func @scalar_add_mul_fusion(%arg0: tensor<?x?xf32>, %arg1 : f32, %arg2 : f32) -> tensor<?x?xf32>
+{
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %0 = memref.dim %arg0, %c0 : tensor<?x?xf32>
+  %1 = memref.dim %arg0, %c1 : tensor<?x?xf32>
+  %2 = linalg.init_tensor [%0, %1] : tensor<?x?xf32>
+  %3 = linalg.generic {indexing_maps = [#map0, #map1, #map0], iterator_types = ["parallel", "parallel"]}
+      ins(%arg0, %arg1 : tensor<?x?xf32>, f32)
+      outs(%2 : tensor<?x?xf32>) {
+    ^bb0(%arg3: f32, %arg4: f32, %arg5: f32):       // no predecessors
+      %4 = addf %arg3, %arg4 : f32
+      linalg.yield %4 : f32
+  } -> tensor<?x?xf32>
+  // CHECK: linalg.generic {
+  // CHECK-SAME: indexing_maps = {{\[}}[[$MAP0]], [[$MAP1]], [[$MAP1]], [[$MAP0]]{{\]}}
+  %4 = linalg.generic {indexing_maps = [#map0, #map1, #map0], iterator_types = ["parallel", "parallel"]}
+      ins(%3, %arg2 : tensor<?x?xf32>, f32)
+      outs(%2 : tensor<?x?xf32>) {
+    // CHECK: ^{{[a-zA-Z0-9_]*}}
+    // CHECK-SAME: [[ARG3:%[a-zA-Z0-9_]*]]
+    // CHECK-SAME: [[ARG4:%[a-zA-Z0-9_]*]]
+    // CHECK-SAME: [[ARG5:%[a-zA-Z0-9_]*]]
+    ^bb0(%arg5: f32, %arg6: f32, %arg7: f32):       // no predecessors
+      // CHECK: [[T1:%[a-zA-Z0-9_]*]] = addf [[ARG3]], [[ARG4]]
+      // CHECK-NOT: linalg.yield
+      // CHECK: mulf [[T1]], [[ARG5]]
+      // CHECK: linalg.yield
+      %5 = mulf %arg5, %arg6 : f32
+      linalg.yield %5 : f32
+    } -> tensor<?x?xf32>
+  return %4 : tensor<?x?xf32>
+}
+
+// -----
+
+// CHECK-DAG: [[$MAP0:#[a-zA-Z0-9_]*]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK-DAG: [[$MAP1:#[a-zA-Z0-9_]*]] = affine_map<(d0, d1) -> (d1, d0)>
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
 #map1 = affine_map<(d0, d1) -> (d1, d0)>

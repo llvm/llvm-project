@@ -2,7 +2,7 @@
 ; elements (here: XMM spills) are accessed using instructions that tolerate
 ; unaligned access.
 ;
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=x86-64 -mattr=+sse,+sse-unaligned-mem -stack-alignment=8 --frame-pointer=all < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=x86-64 -mattr=+sse,+sse-unaligned-mem --frame-pointer=all < %s | FileCheck %s
 
 define dso_local preserve_allcc void @func() #0 {
 ; CHECK-LABEL: func:
@@ -13,3 +13,5 @@ define dso_local preserve_allcc void @func() #0 {
 }
 
 attributes #0 = { nounwind }
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"override-stack-alignment", i32 8}

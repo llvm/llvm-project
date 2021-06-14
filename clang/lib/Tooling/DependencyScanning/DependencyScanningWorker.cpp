@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
+#include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -153,7 +154,15 @@ DependencyScanningWorker::DependencyScanningWorker(
     DependencyScanningService &Service)
     : Format(Service.getFormat()) {
   DiagOpts = new DiagnosticOptions();
+
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
+  PCHContainerOps->registerReader(
+      std::make_unique<ObjectFilePCHContainerReader>());
+  // We don't need to write object files, but the current PCH implementation
+  // requires the writer to be registered as well.
+  PCHContainerOps->registerWriter(
+      std::make_unique<ObjectFilePCHContainerWriter>());
+
   RealFS = llvm::vfs::createPhysicalFileSystem();
   if (Service.canSkipExcludedPPRanges())
     PPSkipMappings =

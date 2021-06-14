@@ -1631,7 +1631,7 @@ MCAsmBackend *llvm::createX86_64AsmBackend(const Target &T,
 
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TheTriple.getOS());
 
-  if (TheTriple.getEnvironment() == Triple::GNUX32)
+  if (TheTriple.isX32())
     return new ELFX86_X32AsmBackend(T, OSABI, STI);
   return new ELFX86_64AsmBackend(T, OSABI, STI);
 }

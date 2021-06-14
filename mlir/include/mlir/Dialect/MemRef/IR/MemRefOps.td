@@ -9,6 +9,7 @@
 #ifndef MEMREF_OPS
 #define MEMREF_OPS
 
+include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Dialect/MemRef/IR/MemRefBase.td"
 include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/CastInterfaces.td"
@@ -197,6 +198,84 @@ def MemRef_AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource> {
     chosen.
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// AllocaScopeOp
+//===----------------------------------------------------------------------===//
+
+def MemRef_AllocaScopeOp : MemRef_Op<"alloca_scope", 
+      [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+       SingleBlockImplicitTerminator<"AllocaScopeReturnOp">,
+       RecursiveSideEffects,
+       NoRegionArguments]> {
+  let summary = "explicitly delimited scope for stack allocation";
+  let description = [{
+    The `memref.alloca_scope` operation represents an explicitly-delimited
+    scope for the alloca allocations. Any `memref.alloca` operations that are
+    used within this scope are going to be cleaned up automatically once
+    the control-flow exits the nested region. For example:
+
+    ```mlir
+    memref.alloca_scope {
+      %myalloca = memref.alloca(): memref<4x3xf32>
+      ...
+    }
+    ```
+
+    Here, `%myalloca` memref is valid within the explicitly delimited scope
+    and is automatically deallocated at the end of the given region.
+
+    `memref.alloca_scope` may also return results that are defined in the nested
+    region. To return a value, one should use `memref.alloca_scope.return`
+    operation:
+
+    ```mlir
+    %result = memref.alloca_scope {
+      ...
+      memref.alloca_scope.return %value
+    }
+    ```
+
+    If `memref.alloca_scope` returns no value, the `memref.alloca_scope.return ` can
+    be left out, and will be inserted implicitly.
+  }];
+
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$bodyRegion);
+}
+
+//===----------------------------------------------------------------------===//
+// AllocaScopeReturnOp
+//===----------------------------------------------------------------------===//
+
+def MemRef_AllocaScopeReturnOp : MemRef_Op<"alloca_scope.return", 
+      [HasParent<"AllocaScopeOp">,
+       NoSideEffect,
+       ReturnLike,
+       Terminator]> {
+  let summary = "terminator for alloca_scope operation";
+  let description = [{
+    `memref.alloca_scope.return` operation returns zero or more SSA values 
+    from the region within `memref.alloca_scope`. If no values are returned,
+    the return operation may be omitted. Otherwise, it has to be present
+    to indicate which values are going to be returned. For example:
+
+    ```mlir
+    memref.alloca_scope.return %value
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$results);
+  let builders = [OpBuilder<(ins), [{ /*nothing to do */ }]>];
+
+  let assemblyFormat =
+      [{ attr-dict ($results^ `:` type($results))? }];
+
+  // No custom verification needed.
+  let verifier = ?;
+}
+
+
 
 //===----------------------------------------------------------------------===//
 // BufferCastOp

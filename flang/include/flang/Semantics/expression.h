@@ -154,6 +154,7 @@ public:
 
   MaybeExpr Analyze(const parser::Expr &);
   MaybeExpr Analyze(const parser::Variable &);
+  MaybeExpr Analyze(const parser::Selector &);
   MaybeExpr Analyze(const parser::Designator &);
   MaybeExpr Analyze(const parser::DataStmtValue &);
   MaybeExpr Analyze(const parser::AllocateObject &);
@@ -295,30 +296,6 @@ private:
   template <typename... As> MaybeExpr Analyze(const std::variant<As...> &u) {
     return std::visit(
         [&](const auto &x) {
-          using Ty = std::decay_t<decltype(x)>;
-          // Function references might turn out to be misparsed structure
-          // constructors; we have to try generic procedure resolution
-          // first to be sure.
-          if constexpr (common::IsTypeInList<parser::StructureConstructor,
-                            As...>) {
-            std::optional<parser::StructureConstructor> ctor;
-            MaybeExpr result;
-            if constexpr (std::is_same_v<Ty,
-                              common::Indirection<parser::FunctionReference>>) {
-              result = Analyze(x.value(), &ctor);
-            } else if constexpr (std::is_same_v<Ty,
-                                     parser::FunctionReference>) {
-              result = Analyze(x, &ctor);
-            } else {
-              return Analyze(x);
-            }
-            if (ctor) {
-              // A misparsed function reference is really a structure
-              // constructor.  Repair the parse tree in situ.
-              const_cast<std::variant<As...> &>(u) = std::move(*ctor);
-            }
-            return result;
-          }
           return Analyze(x);
         },
         u);
@@ -413,7 +390,7 @@ void ConformabilityCheck(
 
 namespace Fortran::semantics {
 
-// Semantic analysis of one expression, variable, or designator.
+// Semantic analysis of one expression, variable, selector, designator, &c.
 template <typename A>
 std::optional<evaluate::Expr<evaluate::SomeType>> AnalyzeExpr(
     SemanticsContext &context, const A &expr) {
@@ -446,6 +423,10 @@ public:
     return false;
   }
   bool Pre(const parser::Variable &x) {
+    exprAnalyzer_.Analyze(x);
+    return false;
+  }
+  bool Pre(const parser::Selector &x) {
     exprAnalyzer_.Analyze(x);
     return false;
   }

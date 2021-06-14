@@ -359,8 +359,8 @@ static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query)
 static bool shouldBitcastLoadStoreType(const GCNSubtarget &ST, const LLT Ty,
                                        const unsigned MemSizeInBits) {
   const unsigned Size = Ty.getSizeInBits();
-    if (Size != MemSizeInBits)
-      return Size <= 32 && Ty.isVector();
+  if (Size != MemSizeInBits)
+    return Size <= 32 && Ty.isVector();
 
   if (loadStoreBitcastWorkaround(Ty) && isRegisterType(Ty))
     return true;
@@ -966,7 +966,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0);
 
     if (ST.hasVOP3PInsts()) {
-      getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
+      getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS})
         .legalFor({S32, S16, V2S16})
         .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
         .clampMaxNumElements(0, S16, 2)
@@ -975,7 +975,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .scalarize(0)
         .lower();
     } else {
-      getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
+      getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS})
         .legalFor({S32, S16})
         .widenScalarToNextPow2(0)
         .minScalar(0, S16)
@@ -994,7 +994,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0)
       .lower();
 
-    getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
+    getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS})
       .legalFor({S32})
       .minScalar(0, S32)
       .widenScalarToNextPow2(0)
@@ -4705,6 +4705,14 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
   Register RayDir = MI.getOperand(5).getReg();
   Register RayInvDir = MI.getOperand(6).getReg();
   Register TDescr = MI.getOperand(7).getReg();
+
+  if (!ST.hasGFX10_AEncoding()) {
+    DiagnosticInfoUnsupported BadIntrin(B.getMF().getFunction(),
+                                        "intrinsic not supported on subtarget",
+                                        MI.getDebugLoc());
+    B.getMF().getFunction().getContext().diagnose(BadIntrin);
+    return false;
+  }
 
   bool IsA16 = MRI.getType(RayDir).getElementType().getSizeInBits() == 16;
   bool Is64 =  MRI.getType(NodePtr).getSizeInBits() == 64;

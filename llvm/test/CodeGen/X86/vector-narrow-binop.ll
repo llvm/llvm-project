@@ -86,12 +86,12 @@ define <4 x i32> @do_not_use_256bit_op(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c,
 define <3 x float> @PR39511(<4 x float> %t0, <3 x float>* %b) {
 ; SSE-LABEL: PR39511:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    addps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR39511:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %add = fadd <4 x float> %t0, <float 1.0, float 2.0, float 3.0, float 4.0>
   %ext = shufflevector <4 x float> %add, <4 x float> undef, <3 x i32> <i32 0, i32 1, i32 2>

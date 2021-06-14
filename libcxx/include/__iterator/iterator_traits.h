@@ -193,8 +193,8 @@ concept __cpp17_bidirectional_iterator =
 
 template<class _Ip>
 concept __cpp17_random_access_iterator =
-  __cpp17_bidirectional_iterator<_Ip> and
-  totally_ordered<_Ip> and
+  __cpp17_bidirectional_iterator<_Ip> &&
+  totally_ordered<_Ip> &&
   requires(_Ip __i, typename incrementable_traits<_Ip>::difference_type __n) {
     { __i += __n } -> same_as<_Ip&>;
     { __i -= __n } -> same_as<_Ip&>;
@@ -255,13 +255,7 @@ struct __iterator_traits_member_pointer_or_arrow_or_void<_Ip> { using type = typ
 // Otherwise, if `decltype(declval<I&>().operator->())` is well-formed, then `pointer` names that
 // type.
 template<class _Ip>
-concept __has_arrow =
-  requires(_Ip& __i) {
-    __i.operator->();
-  };
-
-template<class _Ip>
-  requires __has_arrow<_Ip> && (!__has_member_pointer<_Ip>)
+  requires requires(_Ip& __i) { __i.operator->(); } && (!__has_member_pointer<_Ip>)
 struct __iterator_traits_member_pointer_or_arrow_or_void<_Ip> {
   using type = decltype(declval<_Ip&>().operator->());
 };

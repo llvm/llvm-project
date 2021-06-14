@@ -32,6 +32,7 @@ template <> struct BitPatterns<float> {
   static constexpr BitsType negZero = 0x80000000U;
 
   static constexpr BitsType one = 0x3f800000U;
+  static constexpr BitsType negOne = 0xbf800000U;
 
   // Examples of quiet NAN.
   static constexpr BitsType aQuietNaN = 0x7fc00000U;

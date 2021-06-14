@@ -46,6 +46,14 @@
 # NOBARSTRIP: foo.dylib
 # NOBARSTRIP-NOT: bar-strip.dylib
 
+## Even libraries explicitly reexported with -reexport_library are stripped
+## if they are not referenced.
+# RUN: %lld -lSystem %t/main.o -o %t/main %t/foo_with_bar.dylib \
+# RUN:     -reexport_library %t/bar.dylib -dead_strip_dylibs
+# RUN: llvm-otool -L %t/main | FileCheck --check-prefix=NOBAR %s
+# RUN: llvm-otool -l %t/main | FileCheck --check-prefix=NOREEXPORT %s
+# NOREEXPORT-NOT: LC_REEXPORT_DYLIB
+
 ## But -needed_library and -needed-l win over -dead_strip_dylibs again.
 # RUN: %lld -lSystem %t/main.o -o %t/main %t/foo_with_bar.dylib \
 # RUN:     -needed_library %t/bar.dylib -dead_strip_dylibs

@@ -1293,6 +1293,8 @@ BasicAAResult::aliasSelect(const SelectInst *SI, LocationSize SISize,
 AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
                                     const Value *V2, LocationSize V2Size,
                                     AAQueryInfo &AAQI) {
+  if (!PN->getNumIncomingValues())
+    return AliasResult::NoAlias;
   // If the values are PHIs in the same block, we can do a more precise
   // as well as efficient check: just check for aliases between the values
   // on corresponding edges.

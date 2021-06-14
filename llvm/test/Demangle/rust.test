@@ -9,6 +9,11 @@ CHECK: hello::rust
 CHECK: a::b::c
        _RNvNvC1a1b1c
 
+; Instantiating crate
+
+CHECK: crate
+       _RC5crateC3foo
+
 ; Closure namespace
 
 CHECK: crate::{closure#0}
@@ -232,6 +237,40 @@ CHECK: function::<extern "cdecl" fn()>
 CHECK: function::<unsafe extern "C-cmse-nonsecure-call" fn()>
        _RIC8functionFUK21C_cmse_nonsecure_callEuE
 
+; Trait objects
+
+CHECK: trait::<dyn >
+       _RIC5traitDEL_E
+
+CHECK: trait::<dyn for<'a> >
+       _RIC5traitDG_EL_E
+
+CHECK: trait::<for<'a> fn(dyn for<'b> + 'a)>
+       _RIC5traitFG_DG_EL0_EuE
+
+CHECK: trait::<dyn Display>
+       _RIC5traitDC7DisplayEL_E
+
+CHECK: trait::<dyn Display + Send + Sync>
+       _RIC5traitDC7DisplayC4SendC4SyncEL_E
+
+CHECK: trait::<dyn for<'a> Display>
+       _RIC5traitDG_C7DisplayEL_E
+
+CHECK: trait::<dyn IntoIterator<_, Item = _>>
+       _RIC5traitDIC12IntoIteratorpEp4ItempEL_E
+
+CHECK: trait::<dyn IntoIterator<Item = _>>
+       _RIC5traitDC12IntoIteratorp4ItempEL_E
+
+CHECK: trait::<dyn IntoIterator<Item = _, IntoIter = _>>
+       _RIC5traitDC12IntoIteratorp4Itempp8IntoIterpEL_E
+
+; Invalid trait object, missing lifetime.
+
+CHECK: _RIC5traitDEE
+       _RIC5traitDEE
+
 ; Binders
 
 CHECK: binders::<for<'a> fn(&'a _)>
@@ -380,6 +419,34 @@ CHECK: char::<'\u{10ffff}'>
 
 CHECK: _RIC4charKc1234567_E
        _RIC4charKc1234567_E
+
+; Backreferences
+
+CHECK: backref::<backref::ident>
+       _RIC7backrefNvB0_5identE
+
+CHECK: backref::<(), ()>
+       _RIC7backrefuB9_E
+
+CHECK: backref::<7, 7>
+       _RIC7backrefKi7_KBa_E
+
+; Invalid backreferences
+
+CHECK: _RB_
+       _RB_
+
+CHECK: _RB5_
+       _RB5_
+
+CHECK: _RNvB_1a
+       _RNvB_1a
+
+CHECK: _RIC7backrefSB9_E
+       _RIC7backrefSB9_E
+
+CHECK: _RIC7backrefKBa_E
+       _RIC7backrefKBa_E
 
 ; Invalid mangled characters
 

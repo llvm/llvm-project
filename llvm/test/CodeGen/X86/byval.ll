@@ -8,13 +8,13 @@
 define i64 @f(%struct.s* byval(%struct.s) %a) {
 ; X64-LABEL: f:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq 8(%rsp), %rax
+; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: f:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl 4(%esp), %eax
-; X86-NEXT:    movl 8(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    retl
 entry:
 	%tmp2 = getelementptr %struct.s, %struct.s* %a, i32 0, i32 0

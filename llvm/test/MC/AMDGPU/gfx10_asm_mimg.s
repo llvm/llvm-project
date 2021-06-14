@@ -415,8 +415,8 @@ image_load v[1:3], v1, s[16:23] dmask:0x5 dim:SQ_RSRC_IMG_2D a16 tfe lwe
 image_sample_d v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16
 ; GFX10: image_sample_d v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16 ; encoding: [0x00,0x0f,0x88,0xf0,0x00,0x00,0x40,0x40]
 
-image_sample_d v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
-; GFX10: image_sample_d v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16 ; encoding: [0x08,0x0f,0x88,0xf0,0x00,0x00,0x40,0x40]
+image_sample_d v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX10: image_sample_d v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16 ; encoding: [0x08,0x0f,0x88,0xf0,0x00,0x00,0x40,0x40]
 
 image_sample_d v[0:3], [v0, v1, v2, v3, v4, v5, v6, v8], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D a16
 ; GFX10: image_sample_d v[0:3], [v0, v1, v2, v3, v4, v5, v6, v8], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_3D a16 ; encoding: [0x14,0x0f,0x88,0xf0,0x00,0x00,0x40,0x40,0x01,0x02,0x03,0x04,0x05,0x06,0x08,0x00]
@@ -442,8 +442,8 @@ image_sample_c_d_cl v[0:3], [v0, v1, v2, v3, v4, v5, v7], s[0:7], s[8:11] dmask:
 image_sample_cd v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16
 ; GFX10: image_sample_cd v[0:3], v[0:2], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16 ; encoding: [0x00,0x0f,0xa0,0xf1,0x00,0x00,0x40,0x40]
 
-image_sample_cd v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
-; GFX10: image_sample_cd v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16 ; encoding: [0x08,0x0f,0xa0,0xf1,0x00,0x00,0x40,0x40]
+image_sample_cd v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX10: image_sample_cd v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16 ; encoding: [0x08,0x0f,0xa0,0xf1,0x00,0x00,0x40,0x40]
 
 image_sample_c_cd v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16
 ; GFX10: image_sample_c_cd v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D a16 ; encoding: [0x00,0x0f,0xa8,0xf1,0x00,0x00,0x40,0x40]
@@ -490,8 +490,8 @@ image_sample_d_cl_g16 v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_
 image_sample_d_cl_g16 v[0:3], [v0, v2, v4, v5, v6], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX10: image_sample_d_cl_g16 v[0:3], [v0, v2, v4, v5, v6], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D ; encoding: [0x0b,0x0f,0x8c,0xf0,0x00,0x00,0x40,0x00,0x02,0x04,0x05,0x06]
 
-image_sample_c_d_cl_g16 v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX10: image_sample_c_d_cl_g16 v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D ; encoding: [0x01,0x0f,0xac,0xf0,0x00,0x00,0x40,0x00]
+image_sample_c_d_cl_g16 v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX10: image_sample_c_d_cl_g16 v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D ; encoding: [0x01,0x0f,0xac,0xf0,0x00,0x00,0x40,0x00]
 
 image_sample_c_d_cl_g16 v[0:3], [v0, v1, v3, v5, v6, v7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX10: image_sample_c_d_cl_g16 v[0:3], [v0, v1, v3, v5, v6, v7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D ; encoding: [0x0d,0x0f,0xac,0xf0,0x00,0x00,0x40,0x00,0x01,0x03,0x05,0x06,0x07,0x00,0x00,0x00]
@@ -514,8 +514,8 @@ image_sample_cd_cl_g16 v[0:3], v[0:3], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG
 image_sample_cd_cl_g16 v[0:3], [v0, v2, v4, v5, v6], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX10: image_sample_cd_cl_g16 v[0:3], [v0, v2, v4, v5, v6], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D ; encoding: [0x0b,0x0f,0xa4,0xf1,0x00,0x00,0x40,0x00,0x02,0x04,0x05,0x06]
 
-image_sample_c_cd_cl_g16 v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
-; GFX10: image_sample_c_cd_cl_g16 v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D ; encoding: [0x01,0x0f,0xac,0xf1,0x00,0x00,0x40,0x00]
+image_sample_c_cd_cl_g16 v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX10: image_sample_c_cd_cl_g16 v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D ; encoding: [0x01,0x0f,0xac,0xf1,0x00,0x00,0x40,0x00]
 
 image_sample_c_cd_cl_g16 v[0:3], [v0, v1, v3, v5, v6, v7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D
 ; GFX10: image_sample_c_cd_cl_g16 v[0:3], [v0, v1, v3, v5, v6, v7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D ; encoding: [0x0d,0x0f,0xac,0xf1,0x00,0x00,0x40,0x00,0x01,0x03,0x05,0x06,0x07,0x00,0x00,0x00]
@@ -525,3 +525,9 @@ image_sample_c_d_o_g16 v0, [v0, v1, v2, v4, v6, v7, v8], s[0:7], s[8:11] dmask:0
 
 image_sample_c_d_o_g16 v[0:1], [v0, v1, v2, v4, v6, v7, v8], s[0:7], s[8:11] dmask:0x6 dim:SQ_RSRC_IMG_2D_ARRAY
 ; GFX10: image_sample_c_d_o_g16 v[0:1], [v0, v1, v2, v4, v6, v7, v8], s[0:7], s[8:11] dmask:0x6 dim:SQ_RSRC_IMG_2D_ARRAY ; encoding: [0x2d,0x06,0xe8,0xf0,0x00,0x00,0x40,0x00,0x01,0x02,0x04,0x06,0x07,0x08,0x00,0x00]
+
+
+; Test that wider than required vaddr registers are accepted by assembler for 5 VGPR forms
+
+image_sample_d v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16
+; GFX10: image_sample_d v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_2D a16 ; encoding: [0x08,0x0f,0x88,0xf0,0x00,0x00,0x40,0x40]

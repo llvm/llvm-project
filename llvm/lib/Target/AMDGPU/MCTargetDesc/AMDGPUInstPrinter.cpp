@@ -381,7 +381,7 @@ void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
     O << " ";
   }
 
-  printOperand(MI, OpNo, STI, O);
+  printRegularOperand(MI, OpNo, STI, O);
 
   // Print default vcc/vcc_lo operand.
   switch (Opcode) {
@@ -408,7 +408,7 @@ void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
   case AMDGPU::V_ADD_CO_CI_U32_dpp8_gfx11:
   case AMDGPU::V_SUB_CO_CI_U32_dpp8_gfx11:
   case AMDGPU::V_SUBREV_CO_CI_U32_dpp8_gfx11:
-    printDefaultVccOperand(1, STI, O);
+    printDefaultVccOperand(false, STI, O);
     break;
   }
 }
@@ -420,7 +420,7 @@ void AMDGPUInstPrinter::printVINTRPDst(const MCInst *MI, unsigned OpNo,
   else
     O << "_e32 ";
 
-  printOperand(MI, OpNo, STI, O);
+  printRegularOperand(MI, OpNo, STI, O);
 }
 
 void AMDGPUInstPrinter::printImmediateInt16(uint32_t Imm,
@@ -579,14 +579,14 @@ void AMDGPUInstPrinter::printABID(const MCInst *MI, unsigned OpNo,
   O << " abid:" << Imm;
 }
 
-void AMDGPUInstPrinter::printDefaultVccOperand(unsigned OpNo,
+void AMDGPUInstPrinter::printDefaultVccOperand(bool FirstOperand,
                                                const MCSubtargetInfo &STI,
                                                raw_ostream &O) {
-  if (OpNo > 0)
+  if (!FirstOperand)
     O << ", ";
   printRegOperand(STI.getFeatureBits()[AMDGPU::FeatureWavefrontSize64] ?
                   AMDGPU::VCC : AMDGPU::VCC_LO, O, MRI);
-  if (OpNo == 0)
+  if (FirstOperand)
     O << ", ";
 }
 
@@ -610,15 +610,39 @@ void AMDGPUInstPrinter::printWaitEXP(const MCInst *MI, unsigned OpNo,
   }
 }
 
+bool AMDGPUInstPrinter::needsVccMods(const MCInstrDesc &Desc,
+                                     unsigned OpNo) const {
+  return OpNo == 1 && (Desc.TSFlags & SIInstrFlags::DPP) &&
+         (Desc.TSFlags & SIInstrFlags::VOPC) &&
+         (Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC) ||
+          Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC_LO));
+}
+
+// Print default vcc/vcc_lo operand of VOPC.
 void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI,
                                      raw_ostream &O) {
-  // Print default vcc/vcc_lo operand of VOPC.
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
-  if (OpNo == 0 && (Desc.TSFlags & SIInstrFlags::VOPC) &&
+  // 0, 1 and 2 are the first printed operands in different cases
+  // If there are printed modifiers, printOperandAndFPInputMods or
+  // printOperandAndIntInputMods will be called instead
+  if ((OpNo == 0 ||
+       (OpNo == 1 && (Desc.TSFlags & SIInstrFlags::DPP)) ||
+       (OpNo == 2 && (Desc.TSFlags & SIInstrFlags::DPP) &&
+        (Desc.hasImplicitUseOfPhysReg(AMDGPU::MODE)))) &&
+      (Desc.TSFlags & SIInstrFlags::VOPC) &&
       (Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC) ||
        Desc.hasImplicitDefOfPhysReg(AMDGPU::VCC_LO)))
-    printDefaultVccOperand(OpNo, STI, O);
+    printDefaultVccOperand(true, STI, O);
+
+  printRegularOperand(MI, OpNo, STI, O);
+}
+
+// Print operands after vcc or modifier handling.
+void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
+                                            const MCSubtargetInfo &STI,
+                                            raw_ostream &O) {
+  const MCInstrDesc &Desc = MII.get(MI->getOpcode());
 
   if (OpNo >= MI->getNumOperands()) {
     O << "/*Missing OP" << OpNo << "*/";
@@ -753,7 +777,7 @@ void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   case AMDGPU::V_CNDMASK_B32_e32_vi:
     if ((int)OpNo == AMDGPU::getNamedOperandIdx(MI->getOpcode(),
                                                 AMDGPU::OpName::src1))
-      printDefaultVccOperand(OpNo, STI, O);
+      printDefaultVccOperand(OpNo == 0, STI, O);
     break;
   }
 
@@ -770,6 +794,10 @@ void AMDGPUInstPrinter::printOperandAndFPInputMods(const MCInst *MI,
                                                    unsigned OpNo,
                                                    const MCSubtargetInfo &STI,
                                                    raw_ostream &O) {
+  const MCInstrDesc &Desc = MII.get(MI->getOpcode());
+  if (needsVccMods(Desc, OpNo))
+    printDefaultVccOperand(true, STI, O);
+
   unsigned InputModifiers = MI->getOperand(OpNo).getImm();
 
   // Use 'neg(...)' instead of '-' to avoid ambiguity.
@@ -792,7 +820,7 @@ void AMDGPUInstPrinter::printOperandAndFPInputMods(const MCInst *MI,
 
   if (InputModifiers & SISrcMods::ABS)
     O << '|';
-  printOperand(MI, OpNo + 1, STI, O);
+  printRegularOperand(MI, OpNo + 1, STI, O);
   if (InputModifiers & SISrcMods::ABS)
     O << '|';
 
@@ -805,10 +833,14 @@ void AMDGPUInstPrinter::printOperandAndIntInputMods(const MCInst *MI,
                                                     unsigned OpNo,
                                                     const MCSubtargetInfo &STI,
                                                     raw_ostream &O) {
+  const MCInstrDesc &Desc = MII.get(MI->getOpcode());
+  if (needsVccMods(Desc, OpNo))
+    printDefaultVccOperand(true, STI, O);
+
   unsigned InputModifiers = MI->getOperand(OpNo).getImm();
   if (InputModifiers & SISrcMods::SEXT)
     O << "sext(";
-  printOperand(MI, OpNo + 1, STI, O);
+  printRegularOperand(MI, OpNo + 1, STI, O);
   if (InputModifiers & SISrcMods::SEXT)
     O << ')';
 
@@ -822,7 +854,7 @@ void AMDGPUInstPrinter::printOperandAndIntInputMods(const MCInst *MI,
   case AMDGPU::V_SUBREV_CO_CI_U32_sdwa_gfx10:
     if ((int)OpNo + 1 == AMDGPU::getNamedOperandIdx(MI->getOpcode(),
                                                     AMDGPU::OpName::src1))
-      printDefaultVccOperand(OpNo, STI, O);
+      printDefaultVccOperand(OpNo == 0, STI, O);
     break;
   }
 }
@@ -1241,9 +1273,9 @@ void AMDGPUInstPrinter::printVGPRIndexMode(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printMemOperand(const MCInst *MI, unsigned OpNo,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
-  printOperand(MI, OpNo, STI, O);
+  printRegularOperand(MI, OpNo, STI, O);
   O  << ", ";
-  printOperand(MI, OpNo + 1, STI, O);
+  printRegularOperand(MI, OpNo + 1, STI, O);
 }
 
 void AMDGPUInstPrinter::printIfSet(const MCInst *MI, unsigned OpNo,

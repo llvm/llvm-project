@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! 15.5.1 procedure reference constraints and restrictions
 
 subroutine s01(elem, subr)

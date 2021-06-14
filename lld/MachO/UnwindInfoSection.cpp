@@ -105,7 +105,7 @@ struct SecondLevelPage {
 
 template <class Ptr> class UnwindInfoSectionImpl : public UnwindInfoSection {
 public:
-  void prepareRelocations(InputSection *) override;
+  void prepareRelocations(ConcatInputSection *) override;
   void finalize() override;
   void writeTo(uint8_t *buf) const override;
 
@@ -132,13 +132,13 @@ private:
 // actually end up in the final binary. Second, personality pointers always
 // reside in the GOT and must be treated specially.
 template <class Ptr>
-void UnwindInfoSectionImpl<Ptr>::prepareRelocations(InputSection *isec) {
+void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
   assert(isec->segname == segment_names::ld &&
          isec->name == section_names::compactUnwind);
   assert(!isec->shouldOmitFromOutput() &&
          "__compact_unwind section should not be omitted");
 
-  // FIXME: This could skip relocations for CompactUnwindEntries that
+  // FIXME: Make this skip relocations for CompactUnwindEntries that
   // point to dead-stripped functions. That might save some amount of
   // work. But since there are usually just few personality functions
   // that are referenced from many places, at least some of them likely
@@ -174,8 +174,6 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(InputSection *isec) {
     }
 
     if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
-      assert(!referentIsec->isCoalescedWeak());
-
       // Personality functions can be referenced via section relocations
       // if they live in the same object file. Create placeholder synthetic
       // symbols for them in the GOT.
@@ -200,10 +198,12 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(InputSection *isec) {
 // finalization of __DATA. Moreover, the finalization of unwind info depends on
 // the exact addresses that it references. So it is safe for compact unwind to
 // reference addresses in __TEXT, but not addresses in any other segment.
-static void checkTextSegment(InputSection *isec) {
+static ConcatInputSection *checkTextSegment(InputSection *isec) {
   if (isec->segname != segment_names::text)
     error("compact unwind references address in " + toString(isec) +
           " which is not in segment __TEXT");
+  // __text should always be a ConcatInputSection.
+  return cast<ConcatInputSection>(isec);
 }
 
 // We need to apply the relocations to the pre-link compact unwind section
@@ -214,11 +214,11 @@ template <class Ptr>
 static void
 relocateCompactUnwind(ConcatOutputSection *compactUnwindSection,
                       std::vector<CompactUnwindEntry<Ptr>> &cuVector) {
-  for (const InputSection *isec : compactUnwindSection->inputs) {
+  for (const ConcatInputSection *isec : compactUnwindSection->inputs) {
     assert(isec->parent == compactUnwindSection);
 
     uint8_t *buf =
-        reinterpret_cast<uint8_t *>(cuVector.data()) + isec->outSecFileOff;
+        reinterpret_cast<uint8_t *>(cuVector.data()) + isec->outSecOff;
     memcpy(buf, isec->data.data(), isec->data.size());
 
     for (const Reloc &r : isec->relocs) {
@@ -234,11 +234,11 @@ relocateCompactUnwind(ConcatOutputSection *compactUnwindSection,
           referentVA = referentSym->gotIndex + 1;
         }
       } else if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
-        checkTextSegment(referentIsec);
-        if (referentIsec->shouldOmitFromOutput())
+        ConcatInputSection *concatIsec = checkTextSegment(referentIsec);
+        if (concatIsec->shouldOmitFromOutput())
           referentVA = UINT64_MAX; // Tombstone value
         else
-          referentVA = referentIsec->getVA() + r.addend;
+          referentVA = referentIsec->getVA(r.addend);
       }
 
       writeAddress(buf + r.offset, referentVA, r.length);

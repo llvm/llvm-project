@@ -67,9 +67,9 @@ define void @splat(i8 %a, i8 %b, i8 %c) {
 ; AVX-NEXT:    [[TMP14:%.*]] = insertelement <16 x i8> [[TMP13]], i8 [[C]], i32 13
 ; AVX-NEXT:    [[TMP15:%.*]] = insertelement <16 x i8> [[TMP14]], i8 [[C]], i32 14
 ; AVX-NEXT:    [[TMP16:%.*]] = insertelement <16 x i8> [[TMP15]], i8 [[C]], i32 15
-; AVX-NEXT:    [[TMP17:%.*]] = insertelement <2 x i8> poison, i8 [[A:%.*]], i32 0
-; AVX-NEXT:    [[TMP18:%.*]] = insertelement <2 x i8> [[TMP17]], i8 [[B:%.*]], i32 1
-; AVX-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i8> [[TMP18]], <2 x i8> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 0, i32 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+; AVX-NEXT:    [[TMP17:%.*]] = insertelement <16 x i8> poison, i8 [[A:%.*]], i32 0
+; AVX-NEXT:    [[TMP18:%.*]] = insertelement <16 x i8> [[TMP17]], i8 [[B:%.*]], i32 1
+; AVX-NEXT:    [[SHUFFLE:%.*]] = shufflevector <16 x i8> [[TMP18]], <16 x i8> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 0, i32 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
 ; AVX-NEXT:    [[TMP19:%.*]] = xor <16 x i8> [[TMP16]], [[SHUFFLE]]
 ; AVX-NEXT:    store <16 x i8> [[TMP19]], <16 x i8>* bitcast ([32 x i8]* @cle to <16 x i8>*), align 16
 ; AVX-NEXT:    ret void

@@ -15,8 +15,8 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr() {
 ; GCN-NEXT:     amd_machine_version_stepping = 0
 ; GCN-NEXT:     kernel_code_entry_byte_offset = 256
 ; GCN-NEXT:     kernel_code_prefetch_byte_size = 0
-; GCN-NEXT:     granulated_workitem_vgpr_count = 7
-; GCN-NEXT:     granulated_wavefront_sgpr_count = 5
+; GCN-NEXT:     granulated_workitem_vgpr_count = 15
+; GCN-NEXT:     granulated_wavefront_sgpr_count = 12
 ; GCN-NEXT:     priority = 0
 ; GCN-NEXT:     float_mode = 240
 ; GCN-NEXT:     priv = 0
@@ -59,8 +59,8 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr() {
 ; GCN-NEXT:     gds_segment_byte_size = 0
 ; GCN-NEXT:     kernarg_segment_byte_size = 0
 ; GCN-NEXT:     workgroup_fbarrier_count = 0
-; GCN-NEXT:     wavefront_sgpr_count = 48
-; GCN-NEXT:     workitem_vgpr_count = 32
+; GCN-NEXT:     wavefront_sgpr_count = 102
+; GCN-NEXT:     workitem_vgpr_count = 64
 ; GCN-NEXT:     reserved_vgpr_first = 0
 ; GCN-NEXT:     reserved_vgpr_count = 0
 ; GCN-NEXT:     reserved_sgpr_first = 0
@@ -77,7 +77,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr() {
 ; GCN-NEXT:  ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; GCN-NEXT:    s_add_u32 s12, s12, s17
+; GCN-NEXT:    s_add_i32 s12, s12, s17
 ; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GCN-NEXT:    s_add_u32 s0, s0, s17
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
@@ -111,8 +111,8 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg() {
 ; GCN-NEXT:     amd_machine_version_stepping = 0
 ; GCN-NEXT:     kernel_code_entry_byte_offset = 256
 ; GCN-NEXT:     kernel_code_prefetch_byte_size = 0
-; GCN-NEXT:     granulated_workitem_vgpr_count = 7
-; GCN-NEXT:     granulated_wavefront_sgpr_count = 5
+; GCN-NEXT:     granulated_workitem_vgpr_count = 15
+; GCN-NEXT:     granulated_wavefront_sgpr_count = 12
 ; GCN-NEXT:     priority = 0
 ; GCN-NEXT:     float_mode = 240
 ; GCN-NEXT:     priv = 0
@@ -155,8 +155,8 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg() {
 ; GCN-NEXT:     gds_segment_byte_size = 0
 ; GCN-NEXT:     kernarg_segment_byte_size = 0
 ; GCN-NEXT:     workgroup_fbarrier_count = 0
-; GCN-NEXT:     wavefront_sgpr_count = 48
-; GCN-NEXT:     workitem_vgpr_count = 32
+; GCN-NEXT:     wavefront_sgpr_count = 102
+; GCN-NEXT:     workitem_vgpr_count = 64
 ; GCN-NEXT:     reserved_vgpr_first = 0
 ; GCN-NEXT:     reserved_vgpr_count = 0
 ; GCN-NEXT:     reserved_sgpr_first = 0
@@ -173,7 +173,7 @@ define amdgpu_kernel void @test_indirect_call_sgpr_ptr_arg() {
 ; GCN-NEXT:  ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s32, 0
 ; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; GCN-NEXT:    s_add_u32 s12, s12, s17
+; GCN-NEXT:    s_add_i32 s12, s12, s17
 ; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GCN-NEXT:    s_add_u32 s0, s0, s17
 ; GCN-NEXT:    s_addc_u32 s1, s1, 0
@@ -206,7 +206,7 @@ define void @test_indirect_call_vgpr_ptr(void()* %fptr) {
 ; GCN-NEXT:    s_mov_b64 exec, s[16:17]
 ; GCN-NEXT:    v_writelane_b32 v43, s33, 17
 ; GCN-NEXT:    s_mov_b32 s33, s32
-; GCN-NEXT:    s_add_u32 s32, s32, 0x800
+; GCN-NEXT:    s_addk_i32 s32, 0x800
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v42, off, s[0:3], s33 ; 4-byte Folded Spill
@@ -276,7 +276,7 @@ define void @test_indirect_call_vgpr_ptr(void()* %fptr) {
 ; GCN-NEXT:    buffer_load_dword v42, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
-; GCN-NEXT:    s_sub_u32 s32, s32, 0x800
+; GCN-NEXT:    s_addk_i32 s32, 0xf800
 ; GCN-NEXT:    v_readlane_b32 s33, v43, 17
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
@@ -296,7 +296,7 @@ define void @test_indirect_call_vgpr_ptr_arg(void(i32)* %fptr) {
 ; GCN-NEXT:    s_mov_b64 exec, s[16:17]
 ; GCN-NEXT:    v_writelane_b32 v43, s33, 17
 ; GCN-NEXT:    s_mov_b32 s33, s32
-; GCN-NEXT:    s_add_u32 s32, s32, 0x800
+; GCN-NEXT:    s_addk_i32 s32, 0x800
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v42, off, s[0:3], s33 ; 4-byte Folded Spill
@@ -367,7 +367,7 @@ define void @test_indirect_call_vgpr_ptr_arg(void(i32)* %fptr) {
 ; GCN-NEXT:    buffer_load_dword v42, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
-; GCN-NEXT:    s_sub_u32 s32, s32, 0x800
+; GCN-NEXT:    s_addk_i32 s32, 0xf800
 ; GCN-NEXT:    v_readlane_b32 s33, v43, 17
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
@@ -387,7 +387,7 @@ define i32 @test_indirect_call_vgpr_ptr_ret(i32()* %fptr) {
 ; GCN-NEXT:    s_mov_b64 exec, s[16:17]
 ; GCN-NEXT:    v_writelane_b32 v43, s33, 17
 ; GCN-NEXT:    s_mov_b32 s33, s32
-; GCN-NEXT:    s_add_u32 s32, s32, 0x800
+; GCN-NEXT:    s_addk_i32 s32, 0x800
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v42, off, s[0:3], s33 ; 4-byte Folded Spill
@@ -458,7 +458,7 @@ define i32 @test_indirect_call_vgpr_ptr_ret(i32()* %fptr) {
 ; GCN-NEXT:    buffer_load_dword v42, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
-; GCN-NEXT:    s_sub_u32 s32, s32, 0x800
+; GCN-NEXT:    s_addk_i32 s32, 0xf800
 ; GCN-NEXT:    v_readlane_b32 s33, v43, 17
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
@@ -479,7 +479,7 @@ define void @test_indirect_call_vgpr_ptr_in_branch(void()* %fptr, i1 %cond) {
 ; GCN-NEXT:    s_mov_b64 exec, s[16:17]
 ; GCN-NEXT:    v_writelane_b32 v43, s33, 19
 ; GCN-NEXT:    s_mov_b32 s33, s32
-; GCN-NEXT:    s_add_u32 s32, s32, 0x800
+; GCN-NEXT:    s_addk_i32 s32, 0x800
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v42, off, s[0:3], s33 ; 4-byte Folded Spill
@@ -560,7 +560,7 @@ define void @test_indirect_call_vgpr_ptr_in_branch(void()* %fptr, i1 %cond) {
 ; GCN-NEXT:    buffer_load_dword v42, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
-; GCN-NEXT:    s_sub_u32 s32, s32, 0x800
+; GCN-NEXT:    s_addk_i32 s32, 0xf800
 ; GCN-NEXT:    v_readlane_b32 s33, v43, 19
 ; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GCN-NEXT:    buffer_load_dword v43, off, s[0:3], s32 offset:12 ; 4-byte Folded Reload
@@ -587,7 +587,7 @@ define void @test_indirect_call_vgpr_ptr_inreg_arg(void(i32)* %fptr) {
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    v_writelane_b32 v42, s33, 6
 ; GCN-NEXT:    s_mov_b32 s33, s32
-; GCN-NEXT:    s_add_u32 s32, s32, 0x400
+; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    v_writelane_b32 v42, s34, 0
@@ -618,7 +618,7 @@ define void @test_indirect_call_vgpr_ptr_inreg_arg(void(i32)* %fptr) {
 ; GCN-NEXT:    v_readlane_b32 s34, v42, 0
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
-; GCN-NEXT:    s_sub_u32 s32, s32, 0x400
+; GCN-NEXT:    s_addk_i32 s32, 0xfc00
 ; GCN-NEXT:    v_readlane_b32 s33, v42, 6
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload

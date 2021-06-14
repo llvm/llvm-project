@@ -19,6 +19,10 @@ class StandardOpsDialect;
 template <typename ConcreteDialect>
 void registerDialect(DialectRegistry &registry);
 
+namespace acc {
+class OpenACCDialect;
+} // end namespace acc
+
 namespace complex {
 class ComplexDialect;
 } // end namespace complex
@@ -75,6 +79,10 @@ class TosaDialect;
 namespace vector {
 class VectorDialect;
 } // end namespace vector
+
+namespace arm_neon {
+class ArmNeonDialect;
+} // end namespace arm_neon
 
 #define GEN_PASS_CLASSES
 #include "mlir/Conversion/Passes.h.inc"

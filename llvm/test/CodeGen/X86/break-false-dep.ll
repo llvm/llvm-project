@@ -473,11 +473,11 @@ define dso_local void @loopdep3() {
 ; SSE-WIN-NEXT:    .seh_savexmm %xmm6, 0
 ; SSE-WIN-NEXT:    .seh_endprologue
 ; SSE-WIN-NEXT:    xorl %r9d, %r9d
-; SSE-WIN-NEXT:    leaq {{.*}}(%rip), %r8
-; SSE-WIN-NEXT:    leaq {{.*}}(%rip), %r10
-; SSE-WIN-NEXT:    leaq {{.*}}(%rip), %r11
-; SSE-WIN-NEXT:    leaq {{.*}}(%rip), %rax
-; SSE-WIN-NEXT:    leaq {{.*}}(%rip), %rdx
+; SSE-WIN-NEXT:    leaq v(%rip), %r8
+; SSE-WIN-NEXT:    leaq x(%rip), %r10
+; SSE-WIN-NEXT:    leaq y(%rip), %r11
+; SSE-WIN-NEXT:    leaq z(%rip), %rax
+; SSE-WIN-NEXT:    leaq w(%rip), %rdx
 ; SSE-WIN-NEXT:    .p2align 4, 0x90
 ; SSE-WIN-NEXT:  .LBB8_1: # %for.cond1.preheader
 ; SSE-WIN-NEXT:    # =>This Loop Header: Depth=1
@@ -549,11 +549,11 @@ define dso_local void @loopdep3() {
 ; AVX-NEXT:    .seh_savexmm %xmm6, 0
 ; AVX-NEXT:    .seh_endprologue
 ; AVX-NEXT:    xorl %r9d, %r9d
-; AVX-NEXT:    leaq {{.*}}(%rip), %r8
-; AVX-NEXT:    leaq {{.*}}(%rip), %r10
-; AVX-NEXT:    leaq {{.*}}(%rip), %r11
-; AVX-NEXT:    leaq {{.*}}(%rip), %rax
-; AVX-NEXT:    leaq {{.*}}(%rip), %rdx
+; AVX-NEXT:    leaq v(%rip), %r8
+; AVX-NEXT:    leaq x(%rip), %r10
+; AVX-NEXT:    leaq y(%rip), %r11
+; AVX-NEXT:    leaq z(%rip), %rax
+; AVX-NEXT:    leaq w(%rip), %rdx
 ; AVX-NEXT:    .p2align 4, 0x90
 ; AVX-NEXT:  .LBB8_1: # %for.cond1.preheader
 ; AVX-NEXT:    # =>This Loop Header: Depth=1

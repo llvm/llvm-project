@@ -95,9 +95,11 @@ public:
 // ReshapeOp creates a new view descriptor of the proper rank.
 // For now, the only conversion supported is for target MemRef with static sizes
 // and strides.
+template <typename ReshapeOp>
 class ReshapeOpConversion : public ConvertOpToLLVMPattern<ReshapeOp> {
 public:
   using ConvertOpToLLVMPattern<ReshapeOp>::ConvertOpToLLVMPattern;
+  using ReshapeOpAdaptor = typename ReshapeOp::Adaptor;
 
   LogicalResult
   matchAndRewrite(ReshapeOp reshapeOp, ArrayRef<Value> operands,
@@ -118,8 +120,9 @@ public:
     ReshapeOpAdaptor adaptor(operands);
     MemRefDescriptor baseDesc(adaptor.src());
     Location loc = reshapeOp->getLoc();
-    auto desc = MemRefDescriptor::undef(rewriter, reshapeOp->getLoc(),
-                                        typeConverter->convertType(dstType));
+    auto desc =
+        MemRefDescriptor::undef(rewriter, reshapeOp->getLoc(),
+                                this->typeConverter->convertType(dstType));
     desc.setAllocatedPtr(rewriter, loc, baseDesc.allocatedPtr(rewriter, loc));
     desc.setAlignedPtr(rewriter, loc, baseDesc.alignedPtr(rewriter, loc));
     desc.setOffset(rewriter, loc, baseDesc.offset(rewriter, loc));
@@ -149,7 +152,8 @@ public:
 /// Populate the given list with patterns that convert from Linalg to LLVM.
 void mlir::populateLinalgToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                   RewritePatternSet &patterns) {
-  patterns.add<RangeOpConversion, ReshapeOpConversion, YieldOpConversion>(
+  patterns.add<RangeOpConversion, ReshapeOpConversion<ExpandShapeOp>,
+               ReshapeOpConversion<CollapseShapeOp>, YieldOpConversion>(
       converter);
 
   // Populate the type conversions for the linalg types.

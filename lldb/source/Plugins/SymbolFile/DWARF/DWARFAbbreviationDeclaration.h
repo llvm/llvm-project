@@ -55,9 +55,9 @@ public:
   bool IsValid();
 
 protected:
-  dw_uleb128_t m_code;
-  dw_tag_t m_tag;
-  uint8_t m_has_children;
+  dw_uleb128_t m_code = InvalidCode;
+  dw_tag_t m_tag = llvm::dwarf::DW_TAG_null;
+  uint8_t m_has_children = 0;
   DWARFAttribute::collection m_attributes;
 };
 

@@ -105,9 +105,9 @@ namespace clang {
   /// The categorization of expression values, currently following the
   /// C++11 scheme.
   enum ExprValueKind {
-    /// An r-value expression (a pr-value in the C++11 taxonomy)
+    /// A pr-value expression (in the C++11 taxonomy)
     /// produces a temporary value.
-    VK_RValue,
+    VK_PRValue,
 
     /// An l-value expression is a reference to an object with
     /// independent storage.

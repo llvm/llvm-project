@@ -285,7 +285,6 @@ TEST(ParameterHints, DependentCalls) {
       void bar(A<T> a, T t) {
         nonmember($par1[[t]]);
         a.member($par2[[t]]);
-        // FIXME: This one does not work yet.
         A<T>::static_member($par3[[t]]);
         // We don't want to arbitrarily pick between
         // "anInt" or "aDouble", so just show no hint.
@@ -294,7 +293,8 @@ TEST(ParameterHints, DependentCalls) {
     };
   )cpp",
                        ExpectedHint{"par1: ", "par1"},
-                       ExpectedHint{"par2: ", "par2"});
+                       ExpectedHint{"par2: ", "par2"},
+                       ExpectedHint{"par3: ", "par3"});
 }
 
 TEST(ParameterHints, VariadicFunction) {

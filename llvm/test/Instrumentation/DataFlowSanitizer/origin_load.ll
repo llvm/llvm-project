@@ -1,7 +1,5 @@
-; RUN: opt < %s -dfsan -dfsan-track-origins=1 -dfsan-fast-8-labels -S | FileCheck %s --check-prefixes=CHECK,CHECK8,COMBINE_LOAD_PTR
-; RUN: opt < %s -dfsan -dfsan-track-origins=1 -dfsan-fast-8-labels -dfsan-combine-pointer-labels-on-load=false -S | FileCheck %s --check-prefixes=CHECK,CHECK8
-; RUN: opt < %s -dfsan -dfsan-track-origins=1 -dfsan-fast-16-labels -S | FileCheck %s --check-prefixes=CHECK,CHECK16,COMBINE_LOAD_PTR
-; RUN: opt < %s -dfsan -dfsan-track-origins=1 -dfsan-fast-16-labels -dfsan-combine-pointer-labels-on-load=false -S | FileCheck %s --check-prefixes=CHECK,CHECK16
+; RUN: opt < %s -dfsan -dfsan-track-origins=1 -S | FileCheck %s --check-prefixes=CHECK,COMBINE_LOAD_PTR
+; RUN: opt < %s -dfsan -dfsan-track-origins=1 -dfsan-combine-pointer-labels-on-load=false -S | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -38,7 +36,6 @@ define i16* @load_escaped_alloca() {
   ; CHECK-LABEL:  @"dfs$load_escaped_alloca"
   ; CHECK:        %[[#INTP:]] = ptrtoint i16* %p to i64
   ; CHECK-NEXT:   %[[#SHADOW_ADDR:]] = and i64 %[[#INTP]], [[#%.10d,MASK:]]
-  ; CHECK16-NEXT: %[[#SHADOW_ADDR:]] = mul i64 %[[#SHADOW_ADDR]], 2
   ; CHECK-NEXT:   %[[#SHADOW_PTR0:]] = inttoptr i64 %[[#SHADOW_ADDR]] to i[[#SBITS]]*
   ; CHECK-NEXT:   %[[#ORIGIN_OFFSET:]] = add i64 %[[#INTP+1]], [[#%.10d,ORIGIN_MASK:]]
   ; CHECK-NEXT:   %[[#ORIGIN_ADDR:]] = and i64 %[[#ORIGIN_OFFSET]], -4
@@ -76,7 +73,6 @@ define i1 @load1(i1* %p) {
 
   ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint i1* %p to i64
   ; CHECK-NEXT:            %[[#SHADOW_ADDR:]] = and i64 %[[#INTP]], [[#MASK]]
-  ; CHECK16-NEXT:          %[[#SHADOW_ADDR:]] = mul i64 %[[#SHADOW_ADDR]], 2
   ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_ADDR]] to i[[#SBITS]]*
   ; CHECK-NEXT:            %[[#ORIGIN_OFFSET:]] = add i64 %[[#INTP+1]], [[#ORIGIN_MASK]]
   ; CHECK-NEXT:            %[[#ORIGIN_ADDR:]] = and i64 %[[#ORIGIN_OFFSET]], -4
@@ -104,7 +100,6 @@ define i16 @load16(i1 %i, i16* %p) {
 
   ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint i16* %p to i64
   ; CHECK-NEXT:            %[[#SHADOW_ADDR:]] = and i64 %[[#INTP]], [[#MASK]]
-  ; CHECK16-NEXT:          %[[#SHADOW_ADDR:]] = mul i64 %[[#SHADOW_ADDR]], 2
   ; CHECK-NEXT:            %[[#SHADOW_PTR0:]] = inttoptr i64 %[[#SHADOW_ADDR]] to i[[#SBITS]]*
   ; CHECK-NEXT:            %[[#ORIGIN_OFFSET:]] = add i64 %[[#INTP+1]], [[#ORIGIN_MASK]]
   ; CHECK-NEXT:            %[[#ORIGIN_ADDR:]] = and i64 %[[#ORIGIN_OFFSET]], -4
@@ -133,9 +128,8 @@ define i32 @load32(i32* %p) {
   ; COMBINE_LOAD_PTR-NEXT: %[[#PO:]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
 
-  ; CHECK:                 %[[#INTP:]] = ptrtoint i32* %p to i64
+  ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint i32* %p to i64
   ; CHECK-NEXT:            %[[#SHADOW_ADDR:INTP+1]] = and i64 %[[#INTP]], [[#MASK]]
-  ; CHECK16-NEXT:          %[[#SHADOW_ADDR:]] = mul i64 %[[#SHADOW_ADDR]], 2
   ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_ADDR]] to i[[#SBITS]]*
   ; CHECK-NEXT:            %[[#ORIGIN_ADDR:]] = add i64 %[[#INTP+1]], [[#ORIGIN_MASK]]
   ; CHECK-NEXT:            %[[#ORIGIN_PTR:]] = inttoptr i64 %[[#ORIGIN_ADDR]] to i32*
@@ -166,41 +160,26 @@ define i64 @load64(i64* %p) {
   ; COMBINE_LOAD_PTR-NEXT: %[[#PO:]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
 
-  ; CHECK:                 %[[#INTP:]] = ptrtoint i64* %p to i64
+  ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint i64* %p to i64
   ; CHECK-NEXT:            %[[#SHADOW_ADDR:INTP+1]] = and i64 %[[#INTP]], [[#MASK]]
-  ; CHECK16-NEXT:          %[[#SHADOW_ADDR:]] = mul i64 %[[#SHADOW_ADDR]], 2
   ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_ADDR]] to i[[#SBITS]]*
   ; CHECK-NEXT:            %[[#ORIGIN_ADDR:]] = add i64 %[[#INTP+1]], [[#ORIGIN_MASK]]
   ; CHECK-NEXT:            %[[#ORIGIN_PTR:]] = inttoptr i64 %[[#ORIGIN_ADDR]] to i32*
   ; CHECK-NEXT:            %[[#ORIGIN:]] = load i32, i32* %[[#ORIGIN_PTR]], align 8
   ; CHECK-NEXT:            %[[#WIDE_SHADOW_PTR:]] = bitcast i[[#SBITS]]* %[[#SHADOW_PTR]] to i64*
   ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = load i64, i64* %[[#WIDE_SHADOW_PTR]], align [[#SBYTES]]
-
-  ; COMM: On fast16, the 2x64 shadow bits need to be ORed first.
-  ; CHECK16-NEXT:          %[[#WIDE_SHADOW_PTR2:]] = getelementptr i64, i64* %[[#WIDE_SHADOW_PTR]], i64 1
-  ; CHECK16-NEXT:          %[[#WIDE_SHADOW2:]] = load i64, i64* %[[#WIDE_SHADOW_PTR2]], align [[#SBYTES]]
-  ; CHECK16-NEXT:          %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW2]]
-  ; CHECK16-NEXT:          %[[#ORIGIN_PTR2:]] = getelementptr i32, i32* %[[#ORIGIN_PTR]], i64 1
-  ; CHECK16-NEXT:          %[[#ORIGIN2:]] = load i32, i32* %[[#ORIGIN_PTR2]], align 8
-  ; CHECK16-NEXT:          %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 32
-  ; CHECK16-NEXT:          %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
-  ; CHECK16-NEXT:          %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 16
-  ; CHECK16-NEXT:          %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
-  ; CHECK16-NEXT:          %[[#SHADOW:]] = trunc i64 %[[#WIDE_SHADOW]] to i[[#SBITS]]
-  ; CHECK16-NEXT:          %[[#SHADOW_NZ:]] = icmp ne i64 %[[#WIDE_SHADOW2]], 0
-  ; CHECK16-NEXT:          %[[#ORIGIN:]] = select i1 %[[#SHADOW_NZ]], i32 %[[#ORIGIN2]], i32 %[[#ORIGIN]]
-
-  ; COMM: On fast8, no need to OR the wide shadow but one more shift is needed.
-  ; CHECK8-NEXT:           %[[#WIDE_SHADOW_LO:]] = shl i64 %[[#WIDE_SHADOW]], 32
-  ; CHECK8-NEXT:           %[[#ORIGIN_PTR2:]] = getelementptr i32, i32* %[[#ORIGIN_PTR]], i64 1
-  ; CHECK8-NEXT:           %[[#ORIGIN2:]] = load i32, i32* %[[#ORIGIN_PTR2]], align 8
-  ; CHECK8-NEXT:           %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 32
-  ; CHECK8-NEXT:           %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
-  ; CHECK8-NEXT:           %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 16
-  ; CHECK8-NEXT:           %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
-  ; CHECK8-NEXT:           %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 8
-  ; CHECK8-NEXT:           %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
-  ; CHECK8-NEXT:           %[[#SHADOW:]] = trunc i64 %[[#WIDE_SHADOW]] to i[[#SBITS]]
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW_LO:]] = shl i64 %[[#WIDE_SHADOW]], 32
+  ; CHECK-NEXT:            %[[#ORIGIN2_PTR:]] = getelementptr i32, i32* %[[#ORIGIN_PTR]], i64 1
+  ; CHECK-NEXT:            %[[#ORIGIN2:]] = load i32, i32* %[[#ORIGIN2_PTR]], align 8
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 32
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 16
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 8
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
+  ; CHECK-NEXT:            %[[#SHADOW:]] = trunc i64 %[[#WIDE_SHADOW]] to i[[#SBITS]]
+  ; CHECK-NEXT:            %[[#SHADOW_NZ:]] = icmp ne i64 %[[#WIDE_SHADOW_LO]], 0
+  ; CHECK-NEXT:            %[[#ORIGIN:]] = select i1 %[[#SHADOW_NZ]], i32 %[[#ORIGIN]], i32 %[[#ORIGIN2]]
   ; CHECK8-NEXT:           %[[#SHADOW_NZ:]] = icmp ne i64 %[[#WIDE_SHADOW_LO]], 0
   ; CHECK8-NEXT:           %[[#ORIGIN:]] = select i1 %[[#SHADOW_NZ]], i32 %[[#ORIGIN]], i32 %[[#ORIGIN2]]
 
@@ -246,66 +225,38 @@ define i128 @load128(i128* %p) {
   ; COMBINE_LOAD_PTR-NEXT: %[[#PO:]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
 
-  ; CHECK:                 %[[#INTP:]] = ptrtoint i128* %p to i64
+  ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint i128* %p to i64
   ; CHECK-NEXT:            %[[#SHADOW_ADDR:INTP+1]] = and i64 %[[#INTP]], [[#MASK]]
-  ; CHECK16-NEXT:          %[[#SHADOW_ADDR:]] = mul i64 %[[#SHADOW_ADDR]], 2
   ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_ADDR]] to i[[#SBITS]]*
-  ; CHECK-NEXT:            %[[#ORIGIN_ADDR:]] = add i64 %[[#INTP+1]], [[#ORIGIN_MASK]]
-  ; CHECK-NEXT:            %[[#ORIGIN_PTR:]] = inttoptr i64 %[[#ORIGIN_ADDR]] to i32*
-  ; CHECK-NEXT:            %[[#ORIGIN:]] = load i32, i32* %[[#ORIGIN_PTR]], align 8
-  ; CHECK-NEXT:            %[[#WIDE_SHADOW_PTR:]] = bitcast i[[#SBITS]]* %[[#SHADOW_PTR]] to i64*
-  ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = load i64, i64* %[[#WIDE_SHADOW_PTR]], align [[#SBYTES]]
-  ; CHECK8-NEXT:           %[[#WIDE_SHADOW_LO:]] = shl i64 %[[#WIDE_SHADOW]], 32
-  ; CHECK8-NEXT:           %[[#ORIGIN_PTR2:]] = getelementptr i32, i32* %[[#ORIGIN_PTR]], i64 1
-  ; CHECK8-NEXT:           %[[#ORIGIN2:]] = load i32, i32* %[[#ORIGIN_PTR2]], align 8
-  ; CHECK-NEXT:            %[[#WIDE_SHADOW_PTR2:]] = getelementptr i64, i64* %[[#WIDE_SHADOW_PTR]], i64 1
-  ; CHECK-NEXT:            %[[#WIDE_SHADOW2:]] = load i64, i64* %[[#WIDE_SHADOW_PTR2]], align [[#SBYTES]]
-  ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW2]]
-
-  ; COMM: On fast16, we need to OR 4x64bits for the wide shadow, before ORing its bytes.
-  ; CHECK16-NEXT:          %[[#ORIGIN_PTR2:]] = getelementptr i32, i32* %[[#ORIGIN_PTR]], i64 1
-  ; CHECK16-NEXT:          %[[#ORIGIN2:]] = load i32, i32* %[[#ORIGIN_PTR2]], align 8
-  ; CHECK16-NEXT:          %[[#WIDE_SHADOW_PTR3:]] = getelementptr i64, i64* %[[#WIDE_SHADOW_PTR2]], i64 1
-  ; CHECK16-NEXT:          %[[#WIDE_SHADOW3:]] = load i64, i64* %[[#WIDE_SHADOW_PTR3]], align [[#SBYTES]]
-  ; CHECK16-NEXT:          %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW3]]
-  ; CHECK16-NEXT:          %[[#ORIGIN_PTR3:]] = getelementptr i32, i32* %[[#ORIGIN_PTR2]], i64 1
-  ; CHECK16-NEXT:          %[[#ORIGIN3:]] = load i32, i32* %[[#ORIGIN_PTR3]], align 8
-  ; CHECK16-NEXT:          %[[#WIDE_SHADOW_PTR4:]] = getelementptr i64, i64* %[[#WIDE_SHADOW_PTR3]], i64 1
-  ; CHECK16-NEXT:          %[[#WIDE_SHADOW4:]] = load i64, i64* %[[#WIDE_SHADOW_PTR4]], align [[#SBYTES]]
-  ; CHECK16-NEXT:          %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW4]]
-  ; CHECK16-NEXT:          %[[#ORIGIN_PTR4:]] = getelementptr i32, i32* %[[#ORIGIN_PTR3]], i64 1
-  ; CHECK16-NEXT:          %[[#ORIGIN4:]] = load i32, i32* %[[#ORIGIN_PTR4]], align 8
-  ; CHECK16-NEXT:          %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 32
-  ; CHECK16-NEXT:          %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
-  ; CHECK16-NEXT:          %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 16
-  ; CHECK16-NEXT:          %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
-  ; CHECK16-NEXT:          %[[#SHADOW:]] = trunc i64 %[[#WIDE_SHADOW]] to i[[#SBITS]]
-  ; CHECK16-NEXT:          %[[#SHADOW2_NZ:]] = icmp ne i64 %[[#WIDE_SHADOW2]], 0
-  ; CHECK16-NEXT:          %[[#ORIGIN:]] = select i1 %[[#SHADOW2_NZ]], i32 %[[#ORIGIN2]], i32 %[[#ORIGIN]]
-  ; CHECK16-NEXT:          %[[#SHADOW3_NZ:]] = icmp ne i64 %[[#WIDE_SHADOW3]], 0
-  ; CHECK16-NEXT:          %[[#ORIGIN:]] = select i1 %[[#SHADOW3_NZ]], i32 %[[#ORIGIN3]], i32 %[[#ORIGIN]]
-  ; CHECK16-NEXT:          %[[#SHADOW4_NZ:]] = icmp ne i64 %[[#WIDE_SHADOW4]], 0
-  ; CHECK16-NEXT:          %[[#ORIGIN:]] = select i1 %[[#SHADOW4_NZ]], i32 %[[#ORIGIN4]], i32 %[[#ORIGIN]]
-  
-  ; COMM: On fast8, we need to OR 2x64bits for the wide shadow, before ORing its bytes (one more shift).
-  ; CHECK8-NEXT:           %[[#ORIGIN_PTR3:]] = getelementptr i32, i32* %[[#ORIGIN_PTR2]], i64 1
-  ; CHECK8-NEXT:           %[[#ORIGIN3:]] = load i32, i32* %[[#ORIGIN_PTR3]], align 8
-  ; CHECK8-NEXT:           %[[#WIDE_SHADOW2_LO:]] = shl i64 %[[#WIDE_SHADOW2]], 32
-  ; CHECK8-NEXT:           %[[#ORIGIN_PTR4:]] = getelementptr i32, i32* %[[#ORIGIN_PTR3]], i64 1
-  ; CHECK8-NEXT:           %[[#ORIGIN4:]] = load i32, i32* %[[#ORIGIN_PTR4]], align 8
-  ; CHECK8-NEXT:           %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 32
-  ; CHECK8-NEXT:           %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
-  ; CHECK8-NEXT:           %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 16
-  ; CHECK8-NEXT:           %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
-  ; CHECK8-NEXT:           %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 8
-  ; CHECK8-NEXT:           %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
-  ; CHECK8-NEXT:           %[[#SHADOW:]] = trunc i64 %[[#WIDE_SHADOW]] to i[[#SBITS]]
-  ; CHECK8-NEXT:           %[[#SHADOW_LO_NZ:]] = icmp ne i64 %[[#WIDE_SHADOW_LO]], 0
-  ; CHECK8-NEXT:           %[[#ORIGIN:]] = select i1 %[[#SHADOW_LO_NZ]], i32 %[[#ORIGIN]], i32 %[[#ORIGIN2]]
-  ; CHECK8-NEXT:           %[[#SHADOW2_NZ:]] = icmp ne i64 %[[#WIDE_SHADOW2]], 0
-  ; CHECK8-NEXT:           %[[#ORIGIN:]] = select i1 %[[#SHADOW2_NZ]], i32 %[[#ORIGIN4]], i32 %[[#ORIGIN]]
-  ; CHECK8-NEXT:           %[[#SHADOW2_LO_NZ:]] = icmp ne i64 %[[#WIDE_SHADOW2_LO]], 0
-  ; CHECK8-NEXT:           %[[#ORIGIN:]] = select i1 %[[#SHADOW2_LO_NZ]], i32 %[[#ORIGIN3]], i32 %[[#ORIGIN]]
+  ; CHECK-NEXT:            %[[#ORIGIN_ADDR:]] = add i64 %[[#SHADOW_ADDR]], [[#ORIGIN_MASK]]
+  ; CHECK-NEXT:            %[[#ORIGIN1_PTR:]] = inttoptr i64 %[[#ORIGIN_ADDR]] to i32*
+  ; CHECK-NEXT:            %[[#ORIGIN1:]] = load i32, i32* %[[#ORIGIN1_PTR]], align 8
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW1_PTR:]] = bitcast i[[#SBITS]]* %[[#SHADOW_PTR]] to i64*
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW1:]] = load i64, i64* %[[#WIDE_SHADOW1_PTR]], align [[#SBYTES]]
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW1_LO:]] = shl i64 %[[#WIDE_SHADOW1]], 32
+  ; CHECK-NEXT:            %[[#ORIGIN2_PTR:]] = getelementptr i32, i32* %[[#ORIGIN1_PTR]], i64 1
+  ; CHECK-NEXT:            %[[#ORIGIN2:]] = load i32, i32* %[[#ORIGIN2_PTR]], align 8
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW2_PTR:]] = getelementptr i64, i64* %[[#WIDE_SHADOW1_PTR]], i64 1
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW2:]] = load i64, i64* %[[#WIDE_SHADOW2_PTR]], align [[#SBYTES]]
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW1]], %[[#WIDE_SHADOW2]]
+  ; CHECK-NEXT:            %[[#ORIGIN3_PTR:]] = getelementptr i32, i32* %[[#ORIGIN2_PTR]], i64 1
+  ; CHECK-NEXT:            %[[#ORIGIN3:]] = load i32, i32* %[[#ORIGIN3_PTR]], align 8
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW2_LO:]] = shl i64 %[[#WIDE_SHADOW2]], 32
+  ; CHECK-NEXT:            %[[#ORIGIN4_PTR:]] = getelementptr i32, i32* %[[#ORIGIN3_PTR]], i64 1
+  ; CHECK-NEXT:            %[[#ORIGIN4:]] = load i32, i32* %[[#ORIGIN4_PTR]], align 8
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 32
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 16
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 8
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW_SHIFTED]]
+  ; CHECK-NEXT:            %[[#SHADOW:]] = trunc i64 %[[#WIDE_SHADOW]] to i[[#SBITS]]
+  ; CHECK-NEXT:            %[[#SHADOW1_LO_NZ:]] = icmp ne i64 %[[#WIDE_SHADOW1_LO]], 0
+  ; CHECK-NEXT:            %[[#ORIGIN12:]] = select i1 %[[#SHADOW1_LO_NZ]], i32 %[[#ORIGIN1]], i32 %[[#ORIGIN2]]
+  ; CHECK-NEXT:            %[[#SHADOW2_NZ:]] = icmp ne i64 %[[#WIDE_SHADOW2]], 0
+  ; CHECK-NEXT:            %[[#ORIGIN124:]] = select i1 %[[#SHADOW2_NZ]], i32 %[[#ORIGIN4]], i32 %[[#ORIGIN12]]
+  ; CHECK-NEXT:            %[[#SHADOW2_LO_NZ:]] = icmp ne i64 %[[#WIDE_SHADOW2_LO]], 0
+  ; CHECK-NEXT:            %[[#ORIGIN:]] = select i1 %[[#SHADOW2_LO_NZ]], i32 %[[#ORIGIN3]], i32 %[[#ORIGIN124]]
 
   ; COMBINE_LOAD_PTR-NEXT: %[[#SHADOW:]] = or i[[#SBITS]] %[[#SHADOW]], %[[#PS]]
   ; COMBINE_LOAD_PTR-NEXT: %[[#NZ:]] = icmp ne i[[#SBITS]] %[[#PS]], 0

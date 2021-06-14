@@ -4,7 +4,7 @@
 
 // REQUIRES: stable-runtime
 
-// Stack aliasing is not implemented on x86.
+// Stack histories currently are not recorded on x86.
 // XFAIL: x86_64
 
 void USE(void *x) { // pretend_to_do_something(void *x)

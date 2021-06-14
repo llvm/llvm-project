@@ -435,8 +435,8 @@ define <4 x i32> @test2f(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i64> @or_and_v2i64(<2 x i64> %a0) {
 ; CHECK-LABEL: or_and_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orps {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %1 = and <2 x i64> %a0, <i64 7, i64 7>
   %2 = or <2 x i64> %1, <i64 3, i64 3>
@@ -446,8 +446,8 @@ define <2 x i64> @or_and_v2i64(<2 x i64> %a0) {
 define <4 x i32> @or_and_v4i32(<4 x i32> %a0) {
 ; CHECK-LABEL: or_and_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orps {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    andps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %1 = and <4 x i32> %a0, <i32 1, i32 3, i32 5, i32 7>
   %2 = or <4 x i32> %1, <i32 3, i32 2, i32 15, i32 2>

@@ -843,15 +843,27 @@ RISCVFrameLowering::assignRVVStackObjectOffsets(MachineFrameInfo &MFI) const {
   return Offset;
 }
 
+static bool hasRVVSpillWithFIs(MachineFunction &MF, const RISCVInstrInfo &TII) {
+  if (!MF.getSubtarget<RISCVSubtarget>().hasStdExtV())
+    return false;
+  return any_of(MF, [&TII](const MachineBasicBlock &MBB) {
+    return any_of(MBB, [&TII](const MachineInstr &MI) {
+      return TII.isRVVSpill(MI, /*CheckFIs*/ true);
+    });
+  });
+}
+
 void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
     MachineFunction &MF, RegScavenger *RS) const {
-  const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
+  const RISCVRegisterInfo *RegInfo =
+      MF.getSubtarget<RISCVSubtarget>().getRegisterInfo();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterClass *RC = &RISCV::GPRRegClass;
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
 
   int64_t RVVStackSize = assignRVVStackObjectOffsets(MFI);
   RVFI->setRVVStackSize(RVVStackSize);
+  const RISCVInstrInfo &TII = *MF.getSubtarget<RISCVSubtarget>().getInstrInfo();
 
   // estimateStackSize has been observed to under-estimate the final stack
   // size, so give ourselves wiggle-room by checking for stack size
@@ -859,7 +871,10 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
   // FIXME: It may be possible to craft a function with a small stack that
   // still needs an emergency spill slot for branch relaxation. This case
   // would currently be missed.
-  if (!isInt<11>(MFI.estimateStackSize(MF)) || RVVStackSize != 0) {
+  // RVV loads & stores have no capacity to hold the immediate address offsets
+  // so we must always reserve an emergency spill slot if the MachineFunction
+  // contains any RVV spills.
+  if (!isInt<11>(MFI.estimateStackSize(MF)) || hasRVVSpillWithFIs(MF, TII)) {
     int RegScavFI = MFI.CreateStackObject(RegInfo->getSpillSize(*RC),
                                           RegInfo->getSpillAlign(*RC), false);
     RS->addScavengingFrameIndex(RegScavFI);
@@ -896,11 +911,21 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
   }
 }
 
+static bool hasRVVFrameObject(const MachineFunction &MF) {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I)
+    if (MFI.getStackID(I) == TargetStackID::ScalableVector)
+      return true;
+  return false;
+}
+
 // Not preserve stack space within prologue for outgoing variables when the
-// function contains variable size objects and let eliminateCallFramePseudoInstr
-// preserve stack space for it.
+// function contains variable size objects or there are vector objects accessed
+// by the frame pointer.
+// Let eliminateCallFramePseudoInstr preserve stack space for it.
 bool RISCVFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
-  return !MF.getFrameInfo().hasVarSizedObjects();
+  return !MF.getFrameInfo().hasVarSizedObjects() &&
+         !(hasFP(MF) && hasRVVFrameObject(MF));
 }
 
 // Eliminate ADJCALLSTACKDOWN, ADJCALLSTACKUP pseudo instructions.

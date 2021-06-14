@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! C1134 A CYCLE statement must be within a DO construct
 !
 ! C1166 An EXIT statement must be within a DO construct

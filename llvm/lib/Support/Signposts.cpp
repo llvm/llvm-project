@@ -74,7 +74,7 @@ public:
       if (SIGNPOSTS_AVAILABLE()) {
         // Both strings used here are required to be constant literal strings.
         os_signpost_interval_begin(getLogger(), getSignpostForObject(O),
-                                   "LLVM Timers", "Begin %s", Name.data());
+                                   "LLVM Timers", "%s", Name.data());
       }
     }
   }
@@ -84,7 +84,7 @@ public:
       if (SIGNPOSTS_AVAILABLE()) {
         // Both strings used here are required to be constant literal strings.
         os_signpost_interval_end(getLogger(), getSignpostForObject(O),
-                                 "LLVM Timers", "End %s", Name.data());
+                                 "LLVM Timers", "");
       }
     }
   }

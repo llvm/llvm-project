@@ -23,7 +23,7 @@ define void @shuffle_v16i8_to_v8i8(<16 x i8>* %L, <8 x i8>* %S) nounwind {
 ; SSE2-LABEL: shuffle_v16i8_to_v8i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    movq %xmm0, (%rsi)
 ; SSE2-NEXT:    retq
@@ -78,7 +78,7 @@ define void @trunc_v8i16_to_v8i8(<16 x i8>* %L, <8 x i8>* %S) nounwind {
 ; SSE2-LABEL: trunc_v8i16_to_v8i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    movq %xmm0, (%rsi)
 ; SSE2-NEXT:    retq
@@ -310,7 +310,7 @@ define void @shuffle_v16i8_to_v4i8(<16 x i8>* %L, <4 x i8>* %S) nounwind {
 ; SSE2-LABEL: shuffle_v16i8_to_v4i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    movd %xmm0, (%rsi)
@@ -365,7 +365,7 @@ define void @trunc_v4i32_to_v4i8(<16 x i8>* %L, <4 x i8>* %S) nounwind {
 ; SSE2-LABEL: trunc_v4i32_to_v4i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    movd %xmm0, (%rsi)
@@ -542,7 +542,7 @@ define void @shuffle_v16i8_to_v2i8(<16 x i8>* %L, <2 x i8>* %S) nounwind {
 ; SSE2-LABEL: shuffle_v16i8_to_v2i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
@@ -599,7 +599,7 @@ define void @trunc_v2i64_to_v2i8(<16 x i8>* %L, <2 x i8>* %S) nounwind {
 ; SSE2-LABEL: trunc_v2i64_to_v2i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa (%rdi), %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0

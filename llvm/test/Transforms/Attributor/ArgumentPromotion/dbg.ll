@@ -8,7 +8,7 @@ declare void @sink(i32)
 
 define internal void @test(i32** %X) !dbg !2 {
 ; CHECK-LABEL: define {{[^@]+}}@test
-; CHECK-SAME: (i32** nocapture noundef nonnull readonly align 8 dereferenceable(8) [[X:%.*]]) !dbg [[DBG3:![0-9]+]] {
+; CHECK-SAME: (i32** nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[X:%.*]]) !dbg [[DBG3:![0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32*, i32** [[X]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 8
 ; CHECK-NEXT:    call void @sink(i32 [[TMP2]])
@@ -33,14 +33,14 @@ define internal void @test_byval(%struct.pair* byval(%struct.pair) %P) {
 
 define void @caller(i32** %Y, %struct.pair* %P) {
 ; IS__TUNIT____-LABEL: define {{[^@]+}}@caller
-; IS__TUNIT____-SAME: (i32** nocapture readonly [[Y:%.*]], %struct.pair* nocapture nofree readnone [[P:%.*]]) {
-; IS__TUNIT____-NEXT:    call void @test(i32** nocapture readonly align 8 [[Y]]), !dbg [[DBG4:![0-9]+]]
+; IS__TUNIT____-SAME: (i32** nocapture nofree readonly [[Y:%.*]], %struct.pair* nocapture nofree readnone [[P:%.*]]) {
+; IS__TUNIT____-NEXT:    call void @test(i32** nocapture nofree readonly align 8 [[Y]]), !dbg [[DBG4:![0-9]+]]
 ; IS__TUNIT____-NEXT:    call void @test_byval(), !dbg [[DBG5:![0-9]+]]
 ; IS__TUNIT____-NEXT:    ret void
 ;
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@caller
-; IS__CGSCC____-SAME: (i32** nocapture noundef nonnull readonly align 8 dereferenceable(8) [[Y:%.*]], %struct.pair* nocapture nofree readnone [[P:%.*]]) {
-; IS__CGSCC____-NEXT:    call void @test(i32** nocapture noundef nonnull readonly align 8 dereferenceable(8) [[Y]]), !dbg [[DBG4:![0-9]+]]
+; IS__CGSCC____-SAME: (i32** nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[Y:%.*]], %struct.pair* nocapture nofree readnone [[P:%.*]]) {
+; IS__CGSCC____-NEXT:    call void @test(i32** nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[Y]]), !dbg [[DBG4:![0-9]+]]
 ; IS__CGSCC____-NEXT:    call void @test_byval(), !dbg [[DBG5:![0-9]+]]
 ; IS__CGSCC____-NEXT:    ret void
 ;

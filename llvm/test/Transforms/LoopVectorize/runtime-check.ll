@@ -43,7 +43,7 @@ define i32 @foo(float* nocapture %a, float* nocapture %b, i32 %n) nounwind uwtab
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[INDEX]], [[DBG9]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast float* [[TMP9]] to <4 x float>*, [[DBG9]]
 ; CHECK-NEXT:    store <4 x float> [[TMP8]], <4 x float>* [[TMP10]], align 4, [[DBG9]], !alias.scope !13, !noalias !10
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4, [[DBG9]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4, [[DBG9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]], [[DBG9]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[DBG9]], [[LOOP15:!llvm.loop !.*]]
 ; CHECK:       middle.block:

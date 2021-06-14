@@ -81,23 +81,23 @@ body:             |
     ;CHECK-LABEL: name:           CheckAddrModeT2_i8s4
     ;CHECK: $r0 = tMOVr $r1, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_[[I8S4:[0-9]+]]
-    ;CHECK-NEXT: t2STRDi8 $r0, $r1, $sp, 254, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: t2STRDi8 $r0, $r1, $sp, 1020, 14 /* CC::al */, $noreg
     $r0 = tMOVr $r1, 14, $noreg
     tBL 14, $noreg, @foo, implicit-def dead $lr, implicit $sp
     t2STRDi8 $r0, $r1, $sp, 0, 14, $noreg
     t2STRDi8 $r0, $r1, $sp, 8, 14, $noreg
-    t2STRDi8 $r0, $r1, $sp, 253, 14, $noreg
-    t2STRDi8 $r0, $r1, $sp, 254, 14, $noreg
+    t2STRDi8 $r0, $r1, $sp, 1012, 14, $noreg
+    t2STRDi8 $r0, $r1, $sp, 1020, 14, $noreg
     tBL 14, $noreg, @foo, implicit-def dead $lr, implicit $sp
     t2STRDi8 $r0, $r1, $sp, 0, 14, $noreg
     t2STRDi8 $r0, $r1, $sp, 8, 14, $noreg
-    t2STRDi8 $r0, $r1, $sp, 253, 14, $noreg
-    t2STRDi8 $r0, $r1, $sp, 254, 14, $noreg
+    t2STRDi8 $r0, $r1, $sp, 1012, 14, $noreg
+    t2STRDi8 $r0, $r1, $sp, 1020, 14, $noreg
     tBL 14, $noreg, @foo, implicit-def dead $lr, implicit $sp
     t2STRDi8 $r0, $r1, $sp, 0, 14, $noreg
     t2STRDi8 $r0, $r1, $sp, 8, 14, $noreg
-    t2STRDi8 $r0, $r1, $sp, 253, 14, $noreg
-    t2STRDi8 $r0, $r1, $sp, 254, 14, $noreg
+    t2STRDi8 $r0, $r1, $sp, 1012, 14, $noreg
+    t2STRDi8 $r0, $r1, $sp, 1020, 14, $noreg
     BX_RET 14, $noreg
 ...
 ---
@@ -205,9 +205,9 @@ body:             |
     ;CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 8
     ;CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $lr, -8
     ;CHECK-NEXT: tBL 14 /* CC::al */, $noreg, @foo, implicit-def dead $lr, implicit $sp
-    ;CHECK-NEXT: t2STRDi8 $r0, $r1, $sp, 2, 14 /* CC::al */, $noreg
-    ;CHECK-NEXT: t2STRDi8 $r0, $r1, $sp, 10, 14 /* CC::al */, $noreg
-    ;CHECK-NEXT: t2STRDi8 $r0, $r1, $sp, 255, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: t2STRDi8 $r0, $r1, $sp, 8, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: t2STRDi8 $r0, $r1, $sp, 16, 14 /* CC::al */, $noreg
+    ;CHECK-NEXT: t2STRDi8 $r0, $r1, $sp, 1020, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: $lr, $sp = t2LDR_POST $sp, 8, 14 /* CC::al */, $noreg
 
     ;CHECK: name:           OUTLINED_FUNCTION_[[I12]]

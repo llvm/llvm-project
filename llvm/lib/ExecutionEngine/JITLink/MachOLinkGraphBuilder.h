@@ -200,8 +200,20 @@ private:
   /// all defined symbols in sections without custom parsers.
   Error graphifyRegularSymbols();
 
+  /// Create and return a graph symbol for the given normalized symbol.
+  ///
+  /// NSym's GraphSymbol member will be updated to point at the newly created
+  /// symbol.
+  Symbol &createStandardGraphSymbol(NormalizedSymbol &Sym, Block &B,
+                                    size_t Size, bool IsText,
+                                    bool IsNoDeadStrip, bool IsCanonical);
+
   /// Create graph blocks and symbols for all sections.
   Error graphifySectionsWithCustomParsers();
+
+  /// Graphify cstring section.
+  Error graphifyCStringSection(NormalizedSection &NSec,
+                               std::vector<NormalizedSymbol *> NSyms);
 
   // Put the BumpPtrAllocator first so that we don't free any of the underlying
   // memory until the Symbol/Addressable destructors have been run.

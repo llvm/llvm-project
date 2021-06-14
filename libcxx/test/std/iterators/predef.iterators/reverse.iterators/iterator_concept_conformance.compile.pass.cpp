@@ -17,7 +17,7 @@
 #include "test_iterators.h"
 
 template<class I1>
-[[nodiscard]] consteval bool common_reverse_iterator_checks() {
+constexpr bool common_reverse_iterator_checks() {
   static_assert(std::indirectly_writable<I1, int>);
   static_assert(std::sentinel_for<I1, I1>);
   static_assert(std::sentinel_for<I1, std::reverse_iterator<float*>>);

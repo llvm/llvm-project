@@ -375,6 +375,19 @@ Operation *SymbolTable::lookupNearestSymbolFrom(Operation *from,
   return symbolTableOp ? lookupSymbolIn(symbolTableOp, symbol) : nullptr;
 }
 
+raw_ostream &mlir::operator<<(raw_ostream &os,
+                              SymbolTable::Visibility visibility) {
+  switch (visibility) {
+  case SymbolTable::Visibility::Public:
+    return os << "public";
+  case SymbolTable::Visibility::Private:
+    return os << "private";
+  case SymbolTable::Visibility::Nested:
+    return os << "nested";
+  }
+  llvm_unreachable("Unexpected visibility");
+}
+
 //===----------------------------------------------------------------------===//
 // SymbolTable Trait Types
 //===----------------------------------------------------------------------===//

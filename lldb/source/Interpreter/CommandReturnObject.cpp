@@ -41,9 +41,7 @@ static void DumpStringToStreamWithNewline(Stream &strm, const std::string &s) {
 }
 
 CommandReturnObject::CommandReturnObject(bool colors)
-    : m_out_stream(colors), m_err_stream(colors),
-      m_status(eReturnStatusStarted), m_did_change_process_state(false),
-      m_interactive(true) {}
+    : m_out_stream(colors), m_err_stream(colors) {}
 
 void CommandReturnObject::AppendErrorWithFormat(const char *format, ...) {
   if (!format)
@@ -151,6 +149,7 @@ void CommandReturnObject::Clear() {
     static_cast<StreamString *>(stream_sp.get())->Clear();
   m_status = eReturnStatusStarted;
   m_did_change_process_state = false;
+  m_suppress_immediate_output = false;
   m_interactive = true;
 }
 
@@ -165,3 +164,11 @@ void CommandReturnObject::SetDidChangeProcessState(bool b) {
 bool CommandReturnObject::GetInteractive() const { return m_interactive; }
 
 void CommandReturnObject::SetInteractive(bool b) { m_interactive = b; }
+
+bool CommandReturnObject::GetSuppressImmediateOutput() const {
+  return m_suppress_immediate_output;
+}
+
+void CommandReturnObject::SetSuppressImmediateOutput(bool b) {
+  m_suppress_immediate_output = b;
+}

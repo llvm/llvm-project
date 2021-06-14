@@ -1,7 +1,5 @@
-; RUN: opt < %s -dfsan -S | FileCheck %s --check-prefixes=CHECK,TLS_ABI,TLS_ABI_LEGACY
 ; RUN: opt < %s -dfsan -dfsan-args-abi -S | FileCheck %s --check-prefixes=CHECK,ARGS_ABI
-; RUN: opt < %s -dfsan -dfsan-fast-16-labels=true -S | FileCheck %s --check-prefixes=CHECK,TLS_ABI,TLS_ABI_FAST
-; RUN: opt < %s -dfsan -dfsan-fast-8-labels=true -S | FileCheck %s --check-prefixes=CHECK,TLS_ABI,TLS_ABI_FAST
+; RUN: opt < %s -dfsan -S | FileCheck %s --check-prefixes=CHECK,TLS_ABI
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -37,12 +35,7 @@ define <4 x i1> @icmp_vector(<4 x i8> %a, <4 x i8> %b) {
   ; TLS_ABI-LABEL: @"dfs$icmp_vector"
   ; TLS_ABI-NEXT: %[[B:.*]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align [[ALIGN:2]]
   ; TLS_ABI-NEXT: %[[A:.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
-
-  ; TLS_ABI_LEGACY: %[[U:.*]] = call zeroext i[[#SBITS]] @__dfsan_union(i[[#SBITS]] zeroext %[[A]], i[[#SBITS]] zeroext %[[B]])
-  ; TLS_ABI_LEGACY: %[[L:.*]] = phi i[[#SBITS]] [ %[[U]], {{.*}} ], [ %[[A]], {{.*}} ]
-
-  ; COM: With fast labels enabled, union is just an OR.
-  ; TLS_ABI_FAST: %[[L:.*]] = or i[[#SBITS]] %[[A]], %[[B]]
+  ; TLS_ABI:       %[[L:.*]] = or i[[#SBITS]] %[[A]], %[[B]]
 
   ; TLS_ABI: %r = icmp eq <4 x i8> %a, %b
   ; TLS_ABI: store i[[#SBITS]] %[[L]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]

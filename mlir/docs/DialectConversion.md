@@ -45,6 +45,9 @@ conversion modes that may be selected from:
         operations.
     -   An analysis conversion can be applied via `applyAnalysisConversion`.
 
+In all cases, the framework walks the operations in preorder, examining an op
+before the ops in any regions it has.
+
 ## Conversion Target
 
 The conversion target is a formal definition of what is considered to be legal

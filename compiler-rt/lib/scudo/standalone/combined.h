@@ -694,7 +694,7 @@ public:
   // function. This can be called with a null buffer or zero size for buffer
   // sizing purposes.
   uptr getStats(char *Buffer, uptr Size) {
-    ScopedString Str(1024);
+    ScopedString Str;
     disable();
     const uptr Length = getStats(&Str) + 1;
     enable();
@@ -708,7 +708,7 @@ public:
   }
 
   void printStats() {
-    ScopedString Str(1024);
+    ScopedString Str;
     disable();
     getStats(&Str);
     enable();
@@ -727,6 +727,8 @@ public:
   void iterateOverChunks(uptr Base, uptr Size, iterate_callback Callback,
                          void *Arg) {
     initThreadMaybe();
+    if (archSupportsMemoryTagging())
+      Base = untagPointer(Base);
     const uptr From = Base;
     const uptr To = Base + Size;
     bool MayHaveTaggedPrimary = allocatorSupportsMemoryTagging<Params>() &&

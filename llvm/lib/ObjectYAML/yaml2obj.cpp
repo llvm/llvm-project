@@ -44,6 +44,8 @@ bool convertYAML(yaml::Input &YIn, raw_ostream &Out, ErrorHandler ErrHandler,
       return yaml2minidump(*Doc.Minidump, Out, ErrHandler);
     if (Doc.Wasm)
       return yaml2wasm(*Doc.Wasm, Out, ErrHandler);
+    if (Doc.Xcoff)
+      return yaml2xcoff(*Doc.Xcoff, Out, ErrHandler);
 
     ErrHandler("unknown document type");
     return false;

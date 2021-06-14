@@ -711,10 +711,7 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   ResponseFileSupport ResponseSupport;
-  if (LinkerIsLLDDarwinNew) {
-    // Xcode12's ld64 added support for @response files, but it's crashy:
-    // https://openradar.appspot.com/radar?id=4933317065441280
-    // FIXME: Pass this for ld64 once it no longer crashes.
+  if (Version[0] >= 705 || LinkerIsLLDDarwinNew) {
     ResponseSupport = ResponseFileSupport::AtFileUTF8();
   } else {
     // For older versions of the linker, use the legacy filelist method instead.

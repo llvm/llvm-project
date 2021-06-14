@@ -181,6 +181,9 @@ public:
       for (const UsingShadowDecl *S : UD->shadows())
         add(S->getUnderlyingDecl(), Flags);
       Flags |= Rel::Alias; // continue with the alias.
+    } else if (const UsingEnumDecl *UED = dyn_cast<UsingEnumDecl>(D)) {
+      add(UED->getEnumDecl(), Flags);
+      Flags |= Rel::Alias; // continue with the alias.
     } else if (const auto *NAD = dyn_cast<NamespaceAliasDecl>(D)) {
       add(NAD->getUnderlyingDecl(), Flags | Rel::Underlying);
       Flags |= Rel::Alias; // continue with the alias
@@ -193,9 +196,9 @@ public:
       }
       Flags |= Rel::Alias; // continue with the alias
     } else if (const UsingShadowDecl *USD = dyn_cast<UsingShadowDecl>(D)) {
-      // Include the using decl, but don't traverse it. This may end up
+      // Include the Introducing decl, but don't traverse it. This may end up
       // including *all* shadows, which we don't want.
-      report(USD->getUsingDecl(), Flags | Rel::Alias);
+      report(USD->getIntroducer(), Flags | Rel::Alias);
       // Shadow decls are synthetic and not themselves interesting.
       // Record the underlying decl instead, if allowed.
       D = USD->getTargetDecl();

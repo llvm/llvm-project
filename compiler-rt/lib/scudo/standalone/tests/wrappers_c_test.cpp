@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "memtag.h"
 #include "scudo/interface.h"
 #include "tests/scudo_unit_test.h"
 
@@ -277,6 +278,10 @@ static uintptr_t BoundaryP;
 static size_t Count;
 
 static void callback(uintptr_t Base, size_t Size, void *Arg) {
+  if (scudo::archSupportsMemoryTagging()) {
+    Base = scudo::untagPointer(Base);
+    BoundaryP = scudo::untagPointer(BoundaryP);
+  }
   if (Base == BoundaryP)
     Count++;
 }
@@ -366,7 +371,7 @@ TEST(ScudoWrappersCTest, MallocInfo) {
 TEST(ScudoWrappersCTest, Fork) {
   void *P;
   pid_t Pid = fork();
-  EXPECT_GE(Pid, 0);
+  EXPECT_GE(Pid, 0) << strerror(errno);
   if (Pid == 0) {
     P = malloc(Size);
     EXPECT_NE(P, nullptr);

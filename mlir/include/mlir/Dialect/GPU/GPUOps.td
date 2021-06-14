@@ -900,6 +900,7 @@ def GPU_MemcpyOp : GPU_Op<"memcpy", [GPU_AsyncOpInterface]> {
     $dst`,` $src `:` type($dst)`,` type($src) attr-dict
   }];
   let verifier = [{ return ::verify(*this); }];
+  let hasFolder = 1;
 }
 
 def GPU_SubgroupMmaLoadMatrixOp : GPU_Op<"subgroup_mma_load_matrix",
@@ -1019,6 +1020,51 @@ def GPU_SubgroupMmaComputeOp : GPU_Op<"subgroup_mma_compute",
   }];
 
   let verifier = [{ return ::verify(*this); }];
+}
+
+def GPU_SubgroupMmaConstantMatrixOp : GPU_Op<"subgroup_mma_constant_matrix",
+    [NoSideEffect,
+     TypesMatchWith<"value type matches element type of mma_matrix",
+                    "res", "value",
+                    "$_self.cast<gpu::MMAMatrixType>().getElementType()">]>{
+
+  let summary = "GPU warp synchronous constant matrix";
+
+  let description = [{
+    The `gpu.subgroup_mma_constant_matrix` creates a `!gpu.mma_matrix` with
+    constant elements.
+
+    The operation takes a scalar input and return a `!gpu.mma_matrix` where each
+    element of is equal to the operand constant. The destination mma_matrix type
+    must have elememt type equal to the constant type. Since the layout of
+    `!gpu.mma_matrix` is opaque this only support setting all the elements to
+    the same value.
+
+    This op is meant to be used along with `gpu.subgroup_mma_compute`.
+    
+    Example:
+
+    ```mlir
+     %0 = gpu.subgroup_mma_constant_matrix %a :
+       !gpu.mma_matrix<16x16xf16, "AOp">
+     %1 = gpu.subgroup_mma_constant_matrix %b :
+       !gpu.mma_matrix<16x16xf32, "COp">
+    ```
+  }];
+
+  let arguments = (ins AnyTypeOf<[F16, F32]>:$value);
+
+  let results = (outs GPU_MMAMatrix:$res);
+
+  let extraClassDeclaration = [{
+    gpu::MMAMatrixType getType() {
+      return res().getType().cast<gpu::MMAMatrixType>();
+    }
+  }];
+
+  let assemblyFormat = [{
+    $value attr-dict `:` type($res)
+  }];
 }
 
 #endif // GPU_OPS

@@ -118,23 +118,6 @@ void DbgVariableIntrinsic::replaceVariableLocationOp(unsigned OpIdx,
       0, MetadataAsValue::get(getContext(), DIArgList::get(getContext(), MDs)));
 }
 
-void DbgVariableIntrinsic::addVariableLocationOps(ArrayRef<Value *> NewValues,
-                                                  DIExpression *NewExpr) {
-  assert(NewExpr->hasAllLocationOps(getNumVariableLocationOps() +
-                                    NewValues.size()) &&
-         "NewExpr for debug variable intrinsic does not reference every "
-         "location operand.");
-  assert(!is_contained(NewValues, nullptr) && "New values must be non-null");
-  setArgOperand(2, MetadataAsValue::get(getContext(), NewExpr));
-  SmallVector<ValueAsMetadata *, 4> MDs;
-  for (auto *VMD : location_ops())
-    MDs.push_back(getAsMetadata(VMD));
-  for (auto *VMD : NewValues)
-    MDs.push_back(getAsMetadata(VMD));
-  setArgOperand(
-      0, MetadataAsValue::get(getContext(), DIArgList::get(getContext(), MDs)));
-}
-
 Optional<uint64_t> DbgVariableIntrinsic::getFragmentSizeInBits() const {
   if (auto Fragment = getExpression()->getFragmentInfo())
     return Fragment->SizeInBits;
@@ -419,6 +402,17 @@ bool VPIntrinsic::canIgnoreVectorLengthParam() const {
     return true;
 
   return false;
+}
+
+Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
+                                               ArrayRef<Value *> Params) {
+  assert(isVPIntrinsic(VPID) && "not a VP intrinsic");
+
+  // TODO: Extend this for other VP intrinsics as they are upstreamed. This
+  // works for binary arithmetic VP intrinsics.
+  auto *VPFunc = Intrinsic::getDeclaration(M, VPID, Params[0]->getType());
+  assert(VPFunc && "Could not declare VP intrinsic");
+  return VPFunc;
 }
 
 Instruction::BinaryOps BinaryOpIntrinsic::getBinaryOp() const {

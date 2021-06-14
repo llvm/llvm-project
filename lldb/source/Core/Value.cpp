@@ -38,10 +38,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-Value::Value()
-    : m_value(), m_compiler_type(), m_context(nullptr),
-      m_value_type(ValueType::Scalar), m_context_type(ContextType::Invalid),
-      m_data_buffer() {}
+Value::Value() : m_value(), m_compiler_type(), m_data_buffer() {}
 
 Value::Value(const Scalar &scalar)
     : m_value(scalar), m_compiler_type(), m_context(nullptr),

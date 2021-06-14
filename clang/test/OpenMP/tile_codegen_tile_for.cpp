@@ -247,7 +247,7 @@ extern "C" void func(int start, int end, int step) {
 
 #endif /* HEADER */
 // IR: ![[META0:[0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// IR: ![[META1:[0-9]+]] = !{!"clang version {{[^"]*}}"}
+// IR: ![[META1:[0-9]+]] = !{!"{{[^"]*}}"}
 // IR: ![[LOOP2]] = distinct !{![[LOOP2]], ![[LOOPPROP3:[0-9]+]]}
 // IR: ![[LOOPPROP3]] = !{!"llvm.loop.mustprogress"}
 // IR: ![[LOOP4]] = distinct !{![[LOOP4]], ![[LOOPPROP3]]}

@@ -2107,8 +2107,10 @@ void TCParser::printCanonicalizersAndFolders(llvm::raw_ostream &os,
     }
     void {0}::getEffects(SmallVectorImpl<
         SideEffects::EffectInstance<MemoryEffects::Effect> >&effects) {{
+      SmallVector<Value> inputBuffers = getInputBufferOperands();
+      SmallVector<Value> outputBuffers = getOutputBufferOperands();
       getGenericEffectsImpl(effects,
-        getOperation()->getResults(), getInputBuffers(), getOutputBuffers());
+        getOperation()->getResults(), inputBuffers, outputBuffers);
     })FMT";
   os << llvm::formatv(canonicalizersAndFoldersFmt, cppOpName);
 }

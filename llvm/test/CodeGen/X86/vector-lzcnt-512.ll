@@ -362,7 +362,7 @@ define <32 x i16> @testv32i16(<32 x i16> %in) nounwind {
 ; AVX512BW-LABEL: testv32i16:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpsrlw $4, %zmm0, %zmm1
-; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm1, %zmm1
+; AVX512BW-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; AVX512BW-NEXT:    vpshufb %zmm1, %zmm2, %zmm3
 ; AVX512BW-NEXT:    vpshufb %zmm0, %zmm2, %zmm2
@@ -448,7 +448,7 @@ define <32 x i16> @testv32i16u(<32 x i16> %in) nounwind {
 ; AVX512BW-LABEL: testv32i16u:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpsrlw $4, %zmm0, %zmm1
-; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm1, %zmm1
+; AVX512BW-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; AVX512BW-NEXT:    vpshufb %zmm1, %zmm2, %zmm3
 ; AVX512BW-NEXT:    vpshufb %zmm0, %zmm2, %zmm2
@@ -558,7 +558,7 @@ define <64 x i8> @testv64i8(<64 x i8> %in) nounwind {
 ; AVX512BW-LABEL: testv64i8:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpsrlw $4, %zmm0, %zmm1
-; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm1, %zmm1
+; AVX512BW-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; AVX512BW-NEXT:    vpshufb %zmm1, %zmm2, %zmm3
 ; AVX512BW-NEXT:    vpshufb %zmm0, %zmm2, %zmm0
@@ -652,7 +652,7 @@ define <64 x i8> @testv64i8u(<64 x i8> %in) nounwind {
 ; AVX512BW-LABEL: testv64i8u:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpsrlw $4, %zmm0, %zmm1
-; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm1, %zmm1
+; AVX512BW-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1
 ; AVX512BW-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
 ; AVX512BW-NEXT:    vpshufb %zmm1, %zmm2, %zmm3
 ; AVX512BW-NEXT:    vpshufb %zmm0, %zmm2, %zmm0

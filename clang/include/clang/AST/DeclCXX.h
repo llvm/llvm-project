@@ -69,6 +69,7 @@ class FriendDecl;
 class FunctionTemplateDecl;
 class IdentifierInfo;
 class MemberSpecializationInfo;
+class BaseUsingDecl;
 class TemplateDecl;
 class TemplateParameterList;
 class UsingDecl;
@@ -1479,7 +1480,7 @@ public:
 
   /// Returns true if the class destructor, or any implicitly invoked
   /// destructors are marked noreturn.
-  bool isAnyDestructorNoReturn() const;
+  bool isAnyDestructorNoReturn() const { return data().IsAnyDestructorNoReturn; }
 
   /// If the class is a local class [class.local], returns
   /// the enclosing function declaration.
@@ -3163,21 +3164,27 @@ public:
   }
 };
 
-/// Represents a shadow declaration introduced into a scope by a
-/// (resolved) using declaration.
+/// Represents a shadow declaration implicitly introduced into a scope by a
+/// (resolved) using-declaration or using-enum-declaration to achieve
+/// the desired lookup semantics.
 ///
-/// For example,
+/// For example:
 /// \code
 /// namespace A {
 ///   void foo();
+///   void foo(int);
+///   struct foo {};
+///   enum bar { bar1, bar2 };
 /// }
 /// namespace B {
-///   using A::foo; // <- a UsingDecl
-///                 // Also creates a UsingShadowDecl for A::foo() in B
+///   // add a UsingDecl and three UsingShadowDecls (named foo) to B.
+///   using A::foo;
+///   // adds UsingEnumDecl and two UsingShadowDecls (named bar1 and bar2) to B.
+///   using enum A::bar;
 /// }
 /// \endcode
 class UsingShadowDecl : public NamedDecl, public Redeclarable<UsingShadowDecl> {
-  friend class UsingDecl;
+  friend class BaseUsingDecl;
 
   /// The referenced declaration.
   NamedDecl *Underlying = nullptr;
@@ -3204,7 +3211,8 @@ class UsingShadowDecl : public NamedDecl, public Redeclarable<UsingShadowDecl> {
 
 protected:
   UsingShadowDecl(Kind K, ASTContext &C, DeclContext *DC, SourceLocation Loc,
-                  UsingDecl *Using, NamedDecl *Target);
+                  DeclarationName Name, BaseUsingDecl *Introducer,
+                  NamedDecl *Target);
   UsingShadowDecl(Kind K, ASTContext &C, EmptyShell);
 
 public:
@@ -3212,9 +3220,10 @@ public:
   friend class ASTDeclWriter;
 
   static UsingShadowDecl *Create(ASTContext &C, DeclContext *DC,
-                                 SourceLocation Loc, UsingDecl *Using,
-                                 NamedDecl *Target) {
-    return new (C, DC) UsingShadowDecl(UsingShadow, C, DC, Loc, Using, Target);
+                                 SourceLocation Loc, DeclarationName Name,
+                                 BaseUsingDecl *Introducer, NamedDecl *Target) {
+    return new (C, DC)
+        UsingShadowDecl(UsingShadow, C, DC, Loc, Name, Introducer, Target);
   }
 
   static UsingShadowDecl *CreateDeserialized(ASTContext &C, unsigned ID);
@@ -3252,8 +3261,9 @@ public:
         ~(IDNS_OrdinaryFriend | IDNS_TagFriend | IDNS_LocalExtern);
   }
 
-  /// Gets the using declaration to which this declaration is tied.
-  UsingDecl *getUsingDecl() const;
+  /// Gets the (written or instantiated) using declaration that introduced this
+  /// declaration.
+  BaseUsingDecl *getIntroducer() const;
 
   /// The next using shadow declaration contained in the shadow decl
   /// chain of the using declaration which introduced this decl.
@@ -3265,6 +3275,180 @@ public:
   static bool classofKind(Kind K) {
     return K == Decl::UsingShadow || K == Decl::ConstructorUsingShadow;
   }
+};
+
+/// Represents a C++ declaration that introduces decls from somewhere else. It
+/// provides a set of the shadow decls so introduced.
+
+class BaseUsingDecl : public NamedDecl {
+  /// The first shadow declaration of the shadow decl chain associated
+  /// with this using declaration.
+  ///
+  /// The bool member of the pair is a bool flag a derived type may use
+  /// (UsingDecl makes use of it).
+  llvm::PointerIntPair<UsingShadowDecl *, 1, bool> FirstUsingShadow;
+
+protected:
+  BaseUsingDecl(Kind DK, DeclContext *DC, SourceLocation L, DeclarationName N)
+      : NamedDecl(DK, DC, L, N), FirstUsingShadow(nullptr, 0) {}
+
+private:
+  void anchor() override;
+
+protected:
+  /// A bool flag for use by a derived type
+  bool getShadowFlag() const { return FirstUsingShadow.getInt(); }
+
+  /// A bool flag a derived type may set
+  void setShadowFlag(bool V) { FirstUsingShadow.setInt(V); }
+
+public:
+  friend class ASTDeclReader;
+  friend class ASTDeclWriter;
+
+  /// Iterates through the using shadow declarations associated with
+  /// this using declaration.
+  class shadow_iterator {
+    /// The current using shadow declaration.
+    UsingShadowDecl *Current = nullptr;
+
+  public:
+    using value_type = UsingShadowDecl *;
+    using reference = UsingShadowDecl *;
+    using pointer = UsingShadowDecl *;
+    using iterator_category = std::forward_iterator_tag;
+    using difference_type = std::ptrdiff_t;
+
+    shadow_iterator() = default;
+    explicit shadow_iterator(UsingShadowDecl *C) : Current(C) {}
+
+    reference operator*() const { return Current; }
+    pointer operator->() const { return Current; }
+
+    shadow_iterator &operator++() {
+      Current = Current->getNextUsingShadowDecl();
+      return *this;
+    }
+
+    shadow_iterator operator++(int) {
+      shadow_iterator tmp(*this);
+      ++(*this);
+      return tmp;
+    }
+
+    friend bool operator==(shadow_iterator x, shadow_iterator y) {
+      return x.Current == y.Current;
+    }
+    friend bool operator!=(shadow_iterator x, shadow_iterator y) {
+      return x.Current != y.Current;
+    }
+  };
+
+  using shadow_range = llvm::iterator_range<shadow_iterator>;
+
+  shadow_range shadows() const {
+    return shadow_range(shadow_begin(), shadow_end());
+  }
+
+  shadow_iterator shadow_begin() const {
+    return shadow_iterator(FirstUsingShadow.getPointer());
+  }
+
+  shadow_iterator shadow_end() const { return shadow_iterator(); }
+
+  /// Return the number of shadowed declarations associated with this
+  /// using declaration.
+  unsigned shadow_size() const {
+    return std::distance(shadow_begin(), shadow_end());
+  }
+
+  void addShadowDecl(UsingShadowDecl *S);
+  void removeShadowDecl(UsingShadowDecl *S);
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == Using || K == UsingEnum; }
+};
+
+/// Represents a C++ using-declaration.
+///
+/// For example:
+/// \code
+///    using someNameSpace::someIdentifier;
+/// \endcode
+class UsingDecl : public BaseUsingDecl, public Mergeable<UsingDecl> {
+  /// The source location of the 'using' keyword itself.
+  SourceLocation UsingLocation;
+
+  /// The nested-name-specifier that precedes the name.
+  NestedNameSpecifierLoc QualifierLoc;
+
+  /// Provides source/type location info for the declaration name
+  /// embedded in the ValueDecl base class.
+  DeclarationNameLoc DNLoc;
+
+  UsingDecl(DeclContext *DC, SourceLocation UL,
+            NestedNameSpecifierLoc QualifierLoc,
+            const DeclarationNameInfo &NameInfo, bool HasTypenameKeyword)
+      : BaseUsingDecl(Using, DC, NameInfo.getLoc(), NameInfo.getName()),
+        UsingLocation(UL), QualifierLoc(QualifierLoc),
+        DNLoc(NameInfo.getInfo()) {
+    setShadowFlag(HasTypenameKeyword);
+  }
+
+  void anchor() override;
+
+public:
+  friend class ASTDeclReader;
+  friend class ASTDeclWriter;
+
+  /// Return the source location of the 'using' keyword.
+  SourceLocation getUsingLoc() const { return UsingLocation; }
+
+  /// Set the source location of the 'using' keyword.
+  void setUsingLoc(SourceLocation L) { UsingLocation = L; }
+
+  /// Retrieve the nested-name-specifier that qualifies the name,
+  /// with source-location information.
+  NestedNameSpecifierLoc getQualifierLoc() const { return QualifierLoc; }
+
+  /// Retrieve the nested-name-specifier that qualifies the name.
+  NestedNameSpecifier *getQualifier() const {
+    return QualifierLoc.getNestedNameSpecifier();
+  }
+
+  DeclarationNameInfo getNameInfo() const {
+    return DeclarationNameInfo(getDeclName(), getLocation(), DNLoc);
+  }
+
+  /// Return true if it is a C++03 access declaration (no 'using').
+  bool isAccessDeclaration() const { return UsingLocation.isInvalid(); }
+
+  /// Return true if the using declaration has 'typename'.
+  bool hasTypename() const { return getShadowFlag(); }
+
+  /// Sets whether the using declaration has 'typename'.
+  void setTypename(bool TN) { setShadowFlag(TN); }
+
+  static UsingDecl *Create(ASTContext &C, DeclContext *DC,
+                           SourceLocation UsingL,
+                           NestedNameSpecifierLoc QualifierLoc,
+                           const DeclarationNameInfo &NameInfo,
+                           bool HasTypenameKeyword);
+
+  static UsingDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+
+  SourceRange getSourceRange() const override LLVM_READONLY;
+
+  /// Retrieves the canonical declaration of this declaration.
+  UsingDecl *getCanonicalDecl() override {
+    return cast<UsingDecl>(getFirstDecl());
+  }
+  const UsingDecl *getCanonicalDecl() const {
+    return cast<UsingDecl>(getFirstDecl());
+  }
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == Using; }
 };
 
 /// Represents a shadow constructor declaration introduced into a
@@ -3297,7 +3481,8 @@ class ConstructorUsingShadowDecl final : public UsingShadowDecl {
   ConstructorUsingShadowDecl(ASTContext &C, DeclContext *DC, SourceLocation Loc,
                              UsingDecl *Using, NamedDecl *Target,
                              bool TargetInVirtualBase)
-      : UsingShadowDecl(ConstructorUsingShadow, C, DC, Loc, Using,
+      : UsingShadowDecl(ConstructorUsingShadow, C, DC, Loc,
+                        Using->getDeclName(), Using,
                         Target->getUnderlyingDecl()),
         NominatedBaseClassShadowDecl(
             dyn_cast<ConstructorUsingShadowDecl>(Target)),
@@ -3329,6 +3514,12 @@ public:
                                             bool IsVirtual);
   static ConstructorUsingShadowDecl *CreateDeserialized(ASTContext &C,
                                                         unsigned ID);
+
+  /// Override the UsingShadowDecl's getIntroducer, returning the UsingDecl that
+  /// introduced this.
+  UsingDecl *getIntroducer() const {
+    return cast<UsingDecl>(UsingShadowDecl::getIntroducer());
+  }
 
   /// Returns the parent of this using shadow declaration, which
   /// is the class in which this is declared.
@@ -3377,37 +3568,27 @@ public:
   static bool classofKind(Kind K) { return K == ConstructorUsingShadow; }
 };
 
-/// Represents a C++ using-declaration.
+/// Represents a C++ using-enum-declaration.
 ///
 /// For example:
 /// \code
-///    using someNameSpace::someIdentifier;
+///    using enum SomeEnumTag ;
 /// \endcode
-class UsingDecl : public NamedDecl, public Mergeable<UsingDecl> {
+
+class UsingEnumDecl : public BaseUsingDecl, public Mergeable<UsingEnumDecl> {
   /// The source location of the 'using' keyword itself.
   SourceLocation UsingLocation;
 
-  /// The nested-name-specifier that precedes the name.
-  NestedNameSpecifierLoc QualifierLoc;
+  /// Location of the 'enum' keyword.
+  SourceLocation EnumLocation;
 
-  /// Provides source/type location info for the declaration name
-  /// embedded in the ValueDecl base class.
-  DeclarationNameLoc DNLoc;
+  /// The enum
+  EnumDecl *Enum;
 
-  /// The first shadow declaration of the shadow decl chain associated
-  /// with this using declaration.
-  ///
-  /// The bool member of the pair store whether this decl has the \c typename
-  /// keyword.
-  llvm::PointerIntPair<UsingShadowDecl *, 1, bool> FirstUsingShadow;
-
-  UsingDecl(DeclContext *DC, SourceLocation UL,
-            NestedNameSpecifierLoc QualifierLoc,
-            const DeclarationNameInfo &NameInfo, bool HasTypenameKeyword)
-    : NamedDecl(Using, DC, NameInfo.getLoc(), NameInfo.getName()),
-      UsingLocation(UL), QualifierLoc(QualifierLoc),
-      DNLoc(NameInfo.getInfo()), FirstUsingShadow(nullptr, HasTypenameKeyword) {
-  }
+  UsingEnumDecl(DeclContext *DC, DeclarationName DN, SourceLocation UL,
+                SourceLocation EL, SourceLocation NL, EnumDecl *ED)
+      : BaseUsingDecl(UsingEnum, DC, NL, DN), UsingLocation(UL),
+        EnumLocation(EL), Enum(ED) {}
 
   void anchor() override;
 
@@ -3415,109 +3596,35 @@ public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
 
-  /// Return the source location of the 'using' keyword.
+  /// The source location of the 'using' keyword.
   SourceLocation getUsingLoc() const { return UsingLocation; }
-
-  /// Set the source location of the 'using' keyword.
   void setUsingLoc(SourceLocation L) { UsingLocation = L; }
 
-  /// Retrieve the nested-name-specifier that qualifies the name,
-  /// with source-location information.
-  NestedNameSpecifierLoc getQualifierLoc() const { return QualifierLoc; }
+  /// The source location of the 'enum' keyword.
+  SourceLocation getEnumLoc() const { return EnumLocation; }
+  void setEnumLoc(SourceLocation L) { EnumLocation = L; }
 
-  /// Retrieve the nested-name-specifier that qualifies the name.
-  NestedNameSpecifier *getQualifier() const {
-    return QualifierLoc.getNestedNameSpecifier();
-  }
+public:
+  EnumDecl *getEnumDecl() const { return Enum; }
 
-  DeclarationNameInfo getNameInfo() const {
-    return DeclarationNameInfo(getDeclName(), getLocation(), DNLoc);
-  }
+  static UsingEnumDecl *Create(ASTContext &C, DeclContext *DC,
+                               SourceLocation UsingL, SourceLocation EnumL,
+                               SourceLocation NameL, EnumDecl *ED);
 
-  /// Return true if it is a C++03 access declaration (no 'using').
-  bool isAccessDeclaration() const { return UsingLocation.isInvalid(); }
-
-  /// Return true if the using declaration has 'typename'.
-  bool hasTypename() const { return FirstUsingShadow.getInt(); }
-
-  /// Sets whether the using declaration has 'typename'.
-  void setTypename(bool TN) { FirstUsingShadow.setInt(TN); }
-
-  /// Iterates through the using shadow declarations associated with
-  /// this using declaration.
-  class shadow_iterator {
-    /// The current using shadow declaration.
-    UsingShadowDecl *Current = nullptr;
-
-  public:
-    using value_type = UsingShadowDecl *;
-    using reference = UsingShadowDecl *;
-    using pointer = UsingShadowDecl *;
-    using iterator_category = std::forward_iterator_tag;
-    using difference_type = std::ptrdiff_t;
-
-    shadow_iterator() = default;
-    explicit shadow_iterator(UsingShadowDecl *C) : Current(C) {}
-
-    reference operator*() const { return Current; }
-    pointer operator->() const { return Current; }
-
-    shadow_iterator& operator++() {
-      Current = Current->getNextUsingShadowDecl();
-      return *this;
-    }
-
-    shadow_iterator operator++(int) {
-      shadow_iterator tmp(*this);
-      ++(*this);
-      return tmp;
-    }
-
-    friend bool operator==(shadow_iterator x, shadow_iterator y) {
-      return x.Current == y.Current;
-    }
-    friend bool operator!=(shadow_iterator x, shadow_iterator y) {
-      return x.Current != y.Current;
-    }
-  };
-
-  using shadow_range = llvm::iterator_range<shadow_iterator>;
-
-  shadow_range shadows() const {
-    return shadow_range(shadow_begin(), shadow_end());
-  }
-
-  shadow_iterator shadow_begin() const {
-    return shadow_iterator(FirstUsingShadow.getPointer());
-  }
-
-  shadow_iterator shadow_end() const { return shadow_iterator(); }
-
-  /// Return the number of shadowed declarations associated with this
-  /// using declaration.
-  unsigned shadow_size() const {
-    return std::distance(shadow_begin(), shadow_end());
-  }
-
-  void addShadowDecl(UsingShadowDecl *S);
-  void removeShadowDecl(UsingShadowDecl *S);
-
-  static UsingDecl *Create(ASTContext &C, DeclContext *DC,
-                           SourceLocation UsingL,
-                           NestedNameSpecifierLoc QualifierLoc,
-                           const DeclarationNameInfo &NameInfo,
-                           bool HasTypenameKeyword);
-
-  static UsingDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+  static UsingEnumDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
   /// Retrieves the canonical declaration of this declaration.
-  UsingDecl *getCanonicalDecl() override { return getFirstDecl(); }
-  const UsingDecl *getCanonicalDecl() const { return getFirstDecl(); }
+  UsingEnumDecl *getCanonicalDecl() override {
+    return cast<UsingEnumDecl>(getFirstDecl());
+  }
+  const UsingEnumDecl *getCanonicalDecl() const {
+    return cast<UsingEnumDecl>(getFirstDecl());
+  }
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
-  static bool classofKind(Kind K) { return K == Using; }
+  static bool classofKind(Kind K) { return K == UsingEnum; }
 };
 
 /// Represents a pack of using declarations that a single

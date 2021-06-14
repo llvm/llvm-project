@@ -56,9 +56,8 @@ void mlir::linalg::interchangeGenericOp(PatternRewriter &rewriter,
 
   // 2. Compute the interchanged indexing maps.
   SmallVector<Attribute, 4> newIndexingMaps;
-  ArrayRef<Attribute> indexingMaps = genericOp.indexing_maps().getValue();
-  for (unsigned i = 0, e = genericOp.getNumShapedOperands(); i != e; ++i) {
-    AffineMap m = indexingMaps[i].cast<AffineMapAttr>().getValue();
+  for (OpOperand *opOperand : genericOp.getInputAndOutputOperands()) {
+    AffineMap m = genericOp.getTiedIndexingMap(opOperand);
     if (!permutationMap.isEmpty())
       m = m.compose(permutationMap);
     newIndexingMaps.push_back(AffineMapAttr::get(m));

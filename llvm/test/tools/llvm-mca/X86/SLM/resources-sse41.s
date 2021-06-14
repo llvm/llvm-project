@@ -237,8 +237,8 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  1      4     1.00    *                   pmovzxwd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        pmovzxwq	%xmm0, %xmm2
 # CHECK-NEXT:  1      4     1.00    *                   pmovzxwq	(%rax), %xmm2
-# CHECK-NEXT:  1      4     1.00                        pmuldq	%xmm0, %xmm2
-# CHECK-NEXT:  1      7     1.00    *                   pmuldq	(%rax), %xmm2
+# CHECK-NEXT:  2      5     2.00                        pmuldq	%xmm0, %xmm2
+# CHECK-NEXT:  2      8     2.00    *                   pmuldq	(%rax), %xmm2
 # CHECK-NEXT:  1      4     1.00                        pmulld	%xmm0, %xmm2
 # CHECK-NEXT:  1      7     1.00    *                   pmulld	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        ptest	%xmm0, %xmm1
@@ -264,7 +264,7 @@ roundss     $1, (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -      -      -     88.00  25.00   -      -     54.00
+# CHECK-NEXT:  -      -      -     90.00  25.00   -      -     54.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -350,8 +350,8 @@ roundss     $1, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -     1.00   pmovzxwd	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     pmovzxwq	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -     1.00   pmovzxwq	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     pmuldq	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     1.00    -      -      -     1.00   pmuldq	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -      -     pmuldq	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -     1.00   pmuldq	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     pmulld	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -     1.00   pmulld	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     ptest	%xmm0, %xmm1

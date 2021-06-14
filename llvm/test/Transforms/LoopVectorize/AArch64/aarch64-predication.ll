@@ -46,7 +46,7 @@ target triple = "aarch64--linux-gnu"
 ; CHECK-NEXT:    [[TMP16:%.*]] = phi <2 x i64> [ [[TMP9]], %[[PRED_UDIV_CONTINUE]] ], [ [[TMP15]], %[[PRED_UDIV_IF1]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP16]], <2 x i64> [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP17]] = add <2 x i64> [[VEC_PHI]], [[PREDPHI]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 define i64 @predicated_udiv_scalarized_operand(i64* %a, i64 %x) optsize {

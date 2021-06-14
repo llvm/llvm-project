@@ -240,3 +240,32 @@ StringRef HeaderMapImpl::lookupFilename(StringRef Filename,
     return StringRef(DestPath.begin(), DestPath.size());
   }
 }
+
+StringRef HeaderMapImpl::reverseLookupFilename(StringRef DestPath) const {
+  if (!ReverseMap.empty())
+    return ReverseMap.lookup(DestPath);
+
+  const HMapHeader &Hdr = getHeader();
+  unsigned NumBuckets = getEndianAdjustedWord(Hdr.NumBuckets);
+  StringRef RetKey;
+  for (unsigned i = 0; i != NumBuckets; ++i) {
+    HMapBucket B = getBucket(i);
+    if (B.Key == HMAP_EmptyBucketKey)
+      continue;
+
+    Optional<StringRef> Key = getString(B.Key);
+    Optional<StringRef> Prefix = getString(B.Prefix);
+    Optional<StringRef> Suffix = getString(B.Suffix);
+    if (LLVM_LIKELY(Key && Prefix && Suffix)) {
+      SmallVector<char, 1024> Buf;
+      Buf.append(Prefix->begin(), Prefix->end());
+      Buf.append(Suffix->begin(), Suffix->end());
+      StringRef Value(Buf.begin(), Buf.size());
+      ReverseMap[Value] = *Key;
+
+      if (DestPath == Value)
+        RetKey = *Key;
+    }
+  }
+  return RetKey;
+}

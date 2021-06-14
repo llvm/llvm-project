@@ -64,8 +64,8 @@ protected:
   std::string m_device_support_directory;
   std::string m_device_support_directory_for_os_version;
   std::string m_build_update;
-  uint32_t m_last_module_sdk_idx;
-  uint32_t m_connected_module_sdk_idx;
+  uint32_t m_last_module_sdk_idx = UINT32_MAX;
+  uint32_t m_connected_module_sdk_idx = UINT32_MAX;
 
   bool UpdateSDKDirectoryInfosIfNeeded();
 

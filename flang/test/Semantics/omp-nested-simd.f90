@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1 -fopenmp
+! REQUIRES: shell
 ! OpenMP Version 4.5
 ! Various checks with the nesting of SIMD construct
 

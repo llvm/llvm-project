@@ -27,14 +27,14 @@ define void @g(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6) nounwind {
 ; X64-NEXT:    rep;movsq (%rsi), %es:(%rdi)
 ; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
-; X64-NEXT:    callq f
+; X64-NEXT:    callq f@PLT
 ; X64-NEXT:    movl $16, %ecx
 ; X64-NEXT:    movq %rsp, %rdi
 ; X64-NEXT:    movq %rbx, %rsi
 ; X64-NEXT:    rep;movsq (%rsi), %es:(%rdi)
 ; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
-; X64-NEXT:    callq f
+; X64-NEXT:    callq f@PLT
 ; X64-NEXT:    addq $288, %rsp # imm = 0x120
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    retq
@@ -65,12 +65,12 @@ define void @g(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6) nounwind {
 ; X86-NEXT:    movl %esp, %edi
 ; X86-NEXT:    movl %ebx, %esi
 ; X86-NEXT:    rep;movsl (%esi), %es:(%edi)
-; X86-NEXT:    calll f
+; X86-NEXT:    calll f@PLT
 ; X86-NEXT:    movl $33, %ecx
 ; X86-NEXT:    movl %esp, %edi
 ; X86-NEXT:    movl %ebx, %esi
 ; X86-NEXT:    rep;movsl (%esi), %es:(%edi)
-; X86-NEXT:    calll f
+; X86-NEXT:    calll f@PLT
 ; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi

@@ -986,9 +986,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
         UnrollLoop(remainderLoop,
                    {/*Count*/ Count - 1, /*TripCount*/ Count - 1,
                     /*Force*/ false, /*AllowRuntime*/ false,
-                    /*AllowExpensiveTripCount*/ false, /*PreserveCondBr*/ true,
-                    /*PreserveOnlyFirst*/ false, /*TripMultiple*/ 1,
-                    /*PeelCount*/ 0, /*UnrollRemainder*/ false, ForgetAllSCEV},
+                    /*AllowExpensiveTripCount*/ false, /*TripMultiple*/ 1,
+                    /*UnrollRemainder*/ false, ForgetAllSCEV},
                    LI, SE, DT, AC, TTI, /*ORE*/ nullptr, PreserveLCSSA);
   }
 

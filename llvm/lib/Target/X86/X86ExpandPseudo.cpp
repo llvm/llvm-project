@@ -554,10 +554,13 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     MI.setDesc(TII->get(X86::LDTILECFG));
     return true;
   }
-  case X86::PTILELOADDV: {
+  case X86::PTILELOADDV:
+  case X86::PTILELOADDT1V: {
     for (unsigned i = 2; i > 0; --i)
       MI.RemoveOperand(i);
-    MI.setDesc(TII->get(X86::TILELOADD));
+    unsigned Opc =
+        Opcode == X86::PTILELOADDV ? X86::TILELOADD : X86::TILELOADDT1;
+    MI.setDesc(TII->get(Opc));
     return true;
   }
   case X86::PTDPBSSDV:

@@ -69,7 +69,8 @@ auto UnwrapConstantValue(EXPR &expr) -> common::Constify<Constant<T>, EXPR> * {
 // GetScalarConstantValue() extracts the known scalar constant value of
 // an expression, if it has one.  The value can be parenthesized.
 template <typename T, typename EXPR>
-auto GetScalarConstantValue(const EXPR &expr) -> std::optional<Scalar<T>> {
+constexpr auto GetScalarConstantValue(const EXPR &expr)
+    -> std::optional<Scalar<T>> {
   if (const Constant<T> *constant{UnwrapConstantValue<T>(expr)}) {
     return constant->GetScalarValue();
   } else {
@@ -81,7 +82,7 @@ auto GetScalarConstantValue(const EXPR &expr) -> std::optional<Scalar<T>> {
 // Ensure that the expression has been folded beforehand when folding might
 // be required.
 template <int KIND>
-std::optional<std::int64_t> ToInt64(
+constexpr std::optional<std::int64_t> ToInt64(
     const Expr<Type<TypeCategory::Integer, KIND>> &expr) {
   if (auto scalar{
           GetScalarConstantValue<Type<TypeCategory::Integer, KIND>>(expr)}) {

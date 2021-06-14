@@ -10,12 +10,12 @@
 define <4 x float> @t1(<4 x float> %Q) nounwind {
 ; X32-SSE-LABEL: t1:
 ; X32-SSE:       # %bb.0:
-; X32-SSE-NEXT:    xorps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X32-SSE-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: t1:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    xorps {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE-NEXT:    retq
   %tmp = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %Q
   ret <4 x float> %tmp
@@ -166,12 +166,12 @@ define <2 x float> @fneg_bitcast(i64 %i) nounwind {
 define <4 x float> @fneg_undef_elts_v4f32(<4 x float> %x) {
 ; X32-SSE-LABEL: fneg_undef_elts_v4f32:
 ; X32-SSE:       # %bb.0:
-; X32-SSE-NEXT:    xorps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X32-SSE-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fneg_undef_elts_v4f32:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    xorps {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE-NEXT:    retq
   %r = fsub <4 x float> <float -0.0, float undef, float undef, float -0.0>, %x
   ret <4 x float> %r
@@ -194,12 +194,12 @@ define <4 x float> @fsub0_undef_elts_v4f32(<4 x float> %x) {
 define <4 x float> @fneg(<4 x float> %Q) nounwind {
 ; X32-SSE-LABEL: fneg:
 ; X32-SSE:       # %bb.0:
-; X32-SSE-NEXT:    xorps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X32-SSE-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X32-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fneg:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    xorps {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE-NEXT:    retq
   %tmp = fneg <4 x float> %Q
   ret <4 x float> %tmp

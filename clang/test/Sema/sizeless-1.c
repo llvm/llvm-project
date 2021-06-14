@@ -57,6 +57,7 @@ void func(int sel) {
   static svint8_t static_int8; // expected-error {{non-local variable with sizeless type 'svint8_t'}}
 
   svint8_t local_int8;
+  int8_typedef typedef_int8;
   svint16_t local_int16;
 
   svint8_t __attribute__((aligned)) aligned_int8_1;    // expected-error {{'aligned' attribute cannot be applied to sizeless type 'svint8_t'}}
@@ -137,6 +138,7 @@ void func(int sel) {
   const_volatile_int8 = local_int8; // expected-error {{cannot assign to variable 'const_volatile_int8' with const-qualified type 'const volatile svint8_t'}}
 
   init_int8 = sel ? init_int8 : local_int8;
+  init_int8 = sel ? init_int8 : typedef_int8;
   init_int8 = sel ? init_int8 : const_int8;
   init_int8 = sel ? volatile_int8 : const_int8;
   init_int8 = sel ? volatile_int8 : const_volatile_int8;

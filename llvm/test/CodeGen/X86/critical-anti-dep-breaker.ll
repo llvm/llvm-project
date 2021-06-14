@@ -22,8 +22,8 @@ define i32 @Part_Create(i64* %Anchor, i32 %TypeNum, i32 %F, i32 %Z, i32* %Status
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset %rbx, -24
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movq NullToken@{{.*}}(%rip), %rax
-; CHECK-NEXT:    movq PartClass@{{.*}}(%rip), %r10
+; CHECK-NEXT:    movq NullToken@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movq PartClass@GOTPCREL(%rip), %r10
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    movq %rdi, %rbx

@@ -505,6 +505,17 @@ public:
   /// Erase Value from ValueExprMap and ExprValueMap.
   void eraseValueFromMap(Value *V);
 
+  /// Is operation \p BinOp between \p LHS and \p RHS provably does not have
+  /// a signed/unsigned overflow (\p Signed)?
+  bool willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
+                       const SCEV *LHS, const SCEV *RHS);
+
+  /// Parse NSW/NUW flags from add/sub/mul IR binary operation \p Op into
+  /// SCEV no-wrap flags, and deduce flag[s] that aren't known yet.
+  /// Does not mutate the original instruction.
+  std::pair<SCEV::NoWrapFlags, bool /*Deduced*/>
+  getStrengthenedNoWrapFlagsFromBinOp(const OverflowingBinaryOperator *OBO);
+
   /// Return a SCEV expression for the full generality of the specified
   /// expression.
   const SCEV *getSCEV(Value *V);
@@ -1530,6 +1541,10 @@ private:
   bool loopHasNoAbnormalExits(const Loop *L) {
     return getLoopProperties(L).HasNoAbnormalExits;
   }
+
+  /// Return true if this loop is finite by assumption.  That is,
+  /// to be infinite, it must also be undefined.
+  bool loopIsFiniteByAssumption(const Loop *L);
 
   /// Compute a LoopDisposition value.
   LoopDisposition computeLoopDisposition(const SCEV *S, const Loop *L);

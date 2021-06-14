@@ -166,11 +166,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions()
-        : Options(),
-          m_level(lldb::eDescriptionLevelBrief) // Watchpoint List defaults to
-                                                // brief descriptions
-    {}
+    CommandOptions() : Options() {}
 
     ~CommandOptions() override = default;
 
@@ -206,7 +202,7 @@ public:
 
     // Instance variables to hold the values for command options.
 
-    lldb::DescriptionLevel m_level;
+    lldb::DescriptionLevel m_level = lldb::eDescriptionLevelBrief;
   };
 
 protected:
@@ -467,7 +463,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options(), m_force(false) {}
+    CommandOptions() : Options() {}
 
     ~CommandOptions() override = default;
 
@@ -495,7 +491,7 @@ public:
     }
 
     // Instance variables to hold the values for command options.
-    bool m_force;
+    bool m_force = false;
   };
 
 protected:
@@ -593,7 +589,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options(), m_ignore_count(0) {}
+    CommandOptions() : Options() {}
 
     ~CommandOptions() override = default;
 
@@ -625,7 +621,7 @@ public:
 
     // Instance variables to hold the values for command options.
 
-    uint32_t m_ignore_count;
+    uint32_t m_ignore_count = 0;
   };
 
 protected:
@@ -721,7 +717,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options(), m_condition(), m_condition_passed(false) {}
+    CommandOptions() : Options(), m_condition() {}
 
     ~CommandOptions() override = default;
 
@@ -754,7 +750,7 @@ public:
     // Instance variables to hold the values for command options.
 
     std::string m_condition;
-    bool m_condition_passed;
+    bool m_condition_passed = false;
   };
 
 protected:

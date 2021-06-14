@@ -471,7 +471,7 @@ protected:
   collection m_modules; ///< The collection of modules.
   mutable std::recursive_mutex m_modules_mutex;
 
-  Notifier *m_notifier;
+  Notifier *m_notifier = nullptr;
 
 public:
   typedef LockingAdaptedIterable<collection, lldb::ModuleSP, vector_adapter,

@@ -167,7 +167,6 @@ bool X86InsertPrefetch::doInitialization(Module &M) {
     return false;
   }
   Reader = std::move(ReaderOrErr.get());
-  Reader->setBaseDiscriminatorMask();
   Reader->read();
   return true;
 }

@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Miscellaneous constraint and requirement checking on declarations:
 ! - 8.5.6.2 & 8.5.6.3 constraints on coarrays
 ! - 8.5.19 constraints on the VOLATILE attribute

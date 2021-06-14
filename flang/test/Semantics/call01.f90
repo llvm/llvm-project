@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Confirm enforcement of constraints and restrictions in 15.6.2.1
 
 non_recursive function f01(n) result(res)

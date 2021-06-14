@@ -867,7 +867,7 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc, bool IsConstexpr,
     Cond = ConditionResult(
         *this, nullptr,
         MakeFullExpr(new (Context) OpaqueValueExpr(SourceLocation(),
-                                                   Context.BoolTy, VK_RValue),
+                                                   Context.BoolTy, VK_PRValue),
                      IfLoc),
         false);
 
@@ -1106,8 +1106,8 @@ static void checkCaseValue(Sema &S, SourceLocation Loc, const llvm::APSInt &Val,
     // type versus "switch expression cannot have this value". Use proper
     // IntRange checking rather than just looking at the unpromoted type here.
     if (ConvVal != Val)
-      S.Diag(Loc, diag::warn_case_value_overflow) << Val.toString(10)
-                                                  << ConvVal.toString(10);
+      S.Diag(Loc, diag::warn_case_value_overflow) << toString(Val, 10)
+                                                  << toString(ConvVal, 10);
   }
 }
 
@@ -1432,7 +1432,7 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
         if (OverlapStmt) {
           // If we have a duplicate, report it.
           Diag(CR->getLHS()->getBeginLoc(), diag::err_duplicate_case)
-              << OverlapVal.toString(10);
+              << toString(OverlapVal, 10);
           Diag(OverlapStmt->getLHS()->getBeginLoc(),
                diag::note_duplicate_case_prev);
           // FIXME: We really want to remove the bogus case stmt from the
@@ -1448,7 +1448,7 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
       // TODO: it would be nice if we printed enums as enums, chars as
       // chars, etc.
       Diag(CondExpr->getExprLoc(), diag::warn_missing_case_for_condition)
-        << ConstantCondValue.toString(10)
+        << toString(ConstantCondValue, 10)
         << CondExpr->getSourceRange();
     }
 
@@ -2271,7 +2271,7 @@ Sema::ActOnObjCForCollectionStmt(SourceLocation ForLoc,
       // If the type contained 'auto', deduce the 'auto' to 'id'.
       if (FirstType->getContainedAutoType()) {
         OpaqueValueExpr OpaqueId(D->getLocation(), Context.getObjCIdType(),
-                                 VK_RValue);
+                                 VK_PRValue);
         Expr *DeducedInit = &OpaqueId;
         if (DeduceAutoType(D->getTypeSourceInfo(), DeducedInit, FirstType) ==
                 DAR_Failed)
@@ -3307,99 +3307,161 @@ Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope) {
   return new (Context) BreakStmt(BreakLoc);
 }
 
-/// Determine whether the given expression is a candidate for
-/// copy elision in either a return statement or a throw expression.
+/// Determine whether the given expression might be move-eligible or
+/// copy-elidable in either a (co_)return statement or throw expression,
+/// without considering function return type, if applicable.
 ///
-/// \param ReturnType If we're determining the copy elision candidate for
-/// a return statement, this is the return type of the function. If we're
-/// determining the copy elision candidate for a throw expression, this will
-/// be a NULL type.
+/// \param E The expression being returned from the function or block,
+/// being thrown, or being co_returned from a coroutine. This expression
+/// might be modified by the implementation.
 ///
-/// \param E The expression being returned from the function or block, or
-/// being thrown.
+/// \param ForceCXX2b Overrides detection of current language mode
+/// and uses the rules for C++2b.
 ///
-/// \param CESK Whether we allow function parameters or
-/// id-expressions that could be moved out of the function to be considered NRVO
-/// candidates. C++ prohibits these for NRVO itself, but we re-use this logic to
-/// determine whether we should try to move as part of a return or throw (which
-/// does allow function parameters).
-///
-/// \returns The NRVO candidate variable, if the return statement may use the
-/// NRVO, or NULL if there is no such candidate.
-VarDecl *Sema::getCopyElisionCandidate(QualType ReturnType, Expr *E,
-                                       CopyElisionSemanticsKind CESK) {
+/// \returns An aggregate which contains the Candidate and isMoveEligible
+/// and isCopyElidable methods. If Candidate is non-null, it means
+/// isMoveEligible() would be true under the most permissive language standard.
+Sema::NamedReturnInfo Sema::getNamedReturnInfo(Expr *&E, bool ForceCXX2b) {
+  if (!E)
+    return NamedReturnInfo();
   // - in a return statement in a function [where] ...
   // ... the expression is the name of a non-volatile automatic object ...
-  DeclRefExpr *DR = dyn_cast<DeclRefExpr>(E->IgnoreParens());
+  const auto *DR = dyn_cast<DeclRefExpr>(E->IgnoreParens());
   if (!DR || DR->refersToEnclosingVariableOrCapture())
-    return nullptr;
-  VarDecl *VD = dyn_cast<VarDecl>(DR->getDecl());
+    return NamedReturnInfo();
+  const auto *VD = dyn_cast<VarDecl>(DR->getDecl());
   if (!VD)
-    return nullptr;
-
-  if (isCopyElisionCandidate(ReturnType, VD, CESK))
-    return VD;
-  return nullptr;
+    return NamedReturnInfo();
+  NamedReturnInfo Res = getNamedReturnInfo(VD, /*ForceCXX20=*/ForceCXX2b);
+  if (Res.Candidate && !E->isXValue() &&
+      (ForceCXX2b || getLangOpts().CPlusPlus2b)) {
+    E = ImplicitCastExpr::Create(Context, VD->getType().getNonReferenceType(),
+                                 CK_NoOp, E, nullptr, VK_XValue,
+                                 FPOptionsOverride());
+  }
+  return Res;
 }
 
-bool Sema::isCopyElisionCandidate(QualType ReturnType, const VarDecl *VD,
-                                  CopyElisionSemanticsKind CESK) {
-  QualType VDType = VD->getType();
-  // - in a return statement in a function with ...
-  // ... a class return type ...
-  if (!ReturnType.isNull() && !ReturnType->isDependentType()) {
-    if (!ReturnType->isRecordType())
-      return false;
-    // ... the same cv-unqualified type as the function return type ...
-    // When considering moving this expression out, allow dissimilar types.
-    if (!(CESK & CES_AllowDifferentTypes) && !VDType->isDependentType() &&
-        !Context.hasSameUnqualifiedType(ReturnType, VDType))
-      return false;
-  }
+/// Updates the status in the given NamedReturnInfo object to disallow
+/// copy elision, and optionally also implicit move.
+///
+/// \param Info The NamedReturnInfo object to update.
+///
+/// \param CanMove If true, disallow only copy elision.
+/// If false, also disallow implcit move.
+static void disallowNRVO(Sema::NamedReturnInfo &Info, bool CanMove) {
+  Info.S = std::min(Info.S, CanMove ? Sema::NamedReturnInfo::MoveEligible
+                                    : Sema::NamedReturnInfo::None);
+}
 
-  // ...object (other than a function or catch-clause parameter)...
-  if (VD->getKind() != Decl::Var &&
-      !((CESK & CES_AllowParameters) && VD->getKind() == Decl::ParmVar))
-    return false;
-  if (!(CESK & CES_AllowExceptionVariables) && VD->isExceptionVariable())
-    return false;
+/// Determine whether the given NRVO candidate variable is move-eligible or
+/// copy-elidable, without considering function return type.
+///
+/// \param VD The NRVO candidate variable.
+///
+/// \param ForceCXX20 Overrides detection of current language mode
+/// and uses the rules for C++20.
+///
+/// \returns An aggregate which contains the Candidate and isMoveEligible
+/// and isCopyElidable methods. If Candidate is non-null, it means
+/// isMoveEligible() would be true under the most permissive language standard.
+Sema::NamedReturnInfo Sema::getNamedReturnInfo(const VarDecl *VD,
+                                               bool ForceCXX20) {
+  bool hasCXX11 = getLangOpts().CPlusPlus11 || ForceCXX20;
+  bool hasCXX20 = getLangOpts().CPlusPlus20 || ForceCXX20;
+  NamedReturnInfo Info{VD, NamedReturnInfo::MoveEligibleAndCopyElidable};
+
+  // C++20 [class.copy.elision]p3:
+  // - in a return statement in a function with ...
+  // (other than a function ... parameter)
+  if (VD->getKind() == Decl::ParmVar)
+    disallowNRVO(Info, hasCXX11);
+  else if (VD->getKind() != Decl::Var)
+    return NamedReturnInfo();
+
+  // (other than ... a catch-clause parameter)
+  if (VD->isExceptionVariable())
+    disallowNRVO(Info, hasCXX20);
 
   // ...automatic...
-  if (!VD->hasLocalStorage()) return false;
+  if (!VD->hasLocalStorage())
+    return NamedReturnInfo();
 
-  // Return false if VD is a __block variable. We don't want to implicitly move
-  // out of a __block variable during a return because we cannot assume the
-  // variable will no longer be used.
+  // We don't want to implicitly move out of a __block variable during a return
+  // because we cannot assume the variable will no longer be used.
   if (VD->hasAttr<BlocksAttr>())
-    return false;
+    return NamedReturnInfo();
 
+  QualType VDType = VD->getType();
   if (VDType->isObjectType()) {
     // C++17 [class.copy.elision]p3:
     // ...non-volatile automatic object...
     if (VDType.isVolatileQualified())
-      return false;
+      return NamedReturnInfo();
   } else if (VDType->isRValueReferenceType()) {
     // C++20 [class.copy.elision]p3:
-    // ...either a non-volatile object or an rvalue reference to a non-volatile object type...
-    if (!(CESK & CES_AllowRValueReferenceType))
-      return false;
+    // ...either a non-volatile object or an rvalue reference to a non-volatile
+    // object type...
     QualType VDReferencedType = VDType.getNonReferenceType();
-    if (VDReferencedType.isVolatileQualified() || !VDReferencedType->isObjectType())
-      return false;
+    if (VDReferencedType.isVolatileQualified() ||
+        !VDReferencedType->isObjectType())
+      return NamedReturnInfo();
+    disallowNRVO(Info, hasCXX20);
   } else {
-    return false;
+    return NamedReturnInfo();
   }
-
-  if (CESK & CES_AllowDifferentTypes)
-    return true;
 
   // Variables with higher required alignment than their type's ABI
   // alignment cannot use NRVO.
   if (!VDType->isDependentType() && VD->hasAttr<AlignedAttr>() &&
       Context.getDeclAlign(VD) > Context.getTypeAlignInChars(VDType))
-    return false;
+    disallowNRVO(Info, hasCXX11);
 
-  return true;
+  return Info;
+}
+
+/// Updates given NamedReturnInfo's move-eligible and
+/// copy-elidable statuses, considering the function
+/// return type criteria as applicable to return statements.
+///
+/// \param Info The NamedReturnInfo object to update.
+///
+/// \param ReturnType This is the return type of the function.
+/// \returns The copy elision candidate, in case the initial return expression
+/// was copy elidable, or nullptr otherwise.
+const VarDecl *Sema::getCopyElisionCandidate(NamedReturnInfo &Info,
+                                             QualType ReturnType) {
+  if (!Info.Candidate)
+    return nullptr;
+
+  auto invalidNRVO = [&] {
+    Info = NamedReturnInfo();
+    return nullptr;
+  };
+
+  // If we got a non-deduced auto ReturnType, we are in a dependent context and
+  // there is no point in allowing copy elision since we won't have it deduced
+  // by the point the VardDecl is instantiated, which is the last chance we have
+  // of deciding if the candidate is really copy elidable.
+  if ((ReturnType->getTypeClass() == Type::TypeClass::Auto &&
+       ReturnType->isCanonicalUnqualified()) ||
+      ReturnType->isSpecificBuiltinType(BuiltinType::Dependent))
+    return invalidNRVO();
+
+  if (!ReturnType->isDependentType()) {
+    // - in a return statement in a function with ...
+    // ... a class return type ...
+    if (!ReturnType->isRecordType())
+      return invalidNRVO();
+
+    QualType VDType = Info.Candidate->getType();
+    // ... the same cv-unqualified type as the function return type ...
+    // When considering moving this expression out, allow dissimilar types.
+    if (!VDType->isDependentType() &&
+        !Context.hasSameUnqualifiedType(ReturnType, VDType))
+      disallowNRVO(Info, getLangOpts().CPlusPlus11);
+  }
+  return Info.isCopyElidable() ? Info.Candidate : nullptr;
 }
 
 /// Try to perform the initialization of a potentially-movable value,
@@ -3424,8 +3486,7 @@ bool Sema::isCopyElisionCandidate(QualType ReturnType, const VarDecl *VD,
 /// the selected constructor/operator doesn't match the additional criteria, we
 /// need to do the second overload resolution.
 static bool TryMoveInitialization(Sema &S, const InitializedEntity &Entity,
-                                  const VarDecl *NRVOCandidate,
-                                  QualType ResultType, Expr *&Value,
+                                  const VarDecl *NRVOCandidate, Expr *&Value,
                                   bool ConvertingConstructorsOnly,
                                   bool IsDiagnosticsCheck, ExprResult &Res) {
   ImplicitCastExpr AsRvalue(ImplicitCastExpr::OnStack, Value->getType(),
@@ -3508,63 +3569,41 @@ static bool TryMoveInitialization(Sema &S, const InitializedEntity &Entity,
 /// This routine implements C++20 [class.copy.elision]p3, which attempts to
 /// treat returned lvalues as rvalues in certain cases (to prefer move
 /// construction), then falls back to treating them as lvalues if that failed.
-ExprResult Sema::PerformMoveOrCopyInitialization(
-    const InitializedEntity &Entity, const VarDecl *NRVOCandidate,
-    QualType ResultType, Expr *Value, bool AllowNRVO) {
-  ExprResult Res = ExprError();
-  bool NeedSecondOverloadResolution = true;
+ExprResult
+Sema::PerformMoveOrCopyInitialization(const InitializedEntity &Entity,
+                                      const NamedReturnInfo &NRInfo,
+                                      Expr *Value) {
 
-  if (AllowNRVO) {
-    CopyElisionSemanticsKind CESK = CES_Strict;
-    if (getLangOpts().CPlusPlus20) {
-      CESK = CES_ImplicitlyMovableCXX20;
-    } else if (getLangOpts().CPlusPlus11) {
-      CESK = CES_ImplicitlyMovableCXX11CXX14CXX17;
+  if (NRInfo.Candidate && !getLangOpts().CPlusPlus2b) {
+    if (NRInfo.isMoveEligible()) {
+      ExprResult Res;
+      if (!TryMoveInitialization(*this, Entity, NRInfo.Candidate, Value,
+                                 !getLangOpts().CPlusPlus20, false, Res))
+        return Res;
     }
-
-    if (!NRVOCandidate) {
-      NRVOCandidate = getCopyElisionCandidate(ResultType, Value, CESK);
-    }
-
-    if (NRVOCandidate) {
-      NeedSecondOverloadResolution =
-          TryMoveInitialization(*this, Entity, NRVOCandidate, ResultType, Value,
-                                !getLangOpts().CPlusPlus20, false, Res);
-    }
-
-    if (!getLangOpts().CPlusPlus20 && NeedSecondOverloadResolution &&
-        !getDiagnostics().isIgnored(diag::warn_return_std_move,
+    if (!getDiagnostics().isIgnored(diag::warn_return_std_move,
                                     Value->getExprLoc())) {
-      const VarDecl *FakeNRVOCandidate = getCopyElisionCandidate(
-          QualType(), Value, CES_ImplicitlyMovableCXX20);
-      if (FakeNRVOCandidate) {
-        QualType QT = FakeNRVOCandidate->getType();
-        if (QT->isLValueReferenceType()) {
-          // Adding 'std::move' around an lvalue reference variable's name is
-          // dangerous. Don't suggest it.
-        } else if (QT.getNonReferenceType()
-                       .getUnqualifiedType()
-                       .isTriviallyCopyableType(Context)) {
-          // Adding 'std::move' around a trivially copyable variable is probably
-          // pointless. Don't suggest it.
-        } else {
-          ExprResult FakeRes = ExprError();
-          Expr *FakeValue = Value;
-          TryMoveInitialization(*this, Entity, FakeNRVOCandidate, ResultType,
-                                FakeValue, false, true, FakeRes);
-          if (!FakeRes.isInvalid()) {
-            bool IsThrow =
-                (Entity.getKind() == InitializedEntity::EK_Exception);
-            SmallString<32> Str;
-            Str += "std::move(";
-            Str += FakeNRVOCandidate->getDeclName().getAsString();
-            Str += ")";
-            Diag(Value->getExprLoc(), diag::warn_return_std_move)
-                << Value->getSourceRange()
-                << FakeNRVOCandidate->getDeclName() << IsThrow;
-            Diag(Value->getExprLoc(), diag::note_add_std_move)
-                << FixItHint::CreateReplacement(Value->getSourceRange(), Str);
-          }
+      QualType QT = NRInfo.Candidate->getType();
+      if (QT.getNonReferenceType().getUnqualifiedType().isTriviallyCopyableType(
+              Context)) {
+        // Adding 'std::move' around a trivially copyable variable is probably
+        // pointless. Don't suggest it.
+      } else {
+        ExprResult FakeRes = ExprError();
+        Expr *FakeValue = Value;
+        TryMoveInitialization(*this, Entity, NRInfo.Candidate, FakeValue, false,
+                              true, FakeRes);
+        if (!FakeRes.isInvalid()) {
+          bool IsThrow = (Entity.getKind() == InitializedEntity::EK_Exception);
+          SmallString<32> Str;
+          Str += "std::move(";
+          Str += NRInfo.Candidate->getDeclName().getAsString();
+          Str += ")";
+          Diag(Value->getExprLoc(), diag::warn_return_std_move)
+              << Value->getSourceRange() << NRInfo.Candidate->getDeclName()
+              << IsThrow;
+          Diag(Value->getExprLoc(), diag::note_add_std_move)
+              << FixItHint::CreateReplacement(Value->getSourceRange(), Str);
         }
       }
     }
@@ -3573,10 +3612,7 @@ ExprResult Sema::PerformMoveOrCopyInitialization(
   // Either we didn't meet the criteria for treating an lvalue as an rvalue,
   // above, or overload resolution failed. Either way, we need to try
   // (again) now with the return value expression as written.
-  if (NeedSecondOverloadResolution)
-    Res = PerformCopyInitialization(Entity, SourceLocation(), Value);
-
-  return Res;
+  return PerformCopyInitialization(Entity, SourceLocation(), Value);
 }
 
 /// Determine whether the declared return type of the specified function
@@ -3590,8 +3626,9 @@ static bool hasDeducedReturnType(FunctionDecl *FD) {
 /// ActOnCapScopeReturnStmt - Utility routine to type-check return statements
 /// for capturing scopes.
 ///
-StmtResult
-Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
+StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
+                                         Expr *RetValExp,
+                                         NamedReturnInfo &NRInfo) {
   // If this is the first return we've seen, infer the return type.
   // [expr.prim.lambda]p4 in C++11; block literals follow the same rules.
   CapturingScopeInfo *CurCap = cast<CapturingScopeInfo>(getCurFunction());
@@ -3670,7 +3707,7 @@ Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
     if (CurCap->ReturnType.isNull())
       CurCap->ReturnType = FnRetType;
   }
-  assert(!FnRetType.isNull());
+  const VarDecl *NRVOCandidate = getCopyElisionCandidate(NRInfo, FnRetType);
 
   if (auto *CurBlock = dyn_cast<BlockScopeInfo>(CurCap)) {
     if (CurBlock->FunctionType->castAs<FunctionType>()->getNoReturnAttr()) {
@@ -3693,7 +3730,6 @@ Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
   // Otherwise, verify that this result type matches the previous one.  We are
   // pickier with blocks than for normal functions because we don't have GCC
   // compatibility to worry about here.
-  const VarDecl *NRVOCandidate = nullptr;
   if (FnRetType->isDependentType()) {
     // Delay processing for now.  TODO: there are lots of dependent
     // types we can conclusively prove aren't void.
@@ -3721,20 +3757,15 @@ Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
 
     // In C++ the return statement is handled via a copy initialization.
     // the C version of which boils down to CheckSingleAssignmentConstraints.
-    NRVOCandidate = getCopyElisionCandidate(FnRetType, RetValExp, CES_Strict);
-    InitializedEntity Entity = InitializedEntity::InitializeResult(ReturnLoc,
-                                                                   FnRetType,
-                                                      NRVOCandidate != nullptr);
-    ExprResult Res = PerformMoveOrCopyInitialization(Entity, NRVOCandidate,
-                                                     FnRetType, RetValExp);
+    InitializedEntity Entity = InitializedEntity::InitializeResult(
+        ReturnLoc, FnRetType, NRVOCandidate != nullptr);
+    ExprResult Res = PerformMoveOrCopyInitialization(Entity, NRInfo, RetValExp);
     if (Res.isInvalid()) {
       // FIXME: Cleanup temporaries here, anyway?
       return StmtError();
     }
     RetValExp = Res.get();
     CheckReturnValExpr(RetValExp, FnRetType, ReturnLoc);
-  } else {
-    NRVOCandidate = getCopyElisionCandidate(FnRetType, RetValExp, CES_Strict);
   }
 
   if (RetValExp) {
@@ -3943,8 +3974,10 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
   if (RetValExp && DiagnoseUnexpandedParameterPack(RetValExp))
     return StmtError();
 
+  NamedReturnInfo NRInfo = getNamedReturnInfo(RetValExp);
+
   if (isa<CapturingScopeInfo>(getCurFunction()))
-    return ActOnCapScopeReturnStmt(ReturnLoc, RetValExp);
+    return ActOnCapScopeReturnStmt(ReturnLoc, RetValExp, NRInfo);
 
   QualType FnRetType;
   QualType RelatedRetType;
@@ -4016,6 +4049,7 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
       }
     }
   }
+  const VarDecl *NRVOCandidate = getCopyElisionCandidate(NRInfo, FnRetType);
 
   bool HasDependentReturnType = FnRetType->isDependentType();
 
@@ -4122,8 +4156,6 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
                                 /* NRVOCandidate=*/nullptr);
   } else {
     assert(RetValExp || HasDependentReturnType);
-    const VarDecl *NRVOCandidate = nullptr;
-
     QualType RetType = RelatedRetType.isNull() ? FnRetType : RelatedRetType;
 
     // C99 6.8.6.4p3(136): The return statement is not an assignment. The
@@ -4132,15 +4164,12 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
 
     // In C++ the return statement is handled via a copy initialization,
     // the C version of which boils down to CheckSingleAssignmentConstraints.
-    if (RetValExp)
-      NRVOCandidate = getCopyElisionCandidate(FnRetType, RetValExp, CES_Strict);
     if (!HasDependentReturnType && !RetValExp->isTypeDependent()) {
       // we have a non-void function with an expression, continue checking
-      InitializedEntity Entity = InitializedEntity::InitializeResult(ReturnLoc,
-                                                                     RetType,
-                                                      NRVOCandidate != nullptr);
-      ExprResult Res = PerformMoveOrCopyInitialization(Entity, NRVOCandidate,
-                                                       RetType, RetValExp);
+      InitializedEntity Entity = InitializedEntity::InitializeResult(
+          ReturnLoc, RetType, NRVOCandidate != nullptr);
+      ExprResult Res =
+          PerformMoveOrCopyInitialization(Entity, NRInfo, RetValExp);
       if (Res.isInvalid()) {
         // FIXME: Clean up temporaries here anyway?
         return StmtError();

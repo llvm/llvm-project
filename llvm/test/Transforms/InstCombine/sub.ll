@@ -830,6 +830,44 @@ define i32 @test44(i32 %x) {
   ret i32 %sub
 }
 
+define <2 x i32> @test44vec(<2 x i32> %x) {
+; CHECK-LABEL: @test44vec(
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw <2 x i32> [[X:%.*]], <i32 -32768, i32 -32768>
+; CHECK-NEXT:    ret <2 x i32> [[SUB]]
+;
+  %sub = sub nsw <2 x i32> %x, <i32 32768, i32 32768>
+  ret <2 x i32> %sub
+}
+
+define <vscale x 2 x i32> @test44scalablevec(<vscale x 2 x i32> %x) {
+; CHECK-LABEL: @test44scalablevec(
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw <vscale x 2 x i32> [[X:%.*]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> undef, i32 -32768, i32 0), <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[SUB]]
+;
+  %sub = sub nsw <vscale x 2 x i32> %x, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> undef, i32 32768, i32 0), <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer)
+  ret <vscale x 2 x i32> %sub
+}
+
+define <2 x i16> @test44vecminval(<2 x i16> %x) {
+; CHECK-LABEL: @test44vecminval(
+; CHECK-NEXT:    [[SUB:%.*]] = xor <2 x i16> [[X:%.*]], <i16 -32768, i16 -32768>
+; CHECK-NEXT:    ret <2 x i16> [[SUB]]
+;
+  %sub = sub nsw <2 x i16> %x, <i16 -32768, i16 -32768>
+  ret <2 x i16> %sub
+}
+
+; FIXME: This isn't combined to xor as above because the pattern in visitSub
+; uses m_ImmConstant which matches Constant but (explicitly) not ConstantExpr.
+define <vscale x 2 x i16> @test44scalablevecminval(<vscale x 2 x i16> %x) {
+; CHECK-LABEL: @test44scalablevecminval(
+; CHECK-NEXT:    [[SUB:%.*]] = add <vscale x 2 x i16> [[X:%.*]], shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> undef, i16 -32768, i32 0), <vscale x 2 x i16> undef, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i16> [[SUB]]
+;
+  %sub = sub nsw <vscale x 2 x i16> %x, shufflevector (<vscale x 2 x i16> insertelement (<vscale x 2 x i16> undef, i16 -32768, i32 0), <vscale x 2 x i16> undef, <vscale x 2 x i32> zeroinitializer)
+  ret <vscale x 2 x i16> %sub
+}
+
 define i32 @test45(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test45(
 ; CHECK-NEXT:    [[SUB:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]

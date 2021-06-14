@@ -1,8 +1,8 @@
 ; REQUIRES: asserts
 ; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -loop-vectorize -S -scalable-vectorization=on < %s 2>&1 | FileCheck %s
 ; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -loop-vectorize -pass-remarks-analysis=loop-vectorize -debug-only=loop-vectorize -S -scalable-vectorization=on < %s 2>&1 | FileCheck --check-prefix=CHECK-DBG %s
-; RUN: opt -mtriple=aarch64-none-linux-gnu -loop-vectorize -pass-remarks-analysis=loop-vectorize -debug-only=loop-vectorize -S -scalable-vectorization=on < %s 2>&1 | FileCheck --check-prefix=CHECK-NO-SVE %s
-; RUN: opt -mtriple=aarch64-none-linux-gnu -loop-vectorize -force-target-supports-scalable-vectors=true -pass-remarks-analysis=loop-vectorize -debug-only=loop-vectorize -S -scalable-vectorization=on < %s 2>&1 | FileCheck --check-prefix=CHECK-NO-MAX-VSCALE %s
+; RUN: opt -mtriple=aarch64-none-linux-gnu -loop-vectorize -pass-remarks-analysis=loop-vectorize -debug-only=loop-vectorize -S -scalable-vectorization=on < %s 2>%t | FileCheck --check-prefix=CHECK-NO-SVE %s
+; RUN: cat %t | FileCheck %s -check-prefix=CHECK-NO-SVE-REMARKS
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
@@ -309,11 +309,12 @@ exit:
 !16 = !{!"llvm.loop.vectorize.width", i32 16}
 !17 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
 
-; CHECK-NO-SVE-LABEL: LV: Checking a loop in "test_no_sve"
-; CHECK-NO-SVE: LV: Disabling scalable vectorization, because target does not support scalable vectors.
-; CHECK-NO-SVE: remark: <unknown>:0:0: Disabling scalable vectorization, because target does not support scalable vectors.
-; CHECK-NO-SVE: LV: User VF=vscale x 4 is unsafe. Ignoring scalable UserVF.
-; CHECK-NO-SVE: LV: Selecting VF: 4.
+; CHECK-NO-SVE-REMARKS-LABEL: LV: Checking a loop in "test_no_sve"
+; CHECK-NO-SVE-REMARKS: LV: Disabling scalable vectorization, because target does not support scalable vectors.
+; CHECK-NO-SVE-REMARKS: remark: <unknown>:0:0: Disabling scalable vectorization, because target does not support scalable vectors.
+; CHECK-NO-SVE-REMARKS: LV: User VF=vscale x 4 is unsafe. Ignoring scalable UserVF.
+; CHECK-NO-SVE-REMARKS: LV: Selecting VF: 4.
+; CHECK-NO-SVE-LABEL: @test_no_sve
 ; CHECK-NO-SVE: <4 x i32>
 ; CHECK-NO-SVE-NOT: <vscale x 4 x i32>
 define void @test_no_sve(i32* %a, i32* %b) {
@@ -343,11 +344,12 @@ exit:
 ; Test the LV falls back to fixed-width vectorization if scalable vectors are
 ; supported but max vscale is undefined.
 ;
-; CHECK-NO-MAX-VSCALE-LABEL: LV: Checking a loop in "test_no_max_vscale"
-; CEHCK-NO-MAX-VSCALE: The max safe fixed VF is: 4.
-; CHECK-NO-MAX-VSCALE: LV: User VF=vscale x 4 is unsafe. Ignoring scalable UserVF.
-; CHECK-NO-MAX-VSCALE: LV: Selecting VF: 4.
-; CHECK-NO-MAX-VSCALE: <4 x i32>
+; CHECK-NO-SVE-REMARKS-LABEL: LV: Checking a loop in "test_no_max_vscale"
+; CHECK-NO-SVE-REMARKS: The max safe fixed VF is: 4.
+; CHECK-NO-SVE-REMARKS: LV: User VF=vscale x 4 is unsafe. Ignoring scalable UserVF.
+; CHECK-NO-SVE-REMARKS: LV: Selecting VF: 4.
+; CHECK-NO-SVE-LABEL: @test_no_max_vscale
+; CHECK-NO-SVE: <4 x i32>
 define void @test_no_max_vscale(i32* %a, i32* %b) {
 entry:
   br label %loop

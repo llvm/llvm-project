@@ -29,8 +29,17 @@ using namespace lldb_private;
 
 Symtab::Symtab(ObjectFile *objfile)
     : m_objfile(objfile), m_symbols(), m_file_addr_to_index(*this),
-      m_name_to_index(), m_mutex(), m_file_addr_to_index_computed(false),
-      m_name_indexes_computed(false) {}
+      m_name_to_symbol_indices(), m_mutex(),
+      m_file_addr_to_index_computed(false), m_name_indexes_computed(false) {
+  m_name_to_symbol_indices.emplace(std::make_pair(
+      lldb::eFunctionNameTypeNone, UniqueCStringMap<uint32_t>()));
+  m_name_to_symbol_indices.emplace(std::make_pair(
+      lldb::eFunctionNameTypeBase, UniqueCStringMap<uint32_t>()));
+  m_name_to_symbol_indices.emplace(std::make_pair(
+      lldb::eFunctionNameTypeMethod, UniqueCStringMap<uint32_t>()));
+  m_name_to_symbol_indices.emplace(std::make_pair(
+      lldb::eFunctionNameTypeSelector, UniqueCStringMap<uint32_t>()));
+}
 
 Symtab::~Symtab() {}
 
@@ -51,7 +60,8 @@ uint32_t Symtab::AddSymbol(const Symbol &symbol) {
   // Clients should grab the mutex from this symbol table and lock it manually
   // when calling this function to avoid performance issues.
   uint32_t symbol_idx = m_symbols.size();
-  m_name_to_index.Clear();
+  auto &name_to_index = GetNameToSymbolIndexMap(lldb::eFunctionNameTypeNone);
+  name_to_index.Clear();
   m_file_addr_to_index.Clear();
   m_symbols.push_back(symbol);
   m_file_addr_to_index_computed = false;
@@ -65,7 +75,8 @@ size_t Symtab::GetNumSymbols() const {
 }
 
 void Symtab::SectionFileAddressesChanged() {
-  m_name_to_index.Clear();
+  auto &name_to_index = GetNameToSymbolIndexMap(lldb::eFunctionNameTypeNone);
+  name_to_index.Clear();
   m_file_addr_to_index_computed = false;
 }
 
@@ -252,9 +263,17 @@ void Symtab::InitNameIndexes() {
   if (!m_name_indexes_computed) {
     m_name_indexes_computed = true;
     LLDB_SCOPED_TIMER();
+
+    auto &name_to_index = GetNameToSymbolIndexMap(lldb::eFunctionNameTypeNone);
+    auto &basename_to_index =
+        GetNameToSymbolIndexMap(lldb::eFunctionNameTypeBase);
+    auto &method_to_index =
+        GetNameToSymbolIndexMap(lldb::eFunctionNameTypeMethod);
+    auto &selector_to_index =
+        GetNameToSymbolIndexMap(lldb::eFunctionNameTypeSelector);
     // Create the name index vector to be able to quickly search by name
     const size_t num_symbols = m_symbols.size();
-    m_name_to_index.Reserve(num_symbols);
+    name_to_index.Reserve(num_symbols);
 
     // The "const char *" in "class_contexts" and backlog::value_type::second
     // must come from a ConstString::GetCString()
@@ -279,14 +298,14 @@ void Symtab::InitNameIndexes() {
       // stored in the mangled field.
       Mangled &mangled = symbol->GetMangled();
       if (ConstString name = mangled.GetMangledName()) {
-        m_name_to_index.Append(name, value);
+        name_to_index.Append(name, value);
 
         if (symbol->ContainsLinkerAnnotations()) {
           // If the symbol has linker annotations, also add the version without
           // the annotations.
           ConstString stripped = ConstString(
               m_objfile->StripLinkerSymbolAnnotations(name.GetStringRef()));
-          m_name_to_index.Append(stripped, value);
+          name_to_index.Append(stripped, value);
         }
 
         const SymbolType type = symbol->GetType();
@@ -299,25 +318,25 @@ void Symtab::InitNameIndexes() {
       // Symbol name strings that didn't match a Mangled::ManglingScheme, are
       // stored in the demangled field.
       if (ConstString name = mangled.GetDemangledName()) {
-        m_name_to_index.Append(name, value);
+        name_to_index.Append(name, value);
 
         if (symbol->ContainsLinkerAnnotations()) {
           // If the symbol has linker annotations, also add the version without
           // the annotations.
           name = ConstString(
               m_objfile->StripLinkerSymbolAnnotations(name.GetStringRef()));
-          m_name_to_index.Append(name, value);
+          name_to_index.Append(name, value);
         }
 
         // If the demangled name turns out to be an ObjC name, and is a category
         // name, add the version without categories to the index too.
         ObjCLanguage::MethodName objc_method(name.GetStringRef(), true);
         if (objc_method.IsValid(true)) {
-          m_selector_to_index.Append(objc_method.GetSelector(), value);
+          selector_to_index.Append(objc_method.GetSelector(), value);
 
           if (ConstString objc_method_no_category =
                   objc_method.GetFullNameWithoutCategory(true))
-            m_name_to_index.Append(objc_method_no_category, value);
+            name_to_index.Append(objc_method_no_category, value);
         }
       }
     }
@@ -326,14 +345,14 @@ void Symtab::InitNameIndexes() {
       RegisterBacklogEntry(record.first, record.second, class_contexts);
     }
 
-    m_name_to_index.Sort();
-    m_name_to_index.SizeToFit();
-    m_selector_to_index.Sort();
-    m_selector_to_index.SizeToFit();
-    m_basename_to_index.Sort();
-    m_basename_to_index.SizeToFit();
-    m_method_to_index.Sort();
-    m_method_to_index.SizeToFit();
+    name_to_index.Sort();
+    name_to_index.SizeToFit();
+    selector_to_index.Sort();
+    selector_to_index.SizeToFit();
+    basename_to_index.Sort();
+    basename_to_index.SizeToFit();
+    method_to_index.Sort();
+    method_to_index.SizeToFit();
   }
 }
 
@@ -356,10 +375,13 @@ void Symtab::RegisterMangledNameEntry(
   // Register functions with no context.
   if (decl_context.empty()) {
     // This has to be a basename
-    m_basename_to_index.Append(entry);
+    auto &basename_to_index =
+        GetNameToSymbolIndexMap(lldb::eFunctionNameTypeBase);
+    basename_to_index.Append(entry);
     // If there is no context (no namespaces or class scopes that come before
     // the function name) then this also could be a fullname.
-    m_name_to_index.Append(entry);
+    auto &name_to_index = GetNameToSymbolIndexMap(lldb::eFunctionNameTypeNone);
+    name_to_index.Append(entry);
     return;
   }
 
@@ -368,10 +390,12 @@ void Symtab::RegisterMangledNameEntry(
   const char *decl_context_ccstr = ConstString(decl_context).GetCString();
   auto it = class_contexts.find(decl_context_ccstr);
 
+  auto &method_to_index =
+      GetNameToSymbolIndexMap(lldb::eFunctionNameTypeMethod);
   // Register constructors and destructors. They are methods and create
   // declaration contexts.
   if (rmc.IsCtorOrDtor()) {
-    m_method_to_index.Append(entry);
+    method_to_index.Append(entry);
     if (it == class_contexts.end())
       class_contexts.insert(it, decl_context_ccstr);
     return;
@@ -379,7 +403,7 @@ void Symtab::RegisterMangledNameEntry(
 
   // Register regular methods with a known declaration context.
   if (it != class_contexts.end()) {
-    m_method_to_index.Append(entry);
+    method_to_index.Append(entry);
     return;
   }
 
@@ -391,14 +415,18 @@ void Symtab::RegisterMangledNameEntry(
 void Symtab::RegisterBacklogEntry(
     const NameToIndexMap::Entry &entry, const char *decl_context,
     const std::set<const char *> &class_contexts) {
+  auto &method_to_index =
+      GetNameToSymbolIndexMap(lldb::eFunctionNameTypeMethod);
   auto it = class_contexts.find(decl_context);
   if (it != class_contexts.end()) {
-    m_method_to_index.Append(entry);
+    method_to_index.Append(entry);
   } else {
     // If we got here, we have something that had a context (was inside
     // a namespace or class) yet we don't know the entry
-    m_method_to_index.Append(entry);
-    m_basename_to_index.Append(entry);
+    method_to_index.Append(entry);
+    auto &basename_to_index =
+        GetNameToSymbolIndexMap(lldb::eFunctionNameTypeBase);
+    basename_to_index.Append(entry);
   }
 }
 
@@ -595,7 +623,8 @@ uint32_t Symtab::AppendSymbolIndexesWithName(ConstString symbol_name,
     if (!m_name_indexes_computed)
       InitNameIndexes();
 
-    return m_name_to_index.GetValues(symbol_name, indexes);
+    auto &name_to_index = GetNameToSymbolIndexMap(lldb::eFunctionNameTypeNone);
+    return name_to_index.GetValues(symbol_name, indexes);
   }
   return 0;
 }
@@ -612,9 +641,10 @@ uint32_t Symtab::AppendSymbolIndexesWithName(ConstString symbol_name,
     if (!m_name_indexes_computed)
       InitNameIndexes();
 
+    auto &name_to_index = GetNameToSymbolIndexMap(lldb::eFunctionNameTypeNone);
     std::vector<uint32_t> all_name_indexes;
     const size_t name_match_count =
-        m_name_to_index.GetValues(symbol_name, all_name_indexes);
+        name_to_index.GetValues(symbol_name, all_name_indexes);
     for (size_t i = 0; i < name_match_count; ++i) {
       if (CheckSymbolAtIndex(all_name_indexes[i], symbol_debug_type,
                              symbol_visibility))
@@ -1035,45 +1065,18 @@ void Symtab::FindFunctionSymbols(ConstString name, uint32_t name_type_mask,
     }
   }
 
-  if (name_type_mask & eFunctionNameTypeBase) {
-    // From mangled names we can't tell what is a basename and what is a method
-    // name, so we just treat them the same
-    if (!m_name_indexes_computed)
-      InitNameIndexes();
+  if (!m_name_indexes_computed)
+    InitNameIndexes();
 
-    if (!m_basename_to_index.IsEmpty()) {
+  for (lldb::FunctionNameType type :
+       {lldb::eFunctionNameTypeBase, lldb::eFunctionNameTypeMethod,
+        lldb::eFunctionNameTypeSelector}) {
+    if (name_type_mask & type) {
+      auto map = GetNameToSymbolIndexMap(type);
+
       const UniqueCStringMap<uint32_t>::Entry *match;
-      for (match = m_basename_to_index.FindFirstValueForName(name);
-           match != nullptr;
-           match = m_basename_to_index.FindNextValueForName(match)) {
-        symbol_indexes.push_back(match->value);
-      }
-    }
-  }
-
-  if (name_type_mask & eFunctionNameTypeMethod) {
-    if (!m_name_indexes_computed)
-      InitNameIndexes();
-
-    if (!m_method_to_index.IsEmpty()) {
-      const UniqueCStringMap<uint32_t>::Entry *match;
-      for (match = m_method_to_index.FindFirstValueForName(name);
-           match != nullptr;
-           match = m_method_to_index.FindNextValueForName(match)) {
-        symbol_indexes.push_back(match->value);
-      }
-    }
-  }
-
-  if (name_type_mask & eFunctionNameTypeSelector) {
-    if (!m_name_indexes_computed)
-      InitNameIndexes();
-
-    if (!m_selector_to_index.IsEmpty()) {
-      const UniqueCStringMap<uint32_t>::Entry *match;
-      for (match = m_selector_to_index.FindFirstValueForName(name);
-           match != nullptr;
-           match = m_selector_to_index.FindNextValueForName(match)) {
+      for (match = map.FindFirstValueForName(name); match != nullptr;
+           match = map.FindNextValueForName(match)) {
         symbol_indexes.push_back(match->value);
       }
     }

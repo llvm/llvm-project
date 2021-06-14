@@ -1191,6 +1191,7 @@ void BranchProbabilityInfo::setEdgeProbability(
   // should be within Probs.size / BranchProbability::getDenominator.
   assert(TotalNumerator <= BranchProbability::getDenominator() + Probs.size());
   assert(TotalNumerator >= BranchProbability::getDenominator() - Probs.size());
+  (void)TotalNumerator;
 }
 
 void BranchProbabilityInfo::copyEdgeProbabilities(BasicBlock *Src,

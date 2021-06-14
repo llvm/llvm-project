@@ -1,4 +1,5 @@
 ! RUN: %S/test_modfile.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Test modfiles for entities with initialization
 module m
   integer, parameter :: k8 = 8

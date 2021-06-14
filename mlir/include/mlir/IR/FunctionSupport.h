@@ -522,7 +522,8 @@ LogicalResult FunctionLike<ConcreteType>::verifyTrait(Operation *op) {
              << allArgAttrs.size() << ", but expected " << numArgs;
     }
     for (unsigned i = 0; i != numArgs; ++i) {
-      DictionaryAttr argAttrs = allArgAttrs[i].dyn_cast<DictionaryAttr>();
+      DictionaryAttr argAttrs =
+          allArgAttrs[i].dyn_cast_or_null<DictionaryAttr>();
       if (!argAttrs) {
         return funcOp.emitOpError() << "expects argument attribute dictionary "
                                        "to be a DictionaryAttr, but got `"
@@ -555,7 +556,8 @@ LogicalResult FunctionLike<ConcreteType>::verifyTrait(Operation *op) {
              << allResultAttrs.size() << ", but expected " << numResults;
     }
     for (unsigned i = 0; i != numResults; ++i) {
-      DictionaryAttr resultAttrs = allResultAttrs[i].dyn_cast<DictionaryAttr>();
+      DictionaryAttr resultAttrs =
+          allResultAttrs[i].dyn_cast_or_null<DictionaryAttr>();
       if (!resultAttrs) {
         return funcOp.emitOpError() << "expects result attribute dictionary "
                                        "to be a DictionaryAttr, but got `"

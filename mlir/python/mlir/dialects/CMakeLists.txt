@@ -25,6 +25,11 @@ add_mlir_dialect_python_bindings(MLIRBindingsPythonLinalgOps
   DEPENDS LinalgOdsGen)
 add_dependencies(MLIRBindingsPythonSources MLIRBindingsPythonLinalgOps)
 
+add_mlir_dialect_python_bindings(MLIRBindingsPythonMathOps
+  TD_FILE MathOps.td
+  DIALECT_NAME math)
+add_dependencies(MLIRBindingsPythonSources MLIRBindingsPythonMathOps)
+
 add_mlir_dialect_python_bindings(MLIRBindingsPythonMemRefOps
   TD_FILE MemRefOps.td
   DIALECT_NAME memref)

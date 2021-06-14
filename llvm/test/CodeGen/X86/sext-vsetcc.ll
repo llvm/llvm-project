@@ -158,7 +158,7 @@ define <8 x i16> @cmp_ne_load_const_extra_use2(<8 x i8>* %x) nounwind {
 ;
 ; AVX512-LABEL: cmp_ne_load_const_extra_use2:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    subq $120, %rsp
+; AVX512-NEXT:    subq $72, %rsp
 ; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
@@ -168,7 +168,7 @@ define <8 x i16> @cmp_ne_load_const_extra_use2(<8 x i8>* %x) nounwind {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq use_v8i1@PLT
 ; AVX512-NEXT:    vpmovsxbw (%rsp), %xmm0 # 16-byte Folded Reload
-; AVX512-NEXT:    addq $120, %rsp
+; AVX512-NEXT:    addq $72, %rsp
 ; AVX512-NEXT:    retq
   %loadx = load <8 x i8>, <8 x i8>* %x
   %icmp = icmp ne <8 x i8> %loadx, zeroinitializer

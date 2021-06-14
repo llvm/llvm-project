@@ -498,6 +498,10 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_START)(void (*task)(void *),
     frame->exit_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
   }
 #endif
+#if OMPD_SUPPORT
+  if (ompd_state & OMPD_ENABLE_BP)
+    ompd_bp_parallel_begin();
+#endif
 }
 
 void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_END)(void) {
@@ -528,6 +532,10 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_END)(void) {
                   fork_context_gnu
 #endif
   );
+#if OMPD_SUPPORT
+  if (ompd_state & OMPD_ENABLE_BP)
+    ompd_bp_parallel_end();
+#endif
 }
 
 // Loop worksharing constructs

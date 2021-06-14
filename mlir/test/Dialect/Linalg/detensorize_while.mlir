@@ -52,7 +52,7 @@ func @main(%farg0: tensor<i32>, %farg1: tensor<i32>) -> tensor<i32> attributes {
 // DET-ALL:         br ^[[bb1]](%{{.*}} : i32)
 // DET-ALL:       ^[[bb3]](%{{.*}}: i32)
 // DET-ALL:         tensor.from_elements {{.*}}
-// DET-ALL:         linalg.tensor_reshape {{.*}}
+// DET-ALL:         linalg.tensor_collapse_shape {{.*}}
 // DET-ALL:         return %{{.*}} : tensor<i32>
 
 // Test detensoring only ops involed in control-flow.
@@ -69,5 +69,5 @@ func @main(%farg0: tensor<i32>, %farg1: tensor<i32>) -> tensor<i32> attributes {
 // DET-CF:         br ^[[bb1]](%{{.*}} : i32)
 // DET-CF:       ^[[bb3]](%{{.*}}: i32)
 // DET-CF:         tensor.from_elements %{{.*}} : tensor<1xi32>
-// DET-CF:         linalg.tensor_reshape %{{.*}} [] : tensor<1xi32> into tensor<i32>
+// DET-CF:         linalg.tensor_collapse_shape %{{.*}} [] : tensor<1xi32> into tensor<i32>
 // DET-CF:         return %{{.*}} : tensor<i32>

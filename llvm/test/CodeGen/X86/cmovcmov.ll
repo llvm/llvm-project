@@ -320,7 +320,7 @@ define dso_local void @no_cascade_opt(i32 %v0, i32 %v1, i32 %v2, i32 %v3) nounwi
 ; CMOV-NEXT:    cmovlel %ecx, %eax
 ; CMOV-NEXT:    testl %edi, %edi
 ; CMOV-NEXT:    cmovnel %ecx, %eax
-; CMOV-NEXT:    movb %al, {{.*}}(%rip)
+; CMOV-NEXT:    movb %al, g8(%rip)
 ; CMOV-NEXT:    retq
 ;
 ; NOCMOV-LABEL: no_cascade_opt:

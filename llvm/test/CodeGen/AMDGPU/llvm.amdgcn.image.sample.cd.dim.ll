@@ -144,19 +144,19 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_cd_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, float %dsdh, float %dsdv, float %s, float %clamp) {
 ; VERDE-LABEL: sample_c_cd_cl_1d:
 ; VERDE:       ; %bb.0: ; %main_body
-; VERDE-NEXT:    image_sample_c_cd_cl v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf
+; VERDE-NEXT:    image_sample_c_cd_cl v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf
 ; VERDE-NEXT:    s_waitcnt vmcnt(0)
 ; VERDE-NEXT:    ; return to shader part epilog
 ;
 ; GFX6789-LABEL: sample_c_cd_cl_1d:
 ; GFX6789:       ; %bb.0: ; %main_body
-; GFX6789-NEXT:    image_sample_c_cd_cl v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf
+; GFX6789-NEXT:    image_sample_c_cd_cl v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf
 ; GFX6789-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6789-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: sample_c_cd_cl_1d:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    image_sample_c_cd_cl v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D ; encoding: [0x00,0x0f,0xac,0xf1,0x00,0x00,0x40,0x00]
+; GFX10-NEXT:    image_sample_c_cd_cl v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D ; encoding: [0x00,0x0f,0xac,0xf1,0x00,0x00,0x40,0x00]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) ; encoding: [0x70,0x3f,0x8c,0xbf]
 ; GFX10-NEXT:    ; return to shader part epilog
 main_body:

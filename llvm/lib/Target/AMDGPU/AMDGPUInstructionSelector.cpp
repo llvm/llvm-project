@@ -3418,6 +3418,21 @@ AMDGPUInstructionSelector::selectVOP3PMods(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectDotIUVOP3PMods(MachineOperand &Root) const {
+  // Literal i1 value set in intrinsic, represents SrcMods for the next operand.
+  // Value is in Imm operand as i1 sign extended to int64_t.
+  // 1(-1) promotes packed values to signed, 0 treats them as unsigned.
+  assert((Root.isImm() && (Root.getImm() == -1 || Root.getImm() == 0)) &&
+         "expected i1 value");
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  if (Root.getImm() == -1)
+    Mods ^= SISrcMods::NEG;
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
+  }};
+}
+
+InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3Mods_nnan(MachineOperand &Root) const {
   Register Src;
   unsigned Mods;
@@ -3781,9 +3796,9 @@ AMDGPUInstructionSelector::selectScratchSAddr(MachineOperand &Root) const {
       const DebugLoc &DL = I.getDebugLoc();
       SAddr = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
 
-      BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_ADD_U32), SAddr)
-        .addFrameIndex(FI)
-        .addReg(RHSDef->Reg);
+      BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_ADD_I32), SAddr)
+          .addFrameIndex(FI)
+          .addReg(RHSDef->Reg);
     }
   }
 
@@ -3844,11 +3859,6 @@ AMDGPUInstructionSelector::selectScratchSVAddr(MachineOperand &Root) const {
       [=](MachineInstrBuilder &MIB) { MIB.addReg(LHS); }, // saddr
       [=](MachineInstrBuilder &MIB) { MIB.addImm(ImmOffset); } // offset
   }};
-}
-
-static bool isStackPtrRelative(const MachinePointerInfo &PtrInfo) {
-  auto PSV = PtrInfo.V.dyn_cast<const PseudoSourceValue *>();
-  return PSV && PSV->isStack();
 }
 
 InstructionSelector::ComplexRendererFns

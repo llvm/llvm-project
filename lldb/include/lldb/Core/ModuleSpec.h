@@ -27,8 +27,7 @@ class ModuleSpec {
 public:
   ModuleSpec()
       : m_file(), m_platform_file(), m_symbol_file(), m_arch(), m_uuid(),
-        m_object_name(), m_object_offset(0), m_object_size(0),
-        m_source_mappings() {}
+        m_object_name(), m_source_mappings() {}
 
   /// If the \c data argument is passed, its contents will be used
   /// as the module contents instead of trying to read them from
@@ -271,8 +270,8 @@ protected:
   ArchSpec m_arch;
   UUID m_uuid;
   ConstString m_object_name;
-  uint64_t m_object_offset;
-  uint64_t m_object_size;
+  uint64_t m_object_offset = 0;
+  uint64_t m_object_size = 0;
   llvm::sys::TimePoint<> m_object_mod_time;
   mutable PathMappingList m_source_mappings;
   lldb::DataBufferSP m_data = {};

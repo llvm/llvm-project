@@ -390,8 +390,9 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
                 .Expand(std::move(folded));
           } else if (auto resultShape{GetShape(context, folded)}) {
             if (CheckConformance(context.messages(), symTS->shape(),
-                    *resultShape, "initialized object",
-                    "initialization expression", false, false)) {
+                    *resultShape, CheckConformanceFlags::None,
+                    "initialized object", "initialization expression")
+                    .value_or(false /*fail if not known now to conform*/)) {
               // make a constant array with adjusted lower bounds
               return ArrayConstantBoundChanger{
                   std::move(*AsConstantExtents(

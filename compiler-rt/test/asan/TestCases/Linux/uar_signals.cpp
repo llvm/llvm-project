@@ -1,6 +1,8 @@
 // This test checks that the implementation of use-after-return
 // is async-signal-safe.
 // RUN: %clangxx_asan -std=c++11 -O1 %s -o %t -pthread && %run %t
+// RUN: %clangxx_asan -std=c++11 -O1 %s -o %t -pthread -fsanitize-address-use-after-return=never && %run %t
+// RUN: %clangxx_asan -std=c++11 -O1 %s -o %t -pthread -fsanitize-address-use-after-return=always && %run %t
 // REQUIRES: stable-runtime
 #include <signal.h>
 #include <stdlib.h>

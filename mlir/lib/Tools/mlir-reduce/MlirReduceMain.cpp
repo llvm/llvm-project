@@ -1,0 +1,87 @@
+//===- mlir-reduce.cpp - The MLIR reducer ---------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements the general framework of the MLIR reducer tool. It
+// parses the command line arguments, parses the initial MLIR test case and sets
+// up the testing environment. It  outputs the most reduced test case variant
+// after executing the reduction passes.
+//
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Tools/mlir-reduce/MlirReduceMain.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/Parser.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassManager.h"
+#include "mlir/Reducer/Passes.h"
+#include "mlir/Rewrite/FrozenRewritePatternSet.h"
+#include "mlir/Support/FileUtilities.h"
+#include "mlir/Support/LogicalResult.h"
+#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/ToolOutputFile.h"
+
+using namespace mlir;
+
+// Parse and verify the input MLIR file.
+static LogicalResult loadModule(MLIRContext &context, OwningModuleRef &module,
+                                StringRef inputFilename) {
+  module = parseSourceFile(inputFilename, &context);
+  if (!module)
+    return failure();
+
+  return success();
+}
+
+LogicalResult mlir::mlirReduceMain(int argc, char **argv,
+                                   MLIRContext &context) {
+  static llvm::cl::opt<std::string> inputFilename(
+      llvm::cl::Positional, llvm::cl::Required, llvm::cl::desc("<input file>"));
+
+  static llvm::cl::opt<std::string> outputFilename(
+      "o", llvm::cl::desc("Output filename for the reduced test case"),
+      llvm::cl::init("-"));
+
+  llvm::InitLLVM y(argc, argv);
+
+  registerReducerPasses();
+  registerMLIRContextCLOptions();
+  registerPassManagerCLOptions();
+
+  PassPipelineCLParser parser("", "Reduction Passes to Run");
+  llvm::cl::ParseCommandLineOptions(argc, argv,
+                                    "MLIR test case reduction tool.\n");
+
+  std::string errorMessage;
+
+  auto output = openOutputFile(outputFilename, &errorMessage);
+  if (!output)
+    return failure();
+
+  mlir::OwningModuleRef moduleRef;
+  if (failed(loadModule(context, moduleRef, inputFilename)))
+    return failure();
+
+  auto errorHandler = [&](const Twine &msg) {
+    return emitError(UnknownLoc::get(&context)) << msg;
+  };
+
+  // Reduction pass pipeline.
+  PassManager pm(&context);
+  if (failed(parser.addToPipeline(pm, errorHandler)))
+    return failure();
+
+  ModuleOp m = moduleRef.get().clone();
+
+  if (failed(pm.run(m)))
+    return failure();
+
+  m.print(output->os());
+  output->keep();
+
+  return success();
+}

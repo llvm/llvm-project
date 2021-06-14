@@ -686,7 +686,7 @@ static void adjustBlockReturnsToEnum(Sema &S, ArrayRef<ReturnStmt*> returns,
 
     Expr *E = (cleanups ? cleanups->getSubExpr() : retValue);
     E = ImplicitCastExpr::Create(S.Context, returnType, CK_IntegralCast, E,
-                                 /*base path*/ nullptr, VK_RValue,
+                                 /*base path*/ nullptr, VK_PRValue,
                                  FPOptionsOverride());
     if (cleanups) {
       cleanups->setSubExpr(E);

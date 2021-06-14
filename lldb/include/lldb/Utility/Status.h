@@ -196,8 +196,9 @@ public:
 
 protected:
   /// Member variables
-  ValueType m_code;             ///< Status code as an integer value.
-  lldb::ErrorType m_type;       ///< The type of the above error code.
+  ValueType m_code = 0; ///< Status code as an integer value.
+  lldb::ErrorType m_type =
+      lldb::eErrorTypeInvalid;  ///< The type of the above error code.
   mutable std::string m_string; ///< A string representation of the error code.
 };
 

@@ -197,7 +197,7 @@ PWACtx SCEVAffinator::visit(const SCEV *Expr) {
 
   auto Key = std::make_pair(Expr, BB);
   PWACtx PWAC = CachedExpressions[Key];
-  if (PWAC.first)
+  if (!PWAC.first.is_null())
     return PWAC;
 
   auto ConstantAndLeftOverPair = extractConstantFactor(Expr, SE);

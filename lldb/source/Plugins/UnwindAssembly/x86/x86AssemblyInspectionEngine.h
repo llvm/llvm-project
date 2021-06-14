@@ -45,9 +45,9 @@ public:
   /// are called.  This one takes a vector of register name and lldb
   /// register numbers.
   struct lldb_reg_info {
-    const char *name;
-    uint32_t lldb_regnum;
-    lldb_reg_info() : name(nullptr), lldb_regnum(LLDB_INVALID_REGNUM) {}
+    const char *name = nullptr;
+    uint32_t lldb_regnum = LLDB_INVALID_REGNUM;
+    lldb_reg_info() {}
   };
   void Initialize(std::vector<lldb_reg_info> &reg_info);
 

@@ -15,7 +15,7 @@ define fp128 @add(fp128 %x, fp128 %y) nounwind strictfp {
 ; CHECK-LABEL: add:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq __addtf3
+; CHECK-NEXT:    callq __addtf3@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -60,7 +60,7 @@ define fp128 @sub(fp128 %x, fp128 %y) nounwind strictfp {
 ; CHECK-LABEL: sub:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq __subtf3
+; CHECK-NEXT:    callq __subtf3@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -105,7 +105,7 @@ define fp128 @mul(fp128 %x, fp128 %y) nounwind strictfp {
 ; CHECK-LABEL: mul:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq __multf3
+; CHECK-NEXT:    callq __multf3@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -150,7 +150,7 @@ define fp128 @div(fp128 %x, fp128 %y) nounwind strictfp {
 ; CHECK-LABEL: div:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq __divtf3
+; CHECK-NEXT:    callq __divtf3@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -195,7 +195,7 @@ define fp128 @fma(fp128 %x, fp128 %y, fp128 %z) nounwind strictfp {
 ; CHECK-LABEL: fma:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq fmal
+; CHECK-NEXT:    callq fmal@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -244,7 +244,7 @@ define fp128 @frem(fp128 %x, fp128 %y) nounwind strictfp {
 ; CHECK-LABEL: frem:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq fmodl
+; CHECK-NEXT:    callq fmodl@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -289,7 +289,7 @@ define fp128 @ceil(fp128 %x) nounwind strictfp {
 ; CHECK-LABEL: ceil:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq ceill
+; CHECK-NEXT:    callq ceill@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -330,7 +330,7 @@ define fp128 @cos(fp128 %x) nounwind strictfp {
 ; CHECK-LABEL: cos:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq cosl
+; CHECK-NEXT:    callq cosl@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -371,7 +371,7 @@ define fp128 @exp(fp128 %x) nounwind strictfp {
 ; CHECK-LABEL: exp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq expl
+; CHECK-NEXT:    callq expl@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -412,7 +412,7 @@ define fp128 @exp2(fp128 %x) nounwind strictfp {
 ; CHECK-LABEL: exp2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq exp2l
+; CHECK-NEXT:    callq exp2l@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -453,7 +453,7 @@ define fp128 @floor(fp128 %x) nounwind strictfp {
 ; CHECK-LABEL: floor:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq floorl
+; CHECK-NEXT:    callq floorl@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -494,7 +494,7 @@ define fp128 @log(fp128 %x) nounwind strictfp {
 ; CHECK-LABEL: log:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq logl
+; CHECK-NEXT:    callq logl@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -535,7 +535,7 @@ define fp128 @log10(fp128 %x) nounwind strictfp {
 ; CHECK-LABEL: log10:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq log10l
+; CHECK-NEXT:    callq log10l@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -576,7 +576,7 @@ define fp128 @log2(fp128 %x) nounwind strictfp {
 ; CHECK-LABEL: log2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq log2l
+; CHECK-NEXT:    callq log2l@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -617,7 +617,7 @@ define fp128 @maxnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; CHECK-LABEL: maxnum:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq fmaxl
+; CHECK-NEXT:    callq fmaxl@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -662,7 +662,7 @@ define fp128 @minnum(fp128 %x, fp128 %y) nounwind strictfp {
 ; CHECK-LABEL: minnum:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq fminl
+; CHECK-NEXT:    callq fminl@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -707,7 +707,7 @@ define fp128 @nearbyint(fp128 %x) nounwind strictfp {
 ; CHECK-LABEL: nearbyint:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq nearbyintl
+; CHECK-NEXT:    callq nearbyintl@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -748,7 +748,7 @@ define fp128 @pow(fp128 %x, fp128 %y) nounwind strictfp {
 ; CHECK-LABEL: pow:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq powl
+; CHECK-NEXT:    callq powl@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -793,7 +793,7 @@ define fp128 @powi(fp128 %x, i32 %y) nounwind strictfp {
 ; CHECK-LABEL: powi:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq __powitf2
+; CHECK-NEXT:    callq __powitf2@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -835,7 +835,7 @@ define fp128 @rint(fp128 %x) nounwind strictfp {
 ; CHECK-LABEL: rint:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq rintl
+; CHECK-NEXT:    callq rintl@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -876,7 +876,7 @@ define fp128 @round(fp128 %x) nounwind strictfp {
 ; CHECK-LABEL: round:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq roundl
+; CHECK-NEXT:    callq roundl@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -917,7 +917,7 @@ define fp128 @roundeven(fp128 %x) nounwind strictfp {
 ; CHECK-LABEL: roundeven:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq roundevenl
+; CHECK-NEXT:    callq roundevenl@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -958,7 +958,7 @@ define fp128 @sin(fp128 %x) nounwind strictfp {
 ; CHECK-LABEL: sin:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq sinl
+; CHECK-NEXT:    callq sinl@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -999,7 +999,7 @@ define fp128 @sqrt(fp128 %x) nounwind strictfp {
 ; CHECK-LABEL: sqrt:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq sqrtl
+; CHECK-NEXT:    callq sqrtl@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -1040,7 +1040,7 @@ define fp128 @trunc(fp128 %x) nounwind strictfp {
 ; CHECK-LABEL: trunc:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq truncl
+; CHECK-NEXT:    callq truncl@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -1081,7 +1081,7 @@ define i32 @lrint(fp128 %x) nounwind strictfp {
 ; CHECK-LABEL: lrint:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq lrintl
+; CHECK-NEXT:    callq lrintl@PLT
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 ;
@@ -1104,7 +1104,7 @@ define i64 @llrint(fp128 %x) nounwind strictfp {
 ; CHECK-LABEL: llrint:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq llrintl
+; CHECK-NEXT:    callq llrintl@PLT
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 ;
@@ -1127,7 +1127,7 @@ define i32 @lround(fp128 %x) nounwind strictfp {
 ; CHECK-LABEL: lround:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq lroundl
+; CHECK-NEXT:    callq lroundl@PLT
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 ;
@@ -1150,7 +1150,7 @@ define i64 @llround(fp128 %x) nounwind strictfp {
 ; CHECK-LABEL: llround:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq llroundl
+; CHECK-NEXT:    callq llroundl@PLT
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 ;
@@ -1177,7 +1177,7 @@ define i64 @cmp(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movq %rsi, %r14
 ; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    callq __eqtf2
+; CHECK-NEXT:    callq __eqtf2@PLT
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    cmovneq %r14, %rbx
 ; CHECK-NEXT:    movq %rbx, %rax
@@ -1223,7 +1223,7 @@ define i64 @cmps(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movq %rsi, %r14
 ; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    callq __eqtf2
+; CHECK-NEXT:    callq __eqtf2@PLT
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    cmovneq %r14, %rbx
 ; CHECK-NEXT:    movq %rbx, %rax
@@ -1272,12 +1272,12 @@ define i64 @cmp_ueq_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movq %rsi, %r14
 ; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    callq __eqtf2
+; CHECK-NEXT:    callq __eqtf2@PLT
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    sete %bpl
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    callq __unordtf2
+; CHECK-NEXT:    callq __unordtf2@PLT
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    orb %bpl, %al
@@ -1355,12 +1355,12 @@ define i64 @cmp_one_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movq %rsi, %r14
 ; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    callq __eqtf2
+; CHECK-NEXT:    callq __eqtf2@PLT
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    setne %bpl
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    callq __unordtf2
+; CHECK-NEXT:    callq __unordtf2@PLT
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    testb %bpl, %al

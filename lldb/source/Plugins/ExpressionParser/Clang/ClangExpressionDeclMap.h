@@ -248,10 +248,10 @@ public:
                                 lldb::SymbolType symbol_type);
 
   struct TargetInfo {
-    lldb::ByteOrder byte_order;
-    size_t address_byte_size;
+    lldb::ByteOrder byte_order = lldb::eByteOrderInvalid;
+    size_t address_byte_size = 0;
 
-    TargetInfo() : byte_order(lldb::eByteOrderInvalid), address_byte_size(0) {}
+    TargetInfo() {}
 
     bool IsValid() {
       return (byte_order != lldb::eByteOrderInvalid && address_byte_size != 0);
@@ -353,16 +353,15 @@ private:
   /// The following values contain layout information for the materialized
   /// struct, but are not specific to a single materialization
   struct StructVars {
-    StructVars()
-        : m_struct_alignment(0), m_struct_size(0), m_struct_laid_out(false),
-          m_result_name(), m_object_pointer_type(nullptr, nullptr) {}
+    StructVars() : m_result_name(), m_object_pointer_type(nullptr, nullptr) {}
 
-    lldb::offset_t
-        m_struct_alignment; ///< The alignment of the struct in bytes.
-    size_t m_struct_size;   ///< The size of the struct in bytes.
-    bool m_struct_laid_out; ///< True if the struct has been laid out and the
-                            ///layout is valid (that is, no new fields have been
-                            ///added since).
+    lldb::offset_t m_struct_alignment =
+        0;                    ///< The alignment of the struct in bytes.
+    size_t m_struct_size = 0; ///< The size of the struct in bytes.
+    bool m_struct_laid_out =
+        false; ///< True if the struct has been laid out and the
+               /// layout is valid (that is, no new fields have been
+               /// added since).
     ConstString
         m_result_name; ///< The name of the result variable ($1, for example)
     TypeFromUser m_object_pointer_type; ///< The type of the "this" variable, if
@@ -608,13 +607,8 @@ private:
   ///
   /// \param[in] type
   ///     The type of the class that serves as the evaluation context.
-  ///
-  /// \param[in] context_method
-  ///     The member function declaration in which the expression is being
-  ///     evaluated or null if the expression is not evaluated in the context
-  ///     of a member function.
-  void AddContextClassType(NameSearchContext &context, const TypeFromUser &type,
-                           clang::CXXMethodDecl *context_method = nullptr);
+  void AddContextClassType(NameSearchContext &context,
+                           const TypeFromUser &type);
 
   /// Move a type out of the current ASTContext into another, but make sure to
   /// export all components of the type also.

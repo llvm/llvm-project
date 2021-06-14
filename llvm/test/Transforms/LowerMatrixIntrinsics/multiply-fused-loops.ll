@@ -43,18 +43,18 @@ define void @multiply_noalias_4x4(<16 x double>* noalias %A, <16 x double>* noal
 ; CHECK-NEXT:    [[VEC_CAST7:%.*]] = bitcast double* [[VEC_GEP6]] to <2 x double>*
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST7]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x double> [[COL_LOAD5]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD]], <2 x double> [[SPLAT_SPLAT]], <2 x double> [[RESULT_VEC_0]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD]], <2 x double> [[SPLAT_SPLAT]], <2 x double> [[RESULT_VEC_0]])
 ; CHECK-NEXT:    [[SPLAT_SPLAT12:%.*]] = shufflevector <2 x double> [[COL_LOAD5]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP7]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD2]], <2 x double> [[SPLAT_SPLAT12]], <2 x double> [[TMP6]])
+; CHECK-NEXT:    [[TMP7]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD2]], <2 x double> [[SPLAT_SPLAT12]], <2 x double> [[TMP6]])
 ; CHECK-NEXT:    [[SPLAT_SPLAT16:%.*]] = shufflevector <2 x double> [[COL_LOAD8]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD]], <2 x double> [[SPLAT_SPLAT16]], <2 x double> [[RESULT_VEC_1]])
+; CHECK-NEXT:    [[TMP8:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD]], <2 x double> [[SPLAT_SPLAT16]], <2 x double> [[RESULT_VEC_1]])
 ; CHECK-NEXT:    [[SPLAT_SPLAT19:%.*]] = shufflevector <2 x double> [[COL_LOAD8]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP9]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD2]], <2 x double> [[SPLAT_SPLAT19]], <2 x double> [[TMP8]])
+; CHECK-NEXT:    [[TMP9]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD2]], <2 x double> [[SPLAT_SPLAT19]], <2 x double> [[TMP8]])
 ; CHECK-NEXT:    br label [[INNER_LATCH]]
 ; CHECK:       inner.latch:
 ; CHECK-NEXT:    [[INNER_STEP]] = add i64 [[INNER_IV]], 2
 ; CHECK-NEXT:    [[INNER_COND_NOT:%.*]] = icmp eq i64 [[INNER_STEP]], 4
-; CHECK-NEXT:    br i1 [[INNER_COND_NOT]], label [[ROWS_LATCH]], label [[INNER_HEADER]], [[LOOP0:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[INNER_COND_NOT]], label [[ROWS_LATCH]], label [[INNER_HEADER]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       rows.latch:
 ; CHECK-NEXT:    [[ROWS_STEP]] = add i64 [[ROWS_IV]], 2
 ; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_STEP]], 4
@@ -140,7 +140,7 @@ define void @multiply_noalias_2x4(<8 x i64>* noalias %A, <8 x i64>* noalias %B, 
 ; CHECK:       inner.latch:
 ; CHECK-NEXT:    [[INNER_STEP]] = add i64 [[INNER_IV]], 2
 ; CHECK-NEXT:    [[INNER_COND_NOT:%.*]] = icmp eq i64 [[INNER_STEP]], 4
-; CHECK-NEXT:    br i1 [[INNER_COND_NOT]], label [[ROWS_LATCH]], label [[INNER_HEADER]], [[LOOP2:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[INNER_COND_NOT]], label [[ROWS_LATCH]], label [[INNER_HEADER]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       rows.latch:
 ; CHECK-NEXT:    [[ROWS_STEP]] = add i64 [[ROWS_IV]], 2
 ; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_IV]], 0
@@ -232,7 +232,7 @@ define void @multiply_noalias_4x2_2x8(<8 x i64>* noalias %A, <16 x i64>* noalias
 ; CHECK:       inner.latch:
 ; CHECK-NEXT:    [[INNER_STEP]] = add i64 [[INNER_IV]], 2
 ; CHECK-NEXT:    [[INNER_COND_NOT:%.*]] = icmp eq i64 [[INNER_IV]], 0
-; CHECK-NEXT:    br i1 [[INNER_COND_NOT]], label [[ROWS_LATCH]], label [[INNER_HEADER]], [[LOOP3:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[INNER_COND_NOT]], label [[ROWS_LATCH]], label [[INNER_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       rows.latch:
 ; CHECK-NEXT:    [[ROWS_STEP]] = add i64 [[ROWS_IV]], 2
 ; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_STEP]], 4
@@ -344,18 +344,18 @@ define void @multiply_alias_2x2(<4 x float>* %A, <4 x float>* %B, <4 x float>* %
 ; CHECK-NEXT:    [[VEC_CAST14:%.*]] = bitcast float* [[VEC_GEP13]] to <2 x float>*
 ; CHECK-NEXT:    [[COL_LOAD15:%.*]] = load <2 x float>, <2 x float>* [[VEC_CAST14]], align 4
 ; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x float> [[COL_LOAD12]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP18:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[COL_LOAD]], <2 x float> [[SPLAT_SPLAT]], <2 x float> [[RESULT_VEC_0]])
+; CHECK-NEXT:    [[TMP18:%.*]] = call contract <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[COL_LOAD]], <2 x float> [[SPLAT_SPLAT]], <2 x float> [[RESULT_VEC_0]])
 ; CHECK-NEXT:    [[SPLAT_SPLAT19:%.*]] = shufflevector <2 x float> [[COL_LOAD12]], <2 x float> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP19]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[COL_LOAD9]], <2 x float> [[SPLAT_SPLAT19]], <2 x float> [[TMP18]])
+; CHECK-NEXT:    [[TMP19]] = call contract <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[COL_LOAD9]], <2 x float> [[SPLAT_SPLAT19]], <2 x float> [[TMP18]])
 ; CHECK-NEXT:    [[SPLAT_SPLAT23:%.*]] = shufflevector <2 x float> [[COL_LOAD15]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP20:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[COL_LOAD]], <2 x float> [[SPLAT_SPLAT23]], <2 x float> [[RESULT_VEC_1]])
+; CHECK-NEXT:    [[TMP20:%.*]] = call contract <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[COL_LOAD]], <2 x float> [[SPLAT_SPLAT23]], <2 x float> [[RESULT_VEC_1]])
 ; CHECK-NEXT:    [[SPLAT_SPLAT26:%.*]] = shufflevector <2 x float> [[COL_LOAD15]], <2 x float> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP21]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[COL_LOAD9]], <2 x float> [[SPLAT_SPLAT26]], <2 x float> [[TMP20]])
+; CHECK-NEXT:    [[TMP21]] = call contract <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[COL_LOAD9]], <2 x float> [[SPLAT_SPLAT26]], <2 x float> [[TMP20]])
 ; CHECK-NEXT:    br label [[INNER_LATCH]]
 ; CHECK:       inner.latch:
 ; CHECK-NEXT:    [[INNER_STEP]] = add i64 [[INNER_IV]], 2
 ; CHECK-NEXT:    [[INNER_COND_NOT:%.*]] = icmp eq i64 [[INNER_IV]], 0
-; CHECK-NEXT:    br i1 [[INNER_COND_NOT]], label [[ROWS_LATCH]], label [[INNER_HEADER]], [[LOOP5:!llvm.loop !.*]]
+; CHECK-NEXT:    br i1 [[INNER_COND_NOT]], label [[ROWS_LATCH]], label [[INNER_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       rows.latch:
 ; CHECK-NEXT:    [[ROWS_STEP]] = add i64 [[ROWS_IV]], 2
 ; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_IV]], 0

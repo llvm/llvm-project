@@ -85,6 +85,15 @@ public:
 
   lldb::addr_t GetTaggedPointerObfuscator();
 
+  /// Returns the base address for relative method list selector strings.
+  lldb::addr_t GetRelativeSelectorBaseAddr() {
+    return m_relative_selector_base;
+  }
+
+  void SetRelativeSelectorBaseAddr(lldb::addr_t relative_selector_base) {
+    m_relative_selector_base = relative_selector_base;
+  }
+
   void GetValuesForGlobalCFBooleans(lldb::addr_t &cf_true,
                                     lldb::addr_t &cf_false) override;
 
@@ -116,9 +125,9 @@ private:
     void UpdateSignature(const RemoteNXMapTable &hash_table);
 
   protected:
-    uint32_t m_count;
-    uint32_t m_num_buckets;
-    lldb::addr_t m_buckets_ptr;
+    uint32_t m_count = 0;
+    uint32_t m_num_buckets = 0;
+    lldb::addr_t m_buckets_ptr = 0;
   };
 
   class NonPointerISACache {
@@ -394,6 +403,7 @@ private:
   void WarnIfNoClassesCached(SharedCacheWarningReason reason);
 
   lldb::addr_t GetSharedCacheReadOnlyAddress();
+  lldb::addr_t GetSharedCacheBaseAddress();
 
   bool GetCFBooleanValuesIfNeeded();
 
@@ -416,6 +426,7 @@ private:
   std::unique_ptr<DeclVendor> m_decl_vendor_up;
   lldb::addr_t m_tagged_pointer_obfuscator;
   lldb::addr_t m_isa_hash_table_ptr;
+  lldb::addr_t m_relative_selector_base;
   HashTableSignature m_hash_signature;
   bool m_has_object_getClass;
   bool m_has_objc_copyRealizedClassList;

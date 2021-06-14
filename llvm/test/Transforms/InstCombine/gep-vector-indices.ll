@@ -13,7 +13,7 @@ define i32* @vector_splat_indices_v2i64_ext0(i32* %a) {
 
 define i32* @vector_splat_indices_nxv2i64_ext0(i32* %a) {
 ; CHECK-LABEL: @vector_splat_indices_nxv2i64_ext0(
-; CHECK-NEXT:    [[RES:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 extractelement (<vscale x 2 x i64> shufflevector (<vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 4, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer), i32 0)
+; CHECK-NEXT:    [[RES:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 4
 ; CHECK-NEXT:    ret i32* [[RES]]
 ;
   %tmp = insertelement <vscale x 2 x i64> poison, i64 4, i32 0
@@ -61,10 +61,7 @@ define i32* @vector_splat_ptrs_v2i64_ext0(i32* %a, i64 %index) {
 
 define i32* @vector_splat_ptrs_nxv2i64_ext0(i32* %a, i64 %index) {
 ; CHECK-LABEL: @vector_splat_ptrs_nxv2i64_ext0(
-; CHECK-NEXT:    [[TMP:%.*]] = insertelement <vscale x 2 x i32*> poison, i32* [[A:%.*]], i32 0
-; CHECK-NEXT:    [[SPLATOFA:%.*]] = shufflevector <vscale x 2 x i32*> [[TMP]], <vscale x 2 x i32*> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <vscale x 2 x i32*> [[SPLATOFA]], i32 0
-; CHECK-NEXT:    [[RES:%.*]] = getelementptr i32, i32* [[TMP0]], i64 [[INDEX:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = getelementptr i32, i32* [[A:%.*]], i64 [[INDEX:%.*]]
 ; CHECK-NEXT:    ret i32* [[RES]]
 ;
   %tmp = insertelement <vscale x 2 x i32*> poison, i32* %a, i32 0

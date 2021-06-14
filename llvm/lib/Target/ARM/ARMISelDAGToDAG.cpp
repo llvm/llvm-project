@@ -1972,6 +1972,9 @@ static bool isVLDfixed(unsigned Opc)
   case ARM::VLD2DUPd8wb_fixed : return true;
   case ARM::VLD2DUPd16wb_fixed : return true;
   case ARM::VLD2DUPd32wb_fixed : return true;
+  case ARM::VLD2DUPq8OddPseudoWB_fixed: return true;
+  case ARM::VLD2DUPq16OddPseudoWB_fixed: return true;
+  case ARM::VLD2DUPq32OddPseudoWB_fixed: return true;
   }
 }
 
@@ -2035,6 +2038,9 @@ static unsigned getVLDSTRegisterUpdateOpcode(unsigned Opc) {
   case ARM::VLD1DUPq8wb_fixed : return ARM::VLD1DUPq8wb_register;
   case ARM::VLD1DUPq16wb_fixed : return ARM::VLD1DUPq16wb_register;
   case ARM::VLD1DUPq32wb_fixed : return ARM::VLD1DUPq32wb_register;
+  case ARM::VLD2DUPq8OddPseudoWB_fixed: return ARM::VLD2DUPq8OddPseudoWB_register;
+  case ARM::VLD2DUPq16OddPseudoWB_fixed: return ARM::VLD2DUPq16OddPseudoWB_register;
+  case ARM::VLD2DUPq32OddPseudoWB_fixed: return ARM::VLD2DUPq32OddPseudoWB_register;
 
   case ARM::VST1d8wb_fixed: return ARM::VST1d8wb_register;
   case ARM::VST1d16wb_fixed: return ARM::VST1d16wb_register;
@@ -2987,51 +2993,47 @@ void ARMDAGToDAGISel::SelectVLDDup(SDNode *N, bool IsIntrinsic,
   SDValue Pred = getAL(CurDAG, dl);
   SDValue Reg0 = CurDAG->getRegister(0, MVT::i32);
 
-  SDNode *VLdDup;
-  if (is64BitVector || NumVecs == 1) {
-    SmallVector<SDValue, 6> Ops;
-    Ops.push_back(MemAddr);
-    Ops.push_back(Align);
-    unsigned Opc = is64BitVector ? DOpcodes[OpcodeIndex] :
-                                   QOpcodes0[OpcodeIndex];
-    if (isUpdating) {
-      // fixed-stride update instructions don't have an explicit writeback
-      // operand. It's implicit in the opcode itself.
-      SDValue Inc = N->getOperand(2);
-      bool IsImmUpdate =
-          isPerfectIncrement(Inc, VT.getVectorElementType(), NumVecs);
-      if (NumVecs <= 2 && !IsImmUpdate)
-        Opc = getVLDSTRegisterUpdateOpcode(Opc);
-      if (!IsImmUpdate)
-        Ops.push_back(Inc);
-      // FIXME: VLD3 and VLD4 haven't been updated to that form yet.
-      else if (NumVecs > 2)
+  SmallVector<SDValue, 6> Ops;
+  Ops.push_back(MemAddr);
+  Ops.push_back(Align);
+  unsigned Opc = is64BitVector    ? DOpcodes[OpcodeIndex]
+                 : (NumVecs == 1) ? QOpcodes0[OpcodeIndex]
+                                  : QOpcodes1[OpcodeIndex];
+  if (isUpdating) {
+    SDValue Inc = N->getOperand(2);
+    bool IsImmUpdate =
+        isPerfectIncrement(Inc, VT.getVectorElementType(), NumVecs);
+    if (IsImmUpdate) {
+      if (!isVLDfixed(Opc))
         Ops.push_back(Reg0);
+    } else {
+      if (isVLDfixed(Opc))
+        Opc = getVLDSTRegisterUpdateOpcode(Opc);
+      Ops.push_back(Inc);
     }
-    Ops.push_back(Pred);
-    Ops.push_back(Reg0);
-    Ops.push_back(Chain);
-    VLdDup = CurDAG->getMachineNode(Opc, dl, ResTys, Ops);
-  } else if (NumVecs == 2) {
-    const SDValue OpsA[] = { MemAddr, Align, Pred, Reg0, Chain };
-    SDNode *VLdA = CurDAG->getMachineNode(QOpcodes0[OpcodeIndex],
-                                          dl, ResTys, OpsA);
-
-    Chain = SDValue(VLdA, 1);
-    const SDValue OpsB[] = { MemAddr, Align, Pred, Reg0, Chain };
-    VLdDup = CurDAG->getMachineNode(QOpcodes1[OpcodeIndex], dl, ResTys, OpsB);
-  } else {
-    SDValue ImplDef =
-      SDValue(CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, dl, ResTy), 0);
-    const SDValue OpsA[] = { MemAddr, Align, ImplDef, Pred, Reg0, Chain };
-    SDNode *VLdA = CurDAG->getMachineNode(QOpcodes0[OpcodeIndex],
-                                          dl, ResTys, OpsA);
-
-    SDValue SuperReg = SDValue(VLdA, 0);
-    Chain = SDValue(VLdA, 1);
-    const SDValue OpsB[] = { MemAddr, Align, SuperReg, Pred, Reg0, Chain };
-    VLdDup = CurDAG->getMachineNode(QOpcodes1[OpcodeIndex], dl, ResTys, OpsB);
   }
+  if (is64BitVector || NumVecs == 1) {
+    // Double registers and VLD1 quad registers are directly supported.
+  } else if (NumVecs == 2) {
+    const SDValue OpsA[] = {MemAddr, Align, Pred, Reg0, Chain};
+    SDNode *VLdA = CurDAG->getMachineNode(QOpcodes0[OpcodeIndex], dl, ResTy,
+                                          MVT::Other, OpsA);
+    Chain = SDValue(VLdA, 1);
+  } else {
+    SDValue ImplDef = SDValue(
+        CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, dl, ResTy), 0);
+    const SDValue OpsA[] = {MemAddr, Align, ImplDef, Pred, Reg0, Chain};
+    SDNode *VLdA = CurDAG->getMachineNode(QOpcodes0[OpcodeIndex], dl, ResTy,
+                                          MVT::Other, OpsA);
+    Ops.push_back(SDValue(VLdA, 0));
+    Chain = SDValue(VLdA, 1);
+  }
+
+  Ops.push_back(Pred);
+  Ops.push_back(Reg0);
+  Ops.push_back(Chain);
+
+  SDNode *VLdDup = CurDAG->getMachineNode(Opc, dl, ResTys, Ops);
 
   // Transfer memoperands.
   MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
@@ -4192,26 +4194,47 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
   }
 
   case ARMISD::VLD2DUP_UPD: {
-    static const uint16_t Opcodes[] = { ARM::VLD2DUPd8wb_fixed,
-                                        ARM::VLD2DUPd16wb_fixed,
-                                        ARM::VLD2DUPd32wb_fixed };
-    SelectVLDDup(N, /* IsIntrinsic= */ false, true, 2, Opcodes);
+    static const uint16_t DOpcodes[] = { ARM::VLD2DUPd8wb_fixed,
+                                         ARM::VLD2DUPd16wb_fixed,
+                                         ARM::VLD2DUPd32wb_fixed,
+                                         ARM::VLD1q64wb_fixed };
+    static const uint16_t QOpcodes0[] = { ARM::VLD2DUPq8EvenPseudo,
+                                          ARM::VLD2DUPq16EvenPseudo,
+                                          ARM::VLD2DUPq32EvenPseudo };
+    static const uint16_t QOpcodes1[] = { ARM::VLD2DUPq8OddPseudoWB_fixed,
+                                          ARM::VLD2DUPq16OddPseudoWB_fixed,
+                                          ARM::VLD2DUPq32OddPseudoWB_fixed };
+    SelectVLDDup(N, /* IsIntrinsic= */ false, true, 2, DOpcodes, QOpcodes0, QOpcodes1);
     return;
   }
 
   case ARMISD::VLD3DUP_UPD: {
-    static const uint16_t Opcodes[] = { ARM::VLD3DUPd8Pseudo_UPD,
-                                        ARM::VLD3DUPd16Pseudo_UPD,
-                                        ARM::VLD3DUPd32Pseudo_UPD };
-    SelectVLDDup(N, /* IsIntrinsic= */ false, true, 3, Opcodes);
+    static const uint16_t DOpcodes[] = { ARM::VLD3DUPd8Pseudo_UPD,
+                                         ARM::VLD3DUPd16Pseudo_UPD,
+                                         ARM::VLD3DUPd32Pseudo_UPD,
+                                         ARM::VLD1d64TPseudoWB_fixed };
+    static const uint16_t QOpcodes0[] = { ARM::VLD3DUPq8EvenPseudo,
+                                          ARM::VLD3DUPq16EvenPseudo,
+                                          ARM::VLD3DUPq32EvenPseudo };
+    static const uint16_t QOpcodes1[] = { ARM::VLD3DUPq8OddPseudo_UPD,
+                                          ARM::VLD3DUPq16OddPseudo_UPD,
+                                          ARM::VLD3DUPq32OddPseudo_UPD };
+    SelectVLDDup(N, /* IsIntrinsic= */ false, true, 3, DOpcodes, QOpcodes0, QOpcodes1);
     return;
   }
 
   case ARMISD::VLD4DUP_UPD: {
-    static const uint16_t Opcodes[] = { ARM::VLD4DUPd8Pseudo_UPD,
-                                        ARM::VLD4DUPd16Pseudo_UPD,
-                                        ARM::VLD4DUPd32Pseudo_UPD };
-    SelectVLDDup(N, /* IsIntrinsic= */ false, true, 4, Opcodes);
+    static const uint16_t DOpcodes[] = { ARM::VLD4DUPd8Pseudo_UPD,
+                                         ARM::VLD4DUPd16Pseudo_UPD,
+                                         ARM::VLD4DUPd32Pseudo_UPD,
+                                         ARM::VLD1d64QPseudoWB_fixed };
+    static const uint16_t QOpcodes0[] = { ARM::VLD4DUPq8EvenPseudo,
+                                          ARM::VLD4DUPq16EvenPseudo,
+                                          ARM::VLD4DUPq32EvenPseudo };
+    static const uint16_t QOpcodes1[] = { ARM::VLD4DUPq8OddPseudo_UPD,
+                                          ARM::VLD4DUPq16OddPseudo_UPD,
+                                          ARM::VLD4DUPq32OddPseudo_UPD };
+    SelectVLDDup(N, /* IsIntrinsic= */ false, true, 4, DOpcodes, QOpcodes0, QOpcodes1);
     return;
   }
 

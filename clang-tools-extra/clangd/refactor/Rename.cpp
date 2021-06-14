@@ -751,6 +751,26 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   auto MainFileRenameEdit = renameWithinFile(AST, RenameDecl, RInputs.NewName);
   if (!MainFileRenameEdit)
     return MainFileRenameEdit.takeError();
+
+  // Check the rename-triggering location is actually being renamed.
+  // This is a robustness check to avoid surprising rename results -- if the
+  // the triggering location is not actually the name of the node we identified
+  // (e.g. for broken code), then rename is likely not what users expect, so we
+  // reject this kind of rename.
+  auto StartOffset = positionToOffset(MainFileCode, CurrentIdentifier.start);
+  auto EndOffset = positionToOffset(MainFileCode, CurrentIdentifier.end);
+  if (!StartOffset)
+    return StartOffset.takeError();
+  if (!EndOffset)
+    return EndOffset.takeError();
+  if (llvm::find_if(
+          *MainFileRenameEdit,
+          [&StartOffset, &EndOffset](const clang::tooling::Replacement &R) {
+            return R.getOffset() == *StartOffset &&
+                   R.getLength() == *EndOffset - *StartOffset;
+          }) == MainFileRenameEdit->end()) {
+    return makeError(ReasonToReject::NoSymbolFound);
+  }
   RenameResult Result;
   Result.Target = CurrentIdentifier;
   Edit MainFileEdits = Edit(MainFileCode, std::move(*MainFileRenameEdit));

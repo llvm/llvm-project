@@ -307,8 +307,6 @@ private:
   void visitLoadInst(LoadInst &I);
   void visitGetElementPtrInst(GetElementPtrInst &I);
 
-  void visitCallInst(CallInst &I) { visitCallBase(I); }
-
   void visitInvokeInst(InvokeInst &II) {
     visitCallBase(II);
     visitTerminator(II);
@@ -333,6 +331,8 @@ public:
   void addAnalysis(Function &F, AnalysisResultsForFn A) {
     AnalysisResults.insert({&F, std::move(A)});
   }
+
+  void visitCallInst(CallInst &I) { visitCallBase(I); }
 
   bool markBlockExecutable(BasicBlock *BB);
 
@@ -447,6 +447,17 @@ public:
   bool isStructLatticeConstant(Function *F, StructType *STy);
 
   Constant *getConstant(const ValueLatticeElement &LV) const;
+
+  SmallPtrSetImpl<Function *> &getArgumentTrackedFunctions() {
+    return TrackingIncomingArguments;
+  }
+
+  void markArgInFuncSpecialization(Function *F, Argument *A, Constant *C);
+
+  void markFunctionUnreachable(Function *F) {
+    for (auto &BB : *F)
+      BBExecutable.erase(&BB);
+  }
 };
 
 } // namespace llvm
@@ -513,6 +524,25 @@ Constant *SCCPInstVisitor::getConstant(const ValueLatticeElement &LV) const {
       return ConstantInt::get(Ctx, *CR.getSingleElement());
   }
   return nullptr;
+}
+
+void SCCPInstVisitor::markArgInFuncSpecialization(Function *F, Argument *A,
+                                                  Constant *C) {
+  assert(F->arg_size() == A->getParent()->arg_size() &&
+         "Functions should have the same number of arguments");
+
+  // Mark the argument constant in the new function.
+  markConstant(A, C);
+
+  // For the remaining arguments in the new function, copy the lattice state
+  // over from the old function.
+  for (auto I = F->arg_begin(), J = A->getParent()->arg_begin(),
+            E = F->arg_end();
+       I != E; ++I, ++J)
+    if (J != A && ValueState.count(I)) {
+      ValueState[J] = ValueState[I];
+      pushToWorkList(ValueState[J], J);
+    }
 }
 
 void SCCPInstVisitor::visitInstruction(Instruction &I) {
@@ -1574,7 +1604,7 @@ SCCPSolver::SCCPSolver(
     LLVMContext &Ctx)
     : Visitor(new SCCPInstVisitor(DL, std::move(GetTLI), Ctx)) {}
 
-SCCPSolver::~SCCPSolver() { }
+SCCPSolver::~SCCPSolver() {}
 
 void SCCPSolver::addAnalysis(Function &F, AnalysisResultsForFn A) {
   return Visitor->addAnalysis(F, std::move(A));
@@ -1664,3 +1694,20 @@ bool SCCPSolver::isStructLatticeConstant(Function *F, StructType *STy) {
 Constant *SCCPSolver::getConstant(const ValueLatticeElement &LV) const {
   return Visitor->getConstant(LV);
 }
+
+SmallPtrSetImpl<Function *> &SCCPSolver::getArgumentTrackedFunctions() {
+  return Visitor->getArgumentTrackedFunctions();
+}
+
+void SCCPSolver::markArgInFuncSpecialization(Function *F, Argument *A,
+                                             Constant *C) {
+  Visitor->markArgInFuncSpecialization(F, A, C);
+}
+
+void SCCPSolver::markFunctionUnreachable(Function *F) {
+  Visitor->markFunctionUnreachable(F);
+}
+
+void SCCPSolver::visit(Instruction *I) { Visitor->visit(I); }
+
+void SCCPSolver::visitCall(CallInst &I) { Visitor->visitCall(I); }

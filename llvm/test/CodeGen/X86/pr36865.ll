@@ -9,7 +9,7 @@ define void @main() {
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; CHECK-NEXT:    movl $400, %edx # imm = 0x190
 ; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    callq memset
+; CHECK-NEXT:    callq memset@PLT
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movl (%rax), %ecx
 ; CHECK-NEXT:    addl 0, %eax

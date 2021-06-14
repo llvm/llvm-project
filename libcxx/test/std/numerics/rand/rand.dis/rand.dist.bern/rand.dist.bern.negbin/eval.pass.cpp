@@ -20,8 +20,6 @@
 #include <vector>
 #include <cassert>
 
-#include "test_macros.h"
-
 template <class T>
 inline
 T
@@ -194,10 +192,14 @@ test4()
     kurtosis -= 3;
     double x_mean = d.k() * (1 - d.p()) / d.p();
     double x_var = x_mean / d.p();
-//    double x_skew = (2 - d.p()) / std::sqrt(d.k() * (1 - d.p()));
-//    double x_kurtosis = 6. / d.k() + sqr(d.p()) / (d.k() * (1 - d.p()));
+    double x_skew = (2 - d.p()) / std::sqrt(d.k() * (1 - d.p()));
+    double x_kurtosis = 6. / d.k() + sqr(d.p()) / (d.k() * (1 - d.p()));
     assert(mean == x_mean);
     assert(var == x_var);
+    // assert(skew == x_skew);
+    (void)skew; (void)x_skew;
+    // assert(kurtosis == x_kurtosis);
+    (void)kurtosis; (void)x_kurtosis;
 }
 
 void

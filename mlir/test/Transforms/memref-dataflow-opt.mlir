@@ -300,3 +300,233 @@ func @vector_forwarding(%in : memref<512xf32>, %out : memref<512xf32>) {
 // CHECK-NEXT:   %[[LDVAL:.*]] = affine.vector_load
 // CHECK-NEXT:   affine.vector_store %[[LDVAL]],{{.*}}
 // CHECK-NEXT: }
+
+func @vector_no_forwarding(%in : memref<512xf32>, %out : memref<512xf32>) {
+  %tmp = memref.alloc() : memref<512xf32>
+  affine.for %i = 0 to 16 {
+    %ld0 = affine.vector_load %in[32*%i] : memref<512xf32>, vector<32xf32>
+    affine.vector_store %ld0, %tmp[32*%i] : memref<512xf32>, vector<32xf32>
+    %ld1 = affine.vector_load %tmp[32*%i] : memref<512xf32>, vector<16xf32>
+    affine.vector_store %ld1, %out[32*%i] : memref<512xf32>, vector<16xf32>
+  }
+  return
+}
+
+// CHECK-LABEL: func @vector_no_forwarding
+// CHECK:      affine.for %{{.*}} = 0 to 16 {
+// CHECK-NEXT:   %[[LDVAL:.*]] = affine.vector_load
+// CHECK-NEXT:   affine.vector_store %[[LDVAL]],{{.*}}
+// CHECK-NEXT:   %[[LDVAL1:.*]] = affine.vector_load
+// CHECK-NEXT:   affine.vector_store %[[LDVAL1]],{{.*}}
+// CHECK-NEXT: }
+
+// CHECK-LABEL: func @simple_three_loads
+func @simple_three_loads(%in : memref<10xf32>) {
+  affine.for %i0 = 0 to 10 {
+    // CHECK:       affine.load
+    %v0 = affine.load %in[%i0] : memref<10xf32>
+    // CHECK-NOT:   affine.load
+    %v1 = affine.load %in[%i0] : memref<10xf32>
+    %v2 = addf %v0, %v1 : f32
+    %v3 = affine.load %in[%i0] : memref<10xf32>
+    %v4 = addf %v2, %v3 : f32
+  }
+  return
+}
+
+// CHECK-LABEL: func @nested_loads_const_index
+func @nested_loads_const_index(%in : memref<10xf32>) {
+  %c0 = constant 0 : index
+  // CHECK:       affine.load
+  %v0 = affine.load %in[%c0] : memref<10xf32>
+  affine.for %i0 = 0 to 10 {
+    affine.for %i1 = 0 to 20 {
+      affine.for %i2 = 0 to 30 {
+        // CHECK-NOT:   affine.load
+        %v1 = affine.load %in[%c0] : memref<10xf32>
+        %v2 = addf %v0, %v1 : f32
+      }
+    }
+  }
+  return
+}
+
+// CHECK-LABEL: func @nested_loads
+func @nested_loads(%N : index, %in : memref<10xf32>) {
+  affine.for %i0 = 0 to 10 {
+    // CHECK:       affine.load
+    %v0 = affine.load %in[%i0] : memref<10xf32>
+    affine.for %i1 = 0 to %N {
+      // CHECK-NOT:   affine.load
+      %v1 = affine.load %in[%i0] : memref<10xf32>
+      %v2 = addf %v0, %v1 : f32
+    }
+  }
+  return
+}
+
+// CHECK-LABEL: func @nested_loads_different_memref_accesses_no_cse
+func @nested_loads_different_memref_accesses_no_cse(%in : memref<10xf32>) {
+  affine.for %i0 = 0 to 10 {
+    // CHECK:       affine.load
+    %v0 = affine.load %in[%i0] : memref<10xf32>
+    affine.for %i1 = 0 to 20 {
+      // CHECK:       affine.load
+      %v1 = affine.load %in[%i1] : memref<10xf32>
+      %v2 = addf %v0, %v1 : f32
+    }
+  }
+  return
+}
+
+// CHECK-LABEL: func @load_load_store
+func @load_load_store(%m : memref<10xf32>) {
+  affine.for %i0 = 0 to 10 {
+    // CHECK:       affine.load
+    %v0 = affine.load %m[%i0] : memref<10xf32>
+    // CHECK-NOT:       affine.load
+    %v1 = affine.load %m[%i0] : memref<10xf32>
+    %v2 = addf %v0, %v1 : f32
+    affine.store %v2, %m[%i0] : memref<10xf32>
+  }
+  return
+}
+
+// CHECK-LABEL: func @load_load_store_2_loops_no_cse
+func @load_load_store_2_loops_no_cse(%N : index, %m : memref<10xf32>) {
+  affine.for %i0 = 0 to 10 {
+    // CHECK:       affine.load
+    %v0 = affine.load %m[%i0] : memref<10xf32>
+    affine.for %i1 = 0 to %N {
+      // CHECK:       affine.load
+      %v1 = affine.load %m[%i0] : memref<10xf32>
+      %v2 = addf %v0, %v1 : f32
+      affine.store %v2, %m[%i0] : memref<10xf32>
+    }
+  }
+  return
+}
+
+// CHECK-LABEL: func @load_load_store_3_loops_no_cse
+func @load_load_store_3_loops_no_cse(%m : memref<10xf32>) {
+%cf1 = constant 1.0 : f32
+  affine.for %i0 = 0 to 10 {
+    // CHECK:       affine.load
+    %v0 = affine.load %m[%i0] : memref<10xf32>
+    affine.for %i1 = 0 to 20 {
+      affine.for %i2 = 0 to 30 {
+        // CHECK:       affine.load
+        %v1 = affine.load %m[%i0] : memref<10xf32>
+        %v2 = addf %v0, %v1 : f32
+      }
+      affine.store %cf1, %m[%i0] : memref<10xf32>
+    }
+  }
+  return
+}
+
+// CHECK-LABEL: func @load_load_store_3_loops
+func @load_load_store_3_loops(%m : memref<10xf32>) {
+%cf1 = constant 1.0 : f32
+  affine.for %i0 = 0 to 10 {
+    affine.for %i1 = 0 to 20 {
+      // CHECK:       affine.load
+      %v0 = affine.load %m[%i0] : memref<10xf32>
+      affine.for %i2 = 0 to 30 {
+        // CHECK-NOT:   affine.load
+        %v1 = affine.load %m[%i0] : memref<10xf32>
+        %v2 = addf %v0, %v1 : f32
+      }
+    }
+    affine.store %cf1, %m[%i0] : memref<10xf32>
+  }
+  return
+}
+
+// CHECK-LABEL: func @loads_in_sibling_loops_const_index_no_cse
+func @loads_in_sibling_loops_const_index_no_cse(%m : memref<10xf32>) {
+  %c0 = constant 0 : index
+  affine.for %i0 = 0 to 10 {
+    // CHECK:       affine.load
+    %v0 = affine.load %m[%c0] : memref<10xf32>
+  }
+  affine.for %i1 = 0 to 10 {
+    // CHECK:       affine.load
+    %v0 = affine.load %m[%c0] : memref<10xf32>
+    %v1 = addf %v0, %v0 : f32
+  }
+  return
+}
+
+// CHECK-LABEL: func @load_load_affine_apply
+func @load_load_affine_apply(%in : memref<10x10xf32>) {
+  affine.for %i0 = 0 to 10 {
+    affine.for %i1 = 0 to 10 {
+      %t0 = affine.apply affine_map<(d0, d1) -> (d1 + 1)>(%i0, %i1)
+      %t1 = affine.apply affine_map<(d0, d1) -> (d0)>(%i0, %i1)
+      %idx0 = affine.apply affine_map<(d0, d1) -> (d1)> (%t0, %t1)
+      %idx1 = affine.apply affine_map<(d0, d1) -> (d0 - 1)> (%t0, %t1)
+      // CHECK:       affine.load
+      %v0 = affine.load %in[%idx0, %idx1] : memref<10x10xf32>
+      // CHECK-NOT:   affine.load
+      %v1 = affine.load %in[%i0, %i1] : memref<10x10xf32>
+      %v2 = addf %v0, %v1 : f32
+    }
+  }
+  return
+}
+
+// CHECK-LABEL: func @vector_loads
+func @vector_loads(%in : memref<512xf32>, %out : memref<512xf32>) {
+  affine.for %i = 0 to 16 {
+    // CHECK:       affine.vector_load
+    %ld0 = affine.vector_load %in[32*%i] : memref<512xf32>, vector<32xf32>
+    // CHECK-NOT:   affine.vector_load
+    %ld1 = affine.vector_load %in[32*%i] : memref<512xf32>, vector<32xf32>
+    %add = addf %ld0, %ld1 : vector<32xf32>
+    affine.vector_store %ld1, %out[32*%i] : memref<512xf32>, vector<32xf32>
+  }
+  return
+}
+
+// CHECK-LABEL: func @vector_loads_no_cse
+func @vector_loads_no_cse(%in : memref<512xf32>, %out : memref<512xf32>) {
+  affine.for %i = 0 to 16 {
+    // CHECK:       affine.vector_load
+    %ld0 = affine.vector_load %in[32*%i] : memref<512xf32>, vector<32xf32>
+    // CHECK:   affine.vector_load
+    %ld1 = affine.vector_load %in[32*%i] : memref<512xf32>, vector<16xf32>
+    affine.vector_store %ld1, %out[32*%i] : memref<512xf32>, vector<16xf32>
+  }
+  return
+}
+
+// CHECK-LABEL: func @vector_load_store_load_no_cse
+func @vector_load_store_load_no_cse(%in : memref<512xf32>, %out : memref<512xf32>) {
+  affine.for %i = 0 to 16 {
+    // CHECK:       affine.vector_load
+    %ld0 = affine.vector_load %in[32*%i] : memref<512xf32>, vector<32xf32>
+    affine.vector_store %ld0, %in[16*%i] : memref<512xf32>, vector<32xf32>
+    // CHECK:       affine.vector_load
+    %ld1 = affine.vector_load %in[32*%i] : memref<512xf32>, vector<32xf32>
+    %add = addf %ld0, %ld1 : vector<32xf32>
+    affine.vector_store %ld1, %out[32*%i] : memref<512xf32>, vector<32xf32>
+  }
+  return
+}
+
+// CHECK-LABEL: func @vector_load_affine_apply_store_load
+func @vector_load_affine_apply_store_load(%in : memref<512xf32>, %out : memref<512xf32>) {
+  %cf1 = constant 1: index
+  affine.for %i = 0 to 15 {
+    // CHECK:       affine.vector_load
+    %ld0 = affine.vector_load %in[32*%i] : memref<512xf32>, vector<32xf32>
+    %idx = affine.apply affine_map<(d0) -> (d0 + 1)> (%i)
+    affine.vector_store %ld0, %in[32*%idx] : memref<512xf32>, vector<32xf32>
+    // CHECK-NOT:   affine.vector_load
+    %ld1 = affine.vector_load %in[32*%i] : memref<512xf32>, vector<32xf32>
+    %add = addf %ld0, %ld1 : vector<32xf32>
+    affine.vector_store %ld1, %out[32*%i] : memref<512xf32>, vector<32xf32>
+  }
+  return
+}

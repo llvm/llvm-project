@@ -251,7 +251,12 @@ RocmInstallationDetector::getInstallationPathCandidates() {
   if (ParentPath != InstallDir)
     ROCmSearchDirs.emplace_back(DeduceROCmPath(ParentPath));
 
-  // Device library may be installed in clang resource directory.
+  // Device library may be installed in clang or resource directory.
+  auto ClangRoot = llvm::sys::path::parent_path(InstallDir);
+  auto RealClangRoot = llvm::sys::path::parent_path(ParentPath);
+  ROCmSearchDirs.emplace_back(ClangRoot.str(), /*StrictChecking=*/true);
+  if (RealClangRoot != ClangRoot)
+    ROCmSearchDirs.emplace_back(RealClangRoot.str(), /*StrictChecking=*/true);
   ROCmSearchDirs.emplace_back(D.ResourceDir,
                               /*StrictChecking=*/true);
 
@@ -311,8 +316,8 @@ RocmInstallationDetector::RocmInstallationDetector(
   HIPPathArg = Args.getLastArgValue(clang::driver::options::OPT_hip_path_EQ);
   if (auto *A = Args.getLastArg(clang::driver::options::OPT_hip_version_EQ)) {
     HIPVersionArg = A->getValue();
-    unsigned Major = 0;
-    unsigned Minor = 0;
+    unsigned Major = ~0U;
+    unsigned Minor = ~0U;
     SmallVector<StringRef, 3> Parts;
     HIPVersionArg.split(Parts, '.');
     if (Parts.size())
@@ -323,7 +328,9 @@ RocmInstallationDetector::RocmInstallationDetector(
       VersionPatch = Parts[2].str();
     if (VersionPatch.empty())
       VersionPatch = "0";
-    if (Major == 0 || Minor == 0)
+    if (Major != ~0U && Minor == ~0U)
+      Minor = 0;
+    if (Major == ~0U || Minor == ~0U)
       D.Diag(diag::err_drv_invalid_value)
           << A->getAsString(Args) << HIPVersionArg;
 
@@ -409,10 +416,7 @@ void RocmInstallationDetector::detectDeviceLibrary() {
 
     // Make a path by appending sub-directories to InstallPath.
     auto MakePath = [&](const llvm::ArrayRef<const char *> &SubDirs) {
-      // Device library built by SPACK is installed to
-      // <rocm_root>/rocm-device-libs-<rocm_release_string>-<hash> directory.
-      auto SPACKPath = findSPACKPackage(Candidate, "rocm-device-libs");
-      auto Path = SPACKPath.empty() ? CandidatePath : SPACKPath;
+      auto Path = CandidatePath;
       for (auto SubDir : SubDirs)
         llvm::sys::path::append(Path, SubDir);
       return Path;

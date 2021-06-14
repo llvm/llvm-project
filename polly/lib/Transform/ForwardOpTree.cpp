@@ -363,11 +363,11 @@ public:
       Translator = makeIdentityMap(Known.range(), false);
     }
 
-    if (!Known || !Translator || !NormalizeMap) {
+    if (Known.is_null() || Translator.is_null() || NormalizeMap.is_null()) {
       assert(isl_ctx_last_error(IslCtx.get()) == isl_error_quota);
-      Known = nullptr;
-      Translator = nullptr;
-      NormalizeMap = nullptr;
+      Known = {};
+      Translator = {};
+      NormalizeMap = {};
       LLVM_DEBUG(dbgs() << "Known analysis exceeded max_operations\n");
       return false;
     }
@@ -525,7 +525,7 @@ public:
     isl::union_map Candidates = findSameContentElements(TranslatedExpectedVal);
 
     isl::map SameVal = singleLocation(Candidates, getDomainFor(TargetStmt));
-    if (!SameVal)
+    if (SameVal.is_null())
       return ForwardingAction::notApplicable();
 
     LLVM_DEBUG(dbgs() << "      expected values where " << TargetExpectedVal
@@ -571,7 +571,7 @@ public:
       LLVM_DEBUG(dbgs() << "      local translator is " << LocalTranslator
                         << "\n");
 
-      if (!LocalTranslator)
+      if (LocalTranslator.is_null())
         return ForwardingAction::notApplicable();
     }
 
@@ -583,7 +583,7 @@ public:
                         << Access << "\n");
       (void)Access;
 
-      if (LocalTranslator)
+      if (!LocalTranslator.is_null())
         Translator = Translator.add_map(LocalTranslator);
 
       NumKnownLoadsForwarded++;
@@ -634,7 +634,7 @@ public:
 
     isl::map SameVal = singleLocation(Candidates, getDomainFor(TargetStmt));
     simplify(SameVal);
-    if (!SameVal)
+    if (SameVal.is_null())
       return ForwardingAction::notApplicable();
 
     auto ExecAction = [this, TargetStmt, Inst, SameVal]() {

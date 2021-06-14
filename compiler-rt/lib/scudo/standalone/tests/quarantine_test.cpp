@@ -214,7 +214,7 @@ TEST(ScudoQuarantineTest, GlobalQuarantine) {
   Quarantine.drainAndRecycle(&Cache, Cb);
   EXPECT_EQ(Cache.getSize(), 0UL);
 
-  scudo::ScopedString Str(1024);
+  scudo::ScopedString Str;
   Quarantine.getStats(&Str);
   Str.output();
 }
@@ -246,7 +246,7 @@ TEST(ScudoQuarantineTest, ThreadedGlobalQuarantine) {
   for (scudo::uptr I = 0; I < NumberOfThreads; I++)
     pthread_join(T[I].Thread, 0);
 
-  scudo::ScopedString Str(1024);
+  scudo::ScopedString Str;
   Quarantine.getStats(&Str);
   Str.output();
 

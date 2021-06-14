@@ -1387,8 +1387,7 @@ protected:
   class CommandOptions : public Options {
   public:
     CommandOptions()
-        : Options(), m_class_name(), m_funct_name(), m_short_help(),
-          m_synchronicity(eScriptedCommandSynchronicitySynchronous) {}
+        : Options(), m_class_name(), m_funct_name(), m_short_help() {}
 
     ~CommandOptions() override = default;
 
@@ -1442,7 +1441,8 @@ protected:
     std::string m_class_name;
     std::string m_funct_name;
     std::string m_short_help;
-    ScriptedCommandSynchronicity m_synchronicity;
+    ScriptedCommandSynchronicity m_synchronicity =
+        eScriptedCommandSynchronicitySynchronous;
   };
 
   void IOHandlerActivated(IOHandler &io_handler, bool interactive) override {

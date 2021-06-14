@@ -66,8 +66,7 @@ CoreSimulatorSupport::Process::Process(Status error)
 CoreSimulatorSupport::Process::Process(lldb::pid_t p, Status error)
     : m_pid(p), m_error(error) {}
 
-CoreSimulatorSupport::DeviceType::DeviceType()
-    : m_dev(nil), m_model_identifier() {}
+CoreSimulatorSupport::DeviceType::DeviceType() : m_model_identifier() {}
 
 CoreSimulatorSupport::DeviceType::DeviceType(id d)
     : m_dev(d), m_model_identifier() {}
@@ -87,8 +86,7 @@ CoreSimulatorSupport::DeviceType::GetProductFamilyID() {
   return ProductFamilyID([m_dev productFamilyID]);
 }
 
-CoreSimulatorSupport::DeviceRuntime::DeviceRuntime()
-    : m_dev(nil), m_os_version() {}
+CoreSimulatorSupport::DeviceRuntime::DeviceRuntime() : m_os_version() {}
 
 CoreSimulatorSupport::DeviceRuntime::DeviceRuntime(id d)
     : m_dev(d), m_os_version() {}
@@ -99,8 +97,7 @@ bool CoreSimulatorSupport::DeviceRuntime::IsAvailable() {
   return [m_dev available];
 }
 
-CoreSimulatorSupport::Device::Device()
-    : m_dev(nil), m_dev_type(), m_dev_runtime() {}
+CoreSimulatorSupport::Device::Device() : m_dev_type(), m_dev_runtime() {}
 
 CoreSimulatorSupport::Device::Device(id d)
     : m_dev(d), m_dev_type(), m_dev_runtime() {}

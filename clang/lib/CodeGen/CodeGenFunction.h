@@ -2872,7 +2872,7 @@ public:
   void EmitSehTryScopeBegin();
   void EmitSehTryScopeEnd();
 
-  llvm::Value *EmitLifetimeStart(uint64_t Size, llvm::Value *Addr);
+  llvm::Value *EmitLifetimeStart(llvm::TypeSize Size, llvm::Value *Addr);
   void EmitLifetimeEnd(llvm::Value *Size, llvm::Value *Addr);
 
   llvm::Value *EmitCXXNewExpr(const CXXNewExpr *E);
@@ -3441,6 +3441,7 @@ public:
   void EmitOMPParallelDirective(const OMPParallelDirective &S);
   void EmitOMPSimdDirective(const OMPSimdDirective &S);
   void EmitOMPTileDirective(const OMPTileDirective &S);
+  void EmitOMPUnrollDirective(const OMPUnrollDirective &S);
   void EmitOMPForDirective(const OMPForDirective &S);
   void EmitOMPForSimdDirective(const OMPForSimdDirective &S);
   void EmitOMPSectionsDirective(const OMPSectionsDirective &S);

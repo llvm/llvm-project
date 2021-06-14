@@ -163,6 +163,13 @@ static llvm::cl::opt<bool> GenerateModulesPathArgs(
         "'-fmodule-file=', '-o', '-fmodule-map-file='."),
     llvm::cl::init(false), llvm::cl::cat(DependencyScannerCategory));
 
+static llvm::cl::opt<std::string> ModuleFilesDir(
+    "module-files-dir",
+    llvm::cl::desc("With '-generate-modules-path-args', paths to module files "
+                   "in the generated command lines will begin with the "
+                   "specified directory instead the module cache directory."),
+    llvm::cl::cat(DependencyScannerCategory));
+
 llvm::cl::opt<unsigned>
     NumThreads("j", llvm::cl::Optional,
                llvm::cl::desc("Number of worker threads to use (default: use "
@@ -357,7 +364,22 @@ public:
 
 private:
   StringRef lookupPCMPath(ModuleID MID) {
-    return Modules[IndexedModuleID{MID, 0}].ImplicitModulePCMPath;
+    auto PCMPath = PCMPaths.insert({MID, ""});
+    if (PCMPath.second)
+      PCMPath.first->second = constructPCMPath(lookupModuleDeps(MID));
+    return PCMPath.first->second;
+  }
+
+  /// Construct a path for the explicitly built PCM.
+  std::string constructPCMPath(const ModuleDeps &MD) const {
+    StringRef Filename = llvm::sys::path::filename(MD.ImplicitModulePCMPath);
+
+    SmallString<256> ExplicitPCMPath(
+        !ModuleFilesDir.empty()
+            ? ModuleFilesDir
+            : MD.Invocation.getHeaderSearchOpts().ModuleCachePath);
+    llvm::sys::path::append(ExplicitPCMPath, MD.ID.ContextHash, Filename);
+    return std::string(ExplicitPCMPath);
   }
 
   const ModuleDeps &lookupModuleDeps(ModuleID MID) {
@@ -395,6 +417,7 @@ private:
   std::mutex Lock;
   std::unordered_map<IndexedModuleID, ModuleDeps, IndexedModuleIDHasher>
       Modules;
+  std::unordered_map<ModuleID, std::string, ModuleIDHasher> PCMPaths;
   std::vector<InputDeps> Inputs;
 };
 
@@ -439,6 +462,10 @@ int main(int argc, const char **argv) {
       std::make_unique<tooling::ArgumentsAdjustingCompilations>(
           std::move(Compilations));
   ResourceDirectoryCache ResourceDirCache;
+
+  // FIXME: Adjust the resulting CompilerInvocation in DependencyScanningAction
+  // instead of parsing and adjusting the raw command-line. This will make it
+  // possible to remove some code specific to clang-cl and Windows.
   AdjustingCompilations->appendArgumentsAdjuster(
       [&ResourceDirCache](const tooling::CommandLineArguments &Args,
                           StringRef FileName) {
@@ -509,7 +536,7 @@ int main(int argc, const char **argv) {
 #else
         AdjustedArgs.push_back("/dev/null");
 #endif
-        if (!HasMT && !HasMQ) {
+        if (!HasMT && !HasMQ && Format == ScanningOutputFormat::Make) {
           // We're interested in source dependencies of an object file.
           std::string FileNameArg;
           if (!HasMD) {
@@ -529,8 +556,6 @@ int main(int argc, const char **argv) {
             AdjustedArgs.push_back(std::move(FileNameArg));
           }
         }
-        AdjustedArgs.push_back("-Xclang");
-        AdjustedArgs.push_back("-Eonly");
         AdjustedArgs.push_back("-Xclang");
         AdjustedArgs.push_back("-sys-header-deps");
         AdjustedArgs.push_back("-Wno-error");

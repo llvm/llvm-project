@@ -844,7 +844,15 @@ TEST_P(ImportDecl, ImportUsingDecl) {
   testImport("namespace foo { int bar; }"
              "void declToImport() { using foo::bar; }",
              Lang_CXX03, "", Lang_CXX03, Verifier,
-             functionDecl(hasDescendant(usingDecl())));
+             functionDecl(hasDescendant(usingDecl(hasName("bar")))));
+}
+
+TEST_P(ImportDecl, ImportUsingEnumDecl) {
+  MatchVerifier<Decl> Verifier;
+  testImport("namespace foo { enum bar { baz, toto, quux }; }"
+             "void declToImport() { using enum foo::bar; }",
+             Lang_CXX20, "", Lang_CXX20, Verifier,
+             functionDecl(hasDescendant(usingEnumDecl(hasName("bar")))));
 }
 
 /// \brief Matches shadow declarations introduced into a scope by a
@@ -862,10 +870,16 @@ const internal::VariadicDynCastAllOfMatcher<Decl,
 
 TEST_P(ImportDecl, ImportUsingShadowDecl) {
   MatchVerifier<Decl> Verifier;
+  // from using-decl
   testImport("namespace foo { int bar; }"
              "namespace declToImport { using foo::bar; }",
              Lang_CXX03, "", Lang_CXX03, Verifier,
-             namespaceDecl(has(usingShadowDecl())));
+             namespaceDecl(has(usingShadowDecl(hasName("bar")))));
+  // from using-enum-decl
+  testImport("namespace foo { enum bar {baz, toto, quux }; }"
+             "namespace declToImport { using enum foo::bar; }",
+             Lang_CXX20, "", Lang_CXX20, Verifier,
+             namespaceDecl(has(usingShadowDecl(hasName("baz")))));
 }
 
 TEST_P(ImportExpr, ImportUnresolvedLookupExpr) {
@@ -5375,6 +5389,33 @@ TEST_P(ErrorHandlingTest, ImportOfOverriddenMethods) {
   CheckError(FromFooC);
 }
 
+TEST_P(ErrorHandlingTest, ODRViolationWithinParmVarDecls) {
+  // Importing of 'f' and parameter 'P' should cause an ODR error.
+  // The error happens after the ParmVarDecl for 'P' was already created.
+  // This is a special case because the ParmVarDecl has a temporary DeclContext.
+  // Expected is no crash at error handling of ASTImporter.
+  constexpr auto ToTUCode = R"(
+      struct X {
+        char A;
+      };
+      )";
+  constexpr auto FromTUCode = R"(
+      struct X {
+        enum Y { Z };
+      };
+      void f(int P = X::Z);
+      )";
+  Decl *ToTU = getToTuDecl(ToTUCode, Lang_CXX11);
+  static_cast<void>(ToTU);
+  Decl *FromTU = getTuDecl(FromTUCode, Lang_CXX11);
+  auto *FromF = FirstDeclMatcher<FunctionDecl>().match(
+      FromTU, functionDecl(hasName("f")));
+  ASSERT_TRUE(FromF);
+
+  auto *ImportedF = Import(FromF, Lang_CXX11);
+  EXPECT_FALSE(ImportedF);
+}
+
 TEST_P(ASTImporterOptionSpecificTestBase, LambdaInFunctionBody) {
   Decl *FromTU = getTuDecl(
       R"(
@@ -6190,6 +6231,21 @@ TEST_P(ImportFunctions, CTADWithLocalTypedef) {
       TU, cxxDeductionGuideDecl());
   auto *ToD = Import(FromD, Lang_CXX17);
   ASSERT_TRUE(ToD);
+}
+
+TEST_P(ImportFunctions, ParmVarDeclDeclContext) {
+  constexpr auto FromTUCode = R"(
+      void f(int P);
+      )";
+  Decl *FromTU = getTuDecl(FromTUCode, Lang_CXX11);
+  auto *FromF = FirstDeclMatcher<FunctionDecl>().match(
+      FromTU, functionDecl(hasName("f")));
+  ASSERT_TRUE(FromF);
+
+  auto *ImportedF = Import(FromF, Lang_CXX11);
+  EXPECT_TRUE(ImportedF);
+  EXPECT_TRUE(SharedStatePtr->getLookupTable()->contains(
+      ImportedF, ImportedF->getParamDecl(0)));
 }
 
 // FIXME Move these tests out of ASTImporterTest. For that we need to factor

@@ -254,7 +254,6 @@ public:
     typedef void                        reference;
     typedef void                        pointer;
 
-    constexpr back_insert_iterator() noexcept = default; // since C++20
     explicit back_insert_iterator(Container& x);  // constexpr in C++20
     back_insert_iterator& operator=(const typename Container::value_type& value);  // constexpr in C++20
     back_insert_iterator& operator*();  // constexpr in C++20
@@ -278,7 +277,6 @@ public:
     typedef void                         reference;
     typedef void                         pointer;
 
-    constexpr front_insert_iterator() noexcept = default; // since C++20
     explicit front_insert_iterator(Container& x);  // constexpr in C++20
     front_insert_iterator& operator=(const typename Container::value_type& value);  // constexpr in C++20
     front_insert_iterator& operator*();  // constexpr in C++20
@@ -303,7 +301,6 @@ public:
     typedef void                   reference;
     typedef void                   pointer;
 
-    insert_iterator() = default; // since C++20
     insert_iterator(Container& x, typename Container::iterator i);  // constexpr in C++20
     insert_iterator& operator=(const typename Container::value_type& value);  // constexpr in C++20
     insert_iterator& operator*();  // constexpr in C++20
@@ -436,7 +433,6 @@ public:
     typedef traits traits_type;
     typedef basic_ostream<charT,traits> ostream_type;
 
-    constexpr ostream_iterator() noexcept = default; // since C++20
     ostream_iterator(ostream_type& s);
     ostream_iterator(ostream_type& s, const charT* delimiter);
     ostream_iterator(const ostream_iterator& x);
@@ -502,7 +498,6 @@ public:
     typedef basic_streambuf<charT, traits> streambuf_type;
     typedef basic_ostream<charT, traits>   ostream_type;
 
-    constexpr ostreambuf_iterator() noexcept = default; // since C++20
     ostreambuf_iterator(ostream_type& s) noexcept;
     ostreambuf_iterator(streambuf_type* s) noexcept;
     ostreambuf_iterator& operator=(charT c);
@@ -559,7 +554,6 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <__iterator/concepts.h>
 #include <__iterator/default_sentinel.h>
 #include <__iterator/incrementable_traits.h>
-#include <__iterator/indirect_concepts.h>
 #include <__iterator/iter_move.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
@@ -669,27 +663,53 @@ public:
 #ifndef _LIBCPP_ABI_NO_ITERATOR_BASES
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     reverse_iterator() : __t(), current() {}
+
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     explicit reverse_iterator(_Iter __x) : __t(__x), current(__x) {}
-    template <class _Up>
-        _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-        reverse_iterator(const reverse_iterator<_Up>& __u) : __t(__u.base()), current(__u.base()) {}
-    template <class _Up>
-        _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-        reverse_iterator& operator=(const reverse_iterator<_Up>& __u)
-            { __t = current = __u.base(); return *this; }
+
+    template <class _Up, class = _EnableIf<
+        !is_same<_Up, _Iter>::value && is_convertible<_Up const&, _Iter>::value
+    > >
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    reverse_iterator(const reverse_iterator<_Up>& __u)
+        : __t(__u.base()), current(__u.base())
+    { }
+
+    template <class _Up, class = _EnableIf<
+        !is_same<_Up, _Iter>::value &&
+        is_convertible<_Up const&, _Iter>::value &&
+        is_assignable<_Up const&, _Iter>::value
+    > >
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    reverse_iterator& operator=(const reverse_iterator<_Up>& __u) {
+        __t = current = __u.base();
+        return *this;
+    }
 #else
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     reverse_iterator() : current() {}
+
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     explicit reverse_iterator(_Iter __x) : current(__x) {}
-    template <class _Up>
-        _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-        reverse_iterator(const reverse_iterator<_Up>& __u) : current(__u.base()) {}
-    template <class _Up>
-        _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-        reverse_iterator& operator=(const reverse_iterator<_Up>& __u)
-            { current = __u.base(); return *this; }
+
+    template <class _Up, class = _EnableIf<
+        !is_same<_Up, _Iter>::value && is_convertible<_Up const&, _Iter>::value
+    > >
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    reverse_iterator(const reverse_iterator<_Up>& __u)
+        : current(__u.base())
+    { }
+
+    template <class _Up, class = _EnableIf<
+        !is_same<_Up, _Iter>::value &&
+        is_convertible<_Up const&, _Iter>::value &&
+        is_assignable<_Up const&, _Iter>::value
+    > >
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    reverse_iterator& operator=(const reverse_iterator<_Up>& __u) {
+        current = __u.base();
+        return *this;
+    }
 #endif
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     _Iter base() const {return current;}
@@ -823,9 +843,6 @@ public:
     typedef void reference;
     typedef _Container container_type;
 
-#if _LIBCPP_STD_VER > 17
-    _LIBCPP_INLINE_VISIBILITY constexpr back_insert_iterator() noexcept = default;
-#endif
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 explicit back_insert_iterator(_Container& __x) : container(_VSTD::addressof(__x)) {}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 back_insert_iterator& operator=(const typename _Container::value_type& __value_)
         {container->push_back(__value_); return *this;}
@@ -868,9 +885,6 @@ public:
     typedef void reference;
     typedef _Container container_type;
 
-#if _LIBCPP_STD_VER > 17
-    _LIBCPP_INLINE_VISIBILITY constexpr front_insert_iterator() noexcept = default;
-#endif
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 explicit front_insert_iterator(_Container& __x) : container(_VSTD::addressof(__x)) {}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 front_insert_iterator& operator=(const typename _Container::value_type& __value_)
         {container->push_front(__value_); return *this;}
@@ -901,7 +915,7 @@ class _LIBCPP_TEMPLATE_VIS insert_iterator
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 protected:
     _Container* container;
-    typename _Container::iterator iter;
+    typename _Container::iterator iter; // FIXME: `ranges::iterator_t<Container>` in C++20 mode
 public:
     typedef output_iterator_tag iterator_category;
     typedef void value_type;
@@ -914,9 +928,6 @@ public:
     typedef void reference;
     typedef _Container container_type;
 
-#if _LIBCPP_STD_VER > 17
-    _LIBCPP_INLINE_VISIBILITY insert_iterator() = default;
-#endif
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 insert_iterator(_Container& __x, typename _Container::iterator __i)
         : container(_VSTD::addressof(__x)), iter(__i) {}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 insert_iterator& operator=(const typename _Container::value_type& __value_)
@@ -1035,9 +1046,6 @@ private:
     ostream_type* __out_stream_;
     const char_type* __delim_;
 public:
-#if _LIBCPP_STD_VER > 17
-    _LIBCPP_INLINE_VISIBILITY constexpr ostream_iterator() noexcept = default;
-#endif
     _LIBCPP_INLINE_VISIBILITY ostream_iterator(ostream_type& __s) _NOEXCEPT
         : __out_stream_(_VSTD::addressof(__s)), __delim_(nullptr) {}
     _LIBCPP_INLINE_VISIBILITY ostream_iterator(ostream_type& __s, const _CharT* __delimiter) _NOEXCEPT
@@ -1160,9 +1168,6 @@ public:
 private:
     streambuf_type* __sbuf_;
 public:
-#if _LIBCPP_STD_VER > 17
-    _LIBCPP_INLINE_VISIBILITY constexpr ostreambuf_iterator() noexcept = default;
-#endif
     _LIBCPP_INLINE_VISIBILITY ostreambuf_iterator(ostream_type& __s) _NOEXCEPT
         : __sbuf_(__s.rdbuf()) {}
     _LIBCPP_INLINE_VISIBILITY ostreambuf_iterator(streambuf_type* __s) _NOEXCEPT
@@ -1217,11 +1222,27 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     move_iterator() : __i() {}
+
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     explicit move_iterator(_Iter __x) : __i(__x) {}
-    template <class _Up>
-      _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-      move_iterator(const move_iterator<_Up>& __u) : __i(__u.base()) {}
+
+    template <class _Up, class = _EnableIf<
+        !is_same<_Up, _Iter>::value && is_convertible<_Up const&, _Iter>::value
+    > >
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    move_iterator(const move_iterator<_Up>& __u) : __i(__u.base()) {}
+
+    template <class _Up, class = _EnableIf<
+        !is_same<_Up, _Iter>::value &&
+        is_convertible<_Up const&, _Iter>::value &&
+        is_assignable<_Iter&, _Up const&>::value
+    > >
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    move_iterator& operator=(const move_iterator<_Up>& __u) {
+        __i = __u.base();
+        return *this;
+    }
+
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 _Iter base() const {return __i;}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
     reference operator*() const { return static_cast<reference>(*__i); }

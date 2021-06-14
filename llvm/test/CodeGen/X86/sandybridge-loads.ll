@@ -11,7 +11,7 @@ define void @wideloads(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounwi
 ; CHECK-NEXT:    vmovaps (%rdx), %ymm2
 ; CHECK-NEXT:    vcmpltps %ymm0, %ymm2, %ymm0
 ; CHECK-NEXT:    vandps %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; CHECK-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    vmovaps %ymm0, (%rax)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

@@ -5479,8 +5479,8 @@ let Predicates = [IsThumb2, HasV8_1MMainline, HasLOB] in {
 // t2DoLoopStart a pseudo for DLS hardware loops. Lowered into a DLS in
 // ARMLowOverheadLoops if possible, or reverted to a Mov if not.
 def t2DoLoopStart :
-  t2PseudoInst<(outs GPRlr:$X), (ins rGPR:$elts), 4, IIC_Br,
-  [(set GPRlr:$X, (int_start_loop_iterations rGPR:$elts))]>;
+  t2PseudoInst<(outs GPRlr:$X), (ins rGPR:$tc), 4, IIC_Br,
+  [(set GPRlr:$X, (int_start_loop_iterations rGPR:$tc))]>;
 
 // A pseudo for a DLSTP, created in the MVETPAndVPTOptimizationPass from a
 // t2DoLoopStart if the loops is tail predicated. Holds both the element
@@ -5488,7 +5488,7 @@ def t2DoLoopStart :
 // ARMLowOverheadLoops when it is converted to a DLSTP or DLS as required.
 let isTerminator = 1, hasSideEffects = 1 in
 def t2DoLoopStartTP :
-  t2PseudoInst<(outs GPRlr:$X), (ins rGPR:$elts, rGPR:$count), 4, IIC_Br, []>;
+  t2PseudoInst<(outs GPRlr:$X), (ins rGPR:$tc, rGPR:$elts), 4, IIC_Br, []>;
 
 // Setup for a t2WhileLoopStart. A pair of t2WhileLoopSetup and t2WhileLoopStart
 // will be created post-ISel from a llvm.test.start.loop.iterations. This
@@ -5496,7 +5496,7 @@ def t2DoLoopStartTP :
 // valid after reg alloc, as it should be lowered during MVETPAndVPTOptimisations
 // into a t2WhileLoopStartLR (or expanded).
 def t2WhileLoopSetup :
-  t2PseudoInst<(outs GPRlr:$lr), (ins rGPR:$elts), 4, IIC_Br, []>;
+  t2PseudoInst<(outs GPRlr:$lr), (ins rGPR:$tc), 4, IIC_Br, []>;
 
 // A pseudo to represent the decrement in a low overhead loop. A t2LoopDec and
 // t2LoopEnd together represent a LE instruction. Ideally these are converted
@@ -5511,7 +5511,7 @@ let isBranch = 1, isTerminator = 1, hasSideEffects = 1, Defs = [CPSR] in {
 // into a t2WhileLoopStartLR that does both the LR setup and branch.
 def t2WhileLoopStart :
     t2PseudoInst<(outs),
-                 (ins GPRlr:$elts, brtarget:$target),
+                 (ins GPRlr:$tc, brtarget:$target),
                  4, IIC_Br, []>,
                  Sched<[WriteBr]>;
 
@@ -5521,13 +5521,21 @@ def t2WhileLoopStart :
 // converted into t2CMP and t2Bcc.
 def t2WhileLoopStartLR :
     t2PseudoInst<(outs GPRlr:$lr),
-                 (ins rGPR:$elts, brtarget:$target),
+                 (ins rGPR:$tc, brtarget:$target),
+                 8, IIC_Br, []>,
+                 Sched<[WriteBr]>;
+
+// Similar to a t2DoLoopStartTP, a t2WhileLoopStartTP is a pseudo for a WLSTP
+// holding both the element count and the tripcount of the loop.
+def t2WhileLoopStartTP :
+    t2PseudoInst<(outs GPRlr:$lr),
+                 (ins rGPR:$tc, rGPR:$elts, brtarget:$target),
                  8, IIC_Br, []>,
                  Sched<[WriteBr]>;
 
 // t2LoopEnd - the branch half of a t2LoopDec/t2LoopEnd pair.
 def t2LoopEnd :
-  t2PseudoInst<(outs), (ins GPRlr:$elts, brtarget:$target),
+  t2PseudoInst<(outs), (ins GPRlr:$tc, brtarget:$target),
   8, IIC_Br, []>, Sched<[WriteBr]>;
 
 // The combination of a t2LoopDec and t2LoopEnd, performing both the LR
@@ -5535,7 +5543,7 @@ def t2LoopEnd :
 // LETP in ARMLowOverheadLoops as appropriate, or converted to t2CMP/t2Bcc
 // if the branches are out of range.
 def t2LoopEndDec :
-  t2PseudoInst<(outs GPRlr:$Rm), (ins GPRlr:$elts, brtarget:$target),
+  t2PseudoInst<(outs GPRlr:$Rm), (ins GPRlr:$tc, brtarget:$target),
   8, IIC_Br, []>, Sched<[WriteBr]>;
 
 } // end isBranch, isTerminator, hasSideEffects

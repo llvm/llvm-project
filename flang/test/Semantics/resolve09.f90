@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 integer :: y
 procedure() :: a
 procedure(real) :: b
@@ -18,6 +19,7 @@ subroutine s
   !ERROR: Cannot call function 'f' like a subroutine
   call f
   !ERROR: Cannot call subroutine 's' like a function
+  !ERROR: Function result characteristics are not known
   i = s()
 contains
   function f()

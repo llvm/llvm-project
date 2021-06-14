@@ -7,7 +7,7 @@
 define void @g(i32* %x, i32* %y, i32* %z) {
 ; CHECK-LABEL: g:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl {{.*}}(%rip), %eax
+; CHECK-NEXT:    movl a(%rip), %eax
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    xorl %ecx, %ecx
@@ -19,7 +19,7 @@ define void @g(i32* %x, i32* %y, i32* %z) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    shll $8, %eax
-; CHECK-NEXT:    bextrl %eax, {{.*}}(%rip), %eax
+; CHECK-NEXT:    bextrl %eax, f(%rip), %eax
 ; CHECK-NEXT:    orl %ecx, %eax
 ; CHECK-NEXT:    movl %eax, (%rdx)
 ; CHECK-NEXT:    retq

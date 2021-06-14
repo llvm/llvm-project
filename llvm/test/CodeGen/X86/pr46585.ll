@@ -11,7 +11,7 @@ define void @spam() local_unnamed_addr {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je LBB0_2
 ; CHECK-NEXT:  ## %bb.1: ## %bb9
-; CHECK-NEXT:    movq _global.1@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq _global.1@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movq $1, (%rax)
 ; CHECK-NEXT:  LBB0_2: ## %bb8
 ; CHECK-NEXT:    retq

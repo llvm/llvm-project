@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/Module.h"
 
 #define DEBUG_TYPE "gisel-known-bits"
 
@@ -87,10 +88,10 @@ LLVM_ATTRIBUTE_UNUSED static void
 dumpResult(const MachineInstr &MI, const KnownBits &Known, unsigned Depth) {
   dbgs() << "[" << Depth << "] Compute known bits: " << MI << "[" << Depth
          << "] Computed for: " << MI << "[" << Depth << "] Known: 0x"
-         << (Known.Zero | Known.One).toString(16, false) << "\n"
-         << "[" << Depth << "] Zero: 0x" << Known.Zero.toString(16, false)
+         << toString(Known.Zero | Known.One, 16, false) << "\n"
+         << "[" << Depth << "] Zero: 0x" << toString(Known.Zero, 16, false)
          << "\n"
-         << "[" << Depth << "] One:  0x" << Known.One.toString(16, false)
+         << "[" << Depth << "] One:  0x" << toString(Known.One, 16, false)
          << "\n";
 }
 
@@ -111,6 +112,20 @@ void GISelKnownBits::computeKnownBitsMin(Register Src0, Register Src1,
 
   // Only known if known in both the LHS and RHS.
   Known = KnownBits::commonBits(Known, Known2);
+}
+
+// Bitfield extract is computed as (Src >> Offset) & Mask, where Mask is
+// created using Width. Use this function when the inputs are KnownBits
+// objects. TODO: Move this KnownBits.h if this is usable in more cases.
+static KnownBits extractBits(unsigned BitWidth, const KnownBits &SrcOpKnown,
+                             const KnownBits &OffsetKnown,
+                             const KnownBits &WidthKnown) {
+  KnownBits Mask(BitWidth);
+  Mask.Zero = APInt::getBitsSetFrom(
+      BitWidth, WidthKnown.getMaxValue().getLimitedValue(BitWidth));
+  Mask.One = APInt::getLowBitsSet(
+      BitWidth, WidthKnown.getMinValue().getLimitedValue(BitWidth));
+  return KnownBits::lshr(SrcOpKnown, OffsetKnown) & Mask;
 }
 
 void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
@@ -493,6 +508,34 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     Register SrcReg = MI.getOperand(1).getReg();
     computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
     Known.reverseBits();
+    break;
+  }
+  case TargetOpcode::G_UBFX: {
+    KnownBits SrcOpKnown, OffsetKnown, WidthKnown;
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), SrcOpKnown, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), OffsetKnown, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(3).getReg(), WidthKnown, DemandedElts,
+                         Depth + 1);
+    Known = extractBits(BitWidth, SrcOpKnown, OffsetKnown, WidthKnown);
+    break;
+  }
+  case TargetOpcode::G_SBFX: {
+    KnownBits SrcOpKnown, OffsetKnown, WidthKnown;
+    computeKnownBitsImpl(MI.getOperand(1).getReg(), SrcOpKnown, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(2).getReg(), OffsetKnown, DemandedElts,
+                         Depth + 1);
+    computeKnownBitsImpl(MI.getOperand(3).getReg(), WidthKnown, DemandedElts,
+                         Depth + 1);
+    Known = extractBits(BitWidth, SrcOpKnown, OffsetKnown, WidthKnown);
+    // Sign extend the extracted value using shift left and arithmetic shift
+    // right.
+    KnownBits ExtKnown = KnownBits::makeConstant(APInt(BitWidth, BitWidth));
+    KnownBits ShiftKnown = KnownBits::computeForAddSub(
+        /*Add*/ false, /*NSW*/ false, ExtKnown, WidthKnown);
+    Known = KnownBits::ashr(KnownBits::shl(Known, ShiftKnown), ShiftKnown);
     break;
   }
   }

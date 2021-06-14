@@ -2527,6 +2527,122 @@ bb3:
   ret void
 }
 
+; Test that chr will skip this function when addresses are taken on basic blocks.
+@gototable1 = weak_odr dso_local local_unnamed_addr constant [2 x i8*] [i8* blockaddress(@test_chr_with_bbs_address_taken1, %bb3), i8* blockaddress(@test_chr_with_bbs_address_taken1, %bb3)]
+define void @test_chr_with_bbs_address_taken1(i32* %i) !prof !14 {
+; CHECK-LABEL: @test_chr_with_bbs_address_taken1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[I:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label [[BB1:%.*]], label [[BB0:%.*]], !prof [[PROF16]]
+; CHECK:       bb0:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB1]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[BB4:%.*]], label [[BB2:%.*]], !prof [[PROF16]]
+; CHECK:       bb2:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB4]]
+; CHECK:       bb4:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load i32, i32* %i
+  %1 = and i32 %0, 1
+  %2 = icmp eq i32 %1, 0
+  br i1 %2, label %bb1, label %bb0, !prof !15
+
+bb0:
+  call void @foo()
+  br label %bb1
+
+bb1:
+  %3 = and i32 %0, 2
+  %4 = icmp eq i32 %3, 0
+  br i1 %4, label %bb4, label %bb2, !prof !15
+
+bb2:
+  call void @foo()
+  %pc = bitcast i32* %i to i8*
+  indirectbr i8* %pc, [label %bb3, label %bb3]
+
+bb3:
+  br label %bb4
+
+bb4:
+  ret void
+}
+
+; Test that chr will still optimize the first 2 regions,
+; but will skip the last one due to basic blocks have address taken.
+@gototable2 = weak_odr dso_local local_unnamed_addr constant [2 x i8*] [i8* blockaddress(@test_chr_with_bbs_address_taken2, %bb5), i8* blockaddress(@test_chr_with_bbs_address_taken2, %bb5)]
+define void @test_chr_with_bbs_address_taken2(i32* %i) !prof !14 {
+; CHECK-LABEL: @test_chr_with_bbs_address_taken2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[I:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 3
+; CHECK-NEXT:    br i1 [[TMP2]], label [[BB0:%.*]], label [[ENTRY_SPLIT_NONCHR:%.*]], !prof [[PROF15]]
+; CHECK:       bb0:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK:       entry.split.nonchr:
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP0]], 1
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[DOTNOT]], label [[BB1_NONCHR:%.*]], label [[BB0_NONCHR:%.*]], !prof [[PROF16]]
+; CHECK:       bb0.nonchr:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB1_NONCHR]]
+; CHECK:       bb1.nonchr:
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[TMP5]], label [[BB3]], label [[BB2_NONCHR:%.*]], !prof [[PROF16]]
+; CHECK:       bb2.nonchr:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load i32, i32* %i
+  %1 = and i32 %0, 1
+  %2 = icmp eq i32 %1, 0
+  br i1 %2, label %bb1, label %bb0, !prof !15
+
+bb0:
+  call void @foo()
+  br label %bb1
+
+bb1:
+  %3 = and i32 %0, 2
+  %4 = icmp eq i32 %3, 0
+  br i1 %4, label %bb3, label %bb2, !prof !15
+
+bb2:
+  call void @foo()
+  br label %bb3
+
+bb3:
+  %5 = and i32 %0, 2
+  %6 = icmp eq i32 %5, 0
+  br i1 %6, label %bb6, label %bb4, !prof !15
+
+bb4:
+  %pc = bitcast i32* %i to i8*
+  indirectbr i8* %pc, [label %bb5, label %bb5]
+
+bb5:
+  br label %bb6
+
+bb6:
+  ret void
+}
+
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}

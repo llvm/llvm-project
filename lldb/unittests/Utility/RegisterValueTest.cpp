@@ -11,7 +11,6 @@
 
 using namespace lldb_private;
 using llvm::APInt;
-using llvm::ArrayRef;
 
 TEST(RegisterValueTest, GetSet8) {
   RegisterValue R8(uint8_t(47));

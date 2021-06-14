@@ -9,11 +9,11 @@
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
 
 define void @test1(i8* %a, i8* %b, i64 %s) nounwind {
-; NOFSRM-LABEL: test1
+; NOFSRM-LABEL: test1:
 ; NOFSRM:       # %bb.0:
-; NOFSRM:         jmp memcpy
+; NOFSRM-NEXT:    jmp memcpy@PLT # TAILCALL
 ;
-; FSRM-LABEL: test1
+; FSRM-LABEL: test1:
 ; FSRM:       # %bb.0:
 ; FSRM-NEXT:    movq %rdx, %rcx
 ; FSRM-NEXT:    rep;movsb (%rsi), %es:(%rdi)

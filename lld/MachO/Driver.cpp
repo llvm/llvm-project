@@ -316,11 +316,10 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
   default:
     error(path + ": unhandled file type");
   }
-  if (newFile) {
+  if (newFile && !isa<DylibFile>(newFile)) {
     // printArchiveMemberLoad() prints both .a and .o names, so no need to
     // print the .a name here.
-    if (config->printEachFile && magic != file_magic::archive &&
-        !isa<DylibFile>(newFile))
+    if (config->printEachFile && magic != file_magic::archive)
       message(toString(newFile));
     inputFiles.insert(newFile);
   }
@@ -328,10 +327,10 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
 }
 
 static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
-                       bool isReexport, bool isExplicit) {
+                       bool isReexport, bool isExplicit, bool forceLoad) {
   if (Optional<StringRef> path = findLibrary(name)) {
     if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-            addFile(*path, /*forceLoadArchive=*/false, isExplicit))) {
+            addFile(*path, forceLoad, isExplicit))) {
       if (isNeeded)
         dylibFile->forceNeeded = true;
       if (isWeak)
@@ -387,10 +386,14 @@ void macho::parseLCLinkerOption(InputFile *f, unsigned argc, StringRef data) {
 
   for (const Arg *arg : args) {
     switch (arg->getOption().getID()) {
-    case OPT_l:
-      addLibrary(arg->getValue(), /*isNeeded=*/false, /*isWeak=*/false,
-                 /*isReexport=*/false, /*isExplicit=*/false);
+    case OPT_l: {
+      StringRef name = arg->getValue();
+      bool forceLoad =
+          config->forceLoadSwift ? name.startswith("swift") : false;
+      addLibrary(name, /*isNeeded=*/false, /*isWeak=*/false,
+                 /*isReexport=*/false, /*isExplicit=*/false, forceLoad);
       break;
+    }
     case OPT_framework:
       addFramework(arg->getValue(), /*isNeeded=*/false, /*isWeak=*/false,
                    /*isReexport=*/false, /*isExplicit=*/false);
@@ -530,10 +533,9 @@ static void replaceCommonSymbols() {
     if (common == nullptr)
       continue;
 
-    auto *isec = make<InputSection>();
+    auto *isec =
+        make<ConcatInputSection>(segment_names::data, section_names::common);
     isec->file = common->getFile();
-    isec->name = section_names::common;
-    isec->segname = segment_names::data;
     isec->align = common->align;
     // Casting to size_t will truncate large values on 32-bit architectures,
     // but it's not really worth supporting the linking of 64-bit programs on
@@ -917,7 +919,7 @@ void createFiles(const InputArgList &args) {
     case OPT_weak_l:
       addLibrary(arg->getValue(), opt.getID() == OPT_needed_l,
                  opt.getID() == OPT_weak_l, opt.getID() == OPT_reexport_l,
-                 /*isExplicit=*/true);
+                 /*isExplicit=*/true, /*forceLoad=*/false);
       break;
     case OPT_framework:
     case OPT_needed_framework:
@@ -1017,6 +1019,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->headerPad = args::getHex(args, OPT_headerpad, /*Default=*/32);
   config->headerPadMaxInstallNames =
       args.hasArg(OPT_headerpad_max_install_names);
+  config->printDylibSearch =
+      args.hasArg(OPT_print_dylib_search) || getenv("RC_TRACE_DYLIB_SEARCHING");
   config->printEachFile = args.hasArg(OPT_t);
   config->printWhyLoad = args.hasArg(OPT_why_load);
   config->outputType = getOutputType(args);
@@ -1033,11 +1037,13 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->runtimePaths = args::getStrings(args, OPT_rpath);
   config->allLoad = args.hasArg(OPT_all_load);
   config->forceLoadObjC = args.hasArg(OPT_ObjC);
+  config->forceLoadSwift = args.hasArg(OPT_force_load_swift_libs);
   config->deadStripDylibs = args.hasArg(OPT_dead_strip_dylibs);
   config->demangle = args.hasArg(OPT_demangle);
   config->implicitDylibs = !args.hasArg(OPT_no_implicit_dylibs);
   config->emitFunctionStarts = !args.hasArg(OPT_no_function_starts);
   config->emitBitcodeBundle = args.hasArg(OPT_bitcode_bundle);
+  config->dedupLiterals = args.hasArg(OPT_deduplicate_literals);
 
   // FIXME: Add a commandline flag for this too.
   config->zeroModTime = getenv("ZERO_AR_DATE");
@@ -1286,9 +1292,14 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
       TimeTraceScope timeScope("Gathering input sections");
       // Gather all InputSections into one vector.
       for (const InputFile *file : inputFiles) {
-        for (const SubsectionMap &map : file->subsections)
-          for (const SubsectionEntry &subsectionEntry : map)
-            inputSections.push_back(subsectionEntry.isec);
+        for (const SubsectionMap &map : file->subsections) {
+          for (const SubsectionEntry &entry : map) {
+            if (auto concatIsec = dyn_cast<ConcatInputSection>(entry.isec))
+              if (concatIsec->isCoalescedWeak())
+                continue;
+            inputSections.push_back(entry.isec);
+          }
+        }
       }
     }
 

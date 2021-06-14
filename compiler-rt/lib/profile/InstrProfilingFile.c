@@ -261,9 +261,13 @@ static int doProfileMerging(FILE *ProfileFile, int *MergeDone) {
     return -1;
 
   /* Now start merging */
-  __llvm_profile_merge_from_buffer(ProfileBuffer, ProfileFileSize);
+  if (__llvm_profile_merge_from_buffer(ProfileBuffer, ProfileFileSize)) {
+    PROF_ERR("%s\n", "Invalid profile data to merge");
+    (void)munmap(ProfileBuffer, ProfileFileSize);
+    return -1;
+  }
 
-  // Truncate the file in case merging of value profile did not happend to
+  // Truncate the file in case merging of value profile did not happen to
   // prevent from leaving garbage data at the end of the profile file.
   (void)COMPILER_RT_FTRUNCATE(ProfileFile,
                               __llvm_profile_get_size_for_buffer());

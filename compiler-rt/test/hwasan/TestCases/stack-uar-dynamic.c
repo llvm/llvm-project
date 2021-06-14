@@ -4,7 +4,7 @@
 // still be using FP-relative debug info locations that we can use to find stack
 // objects.
 
-// Stack aliasing is not implemented on x86.
+// Stack histories are currently not recorded on x86.
 // XFAIL: x86_64
 
 __attribute((noinline))

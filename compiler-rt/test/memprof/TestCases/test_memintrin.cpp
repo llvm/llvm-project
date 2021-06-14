@@ -41,8 +41,8 @@ int main() {
   memcpy(q, p, 5);
   int x = memcmp(p, q, 5);
 
-  delete p;
-  delete q;
+  delete[] p;
+  delete[] q;
 
   return x;
 }

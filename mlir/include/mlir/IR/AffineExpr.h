@@ -17,6 +17,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/Casting.h"
+#include <functional>
 #include <type_traits>
 
 namespace mlir {

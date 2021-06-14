@@ -561,9 +561,9 @@ define i32 @main() nounwind {
 ; CHECK-X64-NEXT:    pushq %rax
 ; CHECK-X64-NEXT:    movl $12, (%rsp)
 ; CHECK-X64-NEXT:    movabsq $_func, %r10
-; CHECK-X64-NEXT:    movabsq $LCPI1_0, %rax
+; CHECK-X64-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
 ; CHECK-X64-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-X64-NEXT:    movabsq $LCPI1_1, %rax
+; CHECK-X64-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
 ; CHECK-X64-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; CHECK-X64-NEXT:    movabsq $123456677890, %r8 ## imm = 0x1CBE976802
 ; CHECK-X64-NEXT:    movl $1, %edi

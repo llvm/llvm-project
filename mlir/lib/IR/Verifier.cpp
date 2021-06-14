@@ -35,6 +35,8 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Regex.h"
 
+#include <atomic>
+
 using namespace mlir;
 
 namespace {
@@ -81,7 +83,7 @@ LogicalResult OperationVerifier::verifyOpAndDominance(Operation &op) {
   // check for any nested regions. We do this as a second pass since malformed
   // CFG's can cause dominator analysis constructure to crash and we want the
   // verifier to be resilient to malformed code.
-  DominanceInfo theDomInfo(&op);
+  DominanceInfo theDomInfo;
   domInfo = &theDomInfo;
   if (failed(verifyDominanceOfContainedRegions(op)))
     return failure();

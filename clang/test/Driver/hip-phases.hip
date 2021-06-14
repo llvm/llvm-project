@@ -231,13 +231,14 @@
 // compilation mode.
 //
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu -ccc-print-phases \
-// RUN: --cuda-gpu-arch=gfx803 %s --cuda-device-only -S 2>&1 \
+// RUN: --cuda-gpu-arch=gfx803 %s --cuda-device-only -S --no-gpu-bundle-output 2>&1 \
 // RUN: | FileCheck -check-prefixes=DASM %s
 // DASM-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH:gfx803]])
 // DASM-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
 // DASM-DAG: [[P2:[0-9]+]]: compiler, {[[P1]]}, ir, (device-[[T]], [[ARCH]])
 // DASM-DAG: [[P3:[0-9]+]]: backend, {[[P2]]}, assembler, (device-[[T]], [[ARCH]])
 // DASM-DAG: [[P4:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P3]]}, assembler
+// DASM-NOT: clang-offload-bundler
 // DASM-NOT: host
 
 //
@@ -270,8 +271,20 @@
 //
 // RUN: %clang -x hip -target x86_64-unknown-linux-gnu \
 // RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
+// RUN: --cuda-device-only -S -o %t.s 2>&1 \
+// RUN: | FileCheck -check-prefixes=DASM2,DASM2-NOBUNDLE %s
+// RUN: %clang -x hip -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
+// RUN: --cuda-device-only -S -o %t.s --no-gpu-bundle-output 2>&1 \
+// RUN: | FileCheck -check-prefixes=DASM2,DASM2-NOBUNDLE %s
+// RUN: %clang -x hip -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
 // RUN: --cuda-device-only -S 2>&1 \
-// RUN: | FileCheck -check-prefixes=DASM2 %s
+// RUN: | FileCheck -check-prefixes=DASM2,DASM2-NOBUNDLE %s
+// RUN: %clang -x hip -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
+// RUN: --cuda-device-only -S --gpu-bundle-output 2>&1 \
+// RUN: | FileCheck -check-prefixes=DASM2,DASM2-BUNDLE %s
 // DASM2-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH:gfx803]])
 // DASM2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
 // DASM2-DAG: [[P2:[0-9]+]]: compiler, {[[P1]]}, ir, (device-[[T]], [[ARCH]])
@@ -282,6 +295,8 @@
 // DASM2-DAG: [[P7:[0-9]+]]: compiler, {[[P6]]}, ir, (device-[[T]], [[ARCH2]])
 // DASM2-DAG: [[P8:[0-9]+]]: backend, {[[P7]]}, assembler, (device-[[T]], [[ARCH2]])
 // DASM2-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P8]]}, assembler
+// DASM2-BUNDLE: [[P10:[0-9]+]]: clang-offload-bundler, {[[P4]], [[P9]]}, assembler, (device-hip, )
+// DASM2-NOBUNDLE-NOT: clang-offload-bundler, {[[P4]], [[P9]]}, assembler, (device-hip, )
 // DASM2-NOT: host
 
 //
@@ -312,3 +327,117 @@
 
 // NL2-DAG: [[P4:[0-9]+]]: linker, {[[P0]], [[P2]]}, image, (host-[[T]])
 // RL2-DAG: [[P4:[0-9]+]]: linker, {[[P1]], [[P3]], [[P9]]}, image, (host-[[T]])
+
+// Test one gpu architectures up to the preprocessor expansion output phase in device-only
+// compilation mode. no bundle.
+//
+// RUN: %clang -x hip -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 %s \
+// RUN: --cuda-device-only -E 2>&1 \
+// RUN: | FileCheck -check-prefixes=PPE,PPEN %s
+
+// RUN: %clang -x hip -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 %s \
+// RUN: --cuda-device-only -E --no-gpu-bundle-output 2>&1 \
+// RUN: | FileCheck -check-prefixes=PPE,PPEN %s
+
+// Test one gpu architectures up to the preprocessor expansion output phase in device-only
+// compilation mode. bundle.
+
+// RUN: %clang -x hip -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 %s \
+// RUN: --cuda-device-only -E --gpu-bundle-output 2>&1 \
+// RUN: | FileCheck -check-prefixes=PPE,PPEB %s
+
+// Test two gpu architectures up to the preprocessor expansion output phase in device-only
+// compilation mode. no bundle.
+
+// RUN: %clang -x hip -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
+// RUN: --cuda-device-only -E 2>&1 \
+// RUN: | FileCheck -check-prefixes=PPE2,PPE2N %s
+
+// RUN: %clang -x hip -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
+// RUN: --cuda-device-only -E --no-gpu-bundle-output 2>&1 \
+// RUN: | FileCheck -check-prefixes=PPE2,PPE2N %s
+
+// Test two gpu architectures up to the preprocessor expansion output phase in device-only
+// compilation mode. bundle.
+
+// RUN: %clang -x hip -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
+// RUN: --cuda-device-only -E --gpu-bundle-output 2>&1 \
+// RUN: | FileCheck -check-prefixes=PPE2,PPE2B %s
+
+// Test one gpu architectures up to the LLVM IR output phase in device-only
+// compilation mode. no bundle.
+//
+// RUN: %clang -x hip -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 %s \
+// RUN: --cuda-device-only -c -emit-llvm 2>&1 \
+// RUN: | FileCheck -check-prefixes=LLVM %s
+
+// Test two gpu architectures up to the LLVM IR output phase in device-only
+// compilation mode. bundle.
+//
+// RUN: %clang -x hip -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
+// RUN: --cuda-device-only -c -emit-llvm -o %t.bc --gpu-bundle-output 2>&1 \
+// RUN: | FileCheck -check-prefixes=LLVM2 %s
+
+// Test two gpu architectures up to the LLVM IR output phase in device-only
+// compilation mode with bundled preprocessor expansion as input. bundle.
+//
+// RUN: %clang -x hip-cpp-output -target x86_64-unknown-linux-gnu \
+// RUN: -ccc-print-phases --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
+// RUN: --cuda-device-only -c -emit-llvm -o %t.bc --gpu-bundle-output 2>&1 \
+// RUN: | FileCheck -check-prefixes=PPELLVM2 %s
+
+// PPE-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH:gfx803]])
+// PPE-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
+// PPE-DAG: [[P2:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P1]]}, [[T]]-cpp-output
+// PPEB-DAG: [[P3:[0-9]+]]: clang-offload-bundler, {[[P2]]}, [[T]]-cpp-output, (device-hip, )
+// PPEN-NOT: clang-offload-bundler, {{.*}}, [[T]]-cpp-output, (device-hip, )
+// PPE-NOT: host
+
+// PPE2-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH:gfx803]])
+// PPE2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
+// PPE2-DAG: [[P2:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P1]]}, [[T]]-cpp-output
+// PPE2-DAG: [[P5:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T]], (device-[[T]], [[ARCH2:gfx900]])
+// PPE2-DAG: [[P6:[0-9]+]]: preprocessor, {[[P5]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH2]])
+// PPE2-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P6]]}, [[T]]-cpp-output
+// PPE2B-DAG: [[P10:[0-9]+]]: clang-offload-bundler, {[[P2]], [[P9]]}, [[T]]-cpp-output, (device-hip, )
+// PPE2N-NOT: clang-offload-bundler, {{.*}}, [[T]]-cpp-output, (device-hip, )
+// PPE2-NOT: host
+
+// LLVM-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH:gfx803]])
+// LLVM-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
+// LLVM-DAG: [[P2:[0-9]+]]: compiler, {[[P1]]}, ir, (device-[[T]], [[ARCH]])
+// LLVM-DAG: [[P3:[0-9]+]]: backend, {[[P2]]}, ir, (device-[[T]], [[ARCH]])
+// LLVM-NOT: clang-offload-bundler
+// LLVM-NOT: host
+
+// LLVM2-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]], (device-[[T]], [[ARCH:gfx803]])
+// LLVM2-DAG: [[P1:[0-9]+]]: preprocessor, {[[P0]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH]])
+// LLVM2-DAG: [[P2:[0-9]+]]: compiler, {[[P1]]}, ir, (device-[[T]], [[ARCH]])
+// LLVM2-DAG: [[P3:[0-9]+]]: backend, {[[P2]]}, ir, (device-[[T]], [[ARCH]])
+// LLVM2-DAG: [[P4:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P3]]}, ir
+// LLVM2-DAG: [[P5:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T]], (device-[[T]], [[ARCH2:gfx900]])
+// LLVM2-DAG: [[P6:[0-9]+]]: preprocessor, {[[P5]]}, [[T]]-cpp-output, (device-[[T]], [[ARCH2]])
+// LLVM2-DAG: [[P7:[0-9]+]]: compiler, {[[P6]]}, ir, (device-[[T]], [[ARCH2]])
+// LLVM2-DAG: [[P8:[0-9]+]]: backend, {[[P7]]}, ir, (device-[[T]], [[ARCH2]])
+// LLVM2-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P8]]}, ir
+// LLVM2-DAG: [[P10:[0-9]+]]: clang-offload-bundler, {[[P4]], [[P9]]}, ir, (device-hip, )
+// LLVM2-NOT: host
+
+// PPELLVM2-DAG: [[P0:[0-9]+]]: input, "{{.*}}hip-phases.hip", [[T:hip]]-cpp-output
+// PPELLVM2-DAG: [[P1:[0-9]+]]: clang-offload-unbundler, {[[P0]]}, hip-cpp-output
+// PPELLVM2-DAG: [[P2:[0-9]+]]: compiler, {[[P1]]}, ir, (device-[[T]], [[ARCH:gfx803]])
+// PPELLVM2-DAG: [[P3:[0-9]+]]: backend, {[[P2]]}, ir, (device-[[T]], [[ARCH]])
+// PPELLVM2-DAG: [[P4:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH]])" {[[P3]]}, ir
+// PPELLVM2-DAG: [[P7:[0-9]+]]: compiler, {[[P1]]}, ir, (device-[[T]], [[ARCH2:gfx900]])
+// PPELLVM2-DAG: [[P8:[0-9]+]]: backend, {[[P7]]}, ir, (device-[[T]], [[ARCH2]])
+// PPELLVM2-DAG: [[P9:[0-9]+]]: offload, "device-[[T]] (amdgcn-amd-amdhsa:[[ARCH2]])" {[[P8]]}, ir
+// PPELLVM2-DAG: [[P10:[0-9]+]]: clang-offload-bundler, {[[P4]], [[P9]]}, ir, (device-hip, )
+// PPELLVM2-NOT: host

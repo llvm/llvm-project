@@ -71,7 +71,7 @@ define float @reduction_sum_float_fastmath(i32 %n, float* %array) {
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, <4 x float>* [[TMP7]], align 4
 ; CHECK-NEXT:    [[TMP8]] = fadd fast <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP9]] = fadd fast <4 x float> [[VEC_PHI1]], [[WIDE_LOAD2]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4096
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; CHECK:       middle.block:
@@ -143,7 +143,7 @@ define float @reduction_sum_float_only_reassoc(i32 %n, float* %array) {
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, <4 x float>* [[TMP7]], align 4
 ; CHECK-NEXT:    [[TMP8]] = fadd reassoc <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP9]] = fadd reassoc <4 x float> [[VEC_PHI1]], [[WIDE_LOAD2]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4096
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP4:!llvm.loop !.*]]
 ; CHECK:       middle.block:
@@ -215,7 +215,7 @@ define float @reduction_sum_float_only_reassoc_and_contract(i32 %n, float* %arra
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, <4 x float>* [[TMP7]], align 4
 ; CHECK-NEXT:    [[TMP8]] = fadd reassoc contract <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP9]] = fadd reassoc contract <4 x float> [[VEC_PHI1]], [[WIDE_LOAD2]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4096
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP6:!llvm.loop !.*]]
 ; CHECK:       middle.block:
@@ -296,7 +296,7 @@ define float @PR35538(float* nocapture readonly %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[TMP9:%.*]] = fcmp nnan ninf nsz oge <4 x float> [[WIDE_LOAD2]], [[VEC_PHI1]]
 ; CHECK-NEXT:    [[TMP10]] = select <4 x i1> [[TMP8]], <4 x float> [[WIDE_LOAD]], <4 x float> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP11]] = select <4 x i1> [[TMP9]], <4 x float> [[WIDE_LOAD2]], <4 x float> [[VEC_PHI1]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP8:!llvm.loop !.*]]
 ; CHECK:       middle.block:
@@ -383,7 +383,7 @@ define float @PR35538_more_FMF(float* nocapture readonly %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[TMP9:%.*]] = fcmp nnan ninf oge <4 x float> [[WIDE_LOAD2]], [[VEC_PHI1]]
 ; CHECK-NEXT:    [[TMP10]] = select <4 x i1> [[TMP8]], <4 x float> [[WIDE_LOAD]], <4 x float> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP11]] = select <4 x i1> [[TMP9]], <4 x float> [[WIDE_LOAD2]], <4 x float> [[VEC_PHI1]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP10:!llvm.loop !.*]]
 ; CHECK:       middle.block:

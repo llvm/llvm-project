@@ -1965,7 +1965,7 @@ bool CodeGenFunction::ShouldNullCheckClassCastValue(const CastExpr *CE) {
 
   if (const ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(CE)) {
     // And that glvalue casts are never null.
-    if (ICE->getValueKind() != VK_RValue)
+    if (ICE->getValueKind() != VK_PRValue)
       return false;
   }
 
@@ -4854,7 +4854,7 @@ LValue CodeGenFunction::EmitObjCIsaExpr(const ObjCIsaExpr *E) {
 
   Expr *BaseExpr = E->getBase();
   Address Addr = Address::invalid();
-  if (BaseExpr->isRValue()) {
+  if (BaseExpr->isPRValue()) {
     Addr = Address(EmitScalarExpr(BaseExpr), getPointerAlign());
   } else {
     Addr = EmitLValue(BaseExpr).getAddress(*this);

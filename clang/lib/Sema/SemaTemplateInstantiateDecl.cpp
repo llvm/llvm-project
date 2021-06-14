@@ -23,6 +23,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
+#include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
@@ -474,7 +475,7 @@ static void instantiateOMPDeclareVariantAttr(
                                 SourceLocation(), SubstFD,
                                 /* RefersToEnclosingVariableOrCapture */ false,
                                 /* NameLoc */ SubstFD->getLocation(),
-                                SubstFD->getType(), ExprValueKind::VK_RValue);
+                                SubstFD->getType(), ExprValueKind::VK_PRValue);
       }
     }
   }
@@ -1085,11 +1086,30 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
 
   SemaRef.BuildVariableInstantiation(Var, D, TemplateArgs, LateAttrs, Owner,
                                      StartingScope, InstantiatingVarTemplate);
-
   if (D->isNRVOVariable()) {
-    QualType ReturnType = cast<FunctionDecl>(DC)->getReturnType();
-    if (SemaRef.isCopyElisionCandidate(ReturnType, Var, Sema::CES_Strict))
-      Var->setNRVOVariable(true);
+    QualType RT;
+    if (auto *F = dyn_cast<FunctionDecl>(DC))
+      RT = F->getReturnType();
+    else if (isa<BlockDecl>(DC))
+      RT = cast<FunctionType>(SemaRef.getCurBlock()->FunctionType)
+               ->getReturnType();
+    else
+      llvm_unreachable("Unknown context type");
+
+    // This is the last chance we have of checking copy elision eligibility
+    // for functions in depdendent contexts. The sema actions for building
+    // the return statement during template instantiation will have no effect
+    // regarding copy elision, since NRVO propagation runs on the scope exit
+    // actions, and these are not run on instantiation.
+    // This might run through some VarDecls which were returned from non-taken
+    // 'if constexpr' branches, and these will end up being constructed on the
+    // return slot even if they will never be returned, as a sort of accidental
+    // 'optimization'. Notably, functions with 'auto' return types won't have it
+    // deduced by this point. Coupled with the limitation described
+    // previously, this makes it very hard to support copy elision for these.
+    Sema::NamedReturnInfo Info = SemaRef.getNamedReturnInfo(Var);
+    bool NRVO = SemaRef.getCopyElisionCandidate(Info, RT) != nullptr;
+    Var->setNRVOVariable(NRVO);
   }
 
   Var->setImplicit(D->isImplicit());
@@ -3013,6 +3033,53 @@ Decl *TemplateDeclInstantiator::VisitUsingDirectiveDecl(UsingDirectiveDecl *D) {
   return Inst;
 }
 
+Decl *TemplateDeclInstantiator::VisitBaseUsingDecls(BaseUsingDecl *D,
+                                                    BaseUsingDecl *Inst,
+                                                    LookupResult *Lookup) {
+
+  bool isFunctionScope = Owner->isFunctionOrMethod();
+
+  for (auto *Shadow : D->shadows()) {
+    // FIXME: UsingShadowDecl doesn't preserve its immediate target, so
+    // reconstruct it in the case where it matters. Hm, can we extract it from
+    // the DeclSpec when parsing and save it in the UsingDecl itself?
+    NamedDecl *OldTarget = Shadow->getTargetDecl();
+    if (auto *CUSD = dyn_cast<ConstructorUsingShadowDecl>(Shadow))
+      if (auto *BaseShadow = CUSD->getNominatedBaseClassShadowDecl())
+        OldTarget = BaseShadow;
+
+    NamedDecl *InstTarget = nullptr;
+    if (auto *EmptyD =
+            dyn_cast<UnresolvedUsingIfExistsDecl>(Shadow->getTargetDecl())) {
+      InstTarget = UnresolvedUsingIfExistsDecl::Create(
+          SemaRef.Context, Owner, EmptyD->getLocation(), EmptyD->getDeclName());
+    } else {
+      InstTarget = cast_or_null<NamedDecl>(SemaRef.FindInstantiatedDecl(
+          Shadow->getLocation(), OldTarget, TemplateArgs));
+    }
+    if (!InstTarget)
+      return nullptr;
+
+    UsingShadowDecl *PrevDecl = nullptr;
+    if (Lookup &&
+        SemaRef.CheckUsingShadowDecl(Inst, InstTarget, *Lookup, PrevDecl))
+      continue;
+
+    if (UsingShadowDecl *OldPrev = getPreviousDeclForInstantiation(Shadow))
+      PrevDecl = cast_or_null<UsingShadowDecl>(SemaRef.FindInstantiatedDecl(
+          Shadow->getLocation(), OldPrev, TemplateArgs));
+
+    UsingShadowDecl *InstShadow = SemaRef.BuildUsingShadowDecl(
+        /*Scope*/ nullptr, Inst, InstTarget, PrevDecl);
+    SemaRef.Context.setInstantiatedFromUsingShadowDecl(InstShadow, Shadow);
+
+    if (isFunctionScope)
+      SemaRef.CurrentInstantiationScope->InstantiatedLocal(Shadow, InstShadow);
+  }
+
+  return Inst;
+}
+
 Decl *TemplateDeclInstantiator::VisitUsingDecl(UsingDecl *D) {
 
   // The nested name specifier may be dependent, for example
@@ -3038,11 +3105,9 @@ Decl *TemplateDeclInstantiator::VisitUsingDecl(UsingDecl *D) {
       NameInfo.setName(SemaRef.Context.DeclarationNames.getCXXConstructorName(
           SemaRef.Context.getCanonicalType(SemaRef.Context.getRecordType(RD))));
 
-  // We only need to do redeclaration lookups if we're in a class
-  // scope (in fact, it's not really even possible in non-class
-  // scopes).
+  // We only need to do redeclaration lookups if we're in a class scope (in
+  // fact, it's not really even possible in non-class scopes).
   bool CheckRedeclaration = Owner->isRecord();
-
   LookupResult Prev(SemaRef, NameInfo, Sema::LookupUsingDeclName,
                     Sema::ForVisibleRedeclaration);
 
@@ -3063,12 +3128,11 @@ Decl *TemplateDeclInstantiator::VisitUsingDecl(UsingDecl *D) {
                                             D->hasTypename(), SS,
                                             D->getLocation(), Prev))
       NewUD->setInvalidDecl();
-
   }
 
   if (!NewUD->isInvalidDecl() &&
-      SemaRef.CheckUsingDeclQualifier(D->getUsingLoc(), D->hasTypename(),
-                                      SS, NameInfo, D->getLocation()))
+      SemaRef.CheckUsingDeclQualifier(D->getUsingLoc(), D->hasTypename(), SS,
+                                      NameInfo, D->getLocation(), nullptr, D))
     NewUD->setInvalidDecl();
 
   SemaRef.Context.setInstantiatedFromUsingDecl(NewUD, D);
@@ -3079,52 +3143,39 @@ Decl *TemplateDeclInstantiator::VisitUsingDecl(UsingDecl *D) {
   if (NewUD->isInvalidDecl())
     return NewUD;
 
+  // If the using scope was dependent, or we had dependent bases, we need to
+  // recheck the inheritance
   if (NameInfo.getName().getNameKind() == DeclarationName::CXXConstructorName)
     SemaRef.CheckInheritingConstructorUsingDecl(NewUD);
 
-  bool isFunctionScope = Owner->isFunctionOrMethod();
+  return VisitBaseUsingDecls(D, NewUD, CheckRedeclaration ? &Prev : nullptr);
+}
 
-  // Process the shadow decls.
-  for (auto *Shadow : D->shadows()) {
-    // FIXME: UsingShadowDecl doesn't preserve its immediate target, so
-    // reconstruct it in the case where it matters.
-    NamedDecl *OldTarget = Shadow->getTargetDecl();
-    if (auto *CUSD = dyn_cast<ConstructorUsingShadowDecl>(Shadow))
-      if (auto *BaseShadow = CUSD->getNominatedBaseClassShadowDecl())
-        OldTarget = BaseShadow;
+Decl *TemplateDeclInstantiator::VisitUsingEnumDecl(UsingEnumDecl *D) {
+  // Cannot be a dependent type, but still could be an instantiation
+  EnumDecl *EnumD = cast_or_null<EnumDecl>(SemaRef.FindInstantiatedDecl(
+      D->getLocation(), D->getEnumDecl(), TemplateArgs));
 
-    NamedDecl *InstTarget = nullptr;
-    if (auto *EmptyD =
-            dyn_cast<UnresolvedUsingIfExistsDecl>(Shadow->getTargetDecl())) {
-      InstTarget = UnresolvedUsingIfExistsDecl::Create(
-          SemaRef.Context, Owner, EmptyD->getLocation(), EmptyD->getDeclName());
-    } else {
-      InstTarget = cast_or_null<NamedDecl>(SemaRef.FindInstantiatedDecl(
-          Shadow->getLocation(), OldTarget, TemplateArgs));
-    }
-    if (!InstTarget)
-      return nullptr;
+  if (SemaRef.RequireCompleteEnumDecl(EnumD, EnumD->getLocation()))
+    return nullptr;
 
-    UsingShadowDecl *PrevDecl = nullptr;
-    if (CheckRedeclaration) {
-      if (SemaRef.CheckUsingShadowDecl(NewUD, InstTarget, Prev, PrevDecl))
-        continue;
-    } else if (UsingShadowDecl *OldPrev =
-                   getPreviousDeclForInstantiation(Shadow)) {
-      PrevDecl = cast_or_null<UsingShadowDecl>(SemaRef.FindInstantiatedDecl(
-          Shadow->getLocation(), OldPrev, TemplateArgs));
-    }
+  UsingEnumDecl *NewUD =
+      UsingEnumDecl::Create(SemaRef.Context, Owner, D->getUsingLoc(),
+                            D->getEnumLoc(), D->getLocation(), EnumD);
 
-    UsingShadowDecl *InstShadow =
-        SemaRef.BuildUsingShadowDecl(/*Scope*/nullptr, NewUD, InstTarget,
-                                     PrevDecl);
-    SemaRef.Context.setInstantiatedFromUsingShadowDecl(InstShadow, Shadow);
+  SemaRef.Context.setInstantiatedFromUsingEnumDecl(NewUD, D);
+  NewUD->setAccess(D->getAccess());
+  Owner->addDecl(NewUD);
 
-    if (isFunctionScope)
-      SemaRef.CurrentInstantiationScope->InstantiatedLocal(Shadow, InstShadow);
-  }
+  // Don't process the shadow decls for an invalid decl.
+  if (NewUD->isInvalidDecl())
+    return NewUD;
 
-  return NewUD;
+  // We don't have to recheck for duplication of the UsingEnumDecl itself, as it
+  // cannot be dependent, and will therefore have been checked during template
+  // definition.
+
+  return VisitBaseUsingDecls(D, NewUD, nullptr);
 }
 
 Decl *TemplateDeclInstantiator::VisitUsingShadowDecl(UsingShadowDecl *D) {

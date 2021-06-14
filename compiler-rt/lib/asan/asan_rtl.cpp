@@ -13,6 +13,7 @@
 
 #include "asan_activation.h"
 #include "asan_allocator.h"
+#include "asan_fake_stack.h"
 #include "asan_interceptors.h"
 #include "asan_interface_internal.h"
 #include "asan_internal.h"
@@ -23,11 +24,11 @@
 #include "asan_stats.h"
 #include "asan_suppressions.h"
 #include "asan_thread.h"
+#include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_symbolizer.h"
-#include "lsan/lsan_common.h"
 #include "ubsan/ubsan_init.h"
 #include "ubsan/ubsan_platform.h"
 
@@ -586,8 +587,12 @@ static void UnpoisonDefaultStack() {
 
 static void UnpoisonFakeStack() {
   AsanThread *curr_thread = GetCurrentThread();
-  if (curr_thread && curr_thread->has_fake_stack())
-    curr_thread->fake_stack()->HandleNoReturn();
+  if (!curr_thread)
+    return;
+  FakeStack *stack = curr_thread->get_fake_stack();
+  if (!stack)
+    return;
+  stack->HandleNoReturn();
 }
 
 }  // namespace __asan

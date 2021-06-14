@@ -138,14 +138,14 @@ class COFFMasmParser : public MCAsmParserExtension {
 
     // Processor directives; all ignored
     addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".386");
-    addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".386P");
+    addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".386p");
     addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".387");
     addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".486");
-    addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".486P");
+    addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".486p");
     addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".586");
-    addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".586P");
+    addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".586p");
     addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".686");
-    addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".686P");
+    addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".686p");
     addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".k3d");
     addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".mmx");
     addDirectiveHandler<&COFFMasmParser::IgnoreDirective>(".xmm");

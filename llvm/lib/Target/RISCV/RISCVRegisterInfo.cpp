@@ -156,34 +156,6 @@ bool RISCVRegisterInfo::hasReservedSpillSlot(const MachineFunction &MF,
   return true;
 }
 
-static bool isRVVWholeLoadStore(unsigned Opcode) {
-  switch (Opcode) {
-  default:
-    return false;
-  case RISCV::VS1R_V:
-  case RISCV::VS2R_V:
-  case RISCV::VS4R_V:
-  case RISCV::VS8R_V:
-  case RISCV::VL1RE8_V:
-  case RISCV::VL2RE8_V:
-  case RISCV::VL4RE8_V:
-  case RISCV::VL8RE8_V:
-  case RISCV::VL1RE16_V:
-  case RISCV::VL2RE16_V:
-  case RISCV::VL4RE16_V:
-  case RISCV::VL8RE16_V:
-  case RISCV::VL1RE32_V:
-  case RISCV::VL2RE32_V:
-  case RISCV::VL4RE32_V:
-  case RISCV::VL8RE32_V:
-  case RISCV::VL1RE64_V:
-  case RISCV::VL2RE64_V:
-  case RISCV::VL4RE64_V:
-  case RISCV::VL8RE64_V:
-    return true;
-  }
-}
-
 void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                             int SPAdj, unsigned FIOperandNum,
                                             RegScavenger *RS) const {
@@ -199,10 +171,8 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   Register FrameReg;
   StackOffset Offset =
       getFrameLowering(MF)->getFrameIndexReference(MF, FrameIndex, FrameReg);
-  bool isRVV = RISCVVPseudosTable::getPseudoInfo(MI.getOpcode()) ||
-               isRVVWholeLoadStore(MI.getOpcode()) ||
-               TII->isRVVSpillForZvlsseg(MI.getOpcode());
-  if (!isRVV)
+  bool IsRVVSpill = TII->isRVVSpill(MI, /*CheckFIs*/ false);
+  if (!IsRVVSpill)
     Offset += StackOffset::getFixed(MI.getOperand(FIOperandNum + 1).getImm());
 
   if (!isInt<32>(Offset.getFixed())) {
@@ -255,7 +225,7 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     // Offset = (fixed offset, 0)
     MI.getOperand(FIOperandNum)
         .ChangeToRegister(FrameReg, false, false, FrameRegIsKill);
-    if (!isRVV)
+    if (!IsRVVSpill)
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset.getFixed());
     else {
       if (Offset.getFixed()) {
@@ -286,7 +256,7 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
         .addReg(FrameReg, getKillRegState(FrameRegIsKill))
         .addReg(ScalableFactorRegister, RegState::Kill);
 
-    if (isRVV && Offset.getFixed()) {
+    if (IsRVVSpill && Offset.getFixed()) {
       // Scalable load/store has no immediate argument. We need to add the
       // fixed part into the load/store base address.
       BuildMI(MBB, II, DL, TII->get(RISCV::ADDI), VL)
@@ -296,7 +266,7 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
     // 3. Replace address register with calculated address register
     MI.getOperand(FIOperandNum).ChangeToRegister(VL, false, false, true);
-    if (!isRVV)
+    if (!IsRVVSpill)
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset.getFixed());
   }
 

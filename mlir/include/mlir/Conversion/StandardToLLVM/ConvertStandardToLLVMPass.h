@@ -32,7 +32,7 @@ static constexpr unsigned kDeriveIndexBitwidthFromDataLayout = 0;
 class LowerToLLVMOptions {
 public:
   explicit LowerToLLVMOptions(MLIRContext *ctx);
-  explicit LowerToLLVMOptions(MLIRContext *ctx, DataLayout dl);
+  explicit LowerToLLVMOptions(MLIRContext *ctx, const DataLayout &dl);
 
   bool useBarePtrCallConv = false;
   bool emitCWrappers = false;

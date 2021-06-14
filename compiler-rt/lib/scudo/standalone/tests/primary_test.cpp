@@ -29,6 +29,8 @@ struct TestConfig1 {
   static const bool MaySupportMemoryTagging = false;
   typedef scudo::uptr PrimaryCompactPtrT;
   static const scudo::uptr PrimaryCompactPtrScale = 0;
+  static const bool PrimaryEnableRandomOffset = true;
+  static const scudo::uptr PrimaryMapSizeIncrement = 1UL << 18;
 };
 
 struct TestConfig2 {
@@ -43,6 +45,8 @@ struct TestConfig2 {
   static const bool MaySupportMemoryTagging = false;
   typedef scudo::uptr PrimaryCompactPtrT;
   static const scudo::uptr PrimaryCompactPtrScale = 0;
+  static const bool PrimaryEnableRandomOffset = true;
+  static const scudo::uptr PrimaryMapSizeIncrement = 1UL << 18;
 };
 
 struct TestConfig3 {
@@ -57,6 +61,8 @@ struct TestConfig3 {
   static const bool MaySupportMemoryTagging = true;
   typedef scudo::uptr PrimaryCompactPtrT;
   static const scudo::uptr PrimaryCompactPtrScale = 0;
+  static const bool PrimaryEnableRandomOffset = true;
+  static const scudo::uptr PrimaryMapSizeIncrement = 1UL << 18;
 };
 
 template <typename BaseConfig, typename SizeClassMapT>
@@ -132,7 +138,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, BasicPrimary) {
   }
   Cache.destroy(nullptr);
   Allocator->releaseToOS();
-  scudo::ScopedString Str(1024);
+  scudo::ScopedString Str;
   Allocator->getStats(&Str);
   Str.output();
 }
@@ -145,6 +151,8 @@ struct SmallRegionsConfig {
   static const bool MaySupportMemoryTagging = false;
   typedef scudo::uptr PrimaryCompactPtrT;
   static const scudo::uptr PrimaryCompactPtrScale = 0;
+  static const bool PrimaryEnableRandomOffset = true;
+  static const scudo::uptr PrimaryMapSizeIncrement = 1UL << 18;
 };
 
 // The 64-bit SizeClassAllocator can be easily OOM'd with small region sizes.
@@ -178,7 +186,7 @@ TEST(ScudoPrimaryTest, Primary64OOM) {
   }
   Cache.destroy(nullptr);
   Allocator.releaseToOS();
-  scudo::ScopedString Str(1024);
+  scudo::ScopedString Str;
   Allocator.getStats(&Str);
   Str.output();
   EXPECT_EQ(AllocationFailed, true);
@@ -216,7 +224,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
   }
   Cache.destroy(nullptr);
   Allocator->releaseToOS();
-  scudo::ScopedString Str(1024);
+  scudo::ScopedString Str;
   Allocator->getStats(&Str);
   Str.output();
 }
@@ -263,7 +271,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
   for (auto &T : Threads)
     T.join();
   Allocator->releaseToOS();
-  scudo::ScopedString Str(1024);
+  scudo::ScopedString Str;
   Allocator->getStats(&Str);
   Str.output();
 }

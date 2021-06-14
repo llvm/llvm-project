@@ -88,6 +88,7 @@ set(SCUDO_UNIT_TEST_SOURCES
   flags_test.cpp
   list_test.cpp
   map_test.cpp
+  memtag_test.cpp
   mutex_test.cpp
   primary_test.cpp
   quarantine_test.cpp

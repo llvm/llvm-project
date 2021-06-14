@@ -332,10 +332,6 @@ static cl::opt<bool>
                            cl::desc("Prefer in-loop vector reductions, "
                                     "overriding the targets preference."));
 
-// FIXME: When loop hints are passed which allow reordering of FP operations,
-// we still choose to use strict reductions with this flag. We should instead
-// use the default behaviour of vectorizing with unordered reductions if
-// reordering is allowed.
 cl::opt<bool> EnableStrictReductions(
     "enable-strict-reductions", cl::init(false), cl::Hidden,
     cl::desc("Enable the vectorisation of loops with in-order (strict) "
@@ -558,6 +554,10 @@ public:
   /// Fix the non-induction PHIs in the OrigPHIsToFix vector.
   void fixNonInductionPHIs(VPTransformState &State);
 
+  /// Returns true if the reordering of FP operations is not allowed, but we are
+  /// able to vectorize with strict in-order reductions for the given RdxDesc.
+  bool useOrderedReductions(RecurrenceDescriptor &RdxDesc);
+
   /// Create a broadcast instruction. This method generates a broadcast
   /// instruction (shuffle) for loop invariant values and for the induction
   /// value. If this is the induction variable then we extend it to N, N+1, ...
@@ -598,7 +598,7 @@ protected:
   void fixReduction(VPWidenPHIRecipe *Phi, VPTransformState &State);
 
   /// Clear NSW/NUW flags from reduction instructions if necessary.
-  void clearReductionWrapFlags(RecurrenceDescriptor &RdxDesc,
+  void clearReductionWrapFlags(const RecurrenceDescriptor &RdxDesc,
                                VPTransformState &State);
 
   /// Fixup the LCSSA phi nodes in the unique exit block.  This simply
@@ -1306,6 +1306,15 @@ public:
   /// outside. In loop reductions are collected into InLoopReductionChains.
   void collectInLoopReductions();
 
+  /// Returns true if we should use strict in-order reductions for the given
+  /// RdxDesc. This is true if the -enable-strict-reductions flag is passed,
+  /// the IsOrdered flag of RdxDesc is set and we do not allow reordering
+  /// of FP operations.
+  bool useOrderedReductions(const RecurrenceDescriptor &RdxDesc) {
+    return EnableStrictReductions && !Hints->allowReordering() &&
+           RdxDesc.isOrdered();
+  }
+
   /// \returns The smallest bitwidth each instruction can be represented with.
   /// The vector equivalents of these instructions should be truncated to this
   /// type.
@@ -1506,7 +1515,7 @@ public:
   /// variables found for the given VF.
   bool canVectorizeReductions(ElementCount VF) {
     return (all_of(Legal->getReductionVars(), [&](auto &Reduction) -> bool {
-      RecurrenceDescriptor RdxDesc = Reduction.second;
+      const RecurrenceDescriptor &RdxDesc = Reduction.second;
       return TTI.isLegalToVectorizeReduction(RdxDesc, VF);
     }));
   }
@@ -3073,7 +3082,15 @@ PHINode *InnerLoopVectorizer::createInductionVariable(Loop *L, Value *Start,
   setDebugLocFromInst(Builder, OldInst);
 
   // Create i+1 and fill the PHINode.
-  Value *Next = Builder.CreateAdd(Induction, Step, "index.next");
+  //
+  // If the tail is not folded, we know that End - Start >= Step (either
+  // statically or through the minimum iteration checks). We also know that both
+  // Start % Step == 0 and End % Step == 0. We exit the vector loop if %IV +
+  // %Step == %End. Hence we must exit the loop before %IV + %Step unsigned
+  // overflows and we can mark the induction increment as NUW.
+  Value *Next =
+      Builder.CreateAdd(Induction, Step, "index.next",
+                        /*NUW=*/!Cost->foldTailByMasking(), /*NSW=*/false);
   Induction->addIncoming(Start, L->getLoopPreheader());
   Induction->addIncoming(Next, Latch);
   // Create the compare.
@@ -4308,17 +4325,13 @@ void InnerLoopVectorizer::fixFirstOrderRecurrence(PHINode *Phi,
       LCSSAPhi.addIncoming(ExtractForPhiUsedOutsideLoop, LoopMiddleBlock);
 }
 
-static bool useOrderedReductions(RecurrenceDescriptor &RdxDesc) {
-  return EnableStrictReductions && RdxDesc.isOrdered();
-}
-
 void InnerLoopVectorizer::fixReduction(VPWidenPHIRecipe *PhiR,
                                        VPTransformState &State) {
   PHINode *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
   // Get it's reduction variable descriptor.
   assert(Legal->isReductionVariable(OrigPhi) &&
          "Unable to find the reduction variable");
-  RecurrenceDescriptor RdxDesc = *PhiR->getRecurrenceDescriptor();
+  const RecurrenceDescriptor &RdxDesc = *PhiR->getRecurrenceDescriptor();
 
   RecurKind RK = RdxDesc.getRecurrenceKind();
   TrackingVH<Value> ReductionStartValue = RdxDesc.getRecurrenceStartValue();
@@ -4340,7 +4353,7 @@ void InnerLoopVectorizer::fixReduction(VPWidenPHIRecipe *PhiR,
   BasicBlock *VectorLoopLatch = LI->getLoopFor(LoopVectorBody)->getLoopLatch();
 
   bool IsOrdered = State.VF.isVector() && IsInLoopReductionPhi &&
-                   useOrderedReductions(RdxDesc);
+                   Cost->useOrderedReductions(RdxDesc);
 
   for (unsigned Part = 0; Part < UF; ++Part) {
     if (IsOrdered && Part > 0)
@@ -4499,7 +4512,7 @@ void InnerLoopVectorizer::fixReduction(VPWidenPHIRecipe *PhiR,
   OrigPhi->setIncomingValue(IncomingEdgeBlockIdx, LoopExitInst);
 }
 
-void InnerLoopVectorizer::clearReductionWrapFlags(RecurrenceDescriptor &RdxDesc,
+void InnerLoopVectorizer::clearReductionWrapFlags(const RecurrenceDescriptor &RdxDesc,
                                                   VPTransformState &State) {
   RecurKind RK = RdxDesc.getRecurrenceKind();
   if (RK != RecurKind::Add && RK != RecurKind::Mul)
@@ -4646,6 +4659,10 @@ void InnerLoopVectorizer::fixNonInductionPHIs(VPTransformState &State) {
   }
 }
 
+bool InnerLoopVectorizer::useOrderedReductions(RecurrenceDescriptor &RdxDesc) {
+  return Cost->useOrderedReductions(RdxDesc);
+}
+
 void InnerLoopVectorizer::widenGEP(GetElementPtrInst *GEP, VPValue *VPDef,
                                    VPUser &Operands, unsigned UF,
                                    ElementCount VF, bool IsPtrLoopInvariant,
@@ -4785,7 +4802,7 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
 
     bool IsOrdered = State.VF.isVector() &&
                      Cost->isInLoopReduction(cast<PHINode>(PN)) &&
-                     useOrderedReductions(*RdxDesc);
+                     Cost->useOrderedReductions(*RdxDesc);
 
     for (unsigned Part = 0; Part < State.UF; ++Part) {
       // This is phase one of vectorizing PHIs.
@@ -6256,7 +6273,7 @@ LoopVectorizationCostModel::getSmallestAndWidestTypes() {
       if (auto *PN = dyn_cast<PHINode>(&I)) {
         if (!Legal->isReductionVariable(PN))
           continue;
-        RecurrenceDescriptor RdxDesc = Legal->getReductionVars()[PN];
+        const RecurrenceDescriptor &RdxDesc = Legal->getReductionVars()[PN];
         if (PreferInLoopReductions || useOrderedReductions(RdxDesc) ||
             TTI.preferInLoopReduction(RdxDesc.getOpcode(),
                                       RdxDesc.getRecurrenceType(),
@@ -7156,7 +7173,7 @@ InstructionCost LoopVectorizationCostModel::getReductionPatternCost(
   while (!isa<PHINode>(ReductionPhi))
     ReductionPhi = InLoopReductionImmediateChains[ReductionPhi];
 
-  RecurrenceDescriptor RdxDesc =
+  const RecurrenceDescriptor &RdxDesc =
       Legal->getReductionVars()[cast<PHINode>(ReductionPhi)];
   InstructionCost BaseCost = TTI.getArithmeticReductionCost(
       RdxDesc.getOpcode(), VectorTy, false, CostKind);
@@ -8004,7 +8021,7 @@ LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
        ElementCount::isKnownLE(VF, MaxFactors.ScalableVF); VF *= 2)
     VFCandidates.insert(VF);
 
-  for (const auto VF : VFCandidates) {
+  for (const auto &VF : VFCandidates) {
     // Collect Uniform and Scalar instructions after vectorization with VF.
     CM.collectUniformsAndScalars(VF);
 
@@ -9478,7 +9495,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
   Value *PrevInChain = State.get(getChainOp(), 0);
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     RecurKind Kind = RdxDesc->getRecurrenceKind();
-    bool IsOrdered = useOrderedReductions(*RdxDesc);
+    bool IsOrdered = State.ILV->useOrderedReductions(*RdxDesc);
     Value *NewVecOp = State.get(getVecOp(), Part);
     if (VPValue *Cond = getCondOp()) {
       Value *NewCond = State.get(Cond, Part);

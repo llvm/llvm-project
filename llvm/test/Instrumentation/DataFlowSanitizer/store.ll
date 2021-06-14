@@ -1,9 +1,5 @@
-; RUN: opt < %s -dfsan -dfsan-combine-pointer-labels-on-store=1 -S | FileCheck %s --check-prefixes=CHECK,CHECK16,COMBINE_PTR_LABEL
-; RUN: opt < %s -dfsan -dfsan-combine-pointer-labels-on-store=0 -S | FileCheck %s --check-prefixes=CHECK,CHECK16,NO_COMBINE_PTR_LABEL
-; RUN: opt < %s -dfsan -dfsan-fast-16-labels -dfsan-combine-pointer-labels-on-store=1 -S | FileCheck %s --check-prefixes=CHECK,CHECK16,COMBINE_PTR_LABEL_FAST
-; RUN: opt < %s -dfsan -dfsan-fast-16-labels -dfsan-combine-pointer-labels-on-store=0 -S | FileCheck %s --check-prefixes=CHECK,CHECK16,NO_COMBINE_PTR_LABEL
-; RUN: opt < %s -dfsan -dfsan-fast-8-labels -dfsan-combine-pointer-labels-on-store=1 -S | FileCheck %s --check-prefixes=CHECK,COMBINE_PTR_LABEL_FAST
-; RUN: opt < %s -dfsan -dfsan-fast-8-labels -dfsan-combine-pointer-labels-on-store=0 -S | FileCheck %s --check-prefixes=CHECK,NO_COMBINE_PTR_LABEL
+; RUN: opt < %s -dfsan -dfsan-combine-pointer-labels-on-store=1 -S | FileCheck %s --check-prefixes=CHECK,COMBINE_PTR_LABEL
+; RUN: opt < %s -dfsan -dfsan-combine-pointer-labels-on-store=0 -S | FileCheck %s --check-prefixes=CHECK,NO_COMBINE_PTR_LABEL
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -23,19 +19,10 @@ define void @store0({} %v, {}* %p) {
 define void @store8(i8 %v, i8* %p) {
   ; CHECK-LABEL:       @"dfs$store8"
   ; CHECK:             load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
-
   ; COMBINE_PTR_LABEL: load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
-  ; COMBINE_PTR_LABEL: icmp ne i[[#SBITS]]
-  ; COMBINE_PTR_LABEL: call {{.*}} @__dfsan_union
-
-  ; COMM: When not in legacy mode, the three instructions above will
-  ;        be replaced with the following:
-  ; COMBINE_PTR_LABEL_FAST: load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
-  ; COMBINE_PTR_LABEL_FAST: or i[[#SBITS]]
-
+  ; COMBINE_PTR_LABEL: or i[[#SBITS]]
   ; CHECK:             ptrtoint i8* {{.*}} i64
   ; CHECK-NEXT:        and i64
-  ; CHECK16-NEXT:      mul i64
   ; CHECK-NEXT:        inttoptr i64 {{.*}} i[[#SBITS]]*
   ; CHECK-NEXT:        getelementptr i[[#SBITS]], i[[#SBITS]]*
   ; CHECK-NEXT:        store i[[#SBITS]]
@@ -49,19 +36,10 @@ define void @store8(i8 %v, i8* %p) {
 define void @store16(i16 %v, i16* %p) {
   ; CHECK-LABEL:       @"dfs$store16"
   ; CHECK:             load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
-
   ; COMBINE_PTR_LABEL: load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
-  ; COMBINE_PTR_LABEL: icmp ne i[[#SBITS]]
-  ; COMBINE_PTR_LABEL: call {{.*}} @__dfsan_union
-
-  ; COMM: When not in legacy mode, the three instructions above will
-  ;        be replaced with the following:
-  ; COMBINE_PTR_LABEL_FAST: load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
-  ; COMBINE_PTR_LABEL_FAST: or i[[#SBITS]]
-
+  ; COMBINE_PTR_LABEL: or i[[#SBITS]]
   ; CHECK:             ptrtoint i16* {{.*}} i64
   ; CHECK-NEXT:        and i64
-  ; CHECK16-NEXT:      mul i64
   ; CHECK-NEXT:        inttoptr i64 {{.*}} i[[#SBITS]]*
   ; CHECK-NEXT:        getelementptr i[[#SBITS]], i[[#SBITS]]*
   ; CHECK-NEXT:        store i[[#SBITS]]
@@ -77,19 +55,10 @@ define void @store16(i16 %v, i16* %p) {
 define void @store32(i32 %v, i32* %p) {
   ; CHECK-LABEL:       @"dfs$store32"
   ; CHECK:             load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
-
   ; COMBINE_PTR_LABEL: load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
-  ; COMBINE_PTR_LABEL: icmp ne i[[#SBITS]]
-  ; COMBINE_PTR_LABEL: call {{.*}} @__dfsan_union
-
-  ; COMM: When not in legacy mode, the three instructions above will
-  ;        be replaced with the following:
-  ; COMBINE_PTR_LABEL_FAST: load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
-  ; COMBINE_PTR_LABEL_FAST: or i[[#SBITS]]
-
+  ; COMBINE_PTR_LABEL: or i[[#SBITS]]
   ; CHECK:             ptrtoint i32* {{.*}} i64
   ; CHECK-NEXT:        and i64
-  ; CHECK16-NEXT:      mul i64
   ; CHECK-NEXT:        inttoptr i64 {{.*}} i[[#SBITS]]*
   ; CHECK-NEXT:        getelementptr i[[#SBITS]], i[[#SBITS]]*
   ; CHECK-NEXT:        store i[[#SBITS]]
@@ -109,19 +78,10 @@ define void @store32(i32 %v, i32* %p) {
 define void @store64(i64 %v, i64* %p) {
   ; CHECK-LABEL:       @"dfs$store64"
   ; CHECK:             load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
-
   ; COMBINE_PTR_LABEL: load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
-  ; COMBINE_PTR_LABEL: icmp ne i[[#SBITS]]
-  ; COMBINE_PTR_LABEL: call {{.*}} @__dfsan_union
-
-  ; COMM: When not in legacy mode, the three instructions above will
-  ;       be replaced with the following:
-  ; COMBINE_PTR_LABEL_FAST: load i[[#SBITS]], i[[#SBITS]]* {{.*}} @__dfsan_arg_tls
-  ; COMBINE_PTR_LABEL_FAST: or i[[#SBITS]]
-
+  ; COMBINE_PTR_LABEL: or i[[#SBITS]]
   ; CHECK:             ptrtoint i64* {{.*}} i64
   ; CHECK-NEXT:        and i64
-  ; CHECK16-NEXT:      mul i64
   ; CHECK-NEXT:        inttoptr i64 {{.*}} i[[#SBITS]]*
   ; CHECK-COUNT-8:     insertelement {{.*}} i[[#SBITS]]
   ; CHECK-NEXT:        bitcast i[[#SBITS]]* {{.*}} <8 x i[[#SBITS]]>*

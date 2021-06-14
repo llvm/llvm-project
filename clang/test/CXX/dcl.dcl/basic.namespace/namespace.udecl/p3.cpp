@@ -17,6 +17,7 @@ struct B {
 };
 
 class C {
+public:
   int g();
 };
 
@@ -42,7 +43,7 @@ class D2 : public B {
 #endif
 
   using B::EC;
-  using B::EC::ec; // expected-error {{not a class}} expected-warning 0-1 {{C++11}}
+  using B::EC::ec; // expected-warning {{a C++20 extension}} expected-warning 0-1 {{C++11}}
 };
 
 namespace test1 {

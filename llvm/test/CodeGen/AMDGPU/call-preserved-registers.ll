@@ -59,8 +59,8 @@ define void @test_func_call_external_void_func_void_clobber_s30_s31_call_externa
 ; GCN: v_writelane_b32 v40, s33, 4
 
 ; GCN: s_mov_b32 s33, s32
-; MUBUF:   s_add_u32 s32, s32, 0x400
-; FLATSCR: s_add_u32 s32, s32, 16
+; MUBUF:   s_addk_i32 s32, 0x400
+; FLATSCR: s_add_i32 s32, s32, 16
 ; GCN: s_swappc_b64
 ; GCN-NEXT: s_swappc_b64
 

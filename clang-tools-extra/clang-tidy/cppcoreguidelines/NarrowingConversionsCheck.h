@@ -93,6 +93,11 @@ private:
   void handleBinaryOperator(const ASTContext &Context,
                             const BinaryOperator &Op);
 
+  bool isWarningInhibitedByEquivalentSize(const ASTContext &Context,
+                                          const BuiltinType &FromType,
+                                          const BuiltinType &ToType) const;
+
+  const bool WarnOnIntegerNarrowingConversion;
   const bool WarnOnFloatingPointNarrowingConversion;
   const bool WarnWithinTemplateInstantiation;
   const bool WarnOnEquivalentBitWidth;

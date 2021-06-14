@@ -9,7 +9,7 @@ define void @test_natural() "no-realign-stack" {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movq %rsp, %rdi
-; CHECK-NEXT:    callq capture
+; CHECK-NEXT:    callq capture@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -29,7 +29,7 @@ define void @test_realign() {
 ; CHECK-NEXT:    andq $-64, %rsp
 ; CHECK-NEXT:    subq $64, %rsp
 ; CHECK-NEXT:    movq %rsp, %rdi
-; CHECK-NEXT:    callq capture
+; CHECK-NEXT:    callq capture@PLT
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
@@ -45,7 +45,7 @@ define void @test_norealign() "no-realign-stack" {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movq %rsp, %rdi
-; CHECK-NEXT:    callq capture
+; CHECK-NEXT:    callq capture@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq

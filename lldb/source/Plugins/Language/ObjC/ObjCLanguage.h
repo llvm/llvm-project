@@ -27,9 +27,7 @@ public:
   public:
     enum Type { eTypeUnspecified, eTypeClassMethod, eTypeInstanceMethod };
 
-    MethodName()
-        : m_full(), m_class(), m_category(), m_selector(),
-          m_type(eTypeUnspecified), m_category_is_valid(false) {}
+    MethodName() : m_full(), m_class(), m_category(), m_selector() {}
 
     MethodName(const char *name, bool strict)
         : m_full(), m_class(), m_category(), m_selector(),
@@ -81,8 +79,8 @@ public:
         m_class_category;   // Class with category: "NSString(my_additions)"
     ConstString m_category; // Category:    "my_additions"
     ConstString m_selector; // Selector:    "myStringWithCString:"
-    Type m_type;
-    bool m_category_is_valid;
+    Type m_type = eTypeUnspecified;
+    bool m_category_is_valid = false;
   };
 
   ObjCLanguage() = default;

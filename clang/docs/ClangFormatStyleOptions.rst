@@ -204,6 +204,41 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+**AlignArrayOfStructures** (``ArrayInitializerAlignmentStyle``)
+  if not ``None``, when using initialization for an array of structs
+  aligns the fields into columns.
+
+  Possible values:
+
+  * ``AIAS_Left`` (in configuration: ``Left``)
+    Align array column and left justify the columns e.g.:
+
+    .. code-block:: c++
+
+      struct test demo[] =
+      {
+          {56, 23,    "hello"},
+          {-1, 93463, "world"},
+          {7,  5,     "!!"   }
+      };
+
+  * ``AIAS_Right`` (in configuration: ``Right``)
+    Align array column and right justify the columns e.g.:
+
+    .. code-block:: c++
+
+      struct test demo[] =
+      {
+          {56,    23, "hello"},
+          {-1, 93463, "world"},
+          { 7,     5,    "!!"}
+      };
+
+  * ``AIAS_None`` (in configuration: ``None``)
+    Don't align array initializer columns.
+
+
+
 **AlignConsecutiveAssignments** (``AlignConsecutiveStyle``)
   Style of aligning consecutive assignments.
 
@@ -3032,6 +3067,21 @@ the configuration (without a prefix: ``Auto``).
 **ObjCSpaceBeforeProtocolList** (``bool``)
   Add a space in front of an Objective-C protocol list, i.e. use
   ``Foo <Protocol>`` instead of ``Foo<Protocol>``.
+
+**PPIndentWidth** (``int``)
+  The number of columns to use for indentation of preprocessor statements.
+  When set to -1 (default) ``IndentWidth`` is used also for preprocessor
+  statements.
+
+  .. code-block:: c++
+
+     PPIndentWidth: 1
+
+     #ifdef __linux__
+     # define FOO
+     #else
+     # define BAR
+     #endif
 
 **PenaltyBreakAssignment** (``unsigned``)
   The penalty for breaking around an assignment operator.

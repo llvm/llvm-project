@@ -11,8 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/MBFIWrapper.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MBFIWrapper.h"
 
 using namespace llvm;
 

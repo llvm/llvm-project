@@ -55,7 +55,7 @@ class ObjCStringLiteral : public Expr {
 
 public:
   ObjCStringLiteral(StringLiteral *SL, QualType T, SourceLocation L)
-      : Expr(ObjCStringLiteralClass, T, VK_RValue, OK_Ordinary), String(SL),
+      : Expr(ObjCStringLiteralClass, T, VK_PRValue, OK_Ordinary), String(SL),
         AtLoc(L) {
     setDependence(ExprDependence::None);
   }
@@ -91,7 +91,7 @@ class ObjCBoolLiteralExpr : public Expr {
 
 public:
   ObjCBoolLiteralExpr(bool val, QualType Ty, SourceLocation l)
-      : Expr(ObjCBoolLiteralExprClass, Ty, VK_RValue, OK_Ordinary), Value(val),
+      : Expr(ObjCBoolLiteralExprClass, Ty, VK_PRValue, OK_Ordinary), Value(val),
         Loc(l) {
     setDependence(ExprDependence::None);
   }
@@ -134,7 +134,7 @@ public:
   friend class ASTStmtReader;
 
   ObjCBoxedExpr(Expr *E, QualType T, ObjCMethodDecl *method, SourceRange R)
-      : Expr(ObjCBoxedExprClass, T, VK_RValue, OK_Ordinary), SubExpr(E),
+      : Expr(ObjCBoxedExprClass, T, VK_PRValue, OK_Ordinary), SubExpr(E),
         BoxingMethod(method), Range(R) {
     setDependence(computeDependence(this));
   }
@@ -458,7 +458,7 @@ class ObjCSelectorExpr : public Expr {
 public:
   ObjCSelectorExpr(QualType T, Selector selInfo, SourceLocation at,
                    SourceLocation rp)
-      : Expr(ObjCSelectorExprClass, T, VK_RValue, OK_Ordinary),
+      : Expr(ObjCSelectorExprClass, T, VK_PRValue, OK_Ordinary),
         SelName(selInfo), AtLoc(at), RParenLoc(rp) {
     setDependence(ExprDependence::None);
   }
@@ -511,7 +511,7 @@ public:
 
   ObjCProtocolExpr(QualType T, ObjCProtocolDecl *protocol, SourceLocation at,
                    SourceLocation protoLoc, SourceLocation rp)
-      : Expr(ObjCProtocolExprClass, T, VK_RValue, OK_Ordinary),
+      : Expr(ObjCProtocolExprClass, T, VK_PRValue, OK_Ordinary),
         TheProtocol(protocol), AtLoc(at), ProtoLoc(protoLoc), RParenLoc(rp) {
     setDependence(ExprDependence::None);
   }
@@ -1638,8 +1638,8 @@ public:
   ObjCBridgedCastExpr(SourceLocation LParenLoc, ObjCBridgeCastKind Kind,
                       CastKind CK, SourceLocation BridgeKeywordLoc,
                       TypeSourceInfo *TSInfo, Expr *Operand)
-      : ExplicitCastExpr(ObjCBridgedCastExprClass, TSInfo->getType(), VK_RValue,
-                         CK, Operand, 0, false, TSInfo),
+      : ExplicitCastExpr(ObjCBridgedCastExprClass, TSInfo->getType(),
+                         VK_PRValue, CK, Operand, 0, false, TSInfo),
         LParenLoc(LParenLoc), BridgeKeywordLoc(BridgeKeywordLoc), Kind(Kind) {}
 
   /// Construct an empty Objective-C bridged cast.
@@ -1692,7 +1692,7 @@ class ObjCAvailabilityCheckExpr : public Expr {
 public:
   ObjCAvailabilityCheckExpr(VersionTuple VersionToCheck, SourceLocation AtLoc,
                             SourceLocation RParen, QualType Ty)
-      : Expr(ObjCAvailabilityCheckExprClass, Ty, VK_RValue, OK_Ordinary),
+      : Expr(ObjCAvailabilityCheckExprClass, Ty, VK_PRValue, OK_Ordinary),
         VersionToCheck(VersionToCheck), AtLoc(AtLoc), RParen(RParen) {
     setDependence(ExprDependence::None);
   }

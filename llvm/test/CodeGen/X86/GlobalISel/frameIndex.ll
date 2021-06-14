@@ -9,7 +9,7 @@
 define i32* @allocai32() {
 ; X64-LABEL: allocai32:
 ; X64:       # %bb.0:
-; X64-NEXT:    leaq -4(%rsp), %rax
+; X64-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    retq
 ;
 ; X32-LABEL: allocai32:
@@ -23,7 +23,7 @@ define i32* @allocai32() {
 ;
 ; X32ABI-LABEL: allocai32:
 ; X32ABI:       # %bb.0:
-; X32ABI-NEXT:    leal -4(%rsp), %eax
+; X32ABI-NEXT:    leal -{{[0-9]+}}(%rsp), %eax
 ; X32ABI-NEXT:    retq
   %ptr1 = alloca i32
   ret i32* %ptr1

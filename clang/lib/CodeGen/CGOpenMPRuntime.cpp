@@ -664,7 +664,7 @@ static void emitInitWithReductionInitializer(CodeGenFunction &CGF,
       return;
     }
     }
-    OpaqueValueExpr OVE(DRD->getLocation(), Ty, VK_RValue);
+    OpaqueValueExpr OVE(DRD->getLocation(), Ty, VK_PRValue);
     CodeGenFunction::OpaqueValueMapping OpaqueMap(CGF, &OVE, InitRVal);
     CGF.EmitAnyExprToMem(&OVE, Private, Ty.getQualifiers(),
                          /*IsInitializer=*/false);
@@ -4398,7 +4398,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
       OpaqueValueExpr OVE(
           Loc,
           C.getIntTypeForBitwidth(C.getTypeSize(C.getSizeType()), /*Signed=*/0),
-          VK_RValue);
+          VK_PRValue);
       CodeGenFunction::OpaqueValueMapping OpaqueMap(CGF, &OVE,
                                                     RValue::get(NumOfElements));
       KmpTaskAffinityInfoArrayTy =
@@ -4892,7 +4892,7 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
     }
     OpaqueValueExpr OVE(Loc,
                         C.getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/0),
-                        VK_RValue);
+                        VK_PRValue);
     CodeGenFunction::OpaqueValueMapping OpaqueMap(CGF, &OVE,
                                                   RValue::get(NumOfElements));
     KmpDependInfoArrayTy =
@@ -6307,6 +6307,7 @@ void CGOpenMPRuntime::emitCancellationPointCall(
               CGM.getModule(), OMPRTL___kmpc_cancellationpoint),
           Args);
       // if (__kmpc_cancellationpoint()) {
+      //   call i32 @__kmpc_cancel_barrier( // for parallel cancellation only
       //   exit from construct;
       // }
       llvm::BasicBlock *ExitBB = CGF.createBasicBlock(".cancel.exit");
@@ -6314,6 +6315,8 @@ void CGOpenMPRuntime::emitCancellationPointCall(
       llvm::Value *Cmp = CGF.Builder.CreateIsNotNull(Result);
       CGF.Builder.CreateCondBr(Cmp, ExitBB, ContBB);
       CGF.EmitBlock(ExitBB);
+      if (CancelRegion == OMPD_parallel)
+        emitBarrierCall(CGF, Loc, OMPD_unknown, /*EmitChecks=*/false);
       // exit from construct;
       CodeGenFunction::JumpDest CancelDest =
           CGF.getOMPCancelDestination(OMPRegionInfo->getDirectiveKind());
@@ -6343,6 +6346,7 @@ void CGOpenMPRuntime::emitCancelCall(CodeGenFunction &CGF, SourceLocation Loc,
       llvm::Value *Result = CGF.EmitRuntimeCall(
           OMPBuilder.getOrCreateRuntimeFunction(M, OMPRTL___kmpc_cancel), Args);
       // if (__kmpc_cancel()) {
+      //   call i32 @__kmpc_cancel_barrier( // for parallel cancellation only
       //   exit from construct;
       // }
       llvm::BasicBlock *ExitBB = CGF.createBasicBlock(".cancel.exit");
@@ -6350,6 +6354,8 @@ void CGOpenMPRuntime::emitCancelCall(CodeGenFunction &CGF, SourceLocation Loc,
       llvm::Value *Cmp = CGF.Builder.CreateIsNotNull(Result);
       CGF.Builder.CreateCondBr(Cmp, ExitBB, ContBB);
       CGF.EmitBlock(ExitBB);
+      if (CancelRegion == OMPD_parallel)
+        RT.emitBarrierCall(CGF, Loc, OMPD_unknown, /*EmitChecks=*/false);
       // exit from construct;
       CodeGenFunction::JumpDest CancelDest =
           CGF.getOMPCancelDestination(OMPRegionInfo->getDirectiveKind());
@@ -6672,6 +6678,7 @@ emitNumTeamsForTargetDirective(CodeGenFunction &CGF,
   case OMPD_task:
   case OMPD_simd:
   case OMPD_tile:
+  case OMPD_unroll:
   case OMPD_sections:
   case OMPD_section:
   case OMPD_single:
@@ -6990,6 +6997,7 @@ emitNumThreadsForTargetDirective(CodeGenFunction &CGF,
   case OMPD_task:
   case OMPD_simd:
   case OMPD_tile:
+  case OMPD_unroll:
   case OMPD_sections:
   case OMPD_section:
   case OMPD_single:
@@ -9597,6 +9605,7 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
     case OMPD_task:
     case OMPD_simd:
     case OMPD_tile:
+    case OMPD_unroll:
     case OMPD_sections:
     case OMPD_section:
     case OMPD_single:
@@ -10426,6 +10435,7 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
     case OMPD_task:
     case OMPD_simd:
     case OMPD_tile:
+    case OMPD_unroll:
     case OMPD_sections:
     case OMPD_section:
     case OMPD_single:
@@ -10587,7 +10597,12 @@ CGOpenMPRuntime::registerTargetFirstprivateCopy(CodeGenFunction &CGF,
                              FileID, Line);
     llvm::raw_svector_ostream OS(Buffer);
     OS << "__omp_offloading_firstprivate_" << llvm::format("_%x", DeviceID)
-       << llvm::format("_%x_", FileID) << VD->getName() << "_l" << Line;
+       << llvm::format("_%x_", FileID);
+    if (CGM.getLangOpts().CPlusPlus) {
+      CGM.getCXXABI().getMangleContext().mangleTypeName(VD->getType(), OS);
+      OS << "_";
+    }
+    OS << VD->getName() << "_l" << Line;
     VarName = OS.str();
   }
   Linkage = llvm::GlobalValue::InternalLinkage;
@@ -11133,6 +11148,7 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
     case OMPD_task:
     case OMPD_simd:
     case OMPD_tile:
+    case OMPD_unroll:
     case OMPD_sections:
     case OMPD_section:
     case OMPD_single:

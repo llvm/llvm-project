@@ -26,7 +26,7 @@ public:
   typedef collection::iterator iterator;
   typedef collection::const_iterator const_iterator;
 
-  VMRange() : m_base_addr(0), m_byte_size(0) {}
+  VMRange() {}
 
   VMRange(lldb::addr_t start_addr, lldb::addr_t end_addr)
       : m_base_addr(start_addr),
@@ -88,8 +88,8 @@ public:
                             const VMRange &range);
 
 protected:
-  lldb::addr_t m_base_addr;
-  lldb::addr_t m_byte_size;
+  lldb::addr_t m_base_addr = 0;
+  lldb::addr_t m_byte_size = 0;
 };
 
 bool operator==(const VMRange &lhs, const VMRange &rhs);

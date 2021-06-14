@@ -178,7 +178,7 @@ struct MustKillsInfo {
   /// [params] -> { Stmt_phantom[]  -> scalar_to_kill[] }
   isl::union_map MustKills;
 
-  MustKillsInfo() : KillsSchedule(nullptr) {}
+  MustKillsInfo() : KillsSchedule() {}
 };
 
 /// Check if SAI's uses are entirely contained within Scop S.
@@ -227,7 +227,7 @@ static MustKillsInfo computeMustKillsInfo(const Scop &S) {
   //     - filter: "[control] -> { }"
   // So, we choose to not create this to keep the output a little nicer,
   // at the cost of some code complexity.
-  Info.KillsSchedule = nullptr;
+  Info.KillsSchedule = {};
 
   for (isl::id &ToKillId : KillMemIds) {
     isl::id KillStmtId = isl::id::alloc(
@@ -278,7 +278,7 @@ static MustKillsInfo computeMustKillsInfo(const Scop &S) {
     isl::union_set KillStmtDomain = isl::set::universe(KillStmtSpace);
 
     isl::schedule KillSchedule = isl::schedule::from_domain(KillStmtDomain);
-    if (Info.KillsSchedule)
+    if (!Info.KillsSchedule.is_null())
       Info.KillsSchedule = isl::manage(
           isl_schedule_set(Info.KillsSchedule.release(), KillSchedule.copy()));
     else

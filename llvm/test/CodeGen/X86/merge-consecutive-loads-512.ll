@@ -131,14 +131,14 @@ define <8 x double> @merge_8f64_f64_1u3u5zu8(double* %ptr) nounwind uwtable noin
 ; ALL-LABEL: merge_8f64_f64_1u3u5zu8:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovdqu64 8(%rdi), %zmm0
-; ALL-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
+; ALL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; ALL-NEXT:    retq
 ;
 ; X86-AVX512F-LABEL: merge_8f64_f64_1u3u5zu8:
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512F-NEXT:    vmovdqu64 8(%eax), %zmm0
-; X86-AVX512F-NEXT:    vpandq {{\.LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm0
+; X86-AVX512F-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm0
 ; X86-AVX512F-NEXT:    retl
   %ptr0 = getelementptr inbounds double, double* %ptr, i64 1
   %ptr2 = getelementptr inbounds double, double* %ptr, i64 3
@@ -210,14 +210,14 @@ define <8 x i64> @merge_8i64_i64_1u3u5zu8(i64* %ptr) nounwind uwtable noinline s
 ; ALL-LABEL: merge_8i64_i64_1u3u5zu8:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovdqu64 8(%rdi), %zmm0
-; ALL-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
+; ALL-NEXT:    vpandq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; ALL-NEXT:    retq
 ;
 ; X86-AVX512F-LABEL: merge_8i64_i64_1u3u5zu8:
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512F-NEXT:    vmovdqu64 8(%eax), %zmm0
-; X86-AVX512F-NEXT:    vpandd {{\.LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm0
+; X86-AVX512F-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm0
 ; X86-AVX512F-NEXT:    retl
   %ptr0 = getelementptr inbounds i64, i64* %ptr, i64 1
   %ptr2 = getelementptr inbounds i64, i64* %ptr, i64 3
@@ -429,14 +429,14 @@ define <16 x i32> @merge_16i32_i32_0uu3zzuuuuuzCuEF(i32* %ptr) nounwind uwtable 
 ; ALL-LABEL: merge_16i32_i32_0uu3zzuuuuuzCuEF:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovdqu64 (%rdi), %zmm0
-; ALL-NEXT:    vpandd {{.*}}(%rip), %zmm0, %zmm0
+; ALL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0
 ; ALL-NEXT:    retq
 ;
 ; X86-AVX512F-LABEL: merge_16i32_i32_0uu3zzuuuuuzCuEF:
 ; X86-AVX512F:       # %bb.0:
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512F-NEXT:    vmovdqu64 (%eax), %zmm0
-; X86-AVX512F-NEXT:    vpandd {{\.LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm0
+; X86-AVX512F-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}, %zmm0, %zmm0
 ; X86-AVX512F-NEXT:    retl
   %ptr0 = getelementptr inbounds i32, i32* %ptr, i64 0
   %ptr3 = getelementptr inbounds i32, i32* %ptr, i64 3

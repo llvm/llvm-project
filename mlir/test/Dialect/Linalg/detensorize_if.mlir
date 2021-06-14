@@ -10,10 +10,10 @@
 func @main() -> (tensor<i32>) attributes {} {
   %c0 = constant 0 : i32
   %0 = tensor.from_elements %c0 : tensor<1xi32>
-  %reshaped0 = linalg.tensor_reshape %0 [] : tensor<1xi32> into tensor<i32>
+  %reshaped0 = linalg.tensor_collapse_shape %0 [] : tensor<1xi32> into tensor<i32>
   %c10 = constant 10 : i32
   %1 = tensor.from_elements %c10 : tensor<1xi32>
-  %reshaped1 = linalg.tensor_reshape %1 [] : tensor<1xi32> into tensor<i32>
+  %reshaped1 = linalg.tensor_collapse_shape %1 [] : tensor<1xi32> into tensor<i32>
   br ^bb1(%reshaped0 : tensor<i32>)
 
 ^bb1(%2: tensor<i32>):  // 2 preds: ^bb0, ^bb2
@@ -55,7 +55,7 @@ func @main() -> (tensor<i32>) attributes {} {
 // CHECK-NEXT:     br ^[[bb3:.*]](%{{.*}} : i32)
 // CHECK-NEXT:   ^[[bb3]](%{{.*}}: i32)
 // CHECK-NEXT:     tensor.from_elements %{{.*}} : tensor<1xi32>
-// CHECK-NEXT:     linalg.tensor_reshape %{{.*}} [] : tensor<1xi32> into tensor<i32>
+// CHECK-NEXT:     linalg.tensor_collapse_shape %{{.*}} [] : tensor<1xi32> into tensor<i32>
 // CHECK-NEXT:     return %{{.*}}
 // CHECK-NEXT:   }
 
@@ -74,10 +74,10 @@ func @main() -> (tensor<i32>) attributes {} {
 func @main() -> (tensor<i32>) attributes {} {
   %c0 = constant 0 : i32
   %0 = tensor.from_elements %c0 : tensor<1xi32>
-  %reshaped0 = linalg.tensor_reshape %0 [] : tensor<1xi32> into tensor<i32>
+  %reshaped0 = linalg.tensor_collapse_shape %0 [] : tensor<1xi32> into tensor<i32>
   %c10 = constant 10 : i32
   %1 = tensor.from_elements %c10 : tensor<1xi32>
-  %reshaped1 = linalg.tensor_reshape %1 [] : tensor<1xi32> into tensor<i32>
+  %reshaped1 = linalg.tensor_collapse_shape %1 [] : tensor<1xi32> into tensor<i32>
   br ^bb1(%reshaped0 : tensor<i32>)
 
 ^bb1(%2: tensor<i32>):  // 2 preds: ^bb0, ^bb2
@@ -124,7 +124,7 @@ func @main() -> (tensor<i32>) attributes {} {
 // CHECK-NEXT:     br ^[[bb4:.*]](%{{.*}} : i32)
 // CHECK-NEXT:   ^[[bb4]](%{{.*}}: i32)
 // CHECK-NEXT:     tensor.from_elements %{{.*}} : tensor<1xi32>
-// CHECK-NEXT:     linalg.tensor_reshape %{{.*}} [] : tensor<1xi32> into tensor<i32>
+// CHECK-NEXT:     linalg.tensor_collapse_shape %{{.*}} [] : tensor<1xi32> into tensor<i32>
 // CHECK-NEXT:     return %{{.*}}
 // CHECK-NEXT:   }
 
@@ -140,10 +140,10 @@ func @main() -> (tensor<i32>) attributes {} {
 func @main() -> (tensor<i32>) attributes {} {
   %c0 = constant 0 : i32
   %0 = tensor.from_elements %c0 : tensor<1xi32>
-  %reshaped0 = linalg.tensor_reshape %0 [] : tensor<1xi32> into tensor<i32>
+  %reshaped0 = linalg.tensor_collapse_shape %0 [] : tensor<1xi32> into tensor<i32>
   %c10 = constant 10 : i32
   %1 = tensor.from_elements %c10 : tensor<1xi32>
-  %reshaped1 = linalg.tensor_reshape %1 [] : tensor<1xi32> into tensor<i32>
+  %reshaped1 = linalg.tensor_collapse_shape %1 [] : tensor<1xi32> into tensor<i32>
   br ^bb1(%reshaped0 : tensor<i32>)
 
 ^bb1(%2: tensor<i32>):  // 2 preds: ^bb0, ^bb2
@@ -164,7 +164,7 @@ func @main() -> (tensor<i32>) attributes {} {
 
 ^bb2(%6: tensor<i32>):  // pred: ^bb1
   %12 = tensor.from_elements %c10 : tensor<1xi32>
-  %reshaped12 = linalg.tensor_reshape %12 [] : tensor<1xi32> into tensor<i32>
+  %reshaped12 = linalg.tensor_collapse_shape %12 [] : tensor<1xi32> into tensor<i32>
   %7 = linalg.init_tensor [] : tensor<i32>
   %8 = linalg.generic #attrs
     ins(%6, %reshaped12 : tensor<i32>, tensor<i32>)
@@ -191,6 +191,6 @@ func @main() -> (tensor<i32>) attributes {} {
 // CHECK-NEXT:     br ^[[bb3:.*]](%{{.*}} : i32)
 // CHECK-NEXT:   ^[[bb3]](%{{.*}}: i32)
 // CHECK-NEXT:     tensor.from_elements %{{.*}} : tensor<1xi32>
-// CHECK-NEXT:     linalg.tensor_reshape %{{.*}} [] : tensor<1xi32> into tensor<i32>
+// CHECK-NEXT:     linalg.tensor_collapse_shape %{{.*}} [] : tensor<1xi32> into tensor<i32>
 // CHECK-NEXT:     return %{{.*}}
 // CHECK-NEXT:   }

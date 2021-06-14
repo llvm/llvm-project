@@ -1757,8 +1757,8 @@ bool SampleProfileLoader::doInitialization(Module &M,
                                            FunctionAnalysisManager *FAM) {
   auto &Ctx = M.getContext();
 
-  auto ReaderOrErr =
-      SampleProfileReader::create(Filename, Ctx, RemappingFilename);
+  auto ReaderOrErr = SampleProfileReader::create(
+      Filename, Ctx, FSDiscriminatorPass::Base, RemappingFilename);
   if (std::error_code EC = ReaderOrErr.getError()) {
     std::string Msg = "Could not open profile: " + EC.message();
     Ctx.diagnose(DiagnosticInfoSampleProfile(Filename, Msg));
@@ -1769,7 +1769,6 @@ bool SampleProfileLoader::doInitialization(Module &M,
   // set module before reading the profile so reader may be able to only
   // read the function profiles which are used by the current module.
   Reader->setModule(&M);
-  Reader->setBaseDiscriminatorMask();
   if (std::error_code EC = Reader->read()) {
     std::string Msg = "profile reading failed: " + EC.message();
     Ctx.diagnose(DiagnosticInfoSampleProfile(Filename, Msg));

@@ -236,12 +236,13 @@ bool AtomicExpand::runOnFunction(Function &F) {
                  TLI->shouldExpandAtomicCmpXchgInIR(CASI) ==
                      TargetLoweringBase::AtomicExpansionKind::None &&
                  (isReleaseOrStronger(CASI->getSuccessOrdering()) ||
-                  isAcquireOrStronger(CASI->getSuccessOrdering()))) {
+                  isAcquireOrStronger(CASI->getSuccessOrdering()) ||
+                  isAcquireOrStronger(CASI->getFailureOrdering()))) {
         // If a compare and swap is lowered to LL/SC, we can do smarter fence
         // insertion, with a stronger one on the success path than on the
         // failure path. As a result, fence insertion is directly done by
         // expandAtomicCmpXchg in that case.
-        FenceOrdering = CASI->getSuccessOrdering();
+        FenceOrdering = CASI->getMergedOrdering();
         CASI->setSuccessOrdering(AtomicOrdering::Monotonic);
         CASI->setFailureOrdering(AtomicOrdering::Monotonic);
       }
@@ -1052,7 +1053,7 @@ void AtomicExpand::expandAtomicCmpXchgToMaskedIntrinsic(AtomicCmpXchgInst *CI) {
       "NewVal_Shifted");
   Value *OldVal = TLI->emitMaskedAtomicCmpXchgIntrinsic(
       Builder, CI, PMV.AlignedAddr, CmpVal_Shifted, NewVal_Shifted, PMV.Mask,
-      CI->getSuccessOrdering());
+      CI->getMergedOrdering());
   Value *FinalOldVal = extractMaskedValue(Builder, OldVal, PMV);
   Value *Res = UndefValue::get(CI->getType());
   Res = Builder.CreateInsertValue(Res, FinalOldVal, 0);
@@ -1167,8 +1168,9 @@ bool AtomicExpand::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   // care of everything. Otherwise, emitLeading/TrailingFence are no-op and we
   // should preserve the ordering.
   bool ShouldInsertFencesForAtomic = TLI->shouldInsertFencesForAtomic(CI);
-  AtomicOrdering MemOpOrder =
-      ShouldInsertFencesForAtomic ? AtomicOrdering::Monotonic : SuccessOrder;
+  AtomicOrdering MemOpOrder = ShouldInsertFencesForAtomic
+                                  ? AtomicOrdering::Monotonic
+                                  : CI->getMergedOrdering();
 
   // In implementations which use a barrier to achieve release semantics, we can
   // delay emitting this barrier until we know a store is actually going to be

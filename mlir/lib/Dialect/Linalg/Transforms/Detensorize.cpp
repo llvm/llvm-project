@@ -31,7 +31,7 @@ static Value sourceMaterializationCallback(OpBuilder &builder, Type type,
 
   // FromElementsOp results in a tensor<1xdtype>, we need to reshape that to
   // a tensor<dtype> instead.
-  return builder.create<linalg::TensorReshapeOp>(
+  return builder.create<linalg::TensorCollapseShapeOp>(
       loc, type, createNewTensorOp, ArrayRef<ReassociationExprs>{});
 }
 
@@ -48,10 +48,11 @@ bool canBeDetensored(TensorType tensorType) {
 
 bool shouldBeDetensored(Operation *op, TypeConverter typeConverter) {
   GenericOp genericOp = dyn_cast_or_null<GenericOp>(op);
-  return genericOp && llvm::all_of(genericOp.getShapedOperandTypes(),
-                                   [&](ShapedType shapedType) {
-                                     return !typeConverter.isLegal(shapedType);
-                                   });
+  return genericOp &&
+         llvm::all_of(
+             genericOp.getInputAndOutputOperands(), [&](OpOperand *opOperand) {
+               return !typeConverter.isLegal(opOperand->get().getType());
+             });
 }
 
 /// A conversion patttern for detensoring `linalg.generic` ops.
@@ -159,8 +160,8 @@ public:
 /// Canonicalizes the pattern of the form
 ///
 /// %tensor = tensor.from_elements(%element) : (i32) -> tensor<1xi32>
-/// %reshaped_tensor = linalg.tensor_reshape %tensor [] : tensor<1xi32> into
-///   tensor<i32>
+/// %reshaped_tensor = linalg.tensor_collapse_shape %tensor []
+///     : tensor<1xi32> into tensor<i32>
 /// %extracted_element = tensor.extract %reshaped_tensor[] : tensor<i32>
 ///
 /// to just %element.
@@ -170,10 +171,11 @@ struct ExtractFromReshapeFromElements
 
   LogicalResult matchAndRewrite(tensor::ExtractOp extract,
                                 PatternRewriter &rewriter) const final {
-    if (extract.indices().size() != 0)
+    if (!extract.indices().empty())
       return failure();
 
-    auto tensorReshape = extract.tensor().getDefiningOp<TensorReshapeOp>();
+    auto tensorReshape =
+        extract.tensor().getDefiningOp<TensorCollapseShapeOp>();
     if (tensorReshape == nullptr)
       return failure();
 
@@ -191,7 +193,8 @@ struct ExtractFromReshapeFromElements
 /// @see LinalgDetensorize in Linalg/Passes.td for more details.
 struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
   LinalgDetensorize() = default;
-  LinalgDetensorize(const LinalgDetensorize &pass) {}
+  LinalgDetensorize(const LinalgDetensorize &pass)
+      : LinalgDetensorizeBase<LinalgDetensorize>() {}
 
   class CostModel {
   public:

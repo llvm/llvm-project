@@ -756,7 +756,7 @@ Generate include file containing message identifiers:
 
     $ message-converter.pl --enum-file=kmp_i18n_id.inc en_US.txt
 
-Generate include file contating default messages:
+Generate include file containing default messages:
 
     $ message-converter.pl --default-file=kmp_i18n_default.inc en_US.txt
 

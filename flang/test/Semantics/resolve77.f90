@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Tests valid and invalid usage of forward references to procedures
 ! in specification expressions.
 module m

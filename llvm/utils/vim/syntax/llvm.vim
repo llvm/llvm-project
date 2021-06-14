@@ -16,7 +16,7 @@ syn case match
 " benefit as much from having dedicated highlighting rules.
 syn keyword llvmType void half bfloat float double x86_fp80 fp128 ppc_fp128
 syn keyword llvmType label metadata x86_mmx x86_amx
-syn keyword llvmType type label opaque token
+syn keyword llvmType type label opaque token ptr
 syn match   llvmType /\<i\d\+\>/
 
 " Instructions.
@@ -26,7 +26,7 @@ syn keyword llvmStatement add addrspacecast alloca and arcp ashr atomicrmw
 syn keyword llvmStatement bitcast br catchpad catchswitch catchret call callbr
 syn keyword llvmStatement cleanuppad cleanupret cmpxchg eq exact extractelement
 syn keyword llvmStatement extractvalue fadd fast fcmp fdiv fence fmul fpext
-syn keyword llvmStatement fptosi fptoui fptrunc free frem fsub fneg getelementptr
+syn keyword llvmStatement fptosi fptoui fptrunc free freeze frem fsub fneg getelementptr
 syn keyword llvmStatement icmp inbounds indirectbr insertelement insertvalue
 syn keyword llvmStatement inttoptr invoke landingpad load lshr malloc max min
 syn keyword llvmStatement mul nand ne ninf nnan nsw nsz nuw oeq oge ogt ole

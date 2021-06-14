@@ -259,7 +259,7 @@ define void @test_urem_pow2_v2i32(<2 x i32>* %x, <2 x i32>* %y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    andps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    movlps %xmm0, (%eax)
 ; X86-NEXT:    retl
   %a = load <2 x i32>, <2 x i32>* %x

@@ -110,9 +110,7 @@ static std::string computeDataLayout(const Triple &TT) {
 
   Ret += DataLayout::getManglingComponent(TT);
   // X86 and x32 have 32 bit pointers.
-  if ((TT.isArch64Bit() &&
-       (TT.getEnvironment() == Triple::GNUX32 || TT.isOSNaCl())) ||
-      !TT.isArch64Bit())
+  if (!TT.isArch64Bit() || TT.isX32() || TT.isOSNaCl())
     Ret += "-p:32:32";
 
   // Address spaces for 32 bit signed, 32 bit unsigned, and 64 bit pointers.
@@ -316,8 +314,8 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
     resetTargetOptions(F);
     I = std::make_unique<X86Subtarget>(
         TargetTriple, CPU, TuneCPU, FS, *this,
-        MaybeAlign(Options.StackAlignmentOverride), PreferVectorWidthOverride,
-        RequiredVectorWidth);
+        MaybeAlign(F.getParent()->getOverrideStackAlignment()),
+        PreferVectorWidthOverride, RequiredVectorWidth);
   }
   return I.get();
 }

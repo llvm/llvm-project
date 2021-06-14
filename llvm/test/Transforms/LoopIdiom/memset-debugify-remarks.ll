@@ -16,28 +16,28 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @_Z15my_basic_memsetPcS_c(i8* %ptr, i8* %end, i8 %value) {
 ; CHECK-LABEL: @_Z15my_basic_memsetPcS_c(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PTR1:%.*]] = ptrtoint i8* [[PTR:%.*]] to i64
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8* [[PTR]], [[END:%.*]], !dbg !15
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i1 [[CMP3]], metadata !9, metadata !DIExpression()), !dbg !15
-; CHECK-NEXT:    br i1 [[CMP3]], label [[FOR_END:%.*]], label [[FOR_BODY_PREHEADER:%.*]], !dbg !16
+; CHECK-NEXT:    [[PTR1:%.*]] = ptrtoint i8* [[PTR:%.*]] to i64, !dbg [[DBG15:![0-9]+]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8* [[PTR]], [[END:%.*]], !dbg [[DBG15]]
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i1 [[CMP3]], metadata [[META9:![0-9]+]], metadata !DIExpression()), !dbg [[DBG15]]
+; CHECK-NEXT:    br i1 [[CMP3]], label [[FOR_END:%.*]], label [[FOR_BODY_PREHEADER:%.*]], !dbg [[DBG16:![0-9]+]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 0, [[PTR1]], !dbg !17
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[END]], i64 [[TMP0]], !dbg !17
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = ptrtoint i8* [[SCEVGEP]] to i64
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[PTR]], i8 [[VALUE:%.*]], i64 [[SCEVGEP2]], i1 false), !dbg !18
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]], !dbg !17
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 0, [[PTR1]], !dbg [[DBG17:![0-9]+]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[END]], i64 [[TMP0]], !dbg [[DBG17]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = ptrtoint i8* [[SCEVGEP]] to i64, !dbg [[DBG17]]
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[PTR]], i8 [[VALUE:%.*]], i64 [[SCEVGEP2]], i1 false), !dbg [[DBG18:![0-9]+]]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]], !dbg [[DBG17]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[PTR_ADDR_04:%.*]] = phi i8* [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[PTR]], [[FOR_BODY_PREHEADER]] ], !dbg !19
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8* [[PTR_ADDR_04]], metadata !11, metadata !DIExpression()), !dbg !19
-; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, i8* [[PTR_ADDR_04]], i64 1, !dbg !20
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8* [[INCDEC_PTR]], metadata !13, metadata !DIExpression()), !dbg !20
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[INCDEC_PTR]], [[END]], !dbg !21
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i1 [[CMP]], metadata !14, metadata !DIExpression()), !dbg !21
-; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_BODY]], !dbg !17
+; CHECK-NEXT:    [[PTR_ADDR_04:%.*]] = phi i8* [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[PTR]], [[FOR_BODY_PREHEADER]] ], !dbg [[DBG19:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8* [[PTR_ADDR_04]], metadata [[META11:![0-9]+]], metadata !DIExpression()), !dbg [[DBG19]]
+; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, i8* [[PTR_ADDR_04]], i64 1, !dbg [[DBG20:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i8* [[INCDEC_PTR]], metadata [[META13:![0-9]+]], metadata !DIExpression()), !dbg [[DBG20]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[INCDEC_PTR]], [[END]], !dbg [[DBG21:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i1 [[CMP]], metadata [[META14:![0-9]+]], metadata !DIExpression()), !dbg [[DBG21]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_END_LOOPEXIT:%.*]], label [[FOR_BODY]], !dbg [[DBG17]]
 ; CHECK:       for.end.loopexit:
-; CHECK-NEXT:    br label [[FOR_END]], !dbg !22
+; CHECK-NEXT:    br label [[FOR_END]], !dbg [[DBG22:![0-9]+]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret void, !dbg !22
+; CHECK-NEXT:    ret void, !dbg [[DBG22]]
 ;
 entry:
   %cmp3 = icmp eq i8* %ptr, %end

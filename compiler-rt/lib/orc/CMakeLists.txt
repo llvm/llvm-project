@@ -16,9 +16,10 @@ set(ORC_IMPL_HEADERS
   c_api.h
   common.h
   compiler.h
-  endian.h
+  endianness.h
   error.h
   extensible_rtti.h
+  simple_packed_serialization.h
   stl_extras.h
   wrapper_function_utils.h
 )

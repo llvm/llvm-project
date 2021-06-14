@@ -22,7 +22,7 @@ define void @blend_uniform_iv_trunc(i1 %c) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, i16* [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i16* [[TMP6]] to <4 x i16>*
 ; CHECK-NEXT:    store <4 x i16> zeroinitializer, <4 x i16>* [[TMP7]], align 2
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
 ; CHECK-NEXT:    br i1 [[TMP8]], label %middle.block, label %vector.body
 ;
@@ -67,7 +67,7 @@ define void @blend_uniform_iv(i1 %c) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, i16* [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i16* [[TMP4]] to <4 x i16>*
 ; CHECK-NEXT:    store <4 x i16> zeroinitializer, <4 x i16>* [[TMP5]], align 2
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
 ; CHECK-NEXT:    br i1 [[TMP6]], label %middle.block, label %vector.body
 ;
@@ -125,7 +125,7 @@ define void @blend_chain_iv(i1 %c) {
 ; CHECK-NEXT:    store i16 0, i16* [[TMP12]], align 2
 ; CHECK-NEXT:    store i16 0, i16* [[TMP14]], align 2
 ; CHECK-NEXT:    store i16 0, i16* [[TMP16]], align 2
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
 ; CHECK-NEXT:    br i1 [[TMP17]], label %middle.block, label %vector.body

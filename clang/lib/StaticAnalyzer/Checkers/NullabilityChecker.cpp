@@ -170,7 +170,7 @@ private:
     auto R = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
     if (Region) {
       R->markInteresting(Region);
-      R->addVisitor(std::make_unique<NullabilityBugVisitor>(Region));
+      R->addVisitor<NullabilityBugVisitor>(Region);
     }
     if (ValueExpr) {
       R->addRange(ValueExpr->getSourceRange());

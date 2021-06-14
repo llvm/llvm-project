@@ -32,18 +32,8 @@ namespace {
 struct SparsificationPass : public SparsificationBase<SparsificationPass> {
 
   SparsificationPass() = default;
-  SparsificationPass(const SparsificationPass &pass) {}
-
-  Option<int32_t> parallelization{
-      *this, "parallelization-strategy",
-      llvm::cl::desc("Set the parallelization strategy"), llvm::cl::init(0)};
-
-  Option<int32_t> vectorization{
-      *this, "vectorization-strategy",
-      llvm::cl::desc("Set the vectorization strategy"), llvm::cl::init(0)};
-
-  Option<int32_t> vectorLength{
-      *this, "vl", llvm::cl::desc("Set the vector length"), llvm::cl::init(1)};
+  SparsificationPass(const SparsificationPass &pass)
+      : SparsificationBase<SparsificationPass>() {}
 
   /// Returns parallelization strategy given on command line.
   SparseParallelizationStrategy parallelOption() {
@@ -78,7 +68,7 @@ struct SparsificationPass : public SparsificationBase<SparsificationPass> {
     RewritePatternSet patterns(ctx);
     // Translate strategy flags to strategy options.
     SparsificationOptions options(parallelOption(), vectorOption(),
-                                  vectorLength);
+                                  vectorLength, enableSIMDIndex32);
     // Apply rewriting.
     populateSparsificationPatterns(patterns, options);
     vector::populateVectorToVectorCanonicalizationPatterns(patterns);

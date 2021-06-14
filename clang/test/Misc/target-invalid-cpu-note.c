@@ -1,7 +1,7 @@
 // RUN: not %clang_cc1 -triple armv5--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix ARM
 // ARM: error: unknown target CPU 'not-a-cpu'
 // ARM: note: valid target CPU values are:
-// ARM-SAME: arm2
+// ARM-SAME: arm8
 
 // RUN: not %clang_cc1 -triple arm64--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix AARCH64
 // AARCH64: error: unknown target CPU 'not-a-cpu'
@@ -86,7 +86,7 @@
 // AMDGCN-SAME: gfx703, kabini, mullins, gfx704, bonaire, gfx705, gfx801, carrizo,
 // AMDGCN-SAME: gfx802, iceland, tonga, gfx803, fiji, polaris10, polaris11,
 // AMDGCN-SAME: gfx805, tongapro, gfx810, stoney, gfx900, gfx902, gfx904, gfx906,
-// AMDGCN-SAME: gfx908, gfx909, gfx90a, gfx90c, gfx1010, gfx1011, gfx1012, gfx1030, gfx1031,
+// AMDGCN-SAME: gfx908, gfx909, gfx90a, gfx90c, gfx1010, gfx1011, gfx1012, gfx1013, gfx1030, gfx1031,
 // AMDGCN-SAME: gfx1032, gfx1033, gfx1034, gfx1100, gfx1101, gfx1102
 
 // RUN: not %clang_cc1 -triple wasm64--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix WEBASM

@@ -158,7 +158,7 @@ bool PrescanAndSemaAction::BeginSourceFileAction(CompilerInstance &c1) {
   // Prepare semantics
   setSemantics(std::make_unique<Fortran::semantics::Semantics>(
       ci.invocation().semanticsContext(), parseTree,
-      ci.parsing().cooked().AsCharBlock(), ci.invocation().debugModuleDir()));
+      ci.invocation().debugModuleDir()));
   auto &semantics = this->semantics();
 
   // Run semantic checks
@@ -445,5 +445,13 @@ void EmitObjAction::ExecuteAction() {
   CompilerInstance &ci = this->instance();
   unsigned DiagID = ci.diagnostics().getCustomDiagID(
       clang::DiagnosticsEngine::Error, "code-generation is not available yet");
+  ci.diagnostics().Report(DiagID);
+}
+
+void InitOnlyAction::ExecuteAction() {
+  CompilerInstance &ci = this->instance();
+  unsigned DiagID =
+      ci.diagnostics().getCustomDiagID(clang::DiagnosticsEngine::Warning,
+          "Use `-init-only` for testing purposes only");
   ci.diagnostics().Report(DiagID);
 }

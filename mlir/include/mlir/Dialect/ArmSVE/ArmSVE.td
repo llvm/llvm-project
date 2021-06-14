@@ -15,6 +15,7 @@
 
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/Dialect/StandardOps/IR/StandardOpsBase.td"
 include "mlir/Dialect/ArmSVE/ArmSVEOpBase.td"
 
 //===----------------------------------------------------------------------===//
@@ -355,6 +356,37 @@ def VectorScaleOp : ArmSVE_Op<"vector_scale",
     "attr-dict `:` type($res)";
 }
 
+def ScalableLoadOp : ArmSVE_Op<"load">,
+    Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base, Index:$index)>,
+    Results<(outs ScalableVectorOf<[AnyType]>:$result)> {
+  let summary = "Load scalable vector from memory";
+  let description = [{
+    Load a slice of memory into a scalable vector.
+  }];
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return base().getType().cast<MemRefType>();
+    }
+  }];
+  let assemblyFormat = "$base `[` $index `]` attr-dict `:` "
+    "type($result) `from` type($base)";
+}
+
+def ScalableStoreOp : ArmSVE_Op<"store">,
+    Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base, Index:$index,
+               ScalableVectorOf<[AnyType]>:$value)> {
+  let summary = "Store scalable vector into memory";
+  let description = [{
+    Store a scalable vector on a slice of memory.
+  }];
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return base().getType().cast<MemRefType>();
+    }
+  }];
+  let assemblyFormat = "$value `,` $base `[` $index `]` attr-dict `:` "
+    "type($value) `to` type($base)";
+}
 
 def ScalableAddIOp : ScalableIOp<"addi", "addition", [Commutative]>;
 
@@ -397,6 +429,123 @@ def ScalableMaskedUDivIOp : ScalableMaskedIOp<"masked.divi_unsigned",
                                               "unsigned division">;
 
 def ScalableMaskedDivFOp : ScalableMaskedFOp<"masked.divf", "division">;
+
+//===----------------------------------------------------------------------===//
+// ScalableCmpFOp
+//===----------------------------------------------------------------------===//
+
+def ScalableCmpFOp : ArmSVE_Op<"cmpf", [NoSideEffect, SameTypeOperands,
+    TypesMatchWith<"result type has i1 element type and same shape as operands",
+    "lhs", "result", "getI1SameShape($_self)">]> {
+  let summary = "floating-point comparison operation for scalable vectors";
+  let description = [{
+    The `arm_sve.cmpf` operation compares two scalable vectors of floating point
+    elements according to the float comparison rules and the predicate specified
+    by the respective attribute. The predicate defines the type of comparison:
+    (un)orderedness, (in)equality and signed less/greater than (or equal to) as
+    well as predicates that are always true or false. The result is a scalable
+    vector of i1 elements. Unlike `arm_sve.cmpi`, the operands are always
+    treated as signed. The u prefix indicates *unordered* comparison, not
+    unsigned comparison, so "une" means unordered not equal. For the sake of
+    readability by humans, custom assembly form for the operation uses a
+    string-typed attribute for the predicate.  The value of this attribute
+    corresponds to lower-cased name of the predicate constant, e.g., "one" means
+    "ordered not equal".  The string representation of the attribute is merely a
+    syntactic sugar and is converted to an integer attribute by the parser.
+
+    Example:
+
+    ```mlir
+    %r = arm_sve.cmpf oeq, %0, %1 : !arm_sve.vector<4xf32>
+    ```
+  }];
+  let arguments = (ins
+    CmpFPredicateAttr:$predicate,
+    ScalableVectorOf<[AnyFloat]>:$lhs,
+    ScalableVectorOf<[AnyFloat]>:$rhs // TODO: This should support a simple scalar
+  );
+  let results = (outs ScalableVectorOf<[I1]>:$result);
+
+  let builders = [
+    OpBuilder<(ins "CmpFPredicate":$predicate, "Value":$lhs,
+                  "Value":$rhs), [{
+      buildScalableCmpFOp($_builder, $_state, predicate, lhs, rhs);
+    }]>];
+
+  let extraClassDeclaration = [{
+    static StringRef getPredicateAttrName() { return "predicate"; }
+    static CmpFPredicate getPredicateByName(StringRef name);
+
+    CmpFPredicate getPredicate() {
+      return (CmpFPredicate)(*this)->getAttrOfType<IntegerAttr>(
+          getPredicateAttrName()).getInt();
+    }
+  }];
+
+  let verifier = [{ return success(); }];
+
+  let assemblyFormat = "$predicate `,` $lhs `,` $rhs attr-dict `:` type($lhs)";
+}
+
+//===----------------------------------------------------------------------===//
+// ScalableCmpIOp
+//===----------------------------------------------------------------------===//
+
+def ScalableCmpIOp : ArmSVE_Op<"cmpi", [NoSideEffect, SameTypeOperands,
+    TypesMatchWith<"result type has i1 element type and same shape as operands",
+    "lhs", "result", "getI1SameShape($_self)">]> {
+  let summary = "integer comparison operation for scalable vectors";
+  let description = [{
+    The `arm_sve.cmpi` operation compares two scalable vectors of integer
+    elements according to the predicate specified by the respective attribute.
+
+    The predicate defines the type of comparison:
+
+    -   equal (mnemonic: `"eq"`; integer value: `0`)
+    -   not equal (mnemonic: `"ne"`; integer value: `1`)
+    -   signed less than (mnemonic: `"slt"`; integer value: `2`)
+    -   signed less than or equal (mnemonic: `"sle"`; integer value: `3`)
+    -   signed greater than (mnemonic: `"sgt"`; integer value: `4`)
+    -   signed greater than or equal (mnemonic: `"sge"`; integer value: `5`)
+    -   unsigned less than (mnemonic: `"ult"`; integer value: `6`)
+    -   unsigned less than or equal (mnemonic: `"ule"`; integer value: `7`)
+    -   unsigned greater than (mnemonic: `"ugt"`; integer value: `8`)
+    -   unsigned greater than or equal (mnemonic: `"uge"`; integer value: `9`)
+
+    Example:
+
+    ```mlir
+    %r = arm_sve.cmpi uge, %0, %1 : !arm_sve.vector<4xi32>
+    ```
+  }];
+
+  let arguments = (ins
+      CmpIPredicateAttr:$predicate,
+      ScalableVectorOf<[I8, I16, I32, I64]>:$lhs,
+      ScalableVectorOf<[I8, I16, I32, I64]>:$rhs
+  );
+  let results = (outs ScalableVectorOf<[I1]>:$result);
+
+  let builders = [
+    OpBuilder<(ins "CmpIPredicate":$predicate, "Value":$lhs,
+                 "Value":$rhs), [{
+      buildScalableCmpIOp($_builder, $_state, predicate, lhs, rhs);
+    }]>];
+
+  let extraClassDeclaration = [{
+    static StringRef getPredicateAttrName() { return "predicate"; }
+    static CmpIPredicate getPredicateByName(StringRef name);
+
+    CmpIPredicate getPredicate() {
+      return (CmpIPredicate)(*this)->getAttrOfType<IntegerAttr>(
+          getPredicateAttrName()).getInt();
+    }
+  }];
+
+  let verifier = [{ return success(); }];
+
+  let assemblyFormat = "$predicate `,` $lhs `,` $rhs attr-dict `:` type($lhs)";
+}
 
 def UmmlaIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"ummla">,

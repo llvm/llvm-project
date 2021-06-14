@@ -462,23 +462,46 @@ void *newSparseTensor(char *filename, uint8_t *abase, uint8_t *adata,
   uint8_t *sparsity = adata + aoff;
   uint64_t *perm = pdata + poff;
 
-  // The most common cases: 64-bit or 32-bit overhead, double/float values.
+  // Double matrices with all combinations of overhead storage.
   CASE(kU64, kU64, kF64, uint64_t, uint64_t, double);
-  CASE(kU64, kU64, kF32, uint64_t, uint64_t, float);
   CASE(kU64, kU32, kF64, uint64_t, uint32_t, double);
-  CASE(kU64, kU32, kF32, uint64_t, uint32_t, float);
+  CASE(kU64, kU16, kF64, uint64_t, uint16_t, double);
+  CASE(kU64, kU8, kF64, uint64_t, uint8_t, double);
   CASE(kU32, kU64, kF64, uint32_t, uint64_t, double);
-  CASE(kU32, kU64, kF32, uint32_t, uint64_t, float);
   CASE(kU32, kU32, kF64, uint32_t, uint32_t, double);
-  CASE(kU32, kU32, kF32, uint32_t, uint32_t, float);
-
-  // Some special cases: low overhead storage, double/float values.
+  CASE(kU32, kU16, kF64, uint32_t, uint16_t, double);
+  CASE(kU32, kU8, kF64, uint32_t, uint8_t, double);
+  CASE(kU16, kU64, kF64, uint16_t, uint64_t, double);
+  CASE(kU16, kU32, kF64, uint16_t, uint32_t, double);
   CASE(kU16, kU16, kF64, uint16_t, uint16_t, double);
+  CASE(kU16, kU8, kF64, uint16_t, uint8_t, double);
+  CASE(kU8, kU64, kF64, uint8_t, uint64_t, double);
+  CASE(kU8, kU32, kF64, uint8_t, uint32_t, double);
+  CASE(kU8, kU16, kF64, uint8_t, uint16_t, double);
   CASE(kU8, kU8, kF64, uint8_t, uint8_t, double);
+
+  // Float matrices with all combinations of overhead storage.
+  CASE(kU64, kU64, kF32, uint64_t, uint64_t, float);
+  CASE(kU64, kU32, kF32, uint64_t, uint32_t, float);
+  CASE(kU64, kU16, kF32, uint64_t, uint16_t, float);
+  CASE(kU64, kU8, kF32, uint64_t, uint8_t, float);
+  CASE(kU32, kU64, kF32, uint32_t, uint64_t, float);
+  CASE(kU32, kU32, kF32, uint32_t, uint32_t, float);
+  CASE(kU32, kU16, kF32, uint32_t, uint16_t, float);
+  CASE(kU32, kU8, kF32, uint32_t, uint8_t, float);
+  CASE(kU16, kU64, kF32, uint16_t, uint64_t, float);
+  CASE(kU16, kU32, kF32, uint16_t, uint32_t, float);
   CASE(kU16, kU16, kF32, uint16_t, uint16_t, float);
+  CASE(kU16, kU8, kF32, uint16_t, uint8_t, float);
+  CASE(kU8, kU64, kF32, uint8_t, uint64_t, float);
+  CASE(kU8, kU32, kF32, uint8_t, uint32_t, float);
+  CASE(kU8, kU16, kF32, uint8_t, uint16_t, float);
   CASE(kU8, kU8, kF32, uint8_t, uint8_t, float);
 
-  // Integral matrices with low overhead storage.
+  // Integral matrices with same overhead storage.
+  CASE(kU64, kU64, kI32, uint64_t, uint64_t, int32_t);
+  CASE(kU64, kU64, kI16, uint64_t, uint64_t, int16_t);
+  CASE(kU64, kU64, kI8, uint64_t, uint64_t, int8_t);
   CASE(kU32, kU32, kI32, uint32_t, uint32_t, int32_t);
   CASE(kU32, kU32, kI16, uint32_t, uint32_t, int16_t);
   CASE(kU32, kU32, kI8, uint32_t, uint32_t, int8_t);

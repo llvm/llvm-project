@@ -251,6 +251,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .widenScalarToNextPow2(0);
 
   getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
+      .lowerIf(atomicOrderingAtLeastOrStrongerThan(0, AtomicOrdering::Unordered))
       .legalForTypesWithMemDesc({{s32, p0, 8, 8},
                                  {s32, p0, 16, 8},
                                  {s32, p0, 32, 8},
@@ -668,6 +669,17 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarize(1);
   getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).lower();
 
+  // TODO: Custom lowering for v2s32, v4s32, v2s64.
+  getActionDefinitionsBuilder(G_BITREVERSE).legalFor({s32, s64, v8s8, v16s8});
+
+  getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF).lower();
+
+  // TODO: Handle vector types.
+  getActionDefinitionsBuilder(G_CTTZ)
+      .clampScalar(0, s32, s64)
+      .scalarSameSizeAs(1, 0)
+      .customFor({s32, s64});
+
   getActionDefinitionsBuilder(G_SHUFFLE_VECTOR)
       .legalIf([=](const LegalityQuery &Query) {
         const LLT &DstTy = Query.Types[0];
@@ -786,6 +798,8 @@ bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeCTPOP(MI, MRI, Helper);
   case TargetOpcode::G_ATOMIC_CMPXCHG:
     return legalizeAtomicCmpxchg128(MI, MRI, Helper);
+  case TargetOpcode::G_CTTZ:
+    return legalizeCTTZ(MI, Helper);
   }
 
   llvm_unreachable("expected switch to return");
@@ -1150,6 +1164,17 @@ bool AArch64LegalizerInfo::legalizeAtomicCmpxchg128(
                                    *ST->getRegBankInfo());
 
   MIRBuilder.buildMerge(MI.getOperand(0), {DstLo, DstHi});
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AArch64LegalizerInfo::legalizeCTTZ(MachineInstr &MI,
+                                        LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  LLT Ty = MRI.getType(MI.getOperand(1).getReg());
+  auto BitReverse = MIRBuilder.buildBitReverse(Ty, MI.getOperand(1));
+  MIRBuilder.buildCTLZ(MI.getOperand(0).getReg(), BitReverse);
   MI.eraseFromParent();
   return true;
 }

@@ -490,6 +490,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  expm1f
+  SRCS
+    expm1f.cpp
+  HDRS
+    ../expm1f.h
+  DEPENDS
+    libc.include.math
+    libc.src.math.expf
+    libc.src.math.fabsf
+)
+
+add_entrypoint_object(
   copysign
   SRCS
     copysign.cpp

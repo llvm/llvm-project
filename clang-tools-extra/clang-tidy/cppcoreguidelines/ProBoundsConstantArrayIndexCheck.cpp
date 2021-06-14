@@ -99,7 +99,7 @@ void ProBoundsConstantArrayIndexCheck::check(
 
   if (Index->isSigned() && Index->isNegative()) {
     diag(Matched->getExprLoc(), "std::array<> index %0 is negative")
-        << Index->toString(10);
+        << toString(*Index, 10);
     return;
   }
 
@@ -118,7 +118,7 @@ void ProBoundsConstantArrayIndexCheck::check(
     diag(Matched->getExprLoc(),
          "std::array<> index %0 is past the end of the array "
          "(which contains %1 elements)")
-        << Index->toString(10) << ArraySize.toString(10, false);
+        << toString(*Index, 10) << toString(ArraySize, 10, false);
   }
 }
 

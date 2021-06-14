@@ -4,6 +4,7 @@ include_directories(..)
 set(HWASAN_RTL_SOURCES
   hwasan.cpp
   hwasan_allocator.cpp
+  hwasan_allocation_functions.cpp
   hwasan_dynamic_shadow.cpp
   hwasan_exceptions.cpp
   hwasan_globals.cpp

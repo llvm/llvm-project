@@ -1834,7 +1834,7 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
   };
 
   for (unsigned I = 0; I != SearchDirs.size(); ++I) {
-    // FIXME: Support this search within frameworks and header maps.
+    // FIXME: Support this search within frameworks.
     if (!SearchDirs[I].isNormalDir())
       continue;
 
@@ -1848,6 +1848,19 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
   if (!BestPrefixLength && CheckDir(path::parent_path(MainFile)) && IsSystem)
     *IsSystem = false;
 
+  // Try resolving resulting filename via reverse search in header maps,
+  // key from header name is user prefered name for the include file.
+  StringRef Filename = File.drop_front(BestPrefixLength);
+  for (unsigned I = 0; I != SearchDirs.size(); ++I) {
+    if (!SearchDirs[I].isHeaderMap())
+      continue;
 
-  return path::convert_to_slash(File.drop_front(BestPrefixLength));
+    StringRef SpelledFilename =
+        SearchDirs[I].getHeaderMap()->reverseLookupFilename(Filename);
+    if (!SpelledFilename.empty()) {
+      Filename = SpelledFilename;
+      break;
+    }
+  }
+  return path::convert_to_slash(Filename);
 }

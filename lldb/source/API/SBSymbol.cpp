@@ -18,9 +18,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBSymbol::SBSymbol() : m_opaque_ptr(nullptr) {
-  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBSymbol);
-}
+SBSymbol::SBSymbol() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBSymbol); }
 
 SBSymbol::SBSymbol(lldb_private::Symbol *lldb_object_ptr)
     : m_opaque_ptr(lldb_object_ptr) {}

@@ -218,7 +218,7 @@ define void @fold_indexed_load(i8* %mbstr, i64 %idxprom) nounwind uwtable ssp {
 ; CHECK-LABEL: fold_indexed_load:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    leaq (%rsi,%rsi,4), %rax
-; CHECK-NEXT:    movq _func_table@{{.*}}(%rip), %rcx
+; CHECK-NEXT:    movq _func_table@GOTPCREL(%rip), %rcx
 ; CHECK-NEXT:    jmpq *16(%rcx,%rax,8) ## TAILCALL
 entry:
   %dsplen = getelementptr inbounds [0 x %struct.funcs], [0 x %struct.funcs]* @func_table, i64 0, i64 %idxprom, i32 2
@@ -245,7 +245,7 @@ define i32 @rdar12282281(i32 %n) nounwind uwtable ssp {
 ; CHECK-LABEL: rdar12282281:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movslq %edi, %rax
-; CHECK-NEXT:    movq _funcs@{{.*}}(%rip), %rcx
+; CHECK-NEXT:    movq _funcs@GOTPCREL(%rip), %rcx
 ; CHECK-NEXT:    movq (%rcx,%rax,8), %r11
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    xorl %esi, %esi

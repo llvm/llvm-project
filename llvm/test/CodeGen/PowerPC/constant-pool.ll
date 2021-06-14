@@ -360,25 +360,28 @@ define ppc_fp128 @three_constants_ppcf128(ppc_fp128 %a, ppc_fp128 %c) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    std r0, 16(r1)
-; CHECK-NEXT:    stdu r1, -32(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    stdu r1, -48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-DAG:     xxlxor f4, f4, f4
-; CHECK-DAG:     xxsplti32dx vs3, 0, 1074935889
+; CHECK-NEXT:    .cfi_offset v31, -16
+; CHECK-NEXT:    stxv vs63, 32(r1) # 16-byte Folded Spill
+; CHECK-NEXT:    xxsplti32dx vs63, 0, 1074935889
+; CHECK-NEXT:    xxlxor f4, f4, f4
+; CHECK-NEXT:    xxlor vs3, vs63, vs63
 ; CHECK-NEXT:    xxsplti32dx vs3, 1, -343597384
 ; CHECK-NEXT:    # kill: def $f3 killed $f3 killed $vsl3
 ; CHECK-NEXT:    bl __gcc_qadd@notoc
-; CHECK-DAG:     xxlxor f4, f4, f4
-; CHECK-DAG:     xxsplti32dx vs3, 0, 1074935889
+; CHECK-NEXT:    xxlor vs3, vs63, vs63
+; CHECK-NEXT:    xxlxor f4, f4, f4
 ; CHECK-NEXT:    xxsplti32dx vs3, 1, -1719329096
 ; CHECK-NEXT:    # kill: def $f3 killed $f3 killed $vsl3
 ; CHECK-NEXT:    bl __gcc_qadd@notoc
-; CHECK-DAG:     xxlxor f4, f4, f4
-; CHECK-DAG:     xxsplti32dx vs3, 0, 1074935889
-; CHECK-NEXT:    xxsplti32dx vs3, 1, 8724152
-; CHECK-NEXT:    # kill: def $f3 killed $f3 killed $vsl3
+; CHECK-NEXT:    xxsplti32dx vs63, 1, 8724152
+; CHECK-NEXT:    xxlxor f4, f4, f4
+; CHECK-NEXT:    xscpsgndp f3, vs63, vs63
 ; CHECK-NEXT:    bl __gcc_qadd@notoc
-; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    lxv vs63, 32(r1) # 16-byte Folded Reload
+; CHECK-NEXT:    addi r1, r1, 48
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr

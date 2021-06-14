@@ -15,7 +15,7 @@ define void @foo(i32 %a) {
 ; CHECK-NEXT:  # %bb.1: # %true
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq qux
+; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB0_2: # %false

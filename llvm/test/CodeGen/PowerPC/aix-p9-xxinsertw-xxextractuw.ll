@@ -1560,14 +1560,12 @@ declare <4 x i32> @llvm.ppc.vsx.xxinsertw(<4 x i32>, <2 x i64>, i32)
 define <2 x i64> @intrinsicExtractTest(<2 x i64> %a) {
 ; CHECK-64-LABEL: intrinsicExtractTest:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    xxextractuw 0, 34, 5
-; CHECK-64-NEXT:    xxlor 34, 0, 0
+; CHECK-64-NEXT:    xxextractuw 34, 34, 5
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: intrinsicExtractTest:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    xxextractuw 0, 34, 5
-; CHECK-32-NEXT:    xxlor 34, 0, 0
+; CHECK-32-NEXT:    xxextractuw 34, 34, 5
 ; CHECK-32-NEXT:    blr
 entry:
   %ans = tail call <2 x i64> @llvm.ppc.vsx.xxextractuw(<2 x i64> %a, i32 5)

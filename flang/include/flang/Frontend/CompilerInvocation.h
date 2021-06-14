@@ -69,6 +69,8 @@ class CompilerInvocation : public CompilerInvocationBase {
   // of options.
   std::string moduleDir_ = ".";
 
+  std::string moduleFileSuffix_ = ".mod";
+
   bool debugModuleDir_ = false;
 
   bool warnAsErr_ = false;
@@ -96,6 +98,9 @@ public:
 
   std::string &moduleDir() { return moduleDir_; }
   const std::string &moduleDir() const { return moduleDir_; }
+
+  std::string &moduleFileSuffix() { return moduleFileSuffix_; }
+  const std::string &moduleFileSuffix() const { return moduleFileSuffix_; }
 
   bool &debugModuleDir() { return debugModuleDir_; }
   const bool &debugModuleDir() const { return debugModuleDir_; }
@@ -128,6 +133,10 @@ public:
 
   /// Useful setters
   void SetModuleDir(std::string &moduleDir) { moduleDir_ = moduleDir; }
+
+  void SetModuleFileSuffix(const char *moduleFileSuffix) {
+    moduleFileSuffix_ = std::string(moduleFileSuffix);
+  }
 
   void SetDebugModuleDir(bool flag) { debugModuleDir_ = flag; }
 

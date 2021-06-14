@@ -20,6 +20,8 @@ class Block;
 class BlockArgument;
 class FileLineColLoc;
 class Operation;
+class OperationName;
+class SymbolRefAttr;
 class Value;
 
 /// This class represents state from a parsed MLIR textual format string. It is
@@ -51,7 +53,8 @@ public:
       SMDefinition definition;
     };
 
-    OperationDefinition(Operation *op, llvm::SMRange loc) : op(op), loc(loc) {}
+    OperationDefinition(Operation *op, llvm::SMRange loc, llvm::SMLoc endLoc)
+        : op(op), loc(loc), scopeLoc(loc.Start, endLoc) {}
 
     /// The operation representing this definition.
     Operation *op;
@@ -59,8 +62,16 @@ public:
     /// The source location for the operation, i.e. the location of its name.
     llvm::SMRange loc;
 
+    /// The full source range of the operation definition, i.e. a range
+    /// encompassing the start and end of the full operation definition.
+    llvm::SMRange scopeLoc;
+
     /// Source definitions for any result groups of this operation.
     SmallVector<std::pair<unsigned, SMDefinition>> resultGroups;
+
+    /// If this operation is a symbol operation, this vector contains symbol
+    /// uses of this operation.
+    SmallVector<llvm::SMRange> symbolUses;
   };
 
   /// This class represents the information for a block definition within the
@@ -104,6 +115,10 @@ public:
   /// state.
   iterator_range<OperationDefIterator> getOpDefs() const;
 
+  /// Return the definition for the given operation, or nullptr if the given
+  /// operation does not have a definition.
+  const OperationDefinition *getOpDef(Operation *op) const;
+
   /// Returns (heuristically) the range of an identifier given a SMLoc
   /// corresponding to the start of an identifier location.
   static llvm::SMRange convertIdLocToRange(llvm::SMLoc loc);
@@ -112,16 +127,40 @@ public:
   // Populate State
   //===--------------------------------------------------------------------===//
 
-  /// Add a definition of the given operation.
-  void addDefinition(
-      Operation *op, llvm::SMRange location,
+  /// Initialize the state in preparation for populating more parser state under
+  /// the given top-level operation.
+  void initialize(Operation *topLevelOp);
+
+  /// Finalize any in-progress parser state under the given top-level operation.
+  void finalize(Operation *topLevelOp);
+
+  /// Start a definition for an operation with the given name.
+  void startOperationDefinition(const OperationName &opName);
+
+  /// Finalize the most recently started operation definition.
+  void finalizeOperationDefinition(
+      Operation *op, llvm::SMRange nameLoc, llvm::SMLoc endLoc,
       ArrayRef<std::pair<unsigned, llvm::SMLoc>> resultGroups = llvm::None);
+
+  /// Start a definition for a region nested under the current operation.
+  void startRegionDefinition();
+
+  /// Finalize the most recently started region definition.
+  void finalizeRegionDefinition();
+
+  /// Add a definition of the given entity.
   void addDefinition(Block *block, llvm::SMLoc location);
   void addDefinition(BlockArgument blockArg, llvm::SMLoc location);
 
   /// Add a source uses of the given value.
   void addUses(Value value, ArrayRef<llvm::SMLoc> locations);
   void addUses(Block *block, ArrayRef<llvm::SMLoc> locations);
+
+  /// Add source uses for all the references nested under `refAttr`. The
+  /// provided `locations` should match 1-1 with the number of references in
+  /// `refAttr`, i.e.:
+  ///   nestedReferences.size() + /*leafReference=*/1 == refLocations.size()
+  void addUses(SymbolRefAttr refAttr, ArrayRef<llvm::SMRange> refLocations);
 
   /// Refine the `oldValue` to the `newValue`. This is used to indicate that
   /// `oldValue` was a placeholder, and the uses of it should really refer to

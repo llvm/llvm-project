@@ -69,7 +69,7 @@ define void @isint_branch(double %d) nounwind {
 ; CHECK64-NEXT:    jp .LBB2_2
 ; CHECK64-NEXT:  # %bb.1: # %true
 ; CHECK64-NEXT:    pushq %rax
-; CHECK64-NEXT:    callq foo
+; CHECK64-NEXT:    callq foo@PLT
 ; CHECK64-NEXT:    popq %rax
 ; CHECK64-NEXT:  .LBB2_2: # %false
 ; CHECK64-NEXT:    retq
@@ -83,7 +83,7 @@ define void @isint_branch(double %d) nounwind {
 ; CHECK32-NEXT:    jne .LBB2_2
 ; CHECK32-NEXT:    jp .LBB2_2
 ; CHECK32-NEXT:  # %bb.1: # %true
-; CHECK32-NEXT:    calll foo
+; CHECK32-NEXT:    calll foo@PLT
 ; CHECK32-NEXT:  .LBB2_2: # %false
 ; CHECK32-NEXT:    retl
   %i = fptosi double %d to i32

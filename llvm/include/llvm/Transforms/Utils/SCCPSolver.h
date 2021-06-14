@@ -130,6 +130,23 @@ public:
   /// Helper to return a Constant if \p LV is either a constant or a constant
   /// range with a single element.
   Constant *getConstant(const ValueLatticeElement &LV) const;
+
+  /// Return a reference to the set of argument tracked functions.
+  SmallPtrSetImpl<Function *> &getArgumentTrackedFunctions();
+
+  /// Mark argument \p A constant with value \p C in a new function
+  /// specialization. The argument's parent function is a specialization of the
+  /// original function \p F. All other arguments of the specialization inherit
+  /// the lattice state of their corresponding values in the original function.
+  void markArgInFuncSpecialization(Function *F, Argument *A, Constant *C);
+
+  /// Mark all of the blocks in function \p F non-executable. Clients can used
+  /// this method to erase a function from the module (e.g., if it has been
+  /// completely specialized and is no longer needed).
+  void markFunctionUnreachable(Function *F);
+
+  void visit(Instruction *I);
+  void visitCall(CallInst &I);
 };
 
 } // namespace llvm

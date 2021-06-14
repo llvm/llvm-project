@@ -37,7 +37,7 @@ ConceptSpecializationExpr::ConceptSpecializationExpr(
     const ASTTemplateArgumentListInfo *ArgsAsWritten,
     ArrayRef<TemplateArgument> ConvertedArgs,
     const ConstraintSatisfaction *Satisfaction)
-    : Expr(ConceptSpecializationExprClass, C.BoolTy, VK_RValue, OK_Ordinary),
+    : Expr(ConceptSpecializationExprClass, C.BoolTy, VK_PRValue, OK_Ordinary),
       ConceptReference(NNS, TemplateKWLoc, ConceptNameInfo, FoundDecl,
                        NamedConcept, ArgsAsWritten),
       NumTemplateArgs(ConvertedArgs.size()),
@@ -91,7 +91,7 @@ ConceptSpecializationExpr::ConceptSpecializationExpr(
     ArrayRef<TemplateArgument> ConvertedArgs,
     const ConstraintSatisfaction *Satisfaction, bool Dependent,
     bool ContainsUnexpandedParameterPack)
-    : Expr(ConceptSpecializationExprClass, C.BoolTy, VK_RValue, OK_Ordinary),
+    : Expr(ConceptSpecializationExprClass, C.BoolTy, VK_PRValue, OK_Ordinary),
       ConceptReference(NestedNameSpecifierLoc(), SourceLocation(),
                        DeclarationNameInfo(), NamedConcept, NamedConcept,
                        nullptr),
@@ -146,7 +146,7 @@ RequiresExpr::RequiresExpr(ASTContext &C, SourceLocation RequiresKWLoc,
                            ArrayRef<ParmVarDecl *> LocalParameters,
                            ArrayRef<concepts::Requirement *> Requirements,
                            SourceLocation RBraceLoc)
-    : Expr(RequiresExprClass, C.BoolTy, VK_RValue, OK_Ordinary),
+    : Expr(RequiresExprClass, C.BoolTy, VK_PRValue, OK_Ordinary),
       NumLocalParameters(LocalParameters.size()),
       NumRequirements(Requirements.size()), Body(Body), RBraceLoc(RBraceLoc) {
   RequiresExprBits.IsSatisfied = false;

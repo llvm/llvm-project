@@ -33,6 +33,8 @@ using namespace mlir::linalg;
 // the given `namedOp` does not have a region builder.
 static GenericOp createGenericOpFromNamedOp(LinalgOp namedOp,
                                             PatternRewriter &rewriter) {
+  SmallVector<Value> inputOperands = namedOp.getInputOperands();
+  SmallVector<Value> outputOperands = namedOp.getOutputOperands();
   SmallVector<AffineMap> indexingMaps = namedOp.getIndexingMaps();
   SmallVector<StringRef> iterators = llvm::to_vector<4>(
       namedOp.iterator_types().getAsValueRange<StringAttr>());
@@ -41,9 +43,9 @@ static GenericOp createGenericOpFromNamedOp(LinalgOp namedOp,
 
   // Inline the existing region if the named operation has a region attached.
   if (namedOp->getNumRegions() == 1) {
-    GenericOp genericOp = rewriter.create<GenericOp>(
-        namedOp.getLoc(), types, namedOp.getInputs(), namedOp.getOutputs(),
-        indexingMaps, iterators);
+    GenericOp genericOp =
+        rewriter.create<GenericOp>(namedOp.getLoc(), types, inputOperands,
+                                   outputOperands, indexingMaps, iterators);
     rewriter.inlineRegionBefore(namedOp->getRegion(0), genericOp.region(),
                                 genericOp.region().begin());
     return genericOp;
@@ -57,8 +59,8 @@ static GenericOp createGenericOpFromNamedOp(LinalgOp namedOp,
     return nullptr;
   }
   return rewriter.create<GenericOp>(
-      namedOp.getLoc(), types, namedOp.getInputs(), namedOp.getOutputs(),
-      indexingMaps, iterators,
+      namedOp.getLoc(), types, inputOperands, outputOperands, indexingMaps,
+      iterators,
       [&regionBuilder](OpBuilder &bodyBuilder, Location loc, ValueRange) {
         ImplicitLocOpBuilder b(loc, bodyBuilder);
         regionBuilder(b, *bodyBuilder.getBlock(),
@@ -163,13 +165,14 @@ void LinalgGeneralizationPass::runOnFunction() {
 
 GenericOp GeneralizeConvOp::createGenericOp(ConvOp convOp,
                                             OpBuilder &builder) const {
-  SmallVector<AffineMap, 4> indexingMaps = convOp.getIndexingMaps();
+  SmallVector<AffineMap> indexingMaps = convOp.getIndexingMaps();
   auto iterators =
       llvm::to_vector<4>(convOp.iterator_types().getAsValueRange<StringAttr>());
+  SmallVector<Value> inputBuffers = convOp.getInputBufferOperands();
+  SmallVector<Value> outputBuffers = convOp.getOutputBufferOperands();
   return builder.create<GenericOp>(
-      convOp.getLoc(), /*resultTensorTypes=*/ArrayRef<Type>(),
-      convOp.getInputBuffers(), convOp.getOutputBuffers(), indexingMaps,
-      iterators,
+      convOp.getLoc(), /*resultTensorTypes=*/ArrayRef<Type>(), inputBuffers,
+      outputBuffers, indexingMaps, iterators,
       [](OpBuilder &bodyBuilder, Location bodyLoc, ValueRange bodyArgs) {
         Value mul =
             bodyBuilder.create<MulFOp>(bodyLoc, bodyArgs[0], bodyArgs[1]);

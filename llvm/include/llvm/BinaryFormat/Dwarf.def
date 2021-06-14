@@ -1114,6 +1114,10 @@ HANDLE_DW_CFA_PRED(0x1d, MIPS_advance_loc8, SELECT_MIPS64)
 HANDLE_DW_CFA_PRED(0x2d, GNU_window_save, SELECT_SPARC)
 HANDLE_DW_CFA_PRED(0x2d, AARCH64_negate_ra_state, SELECT_AARCH64)
 HANDLE_DW_CFA_PRED(0x2e, GNU_args_size, SELECT_X86)
+// Heterogeneous Debugging Extension defined at
+// https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html#cfa-definition-instructions
+HANDLE_DW_CFA(0x30, LLVM_def_aspace_cfa)
+HANDLE_DW_CFA(0x31, LLVM_def_aspace_cfa_sf)
 
 // Apple Objective-C Property Attributes.
 // Keep this list in sync with clang's DeclObjCCommon.h

@@ -329,6 +329,11 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Kind = SymbolKind::Using;
       Info.Lang = SymbolLanguage::CXX;
       break;
+    case Decl::UsingEnum:
+      Info.Kind = SymbolKind::Using;
+      Info.Lang = SymbolLanguage::CXX;
+      Info.SubKind = SymbolSubKind::UsingEnum;
+      break;
     case Decl::Binding:
       Info.Kind = SymbolKind::Variable;
       Info.Lang = SymbolLanguage::CXX;
@@ -542,6 +547,8 @@ StringRef index::getSymbolSubKindString(SymbolSubKind K) {
   case SymbolSubKind::AccessorSetter: return "acc-set";
   case SymbolSubKind::UsingTypename: return "using-typename";
   case SymbolSubKind::UsingValue: return "using-value";
+  case SymbolSubKind::UsingEnum:
+    return "using-enum";
   }
   llvm_unreachable("invalid symbol subkind");
 }

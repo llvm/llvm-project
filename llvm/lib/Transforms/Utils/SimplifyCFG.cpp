@@ -2059,10 +2059,6 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
     return NumPHIInsts <= 1;
   };
 
-  // If no instructions can be sunk, early-return.
-  if (ScanIdx == 0)
-    return false;
-
   // We've determined that we are going to sink last ScanIdx instructions,
   // and recorded them in InstructionsToSink. Now, some instructions may be
   // unprofitable to sink. But that determination depends on the instructions
@@ -2716,6 +2712,12 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
       // Don't bother if the branch will be constant folded trivially.
       isa<ConstantInt>(IfCond))
     return false;
+
+  // Don't try to fold an unreachable block. For example, the phi node itself
+  // can't be the candidate if-condition for a select that we want to form.
+  if (auto *IfCondPhiInst = dyn_cast<PHINode>(IfCond))
+    if (IfCondPhiInst->getParent() == BB)
+      return false;
 
   // Okay, we found that we can merge this two-entry phi node into a select.
   // Doing so would require us to fold *all* two entry phi nodes in this block.

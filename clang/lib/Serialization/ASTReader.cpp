@@ -783,9 +783,11 @@ static bool checkHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
                                      StringRef SpecificModuleCachePath,
                                      StringRef ExistingModuleCachePath,
                                      DiagnosticsEngine *Diags,
-                                     const LangOptions &LangOpts) {
+                                     const LangOptions &LangOpts,
+                                     const PreprocessorOptions &PPOpts) {
   if (LangOpts.Modules) {
-    if (SpecificModuleCachePath != ExistingModuleCachePath) {
+    if (SpecificModuleCachePath != ExistingModuleCachePath &&
+        !PPOpts.AllowPCHWithDifferentModulesCachePath) {
       if (Diags)
         Diags->Report(diag::err_pch_modulecache_mismatch)
           << SpecificModuleCachePath << ExistingModuleCachePath;
@@ -802,7 +804,7 @@ bool PCHValidator::ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
   return checkHeaderSearchOptions(HSOpts, SpecificModuleCachePath,
                                   PP.getHeaderSearchInfo().getModuleCachePath(),
                                   Complain ? &Reader.Diags : nullptr,
-                                  PP.getLangOpts());
+                                  PP.getLangOpts(), PP.getPreprocessorOpts());
 }
 
 void PCHValidator::ReadCounter(const ModuleFile &M, unsigned Value) {
@@ -5142,8 +5144,8 @@ namespace {
                                  StringRef SpecificModuleCachePath,
                                  bool Complain) override {
       return checkHeaderSearchOptions(HSOpts, SpecificModuleCachePath,
-                                      ExistingModuleCachePath,
-                                      nullptr, ExistingLangOpts);
+                                      ExistingModuleCachePath, nullptr,
+                                      ExistingLangOpts, ExistingPPOpts);
     }
 
     bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
@@ -11720,6 +11722,12 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPSizesClause::CreateEmpty(Context, NumSizes);
     break;
   }
+  case llvm::omp::OMPC_full:
+    C = OMPFullClause::CreateEmpty(Context);
+    break;
+  case llvm::omp::OMPC_partial:
+    C = OMPPartialClause::CreateEmpty(Context);
+    break;
   case llvm::omp::OMPC_allocator:
     C = new (Context) OMPAllocatorClause();
     break;
@@ -12029,6 +12037,13 @@ void OMPClauseReader::VisitOMPSimdlenClause(OMPSimdlenClause *C) {
 void OMPClauseReader::VisitOMPSizesClause(OMPSizesClause *C) {
   for (Expr *&E : C->getSizesRefs())
     E = Record.readSubExpr();
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPFullClause(OMPFullClause *C) {}
+
+void OMPClauseReader::VisitOMPPartialClause(OMPPartialClause *C) {
+  C->setFactor(Record.readSubExpr());
   C->setLParenLoc(Record.readSourceLocation());
 }
 

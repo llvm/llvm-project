@@ -612,7 +612,7 @@ bool ScopBuilder::propagateDomainConstraints(
 
     BasicBlock *BB = getRegionNodeBasicBlock(RN);
     isl::set &Domain = scop->getOrInitEmptyDomain(BB);
-    assert(Domain);
+    assert(!Domain.is_null());
 
     // Under the union of all predecessor conditions we can reach this block.
     isl::set PredDom = getPredecessorDomainConstraints(BB, Domain);
@@ -653,7 +653,7 @@ void ScopBuilder::propagateDomainConstraintsToRegionExit(
   }
 
   isl::set Domain = scop->getOrInitEmptyDomain(BB);
-  assert(Domain && "Cannot propagate a nullptr");
+  assert(!Domain.is_null() && "Cannot propagate a nullptr");
 
   Loop *ExitBBLoop = getFirstNonBoxedLoopFor(ExitBB, LI, scop->getBoxedLoops());
 
@@ -664,7 +664,8 @@ void ScopBuilder::propagateDomainConstraintsToRegionExit(
 
   // If the exit domain is not yet created we set it otherwise we "add" the
   // current domain.
-  ExitDomain = ExitDomain ? AdjustedDomain.unite(ExitDomain) : AdjustedDomain;
+  ExitDomain =
+      !ExitDomain.is_null() ? AdjustedDomain.unite(ExitDomain) : AdjustedDomain;
 
   // Initialize the invalid domain.
   InvalidDomainMap[ExitBB] = ExitDomain.empty(ExitDomain.get_space());
@@ -750,7 +751,7 @@ bool ScopBuilder::addLoopBoundsToHeaderDomain(
 
     isl::set LatchBBDom = scop->getDomainConditions(LatchBB);
 
-    isl::set BackedgeCondition = nullptr;
+    isl::set BackedgeCondition;
 
     Instruction *TI = LatchBB->getTerminator();
     BranchInst *BI = dyn_cast<BranchInst>(TI);
@@ -823,7 +824,7 @@ void ScopBuilder::buildInvariantEquivalenceClasses() {
 
     ClassRep = LInst;
     scop->addInvariantEquivClass(
-        InvariantEquivClassTy{PointerSCEV, MemoryAccessList(), nullptr, Ty});
+        InvariantEquivClassTy{PointerSCEV, MemoryAccessList(), {}, Ty});
   }
 }
 
@@ -970,7 +971,7 @@ bool ScopBuilder::buildDomainsWithBranchConstraints(
       // successor block.
       isl::set &SuccDomain = scop->getOrInitEmptyDomain(SuccBB);
 
-      if (SuccDomain) {
+      if (!SuccDomain.is_null()) {
         SuccDomain = SuccDomain.unite(CondSet).coalesce();
       } else {
         // Initialize the invalid domain.
@@ -1013,7 +1014,7 @@ bool ScopBuilder::propagateInvalidStmtDomains(
     bool ContainsErrorBlock = containsErrorBlock(RN, scop->getRegion(), LI, DT);
     BasicBlock *BB = getRegionNodeBasicBlock(RN);
     isl::set &Domain = scop->getOrInitEmptyDomain(BB);
-    assert(Domain && "Cannot propagate a nullptr");
+    assert(!Domain.is_null() && "Cannot propagate a nullptr");
 
     isl::set InvalidDomain = InvalidDomainMap[BB];
 
@@ -1131,9 +1132,9 @@ void ScopBuilder::buildScalarDependences(ScopStmt *UserStmt,
 // interpreted as the empty schedule. Can also return null if both schedules are
 // empty.
 static isl::schedule combineInSequence(isl::schedule Prev, isl::schedule Succ) {
-  if (!Prev)
+  if (Prev.is_null())
     return Succ;
-  if (!Succ)
+  if (Succ.is_null())
     return Prev;
 
   return Prev.sequence(Succ);
@@ -1155,7 +1156,7 @@ static isl::schedule combineInSequence(isl::schedule Prev, isl::schedule Succ) {
 // @returns      A mapping from USet to its N-th dimension.
 static isl::multi_union_pw_aff mapToDimension(isl::union_set USet, int N) {
   assert(N >= 0);
-  assert(USet);
+  assert(!USet.is_null());
   assert(!USet.is_empty());
 
   auto Result = isl::union_pw_multi_aff::empty(USet.get_space());
@@ -1175,7 +1176,7 @@ static isl::multi_union_pw_aff mapToDimension(isl::union_set USet, int N) {
 
 void ScopBuilder::buildSchedule() {
   Loop *L = getLoopSurroundingScop(*scop, LI);
-  LoopStackTy LoopStack({LoopStackElementTy(L, nullptr, 0)});
+  LoopStackTy LoopStack({LoopStackElementTy(L, {}, 0)});
   buildSchedule(scop->getRegion().getNode(), LoopStack);
   assert(LoopStack.size() == 1 && LoopStack.back().L == L);
   scop->setScheduleTree(LoopStack[0].Schedule);
@@ -1243,7 +1244,7 @@ void ScopBuilder::buildSchedule(Region *R, LoopStackTy &LoopStack) {
         DelayList.push_back(RN);
         continue;
       }
-      LoopStack.push_back({L, nullptr, 0});
+      LoopStack.push_back({L, {}, 0});
     }
     buildSchedule(RN, LoopStack);
   }
@@ -1288,7 +1289,7 @@ void ScopBuilder::buildSchedule(RegionNode *RN, LoopStackTy &LoopStack) {
     ++LoopData;
     --Dimension;
 
-    if (Schedule) {
+    if (!Schedule.is_null()) {
       isl::union_set Domain = Schedule.get_domain();
       isl::multi_union_pw_aff MUPA = mapToDimension(Domain, Dimension);
       Schedule = Schedule.insert_partial_schedule(MUPA);
@@ -1305,7 +1306,7 @@ void ScopBuilder::buildSchedule(RegionNode *RN, LoopStackTy &LoopStack) {
 
       // It is easier to insert the marks here that do it retroactively.
       isl::id IslLoopId = createIslLoopAttr(scop->getIslCtx(), L);
-      if (IslLoopId)
+      if (!IslLoopId.is_null())
         Schedule = Schedule.get_root()
                        .get_child(0)
                        .insert_mark(IslLoopId)
@@ -2808,9 +2809,11 @@ void ScopBuilder::hoistInvariantLoads() {
   for (ScopStmt &Stmt : *scop) {
     InvariantAccessesTy InvariantAccesses;
 
-    for (MemoryAccess *Access : Stmt)
-      if (isl::set NHCtx = getNonHoistableCtx(Access, Writes))
+    for (MemoryAccess *Access : Stmt) {
+      isl::set NHCtx = getNonHoistableCtx(Access, Writes);
+      if (!NHCtx.is_null())
         InvariantAccesses.push_back({Access, NHCtx});
+    }
 
     // Transfer the memory access from the statement to the SCoP.
     for (auto InvMA : InvariantAccesses)
@@ -2911,7 +2914,7 @@ isl::set ScopBuilder::getNonHoistableCtx(MemoryAccess *Access,
 
   if (Access->isScalarKind() || Access->isWrite() || !Access->isAffine() ||
       Access->isMemoryIntrinsic())
-    return nullptr;
+    return {};
 
   // Skip accesses that have an invariant base pointer which is defined but
   // not loaded inside the SCoP. This can happened e.g., if a readnone call
@@ -2924,13 +2927,13 @@ isl::set ScopBuilder::getNonHoistableCtx(MemoryAccess *Access,
   // outside the region.
   auto *LI = cast<LoadInst>(Access->getAccessInstruction());
   if (hasNonHoistableBasePtrInScop(Access, Writes))
-    return nullptr;
+    return {};
 
   isl::map AccessRelation = Access->getAccessRelation();
   assert(!AccessRelation.is_empty());
 
   if (AccessRelation.involves_dims(isl::dim::in, 0, Stmt.getNumIterators()))
-    return nullptr;
+    return {};
 
   AccessRelation = AccessRelation.intersect_domain(Stmt.getDomain());
   isl::set SafeToLoad;
@@ -2942,13 +2945,13 @@ isl::set ScopBuilder::getNonHoistableCtx(MemoryAccess *Access,
   } else if (BB != LI->getParent()) {
     // Skip accesses in non-affine subregions as they might not be executed
     // under the same condition as the entry of the non-affine subregion.
-    return nullptr;
+    return {};
   } else {
     SafeToLoad = AccessRelation.range();
   }
 
   if (isAccessRangeTooComplex(AccessRelation.range()))
-    return nullptr;
+    return {};
 
   isl::union_map Written = Writes.intersect_range(SafeToLoad);
   isl::set WrittenCtx = Written.params();
@@ -2960,7 +2963,7 @@ isl::set ScopBuilder::getNonHoistableCtx(MemoryAccess *Access,
   WrittenCtx = WrittenCtx.remove_divs();
   bool TooComplex = WrittenCtx.n_basic_set() >= MaxDisjunctsInDomain;
   if (TooComplex || !isRequiredInvariantLoad(LI))
-    return nullptr;
+    return {};
 
   scop->addAssumption(INVARIANTLOAD, WrittenCtx, LI->getDebugLoc(),
                       AS_RESTRICTION, LI->getParent());
@@ -3046,7 +3049,8 @@ void ScopBuilder::addInvariantLoads(ScopStmt &Stmt,
         if (!Values.count(AccInst))
           continue;
 
-        if (isl::id ParamId = scop->getIdForParam(Parameter)) {
+        isl::id ParamId = scop->getIdForParam(Parameter);
+        if (!ParamId.is_null()) {
           int Dim = DomainCtx.find_dim_by_id(isl::dim::param, ParamId);
           if (Dim >= 0)
             DomainCtx = DomainCtx.eliminate(isl::dim::param, Dim, 1);
@@ -3110,7 +3114,7 @@ void ScopBuilder::addInvariantLoads(ScopStmt &Stmt,
 
       // Unify the execution context of the class and this statement.
       isl::set IAClassDomainCtx = IAClass.ExecutionContext;
-      if (IAClassDomainCtx)
+      if (!IAClassDomainCtx.is_null())
         IAClassDomainCtx = IAClassDomainCtx.unite(MACtx).coalesce();
       else
         IAClassDomainCtx = MACtx;
@@ -3337,7 +3341,7 @@ static bool buildMinMaxAccess(isl::set Set,
   // enclose the accessed memory region by MinPMA and MaxPMA. The pointer
   // we test during code generation might now point after the end of the
   // allocated array but we will never dereference it anyway.
-  assert((!MaxPMA || MaxPMA.dim(isl::dim::out)) &&
+  assert((MaxPMA.is_null() || MaxPMA.dim(isl::dim::out)) &&
          "Assumed at least one output dimension");
 
   Pos = MaxPMA.dim(isl::dim::out) - 1;
@@ -3347,7 +3351,7 @@ static bool buildMinMaxAccess(isl::set Set,
   LastDimAff = LastDimAff.add(OneAff);
   MaxPMA = MaxPMA.set_pw_aff(Pos, LastDimAff);
 
-  if (!MinPMA || !MaxPMA)
+  if (MinPMA.is_null() || MaxPMA.is_null())
     return false;
 
   MinMaxAccesses.push_back(std::make_pair(MinPMA, MaxPMA));

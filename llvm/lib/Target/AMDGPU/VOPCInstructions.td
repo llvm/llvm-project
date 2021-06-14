@@ -1275,7 +1275,11 @@ let AssemblerPredicate = isGFX11Only in {
     defvar ps64 = !cast<VOP3_Pseudo>(OpName#"_e64");
     let DecoderNamespace = "GFX11" in {
       def _e32_gfx11 :
-        VOPC_Real<ps32, SIEncodingFamily.GFX11, asm_name>,
+        // 32 and 64 bit forms of the instruction have _e32 and _e64
+        // respectively appended to their assembly mnemonic.
+        // _e64 is printed as part of the VOPDstS64orS32 operand, whereas
+        // the destination-less 32bit forms add it to the asmString here.
+        VOPC_Real<ps32, SIEncodingFamily.GFX11, asm_name#"_e32">,
         VOPCe<op{7-0}>,
         MnemonicAlias<ps32.Mnemonic, asm_name>, Requires<[isGFX11Plus]>;
       def _e64_gfx11 :
@@ -1438,7 +1442,7 @@ let AssemblerPredicate = isGFX11Only in {
             MnemonicAlias<!subst("_nosdst", "", ps32.Mnemonic), asm_name>,
             Requires<[isGFX11Plus]>,
             VOPCe<op{7 - 0}> {
-        let AsmString = asm_name # " " # ps32.AsmOperands;
+        let AsmString = asm_name # "{_e32} " # ps32.AsmOperands;
       }
       def _e64_gfx11
           : VOP3_Real<ps64, SIEncodingFamily.GFX11, asm_name>,

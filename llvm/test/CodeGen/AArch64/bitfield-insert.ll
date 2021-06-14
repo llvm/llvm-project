@@ -576,3 +576,18 @@ define <2 x i32> @test_complex_type(<2 x i32>* %addr, i64 %in, i64* %bf ) {
 
   ret <2 x i32> %vec
 }
+
+define i64 @test_truncated_shift(i64 %x, i64 %y) {
+; CHECK-LABEL: test_truncated_shift:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    lsl w8, w1, #25
+; CHECK-NEXT:    lsr x8, x8, #25
+; CHECK-NEXT:    bfi x0, x8, #25, #5
+; CHECK-NEXT:    ret
+entry:
+  %and = and i64 %x, -1040187393
+  %shl4 = shl i64 %y, 25
+  %and5 = and i64 %shl4, 1040187392
+  %or = or i64 %and5, %and
+  ret i64 %or
+}

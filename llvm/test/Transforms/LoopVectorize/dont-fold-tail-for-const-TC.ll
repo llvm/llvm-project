@@ -34,7 +34,7 @@ define dso_local void @constTC(i32* noalias nocapture %A) optsize {
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, i32* [[TMP3]], i32 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32* [[TMP10]] to <2 x i32>*
 ; CHECK-NEXT:    store <2 x i32> <i32 13, i32 13>, <2 x i32>* [[TMP11]], align 1
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 6
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1800
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; CHECK:       middle.block:

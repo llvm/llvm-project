@@ -55,9 +55,7 @@ ReadAddressFromDebugAddrSection(const DWARFUnit *dwarf_cu,
 }
 
 // DWARFExpression constructor
-DWARFExpression::DWARFExpression()
-    : m_module_wp(), m_data(), m_dwarf_cu(nullptr),
-      m_reg_kind(eRegisterKindDWARF) {}
+DWARFExpression::DWARFExpression() : m_module_wp(), m_data() {}
 
 DWARFExpression::DWARFExpression(lldb::ModuleSP module_sp,
                                  const DataExtractor &data,

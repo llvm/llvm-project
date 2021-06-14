@@ -69,8 +69,8 @@ namespace {
 /// necessary utility hooks. This is only necessary for passes defined directly
 /// in C++. Passes defined declaratively use a cleaner mechanism for providing
 /// these utilities.
-struct MyFunctionPass : public PassWrapper<OperationPass<FuncOp>,
-                                           MyFunctionPass> {
+struct MyFunctionPass : public PassWrapper<MyFunctionPass,
+                                           OperationPass<FuncOp>> {
   void runOnOperation() override {
     // Get the current FuncOp operation being operated on.
     FuncOp f = getOperation();
@@ -113,7 +113,7 @@ A simple pass may look like:
 /// necessary utility hooks. This is only necessary for passes defined directly
 /// in C++. Passes defined declaratively use a cleaner mechanism for providing
 /// these utilities.
-struct MyOperationPass : public PassWrapper<OperationPass<>, MyOperationPass> {
+struct MyOperationPass : public PassWrapper<MyOperationPass, OperationPass<>> {
   void runOnOperation() override {
     // Get the current operation being operated on.
     Operation *op = getOperation();

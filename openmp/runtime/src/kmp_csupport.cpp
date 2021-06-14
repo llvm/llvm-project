@@ -604,6 +604,11 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
     }
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
 
+#if OMPD_SUPPORT
+    if (ompd_state & OMPD_ENABLE_BP)
+      ompd_bp_parallel_end();
+#endif
+
     this_thr->th.th_team = serial_team->t.t_parent;
     this_thr->th.th_info.ds.ds_tid = serial_team->t.t_master_tid;
 

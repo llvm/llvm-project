@@ -32,6 +32,12 @@ using namespace mlir::detail;
 #include "mlir/IR/BuiltinTypes.cpp.inc"
 
 //===----------------------------------------------------------------------===//
+/// Tablegen Interface Definitions
+//===----------------------------------------------------------------------===//
+
+#include "mlir/IR/BuiltinTypeInterfaces.cpp.inc"
+
+//===----------------------------------------------------------------------===//
 // BuiltinDialect
 //===----------------------------------------------------------------------===//
 
@@ -191,6 +197,13 @@ FunctionType::getWithoutArgsAndResults(ArrayRef<unsigned> argIndices,
   }
 
   return get(getContext(), newInputTypes, newResultTypes);
+}
+
+void FunctionType::walkImmediateSubElements(
+    function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  for (Type type : llvm::concat<const Type>(getInputs(), getResults()))
+    walkTypesFn(type);
 }
 
 //===----------------------------------------------------------------------===//
@@ -413,6 +426,12 @@ VectorType VectorType::scaleElementBitwidth(unsigned scale) {
   return VectorType();
 }
 
+void VectorType::walkImmediateSubElements(
+    function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  walkTypesFn(getElementType());
+}
+
 //===----------------------------------------------------------------------===//
 // TensorType
 //===----------------------------------------------------------------------===//
@@ -453,6 +472,12 @@ RankedTensorType::verify(function_ref<InFlightDiagnostic()> emitError,
   return checkTensorElementType(emitError, elementType);
 }
 
+void RankedTensorType::walkImmediateSubElements(
+    function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  walkTypesFn(getElementType());
+}
+
 //===----------------------------------------------------------------------===//
 // UnrankedTensorType
 //===----------------------------------------------------------------------===//
@@ -461,6 +486,12 @@ LogicalResult
 UnrankedTensorType::verify(function_ref<InFlightDiagnostic()> emitError,
                            Type elementType) {
   return checkTensorElementType(emitError, elementType);
+}
+
+void UnrankedTensorType::walkImmediateSubElements(
+    function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  walkTypesFn(getElementType());
 }
 
 //===----------------------------------------------------------------------===//
@@ -604,6 +635,15 @@ LogicalResult MemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
   }
 
   return success();
+}
+
+void MemRefType::walkImmediateSubElements(
+    function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  walkTypesFn(getElementType());
+  walkAttrsFn(getMemorySpace());
+  for (AffineMap map : getAffineMaps())
+    walkAttrsFn(AffineMapAttr::get(map));
 }
 
 //===----------------------------------------------------------------------===//
@@ -773,6 +813,13 @@ LogicalResult mlir::getStridesAndOffset(MemRefType t,
   return success();
 }
 
+void UnrankedMemRefType::walkImmediateSubElements(
+    function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  walkTypesFn(getElementType());
+  walkAttrsFn(getMemorySpace());
+}
+
 //===----------------------------------------------------------------------===//
 /// TupleType
 //===----------------------------------------------------------------------===//
@@ -795,6 +842,13 @@ void TupleType::getFlattenedTypes(SmallVectorImpl<Type> &types) {
 
 /// Return the number of element types.
 size_t TupleType::size() const { return getImpl()->size(); }
+
+void TupleType::walkImmediateSubElements(
+    function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  for (Type type : getTypes())
+    walkTypesFn(type);
+}
 
 //===----------------------------------------------------------------------===//
 // Type Utilities

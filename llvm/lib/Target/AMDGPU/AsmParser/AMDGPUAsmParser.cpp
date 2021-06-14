@@ -3475,22 +3475,28 @@ bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst) {
   unsigned Dim = Inst.getOperand(DimIdx).getImm();
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfoByEncoding(Dim);
   bool IsNSA = SrsrcIdx - VAddr0Idx > 1;
-  unsigned VAddrSize =
+  unsigned ActualAddrSize =
       IsNSA ? SrsrcIdx - VAddr0Idx
             : AMDGPU::getRegOperandSize(getMRI(), Desc, VAddr0Idx) / 4;
   bool IsA16 = (A16Idx != -1 && Inst.getOperand(A16Idx).getImm());
 
-  unsigned AddrSize =
+  unsigned ExpectedAddrSize =
       AMDGPU::getAddrSizeMIMGOp(BaseOpcode, DimInfo, IsA16, hasG16());
 
   if (!IsNSA) {
-    if (AddrSize > 8)
-      AddrSize = 16;
-    else if (AddrSize > 4)
-      AddrSize = 8;
+    if (ExpectedAddrSize > 8)
+      ExpectedAddrSize = 16;
+    else if (ExpectedAddrSize > 5)
+      ExpectedAddrSize = 8;
+
+    // Allow oversized 8 VGPR vaddr when only 5 VGPR are required.
+    // This provides backward compatibility for assembly created
+    // before 160b types were directly supported.
+    if (ExpectedAddrSize == 5 && ActualAddrSize == 8)
+      return true;
   }
 
-  return VAddrSize == AddrSize;
+  return ActualAddrSize == ExpectedAddrSize;
 }
 
 bool AMDGPUAsmParser::validateMIMGAtomicDMask(const MCInst &Inst) {
@@ -4090,8 +4096,8 @@ static int IsAGPROperand(const MCInst &Inst, uint16_t NameIdx,
 
   unsigned Sub = MRI->getSubReg(Op.getReg(), AMDGPU::sub0);
   auto Reg = Sub ? Sub : Op.getReg();
-  const MCRegisterClass &AGRP32 = MRI->getRegClass(AMDGPU::AGPR_32RegClassID);
-  return AGRP32.contains(Reg) ? 1 : 0;
+  const MCRegisterClass &AGPR32 = MRI->getRegClass(AMDGPU::AGPR_32RegClassID);
+  return AGPR32.contains(Reg) ? 1 : 0;
 }
 
 bool AMDGPUAsmParser::validateAGPRLdSt(const MCInst &Inst) const {
@@ -4130,8 +4136,8 @@ bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
     return true;
 
   const MCRegisterInfo *MRI = getMRI();
-  const MCRegisterClass &VGRP32 = MRI->getRegClass(AMDGPU::VGPR_32RegClassID);
-  const MCRegisterClass &AGRP32 = MRI->getRegClass(AMDGPU::AGPR_32RegClassID);
+  const MCRegisterClass &VGPR32 = MRI->getRegClass(AMDGPU::VGPR_32RegClassID);
+  const MCRegisterClass &AGPR32 = MRI->getRegClass(AMDGPU::AGPR_32RegClassID);
   for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
     const MCOperand &Op = Inst.getOperand(I);
     if (!Op.isReg())
@@ -4141,9 +4147,9 @@ bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
     if (!Sub)
       continue;
 
-    if (VGRP32.contains(Sub) && ((Sub - AMDGPU::VGPR0) & 1))
+    if (VGPR32.contains(Sub) && ((Sub - AMDGPU::VGPR0) & 1))
       return false;
-    if (AGRP32.contains(Sub) && ((Sub - AMDGPU::AGPR0) & 1))
+    if (AGPR32.contains(Sub) && ((Sub - AMDGPU::AGPR0) & 1))
       return false;
   }
 
@@ -4163,12 +4169,12 @@ bool AMDGPUAsmParser::validateGWS(const MCInst &Inst,
     return true;
 
   const MCRegisterInfo *MRI = getMRI();
-  const MCRegisterClass &VGRP32 = MRI->getRegClass(AMDGPU::VGPR_32RegClassID);
+  const MCRegisterClass &VGPR32 = MRI->getRegClass(AMDGPU::VGPR_32RegClassID);
   int Data0Pos =
       AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::data0);
   assert(Data0Pos != -1);
   auto Reg = Inst.getOperand(Data0Pos).getReg();
-  auto RegIdx = Reg - (VGRP32.contains(Reg) ? AMDGPU::VGPR0 : AMDGPU::AGPR0);
+  auto RegIdx = Reg - (VGPR32.contains(Reg) ? AMDGPU::VGPR0 : AMDGPU::AGPR0);
   if (RegIdx & 1) {
     SMLoc RegLoc = getRegLoc(Reg, Operands);
     Error(RegLoc, "vgpr must be even aligned");

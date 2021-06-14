@@ -209,10 +209,9 @@ public:
 protected:
   struct Entry {
     Entry()
-        : file_addr(LLDB_INVALID_ADDRESS), line(0),
-          is_start_of_statement(false), is_start_of_basic_block(false),
+        : line(0), is_start_of_statement(false), is_start_of_basic_block(false),
           is_prologue_end(false), is_epilogue_begin(false),
-          is_terminal_entry(false), column(0), file_idx(0) {}
+          is_terminal_entry(false) {}
 
     Entry(lldb::addr_t _file_addr, uint32_t _line, uint16_t _column,
           uint16_t _file_idx, bool _is_start_of_statement,
@@ -279,7 +278,7 @@ protected:
 
     // Member variables.
     /// The file address for this line entry.
-    lldb::addr_t file_addr;
+    lldb::addr_t file_addr = LLDB_INVALID_ADDRESS;
     /// The source line number, or zero if there is no line number
     /// information.
     uint32_t line : 27;
@@ -298,10 +297,10 @@ protected:
     uint32_t is_terminal_entry : 1;
     /// The column number of the source line, or zero if there is no
     /// column information.
-    uint16_t column;
+    uint16_t column = 0;
     /// The file index into CompileUnit's file table, or zero if there
     /// is no file information.
-    uint16_t file_idx;
+    uint16_t file_idx = 0;
   };
 
   struct EntrySearchInfo {

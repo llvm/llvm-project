@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 subroutine s
   !ERROR: Declaration of 'x' conflicts with its use as internal procedure
   real :: x

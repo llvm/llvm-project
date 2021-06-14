@@ -307,7 +307,7 @@ void ScopArrayInfo::applyAndSetFAD(Value *FAD) {
     return;
   }
 
-  assert(DimensionSizesPw.size() > 0 && !DimensionSizesPw[0]);
+  assert(DimensionSizesPw.size() > 0 && DimensionSizesPw[0].is_null());
   assert(!this->FAD);
   this->FAD = FAD;
 
@@ -348,7 +348,7 @@ bool ScopArrayInfo::updateSizes(ArrayRef<const SCEV *> NewSizes,
   DimensionSizesPw.clear();
   for (const SCEV *Expr : DimensionSizes) {
     if (!Expr) {
-      DimensionSizesPw.push_back(nullptr);
+      DimensionSizesPw.push_back(isl::pw_aff());
       continue;
     }
     isl::pw_aff Size = S.getPwAffOnly(Expr);
@@ -889,12 +889,12 @@ MemoryAccess::MemoryAccess(ScopStmt *Stmt, Instruction *AccessInst,
                            ArrayRef<const SCEV *> Subscripts,
                            ArrayRef<const SCEV *> Sizes, Value *AccessValue,
                            MemoryKind Kind)
-    : Kind(Kind), AccType(AccType), Statement(Stmt), InvalidDomain(nullptr),
+    : Kind(Kind), AccType(AccType), Statement(Stmt), InvalidDomain(),
       BaseAddr(BaseAddress), ElementType(ElementType),
       Sizes(Sizes.begin(), Sizes.end()), AccessInstruction(AccessInst),
       AccessValue(AccessValue), IsAffine(Affine),
-      Subscripts(Subscripts.begin(), Subscripts.end()), AccessRelation(nullptr),
-      NewAccessRelation(nullptr), FAD(nullptr) {
+      Subscripts(Subscripts.begin(), Subscripts.end()), AccessRelation(),
+      NewAccessRelation(), FAD(nullptr) {
   static const std::string TypeStrings[] = {"", "_Read", "_Write", "_MayWrite"};
   const std::string Access = TypeStrings[AccType] + utostr(Stmt->size());
 
@@ -904,8 +904,8 @@ MemoryAccess::MemoryAccess(ScopStmt *Stmt, Instruction *AccessInst,
 
 MemoryAccess::MemoryAccess(ScopStmt *Stmt, AccessType AccType, isl::map AccRel)
     : Kind(MemoryKind::Array), AccType(AccType), Statement(Stmt),
-      InvalidDomain(nullptr), AccessRelation(nullptr),
-      NewAccessRelation(AccRel), FAD(nullptr) {
+      InvalidDomain(), AccessRelation(), NewAccessRelation(AccRel),
+      FAD(nullptr) {
   isl::id ArrayInfoId = NewAccessRelation.get_tuple_id(isl::dim::out);
   auto *SAI = ScopArrayInfo::getFromId(ArrayInfoId);
   Sizes.push_back(nullptr);
@@ -1068,7 +1068,7 @@ void MemoryAccess::setAccessRelation(isl::map NewAccess) {
 }
 
 void MemoryAccess::setNewAccessRelation(isl::map NewAccess) {
-  assert(NewAccess);
+  assert(!NewAccess.is_null());
 
 #ifndef NDEBUG
   // Check domain space compatibility.
@@ -1132,8 +1132,8 @@ isl::map ScopStmt::getSchedule() const {
   if (Domain.is_empty())
     return isl::map::from_aff(isl::aff(isl::local_space(getDomainSpace())));
   auto Schedule = getParent()->getSchedule();
-  if (!Schedule)
-    return nullptr;
+  if (Schedule.is_null())
+    return {};
   Schedule = Schedule.intersect_domain(isl::union_set(Domain));
   if (Schedule.is_empty())
     return isl::map::from_aff(isl::aff(isl::local_space(getDomainSpace())));
@@ -1203,21 +1203,19 @@ void ScopStmt::realignParams() {
 ScopStmt::ScopStmt(Scop &parent, Region &R, StringRef Name,
                    Loop *SurroundingLoop,
                    std::vector<Instruction *> EntryBlockInstructions)
-    : Parent(parent), InvalidDomain(nullptr), Domain(nullptr), R(&R),
-      Build(nullptr), BaseName(Name), SurroundingLoop(SurroundingLoop),
-      Instructions(EntryBlockInstructions) {}
+    : Parent(parent), InvalidDomain(), Domain(), R(&R), Build(), BaseName(Name),
+      SurroundingLoop(SurroundingLoop), Instructions(EntryBlockInstructions) {}
 
 ScopStmt::ScopStmt(Scop &parent, BasicBlock &bb, StringRef Name,
                    Loop *SurroundingLoop,
                    std::vector<Instruction *> Instructions)
-    : Parent(parent), InvalidDomain(nullptr), Domain(nullptr), BB(&bb),
-      Build(nullptr), BaseName(Name), SurroundingLoop(SurroundingLoop),
+    : Parent(parent), InvalidDomain(), Domain(), BB(&bb), Build(),
+      BaseName(Name), SurroundingLoop(SurroundingLoop),
       Instructions(Instructions) {}
 
 ScopStmt::ScopStmt(Scop &parent, isl::map SourceRel, isl::map TargetRel,
                    isl::set NewDomain)
-    : Parent(parent), InvalidDomain(nullptr), Domain(NewDomain),
-      Build(nullptr) {
+    : Parent(parent), InvalidDomain(), Domain(NewDomain), Build() {
   BaseName = getIslCompatibleName("CopyStmt_", "",
                                   std::to_string(parent.getCopyStmtsNum()));
   isl::id Id = isl::id::alloc(getIslCtx(), getBaseName(), this);
@@ -1283,14 +1281,14 @@ void ScopStmt::print(raw_ostream &OS, bool PrintInstructions) const {
   OS << "\t" << getBaseName() << "\n";
   OS.indent(12) << "Domain :=\n";
 
-  if (Domain) {
+  if (!Domain.is_null()) {
     OS.indent(16) << getDomainStr() << ";\n";
   } else
     OS.indent(16) << "n/a\n";
 
   OS.indent(12) << "Schedule :=\n";
 
-  if (Domain) {
+  if (!Domain.is_null()) {
     OS.indent(16) << getScheduleStr() << ";\n";
   } else
     OS.indent(16) << "n/a\n";
@@ -1586,7 +1584,7 @@ static std::vector<isl::id> getFortranArrayIds(Scop::array_range Arrays) {
     // TODO: actually need to check if it has a FAD, but for now this works.
     if (Array->getNumberOfDimensions() > 0) {
       isl::pw_aff PwAff = Array->getDimensionSizePw(0);
-      if (!PwAff)
+      if (PwAff.is_null())
         continue;
 
       isl::id Id = PwAff.get_dim_id(isl::dim::param, 0);
@@ -1786,7 +1784,7 @@ void Scop::removeStmts(function_ref<bool(ScopStmt &)> ShouldDelete,
 void Scop::removeStmtNotInDomainMap() {
   removeStmts([this](ScopStmt &Stmt) -> bool {
     isl::set Domain = DomainMap.lookup(Stmt.getEntryBlock());
-    if (!Domain)
+    if (Domain.is_null())
       return true;
     return Domain.is_empty();
   });
@@ -1897,7 +1895,7 @@ ScopArrayInfo *Scop::getScopArrayInfo(Value *BasePtr, MemoryKind Kind) {
 std::string Scop::getContextStr() const { return getContext().to_str(); }
 
 std::string Scop::getAssumedContextStr() const {
-  assert(AssumedContext && "Assumed context not yet built");
+  assert(!AssumedContext.is_null() && "Assumed context not yet built");
   return AssumedContext.to_str();
 }
 
@@ -1952,7 +1950,7 @@ isl::space Scop::getFullParamSpace() const {
 }
 
 isl::set Scop::getAssumedContext() const {
-  assert(AssumedContext && "Assumed context not yet built");
+  assert(!AssumedContext.is_null() && "Assumed context not yet built");
   return AssumedContext;
 }
 
@@ -2136,7 +2134,7 @@ void Scop::addAssumption(AssumptionKind Kind, isl::set Set, DebugLoc Loc,
 }
 
 void Scop::intersectDefinedBehavior(isl::set Set, AssumptionSign Sign) {
-  if (!DefinedBehaviorContext)
+  if (DefinedBehaviorContext.is_null())
     return;
 
   if (Sign == AS_ASSUMPTION)
@@ -2151,7 +2149,7 @@ void Scop::intersectDefinedBehavior(isl::set Set, AssumptionSign Sign) {
     simplify(DefinedBehaviorContext);
     if (DefinedBehaviorContext.n_basic_set() >
         MaxDisjunktsInDefinedBehaviourContext)
-      DefinedBehaviorContext = nullptr;
+      DefinedBehaviorContext = {};
   }
 }
 
@@ -2173,7 +2171,7 @@ void Scop::printContext(raw_ostream &OS) const {
   OS.indent(4) << InvalidContext << "\n";
 
   OS.indent(4) << "Defined Behavior Context:\n";
-  if (DefinedBehaviorContext)
+  if (!DefinedBehaviorContext.is_null())
     OS.indent(4) << DefinedBehaviorContext << "\n";
   else
     OS.indent(4) << "<unavailable>\n";
@@ -2286,7 +2284,7 @@ __isl_give PWACtx Scop::getPwAff(const SCEV *E, BasicBlock *BB,
   // the SCoP and return a dummy value. This way we do not need to add error
   // handling code to all users of this function.
   auto PWAC = Affinator.getPwAff(E, BB, RecordedAssumptions);
-  if (PWAC.first) {
+  if (!PWAC.first.is_null()) {
     // TODO: We could use a heuristic and either use:
     //         SCEVAffinator::takeNonNegativeAssumption
     //       or

@@ -16,12 +16,12 @@ define dso_local void @foo1(double %a.coerce0, double %a.coerce1, double %b.coer
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    movq %rsp, %rdi
-; CHECK-NEXT:    callq foo3
+; CHECK-NEXT:    callq foo3@PLT
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    movapd {{.*#+}} xmm1 = <1.0E+0,u>
 ; CHECK-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; CHECK-NEXT:    addpd %xmm0, %xmm1
-; CHECK-NEXT:    movapd %xmm1, {{.*}}(%rip)
+; CHECK-NEXT:    movapd %xmm1, g(%rip)
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    retq
   %1 = alloca <2 x double>, align 16

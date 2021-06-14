@@ -138,6 +138,10 @@ typedef unsigned int kmp_hwloc_depth_t;
 #include "ompt-internal.h"
 #endif
 
+#if OMPD_SUPPORT
+#include "ompd-specific.h"
+#endif
+
 #ifndef UNLIKELY
 #define UNLIKELY(x) (x)
 #endif
@@ -847,6 +851,10 @@ extern kmp_nested_proc_bind_t __kmp_nested_proc_bind;
 extern int __kmp_display_affinity;
 extern char *__kmp_affinity_format;
 static const size_t KMP_AFFINITY_FORMAT_SIZE = 512;
+#if OMPT_SUPPORT
+extern int __kmp_tool;
+extern char *__kmp_tool_libraries;
+#endif // OMPT_SUPPORT
 
 #if KMP_AFFINITY_SUPPORTED
 #define KMP_PLACE_ALL (-1)
@@ -4139,6 +4147,12 @@ int __kmp_execute_tasks_oncore(kmp_info_t *thread, kmp_int32 gtid,
                                void *itt_sync_obj,
 #endif /* USE_ITT_BUILD */
                                kmp_int32 is_constrained);
+
+extern int __kmp_nesting_mode;
+extern int __kmp_nesting_mode_nlevels;
+extern int *__kmp_nesting_nth_level;
+extern void __kmp_init_nesting_mode();
+extern void __kmp_set_nesting_mode_threads();
 
 /// This class safely opens and closes a C-style FILE* object using RAII
 /// semantics. There are also methods which allow using stdout or stderr as

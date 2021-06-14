@@ -1,4 +1,5 @@
 ! RUN: %S/test_symbols.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Statement functions
 
 !DEF: /p1 MainProgram

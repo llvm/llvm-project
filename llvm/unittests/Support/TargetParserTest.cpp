@@ -124,10 +124,6 @@ INSTANTIATE_TEST_SUITE_P(
         ARMCPUTestParams("invalid", "invalid", "invalid", ARM::AEK_NONE, ""),
         ARMCPUTestParams("generic", "invalid", "none", ARM::AEK_NONE, ""),
 
-        ARMCPUTestParams("arm2", "armv2", "none", ARM::AEK_NONE, "2"),
-        ARMCPUTestParams("arm3", "armv2a", "none", ARM::AEK_NONE, "2A"),
-        ARMCPUTestParams("arm6", "armv3", "none", ARM::AEK_NONE, "3"),
-        ARMCPUTestParams("arm7m", "armv3m", "none", ARM::AEK_NONE, "3M"),
         ARMCPUTestParams("arm8", "armv4", "none", ARM::AEK_NONE, "4"),
         ARMCPUTestParams("arm810", "armv4", "none", ARM::AEK_NONE, "4"),
         ARMCPUTestParams("strongarm", "armv4", "none", ARM::AEK_NONE, "4"),
@@ -388,7 +384,7 @@ INSTANTIATE_TEST_SUITE_P(
                          ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP,
                          "7-S")));
 
-static constexpr unsigned NumARMCPUArchs = 90;
+static constexpr unsigned NumARMCPUArchs = 86;
 
 TEST(TargetParserTest, testARMCPUArchList) {
   SmallVector<StringRef, NumARMCPUArchs> List;
@@ -420,17 +416,13 @@ bool testARMArch(StringRef Arch, StringRef DefaultCPU, StringRef SubArch,
 
 TEST(TargetParserTest, testARMArch) {
   EXPECT_TRUE(
-      testARMArch("armv2", "arm2", "v2",
-                          ARMBuildAttrs::CPUArch::Pre_v4));
+      testARMArch("armv2", "generic", "v2", ARMBuildAttrs::CPUArch::Pre_v4));
   EXPECT_TRUE(
-      testARMArch("armv2a", "arm3", "v2a",
-                          ARMBuildAttrs::CPUArch::Pre_v4));
+      testARMArch("armv2a", "generic", "v2a", ARMBuildAttrs::CPUArch::Pre_v4));
   EXPECT_TRUE(
-      testARMArch("armv3", "arm6", "v3",
-                          ARMBuildAttrs::CPUArch::Pre_v4));
+      testARMArch("armv3", "generic", "v3", ARMBuildAttrs::CPUArch::Pre_v4));
   EXPECT_TRUE(
-      testARMArch("armv3m", "arm7m", "v3m",
-                          ARMBuildAttrs::CPUArch::Pre_v4));
+      testARMArch("armv3m", "generic", "v3m", ARMBuildAttrs::CPUArch::Pre_v4));
   EXPECT_TRUE(
       testARMArch("armv4", "strongarm", "v4",
                           ARMBuildAttrs::CPUArch::v4));
@@ -535,10 +527,6 @@ bool testARMExtension(StringRef CPUName,ARM::ArchKind ArchKind, StringRef ArchEx
 }
 
 TEST(TargetParserTest, testARMExtension) {
-  EXPECT_FALSE(testARMExtension("arm2", ARM::ArchKind::INVALID, "thumb"));
-  EXPECT_FALSE(testARMExtension("arm3", ARM::ArchKind::INVALID, "thumb"));
-  EXPECT_FALSE(testARMExtension("arm6", ARM::ArchKind::INVALID, "thumb"));
-  EXPECT_FALSE(testARMExtension("arm7m", ARM::ArchKind::INVALID, "thumb"));
   EXPECT_FALSE(testARMExtension("strongarm", ARM::ArchKind::INVALID, "dsp"));
   EXPECT_FALSE(testARMExtension("arm7tdmi", ARM::ArchKind::INVALID, "dsp"));
   EXPECT_FALSE(testARMExtension("arm10tdmi",

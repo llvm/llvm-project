@@ -73,11 +73,12 @@ static void dispatchIndexOpFoldResults(ArrayRef<OpFoldResult> ofrs,
 /// This is a common class used for patterns of the form
 /// "someop(memrefcast) -> someop".  It folds the source of any memref.cast
 /// into the root operation directly.
-static LogicalResult foldMemRefCast(Operation *op) {
+static LogicalResult foldMemRefCast(Operation *op, Value inner = nullptr) {
   bool folded = false;
   for (OpOperand &operand : op->getOpOperands()) {
     auto cast = operand.get().getDefiningOp<CastOp>();
-    if (cast && !cast.getOperand().getType().isa<UnrankedMemRefType>()) {
+    if (cast && operand.get() != inner &&
+        !cast.getOperand().getType().isa<UnrankedMemRefType>()) {
       operand.set(cast.getOperand());
       folded = true;
     }
@@ -226,6 +227,65 @@ void AllocaOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
   results.add<SimplifyAllocConst<AllocaOp>, SimplifyDeadAlloc<AllocaOp>>(
       context);
+}
+
+//===----------------------------------------------------------------------===//
+// AllocaScopeOp
+//===----------------------------------------------------------------------===//
+
+static void print(OpAsmPrinter &p, AllocaScopeOp &op) {
+  bool printBlockTerminators = false;
+
+  p << AllocaScopeOp::getOperationName() << " ";
+  if (!op.results().empty()) {
+    p << " -> (" << op.getResultTypes() << ")";
+    printBlockTerminators = true;
+  }
+  p.printRegion(op.bodyRegion(),
+                /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/printBlockTerminators);
+  p.printOptionalAttrDict(op->getAttrs());
+}
+
+static ParseResult parseAllocaScopeOp(OpAsmParser &parser,
+                                      OperationState &result) {
+  // Create a region for the body.
+  result.regions.reserve(1);
+  Region *bodyRegion = result.addRegion();
+
+  // Parse optional results type list.
+  if (parser.parseOptionalArrowTypeList(result.types))
+    return failure();
+
+  // Parse the body region.
+  if (parser.parseRegion(*bodyRegion, /*arguments=*/{}, /*argTypes=*/{}))
+    return failure();
+  AllocaScopeOp::ensureTerminator(*bodyRegion, parser.getBuilder(),
+                                  result.location);
+
+  // Parse the optional attribute list.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return success();
+}
+
+static LogicalResult verify(AllocaScopeOp op) {
+  if (failed(RegionBranchOpInterface::verifyTypes(op)))
+    return failure();
+
+  return success();
+}
+
+void AllocaScopeOp::getSuccessorRegions(
+    Optional<unsigned> index, ArrayRef<Attribute> operands,
+    SmallVectorImpl<RegionSuccessor> &regions) {
+  if (index.hasValue()) {
+    regions.push_back(RegionSuccessor(getResults()));
+    return;
+  }
+
+  regions.push_back(RegionSuccessor(&bodyRegion()));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1425,7 +1485,7 @@ static LogicalResult verify(StoreOp op) {
 LogicalResult StoreOp::fold(ArrayRef<Attribute> cstOperands,
                             SmallVectorImpl<OpFoldResult> &results) {
   /// store(memrefcast) -> store
-  return foldMemRefCast(*this);
+  return foldMemRefCast(*this, getValueToStore());
 }
 
 //===----------------------------------------------------------------------===//

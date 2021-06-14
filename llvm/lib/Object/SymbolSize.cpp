@@ -12,6 +12,7 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/Wasm.h"
+#include "llvm/Object/XCOFFObjectFile.h"
 
 using namespace llvm;
 using namespace object;
@@ -30,7 +31,8 @@ static unsigned getSectionID(const ObjectFile &O, SectionRef Sec) {
     return M->getSectionID(Sec);
   if (isa<WasmObjectFile>(&O))
     return Sec.getIndex();
-
+  if (isa<XCOFFObjectFile>(&O))
+    return Sec.getIndex();
   return cast<COFFObjectFile>(O).getSectionID(Sec);
 }
 
@@ -39,6 +41,8 @@ static unsigned getSymbolSectionID(const ObjectFile &O, SymbolRef Sym) {
     return M->getSymbolSectionID(Sym);
   if (const auto *M = dyn_cast<WasmObjectFile>(&O))
     return M->getSymbolSectionId(Sym);
+  if (const auto *M = dyn_cast<XCOFFObjectFile>(&O))
+    return M->getSymbolSectionID(Sym);
   return cast<COFFObjectFile>(O).getSymbolSectionID(Sym);
 }
 

@@ -1046,6 +1046,72 @@ MDNode *llvm::findOptionMDForLoop(const Loop *TheLoop, StringRef Name) {
   return findOptionMDForLoopID(TheLoop->getLoopID(), Name);
 }
 
+/// Find string metadata for loop
+///
+/// If it has a value (e.g. {"llvm.distribute", 1} return the value as an
+/// operand or null otherwise.  If the string metadata is not found return
+/// Optional's not-a-value.
+Optional<const MDOperand *> llvm::findStringMetadataForLoop(const Loop *TheLoop,
+                                                            StringRef Name) {
+  MDNode *MD = findOptionMDForLoop(TheLoop, Name);
+  if (!MD)
+    return None;
+  switch (MD->getNumOperands()) {
+  case 1:
+    return nullptr;
+  case 2:
+    return &MD->getOperand(1);
+  default:
+    llvm_unreachable("loop metadata has 0 or 1 operand");
+  }
+}
+
+Optional<bool> llvm::getOptionalBoolLoopAttribute(const Loop *TheLoop,
+                                                  StringRef Name) {
+  MDNode *MD = findOptionMDForLoop(TheLoop, Name);
+  if (!MD)
+    return None;
+  switch (MD->getNumOperands()) {
+  case 1:
+    // When the value is absent it is interpreted as 'attribute set'.
+    return true;
+  case 2:
+    if (ConstantInt *IntMD =
+            mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get()))
+      return IntMD->getZExtValue();
+    return true;
+  }
+  llvm_unreachable("unexpected number of options");
+}
+
+bool llvm::getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name) {
+  return getOptionalBoolLoopAttribute(TheLoop, Name).getValueOr(false);
+}
+
+llvm::Optional<int> llvm::getOptionalIntLoopAttribute(const Loop *TheLoop,
+                                                      StringRef Name) {
+  const MDOperand *AttrMD =
+      findStringMetadataForLoop(TheLoop, Name).getValueOr(nullptr);
+  if (!AttrMD)
+    return None;
+
+  ConstantInt *IntMD = mdconst::extract_or_null<ConstantInt>(AttrMD->get());
+  if (!IntMD)
+    return None;
+
+  return IntMD->getSExtValue();
+}
+
+static const char *LLVMLoopMustProgress = "llvm.loop.mustprogress";
+
+bool llvm::hasMustProgress(const Loop *L) {
+  return getBooleanLoopAttribute(L, LLVMLoopMustProgress);
+}
+
+bool llvm::isMustProgress(const Loop *L) {
+  return L->getHeader()->getParent()->mustProgress() || hasMustProgress(L);
+}
+
 bool llvm::isValidAsAccessGroup(MDNode *Node) {
   return Node->getNumOperands() == 0 && Node->isDistinct();
 }

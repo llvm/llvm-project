@@ -291,12 +291,9 @@ static ParseResult parseParallelOp(OpAsmParser &parser,
       if (parser.parseLParen() || parser.parseKeyword(&defval) ||
           parser.parseRParen())
         return failure();
-      SmallString<16> attrval;
       // The def prefix is required for the attribute as "private" is a keyword
       // in C++.
-      attrval += "def";
-      attrval += defval;
-      auto attr = parser.getBuilder().getStringAttr(attrval);
+      auto attr = parser.getBuilder().getStringAttr("def" + defval);
       result.addAttribute("default_val", attr);
     } else if (keyword == "proc_bind") {
       // Fail if there was already another proc_bind clause.

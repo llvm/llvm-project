@@ -456,7 +456,7 @@ define i1 @length16_eq_const(i8* %X) nounwind minsize {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movdqu (%eax), %xmm0
-; X86-SSE2-NEXT:    pcmpeqb {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; X86-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; X86-SSE2-NEXT:    sete %al
@@ -465,7 +465,7 @@ define i1 @length16_eq_const(i8* %X) nounwind minsize {
 ; X64-SSE2-LABEL: length16_eq_const:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    movdqu (%rdi), %xmm0
-; X64-SSE2-NEXT:    pcmpeqb {{.*}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; X64-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; X64-SSE2-NEXT:    sete %al
@@ -474,7 +474,7 @@ define i1 @length16_eq_const(i8* %X) nounwind minsize {
 ; X64-AVX-LABEL: length16_eq_const:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vmovdqu (%rdi), %xmm0
-; X64-AVX-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vptest %xmm0, %xmm0
 ; X64-AVX-NEXT:    sete %al
 ; X64-AVX-NEXT:    retq
@@ -658,7 +658,7 @@ define i1 @length32_eq_const(i8* %X) nounwind minsize {
 ; X64-AVX1-LABEL: length32_eq_const:
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vmovups (%rdi), %ymm0
-; X64-AVX1-NEXT:    vxorps {{.*}}(%rip), %ymm0, %ymm0
+; X64-AVX1-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-AVX1-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX1-NEXT:    setne %al
 ; X64-AVX1-NEXT:    vzeroupper
@@ -667,7 +667,7 @@ define i1 @length32_eq_const(i8* %X) nounwind minsize {
 ; X64-AVX2-LABEL: length32_eq_const:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vmovdqu (%rdi), %ymm0
-; X64-AVX2-NEXT:    vpxor {{.*}}(%rip), %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vptest %ymm0, %ymm0
 ; X64-AVX2-NEXT:    setne %al
 ; X64-AVX2-NEXT:    vzeroupper

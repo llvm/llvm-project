@@ -35,12 +35,12 @@ define dso_local void @test1(i8 *%buf) nounwind {
 ; CHECK-NEXT:  .LBB0_2: # %loop.header
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movabsq $64, %rax
-; CHECK-NEXT:    tilestored %tmm3, 2048(%rsp,%rax) # 1024-byte Folded Spill
+; CHECK-NEXT:    tilestored %tmm3, 3024(%rsp,%rax) # 1024-byte Folded Spill
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movabsq $64, %rax
-; CHECK-NEXT:    tileloadd 2048(%rsp,%rax), %tmm3 # 1024-byte Folded Reload
+; CHECK-NEXT:    tileloadd 3024(%rsp,%rax), %tmm3 # 1024-byte Folded Reload
 ; CHECK-NEXT:    tileloadd (%rbx,%r15), %tmm0
 ; CHECK-NEXT:    tileloadd (%rbx,%r15), %tmm1
 ; CHECK-NEXT:    # implicit-def: $rax

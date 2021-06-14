@@ -212,6 +212,10 @@ CODEGENOPT(NewStructPathTBAA , 1, 0) ///< Whether or not to use enhanced struct-
 CODEGENOPT(SaveTempLabels    , 1, 0) ///< Save temporary labels.
 CODEGENOPT(SanitizeAddressUseAfterScope , 1, 0) ///< Enable use-after-scope detection
                                                 ///< in AddressSanitizer
+ENUM_CODEGENOPT(SanitizeAddressUseAfterReturn,
+                llvm::AsanDetectStackUseAfterReturnMode, 2,
+                llvm::AsanDetectStackUseAfterReturnMode::Runtime
+                ) ///< Set detection mode for stack-use-after-return.
 CODEGENOPT(SanitizeAddressPoisonCustomArrayCookie, 1,
            0) ///< Enable poisoning operator new[] which is not a replaceable
               ///< global allocation function in AddressSanitizer
@@ -293,6 +297,7 @@ VALUE_CODEGENOPT(StackAlignment    , 32, 0) ///< Overrides default stack
                                             ///< alignment, if not 0.
 VALUE_CODEGENOPT(StackProbeSize    , 32, 4096) ///< Overrides default stack
                                                ///< probe size, even if 0.
+VALUE_CODEGENOPT(WarnStackSize     , 32, UINT_MAX) ///< Set via -fwarn-stack-size.
 CODEGENOPT(NoStackArgProbe, 1, 0) ///< Set when -mno-stack-arg-probe is used
 CODEGENOPT(DebugStrictDwarf, 1, 1) ///< Whether or not to use strict DWARF info.
 CODEGENOPT(DebugColumnInfo, 1, 0) ///< Whether or not to use column information

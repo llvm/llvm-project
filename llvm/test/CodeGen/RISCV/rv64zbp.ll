@@ -2679,14 +2679,12 @@ define zeroext i16 @bswap_i16(i16 zeroext %a) nounwind {
 ;
 ; RV64IB-LABEL: bswap_i16:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    rev8 a0, a0
-; RV64IB-NEXT:    srli a0, a0, 48
+; RV64IB-NEXT:    greviw a0, a0, 8
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: bswap_i16:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    rev8 a0, a0
-; RV64IBP-NEXT:    srli a0, a0, 48
+; RV64IBP-NEXT:    greviw a0, a0, 8
 ; RV64IBP-NEXT:    ret
   %1 = tail call i16 @llvm.bswap.i16(i16 %a)
   ret i16 %1
@@ -2832,14 +2830,12 @@ define zeroext i8 @bitreverse_i8(i8 zeroext %a) nounwind {
 ;
 ; RV64IB-LABEL: bitreverse_i8:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    rev a0, a0
-; RV64IB-NEXT:    srli a0, a0, 56
+; RV64IB-NEXT:    greviw a0, a0, 7
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: bitreverse_i8:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    rev a0, a0
-; RV64IBP-NEXT:    srli a0, a0, 56
+; RV64IBP-NEXT:    greviw a0, a0, 7
 ; RV64IBP-NEXT:    ret
   %1 = tail call i8 @llvm.bitreverse.i8(i8 %a)
   ret i8 %1
@@ -2884,14 +2880,12 @@ define zeroext i16 @bitreverse_i16(i16 zeroext %a) nounwind {
 ;
 ; RV64IB-LABEL: bitreverse_i16:
 ; RV64IB:       # %bb.0:
-; RV64IB-NEXT:    rev a0, a0
-; RV64IB-NEXT:    srli a0, a0, 48
+; RV64IB-NEXT:    greviw a0, a0, 15
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBP-LABEL: bitreverse_i16:
 ; RV64IBP:       # %bb.0:
-; RV64IBP-NEXT:    rev a0, a0
-; RV64IBP-NEXT:    srli a0, a0, 48
+; RV64IBP-NEXT:    greviw a0, a0, 15
 ; RV64IBP-NEXT:    ret
   %1 = tail call i16 @llvm.bitreverse.i16(i16 %a)
   ret i16 %1

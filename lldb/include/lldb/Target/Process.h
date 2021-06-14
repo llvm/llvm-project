@@ -113,9 +113,7 @@ class ProcessAttachInfo : public ProcessInstanceInfo {
 public:
   ProcessAttachInfo()
       : ProcessInstanceInfo(), m_listener_sp(), m_hijack_listener_sp(),
-        m_plugin_name(), m_resume_count(0), m_wait_for_launch(false),
-        m_ignore_existing(true), m_continue_once_attached(false),
-        m_detach_on_error(true), m_async(false) {}
+        m_plugin_name() {}
 
   ProcessAttachInfo(const ProcessLaunchInfo &launch_info)
       : ProcessInstanceInfo(), m_listener_sp(), m_hijack_listener_sp(),
@@ -200,17 +198,19 @@ protected:
   lldb::ListenerSP m_listener_sp;
   lldb::ListenerSP m_hijack_listener_sp;
   std::string m_plugin_name;
-  uint32_t m_resume_count; // How many times do we resume after launching
-  bool m_wait_for_launch;
-  bool m_ignore_existing;
-  bool m_continue_once_attached; // Supports the use-case scenario of
-                                 // immediately continuing the process once
-                                 // attached.
-  bool m_detach_on_error; // If we are debugging remotely, instruct the stub to
-                          // detach rather than killing the target on error.
-  bool m_async; // Use an async attach where we start the attach and return
-                // immediately (used by GUI programs with --waitfor so they can
-                // call SBProcess::Stop() to cancel attach)
+  uint32_t m_resume_count = 0; // How many times do we resume after launching
+  bool m_wait_for_launch = false;
+  bool m_ignore_existing = true;
+  bool m_continue_once_attached = false; // Supports the use-case scenario of
+                                         // immediately continuing the process
+                                         // once attached.
+  bool m_detach_on_error =
+      true; // If we are debugging remotely, instruct the stub to
+            // detach rather than killing the target on error.
+  bool m_async =
+      false; // Use an async attach where we start the attach and return
+             // immediately (used by GUI programs with --waitfor so they can
+             // call SBProcess::Stop() to cancel attach)
 };
 
 // This class tracks the Modification state of the process.  Things that can
@@ -223,9 +223,8 @@ class ProcessModID {
 
 public:
   ProcessModID()
-      : m_stop_id(0), m_last_natural_stop_id(0), m_resume_id(0), m_memory_id(0),
-        m_last_user_expression_resume(0), m_running_user_expression(false),
-        m_running_utility_function(0) {}
+
+  {}
 
   ProcessModID(const ProcessModID &rhs)
       : m_stop_id(rhs.m_stop_id), m_memory_id(rhs.m_memory_id) {}
@@ -316,13 +315,13 @@ public:
   }
 
 private:
-  uint32_t m_stop_id;
-  uint32_t m_last_natural_stop_id;
-  uint32_t m_resume_id;
-  uint32_t m_memory_id;
-  uint32_t m_last_user_expression_resume;
-  uint32_t m_running_user_expression;
-  uint32_t m_running_utility_function;
+  uint32_t m_stop_id = 0;
+  uint32_t m_last_natural_stop_id = 0;
+  uint32_t m_resume_id = 0;
+  uint32_t m_memory_id = 0;
+  uint32_t m_last_user_expression_resume = 0;
+  uint32_t m_running_user_expression = false;
+  uint32_t m_running_utility_function = 0;
   lldb::EventSP m_last_natural_stop_event;
 };
 
@@ -471,12 +470,12 @@ public:
     }
 
     lldb::ProcessWP m_process_wp;
-    lldb::StateType m_state;
+    lldb::StateType m_state = lldb::eStateInvalid;
     std::vector<std::string> m_restarted_reasons;
-    bool m_restarted; // For "eStateStopped" events, this is true if the target
-                      // was automatically restarted.
-    int m_update_state;
-    bool m_interrupted;
+    bool m_restarted = false; // For "eStateStopped" events, this is true if the
+                              // target was automatically restarted.
+    int m_update_state = 0;
+    bool m_interrupted = false;
 
     ProcessEventData(const ProcessEventData &) = delete;
     const ProcessEventData &operator=(const ProcessEventData &) = delete;

@@ -157,7 +157,7 @@ main_body:
 define amdgpu_ps <4 x float> @sample_c_d_cl_1d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %dsdh, half %dsdv, float %s, float %clamp) {
 ; GFX10PLUS-LABEL: sample_c_d_cl_1d:
 ; GFX10PLUS:       ; %bb.0: ; %main_body
-; GFX10PLUS-NEXT:    image_sample_c_d_cl_g16 v[0:3], v[0:7], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
+; GFX10PLUS-NEXT:    image_sample_c_d_cl_g16 v[0:3], v[0:4], s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
 main_body:

@@ -846,7 +846,7 @@ RefCountReport::RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
     : PathSensitiveBugReport(D, D.getDescription(), n), Sym(sym),
       isLeak(isLeak) {
   if (!isLeak)
-    addVisitor(std::make_unique<RefCountReportVisitor>(sym));
+    addVisitor<RefCountReportVisitor>(sym);
 }
 
 RefCountReport::RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
@@ -854,7 +854,7 @@ RefCountReport::RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
                                StringRef endText)
     : PathSensitiveBugReport(D, D.getDescription(), endText, n) {
 
-  addVisitor(std::make_unique<RefCountReportVisitor>(sym));
+  addVisitor<RefCountReportVisitor>(sym);
 }
 
 void RefLeakReport::deriveParamLocation(CheckerContext &Ctx) {
@@ -980,13 +980,12 @@ void RefLeakReport::findBindingToReport(CheckerContext &Ctx,
     // got from one to another.
     //
     // NOTE: We use the actual SVal stored in AllocBindingToReport here because
-    //       FindLastStoreBRVisitor compares SVal's and it can get trickier for
+    //       trackStoredValue compares SVal's and it can get trickier for
     //       something like derived regions if we want to construct SVal from
     //       Sym. Instead, we take the value that is definitely stored in that
-    //       region, thus guaranteeing that FindLastStoreBRVisitor will work.
-    addVisitor(std::make_unique<FindLastStoreBRVisitor>(
-        AllVarBindings[0].second.castAs<KnownSVal>(), AllocBindingToReport,
-        false, bugreporter::TrackingKind::Thorough));
+    //       region, thus guaranteeing that trackStoredValue will work.
+    bugreporter::trackStoredValue(AllVarBindings[0].second.castAs<KnownSVal>(),
+                                  AllocBindingToReport, *this);
   } else {
     AllocBindingToReport = AllocFirstBinding;
   }
@@ -1005,5 +1004,5 @@ RefLeakReport::RefLeakReport(const RefCountBug &D, const LangOptions &LOpts,
 
   createDescription(Ctx);
 
-  addVisitor(std::make_unique<RefLeakReportVisitor>(Sym, AllocBindingToReport));
+  addVisitor<RefLeakReportVisitor>(Sym, AllocBindingToReport);
 }

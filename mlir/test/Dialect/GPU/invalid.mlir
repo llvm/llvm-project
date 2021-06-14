@@ -244,6 +244,7 @@ func @reduce_op_and_body(%arg0 : f32) {
   ^bb(%lhs : f32, %rhs : f32):
     "gpu.yield"(%lhs) : (f32) -> ()
   }) {op = "add"} : (f32) -> (f32)
+  return
 }
 
 // -----
@@ -270,6 +271,7 @@ func @reduce_incorrect_region_arguments(%arg0 : f32) {
   ^bb(%lhs : f32):
     "gpu.yield"(%lhs) : (f32) -> ()
   }) : (f32) -> (f32)
+  return
 }
 
 // -----
@@ -280,6 +282,7 @@ func @reduce_incorrect_region_arguments(%arg0 : f32) {
   ^bb(%lhs : f32, %rhs : i32):
     "gpu.yield"(%lhs) : (f32) -> ()
   }) : (f32) -> (f32)
+  return
 }
 
 // -----
@@ -290,6 +293,7 @@ func @reduce_incorrect_yield(%arg0 : f32) {
   ^bb(%lhs : f32, %rhs : f32):
     "gpu.yield"(%lhs, %rhs) : (f32, f32) -> ()
   }) : (f32) -> (f32)
+  return
 }
 
 // -----
@@ -301,6 +305,7 @@ func @reduce_incorrect_yield(%arg0 : f32) {
     %one = constant 1 : i32
     "gpu.yield"(%one) : (i32) -> ()
   }) : (f32) -> (f32)
+  return
 }
 
 // -----
@@ -311,6 +316,7 @@ func @reduce_incorrect_yield(%arg0 : f32) {
   ^bb(%lhs : f32, %rhs : f32):
     return
   }) : (f32) -> (f32)
+  return
 }
 
 // -----

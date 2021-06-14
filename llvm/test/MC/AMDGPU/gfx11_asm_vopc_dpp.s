@@ -23,6 +23,11 @@ v_cmp_tru_f32_dpp vcc_lo, v1, v2 dpp8:[0,2,1,3,4,5,6,7]
 // W32: encoding: [0xe9,0x04,0x3e,0x7c,0x01,0x50,0xc6,0xfa]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error
 
+; check vcc/vcc_lo have been added
+v_cmp_lt_f32_dpp v1, v2 dpp8:[2,3,4,1,3,3,3,3]
+// W32: v_cmp_lt_f32 vcc_lo, v1, v2 dpp8:[2,3,4,1,3,3,3,3] ; encoding: [0xe9,0x04,0x22,0x7c,0x01,0x1a,0xb3,0x6d]
+// W64: v_cmp_lt_f32 vcc, v1, v2 dpp8:[2,3,4,1,3,3,3,3] ; encoding: [0xe9,0x04,0x22,0x7c,0x01,0x1a,0xb3,0x6d]
+
 ; w64
 
 v_cmp_lt_u16_dpp vcc, v1, v2 dpp8:[7,6,5,3,4,2,1,0] fi:1

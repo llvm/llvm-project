@@ -25,7 +25,7 @@ define void @run() {
 ; IS________OPM-LABEL: define {{[^@]+}}@run
 ; IS________OPM-SAME: () #[[ATTR0:[0-9]+]] {
 ; IS________OPM-NEXT:  entry:
-; IS________OPM-NEXT:    [[TMP0:%.*]] = call i64 @CaptureAStruct(%struct.Foo* nocapture nofree noundef nonnull readonly byval(%struct.Foo) align 8 dereferenceable(16) @a) #[[ATTR0]]
+; IS________OPM-NEXT:    [[TMP0:%.*]] = call i64 @CaptureAStruct(%struct.Foo* nocapture nofree noundef nonnull readonly byval([[STRUCT_FOO:%.*]]) align 8 dereferenceable(16) @a) #[[ATTR0]]
 ; IS________OPM-NEXT:    unreachable
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree noreturn nosync nounwind readnone

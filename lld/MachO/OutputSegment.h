@@ -13,6 +13,7 @@
 #include "lld/Common/LLVM.h"
 
 #include <limits>
+#include <vector>
 
 namespace lld {
 namespace macho {

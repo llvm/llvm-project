@@ -8,7 +8,7 @@ define void @f() {
 ; IS________OPM-LABEL: define {{[^@]+}}@f() {
 ; IS________OPM-NEXT:  entry:
 ; IS________OPM-NEXT:    [[A:%.*]] = alloca i32, align 1
-; IS________OPM-NEXT:    call void @g(i32* noalias nocapture noundef nonnull readonly dereferenceable(4) [[A]])
+; IS________OPM-NEXT:    call void @g(i32* noalias nocapture nofree noundef nonnull readonly dereferenceable(4) [[A]])
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@f() {
@@ -26,7 +26,7 @@ entry:
 
 define internal void @g(i32* %a) {
 ; IS________OPM-LABEL: define {{[^@]+}}@g
-; IS________OPM-SAME: (i32* noalias nocapture noundef nonnull readonly dereferenceable(4) [[A:%.*]]) {
+; IS________OPM-SAME: (i32* noalias nocapture nofree noundef nonnull readonly dereferenceable(4) [[A:%.*]]) {
 ; IS________OPM-NEXT:    [[AA:%.*]] = load i32, i32* [[A]], align 1
 ; IS________OPM-NEXT:    call void @z(i32 [[AA]])
 ; IS________OPM-NEXT:    ret void

@@ -702,7 +702,7 @@ void IRSimilarityIdentifier::populateMapper(
 /// \param [out] CandsForRepSubstring - The vector to store the generated
 /// IRSimilarityCandidates.
 static void createCandidatesFromSuffixTree(
-    IRInstructionMapper Mapper, std::vector<IRInstructionData *> &InstrList,
+    const IRInstructionMapper& Mapper, std::vector<IRInstructionData *> &InstrList,
     std::vector<unsigned> &IntegerMapping, SuffixTree::RepeatedSubstring &RS,
     std::vector<IRSimilarityCandidate> &CandsForRepSubstring) {
 
@@ -891,7 +891,7 @@ IRSimilarityIdentifierWrapperPass::IRSimilarityIdentifierWrapperPass()
 }
 
 bool IRSimilarityIdentifierWrapperPass::doInitialization(Module &M) {
-  IRSI.reset(new IRSimilarityIdentifier(M));
+  IRSI.reset(new IRSimilarityIdentifier());
   return false;
 }
 
@@ -901,8 +901,7 @@ bool IRSimilarityIdentifierWrapperPass::doFinalization(Module &M) {
 }
 
 bool IRSimilarityIdentifierWrapperPass::runOnModule(Module &M) {
-  // All the real work is done in the constructor for the pass.
-  IRSI.reset(new IRSimilarityIdentifier(M));
+  IRSI->findSimilarity(M);
   return false;
 }
 
@@ -910,7 +909,9 @@ AnalysisKey IRSimilarityAnalysis::Key;
 IRSimilarityIdentifier IRSimilarityAnalysis::run(Module &M,
                                                ModuleAnalysisManager &) {
 
-  return IRSimilarityIdentifier(M);
+  auto IRSI = IRSimilarityIdentifier();
+  IRSI.findSimilarity(M);
+  return IRSI;
 }
 
 PreservedAnalyses

@@ -54,8 +54,8 @@ private:
   SomeExpr SaveNameAsPointerTarget(Scope &, const std::string &);
   const SymbolVector *GetTypeParameters(const Symbol &);
   evaluate::StructureConstructor DescribeComponent(const Symbol &,
-      const ObjectEntityDetails &, Scope &, const std::string &distinctName,
-      const SymbolVector *parameters);
+      const ObjectEntityDetails &, Scope &, Scope &,
+      const std::string &distinctName, const SymbolVector *parameters);
   evaluate::StructureConstructor DescribeComponent(
       const Symbol &, const ProcEntityDetails &, Scope &);
   evaluate::StructureConstructor PackageIntValue(
@@ -440,12 +440,12 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
               },
               [&](const ObjectEntityDetails &object) {
                 dataComponents.emplace_back(DescribeComponent(
-                    symbol, object, dtScope, distinctName, parameters));
+                    symbol, object, scope, dtScope, distinctName, parameters));
               },
               [&](const ProcEntityDetails &proc) {
                 if (IsProcedurePointer(symbol)) {
                   procPtrComponents.emplace_back(
-                      DescribeComponent(symbol, proc, dtScope));
+                      DescribeComponent(symbol, proc, scope));
                 }
               },
               [&](const ProcBindingDetails &) { // handled in a later pass
@@ -606,7 +606,8 @@ SomeExpr RuntimeTableBuilder::SaveNameAsPointerTarget(
 
 evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
     const Symbol &symbol, const ObjectEntityDetails &object, Scope &scope,
-    const std::string &distinctName, const SymbolVector *parameters) {
+    Scope &dtScope, const std::string &distinctName,
+    const SymbolVector *parameters) {
   evaluate::StructureConstructorValues values;
   auto &foldingContext{context_.foldingContext()};
   auto typeAndShape{evaluate::characteristics::TypeAndShape::Characterize(
@@ -627,7 +628,8 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
   AddValue(values, componentSchema_, "offset"s, IntExpr<8>(symbol.offset()));
   // CHARACTER length
   auto len{typeAndShape->LEN()};
-  if (const semantics::DerivedTypeSpec * pdtInstance{scope.derivedTypeSpec()}) {
+  if (const semantics::DerivedTypeSpec *
+      pdtInstance{dtScope.derivedTypeSpec()}) {
     auto restorer{foldingContext.WithPDTInstance(*pdtInstance)};
     len = Fold(foldingContext, std::move(len));
   }
@@ -886,12 +888,6 @@ void RuntimeTableBuilder::DescribeSpecialProc(
       }
     } else { // user defined derived type I/O
       CHECK(proc->dummyArguments.size() >= 4);
-      bool isArg0Descriptor{
-          !proc->dummyArguments.at(0).CanBePassedViaImplicitInterface()};
-      // N.B. When the user defined I/O subroutine is a type bound procedure,
-      // its first argument is always a descriptor, otherwise, when it was an
-      // interface, it never is.
-      CHECK(!!binding == isArg0Descriptor);
       if (binding) {
         isArgDescriptorSet |= 1;
       }

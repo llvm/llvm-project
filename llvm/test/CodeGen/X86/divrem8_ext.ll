@@ -17,7 +17,7 @@ define zeroext i8 @test_udivrem_zext_ah(i8 %x, i8 %y) {
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    divb %sil
 ; X64-NEXT:    movzbl %ah, %ecx
-; X64-NEXT:    movb %al, {{.*}}(%rip)
+; X64-NEXT:    movb %al, z(%rip)
 ; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    retq
   %div = udiv i8 %x, %y
@@ -105,7 +105,7 @@ define signext i8 @test_sdivrem_sext_ah(i8 %x, i8 %y) {
 ; X64-NEXT:    movsbl %dil, %eax
 ; X64-NEXT:    idivb %sil
 ; X64-NEXT:    movsbl %ah, %ecx
-; X64-NEXT:    movb %al, {{.*}}(%rip)
+; X64-NEXT:    movb %al, z(%rip)
 ; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    retq
   %div = sdiv i8 %x, %y

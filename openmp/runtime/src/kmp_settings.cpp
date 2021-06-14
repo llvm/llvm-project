@@ -25,6 +25,9 @@
 #include "kmp_str.h"
 #include "kmp_wrapper_getpid.h"
 #include <ctype.h> // toupper()
+#if OMPD_SUPPORT
+#include "ompd-specific.h"
+#endif
 
 static int __kmp_env_toPrint(char const *name, int flag);
 
@@ -1014,6 +1017,28 @@ static void __kmp_stg_print_warnings(kmp_str_buf_t *buffer, char const *name,
   // AC: TODO: change to print_int? (needs documentation change)
   __kmp_stg_print_bool(buffer, name, __kmp_generate_warnings);
 } // __kmp_stg_print_warnings
+
+// -----------------------------------------------------------------------------
+// KMP_NESTING_MODE
+
+static void __kmp_stg_parse_nesting_mode(char const *name, char const *value,
+                                         void *data) {
+  __kmp_stg_parse_int(name, value, 0, INT_MAX, &__kmp_nesting_mode);
+#if KMP_AFFINITY_SUPPORTED && KMP_USE_HWLOC
+  if (__kmp_nesting_mode > 0)
+    __kmp_affinity_top_method = affinity_top_method_hwloc;
+#endif
+} // __kmp_stg_parse_nesting_mode
+
+static void __kmp_stg_print_nesting_mode(kmp_str_buf_t *buffer,
+                                         char const *name, void *data) {
+  if (__kmp_env_format) {
+    KMP_STR_BUF_PRINT_NAME;
+  } else {
+    __kmp_str_buf_print(buffer, "   %s", name);
+  }
+  __kmp_str_buf_print(buffer, "=%d\n", __kmp_nesting_mode);
+} // __kmp_stg_print_nesting_mode
 
 // -----------------------------------------------------------------------------
 // OMP_NESTED, OMP_NUM_THREADS
@@ -5011,7 +5036,7 @@ static void __kmp_stg_print_omp_cancellation(kmp_str_buf_t *buffer,
 } // __kmp_stg_print_omp_cancellation
 
 #if OMPT_SUPPORT
-static int __kmp_tool = 1;
+int __kmp_tool = 1;
 
 static void __kmp_stg_parse_omp_tool(char const *name, char const *value,
                                      void *data) {
@@ -5028,7 +5053,7 @@ static void __kmp_stg_print_omp_tool(kmp_str_buf_t *buffer, char const *name,
   }
 } // __kmp_stg_print_omp_tool
 
-static char *__kmp_tool_libraries = NULL;
+char *__kmp_tool_libraries = NULL;
 
 static void __kmp_stg_parse_omp_tool_libraries(char const *name,
                                                char const *value, void *data) {
@@ -5049,7 +5074,7 @@ static void __kmp_stg_print_omp_tool_libraries(kmp_str_buf_t *buffer,
   }
 } // __kmp_stg_print_omp_tool_libraries
 
-static char *__kmp_tool_verbose_init = NULL;
+char *__kmp_tool_verbose_init = NULL;
 
 static void __kmp_stg_parse_omp_tool_verbose_init(char const *name,
                                                   char const *value,
@@ -5106,6 +5131,8 @@ static kmp_setting_t __kmp_stg_table[] = {
     {"KMP_WARNINGS", __kmp_stg_parse_warnings, __kmp_stg_print_warnings, NULL,
      0, 0},
 
+    {"KMP_NESTING_MODE", __kmp_stg_parse_nesting_mode,
+     __kmp_stg_print_nesting_mode, NULL, 0, 0},
     {"OMP_NESTED", __kmp_stg_parse_nested, __kmp_stg_print_nested, NULL, 0, 0},
     {"OMP_NUM_THREADS", __kmp_stg_parse_num_threads,
      __kmp_stg_print_num_threads, NULL, 0, 0},
@@ -6144,5 +6171,48 @@ void __kmp_display_env_impl(int display_env, int display_env_verbose) {
 
   __kmp_printf("\n");
 }
+
+#if OMPD_SUPPORT
+// Dump environment variables for OMPD
+void __kmp_env_dump() {
+
+  kmp_env_blk_t block;
+  kmp_str_buf_t buffer, env, notdefined;
+
+  __kmp_stg_init();
+  __kmp_str_buf_init(&buffer);
+  __kmp_str_buf_init(&env);
+  __kmp_str_buf_init(&notdefined);
+
+  __kmp_env_blk_init(&block, NULL);
+  __kmp_env_blk_sort(&block);
+
+  __kmp_str_buf_print(&notdefined, ": %s", KMP_I18N_STR(NotDefined));
+
+  for (int i = 0; i < __kmp_stg_count; ++i) {
+    if (__kmp_stg_table[i].print == NULL)
+      continue;
+    __kmp_str_buf_clear(&env);
+    __kmp_stg_table[i].print(&env, __kmp_stg_table[i].name,
+                             __kmp_stg_table[i].data);
+    if (env.used < 4) // valid definition must have indents (3) and a new line
+      continue;
+    if (strstr(env.str, notdefined.str))
+      // normalize the string
+      __kmp_str_buf_print(&buffer, "%s=undefined\n", __kmp_stg_table[i].name);
+    else
+      __kmp_str_buf_cat(&buffer, env.str + 3, env.used - 3);
+  }
+
+  ompd_env_block = (char *)__kmp_allocate(buffer.used + 1);
+  KMP_MEMCPY(ompd_env_block, buffer.str, buffer.used + 1);
+  ompd_env_block_size = (ompd_size_t)KMP_STRLEN(ompd_env_block);
+
+  __kmp_env_blk_free(&block);
+  __kmp_str_buf_free(&buffer);
+  __kmp_str_buf_free(&env);
+  __kmp_str_buf_free(&notdefined);
+}
+#endif // OMPD_SUPPORT
 
 // end of file

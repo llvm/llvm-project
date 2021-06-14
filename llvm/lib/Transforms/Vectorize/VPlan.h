@@ -640,6 +640,10 @@ public:
     print(O, "", SlotTracker);
   }
 
+  /// Print the successors of this block to \p O, prefixing all lines with \p
+  /// Indent.
+  void printSuccessors(raw_ostream &O, const Twine &Indent) const;
+
   /// Dump this VPBlockBase to dbgs().
   LLVM_DUMP_METHOD void dump() const { print(dbgs()); }
 #endif

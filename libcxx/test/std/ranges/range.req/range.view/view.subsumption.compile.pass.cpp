@@ -43,11 +43,3 @@ namespace subsume_movable {
   constexpr bool test() { return false; }
   static_assert(test<View>());
 }
-
-namespace subsume_default_initializable {
-  template <std::ranges::view>
-  constexpr bool test() { return true; }
-  template <std::default_initializable>
-  constexpr bool test() { return false; }
-  static_assert(test<View>());
-}

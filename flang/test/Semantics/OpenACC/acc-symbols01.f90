@@ -1,4 +1,5 @@
 ! RUN: %S/../test_symbols.sh %s %t %flang_fc1 -fopenacc
+! REQUIRES: shell
 
 !DEF: /mm MainProgram
 program mm

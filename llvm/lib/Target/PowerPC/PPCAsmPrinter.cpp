@@ -78,6 +78,10 @@ using namespace llvm::XCOFF;
 
 #define DEBUG_TYPE "asmprinter"
 
+static cl::opt<bool> EnableSSPCanaryBitInTB(
+    "aix-ssp-tb-bit", cl::init(false),
+    cl::desc("Enable Passing SSP Canary info in Trackback on AIX"), cl::Hidden);
+
 // Specialize DenseMapInfo to allow
 // std::pair<const MCSymbol *, MCSymbolRefExpr::VariantKind> in DenseMap.
 // This specialization is needed here because that type is used as keys in the
@@ -358,6 +362,12 @@ bool PPCAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
     case 'y': // A memory reference for an X-form instruction
       O << "0, ";
       printOperand(MI, OpNo, O);
+      return false;
+    case 'I':
+      // Write 'i' if an integer constant, otherwise nothing.  Used to print
+      // addi vs add, etc.
+      if (MI->getOperand(OpNo).isImm())
+        O << "i";
       return false;
     case 'U': // Print 'u' for update form.
     case 'X': // Print 'x' for indexed form.
@@ -2120,6 +2130,9 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
   if (SecondHalfOfMandatoryField & TracebackTable::HasExtensionTableMask) {
     if (ShouldEmitEHBlock)
       ExtensionTableFlag |= ExtendedTBTableFlag::TB_EH_INFO;
+    if (EnableSSPCanaryBitInTB &&
+        TargetLoweringObjectFileXCOFF::ShouldSetSSPCanaryBitInTB(MF))
+      ExtensionTableFlag |= ExtendedTBTableFlag::TB_SSP_CANARY;
 
     CommentOS << "ExtensionTableFlag = "
               << getExtendedTBTableFlagString(ExtensionTableFlag);

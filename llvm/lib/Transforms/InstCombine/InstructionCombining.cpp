@@ -924,6 +924,12 @@ Value *InstCombinerImpl::dyn_castNegVal(Value *V) const {
     return ConstantExpr::getNeg(CV);
   }
 
+  // Negate integer vector splats.
+  if (auto *CV = dyn_cast<Constant>(V))
+    if (CV->getType()->isVectorTy() &&
+        CV->getType()->getScalarType()->isIntegerTy() && CV->getSplatValue())
+      return ConstantExpr::getNeg(CV);
+
   return nullptr;
 }
 
