@@ -48,7 +48,7 @@ lpad:
           catch i8* null
   %1 = extractvalue { i8*, i32 } %0, 0
 
-  ; CHECK: store {{.*}} @__dfsan_arg_tls
+  ; CHECK: store i8 0,{{.*}} @__dfsan_arg_tls
   ; CHECK: call {{.*}} @"dfs$__cxa_begin_catch"
   ; CHECK: load {{.*}} @__dfsan_retval_tls
   %2 = tail call i8* @__cxa_begin_catch(i8* %1)
