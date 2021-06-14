@@ -2705,6 +2705,19 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       return SelectInst::Create(FalseVal, One, TrueVal);
 
     Value *A, *B;
+
+    // DeMorgan in select form: !a && !b --> !(a || b)
+    // select !a, !b, false --> not (select a, true, b)
+    if (match(&SI, m_LogicalAnd(m_Not(m_Value(A)), m_Not(m_Value(B)))) &&
+        (CondVal->hasOneUse() || TrueVal->hasOneUse()))
+      return BinaryOperator::CreateNot(Builder.CreateSelect(A, One, B));
+
+    // DeMorgan in select form: !a || !b --> !(a && b)
+    // select !a, true, !b --> not (select a, b, false)
+    if (match(&SI, m_LogicalOr(m_Not(m_Value(A)), m_Not(m_Value(B)))) &&
+        (CondVal->hasOneUse() || FalseVal->hasOneUse()))
+      return BinaryOperator::CreateNot(Builder.CreateSelect(A, B, Zero));
+
     // select (select a, true, b), true, b -> select a, true, b
     if (match(CondVal, m_Select(m_Value(A), m_One(), m_Value(B))) &&
         match(TrueVal, m_One()) && match(FalseVal, m_Specific(B)))
