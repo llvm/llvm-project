@@ -107,6 +107,8 @@ public:
     Compiler.getDiagnosticOpts().ShowCarets = false;
     // Don't write out diagnostic file.
     Compiler.getDiagnosticOpts().DiagnosticSerializationFile.clear();
+    // Don't treat warnings as errors.
+    Compiler.getDiagnosticOpts().Warnings.push_back("no-error");
     // Create the compiler's actual diagnostics engine.
     Compiler.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
     if (!Compiler.hasDiagnostics())
