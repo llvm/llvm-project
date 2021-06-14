@@ -24,14 +24,14 @@ static_assert(is_function_like<decltype(std::ranges::advance)>());
 
 using range_t = std::array<int, 10>;
 
-template <std::input_or_output_iterator I>
+template <std::input_or_output_iterator It>
 constexpr void check_move_forward(std::ptrdiff_t const n) {
   auto range = range_t{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  auto first = stride_counting_iterator(I(range.begin()));
+  auto first = stride_counting_iterator(It(range.begin()));
   std::ranges::advance(first, n);
 
   assert(first.base().base() == range.begin() + n);
-  if constexpr (std::random_access_iterator<I>) {
+  if constexpr (std::random_access_iterator<It>) {
     assert(first.stride_count() == 0 || first.stride_count() == 1);
     assert(first.stride_displacement() == 1);
   } else {
@@ -40,14 +40,14 @@ constexpr void check_move_forward(std::ptrdiff_t const n) {
   }
 }
 
-template <std::bidirectional_iterator I>
+template <std::bidirectional_iterator It>
 constexpr void check_move_backward(std::ptrdiff_t const n) {
   auto range = range_t{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  auto first = stride_counting_iterator(I(range.begin() + n));
+  auto first = stride_counting_iterator(It(range.begin() + n));
   std::ranges::advance(first, -n);
   assert(first.base().base() == range.begin());
 
-  if constexpr (std::random_access_iterator<I>) {
+  if constexpr (std::random_access_iterator<It>) {
     assert(first.stride_count() == 0 || first.stride_count() == 1);
     assert(first.stride_displacement() == 1);
   } else {
@@ -83,7 +83,7 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  static_assert(test());
   assert(test());
+  static_assert(test());
   return 0;
 }

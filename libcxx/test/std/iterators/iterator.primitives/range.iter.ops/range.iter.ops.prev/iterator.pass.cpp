@@ -20,9 +20,11 @@
 template <class It>
 constexpr void check() {
   int range[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+  assert(std::ranges::prev(It(&range[1])) == It(&range[0]));
   assert(std::ranges::prev(It(&range[4])) == It(&range[3]));
   assert(std::ranges::prev(It(&range[5])) == It(&range[4]));
   assert(std::ranges::prev(It(&range[6])) == It(&range[5]));
+  assert(std::ranges::prev(It(&range[10])) == It(&range[9]));
 }
 
 constexpr bool test() {
@@ -34,7 +36,7 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  static_assert(test());
   test();
+  static_assert(test());
   return 0;
 }
