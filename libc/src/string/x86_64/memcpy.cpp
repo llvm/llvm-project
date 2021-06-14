@@ -8,7 +8,7 @@
 
 #include "src/string/memcpy.h"
 #include "src/__support/common.h"
-#include "src/string/memory_utils/elements.h"
+#include "src/string/memory_utils/memcpy_utils.h"
 
 namespace __llvm_libc {
 
@@ -29,11 +29,8 @@ constexpr size_t kRepMovsBSize =
 // Whether target supports AVX instructions.
 constexpr bool kHasAvx = LLVM_LIBC_IS_DEFINED(__AVX__);
 
-#ifdef __AVX__
-using LoopBlockSize = __llvm_libc::x86::_64;
-#else
-using LoopBlockSize = __llvm_libc::x86::_32;
-#endif
+// The chunk size used for the loop copy strategy.
+constexpr size_t kLoopCopyBlockSize = kHasAvx ? 64 : 32;
 
 static void CopyRepMovsb(char *__restrict dst, const char *__restrict src,
                          size_t count) {
@@ -64,37 +61,33 @@ static void CopyRepMovsb(char *__restrict dst, const char *__restrict src,
 //   with little change on the code side.
 static void memcpy_x86(char *__restrict dst, const char *__restrict src,
                        size_t count) {
-  // Use x86 strategies (_1, _2, _3 ...)
-  using namespace __llvm_libc::x86;
-
   if (kUseOnlyRepMovsb)
     return CopyRepMovsb(dst, src, count);
 
   if (count == 0)
     return;
   if (count == 1)
-    return Copy<_1>(dst, src);
+    return CopyBlock<1>(dst, src);
   if (count == 2)
-    return Copy<_2>(dst, src);
+    return CopyBlock<2>(dst, src);
   if (count == 3)
-    return Copy<_3>(dst, src);
+    return CopyBlock<3>(dst, src);
   if (count == 4)
-    return Copy<_4>(dst, src);
+    return CopyBlock<4>(dst, src);
   if (count < 8)
-    return Copy<HeadTail<_4>>(dst, src, count);
+    return CopyBlockOverlap<4>(dst, src, count);
   if (count < 16)
-    return Copy<HeadTail<_8>>(dst, src, count);
+    return CopyBlockOverlap<8>(dst, src, count);
   if (count < 32)
-    return Copy<HeadTail<_16>>(dst, src, count);
+    return CopyBlockOverlap<16>(dst, src, count);
   if (count < 64)
-    return Copy<HeadTail<_32>>(dst, src, count);
+    return CopyBlockOverlap<32>(dst, src, count);
   if (count < 128)
-    return Copy<HeadTail<_64>>(dst, src, count);
+    return CopyBlockOverlap<64>(dst, src, count);
   if (kHasAvx && count < 256)
-    return Copy<HeadTail<_128>>(dst, src, count);
+    return CopyBlockOverlap<128>(dst, src, count);
   if (count <= kRepMovsBSize)
-    return Copy<Align<_32, Arg::Dst>::Then<Loop<LoopBlockSize>>>(dst, src,
-                                                                 count);
+    return CopyDstAlignedBlocks<kLoopCopyBlockSize, 32>(dst, src, count);
   return CopyRepMovsb(dst, src, count);
 }
 

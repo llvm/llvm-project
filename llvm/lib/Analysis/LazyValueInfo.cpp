@@ -1151,20 +1151,20 @@ static ValueLatticeElement getValueFromOverflowCondition(
   return ValueLatticeElement::getRange(NWR);
 }
 
-static ValueLatticeElement
-getValueFromCondition(Value *Val, Value *Cond, bool isTrueDest,
-                      SmallDenseMap<Value*, ValueLatticeElement> &Visited);
-
-static ValueLatticeElement
+static Optional<ValueLatticeElement>
 getValueFromConditionImpl(Value *Val, Value *Cond, bool isTrueDest,
-                          SmallDenseMap<Value*, ValueLatticeElement> &Visited) {
-  if (ICmpInst *ICI = dyn_cast<ICmpInst>(Cond))
-    return getValueFromICmpCondition(Val, ICI, isTrueDest);
+                          bool isRevisit,
+                          SmallDenseMap<Value *, ValueLatticeElement> &Visited,
+                          SmallVectorImpl<Value *> &Worklist) {
+  if (!isRevisit) {
+    if (ICmpInst *ICI = dyn_cast<ICmpInst>(Cond))
+      return getValueFromICmpCondition(Val, ICI, isTrueDest);
 
-  if (auto *EVI = dyn_cast<ExtractValueInst>(Cond))
-    if (auto *WO = dyn_cast<WithOverflowInst>(EVI->getAggregateOperand()))
-      if (EVI->getNumIndices() == 1 && *EVI->idx_begin() == 1)
-        return getValueFromOverflowCondition(Val, WO, isTrueDest);
+    if (auto *EVI = dyn_cast<ExtractValueInst>(Cond))
+      if (auto *WO = dyn_cast<WithOverflowInst>(EVI->getAggregateOperand()))
+        if (EVI->getNumIndices() == 1 && *EVI->idx_begin() == 1)
+          return getValueFromOverflowCondition(Val, WO, isTrueDest);
+  }
 
   Value *L, *R;
   bool IsAnd;
@@ -1175,44 +1175,63 @@ getValueFromConditionImpl(Value *Val, Value *Cond, bool isTrueDest,
   else
     return ValueLatticeElement::getOverdefined();
 
+  auto LV = Visited.find(L);
+  auto RV = Visited.find(R);
+
   // if (L && R) -> intersect L and R
   // if (!(L || R)) -> intersect L and R
   // if (L || R) -> union L and R
   // if (!(L && R)) -> union L and R
-  if (isTrueDest ^ IsAnd) {
-    ValueLatticeElement V = getValueFromCondition(Val, L, isTrueDest, Visited);
+  if ((isTrueDest ^ IsAnd) && (LV != Visited.end())) {
+    ValueLatticeElement V = LV->second;
     if (V.isOverdefined())
       return V;
-    V.mergeIn(getValueFromCondition(Val, R, isTrueDest, Visited));
-    return V;
+    if (RV != Visited.end()) {
+      V.mergeIn(RV->second);
+      return V;
+    }
   }
 
-  return intersect(getValueFromCondition(Val, L, isTrueDest, Visited),
-                   getValueFromCondition(Val, R, isTrueDest, Visited));
-}
+  if (LV == Visited.end() || RV == Visited.end()) {
+    assert(!isRevisit);
+    if (LV == Visited.end())
+      Worklist.push_back(L);
+    if (RV == Visited.end())
+      Worklist.push_back(R);
+    return None;
+  }
 
-static ValueLatticeElement
-getValueFromCondition(Value *Val, Value *Cond, bool isTrueDest,
-                      SmallDenseMap<Value*, ValueLatticeElement> &Visited) {
-  // Insert an Overdefined placeholder into the set to prevent
-  // infinite recursion if there exists IRs that use not
-  // dominated by its def as in this example:
-  //   "%tmp3 = or i1 undef, %tmp4"
-  //   "%tmp4 = or i1 undef, %tmp3"
-  auto Iter = Visited.try_emplace(Cond, ValueLatticeElement::getOverdefined());
-  if (!Iter.second)
-    return Iter.first->getSecond();
-
-  auto Result = getValueFromConditionImpl(Val, Cond, isTrueDest, Visited);
-  Visited[Cond] = Result;
-  return Result;
+  return intersect(LV->second, RV->second);
 }
 
 ValueLatticeElement getValueFromCondition(Value *Val, Value *Cond,
                                           bool isTrueDest) {
   assert(Cond && "precondition");
   SmallDenseMap<Value*, ValueLatticeElement> Visited;
-  return getValueFromCondition(Val, Cond, isTrueDest, Visited);
+  SmallVector<Value *> Worklist;
+
+  Worklist.push_back(Cond);
+  do {
+    Value *CurrentCond = Worklist.back();
+    // Insert an Overdefined placeholder into the set to prevent
+    // infinite recursion if there exists IRs that use not
+    // dominated by its def as in this example:
+    //   "%tmp3 = or i1 undef, %tmp4"
+    //   "%tmp4 = or i1 undef, %tmp3"
+    auto Iter =
+        Visited.try_emplace(CurrentCond, ValueLatticeElement::getOverdefined());
+    bool isRevisit = !Iter.second;
+    Optional<ValueLatticeElement> Result = getValueFromConditionImpl(
+        Val, CurrentCond, isTrueDest, isRevisit, Visited, Worklist);
+    if (Result) {
+      Visited[CurrentCond] = *Result;
+      Worklist.pop_back();
+    }
+  } while (!Worklist.empty());
+
+  auto Result = Visited.find(Cond);
+  assert(Result != Visited.end());
+  return Result->second;
 }
 
 // Return true if Usr has Op as an operand, otherwise false.

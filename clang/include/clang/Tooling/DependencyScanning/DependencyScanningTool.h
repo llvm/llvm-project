@@ -31,6 +31,10 @@ struct FullDependencies {
   /// directly depends on, not including transitive dependencies.
   std::vector<std::string> FileDeps;
 
+  /// A collection of prebuilt modules this translation unit directly depends
+  /// on, not including transitive dependencies.
+  std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
+
   /// A list of modules this translation unit directly depends on, not including
   /// transitive dependencies.
   ///

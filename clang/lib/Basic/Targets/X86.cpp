@@ -516,6 +516,10 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_x86_64:
     defineCPUMacros(Builder, "k8");
     break;
+  case CK_x86_64_v2:
+  case CK_x86_64_v3:
+  case CK_x86_64_v4:
+    break;
   case CK_AMDFAM10:
     defineCPUMacros(Builder, "amdfam10");
     break;
