@@ -10,7 +10,6 @@
 #define COMPLEX_OPS
 
 include "mlir/Dialect/Complex/IR/ComplexBase.td"
-include "mlir/Interfaces/VectorInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 class Complex_Op<string mnemonic, list<OpTrait> traits = []>
@@ -21,8 +20,7 @@ class Complex_Op<string mnemonic, list<OpTrait> traits = []>
 // one result, all of which must be complex numbers of the same type.
 class ComplexArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
     Complex_Op<mnemonic, traits # [NoSideEffect, SameOperandsAndResultType,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
-    ElementwiseMappable.traits> {
+    Elementwise]> {
   let arguments = (ins Complex<AnyFloat>:$lhs, Complex<AnyFloat>:$rhs);
   let results = (outs Complex<AnyFloat>:$result);
   let assemblyFormat = "$lhs `,` $rhs  attr-dict `:` type($result)";
@@ -33,7 +31,7 @@ class ComplexArithmeticOp<string mnemonic, list<OpTrait> traits = []> :
 // floating-point element type. These operations take one operand and return
 // one result; the operand must be a complex number.
 class ComplexUnaryOp<string mnemonic, list<OpTrait> traits = []> :
-    Complex_Op<mnemonic, traits # [NoSideEffect]> {
+    Complex_Op<mnemonic, traits # [NoSideEffect, Elementwise]> {
   let arguments = (ins Complex<AnyFloat>:$complex);
   let assemblyFormat = "$complex attr-dict `:` type($complex)";
   let verifier = ?;
@@ -131,9 +129,7 @@ def DivOp : ComplexArithmeticOp<"div"> {
 //===----------------------------------------------------------------------===//
 
 def EqualOp : Complex_Op<"eq",
-    [NoSideEffect, AllTypesMatch<["lhs", "rhs"]>,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
-    ElementwiseMappable.traits> {
+    [NoSideEffect, AllTypesMatch<["lhs", "rhs"]>, Elementwise]> {
   let summary = "computes whether two complex values are equal";
   let description = [{
     The `eq` op takes two complex numbers and returns whether they are equal.
@@ -219,9 +215,7 @@ def MulOp : ComplexArithmeticOp<"mul"> {
 //===----------------------------------------------------------------------===//
 
 def NotEqualOp : Complex_Op<"neq",
-    [NoSideEffect, AllTypesMatch<["lhs", "rhs"]>,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
-    ElementwiseMappable.traits> {
+    [NoSideEffect, AllTypesMatch<["lhs", "rhs"]>, Elementwise]> {
   let summary = "computes whether two complex values are not equal";
   let description = [{
     The `neq` op takes two complex numbers and returns whether they are not
