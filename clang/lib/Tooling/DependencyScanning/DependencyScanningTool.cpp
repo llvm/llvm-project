@@ -16,10 +16,7 @@ namespace dependencies{
 std::vector<std::string> FullDependencies::getAdditionalArgs(
     std::function<StringRef(ModuleID)> LookupPCMPath,
     std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const {
-  std::vector<std::string> Ret{
-      "-fno-implicit-modules",
-      "-fno-implicit-module-maps",
-  };
+  std::vector<std::string> Ret = getAdditionalArgsWithoutModulePaths();
 
   std::vector<std::string> PCMPaths;
   std::vector<std::string> ModMapPaths;
@@ -35,10 +32,17 @@ std::vector<std::string> FullDependencies::getAdditionalArgs(
 
 std::vector<std::string>
 FullDependencies::getAdditionalArgsWithoutModulePaths() const {
-  return {
+  std::vector<std::string> Args{
       "-fno-implicit-modules",
       "-fno-implicit-module-maps",
   };
+
+  for (const PrebuiltModuleDep &PMD : PrebuiltModuleDeps) {
+    Args.push_back("-fmodule-file=" + PMD.ModuleName + "=" + PMD.PCMFile);
+    Args.push_back("-fmodule-map-file=" + PMD.ModuleMapFile);
+  }
+
+  return Args;
 }
 
 DependencyScanningTool::DependencyScanningTool(
@@ -55,6 +59,10 @@ llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
       if (!this->Opts)
         this->Opts = std::make_unique<DependencyOutputOptions>(Opts);
       Dependencies.push_back(std::string(File));
+    }
+
+    void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {
+      // Same as `handleModuleDependency`.
     }
 
     void handleModuleDependency(ModuleDeps MD) override {
@@ -125,6 +133,10 @@ DependencyScanningTool::getFullDependencies(
       Dependencies.push_back(std::string(File));
     }
 
+    void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {
+      PrebuiltModuleDeps.emplace_back(std::move(PMD));
+    }
+
     void handleModuleDependency(ModuleDeps MD) override {
       ClangModuleDeps[MD.ID.ContextHash + MD.ID.ModuleName] = std::move(MD);
     }
@@ -146,6 +158,8 @@ DependencyScanningTool::getFullDependencies(
           FD.ClangModuleDeps.push_back(MD.ID);
       }
 
+      FD.PrebuiltModuleDeps = std::move(PrebuiltModuleDeps);
+
       FullDependenciesResult FDR;
 
       for (auto &&M : ClangModuleDeps) {
@@ -162,6 +176,7 @@ DependencyScanningTool::getFullDependencies(
 
   private:
     std::vector<std::string> Dependencies;
+    std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
     std::unordered_map<std::string, ModuleDeps> ClangModuleDeps;
     std::string ContextHash;
     std::vector<std::string> OutputPaths;
