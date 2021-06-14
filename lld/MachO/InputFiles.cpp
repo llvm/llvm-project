@@ -254,9 +254,12 @@ void ObjFile::parseSections(ArrayRef<Section> sections) {
     ArrayRef<uint8_t> data = {isZeroFill(sec.flags) ? nullptr
                                                     : buf + sec.offset,
                               static_cast<size_t>(sec.size)};
-    if (sec.align >= 32)
+    if (sec.align >= 32) {
       error("alignment " + std::to_string(sec.align) + " of section " + name +
             " is too large");
+      subsections.push_back({});
+      continue;
+    }
     uint32_t align = 1 << sec.align;
     uint32_t flags = sec.flags;
 
