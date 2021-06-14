@@ -62,3 +62,23 @@ func @foo5(%box : !fir.box<!fir.ptr<!fir.array<?xi32>>>, %i : index) -> i32 {
   %rv = fir.load %1 : !fir.ref<i32>
   return %rv : i32
 }
+
+// CHECK-LABEL: @foo6
+// CHECK-SAME: ({ [1 x i8]*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }* %[[box:.*]], i64 %{{.*}}, [1 x i8]* %{{.*}}) 
+func @foo6(%box : !fir.box<!fir.ptr<!fir.array<?x!fir.char<1>>>>, %i : i64 , %res : !fir.ref<!fir.char<1>>) {
+  // CHECK: %[[addr_gep:.*]] = getelementptr { [1 x i8]*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, { [1 x i8]*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }* %[[box]], i32 0, i32 0
+  // CHECK: %[[addr:.*]] = load [1 x i8]*, [1 x i8]** %[[addr_gep]]
+  // CHECK: %[[stride_gep:.*]] = getelementptr { [1 x i8]*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, { [1 x i8]*, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }* %[[box]], i32 0, i32 7, i64 0, i32 2
+  // CHECK: %[[stride:.*]] = load i64, i64* %[[stride_gep]]
+  // CHECK: %[[mul:.*]] = mul i64 %{{.*}}, %[[stride]]
+  // CHECK: %[[offset:.*]] = add i64 %[[mul]], 0
+  // CHECK: %[[cast:.*]] = bitcast [1 x i8]* %[[addr]] to i8*
+  // CHECK: %[[gep:.*]] = getelementptr i8, i8* %[[cast]], i64 %[[offset]]
+  // CHECK: %[[cast2:.*]] = bitcast i8* %[[gep]] to [1 x i8]*
+  %coor = fir.coordinate_of %box, %i : (!fir.box<!fir.ptr<!fir.array<?x!fir.char<1>>>>, i64) -> !fir.ref<!fir.char<1>>
+
+  // CHECK: load [1 x i8], [1 x i8]* %[[cast2]]
+  %load = fir.load %coor : !fir.ref<!fir.char<1>>
+  fir.store %load to %res : !fir.ref<!fir.char<1>>
+  return
+}
