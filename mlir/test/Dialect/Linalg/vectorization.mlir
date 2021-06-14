@@ -512,21 +512,44 @@ func @matmul_i8_i8_i32(%a: memref<4x6xi8>, %b: memref<6x12xi8>, %c: memref<4x12x
 
 // -----
 
-// CHECK-LABEL: func @pad_static_high_padding
-//       CHECK:   linalg.pad_tensor
-func @pad_static_high_padding(%arg0: tensor<?x?x?xf32>, %pad_value: f32) -> tensor<2x3x4xf32> {
-  %0 = linalg.pad_tensor %arg0 low[0, 0, 0] high[0, 1, 0] {
+// CHECK-LABEL: func @pad_static(
+//  CHECK-SAME:                  %[[ARG0:.*]]: tensor<2x?x2xf32>, %[[PAD:.*]]: f32
+//   CHECK-NOT:   linalg.pad_tensor
+//   CHECK-DAG:   %[[C1:.*]] = constant 1 : index
+//   CHECK-DAG:   %[[INIT:.*]] = linalg.init_tensor [2, 3, 4] : tensor<2x3x4xf32>
+//   CHECK-DAG:   %[[VEC:.*]] = vector.broadcast %[[PAD]] : f32 to vector<2x3x4xf32>
+//       CHECK:   %[[FILL:.*]] = vector.transfer_write %[[VEC]], %[[INIT]]{{.*}} : vector<2x3x4xf32>, tensor<2x3x4xf32>
+//   CHECK-DAG:   %[[DIM1:.*]] = memref.dim %[[ARG0]], %[[C1]]
+//       CHECK:   %[[RESULT:.*]] = subtensor_insert %[[ARG0]] into %2[0, 0, 2] [2, %[[DIM1]], 2] [1, 1, 1] : tensor<2x?x2xf32> into tensor<2x3x4xf32>
+//       CHECK:   return %[[RESULT]]
+func @pad_static(%arg0: tensor<2x?x2xf32>, %pad_value: f32) -> tensor<2x3x4xf32> {
+  %0 = linalg.pad_tensor %arg0 low[0, 0, 2] high[0, 1, 0] {
     ^bb0(%arg1: index, %arg2: index, %arg3: index):
       linalg.yield %pad_value : f32
-    } : tensor<?x?x?xf32> to tensor<2x3x4xf32>
+    } : tensor<2x?x2xf32> to tensor<2x3x4xf32>
   return %0 : tensor<2x3x4xf32>
 }
 
 // -----
 
-// CHECK-LABEL: func @pad_dynamic
-//       CHECK:   linalg.pad_tensor
-func @pad_dynamic(%arg0: tensor<1x2x2x?xf32>, %low: index, %high: index,
+// CHECK-LABEL: func @pad_static_dynamic(
+//  CHECK-SAME:                          %[[SRC:.*]]: tensor<1x2x2x?xf32>, %[[LOW:.*]]: index, %[[HIGH:.*]]: index
+//   CHECK-NOT:   linalg.pad_tensor
+//   CHECK-DAG:   %[[C2:.*]] = constant 2 : index
+//   CHECK-DAG:   %[[C3:.*]] = constant 3 : index
+//   CHECK-DAG:   %[[C5:.*]] = constant 5 : index
+//       CHECK:   %[[V0:.*]] = addi %[[LOW]], %[[C2]] : index
+//       CHECK:   %[[V1:.*]] = addi %[[V0]], %[[C3]] : index
+//       CHECK:   %[[V2:.*]] = addi %[[HIGH]], %[[C5]] : index
+//       CHECK:   %[[DIM3:.*]] = memref.dim %[[SRC]], %[[C3]] : tensor<1x2x2x?xf32>
+//       CHECK:   %[[V4:.*]] = addi %[[DIM3]], %[[C3]] : index
+//       CHECK:   %[[V5:.*]] = addi %[[V4]], %[[C2]] : index
+//       CHECK:   %[[INIT:.*]] = linalg.init_tensor [6, %[[V1]], %[[V2]], %[[V5]]] : tensor<6x?x?x?xf32>
+//       CHECK:   %[[FILL:.*]] = linalg.fill(%[[INIT]], %{{.*}}) : tensor<6x?x?x?xf32>, f32 -> tensor<6x?x?x?xf32>
+//       CHECK:   %[[SRCDIM:.*]] = memref.dim %[[SRC]], %[[C3]] : tensor<1x2x2x?xf32>
+//       CHECK:   %[[RESULT:.*]] = subtensor_insert %[[SRC]] into %[[FILL]][2, %[[LOW]], 3, 3] [1, 2, 2, %[[SRCDIM]]] [1, 1, 1, 1] : tensor<1x2x2x?xf32> into tensor<6x?x?x?xf32>
+//       CHECK:   return %[[RESULT]]
+func @pad_static_dynamic(%arg0: tensor<1x2x2x?xf32>, %low: index, %high: index,
                   %pad_value: f32) -> tensor<6x?x?x?xf32> {
   %0 = linalg.pad_tensor %arg0 low[2, %low, 3, 3] high[3, 3, %high, 2] {
     ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):
