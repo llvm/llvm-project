@@ -650,31 +650,6 @@ mlir::linalg::vectorizeLinalgOp(OpBuilder &b, Operation *op,
 // Misc. vectorization patterns.
 //----------------------------------------------------------------------------//
 
-/// Given a block, return the Value that the block yields if that Value is
-/// constant. In this context, "constant" means "defined outside of the block".
-/// Should not be called on blocks that yield more than one value.
-///
-/// Values are considered constant in two cases:
-///  - A basic block argument from a different block.
-///  - A value defined outside of the block.
-///
-/// If the yielded value is not constant, an empty Value is returned.
-static Value getConstantYieldValueFromBlock(Block &block) {
-  auto yieldOp = cast<YieldOp>(block.getTerminator());
-  assert(yieldOp.getNumOperands() == 1 && "expected single operand yield");
-  Value result = yieldOp.values().front();
-  Operation *definingOp = result.getDefiningOp();
-
-  // Check if yield value is defined inside the block.
-  if (definingOp && definingOp->getBlock() == &block)
-    return Value();
-  // Check if the yield value is a BB arg of the block.
-  if (!definingOp && result.cast<BlockArgument>().getOwner() == &block)
-    return Value();
-
-  return result;
-}
-
 /// Rewrite a PadTensorOp into a sequence of InitTensorOp, TransferReadOp and
 /// TransferWriteOp. For now, this only applies when all low and high paddings
 /// are determined to be zero.
@@ -693,7 +668,7 @@ struct GenericPadTensorOpVectorizationPattern
     // High padding must be static 0.
     if (!llvm::all_of(padOp.getMixedHighPad(), isZeroInt)) return failure();
     // Pad value must be a constant.
-    auto padValue = getConstantYieldValueFromBlock(padOp.region().front());
+    auto padValue = padOp.getConstantPaddingValue();
     if (!padValue) return failure();
 
     // Bail on non-static shapes.

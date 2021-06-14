@@ -242,6 +242,9 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
         Type type, Value source, Value pad, ArrayRef<OpFoldResult> low,
         ArrayRef<OpFoldResult> high, Location loc, OpBuilder & builder);
 
+    // Return the pad value if it is a constant. Return null value otherwise.
+    Value getConstantPaddingValue();
+
     // Return a vector of all the static or dynamic values (low/high padding) of
     // the op.
     inline SmallVector<OpFoldResult> getMixedPadImpl(ArrayAttr staticAttrs,
