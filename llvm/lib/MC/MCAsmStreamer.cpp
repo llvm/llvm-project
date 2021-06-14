@@ -315,6 +315,8 @@ public:
   void emitCFIDefCfa(int64_t Register, int64_t Offset) override;
   void emitCFIDefCfaOffset(int64_t Offset) override;
   void emitCFIDefCfaRegister(int64_t Register) override;
+  void emitCFILLVMDefAspaceCfa(int64_t Register, int64_t Offset,
+                               int64_t AddressSpace) override;
   void emitCFIOffset(int64_t Register, int64_t Offset) override;
   void emitCFIPersonality(const MCSymbol *Sym, unsigned Encoding) override;
   void emitCFILsda(const MCSymbol *Sym, unsigned Encoding) override;
@@ -1807,6 +1809,16 @@ void MCAsmStreamer::emitCFIDefCfa(int64_t Register, int64_t Offset) {
 void MCAsmStreamer::emitCFIDefCfaOffset(int64_t Offset) {
   MCStreamer::emitCFIDefCfaOffset(Offset);
   OS << "\t.cfi_def_cfa_offset " << Offset;
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitCFILLVMDefAspaceCfa(int64_t Register, int64_t Offset,
+                                            int64_t AddressSpace) {
+  MCStreamer::emitCFILLVMDefAspaceCfa(Register, Offset, AddressSpace);
+  OS << "\t.cfi_llvm_def_aspace_cfa ";
+  EmitRegisterName(Register);
+  OS << ", " << Offset;
+  OS << ", " << AddressSpace;
   EmitEOL();
 }
 
