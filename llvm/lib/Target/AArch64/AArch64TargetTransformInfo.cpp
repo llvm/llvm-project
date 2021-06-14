@@ -275,6 +275,56 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     return Cost;
   }
+  case Intrinsic::bitreverse: {
+    static const CostTblEntry BitreverseTbl[] = {
+        {Intrinsic::bitreverse, MVT::i32, 1},
+        {Intrinsic::bitreverse, MVT::i64, 1},
+        {Intrinsic::bitreverse, MVT::v8i8, 1},
+        {Intrinsic::bitreverse, MVT::v16i8, 1},
+        {Intrinsic::bitreverse, MVT::v4i16, 2},
+        {Intrinsic::bitreverse, MVT::v8i16, 2},
+        {Intrinsic::bitreverse, MVT::v2i32, 2},
+        {Intrinsic::bitreverse, MVT::v4i32, 2},
+        {Intrinsic::bitreverse, MVT::v1i64, 2},
+        {Intrinsic::bitreverse, MVT::v2i64, 2},
+    };
+    const auto LegalisationCost = TLI->getTypeLegalizationCost(DL, RetTy);
+    const auto *Entry =
+        CostTableLookup(BitreverseTbl, ICA.getID(), LegalisationCost.second);
+    // Cost Model is using the legal type(i32) that i8 and i16 will be converted
+    // to +1 so that we match the actual lowering cost
+    if (TLI->getValueType(DL, RetTy, true) == MVT::i8 ||
+        TLI->getValueType(DL, RetTy, true) == MVT::i16)
+      return LegalisationCost.first * Entry->Cost + 1;
+    if (Entry)
+      return LegalisationCost.first * Entry->Cost;
+    break;
+  }
+  case Intrinsic::ctpop: {
+    static const CostTblEntry CtpopCostTbl[] = {
+        {ISD::CTPOP, MVT::v2i64, 4},
+        {ISD::CTPOP, MVT::v4i32, 3},
+        {ISD::CTPOP, MVT::v8i16, 2},
+        {ISD::CTPOP, MVT::v16i8, 1},
+        {ISD::CTPOP, MVT::i64,   4},
+        {ISD::CTPOP, MVT::v2i32, 3},
+        {ISD::CTPOP, MVT::v4i16, 2},
+        {ISD::CTPOP, MVT::v8i8,  1},
+        {ISD::CTPOP, MVT::i32,   5},
+    };
+    auto LT = TLI->getTypeLegalizationCost(DL, RetTy);
+    MVT MTy = LT.second;
+    if (const auto *Entry = CostTableLookup(CtpopCostTbl, ISD::CTPOP, MTy)) {
+      // Extra cost of +1 when illegal vector types are legalized by promoting
+      // the integer type.
+      int ExtraCost = MTy.isVector() && MTy.getScalarSizeInBits() !=
+                                            RetTy->getScalarSizeInBits()
+                          ? 1
+                          : 0;
+      return LT.first * Entry->Cost + ExtraCost;
+    }
+    break;
+  }
   default:
     break;
   }
@@ -1639,8 +1689,8 @@ bool AArch64TTIImpl::shouldConsiderAddressTypePromotion(
   return Considerable;
 }
 
-bool AArch64TTIImpl::isLegalToVectorizeReduction(RecurrenceDescriptor RdxDesc,
-                                                 ElementCount VF) const {
+bool AArch64TTIImpl::isLegalToVectorizeReduction(
+    const RecurrenceDescriptor &RdxDesc, ElementCount VF) const {
   if (!VF.isScalable())
     return true;
 

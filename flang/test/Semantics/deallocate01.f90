@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Test that DEALLOCATE works
 
 INTEGER, PARAMETER :: maxvalue=1024

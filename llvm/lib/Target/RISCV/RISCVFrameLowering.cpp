@@ -911,11 +911,21 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
   }
 }
 
+static bool hasRVVFrameObject(const MachineFunction &MF) {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  for (int I = 0, E = MFI.getObjectIndexEnd(); I != E; ++I)
+    if (MFI.getStackID(I) == TargetStackID::ScalableVector)
+      return true;
+  return false;
+}
+
 // Not preserve stack space within prologue for outgoing variables when the
-// function contains variable size objects and let eliminateCallFramePseudoInstr
-// preserve stack space for it.
+// function contains variable size objects or there are vector objects accessed
+// by the frame pointer.
+// Let eliminateCallFramePseudoInstr preserve stack space for it.
 bool RISCVFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
-  return !MF.getFrameInfo().hasVarSizedObjects();
+  return !MF.getFrameInfo().hasVarSizedObjects() &&
+         !(hasFP(MF) && hasRVVFrameObject(MF));
 }
 
 // Eliminate ADJCALLSTACKDOWN, ADJCALLSTACKUP pseudo instructions.

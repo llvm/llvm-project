@@ -1213,7 +1213,7 @@ AST_MATCHER_P(TemplateArgument, equalsIntegralValue,
               std::string, Value) {
   if (Node.getKind() != TemplateArgument::Integral)
     return false;
-  return Node.getAsIntegral().toString(10) == Value;
+  return toString(Node.getAsIntegral(), 10) == Value;
 }
 
 /// Matches an Objective-C autorelease pool statement.

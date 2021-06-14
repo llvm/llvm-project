@@ -1930,7 +1930,7 @@ const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
 
 static std::string APIntToHexString(const APInt &AI) {
   unsigned Width = (AI.getBitWidth() / 8) * 2;
-  std::string HexString = AI.toString(16, /*Signed=*/false);
+  std::string HexString = toString(AI, 16, /*Signed=*/false);
   llvm::transform(HexString, HexString.begin(), tolower);
   unsigned Size = HexString.size();
   assert(Width >= Size && "hex string is too large!");
@@ -2185,6 +2185,17 @@ bool TargetLoweringObjectFileXCOFF::ShouldEmitEHBlock(
   if (isNoOpWithoutInvoke(classifyEHPersonality(Per)))
     return false;
 
+  return true;
+}
+
+bool TargetLoweringObjectFileXCOFF::ShouldSetSSPCanaryBitInTB(
+    const MachineFunction *MF) {
+  const Function &F = MF->getFunction();
+  if (!F.hasStackProtectorFnAttr())
+    return false;
+  // FIXME: check presence of canary word
+  // There are cases that the stack protectors are not really inserted even if
+  // the attributes are on.
   return true;
 }
 

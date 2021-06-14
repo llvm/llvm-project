@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang -fopenmp
+! REQUIRES: shell
 ! OpenMP Version 4.5
 ! 2.13.9 Depend Clause
 ! A variable that is part of another variable

@@ -74,9 +74,9 @@ private:
   }
 
   std::vector<GDBRemotePacket> m_packets;
-  uint32_t m_curr_idx;
-  uint32_t m_total_packet_count;
-  mutable bool m_dumped_to_log;
+  uint32_t m_curr_idx = 0;
+  uint32_t m_total_packet_count = 0;
+  mutable bool m_dumped_to_log = false;
   repro::PacketRecorder *m_recorder = nullptr;
 };
 

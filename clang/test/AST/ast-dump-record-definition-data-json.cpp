@@ -5012,7 +5012,6 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
 
-
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
 // CHECK-NEXT:   "offset": 1675,
@@ -5155,14 +5154,13 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
 // CHECK-NEXT:      },
-// CHECK-NEXT:      "valueCategory": "rvalue",
+// CHECK-NEXT:      "valueCategory": "prvalue",
 // CHECK-NEXT:      "value": "12"
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
-
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {

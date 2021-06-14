@@ -133,6 +133,15 @@ statement in main!)</td>
 
 <tbody>
 <tr>
+<td class="org-left">report&#95;data&#95;leak</td>
+<td class="org-right">0</td>
+<td class="org-left">Report leaking OMPT data for execution under
+Archer. Used for testing and debugging Archer if errors occur.</td>
+</tr>
+</tbody>
+
+<tbody>
+<tr>
 <td class="org-left">verbose</td>
 <td class="org-right">0</td>
 <td class="org-left">Print startup information.</td>

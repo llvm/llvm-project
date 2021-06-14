@@ -835,7 +835,7 @@ ExprResult ObjCPropertyOpBuilder::buildRValueOperation(Expr *op) {
 
   // As a special case, if the method returns 'id', try to get
   // a better type from the property.
-  if (RefExpr->isExplicitProperty() && result.get()->isRValue()) {
+  if (RefExpr->isExplicitProperty() && result.get()->isPRValue()) {
     QualType receiverType = RefExpr->getReceiverType(S.Context);
     QualType propType = RefExpr->getExplicitProperty()
                           ->getUsageType(receiverType);
@@ -1554,7 +1554,7 @@ ExprResult Sema::checkPseudoObjectIncDec(Scope *Sc, SourceLocation opcLoc,
   // Do nothing if the operand is dependent.
   if (op->isTypeDependent())
     return UnaryOperator::Create(Context, op, opcode, Context.DependentTy,
-                                 VK_RValue, OK_Ordinary, opcLoc, false,
+                                 VK_PRValue, OK_Ordinary, opcLoc, false,
                                  CurFPFeatureOverrides());
 
   assert(UnaryOperator::isIncrementDecrementOp(opcode));
@@ -1585,7 +1585,7 @@ ExprResult Sema::checkPseudoObjectAssignment(Scope *S, SourceLocation opcLoc,
   // Do nothing if either argument is dependent.
   if (LHS->isTypeDependent() || RHS->isTypeDependent())
     return BinaryOperator::Create(Context, LHS, RHS, opcode,
-                                  Context.DependentTy, VK_RValue, OK_Ordinary,
+                                  Context.DependentTy, VK_PRValue, OK_Ordinary,
                                   opcLoc, CurFPFeatureOverrides());
 
   // Filter out non-overload placeholder types in the RHS.

@@ -316,8 +316,8 @@ RocmInstallationDetector::RocmInstallationDetector(
   HIPPathArg = Args.getLastArgValue(clang::driver::options::OPT_hip_path_EQ);
   if (auto *A = Args.getLastArg(clang::driver::options::OPT_hip_version_EQ)) {
     HIPVersionArg = A->getValue();
-    unsigned Major = 0;
-    unsigned Minor = 0;
+    unsigned Major = ~0U;
+    unsigned Minor = ~0U;
     SmallVector<StringRef, 3> Parts;
     HIPVersionArg.split(Parts, '.');
     if (Parts.size())
@@ -328,7 +328,9 @@ RocmInstallationDetector::RocmInstallationDetector(
       VersionPatch = Parts[2].str();
     if (VersionPatch.empty())
       VersionPatch = "0";
-    if (Major == 0 || Minor == 0)
+    if (Major != ~0U && Minor == ~0U)
+      Minor = 0;
+    if (Major == ~0U || Minor == ~0U)
       D.Diag(diag::err_drv_invalid_value)
           << A->getAsString(Args) << HIPVersionArg;
 

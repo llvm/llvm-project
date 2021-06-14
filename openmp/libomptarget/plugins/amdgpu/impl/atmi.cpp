@@ -43,7 +43,7 @@ static hsa_status_t invoke_hsa_copy(hsa_signal_t sig, void *dest,
 
 struct atmiFreePtrDeletor {
   void operator()(void *p) {
-    atmi_free(p); // ignore failure to free
+    core::Runtime::Memfree(p); // ignore failure to free
   }
 };
 
@@ -60,10 +60,9 @@ hsa_status_t atmi_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
   }
 
   void *tempHostPtr;
-  hsa_status_t ret =
-      atmi_malloc(&tempHostPtr, size, 0 /* DeviceId */, ATMI_DEVTYPE_CPU);
+  hsa_status_t ret = core::Runtime::HostMalloc(&tempHostPtr, size);
   if (ret != HSA_STATUS_SUCCESS) {
-    DEBUG_PRINT("atmi_malloc: Unable to alloc %d bytes for temp scratch\n",
+    DEBUG_PRINT("HostMalloc: Unable to alloc %d bytes for temp scratch\n",
                 size);
     return ret;
   }
@@ -91,10 +90,9 @@ hsa_status_t atmi_memcpy_d2h(hsa_signal_t signal, void *dest,
 
   void *tempHostPtr;
 
-  hsa_status_t ret =
-      atmi_malloc(&tempHostPtr, size, 0 /* DeviceId */, ATMI_DEVTYPE_CPU);
+  hsa_status_t ret = core::Runtime::HostMalloc(&tempHostPtr, size);
   if (ret != HSA_STATUS_SUCCESS) {
-    DEBUG_PRINT("atmi_malloc: Unable to alloc %d bytes for temp scratch\n",
+    DEBUG_PRINT("HostMalloc: Unable to alloc %d bytes for temp scratch\n",
                 size);
     return ret;
   }
@@ -107,11 +105,4 @@ hsa_status_t atmi_memcpy_d2h(hsa_signal_t signal, void *dest,
 
   memcpy(dest, tempHostPtr, size);
   return HSA_STATUS_SUCCESS;
-}
-
-hsa_status_t atmi_free(void *ptr) { return core::Runtime::Memfree(ptr); }
-
-hsa_status_t atmi_malloc(void **ptr, size_t size, int DeviceId,
-                         atmi_devtype_t DeviceType) {
-  return core::Runtime::Malloc(ptr, size, DeviceId, DeviceType);
 }

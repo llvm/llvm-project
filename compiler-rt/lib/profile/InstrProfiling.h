@@ -101,13 +101,13 @@ void __llvm_profile_reset_counters(void);
 /*!
  * \brief Merge profile data from buffer.
  *
- * Read profile data form buffer \p Profile  and merge with
- * in-process profile counters. The client is expected to
- * have checked or already knows the profile data in the
- * buffer matches the in-process counter structure before
- * calling it.
+ * Read profile data form buffer \p Profile  and merge with in-process profile
+ * counters. The client is expected to have checked or already knows the profile
+ * data in the buffer matches the in-process counter structure before calling
+ * it. Returns 0 (success) if the profile data is valid. Upon reading
+ * invalid/corrupted profile data, returns 1 (failure).
  */
-void __llvm_profile_merge_from_buffer(const char *Profile, uint64_t Size);
+int __llvm_profile_merge_from_buffer(const char *Profile, uint64_t Size);
 
 /*! \brief Check if profile in buffer matches the current binary.
  *

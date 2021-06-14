@@ -87,7 +87,7 @@ insert-before or insert-after.");
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options(), m_global(false) {}
+    CommandOptions() : Options() {}
 
     ~CommandOptions() override = default;
 
@@ -120,7 +120,7 @@ insert-before or insert-after.");
     }
 
     // Instance variables to hold the values for command options.
-    bool m_global;
+    bool m_global = false;
     bool m_force;
   };
 

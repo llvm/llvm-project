@@ -100,7 +100,7 @@ private:
   void reset(lldb::ListenerSP listener_sp);
 
   lldb::ListenerSP m_opaque_sp;
-  lldb_private::Listener *m_unused_ptr;
+  lldb_private::Listener *m_unused_ptr = nullptr;
 };
 
 } // namespace lldb

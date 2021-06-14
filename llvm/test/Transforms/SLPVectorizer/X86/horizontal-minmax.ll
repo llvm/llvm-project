@@ -1334,8 +1334,8 @@ define i8 @umin_intrinsic_rdx_v16i8(i8* %p0) {
 
 define void @PR49730() {
 ; CHECK-LABEL: @PR49730(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> undef, <4 x i32> <i32 2, i32 2, i32 1, i32 1>)
-; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw <4 x i32> undef, [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> poison, <4 x i32> <i32 2, i32 2, i32 1, i32 1>)
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw <4 x i32> poison, [[TMP1]]
 ; CHECK-NEXT:    [[T12:%.*]] = sub nsw i32 undef, undef
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.umin.v4i32(<4 x i32> [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP3]], i32 [[T12]])

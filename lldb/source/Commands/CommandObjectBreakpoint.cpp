@@ -242,15 +242,8 @@ public:
   class CommandOptions : public OptionGroup {
   public:
     CommandOptions()
-        : OptionGroup(), m_condition(), m_filenames(), m_line_num(0),
-          m_column(0), m_func_names(),
-          m_func_name_type_mask(eFunctionNameTypeNone), m_func_regexp(),
-          m_source_text_regexp(), m_modules(), m_load_addr(), m_catch_bp(false),
-          m_throw_bp(true), m_hardware(false),
-          m_exception_language(eLanguageTypeUnknown),
-          m_language(lldb::eLanguageTypeUnknown),
-          m_skip_prologue(eLazyBoolCalculate), m_all_files(false),
-          m_move_to_nearest_code(eLazyBoolCalculate) {}
+        : OptionGroup(), m_condition(), m_filenames(), m_func_names(),
+          m_func_regexp(), m_source_text_regexp(), m_modules() {}
 
     ~CommandOptions() override = default;
 
@@ -500,25 +493,25 @@ public:
 
     std::string m_condition;
     FileSpecList m_filenames;
-    uint32_t m_line_num;
-    uint32_t m_column;
+    uint32_t m_line_num = 0;
+    uint32_t m_column = 0;
     std::vector<std::string> m_func_names;
     std::vector<std::string> m_breakpoint_names;
-    lldb::FunctionNameType m_func_name_type_mask;
+    lldb::FunctionNameType m_func_name_type_mask = eFunctionNameTypeNone;
     std::string m_func_regexp;
     std::string m_source_text_regexp;
     FileSpecList m_modules;
-    lldb::addr_t m_load_addr;
+    lldb::addr_t m_load_addr = 0;
     lldb::addr_t m_offset_addr;
-    bool m_catch_bp;
-    bool m_throw_bp;
-    bool m_hardware; // Request to use hardware breakpoints
-    lldb::LanguageType m_exception_language;
-    lldb::LanguageType m_language;
-    LazyBool m_skip_prologue;
-    bool m_all_files;
+    bool m_catch_bp = false;
+    bool m_throw_bp = true;
+    bool m_hardware = false; // Request to use hardware breakpoints
+    lldb::LanguageType m_exception_language = eLanguageTypeUnknown;
+    lldb::LanguageType m_language = lldb::eLanguageTypeUnknown;
+    LazyBool m_skip_prologue = eLazyBoolCalculate;
+    bool m_all_files = false;
     Args m_exception_extra_args;
-    LazyBool m_move_to_nearest_code;
+    LazyBool m_move_to_nearest_code = eLazyBoolCalculate;
     std::unordered_set<std::string> m_source_regex_func_names;
     std::string m_current_key;
   };
@@ -1133,9 +1126,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions()
-        : Options(), m_level(lldb::eDescriptionLevelBrief), m_use_dummy(false) {
-    }
+    CommandOptions() : Options() {}
 
     ~CommandOptions() override = default;
 
@@ -1179,10 +1170,10 @@ public:
 
     // Instance variables to hold the values for command options.
 
-    lldb::DescriptionLevel m_level;
+    lldb::DescriptionLevel m_level = lldb::eDescriptionLevelBrief;
 
     bool m_internal;
-    bool m_use_dummy;
+    bool m_use_dummy = false;
   };
 
 protected:
@@ -1268,7 +1259,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options(), m_filename(), m_line_num(0) {}
+    CommandOptions() : Options(), m_filename() {}
 
     ~CommandOptions() override = default;
 
@@ -1305,7 +1296,7 @@ public:
     // Instance variables to hold the values for command options.
 
     std::string m_filename;
-    uint32_t m_line_num;
+    uint32_t m_line_num = 0;
   };
 
 protected:
@@ -1423,8 +1414,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options(), m_use_dummy(false), m_force(false),
-      m_delete_disabled(false) {}
+    CommandOptions() : Options() {}
 
     ~CommandOptions() override = default;
 
@@ -1464,9 +1454,9 @@ public:
     }
 
     // Instance variables to hold the values for command options.
-    bool m_use_dummy;
-    bool m_force;
-    bool m_delete_disabled;
+    bool m_use_dummy = false;
+    bool m_force = false;
+    bool m_delete_disabled = false;
   };
 
 protected:

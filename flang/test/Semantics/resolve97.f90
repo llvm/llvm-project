@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 
 ! Check errors from illegal (10.1.12 para 2) forward references
 ! in specification expressions to entities declared later in the

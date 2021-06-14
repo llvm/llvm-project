@@ -39,6 +39,33 @@
 // RUN: %clang -target riscv32-unknown-elf -march=rv32gc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 
+// RUN: %clang -target riscv32-unknown-elf -mabi=ilp32 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=CHECK-ILP32 %s
+
+// CHECK-ILP32:      "-target-feature" "+m"
+// CHECK-ILP32-SAME: {{^}} "-target-feature" "+a"
+// CHECK-ILP32-SAME: {{^}} "-target-feature" "+f"
+// CHECK-ILP32-SAME: {{^}} "-target-feature" "+d"
+// CHECK-ILP32-SAME: {{^}} "-target-feature" "+c"
+
+// RUN: %clang -target riscv32-unknown-elf -mabi=ilp32f -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=CHECK-ILP32F %s
+
+// CHECK-ILP32F:      "-target-feature" "+m"
+// CHECK-ILP32F-SAME: {{^}} "-target-feature" "+a"
+// CHECK-ILP32F-SAME: {{^}} "-target-feature" "+f"
+// CHECK-ILP32F-SAME: {{^}} "-target-feature" "+d"
+// CHECK-ILP32F-SAME: {{^}} "-target-feature" "+c"
+
+// RUN: %clang -target riscv32-unknown-elf -mabi=ilp32d -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=CHECK-ILP32D %s
+
+// CHECK-ILP32D:      "-target-feature" "+m"
+// CHECK-ILP32D-SAME: {{^}} "-target-feature" "+a"
+// CHECK-ILP32D-SAME: {{^}} "-target-feature" "+f"
+// CHECK-ILP32D-SAME: {{^}} "-target-feature" "+d"
+// CHECK-ILP32D-SAME: {{^}} "-target-feature" "+c"
+
 // RUN: %clang -target riscv64-unknown-elf -march=rv64i -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang -target riscv64-unknown-elf -march=rv64im -### %s \
@@ -79,6 +106,33 @@
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang -target riscv64-unknown-elf -march=rv64gc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
+
+// RUN: %clang -target riscv64-unknown-elf -mabi=lp64 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=CHECK-LP64 %s
+
+// CHECK-LP64: "-target-feature" "+m"
+// CHECK-LP64-SAME: {{^}} "-target-feature" "+a"
+// CHECK-LP64-SAME: {{^}} "-target-feature" "+f"
+// CHECK-LP64-SAME: {{^}} "-target-feature" "+d"
+// CHECK-LP64-SAME: {{^}} "-target-feature" "+c"
+
+// RUN: %clang -target riscv64-unknown-elf -mabi=lp64f -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=CHECK-LP64F %s
+
+// CHECK-LP64F: "-target-feature" "+m"
+// CHECK-LP64F-SAME: {{^}} "-target-feature" "+a"
+// CHECK-LP64F-SAME: {{^}} "-target-feature" "+f"
+// CHECK-LP64F-SAME: {{^}} "-target-feature" "+d"
+// CHECK-LP64F-SAME: {{^}} "-target-feature" "+c"
+
+// RUN: %clang -target riscv64-unknown-elf -mabi=lp64d -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=CHECK-LP64D %s
+
+// CHECK-LP64D: "-target-feature" "+m"
+// CHECK-LP64D-SAME: {{^}} "-target-feature" "+a"
+// CHECK-LP64D-SAME: {{^}} "-target-feature" "+f"
+// CHECK-LP64D-SAME: {{^}} "-target-feature" "+d"
+// CHECK-LP64D-SAME: {{^}} "-target-feature" "+c"
 
 // CHECK-NOT: error: invalid arch name '
 

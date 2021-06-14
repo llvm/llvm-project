@@ -359,8 +359,8 @@ static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query)
 static bool shouldBitcastLoadStoreType(const GCNSubtarget &ST, const LLT Ty,
                                        const unsigned MemSizeInBits) {
   const unsigned Size = Ty.getSizeInBits();
-    if (Size != MemSizeInBits)
-      return Size <= 32 && Ty.isVector();
+  if (Size != MemSizeInBits)
+    return Size <= 32 && Ty.isVector();
 
   if (loadStoreBitcastWorkaround(Ty) && isRegisterType(Ty))
     return true;
@@ -4685,6 +4685,14 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
   Register RayDir = MI.getOperand(5).getReg();
   Register RayInvDir = MI.getOperand(6).getReg();
   Register TDescr = MI.getOperand(7).getReg();
+
+  if (!ST.hasGFX10_AEncoding()) {
+    DiagnosticInfoUnsupported BadIntrin(B.getMF().getFunction(),
+                                        "intrinsic not supported on subtarget",
+                                        MI.getDebugLoc());
+    B.getMF().getFunction().getContext().diagnose(BadIntrin);
+    return false;
+  }
 
   bool IsA16 = MRI.getType(RayDir).getElementType().getSizeInBits() == 16;
   bool Is64 =  MRI.getType(NodePtr).getSizeInBits() == 64;

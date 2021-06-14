@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 module m
   integer :: foo
   !Note: PGI, Intel, and GNU allow this; NAG and Sun do not

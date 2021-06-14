@@ -17,9 +17,7 @@
 
 using namespace lldb_private;
 
-DWARFAbbreviationDeclaration::DWARFAbbreviationDeclaration()
-    : m_code(InvalidCode), m_tag(llvm::dwarf::DW_TAG_null), m_has_children(0),
-      m_attributes() {}
+DWARFAbbreviationDeclaration::DWARFAbbreviationDeclaration() : m_attributes() {}
 
 DWARFAbbreviationDeclaration::DWARFAbbreviationDeclaration(dw_tag_t tag,
                                                            uint8_t has_children)

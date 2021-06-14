@@ -40,7 +40,6 @@
 #include "machine.h"
 #include "omptargetplugin.h"
 #include "print_tracing.h"
-#include "trace.h"
 
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
@@ -327,7 +326,6 @@ hsa_status_t addKernArgPool(hsa_amd_memory_pool_t MemoryPool, void *Data) {
     return err;
   }
 
-  fprintf(stderr, "Flags : %d\n", GlobalFlags);
   if ((GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED) &&
       (GlobalFlags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT)) {
     size_t size = 0;
@@ -419,7 +417,7 @@ public:
 
   struct atmiFreePtrDeletor {
     void operator()(void *p) {
-      atmi_free(p); // ignore failure to free
+      core::Runtime::Memfree(p); // ignore failure to free
     }
   };
 
@@ -666,7 +664,6 @@ public:
 pthread_mutex_t SignalPoolT::mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #include "../../../src/device_env_struct.h"
-
 static RTLDeviceInfoTy DeviceInfo;
 
 namespace {
@@ -1243,7 +1240,7 @@ struct device_environment {
 static hsa_status_t atmi_calloc(void **ret_ptr, size_t size, int DeviceId) {
   uint64_t rounded = 4 * ((size + 3) / 4);
   void *ptr;
-  hsa_status_t err = atmi_malloc(&ptr, rounded, DeviceId, ATMI_DEVTYPE_GPU);
+  hsa_status_t err = core::Runtime::DeviceMalloc(&ptr, rounded, DeviceId);
   if (err != HSA_STATUS_SUCCESS) {
     return err;
   }
@@ -1251,7 +1248,7 @@ static hsa_status_t atmi_calloc(void **ret_ptr, size_t size, int DeviceId) {
   hsa_status_t rc = hsa_amd_memory_fill(ptr, 0, rounded / 4);
   if (rc != HSA_STATUS_SUCCESS) {
     fprintf(stderr, "zero fill device_state failed with %u\n", rc);
-    atmi_free(ptr);
+    core::Runtime::Memfree(ptr);
     return HSA_STATUS_ERROR;
   }
 
@@ -1637,7 +1634,7 @@ void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *, int32_t kind) {
     return NULL;
   }
 
-  hsa_status_t err = atmi_malloc(&ptr, size, device_id, ATMI_DEVTYPE_GPU);
+  hsa_status_t err = core::Runtime::DeviceMalloc(&ptr, size, device_id);
   DP("Tgt alloc data %ld bytes, (tgt:%016llx).\n", size,
      (long long unsigned)(Elf64_Addr)ptr);
   ptr = (err == HSA_STATUS_SUCCESS) ? ptr : NULL;
@@ -1690,7 +1687,7 @@ int32_t __tgt_rtl_data_delete(int device_id, void *tgt_ptr) {
   assert(device_id < DeviceInfo.NumberOfDevices && "Device ID too large");
   hsa_status_t err;
   DP("Tgt free data (tgt:%016llx).\n", (long long unsigned)(Elf64_Addr)tgt_ptr);
-  err = atmi_free(tgt_ptr);
+  err = core::Runtime::Memfree(tgt_ptr);
   if (err != HSA_STATUS_SUCCESS) {
     DP("Error when freeing CUDA memory\n");
     return OFFLOAD_FAIL;
@@ -1931,7 +1928,7 @@ int32_t __tgt_rtl_run_target_team_region_locked(
 
   if (print_kernel_trace >= LAUNCH) {
     // enum modes are SPMD, GENERIC, NONE 0,1,2
-    // if we are doing launch timing, print to stdout, else stderr.
+    // if doing rtl timing, print to stderr, unless stdout requested.
     bool traceToStdout = print_kernel_trace & (RTL_TO_STDOUT | RTL_TIMING);
     fprintf(traceToStdout ? stdout : stderr,
             "DEVID:%2d SGN:%1d ConstWGSize:%-4d args:%2d teamsXthrds:(%4dX%4d) "
@@ -2105,7 +2102,7 @@ hsa_status_t atmi_memcpy_no_signal(void *dest, const void *src, size_t size,
   hsa_signal_t sig;
   hsa_status_t err = hsa_signal_create(0, 0, NULL, &sig);
   if (err != HSA_STATUS_SUCCESS) {
-    return HSA_STATUS_ERROR;
+    return err;
   }
 
   const int deviceId = 0;
@@ -2122,7 +2119,7 @@ hsa_status_t atmi_memcpy_no_signal(void *dest, const void *src, size_t size,
     return r;
   }
   if (rc != HSA_STATUS_SUCCESS) {
-    return HSA_STATUS_ERROR;
+    return rc;
   }
 
   return HSA_STATUS_SUCCESS;

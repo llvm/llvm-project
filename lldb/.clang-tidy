@@ -1,2 +1,7 @@
-Checks: '-readability-identifier-naming'
+Checks: '-readability-identifier-naming,modernize-use-default-member-init'
 InheritParentConfig: true
+CheckOptions:
+  - key:             modernize-use-default-member-init.IgnoreMacros
+    value:           '1'
+  - key:             modernize-use-default-member-init.UseAssignment
+    value:           '1'

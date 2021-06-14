@@ -10,6 +10,7 @@
 #include "hsa.h"
 #include <cstdarg>
 #include <string>
+#include <vector>
 
 namespace core {
 
@@ -59,11 +60,15 @@ public:
   // data
   static hsa_status_t Memcpy(hsa_signal_t, void *, const void *, size_t);
   static hsa_status_t Memfree(void *);
-  static hsa_status_t Malloc(void **ptr, size_t size, int DeviceId,
-                             atmi_devtype_t DeviceType);
+  static hsa_status_t HostMalloc(void **ptr, size_t size);
+  static hsa_status_t DeviceMalloc(void **ptr, size_t size, int DeviceId);
 
   int getMaxQueueSize() const { return env_.getMaxQueueSize(); }
   int getDebugMode() const { return env_.getDebugMode(); }
+
+private:
+  static hsa_status_t Malloc(void **ptr, size_t size, int DeviceId,
+                             atmi_devtype_t DeviceType);
 
 protected:
   Runtime() = default;

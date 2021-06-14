@@ -13,6 +13,7 @@
 #include "polly/ScopInfo.h"
 #include "polly/ScopPass.h"
 #include "polly/Simplify.h"
+#include "polly/Support/ISLTools.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Sequence.h"
@@ -204,9 +205,9 @@ static isl::map permuteDimensions(isl::map Map, isl::dim DimType,
   Map = Map.move_dims(FreeDim, 0, DimType, MinDim, 1);
   Map = Map.move_dims(DimType, MinDim, FreeDim, 1, 1);
   Map = Map.move_dims(DimType, MaxDim, FreeDim, 0, 1);
-  if (DimId)
+  if (!DimId.is_null())
     Map = Map.set_tuple_id(DimType, DimId);
-  if (FreeDimId)
+  if (!FreeDimId.is_null())
     Map = Map.set_tuple_id(FreeDim, FreeDimId);
   return Map;
 }
@@ -357,7 +358,7 @@ static bool containsOnlyMatMulDep(isl::map Schedule, const Dependences *D,
                                   int &Pos) {
   isl::union_map Dep = D->getDependences(Dependences::TYPE_RAW);
   isl::union_map Red = D->getDependences(Dependences::TYPE_RED);
-  if (Red)
+  if (!Red.is_null())
     Dep = Dep.unite(Red);
   auto DomainSpace = Schedule.get_space().domain();
   auto Space = DomainSpace.map_from_domain_and_range(DomainSpace);
@@ -700,6 +701,102 @@ static isl::schedule_node createExtensionNode(isl::schedule_node Node,
   return Node.graft_before(NewNode);
 }
 
+static isl::schedule_node optimizePackedB(isl::schedule_node Node,
+                                          ScopStmt *Stmt, isl::map MapOldIndVar,
+                                          MicroKernelParamsTy MicroParams,
+                                          MacroKernelParamsTy MacroParams,
+                                          MatMulInfoTy &MMI) {
+  Scop *S = Stmt->getParent();
+  isl::set Domain = Stmt->getDomain();
+
+  // Create packed array.
+  unsigned FirstDimSize = MacroParams.Nc / MicroParams.Nr;
+  unsigned SecondDimSize = MacroParams.Kc;
+  unsigned ThirdDimSize = MicroParams.Nr;
+  ScopArrayInfo *PackedB =
+      S->createScopArrayInfo(MMI.B->getElementType(), "Packed_B",
+                             {FirstDimSize, SecondDimSize, ThirdDimSize});
+
+  // Compute the access relation for copying from B to PackedB.
+  isl::map AccRelB = MMI.B->getLatestAccessRelation();
+  isl::map AccRelPackedB = getMatMulAccRel(MapOldIndVar, 3, 7);
+  AccRelPackedB =
+      AccRelPackedB.set_tuple_id(isl::dim::out, PackedB->getBasePtrId());
+
+  // Create the copy statement and redirect access.
+  ScopStmt *CopyStmt = S->addScopStmt(AccRelB, AccRelPackedB, Domain);
+  MMI.B->setNewAccessRelation(AccRelPackedB);
+
+  // Insert into the schedule tree.
+  isl::map ExtMap = MapOldIndVar.project_out(
+      isl::dim::out, 2, MapOldIndVar.dim(isl::dim::out) - 2);
+  ExtMap = ExtMap.reverse();
+  ExtMap = ExtMap.fix_si(isl::dim::out, MMI.i, 0);
+  ExtMap = ExtMap.intersect_range(Domain);
+  ExtMap = ExtMap.set_tuple_id(isl::dim::out, CopyStmt->getDomainId());
+  return createExtensionNode(Node, ExtMap);
+}
+
+static isl::schedule_node optimizePackedA(isl::schedule_node Node, ScopStmt *,
+                                          isl::map MapOldIndVar,
+                                          MicroKernelParamsTy MicroParams,
+                                          MacroKernelParamsTy MacroParams,
+                                          MatMulInfoTy &MMI) {
+  isl::id InputDimsId = MapOldIndVar.get_tuple_id(isl::dim::in);
+  ScopStmt *Stmt = static_cast<ScopStmt *>(InputDimsId.get_user());
+  isl::set Domain = Stmt->getDomain();
+  isl::id DomainId = Domain.get_tuple_id();
+
+  // Create the packed array.
+  unsigned FirstDimSize = MacroParams.Mc / MicroParams.Mr;
+  unsigned SecondDimSize = MacroParams.Kc;
+  unsigned ThirdDimSize = MicroParams.Mr;
+  ScopArrayInfo *PackedA = Stmt->getParent()->createScopArrayInfo(
+      MMI.A->getElementType(), "Packed_A",
+      {FirstDimSize, SecondDimSize, ThirdDimSize});
+
+  // Compute the access relation for copying from A to PackedA.
+  isl::map AccRelA = MMI.A->getLatestAccessRelation();
+  isl::map AccRelPackedA = getMatMulAccRel(MapOldIndVar, 4, 6);
+  AccRelPackedA =
+      AccRelPackedA.set_tuple_id(isl::dim::out, PackedA->getBasePtrId());
+  // { MemrefA[] -> PackedA[] }
+  isl::map PackedATranslator = AccRelPackedA.apply_domain(AccRelA);
+
+  // Compute the domain for the copy statement.
+  // Construct the copy statement domain out of the 3 outermost scatter
+  // dimensions (to match the 3 band nodes surrounding the extension node) and
+  // the array elements to copy (one statement instance per array element).
+  // { Scatter[] }
+  isl::set ScatterDomain = MapOldIndVar.intersect_domain(Domain).range();
+  // { Scatter[] -> OutermostScatter[] }
+  isl::map OuterDomainMap =
+      makeIdentityMap(ScatterDomain, true).project_out(isl::dim::out, 3, 6);
+  // { Scatter[] -> MemrefA[] }
+  isl::map CopyFrom = MapOldIndVar.reverse().apply_range(AccRelA);
+  // { Scatter[] -> CopyStmt[] }
+  isl::map DomainTranslator = OuterDomainMap.range_product(CopyFrom);
+  // { CopyStmt[] }
+  isl::set CopyDomain = DomainTranslator.range();
+
+  // Translate the access relations to the new domain.
+  // { CopyStmt[] -> MemrefA[] }
+  CopyFrom = CopyFrom.apply_domain(DomainTranslator);
+  // { CopyStmt[] -> PackedA[] }
+  isl::map CopyTo = CopyFrom.apply_range(PackedATranslator);
+
+  // Create the copy statement and redirect access.
+  ScopStmt *CopyStmt =
+      Stmt->getParent()->addScopStmt(CopyFrom, CopyTo, CopyDomain);
+  MMI.A->setNewAccessRelation(AccRelPackedA);
+
+  // Insert into the schedule tree.
+  // { Scatter[] -> CopyStmt[] }
+  isl::map ExtScatterCopy = makeIdentityMap(CopyStmt->getDomain(), true);
+  ExtScatterCopy = ExtScatterCopy.project_out(isl::dim::in, 3, 2);
+  return createExtensionNode(Node, ExtScatterCopy);
+}
+
 /// Apply the packing transformation.
 ///
 /// The packing transformation can be described as a data-layout
@@ -737,64 +834,20 @@ optimizeDataLayoutMatrMulPattern(isl::schedule_node Node, isl::map MapOldIndVar,
                                  MicroKernelParamsTy MicroParams,
                                  MacroKernelParamsTy MacroParams,
                                  MatMulInfoTy &MMI) {
-  auto InputDimsId = MapOldIndVar.get_tuple_id(isl::dim::in);
-  auto *Stmt = static_cast<ScopStmt *>(InputDimsId.get_user());
+  isl::id InputDimsId = MapOldIndVar.get_tuple_id(isl::dim::in);
+  ScopStmt *Stmt = static_cast<ScopStmt *>(InputDimsId.get_user());
 
-  // Create a copy statement that corresponds to the memory access to the
-  // matrix B, the second operand of the matrix multiplication.
   Node = Node.parent().parent().parent().parent().parent().parent();
-  Node = isl::manage(isl_schedule_node_band_split(Node.release(), 2)).child(0);
-  auto AccRel = getMatMulAccRel(MapOldIndVar, 3, 7);
-  unsigned FirstDimSize = MacroParams.Nc / MicroParams.Nr;
-  unsigned SecondDimSize = MacroParams.Kc;
-  unsigned ThirdDimSize = MicroParams.Nr;
-  auto *SAI = Stmt->getParent()->createScopArrayInfo(
-      MMI.B->getElementType(), "Packed_B",
-      {FirstDimSize, SecondDimSize, ThirdDimSize});
-  AccRel = AccRel.set_tuple_id(isl::dim::out, SAI->getBasePtrId());
-  auto OldAcc = MMI.B->getLatestAccessRelation();
-  MMI.B->setNewAccessRelation(AccRel);
-  auto ExtMap = MapOldIndVar.project_out(isl::dim::out, 2,
-                                         MapOldIndVar.dim(isl::dim::out) - 2);
-  ExtMap = ExtMap.reverse();
-  ExtMap = ExtMap.fix_si(isl::dim::out, MMI.i, 0);
-  auto Domain = Stmt->getDomain();
+  Node = isl::manage(isl_schedule_node_band_split(Node.release(), 2));
 
-  // Restrict the domains of the copy statements to only execute when also its
-  // originating statement is executed.
-  auto DomainId = Domain.get_tuple_id();
-  auto *NewStmt = Stmt->getParent()->addScopStmt(
-      OldAcc, MMI.B->getLatestAccessRelation(), Domain);
-  ExtMap = ExtMap.set_tuple_id(isl::dim::out, DomainId);
-  ExtMap = ExtMap.intersect_range(Domain);
-  ExtMap = ExtMap.set_tuple_id(isl::dim::out, NewStmt->getDomainId());
-  Node = createExtensionNode(Node, ExtMap);
-
-  // Create a copy statement that corresponds to the memory access
-  // to the matrix A, the first operand of the matrix multiplication.
   Node = Node.child(0);
-  AccRel = getMatMulAccRel(MapOldIndVar, 4, 6);
-  FirstDimSize = MacroParams.Mc / MicroParams.Mr;
-  ThirdDimSize = MicroParams.Mr;
-  SAI = Stmt->getParent()->createScopArrayInfo(
-      MMI.A->getElementType(), "Packed_A",
-      {FirstDimSize, SecondDimSize, ThirdDimSize});
-  AccRel = AccRel.set_tuple_id(isl::dim::out, SAI->getBasePtrId());
-  OldAcc = MMI.A->getLatestAccessRelation();
-  MMI.A->setNewAccessRelation(AccRel);
-  ExtMap = MapOldIndVar.project_out(isl::dim::out, 3,
-                                    MapOldIndVar.dim(isl::dim::out) - 3);
-  ExtMap = ExtMap.reverse();
-  ExtMap = ExtMap.fix_si(isl::dim::out, MMI.j, 0);
-  NewStmt = Stmt->getParent()->addScopStmt(
-      OldAcc, MMI.A->getLatestAccessRelation(), Domain);
+  Node =
+      optimizePackedB(Node, Stmt, MapOldIndVar, MicroParams, MacroParams, MMI);
 
-  // Restrict the domains of the copy statements to only execute when also its
-  // originating statement is executed.
-  ExtMap = ExtMap.set_tuple_id(isl::dim::out, DomainId);
-  ExtMap = ExtMap.intersect_range(Domain);
-  ExtMap = ExtMap.set_tuple_id(isl::dim::out, NewStmt->getDomainId());
-  Node = createExtensionNode(Node, ExtMap);
+  Node = Node.child(0);
+  Node =
+      optimizePackedA(Node, Stmt, MapOldIndVar, MicroParams, MacroParams, MMI);
+
   return Node.child(0).child(0).child(0).child(0).child(0);
 }
 
@@ -940,7 +993,7 @@ static isl::schedule_node optimizeMatMulPattern(isl::schedule_node Node,
     return Node;
   auto MapOldIndVar = getInductionVariablesSubstitution(Node, MicroKernelParams,
                                                         MacroKernelParams);
-  if (!MapOldIndVar)
+  if (MapOldIndVar.is_null())
     return Node;
   Node = markLoopVectorizerDisabled(Node.parent()).child(0);
   Node = isolateAndUnrollMatMulInnerLoops(Node, MicroKernelParams);

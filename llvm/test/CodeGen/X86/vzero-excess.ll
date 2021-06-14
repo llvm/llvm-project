@@ -8,16 +8,16 @@ define <4 x float> @zeroupper_v4f32(<8 x float> *%x, <8 x float> %y) nounwind {
 ; CHECK-LABEL: zeroupper_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    subq $48, %rsp
+; CHECK-NEXT:    subq $32, %rsp
 ; CHECK-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq the_unknown
+; CHECK-NEXT:    callq the_unknown@PLT
 ; CHECK-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; CHECK-NEXT:    vaddps (%rbx), %ymm0, %ymm0
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    addq $48, %rsp
+; CHECK-NEXT:    addq $32, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -34,12 +34,12 @@ define <4 x float> @zeroupper_v4f32(<8 x float> *%x, <8 x float> %y) nounwind {
 define <8 x float> @zeroupper_v8f32(<8 x float> %x) nounwind {
 ; CHECK-LABEL: zeroupper_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
+; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
 ; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    callq the_unknown
+; CHECK-NEXT:    callq the_unknown@PLT
 ; CHECK-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    retq
   call void @llvm.x86.avx.vzeroupper()
   call void @the_unknown()
@@ -50,16 +50,16 @@ define <4 x float> @zeroall_v4f32(<8 x float> *%x, <8 x float> %y) nounwind {
 ; CHECK-LABEL: zeroall_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    subq $48, %rsp
+; CHECK-NEXT:    subq $32, %rsp
 ; CHECK-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    vzeroall
-; CHECK-NEXT:    callq the_unknown
+; CHECK-NEXT:    callq the_unknown@PLT
 ; CHECK-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
 ; CHECK-NEXT:    vaddps (%rbx), %ymm0, %ymm0
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; CHECK-NEXT:    vaddps %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    addq $48, %rsp
+; CHECK-NEXT:    addq $32, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -76,12 +76,12 @@ define <4 x float> @zeroall_v4f32(<8 x float> *%x, <8 x float> %y) nounwind {
 define <8 x float> @zeroall_v8f32(<8 x float> %x) nounwind {
 ; CHECK-LABEL: zeroall_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $56, %rsp
+; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
 ; CHECK-NEXT:    vzeroall
-; CHECK-NEXT:    callq the_unknown
+; CHECK-NEXT:    callq the_unknown@PLT
 ; CHECK-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
-; CHECK-NEXT:    addq $56, %rsp
+; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    retq
   call void @llvm.x86.avx.vzeroall()
   call void @the_unknown()

@@ -9,8 +9,8 @@
 #ifndef LLDB_INTERPRETER_OPTIONVALUEFILECOLONLINE_H
 #define LLDB_INTERPRETER_OPTIONVALUEFILECOLONLINE_H
 
+#include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/OptionValue.h"
-
 #include "lldb/Utility/FileSpec.h"
 #include "llvm/Support/Chrono.h"
 
@@ -50,9 +50,9 @@ public:
 
 protected:
   FileSpec m_file_spec;
-  uint32_t m_line_number;
-  uint32_t m_column_number;
-  uint32_t m_completion_mask;
+  uint32_t m_line_number = LLDB_INVALID_LINE_NUMBER;
+  uint32_t m_column_number = LLDB_INVALID_COLUMN_NUMBER;
+  uint32_t m_completion_mask = CommandCompletions::eSourceFileCompletion;
 };
 
 } // namespace lldb_private

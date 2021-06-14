@@ -196,7 +196,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 1
 // CHECK1-NEXT:    store i64 4, i64* [[TMP21]], align 8
 // CHECK1-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 2
-// CHECK1-NEXT:    store i32 3, i32* [[TMP22]], align 8
+// CHECK1-NEXT:    store i8 3, i8* [[TMP22]], align 8
 // CHECK1-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP23:%.*]] = bitcast %struct.kmp_depend_info* [[TMP18]] to i8*
 // CHECK1-NEXT:    [[TMP24:%.*]] = load i32, i32* @Arg, align 4
@@ -415,7 +415,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 1
 // CHECK1-NEXT:    store i64 4, i64* [[TMP22]], align 8
 // CHECK1-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 2
-// CHECK1-NEXT:    store i32 1, i32* [[TMP23]], align 8
+// CHECK1-NEXT:    store i8 1, i8* [[TMP23]], align 8
 // CHECK1-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR]], align 8
 // CHECK1-NEXT:    [[TMP24:%.*]] = bitcast %struct.kmp_depend_info* [[TMP18]] to i8*
 // CHECK1-NEXT:    [[TMP25:%.*]] = load i32, i32* [[ARG_ADDR]], align 4
@@ -442,7 +442,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP32]], i32 0, i32 1
 // CHECK1-NEXT:    store i64 4, i64* [[TMP35]], align 8
 // CHECK1-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP32]], i32 0, i32 2
-// CHECK1-NEXT:    store i32 3, i32* [[TMP36]], align 8
+// CHECK1-NEXT:    store i8 3, i8* [[TMP36]], align 8
 // CHECK1-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR10]], align 8
 // CHECK1-NEXT:    [[TMP37:%.*]] = bitcast %struct.kmp_depend_info* [[TMP31]] to i8*
 // CHECK1-NEXT:    [[TMP38:%.*]] = load i32, i32* [[ARG_ADDR]], align 4
@@ -469,7 +469,7 @@ int main() {
 // CHECK1-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP45]], i32 0, i32 1
 // CHECK1-NEXT:    store i64 4, i64* [[TMP48]], align 8
 // CHECK1-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP45]], i32 0, i32 2
-// CHECK1-NEXT:    store i32 3, i32* [[TMP49]], align 8
+// CHECK1-NEXT:    store i8 3, i8* [[TMP49]], align 8
 // CHECK1-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR17]], align 8
 // CHECK1-NEXT:    [[TMP50:%.*]] = bitcast %struct.kmp_depend_info* [[TMP44]] to i8*
 // CHECK1-NEXT:    [[TMP51:%.*]] = load i32, i32* [[ARG_ADDR]], align 4
@@ -813,7 +813,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 1
 // CHECK2-NEXT:    store i64 4, i64* [[TMP21]], align 8
 // CHECK2-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 2
-// CHECK2-NEXT:    store i32 3, i32* [[TMP22]], align 8
+// CHECK2-NEXT:    store i8 3, i8* [[TMP22]], align 8
 // CHECK2-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR]], align 8
 // CHECK2-NEXT:    [[TMP23:%.*]] = bitcast %struct.kmp_depend_info* [[TMP18]] to i8*
 // CHECK2-NEXT:    [[TMP24:%.*]] = load i32, i32* @Arg, align 4
@@ -1032,7 +1032,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 1
 // CHECK2-NEXT:    store i64 4, i64* [[TMP22]], align 8
 // CHECK2-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 2
-// CHECK2-NEXT:    store i32 1, i32* [[TMP23]], align 8
+// CHECK2-NEXT:    store i8 1, i8* [[TMP23]], align 8
 // CHECK2-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR]], align 8
 // CHECK2-NEXT:    [[TMP24:%.*]] = bitcast %struct.kmp_depend_info* [[TMP18]] to i8*
 // CHECK2-NEXT:    [[TMP25:%.*]] = load i32, i32* [[ARG_ADDR]], align 4
@@ -1059,7 +1059,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP32]], i32 0, i32 1
 // CHECK2-NEXT:    store i64 4, i64* [[TMP35]], align 8
 // CHECK2-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP32]], i32 0, i32 2
-// CHECK2-NEXT:    store i32 3, i32* [[TMP36]], align 8
+// CHECK2-NEXT:    store i8 3, i8* [[TMP36]], align 8
 // CHECK2-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR10]], align 8
 // CHECK2-NEXT:    [[TMP37:%.*]] = bitcast %struct.kmp_depend_info* [[TMP31]] to i8*
 // CHECK2-NEXT:    [[TMP38:%.*]] = load i32, i32* [[ARG_ADDR]], align 4
@@ -1086,7 +1086,7 @@ int main() {
 // CHECK2-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP45]], i32 0, i32 1
 // CHECK2-NEXT:    store i64 4, i64* [[TMP48]], align 8
 // CHECK2-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP45]], i32 0, i32 2
-// CHECK2-NEXT:    store i32 3, i32* [[TMP49]], align 8
+// CHECK2-NEXT:    store i8 3, i8* [[TMP49]], align 8
 // CHECK2-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR17]], align 8
 // CHECK2-NEXT:    [[TMP50:%.*]] = bitcast %struct.kmp_depend_info* [[TMP44]] to i8*
 // CHECK2-NEXT:    [[TMP51:%.*]] = load i32, i32* [[ARG_ADDR]], align 4
@@ -1430,7 +1430,7 @@ int main() {
 // CHECK5-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 1
 // CHECK5-NEXT:    store i64 4, i64* [[TMP21]], align 8
 // CHECK5-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 2
-// CHECK5-NEXT:    store i32 3, i32* [[TMP22]], align 8
+// CHECK5-NEXT:    store i8 3, i8* [[TMP22]], align 8
 // CHECK5-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP23:%.*]] = bitcast %struct.kmp_depend_info* [[TMP18]] to i8*
 // CHECK5-NEXT:    [[TMP24:%.*]] = load i32, i32* @Arg, align 4
@@ -1649,7 +1649,7 @@ int main() {
 // CHECK5-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 1
 // CHECK5-NEXT:    store i64 4, i64* [[TMP22]], align 8
 // CHECK5-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 2
-// CHECK5-NEXT:    store i32 1, i32* [[TMP23]], align 8
+// CHECK5-NEXT:    store i8 1, i8* [[TMP23]], align 8
 // CHECK5-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR]], align 8
 // CHECK5-NEXT:    [[TMP24:%.*]] = bitcast %struct.kmp_depend_info* [[TMP18]] to i8*
 // CHECK5-NEXT:    [[TMP25:%.*]] = load i32, i32* [[ARG_ADDR]], align 4
@@ -1676,7 +1676,7 @@ int main() {
 // CHECK5-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP32]], i32 0, i32 1
 // CHECK5-NEXT:    store i64 4, i64* [[TMP35]], align 8
 // CHECK5-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP32]], i32 0, i32 2
-// CHECK5-NEXT:    store i32 3, i32* [[TMP36]], align 8
+// CHECK5-NEXT:    store i8 3, i8* [[TMP36]], align 8
 // CHECK5-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR10]], align 8
 // CHECK5-NEXT:    [[TMP37:%.*]] = bitcast %struct.kmp_depend_info* [[TMP31]] to i8*
 // CHECK5-NEXT:    [[TMP38:%.*]] = load i32, i32* [[ARG_ADDR]], align 4
@@ -1703,7 +1703,7 @@ int main() {
 // CHECK5-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP45]], i32 0, i32 1
 // CHECK5-NEXT:    store i64 4, i64* [[TMP48]], align 8
 // CHECK5-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP45]], i32 0, i32 2
-// CHECK5-NEXT:    store i32 3, i32* [[TMP49]], align 8
+// CHECK5-NEXT:    store i8 3, i8* [[TMP49]], align 8
 // CHECK5-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR17]], align 8
 // CHECK5-NEXT:    [[TMP50:%.*]] = bitcast %struct.kmp_depend_info* [[TMP44]] to i8*
 // CHECK5-NEXT:    [[TMP51:%.*]] = load i32, i32* [[ARG_ADDR]], align 4
@@ -2047,7 +2047,7 @@ int main() {
 // CHECK6-NEXT:    [[TMP21:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 1
 // CHECK6-NEXT:    store i64 4, i64* [[TMP21]], align 8
 // CHECK6-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 2
-// CHECK6-NEXT:    store i32 3, i32* [[TMP22]], align 8
+// CHECK6-NEXT:    store i8 3, i8* [[TMP22]], align 8
 // CHECK6-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR]], align 8
 // CHECK6-NEXT:    [[TMP23:%.*]] = bitcast %struct.kmp_depend_info* [[TMP18]] to i8*
 // CHECK6-NEXT:    [[TMP24:%.*]] = load i32, i32* @Arg, align 4
@@ -2266,7 +2266,7 @@ int main() {
 // CHECK6-NEXT:    [[TMP22:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 1
 // CHECK6-NEXT:    store i64 4, i64* [[TMP22]], align 8
 // CHECK6-NEXT:    [[TMP23:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP19]], i32 0, i32 2
-// CHECK6-NEXT:    store i32 1, i32* [[TMP23]], align 8
+// CHECK6-NEXT:    store i8 1, i8* [[TMP23]], align 8
 // CHECK6-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR]], align 8
 // CHECK6-NEXT:    [[TMP24:%.*]] = bitcast %struct.kmp_depend_info* [[TMP18]] to i8*
 // CHECK6-NEXT:    [[TMP25:%.*]] = load i32, i32* [[ARG_ADDR]], align 4
@@ -2293,7 +2293,7 @@ int main() {
 // CHECK6-NEXT:    [[TMP35:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP32]], i32 0, i32 1
 // CHECK6-NEXT:    store i64 4, i64* [[TMP35]], align 8
 // CHECK6-NEXT:    [[TMP36:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP32]], i32 0, i32 2
-// CHECK6-NEXT:    store i32 3, i32* [[TMP36]], align 8
+// CHECK6-NEXT:    store i8 3, i8* [[TMP36]], align 8
 // CHECK6-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR10]], align 8
 // CHECK6-NEXT:    [[TMP37:%.*]] = bitcast %struct.kmp_depend_info* [[TMP31]] to i8*
 // CHECK6-NEXT:    [[TMP38:%.*]] = load i32, i32* [[ARG_ADDR]], align 4
@@ -2320,7 +2320,7 @@ int main() {
 // CHECK6-NEXT:    [[TMP48:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP45]], i32 0, i32 1
 // CHECK6-NEXT:    store i64 4, i64* [[TMP48]], align 8
 // CHECK6-NEXT:    [[TMP49:%.*]] = getelementptr inbounds [[STRUCT_KMP_DEPEND_INFO]], %struct.kmp_depend_info* [[TMP45]], i32 0, i32 2
-// CHECK6-NEXT:    store i32 3, i32* [[TMP49]], align 8
+// CHECK6-NEXT:    store i8 3, i8* [[TMP49]], align 8
 // CHECK6-NEXT:    store i64 1, i64* [[DEP_COUNTER_ADDR17]], align 8
 // CHECK6-NEXT:    [[TMP50:%.*]] = bitcast %struct.kmp_depend_info* [[TMP44]] to i8*
 // CHECK6-NEXT:    [[TMP51:%.*]] = load i32, i32* [[ARG_ADDR]], align 4

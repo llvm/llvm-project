@@ -5781,9 +5781,9 @@ AArch64_AM::ShiftExtendType AArch64InstructionSelector::getExtendTypeForInst(
     assert(Size != 64 && "Extend from 64 bits?");
     switch (Size) {
     case 8:
-      return AArch64_AM::SXTB;
+      return IsLoadStore ? AArch64_AM::InvalidShiftExtend : AArch64_AM::SXTB;
     case 16:
-      return AArch64_AM::SXTH;
+      return IsLoadStore ? AArch64_AM::InvalidShiftExtend : AArch64_AM::SXTH;
     case 32:
       return AArch64_AM::SXTW;
     default:
@@ -5796,9 +5796,9 @@ AArch64_AM::ShiftExtendType AArch64InstructionSelector::getExtendTypeForInst(
     assert(Size != 64 && "Extend from 64 bits?");
     switch (Size) {
     case 8:
-      return AArch64_AM::UXTB;
+      return IsLoadStore ? AArch64_AM::InvalidShiftExtend : AArch64_AM::UXTB;
     case 16:
-      return AArch64_AM::UXTH;
+      return IsLoadStore ? AArch64_AM::InvalidShiftExtend : AArch64_AM::UXTH;
     case 32:
       return AArch64_AM::UXTW;
     default:

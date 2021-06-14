@@ -1,5 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
-
+! REQUIRES: shell
 ! Tests for the index-name of a FORALL statement
 
 module m1

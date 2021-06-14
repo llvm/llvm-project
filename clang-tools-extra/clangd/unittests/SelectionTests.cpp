@@ -659,10 +659,11 @@ TEST(SelectionTest, CreateAll) {
       AST.getASTContext(), AST.getTokens(), Test.point("ambiguous"),
       Test.point("ambiguous"), [&](SelectionTree T) {
         // Expect to see the right-biased tree first.
-        if (Seen == 0)
+        if (Seen == 0) {
           EXPECT_EQ("BinaryOperator", nodeKind(T.commonAncestor()));
-        else if (Seen == 1)
+        } else if (Seen == 1) {
           EXPECT_EQ("IntegerLiteral", nodeKind(T.commonAncestor()));
+        }
         ++Seen;
         return false;
       });

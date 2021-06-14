@@ -105,7 +105,7 @@ private:
   SBStream(const SBStream &) = delete;
   const SBStream &operator=(const SBStream &) = delete;
   std::unique_ptr<lldb_private::Stream> m_opaque_up;
-  bool m_is_file;
+  bool m_is_file = false;
 };
 
 } // namespace lldb

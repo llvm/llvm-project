@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Test SELECT TYPE and ASSOCIATE errors: C1103
 
 subroutine s1()

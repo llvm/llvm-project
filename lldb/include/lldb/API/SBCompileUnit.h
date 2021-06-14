@@ -87,7 +87,7 @@ private:
 
   void reset(lldb_private::CompileUnit *lldb_object_ptr);
 
-  lldb_private::CompileUnit *m_opaque_ptr;
+  lldb_private::CompileUnit *m_opaque_ptr = nullptr;
 };
 
 } // namespace lldb

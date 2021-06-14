@@ -82,11 +82,6 @@ public:
   void toString(SmallVectorImpl<char> &Str, unsigned Radix = 10) const {
     APInt::toString(Str, Radix, isSigned());
   }
-  /// Converts an APInt to a std::string.  This is an inefficient
-  /// method; you should prefer passing in a SmallString instead.
-  std::string toString(unsigned Radix) const {
-    return APInt::toString(Radix, isSigned());
-  }
   using APInt::toString;
 
   /// Get the correctly-extended \c int64_t value.

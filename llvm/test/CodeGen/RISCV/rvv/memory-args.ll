@@ -13,7 +13,7 @@ define <vscale x 64 x i8> @callee(<vscale x 64 x i8> %arg0, <vscale x 64 x i8> %
 ; RV64IV:       # %bb.0:
 ; RV64IV-NEXT:    vl8r.v v24, (a0)
 ; RV64IV-NEXT:    addi a0, zero, 1024
-; RV64IV-NEXT:    vsetvli zero, a0, e8,m8,tu,mu
+; RV64IV-NEXT:    vsetvli zero, a0, e8, m8, tu, mu
 ; RV64IV-NEXT:    vmacc.vv v8, v16, v24
 ; RV64IV-NEXT:    ret
   %ret = call <vscale x 64 x i8> @llvm.riscv.vmacc.nxv64i8.nxv64i8(

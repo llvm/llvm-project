@@ -474,7 +474,7 @@ static void instantiateOMPDeclareVariantAttr(
                                 SourceLocation(), SubstFD,
                                 /* RefersToEnclosingVariableOrCapture */ false,
                                 /* NameLoc */ SubstFD->getLocation(),
-                                SubstFD->getType(), ExprValueKind::VK_RValue);
+                                SubstFD->getType(), ExprValueKind::VK_PRValue);
       }
     }
   }

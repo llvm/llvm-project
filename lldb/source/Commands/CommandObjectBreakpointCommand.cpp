@@ -283,10 +283,7 @@ are no syntax errors may indicate that a function was declared but never called.
 
   class CommandOptions : public OptionGroup {
   public:
-    CommandOptions()
-        : OptionGroup(), m_use_commands(false), m_use_script_language(false),
-          m_script_language(eScriptLanguageNone), m_use_one_liner(false),
-          m_one_liner() {}
+    CommandOptions() : OptionGroup(), m_one_liner() {}
 
     ~CommandOptions() override = default;
 
@@ -356,12 +353,12 @@ are no syntax errors may indicate that a function was declared but never called.
 
     // Instance variables to hold the values for command options.
 
-    bool m_use_commands;
-    bool m_use_script_language;
-    lldb::ScriptLanguage m_script_language;
+    bool m_use_commands = false;
+    bool m_use_script_language = false;
+    lldb::ScriptLanguage m_script_language = eScriptLanguageNone;
 
     // Instance variables to hold the values for one_liner options.
-    bool m_use_one_liner;
+    bool m_use_one_liner = false;
     std::string m_one_liner;
     bool m_stop_on_error;
     bool m_use_dummy;
@@ -510,7 +507,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options(), m_use_dummy(false) {}
+    CommandOptions() : Options() {}
 
     ~CommandOptions() override = default;
 
@@ -540,7 +537,7 @@ public:
     }
 
     // Instance variables to hold the values for command options.
-    bool m_use_dummy;
+    bool m_use_dummy = false;
   };
 
 protected:

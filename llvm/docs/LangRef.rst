@@ -3320,10 +3320,12 @@ are target-specific.
 Note that LLVM does not permit pointers to void (``void*``) nor does it
 permit pointers to labels (``label*``). Use ``i8*`` instead.
 
-LLVM is in the process of transitioning to opaque pointers. Opaque pointers do
-not have a pointee type. Rather, instructions interacting through pointers
-specify the type of the underlying memory they are interacting with. Opaque
-pointers are still in the process of being worked on and are not complete.
+LLVM is in the process of transitioning to
+`opaque pointers <OpaquePointers.html#opaque-pointers>`_.
+Opaque pointers do not have a pointee type. Rather, instructions
+interacting through pointers specify the type of the underlying memory
+they are interacting with. Opaque pointers are still in the process of
+being worked on and are not complete.
 
 :Syntax:
 
@@ -3825,7 +3827,7 @@ cleared low bit. However, in the ``%C`` example, the optimizer is
 allowed to assume that the '``undef``' operand could be the same as
 ``%Y``, allowing the whole '``select``' to be eliminated.
 
-.. code-block:: text
+.. code-block:: llvm
 
       %A = xor undef, undef
 
@@ -3900,7 +3902,7 @@ predicates, such as Correlated Value Propagation and Global Value Numbering.
 In case of switch instruction, the branch condition should be frozen, otherwise
 it is undefined behavior.
 
-.. code-block:: text
+.. code-block:: llvm
 
     Unsafe:
       br undef, BB1, BB2 ; UB

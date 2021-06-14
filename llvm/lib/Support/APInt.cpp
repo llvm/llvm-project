@@ -2281,14 +2281,6 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix,
   std::reverse(Str.begin()+StartDig, Str.end());
 }
 
-/// Returns the APInt as a std::string. Note that this is an inefficient method.
-/// It is better to pass in a SmallVector/SmallString to the methods above.
-std::string APInt::toString(unsigned Radix = 10, bool Signed = true) const {
-  SmallString<40> S;
-  toString(S, Radix, Signed, /* formatAsCLiteral = */false);
-  return std::string(S.str());
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void APInt::dump() const {
   SmallString<40> S, U;

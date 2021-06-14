@@ -101,14 +101,14 @@ public:
     lldb::addr_t m_dynamic;
   };
 
-  LoadedModuleInfoList() : m_list(), m_link_map(LLDB_INVALID_ADDRESS) {}
+  LoadedModuleInfoList() : m_list() {}
 
   void add(const LoadedModuleInfo &mod) { m_list.push_back(mod); }
 
   void clear() { m_list.clear(); }
 
   std::vector<LoadedModuleInfo> m_list;
-  lldb::addr_t m_link_map;
+  lldb::addr_t m_link_map = LLDB_INVALID_ADDRESS;
 };
 } // namespace lldb_private
 

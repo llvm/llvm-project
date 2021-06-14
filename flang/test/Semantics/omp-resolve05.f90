@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang -fopenmp
+! REQUIRES: shell
 
 ! 2.15.3 Data-Sharing Attribute Clauses
 ! 2.15.3.1 default Clause

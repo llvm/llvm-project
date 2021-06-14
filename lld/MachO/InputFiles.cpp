@@ -788,16 +788,20 @@ static DylibFile *findDylib(StringRef path, DylibFile *umbrella,
       path.consume_front("@executable_path/")) {
     // ld64 allows overriding this with the undocumented flag -executable_path.
     // lld doesn't currently implement that flag.
-    path::append(newPath, sys::path::parent_path(config->outputFile), path);
+    path::append(newPath, path::parent_path(config->outputFile), path);
     path = newPath;
   } else if (path.consume_front("@loader_path/")) {
-    path::append(newPath, sys::path::parent_path(umbrella->getName()), path);
+    fs::real_path(umbrella->getName(), newPath);
+    path::remove_filename(newPath);
+    path::append(newPath, path);
     path = newPath;
   } else if (path.startswith("@rpath/")) {
     for (StringRef rpath : umbrella->rpaths) {
       newPath.clear();
-      if (rpath.consume_front("@loader_path/"))
-        path::append(newPath, sys::path::parent_path(umbrella->getName()));
+      if (rpath.consume_front("@loader_path/")) {
+        fs::real_path(umbrella->getName(), newPath);
+        path::remove_filename(newPath);
+      }
       path::append(newPath, rpath, path.drop_front(strlen("@rpath/")));
       if (Optional<std::string> dylibPath = resolveDylibPath(newPath))
         return loadDylib(*dylibPath, umbrella);

@@ -405,7 +405,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
             if (!Info.isValidAsmImmediate(IntResult))
               return StmtError(Diag(InputExpr->getBeginLoc(),
                                     diag::err_invalid_asm_value_for_constraint)
-                               << IntResult.toString(10)
+                               << toString(IntResult, 10)
                                << Info.getConstraintStr()
                                << InputExpr->getSourceRange());
         }
@@ -735,7 +735,7 @@ void Sema::FillInlineAsmIdentifierInfo(Expr *Res,
   Expr::EvalResult Eval;
   if (T->isFunctionType() || T->isDependentType())
     return Info.setLabel(Res);
-  if (Res->isRValue()) {
+  if (Res->isPRValue()) {
     bool IsEnum = isa<clang::EnumType>(T);
     if (DeclRefExpr *DRE = dyn_cast<clang::DeclRefExpr>(Res))
       if (DRE->getDecl()->getKind() == Decl::EnumConstant)

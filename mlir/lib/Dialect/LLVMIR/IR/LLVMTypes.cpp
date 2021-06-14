@@ -136,15 +136,160 @@ LLVMPointerType::getChecked(function_ref<InFlightDiagnostic()> emitError,
                           addressSpace);
 }
 
-Type LLVMPointerType::getElementType() { return getImpl()->pointeeType; }
+Type LLVMPointerType::getElementType() const { return getImpl()->pointeeType; }
 
-unsigned LLVMPointerType::getAddressSpace() { return getImpl()->addressSpace; }
+unsigned LLVMPointerType::getAddressSpace() const {
+  return getImpl()->addressSpace;
+}
 
 LogicalResult
 LLVMPointerType::verify(function_ref<InFlightDiagnostic()> emitError,
                         Type pointee, unsigned) {
   if (!isValidElementType(pointee))
     return emitError() << "invalid pointer element type: " << pointee;
+  return success();
+}
+
+namespace {
+/// The positions of different values in the data layout entry.
+enum class DLEntryPos { Size = 0, Abi = 1, Preferred = 2, Address = 3 };
+} // namespace
+
+constexpr const static unsigned kDefaultPointerSizeBits = 64;
+constexpr const static unsigned kDefaultPointerAlignment = 8;
+constexpr const static unsigned kBitsInByte = 8;
+
+/// Returns the value that corresponds to named position `pos` from the
+/// attribute `attr` assuming it's a dense integer elements attribute.
+static unsigned extractPointerSpecValue(Attribute attr, DLEntryPos pos) {
+  return attr.cast<DenseIntElementsAttr>().getValue<unsigned>(
+      static_cast<unsigned>(pos));
+}
+
+/// Returns the part of the data layout entry that corresponds to `pos` for the
+/// given `type` by interpreting the list of entries `params`. For the pointer
+/// type in the default address space, returns the default value if the entries
+/// do not provide a custom one, for other address spaces returns None.
+static Optional<unsigned>
+getPointerDataLayoutEntry(DataLayoutEntryListRef params, LLVMPointerType type,
+                          DLEntryPos pos) {
+  // First, look for the entry for the pointer in the current address space.
+  Attribute currentEntry;
+  for (DataLayoutEntryInterface entry : params) {
+    if (!entry.isTypeEntry())
+      continue;
+    if (entry.getKey().get<Type>().cast<LLVMPointerType>().getAddressSpace() ==
+        type.getAddressSpace()) {
+      currentEntry = entry.getValue();
+      break;
+    }
+  }
+  if (currentEntry) {
+    return extractPointerSpecValue(currentEntry, pos) /
+           (pos == DLEntryPos::Size ? 1 : kBitsInByte);
+  }
+
+  // If not found, and this is the pointer to the default memory space, assume
+  // 64-bit pointers.
+  if (type.getAddressSpace() == 0) {
+    return pos == DLEntryPos::Size ? kDefaultPointerSizeBits
+                                   : kDefaultPointerAlignment;
+  }
+
+  return llvm::None;
+}
+
+unsigned
+LLVMPointerType::getTypeSizeInBits(const DataLayout &dataLayout,
+                                   DataLayoutEntryListRef params) const {
+  if (Optional<unsigned> size =
+          getPointerDataLayoutEntry(params, *this, DLEntryPos::Size))
+    return *size;
+
+  // For other memory spaces, use the size of the pointer to the default memory
+  // space.
+  return dataLayout.getTypeSizeInBits(get(getElementType()));
+}
+
+unsigned LLVMPointerType::getABIAlignment(const DataLayout &dataLayout,
+                                          DataLayoutEntryListRef params) const {
+  if (Optional<unsigned> alignment =
+          getPointerDataLayoutEntry(params, *this, DLEntryPos::Abi))
+    return *alignment;
+
+  return dataLayout.getTypeABIAlignment(get(getElementType()));
+}
+
+unsigned
+LLVMPointerType::getPreferredAlignment(const DataLayout &dataLayout,
+                                       DataLayoutEntryListRef params) const {
+  if (Optional<unsigned> alignment =
+          getPointerDataLayoutEntry(params, *this, DLEntryPos::Preferred))
+    return *alignment;
+
+  return dataLayout.getTypePreferredAlignment(get(getElementType()));
+}
+
+bool LLVMPointerType::areCompatible(DataLayoutEntryListRef oldLayout,
+                                    DataLayoutEntryListRef newLayout) const {
+  for (DataLayoutEntryInterface newEntry : newLayout) {
+    if (!newEntry.isTypeEntry())
+      continue;
+    unsigned size = kDefaultPointerSizeBits;
+    unsigned abi = kDefaultPointerAlignment;
+    auto newType = newEntry.getKey().get<Type>().cast<LLVMPointerType>();
+    auto it = llvm::find_if(oldLayout, [&](DataLayoutEntryInterface entry) {
+      if (auto type = entry.getKey().dyn_cast<Type>()) {
+        return type.cast<LLVMPointerType>().getAddressSpace() ==
+               newType.getAddressSpace();
+      }
+      return false;
+    });
+    if (it == oldLayout.end()) {
+      llvm::find_if(oldLayout, [&](DataLayoutEntryInterface entry) {
+        if (auto type = entry.getKey().dyn_cast<Type>()) {
+          return type.cast<LLVMPointerType>().getAddressSpace() == 0;
+        }
+        return false;
+      });
+    }
+    if (it != oldLayout.end()) {
+      size = extractPointerSpecValue(*it, DLEntryPos::Size);
+      abi = extractPointerSpecValue(*it, DLEntryPos::Abi);
+    }
+
+    Attribute newSpec = newEntry.getValue().cast<DenseIntElementsAttr>();
+    unsigned newSize = extractPointerSpecValue(newSpec, DLEntryPos::Size);
+    unsigned newAbi = extractPointerSpecValue(newSpec, DLEntryPos::Abi);
+    if (size != newSize || abi < newAbi || abi % newAbi != 0)
+      return false;
+  }
+  return true;
+}
+
+LogicalResult LLVMPointerType::verifyEntries(DataLayoutEntryListRef entries,
+                                             Location loc) const {
+  for (DataLayoutEntryInterface entry : entries) {
+    if (!entry.isTypeEntry())
+      continue;
+    auto key = entry.getKey().get<Type>().cast<LLVMPointerType>();
+    auto values = entry.getValue().dyn_cast<DenseIntElementsAttr>();
+    if (!values || (values.size() != 3 && values.size() != 4)) {
+      return emitError(loc)
+             << "expected layout attribute for " << entry.getKey().get<Type>()
+             << " to be a dense integer elements attribute with 3 or 4 "
+                "elements";
+    }
+    if (!key.getElementType().isInteger(8)) {
+      return emitError(loc) << "unexpected layout attribute for pointer to "
+                            << key.getElementType();
+    }
+    if (extractPointerSpecValue(values, DLEntryPos::Abi) >
+        extractPointerSpecValue(values, DLEntryPos::Preferred)) {
+      return emitError(loc) << "preferred alignment is expected to be at least "
+                               "as large as ABI alignment";
+    }
+  }
   return success();
 }
 

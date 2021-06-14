@@ -65,26 +65,26 @@ entry:
 define dso_local signext i32 @main() #0 {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -128
-; CHECK-NEXT:    sd ra, 120(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 112(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    addi s0, sp, 128
+; CHECK-NEXT:    addi sp, sp, -112
+; CHECK-NEXT:    sd ra, 104(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 96(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi s0, sp, 112
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    sw zero, -36(s0)
 ; CHECK-NEXT:    sd zero, -48(s0)
 ; CHECK-NEXT:    sd zero, -56(s0)
-; CHECK-NEXT:    vsetivli a0, 4, e32,m8,ta,mu
+; CHECK-NEXT:    vsetivli a0, 4, e32, m8, ta, mu
 ; CHECK-NEXT:    sd a0, -64(s0)
 ; CHECK-NEXT:    ld a0, -64(s0)
-; CHECK-NEXT:    vsetvli zero, a0, e32,m8,ta,mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
 ; CHECK-NEXT:    addi a0, s0, -56
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub a0, s0, a0
-; CHECK-NEXT:    addi a0, a0, -128
+; CHECK-NEXT:    addi a0, a0, -112
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    addi a0, zero, 1
 ; CHECK-NEXT:    sw a0, -68(s0)
@@ -102,7 +102,7 @@ define dso_local signext i32 @main() #0 {
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 3
 ; CHECK-NEXT:    sub a2, s0, a2
-; CHECK-NEXT:    addi a2, a2, -128
+; CHECK-NEXT:    addi a2, a2, -112
 ; CHECK-NEXT:    vl8re32.v v8, (a2)
 ; CHECK-NEXT:    lw a2, -76(s0)
 ; CHECK-NEXT:    lw a3, -80(s0)
@@ -112,15 +112,17 @@ define dso_local signext i32 @main() #0 {
 ; CHECK-NEXT:    lw a7, -96(s0)
 ; CHECK-NEXT:    lw t0, -100(s0)
 ; CHECK-NEXT:    lw t1, -104(s0)
+; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sd t1, 8(sp)
 ; CHECK-NEXT:    sd t0, 0(sp)
 ; CHECK-NEXT:    call lots_args
+; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    lw a0, -68(s0)
 ; CHECK-NEXT:    lw a1, -72(s0)
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 3
 ; CHECK-NEXT:    sub a2, s0, a2
-; CHECK-NEXT:    addi a2, a2, -128
+; CHECK-NEXT:    addi a2, a2, -112
 ; CHECK-NEXT:    vl8re32.v v8, (a2)
 ; CHECK-NEXT:    lw a2, -76(s0)
 ; CHECK-NEXT:    lw a3, -80(s0)
@@ -130,16 +132,18 @@ define dso_local signext i32 @main() #0 {
 ; CHECK-NEXT:    lw a7, -96(s0)
 ; CHECK-NEXT:    lw t0, -100(s0)
 ; CHECK-NEXT:    lw t1, -104(s0)
+; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    sd t1, 8(sp)
 ; CHECK-NEXT:    sd t0, 0(sp)
 ; CHECK-NEXT:    call lots_args
+; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    mv a0, zero
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add sp, sp, a1
-; CHECK-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 128
+; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 112
 ; CHECK-NEXT:    ret
 entry:
   %retval = alloca i32, align 4

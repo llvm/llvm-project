@@ -116,12 +116,12 @@ protected:
 
   // Member variables
   Terminal m_tty; ///< A terminal
-  int m_tflags;   ///< Cached tflags information.
+  int m_tflags = -1; ///< Cached tflags information.
 #if LLDB_ENABLE_TERMIOS
   std::unique_ptr<struct termios>
       m_termios_up; ///< Cached terminal state information.
 #endif
-  lldb::pid_t m_process_group; ///< Cached process group information.
+  lldb::pid_t m_process_group = -1; ///< Cached process group information.
 };
 
 /// \class TerminalStateSwitcher Terminal.h "lldb/Host/Terminal.h"
@@ -171,7 +171,8 @@ public:
 
 protected:
   // Member variables
-  mutable uint32_t m_currentState; ///< The currently active TTY state index.
+  mutable uint32_t m_currentState =
+      UINT32_MAX; ///< The currently active TTY state index.
   TerminalState
       m_ttystates[2]; ///< The array of TTY states that holds saved TTY info.
 };

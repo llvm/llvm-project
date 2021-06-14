@@ -10,7 +10,7 @@ define <4 x i32> @vselect_of_consts(<4 x i1> %cc) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a0, 284280
 ; RV32-NEXT:    addi a0, a0, 291
-; RV32-NEXT:    vsetivli zero, 4, e32,m1,ta,mu
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; RV32-NEXT:    vmv.v.x v25, a0
 ; RV32-NEXT:    lui a0, 214376
 ; RV32-NEXT:    addi a0, a0, -2030
@@ -21,7 +21,7 @@ define <4 x i32> @vselect_of_consts(<4 x i1> %cc) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a0, 284280
 ; RV64-NEXT:    addiw a0, a0, 291
-; RV64-NEXT:    vsetivli zero, 4, e32,m1,ta,mu
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; RV64-NEXT:    vmv.v.x v25, a0
 ; RV64-NEXT:    lui a0, 214376
 ; RV64-NEXT:    addiw a0, a0, -2030

@@ -59,7 +59,9 @@ void JSONNodeDumper::Visit(const Stmt *S) {
     switch (E->getValueKind()) {
     case VK_LValue: Category = "lvalue"; break;
     case VK_XValue: Category = "xvalue"; break;
-    case VK_RValue: Category = "rvalue"; break;
+    case VK_PRValue:
+      Category = "prvalue";
+      break;
     }
     JOS.attribute("valueCategory", Category);
   }
@@ -1414,9 +1416,10 @@ void JSONNodeDumper::VisitCXXDependentScopeMemberExpr(
 }
 
 void JSONNodeDumper::VisitIntegerLiteral(const IntegerLiteral *IL) {
-  JOS.attribute("value",
-                IL->getValue().toString(
-                    /*Radix=*/10, IL->getType()->isSignedIntegerType()));
+  llvm::SmallString<16> Buffer;
+  IL->getValue().toString(Buffer,
+                          /*Radix=*/10, IL->getType()->isSignedIntegerType());
+  JOS.attribute("value", Buffer);
 }
 void JSONNodeDumper::VisitCharacterLiteral(const CharacterLiteral *CL) {
   // FIXME: This should probably print the character literal as a string,

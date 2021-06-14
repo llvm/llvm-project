@@ -1,4 +1,5 @@
 ! RUN: %S/test_folding.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Test transformational intrinsic function folding
 
 module m

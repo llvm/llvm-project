@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Tests based on examples in C.10.6
 
 ! C.10.6(10)

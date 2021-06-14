@@ -266,13 +266,11 @@ public:
   /// C++11 divides the concept of "r-value" into pure r-values
   /// ("pr-values") and so-called expiring values ("x-values"), which
   /// identify specific objects that can be safely cannibalized for
-  /// their resources.  This is an unfortunate abuse of terminology on
-  /// the part of the C++ committee.  In Clang, when we say "r-value",
-  /// we generally mean a pr-value.
+  /// their resources.
   bool isLValue() const { return getValueKind() == VK_LValue; }
-  bool isRValue() const { return getValueKind() == VK_RValue; }
+  bool isPRValue() const { return getValueKind() == VK_PRValue; }
   bool isXValue() const { return getValueKind() == VK_XValue; }
-  bool isGLValue() const { return getValueKind() != VK_RValue; }
+  bool isGLValue() const { return getValueKind() != VK_PRValue; }
 
   enum LValueClassification {
     LV_Valid,
@@ -425,7 +423,7 @@ public:
                 ? VK_LValue
                 : (RT->getPointeeType()->isFunctionType()
                      ? VK_LValue : VK_XValue));
-    return VK_RValue;
+    return VK_PRValue;
   }
 
   /// getValueKind - The value kind that this expression produces.
@@ -1588,8 +1586,8 @@ public:
   // type should be IntTy
   CharacterLiteral(unsigned value, CharacterKind kind, QualType type,
                    SourceLocation l)
-      : Expr(CharacterLiteralClass, type, VK_RValue, OK_Ordinary), Value(value),
-        Loc(l) {
+      : Expr(CharacterLiteralClass, type, VK_PRValue, OK_Ordinary),
+        Value(value), Loc(l) {
     CharacterLiteralBits.Kind = kind;
     setDependence(ExprDependence::None);
   }
@@ -1709,7 +1707,7 @@ class ImaginaryLiteral : public Expr {
   Stmt *Val;
 public:
   ImaginaryLiteral(Expr *val, QualType Ty)
-      : Expr(ImaginaryLiteralClass, Ty, VK_RValue, OK_Ordinary), Val(val) {
+      : Expr(ImaginaryLiteralClass, Ty, VK_PRValue, OK_Ordinary), Val(val) {
     setDependence(ExprDependence::None);
   }
 
@@ -2547,7 +2545,8 @@ public:
   UnaryExprOrTypeTraitExpr(UnaryExprOrTypeTrait ExprKind, TypeSourceInfo *TInfo,
                            QualType resultType, SourceLocation op,
                            SourceLocation rp)
-      : Expr(UnaryExprOrTypeTraitExprClass, resultType, VK_RValue, OK_Ordinary),
+      : Expr(UnaryExprOrTypeTraitExprClass, resultType, VK_PRValue,
+             OK_Ordinary),
         OpLoc(op), RParenLoc(rp) {
     assert(ExprKind <= UETT_Last && "invalid enum value!");
     UnaryExprOrTypeTraitExprBits.Kind = ExprKind;
@@ -4287,7 +4286,7 @@ class AddrLabelExpr : public Expr {
 public:
   AddrLabelExpr(SourceLocation AALoc, SourceLocation LLoc, LabelDecl *L,
                 QualType t)
-      : Expr(AddrLabelExprClass, t, VK_RValue, OK_Ordinary), AmpAmpLoc(AALoc),
+      : Expr(AddrLabelExprClass, t, VK_PRValue, OK_Ordinary), AmpAmpLoc(AALoc),
         LabelLoc(LLoc), Label(L) {
     setDependence(ExprDependence::None);
   }
@@ -4332,7 +4331,7 @@ class StmtExpr : public Expr {
 public:
   StmtExpr(CompoundStmt *SubStmt, QualType T, SourceLocation LParenLoc,
            SourceLocation RParenLoc, unsigned TemplateDepth)
-      : Expr(StmtExprClass, T, VK_RValue, OK_Ordinary), SubStmt(SubStmt),
+      : Expr(StmtExprClass, T, VK_PRValue, OK_Ordinary), SubStmt(SubStmt),
         LParenLoc(LParenLoc), RParenLoc(RParenLoc) {
     setDependence(computeDependence(this, TemplateDepth));
     // FIXME: A templated statement expression should have an associated
@@ -4582,7 +4581,7 @@ class GNUNullExpr : public Expr {
 
 public:
   GNUNullExpr(QualType Ty, SourceLocation Loc)
-      : Expr(GNUNullExprClass, Ty, VK_RValue, OK_Ordinary), TokenLoc(Loc) {
+      : Expr(GNUNullExprClass, Ty, VK_PRValue, OK_Ordinary), TokenLoc(Loc) {
     setDependence(ExprDependence::None);
   }
 
@@ -4617,7 +4616,7 @@ class VAArgExpr : public Expr {
 public:
   VAArgExpr(SourceLocation BLoc, Expr *e, TypeSourceInfo *TInfo,
             SourceLocation RPLoc, QualType t, bool IsMS)
-      : Expr(VAArgExprClass, t, VK_RValue, OK_Ordinary), Val(e),
+      : Expr(VAArgExprClass, t, VK_PRValue, OK_Ordinary), Val(e),
         TInfo(TInfo, IsMS), BuiltinLoc(BLoc), RParenLoc(RPLoc) {
     setDependence(computeDependence(this));
   }
@@ -5309,7 +5308,7 @@ public:
 class NoInitExpr : public Expr {
 public:
   explicit NoInitExpr(QualType ty)
-      : Expr(NoInitExprClass, ty, VK_RValue, OK_Ordinary) {
+      : Expr(NoInitExprClass, ty, VK_PRValue, OK_Ordinary) {
     setDependence(computeDependence(this));
   }
 
@@ -5405,7 +5404,7 @@ class ArrayInitLoopExpr : public Expr {
 
 public:
   explicit ArrayInitLoopExpr(QualType T, Expr *CommonInit, Expr *ElementInit)
-      : Expr(ArrayInitLoopExprClass, T, VK_RValue, OK_Ordinary),
+      : Expr(ArrayInitLoopExprClass, T, VK_PRValue, OK_Ordinary),
         SubExprs{CommonInit, ElementInit} {
     setDependence(computeDependence(this));
   }
@@ -5456,7 +5455,7 @@ class ArrayInitIndexExpr : public Expr {
 
 public:
   explicit ArrayInitIndexExpr(QualType T)
-      : Expr(ArrayInitIndexExprClass, T, VK_RValue, OK_Ordinary) {
+      : Expr(ArrayInitIndexExprClass, T, VK_PRValue, OK_Ordinary) {
     setDependence(ExprDependence::None);
   }
 
@@ -5489,7 +5488,7 @@ public:
 class ImplicitValueInitExpr : public Expr {
 public:
   explicit ImplicitValueInitExpr(QualType ty)
-      : Expr(ImplicitValueInitExprClass, ty, VK_RValue, OK_Ordinary) {
+      : Expr(ImplicitValueInitExprClass, ty, VK_PRValue, OK_Ordinary) {
     setDependence(computeDependence(this));
   }
 
@@ -5894,7 +5893,7 @@ public:
   ExtVectorElementExpr(QualType ty, ExprValueKind VK, Expr *base,
                        IdentifierInfo &accessor, SourceLocation loc)
       : Expr(ExtVectorElementExprClass, ty, VK,
-             (VK == VK_RValue ? OK_Ordinary : OK_VectorComponent)),
+             (VK == VK_PRValue ? OK_Ordinary : OK_VectorComponent)),
         Base(base), Accessor(&accessor), AccessorLoc(loc) {
     setDependence(computeDependence(this));
   }
@@ -5951,7 +5950,7 @@ protected:
   BlockDecl *TheBlock;
 public:
   BlockExpr(BlockDecl *BD, QualType ty)
-      : Expr(BlockExprClass, ty, VK_RValue, OK_Ordinary), TheBlock(BD) {
+      : Expr(BlockExprClass, ty, VK_PRValue, OK_Ordinary), TheBlock(BD) {
     setDependence(computeDependence(this));
   }
 

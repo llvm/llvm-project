@@ -1,4 +1,5 @@
 ! RUN: %S/test_modfile.sh %s %t %flang_fc1
+! REQUIRES: shell
 
 ! Check modfile that contains import of use-assocation of another use-association.
 

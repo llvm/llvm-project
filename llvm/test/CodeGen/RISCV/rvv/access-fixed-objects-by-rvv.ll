@@ -39,7 +39,7 @@ define <vscale x 1 x i64> @access_fixed_and_vector_objects(i64 *%val) {
 ; RV64IV-NEXT:    ld a0, 536(sp)
 ; RV64IV-NEXT:    addi a1, sp, 544
 ; RV64IV-NEXT:    vl1re64.v v26, (a1)
-; RV64IV-NEXT:    vsetvli zero, a0, e64,m1,ta,mu
+; RV64IV-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
 ; RV64IV-NEXT:    vadd.vv v8, v25, v26
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    add sp, sp, a0

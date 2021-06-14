@@ -18,7 +18,6 @@ set(files
   __iterator/concepts.h
   __iterator/default_sentinel.h
   __iterator/incrementable_traits.h
-  __iterator/indirect_concepts.h
   __iterator/iter_move.h
   __iterator/iterator_traits.h
   __iterator/next.h
@@ -50,9 +49,11 @@ set(files
   __ranges/empty.h
   __ranges/empty_view.h
   __ranges/enable_borrowed_range.h
+  __ranges/enable_view.h
   __ranges/view_interface.h
-  __ranges/view.h
+  __ranges/ref_view.h
   __ranges/size.h
+  __ranges/subrange.h
   __split_buffer
   __std_stream
   __string

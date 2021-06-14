@@ -20,53 +20,14 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
   def int_ppc_dcba  : Intrinsic<[], [llvm_ptr_ty], []>;
   def int_ppc_dcbf : GCCBuiltin<"__builtin_dcbf">,
                       Intrinsic<[], [llvm_ptr_ty], [IntrArgMemOnly]>;
-  def int_ppc_dcbfl : GCCBuiltin<"__builtin_ppc_dcbfl">,
-                      Intrinsic<[], [llvm_ptr_ty], [IntrArgMemOnly]>;
-  def int_ppc_dcbflp : GCCBuiltin<"__builtin_ppc_dcbflp">,
-                       Intrinsic<[], [llvm_ptr_ty], [IntrArgMemOnly]>;
   def int_ppc_dcbfps : Intrinsic<[], [llvm_ptr_ty], [IntrArgMemOnly]>;
   def int_ppc_dcbstps : Intrinsic<[], [llvm_ptr_ty], [IntrArgMemOnly]>;
   def int_ppc_dcbi  : Intrinsic<[], [llvm_ptr_ty], []>;
-  def int_ppc_dcbst : GCCBuiltin<"__builtin_ppc_dcbst">,
-                      Intrinsic<[], [llvm_ptr_ty], []>;
-  def int_ppc_dcbt  : GCCBuiltin<"__builtin_ppc_dcbt">,
-                      Intrinsic<[], [llvm_ptr_ty],
-    [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
-  def int_ppc_dcbtst : GCCBuiltin<"__builtin_ppc_dcbtst">,
-                       Intrinsic<[], [llvm_ptr_ty],
-    [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
   def int_ppc_dcbt_with_hint: Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty],
     [IntrArgMemOnly, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
   def int_ppc_dcbtst_with_hint: Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty],
     [IntrArgMemOnly, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<1>>]>;
-  def int_ppc_dcbz  : GCCBuiltin<"__builtin_ppc_dcbz">,
-                      Intrinsic<[], [llvm_ptr_ty], []>;
   def int_ppc_dcbzl : Intrinsic<[], [llvm_ptr_ty], []>;
-  def int_ppc_icbt : GCCBuiltin<"__builtin_ppc_icbt">,
-                     Intrinsic<[], [llvm_ptr_ty], []>;
-
-  // Population Count in each Byte.
-  def int_ppc_popcntb : GCCBuiltin<"__builtin_ppc_popcntb">,
-                        Intrinsic<[llvm_i64_ty], [llvm_i64_ty], [IntrNoMem]>;
-
-  // sync instruction (i.e. sync 0, a.k.a hwsync)
-  def int_ppc_sync : GCCBuiltin<"__builtin_ppc_sync">,
-                     Intrinsic<[], [], []>;
-  def int_ppc_iospace_sync : GCCBuiltin<"__builtin_ppc_iospace_sync">,
-                             Intrinsic<[], [], []>;
-  // isync instruction
-  def int_ppc_isync : GCCBuiltin<"__builtin_ppc_isync">,
-                      Intrinsic<[], [], []>;
-  // lwsync is sync 1
-  def int_ppc_lwsync : GCCBuiltin<"__builtin_ppc_lwsync">,
-                       Intrinsic<[], [], []>;
-  def int_ppc_iospace_lwsync : GCCBuiltin<"__builtin_ppc_iospace_lwsync">,
-                               Intrinsic<[], [], []>;
-  // eieio instruction
-  def int_ppc_eieio : GCCBuiltin<"__builtin_ppc_eieio">,
-                      Intrinsic<[],[],[]>;
-  def int_ppc_iospace_eieio : GCCBuiltin<"__builtin_ppc_iospace_eieio">,
-                              Intrinsic<[],[],[]>;
 
   // Get content from current FPSCR register
   def int_ppc_readflm : GCCBuiltin<"__builtin_readflm">,
@@ -1520,3 +1481,47 @@ let TargetPrefix = "ppc" in {
                   [llvm_v512i1_ty, llvm_v16i8_ty, llvm_v16i8_ty, llvm_i32_ty,
                    llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 }
+
+// XL Compat intrinsics.
+let TargetPrefix = "ppc" in {
+  def int_ppc_dcbfl : GCCBuiltin<"__builtin_ppc_dcbfl">,
+                      Intrinsic<[], [llvm_ptr_ty], [IntrArgMemOnly]>;
+  def int_ppc_dcbflp : GCCBuiltin<"__builtin_ppc_dcbflp">,
+                       Intrinsic<[], [llvm_ptr_ty], [IntrArgMemOnly]>;
+  def int_ppc_dcbst : GCCBuiltin<"__builtin_ppc_dcbst">,
+                      Intrinsic<[], [llvm_ptr_ty], []>;
+  def int_ppc_dcbt  : GCCBuiltin<"__builtin_ppc_dcbt">,
+                      Intrinsic<[], [llvm_ptr_ty],
+    [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+  def int_ppc_dcbtst : GCCBuiltin<"__builtin_ppc_dcbtst">,
+                       Intrinsic<[], [llvm_ptr_ty],
+    [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
+  def int_ppc_dcbz  : GCCBuiltin<"__builtin_ppc_dcbz">,
+                      Intrinsic<[], [llvm_ptr_ty], []>;
+  def int_ppc_icbt : GCCBuiltin<"__builtin_ppc_icbt">,
+                     Intrinsic<[], [llvm_ptr_ty], []>;
+  
+  // Population Count in each Byte.
+  def int_ppc_popcntb : GCCBuiltin<"__builtin_ppc_popcntb">,
+                        Intrinsic<[llvm_i64_ty], [llvm_i64_ty], [IntrNoMem]>;
+  
+  // sync instruction (i.e. sync 0, a.k.a hwsync)
+  def int_ppc_sync : GCCBuiltin<"__builtin_ppc_sync">,
+                     Intrinsic<[], [], []>;
+  def int_ppc_iospace_sync : GCCBuiltin<"__builtin_ppc_iospace_sync">,
+                             Intrinsic<[], [], []>;
+  // isync instruction
+  def int_ppc_isync : GCCBuiltin<"__builtin_ppc_isync">,
+                      Intrinsic<[], [], []>;
+  // lwsync is sync 1
+  def int_ppc_lwsync : GCCBuiltin<"__builtin_ppc_lwsync">,
+                       Intrinsic<[], [], []>;
+  def int_ppc_iospace_lwsync : GCCBuiltin<"__builtin_ppc_iospace_lwsync">,
+                               Intrinsic<[], [], []>;
+  // eieio instruction
+  def int_ppc_eieio : GCCBuiltin<"__builtin_ppc_eieio">,
+                      Intrinsic<[],[],[]>;
+  def int_ppc_iospace_eieio : GCCBuiltin<"__builtin_ppc_iospace_eieio">,
+                              Intrinsic<[],[],[]>;
+}
+

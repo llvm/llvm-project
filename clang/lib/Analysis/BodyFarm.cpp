@@ -116,7 +116,7 @@ BinaryOperator *ASTMaker::makeAssignment(const Expr *LHS, const Expr *RHS,
                                          QualType Ty) {
   return BinaryOperator::Create(
       C, const_cast<Expr *>(LHS), const_cast<Expr *>(RHS), BO_Assign, Ty,
-      VK_RValue, OK_Ordinary, SourceLocation(), FPOptionsOverride());
+      VK_PRValue, OK_Ordinary, SourceLocation(), FPOptionsOverride());
 }
 
 BinaryOperator *ASTMaker::makeComparison(const Expr *LHS, const Expr *RHS,
@@ -125,7 +125,7 @@ BinaryOperator *ASTMaker::makeComparison(const Expr *LHS, const Expr *RHS,
          BinaryOperator::isComparisonOp(Op));
   return BinaryOperator::Create(
       C, const_cast<Expr *>(LHS), const_cast<Expr *>(RHS), Op,
-      C.getLogicalOperationType(), VK_RValue, OK_Ordinary, SourceLocation(),
+      C.getLogicalOperationType(), VK_PRValue, OK_Ordinary, SourceLocation(),
       FPOptionsOverride());
 }
 
@@ -169,7 +169,7 @@ ImplicitCastExpr *ASTMaker::makeImplicitCast(const Expr *Arg, QualType Ty,
                                   /* CastKind=*/CK,
                                   /* Expr=*/const_cast<Expr *>(Arg),
                                   /* CXXCastPath=*/nullptr,
-                                  /* ExprValueKind=*/VK_RValue,
+                                  /* ExprValueKind=*/VK_PRValue,
                                   /* FPFeatures */ FPOptionsOverride());
 }
 
@@ -264,7 +264,7 @@ static CallExpr *create_call_once_funcptr_call(ASTContext &C, ASTMaker M,
     llvm_unreachable("Unexpected state");
   }
 
-  return CallExpr::Create(C, SubExpr, CallArgs, C.VoidTy, VK_RValue,
+  return CallExpr::Create(C, SubExpr, CallArgs, C.VoidTy, VK_PRValue,
                           SourceLocation(), FPOptionsOverride());
 }
 
@@ -291,7 +291,7 @@ static CallExpr *create_call_once_lambda_call(ASTContext &C, ASTMaker M,
       /*AstContext=*/C, OO_Call, callOperatorDeclRef,
       /*Args=*/CallArgs,
       /*QualType=*/C.VoidTy,
-      /*ExprValueType=*/VK_RValue,
+      /*ExprValueType=*/VK_PRValue,
       /*SourceLocation=*/SourceLocation(),
       /*FPFeatures=*/FPOptionsOverride());
 }
@@ -451,7 +451,7 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
                          CK_IntegralToBoolean),
       /* opc=*/UO_LNot,
       /* QualType=*/C.IntTy,
-      /* ExprValueKind=*/VK_RValue,
+      /* ExprValueKind=*/VK_PRValue,
       /* ExprObjectKind=*/OK_Ordinary, SourceLocation(),
       /* CanOverflow*/ false, FPOptionsOverride());
 
@@ -513,13 +513,13 @@ static Stmt *create_dispatch_once(ASTContext &C, const FunctionDecl *D) {
       /*StmtClass=*/M.makeLvalueToRvalue(/*Expr=*/Block),
       /*Args=*/None,
       /*QualType=*/C.VoidTy,
-      /*ExprValueType=*/VK_RValue,
+      /*ExprValueType=*/VK_PRValue,
       /*SourceLocation=*/SourceLocation(), FPOptionsOverride());
 
   // (2) Create the assignment to the predicate.
   Expr *DoneValue =
       UnaryOperator::Create(C, M.makeIntegerLiteral(0, C.LongTy), UO_Not,
-                            C.LongTy, VK_RValue, OK_Ordinary, SourceLocation(),
+                            C.LongTy, VK_PRValue, OK_Ordinary, SourceLocation(),
                             /*CanOverflow*/ false, FPOptionsOverride());
 
   BinaryOperator *B =
@@ -580,7 +580,7 @@ static Stmt *create_dispatch_sync(ASTContext &C, const FunctionDecl *D) {
   ASTMaker M(C);
   DeclRefExpr *DR = M.makeDeclRefExpr(PV);
   ImplicitCastExpr *ICE = M.makeLvalueToRvalue(DR, Ty);
-  CallExpr *CE = CallExpr::Create(C, ICE, None, C.VoidTy, VK_RValue,
+  CallExpr *CE = CallExpr::Create(C, ICE, None, C.VoidTy, VK_PRValue,
                                   SourceLocation(), FPOptionsOverride());
   return CE;
 }

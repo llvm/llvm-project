@@ -179,7 +179,7 @@ struct ExtensionNodeRewriter
     isl::union_map Extensions;
     isl::schedule Result =
         visit(Schedule.get_root(), Schedule.get_domain(), Extensions);
-    assert(Extensions && Extensions.is_empty());
+    assert(!Extensions.is_null() && Extensions.is_empty());
     return Result;
   }
 
@@ -643,7 +643,7 @@ isl::schedule polly::applyPartialUnroll(isl::schedule_node BandToUnroll,
         findOptionalNodeOperand(Attr->Metadata, LLVMLoopUnrollFollowupUnrolled);
 
   isl::id NewBandId = createGeneratedLoopAttr(Ctx, FollowupMD);
-  if (NewBandId)
+  if (!NewBandId.is_null())
     NewLoop = insertMark(NewLoop, NewBandId);
 
   return NewLoop.get_schedule();

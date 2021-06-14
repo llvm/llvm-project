@@ -239,15 +239,16 @@ private:
   void checkConsistency() const {
 #ifndef NDEBUG
     // Default-initialized object
-    if (!Occupied && !Unused && !Known && !Written)
+    if (Occupied.is_null() && Unused.is_null() && Known.is_null() &&
+        Written.is_null())
       return;
 
-    assert(Occupied || Unused);
-    assert(Known);
-    assert(Written);
+    assert(!Occupied.is_null() || !Unused.is_null());
+    assert(!Known.is_null());
+    assert(!Written.is_null());
 
     // If not all fields are defined, we cannot derived the universe.
-    if (!Occupied || !Unused)
+    if (Occupied.is_null() || Unused.is_null())
       return;
 
     assert(Occupied.is_disjoint(Unused));
@@ -272,16 +273,19 @@ public:
   }
 
   /// Return whether this object was not default-constructed.
-  bool isUsable() const { return (Occupied || Unused) && Known && Written; }
+  bool isUsable() const {
+    return (Occupied.is_null() || Unused.is_null()) && !Known.is_null() &&
+           !Written.is_null();
+  }
 
   /// Print the content of this object to @p OS.
   void print(llvm::raw_ostream &OS, unsigned Indent = 0) const {
     if (isUsable()) {
-      if (Occupied)
+      if (!Occupied.is_null())
         OS.indent(Indent) << "Occupied: " << Occupied << "\n";
       else
         OS.indent(Indent) << "Occupied: <Everything else not in Unused>\n";
-      if (Unused)
+      if (!Unused.is_null())
         OS.indent(Indent) << "Unused:   " << Unused << "\n";
       else
         OS.indent(Indent) << "Unused:   <Everything else not in Occupied>\n";
@@ -295,13 +299,13 @@ public:
   /// Combine two knowledges, this and @p That.
   void learnFrom(Knowledge That) {
     assert(!isConflicting(*this, That));
-    assert(Unused && That.Occupied);
+    assert(!Unused.is_null() && !That.Occupied.is_null());
     assert(
-        !That.Unused &&
+        That.Unused.is_null() &&
         "This function is only prepared to learn occupied elements from That");
-    assert(!Occupied && "This function does not implement "
-                        "`this->Occupied = "
-                        "this->Occupied.unite(That.Occupied);`");
+    assert(Occupied.is_null() && "This function does not implement "
+                                 "`this->Occupied = "
+                                 "this->Occupied.unite(That.Occupied);`");
 
     Unused = Unused.subtract(That.Occupied);
     Known = Known.unite(That.Known);
@@ -332,11 +336,11 @@ public:
                             const Knowledge &Proposed,
                             llvm::raw_ostream *OS = nullptr,
                             unsigned Indent = 0) {
-    assert(Existing.Unused);
-    assert(Proposed.Occupied);
+    assert(!Existing.Unused.is_null());
+    assert(!Proposed.Occupied.is_null());
 
 #ifndef NDEBUG
-    if (Existing.Occupied && Proposed.Unused) {
+    if (!Existing.Occupied.is_null() && !Proposed.Unused.is_null()) {
       auto ExistingUniverse = Existing.Occupied.unite(Existing.Unused);
       auto ProposedUniverse = Proposed.Occupied.unite(Proposed.Unused);
       assert(ExistingUniverse.is_equal(ProposedUniverse) &&
@@ -867,7 +871,7 @@ private:
 
     // { DomainRead[] -> DomainWrite[] }
     auto PerPHIWrites = computePerPHI(SAI);
-    if (!PerPHIWrites) {
+    if (PerPHIWrites.is_null()) {
       LLVM_DEBUG(
           dbgs() << "    Reject because cannot determine incoming values\n");
       return false;
@@ -1203,7 +1207,7 @@ public:
     }
     DeLICMAnalyzed++;
 
-    if (!EltUnused || !EltKnown || !EltWritten) {
+    if (EltUnused.is_null() || EltKnown.is_null() || EltWritten.is_null()) {
       assert(isl_ctx_last_error(IslCtx.get()) == isl_error_quota &&
              "The only reason that these things have not been computed should "
              "be if the max-operations limit hit");

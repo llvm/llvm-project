@@ -2713,6 +2713,12 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
       isa<ConstantInt>(IfCond))
     return false;
 
+  // Don't try to fold an unreachable block. For example, the phi node itself
+  // can't be the candidate if-condition for a select that we want to form.
+  if (auto *IfCondPhiInst = dyn_cast<PHINode>(IfCond))
+    if (IfCondPhiInst->getParent() == BB)
+      return false;
+
   // Okay, we found that we can merge this two-entry phi node into a select.
   // Doing so would require us to fold *all* two entry phi nodes in this block.
   // At some point this becomes non-profitable (particularly if the target

@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! C701 The type-param-value for a kind type parameter shall be a constant
 ! expression.  This constraint looks like a mistake in the standard.
 integer, parameter :: k = 8

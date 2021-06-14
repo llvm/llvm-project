@@ -96,7 +96,7 @@ declare void @test6_1()
 ; This is not a missed optz'n.
 define void @test6_2(i8** %p, i8* %q) {
 ; CHECK-LABEL: define {{[^@]+}}@test6_2
-; CHECK-SAME: (i8** nocapture noundef nonnull writeonly align 8 dereferenceable(8) [[P:%.*]], i8* [[Q:%.*]]) {
+; CHECK-SAME: (i8** nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[P:%.*]], i8* nofree [[Q:%.*]]) {
 ; CHECK-NEXT:    store i8* [[Q]], i8** [[P]], align 8
 ; CHECK-NEXT:    call void @test6_1()
 ; CHECK-NEXT:    ret void

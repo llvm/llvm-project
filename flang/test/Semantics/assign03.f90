@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Pointer assignment constraints 10.2.2.2 (see also assign02.f90)
 
 module m

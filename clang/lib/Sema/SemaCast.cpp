@@ -747,7 +747,7 @@ static TryCastResult getCastAwayConstnessCastKind(CastAwayConstnessKind CACK,
 void CastOperation::CheckDynamicCast() {
   CheckNoDerefRAII NoderefCheck(*this);
 
-  if (ValueKind == VK_RValue)
+  if (ValueKind == VK_PRValue)
     SrcExpr = Self.DefaultFunctionArrayLvalueConversion(SrcExpr.get());
   else if (isPlaceholder())
     SrcExpr = Self.CheckPlaceholderExpr(SrcExpr.get());
@@ -815,7 +815,7 @@ void CastOperation::CheckDynamicCast() {
   } else {
     // If we're dynamic_casting from a prvalue to an rvalue reference, we need
     // to materialize the prvalue before we bind the reference to it.
-    if (SrcExpr.get()->isRValue())
+    if (SrcExpr.get()->isPRValue())
       SrcExpr = Self.CreateMaterializeTemporaryExpr(
           SrcType, SrcExpr.get(), /*IsLValueReference*/ false);
     SrcPointee = SrcType;
@@ -914,7 +914,7 @@ void CastOperation::CheckDynamicCast() {
 void CastOperation::CheckConstCast() {
   CheckNoDerefRAII NoderefCheck(*this);
 
-  if (ValueKind == VK_RValue)
+  if (ValueKind == VK_PRValue)
     SrcExpr = Self.DefaultFunctionArrayLvalueConversion(SrcExpr.get());
   else if (isPlaceholder())
     SrcExpr = Self.CheckPlaceholderExpr(SrcExpr.get());
@@ -1126,7 +1126,7 @@ static bool checkCastFunctionType(Sema &Self, const ExprResult &SrcExpr,
 /// like this:
 /// char *bytes = reinterpret_cast\<char*\>(int_ptr);
 void CastOperation::CheckReinterpretCast() {
-  if (ValueKind == VK_RValue && !isPlaceholder(BuiltinType::Overload))
+  if (ValueKind == VK_PRValue && !isPlaceholder(BuiltinType::Overload))
     SrcExpr = Self.DefaultFunctionArrayLvalueConversion(SrcExpr.get());
   else
     checkNonOverloadPlaceholders();
@@ -1198,7 +1198,7 @@ void CastOperation::CheckStaticCast() {
     return;
   }
 
-  if (ValueKind == VK_RValue && !DestType->isRecordType() &&
+  if (ValueKind == VK_PRValue && !DestType->isRecordType() &&
       !isPlaceholder(BuiltinType::Overload)) {
     SrcExpr = Self.DefaultFunctionArrayLvalueConversion(SrcExpr.get());
     if (SrcExpr.isInvalid()) // if conversion failed, don't report another error
@@ -1897,7 +1897,7 @@ static TryCastResult TryConstCast(Sema &Self, ExprResult &SrcExpr,
       return TC_NotApplicable;
     }
 
-    if (isa<RValueReferenceType>(DestTypeTmp) && SrcExpr.get()->isRValue()) {
+    if (isa<RValueReferenceType>(DestTypeTmp) && SrcExpr.get()->isPRValue()) {
       if (!SrcType->isRecordType()) {
         // Cannot const_cast non-class prvalue to rvalue reference type. But if
         // this is C-style, static_cast can do this.
@@ -2169,7 +2169,8 @@ static bool fixOverloadedReinterpretCastExpr(Sema &Self, QualType DestType,
   // like it?
   if (Self.ResolveAndFixSingleFunctionTemplateSpecialization(
           Result,
-          Expr::getValueKindForType(DestType) == VK_RValue // Convert Fun to Ptr
+          Expr::getValueKindForType(DestType) ==
+              VK_PRValue // Convert Fun to Ptr
           ) &&
       Result.isUsable())
     return true;
@@ -2659,7 +2660,7 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
     return;
   }
 
-  if (ValueKind == VK_RValue && !DestType->isRecordType() &&
+  if (ValueKind == VK_PRValue && !DestType->isRecordType() &&
       !isPlaceholder(BuiltinType::Overload)) {
     SrcExpr = Self.DefaultFunctionArrayLvalueConversion(SrcExpr.get());
     if (SrcExpr.isInvalid())
@@ -2916,7 +2917,7 @@ void CastOperation::CheckCStyleCast() {
         }
         Self.Diag(OpRange.getBegin(),
                   diag::err_opencl_cast_non_zero_to_event_t)
-                  << CastInt.toString(10) << SrcExpr.get()->getSourceRange();
+                  << toString(CastInt, 10) << SrcExpr.get()->getSourceRange();
         SrcExpr = ExprError();
         return;
       }
@@ -3103,7 +3104,7 @@ void CastOperation::CheckBuiltinBitCast() {
     return;
   }
 
-  if (SrcExpr.get()->isRValue())
+  if (SrcExpr.get()->isPRValue())
     SrcExpr = Self.CreateMaterializeTemporaryExpr(SrcType, SrcExpr.get(),
                                                   /*IsLValueReference=*/false);
 

@@ -214,6 +214,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
       Features["dot6-insts"] = true;
       Features["dot7-insts"] = true;
       LLVM_FALLTHROUGH;
+    case GK_GFX1013:
     case GK_GFX1010:
       Features["dl-insts"] = true;
       Features["ci-insts"] = true;

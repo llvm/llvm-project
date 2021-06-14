@@ -17,6 +17,7 @@ class DialectRegistry;
 
 namespace lsp {
 struct Diagnostic;
+struct DocumentSymbol;
 struct Hover;
 struct Location;
 struct Position;
@@ -54,6 +55,10 @@ public:
   /// Find a hover description for the given hover position, or None if one
   /// couldn't be found.
   Optional<Hover> findHover(const URIForFile &uri, const Position &hoverPos);
+
+  /// Find all of the document symbols within the given file.
+  void findDocumentSymbols(const URIForFile &uri,
+                           std::vector<DocumentSymbol> &symbols);
 
 private:
   struct Impl;

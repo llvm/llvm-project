@@ -212,9 +212,9 @@ define void @f3(i8* %x_addr, i8* %y_addr, i32* %tmp_addr) {
 ; CHECK-NEXT:    %sunkaddr4 = getelementptr inbounds i8, i8* bitcast ({ %union, [2000 x i8] }* @tmp_addr to i8*), i64 %sunkaddr3
 ; CHECK-NEXT:    --> ((4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr)<nuw> U: [0,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %sunkaddr5 = getelementptr inbounds i8, i8* %sunkaddr4, i64 4096
-; CHECK-NEXT:    --> (4096 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr) U: [0,-3) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> (4096 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr)<nuw> U: [4096,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %addr4.cast = bitcast i8* %sunkaddr5 to i32*
-; CHECK-NEXT:    --> (4096 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr) U: [0,-3) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> (4096 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr)<nuw> U: [4096,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %addr4.incr = getelementptr i32, i32* %addr4.cast, i64 1
 ; CHECK-NEXT:    --> (4100 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr) U: [0,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %add5 = add i32 %mul, 5
@@ -224,11 +224,11 @@ define void @f3(i8* %x_addr, i8* %y_addr, i32* %tmp_addr) {
 ; CHECK-NEXT:    %sunkaddr0 = mul i64 %add5.zext, 4
 ; CHECK-NEXT:    --> (4 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw>)<nuw><nsw> U: [4,17179869173) S: [4,17179869185)
 ; CHECK-NEXT:    %sunkaddr1 = getelementptr inbounds i8, i8* bitcast ({ %union, [2000 x i8] }* @tmp_addr to i8*), i64 %sunkaddr0
-; CHECK-NEXT:    --> (4 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr) U: [0,-3) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> (4 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr)<nuw> U: [4,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %sunkaddr2 = getelementptr inbounds i8, i8* %sunkaddr1, i64 4096
-; CHECK-NEXT:    --> (4100 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr) U: [0,-3) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> (4100 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr)<nuw> U: [0,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %addr5.cast = bitcast i8* %sunkaddr2 to i32*
-; CHECK-NEXT:    --> (4100 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr) U: [0,-3) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> (4100 + (4 * (zext i32 (4 + (4 * (%tmp /u 4))<nuw>) to i64))<nuw><nsw> + @tmp_addr)<nuw> U: [0,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:  Determining loop execution counts for: @f3
 ;
   entry:

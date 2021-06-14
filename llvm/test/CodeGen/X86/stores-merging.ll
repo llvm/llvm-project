@@ -14,7 +14,7 @@ define dso_local void @redundant_stores_merging() {
 ; CHECK-LABEL: redundant_stores_merging:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movabsq $1958505086977, %rax # imm = 0x1C800000001
-; CHECK-NEXT:    movq %rax, e+{{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, e+4(%rip)
 ; CHECK-NEXT:    retq
   store i32 1, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 1), align 4
   store i32 123, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 2), align 4
@@ -27,8 +27,8 @@ define dso_local void @redundant_stores_merging_reverse() {
 ; CHECK-LABEL: redundant_stores_merging_reverse:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movabsq $528280977409, %rax # imm = 0x7B00000001
-; CHECK-NEXT:    movq %rax, e+{{.*}}(%rip)
-; CHECK-NEXT:    movl $456, e+{{.*}}(%rip) # imm = 0x1C8
+; CHECK-NEXT:    movq %rax, e+4(%rip)
+; CHECK-NEXT:    movl $456, e+8(%rip) # imm = 0x1C8
 ; CHECK-NEXT:    retq
   store i32 123, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 2), align 4
   store i32 456, i32* getelementptr inbounds (%structTy, %structTy* @e, i64 0, i32 2), align 4
@@ -46,8 +46,8 @@ define dso_local void @redundant_stores_merging_reverse() {
 define dso_local void @overlapping_stores_merging() {
 ; CHECK-LABEL: overlapping_stores_merging:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $1, {{.*}}(%rip)
-; CHECK-NEXT:    movw $2, b+{{.*}}(%rip)
+; CHECK-NEXT:    movl $1, b(%rip)
+; CHECK-NEXT:    movw $2, b+3(%rip)
 ; CHECK-NEXT:    retq
   store i16 0, i16* bitcast (i8* getelementptr inbounds ([8 x i8], [8 x i8]* @b, i64 0, i64 2) to i16*), align 2
   store i16 2, i16* bitcast (i8* getelementptr inbounds ([8 x i8], [8 x i8]* @b, i64 0, i64 3) to i16*), align 1
@@ -610,5 +610,91 @@ define dso_local void @be_i64_to_i32_order(i64 %x, i32* %p0) {
   %p1 = getelementptr inbounds i32, i32* %p0, i64 1
   store i32 %t1, i32* %p0, align 4
   store i32 %t0, i32* %p1, align 4
+  ret void
+}
+
+; https://llvm.org/PR50623
+; It is a miscompile to merge the stores if we are not
+; writing all of the bytes from the source value.
+
+define void @merge_hole(i32 %x, i8* %p) {
+; CHECK-LABEL: merge_hole:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movb %dil, (%rsi)
+; CHECK-NEXT:    shrl $16, %edi
+; CHECK-NEXT:    movw %di, 2(%rsi)
+; CHECK-NEXT:    retq
+  %pcast = bitcast i8* %p to i16*
+  %p2 = getelementptr inbounds i16, i16* %pcast, i64 1
+  %x3 = trunc i32 %x to i8
+  store i8 %x3, i8* %p, align 1
+  %sh = lshr i32 %x, 16
+  %x01 = trunc i32 %sh to i16
+  store i16 %x01, i16* %p2, align 1
+  ret void
+}
+
+; Change the order of the stores.
+; It is a miscompile to merge the stores if we are not
+; writing all of the bytes from the source value.
+
+define void @merge_hole2(i32 %x, i8* %p) {
+; CHECK-LABEL: merge_hole2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shrl $16, %eax
+; CHECK-NEXT:    movw %ax, 2(%rsi)
+; CHECK-NEXT:    movb %dil, (%rsi)
+; CHECK-NEXT:    retq
+  %pcast = bitcast i8* %p to i16*
+  %p2 = getelementptr inbounds i16, i16* %pcast, i64 1
+  %sh = lshr i32 %x, 16
+  %x01 = trunc i32 %sh to i16
+  store i16 %x01, i16* %p2, align 1
+  %x3 = trunc i32 %x to i8
+  store i8 %x3, i8* %p, align 1
+  ret void
+}
+
+; Change offset.
+; It is a miscompile to merge the stores if we are not
+; writing all of the bytes from the source value.
+
+define void @merge_hole3(i32 %x, i8* %p) {
+; CHECK-LABEL: merge_hole3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movb %dil, 1(%rsi)
+; CHECK-NEXT:    shrl $16, %edi
+; CHECK-NEXT:    movw %di, 2(%rsi)
+; CHECK-NEXT:    retq
+  %p1 = getelementptr inbounds i8, i8* %p, i64 1
+  %pcast = bitcast i8* %p to i16*
+  %p2 = getelementptr inbounds i16, i16* %pcast, i64 1
+  %x3 = trunc i32 %x to i8
+  store i8 %x3, i8* %p1, align 1
+  %sh = lshr i32 %x, 16
+  %x01 = trunc i32 %sh to i16
+  store i16 %x01, i16* %p2, align 1
+  ret void
+}
+
+; Change offset.
+; It is a miscompile to merge the stores if we are not
+; writing all of the bytes from the source value.
+
+define void @merge_hole4(i32 %x, i8* %p) {
+; CHECK-LABEL: merge_hole4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movb %dil, 2(%rsi)
+; CHECK-NEXT:    shrl $16, %edi
+; CHECK-NEXT:    movw %di, (%rsi)
+; CHECK-NEXT:    retq
+  %pcast = bitcast i8* %p to i16*
+  %p2 = getelementptr inbounds i8, i8* %p, i64 2
+  %x3 = trunc i32 %x to i8
+  store i8 %x3, i8* %p2, align 1
+  %sh = lshr i32 %x, 16
+  %x01 = trunc i32 %sh to i16
+  store i16 %x01, i16* %pcast, align 1
   ret void
 }

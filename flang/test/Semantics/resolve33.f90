@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Derived type parameters
 ! C731 The same type-param-name shall not appear more than once in a given
 ! derived-type-stmt.

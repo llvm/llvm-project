@@ -10,7 +10,7 @@ define dso_local <4 x float> @foo(<4 x i32> %0) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> poison, <4 x i32> <i32 0, i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> undef, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP7:%.*]] = sitofp <2 x i32> [[TMP6]] to <2 x float>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP7]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP7]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    ret <4 x float> [[TMP9]]
 ;

@@ -557,7 +557,7 @@ Error MinimalTypeDumpVisitor::visitKnownMember(CVMemberRecord &CVR,
 Error MinimalTypeDumpVisitor::visitKnownMember(CVMemberRecord &CVR,
                                                EnumeratorRecord &Enum) {
   P.format(" [{0} = {1}]", Enum.Name,
-           Enum.Value.toString(10, Enum.Value.isSigned()));
+           toString(Enum.Value, 10, Enum.Value.isSigned()));
   return Error::success();
 }
 

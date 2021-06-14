@@ -133,8 +133,8 @@ define arm_aapcs_vfpcc void @scatter_inc_v4i32_complex(<4 x i32> %data1, <4 x i3
 ; CHECK-NEXT:    push {r4, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    .pad #24
-; CHECK-NEXT:    sub sp, #24
+; CHECK-NEXT:    .pad #16
+; CHECK-NEXT:    sub sp, #16
 ; CHECK-NEXT:    cmp r1, #1
 ; CHECK-NEXT:    blt .LBB3_5
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph.preheader
@@ -171,7 +171,7 @@ define arm_aapcs_vfpcc void @scatter_inc_v4i32_complex(<4 x i32> %data1, <4 x i3
 ; CHECK-NEXT:    cmp r2, r1
 ; CHECK-NEXT:    bne .LBB3_2
 ; CHECK-NEXT:  .LBB3_5: @ %for.cond.cleanup
-; CHECK-NEXT:    add sp, #24
+; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    pop {r4, pc}
 ; CHECK-NEXT:    .p2align 4

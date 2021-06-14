@@ -19,7 +19,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBStream::SBStream() : m_opaque_up(new StreamString()), m_is_file(false) {
+SBStream::SBStream() : m_opaque_up(new StreamString()) {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBStream);
 }
 

@@ -1,4 +1,5 @@
 ! RUN: %S/test_symbols.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Explicit and implicit entities in blocks
 
 !DEF: /s1 (Subroutine) Subprogram

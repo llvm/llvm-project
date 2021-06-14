@@ -12,6 +12,8 @@
 // This file can only include headers from utils/CPP/ or utils/testutils. No
 // other headers should be included.
 
+#include "PlatformDefs.h"
+
 #include "utils/CPP/TypeTraits.h"
 #include "utils/testutils/ExecuteFunction.h"
 #include "utils/testutils/StreamWrapper.h"
@@ -360,6 +362,8 @@ template <typename... Types> using TypeList = internal::TypeList<Types...>;
   if (!EXPECT_FALSE(VAL))                                                      \
   return
 
+#ifdef ENABLE_SUBPROCESS_TESTS
+
 #define EXPECT_EXITS(FUNC, EXIT)                                               \
   this->testProcessExits(__llvm_libc::testing::Test::createCallable(FUNC),     \
                          EXIT, #FUNC, #EXIT, __FILE__, __LINE__)
@@ -379,6 +383,8 @@ template <typename... Types> using TypeList = internal::TypeList<Types...>;
 #define __CAT1(a, b) a##b
 #define __CAT(a, b) __CAT1(a, b)
 #define UNIQUE_VAR(prefix) __CAT(prefix, __LINE__)
+
+#endif // ENABLE_SUBPROCESS_TESTS
 
 #define EXPECT_THAT(MATCH, MATCHER)                                            \
   do {                                                                         \

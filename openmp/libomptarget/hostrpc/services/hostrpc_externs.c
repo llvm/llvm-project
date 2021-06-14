@@ -87,7 +87,7 @@ static buffer_t *atl_hcq_create_buffer(unsigned int num_packets) {
   size_t size = amd_hostcall_get_buffer_size(num_packets);
   uint32_t align = amd_hostcall_get_buffer_alignment();
   void *newbuffer = NULL;
-  hsa_status_t err = atmi_malloc(&newbuffer, size + align, 0 /* DeviceId */, ATMI_DEVTYPE_CPU);
+  hsa_status_t err = host_malloc(&newbuffer, size + align);
   if (!newbuffer || (err != HSA_STATUS_SUCCESS)) {
     printf("call to atmi_malloc failed \n");
     abort();

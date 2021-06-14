@@ -213,8 +213,6 @@ public:
     return hasSameVTYPE(Other) && hasSameAVL(Other);
   }
 
-  bool operator!=(const VSETVLIInfo &Other) const { return !(*this == Other); }
-
   // Calculate the VSETVLIInfo visible to a block assuming this and Other are
   // both predecessors.
   VSETVLIInfo intersect(const VSETVLIInfo &Other) const {

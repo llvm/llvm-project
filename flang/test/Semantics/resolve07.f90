@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 subroutine s1
   integer :: x(2)
   !ERROR: The dimensions of 'x' have already been declared

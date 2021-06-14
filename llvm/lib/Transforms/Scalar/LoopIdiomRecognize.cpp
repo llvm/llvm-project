@@ -2535,8 +2535,7 @@ static bool detectShiftUntilZeroIdiom(Loop *CurLoop, ScalarEvolution *SE,
   // right-shift, iff the sign bit was set, the value will never become zero,
   // and the loop may never finish.
   if (ValShifted->getOpcode() == Instruction::AShr &&
-      !CurLoop->getHeader()->getParent()->mustProgress() &&
-      !hasMustProgress(CurLoop) && !SE->isKnownNonNegative(SE->getSCEV(Val))) {
+      !isMustProgress(CurLoop) && !SE->isKnownNonNegative(SE->getSCEV(Val))) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE " Can not prove the loop is finite.\n");
     return false;
   }

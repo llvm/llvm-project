@@ -64,7 +64,9 @@ Cl Expr::ClassifyImpl(ASTContext &Ctx, SourceLocation *Loc) const {
   case Cl::CL_ClassTemporary:
   case Cl::CL_ArrayTemporary:
   case Cl::CL_ObjCMessageRValue:
-  case Cl::CL_PRValue: assert(getValueKind() == VK_RValue); break;
+  case Cl::CL_PRValue:
+    assert(getValueKind() == VK_PRValue);
+    break;
   }
 
   Cl::ModifiableType modifiable = Cl::CM_Untested;
@@ -89,7 +91,7 @@ static Cl::Kinds ClassifyExprValueKind(const LangOptions &Lang,
                                        const Expr *E,
                                        ExprValueKind Kind) {
   switch (Kind) {
-  case VK_RValue:
+  case VK_PRValue:
     return Lang.CPlusPlus ? ClassifyTemporary(E->getType()) : Cl::CL_PRValue;
   case VK_LValue:
     return Cl::CL_LValue;
@@ -424,7 +426,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
     // contains only one element. In that case, we look at that element
     // for an exact classification. Init list creation takes care of the
     // value kind for us, so we only need to fine-tune.
-    if (E->isRValue())
+    if (E->isPRValue())
       return ClassifyExprValueKind(Lang, E, E->getValueKind());
     assert(cast<InitListExpr>(E)->getNumInits() == 1 &&
            "Only 1-element init lists can be glvalues.");

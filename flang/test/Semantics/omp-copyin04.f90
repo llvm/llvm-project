@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang -fopenmp
+! REQUIRES: shell
 ! OpenMP Version 4.5
 ! 2.15.4.1 copyin Clause
 ! A list item that appears in a copyin clause must be threadprivate

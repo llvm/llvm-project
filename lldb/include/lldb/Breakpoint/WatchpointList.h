@@ -198,7 +198,7 @@ protected:
   wp_collection m_watchpoints;
   mutable std::recursive_mutex m_mutex;
 
-  lldb::watch_id_t m_next_wp_id;
+  lldb::watch_id_t m_next_wp_id = 0;
 };
 
 } // namespace lldb_private

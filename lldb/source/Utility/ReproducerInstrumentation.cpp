@@ -193,8 +193,8 @@ unsigned ObjectToIndex::GetIndexForObjectImpl(const void *object) {
 }
 
 Recorder::Recorder()
-    : m_serializer(nullptr), m_pretty_func(), m_pretty_args(),
-      m_local_boundary(false), m_result_recorded(true),
+    : m_pretty_func(), m_pretty_args(),
+
       m_sequence(std::numeric_limits<unsigned>::max()) {
   if (!g_global_boundary) {
     g_global_boundary = true;

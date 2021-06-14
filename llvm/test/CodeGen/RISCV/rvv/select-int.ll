@@ -12,7 +12,7 @@ define <vscale x 1 x i1> @select_nxv1i1(i1 zeroext %c, <vscale x 1 x i1> %a, <vs
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    vsetvli a0, zero, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.v.x v25, a1
 ; CHECK-NEXT:    vmsne.vi v25, v25, 0
 ; CHECK-NEXT:    vmandnot.mm v26, v8, v25
@@ -33,7 +33,7 @@ define <vscale x 1 x i1> @selectcc_nxv1i1(i1 signext %a, i1 signext %b, <vscale 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, zero
 ; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    vsetvli a1, zero, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.v.x v25, a0
 ; CHECK-NEXT:    vmsne.vi v25, v25, 0
 ; CHECK-NEXT:    vmandnot.mm v26, v8, v25
@@ -53,7 +53,7 @@ define <vscale x 2 x i1> @select_nxv2i1(i1 zeroext %c, <vscale x 2 x i1> %a, <vs
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB2_2:
-; CHECK-NEXT:    vsetvli a0, zero, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
 ; CHECK-NEXT:    vmv.v.x v25, a1
 ; CHECK-NEXT:    vmsne.vi v25, v25, 0
 ; CHECK-NEXT:    vmandnot.mm v26, v8, v25
@@ -74,7 +74,7 @@ define <vscale x 2 x i1> @selectcc_nxv2i1(i1 signext %a, i1 signext %b, <vscale 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, zero
 ; CHECK-NEXT:  .LBB3_2:
-; CHECK-NEXT:    vsetvli a1, zero, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, mu
 ; CHECK-NEXT:    vmv.v.x v25, a0
 ; CHECK-NEXT:    vmsne.vi v25, v25, 0
 ; CHECK-NEXT:    vmandnot.mm v26, v8, v25
@@ -94,7 +94,7 @@ define <vscale x 4 x i1> @select_nxv4i1(i1 zeroext %c, <vscale x 4 x i1> %a, <vs
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB4_2:
-; CHECK-NEXT:    vsetvli a0, zero, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.x v25, a1
 ; CHECK-NEXT:    vmsne.vi v25, v25, 0
 ; CHECK-NEXT:    vmandnot.mm v26, v8, v25
@@ -115,7 +115,7 @@ define <vscale x 4 x i1> @selectcc_nxv4i1(i1 signext %a, i1 signext %b, <vscale 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, zero
 ; CHECK-NEXT:  .LBB5_2:
-; CHECK-NEXT:    vsetvli a1, zero, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.x v25, a0
 ; CHECK-NEXT:    vmsne.vi v25, v25, 0
 ; CHECK-NEXT:    vmandnot.mm v26, v8, v25
@@ -135,7 +135,7 @@ define <vscale x 8 x i1> @select_nxv8i1(i1 zeroext %c, <vscale x 8 x i1> %a, <vs
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB6_2:
-; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
 ; CHECK-NEXT:    vmv.v.x v25, a1
 ; CHECK-NEXT:    vmsne.vi v25, v25, 0
 ; CHECK-NEXT:    vmandnot.mm v26, v8, v25
@@ -156,7 +156,7 @@ define <vscale x 8 x i1> @selectcc_nxv8i1(i1 signext %a, i1 signext %b, <vscale 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, zero
 ; CHECK-NEXT:  .LBB7_2:
-; CHECK-NEXT:    vsetvli a1, zero, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
 ; CHECK-NEXT:    vmv.v.x v25, a0
 ; CHECK-NEXT:    vmsne.vi v25, v25, 0
 ; CHECK-NEXT:    vmandnot.mm v26, v8, v25
@@ -176,7 +176,7 @@ define <vscale x 16 x i1> @select_nxv16i1(i1 zeroext %c, <vscale x 16 x i1> %a, 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB8_2:
-; CHECK-NEXT:    vsetvli a0, zero, e8,m2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, mu
 ; CHECK-NEXT:    vmv.v.x v26, a1
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
 ; CHECK-NEXT:    vmandnot.mm v26, v8, v25
@@ -197,7 +197,7 @@ define <vscale x 16 x i1> @selectcc_nxv16i1(i1 signext %a, i1 signext %b, <vscal
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, zero
 ; CHECK-NEXT:  .LBB9_2:
-; CHECK-NEXT:    vsetvli a1, zero, e8,m2,ta,mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, mu
 ; CHECK-NEXT:    vmv.v.x v26, a0
 ; CHECK-NEXT:    vmsne.vi v25, v26, 0
 ; CHECK-NEXT:    vmandnot.mm v26, v8, v25
@@ -217,7 +217,7 @@ define <vscale x 32 x i1> @select_nxv32i1(i1 zeroext %c, <vscale x 32 x i1> %a, 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB10_2:
-; CHECK-NEXT:    vsetvli a0, zero, e8,m4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, mu
 ; CHECK-NEXT:    vmv.v.x v28, a1
 ; CHECK-NEXT:    vmsne.vi v25, v28, 0
 ; CHECK-NEXT:    vmandnot.mm v26, v8, v25
@@ -238,7 +238,7 @@ define <vscale x 32 x i1> @selectcc_nxv32i1(i1 signext %a, i1 signext %b, <vscal
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, zero
 ; CHECK-NEXT:  .LBB11_2:
-; CHECK-NEXT:    vsetvli a1, zero, e8,m4,ta,mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, mu
 ; CHECK-NEXT:    vmv.v.x v28, a0
 ; CHECK-NEXT:    vmsne.vi v25, v28, 0
 ; CHECK-NEXT:    vmandnot.mm v26, v8, v25
@@ -258,7 +258,7 @@ define <vscale x 64 x i1> @select_nxv64i1(i1 zeroext %c, <vscale x 64 x i1> %a, 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB12_2:
-; CHECK-NEXT:    vsetvli a0, zero, e8,m8,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, mu
 ; CHECK-NEXT:    vmv.v.x v16, a1
 ; CHECK-NEXT:    vmsne.vi v25, v16, 0
 ; CHECK-NEXT:    vmandnot.mm v26, v8, v25
@@ -279,7 +279,7 @@ define <vscale x 64 x i1> @selectcc_nxv64i1(i1 signext %a, i1 signext %b, <vscal
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, zero
 ; CHECK-NEXT:  .LBB13_2:
-; CHECK-NEXT:    vsetvli a1, zero, e8,m8,ta,mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, mu
 ; CHECK-NEXT:    vmv.v.x v16, a0
 ; CHECK-NEXT:    vmsne.vi v25, v16, 0
 ; CHECK-NEXT:    vmandnot.mm v26, v8, v25
@@ -299,7 +299,7 @@ define <vscale x 1 x i8> @select_nxv1i8(i1 zeroext %c, <vscale x 1 x i8> %a, <vs
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB14_2:
-; CHECK-NEXT:    vsetvli a0, zero, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
 ; CHECK-NEXT:    vand.vx v25, v8, a1
 ; CHECK-NEXT:    vmv.v.x v26, a1
 ; CHECK-NEXT:    vxor.vi v26, v26, -1
@@ -318,7 +318,7 @@ define <vscale x 1 x i8> @selectcc_nxv1i8(i8 signext %a, i8 signext %b, <vscale 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, zero
 ; CHECK-NEXT:  .LBB15_2:
-; CHECK-NEXT:    vsetvli a0, zero, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
 ; CHECK-NEXT:    vand.vx v25, v8, a2
 ; CHECK-NEXT:    vmv.v.x v26, a2
 ; CHECK-NEXT:    vxor.vi v26, v26, -1
@@ -338,7 +338,7 @@ define <vscale x 2 x i8> @select_nxv2i8(i1 zeroext %c, <vscale x 2 x i8> %a, <vs
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB16_2:
-; CHECK-NEXT:    vsetvli a0, zero, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
 ; CHECK-NEXT:    vand.vx v25, v8, a1
 ; CHECK-NEXT:    vmv.v.x v26, a1
 ; CHECK-NEXT:    vxor.vi v26, v26, -1
@@ -357,7 +357,7 @@ define <vscale x 2 x i8> @selectcc_nxv2i8(i8 signext %a, i8 signext %b, <vscale 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, zero
 ; CHECK-NEXT:  .LBB17_2:
-; CHECK-NEXT:    vsetvli a0, zero, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
 ; CHECK-NEXT:    vand.vx v25, v8, a2
 ; CHECK-NEXT:    vmv.v.x v26, a2
 ; CHECK-NEXT:    vxor.vi v26, v26, -1
@@ -377,7 +377,7 @@ define <vscale x 4 x i8> @select_nxv4i8(i1 zeroext %c, <vscale x 4 x i8> %a, <vs
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB18_2:
-; CHECK-NEXT:    vsetvli a0, zero, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
 ; CHECK-NEXT:    vand.vx v25, v8, a1
 ; CHECK-NEXT:    vmv.v.x v26, a1
 ; CHECK-NEXT:    vxor.vi v26, v26, -1
@@ -396,7 +396,7 @@ define <vscale x 4 x i8> @selectcc_nxv4i8(i8 signext %a, i8 signext %b, <vscale 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, zero
 ; CHECK-NEXT:  .LBB19_2:
-; CHECK-NEXT:    vsetvli a0, zero, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
 ; CHECK-NEXT:    vand.vx v25, v8, a2
 ; CHECK-NEXT:    vmv.v.x v26, a2
 ; CHECK-NEXT:    vxor.vi v26, v26, -1
@@ -416,7 +416,7 @@ define <vscale x 8 x i8> @select_nxv8i8(i1 zeroext %c, <vscale x 8 x i8> %a, <vs
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB20_2:
-; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
 ; CHECK-NEXT:    vand.vx v25, v8, a1
 ; CHECK-NEXT:    vmv.v.x v26, a1
 ; CHECK-NEXT:    vxor.vi v26, v26, -1
@@ -435,7 +435,7 @@ define <vscale x 8 x i8> @selectcc_nxv8i8(i8 signext %a, i8 signext %b, <vscale 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, zero
 ; CHECK-NEXT:  .LBB21_2:
-; CHECK-NEXT:    vsetvli a0, zero, e8,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
 ; CHECK-NEXT:    vand.vx v25, v8, a2
 ; CHECK-NEXT:    vmv.v.x v26, a2
 ; CHECK-NEXT:    vxor.vi v26, v26, -1
@@ -455,7 +455,7 @@ define <vscale x 16 x i8> @select_nxv16i8(i1 zeroext %c, <vscale x 16 x i8> %a, 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB22_2:
-; CHECK-NEXT:    vsetvli a0, zero, e8,m2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, mu
 ; CHECK-NEXT:    vand.vx v26, v8, a1
 ; CHECK-NEXT:    vmv.v.x v28, a1
 ; CHECK-NEXT:    vxor.vi v28, v28, -1
@@ -474,7 +474,7 @@ define <vscale x 16 x i8> @selectcc_nxv16i8(i8 signext %a, i8 signext %b, <vscal
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, zero
 ; CHECK-NEXT:  .LBB23_2:
-; CHECK-NEXT:    vsetvli a0, zero, e8,m2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, mu
 ; CHECK-NEXT:    vand.vx v26, v8, a2
 ; CHECK-NEXT:    vmv.v.x v28, a2
 ; CHECK-NEXT:    vxor.vi v28, v28, -1
@@ -494,7 +494,7 @@ define <vscale x 32 x i8> @select_nxv32i8(i1 zeroext %c, <vscale x 32 x i8> %a, 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB24_2:
-; CHECK-NEXT:    vsetvli a0, zero, e8,m4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, mu
 ; CHECK-NEXT:    vand.vx v28, v8, a1
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vxor.vi v8, v8, -1
@@ -513,7 +513,7 @@ define <vscale x 32 x i8> @selectcc_nxv32i8(i8 signext %a, i8 signext %b, <vscal
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, zero
 ; CHECK-NEXT:  .LBB25_2:
-; CHECK-NEXT:    vsetvli a0, zero, e8,m4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, mu
 ; CHECK-NEXT:    vand.vx v28, v8, a2
 ; CHECK-NEXT:    vmv.v.x v8, a2
 ; CHECK-NEXT:    vxor.vi v8, v8, -1
@@ -533,7 +533,7 @@ define <vscale x 64 x i8> @select_nxv64i8(i1 zeroext %c, <vscale x 64 x i8> %a, 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB26_2:
-; CHECK-NEXT:    vsetvli a0, zero, e8,m8,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, mu
 ; CHECK-NEXT:    vand.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.v.x v24, a1
 ; CHECK-NEXT:    vxor.vi v24, v24, -1
@@ -552,7 +552,7 @@ define <vscale x 64 x i8> @selectcc_nxv64i8(i8 signext %a, i8 signext %b, <vscal
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, zero
 ; CHECK-NEXT:  .LBB27_2:
-; CHECK-NEXT:    vsetvli a0, zero, e8,m8,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, mu
 ; CHECK-NEXT:    vand.vx v8, v8, a2
 ; CHECK-NEXT:    vmv.v.x v24, a2
 ; CHECK-NEXT:    vxor.vi v24, v24, -1
@@ -572,7 +572,7 @@ define <vscale x 1 x i16> @select_nxv1i16(i1 zeroext %c, <vscale x 1 x i16> %a, 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB28_2:
-; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
 ; CHECK-NEXT:    vand.vx v25, v8, a1
 ; CHECK-NEXT:    vmv.v.x v26, a1
 ; CHECK-NEXT:    vxor.vi v26, v26, -1
@@ -591,7 +591,7 @@ define <vscale x 1 x i16> @selectcc_nxv1i16(i16 signext %a, i16 signext %b, <vsc
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, zero
 ; CHECK-NEXT:  .LBB29_2:
-; CHECK-NEXT:    vsetvli a0, zero, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
 ; CHECK-NEXT:    vand.vx v25, v8, a2
 ; CHECK-NEXT:    vmv.v.x v26, a2
 ; CHECK-NEXT:    vxor.vi v26, v26, -1
@@ -611,7 +611,7 @@ define <vscale x 2 x i16> @select_nxv2i16(i1 zeroext %c, <vscale x 2 x i16> %a, 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB30_2:
-; CHECK-NEXT:    vsetvli a0, zero, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vand.vx v25, v8, a1
 ; CHECK-NEXT:    vmv.v.x v26, a1
 ; CHECK-NEXT:    vxor.vi v26, v26, -1
@@ -630,7 +630,7 @@ define <vscale x 2 x i16> @selectcc_nxv2i16(i16 signext %a, i16 signext %b, <vsc
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, zero
 ; CHECK-NEXT:  .LBB31_2:
-; CHECK-NEXT:    vsetvli a0, zero, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vand.vx v25, v8, a2
 ; CHECK-NEXT:    vmv.v.x v26, a2
 ; CHECK-NEXT:    vxor.vi v26, v26, -1
@@ -650,7 +650,7 @@ define <vscale x 4 x i16> @select_nxv4i16(i1 zeroext %c, <vscale x 4 x i16> %a, 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB32_2:
-; CHECK-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vand.vx v25, v8, a1
 ; CHECK-NEXT:    vmv.v.x v26, a1
 ; CHECK-NEXT:    vxor.vi v26, v26, -1
@@ -669,7 +669,7 @@ define <vscale x 4 x i16> @selectcc_nxv4i16(i16 signext %a, i16 signext %b, <vsc
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, zero
 ; CHECK-NEXT:  .LBB33_2:
-; CHECK-NEXT:    vsetvli a0, zero, e16,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
 ; CHECK-NEXT:    vand.vx v25, v8, a2
 ; CHECK-NEXT:    vmv.v.x v26, a2
 ; CHECK-NEXT:    vxor.vi v26, v26, -1
@@ -689,7 +689,7 @@ define <vscale x 8 x i16> @select_nxv8i16(i1 zeroext %c, <vscale x 8 x i16> %a, 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB34_2:
-; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vand.vx v26, v8, a1
 ; CHECK-NEXT:    vmv.v.x v28, a1
 ; CHECK-NEXT:    vxor.vi v28, v28, -1
@@ -708,7 +708,7 @@ define <vscale x 8 x i16> @selectcc_nxv8i16(i16 signext %a, i16 signext %b, <vsc
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, zero
 ; CHECK-NEXT:  .LBB35_2:
-; CHECK-NEXT:    vsetvli a0, zero, e16,m2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
 ; CHECK-NEXT:    vand.vx v26, v8, a2
 ; CHECK-NEXT:    vmv.v.x v28, a2
 ; CHECK-NEXT:    vxor.vi v28, v28, -1
@@ -728,7 +728,7 @@ define <vscale x 16 x i16> @select_nxv16i16(i1 zeroext %c, <vscale x 16 x i16> %
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB36_2:
-; CHECK-NEXT:    vsetvli a0, zero, e16,m4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
 ; CHECK-NEXT:    vand.vx v28, v8, a1
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vxor.vi v8, v8, -1
@@ -747,7 +747,7 @@ define <vscale x 16 x i16> @selectcc_nxv16i16(i16 signext %a, i16 signext %b, <v
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, zero
 ; CHECK-NEXT:  .LBB37_2:
-; CHECK-NEXT:    vsetvli a0, zero, e16,m4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
 ; CHECK-NEXT:    vand.vx v28, v8, a2
 ; CHECK-NEXT:    vmv.v.x v8, a2
 ; CHECK-NEXT:    vxor.vi v8, v8, -1
@@ -767,7 +767,7 @@ define <vscale x 32 x i16> @select_nxv32i16(i1 zeroext %c, <vscale x 32 x i16> %
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB38_2:
-; CHECK-NEXT:    vsetvli a0, zero, e16,m8,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
 ; CHECK-NEXT:    vand.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.v.x v24, a1
 ; CHECK-NEXT:    vxor.vi v24, v24, -1
@@ -786,7 +786,7 @@ define <vscale x 32 x i16> @selectcc_nxv32i16(i16 signext %a, i16 signext %b, <v
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, zero
 ; CHECK-NEXT:  .LBB39_2:
-; CHECK-NEXT:    vsetvli a0, zero, e16,m8,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
 ; CHECK-NEXT:    vand.vx v8, v8, a2
 ; CHECK-NEXT:    vmv.v.x v24, a2
 ; CHECK-NEXT:    vxor.vi v24, v24, -1
@@ -806,7 +806,7 @@ define <vscale x 1 x i32> @select_nxv1i32(i1 zeroext %c, <vscale x 1 x i32> %a, 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB40_2:
-; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vand.vx v25, v8, a1
 ; CHECK-NEXT:    vmv.v.x v26, a1
 ; CHECK-NEXT:    vxor.vi v26, v26, -1
@@ -825,7 +825,7 @@ define <vscale x 1 x i32> @selectcc_nxv1i32(i32 signext %a, i32 signext %b, <vsc
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, zero
 ; CHECK-NEXT:  .LBB41_2:
-; CHECK-NEXT:    vsetvli a0, zero, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
 ; CHECK-NEXT:    vand.vx v25, v8, a2
 ; CHECK-NEXT:    vmv.v.x v26, a2
 ; CHECK-NEXT:    vxor.vi v26, v26, -1
@@ -845,7 +845,7 @@ define <vscale x 2 x i32> @select_nxv2i32(i1 zeroext %c, <vscale x 2 x i32> %a, 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB42_2:
-; CHECK-NEXT:    vsetvli a0, zero, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vand.vx v25, v8, a1
 ; CHECK-NEXT:    vmv.v.x v26, a1
 ; CHECK-NEXT:    vxor.vi v26, v26, -1
@@ -864,7 +864,7 @@ define <vscale x 2 x i32> @selectcc_nxv2i32(i32 signext %a, i32 signext %b, <vsc
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, zero
 ; CHECK-NEXT:  .LBB43_2:
-; CHECK-NEXT:    vsetvli a0, zero, e32,m1,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vand.vx v25, v8, a2
 ; CHECK-NEXT:    vmv.v.x v26, a2
 ; CHECK-NEXT:    vxor.vi v26, v26, -1
@@ -884,7 +884,7 @@ define <vscale x 4 x i32> @select_nxv4i32(i1 zeroext %c, <vscale x 4 x i32> %a, 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB44_2:
-; CHECK-NEXT:    vsetvli a0, zero, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    vand.vx v26, v8, a1
 ; CHECK-NEXT:    vmv.v.x v28, a1
 ; CHECK-NEXT:    vxor.vi v28, v28, -1
@@ -903,7 +903,7 @@ define <vscale x 4 x i32> @selectcc_nxv4i32(i32 signext %a, i32 signext %b, <vsc
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, zero
 ; CHECK-NEXT:  .LBB45_2:
-; CHECK-NEXT:    vsetvli a0, zero, e32,m2,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
 ; CHECK-NEXT:    vand.vx v26, v8, a2
 ; CHECK-NEXT:    vmv.v.x v28, a2
 ; CHECK-NEXT:    vxor.vi v28, v28, -1
@@ -923,7 +923,7 @@ define <vscale x 8 x i32> @select_nxv8i32(i1 zeroext %c, <vscale x 8 x i32> %a, 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB46_2:
-; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vand.vx v28, v8, a1
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    vxor.vi v8, v8, -1
@@ -942,7 +942,7 @@ define <vscale x 8 x i32> @selectcc_nxv8i32(i32 signext %a, i32 signext %b, <vsc
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, zero
 ; CHECK-NEXT:  .LBB47_2:
-; CHECK-NEXT:    vsetvli a0, zero, e32,m4,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
 ; CHECK-NEXT:    vand.vx v28, v8, a2
 ; CHECK-NEXT:    vmv.v.x v8, a2
 ; CHECK-NEXT:    vxor.vi v8, v8, -1
@@ -962,7 +962,7 @@ define <vscale x 16 x i32> @select_nxv16i32(i1 zeroext %c, <vscale x 16 x i32> %
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, zero
 ; CHECK-NEXT:  .LBB48_2:
-; CHECK-NEXT:    vsetvli a0, zero, e32,m8,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
 ; CHECK-NEXT:    vand.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.v.x v24, a1
 ; CHECK-NEXT:    vxor.vi v24, v24, -1
@@ -981,7 +981,7 @@ define <vscale x 16 x i32> @selectcc_nxv16i32(i32 signext %a, i32 signext %b, <v
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, zero
 ; CHECK-NEXT:  .LBB49_2:
-; CHECK-NEXT:    vsetvli a0, zero, e32,m8,ta,mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
 ; CHECK-NEXT:    vand.vx v8, v8, a2
 ; CHECK-NEXT:    vmv.v.x v24, a2
 ; CHECK-NEXT:    vxor.vi v24, v24, -1
@@ -1005,7 +1005,7 @@ define <vscale x 1 x i64> @select_nxv1i64(i1 zeroext %c, <vscale x 1 x i64> %a, 
 ; RV32-NEXT:  .LBB50_2:
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
-; RV32-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; RV32-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v25, (a0), zero
 ; RV32-NEXT:    vand.vv v26, v8, v25
@@ -1022,7 +1022,7 @@ define <vscale x 1 x i64> @select_nxv1i64(i1 zeroext %c, <vscale x 1 x i64> %a, 
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    mv a1, zero
 ; RV64-NEXT:  .LBB50_2:
-; RV64-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; RV64-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
 ; RV64-NEXT:    vand.vx v25, v8, a1
 ; RV64-NEXT:    vmv.v.x v26, a1
 ; RV64-NEXT:    vxor.vi v26, v26, -1
@@ -1048,7 +1048,7 @@ define <vscale x 1 x i64> @selectcc_nxv1i64(i64 signext %a, i64 signext %b, <vsc
 ; RV32-NEXT:  .LBB51_2:
 ; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; RV32-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v25, (a0), zero
 ; RV32-NEXT:    vand.vv v26, v8, v25
@@ -1065,7 +1065,7 @@ define <vscale x 1 x i64> @selectcc_nxv1i64(i64 signext %a, i64 signext %b, <vsc
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    mv a2, zero
 ; RV64-NEXT:  .LBB51_2:
-; RV64-NEXT:    vsetvli a0, zero, e64,m1,ta,mu
+; RV64-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
 ; RV64-NEXT:    vand.vx v25, v8, a2
 ; RV64-NEXT:    vmv.v.x v26, a2
 ; RV64-NEXT:    vxor.vi v26, v26, -1
@@ -1089,7 +1089,7 @@ define <vscale x 2 x i64> @select_nxv2i64(i1 zeroext %c, <vscale x 2 x i64> %a, 
 ; RV32-NEXT:  .LBB52_2:
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
-; RV32-NEXT:    vsetvli a0, zero, e64,m2,ta,mu
+; RV32-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v26, (a0), zero
 ; RV32-NEXT:    vand.vv v28, v8, v26
@@ -1106,7 +1106,7 @@ define <vscale x 2 x i64> @select_nxv2i64(i1 zeroext %c, <vscale x 2 x i64> %a, 
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    mv a1, zero
 ; RV64-NEXT:  .LBB52_2:
-; RV64-NEXT:    vsetvli a0, zero, e64,m2,ta,mu
+; RV64-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
 ; RV64-NEXT:    vand.vx v26, v8, a1
 ; RV64-NEXT:    vmv.v.x v28, a1
 ; RV64-NEXT:    vxor.vi v28, v28, -1
@@ -1132,7 +1132,7 @@ define <vscale x 2 x i64> @selectcc_nxv2i64(i64 signext %a, i64 signext %b, <vsc
 ; RV32-NEXT:  .LBB53_2:
 ; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    vsetvli a0, zero, e64,m2,ta,mu
+; RV32-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v26, (a0), zero
 ; RV32-NEXT:    vand.vv v28, v8, v26
@@ -1149,7 +1149,7 @@ define <vscale x 2 x i64> @selectcc_nxv2i64(i64 signext %a, i64 signext %b, <vsc
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    mv a2, zero
 ; RV64-NEXT:  .LBB53_2:
-; RV64-NEXT:    vsetvli a0, zero, e64,m2,ta,mu
+; RV64-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
 ; RV64-NEXT:    vand.vx v26, v8, a2
 ; RV64-NEXT:    vmv.v.x v28, a2
 ; RV64-NEXT:    vxor.vi v28, v28, -1
@@ -1173,7 +1173,7 @@ define <vscale x 4 x i64> @select_nxv4i64(i1 zeroext %c, <vscale x 4 x i64> %a, 
 ; RV32-NEXT:  .LBB54_2:
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
-; RV32-NEXT:    vsetvli a0, zero, e64,m4,ta,mu
+; RV32-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v28, (a0), zero
 ; RV32-NEXT:    vand.vv v8, v8, v28
@@ -1190,7 +1190,7 @@ define <vscale x 4 x i64> @select_nxv4i64(i1 zeroext %c, <vscale x 4 x i64> %a, 
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    mv a1, zero
 ; RV64-NEXT:  .LBB54_2:
-; RV64-NEXT:    vsetvli a0, zero, e64,m4,ta,mu
+; RV64-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
 ; RV64-NEXT:    vand.vx v28, v8, a1
 ; RV64-NEXT:    vmv.v.x v8, a1
 ; RV64-NEXT:    vxor.vi v8, v8, -1
@@ -1216,7 +1216,7 @@ define <vscale x 4 x i64> @selectcc_nxv4i64(i64 signext %a, i64 signext %b, <vsc
 ; RV32-NEXT:  .LBB55_2:
 ; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    vsetvli a0, zero, e64,m4,ta,mu
+; RV32-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v28, (a0), zero
 ; RV32-NEXT:    vand.vv v8, v8, v28
@@ -1233,7 +1233,7 @@ define <vscale x 4 x i64> @selectcc_nxv4i64(i64 signext %a, i64 signext %b, <vsc
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    mv a2, zero
 ; RV64-NEXT:  .LBB55_2:
-; RV64-NEXT:    vsetvli a0, zero, e64,m4,ta,mu
+; RV64-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
 ; RV64-NEXT:    vand.vx v28, v8, a2
 ; RV64-NEXT:    vmv.v.x v8, a2
 ; RV64-NEXT:    vxor.vi v8, v8, -1
@@ -1257,7 +1257,7 @@ define <vscale x 8 x i64> @select_nxv8i64(i1 zeroext %c, <vscale x 8 x i64> %a, 
 ; RV32-NEXT:  .LBB56_2:
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a1, 8(sp)
-; RV32-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
 ; RV32-NEXT:    vand.vv v8, v8, v24
@@ -1274,7 +1274,7 @@ define <vscale x 8 x i64> @select_nxv8i64(i1 zeroext %c, <vscale x 8 x i64> %a, 
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    mv a1, zero
 ; RV64-NEXT:  .LBB56_2:
-; RV64-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; RV64-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
 ; RV64-NEXT:    vand.vx v8, v8, a1
 ; RV64-NEXT:    vmv.v.x v24, a1
 ; RV64-NEXT:    vxor.vi v24, v24, -1
@@ -1300,7 +1300,7 @@ define <vscale x 8 x i64> @selectcc_nxv8i64(i64 signext %a, i64 signext %b, <vsc
 ; RV32-NEXT:  .LBB57_2:
 ; RV32-NEXT:    sw a0, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v24, (a0), zero
 ; RV32-NEXT:    vand.vv v8, v8, v24
@@ -1317,7 +1317,7 @@ define <vscale x 8 x i64> @selectcc_nxv8i64(i64 signext %a, i64 signext %b, <vsc
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    mv a2, zero
 ; RV64-NEXT:  .LBB57_2:
-; RV64-NEXT:    vsetvli a0, zero, e64,m8,ta,mu
+; RV64-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
 ; RV64-NEXT:    vand.vx v8, v8, a2
 ; RV64-NEXT:    vmv.v.x v24, a2
 ; RV64-NEXT:    vxor.vi v24, v24, -1
