@@ -402,8 +402,13 @@ class RegisterCommandsTestCase(TestBase):
             # Returns an SBValueList.
             registerSets = currentFrame.GetRegisters()
             for registerSet in registerSets:
-                if 'advanced vector extensions' in registerSet.GetName().lower():
+                set_name = registerSet.GetName().lower()
+                if 'advanced vector extensions' in set_name:
                     has_avx = True
+                # Darwin reports AVX registers as part of "Floating Point Registers"
+                else if self.platformIsDarwin() and 'floating point registers' in set_name:
+                    has_avx = registerSet.GetFirstValueByName('ymm0').IsValid()
+
                 # FreeBSD/NetBSD reports missing register sets differently
                 # at the moment and triggers false positive here.
                 # TODO: remove FreeBSD/NetBSD exception when we make unsupported
