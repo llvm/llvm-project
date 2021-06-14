@@ -263,7 +263,7 @@ end subroutine
 
 ! COUNT
 ! CHECK-LABEL: test_count3
-! CHRECK-SAME: %[[arg0:.*]]: !fir.ref<i32>, %[[arg1:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>>) 
+! CHECK-SAME: %[[arg0:.*]]: !fir.ref<i32>, %[[arg1:.*]]: !fir.box<!fir.array<?x!fir.logical<4>>>) 
 subroutine test_count3(rslt, mask)
   integer :: rslt
   logical :: mask(:)
