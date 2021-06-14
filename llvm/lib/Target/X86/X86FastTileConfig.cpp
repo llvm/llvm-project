@@ -122,7 +122,8 @@ static inline void adjustColCfg(unsigned TIdx, MachineInstr *MI) {
 }
 
 bool X86FastTileConfig::isTileLoad(MachineInstr &MI) {
-  return MI.getOpcode() == X86::PTILELOADDV;
+  return MI.getOpcode() == X86::PTILELOADDV ||
+         MI.getOpcode() == X86::PTILELOADDT1V;
 }
 bool X86FastTileConfig::isTileStore(MachineInstr &MI) {
   return MI.getOpcode() == X86::PTILESTOREDV;

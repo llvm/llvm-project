@@ -30,12 +30,12 @@ define <4 x i32> @combine_vec_sub_self(<4 x i32> %a) {
 define <4 x i32> @combine_vec_sub_constant(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_sub_constant:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    psubd {{.*}}(%rip), %xmm0
+; SSE-NEXT:    psubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sub_constant:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpsubd {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = sub <4 x i32> %x, <i32 0, i32 1, i32 2, i32 3>
   ret <4 x i32> %1
@@ -245,14 +245,14 @@ define i32 @combine_sub_xor_consts(i32 %x) {
 define <4 x i32> @combine_vec_sub_xor_consts(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_sub_xor_consts:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pxor {{.*}}(%rip), %xmm0
-; SSE-NEXT:    paddd {{.*}}(%rip), %xmm0
+; SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_sub_xor_consts:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vpaddd {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %xor = xor <4 x i32> %x, <i32 28, i32 29, i32 -1, i32 -31>
   %sub = sub <4 x i32> <i32 1, i32 2, i32 3, i32 4>, %xor

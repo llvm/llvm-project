@@ -98,9 +98,9 @@ lor.end:                                          ; preds = %lor.rhs, %entry
 define dso_local void @test5(i32 %X) nounwind !prof !14 {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzbl x+{{.*}}(%rip), %eax
+; CHECK-NEXT:    movzbl x+6(%rip), %eax
 ; CHECK-NEXT:    shll $16, %eax
-; CHECK-NEXT:    movzwl x+{{.*}}(%rip), %ecx
+; CHECK-NEXT:    movzwl x+4(%rip), %ecx
 ; CHECK-NEXT:    orl %eax, %ecx
 ; CHECK-NEXT:    cmpl $1, %ecx
 ; CHECK-NEXT:    jne bar # TAILCALL

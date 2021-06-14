@@ -587,7 +587,7 @@ HoverInfo getHoverContents(const NamedDecl *D, const PrintingPolicy &PP,
   } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(D)) {
     // Dependent enums (e.g. nested in template classes) don't have values yet.
     if (!ECD->getType()->isDependentType())
-      HI.Value = ECD->getInitVal().toString(10);
+      HI.Value = toString(ECD->getInitVal(), 10);
   }
 
   HI.Definition = printDefinition(D, PP);

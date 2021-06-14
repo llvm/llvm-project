@@ -22,6 +22,19 @@ func @extract(%arg0: tensor<?x?x?xf32>, %arg1: index) {
   return
 }
 
+// CHECK-LABEL:   func @insert(
+// CHECK-SAME:                  %[[SCALAR:.*]]: f32
+// CHECK-SAME:                  %[[INDEX:.*]]: index
+// CHECK-SAME:                  %[[DEST1:.*]]: tensor<?x?x?xf32>
+// CHECK-SAME:                  %[[DEST2:.*]]: tensor<*xf32>
+func @insert(%arg0: f32, %arg1: index, %arg2: tensor<?x?x?xf32>, %arg3: tensor<*xf32>) {
+  // CHECK: tensor.insert %[[SCALAR]] into %[[DEST1]][%[[INDEX]], %[[INDEX]], %[[INDEX]]] : tensor<?x?x?xf32>
+  %0 = tensor.insert %arg0 into %arg2[%arg1, %arg1, %arg1] : tensor<?x?x?xf32>
+  // CHECK: tensor.insert %[[SCALAR]] into %[[DEST2]][%[[INDEX]], %[[INDEX]], %[[INDEX]]] : tensor<*xf32>
+  %1 = tensor.insert %arg0 into %arg3[%arg1, %arg1, %arg1] : tensor<*xf32>
+  return
+}
+
 // CHECK-LABEL: func @tensor.from_elements() {
 func @tensor.from_elements() {
   %c0 = "std.constant"() {value = 0: index} : () -> index

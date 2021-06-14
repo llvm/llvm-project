@@ -17,9 +17,9 @@ define void @t(i8* nocapture %in, i8* nocapture %out, i32* nocapture %rk, i32 %r
 ; GENERIC-NEXT:    movl 4(%rdx), %ebx
 ; GENERIC-NEXT:    decl %ecx
 ; GENERIC-NEXT:    leaq 20(%rdx), %r11
-; GENERIC-NEXT:    movq _Te0@{{.*}}(%rip), %r9
-; GENERIC-NEXT:    movq _Te1@{{.*}}(%rip), %r8
-; GENERIC-NEXT:    movq _Te3@{{.*}}(%rip), %r10
+; GENERIC-NEXT:    movq _Te0@GOTPCREL(%rip), %r9
+; GENERIC-NEXT:    movq _Te1@GOTPCREL(%rip), %r8
+; GENERIC-NEXT:    movq _Te3@GOTPCREL(%rip), %r10
 ; GENERIC-NEXT:    movq %rcx, %r14
 ; GENERIC-NEXT:    .p2align 4, 0x90
 ; GENERIC-NEXT:  LBB0_1: ## %bb
@@ -99,9 +99,9 @@ define void @t(i8* nocapture %in, i8* nocapture %out, i32* nocapture %rk, i32 %r
 ; ATOM-NEXT:    movl (%rdx), %r15d
 ; ATOM-NEXT:    movl 4(%rdx), %eax
 ; ATOM-NEXT:    leaq 20(%rdx), %r11
-; ATOM-NEXT:    movq _Te0@{{.*}}(%rip), %r9
-; ATOM-NEXT:    movq _Te1@{{.*}}(%rip), %r8
-; ATOM-NEXT:    movq _Te3@{{.*}}(%rip), %r10
+; ATOM-NEXT:    movq _Te0@GOTPCREL(%rip), %r9
+; ATOM-NEXT:    movq _Te1@GOTPCREL(%rip), %r8
+; ATOM-NEXT:    movq _Te3@GOTPCREL(%rip), %r10
 ; ATOM-NEXT:    decl %ecx
 ; ATOM-NEXT:    movq %rcx, %r14
 ; ATOM-NEXT:    .p2align 4, 0x90

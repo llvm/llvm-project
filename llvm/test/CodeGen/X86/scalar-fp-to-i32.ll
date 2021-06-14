@@ -724,7 +724,7 @@ define i32 @t_to_u32(fp128 %a) nounwind {
 ; X64-AVX512-LIN-LABEL: t_to_u32:
 ; X64-AVX512-LIN:       # %bb.0:
 ; X64-AVX512-LIN-NEXT:    pushq %rax
-; X64-AVX512-LIN-NEXT:    callq __fixunstfsi
+; X64-AVX512-LIN-NEXT:    callq __fixunstfsi@PLT
 ; X64-AVX512-LIN-NEXT:    popq %rcx
 ; X64-AVX512-LIN-NEXT:    retq
 ;
@@ -759,7 +759,7 @@ define i32 @t_to_u32(fp128 %a) nounwind {
 ; X64-SSE-LIN-LABEL: t_to_u32:
 ; X64-SSE-LIN:       # %bb.0:
 ; X64-SSE-LIN-NEXT:    pushq %rax
-; X64-SSE-LIN-NEXT:    callq __fixunstfsi
+; X64-SSE-LIN-NEXT:    callq __fixunstfsi@PLT
 ; X64-SSE-LIN-NEXT:    popq %rcx
 ; X64-SSE-LIN-NEXT:    retq
 ;
@@ -816,7 +816,7 @@ define i32 @t_to_s32(fp128 %a) nounwind {
 ; X64-AVX512-LIN-LABEL: t_to_s32:
 ; X64-AVX512-LIN:       # %bb.0:
 ; X64-AVX512-LIN-NEXT:    pushq %rax
-; X64-AVX512-LIN-NEXT:    callq __fixtfsi
+; X64-AVX512-LIN-NEXT:    callq __fixtfsi@PLT
 ; X64-AVX512-LIN-NEXT:    popq %rcx
 ; X64-AVX512-LIN-NEXT:    retq
 ;
@@ -851,7 +851,7 @@ define i32 @t_to_s32(fp128 %a) nounwind {
 ; X64-SSE-LIN-LABEL: t_to_s32:
 ; X64-SSE-LIN:       # %bb.0:
 ; X64-SSE-LIN-NEXT:    pushq %rax
-; X64-SSE-LIN-NEXT:    callq __fixtfsi
+; X64-SSE-LIN-NEXT:    callq __fixtfsi@PLT
 ; X64-SSE-LIN-NEXT:    popq %rcx
 ; X64-SSE-LIN-NEXT:    retq
 ;

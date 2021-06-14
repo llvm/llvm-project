@@ -29,7 +29,7 @@ define void @g() #0 {
 ; CHECK-NEXT:    cmpb $0, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Reload
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %.
-; CHECK-NEXT:    calll m
+; CHECK-NEXT:    calll m@PLT
 ; CHECK-NEXT:  .LBB0_2: # %k.end
 entry:
   %p = load i8*, i8** @f

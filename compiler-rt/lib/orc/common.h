@@ -14,6 +14,7 @@
 #define ORC_RT_COMMON_H
 
 #include "c_api.h"
+#include <type_traits>
 
 /// Opaque struct for external symbols.
 struct __orc_rt_Opaque {};

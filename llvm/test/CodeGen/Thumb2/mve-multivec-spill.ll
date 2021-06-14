@@ -10,8 +10,8 @@ define arm_aapcs_vfpcc void @spill_multivector(<4 x i32>* %p) {
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    .pad #112
-; CHECK-NEXT:    sub sp, #112
+; CHECK-NEXT:    .pad #96
+; CHECK-NEXT:    sub sp, #96
 ; CHECK-NEXT:    vld20.32 {q0, q1}, [r0]
 ; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    add.w lr, sp, #64
@@ -49,7 +49,7 @@ define arm_aapcs_vfpcc void @spill_multivector(<4 x i32>* %p) {
 ; CHECK-NEXT:    vldmia lr, {d2, d3, d4, d5} @ 32-byte Reload
 ; CHECK-NEXT:    vstrw.32 q2, [r4, #16]
 ; CHECK-NEXT:    vstrw.32 q1, [r4]
-; CHECK-NEXT:    add sp, #112
+; CHECK-NEXT:    add sp, #96
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:

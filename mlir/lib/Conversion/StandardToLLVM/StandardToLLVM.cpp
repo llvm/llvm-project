@@ -2028,6 +2028,60 @@ struct AllocaOpLowering : public AllocLikeOpLLVMLowering {
   }
 };
 
+struct AllocaScopeOpLowering
+    : public ConvertOpToLLVMPattern<memref::AllocaScopeOp> {
+  using ConvertOpToLLVMPattern<memref::AllocaScopeOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::AllocaScopeOp allocaScopeOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    OpBuilder::InsertionGuard guard(rewriter);
+    Location loc = allocaScopeOp.getLoc();
+
+    // Split the current block before the AllocaScopeOp to create the inlining
+    // point.
+    auto *currentBlock = rewriter.getInsertionBlock();
+    auto *remainingOpsBlock =
+        rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
+    Block *continueBlock;
+    if (allocaScopeOp.getNumResults() == 0) {
+      continueBlock = remainingOpsBlock;
+    } else {
+      continueBlock = rewriter.createBlock(remainingOpsBlock,
+                                           allocaScopeOp.getResultTypes());
+      rewriter.create<BranchOp>(loc, remainingOpsBlock);
+    }
+
+    // Inline body region.
+    Block *beforeBody = &allocaScopeOp.bodyRegion().front();
+    Block *afterBody = &allocaScopeOp.bodyRegion().back();
+    rewriter.inlineRegionBefore(allocaScopeOp.bodyRegion(), continueBlock);
+
+    // Save stack and then branch into the body of the region.
+    rewriter.setInsertionPointToEnd(currentBlock);
+    auto stackSaveOp =
+        rewriter.create<LLVM::StackSaveOp>(loc, getVoidPtrType());
+    rewriter.create<BranchOp>(loc, beforeBody);
+
+    // Replace the alloca_scope return with a branch that jumps out of the body.
+    // Stack restore before leaving the body region.
+    rewriter.setInsertionPointToEnd(afterBody);
+    auto returnOp =
+        cast<memref::AllocaScopeReturnOp>(afterBody->getTerminator());
+    auto branchOp = rewriter.replaceOpWithNewOp<BranchOp>(
+        returnOp, continueBlock, returnOp.results());
+
+    // Insert stack restore before jumping out the body of the region.
+    rewriter.setInsertionPoint(branchOp);
+    rewriter.create<LLVM::StackRestoreOp>(loc, stackSaveOp);
+
+    // Replace the op with values return from the body region.
+    rewriter.replaceOp(allocaScopeOp, continueBlock->getArguments());
+
+    return success();
+  }
+};
+
 /// Copies the shaped descriptor part to (if `toDynamic` is set) or from
 /// (otherwise) the dynamically allocated memory for any operands that were
 /// unranked descriptors originally.
@@ -3885,6 +3939,7 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       AddFOpLowering,
       AddIOpLowering,
       AllocaOpLowering,
+      AllocaScopeOpLowering,
       AndOpLowering,
       AssertOpLowering,
       AtomicRMWOpLowering,

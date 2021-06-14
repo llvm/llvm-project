@@ -44,16 +44,16 @@ define dso_local i32 @test1() nounwind {
 ; X64-LABEL: test1:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
-; X64-NEXT:    movb {{.*}}(%rip), %cl
+; X64-NEXT:    movb b(%rip), %cl
 ; X64-NEXT:    leal 1(%rcx), %eax
-; X64-NEXT:    movb %al, {{.*}}(%rip)
-; X64-NEXT:    incl {{.*}}(%rip)
+; X64-NEXT:    movb %al, b(%rip)
+; X64-NEXT:    incl c(%rip)
 ; X64-NEXT:    sete %dl
-; X64-NEXT:    movb {{.*}}(%rip), %sil
+; X64-NEXT:    movb a(%rip), %sil
 ; X64-NEXT:    leal 1(%rsi), %edi
 ; X64-NEXT:    cmpb %cl, %sil
-; X64-NEXT:    sete {{.*}}(%rip)
-; X64-NEXT:    movb %dil, {{.*}}(%rip)
+; X64-NEXT:    sete d(%rip)
+; X64-NEXT:    movb %dil, a(%rip)
 ; X64-NEXT:    testb %dl, %dl
 ; X64-NEXT:    jne .LBB0_2
 ; X64-NEXT:  # %bb.1: # %if.then
@@ -167,8 +167,8 @@ define dso_local void @test_tail_call(i32* %ptr) nounwind optsize {
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    incl (%rdi)
 ; X64-NEXT:    setne %al
-; X64-NEXT:    incb {{.*}}(%rip)
-; X64-NEXT:    sete {{.*}}(%rip)
+; X64-NEXT:    incb a(%rip)
+; X64-NEXT:    sete d(%rip)
 ; X64-NEXT:    testb %al, %al
 ; X64-NEXT:    jne external_b # TAILCALL
 ; X64-NEXT:  # %bb.1: # %then

@@ -79,24 +79,28 @@ conformance.</p>
 <h2 id="c89">C89 implementation status</h2>
 
 <p>Clang implements all of the ISO 9899:1990 (C89) standard.</p>
+<p>You can use Clang in C89 mode with the <code>-std=c89</code> or <code>-std=c90</code> options.</p>
 
 <h2 id="c99">C99 implementation status</h2>
 
 <p>Clang implements a significant portion of the ISO 9899:1999 (C99) standard, but the status of individual proposals is still under investigation.</p>
+<p>You can use Clang in C99 mode with the <code>-std=c99</code> option.</p>
 
 <h2 id="c11">C11 implementation status</h2>
 
 <p>Clang implements a significant portion of the ISO 9899:2011 (C11) standard, but the status of individual proposals is still under investigation.</p>
+<p>You can use Clang in C11 mode with the <code>-std=c11</code> option (use <code>-std=c1x</code> in Clang 3.0 and earlier).</p>
 
 <h2 id="c17">C17 implementation status</h2>
 
-<p>Clang implements a significant portion of the ISO 9899:2018 (C17) standard, but the status of individual proposals is still under investigation.</p>
+<p>There are no major changes in this edition, only technical corrections and clarifications that are tracked by Defect Report.</p>
+<p>You can use Clang in C17 mode with the <code>-std=c17</code> or <code>-std=c18</code> options (available in Clang 6 and later).</p>
 
 <h2 id="c2x">C2x implementation status</h2>
 
 <p>Clang has support for some of the features of the C standard following C17, informally referred to as C2x.</p>
 
-<p>You can use Clang in C2x mode with the <code>-std=c2x</code> option.</p>
+<p>You can use Clang in C2x mode with the <code>-std=c2x</code> option (available in Clang 9 and later).</p>
 
 <details open>
 <summary>List of features and minimum Clang version with support</summary>
@@ -289,7 +293,7 @@ conformance.</p>
     <tr>
       <td>Compatibility of Pointers to Arrays with Qualifiers</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg14/www/docs/n2607.pdf">N2607</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="partial" align="center">Yes</td>
     </tr>
 </table>
 </details>

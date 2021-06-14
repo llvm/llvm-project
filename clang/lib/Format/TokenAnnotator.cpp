@@ -729,6 +729,21 @@ private:
     return false;
   }
 
+  bool couldBeInStructArrayInitializer() const {
+    if (Contexts.size() < 2)
+      return false;
+    // We want to back up no more then 2 context levels i.e.
+    // . { { <-
+    const auto End = std::next(Contexts.rbegin(), 2);
+    auto Last = Contexts.rbegin();
+    unsigned Depth = 0;
+    for (; Last != End; ++Last) {
+      if (Last->ContextKind == tok::l_brace)
+        ++Depth;
+    }
+    return Depth == 2 && Last->ContextKind != tok::l_brace;
+  }
+
   bool parseBrace() {
     if (CurrentToken) {
       FormatToken *Left = CurrentToken->Previous;
@@ -746,10 +761,17 @@ private:
           Left->Previous->is(TT_JsTypeColon))
         Contexts.back().IsExpression = false;
 
+      unsigned CommaCount = 0;
       while (CurrentToken) {
         if (CurrentToken->is(tok::r_brace)) {
           Left->MatchingParen = CurrentToken;
           CurrentToken->MatchingParen = Left;
+          if (Style.AlignArrayOfStructures != FormatStyle::AIAS_None) {
+            if (Left->ParentBracket == tok::l_brace &&
+                couldBeInStructArrayInitializer() && CommaCount > 0) {
+              Contexts.back().InStructArrayInitializer = true;
+            }
+          }
           next();
           return true;
         }
@@ -773,9 +795,11 @@ private:
               Style.Language == FormatStyle::LK_JavaScript)
             Left->setType(TT_DictLiteral);
         }
-        if (CurrentToken->is(tok::comma) &&
-            Style.Language == FormatStyle::LK_JavaScript)
-          Left->setType(TT_DictLiteral);
+        if (CurrentToken->is(tok::comma)) {
+          if (Style.Language == FormatStyle::LK_JavaScript)
+            Left->setType(TT_DictLiteral);
+          ++CommaCount;
+        }
         if (!consumeToken())
           return false;
       }
@@ -1339,6 +1363,12 @@ public:
       return LT_ObjCMethodDecl;
     }
 
+    for (const auto &ctx : Contexts) {
+      if (ctx.InStructArrayInitializer) {
+        return LT_ArrayOfStructInitializer;
+      }
+    }
+
     return LT_Other;
   }
 
@@ -1414,6 +1444,7 @@ private:
     bool IsForEachMacro = false;
     bool InCpp11AttributeSpecifier = false;
     bool InCSharpAttributeSpecifier = false;
+    bool InStructArrayInitializer = false;
   };
 
   /// Puts a new \c Context onto the stack \c Contexts for the lifetime
@@ -1429,7 +1460,16 @@ private:
                                    P.Contexts.back().IsExpression));
     }
 
-    ~ScopedContextCreator() { P.Contexts.pop_back(); }
+    ~ScopedContextCreator() {
+      if (P.Style.AlignArrayOfStructures != FormatStyle::AIAS_None) {
+        if (P.Contexts.back().InStructArrayInitializer) {
+          P.Contexts.pop_back();
+          P.Contexts.back().InStructArrayInitializer = true;
+          return;
+        }
+      }
+      P.Contexts.pop_back();
+    }
   };
 
   void modifyContext(const FormatToken &Current) {
@@ -2473,6 +2513,12 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) {
                               : Line.FirstStartColumn + Line.First->ColumnWidth;
   FormatToken *Current = Line.First->Next;
   bool InFunctionDecl = Line.MightBeFunctionDecl;
+  bool AlignArrayOfStructures =
+      (Style.AlignArrayOfStructures != FormatStyle::AIAS_None &&
+       Line.Type == LT_ArrayOfStructInitializer);
+  if (AlignArrayOfStructures)
+    calculateArrayInitializerColumnList(Line);
+
   while (Current) {
     if (isFunctionDeclarationName(*Current, Line))
       Current->setType(TT_FunctionDeclarationName);
@@ -2590,6 +2636,45 @@ void TokenAnnotator::calculateUnbreakableTailLengths(AnnotatedLine &Line) {
     }
     Current = Current->Previous;
   }
+}
+
+void TokenAnnotator::calculateArrayInitializerColumnList(AnnotatedLine &Line) {
+  if (Line.First == Line.Last) {
+    return;
+  }
+  auto *CurrentToken = Line.First;
+  CurrentToken->ArrayInitializerLineStart = true;
+  unsigned Depth = 0;
+  while (CurrentToken != nullptr && CurrentToken != Line.Last) {
+    if (CurrentToken->is(tok::l_brace)) {
+      CurrentToken->IsArrayInitializer = true;
+      if (CurrentToken->Next != nullptr)
+        CurrentToken->Next->MustBreakBefore = true;
+      CurrentToken =
+          calculateInitializerColumnList(Line, CurrentToken->Next, Depth + 1);
+    } else {
+      CurrentToken = CurrentToken->Next;
+    }
+  }
+}
+
+FormatToken *TokenAnnotator::calculateInitializerColumnList(
+    AnnotatedLine &Line, FormatToken *CurrentToken, unsigned Depth) {
+  while (CurrentToken != nullptr && CurrentToken != Line.Last) {
+    if (CurrentToken->is(tok::l_brace))
+      ++Depth;
+    else if (CurrentToken->is(tok::r_brace))
+      --Depth;
+    if (Depth == 2 && CurrentToken->isOneOf(tok::l_brace, tok::comma)) {
+      CurrentToken = CurrentToken->Next;
+      if (CurrentToken == nullptr)
+        break;
+      CurrentToken->StartsColumn = true;
+      CurrentToken = CurrentToken->Previous;
+    }
+    CurrentToken = CurrentToken->Next;
+  }
+  return CurrentToken;
 }
 
 unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,

@@ -15,21 +15,21 @@ define i32 @f(<8 x float> %A, i8* %B, <4 x double> %C, <4 x i64> %E, <8 x i32> %
 ; X32-NEXT:    movl 8(%ebp), %ecx
 ; X32-NEXT:    movl 136(%ebp), %edx
 ; X32-NEXT:    movl (%edx), %eax
-; X32-NEXT:    vaddps {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X32-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X32-NEXT:    vmovntps %ymm0, (%ecx)
-; X32-NEXT:    vpaddq {{\.LCPI[0-9]+_[0-9]+}}, %ymm2, %ymm0
+; X32-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}, %ymm2, %ymm0
 ; X32-NEXT:    addl (%edx), %eax
 ; X32-NEXT:    vmovntdq %ymm0, (%ecx)
-; X32-NEXT:    vaddpd {{\.LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm0
+; X32-NEXT:    vaddpd {{\.?LCPI[0-9]+_[0-9]+}}, %ymm1, %ymm0
 ; X32-NEXT:    addl (%edx), %eax
 ; X32-NEXT:    vmovntpd %ymm0, (%ecx)
-; X32-NEXT:    vpaddd {{\.LCPI[0-9]+_[0-9]+}}, %ymm5, %ymm0
+; X32-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %ymm5, %ymm0
 ; X32-NEXT:    addl (%edx), %eax
 ; X32-NEXT:    vmovntdq %ymm0, (%ecx)
-; X32-NEXT:    vpaddw {{\.LCPI[0-9]+_[0-9]+}}, %ymm4, %ymm0
+; X32-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}, %ymm4, %ymm0
 ; X32-NEXT:    addl (%edx), %eax
 ; X32-NEXT:    vmovntdq %ymm0, (%ecx)
-; X32-NEXT:    vpaddb {{\.LCPI[0-9]+_[0-9]+}}, %ymm3, %ymm0
+; X32-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}, %ymm3, %ymm0
 ; X32-NEXT:    addl (%edx), %eax
 ; X32-NEXT:    vmovntdq %ymm0, (%ecx)
 ; X32-NEXT:    movl %ebp, %esp
@@ -40,21 +40,21 @@ define i32 @f(<8 x float> %A, i8* %B, <4 x double> %C, <4 x i64> %E, <8 x i32> %
 ; X64-LABEL: f:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl (%rsi), %eax
-; X64-NEXT:    vaddps {{.*}}(%rip), %ymm0, %ymm0
+; X64-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    vmovntps %ymm0, (%rdi)
-; X64-NEXT:    vpaddq {{.*}}(%rip), %ymm2, %ymm0
+; X64-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm0
 ; X64-NEXT:    addl (%rsi), %eax
 ; X64-NEXT:    vmovntdq %ymm0, (%rdi)
-; X64-NEXT:    vaddpd {{.*}}(%rip), %ymm1, %ymm0
+; X64-NEXT:    vaddpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; X64-NEXT:    addl (%rsi), %eax
 ; X64-NEXT:    vmovntpd %ymm0, (%rdi)
-; X64-NEXT:    vpaddd {{.*}}(%rip), %ymm3, %ymm0
+; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm0
 ; X64-NEXT:    addl (%rsi), %eax
 ; X64-NEXT:    vmovntdq %ymm0, (%rdi)
-; X64-NEXT:    vpaddw {{.*}}(%rip), %ymm4, %ymm0
+; X64-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm4, %ymm0
 ; X64-NEXT:    addl (%rsi), %eax
 ; X64-NEXT:    vmovntdq %ymm0, (%rdi)
-; X64-NEXT:    vpaddb {{.*}}(%rip), %ymm5, %ymm0
+; X64-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm5, %ymm0
 ; X64-NEXT:    addl (%rsi), %eax
 ; X64-NEXT:    vmovntdq %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper

@@ -83,6 +83,7 @@ struct MIToken {
     kw_cfi_adjust_cfa_offset,
     kw_cfi_escape,
     kw_cfi_def_cfa,
+    kw_cfi_llvm_def_aspace_cfa,
     kw_cfi_register,
     kw_cfi_remember_state,
     kw_cfi_restore,

@@ -462,6 +462,10 @@ int main(int argc, const char **argv) {
       std::make_unique<tooling::ArgumentsAdjustingCompilations>(
           std::move(Compilations));
   ResourceDirectoryCache ResourceDirCache;
+
+  // FIXME: Adjust the resulting CompilerInvocation in DependencyScanningAction
+  // instead of parsing and adjusting the raw command-line. This will make it
+  // possible to remove some code specific to clang-cl and Windows.
   AdjustingCompilations->appendArgumentsAdjuster(
       [&ResourceDirCache](const tooling::CommandLineArguments &Args,
                           StringRef FileName) {
@@ -532,7 +536,7 @@ int main(int argc, const char **argv) {
 #else
         AdjustedArgs.push_back("/dev/null");
 #endif
-        if (!HasMT && !HasMQ) {
+        if (!HasMT && !HasMQ && Format == ScanningOutputFormat::Make) {
           // We're interested in source dependencies of an object file.
           std::string FileNameArg;
           if (!HasMD) {
@@ -552,8 +556,6 @@ int main(int argc, const char **argv) {
             AdjustedArgs.push_back(std::move(FileNameArg));
           }
         }
-        AdjustedArgs.push_back("-Xclang");
-        AdjustedArgs.push_back("-Eonly");
         AdjustedArgs.push_back("-Xclang");
         AdjustedArgs.push_back("-sys-header-deps");
         AdjustedArgs.push_back("-Wno-error");

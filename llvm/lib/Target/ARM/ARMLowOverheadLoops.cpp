@@ -101,10 +101,6 @@ static bool shouldInspect(MachineInstr &MI) {
   return isDomainMVE(&MI) || isVectorPredicate(&MI) || hasVPRUse(MI);
 }
 
-static bool isDo(MachineInstr *MI) {
-  return MI->getOpcode() != ARM::t2WhileLoopStartLR;
-}
-
 namespace {
 
   using InstSet = SmallPtrSetImpl<MachineInstr *>;
@@ -446,7 +442,7 @@ namespace {
     }
 
     unsigned getStartOpcode() const {
-      bool IsDo = isDo(Start);
+      bool IsDo = isDoLoopStart(*Start);
       if (!IsTailPredicationLegal())
         return IsDo ? ARM::t2DLS : ARM::t2WLS;
 
@@ -635,7 +631,8 @@ bool LowOverheadLoop::ValidateTailPredicate() {
   // elements is provided to the vctp instruction, so we need to check that
   // we can use this register at InsertPt.
   MachineInstr *VCTP = VCTPs.back();
-  if (Start->getOpcode() == ARM::t2DoLoopStartTP) {
+  if (Start->getOpcode() == ARM::t2DoLoopStartTP ||
+      Start->getOpcode() == ARM::t2WhileLoopStartTP) {
     TPNumElements = Start->getOperand(2);
     StartInsertPt = Start;
     StartInsertBB = Start->getParent();
@@ -778,10 +775,12 @@ bool LowOverheadLoop::ValidateTailPredicate() {
     }
   }
 
-  // If we converted the LoopStart to a t2DoLoopStartTP, we can also remove any
-  // extra instructions in the preheader, which often includes a now unused MOV.
-  if (Start->getOpcode() == ARM::t2DoLoopStartTP && Preheader &&
-      !Preheader->empty() &&
+  // If we converted the LoopStart to a t2DoLoopStartTP/t2WhileLoopStartTP, we
+  // can also remove any extra instructions in the preheader, which often
+  // includes a now unused MOV.
+  if ((Start->getOpcode() == ARM::t2DoLoopStartTP ||
+       Start->getOpcode() == ARM::t2WhileLoopStartTP) &&
+      Preheader && !Preheader->empty() &&
       !RDA.hasLocalDefBefore(VCTP, VCTP->getOperand(1).getReg())) {
     if (auto *Def = RDA.getUniqueReachingMIDef(
             &Preheader->back(), VCTP->getOperand(1).getReg().asMCReg())) {
@@ -1045,12 +1044,13 @@ void LowOverheadLoop::Validate(ARMBasicBlockUtils *BBUtils) {
       return false;
     }
 
-    if (Start->getOpcode() == ARM::t2WhileLoopStartLR &&
-        (BBUtils->getOffsetOf(Start) >
-             BBUtils->getOffsetOf(Start->getOperand(2).getMBB()) ||
-         !BBUtils->isBBInRange(Start, Start->getOperand(2).getMBB(), 4094))) {
-      LLVM_DEBUG(dbgs() << "ARM Loops: WLS offset is out-of-range!\n");
-      return false;
+    if (isWhileLoopStart(*Start)) {
+      MachineBasicBlock *TargetBB = getWhileLoopStartTargetBB(*Start);
+      if (BBUtils->getOffsetOf(Start) > BBUtils->getOffsetOf(TargetBB) ||
+          !BBUtils->isBBInRange(Start, TargetBB, 4094)) {
+        LLVM_DEBUG(dbgs() << "ARM Loops: WLS offset is out-of-range!\n");
+        return false;
+      }
     }
     return true;
   };
@@ -1289,7 +1289,7 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
 // another low register.
 void ARMLowOverheadLoops::RevertWhile(MachineInstr *MI) const {
   LLVM_DEBUG(dbgs() << "ARM Loops: Reverting to cmp: " << *MI);
-  MachineBasicBlock *DestBB = MI->getOperand(2).getMBB();
+  MachineBasicBlock *DestBB = getWhileLoopStartTargetBB(*MI);
   unsigned BrOpc = BBUtils->isBBInRange(MI, DestBB, 254) ?
     ARM::tBcc : ARM::t2Bcc;
 
@@ -1426,8 +1426,8 @@ MachineInstr* ARMLowOverheadLoops::ExpandLoopStart(LowOverheadLoop &LoLoop) {
 
     MIB.addDef(ARM::LR);
     MIB.add(Count);
-    if (!isDo(Start))
-      MIB.add(Start->getOperand(2));
+    if (isWhileLoopStart(*Start))
+      MIB.addMBB(getWhileLoopStartTargetBB(*Start));
 
     LLVM_DEBUG(dbgs() << "ARM Loops: Inserted start: " << *MIB);
     NewStart = &*MIB;
@@ -1612,7 +1612,7 @@ void ARMLowOverheadLoops::Expand(LowOverheadLoop &LoLoop) {
   };
 
   if (LoLoop.Revert) {
-    if (LoLoop.Start->getOpcode() == ARM::t2WhileLoopStartLR)
+    if (isWhileLoopStart(*LoLoop.Start))
       RevertWhile(LoLoop.Start);
     else
       RevertDo(LoLoop.Start);
@@ -1683,7 +1683,7 @@ bool ARMLowOverheadLoops::RevertNonLoops() {
     Changed = true;
 
     for (auto *Start : Starts) {
-      if (Start->getOpcode() == ARM::t2WhileLoopStartLR)
+      if (isWhileLoopStart(*Start))
         RevertWhile(Start);
       else
         RevertDo(Start);

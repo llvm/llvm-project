@@ -36,18 +36,18 @@ define dso_local i32 @foo() optsize {
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl $1234, %eax # imm = 0x4D2
-; X64-NEXT:    movl %eax, {{.*}}(%rip)
-; X64-NEXT:    movl %eax, {{.*}}(%rip)
-; X64-NEXT:    movl $12, {{.*}}(%rip)
-; X64-NEXT:    cmpl $12, {{.*}}(%rip)
+; X64-NEXT:    movl %eax, a(%rip)
+; X64-NEXT:    movl %eax, b(%rip)
+; X64-NEXT:    movl $12, c(%rip)
+; X64-NEXT:    cmpl $12, e(%rip)
 ; X64-NEXT:    jne .LBB0_2
 ; X64-NEXT:  # %bb.1: # %if.then
-; X64-NEXT:    movl $1, {{.*}}(%rip)
+; X64-NEXT:    movl $1, x(%rip)
 ; X64-NEXT:  .LBB0_2: # %if.end
-; X64-NEXT:    movl $1234, {{.*}}(%rip) # imm = 0x4D2
+; X64-NEXT:    movl $1234, f(%rip) # imm = 0x4D2
 ; X64-NEXT:    movl $555, %eax # imm = 0x22B
-; X64-NEXT:    movl %eax, {{.*}}(%rip)
-; X64-NEXT:    addl %eax, {{.*}}(%rip)
+; X64-NEXT:    movl %eax, h(%rip)
+; X64-NEXT:    addl %eax, i(%rip)
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
 entry:
@@ -97,18 +97,18 @@ define dso_local i32 @foo_pgso() !prof !14 {
 ; X64-LABEL: foo_pgso:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movl $1234, %eax # imm = 0x4D2
-; X64-NEXT:    movl %eax, {{.*}}(%rip)
-; X64-NEXT:    movl %eax, {{.*}}(%rip)
-; X64-NEXT:    movl $12, {{.*}}(%rip)
-; X64-NEXT:    cmpl $12, {{.*}}(%rip)
+; X64-NEXT:    movl %eax, a(%rip)
+; X64-NEXT:    movl %eax, b(%rip)
+; X64-NEXT:    movl $12, c(%rip)
+; X64-NEXT:    cmpl $12, e(%rip)
 ; X64-NEXT:    jne .LBB1_2
 ; X64-NEXT:  # %bb.1: # %if.then
-; X64-NEXT:    movl $1, {{.*}}(%rip)
+; X64-NEXT:    movl $1, x(%rip)
 ; X64-NEXT:  .LBB1_2: # %if.end
-; X64-NEXT:    movl $1234, {{.*}}(%rip) # imm = 0x4D2
+; X64-NEXT:    movl $1234, f(%rip) # imm = 0x4D2
 ; X64-NEXT:    movl $555, %eax # imm = 0x22B
-; X64-NEXT:    movl %eax, {{.*}}(%rip)
-; X64-NEXT:    addl %eax, {{.*}}(%rip)
+; X64-NEXT:    movl %eax, h(%rip)
+; X64-NEXT:    addl %eax, i(%rip)
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
 entry:
@@ -144,8 +144,8 @@ define dso_local i32 @foo2() {
 ;
 ; X64-LABEL: foo2:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movl $1234, {{.*}}(%rip) # imm = 0x4D2
-; X64-NEXT:    movl $1234, {{.*}}(%rip) # imm = 0x4D2
+; X64-NEXT:    movl $1234, a(%rip) # imm = 0x4D2
+; X64-NEXT:    movl $1234, b(%rip) # imm = 0x4D2
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
 entry:
@@ -176,9 +176,9 @@ define dso_local void @foomemset() optsize {
 ; X64-LABEL: foomemset:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movabsq $2387225703656530209, %rax # imm = 0x2121212121212121
-; X64-NEXT:    movq %rax, AA+{{.*}}(%rip)
-; X64-NEXT:    movq %rax, AA+{{.*}}(%rip)
-; X64-NEXT:    movq %rax, {{.*}}(%rip)
+; X64-NEXT:    movq %rax, AA+16(%rip)
+; X64-NEXT:    movq %rax, AA+8(%rip)
+; X64-NEXT:    movq %rax, AA(%rip)
 ; X64-NEXT:    retq
 entry:
   call void @llvm.memset.p0i8.i32(i8* getelementptr inbounds ([100 x i8], [100 x i8]* @AA, i32 0, i32 0), i8 33, i32 24, i1 false)
@@ -203,9 +203,9 @@ define dso_local void @foomemset_pgso() !prof !14 {
 ; X64-LABEL: foomemset_pgso:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movabsq $2387225703656530209, %rax # imm = 0x2121212121212121
-; X64-NEXT:    movq %rax, AA+{{.*}}(%rip)
-; X64-NEXT:    movq %rax, AA+{{.*}}(%rip)
-; X64-NEXT:    movq %rax, {{.*}}(%rip)
+; X64-NEXT:    movq %rax, AA+16(%rip)
+; X64-NEXT:    movq %rax, AA+8(%rip)
+; X64-NEXT:    movq %rax, AA(%rip)
 ; X64-NEXT:    retq
 entry:
   call void @llvm.memset.p0i8.i32(i8* getelementptr inbounds ([100 x i8], [100 x i8]* @AA, i32 0, i32 0), i8 33, i32 24, i1 false)

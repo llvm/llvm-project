@@ -317,6 +317,11 @@ private:
 
   // Appends ``Reference`` to ``Buffer``.
   void appendReference(std::string &Buffer, JsModuleReference &Reference) {
+    if (Reference.FormattingOff) {
+      Buffer +=
+          getSourceText(Reference.Range.getBegin(), Reference.Range.getEnd());
+      return;
+    }
     // Sort the individual symbols within the import.
     // E.g. `import {b, a} from 'x';` -> `import {a, b} from 'x';`
     SmallVector<JsImportedSymbol, 1> Symbols = Reference.Symbols;

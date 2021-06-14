@@ -877,7 +877,7 @@ public:
   /// MachineMemOperands are owned by the MachineFunction and need not be
   /// explicitly deallocated.
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
-                                          MachinePointerInfo &PtrInfo,
+                                          const MachinePointerInfo &PtrInfo,
                                           uint64_t Size);
 
   /// Allocate a new MachineMemOperand by copying an existing one,

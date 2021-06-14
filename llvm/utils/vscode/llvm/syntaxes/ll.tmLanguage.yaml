@@ -67,6 +67,7 @@ patterns:
             \\bfptrunc\\b|\
             \\bfree\\b|\
             \\bfrem\\b|\
+            \\bfreeze\\b|\
             \\bfsub\\b|\
             \\bfneg\\b|\
             \\bgetelementptr\\b|\
@@ -335,6 +336,7 @@ patterns:
             \\bnull\\b|\
             \\bzeroinitializer\\b|\
             \\bundef\\b|\
+            \\bpoison\\b|\
             \\bnull\\b|\
             \\bnone\\b"
     name: constant.language

@@ -14,14 +14,14 @@ define i1 @func(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:    jno .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %carry
 ; CHECK-NEXT:    pushl $no
-; CHECK-NEXT:    calll printf
+; CHECK-NEXT:    calll printf@PLT
 ; CHECK-NEXT:    addl $4, %esp
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB0_1: # %normal
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    pushl $ok
-; CHECK-NEXT:    calll printf
+; CHECK-NEXT:    calll printf@PLT
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    retl

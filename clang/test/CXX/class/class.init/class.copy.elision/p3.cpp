@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -fcxx-exceptions -verify=expected,cxx20_2b %s
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -verify=expected,cxx20_2b %s
-// RUN: %clang_cc1 -std=c++17 -fsyntax-only -fcxx-exceptions -verify=expected,cxx11_17 %s
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -fcxx-exceptions -verify=expected,cxx11_17 %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -fcxx-exceptions -verify=expected,cxx11_17 %s
+// RUN: %clang_cc1 -std=c++2b -fsyntax-only -fcxx-exceptions -verify=expected,cxx20_2b,cxx2b %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions -verify=expected,cxx11_20,cxx20_2b %s
+// RUN: %clang_cc1 -std=c++17 -fsyntax-only -fcxx-exceptions -verify=expected,cxx11_17,cxx11_20 %s
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -fcxx-exceptions -verify=expected,cxx11_17,cxx11_20 %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -fcxx-exceptions -verify=expected,cxx11_17,cxx11_20 %s
 
 namespace test_delete_function {
 struct A1 {
@@ -409,8 +409,10 @@ Target t4() {
 namespace test_simpler_implicit_move {
 
 struct CopyOnly {
-  CopyOnly();
-  CopyOnly(CopyOnly &);
+  CopyOnly(); // cxx2b-note {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
+  // cxx2b-note@-1 {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
+  CopyOnly(CopyOnly &); // cxx2b-note {{candidate constructor not viable: expects an lvalue for 1st argument}}
+  // cxx2b-note@-1 {{candidate constructor not viable: expects an lvalue for 1st argument}}
 };
 struct MoveOnly {
   MoveOnly();
@@ -419,7 +421,7 @@ struct MoveOnly {
 MoveOnly &&rref();
 
 MoveOnly &&test1(MoveOnly &&w) {
-  return w; // expected-error {{cannot bind to lvalue of type}}
+  return w; // cxx11_20-error {{cannot bind to lvalue of type}}
 }
 
 CopyOnly test2(bool b) {
@@ -428,22 +430,22 @@ CopyOnly test2(bool b) {
   if (b) {
     return w1;
   } else {
-    return w2;
+    return w2; // cxx2b-error {{no matching constructor for initialization}}
   }
 }
 
-template <class T> T &&test3(T &&x) { return x; } // expected-error {{cannot bind to lvalue of type}}
+template <class T> T &&test3(T &&x) { return x; } // cxx11_20-error {{cannot bind to lvalue of type}}
 template MoveOnly& test3<MoveOnly&>(MoveOnly&);
-template MoveOnly&& test3<MoveOnly>(MoveOnly&&); // expected-note {{in instantiation of function template specialization}}
+template MoveOnly &&test3<MoveOnly>(MoveOnly &&); // cxx11_20-note {{in instantiation of function template specialization}}
 
 MoveOnly &&test4() {
   MoveOnly &&x = rref();
-  return x; // expected-error {{cannot bind to lvalue of type}}
+  return x; // cxx11_20-error {{cannot bind to lvalue of type}}
 }
 
 void test5() try {
   CopyOnly x;
-  throw x;
+  throw x; // cxx2b-error {{no matching constructor for initialization}}
 } catch (...) {
 }
 

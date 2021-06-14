@@ -7,11 +7,11 @@
 define i16 @unify_through_trivial_asm() {
 ; CHECK-LABEL: unify_through_trivial_asm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzwl {{.*}}(%rip), %eax
+; CHECK-NEXT:    movzwl base(%rip), %eax
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    movzwl {{.*}}(%rip), %eax
+; CHECK-NEXT:    movzwl base(%rip), %eax
 ; CHECK-NEXT:    incl %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
@@ -22,15 +22,15 @@ define i16 @unify_through_trivial_asm() {
   ret i16 %v
 }
 
-; The asm call prevents the merging the loads here. 
+; The asm call prevents the merging the loads here.
 define i16 @unify_through_trival_asm_w_memory_clobber() {
 ; CHECK-LABEL: unify_through_trival_asm_w_memory_clobber:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzwl {{.*}}(%rip), %eax
+; CHECK-NEXT:    movzwl base(%rip), %eax
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    movzwl {{.*}}(%rip), %eax
+; CHECK-NEXT:    movzwl base(%rip), %eax
 ; CHECK-NEXT:    incl %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
@@ -44,63 +44,63 @@ define i16 @unify_through_trival_asm_w_memory_clobber() {
 define dso_local void @fulltest() local_unnamed_addr {
 ; CHECK-LABEL: fulltest:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl {{.*}}(%rip), %edx
+; CHECK-NEXT:    movzwl base(%rip), %edx
 ; CHECK-NEXT:    addl $16, %edx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    # kill: def $dx killed $dx killed $edx
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    outb %al, %dx
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    movzwl {{.*}}(%rip), %edx
+; CHECK-NEXT:    movzwl base(%rip), %edx
 ; CHECK-NEXT:    addl $16, %edx
 ; CHECK-NEXT:    movb $1, %al
 ; CHECK-NEXT:    # kill: def $dx killed $dx killed $edx
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    outb %al, %dx
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    movzwl {{.*}}(%rip), %edx
+; CHECK-NEXT:    movzwl base(%rip), %edx
 ; CHECK-NEXT:    addl $16, %edx
 ; CHECK-NEXT:    movb $2, %al
 ; CHECK-NEXT:    # kill: def $dx killed $dx killed $edx
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    outb %al, %dx
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    movzwl {{.*}}(%rip), %edx
+; CHECK-NEXT:    movzwl base(%rip), %edx
 ; CHECK-NEXT:    addl $16, %edx
 ; CHECK-NEXT:    movb $3, %al
 ; CHECK-NEXT:    # kill: def $dx killed $dx killed $edx
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    outb %al, %dx
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    movzwl {{.*}}(%rip), %edx
+; CHECK-NEXT:    movzwl base(%rip), %edx
 ; CHECK-NEXT:    addl $16, %edx
 ; CHECK-NEXT:    movb $4, %al
 ; CHECK-NEXT:    # kill: def $dx killed $dx killed $edx
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    outb %al, %dx
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    movzwl {{.*}}(%rip), %edx
+; CHECK-NEXT:    movzwl base(%rip), %edx
 ; CHECK-NEXT:    addl $16, %edx
 ; CHECK-NEXT:    movb $5, %al
 ; CHECK-NEXT:    # kill: def $dx killed $dx killed $edx
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    outb %al, %dx
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    movzwl {{.*}}(%rip), %edx
+; CHECK-NEXT:    movzwl base(%rip), %edx
 ; CHECK-NEXT:    addl $16, %edx
 ; CHECK-NEXT:    movb $6, %al
 ; CHECK-NEXT:    # kill: def $dx killed $dx killed $edx
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    outb %al, %dx
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    movzwl {{.*}}(%rip), %edx
+; CHECK-NEXT:    movzwl base(%rip), %edx
 ; CHECK-NEXT:    addl $16, %edx
 ; CHECK-NEXT:    movb $7, %al
 ; CHECK-NEXT:    # kill: def $dx killed $dx killed $edx
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    outb %al, %dx
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    movzwl {{.*}}(%rip), %edx
+; CHECK-NEXT:    movzwl base(%rip), %edx
 ; CHECK-NEXT:    addl $16, %edx
 ; CHECK-NEXT:    movb $8, %al
 ; CHECK-NEXT:    # kill: def $dx killed $dx killed $edx

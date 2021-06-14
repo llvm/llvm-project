@@ -27,7 +27,7 @@ define void @foo(%struct.face* byval(%struct.face) nocapture align 8) local_unna
 ; CHECK-NEXT:    vmovups %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0
 ; CHECK-NEXT:    vmovups %xmm0, (%rsp)
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq

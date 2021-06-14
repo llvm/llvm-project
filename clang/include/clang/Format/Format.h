@@ -90,6 +90,35 @@ struct FormatStyle {
   /// brackets.
   BracketAlignmentStyle AlignAfterOpenBracket;
 
+  /// Different style for aligning array initializers.
+  enum ArrayInitializerAlignmentStyle {
+    /// Align array column and left justify the columns e.g.:
+    /// \code
+    ///   struct test demo[] =
+    ///   {
+    ///       {56, 23,    "hello"},
+    ///       {-1, 93463, "world"},
+    ///       {7,  5,     "!!"   }
+    ///   };
+    /// \endcode
+    AIAS_Left,
+    /// Align array column and right justify the columns e.g.:
+    /// \code
+    ///   struct test demo[] =
+    ///   {
+    ///       {56,    23, "hello"},
+    ///       {-1, 93463, "world"},
+    ///       { 7,     5,    "!!"}
+    ///   };
+    /// \endcode
+    AIAS_Right,
+    /// Don't align array initializer columns.
+    AIAS_None
+  };
+  /// if not ``None``, when using initialization for an array of structs
+  /// aligns the fields into columns.
+  ArrayInitializerAlignmentStyle AlignArrayOfStructures;
+
   /// Styles for alignment of consecutive tokens. Tokens can be assignment signs
   /// (see
   /// ``AlignConsecutiveAssignments``), bitfield member separators (see
@@ -3272,6 +3301,7 @@ struct FormatStyle {
   bool operator==(const FormatStyle &R) const {
     return AccessModifierOffset == R.AccessModifierOffset &&
            AlignAfterOpenBracket == R.AlignAfterOpenBracket &&
+           AlignArrayOfStructures == R.AlignArrayOfStructures &&
            AlignConsecutiveAssignments == R.AlignConsecutiveAssignments &&
            AlignConsecutiveBitFields == R.AlignConsecutiveBitFields &&
            AlignConsecutiveDeclarations == R.AlignConsecutiveDeclarations &&

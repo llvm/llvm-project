@@ -55,10 +55,6 @@ public:
 
   virtual uint64_t getVA() const { return 0; }
 
-  virtual uint64_t getFileOffset() const {
-    llvm_unreachable("attempt to get an offset from a non-defined symbol");
-  }
-
   virtual bool isWeakDef() const { llvm_unreachable("cannot be weak def"); }
 
   // Only undefined or dylib symbols can be weak references. A weak reference
@@ -124,8 +120,8 @@ public:
         includeInSymtab(true), thumb(isThumb),
         referencedDynamically(isReferencedDynamically),
         noDeadStrip(noDeadStrip), weakDef(isWeakDef), external(isExternal) {
-    if (isec)
-      isec->numRefs++;
+    if (auto concatIsec = dyn_cast_or_null<ConcatInputSection>(isec))
+      concatIsec->numRefs++;
   }
 
   bool isWeakDef() const override { return weakDef; }
@@ -140,7 +136,6 @@ public:
   bool isAbsolute() const { return isec == nullptr; }
 
   uint64_t getVA() const override;
-  uint64_t getFileOffset() const override;
 
   static bool classof(const Symbol *s) { return s->kind() == DefinedKind; }
 

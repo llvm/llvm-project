@@ -10,18 +10,18 @@ define dso_local float @_Z3fn2v() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq _Z1av
+; CHECK-NEXT:    callq _Z1av@PLT
 ; CHECK-NEXT:    # kill: def $al killed $al def $eax
 ; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    vmovss {{.*}}(%rip), %xmm0 {%k1} {z}
-; CHECK-NEXT:    cmpl $0, {{.*}}(%rip)
+; CHECK-NEXT:    vmovss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1} {z}
+; CHECK-NEXT:    cmpl $0, c(%rip)
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
-; CHECK-NEXT:    vcvtsi2ssl {{.*}}(%rip), %xmm1, %xmm1
+; CHECK-NEXT:    vcvtsi2ssl b(%rip), %xmm1, %xmm1
 ; CHECK-NEXT:    kmovd %eax, %k1
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vmovss %xmm2, %xmm1, %xmm1 {%k1}
-; CHECK-NEXT:    vmovss %xmm1, {{.*}}(%rip)
+; CHECK-NEXT:    vmovss %xmm1, d(%rip)
 ; CHECK-NEXT:  .LBB0_2: # %if.end
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8

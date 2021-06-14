@@ -16,16 +16,16 @@ define <4 x i32> @test_srem_odd_25(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
 ; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; CHECK-SSE2-NEXT:    paddd {{.*}}(%rip), %xmm0
-; CHECK-SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
-; CHECK-SSE2-NEXT:    pcmpgtd {{.*}}(%rip), %xmm0
-; CHECK-SSE2-NEXT:    pandn {{.*}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE2-NEXT:    retq
 ;
 ; CHECK-SSE41-LABEL: test_srem_odd_25:
 ; CHECK-SSE41:       # %bb.0:
-; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm0
-; CHECK-SSE41-NEXT:    paddd {{.*}}(%rip), %xmm0
+; CHECK-SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE41-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [171798690,171798690,171798690,171798690]
 ; CHECK-SSE41-NEXT:    pminud %xmm0, %xmm1
 ; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
@@ -34,9 +34,9 @@ define <4 x i32> @test_srem_odd_25(<4 x i32> %X) nounwind {
 ;
 ; CHECK-AVX1-LABEL: test_srem_odd_25:
 ; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vpmulld {{.*}}(%rip), %xmm0, %xmm0
-; CHECK-AVX1-NEXT:    vpaddd {{.*}}(%rip), %xmm0, %xmm0
-; CHECK-AVX1-NEXT:    vpminud {{.*}}(%rip), %xmm0, %xmm1
+; CHECK-AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; CHECK-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    retq
@@ -55,9 +55,9 @@ define <4 x i32> @test_srem_odd_25(<4 x i32> %X) nounwind {
 ;
 ; CHECK-AVX512VL-LABEL: test_srem_odd_25:
 ; CHECK-AVX512VL:       # %bb.0:
-; CHECK-AVX512VL-NEXT:    vpmulld {{.*}}(%rip){1to4}, %xmm0, %xmm0
-; CHECK-AVX512VL-NEXT:    vpaddd {{.*}}(%rip){1to4}, %xmm0, %xmm0
-; CHECK-AVX512VL-NEXT:    vpminud {{.*}}(%rip){1to4}, %xmm0, %xmm1
+; CHECK-AVX512VL-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    retq
@@ -78,20 +78,20 @@ define <4 x i32> @test_srem_even_100(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
 ; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; CHECK-SSE2-NEXT:    paddd {{.*}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-SSE2-NEXT:    psrld $2, %xmm1
 ; CHECK-SSE2-NEXT:    pslld $30, %xmm0
 ; CHECK-SSE2-NEXT:    por %xmm1, %xmm0
-; CHECK-SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
-; CHECK-SSE2-NEXT:    pcmpgtd {{.*}}(%rip), %xmm0
-; CHECK-SSE2-NEXT:    pandn {{.*}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE2-NEXT:    retq
 ;
 ; CHECK-SSE41-LABEL: test_srem_even_100:
 ; CHECK-SSE41:       # %bb.0:
-; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm0
-; CHECK-SSE41-NEXT:    paddd {{.*}}(%rip), %xmm0
+; CHECK-SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE41-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE41-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-SSE41-NEXT:    psrld $2, %xmm1
 ; CHECK-SSE41-NEXT:    pslld $30, %xmm0
@@ -104,12 +104,12 @@ define <4 x i32> @test_srem_even_100(<4 x i32> %X) nounwind {
 ;
 ; CHECK-AVX1-LABEL: test_srem_even_100:
 ; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vpmulld {{.*}}(%rip), %xmm0, %xmm0
-; CHECK-AVX1-NEXT:    vpaddd {{.*}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpsrld $2, %xmm0, %xmm1
 ; CHECK-AVX1-NEXT:    vpslld $30, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; CHECK-AVX1-NEXT:    vpminud {{.*}}(%rip), %xmm0, %xmm1
+; CHECK-AVX1-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; CHECK-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    retq
@@ -131,10 +131,10 @@ define <4 x i32> @test_srem_even_100(<4 x i32> %X) nounwind {
 ;
 ; CHECK-AVX512VL-LABEL: test_srem_even_100:
 ; CHECK-AVX512VL:       # %bb.0:
-; CHECK-AVX512VL-NEXT:    vpmulld {{.*}}(%rip){1to4}, %xmm0, %xmm0
-; CHECK-AVX512VL-NEXT:    vpaddd {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vprord $2, %xmm0, %xmm0
-; CHECK-AVX512VL-NEXT:    vpminud {{.*}}(%rip){1to4}, %xmm0, %xmm1
+; CHECK-AVX512VL-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    retq
@@ -157,16 +157,16 @@ define <4 x i32> @test_srem_odd_neg25(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
 ; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; CHECK-SSE2-NEXT:    paddd {{.*}}(%rip), %xmm0
-; CHECK-SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
-; CHECK-SSE2-NEXT:    pcmpgtd {{.*}}(%rip), %xmm0
-; CHECK-SSE2-NEXT:    pandn {{.*}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE2-NEXT:    retq
 ;
 ; CHECK-SSE41-LABEL: test_srem_odd_neg25:
 ; CHECK-SSE41:       # %bb.0:
-; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm0
-; CHECK-SSE41-NEXT:    paddd {{.*}}(%rip), %xmm0
+; CHECK-SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE41-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [171798690,171798690,171798690,171798690]
 ; CHECK-SSE41-NEXT:    pminud %xmm0, %xmm1
 ; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
@@ -175,9 +175,9 @@ define <4 x i32> @test_srem_odd_neg25(<4 x i32> %X) nounwind {
 ;
 ; CHECK-AVX1-LABEL: test_srem_odd_neg25:
 ; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vpmulld {{.*}}(%rip), %xmm0, %xmm0
-; CHECK-AVX1-NEXT:    vpaddd {{.*}}(%rip), %xmm0, %xmm0
-; CHECK-AVX1-NEXT:    vpminud {{.*}}(%rip), %xmm0, %xmm1
+; CHECK-AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; CHECK-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    retq
@@ -196,9 +196,9 @@ define <4 x i32> @test_srem_odd_neg25(<4 x i32> %X) nounwind {
 ;
 ; CHECK-AVX512VL-LABEL: test_srem_odd_neg25:
 ; CHECK-AVX512VL:       # %bb.0:
-; CHECK-AVX512VL-NEXT:    vpmulld {{.*}}(%rip){1to4}, %xmm0, %xmm0
-; CHECK-AVX512VL-NEXT:    vpaddd {{.*}}(%rip){1to4}, %xmm0, %xmm0
-; CHECK-AVX512VL-NEXT:    vpminud {{.*}}(%rip){1to4}, %xmm0, %xmm1
+; CHECK-AVX512VL-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    retq
@@ -219,20 +219,20 @@ define <4 x i32> @test_srem_even_neg100(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,2,3]
 ; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; CHECK-SSE2-NEXT:    paddd {{.*}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-SSE2-NEXT:    psrld $2, %xmm1
 ; CHECK-SSE2-NEXT:    pslld $30, %xmm0
 ; CHECK-SSE2-NEXT:    por %xmm1, %xmm0
-; CHECK-SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
-; CHECK-SSE2-NEXT:    pcmpgtd {{.*}}(%rip), %xmm0
-; CHECK-SSE2-NEXT:    pandn {{.*}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE2-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE2-NEXT:    retq
 ;
 ; CHECK-SSE41-LABEL: test_srem_even_neg100:
 ; CHECK-SSE41:       # %bb.0:
-; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm0
-; CHECK-SSE41-NEXT:    paddd {{.*}}(%rip), %xmm0
+; CHECK-SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-SSE41-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-SSE41-NEXT:    movdqa %xmm0, %xmm1
 ; CHECK-SSE41-NEXT:    psrld $2, %xmm1
 ; CHECK-SSE41-NEXT:    pslld $30, %xmm0
@@ -245,12 +245,12 @@ define <4 x i32> @test_srem_even_neg100(<4 x i32> %X) nounwind {
 ;
 ; CHECK-AVX1-LABEL: test_srem_even_neg100:
 ; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vpmulld {{.*}}(%rip), %xmm0, %xmm0
-; CHECK-AVX1-NEXT:    vpaddd {{.*}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpsrld $2, %xmm0, %xmm1
 ; CHECK-AVX1-NEXT:    vpslld $30, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; CHECK-AVX1-NEXT:    vpminud {{.*}}(%rip), %xmm0, %xmm1
+; CHECK-AVX1-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; CHECK-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    retq
@@ -272,10 +272,10 @@ define <4 x i32> @test_srem_even_neg100(<4 x i32> %X) nounwind {
 ;
 ; CHECK-AVX512VL-LABEL: test_srem_even_neg100:
 ; CHECK-AVX512VL:       # %bb.0:
-; CHECK-AVX512VL-NEXT:    vpmulld {{.*}}(%rip){1to4}, %xmm0, %xmm0
-; CHECK-AVX512VL-NEXT:    vpaddd {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vprord $2, %xmm0, %xmm0
-; CHECK-AVX512VL-NEXT:    vpminud {{.*}}(%rip){1to4}, %xmm0, %xmm1
+; CHECK-AVX512VL-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    retq
@@ -333,7 +333,7 @@ define <4 x i32> @test_srem_odd_undef1(<4 x i32> %X) nounwind {
 ; CHECK-SSE41-NEXT:    psrld $31, %xmm1
 ; CHECK-SSE41-NEXT:    psrad $3, %xmm2
 ; CHECK-SSE41-NEXT:    paddd %xmm1, %xmm2
-; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm2
+; CHECK-SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; CHECK-SSE41-NEXT:    psubd %xmm2, %xmm0
 ; CHECK-SSE41-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
@@ -351,7 +351,7 @@ define <4 x i32> @test_srem_odd_undef1(<4 x i32> %X) nounwind {
 ; CHECK-AVX1-NEXT:    vpsrld $31, %xmm1, %xmm2
 ; CHECK-AVX1-NEXT:    vpsrad $3, %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
-; CHECK-AVX1-NEXT:    vpmulld {{.*}}(%rip), %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
@@ -388,7 +388,7 @@ define <4 x i32> @test_srem_odd_undef1(<4 x i32> %X) nounwind {
 ; CHECK-AVX512VL-NEXT:    vpsrld $31, %xmm1, %xmm2
 ; CHECK-AVX512VL-NEXT:    vpsrad $3, %xmm1, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
-; CHECK-AVX512VL-NEXT:    vpmulld {{.*}}(%rip){1to4}, %xmm1, %xmm1
+; CHECK-AVX512VL-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
@@ -444,7 +444,7 @@ define <4 x i32> @test_srem_even_undef1(<4 x i32> %X) nounwind {
 ; CHECK-SSE41-NEXT:    psrld $31, %xmm1
 ; CHECK-SSE41-NEXT:    psrad $5, %xmm2
 ; CHECK-SSE41-NEXT:    paddd %xmm1, %xmm2
-; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm2
+; CHECK-SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; CHECK-SSE41-NEXT:    psubd %xmm2, %xmm0
 ; CHECK-SSE41-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
@@ -462,7 +462,7 @@ define <4 x i32> @test_srem_even_undef1(<4 x i32> %X) nounwind {
 ; CHECK-AVX1-NEXT:    vpsrld $31, %xmm1, %xmm2
 ; CHECK-AVX1-NEXT:    vpsrad $5, %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
-; CHECK-AVX1-NEXT:    vpmulld {{.*}}(%rip), %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
@@ -499,7 +499,7 @@ define <4 x i32> @test_srem_even_undef1(<4 x i32> %X) nounwind {
 ; CHECK-AVX512VL-NEXT:    vpsrld $31, %xmm1, %xmm2
 ; CHECK-AVX512VL-NEXT:    vpsrad $5, %xmm1, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
-; CHECK-AVX512VL-NEXT:    vpmulld {{.*}}(%rip){1to4}, %xmm1, %xmm1
+; CHECK-AVX512VL-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
@@ -564,7 +564,7 @@ define <4 x i32> @test_srem_pow2(<4 x i32> %X) nounwind {
 ; CHECK-SSE-NEXT:    psrad $31, %xmm1
 ; CHECK-SSE-NEXT:    psrld $28, %xmm1
 ; CHECK-SSE-NEXT:    paddd %xmm0, %xmm1
-; CHECK-SSE-NEXT:    pand {{.*}}(%rip), %xmm1
+; CHECK-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-SSE-NEXT:    psubd %xmm1, %xmm0
 ; CHECK-SSE-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE-NEXT:    pcmpeqd %xmm1, %xmm0
@@ -576,7 +576,7 @@ define <4 x i32> @test_srem_pow2(<4 x i32> %X) nounwind {
 ; CHECK-AVX1-NEXT:    vpsrad $31, %xmm0, %xmm1
 ; CHECK-AVX1-NEXT:    vpsrld $28, %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
-; CHECK-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
@@ -601,7 +601,7 @@ define <4 x i32> @test_srem_pow2(<4 x i32> %X) nounwind {
 ; CHECK-AVX512VL-NEXT:    vpsrad $31, %xmm0, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpsrld $28, %xmm1, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
-; CHECK-AVX512VL-NEXT:    vpandd {{.*}}(%rip){1to4}, %xmm1, %xmm1
+; CHECK-AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
@@ -621,7 +621,7 @@ define <4 x i32> @test_srem_int_min(<4 x i32> %X) nounwind {
 ; CHECK-SSE-NEXT:    psrad $31, %xmm1
 ; CHECK-SSE-NEXT:    psrld $1, %xmm1
 ; CHECK-SSE-NEXT:    paddd %xmm0, %xmm1
-; CHECK-SSE-NEXT:    pand {{.*}}(%rip), %xmm1
+; CHECK-SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-SSE-NEXT:    psubd %xmm1, %xmm0
 ; CHECK-SSE-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE-NEXT:    pcmpeqd %xmm1, %xmm0
@@ -633,7 +633,7 @@ define <4 x i32> @test_srem_int_min(<4 x i32> %X) nounwind {
 ; CHECK-AVX1-NEXT:    vpsrad $31, %xmm0, %xmm1
 ; CHECK-AVX1-NEXT:    vpsrld $1, %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
-; CHECK-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
@@ -658,7 +658,7 @@ define <4 x i32> @test_srem_int_min(<4 x i32> %X) nounwind {
 ; CHECK-AVX512VL-NEXT:    vpsrad $31, %xmm0, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpsrld $1, %xmm1, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
-; CHECK-AVX512VL-NEXT:    vpandd {{.*}}(%rip){1to4}, %xmm1, %xmm1
+; CHECK-AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0

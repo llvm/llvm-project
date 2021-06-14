@@ -99,6 +99,8 @@ static void updateAndRemoveSymbols(const CommonConfig &Config, Object &Obj) {
       return false;
     if (Config.KeepUndefined && N->isUndefinedSymbol())
       return false;
+    if (N->n_desc & MachO::REFERENCED_DYNAMICALLY)
+      return false;
     if (Config.StripAll)
       return true;
     if (Config.DiscardMode == DiscardType::All && !(N->n_type & MachO::N_EXT))

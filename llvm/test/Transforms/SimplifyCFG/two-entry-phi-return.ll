@@ -23,4 +23,33 @@ UnifiedReturnBlock:
 
 }
 
+@a = external dso_local global i32, align 4
+
+define i32 @PR50638() {
+; CHECK-LABEL: @PR50638(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 0, i32* @a, align 4
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  store i32 0, i32* @a, align 4
+  br label %pre.for
+
+pre.for:
+  %tobool.not = phi i1 [ false, %for ], [ true, %entry ]
+  br i1 %tobool.not, label %end, label %for
+
+for:
+  %cmp = phi i1 [ true, %pre.for ], [ false, %post.for ]
+  %storemerge = phi i32 [ 0, %pre.for ], [ 1, %post.for ]
+  store i32 %storemerge, i32* @a, align 4
+  br i1 %cmp, label %post.for, label %pre.for
+
+post.for:
+  br label %for
+
+end:
+  ret i32 0
+}
+
 !0 = !{!"branch_weights", i32 4, i32 64}

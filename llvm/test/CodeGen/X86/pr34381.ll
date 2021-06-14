@@ -11,14 +11,14 @@
 define void @_Z3foov() {
 ; CHECK-LABEL: _Z3foov:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movsbl {{.*}}(%rip), %eax
+; CHECK-NEXT:    movsbl var_29(%rip), %eax
 ; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    cmpl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    cmpl %eax, var_21(%rip)
 ; CHECK-NEXT:    setb %cl
-; CHECK-NEXT:    movl %ecx, {{.*}}(%rip)
-; CHECK-NEXT:    movb {{.*}}(%rip), %al
-; CHECK-NEXT:    movb %al, {{.*}}(%rip)
+; CHECK-NEXT:    movl %ecx, var_390(%rip)
+; CHECK-NEXT:    movb var_11(%rip), %al
+; CHECK-NEXT:    movb %al, var_370(%rip)
 ; CHECK-NEXT:    retq
 entry:
   %0 = load i32, i32* @var_21, align 4

@@ -7,14 +7,14 @@
 
 ; Clobbered SSE must not be saved when the target doesn't support SSE
 define x86_intrcc void @test_isr_sse_clobbers(%struct.interrupt_frame* byval(%struct.interrupt_frame) %frame, i64 %ecode) {
-  ; CHECK-LABEL: test_isr_sse_clobbers:
-  ; CHECK:       # %bb.0:
-  ; CHECK-NEXT:    pushq %rax
-  ; CHECK-NEXT:    cld
-  ; CHECK-NEXT:    #APP
-  ; CHECK-NEXT:    #NO_APP
-  ; CHECK-NEXT:    addq $16, %rsp
-  ; CHECK-NEXT:    iretq
+; CHECK-LABEL: test_isr_sse_clobbers:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    cld
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    addq $16, %rsp
+; CHECK-NEXT:    iretq
   call void asm sideeffect "", "~{xmm0},~{xmm6}"()
   ret void
 }

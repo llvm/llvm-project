@@ -67,8 +67,8 @@ define void @t3() {
 ;
 ; X64-LABEL: t3:
 ; X64:       ## %bb.0:
-; X64-NEXT:    movq _g0@{{.*}}(%rip), %rax
-; X64-NEXT:    movq _g1@{{.*}}(%rip), %rcx
+; X64-NEXT:    movq _g0@GOTPCREL(%rip), %rax
+; X64-NEXT:    movq _g1@GOTPCREL(%rip), %rcx
 ; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    pinsrw $0, (%rax), %xmm0
 ; X64-NEXT:    movq %xmm0, (%rcx)

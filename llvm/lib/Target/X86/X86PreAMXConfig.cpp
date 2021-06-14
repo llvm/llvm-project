@@ -65,7 +65,8 @@ static bool isAMXIntrinsic(IntrinsicInst *II) {
 }
 
 static bool isTileLoad(IntrinsicInst *II) {
-  return II->getIntrinsicID() == Intrinsic::x86_tileloadd64_internal;
+  return II->getIntrinsicID() == Intrinsic::x86_tileloadd64_internal ||
+         II->getIntrinsicID() == Intrinsic::x86_tileloaddt164_internal;
 }
 
 static bool isTileStore(IntrinsicInst *II) {

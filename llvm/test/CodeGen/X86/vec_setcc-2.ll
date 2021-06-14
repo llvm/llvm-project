@@ -213,8 +213,8 @@ define <8 x i1> @ugt_v8i16_splat(<8 x i16> %x) {
 define <4 x i1> @ugt_v4i32_splat(<4 x i32> %x) {
 ; SSE2-LABEL: ugt_v4i32_splat:
 ; SSE2:       ## %bb.0:
-; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
-; SSE2-NEXT:    pcmpgtd {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: ugt_v4i32_splat:
@@ -230,7 +230,7 @@ define <4 x i1> @ugt_v4i32_splat(<4 x i32> %x) {
 define <2 x i1> @ugt_v2i64_splat(<2 x i64> %x) {
 ; SSE2-LABEL: ugt_v2i64_splat:
 ; SSE2:       ## %bb.0:
-; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [9223372039002259898,9223372039002259898]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm2
@@ -244,8 +244,8 @@ define <2 x i1> @ugt_v2i64_splat(<2 x i64> %x) {
 ;
 ; SSE41-LABEL: ugt_v2i64_splat:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    pxor {{.*}}(%rip), %xmm0
-; SSE41-NEXT:    pcmpgtq {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    pcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    retq
   %cmp = icmp ugt <2 x i64> %x, <i64 442, i64 442>
   ret <2 x i1> %cmp
@@ -284,7 +284,7 @@ define <8 x i1> @uge_v8i16_splat(<8 x i16> %x) {
 define <4 x i1> @uge_v4i32_splat(<4 x i32> %x) {
 ; SSE2-LABEL: uge_v4i32_splat:
 ; SSE2:       ## %bb.0:
-; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2147483606,2147483606,2147483606,2147483606]
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
@@ -304,7 +304,7 @@ define <4 x i1> @uge_v4i32_splat(<4 x i32> %x) {
 define <2 x i1> @uge_v2i64_splat(<2 x i64> %x) {
 ; SSE2-LABEL: uge_v2i64_splat:
 ; SSE2:       ## %bb.0:
-; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [9223372039002259898,9223372039002259898]
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm2
@@ -320,7 +320,7 @@ define <2 x i1> @uge_v2i64_splat(<2 x i64> %x) {
 ;
 ; SSE41-LABEL: uge_v2i64_splat:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [9223372036854776250,9223372036854776250]
 ; SSE41-NEXT:    pcmpgtq %xmm0, %xmm1
 ; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
@@ -344,7 +344,7 @@ define <16 x i1> @ult_v16i8_splat(<16 x i8> %x) {
 define <8 x i1> @ult_v8i16_splat(<8 x i16> %x) {
 ; SSE2-LABEL: ult_v8i16_splat:
 ; SSE2:       ## %bb.0:
-; SSE2-NEXT:    psubusw {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    psubusw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpeqw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
@@ -362,7 +362,7 @@ define <8 x i1> @ult_v8i16_splat(<8 x i16> %x) {
 define <4 x i1> @ult_v4i32_splat(<4 x i32> %x) {
 ; SSE2-LABEL: ult_v4i32_splat:
 ; SSE2:       ## %bb.0:
-; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2147483606,2147483606,2147483606,2147483606]
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, %xmm0
@@ -381,7 +381,7 @@ define <4 x i1> @ult_v4i32_splat(<4 x i32> %x) {
 define <2 x i1> @ult_v2i64_splat(<2 x i64> %x) {
 ; SSE2-LABEL: ult_v2i64_splat:
 ; SSE2:       ## %bb.0:
-; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [9223372039002259898,9223372039002259898]
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm2
@@ -395,7 +395,7 @@ define <2 x i1> @ult_v2i64_splat(<2 x i64> %x) {
 ;
 ; SSE41-LABEL: ult_v2i64_splat:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [9223372036854776250,9223372036854776250]
 ; SSE41-NEXT:    pcmpgtq %xmm0, %xmm1
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
@@ -418,7 +418,7 @@ define <16 x i1> @ule_v16i8_splat(<16 x i8> %x) {
 define <8 x i1> @ule_v8i16_splat(<8 x i16> %x) {
 ; SSE2-LABEL: ule_v8i16_splat:
 ; SSE2:       ## %bb.0:
-; SSE2-NEXT:    psubusw {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    psubusw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpeqw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
@@ -436,8 +436,8 @@ define <8 x i1> @ule_v8i16_splat(<8 x i16> %x) {
 define <4 x i1> @ule_v4i32_splat(<4 x i32> %x) {
 ; SSE2-LABEL: ule_v4i32_splat:
 ; SSE2:       ## %bb.0:
-; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
-; SSE2-NEXT:    pcmpgtd {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE2-NEXT:    pxor %xmm1, %xmm0
 ; SSE2-NEXT:    retq
@@ -455,7 +455,7 @@ define <4 x i1> @ule_v4i32_splat(<4 x i32> %x) {
 define <2 x i1> @ule_v2i64_splat(<2 x i64> %x) {
 ; SSE2-LABEL: ule_v2i64_splat:
 ; SSE2:       ## %bb.0:
-; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [9223372039002259898,9223372039002259898]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm2
@@ -471,8 +471,8 @@ define <2 x i1> @ule_v2i64_splat(<2 x i64> %x) {
 ;
 ; SSE41-LABEL: ule_v2i64_splat:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    pxor {{.*}}(%rip), %xmm0
-; SSE41-NEXT:    pcmpgtq {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    pcmpgtq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE41-NEXT:    pxor %xmm1, %xmm0
 ; SSE41-NEXT:    retq
@@ -507,8 +507,8 @@ define <4 x i1> @ugt_v4i32_splat_maxval_simplify(<4 x i32> %x) {
 define <4 x i1> @ugt_v4i32_nonsplat(<4 x i32> %x) {
 ; SSE2-LABEL: ugt_v4i32_nonsplat:
 ; SSE2:       ## %bb.0:
-; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
-; SSE2-NEXT:    pcmpgtd {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: ugt_v4i32_nonsplat:
@@ -524,7 +524,7 @@ define <4 x i1> @ugt_v4i32_nonsplat(<4 x i32> %x) {
 define <4 x i1> @ugt_v4i32_splat_commute(<4 x i32> %x) {
 ; SSE2-LABEL: ugt_v4i32_splat_commute:
 ; SSE2:       ## %bb.0:
-; SSE2-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2147483652,2147483652,2147483652,2147483652]
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, %xmm0

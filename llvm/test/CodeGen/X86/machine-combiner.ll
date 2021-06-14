@@ -1074,13 +1074,13 @@ define double @reassociate_adds_from_calls() {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    subq $24, %rsp
 ; SSE-NEXT:    .cfi_def_cfa_offset 32
-; SSE-NEXT:    callq bar
+; SSE-NEXT:    callq bar@PLT
 ; SSE-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; SSE-NEXT:    callq bar
+; SSE-NEXT:    callq bar@PLT
 ; SSE-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; SSE-NEXT:    callq bar
+; SSE-NEXT:    callq bar@PLT
 ; SSE-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
-; SSE-NEXT:    callq bar
+; SSE-NEXT:    callq bar@PLT
 ; SSE-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
 ; SSE-NEXT:    # xmm1 = mem[0],zero
 ; SSE-NEXT:    addsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Folded Reload
@@ -1094,13 +1094,13 @@ define double @reassociate_adds_from_calls() {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    subq $24, %rsp
 ; AVX-NEXT:    .cfi_def_cfa_offset 32
-; AVX-NEXT:    callq bar
+; AVX-NEXT:    callq bar@PLT
 ; AVX-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX-NEXT:    callq bar
+; AVX-NEXT:    callq bar@PLT
 ; AVX-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX-NEXT:    callq bar
+; AVX-NEXT:    callq bar@PLT
 ; AVX-NEXT:    vmovsd %xmm0, (%rsp) # 8-byte Spill
-; AVX-NEXT:    callq bar
+; AVX-NEXT:    callq bar@PLT
 ; AVX-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
 ; AVX-NEXT:    # xmm1 = mem[0],zero
 ; AVX-NEXT:    vaddsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm1 # 8-byte Folded Reload
@@ -1125,13 +1125,13 @@ define double @already_reassociated() {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    subq $24, %rsp
 ; SSE-NEXT:    .cfi_def_cfa_offset 32
-; SSE-NEXT:    callq bar
+; SSE-NEXT:    callq bar@PLT
 ; SSE-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; SSE-NEXT:    callq bar
+; SSE-NEXT:    callq bar@PLT
 ; SSE-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; SSE-NEXT:    callq bar
+; SSE-NEXT:    callq bar@PLT
 ; SSE-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
-; SSE-NEXT:    callq bar
+; SSE-NEXT:    callq bar@PLT
 ; SSE-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
 ; SSE-NEXT:    # xmm1 = mem[0],zero
 ; SSE-NEXT:    addsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Folded Reload
@@ -1145,13 +1145,13 @@ define double @already_reassociated() {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    subq $24, %rsp
 ; AVX-NEXT:    .cfi_def_cfa_offset 32
-; AVX-NEXT:    callq bar
+; AVX-NEXT:    callq bar@PLT
 ; AVX-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX-NEXT:    callq bar
+; AVX-NEXT:    callq bar@PLT
 ; AVX-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX-NEXT:    callq bar
+; AVX-NEXT:    callq bar@PLT
 ; AVX-NEXT:    vmovsd %xmm0, (%rsp) # 8-byte Spill
-; AVX-NEXT:    callq bar
+; AVX-NEXT:    callq bar@PLT
 ; AVX-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
 ; AVX-NEXT:    # xmm1 = mem[0],zero
 ; AVX-NEXT:    vaddsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm1 # 8-byte Folded Reload

@@ -235,8 +235,7 @@ define void @test11(i8* nocapture %x, i8* nocapture %y, i32 %n) {
 ; CHECK-NEXT:  .LBB10_1: @ %prehead
 ; CHECK-NEXT:    mov r12, r1
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    mov r3, r2
-; CHECK-NEXT:    wlstp.8 lr, r3, .LBB10_3
+; CHECK-NEXT:    wlstp.8 lr, r2, .LBB10_3
 ; CHECK-NEXT:  .LBB10_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrb.u8 q0, [r12], #16
 ; CHECK-NEXT:    vstrb.8 q0, [r4], #16
@@ -318,8 +317,7 @@ define void @twoloops(i32* %X, i32 %n, i32 %m) {
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    mov r3, r0
-; CHECK-NEXT:    mov r1, r2
-; CHECK-NEXT:    wlstp.8 lr, r1, .LBB13_2
+; CHECK-NEXT:    wlstp.8 lr, r2, .LBB13_2
 ; CHECK-NEXT:  .LBB13_1: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vstrb.8 q0, [r3], #16
 ; CHECK-NEXT:    letp lr, .LBB13_1
@@ -489,8 +487,7 @@ define void @multilooped_exit(i32 %b) {
 ; CHECK-NEXT:    movt r3, :upper16:arr_56
 ; CHECK-NEXT:    lsr.w r12, r1, #4
 ; CHECK-NEXT:    mov r2, r3
-; CHECK-NEXT:    mov r1, r0
-; CHECK-NEXT:    wlstp.8 lr, r1, .LBB18_5
+; CHECK-NEXT:    wlstp.8 lr, r0, .LBB18_5
 ; CHECK-NEXT:  .LBB18_4: @ Parent Loop BB18_3 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    vstrb.8 q0, [r2], #16
@@ -498,8 +495,7 @@ define void @multilooped_exit(i32 %b) {
 ; CHECK-NEXT:  .LBB18_5: @ %loop
 ; CHECK-NEXT:    @ in Loop: Header=BB18_3 Depth=1
 ; CHECK-NEXT:    mov r2, r3
-; CHECK-NEXT:    mov r1, r0
-; CHECK-NEXT:    wlstp.8 lr, r1, .LBB18_7
+; CHECK-NEXT:    wlstp.8 lr, r0, .LBB18_7
 ; CHECK-NEXT:  .LBB18_6: @ Parent Loop BB18_3 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    vstrb.8 q0, [r2], #16
@@ -507,8 +503,7 @@ define void @multilooped_exit(i32 %b) {
 ; CHECK-NEXT:  .LBB18_7: @ %loop
 ; CHECK-NEXT:    @ in Loop: Header=BB18_3 Depth=1
 ; CHECK-NEXT:    mov r2, r3
-; CHECK-NEXT:    mov r1, r0
-; CHECK-NEXT:    wlstp.8 lr, r1, .LBB18_9
+; CHECK-NEXT:    wlstp.8 lr, r0, .LBB18_9
 ; CHECK-NEXT:  .LBB18_8: @ Parent Loop BB18_3 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    vstrb.8 q0, [r2], #16
@@ -567,12 +562,10 @@ define i32 @reverted(i1 zeroext %b) {
 ; CHECK-NEXT:    movw r0, :lower16:arr_22
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    movt r0, :upper16:arr_22
-; CHECK-NEXT:    str r2, [sp, #4] @ 4-byte Spill
 ; CHECK-NEXT:    add.w r1, r2, #15
 ; CHECK-NEXT:    lsrs r3, r1, #4
-; CHECK-NEXT:    mov r1, r2
-; CHECK-NEXT:    str r3, [sp] @ 4-byte Spill
-; CHECK-NEXT:    wlstp.8 lr, r1, .LBB19_2
+; CHECK-NEXT:    strd r3, r2, [sp] @ 8-byte Folded Spill
+; CHECK-NEXT:    wlstp.8 lr, r2, .LBB19_2
 ; CHECK-NEXT:  .LBB19_1: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vstrb.8 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB19_1
@@ -621,11 +614,12 @@ define i32 @reverted(i1 zeroext %b) {
 ; CHECK-NEXT:    le lr, .LBB19_3
 ; CHECK-NEXT:  @ %bb.4: @ %for.cond.cleanup6
 ; CHECK-NEXT:    movw r0, :lower16:arr_22
-; CHECK-NEXT:    ldrd r2, r1, [sp] @ 8-byte Folded Reload
+; CHECK-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    movt r0, :upper16:arr_22
-; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    ldr r3, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    add.w r0, r0, #1824
-; CHECK-NEXT:    wlstp.8 lr, r1, .LBB19_6
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    wlstp.8 lr, r2, .LBB19_6
 ; CHECK-NEXT:  .LBB19_5: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vstrb.8 q1, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB19_5
@@ -675,11 +669,12 @@ define i32 @reverted(i1 zeroext %b) {
 ; CHECK-NEXT:    le lr, .LBB19_7
 ; CHECK-NEXT:  @ %bb.8: @ %for.cond.cleanup6.1
 ; CHECK-NEXT:    movw r0, :lower16:arr_22
-; CHECK-NEXT:    ldrd r2, r1, [sp] @ 8-byte Folded Reload
+; CHECK-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    movt r0, :upper16:arr_22
-; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    ldr r3, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    add.w r0, r0, #3648
-; CHECK-NEXT:    wlstp.8 lr, r1, .LBB19_10
+; CHECK-NEXT:    vmov.i32 q1, #0x0
+; CHECK-NEXT:    wlstp.8 lr, r2, .LBB19_10
 ; CHECK-NEXT:  .LBB19_9: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vstrb.8 q1, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB19_9
@@ -731,19 +726,14 @@ define i32 @reverted(i1 zeroext %b) {
 ; CHECK-NEXT:    le lr, .LBB19_11
 ; CHECK-NEXT:  @ %bb.12: @ %for.cond.cleanup6.2
 ; CHECK-NEXT:    movw r0, :lower16:arr_22
-; CHECK-NEXT:    ldr r1, [sp] @ 4-byte Reload
+; CHECK-NEXT:    ldrd r2, r1, [sp] @ 8-byte Folded Reload
 ; CHECK-NEXT:    movt r0, :upper16:arr_22
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
 ; CHECK-NEXT:    add.w r0, r0, #5472
-; CHECK-NEXT:    wls lr, r1, .LBB19_14
+; CHECK-NEXT:    wlstp.8 lr, r1, .LBB19_14
 ; CHECK-NEXT:  .LBB19_13: @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr r1, [sp, #4] @ 4-byte Reload
-; CHECK-NEXT:    vctp.8 r1
-; CHECK-NEXT:    subs r1, #16
-; CHECK-NEXT:    str r1, [sp, #4] @ 4-byte Spill
-; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vstrbt.8 q1, [r0], #16
-; CHECK-NEXT:    le lr, .LBB19_13
+; CHECK-NEXT:    vstrb.8 q1, [r0], #16
+; CHECK-NEXT:    letp lr, .LBB19_13
 ; CHECK-NEXT:  .LBB19_14: @ %for.cond.cleanup6.2
 ; CHECK-NEXT:    movw r2, :lower16:arr_21
 ; CHECK-NEXT:    movw r1, #5508

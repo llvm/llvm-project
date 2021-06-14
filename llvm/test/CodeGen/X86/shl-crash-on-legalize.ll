@@ -21,7 +21,7 @@ define i32 @PR29058(i8 %x, i32 %y) {
 ; CHECK-NEXT:    orb %dl, %cl
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shll %cl, %eax
-; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, structMember(%rip)
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
 entry:

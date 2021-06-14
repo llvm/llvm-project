@@ -2,6 +2,7 @@
 
 #accesses = [
   affine_map<(i, j, k, l, m) -> (i, k, m)>,
+  affine_map<(i, j, k, l, m) -> ()>,
   affine_map<(i, j, k, l, m) -> (i, k, j, l, m)>
 ]
 
@@ -11,21 +12,22 @@
   library_call = "some_external_func"
 }
 
-func @drop_one_trip_loops(%arg0 : tensor<?x1x?xf32>, %shape: tensor<?x1x?x1x?xf32>) -> tensor<?x1x?x1x?xf32> {
+func @drop_one_trip_loops(%arg0 : tensor<?x1x?xf32>, %arg1 : f32, %shape: tensor<?x1x?x1x?xf32>) -> tensor<?x1x?x1x?xf32> {
   %0 = linalg.generic #trait
-     ins(%arg0 : tensor<?x1x?xf32>)
+     ins(%arg0, %arg1 : tensor<?x1x?xf32>, f32)
     outs(%shape : tensor<?x1x?x1x?xf32>) {
-       ^bb0(%arg2 : f32, %arg3 : f32) :
-         linalg.yield %arg2 : f32
+       ^bb0(%arg2 : f32, %arg3 : f32, %arg4 : f32) :
+         linalg.yield %arg3 : f32
        } -> tensor<?x1x?x1x?xf32>
   return %0 : tensor<?x1x?x1x?xf32>
 }
-//   CHECK-DAG: #[[$MAP2:.*]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+//   CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+//   CHECK-DAG: #[[$MAP2:.*]] = affine_map<(d0, d1, d2) -> ()>
 //   CHECK-DAG: #[[$MAP3:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 // CHECK-LABEL: func @drop_one_trip_loops
 //       CHECK: linalg.tensor_collapse_shape %{{.*}} {{\[}}[0, 1], [2]]
 //       CHECK: linalg.generic
-//  CHECK-SAME:   indexing_maps = [#[[$MAP2]], #[[$MAP3]]]
+//  CHECK-SAME:   indexing_maps = [#[[$MAP1]], #[[$MAP2]], #[[$MAP3]]]
 //  CHECK-SAME:   iterator_types = ["parallel", "parallel", "parallel"]
 //       CHECK: linalg.tensor_expand_shape %{{.*}} {{\[}}[0, 1], [2, 3], [4]]
 

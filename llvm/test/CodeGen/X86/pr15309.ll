@@ -19,10 +19,10 @@ define void @test_convert_float2_ulong2(<2 x i64>* nocapture %src, <2 x float>* 
 ; CHECK-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    shrl $31, %ecx
 ; CHECK-NEXT:    fildll (%esp)
-; CHECK-NEXT:    fadds {{\.LCPI[0-9]+_[0-9]+}}(,%ecx,4)
+; CHECK-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%ecx,4)
 ; CHECK-NEXT:    shrl $31, %esi
 ; CHECK-NEXT:    fildll {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fadds {{\.LCPI[0-9]+_[0-9]+}}(,%esi,4)
+; CHECK-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%esi,4)
 ; CHECK-NEXT:    fstps 84(%eax)
 ; CHECK-NEXT:    fstps 80(%eax)
 ; CHECK-NEXT:    addl $20, %esp

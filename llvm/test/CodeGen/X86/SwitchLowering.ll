@@ -28,7 +28,7 @@ define i8* @FindChar(i8* %CurPtr) {
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
-; CHECK-NEXT:    calll foo
+; CHECK-NEXT:    calll foo@PLT
 ; CHECK-NEXT:    addl $4, %esp
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset -4
 ; CHECK-NEXT:    addl %edi, %esi

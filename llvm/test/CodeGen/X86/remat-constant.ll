@@ -11,11 +11,11 @@ define void @foo() nounwind  {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq qux
+; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    callq qux
+; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
   %f = load float, float* @a

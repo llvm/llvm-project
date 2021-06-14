@@ -126,11 +126,6 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
 
-    // The reported memory location may be wider than the value.
-    const LLT RegTy = MRI.getType(ValVReg);
-    MemSize = std::min(static_cast<uint64_t>(RegTy.getSizeInBytes()), MemSize);
-
-    // FIXME: Get alignment
     auto MMO = MF.getMachineMemOperand(
         MPO, MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant, MemSize,
         inferAlignFromPtrInfo(MF, MPO));
@@ -233,12 +228,6 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
     Register ValVReg = VA.getLocInfo() != CCValAssign::LocInfo::FPExt
                            ? extendRegister(Arg.Regs[ValRegIndex], VA)
                            : Arg.Regs[ValRegIndex];
-
-    // If we extended the value type we might need to adjust the MMO's
-    // Size. This happens if ComputeValueVTs widened a small type value to a
-    // legal register type (e.g. s8->s16)
-    const LLT RegTy = MRI.getType(ValVReg);
-    MemSize = std::min(MemSize, (uint64_t)RegTy.getSizeInBytes());
     assignValueToAddress(ValVReg, Addr, MemSize, MPO, VA);
   }
 };

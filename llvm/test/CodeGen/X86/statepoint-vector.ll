@@ -11,7 +11,7 @@ define <2 x i8 addrspace(1)*> @test(<2 x i8 addrspace(1)*> %obj) gc "statepoint-
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    movaps %xmm0, (%rsp)
-; CHECK-NEXT:    callq do_safepoint
+; CHECK-NEXT:    callq do_safepoint@PLT
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    movaps (%rsp), %xmm0
 ; CHECK-NEXT:    addq $24, %rsp
@@ -32,11 +32,11 @@ define <2 x i8 addrspace(1)*> @test2(<2 x i8 addrspace(1)*> %obj, i64 %offset) g
 ; CHECK-NEXT:    movq %rdi, %xmm1
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; CHECK-NEXT:    paddq %xmm0, %xmm1
-; CHECK-NEXT:    movdqa %xmm0, {{[0-9]*}}(%rsp)
-; CHECK-NEXT:    movdqa %xmm1, {{[0-9]*}}(%rsp)
-; CHECK-NEXT:    callq do_safepoint
+; CHECK-NEXT:    movdqa %xmm0, (%rsp)
+; CHECK-NEXT:    movdqa %xmm1, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    callq do_safepoint@PLT
 ; CHECK-NEXT:  .Ltmp1:
-; CHECK-NEXT:    movaps {{[0-9]*}}(%rsp), %xmm0
+; CHECK-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
@@ -63,7 +63,7 @@ define <2 x i64 addrspace(1)*> @test3(i1 %cnd, <2 x i64 addrspace(1)*>* %ptr) gc
 ; CHECK-NEXT:    movaps (%rsi), %xmm0
 ; CHECK-NEXT:    movaps %xmm0, (%rsp)
 ; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    callq do_safepoint
+; CHECK-NEXT:    callq do_safepoint@PLT
 ; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    movaps (%rsp), %xmm0
 ; CHECK-NEXT:    addq $40, %rsp
@@ -100,7 +100,7 @@ define <2 x i8 addrspace(1)*> @test4() gc "statepoint-example" {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    movaps %xmm0, (%rsp)
-; CHECK-NEXT:    callq do_safepoint
+; CHECK-NEXT:    callq do_safepoint@PLT
 ; CHECK-NEXT:  .Ltmp3:
 ; CHECK-NEXT:    movaps (%rsp), %xmm0
 ; CHECK-NEXT:    addq $24, %rsp
@@ -115,7 +115,7 @@ entry:
 ; Check that we can lower a constant typed as i128 correctly.  We don't have
 ; a representation of larger than 64 bit constant in the StackMap format. At
 ; the moment, this simply means spilling them, but there's a potential
-; optimization for values representable as sext(Con64).  
+; optimization for values representable as sext(Con64).
 define void @test5() gc "statepoint-example" {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
@@ -125,7 +125,7 @@ define void @test5() gc "statepoint-example" {
 ; CHECK-NEXT:    movups %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq $-1, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq $-1, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    callq do_safepoint
+; CHECK-NEXT:    callq do_safepoint@PLT
 ; CHECK-NEXT:  .Ltmp4:
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8

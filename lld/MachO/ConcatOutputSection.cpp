@@ -192,7 +192,6 @@ void ConcatOutputSection::finalize() {
     isecAddr = alignTo(isecAddr, isec->align);
     isecFileOff = alignTo(isecFileOff, isec->align);
     isec->outSecOff = isecAddr - addr;
-    isec->outSecFileOff = isecFileOff - fileOff;
     isec->isFinal = true;
     isecAddr += isec->getSize();
     isecFileOff += isec->getFileSize();
@@ -290,9 +289,7 @@ void ConcatOutputSection::finalize() {
         // unfinalized inputs[finalIdx].
         fatal(Twine(__FUNCTION__) + ": FIXME: thunk range overrun");
       }
-      thunkInfo.isec = make<ConcatInputSection>();
-      thunkInfo.isec->name = isec->name;
-      thunkInfo.isec->segname = isec->segname;
+      thunkInfo.isec = make<ConcatInputSection>(isec->segname, isec->name);
       thunkInfo.isec->parent = this;
       StringRef thunkName = saver.save(funcSym->getName() + ".thunk." +
                                        std::to_string(thunkInfo.sequence++));
@@ -325,11 +322,11 @@ void ConcatOutputSection::writeTo(uint8_t *buf) const {
   while (i < ie || t < te) {
     while (i < ie && (t == te || inputs[i]->getSize() == 0 ||
                       inputs[i]->outSecOff < thunks[t]->outSecOff)) {
-      inputs[i]->writeTo(buf + inputs[i]->outSecFileOff);
+      inputs[i]->writeTo(buf + inputs[i]->outSecOff);
       ++i;
     }
     while (t < te && (i == ie || thunks[t]->outSecOff < inputs[i]->outSecOff)) {
-      thunks[t]->writeTo(buf + thunks[t]->outSecFileOff);
+      thunks[t]->writeTo(buf + thunks[t]->outSecOff);
       ++t;
     }
   }
@@ -339,8 +336,8 @@ void ConcatOutputSection::writeTo(uint8_t *buf) const {
 // are actually merged. The logic presented here was written without
 // any form of informed research.
 void ConcatOutputSection::mergeFlags(InputSection *input) {
-  uint8_t baseType = flags & SECTION_TYPE;
-  uint8_t inputType = input->flags & SECTION_TYPE;
+  uint8_t baseType = sectionType(flags);
+  uint8_t inputType = sectionType(input->flags);
   if (baseType != inputType)
     error("Cannot merge section " + input->name + " (type=0x" +
           to_hexString(inputType) + ") into " + name + " (type=0x" +

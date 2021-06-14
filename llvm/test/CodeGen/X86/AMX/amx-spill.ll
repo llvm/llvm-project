@@ -7,33 +7,33 @@
 define dso_local void @test_api(i32 %0, i16 signext %1, i16 signext %2) nounwind {
 ; CHECK-LABEL: test_api:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $2936, %rsp # imm = 0xB78
+; CHECK-NEXT:    subq $968, %rsp # imm = 0x3C8
 ; CHECK-NEXT:    vpxord %zmm0, %zmm0, %zmm0
-; CHECK-NEXT:    vmovdqu64 %zmm0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb $1, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw %dx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %sil, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw %si, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %sil, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw %dx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %dl, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw %dx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %dl, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw %dx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %sil, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw %dx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %dl, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw %dx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %sil, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw %dx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb %dl, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vmovdqu64 %zmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb $1, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %sil, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw %si, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %sil, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %dl, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %dl, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %sil, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %dl, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %sil, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movw %dx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %dl, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    ldtilecfg -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl $buf, %r8d
 ; CHECK-NEXT:    movl $32, %eax
 ; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm1
 ; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm1
 ; CHECK-NEXT:    movabsq $64, %rcx
-; CHECK-NEXT:    tilestored %tmm1, 896(%rsp,%rcx) # 1024-byte Folded Spill
+; CHECK-NEXT:    tilestored %tmm1, -64(%rsp,%rcx) # 1024-byte Folded Spill
 ; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm3
 ; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm4
 ; CHECK-NEXT:    tileloadd (%r8,%rax), %tmm2
@@ -54,14 +54,14 @@ define dso_local void @test_api(i32 %0, i16 signext %1, i16 signext %2) nounwind
 ; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    tdpbssd %tmm7, %tmm6, %tmm1
 ; CHECK-NEXT:    movabsq $64, %rax
-; CHECK-NEXT:    tileloadd 896(%rsp,%rax), %tmm7 # 1024-byte Folded Reload
+; CHECK-NEXT:    tileloadd -64(%rsp,%rax), %tmm7 # 1024-byte Folded Reload
 ; CHECK-NEXT:    tdpbssd %tmm7, %tmm1, %tmm3
 ; CHECK-NEXT:    tdpbssd %tmm4, %tmm3, %tmm2
 ; CHECK-NEXT:    tdpbssd %tmm5, %tmm2, %tmm0
 ; CHECK-NEXT:    movl $buf, %eax
 ; CHECK-NEXT:    movl $32, %ecx
 ; CHECK-NEXT:    tilestored %tmm0, (%rax,%rcx)
-; CHECK-NEXT:    addq $2936, %rsp # imm = 0xB78
+; CHECK-NEXT:    addq $968, %rsp # imm = 0x3C8
 ; CHECK-NEXT:    tilerelease
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

@@ -3,14 +3,14 @@
 // RUN: %clangxx_asan  -O2 %s -pthread -o %t && %env_asan_opts=detect_stack_use_after_return=1 not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan  -O3 %s -pthread -o %t && %env_asan_opts=detect_stack_use_after_return=1 not %run %t 2>&1 | FileCheck %s
 // RUN: %env_asan_opts=detect_stack_use_after_return=0 %run %t
-// RUN: %clangxx_asan  -O0 %s -pthread -o %t -mllvm -asan-use-after-return=always && not %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_asan  -O1 %s -pthread -o %t -mllvm -asan-use-after-return=always && not %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_asan  -O2 %s -pthread -o %t -mllvm -asan-use-after-return=always && not %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_asan  -O3 %s -pthread -o %t -mllvm -asan-use-after-return=always && not %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_asan  -O3 %s -pthread -o %t -mllvm -asan-use-after-return=never && %run %t
+// RUN: %clangxx_asan  -O0 %s -pthread -o %t -fsanitize-address-use-after-return=always && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan  -O1 %s -pthread -o %t -fsanitize-address-use-after-return=always && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan  -O2 %s -pthread -o %t -fsanitize-address-use-after-return=always && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan  -O3 %s -pthread -o %t -fsanitize-address-use-after-return=always && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan  -O3 %s -pthread -o %t -fsanitize-address-use-after-return=never && %run %t
 // Regression test for a CHECK failure with small stack size and large frame.
 // RUN: %clangxx_asan  -O3 %s -pthread -o %t -DkSize=10000 -DUseThread -DkStackSize=131072 && %env_asan_opts=detect_stack_use_after_return=1 not %run %t 2>&1 | FileCheck --check-prefix=THREAD %s
-// RUN: %clangxx_asan  -O3 %s -pthread -o %t -DkSize=10000 -DUseThread -DkStackSize=131072 -mllvm -asan-use-after-return=always && not %run %t 2>&1 | FileCheck --check-prefix=THREAD %s
+// RUN: %clangxx_asan  -O3 %s -pthread -o %t -DkSize=10000 -DUseThread -DkStackSize=131072 -fsanitize-address-use-after-return=always && not %run %t 2>&1 | FileCheck --check-prefix=THREAD %s
 //
 // Test that we can find UAR in a thread other than main (UAR mode: runtime):
 // RUN: %clangxx_asan  -DUseThread -O2 %s -pthread -o %t && %env_asan_opts=detect_stack_use_after_return=1 not %run %t 2>&1 | FileCheck --check-prefix=THREAD %s
@@ -22,7 +22,7 @@
 // RUN: %env_asan_opts=detect_stack_use_after_return=1:min_uar_stack_size_log=24:max_uar_stack_size_log=24:verbosity=1 not %run %t 2>&1 | FileCheck --check-prefix=CHECK-24 %s
 //
 // Test that we can find UAR in a thread other than main (UAR mode: always):
-// RUN: %clangxx_asan  -DUseThread -O2 %s -pthread -o %t -mllvm -asan-use-after-return=always && not %run %t 2>&1 | FileCheck --check-prefix=THREAD %s
+// RUN: %clangxx_asan  -DUseThread -O2 %s -pthread -o %t -fsanitize-address-use-after-return=always && not %run %t 2>&1 | FileCheck --check-prefix=THREAD %s
 //
 // Test the max_uar_stack_size_log/min_uar_stack_size_log flag.
 // (uses the previous)

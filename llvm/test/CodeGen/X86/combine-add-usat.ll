@@ -88,12 +88,12 @@ define i32 @combine_constant_i32(i32 %a0) {
 define <8 x i16> @combine_constant_v8i16(<8 x i16> %a0) {
 ; SSE-LABEL: combine_constant_v8i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    paddusw {{.*}}(%rip), %xmm0
+; SSE-NEXT:    paddusw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_constant_v8i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddusw {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddusw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <8 x i16> %a0)
   ret <8 x i16> %1

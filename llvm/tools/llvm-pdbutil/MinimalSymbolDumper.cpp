@@ -559,7 +559,7 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
   P.format(" `{0}`", Constant.Name);
   AutoIndent Indent(P, 7);
   P.formatLine("type = {0}, value = {1}", typeIndex(Constant.Type),
-               Constant.Value.toString(10));
+               toString(Constant.Value, 10));
   return Error::success();
 }
 

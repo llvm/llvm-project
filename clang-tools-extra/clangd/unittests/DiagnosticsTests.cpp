@@ -248,13 +248,23 @@ TEST(DiagnosticsTest, ClangTidy) {
       return SQUARE($macroarg[[++]]y);
       return $doubled[[sizeof]](sizeof(int));
     }
+
+    // misc-no-recursion uses a custom traversal from the TUDecl
+    void foo();
+    void $bar[[bar]]() {
+      foo();
+    }
+    void $foo[[foo]]() {
+      bar();
+    }
   )cpp");
   auto TU = TestTU::withCode(Test.code());
   TU.HeaderFilename = "assert.h"; // Suppress "not found" error.
   TU.ClangTidyProvider = addTidyChecks("bugprone-sizeof-expression,"
                                        "bugprone-macro-repeated-side-effects,"
                                        "modernize-deprecated-headers,"
-                                       "modernize-use-trailing-return-type");
+                                       "modernize-use-trailing-return-type,"
+                                       "misc-no-recursion");
   EXPECT_THAT(
       *TU.build().getDiagnostics(),
       UnorderedElementsAre(
@@ -283,8 +293,12 @@ TEST(DiagnosticsTest, ClangTidy) {
               DiagSource(Diag::ClangTidy),
               DiagName("modernize-use-trailing-return-type"),
               // Verify that we don't have "[check-name]" suffix in the message.
-              WithFix(FixMessage(
-                  "use a trailing return type for this function")))));
+              WithFix(
+                  FixMessage("use a trailing return type for this function"))),
+          Diag(Test.range("foo"),
+               "function 'foo' is within a recursive call chain"),
+          Diag(Test.range("bar"),
+               "function 'bar' is within a recursive call chain")));
 }
 
 TEST(DiagnosticsTest, ClangTidyEOF) {

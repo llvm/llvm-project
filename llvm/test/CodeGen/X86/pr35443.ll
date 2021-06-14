@@ -8,11 +8,11 @@
 define void @pr35443() {
 ; CHECK-LABEL: pr35443:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpbroadcastb ac+{{.*}}(%rip), %xmm0
+; CHECK-NEXT:    vpbroadcastb ac+4(%rip), %xmm0
 ; CHECK-NEXT:    vpmovzxbq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsubq %ymm0, %ymm1, %ymm0
-; CHECK-NEXT:    vpmovqd %ymm0, ai3+{{.*}}(%rip)
+; CHECK-NEXT:    vpmovqd %ymm0, ai3+16(%rip)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:

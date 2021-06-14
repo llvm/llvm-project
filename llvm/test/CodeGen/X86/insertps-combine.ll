@@ -163,7 +163,7 @@ define <4 x float> @insertps_zero_from_v2f64(<4 x float> %a0, <2 x double>* %a1)
 ; SSE-LABEL: insertps_zero_from_v2f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movapd (%rdi), %xmm1
-; SSE-NEXT:    addpd {{.*}}(%rip), %xmm1
+; SSE-NEXT:    addpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    insertps {{.*#+}} xmm0 = zero,xmm0[2,2,3]
 ; SSE-NEXT:    movapd %xmm1, (%rdi)
 ; SSE-NEXT:    retq
@@ -171,7 +171,7 @@ define <4 x float> @insertps_zero_from_v2f64(<4 x float> %a0, <2 x double>* %a1)
 ; AVX-LABEL: insertps_zero_from_v2f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovapd (%rdi), %xmm1
-; AVX-NEXT:    vaddpd {{.*}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vaddpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[2,2,3]
 ; AVX-NEXT:    vmovapd %xmm1, (%rdi)
 ; AVX-NEXT:    retq
@@ -187,7 +187,7 @@ define <4 x float> @insertps_zero_from_v2i64(<4 x float> %a0, <2 x i64>* %a1) no
 ; SSE-LABEL: insertps_zero_from_v2i64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm1
-; SSE-NEXT:    paddq {{.*}}(%rip), %xmm1
+; SSE-NEXT:    paddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    insertps {{.*#+}} xmm0 = zero,xmm0[2,2,3]
 ; SSE-NEXT:    movdqa %xmm1, (%rdi)
 ; SSE-NEXT:    retq
@@ -195,7 +195,7 @@ define <4 x float> @insertps_zero_from_v2i64(<4 x float> %a0, <2 x i64>* %a1) no
 ; AVX-LABEL: insertps_zero_from_v2i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovdqa (%rdi), %xmm1
-; AVX-NEXT:    vpaddq {{.*}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[2,2,3]
 ; AVX-NEXT:    vmovdqa %xmm1, (%rdi)
 ; AVX-NEXT:    retq
@@ -211,7 +211,7 @@ define <4 x float> @insertps_zero_from_v8i16(<4 x float> %a0, <8 x i16>* %a1) no
 ; SSE-LABEL: insertps_zero_from_v8i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm1
-; SSE-NEXT:    paddw {{.*}}(%rip), %xmm1
+; SSE-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    insertps {{.*#+}} xmm0 = zero,xmm0[2,2,3]
 ; SSE-NEXT:    movdqa %xmm1, (%rdi)
 ; SSE-NEXT:    retq
@@ -219,7 +219,7 @@ define <4 x float> @insertps_zero_from_v8i16(<4 x float> %a0, <8 x i16>* %a1) no
 ; AVX-LABEL: insertps_zero_from_v8i16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovdqa (%rdi), %xmm1
-; AVX-NEXT:    vpaddw {{.*}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = zero,xmm0[2,2,3]
 ; AVX-NEXT:    vmovdqa %xmm1, (%rdi)
 ; AVX-NEXT:    retq

@@ -882,7 +882,7 @@ define void @test_cca_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jbe .LBB28_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB28_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -894,7 +894,7 @@ define void @test_cca_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jbe .LBB28_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB28_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -922,7 +922,7 @@ define void @test_ccae_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jb .LBB29_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB29_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -934,7 +934,7 @@ define void @test_ccae_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jb .LBB29_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB29_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -962,7 +962,7 @@ define void @test_ccb_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jae .LBB30_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB30_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -974,7 +974,7 @@ define void @test_ccb_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jae .LBB30_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB30_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1002,7 +1002,7 @@ define void @test_ccbe_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    ja .LBB31_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB31_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1014,7 +1014,7 @@ define void @test_ccbe_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    ja .LBB31_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB31_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1042,7 +1042,7 @@ define void @test_ccc_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jae .LBB32_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB32_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1054,7 +1054,7 @@ define void @test_ccc_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jae .LBB32_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB32_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1082,7 +1082,7 @@ define void @test_cce_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jne .LBB33_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB33_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1094,7 +1094,7 @@ define void @test_cce_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jne .LBB33_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB33_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1122,7 +1122,7 @@ define void @test_ccz_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jne .LBB34_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB34_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1134,7 +1134,7 @@ define void @test_ccz_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jne .LBB34_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB34_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1162,7 +1162,7 @@ define void @test_ccg_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jle .LBB35_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB35_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1174,7 +1174,7 @@ define void @test_ccg_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jle .LBB35_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB35_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1202,7 +1202,7 @@ define void @test_ccge_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jl .LBB36_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB36_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1214,7 +1214,7 @@ define void @test_ccge_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jl .LBB36_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB36_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1242,7 +1242,7 @@ define void @test_ccl_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jge .LBB37_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB37_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1254,7 +1254,7 @@ define void @test_ccl_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jge .LBB37_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB37_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1282,7 +1282,7 @@ define void @test_ccle_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jg .LBB38_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB38_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1294,7 +1294,7 @@ define void @test_ccle_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jg .LBB38_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB38_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1322,7 +1322,7 @@ define void @test_ccna_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    ja .LBB39_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB39_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1334,7 +1334,7 @@ define void @test_ccna_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    ja .LBB39_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB39_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1362,7 +1362,7 @@ define void @test_ccnae_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jae .LBB40_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB40_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1374,7 +1374,7 @@ define void @test_ccnae_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jae .LBB40_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB40_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1402,7 +1402,7 @@ define void @test_ccnb_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jb .LBB41_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB41_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1414,7 +1414,7 @@ define void @test_ccnb_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jb .LBB41_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB41_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1442,7 +1442,7 @@ define void @test_ccnbe_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jbe .LBB42_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB42_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1454,7 +1454,7 @@ define void @test_ccnbe_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jbe .LBB42_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB42_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1482,7 +1482,7 @@ define void @test_ccnc_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jb .LBB43_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB43_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1494,7 +1494,7 @@ define void @test_ccnc_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jb .LBB43_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB43_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1522,7 +1522,7 @@ define void @test_ccne_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    je .LBB44_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB44_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1534,7 +1534,7 @@ define void @test_ccne_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    je .LBB44_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB44_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1562,7 +1562,7 @@ define void @test_ccnz_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    je .LBB45_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB45_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1574,7 +1574,7 @@ define void @test_ccnz_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    je .LBB45_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB45_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1602,7 +1602,7 @@ define void @test_ccng_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jg .LBB46_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB46_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1614,7 +1614,7 @@ define void @test_ccng_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jg .LBB46_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB46_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1642,7 +1642,7 @@ define void @test_ccnge_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jge .LBB47_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB47_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1654,7 +1654,7 @@ define void @test_ccnge_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jge .LBB47_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB47_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1682,7 +1682,7 @@ define void @test_ccnl_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jl .LBB48_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB48_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1694,7 +1694,7 @@ define void @test_ccnl_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jl .LBB48_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB48_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1722,7 +1722,7 @@ define void @test_ccnle_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jle .LBB49_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB49_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1734,7 +1734,7 @@ define void @test_ccnle_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jle .LBB49_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB49_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1762,7 +1762,7 @@ define void @test_ccno_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jo .LBB50_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB50_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1774,7 +1774,7 @@ define void @test_ccno_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jo .LBB50_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB50_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1802,7 +1802,7 @@ define void @test_ccnp_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jp .LBB51_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB51_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1814,7 +1814,7 @@ define void @test_ccnp_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jp .LBB51_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB51_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1842,7 +1842,7 @@ define void @test_ccns_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    js .LBB52_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB52_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1854,7 +1854,7 @@ define void @test_ccns_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    js .LBB52_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB52_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1882,7 +1882,7 @@ define void @test_cco_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jno .LBB53_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB53_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1894,7 +1894,7 @@ define void @test_cco_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jno .LBB53_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB53_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1922,7 +1922,7 @@ define void @test_ccp_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jnp .LBB54_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB54_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1934,7 +1934,7 @@ define void @test_ccp_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jnp .LBB54_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB54_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
@@ -1962,7 +1962,7 @@ define void @test_ccs_branch(i64 %nr, i64* %addr) nounwind {
 ; X32-NEXT:    #NO_APP
 ; X32-NEXT:    jns .LBB55_2
 ; X32-NEXT:  # %bb.1: # %then
-; X32-NEXT:    calll bar
+; X32-NEXT:    calll bar@PLT
 ; X32-NEXT:  .LBB55_2: # %exit
 ; X32-NEXT:    retl
 ;
@@ -1974,7 +1974,7 @@ define void @test_ccs_branch(i64 %nr, i64* %addr) nounwind {
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jns .LBB55_2
 ; X64-NEXT:  # %bb.1: # %then
-; X64-NEXT:    callq bar
+; X64-NEXT:    callq bar@PLT
 ; X64-NEXT:  .LBB55_2: # %exit
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq

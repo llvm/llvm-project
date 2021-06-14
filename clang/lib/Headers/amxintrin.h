@@ -241,6 +241,14 @@ _tile_loadd_internal(unsigned short m, unsigned short n, const void *base,
 
 /// This is internal intrinsic. C/C++ user should avoid calling it directly.
 static __inline__ _tile1024i __DEFAULT_FN_ATTRS_INT8
+_tile_loaddt1_internal(unsigned short m, unsigned short n, const void *base,
+                       __SIZE_TYPE__ stride) {
+  return __builtin_ia32_tileloaddt164_internal(m, n, base,
+                                               (__SIZE_TYPE__)(stride));
+}
+
+/// This is internal intrinsic. C/C++ user should avoid calling it directly.
+static __inline__ _tile1024i __DEFAULT_FN_ATTRS_INT8
 _tile_dpbssd_internal(unsigned short m, unsigned short n, unsigned short k,
                       _tile1024i dst, _tile1024i src1, _tile1024i src2) {
   return __builtin_ia32_tdpbssd_internal(m, n, k, dst, src1, src2);
@@ -309,6 +317,27 @@ __DEFAULT_FN_ATTRS_TILE
 static void __tile_loadd(__tile1024i *dst, const void *base,
                          __SIZE_TYPE__ stride) {
   dst->tile = _tile_loadd_internal(dst->row, dst->col, base, stride);
+}
+
+/// Load tile rows from memory specifieid by "base" address and "stride" into
+/// destination tile "dst". This intrinsic provides a hint to the implementation
+/// that the data will likely not be reused in the near future and the data
+/// caching can be optimized accordingly.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the <c> TILELOADDT1 </c> instruction.
+///
+/// \param dst
+///    A destination tile. Max size is 1024 Bytes.
+/// \param base
+///    A pointer to base address.
+/// \param stride
+///    The stride between the rows' data to be loaded in memory.
+__DEFAULT_FN_ATTRS_TILE
+static void __tile_stream_loadd(__tile1024i *dst, const void *base,
+                                __SIZE_TYPE__ stride) {
+  dst->tile = _tile_loaddt1_internal(dst->row, dst->col, base, stride);
 }
 
 /// Compute dot-product of bytes in tiles with a source/destination accumulator.

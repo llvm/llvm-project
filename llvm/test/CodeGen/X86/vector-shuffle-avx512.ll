@@ -340,12 +340,12 @@ define <32 x i16> @test_mm512_mask_blend_epi16(<32 x i16> %A, <32 x i16> %W){
 ;
 ; KNL64-LABEL: test_mm512_mask_blend_epi16:
 ; KNL64:       # %bb.0: # %entry
-; KNL64-NEXT:    vpternlogd $216, {{.*}}(%rip){1to16}, %zmm1, %zmm0
+; KNL64-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm0
 ; KNL64-NEXT:    retq
 ;
 ; KNL32-LABEL: test_mm512_mask_blend_epi16:
 ; KNL32:       # %bb.0: # %entry
-; KNL32-NEXT:    vpternlogd $216, {{\.LCPI[0-9]+_[0-9]+}}{1to16}, %zmm1, %zmm0
+; KNL32-NEXT:    vpternlogd $216, {{\.?LCPI[0-9]+_[0-9]+}}{1to16}, %zmm1, %zmm0
 ; KNL32-NEXT:    retl
 entry:
   %0 = shufflevector <32 x i16> %A, <32 x i16> %W, <32 x i32>  <i32 32, i32 1, i32 34, i32 3, i32 36, i32 5, i32 38, i32 7, i32 40, i32 9, i32 42, i32 11, i32 44, i32 13, i32 46, i32 15, i32 48, i32 17, i32 50, i32 19, i32 52, i32 21, i32 54, i32 23, i32 56, i32 25, i32 58, i32 27, i32 60, i32 29, i32 62, i32 31>
@@ -617,14 +617,14 @@ define <32 x float> @PR47534(<8 x float> %tmp) {
 define void @PR43170(<16 x float>* %a0) {
 ; SKX64-LABEL: PR43170:
 ; SKX64:       # %bb.0: # %entry
-; SKX64-NEXT:    vmovaps {{.*}}(%rip), %ymm0
+; SKX64-NEXT:    vmovaps src1(%rip), %ymm0
 ; SKX64-NEXT:    vmovaps %zmm0, (%rdi)
 ; SKX64-NEXT:    vzeroupper
 ; SKX64-NEXT:    retq
 ;
 ; KNL64-LABEL: PR43170:
 ; KNL64:       # %bb.0: # %entry
-; KNL64-NEXT:    vmovaps {{.*}}(%rip), %ymm0
+; KNL64-NEXT:    vmovaps src1(%rip), %ymm0
 ; KNL64-NEXT:    vmovaps %zmm0, (%rdi)
 ; KNL64-NEXT:    retq
 ;

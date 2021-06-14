@@ -4,26 +4,28 @@
 define void @test_amx(i8* %pointer, i8* %base, i64 %stride) {
 ; CHECK-LABEL: test_amx:
 ; CHECK:       # %bb.0:
-  call void @llvm.x86.ldtilecfg(i8* %pointer)
 ; CHECK-NEXT:    ldtilecfg (%rdi)
+; CHECK-NEXT:    sttilecfg (%rdi)
+; CHECK-NEXT:    tilerelease
+; CHECK-NEXT:    tilezero %tmm3
+; CHECK-NEXT:    tileloadd (%rsi,%rdx), %tmm3
+; CHECK-NEXT:    tileloaddt1 (%rsi,%rdx), %tmm3
+; CHECK-NEXT:    tilestored %tmm3, (%rsi,%rdx)
+; CHECK-NEXT:    tilerelease
+; CHECK-NEXT:    retq
+  call void @llvm.x86.ldtilecfg(i8* %pointer)
 
   call void @llvm.x86.sttilecfg(i8* %pointer)
-; CHECK-NEXT:    sttilecfg (%rdi)
 
   call void @llvm.x86.tilerelease()
-; CHECK-NEXT:    tilerelease
 
   call void @llvm.x86.tilezero(i8 3)
-; CHECK-NEXT:    tilezero %tmm3
 
   call void @llvm.x86.tileloadd64(i8 3, i8* %base, i64 %stride)
-; CHECK-NEXT:    tileloadd (%rsi,%rdx), %tmm3
 
   call void @llvm.x86.tileloaddt164(i8 3, i8* %base, i64 %stride)
-; CHECK-NEXT:    tileloaddt1 (%rsi,%rdx), %tmm3
 
   call void @llvm.x86.tilestored64(i8 3, i8* %base, i64 %stride)
-; CHECK-NEXT:    tilestored %tmm3, (%rsi,%rdx)
   ret void
 }
 

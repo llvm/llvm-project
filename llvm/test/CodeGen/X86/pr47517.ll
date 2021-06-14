@@ -30,6 +30,11 @@ entry:
 ; To ensure negated result will not be removed when NegX=NegY and
 ; NegX is needed
 define float @test2(float %x, float %y) {
+; CHECK-LABEL: test2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    retq
   %add = fadd fast float %x, 750.0
   %sub = fsub fast float %x, %add
   %mul = fmul fast float %sub, %sub

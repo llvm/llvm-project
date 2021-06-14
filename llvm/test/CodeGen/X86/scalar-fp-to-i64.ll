@@ -267,7 +267,7 @@ define i64 @f_to_u64(float %a) nounwind {
 ; X87-LIN:       # %bb.0:
 ; X87-LIN-NEXT:    subl $20, %esp
 ; X87-LIN-NEXT:    flds {{[0-9]+}}(%esp)
-; X87-LIN-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
+; X87-LIN-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X87-LIN-NEXT:    fucom %st(1)
 ; X87-LIN-NEXT:    fnstsw %ax
 ; X87-LIN-NEXT:    xorl %edx, %edx
@@ -691,7 +691,7 @@ define i64 @d_to_u64(double %a) nounwind {
 ; X87-LIN:       # %bb.0:
 ; X87-LIN-NEXT:    subl $20, %esp
 ; X87-LIN-NEXT:    fldl {{[0-9]+}}(%esp)
-; X87-LIN-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
+; X87-LIN-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X87-LIN-NEXT:    fucom %st(1)
 ; X87-LIN-NEXT:    fnstsw %ax
 ; X87-LIN-NEXT:    xorl %edx, %edx
@@ -914,7 +914,7 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X86-AVX512-LIN:       # %bb.0:
 ; X86-AVX512-LIN-NEXT:    subl $12, %esp
 ; X86-AVX512-LIN-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-AVX512-LIN-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
+; X86-AVX512-LIN-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-AVX512-LIN-NEXT:    xorl %edx, %edx
 ; X86-AVX512-LIN-NEXT:    fucomi %st(1), %st
 ; X86-AVX512-LIN-NEXT:    fldz
@@ -933,7 +933,7 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X64-AVX512-WIN:       # %bb.0:
 ; X64-AVX512-WIN-NEXT:    pushq %rax
 ; X64-AVX512-WIN-NEXT:    fldt (%rcx)
-; X64-AVX512-WIN-NEXT:    flds __real@{{.*}}(%rip)
+; X64-AVX512-WIN-NEXT:    flds __real@5f000000(%rip)
 ; X64-AVX512-WIN-NEXT:    xorl %eax, %eax
 ; X64-AVX512-WIN-NEXT:    fucomi %st(1), %st
 ; X64-AVX512-WIN-NEXT:    fldz
@@ -950,7 +950,7 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X64-AVX512-LIN-LABEL: x_to_u64:
 ; X64-AVX512-LIN:       # %bb.0:
 ; X64-AVX512-LIN-NEXT:    fldt {{[0-9]+}}(%rsp)
-; X64-AVX512-LIN-NEXT:    flds {{.*}}(%rip)
+; X64-AVX512-LIN-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
 ; X64-AVX512-LIN-NEXT:    xorl %eax, %eax
 ; X64-AVX512-LIN-NEXT:    fucomi %st(1), %st
 ; X64-AVX512-LIN-NEXT:    fldz
@@ -990,7 +990,7 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X86-SSE3-LIN:       # %bb.0:
 ; X86-SSE3-LIN-NEXT:    subl $12, %esp
 ; X86-SSE3-LIN-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-SSE3-LIN-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
+; X86-SSE3-LIN-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-SSE3-LIN-NEXT:    xorl %edx, %edx
 ; X86-SSE3-LIN-NEXT:    fucomi %st(1), %st
 ; X86-SSE3-LIN-NEXT:    fldz
@@ -1009,7 +1009,7 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X64-SSE3-WIN:       # %bb.0:
 ; X64-SSE3-WIN-NEXT:    pushq %rax
 ; X64-SSE3-WIN-NEXT:    fldt (%rcx)
-; X64-SSE3-WIN-NEXT:    flds __real@{{.*}}(%rip)
+; X64-SSE3-WIN-NEXT:    flds __real@5f000000(%rip)
 ; X64-SSE3-WIN-NEXT:    xorl %eax, %eax
 ; X64-SSE3-WIN-NEXT:    fucomi %st(1), %st
 ; X64-SSE3-WIN-NEXT:    fldz
@@ -1026,7 +1026,7 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X64-SSE3-LIN-LABEL: x_to_u64:
 ; X64-SSE3-LIN:       # %bb.0:
 ; X64-SSE3-LIN-NEXT:    fldt {{[0-9]+}}(%rsp)
-; X64-SSE3-LIN-NEXT:    flds {{.*}}(%rip)
+; X64-SSE3-LIN-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
 ; X64-SSE3-LIN-NEXT:    xorl %eax, %eax
 ; X64-SSE3-LIN-NEXT:    fucomi %st(1), %st
 ; X64-SSE3-LIN-NEXT:    fldz
@@ -1072,7 +1072,7 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X86-SSE2-LIN:       # %bb.0:
 ; X86-SSE2-LIN-NEXT:    subl $20, %esp
 ; X86-SSE2-LIN-NEXT:    fldt {{[0-9]+}}(%esp)
-; X86-SSE2-LIN-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
+; X86-SSE2-LIN-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-SSE2-LIN-NEXT:    xorl %edx, %edx
 ; X86-SSE2-LIN-NEXT:    fucomi %st(1), %st
 ; X86-SSE2-LIN-NEXT:    setbe %dl
@@ -1097,7 +1097,7 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X64-SSE2-WIN:       # %bb.0:
 ; X64-SSE2-WIN-NEXT:    subq $16, %rsp
 ; X64-SSE2-WIN-NEXT:    fldt (%rcx)
-; X64-SSE2-WIN-NEXT:    flds __real@{{.*}}(%rip)
+; X64-SSE2-WIN-NEXT:    flds __real@5f000000(%rip)
 ; X64-SSE2-WIN-NEXT:    xorl %eax, %eax
 ; X64-SSE2-WIN-NEXT:    fucomi %st(1), %st
 ; X64-SSE2-WIN-NEXT:    setbe %al
@@ -1120,7 +1120,7 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X64-SSE2-LIN-LABEL: x_to_u64:
 ; X64-SSE2-LIN:       # %bb.0:
 ; X64-SSE2-LIN-NEXT:    fldt {{[0-9]+}}(%rsp)
-; X64-SSE2-LIN-NEXT:    flds {{.*}}(%rip)
+; X64-SSE2-LIN-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
 ; X64-SSE2-LIN-NEXT:    xorl %eax, %eax
 ; X64-SSE2-LIN-NEXT:    fucomi %st(1), %st
 ; X64-SSE2-LIN-NEXT:    setbe %al
@@ -1180,7 +1180,7 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X87-LIN:       # %bb.0:
 ; X87-LIN-NEXT:    subl $20, %esp
 ; X87-LIN-NEXT:    fldt {{[0-9]+}}(%esp)
-; X87-LIN-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
+; X87-LIN-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X87-LIN-NEXT:    fucom %st(1)
 ; X87-LIN-NEXT:    fnstsw %ax
 ; X87-LIN-NEXT:    xorl %edx, %edx

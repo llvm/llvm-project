@@ -43,7 +43,7 @@ define void @test3(i8 %x) nounwind readnone {
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    andl $-32, %eax
 ; CHECK-NEXT:    pushl %eax
-; CHECK-NEXT:    calll use
+; CHECK-NEXT:    calll use@PLT
 ; CHECK-NEXT:    addl $28, %esp
 ; CHECK-NEXT:    retl
   %A = and i8 %x, -32

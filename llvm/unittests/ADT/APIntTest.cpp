@@ -1461,7 +1461,10 @@ TEST(APIntTest, mul_clear) {
   APInt ValC(65, 0);
   ValC = ValA * ValB;
   ValA *= ValB;
-  EXPECT_EQ(ValA.toString(10, false), ValC.toString(10, false));
+  SmallString<16> StrA, StrC;
+  ValA.toString(StrA, 10, false);
+  ValC.toString(StrC, 10, false);
+  EXPECT_EQ(std::string(StrA), std::string(StrC));
 }
 
 TEST(APIntTest, Rotate) {

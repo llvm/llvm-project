@@ -166,7 +166,7 @@ define float @foo3(float* nocapture readonly %A) #0 {
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x float> [[TMP7]], i32 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> poison, float [[TMP13]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x float> [[TMP14]], float [[TMP10]], i32 1
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x float> [[TMP12]], <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x float> [[TMP12]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <4 x float> [[TMP15]], <4 x float> [[TMP16]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP18:%.*]] = fmul <4 x float> [[TMP17]], <float 8.000000e+00, float 9.000000e+00, float 1.000000e+01, float 1.100000e+01>
 ; CHECK-NEXT:    [[TMP19]] = fadd <4 x float> [[TMP6]], [[TMP18]]

@@ -8,7 +8,7 @@
 define void @test_float(float* %a , float %b) {
 ; CHECK64_SMALL-LABEL: test_float:
 ; CHECK64_SMALL:       # %bb.0: # %entry
-; CHECK64_SMALL-NEXT:    movss .LCPI0_0(%rip), %xmm1 # xmm1 = mem[0],zero,zero,zero
+; CHECK64_SMALL-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK64_SMALL-NEXT:    addss %xmm0, %xmm1
 ; CHECK64_SMALL-NEXT:    movd %xmm1, %eax
 ; CHECK64_SMALL-NEXT:    movl %eax, (%rdi)
@@ -16,7 +16,7 @@ define void @test_float(float* %a , float %b) {
 ;
 ; CHECK64_LARGE-LABEL: test_float:
 ; CHECK64_LARGE:       # %bb.0: # %entry
-; CHECK64_LARGE-NEXT:    movabsq $.LCPI0_0, %rax
+; CHECK64_LARGE-NEXT:    movabsq ${{\.?LCPI[0-9]+_[0-9]+}}, %rax
 ; CHECK64_LARGE-NEXT:    addss (%rax), %xmm0
 ; CHECK64_LARGE-NEXT:    movd %xmm0, %eax
 ; CHECK64_LARGE-NEXT:    movl %eax, (%rdi)
@@ -24,9 +24,9 @@ define void @test_float(float* %a , float %b) {
 ;
 ; CHECK32-LABEL: test_float:
 ; CHECK32:       # %bb.0: # %entry
-; CHECK32-NEXT:    movl 4(%esp), %eax
-; CHECK32-NEXT:    movl 8(%esp), %ecx
-; CHECK32-NEXT:    movss .LCPI0_0, %xmm0 # xmm0 = mem[0],zero,zero,zero
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK32-NEXT:    movd %ecx, %xmm1
 ; CHECK32-NEXT:    addss %xmm0, %xmm1
 ; CHECK32-NEXT:    movd %xmm1, %ecx

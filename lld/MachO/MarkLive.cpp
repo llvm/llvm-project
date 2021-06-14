@@ -30,20 +30,25 @@ void markLive() {
   // We build up a worklist of sections which have been marked as live. We only
   // push into the worklist when we discover an unmarked section, and we mark
   // as we push, so sections never appear twice in the list.
-  SmallVector<InputSection *, 256> worklist;
+  // Literal sections cannot contain references to other sections, so we only
+  // store ConcatInputSections in our worklist.
+  SmallVector<ConcatInputSection *, 256> worklist;
 
-  auto enqueue = [&](InputSection *s) {
-    if (s->live)
+  auto enqueue = [&](InputSection *isec, uint64_t off) {
+    if (isec->isLive(off))
       return;
-    s->live = true;
-    worklist.push_back(s);
+    isec->markLive(off);
+    if (auto s = dyn_cast<ConcatInputSection>(isec)) {
+      assert(!s->isCoalescedWeak());
+      worklist.push_back(s);
+    }
   };
 
   auto addSym = [&](Symbol *s) {
     s->used = true;
     if (auto *d = dyn_cast<Defined>(s))
       if (d->isec)
-        enqueue(d->isec);
+        enqueue(d->isec, d->value);
   };
 
   // Add GC roots.
@@ -99,14 +104,16 @@ void markLive() {
   for (InputSection *isec : inputSections) {
     // Sections marked no_dead_strip
     if (isec->flags & S_ATTR_NO_DEAD_STRIP) {
-      enqueue(isec);
+      assert(isa<ConcatInputSection>(isec));
+      enqueue(isec, 0);
       continue;
     }
 
     // mod_init_funcs, mod_term_funcs sections
     if (sectionType(isec->flags) == S_MOD_INIT_FUNC_POINTERS ||
         sectionType(isec->flags) == S_MOD_TERM_FUNC_POINTERS) {
-      enqueue(isec);
+      assert(isa<ConcatInputSection>(isec));
+      enqueue(isec, 0);
       continue;
     }
 
@@ -119,7 +126,8 @@ void markLive() {
     // See also scanEhFrameSection() in lld/ELF/MarkLive.cpp.
     if (isec->segname == segment_names::ld &&
         isec->name == section_names::compactUnwind) {
-      isec->live = true;
+      auto concatIsec = cast<ConcatInputSection>(isec);
+      concatIsec->live = true;
       const int compactUnwindEntrySize =
           target->wordSize == 8 ? sizeof(CompactUnwindEntry<uint64_t>)
                                 : sizeof(CompactUnwindEntry<uint32_t>);
@@ -131,11 +139,8 @@ void markLive() {
 
         if (auto *s = r.referent.dyn_cast<Symbol *>())
           addSym(s);
-        else {
-          auto *referentIsec = r.referent.get<InputSection *>();
-          assert(!referentIsec->isCoalescedWeak());
-          enqueue(referentIsec);
-        }
+        else
+          enqueue(r.referent.get<InputSection *>(), r.addend);
       }
       continue;
     }
@@ -144,27 +149,27 @@ void markLive() {
   do {
     // Mark things reachable from GC roots as live.
     while (!worklist.empty()) {
-      InputSection *s = worklist.pop_back_val();
+      ConcatInputSection *s = worklist.pop_back_val();
       assert(s->live && "We mark as live when pushing onto the worklist!");
 
       // Mark all symbols listed in the relocation table for this section.
       for (const Reloc &r : s->relocs) {
-        if (auto *s = r.referent.dyn_cast<Symbol *>()) {
+        if (auto *s = r.referent.dyn_cast<Symbol *>())
           addSym(s);
-        } else {
-          auto *referentIsec = r.referent.get<InputSection *>();
-          assert(!referentIsec->isCoalescedWeak());
-          enqueue(referentIsec);
-        }
+        else
+          enqueue(r.referent.get<InputSection *>(), r.addend);
       }
     }
 
     // S_ATTR_LIVE_SUPPORT sections are live if they point _to_ a live section.
     // Process them in a second pass.
     for (InputSection *isec : inputSections) {
+      if (!isa<ConcatInputSection>(isec))
+        continue;
+      auto concatIsec = cast<ConcatInputSection>(isec);
       // FIXME: Check if copying all S_ATTR_LIVE_SUPPORT sections into a
       // separate vector and only walking that here is faster.
-      if (!(isec->flags & S_ATTR_LIVE_SUPPORT) || isec->live)
+      if (!(concatIsec->flags & S_ATTR_LIVE_SUPPORT) || concatIsec->live)
         continue;
 
       for (const Reloc &r : isec->relocs) {
@@ -172,9 +177,9 @@ void markLive() {
         if (auto *s = r.referent.dyn_cast<Symbol *>())
           referentLive = s->isLive();
         else
-          referentLive = r.referent.get<InputSection *>()->live;
+          referentLive = r.referent.get<InputSection *>()->isLive(r.addend);
         if (referentLive)
-          enqueue(isec);
+          enqueue(isec, 0);
       }
     }
 

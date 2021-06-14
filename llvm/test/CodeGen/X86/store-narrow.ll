@@ -191,7 +191,7 @@ entry:
 define void @test8() nounwind {
 ; X64-LABEL: test8:
 ; X64:       ## %bb.0:
-; X64-NEXT:    orb $1, {{.*}}(%rip)
+; X64-NEXT:    orb $1, _g_16(%rip)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test8:
@@ -208,7 +208,7 @@ define void @test8() nounwind {
 define void @test9() nounwind {
 ; X64-LABEL: test9:
 ; X64:       ## %bb.0:
-; X64-NEXT:    orb $1, {{.*}}(%rip)
+; X64-NEXT:    orb $1, _g_16(%rip)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test9:

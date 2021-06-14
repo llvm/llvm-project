@@ -17,7 +17,6 @@
 #include "llvm/Transforms/IPO/SampleContextTracker.h"
 #include <queue>
 #include <set>
-#include <string>
 
 using namespace llvm;
 using namespace sampleprof;

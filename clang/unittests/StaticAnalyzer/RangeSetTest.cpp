@@ -28,7 +28,7 @@ template <class RangeOrSet> static std::string toString(const RangeOrSet &Obj) {
   return SS.str();
 }
 LLVM_ATTRIBUTE_UNUSED static std::string toString(const llvm::APSInt &Point) {
-  return Point.toString(10);
+  return toString(Point, 10);
 }
 // We need it here for better fail diagnostics from gtest.
 LLVM_ATTRIBUTE_UNUSED static std::ostream &operator<<(std::ostream &OS,

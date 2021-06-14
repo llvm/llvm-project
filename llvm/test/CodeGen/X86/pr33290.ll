@@ -21,16 +21,16 @@ define dso_local void @e() {
 ;
 ; X64-LABEL: e:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq {{.*}}(%rip), %rax
+; X64-NEXT:    movq b(%rip), %rax
 ; X64-NEXT:    .p2align 4, 0x90
 ; X64-NEXT:  .LBB0_1: # %for.cond
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    movzbl {{.*}}(%rip), %ecx
+; X64-NEXT:    movzbl c(%rip), %ecx
 ; X64-NEXT:    addq $a, %rcx
 ; X64-NEXT:    setb %dl
 ; X64-NEXT:    addq $2, %rcx
 ; X64-NEXT:    adcb $0, %dl
-; X64-NEXT:    movb %dl, {{.*}}(%rip)
+; X64-NEXT:    movb %dl, c(%rip)
 ; X64-NEXT:    movl %ecx, (%rax)
 ; X64-NEXT:    jmp .LBB0_1
 entry:

@@ -27,7 +27,7 @@ define cc 11 i32 @caller(i32 %a0, i32 %b0, i32 %c0, i32 %d0, i32 %e0) nounwind {
 ; CHECK-NEXT:    movl %ebx, %edi
 ; CHECK-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
 ; CHECK-NEXT:    movl %ebp, %esi
-; CHECK-NEXT:    calll callee
+; CHECK-NEXT:    calll callee@PLT
 ; CHECK-NEXT:    leal (%eax,%ebx), %esi
 ; CHECK-NEXT:    addl %ebp, %esi
 ; CHECK-NEXT:    addl $12, %esp
