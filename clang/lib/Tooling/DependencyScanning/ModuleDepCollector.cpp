@@ -173,11 +173,13 @@ void ModuleDepCollectorPP::EndOfMainFile() {
   for (const Module *M : DirectModularDeps)
     handleTopLevelModule(M);
 
+  MDC.Consumer.handleDependencyOutputOpts(*MDC.Opts);
+
   for (auto &&I : MDC.ModularDeps)
     MDC.Consumer.handleModuleDependency(I.second);
 
   for (auto &&I : MDC.FileDeps)
-    MDC.Consumer.handleFileDependency(*MDC.Opts, I);
+    MDC.Consumer.handleFileDependency(I);
 
   for (auto &&I : DirectPrebuiltModularDeps)
     MDC.Consumer.handlePrebuiltModuleDependency(PrebuiltModuleDep{I});
