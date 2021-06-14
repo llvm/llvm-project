@@ -326,16 +326,6 @@ public:
   Defined *dyldPrivate = nullptr;
 };
 
-// This section contains space for just a single word, and will be used by dyld
-// to cache an address to the image loader it uses. Note that unlike the other
-// synthetic sections, which are OutputSections, the ImageLoaderCacheSection is
-// an InputSection that gets merged into the __data OutputSection.
-class ImageLoaderCacheSection : public ConcatInputSection {
-public:
-  ImageLoaderCacheSection();
-  uint64_t getSize() const override { return target->wordSize; }
-};
-
 // Note that this section may also be targeted by non-lazy bindings. In
 // particular, this happens when branch relocations target weak symbols.
 class LazyPointerSection : public SyntheticSection {
@@ -600,8 +590,8 @@ struct InStruct {
   LazyPointerSection *lazyPointers = nullptr;
   StubsSection *stubs = nullptr;
   StubHelperSection *stubHelper = nullptr;
-  ImageLoaderCacheSection *imageLoaderCache = nullptr;
   UnwindInfoSection *unwindInfo = nullptr;
+  ConcatInputSection *imageLoaderCache = nullptr;
 };
 
 extern InStruct in;

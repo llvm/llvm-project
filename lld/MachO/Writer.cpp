@@ -1070,8 +1070,18 @@ void macho::createSyntheticSections() {
   in.lazyPointers = make<LazyPointerSection>();
   in.stubs = make<StubsSection>();
   in.stubHelper = make<StubHelperSection>();
-  in.imageLoaderCache = make<ImageLoaderCacheSection>();
   in.unwindInfo = makeUnwindInfoSection();
+
+  // This section contains space for just a single word, and will be used by
+  // dyld to cache an address to the image loader it uses.
+  ArrayRef<uint8_t> data{bAlloc.Allocate<uint8_t>(target->wordSize),
+                         target->wordSize};
+  in.imageLoaderCache = make<ConcatInputSection>(
+      segment_names::data, section_names::data, /*file=*/nullptr, data,
+      /*align=*/target->wordSize, /*flags=*/S_REGULAR);
+  // References from dyld are not visible to us, so ensure this section is
+  // always treated as live.
+  in.imageLoaderCache->live = true;
 }
 
 OutputSection *macho::firstTLVDataSection = nullptr;
