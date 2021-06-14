@@ -89,6 +89,17 @@ END_REGISTER_VP_SDNODE(SDOPC)
 #define HANDLE_VP_TO_OPC(OPC)
 #endif
 
+// Whether the intrinsic may have a rounding mode or exception behavior operand
+// bundle.
+// \p HASROUND   '1' if the intrinsic can have a rounding mode operand bundle,
+//               '0' otherwise.
+// \p HASEXCEPT  '1' if the intrinsic can have an exception behavior operand
+//               bundle, '0' otherwise.
+// \p INTRINID  The constrained fp intrinsic this VP intrinsic corresponds to.
+#ifndef HANDLE_VP_TO_CONSTRAINEDFP
+#define HANDLE_VP_TO_CONSTRAINEDFP(HASROUND, HASEXCEPT, INTRINID)
+#endif
+
 /// } Property Macros
 
 ///// Integer Arithmetic {
@@ -147,6 +158,38 @@ HELPER_REGISTER_BINARY_INT_VP(vp_xor, VP_XOR, Xor)
 
 ///// } Integer Arithmetic
 
+///// Floating-Point Arithmetic {
+
+// Specialized helper macro for floating-point binary operators
+// <operation>(%x, %y, %mask, %evl).
+#ifdef HELPER_REGISTER_BINARY_FP_VP
+#error                                                                         \
+    "The internal helper macro HELPER_REGISTER_BINARY_FP_VP is already defined!"
+#endif
+#define HELPER_REGISTER_BINARY_FP_VP(OPSUFFIX, SDOPC, OPC)                     \
+  BEGIN_REGISTER_VP(vp_##OPSUFFIX, 2, 3, SDOPC, -1)                            \
+  HANDLE_VP_TO_OPC(OPC)                                                        \
+  HANDLE_VP_TO_CONSTRAINEDFP(1, 1, experimental_constrained_##OPSUFFIX)        \
+  END_REGISTER_VP(vp_##OPSUFFIX, SDOPC)
+
+// llvm.vp.fadd(x,y,mask,vlen)
+HELPER_REGISTER_BINARY_FP_VP(fadd, VP_FADD, FAdd)
+
+// llvm.vp.fsub(x,y,mask,vlen)
+HELPER_REGISTER_BINARY_FP_VP(fsub, VP_FSUB, FSub)
+
+// llvm.vp.fmul(x,y,mask,vlen)
+HELPER_REGISTER_BINARY_FP_VP(fmul, VP_FMUL, FMul)
+
+// llvm.vp.fdiv(x,y,mask,vlen)
+HELPER_REGISTER_BINARY_FP_VP(fdiv, VP_FDIV, FDiv)
+
+// llvm.vp.frem(x,y,mask,vlen)
+HELPER_REGISTER_BINARY_FP_VP(frem, VP_FREM, FRem)
+
+#undef HELPER_REGISTER_BINARY_FP_VP
+
+///// } Floating-Point Arithmetic
 
 #undef BEGIN_REGISTER_VP
 #undef BEGIN_REGISTER_VP_INTRINSIC
@@ -155,3 +198,4 @@ HELPER_REGISTER_BINARY_INT_VP(vp_xor, VP_XOR, Xor)
 #undef END_REGISTER_VP_INTRINSIC
 #undef END_REGISTER_VP_SDNODE
 #undef HANDLE_VP_TO_OPC
+#undef HANDLE_VP_TO_CONSTRAINEDFP
