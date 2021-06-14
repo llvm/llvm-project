@@ -78,7 +78,7 @@ public:
 };
 
 // LC_DYLD_INFO_ONLY stores the offsets of symbol import/export information.
-class LCDyldInfo : public LoadCommand {
+class LCDyldInfo final : public LoadCommand {
 public:
   LCDyldInfo(RebaseSection *rebaseSection, BindingSection *bindingSection,
              WeakBindingSection *weakBindingSection,
@@ -123,7 +123,7 @@ public:
   ExportSection *exportSection;
 };
 
-class LCFunctionStarts : public LoadCommand {
+class LCFunctionStarts final : public LoadCommand {
 public:
   explicit LCFunctionStarts(FunctionStartsSection *functionStartsSection)
       : functionStartsSection(functionStartsSection) {}
@@ -142,7 +142,7 @@ private:
   FunctionStartsSection *functionStartsSection;
 };
 
-class LCDysymtab : public LoadCommand {
+class LCDysymtab final : public LoadCommand {
 public:
   LCDysymtab(SymtabSection *symtabSection,
              IndirectSymtabSection *indirectSymtabSection)
@@ -170,7 +170,7 @@ public:
   IndirectSymtabSection *indirectSymtabSection;
 };
 
-template <class LP> class LCSegment : public LoadCommand {
+template <class LP> class LCSegment final : public LoadCommand {
 public:
   LCSegment(StringRef name, OutputSegment *seg) : name(name), seg(seg) {}
 
@@ -226,7 +226,7 @@ private:
   OutputSegment *seg;
 };
 
-class LCMain : public LoadCommand {
+class LCMain final : public LoadCommand {
   uint32_t getSize() const override {
     return sizeof(structs::entry_point_command);
   }
@@ -246,7 +246,7 @@ class LCMain : public LoadCommand {
   }
 };
 
-class LCSymtab : public LoadCommand {
+class LCSymtab final : public LoadCommand {
 public:
   LCSymtab(SymtabSection *symtabSection, StringTableSection *stringTableSection)
       : symtabSection(symtabSection), stringTableSection(stringTableSection) {}
@@ -271,7 +271,7 @@ public:
 //   * LC_LOAD_DYLIB
 //   * LC_ID_DYLIB
 //   * LC_REEXPORT_DYLIB
-class LCDylib : public LoadCommand {
+class LCDylib final : public LoadCommand {
 public:
   LCDylib(LoadCommandType type, StringRef path,
           uint32_t compatibilityVersion = 0, uint32_t currentVersion = 0)
@@ -311,7 +311,7 @@ private:
 
 uint32_t LCDylib::instanceCount = 0;
 
-class LCLoadDylinker : public LoadCommand {
+class LCLoadDylinker final : public LoadCommand {
 public:
   uint32_t getSize() const override {
     return alignTo(sizeof(dylinker_command) + path.size() + 1, 8);
@@ -335,7 +335,7 @@ private:
   const StringRef path = "/usr/lib/dyld";
 };
 
-class LCRPath : public LoadCommand {
+class LCRPath final : public LoadCommand {
 public:
   explicit LCRPath(StringRef path) : path(path) {}
 
@@ -359,7 +359,7 @@ private:
   StringRef path;
 };
 
-class LCMinVersion : public LoadCommand {
+class LCMinVersion final : public LoadCommand {
 public:
   explicit LCMinVersion(const PlatformInfo &platformInfo)
       : platformInfo(platformInfo) {}
@@ -397,7 +397,7 @@ private:
   const PlatformInfo &platformInfo;
 };
 
-class LCBuildVersion : public LoadCommand {
+class LCBuildVersion final : public LoadCommand {
 public:
   explicit LCBuildVersion(const PlatformInfo &platformInfo)
       : platformInfo(platformInfo) {}
@@ -432,7 +432,7 @@ private:
 // offsets to be calculated correctly. We resolve this circular paradox by
 // first writing an LC_UUID with an all-zero UUID, then updating the UUID with
 // its real value later.
-class LCUuid : public LoadCommand {
+class LCUuid final : public LoadCommand {
 public:
   uint32_t getSize() const override { return sizeof(uuid_command); }
 
@@ -465,7 +465,7 @@ public:
   mutable uint8_t *uuidBuf;
 };
 
-template <class LP> class LCEncryptionInfo : public LoadCommand {
+template <class LP> class LCEncryptionInfo final : public LoadCommand {
 public:
   uint32_t getSize() const override {
     return sizeof(typename LP::encryption_info_command);
@@ -486,7 +486,7 @@ public:
   }
 };
 
-class LCCodeSignature : public LoadCommand {
+class LCCodeSignature final : public LoadCommand {
 public:
   LCCodeSignature(CodeSignatureSection *section) : section(section) {}
 
