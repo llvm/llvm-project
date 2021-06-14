@@ -245,6 +245,10 @@ void AsmPrinter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
   case MCCFIInstruction::OpDefCfaRegister:
     OutStreamer->emitCFIDefCfaRegister(Inst.getRegister());
     break;
+  case MCCFIInstruction::OpLLVMDefAspaceCfa:
+    OutStreamer->emitCFILLVMDefAspaceCfa(Inst.getRegister(), Inst.getOffset(),
+                                         Inst.getAddressSpace());
+    break;
   case MCCFIInstruction::OpOffset:
     OutStreamer->emitCFIOffset(Inst.getRegister(), Inst.getOffset());
     break;

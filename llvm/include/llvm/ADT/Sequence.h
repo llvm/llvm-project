@@ -15,8 +15,6 @@
 #ifndef LLVM_ADT_SEQUENCE_H
 #define LLVM_ADT_SEQUENCE_H
 
-#include "llvm/ADT/SmallVector.h"
-
 #include <cstddef>  //std::ptrdiff_t
 #include <iterator> //std::random_access_iterator_tag
 
@@ -166,8 +164,6 @@ template <typename ValueT> struct iota_range {
 
   auto rbegin() const { return const_reverse_iterator(End - 1); }
   auto rend() const { return const_reverse_iterator(Begin - 1); }
-
-  auto asSmallVector() const { return SmallVector<ValueT>(begin(), end()); }
 
 private:
   static_assert(std::is_same<ValueT, std::remove_cv_t<ValueT>>::value,

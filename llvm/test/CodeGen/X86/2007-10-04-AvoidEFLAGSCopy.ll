@@ -13,7 +13,7 @@ define fastcc void @sample_3d_linear(%struct.gl_texture_object* %tObj, %struct.g
 ; CHECK-NEXT:    movl 0, %esi
 ; CHECK-NEXT:    pushl $0
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset 4
-; CHECK-NEXT:    calll floorf
+; CHECK-NEXT:    calll floorf@PLT
 ; CHECK-NEXT:    fstp %st(0)
 ; CHECK-NEXT:    addl $4, %esp
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset -4

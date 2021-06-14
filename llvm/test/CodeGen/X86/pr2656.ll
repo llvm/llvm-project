@@ -56,7 +56,7 @@ define double @PR22371(double %x) {
 ; CHECK-NEXT:    subl $12, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    andps LCPI1_0, %xmm0
+; CHECK-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; CHECK-NEXT:    movlps %xmm0, (%esp)
 ; CHECK-NEXT:    fldl (%esp)
 ; CHECK-NEXT:    addl $12, %esp

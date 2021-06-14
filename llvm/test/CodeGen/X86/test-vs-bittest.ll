@@ -9,7 +9,7 @@ define void @test64(i64 inreg %x) {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB0_2: # %no
@@ -33,7 +33,7 @@ define void @test64_optsize(i64 inreg %x) optsize {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB1_2: # %no
@@ -57,7 +57,7 @@ define void @test64_pgso(i64 inreg %x) !prof !14 {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB2_2: # %no
@@ -86,7 +86,7 @@ define void @test64_2(i64 inreg %x) {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB3_2: # %no
@@ -110,7 +110,7 @@ define void @test64_optsize_2(i64 inreg %x) optsize {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB4_2: # %no
@@ -134,7 +134,7 @@ define void @test64_pgso_2(i64 inreg %x) !prof !14 {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB5_2: # %no
@@ -158,7 +158,7 @@ define void @test64_3(i64 inreg %x) {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB6_2: # %no
@@ -182,7 +182,7 @@ define void @test64_optsize_3(i64 inreg %x) optsize {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB7_2: # %no
@@ -206,7 +206,7 @@ define void @test64_pgso_3(i64 inreg %x) !prof !14 {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB8_2: # %no
@@ -230,7 +230,7 @@ define void @test64_4(i64 inreg %x) {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB9_2: # %no
@@ -254,7 +254,7 @@ define void @test64_optsize_4(i64 inreg %x) optsize {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB10_2: # %no
@@ -278,7 +278,7 @@ define void @test64_pgso_4(i64 inreg %x) !prof !14 {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB11_2: # %no
@@ -302,7 +302,7 @@ define void @test32(i32 inreg %x) {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB12_2: # %no
@@ -326,7 +326,7 @@ define void @test32_optsize(i32 inreg %x) optsize {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB13_2: # %no
@@ -350,7 +350,7 @@ define void @test32_2(i32 inreg %x) {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB14_2: # %no
@@ -374,7 +374,7 @@ define void @test32_optsize_2(i32 inreg %x) optsize {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB15_2: # %no
@@ -398,7 +398,7 @@ define void @test32_pgso_2(i32 inreg %x) !prof !14 {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB16_2: # %no
@@ -422,7 +422,7 @@ define void @test16(i16 inreg %x) {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB17_2: # %no
@@ -446,7 +446,7 @@ define void @test16_optsize(i16 inreg %x) optsize {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB18_2: # %no
@@ -470,7 +470,7 @@ define void @test16_pgso(i16 inreg %x) !prof !14 {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB19_2: # %no
@@ -494,7 +494,7 @@ define void @test16_2(i16 inreg %x) {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB20_2: # %no
@@ -518,7 +518,7 @@ define void @test16_optsize_2(i16 inreg %x) optsize {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB21_2: # %no
@@ -542,7 +542,7 @@ define void @test16_pgso_2(i16 inreg %x) !prof !14 {
 ; CHECK-NEXT:  # %bb.1: # %yes
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:  .LBB22_2: # %no

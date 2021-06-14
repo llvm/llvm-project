@@ -4,7 +4,7 @@
 define <16 x i16> @foo(<16 x i32> %i) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpminud {{.*}}(%rip){1to16}, %zmm0, %zmm0
+; CHECK-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
 ; CHECK-NEXT:    vpmovdw %zmm0, %ymm0
 ; CHECK-NEXT:    retq
   %x3 = icmp ult <16 x i32> %i, <i32 16843009, i32 16843009, i32 16843009, i32 16843009, i32 16843009, i32 16843009, i32 16843009, i32 16843009, i32 16843009, i32 16843009, i32 16843009, i32 16843009, i32 16843009, i32 16843009, i32 16843009, i32 16843009>

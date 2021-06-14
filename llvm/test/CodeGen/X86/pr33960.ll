@@ -12,7 +12,7 @@ define void @PR33960() {
 ;
 ; X64-LABEL: PR33960:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movl $-1, {{.*}}(%rip)
+; X64-NEXT:    movl $-1, b(%rip)
 ; X64-NEXT:    retq
 entry:
   %tmp = insertelement <4 x i32> <i32 undef, i32 -7, i32 -3, i32 undef>, i32 -2, i32 3

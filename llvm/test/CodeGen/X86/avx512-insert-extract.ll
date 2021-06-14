@@ -1657,7 +1657,7 @@ define i32 @test_insertelement_variable_v32i1(<32 x i8> %a, i8 %b, i32 %index) {
 ; SKX-NEXT:    testb %dil, %dil
 ; SKX-NEXT:    setne %al
 ; SKX-NEXT:    vpbroadcastb %esi, %ymm0
-; SKX-NEXT:    vpcmpeqb {{.*}}(%rip), %ymm0, %k1
+; SKX-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %k1
 ; SKX-NEXT:    vpmovm2b %k0, %ymm0
 ; SKX-NEXT:    vpbroadcastb %eax, %ymm0 {%k1}
 ; SKX-NEXT:    vpsllw $7, %ymm0, %ymm0
@@ -1726,7 +1726,7 @@ define i64 @test_insertelement_variable_v64i1(<64 x i8> %a, i8 %b, i32 %index) {
 ; SKX-NEXT:    testb %dil, %dil
 ; SKX-NEXT:    setne %al
 ; SKX-NEXT:    vpbroadcastb %esi, %zmm0
-; SKX-NEXT:    vpcmpeqb {{.*}}(%rip), %zmm0, %k1
+; SKX-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %k1
 ; SKX-NEXT:    vpmovm2b %k0, %zmm0
 ; SKX-NEXT:    vpbroadcastb %eax, %zmm0 {%k1}
 ; SKX-NEXT:    vpsllw $7, %zmm0, %zmm0

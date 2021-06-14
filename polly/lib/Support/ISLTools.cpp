@@ -49,7 +49,7 @@ isl::multi_aff makeShiftDimAff(isl::space Space, int Pos, int Amount) {
 isl::basic_map makeTupleSwapBasicMap(isl::space FromSpace1,
                                      isl::space FromSpace2) {
   // Fast-path on out-of-quota.
-  if (!FromSpace1 || !FromSpace2)
+  if (FromSpace1.is_null() || FromSpace2.is_null())
     return {};
 
   assert(FromSpace1.is_set());
@@ -132,27 +132,29 @@ isl::union_map polly::betweenScatter(isl::union_map From, isl::union_map To,
 }
 
 isl::map polly::singleton(isl::union_map UMap, isl::space ExpectedSpace) {
-  if (!UMap)
+  if (UMap.is_null())
     return {};
 
   if (isl_union_map_n_map(UMap.get()) == 0)
     return isl::map::empty(ExpectedSpace);
 
   isl::map Result = isl::map::from_union_map(UMap);
-  assert(!Result || Result.get_space().has_equal_tuples(ExpectedSpace));
+  assert(Result.is_null() ||
+         Result.get_space().has_equal_tuples(ExpectedSpace));
 
   return Result;
 }
 
 isl::set polly::singleton(isl::union_set USet, isl::space ExpectedSpace) {
-  if (!USet)
+  if (USet.is_null())
     return {};
 
   if (isl_union_set_n_set(USet.get()) == 0)
     return isl::set::empty(ExpectedSpace);
 
   isl::set Result(USet);
-  assert(!Result || Result.get_space().has_equal_tuples(ExpectedSpace));
+  assert(Result.is_null() ||
+         Result.get_space().has_equal_tuples(ExpectedSpace));
 
   return Result;
 }
@@ -160,7 +162,7 @@ isl::set polly::singleton(isl::union_set USet, isl::space ExpectedSpace) {
 isl_size polly::getNumScatterDims(const isl::union_map &Schedule) {
   isl_size Dims = 0;
   for (isl::map Map : Schedule.get_map_list()) {
-    if (!Map)
+    if (Map.is_null())
       continue;
 
     Dims = std::max(Dims, Map.dim(isl::dim::out));
@@ -169,7 +171,7 @@ isl_size polly::getNumScatterDims(const isl::union_map &Schedule) {
 }
 
 isl::space polly::getScatterSpace(const isl::union_map &Schedule) {
-  if (!Schedule)
+  if (Schedule.is_null())
     return {};
   unsigned Dims = getNumScatterDims(Schedule);
   isl::space ScatterSpace = Schedule.get_space().set_from_params();
@@ -444,16 +446,16 @@ isl::map polly::distributeDomain(isl::map Map) {
 
   isl::space Space = Map.get_space();
   isl::space DomainSpace = Space.domain();
-  if (!DomainSpace)
+  if (DomainSpace.is_null())
     return {};
   unsigned DomainDims = DomainSpace.dim(isl::dim::set);
   isl::space RangeSpace = Space.range().unwrap();
   isl::space Range1Space = RangeSpace.domain();
-  if (!Range1Space)
+  if (Range1Space.is_null())
     return {};
   unsigned Range1Dims = Range1Space.dim(isl::dim::set);
   isl::space Range2Space = RangeSpace.range();
-  if (!Range2Space)
+  if (Range2Space.is_null())
     return {};
   unsigned Range2Dims = Range2Space.dim(isl::dim::set);
 
@@ -539,7 +541,7 @@ isl::val polly::getConstant(isl::pw_aff PwAff, bool Max, bool Min) {
   isl::val Result;
   isl::stat Stat = PwAff.foreach_piece(
       [=, &Result](isl::set Set, isl::aff Aff) -> isl::stat {
-        if (Result && Result.is_nan())
+        if (!Result.is_null() && Result.is_nan())
           return isl::stat::ok();
 
         // TODO: If Min/Max, we can also determine a minimum/maximum value if
@@ -550,7 +552,7 @@ isl::val polly::getConstant(isl::pw_aff PwAff, bool Max, bool Min) {
         }
 
         isl::val ThisVal = Aff.get_constant_val();
-        if (!Result) {
+        if (Result.is_null()) {
           Result = ThisVal;
           return isl::stat::ok();
         }
@@ -600,7 +602,7 @@ static void foreachPoint(isl::basic_set BSet,
 /// dimensions are considered first.
 static int flatCompare(const isl::basic_set &A, const isl::basic_set &B) {
   // Quick bail-out on out-of-quota.
-  if (!A || !B)
+  if (A.is_null() || B.is_null())
     return 0;
 
   unsigned ALen = A.dim(isl::dim::set);
@@ -728,7 +730,7 @@ static bool orderComparer(const isl::basic_set &A, const isl::basic_set &B) {
 ///                 unwrapped before printing to again appear as a map.
 static void printSortedPolyhedra(isl::union_set USet, llvm::raw_ostream &OS,
                                  bool Simplify, bool IsMap) {
-  if (!USet) {
+  if (USet.is_null()) {
     OS << "<null>\n";
     return;
   }

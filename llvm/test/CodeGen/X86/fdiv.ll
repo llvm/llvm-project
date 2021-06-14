@@ -5,7 +5,7 @@ define double @exact(double %x) {
 ; Exact division by a constant converted to multiplication.
 ; CHECK-LABEL: exact:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mulsd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    mulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %div = fdiv double %x, 2.0
   ret double %div
@@ -15,7 +15,7 @@ define double @inexact(double %x) {
 ; Inexact division by a constant converted to multiplication.
 ; CHECK-LABEL: inexact:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mulsd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    mulsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %div = fdiv double %x, 0x41DFFFFFFFC00000
   ret double %div
@@ -36,7 +36,7 @@ define double @denormal1(double %x) {
 ; Don't generate multiplication by a denormal.
 ; CHECK-LABEL: denormal1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    divsd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    divsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %div = fdiv double %x, 0x7FD0000000000001
   ret double %div
@@ -46,7 +46,7 @@ define double @denormal2(double %x) {
 ; Don't generate multiplication by a denormal.
 ; CHECK-LABEL: denormal2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    divsd {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    divsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    retq
   %div = fdiv double %x, 0x7FEFFFFFFFFFFFFF
   ret double %div

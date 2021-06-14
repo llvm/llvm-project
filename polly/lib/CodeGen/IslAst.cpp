@@ -570,7 +570,7 @@ isl::ast_expr IslAstInfo::getRunCondition() { return Ast.getRunCondition(); }
 
 IslAstUserPayload *IslAstInfo::getNodePayload(const isl::ast_node &Node) {
   isl::id Id = Node.get_annotation();
-  if (!Id)
+  if (Id.is_null())
     return nullptr;
   IslAstUserPayload *Payload = (IslAstUserPayload *)Id.get_user();
   return Payload;

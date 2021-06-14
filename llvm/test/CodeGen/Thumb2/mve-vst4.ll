@@ -119,8 +119,8 @@ define void @vst4_v16i32(<16 x i32> *%src, <64 x i32> *%dst) {
 ; CHECK-NEXT:    push {r4, r5}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    .pad #216
-; CHECK-NEXT:    sub sp, #216
+; CHECK-NEXT:    .pad #192
+; CHECK-NEXT:    sub sp, #192
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #144]
 ; CHECK-NEXT:    add r2, sp, #64
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #80]
@@ -180,7 +180,7 @@ define void @vst4_v16i32(<16 x i32> *%src, <64 x i32> *%dst) {
 ; CHECK-NEXT:    vst42.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vst43.32 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst43.32 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    add sp, #216
+; CHECK-NEXT:    add sp, #192
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    pop {r4, r5}
 ; CHECK-NEXT:    bx lr
@@ -889,8 +889,8 @@ define void @vst4_v16f32(<16 x float> *%src, <64 x float> *%dst) {
 ; CHECK-NEXT:    push {r4, r5}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    .pad #216
-; CHECK-NEXT:    sub sp, #216
+; CHECK-NEXT:    .pad #192
+; CHECK-NEXT:    sub sp, #192
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #144]
 ; CHECK-NEXT:    add r2, sp, #64
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #80]
@@ -950,7 +950,7 @@ define void @vst4_v16f32(<16 x float> *%src, <64 x float> *%dst) {
 ; CHECK-NEXT:    vst42.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vst43.32 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst43.32 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    add sp, #216
+; CHECK-NEXT:    add sp, #192
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    pop {r4, r5}
 ; CHECK-NEXT:    bx lr

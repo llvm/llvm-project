@@ -1786,7 +1786,7 @@ template <class ELFT> Error ELFBuilder<ELFT>::readSectionHeaders() {
     Sec->OriginalIndex = Sec->Index;
     Sec->OriginalData =
         ArrayRef<uint8_t>(ElfFile.base() + Shdr.sh_offset,
-                          (Shdr.sh_type == SHT_NOBITS) ? 0 : Shdr.sh_size);
+                          (Shdr.sh_type == SHT_NOBITS) ? (size_t)0 : Shdr.sh_size);
   }
 
   return Error::success();
@@ -2668,7 +2668,8 @@ Error IHexWriter::checkSection(const SectionBase &Sec) {
 Error IHexWriter::finalize() {
   bool UseSegments = false;
   auto ShouldWrite = [](const SectionBase &Sec) {
-    return (Sec.Flags & ELF::SHF_ALLOC) && (Sec.Type != ELF::SHT_NOBITS);
+    return (Sec.Flags & ELF::SHF_ALLOC) && Sec.Type != ELF::SHT_NOBITS &&
+           Sec.Size > 0;
   };
   auto IsInPtLoad = [](const SectionBase &Sec) {
     return Sec.ParentSegment && Sec.ParentSegment->Type == ELF::PT_LOAD;

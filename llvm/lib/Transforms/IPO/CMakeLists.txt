@@ -15,6 +15,7 @@ add_llvm_component_library(LLVMipo
   ForceFunctionAttrs.cpp
   FunctionAttrs.cpp
   FunctionImport.cpp
+  FunctionSpecialization.cpp
   GlobalDCE.cpp
   GlobalOpt.cpp
   GlobalSplit.cpp

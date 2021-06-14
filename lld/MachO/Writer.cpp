@@ -78,7 +78,7 @@ public:
 };
 
 // LC_DYLD_INFO_ONLY stores the offsets of symbol import/export information.
-class LCDyldInfo : public LoadCommand {
+class LCDyldInfo final : public LoadCommand {
 public:
   LCDyldInfo(RebaseSection *rebaseSection, BindingSection *bindingSection,
              WeakBindingSection *weakBindingSection,
@@ -123,7 +123,7 @@ public:
   ExportSection *exportSection;
 };
 
-class LCFunctionStarts : public LoadCommand {
+class LCFunctionStarts final : public LoadCommand {
 public:
   explicit LCFunctionStarts(FunctionStartsSection *functionStartsSection)
       : functionStartsSection(functionStartsSection) {}
@@ -142,7 +142,7 @@ private:
   FunctionStartsSection *functionStartsSection;
 };
 
-class LCDysymtab : public LoadCommand {
+class LCDysymtab final : public LoadCommand {
 public:
   LCDysymtab(SymtabSection *symtabSection,
              IndirectSymtabSection *indirectSymtabSection)
@@ -170,7 +170,7 @@ public:
   IndirectSymtabSection *indirectSymtabSection;
 };
 
-template <class LP> class LCSegment : public LoadCommand {
+template <class LP> class LCSegment final : public LoadCommand {
 public:
   LCSegment(StringRef name, OutputSegment *seg) : name(name), seg(seg) {}
 
@@ -226,7 +226,7 @@ private:
   OutputSegment *seg;
 };
 
-class LCMain : public LoadCommand {
+class LCMain final : public LoadCommand {
   uint32_t getSize() const override {
     return sizeof(structs::entry_point_command);
   }
@@ -240,13 +240,13 @@ class LCMain : public LoadCommand {
       c->entryoff =
           in.stubs->fileOff + config->entry->stubsIndex * target->stubSize;
     else
-      c->entryoff = config->entry->getFileOffset();
+      c->entryoff = config->entry->getVA() - in.header->addr;
 
     c->stacksize = 0;
   }
 };
 
-class LCSymtab : public LoadCommand {
+class LCSymtab final : public LoadCommand {
 public:
   LCSymtab(SymtabSection *symtabSection, StringTableSection *stringTableSection)
       : symtabSection(symtabSection), stringTableSection(stringTableSection) {}
@@ -271,7 +271,7 @@ public:
 //   * LC_LOAD_DYLIB
 //   * LC_ID_DYLIB
 //   * LC_REEXPORT_DYLIB
-class LCDylib : public LoadCommand {
+class LCDylib final : public LoadCommand {
 public:
   LCDylib(LoadCommandType type, StringRef path,
           uint32_t compatibilityVersion = 0, uint32_t currentVersion = 0)
@@ -311,7 +311,7 @@ private:
 
 uint32_t LCDylib::instanceCount = 0;
 
-class LCLoadDylinker : public LoadCommand {
+class LCLoadDylinker final : public LoadCommand {
 public:
   uint32_t getSize() const override {
     return alignTo(sizeof(dylinker_command) + path.size() + 1, 8);
@@ -335,7 +335,7 @@ private:
   const StringRef path = "/usr/lib/dyld";
 };
 
-class LCRPath : public LoadCommand {
+class LCRPath final : public LoadCommand {
 public:
   explicit LCRPath(StringRef path) : path(path) {}
 
@@ -359,7 +359,7 @@ private:
   StringRef path;
 };
 
-class LCMinVersion : public LoadCommand {
+class LCMinVersion final : public LoadCommand {
 public:
   explicit LCMinVersion(const PlatformInfo &platformInfo)
       : platformInfo(platformInfo) {}
@@ -397,7 +397,7 @@ private:
   const PlatformInfo &platformInfo;
 };
 
-class LCBuildVersion : public LoadCommand {
+class LCBuildVersion final : public LoadCommand {
 public:
   explicit LCBuildVersion(const PlatformInfo &platformInfo)
       : platformInfo(platformInfo) {}
@@ -432,7 +432,7 @@ private:
 // offsets to be calculated correctly. We resolve this circular paradox by
 // first writing an LC_UUID with an all-zero UUID, then updating the UUID with
 // its real value later.
-class LCUuid : public LoadCommand {
+class LCUuid final : public LoadCommand {
 public:
   uint32_t getSize() const override { return sizeof(uuid_command); }
 
@@ -465,7 +465,7 @@ public:
   mutable uint8_t *uuidBuf;
 };
 
-template <class LP> class LCEncryptionInfo : public LoadCommand {
+template <class LP> class LCEncryptionInfo final : public LoadCommand {
 public:
   uint32_t getSize() const override {
     return sizeof(typename LP::encryption_info_command);
@@ -486,7 +486,7 @@ public:
   }
 };
 
-class LCCodeSignature : public LoadCommand {
+class LCCodeSignature final : public LoadCommand {
 public:
   LCCodeSignature(CodeSignatureSection *section) : section(section) {}
 
@@ -566,11 +566,15 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
 void Writer::scanRelocations() {
   TimeTraceScope timeScope("Scan relocations");
   for (InputSection *isec : inputSections) {
-    if (isec->shouldOmitFromOutput())
+    if (!isa<ConcatInputSection>(isec))
+      continue;
+    auto concatIsec = cast<ConcatInputSection>(isec);
+
+    if (concatIsec->shouldOmitFromOutput())
       continue;
 
-    if (isec->segname == segment_names::ld) {
-      in.unwindInfo->prepareRelocations(isec);
+    if (concatIsec->segname == segment_names::ld) {
+      in.unwindInfo->prepareRelocations(concatIsec);
       continue;
     }
 
@@ -591,7 +595,6 @@ void Writer::scanRelocations() {
           prepareSymbolRelocation(sym, isec, r);
       } else {
         assert(r.referent.is<InputSection *>());
-        assert(!r.referent.get<InputSection *>()->shouldOmitFromOutput());
         if (!r.pcrel)
           in.rebase->addEntry(isec, r.offset);
       }
@@ -712,7 +715,7 @@ template <class LP> void Writer::createLoadCommands() {
       //   command line and implicitly as a reexport from a different
       //   framework. The re-export will usually point to the tbd file
       //   in Foo.framework/Versions/A/Foo.tbd, while the explicit link will
-      //   usually find Foo.framwork/Foo.tbd. These are usually symlinks,
+      //   usually find Foo.framework/Foo.tbd. These are usually symlinks,
       //   but in a --reproduce archive they will be identical but distinct
       //   files.
       // In the first case, *semantically distinct* DylibFiles will have the
@@ -861,21 +864,26 @@ template <class LP> void Writer::createOutputSections() {
   DenseMap<NamePair, ConcatOutputSection *> concatOutputSections;
   for (const auto &p : enumerate(inputSections)) {
     InputSection *isec = p.value();
-    if (isec->shouldOmitFromOutput())
-      continue;
+    OutputSection *osec;
     if (auto *concatIsec = dyn_cast<ConcatInputSection>(isec)) {
+      if (concatIsec->shouldOmitFromOutput())
+        continue;
       NamePair names = maybeRenameSection({isec->segname, isec->name});
-      ConcatOutputSection *&osec = concatOutputSections[names];
-      if (osec == nullptr) {
-        osec = make<ConcatOutputSection>(names.second);
-        osec->inputOrder = p.index();
-      }
-      osec->addInput(concatIsec);
+      ConcatOutputSection *&concatOsec = concatOutputSections[names];
+      if (concatOsec == nullptr)
+        concatOsec = make<ConcatOutputSection>(names.second);
+      concatOsec->addInput(concatIsec);
+      osec = concatOsec;
     } else if (auto *cStringIsec = dyn_cast<CStringInputSection>(isec)) {
-      if (in.cStringSection->inputs.empty())
-        in.cStringSection->inputOrder = p.index();
       in.cStringSection->addInput(cStringIsec);
+      osec = in.cStringSection;
+    } else if (auto *litIsec = dyn_cast<WordLiteralInputSection>(isec)) {
+      in.wordLiteralSection->addInput(litIsec);
+      osec = in.wordLiteralSection;
+    } else {
+      llvm_unreachable("unhandled InputSection type");
     }
+    osec->inputOrder = std::min(osec->inputOrder, static_cast<int>(p.index()));
   }
 
   // Once all the inputs are added, we can finalize the output section
@@ -1050,6 +1058,8 @@ template <class LP> void macho::writeResult() { Writer().run<LP>(); }
 void macho::createSyntheticSections() {
   in.header = make<MachHeaderSection>();
   in.cStringSection = config->dedupLiterals ? make<CStringSection>() : nullptr;
+  in.wordLiteralSection =
+      config->dedupLiterals ? make<WordLiteralSection>() : nullptr;
   in.rebase = make<RebaseSection>();
   in.binding = make<BindingSection>();
   in.weakBinding = make<WeakBindingSection>();
@@ -1060,8 +1070,19 @@ void macho::createSyntheticSections() {
   in.lazyPointers = make<LazyPointerSection>();
   in.stubs = make<StubsSection>();
   in.stubHelper = make<StubHelperSection>();
-  in.imageLoaderCache = make<ImageLoaderCacheSection>();
   in.unwindInfo = makeUnwindInfoSection();
+
+  // This section contains space for just a single word, and will be used by
+  // dyld to cache an address to the image loader it uses.
+  uint8_t *arr = bAlloc.Allocate<uint8_t>(target->wordSize);
+  memset(arr, 0, target->wordSize);
+  in.imageLoaderCache = make<ConcatInputSection>(
+      segment_names::data, section_names::data, /*file=*/nullptr,
+      ArrayRef<uint8_t>{arr, target->wordSize},
+      /*align=*/target->wordSize, /*flags=*/S_REGULAR);
+  // References from dyld are not visible to us, so ensure this section is
+  // always treated as live.
+  in.imageLoaderCache->live = true;
 }
 
 OutputSection *macho::firstTLVDataSection = nullptr;

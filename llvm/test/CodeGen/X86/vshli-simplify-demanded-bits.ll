@@ -27,7 +27,7 @@ define <8 x i8> @vshli_target_constant(<8 x i16> %arg, <8 x i32> %arg1) {
 ; CHECK-NEXT:    pslld $15, %xmm4
 ; CHECK-NEXT:    psrad $16, %xmm4
 ; CHECK-NEXT:    packssdw %xmm2, %xmm4
-; CHECK-NEXT:    pand {{.*}}(%rip), %xmm4
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
 ; CHECK-NEXT:    pxor %xmm0, %xmm0
 ; CHECK-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; CHECK-NEXT:    pmullw %xmm4, %xmm1

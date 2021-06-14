@@ -7,7 +7,7 @@
 define void @sum_unroll(i64* nocapture readonly, i64* nocapture) {
 ; CHECK-LABEL: sum_unroll:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movb {{.*}}(%rip), %al
+; CHECK-NEXT:    movb _ZL1c(%rip), %al
 ; CHECK-NEXT:    movq (%rdi), %rcx
 ; CHECK-NEXT:    addb $-1, %al
 ; CHECK-NEXT:    adcq %rcx, (%rsi)
@@ -17,7 +17,7 @@ define void @sum_unroll(i64* nocapture readonly, i64* nocapture) {
 ; CHECK-NEXT:    adcq %rax, 16(%rsi)
 ; CHECK-NEXT:    movq 24(%rdi), %rax
 ; CHECK-NEXT:    adcq %rax, 24(%rsi)
-; CHECK-NEXT:    setb {{.*}}(%rip)
+; CHECK-NEXT:    setb _ZL1c(%rip)
 ; CHECK-NEXT:    retq
   %3 = load i8, i8* @_ZL1c, align 1
   %4 = load i64, i64* %0, align 8

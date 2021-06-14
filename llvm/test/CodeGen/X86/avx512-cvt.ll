@@ -322,10 +322,10 @@ define <8 x double> @ulto8f64(<8 x i64> %a) {
 ; NODQ-LABEL: ulto8f64:
 ; NODQ:       # %bb.0:
 ; NODQ-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200]
-; NODQ-NEXT:    vpternlogq $248, {{.*}}(%rip){1to8}, %zmm0, %zmm1
+; NODQ-NEXT:    vpternlogq $248, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm1
 ; NODQ-NEXT:    vpsrlq $32, %zmm0, %zmm0
-; NODQ-NEXT:    vporq {{.*}}(%rip){1to8}, %zmm0, %zmm0
-; NODQ-NEXT:    vsubpd {{.*}}(%rip){1to8}, %zmm0, %zmm0
+; NODQ-NEXT:    vporq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; NODQ-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
 ; NODQ-NEXT:    vaddpd %zmm0, %zmm1, %zmm0
 ; NODQ-NEXT:    retq
 ;
@@ -1944,7 +1944,7 @@ define <8 x float> @ubto8f32(<8 x i32> %a) {
 ; VL:       # %bb.0:
 ; VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; VL-NEXT:    vpcmpgtd %ymm0, %ymm1, %ymm0
-; VL-NEXT:    vpandd {{.*}}(%rip){1to8}, %ymm0, %ymm0
+; VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; VL-NEXT:    retq
   %mask = icmp slt <8 x i32> %a, zeroinitializer
   %1 = uitofp <8 x i1> %mask to <8 x float>
@@ -1975,7 +1975,7 @@ define <4 x float> @ubto4f32(<4 x i32> %a) {
 ; VL:       # %bb.0:
 ; VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; VL-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
-; VL-NEXT:    vpandd {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; VL-NEXT:    retq
   %mask = icmp slt <4 x i32> %a, zeroinitializer
   %1 = uitofp <4 x i1> %mask to <4 x float>
@@ -2006,7 +2006,7 @@ define <2 x float> @ubto2f32(<2 x i32> %a) {
 ; VL:       # %bb.0:
 ; VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; VL-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; VL-NEXT:    vpandnd {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; VL-NEXT:    vpandnd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; VL-NEXT:    retq
   %mask = icmp ne <2 x i32> %a, zeroinitializer
   %1 = uitofp <2 x i1> %mask to <2 x float>
@@ -2027,7 +2027,7 @@ define <2 x double> @ubto2f64(<2 x i32> %a) {
 ; VL:       # %bb.0:
 ; VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; VL-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; VL-NEXT:    vpandnd {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; VL-NEXT:    vpandnd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; VL-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; VL-NEXT:    retq
   %mask = icmp ne <2 x i32> %a, zeroinitializer

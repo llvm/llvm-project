@@ -6,7 +6,7 @@
 %struct.Buffer = type { i8*, i32 }
 
 ; This test checks that the load of store %2 is not dropped.
-; 
+;
 define i32 @pr34088() local_unnamed_addr {
 ; CHECK-LABEL: pr34088:
 ; CHECK:       # %bb.0: # %entry

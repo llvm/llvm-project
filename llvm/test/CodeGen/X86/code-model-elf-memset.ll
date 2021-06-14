@@ -57,7 +57,7 @@ define i32 @main() #0 {
 ; LARGE-PIC-NEXT:    subq $424, %rsp # imm = 0x1A8
 ; LARGE-PIC-NEXT:    .cfi_def_cfa_offset 432
 ; LARGE-PIC-NEXT:  .L0$pb:
-; LARGE-PIC-NEXT:    leaq .L0${{.*}}(%rip), %rax
+; LARGE-PIC-NEXT:    leaq .L0$pb(%rip), %rax
 ; LARGE-PIC-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L0$pb, %rcx
 ; LARGE-PIC-NEXT:    addq %rax, %rcx
 ; LARGE-PIC-NEXT:    movl $0, {{[0-9]+}}(%rsp)

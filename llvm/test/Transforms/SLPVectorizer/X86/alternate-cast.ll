@@ -171,7 +171,7 @@ define <8 x float> @sitofp_4i32_8i16(<4 x i32> %a, <8 x i16> %b) {
 ; SSE-NEXT:    [[AB5:%.*]] = sitofp i16 [[B1]] to float
 ; SSE-NEXT:    [[AB6:%.*]] = sitofp i16 [[B2]] to float
 ; SSE-NEXT:    [[AB7:%.*]] = sitofp i16 [[B3]] to float
-; SSE-NEXT:    [[R31:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; SSE-NEXT:    [[R31:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
 ; SSE-NEXT:    [[R4:%.*]] = insertelement <8 x float> [[R31]], float [[AB4]], i32 4
 ; SSE-NEXT:    [[R5:%.*]] = insertelement <8 x float> [[R4]], float [[AB5]], i32 5
 ; SSE-NEXT:    [[R6:%.*]] = insertelement <8 x float> [[R5]], float [[AB6]], i32 6
@@ -240,7 +240,7 @@ define <8 x float> @sitofp_uitofp_4i32_8i16_16i8(<4 x i32> %a, <8 x i16> %b, <16
 ; CHECK-NEXT:    [[AB5:%.*]] = uitofp i16 [[B1]] to float
 ; CHECK-NEXT:    [[AB6:%.*]] = sitofp i8 [[C0]] to float
 ; CHECK-NEXT:    [[AB7:%.*]] = uitofp i8 [[C1]] to float
-; CHECK-NEXT:    [[R31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[R31:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[R4:%.*]] = insertelement <8 x float> [[R31]], float [[AB4]], i32 4
 ; CHECK-NEXT:    [[R5:%.*]] = insertelement <8 x float> [[R4]], float [[AB5]], i32 5
 ; CHECK-NEXT:    [[R6:%.*]] = insertelement <8 x float> [[R5]], float [[AB6]], i32 6

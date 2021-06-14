@@ -1192,7 +1192,7 @@ define i16 @test_v8i16(<8 x i16> %a0) {
 ;
 ; SSE4-LABEL: test_v8i16:
 ; SSE4:       # %bb.0:
-; SSE4-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE4-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE4-NEXT:    phminposuw %xmm0, %xmm0
 ; SSE4-NEXT:    movd %xmm0, %eax
 ; SSE4-NEXT:    xorl $32767, %eax # imm = 0x7FFF
@@ -1201,7 +1201,7 @@ define i16 @test_v8i16(<8 x i16> %a0) {
 ;
 ; AVX-LABEL: test_v8i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    xorl $32767, %eax # imm = 0x7FFF
@@ -1210,7 +1210,7 @@ define i16 @test_v8i16(<8 x i16> %a0) {
 ;
 ; AVX512-LABEL: test_v8i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    xorl $32767, %eax # imm = 0x7FFF
@@ -1238,7 +1238,7 @@ define i16 @test_v16i16(<16 x i16> %a0) {
 ; SSE4-LABEL: test_v16i16:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pmaxsw %xmm1, %xmm0
-; SSE4-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE4-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE4-NEXT:    phminposuw %xmm0, %xmm0
 ; SSE4-NEXT:    movd %xmm0, %eax
 ; SSE4-NEXT:    xorl $32767, %eax # imm = 0x7FFF
@@ -1249,7 +1249,7 @@ define i16 @test_v16i16(<16 x i16> %a0) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    xorl $32767, %eax # imm = 0x7FFF
@@ -1261,7 +1261,7 @@ define i16 @test_v16i16(<16 x i16> %a0) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    xorl $32767, %eax # imm = 0x7FFF
@@ -1273,7 +1273,7 @@ define i16 @test_v16i16(<16 x i16> %a0) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    xorl $32767, %eax # imm = 0x7FFF
@@ -1306,7 +1306,7 @@ define i16 @test_v32i16(<32 x i16> %a0) {
 ; SSE4-NEXT:    pmaxsw %xmm3, %xmm1
 ; SSE4-NEXT:    pmaxsw %xmm2, %xmm1
 ; SSE4-NEXT:    pmaxsw %xmm0, %xmm1
-; SSE4-NEXT:    pxor {{.*}}(%rip), %xmm1
+; SSE4-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE4-NEXT:    phminposuw %xmm1, %xmm0
 ; SSE4-NEXT:    movd %xmm0, %eax
 ; SSE4-NEXT:    xorl $32767, %eax # imm = 0x7FFF
@@ -1320,7 +1320,7 @@ define i16 @test_v32i16(<32 x i16> %a0) {
 ; AVX1-NEXT:    vpmaxsw %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpmaxsw %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    xorl $32767, %eax # imm = 0x7FFF
@@ -1333,7 +1333,7 @@ define i16 @test_v32i16(<32 x i16> %a0) {
 ; AVX2-NEXT:    vpmaxsw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    xorl $32767, %eax # imm = 0x7FFF
@@ -1347,7 +1347,7 @@ define i16 @test_v32i16(<32 x i16> %a0) {
 ; AVX512-NEXT:    vpmaxsw %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    xorl $32767, %eax # imm = 0x7FFF
@@ -1388,7 +1388,7 @@ define i16 @test_v64i16(<64 x i16> %a0) {
 ; SSE4-NEXT:    pmaxsw %xmm4, %xmm2
 ; SSE4-NEXT:    pmaxsw %xmm3, %xmm2
 ; SSE4-NEXT:    pmaxsw %xmm0, %xmm2
-; SSE4-NEXT:    pxor {{.*}}(%rip), %xmm2
+; SSE4-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE4-NEXT:    phminposuw %xmm2, %xmm0
 ; SSE4-NEXT:    movd %xmm0, %eax
 ; SSE4-NEXT:    xorl $32767, %eax # imm = 0x7FFF
@@ -1408,7 +1408,7 @@ define i16 @test_v64i16(<64 x i16> %a0) {
 ; AVX1-NEXT:    vpmaxsw %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpmaxsw %xmm4, %xmm1, %xmm1
 ; AVX1-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax
 ; AVX1-NEXT:    xorl $32767, %eax # imm = 0x7FFF
@@ -1423,7 +1423,7 @@ define i16 @test_v64i16(<64 x i16> %a0) {
 ; AVX2-NEXT:    vpmaxsw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    xorl $32767, %eax # imm = 0x7FFF
@@ -1438,7 +1438,7 @@ define i16 @test_v64i16(<64 x i16> %a0) {
 ; AVX512-NEXT:    vpmaxsw %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    xorl $32767, %eax # imm = 0x7FFF
@@ -1654,7 +1654,7 @@ define i8 @test_v16i8(<16 x i8> %a0) {
 ;
 ; SSE4-LABEL: test_v16i8:
 ; SSE4:       # %bb.0:
-; SSE4-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE4-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE4-NEXT:    movdqa %xmm0, %xmm1
 ; SSE4-NEXT:    psrlw $8, %xmm1
 ; SSE4-NEXT:    pminub %xmm0, %xmm1
@@ -1666,7 +1666,7 @@ define i8 @test_v16i8(<16 x i8> %a0) {
 ;
 ; AVX-LABEL: test_v16i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vphminposuw %xmm0, %xmm0
@@ -1677,7 +1677,7 @@ define i8 @test_v16i8(<16 x i8> %a0) {
 ;
 ; AVX512-LABEL: test_v16i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
@@ -1730,7 +1730,7 @@ define i8 @test_v32i8(<32 x i8> %a0) {
 ; SSE4-LABEL: test_v32i8:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    pmaxsb %xmm1, %xmm0
-; SSE4-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE4-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE4-NEXT:    movdqa %xmm0, %xmm1
 ; SSE4-NEXT:    psrlw $8, %xmm1
 ; SSE4-NEXT:    pminub %xmm0, %xmm1
@@ -1744,7 +1744,7 @@ define i8 @test_v32i8(<32 x i8> %a0) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX1-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vphminposuw %xmm0, %xmm0
@@ -1758,7 +1758,7 @@ define i8 @test_v32i8(<32 x i8> %a0) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX2-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vphminposuw %xmm0, %xmm0
@@ -1772,7 +1772,7 @@ define i8 @test_v32i8(<32 x i8> %a0) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
@@ -1838,7 +1838,7 @@ define i8 @test_v64i8(<64 x i8> %a0) {
 ; SSE4-NEXT:    pmaxsb %xmm3, %xmm1
 ; SSE4-NEXT:    pmaxsb %xmm2, %xmm1
 ; SSE4-NEXT:    pmaxsb %xmm0, %xmm1
-; SSE4-NEXT:    pxor {{.*}}(%rip), %xmm1
+; SSE4-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE4-NEXT:    movdqa %xmm1, %xmm0
 ; SSE4-NEXT:    psrlw $8, %xmm0
 ; SSE4-NEXT:    pminub %xmm1, %xmm0
@@ -1855,7 +1855,7 @@ define i8 @test_v64i8(<64 x i8> %a0) {
 ; AVX1-NEXT:    vpmaxsb %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpmaxsb %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX1-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vphminposuw %xmm0, %xmm0
@@ -1870,7 +1870,7 @@ define i8 @test_v64i8(<64 x i8> %a0) {
 ; AVX2-NEXT:    vpmaxsb %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX2-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vphminposuw %xmm0, %xmm0
@@ -1886,7 +1886,7 @@ define i8 @test_v64i8(<64 x i8> %a0) {
 ; AVX512-NEXT:    vpmaxsb %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
@@ -1976,7 +1976,7 @@ define i8 @test_v128i8(<128 x i8> %a0) {
 ; SSE4-NEXT:    pmaxsb %xmm4, %xmm2
 ; SSE4-NEXT:    pmaxsb %xmm3, %xmm2
 ; SSE4-NEXT:    pmaxsb %xmm0, %xmm2
-; SSE4-NEXT:    pxor {{.*}}(%rip), %xmm2
+; SSE4-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE4-NEXT:    movdqa %xmm2, %xmm0
 ; SSE4-NEXT:    psrlw $8, %xmm0
 ; SSE4-NEXT:    pminub %xmm2, %xmm0
@@ -1999,7 +1999,7 @@ define i8 @test_v128i8(<128 x i8> %a0) {
 ; AVX1-NEXT:    vpmaxsb %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpmaxsb %xmm4, %xmm1, %xmm1
 ; AVX1-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX1-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vphminposuw %xmm0, %xmm0
@@ -2016,7 +2016,7 @@ define i8 @test_v128i8(<128 x i8> %a0) {
 ; AVX2-NEXT:    vpmaxsb %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX2-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vphminposuw %xmm0, %xmm0
@@ -2033,7 +2033,7 @@ define i8 @test_v128i8(<128 x i8> %a0) {
 ; AVX512-NEXT:    vpmaxsb %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX512-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vpsrlw $8, %xmm0, %xmm1
 ; AVX512-NEXT:    vpminub %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vphminposuw %xmm0, %xmm0

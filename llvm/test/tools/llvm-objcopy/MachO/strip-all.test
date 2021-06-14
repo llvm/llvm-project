@@ -45,8 +45,20 @@
 # DWARF-NOT:     Name: __debug_line
 # DWARF:       ]
 
-## Make sure that all relocations and symbols are removed.
+## Make sure that all relocations and symbols
+## (except those which have the flag ReferencedDynamically set) are removed.
 # COMMON:      Relocations [
 # COMMON-NEXT: ]
-# COMMON:      Symbols [
+# COMMON-NEXT: Symbols [
+# COMMON-NEXT:    Symbol {
+# COMMON-NEXT:      Name: __mh_execute_header
+# COMMON-NEXT:      Extern
+# COMMON-NEXT:      Type: Section
+# COMMON-NEXT:      Section: __text
+# COMMON-NEXT:      RefType: UndefinedNonLazy
+# COMMON-NEXT:      Flags [ (0x10)
+# COMMON-NEXT:        ReferencedDynamically (0x10)
+# COMMON-NEXT:      ]
+# COMMON-NEXT:      Value:
+# COMMON-NEXT:    }
 # COMMON-NEXT: ]

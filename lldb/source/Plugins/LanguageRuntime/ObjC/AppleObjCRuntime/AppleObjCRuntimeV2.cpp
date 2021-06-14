@@ -263,6 +263,12 @@ struct objc_classheader_t {
     int32_t hiOffset;
 };
 
+struct objc_classheader_v16_t {
+    uint64_t isDuplicate       : 1,
+             objectCacheOffset : 47, // Offset from the shared cache base
+             dylibObjCIndex    : 16;
+};
+
 struct objc_clsopt_t {
     uint32_t capacity;
     uint32_t occupied;
@@ -280,6 +286,22 @@ struct objc_clsopt_t {
     //  objc_classheader_t duplicateOffsets[duplicateCount];
 };
 
+struct objc_clsopt_v16_t {
+   uint32_t version;
+   uint32_t capacity;
+   uint32_t occupied;
+   uint32_t shift;
+   uint32_t mask;
+   uint64_t salt;
+   uint32_t scramble[256];
+   uint8_t  tab[0]; // tab[mask+1]
+   //  uint8_t checkbytes[capacity];
+   //  int32_t offset[capacity];
+   //  objc_classheader_t clsOffsets[capacity];
+   //  uint32_t duplicateCount;
+   //  objc_classheader_t duplicateOffsets[duplicateCount];
+};
+
 struct objc_opt_t {
     uint32_t version;
     int32_t selopt_offset;
@@ -295,6 +317,20 @@ struct objc_opt_v14_t {
     int32_t clsopt_offset;
 };
 
+struct objc_opt_v16_t {
+    uint32_t version;
+    uint32_t flags;
+    int32_t selopt_offset;
+    int32_t headeropt_ro_offset;
+    int32_t unused_clsopt_offset;
+    int32_t unused_protocolopt_offset;
+    int32_t headeropt_rw_offset;
+    int32_t unused_protocolopt2_offset;
+    int32_t largeSharedCachesClassOffset;
+    int32_t largeSharedCachesProtocolOffset;
+    uint64_t relativeMethodSelectorBaseAddressCacheOffset;
+};
+
 struct ClassInfo
 {
     Class isa;
@@ -303,19 +339,33 @@ struct ClassInfo
 
 uint32_t
 __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
+                                                  void *shared_cache_base_ptr,
                                                   void *class_infos_ptr,
+                                                  uint64_t *relative_selector_offset,
                                                   uint32_t class_infos_byte_size,
                                                   uint32_t should_log)
 {
+    *relative_selector_offset = 0;
     uint32_t idx = 0;
     DEBUG_PRINTF ("objc_opt_ro_ptr = %p\n", objc_opt_ro_ptr);
+    DEBUG_PRINTF ("shared_cache_base_ptr = %p\n", shared_cache_base_ptr);
     DEBUG_PRINTF ("class_infos_ptr = %p\n", class_infos_ptr);
     DEBUG_PRINTF ("class_infos_byte_size = %u (%llu class infos)\n", class_infos_byte_size, (uint64_t)(class_infos_byte_size/sizeof(ClassInfo)));
     if (objc_opt_ro_ptr)
     {
         const objc_opt_t *objc_opt = (objc_opt_t *)objc_opt_ro_ptr;
         const objc_opt_v14_t* objc_opt_v14 = (objc_opt_v14_t*)objc_opt_ro_ptr;
-        if (objc_opt->version >= 14)
+        const objc_opt_v16_t* objc_opt_v16 = (objc_opt_v16_t*)objc_opt_ro_ptr;
+        if (objc_opt->version >= 16)
+        {
+            *relative_selector_offset = objc_opt_v16->relativeMethodSelectorBaseAddressCacheOffset;
+            DEBUG_PRINTF ("objc_opt->version = %u\n", objc_opt_v16->version);
+            DEBUG_PRINTF ("objc_opt->flags = %u\n", objc_opt_v16->flags);
+            DEBUG_PRINTF ("objc_opt->selopt_offset = %d\n", objc_opt_v16->selopt_offset);
+            DEBUG_PRINTF ("objc_opt->headeropt_ro_offset = %d\n", objc_opt_v16->headeropt_ro_offset);
+            DEBUG_PRINTF ("objc_opt->relativeMethodSelectorBaseAddressCacheOffset = %d\n", *relative_selector_offset);
+        }
+        else if (objc_opt->version >= 14)
         {
             DEBUG_PRINTF ("objc_opt->version = %u\n", objc_opt_v14->version);
             DEBUG_PRINTF ("objc_opt->flags = %u\n", objc_opt_v14->flags);
@@ -330,7 +380,123 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
             DEBUG_PRINTF ("objc_opt->headeropt_offset = %d\n", objc_opt->headeropt_offset);
             DEBUG_PRINTF ("objc_opt->clsopt_offset = %d\n", objc_opt->clsopt_offset);
         }
-        if (objc_opt->version == 12 || objc_opt->version == 13 || objc_opt->version == 14 || objc_opt->version == 15)
+
+        if (objc_opt->version == 16)
+        {
+            const objc_clsopt_v16_t* clsopt = (const objc_clsopt_v16_t*)((uint8_t *)objc_opt + objc_opt_v16->largeSharedCachesClassOffset);
+            const size_t max_class_infos = class_infos_byte_size/sizeof(ClassInfo);
+
+            DEBUG_PRINTF("max_class_infos = %llu\n", (uint64_t)max_class_infos);
+
+            ClassInfo *class_infos = (ClassInfo *)class_infos_ptr;
+
+            const uint8_t *checkbytes = &clsopt->tab[clsopt->mask+1];
+            const int32_t *offsets = (const int32_t *)(checkbytes + clsopt->capacity);
+            const objc_classheader_v16_t *classOffsets = (const objc_classheader_v16_t *)(offsets + clsopt->capacity);
+
+            DEBUG_PRINTF ("clsopt->capacity = %u\n", clsopt->capacity);
+            DEBUG_PRINTF ("clsopt->mask = 0x%8.8x\n", clsopt->mask);
+            DEBUG_PRINTF ("classOffsets = %p\n", classOffsets);
+
+            for (uint32_t i=0; i<clsopt->capacity; ++i)
+            {
+                const uint64_t objectCacheOffset = classOffsets[i].objectCacheOffset;
+                DEBUG_PRINTF("objectCacheOffset[%u] = %u\n", i, objectCacheOffset);
+
+                if (classOffsets[i].isDuplicate) {
+                    DEBUG_PRINTF("isDuplicate = true\n");
+                    continue; // duplicate
+                }
+
+                if (objectCacheOffset == 0) {
+                    DEBUG_PRINTF("objectCacheOffset == invalidEntryOffset\n");
+                    continue; // invalid offset
+                }
+
+                if (class_infos && idx < max_class_infos)
+                {
+                    class_infos[idx].isa = (Class)((uint8_t *)shared_cache_base_ptr + objectCacheOffset);
+
+                    // Lookup the class name.
+                    const char *name = class_name_lookup_func(class_infos[idx].isa);
+                    DEBUG_PRINTF("[%u] isa = %8p %s\n", idx, class_infos[idx].isa, name);
+
+                    // Hash the class name so we don't have to read it.
+                    const char *s = name;
+                    uint32_t h = 5381;
+                    for (unsigned char c = *s; c; c = *++s)
+                    {
+                        // class_getName demangles swift names and the hash must
+                        // be calculated on the mangled name.  hash==0 means lldb
+                        // will fetch the mangled name and compute the hash in
+                        // ParseClassInfoArray.
+                        if (c == '.')
+                        {
+                            h = 0;
+                            break;
+                        }
+                        h = ((h << 5) + h) + c;
+                    }
+                    class_infos[idx].hash = h;
+                }
+                else
+                {
+                    DEBUG_PRINTF("not(class_infos && idx < max_class_infos)\n");
+                }
+                ++idx;
+            }
+
+            const uint32_t *duplicate_count_ptr = (uint32_t *)&classOffsets[clsopt->capacity];
+            const uint32_t duplicate_count = *duplicate_count_ptr;
+            const objc_classheader_v16_t *duplicateClassOffsets = (const objc_classheader_v16_t *)(&duplicate_count_ptr[1]);
+
+            DEBUG_PRINTF ("duplicate_count = %u\n", duplicate_count);
+            DEBUG_PRINTF ("duplicateClassOffsets = %p\n", duplicateClassOffsets);
+
+            for (uint32_t i=0; i<duplicate_count; ++i)
+            {
+                const uint64_t objectCacheOffset = classOffsets[i].objectCacheOffset;
+                DEBUG_PRINTF("objectCacheOffset[%u] = %u\n", i, objectCacheOffset);
+
+                if (classOffsets[i].isDuplicate) {
+                    DEBUG_PRINTF("isDuplicate = true\n");
+                    continue; // duplicate
+                }
+
+                if (objectCacheOffset == 0) {
+                    DEBUG_PRINTF("objectCacheOffset == invalidEntryOffset\n");
+                    continue; // invalid offset
+                }
+
+                if (class_infos && idx < max_class_infos)
+                {
+                    class_infos[idx].isa = (Class)((uint8_t *)shared_cache_base_ptr + objectCacheOffset);
+
+                    // Lookup the class name.
+                    const char *name = class_name_lookup_func(class_infos[idx].isa);
+                    DEBUG_PRINTF("[%u] isa = %8p %s\n", idx, class_infos[idx].isa, name);
+
+                    // Hash the class name so we don't have to read it.
+                    const char *s = name;
+                    uint32_t h = 5381;
+                    for (unsigned char c = *s; c; c = *++s)
+                    {
+                        // class_getName demangles swift names and the hash must
+                        // be calculated on the mangled name.  hash==0 means lldb
+                        // will fetch the mangled name and compute the hash in
+                        // ParseClassInfoArray.
+                        if (c == '.')
+                        {
+                            h = 0;
+                            break;
+                        }
+                        h = ((h << 5) + h) + c;
+                    }
+                    class_infos[idx].hash = h;
+                }
+            }
+        }
+        else if (objc_opt->version >= 12 && objc_opt->version <= 15)
         {
             const objc_clsopt_t* clsopt = NULL;
             if (objc_opt->version >= 14)
@@ -491,7 +657,8 @@ AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
       m_dynamic_class_info_extractor(*this),
       m_shared_cache_class_info_extractor(*this), m_decl_vendor_up(),
       m_tagged_pointer_obfuscator(LLDB_INVALID_ADDRESS),
-      m_isa_hash_table_ptr(LLDB_INVALID_ADDRESS), m_hash_signature(),
+      m_isa_hash_table_ptr(LLDB_INVALID_ADDRESS),
+      m_relative_selector_base(LLDB_INVALID_ADDRESS), m_hash_signature(),
       m_has_object_getClass(false), m_has_objc_copyRealizedClassList(false),
       m_loaded_objc_opt(false), m_non_pointer_isa_cache_up(),
       m_tagged_pointer_vendor_up(
@@ -1515,6 +1682,9 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::
       ast->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
   CompilerType clang_void_pointer_type =
       ast->GetBasicType(eBasicTypeVoid).GetPointerType();
+  CompilerType clang_uint64_t_pointer_type =
+      ast->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 64)
+          .GetPointerType();
 
   // Next make the function caller for our implementation utility function.
   ValueList arguments;
@@ -1522,6 +1692,11 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::
   value.SetValueType(Value::ValueType::Scalar);
   value.SetCompilerType(clang_void_pointer_type);
   arguments.PushValue(value);
+  arguments.PushValue(value);
+  arguments.PushValue(value);
+
+  value.SetValueType(Value::ValueType::Scalar);
+  value.SetCompilerType(clang_uint64_t_pointer_type);
   arguments.PushValue(value);
 
   value.SetValueType(Value::ValueType::Scalar);
@@ -1816,8 +1991,11 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
   uint32_t num_class_infos = 0;
 
   const lldb::addr_t objc_opt_ptr = m_runtime.GetSharedCacheReadOnlyAddress();
+  const lldb::addr_t shared_cache_base_addr =
+      m_runtime.GetSharedCacheBaseAddress();
 
-  if (objc_opt_ptr == LLDB_INVALID_ADDRESS)
+  if (objc_opt_ptr == LLDB_INVALID_ADDRESS ||
+      shared_cache_base_addr == LLDB_INVALID_ADDRESS)
     return DescriptorMapUpdateResult::Fail();
 
   const uint32_t num_classes = 128 * 1024;
@@ -1840,6 +2018,10 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
   const uint32_t class_infos_byte_size = num_classes * class_info_byte_size;
   lldb::addr_t class_infos_addr = process->AllocateMemory(
       class_infos_byte_size, ePermissionsReadable | ePermissionsWritable, err);
+  const uint32_t relative_selector_offset_addr_size = 64;
+  lldb::addr_t relative_selector_offset_addr =
+      process->AllocateMemory(relative_selector_offset_addr_size,
+                              ePermissionsReadable | ePermissionsWritable, err);
 
   if (class_infos_addr == LLDB_INVALID_ADDRESS) {
     LLDB_LOGF(log,
@@ -1853,14 +2035,16 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
 
   // Fill in our function argument values
   arguments.GetValueAtIndex(0)->GetScalar() = objc_opt_ptr;
-  arguments.GetValueAtIndex(1)->GetScalar() = class_infos_addr;
-  arguments.GetValueAtIndex(2)->GetScalar() = class_infos_byte_size;
+  arguments.GetValueAtIndex(1)->GetScalar() = shared_cache_base_addr;
+  arguments.GetValueAtIndex(2)->GetScalar() = class_infos_addr;
+  arguments.GetValueAtIndex(3)->GetScalar() = relative_selector_offset_addr;
+  arguments.GetValueAtIndex(4)->GetScalar() = class_infos_byte_size;
   // Only dump the runtime classes from the expression evaluation if the log is
   // verbose:
   Log *type_log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES);
   bool dump_log = type_log && type_log->GetVerbose();
 
-  arguments.GetValueAtIndex(3)->GetScalar() = dump_log ? 1 : 0;
+  arguments.GetValueAtIndex(5)->GetScalar() = dump_log ? 1 : 0;
 
   bool success = false;
 
@@ -1907,13 +2091,35 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
           success = true;
         }
 
+        // Read the relative selector offset.
+        DataBufferHeap relative_selector_offset_buffer(64, 0);
+        if (process->ReadMemory(relative_selector_offset_addr,
+                                relative_selector_offset_buffer.GetBytes(),
+                                relative_selector_offset_buffer.GetByteSize(),
+                                err) ==
+            relative_selector_offset_buffer.GetByteSize()) {
+          DataExtractor relative_selector_offset_data(
+              relative_selector_offset_buffer.GetBytes(),
+              relative_selector_offset_buffer.GetByteSize(),
+              process->GetByteOrder(), addr_size);
+          lldb::offset_t offset = 0;
+          uint64_t relative_selector_offset =
+              relative_selector_offset_data.GetU64(&offset);
+          if (relative_selector_offset > 0) {
+            // The offset is relative to the objc_opt struct.
+            m_runtime.SetRelativeSelectorBaseAddr(objc_opt_ptr +
+                                                  relative_selector_offset);
+          }
+        }
+
         // Read the ClassInfo structures
-        DataBufferHeap buffer(num_class_infos * class_info_byte_size, 0);
-        if (process->ReadMemory(class_infos_addr, buffer.GetBytes(),
-                                buffer.GetByteSize(),
-                                err) == buffer.GetByteSize()) {
-          DataExtractor class_infos_data(buffer.GetBytes(),
-                                         buffer.GetByteSize(),
+        DataBufferHeap class_infos_buffer(
+            num_class_infos * class_info_byte_size, 0);
+        if (process->ReadMemory(class_infos_addr, class_infos_buffer.GetBytes(),
+                                class_infos_buffer.GetByteSize(),
+                                err) == class_infos_buffer.GetByteSize()) {
+          DataExtractor class_infos_data(class_infos_buffer.GetBytes(),
+                                         class_infos_buffer.GetByteSize(),
                                          process->GetByteOrder(), addr_size);
 
           m_runtime.ParseClassInfoArray(class_infos_data, num_class_infos);
@@ -1971,6 +2177,19 @@ lldb::addr_t AppleObjCRuntimeV2::GetSharedCacheReadOnlyAddress() {
     }
   }
   return LLDB_INVALID_ADDRESS;
+}
+
+lldb::addr_t AppleObjCRuntimeV2::GetSharedCacheBaseAddress() {
+  StructuredData::ObjectSP info = m_process->GetSharedCacheInfo();
+  if (!info)
+    return LLDB_INVALID_ADDRESS;
+
+  StructuredData::Dictionary *info_dict = info->GetAsDictionary();
+  if (!info_dict)
+    return LLDB_INVALID_ADDRESS;
+
+  return info_dict->GetValueForKey("shared_cache_base_address")
+      ->GetIntegerValue(LLDB_INVALID_ADDRESS);
 }
 
 void AppleObjCRuntimeV2::UpdateISAToDescriptorMapIfNeeded() {

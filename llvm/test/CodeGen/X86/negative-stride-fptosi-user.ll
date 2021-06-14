@@ -22,7 +22,7 @@ define void @foo(i32 %N) nounwind {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    cvtsi2sd %ebp, %xmm0
-; CHECK-NEXT:    callq bar
+; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    decl %ebp
 ; CHECK-NEXT:    cmpl %ebp, %ebx
 ; CHECK-NEXT:    jne .LBB0_2

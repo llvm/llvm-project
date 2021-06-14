@@ -24,7 +24,7 @@ define i32 @main() nounwind  {
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl $3
-; CHECK-NEXT:    calll bar
+; CHECK-NEXT:    calll bar@PLT
 ; CHECK-NEXT:    addl $28, %esp
 ; CHECK-NEXT:    movl B+20, %eax
 ; CHECK-NEXT:    movl B+16, %ecx
@@ -39,7 +39,7 @@ define i32 @main() nounwind  {
 ; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    pushl $3
-; CHECK-NEXT:    calll baz
+; CHECK-NEXT:    calll baz@PLT
 ; CHECK-NEXT:    addl $28, %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi

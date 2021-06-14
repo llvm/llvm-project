@@ -8,7 +8,7 @@ define void @off01(i64 %i) nounwind {
 ; CHECK-LABEL: off01:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    leaq dst+64(,%rdi,4), %rax
-; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, ptr(%rip)
 ; CHECK-NEXT:    retq
 entry:
 	%.sum = add i64 %i, 16

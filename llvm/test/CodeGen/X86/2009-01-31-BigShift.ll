@@ -14,7 +14,7 @@ define void @x(i288 %i) nounwind {
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    pushl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    calll add
+; CHECK-NEXT:    calll add@PLT
 ; CHECK-NEXT:    addl $36, %esp
 ; CHECK-NEXT:    retl
 	call void @add(i288 %i)

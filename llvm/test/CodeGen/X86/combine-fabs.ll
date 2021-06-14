@@ -40,7 +40,7 @@ define <4 x float> @combine_vec_fabs_constant() {
 define float @combine_fabs_fabs(float %a) {
 ; SSE-LABEL: combine_fabs_fabs:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_fabs_fabs:
@@ -56,7 +56,7 @@ define float @combine_fabs_fabs(float %a) {
 define <4 x float> @combine_vec_fabs_fabs(<4 x float> %a) {
 ; SSE-LABEL: combine_vec_fabs_fabs:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fabs_fabs:
@@ -73,7 +73,7 @@ define <4 x float> @combine_vec_fabs_fabs(<4 x float> %a) {
 define float @combine_fabs_fneg(float %a) {
 ; SSE-LABEL: combine_fabs_fneg:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_fabs_fneg:
@@ -89,7 +89,7 @@ define float @combine_fabs_fneg(float %a) {
 define <4 x float> @combine_vec_fabs_fneg(<4 x float> %a) {
 ; SSE-LABEL: combine_vec_fabs_fneg:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fabs_fneg:
@@ -106,7 +106,7 @@ define <4 x float> @combine_vec_fabs_fneg(<4 x float> %a) {
 define float @combine_fabs_fcopysign(float %a, float %b) {
 ; SSE-LABEL: combine_fabs_fcopysign:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_fabs_fcopysign:
@@ -122,7 +122,7 @@ define float @combine_fabs_fcopysign(float %a, float %b) {
 define <4 x float> @combine_vec_fabs_fcopysign(<4 x float> %a, <4 x float> %b) {
 ; SSE-LABEL: combine_vec_fabs_fcopysign:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fabs_fcopysign:

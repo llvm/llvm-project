@@ -82,7 +82,8 @@ public:
     // There is no need to go deeper into nodes that do not enclose selection,
     // since "using" there will not affect selection, nor would it make a good
     // insertion point.
-    if (Node->getDeclContext()->Encloses(SelectionDeclContext)) {
+    if (!Node->getDeclContext() ||
+        Node->getDeclContext()->Encloses(SelectionDeclContext)) {
       return RecursiveASTVisitor<UsingFinder>::TraverseDecl(Node);
     }
     return true;

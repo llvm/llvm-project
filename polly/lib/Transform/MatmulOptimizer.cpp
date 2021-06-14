@@ -205,9 +205,9 @@ static isl::map permuteDimensions(isl::map Map, isl::dim DimType,
   Map = Map.move_dims(FreeDim, 0, DimType, MinDim, 1);
   Map = Map.move_dims(DimType, MinDim, FreeDim, 1, 1);
   Map = Map.move_dims(DimType, MaxDim, FreeDim, 0, 1);
-  if (DimId)
+  if (!DimId.is_null())
     Map = Map.set_tuple_id(DimType, DimId);
-  if (FreeDimId)
+  if (!FreeDimId.is_null())
     Map = Map.set_tuple_id(FreeDim, FreeDimId);
   return Map;
 }
@@ -358,7 +358,7 @@ static bool containsOnlyMatMulDep(isl::map Schedule, const Dependences *D,
                                   int &Pos) {
   isl::union_map Dep = D->getDependences(Dependences::TYPE_RAW);
   isl::union_map Red = D->getDependences(Dependences::TYPE_RED);
-  if (Red)
+  if (!Red.is_null())
     Dep = Dep.unite(Red);
   auto DomainSpace = Schedule.get_space().domain();
   auto Space = DomainSpace.map_from_domain_and_range(DomainSpace);
@@ -993,7 +993,7 @@ static isl::schedule_node optimizeMatMulPattern(isl::schedule_node Node,
     return Node;
   auto MapOldIndVar = getInductionVariablesSubstitution(Node, MicroKernelParams,
                                                         MacroKernelParams);
-  if (!MapOldIndVar)
+  if (MapOldIndVar.is_null())
     return Node;
   Node = markLoopVectorizerDisabled(Node.parent()).child(0);
   Node = isolateAndUnrollMatMulInnerLoops(Node, MicroKernelParams);

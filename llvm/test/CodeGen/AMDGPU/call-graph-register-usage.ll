@@ -227,10 +227,10 @@ define amdgpu_kernel void @usage_direct_recursion(i32 %n) #0 {
 ; Make sure there's no assert when a sgpr96 is used.
 ; GCN-LABEL: {{^}}count_use_sgpr96_external_call
 ; GCN: ; sgpr96 s[{{[0-9]+}}:{{[0-9]+}}]
-; CI: NumSgprs: 48
-; VI-NOBUG: NumSgprs: 48
+; CI: NumSgprs: 102
+; VI-NOBUG: NumSgprs: 102
 ; VI-BUG: NumSgprs: 96
-; GCN: NumVgprs: 24
+; GCN: NumVgprs: 64
 define amdgpu_kernel void @count_use_sgpr96_external_call()  {
 entry:
   tail call void asm sideeffect "; sgpr96 $0", "s"(<3 x i32> <i32 10, i32 11, i32 12>) #1
@@ -241,10 +241,10 @@ entry:
 ; Make sure there's no assert when a sgpr160 is used.
 ; GCN-LABEL: {{^}}count_use_sgpr160_external_call
 ; GCN: ; sgpr160 s[{{[0-9]+}}:{{[0-9]+}}]
-; CI: NumSgprs: 48
-; VI-NOBUG: NumSgprs: 48
+; CI: NumSgprs: 102
+; VI-NOBUG: NumSgprs: 102
 ; VI-BUG: NumSgprs: 96
-; GCN: NumVgprs: 24
+; GCN: NumVgprs: 64
 define amdgpu_kernel void @count_use_sgpr160_external_call()  {
 entry:
   tail call void asm sideeffect "; sgpr160 $0", "s"(<5 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14>) #1
@@ -255,10 +255,10 @@ entry:
 ; Make sure there's no assert when a vgpr160 is used.
 ; GCN-LABEL: {{^}}count_use_vgpr160_external_call
 ; GCN: ; vgpr160 v[{{[0-9]+}}:{{[0-9]+}}]
-; CI: NumSgprs: 48
-; VI-NOBUG: NumSgprs: 48
+; CI: NumSgprs: 102
+; VI-NOBUG: NumSgprs: 102
 ; VI-BUG: NumSgprs: 96
-; GCN: NumVgprs: 24
+; GCN: NumVgprs: 64
 define amdgpu_kernel void @count_use_vgpr160_external_call()  {
 entry:
   tail call void asm sideeffect "; vgpr160 $0", "v"(<5 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14>) #1

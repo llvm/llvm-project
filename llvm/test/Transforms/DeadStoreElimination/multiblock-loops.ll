@@ -171,6 +171,234 @@ for.cond.cleanup3:                                ; preds = %for.body4
   br i1 %exitcond29, label %for.cond.cleanup, label %for.body4.lr.ph
 }
 
+define i32 @test_if(i1 %c, i32* %p, i32 %i) {
+; CHECK-LABEL: @test_if(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[PH:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[BB3:%.*]] ]
+; CHECK-NEXT:    [[INC]] = add i32 [[PH]], 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i32 [[PH]]
+; CHECK-NEXT:    store i32 [[I:%.*]], i32* [[GEP]], align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB2:%.*]], label [[BB3]]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    store i32 2, i32* [[GEP]], align 4
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[PH]], 10
+; CHECK-NEXT:    br i1 [[C1]], label [[BB1]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %bb1
+bb1:
+  %ph = phi i32 [ 0, %entry ], [ %inc, %bb3 ]
+  %inc = add i32 %ph, 1
+  %gep = getelementptr inbounds i32, i32* %p, i32 %ph
+  store i32 %i, i32* %gep, align 4
+  br i1 %c, label %bb2, label %bb3
+bb2:
+  br label %bb3
+bb3:
+  store i32 2, i32* %gep, align 4
+  %c1 = icmp slt i32 %ph, 10
+  br i1 %c1, label %bb1, label %exit
+exit:
+  ret i32 0
+}
+
+define i32 @test_if2(i1 %c, i32* %p, i32 %i) {
+; CHECK-LABEL: @test_if2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[PH:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[BB2:%.*]] ], [ [[INC]], [[BB3:%.*]] ]
+; CHECK-NEXT:    [[INC]] = add i32 [[PH]], 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i32 [[PH]]
+; CHECK-NEXT:    store i32 [[I:%.*]], i32* [[GEP]], align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB2]], label [[BB3]]
+; CHECK:       bb2:
+; CHECK-NEXT:    store i32 2, i32* [[GEP]], align 4
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[PH]], 10
+; CHECK-NEXT:    br i1 [[C1]], label [[BB1]], label [[EXIT:%.*]]
+; CHECK:       bb3:
+; CHECK-NEXT:    store i32 3, i32* [[GEP]], align 4
+; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[PH]], 5
+; CHECK-NEXT:    br i1 [[C2]], label [[BB1]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %bb1
+bb1:
+  %ph = phi i32 [ 0, %entry ], [ %inc, %bb2 ], [ %inc, %bb3 ]
+  %inc = add i32 %ph, 1
+  %gep = getelementptr inbounds i32, i32* %p, i32 %ph
+  store i32 %i, i32* %gep, align 4
+  br i1 %c, label %bb2, label %bb3
+bb2:
+  store i32 2, i32* %gep, align 4
+  %c1 = icmp slt i32 %ph, 10
+  br i1 %c1, label %bb1, label %exit
+bb3:
+  store i32 3, i32* %gep, align 4
+  %c2 = icmp slt i32 %ph, 5
+  br i1 %c2, label %bb1, label %exit
+exit:
+  ret i32 0
+}
+
+define i32 @test_if3(i1 %c, i32* %p, i32 %i) {
+; CHECK-LABEL: @test_if3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[PH:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[BB3:%.*]] ]
+; CHECK-NEXT:    [[INC]] = add i32 [[PH]], 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i32 [[PH]]
+; CHECK-NEXT:    store i32 [[I:%.*]], i32* [[GEP]], align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB2:%.*]], label [[BB3]]
+; CHECK:       bb2:
+; CHECK-NEXT:    store i32 2, i32* [[GEP]], align 4
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[PH]], 10
+; CHECK-NEXT:    br i1 [[C1]], label [[BB1]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %bb1
+bb1:
+  %ph = phi i32 [ 0, %entry ], [ %inc, %bb3 ]
+  %inc = add i32 %ph, 1
+  %gep = getelementptr inbounds i32, i32* %p, i32 %ph
+  store i32 %i, i32* %gep, align 4
+  br i1 %c, label %bb2, label %bb3
+bb2:
+  store i32 2, i32* %gep, align 4
+  br label %bb3
+bb3:
+  %c1 = icmp slt i32 %ph, 10
+  br i1 %c1, label %bb1, label %exit
+exit:
+  ret i32 0
+}
+
+define i32 @test_if4(i1 %c, i32* %p, i32 %i) {
+; CHECK-LABEL: @test_if4(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[PH:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[BB1]] ], [ [[INC]], [[BB2:%.*]] ]
+; CHECK-NEXT:    [[INC]] = add i32 [[PH]], 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i32 [[PH]]
+; CHECK-NEXT:    store i32 [[I:%.*]], i32* [[GEP]], align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB2]], label [[BB1]]
+; CHECK:       bb2:
+; CHECK-NEXT:    store i32 2, i32* [[GEP]], align 4
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[PH]], 10
+; CHECK-NEXT:    br i1 [[C1]], label [[BB1]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %bb1
+bb1:
+  %ph = phi i32 [ 0, %entry ], [ %inc, %bb1 ], [ %inc, %bb2 ]
+  %inc = add i32 %ph, 1
+  %gep = getelementptr inbounds i32, i32* %p, i32 %ph
+  store i32 %i, i32* %gep, align 4
+  br i1 %c, label %bb2, label %bb1
+bb2:
+  store i32 2, i32* %gep, align 4
+  %c1 = icmp slt i32 %ph, 10
+  br i1 %c1, label %bb1, label %exit
+exit:
+  ret i32 0
+}
+
+declare void @clobber()
+define i32 @test_self(i1 %c, i32* %p, i32 %i) {
+; CHECK-LABEL: @test_self(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[PH:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[BB1]] ], [ [[INC]], [[BB2:%.*]] ]
+; CHECK-NEXT:    [[INC]] = add i32 [[PH]], 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i32 [[PH]]
+; CHECK-NEXT:    store i32 1, i32* [[GEP]], align 4
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    store i32 2, i32* [[GEP]], align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB2]], label [[BB1]]
+; CHECK:       bb2:
+; CHECK-NEXT:    store i32 3, i32* [[GEP]], align 4
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[PH]], 10
+; CHECK-NEXT:    br i1 [[C1]], label [[BB1]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  br label %bb1
+bb1:
+  %ph = phi i32 [ 0, %entry ], [ %inc, %bb1 ], [ %inc, %bb2 ]
+  %inc = add i32 %ph, 1
+  %gep = getelementptr inbounds i32, i32* %p, i32 %ph
+  store i32 1, i32* %gep, align 4
+  call void @clobber()
+  store i32 2, i32* %gep, align 4
+  br i1 %c, label %bb2, label %bb1
+bb2:
+  store i32 3, i32* %gep, align 4
+  %c1 = icmp slt i32 %ph, 10
+  br i1 %c1, label %bb1, label %exit
+exit:
+  ret i32 0
+}
+
+define i32 @test_selfalloca(i1 %c, i32 %i) {
+; CHECK-LABEL: @test_selfalloca(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    br label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[PH:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[BB1]] ], [ [[INC]], [[BB2:%.*]] ]
+; CHECK-NEXT:    [[INC]] = add i32 [[PH]], 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32* [[P]], i32 [[PH]]
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    store i32 2, i32* [[GEP]], align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB2]], label [[BB1]]
+; CHECK:       bb2:
+; CHECK-NEXT:    store i32 3, i32* [[GEP]], align 4
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[PH]], 10
+; CHECK-NEXT:    br i1 [[C1]], label [[BB1]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[PG:%.*]] = getelementptr inbounds i32, i32* [[P]], i32 [[I:%.*]]
+; CHECK-NEXT:    [[L:%.*]] = load i32, i32* [[PG]], align 4
+; CHECK-NEXT:    ret i32 [[L]]
+;
+entry:
+  %p = alloca i32, align 4
+  br label %bb1
+bb1:
+  %ph = phi i32 [ 0, %entry ], [ %inc, %bb1 ], [ %inc, %bb2 ]
+  %inc = add i32 %ph, 1
+  %gep = getelementptr inbounds i32, i32* %p, i32 %ph
+  store i32 1, i32* %gep, align 4
+  call void @clobber()
+  store i32 2, i32* %gep, align 4
+  br i1 %c, label %bb2, label %bb1
+bb2:
+  store i32 3, i32* %gep, align 4
+  %c1 = icmp slt i32 %ph, 10
+  br i1 %c1, label %bb1, label %exit
+exit:
+  %pg = getelementptr inbounds i32, i32* %p, i32 %i
+  %l = load i32, i32* %pg
+  ret i32 %l
+}
+
 declare i1 @cond() readnone
 
 ; TODO: We can eliminate the store in for.header, but we currently hit a MemoryPhi.

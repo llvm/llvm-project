@@ -444,9 +444,9 @@ define dso_local void @arm_mat_mult_q31(i32* noalias nocapture readonly %A, i32*
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    .pad #24
-; CHECK-NEXT:    sub sp, #24
-; CHECK-NEXT:    ldrd r9, r12, [sp, #128]
+; CHECK-NEXT:    .pad #16
+; CHECK-NEXT:    sub sp, #16
+; CHECK-NEXT:    ldrd r9, r12, [sp, #120]
 ; CHECK-NEXT:    sub.w r7, r12, #1
 ; CHECK-NEXT:    movs r6, #1
 ; CHECK-NEXT:    mov.w r8, #0
@@ -506,7 +506,7 @@ define dso_local void @arm_mat_mult_q31(i32* noalias nocapture readonly %A, i32*
 ; CHECK-NEXT:    cmp r8, r3
 ; CHECK-NEXT:    bne .LBB9_1
 ; CHECK-NEXT:  @ %bb.6: @ %for.end25
-; CHECK-NEXT:    add sp, #24
+; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
@@ -634,8 +634,7 @@ define dso_local void @arm_mat_mult_q15(i16* noalias nocapture readonly %A, i16*
 ; CHECK-NEXT:    @ in Loop: Header=BB10_5 Depth=1
 ; CHECK-NEXT:    ldr r0, [sp, #28] @ 4-byte Reload
 ; CHECK-NEXT:    add.w r3, r0, r5, lsl #1
-; CHECK-NEXT:    mov r5, r6
-; CHECK-NEXT:    wlstp.8 lr, r5, .LBB10_4
+; CHECK-NEXT:    wlstp.8 lr, r6, .LBB10_4
 ; CHECK-NEXT:    b .LBB10_15
 ; CHECK-NEXT:  .LBB10_4: @ %for.cond1.for.cond.cleanup3_crit_edge.us
 ; CHECK-NEXT:    @ in Loop: Header=BB10_5 Depth=1

@@ -19,7 +19,7 @@ define i32 @foo() nounwind {
 ; CHECK-NEXT:    movsbl %al, %eax
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    pushl $LC
-; CHECK-NEXT:    calll printf
+; CHECK-NEXT:    calll printf@PLT
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    incl %ebx
 ; CHECK-NEXT:    cmpl $258, %ebx # imm = 0x102

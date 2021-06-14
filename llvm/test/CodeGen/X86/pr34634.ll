@@ -11,7 +11,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local void @fn1() local_unnamed_addr #0 {
 ; CHECK-LABEL: fn1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movslq {{.*}}(%rip), %rax
+; CHECK-NEXT:    movslq c(%rip), %rax
 ; CHECK-NEXT:    leaq (%rax,%rax,4), %rcx
 ; CHECK-NEXT:    leaq (,%rax,4), %rdx
 ; CHECK-NEXT:    movl a(%rdx,%rcx,8), %ecx
@@ -34,7 +34,7 @@ entry:
 define dso_local i32 @main() local_unnamed_addr #0 {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movslq {{.*}}(%rip), %rax
+; CHECK-NEXT:    movslq c(%rip), %rax
 ; CHECK-NEXT:    leaq (%rax,%rax,4), %rcx
 ; CHECK-NEXT:    leaq (,%rax,4), %rdx
 ; CHECK-NEXT:    movl a(%rdx,%rcx,8), %ecx

@@ -16,7 +16,7 @@ define i32 addrspace(1)* @test(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i1 %w
 ; CHECK-NEXT:    movl %edx, %ebx
 ; CHECK-NEXT:    movq %rdi, (%rsp)
 ; CHECK-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    callq f
+; CHECK-NEXT:    callq f@PLT
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    testb $1, %bl
 ; CHECK-NEXT:    je .LBB0_1

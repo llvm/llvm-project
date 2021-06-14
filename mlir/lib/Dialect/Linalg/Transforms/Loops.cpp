@@ -126,8 +126,12 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
 
   // TODO: Avoid the loads if the corresponding argument of the
   // region has no uses.
-  // 1.a. Emit load from input views.
+  // 1.a. Emit load from input operand or for scalars access the operand itself.
   for (OpOperand *inputOperand : linalgOp.getInputOperands()) {
+    if (linalgOp.isScalar(inputOperand)) {
+      indexedValues.push_back(inputOperand->get());
+      continue;
+    }
     auto indexing = makeCanonicalAffineApplies(
         b, loc, linalgOp.getTiedIndexingMap(inputOperand), allIvsPlusDims);
     indexedValues.push_back(

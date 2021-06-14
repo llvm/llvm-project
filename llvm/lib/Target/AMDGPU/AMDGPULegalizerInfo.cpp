@@ -359,8 +359,8 @@ static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query)
 static bool shouldBitcastLoadStoreType(const GCNSubtarget &ST, const LLT Ty,
                                        const unsigned MemSizeInBits) {
   const unsigned Size = Ty.getSizeInBits();
-    if (Size != MemSizeInBits)
-      return Size <= 32 && Ty.isVector();
+  if (Size != MemSizeInBits)
+    return Size <= 32 && Ty.isVector();
 
   if (loadStoreBitcastWorkaround(Ty) && isRegisterType(Ty))
     return true;

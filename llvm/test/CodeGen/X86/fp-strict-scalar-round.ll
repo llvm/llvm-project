@@ -511,7 +511,7 @@ define float @fround32(float %f) #0 {
 ; SSE41-X64:       # %bb.0:
 ; SSE41-X64-NEXT:    pushq %rax
 ; SSE41-X64-NEXT:    .cfi_def_cfa_offset 16
-; SSE41-X64-NEXT:    callq roundf
+; SSE41-X64-NEXT:    callq roundf@PLT
 ; SSE41-X64-NEXT:    popq %rax
 ; SSE41-X64-NEXT:    .cfi_def_cfa_offset 8
 ; SSE41-X64-NEXT:    retq
@@ -531,7 +531,7 @@ define float @fround32(float %f) #0 {
 ; AVX-X64:       # %bb.0:
 ; AVX-X64-NEXT:    pushq %rax
 ; AVX-X64-NEXT:    .cfi_def_cfa_offset 16
-; AVX-X64-NEXT:    callq roundf
+; AVX-X64-NEXT:    callq roundf@PLT
 ; AVX-X64-NEXT:    popq %rax
 ; AVX-X64-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-X64-NEXT:    retq
@@ -556,7 +556,7 @@ define double @froundf64(double %f) #0 {
 ; SSE41-X64:       # %bb.0:
 ; SSE41-X64-NEXT:    pushq %rax
 ; SSE41-X64-NEXT:    .cfi_def_cfa_offset 16
-; SSE41-X64-NEXT:    callq round
+; SSE41-X64-NEXT:    callq round@PLT
 ; SSE41-X64-NEXT:    popq %rax
 ; SSE41-X64-NEXT:    .cfi_def_cfa_offset 8
 ; SSE41-X64-NEXT:    retq
@@ -576,7 +576,7 @@ define double @froundf64(double %f) #0 {
 ; AVX-X64:       # %bb.0:
 ; AVX-X64-NEXT:    pushq %rax
 ; AVX-X64-NEXT:    .cfi_def_cfa_offset 16
-; AVX-X64-NEXT:    callq round
+; AVX-X64-NEXT:    callq round@PLT
 ; AVX-X64-NEXT:    popq %rax
 ; AVX-X64-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-X64-NEXT:    retq

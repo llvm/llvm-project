@@ -9,7 +9,7 @@ define <8 x float> @_256_broadcast_ss_spill(float %x) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    vaddss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    callq func_f32
+; CHECK-NEXT:    callq func_f32@PLT
 ; CHECK-NEXT:    vbroadcastss (%rsp), %ymm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -28,7 +28,7 @@ define <4 x float> @_128_broadcast_ss_spill(float %x) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    vaddss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    callq func_f32
+; CHECK-NEXT:    callq func_f32@PLT
 ; CHECK-NEXT:    vbroadcastss (%rsp), %xmm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -48,7 +48,7 @@ define <4 x double> @_256_broadcast_sd_spill(double %x) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    vaddsd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    callq func_f64
+; CHECK-NEXT:    callq func_f64@PLT
 ; CHECK-NEXT:    vbroadcastsd (%rsp), %ymm0 # 16-byte Folded Reload
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8

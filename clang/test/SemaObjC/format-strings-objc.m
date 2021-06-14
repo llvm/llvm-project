@@ -34,6 +34,11 @@ typedef float CGFloat;
 @interface NSConstantString : NSSimpleCString @end
 extern void *_NSConstantStringClassReference;
 
+@interface NSAttributedString : NSObject
++(instancetype)stringWithFormat:(NSAttributedString *)fmt, ...
+    __attribute__((format(__NSString__, 1, 2)));
+@end
+
 typedef const struct __CFString * CFStringRef;
 extern void CFStringCreateWithFormat(CFStringRef format, ...) __attribute__((format(CFString, 1, 2)));
 #define CFSTR(cStr)  ((CFStringRef) __builtin___CFStringMakeConstantString ("" cStr ""))
@@ -317,6 +322,9 @@ const char *rd23622446(const char *format) {
                          value:(nullable NSString *)value
                          table:(nullable NSString *)tableName
     __attribute__((format_arg(1)));
+
+- (NSAttributedString *)someMethod2:(NSString *)key
+    __attribute__((format_arg(1)));
 @end
 
 void useLocalizedStringForKey(NSBundle *bndl) {
@@ -341,4 +349,9 @@ void useLocalizedStringForKey(NSBundle *bndl) {
               [bndl someRandomMethod:@"flerp"
                                value:0
                                table:0], 42]; // expected-warning{{data argument not used by format string}}
+
+  [NSAttributedString stringWithFormat:
+              [bndl someMethod2: @"test"], 5]; // expected-warning{{data argument not used by format string}}
+  [NSAttributedString stringWithFormat:
+              [bndl someMethod2: @"%f"], 42]; // expected-warning{{format specifies type 'double' but the argument has type 'int'}}
 }

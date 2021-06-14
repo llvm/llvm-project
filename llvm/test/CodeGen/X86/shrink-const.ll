@@ -7,14 +7,14 @@ define <4 x i32> @sext_vector_constants(<4 x i32> %a0) {
 ; SSE-LABEL: sext_vector_constants:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    psrld $9, %xmm0
-; SSE-NEXT:    pxor {{.*}}(%rip), %xmm0
+; SSE-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    pslld $26, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: sext_vector_constants:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsrld $9, %xmm0, %xmm0
-; AVX-NEXT:    vpxor {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vpslld $26, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = lshr <4 x i32> %a0, <i32 9, i32 9, i32 9, i32 9>

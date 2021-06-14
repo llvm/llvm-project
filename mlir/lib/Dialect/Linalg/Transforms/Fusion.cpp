@@ -129,14 +129,14 @@ static SmallVector<Value> getTiledOperands(OpBuilder &b, LinalgOp producer) {
   assert(producer.hasTensorSemantics() &&
          "only fusion on tensors is currently supported for TiledLinalgOp");
 
-  for (OpOperand *producerInput : producer.getInputTensorOperands()) {
+  for (OpOperand *producerInput : producer.getInputOperands()) {
     OpOperand *addedInput = tiledLoop.findInputOperand(producerInput->get());
     if (addedInput == nullptr)
       addedInput = &tiledLoop.appendInputOperand(b, producerInput->get());
     BlockArgument addedBlockArg = tiledLoop.getTiedBlockArgument(*addedInput);
     tiledOperands.push_back(addedBlockArg);
   }
-  for (OpOperand *producerOutput : producer.getOutputTensorOperands()) {
+  for (OpOperand *producerOutput : producer.getOutputOperands()) {
     OpResult result = producer.getTiedOpResult(producerOutput);
     OpOperand *resultInputOperand = tiledLoop.findInputOperand(result);
     OpOperand *resultOutputOperand = tiledLoop.findOutputOperand(result);

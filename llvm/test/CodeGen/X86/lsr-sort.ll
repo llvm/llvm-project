@@ -12,7 +12,7 @@ define dso_local i32 @foo(i32 %N) nounwind {
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_1: # %bb
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movw %ax, {{.*}}(%rip)
+; CHECK-NEXT:    movw %ax, X(%rip)
 ; CHECK-NEXT:    incl %eax
 ; CHECK-NEXT:    cmpl %eax, %edi
 ; CHECK-NEXT:    jne .LBB0_1

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected,cxx20_2b %s -fcxx-exceptions -triple=x86_64-linux-gnu
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx20_2b %s -fcxx-exceptions -triple=x86_64-linux-gnu
-// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14    %s -fcxx-exceptions -triple=x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected,cxx20_2b,cxx2b          %s -fcxx-exceptions -triple=x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_2b,cxx20 %s -fcxx-exceptions -triple=x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify=expected,cxx14_20,cxx14          %s -fcxx-exceptions -triple=x86_64-linux-gnu
 
 struct S {
   // dummy ctor to make this a literal type
@@ -269,16 +269,23 @@ namespace null {
 
 namespace incdec {
   template<typename T> constexpr T &ref(T &&r) { return r; }
+  // cxx2b-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
   template<typename T> constexpr T postinc(T &&r) { return (r++, r); }
   template<typename T> constexpr T postdec(T &&r) { return (r--, r); }
 
+  template int &ref<int>(int &&);
+  // cxx2b-note@-1  {{in instantiation of function template specialization}}
+
+  static_assert(postinc(0) == 1, "");
+  static_assert(postdec(0) == -1, "");
+#if __cplusplus <= 202002L
   static_assert(++ref(0) == 1, "");
   static_assert(ref(0)++ == 0, "");
-  static_assert(postinc(0) == 1, "");
   static_assert(--ref(0) == -1, "");
   static_assert(ref(0)-- == 0, "");
-  static_assert(postdec(0) == -1, "");
+#endif
 
+#if __cplusplus <= 202002L
   constexpr int overflow_int_inc_1 = ref(0x7fffffff)++; // expected-error {{constant}} expected-note {{2147483648}}
   constexpr int overflow_int_inc_1_ok = ref(0x7ffffffe)++;
   constexpr int overflow_int_inc_2 = ++ref(0x7fffffff); // expected-error {{constant}} expected-note {{2147483648}}
@@ -291,37 +298,42 @@ namespace incdec {
   // inc on bool sets to true
   static_assert(++ref(false), "");
   // cxx14-warning@-1  {{incrementing expression of type bool}}
-  // cxx20_2b-error@-2 {{incrementing expression of type bool}}
+  // cxx20-error@-2 {{incrementing expression of type bool}}
   static_assert(++ref(true), "");
   // cxx14-warning@-1  {{incrementing expression of type bool}}
-  // cxx20_2b-error@-2 {{incrementing expression of type bool}}
+  // cxx20-error@-2 {{incrementing expression of type bool}}
+#endif
 
   int arr[10];
+  static_assert(postinc(&arr[0]) == &arr[1], "");
+  static_assert(postdec(&arr[1]) == &arr[0], "");
+#if __cplusplus <= 202002L
   static_assert(++ref(&arr[0]) == &arr[1], "");
   static_assert(++ref(&arr[9]) == &arr[10], "");
   static_assert(++ref(&arr[10]) == &arr[11], ""); // expected-error {{constant}} expected-note {{cannot refer to element 11}}
   static_assert(ref(&arr[0])++ == &arr[0], "");
   static_assert(ref(&arr[10])++ == &arr[10], ""); // expected-error {{constant}} expected-note {{cannot refer to element 11}}
-  static_assert(postinc(&arr[0]) == &arr[1], "");
   static_assert(--ref(&arr[10]) == &arr[9], "");
   static_assert(--ref(&arr[1]) == &arr[0], "");
   static_assert(--ref(&arr[0]) != &arr[0], ""); // expected-error {{constant}} expected-note {{cannot refer to element -1}}
   static_assert(ref(&arr[1])-- == &arr[1], "");
   static_assert(ref(&arr[0])-- == &arr[0], ""); // expected-error {{constant}} expected-note {{cannot refer to element -1}}
-  static_assert(postdec(&arr[1]) == &arr[0], "");
+#endif
 
+  static_assert(postinc(0.0) == 1.0, "");
+  static_assert(postdec(0.0) == -1.0, "");
+#if __cplusplus <= 202002L
   int x;
   static_assert(++ref(&x) == &x + 1, "");
 
   static_assert(++ref(0.0) == 1.0, "");
   static_assert(ref(0.0)++ == 0.0, "");
-  static_assert(postinc(0.0) == 1.0, "");
   static_assert(--ref(0.0) == -1.0, "");
   static_assert(ref(0.0)-- == 0.0, "");
-  static_assert(postdec(0.0) == -1.0, "");
 
   static_assert(++ref(1e100) == 1e100, "");
   static_assert(--ref(1e100) == 1e100, "");
+#endif
 
   union U {
     int a, b;
@@ -863,9 +875,13 @@ namespace VirtualFromBase {
 
 namespace Lifetime {
   constexpr int &get(int &&r) { return r; }
+  // cxx2b-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
+  // cxx2b-error@-2 {{no return statement in constexpr function}} See PR40598
   constexpr int f() {
     int &r = get(123);
-    return r; // expected-note {{read of object outside its lifetime}}
+    return r;
+    // cxx2b-note@-1 {{use of reference outside its lifetime is not allowed in a constant expression}}
+    // cxx14_20-note@-2 {{read of object outside its lifetime}}
   }
   static_assert(f() == 123, ""); // expected-error {{constant expression}} expected-note {{in call}}
 
@@ -1027,8 +1043,9 @@ constexpr int S = sum(Cs); // expected-error{{must be initialized by a constant 
 }
 
 constexpr void PR28739(int n) { // expected-error {{never produces a constant}}
-  int *p = &n;
+  int *p = &n;                  // expected-note {{array 'p' declared here}}
   p += (__int128)(unsigned long)-1; // expected-note {{cannot refer to element 18446744073709551615 of non-array object in a constant expression}}
+  // expected-warning@-1 {{the pointer incremented by 18446744073709551615 refers past the last possible element for an array in 64-bit address space containing 32-bit (4-byte) elements (max possible 4611686018427387904 elements)}}
 }
 
 constexpr void Void(int n) {

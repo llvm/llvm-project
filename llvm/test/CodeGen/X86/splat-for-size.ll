@@ -242,7 +242,7 @@ define <8 x i32> @splat_v8i32_pgso(<8 x i32> %x) !prof !14 {
 define <8 x i16> @splat_v8i16(<8 x i16> %x) #1 {
 ; AVX-LABEL: splat_v8i16:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddw {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: splat_v8i16:
@@ -257,7 +257,7 @@ define <8 x i16> @splat_v8i16(<8 x i16> %x) #1 {
 define <8 x i16> @splat_v8i16_pgso(<8 x i16> %x) !prof !14 {
 ; AVX-LABEL: splat_v8i16_pgso:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddw {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: splat_v8i16_pgso:
@@ -312,7 +312,7 @@ define <16 x i16> @splat_v16i16_pgso(<16 x i16> %x) !prof !14 {
 define <16 x i8> @splat_v16i8(<16 x i8> %x) #1 {
 ; AVX-LABEL: splat_v16i8:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddb {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: splat_v16i8:
@@ -327,7 +327,7 @@ define <16 x i8> @splat_v16i8(<16 x i8> %x) #1 {
 define <16 x i8> @splat_v16i8_pgso(<16 x i8> %x) !prof !14 {
 ; AVX-LABEL: splat_v16i8_pgso:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpaddb {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: splat_v16i8_pgso:
@@ -400,7 +400,7 @@ define <8 x i64> @pr23259() #1 {
 ;
 ; AVX2-LABEL: pr23259:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vmovdqa {{.*}}(%rip), %ymm0
+; AVX2-NEXT:    vmovdqa A(%rip), %ymm0
 ; AVX2-NEXT:    pushq $1
 ; AVX2-NEXT:    .cfi_adjust_cfa_offset 8
 ; AVX2-NEXT:    popq %rax

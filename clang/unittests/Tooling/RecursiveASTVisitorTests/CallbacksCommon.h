@@ -39,7 +39,7 @@ public:
   std::string stmtToString(Stmt *S) {
     StringRef ClassName = S->getStmtClassName();
     if (IntegerLiteral *IL = dyn_cast<IntegerLiteral>(S)) {
-      return (ClassName + "(" + IL->getValue().toString(10, false) + ")").str();
+      return (ClassName + "(" + toString(IL->getValue(), 10, false) + ")").str();
     }
     if (UnaryOperator *UO = dyn_cast<UnaryOperator>(S)) {
       return (ClassName + "(" + UnaryOperator::getOpcodeStr(UO->getOpcode()) +

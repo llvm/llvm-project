@@ -9,7 +9,7 @@ define void @zero128() nounwind ssp {
 ; CHECK-LABEL: zero128:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    movq _z@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq _z@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    vmovaps %xmm0, (%rax)
 ; CHECK-NEXT:    retq
   store <4 x float> zeroinitializer, <4 x float>* @z, align 16
@@ -20,9 +20,9 @@ define void @zero256() nounwind ssp {
 ; CHECK-LABEL: zero256:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    movq _x@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq _x@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    vmovaps %ymm0, (%rax)
-; CHECK-NEXT:    movq _y@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq _y@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    vmovaps %ymm0, (%rax)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

@@ -41,8 +41,8 @@ define void @test(i8* %x) uwtable ssp {
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movl $10000, %ebp ## imm = 0x2710
-; CHECK-NEXT:    movq {{.*}}(%rip), %r14
-; CHECK-NEXT:    movq _objc_msgSend@{{.*}}(%rip), %r15
+; CHECK-NEXT:    movq L_OBJC_SELECTOR_REFERENCES_(%rip), %r14
+; CHECK-NEXT:    movq _objc_msgSend@GOTPCREL(%rip), %r15
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB0_1: ## %for.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -92,8 +92,8 @@ define void @test_unordered(i8* %x) uwtable ssp {
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movl $10000, %ebp ## imm = 0x2710
-; CHECK-NEXT:    movq {{.*}}(%rip), %r14
-; CHECK-NEXT:    movq _objc_msgSend@{{.*}}(%rip), %r15
+; CHECK-NEXT:    movq L_OBJC_SELECTOR_REFERENCES_(%rip), %r14
+; CHECK-NEXT:    movq _objc_msgSend@GOTPCREL(%rip), %r15
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB1_1: ## %for.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
@@ -138,11 +138,11 @@ define void @test_volatile(i8* %x) uwtable ssp {
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movl $10000, %ebp ## imm = 0x2710
-; CHECK-NEXT:    movq _objc_msgSend@{{.*}}(%rip), %r14
+; CHECK-NEXT:    movq _objc_msgSend@GOTPCREL(%rip), %r14
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB2_1: ## %for.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movq {{.*}}(%rip), %rsi
+; CHECK-NEXT:    movq L_OBJC_SELECTOR_REFERENCES_(%rip), %rsi
 ; CHECK-NEXT:    movq %rbx, %rdi
 ; CHECK-NEXT:    callq *%r14
 ; CHECK-NEXT:    decl %ebp
@@ -181,11 +181,11 @@ define void @test_seq_cst(i8* %x) uwtable ssp {
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    movl $10000, %ebp ## imm = 0x2710
-; CHECK-NEXT:    movq _objc_msgSend@{{.*}}(%rip), %r14
+; CHECK-NEXT:    movq _objc_msgSend@GOTPCREL(%rip), %r14
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB3_1: ## %for.body
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movq {{.*}}(%rip), %rsi
+; CHECK-NEXT:    movq L_OBJC_SELECTOR_REFERENCES_(%rip), %rsi
 ; CHECK-NEXT:    movq %rbx, %rdi
 ; CHECK-NEXT:    callq *%r14
 ; CHECK-NEXT:    decl %ebp

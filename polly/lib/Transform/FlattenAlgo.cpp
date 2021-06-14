@@ -48,7 +48,7 @@ bool isDimBoundedByParameter(isl::set Set, unsigned dim) {
 /// Whether BMap's first out-dimension is not a constant.
 bool isVariableDim(const isl::basic_map &BMap) {
   auto FixedVal = BMap.plain_get_val_if_fixed(isl::dim::out, 0);
-  return !FixedVal || FixedVal.is_nan();
+  return FixedVal.is_null() || FixedVal.is_nan();
 }
 
 /// Whether Map's first out dimension is no constant nor piecewise constant.
@@ -132,7 +132,7 @@ isl::union_map scheduleProjectOut(const isl::union_map &UMap, unsigned first,
 isl_size scheduleScatterDims(const isl::union_map &Schedule) {
   isl_size Dims = 0;
   for (isl::map Map : Schedule.get_map_list()) {
-    if (!Map)
+    if (Map.is_null())
       continue;
 
     Dims = std::max(Dims, Map.dim(isl::dim::out));
@@ -285,7 +285,8 @@ isl::union_map tryFlattenLoop(isl::union_map Schedule) {
   LLVM_DEBUG(dbgs() << "Max bound:\n  " << Max << "\n");
   auto MaxVal = getConstant(Max, true, false);
 
-  if (!MinVal || !MaxVal || MinVal.is_nan() || MaxVal.is_nan()) {
+  if (MinVal.is_null() || MaxVal.is_null() || MinVal.is_nan() ||
+      MaxVal.is_nan()) {
     LLVM_DEBUG(dbgs() << "Abort; dimension bounds could not be determined\n");
     return {};
   }
@@ -328,20 +329,20 @@ isl::union_map polly::flattenSchedule(isl::union_map Schedule) {
   if (!isVariableDim(Schedule)) {
     LLVM_DEBUG(dbgs() << "Fixed dimension; try sequence flattening\n");
     auto NewScheduleSequence = tryFlattenSequence(Schedule);
-    if (NewScheduleSequence)
+    if (!NewScheduleSequence.is_null())
       return NewScheduleSequence;
   }
 
   // Constant stride
   LLVM_DEBUG(dbgs() << "Try loop flattening\n");
   auto NewScheduleLoop = tryFlattenLoop(Schedule);
-  if (NewScheduleLoop)
+  if (!NewScheduleLoop.is_null())
     return NewScheduleLoop;
 
   // Try again without loop condition (may blow up the number of pieces!!)
   LLVM_DEBUG(dbgs() << "Try sequence flattening again\n");
   auto NewScheduleSequence = tryFlattenSequence(Schedule);
-  if (NewScheduleSequence)
+  if (!NewScheduleSequence.is_null())
     return NewScheduleSequence;
 
   // Cannot flatten

@@ -2,6 +2,7 @@
 ; RUN: opt -S -rewrite-statepoints-for-gc < %s | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"
+target datalayout = "e-ni:1:6"
 
 declare void @foo()
 
