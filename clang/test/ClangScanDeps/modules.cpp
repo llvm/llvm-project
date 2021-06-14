@@ -48,7 +48,7 @@
 // CHECK1-NEXT: Inputs{{/|\\}}header2.h
 // CHECK1: Inputs{{/|\\}}header.h
 
-// CHECK2: {{.*}}.o:
+// CHECK2: {{(modules_cdb_input)|(a)|(b)}}.o:
 // CHECK2-NEXT: modules_cdb_input.cpp
 // CHECK2-NEXT: Inputs{{/|\\}}module.modulemap
 // CHECK2-NEXT: Inputs{{/|\\}}header.h
