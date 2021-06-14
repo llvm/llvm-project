@@ -462,7 +462,10 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
 
   setOperationAction(ISD::VASTART,           MVT::Other, Custom);
   setOperationAction(ISD::VAARG,             MVT::Other, Custom);
-  setOperationAction(ISD::VACOPY,            MVT::Other, Expand);
+  if (Subtarget.hasNanoMips())
+    setOperationAction(ISD::VACOPY,            MVT::Other, Custom);
+  else
+    setOperationAction(ISD::VACOPY,            MVT::Other, Expand);
   setOperationAction(ISD::VAEND,             MVT::Other, Expand);
 
   // Use the default for now
@@ -1223,6 +1226,7 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::SETCC:              return lowerSETCC(Op, DAG);
   case ISD::VASTART:            return lowerVASTART(Op, DAG);
   case ISD::VAARG:              return lowerVAARG(Op, DAG);
+  case ISD::VACOPY:             return lowerVACOPY(Op, DAG);
   case ISD::FCOPYSIGN:          return lowerFCOPYSIGN(Op, DAG);
   case ISD::FABS:               return lowerFABS(Op, DAG);
   case ISD::FRAMEADDR:          return lowerFRAMEADDR(Op, DAG);
@@ -2419,6 +2423,25 @@ SDValue MipsTargetLowering::lowerVAARG(SDValue Op, SelectionDAG &DAG) const {
   }
   // Load the actual argument out of the pointer VAList
   return DAG.getLoad(VT, DL, Chain, VAList, MachinePointerInfo());
+}
+
+SDValue MipsTargetLowering::lowerVACOPY(SDValue Op, SelectionDAG &DAG) const {
+  if (Subtarget.hasNanoMips()) {
+    // NanoMips va_list is a 16-byte struct. Copy it.
+    SDLoc DL(Op);
+    unsigned PtrSize = 4;
+    unsigned VaListSize = 16;
+    const Value *DestSV = cast<SrcValueSDNode>(Op.getOperand(3))->getValue();
+    const Value *SrcSV = cast<SrcValueSDNode>(Op.getOperand(4))->getValue();
+
+    return DAG.getMemcpy(Op.getOperand(0), DL, Op.getOperand(1),
+                         Op.getOperand(2),
+                         DAG.getConstant(VaListSize, DL, MVT::i32),
+                         Align(PtrSize), false, false, false,
+                         MachinePointerInfo(DestSV), MachinePointerInfo(SrcSV));
+  } else {
+    return SDNode();
+  }
 }
 
 static SDValue lowerFCOPYSIGN32(SDValue Op, SelectionDAG &DAG,
