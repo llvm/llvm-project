@@ -101,6 +101,10 @@ public:
     Dependencies.push_back(std::string(File));
   }
 
+  void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {
+    PrebuiltModuleDeps.emplace_back(std::move(PMD));
+  }
+
   void handleModuleDependency(ModuleDeps MD) override {
     ClangModuleDeps[MD.ID.ContextHash + MD.ID.ModuleName] = std::move(MD);
   }
@@ -122,6 +126,8 @@ public:
         FD.ClangModuleDeps.push_back({MD.ID.ModuleName, ContextHash});
     }
 
+    FD.PrebuiltModuleDeps = std::move(PrebuiltModuleDeps);
+
     FullDependenciesResult FDR;
 
     for (auto &&M : ClangModuleDeps) {
@@ -138,6 +144,7 @@ public:
 
 private:
   std::vector<std::string> Dependencies;
+  std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
   std::unordered_map<std::string, ModuleDeps> ClangModuleDeps;
   std::string ContextHash;
   std::vector<std::string> OutputPaths;
