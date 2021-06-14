@@ -201,13 +201,6 @@ llvm::cl::opt<bool> Verbose("v", llvm::cl::Optional,
 
 } // end anonymous namespace
 
-/// \returns object-file path derived from source-file path.
-static std::string getObjFilePath(StringRef SrcFile) {
-  SmallString<128> ObjFileName(SrcFile);
-  llvm::sys::path::replace_extension(ObjFileName, "o");
-  return std::string(ObjFileName.str());
-}
-
 class SingleCommandCompilationDatabase : public tooling::CompilationDatabase {
 public:
   SingleCommandCompilationDatabase(tooling::CompileCommand Cmd)
@@ -463,16 +456,10 @@ int main(int argc, const char **argv) {
           std::move(Compilations));
   ResourceDirectoryCache ResourceDirCache;
 
-  // FIXME: Adjust the resulting CompilerInvocation in DependencyScanningAction
-  // instead of parsing and adjusting the raw command-line. This will make it
-  // possible to remove some code specific to clang-cl and Windows.
   AdjustingCompilations->appendArgumentsAdjuster(
       [&ResourceDirCache](const tooling::CommandLineArguments &Args,
                           StringRef FileName) {
         std::string LastO = "";
-        bool HasMT = false;
-        bool HasMQ = false;
-        bool HasMD = false;
         bool HasResourceDir = false;
         bool ClangCLMode = false;
         auto FlagsEnd = llvm::find(Args, "--");
@@ -503,58 +490,17 @@ int main(int argc, const char **argv) {
                 if (!LastO.empty() && !llvm::sys::path::has_extension(LastO))
                   LastO.append(".obj");
               }
-              if (Arg == "/clang:-MT")
-                HasMT = true;
-              if (Arg == "/clang:-MQ")
-                HasMQ = true;
-              if (Arg == "/clang:-MD")
-                HasMD = true;
-            } else {
-              if (LastO.empty()) {
-                if (Arg == "-o" && I != R)
-                  LastO = I[-1]; // Next argument (reverse iterator)
-                else if (Arg.startswith("-o"))
-                  LastO = Arg.drop_front(2).str();
-              }
-              if (Arg == "-MT")
-                HasMT = true;
-              if (Arg == "-MQ")
-                HasMQ = true;
-              if (Arg == "-MD")
-                HasMD = true;
             }
             if (Arg == "-resource-dir")
               HasResourceDir = true;
           }
         }
-        // If there's no -MT/-MQ Driver would add -MT with the value of the last
-        // -o option.
         tooling::CommandLineArguments AdjustedArgs(Args.begin(), FlagsEnd);
-        AdjustedArgs.push_back("-o");
-#ifdef _WIN32
-        AdjustedArgs.push_back("nul");
-#else
-        AdjustedArgs.push_back("/dev/null");
-#endif
-        if (!HasMT && !HasMQ && Format == ScanningOutputFormat::Make) {
-          // We're interested in source dependencies of an object file.
-          std::string FileNameArg;
-          if (!HasMD) {
-            // FIXME: We are missing the directory unless the -o value is an
-            // absolute path.
-            FileNameArg = !LastO.empty() ? LastO : getObjFilePath(FileName);
-          } else {
-            FileNameArg = std::string(FileName);
-          }
-          if (ClangCLMode) {
-            AdjustedArgs.push_back("/clang:-M");
-            AdjustedArgs.push_back("/clang:-MT");
-            AdjustedArgs.push_back(Twine("/clang:", FileNameArg).str());
-          } else {
-            AdjustedArgs.push_back("-M");
-            AdjustedArgs.push_back("-MT");
-            AdjustedArgs.push_back(std::move(FileNameArg));
-          }
+        // The clang-cl driver passes "-o -" to the frontend. Inject the real
+        // file here to ensure "-MT" can be deduced if need be.
+        if (ClangCLMode && !LastO.empty()) {
+          AdjustedArgs.push_back("/clang:-o");
+          AdjustedArgs.push_back("/clang:" + LastO);
         }
         AdjustedArgs.push_back("-Xclang");
         AdjustedArgs.push_back("-sys-header-deps");

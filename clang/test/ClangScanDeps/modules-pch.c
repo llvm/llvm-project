@@ -9,6 +9,9 @@
 // RUN:   -generate-modules-path-args -module-files-dir %t/build -mode preprocess >> %t/result_pch.json
 // RUN: cat %t/result_pch.json | sed 's:\\\\\?:/:g' | FileCheck %s -check-prefix=CHECK-PCH
 //
+// Check we didn't build the PCH during dependency scanning.
+// RUN: not cat %/t/pch.h.gch
+//
 // CHECK-PCH:      -[[PREFIX:.*]]
 // CHECK-PCH-NEXT: {
 // CHECK-PCH-NEXT:   "modules": [
