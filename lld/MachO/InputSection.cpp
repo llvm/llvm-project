@@ -25,10 +25,6 @@ using namespace lld::macho;
 
 std::vector<InputSection *> macho::inputSections;
 
-uint64_t ConcatInputSection::getFileOffset(uint64_t off) const {
-  return parent->fileOff + outSecFileOff + off;
-}
-
 uint64_t InputSection::getFileSize() const {
   return isZeroFill(flags) ? 0 : getSize();
 }
@@ -119,10 +115,6 @@ const StringPiece &CStringInputSection::getStringPiece(uint64_t off) const {
   return const_cast<CStringInputSection *>(this)->getStringPiece(off);
 }
 
-uint64_t CStringInputSection::getFileOffset(uint64_t off) const {
-  return parent->fileOff + getOffset(off);
-}
-
 uint64_t CStringInputSection::getOffset(uint64_t off) const {
   const StringPiece &piece = getStringPiece(off);
   uint64_t addend = off - piece.inSecOff;
@@ -150,10 +142,6 @@ WordLiteralInputSection::WordLiteralInputSection(StringRef segname,
   }
 
   live.resize(data.size() >> power2LiteralSize, !config->deadStrip);
-}
-
-uint64_t WordLiteralInputSection::getFileOffset(uint64_t off) const {
-  return parent->fileOff + getOffset(off);
 }
 
 uint64_t WordLiteralInputSection::getOffset(uint64_t off) const {

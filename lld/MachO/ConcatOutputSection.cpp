@@ -192,7 +192,6 @@ void ConcatOutputSection::finalize() {
     isecAddr = alignTo(isecAddr, isec->align);
     isecFileOff = alignTo(isecFileOff, isec->align);
     isec->outSecOff = isecAddr - addr;
-    isec->outSecFileOff = isecFileOff - fileOff;
     isec->isFinal = true;
     isecAddr += isec->getSize();
     isecFileOff += isec->getFileSize();
@@ -323,11 +322,11 @@ void ConcatOutputSection::writeTo(uint8_t *buf) const {
   while (i < ie || t < te) {
     while (i < ie && (t == te || inputs[i]->getSize() == 0 ||
                       inputs[i]->outSecOff < thunks[t]->outSecOff)) {
-      inputs[i]->writeTo(buf + inputs[i]->outSecFileOff);
+      inputs[i]->writeTo(buf + inputs[i]->outSecOff);
       ++i;
     }
     while (t < te && (i == ie || thunks[t]->outSecOff < inputs[i]->outSecOff)) {
-      thunks[t]->writeTo(buf + thunks[t]->outSecFileOff);
+      thunks[t]->writeTo(buf + thunks[t]->outSecOff);
       ++t;
     }
   }
