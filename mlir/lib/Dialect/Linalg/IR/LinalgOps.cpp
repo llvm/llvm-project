@@ -3067,9 +3067,8 @@ parseNamedStructuredOpRegion(OpAsmParser &parser, Region &region,
 static ParseResult
 parseNamedStructuredOpResults(OpAsmParser &parser,
                               SmallVectorImpl<Type> &resultTypes) {
-  if (succeeded(parser.parseOptionalArrow()))
-    if (parser.parseTypeList(resultTypes))
-      return failure();
+  if (parser.parseOptionalArrowTypeList(resultTypes))
+    return failure();
   return success();
 }
 

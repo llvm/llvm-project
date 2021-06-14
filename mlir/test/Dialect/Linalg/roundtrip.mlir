@@ -424,6 +424,39 @@ func @generic_with_tensor_input_and_output(
 
 // -----
 
+func @generic_with_multiple_tensor_outputs(
+    %arg0: tensor<?xi32>, %arg1: tensor<?xi32>, %arg2: i32)
+    -> (tensor<i32>, tensor<i32>) {
+  %c0 = constant 0 : index
+  %0 = linalg.init_tensor [] : tensor<i32>
+  %1 = linalg.fill(%0, %arg2) : tensor<i32>, i32 -> tensor<i32>
+  %2 = linalg.init_tensor [] : tensor<i32>
+  %3 = linalg.fill(%2, %arg2) : tensor<i32>, i32 -> tensor<i32>
+  %4:2 = linalg.generic {
+    indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>, affine_map<(d0) -> ()>, affine_map<(d0) -> ()>],
+    iterator_types = ["reduction"]}
+    ins(%arg0, %arg1 : tensor<?xi32>, tensor<?xi32>)
+    outs(%1, %3 : tensor<i32>, tensor<i32>) {
+  ^bb0(%arg3: i32, %arg4: i32, %arg5: i32, %arg6: i32):  // no predecessors
+    %5 = cmpi sge, %arg3, %arg5 : i32
+    %6 = select %5, %arg3, %arg5 : i32
+    %7 = cmpi eq, %arg3, %arg5 : i32
+    %8 = cmpi slt, %arg4, %arg6 : i32
+    %9 = select %8, %arg4, %arg6 : i32
+    %10 = select %5, %arg4, %arg6 : i32
+    %11 = select %7, %9, %10 : i32
+    linalg.yield %6, %11 : i32, i32
+  } -> (tensor<i32>, tensor<i32>)
+  return %4#0, %4#1 : tensor<i32>, tensor<i32>
+}
+// CHECK-LABEL: func @generic_with_multiple_tensor_outputs
+//       CHECK:   %{{.*}} = linalg.generic {
+//  CHECK-SAME:      ins({{.*}} : tensor<?xi32>, tensor<?xi32>)
+//  CHECK-SAME:     outs({{.*}} : tensor<i32>, tensor<i32>)
+//       CHECK:   } -> (tensor<i32>, tensor<i32>)
+
+// -----
+
 #accesses_2 = [
   affine_map<(i, j, k) -> (j, i)>,
   affine_map<(i, j, k) -> (i, k, i + j)>,
