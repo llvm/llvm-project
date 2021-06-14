@@ -28,6 +28,8 @@ ELF Improvements
   (`D102461 <https://reviews.llvm.org/D102461>`_)
 * ``-Bno-symbolic`` has been added.
   (`D102461 <https://reviews.llvm.org/D102461>`_)
+* A new linker script command ``OVERWRITE_SECTIONS`` has been added.
+  (`D103303 <https://reviews.llvm.org/D103303>`_)
 
 Breaking changes
 ----------------

@@ -5,11 +5,13 @@
 define i32 @PR31007() {
 ; CHECK-LABEL: PR31007:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:  #APP
-; CHECK:       addb $11, %al
-; CHECK:       #NO_APP
-; CHECK-NEXT:  xorl %eax, %eax
-; CHECK-NEXT:  retq
+; CHECK-NEXT:    #APP
+; CHECK-EMPTY:
+; CHECK-NEXT:    addb $11, %al
+; CHECK-EMPTY:
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
 entry:
   call void asm sideeffect inteldialect "add al,$$0bH", "~{al},~{flags},~{dirflag},~{fpsr},~{flags}"()
   ret i32 0

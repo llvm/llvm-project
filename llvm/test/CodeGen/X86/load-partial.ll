@@ -305,25 +305,25 @@ define <4 x double> @load_double4_0u2u(double* nocapture readonly dereferenceabl
 define dso_local i32 @load_partial_illegal_type() {
 ; SSE2-LABEL: load_partial_illegal_type:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movzwl {{.*}}(%rip), %eax
+; SSE2-NEXT:    movzwl h(%rip), %eax
 ; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
-; SSE2-NEXT:    por {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: load_partial_illegal_type:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movzwl {{.*}}(%rip), %eax
+; SSSE3-NEXT:    movzwl h(%rip), %eax
 ; SSSE3-NEXT:    movd %eax, %xmm0
 ; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1],zero,xmm0[3,u,u,u,u,u,u,u,u,u,u,u,u]
-; SSSE3-NEXT:    por {{.*}}(%rip), %xmm0
+; SSSE3-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSSE3-NEXT:    movd %xmm0, %eax
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: load_partial_illegal_type:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movzwl {{.*}}(%rip), %eax
+; SSE41-NEXT:    movzwl h(%rip), %eax
 ; SSE41-NEXT:    movd %eax, %xmm0
 ; SSE41-NEXT:    movl $2, %eax
 ; SSE41-NEXT:    pinsrb $2, %eax, %xmm0
@@ -332,7 +332,7 @@ define dso_local i32 @load_partial_illegal_type() {
 ;
 ; AVX-LABEL: load_partial_illegal_type:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movzwl {{.*}}(%rip), %eax
+; AVX-NEXT:    movzwl h(%rip), %eax
 ; AVX-NEXT:    vmovd %eax, %xmm0
 ; AVX-NEXT:    movl $2, %eax
 ; AVX-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0

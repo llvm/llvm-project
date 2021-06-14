@@ -21,6 +21,7 @@
 #include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -582,8 +583,16 @@ public:
   LLVM_NODISCARD inline ClassSet
   getDisequalClasses(DisequalityMapTy Map, ClassSet::Factory &Factory) const;
 
+  LLVM_NODISCARD static inline Optional<bool> areEqual(ProgramStateRef State,
+                                                       EquivalenceClass First,
+                                                       EquivalenceClass Second);
   LLVM_NODISCARD static inline Optional<bool>
   areEqual(ProgramStateRef State, SymbolRef First, SymbolRef Second);
+
+  /// Iterate over all symbols and try to simplify them.
+  LLVM_NODISCARD ProgramStateRef simplify(SValBuilder &SVB,
+                                          RangeSet::Factory &F,
+                                          ProgramStateRef State);
 
   /// Check equivalence data for consistency.
   LLVM_NODISCARD LLVM_ATTRIBUTE_UNUSED static bool
@@ -1375,6 +1384,12 @@ RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Rem>(Range LHS,
 //                  Constraint manager implementation details
 //===----------------------------------------------------------------------===//
 
+static SymbolRef simplify(ProgramStateRef State, SymbolRef Sym) {
+  SValBuilder &SVB = State->getStateManager().getSValBuilder();
+  SVal SimplifiedVal = SVB.simplifySVal(State, SVB.makeSymbolVal(Sym));
+  return SimplifiedVal.getAsSymbol();
+}
+
 class RangeConstraintManager : public RangedConstraintManager {
 public:
   RangeConstraintManager(ExprEngine *EE, SValBuilder &SVB)
@@ -1488,6 +1503,9 @@ private:
       // This is an infeasible assumption.
       return nullptr;
 
+    if (SymbolRef SimplifiedSym = simplify(State, Sym))
+      Sym = SimplifiedSym;
+
     if (ProgramStateRef NewState = setConstraint(State, Sym, NewConstraint)) {
       if (auto Equality = EqualityInfo::extract(Sym, Int, Adjustment)) {
         // If the original assumption is not Sym + Adjustment !=/</> Int,
@@ -1554,9 +1572,47 @@ private:
     return State->set<ConstraintRange>(Constraints);
   }
 
+  // Associate a constraint to a symbolic expression. First, we set the
+  // constraint in the State, then we try to simplify existing symbolic
+  // expressions based on the newly set constraint.
   LLVM_NODISCARD inline ProgramStateRef
   setConstraint(ProgramStateRef State, SymbolRef Sym, RangeSet Constraint) {
-    return setConstraint(State, EquivalenceClass::find(State, Sym), Constraint);
+    assert(State);
+
+    State = setConstraint(State, EquivalenceClass::find(State, Sym), Constraint);
+    if (!State)
+      return nullptr;
+
+    // We have a chance to simplify existing symbolic values if the new
+    // constraint is a constant.
+    if (!Constraint.getConcreteValue())
+      return State;
+
+    llvm::SmallSet<EquivalenceClass, 4> SimplifiedClasses;
+    // Iterate over all equivalence classes and try to simplify them.
+    ClassMembersTy Members = State->get<ClassMembers>();
+    for (std::pair<EquivalenceClass, SymbolSet> ClassToSymbolSet : Members) {
+      EquivalenceClass Class = ClassToSymbolSet.first;
+      State = Class.simplify(getSValBuilder(), F, State);
+      if (!State)
+        return nullptr;
+      SimplifiedClasses.insert(Class);
+    }
+
+    // Trivial equivalence classes (those that have only one symbol member) are
+    // not stored in the State. Thus, we must skim through the constraints as
+    // well. And we try to simplify symbols in the constraints.
+    ConstraintRangeTy Constraints = State->get<ConstraintRange>();
+    for (std::pair<EquivalenceClass, RangeSet> ClassConstraint : Constraints) {
+      EquivalenceClass Class = ClassConstraint.first;
+      if (SimplifiedClasses.count(Class)) // Already simplified.
+        continue;
+      State = Class.simplify(getSValBuilder(), F, State);
+      if (!State)
+        return nullptr;
+    }
+
+    return State;
   }
 };
 
@@ -1592,6 +1648,8 @@ ConstraintMap ento::getConstraintMap(ProgramStateRef State) {
 
 inline EquivalenceClass EquivalenceClass::find(ProgramStateRef State,
                                                SymbolRef Sym) {
+  assert(State && "State should not be null");
+  assert(Sym && "Symbol should not be null");
   // We store far from all Symbol -> Class mappings
   if (const EquivalenceClass *NontrivialClass = State->get<ClassMap>(Sym))
     return *NontrivialClass;
@@ -1723,6 +1781,11 @@ EquivalenceClass::mergeImpl(BasicValueFactory &ValueFactory,
 
   // 4. Update disequality relations
   ClassSet DisequalToOther = Other.getDisequalClasses(DisequalityInfo, CF);
+  // We are about to merge two classes but they are already known to be
+  // non-equal. This is a contradiction.
+  if (DisequalToOther.contains(*this))
+    return nullptr;
+
   if (!DisequalToOther.isEmpty()) {
     ClassSet DisequalToThis = getDisequalClasses(DisequalityInfo, CF);
     DisequalityInfo = DF.remove(DisequalityInfo, Other);
@@ -1869,9 +1932,13 @@ inline bool EquivalenceClass::addToDisequalityInfo(
 inline Optional<bool> EquivalenceClass::areEqual(ProgramStateRef State,
                                                  SymbolRef FirstSym,
                                                  SymbolRef SecondSym) {
-  EquivalenceClass First = find(State, FirstSym);
-  EquivalenceClass Second = find(State, SecondSym);
+  return EquivalenceClass::areEqual(State, find(State, FirstSym),
+                                    find(State, SecondSym));
+}
 
+inline Optional<bool> EquivalenceClass::areEqual(ProgramStateRef State,
+                                                 EquivalenceClass First,
+                                                 EquivalenceClass Second) {
   // The same equivalence class => symbols are equal.
   if (First == Second)
     return true;
@@ -1884,6 +1951,30 @@ inline Optional<bool> EquivalenceClass::areEqual(ProgramStateRef State,
 
   // It is not clear.
   return llvm::None;
+}
+
+// Iterate over all symbols and try to simplify them. Once a symbol is
+// simplified then we check if we can merge the simplified symbol's equivalence
+// class to this class. This way, we simplify not just the symbols but the
+// classes as well: we strive to keep the number of the classes to be the
+// absolute minimum.
+LLVM_NODISCARD ProgramStateRef EquivalenceClass::simplify(
+    SValBuilder &SVB, RangeSet::Factory &F, ProgramStateRef State) {
+  SymbolSet ClassMembers = getClassMembers(State);
+  for (const SymbolRef &MemberSym : ClassMembers) {
+    SymbolRef SimplifiedMemberSym = ::simplify(State, MemberSym);
+    if (SimplifiedMemberSym && MemberSym != SimplifiedMemberSym) {
+      EquivalenceClass ClassOfSimplifiedSym =
+          EquivalenceClass::find(State, SimplifiedMemberSym);
+      // The simplified symbol should be the member of the original Class,
+      // however, it might be in another existing class at the moment. We
+      // have to merge these classes.
+      State = merge(SVB.getBasicValueFactory(), F, State, ClassOfSimplifiedSym);
+      if (!State)
+        return nullptr;
+    }
+  }
+  return State;
 }
 
 inline ClassSet EquivalenceClass::getDisequalClasses(ProgramStateRef State,

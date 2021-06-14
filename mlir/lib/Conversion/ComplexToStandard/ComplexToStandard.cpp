@@ -86,7 +86,7 @@ struct DivOpConversion : public OpConversionPattern<complex::DivOp> {
                   ConversionPatternRewriter &rewriter) const override {
     complex::DivOp::Adaptor transformed(operands);
     auto loc = op.getLoc();
-    auto type = transformed.lhs().getType().template cast<ComplexType>();
+    auto type = transformed.lhs().getType().cast<ComplexType>();
     auto elementType = type.getElementType().cast<FloatType>();
 
     Value lhsReal =
@@ -286,6 +286,33 @@ struct DivOpConversion : public OpConversionPattern<complex::DivOp> {
     return success();
   }
 };
+
+struct ExpOpConversion : public OpConversionPattern<complex::ExpOp> {
+  using OpConversionPattern<complex::ExpOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::ExpOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    complex::ExpOp::Adaptor transformed(operands);
+    auto loc = op.getLoc();
+    auto type = transformed.complex().getType().cast<ComplexType>();
+    auto elementType = type.getElementType().cast<FloatType>();
+
+    Value real =
+        rewriter.create<complex::ReOp>(loc, elementType, transformed.complex());
+    Value imag =
+        rewriter.create<complex::ImOp>(loc, elementType, transformed.complex());
+    Value expReal = rewriter.create<math::ExpOp>(loc, real);
+    Value cosImag = rewriter.create<math::CosOp>(loc, imag);
+    Value resultReal = rewriter.create<MulFOp>(loc, expReal, cosImag);
+    Value sinImag = rewriter.create<math::SinOp>(loc, imag);
+    Value resultImag = rewriter.create<MulFOp>(loc, expReal, sinImag);
+
+    rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
+                                                   resultImag);
+    return success();
+  }
+};
 } // namespace
 
 void mlir::populateComplexToStandardConversionPatterns(
@@ -293,7 +320,7 @@ void mlir::populateComplexToStandardConversionPatterns(
   patterns.add<AbsOpConversion,
                ComparisonOpConversion<complex::EqualOp, CmpFPredicate::OEQ>,
                ComparisonOpConversion<complex::NotEqualOp, CmpFPredicate::UNE>,
-               DivOpConversion>(patterns.getContext());
+               DivOpConversion, ExpOpConversion>(patterns.getContext());
 }
 
 namespace {
@@ -313,7 +340,7 @@ void ConvertComplexToStandardPass::runOnFunction() {
   target.addLegalDialect<StandardOpsDialect, math::MathDialect,
                          complex::ComplexDialect>();
   target.addIllegalOp<complex::AbsOp, complex::DivOp, complex::EqualOp,
-                      complex::NotEqualOp>();
+                      complex::ExpOp, complex::NotEqualOp>();
   if (failed(applyPartialConversion(function, target, std::move(patterns))))
     signalPassFailure();
 }

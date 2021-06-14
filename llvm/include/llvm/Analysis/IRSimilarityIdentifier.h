@@ -654,12 +654,6 @@ public:
   IRSimilarityIdentifier()
       : Mapper(&InstDataAllocator, &InstDataListAllocator) {}
 
-  /// \param M the module to find similarity in.
-  explicit IRSimilarityIdentifier(Module &M)
-      : Mapper(&InstDataAllocator, &InstDataListAllocator) {
-    findSimilarity(M);
-  }
-
 private:
   /// Map the instructions in the module to unsigned integers, using mapping
   /// already present in the Mapper if possible.

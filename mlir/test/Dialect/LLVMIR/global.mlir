@@ -108,6 +108,8 @@ llvm.mlir.global internal constant @constant(37.0) : !llvm.label
 func @foo() {
   // expected-error @+1 {{must appear at the module level}}
   llvm.mlir.global internal @bar(42) : i32
+
+  return
 }
 
 // -----

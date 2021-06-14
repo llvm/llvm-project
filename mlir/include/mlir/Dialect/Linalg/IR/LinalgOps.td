@@ -242,6 +242,9 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
         Type type, Value source, Value pad, ArrayRef<OpFoldResult> low,
         ArrayRef<OpFoldResult> high, Location loc, OpBuilder & builder);
 
+    // Return the pad value if it is a constant. Return null value otherwise.
+    Value getConstantPaddingValue();
+
     // Return a vector of all the static or dynamic values (low/high padding) of
     // the op.
     inline SmallVector<OpFoldResult> getMixedPadImpl(ArrayAttr staticAttrs,
@@ -637,8 +640,8 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
   let arguments = (ins Variadic<Index>:$lowerBound,
                        Variadic<Index>:$upperBound,
                        Variadic<Index>:$step,
-                       Variadic<LinalgOperand>:$inputs,
-                       Variadic<LinalgOperand>:$outputs,
+                       Variadic<AnyType>:$inputs,
+                       Variadic<AnyShaped>:$outputs,
                        ArrayAttr:$iterator_types,
                        OptionalAttr<ArrayAttr>:$distribution_types);
   let results = (outs Variadic<AnyRankedTensor>:$results);

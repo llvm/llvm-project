@@ -27,7 +27,7 @@ define dso_local void @TestFPExtF32_F128() nounwind {
 ; X64-SSE-NEXT:    pushq %rax
 ; X64-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-SSE-NEXT:    callq __extendsftf2@PLT
-; X64-SSE-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; X64-SSE-NEXT:    movaps %xmm0, vf128(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -58,7 +58,7 @@ define dso_local void @TestFPExtF32_F128() nounwind {
 ; X64-AVX-NEXT:    pushq %rax
 ; X64-AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-AVX-NEXT:    callq __extendsftf2@PLT
-; X64-AVX-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; X64-AVX-NEXT:    vmovaps %xmm0, vf128(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
@@ -74,7 +74,7 @@ define dso_local void @TestFPExtF64_F128() nounwind {
 ; X64-SSE-NEXT:    pushq %rax
 ; X64-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X64-SSE-NEXT:    callq __extenddftf2@PLT
-; X64-SSE-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; X64-SSE-NEXT:    movaps %xmm0, vf128(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -105,7 +105,7 @@ define dso_local void @TestFPExtF64_F128() nounwind {
 ; X64-AVX-NEXT:    pushq %rax
 ; X64-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X64-AVX-NEXT:    callq __extenddftf2@PLT
-; X64-AVX-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; X64-AVX-NEXT:    vmovaps %xmm0, vf128(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
@@ -119,10 +119,10 @@ define dso_local void @TestFPExtF80_F128() nounwind {
 ; X64-SSE-LABEL: TestFPExtF80_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    subq $24, %rsp
-; X64-SSE-NEXT:    fldt {{.*}}(%rip)
+; X64-SSE-NEXT:    fldt vf80(%rip)
 ; X64-SSE-NEXT:    fstpt (%rsp)
 ; X64-SSE-NEXT:    callq __extendxftf2@PLT
-; X64-SSE-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; X64-SSE-NEXT:    movaps %xmm0, vf128(%rip)
 ; X64-SSE-NEXT:    addq $24, %rsp
 ; X64-SSE-NEXT:    retq
 ;
@@ -151,10 +151,10 @@ define dso_local void @TestFPExtF80_F128() nounwind {
 ; X64-AVX-LABEL: TestFPExtF80_F128:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    subq $24, %rsp
-; X64-AVX-NEXT:    fldt {{.*}}(%rip)
+; X64-AVX-NEXT:    fldt vf80(%rip)
 ; X64-AVX-NEXT:    fstpt (%rsp)
 ; X64-AVX-NEXT:    callq __extendxftf2@PLT
-; X64-AVX-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; X64-AVX-NEXT:    vmovaps %xmm0, vf128(%rip)
 ; X64-AVX-NEXT:    addq $24, %rsp
 ; X64-AVX-NEXT:    retq
 entry:
@@ -168,9 +168,9 @@ define dso_local void @TestFPToSIF128_I16() nounwind {
 ; X64-SSE-LABEL: TestFPToSIF128_I16:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movaps {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    movaps vf128(%rip), %xmm0
 ; X64-SSE-NEXT:    callq __fixtfsi@PLT
-; X64-SSE-NEXT:    movw %ax, {{.*}}(%rip)
+; X64-SSE-NEXT:    movw %ax, vi16(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -190,9 +190,9 @@ define dso_local void @TestFPToSIF128_I16() nounwind {
 ; X64-AVX-LABEL: TestFPToSIF128_I16:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm0
+; X64-AVX-NEXT:    vmovaps vf128(%rip), %xmm0
 ; X64-AVX-NEXT:    callq __fixtfsi@PLT
-; X64-AVX-NEXT:    movw %ax, {{.*}}(%rip)
+; X64-AVX-NEXT:    movw %ax, vi16(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
@@ -206,9 +206,9 @@ define dso_local void @TestFPToUIF128_I16() nounwind {
 ; X64-SSE-LABEL: TestFPToUIF128_I16:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movaps {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    movaps vf128(%rip), %xmm0
 ; X64-SSE-NEXT:    callq __fixtfsi@PLT
-; X64-SSE-NEXT:    movw %ax, {{.*}}(%rip)
+; X64-SSE-NEXT:    movw %ax, vi16(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -228,9 +228,9 @@ define dso_local void @TestFPToUIF128_I16() nounwind {
 ; X64-AVX-LABEL: TestFPToUIF128_I16:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm0
+; X64-AVX-NEXT:    vmovaps vf128(%rip), %xmm0
 ; X64-AVX-NEXT:    callq __fixtfsi@PLT
-; X64-AVX-NEXT:    movw %ax, {{.*}}(%rip)
+; X64-AVX-NEXT:    movw %ax, vi16(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
@@ -244,9 +244,9 @@ define dso_local void @TestFPToSIF128_I32() nounwind {
 ; X64-SSE-LABEL: TestFPToSIF128_I32:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movaps {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    movaps vf128(%rip), %xmm0
 ; X64-SSE-NEXT:    callq __fixtfsi@PLT
-; X64-SSE-NEXT:    movl %eax, {{.*}}(%rip)
+; X64-SSE-NEXT:    movl %eax, vi32(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -266,9 +266,9 @@ define dso_local void @TestFPToSIF128_I32() nounwind {
 ; X64-AVX-LABEL: TestFPToSIF128_I32:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm0
+; X64-AVX-NEXT:    vmovaps vf128(%rip), %xmm0
 ; X64-AVX-NEXT:    callq __fixtfsi@PLT
-; X64-AVX-NEXT:    movl %eax, {{.*}}(%rip)
+; X64-AVX-NEXT:    movl %eax, vi32(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
@@ -282,9 +282,9 @@ define dso_local void @TestFPToUIF128_U32() nounwind {
 ; X64-SSE-LABEL: TestFPToUIF128_U32:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movaps {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    movaps vf128(%rip), %xmm0
 ; X64-SSE-NEXT:    callq __fixunstfsi@PLT
-; X64-SSE-NEXT:    movl %eax, {{.*}}(%rip)
+; X64-SSE-NEXT:    movl %eax, vu32(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -304,9 +304,9 @@ define dso_local void @TestFPToUIF128_U32() nounwind {
 ; X64-AVX-LABEL: TestFPToUIF128_U32:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm0
+; X64-AVX-NEXT:    vmovaps vf128(%rip), %xmm0
 ; X64-AVX-NEXT:    callq __fixunstfsi@PLT
-; X64-AVX-NEXT:    movl %eax, {{.*}}(%rip)
+; X64-AVX-NEXT:    movl %eax, vu32(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
@@ -320,10 +320,10 @@ define dso_local void @TestFPToSIF128_I64() nounwind {
 ; X64-SSE-LABEL: TestFPToSIF128_I64:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movaps {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    movaps vf128(%rip), %xmm0
 ; X64-SSE-NEXT:    callq __fixtfsi@PLT
 ; X64-SSE-NEXT:    cltq
-; X64-SSE-NEXT:    movq %rax, {{.*}}(%rip)
+; X64-SSE-NEXT:    movq %rax, vi64(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -345,10 +345,10 @@ define dso_local void @TestFPToSIF128_I64() nounwind {
 ; X64-AVX-LABEL: TestFPToSIF128_I64:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm0
+; X64-AVX-NEXT:    vmovaps vf128(%rip), %xmm0
 ; X64-AVX-NEXT:    callq __fixtfsi@PLT
 ; X64-AVX-NEXT:    cltq
-; X64-AVX-NEXT:    movq %rax, {{.*}}(%rip)
+; X64-AVX-NEXT:    movq %rax, vi64(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
@@ -363,10 +363,10 @@ define dso_local void @TestFPToUIF128_U64() nounwind {
 ; X64-SSE-LABEL: TestFPToUIF128_U64:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movaps {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    movaps vf128(%rip), %xmm0
 ; X64-SSE-NEXT:    callq __fixunstfsi@PLT
 ; X64-SSE-NEXT:    movl %eax, %eax
-; X64-SSE-NEXT:    movq %rax, {{.*}}(%rip)
+; X64-SSE-NEXT:    movq %rax, vu64(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -387,10 +387,10 @@ define dso_local void @TestFPToUIF128_U64() nounwind {
 ; X64-AVX-LABEL: TestFPToUIF128_U64:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm0
+; X64-AVX-NEXT:    vmovaps vf128(%rip), %xmm0
 ; X64-AVX-NEXT:    callq __fixunstfsi@PLT
 ; X64-AVX-NEXT:    movl %eax, %eax
-; X64-AVX-NEXT:    movq %rax, {{.*}}(%rip)
+; X64-AVX-NEXT:    movq %rax, vu64(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
@@ -405,10 +405,10 @@ define dso_local void @TestFPToSIF128_I128() nounwind {
 ; X64-SSE-LABEL: TestFPToSIF128_I128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movaps {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    movaps vf128(%rip), %xmm0
 ; X64-SSE-NEXT:    callq __fixtfti@PLT
-; X64-SSE-NEXT:    movq %rdx, vi128+{{.*}}(%rip)
-; X64-SSE-NEXT:    movq %rax, {{.*}}(%rip)
+; X64-SSE-NEXT:    movq %rdx, vi128+8(%rip)
+; X64-SSE-NEXT:    movq %rax, vi128(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -439,10 +439,10 @@ define dso_local void @TestFPToSIF128_I128() nounwind {
 ; X64-AVX-LABEL: TestFPToSIF128_I128:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm0
+; X64-AVX-NEXT:    vmovaps vf128(%rip), %xmm0
 ; X64-AVX-NEXT:    callq __fixtfti@PLT
-; X64-AVX-NEXT:    movq %rdx, vi128+{{.*}}(%rip)
-; X64-AVX-NEXT:    movq %rax, {{.*}}(%rip)
+; X64-AVX-NEXT:    movq %rdx, vi128+8(%rip)
+; X64-AVX-NEXT:    movq %rax, vi128(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
@@ -456,10 +456,10 @@ define dso_local void @TestFPToUIF128_U128() nounwind {
 ; X64-SSE-LABEL: TestFPToUIF128_U128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movaps {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    movaps vf128(%rip), %xmm0
 ; X64-SSE-NEXT:    callq __fixunstfti@PLT
-; X64-SSE-NEXT:    movq %rdx, vu128+{{.*}}(%rip)
-; X64-SSE-NEXT:    movq %rax, {{.*}}(%rip)
+; X64-SSE-NEXT:    movq %rdx, vu128+8(%rip)
+; X64-SSE-NEXT:    movq %rax, vu128(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -490,10 +490,10 @@ define dso_local void @TestFPToUIF128_U128() nounwind {
 ; X64-AVX-LABEL: TestFPToUIF128_U128:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm0
+; X64-AVX-NEXT:    vmovaps vf128(%rip), %xmm0
 ; X64-AVX-NEXT:    callq __fixunstfti@PLT
-; X64-AVX-NEXT:    movq %rdx, vu128+{{.*}}(%rip)
-; X64-AVX-NEXT:    movq %rax, {{.*}}(%rip)
+; X64-AVX-NEXT:    movq %rdx, vu128+8(%rip)
+; X64-AVX-NEXT:    movq %rax, vu128(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
@@ -507,9 +507,9 @@ define dso_local void @TestFPTruncF128_F32() nounwind {
 ; X64-SSE-LABEL: TestFPTruncF128_F32:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movaps {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    movaps vf128(%rip), %xmm0
 ; X64-SSE-NEXT:    callq __trunctfsf2@PLT
-; X64-SSE-NEXT:    movss %xmm0, {{.*}}(%rip)
+; X64-SSE-NEXT:    movss %xmm0, vf32(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -529,9 +529,9 @@ define dso_local void @TestFPTruncF128_F32() nounwind {
 ; X64-AVX-LABEL: TestFPTruncF128_F32:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm0
+; X64-AVX-NEXT:    vmovaps vf128(%rip), %xmm0
 ; X64-AVX-NEXT:    callq __trunctfsf2@PLT
-; X64-AVX-NEXT:    vmovss %xmm0, {{.*}}(%rip)
+; X64-AVX-NEXT:    vmovss %xmm0, vf32(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
@@ -545,9 +545,9 @@ define dso_local void @TestFPTruncF128_F64() nounwind {
 ; X64-SSE-LABEL: TestFPTruncF128_F64:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movaps {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    movaps vf128(%rip), %xmm0
 ; X64-SSE-NEXT:    callq __trunctfdf2@PLT
-; X64-SSE-NEXT:    movsd %xmm0, {{.*}}(%rip)
+; X64-SSE-NEXT:    movsd %xmm0, vf64(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -567,9 +567,9 @@ define dso_local void @TestFPTruncF128_F64() nounwind {
 ; X64-AVX-LABEL: TestFPTruncF128_F64:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm0
+; X64-AVX-NEXT:    vmovaps vf128(%rip), %xmm0
 ; X64-AVX-NEXT:    callq __trunctfdf2@PLT
-; X64-AVX-NEXT:    vmovsd %xmm0, {{.*}}(%rip)
+; X64-AVX-NEXT:    vmovsd %xmm0, vf64(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
@@ -583,9 +583,9 @@ define dso_local void @TestFPTruncF128_F80() nounwind {
 ; X64-SSE-LABEL: TestFPTruncF128_F80:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movaps {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    movaps vf128(%rip), %xmm0
 ; X64-SSE-NEXT:    callq __trunctfxf2@PLT
-; X64-SSE-NEXT:    fstpt {{.*}}(%rip)
+; X64-SSE-NEXT:    fstpt vf80(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -605,9 +605,9 @@ define dso_local void @TestFPTruncF128_F80() nounwind {
 ; X64-AVX-LABEL: TestFPTruncF128_F80:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm0
+; X64-AVX-NEXT:    vmovaps vf128(%rip), %xmm0
 ; X64-AVX-NEXT:    callq __trunctfxf2@PLT
-; X64-AVX-NEXT:    fstpt {{.*}}(%rip)
+; X64-AVX-NEXT:    fstpt vf80(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
@@ -621,9 +621,9 @@ define dso_local void @TestSIToFPI16_F128() nounwind {
 ; X64-SSE-LABEL: TestSIToFPI16_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movswl {{.*}}(%rip), %edi
+; X64-SSE-NEXT:    movswl vi16(%rip), %edi
 ; X64-SSE-NEXT:    callq __floatsitf@PLT
-; X64-SSE-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; X64-SSE-NEXT:    movaps %xmm0, vf128(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -653,9 +653,9 @@ define dso_local void @TestSIToFPI16_F128() nounwind {
 ; X64-AVX-LABEL: TestSIToFPI16_F128:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    movswl {{.*}}(%rip), %edi
+; X64-AVX-NEXT:    movswl vi16(%rip), %edi
 ; X64-AVX-NEXT:    callq __floatsitf@PLT
-; X64-AVX-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; X64-AVX-NEXT:    vmovaps %xmm0, vf128(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
@@ -669,9 +669,9 @@ define dso_local void @TestSIToFPU16_F128() nounwind {
 ; X64-SSE-LABEL: TestSIToFPU16_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movzwl {{.*}}(%rip), %edi
+; X64-SSE-NEXT:    movzwl vi16(%rip), %edi
 ; X64-SSE-NEXT:    callq __floatsitf@PLT
-; X64-SSE-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; X64-SSE-NEXT:    movaps %xmm0, vf128(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -701,9 +701,9 @@ define dso_local void @TestSIToFPU16_F128() nounwind {
 ; X64-AVX-LABEL: TestSIToFPU16_F128:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    movzwl {{.*}}(%rip), %edi
+; X64-AVX-NEXT:    movzwl vi16(%rip), %edi
 ; X64-AVX-NEXT:    callq __floatsitf@PLT
-; X64-AVX-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; X64-AVX-NEXT:    vmovaps %xmm0, vf128(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
@@ -717,9 +717,9 @@ define dso_local void @TestSIToFPI32_F128() nounwind {
 ; X64-SSE-LABEL: TestSIToFPI32_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movl {{.*}}(%rip), %edi
+; X64-SSE-NEXT:    movl vi32(%rip), %edi
 ; X64-SSE-NEXT:    callq __floatsitf@PLT
-; X64-SSE-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; X64-SSE-NEXT:    movaps %xmm0, vf128(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -747,9 +747,9 @@ define dso_local void @TestSIToFPI32_F128() nounwind {
 ; X64-AVX-LABEL: TestSIToFPI32_F128:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    movl {{.*}}(%rip), %edi
+; X64-AVX-NEXT:    movl vi32(%rip), %edi
 ; X64-AVX-NEXT:    callq __floatsitf@PLT
-; X64-AVX-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; X64-AVX-NEXT:    vmovaps %xmm0, vf128(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
@@ -763,9 +763,9 @@ define dso_local void @TestUIToFPU32_F128() #2 {
 ; X64-SSE-LABEL: TestUIToFPU32_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movl {{.*}}(%rip), %edi
+; X64-SSE-NEXT:    movl vu32(%rip), %edi
 ; X64-SSE-NEXT:    callq __floatunsitf@PLT
-; X64-SSE-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; X64-SSE-NEXT:    movaps %xmm0, vf128(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -793,9 +793,9 @@ define dso_local void @TestUIToFPU32_F128() #2 {
 ; X64-AVX-LABEL: TestUIToFPU32_F128:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    movl {{.*}}(%rip), %edi
+; X64-AVX-NEXT:    movl vu32(%rip), %edi
 ; X64-AVX-NEXT:    callq __floatunsitf@PLT
-; X64-AVX-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; X64-AVX-NEXT:    vmovaps %xmm0, vf128(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
@@ -809,9 +809,9 @@ define dso_local void @TestSIToFPI64_F128() nounwind {
 ; X64-SSE-LABEL: TestSIToFPI64_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movq {{.*}}(%rip), %rdi
+; X64-SSE-NEXT:    movq vi64(%rip), %rdi
 ; X64-SSE-NEXT:    callq __floatditf@PLT
-; X64-SSE-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; X64-SSE-NEXT:    movaps %xmm0, vf128(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -840,9 +840,9 @@ define dso_local void @TestSIToFPI64_F128() nounwind {
 ; X64-AVX-LABEL: TestSIToFPI64_F128:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    movq {{.*}}(%rip), %rdi
+; X64-AVX-NEXT:    movq vi64(%rip), %rdi
 ; X64-AVX-NEXT:    callq __floatditf@PLT
-; X64-AVX-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; X64-AVX-NEXT:    vmovaps %xmm0, vf128(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
@@ -856,9 +856,9 @@ define dso_local void @TestUIToFPU64_F128() #2 {
 ; X64-SSE-LABEL: TestUIToFPU64_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movq {{.*}}(%rip), %rdi
+; X64-SSE-NEXT:    movq vu64(%rip), %rdi
 ; X64-SSE-NEXT:    callq __floatunditf@PLT
-; X64-SSE-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; X64-SSE-NEXT:    movaps %xmm0, vf128(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -887,9 +887,9 @@ define dso_local void @TestUIToFPU64_F128() #2 {
 ; X64-AVX-LABEL: TestUIToFPU64_F128:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    movq {{.*}}(%rip), %rdi
+; X64-AVX-NEXT:    movq vu64(%rip), %rdi
 ; X64-AVX-NEXT:    callq __floatunditf@PLT
-; X64-AVX-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; X64-AVX-NEXT:    vmovaps %xmm0, vf128(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
@@ -903,10 +903,10 @@ define dso_local void @TestSIToFPI128_F128() nounwind {
 ; X64-SSE-LABEL: TestSIToFPI128_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movq {{.*}}(%rip), %rdi
-; X64-SSE-NEXT:    movq vi128+{{.*}}(%rip), %rsi
+; X64-SSE-NEXT:    movq vi128(%rip), %rdi
+; X64-SSE-NEXT:    movq vi128+8(%rip), %rsi
 ; X64-SSE-NEXT:    callq __floattitf@PLT
-; X64-SSE-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; X64-SSE-NEXT:    movaps %xmm0, vf128(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -937,10 +937,10 @@ define dso_local void @TestSIToFPI128_F128() nounwind {
 ; X64-AVX-LABEL: TestSIToFPI128_F128:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    movq {{.*}}(%rip), %rdi
-; X64-AVX-NEXT:    movq vi128+{{.*}}(%rip), %rsi
+; X64-AVX-NEXT:    movq vi128(%rip), %rdi
+; X64-AVX-NEXT:    movq vi128+8(%rip), %rsi
 ; X64-AVX-NEXT:    callq __floattitf@PLT
-; X64-AVX-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; X64-AVX-NEXT:    vmovaps %xmm0, vf128(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
@@ -954,10 +954,10 @@ define dso_local void @TestUIToFPU128_F128() #2 {
 ; X64-SSE-LABEL: TestUIToFPU128_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movq {{.*}}(%rip), %rdi
-; X64-SSE-NEXT:    movq vu128+{{.*}}(%rip), %rsi
+; X64-SSE-NEXT:    movq vu128(%rip), %rdi
+; X64-SSE-NEXT:    movq vu128+8(%rip), %rsi
 ; X64-SSE-NEXT:    callq __floatuntitf@PLT
-; X64-SSE-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; X64-SSE-NEXT:    movaps %xmm0, vf128(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -988,10 +988,10 @@ define dso_local void @TestUIToFPU128_F128() #2 {
 ; X64-AVX-LABEL: TestUIToFPU128_F128:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    movq {{.*}}(%rip), %rdi
-; X64-AVX-NEXT:    movq vu128+{{.*}}(%rip), %rsi
+; X64-AVX-NEXT:    movq vu128(%rip), %rdi
+; X64-AVX-NEXT:    movq vu128+8(%rip), %rsi
 ; X64-AVX-NEXT:    callq __floatuntitf@PLT
-; X64-AVX-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; X64-AVX-NEXT:    vmovaps %xmm0, vf128(%rip)
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
@@ -1005,7 +1005,7 @@ define dso_local i32 @TestConst128(fp128 %v) nounwind {
 ; X64-SSE-LABEL: TestConst128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movaps {{.*}}(%rip), %xmm1
+; X64-SSE-NEXT:    movaps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-SSE-NEXT:    callq __gttf2@PLT
 ; X64-SSE-NEXT:    xorl %ecx, %ecx
 ; X64-SSE-NEXT:    testl %eax, %eax
@@ -1037,7 +1037,7 @@ define dso_local i32 @TestConst128(fp128 %v) nounwind {
 ; X64-AVX-LABEL: TestConst128:
 ; X64-AVX:       # %bb.0: # %entry
 ; X64-AVX-NEXT:    pushq %rax
-; X64-AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm1
+; X64-AVX-NEXT:    vmovaps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-AVX-NEXT:    callq __gttf2@PLT
 ; X64-AVX-NEXT:    xorl %ecx, %ecx
 ; X64-AVX-NEXT:    testl %eax, %eax
@@ -1259,8 +1259,8 @@ define fp128 @TestTruncCopysign(fp128 %x, i32 %n) nounwind {
 ; X64-SSE-NEXT:  # %bb.1: # %if.then
 ; X64-SSE-NEXT:    pushq %rax
 ; X64-SSE-NEXT:    callq __trunctfdf2@PLT
-; X64-SSE-NEXT:    andps {{.*}}(%rip), %xmm0
-; X64-SSE-NEXT:    orps {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE-NEXT:    callq __extenddftf2@PLT
 ; X64-SSE-NEXT:    addq $8, %rsp
 ; X64-SSE-NEXT:  .LBB26_2: # %cleanup
@@ -1287,8 +1287,8 @@ define fp128 @TestTruncCopysign(fp128 %x, i32 %n) nounwind {
 ; X32-NEXT:    addl $16, %esp
 ; X32-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; X32-NEXT:    testb $-128, {{[0-9]+}}(%esp)
-; X32-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
-; X32-NEXT:    flds {{\.LCPI[0-9]+_[0-9]+}}
+; X32-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
+; X32-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X32-NEXT:    jne .LBB26_3
 ; X32-NEXT:  # %bb.2: # %if.then
 ; X32-NEXT:    fstp %st(1)
@@ -1323,7 +1323,7 @@ define fp128 @TestTruncCopysign(fp128 %x, i32 %n) nounwind {
 ; X64-AVX-NEXT:  # %bb.1: # %if.then
 ; X64-AVX-NEXT:    pushq %rax
 ; X64-AVX-NEXT:    callq __trunctfdf2@PLT
-; X64-AVX-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [+Inf,+Inf]
 ; X64-AVX-NEXT:    # xmm1 = mem[0,0]
 ; X64-AVX-NEXT:    vorps %xmm0, %xmm1, %xmm0

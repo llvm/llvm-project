@@ -18,17 +18,17 @@
 define void @_Z1av() local_unnamed_addr #0 {
 ; CHECK-LABEL: _Z1av:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl struct_obj_3+{{.*}}(%rip), %eax
-; CHECK-NEXT:    movzbl {{.*}}(%rip), %ecx
-; CHECK-NEXT:    movzbl {{.*}}(%rip), %edx
+; CHECK-NEXT:    movl struct_obj_3+8(%rip), %eax
+; CHECK-NEXT:    movzbl var_46(%rip), %ecx
+; CHECK-NEXT:    movzbl var_49(%rip), %edx
 ; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    addl %eax, %eax
 ; CHECK-NEXT:    subl %ecx, %eax
 ; CHECK-NEXT:    subl %edx, %eax
 ; CHECK-NEXT:    notl %eax
 ; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    movw %ax, struct_obj_12+{{.*}}(%rip)
-; CHECK-NEXT:    movb $0, {{.*}}(%rip)
+; CHECK-NEXT:    movw %ax, struct_obj_12+5(%rip)
+; CHECK-NEXT:    movb $0, var_163(%rip)
 ; CHECK-NEXT:    retq
 entry:
   %bf.load = load i32, i32* bitcast (i24* getelementptr inbounds (%struct.d.3.7.11.15.39.71.75.91.95.99.107.123.363, %struct.d.3.7.11.15.39.71.75.91.95.99.107.123.363* @struct_obj_3, i64 0, i32 0, i32 2) to i32*), align 2

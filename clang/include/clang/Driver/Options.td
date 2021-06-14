@@ -1598,6 +1598,16 @@ defm sanitize_address_use_after_scope : BoolOption<"f", "sanitize-address-use-af
   PosFlag<SetTrue, [], "Enable">, NegFlag<SetFalse, [CoreOption, NoXarchOption], "Disable">,
   BothFlags<[], " use-after-scope detection in AddressSanitizer">>,
   Group<f_clang_Group>;
+def sanitize_address_use_after_return_EQ
+  : Joined<["-"], "fsanitize-address-use-after-return=">,
+    MetaVarName<"<mode>">,
+    Flags<[CC1Option]>,
+    HelpText<"Select the mode of detecting stack use-after-return in AddressSanitizer">,
+    Group<f_clang_Group>,
+    Values<"never,runtime,always">,
+    NormalizedValuesScope<"llvm::AsanDetectStackUseAfterReturnMode">,
+    NormalizedValues<["Never", "Runtime", "Always"]>,
+    MarshallingInfoEnum<CodeGenOpts<"SanitizeAddressUseAfterReturn">, "Runtime">;
 defm sanitize_address_poison_custom_array_cookie : BoolOption<"f", "sanitize-address-poison-custom-array-cookie",
   CodeGenOpts<"SanitizeAddressPoisonCustomArrayCookie">, DefaultFalse,
   PosFlag<SetTrue, [], "Enable">, NegFlag<SetFalse, [], "Disable">,
@@ -5634,6 +5644,10 @@ def fallow_pch_with_errors : Flag<["-"], "fallow-pch-with-compiler-errors">,
   HelpText<"Accept a PCH file that was created with compiler errors">,
   MarshallingInfoFlag<PreprocessorOpts<"AllowPCHWithCompilerErrors">>,
   ImpliedByAnyOf<[fallow_pcm_with_errors.KeyPath]>;
+def fallow_pch_with_different_modules_cache_path :
+  Flag<["-"], "fallow-pch-with-different-modules-cache-path">,
+  HelpText<"Accept a PCH file that was created with a different modules cache path">,
+  MarshallingInfoFlag<PreprocessorOpts<"AllowPCHWithDifferentModulesCachePath">>;
 def dump_deserialized_pch_decls : Flag<["-"], "dump-deserialized-decls">,
   HelpText<"Dump declarations that are deserialized from PCH, for testing">,
   MarshallingInfoFlag<PreprocessorOpts<"DumpDeserializedPCHDecls">>;

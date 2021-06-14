@@ -226,13 +226,13 @@ define <16 x i8> @cmpeq_zext_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; SSE-LABEL: cmpeq_zext_v16i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqb %xmm1, %xmm0
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: cmpeq_zext_v16i8:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %cmp = icmp eq <16 x i8> %a, %b
   %zext = zext <16 x i1> %cmp to <16 x i8>
@@ -255,7 +255,7 @@ define <16 x i16> @cmpeq_zext_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; AVX1-NEXT:    vpcmpeqw %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cmpeq_zext_v16i16:
@@ -314,7 +314,7 @@ define <4 x i64> @cmpeq_zext_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; AVX1-NEXT:    vpcmpeqq %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cmpeq_zext_v4i64:
@@ -344,13 +344,13 @@ define <32 x i8> @cmpgt_zext_v32i8(<32 x i8> %a, <32 x i8> %b) {
 ; AVX1-NEXT:    vpcmpgtb %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cmpgt_zext_v32i8:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpgtb %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    retq
   %cmp = icmp sgt <32 x i8> %a, %b
   %zext = zext <32 x i1> %cmp to <32 x i8>
@@ -390,7 +390,7 @@ define <8 x i32> @cmpgt_zext_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: cmpgt_zext_v8i32:
@@ -416,7 +416,7 @@ define <2 x i64> @cmpgt_zext_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; SSE2-NEXT:    pand %xmm2, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,1,3,3]
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: cmpgt_zext_v2i64:

@@ -48,9 +48,7 @@ std::vector<SyntheticSection *> macho::syntheticSections;
 
 SyntheticSection::SyntheticSection(const char *segname, const char *name)
     : OutputSection(SyntheticKind, name), segname(segname) {
-  isec = make<ConcatInputSection>();
-  isec->segname = segname;
-  isec->name = name;
+  isec = make<ConcatInputSection>(segname, name);
   isec->parent = this;
   syntheticSections.push_back(this);
 }
@@ -479,16 +477,6 @@ void StubHelperSection::setup() {
                     /*noDeadStrip=*/false);
 }
 
-ImageLoaderCacheSection::ImageLoaderCacheSection() {
-  segname = segment_names::data;
-  name = section_names::data;
-  uint8_t *arr = bAlloc.Allocate<uint8_t>(target->wordSize);
-  memset(arr, 0, target->wordSize);
-  data = {arr, target->wordSize};
-  align = target->wordSize;
-  live = true;
-}
-
 LazyPointerSection::LazyPointerSection()
     : SyntheticSection(segment_names::data, section_names::lazySymbolPtr) {
   align = target->wordSize;
@@ -591,20 +579,24 @@ FunctionStartsSection::FunctionStartsSection()
 
 void FunctionStartsSection::finalizeContents() {
   raw_svector_ostream os{contents};
-  uint64_t addr = in.header->addr;
+  std::vector<uint64_t> addrs;
   for (const Symbol *sym : symtab->getSymbols()) {
     if (const auto *defined = dyn_cast<Defined>(sym)) {
       if (!defined->isec || !isCodeSection(defined->isec) || !defined->isLive())
         continue;
       // TODO: Add support for thumbs, in that case
       // the lowest bit of nextAddr needs to be set to 1.
-      uint64_t nextAddr = defined->getVA();
-      uint64_t delta = nextAddr - addr;
-      if (delta == 0)
-        continue;
-      encodeULEB128(delta, os);
-      addr = nextAddr;
+      addrs.push_back(defined->getVA());
     }
+  }
+  llvm::sort(addrs);
+  uint64_t addr = in.header->addr;
+  for (uint64_t nextAddr : addrs) {
+    uint64_t delta = nextAddr - addr;
+    if (delta == 0)
+      continue;
+    encodeULEB128(delta, os);
+    addr = nextAddr;
   }
   os << '\0';
 }
@@ -782,7 +774,7 @@ uint32_t SymtabSection::getNumSymbols() const {
 }
 
 // This serves to hide (type-erase) the template parameter from SymtabSection.
-template <class LP> class SymtabSectionImpl : public SymtabSection {
+template <class LP> class SymtabSectionImpl final : public SymtabSection {
 public:
   SymtabSectionImpl(StringTableSection &stringTableSection)
       : SymtabSection(stringTableSection) {}
@@ -1098,14 +1090,14 @@ void BitcodeBundleSection::writeTo(uint8_t *buf) const {
 // that only contains a duplicate cstring at a different alignment. See PR50563
 // for details.
 //
-// In practice, the cstrings we've seen so far that require special aligment are
-// all accessed by x86_64 SIMD operations -- x86_64 requires SIMD accesses to be
-// 16-byte-aligned. So for now, I'm just aligning all strings to 16 bytes on
-// x86_64. This is indeed wasteful, but implementation-wise it's simpler than
-// preserving per-string alignment+offsets. It also avoids the aforementioned
-// crash after deduplication of differently-aligned strings. Finally, the
-// overhead is not huge: using 16-byte alignment (vs no alignment) is only a
-// 0.5% size overhead when linking chromium_framework.
+// In practice, the cstrings we've seen so far that require special alignment
+// are all accessed by x86_64 SIMD operations -- x86_64 requires SIMD accesses
+// to be 16-byte-aligned. So for now, I'm just aligning all strings to 16 bytes
+// on x86_64. This is indeed wasteful, but implementation-wise it's simpler
+// than preserving per-string alignment+offsets. It also avoids the
+// aforementioned crash after deduplication of differently-aligned strings.
+// Finally, the overhead is not huge: using 16-byte alignment (vs no alignment)
+// is only a 0.5% size overhead when linking chromium_framework.
 CStringSection::CStringSection()
     : SyntheticSection(segment_names::text, section_names::cString),
       builder(StringTableBuilder::RAW,
@@ -1124,7 +1116,8 @@ void CStringSection::finalize() {
   // contents.
   for (const CStringInputSection *isec : inputs)
     for (size_t i = 0, e = isec->pieces.size(); i != e; ++i)
-      builder.add(isec->getCachedHashStringRef(i));
+      if (isec->pieces[i].live)
+        builder.add(isec->getCachedHashStringRef(i));
 
   // Fix the string table content. After this, the contents will never change.
   builder.finalizeInOrder();
@@ -1134,11 +1127,77 @@ void CStringSection::finalize() {
   // to a corresponding SectionPiece for easy access.
   for (CStringInputSection *isec : inputs) {
     for (size_t i = 0, e = isec->pieces.size(); i != e; ++i) {
+      if (!isec->pieces[i].live)
+        continue;
       isec->pieces[i].outSecOff =
           builder.getOffset(isec->getCachedHashStringRef(i));
       isec->isFinal = true;
     }
   }
+}
+
+// This section is actually emitted as __TEXT,__const by ld64, but clang may
+// emit input sections of that name, and LLD doesn't currently support mixing
+// synthetic and concat-type OutputSections. To work around this, I've given
+// our merged-literals section a different name.
+WordLiteralSection::WordLiteralSection()
+    : SyntheticSection(segment_names::text, section_names::literals) {
+  align = 16;
+}
+
+void WordLiteralSection::addInput(WordLiteralInputSection *isec) {
+  isec->parent = this;
+  // We do all processing of the InputSection here, so it will be effectively
+  // finalized.
+  isec->isFinal = true;
+  const uint8_t *buf = isec->data.data();
+  switch (sectionType(isec->flags)) {
+  case S_4BYTE_LITERALS: {
+    for (size_t off = 0, e = isec->data.size(); off < e; off += 4) {
+      if (!isec->isLive(off))
+        continue;
+      uint32_t value = *reinterpret_cast<const uint32_t *>(buf + off);
+      literal4Map.emplace(value, literal4Map.size());
+    }
+    break;
+  }
+  case S_8BYTE_LITERALS: {
+    for (size_t off = 0, e = isec->data.size(); off < e; off += 8) {
+      if (!isec->isLive(off))
+        continue;
+      uint64_t value = *reinterpret_cast<const uint64_t *>(buf + off);
+      literal8Map.emplace(value, literal8Map.size());
+    }
+    break;
+  }
+  case S_16BYTE_LITERALS: {
+    for (size_t off = 0, e = isec->data.size(); off < e; off += 16) {
+      if (!isec->isLive(off))
+        continue;
+      UInt128 value = *reinterpret_cast<const UInt128 *>(buf + off);
+      literal16Map.emplace(value, literal16Map.size());
+    }
+    break;
+  }
+  default:
+    llvm_unreachable("invalid literal section type");
+  }
+}
+
+void WordLiteralSection::writeTo(uint8_t *buf) const {
+  // Note that we don't attempt to do any endianness conversion in addInput(),
+  // so we don't do it here either -- just write out the original value,
+  // byte-for-byte.
+  for (const auto &p : literal16Map)
+    memcpy(buf + p.second * 16, &p.first, 16);
+  buf += literal16Map.size() * 16;
+
+  for (const auto &p : literal8Map)
+    memcpy(buf + p.second * 8, &p.first, 8);
+  buf += literal8Map.size() * 8;
+
+  for (const auto &p : literal4Map)
+    memcpy(buf + p.second * 4, &p.first, 4);
 }
 
 void macho::createSyntheticSymbols() {

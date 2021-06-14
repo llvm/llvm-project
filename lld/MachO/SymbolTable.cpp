@@ -71,8 +71,8 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
           //        We could do this if either is weak (but getting the
           //        case where !isWeakDef && defined->isWeakDef() right
           //        requires some care and testing).
-          if (isec)
-            isec->wasCoalesced = true;
+          if (auto concatIsec = dyn_cast_or_null<ConcatInputSection>(isec))
+            concatIsec->wasCoalesced = true;
         }
 
         return defined;

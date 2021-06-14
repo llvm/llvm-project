@@ -3471,7 +3471,7 @@ static void handleFormatAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   } else if (Kind == NSStringFormat) {
     // FIXME: do we need to check if the type is NSString*?  What are the
     // semantics?
-    if (!isNSStringType(Ty, S.Context)) {
+    if (!isNSStringType(Ty, S.Context, /*AllowNSAttributedString=*/true)) {
       S.Diag(AL.getLoc(), diag::err_format_attribute_not)
         << "an NSString" << IdxExpr->getSourceRange()
         << getFunctionOrMethodParamRange(D, ArgIdx);

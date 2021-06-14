@@ -284,12 +284,12 @@ define <2 x i64> @test8() nounwind {
 ;
 ; X64-SSE-LABEL: test8:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movups {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    movups x(%rip), %xmm0
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test8:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovups {{.*}}(%rip), %xmm0
+; X64-AVX-NEXT:    vmovups x(%rip), %xmm0
 ; X64-AVX-NEXT:    retq
 	%tmp = load i32, i32* getelementptr ([4 x i32], [4 x i32]* @x, i32 0, i32 0)		; <i32> [#uses=1]
 	%tmp3 = load i32, i32* getelementptr ([4 x i32], [4 x i32]* @x, i32 0, i32 1)		; <i32> [#uses=1]
@@ -675,7 +675,7 @@ define <2 x i64> @test_insert_64_zext(<2 x i64> %i) {
 define <4 x i32> @PR19721(<4 x i32> %i) {
 ; X86-SSE-LABEL: PR19721:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    andps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
 ; AVX-LABEL: PR19721:
@@ -686,7 +686,7 @@ define <4 x i32> @PR19721(<4 x i32> %i) {
 ;
 ; X64-SSE-LABEL: PR19721:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE-NEXT:    retq
   %bc = bitcast <4 x i32> %i to i128
   %insert = and i128 %bc, -4294967296

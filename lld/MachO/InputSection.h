@@ -14,6 +14,7 @@
 
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/BinaryFormat/MachO.h"
 
@@ -28,6 +29,7 @@ public:
   enum Kind {
     ConcatKind,
     CStringLiteralKind,
+    WordLiteralKind,
   };
 
   Kind kind() const { return sectionKind; }
@@ -38,10 +40,10 @@ public:
   // offset from the beginning of its parent OutputSection.
   virtual uint64_t getOffset(uint64_t off) const = 0;
   // The offset from the beginning of the file.
-  virtual uint64_t getFileOffset(uint64_t off) const = 0;
   uint64_t getVA(uint64_t off) const;
-
-  void writeTo(uint8_t *buf);
+  // Whether the data at \p off in this InputSection is live.
+  virtual bool isLive(uint64_t off) const = 0;
+  virtual void markLive(uint64_t off) = 0;
 
   InputFile *file = nullptr;
   StringRef name;
@@ -54,8 +56,47 @@ public:
   uint32_t callSiteCount = 0;
   bool isFinal = false; // is address assigned?
 
-  // How many symbols refer to this InputSection.
-  uint32_t numRefs = 0;
+
+  ArrayRef<uint8_t> data;
+  std::vector<Reloc> relocs;
+
+protected:
+  InputSection(Kind kind, StringRef segname, StringRef name)
+      : name(name), segname(segname), sectionKind(kind) {}
+
+  InputSection(Kind kind, StringRef segname, StringRef name, InputFile *file,
+               ArrayRef<uint8_t> data, uint32_t align, uint32_t flags)
+      : file(file), name(name), segname(segname), align(align), flags(flags),
+        data(data), sectionKind(kind) {}
+
+private:
+  Kind sectionKind;
+};
+
+// ConcatInputSections are combined into (Concat)OutputSections through simple
+// concatenation, in contrast with literal sections which may have their
+// contents merged before output.
+class ConcatInputSection final : public InputSection {
+public:
+  ConcatInputSection(StringRef segname, StringRef name)
+      : InputSection(ConcatKind, segname, name) {}
+
+  ConcatInputSection(StringRef segname, StringRef name, InputFile *file,
+                     ArrayRef<uint8_t> data, uint32_t align, uint32_t flags)
+      : InputSection(ConcatKind, segname, name, file, data, align, flags) {}
+
+  uint64_t getOffset(uint64_t off) const override { return outSecOff + off; }
+  uint64_t getVA() const { return InputSection::getVA(0); }
+  // ConcatInputSections are entirely live or dead, so the offset is irrelevant.
+  bool isLive(uint64_t off) const override { return live; }
+  void markLive(uint64_t off) override { live = true; }
+  bool isCoalescedWeak() const { return wasCoalesced && numRefs == 0; }
+  bool shouldOmitFromOutput() const { return !live || isCoalescedWeak(); }
+  void writeTo(uint8_t *buf);
+
+  static bool classof(const InputSection *isec) {
+    return isec->kind() == ConcatKind;
+  }
 
   // With subsections_via_symbols, most symbols have their own InputSection,
   // and for weak symbols (e.g. from inline functions), only the
@@ -63,51 +104,27 @@ public:
   // while all copies in other translation units are coalesced into the
   // first and not copied to the output.
   bool wasCoalesced = false;
-
-  bool isCoalescedWeak() const { return wasCoalesced && numRefs == 0; }
-  bool shouldOmitFromOutput() const { return !live || isCoalescedWeak(); }
-
   bool live = !config->deadStrip;
-
-  ArrayRef<uint8_t> data;
-  std::vector<Reloc> relocs;
-
-protected:
-  explicit InputSection(Kind kind) : sectionKind(kind) {}
-
-private:
-  Kind sectionKind;
-};
-
-// ConcatInputSections are combined into (Concat)OutputSections through simple
-// concatentation, in contrast with literal sections which may have their
-// contents merged before output.
-class ConcatInputSection : public InputSection {
-public:
-  ConcatInputSection() : InputSection(ConcatKind) {}
-  uint64_t getFileOffset(uint64_t off) const override;
-  uint64_t getOffset(uint64_t off) const override { return outSecOff + off; }
-  uint64_t getVA() const { return InputSection::getVA(0); }
-
-  static bool classof(const InputSection *isec) {
-    return isec->kind() == ConcatKind;
-  }
-
+  // How many symbols refer to this InputSection.
+  uint32_t numRefs = 0;
   uint64_t outSecOff = 0;
-  uint64_t outSecFileOff = 0;
 };
 
 // We allocate a lot of these and binary search on them, so they should be as
-// compact as possible. Hence the use of 32 rather than 64 bits for the hash.
+// compact as possible. Hence the use of 31 rather than 64 bits for the hash.
 struct StringPiece {
   // Offset from the start of the containing input section.
   uint32_t inSecOff;
-  uint32_t hash;
+  uint32_t live : 1;
+  uint32_t hash : 31;
   // Offset from the start of the containing output section.
   uint64_t outSecOff = 0;
 
-  StringPiece(uint64_t off, uint32_t hash) : inSecOff(off), hash(hash) {}
+  StringPiece(uint64_t off, uint32_t hash)
+      : inSecOff(off), live(!config->deadStrip), hash(hash) {}
 };
+
+static_assert(sizeof(StringPiece) == 16, "StringPiece is too big!");
 
 // CStringInputSections are composed of multiple null-terminated string
 // literals, which we represent using StringPieces. These literals can be
@@ -119,12 +136,17 @@ struct StringPiece {
 // ld64 is more conservative and does not do that. This was mostly done for
 // implementation simplicity; if we find programs that need the more
 // conservative behavior we can certainly implement that.
-class CStringInputSection : public InputSection {
+class CStringInputSection final : public InputSection {
 public:
-  CStringInputSection() : InputSection(CStringLiteralKind) {}
-  uint64_t getFileOffset(uint64_t off) const override;
+  CStringInputSection(StringRef segname, StringRef name, InputFile *file,
+                      ArrayRef<uint8_t> data, uint32_t align, uint32_t flags)
+      : InputSection(CStringLiteralKind, segname, name, file, data, align,
+                     flags) {}
   uint64_t getOffset(uint64_t off) const override;
+  bool isLive(uint64_t off) const override { return getStringPiece(off).live; }
+  void markLive(uint64_t off) override { getStringPiece(off).live = true; }
   // Find the StringPiece that contains this offset.
+  StringPiece &getStringPiece(uint64_t off);
   const StringPiece &getStringPiece(uint64_t off) const;
   // Split at each null byte.
   void splitIntoPieces();
@@ -144,6 +166,27 @@ public:
   }
 
   std::vector<StringPiece> pieces;
+};
+
+class WordLiteralInputSection final : public InputSection {
+public:
+  WordLiteralInputSection(StringRef segname, StringRef name, InputFile *file,
+                          ArrayRef<uint8_t> data, uint32_t align,
+                          uint32_t flags);
+  uint64_t getOffset(uint64_t off) const override;
+  bool isLive(uint64_t off) const override {
+    return live[off >> power2LiteralSize];
+  }
+  void markLive(uint64_t off) override { live[off >> power2LiteralSize] = 1; }
+
+  static bool classof(const InputSection *isec) {
+    return isec->kind() == WordLiteralKind;
+  }
+
+private:
+  unsigned power2LiteralSize;
+  // The liveness of data[off] is tracked by live[off >> power2LiteralSize].
+  llvm::BitVector live;
 };
 
 inline uint8_t sectionType(uint32_t flags) {
@@ -167,6 +210,12 @@ inline bool isThreadLocalData(uint32_t flags) {
 inline bool isDebugSection(uint32_t flags) {
   return (flags & llvm::MachO::SECTION_ATTRIBUTES_USR) ==
          llvm::MachO::S_ATTR_DEBUG;
+}
+
+inline bool isWordLiteralSection(uint32_t flags) {
+  return sectionType(flags) == llvm::MachO::S_4BYTE_LITERALS ||
+         sectionType(flags) == llvm::MachO::S_8BYTE_LITERALS ||
+         sectionType(flags) == llvm::MachO::S_16BYTE_LITERALS;
 }
 
 bool isCodeSection(const InputSection *);
@@ -197,6 +246,7 @@ constexpr const char indirectSymbolTable[] = "__ind_sym_tab";
 constexpr const char const_[] = "__const";
 constexpr const char lazySymbolPtr[] = "__la_symbol_ptr";
 constexpr const char lazyBinding[] = "__lazy_binding";
+constexpr const char literals[] = "__literals";
 constexpr const char moduleInitFunc[] = "__mod_init_func";
 constexpr const char moduleTermFunc[] = "__mod_term_func";
 constexpr const char nonLazySymbolPtr[] = "__nl_symbol_ptr";

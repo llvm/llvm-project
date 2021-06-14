@@ -34,8 +34,12 @@ class DependencyConsumer {
 public:
   virtual ~DependencyConsumer() {}
 
-  virtual void handleFileDependency(const DependencyOutputOptions &Opts,
-                                    StringRef Filename) = 0;
+  virtual void
+  handleDependencyOutputOpts(const DependencyOutputOptions &Opts) = 0;
+
+  virtual void handleFileDependency(StringRef Filename) = 0;
+
+  virtual void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) = 0;
 
   virtual void handleModuleDependency(ModuleDeps MD) = 0;
 

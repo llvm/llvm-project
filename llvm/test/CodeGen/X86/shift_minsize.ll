@@ -15,6 +15,13 @@ define i64 @f0(i64 %val, i64 %amt) minsize optsize {
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-NEXT:    shlq %cl, %rax
 ; CHECK-NEXT:    retq
+;
+; CHECK-WIN-LABEL: f0:
+; CHECK-WIN:       # %bb.0:
+; CHECK-WIN-NEXT:    movq %rcx, %rax
+; CHECK-WIN-NEXT:    movl %edx, %ecx
+; CHECK-WIN-NEXT:    shlq %cl, %rax
+; CHECK-WIN-NEXT:    retq
   %res = shl i64 %val, %amt
   ret i64 %res
 }
@@ -28,6 +35,14 @@ define i32 @f1(i64 %x, i64 %y) minsize optsize {
 ; CHECK-NEXT:    shlq %cl, %rax
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
+;
+; CHECK-WIN-LABEL: f1:
+; CHECK-WIN:       # %bb.0:
+; CHECK-WIN-NEXT:    movq %rcx, %rax
+; CHECK-WIN-NEXT:    movl %edx, %ecx
+; CHECK-WIN-NEXT:    shlq %cl, %rax
+; CHECK-WIN-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-WIN-NEXT:    retq
 	%a = shl i64 %x, %y
 	%b = trunc i64 %a to i32
 	ret i32 %b
@@ -42,6 +57,14 @@ define i32 @f2(i64 %x, i64 %y) minsize optsize {
 ; CHECK-NEXT:    sarq %cl, %rax
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
+;
+; CHECK-WIN-LABEL: f2:
+; CHECK-WIN:       # %bb.0:
+; CHECK-WIN-NEXT:    movq %rcx, %rax
+; CHECK-WIN-NEXT:    movl %edx, %ecx
+; CHECK-WIN-NEXT:    sarq %cl, %rax
+; CHECK-WIN-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-WIN-NEXT:    retq
 	%a = ashr i64 %x, %y
 	%b = trunc i64 %a to i32
 	ret i32 %b
@@ -56,6 +79,14 @@ define i32 @f3(i64 %x, i64 %y) minsize optsize {
 ; CHECK-NEXT:    shrq %cl, %rax
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
+;
+; CHECK-WIN-LABEL: f3:
+; CHECK-WIN:       # %bb.0:
+; CHECK-WIN-NEXT:    movq %rcx, %rax
+; CHECK-WIN-NEXT:    movl %edx, %ecx
+; CHECK-WIN-NEXT:    shrq %cl, %rax
+; CHECK-WIN-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-WIN-NEXT:    retq
 	%a = lshr i64 %x, %y
 	%b = trunc i64 %a to i32
 	ret i32 %b
@@ -67,10 +98,22 @@ define dso_local { i64, i64 } @shl128(i64 %x.coerce0, i64 %x.coerce1, i8 signext
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movzbl %dl, %edx
-; CHECK-NEXT:    callq __ashlti3
+; CHECK-NEXT:    callq __ashlti3@PLT
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
+;
+; CHECK-WIN-LABEL: shl128:
+; CHECK-WIN:       # %bb.0: # %entry
+; CHECK-WIN-NEXT:    movq %rcx, %r9
+; CHECK-WIN-NEXT:    movl %r8d, %ecx
+; CHECK-WIN-NEXT:    shldq %cl, %r9, %rdx
+; CHECK-WIN-NEXT:    shlq %cl, %r9
+; CHECK-WIN-NEXT:    xorl %eax, %eax
+; CHECK-WIN-NEXT:    testb $64, %r8b
+; CHECK-WIN-NEXT:    cmovneq %r9, %rdx
+; CHECK-WIN-NEXT:    cmoveq %r9, %rax
+; CHECK-WIN-NEXT:    retq
 entry:
   %x.sroa.2.0.insert.ext = zext i64 %x.coerce1 to i128
   %x.sroa.2.0.insert.shift = shl nuw i128 %x.sroa.2.0.insert.ext, 64
@@ -92,10 +135,23 @@ define dso_local { i64, i64 } @ashr128(i64 %x.coerce0, i64 %x.coerce1, i8 signex
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq __ashrti3
+; CHECK-NEXT:    callq __ashrti3@PLT
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
+;
+; CHECK-WIN-LABEL: ashr128:
+; CHECK-WIN:       # %bb.0: # %entry
+; CHECK-WIN-NEXT:    movq %rcx, %rax
+; CHECK-WIN-NEXT:    movl %r8d, %ecx
+; CHECK-WIN-NEXT:    shrdq %cl, %rdx, %rax
+; CHECK-WIN-NEXT:    movq %rdx, %r9
+; CHECK-WIN-NEXT:    sarq %cl, %r9
+; CHECK-WIN-NEXT:    sarq $63, %rdx
+; CHECK-WIN-NEXT:    testb $64, %r8b
+; CHECK-WIN-NEXT:    cmovneq %r9, %rax
+; CHECK-WIN-NEXT:    cmoveq %r9, %rdx
+; CHECK-WIN-NEXT:    retq
 entry:
   %x.sroa.2.0.insert.ext = zext i64 %x.coerce1 to i128
   %x.sroa.2.0.insert.shift = shl nuw i128 %x.sroa.2.0.insert.ext, 64
@@ -118,10 +174,22 @@ define dso_local { i64, i64 } @lshr128(i64 %x.coerce0, i64 %x.coerce1, i8 signex
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movzbl %dl, %edx
-; CHECK-NEXT:    callq __lshrti3
+; CHECK-NEXT:    callq __lshrti3@PLT
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
+;
+; CHECK-WIN-LABEL: lshr128:
+; CHECK-WIN:       # %bb.0: # %entry
+; CHECK-WIN-NEXT:    movq %rcx, %rax
+; CHECK-WIN-NEXT:    movl %r8d, %ecx
+; CHECK-WIN-NEXT:    shrdq %cl, %rdx, %rax
+; CHECK-WIN-NEXT:    shrq %cl, %rdx
+; CHECK-WIN-NEXT:    xorl %ecx, %ecx
+; CHECK-WIN-NEXT:    testb $64, %r8b
+; CHECK-WIN-NEXT:    cmovneq %rdx, %rax
+; CHECK-WIN-NEXT:    cmovneq %rcx, %rdx
+; CHECK-WIN-NEXT:    retq
 entry:
   %x.sroa.2.0.insert.ext = zext i64 %x.coerce1 to i128
   %x.sroa.2.0.insert.shift = shl nuw i128 %x.sroa.2.0.insert.ext, 64

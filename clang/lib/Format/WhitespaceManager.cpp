@@ -13,6 +13,8 @@
 
 #include "WhitespaceManager.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include <algorithm>
 
 namespace clang {
 namespace format {
@@ -100,6 +102,7 @@ const tooling::Replacements &WhitespaceManager::generateReplacements() {
   alignChainedConditionals();
   alignTrailingComments();
   alignEscapedNewlines();
+  alignArrayInitializers();
   generateChanges();
 
   return Replaces;
@@ -950,6 +953,305 @@ void WhitespaceManager::alignEscapedNewlines(unsigned Start, unsigned End,
         C.EscapedNewlineColumn = Column;
     }
   }
+}
+
+void WhitespaceManager::alignArrayInitializers() {
+  if (Style.AlignArrayOfStructures == FormatStyle::AIAS_None)
+    return;
+
+  for (unsigned ChangeIndex = 1U, ChangeEnd = Changes.size();
+       ChangeIndex < ChangeEnd; ++ChangeIndex) {
+    auto &C = Changes[ChangeIndex];
+    if (C.Tok->IsArrayInitializer) {
+      bool FoundComplete = false;
+      for (unsigned InsideIndex = ChangeIndex + 1; InsideIndex < ChangeEnd;
+           ++InsideIndex) {
+        if (Changes[InsideIndex].Tok == C.Tok->MatchingParen) {
+          alignArrayInitializers(ChangeIndex, InsideIndex + 1);
+          ChangeIndex = InsideIndex + 1;
+          FoundComplete = true;
+          break;
+        }
+      }
+      if (!FoundComplete)
+        ChangeIndex = ChangeEnd;
+    }
+  }
+}
+
+void WhitespaceManager::alignArrayInitializers(unsigned Start, unsigned End) {
+
+  if (Style.AlignArrayOfStructures == FormatStyle::AIAS_Right)
+    alignArrayInitializersRightJustified(getCells(Start, End));
+  else if (Style.AlignArrayOfStructures == FormatStyle::AIAS_Left)
+    alignArrayInitializersLeftJustified(getCells(Start, End));
+}
+
+void WhitespaceManager::alignArrayInitializersRightJustified(
+    CellDescriptions &&CellDescs) {
+  auto &Cells = CellDescs.Cells;
+
+  // Now go through and fixup the spaces.
+  auto *CellIter = Cells.begin();
+  for (auto i = 0U; i < CellDescs.CellCount; i++, ++CellIter) {
+    unsigned NetWidth = 0U;
+    if (isSplitCell(*CellIter))
+      NetWidth = getNetWidth(Cells.begin(), CellIter, CellDescs.InitialSpaces);
+    auto CellWidth = getMaximumCellWidth(CellIter, NetWidth);
+
+    if (Changes[CellIter->Index].Tok->is(tok::r_brace)) {
+      // So in here we want to see if there is a brace that falls
+      // on a line that was split. If so on that line we make sure that
+      // the spaces in front of the brace are enough.
+      Changes[CellIter->Index].NewlinesBefore = 0;
+      Changes[CellIter->Index].Spaces = 0;
+      for (const auto *Next = CellIter->NextColumnElement; Next != nullptr;
+           Next = Next->NextColumnElement) {
+        Changes[Next->Index].Spaces = 0;
+        Changes[Next->Index].NewlinesBefore = 0;
+      }
+      // Unless the array is empty, we need the position of all the
+      // immediately adjacent cells
+      if (CellIter != Cells.begin()) {
+        auto ThisNetWidth =
+            getNetWidth(Cells.begin(), CellIter, CellDescs.InitialSpaces);
+        auto MaxNetWidth =
+            getMaximumNetWidth(Cells.begin(), CellIter, CellDescs.InitialSpaces,
+                               CellDescs.CellCount);
+        if (ThisNetWidth < MaxNetWidth)
+          Changes[CellIter->Index].Spaces = (MaxNetWidth - ThisNetWidth);
+        auto RowCount = 1U;
+        auto Offset = std::distance(Cells.begin(), CellIter);
+        for (const auto *Next = CellIter->NextColumnElement; Next != nullptr;
+             Next = Next->NextColumnElement) {
+          auto *Start = (Cells.begin() + RowCount * CellDescs.CellCount);
+          auto *End = Start + Offset;
+          ThisNetWidth = getNetWidth(Start, End, CellDescs.InitialSpaces);
+          if (ThisNetWidth < MaxNetWidth)
+            Changes[Next->Index].Spaces = (MaxNetWidth - ThisNetWidth);
+          ++RowCount;
+        }
+      }
+    } else {
+      auto ThisWidth =
+          calculateCellWidth(CellIter->Index, CellIter->EndIndex, true) +
+          NetWidth;
+      if (Changes[CellIter->Index].NewlinesBefore == 0) {
+        Changes[CellIter->Index].Spaces = (CellWidth - (ThisWidth + NetWidth));
+        Changes[CellIter->Index].Spaces += (i > 0) ? 1 : 0;
+      }
+      alignToStartOfCell(CellIter->Index, CellIter->EndIndex);
+      for (const auto *Next = CellIter->NextColumnElement; Next != nullptr;
+           Next = Next->NextColumnElement) {
+        ThisWidth =
+            calculateCellWidth(Next->Index, Next->EndIndex, true) + NetWidth;
+        if (Changes[Next->Index].NewlinesBefore == 0) {
+          Changes[Next->Index].Spaces = (CellWidth - ThisWidth);
+          Changes[Next->Index].Spaces += (i > 0) ? 1 : 0;
+        }
+        alignToStartOfCell(Next->Index, Next->EndIndex);
+      }
+    }
+  }
+}
+
+void WhitespaceManager::alignArrayInitializersLeftJustified(
+    CellDescriptions &&CellDescs) {
+  auto &Cells = CellDescs.Cells;
+
+  // Now go through and fixup the spaces.
+  auto *CellIter = Cells.begin();
+  // The first cell needs to be against the left brace.
+  if (Changes[CellIter->Index].NewlinesBefore == 0)
+    Changes[CellIter->Index].Spaces = 0;
+  else
+    Changes[CellIter->Index].Spaces = CellDescs.InitialSpaces;
+  ++CellIter;
+  for (auto i = 1U; i < CellDescs.CellCount; i++, ++CellIter) {
+    unsigned NetWidth = 0U;
+    if (isSplitCell(*CellIter))
+      NetWidth = getNetWidth(Cells.begin(), CellIter, CellDescs.InitialSpaces);
+    auto MaxNetWidth = getMaximumNetWidth(
+        Cells.begin(), CellIter, CellDescs.InitialSpaces, CellDescs.CellCount);
+    auto ThisNetWidth =
+        getNetWidth(Cells.begin(), CellIter, CellDescs.InitialSpaces);
+    if (Changes[CellIter->Index].NewlinesBefore == 0) {
+      Changes[CellIter->Index].Spaces =
+          MaxNetWidth - ThisNetWidth +
+          (Changes[CellIter->Index].Tok->isNot(tok::r_brace) ? 1 : 0);
+    }
+    auto RowCount = 1U;
+    auto Offset = std::distance(Cells.begin(), CellIter);
+    for (const auto *Next = CellIter->NextColumnElement; Next != nullptr;
+         Next = Next->NextColumnElement) {
+      auto *Start = (Cells.begin() + RowCount * CellDescs.CellCount);
+      auto *End = Start + Offset;
+      auto ThisNetWidth = getNetWidth(Start, End, CellDescs.InitialSpaces);
+      if (Changes[Next->Index].NewlinesBefore == 0) {
+        Changes[Next->Index].Spaces =
+            MaxNetWidth - ThisNetWidth +
+            (Changes[Next->Index].Tok->isNot(tok::r_brace) ? 1 : 0);
+      }
+      ++RowCount;
+    }
+  }
+}
+
+bool WhitespaceManager::isSplitCell(const CellDescription &Cell) {
+  if (Cell.HasSplit)
+    return true;
+  for (const auto *Next = Cell.NextColumnElement; Next != nullptr;
+       Next = Next->NextColumnElement) {
+    if (Next->HasSplit)
+      return true;
+  }
+  return false;
+}
+
+WhitespaceManager::CellDescriptions WhitespaceManager::getCells(unsigned Start,
+                                                                unsigned End) {
+
+  unsigned Depth = 0;
+  unsigned Cell = 0;
+  unsigned CellCount = 0;
+  unsigned InitialSpaces = 0;
+  unsigned InitialTokenLength = 0;
+  unsigned EndSpaces = 0;
+  SmallVector<CellDescription> Cells;
+  const FormatToken *MatchingParen = nullptr;
+  for (unsigned i = Start; i < End; ++i) {
+    auto &C = Changes[i];
+    if (C.Tok->is(tok::l_brace))
+      ++Depth;
+    else if (C.Tok->is(tok::r_brace))
+      --Depth;
+    if (Depth == 2) {
+      if (C.Tok->is(tok::l_brace)) {
+        Cell = 0;
+        MatchingParen = C.Tok->MatchingParen;
+        if (InitialSpaces == 0) {
+          InitialSpaces = C.Spaces + C.TokenLength;
+          InitialTokenLength = C.TokenLength;
+          auto j = i - 1;
+          for (; Changes[j].NewlinesBefore == 0 && j > Start; --j) {
+            InitialSpaces += Changes[j].Spaces + Changes[j].TokenLength;
+            InitialTokenLength += Changes[j].TokenLength;
+          }
+          if (C.NewlinesBefore == 0) {
+            InitialSpaces += Changes[j].Spaces + Changes[j].TokenLength;
+            InitialTokenLength += Changes[j].TokenLength;
+          }
+        }
+      } else if (C.Tok->is(tok::comma)) {
+        if (!Cells.empty())
+          Cells.back().EndIndex = i;
+        Cell++;
+      }
+    } else if (Depth == 1) {
+      if (C.Tok == MatchingParen) {
+        if (!Cells.empty())
+          Cells.back().EndIndex = i;
+        Cells.push_back(CellDescription{i, ++Cell, i + 1, false, nullptr});
+        CellCount = Cell + 1;
+        // Go to the next non-comment and ensure there is a break in front
+        const auto *NextNonComment = C.Tok->getNextNonComment();
+        while (NextNonComment->is(tok::comma))
+          NextNonComment = NextNonComment->getNextNonComment();
+        auto j = i;
+        while (Changes[j].Tok != NextNonComment && j < End)
+          j++;
+        if (j < End && Changes[j].NewlinesBefore == 0 &&
+            Changes[j].Tok->isNot(tok::r_brace)) {
+          Changes[j].NewlinesBefore = 1;
+          // Account for the added token lengths
+          Changes[j].Spaces = InitialSpaces - InitialTokenLength;
+        }
+      } else if (C.Tok->is(tok::comment)) {
+        // Trailing comments stay at a space past the last token
+        C.Spaces = Changes[i - 1].Tok->is(tok::comma) ? 1 : 2;
+      } else if (C.Tok->is(tok::l_brace)) {
+        // We need to make sure that the ending braces is aligned to the
+        // start of our initializer
+        auto j = i - 1;
+        for (; j > 0 && !Changes[j].Tok->ArrayInitializerLineStart; --j)
+          ; // Nothing the loop does the work
+        EndSpaces = Changes[j].Spaces;
+      }
+    } else if (Depth == 0 && C.Tok->is(tok::r_brace)) {
+      C.NewlinesBefore = 1;
+      C.Spaces = EndSpaces;
+    }
+    if (C.Tok->StartsColumn) {
+      // This gets us past tokens that have been split over multiple
+      // lines
+      bool HasSplit = false;
+      if (Changes[i].NewlinesBefore > 0) {
+        // So if we split a line previously and the tail line + this token is
+        // less then the column limit we remove the split here and just put
+        // the column start at a space past the comma
+        auto j = i - 1;
+        if ((j - 1) > Start && Changes[j].Tok->is(tok::comma) &&
+            Changes[j - 1].NewlinesBefore > 0) {
+          --j;
+          auto LineLimit = Changes[j].Spaces + Changes[j].TokenLength;
+          if (LineLimit < Style.ColumnLimit) {
+            Changes[i].NewlinesBefore = 0;
+            Changes[i].Spaces = 1;
+          }
+        }
+      }
+      while (Changes[i].NewlinesBefore > 0 && Changes[i].Tok == C.Tok) {
+        Changes[i].Spaces = InitialSpaces;
+        ++i;
+        HasSplit = true;
+      }
+      if (Changes[i].Tok != C.Tok)
+        --i;
+      Cells.push_back(CellDescription{i, Cell, i, HasSplit, nullptr});
+    }
+  }
+
+  return linkCells({Cells, CellCount, InitialSpaces});
+}
+
+unsigned WhitespaceManager::calculateCellWidth(unsigned Start, unsigned End,
+                                               bool WithSpaces) const {
+  unsigned CellWidth = 0;
+  for (auto i = Start; i < End; i++) {
+    if (Changes[i].NewlinesBefore > 0)
+      CellWidth = 0;
+    CellWidth += Changes[i].TokenLength;
+    CellWidth += (WithSpaces ? Changes[i].Spaces : 0);
+  }
+  return CellWidth;
+}
+
+void WhitespaceManager::alignToStartOfCell(unsigned Start, unsigned End) {
+  if ((End - Start) <= 1)
+    return;
+  // If the line is broken anywhere in there make sure everything
+  // is aligned to the parent
+  for (auto i = Start + 1; i < End; i++) {
+    if (Changes[i].NewlinesBefore > 0)
+      Changes[i].Spaces = Changes[Start].Spaces;
+  }
+}
+
+WhitespaceManager::CellDescriptions
+WhitespaceManager::linkCells(CellDescriptions &&CellDesc) {
+  auto &Cells = CellDesc.Cells;
+  for (auto *CellIter = Cells.begin(); CellIter != Cells.end(); ++CellIter) {
+    if (CellIter->NextColumnElement == nullptr &&
+        ((CellIter + 1) != Cells.end())) {
+      for (auto *NextIter = CellIter + 1; NextIter != Cells.end(); ++NextIter) {
+        if (NextIter->Cell == CellIter->Cell) {
+          CellIter->NextColumnElement = &(*NextIter);
+          break;
+        }
+      }
+    }
+  }
+  return std::move(CellDesc);
 }
 
 void WhitespaceManager::generateChanges() {

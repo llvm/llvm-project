@@ -48,7 +48,7 @@ define void @test(<4 x i64> %a, <4 x x86_fp80> %b, <8 x x86_fp80>* %c) local_unn
 ;
 ; AVX512VL-LABEL: test:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpcmpeqq {{.*}}(%rip), %ymm0, %k0
+; AVX512VL-NEXT:    vpcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %k0
 ; AVX512VL-NEXT:    kshiftrb $2, %k0, %k1
 ; AVX512VL-NEXT:    kshiftrb $1, %k0, %k2
 ; AVX512VL-NEXT:    kmovd %k0, %eax

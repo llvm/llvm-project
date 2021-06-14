@@ -162,8 +162,7 @@ static LogicalResult fuseLinalgOpsGreedily(FuncOp f) {
           *originalOpInLinalgOpsVector = info->fusedProducer.getOperation();
           changed = true;
         }
-      } else {
-        assert(opOperand->get().getType().isa<RankedTensorType>());
+      } else if (opOperand->get().getType().isa<RankedTensorType>()) {
         // Tile and Fuse tensor input.
         if (opOperand->getOperandNumber() >= linalgOp.getNumInputs())
           continue;

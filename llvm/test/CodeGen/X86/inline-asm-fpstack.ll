@@ -56,7 +56,7 @@ define void @test5(double %X) {
 ; CHECK-LABEL: test5:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fadds LCPI4_0
+; CHECK-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    frob
 ; CHECK-NEXT:    ## InlineAsm End
@@ -113,7 +113,7 @@ entry:
 define void @testPR4185() {
 ; CHECK-LABEL: testPR4185:
 ; CHECK:       ## %bb.0: ## %return
-; CHECK-NEXT:    flds LCPI6_0
+; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    fld %st(0)
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    fistpl %st
@@ -135,7 +135,7 @@ return:
 define void @testPR4185b() {
 ; CHECK-LABEL: testPR4185b:
 ; CHECK:       ## %bb.0: ## %return
-; CHECK-NEXT:    flds LCPI7_0
+; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    ## InlineAsm Start
 ; CHECK-NEXT:    fistl %st
 ; CHECK-NEXT:    ## InlineAsm End
@@ -209,9 +209,9 @@ define void @testPR4485(x86_fp80* %a) {
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    fldt (%eax)
-; CHECK-NEXT:    flds LCPI10_0
+; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    fmul %st, %st(1)
-; CHECK-NEXT:    flds LCPI10_1
+; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    fmul %st, %st(2)
 ; CHECK-NEXT:    fxch %st(2)
 ; CHECK-NEXT:    ## InlineAsm Start
@@ -409,7 +409,7 @@ entry:
 define i32 @PR10602() nounwind ssp {
 ; CHECK-LABEL: PR10602:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    flds LCPI19_0
+; CHECK-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    fld %st(0)
 ; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:    ## InlineAsm Start

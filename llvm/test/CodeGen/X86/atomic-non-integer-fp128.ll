@@ -14,7 +14,7 @@ define void @store_fp128(fp128* %fptr, fp128 %v) {
 ; X64-NOSSE:       # %bb.0:
 ; X64-NOSSE-NEXT:    pushq %rax
 ; X64-NOSSE-NEXT:    .cfi_def_cfa_offset 16
-; X64-NOSSE-NEXT:    callq __sync_lock_test_and_set_16
+; X64-NOSSE-NEXT:    callq __sync_lock_test_and_set_16@PLT
 ; X64-NOSSE-NEXT:    popq %rax
 ; X64-NOSSE-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NOSSE-NEXT:    retq
@@ -26,7 +26,7 @@ define void @store_fp128(fp128* %fptr, fp128 %v) {
 ; X64-SSE-NEXT:    movaps %xmm0, (%rsp)
 ; X64-SSE-NEXT:    movq (%rsp), %rsi
 ; X64-SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
-; X64-SSE-NEXT:    callq __sync_lock_test_and_set_16
+; X64-SSE-NEXT:    callq __sync_lock_test_and_set_16@PLT
 ; X64-SSE-NEXT:    addq $24, %rsp
 ; X64-SSE-NEXT:    .cfi_def_cfa_offset 8
 ; X64-SSE-NEXT:    retq

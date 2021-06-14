@@ -52,8 +52,8 @@ define i32 @PR48215(i32 %a0, i32 %a1)  {
 ; AVX512-NEXT:    idivl %esi
 ; AVX512-NEXT:    vpbroadcastd %eax, %ymm0
 ; AVX512-NEXT:    vpbroadcastd %edx, %xmm1
-; AVX512-NEXT:    vpcmpltd {{.*}}(%rip), %ymm0, %k0
-; AVX512-NEXT:    vpcmpltd {{.*}}(%rip), %xmm1, %k1
+; AVX512-NEXT:    vpcmpltd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %k0
+; AVX512-NEXT:    vpcmpltd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %k1
 ; AVX512-NEXT:    kmovw %k0, %eax
 ; AVX512-NEXT:    movzbl %al, %ecx
 ; AVX512-NEXT:    kmovw %k1, %eax

@@ -645,8 +645,8 @@ define void @test_x86_sse2_storeu_pd(i8* %a0, <2 x double> %a1) {
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1 # encoding: [0xc5,0xf1,0x57,0xc9]
-; X86-AVX-NEXT:    vmovhpd {{\.LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1 # encoding: [0xc5,0xf1,0x16,0x0d,A,A,A,A]
-; X86-AVX-NEXT:    # fixup A - offset: 4, value: {{\.LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
+; X86-AVX-NEXT:    vmovhpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1 # encoding: [0xc5,0xf1,0x16,0x0d,A,A,A,A]
+; X86-AVX-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; X86-AVX-NEXT:    # xmm1 = xmm1[0],mem[0]
 ; X86-AVX-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0x58,0xc1]
 ; X86-AVX-NEXT:    vmovupd %xmm0, (%eax) # encoding: [0xc5,0xf9,0x11,0x00]
@@ -656,8 +656,8 @@ define void @test_x86_sse2_storeu_pd(i8* %a0, <2 x double> %a1) {
 ; X86-AVX512VL:       # %bb.0:
 ; X86-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-AVX512VL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xf1,0x57,0xc9]
-; X86-AVX512VL-NEXT:    vmovhpd {{\.LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xf1,0x16,0x0d,A,A,A,A]
-; X86-AVX512VL-NEXT:    # fixup A - offset: 4, value: {{\.LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
+; X86-AVX512VL-NEXT:    vmovhpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xf1,0x16,0x0d,A,A,A,A]
+; X86-AVX512VL-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
 ; X86-AVX512VL-NEXT:    # xmm1 = xmm1[0],mem[0]
 ; X86-AVX512VL-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x58,0xc1]
 ; X86-AVX512VL-NEXT:    vmovupd %xmm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x11,0x00]
@@ -666,8 +666,8 @@ define void @test_x86_sse2_storeu_pd(i8* %a0, <2 x double> %a1) {
 ; X64-AVX-LABEL: test_x86_sse2_storeu_pd:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1 # encoding: [0xc5,0xf1,0x57,0xc9]
-; X64-AVX-NEXT:    vmovhpd {{.*}}(%rip), %xmm1, %xmm1 # encoding: [0xc5,0xf1,0x16,0x0d,A,A,A,A]
-; X64-AVX-NEXT:    # fixup A - offset: 4, value: {{\.LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; X64-AVX-NEXT:    vmovhpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # encoding: [0xc5,0xf1,0x16,0x0d,A,A,A,A]
+; X64-AVX-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-AVX-NEXT:    # xmm1 = xmm1[0],mem[0]
 ; X64-AVX-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0x58,0xc1]
 ; X64-AVX-NEXT:    vmovupd %xmm0, (%rdi) # encoding: [0xc5,0xf9,0x11,0x07]
@@ -676,8 +676,8 @@ define void @test_x86_sse2_storeu_pd(i8* %a0, <2 x double> %a1) {
 ; X64-AVX512VL-LABEL: test_x86_sse2_storeu_pd:
 ; X64-AVX512VL:       # %bb.0:
 ; X64-AVX512VL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xf1,0x57,0xc9]
-; X64-AVX512VL-NEXT:    vmovhpd {{.*}}(%rip), %xmm1, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xf1,0x16,0x0d,A,A,A,A]
-; X64-AVX512VL-NEXT:    # fixup A - offset: 4, value: {{\.LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; X64-AVX512VL-NEXT:    vmovhpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xf1,0x16,0x0d,A,A,A,A]
+; X64-AVX512VL-NEXT:    # fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; X64-AVX512VL-NEXT:    # xmm1 = xmm1[0],mem[0]
 ; X64-AVX512VL-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x58,0xc1]
 ; X64-AVX512VL-NEXT:    vmovupd %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x11,0x07]

@@ -9,7 +9,7 @@ define void @t1() nounwind {
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq _return_v1di
-; CHECK-NEXT:    movq _g_v1di@{{.*}}(%rip), %rcx
+; CHECK-NEXT:    movq _g_v1di@GOTPCREL(%rip), %rcx
 ; CHECK-NEXT:    movq %rax, (%rcx)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq

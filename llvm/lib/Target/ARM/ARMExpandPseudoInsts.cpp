@@ -247,10 +247,16 @@ static const NEONLdStTableEntry NEONLdStTable[] = {
 
 { ARM::VLD2DUPq16EvenPseudo,  ARM::VLD2DUPd16x2,  true, false, false, EvenDblSpc, 2, 4 ,false},
 { ARM::VLD2DUPq16OddPseudo,   ARM::VLD2DUPd16x2,  true, false, false, OddDblSpc,  2, 4 ,false},
+{ ARM::VLD2DUPq16OddPseudoWB_fixed,   ARM::VLD2DUPd16x2wb_fixed, true, true, false, OddDblSpc,  2, 4 ,false},
+{ ARM::VLD2DUPq16OddPseudoWB_register,   ARM::VLD2DUPd16x2wb_register, true, true, true, OddDblSpc,  2, 4 ,false},
 { ARM::VLD2DUPq32EvenPseudo,  ARM::VLD2DUPd32x2,  true, false, false, EvenDblSpc, 2, 2 ,false},
 { ARM::VLD2DUPq32OddPseudo,   ARM::VLD2DUPd32x2,  true, false, false, OddDblSpc,  2, 2 ,false},
+{ ARM::VLD2DUPq32OddPseudoWB_fixed,   ARM::VLD2DUPd32x2wb_fixed, true, true, false, OddDblSpc,  2, 2 ,false},
+{ ARM::VLD2DUPq32OddPseudoWB_register,   ARM::VLD2DUPd32x2wb_register, true, true, true, OddDblSpc,  2, 2 ,false},
 { ARM::VLD2DUPq8EvenPseudo,   ARM::VLD2DUPd8x2,   true, false, false, EvenDblSpc, 2, 8 ,false},
 { ARM::VLD2DUPq8OddPseudo,    ARM::VLD2DUPd8x2,   true, false, false, OddDblSpc,  2, 8 ,false},
+{ ARM::VLD2DUPq8OddPseudoWB_fixed,    ARM::VLD2DUPd8x2wb_fixed, true, true, false, OddDblSpc,  2, 8 ,false},
+{ ARM::VLD2DUPq8OddPseudoWB_register,    ARM::VLD2DUPd8x2wb_register, true, true, true, OddDblSpc,  2, 8 ,false},
 
 { ARM::VLD2LNd16Pseudo,     ARM::VLD2LNd16,     true, false, false, SingleSpc,  2, 4 ,true},
 { ARM::VLD2LNd16Pseudo_UPD, ARM::VLD2LNd16_UPD, true, true, true,  SingleSpc,  2, 4 ,true},
@@ -281,10 +287,13 @@ static const NEONLdStTableEntry NEONLdStTable[] = {
 { ARM::VLD3DUPd8Pseudo_UPD,  ARM::VLD3DUPd8_UPD, true, true, true,  SingleSpc, 3, 8,true},
 { ARM::VLD3DUPq16EvenPseudo, ARM::VLD3DUPq16,     true, false, false, EvenDblSpc, 3, 4 ,true},
 { ARM::VLD3DUPq16OddPseudo,  ARM::VLD3DUPq16,     true, false, false, OddDblSpc,  3, 4 ,true},
+{ ARM::VLD3DUPq16OddPseudo_UPD,  ARM::VLD3DUPq16_UPD, true, true, true, OddDblSpc,  3, 4 ,true},
 { ARM::VLD3DUPq32EvenPseudo, ARM::VLD3DUPq32,     true, false, false, EvenDblSpc, 3, 2 ,true},
 { ARM::VLD3DUPq32OddPseudo,  ARM::VLD3DUPq32,     true, false, false, OddDblSpc,  3, 2 ,true},
+{ ARM::VLD3DUPq32OddPseudo_UPD,  ARM::VLD3DUPq32_UPD, true, true, true, OddDblSpc,  3, 2 ,true},
 { ARM::VLD3DUPq8EvenPseudo,  ARM::VLD3DUPq8,      true, false, false, EvenDblSpc, 3, 8 ,true},
 { ARM::VLD3DUPq8OddPseudo,   ARM::VLD3DUPq8,      true, false, false, OddDblSpc,  3, 8 ,true},
+{ ARM::VLD3DUPq8OddPseudo_UPD,   ARM::VLD3DUPq8_UPD, true, true, true, OddDblSpc,  3, 8 ,true},
 
 { ARM::VLD3LNd16Pseudo,     ARM::VLD3LNd16,     true, false, false, SingleSpc,  3, 4 ,true},
 { ARM::VLD3LNd16Pseudo_UPD, ARM::VLD3LNd16_UPD, true, true, true,  SingleSpc,  3, 4 ,true},
@@ -322,10 +331,13 @@ static const NEONLdStTableEntry NEONLdStTable[] = {
 { ARM::VLD4DUPd8Pseudo_UPD,  ARM::VLD4DUPd8_UPD, true, true, true,  SingleSpc, 4, 8,true},
 { ARM::VLD4DUPq16EvenPseudo, ARM::VLD4DUPq16,     true, false, false, EvenDblSpc, 4, 4 ,true},
 { ARM::VLD4DUPq16OddPseudo,  ARM::VLD4DUPq16,     true, false, false, OddDblSpc,  4, 4 ,true},
+{ ARM::VLD4DUPq16OddPseudo_UPD,  ARM::VLD4DUPq16_UPD, true, true, true, OddDblSpc,  4, 4 ,true},
 { ARM::VLD4DUPq32EvenPseudo, ARM::VLD4DUPq32,     true, false, false, EvenDblSpc, 4, 2 ,true},
 { ARM::VLD4DUPq32OddPseudo,  ARM::VLD4DUPq32,     true, false, false, OddDblSpc,  4, 2 ,true},
+{ ARM::VLD4DUPq32OddPseudo_UPD,  ARM::VLD4DUPq32_UPD, true, true, true, OddDblSpc,  4, 2 ,true},
 { ARM::VLD4DUPq8EvenPseudo,  ARM::VLD4DUPq8,      true, false, false, EvenDblSpc, 4, 8 ,true},
 { ARM::VLD4DUPq8OddPseudo,   ARM::VLD4DUPq8,      true, false, false, OddDblSpc,  4, 8 ,true},
+{ ARM::VLD4DUPq8OddPseudo_UPD,   ARM::VLD4DUPq8_UPD, true, true, true, OddDblSpc,  4, 8 ,true},
 
 { ARM::VLD4LNd16Pseudo,     ARM::VLD4LNd16,     true, false, false, SingleSpc,  4, 4 ,true},
 { ARM::VLD4LNd16Pseudo_UPD, ARM::VLD4LNd16_UPD, true, true, true,  SingleSpc,  4, 4 ,true},
@@ -567,9 +579,18 @@ void ARMExpandPseudo::ExpandVLD(MachineBasicBlock::iterator &MBBI) {
 
   bool DstIsDead = MI.getOperand(OpIdx).isDead();
   Register DstReg = MI.getOperand(OpIdx++).getReg();
-  if(TableEntry->RealOpc == ARM::VLD2DUPd8x2 ||
-     TableEntry->RealOpc == ARM::VLD2DUPd16x2 ||
-     TableEntry->RealOpc == ARM::VLD2DUPd32x2) {
+
+  bool IsVLD2DUP = TableEntry->RealOpc == ARM::VLD2DUPd8x2 ||
+                   TableEntry->RealOpc == ARM::VLD2DUPd16x2 ||
+                   TableEntry->RealOpc == ARM::VLD2DUPd32x2 ||
+                   TableEntry->RealOpc == ARM::VLD2DUPd8x2wb_fixed ||
+                   TableEntry->RealOpc == ARM::VLD2DUPd16x2wb_fixed ||
+                   TableEntry->RealOpc == ARM::VLD2DUPd32x2wb_fixed ||
+                   TableEntry->RealOpc == ARM::VLD2DUPd8x2wb_register ||
+                   TableEntry->RealOpc == ARM::VLD2DUPd16x2wb_register ||
+                   TableEntry->RealOpc == ARM::VLD2DUPd32x2wb_register;
+
+  if (IsVLD2DUP) {
     unsigned SubRegIndex;
     if (RegSpc == EvenDblSpc) {
       SubRegIndex = ARM::dsub_0;
@@ -617,7 +638,10 @@ void ARMExpandPseudo::ExpandVLD(MachineBasicBlock::iterator &MBBI) {
         TableEntry->RealOpc == ARM::VLD1d8Twb_fixed ||
         TableEntry->RealOpc == ARM::VLD1d16Twb_fixed ||
         TableEntry->RealOpc == ARM::VLD1d32Twb_fixed ||
-        TableEntry->RealOpc == ARM::VLD1d64Twb_fixed) {
+        TableEntry->RealOpc == ARM::VLD1d64Twb_fixed ||
+        TableEntry->RealOpc == ARM::VLD2DUPd8x2wb_fixed ||
+        TableEntry->RealOpc == ARM::VLD2DUPd16x2wb_fixed ||
+        TableEntry->RealOpc == ARM::VLD2DUPd32x2wb_fixed) {
       assert(AM6Offset.getReg() == 0 &&
              "A fixed writing-back pseudo instruction provides an offset "
              "register!");
@@ -630,9 +654,7 @@ void ARMExpandPseudo::ExpandVLD(MachineBasicBlock::iterator &MBBI) {
   // has an extra operand that is a use of the super-register.  Record the
   // operand index and skip over it.
   unsigned SrcOpIdx = 0;
-  if(TableEntry->RealOpc != ARM::VLD2DUPd8x2 &&
-     TableEntry->RealOpc != ARM::VLD2DUPd16x2 &&
-     TableEntry->RealOpc != ARM::VLD2DUPd32x2) {
+  if (!IsVLD2DUP) {
     if (RegSpc == EvenDblSpc || RegSpc == OddDblSpc ||
         RegSpc == SingleLowSpc || RegSpc == SingleHighQSpc ||
         RegSpc == SingleHighTSpc)
@@ -2697,18 +2719,30 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     case ARM::VLD2DUPq16OddPseudo:
     case ARM::VLD2DUPq32EvenPseudo:
     case ARM::VLD2DUPq32OddPseudo:
+    case ARM::VLD2DUPq8OddPseudoWB_fixed:
+    case ARM::VLD2DUPq8OddPseudoWB_register:
+    case ARM::VLD2DUPq16OddPseudoWB_fixed:
+    case ARM::VLD2DUPq16OddPseudoWB_register:
+    case ARM::VLD2DUPq32OddPseudoWB_fixed:
+    case ARM::VLD2DUPq32OddPseudoWB_register:
     case ARM::VLD3DUPq8EvenPseudo:
     case ARM::VLD3DUPq8OddPseudo:
     case ARM::VLD3DUPq16EvenPseudo:
     case ARM::VLD3DUPq16OddPseudo:
     case ARM::VLD3DUPq32EvenPseudo:
     case ARM::VLD3DUPq32OddPseudo:
+    case ARM::VLD3DUPq8OddPseudo_UPD:
+    case ARM::VLD3DUPq16OddPseudo_UPD:
+    case ARM::VLD3DUPq32OddPseudo_UPD:
     case ARM::VLD4DUPq8EvenPseudo:
     case ARM::VLD4DUPq8OddPseudo:
     case ARM::VLD4DUPq16EvenPseudo:
     case ARM::VLD4DUPq16OddPseudo:
     case ARM::VLD4DUPq32EvenPseudo:
     case ARM::VLD4DUPq32OddPseudo:
+    case ARM::VLD4DUPq8OddPseudo_UPD:
+    case ARM::VLD4DUPq16OddPseudo_UPD:
+    case ARM::VLD4DUPq32OddPseudo_UPD:
       ExpandVLD(MBBI);
       return true;
 

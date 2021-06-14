@@ -88,8 +88,8 @@ define void @foo() {
 ;
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %bb
-; X64-NEXT:    movzwl {{.*}}(%rip), %ecx
-; X64-NEXT:    movzwl {{.*}}(%rip), %eax
+; X64-NEXT:    movzwl var_27(%rip), %ecx
+; X64-NEXT:    movzwl var_22(%rip), %eax
 ; X64-NEXT:    xorw %cx, %ax
 ; X64-NEXT:    xorl %ecx, %eax
 ; X64-NEXT:    movzwl %ax, %eax

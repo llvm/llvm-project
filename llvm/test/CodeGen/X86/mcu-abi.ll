@@ -124,7 +124,7 @@ define void @test_alignment_d() #0 {
 ; CHECK-NEXT:    movl $1073741824, {{[0-9]+}}(%esp) # imm = 0x40000000
 ; CHECK-NEXT:    movl $0, (%esp)
 ; CHECK-NEXT:    movl %esp, %eax
-; CHECK-NEXT:    calll food
+; CHECK-NEXT:    calll food@PLT
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    retl
 entry:
@@ -141,7 +141,7 @@ define void @test_alignment_i() #0 {
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $2, (%esp)
 ; CHECK-NEXT:    movl %esp, %eax
-; CHECK-NEXT:    calll fooi
+; CHECK-NEXT:    calll fooi@PLT
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    retl
 entry:
@@ -156,7 +156,7 @@ define void @test_alignment_s() #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %eax
 ; CHECK-NEXT:    movl %esp, %eax
-; CHECK-NEXT:    calll foos
+; CHECK-NEXT:    calll foos@PLT
 ; CHECK-NEXT:    popl %eax
 ; CHECK-NEXT:    retl
   %s = alloca %struct.S, align 4
@@ -173,7 +173,7 @@ define void @test_alignment_fp() #0 {
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $0, (%esp)
 ; CHECK-NEXT:    movl %esp, %eax
-; CHECK-NEXT:    calll foofp
+; CHECK-NEXT:    calll foofp@PLT
 ; CHECK-NEXT:    addl $16, %esp
 ; CHECK-NEXT:    retl
 entry:

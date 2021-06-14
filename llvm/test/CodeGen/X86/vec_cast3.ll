@@ -119,7 +119,7 @@ define <2 x i32> @cvt_v2f32_v2u32(<2 x float> %src) {
 ; CHECK-NEXT:    vcmpltps %xmm1, %xmm0, %xmm2
 ; CHECK-NEXT:    vsubps %xmm1, %xmm0, %xmm1
 ; CHECK-NEXT:    vcvttps2dq %xmm1, %xmm1
-; CHECK-NEXT:    vxorps LCPI11_1, %xmm1, %xmm1
+; CHECK-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
 ; CHECK-NEXT:    vcvttps2dq %xmm0, %xmm0
 ; CHECK-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    retl

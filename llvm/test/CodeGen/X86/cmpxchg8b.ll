@@ -44,7 +44,7 @@ define void @t1(i64* nocapture %p) nounwind ssp {
 ; I486-NEXT:    pushl $1
 ; I486-NEXT:    pushl %ecx
 ; I486-NEXT:    pushl %eax
-; I486-NEXT:    calll __atomic_compare_exchange_8
+; I486-NEXT:    calll __atomic_compare_exchange_8@PLT
 ; I486-NEXT:    addl $24, %esp
 ; I486-NEXT:    movl %ebp, %esp
 ; I486-NEXT:    popl %ebp

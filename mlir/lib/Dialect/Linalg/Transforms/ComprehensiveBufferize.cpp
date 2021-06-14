@@ -484,18 +484,21 @@ static LogicalResult bufferize(OpBuilder &b, LinalgOp op,
 
   b.setInsertionPoint(op);
   Location loc = op.getLoc();
-  SmallVector<Value, 2> newInputBuffers;
-  newInputBuffers.reserve(op.getNumInputs());
+  SmallVector<Value> newInputs;
+  newInputs.reserve(op.getNumInputs());
   for (OpOperand *opOperand : op.getInputOperands()) {
-    Value v = lookup(bvm, opOperand->get());
-    if (!v)
+    if (op.isScalar(opOperand)) {
+      newInputs.push_back(opOperand->get());
+      continue;
+    }
+    newInputs.push_back(lookup(bvm, opOperand->get()));
+    if (!newInputs.back())
       return failure();
-    newInputBuffers.push_back(v);
   }
-  SmallVector<Value, 2> newOutputBuffers;
+  SmallVector<Value> newOutputBuffers;
   if (failed(allocateBuffersForResults(b, loc, op, newOutputBuffers, bvm)))
     return failure();
-  finalizeBufferAllocation(b, op, newInputBuffers, newOutputBuffers, bvm);
+  finalizeBufferAllocation(b, op, newInputs, newOutputBuffers, bvm);
   return success();
 }
 

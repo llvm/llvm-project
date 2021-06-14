@@ -18,7 +18,7 @@ define void @test_256_load(double* nocapture %d, float* nocapture %f, <4 x i64>*
 ; CHECK-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; CHECK-NEXT:    vmovaps (%rdx), %ymm2
 ; CHECK-NEXT:    vmovups %ymm2, (%rsp) # 32-byte Spill
-; CHECK-NEXT:    callq dummy
+; CHECK-NEXT:    callq dummy@PLT
 ; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; CHECK-NEXT:    vmovaps %ymm0, (%rbx)
 ; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
@@ -44,7 +44,7 @@ define void @test_256_load(double* nocapture %d, float* nocapture %f, <4 x i64>*
 ; CHECK_O0-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; CHECK_O0-NEXT:    vmovdqa (%rdx), %ymm2
 ; CHECK_O0-NEXT:    vmovups %ymm2, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; CHECK_O0-NEXT:    callq dummy
+; CHECK_O0-NEXT:    callq dummy@PLT
 ; CHECK_O0-NEXT:    vmovups (%rsp), %ymm2 # 32-byte Reload
 ; CHECK_O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
 ; CHECK_O0-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload

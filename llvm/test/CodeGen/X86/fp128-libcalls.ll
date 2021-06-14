@@ -15,8 +15,8 @@ define dso_local void @Test128Add(fp128 %d1, fp128 %d2) nounwind {
 ; CHECK-LABEL: Test128Add:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq __addtf3
-; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    callq __addtf3@PLT
+; CHECK-NEXT:    movaps %xmm0, vf128(%rip)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -58,9 +58,9 @@ define dso_local void @Test128_1Add(fp128 %d1) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    movaps {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    callq __addtf3
-; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    movaps vf128(%rip), %xmm0
+; CHECK-NEXT:    callq __addtf3@PLT
+; CHECK-NEXT:    movaps %xmm0, vf128(%rip)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -102,8 +102,8 @@ define dso_local void @Test128Sub(fp128 %d1, fp128 %d2) nounwind {
 ; CHECK-LABEL: Test128Sub:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq __subtf3
-; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    callq __subtf3@PLT
+; CHECK-NEXT:    movaps %xmm0, vf128(%rip)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -145,9 +145,9 @@ define dso_local void @Test128_1Sub(fp128 %d1) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    movaps {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    callq __subtf3
-; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    movaps vf128(%rip), %xmm0
+; CHECK-NEXT:    callq __subtf3@PLT
+; CHECK-NEXT:    movaps %xmm0, vf128(%rip)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -189,8 +189,8 @@ define dso_local void @Test128Mul(fp128 %d1, fp128 %d2) nounwind {
 ; CHECK-LABEL: Test128Mul:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq __multf3
-; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    callq __multf3@PLT
+; CHECK-NEXT:    movaps %xmm0, vf128(%rip)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -232,9 +232,9 @@ define dso_local void @Test128_1Mul(fp128 %d1) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    movaps {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    callq __multf3
-; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    movaps vf128(%rip), %xmm0
+; CHECK-NEXT:    callq __multf3@PLT
+; CHECK-NEXT:    movaps %xmm0, vf128(%rip)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -276,8 +276,8 @@ define dso_local void @Test128Div(fp128 %d1, fp128 %d2) nounwind {
 ; CHECK-LABEL: Test128Div:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq __divtf3
-; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    callq __divtf3@PLT
+; CHECK-NEXT:    movaps %xmm0, vf128(%rip)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -319,9 +319,9 @@ define dso_local void @Test128_1Div(fp128 %d1) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    movaps {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    callq __divtf3
-; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    movaps vf128(%rip), %xmm0
+; CHECK-NEXT:    callq __divtf3@PLT
+; CHECK-NEXT:    movaps %xmm0, vf128(%rip)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -363,8 +363,8 @@ define dso_local void @Test128Rem(fp128 %d1, fp128 %d2) nounwind {
 ; CHECK-LABEL: Test128Rem:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq fmodl
-; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    callq fmodl@PLT
+; CHECK-NEXT:    movaps %xmm0, vf128(%rip)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -406,9 +406,9 @@ define dso_local void @Test128_1Rem(fp128 %d1) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    movaps {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    callq fmodl
-; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    movaps vf128(%rip), %xmm0
+; CHECK-NEXT:    callq fmodl@PLT
+; CHECK-NEXT:    movaps %xmm0, vf128(%rip)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -450,8 +450,8 @@ define dso_local void @Test128Sqrt(fp128 %d1) nounwind {
 ; CHECK-LABEL: Test128Sqrt:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq sqrtl
-; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    callq sqrtl@PLT
+; CHECK-NEXT:    movaps %xmm0, vf128(%rip)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -489,8 +489,8 @@ define dso_local void @Test128Sin(fp128 %d1) nounwind {
 ; CHECK-LABEL: Test128Sin:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq sinl
-; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    callq sinl@PLT
+; CHECK-NEXT:    movaps %xmm0, vf128(%rip)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -528,8 +528,8 @@ define dso_local void @Test128Cos(fp128 %d1) nounwind {
 ; CHECK-LABEL: Test128Cos:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq cosl
-; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    callq cosl@PLT
+; CHECK-NEXT:    movaps %xmm0, vf128(%rip)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -567,8 +567,8 @@ define dso_local void @Test128Ceil(fp128 %d1) nounwind {
 ; CHECK-LABEL: Test128Ceil:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq ceill
-; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    callq ceill@PLT
+; CHECK-NEXT:    movaps %xmm0, vf128(%rip)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -606,8 +606,8 @@ define dso_local void @Test128Floor(fp128 %d1) nounwind {
 ; CHECK-LABEL: Test128Floor:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq floorl
-; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    callq floorl@PLT
+; CHECK-NEXT:    movaps %xmm0, vf128(%rip)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -645,8 +645,8 @@ define dso_local void @Test128Trunc(fp128 %d1) nounwind {
 ; CHECK-LABEL: Test128Trunc:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq truncl
-; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    callq truncl@PLT
+; CHECK-NEXT:    movaps %xmm0, vf128(%rip)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -684,8 +684,8 @@ define dso_local void @Test128Nearbyint(fp128 %d1) nounwind {
 ; CHECK-LABEL: Test128Nearbyint:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq nearbyintl
-; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    callq nearbyintl@PLT
+; CHECK-NEXT:    movaps %xmm0, vf128(%rip)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -723,8 +723,8 @@ define dso_local void @Test128Rint(fp128 %d1) nounwind {
 ; CHECK-LABEL: Test128Rint:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq rintl
-; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    callq rintl@PLT
+; CHECK-NEXT:    movaps %xmm0, vf128(%rip)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;
@@ -762,8 +762,8 @@ define dso_local void @Test128Round(fp128 %d1) nounwind {
 ; CHECK-LABEL: Test128Round:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq roundl
-; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    callq roundl@PLT
+; CHECK-NEXT:    movaps %xmm0, vf128(%rip)
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    retq
 ;

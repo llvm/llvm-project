@@ -32,7 +32,7 @@ class UnwindInfoSection : public SyntheticSection {
 public:
   bool isNeeded() const override { return compactUnwindSection != nullptr; }
   uint64_t getSize() const override { return unwindInfoSize; }
-  virtual void prepareRelocations(InputSection *) = 0;
+  virtual void prepareRelocations(ConcatInputSection *) = 0;
 
   void setCompactUnwindSection(ConcatOutputSection *cuSection) {
     compactUnwindSection = cuSection;

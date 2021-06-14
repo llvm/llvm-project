@@ -121,6 +121,10 @@ Changes to the OCaml bindings
 Changes to the C API
 --------------------
 
+* The C API function ``LLVMIntrinsicCopyOverloadedName`` has been deprecated.
+  Please migrate to ``LLVMIntrinsicCopyOverloadedName2`` which takes an extra
+  module argument and which also handles unnamed types.
+  ('D99173' <https://reviews.llvm.org/D99173>'_)
 
 Changes to the Go bindings
 --------------------------

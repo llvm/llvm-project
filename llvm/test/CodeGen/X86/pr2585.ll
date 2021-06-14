@@ -19,7 +19,7 @@ define internal void @PR2585() {
 ; X64-NEXT:    pshuflw {{.*#+}} xmm0 = mem[0,2,2,3,4,5,6,7]
 ; X64-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X64-NEXT:    movq %xmm0, {{.*}}(%rip)
+; X64-NEXT:    movq %xmm0, __unnamed_2(%rip)
 ; X64-NEXT:    retq
 	load <4 x i32>, <4 x i32>* @0, align 16		; <<4 x i32>>:1 [#uses=1]
 	bitcast <4 x i32> %1 to <8 x i16>		; <<8 x i16>>:2 [#uses=1]

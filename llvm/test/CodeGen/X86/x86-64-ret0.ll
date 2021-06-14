@@ -6,7 +6,7 @@ define i32 @f() nounwind  {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movl $1, %edi
-; CHECK-NEXT:    callq t
+; CHECK-NEXT:    callq t@PLT
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq

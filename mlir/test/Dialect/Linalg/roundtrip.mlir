@@ -316,6 +316,7 @@ func @pooling_sum(%arg0: memref<?x?x?xf32>,
 
 #accesses_0 = [
   affine_map<(i, j, k) -> (j, i)>,
+  affine_map<(i, j, k) -> ()>,
   affine_map<(i, j, k) -> (i, k, i + j)>
 ]
 
@@ -327,34 +328,34 @@ func @pooling_sum(%arg0: memref<?x?x?xf32>,
 
 func @generic(%arg0: memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>,
               %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
+  %cst = constant 0.0 : f32
   linalg.generic #trait_0
-       ins(%arg0 : memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>)
+       ins(%arg0, %cst : memref<?x?xvector<3x4xi4>, offset: ?, strides: [?, 1]>, f32)
       outs(%arg1 : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>)
       attrs = {foo = 1} {
-    ^bb(%0: vector<3x4xi4>, %1: f32) :
-      %f0 = constant 0.0 : f32
-      linalg.yield %f0 : f32
+    ^bb(%0: vector<3x4xi4>, %1: f32, %2: f32) :
+      linalg.yield %1 : f32
   }
   return
 }
 // CHECK-LABEL: func @generic
 //       CHECK:   linalg.generic {
-//  CHECK-SAME:     indexing_maps = [#{{[0-9a-z]*}}, #{{[0-9a-z]*}}],
+//  CHECK-SAME:     indexing_maps = [#{{[0-9a-z]*}}, #{{[0-9a-z]*}}, #{{[0-9a-z]*}}],
 //  CHECK-SAME:     iterator_types = ["parallel", "parallel", "parallel"],
 //  CHECK-SAME:     library_call = "some_external_function_name_1"}
-//  CHECK-SAME:      ins({{.*}} : memref<?x?xvector<3x4xi4>, #[[$strided2D]]>)
+//  CHECK-SAME:      ins({{.*}}, {{.*}} : memref<?x?xvector<3x4xi4>, #[[$strided2D]]>, f32)
 //  CHECK-SAME:     outs({{.*}} : memref<?x?x?xf32, #[[$strided3D]]>)
 //  CHECK-SAME:     {foo = 1 : i64}
 
 func @generic_with_tensor_input(%arg0: tensor<?x?xvector<3x4xi4>>,
                                 %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
+  %cst = constant 0.0 : f32
   linalg.generic #trait_0
-       ins(%arg0 : tensor<?x?xvector<3x4xi4>>)
+       ins(%arg0, %cst : tensor<?x?xvector<3x4xi4>>, f32)
       outs(%arg1 : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>)
       attrs = {foo = 1} {
-    ^bb(%0: vector<3x4xi4>, %1: f32) :
-      %f0 = constant 0.0 : f32
-      linalg.yield %f0 : f32
+    ^bb(%0: vector<3x4xi4>, %1: f32, %2: f32) :
+      linalg.yield %1 : f32
   }
   return
 }
@@ -362,7 +363,7 @@ func @generic_with_tensor_input(%arg0: tensor<?x?xvector<3x4xi4>>,
 //       CHECK:   linalg.generic {
 //  CHECK-SAME:     indexing_maps = [#{{.*}}, #{{.*}}], iterator_types = ["parallel", "parallel", "parallel"],
 //  CHECK-SAME:     library_call = "some_external_function_name_1"}
-//  CHECK-SAME:     ins({{.*}} : tensor<?x?xvector<3x4xi4>>)
+//  CHECK-SAME:     ins({{.*}}, {{.*}} : tensor<?x?xvector<3x4xi4>>, f32)
 //  CHECK-SAME:     outs({{.*}} : memref<?x?x?xf32, #[[$strided3D]]>)
 //  CHECK-SAME:     {foo = 1 : i64}
 

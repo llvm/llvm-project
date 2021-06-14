@@ -77,10 +77,10 @@ define i8* @SyFgets(i8* %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    callq _memset
 ; CHECK-NEXT:  LBB0_8: ## %while.body.preheader
 ; CHECK-NEXT:    imulq $1040, %rbx, %rax ## imm = 0x410
-; CHECK-NEXT:    movq _syBuf@{{.*}}(%rip), %rcx
+; CHECK-NEXT:    movq _syBuf@GOTPCREL(%rip), %rcx
 ; CHECK-NEXT:    leaq 8(%rcx,%rax), %rdx
 ; CHECK-NEXT:    movl $1, %r15d
-; CHECK-NEXT:    movq _syCTRO@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq _syCTRO@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movb $1, %cl
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB0_9: ## %do.body
@@ -96,8 +96,8 @@ define i8* @SyFgets(i8* %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    jne LBB0_11
 ; CHECK-NEXT:  ## %bb.12: ## %while.body200.preheader
 ; CHECK-NEXT:    xorl %r12d, %r12d
-; CHECK-NEXT:    leaq {{.*}}(%rip), %rdx
-; CHECK-NEXT:    leaq {{.*}}(%rip), %rbx
+; CHECK-NEXT:    leaq LJTI0_0(%rip), %rdx
+; CHECK-NEXT:    leaq LJTI0_1(%rip), %rbx
 ; CHECK-NEXT:    movl $0, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Folded Spill
 ; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:    jmp LBB0_13
@@ -223,7 +223,7 @@ define i8* @SyFgets(i8* %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    je LBB0_38
 ; CHECK-NEXT:  ## %bb.37: ## %if.then532
 ; CHECK-NEXT:    ## in Loop: Header=BB0_13 Depth=1
-; CHECK-NEXT:    movq _SyFgets.yank@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq _SyFgets.yank@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    movb $0, (%rax)
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB0_38: ## %for.cond534
@@ -236,7 +236,7 @@ define i8* @SyFgets(i8* %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    testb %r12b, %r12b
 ; CHECK-NEXT:    movb $0, (%rbp)
 ; CHECK-NEXT:    movl %r13d, %r14d
-; CHECK-NEXT:    leaq {{.*}}(%rip), %rdx
+; CHECK-NEXT:    leaq LJTI0_0(%rip), %rdx
 ; CHECK-NEXT:    jmp LBB0_21
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB0_42: ## %while.cond864
@@ -268,7 +268,7 @@ define i8* @SyFgets(i8* %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:    callq _write
 ; CHECK-NEXT:    subq %rbp, %rbx
-; CHECK-NEXT:    movq _syHistory@{{.*}}(%rip), %rax
+; CHECK-NEXT:    movq _syHistory@GOTPCREL(%rip), %rax
 ; CHECK-NEXT:    leaq 8189(%rbx,%rax), %rax
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB0_49: ## %for.body1723

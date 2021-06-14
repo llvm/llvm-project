@@ -27,7 +27,7 @@ define x86_fp80 @fma(x86_fp80 %x, x86_fp80 %y, x86_fp80 %z) nounwind strictfp {
 ; X64-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq fmal
+; X64-NEXT:    callq fmal@PLT
 ; X64-NEXT:    addq $56, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -56,7 +56,7 @@ define x86_fp80 @frem(x86_fp80 %x, x86_fp80 %y) nounwind strictfp {
 ; X64-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq fmodl
+; X64-NEXT:    callq fmodl@PLT
 ; X64-NEXT:    addq $40, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -81,7 +81,7 @@ define x86_fp80 @ceil(x86_fp80 %x) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq ceill
+; X64-NEXT:    callq ceill@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -106,7 +106,7 @@ define x86_fp80 @cos(x86_fp80 %x) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq cosl
+; X64-NEXT:    callq cosl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -131,7 +131,7 @@ define x86_fp80 @exp(x86_fp80 %x) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq expl
+; X64-NEXT:    callq expl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -156,7 +156,7 @@ define x86_fp80 @exp2(x86_fp80 %x) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq exp2l
+; X64-NEXT:    callq exp2l@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -181,7 +181,7 @@ define x86_fp80 @floor(x86_fp80 %x) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq floorl
+; X64-NEXT:    callq floorl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -206,7 +206,7 @@ define x86_fp80 @log(x86_fp80 %x) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq logl
+; X64-NEXT:    callq logl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -231,7 +231,7 @@ define x86_fp80 @log10(x86_fp80 %x) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq log10l
+; X64-NEXT:    callq log10l@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -256,7 +256,7 @@ define x86_fp80 @log2(x86_fp80 %x) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq log2l
+; X64-NEXT:    callq log2l@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -285,7 +285,7 @@ define x86_fp80 @maxnum(x86_fp80 %x, x86_fp80 %y) nounwind strictfp {
 ; X64-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq fmaxl
+; X64-NEXT:    callq fmaxl@PLT
 ; X64-NEXT:    addq $40, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -314,7 +314,7 @@ define x86_fp80 @minnum(x86_fp80 %x, x86_fp80 %y) nounwind strictfp {
 ; X64-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq fminl
+; X64-NEXT:    callq fminl@PLT
 ; X64-NEXT:    addq $40, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -339,7 +339,7 @@ define x86_fp80 @nearbyint(x86_fp80 %x) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq nearbyintl
+; X64-NEXT:    callq nearbyintl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -368,7 +368,7 @@ define x86_fp80 @pow(x86_fp80 %x, x86_fp80 %y) nounwind strictfp {
 ; X64-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq powl
+; X64-NEXT:    callq powl@PLT
 ; X64-NEXT:    addq $40, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -396,7 +396,7 @@ define x86_fp80 @powi(x86_fp80 %x, i32 %y) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq __powixf2
+; X64-NEXT:    callq __powixf2@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -421,7 +421,7 @@ define x86_fp80 @rint(x86_fp80 %x) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq rintl
+; X64-NEXT:    callq rintl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -446,7 +446,7 @@ define x86_fp80 @round(x86_fp80 %x) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq roundl
+; X64-NEXT:    callq roundl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -471,7 +471,7 @@ define x86_fp80 @roundeven(x86_fp80 %x) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq roundevenl
+; X64-NEXT:    callq roundevenl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -496,7 +496,7 @@ define x86_fp80 @sin(x86_fp80 %x) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq sinl
+; X64-NEXT:    callq sinl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -521,7 +521,7 @@ define x86_fp80 @trunc(x86_fp80 %x) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq truncl
+; X64-NEXT:    callq truncl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -546,7 +546,7 @@ define i32 @lrint(x86_fp80 %x) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq lrintl
+; X64-NEXT:    callq lrintl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -571,7 +571,7 @@ define i64 @llrint(x86_fp80 %x) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq llrintl
+; X64-NEXT:    callq llrintl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -596,7 +596,7 @@ define i32 @lround(x86_fp80 %x) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq lroundl
+; X64-NEXT:    callq lroundl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 entry:
@@ -621,7 +621,7 @@ define i64 @llround(x86_fp80 %x) nounwind strictfp {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    wait
-; X64-NEXT:    callq llroundl
+; X64-NEXT:    callq llroundl@PLT
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 entry:

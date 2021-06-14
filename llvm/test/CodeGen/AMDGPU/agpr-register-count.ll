@@ -154,21 +154,22 @@ bb:
 declare void @undef_func()
 
 ; GCN-LABEL: {{^}}kernel_call_undef_func:
-; GFX908: .amdhsa_next_free_vgpr 24
-; GFX90A: .amdhsa_next_free_vgpr 48
-; GFX90A: .amdhsa_accum_offset 24
-; GCN:    NumVgprs: 24
+; GFX908: .amdhsa_next_free_vgpr 128
+; GFX90A: .amdhsa_next_free_vgpr 280
+; GFX90A: .amdhsa_accum_offset 256
+; GCN908: NumVgprs: 128
+; GCN90A: NumVgprs: 256
 ; GCN:    NumAgprs: 24
-; GFX908: TotalNumVgprs: 24
-; GFX90A: TotalNumVgprs: 48
-; GFX908: VGPRBlocks: 5
-; GFX90A: VGPRBlocks: 5
-; GFX908: NumVGPRsForWavesPerEU: 24
-; GFX90A: NumVGPRsForWavesPerEU: 48
-; GFX90A: AccumOffset: 24
-; GFX908: Occupancy: 10
-; GFX90A: Occupancy: 8
-; GFX90A: COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: 5
+; GFX908: TotalNumVgprs: 128
+; GFX90A: TotalNumVgprs: 280
+; GFX908: VGPRBlocks: 31
+; GFX90A: VGPRBlocks: 34
+; GFX908: NumVGPRsForWavesPerEU: 128
+; GFX90A: NumVGPRsForWavesPerEU: 280
+; GFX90A: AccumOffset: 256
+; GFX908: Occupancy: 2
+; GFX90A: Occupancy: 1
+; GFX90A: COMPUTE_PGM_RSRC3_GFX90A:ACCUM_OFFSET: 63
 define amdgpu_kernel void @kernel_call_undef_func() #0 {
 bb:
   call void @undef_func()

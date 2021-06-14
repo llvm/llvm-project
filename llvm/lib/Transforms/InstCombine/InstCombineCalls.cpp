@@ -444,6 +444,16 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     return CallInst::Create(F, {X, II.getArgOperand(1)});
   }
 
+  if (II.getType()->isIntOrIntVectorTy(1)) {
+    // ctlz/cttz i1 Op0 --> not Op0
+    if (match(Op1, m_Zero()))
+      return BinaryOperator::CreateNot(Op0);
+    // If zero is undef, then the input can be assumed to be "true", so the
+    // instruction simplifies to "false".
+    assert(match(Op1, m_One()) && "Expected ctlz/cttz operand to be 0 or 1");
+    return IC.replaceInstUsesWith(II, ConstantInt::getNullValue(II.getType()));
+  }
+
   if (IsTZ) {
     // cttz(-x) -> cttz(x)
     if (match(Op0, m_Neg(m_Value(X))))

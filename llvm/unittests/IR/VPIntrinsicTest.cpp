@@ -41,6 +41,11 @@ protected:
       Str << " declare <8 x i32> @llvm.vp." << BinaryIntOpcode
           << ".v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32) ";
 
+    const char *BinaryFPOpcodes[] = {"fadd", "fsub", "fmul", "fdiv", "frem"};
+    for (const char *BinaryFPOpcode : BinaryFPOpcodes)
+      Str << " declare <8 x float> @llvm.vp." << BinaryFPOpcode
+          << ".v8f32(<8 x float>, <8 x float>, <8 x i1>, i32) ";
+
     return parseAssemblyString(Str.str(), Err, C);
   }
 };
@@ -131,7 +136,8 @@ TEST_F(VPIntrinsicTest, CanIgnoreVectorLength) {
   assert(F);
 
   const int NumExpected = 12;
-  const bool Expected[] = {false, true, false, false, false, true, false, false, true, false, true, false};
+  const bool Expected[] = {false, true,  false, false, false, true,
+                           false, false, true,  false, true,  false};
   int i = 0;
   for (auto &I : F->getEntryBlock()) {
     VPIntrinsic *VPI = dyn_cast<VPIntrinsic>(&I);
@@ -157,7 +163,8 @@ TEST_F(VPIntrinsicTest, GetParamPos) {
     if (MaskParamPos.hasValue()) {
       Type *MaskParamType = F.getArg(MaskParamPos.getValue())->getType();
       ASSERT_TRUE(MaskParamType->isVectorTy());
-      ASSERT_TRUE(cast<VectorType>(MaskParamType)->getElementType()->isIntegerTy(1));
+      ASSERT_TRUE(
+          cast<VectorType>(MaskParamType)->getElementType()->isIntegerTy(1));
     }
 
     Optional<unsigned> VecLenParamPos =
@@ -252,6 +259,21 @@ TEST_F(VPIntrinsicTest, VPIntrinsicDeclarationForParams) {
       ++ItNewParams;
     }
   }
+}
+
+/// Check that the HANDLE_VP_TO_CONSTRAINEDFP maps to an existing intrinsic with
+/// the right amount of metadata args.
+TEST_F(VPIntrinsicTest, HandleToConstrainedFP) {
+#define HANDLE_VP_TO_CONSTRAINEDFP(HASROUND, HASEXCEPT, CFPID)                 \
+  {                                                                            \
+    SmallVector<Intrinsic::IITDescriptor, 5> T;                                \
+    Intrinsic::getIntrinsicInfoTableEntries(Intrinsic::CFPID, T);              \
+    unsigned NumMetadataArgs = 0;                                              \
+    for (auto TD : T)                                                          \
+      NumMetadataArgs += (TD.Kind == Intrinsic::IITDescriptor::Metadata);      \
+    ASSERT_EQ(NumMetadataArgs, (unsigned)(HASROUND + HASEXCEPT));              \
+  }
+#include "llvm/IR/VPIntrinsics.def"
 }
 
 } // end anonymous namespace

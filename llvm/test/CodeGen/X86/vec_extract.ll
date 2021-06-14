@@ -79,7 +79,7 @@ define double @test4(double %A) nounwind {
 ; X32-LABEL: test4:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    subl $12, %esp
-; X32-NEXT:    calll foo
+; X32-NEXT:    calll foo@PLT
 ; X32-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; X32-NEXT:    addsd {{[0-9]+}}(%esp), %xmm0
 ; X32-NEXT:    movsd %xmm0, (%esp)
@@ -91,7 +91,7 @@ define double @test4(double %A) nounwind {
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
-; X64-NEXT:    callq foo
+; X64-NEXT:    callq foo@PLT
 ; X64-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
 ; X64-NEXT:    addsd (%rsp), %xmm0 # 8-byte Folded Reload
 ; X64-NEXT:    popq %rax

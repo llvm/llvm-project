@@ -16,10 +16,7 @@ namespace dependencies{
 std::vector<std::string> FullDependencies::getAdditionalArgs(
     std::function<StringRef(ModuleID)> LookupPCMPath,
     std::function<const ModuleDeps &(ModuleID)> LookupModuleDeps) const {
-  std::vector<std::string> Ret{
-      "-fno-implicit-modules",
-      "-fno-implicit-module-maps",
-  };
+  std::vector<std::string> Ret = getAdditionalArgsWithoutModulePaths();
 
   std::vector<std::string> PCMPaths;
   std::vector<std::string> ModMapPaths;
@@ -35,10 +32,17 @@ std::vector<std::string> FullDependencies::getAdditionalArgs(
 
 std::vector<std::string>
 FullDependencies::getAdditionalArgsWithoutModulePaths() const {
-  return {
+  std::vector<std::string> Args{
       "-fno-implicit-modules",
       "-fno-implicit-module-maps",
   };
+
+  for (const PrebuiltModuleDep &PMD : PrebuiltModuleDeps) {
+    Args.push_back("-fmodule-file=" + PMD.ModuleName + "=" + PMD.PCMFile);
+    Args.push_back("-fmodule-map-file=" + PMD.ModuleMapFile);
+  }
+
+  return Args;
 }
 
 DependencyScanningTool::DependencyScanningTool(
@@ -50,11 +54,17 @@ llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
   /// Prints out all of the gathered dependencies into a string.
   class MakeDependencyPrinterConsumer : public DependencyConsumer {
   public:
-    void handleFileDependency(const DependencyOutputOptions &Opts,
-                              StringRef File) override {
-      if (!this->Opts)
-        this->Opts = std::make_unique<DependencyOutputOptions>(Opts);
+    void
+    handleDependencyOutputOpts(const DependencyOutputOptions &Opts) override {
+      this->Opts = std::make_unique<DependencyOutputOptions>(Opts);
+    }
+
+    void handleFileDependency(StringRef File) override {
       Dependencies.push_back(std::string(File));
+    }
+
+    void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {
+      // Same as `handleModuleDependency`.
     }
 
     void handleModuleDependency(ModuleDeps MD) override {
@@ -66,8 +76,7 @@ llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
     void handleContextHash(std::string Hash) override {}
 
     void printDependencies(std::string &S) {
-      if (!Opts)
-        return;
+      assert(Opts && "Handled dependency output options.");
 
       class DependencyPrinter : public DependencyFileGenerator {
       public:
@@ -120,9 +129,15 @@ DependencyScanningTool::getFullDependencies(
     FullDependencyPrinterConsumer(const llvm::StringSet<> &AlreadySeen)
         : AlreadySeen(AlreadySeen) {}
 
-    void handleFileDependency(const DependencyOutputOptions &Opts,
-                              StringRef File) override {
+    void
+    handleDependencyOutputOpts(const DependencyOutputOptions &Opts) override {}
+
+    void handleFileDependency(StringRef File) override {
       Dependencies.push_back(std::string(File));
+    }
+
+    void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {
+      PrebuiltModuleDeps.emplace_back(std::move(PMD));
     }
 
     void handleModuleDependency(ModuleDeps MD) override {
@@ -146,6 +161,8 @@ DependencyScanningTool::getFullDependencies(
           FD.ClangModuleDeps.push_back(MD.ID);
       }
 
+      FD.PrebuiltModuleDeps = std::move(PrebuiltModuleDeps);
+
       FullDependenciesResult FDR;
 
       for (auto &&M : ClangModuleDeps) {
@@ -162,6 +179,7 @@ DependencyScanningTool::getFullDependencies(
 
   private:
     std::vector<std::string> Dependencies;
+    std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
     std::unordered_map<std::string, ModuleDeps> ClangModuleDeps;
     std::string ContextHash;
     std::vector<std::string> OutputPaths;

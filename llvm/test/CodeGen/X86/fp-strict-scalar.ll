@@ -626,7 +626,7 @@ define double @fma_f64(double %a, double %b, double %c) nounwind strictfp {
 ; SSE-X64-LABEL: fma_f64:
 ; SSE-X64:       # %bb.0:
 ; SSE-X64-NEXT:    pushq %rax
-; SSE-X64-NEXT:    callq fma
+; SSE-X64-NEXT:    callq fma@PLT
 ; SSE-X64-NEXT:    popq %rax
 ; SSE-X64-NEXT:    retq
 ;
@@ -687,7 +687,7 @@ define float @fma_f32(float %a, float %b, float %c) nounwind strictfp {
 ; SSE-X64-LABEL: fma_f32:
 ; SSE-X64:       # %bb.0:
 ; SSE-X64-NEXT:    pushq %rax
-; SSE-X64-NEXT:    callq fmaf
+; SSE-X64-NEXT:    callq fmaf@PLT
 ; SSE-X64-NEXT:    popq %rax
 ; SSE-X64-NEXT:    retq
 ;

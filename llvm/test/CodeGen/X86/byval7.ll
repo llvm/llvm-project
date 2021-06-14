@@ -21,7 +21,7 @@ define i32 @main() nounwind  {
 ; CHECK-NEXT:    movl $36, %ecx
 ; CHECK-NEXT:    rep;movsl (%esi), %es:(%edi)
 ; CHECK-NEXT:    movl $1, (%esp)
-; CHECK-NEXT:    calll t
+; CHECK-NEXT:    calll t@PLT
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    leal -8(%ebp), %esp
 ; CHECK-NEXT:    popl %esi

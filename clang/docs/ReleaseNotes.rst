@@ -265,6 +265,9 @@ clang-format
 - Makes ``PointerAligment: Right`` working with ``AlignConsecutiveDeclarations``.
   (Fixes https://llvm.org/PR27353)
 
+- Option ``AlignArrayOfStructure`` has been added to allow for ordering array-like
+  initializers.
+
 libclang
 --------
 

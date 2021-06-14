@@ -13,7 +13,7 @@ define void @atomic_fetch_swapf128(fp128 %x) nounwind {
 ; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rbx
 ; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
-; CHECK-NEXT:    movq _fsc128@{{.*}}(%rip), %rsi
+; CHECK-NEXT:    movq _fsc128@GOTPCREL(%rip), %rsi
 ; CHECK-NEXT:    movq (%rsi), %rax
 ; CHECK-NEXT:    movq 8(%rsi), %rdx
 ; CHECK-NEXT:    .p2align 4, 0x90
@@ -30,7 +30,7 @@ define void @atomic_fetch_swapf128(fp128 %x) nounwind {
 ; NOSSE-NEXT:    pushq %rbx
 ; NOSSE-NEXT:    movq %rsi, %rcx
 ; NOSSE-NEXT:    movq %rdi, %rbx
-; NOSSE-NEXT:    movq _fsc128@{{.*}}(%rip), %rsi
+; NOSSE-NEXT:    movq _fsc128@GOTPCREL(%rip), %rsi
 ; NOSSE-NEXT:    movq (%rsi), %rax
 ; NOSSE-NEXT:    movq 8(%rsi), %rdx
 ; NOSSE-NEXT:    .p2align 4, 0x90
