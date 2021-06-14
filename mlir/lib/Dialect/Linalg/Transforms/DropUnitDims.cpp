@@ -301,7 +301,7 @@ static UnitExtentReplacementInfo replaceUnitExtents(GenericOp genericOp,
     ++dim;
   }
   // Compute the tensor or scalar replacement type.
-  Type elementType = getElementTypeOrSelf(opOperand->get().getType());
+  Type elementType = getElementTypeOrSelf(opOperand->get());
   Type replacementType = elementType == opOperand->get().getType()
                              ? elementType
                              : RankedTensorType::get(newShape, elementType);

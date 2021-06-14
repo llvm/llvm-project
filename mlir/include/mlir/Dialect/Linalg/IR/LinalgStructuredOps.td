@@ -517,17 +517,12 @@ def PoolingSumOp: SingleInputPoolingBase_Op<"pooling_sum"> {
 //===----------------------------------------------------------------------===//
 // Generic Linalg ops.
 //===----------------------------------------------------------------------===//
-class LinalgOperandOfRank<int rank>: Type<
-  And<[
-    LinalgOperand.predicate,
-    CPred<"$_self.cast<ShapedType>().getRank() == " # rank>]
-  >>;
 
 class GenericOpBase<string mnemonic> : LinalgStructuredBase_Op<mnemonic, [
     AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
     SingleBlockImplicitTerminator<"YieldOp">]> {
-  let arguments = (ins Variadic<AnyShaped>:$inputs,
+  let arguments = (ins Variadic<AnyType>:$inputs,
                        Variadic<AnyShaped>:$outputs,
                        AffineMapArrayAttr:$indexing_maps,
                        ArrayAttr:$iterator_types,

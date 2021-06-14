@@ -975,6 +975,30 @@ func @generic_op_zero_rank(%arg0: memref<f32>, %arg1: memref<3x4xf32>)
 //       CHECKPARALLEL:   %[[a:.*]] = memref.load %[[ARG0]][]
 //       CHECKPARALLEL:   store %[[a]], %[[ARG1]][%[[i]], %[[j]]]
 
+func @generic_op_scalar(%arg0: f32, %arg1: memref<3x4xf32>)
+{
+  linalg.generic #trait_broadcast
+      ins(%arg0 : f32)
+     outs(%arg1 : memref<3x4xf32>) {
+    ^bb(%a: f32, %b: f32) :
+      linalg.yield %a : f32
+  }
+  return
+}
+
+// CHECK-LABEL: @generic_op_scalar
+//  CHECK-SAME: %[[ARG0:[a-zA-Z0-9_]*]]: f32
+//  CHECK-SAME: %[[ARG1:[a-zA-Z0-9_]*]]: memref<3x4xf32>
+//       CHECK: scf.for %[[i:.*]] = {{.*}}
+//       CHECK:   scf.for %[[j:.*]] = {{.*}}
+//       CHECK:     store %[[ARG0]], %[[ARG1]][%[[i]], %[[j]]]
+
+// CHECKPARALLEL-LABEL: @generic_op_scalar
+//  CHECKPARALLEL-SAME: %[[ARG0:[a-zA-Z0-9_]*]]: f32
+//  CHECKPARALLEL-SAME: %[[ARG1:[a-zA-Z0-9_]*]]: memref<3x4xf32>
+//       CHECKPARALLEL: scf.parallel (%[[i:[a-zA-Z0-9_]*]], %[[j:[a-zA-Z0-9_]*]])
+//       CHECKPARALLEL:   store %[[ARG0]], %[[ARG1]][%[[i]], %[[j]]]
+
 func @generic_index_op_zero_rank(%arg0: memref<i32>, %arg1: memref<3x4xi32>)
 {
   linalg.generic #trait_broadcast

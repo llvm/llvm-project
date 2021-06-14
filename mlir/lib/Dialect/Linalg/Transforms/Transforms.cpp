@@ -149,7 +149,7 @@ static LogicalResult padOperandToSmallestStaticBoundingBox(
   }
   Value pad = options.paddingValueComputationFunction(rewriter, *opOperand);
   auto staticTensorType = RankedTensorType::get(
-      staticSizes, getElementTypeOrSelf(opOperand->get().getType()));
+      staticSizes, getElementTypeOrSelf(opOperand->get()));
   result = linalg::PadTensorOp::createPadHighOp(
       staticTensorType, opOperand->get(), pad, opToPad->getLoc(), rewriter);
   return success();
