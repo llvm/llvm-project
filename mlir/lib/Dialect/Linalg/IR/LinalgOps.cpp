@@ -2787,11 +2787,6 @@ DEFINE_POOLING_OP_GET_EFFECTS(PoolingMaxOp)
 DEFINE_POOLING_OP_GET_EFFECTS(PoolingMinOp)
 DEFINE_POOLING_OP_GET_EFFECTS(PoolingSumOp)
 
-namespace {
-struct EraseDeadLinalgOp;
-struct FoldTensorCastOp;
-} // namespace
-
 #include "mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.tcgen.cpp.inc"
 #include "mlir/Dialect/Linalg/IR/LinalgNamedStructuredOps.yamlgen.cpp.inc"
 
@@ -3374,25 +3369,29 @@ struct RemoveIdentityLinalgOps : public OpInterfaceRewritePattern<LinalgOp> {
 };
 } // namespace
 
-#define CANONICALIZERS_AND_FOLDERS(XXX)                                        \
-  void XXX::getCanonicalizationPatterns(RewritePatternSet &results,            \
-                                        MLIRContext *context) {                \
-    results.add<DeduplicateInputs, EraseDeadLinalgOp, FoldTensorCastOp,        \
-                RemoveIdentityLinalgOps>(context);                             \
-  }                                                                            \
-                                                                               \
+#define LINALGOP_FOLDERS(XXX)                                                  \
   LogicalResult XXX::fold(ArrayRef<Attribute>,                                 \
                           SmallVectorImpl<OpFoldResult> &) {                   \
     return foldMemRefCast(*this);                                              \
   }
 
-CANONICALIZERS_AND_FOLDERS(ConvOp)
-CANONICALIZERS_AND_FOLDERS(PoolingMaxOp)
-CANONICALIZERS_AND_FOLDERS(PoolingMinOp)
-CANONICALIZERS_AND_FOLDERS(PoolingSumOp)
-CANONICALIZERS_AND_FOLDERS(CopyOp)
-CANONICALIZERS_AND_FOLDERS(FillOp)
-CANONICALIZERS_AND_FOLDERS(GenericOp)
+LINALGOP_FOLDERS(ConvOp)
+LINALGOP_FOLDERS(PoolingMaxOp)
+LINALGOP_FOLDERS(PoolingMinOp)
+LINALGOP_FOLDERS(PoolingSumOp)
+LINALGOP_FOLDERS(CopyOp)
+LINALGOP_FOLDERS(FillOp)
+LINALGOP_FOLDERS(GenericOp)
 
 // All named ops canonicalizers and folders are auto-generated in the
 // .cpp.inc.
+
+//===----------------------------------------------------------------------===//
+// LinalgDialect
+//===----------------------------------------------------------------------===//
+
+void LinalgDialect::getCanonicalizationPatterns(
+    RewritePatternSet &results) const {
+  results.add<DeduplicateInputs, EraseDeadLinalgOp, FoldTensorCastOp,
+              RemoveIdentityLinalgOps>(getContext());
+}
