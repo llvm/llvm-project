@@ -729,7 +729,7 @@ public:
 
   constexpr explicit stride_counting_iterator(I current) : base_(std::move(current)) {}
 
-  [[nodiscard]] constexpr I const& base() const& requires std::copyable<I> { return base_; }
+  [[nodiscard]] constexpr I const& base() const& { return base_; }
 
   [[nodiscard]] constexpr I base() && { return std::move(base_); }
 
