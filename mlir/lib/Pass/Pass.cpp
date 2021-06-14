@@ -387,9 +387,27 @@ LogicalResult OpToOpPassAdaptor::run(Pass *pass, Operation *op,
   // Invalidate any non preserved analyses.
   am.invalidate(pass->passState->preservedAnalyses);
 
-  // Run the verifier if this pass didn't fail already.
-  if (!passFailed && verifyPasses)
-    passFailed = failed(verify(op));
+  // When verifyPasses is specified, we run the verifier (unless the pass
+  // failed).
+  if (!passFailed && verifyPasses) {
+    bool runVerifierNow = true;
+    // Reduce compile time by avoiding running the verifier if the pass didn't
+    // change the IR since the last time the verifier was run:
+    //
+    //  1) If the pass said that it preserved all analyses then it can't have
+    //     permuted the IR.
+    //  2) If we just ran an OpToOpPassAdaptor (e.g. to run function passes
+    //     within a module) then each sub-unit will have been verified on the
+    //     subunit (and those passes aren't allowed to modify the parent).
+    //
+    // We run these checks in EXPENSIVE_CHECKS mode out of caution.
+#ifndef EXPENSIVE_CHECKS
+    runVerifierNow = !isa<OpToOpPassAdaptor>(pass) &&
+                     !pass->passState->preservedAnalyses.isAll();
+#endif
+    if (runVerifierNow)
+      passFailed = failed(verify(op));
+  }
 
   // Instrument after the pass has run.
   if (pi) {
