@@ -123,7 +123,7 @@ public:
     for (auto &&M : ClangModuleDeps) {
       auto &MD = M.second;
       if (MD.ImportedByMainFile)
-        FD.ClangModuleDeps.push_back({MD.ID.ModuleName, ContextHash});
+        FD.ClangModuleDeps.push_back(MD.ID);
     }
 
     FD.PrebuiltModuleDeps = std::move(PrebuiltModuleDeps);
