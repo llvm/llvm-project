@@ -42,7 +42,7 @@ block data
   ! CHECK: %[[undef:.*]] = fir.undefined tuple<!fir.box<!fir.ptr<f32>>>
   ! CHECK: %[[b:.*]] = fir.address_of(@_QEb) : !fir.ref<f32>
   ! CHECK: %[[box:.*]] = fir.embox %[[b]] : (!fir.ref<f32>) -> !fir.box<!fir.ptr<f32>>
-  ! CHECK: %[[a:.*]] = fir.insert_value %[[undef]], %[[box]], %c0{{.*}} : (tuple<!fir.box<!fir.ptr<f32>>>, !fir.box<!fir.ptr<f32>>, index) -> tuple<!fir.box<!fir.ptr<f32>>>
+  ! CHECK: %[[a:.*]] = fir.insert_value %[[undef]], %[[box]], [0 : index] : (tuple<!fir.box<!fir.ptr<f32>>>, !fir.box<!fir.ptr<f32>>) -> tuple<!fir.box<!fir.ptr<f32>>>
   ! CHECK: fir.has_value %[[a]] : tuple<!fir.box<!fir.ptr<f32>>>
 end block data
 
@@ -58,8 +58,8 @@ block data snake
   ! CHECK: %[[coor:.*]] = fir.coordinate_of %[[byteView]], %c24{{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
   ! CHECK: %[[bAddr:.*]] = fir.convert %[[coor]] : (!fir.ref<i8>) -> !fir.ref<i32>
   ! CHECK: %[[box:.*]] = fir.embox %[[bAddr]] : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
-  ! CHECK: %[[tuple1:.*]] = fir.insert_value %[[tuple0]], %[[box]], %c0{{.*}} : (tuple<!fir.box<!fir.ptr<i32>>, i32>, !fir.box<!fir.ptr<i32>>, index) -> tuple<!fir.box<!fir.ptr<i32>>, i32>
-  ! CHECK: %[[tuple2:.*]] = fir.insert_value %[[tuple1]], %c42{{.*}}, %c1{{.*}} : (tuple<!fir.box<!fir.ptr<i32>>, i32>, i32, index) -> tuple<!fir.box<!fir.ptr<i32>>, i32>
+  ! CHECK: %[[tuple1:.*]] = fir.insert_value %[[tuple0]], %[[box]], [0 : index] : (tuple<!fir.box<!fir.ptr<i32>>, i32>, !fir.box<!fir.ptr<i32>>) -> tuple<!fir.box<!fir.ptr<i32>>, i32>
+  ! CHECK: %[[tuple2:.*]] = fir.insert_value %[[tuple1]], %c42{{.*}}, [1 : index] : (tuple<!fir.box<!fir.ptr<i32>>, i32>, i32) -> tuple<!fir.box<!fir.ptr<i32>>, i32>
   ! CHECK: fir.has_value %[[tuple2]] : tuple<!fir.box<!fir.ptr<i32>>, i32>
 end block data
 

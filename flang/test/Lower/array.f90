@@ -93,21 +93,14 @@ end subroutine range
   ! CHECK-DAG: %[[c1_i32:.*]] = constant 1 : i32
   ! CHECK-DAG: %[[c2_i32:.*]] = constant 2 : i32
   ! CHECK-DAG: %[[c3_i32:.*]] = constant 3 : i32
-  ! CHECK-DAG: %[[c0:.*]] = constant 0 : index
-  ! CHECK-DAG: %[[c1:.*]] = constant 1 : index
-  ! CHECK-DAG: %[[c2:.*]] = constant 2 : index
-  ! CHECK-DAG: %[[c9:.*]] = constant 9 : index
-  ! CHECK: %[[r1:.*]] = fir.insert_value %{{.*}}, %{{.*}}, %{{.*}} :
-  ! CHECK: %[[r2:.*]] = fir.insert_value %[[r1]], %{{.*}}, %{{.*}} :
-  ! CHECK: %[[r3:.*]] = fir.insert_on_range %[[r2]], %[[c3_i32]], %[[c2]], %[[c9]] :
+  ! CHECK: %[[r1:.*]] = fir.insert_value %{{.*}}, %{{.*}}, [0 : index] :
+  ! CHECK: %[[r2:.*]] = fir.insert_value %[[r1]], %{{.*}}, [1 : index] :
+  ! CHECK: %[[r3:.*]] = fir.insert_on_range %[[r2]], %[[c3_i32]], [2 : index, 9 : index] :
 
 ! a1 array constructor
 ! CHECK: fir.global internal @_QQro.2x3xr4.{{.*}} constant : !fir.array<2x3xf32> {
   ! CHECK-DAG: %cst = constant {{.*}} : f32
-  ! CHECK-DAG: %[[c0:.*]] = constant 0 : index
-  ! CHECK-DAG: %[[c1:.*]] = constant 1 : index
-  ! CHECK-DAG: %[[c2:.*]] = constant 2 : index
-  ! CHECK: %{{.*}} = fir.insert_on_range %{{[0-9]+}}, %cst, %[[c0]], %[[c1]], %[[c0]], %[[c2]] :
+  ! CHECK: %{{.*}} = fir.insert_on_range %{{[0-9]+}}, %cst, [0 : index, 1 : index, 0 : index, 2 : index] :
 
 ! a2 array constructor
 ! CHECK: fir.global internal @_QQro.3x4xi4.{{.*}} constant : !fir.array<3x4xi32> {
@@ -116,36 +109,45 @@ end subroutine range
   ! CHECK-DAG: %[[c5_i32:.*]] = constant 5 : i32
   ! CHECK-DAG: %[[c8_i32:.*]] = constant 8 : i32
   ! CHECK-DAG: %[[c9_i32:.*]] = constant 9 : i32
-  ! CHECK-DAG: %[[c0:.*]] = constant 0 : index
-  ! CHECK-DAG: %[[c1:.*]] = constant 1 : index
-  ! CHECK-DAG: %[[c2:.*]] = constant 2 : index
-  ! CHECK-DAG: %[[c3:.*]] = constant 3 : index
-  ! CHECK: %[[r1:.*]] = fir.insert_value %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} :
-  ! CHECK: %[[r2:.*]] = fir.insert_on_range %[[r1]], %[[c3_i32]], %[[c1]], %[[c2]], %[[c0]], %[[c0]] :
-  ! CHECK: %[[r3:.*]] = fir.insert_value %[[r2]], %{{.*}}, %{{.*}}, %{{.*}} :
-  ! CHECK: %[[r4:.*]] = fir.insert_on_range %[[r3]], %[[c3_i32]], %[[c1]], %[[c1]], %[[c1]], %[[c2]] :
-  ! CHECK: %[[r5:.*]] = fir.insert_on_range %[[r4]], %[[c9_i32]], %[[c2]], %[[c1]], %[[c2]], %[[c3]] :
-  ! CHECK: %[[r6:.*]] = fir.insert_value %[[r5]], %{{.*}}, %{{.*}}, %{{.*}} :
+  ! CHECK: %[[r1:.*]] = fir.insert_value %{{.*}}, %{{.*}}, [0 : index, 0 : index] :
+  ! CHECK: %[[r2:.*]] = fir.insert_on_range %[[r1]], %[[c3_i32]], [1 : index, 2 : index, 0 : index, 0 : index] :
+  ! CHECK: %[[r3:.*]] = fir.insert_value %[[r2]], %{{.*}}, [0 : index, 1 : index] :
+  ! CHECK: %[[r4:.*]] = fir.insert_on_range %[[r3]], %[[c3_i32]], [1 : index, 1 : index, 1 : index, 2 : index] :
+  ! CHECK: %[[r5:.*]] = fir.insert_on_range %[[r4]], %[[c9_i32]], [2 : index, 1 : index, 2 : index, 3 : index] :
+  ! CHECK: %[[r6:.*]] = fir.insert_value %[[r5]], %{{.*}}, [2 : index, 3 : index] :
 
 ! CHECK-LABEL rangeGlobal
 subroutine rangeGlobal()
   ! CHECK-DAG: %[[c1_i32:.*]] = constant 1 : i32
   ! CHECK-DAG: %[[c2_i32:.*]] = constant 2 : i32
   ! CHECK-DAG: %[[c3_i32:.*]] = constant 3 : i32
-  ! CHECK-DAG: %[[c0:.*]] = constant 0 : index
-  ! CHECK-DAG: %[[c1:.*]] = constant 1 : index
-  ! CHECK-DAG: %[[c2:.*]] = constant 2 : index
-  ! CHECK-DAG: %[[c3:.*]] = constant 3 : index
-  ! CHECK-DAG: %[[c4:.*]] = constant 4 : index
-  ! CHECK-DAG: %[[c5:.*]] = constant 5 : index
-  ! CHECK: %{{.*}} = fir.insert_on_range %{{.*}}, %[[c1_i32]], %[[c0]], %[[c1]] :
-  ! CHECK: %{{.*}} = fir.insert_on_range %{{.*}}, %[[c2_i32]], %[[c2]], %[[c3]] :
-  ! CHECK: %{{.*}} = fir.insert_on_range %{{.*}}, %[[c3_i32]], %[[c4]], %[[c5]] :
+  ! CHECK: %{{.*}} = fir.insert_on_range %{{.*}}, %[[c1_i32]], [0 : index, 1 : index] :
+  ! CHECK: %{{.*}} = fir.insert_on_range %{{.*}}, %[[c2_i32]], [2 : index, 3 : index] :
+  ! CHECK: %{{.*}} = fir.insert_on_range %{{.*}}, %[[c3_i32]], [4 : index, 5 : index] :
   integer, dimension(6) :: a0 = (/ 1, 1, 2, 2, 3, 3 /)
 
 end subroutine rangeGlobal
 
 block data
+   ! CHECK: %[[VAL_223:.*]] = constant 1.000000e+00 : f32
+   ! CHECK: %[[VAL_224:.*]] = constant 2.400000e+00 : f32
+   ! CHECK: %[[VAL_225:.*]] = constant 0.000000e+00 : f32
+   ! CHECK: %[[VAL_226:.*]] = fir.undefined tuple<!fir.array<5x5xf32>>
+   ! CHECK: %[[VAL_227:.*]] = fir.undefined !fir.array<5x5xf32>
+   ! CHECK: %[[VAL_228:.*]] = fir.insert_on_range %[[VAL_227]], %[[VAL_223]], [0 : index, 1 : index, 0 : index, 0 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+   ! CHECK: %[[VAL_229:.*]] = fir.insert_on_range %[[VAL_228]], %[[VAL_225]], [2 : index, 4 : index, 0 : index, 0 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+   ! CHECK: %[[VAL_230:.*]] = fir.insert_on_range %[[VAL_229]], %[[VAL_223]], [0 : index, 1 : index, 1 : index, 1 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+   ! CHECK: %[[VAL_231:.*]] = fir.insert_value %[[VAL_230]], %[[VAL_225]], [2 : index, 1 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+   ! CHECK: %[[VAL_232:.*]] = fir.insert_value %[[VAL_231]], %[[VAL_224]], [3 : index, 1 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+   ! CHECK: %[[VAL_233:.*]] = fir.insert_value %[[VAL_232]], %[[VAL_225]], [4 : index, 1 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+   ! CHECK: %[[VAL_234:.*]] = fir.insert_on_range %[[VAL_233]], %[[VAL_223]], [0 : index, 1 : index, 2 : index, 2 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+   ! CHECK: %[[VAL_235:.*]] = fir.insert_value %[[VAL_234]], %[[VAL_225]], [2 : index, 2 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+   ! CHECK: %[[VAL_236:.*]] = fir.insert_value %[[VAL_235]], %[[VAL_224]], [3 : index, 2 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+   ! CHECK: %[[VAL_237:.*]] = fir.insert_on_range %[[VAL_236]], %[[VAL_225]], [4 : index, 2 : index, 2 : index, 3 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+   ! CHECK: %[[VAL_238:.*]] = fir.insert_value %[[VAL_237]], %[[VAL_224]], [3 : index, 3 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+   ! CHECK: %[[VAL_239:.*]] = fir.insert_on_range %[[VAL_238]], %[[VAL_225]], [4 : index, 4 : index, 3 : index, 4 : index] : (!fir.array<5x5xf32>, f32) -> !fir.array<5x5xf32>
+   ! CHECK: %[[VAL_240:.*]] = fir.insert_value %[[VAL_226]], %[[VAL_239]], [0 : index] : (tuple<!fir.array<5x5xf32>>, !fir.array<5x5xf32>) -> tuple<!fir.array<5x5xf32>>
+   ! CHECK: fir.has_value %[[VAL_240]] : tuple<!fir.array<5x5xf32>>
   real :: x(5,5)
   common /block/ x
   data x(1,1), x(2,1), x(3,1) / 1, 1, 0 /

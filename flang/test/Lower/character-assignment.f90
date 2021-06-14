@@ -18,7 +18,7 @@ subroutine assign1(lhs, rhs)
   ! CHECK: fir.call @llvm.memmove.p0i8.p0i8.i64(%{{.*}}, %[[src]], %[[count]], %false) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 
   ! Padding
-  ! CHECK-DAG: %[[blank:.*]] = fir.insert_value %{{.*}}, %c32{{.*}}, %c0{{.*}} : (!fir.char<1>, i8, index) -> !fir.char<1>
+  ! CHECK-DAG: %[[blank:.*]] = fir.insert_value %{{.*}}, %c32{{.*}}, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
   ! CHECK: fir.do_loop %[[ij:.*]] =
     ! CHECK-DAG: %[[lhs_cast:.*]] = fir.convert %[[lhs]]#0
     ! CHECK: %[[lhs_addr:.*]] = fir.coordinate_of %[[lhs_cast]], %[[ij]]
@@ -75,7 +75,7 @@ subroutine assign_constant(lhs)
   ! CHECK: fir.call @llvm.memmove.p0i8.p0i8.i64(%[[dst]], %[[src]], %[[count]], %false) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 
   ! Padding
-  ! CHECK-DAG: %[[blank:.*]] = fir.insert_value %{{.*}}, %c32{{.*}}, %c0{{.*}} : (!fir.char<1>, i8, index) -> !fir.char<1>
+  ! CHECK-DAG: %[[blank:.*]] = fir.insert_value %{{.*}}, %c32{{.*}}, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
   ! CHECK: fir.do_loop %[[j:.*]] = %{{.*}} to %{{.*}} {
     ! CHECK-DAG: %[[jhs_cast:.*]] = fir.convert %[[lhs]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
     ! CHECK: %[[jhs_addr:.*]] = fir.coordinate_of %[[jhs_cast]], %[[j]]

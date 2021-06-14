@@ -12,10 +12,10 @@ func @gen4() -> !fir.complex<4> {
   %2 = constant 2.0 : f32
   %3 = fir.convert %2 : (f32) -> !fir.real<4>
   %c0 = constant 0 : i32
-  %4 = fir.insert_value %1, %3, %c0 : (!fir.complex<4>, !fir.real<4>, i32) -> !fir.complex<4>
+  %4 = fir.insert_value %1, %3, [0 : index] : (!fir.complex<4>, !fir.real<4>) -> !fir.complex<4>
   %c1 = constant 1 : i32
   %5 = constant -42.0 : f32
-  %6 = fir.insert_value %4, %5, %c1 : (!fir.complex<4>, f32, i32) -> !fir.complex<4>
+  %6 = fir.insert_value %4, %5, [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
   // I32: store { float, float } { float 2.000000e+00, float -4.200000e+01 }
   // I32: %[[load:.*]] = load i64, i64*
   // I32: ret i64 %[[load]]
@@ -36,9 +36,9 @@ func @gen8() -> !fir.complex<8> {
   %2 = constant 1.0 : f64
   %3 = constant -4.0 : f64
   %c0 = constant 0 : i32
-  %4 = fir.insert_value %1, %3, %c0 : (!fir.complex<8>, f64, i32) -> !fir.complex<8>
+  %4 = fir.insert_value %1, %3, [0 : index] : (!fir.complex<8>, f64) -> !fir.complex<8>
   %c1 = constant 1 : i32
-  %5 = fir.insert_value %4, %2, %c1 : (!fir.complex<8>, f64, i32) -> !fir.complex<8>
+  %5 = fir.insert_value %4, %2, [1 : index] : (!fir.complex<8>, f64) -> !fir.complex<8>
   // I32: store { double, double } { double -4.000000e+00, double 1.000000e+00 }
   // I64: store { double, double } { double -4.000000e+00, double 1.000000e+00 }
   // I64: %[[load:.*]] = load { double, double }
