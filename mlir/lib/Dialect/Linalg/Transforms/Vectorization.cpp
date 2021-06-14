@@ -673,10 +673,8 @@ static SmallVector<Value> ofrToIndexValues(OpBuilder &builder, Location loc,
 
 /// Rewrite a PadTensorOp into a sequence of InitTensorOp, FillOp and
 /// SubTensorInsertOp. For now, only constant padding values are supported.
-/// Note: This rewrite is not yet a vectorization, but some of the generated ops
-/// may be vectorized down the line (e.g., FillOp).
-/// TODO: If there is enough static shape information, generate TransferReadOps
-/// and TransferWriteOps instead of SubTensorInsertOp.
+/// If there is enough static type information, TransferReadOps and
+/// TransferWriteOps may be generated instead of SubTensorInsertOps.
 struct GenericPadTensorOpVectorizationPattern
     : public OpRewritePattern<PadTensorOp> {
   using OpRewritePattern<PadTensorOp>::OpRewritePattern;
@@ -720,6 +718,20 @@ struct GenericPadTensorOpVectorizationPattern
         rewriter.create<FillOp>(padOp.getLoc(), init, padValue).result();
 
     auto sourceType = padOp.getSourceType();
+
+    // Copy of source with static shape can be vectorized.
+    if (sourceType.hasStaticShape()) {
+      auto vecType = VectorType::get(sourceType.getShape(),
+                                     sourceType.getElementType());
+      vectorizeStaticShapeSource(rewriter, padOp, fill, vecType);
+      return success();
+    }
+
+    // TODO: Vectorize dynamic source but static destination.
+
+    // Neither source type nor PadTensorOp result type have static shape. Such
+    // PadTensorOps cannot be vectorized. Generate a SubTensorInsertOp instead.
+
     // Compute size of source of PadTensorOp.
     SmallVector<OpFoldResult> srcSizes;
     for (unsigned dim = 0; dim < sourceType.getRank(); ++dim) {
@@ -737,6 +749,25 @@ struct GenericPadTensorOpVectorizationPattern
         padOp, padOp.source(), fill, padOp.getMixedLowPad(), srcSizes, strides);
 
     return success();
+  }
+
+  /// Vectorize the copying of a PadTensorOp's source that has static shape.
+  void vectorizeStaticShapeSource(PatternRewriter &rewriter, PadTensorOp padOp,
+                                  Value dest, VectorType vecType) const {
+    // Generate TransferReadOp.
+    SmallVector<Value> readIndices(
+        vecType.getRank(), rewriter.create<ConstantIndexOp>(padOp.getLoc(), 0));
+    auto read = rewriter.create<vector::TransferReadOp>(
+        padOp.getLoc(), vecType, padOp.source(), readIndices);
+
+    // Generate TransferWriteOp. The destination dimensions may be dynamic, but
+    // the write cannot be out-of-bounds. (A large enough destination tensor is
+    // allocated in this pattern.)
+    auto writeIndices = ofrToIndexValues(
+        rewriter, padOp.getLoc(), padOp.getMixedLowPad());
+    SmallVector<bool> inBounds(vecType.getRank(), true);
+    rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
+        padOp, read, dest, writeIndices, inBounds);
   }
 };
 
