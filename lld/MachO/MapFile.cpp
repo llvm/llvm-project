@@ -48,9 +48,9 @@ static SymbolMapTy getSectionSyms(ArrayRef<Defined *> syms) {
   for (Defined *dr : syms)
     ret[dr->isec].push_back(dr);
 
-  // Sort symbols by address. We want to print out symbols in the
-  // order in the output file rather than the order they appeared
-  // in the input files.
+  // Sort symbols by address. We want to print out symbols in the order they
+  // appear in the output file rather than the order they appeared in the input
+  // files.
   for (auto &it : ret)
     llvm::stable_sort(it.second, [](Defined *a, Defined *b) {
       return a->getVA() < b->getVA();
