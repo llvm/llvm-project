@@ -502,8 +502,6 @@ int main(int argc, const char **argv) {
           AdjustedArgs.push_back("/clang:-o");
           AdjustedArgs.push_back("/clang:" + LastO);
         }
-        AdjustedArgs.push_back("-Xclang");
-        AdjustedArgs.push_back("-sys-header-deps");
 
         if (!HasResourceDir) {
           StringRef ResourceDir =
