@@ -580,6 +580,54 @@ func @pad_and_transfer_read(%arg0: tensor<5x6xf32>) -> vector<7x9xf32> {
 
 // -----
 
+
+// CHECK-LABEL: func @pad_and_transfer_write_static
+//  CHECK-SAME:     %[[ARG0:.*]]: tensor<5x6xf32>, %[[ARG1:.*]]: vector<7x9xf32>
+//   CHECK-NOT:   linalg.pad_tensor
+//       CHECK:   %[[C0:.*]] = constant 0 : index
+//       CHECK:   %[[RESULT:.*]] = vector.transfer_write %[[ARG1]], %[[ARG0]][%[[C0]], %[[C0]]] : vector<7x9xf32>, tensor<5x6xf32>
+//       CHECK:   return %[[RESULT]]
+func @pad_and_transfer_write_static(
+    %arg0: tensor<5x6xf32>, %arg1: vector<7x9xf32>) -> tensor<5x6xf32> {
+  %c0 = constant 0 : index
+  %c5 = constant 5.0 : f32
+  %0 = linalg.pad_tensor %arg0 low[0, 0] high[5, 7] {
+    ^bb0(%arg2: index, %arg3: index):
+      linalg.yield %c5 : f32
+  } : tensor<5x6xf32> to tensor<10x13xf32>
+  %1 = vector.transfer_write %arg1, %0[%c0, %c0]
+      : vector<7x9xf32>, tensor<10x13xf32>
+  %2 = subtensor %1[0, 0] [5, 6] [1, 1] : tensor<10x13xf32> to tensor<5x6xf32>
+  return %2 : tensor<5x6xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @pad_and_transfer_write_dynamic_static
+//  CHECK-SAME:     %[[ARG0:.*]]: tensor<?x?xf32>, %[[ARG1:.*]]: vector<7x9xf32>, %[[SIZE:.*]]: index, %[[PADDING:.*]]: index
+//   CHECK-NOT:   linalg.pad_tensor
+//       CHECK:   %[[C0:.*]] = constant 0 : index
+//       CHECK:   %[[SUB:.*]] = subtensor %[[ARG0]][0, 0] [%[[SIZE]], 6] [1, 1] : tensor<?x?xf32> to tensor<?x6xf32>
+//       CHECK:   %[[RESULT:.*]] = vector.transfer_write %[[ARG1]], %[[SUB]][%[[C0]], %[[C0]]] : vector<7x9xf32>, tensor<?x6xf32>
+//       CHECK:   return %[[RESULT]]
+func @pad_and_transfer_write_dynamic_static(
+    %arg0: tensor<?x?xf32>, %arg1: vector<7x9xf32>, %size: index, %padding: index) -> tensor<?x6xf32> {
+  %c0 = constant 0 : index
+  %c5 = constant 5.0 : f32
+  %s = subtensor %arg0[0, 0] [%size, 6] [1, 1]
+      : tensor<?x?xf32> to tensor<?x6xf32>
+  %0 = linalg.pad_tensor %s low[0, 0] high[%padding, 7] {
+    ^bb0(%arg2: index, %arg3: index):
+      linalg.yield %c5 : f32
+  } : tensor<?x6xf32> to tensor<?x13xf32>
+  %1 = vector.transfer_write %arg1, %0[%c0, %c0]
+      : vector<7x9xf32>, tensor<?x13xf32>
+  %2 = subtensor %1[0, 0] [%size, 6] [1, 1] : tensor<?x13xf32> to tensor<?x6xf32>
+  return %2 : tensor<?x6xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @pad_and_subtensor_insert
 //  CHECK-SAME:     %[[ARG0:.*]]: tensor<5x6xf32>, %[[ARG1:.*]]: tensor<12x13xf32>
 //   CHECK-NOT:   linalg.pad_tensor
