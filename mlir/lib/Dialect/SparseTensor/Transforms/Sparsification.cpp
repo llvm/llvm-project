@@ -1372,6 +1372,8 @@ public:
     // Detects sparse annotations and translate the per-dimension sparsity
     // information for all tensors to loop indices in the kernel.
     assert(op.getNumOutputs() == 1);
+    assert(llvm::none_of(op.getInputAndOutputOperands(),
+                         [&](OpOperand *t) { return op.isScalar(t); }));
     unsigned numTensors = op.getNumInputsAndOutputs();
     unsigned numLoops = op.iterator_types().getValue().size();
     Merger merger(numTensors, numLoops);

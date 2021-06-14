@@ -377,8 +377,7 @@ void printCopyOpRegion(OpAsmPrinter &, Operation *, Region &, Type, Type) {}
 static LogicalResult verify(CopyOp op) {
   OpOperand *output = op.getOutputOperand(0);
   OpOperand *input = op.getInputOperand(0);
-  if (getElementTypeOrSelf(input->get().getType()) !=
-      getElementTypeOrSelf(output->get().getType()))
+  if (getElementTypeOrSelf(input->get()) != getElementTypeOrSelf(output->get()))
     return op.emitOpError("expects views of the same type");
   if (op.getRank(input) != op.getRank(output))
     return op.emitOpError("expects views of the same rank");
@@ -452,7 +451,7 @@ void printFillOpRegion(OpAsmPrinter &, Operation *, Region &, Type, Value) {}
 static LogicalResult verify(FillOp op) {
   OpOperand *output = op.getOutputOperand(0);
   Type fillType = op.value().getType();
-  if (getElementTypeOrSelf(output->get().getType()) != fillType)
+  if (getElementTypeOrSelf(output->get()) != fillType)
     return op.emitOpError("expects fill type to match view elemental type");
   if (!op.getNumResults() && !output->get().getType().isa<MemRefType>()) {
     return op.emitOpError(
@@ -489,7 +488,7 @@ void GenericOp::build(
   SmallVector<Type, 4> blockArgTypes;
   for (ValueRange container : {inputs, outputs})
     for (Value v : container)
-      blockArgTypes.push_back(v.getType().cast<ShapedType>().getElementType());
+      blockArgTypes.push_back(getElementTypeOrSelf(v));
 
   OpBuilder::InsertionGuard guard(builder);
   auto &region = *result.regions.front();
@@ -545,7 +544,7 @@ void IndexedGenericOp::build(
   SmallVector<Type, 4> blockArgTypes(nLoops, builder.getIndexType());
   for (ValueRange container : {inputs, outputs})
     for (Value v : container)
-      blockArgTypes.push_back(v.getType().cast<ShapedType>().getElementType());
+      blockArgTypes.push_back(getElementTypeOrSelf(v));
 
   OpBuilder::InsertionGuard guard(builder);
   auto &region = *result.regions.front();
@@ -2949,7 +2948,6 @@ fillStructuredOpRegion(OpBuilder &opBuilder, Region &region,
                        TypeRange inputTypes, TypeRange outputTypes,
                        ValueRange captures,
                        std::function<void(unsigned, unsigned)> errorHandler) {
-  assert(llvm::all_of(inputTypes, [](Type t) { return t.isa<ShapedType>(); }));
   assert(llvm::all_of(outputTypes, [](Type t) { return t.isa<ShapedType>(); }));
 
   // TODO: atm all operands go through getElementTypeOrSelf,
