@@ -719,15 +719,9 @@ struct GenericPadTensorOpVectorizationPattern
 
     auto sourceType = padOp.getSourceType();
 
-    // Copy of source with static shape can be vectorized.
-    if (sourceType.hasStaticShape()) {
-      auto vecType = VectorType::get(sourceType.getShape(),
-                                     sourceType.getElementType());
-      vectorizeStaticShapeSource(rewriter, padOp, fill, vecType);
+    // Try vectorizing the copy of source.
+    if (tryVectorizeCopy(rewriter, padOp, padValue, fill).succeeded())
       return success();
-    }
-
-    // TODO: Vectorize dynamic source but static destination.
 
     // Neither source type nor PadTensorOp result type have static shape. Such
     // PadTensorOps cannot be vectorized. Generate a SubTensorInsertOp instead.
@@ -751,23 +745,57 @@ struct GenericPadTensorOpVectorizationPattern
     return success();
   }
 
-  /// Vectorize the copying of a PadTensorOp's source that has static shape.
-  void vectorizeStaticShapeSource(PatternRewriter &rewriter, PadTensorOp padOp,
-                                  Value dest, VectorType vecType) const {
+  /// Vectorize the copying of a PadTensorOp's source. This is possible if each
+  /// dimension size is statically know in the source type or the result type
+  /// (or both).
+  LogicalResult tryVectorizeCopy(PatternRewriter &rewriter, PadTensorOp padOp,
+                                 Value padValue, Value dest) const {
+    auto sourceType = padOp.getSourceType();
+    auto resultType = padOp.getResultType();
+
+    SmallVector<int64_t> vecShape;
+    SmallVector<bool> readInBounds;
+    SmallVector<bool> writeInBounds;
+    for (unsigned i = 0; i < sourceType.getRank(); ++i) {
+      if (!sourceType.isDynamicDim(i)) {
+        vecShape.push_back(sourceType.getDimSize(i));
+        // Source shape is statically known: Neither read nor write are out-of-
+        // bounds.
+        readInBounds.push_back(true);
+        writeInBounds.push_back(true);
+      } else if (!resultType.isDynamicDim(i)) {
+        // Source shape is not statically known, but result shape is. Vectorize
+        // with size of result shape. This may be larger than the source size.
+        vecShape.push_back(resultType.getDimSize(i));
+        // Read may be out-of-bounds because the result size could be larger
+        // than the source size.
+        readInBounds.push_back(false);
+        // Write is out-of-bounds if low padding > 0.
+        writeInBounds.push_back(
+            isEqualConstantIntOrValue(padOp.getMixedLowPad()[i],
+                                      rewriter.getIndexAttr(0)));
+      } else {
+        // Neither source nor result dim of padOp is static. Cannot vectorize
+        // the copy.
+        return failure();
+      }
+    }
+    auto vecType = VectorType::get(vecShape, sourceType.getElementType());
+
     // Generate TransferReadOp.
     SmallVector<Value> readIndices(
         vecType.getRank(), rewriter.create<ConstantIndexOp>(padOp.getLoc(), 0));
     auto read = rewriter.create<vector::TransferReadOp>(
-        padOp.getLoc(), vecType, padOp.source(), readIndices);
+        padOp.getLoc(), vecType, padOp.source(), readIndices, padValue,
+        readInBounds);
 
-    // Generate TransferWriteOp. The destination dimensions may be dynamic, but
-    // the write cannot be out-of-bounds. (A large enough destination tensor is
-    // allocated in this pattern.)
+    // Generate TransferWriteOp.
     auto writeIndices = ofrToIndexValues(
         rewriter, padOp.getLoc(), padOp.getMixedLowPad());
-    SmallVector<bool> inBounds(vecType.getRank(), true);
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-        padOp, read, dest, writeIndices, inBounds);
+        padOp, read, dest, writeIndices, writeInBounds);
+
+    return success();
   }
 };
 
