@@ -179,6 +179,8 @@ define i1 @logical_and_noundef_b(i1 %a, i1 noundef %b) {
   ret i1 %res
 }
 
+; (!x && !y) || x --> x || !y
+
 define i1 @not_not_true(i1 %x, i1 %y) {
 ; CHECK-LABEL: @not_not_true(
 ; CHECK-NEXT:    [[NOTY:%.*]] = xor i1 [[Y:%.*]], true
@@ -191,11 +193,12 @@ define i1 @not_not_true(i1 %x, i1 %y) {
   ret i1 %r
 }
 
+; (!x && !y) --> !(x || y)
+
 define i1 @not_not_false(i1 %x, i1 %y) {
 ; CHECK-LABEL: @not_not_false(
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i1 [[X:%.*]], true
-; CHECK-NEXT:    [[NOTY:%.*]] = xor i1 [[Y:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOTX]], i1 [[NOTY]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[X:%.*]], i1 true, i1 [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %notx = xor i1 %x, true
@@ -204,11 +207,12 @@ define i1 @not_not_false(i1 %x, i1 %y) {
   ret i1 %r
 }
 
+; (!x || !y) --> !(x && y)
+
 define i1 @not_true_not(i1 %x, i1 %y) {
 ; CHECK-LABEL: @not_true_not(
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i1 [[X:%.*]], true
-; CHECK-NEXT:    [[NOTY:%.*]] = xor i1 [[Y:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOTX]], i1 true, i1 [[NOTY]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[X:%.*]], i1 [[Y:%.*]], i1 false
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %notx = xor i1 %x, true
@@ -216,6 +220,8 @@ define i1 @not_true_not(i1 %x, i1 %y) {
   %r = select i1 %notx, i1 true, i1 %noty
   ret i1 %r
 }
+
+; (!!x && !y) --> x && !y
 
 define i1 @not_false_not(i1 %x, i1 %y) {
 ; CHECK-LABEL: @not_false_not(
@@ -248,8 +254,8 @@ define i1 @not_not_false_use1(i1 %x, i1 %y) {
 ; CHECK-LABEL: @not_not_false_use1(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i1 [[X:%.*]], true
 ; CHECK-NEXT:    call void @use(i1 [[NOTX]])
-; CHECK-NEXT:    [[NOTY:%.*]] = xor i1 [[Y:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOTX]], i1 [[NOTY]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[X]], i1 true, i1 [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %notx = xor i1 %x, true
@@ -263,8 +269,8 @@ define i1 @not_true_not_use1(i1 %x, i1 %y) {
 ; CHECK-LABEL: @not_true_not_use1(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i1 [[X:%.*]], true
 ; CHECK-NEXT:    call void @use(i1 [[NOTX]])
-; CHECK-NEXT:    [[NOTY:%.*]] = xor i1 [[Y:%.*]], true
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOTX]], i1 true, i1 [[NOTY]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[X]], i1 [[Y:%.*]], i1 false
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %notx = xor i1 %x, true
@@ -305,10 +311,10 @@ define i1 @not_not_true_use2(i1 %x, i1 %y) {
 
 define i1 @not_not_false_use2(i1 %x, i1 %y) {
 ; CHECK-LABEL: @not_not_false_use2(
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i1 [[X:%.*]], true
 ; CHECK-NEXT:    [[NOTY:%.*]] = xor i1 [[Y:%.*]], true
 ; CHECK-NEXT:    call void @use(i1 [[NOTY]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOTX]], i1 [[NOTY]], i1 false
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[X:%.*]], i1 true, i1 [[Y]]
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %notx = xor i1 %x, true
@@ -320,10 +326,10 @@ define i1 @not_not_false_use2(i1 %x, i1 %y) {
 
 define i1 @not_true_not_use2(i1 %x, i1 %y) {
 ; CHECK-LABEL: @not_true_not_use2(
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i1 [[X:%.*]], true
 ; CHECK-NEXT:    [[NOTY:%.*]] = xor i1 [[Y:%.*]], true
 ; CHECK-NEXT:    call void @use(i1 [[NOTY]])
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOTX]], i1 true, i1 [[NOTY]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[X:%.*]], i1 [[Y]], i1 false
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %notx = xor i1 %x, true
