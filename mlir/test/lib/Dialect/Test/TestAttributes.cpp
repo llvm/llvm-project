@@ -93,6 +93,8 @@ void CompoundAAttr::print(DialectAsmPrinter &printer) const {
 // Tablegen Generated Definitions
 //===----------------------------------------------------------------------===//
 
+#include "TestAttrInterfaces.cpp.inc"
+
 #define GET_ATTRDEF_CLASSES
 #include "TestAttrDefs.cpp.inc"
 
