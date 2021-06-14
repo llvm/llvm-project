@@ -20,8 +20,8 @@ using namespace dependencies;
 
 CompilerInvocation ModuleDepCollector::makeInvocationForModuleBuildWithoutPaths(
     const ModuleDeps &Deps) const {
-  // Make a deep copy of the invocation.
-  CompilerInvocation CI(Instance.getInvocation());
+  // Make a deep copy of the original Clang invocation.
+  CompilerInvocation CI(OriginalInvocation);
 
   // Remove options incompatible with explicit module build.
   CI.getFrontendOpts().Inputs.clear();
@@ -38,9 +38,6 @@ CompilerInvocation ModuleDepCollector::makeInvocationForModuleBuildWithoutPaths(
     CI.getFrontendOpts().ModuleFiles.push_back(PrebuiltModule.PCMFile);
     CI.getFrontendOpts().ModuleMapFiles.push_back(PrebuiltModule.ModuleMapFile);
   }
-
-  // Restore the original set of prebuilt module files.
-  CI.getHeaderSearchOpts().PrebuiltModuleFiles = OriginalPrebuiltModuleFiles;
 
   CI.getPreprocessorOpts().ImplicitPCHInclude.clear();
 
@@ -269,10 +266,9 @@ void ModuleDepCollectorPP::addModuleDep(
 
 ModuleDepCollector::ModuleDepCollector(
     std::unique_ptr<DependencyOutputOptions> Opts, CompilerInstance &I,
-    DependencyConsumer &C,
-    std::map<std::string, std::string, std::less<>> OriginalPrebuiltModuleFiles)
+    DependencyConsumer &C, CompilerInvocation &&OriginalCI)
     : Instance(I), Consumer(C), Opts(std::move(Opts)),
-      OriginalPrebuiltModuleFiles(std::move(OriginalPrebuiltModuleFiles)) {}
+      OriginalInvocation(std::move(OriginalCI)) {}
 
 void ModuleDepCollector::attachToPreprocessor(Preprocessor &PP) {
   PP.addPPCallbacks(std::make_unique<ModuleDepCollectorPP>(Instance, *this));
