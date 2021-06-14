@@ -32,11 +32,12 @@ public:
       : DependencyFileGenerator(*Opts), Opts(std::move(Opts)), C(C) {}
 
   void finishedMainFile(DiagnosticsEngine &Diags) override {
+    C.handleDependencyOutputOpts(*Opts);
     llvm::SmallString<256> CanonPath;
     for (const auto &File : getDependencies()) {
       CanonPath = File;
       llvm::sys::path::remove_dots(CanonPath, /*remove_dot_dot=*/true);
-      C.handleFileDependency(*Opts, CanonPath);
+      C.handleFileDependency(CanonPath);
     }
   }
 

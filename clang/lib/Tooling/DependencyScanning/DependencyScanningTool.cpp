@@ -54,10 +54,12 @@ llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
   /// Prints out all of the gathered dependencies into a string.
   class MakeDependencyPrinterConsumer : public DependencyConsumer {
   public:
-    void handleFileDependency(const DependencyOutputOptions &Opts,
-                              StringRef File) override {
-      if (!this->Opts)
-        this->Opts = std::make_unique<DependencyOutputOptions>(Opts);
+    void
+    handleDependencyOutputOpts(const DependencyOutputOptions &Opts) override {
+      this->Opts = std::make_unique<DependencyOutputOptions>(Opts);
+    }
+
+    void handleFileDependency(StringRef File) override {
       Dependencies.push_back(std::string(File));
     }
 
@@ -74,8 +76,7 @@ llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
     void handleContextHash(std::string Hash) override {}
 
     void printDependencies(std::string &S) {
-      if (!Opts)
-        return;
+      assert(Opts && "Handled dependency output options.");
 
       class DependencyPrinter : public DependencyFileGenerator {
       public:
@@ -128,8 +129,10 @@ DependencyScanningTool::getFullDependencies(
     FullDependencyPrinterConsumer(const llvm::StringSet<> &AlreadySeen)
         : AlreadySeen(AlreadySeen) {}
 
-    void handleFileDependency(const DependencyOutputOptions &Opts,
-                              StringRef File) override {
+    void
+    handleDependencyOutputOpts(const DependencyOutputOptions &Opts) override {}
+
+    void handleFileDependency(StringRef File) override {
       Dependencies.push_back(std::string(File));
     }
 
