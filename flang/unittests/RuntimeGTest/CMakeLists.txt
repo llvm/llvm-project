@@ -11,6 +11,7 @@ add_flang_unittest(FlangRuntimeTests
   Random.cpp
   Reduction.cpp
   RuntimeCrashTest.cpp
+  Time.cpp
   Transformational.cpp
 )
 
