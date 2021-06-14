@@ -42,13 +42,14 @@
 
 #include "header.h"
 
-// CHECK1: modules_cdb_input2.cpp
+// CHECK1: modules_cdb_input2.o:
 // CHECK1-NEXT: modules_cdb_input2.cpp
 // CHECK1-NEXT: Inputs{{/|\\}}module.modulemap
 // CHECK1-NEXT: Inputs{{/|\\}}header2.h
 // CHECK1: Inputs{{/|\\}}header.h
 
-// CHECK2: modules_cdb_input.cpp
+// CHECK2: {{(modules_cdb_input)|(a)|(b)}}.o:
+// CHECK2-NEXT: modules_cdb_input.cpp
 // CHECK2-NEXT: Inputs{{/|\\}}module.modulemap
 // CHECK2-NEXT: Inputs{{/|\\}}header.h
 // CHECK2NO-NOT: header2

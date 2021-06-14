@@ -37,6 +37,8 @@ public:
   virtual void handleFileDependency(const DependencyOutputOptions &Opts,
                                     StringRef Filename) = 0;
 
+  virtual void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) = 0;
+
   virtual void handleModuleDependency(ModuleDeps MD) = 0;
 
   virtual void handleContextHash(std::string Hash) = 0;
