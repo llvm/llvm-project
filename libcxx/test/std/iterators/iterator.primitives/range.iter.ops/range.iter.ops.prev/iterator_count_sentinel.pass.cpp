@@ -17,21 +17,22 @@
 
 #include "test_iterators.h"
 
-template <std::bidirectional_iterator I>
-constexpr void check(I it, std::ptrdiff_t n, I last) {
+template <std::bidirectional_iterator It>
+constexpr void check(It it, std::ptrdiff_t n, It last) {
   auto abs = [](auto x) { return x < 0 ? -x : x; };
 
   {
-    auto result = std::ranges::prev(it, n, last);
+    It result = std::ranges::prev(it, n, last);
     assert(result == last);
   }
 
   // Count the number of operations
   {
-    stride_counting_iterator strided_it(it), strided_last(last);
-    auto result = std::ranges::prev(strided_it, n, strided_last);
+    stride_counting_iterator<It> strided_it(it);
+    stride_counting_iterator<It> strided_last(last);
+    stride_counting_iterator<It> result = std::ranges::prev(strided_it, n, strided_last);
     assert(result == strided_last);
-    if constexpr (std::random_access_iterator<I>) {
+    if constexpr (std::random_access_iterator<It>) {
       if (n == 0 || abs(n) >= abs(last - it)) {
         assert(result.stride_count() == 0); // uses the assign-from-sentinel codepath
       } else {
@@ -62,8 +63,7 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  static_assert(test());
   assert(test());
-
+  static_assert(test());
   return 0;
 }

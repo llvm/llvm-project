@@ -19,19 +19,19 @@
 
 #include "test_iterators.h"
 
-template <std::input_or_output_iterator I>
-constexpr void check_steps(I it, std::ptrdiff_t n, int const* expected) {
+template <std::input_or_output_iterator It>
+constexpr void check_steps(It it, std::ptrdiff_t n, int const* expected) {
   {
-    auto result = std::ranges::next(std::move(it), n);
+    It result = std::ranges::next(std::move(it), n);
     assert(&*result == expected);
   }
 
   // Count the number of operations
   {
     stride_counting_iterator strided_it(std::move(it));
-    auto result = std::ranges::next(std::move(strided_it), n);
+    stride_counting_iterator result = std::ranges::next(std::move(strided_it), n);
     assert(&*result == expected);
-    if constexpr (std::random_access_iterator<I>) {
+    if constexpr (std::random_access_iterator<It>) {
       assert(result.stride_count() == 1); // uses += exactly once
       assert(result.stride_displacement() == 1);
     } else {
@@ -68,7 +68,7 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  static_assert(test());
   test();
+  static_assert(test());
   return 0;
 }

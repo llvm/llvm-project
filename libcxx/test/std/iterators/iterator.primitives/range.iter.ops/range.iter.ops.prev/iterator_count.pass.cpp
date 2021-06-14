@@ -18,17 +18,17 @@
 
 #include "test_iterators.h"
 
-template <std::input_or_output_iterator I>
-constexpr void check(I it, std::ptrdiff_t n, int const* expected) {
-  auto result = std::ranges::prev(stride_counting_iterator(std::move(it)), n);
+template <std::input_or_output_iterator It>
+constexpr void check(It it, std::ptrdiff_t n, int const* expected) {
+  stride_counting_iterator result = std::ranges::prev(stride_counting_iterator(std::move(it)), n);
   assert(result.base().base() == expected);
 
-  if constexpr (std::random_access_iterator<I>) {
+  if constexpr (std::random_access_iterator<It>) {
     assert(result.stride_count() <= 1);
     // we can't say anything about the stride displacement, cause we could be using -= or +=.
   } else {
-    auto const distance = n < 0 ? -n : n;
-    assert(result.stride_count() == distance);
+    std::ptrdiff_t const abs_n = n < 0 ? -n : n;
+    assert(result.stride_count() == abs_n);
     assert(result.stride_displacement() == -n);
   }
 }
@@ -51,7 +51,7 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  static_assert(test());
   test();
+  static_assert(test());
   return 0;
 }

@@ -663,9 +663,9 @@ struct cpp20_input_iterator {
 
   constexpr void operator++(int) { ++base_; }
 
-  [[nodiscard]] constexpr I const& base() const& { return base_; }
+  constexpr I const& base() const& { return base_; }
 
-  [[nodiscard]] constexpr I base() && { return std::move(base_); }
+  constexpr I base() && { return std::move(base_); }
 
 private:
   I base_ = I();

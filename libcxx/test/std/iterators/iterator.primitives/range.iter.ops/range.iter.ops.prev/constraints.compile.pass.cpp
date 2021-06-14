@@ -20,7 +20,7 @@
 #include "test_iterators.h"
 
 template <class ...Args>
-concept has_ranges_prev = requires (Args ...args) {
+concept has_ranges_prev = requires (Args&& ...args) {
   { std::ranges::prev(std::forward<Args>(args)...) };
 };
 
@@ -30,4 +30,7 @@ static_assert(!has_ranges_prev<It, std::ptrdiff_t>);
 static_assert(!has_ranges_prev<It, std::ptrdiff_t, It>);
 
 // Test the test
-static_assert(has_ranges_prev<int*, std::ptrdiff_t, int*>);
+using It2 = bidirectional_iterator<int*>;
+static_assert(has_ranges_prev<It2>);
+static_assert(has_ranges_prev<It2, std::ptrdiff_t>);
+static_assert(has_ranges_prev<It2, std::ptrdiff_t, It2>);
