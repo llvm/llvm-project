@@ -1074,10 +1074,11 @@ void macho::createSyntheticSections() {
 
   // This section contains space for just a single word, and will be used by
   // dyld to cache an address to the image loader it uses.
-  ArrayRef<uint8_t> data{bAlloc.Allocate<uint8_t>(target->wordSize),
-                         target->wordSize};
+  uint8_t *arr = bAlloc.Allocate<uint8_t>(target->wordSize);
+  memset(arr, 0, target->wordSize);
   in.imageLoaderCache = make<ConcatInputSection>(
-      segment_names::data, section_names::data, /*file=*/nullptr, data,
+      segment_names::data, section_names::data, /*file=*/nullptr,
+      ArrayRef<uint8_t>{arr, target->wordSize},
       /*align=*/target->wordSize, /*flags=*/S_REGULAR);
   // References from dyld are not visible to us, so ensure this section is
   // always treated as live.
