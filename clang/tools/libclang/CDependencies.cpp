@@ -94,10 +94,12 @@ public:
   FullDependencyConsumer(const llvm::StringSet<> &AlreadySeen)
       : AlreadySeen(AlreadySeen) {}
 
-  void handleFileDependency(const DependencyOutputOptions &Opts,
-                            StringRef File) override {
-    if (OutputPaths.empty())
-      OutputPaths = Opts.Targets;
+  void
+  handleDependencyOutputOpts(const DependencyOutputOptions &Opts) override {
+    OutputPaths = Opts.Targets;
+  }
+
+  void handleFileDependency(StringRef File) override {
     Dependencies.push_back(std::string(File));
   }
 
