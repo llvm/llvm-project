@@ -142,6 +142,10 @@ const char PPTimerDescription[] = "Pseudo Probe Emission";
 const char PPGroupName[] = "pseudo probe";
 const char PPGroupDescription[] = "Pseudo Probe Emission";
 
+// A basic block index value used in the bb_addr_map to indicate that there
+// is no correspoinding IR block for the given machine basic block.
+const uint64_t NO_BB = UINT64_MAX;
+
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
 
 char AsmPrinter::ID = 0;
@@ -1350,15 +1354,26 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
     PrevMBBEndSymbol = MBB.getEndSymbol();
     // Emit the index of the corresponding LLVMIR basic block.
-    size_t i = 0;
-    for (auto It = F.begin(); It != F.end(); It++) {
-      const BasicBlock *BB = &*It;
-      if (BB == MBB.getBasicBlock()) {
-          break;
+    size_t BBIdx = 0;
+    bool found = false;
+    const BasicBlock *FindBB = MBB.getBasicBlock();
+    if (FindBB == nullptr) {
+      found = true;
+      BBIdx = NO_BB;
+    } else {
+      for (auto It = F.begin(); It != F.end(); It++) {
+        const BasicBlock *BB = &*It;
+        if (BB == FindBB) {
+            found = true;
+            break;
+        }
+        BBIdx++;
+        assert(BBIdx != NO_BB); // Or we are out of encoding space.
       }
-      i++;
     }
-    OutStreamer->emitULEB128IntValue(i);
+    if (!found)
+      OutContext.reportError(SMLoc(), "Couldn't find the block's index");
+    OutStreamer->emitULEB128IntValue(BBIdx);
   }
   OutStreamer->popSection();
 }
