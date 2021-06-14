@@ -907,7 +907,8 @@ static void lowerExplicitExtents(Fortran::lower::AbstractConverter &converter,
         result.emplace_back(
             computeExtent(builder, loc, lowerBounds[spec.index()], ub));
     } else if (spec.value()->ubound().isAssumed()) {
-      result.emplace_back(mlir::Value{});
+      // Column extent is undefined. Must be provided by user's code.
+      result.emplace_back(builder.create<fir::UndefOp>(loc, idxTy));
     }
   }
   assert(result.empty() || result.size() == box.dynamicBound().size());
@@ -1031,7 +1032,7 @@ void Fortran::lower::mapSymbolAttributes(
             builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, box, dim);
         shapes.emplace_back(dimInfo.getResult(1));
       } else if (spec->ubound().isAssumed()) {
-        shapes.emplace_back(mlir::Value{});
+        shapes.emplace_back(builder.create<fir::UndefOp>(loc, idxTy));
       } else {
         llvm::report_fatal_error("unknown bound category");
       }
@@ -1078,7 +1079,7 @@ void Fortran::lower::mapSymbolAttributes(
           // An assumed size array. The extent is not computed.
           assert(spec->ubound().isAssumed() && "expected assumed size");
           lbounds.emplace_back(lb);
-          extents.emplace_back(mlir::Value{});
+          extents.emplace_back(builder.create<fir::UndefOp>(loc, idxTy));
         }
       }
     }
