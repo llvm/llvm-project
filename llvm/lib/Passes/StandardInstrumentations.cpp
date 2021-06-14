@@ -1086,7 +1086,9 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
 
   PIC.registerBeforeNonSkippedPassCallback(
       [this, &FAM](StringRef P, Any IR) {
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
         assert(&PassStack.emplace_back(P));
+#endif
         (void)this;
         if (!any_isa<const Function *>(IR))
           return;
@@ -1098,16 +1100,20 @@ void PreservedCFGCheckerInstrumentation::registerCallbacks(
 
   PIC.registerAfterPassInvalidatedCallback(
       [this](StringRef P, const PreservedAnalyses &PassPA) {
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
         assert(PassStack.pop_back_val() == P &&
                "Before and After callbacks must correspond");
+#endif
         (void)this;
       });
 
   PIC.registerAfterPassCallback([this, &FAM,
                                  checkCFG](StringRef P, Any IR,
                                            const PreservedAnalyses &PassPA) {
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
     assert(PassStack.pop_back_val() == P &&
            "Before and After callbacks must correspond");
+#endif
     (void)this;
 
     if (!any_isa<const Function *>(IR))
