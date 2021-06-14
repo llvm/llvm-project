@@ -674,6 +674,35 @@ func @pad_and_subtensor_insert(
 
 // -----
 
+// CHECK-LABEL: func @pad_tensor_non_const_pad_value
+//  CHECK-SAME:     %[[ARG0:.*]]: tensor<5x6xf32>
+//   CHECK-NOT:   linalg.pad_tensor
+//   CHECK-DAG:   %[[C0:.*]] = constant 0 : index
+//   CHECK-DAG:   %[[C3:.*]] = constant 3 : index
+//   CHECK-DAG:   %[[C4:.*]] = constant 4 : index
+//       CHECK:   %[[FILL:.*]] = tensor.generate
+//       CHECK:     %[[RES:.*]] = mulf
+//       CHECK:     tensor.yield %[[RES]] : f32
+//       CHECK:   %[[READ:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]]], %{{.*}} {in_bounds = [true, true]} : tensor<5x6xf32>, vector<5x6xf32>
+//       CHECK:   %[[WRITE:.*]] = vector.transfer_write %[[READ]], %[[FILL]][%[[C3]], %[[C4]]] {in_bounds = [true, true]} : vector<5x6xf32>, tensor<12x13xf32>
+//       CHECK:   return %[[WRITE]]
+func @pad_tensor_non_const_pad_value(%arg0: tensor<5x6xf32>) -> tensor<12x13xf32> {
+  %c0 = constant 0 : index
+  %c5 = constant 5.0 : f32
+  %0 = linalg.pad_tensor %arg0 low[3, 4] high[4, 3] {
+    ^bb0(%arg1: index, %arg2: index):
+      %i1 = index_cast %arg1 : index to i32
+      %i2 = index_cast %arg2 : index to i32
+      %f1 = sitofp %i1 : i32 to f32
+      %f2 = sitofp %i2 : i32 to f32
+      %m = mulf %f1, %f2 : f32
+      linalg.yield %m : f32
+  } : tensor<5x6xf32> to tensor<12x13xf32>
+  return %0 : tensor<12x13xf32>
+}
+
+// -----
+
 // CHECK-DAG: #[[$M0:.*]] = affine_map<(d0, d1) -> (d0, d1, 0)>
 
 // CHECK-LABEL: func @sum_exp
