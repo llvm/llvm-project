@@ -894,8 +894,7 @@ mlir::ParseResult fir::GlobalOp::verifyValidLinkage(StringRef linkage) {
 //===----------------------------------------------------------------------===//
 
 template <bool AllowFields>
-static void appendAsAttribute(OperationState &result,
-                              llvm::SmallVectorImpl<mlir::Attribute> &attrs,
+static void appendAsAttribute(llvm::SmallVectorImpl<mlir::Attribute> &attrs,
                               mlir::Value val) {
   if (auto op = val.getDefiningOp()) {
     if (auto cop = mlir::dyn_cast<mlir::ConstantOp>(op)) {
@@ -922,7 +921,7 @@ static mlir::ArrayAttr collectAsAttributes(mlir::MLIRContext *ctxt,
                                            llvm::ArrayRef<mlir::Value> inds) {
   llvm::SmallVector<mlir::Attribute> attrs;
   for (auto v : inds)
-    appendAsAttribute<AllowFields>(result, attrs, v);
+    appendAsAttribute<AllowFields>(attrs, v);
   assert(!attrs.empty());
   return mlir::ArrayAttr::get(ctxt, attrs);
 }
