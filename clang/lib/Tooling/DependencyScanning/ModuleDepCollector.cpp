@@ -156,6 +156,9 @@ void ModuleDepCollectorPP::EndOfMainFile() {
   MDC.MainFile = std::string(
       Instance.getSourceManager().getFileEntryForID(MainFileID)->getName());
 
+  if (!Instance.getPreprocessorOpts().ImplicitPCHInclude.empty())
+    MDC.FileDeps.push_back(Instance.getPreprocessorOpts().ImplicitPCHInclude);
+
   for (const Module *M : DirectModularDeps)
     handleTopLevelModule(M);
 

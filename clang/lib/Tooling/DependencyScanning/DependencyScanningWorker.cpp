@@ -73,6 +73,8 @@ public:
     if (!Compiler.hasDiagnostics())
       return false;
 
+    Compiler.getPreprocessorOpts().AllowPCHWithDifferentModulesCachePath = true;
+
     // Use the dependency scanning optimized file system if we can.
     if (DepFS) {
       const CompilerInvocation &CI = Compiler.getInvocation();
@@ -133,7 +135,7 @@ public:
     // the impact of strict context hashing.
     Compiler.getHeaderSearchOpts().ModulesStrictContextHash = true;
 
-    auto Action = std::make_unique<PreprocessOnlyAction>();
+    auto Action = std::make_unique<ReadPCHAndPreprocessAction>();
     const bool Result = Compiler.ExecuteAction(*Action);
     if (!DepFS)
       FileMgr->clearStatCache();
