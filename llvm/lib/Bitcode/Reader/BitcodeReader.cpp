@@ -3848,8 +3848,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
   unsigned ModuleMDLoaderSize = MDLoader->size();
 
   // Add all the function arguments to the value table.
+#ifndef NDEBUG
   unsigned ArgNo = 0;
   FunctionType *FTy = FunctionTypes[F];
+#endif
   for (Argument &I : F->args()) {
     assert(I.getType() == FTy->getParamType(ArgNo++) &&
            "Incorrect fully specified type for Function Argument");

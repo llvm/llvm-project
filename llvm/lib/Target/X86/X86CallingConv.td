@@ -627,6 +627,10 @@ def CC_X86_Win64_C : CallingConv<[
   // Pass SwiftSelf in a callee saved register.
   CCIfSwiftSelf<CCIfType<[i64], CCAssignToReg<[R13]>>>,
 
+  // Pass SwiftAsync in an otherwise callee saved register so that calls to
+  // normal functions don't need to save it somewhere.
+  CCIfSwiftAsync<CCIfType<[i64], CCAssignToReg<[R14]>>>,
+
   // The 'CFGuardTarget' parameter, if any, is passed in RAX.
   CCIfCFGuardTarget<CCAssignToReg<[RAX]>>,
 

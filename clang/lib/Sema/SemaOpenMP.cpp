@@ -7668,53 +7668,43 @@ bool OpenMPIterationSpaceChecker::checkAndSetCond(Expr *S) {
   Condition = S;
   S = getExprAsWritten(S);
   SourceLocation CondLoc = S->getBeginLoc();
-  if (auto *BO = dyn_cast<BinaryOperator>(S)) {
-    if (BO->isRelationalOp()) {
-      if (getInitLCDecl(BO->getLHS()) == LCDecl)
-        return setUB(BO->getRHS(),
-                     (BO->getOpcode() == BO_LT || BO->getOpcode() == BO_LE),
-                     (BO->getOpcode() == BO_LT || BO->getOpcode() == BO_GT),
-                     BO->getSourceRange(), BO->getOperatorLoc());
-      if (getInitLCDecl(BO->getRHS()) == LCDecl)
-        return setUB(BO->getLHS(),
-                     (BO->getOpcode() == BO_GT || BO->getOpcode() == BO_GE),
-                     (BO->getOpcode() == BO_LT || BO->getOpcode() == BO_GT),
-                     BO->getSourceRange(), BO->getOperatorLoc());
-    } else if (IneqCondIsCanonical && BO->getOpcode() == BO_NE)
-      return setUB(
-          getInitLCDecl(BO->getLHS()) == LCDecl ? BO->getRHS() : BO->getLHS(),
-          /*LessOp=*/llvm::None,
-          /*StrictOp=*/true, BO->getSourceRange(), BO->getOperatorLoc());
+  auto &&CheckAndSetCond = [this, IneqCondIsCanonical](
+                               BinaryOperatorKind Opcode, const Expr *LHS,
+                               const Expr *RHS, SourceRange SR,
+                               SourceLocation OpLoc) -> llvm::Optional<bool> {
+    if (BinaryOperator::isRelationalOp(Opcode)) {
+      if (getInitLCDecl(LHS) == LCDecl)
+        return setUB(const_cast<Expr *>(RHS),
+                     (Opcode == BO_LT || Opcode == BO_LE),
+                     (Opcode == BO_LT || Opcode == BO_GT), SR, OpLoc);
+      if (getInitLCDecl(RHS) == LCDecl)
+        return setUB(const_cast<Expr *>(LHS),
+                     (Opcode == BO_GT || Opcode == BO_GE),
+                     (Opcode == BO_LT || Opcode == BO_GT), SR, OpLoc);
+    } else if (IneqCondIsCanonical && Opcode == BO_NE) {
+      return setUB(const_cast<Expr *>(getInitLCDecl(LHS) == LCDecl ? RHS : LHS),
+                   /*LessOp=*/llvm::None,
+                   /*StrictOp=*/true, SR, OpLoc);
+    }
+    return llvm::None;
+  };
+  llvm::Optional<bool> Res;
+  if (auto *RBO = dyn_cast<CXXRewrittenBinaryOperator>(S)) {
+    CXXRewrittenBinaryOperator::DecomposedForm DF = RBO->getDecomposedForm();
+    Res = CheckAndSetCond(DF.Opcode, DF.LHS, DF.RHS, RBO->getSourceRange(),
+                          RBO->getOperatorLoc());
+  } else if (auto *BO = dyn_cast<BinaryOperator>(S)) {
+    Res = CheckAndSetCond(BO->getOpcode(), BO->getLHS(), BO->getRHS(),
+                          BO->getSourceRange(), BO->getOperatorLoc());
   } else if (auto *CE = dyn_cast<CXXOperatorCallExpr>(S)) {
     if (CE->getNumArgs() == 2) {
-      auto Op = CE->getOperator();
-      switch (Op) {
-      case OO_Greater:
-      case OO_GreaterEqual:
-      case OO_Less:
-      case OO_LessEqual:
-        if (getInitLCDecl(CE->getArg(0)) == LCDecl)
-          return setUB(CE->getArg(1), Op == OO_Less || Op == OO_LessEqual,
-                       Op == OO_Less || Op == OO_Greater, CE->getSourceRange(),
-                       CE->getOperatorLoc());
-        if (getInitLCDecl(CE->getArg(1)) == LCDecl)
-          return setUB(CE->getArg(0), Op == OO_Greater || Op == OO_GreaterEqual,
-                       Op == OO_Less || Op == OO_Greater, CE->getSourceRange(),
-                       CE->getOperatorLoc());
-        break;
-      case OO_ExclaimEqual:
-        if (IneqCondIsCanonical)
-          return setUB(getInitLCDecl(CE->getArg(0)) == LCDecl ? CE->getArg(1)
-                                                              : CE->getArg(0),
-                       /*LessOp=*/llvm::None,
-                       /*StrictOp=*/true, CE->getSourceRange(),
-                       CE->getOperatorLoc());
-        break;
-      default:
-        break;
-      }
+      Res = CheckAndSetCond(
+          BinaryOperator::getOverloadedOpcode(CE->getOperator()), CE->getArg(0),
+          CE->getArg(1), CE->getSourceRange(), CE->getOperatorLoc());
     }
   }
+  if (Res.hasValue())
+    return *Res;
   if (dependent() || SemaRef.CurContext->isDependentContext())
     return false;
   SemaRef.Diag(CondLoc, diag::err_omp_loop_not_canonical_cond)
