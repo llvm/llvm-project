@@ -480,8 +480,8 @@ ValueType
 
    Thread local storage variable.
 
-InputReader
------------
+InputReaderGranularity
+----------------------
 
 Token size/granularities for Input Readers.
 
