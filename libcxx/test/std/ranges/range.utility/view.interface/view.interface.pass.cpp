@@ -43,20 +43,16 @@ struct InputRange : std::ranges::view_interface<InputRange> {
 };
 
 struct NotSizedSentinel {
-  using I = int*;
-  using value_type = std::iter_value_t<I>;
-  using difference_type = std::iter_difference_t<I>;
+  using value_type = int;
+  using difference_type = std::ptrdiff_t;
   using iterator_concept = std::forward_iterator_tag;
 
-  NotSizedSentinel() = default;
-  explicit constexpr NotSizedSentinel(I);
-
-  constexpr int &operator*() const { return *value; };
+  explicit NotSizedSentinel() = default;
+  explicit NotSizedSentinel(int*);
+  int& operator*() const;
   NotSizedSentinel& operator++();
   NotSizedSentinel operator++(int);
   bool operator==(NotSizedSentinel const&) const;
-
-  int *value;
 };
 static_assert(std::forward_iterator<NotSizedSentinel>);
 
@@ -127,13 +123,13 @@ struct BoolConvertibleComparison : std::ranges::view_interface<BoolConvertibleCo
   };
 
   struct SentinelType {
-    int *base;
+    int *base_;
     SentinelType() = default;
-    explicit constexpr SentinelType(int *base) : base(base) {}
-    friend constexpr ResultType operator==(ForwardIter const& iter, SentinelType const& sent) noexcept { return {iter.base() == sent.base}; }
-    friend constexpr ResultType operator==(SentinelType const& sent, ForwardIter const& iter) noexcept { return {iter.base() == sent.base}; }
-    friend constexpr ResultType operator!=(ForwardIter const& iter, SentinelType const& sent) noexcept { return {iter.base() != sent.base}; }
-    friend constexpr ResultType operator!=(SentinelType const& sent, ForwardIter const& iter) noexcept { return {iter.base() != sent.base}; }
+    explicit constexpr SentinelType(int *base) : base_(base) {}
+    friend constexpr ResultType operator==(ForwardIter const& iter, SentinelType const& sent) noexcept { return {iter.base() == sent.base_}; }
+    friend constexpr ResultType operator==(SentinelType const& sent, ForwardIter const& iter) noexcept { return {iter.base() == sent.base_}; }
+    friend constexpr ResultType operator!=(ForwardIter const& iter, SentinelType const& sent) noexcept { return {iter.base() != sent.base_}; }
+    friend constexpr ResultType operator!=(SentinelType const& sent, ForwardIter const& iter) noexcept { return {iter.base() != sent.base_}; }
   };
 
   int buff[8] = {0, 1, 2, 3, 4, 5, 6, 7};
