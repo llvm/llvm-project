@@ -357,10 +357,6 @@ bool LLParser::parseTopLevelEntities() {
       if (parseModuleAsm())
         return true;
       break;
-    case lltok::kw_deplibs:
-      if (parseDepLibs())
-        return true;
-      break;
     case lltok::LocalVarID:
       if (parseUnnamedType())
         return true;
@@ -458,29 +454,6 @@ bool LLParser::parseSourceFileName() {
   if (M)
     M->setSourceFileName(SourceFileName);
   return false;
-}
-
-/// toplevelentity
-///   ::= 'deplibs' '=' '[' ']'
-///   ::= 'deplibs' '=' '[' STRINGCONSTANT (',' STRINGCONSTANT)* ']'
-/// FIXME: Remove in 4.0. Currently parse, but ignore.
-bool LLParser::parseDepLibs() {
-  assert(Lex.getKind() == lltok::kw_deplibs);
-  Lex.Lex();
-  if (parseToken(lltok::equal, "expected '=' after deplibs") ||
-      parseToken(lltok::lsquare, "expected '=' after deplibs"))
-    return true;
-
-  if (EatIfPresent(lltok::rsquare))
-    return false;
-
-  do {
-    std::string Str;
-    if (parseStringConstant(Str))
-      return true;
-  } while (EatIfPresent(lltok::comma));
-
-  return parseToken(lltok::rsquare, "expected ']' at end of list");
 }
 
 /// parseUnnamedType:
