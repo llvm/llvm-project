@@ -2110,6 +2110,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::INDEX_VECTOR)
     MAKE_CASE(AArch64ISD::UABD)
     MAKE_CASE(AArch64ISD::SABD)
+    MAKE_CASE(AArch64ISD::UADDLP)
     MAKE_CASE(AArch64ISD::CALL_RVMARKER)
   }
 #undef MAKE_CASE
@@ -4077,6 +4078,10 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                                             : AArch64ISD::SABD;
     return DAG.getNode(Opcode, dl, Op.getValueType(), Op.getOperand(1),
                        Op.getOperand(2));
+  }
+  case Intrinsic::aarch64_neon_uaddlp: {
+    unsigned Opcode = AArch64ISD::UADDLP;
+    return DAG.getNode(Opcode, dl, Op.getValueType(), Op.getOperand(1));
   }
   case Intrinsic::aarch64_neon_sdot:
   case Intrinsic::aarch64_neon_udot:
@@ -11981,13 +11986,106 @@ static SDValue foldVectorXorShiftIntoCmp(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(AArch64ISD::CMGEz, SDLoc(N), VT, Shift.getOperand(0));
 }
 
+// Given a vecreduce_add node, detect the below pattern and convert it to the
+// node sequence with UABDL, [S|U]ADB and UADDLP.
+//
+// i32 vecreduce_add(
+//  v16i32 abs(
+//    v16i32 sub(
+//     v16i32 [sign|zero]_extend(v16i8 a), v16i32 [sign|zero]_extend(v16i8 b))))
+// =================>
+// i32 vecreduce_add(
+//   v4i32 UADDLP(
+//     v8i16 add(
+//       v8i16 zext(
+//         v8i8 [S|U]ABD low8:v16i8 a, low8:v16i8 b
+//       v8i16 zext(
+//         v8i8 [S|U]ABD high8:v16i8 a, high8:v16i8 b
+static SDValue performVecReduceAddCombineWithUADDLP(SDNode *N,
+                                                    SelectionDAG &DAG) {
+  // Assumed i32 vecreduce_add
+  if (N->getValueType(0) != MVT::i32)
+    return SDValue();
+
+  SDValue VecReduceOp0 = N->getOperand(0);
+  unsigned Opcode = VecReduceOp0.getOpcode();
+  // Assumed v16i32 abs
+  if (Opcode != ISD::ABS || VecReduceOp0->getValueType(0) != MVT::v16i32)
+    return SDValue();
+
+  SDValue ABS = VecReduceOp0;
+  // Assumed v16i32 sub
+  if (ABS->getOperand(0)->getOpcode() != ISD::SUB ||
+      ABS->getOperand(0)->getValueType(0) != MVT::v16i32)
+    return SDValue();
+
+  SDValue SUB = ABS->getOperand(0);
+  unsigned Opcode0 = SUB->getOperand(0).getOpcode();
+  unsigned Opcode1 = SUB->getOperand(1).getOpcode();
+  // Assumed v16i32 type
+  if (SUB->getOperand(0)->getValueType(0) != MVT::v16i32 ||
+      SUB->getOperand(1)->getValueType(0) != MVT::v16i32)
+    return SDValue();
+
+  // Assumed zext or sext
+  bool IsZExt = false;
+  if (Opcode0 == ISD::ZERO_EXTEND && Opcode1 == ISD::ZERO_EXTEND) {
+    IsZExt = true;
+  } else if (Opcode0 == ISD::SIGN_EXTEND && Opcode1 == ISD::SIGN_EXTEND) {
+    IsZExt = false;
+  } else
+    return SDValue();
+
+  SDValue EXT0 = SUB->getOperand(0);
+  SDValue EXT1 = SUB->getOperand(1);
+  // Assumed zext's operand has v16i8 type
+  if (EXT0->getOperand(0)->getValueType(0) != MVT::v16i8 ||
+      EXT1->getOperand(0)->getValueType(0) != MVT::v16i8)
+    return SDValue();
+
+  // Pattern is dectected. Let's convert it to sequence of nodes.
+  SDLoc DL(N);
+
+  // First, create the node pattern of UABD/SABD.
+  SDValue UABDHigh8Op0 =
+      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v8i8, EXT0->getOperand(0),
+                  DAG.getConstant(8, DL, MVT::i64));
+  SDValue UABDHigh8Op1 =
+      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v8i8, EXT1->getOperand(0),
+                  DAG.getConstant(8, DL, MVT::i64));
+  SDValue UABDHigh8 = DAG.getNode(IsZExt ? AArch64ISD::UABD : AArch64ISD::SABD,
+                                  DL, MVT::v8i8, UABDHigh8Op0, UABDHigh8Op1);
+  SDValue UABDL = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v8i16, UABDHigh8);
+
+  // Second, create the node pattern of UABAL.
+  SDValue UABDLo8Op0 =
+      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v8i8, EXT0->getOperand(0),
+                  DAG.getConstant(0, DL, MVT::i64));
+  SDValue UABDLo8Op1 =
+      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v8i8, EXT1->getOperand(0),
+                  DAG.getConstant(0, DL, MVT::i64));
+  SDValue UABDLo8 = DAG.getNode(IsZExt ? AArch64ISD::UABD : AArch64ISD::SABD,
+                                DL, MVT::v8i8, UABDLo8Op0, UABDLo8Op1);
+  SDValue ZExtUABD = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v8i16, UABDLo8);
+  SDValue UABAL = DAG.getNode(ISD::ADD, DL, MVT::v8i16, UABDL, ZExtUABD);
+
+  // Third, create the node of UADDLP.
+  SDValue UADDLP = DAG.getNode(AArch64ISD::UADDLP, DL, MVT::v4i32, UABAL);
+
+  // Fourth, create the node of VECREDUCE_ADD.
+  return DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i32, UADDLP);
+}
+
 // Turn a v8i8/v16i8 extended vecreduce into a udot/sdot and vecreduce
 //   vecreduce.add(ext(A)) to vecreduce.add(DOT(zero, A, one))
 //   vecreduce.add(mul(ext(A), ext(B))) to vecreduce.add(DOT(zero, A, B))
 static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
                                           const AArch64Subtarget *ST) {
+  if (!ST->hasDotProd())
+    return performVecReduceAddCombineWithUADDLP(N, DAG);
+
   SDValue Op0 = N->getOperand(0);
-  if (!ST->hasDotProd() || N->getValueType(0) != MVT::i32 ||
+  if (N->getValueType(0) != MVT::i32 ||
       Op0.getValueType().getVectorElementType() != MVT::i32)
     return SDValue();
 

@@ -32,11 +32,12 @@ public:
       : DependencyFileGenerator(*Opts), Opts(std::move(Opts)), C(C) {}
 
   void finishedMainFile(DiagnosticsEngine &Diags) override {
+    C.handleDependencyOutputOpts(*Opts);
     llvm::SmallString<256> CanonPath;
     for (const auto &File : getDependencies()) {
       CanonPath = File;
       llvm::sys::path::remove_dots(CanonPath, /*remove_dot_dot=*/true);
-      C.handleFileDependency(*Opts, CanonPath);
+      C.handleFileDependency(CanonPath);
     }
   }
 
@@ -47,9 +48,11 @@ private:
 
 /// A listener that collects the names and paths to imported modules.
 class ImportCollectingListener : public ASTReaderListener {
+  using PrebuiltModuleFilesT =
+      decltype(HeaderSearchOptions::PrebuiltModuleFiles);
+
 public:
-  ImportCollectingListener(
-      std::map<std::string, std::string> &PrebuiltModuleFiles)
+  ImportCollectingListener(PrebuiltModuleFilesT &PrebuiltModuleFiles)
       : PrebuiltModuleFiles(PrebuiltModuleFiles) {}
 
   bool needsImportVisitation() const override { return true; }
@@ -59,7 +62,7 @@ public:
   }
 
 private:
-  std::map<std::string, std::string> &PrebuiltModuleFiles;
+  PrebuiltModuleFilesT &PrebuiltModuleFiles;
 };
 
 /// Transform arbitrary file name into an object-like file name.
@@ -99,6 +102,9 @@ public:
                      FileManager *FileMgr,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagConsumer) override {
+    // Make a deep copy of the original Clang invocation.
+    CompilerInvocation OriginalInvocation(*Invocation);
+
     // Create a compiler instance to handle the actual work.
     CompilerInstance Compiler(std::move(PCHContainerOps));
     Compiler.setInvocation(std::move(Invocation));
@@ -144,24 +150,19 @@ public:
     Compiler.setFileManager(FileMgr);
     Compiler.createSourceManager(*FileMgr);
 
-    std::map<std::string, std::string> PrebuiltModuleFiles;
     if (!Compiler.getPreprocessorOpts().ImplicitPCHInclude.empty()) {
-      /// Collect the modules that were prebuilt as part of the PCH.
-      ImportCollectingListener Listener(PrebuiltModuleFiles);
+      // Collect the modules that were prebuilt as part of the PCH and pass them
+      // to the compiler. This will prevent the implicit build to create
+      // duplicate modules and force reuse of existing prebuilt module files
+      // instead.
+      ImportCollectingListener Listener(
+          Compiler.getHeaderSearchOpts().PrebuiltModuleFiles);
       ASTReader::readASTFileControlBlock(
           Compiler.getPreprocessorOpts().ImplicitPCHInclude,
           Compiler.getFileManager(), Compiler.getPCHContainerReader(),
           /*FindModuleFileExtensions=*/false, Listener,
           /*ValidateDiagnosticOptions=*/false);
     }
-    /// Make a backup of the original prebuilt module file arguments.
-    std::map<std::string, std::string, std::less<>> OrigPrebuiltModuleFiles =
-        Compiler.getHeaderSearchOpts().PrebuiltModuleFiles;
-    /// Configure the compiler with discovered prebuilt modules. This will
-    /// prevent the implicit build of duplicate modules and force reuse of
-    /// existing prebuilt module files instead.
-    Compiler.getHeaderSearchOpts().PrebuiltModuleFiles.insert(
-        PrebuiltModuleFiles.begin(), PrebuiltModuleFiles.end());
 
     // Create the dependency collector that will collect the produced
     // dependencies.
@@ -170,8 +171,8 @@ public:
     // invocation to the collector. The options in the invocation are reset,
     // which ensures that the compiler won't create new dependency collectors,
     // and thus won't write out the extra '.d' files to disk.
-    auto Opts = std::make_unique<DependencyOutputOptions>(
-        std::move(Compiler.getInvocation().getDependencyOutputOpts()));
+    auto Opts = std::make_unique<DependencyOutputOptions>();
+    std::swap(*Opts, Compiler.getInvocation().getDependencyOutputOpts());
     // We need at least one -MT equivalent for the generator of make dependency
     // files to work.
     if (Opts->Targets.empty())
@@ -187,8 +188,7 @@ public:
       break;
     case ScanningOutputFormat::Full:
       Compiler.addDependencyCollector(std::make_shared<ModuleDepCollector>(
-          std::move(Opts), Compiler, Consumer,
-          std::move(OrigPrebuiltModuleFiles)));
+          std::move(Opts), Compiler, Consumer, std::move(OriginalInvocation)));
       break;
     }
 

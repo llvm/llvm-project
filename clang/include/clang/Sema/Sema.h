@@ -3455,6 +3455,12 @@ public:
   bool DiagnoseMultipleUserDefinedConversion(Expr *From, QualType ToType);
   bool isSameOrCompatibleFunctionType(CanQualType Param, CanQualType Arg);
 
+  ExprResult PerformMoveOrCopyInitialization(const InitializedEntity &Entity,
+                                             const VarDecl *NRVOCandidate,
+                                             QualType ResultType,
+                                             Expr *Value,
+                                             bool AllowNRVO = true);
+
   bool CanPerformAggregateInitializationForOverloadResolution(
       const InitializedEntity &Entity, InitListExpr *From);
 
@@ -4754,30 +4760,28 @@ public:
                                            SourceLocation Loc,
                                            unsigned NumParams);
 
-  struct NamedReturnInfo {
-    const VarDecl *Candidate;
-
-    enum Status : uint8_t { None, MoveEligible, MoveEligibleAndCopyElidable };
-    Status S;
-
-    bool isMoveEligible() const { return S != None; };
-    bool isCopyElidable() const { return S == MoveEligibleAndCopyElidable; }
+  enum CopyElisionSemanticsKind {
+    CES_Strict = 0,
+    CES_AllowParameters = 1,
+    CES_AllowDifferentTypes = 2,
+    CES_AllowExceptionVariables = 4,
+    CES_AllowRValueReferenceType = 8,
+    CES_ImplicitlyMovableCXX11CXX14CXX17 =
+        (CES_AllowParameters | CES_AllowDifferentTypes),
+    CES_ImplicitlyMovableCXX20 =
+        (CES_AllowParameters | CES_AllowDifferentTypes |
+         CES_AllowExceptionVariables | CES_AllowRValueReferenceType),
   };
-  NamedReturnInfo getNamedReturnInfo(Expr *&E, bool ForceCXX2b = false);
-  NamedReturnInfo getNamedReturnInfo(const VarDecl *VD,
-                                     bool ForceCXX20 = false);
-  const VarDecl *getCopyElisionCandidate(NamedReturnInfo &Info,
-                                         QualType ReturnType);
 
-  ExprResult PerformMoveOrCopyInitialization(const InitializedEntity &Entity,
-                                             const NamedReturnInfo &NRInfo,
-                                             Expr *Value);
+  VarDecl *getCopyElisionCandidate(QualType ReturnType, Expr *E,
+                                   CopyElisionSemanticsKind CESK);
+  bool isCopyElisionCandidate(QualType ReturnType, const VarDecl *VD,
+                              CopyElisionSemanticsKind CESK);
 
   StmtResult ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
                              Scope *CurScope);
   StmtResult BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp);
-  StmtResult ActOnCapScopeReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
-                                     NamedReturnInfo &NRInfo);
+  StmtResult ActOnCapScopeReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp);
 
   StmtResult ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                              bool IsVolatile, unsigned NumOutputs,

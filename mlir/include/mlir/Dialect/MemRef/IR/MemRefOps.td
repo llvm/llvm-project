@@ -204,7 +204,8 @@ def MemRef_AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource> {
 //===----------------------------------------------------------------------===//
 
 def MemRef_AllocaScopeOp : MemRef_Op<"alloca_scope", 
-      [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+      [AutomaticAllocationScope,
+       DeclareOpInterfaceMethods<RegionBranchOpInterface>,
        SingleBlockImplicitTerminator<"AllocaScopeReturnOp">,
        RecursiveSideEffects,
        NoRegionArguments]> {
@@ -223,7 +224,9 @@ def MemRef_AllocaScopeOp : MemRef_Op<"alloca_scope",
     ```
 
     Here, `%myalloca` memref is valid within the explicitly delimited scope
-    and is automatically deallocated at the end of the given region.
+    and is automatically deallocated at the end of the given region. Conceptually,
+    `memref.alloca_scope` is a passthrough operation with 
+    `AutomaticAllocationScope` that spans the body of the region within the operation. 
 
     `memref.alloca_scope` may also return results that are defined in the nested
     region. To return a value, one should use `memref.alloca_scope.return`

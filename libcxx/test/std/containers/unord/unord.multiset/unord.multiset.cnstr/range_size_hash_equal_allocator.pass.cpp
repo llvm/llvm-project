@@ -34,7 +34,7 @@ int main(int, char**)
 {
     {
         typedef std::unordered_multiset<int,
-                                   test_hash<std::hash<int> >,
+                                   test_hash<int>,
                                    test_equal_to<int>,
                                    test_allocator<int>
                                    > C;
@@ -50,7 +50,7 @@ int main(int, char**)
         };
         C c(cpp17_input_iterator<P*>(a), cpp17_input_iterator<P*>(a + sizeof(a)/sizeof(a[0])),
             7,
-            test_hash<std::hash<int> >(8),
+            test_hash<int>(8),
             test_equal_to<int>(9),
             test_allocator<int>(10)
            );
@@ -60,7 +60,7 @@ int main(int, char**)
         assert(c.count(2) == 2);
         assert(c.count(3) == 1);
         assert(c.count(4) == 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
+        assert(c.hash_function() == test_hash<int>(8));
         assert(c.key_eq() == test_equal_to<int>(9));
         assert(c.get_allocator() == test_allocator<int>(10));
         assert(!c.empty());
@@ -72,7 +72,7 @@ int main(int, char**)
 #if TEST_STD_VER >= 11
     {
         typedef std::unordered_multiset<int,
-                                   test_hash<std::hash<int> >,
+                                   test_hash<int>,
                                    test_equal_to<int>,
                                    min_allocator<int>
                                    > C;
@@ -88,7 +88,7 @@ int main(int, char**)
         };
         C c(cpp17_input_iterator<P*>(a), cpp17_input_iterator<P*>(a + sizeof(a)/sizeof(a[0])),
             7,
-            test_hash<std::hash<int> >(8),
+            test_hash<int>(8),
             test_equal_to<int>(9),
             min_allocator<int>()
            );
@@ -98,7 +98,7 @@ int main(int, char**)
         assert(c.count(2) == 2);
         assert(c.count(3) == 1);
         assert(c.count(4) == 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
+        assert(c.hash_function() == test_hash<int>(8));
         assert(c.key_eq() == test_equal_to<int>(9));
         assert(c.get_allocator() == min_allocator<int>());
         assert(!c.empty());
