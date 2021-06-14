@@ -11808,8 +11808,12 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
     return false;
 
   // FIXME: Update this method to support scalable addressing modes.
-  if (isa<ScalableVectorType>(Ty))
-    return AM.HasBaseReg && !AM.BaseOffs && !AM.Scale;
+  if (isa<ScalableVectorType>(Ty)) {
+    uint64_t VecElemNumBytes =
+        DL.getTypeSizeInBits(cast<VectorType>(Ty)->getElementType()) / 8;
+    return AM.HasBaseReg && !AM.BaseOffs &&
+           (AM.Scale == 0 || (uint64_t)AM.Scale == VecElemNumBytes);
+  }
 
   // check reg + imm case:
   // i.e., reg + 0, reg + imm9, reg + SIZE_IN_BYTES * uimm12
