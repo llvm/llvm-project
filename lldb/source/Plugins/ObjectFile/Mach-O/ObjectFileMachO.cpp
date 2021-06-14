@@ -65,63 +65,6 @@
 #include <memory>
 
 // Unfortunately the signpost header pulls in the system MachO header, too.
-#ifdef MH_MAGIC
-#undef MH_MAGIC
-#endif
-#ifdef MH_CIGAM
-#undef MH_CIGAM
-#endif
-#ifdef MH_MAGIC_64
-#undef MH_MAGIC_64
-#endif
-#ifdef MH_CIGAM_64
-#undef MH_CIGAM_64
-#endif
-#ifdef MH_OBJECT
-#undef MH_OBJECT
-#endif
-#ifdef MH_EXECUTE
-#undef MH_EXECUTE
-#endif
-#ifdef MH_FVMLIB
-#undef MH_FVMLIB
-#endif
-#ifdef MH_CORE
-#undef MH_CORE
-#endif
-#ifdef MH_PRELOAD
-#undef MH_PRELOAD
-#endif
-#ifdef MH_DYLIB
-#undef MH_DYLIB
-#endif
-#ifdef MH_DYLINKER
-#undef MH_DYLINKER
-#endif
-#ifdef MH_DYLIB_STUB
-#undef MH_DYLIB_STUB
-#endif
-#ifdef MH_DSYM
-#undef MH_DSYM
-#endif
-#ifdef MH_BUNDLE
-#undef MH_BUNDLE
-#endif
-#ifdef MH_KEXT_BUNDLE
-#undef MH_KEXT_BUNDLE
-#endif
-#ifdef MH_NOUNDEFS
-#undef MH_NOUNDEFS
-#endif
-#ifdef MH_INCRLINK
-#undef MH_INCRLINK
-#endif
-#ifdef MH_DYLDLINK
-#undef MH_DYLDLINK
-#endif
-#ifdef MH_BINDATLOAD
-#undef MH_BINDATLOAD
-#endif
 #ifdef CPU_TYPE_ARM
 #undef CPU_TYPE_ARM
 #endif
