@@ -3,12 +3,28 @@
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64"
 
+; loop1 contains an irreducible cycle, which may loop infinitely. Do not remove
+; the loop.
 define void @irreducible_subloop_no_mustprogress(i1 %c1, i1 %c2, i1 %c3) {
 ; CHECK-LABEL: @irreducible_subloop_no_mustprogress(
-; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP1:%.*]]
+; CHECK:       loop1:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[LOOP1_BB1:%.*]], label [[IRR_BB1:%.*]]
+; CHECK:       loop1.bb1:
+; CHECK-NEXT:    br label [[IRR_BB2:%.*]]
+; CHECK:       irr.bb1:
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[LOOP1_LATCH:%.*]], label [[IRR_BB2]]
+; CHECK:       irr.bb2:
+; CHECK-NEXT:    br i1 [[C3:%.*]], label [[LOOP1_LATCH]], label [[IRR_BB1]]
+; CHECK:       loop1.latch:
+; CHECK-NEXT:    br i1 false, label [[LOOP1_LATCH_LOOP1_CRIT_EDGE:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop1.latch.loop1_crit_edge:
+; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
+entry:
   br label %loop1
 
 loop1:
