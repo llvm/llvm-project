@@ -17,14 +17,14 @@
 #if SANITIZER_FREEBSD || SANITIZER_FUCHSIA || SANITIZER_LINUX || \
     SANITIZER_NETBSD || SANITIZER_RTEMS || SANITIZER_SOLARIS
 
-#include "sanitizer_common/sanitizer_allocator_checks.h"
-#include "sanitizer_common/sanitizer_errno.h"
-#include "sanitizer_common/sanitizer_tls_get_addr.h"
-#include "asan_allocator.h"
-#include "asan_interceptors.h"
-#include "asan_internal.h"
-#include "asan_malloc_local.h"
-#include "asan_stack.h"
+#  include "asan_allocator.h"
+#  include "asan_interceptors.h"
+#  include "asan_internal.h"
+#  include "asan_malloc_local.h"
+#  include "asan_stack.h"
+#  include "sanitizer_common/sanitizer_allocator_checks.h"
+#  include "sanitizer_common/sanitizer_errno.h"
+#  include "sanitizer_common/sanitizer_tls_get_addr.h"
 
 // ---------------------- Replacement functions ---------------- {{{1
 using namespace __asan;
@@ -82,27 +82,23 @@ static int PosixMemalignFromLocalPool(void **memptr, uptr alignment,
   return 0;
 }
 
-#if SANITIZER_RTEMS
-void* MemalignFromLocalPool(uptr alignment, uptr size) {
+#  if SANITIZER_RTEMS
+void *MemalignFromLocalPool(uptr alignment, uptr size) {
   void *ptr = nullptr;
   alignment = Max(alignment, kWordSize);
   PosixMemalignFromLocalPool(&ptr, alignment, size);
   return ptr;
 }
 
-bool IsFromLocalPool(const void *ptr) {
-  return IsInDlsymAllocPool(ptr);
-}
-#endif
+bool IsFromLocalPool(const void *ptr) { return IsInDlsymAllocPool(ptr); }
+#  endif
 
 static inline bool MaybeInDlsym() {
   // Fuchsia doesn't use dlsym-based interceptors.
   return !SANITIZER_FUCHSIA && asan_init_is_running;
 }
 
-static inline bool UseLocalPool() {
-  return EarlyMalloc() || MaybeInDlsym();
-}
+static inline bool UseLocalPool() { return EarlyMalloc() || MaybeInDlsym(); }
 
 static void *ReallocFromLocalPool(void *ptr, uptr size) {
   const uptr offset = (uptr)ptr - (uptr)alloc_memory_for_dlsym;
