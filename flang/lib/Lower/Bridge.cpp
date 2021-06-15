@@ -212,8 +212,10 @@ public:
     for (const auto &var : funit.getOrderedSymbolTable()) {
       const auto &sym = var.getSymbol();
       if (const auto *details =
-              sym.detailsIf<Fortran::semantics::HostAssocDetails>())
+              sym.detailsIf<Fortran::semantics::HostAssocDetails>()) {
+        LLVM_DEBUG(llvm::dbgs() << "host associated symbol " << sym << '\n');
         escapees.insert(&details->symbol());
+      }
     }
   }
 

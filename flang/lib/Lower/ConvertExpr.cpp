@@ -1448,16 +1448,24 @@ public:
   // Return the coordinate of the array reference
   ExtValue gen(const Fortran::evaluate::ArrayRef &aref) {
     if (aref.base().IsSymbol()) {
+      auto loc = getLoc();
       auto &symbol = aref.base().GetFirstSymbol();
+      // Check for command-line override to use array_coor op.
       if (generateArrayCoordinate)
         return genArrayCoorOp(gen(symbol), aref);
+      // Otherwise, use coordinate_of op.
       auto si = symMap.lookupSymbol(symbol);
       si = si.match(
           [&](const Fortran::lower::SymbolBox::PointerOrAllocatable &x)
               -> Fortran::lower::SymbolBox {
             return genAllocatableOrPointerUnbox(x);
           },
-          [](const auto &x) -> Fortran::lower::SymbolBox { return x; });
+          [](const auto &x) -> Fortran::lower::SymbolBox { return x; },
+          [&](const Fortran::lower::SymbolBox::None &)
+              -> Fortran::lower::SymbolBox {
+            fir::emitFatalError(loc, "the symbol referenced in the array "
+                                     "expression is not in the symbol map");
+          });
       auto isIrBox = si.getAddr().getType().isa<fir::BoxType>();
       if (!si.hasConstantShape() && !isIrBox)
         return gen(si, aref);
@@ -1465,7 +1473,6 @@ public:
       auto base = fir::getBase(box);
       unsigned i = 0;
       llvm::SmallVector<mlir::Value> args;
-      auto loc = getLoc();
       for (auto &subsc : aref.subscript()) {
         auto subVal = genSubscript(subsc);
         assert(fir::isUnboxedValue(subVal));
