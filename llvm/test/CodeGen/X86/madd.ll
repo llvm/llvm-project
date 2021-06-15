@@ -1987,12 +1987,12 @@ define <16 x i32> @pmaddwd_32(<32 x i16> %A, <32 x i16> %B) {
 define <4 x i32> @pmaddwd_const(<8 x i16> %A) {
 ; SSE2-LABEL: pmaddwd_const:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pmaddwd {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: pmaddwd_const:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmaddwd {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
    %a = sext <8 x i16> %A to <8 x i32>
    %m = mul nsw <8 x i32> %a, <i32 32767, i32 -32768, i32 0, i32 0, i32 1, i32 7, i32 42, i32 32>
@@ -2077,15 +2077,15 @@ define <4 x i32> @pmaddwd_negative2(<8 x i16> %A) {
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vpmovsxwd %xmm1, %xmm1
 ; AVX1-NEXT:    vpmovsxwd %xmm0, %xmm0
-; AVX1-NEXT:    vpmulld {{.*}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vpmulld {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX256-LABEL: pmaddwd_negative2:
 ; AVX256:       # %bb.0:
 ; AVX256-NEXT:    vpmovsxwd %xmm0, %ymm0
-; AVX256-NEXT:    vpmulld {{.*}}(%rip), %ymm0, %ymm0
+; AVX256-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX256-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX256-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
 ; AVX256-NEXT:    vzeroupper

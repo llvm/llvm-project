@@ -17,8 +17,9 @@
 
 using namespace mlir;
 
-extern "C" MlirExecutionEngine mlirExecutionEngineCreate(MlirModule op,
-                                                         int optLevel) {
+extern "C" MlirExecutionEngine
+mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
+                          const MlirStringRef *sharedLibPaths) {
   static bool initOnce = [] {
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
@@ -39,13 +40,18 @@ extern "C" MlirExecutionEngine mlirExecutionEngineCreate(MlirModule op,
     return MlirExecutionEngine{nullptr};
   }
 
+  SmallVector<StringRef> libPaths;
+  for (unsigned i = 0; i < static_cast<unsigned>(numPaths); ++i)
+    libPaths.push_back(sharedLibPaths[i].data);
+
   // Create a transformer to run all LLVM optimization passes at the
   // specified optimization level.
   auto llvmOptLevel = static_cast<llvm::CodeGenOpt::Level>(optLevel);
   auto transformer = mlir::makeLLVMPassesTransformer(
       /*passes=*/{}, llvmOptLevel, /*targetMachine=*/tmOrError->get());
-  auto jitOrError = ExecutionEngine::create(
-      unwrap(op), /*llvmModuleBuilder=*/{}, transformer, llvmOptLevel);
+  auto jitOrError =
+      ExecutionEngine::create(unwrap(op), /*llvmModuleBuilder=*/{}, transformer,
+                              llvmOptLevel, libPaths);
   if (!jitOrError) {
     consumeError(jitOrError.takeError());
     return MlirExecutionEngine{nullptr};

@@ -48,7 +48,8 @@ void testSimpleExecution() {
   // clang-format on
   lowerModuleToLLVM(ctx, module);
   mlirRegisterAllLLVMTranslations(ctx);
-  MlirExecutionEngine jit = mlirExecutionEngineCreate(module, /*optLevel=*/2);
+  MlirExecutionEngine jit = mlirExecutionEngineCreate(
+      module, /*optLevel=*/2, /*numPaths=*/0, /*sharedLibPaths=*/NULL);
   if (mlirExecutionEngineIsNull(jit)) {
     fprintf(stderr, "Execution engine creation failed");
     exit(2);

@@ -108,7 +108,8 @@ CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
       ImplicitCopyConstructorCanHaveConstParamForNonVBase(true),
       ImplicitCopyAssignmentHasConstParam(true),
       HasDeclaredCopyConstructorWithConstParam(false),
-      HasDeclaredCopyAssignmentWithConstParam(false), IsLambda(false),
+      HasDeclaredCopyAssignmentWithConstParam(false),
+      IsAnyDestructorNoReturn(false), IsLambda(false),
       IsParsingBaseSpecifiers(false), ComputedVisibleConversions(false),
       HasODRHash(false), Definition(D) {}
 
@@ -423,6 +424,9 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
 
     if (!BaseClassDecl->hasIrrelevantDestructor())
       data().HasIrrelevantDestructor = false;
+
+    if (BaseClassDecl->isAnyDestructorNoReturn())
+      data().IsAnyDestructorNoReturn = true;
 
     // C++11 [class.copy]p18:
     //   The implicitly-declared copy assignment operator for a class X will
@@ -836,6 +840,9 @@ void CXXRecordDecl::addedMember(Decl *D) {
       data().HasTrivialSpecialMembers &= ~SMF_Destructor;
       data().HasTrivialSpecialMembersForCall &= ~SMF_Destructor;
     }
+
+    if (DD->isNoReturn())
+      data().IsAnyDestructorNoReturn = true;
   }
 
   // Handle member functions.
@@ -1233,6 +1240,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
           data().HasTrivialSpecialMembersForCall &= ~SMF_Destructor;
         if (!FieldRec->hasIrrelevantDestructor())
           data().HasIrrelevantDestructor = false;
+        if (FieldRec->isAnyDestructorNoReturn())
+          data().IsAnyDestructorNoReturn = true;
         if (FieldRec->hasObjectMember())
           setHasObjectMember(true);
         if (FieldRec->hasVolatileMember())
@@ -1886,29 +1895,6 @@ CXXDestructorDecl *CXXRecordDecl::getDestructor() const {
   DeclContext::lookup_result R = lookup(Name);
 
   return R.empty() ? nullptr : dyn_cast<CXXDestructorDecl>(R.front());
-}
-
-bool CXXRecordDecl::isAnyDestructorNoReturn() const {
-  // Destructor is noreturn.
-  if (const CXXDestructorDecl *Destructor = getDestructor())
-    if (Destructor->isNoReturn())
-      return true;
-
-  // Check base classes destructor for noreturn.
-  for (const auto &Base : bases())
-    if (const CXXRecordDecl *RD = Base.getType()->getAsCXXRecordDecl())
-      if (RD->isAnyDestructorNoReturn())
-        return true;
-
-  // Check fields for noreturn.
-  for (const auto *Field : fields())
-    if (const CXXRecordDecl *RD =
-            Field->getType()->getBaseElementTypeUnsafe()->getAsCXXRecordDecl())
-      if (RD->isAnyDestructorNoReturn())
-        return true;
-
-  // All destructors are not noreturn.
-  return false;
 }
 
 static bool isDeclContextInNamespace(const DeclContext *DC) {

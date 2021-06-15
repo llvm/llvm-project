@@ -1148,3 +1148,21 @@ func @tensor_pad_cast_fold(%arg0: tensor<4x4xf32>) -> tensor<4x4xf32> {
 // CHECK-LABEL: @tensor_pad_cast
 // CHECK-SAME: %[[ARG0:.+]]: tensor<4x4xf32>
 // CHECK: return %[[ARG0]]
+
+// -----
+
+// CHECK-LABEL: func @pad_static_zero_cast(
+//  CHECK-SAME:                  %[[ARG0:.*]]: tensor<?x?x?xf32>
+//   CHECK-NOT:   linalg.pad_tensor
+//       CHECK:   %[[RESULT:.*]] = tensor.cast %[[ARG0]] : tensor<?x?x?xf32> to tensor<2x3x4xf32>
+//       CHECK:   return %[[RESULT]]
+func @pad_static_zero_cast(%arg0: tensor<?x?x?xf32>, %pad_value: f32) -> tensor<2x3x4xf32> {
+  %c0 = constant 0 : index
+  %0 = linalg.pad_tensor %arg0 low[0, %c0, 0] high[0, 0, %c0] {
+    ^bb0(%arg1: index, %arg2: index, %arg3: index):
+      linalg.yield %pad_value : f32
+    } : tensor<?x?x?xf32> to tensor<2x3x4xf32>
+
+  return %0 : tensor<2x3x4xf32>
+}
+

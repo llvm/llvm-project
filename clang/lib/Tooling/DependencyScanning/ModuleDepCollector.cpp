@@ -18,11 +18,10 @@ using namespace clang;
 using namespace tooling;
 using namespace dependencies;
 
-static CompilerInvocation
-makeInvocationForModuleBuildWithoutPaths(const ModuleDeps &Deps,
-                                         const CompilerInvocation &Invocation) {
-  // Make a deep copy of the invocation.
-  CompilerInvocation CI(Invocation);
+CompilerInvocation ModuleDepCollector::makeInvocationForModuleBuildWithoutPaths(
+    const ModuleDeps &Deps) const {
+  // Make a deep copy of the original Clang invocation.
+  CompilerInvocation CI(OriginalInvocation);
 
   // Remove options incompatible with explicit module build.
   CI.getFrontendOpts().Inputs.clear();
@@ -33,6 +32,14 @@ makeInvocationForModuleBuildWithoutPaths(const ModuleDeps &Deps,
   CI.getFrontendOpts().IsSystemModule = Deps.IsSystem;
 
   CI.getLangOpts()->ImplicitModules = false;
+
+  // Report the prebuilt modules this module uses.
+  for (const auto &PrebuiltModule : Deps.PrebuiltModuleDeps) {
+    CI.getFrontendOpts().ModuleFiles.push_back(PrebuiltModule.PCMFile);
+    CI.getFrontendOpts().ModuleMapFiles.push_back(PrebuiltModule.ModuleMapFile);
+  }
+
+  CI.getPreprocessorOpts().ImplicitPCHInclude.clear();
 
   return CI;
 }
@@ -148,7 +155,11 @@ void ModuleDepCollectorPP::handleImport(const Module *Imported) {
     return;
 
   const Module *TopLevelModule = Imported->getTopLevelModule();
-  DirectModularDeps.insert(TopLevelModule);
+
+  if (MDC.isPrebuiltModule(TopLevelModule))
+    DirectPrebuiltModularDeps.insert(TopLevelModule);
+  else
+    DirectModularDeps.insert(TopLevelModule);
 }
 
 void ModuleDepCollectorPP::EndOfMainFile() {
@@ -156,14 +167,22 @@ void ModuleDepCollectorPP::EndOfMainFile() {
   MDC.MainFile = std::string(
       Instance.getSourceManager().getFileEntryForID(MainFileID)->getName());
 
+  if (!Instance.getPreprocessorOpts().ImplicitPCHInclude.empty())
+    MDC.FileDeps.push_back(Instance.getPreprocessorOpts().ImplicitPCHInclude);
+
   for (const Module *M : DirectModularDeps)
     handleTopLevelModule(M);
+
+  MDC.Consumer.handleDependencyOutputOpts(*MDC.Opts);
 
   for (auto &&I : MDC.ModularDeps)
     MDC.Consumer.handleModuleDependency(I.second);
 
   for (auto &&I : MDC.FileDeps)
-    MDC.Consumer.handleFileDependency(*MDC.Opts, I);
+    MDC.Consumer.handleFileDependency(I);
+
+  for (auto &&I : DirectPrebuiltModularDeps)
+    MDC.Consumer.handlePrebuiltModuleDependency(PrebuiltModuleDep{I});
 }
 
 ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
@@ -203,14 +222,26 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
         MD.FileDeps.insert(IF.getFile()->getName());
       });
 
-  MD.Invocation =
-      makeInvocationForModuleBuildWithoutPaths(MD, Instance.getInvocation());
+  // Add direct prebuilt module dependencies now, so that we can use them when
+  // creating a CompilerInvocation and computing context hash for this
+  // ModuleDeps instance.
+  addDirectPrebuiltModuleDeps(M, MD);
+
+  MD.Invocation = MDC.makeInvocationForModuleBuildWithoutPaths(MD);
   MD.ID.ContextHash = MD.Invocation.getModuleHash();
 
   llvm::DenseSet<const Module *> AddedModules;
   addAllSubmoduleDeps(M, MD, AddedModules);
 
   return MD.ID;
+}
+
+void ModuleDepCollectorPP::addDirectPrebuiltModuleDeps(const Module *M,
+                                                       ModuleDeps &MD) {
+  for (const Module *Import : M->Imports)
+    if (Import->getTopLevelModule() != M->getTopLevelModule())
+      if (MDC.isPrebuiltModule(Import))
+        MD.PrebuiltModuleDeps.emplace_back(Import);
 }
 
 void ModuleDepCollectorPP::addAllSubmoduleDeps(
@@ -226,7 +257,8 @@ void ModuleDepCollectorPP::addModuleDep(
     const Module *M, ModuleDeps &MD,
     llvm::DenseSet<const Module *> &AddedModules) {
   for (const Module *Import : M->Imports) {
-    if (Import->getTopLevelModule() != M->getTopLevelModule()) {
+    if (Import->getTopLevelModule() != M->getTopLevelModule() &&
+        !MDC.isPrebuiltModule(Import)) {
       ModuleID ImportID = handleTopLevelModule(Import->getTopLevelModule());
       if (AddedModules.insert(Import->getTopLevelModule()).second)
         MD.ClangModuleDeps.push_back(ImportID);
@@ -236,11 +268,24 @@ void ModuleDepCollectorPP::addModuleDep(
 
 ModuleDepCollector::ModuleDepCollector(
     std::unique_ptr<DependencyOutputOptions> Opts, CompilerInstance &I,
-    DependencyConsumer &C)
-    : Instance(I), Consumer(C), Opts(std::move(Opts)) {}
+    DependencyConsumer &C, CompilerInvocation &&OriginalCI)
+    : Instance(I), Consumer(C), Opts(std::move(Opts)),
+      OriginalInvocation(std::move(OriginalCI)) {}
 
 void ModuleDepCollector::attachToPreprocessor(Preprocessor &PP) {
   PP.addPPCallbacks(std::make_unique<ModuleDepCollectorPP>(Instance, *this));
 }
 
 void ModuleDepCollector::attachToASTReader(ASTReader &R) {}
+
+bool ModuleDepCollector::isPrebuiltModule(const Module *M) {
+  std::string Name(M->getTopLevelModuleName());
+  const auto &PrebuiltModuleFiles =
+      Instance.getHeaderSearchOpts().PrebuiltModuleFiles;
+  auto PrebuiltModuleFileIt = PrebuiltModuleFiles.find(Name);
+  if (PrebuiltModuleFileIt == PrebuiltModuleFiles.end())
+    return false;
+  assert("Prebuilt module came from the expected AST file" &&
+         PrebuiltModuleFileIt->second == M->getASTFile()->getName());
+  return true;
+}

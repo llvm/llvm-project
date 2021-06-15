@@ -1,4 +1,4 @@
-//===- MemRefDataFlowOpt.cpp - MemRef DataFlow Optimization pass ------ -*-===//
+//===- AffineScalarReplacement.cpp - Affine scalar replacement pass -------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a pass to forward memref stores to loads, thereby
-// potentially getting rid of intermediate memref's entirely. It also removes
+// This file implements a pass to forward affine memref stores to loads, thereby
+// potentially getting rid of intermediate memrefs entirely. It also removes
 // redundant loads.
 // TODO: In the future, similar techniques could be used to eliminate
 // dead memref store's and perform more complex forwarding when support for
@@ -18,11 +18,11 @@
 #include "mlir/Analysis/AffineAnalysis.h"
 #include "mlir/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include <algorithm>
 
@@ -66,7 +66,8 @@ namespace {
 // currently only eliminates the stores only if no other loads/uses (other
 // than dealloc) remain.
 //
-struct MemRefDataFlowOpt : public MemRefDataFlowOptBase<MemRefDataFlowOpt> {
+struct AffineScalarReplacement
+    : public AffineScalarReplacementBase<AffineScalarReplacement> {
   void runOnFunction() override;
 
   LogicalResult forwardStoreToLoad(AffineReadOpInterface loadOp);
@@ -86,8 +87,9 @@ struct MemRefDataFlowOpt : public MemRefDataFlowOptBase<MemRefDataFlowOpt> {
 
 /// Creates a pass to perform optimizations relying on memref dataflow such as
 /// store to load forwarding, elimination of dead stores, and dead allocs.
-std::unique_ptr<OperationPass<FuncOp>> mlir::createMemRefDataFlowOptPass() {
-  return std::make_unique<MemRefDataFlowOpt>();
+std::unique_ptr<OperationPass<FuncOp>>
+mlir::createAffineScalarReplacementPass() {
+  return std::make_unique<AffineScalarReplacement>();
 }
 
 // Check if the store may be reaching the load.
@@ -115,7 +117,7 @@ static bool storeMayReachLoad(Operation *storeOp, Operation *loadOp,
 // This is a straightforward implementation not optimized for speed. Optimize
 // if needed.
 LogicalResult
-MemRefDataFlowOpt::forwardStoreToLoad(AffineReadOpInterface loadOp) {
+AffineScalarReplacement::forwardStoreToLoad(AffineReadOpInterface loadOp) {
   // First pass over the use list to get the minimum number of surrounding
   // loops common between the load op and the store op, with min taken across
   // all store ops.
@@ -206,7 +208,7 @@ MemRefDataFlowOpt::forwardStoreToLoad(AffineReadOpInterface loadOp) {
 // 1) loadA and loadB have mathematically equivalent affine access functions.
 // 2) loadB dominates loadA.
 // 3) loadB postdominates all the store op's that have a dependence into loadA.
-void MemRefDataFlowOpt::loadCSE(AffineReadOpInterface loadOp) {
+void AffineScalarReplacement::loadCSE(AffineReadOpInterface loadOp) {
   // The list of load op candidates for forwarding that satisfy conditions
   // (1) and (2) above - they will be filtered later when checking (3).
   SmallVector<Operation *, 8> fwdingCandidates;
@@ -283,7 +285,7 @@ void MemRefDataFlowOpt::loadCSE(AffineReadOpInterface loadOp) {
   loadOpsToErase.push_back(loadOp);
 }
 
-void MemRefDataFlowOpt::runOnFunction() {
+void AffineScalarReplacement::runOnFunction() {
   // Only supports single block functions at the moment.
   FuncOp f = getFunction();
   if (!llvm::hasSingleElement(f)) {

@@ -212,6 +212,10 @@ CODEGENOPT(NewStructPathTBAA , 1, 0) ///< Whether or not to use enhanced struct-
 CODEGENOPT(SaveTempLabels    , 1, 0) ///< Save temporary labels.
 CODEGENOPT(SanitizeAddressUseAfterScope , 1, 0) ///< Enable use-after-scope detection
                                                 ///< in AddressSanitizer
+ENUM_CODEGENOPT(SanitizeAddressUseAfterReturn,
+                llvm::AsanDetectStackUseAfterReturnMode, 2,
+                llvm::AsanDetectStackUseAfterReturnMode::Runtime
+                ) ///< Set detection mode for stack-use-after-return.
 CODEGENOPT(SanitizeAddressPoisonCustomArrayCookie, 1,
            0) ///< Enable poisoning operator new[] which is not a replaceable
               ///< global allocation function in AddressSanitizer

@@ -71,7 +71,7 @@ define i128 @test2(i128 %x) nounwind {
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    movq $-4, %rcx
-; X64-NEXT:    callq __udivti3
+; X64-NEXT:    callq __udivti3@PLT
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
   %tmp = udiv i128 %x, -73786976294838206464
@@ -120,7 +120,7 @@ define i128 @test3(i128 %x) nounwind {
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movq $-3, %rdx
 ; X64-NEXT:    movq $-5, %rcx
-; X64-NEXT:    callq __udivti3
+; X64-NEXT:    callq __udivti3@PLT
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
   %tmp = udiv i128 %x, -73786976294838206467

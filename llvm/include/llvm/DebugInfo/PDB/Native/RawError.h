@@ -11,8 +11,6 @@
 
 #include "llvm/Support/Error.h"
 
-#include <string>
-
 namespace llvm {
 namespace pdb {
 enum class raw_error_code {

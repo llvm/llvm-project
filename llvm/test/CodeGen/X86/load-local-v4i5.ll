@@ -6,7 +6,7 @@
 define void @_start() {
 ; CHECK-LABEL: _start:
 ; CHECK:       # %bb.0: # %Entry
-; CHECK-NEXT:    movl {{.*}}(%rip), %eax
+; CHECK-NEXT:    movl __unnamed_1(%rip), %eax
 ; CHECK-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb -{{[0-9]+}}(%rsp), %cl
 ; CHECK-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx

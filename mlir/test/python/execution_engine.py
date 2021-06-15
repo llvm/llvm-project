@@ -219,7 +219,7 @@ func private @some_callback_into_python(memref<2x2xf32>) -> () attributes { llvm
 
 run(testRankedMemRefCallback)
 
-#  Test addition of two memref
+#  Test addition of two memrefs.
 # CHECK-LABEL: TEST: testMemrefAdd
 def testMemrefAdd():
     with Context():
@@ -308,3 +308,34 @@ def testDynamicMemrefAdd2D():
         log(np.allclose(arg1+arg2, res))
 
 run(testDynamicMemrefAdd2D)
+
+#  Test loading of shared libraries.
+# CHECK-LABEL: TEST: testSharedLibLoad
+def testSharedLibLoad():
+    with Context():
+        module = Module.parse(
+            """
+      module  {
+      func @main(%arg0: memref<1xf32>) attributes { llvm.emit_c_interface } {
+        %c0 = constant 0 : index
+        %cst42 = constant 42.0 : f32
+        memref.store %cst42, %arg0[%c0] : memref<1xf32>
+        %u_memref = memref.cast %arg0 : memref<1xf32> to memref<*xf32>
+        call @print_memref_f32(%u_memref) : (memref<*xf32>) -> ()
+        return
+      }
+      func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+     } """
+        )
+        arg0 = np.array([0.0]).astype(np.float32)
+
+        arg0_memref_ptr = ctypes.pointer(ctypes.pointer(get_ranked_memref_descriptor(arg0)))
+
+        execution_engine = ExecutionEngine(lowerToLLVM(module), opt_level=3,
+                shared_libs=["../../../../lib/libmlir_runner_utils.so",
+                    "../../../../lib/libmlir_c_runner_utils.so"])
+        execution_engine.invoke("main", arg0_memref_ptr)
+        # CHECK: Unranked Memref
+        # CHECK-NEXT: [42]
+
+run(testSharedLibLoad)

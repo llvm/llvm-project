@@ -494,14 +494,14 @@ define <16 x i16> @merge_16i16_i16_0uu3zzuuuuuzCuEF(i16* %ptr) nounwind uwtable 
 ; AVX-LABEL: merge_16i16_i16_0uu3zzuuuuuzCuEF:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovups (%rdi), %ymm0
-; AVX-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    retq
 ;
 ; X86-AVX-LABEL: merge_16i16_i16_0uu3zzuuuuuzCuEF:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    vmovups (%eax), %ymm0
-; X86-AVX-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X86-AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-AVX-NEXT:    retl
   %ptr0 = getelementptr inbounds i16, i16* %ptr, i64 0
   %ptr3 = getelementptr inbounds i16, i16* %ptr, i64 3
@@ -680,7 +680,7 @@ define <16 x i16> @merge_16i16_i16_0uu3zzuuuuuzCuEF_volatile(i16* %ptr) nounwind
 define <2 x i8> @PR42846(<2 x i8>* %j, <2 x i8> %k) {
 ; AVX-LABEL: PR42846:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqa {{.*}}(%rip), %ymm0
+; AVX-NEXT:    vmovdqa l(%rip), %ymm0
 ; AVX-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX-NEXT:    vzeroupper

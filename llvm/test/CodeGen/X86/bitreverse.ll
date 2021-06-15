@@ -59,27 +59,27 @@ define <2 x i16> @test_bitreverse_v2i16(<2 x i16> %a) nounwind {
 ; X64-NEXT:    por %xmm1, %xmm0
 ; X64-NEXT:    movdqa %xmm0, %xmm1
 ; X64-NEXT:    psllw $4, %xmm1
-; X64-NEXT:    pand {{.*}}(%rip), %xmm1
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-NEXT:    psrlw $4, %xmm0
-; X64-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    por %xmm1, %xmm0
 ; X64-NEXT:    movdqa {{.*#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; X64-NEXT:    pand %xmm0, %xmm1
 ; X64-NEXT:    psllw $2, %xmm1
-; X64-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    psrlw $2, %xmm0
 ; X64-NEXT:    por %xmm1, %xmm0
 ; X64-NEXT:    movdqa {{.*#+}} xmm1 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
 ; X64-NEXT:    pand %xmm0, %xmm1
 ; X64-NEXT:    paddb %xmm1, %xmm1
-; X64-NEXT:    pand {{.*}}(%rip), %xmm0
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    psrlw $1, %xmm0
 ; X64-NEXT:    por %xmm1, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86XOP-LABEL: test_bitreverse_v2i16:
 ; X86XOP:       # %bb.0:
-; X86XOP-NEXT:    vpperm {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
+; X86XOP-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
 ; X86XOP-NEXT:    retl
   %b = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> %a)
   ret <2 x i16> %b
@@ -155,7 +155,7 @@ define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ; X86XOP-LABEL: test_bitreverse_i64:
 ; X86XOP:       # %bb.0:
 ; X86XOP-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; X86XOP-NEXT:    vpperm {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
+; X86XOP-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
 ; X86XOP-NEXT:    vmovd %xmm0, %eax
 ; X86XOP-NEXT:    vpextrd $1, %xmm0, %edx
 ; X86XOP-NEXT:    retl
@@ -213,7 +213,7 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; X86XOP-LABEL: test_bitreverse_i32:
 ; X86XOP:       # %bb.0:
 ; X86XOP-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86XOP-NEXT:    vpperm {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
+; X86XOP-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
 ; X86XOP-NEXT:    vmovd %xmm0, %eax
 ; X86XOP-NEXT:    retl
   %b = call i32 @llvm.bitreverse.i32(i32 %a)
@@ -272,7 +272,7 @@ define i24 @test_bitreverse_i24(i24 %a) nounwind {
 ; X86XOP-LABEL: test_bitreverse_i24:
 ; X86XOP:       # %bb.0:
 ; X86XOP-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86XOP-NEXT:    vpperm {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
+; X86XOP-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
 ; X86XOP-NEXT:    vmovd %xmm0, %eax
 ; X86XOP-NEXT:    shrl $8, %eax
 ; X86XOP-NEXT:    retl
@@ -332,7 +332,7 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; X86XOP-LABEL: test_bitreverse_i16:
 ; X86XOP:       # %bb.0:
 ; X86XOP-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86XOP-NEXT:    vpperm {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
+; X86XOP-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
 ; X86XOP-NEXT:    vmovd %xmm0, %eax
 ; X86XOP-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86XOP-NEXT:    retl
@@ -383,7 +383,7 @@ define i8 @test_bitreverse_i8(i8 %a) {
 ; X86XOP-LABEL: test_bitreverse_i8:
 ; X86XOP:       # %bb.0:
 ; X86XOP-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86XOP-NEXT:    vpperm {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
+; X86XOP-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
 ; X86XOP-NEXT:    vmovd %xmm0, %eax
 ; X86XOP-NEXT:    # kill: def $al killed $al killed $eax
 ; X86XOP-NEXT:    retl
@@ -436,7 +436,7 @@ define i4 @test_bitreverse_i4(i4 %a) {
 ; X86XOP-LABEL: test_bitreverse_i4:
 ; X86XOP:       # %bb.0:
 ; X86XOP-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86XOP-NEXT:    vpperm {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
+; X86XOP-NEXT:    vpperm {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0, %xmm0
 ; X86XOP-NEXT:    vmovd %xmm0, %eax
 ; X86XOP-NEXT:    shrb $4, %al
 ; X86XOP-NEXT:    # kill: def $al killed $al killed $eax

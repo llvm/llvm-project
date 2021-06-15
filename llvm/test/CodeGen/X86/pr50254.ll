@@ -18,12 +18,12 @@ define void @PR50254() {
 ;
 ; X64-LABEL: PR50254:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movswq {{.*}}(%rip), %rax
+; X64-NEXT:    movswq d.e(%rip), %rax
 ; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    testb %cl, %cl
 ; X64-NEXT:    jne .LBB0_2
 ; X64-NEXT:  # %bb.1: # %for.end
-; X64-NEXT:    movw %ax, {{.*}}(%rip)
+; X64-NEXT:    movw %ax, d.e(%rip)
 ; X64-NEXT:  .LBB0_2: # %for.body.1
 ; X64-NEXT:    retq
 entry:

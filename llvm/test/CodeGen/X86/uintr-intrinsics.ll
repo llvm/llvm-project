@@ -11,7 +11,7 @@ define i8 @test_uintr(i64 %arg) {
 ; X64-NEXT:    testui
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
-
+;
 ; X32-LABEL: test_uintr:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    clui
@@ -20,6 +20,7 @@ define i8 @test_uintr(i64 %arg) {
 ; X32-NEXT:    testui
 ; X32-NEXT:    setb %al
 ; X32-NEXT:    retq
+
 entry:
   call void @llvm.x86.clui()
   call void @llvm.x86.stui()

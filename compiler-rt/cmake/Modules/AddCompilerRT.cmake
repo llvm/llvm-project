@@ -148,7 +148,7 @@ endmacro()
 # Adds static or shared runtime for a list of architectures and operating
 # systems and puts it in the proper directory in the build and install trees.
 # add_compiler_rt_runtime(<name>
-#                         {OBJECT|STATIC|SHARED}
+#                         {OBJECT|STATIC|SHARED|MODULE}
 #                         ARCHS <architectures>
 #                         OS <os list>
 #                         SOURCES <source files>
@@ -161,8 +161,9 @@ endmacro()
 #                         PARENT_TARGET <convenience parent target>
 #                         ADDITIONAL_HEADERS <header files>)
 function(add_compiler_rt_runtime name type)
-  if(NOT type MATCHES "^(OBJECT|STATIC|SHARED)$")
-    message(FATAL_ERROR "type argument must be OBJECT, STATIC or SHARED")
+  if(NOT type MATCHES "^(OBJECT|STATIC|SHARED|MODULE)$")
+    message(FATAL_ERROR
+            "type argument must be OBJECT, STATIC, SHARED or MODULE")
     return()
   endif()
   cmake_parse_arguments(LIB

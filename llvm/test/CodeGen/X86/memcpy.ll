@@ -140,11 +140,6 @@ entry:
 }
 
 define void @test3_pgso(i8* nocapture %A, i8* nocapture %B) nounwind noredzone !prof !14 {
-; LINUX-LABEL: test3_pgso:
-; LINUX:       # %bb.0: # %entry
-; LINUX-NEXT:    movl $64, %edx
-; LINUX-NEXT:    jmp memcpy@PLT # TAILCALL
-;
 ; DARWIN-LABEL: test3_pgso:
 ; DARWIN:       ## %bb.0: ## %entry
 ; DARWIN-NEXT:    movq 56(%rsi), %rax
@@ -164,6 +159,42 @@ define void @test3_pgso(i8* nocapture %A, i8* nocapture %B) nounwind noredzone !
 ; DARWIN-NEXT:    movq %rcx, 8(%rdi)
 ; DARWIN-NEXT:    movq %rax, (%rdi)
 ; DARWIN-NEXT:    retq
+;
+; LINUX-LABEL: test3_pgso:
+; LINUX:       # %bb.0: # %entry
+; LINUX-NEXT:    movl $64, %edx
+; LINUX-NEXT:    jmp memcpy@PLT # TAILCALL
+;
+; LINUX-SKL-LABEL: test3_pgso:
+; LINUX-SKL:       # %bb.0: # %entry
+; LINUX-SKL-NEXT:    vmovups (%rsi), %ymm0
+; LINUX-SKL-NEXT:    vmovups 32(%rsi), %ymm1
+; LINUX-SKL-NEXT:    vmovups %ymm1, 32(%rdi)
+; LINUX-SKL-NEXT:    vmovups %ymm0, (%rdi)
+; LINUX-SKL-NEXT:    vzeroupper
+; LINUX-SKL-NEXT:    retq
+;
+; LINUX-SKX-LABEL: test3_pgso:
+; LINUX-SKX:       # %bb.0: # %entry
+; LINUX-SKX-NEXT:    vmovups (%rsi), %ymm0
+; LINUX-SKX-NEXT:    vmovups 32(%rsi), %ymm1
+; LINUX-SKX-NEXT:    vmovups %ymm1, 32(%rdi)
+; LINUX-SKX-NEXT:    vmovups %ymm0, (%rdi)
+; LINUX-SKX-NEXT:    vzeroupper
+; LINUX-SKX-NEXT:    retq
+;
+; LINUX-KNL-LABEL: test3_pgso:
+; LINUX-KNL:       # %bb.0: # %entry
+; LINUX-KNL-NEXT:    vmovups (%rsi), %zmm0
+; LINUX-KNL-NEXT:    vmovups %zmm0, (%rdi)
+; LINUX-KNL-NEXT:    retq
+;
+; LINUX-AVX512BW-LABEL: test3_pgso:
+; LINUX-AVX512BW:       # %bb.0: # %entry
+; LINUX-AVX512BW-NEXT:    vmovups (%rsi), %zmm0
+; LINUX-AVX512BW-NEXT:    vmovups %zmm0, (%rdi)
+; LINUX-AVX512BW-NEXT:    vzeroupper
+; LINUX-AVX512BW-NEXT:    retq
 entry:
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %A, i8* %B, i64 64, i1 false)
   ret void
@@ -362,25 +393,25 @@ define void @test5(i8* nocapture %C) nounwind uwtable ssp {
 ;
 ; LINUX-SKL-LABEL: test5:
 ; LINUX-SKL:       # %bb.0: # %entry
-; LINUX-SKL-NEXT:    vmovups {{.*}}(%rip), %xmm0
+; LINUX-SKL-NEXT:    vmovups .L.str(%rip), %xmm0
 ; LINUX-SKL-NEXT:    vmovups %xmm0, (%rdi)
 ; LINUX-SKL-NEXT:    retq
 ;
 ; LINUX-SKX-LABEL: test5:
 ; LINUX-SKX:       # %bb.0: # %entry
-; LINUX-SKX-NEXT:    vmovups {{.*}}(%rip), %xmm0
+; LINUX-SKX-NEXT:    vmovups .L.str(%rip), %xmm0
 ; LINUX-SKX-NEXT:    vmovups %xmm0, (%rdi)
 ; LINUX-SKX-NEXT:    retq
 ;
 ; LINUX-KNL-LABEL: test5:
 ; LINUX-KNL:       # %bb.0: # %entry
-; LINUX-KNL-NEXT:    vmovups {{.*}}(%rip), %xmm0
+; LINUX-KNL-NEXT:    vmovups .L.str(%rip), %xmm0
 ; LINUX-KNL-NEXT:    vmovups %xmm0, (%rdi)
 ; LINUX-KNL-NEXT:    retq
 ;
 ; LINUX-AVX512BW-LABEL: test5:
 ; LINUX-AVX512BW:       # %bb.0: # %entry
-; LINUX-AVX512BW-NEXT:    vmovups {{.*}}(%rip), %xmm0
+; LINUX-AVX512BW-NEXT:    vmovups .L.str(%rip), %xmm0
 ; LINUX-AVX512BW-NEXT:    vmovups %xmm0, (%rdi)
 ; LINUX-AVX512BW-NEXT:    retq
 entry:

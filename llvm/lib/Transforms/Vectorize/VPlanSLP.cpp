@@ -35,10 +35,10 @@
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include <algorithm>
 #include <cassert>
 #include <iterator>
-#include <string>
-#include <vector>
+#include <utility>
 
 using namespace llvm;
 

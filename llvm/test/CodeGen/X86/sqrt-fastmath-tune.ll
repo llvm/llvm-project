@@ -13,10 +13,10 @@ define float @f32_no_daz(float %f) #0 {
 ; NHM-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; NHM-NEXT:    mulss %xmm2, %xmm3
 ; NHM-NEXT:    mulss %xmm1, %xmm2
-; NHM-NEXT:    addss {{.*}}(%rip), %xmm2
-; NHM-NEXT:    andps {{.*}}(%rip), %xmm0
+; NHM-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; NHM-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; NHM-NEXT:    mulss %xmm3, %xmm2
-; NHM-NEXT:    cmpltss {{.*}}(%rip), %xmm0
+; NHM-NEXT:    cmpltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; NHM-NEXT:    andnps %xmm2, %xmm0
 ; NHM-NEXT:    retq
 ;
@@ -37,8 +37,8 @@ define <4 x float> @v4f32_no_daz(<4 x float> %f) #0 {
 ; NHM-NEXT:    movaps {{.*#+}} xmm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; NHM-NEXT:    mulps %xmm1, %xmm3
 ; NHM-NEXT:    mulps %xmm2, %xmm1
-; NHM-NEXT:    addps {{.*}}(%rip), %xmm1
-; NHM-NEXT:    andps {{.*}}(%rip), %xmm0
+; NHM-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; NHM-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; NHM-NEXT:    mulps %xmm3, %xmm1
 ; NHM-NEXT:    movaps {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
 ; NHM-NEXT:    cmpleps %xmm0, %xmm2
@@ -50,10 +50,10 @@ define <4 x float> @v4f32_no_daz(<4 x float> %f) #0 {
 ; SNB:       # %bb.0:
 ; SNB-NEXT:    vrsqrtps %xmm0, %xmm1
 ; SNB-NEXT:    vmulps %xmm1, %xmm0, %xmm2
-; SNB-NEXT:    vmulps {{.*}}(%rip), %xmm2, %xmm3
+; SNB-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm3
 ; SNB-NEXT:    vmulps %xmm1, %xmm2, %xmm1
-; SNB-NEXT:    vaddps {{.*}}(%rip), %xmm1, %xmm1
-; SNB-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; SNB-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; SNB-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; SNB-NEXT:    vmulps %xmm1, %xmm3, %xmm1
 ; SNB-NEXT:    vmovaps {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
 ; SNB-NEXT:    vcmpleps %xmm0, %xmm2, %xmm0
@@ -120,10 +120,10 @@ define <8 x float> @v8f32_no_daz(<8 x float> %f) #0 {
 ; SNB:       # %bb.0:
 ; SNB-NEXT:    vrsqrtps %ymm0, %ymm1
 ; SNB-NEXT:    vmulps %ymm1, %ymm0, %ymm2
-; SNB-NEXT:    vmulps {{.*}}(%rip), %ymm2, %ymm3
+; SNB-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm3
 ; SNB-NEXT:    vmulps %ymm1, %ymm2, %ymm1
-; SNB-NEXT:    vaddps {{.*}}(%rip), %ymm1, %ymm1
-; SNB-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; SNB-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; SNB-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; SNB-NEXT:    vmulps %ymm1, %ymm3, %ymm1
 ; SNB-NEXT:    vmovaps {{.*#+}} ymm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
 ; SNB-NEXT:    vcmpleps %ymm0, %ymm2, %ymm0
@@ -165,7 +165,7 @@ define float @f32_daz(float %f) #1 {
 ; NHM-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; NHM-NEXT:    mulss %xmm2, %xmm3
 ; NHM-NEXT:    mulss %xmm1, %xmm2
-; NHM-NEXT:    addss {{.*}}(%rip), %xmm2
+; NHM-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; NHM-NEXT:    mulss %xmm3, %xmm2
 ; NHM-NEXT:    xorps %xmm1, %xmm1
 ; NHM-NEXT:    cmpeqss %xmm1, %xmm0
@@ -189,7 +189,7 @@ define <4 x float> @v4f32_daz(<4 x float> %f) #1 {
 ; NHM-NEXT:    movaps {{.*#+}} xmm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; NHM-NEXT:    mulps %xmm2, %xmm3
 ; NHM-NEXT:    mulps %xmm1, %xmm2
-; NHM-NEXT:    addps {{.*}}(%rip), %xmm2
+; NHM-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; NHM-NEXT:    mulps %xmm3, %xmm2
 ; NHM-NEXT:    xorps %xmm1, %xmm1
 ; NHM-NEXT:    cmpneqps %xmm1, %xmm0
@@ -200,9 +200,9 @@ define <4 x float> @v4f32_daz(<4 x float> %f) #1 {
 ; SNB:       # %bb.0:
 ; SNB-NEXT:    vrsqrtps %xmm0, %xmm1
 ; SNB-NEXT:    vmulps %xmm1, %xmm0, %xmm2
-; SNB-NEXT:    vmulps {{.*}}(%rip), %xmm2, %xmm3
+; SNB-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm3
 ; SNB-NEXT:    vmulps %xmm1, %xmm2, %xmm1
-; SNB-NEXT:    vaddps {{.*}}(%rip), %xmm1, %xmm1
+; SNB-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; SNB-NEXT:    vmulps %xmm1, %xmm3, %xmm1
 ; SNB-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; SNB-NEXT:    vcmpneqps %xmm2, %xmm0, %xmm0
@@ -262,9 +262,9 @@ define <8 x float> @v8f32_daz(<8 x float> %f) #1 {
 ; SNB:       # %bb.0:
 ; SNB-NEXT:    vrsqrtps %ymm0, %ymm1
 ; SNB-NEXT:    vmulps %ymm1, %ymm0, %ymm2
-; SNB-NEXT:    vmulps {{.*}}(%rip), %ymm2, %ymm3
+; SNB-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm3
 ; SNB-NEXT:    vmulps %ymm1, %ymm2, %ymm1
-; SNB-NEXT:    vaddps {{.*}}(%rip), %ymm1, %ymm1
+; SNB-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; SNB-NEXT:    vmulps %ymm1, %ymm3, %ymm1
 ; SNB-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; SNB-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm0

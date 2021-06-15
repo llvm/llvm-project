@@ -13,7 +13,7 @@ define i32 @main() {
 ; CHECK:       ## %bb.0: ## %entry_nan.main
 ; CHECK-NEXT:    subl $28, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    fldl LCPI0_0
+; CHECK-NEXT:    fldl {{\.?LCPI[0-9]+_[0-9]+}}
 ; CHECK-NEXT:    fstpt (%esp)
 ; CHECK-NEXT:    calll __D3nan5printFeZv
 ; CHECK-NEXT:    subl $16, %esp

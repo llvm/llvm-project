@@ -184,6 +184,57 @@ def Tensor_GenerateOp : Tensor_Op<"generate",
 }
 
 //===----------------------------------------------------------------------===//
+// InsertOp
+//===----------------------------------------------------------------------===//
+
+def Tensor_InsertOp : Tensor_Op<"insert",
+    [NoSideEffect,
+     TypesMatchWith<"result type matches type of dest",
+                    "dest", "result",
+                    "$_self.cast<ShapedType>()">,
+     TypesMatchWith<"scalar type matches element type of dest",
+                    "dest", "scalar",
+                    "$_self.cast<ShapedType>().getElementType()">]> {
+  let summary = "element insertion operation";
+  let description = [{
+    The `tensor.insert` op writes a tensor into a tensor `dest`as specified by
+    the operation's indices.
+
+    It returns a copy of `dest` with the proper subtensor updated with the value
+    of `scalar`.
+
+    The arity of indices must match the rank of the tensor `dest` (i.e., if a
+    tensor is of rank 3, then 3 indices are required for the extract. The
+    indices should all be of `index` type.
+
+    Example:
+
+    ```mlir
+    %4 = tensor.insert %t into %dest[%1, %2] : tensor<4x4xi32>
+    %5 = tensor.insert %rt into %dest[%1, %2] : tensor<?x?xi32>
+    %6 = tensor.insert %ut into %dest[%1, %2] : tensor<*xi32>
+    ```
+  }];
+
+  let arguments = (ins AnyType:$scalar,
+                       AnyTensor:$dest,
+                       Variadic<Index>:$indices);
+  let results = (outs AnyTensor:$result);
+  let assemblyFormat = [{
+    $scalar `into` $dest `[` $indices `]` attr-dict `:` type($dest)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$scalar, "Value":$dest,
+      CArg<"ValueRange", "{}">:$indices), [{
+      auto resType = dest.getType();
+      build($_builder, $_state, resType, scalar, dest, indices);
+    }]>];
+
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // ReshapeOp
 //===----------------------------------------------------------------------===//
 

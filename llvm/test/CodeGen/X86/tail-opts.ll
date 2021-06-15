@@ -18,7 +18,7 @@ define dso_local void @tail_merge_me() nounwind {
 ; CHECK-LABEL: tail_merge_me:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq qux
+; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    je .LBB0_1
 ; CHECK-NEXT:  # %bb.6: # %A
@@ -26,7 +26,7 @@ define dso_local void @tail_merge_me() nounwind {
 ; CHECK-NEXT:    callq bar
 ; CHECK-NEXT:    jmp .LBB0_4
 ; CHECK-NEXT:  .LBB0_1: # %next
-; CHECK-NEXT:    callq qux
+; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    je .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # %B
@@ -37,9 +37,9 @@ define dso_local void @tail_merge_me() nounwind {
 ; CHECK-NEXT:    movl $2, %edi
 ; CHECK-NEXT:    callq dar
 ; CHECK-NEXT:  .LBB0_4: # %M
-; CHECK-NEXT:    movl $0, {{.*}}(%rip)
-; CHECK-NEXT:    movl $1, {{.*}}(%rip)
-; CHECK-NEXT:    callq qux
+; CHECK-NEXT:    movl $0, GHJK(%rip)
+; CHECK-NEXT:    movl $1, HABC(%rip)
+; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    je .LBB0_5
 ; CHECK-NEXT:  # %bb.7: # %return
@@ -98,18 +98,18 @@ define dso_local void @tail_duplicate_me() nounwind {
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq qux
+; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    movl $.Ltmp0, %edi
 ; CHECK-NEXT:    movl $.Ltmp1, %esi
 ; CHECK-NEXT:    movl %eax, %ebx
-; CHECK-NEXT:    callq choose
+; CHECK-NEXT:    callq choose@PLT
 ; CHECK-NEXT:    movq %rax, %r14
 ; CHECK-NEXT:    testb $1, %bl
 ; CHECK-NEXT:    je .LBB1_1
 ; CHECK-NEXT:  # %bb.7: # %A
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    callq bar
-; CHECK-NEXT:    movl $0, {{.*}}(%rip)
+; CHECK-NEXT:    movl $0, GHJK(%rip)
 ; CHECK-NEXT:    jmpq *%r14
 ; CHECK-NEXT:  .Ltmp0: # Block address taken
 ; CHECK-NEXT:  .LBB1_4: # %return
@@ -117,13 +117,13 @@ define dso_local void @tail_duplicate_me() nounwind {
 ; CHECK-NEXT:    callq ear
 ; CHECK-NEXT:    jmp .LBB1_5
 ; CHECK-NEXT:  .LBB1_1: # %next
-; CHECK-NEXT:    callq qux
+; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    je .LBB1_3
 ; CHECK-NEXT:  # %bb.2: # %B
 ; CHECK-NEXT:    movl $1, %edi
 ; CHECK-NEXT:    callq car
-; CHECK-NEXT:    movl $0, {{.*}}(%rip)
+; CHECK-NEXT:    movl $0, GHJK(%rip)
 ; CHECK-NEXT:    jmpq *%r14
 ; CHECK-NEXT:  .Ltmp1: # Block address taken
 ; CHECK-NEXT:  .LBB1_6: # %altret
@@ -137,7 +137,7 @@ define dso_local void @tail_duplicate_me() nounwind {
 ; CHECK-NEXT:  .LBB1_3: # %C
 ; CHECK-NEXT:    movl $2, %edi
 ; CHECK-NEXT:    callq dar
-; CHECK-NEXT:    movl $0, {{.*}}(%rip)
+; CHECK-NEXT:    movl $0, GHJK(%rip)
 ; CHECK-NEXT:    jmpq *%r14
 entry:
   %a = call i1 @qux()
@@ -270,7 +270,7 @@ define fastcc void @c_expand_expr_stmt(%union.tree_node* %expr) nounwind {
 ; CHECK-NEXT:    jne .LBB3_15
 ; CHECK-NEXT:  # %bb.7: # %bb.i.i
 ; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    callq lvalue_p
+; CHECK-NEXT:    callq lvalue_p@PLT
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    jmp .LBB3_16
@@ -529,8 +529,8 @@ define dso_local void @two() nounwind optsize {
 ; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB7_1: # %bb7
-; CHECK-NEXT:    movl $0, {{.*}}(%rip)
-; CHECK-NEXT:    movl $1, {{.*}}(%rip)
+; CHECK-NEXT:    movl $0, XYZ(%rip)
+; CHECK-NEXT:    movl $1, XYZ(%rip)
 entry:
   %0 = icmp eq i32 undef, 0
   br i1 %0, label %bbx, label %bby
@@ -570,8 +570,8 @@ define dso_local void @two_pgso() nounwind !prof !14 {
 ; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB8_1: # %bb7
-; CHECK-NEXT:    movl $0, {{.*}}(%rip)
-; CHECK-NEXT:    movl $1, {{.*}}(%rip)
+; CHECK-NEXT:    movl $0, XYZ(%rip)
+; CHECK-NEXT:    movl $1, XYZ(%rip)
 entry:
   %0 = icmp eq i32 undef, 0
   br i1 %0, label %bbx, label %bby
@@ -613,8 +613,8 @@ define dso_local void @two_minsize() nounwind minsize {
 ; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB9_1: # %bb7
-; CHECK-NEXT:    movl $0, {{.*}}(%rip)
-; CHECK-NEXT:    movl $1, {{.*}}(%rip)
+; CHECK-NEXT:    movl $0, XYZ(%rip)
+; CHECK-NEXT:    movl $1, XYZ(%rip)
 entry:
   %0 = icmp eq i32 undef, 0
   br i1 %0, label %bbx, label %bby
@@ -655,13 +655,13 @@ define dso_local void @two_nosize(i32 %x, i32 %y, i32 %z) nounwind {
 ; CHECK-NEXT:    testl %esi, %esi
 ; CHECK-NEXT:    je .LBB10_4
 ; CHECK-NEXT:  # %bb.2: # %bb7
-; CHECK-NEXT:    movl $0, {{.*}}(%rip)
+; CHECK-NEXT:    movl $0, XYZ(%rip)
 ; CHECK-NEXT:    jmp tail_call_me # TAILCALL
 ; CHECK-NEXT:  .LBB10_3: # %bbx
 ; CHECK-NEXT:    cmpl $-1, %edx
 ; CHECK-NEXT:    je .LBB10_4
 ; CHECK-NEXT:  # %bb.5: # %bb12
-; CHECK-NEXT:    movl $0, {{.*}}(%rip)
+; CHECK-NEXT:    movl $0, XYZ(%rip)
 ; CHECK-NEXT:    jmp tail_call_me # TAILCALL
 ; CHECK-NEXT:  .LBB10_4: # %return
 ; CHECK-NEXT:    retq
@@ -734,19 +734,19 @@ define dso_local void @merge_aborts() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq qux
+; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    je .LBB12_5
 ; CHECK-NEXT:  # %bb.1: # %cont1
-; CHECK-NEXT:    callq qux
+; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    je .LBB12_5
 ; CHECK-NEXT:  # %bb.2: # %cont2
-; CHECK-NEXT:    callq qux
+; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    je .LBB12_5
 ; CHECK-NEXT:  # %bb.3: # %cont3
-; CHECK-NEXT:    callq qux
+; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    je .LBB12_5
 ; CHECK-NEXT:  # %bb.4: # %cont4
@@ -794,19 +794,19 @@ define dso_local void @merge_alternating_aborts() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq qux
+; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    je .LBB13_5
 ; CHECK-NEXT:  # %bb.1: # %cont1
-; CHECK-NEXT:    callq qux
+; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    je .LBB13_6
 ; CHECK-NEXT:  # %bb.2: # %cont2
-; CHECK-NEXT:    callq qux
+; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    je .LBB13_5
 ; CHECK-NEXT:  # %bb.3: # %cont3
-; CHECK-NEXT:    callq qux
+; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    je .LBB13_6
 ; CHECK-NEXT:  # %bb.4: # %cont4
@@ -870,7 +870,7 @@ define dso_local void @bfi_new_block_pgso(i32 %c) nounwind {
 ; CHECK-NEXT:  # %bb.5: # %return
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB14_6: # %bb3
-; CHECK-NEXT:    movl $0, {{.*}}(%rip)
+; CHECK-NEXT:    movl $0, GV(%rip)
 ; CHECK-NEXT:  .LBB14_7: # %bb4
 ; CHECK-NEXT:    callq func
 ; CHECK-NEXT:    popq %rax

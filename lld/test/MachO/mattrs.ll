@@ -11,14 +11,14 @@
 
 ; FMA:      <_foo>:
 ; FMA-NEXT: vrcpss       %xmm0, %xmm0, %xmm1
-; FMA-NEXT: vfmsub213ss  7(%rip), %xmm1, %xmm0
+; FMA-NEXT: vfmsub213ss  [[#]](%rip), %xmm1, %xmm0
 ; FMA-NEXT: vfnmadd132ss %xmm1, %xmm1, %xmm0
 ; FMA-NEXT: retq
 
 ; NO-FMA:      <_foo>:
 ; NO-FMA-NEXT: vrcpss %xmm0, %xmm0, %xmm1
 ; NO-FMA-NEXT: vmulss %xmm1, %xmm0, %xmm0
-; NO-FMA-NEXT: vmovss 16(%rip), %xmm2
+; NO-FMA-NEXT: vmovss [[#]](%rip), %xmm2
 ; NO-FMA-NEXT: vsubss %xmm0, %xmm2, %xmm0
 ; NO-FMA-NEXT: vmulss %xmm0, %xmm1, %xmm0
 ; NO-FMA-NEXT: vaddss %xmm0, %xmm1, %xmm0

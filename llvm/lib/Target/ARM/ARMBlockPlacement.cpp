@@ -15,6 +15,7 @@
 #include "ARMBaseInstrInfo.h"
 #include "ARMBasicBlockInfo.h"
 #include "ARMSubtarget.h"
+#include "MVETailPredUtils.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -61,13 +62,13 @@ INITIALIZE_PASS(ARMBlockPlacement, DEBUG_TYPE, "ARM block placement", false,
 
 static MachineInstr *findWLSInBlock(MachineBasicBlock *MBB) {
   for (auto &Terminator : MBB->terminators()) {
-    if (Terminator.getOpcode() == ARM::t2WhileLoopStartLR)
+    if (isWhileLoopStart(Terminator))
       return &Terminator;
   }
   return nullptr;
 }
 
-/// Find t2WhileLoopStartLR in the loop predecessor BB or otherwise in its only
+/// Find WhileLoopStart in the loop predecessor BB or otherwise in its only
 /// predecessor. If found, returns (BB, WLS Instr) pair, otherwise a null pair.
 static MachineInstr *findWLS(MachineLoop *ML) {
   MachineBasicBlock *Predecessor = ML->getLoopPredecessor();
@@ -93,7 +94,7 @@ bool ARMBlockPlacement::fixBackwardsWLS(MachineLoop *ML) {
     return false;
 
   MachineBasicBlock *Predecessor = WlsInstr->getParent();
-  MachineBasicBlock *LoopExit = WlsInstr->getOperand(2).getMBB();
+  MachineBasicBlock *LoopExit = getWhileLoopStartTargetBB(*WlsInstr);
 
   // We don't want to move Preheader to before the function's entry block.
   if (!LoopExit->getPrevNode())
@@ -118,9 +119,9 @@ bool ARMBlockPlacement::fixBackwardsWLS(MachineLoop *ML) {
        ++It) {
     MachineBasicBlock *MBB = &*It;
     for (auto &Terminator : MBB->terminators()) {
-      if (Terminator.getOpcode() != ARM::t2WhileLoopStartLR)
+      if (!isWhileLoopStart(Terminator))
         continue;
-      MachineBasicBlock *WLSTarget = Terminator.getOperand(2).getMBB();
+      MachineBasicBlock *WLSTarget = getWhileLoopStartTargetBB(Terminator);
       // TODO: Analyse the blocks to make a decision if it would be worth
       // moving Preheader even if we'd introduce a backwards WLS
       if (WLSTarget == Predecessor) {

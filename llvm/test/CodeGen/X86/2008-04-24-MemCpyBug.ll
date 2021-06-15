@@ -21,7 +21,7 @@ define void @testit63_entry_2E_ce() nounwind  {
 ; CHECK-NEXT:    movb %al, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl g1s63+60, %eax
 ; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    calll test63
+; CHECK-NEXT:    calll test63@PLT
 ; CHECK-NEXT:    addl $64, %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi

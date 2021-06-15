@@ -32,11 +32,12 @@ public:
       : DependencyFileGenerator(*Opts), Opts(std::move(Opts)), C(C) {}
 
   void finishedMainFile(DiagnosticsEngine &Diags) override {
+    C.handleDependencyOutputOpts(*Opts);
     llvm::SmallString<256> CanonPath;
     for (const auto &File : getDependencies()) {
       CanonPath = File;
       llvm::sys::path::remove_dots(CanonPath, /*remove_dot_dot=*/true);
-      C.handleFileDependency(*Opts, CanonPath);
+      C.handleFileDependency(CanonPath);
     }
   }
 
@@ -44,6 +45,45 @@ private:
   std::unique_ptr<DependencyOutputOptions> Opts;
   DependencyConsumer &C;
 };
+
+/// A listener that collects the names and paths to imported modules.
+class ImportCollectingListener : public ASTReaderListener {
+  using PrebuiltModuleFilesT =
+      decltype(HeaderSearchOptions::PrebuiltModuleFiles);
+
+public:
+  ImportCollectingListener(PrebuiltModuleFilesT &PrebuiltModuleFiles)
+      : PrebuiltModuleFiles(PrebuiltModuleFiles) {}
+
+  bool needsImportVisitation() const override { return true; }
+
+  void visitImport(StringRef ModuleName, StringRef Filename) override {
+    PrebuiltModuleFiles[std::string(ModuleName)] = std::string(Filename);
+  }
+
+private:
+  PrebuiltModuleFilesT &PrebuiltModuleFiles;
+};
+
+/// Transform arbitrary file name into an object-like file name.
+static std::string makeObjFileName(StringRef FileName) {
+  SmallString<128> ObjFileName(FileName);
+  llvm::sys::path::replace_extension(ObjFileName, "o");
+  return std::string(ObjFileName.str());
+}
+
+/// Deduce the dependency target based on the output file and input files.
+static std::string
+deduceDepTarget(const std::string &OutputFile,
+                const SmallVectorImpl<FrontendInputFile> &InputFiles) {
+  if (OutputFile != "-")
+    return OutputFile;
+
+  if (InputFiles.empty() || !InputFiles.front().isFile())
+    return "clang-scan-deps\\ dependency";
+
+  return makeObjFileName(InputFiles.front().getFile());
+}
 
 /// A clang tool that runs the preprocessor in a mode that's optimized for
 /// dependency scanning for the given compiler invocation.
@@ -62,16 +102,25 @@ public:
                      FileManager *FileMgr,
                      std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                      DiagnosticConsumer *DiagConsumer) override {
+    // Make a deep copy of the original Clang invocation.
+    CompilerInvocation OriginalInvocation(*Invocation);
+
     // Create a compiler instance to handle the actual work.
     CompilerInstance Compiler(std::move(PCHContainerOps));
     Compiler.setInvocation(std::move(Invocation));
 
     // Don't print 'X warnings and Y errors generated'.
     Compiler.getDiagnosticOpts().ShowCarets = false;
+    // Don't write out diagnostic file.
+    Compiler.getDiagnosticOpts().DiagnosticSerializationFile.clear();
+    // Don't treat warnings as errors.
+    Compiler.getDiagnosticOpts().Warnings.push_back("no-error");
     // Create the compiler's actual diagnostics engine.
     Compiler.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
     if (!Compiler.hasDiagnostics())
       return false;
+
+    Compiler.getPreprocessorOpts().AllowPCHWithDifferentModulesCachePath = true;
 
     // Use the dependency scanning optimized file system if we can.
     if (DepFS) {
@@ -101,6 +150,20 @@ public:
     Compiler.setFileManager(FileMgr);
     Compiler.createSourceManager(*FileMgr);
 
+    if (!Compiler.getPreprocessorOpts().ImplicitPCHInclude.empty()) {
+      // Collect the modules that were prebuilt as part of the PCH and pass them
+      // to the compiler. This will prevent the implicit build to create
+      // duplicate modules and force reuse of existing prebuilt module files
+      // instead.
+      ImportCollectingListener Listener(
+          Compiler.getHeaderSearchOpts().PrebuiltModuleFiles);
+      ASTReader::readASTFileControlBlock(
+          Compiler.getPreprocessorOpts().ImplicitPCHInclude,
+          Compiler.getFileManager(), Compiler.getPCHContainerReader(),
+          /*FindModuleFileExtensions=*/false, Listener,
+          /*ValidateDiagnosticOptions=*/false);
+    }
+
     // Create the dependency collector that will collect the produced
     // dependencies.
     //
@@ -108,11 +171,14 @@ public:
     // invocation to the collector. The options in the invocation are reset,
     // which ensures that the compiler won't create new dependency collectors,
     // and thus won't write out the extra '.d' files to disk.
-    auto Opts = std::make_unique<DependencyOutputOptions>(
-        std::move(Compiler.getInvocation().getDependencyOutputOpts()));
-    // We need at least one -MT equivalent for the generator to work.
+    auto Opts = std::make_unique<DependencyOutputOptions>();
+    std::swap(*Opts, Compiler.getInvocation().getDependencyOutputOpts());
+    // We need at least one -MT equivalent for the generator of make dependency
+    // files to work.
     if (Opts->Targets.empty())
-      Opts->Targets = {"clang-scan-deps dependency"};
+      Opts->Targets = {deduceDepTarget(Compiler.getFrontendOpts().OutputFile,
+                                       Compiler.getFrontendOpts().Inputs)};
+    Opts->IncludeSystemHeaders = true;
 
     switch (Format) {
     case ScanningOutputFormat::Make:
@@ -122,7 +188,7 @@ public:
       break;
     case ScanningOutputFormat::Full:
       Compiler.addDependencyCollector(std::make_shared<ModuleDepCollector>(
-          std::move(Opts), Compiler, Consumer));
+          std::move(Opts), Compiler, Consumer, std::move(OriginalInvocation)));
       break;
     }
 
@@ -133,7 +199,7 @@ public:
     // the impact of strict context hashing.
     Compiler.getHeaderSearchOpts().ModulesStrictContextHash = true;
 
-    auto Action = std::make_unique<PreprocessOnlyAction>();
+    auto Action = std::make_unique<ReadPCHAndPreprocessAction>();
     const bool Result = Compiler.ExecuteAction(*Action);
     if (!DepFS)
       FileMgr->clearStatCache();

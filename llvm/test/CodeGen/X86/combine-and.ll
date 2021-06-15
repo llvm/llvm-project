@@ -302,7 +302,7 @@ define <16 x i8> @PR34620(<16 x i8> %a0, <16 x i8> %a1) {
 ; CHECK-LABEL: PR34620:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    psrlw $1, %xmm0
-; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    paddb %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %1 = lshr <16 x i8> %a0, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>

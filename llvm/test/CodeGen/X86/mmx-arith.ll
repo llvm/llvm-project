@@ -33,7 +33,7 @@ define void @test0(x86_mmx* %A, x86_mmx* %B) {
 ; X32-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X32-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X32-NEXT:    pmullw %xmm0, %xmm1
-; X32-NEXT:    pand {{\.LCPI[0-9]+_[0-9]+}}, %xmm1
+; X32-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X32-NEXT:    packuswb %xmm1, %xmm1
 ; X32-NEXT:    movq %xmm1, (%eax)
 ; X32-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -73,7 +73,7 @@ define void @test0(x86_mmx* %A, x86_mmx* %B) {
 ; X64-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X64-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X64-NEXT:    pmullw %xmm0, %xmm1
-; X64-NEXT:    pand {{.*}}(%rip), %xmm1
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; X64-NEXT:    packuswb %xmm1, %xmm1
 ; X64-NEXT:    movq %xmm1, (%rdi)
 ; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -661,7 +661,7 @@ define i64 @pr43922() {
 ; X32-NEXT:    .cfi_def_cfa_register %ebp
 ; X32-NEXT:    andl $-8, %esp
 ; X32-NEXT:    subl $8, %esp
-; X32-NEXT:    movq {{\.LCPI[0-9]+_[0-9]+}}, %mm0 # mm0 = 0x7AAAAAAA7AAAAAAA
+; X32-NEXT:    movq {{\.?LCPI[0-9]+_[0-9]+}}, %mm0 # mm0 = 0x7AAAAAAA7AAAAAAA
 ; X32-NEXT:    psrad $255, %mm0
 ; X32-NEXT:    movq %mm0, (%esp)
 ; X32-NEXT:    movl (%esp), %eax
@@ -673,7 +673,7 @@ define i64 @pr43922() {
 ;
 ; X64-LABEL: pr43922:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movq {{.*}}(%rip), %mm0 # mm0 = 0x7AAAAAAA7AAAAAAA
+; X64-NEXT:    movq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %mm0 # mm0 = 0x7AAAAAAA7AAAAAAA
 ; X64-NEXT:    psrad $255, %mm0
 ; X64-NEXT:    movq %mm0, %rax
 ; X64-NEXT:    retq

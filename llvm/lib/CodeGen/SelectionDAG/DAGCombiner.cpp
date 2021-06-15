@@ -19091,6 +19091,9 @@ SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
   uint64_t InVT1Size = InVT1.getFixedSizeInBits();
   uint64_t InVT2Size = InVT2.getFixedSizeInBits();
 
+  assert(InVT2Size <= InVT1Size &&
+         "Inputs must be sorted to be in non-increasing vector size order.");
+
   // We can't generate a shuffle node with mismatched input and output types.
   // Try to make the types match the type of the output.
   if (InVT1 != VT || InVT2 != VT) {
@@ -19117,7 +19120,10 @@ SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
         // Since we now have shorter input vectors, adjust the offset of the
         // second vector's start.
         Vec2Offset = NumElems;
-      } else if (InVT2Size <= InVT1Size) {
+      } else {
+        assert(InVT2Size <= InVT1Size &&
+               "Second input is not going to be larger than the first one.");
+
         // VecIn1 is wider than the output, and we have another, possibly
         // smaller input. Pad the smaller input with undefs, shuffle at the
         // input vector width, and extract the output.
@@ -19136,11 +19142,6 @@ SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
                                DAG.getUNDEF(InVT1), VecIn2, ZeroIdx);
         }
         ShuffleNumElems = NumElems * 2;
-      } else {
-        // Both VecIn1 and VecIn2 are wider than the output, and VecIn2 is wider
-        // than VecIn1. We can't handle this for now - this case will disappear
-        // when we start sorting the vectors by type.
-        return SDValue();
       }
     } else if (InVT2Size * 2 == VTSize && InVT1Size == VTSize) {
       SmallVector<SDValue, 2> ConcatOps(2, DAG.getUNDEF(InVT2));
@@ -19265,6 +19266,15 @@ static SDValue reduceBuildVecToShuffleWithZero(SDNode *BV, SelectionDAG &DAG) {
   return DAG.getBitcast(VT, Shuf);
 }
 
+// FIXME: promote to STLExtras.
+template <typename R, typename T>
+static auto getFirstIndexOf(R &&Range, const T &Val) {
+  auto I = find(Range, Val);
+  if (I == Range.end())
+    return -1L;
+  return std::distance(Range.begin(), I);
+}
+
 // Check to see if this is a BUILD_VECTOR of a bunch of EXTRACT_VECTOR_ELT
 // operations. If the types of the vectors we're extracting from allow it,
 // turn this into a vector_shuffle node.
@@ -19333,9 +19343,11 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
     // Have we seen this input vector before?
     // The vectors are expected to be tiny (usually 1 or 2 elements), so using
     // a map back from SDValues to numbers isn't worth it.
-    unsigned Idx = std::distance(VecIn.begin(), find(VecIn, ExtractedFromVec));
-    if (Idx == VecIn.size())
+    int Idx = getFirstIndexOf(VecIn, ExtractedFromVec);
+    if (Idx == -1) { // A new source vector?
+      Idx = VecIn.size();
       VecIn.push_back(ExtractedFromVec);
+    }
 
     VectorMask[i] = Idx;
   }
@@ -19391,9 +19403,28 @@ SDValue DAGCombiner::reduceBuildVecToShuffle(SDNode *N) {
     }
   }
 
-  // TODO: We want to sort the vectors by descending length, so that adjacent
-  // pairs have similar length, and the longer vector is always first in the
-  // pair.
+  // Sort input vectors by decreasing vector element count,
+  // while preserving the relative order of equally-sized vectors.
+  // Note that we keep the first "implicit zero vector as-is.
+  SmallVector<SDValue, 8> SortedVecIn(VecIn);
+  llvm::stable_sort(MutableArrayRef<SDValue>(SortedVecIn).drop_front(),
+                    [](const SDValue &a, const SDValue &b) {
+                      return a.getValueType().getVectorNumElements() >
+                             b.getValueType().getVectorNumElements();
+                    });
+
+  // We now also need to rebuild the VectorMask, because it referenced element
+  // order in VecIn, and we just sorted them.
+  for (int &SourceVectorIndex : VectorMask) {
+    if (SourceVectorIndex <= 0)
+      continue;
+    unsigned Idx = getFirstIndexOf(SortedVecIn, VecIn[SourceVectorIndex]);
+    assert(Idx > 0 && Idx < SortedVecIn.size() &&
+           VecIn[SourceVectorIndex] == SortedVecIn[Idx] && "Remapping failure");
+    SourceVectorIndex = Idx;
+  }
+
+  VecIn = std::move(SortedVecIn);
 
   // TODO: Should this fire if some of the input vectors has illegal type (like
   // it does now), or should we let legalization run its course first?

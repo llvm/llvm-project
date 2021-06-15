@@ -292,7 +292,7 @@ module {
 // TLOOP:  %[[DIM_A_0:.*]] = memref.dim %[[A]], %[[C0]] : [[TY:.*]]
 // TLOOP:  %[[DIM_B_1:.*]] = memref.dim %[[B]], %[[C1]] : [[TY]]
 
-// TLOOP:  %[[AB:.*]] = linalg.tiled_loop (%[[I:.*]], %[[J:.*]]) = 
+// TLOOP:  %[[AB:.*]] = linalg.tiled_loop (%[[I:.*]], %[[J:.*]]) =
 // TLOOP-SAME: (%[[C0]], %[[C0]]) to (%[[DIM_A_0]], %[[DIM_B_1]])
 // TLOOP-SAME: step (%[[C32]], %[[C64]])
 // TLOOP-SAME: ins (%[[A_:.*]] = %[[A]]: [[TY]],
@@ -305,7 +305,80 @@ module {
 // TLOOP:    %[[OUT_SUB:.*]] = subtensor %[[OUT_]][%[[I]], %[[J]]]
 // TLOOP:    %[[INIT_SUB:.*]] = linalg.fill(%[[OUT_SUB]], %[[C0_F32]])
 
-// TLOOP:    %[[AB_SUB:.*]] = linalg.tiled_loop (%[[K:.*]]) = (%[[C0]]) 
+// TLOOP:    %[[AB_SUB:.*]] = linalg.tiled_loop (%[[K:.*]]) = (%[[C0]])
+// TLOOP-SAME: to (%[[DIM_A__1]]) step (%[[C16]])
+// TLOOP-SAME: ins (%[[A_SUB_:.*]] = %[[A_SUB]]: [[TY]],
+// TLOOP-SAME:      %[[B_SUB_:.*]] = %[[B_SUB]]: [[TY]])
+// TLOOP-SAME: outs (%[[INIT_SUB_:.*]] = %[[INIT_SUB]]: [[TY]])
+// TLOOP-SAME: iterators["reduction"] {
+
+// TLOOP:      %[[A_SUB_SUB:.*]] = subtensor %[[A_SUB_]][0, %[[K]]]
+// TLOOP:      %[[B_SUB_SUB:.*]] = subtensor %[[B_SUB_]][%[[K]], 0]
+
+// TLOOP:      %[[AB_SUB_SUB:.*]] = linalg.matmul
+// TLOOP-SAME:   ins(%[[A_SUB_SUB]], %[[B_SUB_SUB]] : [[TY]], [[TY]])
+// TLOOP-SAME:   outs(%[[INIT_SUB_]] : [[TY]]) -> [[TY]]
+// TLOOP:      linalg.yield %[[AB_SUB_SUB]] : [[TY]]
+// TLOOP:    }
+// TLOOP:    %[[SUB_RESULT:.*]] = subtensor_insert %[[AB_SUB]]
+// TLOOP-SAME:  into %[[OUT_]][%[[I]], %[[J]]]
+// TLOOP:    linalg.yield %[[SUB_RESULT]] : [[TY]]
+// TLOOP:  }
+// TLOOP:  return %[[AB]] : [[TY]]
+
+// -----
+
+module {
+  func @generic_plus_matmul(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
+                      %arg2: tensor<?x?xf32>) -> tensor<?x?xf32> {
+    %c0 = constant 0.0 : f32
+    %0 = linalg.generic {
+      indexing_maps = [affine_map<(m, n) -> ()>, affine_map<(m, n) -> (m, n)>],
+      iterator_types = ["parallel", "parallel"]}
+     ins(%c0 : f32)
+    outs(%arg0: tensor<?x?xf32>) {
+      ^bb(%0: f32, %1: f32) :
+        linalg.yield %0 : f32
+    } -> tensor<?x?xf32>
+    %1 = linalg.matmul {__internal_linalg_transform__ = "out_fusion"}
+      ins(%arg1, %arg2 : tensor<?x?xf32>, tensor<?x?xf32>)
+      outs(%0 : tensor<?x?xf32>) -> tensor<?x?xf32>
+    return %1 : tensor<?x?xf32>
+  }
+}
+
+// TLOOP-LABEL: func @generic_plus_matmul(
+// TLOOP-SAME:    %[[OUT:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
+// TLOOP-SAME:    %[[A:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
+// TLOOP-SAME:    %[[B:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
+
+// TLOOP-DAG:  %[[C0_F32:.*]] = constant 0.0
+// TLOOP-DAG:  %[[C32:.*]] = constant 32 : index
+// TLOOP-DAG:  %[[C64:.*]] = constant 64 : index
+// TLOOP-DAG:  %[[C16:.*]] = constant 16 : index
+// TLOOP-DAG:  %[[C0:.*]] = constant 0 : index
+// TLOOP-DAG:  %[[C1:.*]] = constant 1 : index
+
+// TLOOP:  %[[DIM_A_0:.*]] = memref.dim %[[A]], %[[C0]] : [[TY:.*]]
+// TLOOP:  %[[DIM_B_1:.*]] = memref.dim %[[B]], %[[C1]] : [[TY]]
+
+// TLOOP:  %[[AB:.*]] = linalg.tiled_loop (%[[I:.*]], %[[J:.*]]) =
+// TLOOP-SAME: (%[[C0]], %[[C0]]) to (%[[DIM_A_0]], %[[DIM_B_1]])
+// TLOOP-SAME: step (%[[C32]], %[[C64]])
+// TLOOP-SAME: ins (%[[A_:.*]] = %[[A]]: [[TY]],
+// TLOOP-SAME:      %[[B_:.*]] = %[[B]]: [[TY]],
+// TLOOP-SAME:      %[[C0_F32_:.*]] = %[[C0_F32]]
+// TLOOP-SAME: outs (%[[OUT_:.*]] = %[[OUT]]: [[TY]]) {
+
+// TLOOP:    %[[DIM_A__1:.*]] = memref.dim %[[A_]], %[[C1]] : [[TY]]
+// TLOOP:    %[[A_SUB:.*]] = subtensor %[[A_]][%[[I]], 0]
+// TLOOP:    %[[B_SUB:.*]] = subtensor %[[B_]][0, %[[J]]]
+// TLOOP:    %[[OUT_SUB:.*]] = subtensor %[[OUT_]][%[[I]], %[[J]]]
+// TLOOP:    %[[INIT_SUB:.*]] = linalg.generic
+// TLOOP-SAME: ins(%[[C0_F32_]]
+// TLOOP-SAME: outs(%[[OUT_SUB]]
+
+// TLOOP:    %[[AB_SUB:.*]] = linalg.tiled_loop (%[[K:.*]]) = (%[[C0]])
 // TLOOP-SAME: to (%[[DIM_A__1]]) step (%[[C16]])
 // TLOOP-SAME: ins (%[[A_SUB_:.*]] = %[[A_SUB]]: [[TY]],
 // TLOOP-SAME:      %[[B_SUB_:.*]] = %[[B_SUB]]: [[TY]])

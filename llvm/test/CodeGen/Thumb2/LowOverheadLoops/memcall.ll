@@ -17,8 +17,7 @@ define void @test_memcpy(i32* nocapture %x, i32* nocapture readonly %y, i32 %n, 
 ; CHECK-NEXT:    @ Child Loop BB0_4 Depth 2
 ; CHECK-NEXT:    adds r4, r1, r7
 ; CHECK-NEXT:    adds r5, r0, r7
-; CHECK-NEXT:    mov r6, r3
-; CHECK-NEXT:    wlstp.8 lr, r6, .LBB0_3
+; CHECK-NEXT:    wlstp.8 lr, r3, .LBB0_3
 ; CHECK-NEXT:    b .LBB0_4
 ; CHECK-NEXT:  .LBB0_3: @ %for.body
 ; CHECK-NEXT:    @ in Loop: Header=BB0_2 Depth=1
@@ -71,8 +70,7 @@ define void @test_memset(i32* nocapture %x, i32 %n, i32 %m) {
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB1_4 Depth 2
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    mov r3, r2
-; CHECK-NEXT:    wlstp.8 lr, r3, .LBB1_3
+; CHECK-NEXT:    wlstp.8 lr, r2, .LBB1_3
 ; CHECK-NEXT:    b .LBB1_4
 ; CHECK-NEXT:  .LBB1_3: @ %for.body
 ; CHECK-NEXT:    @ in Loop: Header=BB1_2 Depth=1
@@ -285,8 +283,7 @@ define void @test_memset_preheader(i8* %x, i8* %y, i32 %n) {
 ; CHECK-NEXT:  @ %bb.1: @ %prehead
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
 ; CHECK-NEXT:    mov r12, r0
-; CHECK-NEXT:    mov r3, r2
-; CHECK-NEXT:    wlstp.8 lr, r3, .LBB6_3
+; CHECK-NEXT:    wlstp.8 lr, r2, .LBB6_3
 ; CHECK-NEXT:  .LBB6_2: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vstrb.8 q0, [r12], #16
 ; CHECK-NEXT:    letp lr, .LBB6_2

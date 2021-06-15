@@ -24,7 +24,7 @@ class Defined;
 // files that are labeled with the same segment and section name. This class
 // contains all such sections and writes the data from each section sequentially
 // in the final binary.
-class ConcatOutputSection : public OutputSection {
+class ConcatOutputSection final : public OutputSection {
 public:
   explicit ConcatOutputSection(StringRef name)
       : OutputSection(ConcatKind, name) {}

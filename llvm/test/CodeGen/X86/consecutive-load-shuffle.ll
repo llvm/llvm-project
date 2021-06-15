@@ -11,8 +11,8 @@
 define void @foo2() {
 ; CHECK-LABEL: foo2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movaps {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    movaps %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    movaps f(%rip), %xmm0
+; CHECK-NEXT:    movaps %xmm0, ms(%rip)
 ; CHECK-NEXT:    retq
 entry:
   %0 = load <2 x float>, <2 x float>* bitcast (float* getelementptr inbounds ([4 x float], [4 x float]* @f, i64 0, i64 2) to <2 x float>*), align 8

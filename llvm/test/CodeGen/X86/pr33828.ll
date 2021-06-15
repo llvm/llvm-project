@@ -16,7 +16,7 @@ define void @foo(i8 %a0) {
 ;
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movsbl {{.*}}(%rip), %eax
+; X64-NEXT:    movsbl var_580(%rip), %eax
 ; X64-NEXT:    testl $-536870913, %eax # imm = 0xDFFFFFFF
 ; X64-NEXT:    jne .LBB0_1
 ; X64-NEXT:  # %bb.2: # %if.end13

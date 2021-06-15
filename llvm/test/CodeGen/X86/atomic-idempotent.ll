@@ -170,7 +170,7 @@ define i128 @or128(i128* %p) {
 ; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    xorl %esi, %esi
 ; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    callq __sync_fetch_and_or_16
+; X64-NEXT:    callq __sync_fetch_and_or_16@PLT
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq
@@ -508,7 +508,7 @@ define void @or128_nouse_seq_cst(i128* %p) {
 ; X64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NEXT:    xorl %esi, %esi
 ; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    callq __sync_fetch_and_or_16
+; X64-NEXT:    callq __sync_fetch_and_or_16@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-NEXT:    retq

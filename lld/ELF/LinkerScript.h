@@ -227,7 +227,7 @@ struct ByteCommand : BaseCommand {
 };
 
 struct InsertCommand {
-  OutputSection *os;
+  StringRef name;
   bool isAfter;
   StringRef where;
 };
@@ -342,6 +342,9 @@ public:
   // Used to implement INSERT [AFTER|BEFORE]. Contains output sections that need
   // to be reordered.
   std::vector<InsertCommand> insertCommands;
+
+  // OutputSections specified by OVERWRITE_SECTIONS.
+  std::vector<OutputSection *> overwriteSections;
 
   // Sections that will be warned/errored by --orphan-handling.
   std::vector<const InputSectionBase *> orphanSections;

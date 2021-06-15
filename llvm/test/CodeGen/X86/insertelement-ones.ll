@@ -280,12 +280,12 @@ define <16 x i16> @insert_v16i16_x12345x789ABCDEx(<16 x i16> %a) {
 ;
 ; AVX1-LABEL: insert_v16i16_x12345x789ABCDEx:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    vorps {{.*}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    vorps {{.*}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    vorps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: insert_v16i16_x12345x789ABCDEx:
@@ -327,7 +327,7 @@ define <16 x i8> @insert_v16i8_x123456789ABCDEx(<16 x i8> %a) {
 ; SSE2-NEXT:    movd %eax, %xmm2
 ; SSE2-NEXT:    pandn %xmm2, %xmm1
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    pslldq {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0]
 ; SSE2-NEXT:    por %xmm2, %xmm0
 ; SSE2-NEXT:    retq
@@ -340,7 +340,7 @@ define <16 x i8> @insert_v16i8_x123456789ABCDEx(<16 x i8> %a) {
 ; SSE3-NEXT:    movd %eax, %xmm2
 ; SSE3-NEXT:    pandn %xmm2, %xmm1
 ; SSE3-NEXT:    por %xmm1, %xmm0
-; SSE3-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE3-NEXT:    pslldq {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0]
 ; SSE3-NEXT:    por %xmm2, %xmm0
 ; SSE3-NEXT:    retq
@@ -389,7 +389,7 @@ define <32 x i8> @insert_v32i8_x123456789ABCDEzGHIJKLMNOPQRSTxx(<32 x i8> %a) {
 ; SSE2-NEXT:    movdqa %xmm3, %xmm4
 ; SSE2-NEXT:    pslldq {{.*#+}} xmm4 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm4[0]
 ; SSE2-NEXT:    por %xmm4, %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    pslldq {{.*#+}} xmm3 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm3[0,1]
 ; SSE2-NEXT:    por %xmm3, %xmm1
 ; SSE2-NEXT:    pand %xmm2, %xmm1
@@ -409,7 +409,7 @@ define <32 x i8> @insert_v32i8_x123456789ABCDEzGHIJKLMNOPQRSTxx(<32 x i8> %a) {
 ; SSE3-NEXT:    movdqa %xmm3, %xmm4
 ; SSE3-NEXT:    pslldq {{.*#+}} xmm4 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm4[0]
 ; SSE3-NEXT:    por %xmm4, %xmm0
-; SSE3-NEXT:    pand {{.*}}(%rip), %xmm1
+; SSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE3-NEXT:    pslldq {{.*#+}} xmm3 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm3[0,1]
 ; SSE3-NEXT:    por %xmm3, %xmm1
 ; SSE3-NEXT:    pand %xmm2, %xmm1

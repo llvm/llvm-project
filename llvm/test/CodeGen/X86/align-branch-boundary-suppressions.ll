@@ -43,7 +43,7 @@ define void @test_statepoint(i32 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    #noautopadding
-; CHECK-NEXT:    callq return_i1
+; CHECK-NEXT:    callq return_i1@PLT
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    #autopadding
 ; CHECK-NEXT:    popq %rax

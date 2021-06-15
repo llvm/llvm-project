@@ -334,7 +334,7 @@ define void @h_thunk(%struct.Foo* %this, ...) {
 ; LINUX-NEXT:    jmpq *%r11 # TAILCALL
 ; LINUX-NEXT:  .LBB2_2: # %else
 ; LINUX-NEXT:    movq 16(%rdi), %r11
-; LINUX-NEXT:    movl $42, {{.*}}(%rip)
+; LINUX-NEXT:    movl $42, g(%rip)
 ; LINUX-NEXT:    jmpq *%r11 # TAILCALL
 ;
 ; LINUX-X32-LABEL: h_thunk:
@@ -347,7 +347,7 @@ define void @h_thunk(%struct.Foo* %this, ...) {
 ; LINUX-X32-NEXT:    jmpq *%r11 # TAILCALL
 ; LINUX-X32-NEXT:  .LBB2_2: # %else
 ; LINUX-X32-NEXT:    movl 8(%edi), %r11d
-; LINUX-X32-NEXT:    movl $42, {{.*}}(%rip)
+; LINUX-X32-NEXT:    movl $42, g(%rip)
 ; LINUX-X32-NEXT:    movl %edi, %edi
 ; LINUX-X32-NEXT:    jmpq *%r11 # TAILCALL
 ;
@@ -360,7 +360,7 @@ define void @h_thunk(%struct.Foo* %this, ...) {
 ; WINDOWS-NEXT:    rex64 jmpq *%rax # TAILCALL
 ; WINDOWS-NEXT:  .LBB2_2: # %else
 ; WINDOWS-NEXT:    movq 16(%rcx), %rax
-; WINDOWS-NEXT:    movl $42, {{.*}}(%rip)
+; WINDOWS-NEXT:    movl $42, g(%rip)
 ; WINDOWS-NEXT:    rex64 jmpq *%rax # TAILCALL
 ;
 ; X86-LABEL: h_thunk:

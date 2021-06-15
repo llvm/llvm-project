@@ -125,6 +125,9 @@ Miscellaneous constants
 Enumerators
 ***********
 
+
+.. _State:
+
 State
 -----
 
@@ -176,6 +179,9 @@ State
    Process or thread is in a suspended state as far
    as the debugger is concerned while other processes
    or threads get the chance to run.
+
+
+.. _LaunchFlag:
 
 LaunchFlag
 ----------
@@ -235,12 +241,17 @@ LaunchFlag
    Don't make the inferior responsible for its own TCC
    permissions but instead inherit them from its parent.
 
+
+.. _RunMode:
+
 RunMode
 -------
 .. py:data:: eOnlyThisThread
 .. py:data:: eAllThreads
 .. py:data:: eOnlyDuringStepping
 
+
+.. _ByteOrder:
 
 ByteOrder
 ---------
@@ -250,6 +261,9 @@ ByteOrder
 .. py:data:: eByteOrderPDP
 .. py:data:: eByteOrderLittle
 
+
+.. _Encoding:
+
 Encoding
 --------
 
@@ -258,6 +272,9 @@ Encoding
 .. py:data:: eEncodingSint
 .. py:data:: eEncodingIEEE754
 .. py:data:: eEncodingVector
+
+
+.. _Format:
 
 Format
 ------
@@ -305,6 +322,9 @@ Format
 .. py:data:: eFormatVoid
 .. py:data:: eFormatUnicode8
 
+
+.. _DescriptionLevel:
+
 DescriptionLevel
 ----------------
 
@@ -312,6 +332,9 @@ DescriptionLevel
 .. py:data:: eDescriptionLevelFull
 .. py:data:: eDescriptionLevelVerbose
 .. py:data:: eDescriptionLevelInitial
+
+
+.. _ScriptLanguage:
 
 ScriptLanguage
 --------------
@@ -322,6 +345,9 @@ ScriptLanguage
 .. py:data:: eScriptLanguageUnknown
 .. py:data:: eScriptLanguageDefault
 
+
+.. _RegisterKind:
+
 RegisterKind
 ------------
 
@@ -330,6 +356,9 @@ RegisterKind
 .. py:data:: eRegisterKindGeneric
 .. py:data:: eRegisterKindProcessPlugin
 .. py:data:: eRegisterKindLLDB
+
+
+.. _StopReason:
 
 StopReason
 ----------
@@ -349,6 +378,9 @@ StopReason
 .. py:data:: eStopReasonThreadExiting
 .. py:data:: eStopReasonInstrumentation
 
+
+.. _ReturnStatus:
+
 ReturnStatus
 ------------
 
@@ -360,6 +392,9 @@ ReturnStatus
 .. py:data:: eReturnStatusStarted
 .. py:data:: eReturnStatusFailed
 .. py:data:: eReturnStatusQuit
+
+
+.. _Expression:
 
 Expression
 ----------
@@ -377,6 +412,9 @@ The results of expression evaluation.
 .. py:data:: eExpressionStoppedForDebug
 .. py:data:: eExpressionThreadVanished
 
+
+.. _SearchDepth:
+
 SearchDepth
 -----------
 
@@ -387,6 +425,9 @@ SearchDepth
 .. py:data:: eSearchDepthFunction
 .. py:data:: eSearchDepthBlock
 .. py:data:: eSearchDepthAddress
+
+
+.. _ConnectionStatus:
 
 ConnectionStatus
 ----------------
@@ -419,6 +460,9 @@ ConnectionStatus
 
    Interrupted read.
 
+
+.. _ErrorType:
+
 ErrorType
 ---------
 
@@ -443,6 +487,8 @@ ErrorType
 
    Standard Win32 error codes.
 
+
+.. _ValueType:
 
 ValueType
 ---------
@@ -480,8 +526,11 @@ ValueType
 
    Thread local storage variable.
 
-InputReader
------------
+
+.. _InputReaderGranularity:
+
+InputReaderGranularity
+----------------------
 
 Token size/granularities for Input Readers.
 
@@ -490,6 +539,9 @@ Token size/granularities for Input Readers.
 .. py:data:: eInputReaderGranularityWord
 .. py:data:: eInputReaderGranularityLine
 .. py:data:: eInputReaderGranularityAll
+
+
+.. _SymbolContextItem:
 
 SymbolContextItem
 -----------------
@@ -552,11 +604,17 @@ indicates that the member did get resolved.
    from being used during frame PC lookups and many other
    potential address to symbol context lookups.
 
+
+.. _Permissions:
+
 Permissions
 -----------
 .. py:data:: ePermissionsWritable
 .. py:data:: ePermissionsReadable
 .. py:data:: ePermissionsExecutable
+
+
+.. _InputReader:
 
 InputReader
 -----------
@@ -593,6 +651,9 @@ InputReader
 
    Reader was just popped off the stack and is done.
 
+
+.. _BreakpointEventType:
+
 BreakpointEventType
 -------------------
 
@@ -610,6 +671,9 @@ BreakpointEventType
 .. py:data:: eBreakpointEventTypeThreadChanged
 .. py:data:: eBreakpointEventTypeAutoContinueChanged
 
+
+.. _WatchpointEventType:
+
 WatchpointEventType
 -------------------
 
@@ -623,6 +687,7 @@ WatchpointEventType
 .. py:data:: eWatchpointEventTypeIgnoreChanged
 .. py:data:: eWatchpointEventTypeThreadChanged
 .. py:data:: eWatchpointEventTypeTypeChanged
+
 
 .. _LanguageType:
 
@@ -669,6 +734,9 @@ LanguageType
 .. py:data:: eLanguageTypeExtRenderScript
 .. py:data:: eNumLanguageTypes
 
+
+.. _InstrumentationRuntimeType:
+
 InstrumentationRuntimeType
 --------------------------
 
@@ -679,12 +747,18 @@ InstrumentationRuntimeType
 .. py:data:: eInstrumentationRuntimeTypeSwiftRuntimeReporting
 .. py:data:: eNumInstrumentationRuntimeTypes
 
+
+.. _DynamicValueType:
+
 DynamicValueType
 ----------------
 
 .. py:data:: eNoDynamicValues
 .. py:data:: eDynamicCanRunTarget
 .. py:data:: eDynamicDontRunTarget
+
+
+.. _StopShowColumn:
 
 StopShowColumn
 --------------
@@ -694,6 +768,9 @@ StopShowColumn
 .. py:data:: eStopShowColumnCaret
 .. py:data:: eStopShowColumnNone
 
+
+.. _AccessType:
+
 AccessType
 ----------
 
@@ -702,6 +779,9 @@ AccessType
 .. py:data:: eAccessPrivate
 .. py:data:: eAccessProtected
 .. py:data:: eAccessPackage
+
+
+.. _CommandArgumentType:
 
 CommandArgumentType
 -------------------
@@ -796,6 +876,8 @@ CommandArgumentType
 .. py:data:: eArgTypeModuleUUID
 .. py:data:: eArgTypeLastArg
 
+.. _SymbolType:
+
 SymbolType
 ----------
 
@@ -829,6 +911,9 @@ SymbolType
 .. py:data:: eSymbolTypeObjCMetaClass
 .. py:data:: eSymbolTypeObjCIVar
 .. py:data:: eSymbolTypeReExported
+
+
+.. _SectionType:
 
 SectionType
 -----------
@@ -894,12 +979,18 @@ SectionType
 .. py:data:: eSectionTypeDWARFDebugLocListsDwo
 .. py:data:: eSectionTypeDWARFDebugTuIndex
 
+
+.. _EmulatorInstructionOption:
+
 EmulatorInstructionOption
 -------------------------
 
 .. py:data:: eEmulateInstructionOptionNone
 .. py:data:: eEmulateInstructionOptionAutoAdvancePC
 .. py:data:: eEmulateInstructionOptionIgnoreConditions
+
+
+.. _FunctionNameType:
 
 FunctionNameType
 ----------------
@@ -911,6 +1002,9 @@ FunctionNameType
 .. py:data:: eFunctionNameTypeMethod
 .. py:data:: eFunctionNameTypeSelector
 .. py:data:: eFunctionNameTypeAny
+
+
+.. _BasicType:
 
 BasicType
 ---------
@@ -949,11 +1043,17 @@ BasicType
 .. py:data:: eBasicTypeNullPtr
 .. py:data:: eBasicTypeOther
 
+
+.. _TraceType:
+
 TraceType
 ---------
 
 .. py:data:: eTraceTypeNone
 .. py:data:: eTraceTypeProcessorTrace
+
+
+.. _StructuredDataType:
 
 StructuredDataType
 ------------------
@@ -967,6 +1067,9 @@ StructuredDataType
 .. py:data:: eStructuredDataTypeBoolean
 .. py:data:: eStructuredDataTypeString
 .. py:data:: eStructuredDataTypeDictionary
+
+
+.. _TypeClass:
 
 TypeClass
 ---------
@@ -993,6 +1096,9 @@ TypeClass
 .. py:data:: eTypeClassOther
 .. py:data:: eTypeClassAny
 
+
+.. _TemplateArgument:
+
 TemplateArgument
 ----------------
 
@@ -1006,6 +1112,9 @@ TemplateArgument
 .. py:data:: eTemplateArgumentKindPack
 .. py:data:: eTemplateArgumentKindNullPtr
 .. py:data:: eTemplateArgumentKindUncommonValue
+
+
+.. _TypeOption:
 
 TypeOption
 ----------
@@ -1024,6 +1133,10 @@ all of these are applicable to all formatter types.
 .. py:data:: eTypeOptionNonCacheable
 .. py:data:: eTypeOptionHideEmptyAggregates
 .. py:data:: eTypeOptionFrontEndWantsDereference
+
+
+
+.. _FrameCompare:
 
 FrameCompare
 ------------
@@ -1056,6 +1169,9 @@ A to frame B the following cases arise:
 .. py:data:: eFrameCompareYounger
 .. py:data:: eFrameCompareOlder
 
+
+.. _FilePermissions:
+
 FilePermissions
 ---------------
 
@@ -1086,11 +1202,17 @@ FilePermissions
 .. py:data:: eFilePermissionsFileDefault = eFilePermissionsUserRW,
 .. py:data:: eFilePermissionsDirectoryDefault
 
+
+.. _QueueItem:
+
 QueueItem
 ---------
 .. py:data:: eQueueItemKindUnknown
 .. py:data:: eQueueItemKindFunction
 .. py:data:: eQueueItemKindBlock
+
+
+.. _QueueKind:
 
 QueueKind
 ---------
@@ -1102,6 +1224,9 @@ multiple threads).
 .. py:data:: eQueueKindUnknown
 .. py:data:: eQueueKindSerial
 .. py:data:: eQueueKindConcurrent
+
+
+.. _ExpressionEvaluationPhase:
 
 ExpressionEvaluationPhase
 -------------------------
@@ -1115,6 +1240,9 @@ expression evaluation at the various points in its lifecycle.
 .. py:data:: eExpressionEvaluationExecution
 .. py:data:: eExpressionEvaluationComplete
 
+
+.. _WatchpointKind:
+
 WatchpointKind
 --------------
 
@@ -1123,6 +1251,9 @@ Indicates what types of events cause the watchpoint to fire. Used by Native
 
 .. py:data:: eWatchpointKindWrite
 .. py:data:: eWatchpointKindRead
+
+
+.. _GdbSignal:
 
 GdbSignal
 ---------
@@ -1133,6 +1264,8 @@ GdbSignal
 .. py:data:: eGdbSignalEmulation
 .. py:data:: eGdbSignalSoftware
 .. py:data:: eGdbSignalBreakpoint
+
+.. _PathType:
 
 PathType
 --------
@@ -1179,6 +1312,9 @@ relative to LLDB or are in known locations.
 
    Find path to Clang builtin headers.
 
+
+.. _MemberFunctionKind:
+
 MemberFunctionKind
 ------------------
 
@@ -1199,6 +1335,9 @@ MemberFunctionKind
 
    A function that applies to a type rather than any instance,
 
+
+.. _TypeFlags:
+
 TypeFlags
 ---------
 
@@ -1215,6 +1354,9 @@ TypeFlags
 .. py:data:: eTypeIsComplex
 .. py:data:: eTypeInstanceIsPointer
 
+
+.. _CommandFlags:
+
 CommandFlags
 ---------------
 
@@ -1228,6 +1370,9 @@ CommandFlags
 .. py:data:: eCommandProcessMustBePaused
 .. py:data:: eCommandProcessMustBeTraced
 
+
+.. _TypeSummary:
+
 TypeSummary
 -----------
 
@@ -1235,6 +1380,9 @@ Whether a summary should cap how much data it returns to users or not.
 
 .. py:data:: eTypeSummaryCapped
 .. py:data:: eTypeSummaryUncapped
+
+
+.. _CommandInterpreterResult:
 
 CommandInterpreterResult
 ------------------------

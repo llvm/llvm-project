@@ -13,12 +13,12 @@
 define dso_local void @PR37667() {
 ; CHECK-LABEL: PR37667:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{.*}}(%rip), %eax
+; CHECK-NEXT:    movl b(%rip), %eax
 ; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl {{.*}}(%rip)
-; CHECK-NEXT:    orl {{.*}}(%rip), %edx
+; CHECK-NEXT:    divl d(%rip)
+; CHECK-NEXT:    orl c(%rip), %edx
 ; CHECK-NEXT:    movzbl %dl, %eax
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    movl %eax, a(%rip)
 ; CHECK-NEXT:    retq
   %t0 = load i32, i32* @c, align 4
   %t1 = load i32, i32* @b, align 4
@@ -35,10 +35,10 @@ define dso_local void @PR37060() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl {{.*}}(%rip)
-; CHECK-NEXT:    xorl {{.*}}(%rip), %edx
+; CHECK-NEXT:    idivl c(%rip)
+; CHECK-NEXT:    xorl b(%rip), %edx
 ; CHECK-NEXT:    movzbl %dl, %eax
-; CHECK-NEXT:    movl %eax, {{.*}}(%rip)
+; CHECK-NEXT:    movl %eax, a(%rip)
 ; CHECK-NEXT:    retq
   %t0 = load i32, i32* @c, align 4
   %rem = srem i32 -1, %t0

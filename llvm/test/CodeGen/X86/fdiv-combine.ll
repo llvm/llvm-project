@@ -131,7 +131,7 @@ define void @PR24141() {
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB8_1: # %while.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    callq g
+; CHECK-NEXT:    callq g@PLT
 ; CHECK-NEXT:    divsd %xmm1, %xmm0
 ; CHECK-NEXT:    jmp .LBB8_1
 entry:

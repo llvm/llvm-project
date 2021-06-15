@@ -10,7 +10,7 @@ define i64 @mod128(i128 %x) nounwind {
 ; X86-64-NEXT:    pushq %rax
 ; X86-64-NEXT:    movl $3, %edx
 ; X86-64-NEXT:    xorl %ecx, %ecx
-; X86-64-NEXT:    callq __modti3
+; X86-64-NEXT:    callq __modti3@PLT
 ; X86-64-NEXT:    popq %rcx
 ; X86-64-NEXT:    retq
 ;
@@ -40,7 +40,7 @@ define i64 @div128(i128 %x) nounwind {
 ; X86-64-NEXT:    pushq %rax
 ; X86-64-NEXT:    movl $3, %edx
 ; X86-64-NEXT:    xorl %ecx, %ecx
-; X86-64-NEXT:    callq __divti3
+; X86-64-NEXT:    callq __divti3@PLT
 ; X86-64-NEXT:    popq %rcx
 ; X86-64-NEXT:    retq
 ;
@@ -70,7 +70,7 @@ define i64 @umod128(i128 %x) nounwind {
 ; X86-64-NEXT:    pushq %rax
 ; X86-64-NEXT:    movl $3, %edx
 ; X86-64-NEXT:    xorl %ecx, %ecx
-; X86-64-NEXT:    callq __umodti3
+; X86-64-NEXT:    callq __umodti3@PLT
 ; X86-64-NEXT:    popq %rcx
 ; X86-64-NEXT:    retq
 ;
@@ -100,7 +100,7 @@ define i64 @udiv128(i128 %x) nounwind {
 ; X86-64-NEXT:    pushq %rax
 ; X86-64-NEXT:    movl $3, %edx
 ; X86-64-NEXT:    xorl %ecx, %ecx
-; X86-64-NEXT:    callq __udivti3
+; X86-64-NEXT:    callq __udivti3@PLT
 ; X86-64-NEXT:    popq %rcx
 ; X86-64-NEXT:    retq
 ;
