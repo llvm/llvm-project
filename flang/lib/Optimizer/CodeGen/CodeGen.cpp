@@ -2005,7 +2005,8 @@ struct CoordinateOpConversion
           mlir::Value off = genConstantIndex(loc, idxTy, rewriter, 0);
           for (unsigned index = i, lastIndex = i + arrTy.getDimension();
                index < lastIndex; ++index) {
-            auto stride = loadStrideFromBox(loc, operands[0], index, rewriter);
+            auto stride =
+                loadStrideFromBox(loc, operands[0], index - i, rewriter);
             auto sc = rewriter.create<mlir::LLVM::MulOp>(
                 loc, idxTy, operands[index], stride);
             off = rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, sc, off);
