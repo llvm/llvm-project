@@ -337,21 +337,16 @@ SmallVector<Bucket, 16> PPCLoopInstrFormPrep::collectCandidates(
   for (const auto &BB : L->blocks())
     for (auto &J : *BB) {
       Value *PtrValue;
-      Instruction *MemI;
 
       if (LoadInst *LMemI = dyn_cast<LoadInst>(&J)) {
-        MemI = LMemI;
         PtrValue = LMemI->getPointerOperand();
       } else if (StoreInst *SMemI = dyn_cast<StoreInst>(&J)) {
-        MemI = SMemI;
         PtrValue = SMemI->getPointerOperand();
       } else if (IntrinsicInst *IMemI = dyn_cast<IntrinsicInst>(&J)) {
         if (IMemI->getIntrinsicID() == Intrinsic::prefetch ||
             IMemI->getIntrinsicID() == Intrinsic::ppc_vsx_lxvp) {
-          MemI = IMemI;
           PtrValue = IMemI->getArgOperand(0);
         } else if (IMemI->getIntrinsicID() == Intrinsic::ppc_vsx_stxvp) {
-          MemI = IMemI;
           PtrValue = IMemI->getArgOperand(1);
         } else continue;
       } else continue;
@@ -369,7 +364,7 @@ SmallVector<Bucket, 16> PPCLoopInstrFormPrep::collectCandidates(
         continue;
 
       if (isValidCandidate(&J, PtrValue))
-        addOneCandidate(MemI, LSCEV, Buckets, MaxCandidateNum);
+        addOneCandidate(&J, LSCEV, Buckets, MaxCandidateNum);
     }
   return Buckets;
 }
