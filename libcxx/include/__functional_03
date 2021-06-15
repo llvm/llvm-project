@@ -493,7 +493,7 @@ public:
         {function(allocator_arg, __a, __f).swap(*this);}
 
     // 20.7.16.2.3, function capacity:
-    _LIBCPP_INLINE_VISIBILITY operator bool() const {return __f_;}
+    _LIBCPP_INLINE_VISIBILITY explicit operator bool() const {return __f_;}
 
 private:
     // deleted overloads close possible hole in the type system
@@ -773,7 +773,7 @@ public:
         {function(allocator_arg, __a, __f).swap(*this);}
 
     // 20.7.16.2.3, function capacity:
-    _LIBCPP_INLINE_VISIBILITY operator bool() const {return __f_;}
+    _LIBCPP_INLINE_VISIBILITY explicit operator bool() const {return __f_;}
 
 private:
     // deleted overloads close possible hole in the type system
@@ -1053,7 +1053,7 @@ public:
         {function(allocator_arg, __a, __f).swap(*this);}
 
     // 20.7.16.2.3, function capacity:
-    operator bool() const {return __f_;}
+    _LIBCPP_INLINE_VISIBILITY explicit operator bool() const {return __f_;}
 
 private:
     // deleted overloads close possible hole in the type system
@@ -1332,7 +1332,7 @@ public:
         {function(allocator_arg, __a, __f).swap(*this);}
 
     // 20.7.16.2.3, function capacity:
-    _LIBCPP_INLINE_VISIBILITY operator bool() const {return __f_;}
+    _LIBCPP_INLINE_VISIBILITY explicit operator bool() const {return __f_;}
 
 private:
     // deleted overloads close possible hole in the type system
