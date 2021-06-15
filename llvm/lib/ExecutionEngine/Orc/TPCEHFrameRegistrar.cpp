@@ -54,9 +54,11 @@ Error TPCEHFrameRegistrar::registerEHFrames(JITTargetAddress EHFrameSectionAddr,
                                             size_t EHFrameSectionSize) {
   constexpr size_t ArgBufferSize = sizeof(uint64_t) + sizeof(uint64_t);
   uint8_t ArgBuffer[ArgBufferSize];
+
+  // FIXME: Replace manual serialization with WrapperFunction util call.
   BinaryStreamWriter ArgWriter(
       MutableArrayRef<uint8_t>(ArgBuffer, ArgBufferSize),
-      support::endianness::big);
+      support::endianness::little);
   cantFail(ArgWriter.writeInteger(static_cast<uint64_t>(EHFrameSectionAddr)));
   cantFail(ArgWriter.writeInteger(static_cast<uint64_t>(EHFrameSectionSize)));
 
@@ -67,9 +69,11 @@ Error TPCEHFrameRegistrar::deregisterEHFrames(
     JITTargetAddress EHFrameSectionAddr, size_t EHFrameSectionSize) {
   constexpr size_t ArgBufferSize = sizeof(uint64_t) + sizeof(uint64_t);
   uint8_t ArgBuffer[ArgBufferSize];
+
+  // FIXME: Replace manual serialization with WrapperFunction util call.
   BinaryStreamWriter ArgWriter(
       MutableArrayRef<uint8_t>(ArgBuffer, ArgBufferSize),
-      support::endianness::big);
+      support::endianness::little);
   cantFail(ArgWriter.writeInteger(static_cast<uint64_t>(EHFrameSectionAddr)));
   cantFail(ArgWriter.writeInteger(static_cast<uint64_t>(EHFrameSectionSize)));
 
