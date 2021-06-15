@@ -236,6 +236,11 @@ private:
   void CheckMultipleAppearanceAcrossContext(
       const parser::OmpObjectList &ompObjectList);
   const parser::OmpObjectList *GetOmpObjectList(const parser::OmpClause &);
+  void CheckPredefinedAllocatorRestriction(const parser::CharBlock &source,
+      const parser::OmpObjectList &ompObjectList);
+  void CheckPredefinedAllocatorRestriction(
+      const parser::CharBlock &source, const parser::Name &name);
+  bool isPredefinedAllocator{false};
 };
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_CHECK_OMP_STRUCTURE_H_
