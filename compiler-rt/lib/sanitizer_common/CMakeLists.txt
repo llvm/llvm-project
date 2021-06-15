@@ -31,7 +31,6 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_procmaps_linux.cpp
   sanitizer_procmaps_mac.cpp
   sanitizer_procmaps_solaris.cpp
-  sanitizer_rtems.cpp
   sanitizer_solaris.cpp
   sanitizer_stoptheworld_fuchsia.cpp
   sanitizer_stoptheworld_mac.cpp
@@ -167,7 +166,6 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_quarantine.h
   sanitizer_report_decorator.h
   sanitizer_ring_buffer.h
-  sanitizer_rtems.h
   sanitizer_signal_interceptors.inc
   sanitizer_stackdepot.h
   sanitizer_stackdepotbase.h
@@ -180,7 +178,6 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_symbolizer_internal.h
   sanitizer_symbolizer_libbacktrace.h
   sanitizer_symbolizer_mac.h
-  sanitizer_symbolizer_rtems.h
   sanitizer_syscall_generic.inc
   sanitizer_syscall_linux_aarch64.inc
   sanitizer_syscall_linux_arm.inc
