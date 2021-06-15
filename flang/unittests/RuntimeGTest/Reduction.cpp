@@ -21,11 +21,17 @@
 using namespace Fortran::runtime;
 using Fortran::common::TypeCategory;
 
-TEST(Reductions, SumInt4) {
+TEST(Reductions, Int4Ops) {
   auto array{MakeArray<TypeCategory::Integer, 4>(
       std::vector<int>{2, 3}, std::vector<std::int32_t>{1, 2, 3, 4, 5, 6})};
   std::int32_t sum{RTNAME(SumInteger4)(*array, __FILE__, __LINE__)};
   EXPECT_EQ(sum, 21) << sum;
+  std::int32_t all{RTNAME(IAll4)(*array, __FILE__, __LINE__)};
+  EXPECT_EQ(all, 0) << all;
+  std::int32_t any{RTNAME(IAny4)(*array, __FILE__, __LINE__)};
+  EXPECT_EQ(any, 7) << any;
+  std::int32_t eor{RTNAME(IParity4)(*array, __FILE__, __LINE__)};
+  EXPECT_EQ(eor, 7) << eor;
 }
 
 TEST(Reductions, DimMaskProductInt4) {
