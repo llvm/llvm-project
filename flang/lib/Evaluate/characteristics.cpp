@@ -468,7 +468,23 @@ static std::optional<Procedure> CharacterizeProcedure(
           [&](const semantics::HostAssocDetails &assoc) {
             return CharacterizeProcedure(assoc.symbol(), context, seenProcs);
           },
-          [](const auto &) { return std::optional<Procedure>{}; },
+          [&](const semantics::EntityDetails &) {
+            context.messages().Say(
+                "Procedure '%s' is referenced before being sufficiently defined in a context where it must be so"_err_en_US,
+                symbol.name());
+            return std::optional<Procedure>{};
+          },
+          [&](const semantics::SubprogramNameDetails &) {
+            context.messages().Say(
+                "Procedure '%s' is referenced before being sufficiently defined in a context where it must be so"_err_en_US,
+                symbol.name());
+            return std::optional<Procedure>{};
+          },
+          [&](const auto &) {
+            context.messages().Say(
+                "'%s' is not a procedure"_err_en_US, symbol.name());
+            return std::optional<Procedure>{};
+          },
       },
       symbol.details());
 }

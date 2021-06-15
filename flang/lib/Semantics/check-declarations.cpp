@@ -822,7 +822,9 @@ void CheckHelper::CheckSubprogram(
     } else if (FindSeparateModuleSubprogramInterface(subprogram)) {
       error = "ENTRY may not appear in a separate module procedure"_err_en_US;
     } else if (subprogramDetails && details.isFunction() &&
-        subprogramDetails->isFunction()) {
+        subprogramDetails->isFunction() &&
+        !context_.HasError(details.result()) &&
+        !context_.HasError(subprogramDetails->result())) {
       auto result{FunctionResult::Characterize(
           details.result(), context_.foldingContext())};
       auto subpResult{FunctionResult::Characterize(
