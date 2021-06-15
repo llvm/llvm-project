@@ -174,7 +174,8 @@ private:
 // Wraps a data reference in a typed Designator<>, and a procedure
 // or procedure pointer reference in a ProcedureDesignator.
 MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
-  const Symbol &symbol{ref.GetLastSymbol().GetUltimate()};
+  const Symbol &last{ref.GetLastSymbol()};
+  const Symbol &symbol{last.GetUltimate()};
   if (semantics::IsProcedure(symbol)) {
     if (auto *component{std::get_if<Component>(&ref.u)}) {
       return Expr<SomeType>{ProcedureDesignator{std::move(*component)}};
@@ -193,8 +194,17 @@ MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
           symbol.name());
     }
     return std::nullopt;
+  } else if (MaybeExpr result{AsGenericExpr(std::move(ref))}) {
+    return result;
   } else {
-    return AsGenericExpr(std::move(ref));
+    if (!context_.HasError(last) && !context_.HasError(symbol)) {
+      AttachDeclaration(
+          Say("'%s' is not an object that can appear in an expression"_err_en_US,
+              last.name()),
+          symbol);
+      context_.SetError(last);
+    }
+    return std::nullopt;
   }
 }
 

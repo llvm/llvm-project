@@ -3361,7 +3361,8 @@ void DeclarationVisitor::EndDecl() {
 }
 
 bool DeclarationVisitor::CheckUseError(const parser::Name &name) {
-  const auto *details{name.symbol->detailsIf<UseErrorDetails>()};
+  const auto *details{
+      name.symbol ? name.symbol->detailsIf<UseErrorDetails>() : nullptr};
   if (!details) {
     return false;
   }
@@ -3370,6 +3371,7 @@ bool DeclarationVisitor::CheckUseError(const parser::Name &name) {
     msg.Attach(location, "'%s' was use-associated from module '%s'"_en_US,
         name.source, module->GetName().value());
   }
+  context().SetError(*name.symbol);
   return true;
 }
 
@@ -5247,6 +5249,7 @@ void ConstructVisitor::ResolveIndexName(
         !prevRoot.has<EntityDetails>()) {
       Say2(name, "Index name '%s' conflicts with existing identifier"_err_en_US,
           *prev, "Previous declaration of '%s'"_en_US);
+      context().SetError(symbol);
       return;
     } else {
       if (const auto *type{prevRoot.GetType()}) {
