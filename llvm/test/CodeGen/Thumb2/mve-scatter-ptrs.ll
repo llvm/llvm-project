@@ -228,22 +228,13 @@ entry:
   ret void
 }
 
-; Expand
 define arm_aapcs_vfpcc void @ptr_v4i16_trunc(<4 x i32> %v, <4 x i16*>* %offptr) {
 ; CHECK-LABEL: ptr_v4i16_trunc:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vmov r1, r3, d0
-; CHECK-NEXT:    vmov r4, r5, d1
-; CHECK-NEXT:    vmov r0, r12, d2
-; CHECK-NEXT:    vmov r2, lr, d3
-; CHECK-NEXT:    strh r1, [r0]
-; CHECK-NEXT:    strh.w r3, [r12]
-; CHECK-NEXT:    strh r4, [r2]
-; CHECK-NEXT:    strh.w r5, [lr]
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    vstrh.32 q0, [r0, q1]
+; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i16*>, <4 x i16*>* %offptr, align 4
   %ext = trunc <4 x i32> %v to <4 x i16>
@@ -463,22 +454,13 @@ entry:
   ret void
 }
 
-; Expand
 define arm_aapcs_vfpcc void @ptr_v4i8_trunc32(<4 x i32> %v, <4 x i8*>* %offptr) {
 ; CHECK-LABEL: ptr_v4i8_trunc32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
-; CHECK-NEXT:    vmov r1, r3, d0
-; CHECK-NEXT:    vmov r4, r5, d1
-; CHECK-NEXT:    vmov r0, r12, d2
-; CHECK-NEXT:    vmov r2, lr, d3
-; CHECK-NEXT:    strb r1, [r0]
-; CHECK-NEXT:    strb.w r3, [r12]
-; CHECK-NEXT:    strb r4, [r2]
-; CHECK-NEXT:    strb.w r5, [lr]
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    vstrb.32 q0, [r0, q1]
+; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i8*>, <4 x i8*>* %offptr, align 4
   %ext = trunc <4 x i32> %v to <4 x i8>

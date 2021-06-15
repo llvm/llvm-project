@@ -234,16 +234,9 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @ptr_v4i16_sext(<4 x i16*>* %offptr) {
 ; CHECK-LABEL: ptr_v4i16_sext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vmov r0, r1, d1
-; CHECK-NEXT:    vmov r2, r3, d0
-; CHECK-NEXT:    ldrh r0, [r0]
-; CHECK-NEXT:    ldrh r2, [r2]
-; CHECK-NEXT:    ldrh r1, [r1]
-; CHECK-NEXT:    ldrh r3, [r3]
-; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
-; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
-; CHECK-NEXT:    vmovlb.s16 q0, q0
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vldrh.s32 q0, [r1, q1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i16*>, <4 x i16*>* %offptr, align 4
@@ -255,16 +248,9 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @ptr_v4i16_zext(<4 x i16*>* %offptr) {
 ; CHECK-LABEL: ptr_v4i16_zext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vmov r0, r1, d1
-; CHECK-NEXT:    vmov r2, r3, d0
-; CHECK-NEXT:    ldrh r0, [r0]
-; CHECK-NEXT:    ldrh r2, [r2]
-; CHECK-NEXT:    ldrh r1, [r1]
-; CHECK-NEXT:    ldrh r3, [r3]
-; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
-; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
-; CHECK-NEXT:    vmovlb.u16 q0, q0
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vldrh.u32 q0, [r1, q1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i16*>, <4 x i16*>* %offptr, align 4
@@ -574,17 +560,9 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @ptr_v4i8_sext32(<4 x i8*>* %offptr) {
 ; CHECK-LABEL: ptr_v4i8_sext32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vmov r0, r1, d1
-; CHECK-NEXT:    vmov r2, r3, d0
-; CHECK-NEXT:    ldrb r0, [r0]
-; CHECK-NEXT:    ldrb r2, [r2]
-; CHECK-NEXT:    ldrb r1, [r1]
-; CHECK-NEXT:    ldrb r3, [r3]
-; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
-; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
-; CHECK-NEXT:    vmovlb.s8 q0, q0
-; CHECK-NEXT:    vmovlb.s16 q0, q0
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vldrb.s32 q0, [r1, q1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i8*>, <4 x i8*>* %offptr, align 4
@@ -596,17 +574,9 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @ptr_v4i8_zext32(<4 x i8*>* %offptr) {
 ; CHECK-LABEL: ptr_v4i8_zext32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vmov r0, r1, d1
-; CHECK-NEXT:    vmov r2, r3, d0
-; CHECK-NEXT:    vmov.i32 q0, #0xff
-; CHECK-NEXT:    ldrb r0, [r0]
-; CHECK-NEXT:    ldrb r2, [r2]
-; CHECK-NEXT:    ldrb r1, [r1]
-; CHECK-NEXT:    ldrb r3, [r3]
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
-; CHECK-NEXT:    vmov q1[3], q1[1], r3, r1
-; CHECK-NEXT:    vand q0, q1, q0
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vldrb.u32 q0, [r1, q1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i8*>, <4 x i8*>* %offptr, align 4
