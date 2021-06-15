@@ -220,9 +220,17 @@ char *GetTeamsReductionScratchpad() {
 void __kmp_invoke_microtask(kmp_int32 global_tid, kmp_int32 bound_tid, void *fn,
                             void **args, size_t nargs) {
   switch (nargs) {
-#include "common/generated_microtask_cases.gen"
+  case 1:
+    ((void (*)(kmp_int32 *, kmp_int32 *, void *))fn)(&global_tid, &bound_tid,
+                                                     args[0]);
+    break;
+  case 3:
+    ((void (*)(kmp_int32 *, kmp_int32 *, void *, void *, void *))fn)(
+        &global_tid, &bound_tid, args[0], args[1], args[2]);
+    break;
   default:
-    printf("Too many arguments in kmp_invoke_microtask, aborting execution.\n");
+    printf("Invalid number of arguments in kmp_invoke_microtask, expects 1 or "
+           "3 (for combined constructs), aborting execution.\n");
     __builtin_trap();
   }
 }
