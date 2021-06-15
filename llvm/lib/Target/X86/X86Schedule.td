@@ -125,6 +125,7 @@ def WriteLoad    : SchedWrite;
 def WriteStore   : SchedWrite;
 def WriteStoreNT : SchedWrite;
 def WriteMove    : SchedWrite;
+def WriteVecMaskedGatherWriteback : SchedWrite;
 def WriteCopy    : WriteSequence<[WriteLoad, WriteStore]>; // mem->mem copy
 
 // Arithmetic.

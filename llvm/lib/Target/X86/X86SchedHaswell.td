@@ -125,6 +125,10 @@ defm : X86WriteRes<WriteLoad,    [HWPort23], 5, [1], 1>;
 defm : X86WriteRes<WriteMove,    [HWPort0156], 1, [1], 1>;
 def  : WriteRes<WriteZero,       []>;
 
+// Model the effect of clobbering the read-write mask operand of the GATHER operation.
+// Does not cost anything by itself, only has latency, matching that of the WriteLoad,
+defm : X86WriteRes<WriteVecMaskedGatherWriteback, [], 5, [], 0>;
+
 // Arithmetic.
 defm : HWWriteResPair<WriteALU,    [HWPort0156], 1>;
 defm : HWWriteResPair<WriteADC,    [HWPort06, HWPort0156], 2, [1,1], 2>;
