@@ -211,6 +211,25 @@ def MulOp : ComplexArithmeticOp<"mul"> {
 }
 
 //===----------------------------------------------------------------------===//
+// NegOp
+//===----------------------------------------------------------------------===//
+
+def NegOp : ComplexUnaryOp<"neg", [SameOperandsAndResultType]> {
+  let summary = "Negation operator";
+  let description = [{
+    The `neg` op takes a single complex number `complex` and returns `-complex`.
+
+    Example:
+
+    ```mlir
+    %a = complex.neg %b : complex<f32>
+    ```
+  }];
+
+  let results = (outs Complex<AnyFloat>:$result);
+}
+
+//===----------------------------------------------------------------------===//
 // NotEqualOp
 //===----------------------------------------------------------------------===//
 
