@@ -6954,10 +6954,38 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
     if (VA.isRegLoc()) {
       if (VA.getValVT().isScalarInteger())
         FuncInfo->appendParameterType(PPCFunctionInfo::FixedType);
-      else if (VA.getValVT().isFloatingPoint() && !VA.getValVT().isVector())
-        FuncInfo->appendParameterType(VA.getValVT().SimpleTy == MVT::f32
-                                          ? PPCFunctionInfo::ShortFloatPoint
-                                          : PPCFunctionInfo::LongFloatPoint);
+      else if (VA.getValVT().isFloatingPoint() && !VA.getValVT().isVector()) {
+        switch (VA.getValVT().SimpleTy) {
+        default:
+          report_fatal_error("Unhandled value type for argument.");
+        case MVT::f32:
+          FuncInfo->appendParameterType(PPCFunctionInfo::ShortFloatingPoint);
+          break;
+        case MVT::f64:
+          FuncInfo->appendParameterType(PPCFunctionInfo::LongFloatingPoint);
+          break;
+        }
+      } else if (VA.getValVT().isVector()) {
+        switch (VA.getValVT().SimpleTy) {
+        default:
+          report_fatal_error("Unhandled value type for argument.");
+        case MVT::v16i8:
+          FuncInfo->appendParameterType(PPCFunctionInfo::VectorChar);
+          break;
+        case MVT::v8i16:
+          FuncInfo->appendParameterType(PPCFunctionInfo::VectorShort);
+          break;
+        case MVT::v4i32:
+        case MVT::v2i64:
+        case MVT::v1i128:
+          FuncInfo->appendParameterType(PPCFunctionInfo::VectorInt);
+          break;
+        case MVT::v4f32:
+        case MVT::v2f64:
+          FuncInfo->appendParameterType(PPCFunctionInfo::VectorFloat);
+          break;
+        }
+      }
     }
 
     if (Flags.isByVal() && VA.isMemLoc()) {

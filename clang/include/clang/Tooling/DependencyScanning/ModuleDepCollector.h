@@ -191,8 +191,7 @@ class ModuleDepCollector final : public DependencyCollector {
 public:
   ModuleDepCollector(std::unique_ptr<DependencyOutputOptions> Opts,
                      CompilerInstance &I, DependencyConsumer &C,
-                     std::map<std::string, std::string, std::less<>>
-                         OriginalPrebuiltModuleFiles);
+                     CompilerInvocation &&OriginalCI);
 
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
@@ -215,9 +214,8 @@ private:
   std::unordered_map<const Module *, ModuleDeps> ModularDeps;
   /// Options that control the dependency output generation.
   std::unique_ptr<DependencyOutputOptions> Opts;
-  /// The mapping between prebuilt module names and module files that were
-  /// present in the original CompilerInvocation.
-  std::map<std::string, std::string, std::less<>> OriginalPrebuiltModuleFiles;
+  /// The original Clang invocation passed to dependency scanner.
+  CompilerInvocation OriginalInvocation;
 
   /// Checks whether the module is known as being prebuilt.
   bool isPrebuiltModule(const Module *M);

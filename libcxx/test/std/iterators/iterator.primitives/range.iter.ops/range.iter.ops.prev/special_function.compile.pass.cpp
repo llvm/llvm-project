@@ -10,7 +10,7 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: gcc-10
 
-// ranges::next
+// ranges::prev
 
 #include <iterator>
 

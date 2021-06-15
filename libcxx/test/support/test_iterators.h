@@ -663,9 +663,9 @@ struct cpp20_input_iterator {
 
   constexpr void operator++(int) { ++base_; }
 
-  [[nodiscard]] constexpr I const& base() const& { return base_; }
+  constexpr I const& base() const& { return base_; }
 
-  [[nodiscard]] constexpr I base() && { return std::move(base_); }
+  constexpr I base() && { return std::move(base_); }
 
 private:
   I base_ = I();
@@ -729,7 +729,7 @@ public:
 
   constexpr explicit stride_counting_iterator(I current) : base_(std::move(current)) {}
 
-  [[nodiscard]] constexpr I const& base() const& requires std::copyable<I> { return base_; }
+  [[nodiscard]] constexpr I const& base() const& { return base_; }
 
   [[nodiscard]] constexpr I base() && { return std::move(base_); }
 

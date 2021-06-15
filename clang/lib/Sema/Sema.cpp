@@ -1962,10 +1962,9 @@ static void checkEscapingByref(VarDecl *VD, Sema &S) {
   SourceLocation Loc = VD->getLocation();
   Expr *VarRef =
       new (S.Context) DeclRefExpr(S.Context, VD, false, T, VK_LValue, Loc);
-  ExprResult Result = S.PerformCopyInitialization(
-      InitializedEntity::InitializeBlock(Loc, T, false), SourceLocation(),
-      VarRef);
-
+  ExprResult Result = S.PerformMoveOrCopyInitialization(
+      InitializedEntity::InitializeBlock(Loc, T, false), VD, VD->getType(),
+      VarRef, /*AllowNRVO=*/true);
   if (!Result.isInvalid()) {
     Result = S.MaybeCreateExprWithCleanups(Result);
     Expr *Init = Result.getAs<Expr>();
