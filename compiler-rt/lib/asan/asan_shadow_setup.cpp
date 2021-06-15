@@ -17,8 +17,8 @@
 // InitializeShadowMemory implementation.
 #if !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
 
-#include "asan_internal.h"
-#include "asan_mapping.h"
+#  include "asan_internal.h"
+#  include "asan_mapping.h"
 
 namespace __asan {
 

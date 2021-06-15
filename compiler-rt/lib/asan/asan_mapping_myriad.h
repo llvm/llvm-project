@@ -17,22 +17,22 @@
 #define MEM_TO_SHADOW(mem) \
   (((RAW_ADDR(mem) - kLowMemBeg) >> SHADOW_SCALE) + (SHADOW_OFFSET))
 
-#define kLowMemBeg     kMyriadMemoryOffset32
-#define kLowMemEnd     (SHADOW_OFFSET - 1)
+#define kLowMemBeg kMyriadMemoryOffset32
+#define kLowMemEnd (SHADOW_OFFSET - 1)
 
-#define kLowShadowBeg  SHADOW_OFFSET
-#define kLowShadowEnd  MEM_TO_SHADOW(kLowMemEnd)
+#define kLowShadowBeg SHADOW_OFFSET
+#define kLowShadowEnd MEM_TO_SHADOW(kLowMemEnd)
 
-#define kHighMemBeg    0
+#define kHighMemBeg 0
 
 #define kHighShadowBeg 0
 #define kHighShadowEnd 0
 
-#define kMidShadowBeg  0
-#define kMidShadowEnd  0
+#define kMidShadowBeg 0
+#define kMidShadowEnd 0
 
-#define kShadowGapBeg  (kLowShadowEnd + 1)
-#define kShadowGapEnd  kMyriadMemoryEnd32
+#define kShadowGapBeg (kLowShadowEnd + 1)
+#define kShadowGapEnd kMyriadMemoryEnd32
 
 #define kShadowGap2Beg 0
 #define kShadowGap2End 0
