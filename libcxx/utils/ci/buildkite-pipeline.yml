@@ -124,7 +124,7 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
-  - label: "GCC/C++20"
+  - label: "GCC Current/C++20"
     command: "libcxx/utils/ci/run-buildbot generic-gcc"
     artifact_paths:
       - "**/test-results.xml"
@@ -135,8 +135,13 @@ steps:
         - exit_status: -1  # Agent was lost
           limit: 2
 
-  - label: "GCC-next/C++20"
-    command: "libcxx/utils/ci/run-buildbot generic-gcc-next"
+  #
+  # All other supported configurations of libc++.
+  #
+  - wait
+
+  - label: "GCC Previous/C++20"
+    command: "libcxx/utils/ci/run-buildbot generic-gcc-prev"
     artifact_paths:
       - "**/test-results.xml"
     agents:
@@ -145,13 +150,6 @@ steps:
       automatic:
         - exit_status: -1  # Agent was lost
           limit: 2
-    soft_fail:
-      - exit_status: 1
-
-  #
-  # All other supported configurations of libc++.
-  #
-  - wait
 
   - label: "-fno-exceptions"
     command: "libcxx/utils/ci/run-buildbot generic-noexceptions"
