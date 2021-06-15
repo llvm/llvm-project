@@ -458,11 +458,17 @@ static Optional<unsigned> buildTensorExp(Merger &merger, linalg::GenericOp op,
                                          Value val) {
   if (auto arg = val.dyn_cast<BlockArgument>()) {
     unsigned argN = arg.getArgNumber();
-    // Any parameter of the generic op is considered a tensor,
-    // indexed by the implicit loop bounds.
-    if (arg.getOwner()->getParentOp() == op)
-      return merger.addExp(Kind::kTensor, argN);
-    // Any parameter of a higher op is invariant.
+    // Any argument of the generic op that is not marked as a scalar
+    // argument is considered a tensor, indexed by the implicit loop
+    // bounds. This includes rank-0 tensor arguments.
+    if (arg.getOwner()->getParentOp() == op) {
+      OpOperand *t = op.getInputAndOutputOperands()[argN];
+      if (!op.isScalar(t))
+        return merger.addExp(Kind::kTensor, argN);
+      val = t->get(); // get scalar value
+    }
+    // Any other argument (marked as scalar argument for the generic op
+    // or belonging to an enveloping op) is considered invariant.
     return merger.addExp(Kind::kInvariant, val);
   }
   Operation *def = val.getDefiningOp();
@@ -719,9 +725,7 @@ static Value genTensorLoad(Merger &merger, CodeGen &codegen,
   }
   // Actual load.
   SmallVector<Value, 4> args;
-  OpOperand *t = merger.exp(exp).e0 < op.getNumInputs()
-                     ? op.getInputOperand(merger.exp(exp).e0)
-                     : op.getOutputOperand(0);
+  OpOperand *t = op.getInputAndOutputOperands()[merger.exp(exp).e0];
   unsigned tensor = t->getOperandNumber();
   auto map = op.getTiedIndexingMap(t);
   auto enc = getSparseTensorEncoding(t->get().getType());
@@ -919,11 +923,9 @@ static void genInvariants(Merger &merger, CodeGen &codegen,
   if (merger.exp(exp).kind == Kind::kTensor) {
     // Inspect tensor indices.
     bool atLevel = ldx == -1u;
-    OpOperand *tensor = merger.exp(exp).e0 < op.getNumInputs()
-                            ? op.getInputOperand(merger.exp(exp).e0)
-                            : op.getOutputOperand(0);
-    auto map = op.getTiedIndexingMap(tensor);
-    auto enc = getSparseTensorEncoding(tensor->get().getType());
+    OpOperand *t = op.getInputAndOutputOperands()[merger.exp(exp).e0];
+    auto map = op.getTiedIndexingMap(t);
+    auto enc = getSparseTensorEncoding(t->get().getType());
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
       unsigned idx = map.getDimPosition(perm(enc, d));
       if (!codegen.loops[idx])
@@ -933,7 +935,7 @@ static void genInvariants(Merger &merger, CodeGen &codegen,
     }
     // All exhausted at this level (atLevel denotes exactly at this level).
     OpOperand *lhs = op.getOutputOperand(0);
-    if (lhs == tensor) {
+    if (lhs == t) {
       codegen.redExp = hoist ? exp : -1u;
     } else if (atLevel) {
       merger.exp(exp).val =
@@ -1413,8 +1415,6 @@ public:
     // Detects sparse annotations and translate the per-dimension sparsity
     // information for all tensors to loop indices in the kernel.
     assert(op.getNumOutputs() == 1);
-    assert(llvm::none_of(op.getInputAndOutputOperands(),
-                         [&](OpOperand *t) { return op.isScalar(t); }));
     unsigned numTensors = op.getNumInputsAndOutputs();
     unsigned numLoops = op.iterator_types().getValue().size();
     Merger merger(numTensors, numLoops);
