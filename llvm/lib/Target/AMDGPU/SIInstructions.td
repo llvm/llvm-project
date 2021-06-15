@@ -1995,10 +1995,16 @@ def : GCNPat <
 
 // Eliminate a zero extension from an fp16 operation if it already
 // zeros the high bits of the 32-bit register.
+//
+// This is complicated on gfx9+. Some instructions maintain the legacy
+// zeroing behavior, but others preserve the high bits. Some have a
+// control bit to change the behavior. We can't simply say with
+// certainty what the source behavior is without more context on how
+// the src is lowered. e.g. fptrunc + fma may be lowered to a
+// v_fma_mix* instruction which does not zero, or may not.
 def : GCNPat<
   (i32 (zext (i16 (bitconvert fp16_zeros_high_16bits:$src)))),
-  (COPY VSrc_b16:$src)
->;
+  (COPY VSrc_b16:$src)>;
 
 def : GCNPat <
   (i32 (trunc i64:$a)),
