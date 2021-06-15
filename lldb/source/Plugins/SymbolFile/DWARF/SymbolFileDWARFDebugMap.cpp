@@ -16,7 +16,6 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/RegularExpression.h"
-#include "lldb/Utility/Timer.h"
 
 //#define DEBUG_OSO_DMAP // DO NOT CHECKIN WITH THIS NOT COMMENTED OUT
 #if defined(DEBUG_OSO_DMAP)
@@ -33,6 +32,9 @@
 
 #include "LogChannelDWARF.h"
 #include "SymbolFileDWARF.h"
+
+// Work around the fact that Timer.h pulls in the system Mach-O headers.
+#include "lldb/Utility/Timer.h"
 
 #include <memory>
 

@@ -31,8 +31,3 @@ add_flang_nongtest_unittest(external-io
   RuntimeTesting
   FortranRuntime
 )
-
-add_flang_nongtest_unittest(buffer
-  RuntimeTesting
-  FortranRuntime
-)

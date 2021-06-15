@@ -4890,10 +4890,13 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   // Introduce a new scope where local variable instantiations will be
   // recorded, unless we're actually a member function within a local
   // class, in which case we need to merge our results with the parent
-  // scope (of the enclosing function).
+  // scope (of the enclosing function). The exception is instantiating
+  // a function template specialization, since the template to be
+  // instantiated already has references to locals properly substituted.
   bool MergeWithParentScope = false;
   if (CXXRecordDecl *Rec = dyn_cast<CXXRecordDecl>(Function->getDeclContext()))
-    MergeWithParentScope = Rec->isLocalClass();
+    MergeWithParentScope =
+        Rec->isLocalClass() && !Function->isFunctionTemplateSpecialization();
 
   LocalInstantiationScope Scope(*this, MergeWithParentScope);
 

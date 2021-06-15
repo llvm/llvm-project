@@ -34,7 +34,7 @@ static const u32 kStackTraceMax = 256;
 // revisit this macro when slow unwind works on Mac, see
 // https://github.com/google/sanitizers/issues/137
 #if SANITIZER_MAC || SANITIZER_RTEMS
-# define SANITIZER_CAN_SLOW_UNWIND 0
+#  define SANITIZER_CAN_SLOW_UNWIND 0
 #else
 # define SANITIZER_CAN_SLOW_UNWIND 1
 #endif

@@ -105,8 +105,8 @@ void dfsan_print_origin_trace(const void *addr, const char *description);
 ///   int len = dfsan_sprint_origin_trace(&var, nullptr, buf, sizeof(buf));
 ///
 ///   if (len < sizeof(buf)) {
-///     ProcessOriginTrace(tmpbuf);
-///   else {
+///     ProcessOriginTrace(buf);
+///   } else {
 ///     char *tmpbuf = new char[len + 1];
 ///     dfsan_sprint_origin_trace(&var, nullptr, tmpbuf, len + 1);
 ///     ProcessOriginTrace(tmpbuf);
@@ -124,6 +124,19 @@ void dfsan_print_origin_trace(const void *addr, const char *description);
 /// return value is not less than \p out_buf_size.
 size_t dfsan_sprint_origin_trace(const void *addr, const char *description,
                                  char *out_buf, size_t out_buf_size);
+
+/// Prints the stack trace leading to this call to a pre-allocated output
+/// buffer.
+///
+/// For usage examples, see dfsan_sprint_origin_trace.
+///
+/// \param [out] out_buf The output buffer to write the results to.
+/// \param out_buf_size The size of \p out_buf.
+///
+/// \returns The number of symbols that should have been written to \p out_buf
+/// (not including trailing null byte '\0'). Thus, the string is truncated iff
+/// return value is not less than \p out_buf_size.
+size_t dfsan_sprint_stack_trace(char *out_buf, size_t out_buf_size);
 
 /// Retrieves the very first origin associated with the data at the given
 /// address.

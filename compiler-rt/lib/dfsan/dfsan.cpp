@@ -824,10 +824,6 @@ dfsan_get_init_origin(const void *addr) {
   return origin_id;
 }
 
-#define GET_FATAL_STACK_TRACE_PC_BP(pc, bp) \
-  BufferedStackTrace stack;                 \
-  stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal);
-
 void __sanitizer::BufferedStackTrace::UnwindImpl(uptr pc, uptr bp,
                                                  void *context,
                                                  bool request_fast,
@@ -841,8 +837,17 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(uptr pc, uptr bp,
 }
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_print_stack_trace() {
-  GET_FATAL_STACK_TRACE_PC_BP(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME());
+  GET_CALLER_PC_BP;
+  GET_STORE_STACK_TRACE_PC_BP(pc, bp);
   stack.Print();
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE size_t
+dfsan_sprint_stack_trace(char *out_buf, size_t out_buf_size) {
+  CHECK(out_buf);
+  GET_CALLER_PC_BP;
+  GET_STORE_STACK_TRACE_PC_BP(pc, bp);
+  return stack.PrintTo(out_buf, out_buf_size);
 }
 
 void Flags::SetDefaults() {
