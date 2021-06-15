@@ -198,6 +198,7 @@ if (LIBCXX_ENABLE_SHARED)
       VERSION       "${LIBCXX_ABI_VERSION}.0"
       SOVERSION     "${LIBCXX_ABI_VERSION}"
       DEFINE_SYMBOL ""
+      POSITION_INDEPENDENT_CODE ON
   )
   cxx_add_common_build_flags(cxx_shared)
   cxx_set_common_defines(cxx_shared)
@@ -272,6 +273,7 @@ if (LIBCXX_ENABLE_STATIC)
       COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
       LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
       OUTPUT_NAME   "c++"
+      POSITION_INDEPENDENT_CODE ON
   )
   cxx_add_common_build_flags(cxx_static)
   cxx_set_common_defines(cxx_static)
