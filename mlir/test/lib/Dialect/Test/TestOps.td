@@ -1876,6 +1876,15 @@ def FormatTypesMatchAttrOp : TEST_Op<"format_types_match_attr", [
   let assemblyFormat = "attr-dict $value";
 }
 
+def FormatTypesMatchContextOp : TEST_Op<"format_types_match_context", [
+    TypesMatchWith<"tuple result type matches operand type", "value", "result",
+        "::mlir::TupleType::get($_ctxt, $_self)">
+  ]> {
+  let arguments = (ins AnyType:$value);
+  let results = (outs AnyType:$result);
+  let assemblyFormat = "attr-dict $value `:` type($value)";
+}
+
 //===----------------------------------------------------------------------===//
 // Test SideEffects
 //===----------------------------------------------------------------------===//

@@ -348,3 +348,6 @@ test.format_infer_variadic_type_from_non_variadic %i64, %i64 : i64
 
 // CHECK: test.format_types_match_attr 1 : i64
 %ignored_res5 = test.format_types_match_attr 1 : i64
+
+// CHECK: test.format_types_match_context %[[I64]] : i64
+%ignored_res6 = test.format_types_match_context %i64 : i64
