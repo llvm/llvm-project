@@ -154,6 +154,19 @@ func @complex_exp(%arg: complex<f32>) -> complex<f32> {
 // CHECK: %[[RESULT:.*]] = complex.create %[[RESULT_REAL]], %[[RESULT_IMAG]] : complex<f32>
 // CHECK: return %[[RESULT]] : complex<f32>
 
+// CHECK-LABEL: func @complex_neg
+// CHECK-SAME: %[[ARG:.*]]: complex<f32>
+func @complex_neg(%arg: complex<f32>) -> complex<f32> {
+  %neg = complex.neg %arg: complex<f32>
+  return %neg : complex<f32>
+}
+// CHECK: %[[REAL:.*]] = complex.re %[[ARG]] : complex<f32>
+// CHECK: %[[IMAG:.*]] = complex.im %[[ARG]] : complex<f32>
+// CHECK-DAG: %[[NEG_REAL:.*]] = negf %[[REAL]] : f32
+// CHECK-DAG: %[[NEG_IMAG:.*]] = negf %[[IMAG]] : f32
+// CHECK: %[[RESULT:.*]] = complex.create %[[NEG_REAL]], %[[NEG_IMAG]] : complex<f32>
+// CHECK: return %[[RESULT]] : complex<f32>
+
 // CHECK-LABEL: func @complex_neq
 // CHECK-SAME: %[[LHS:.*]]: complex<f32>, %[[RHS:.*]]: complex<f32>
 func @complex_neq(%lhs: complex<f32>, %rhs: complex<f32>) -> i1 {

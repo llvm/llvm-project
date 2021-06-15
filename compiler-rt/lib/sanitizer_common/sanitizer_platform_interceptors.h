@@ -115,9 +115,9 @@
 #endif
 
 #if SANITIZER_RTEMS
-#define SI_NOT_RTEMS 0
+#  define SI_NOT_RTEMS 0
 #else
-#define SI_NOT_RTEMS 1
+#  define SI_NOT_RTEMS 1
 #endif
 
 #if SANITIZER_SOLARIS

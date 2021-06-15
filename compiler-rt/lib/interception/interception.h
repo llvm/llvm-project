@@ -16,10 +16,10 @@
 
 #include "sanitizer_common/sanitizer_internal_defs.h"
 
-#if !SANITIZER_LINUX && !SANITIZER_FREEBSD && !SANITIZER_MAC && \
-    !SANITIZER_NETBSD && !SANITIZER_WINDOWS && \
-    !SANITIZER_FUCHSIA && !SANITIZER_RTEMS && !SANITIZER_SOLARIS
-# error "Interception doesn't work on this operating system."
+#if !SANITIZER_LINUX && !SANITIZER_FREEBSD && !SANITIZER_MAC &&      \
+    !SANITIZER_NETBSD && !SANITIZER_WINDOWS && !SANITIZER_FUCHSIA && \
+    !SANITIZER_RTEMS && !SANITIZER_SOLARIS
+#  error "Interception doesn't work on this operating system."
 #endif
 
 // These typedefs should be used only in the interceptor definitions to replace
@@ -131,10 +131,10 @@ const interpose_substitution substitution_##func_name[] \
 # define DECLARE_WRAPPER_WINAPI(ret_type, func, ...) \
     extern "C" __declspec(dllimport) ret_type __stdcall func(__VA_ARGS__);
 #elif SANITIZER_RTEMS
-# define WRAP(x) x
-# define WRAPPER_NAME(x) #x
-# define INTERCEPTOR_ATTRIBUTE
-# define DECLARE_WRAPPER(ret_type, func, ...)
+#  define WRAP(x) x
+#  define WRAPPER_NAME(x) #  x
+#  define INTERCEPTOR_ATTRIBUTE
+#  define DECLARE_WRAPPER(ret_type, func, ...)
 #elif SANITIZER_FREEBSD || SANITIZER_NETBSD
 # define WRAP(x) __interceptor_ ## x
 # define WRAPPER_NAME(x) "__interceptor_" #x
@@ -163,8 +163,8 @@ const interpose_substitution substitution_##func_name[] \
 # define REAL(x) __unsanitized_##x
 # define DECLARE_REAL(ret_type, func, ...)
 #elif SANITIZER_RTEMS
-# define REAL(x) __real_ ## x
-# define DECLARE_REAL(ret_type, func, ...) \
+#  define REAL(x) __real_##x
+#  define DECLARE_REAL(ret_type, func, ...) \
     extern "C" ret_type REAL(func)(__VA_ARGS__);
 #elif !SANITIZER_MAC
 # define PTR_TO_REAL(x) real_##x
@@ -185,9 +185,9 @@ const interpose_substitution substitution_##func_name[] \
 #endif  // SANITIZER_MAC
 
 #if !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
-# define DECLARE_REAL_AND_INTERCEPTOR(ret_type, func, ...) \
-  DECLARE_REAL(ret_type, func, __VA_ARGS__) \
-  extern "C" ret_type WRAP(func)(__VA_ARGS__);
+#  define DECLARE_REAL_AND_INTERCEPTOR(ret_type, func, ...) \
+    DECLARE_REAL(ret_type, func, __VA_ARGS__)               \
+    extern "C" ret_type WRAP(func)(__VA_ARGS__);
 // Declare an interceptor and its wrapper defined in a different translation
 // unit (ex. asm).
 # define DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(ret_type, func, ...)    \
@@ -203,10 +203,10 @@ const interpose_substitution substitution_##func_name[] \
 // without defining INTERCEPTOR(..., foo, ...). For example, if you override
 // foo with an interceptor for other function.
 #if !SANITIZER_MAC && !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
-# define DEFINE_REAL(ret_type, func, ...) \
+#  define DEFINE_REAL(ret_type, func, ...)            \
     typedef ret_type (*FUNC_TYPE(func))(__VA_ARGS__); \
-    namespace __interception { \
-      FUNC_TYPE(func) PTR_TO_REAL(func); \
+    namespace __interception {                        \
+    FUNC_TYPE(func) PTR_TO_REAL(func);                \
     }
 #else
 # define DEFINE_REAL(ret_type, func, ...)

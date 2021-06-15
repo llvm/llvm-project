@@ -26,10 +26,10 @@ def matmul_poly(
 
 @linalg_structured_op
 def fill_rng(
-    O=TensorDef(T, S.M, S.N, output=True),
-    min=CaptureDef(F64),
-    max=CaptureDef(F64),
-    seed=CaptureDef(I32)):
+    min=ScalarDef(F64),
+    max=ScalarDef(F64),
+    seed=ScalarDef(I32),
+    O=TensorDef(T, S.M, S.N, output=True)):
   multiplier = cast(I32, const(1103515245))
   increment = cast(I32, const(12345))
   rand1 = (cast(I32, index(D.m)) + seed) * multiplier + increment
@@ -159,7 +159,7 @@ with Context() as ctx, Location.unknown():
       return matmul_poly(lhs, rhs, outs=[init_result])
 
     # CHECK-LABEL: @test_fill_rng
-    # CHECK-SAME:  %{{.*}} tensor<4x16xi32>, %[[MIN:.+]]: f64, %[[MAX:.+]]: f64, %[[SEED:.+]]: i32
+    # CHECK:      ^{{.*}}(%[[MIN:.+]]: f64, %[[MAX:.+]]: f64, %[[SEED:.+]]: i32, %{{.*}}
     # CHECK-DAG:    %[[IDX0:.+]] = linalg.index 0 : index
     # CHECK-DAG:    %[[IDX1:.+]] = linalg.index 1 : index
     # CHECK-DAG:    %[[IDX0_CAST:.+]] = index_cast %[[IDX0]] : index to i32
@@ -178,10 +178,10 @@ with Context() as ctx, Location.unknown():
     # CHECK-DAG:    %[[RND4:.+]] = mulf %{{.+}}, %[[FACT]] : f64
     # CHECK-DAG:    %[[RND5:.+]] = addf %[[RND4]], %[[MIN]] : f64
     # CHECK-DAG:    %{{.*}} = fptosi %[[RND5]] : f64 to i32
-    @builtin.FuncOp.from_py_func(
-        RankedTensorType.get((4, 16), i32), f64, f64, i32)
-    def test_fill_rng(init_result, min, max, seed):
-      return fill_rng(outs=[init_result], captures=[min, max, seed])
+    @builtin.FuncOp.from_py_func(f64, f64, i32,
+                                 RankedTensorType.get((4, 16), i32))
+    def test_fill_rng(min, max, seed, init_result):
+      return fill_rng(min, max, seed, outs=[init_result])
 
 
 print(module)

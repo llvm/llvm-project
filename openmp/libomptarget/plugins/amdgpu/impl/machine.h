@@ -66,9 +66,6 @@ public:
   }
   template <typename T> void addProcessor(const T &p);
   template <typename T> std::vector<T> &processors();
-  template <typename T> size_t processorCount() {
-    return processors<T>().size();
-  }
 
 private:
   std::vector<ATLCPUProcessor> cpu_processors_;
@@ -77,15 +74,5 @@ private:
 
 hsa_amd_memory_pool_t get_memory_pool(const ATLProcessor &proc,
                                       const int mem_id);
-
-extern ATLMachine g_atl_machine;
-template <typename T> T &get_processor(int dev_id) {
-  if (dev_id == -1) {
-    // user is asking runtime to pick a device
-    // best device of this type? pick 0 for now
-    dev_id = 0;
-  }
-  return g_atl_machine.processors<T>()[dev_id];
-}
 
 #endif // SRC_RUNTIME_INCLUDE_MACHINE_H_

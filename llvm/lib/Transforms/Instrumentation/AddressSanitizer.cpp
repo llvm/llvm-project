@@ -503,8 +503,7 @@ static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
       uint64_t ShadowOffset = (kMyriadMemoryOffset32 + kMyriadMemorySize32 -
                                (kMyriadMemorySize32 >> Mapping.Scale));
       Mapping.Offset = ShadowOffset - (kMyriadMemoryOffset32 >> Mapping.Scale);
-    }
-    else
+    } else
       Mapping.Offset = kDefaultShadowOffset32;
   } else {  // LongSize == 64
     // Fuchsia is always PIE, which means that the beginning of the address

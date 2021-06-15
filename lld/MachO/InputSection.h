@@ -239,6 +239,7 @@ constexpr const char debugInfo[] = "__debug_info";
 constexpr const char debugStr[] = "__debug_str";
 constexpr const char ehFrame[] = "__eh_frame";
 constexpr const char export_[] = "__export";
+constexpr const char dataInCode[] = "__data_in_code";
 constexpr const char functionStarts[] = "__func_starts";
 constexpr const char got[] = "__got";
 constexpr const char header[] = "__mach_header";

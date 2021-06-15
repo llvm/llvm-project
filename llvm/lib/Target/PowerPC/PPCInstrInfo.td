@@ -635,6 +635,12 @@ def PPCRegG8RCAsmOperand : AsmOperandClass {
 def g8rc : RegisterOperand<G8RC> {
   let ParserMatchClass = PPCRegG8RCAsmOperand;
 }
+def PPCRegG8pRCAsmOperand : AsmOperandClass {
+  let Name = "RegG8pRC"; let PredicateMethod = "isEvenRegNumber";
+}
+def g8prc : RegisterOperand<G8pRC> {
+  let ParserMatchClass = PPCRegG8pRCAsmOperand;
+}
 def PPCRegGPRCNoR0AsmOperand : AsmOperandClass {
   let Name = "RegGPRCNoR0"; let PredicateMethod = "isRegNumber";
 }

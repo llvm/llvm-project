@@ -279,9 +279,9 @@ extern uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;  // Initialized in __asan_init.
 }  // namespace __asan
 
 #if SANITIZER_MYRIAD2
-#include "asan_mapping_myriad.h"
+#  include "asan_mapping_myriad.h"
 #elif defined(__sparc__) && SANITIZER_WORDSIZE == 64
-#include "asan_mapping_sparc64.h"
+#  include "asan_mapping_sparc64.h"
 #else
 #define MEM_TO_SHADOW(mem) (((mem) >> SHADOW_SCALE) + (SHADOW_OFFSET))
 

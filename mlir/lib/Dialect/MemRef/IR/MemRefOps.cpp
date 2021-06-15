@@ -770,8 +770,11 @@ struct DimOfMemRefReshape : public OpRewritePattern<DimOp> {
     // Place the load directly after the reshape to ensure that the shape memref
     // was not mutated.
     rewriter.setInsertionPointAfter(reshape);
-    rewriter.replaceOpWithNewOp<LoadOp>(dim, reshape.shape(),
-                                        llvm::makeArrayRef({dim.index()}));
+    Location loc = dim.getLoc();
+    Value load = rewriter.create<LoadOp>(loc, reshape.shape(), dim.index());
+    if (load.getType() != dim.getType())
+      load = rewriter.create<IndexCastOp>(loc, dim.getType(), load);
+    rewriter.replaceOp(dim, load);
     return success();
   }
 };
