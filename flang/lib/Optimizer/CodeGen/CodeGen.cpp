@@ -1222,6 +1222,22 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
   }
 };
 
+/// Compute the extent of a triplet slice (lb:ub:step).
+static mlir::Value
+computeTripletExtent(mlir::ConversionPatternRewriter &rewriter,
+                     mlir::Location loc, mlir::Value lb, mlir::Value ub,
+                     mlir::Value step, mlir::Value zero, mlir::Type type) {
+  // auto type = ub.getType();
+  mlir::Value extent = rewriter.create<mlir::LLVM::SubOp>(loc, type, ub, lb);
+  extent = rewriter.create<mlir::LLVM::AddOp>(loc, type, extent, step);
+  extent = rewriter.create<mlir::LLVM::SDivOp>(loc, type, extent, step);
+  // If the resulting extent is negative (`ub-lb` and `step` have different
+  // signs), zero must be returned instead.
+  auto cmp = rewriter.create<mlir::LLVM::ICmpOp>(
+      loc, mlir::LLVM::ICmpPredicate::sgt, extent, zero);
+  return rewriter.create<mlir::LLVM::SelectOp>(loc, cmp, extent, zero);
+}
+
 /// Create a generic box on a memory reference. This conversions lowers the
 /// abstract box to the appropriate, initialized descriptor.
 struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
@@ -1334,14 +1350,10 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
         dest = insertLowerBound(rewriter, loc, dest, descIdx, lb);
 
         // store extent
-        if (hasSlice) {
-          extent = rewriter.create<mlir::LLVM::SubOp>(
-              loc, i64Ty, operands[sliceOff + 1], operands[sliceOff]);
-          extent = rewriter.create<mlir::LLVM::AddOp>(loc, i64Ty, extent,
-                                                      operands[sliceOff + 2]);
-          extent = rewriter.create<mlir::LLVM::SDivOp>(loc, i64Ty, extent,
-                                                       operands[sliceOff + 2]);
-        }
+        if (hasSlice)
+          extent = computeTripletExtent(rewriter, loc, operands[sliceOff],
+                                        operands[sliceOff + 1],
+                                        operands[sliceOff + 2], zero, i64Ty);
         dest = insertExtent(rewriter, loc, dest, descIdx, extent);
 
         // store step (scaled by shaped extent)
@@ -1494,6 +1506,7 @@ private:
     llvm::SmallVector<mlir::Value> slicedStrides;
     auto idxTy = lowerTy().indexType();
     auto one = genConstantIndex(loc, idxTy, rewriter, 1);
+    auto zero = genConstantIndex(loc, idxTy, rewriter, 0);
     const bool sliceHasOrigins = !rebox.shift().empty();
     auto sliceOps = rebox.slice().begin();
     auto shiftOps = rebox.shift().begin();
@@ -1520,12 +1533,8 @@ private:
         auto step = integerCast(loc, rewriter, idxTy, *(sliceOps + 2));
         // extent = ub-lb+step/step
         auto sliceUb = integerCast(loc, rewriter, idxTy, upper);
-        auto diff =
-            rewriter.create<mlir::LLVM::SubOp>(loc, idxTy, sliceUb, sliceLb);
-        auto numerator =
-            rewriter.create<mlir::LLVM::AddOp>(loc, idxTy, diff, step);
-        auto extent =
-            rewriter.create<mlir::LLVM::SDivOp>(loc, idxTy, numerator, step);
+        auto extent = computeTripletExtent(rewriter, loc, sliceLb, sliceUb,
+                                           step, zero, idxTy);
         slicedExtents.emplace_back(extent);
         // stride = step*input_stride
         auto stride =

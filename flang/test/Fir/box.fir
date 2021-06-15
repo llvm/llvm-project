@@ -143,7 +143,9 @@ func @box6(%0 : !fir.ref<!fir.array<?x?x?x?xf32>>, %1 : index, %2 : index) -> i3
   // CHECK: %[[diff:.*]] = sub i64 %[[ARG2]], %[[ARG1]]
   // CHECK: %[[dp2:.*]] = add i64 %[[diff]], 2
   // CHECK: %[[sdp2:.*]] = sdiv i64 %[[dp2]], 2
-  // CHECK: insertvalue { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] } { float* undef, i64 4, i32 20180515, i8 2, i8 25, i8 0, i8 0, [2 x [3 x i64]] [{{\[}}3 x i64] [i64 0, i64 undef, i64 undef], [3 x i64] undef] }, i64 %[[sdp2]], 7, 0, 1
+  // CHECK: %[[cmp:.*]] = icmp sgt i64 %[[sdp2]], 0
+  // CHECK: %[[extent:.*]] = select i1 %[[cmp]], i64 %[[sdp2]], i64 0
+  // CHECK: insertvalue { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] } { float* undef, i64 4, i32 20180515, i8 2, i8 25, i8 0, i8 0, [2 x [3 x i64]] [{{\[}}3 x i64] [i64 0, i64 undef, i64 undef], [3 x i64] undef] }, i64 %[[extent]], 7, 0, 1
   // CHECK: insertvalue { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] } %{{.*}}, i64 800, 7, 0, 2
   // CHECK: %[[op25:.*]] = add i64 25000, %[[i100p40]]
   // CHECK: insertvalue { float*, i64, i32, i8, i8, i8, i8, [2 x [3 x i64]] } %{{.*}}, i64 0, 7, 1, 0
