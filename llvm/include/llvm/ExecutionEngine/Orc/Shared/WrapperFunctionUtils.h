@@ -410,10 +410,10 @@ template <typename... SPSTagTs>
 class WrapperFunction<void(SPSTagTs...)>
     : private WrapperFunction<SPSEmpty(SPSTagTs...)> {
 public:
-  template <typename... ArgTs>
-  static Error call(const void *FnTag, const ArgTs &...Args) {
+  template <typename CallerFn, typename... ArgTs>
+  static Error call(const CallerFn &Caller, const ArgTs &...Args) {
     SPSEmpty BE;
-    return WrapperFunction<SPSEmpty(SPSTagTs...)>::call(FnTag, BE, Args...);
+    return WrapperFunction<SPSEmpty(SPSTagTs...)>::call(Caller, BE, Args...);
   }
 
   using WrapperFunction<SPSEmpty(SPSTagTs...)>::handle;

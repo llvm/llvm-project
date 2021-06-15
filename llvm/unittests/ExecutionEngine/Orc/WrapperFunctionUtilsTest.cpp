@@ -53,6 +53,8 @@ TEST(WrapperFunctionUtilsTest, WrapperFunctionResultFromOutOfBandError) {
   EXPECT_TRUE(strcmp(R.getOutOfBandError(), TestString) == 0);
 }
 
+static void voidNoop() {}
+
 static WrapperFunctionResult voidNoopWrapper(const char *ArgData,
                                              size_t ArgSize) {
   return WrapperFunction<void()>::handle(ArgData, ArgSize, voidNoop);
@@ -64,7 +66,7 @@ static WrapperFunctionResult addWrapper(const char *ArgData, size_t ArgSize) {
 }
 
 TEST(WrapperFunctionUtilsTest, WrapperFunctionCallVoidNoopAndHandle) {
-  EXPECT_FALSE(!!WrapperFunction<void()>::call((void *)&voidNoopWrapper));
+  EXPECT_FALSE(!!WrapperFunction<void()>::call(voidNoopWrapper));
 }
 
 TEST(WrapperFunctionUtilsTest, WrapperFunctionCallAndHandle) {
