@@ -68,26 +68,11 @@ using namespace llvm;
 // Serialize rendezvous with the debugger as well as access to shared data.
 ManagedStatic<std::mutex> JITDebugLock;
 
-static std::pair<const char *, uint64_t> readDebugObjectInfo(uint8_t *ArgData,
-                                                             uint64_t ArgSize) {
-  BinaryStreamReader ArgReader(ArrayRef<uint8_t>(ArgData, ArgSize),
-                               support::endianness::big);
-  uint64_t Addr, Size;
-  cantFail(ArgReader.readInteger(Addr));
-  cantFail(ArgReader.readInteger(Size));
-
-  return std::make_pair(jitTargetAddressToPointer<const char *>(Addr), Size);
-}
-
-extern "C" orc::tpctypes::CWrapperFunctionResult
-llvm_orc_registerJITLoaderGDBWrapper(uint8_t *Data, uint64_t Size) {
-  if (Size != sizeof(uint64_t) + sizeof(uint64_t))
-    return orc::tpctypes::WrapperFunctionResult::from(
-               "Invalid arguments to llvm_orc_registerJITLoaderGDBWrapper")
-        .release();
-
+// Register debug object, return error message or null for success.
+static void registerJITLoaderGDBImpl(JITTargetAddress Addr, uint64_t Size) {
   jit_code_entry *E = new jit_code_entry;
-  std::tie(E->symfile_addr, E->symfile_size) = readDebugObjectInfo(Data, Size);
+  E->symfile_addr = jitTargetAddressToPointer<const char *>(Addr);
+  E->symfile_size = Size;
   E->prev_entry = nullptr;
 
   std::lock_guard<std::mutex> Lock(*JITDebugLock);
@@ -105,6 +90,12 @@ llvm_orc_registerJITLoaderGDBWrapper(uint8_t *Data, uint64_t Size) {
   // Run into the rendezvous breakpoint.
   __jit_debug_descriptor.action_flag = JIT_REGISTER_FN;
   __jit_debug_register_code();
+}
 
-  return orc::tpctypes::WrapperFunctionResult().release();
+extern "C" orc::shared::detail::CWrapperFunctionResult
+llvm_orc_registerJITLoaderGDBWrapper(const char *Data, uint64_t Size) {
+  using namespace orc::shared;
+  return WrapperFunction<void(SPSTargetAddress, uint64_t)>::handle(
+             Data, Size, registerJITLoaderGDBImpl)
+      .release();
 }
