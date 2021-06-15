@@ -11,21 +11,21 @@ metadata: !LinalgOpMetadata
   - LinalgContractionOpInterface
 structured_op: !LinalgStructuredOpConfig
   args:
-  - !<LinalgTensorDef>
+  - !LinalgOperandDefConfig
     name: A
     usage: input
     shape: affine_map<()[s0, s1, s2] -> (s0, s2)>
-    element_type_var: T1
-  - !<LinalgTensorDef>
+    type_var: T1
+  - !LinalgOperandDefConfig
     name: B
     usage: input
     shape: affine_map<()[s0, s1, s2] -> (s2, s1)>
-    element_type_var: T2
-  - !<LinalgTensorDef>
+    type_var: T2
+  - !LinalgOperandDefConfig
     name: C
     usage: output
     shape: affine_map<()[s0, s1, s2] -> (s0, s1)>
-    element_type_var: U
+    type_var: U
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0, d2)>
@@ -73,21 +73,21 @@ metadata: !LinalgOpMetadata
   - LinalgContractionOpInterface
 structured_op: !LinalgStructuredOpConfig
   args:
-  - !<LinalgTensorDef>
+  - !LinalgOperandDefConfig
     name: A
     usage: input
     shape: affine_map<()[s0, s1, s2, s3] -> (s0, s1, s3)>
-    element_type_var: T1
-  - !<LinalgTensorDef>
+    type_var: T1
+  - !LinalgOperandDefConfig
     name: B
     usage: input
     shape: affine_map<()[s0, s1, s2, s3] -> (s0, s3, s2)>
-    element_type_var: T2
-  - !<LinalgTensorDef>
+    type_var: T2
+  - !LinalgOperandDefConfig
     name: C
     usage: output
     shape: affine_map<()[s0, s1, s2, s3] -> (s0, s1, s2)>
-    element_type_var: U
+    type_var: U
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0, d1, d3)>
@@ -136,21 +136,21 @@ metadata: !LinalgOpMetadata
   - LinalgContractionOpInterface
 structured_op: !LinalgStructuredOpConfig
   args:
-  - !<LinalgTensorDef>
+  - !LinalgOperandDefConfig
     name: A
     usage: input
     shape: affine_map<()[s0, s1] -> (s0, s1)>
-    element_type_var: T1
-  - !<LinalgTensorDef>
+    type_var: T1
+  - !LinalgOperandDefConfig
     name: y
     usage: input
     shape: affine_map<()[s0, s1] -> (s1)>
-    element_type_var: T2
-  - !<LinalgTensorDef>
+    type_var: T2
+  - !LinalgOperandDefConfig
     name: x
     usage: output
     shape: affine_map<()[s0, s1] -> (s0)>
-    element_type_var: U
+    type_var: U
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1)[s0, s1] -> (d0, d1)>
@@ -197,21 +197,21 @@ metadata: !LinalgOpMetadata
   - LinalgContractionOpInterface
 structured_op: !LinalgStructuredOpConfig
   args:
-  - !<LinalgTensorDef>
+  - !LinalgOperandDefConfig
     name: y
     usage: input
     shape: affine_map<()[s0, s1] -> (s1)>
-    element_type_var: T1
-  - !<LinalgTensorDef>
+    type_var: T1
+  - !LinalgOperandDefConfig
     name: A
     usage: input
     shape: affine_map<()[s0, s1] -> (s1, s0)>
-    element_type_var: T2
-  - !<LinalgTensorDef>
+    type_var: T2
+  - !LinalgOperandDefConfig
     name: x
     usage: output
     shape: affine_map<()[s0, s1] -> (s0)>
-    element_type_var: U
+    type_var: U
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1)[s0, s1] -> (d1)>
@@ -258,21 +258,21 @@ metadata: !LinalgOpMetadata
   - LinalgContractionOpInterface
 structured_op: !LinalgStructuredOpConfig
   args:
-  - !<LinalgTensorDef>
+  - !LinalgOperandDefConfig
     name: A
     usage: input
     shape: affine_map<()[s0] -> (s0)>
-    element_type_var: T1
-  - !<LinalgTensorDef>
+    type_var: T1
+  - !LinalgOperandDefConfig
     name: B
     usage: input
     shape: affine_map<()[s0] -> (s0)>
-    element_type_var: T2
-  - !<LinalgTensorDef>
+    type_var: T2
+  - !LinalgOperandDefConfig
     name: C
     usage: output
     shape: affine_map<()[s0] -> ()>
-    element_type_var: U
+    type_var: U
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0)[s0] -> (d0)>
@@ -319,18 +319,30 @@ metadata: !LinalgOpMetadata
     and runs them in parallel. The seed operand and the indices of the data
     element seed the random number generation. The min and max operands limit
     the range of the generated random numbers.
-
-    Note: The captures are hard-coded till there is capture support on the C++
-    side.
 structured_op: !LinalgStructuredOpConfig
   args:
-  - !<LinalgTensorDef>
+  - !LinalgOperandDefConfig
+    name: min
+    usage: input
+    type_var: F64
+  - !LinalgOperandDefConfig
+    name: max
+    usage: input
+    type_var: F64
+  - !LinalgOperandDefConfig
+    name: seed
+    usage: input
+    type_var: I32
+  - !LinalgOperandDefConfig
     name: O
     usage: output
     shape: affine_map<()[s0, s1] -> (s0, s1)>
-    element_type_var: T
+    type_var: T
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
+    - affine_map<(d0, d1)[s0, s1] -> ()>
+    - affine_map<(d0, d1)[s0, s1] -> ()>
+    - affine_map<(d0, d1)[s0, s1] -> ()>
     - affine_map<(d0, d1)[s0, s1] -> (d0, d1)>
   iterator_types:
   - parallel
@@ -401,11 +413,7 @@ structured_op: !LinalgStructuredOpConfig
                                                     - !ScalarExpression
                                                       scalar_index: 0
                                                 - !ScalarExpression
-                                                  symbolic_cast:
-                                                    type_var: I32
-                                                    operands:
-                                                    - !ScalarExpression
-                                                      scalar_const: '42 : i64'
+                                                  scalar_arg: seed
                                             - !ScalarExpression
                                               symbolic_cast:
                                                 type_var: I32
@@ -439,17 +447,9 @@ structured_op: !LinalgStructuredOpConfig
                         fn_name: sub
                         operands:
                         - !ScalarExpression
-                          symbolic_cast:
-                            type_var: F64
-                            operands:
-                            - !ScalarExpression
-                              scalar_const: '1000 : i64'
+                          scalar_arg: max
                         - !ScalarExpression
-                          symbolic_cast:
-                            type_var: F64
-                            operands:
-                            - !ScalarExpression
-                              scalar_const: '-1000 : i64'
+                          scalar_arg: min
                     - !ScalarExpression
                       symbolic_cast:
                         type_var: F64
@@ -457,8 +457,4 @@ structured_op: !LinalgStructuredOpConfig
                         - !ScalarExpression
                           scalar_const: '2.3283063999999999E-10 : f64'
             - !ScalarExpression
-              symbolic_cast:
-                type_var: F64
-                operands:
-                - !ScalarExpression
-                  scalar_const: '-1000 : i64'
+              scalar_arg: min

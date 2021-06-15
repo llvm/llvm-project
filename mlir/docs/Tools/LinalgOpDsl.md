@@ -19,7 +19,7 @@ package, if available, to avoid building.
 
 ```shell
 # Dump the `core_named_ops.py` module as YAML.
-python -m python -m mlir.tools.linalg_opdsl.dump_oplib .ops.core_named_ops
+python -m mlir.dialects.linalg.opdsl.dump_oplib .ops.core_named_ops
 ```
 
 The tool is meant for use during both development and runtime, but not as

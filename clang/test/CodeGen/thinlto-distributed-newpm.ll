@@ -165,7 +165,6 @@
 ; CHECK-O: Running pass: InstSimplifyPass on main
 ; CHECK-O: Running pass: DivRemPairsPass on main
 ; CHECK-O: Running pass: SimplifyCFGPass on main
-; CHECK-O: Running pass: SpeculateAroundPHIsPass on main
 ; CHECK-O: Running pass: CGProfilePass
 ; CHECK-O: Running pass: GlobalDCEPass
 ; CHECK-O: Running pass: ConstantMergePass

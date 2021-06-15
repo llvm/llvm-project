@@ -65,7 +65,7 @@ entry:
   ret void
 }
 
-; Expand
+; Expand - sext offsets
 define arm_aapcs_vfpcc void @unscaled_v8i16_sext(i8* %base, <8 x i16>* %offptr, <8 x i16> %input) {
 ; CHECK-LABEL: unscaled_v8i16_sext:
 ; CHECK:       @ %bb.0: @ %entry
@@ -105,7 +105,7 @@ entry:
   ret void
 }
 
-; Expand
+; Expand - sext offsets
 define arm_aapcs_vfpcc void @unscaled_v8f16_sext(i8* %base, <8 x i16>* %offptr, <8 x half> %input) {
 ; CHECK-LABEL: unscaled_v8f16_sext:
 ; CHECK:       @ %bb.0: @ %entry
@@ -139,7 +139,7 @@ entry:
   ret void
 }
 
-; Expand
+; Expand - i32 offsets
 define arm_aapcs_vfpcc void @unscaled_v8i16_noext(i8* %base, <8 x i32>* %offptr, <8 x i16> %input) {
 ; CHECK-LABEL: unscaled_v8i16_noext:
 ; CHECK:       @ %bb.0: @ %entry
@@ -178,7 +178,7 @@ entry:
   ret void
 }
 
-; Expand
+; Expand - i32 offsets
 define arm_aapcs_vfpcc void @unscaled_v8f16_noext(i8* %base, <8 x i32>* %offptr, <8 x half> %input) {
 ; CHECK-LABEL: unscaled_v8f16_noext:
 ; CHECK:       @ %bb.0: @ %entry
@@ -243,7 +243,7 @@ entry:
   ret void
 }
 
-; Expand ?
+; Expand - sext offsets
 define arm_aapcs_vfpcc void @trunc_signed_unscaled_i64_i8(i8* %base, <8 x i8>* %offptr, <8 x i64> %input) {
 ; CHECK-LABEL: trunc_signed_unscaled_i64_i8:
 ; CHECK:       @ %bb.0: @ %entry
@@ -287,7 +287,6 @@ entry:
   ret void
 }
 
-; Expand ?
 define arm_aapcs_vfpcc void @trunc_unsigned_unscaled_i64_i8(i8* %base, <8 x i8>* %offptr, <8 x i64> %input) {
 ; CHECK-LABEL: trunc_unsigned_unscaled_i64_i8:
 ; CHECK:       @ %bb.0: @ %entry
@@ -323,7 +322,7 @@ entry:
   ret void
 }
 
-; Expand ?
+; Expand - sext offsets
 define arm_aapcs_vfpcc void @trunc_signed_unscaled_i32_i8(i8* %base, <8 x i8>* %offptr, <8 x i32> %input) {
 ; CHECK-LABEL: trunc_signed_unscaled_i32_i8:
 ; CHECK:       @ %bb.0: @ %entry
@@ -360,7 +359,6 @@ entry:
   ret void
 }
 
-; Expand ?
 define arm_aapcs_vfpcc void @trunc_unsigned_unscaled_i32_i8(i8* %base, <8 x i8>* %offptr, <8 x i32> %input) {
 ; CHECK-LABEL: trunc_unsigned_unscaled_i32_i8:
 ; CHECK:       @ %bb.0: @ %entry
@@ -391,7 +389,7 @@ entry:
   ret void
 }
 
-; Expand ?
+; Expand - sext offsets
 define arm_aapcs_vfpcc void @trunc_signed_unscaled_i16_i8(i8* %base, <8 x i8>* %offptr, <8 x i16> %input) {
 ; CHECK-LABEL: trunc_signed_unscaled_i16_i8:
 ; CHECK:       @ %bb.0: @ %entry

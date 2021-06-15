@@ -328,6 +328,8 @@ public:
         (!packed_args || !packed_args->packed_args);
     }
 
+    bool hasParameterPack() const { return static_cast<bool>(packed_args); }
+
     llvm::SmallVector<const char *, 2> names;
     llvm::SmallVector<clang::TemplateArgument, 2> args;
     

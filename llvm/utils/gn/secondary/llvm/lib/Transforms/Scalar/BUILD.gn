@@ -83,7 +83,6 @@ static_library("Scalar") {
     "SimpleLoopUnswitch.cpp",
     "SimplifyCFGPass.cpp",
     "Sink.cpp",
-    "SpeculateAroundPHIs.cpp",
     "SpeculativeExecution.cpp",
     "StraightLineStrengthReduce.cpp",
     "StructurizeCFG.cpp",

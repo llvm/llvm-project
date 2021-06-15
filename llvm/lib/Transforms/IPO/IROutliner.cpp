@@ -16,6 +16,9 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DIBuilder.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -353,6 +356,19 @@ void OutlinableGroup::collectGVNStoreSets(Module &M) {
     ArgumentTypes.push_back(Type::getInt32Ty(M.getContext()));
 }
 
+/// Get the subprogram if it exists for one of the outlined regions.
+///
+/// \param [in] Group - The set of regions to find a subprogram for.
+/// \returns the subprogram if it exists, or nullptr.
+static DISubprogram *getSubprogramOrNull(OutlinableGroup &Group) {
+  for (OutlinableRegion *OS : Group.Regions)
+    if (Function *F = OS->Call->getFunction())
+      if (DISubprogram *SP = F->getSubprogram())
+        return SP;
+
+  return nullptr;
+}
+
 Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
                                      unsigned FunctionNameSuffix) {
   assert(!Group.OutlinedFunction && "Function is already defined!");
@@ -374,12 +390,45 @@ Function *IROutliner::createFunction(Module &M, OutlinableGroup &Group,
   Group.OutlinedFunction->addFnAttr(Attribute::OptimizeForSize);
   Group.OutlinedFunction->addFnAttr(Attribute::MinSize);
 
+  // If there's a DISubprogram associated with this outlined function, then
+  // emit debug info for the outlined function.
+  if (DISubprogram *SP = getSubprogramOrNull(Group)) {
+    Function *F = Group.OutlinedFunction;
+    // We have a DISubprogram. Get its DICompileUnit.
+    DICompileUnit *CU = SP->getUnit();
+    DIBuilder DB(M, true, CU);
+    DIFile *Unit = SP->getFile();
+    Mangler Mg;
+    // Get the mangled name of the function for the linkage name.
+    std::string Dummy;
+    llvm::raw_string_ostream MangledNameStream(Dummy);
+    Mg.getNameWithPrefix(MangledNameStream, F, false);
+
+    DISubprogram *OutlinedSP = DB.createFunction(
+        Unit /* Context */, F->getName(), MangledNameStream.str(),
+        Unit /* File */,
+        0 /* Line 0 is reserved for compiler-generated code. */,
+        DB.createSubroutineType(DB.getOrCreateTypeArray(None)), /* void type */
+        0, /* Line 0 is reserved for compiler-generated code. */
+        DINode::DIFlags::FlagArtificial /* Compiler-generated code. */,
+        /* Outlined code is optimized code by definition. */
+        DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
+
+    // Don't add any new variables to the subprogram.
+    DB.finalizeSubprogram(OutlinedSP);
+
+    // Attach subprogram to the function.
+    F->setSubprogram(OutlinedSP);
+    // We're done with the DIBuilder.
+    DB.finalize();
+  }
+
   return Group.OutlinedFunction;
 }
 
 /// Move each BasicBlock in \p Old to \p New.
 ///
-/// \param [in] Old - the function to move the basic blocks from.
+/// \param [in] Old - The function to move the basic blocks from.
 /// \param [in] New - The function to move the basic blocks to.
 /// \returns the first return block for the function in New.
 static BasicBlock *moveFunctionData(Function &Old, Function &New) {
@@ -394,6 +443,37 @@ static BasicBlock *moveFunctionData(Function &Old, Function &New) {
     Instruction *I = CurrBB->getTerminator();
     if (isa<ReturnInst>(I))
       NewEnd = &(*CurrBB);
+
+    for (Instruction &Val : *CurrBB) {
+      // We must handle the scoping of called functions differently than
+      // other outlined instructions.
+      if (!isa<CallInst>(&Val)) {
+        // Remove the debug information for outlined functions.
+        Val.setDebugLoc(DebugLoc());
+        continue;
+      }
+
+      // From this point we are only handling call instructions.
+      CallInst *CI = cast<CallInst>(&Val);
+
+      // We add any debug statements here, to be removed after.  Since the
+      // instructions originate from many different locations in the program,
+      // it will cause incorrect reporting from a debugger if we keep the
+      // same debug instructions.
+      if (isa<DbgInfoIntrinsic>(CI)) {
+        DebugInsts.push_back(&Val);
+        continue;
+      }
+
+      // Edit the scope of called functions inside of outlined functions.
+      if (DISubprogram *SP = New.getSubprogram()) {
+        DILocation *DI = DILocation::get(New.getContext(), 0, 0, SP);
+        Val.setDebugLoc(DI);
+      }
+    }
+
+    for (Instruction *I : DebugInsts)
+      I->eraseFromParent();
   }
 
   assert(NewEnd && "No return instruction for new function?");
