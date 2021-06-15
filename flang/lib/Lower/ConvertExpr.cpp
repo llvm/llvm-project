@@ -2461,17 +2461,22 @@ public:
     auto triples = slOp.triples();
     auto idxTy = builder.getIndexType();
     auto loc = getLoc();
+    auto zero = builder.createIntegerConstant(loc, idxTy, 0);
     for (unsigned i = 0, end = triples.size(); i < end; i += 3) {
       if (!mlir::isa_and_nonnull<fir::UndefOp>(
               triples[i + 1].getDefiningOp())) {
-        // (..., lb:ub:step, ...) case:  extent = (ub-lb+step)/step
+        // (..., lb:ub:step, ...) case:  extent = max((ub-lb+step)/step, 0)
+        // See Fortran 2018 9.5.3.3.2 section for more details.
         auto lb = builder.createConvert(loc, idxTy, triples[i]);
         auto ub = builder.createConvert(loc, idxTy, triples[i + 1]);
         auto step = builder.createConvert(loc, idxTy, triples[i + 2]);
         auto diff = builder.create<mlir::SubIOp>(loc, ub, lb);
         auto add = builder.create<mlir::AddIOp>(loc, diff, step);
+        auto div = builder.create<mlir::SignedDivIOp>(loc, add, step);
+        auto cmp = builder.create<mlir::CmpIOp>(loc, mlir::CmpIPredicate::sgt,
+                                                div, zero);
         slicedShape.emplace_back(
-            builder.create<mlir::SignedDivIOp>(loc, add, step));
+            builder.create<mlir::SelectOp>(loc, cmp, div, zero));
       }
       // else (..., i, ...) case: dimension is dropped (do nothing).
     }
