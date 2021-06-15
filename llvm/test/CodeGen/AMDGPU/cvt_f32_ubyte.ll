@@ -1298,12 +1298,12 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* n
 ; GFX11-NEXT:    s_movk_i32 s2, 0xff
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    v_add_nc_u16_e64 v2, v0, 9
+; GFX11-NEXT:    v_add_nc_u16 v2, v0, 9
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v3, 24, v0
 ; GFX11-NEXT:    v_and_b32_e32 v4, 0xffffff00, v0
-; GFX11-NEXT:    v_add_nc_u16_e64 v1, v1, 9
+; GFX11-NEXT:    v_add_nc_u16 v1, v1, 9
 ; GFX11-NEXT:    v_and_b32_e32 v2, s2, v2
-; GFX11-NEXT:    v_lshlrev_b16_e64 v3, 8, v3
+; GFX11-NEXT:    v_lshlrev_b16 v3, 8, v3
 ; GFX11-NEXT:    v_and_b32_e32 v1, s2, v1
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[0:1], 0x24
@@ -1312,8 +1312,8 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* n
 ; GFX11-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX11-NEXT:    v_or_b32_e32 v1, v3, v1
 ; GFX11-NEXT:    v_cvt_f32_ubyte3_e32 v3, v0
-; GFX11-NEXT:    v_add_nc_u16_e64 v2, v2, s4
-; GFX11-NEXT:    v_add_nc_u16_e64 v1, v1, s4
+; GFX11-NEXT:    v_add_nc_u16 v2, v2, s4
+; GFX11-NEXT:    v_add_nc_u16 v1, v1, s4
 ; GFX11-NEXT:    v_and_b32_e32 v5, 0xffff, v2
 ; GFX11-NEXT:    v_cvt_f32_ubyte2_e32 v2, v0
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v6, 16, v1

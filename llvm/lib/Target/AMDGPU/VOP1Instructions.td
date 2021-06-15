@@ -636,7 +636,7 @@ let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
 } // End AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11"
 
 multiclass VOP1_Realtriple_e64_gfx11<bits<9> op> {
-  defm NAME : VOP3_Realtriple_gfx11<{0, 1, 1, op{6-0}}, NAME>;
+  defm NAME : VOP3_Realtriple_gfx11<{0, 1, 1, op{6-0}}, /*isSingle=*/ 0, NAME>;
 }
 multiclass VOP1_Realtriple_e64_with_name_gfx11<bits<9> op, string opName,
   string asmName> {

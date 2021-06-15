@@ -344,7 +344,7 @@ body: |
   bb.0:
     ; CHECK-LABEL: {{^}}explicit_addc_addc:
     ; CHECK: %bb.0:
-    ; CHECK-NEXT: v_add_co_u32_e64 v0, vcc, v0, v0
+    ; CHECK-NEXT: v_add_co_u32 v0, vcc, v0, v0
     ; CHECK-NEXT: v_add_co_ci_u32_e32 v1, vcc, v1, v1, vcc
     $vgpr0,$vcc = V_ADD_CO_U32_e64 $vgpr0, $vgpr0, 0, implicit $exec
     $vgpr1 = V_ADDC_U32_e32 $vgpr1, $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec
