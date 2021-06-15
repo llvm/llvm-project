@@ -48,6 +48,8 @@ Constant<ExtentType> AsConstantShape(const ConstantSubscripts &);
 ConstantSubscripts AsConstantExtents(const Constant<ExtentType> &);
 std::optional<ConstantSubscripts> AsConstantExtents(
     FoldingContext &, const Shape &);
+Shape AsShape(const ConstantSubscripts &);
+std::optional<Shape> AsShape(const std::optional<ConstantSubscripts> &);
 
 inline int GetRank(const Shape &s) { return static_cast<int>(s.size()); }
 
@@ -89,6 +91,7 @@ MaybeExtentExpr CountTrips(
 
 // Computes SIZE() == PRODUCT(shape)
 MaybeExtentExpr GetSize(Shape &&);
+ConstantSubscript GetSize(const ConstantSubscripts &);
 
 // Utility predicate: does an expression reference any implied DO index?
 bool ContainsAnyImpliedDoIndex(const ExtentExpr &);

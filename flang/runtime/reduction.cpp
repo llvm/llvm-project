@@ -9,8 +9,11 @@
 // Implements ALL, ANY, COUNT, IPARITY, & PARITY for all required operand
 // types and shapes.
 //
-// DOT_PRODUCT, FINDLOC, SUM, and PRODUCT are in their own eponymous source
-// files; NORM2, MAXLOC, MINLOC, MAXVAL, and MINVAL are in extrema.cpp.
+// DOT_PRODUCT, FINDLOC, MATMUL, SUM, and PRODUCT are in their own eponymous
+// source files.
+// NORM2, MAXLOC, MINLOC, MAXVAL, and MINVAL are in extrema.cpp.
+//
+// TODO: IALL, IANY
 
 #include "reduction.h"
 #include "reduction-templates.h"
