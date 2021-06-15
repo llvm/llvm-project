@@ -383,7 +383,7 @@ public:
     Data = IB.data();
     if (!IB.skip(Size))
       return false;
-    S = {Data, Size};
+    S = StringRef(Data, Size);
     return true;
   }
 };
