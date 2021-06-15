@@ -7,7 +7,6 @@ using namespace Fortran::common;
 using namespace Fortran::runtime;
 
 int main() {
-  static const SubscriptValue ones[]{1, 1, 1};
   static const SubscriptValue sourceExtent[]{2, 3, 4};
   auto source{Descriptor::Create(TypeCategory::Integer, sizeof(std::int32_t),
       nullptr, 3, sourceExtent, CFI_attribute_allocatable)};
@@ -16,7 +15,10 @@ int main() {
   MATCH(sizeof(std::int32_t), source->ElementBytes());
   TEST(source->IsAllocatable());
   TEST(!source->IsPointer());
-  TEST(source->Allocate(ones, sourceExtent) == CFI_SUCCESS);
+  for (int j{0}; j < 3; ++j) {
+    source->GetDimension(j).SetBounds(1, sourceExtent[j]);
+  }
+  TEST(source->Allocate() == CFI_SUCCESS);
   TEST(source->IsAllocated());
   MATCH(2, source->GetDimension(0).Extent());
   MATCH(3, source->GetDimension(1).Extent());
