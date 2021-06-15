@@ -100,3 +100,31 @@ TEST(DriverTests, LanguageDiagnostics) {
   clang_disposeDiagnosticSet(Diags);
   clang_Driver_ExternalActionList_dispose(EAL);
 }
+
+TEST(DriverTests, DriverParsesDiagnosticsOptions) {
+  const char *ArgV[] = {"clang",
+                        "-x",
+                        "objective-c",
+                        "-target",
+                        "i386-apple-ios14.0-simulator",
+                        "-c",
+                        "t.m",
+                        "-o",
+                        "t.o",
+                        "-Wno-error=invalid-ios-deployment-target"};
+
+  CXDiagnosticSet Diags;
+  CXExternalActionList *EAL = clang_Driver_getExternalActionsForCommand_v0(
+      GTEST_ARRAY_SIZE_(ArgV), ArgV, nullptr, "/", &Diags);
+  ASSERT_NE(EAL, nullptr);
+  ASSERT_EQ(EAL->Count, 1);
+  ASSERT_EQ(nullptr, Diags);
+
+  auto *CompileAction = EAL->Actions[0];
+  ASSERT_GE(CompileAction->ArgC, 2);
+  EXPECT_STREQ(CompileAction->ArgV[0], "clang");
+  EXPECT_STREQ(CompileAction->ArgV[1], "-cc1");
+
+  clang_disposeDiagnosticSet(Diags);
+  clang_Driver_ExternalActionList_dispose(EAL);
+}
