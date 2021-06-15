@@ -937,91 +937,6 @@ public:
     ID.AddBoolean(EnableNullFPSuppression);
   }
 
-  /// Adds a ReturnVisitor if the given statement represents a call that was
-  /// inlined.
-  ///
-  /// This will search back through the ExplodedGraph, starting from the given
-  /// node, looking for when the given statement was processed. If it turns out
-  /// the statement is a call that was inlined, we add the visitor to the
-  /// bug report, so it can print a note later.
-  static void addVisitorIfNecessary(TrackerRef ParentTracker,
-                                    const ExplodedNode *Node, const Stmt *S,
-                                    PathSensitiveBugReport &BR,
-                                    bool InEnableNullFPSuppression,
-                                    bugreporter::TrackingKind TKind) {
-    if (!CallEvent::isCallStmt(S))
-      return;
-
-    // First, find when we processed the statement.
-    // If we work with a 'CXXNewExpr' that is going to be purged away before
-    // its call take place. We would catch that purge in the last condition
-    // as a 'StmtPoint' so we have to bypass it.
-    const bool BypassCXXNewExprEval = isa<CXXNewExpr>(S);
-
-    // This is moving forward when we enter into another context.
-    const StackFrameContext *CurrentSFC = Node->getStackFrame();
-
-    do {
-      // If that is satisfied we found our statement as an inlined call.
-      if (Optional<CallExitEnd> CEE = Node->getLocationAs<CallExitEnd>())
-        if (CEE->getCalleeContext()->getCallSite() == S)
-          break;
-
-      // Try to move forward to the end of the call-chain.
-      Node = Node->getFirstPred();
-      if (!Node)
-        break;
-
-      const StackFrameContext *PredSFC = Node->getStackFrame();
-
-      // If that is satisfied we found our statement.
-      // FIXME: This code currently bypasses the call site for the
-      //        conservatively evaluated allocator.
-      if (!BypassCXXNewExprEval)
-        if (Optional<StmtPoint> SP = Node->getLocationAs<StmtPoint>())
-          // See if we do not enter into another context.
-          if (SP->getStmt() == S && CurrentSFC == PredSFC)
-            break;
-
-      CurrentSFC = PredSFC;
-    } while (Node->getStackFrame() == CurrentSFC);
-
-    // Next, step over any post-statement checks.
-    while (Node && Node->getLocation().getAs<PostStmt>())
-      Node = Node->getFirstPred();
-    if (!Node)
-      return;
-
-    // Finally, see if we inlined the call.
-    Optional<CallExitEnd> CEE = Node->getLocationAs<CallExitEnd>();
-    if (!CEE)
-      return;
-
-    const StackFrameContext *CalleeContext = CEE->getCalleeContext();
-    if (CalleeContext->getCallSite() != S)
-      return;
-
-    // Check the return value.
-    ProgramStateRef State = Node->getState();
-    SVal RetVal = Node->getSVal(S);
-
-    // Handle cases where a reference is returned and then immediately used.
-    if (cast<Expr>(S)->isGLValue())
-      if (Optional<Loc> LValue = RetVal.getAs<Loc>())
-        RetVal = State->getSVal(*LValue);
-
-    // See if the return value is NULL. If so, suppress the report.
-    AnalyzerOptions &Options = State->getAnalysisManager().options;
-
-    bool EnableNullFPSuppression = false;
-    if (InEnableNullFPSuppression && Options.ShouldSuppressNullReturnPaths)
-      if (Optional<Loc> RetLoc = RetVal.getAs<Loc>())
-        EnableNullFPSuppression = State->isNull(*RetLoc).isConstrainedTrue();
-
-    BR.addVisitor<ReturnVisitor>(ParentTracker, CalleeContext,
-                                 EnableNullFPSuppression, Options, TKind);
-  }
-
   PathDiagnosticPieceRef visitNodeInitial(const ExplodedNode *N,
                                           BugReporterContext &BRC,
                                           PathSensitiveBugReport &BR) {
@@ -2228,6 +2143,96 @@ public:
   }
 };
 
+/// Adds a ReturnVisitor if the given statement represents a call that was
+/// inlined.
+///
+/// This will search back through the ExplodedGraph, starting from the given
+/// node, looking for when the given statement was processed. If it turns out
+/// the statement is a call that was inlined, we add the visitor to the
+/// bug report, so it can print a note later.
+class InlinedFunctionCallHandler final : public ExpressionHandler {
+  using ExpressionHandler::ExpressionHandler;
+
+  Tracker::Result handle(const Expr *E, const ExplodedNode *InputNode,
+                         const ExplodedNode *ExprNode,
+                         TrackingOptions Opts) override {
+    if (!CallEvent::isCallStmt(E))
+      return {};
+
+    // First, find when we processed the statement.
+    // If we work with a 'CXXNewExpr' that is going to be purged away before
+    // its call take place. We would catch that purge in the last condition
+    // as a 'StmtPoint' so we have to bypass it.
+    const bool BypassCXXNewExprEval = isa<CXXNewExpr>(E);
+
+    // This is moving forward when we enter into another context.
+    const StackFrameContext *CurrentSFC = ExprNode->getStackFrame();
+
+    do {
+      // If that is satisfied we found our statement as an inlined call.
+      if (Optional<CallExitEnd> CEE = ExprNode->getLocationAs<CallExitEnd>())
+        if (CEE->getCalleeContext()->getCallSite() == E)
+          break;
+
+      // Try to move forward to the end of the call-chain.
+      ExprNode = ExprNode->getFirstPred();
+      if (!ExprNode)
+        break;
+
+      const StackFrameContext *PredSFC = ExprNode->getStackFrame();
+
+      // If that is satisfied we found our statement.
+      // FIXME: This code currently bypasses the call site for the
+      //        conservatively evaluated allocator.
+      if (!BypassCXXNewExprEval)
+        if (Optional<StmtPoint> SP = ExprNode->getLocationAs<StmtPoint>())
+          // See if we do not enter into another context.
+          if (SP->getStmt() == E && CurrentSFC == PredSFC)
+            break;
+
+      CurrentSFC = PredSFC;
+    } while (ExprNode->getStackFrame() == CurrentSFC);
+
+    // Next, step over any post-statement checks.
+    while (ExprNode && ExprNode->getLocation().getAs<PostStmt>())
+      ExprNode = ExprNode->getFirstPred();
+    if (!ExprNode)
+      return {};
+
+    // Finally, see if we inlined the call.
+    Optional<CallExitEnd> CEE = ExprNode->getLocationAs<CallExitEnd>();
+    if (!CEE)
+      return {};
+
+    const StackFrameContext *CalleeContext = CEE->getCalleeContext();
+    if (CalleeContext->getCallSite() != E)
+      return {};
+
+    // Check the return value.
+    ProgramStateRef State = ExprNode->getState();
+    SVal RetVal = ExprNode->getSVal(E);
+
+    // Handle cases where a reference is returned and then immediately used.
+    if (cast<Expr>(E)->isGLValue())
+      if (Optional<Loc> LValue = RetVal.getAs<Loc>())
+        RetVal = State->getSVal(*LValue);
+
+    // See if the return value is NULL. If so, suppress the report.
+    AnalyzerOptions &Options = State->getAnalysisManager().options;
+
+    bool EnableNullFPSuppression = false;
+    if (Opts.EnableNullFPSuppression && Options.ShouldSuppressNullReturnPaths)
+      if (Optional<Loc> RetLoc = RetVal.getAs<Loc>())
+        EnableNullFPSuppression = State->isNull(*RetLoc).isConstrainedTrue();
+
+    PathSensitiveBugReport &Report = getParentTracker().getReport();
+    Report.addVisitor<ReturnVisitor>(&getParentTracker(), CalleeContext,
+                                     EnableNullFPSuppression, Options,
+                                     Opts.Kind);
+    return {true};
+  }
+};
+
 class DefaultExpressionHandler final : public ExpressionHandler {
 public:
   using ExpressionHandler::ExpressionHandler;
@@ -2243,10 +2248,6 @@ public:
     // If the expression is not an "lvalue expression", we can still
     // track the constraints on its contents.
     SVal V = LVState->getSValAsScalarOrLoc(Inner, LVNode->getLocationContext());
-
-    ReturnVisitor::addVisitorIfNecessary(&getParentTracker(), LVNode, Inner,
-                                         Report, Opts.EnableNullFPSuppression,
-                                         Opts.Kind);
 
     // Is it a symbolic value?
     if (auto L = V.getAs<loc::MemRegionVal>()) {
@@ -2347,6 +2348,7 @@ Tracker::Tracker(PathSensitiveBugReport &Report) : Report(Report) {
   addLowPriorityHandler<NilReceiverHandler>();
   addLowPriorityHandler<ArrayIndexHandler>();
   addLowPriorityHandler<InterestingLValueHandler>();
+  addLowPriorityHandler<InlinedFunctionCallHandler>();
   addLowPriorityHandler<DefaultExpressionHandler>();
   addLowPriorityHandler<PRValueHandler>();
   // Default store handlers.
