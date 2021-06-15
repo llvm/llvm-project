@@ -41,6 +41,10 @@ void __compilerrt_abort_impl(const char *file, int line, const char *function) {
 
 #else
 
+#ifdef _WIN32
+#include <stdlib.h>
+#endif
+
 #ifndef _WIN32
 __attribute__((weak))
 __attribute__((visibility("hidden")))
@@ -49,6 +53,8 @@ void __compilerrt_abort_impl(const char *file, int line, const char *function) {
 #if !__STDC_HOSTED__
   // Avoid depending on libc when compiling with -ffreestanding.
   __builtin_trap();
+#elif defined(_WIN32)
+  abort();
 #else
   __builtin_abort();
 #endif
