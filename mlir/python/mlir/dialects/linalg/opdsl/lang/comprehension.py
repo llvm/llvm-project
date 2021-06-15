@@ -8,7 +8,7 @@ about it typically involves processing this form into config objects that
 represent actual op definitions (i.e. YAML).
 """
 
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 from mlir import ir as _ir
 
@@ -50,7 +50,7 @@ class TensorExpression:
     self.visit_tensor_exprs(visit_affine_exprs)
     return results
 
-  def collect_uses(self, uses: Set["TensorUse"]):
+  def collect_tensor_uses(self, uses: Set["TensorUse"]):
     """Collects all TensorUses reachable through this expression."""
 
     def visit_tensor_use(expr):
@@ -68,14 +68,14 @@ class TensorExpression:
 
     self.visit_tensor_exprs(visit_index)
 
-  def collect_captures(self, captures: Set["CaptureDef"]):
-    """Collects all CaptureDefs reachable through this expression."""
+  def collect_scalar_uses(self, uses: Set["ScalarDef"]):
+    """Collects all ScalarDefs reachable through this expression."""
 
-    def visit_capture_def(expr):
-      if isinstance(expr, CaptureDef):
-        captures.add(expr)
+    def visit_scalar_def(expr):
+      if isinstance(expr, ScalarDef):
+        uses.add(expr)
 
-    self.visit_tensor_exprs(visit_capture_def)
+    self.visit_tensor_exprs(visit_scalar_def)
 
   def __add__(self, rhs: "TensorExpression") -> "TensorExpression":
     return PrimFn.add(self, rhs)
@@ -101,19 +101,19 @@ class TensorUse(TensorExpression):
     TensorDef.__setitem__
   """
 
-  def __init__(self, tensor_def: "TensorDef", indices: Sequence[AffineExprDef]):
-    self.tensor_def = tensor_def
+  def __init__(self, operand_def: "OperandDef",
+               indices: Sequence[AffineExprDef]):
+    self.operand_def = operand_def
     self.indices = tuple(indices)
 
   def to_scalar_expression(self) -> ScalarExpression:
-    assert self.tensor_def.tensor_name is not None
-    return ScalarArg(self.tensor_def.tensor_name).expr()
+    return ScalarArg(self.tensor_name).expr()
 
   @property
   def tensor_name(self) -> str:
-    n = self.tensor_def.tensor_name
-    assert n is not None, "TensorDef not attached"
-    return n
+    name = self.operand_def.name
+    assert name is not None, "TensorDef not attached"
+    return name
 
   def __iadd__(self, rhs: TensorExpression) -> TensorExpression:
     return ReduceFn.add(*self._compute_reduce_dims(rhs))(rhs)
@@ -133,40 +133,57 @@ class TensorUse(TensorExpression):
     return f"{self.tensor_name}[{', '.join([repr(i) for i in self.indices])}]"
 
 
+class OperandDef:
+  """Definition of a Tensor or Scalar operand passed to an operation."""
+
+  def __init__(self, type_var: TypeVar, shape: Sequence[AffineExprDef],
+               scalar: bool, output: bool):
+    if not isinstance(type_var, TypeVar):
+      raise ValueError(f"OperandDef requires a TypeVar. Got: {repr(type_var)}")
+    self.owner = None  # type: Optional["LinalgOpDef"]
+    self.type_var = type_var
+    self.shape = shape
+    self.scalar = scalar
+    self.output = output
+    self.name = None  # type: Optional[str]
+    self.registered_index = -1  # type: int
+
+  def attach(self, index: int, name: str, owner: "LinalgOpDef"):
+    if self.owner:
+      raise ValueError(f"OperandDef already registered with op: {self}")
+    self.registered_index = index
+    self.name = name
+    self.owner = owner
+
+  def __hash__(self):
+    return hash(id(self))
+
+  def __repr__(self):
+    output = "OUTPUT " if self.output else ""
+    scalar = "SCALAR " if self.scalar else ""
+    return (f"{self.name}:OperandDef({output}{scalar}"
+            f"{repr(self.type_var)}, shape={self.shape})")
+
+
 class TensorDef:
-  """Bookkeeping of a single registered tensor, held in dict by name."""
+  """Tensor operand definition.
+
+  Tensor operands are indexed using the associated indexing_map when forwarded
+  to the body of the structured op. A unique name identifies the tensor operands
+  and an index determines their position in the operation's parameter list.
+  """
 
   def __init__(self,
                type_var: TypeVar,
                *shape: AffineExprDef,
-               indexing_map: Optional[_ir.AffineMap] = None,
                output: bool = False):
-    if not isinstance(type_var, TypeVar):
-      raise ValueError(f"TensorDef requires a TypeVar. Got: {repr(type_var)}")
-    self.owner = None  # type: Optional["LinalgOpDef"]
-    self.type_var = type_var
-    self.shape = shape
-    self.indexing_map = indexing_map
-    self.output = output
-    self.tensor_name = None  # type: Optional[str]
-    self.registered_index = -1  # type: int
-
-  @property
-  def rank(self) -> int:
-    """The rank of the tensor."""
-    return len(self.shape)
-
-  def attach(self, index: int, tensor_name: str, owner: "LinalgOpDef"):
-    if self.owner:
-      raise ValueError(f"TensorDef already registered with op: {self}")
-    self.registered_index = index
-    self.tensor_name = tensor_name
-    self.owner = owner
+    self.operand_def = OperandDef(type_var, shape, False, output)
 
   def __getitem__(self, dims) -> TensorUse:
-    assert self.owner, "TensorDef is not attached to an op"
+    assert self.operand_def.owner, "TensorDef is not attached to an op"
     state = AffineBuildState(
-        global_state=self.owner._affine_state, allow_new_symbols=False)
+        global_state=self.operand_def.owner._affine_state,
+        allow_new_symbols=False)
     if not isinstance(dims, tuple):
       dims = (dims,)  # Handle single subscript case.
     # Special case: (None) is a 0d-scalar use.
@@ -179,7 +196,7 @@ class TensorDef:
         raise KeyError(
             "A TensorDef can only be subscripted by a tuple of affine dims")
       exprs.append(expr_def)
-    return TensorUse(self, exprs)
+    return TensorUse(self.operand_def, exprs)
 
   def __setitem__(self, dims, value):
     """Creates a new 1:1 comprehension by binding this tensor to an expression.
@@ -192,46 +209,28 @@ class TensorDef:
                        f"Got: {repr(value)}")
     use = self[dims]
     comp = Comprehension((use, value))
-    self.owner.comprehensions.append(comp)
-
-  def __hash__(self):
-    return hash(id(self))
-
-  def __repr__(self):
-    output = "OUTPUT " if self.output else ""
-    return (f"{self.tensor_name}:TensorDef({output}{repr(self.type_var)}, "
-            f"shape={self.shape})")
+    self.operand_def.owner.comprehensions.append(comp)
 
 
-class CaptureDef(TensorExpression):
-  """Defines an SSA value captured by the operation.
+class ScalarDef(TensorExpression):
+  """Scalar operand definition.
 
-  The captured SSA values are not indexed by the indexing_maps of the
-  structured op (as opposed to memrefs and tensors). A unique name
-  identifies the captures and an index determines their position the
-  operation's parameter list.
+  Scalar operands are forwarded to the body of the structured op as they are.
+  A unique name identifies the scalars and an index determines their position in
+  the operation's parameter list.
   """
 
   def __init__(self, type_var: TypeVar):
-    if not isinstance(type_var, TypeVar):
-      raise ValueError(f"CaptureDef requires a TypeVar. Got: {repr(type_var)}")
-    self.owner = None  # type: Optional["LinalgOpDef"]
-    self.type_var = type_var
-    self.capture_name = None  # type: Optional[str]
-    self.registered_index = -1  # type: int
+    self.operand_def = OperandDef(type_var, (), True, False)
 
-  def attach(self, index: int, capture_name: str, owner: "LinalgOpDef"):
-    if self.owner:
-      raise ValueError(f"CaptureDef already registered with op: {self}")
-    self.registered_index = index
-    self.capture_name = capture_name
-    self.owner = owner
+  @property
+  def scalar_name(self) -> str:
+    name = self.operand_def.name
+    assert name is not None, "ScalarDef not attached"
+    return name
 
   def to_scalar_expression(self) -> ScalarExpression:
-    return ScalarCapture(self.capture_name).expr()
-
-  def __repr__(self):
-    return (f"{self.capture_name}:CaptureDef({repr(self.type_var)})")
+    return ScalarArg(self.scalar_name).expr()
 
 
 class Comprehension:
@@ -472,43 +471,34 @@ class LinalgOpDef:
                doc: Optional[str] = None):
     self.metadata = OpMetadataDef(
         name=name, cpp_class_name=cpp_class_name, doc=doc)
-    self.registered_tensors = dict()  # type: Dict[str, TensorDef]
-    self.registered_captures = dict()  # type: Dict[str, CaptureDef]
+    self.registered_operands = dict()  # type: Dict[str, OperandDef]
     self.comprehensions = list()  # type: List[Comprehension]
     self._affine_state = AffineBuildState()
 
   @property
-  def inputs(self) -> Sequence[TensorDef]:
-    return [t for t in self.registered_tensors.values() if not t.output]
+  def outputs(self) -> Sequence[OperandDef]:
+    return [
+        operand for operand in self.registered_operands.values()
+        if operand.output
+    ]
 
-  @property
-  def outputs(self) -> Sequence[TensorDef]:
-    return [t for t in self.registered_tensors.values() if t.output]
-
-  def add_tensor(self, tensor_name: str, tensor: TensorDef):
-    """Registers a tensor."""
-    if tensor_name in self.registered_tensors:
-      raise ValueError(f"Tensor {tensor_name} is already registered "
-                       f"to {self.registered_tensors['tensor_name']}")
-    tensor.attach(len(self.registered_tensors), tensor_name, self)
-    self.registered_tensors[tensor_name] = tensor
-
-  def add_capture(self, capture_name: str, capture: CaptureDef):
-    """Registers a capture."""
-    if capture_name in self.registered_captures:
-      raise ValueError(f"Capture {capture_name} is already registered "
-                       f"to {self.registered_captures['capture_name']}")
-    capture.attach(len(self.registered_captures), capture_name, self)
-    self.registered_captures[capture_name] = capture
+  def add_operand(self, name: str, operand: OperandDef):
+    """Registers an operand."""
+    if name in self.registered_operands:
+      raise ValueError(f"The operand {name} is already registered "
+                       f"to {self.registered_operands['name']}")
+    if not operand.output and self.outputs:
+      raise ValueError(f"The operand {name} is an input registered after "
+                       f"the output {self.outputs[-1]}")
+    operand.attach(len(self.registered_operands), name, self)
+    self.registered_operands[name] = operand
 
   def __repr__(self):
     lines = [
         f"LinalgOpDef({self.metadata.name} -> {self.metadata.cpp_class_name},"
     ]
-    for name, tensor in self.registered_tensors.items():
-      lines.append(f"  {tensor}")
-    for name, capture in self.registered_captures.items():
-      lines.append(f"  {capture}")
+    for name, operand in self.registered_operands.items():
+      lines.append(f"  {operand}")
     if self.comprehensions:
       lines[-1] += " {"
       for comprehension in self.comprehensions:
