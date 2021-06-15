@@ -47,7 +47,7 @@ entry:
   ret void
 }
 
-; Expand
+; Expand - sext offset
 define arm_aapcs_vfpcc void @scaled_v8i16_sext(i16* %base, <8 x i16>* %offptr, <8 x i16> %input) {
 ; CHECK-LABEL: scaled_v8i16_sext:
 ; CHECK:       @ %bb.0: @ %entry
@@ -88,7 +88,7 @@ entry:
   ret void
 }
 
-; Expand
+; Expand - sext offset
 define arm_aapcs_vfpcc void @scaled_v8f16_sext(i16* %base, <8 x i16>* %offptr, <8 x half> %input) {
 ; CHECK-LABEL: scaled_v8f16_sext:
 ; CHECK:       @ %bb.0: @ %entry
