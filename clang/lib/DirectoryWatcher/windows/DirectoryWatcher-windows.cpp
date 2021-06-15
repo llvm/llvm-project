@@ -133,6 +133,9 @@ DirectoryWatcherWindows::~DirectoryWatcherWindows() {
 }
 
 void DirectoryWatcherWindows::InitialScan() {
+  std::unique_lock<std::mutex> lock(Mutex);
+  Ready.wait(lock, [this] { return this->WatcherActive; });
+
   Callback(getAsFileEvents(scanDirectory(Path.data())), /*IsInitial=*/true);
 }
 
