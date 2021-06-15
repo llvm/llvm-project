@@ -16,13 +16,37 @@ entry:
   ret void
 }
 
+; Expanded ?
 define arm_aapcs_vfpcc void @unscaled_v8i8_i8(i8* %base, <8 x i8>* %offptr, <8 x i8> %input) {
 ; CHECK-LABEL: unscaled_v8i8_i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrb.u16 q1, [r1]
-; CHECK-NEXT:    vmovlb.u8 q0, q0
-; CHECK-NEXT:    vstrb.16 q0, [r0, q1]
-; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r6, lr}
+; CHECK-NEXT:    vldrb.u32 q1, [r1]
+; CHECK-NEXT:    vmov.u16 r6, q0[0]
+; CHECK-NEXT:    vadd.i32 q1, q1, r0
+; CHECK-NEXT:    vmov r2, r3, d2
+; CHECK-NEXT:    vmov r12, lr, d3
+; CHECK-NEXT:    vldrb.u32 q1, [r1, #4]
+; CHECK-NEXT:    vadd.i32 q1, q1, r0
+; CHECK-NEXT:    vmov r0, r1, d2
+; CHECK-NEXT:    vmov r4, r5, d3
+; CHECK-NEXT:    strb r6, [r2]
+; CHECK-NEXT:    vmov.u16 r2, q0[1]
+; CHECK-NEXT:    strb r2, [r3]
+; CHECK-NEXT:    vmov.u16 r2, q0[2]
+; CHECK-NEXT:    strb.w r2, [r12]
+; CHECK-NEXT:    vmov.u16 r2, q0[3]
+; CHECK-NEXT:    strb.w r2, [lr]
+; CHECK-NEXT:    vmov.u16 r2, q0[4]
+; CHECK-NEXT:    strb r2, [r0]
+; CHECK-NEXT:    vmov.u16 r0, q0[5]
+; CHECK-NEXT:    strb r0, [r1]
+; CHECK-NEXT:    vmov.u16 r0, q0[6]
+; CHECK-NEXT:    strb r0, [r4]
+; CHECK-NEXT:    vmov.u16 r0, q0[7]
+; CHECK-NEXT:    strb r0, [r5]
+; CHECK-NEXT:    pop {r4, r5, r6, pc}
 entry:
   %offs = load <8 x i8>, <8 x i8>* %offptr, align 1
   %offs.zext = zext <8 x i8> %offs to <8 x i32>
