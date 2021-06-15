@@ -182,7 +182,7 @@ serializeViaSPSToWrapperFunctionResult(const ArgTs &...Args) {
     return make_error<StringError>(
         "Error serializing arguments to blob in call",
         inconvertibleErrorCode());
-  return Result;
+  return std::move(Result);
 }
 
 template <typename RetT> class WrapperFunctionHandlerCaller {
