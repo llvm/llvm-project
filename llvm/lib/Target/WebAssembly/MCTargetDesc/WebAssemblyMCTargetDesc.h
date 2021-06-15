@@ -72,8 +72,8 @@ enum OperandType {
   OPERAND_SIGNATURE,
   /// type signature immediate for call_indirect.
   OPERAND_TYPEINDEX,
-  /// Event index.
-  OPERAND_EVENT,
+  /// Tag index.
+  OPERAND_TAG,
   /// A list of branch targets for br_list.
   OPERAND_BRLIST,
   /// 32-bit unsigned table number.

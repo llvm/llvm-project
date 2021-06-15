@@ -57,8 +57,8 @@ public:
                          InputChunk *segment, uint64_t address, uint64_t size);
   Symbol *addDefinedGlobal(StringRef name, uint32_t flags, InputFile *file,
                            InputGlobal *g);
-  Symbol *addDefinedEvent(StringRef name, uint32_t flags, InputFile *file,
-                          InputEvent *e);
+  Symbol *addDefinedTag(StringRef name, uint32_t flags, InputFile *file,
+                        InputTag *t);
   Symbol *addDefinedTable(StringRef name, uint32_t flags, InputFile *file,
                           InputTable *t);
 

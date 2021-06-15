@@ -1,5 +1,5 @@
-; RUN: llc -filetype=obj -exception-model=wasm -mattr=+exception-handling %p/Inputs/event-section1.ll -o %t1.o
-; RUN: llc -filetype=obj -exception-model=wasm -mattr=+exception-handling %p/Inputs/event-section2.ll -o %t2.o
+; RUN: llc -filetype=obj -exception-model=wasm -mattr=+exception-handling %p/Inputs/tag-section1.ll -o %t1.o
+; RUN: llc -filetype=obj -exception-model=wasm -mattr=+exception-handling %p/Inputs/tag-section2.ll -o %t2.o
 ; RUN: llc -filetype=obj -exception-model=wasm -mattr=+exception-handling %s -o %t.o
 ; RUN: wasm-ld -o %t.wasm %t.o %t1.o %t2.o
 ; RUN: wasm-ld --export-all -o %t-export-all.wasm %t.o %t1.o %t2.o
@@ -29,17 +29,17 @@ define void @_start() {
 ; CHECK-NEXT:           - I32
 ; CHECK-NEXT:         ReturnTypes:     []
 
-; CHECK:        - Type:            EVENT
-; CHECK-NEXT:     Events:
+; CHECK:        - Type:            TAG
+; CHECK-NEXT:     Tags:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Attribute:       0
 ; CHECK-NEXT:         SigIndex:        1
 
-; Global section has to come after event section
+; Global section has to come after tag section
 ; CHECK:        - Type:            GLOBAL
 
 ; EXPORT-ALL:   - Type:            EXPORT
 ; EXPORT-ALL-NEXT Exports:
 ; EXPORT-ALL:       - Name:            __cpp_exception
-; EXPORT-ALL:         Kind:            EVENT
+; EXPORT-ALL:         Kind:            TAG
 ; EXPORT-ALL:         Index:           0
