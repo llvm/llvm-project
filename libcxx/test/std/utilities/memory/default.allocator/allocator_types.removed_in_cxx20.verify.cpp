@@ -31,16 +31,17 @@
 template <typename T>
 void check()
 {
-    typedef typename std::allocator<T>::pointer AP;                      // expected-error 2 {{no type named 'pointer'}}
-    typedef typename std::allocator<T>::const_pointer ACP;               // expected-error 2 {{no type named 'const_pointer'}}
-    typedef typename std::allocator<T>::reference AR;                    // expected-error 2 {{no type named 'reference'}}
-    typedef typename std::allocator<T>::const_reference ACR;             // expected-error 2 {{no type named 'const_reference'}}
-    typedef typename std::allocator<T>::template rebind<int>::other ARO; // expected-error 2 {{no member named 'rebind'}}
+    typedef typename std::allocator<T>::pointer AP;                      // expected-error 3 {{no type named 'pointer'}}
+    typedef typename std::allocator<T>::const_pointer ACP;               // expected-error 3 {{no type named 'const_pointer'}}
+    typedef typename std::allocator<T>::reference AR;                    // expected-error 3 {{no type named 'reference'}}
+    typedef typename std::allocator<T>::const_reference ACR;             // expected-error 3 {{no type named 'const_reference'}}
+    typedef typename std::allocator<T>::template rebind<int>::other ARO; // expected-error 3 {{no member named 'rebind'}}
 }
 
 int main(int, char**)
 {
     check<char>();
     check<char const>();
+    check<void>();
     return 0;
 }
