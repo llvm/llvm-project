@@ -2134,6 +2134,23 @@ public:
   }
 };
 
+class ArrayIndexHandler final : public ExpressionHandler {
+public:
+  using ExpressionHandler::ExpressionHandler;
+
+  Tracker::Result handle(const Expr *Inner, const ExplodedNode *InputNode,
+                         const ExplodedNode *LVNode,
+                         TrackingOptions Opts) override {
+    // Track the index if this is an array subscript.
+    if (const auto *Arr = dyn_cast<ArraySubscriptExpr>(Inner))
+      return getParentTracker().track(
+          Arr->getIdx(), LVNode,
+          {Opts.Kind, /*EnableNullFPSuppression*/ false});
+
+    return {};
+  }
+};
+
 class DefaultExpressionHandler final : public ExpressionHandler {
 public:
   using ExpressionHandler::ExpressionHandler;
@@ -2145,12 +2162,6 @@ public:
     const StackFrameContext *SFC = LVNode->getStackFrame();
     PathSensitiveBugReport &Report = getParentTracker().getReport();
     Tracker::Result Result;
-
-    // Track the index if this is an array subscript.
-    if (const auto *Arr = dyn_cast<ArraySubscriptExpr>(Inner))
-      Result.combineWith(getParentTracker().track(
-          Arr->getIdx(), LVNode,
-          {Opts.Kind, /*EnableNullFPSuppression*/ false}));
 
     // See if the expression we're interested refers to a variable.
     // If so, we can track both its contents and constraints on its value.
@@ -2320,6 +2331,7 @@ Tracker::Tracker(PathSensitiveBugReport &Report) : Report(Report) {
   // Default expression handlers.
   addLowPriorityHandler<ControlDependencyHandler>();
   addLowPriorityHandler<NilReceiverHandler>();
+  addLowPriorityHandler<ArrayIndexHandler>();
   addLowPriorityHandler<DefaultExpressionHandler>();
   addLowPriorityHandler<PRValueHandler>();
   // Default store handlers.
@@ -2340,8 +2352,12 @@ Tracker::Result Tracker::track(const Expr *E, const ExplodedNode *N,
   // Iterate through the handlers in the order according to their priorities.
   for (ExpressionHandlerPtr &Handler : ExpressionHandlers) {
     CombinedResult.combineWith(Handler->handle(Inner, N, LVNode, Opts));
-    if (CombinedResult.WasInterrupted)
+    if (CombinedResult.WasInterrupted) {
+      // There is no need to confuse our users here.
+      // We got interrupted, but our users don't need to know about it.
+      CombinedResult.WasInterrupted = false;
       break;
+    }
   }
 
   return CombinedResult;
