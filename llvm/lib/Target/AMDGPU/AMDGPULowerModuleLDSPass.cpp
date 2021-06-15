@@ -46,8 +46,8 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/OptimizedStructLayout.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include <algorithm>
 #include <vector>
 
 #define DEBUG_TYPE "amdgpu-lower-module-lds"
@@ -210,35 +210,25 @@ private:
       }
     }
 
-    // Sort by alignment, descending, to minimise padding.
-    // On ties, sort by size, descending, then by name, lexicographical.
-    llvm::stable_sort(
-        FoundLocalVars,
-        [&](const GlobalVariable *LHS, const GlobalVariable *RHS) -> bool {
-          Align ALHS = AMDGPU::getAlign(DL, LHS);
-          Align ARHS = AMDGPU::getAlign(DL, RHS);
-          if (ALHS != ARHS) {
-            return ALHS > ARHS;
-          }
+    SmallVector<OptimizedStructLayoutField, 8> LayoutFields;
+    LayoutFields.reserve(FoundLocalVars.size());
+    for (GlobalVariable *GV : FoundLocalVars) {
+      OptimizedStructLayoutField F(GV, DL.getTypeAllocSize(GV->getValueType()),
+                                   AMDGPU::getAlign(DL, GV));
+      LayoutFields.emplace_back(F);
+    }
 
-          TypeSize SLHS = DL.getTypeAllocSize(LHS->getValueType());
-          TypeSize SRHS = DL.getTypeAllocSize(RHS->getValueType());
-          if (SLHS != SRHS) {
-            return SLHS > SRHS;
-          }
-
-          // By variable name on tie for predictable order in test cases.
-          return LHS->getName() < RHS->getName();
-        });
+    performOptimizedStructLayout(LayoutFields);
 
     std::vector<GlobalVariable *> LocalVars;
     LocalVars.reserve(FoundLocalVars.size()); // will be at least this large
     {
       // This usually won't need to insert any padding, perhaps avoid the alloc
       uint64_t CurrentOffset = 0;
-      for (size_t I = 0; I < FoundLocalVars.size(); I++) {
-        GlobalVariable *FGV = FoundLocalVars[I];
-        Align DataAlign = AMDGPU::getAlign(DL, FGV);
+      for (size_t I = 0; I < LayoutFields.size(); I++) {
+        GlobalVariable *FGV = static_cast<GlobalVariable *>(
+            const_cast<void *>(LayoutFields[I].Id));
+        Align DataAlign = LayoutFields[I].Alignment;
 
         uint64_t DataAlignV = DataAlign.value();
         if (uint64_t Rem = CurrentOffset % DataAlignV) {
@@ -257,7 +247,7 @@ private:
         }
 
         LocalVars.push_back(FGV);
-        CurrentOffset += DL.getTypeAllocSize(FGV->getValueType());
+        CurrentOffset += LayoutFields[I].Size;
       }
     }
 
@@ -272,14 +262,14 @@ private:
           : "llvm.amdgcn.module.lds");
     StructType *LDSTy = StructType::create(Ctx, LocalVarTypes, VarName + ".t");
 
-    Align MaxAlign =
-        AMDGPU::getAlign(DL, LocalVars[0]); // was sorted on alignment
+    Align StructAlign =
+        AMDGPU::getAlign(DL, LocalVars[0]);
 
     GlobalVariable *SGV = new GlobalVariable(
         M, LDSTy, false, GlobalValue::InternalLinkage, UndefValue::get(LDSTy),
         VarName, nullptr, GlobalValue::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS,
         false);
-    SGV->setAlignment(MaxAlign);
+    SGV->setAlignment(StructAlign);
     if (!F) {
       appendToCompilerUsed(
           M, {static_cast<GlobalValue *>(
