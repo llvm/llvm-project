@@ -241,6 +241,12 @@
 # CHECK-BE: ldmx 2, 3, 4                    # encoding: [0x7c,0x43,0x22,0x6a]
 # CHECK-LE: ldmx 2, 3, 4                    # encoding: [0x6a,0x22,0x43,0x7c]
             ldmx 2, 3, 4
+# CHECK-BE: lq 2, 128(4)                    # encoding: [0xe0,0x44,0x00,0x80]
+# CHECK-LE: lq 2, 128(4)                    # encoding: [0x80,0x00,0x44,0xe0]
+            lq 2, 128(4)
+# CHECK-BE: lq 28, 128(30)                  # encoding: [0xe3,0x9e,0x00,0x80]
+# CHECK-LE: lq 28, 128(30)                  # encoding: [0x80,0x00,0x9e,0xe3]
+            lq 28, 128(30)
 
 # Fixed-point store instructions
 
@@ -292,6 +298,12 @@
 # CHECK-BE: stdux 2, 3, 4                   # encoding: [0x7c,0x43,0x21,0x6a]
 # CHECK-LE: stdux 2, 3, 4                   # encoding: [0x6a,0x21,0x43,0x7c]
             stdux 2, 3, 4
+# CHECK-BE: stq 2, 128(4)                   # encoding: [0xf8,0x44,0x00,0x82]
+# CHECK-LE: stq 2, 128(4)                   # encoding: [0x82,0x00,0x44,0xf8]
+            stq 2, 128(4)
+# CHECK-BE: stq 28, 128(30)                 # encoding: [0xfb,0x9e,0x00,0x82]
+# CHECK-LE: stq 28, 128(30)                 # encoding: [0x82,0x00,0x9e,0xfb]
+            stq 28, 128(30)
 
 # Fixed-point load and store with byte reversal instructions
 

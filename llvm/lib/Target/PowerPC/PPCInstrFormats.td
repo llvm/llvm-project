@@ -422,6 +422,20 @@ class DQ_RD6_RS5_DQ12<bits<6> opcode, bits<3> xo, dag OOL, dag IOL,
   let Inst{29-31} = xo;
 }
 
+class DQForm_RTp5_RA17_MEM<bits<6> opcode, bits<4> xo, dag OOL, dag IOL,
+                           string asmstr, InstrItinClass itin,
+                           list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<5> RTp;
+  bits<17> DQ_RA;
+  let Pattern = pattern;
+
+  let Inst{6-10} =  RTp{4-0};
+  let Inst{11-15} = DQ_RA{16-12};  // Register #
+  let Inst{16-27} = DQ_RA{11-0};   // Displacement.
+  let Inst{28-31} = xo;
+}
+
 // 1.7.6 X-Form
 class XForm_base_r3xo<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr, 
                       InstrItinClass itin, list<dag> pattern>
