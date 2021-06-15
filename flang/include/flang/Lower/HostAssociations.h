@@ -36,7 +36,7 @@ public:
   /// host procedure.
   void addSymbolsToBind(
       const llvm::SetVector<const Fortran::semantics::Symbol *> &s) {
-    assert(empty());
+    assert(empty() && "symbol set must be initially empty");
     symbols = s;
   }
 
