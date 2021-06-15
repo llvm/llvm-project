@@ -58,6 +58,7 @@ class DS_Real <DS_Pseudo ds> :
 
   let isPseudo = 0;
   let isCodeGenOnly = 0;
+  let LGKM_CNT = 1;
   let DS = 1;
   let UseNamedOperandTable = 1;
 
