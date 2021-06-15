@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <memory>
+// Check that the nested types of std::allocator<void> are provided.
+// After C++17, those are not provided in the primary template and the
+// explicit specialization doesn't exist anymore, so this test is moot.
 
-// Check that the following member types of allocator<void> are provided
-// regardless of the Standard when we request them from libc++.
+// REQUIRES: c++03 || c++11 || c++14 || c++17
 
 // template <>
 // class allocator<void>
@@ -22,24 +23,13 @@
 //     template <class _Up> struct rebind {typedef allocator<_Up> other;};
 // };
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <memory>
 #include <type_traits>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
-    static_assert((std::is_same<std::allocator<void>::pointer, void*>::value), "");
-    static_assert((std::is_same<std::allocator<void>::const_pointer, const void*>::value), "");
-    static_assert((std::is_same<std::allocator<void>::value_type, void>::value), "");
-    static_assert((std::is_same<std::allocator<void>::rebind<int>::other,
-                                std::allocator<int> >::value), "");
-    std::allocator<void> a;
-    std::allocator<void> a2 = a;
-    a2 = a;
-
-  return 0;
-}
+static_assert((std::is_same<std::allocator<void>::pointer, void*>::value), "");
+static_assert((std::is_same<std::allocator<void>::const_pointer, const void*>::value), "");
+static_assert((std::is_same<std::allocator<void>::value_type, void>::value), "");
+static_assert((std::is_same<std::allocator<void>::rebind<int>::other,
+                            std::allocator<int> >::value), "");

@@ -33,18 +33,19 @@
 #include <type_traits>
 #include <cstddef>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
-    static_assert((std::is_same<std::allocator<char>::size_type, std::size_t>::value), "");
-    static_assert((std::is_same<std::allocator<char>::difference_type, std::ptrdiff_t>::value), "");
-    static_assert((std::is_same<std::allocator<char>::pointer, char*>::value), "");
-    static_assert((std::is_same<std::allocator<char>::const_pointer, const char*>::value), "");
-    static_assert((std::is_same<std::allocator<char>::reference, char&>::value), "");
-    static_assert((std::is_same<std::allocator<char>::const_reference, const char&>::value), "");
-    static_assert((std::is_same<std::allocator<char>::rebind<int>::other,
+template <class T>
+void test() {
+    static_assert((std::is_same<typename std::allocator<T>::size_type, std::size_t>::value), "");
+    static_assert((std::is_same<typename std::allocator<T>::difference_type, std::ptrdiff_t>::value), "");
+    static_assert((std::is_same<typename std::allocator<T>::pointer, T*>::value), "");
+    static_assert((std::is_same<typename std::allocator<T>::const_pointer, const T*>::value), "");
+    static_assert((std::is_same<typename std::allocator<T>::reference, T&>::value), "");
+    static_assert((std::is_same<typename std::allocator<T>::const_reference, const T&>::value), "");
+    static_assert((std::is_same<typename std::allocator<T>::template rebind<int>::other,
                                 std::allocator<int> >::value), "");
+}
 
+int main(int, char**) {
+    test<char>();
     return 0;
 }
