@@ -1081,10 +1081,9 @@ bool NamedDecl::isLinkageValid() const {
 ReservedIdentifierStatus
 NamedDecl::isReserved(const LangOptions &LangOpts) const {
   const IdentifierInfo *II = getIdentifier();
-  if (!II)
-    if (const auto *FD = dyn_cast<FunctionDecl>(this))
-      II = FD->getLiteralIdentifier();
 
+  // This triggers at least for CXXLiteralIdentifiers, which we already checked
+  // at lexing time.
   if (!II)
     return ReservedIdentifierStatus::NotReserved;
 
