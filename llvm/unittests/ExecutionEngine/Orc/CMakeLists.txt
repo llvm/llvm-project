@@ -26,8 +26,10 @@ add_llvm_unittest(OrcJITTests
   ResourceTrackerTest.cpp
   RPCUtilsTest.cpp
   RTDyldObjectLinkingLayerTest.cpp
+  SimplePackedSerializationTest.cpp
   SymbolStringPoolTest.cpp
   ThreadSafeModuleTest.cpp
+  WrapperFunctionUtilsTest.cpp
   )
 
 target_link_libraries(OrcJITTests PRIVATE
