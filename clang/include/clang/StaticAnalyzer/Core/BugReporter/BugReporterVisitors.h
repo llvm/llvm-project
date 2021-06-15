@@ -125,6 +125,9 @@ struct StoreInfo {
     ///   int x;
     ///   x = 42;
     Assignment,
+    /// The value got stored into the parameter region as the result
+    /// of a call.
+    CallArgument,
     /// The value got stored into the region as block capture.
     /// Block data is modeled as a separate region, thus whenever
     /// the analyzer sees a captured variable, its value is copied
@@ -138,7 +141,7 @@ struct StoreInfo {
   const ExplodedNode *StoreSite;
   /// The expression where the value comes from.
   /// NOTE: might be null.
-  Expr *SourceOfTheValue;
+  const Expr *SourceOfTheValue;
   /// Symbolic value that is being stored.
   SVal Value;
   /// Memory regions involved in the store operation.
@@ -230,7 +233,8 @@ public:
   /// \param Opts Tracking options specifying how we got to it.
   ///
   /// NOTE: this method is designed for sub-trackers and visitors.
-  virtual PathDiagnosticPieceRef handle(StoreInfo SI, TrackingOptions Opts);
+  virtual PathDiagnosticPieceRef handle(StoreInfo SI, BugReporterContext &BRC,
+                                        TrackingOptions Opts);
 
   /// Add custom expression handler with the highest priority.
   ///
@@ -322,7 +326,8 @@ public:
   ///
   /// \return the produced note, null if the handler doesn't support this kind
   ///         of stores.
-  virtual PathDiagnosticPieceRef handle(StoreInfo SI, TrackingOptions Opts) = 0;
+  virtual PathDiagnosticPieceRef handle(StoreInfo SI, BugReporterContext &BRC,
+                                        TrackingOptions Opts) = 0;
 
   Tracker &getParentTracker() { return ParentTracker; }
 };

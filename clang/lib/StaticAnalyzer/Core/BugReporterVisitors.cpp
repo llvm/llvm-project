@@ -1232,12 +1232,7 @@ class StoreSiteFinder final : public TrackingBugReporterVisitor {
   SVal V;
   bool Satisfied = false;
 
-  /// If the visitor is tracking the value directly responsible for the
-  /// bug, we are going to employ false positive suppression.
-  bool EnableNullFPSuppression;
-
-  using TrackingKind = bugreporter::TrackingKind;
-  TrackingKind TKind;
+  TrackingOptions Options;
   const StackFrameContext *OriginSFC;
 
 public:
@@ -1252,11 +1247,9 @@ public:
   ///        this visitor can prevent that without polluting the bugpath too
   ///        much.
   StoreSiteFinder(bugreporter::TrackerRef ParentTracker, KnownSVal V,
-                  const MemRegion *R, bool InEnableNullFPSuppression,
-                  TrackingKind TKind,
+                  const MemRegion *R, TrackingOptions Options,
                   const StackFrameContext *OriginSFC = nullptr)
-      : TrackingBugReporterVisitor(ParentTracker), R(R), V(V),
-        EnableNullFPSuppression(InEnableNullFPSuppression), TKind(TKind),
+      : TrackingBugReporterVisitor(ParentTracker), R(R), V(V), Options(Options),
         OriginSFC(OriginSFC) {
     assert(R);
   }
@@ -1273,8 +1266,8 @@ void StoreSiteFinder::Profile(llvm::FoldingSetNodeID &ID) const {
   ID.AddPointer(&tag);
   ID.AddPointer(R);
   ID.Add(V);
-  ID.AddInteger(static_cast<int>(TKind));
-  ID.AddBoolean(EnableNullFPSuppression);
+  ID.AddInteger(static_cast<int>(Options.Kind));
+  ID.AddBoolean(Options.EnableNullFPSuppression);
 }
 
 /// Returns true if \p N represents the DeclStmt declaring and initializing
@@ -1533,8 +1526,7 @@ PathDiagnosticPieceRef StoreSiteFinder::VisitNode(const ExplodedNode *Succ,
     if (!IsParam)
       InitE = InitE->IgnoreParenCasts();
 
-    getParentTracker().track(InitE, StoreSite,
-                             {TKind, EnableNullFPSuppression});
+    getParentTracker().track(InitE, StoreSite, Options);
   }
 
   // Let's try to find the region where the value came from.
@@ -1605,7 +1597,7 @@ PathDiagnosticPieceRef StoreSiteFinder::VisitNode(const ExplodedNode *Succ,
     }
   }
 
-  if (TKind == TrackingKind::Condition &&
+  if (Options.Kind == TrackingKind::Condition && OriginSFC &&
       !OriginSFC->isParentOf(StoreSite->getStackFrame()))
     return nullptr;
 
@@ -1613,60 +1605,41 @@ PathDiagnosticPieceRef StoreSiteFinder::VisitNode(const ExplodedNode *Succ,
   SmallString<256> sbuf;
   llvm::raw_svector_ostream os(sbuf);
 
+  StoreInfo SI = {StoreInfo::Assignment, // default kind
+                  StoreSite,
+                  InitE,
+                  V,
+                  R,
+                  OldRegion};
+
   if (Optional<PostStmt> PS = StoreSite->getLocationAs<PostStmt>()) {
     const Stmt *S = PS->getStmt();
-    const char *action = nullptr;
     const auto *DS = dyn_cast<DeclStmt>(S);
     const auto *VR = dyn_cast<VarRegion>(R);
 
     if (DS) {
-      action = R->canPrintPretty() ? "initialized to " :
-                                     "Initializing to ";
+      SI.StoreKind = StoreInfo::Initialization;
     } else if (isa<BlockExpr>(S)) {
-      action = R->canPrintPretty() ? "captured by block as " :
-                                     "Captured by block as ";
+      SI.StoreKind = StoreInfo::BlockCapture;
       if (VR) {
         // See if we can get the BlockVarRegion.
         ProgramStateRef State = StoreSite->getState();
         SVal V = StoreSite->getSVal(S);
         if (const auto *BDR =
-              dyn_cast_or_null<BlockDataRegion>(V.getAsRegion())) {
+                dyn_cast_or_null<BlockDataRegion>(V.getAsRegion())) {
           if (const VarRegion *OriginalR = BDR->getOriginalRegion(VR)) {
-            if (auto KV = State->getSVal(OriginalR).getAs<KnownSVal>())
-              getParentTracker().track(
-                  *KV, OriginalR, {TKind, EnableNullFPSuppression}, OriginSFC);
+            getParentTracker().track(State->getSVal(OriginalR), OriginalR,
+                                     Options, OriginSFC);
           }
         }
       }
     }
-    if (action)
-      showBRDiagnostics(action, os, R, V, OldRegion, DS);
-
-  } else if (StoreSite->getLocation().getAs<CallEnter>()) {
-    if (const auto *VR = dyn_cast<VarRegion>(R))
-      showBRParamDiagnostics(os, VR, V, OldRegion);
+  } else if (SI.StoreSite->getLocation().getAs<CallEnter>() &&
+             isa<VarRegion>(SI.Dest)) {
+    SI.StoreKind = StoreInfo::CallArgument;
   }
 
-  if (os.str().empty())
-    showBRDefaultDiagnostics(os, R, V, OldRegion);
-
-  if (TKind == bugreporter::TrackingKind::Condition)
-    os << WillBeUsedForACondition;
-
-  // Construct a new PathDiagnosticPiece.
-  ProgramPoint P = StoreSite->getLocation();
-  PathDiagnosticLocation L;
-  if (P.getAs<CallEnter>() && InitE)
-    L = PathDiagnosticLocation(InitE, BRC.getSourceManager(),
-                               P.getLocationContext());
-
-  if (!L.isValid() || !L.asLocation().isValid())
-    L = PathDiagnosticLocation::create(P, BRC.getSourceManager());
-
-  if (!L.isValid() || !L.asLocation().isValid())
-    return nullptr;
-
-  return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
+  return getParentTracker().handle(SI, BRC, Options);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2060,6 +2033,61 @@ static const ExplodedNode* findNodeForExpression(const ExplodedNode *N,
 //                            Tracker implementation
 //===----------------------------------------------------------------------===//
 
+class DefaultStoreHandler final : public StoreHandler {
+public:
+  using StoreHandler::StoreHandler;
+
+  PathDiagnosticPieceRef handle(StoreInfo SI, BugReporterContext &BRC,
+                                TrackingOptions Opts) override {
+    // Okay, we've found the binding. Emit an appropriate message.
+    SmallString<256> Buffer;
+    llvm::raw_svector_ostream OS(Buffer);
+    const char *Action = nullptr;
+
+    switch (SI.StoreKind) {
+    case StoreInfo::Initialization:
+      // We don't need to check here, all these conditions were
+      // checked by StoreSiteFinder, when it figured out that it is
+      // initialization.
+      Action =
+          SI.Dest->canPrintPretty() ? "initialized to " : "Initializing to ";
+      showBRDiagnostics(
+          Action, OS, SI.Dest, SI.Value, SI.Origin,
+          cast<DeclStmt>(SI.StoreSite->getLocationAs<PostStmt>()->getStmt()));
+      break;
+    case StoreInfo::BlockCapture:
+      Action = SI.Dest->canPrintPretty() ? "captured by block as "
+                                         : "Captured by block as ";
+      showBRDiagnostics(Action, OS, SI.Dest, SI.Value, SI.Origin, nullptr);
+      break;
+    case StoreInfo::CallArgument:
+      showBRParamDiagnostics(OS, cast<VarRegion>(SI.Dest), SI.Value, SI.Origin);
+      break;
+    case StoreInfo::Assignment:
+      showBRDefaultDiagnostics(OS, SI.Dest, SI.Value, SI.Origin);
+      break;
+    }
+
+    if (Opts.Kind == bugreporter::TrackingKind::Condition)
+      OS << WillBeUsedForACondition;
+
+    // Construct a new PathDiagnosticPiece.
+    ProgramPoint P = SI.StoreSite->getLocation();
+    PathDiagnosticLocation L;
+    if (P.getAs<CallEnter>() && SI.SourceOfTheValue)
+      L = PathDiagnosticLocation(SI.SourceOfTheValue, BRC.getSourceManager(),
+                                 P.getLocationContext());
+
+    if (!L.isValid() || !L.asLocation().isValid())
+      L = PathDiagnosticLocation::create(P, BRC.getSourceManager());
+
+    if (!L.isValid() || !L.asLocation().isValid())
+      return nullptr;
+
+    return std::make_shared<PathDiagnosticEventPiece>(L, OS.str());
+  }
+};
+
 class DefaultExpressionHandler final : public ExpressionHandler {
 public:
   using ExpressionHandler::ExpressionHandler;
@@ -2264,10 +2292,11 @@ public:
 };
 
 Tracker::Tracker(PathSensitiveBugReport &Report) : Report(Report) {
+  // Default expression handlers.
   addHighPriorityHandler<DefaultExpressionHandler>();
   addLowPriorityHandler<PRValueHandler>();
-  // TODO: split trackExpressionValue and FindLastStoreBRVisitor into handlers
-  //       and add them here.
+  // Default store handlers.
+  addHighPriorityHandler<DefaultStoreHandler>();
 }
 
 Tracker::Result Tracker::track(const Expr *E, const ExplodedNode *N,
@@ -2294,17 +2323,17 @@ Tracker::Result Tracker::track(const Expr *E, const ExplodedNode *N,
 Tracker::Result Tracker::track(SVal V, const MemRegion *R, TrackingOptions Opts,
                                const StackFrameContext *Origin) {
   if (auto KV = V.getAs<KnownSVal>()) {
-    Report.addVisitor<StoreSiteFinder>(
-        this, *KV, R, Opts.EnableNullFPSuppression, Opts.Kind, Origin);
+    Report.addVisitor<StoreSiteFinder>(this, *KV, R, Opts, Origin);
     return {true};
   }
   return {};
 }
 
-PathDiagnosticPieceRef Tracker::handle(StoreInfo SI, TrackingOptions Opts) {
+PathDiagnosticPieceRef Tracker::handle(StoreInfo SI, BugReporterContext &BRC,
+                                       TrackingOptions Opts) {
   // Iterate through the handlers in the order according to their priorities.
   for (StoreHandlerPtr &Handler : StoreHandlers) {
-    if (PathDiagnosticPieceRef Result = Handler->handle(SI, Opts))
+    if (PathDiagnosticPieceRef Result = Handler->handle(SI, BRC, Opts))
       // If the handler produced a non-null piece, return it.
       // There is no need in asking other handlers.
       return Result;
