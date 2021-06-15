@@ -79,7 +79,7 @@ public:
 
   using ImplType = TypeStorage;
 
-  using AbstractType = AbstractType;
+  using AbstractTy = AbstractType;
 
   constexpr Type() : impl(nullptr) {}
   /* implicit */ Type(const ImplType *impl)
@@ -170,7 +170,7 @@ public:
   }
 
   /// Return the abstract type descriptor for this type.
-  const AbstractType &getAbstractType() { return impl->getAbstractType(); }
+  const AbstractTy &getAbstractType() { return impl->getAbstractType(); }
 
 protected:
   ImplType *impl;
