@@ -296,6 +296,7 @@ def Linalg_PadTensorOp : Linalg_Op<"pad_tensor",
   ];
 
   let hasCanonicalizer = 1;
+  let hasFolder = 1;
 }
 
 def Linalg_RangeOp :
