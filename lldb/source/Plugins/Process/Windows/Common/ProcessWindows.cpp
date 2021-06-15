@@ -394,7 +394,7 @@ void ProcessWindows::RefreshStateAfterStop() {
     RegisterContextSP register_context = stop_thread->GetRegisterContext();
     const uint64_t pc = register_context->GetPC();
     BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
-    if (site && site->ValidForThisThread(stop_thread.get())) {
+    if (site && site->ValidForThisThread(*stop_thread)) {
       LLDB_LOG(log,
                "Single-stepped onto a breakpoint in process {0} at "
                "address {1:x} with breakpoint site {2}",
@@ -449,7 +449,7 @@ void ProcessWindows::RefreshStateAfterStop() {
                m_session_data->m_debugger->GetProcess().GetProcessId(), pc,
                site->GetID());
 
-      if (site->ValidForThisThread(stop_thread.get())) {
+      if (site->ValidForThisThread(*stop_thread)) {
         LLDB_LOG(log,
                  "Breakpoint site {0} is valid for this thread ({1:x}), "
                  "creating stop info.",
