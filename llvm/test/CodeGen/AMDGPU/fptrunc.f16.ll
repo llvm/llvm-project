@@ -73,8 +73,7 @@ entry:
 ; SIVI: v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[R_F16_0]], v[[R_F16_HI]]
 
 ; GFX9-DAG: v_cvt_f16_f32_e32 v[[R_F16_1:[0-9]+]], v[[A_F32_1]]
-; GFX9: v_and_b32_e32 v[[R_F16_LO:[0-9]+]], 0xffff, v[[R_F16_0]]
-; GFX9: v_lshl_or_b32 v[[R_V2_F16:[0-9]+]], v[[R_F16_1]], 16, v[[R_F16_LO]]
+; GFX9: v_lshl_or_b32 v[[R_V2_F16:[0-9]+]], v[[R_F16_1]], 16, v[[R_F16_0]]
 
 ; GCN: buffer_store_dword v[[R_V2_F16]]
 
@@ -141,7 +140,7 @@ entry:
 ; GCN: buffer_load_dword v[[A_F32:[0-9]+]]
 ; GCN: v_cvt_f16_f32_e32 v[[R_F16:[0-9]+]], v[[A_F32]]
 ; SIVI-NOT: v[[R_F16]]
-; GFX9-NEXT: v_and_b32_e32 v[[R_F16]], 0xffff, v[[R_F16]]
+; GFX9-NOT: v_and_b32
 ; GCN: buffer_store_dword v[[R_F16]]
 define amdgpu_kernel void @fptrunc_f32_to_f16_zext_i32(
     i32 addrspace(1)* %r,
@@ -159,7 +158,7 @@ entry:
 ; GCN: buffer_load_dword v[[A_F32:[0-9]+]]
 ; GCN: v_cvt_f16_f32_e64 v[[R_F16:[0-9]+]], |v[[A_F32]]|
 ; SIVI-NOT: v[[R_F16]]
-; GFX9-NEXT: v_and_b32_e32 v[[R_F16]], 0xffff, v[[R_F16]]
+; GFX9-NOT: v_and_b32
 ; GCN: buffer_store_dword v[[R_F16]]
 define amdgpu_kernel void @fptrunc_fabs_f32_to_f16_zext_i32(
     i32 addrspace(1)* %r,
