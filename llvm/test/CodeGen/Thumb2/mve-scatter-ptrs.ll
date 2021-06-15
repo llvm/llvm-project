@@ -251,6 +251,24 @@ entry:
   ret void
 }
 
+define arm_aapcs_vfpcc void @ptr_v4i16_dup(i32 %v, <4 x i16*> %offs) {
+; CHECK-LABEL: ptr_v4i16_dup:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov r1, r2, d0
+; CHECK-NEXT:    vmov r3, r12, d1
+; CHECK-NEXT:    strh r0, [r1]
+; CHECK-NEXT:    strh r0, [r2]
+; CHECK-NEXT:    strh r0, [r3]
+; CHECK-NEXT:    strh.w r0, [r12]
+; CHECK-NEXT:    bx lr
+entry:
+  %ext = trunc i32 %v to i16
+  %splatinsert = insertelement <4 x i16> poison, i16 %ext, i32 0
+  %splat = shufflevector <4 x i16> %splatinsert, <4 x i16> poison, <4 x i32> zeroinitializer
+  call void @llvm.masked.scatter.v4i16.v4p0i16(<4 x i16> %splat, <4 x i16*> %offs, i32 2, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  ret void
+}
+
 ; Expand
 define arm_aapcs_vfpcc void @ptr_v8i16_trunc(<8 x i32> %v, <8 x i16*>* %offptr) {
 ; CHECK-LABEL: ptr_v8i16_trunc:
@@ -311,6 +329,42 @@ define arm_aapcs_vfpcc void @ptr_f16(<8 x half> %v, <8 x half*>* %offptr) {
 entry:
   %offs = load <8 x half*>, <8 x half*>* %offptr, align 4
   call void @llvm.masked.scatter.v8f16.v8p0f16(<8 x half> %v, <8 x half*> %offs, i32 2, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+  ret void
+}
+
+define arm_aapcs_vfpcc void @ptr_v4f16(<4 x half> %v, <4 x half*>* %offptr) {
+; CHECK-LABEL: ptr_v4f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vmovx.f16 s8, s0
+; CHECK-NEXT:    vmov r0, r1, d2
+; CHECK-NEXT:    vstr.16 s0, [r0]
+; CHECK-NEXT:    vstr.16 s8, [r1]
+; CHECK-NEXT:    vmov r0, r1, d3
+; CHECK-NEXT:    vmovx.f16 s0, s1
+; CHECK-NEXT:    vstr.16 s1, [r0]
+; CHECK-NEXT:    vstr.16 s0, [r1]
+; CHECK-NEXT:    bx lr
+entry:
+  %offs = load <4 x half*>, <4 x half*>* %offptr, align 4
+  call void @llvm.masked.scatter.v4f16.v4p0f16(<4 x half> %v, <4 x half*> %offs, i32 2, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
+  ret void
+}
+
+define arm_aapcs_vfpcc void @ptr_v4f16_dup(half %v, <4 x half*> %offs) {
+; CHECK-LABEL: ptr_v4f16_dup:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov r0, r1, d2
+; CHECK-NEXT:    vmov r2, r3, d3
+; CHECK-NEXT:    vstr.16 s0, [r0]
+; CHECK-NEXT:    vstr.16 s0, [r1]
+; CHECK-NEXT:    vstr.16 s0, [r2]
+; CHECK-NEXT:    vstr.16 s0, [r3]
+; CHECK-NEXT:    bx lr
+entry:
+  %splatinsert = insertelement <4 x half> poison, half %v, i32 0
+  %splat = shufflevector <4 x half> %splatinsert, <4 x half> poison, <4 x i32> zeroinitializer
+  call void @llvm.masked.scatter.v4f16.v4p0f16(<4 x half> %splat, <4 x half*> %offs, i32 2, <4 x i1> <i1 true, i1 true, i1 true, i1 true>)
   ret void
 }
 
@@ -473,14 +527,14 @@ define void @foo_ptr_p_int32_t(i32* %dest, i32** %src, i32 %n) {
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    bxlt lr
-; CHECK-NEXT:  .LBB16_1: @ %vector.body
+; CHECK-NEXT:  .LBB19_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vptt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrwt.u32 q1, [r0], #16
 ; CHECK-NEXT:    vstrwt.32 q1, [q0]
-; CHECK-NEXT:    bne .LBB16_1
+; CHECK-NEXT:    bne .LBB19_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.end
 ; CHECK-NEXT:    bx lr
 entry:
@@ -513,14 +567,14 @@ define void @foo_ptr_p_float(float* %dest, float** %src, i32 %n) {
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    bxlt lr
-; CHECK-NEXT:  .LBB17_1: @ %vector.body
+; CHECK-NEXT:  .LBB20_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vptt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrwt.u32 q1, [r0], #16
 ; CHECK-NEXT:    vstrwt.32 q1, [q0]
-; CHECK-NEXT:    bne .LBB17_1
+; CHECK-NEXT:    bne .LBB20_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.end
 ; CHECK-NEXT:    bx lr
 entry:
