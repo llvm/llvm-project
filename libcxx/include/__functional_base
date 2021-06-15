@@ -42,14 +42,24 @@ public:
     static const bool value = sizeof(__test<_Tp>(0)) == 1;
 };
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 #if _LIBCPP_STD_VER > 11
 template <class _Tp = void>
 #else
 template <class _Tp>
 #endif
-struct _LIBCPP_TEMPLATE_VIS less : binary_function<_Tp, _Tp, bool>
+struct _LIBCPP_TEMPLATE_VIS less
+#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
+    : binary_function<_Tp, _Tp, bool>
+#endif
 {
+_LIBCPP_SUPPRESS_DEPRECATED_POP
     typedef bool __result_type;  // used by valarray
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+    _LIBCPP_DEPRECATED_IN_CXX17 typedef bool result_type;
+    _LIBCPP_DEPRECATED_IN_CXX17 typedef _Tp first_argument_type;
+    _LIBCPP_DEPRECATED_IN_CXX17 typedef _Tp second_argument_type;
+#endif
     _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
     bool operator()(const _Tp& __x, const _Tp& __y) const
         {return __x < __y;}
@@ -373,7 +383,9 @@ struct __invoke_void_return_wrapper<_Ret, true>
 
 template <class _Tp>
 class _LIBCPP_TEMPLATE_VIS reference_wrapper
+#if _LIBCPP_STD_VER <= 17 || !defined(_LIBCPP_ABI_NO_BINDER_BASES)
     : public __weak_result_type<_Tp>
+#endif
 {
 public:
     // types

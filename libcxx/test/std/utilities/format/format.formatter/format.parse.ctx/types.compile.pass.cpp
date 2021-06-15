@@ -24,6 +24,8 @@
 // using wformat_parse_context = basic_format_parse_context<wchar_t>;
 
 #include <format>
+
+#include <string_view>
 #include <type_traits>
 
 #include "test_macros.h"

@@ -336,7 +336,7 @@ namespace llvm {
     /// arm-apple-darwin). Hard presumes that the normal FP ABI is used.
     FloatABI::ABIType FloatABIType = FloatABI::Default;
 
-    /// AllowFPOpFusion - This flag is set by the -fuse-fp-ops=xxx option.
+    /// AllowFPOpFusion - This flag is set by the -fp-contract=xxx option.
     /// This controls the creation of fused FP ops that store intermediate
     /// results in higher precision than IEEE allows (E.g. FMAs).
     ///
