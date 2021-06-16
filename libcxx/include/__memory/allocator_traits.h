@@ -361,6 +361,8 @@ struct __rebind_alloc_helper {
 template <class _Tp>
 struct __is_default_allocator : false_type { };
 
+template <class> class allocator;
+
 template <class _Tp>
 struct __is_default_allocator<allocator<_Tp> > : true_type { };
 
