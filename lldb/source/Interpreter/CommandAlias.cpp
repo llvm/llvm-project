@@ -47,7 +47,6 @@ static bool ProcessAliasOptionsArgs(lldb::CommandObjectSP &cmd_obj_sp,
     if (!args_or) {
       result.AppendError(toString(args_or.takeError()));
       result.AppendError("Unable to create requested alias.\n");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
     args = std::move(*args_or);
