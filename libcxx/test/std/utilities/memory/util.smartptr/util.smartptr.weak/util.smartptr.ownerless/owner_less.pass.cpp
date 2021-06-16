@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // <memory>
 
 // template <class T> struct owner_less;
@@ -65,9 +67,11 @@ int main(int, char**)
     typedef std::owner_less<std::shared_ptr<int> > CS;
     CS cs;
 
+#if TEST_STD_VER <= 17
     static_assert((std::is_same<std::shared_ptr<int>, CS::first_argument_type>::value), "" );
     static_assert((std::is_same<std::shared_ptr<int>, CS::second_argument_type>::value), "" );
     static_assert((std::is_same<bool, CS::result_type>::value), "" );
+#endif
 
     assert(!cs(p1, p2));
     assert(!cs(p2, p1));
@@ -86,9 +90,11 @@ int main(int, char**)
     typedef std::owner_less<std::weak_ptr<int> > CS;
     CS cs;
 
+#if TEST_STD_VER <= 17
     static_assert((std::is_same<std::weak_ptr<int>, CS::first_argument_type>::value), "" );
     static_assert((std::is_same<std::weak_ptr<int>, CS::second_argument_type>::value), "" );
     static_assert((std::is_same<bool, CS::result_type>::value), "" );
+#endif
 
     assert(!cs(w1, w2));
     assert(!cs(w2, w1));
