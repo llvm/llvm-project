@@ -77,7 +77,6 @@ target(asan_target_type, "asan") {
     "asan_malloc_mac.cpp",
     "asan_malloc_win.cpp",
     "asan_mapping.h",
-    "asan_mapping_myriad.h",
     "asan_memory_profile.cpp",
     "asan_poisoning.cpp",
     "asan_poisoning.h",
