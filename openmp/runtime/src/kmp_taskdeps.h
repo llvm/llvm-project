@@ -58,8 +58,8 @@ static inline void __kmp_dephash_free_entries(kmp_info_t *thread,
       kmp_dephash_entry_t *next;
       for (kmp_dephash_entry_t *entry = h->buckets[i]; entry; entry = next) {
         next = entry->next_in_bucket;
-        __kmp_depnode_list_free(thread, entry->last_ins);
-        __kmp_depnode_list_free(thread, entry->last_mtxs);
+        __kmp_depnode_list_free(thread, entry->last_set);
+        __kmp_depnode_list_free(thread, entry->prev_set);
         __kmp_node_deref(thread, entry->last_out);
         if (entry->mtx_lock) {
           __kmp_destroy_lock(entry->mtx_lock);

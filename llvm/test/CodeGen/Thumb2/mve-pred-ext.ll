@@ -15,6 +15,20 @@ entry:
   ret <4 x i32> %0
 }
 
+define arm_aapcs_vfpcc <4 x i32> @sext_v4i1_v4f32(<4 x float> %src1, <4 x float> %src2) {
+; CHECK-LABEL: sext_v4i1_v4f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q2, #0x0
+; CHECK-NEXT:    vmov.i8 q3, #0xff
+; CHECK-NEXT:    vcmp.f32 ne, q0, q1
+; CHECK-NEXT:    vpsel q0, q3, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %c = fcmp une <4 x float> %src1, %src2
+  %0 = sext <4 x i1> %c to <4 x i32>
+  ret <4 x i32> %0
+}
+
 define arm_aapcs_vfpcc <8 x i16> @sext_v8i1_v8i16(<8 x i16> %src) {
 ; CHECK-LABEL: sext_v8i1_v8i16:
 ; CHECK:       @ %bb.0: @ %entry
@@ -25,6 +39,20 @@ define arm_aapcs_vfpcc <8 x i16> @sext_v8i1_v8i16(<8 x i16> %src) {
 ; CHECK-NEXT:    bx lr
 entry:
   %c = icmp sgt <8 x i16> %src, zeroinitializer
+  %0 = sext <8 x i1> %c to <8 x i16>
+  ret <8 x i16> %0
+}
+
+define arm_aapcs_vfpcc <8 x i16> @sext_v8i1_v8f32(<8 x half> %src1, <8 x half> %src2) {
+; CHECK-LABEL: sext_v8i1_v8f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i16 q2, #0x0
+; CHECK-NEXT:    vmov.i8 q3, #0xff
+; CHECK-NEXT:    vcmp.f16 ne, q0, q1
+; CHECK-NEXT:    vpsel q0, q3, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %c = fcmp une <8 x half> %src1, %src2
   %0 = sext <8 x i1> %c to <8 x i16>
   ret <8 x i16> %0
 }
@@ -71,6 +99,46 @@ entry:
   ret <2 x i64> %0
 }
 
+define arm_aapcs_vfpcc <2 x i64> @sext_v2i1_v2f64(<2 x double> %src) {
+; CHECK-LABEL: sext_v2i1_v2f64:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r6, lr}
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    vmov q4, q0
+; CHECK-NEXT:    vldr d0, .LCPI6_0
+; CHECK-NEXT:    vmov r0, r1, d9
+; CHECK-NEXT:    vmov r4, r5, d0
+; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r3, r5
+; CHECK-NEXT:    bl __aeabi_dcmpeq
+; CHECK-NEXT:    vmov r2, r1, d8
+; CHECK-NEXT:    clz r0, r0
+; CHECK-NEXT:    mov r3, r5
+; CHECK-NEXT:    lsrs r0, r0, #5
+; CHECK-NEXT:    csetm r6, ne
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    bl __aeabi_dcmpeq
+; CHECK-NEXT:    clz r0, r0
+; CHECK-NEXT:    lsrs r0, r0, #5
+; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r6
+; CHECK-NEXT:    vmov q0[3], q0[1], r0, r6
+; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-NEXT:    .p2align 3
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI6_0:
+; CHECK-NEXT:    .long 0 @ double 0
+; CHECK-NEXT:    .long 0
+entry:
+  %c = fcmp une <2 x double> %src, zeroinitializer
+  %0 = sext <2 x i1> %c to <2 x i64>
+  ret <2 x i64> %0
+}
+
 
 define arm_aapcs_vfpcc <4 x i32> @zext_v4i1_v4i32(<4 x i32> %src) {
 ; CHECK-LABEL: zext_v4i1_v4i32:
@@ -86,6 +154,20 @@ entry:
   ret <4 x i32> %0
 }
 
+define arm_aapcs_vfpcc <4 x i32> @zext_v4i1_v4f32(<4 x float> %src1, <4 x float> %src2) {
+; CHECK-LABEL: zext_v4i1_v4f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q2, #0x0
+; CHECK-NEXT:    vmov.i32 q3, #0x1
+; CHECK-NEXT:    vcmp.f32 ne, q0, q1
+; CHECK-NEXT:    vpsel q0, q3, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %c = fcmp une <4 x float> %src1, %src2
+  %0 = zext <4 x i1> %c to <4 x i32>
+  ret <4 x i32> %0
+}
+
 define arm_aapcs_vfpcc <8 x i16> @zext_v8i1_v8i16(<8 x i16> %src) {
 ; CHECK-LABEL: zext_v8i1_v8i16:
 ; CHECK:       @ %bb.0: @ %entry
@@ -96,6 +178,20 @@ define arm_aapcs_vfpcc <8 x i16> @zext_v8i1_v8i16(<8 x i16> %src) {
 ; CHECK-NEXT:    bx lr
 entry:
   %c = icmp sgt <8 x i16> %src, zeroinitializer
+  %0 = zext <8 x i1> %c to <8 x i16>
+  ret <8 x i16> %0
+}
+
+define arm_aapcs_vfpcc <8 x i16> @zext_v8i1_v8f32(<8 x half> %src1, <8 x half> %src2) {
+; CHECK-LABEL: zext_v8i1_v8f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i16 q2, #0x0
+; CHECK-NEXT:    vmov.i16 q3, #0x1
+; CHECK-NEXT:    vcmp.f16 ne, q0, q1
+; CHECK-NEXT:    vpsel q0, q3, q2
+; CHECK-NEXT:    bx lr
+entry:
+  %c = fcmp une <8 x half> %src1, %src2
   %0 = zext <8 x i1> %c to <8 x i16>
   ret <8 x i16> %0
 }
@@ -122,7 +218,7 @@ define arm_aapcs_vfpcc <2 x i64> @zext_v2i1_v2i64(<2 x i64> %src) {
 ; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    movs r3, #0
 ; CHECK-NEXT:    vmov lr, r12, d0
-; CHECK-NEXT:    adr r2, .LCPI7_0
+; CHECK-NEXT:    adr r2, .LCPI12_0
 ; CHECK-NEXT:    vldrw.u32 q0, [r2]
 ; CHECK-NEXT:    rsbs r0, r0, #0
 ; CHECK-NEXT:    sbcs.w r0, r3, r1
@@ -142,13 +238,60 @@ define arm_aapcs_vfpcc <2 x i64> @zext_v2i1_v2i64(<2 x i64> %src) {
 ; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI7_0:
+; CHECK-NEXT:  .LCPI12_0:
 ; CHECK-NEXT:    .long 1 @ 0x1
 ; CHECK-NEXT:    .long 0 @ 0x0
 ; CHECK-NEXT:    .long 1 @ 0x1
 ; CHECK-NEXT:    .long 0 @ 0x0
 entry:
   %c = icmp sgt <2 x i64> %src, zeroinitializer
+  %0 = zext <2 x i1> %c to <2 x i64>
+  ret <2 x i64> %0
+}
+
+define arm_aapcs_vfpcc <2 x i64> @zext_v2i1_v2f64(<2 x double> %src) {
+; CHECK-LABEL: zext_v2i1_v2f64:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r6, lr}
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    vmov q4, q0
+; CHECK-NEXT:    vldr d0, .LCPI13_0
+; CHECK-NEXT:    vmov r0, r1, d9
+; CHECK-NEXT:    vmov r4, r5, d0
+; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r3, r5
+; CHECK-NEXT:    bl __aeabi_dcmpeq
+; CHECK-NEXT:    vmov r2, r1, d8
+; CHECK-NEXT:    clz r0, r0
+; CHECK-NEXT:    adr r3, .LCPI13_1
+; CHECK-NEXT:    lsrs r0, r0, #5
+; CHECK-NEXT:    vldrw.u32 q4, [r3]
+; CHECK-NEXT:    mov r3, r5
+; CHECK-NEXT:    csetm r6, ne
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    bl __aeabi_dcmpeq
+; CHECK-NEXT:    clz r0, r0
+; CHECK-NEXT:    lsrs r0, r0, #5
+; CHECK-NEXT:    csetm r0, ne
+; CHECK-NEXT:    vmov q0[2], q0[0], r0, r6
+; CHECK-NEXT:    vand q0, q0, q4
+; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI13_1:
+; CHECK-NEXT:    .long 1 @ 0x1
+; CHECK-NEXT:    .long 0 @ 0x0
+; CHECK-NEXT:    .long 1 @ 0x1
+; CHECK-NEXT:    .long 0 @ 0x0
+; CHECK-NEXT:  .LCPI13_0:
+; CHECK-NEXT:    .long 0 @ double 0
+; CHECK-NEXT:    .long 0
+entry:
+  %c = fcmp une <2 x double> %src, zeroinitializer
   %0 = zext <2 x i1> %c to <2 x i64>
   ret <2 x i64> %0
 }

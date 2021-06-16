@@ -735,7 +735,8 @@ template <class LP> void ObjFile::parse() {
       parseRelocations(sectionHeaders, sectionHeaders[i], subsections[i]);
 
   parseDebugInfo();
-  parseDataInCode();
+  if (config->emitDataInCodeInfo)
+    parseDataInCode();
 }
 
 void ObjFile::parseDebugInfo() {
