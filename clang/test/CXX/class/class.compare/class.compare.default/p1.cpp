@@ -1,15 +1,13 @@
 // RUN: %clang_cc1 -std=c++2a -verify %s
 
 struct B {};
-bool operator==(const B&, const B&) = default; // expected-error {{equality comparison operator can only be defaulted in a class definition}} expected-note {{candidate}}
-bool operator<=>(const B&, const B&) = default; // expected-error {{three-way comparison operator can only be defaulted in a class definition}}
 
 template<typename T = void>
   bool operator<(const B&, const B&) = default; // expected-error {{comparison operator template cannot be defaulted}}
 
 struct A {
   friend bool operator==(const A&, const A&) = default;
-  friend bool operator!=(const A&, const B&) = default; // expected-error {{invalid parameter type for defaulted equality comparison operator; found 'const B &', expected 'A' or 'const A &'}}
+  friend bool operator!=(const A&, const B&) = default; // expected-error {{parameters for defaulted equality comparison operator must have the same type (found 'const A &' vs 'const B &')}}
   friend bool operator!=(const B&, const B&) = default; // expected-error {{invalid parameter type for defaulted equality comparison}}
   friend bool operator<(const A&, const A&);
   friend bool operator<(const B&, const B&) = default; // expected-error {{invalid parameter type for defaulted relational comparison}}
@@ -28,11 +26,6 @@ struct A {
   template<typename T = void>
     bool operator==(const A&) const = default; // expected-error {{comparison operator template cannot be defaulted}}
 };
-
-// FIXME: The wording is not clear as to whether these are valid, but the
-// intention is that they are not.
-bool operator<(const A&, const A&) = default; // expected-error {{relational comparison operator can only be defaulted in a class definition}}
-bool A::operator<(const A&) const = default; // expected-error {{can only be defaulted in a class definition}}
 
 template<typename T> struct Dependent {
   using U = typename T::type;
@@ -132,3 +125,41 @@ namespace P1946 {
     friend bool operator==(const B&, const B&) = default; // expected-warning {{deleted}}
   };
 }
+
+namespace p2085 {
+// out-of-class defaulting
+
+struct S1 {
+  bool operator==(S1 const &) const;
+};
+
+bool S1::operator==(S1 const &) const = default;
+
+bool F1(S1 &s) {
+  return s != s;
+}
+
+struct S2 {
+  friend bool operator==(S2 const &, S2 const &);
+};
+
+bool operator==(S2 const &, S2 const &) = default;
+bool F2(S2 &s) {
+  return s != s;
+}
+
+struct S3 {};                                      // expected-note{{here}}
+bool operator==(S3 const &, S3 const &) = default; // expected-error{{not a friend}}
+
+struct S4;                                         // expected-note{{forward declaration}}
+bool operator==(S4 const &, S4 const &) = default; // expected-error{{not a friend}}
+
+struct S5;                         // expected-note 3{{forward declaration}}
+bool operator==(S5, S5) = default; // expected-error{{not a friend}} expected-error 2{{has incomplete type}}
+
+enum e {};
+bool operator==(e, int) = default; // expected-error{{expected class or reference to a constant class}}
+
+bool operator==(e *, int *) = default; // expected-error{{must have at least one}}
+
+} // namespace p2085
