@@ -8531,8 +8531,6 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
             QualType PlainTy = Context.getRecordType(RD);
             QualType RefTy =
                 Context.getLValueReferenceType(PlainTy.withConst());
-            if (IsMethod)
-              PlainTy = QualType();
             Diag(FD->getLocation(), diag::err_defaulted_comparison_param)
                 << int(DCK) << ParmTy << RefTy << int(!IsMethod) << PlainTy
                 << Param->getSourceRange();
@@ -17266,10 +17264,13 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
   // that we've marked it as defaulted.
   FD->setWillHaveBody(false);
 
-  // If this is a comparison's defaulted definition within the record, do
-  // the checking when the record is complete.
-  if (DefKind.isComparison() && isa<CXXRecordDecl>(FD->getLexicalDeclContext()))
-    return;
+  if (DefKind.isComparison()) {
+    // If this comparison's defaulting occurs within the definition of its
+    // lexical class context, we have to do the checking when complete.
+    if (auto const *RD = dyn_cast<CXXRecordDecl>(FD->getLexicalDeclContext()))
+      if (!RD->isCompleteDefinition())
+        return;
+  }
 
   // If this member fn was defaulted on its first declaration, we will have
   // already performed the checking in CheckCompletedCXXClass. Such a

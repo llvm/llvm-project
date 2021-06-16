@@ -115,6 +115,28 @@ namespace LookupContext {
   }
 }
 
+namespace evil1 {
+template <class T> struct Bad {
+  // expected-error@+1{{found 'const float &'}}
+  bool operator==(T const &) const = default;
+  Bad(int = 0);
+};
+
+template <class T> struct Weird {
+  // expected-error@+1{{'float' cannot be used prior to '::'}}
+  bool operator==(typename T::Weird_ const &) const = default;
+  Weird(int = 0);
+};
+
+struct evil {
+  using Weird_ = Weird<evil>;
+};
+template struct Bad<float>;   // expected-note{{evil1::Bad<float>' requested}}
+template struct Weird<float>; // expected-note{{evil1::Weird<float>' requested}}
+template struct Weird<evil>;
+
+} // namespace evil1
+
 namespace P1946 {
   struct A {
     friend bool operator==(A &, A &); // expected-note {{would lose const qualifier}}
@@ -161,5 +183,40 @@ enum e {};
 bool operator==(e, int) = default; // expected-error{{expected class or reference to a constant class}}
 
 bool operator==(e *, int *) = default; // expected-error{{must have at least one}}
-
 } // namespace p2085
+
+namespace p2085_2 {
+template <class T> struct S6 {
+  // expected-error@+2{{found 'const int &'}}
+  // expected-error@+1{{found 'const float &'}}
+  bool operator==(T const &) const;
+};
+template <class T> bool S6<T>::operator==(T const &) const = default;
+
+template struct S6<int>; // expected-note{{S6<int>::operator==' requested}}
+
+void f1() {
+  S6<float> a;
+  (void)(a == 0); // expected-note{{S6<float>::operator==' requested}}
+}
+
+template <class T> struct S7 {
+  // expected-error@+2{{'float' cannot be used}}
+  // expected-error@+1{{'int' cannot be used}}
+  bool operator==(typename T::S7_ const &) const;
+  S7(int = 0);
+};
+template <class T> bool S7<T>::operator==(typename T::S7_ const &) const = default;
+
+struct evil {
+  using S7_ = S7<evil>;
+};
+template struct S7<float>; // expected-note{{S7<float>' requested}}
+
+void f2() {
+  S7<int> a; // expected-note{{S7<int>' requested}}
+  S7<evil> b;
+  (void)(a == 0); // expected-error{{invalid operands}}
+  (void)(b == 0);
+}
+} // namespace p2085_2
