@@ -73,6 +73,21 @@ static bool isSmartPointerType(QualType Ty, ASTContext &Context) {
   return match(SmartPointer, Ty, Context).size() > 0;
 }
 
+// Identifies use of `operator*` on smart pointers, and returns the underlying
+// smart-pointer expression; otherwise, returns null.
+static const Expr *isSmartDereference(const Expr &E, ASTContext &Context) {
+  using namespace ::clang::ast_matchers;
+
+  const auto HasOverloadedArrow = cxxRecordDecl(hasMethod(cxxMethodDecl(
+      hasOverloadedOperatorName("->"), returns(qualType(pointsTo(type()))))));
+  // Verify it is a smart pointer by finding `operator->` in the class
+  // declaration.
+  auto Deref = cxxOperatorCallExpr(
+      hasOverloadedOperatorName("*"), hasUnaryOperand(expr().bind("arg")),
+      callee(cxxMethodDecl(ofClass(HasOverloadedArrow))));
+  return selectFirst<Expr>("arg", match(Deref, E, Context));
+}
+
 namespace {
 // An arbitrary fragment of code within a stencil.
 class RawTextStencil : public StencilInterface {
@@ -309,6 +324,10 @@ public:
           }
         }
         S = tooling::buildArrow(*E, *Match.Context);
+      } else if (const auto *Operand = isSmartDereference(*E, *Match.Context)) {
+        // `buildDot` already handles the built-in dereference operator, so we
+        // only need to catch overloaded `operator*`.
+        S = tooling::buildArrow(*Operand, *Match.Context);
       } else {
         S = tooling::buildDot(*E, *Match.Context);
       }
