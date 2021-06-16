@@ -888,6 +888,9 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     if (!UI || UI->getParent() != LI->getParent())
       return false;
 
+    if (!isGuaranteedNotToBePoison(UI->getOperand(1), &AC, LI, &DT))
+      return false;
+
     // Check if any instruction between the load and the extract may modify
     // memory.
     if (LastCheckedInst->comesBefore(UI)) {
@@ -928,9 +931,6 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     Builder.SetInsertPoint(EI);
 
     Value *Idx = EI->getOperand(1);
-    if (!isGuaranteedNotToBePoison(Idx, &AC, LI, &DT))
-      Idx = Builder.CreateFreeze(Idx);
-
     Value *GEP =
         Builder.CreateInBoundsGEP(FixedVT, Ptr, {Builder.getInt32(0), Idx});
     auto *NewLoad = cast<LoadInst>(Builder.CreateLoad(

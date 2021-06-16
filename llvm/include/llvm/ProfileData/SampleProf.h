@@ -430,6 +430,22 @@ public:
     return ContextStr.split(" @ ");
   }
 
+  // Reconstruct a new context with the last k frames, return the context-less
+  // name if K = 1
+  StringRef getContextWithLastKFrames(uint32_t K) {
+    if (K == 1)
+      return getNameWithoutContext();
+
+    size_t I = FullContext.size();
+    while (K--) {
+      I = FullContext.find_last_of(" @ ", I);
+      if (I == StringRef::npos)
+        return FullContext;
+      I -= 2;
+    }
+    return FullContext.slice(I + 3, StringRef::npos);
+  }
+
   // Decode context string for a frame to get function name and location.
   // `ContextStr` is in the form of `FuncName:StartLine.Discriminator`.
   static void decodeContextString(StringRef ContextStr, StringRef &FName,
@@ -993,8 +1009,9 @@ public:
       : ProfileMap(Profiles){};
   // Trim and merge cold context profile when requested.
   void trimAndMergeColdContextProfiles(uint64_t ColdCountThreshold,
-                                       bool TrimColdContext = true,
-                                       bool MergeColdContext = true);
+                                       bool TrimColdContext,
+                                       bool MergeColdContext,
+                                       uint32_t ColdContextFrameLength);
   // Canonicalize context profile name and attributes.
   void canonicalizeContextProfiles();
 

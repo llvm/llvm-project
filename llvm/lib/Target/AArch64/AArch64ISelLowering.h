@@ -240,6 +240,9 @@ enum NodeType : unsigned {
   UABD,
   SABD,
 
+  // Unsigned Add Long Pairwise
+  UADDLP,
+
   // udot/sdot instructions
   UDOT,
   SDOT,

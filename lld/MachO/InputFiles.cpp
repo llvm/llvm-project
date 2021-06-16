@@ -254,9 +254,12 @@ void ObjFile::parseSections(ArrayRef<Section> sections) {
     ArrayRef<uint8_t> data = {isZeroFill(sec.flags) ? nullptr
                                                     : buf + sec.offset,
                               static_cast<size_t>(sec.size)};
-    if (sec.align >= 32)
+    if (sec.align >= 32) {
       error("alignment " + std::to_string(sec.align) + " of section " + name +
             " is too large");
+      subsections.push_back({});
+      continue;
+    }
     uint32_t align = 1 << sec.align;
     uint32_t flags = sec.flags;
 
@@ -732,6 +735,7 @@ template <class LP> void ObjFile::parse() {
       parseRelocations(sectionHeaders, sectionHeaders[i], subsections[i]);
 
   parseDebugInfo();
+  parseDataInCode();
 }
 
 void ObjFile::parseDebugInfo() {
@@ -755,6 +759,21 @@ void ObjFile::parseDebugInfo() {
   // PR48637.
   auto it = units.begin();
   compileUnit = it->get();
+}
+
+void ObjFile::parseDataInCode() {
+  const auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
+  const load_command *cmd = findCommand(buf, LC_DATA_IN_CODE);
+  if (!cmd)
+    return;
+  const auto *c = reinterpret_cast<const linkedit_data_command *>(cmd);
+  dataInCodeEntries = {
+      reinterpret_cast<const data_in_code_entry *>(buf + c->dataoff),
+      c->datasize / sizeof(data_in_code_entry)};
+  assert(is_sorted(dataInCodeEntries, [](const data_in_code_entry &lhs,
+                                         const data_in_code_entry &rhs) {
+    return lhs.offset < rhs.offset;
+  }));
 }
 
 // The path can point to either a dylib or a .tbd file.
