@@ -79,7 +79,8 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
   } else if (name == "min") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
   } else if (name == "minval") {
-    auto most{std::numeric_limits<SingleCharType>::max()};
+    // Collating sequences correspond to positive integers (3.31)
+    SingleCharType most{0x7fffffff >> (8 * (4 - KIND))};
     if (auto identity{Identity<T>(
             StringType{most}, GetConstantLength(context, funcRef, 0))}) {
       return FoldMaxvalMinval<T>(
