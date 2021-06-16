@@ -3952,7 +3952,7 @@ public:
               false,               // request_hardware
               eLazyBoolCalculate); // move_to_nearest_code
           // Make breakpoint one shot
-          bp_sp->GetOptions()->SetOneShot(true);
+          bp_sp->GetOptions().SetOneShot(true);
           exe_ctx.GetProcessRef().Resume();
         }
       } else if (m_selected_line < GetNumDisassemblyLines()) {
@@ -3968,7 +3968,7 @@ public:
               false,  // internal
               false); // request_hardware
           // Make breakpoint one shot
-          bp_sp->GetOptions()->SetOneShot(true);
+          bp_sp->GetOptions().SetOneShot(true);
           exe_ctx.GetProcessRef().Resume();
         }
       }

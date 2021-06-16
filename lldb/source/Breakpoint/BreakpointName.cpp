@@ -81,6 +81,6 @@ bool BreakpointName::GetDescription(Stream *s, lldb::DescriptionLevel level) {
 
 void BreakpointName::ConfigureBreakpoint(lldb::BreakpointSP bp_sp)
 {
-   bp_sp->GetOptions()->CopyOverSetOptions(GetOptions());
-   bp_sp->GetPermissions().MergeInto(GetPermissions());
+  bp_sp->GetOptions().CopyOverSetOptions(GetOptions());
+  bp_sp->GetPermissions().MergeInto(GetPermissions());
 }
