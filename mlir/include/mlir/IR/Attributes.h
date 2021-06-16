@@ -31,6 +31,7 @@ public:
 
   using ImplType = AttributeStorage;
   using ValueType = void;
+  using AbstractTy = AbstractAttribute;
 
   constexpr Attribute() : impl(nullptr) {}
   /* implicit */ Attribute(const ImplType *impl)
@@ -82,7 +83,7 @@ public:
   friend ::llvm::hash_code hash_value(Attribute arg);
 
   /// Return the abstract descriptor for this attribute.
-  const AbstractAttribute &getAbstractAttribute() const {
+  const AbstractTy &getAbstractAttribute() const {
     return impl->getAbstractAttribute();
   }
 

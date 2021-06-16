@@ -306,7 +306,7 @@ public:
   // Type uniquing
   //===--------------------------------------------------------------------===//
 
-  DenseMap<TypeID, const AbstractType *> registeredTypes;
+  DenseMap<TypeID, AbstractType *> registeredTypes;
   StorageUniquer typeUniquer;
 
   /// Cached Type Instances.
@@ -324,7 +324,7 @@ public:
   // Attribute uniquing
   //===--------------------------------------------------------------------===//
 
-  DenseMap<TypeID, const AbstractAttribute *> registeredAttributes;
+  DenseMap<TypeID, AbstractAttribute *> registeredAttributes;
   StorageUniquer attributeUniquer;
 
   /// Cached Attribute Instances.
@@ -669,12 +669,20 @@ void Dialect::addAttribute(TypeID typeID, AbstractAttribute &&attrInfo) {
 /// Get the dialect that registered the attribute with the provided typeid.
 const AbstractAttribute &AbstractAttribute::lookup(TypeID typeID,
                                                    MLIRContext *context) {
+  const AbstractAttribute *abstract = lookupMutable(typeID, context);
+  if (!abstract)
+    llvm::report_fatal_error("Trying to create an Attribute that was not "
+                             "registered in this MLIRContext.");
+  return *abstract;
+}
+
+AbstractAttribute *AbstractAttribute::lookupMutable(TypeID typeID,
+                                                    MLIRContext *context) {
   auto &impl = context->getImpl();
   auto it = impl.registeredAttributes.find(typeID);
   if (it == impl.registeredAttributes.end())
-    llvm::report_fatal_error("Trying to create an Attribute that was not "
-                             "registered in this MLIRContext.");
-  return *it->second;
+    return nullptr;
+  return it->second;
 }
 
 //===----------------------------------------------------------------------===//
@@ -740,12 +748,19 @@ AbstractOperation::AbstractOperation(
 //===----------------------------------------------------------------------===//
 
 const AbstractType &AbstractType::lookup(TypeID typeID, MLIRContext *context) {
+  const AbstractType *type = lookupMutable(typeID, context);
+  if (!type)
+    llvm::report_fatal_error(
+        "Trying to create a Type that was not registered in this MLIRContext.");
+  return *type;
+}
+
+AbstractType *AbstractType::lookupMutable(TypeID typeID, MLIRContext *context) {
   auto &impl = context->getImpl();
   auto it = impl.registeredTypes.find(typeID);
   if (it == impl.registeredTypes.end())
-    llvm::report_fatal_error(
-        "Trying to create a Type that was not registered in this MLIRContext.");
-  return *it->second;
+    return nullptr;
+  return it->second;
 }
 
 //===----------------------------------------------------------------------===//

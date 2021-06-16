@@ -236,22 +236,14 @@ entry:
 define arm_aapcs_vfpcc void @ext_scaled_i16_i32_2gep(i16* %base, <4 x i32>* %offptr, <4 x i32> %input) {
 ; CHECK-LABEL: ext_scaled_i16_i32_2gep:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-NEXT:    vldrw.u32 q2, [r1]
 ; CHECK-NEXT:    vmov.i32 q1, #0xa
-; CHECK-NEXT:    vmov r1, r3, d0
+; CHECK-NEXT:    movs r2, #0
 ; CHECK-NEXT:    vshl.i32 q2, q2, #1
-; CHECK-NEXT:    vmov r4, r5, d1
 ; CHECK-NEXT:    vadd.i32 q2, q2, r0
 ; CHECK-NEXT:    vadd.i32 q1, q2, q1
-; CHECK-NEXT:    vmov r0, r12, d2
-; CHECK-NEXT:    vmov r2, lr, d3
-; CHECK-NEXT:    strh r1, [r0]
-; CHECK-NEXT:    strh.w r3, [r12]
-; CHECK-NEXT:    strh r4, [r2]
-; CHECK-NEXT:    strh.w r5, [lr]
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    vstrh.32 q0, [r2, q1]
+; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i32>, <4 x i32>* %offptr, align 4
   %ptrs = getelementptr inbounds i16, i16* %base, <4 x i32> %offs

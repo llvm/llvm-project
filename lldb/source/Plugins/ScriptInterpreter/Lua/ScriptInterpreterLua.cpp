@@ -98,9 +98,10 @@ public:
                               std::string &data) override {
     switch (m_active_io_handler) {
     case eIOHandlerBreakpoint: {
-      auto *bp_options_vec = static_cast<std::vector<BreakpointOptions *> *>(
-          io_handler.GetUserData());
-      for (auto *bp_options : *bp_options_vec) {
+      auto *bp_options_vec =
+          static_cast<std::vector<std::reference_wrapper<BreakpointOptions>> *>(
+              io_handler.GetUserData());
+      for (BreakpointOptions &bp_options : *bp_options_vec) {
         Status error = m_script_interpreter.SetBreakpointCommandCallback(
             bp_options, data.c_str());
         if (error.Fail())
@@ -276,7 +277,7 @@ bool ScriptInterpreterLua::BreakpointCallbackFunction(
 }
 
 void ScriptInterpreterLua::CollectDataForBreakpointCommandCallback(
-    std::vector<BreakpointOptions *> &bp_options_vec,
+    std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
     CommandReturnObject &result) {
   IOHandlerSP io_handler_sp(
       new IOHandlerLuaInterpreter(m_debugger, *this, eIOHandlerBreakpoint));
@@ -285,7 +286,7 @@ void ScriptInterpreterLua::CollectDataForBreakpointCommandCallback(
 }
 
 Status ScriptInterpreterLua::SetBreakpointCommandCallbackFunction(
-    BreakpointOptions *bp_options, const char *function_name,
+    BreakpointOptions &bp_options, const char *function_name,
     StructuredData::ObjectSP extra_args_sp) {
   const char *fmt_str = "return {0}(frame, bp_loc, ...)";
   std::string oneliner = llvm::formatv(fmt_str, function_name).str();
@@ -294,12 +295,12 @@ Status ScriptInterpreterLua::SetBreakpointCommandCallbackFunction(
 }
 
 Status ScriptInterpreterLua::SetBreakpointCommandCallback(
-    BreakpointOptions *bp_options, const char *command_body_text) {
+    BreakpointOptions &bp_options, const char *command_body_text) {
   return RegisterBreakpointCallback(bp_options, command_body_text, {});
 }
 
 Status ScriptInterpreterLua::RegisterBreakpointCallback(
-    BreakpointOptions *bp_options, const char *command_body_text,
+    BreakpointOptions &bp_options, const char *command_body_text,
     StructuredData::ObjectSP extra_args_sp) {
   Status error;
   auto data_up = std::make_unique<CommandDataLua>(extra_args_sp);
@@ -308,8 +309,8 @@ Status ScriptInterpreterLua::RegisterBreakpointCallback(
     return error;
   auto baton_sp =
       std::make_shared<BreakpointOptions::CommandBaton>(std::move(data_up));
-  bp_options->SetCallback(ScriptInterpreterLua::BreakpointCallbackFunction,
-                          baton_sp);
+  bp_options.SetCallback(ScriptInterpreterLua::BreakpointCallbackFunction,
+                         baton_sp);
   return error;
 }
 

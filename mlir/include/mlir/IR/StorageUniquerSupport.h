@@ -87,6 +87,21 @@ public:
     return detail::InterfaceMap::template get<Traits<ConcreteT>...>();
   }
 
+  /// Attach the given models as implementations of the corresponding interfaces
+  /// for the concrete storage user class. The type must be registered with the
+  /// context, i.e. the dialect to which the type belongs must be loaded. The
+  /// call will abort otherwise.
+  template <typename... IfaceModels>
+  static void attachInterface(MLIRContext &context) {
+    typename ConcreteT::AbstractTy *abstract =
+        ConcreteT::AbstractTy::lookupMutable(TypeID::get<ConcreteT>(),
+                                             &context);
+    if (!abstract)
+      llvm::report_fatal_error("Registering an interface for an attribute/type "
+                               "that is not itself registered.");
+    abstract->interfaceMap.template insert<IfaceModels...>();
+  }
+
   /// Get or create a new ConcreteT instance within the ctx. This
   /// function is guaranteed to return a non null object and will assert if
   /// the arguments provided are invalid.

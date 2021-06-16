@@ -135,7 +135,7 @@ struct ConditionallyConvertibleBase {
 
     constexpr int *base() const { return base_; }
 
-    friend bool operator==(const self&, const self&);
+    friend bool operator==(const self&, const self&) = default;
 
     reference operator*() const;
     pointer operator->() const;

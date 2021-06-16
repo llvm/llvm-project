@@ -29,19 +29,14 @@ def isa(cls: Type, ty: Type):
 
 
 def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
-                                 *ins: Value, outs: Sequence[Value],
-                                 captures: Sequence[Value]):
-  all_arg_defs = op_config.ordered_tensor_args
+                                 *ins: Value, outs: Sequence[Value]):
+  all_arg_defs = op_config.ordered_operands
   in_arg_defs = [arg for arg in all_arg_defs if arg.usage == "input"]
   out_arg_defs = [arg for arg in all_arg_defs if arg.usage == "output"]
-  capture_arg_defs = op_config.ordered_capture_args
 
   # Verify outs and captures are sequences.
   if not isinstance(outs, Sequence):
     raise ValueError(f"Expected named argument outs to have type Sequence "
-                     f"but got {type(outs)}")
-  if not isinstance(captures, Sequence):
-    raise ValueError(f"Expected named argument captures to have type Sequence "
                      f"but got {type(outs)}")
 
   # Arity validation.
@@ -51,9 +46,6 @@ def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
   if outs and len(outs) != len(out_arg_defs):
     raise ValueError(f"Expected {len(out_arg_defs)} outputs but got "
                      f"{len(outs)} for {op_config}")
-  if captures and len(captures) != len(capture_arg_defs):
-    raise ValueError(f"Expected {len(capture_arg_defs)} captures but got "
-                     f"{len(captures)} for {op_config}")
 
   outs, out_types = _infer_structured_outs(op_config, in_arg_defs, ins,
                                            out_arg_defs, outs)
@@ -68,18 +60,10 @@ def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
   type_mapping["I64"] = IntegerType.get_signless(64)
 
   # Extract type vars for input/output based types.
-  for arg_def, arg_element_type in zip(
-      in_arg_defs + out_arg_defs,
-      _get_shaped_element_types_from_values(*ins, *outs)):
-    _add_type_mapping(arg_def.tensor_def.type_var.name, arg_element_type,
-                      type_mapping)
-
-  # Extract type vars for captures and compute capture argument mapping.
-  capture_arg_mapping = dict()  # type: Dict[str, Value]
-  for arg_def, capture_value in zip(capture_arg_defs, captures):
-    _add_type_mapping(arg_def.capture_def.type_var.name, capture_value.type,
-                      type_mapping)
-    capture_arg_mapping[arg_def.capture_def.capture_name] = capture_value
+  block_arg_types = list()  # type: List[Type]
+  for arg_def, arg_element_type in zip(in_arg_defs + out_arg_defs,
+                                       _get_types_from_values(*ins, *outs)):
+    _add_type_mapping(arg_def, arg_element_type, type_mapping, block_arg_types)
 
   # Emit the generic op.
   # TODO: Support emission of pure memref form.
@@ -94,18 +78,16 @@ def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
       [StringAttr.get(s) for s in op_config.iterator_types])
 
   return (all_arg_defs, in_arg_defs, out_arg_defs, outs, result_types,
-          type_mapping, capture_arg_mapping, indexing_maps_attr,
-          iterator_types_attr)
+          type_mapping, indexing_maps_attr, iterator_types_attr,
+          block_arg_types)
 
 
 def emit_generic_structured_op(op_config: LinalgStructuredOpConfig,
                                *ins: Value,
-                               outs: Sequence[Value] = (),
-                               captures: Sequence[Value] = ()):
+                               outs: Sequence[Value] = ()):
   all_arg_defs, in_arg_defs, out_arg_defs, outs, result_types, type_mapping, \
-  capture_arg_mapping, indexing_maps_attr, iterator_types_attr = \
-     prepare_common_structured_op(op_config, *ins, outs = outs,
-                                  captures=captures)
+  indexing_maps_attr, iterator_types_attr, block_arg_types = \
+     prepare_common_structured_op(op_config, *ins, outs = outs)
 
   generic_op = linalg.GenericOp(
       result_tensors=result_types,
@@ -117,16 +99,14 @@ def emit_generic_structured_op(op_config: LinalgStructuredOpConfig,
       library_call=None)  # TODO: Make optional.
 
   # Construct the body.
-  block_arg_names = _get_tensor_def_names(*in_arg_defs, *out_arg_defs)
-  block_arg_types = _get_shaped_element_types_from_values(*ins, *outs)
+  block_arg_names = _get_operand_def_names(*in_arg_defs, *out_arg_defs)
   block = generic_op.regions[0].blocks.append(*block_arg_types)
   block_arg_mapping = dict(zip(block_arg_names, block.arguments))
   with InsertionPoint(block):
-    body_builder = _BodyBuilder(type_mapping, block_arg_mapping,
-                                capture_arg_mapping)
+    body_builder = _BodyBuilder(type_mapping, block_arg_mapping)
     for assignment in op_config.assignments:
       body_builder.assign(assignment)
-    body_builder.yield_outputs(*_get_tensor_def_names(*out_arg_defs))
+    body_builder.yield_outputs(*_get_operand_def_names(*out_arg_defs))
 
   if len(result_types) == 1:
     return generic_op.result
@@ -138,12 +118,10 @@ def emit_named_structured_op(op_config: LinalgStructuredOpConfig,
                              op_name: str,
                              op_class_name: str,
                              *ins: Value,
-                             outs: Sequence[Value] = (),
-                             captures: Sequence[Value] = ()):
+                             outs: Sequence[Value] = ()):
   all_arg_defs, in_arg_defs, out_arg_defs, outs, result_types, type_mapping, \
-  capture_arg_mapping, indexing_maps_attr, iterator_types_attr = \
-     prepare_common_structured_op(op_config, *ins, outs = outs,
-                                  captures = captures)
+  indexing_maps_attr, iterator_types_attr, block_arg_types = \
+     prepare_common_structured_op(op_config, *ins, outs = outs)
 
   # If we get here, there must exist a builtin class `op_class_name`.
   ctx = Context.current
@@ -173,11 +151,9 @@ class _BodyBuilder:
   """Constructs a structured op body by evaluating assignments."""
 
   def __init__(self, type_mapping: Dict[str, Type],
-               block_arg_mapping: Dict[str, Value],
-               capture_arg_mapping: Dict[str, Value]):
+               block_arg_mapping: Dict[str, Value]):
     self.type_mapping = type_mapping
     self.block_arg_mapping = block_arg_mapping
-    self.capture_arg_mapping = capture_arg_mapping
     self.yield_mapping = dict()  # type: Dict[str, Value]
 
   def assign(self, assignment: ScalarAssign):
@@ -194,13 +170,6 @@ class _BodyBuilder:
       except KeyError:
         raise ValueError(f"Argument {expr.scalar_arg.arg} is not bound for "
                          f"this structured op.")
-    elif expr.scalar_capture:
-      try:
-        return self.capture_arg_mapping[expr.scalar_capture.capture]
-      except KeyError:
-        raise ValueError(
-            f"Capture {expr.scalar_capture.capture} is not bound for "
-            f"this structured op.")
     elif expr.scalar_const:
       value_attr = Attribute.parse(expr.scalar_const.value)
       return std.ConstantOp(value_attr.type, value_attr).result
@@ -229,7 +198,7 @@ class _BodyBuilder:
       to_type = self.type_mapping[type_var_name]
     except KeyError:
       raise ValueError(f"Unbound type variable '{type_var_name}' ("
-                       f"expected one of {self.type_mappings.keys()}")
+                       f"expected one of {self.type_mapping.keys()}")
     if operand.type == to_type:
       return operand
     if _is_integer_type(to_type):
@@ -300,9 +269,9 @@ class _BodyBuilder:
 
 
 def _infer_structured_outs(op_config: LinalgStructuredOpConfig,
-                           in_arg_defs: Sequence[TensorDefConfig],
+                           in_arg_defs: Sequence[OperandDefConfig],
                            ins: Sequence[Value],
-                           out_arg_defs: Sequence[TensorDefConfig],
+                           out_arg_defs: Sequence[OperandDefConfig],
                            outs: Sequence[Value]):
   """Infers implicit outs and output types.
 
@@ -319,28 +288,34 @@ def _infer_structured_outs(op_config: LinalgStructuredOpConfig,
                             "structured ops")
 
 
-def _get_shaped_element_types_from_values(*values: Value) -> Sequence[Type]:
+def _get_types_from_values(*values: Value) -> Sequence[Type]:
   types = []
   for v in values:
-    try:
-      t = ShapedType(v.type)
-    except Exception as e:
-      raise ValueError(f"Expected ShapedType but got {v}") from e
-    types.append(t.element_type)
+    types.append(v.type)
   return types
 
 
-def _get_tensor_def_names(
-    *tensor_def_configs: TensorDefConfig) -> Sequence[str]:
-  return [tdc.tensor_def.tensor_name for tdc in tensor_def_configs]
+def _get_operand_def_names(*operand_configs: OperandDefConfig) -> Sequence[str]:
+  return [odc.operand_def.name for odc in operand_configs]
 
 
-def _add_type_mapping(name: str, type: Type, type_mapping: Dict[str, Type]):
+def _add_type_mapping(operand_config: OperandDefConfig, operand_type: Type,
+                      type_mapping: Dict[str, Type],
+                      block_arg_types: Sequence[Type]):
+  element_or_self_type = operand_type
+  # Get the element type for tensor operands and the type itself for scalars.
+  if operand_config.operand_def.shape:
+    try:
+      element_or_self_type = ShapedType(operand_type).element_type
+    except Exception as e:
+      raise ValueError(f"Expected ShapedType but got {operand_type}") from e
+  name = operand_config.type_var.name
   if name in type_mapping:
-    if type_mapping[name] != type:
+    if type_mapping[name] != element_or_self_type:
       raise ValueError(f"Cannot overwrite type mapping {name} = "
-                       f"{type_mapping[name]} by type {type}")
-  type_mapping[name] = type
+                       f"{type_mapping[name]} by type {element_or_self_type}")
+  type_mapping[name] = element_or_self_type
+  block_arg_types.append(element_or_self_type)
 
 
 def _is_floating_point_type(t: Type) -> bool:

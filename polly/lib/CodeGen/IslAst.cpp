@@ -766,11 +766,9 @@ void IslAstInfo::print(raw_ostream &OS) {
   P = isl_ast_node_print(RootNode.get(), P, Options);
   AstStr = isl_printer_get_str(P);
 
-  auto *Schedule = S.getScheduleTree().release();
-
   LLVM_DEBUG({
     dbgs() << S.getContextStr() << "\n";
-    dbgs() << stringFromIslObj(Schedule);
+    dbgs() << stringFromIslObj(S.getScheduleTree(), "null");
   });
   OS << "\nif (" << RtCStr << ")\n\n";
   OS << AstStr << "\n";
@@ -780,7 +778,6 @@ void IslAstInfo::print(raw_ostream &OS) {
   free(RtCStr);
   free(AstStr);
 
-  isl_schedule_free(Schedule);
   isl_printer_free(P);
 }
 

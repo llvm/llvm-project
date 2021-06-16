@@ -273,26 +273,31 @@ constexpr bool testEndFunction() {
   return true;
 }
 
+
+ASSERT_NOEXCEPT(std::ranges::end(std::declval<int (&)[10]>()));
+ASSERT_NOEXCEPT(std::ranges::cend(std::declval<int (&)[10]>()));
+
 template<class T>
 struct NoThrowMemberEnd {
-  T begin() noexcept;
-  T begin() const noexcept;
-  T end() noexcept;
+  T begin() const;
   T end() const noexcept;
 };
+ASSERT_NOEXCEPT(std::ranges::end(std::declval<NoThrowMemberEnd<int*>&>()));
+ASSERT_NOEXCEPT(std::ranges::cend(std::declval<NoThrowMemberEnd<int*>&>()));
+ASSERT_NOT_NOEXCEPT(std::ranges::end(std::declval<NoThrowMemberEnd<ThrowingIterator<int>>&>()));
+ASSERT_NOT_NOEXCEPT(std::ranges::cend(std::declval<NoThrowMemberEnd<ThrowingIterator<int>>&>()));
 
 template<class T>
 struct NoThrowADLEnd {
-  friend T begin(NoThrowADLEnd&) noexcept;
-  friend T begin(NoThrowADLEnd const&) noexcept;
-  friend T end(NoThrowADLEnd&) noexcept;
-  friend T end(NoThrowADLEnd const&) noexcept;
+  T begin() const;
+  friend T end(NoThrowADLEnd&) noexcept { return T{}; }
+  friend T end(NoThrowADLEnd const&) noexcept { return T{}; }
 };
-ASSERT_NOEXCEPT(std::ranges::begin(std::declval<int (&)[10]>()));
-ASSERT_NOEXCEPT(std::ranges::begin(std::declval<NoThrowMemberEnd<int*>&>()));
-ASSERT_NOT_NOEXCEPT(std::ranges::begin(std::declval<NoThrowMemberEnd<ThrowingIterator<int> >&>()));
-ASSERT_NOEXCEPT(std::ranges::begin(std::declval<NoThrowADLEnd<int*>&>()));
-ASSERT_NOT_NOEXCEPT(std::ranges::begin(std::declval<NoThrowADLEnd<ThrowingIterator<int> >&>()));
+ASSERT_NOEXCEPT(std::ranges::end(std::declval<NoThrowADLEnd<int*>&>()));
+ASSERT_NOEXCEPT(std::ranges::cend(std::declval<NoThrowADLEnd<int*>&>()));
+ASSERT_NOT_NOEXCEPT(std::ranges::end(std::declval<NoThrowADLEnd<ThrowingIterator<int>>&>()));
+ASSERT_NOT_NOEXCEPT(std::ranges::cend(std::declval<NoThrowADLEnd<ThrowingIterator<int>>&>()));
+
 
 int main(int, char**) {
   testArray();

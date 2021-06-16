@@ -45,6 +45,8 @@
 
 namespace llvm {
 
+template <class GraphType> struct GraphTraits;
+
 namespace yaml {
 
 template <typename T> struct MappingTraits;

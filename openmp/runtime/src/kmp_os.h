@@ -406,9 +406,24 @@ extern "C" {
           api_name) "@" ver_str "\n\t");                                        \
   __asm__(".symver " KMP_STR(__kmp_api_##api_name) "," KMP_STR(                 \
       api_name) "@@" default_ver "\n\t")
+
+#define KMP_VERSION_OMPC_SYMBOL(apic_name, api_name, ver_num, ver_str)         \
+  _KMP_VERSION_OMPC_SYMBOL(apic_name, api_name, ver_num, ver_str, "VERSION")
+#define _KMP_VERSION_OMPC_SYMBOL(apic_name, api_name, ver_num, ver_str,          \
+                                 default_ver)                                    \
+  __typeof__(__kmp_api_##apic_name) __kmp_api_##apic_name##_##ver_num##_alias    \
+      __attribute__((alias(KMP_STR(__kmp_api_##apic_name))));                    \
+  __asm__(".symver " KMP_STR(__kmp_api_##apic_name) "," KMP_STR(                 \
+      apic_name) "@@" default_ver "\n\t");                                       \
+  __asm__(                                                                       \
+      ".symver " KMP_STR(__kmp_api_##apic_name##_##ver_num##_alias) "," KMP_STR( \
+          api_name) "@" ver_str "\n\t")
+
 #else // KMP_USE_VERSION_SYMBOLS
 #define KMP_EXPAND_NAME(api_name) api_name
 #define KMP_VERSION_SYMBOL(api_name, ver_num, ver_str) /* Nothing */
+#define KMP_VERSION_OMPC_SYMBOL(apic_name, api_name, ver_num,                  \
+                                ver_str) /* Nothing */
 #endif // KMP_USE_VERSION_SYMBOLS
 
 /* Temporary note: if performance testing of this passes, we can remove

@@ -23,7 +23,9 @@
 // constexpr size_t next_arg_id();
 
 #include <format>
+
 #include <cassert>
+#include <string_view>
 
 #include "test_macros.h"
 

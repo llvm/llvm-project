@@ -219,13 +219,14 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
   // and we're taking the path that skips virtual base constructors.
   if (L.getSrc()->getTerminator().isVirtualBaseBranch() &&
       L.getDst() == *L.getSrc()->succ_begin()) {
-    ProgramPoint P = L.withTag(getNoteTags().makeNoteTag(
+    ProgramPoint P = L.withTag(getDataTags().make<NoteTag>(
         [](BugReporterContext &, PathSensitiveBugReport &) -> std::string {
           // TODO: Just call out the name of the most derived class
           // when we know it.
           return "Virtual base initialization skipped because "
                  "it has already been handled by the most derived class";
-        }, /*IsPrunable=*/true));
+        },
+        /*IsPrunable=*/true));
     // Perform the transition.
     ExplodedNodeSet Dst;
     NodeBuilder Bldr(Pred, Dst, BuilderCtx);

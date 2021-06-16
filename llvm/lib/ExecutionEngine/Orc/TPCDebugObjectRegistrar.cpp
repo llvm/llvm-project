@@ -25,7 +25,8 @@ writeDebugObjectInfo(sys::MemoryBlock TargetMemBlock) {
   ArgBuffer.resize(sizeof(decltype(DebugObjAddr)) +
                    sizeof(decltype(DebugObjSize)));
 
-  BinaryStreamWriter ArgWriter(ArgBuffer, support::endianness::big);
+  // FIXME: Replace manual serializatio with WrapperFunction utility.
+  BinaryStreamWriter ArgWriter(ArgBuffer, support::endianness::little);
   cantFail(ArgWriter.writeInteger(DebugObjAddr));
   cantFail(ArgWriter.writeInteger(DebugObjSize));
 

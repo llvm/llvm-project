@@ -43,7 +43,6 @@ public:
     typedef INSERT_RETURN_TYPE<iterator, node_type>  insert_return_type;     // C++17
 
     class value_compare
-        : public binary_function<value_type, value_type, bool>
     {
         friend class map;
     protected:
@@ -51,6 +50,9 @@ public:
 
         value_compare(key_compare c);
     public:
+        typedef bool result_type;  // deprecated in C++17, removed in C++20
+        typedef value_type first_argument_type;  // deprecated in C++17, removed in C++20
+        typedef value_type second_argument_type;  // deprecated in C++17, removed in C++20
         bool operator()(const value_type& x, const value_type& y) const;
     };
 
@@ -287,13 +289,15 @@ public:
     typedef unspecified                              node_type;              // C++17
 
     class value_compare
-        : public binary_function<value_type,value_type,bool>
     {
         friend class multimap;
     protected:
         key_compare comp;
         value_compare(key_compare c);
     public:
+        typedef bool result_type;  // deprecated in C++17, removed in C++20
+        typedef value_type first_argument_type;  // deprecated in C++17, removed in C++20
+        typedef value_type second_argument_type;  // deprecated in C++17, removed in C++20
         bool operator()(const value_type& x, const value_type& y) const;
     };
 
@@ -922,15 +926,24 @@ public:
     static_assert((is_same<typename allocator_type::value_type, value_type>::value),
                   "Allocator::value_type must be same type as value_type");
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
     class _LIBCPP_TEMPLATE_VIS value_compare
+#if defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
         : public binary_function<value_type, value_type, bool>
+#endif
     {
+_LIBCPP_SUPPRESS_DEPRECATED_POP
         friend class map;
     protected:
         key_compare comp;
 
         _LIBCPP_INLINE_VISIBILITY value_compare(key_compare c) : comp(c) {}
     public:
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+        _LIBCPP_DEPRECATED_IN_CXX17 typedef bool result_type;
+        _LIBCPP_DEPRECATED_IN_CXX17 typedef value_type first_argument_type;
+        _LIBCPP_DEPRECATED_IN_CXX17 typedef value_type second_argument_type;
+#endif
         _LIBCPP_INLINE_VISIBILITY
         bool operator()(const value_type& __x, const value_type& __y) const
             {return comp(__x.first, __y.first);}
@@ -1696,9 +1709,13 @@ public:
     static_assert((is_same<typename allocator_type::value_type, value_type>::value),
                   "Allocator::value_type must be same type as value_type");
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
     class _LIBCPP_TEMPLATE_VIS value_compare
+#if defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
         : public binary_function<value_type, value_type, bool>
+#endif
     {
+_LIBCPP_SUPPRESS_DEPRECATED_POP
         friend class multimap;
     protected:
         key_compare comp;
@@ -1706,6 +1723,11 @@ public:
         _LIBCPP_INLINE_VISIBILITY
         value_compare(key_compare c) : comp(c) {}
     public:
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+        _LIBCPP_DEPRECATED_IN_CXX17 typedef bool result_type;
+        _LIBCPP_DEPRECATED_IN_CXX17 typedef value_type first_argument_type;
+        _LIBCPP_DEPRECATED_IN_CXX17 typedef value_type second_argument_type;
+#endif
         _LIBCPP_INLINE_VISIBILITY
         bool operator()(const value_type& __x, const value_type& __y) const
             {return comp(__x.first, __y.first);}

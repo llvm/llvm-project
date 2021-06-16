@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "int_lib.h"
+#if defined(__linux__)
 #include <assert.h>
+#endif
 #include <stddef.h>
 
 #if __APPLE__
