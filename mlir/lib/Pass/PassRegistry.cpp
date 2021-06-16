@@ -122,6 +122,15 @@ void mlir::registerPass(StringRef arg, StringRef description,
   }
 }
 
+void mlir::registerPass(const PassAllocatorFunction &function) {
+  std::unique_ptr<Pass> pass = function();
+  StringRef arg = pass->getArgument();
+  if (arg.empty())
+    llvm::report_fatal_error(
+        "Trying to register a pass that does not override `getArgument()`");
+  registerPass(arg, pass->getDescription(), function);
+}
+
 /// Returns the pass info for the specified pass argument or null if unknown.
 const PassInfo *mlir::Pass::lookupPassInfo(StringRef passArg) {
   auto it = passRegistry->find(passArg);
