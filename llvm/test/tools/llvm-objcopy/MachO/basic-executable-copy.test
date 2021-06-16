@@ -169,6 +169,10 @@ LoadCommands:
   - cmd:             LC_SOURCE_VERSION
     cmdsize:         16
     version:         0
+  - cmd:             LC_LINKER_OPTIMIZATION_HINT
+    cmdsize:         16
+    dataoff:         0
+    datasize:        0
   - cmd:             LC_MAIN
     cmdsize:         24
     entryoff:        3984
