@@ -69,6 +69,8 @@ class DS_Real <DS_Pseudo ps> :
   let SchedRW            = ps.SchedRW;
   let mayLoad            = ps.mayLoad;
   let mayStore           = ps.mayStore;
+  let IsAtomicRet        = ps.IsAtomicRet;
+  let IsAtomicNoRet      = ps.IsAtomicNoRet;
 
   // encoding fields
   bits<10> vdst;
