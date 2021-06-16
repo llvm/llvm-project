@@ -4012,6 +4012,11 @@ KMP_EXPORT void KMPC_CONVENTION kmpc_set_stacksize_s(size_t);
 KMP_EXPORT void KMPC_CONVENTION kmpc_set_library(int);
 KMP_EXPORT void KMPC_CONVENTION kmpc_set_defaults(char const *);
 KMP_EXPORT void KMPC_CONVENTION kmpc_set_disp_num_buffers(int);
+void KMP_EXPAND_NAME(ompc_set_affinity_format)(char const *format);
+size_t KMP_EXPAND_NAME(ompc_get_affinity_format)(char *buffer, size_t size);
+void KMP_EXPAND_NAME(ompc_display_affinity)(char const *format);
+size_t KMP_EXPAND_NAME(ompc_capture_affinity)(char *buffer, size_t buf_size,
+                                              char const *format);
 
 enum kmp_target_offload_kind {
   tgt_disabled = 0,
