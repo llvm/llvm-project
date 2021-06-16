@@ -75,6 +75,11 @@ static void forceLazy(Symbol *s) {
   case Symbol::Kind::LazyObjectKind:
     cast<LazyObject>(s)->file->fetch();
     break;
+  case Symbol::Kind::LazyDLLSymbolKind: {
+    auto *l = cast<LazyDLLSymbol>(s);
+    l->file->makeImport(l->sym);
+    break;
+  }
   default:
     llvm_unreachable(
         "symbol passed to forceLazy is not a LazyArchive or LazyObject");
@@ -538,6 +543,22 @@ void SymbolTable::addLazyObject(LazyObjFile *f, StringRef n) {
     return;
   s->pendingArchiveLoad = true;
   f->fetch();
+}
+
+void SymbolTable::addLazyDLLSymbol(DLLFile *f, DLLFile::Symbol *sym,
+                                   StringRef n) {
+  Symbol *s;
+  bool wasInserted;
+  std::tie(s, wasInserted) = insert(n);
+  if (wasInserted) {
+    replaceSymbol<LazyDLLSymbol>(s, f, sym, n);
+    return;
+  }
+  auto *u = dyn_cast<Undefined>(s);
+  if (!u || u->weakAlias || s->pendingArchiveLoad)
+    return;
+  s->pendingArchiveLoad = true;
+  f->makeImport(sym);
 }
 
 static std::string getSourceLocationBitcode(BitcodeFile *file) {
