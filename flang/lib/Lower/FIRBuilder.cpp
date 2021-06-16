@@ -524,6 +524,28 @@ Fortran::lower::readExtents(Fortran::lower::FirOpBuilder &builder,
   return result;
 }
 
+llvm::SmallVector<mlir::Value>
+Fortran::lower::getExtents(Fortran::lower::FirOpBuilder &builder,
+                           mlir::Location loc, const fir::ExtendedValue &box) {
+  return box.match(
+      [&](const fir::ArrayBoxValue &x) -> llvm::SmallVector<mlir::Value> {
+        return {x.getExtents().begin(), x.getExtents().end()};
+      },
+      [&](const fir::CharArrayBoxValue &x) -> llvm::SmallVector<mlir::Value> {
+        return {x.getExtents().begin(), x.getExtents().end()};
+      },
+      [&](const fir::BoxValue &x) -> llvm::SmallVector<mlir::Value> {
+        return Fortran::lower::readExtents(builder, loc, x);
+      },
+      [&](const fir::MutableBoxValue &x) -> llvm::SmallVector<mlir::Value> {
+        return Fortran::lower::getExtents(
+            builder, loc,
+            Fortran::lower::genMutableBoxRead(builder, loc, x)
+                .toExtendedValue());
+      },
+      [&](const auto &) -> llvm::SmallVector<mlir::Value> { return {}; });
+}
+
 std::string Fortran::lower::uniqueCGIdent(llvm::StringRef prefix,
                                           llvm::StringRef name) {
   // For "long" identifiers use a hash value
