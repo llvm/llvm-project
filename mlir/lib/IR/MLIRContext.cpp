@@ -356,11 +356,11 @@ MLIRContext::MLIRContext(const DialectRegistry &registry)
     printStackTraceOnDiagnostic(clOptions->printStackTraceOnDiagnostic);
   }
 
-  // Ensure the builtin dialect is always pre-loaded.
-  getOrLoadDialect<BuiltinDialect>();
-
   // Pre-populate the registry.
   registry.appendTo(impl->dialectsRegistry);
+
+  // Ensure the builtin dialect is always pre-loaded.
+  getOrLoadDialect<BuiltinDialect>();
 
   // Initialize several common attributes and types to avoid the need to lock
   // the context when accessing them.
