@@ -3429,6 +3429,10 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case PPC::BI__builtin_ppc_mtfsfi:
     return SemaBuiltinConstantArgRange(TheCall, 0, 0, 7) ||
            SemaBuiltinConstantArgRange(TheCall, 1, 0, 15);
+  case PPC::BI__builtin_ppc_alignx:
+    return SemaBuiltinConstantArgPower2(TheCall, 0);
+  case PPC::BI__builtin_ppc_rdlam:
+    return SemaValueIsRunOfOnes(TheCall, 2);
 #define CUSTOM_BUILTIN(Name, Intr, Types, Acc) \
   case PPC::BI__builtin_##Name: \
     return SemaBuiltinPPCMMACall(TheCall, Types);

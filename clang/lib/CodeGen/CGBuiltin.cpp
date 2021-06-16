@@ -15293,7 +15293,24 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(Intrinsic::sqrt, ResultType);
     return Builder.CreateFDiv(One, Builder.CreateCall(F, X), "rsqrt");
   }
+  case PPC::BI__builtin_ppc_alignx: {
+    ConstantInt *AlignmentCI = cast<ConstantInt>(Ops[0]);
+    if (AlignmentCI->getValue().ugt(llvm::Value::MaximumAlignment))
+      AlignmentCI = ConstantInt::get(AlignmentCI->getType(),
+                                     llvm::Value::MaximumAlignment);
 
+    emitAlignmentAssumption(Ops[1], E->getArg(1),
+                            /*The expr loc is sufficient.*/ SourceLocation(),
+                            AlignmentCI, nullptr);
+    return Ops[1];
+  }
+  case PPC::BI__builtin_ppc_rdlam: {
+    llvm::Type *Ty = Ops[0]->getType();
+    Value *ShiftAmt = Builder.CreateIntCast(Ops[1], Ty, false);
+    Function *F = CGM.getIntrinsic(Intrinsic::fshl, Ty);
+    Value *Rotate = Builder.CreateCall(F, {Ops[0], Ops[0], ShiftAmt});
+    return Builder.CreateAnd(Rotate, Ops[2]);
+  }
   // FMA variations
   case PPC::BI__builtin_vsx_xvmaddadp:
   case PPC::BI__builtin_vsx_xvmaddasp:

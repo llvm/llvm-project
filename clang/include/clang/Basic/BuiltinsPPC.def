@@ -75,6 +75,8 @@ BUILTIN(__builtin_ppc_fctudz, "dd", "")
 BUILTIN(__builtin_ppc_fctuwz, "dd", "")
 BUILTIN(__builtin_ppc_swdiv_nochk, "ddd", "")
 BUILTIN(__builtin_ppc_swdivs_nochk, "fff", "")
+BUILTIN(__builtin_ppc_alignx, "vIivC*", "nc")
+BUILTIN(__builtin_ppc_rdlam, "UWiUWiUWiUWIi", "nc")
 // Compare
 BUILTIN(__builtin_ppc_cmpeqb, "LLiLLiLLi", "")
 BUILTIN(__builtin_ppc_cmprb, "iCIiii", "")
