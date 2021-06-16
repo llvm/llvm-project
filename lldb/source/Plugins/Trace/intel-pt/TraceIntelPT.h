@@ -74,6 +74,8 @@ public:
 
   size_t GetCursorPosition(Thread &thread) override;
 
+  lldb::TraceCursorUP GetCursor(Thread &thread) override;
+
   void DoRefreshLiveProcessState(
       llvm::Expected<TraceGetStateResponse> state) override;
 

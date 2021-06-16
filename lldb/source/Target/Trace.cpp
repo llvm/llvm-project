@@ -473,3 +473,8 @@ void Trace::RefreshLiveProcessState() {
 
   DoRefreshLiveProcessState(std::move(live_process_state));
 }
+
+uint32_t Trace::GetStopID() {
+  RefreshLiveProcessState();
+  return m_stop_id;
+}
