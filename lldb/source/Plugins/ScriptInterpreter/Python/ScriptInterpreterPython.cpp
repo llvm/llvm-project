@@ -635,11 +635,10 @@ void ScriptInterpreterPythonImpl::IOHandlerInputComplete(IOHandler &io_handler,
   case eIOHandlerNone:
     break;
   case eIOHandlerBreakpoint: {
-    std::vector<BreakpointOptions *> *bp_options_vec =
-        (std::vector<BreakpointOptions *> *)io_handler.GetUserData();
-    for (auto bp_options : *bp_options_vec) {
-      if (!bp_options)
-        continue;
+    std::vector<std::reference_wrapper<BreakpointOptions>> *bp_options_vec =
+        (std::vector<std::reference_wrapper<BreakpointOptions>> *)
+            io_handler.GetUserData();
+    for (BreakpointOptions &bp_options : *bp_options_vec) {
 
       auto data_up = std::make_unique<CommandDataPython>();
       if (!data_up)
@@ -653,7 +652,7 @@ void ScriptInterpreterPythonImpl::IOHandlerInputComplete(IOHandler &io_handler,
               .Success()) {
         auto baton_sp = std::make_shared<BreakpointOptions::CommandBaton>(
             std::move(data_up));
-        bp_options->SetCallback(
+        bp_options.SetCallback(
             ScriptInterpreterPythonImpl::BreakpointCallbackFunction, baton_sp);
       } else if (!batch_mode) {
         StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
@@ -1226,7 +1225,7 @@ Status ScriptInterpreterPythonImpl::ExecuteMultipleLines(
 }
 
 void ScriptInterpreterPythonImpl::CollectDataForBreakpointCommandCallback(
-    std::vector<BreakpointOptions *> &bp_options_vec,
+    std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
     CommandReturnObject &result) {
   m_active_io_handler = eIOHandlerBreakpoint;
   m_debugger.GetCommandInterpreter().GetPythonCommandsFromIOHandler(
@@ -1241,7 +1240,7 @@ void ScriptInterpreterPythonImpl::CollectDataForWatchpointCommandCallback(
 }
 
 Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallbackFunction(
-    BreakpointOptions *bp_options, const char *function_name,
+    BreakpointOptions &bp_options, const char *function_name,
     StructuredData::ObjectSP extra_args_sp) {
   Status error;
   // For now just cons up a oneliner that calls the provided function.
@@ -1283,7 +1282,7 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallbackFunction(
 }
 
 Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
-    BreakpointOptions *bp_options,
+    BreakpointOptions &bp_options,
     std::unique_ptr<BreakpointOptions::CommandData> &cmd_data_up) {
   Status error;
   error = GenerateBreakpointCommandCallbackData(cmd_data_up->user_source,
@@ -1294,21 +1293,20 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
   }
   auto baton_sp =
       std::make_shared<BreakpointOptions::CommandBaton>(std::move(cmd_data_up));
-  bp_options->SetCallback(
+  bp_options.SetCallback(
       ScriptInterpreterPythonImpl::BreakpointCallbackFunction, baton_sp);
   return error;
 }
 
 Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
-    BreakpointOptions *bp_options, const char *command_body_text) {
+    BreakpointOptions &bp_options, const char *command_body_text) {
   return SetBreakpointCommandCallback(bp_options, command_body_text, {},false);
 }
 
 // Set a Python one-liner as the callback for the breakpoint.
 Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
-    BreakpointOptions *bp_options, const char *command_body_text,
-    StructuredData::ObjectSP extra_args_sp,
-    bool uses_extra_args) {
+    BreakpointOptions &bp_options, const char *command_body_text,
+    StructuredData::ObjectSP extra_args_sp, bool uses_extra_args) {
   auto data_up = std::make_unique<CommandDataPython>(extra_args_sp);
   // Split the command_body_text into lines, and pass that to
   // GenerateBreakpointCommandCallbackData.  That will wrap the body in an
@@ -1322,7 +1320,7 @@ Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallback(
   if (error.Success()) {
     auto baton_sp =
         std::make_shared<BreakpointOptions::CommandBaton>(std::move(data_up));
-    bp_options->SetCallback(
+    bp_options.SetCallback(
         ScriptInterpreterPythonImpl::BreakpointCallbackFunction, baton_sp);
     return error;
   }

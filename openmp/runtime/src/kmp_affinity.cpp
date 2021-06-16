@@ -2608,12 +2608,6 @@ restart_radix_check:
   nCoresPerPkg = maxCt[coreIdIndex];
   nPackages = totals[pkgIdIndex];
 
-  // Check to see if the machine topology is uniform
-  unsigned prod = totals[maxIndex];
-  for (index = threadIdIndex; index < maxIndex; index++) {
-    prod *= maxCt[index];
-  }
-
   // When affinity is off, this routine will still be called to set
   // __kmp_ncores, as well as __kmp_nThreadsPerCore, nCoresPerPkg, & nPackages.
   // Make sure all these vars are set correctly, and return now if affinity is

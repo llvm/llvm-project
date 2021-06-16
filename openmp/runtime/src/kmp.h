@@ -2874,6 +2874,9 @@ typedef struct kmp_base_root {
   kmp_lock_t r_begin_lock;
   volatile int r_begin;
   int r_blocktime; /* blocktime for this root and descendants */
+#if KMP_AFFINITY_SUPPORTED
+  int r_affinity_assigned;
+#endif // KMP_AFFINITY_SUPPORTED
 } kmp_base_root_t;
 
 typedef union KMP_ALIGN_CACHE kmp_root {
@@ -3495,6 +3498,16 @@ extern void __kmp_balanced_affinity(kmp_info_t *th, int team_size);
 #if KMP_OS_LINUX || KMP_OS_FREEBSD
 extern int kmp_set_thread_affinity_mask_initial(void);
 #endif
+static inline void __kmp_assign_root_init_mask() {
+  int gtid = __kmp_entry_gtid();
+  kmp_root_t *r = __kmp_threads[gtid]->th.th_root;
+  if (r->r.r_uber_thread == __kmp_threads[gtid] && !r->r.r_affinity_assigned) {
+    __kmp_affinity_set_init_mask(gtid, TRUE);
+    r->r.r_affinity_assigned = TRUE;
+  }
+}
+#else /* KMP_AFFINITY_SUPPORTED */
+#define __kmp_assign_root_init_mask() /* Nothing */
 #endif /* KMP_AFFINITY_SUPPORTED */
 // No need for KMP_AFFINITY_SUPPORTED guard as only one field in the
 // format string is for affinity, so platforms that do not support
@@ -3999,6 +4012,11 @@ KMP_EXPORT void KMPC_CONVENTION kmpc_set_stacksize_s(size_t);
 KMP_EXPORT void KMPC_CONVENTION kmpc_set_library(int);
 KMP_EXPORT void KMPC_CONVENTION kmpc_set_defaults(char const *);
 KMP_EXPORT void KMPC_CONVENTION kmpc_set_disp_num_buffers(int);
+void KMP_EXPAND_NAME(ompc_set_affinity_format)(char const *format);
+size_t KMP_EXPAND_NAME(ompc_get_affinity_format)(char *buffer, size_t size);
+void KMP_EXPAND_NAME(ompc_display_affinity)(char const *format);
+size_t KMP_EXPAND_NAME(ompc_capture_affinity)(char *buffer, size_t buf_size,
+                                              char const *format);
 
 enum kmp_target_offload_kind {
   tgt_disabled = 0,

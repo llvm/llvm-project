@@ -401,6 +401,7 @@ if (FLANG_BUILD_TOOLS)
   add_subdirectory(tools)
 endif()
 add_subdirectory(runtime)
+add_subdirectory(examples)
 
 if (FLANG_INCLUDE_TESTS)
   add_subdirectory(test)

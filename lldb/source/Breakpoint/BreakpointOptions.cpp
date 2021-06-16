@@ -332,7 +332,7 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
       }
       Status script_error;
       script_error =
-          interp->SetBreakpointCommandCallback(bp_options.get(), cmd_data_up);
+          interp->SetBreakpointCommandCallback(*bp_options, cmd_data_up);
       if (script_error.Fail()) {
         error.SetErrorStringWithFormat("Error generating script callback: %s.",
                                        error.AsCString());

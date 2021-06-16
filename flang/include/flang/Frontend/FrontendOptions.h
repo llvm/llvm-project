@@ -51,6 +51,9 @@ enum ActionKind {
   /// Parse, run semantics and then output the parse tree
   DebugDumpParseTree,
 
+  /// Parse, run semantics and then output the parse tree and symbols
+  DebugDumpAll,
+
   /// Parse and then output the parse tree, skip the semantic checks
   DebugDumpParseTreeNoSema,
 

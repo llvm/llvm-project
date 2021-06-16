@@ -1133,7 +1133,6 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
 
 #if OMPT_SUPPORT
   ompt_data_t ompt_parallel_data = ompt_data_none;
-  ompt_data_t *implicit_task_data;
   void *codeptr = OMPT_LOAD_RETURN_ADDRESS(global_tid);
   if (ompt_enabled.enabled &&
       this_thr->th.ompt_thread_info.state != ompt_state_overhead) {
@@ -1326,7 +1325,6 @@ void __kmp_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
     // don't use lw_taskteam after linking. content was swaped
 
     /* OMPT implicit task begin */
-    implicit_task_data = OMPT_CUR_TASK_DATA(this_thr);
     if (ompt_enabled.ompt_callback_implicit_task) {
       ompt_callbacks.ompt_callback(ompt_callback_implicit_task)(
           ompt_scope_begin, OMPT_CUR_TEAM_DATA(this_thr),
@@ -1411,6 +1409,9 @@ int __kmp_fork_call(ident_t *loc, int gtid,
       return_address = OMPT_LOAD_RETURN_ADDRESS(gtid);
     }
 #endif
+
+    // Assign affinity to root thread if it hasn't happened yet
+    __kmp_assign_root_init_mask();
 
     // Nested level will be an index in the nested nthreads array
     level = parent_team->t.t_level;
@@ -3171,6 +3172,9 @@ static void __kmp_initialize_root(kmp_root_t *root) {
   root->r.r_active = FALSE;
   root->r.r_in_parallel = 0;
   root->r.r_blocktime = __kmp_dflt_blocktime;
+#if KMP_AFFINITY_SUPPORTED
+  root->r.r_affinity_assigned = FALSE;
+#endif
 
   /* setup the root team for this task */
   /* allocate the root team structure */
@@ -3816,9 +3820,6 @@ int __kmp_register_root(int initial_thread) {
   root_thread->th.th_new_place = KMP_PLACE_UNDEFINED;
   root_thread->th.th_first_place = KMP_PLACE_UNDEFINED;
   root_thread->th.th_last_place = KMP_PLACE_UNDEFINED;
-  if (TCR_4(__kmp_init_middle)) {
-    __kmp_affinity_set_init_mask(gtid, TRUE);
-  }
 #endif /* KMP_AFFINITY_SUPPORTED */
   root_thread->th.th_def_allocator = __kmp_def_allocator;
   root_thread->th.th_prev_level = 0;
@@ -7037,13 +7038,6 @@ static void __kmp_do_middle_initialize(void) {
   // number of cores on the machine.
   __kmp_affinity_initialize();
 
-  // Run through the __kmp_threads array and set the affinity mask
-  // for each root thread that is currently registered with the RTL.
-  for (i = 0; i < __kmp_threads_capacity; i++) {
-    if (TCR_PTR(__kmp_threads[i]) != NULL) {
-      __kmp_affinity_set_init_mask(i, TRUE);
-    }
-  }
 #endif /* KMP_AFFINITY_SUPPORTED */
 
   KMP_ASSERT(__kmp_xproc > 0);
@@ -7165,6 +7159,7 @@ void __kmp_parallel_initialize(void) {
   if (!__kmp_init_middle) {
     __kmp_do_middle_initialize();
   }
+  __kmp_assign_root_init_mask();
   __kmp_resume_if_hard_paused();
 
   /* begin initialization */
@@ -7471,6 +7466,7 @@ static void __kmp_push_thread_limit(kmp_info_t *thr, int num_teams,
   // Remember the number of threads for inner parallel regions
   if (!TCR_4(__kmp_init_middle))
     __kmp_middle_initialize(); // get internal globals calculated
+  __kmp_assign_root_init_mask();
   KMP_DEBUG_ASSERT(__kmp_avail_proc);
   KMP_DEBUG_ASSERT(__kmp_dflt_team_nth);
 

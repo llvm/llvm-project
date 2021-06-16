@@ -481,16 +481,16 @@ public:
   /// Meant to be used by the BreakpointLocation class.
   ///
   /// \return
-  ///     A pointer to this breakpoint's BreakpointOptions.
-  BreakpointOptions *GetOptions();
+  ///     A reference to this breakpoint's BreakpointOptions.
+  BreakpointOptions &GetOptions();
 
   /// Returns the BreakpointOptions structure set at the breakpoint level.
   ///
   /// Meant to be used by the BreakpointLocation class.
   ///
   /// \return
-  ///     A pointer to this breakpoint's BreakpointOptions.
-  const BreakpointOptions *GetOptions() const;
+  ///     A reference to this breakpoint's BreakpointOptions.
+  const BreakpointOptions &GetOptions() const;
 
   /// Invoke the callback action when the breakpoint is hit.
   ///
@@ -640,8 +640,7 @@ private:
   // to skip certain breakpoint hits.  For instance, exception breakpoints use
   // this to limit the stop to certain exception classes, while leaving the
   // condition & callback free for user specification.
-  std::unique_ptr<BreakpointOptions>
-      m_options_up; // Settable breakpoint options
+  BreakpointOptions m_options; // Settable breakpoint options
   BreakpointLocationList
       m_locations; // The list of locations currently found for this breakpoint.
   std::string m_kind_description;
