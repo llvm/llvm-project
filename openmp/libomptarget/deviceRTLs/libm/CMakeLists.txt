@@ -17,6 +17,16 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
   message("--------------------------------------------")
 endif()
 
+# Use config from device-libs to find install location
+# We need ocml.bc to link into libm
+find_package(AMDDeviceLibs QUIET CONFIG)
+if(AMDDeviceLibs_DIR)
+  message("   -- Found AMDDeviceLibs config at ${AMDDeviceLibs_DIR}")
+else()
+  message("   ERROR: NO AMDDevicelibs FOUND! Not building libm libdevice.")
+  return()
+endif()
+
 # find the llvm compiler
 find_package(LLVM QUIET CONFIG
   PATHS
@@ -120,10 +130,6 @@ set(triple "amdgcn-amd-amdhsa")
 set(systemarch "amdgcn")
 set(gpulist ${gfxgpus})
 
-# Use config from device-libs to find install location
-# Look for ocml.bc to link into libm
-find_package(AMDDeviceLibs REQUIRED CONFIG)
-message("---AMDDeviceLibs_DIR: ${AMDDeviceLibs_DIR}")
 if(NOT DEFINED AMD_DEVICE_LIBS_TARGETS)
   get_property(AMD_DEVICE_LIBS_TARGETS GLOBAL PROPERTY AMD_DEVICE_LIBS)
 endif()
