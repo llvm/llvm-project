@@ -77,6 +77,8 @@ void DispatchStatistics::printDispatchStalls(raw_ostream &OS) const {
   printStalls(SS, HWStalls[HWStallEvent::StoreQueueFull], NumCycles);
   SS << "\nGROUP   - Static restrictions on the dispatch group: ";
   printStalls(SS, HWStalls[HWStallEvent::DispatchGroupStall], NumCycles);
+  SS << "\nUSH     - Uncategorised Structural Hazard:           ";
+  printStalls(SS, HWStalls[HWStallEvent::CustomBehaviourStall], NumCycles);
   SS << '\n';
   SS.flush();
   OS << Buffer;
