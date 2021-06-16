@@ -179,7 +179,6 @@ __kmp_wait_template(kmp_info_t *this_thr,
   kmp_uint32 spins;
   int th_gtid;
   int tasks_completed = FALSE;
-  int oversubscribed;
 #if !KMP_USE_MONITOR
   kmp_uint64 poll_count;
   kmp_uint64 hibernate_goal;
@@ -321,10 +320,10 @@ final_spin=FALSE)
     } else
       hibernate_goal = KMP_NOW() + this_thr->th.th_team_bt_intervals;
     poll_count = 0;
+    (void)poll_count;
 #endif // KMP_USE_MONITOR
   }
 
-  oversubscribed = (TCR_4(__kmp_nth) > __kmp_avail_proc);
   KMP_MB();
 
   // Main wait spin loop

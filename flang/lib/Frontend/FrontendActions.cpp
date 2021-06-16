@@ -305,6 +305,42 @@ void DebugDumpSymbolsAction::ExecuteAction() {
   semantics.DumpSymbols(llvm::outs());
 }
 
+void DebugDumpAllAction::ExecuteAction() {
+  CompilerInstance &ci = this->instance();
+
+  // Dump parse tree
+  auto &parseTree{instance().parsing().parseTree()};
+  Fortran::parser::AnalyzedObjectsAsFortran asFortran =
+      Fortran::frontend::getBasicAsFortran();
+  llvm::outs() << "========================";
+  llvm::outs() << " Flang: parse tree dump ";
+  llvm::outs() << "========================\n";
+  Fortran::parser::DumpTree(llvm::outs(), parseTree, &asFortran);
+
+  auto &semantics = this->semantics();
+  auto tables{Fortran::semantics::BuildRuntimeDerivedTypeTables(
+      instance().invocation().semanticsContext())};
+  // The runtime derived type information table builder may find and report
+  // semantic errors. So it is important that we report them _after_
+  // BuildRuntimeDerivedTypeTables is run.
+  reportFatalSemanticErrors(
+      semantics, this->instance().diagnostics(), GetCurrentFileOrBufferName());
+
+  if (!tables.schemata) {
+    unsigned DiagID =
+        ci.diagnostics().getCustomDiagID(clang::DiagnosticsEngine::Error,
+            "could not find module file for __fortran_type_info");
+    ci.diagnostics().Report(DiagID);
+    llvm::errs() << "\n";
+  }
+
+  // Dump symbols
+  llvm::outs() << "=====================";
+  llvm::outs() << " Flang: symbols dump ";
+  llvm::outs() << "=====================\n";
+  semantics.DumpSymbols(llvm::outs());
+}
+
 void DebugDumpParseTreeNoSemaAction::ExecuteAction() {
   auto &parseTree{instance().parsing().parseTree()};
   Fortran::parser::AnalyzedObjectsAsFortran asFortran =

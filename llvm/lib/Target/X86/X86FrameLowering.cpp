@@ -1482,20 +1482,13 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
           .setMIFlag(MachineInstr::FrameSetup);
     }
 
-    if (!IsWin64Prologue && !IsFunclet) {
-      // Update EBP with the new base value.
-      if (!X86FI->hasSwiftAsyncContext()) {
-        BuildMI(MBB, MBBI, DL,
-                TII.get(Uses64BitFramePtr ? X86::MOV64rr : X86::MOV32rr),
-                FramePtr)
-            .addReg(StackPtr)
-            .setMIFlag(MachineInstr::FrameSetup);
-      } else {
+    if (!IsFunclet) {
+      if (X86FI->hasSwiftAsyncContext()) {
+        const auto &Attrs = MF.getFunction().getAttributes();
+
         // Before we update the live frame pointer we have to ensure there's a
         // valid (or null) asynchronous context in its slot just before FP in
         // the frame record, so store it now.
-        const auto &Attrs = MF.getFunction().getAttributes();
-
         if (Attrs.hasAttrSomewhere(Attribute::SwiftAsync)) {
           // We have an initial context in r14, store it just before the frame
           // pointer.
@@ -1510,6 +1503,14 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
               .addImm(0)
               .setMIFlag(MachineInstr::FrameSetup);
         }
+
+        if (NeedsWinCFI) {
+          HasWinCFI = true;
+          BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_PushReg))
+              .addImm(X86::R14)
+              .setMIFlag(MachineInstr::FrameSetup);
+        }
+
         BuildMI(MBB, MBBI, DL, TII.get(X86::LEA64r), FramePtr)
             .addUse(X86::RSP)
             .addImm(1)
@@ -1523,21 +1524,32 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
             .setMIFlag(MachineInstr::FrameSetup);
       }
 
-      if (NeedsDwarfCFI) {
-        // Mark effective beginning of when frame pointer becomes valid.
-        // Define the current CFA to use the EBP/RBP register.
-        unsigned DwarfFramePtr = TRI->getDwarfRegNum(MachineFramePtr, true);
-        BuildCFI(MBB, MBBI, DL, MCCFIInstruction::createDefCfaRegister(
-                                    nullptr, DwarfFramePtr));
-      }
+      if (!IsWin64Prologue && !IsFunclet) {
+        // Update EBP with the new base value.
+        if (!X86FI->hasSwiftAsyncContext())
+          BuildMI(MBB, MBBI, DL,
+                  TII.get(Uses64BitFramePtr ? X86::MOV64rr : X86::MOV32rr),
+                  FramePtr)
+              .addReg(StackPtr)
+              .setMIFlag(MachineInstr::FrameSetup);
 
-      if (NeedsWinFPO) {
-        // .cv_fpo_setframe $FramePtr
-        HasWinCFI = true;
-        BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_SetFrame))
-            .addImm(FramePtr)
-            .addImm(0)
-            .setMIFlag(MachineInstr::FrameSetup);
+        if (NeedsDwarfCFI) {
+          // Mark effective beginning of when frame pointer becomes valid.
+          // Define the current CFA to use the EBP/RBP register.
+          unsigned DwarfFramePtr = TRI->getDwarfRegNum(MachineFramePtr, true);
+          BuildCFI(
+              MBB, MBBI, DL,
+              MCCFIInstruction::createDefCfaRegister(nullptr, DwarfFramePtr));
+        }
+
+        if (NeedsWinFPO) {
+          // .cv_fpo_setframe $FramePtr
+          HasWinCFI = true;
+          BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_SetFrame))
+              .addImm(FramePtr)
+              .addImm(0)
+              .setMIFlag(MachineInstr::FrameSetup);
+        }
       }
     }
   } else {

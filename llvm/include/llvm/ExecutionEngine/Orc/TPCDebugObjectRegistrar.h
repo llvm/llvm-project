@@ -22,6 +22,8 @@
 #include <memory>
 #include <vector>
 
+using namespace llvm::orc::shared;
+
 namespace llvm {
 namespace orc {
 
@@ -36,24 +38,19 @@ public:
 /// target process.
 class TPCDebugObjectRegistrar : public DebugObjectRegistrar {
 public:
-  using SerializeBlockInfoFn =
-      std::vector<uint8_t> (*)(sys::MemoryBlock TargetMemBlock);
-
   TPCDebugObjectRegistrar(TargetProcessControl &TPC,
-                          JITTargetAddress RegisterFn,
-                          SerializeBlockInfoFn SerializeBlockInfo)
-      : TPC(TPC), RegisterFn(RegisterFn),
-        SerializeBlockInfo(SerializeBlockInfo) {}
+                          JITTargetAddress RegisterFn)
+      : TPC(TPC), RegisterFn(RegisterFn) {}
 
   Error registerDebugObject(sys::MemoryBlock TargetMem) override {
-    return TPC.runWrapper(RegisterFn, SerializeBlockInfo(TargetMem))
-        .takeError();
+    return WrapperFunction<void(SPSTargetAddress, uint64_t)>::call(
+        TPCCaller(TPC, RegisterFn), pointerToJITTargetAddress(TargetMem.base()),
+        static_cast<uint64_t>(TargetMem.allocatedSize()));
   }
 
 private:
   TargetProcessControl &TPC;
   JITTargetAddress RegisterFn;
-  SerializeBlockInfoFn SerializeBlockInfo;
 };
 
 /// Create a TargetProcessControl-based DebugObjectRegistrar that emits debug

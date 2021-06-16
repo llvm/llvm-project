@@ -163,6 +163,23 @@ protected:
   jitlink::JITLinkMemoryManager *MemMgr = nullptr;
 };
 
+/// Call a wrapper function via TargetProcessControl::runWrapper.
+class TPCCaller {
+public:
+  TPCCaller(TargetProcessControl &TPC, JITTargetAddress WrapperFnAddr)
+      : TPC(TPC), WrapperFnAddr(WrapperFnAddr) {}
+  Expected<shared::WrapperFunctionResult> operator()(const char *ArgData,
+                                                     size_t ArgSize) const {
+    return TPC.runWrapper(
+        WrapperFnAddr,
+        ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(ArgData), ArgSize));
+  }
+
+private:
+  TargetProcessControl &TPC;
+  JITTargetAddress WrapperFnAddr;
+};
+
 /// A TargetProcessControl implementation targeting the current process.
 class SelfTargetProcessControl : public TargetProcessControl,
                                  private TargetProcessControl::MemoryAccess {

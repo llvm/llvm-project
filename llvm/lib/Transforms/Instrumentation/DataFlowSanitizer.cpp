@@ -346,10 +346,7 @@ class DataFlowSanitizer {
 
   enum { ShadowWidthBits = 8, ShadowWidthBytes = ShadowWidthBits / 8 };
 
-  enum {
-    OriginWidthBits = 32,
-    OriginWidthBytes = OriginWidthBits / 8
-  };
+  enum { OriginWidthBits = 32, OriginWidthBytes = OriginWidthBits / 8 };
 
   /// Which ABI should be used for instrumented functions?
   enum InstrumentedABI {
@@ -721,6 +718,7 @@ public:
   void visitBitCastInst(BitCastInst &BCI);
   void visitCastInst(CastInst &CI);
   void visitCmpInst(CmpInst &CI);
+  void visitLandingPadInst(LandingPadInst &LPI);
   void visitGetElementPtrInst(GetElementPtrInst &GEPI);
   void visitLoadInst(LoadInst &LI);
   void visitStoreInst(StoreInst &SI);
@@ -2561,6 +2559,22 @@ void DFSanVisitor::visitCmpInst(CmpInst &CI) {
   }
 }
 
+void DFSanVisitor::visitLandingPadInst(LandingPadInst &LPI) {
+  // We do not need to track data through LandingPadInst.
+  //
+  // For the C++ exceptions, if a value is thrown, this value will be stored
+  // in a memory location provided by __cxa_allocate_exception(...) (on the
+  // throw side) or  __cxa_begin_catch(...) (on the catch side).
+  // This memory will have a shadow, so with the loads and stores we will be
+  // able to propagate labels on data thrown through exceptions, without any
+  // special handling of the LandingPadInst.
+  //
+  // The second element in the pair result of the LandingPadInst is a
+  // register value, but it is for a type ID and should never be tainted.
+  DFSF.setShadow(&LPI, DFSF.DFS.getZeroShadow(&LPI));
+  DFSF.setOrigin(&LPI, DFSF.DFS.ZeroOrigin);
+}
+
 void DFSanVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
   if (ClCombineOffsetLabelsOnGEP) {
     visitInstOperands(GEPI);
@@ -2930,8 +2944,9 @@ bool DFSanVisitor::visitWrappedCallBase(Function &F, CallBase &CB) {
         TName += utostr(FT->getNumParams() - N);
         TName += "$";
         TName += F.getName();
-        Constant *T = DFSF.DFS.getOrBuildTrampolineFunction(ParamFT, TName);
-        Args.push_back(T);
+        Constant *Trampoline =
+            DFSF.DFS.getOrBuildTrampolineFunction(ParamFT, TName);
+        Args.push_back(Trampoline);
         Args.push_back(
             IRB.CreateBitCast(*I, Type::getInt8PtrTy(*DFSF.DFS.Ctx)));
       } else {
