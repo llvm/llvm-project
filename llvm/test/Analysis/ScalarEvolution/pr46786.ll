@@ -16,11 +16,11 @@ define i8* @FSE_decompress_usingDTable(i8* %arg, i32 %arg1, i32 %arg2, i32 %arg3
 ; CHECK-NEXT:    %i5 = getelementptr inbounds i8, i8* %i, i32 %i4
 ; CHECK-NEXT:    --> ((-1 * %arg1) + %arg2 + %arg) U: full-set S: full-set
 ; CHECK-NEXT:    %i7 = select i1 %i6, i32 %arg2, i32 %arg1
-; CHECK-NEXT:    --> ((-1 * %arg) + (((-1 * %arg1) + %arg2 + %arg) umin %arg) + %arg1) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (ptrtoint i8* %arg to i32)) + (((-1 * %arg1) + (ptrtoint i8* %arg to i32) + %arg2) umin (ptrtoint i8* %arg to i32)) + %arg1) U: full-set S: full-set
 ; CHECK-NEXT:    %i8 = sub i32 %arg3, %i7
-; CHECK-NEXT:    --> ((-1 * (((-1 * %arg1) + %arg2 + %arg) umin %arg)) + (-1 * %arg1) + %arg3 + %arg) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (((-1 * %arg1) + (ptrtoint i8* %arg to i32) + %arg2) umin (ptrtoint i8* %arg to i32))) + (-1 * %arg1) + (ptrtoint i8* %arg to i32) + %arg3) U: full-set S: full-set
 ; CHECK-NEXT:    %i9 = getelementptr inbounds i8, i8* %arg, i32 %i8
-; CHECK-NEXT:    --> ((2 * %arg) + (-1 * (((-1 * %arg1) + %arg2 + %arg) umin %arg)) + (-1 * %arg1) + %arg3) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (((-1 * %arg1) + (ptrtoint i8* %arg to i32) + %arg2) umin (ptrtoint i8* %arg to i32))) + (-1 * %arg1) + (ptrtoint i8* %arg to i32) + %arg3 + %arg) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @FSE_decompress_usingDTable
 ;
 bb:
@@ -42,11 +42,11 @@ define i8* @test_01(i8* %p) {
 ; CHECK-NEXT:    %p2 = getelementptr i8, i8* %p, i32 1
 ; CHECK-NEXT:    --> (1 + %p) U: full-set S: full-set
 ; CHECK-NEXT:    %index = select i1 %cmp, i32 2, i32 1
-; CHECK-NEXT:    --> ((-1 * %p) + ((1 + %p) umax (2 + %p))) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (ptrtoint i8* %p to i32)) + ((1 + (ptrtoint i8* %p to i32)) umax (2 + (ptrtoint i8* %p to i32)))) U: full-set S: full-set
 ; CHECK-NEXT:    %neg_index = sub i32 0, %index
-; CHECK-NEXT:    --> ((-1 * ((1 + %p) umax (2 + %p))) + %p) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint i8* %p to i32)) umax (2 + (ptrtoint i8* %p to i32)))) + (ptrtoint i8* %p to i32)) U: full-set S: full-set
 ; CHECK-NEXT:    %gep = getelementptr i8, i8* %p, i32 %neg_index
-; CHECK-NEXT:    --> ((2 * %p) + (-1 * ((1 + %p) umax (2 + %p)))) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint i8* %p to i32)) umax (2 + (ptrtoint i8* %p to i32)))) + (ptrtoint i8* %p to i32) + %p) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @test_01
 ;
   %p1 = getelementptr i8, i8* %p, i32 2
@@ -66,11 +66,11 @@ define i8* @test_02(i8* %p) {
 ; CHECK-NEXT:    %p2 = getelementptr i8, i8* %p, i32 1
 ; CHECK-NEXT:    --> (1 + %p) U: full-set S: full-set
 ; CHECK-NEXT:    %index = select i1 %cmp, i32 2, i32 1
-; CHECK-NEXT:    --> ((-1 * %p) + ((1 + %p) smax (2 + %p))) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (ptrtoint i8* %p to i32)) + ((1 + (ptrtoint i8* %p to i32)) smax (2 + (ptrtoint i8* %p to i32)))) U: full-set S: full-set
 ; CHECK-NEXT:    %neg_index = sub i32 0, %index
-; CHECK-NEXT:    --> ((-1 * ((1 + %p) smax (2 + %p))) + %p) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint i8* %p to i32)) smax (2 + (ptrtoint i8* %p to i32)))) + (ptrtoint i8* %p to i32)) U: full-set S: full-set
 ; CHECK-NEXT:    %gep = getelementptr i8, i8* %p, i32 %neg_index
-; CHECK-NEXT:    --> ((2 * %p) + (-1 * ((1 + %p) smax (2 + %p)))) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint i8* %p to i32)) smax (2 + (ptrtoint i8* %p to i32)))) + (ptrtoint i8* %p to i32) + %p) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @test_02
 ;
   %p1 = getelementptr i8, i8* %p, i32 2
@@ -90,11 +90,11 @@ define i8* @test_03(i8* %p) {
 ; CHECK-NEXT:    %p2 = getelementptr i8, i8* %p, i32 1
 ; CHECK-NEXT:    --> (1 + %p) U: full-set S: full-set
 ; CHECK-NEXT:    %index = select i1 %cmp, i32 2, i32 1
-; CHECK-NEXT:    --> ((-1 * %p) + ((1 + %p) umin (2 + %p))) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (ptrtoint i8* %p to i32)) + ((1 + (ptrtoint i8* %p to i32)) umin (2 + (ptrtoint i8* %p to i32)))) U: full-set S: full-set
 ; CHECK-NEXT:    %neg_index = sub i32 0, %index
-; CHECK-NEXT:    --> ((-1 * ((1 + %p) umin (2 + %p))) + %p) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint i8* %p to i32)) umin (2 + (ptrtoint i8* %p to i32)))) + (ptrtoint i8* %p to i32)) U: full-set S: full-set
 ; CHECK-NEXT:    %gep = getelementptr i8, i8* %p, i32 %neg_index
-; CHECK-NEXT:    --> ((2 * %p) + (-1 * ((1 + %p) umin (2 + %p)))) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint i8* %p to i32)) umin (2 + (ptrtoint i8* %p to i32)))) + (ptrtoint i8* %p to i32) + %p) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @test_03
 ;
   %p1 = getelementptr i8, i8* %p, i32 2
@@ -114,11 +114,11 @@ define i8* @test_04(i8* %p) {
 ; CHECK-NEXT:    %p2 = getelementptr i8, i8* %p, i32 1
 ; CHECK-NEXT:    --> (1 + %p) U: full-set S: full-set
 ; CHECK-NEXT:    %index = select i1 %cmp, i32 2, i32 1
-; CHECK-NEXT:    --> ((-1 * %p) + ((1 + %p) smin (2 + %p))) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (ptrtoint i8* %p to i32)) + ((1 + (ptrtoint i8* %p to i32)) smin (2 + (ptrtoint i8* %p to i32)))) U: full-set S: full-set
 ; CHECK-NEXT:    %neg_index = sub i32 0, %index
-; CHECK-NEXT:    --> ((-1 * ((1 + %p) smin (2 + %p))) + %p) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint i8* %p to i32)) smin (2 + (ptrtoint i8* %p to i32)))) + (ptrtoint i8* %p to i32)) U: full-set S: full-set
 ; CHECK-NEXT:    %gep = getelementptr i8, i8* %p, i32 %neg_index
-; CHECK-NEXT:    --> ((2 * %p) + (-1 * ((1 + %p) smin (2 + %p)))) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * ((1 + (ptrtoint i8* %p to i32)) smin (2 + (ptrtoint i8* %p to i32)))) + (ptrtoint i8* %p to i32) + %p) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @test_04
 ;
   %p1 = getelementptr i8, i8* %p, i32 2
