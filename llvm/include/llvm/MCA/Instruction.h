@@ -359,6 +359,9 @@ struct InstrDesc {
   // A bitmask of used processor resource units.
   uint64_t UsedProcResUnits;
 
+  // A bitmask of implicit uses of processor resource units.
+  uint64_t ImplicitlyUsedProcResUnits;
+
   // A bitmask of used processor resource groups.
   uint64_t UsedProcResGroups;
 
