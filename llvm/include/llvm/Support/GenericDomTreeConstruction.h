@@ -852,7 +852,7 @@ struct SemiNCAInfo {
       TN->setIDom(NCD);
     }
 
-#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if defined(LLVM_ENABLE_ABI_BREAKING_CHECKS) && !defined(NDEBUG)
     for (const TreeNodePtr TN : II.VisitedUnaffected)
       assert(TN->getLevel() == TN->getIDom()->getLevel() + 1 &&
              "TN should have been updated by an affected ancestor");
