@@ -755,12 +755,10 @@ enum FileAccess : unsigned {
 
 enum OpenFlags : unsigned {
   OF_None = 0,
-  F_None = 0, // For compatibility
 
   /// The file should be opened in text mode on platforms like z/OS that make
   /// this distinction.
   OF_Text = 1,
-  F_Text = 1, // For compatibility
 
   /// The file should use a carriage linefeed '\r\n'. This flag should only be
   /// used with OF_Text. Only makes a difference on Windows.
@@ -773,7 +771,6 @@ enum OpenFlags : unsigned {
 
   /// The file should be opened in append mode.
   OF_Append = 4,
-  F_Append = 4, // For compatibility
 
   /// Delete the file on close. Only makes a difference on windows.
   OF_Delete = 8,
