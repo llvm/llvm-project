@@ -14567,8 +14567,13 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
               EffectiveType->getCanonicalTypeInternal()));
       if (index.getBitWidth() < AddrBits)
         index = index.zext(AddrBits);
-      CharUnits ElemCharUnits = ASTC.getTypeSizeInChars(EffectiveType);
-      llvm::APInt ElemBytes(index.getBitWidth(), ElemCharUnits.getQuantity());
+      Optional<CharUnits> ElemCharUnits =
+          ASTC.getTypeSizeInCharsIfKnown(EffectiveType);
+      // PR50741 - If EffectiveType has unknown size (e.g., if it's a void
+      // pointer) bounds-checking isn't meaningful.
+      if (!ElemCharUnits)
+        return;
+      llvm::APInt ElemBytes(index.getBitWidth(), ElemCharUnits->getQuantity());
       // If index has more active bits than address space, we already know
       // we have a bounds violation to warn about.  Otherwise, compute
       // address of (index + 1)th element, and warn about bounds violation
@@ -14599,7 +14604,7 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
       DiagRuntimeBehavior(BaseExpr->getBeginLoc(), BaseExpr,
                           PDiag(DiagID)
                               << toString(index, 10, true) << AddrBits
-                              << (unsigned)ASTC.toBits(ElemCharUnits)
+                              << (unsigned)ASTC.toBits(*ElemCharUnits)
                               << toString(ElemBytes, 10, false)
                               << toString(MaxElems, 10, false)
                               << (unsigned)MaxElems.getLimitedValue(~0U)
