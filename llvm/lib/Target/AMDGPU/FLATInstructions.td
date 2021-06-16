@@ -81,6 +81,8 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
+  let FLAT = 1;
+
   // copy relevant pseudo op flags
   let SubtargetPredicate   = ps.SubtargetPredicate;
   let AsmMatchConverter    = ps.AsmMatchConverter;
@@ -88,6 +90,8 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :
   let TSFlags              = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let SchedRW              = ps.SchedRW;
+  let VM_CNT               = ps.VM_CNT;
+  let LGKM_CNT             = ps.LGKM_CNT;
 
   // encoding fields
   bits<8> vaddr;

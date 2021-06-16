@@ -31,6 +31,7 @@ class ELFDumper {
 
   DenseMap<StringRef, uint32_t> UsedSectionNames;
   std::vector<std::string> SectionNames;
+  Optional<uint32_t> ShStrTabIndex;
 
   DenseMap<StringRef, uint32_t> UsedSymbolNames;
   std::vector<std::string> SymbolNames;
@@ -289,6 +290,13 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
   Sections = *SectionsOrErr;
   SectionNames.resize(Sections.size());
 
+  if (Sections.size() > 0) {
+    ShStrTabIndex = Obj.getHeader().e_shstrndx;
+    if (*ShStrTabIndex == ELF::SHN_XINDEX)
+      ShStrTabIndex = Sections[0].sh_link;
+    // TODO: Set EShStrndx if the value doesn't represent a real section.
+  }
+
   // Normally an object that does not have sections has e_shnum == 0.
   // Also, e_shnum might be 0, when the the number of entries in the section
   // header table is larger than or equal to SHN_LORESERVE (0xff00). In this
@@ -398,6 +406,29 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
     return !shouldPrintSection(S, Sections[S.OriginalSecNdx], Y->DWARF);
   });
 
+  // The section header string table by default is assumed to be called
+  // ".shstrtab" and be in its own unique section. However, it's possible for it
+  // to be called something else and shared with another section. If the name
+  // isn't the default, provide this in the YAML.
+  if (ShStrTabIndex && *ShStrTabIndex != ELF::SHN_UNDEF &&
+      *ShStrTabIndex < Sections.size()) {
+    StringRef ShStrtabName;
+    if (SymTab && SymTab->sh_link == *ShStrTabIndex) {
+      // Section header string table is shared with the symbol table. Use that
+      // section's name (usually .strtab).
+      ShStrtabName = cantFail(Obj.getSectionName(Sections[SymTab->sh_link]));
+    } else if (DynSymTab && DynSymTab->sh_link == *ShStrTabIndex) {
+      // Section header string table is shared with the dynamic symbol table.
+      // Use that section's name (usually .dynstr).
+      ShStrtabName = cantFail(Obj.getSectionName(Sections[DynSymTab->sh_link]));
+    } else {
+      // Otherwise, the section name potentially needs uniquifying.
+      ShStrtabName = cantFail(getUniquedSectionName(Sections[*ShStrTabIndex]));
+    }
+    if (ShStrtabName != ".shstrtab")
+      Y->Header.SectionHeaderStringTable = ShStrtabName;
+  }
+
   Y->Chunks = std::move(Chunks);
   return Y.release();
 }
@@ -486,6 +517,12 @@ Optional<DWARFYAML::Data> ELFDumper<ELFT>::dumpDWARFSections(
 
     if (ELFYAML::RawContentSection *RawSec =
             dyn_cast<ELFYAML::RawContentSection>(C.get())) {
+      // FIXME: The debugDebug* functions should take the content as stored in
+      // RawSec. Currently, they just use the last section with the matching
+      // name, which defeats this attempt to skip reading a section header
+      // string table with the same name as a DWARF section.
+      if (ShStrTabIndex && RawSec->OriginalSecNdx == *ShStrTabIndex)
+        continue;
       Error Err = Error::success();
       cantFail(std::move(Err));
 

@@ -1007,6 +1007,7 @@ void MappingTraits<ELFYAML::FileHeader>::mapping(IO &IO,
   IO.mapOptional("Machine", FileHdr.Machine);
   IO.mapOptional("Flags", FileHdr.Flags, ELFYAML::ELF_EF(0));
   IO.mapOptional("Entry", FileHdr.Entry, Hex64(0));
+  IO.mapOptional("SectionHeaderStringTable", FileHdr.SectionHeaderStringTable);
 
   // obj2yaml does not dump these fields.
   assert(!IO.outputting() ||
