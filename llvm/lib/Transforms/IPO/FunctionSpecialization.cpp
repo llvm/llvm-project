@@ -555,6 +555,8 @@ bool llvm::runFunctionSpecialization(
   for (Function &F : M) {
     if (F.isDeclaration())
       continue;
+    if (F.hasFnAttribute(Attribute::NoDuplicate))
+      continue;
 
     LLVM_DEBUG(dbgs() << "\nFnSpecialization: Analysing decl: " << F.getName()
                       << "\n");
