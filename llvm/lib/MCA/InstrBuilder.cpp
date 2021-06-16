@@ -644,7 +644,8 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
   if (!DescOrErr)
     return DescOrErr.takeError();
   const InstrDesc &D = *DescOrErr;
-  std::unique_ptr<Instruction> NewIS = std::make_unique<Instruction>(D);
+  std::unique_ptr<Instruction> NewIS =
+      std::make_unique<Instruction>(D, MCI.getOpcode());
 
   // Check if this is a dependency breaking instruction.
   APInt Mask;
