@@ -995,7 +995,7 @@ int indextest_core_main(int argc, const char **argv) {
     if (options::OutputFile.empty())
       return aggregateDataAsJSON(storePath, outs());
     std::error_code EC;
-    raw_fd_ostream OS(options::OutputFile, EC, llvm::sys::fs::F_None);
+    raw_fd_ostream OS(options::OutputFile, EC, llvm::sys::fs::OF_None);
     if (EC) {
       errs() << "failed to open output file: " << EC.message() << '\n';
       return 1;
