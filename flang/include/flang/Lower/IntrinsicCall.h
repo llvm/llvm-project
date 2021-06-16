@@ -40,9 +40,10 @@ enum class LowerIntrinsicArgAs {
   /// Lower argument to a value. Mainly intended for scalar arguments.
   Value,
   /// Lower argument to an address. Only valid when the argument properties are
-  /// fully
-  /// defined (e.g. allocatable is allocated...).
+  /// fully defined (e.g. allocatable is allocated...).
   Addr,
+  /// Lower argument to a box.
+  Box,
   /// Lower argument without assuming that the argument is fully defined.
   /// It can be used on unallocated allocatable, disassociated pointer,
   /// or absent optional. This is meant for inquiry intrinsic arguments.

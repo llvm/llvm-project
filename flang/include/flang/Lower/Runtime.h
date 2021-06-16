@@ -28,7 +28,7 @@ class Optional;
 namespace mlir {
 class Location;
 class Value;
-}
+} // namespace mlir
 
 namespace fir {
 class CharBoxValue;
@@ -74,6 +74,12 @@ void genDateAndTime(FirOpBuilder &, mlir::Location,
                     llvm::Optional<fir::CharBoxValue> date,
                     llvm::Optional<fir::CharBoxValue> time,
                     llvm::Optional<fir::CharBoxValue> zone);
+
+void genRandomInit(FirOpBuilder &, mlir::Location, mlir::Value repeatable,
+                   mlir::Value imageDistinct);
+void genRandomNumber(FirOpBuilder &, mlir::Location, mlir::Value harvest);
+void genRandomSeed(FirOpBuilder &, mlir::Location, int argIndex,
+                   mlir::Value argBox);
 
 /// generate runtime call to transfer intrinsic with no size argument
 void genTransfer(Fortran::lower::FirOpBuilder &builder, mlir::Location loc,

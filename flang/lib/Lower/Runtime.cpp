@@ -9,6 +9,7 @@
 #include "flang/Lower/Runtime.h"
 #include "../../runtime/misc-intrinsic.h"
 #include "../runtime/clock.h"
+#include "../runtime/random.h"
 #include "../runtime/stop.h"
 #include "RTBuilder.h"
 #include "StatementContext.h"
@@ -220,6 +221,61 @@ void Fortran::lower::genDateAndTime(Fortran::lower::FirOpBuilder &builder,
   for (auto [fst, snd] : llvm::zip(args, callee.getType().getInputs()))
     operands.emplace_back(builder.createConvert(loc, snd, fst));
   builder.create<fir::CallOp>(loc, callee, operands);
+}
+
+void Fortran::lower::genRandomInit(Fortran::lower::FirOpBuilder &builder,
+                                   mlir::Location loc, mlir::Value repeatable,
+                                   mlir::Value imageDistinct) {
+  auto func = getRuntimeFunc<mkRTKey(RandomInit)>(loc, builder);
+  auto args = Fortran::lower::createArguments(builder, loc, func.getType(),
+                                              repeatable, imageDistinct);
+  builder.create<fir::CallOp>(loc, func, args);
+}
+
+void Fortran::lower::genRandomNumber(Fortran::lower::FirOpBuilder &builder,
+                                     mlir::Location loc, mlir::Value harvest) {
+  auto func = getRuntimeFunc<mkRTKey(RandomNumber)>(loc, builder);
+  auto funcTy = func.getType();
+  auto sourceFile = Fortran::lower::locationToFilename(builder, loc);
+  auto sourceLine =
+      Fortran::lower::locationToLineNo(builder, loc, funcTy.getInput(2));
+  auto args = Fortran::lower::createArguments(builder, loc, funcTy, harvest,
+                                              sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, func, args);
+}
+
+void Fortran::lower::genRandomSeed(Fortran::lower::FirOpBuilder &builder,
+                                   mlir::Location loc, int argIndex,
+                                   mlir::Value argBox) {
+  mlir::FuncOp func;
+  // argIndex is the nth (0-origin) argument in declaration order,
+  // or -1 if no argument is present.
+  switch (argIndex) {
+  case -1:
+    func = Fortran::lower::getRuntimeFunc<mkRTKey(RandomSeedDefaultPut)>(
+        loc, builder);
+    builder.create<fir::CallOp>(loc, func);
+    return;
+  case 0:
+    func =
+        Fortran::lower::getRuntimeFunc<mkRTKey(RandomSeedSize)>(loc, builder);
+    break;
+  case 1:
+    func = Fortran::lower::getRuntimeFunc<mkRTKey(RandomSeedPut)>(loc, builder);
+    break;
+  case 2:
+    func = Fortran::lower::getRuntimeFunc<mkRTKey(RandomSeedGet)>(loc, builder);
+    break;
+  default:
+    llvm::report_fatal_error("invalid RANDOM_SEED argument index");
+  }
+  auto funcTy = func.getType();
+  auto sourceFile = Fortran::lower::locationToFilename(builder, loc);
+  auto sourceLine =
+      Fortran::lower::locationToLineNo(builder, loc, funcTy.getInput(2));
+  auto args = Fortran::lower::createArguments(builder, loc, funcTy, argBox,
+                                              sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, func, args);
 }
 
 /// generate runtime call to transfer intrinsic with no size argument
