@@ -28,6 +28,12 @@ struct TestMathPolynomialApproximationPass
     registry
         .insert<vector::VectorDialect, math::MathDialect, LLVM::LLVMDialect>();
   }
+  StringRef getArgument() const final {
+    return "test-math-polynomial-approximation";
+  }
+  StringRef getDescription() const final {
+    return "Test math polynomial approximations";
+  }
 };
 } // end anonymous namespace
 
@@ -40,9 +46,7 @@ void TestMathPolynomialApproximationPass::runOnFunction() {
 namespace mlir {
 namespace test {
 void registerTestMathPolynomialApproximationPass() {
-  PassRegistration<TestMathPolynomialApproximationPass> pass(
-      "test-math-polynomial-approximation",
-      "Test math polynomial approximations");
+  PassRegistration<TestMathPolynomialApproximationPass>();
 }
 } // namespace test
 } // namespace mlir

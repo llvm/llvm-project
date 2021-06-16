@@ -20,6 +20,8 @@ namespace {
 struct TestExpandTanhPass
     : public PassWrapper<TestExpandTanhPass, FunctionPass> {
   void runOnFunction() override;
+  StringRef getArgument() const final { return "test-expand-tanh"; }
+  StringRef getDescription() const final { return "Test expanding tanh"; }
 };
 } // end anonymous namespace
 
@@ -31,9 +33,6 @@ void TestExpandTanhPass::runOnFunction() {
 
 namespace mlir {
 namespace test {
-void registerTestExpandTanhPass() {
-  PassRegistration<TestExpandTanhPass> pass("test-expand-tanh",
-                                            "Test expanding tanh");
-}
+void registerTestExpandTanhPass() { PassRegistration<TestExpandTanhPass>(); }
 } // namespace test
 } // namespace mlir

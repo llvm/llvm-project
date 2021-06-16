@@ -47,6 +47,10 @@ namespace {
 /// Pass to test slice generated from slice analysis.
 struct SliceAnalysisTestPass
     : public PassWrapper<SliceAnalysisTestPass, OperationPass<ModuleOp>> {
+  StringRef getArgument() const final { return "slice-analysis-test"; }
+  StringRef getDescription() const final {
+    return "Test Slice analysis functionality.";
+  }
   void runOnOperation() override;
   SliceAnalysisTestPass() = default;
   SliceAnalysisTestPass(const SliceAnalysisTestPass &) {}
@@ -74,7 +78,6 @@ void SliceAnalysisTestPass::runOnOperation() {
 
 namespace mlir {
 void registerSliceAnalysisTestPass() {
-  PassRegistration<SliceAnalysisTestPass> pass(
-      "slice-analysis-test", "Test Slice analysis functionality.");
+  PassRegistration<SliceAnalysisTestPass>();
 }
 } // namespace mlir

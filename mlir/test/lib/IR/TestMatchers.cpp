@@ -17,6 +17,10 @@ namespace {
 /// This is a test pass for verifying matchers.
 struct TestMatchers : public PassWrapper<TestMatchers, FunctionPass> {
   void runOnFunction() override;
+  StringRef getArgument() const final { return "test-matchers"; }
+  StringRef getDescription() const final {
+    return "Test C++ pattern matchers.";
+  }
 };
 } // end anonymous namespace
 
@@ -148,7 +152,5 @@ void TestMatchers::runOnFunction() {
 }
 
 namespace mlir {
-void registerTestMatchers() {
-  PassRegistration<TestMatchers>("test-matchers", "Test C++ pattern matchers.");
-}
+void registerTestMatchers() { PassRegistration<TestMatchers>(); }
 } // namespace mlir

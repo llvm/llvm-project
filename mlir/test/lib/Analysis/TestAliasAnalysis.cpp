@@ -46,6 +46,10 @@ static void printAliasOperand(Value value) {
 namespace {
 struct TestAliasAnalysisPass
     : public PassWrapper<TestAliasAnalysisPass, OperationPass<>> {
+  StringRef getArgument() const final { return "test-alias-analysis"; }
+  StringRef getDescription() const final {
+    return "Test alias analysis results.";
+  }
   void runOnOperation() override {
     llvm::errs() << "Testing : " << getOperation()->getAttr("sym_name") << "\n";
 
@@ -84,6 +88,10 @@ struct TestAliasAnalysisPass
 namespace {
 struct TestAliasAnalysisModRefPass
     : public PassWrapper<TestAliasAnalysisModRefPass, OperationPass<>> {
+  StringRef getArgument() const final { return "test-alias-analysis-modref"; }
+  StringRef getDescription() const final {
+    return "Test alias analysis ModRef results.";
+  }
   void runOnOperation() override {
     llvm::errs() << "Testing : " << getOperation()->getAttr("sym_name") << "\n";
 
@@ -126,10 +134,8 @@ struct TestAliasAnalysisModRefPass
 namespace mlir {
 namespace test {
 void registerTestAliasAnalysisPass() {
-  PassRegistration<TestAliasAnalysisPass> aliasPass(
-      "test-alias-analysis", "Test alias analysis results.");
-  PassRegistration<TestAliasAnalysisModRefPass> modRefPass(
-      "test-alias-analysis-modref", "Test alias analysis ModRef results.");
+  PassRegistration<TestAliasAnalysisPass>();
+  PassRegistration<TestAliasAnalysisModRefPass>();
 }
 } // namespace test
 } // namespace mlir

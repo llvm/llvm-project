@@ -26,6 +26,10 @@ struct TestLinalgHoisting
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect>();
   }
+  StringRef getArgument() const final { return "test-linalg-hoisting"; }
+  StringRef getDescription() const final {
+    return "Test Linalg hoisting functions.";
+  }
 
   void runOnFunction() override;
 
@@ -46,9 +50,6 @@ void TestLinalgHoisting::runOnFunction() {
 
 namespace mlir {
 namespace test {
-void registerTestLinalgHoisting() {
-  PassRegistration<TestLinalgHoisting> testTestLinalgHoistingPass(
-      "test-linalg-hoisting", "Test Linalg hoisting functions.");
-}
+void registerTestLinalgHoisting() { PassRegistration<TestLinalgHoisting>(); }
 } // namespace test
 } // namespace mlir

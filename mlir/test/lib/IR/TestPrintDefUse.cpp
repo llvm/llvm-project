@@ -16,6 +16,8 @@ namespace {
 /// This pass illustrates the IR def-use chains through printing.
 struct TestPrintDefUsePass
     : public PassWrapper<TestPrintDefUsePass, OperationPass<>> {
+  StringRef getArgument() const final { return "test-print-defuse"; }
+  StringRef getDescription() const final { return "Test various printing."; }
   void runOnOperation() override {
     // Recursively traverse the IR nested under the current operation and print
     // every single operation and their operands and users.
@@ -64,8 +66,5 @@ struct TestPrintDefUsePass
 } // end anonymous namespace
 
 namespace mlir {
-void registerTestPrintDefUsePass() {
-  PassRegistration<TestPrintDefUsePass>("test-print-defuse",
-                                        "Test various printing.");
-}
+void registerTestPrintDefUsePass() { PassRegistration<TestPrintDefUsePass>(); }
 } // namespace mlir
