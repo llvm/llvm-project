@@ -65,8 +65,10 @@ static std::vector<Defined *> getSymbols() {
     if (isa<ObjFile>(file))
       for (Symbol *sym : file->symbols)
         if (auto *d = dyn_cast_or_null<Defined>(sym))
-          if (d->isLive() && d->isec && d->getFile() == file)
+          if (d->isLive() && d->isec && d->getFile() == file) {
+            assert(!shouldOmitFromOutput(d->isec));
             v.push_back(d);
+          }
   return v;
 }
 
@@ -142,6 +144,7 @@ void macho::writeMapFile() {
   os << "# Address\t    File  Name\n";
   for (InputSection *isec : inputSections) {
     auto symsIt = sectionSyms.find(isec);
+    assert(!shouldOmitFromOutput(isec) || (symsIt == sectionSyms.end()));
     if (symsIt == sectionSyms.end())
       continue;
     for (Symbol *sym : symsIt->second) {
