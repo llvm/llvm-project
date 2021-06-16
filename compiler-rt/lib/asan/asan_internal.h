@@ -35,11 +35,11 @@
 // If set, values like allocator chunk size, as well as defaults for some flags
 // will be changed towards less memory overhead.
 #ifndef ASAN_LOW_MEMORY
-# if SANITIZER_IOS || SANITIZER_ANDROID || SANITIZER_RTEMS
-#  define ASAN_LOW_MEMORY 1
-# else
-#  define ASAN_LOW_MEMORY 0
-# endif
+#  if SANITIZER_IOS || SANITIZER_ANDROID || SANITIZER_RTEMS
+#    define ASAN_LOW_MEMORY 1
+#  else
+#    define ASAN_LOW_MEMORY 0
+#  endif
 #endif
 
 #ifndef ASAN_DYNAMIC

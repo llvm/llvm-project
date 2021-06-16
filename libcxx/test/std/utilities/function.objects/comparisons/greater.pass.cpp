@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // <functional>
 
 // greater
@@ -21,9 +23,11 @@ int main(int, char**)
 {
     typedef std::greater<int> F;
     const F f = F();
+#if TEST_STD_VER <= 17
     static_assert((std::is_same<int, F::first_argument_type>::value), "" );
     static_assert((std::is_same<int, F::second_argument_type>::value), "" );
     static_assert((std::is_same<bool, F::result_type>::value), "" );
+#endif
     assert(!f(36, 36));
     assert(f(36, 6));
     assert(!f(6, 36));

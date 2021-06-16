@@ -428,8 +428,7 @@ public:
   SymbolManager &getSymbolManager() { return SymMgr; }
   MemRegionManager &getRegionManager() { return MRMgr; }
 
-  NoteTag::Factory &getNoteTags() { return Engine.getNoteTags(); }
-
+  DataTag::Factory &getDataTags() { return Engine.getDataTags(); }
 
   // Functions for external checking of whether we have unfinished work
   bool wasBlocksExhausted() const { return Engine.wasBlocksExhausted(); }

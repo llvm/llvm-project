@@ -62,17 +62,13 @@ struct SerializedAffineMap {
   AffineMap affineMap() { return affineMapAttr.getValue(); }
 };
 
-enum class LinalgTensorUsageDef {
-  input,
-  output,
-  temporary,
-};
+enum class LinalgOperandDefUsage { input, output };
 
-struct LinalgTensorDef {
+struct LinalgOperandDef {
   std::string name;
-  LinalgTensorUsageDef usage;
-  SerializedAffineMap shape;
-  std::string elementTypeVar;
+  LinalgOperandDefUsage usage;
+  Optional<SerializedAffineMap> shape;
+  std::string typeVar;
 };
 
 enum class LinalgIteratorTypeDef {
@@ -114,10 +110,10 @@ struct ScalarAssign {
 };
 
 struct LinalgStructuredOpConfig {
-  SmallVector<LinalgTensorDef> args;
+  SmallVector<LinalgOperandDef> args;
   LinalgIndexingMapsConfig indexingMaps;
   SmallVector<LinalgIteratorTypeDef> iteratorTypes;
-  SmallVector<ScalarAssign, 2> assignments;
+  std::vector<ScalarAssign> assignments;
 };
 
 struct LinalgOpConfig {
@@ -131,7 +127,7 @@ struct LinalgOpConfig {
 // Mapping traits.
 //===----------------------------------------------------------------------===//
 
-LLVM_YAML_IS_SEQUENCE_VECTOR(LinalgTensorDef)
+LLVM_YAML_IS_SEQUENCE_VECTOR(LinalgOperandDef)
 LLVM_YAML_IS_SEQUENCE_VECTOR(SerializedAffineMap)
 LLVM_YAML_IS_SEQUENCE_VECTOR(LinalgIteratorTypeDef)
 LLVM_YAML_IS_SEQUENCE_VECTOR(ScalarAssign)
@@ -153,8 +149,8 @@ struct MappingTraits<LinalgOpConfig> {
 };
 
 /// A structured op models (at most) a single contraction by modeling
-///   - A list of named arguments (`LinalgTensorDef`), which can be inputs,
-///     outputs, or temporaries.
+///   - A list of named arguments (`LinalgOperandDef`), which can be inputs or
+///     outputs.
 ///   - List of indexing maps (see `LinalgIndexingMaps`).
 ///   - Iterator types (see `LinalgIteratorTypeDef`).
 ///   - List of scalar level assignment (see `ScalarAssign`).
@@ -168,31 +164,30 @@ struct MappingTraits<LinalgStructuredOpConfig> {
   }
 };
 
-/// Maps a named tensor-argument to an operation, consisting of:
+/// Maps a named tensor- or scalar-argument to an operation, consisting of:
 ///   - `name`: Must be unique within the operation.
 ///   - `usage`: How the argument is used (input, output, etc).
-///   - `shape`: An AffineMap from all op symbols to the specific shape
-///     of this argument. Each shape must be normalized over the same list of
-///     symbols and have no dimension inputs.
-///   - `element_type_var`: The symbolic type variable that binds to the scalar
-///     element type of this TensorDef.
+///   - `shape`: An optional AffineMap from all op symbols to the shape of the
+///     argument. Only tensor-arguments have a shape. Each shape must be
+///     normalized over the same list of symbols and have no dimension inputs.
+///   - `type_var`: The symbolic type variable that binds to the element or self
+///     type of the tensor- or scalar-argument, respectively.
 template <>
-struct MappingTraits<LinalgTensorDef> {
-  static void mapping(IO &io, LinalgTensorDef &info) {
+struct MappingTraits<LinalgOperandDef> {
+  static void mapping(IO &io, LinalgOperandDef &info) {
     io.mapRequired("name", info.name);
     io.mapRequired("usage", info.usage);
-    io.mapRequired("shape", info.shape);
-    io.mapRequired("element_type_var", info.elementTypeVar);
+    io.mapOptional("shape", info.shape);
+    io.mapRequired("type_var", info.typeVar);
   }
 };
 
 /// Usage enum for a named argument.
 template <>
-struct ScalarEnumerationTraits<LinalgTensorUsageDef> {
-  static void enumeration(IO &io, LinalgTensorUsageDef &value) {
-    io.enumCase(value, "input", LinalgTensorUsageDef::input);
-    io.enumCase(value, "output", LinalgTensorUsageDef::output);
-    io.enumCase(value, "temporary", LinalgTensorUsageDef::temporary);
+struct ScalarEnumerationTraits<LinalgOperandDefUsage> {
+  static void enumeration(IO &io, LinalgOperandDefUsage &value) {
+    io.enumCase(value, "input", LinalgOperandDefUsage::input);
+    io.enumCase(value, "output", LinalgOperandDefUsage::output);
   }
 };
 
@@ -229,7 +224,7 @@ struct MappingTraits<LinalgIndexingMapsConfig> {
 };
 
 /// Models an assignment to a named output.
-///   - The `arg` name must match a named output or temporary.
+///   - The `arg` name must match a named output.
 ///   - The `value` is a scalar expression for computing the value to
 ///     assign (see `ScalarExpression`).
 template <>
@@ -366,7 +361,7 @@ static std::string interleaveToString(Container &container,
 }
 
 static Optional<int>
-findTensorDefArgIndex(StringRef name, SmallVectorImpl<LinalgTensorDef> &args) {
+findTensorDefArgIndex(StringRef name, SmallVectorImpl<LinalgOperandDef> &args) {
   for (auto it : llvm::enumerate(args)) {
     if (it.value().name == name)
       return it.index();
@@ -376,7 +371,7 @@ findTensorDefArgIndex(StringRef name, SmallVectorImpl<LinalgTensorDef> &args) {
 
 // Try to map the TypeVar to a predefined or an argument type.
 static Optional<std::string>
-findTypeValue(StringRef typeVar, SmallVectorImpl<LinalgTensorDef> &args) {
+findTypeValue(StringRef typeVar, SmallVectorImpl<LinalgOperandDef> &args) {
   // Handle all predefined types.
   if (typeVar == "I32")
     return std::string("helper.getIntegerType(32)");
@@ -389,7 +384,7 @@ findTypeValue(StringRef typeVar, SmallVectorImpl<LinalgTensorDef> &args) {
 
   // Search all argument types.
   for (auto it : llvm::enumerate(args)) {
-    if (it.value().elementTypeVar == typeVar)
+    if (it.value().typeVar == typeVar)
       return llvm::formatv("block.getArgument({0}).getType()", it.index())
           .str();
   }
@@ -397,8 +392,8 @@ findTypeValue(StringRef typeVar, SmallVectorImpl<LinalgTensorDef> &args) {
   return None;
 }
 
-static ScalarAssign *
-findAssignment(StringRef name, SmallVectorImpl<ScalarAssign> &assignments) {
+static ScalarAssign *findAssignment(StringRef name,
+                                    std::vector<ScalarAssign> &assignments) {
   for (auto &assign : assignments) {
     if (assign.arg == name)
       return &assign;
@@ -445,7 +440,7 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([
   /*extraInterfaces=*/[{2}])> {
     {3}
     let arguments = (ins
-      Variadic<AnyShaped>:$inputs,
+      Variadic<AnyType>:$inputs,
       Variadic<AnyShaped>:$outputs{4}
     );
     let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
@@ -467,7 +462,7 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([
           $_builder,
           $_state,
           TypeRange(inputs),
-          TypeRange(outputs)/*, TODO: support captures*/);
+          TypeRange(outputs));
       }]>,
       OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
@@ -485,7 +480,7 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([
           $_builder,
           $_state,
           TypeRange(inputs),
-          TypeRange(outputs)/*, TODO: support captures*/);
+          TypeRange(outputs));
       }]>,
       OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$operands,
@@ -500,7 +495,7 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([
     ];
     let printer = [{{ return ::printNamedStructuredOp(p, *this); }];
     let parser = [{{
-      return ::parseNamedStructuredOp<{0}>(parser, result/*TODO:, captures*/);
+      return ::parseNamedStructuredOp<{0}>(parser, result);
     }];
     let hasFolder = 1;
 
@@ -768,9 +763,8 @@ void {0}::regionBuilder(
     size_t generatedAssignmentCount = 0;
     int localCounter = 0;
     SmallVector<std::string> stmts;
-    for (LinalgTensorDef &arg : args) {
-      if (arg.usage != LinalgTensorUsageDef::output &&
-          arg.usage != LinalgTensorUsageDef::temporary)
+    for (LinalgOperandDef &arg : args) {
+      if (arg.usage != LinalgOperandDefUsage::output)
         continue;
 
       // Find the assignment that correlates with the argument.

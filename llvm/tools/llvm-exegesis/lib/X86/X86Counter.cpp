@@ -41,6 +41,10 @@ static constexpr int kLbrEntries = 16;
 static constexpr size_t kBufferPages = 8;
 static const size_t kDataBufferSize = kBufferPages * getpagesize();
 
+// First page is reserved for perf_event_mmap_page. Data buffer starts on
+// the next page, so we allocate one more page.
+static const size_t kMappedBufferSize = (kBufferPages + 1) * getpagesize();
+
 // Waits for the LBR perf events.
 static int pollLbrPerfEvent(const int FileDescriptor) {
   struct pollfd PollFd;
@@ -137,15 +141,16 @@ X86LbrPerfEvent::X86LbrPerfEvent(unsigned SamplingPeriod) {
 
 X86LbrCounter::X86LbrCounter(pfm::PerfEvent &&NewEvent)
     : Counter(std::move(NewEvent)) {
-  // First page is reserved for perf_event_mmap_page. Data buffer starts on
-  // the next page, so we allocate one more page.
-  MMappedBuffer = mmap(nullptr, (kBufferPages + 1) * getpagesize(),
-                       PROT_READ | PROT_WRITE, MAP_SHARED, FileDescriptor, 0);
+  MMappedBuffer = mmap(nullptr, kMappedBufferSize, PROT_READ | PROT_WRITE,
+                       MAP_SHARED, FileDescriptor, 0);
   if (MMappedBuffer == MAP_FAILED)
     llvm::errs() << "Failed to mmap buffer.";
 }
 
-X86LbrCounter::~X86LbrCounter() { close(FileDescriptor); }
+X86LbrCounter::~X86LbrCounter() {
+  if (0 != munmap(MMappedBuffer, kMappedBufferSize))
+    llvm::errs() << "Failed to munmap buffer.";
+}
 
 void X86LbrCounter::start() {
   ioctl(FileDescriptor, PERF_EVENT_IOC_REFRESH, 1024 /* kMaxPollsPerFd */);

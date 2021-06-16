@@ -937,91 +937,6 @@ public:
     ID.AddBoolean(EnableNullFPSuppression);
   }
 
-  /// Adds a ReturnVisitor if the given statement represents a call that was
-  /// inlined.
-  ///
-  /// This will search back through the ExplodedGraph, starting from the given
-  /// node, looking for when the given statement was processed. If it turns out
-  /// the statement is a call that was inlined, we add the visitor to the
-  /// bug report, so it can print a note later.
-  static void addVisitorIfNecessary(TrackerRef ParentTracker,
-                                    const ExplodedNode *Node, const Stmt *S,
-                                    PathSensitiveBugReport &BR,
-                                    bool InEnableNullFPSuppression,
-                                    bugreporter::TrackingKind TKind) {
-    if (!CallEvent::isCallStmt(S))
-      return;
-
-    // First, find when we processed the statement.
-    // If we work with a 'CXXNewExpr' that is going to be purged away before
-    // its call take place. We would catch that purge in the last condition
-    // as a 'StmtPoint' so we have to bypass it.
-    const bool BypassCXXNewExprEval = isa<CXXNewExpr>(S);
-
-    // This is moving forward when we enter into another context.
-    const StackFrameContext *CurrentSFC = Node->getStackFrame();
-
-    do {
-      // If that is satisfied we found our statement as an inlined call.
-      if (Optional<CallExitEnd> CEE = Node->getLocationAs<CallExitEnd>())
-        if (CEE->getCalleeContext()->getCallSite() == S)
-          break;
-
-      // Try to move forward to the end of the call-chain.
-      Node = Node->getFirstPred();
-      if (!Node)
-        break;
-
-      const StackFrameContext *PredSFC = Node->getStackFrame();
-
-      // If that is satisfied we found our statement.
-      // FIXME: This code currently bypasses the call site for the
-      //        conservatively evaluated allocator.
-      if (!BypassCXXNewExprEval)
-        if (Optional<StmtPoint> SP = Node->getLocationAs<StmtPoint>())
-          // See if we do not enter into another context.
-          if (SP->getStmt() == S && CurrentSFC == PredSFC)
-            break;
-
-      CurrentSFC = PredSFC;
-    } while (Node->getStackFrame() == CurrentSFC);
-
-    // Next, step over any post-statement checks.
-    while (Node && Node->getLocation().getAs<PostStmt>())
-      Node = Node->getFirstPred();
-    if (!Node)
-      return;
-
-    // Finally, see if we inlined the call.
-    Optional<CallExitEnd> CEE = Node->getLocationAs<CallExitEnd>();
-    if (!CEE)
-      return;
-
-    const StackFrameContext *CalleeContext = CEE->getCalleeContext();
-    if (CalleeContext->getCallSite() != S)
-      return;
-
-    // Check the return value.
-    ProgramStateRef State = Node->getState();
-    SVal RetVal = Node->getSVal(S);
-
-    // Handle cases where a reference is returned and then immediately used.
-    if (cast<Expr>(S)->isGLValue())
-      if (Optional<Loc> LValue = RetVal.getAs<Loc>())
-        RetVal = State->getSVal(*LValue);
-
-    // See if the return value is NULL. If so, suppress the report.
-    AnalyzerOptions &Options = State->getAnalysisManager().options;
-
-    bool EnableNullFPSuppression = false;
-    if (InEnableNullFPSuppression && Options.ShouldSuppressNullReturnPaths)
-      if (Optional<Loc> RetLoc = RetVal.getAs<Loc>())
-        EnableNullFPSuppression = State->isNull(*RetLoc).isConstrainedTrue();
-
-    BR.addVisitor<ReturnVisitor>(ParentTracker, CalleeContext,
-                                 EnableNullFPSuppression, Options, TKind);
-  }
-
   PathDiagnosticPieceRef visitNodeInitial(const ExplodedNode *N,
                                           BugReporterContext &BRC,
                                           PathSensitiveBugReport &BR) {
@@ -1232,12 +1147,7 @@ class StoreSiteFinder final : public TrackingBugReporterVisitor {
   SVal V;
   bool Satisfied = false;
 
-  /// If the visitor is tracking the value directly responsible for the
-  /// bug, we are going to employ false positive suppression.
-  bool EnableNullFPSuppression;
-
-  using TrackingKind = bugreporter::TrackingKind;
-  TrackingKind TKind;
+  TrackingOptions Options;
   const StackFrameContext *OriginSFC;
 
 public:
@@ -1252,11 +1162,9 @@ public:
   ///        this visitor can prevent that without polluting the bugpath too
   ///        much.
   StoreSiteFinder(bugreporter::TrackerRef ParentTracker, KnownSVal V,
-                  const MemRegion *R, bool InEnableNullFPSuppression,
-                  TrackingKind TKind,
+                  const MemRegion *R, TrackingOptions Options,
                   const StackFrameContext *OriginSFC = nullptr)
-      : TrackingBugReporterVisitor(ParentTracker), R(R), V(V),
-        EnableNullFPSuppression(InEnableNullFPSuppression), TKind(TKind),
+      : TrackingBugReporterVisitor(ParentTracker), R(R), V(V), Options(Options),
         OriginSFC(OriginSFC) {
     assert(R);
   }
@@ -1273,8 +1181,8 @@ void StoreSiteFinder::Profile(llvm::FoldingSetNodeID &ID) const {
   ID.AddPointer(&tag);
   ID.AddPointer(R);
   ID.Add(V);
-  ID.AddInteger(static_cast<int>(TKind));
-  ID.AddBoolean(EnableNullFPSuppression);
+  ID.AddInteger(static_cast<int>(Options.Kind));
+  ID.AddBoolean(Options.EnableNullFPSuppression);
 }
 
 /// Returns true if \p N represents the DeclStmt declaring and initializing
@@ -1306,136 +1214,146 @@ static bool isInitializationOfVar(const ExplodedNode *N, const VarRegion *VR) {
   return FrameSpace->getStackFrame() == LCtx->getStackFrame();
 }
 
+static bool isObjCPointer(const MemRegion *R) {
+  if (R->isBoundable())
+    if (const auto *TR = dyn_cast<TypedValueRegion>(R))
+      return TR->getValueType()->isObjCObjectPointerType();
+
+  return false;
+}
+
+static bool isObjCPointer(const ValueDecl *D) {
+  return D->getType()->isObjCObjectPointerType();
+}
+
 /// Show diagnostics for initializing or declaring a region \p R with a bad value.
-static void showBRDiagnostics(const char *action, llvm::raw_svector_ostream &os,
-                              const MemRegion *NewR, SVal V,
-                              const MemRegion *OldR, const DeclStmt *DS) {
-  if (NewR->canPrintPretty()) {
-    NewR->printPretty(os);
-    os << " ";
+static void showBRDiagnostics(llvm::raw_svector_ostream &OS, StoreInfo SI) {
+  const bool HasPrefix = SI.Dest->canPrintPretty();
+
+  if (HasPrefix) {
+    SI.Dest->printPretty(OS);
+    OS << " ";
   }
 
-  if (V.getAs<loc::ConcreteInt>()) {
-    bool b = false;
-    if (NewR->isBoundable()) {
-      if (const auto *TR = dyn_cast<TypedValueRegion>(NewR)) {
-        if (TR->getValueType()->isObjCObjectPointerType()) {
-          os << action << "nil";
-          b = true;
-        }
-      }
-    }
-    if (!b)
-      os << action << "a null pointer value";
+  const char *Action = nullptr;
 
-  } else if (auto CVal = V.getAs<nonloc::ConcreteInt>()) {
-    os << action << CVal->getValue();
-  } else if (OldR && OldR->canPrintPretty()) {
-    os << action << "the value of ";
-    OldR->printPretty(os);
-  } else if (DS) {
-    if (V.isUndef()) {
-      if (isa<VarRegion>(NewR)) {
+  switch (SI.StoreKind) {
+  case StoreInfo::Initialization:
+    Action = HasPrefix ? "initialized to " : "Initializing to ";
+    break;
+  case StoreInfo::BlockCapture:
+    Action = HasPrefix ? "captured by block as " : "Captured by block as ";
+    break;
+  default:
+    llvm_unreachable("Unexpected store kind");
+  }
+
+  if (SI.Value.getAs<loc::ConcreteInt>()) {
+    OS << Action << (isObjCPointer(SI.Dest) ? "nil" : "a null pointer value");
+
+  } else if (auto CVal = SI.Value.getAs<nonloc::ConcreteInt>()) {
+    OS << Action << CVal->getValue();
+
+  } else if (SI.Origin && SI.Origin->canPrintPretty()) {
+    OS << Action << "the value of ";
+    SI.Origin->printPretty(OS);
+
+  } else if (SI.StoreKind == StoreInfo::Initialization) {
+    // We don't need to check here, all these conditions were
+    // checked by StoreSiteFinder, when it figured out that it is
+    // initialization.
+    const auto *DS =
+        cast<DeclStmt>(SI.StoreSite->getLocationAs<PostStmt>()->getStmt());
+
+    if (SI.Value.isUndef()) {
+      if (isa<VarRegion>(SI.Dest)) {
         const auto *VD = cast<VarDecl>(DS->getSingleDecl());
+
         if (VD->getInit()) {
-          os << (NewR->canPrintPretty() ? "initialized" : "Initializing")
+          OS << (HasPrefix ? "initialized" : "Initializing")
              << " to a garbage value";
         } else {
-          os << (NewR->canPrintPretty() ? "declared" : "Declaring")
+          OS << (HasPrefix ? "declared" : "Declaring")
              << " without an initial value";
         }
       }
     } else {
-      os << (NewR->canPrintPretty() ? "initialized" : "Initialized") << " here";
+      OS << (HasPrefix ? "initialized" : "Initialized") << " here";
     }
   }
 }
 
 /// Display diagnostics for passing bad region as a parameter.
-static void showBRParamDiagnostics(llvm::raw_svector_ostream &os,
-                                   const VarRegion *VR, SVal V,
-                                   const MemRegion *ValueR) {
+static void showBRParamDiagnostics(llvm::raw_svector_ostream &OS,
+                                   StoreInfo SI) {
+  const auto *VR = cast<VarRegion>(SI.Dest);
   const auto *Param = cast<ParmVarDecl>(VR->getDecl());
 
-  os << "Passing ";
+  OS << "Passing ";
 
-  if (V.getAs<loc::ConcreteInt>()) {
-    if (Param->getType()->isObjCObjectPointerType())
-      os << "nil object reference";
-    else
-      os << "null pointer value";
-  } else if (V.isUndef()) {
-    os << "uninitialized value";
-  } else if (auto CI = V.getAs<nonloc::ConcreteInt>()) {
-    os << "the value " << CI->getValue();
-  } else if (ValueR && ValueR->canPrintPretty()) {
-    ValueR->printPretty(os);
+  if (SI.Value.getAs<loc::ConcreteInt>()) {
+    OS << (isObjCPointer(Param) ? "nil object reference"
+                                : "null pointer value");
+
+  } else if (SI.Value.isUndef()) {
+    OS << "uninitialized value";
+
+  } else if (auto CI = SI.Value.getAs<nonloc::ConcreteInt>()) {
+    OS << "the value " << CI->getValue();
+
+  } else if (SI.Origin && SI.Origin->canPrintPretty()) {
+    SI.Origin->printPretty(OS);
+
   } else {
-    os << "value";
+    OS << "value";
   }
 
   // Printed parameter indexes are 1-based, not 0-based.
   unsigned Idx = Param->getFunctionScopeIndex() + 1;
-  os << " via " << Idx << llvm::getOrdinalSuffix(Idx) << " parameter";
+  OS << " via " << Idx << llvm::getOrdinalSuffix(Idx) << " parameter";
   if (VR->canPrintPretty()) {
-    os << " ";
-    VR->printPretty(os);
+    OS << " ";
+    VR->printPretty(OS);
   }
 }
 
 /// Show default diagnostics for storing bad region.
-static void showBRDefaultDiagnostics(llvm::raw_svector_ostream &os,
-                                     const MemRegion *NewR, SVal V,
-                                     const MemRegion *OldR) {
-  if (V.getAs<loc::ConcreteInt>()) {
-    bool b = false;
-    if (NewR->isBoundable()) {
-      if (const auto *TR = dyn_cast<TypedValueRegion>(NewR)) {
-        if (TR->getValueType()->isObjCObjectPointerType()) {
-          os << "nil object reference stored";
-          b = true;
-        }
-      }
-    }
-    if (!b) {
-      if (NewR->canPrintPretty())
-        os << "Null pointer value stored";
-      else
-        os << "Storing null pointer value";
-    }
+static void showBRDefaultDiagnostics(llvm::raw_svector_ostream &OS,
+                                     StoreInfo SI) {
+  const bool HasSuffix = SI.Dest->canPrintPretty();
 
-  } else if (V.isUndef()) {
-    if (NewR->canPrintPretty())
-      os << "Uninitialized value stored";
+  if (SI.Value.getAs<loc::ConcreteInt>()) {
+    OS << (isObjCPointer(SI.Dest) ? "nil object reference stored"
+                                  : (HasSuffix ? "Null pointer value stored"
+                                               : "Storing null pointer value"));
+
+  } else if (SI.Value.isUndef()) {
+    OS << (HasSuffix ? "Uninitialized value stored"
+                     : "Storing uninitialized value");
+
+  } else if (auto CV = SI.Value.getAs<nonloc::ConcreteInt>()) {
+    if (HasSuffix)
+      OS << "The value " << CV->getValue() << " is assigned";
     else
-      os << "Storing uninitialized value";
+      OS << "Assigning " << CV->getValue();
 
-  } else if (auto CV = V.getAs<nonloc::ConcreteInt>()) {
-    if (NewR->canPrintPretty())
-      os << "The value " << CV->getValue() << " is assigned";
-    else
-      os << "Assigning " << CV->getValue();
-
-  } else if (OldR && OldR->canPrintPretty()) {
-    if (NewR->canPrintPretty()) {
-      os << "The value of ";
-      OldR->printPretty(os);
-      os << " is assigned";
+  } else if (SI.Origin && SI.Origin->canPrintPretty()) {
+    if (HasSuffix) {
+      OS << "The value of ";
+      SI.Origin->printPretty(OS);
+      OS << " is assigned";
     } else {
-      os << "Assigning the value of ";
-      OldR->printPretty(os);
+      OS << "Assigning the value of ";
+      SI.Origin->printPretty(OS);
     }
 
   } else {
-    if (NewR->canPrintPretty())
-      os << "Value assigned";
-    else
-      os << "Assigning value";
+    OS << (HasSuffix ? "Value assigned" : "Assigning value");
   }
 
-  if (NewR->canPrintPretty()) {
-    os << " to ";
-    NewR->printPretty(os);
+  if (HasSuffix) {
+    OS << " to ";
+    SI.Dest->printPretty(OS);
   }
 }
 
@@ -1533,8 +1451,7 @@ PathDiagnosticPieceRef StoreSiteFinder::VisitNode(const ExplodedNode *Succ,
     if (!IsParam)
       InitE = InitE->IgnoreParenCasts();
 
-    getParentTracker().track(InitE, StoreSite,
-                             {TKind, EnableNullFPSuppression});
+    getParentTracker().track(InitE, StoreSite, Options);
   }
 
   // Let's try to find the region where the value came from.
@@ -1605,7 +1522,7 @@ PathDiagnosticPieceRef StoreSiteFinder::VisitNode(const ExplodedNode *Succ,
     }
   }
 
-  if (TKind == TrackingKind::Condition &&
+  if (Options.Kind == TrackingKind::Condition && OriginSFC &&
       !OriginSFC->isParentOf(StoreSite->getStackFrame()))
     return nullptr;
 
@@ -1613,60 +1530,41 @@ PathDiagnosticPieceRef StoreSiteFinder::VisitNode(const ExplodedNode *Succ,
   SmallString<256> sbuf;
   llvm::raw_svector_ostream os(sbuf);
 
+  StoreInfo SI = {StoreInfo::Assignment, // default kind
+                  StoreSite,
+                  InitE,
+                  V,
+                  R,
+                  OldRegion};
+
   if (Optional<PostStmt> PS = StoreSite->getLocationAs<PostStmt>()) {
     const Stmt *S = PS->getStmt();
-    const char *action = nullptr;
     const auto *DS = dyn_cast<DeclStmt>(S);
     const auto *VR = dyn_cast<VarRegion>(R);
 
     if (DS) {
-      action = R->canPrintPretty() ? "initialized to " :
-                                     "Initializing to ";
+      SI.StoreKind = StoreInfo::Initialization;
     } else if (isa<BlockExpr>(S)) {
-      action = R->canPrintPretty() ? "captured by block as " :
-                                     "Captured by block as ";
+      SI.StoreKind = StoreInfo::BlockCapture;
       if (VR) {
         // See if we can get the BlockVarRegion.
         ProgramStateRef State = StoreSite->getState();
         SVal V = StoreSite->getSVal(S);
         if (const auto *BDR =
-              dyn_cast_or_null<BlockDataRegion>(V.getAsRegion())) {
+                dyn_cast_or_null<BlockDataRegion>(V.getAsRegion())) {
           if (const VarRegion *OriginalR = BDR->getOriginalRegion(VR)) {
-            if (auto KV = State->getSVal(OriginalR).getAs<KnownSVal>())
-              getParentTracker().track(
-                  *KV, OriginalR, {TKind, EnableNullFPSuppression}, OriginSFC);
+            getParentTracker().track(State->getSVal(OriginalR), OriginalR,
+                                     Options, OriginSFC);
           }
         }
       }
     }
-    if (action)
-      showBRDiagnostics(action, os, R, V, OldRegion, DS);
-
-  } else if (StoreSite->getLocation().getAs<CallEnter>()) {
-    if (const auto *VR = dyn_cast<VarRegion>(R))
-      showBRParamDiagnostics(os, VR, V, OldRegion);
+  } else if (SI.StoreSite->getLocation().getAs<CallEnter>() &&
+             isa<VarRegion>(SI.Dest)) {
+    SI.StoreKind = StoreInfo::CallArgument;
   }
 
-  if (os.str().empty())
-    showBRDefaultDiagnostics(os, R, V, OldRegion);
-
-  if (TKind == bugreporter::TrackingKind::Condition)
-    os << WillBeUsedForACondition;
-
-  // Construct a new PathDiagnosticPiece.
-  ProgramPoint P = StoreSite->getLocation();
-  PathDiagnosticLocation L;
-  if (P.getAs<CallEnter>() && InitE)
-    L = PathDiagnosticLocation(InitE, BRC.getSourceManager(),
-                               P.getLocationContext());
-
-  if (!L.isValid() || !L.asLocation().isValid())
-    L = PathDiagnosticLocation::create(P, BRC.getSourceManager());
-
-  if (!L.isValid() || !L.asLocation().isValid())
-    return nullptr;
-
-  return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
+  return getParentTracker().handle(SI, BRC, Options);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2060,7 +1958,120 @@ static const ExplodedNode* findNodeForExpression(const ExplodedNode *N,
 //                            Tracker implementation
 //===----------------------------------------------------------------------===//
 
-class DefaultExpressionHandler final : public ExpressionHandler {
+PathDiagnosticPieceRef StoreHandler::constructNote(StoreInfo SI,
+                                                   BugReporterContext &BRC,
+                                                   StringRef NodeText) {
+  // Construct a new PathDiagnosticPiece.
+  ProgramPoint P = SI.StoreSite->getLocation();
+  PathDiagnosticLocation L;
+  if (P.getAs<CallEnter>() && SI.SourceOfTheValue)
+    L = PathDiagnosticLocation(SI.SourceOfTheValue, BRC.getSourceManager(),
+                               P.getLocationContext());
+
+  if (!L.isValid() || !L.asLocation().isValid())
+    L = PathDiagnosticLocation::create(P, BRC.getSourceManager());
+
+  if (!L.isValid() || !L.asLocation().isValid())
+    return nullptr;
+
+  return std::make_shared<PathDiagnosticEventPiece>(L, NodeText);
+}
+
+class DefaultStoreHandler final : public StoreHandler {
+public:
+  using StoreHandler::StoreHandler;
+
+  PathDiagnosticPieceRef handle(StoreInfo SI, BugReporterContext &BRC,
+                                TrackingOptions Opts) override {
+    // Okay, we've found the binding. Emit an appropriate message.
+    SmallString<256> Buffer;
+    llvm::raw_svector_ostream OS(Buffer);
+
+    switch (SI.StoreKind) {
+    case StoreInfo::Initialization:
+    case StoreInfo::BlockCapture:
+      showBRDiagnostics(OS, SI);
+      break;
+    case StoreInfo::CallArgument:
+      showBRParamDiagnostics(OS, SI);
+      break;
+    case StoreInfo::Assignment:
+      showBRDefaultDiagnostics(OS, SI);
+      break;
+    }
+
+    if (Opts.Kind == bugreporter::TrackingKind::Condition)
+      OS << WillBeUsedForACondition;
+
+    return constructNote(SI, BRC, OS.str());
+  }
+};
+
+class ControlDependencyHandler final : public ExpressionHandler {
+public:
+  using ExpressionHandler::ExpressionHandler;
+
+  Tracker::Result handle(const Expr *Inner, const ExplodedNode *InputNode,
+                         const ExplodedNode *LVNode,
+                         TrackingOptions Opts) override {
+    PathSensitiveBugReport &Report = getParentTracker().getReport();
+
+    // We only track expressions if we believe that they are important. Chances
+    // are good that control dependencies to the tracking point are also
+    // important because of this, let's explain why we believe control reached
+    // this point.
+    // TODO: Shouldn't we track control dependencies of every bug location,
+    // rather than only tracked expressions?
+    if (LVNode->getState()
+            ->getAnalysisManager()
+            .getAnalyzerOptions()
+            .ShouldTrackConditions) {
+      Report.addVisitor<TrackControlDependencyCondBRVisitor>(
+          &getParentTracker(), InputNode);
+      return {/*FoundSomethingToTrack=*/true};
+    }
+
+    return {};
+  }
+};
+
+class NilReceiverHandler final : public ExpressionHandler {
+public:
+  using ExpressionHandler::ExpressionHandler;
+
+  Tracker::Result handle(const Expr *Inner, const ExplodedNode *InputNode,
+                         const ExplodedNode *LVNode,
+                         TrackingOptions Opts) override {
+    // The message send could be nil due to the receiver being nil.
+    // At this point in the path, the receiver should be live since we are at
+    // the message send expr. If it is nil, start tracking it.
+    if (const Expr *Receiver =
+            NilReceiverBRVisitor::getNilReceiver(Inner, LVNode))
+      return getParentTracker().track(Receiver, LVNode, Opts);
+
+    return {};
+  }
+};
+
+class ArrayIndexHandler final : public ExpressionHandler {
+public:
+  using ExpressionHandler::ExpressionHandler;
+
+  Tracker::Result handle(const Expr *Inner, const ExplodedNode *InputNode,
+                         const ExplodedNode *LVNode,
+                         TrackingOptions Opts) override {
+    // Track the index if this is an array subscript.
+    if (const auto *Arr = dyn_cast<ArraySubscriptExpr>(Inner))
+      return getParentTracker().track(
+          Arr->getIdx(), LVNode,
+          {Opts.Kind, /*EnableNullFPSuppression*/ false});
+
+    return {};
+  }
+};
+
+// TODO: extract it into more handlers
+class InterestingLValueHandler final : public ExpressionHandler {
 public:
   using ExpressionHandler::ExpressionHandler;
 
@@ -2071,33 +2082,6 @@ public:
     const StackFrameContext *SFC = LVNode->getStackFrame();
     PathSensitiveBugReport &Report = getParentTracker().getReport();
     Tracker::Result Result;
-
-    // We only track expressions if we believe that they are important. Chances
-    // are good that control dependencies to the tracking point are also
-    // important because of this, let's explain why we believe control reached
-    // this point.
-    // TODO: Shouldn't we track control dependencies of every bug location,
-    // rather than only tracked expressions?
-    if (LVState->getAnalysisManager()
-            .getAnalyzerOptions()
-            .ShouldTrackConditions) {
-      Report.addVisitor<TrackControlDependencyCondBRVisitor>(
-          &getParentTracker(), InputNode);
-      Result.FoundSomethingToTrack = true;
-    }
-
-    // The message send could be nil due to the receiver being nil.
-    // At this point in the path, the receiver should be live since we are at
-    // the message send expr. If it is nil, start tracking it.
-    if (const Expr *Receiver =
-            NilReceiverBRVisitor::getNilReceiver(Inner, LVNode))
-      Result.combineWith(getParentTracker().track(Receiver, LVNode, Opts));
-
-    // Track the index if this is an array subscript.
-    if (const auto *Arr = dyn_cast<ArraySubscriptExpr>(Inner))
-      Result.combineWith(getParentTracker().track(
-          Arr->getIdx(), LVNode,
-          {Opts.Kind, /*EnableNullFPSuppression*/ false}));
 
     // See if the expression we're interested refers to a variable.
     // If so, we can track both its contents and constraints on its value.
@@ -2155,20 +2139,119 @@ public:
             // previously.
             Report.addVisitor<SuppressInlineDefensiveChecksVisitor>(*DV,
                                                                     InputNode);
-
         getParentTracker().track(V, R, Opts, SFC);
-
-        return Result;
       }
     }
+
+    return Result;
+  }
+};
+
+/// Adds a ReturnVisitor if the given statement represents a call that was
+/// inlined.
+///
+/// This will search back through the ExplodedGraph, starting from the given
+/// node, looking for when the given statement was processed. If it turns out
+/// the statement is a call that was inlined, we add the visitor to the
+/// bug report, so it can print a note later.
+class InlinedFunctionCallHandler final : public ExpressionHandler {
+  using ExpressionHandler::ExpressionHandler;
+
+  Tracker::Result handle(const Expr *E, const ExplodedNode *InputNode,
+                         const ExplodedNode *ExprNode,
+                         TrackingOptions Opts) override {
+    if (!CallEvent::isCallStmt(E))
+      return {};
+
+    // First, find when we processed the statement.
+    // If we work with a 'CXXNewExpr' that is going to be purged away before
+    // its call take place. We would catch that purge in the last condition
+    // as a 'StmtPoint' so we have to bypass it.
+    const bool BypassCXXNewExprEval = isa<CXXNewExpr>(E);
+
+    // This is moving forward when we enter into another context.
+    const StackFrameContext *CurrentSFC = ExprNode->getStackFrame();
+
+    do {
+      // If that is satisfied we found our statement as an inlined call.
+      if (Optional<CallExitEnd> CEE = ExprNode->getLocationAs<CallExitEnd>())
+        if (CEE->getCalleeContext()->getCallSite() == E)
+          break;
+
+      // Try to move forward to the end of the call-chain.
+      ExprNode = ExprNode->getFirstPred();
+      if (!ExprNode)
+        break;
+
+      const StackFrameContext *PredSFC = ExprNode->getStackFrame();
+
+      // If that is satisfied we found our statement.
+      // FIXME: This code currently bypasses the call site for the
+      //        conservatively evaluated allocator.
+      if (!BypassCXXNewExprEval)
+        if (Optional<StmtPoint> SP = ExprNode->getLocationAs<StmtPoint>())
+          // See if we do not enter into another context.
+          if (SP->getStmt() == E && CurrentSFC == PredSFC)
+            break;
+
+      CurrentSFC = PredSFC;
+    } while (ExprNode->getStackFrame() == CurrentSFC);
+
+    // Next, step over any post-statement checks.
+    while (ExprNode && ExprNode->getLocation().getAs<PostStmt>())
+      ExprNode = ExprNode->getFirstPred();
+    if (!ExprNode)
+      return {};
+
+    // Finally, see if we inlined the call.
+    Optional<CallExitEnd> CEE = ExprNode->getLocationAs<CallExitEnd>();
+    if (!CEE)
+      return {};
+
+    const StackFrameContext *CalleeContext = CEE->getCalleeContext();
+    if (CalleeContext->getCallSite() != E)
+      return {};
+
+    // Check the return value.
+    ProgramStateRef State = ExprNode->getState();
+    SVal RetVal = ExprNode->getSVal(E);
+
+    // Handle cases where a reference is returned and then immediately used.
+    if (cast<Expr>(E)->isGLValue())
+      if (Optional<Loc> LValue = RetVal.getAs<Loc>())
+        RetVal = State->getSVal(*LValue);
+
+    // See if the return value is NULL. If so, suppress the report.
+    AnalyzerOptions &Options = State->getAnalysisManager().options;
+
+    bool EnableNullFPSuppression = false;
+    if (Opts.EnableNullFPSuppression && Options.ShouldSuppressNullReturnPaths)
+      if (Optional<Loc> RetLoc = RetVal.getAs<Loc>())
+        EnableNullFPSuppression = State->isNull(*RetLoc).isConstrainedTrue();
+
+    PathSensitiveBugReport &Report = getParentTracker().getReport();
+    Report.addVisitor<ReturnVisitor>(&getParentTracker(), CalleeContext,
+                                     EnableNullFPSuppression, Options,
+                                     Opts.Kind);
+    return {true};
+  }
+};
+
+class DefaultExpressionHandler final : public ExpressionHandler {
+public:
+  using ExpressionHandler::ExpressionHandler;
+
+  Tracker::Result handle(const Expr *Inner, const ExplodedNode *InputNode,
+                         const ExplodedNode *LVNode,
+                         TrackingOptions Opts) override {
+    ProgramStateRef LVState = LVNode->getState();
+    const StackFrameContext *SFC = LVNode->getStackFrame();
+    PathSensitiveBugReport &Report = getParentTracker().getReport();
+    Tracker::Result Result;
 
     // If the expression is not an "lvalue expression", we can still
     // track the constraints on its contents.
     SVal V = LVState->getSValAsScalarOrLoc(Inner, LVNode->getLocationContext());
-
-    ReturnVisitor::addVisitorIfNecessary(&getParentTracker(), LVNode, Inner,
-                                         Report, Opts.EnableNullFPSuppression,
-                                         Opts.Kind);
 
     // Is it a symbolic value?
     if (auto L = V.getAs<loc::MemRegionVal>()) {
@@ -2264,10 +2347,16 @@ public:
 };
 
 Tracker::Tracker(PathSensitiveBugReport &Report) : Report(Report) {
-  addHighPriorityHandler<DefaultExpressionHandler>();
+  // Default expression handlers.
+  addLowPriorityHandler<ControlDependencyHandler>();
+  addLowPriorityHandler<NilReceiverHandler>();
+  addLowPriorityHandler<ArrayIndexHandler>();
+  addLowPriorityHandler<InterestingLValueHandler>();
+  addLowPriorityHandler<InlinedFunctionCallHandler>();
+  addLowPriorityHandler<DefaultExpressionHandler>();
   addLowPriorityHandler<PRValueHandler>();
-  // TODO: split trackExpressionValue and FindLastStoreBRVisitor into handlers
-  //       and add them here.
+  // Default store handlers.
+  addHighPriorityHandler<DefaultStoreHandler>();
 }
 
 Tracker::Result Tracker::track(const Expr *E, const ExplodedNode *N,
@@ -2284,8 +2373,12 @@ Tracker::Result Tracker::track(const Expr *E, const ExplodedNode *N,
   // Iterate through the handlers in the order according to their priorities.
   for (ExpressionHandlerPtr &Handler : ExpressionHandlers) {
     CombinedResult.combineWith(Handler->handle(Inner, N, LVNode, Opts));
-    if (CombinedResult.WasInterrupted)
+    if (CombinedResult.WasInterrupted) {
+      // There is no need to confuse our users here.
+      // We got interrupted, but our users don't need to know about it.
+      CombinedResult.WasInterrupted = false;
       break;
+    }
   }
 
   return CombinedResult;
@@ -2294,17 +2387,17 @@ Tracker::Result Tracker::track(const Expr *E, const ExplodedNode *N,
 Tracker::Result Tracker::track(SVal V, const MemRegion *R, TrackingOptions Opts,
                                const StackFrameContext *Origin) {
   if (auto KV = V.getAs<KnownSVal>()) {
-    Report.addVisitor<StoreSiteFinder>(
-        this, *KV, R, Opts.EnableNullFPSuppression, Opts.Kind, Origin);
+    Report.addVisitor<StoreSiteFinder>(this, *KV, R, Opts, Origin);
     return {true};
   }
   return {};
 }
 
-PathDiagnosticPieceRef Tracker::handle(StoreInfo SI, TrackingOptions Opts) {
+PathDiagnosticPieceRef Tracker::handle(StoreInfo SI, BugReporterContext &BRC,
+                                       TrackingOptions Opts) {
   // Iterate through the handlers in the order according to their priorities.
   for (StoreHandlerPtr &Handler : StoreHandlers) {
-    if (PathDiagnosticPieceRef Result = Handler->handle(SI, Opts))
+    if (PathDiagnosticPieceRef Result = Handler->handle(SI, BRC, Opts))
       // If the handler produced a non-null piece, return it.
       // There is no need in asking other handlers.
       return Result;

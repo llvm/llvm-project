@@ -4608,12 +4608,17 @@ StmtResult Sema::ActOnOpenMPRegionEnd(StmtResult S,
       }
     }
     if (ThisCaptureRegion == OMPD_parallel) {
-      // Capture temp arrays for inscan reductions.
+      // Capture temp arrays for inscan reductions and locals in aligned
+      // clauses.
       for (OMPClause *C : Clauses) {
         if (auto *RC = dyn_cast<OMPReductionClause>(C)) {
           if (RC->getModifier() != OMPC_REDUCTION_inscan)
             continue;
           for (Expr *E : RC->copy_array_temps())
+            MarkDeclarationsReferencedInExpr(E);
+        }
+        if (auto *AC = dyn_cast<OMPAlignedClause>(C)) {
+          for (Expr *E : AC->varlists())
             MarkDeclarationsReferencedInExpr(E);
         }
       }

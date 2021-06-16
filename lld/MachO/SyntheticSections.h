@@ -371,6 +371,21 @@ private:
   size_t size = 0;
 };
 
+// Stores 'data in code' entries that describe the locations of
+// data regions inside code sections.
+class DataInCodeSection final : public LinkEditSection {
+public:
+  DataInCodeSection();
+  void finalizeContents() override;
+  uint64_t getRawSize() const override {
+    return sizeof(llvm::MachO::data_in_code_entry) * entries.size();
+  }
+  void writeTo(uint8_t *buf) const override;
+
+private:
+  std::vector<llvm::MachO::data_in_code_entry> entries;
+};
+
 // Stores ULEB128 delta encoded addresses of functions.
 class FunctionStartsSection final : public LinkEditSection {
 public:

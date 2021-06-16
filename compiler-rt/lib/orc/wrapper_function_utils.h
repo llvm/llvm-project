@@ -128,6 +128,25 @@ serializeViaSPSToWrapperFunctionResult(const ArgTs &...Args) {
   return Result;
 }
 
+template <typename RetT> class WrapperFunctionHandlerCaller {
+public:
+  template <typename HandlerT, typename ArgTupleT, std::size_t... I>
+  static decltype(auto) call(HandlerT &&H, ArgTupleT &Args,
+                             std::index_sequence<I...>) {
+    return std::forward<HandlerT>(H)(std::get<I>(Args)...);
+  }
+};
+
+template <> class WrapperFunctionHandlerCaller<void> {
+public:
+  template <typename HandlerT, typename ArgTupleT, std::size_t... I>
+  static SPSEmpty call(HandlerT &&H, ArgTupleT &Args,
+                       std::index_sequence<I...>) {
+    std::forward<HandlerT>(H)(std::get<I>(Args)...);
+    return SPSEmpty();
+  }
+};
+
 template <typename WrapperFunctionImplT,
           template <typename> class ResultSerializer, typename... SPSTagTs>
 class WrapperFunctionHandlerHelper
@@ -151,8 +170,11 @@ public:
       return WrapperFunctionResult::createOutOfBandError(
           "Could not deserialize arguments for wrapper function call");
 
-    if (auto Result = ResultSerializer<RetT>::serialize(
-            call(std::forward<HandlerT>(H), Args, ArgIndices{})))
+    auto HandlerResult = WrapperFunctionHandlerCaller<RetT>::call(
+        std::forward<HandlerT>(H), Args, ArgIndices{});
+
+    if (auto Result = ResultSerializer<decltype(HandlerResult)>::serialize(
+            std::move(HandlerResult)))
       return std::move(*Result);
     else
       return WrapperFunctionResult::createOutOfBandError(
@@ -167,11 +189,6 @@ private:
     return SPSArgList<SPSTagTs...>::deserialize(IB, std::get<I>(Args)...);
   }
 
-  template <typename HandlerT, std::size_t... I>
-  static decltype(auto) call(HandlerT &&H, ArgTuple &Args,
-                             std::index_sequence<I...>) {
-    return std::forward<HandlerT>(H)(std::get<I>(Args)...);
-  }
 };
 
 // Map function references to function types.

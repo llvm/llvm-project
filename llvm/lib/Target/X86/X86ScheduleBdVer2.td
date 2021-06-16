@@ -269,6 +269,7 @@ def : WriteRes<WriteLoad,    [PdLoad]> { let Latency = 5; let ResourceCycles = [
 def : WriteRes<WriteStore,   [PdStore]>;
 def : WriteRes<WriteStoreNT, [PdStore]>;
 def : WriteRes<WriteMove,    [PdEX01]> { let ResourceCycles = [2]; }
+defm : X86WriteResUnsupported<WriteVecMaskedGatherWriteback>;
 
 // Load/store MXCSR.
 // FIXME: These are copy and pasted from WriteLoad/Store.

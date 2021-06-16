@@ -12,6 +12,7 @@
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
+#include <__memory/pointer_traits.h>
 #include <__ranges/access.h>
 #include <concepts>
 #include <type_traits>

@@ -75,7 +75,11 @@ def dot(
 
 
 @linalg_structured_op
-def fill_rng_2d(O=TensorDef(T, S.M, S.N, output=True)):
+def fill_rng_2d(
+    min=ScalarDef(F64),
+    max=ScalarDef(F64),
+    seed=ScalarDef(I32),
+    O=TensorDef(T, S.M, S.N, output=True)):
   """Fills the output tensor with pseudo random numbers.
 
   The operation generations pseudo random numbers using a linear congruential
@@ -85,13 +89,7 @@ def fill_rng_2d(O=TensorDef(T, S.M, S.N, output=True)):
   and runs them in parallel. The seed operand and the indices of the data
   element seed the random number generation. The min and max operands limit
   the range of the generated random numbers.
-
-  Note: The captures are hard-coded till there is capture support on the C++
-  side.
   """
-  min = cast(F64, const(-1000))
-  max = cast(F64, const(+1000))
-  seed = cast(I32, const(42))
   multiplier = cast(I32, const(1103515245))
   increment = cast(I32, const(12345))
   rand1 = (cast(I32, index(D.m)) + seed) * multiplier + increment

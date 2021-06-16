@@ -123,6 +123,11 @@ public:
   void lowerACCRestore(MachineBasicBlock::iterator II,
                        unsigned FrameIndex) const;
 
+  void lowerQuadwordSpilling(MachineBasicBlock::iterator II,
+                             unsigned FrameIndex) const;
+  void lowerQuadwordRestore(MachineBasicBlock::iterator II,
+                            unsigned FrameIndex) const;
+
   static void emitAccCopyInfo(MachineBasicBlock &MBB, MCRegister DestReg,
                               MCRegister SrcReg);
 

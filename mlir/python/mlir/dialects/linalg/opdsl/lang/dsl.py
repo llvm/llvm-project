@@ -53,8 +53,8 @@ class DefinedOpCallable:
         False, a named form is emitted (which must have been built in to the
         compiler).
     """
-    op_configs = LinalgOpConfig.from_linalg_op_def(self.model,
-                                                   context=ir.Context.current)
+    op_configs = LinalgOpConfig.from_linalg_op_def(
+        self.model, context=ir.Context.current)
 
     if len(op_configs) != 1:
       # TODO: Support composite ops.
@@ -63,8 +63,9 @@ class DefinedOpCallable:
 
     ctx = ir.Context.current
     linalgDialect = ctx.get_dialect_descriptor("linalg")
-    fully_qualified_name = 'linalg.' + self.op_name
-    emit_generic = (emit_generic or not ctx.is_registered_operation(fully_qualified_name))
+    fully_qualified_name = "linalg." + self.op_name
+    emit_generic = (
+        emit_generic or not ctx.is_registered_operation(fully_qualified_name))
 
     op_config = op_configs[0]
     if op_config.structured_op:
@@ -72,9 +73,9 @@ class DefinedOpCallable:
         return emit_generic_structured_op(op_config.structured_op, *args,
                                           **kwargs)
       else:
-        return emit_named_structured_op(
-          op_config.structured_op, self.op_name,
-          self.model.metadata.cpp_class_name, *args, **kwargs)
+        return emit_named_structured_op(op_config.structured_op, self.op_name,
+                                        self.model.metadata.cpp_class_name,
+                                        *args, **kwargs)
 
     raise NotImplementedError(
         f"Emission of linalg op type not supported: {op_config}")
@@ -86,9 +87,8 @@ def linalg_structured_op(dsl_func=None,
                          op_class_name=None) -> DefinedOpCallable:
   if dsl_func is None:
     # Curry the keyword args in for delayed application.
-    return functools.partial(tc_def_op,
-                             op_name=op_name,
-                             op_class_name=op_class_name)
+    return functools.partial(
+        tc_def_op, op_name=op_name, op_class_name=op_class_name)
   # Determine default names by introspecting the function.
   if op_name is None:
     op_name = dsl_func.__name__
@@ -96,9 +96,8 @@ def linalg_structured_op(dsl_func=None,
     # Camel case it.
     op_class_name = f"{''.join(x.title() for x in op_name.split('_'))}Op"
 
-  tc_model = LinalgOpDef(name=op_name,
-                         cpp_class_name=op_class_name,
-                         doc=inspect.getdoc(dsl_func))
+  tc_model = LinalgOpDef(
+      name=op_name, cpp_class_name=op_class_name, doc=inspect.getdoc(dsl_func))
 
   # Extract arguments and TensorDefs from the signature.
   dsl_func_args = list()
@@ -106,12 +105,12 @@ def linalg_structured_op(dsl_func=None,
   for param_name, param in sig.parameters.items():
     param_default = param.default
     if isinstance(param_default, TensorDef):
-      tc_model.add_tensor(param_name, param_default)
-    elif isinstance(param_default, CaptureDef):
-      tc_model.add_capture(param_name, param_default)
+      tc_model.add_operand(param_name, param_default.operand_def)
+    elif isinstance(param_default, ScalarDef):
+      tc_model.add_operand(param_name, param_default.operand_def)
     else:
       raise ValueError(f"@tc_def_op function parameters must be defaulted as "
-                       f"TensorDef(...) or CaptureDef(...): Found {param_name}"
+                       f"TensorDef(...) or ScalarDef(...): Found {param_name}"
                        f": {param_default}")
     dsl_func_args.append(param_default)
 
