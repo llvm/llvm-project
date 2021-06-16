@@ -39,6 +39,7 @@ void __kmpc_begin(ident_t *loc, kmp_int32 flags) {
   if ((env = getenv("KMP_INITIAL_THREAD_BIND")) != NULL &&
       __kmp_str_match_true(env)) {
     __kmp_middle_initialize();
+    __kmp_assign_root_init_mask();
     KC_TRACE(10, ("__kmpc_begin: middle initialization called\n"));
   } else if (__kmp_ignore_mppbeg() == FALSE) {
     // By default __kmp_ignore_mppbeg() returns TRUE.
@@ -2023,6 +2024,7 @@ void ompc_display_affinity(char const *format) {
   if (!TCR_4(__kmp_init_middle)) {
     __kmp_middle_initialize();
   }
+  __kmp_assign_root_init_mask();
   gtid = __kmp_get_gtid();
   __kmp_aux_display_affinity(gtid, format);
 }
@@ -2035,6 +2037,7 @@ size_t ompc_capture_affinity(char *buffer, size_t buf_size,
   if (!TCR_4(__kmp_init_middle)) {
     __kmp_middle_initialize();
   }
+  __kmp_assign_root_init_mask();
   gtid = __kmp_get_gtid();
   __kmp_str_buf_init(&capture_buf);
   num_required = __kmp_aux_capture_affinity(gtid, format, &capture_buf);
@@ -2093,6 +2096,7 @@ int kmpc_set_affinity_mask_proc(int proc, void **mask) {
   if (!TCR_4(__kmp_init_middle)) {
     __kmp_middle_initialize();
   }
+  __kmp_assign_root_init_mask();
   return __kmp_aux_set_affinity_mask_proc(proc, mask);
 #endif
 }
@@ -2104,6 +2108,7 @@ int kmpc_unset_affinity_mask_proc(int proc, void **mask) {
   if (!TCR_4(__kmp_init_middle)) {
     __kmp_middle_initialize();
   }
+  __kmp_assign_root_init_mask();
   return __kmp_aux_unset_affinity_mask_proc(proc, mask);
 #endif
 }
@@ -2115,6 +2120,7 @@ int kmpc_get_affinity_mask_proc(int proc, void **mask) {
   if (!TCR_4(__kmp_init_middle)) {
     __kmp_middle_initialize();
   }
+  __kmp_assign_root_init_mask();
   return __kmp_aux_get_affinity_mask_proc(proc, mask);
 #endif
 }
