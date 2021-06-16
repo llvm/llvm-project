@@ -212,11 +212,6 @@ option specifies "``-``", then the output will also be sent to standard output.
   Print the requested views in JSON format. The instructions and the processor
   resources are printed as members of special top level JSON objects.  The
   individual views refer to them by index.
-  
-.. option:: -disable-cb
-
-  Force usage of the generic CustomBehaviour class rather than using the target
-  specific class. The generic class never detects any custom hazards.
 
 
 EXIT STATUS
@@ -983,32 +978,3 @@ Once issued, an instruction is moved to ``IssuedInst`` set until it is ready to
 retire. :program:`llvm-mca` ensures that writes are committed in-order. However,
 an instruction is allowed to commit writes and retire out-of-order if
 ``RetireOOO`` property is true for at least one of its writes.
-
-Custom Behaviour
-""""""""""""""""""""""""""""""""""""
-Due to certain instructions not being expressed perfectly within their
-scheduling model, :program:`llvm-ma` isn't always able to simulate them
-perfectly. Modifying the scheduling model isn't always a viable
-option though (maybe because the instruction is modeled incorrectly on
-purpose or the instruction's behaviour is quite complex). The
-CustomBehaviour class can be used in these cases to enforce proper
-instruction modeling (often by customizing data dependencies and detecting
-hazards that :program:`llvm-ma` has no way of knowing about).
-
-:program:`llvm-mca` comes with one generic and multiple target specific
-CustomBehaviour classes. The generic class will be used if the ``-disable-cb``
-flag is used or if a target specific CustomBehaviour class doesn't exist for
-that target. (The generic class does nothing.) Currently, the CustomBehaviour
-class is only a part of the in-order pipeline, but there are plans to add it
-to the out-of-order pipeline in the future.
-
-CustomBehaviour's main method is `checkCustomHazard()` which uses the
-current instruction and a list of all instructions still executing within
-the pipeline to determine if the current instruction should be dispatched.
-As output, the method returns an integer representing the number of cycles
-that the current instruction must stall for (this can be an underestimate
-if you don't know the exact number and a value of 0 represents no stall).
-
-If you'd like to add a CustomBehaviour class for a target that doesn't
-already have one, refer to an existing implementation to see how to set it
-up. Remember to look at (and add to) `/llvm-mca/lib/CMakeLists.txt`.

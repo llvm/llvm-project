@@ -115,7 +115,6 @@ public:
     SchedulerQueueFull,
     LoadQueueFull,
     StoreQueueFull,
-    CustomBehaviourStall,
     LastGenericEvent
   };
 
