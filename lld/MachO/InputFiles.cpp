@@ -702,11 +702,10 @@ template <class LP> void ObjFile::parse() {
   if (!checkCompatibility(this))
     return;
 
-  if (const load_command *cmd = findCommand(hdr, LC_LINKER_OPTION)) {
-    auto *c = reinterpret_cast<const linker_option_command *>(cmd);
-    StringRef data{reinterpret_cast<const char *>(c + 1),
-                   c->cmdsize - sizeof(linker_option_command)};
-    parseLCLinkerOption(this, c->count, data);
+  for (auto *cmd : findCommands<linker_option_command>(hdr, LC_LINKER_OPTION)) {
+    StringRef data{reinterpret_cast<const char *>(cmd + 1),
+                   cmd->cmdsize - sizeof(linker_option_command)};
+    parseLCLinkerOption(this, cmd->count, data);
   }
 
   ArrayRef<Section> sectionHeaders;
