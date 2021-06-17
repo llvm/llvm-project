@@ -71,6 +71,22 @@ def V_MF2 : LMULInfo<0b111, 4, VR, VR,          VR,          VR,/*NoVReg*/VR, "M
 def MxList {
   list<LMULInfo> m = [V_MF8, V_MF4, V_MF2, V_M1, V_M2, V_M4, V_M8];
 }
+// Used for widening and narrowing instructions as it doesn't contain M8.
+def MxListW {
+  list<LMULInfo> m = [V_MF8, V_MF4, V_MF2, V_M1, V_M2, V_M4];
+}
+// Use for zext/sext.vf2
+def MxListVF2 {
+  list<LMULInfo> m = [V_MF4, V_MF2, V_M1, V_M2, V_M4, V_M8];
+}
+// Use for zext/sext.vf4
+def MxListVF4 {
+  list<LMULInfo> m = [V_MF2, V_M1, V_M2, V_M4, V_M8];
+}
+// Use for zext/sext.vf8
+def MxListVF8 {
+  list<LMULInfo> m = [V_M1, V_M2, V_M4, V_M8];
+}
 
 class FPR_Info<RegisterClass regclass, string fx> {
   RegisterClass fprclass = regclass;
@@ -83,6 +99,10 @@ def SCALAR_F64 : FPR_Info<FPR64, "F64">;
 
 def FPList {
   list<FPR_Info> fpinfo = [SCALAR_F16, SCALAR_F32, SCALAR_F64];
+}
+// Used for widening instructions. It excludes F64.
+def FPListW {
+  list<FPR_Info> fpinfo = [SCALAR_F16, SCALAR_F32];
 }
 
 class MxSet<int eew> {
@@ -1514,57 +1534,57 @@ multiclass VPseudoBinaryM_MM {
 //   at least 1, and the overlap is in the highest-numbered part of the
 //   destination register group is legal. Otherwise, it is illegal.
 multiclass VPseudoBinaryW_VV {
-  foreach m = MxList.m[0-5] in
+  foreach m = MxListW.m in
     defm _VV : VPseudoBinary<m.wvrclass, m.vrclass, m.vrclass, m,
                              "@earlyclobber $rd">;
 }
 
 multiclass VPseudoBinaryW_VX {
-  foreach m = MxList.m[0-5] in
+  foreach m = MxListW.m in
     defm "_VX" : VPseudoBinary<m.wvrclass, m.vrclass, GPR, m,
                                "@earlyclobber $rd">;
 }
 
 multiclass VPseudoBinaryW_VF {
-  foreach m = MxList.m[0-5] in
-    foreach f = FPList.fpinfo[0-1] in
+  foreach m = MxListW.m in
+    foreach f = FPListW.fpinfo in
       defm "_V" # f.FX : VPseudoBinary<m.wvrclass, m.vrclass,
                                        f.fprclass, m,
                                        "@earlyclobber $rd">;
 }
 
 multiclass VPseudoBinaryW_WV {
-  foreach m = MxList.m[0-5] in
+  foreach m = MxListW.m in
     defm _WV : VPseudoBinary<m.wvrclass, m.wvrclass, m.vrclass, m,
                              "@earlyclobber $rd">;
 }
 
 multiclass VPseudoBinaryW_WX {
-  foreach m = MxList.m[0-5] in
+  foreach m = MxListW.m in
     defm "_WX" : VPseudoBinary<m.wvrclass, m.wvrclass, GPR, m>;
 }
 
 multiclass VPseudoBinaryW_WF {
-  foreach m = MxList.m[0-5] in
-    foreach f = FPList.fpinfo[0-1] in
+  foreach m = MxListW.m in
+    foreach f = FPListW.fpinfo in
       defm "_W" # f.FX : VPseudoBinary<m.wvrclass, m.wvrclass,
                                        f.fprclass, m>;
 }
 
 multiclass VPseudoBinaryV_WV {
-  foreach m = MxList.m[0-5] in
+  foreach m = MxListW.m in
     defm _WV : VPseudoBinary<m.vrclass, m.wvrclass, m.vrclass, m,
                              "@earlyclobber $rd">;
 }
 
 multiclass VPseudoBinaryV_WX {
-  foreach m = MxList.m[0-5] in
+  foreach m = MxListW.m in
     defm _WX : VPseudoBinary<m.vrclass, m.wvrclass, GPR, m,
                              "@earlyclobber $rd">;
 }
 
 multiclass VPseudoBinaryV_WI {
-  foreach m = MxList.m[0-5] in
+  foreach m = MxListW.m in
     defm _WI : VPseudoBinary<m.vrclass, m.wvrclass, uimm5, m,
                              "@earlyclobber $rd">;
 }
@@ -1641,7 +1661,7 @@ multiclass VPseudoUnaryV_V {
 
 multiclass PseudoUnaryV_VF2 {
   defvar constraints = "@earlyclobber $rd";
-  foreach m = MxList.m[1-6] in
+  foreach m = MxListVF2.m in
   {
     let VLMul = m.value in {
       def "_" # m.MX : VPseudoUnaryNoMask<m.vrclass, m.f2vrclass, constraints>;
@@ -1653,7 +1673,7 @@ multiclass PseudoUnaryV_VF2 {
 
 multiclass PseudoUnaryV_VF4 {
   defvar constraints = "@earlyclobber $rd";
-  foreach m = MxList.m[2-6] in
+  foreach m = MxListVF4.m in
   {
     let VLMul = m.value in {
       def "_" # m.MX : VPseudoUnaryNoMask<m.vrclass, m.f4vrclass, constraints>;
@@ -1665,7 +1685,7 @@ multiclass PseudoUnaryV_VF4 {
 
 multiclass PseudoUnaryV_VF8 {
   defvar constraints = "@earlyclobber $rd";
-  foreach m = MxList.m[3-6] in
+  foreach m = MxListVF8.m in
   {
     let VLMul = m.value in {
       def "_" # m.MX : VPseudoUnaryNoMask<m.vrclass, m.f8vrclass, constraints>;
@@ -1817,20 +1837,20 @@ multiclass VPseudoTernaryV_VF_AAXA<string Constraint = ""> {
 
 multiclass VPseudoTernaryW_VV {
   defvar constraint = "@earlyclobber $rd";
-  foreach m = MxList.m[0-5] in
+  foreach m = MxListW.m in
     defm _VV : VPseudoTernary<m.wvrclass, m.vrclass, m.vrclass, m, constraint>;
 }
 
 multiclass VPseudoTernaryW_VX {
   defvar constraint = "@earlyclobber $rd";
-  foreach m = MxList.m[0-5] in
+  foreach m = MxListW.m in
     defm "_VX" : VPseudoTernary<m.wvrclass, GPR, m.vrclass, m, constraint>;
 }
 
 multiclass VPseudoTernaryW_VF {
   defvar constraint = "@earlyclobber $rd";
-  foreach m = MxList.m[0-5] in
-    foreach f = FPList.fpinfo[0-1] in
+  foreach m = MxListW.m in
+    foreach f = FPListW.fpinfo in
       defm "_V" # f.FX : VPseudoTernary<m.wvrclass, f.fprclass, m.vrclass, m,
                                         constraint>;
 }
@@ -1928,13 +1948,13 @@ multiclass VPseudoConversionV_V {
 
 multiclass VPseudoConversionW_V {
   defvar constraint = "@earlyclobber $rd";
-  foreach m = MxList.m[0-5] in
+  foreach m = MxListW.m in
     defm _V : VPseudoConversion<m.wvrclass, m.vrclass, m, constraint>;
 }
 
 multiclass VPseudoConversionV_W {
   defvar constraint = "@earlyclobber $rd";
-  foreach m = MxList.m[0-5] in
+  foreach m = MxListW.m in
     defm _W : VPseudoConversion<m.vrclass, m.wvrclass, m, constraint>;
 }
 
