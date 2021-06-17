@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+c -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+c -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c < %s \
 # RUN:     | llvm-objdump --mattr=+c -M no-aliases -d -r - \
@@ -6,10 +6,10 @@
 #
 #
 # RUN: not llvm-mc -triple riscv64 \
-# RUN:     -riscv-no-aliases -show-encoding < %s 2>&1 \
+# RUN:     -M no-aliases -show-encoding < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK-NO-EXT %s
 # RUN: not llvm-mc -triple riscv32 -mattr=+c \
-# RUN:     -riscv-no-aliases -show-encoding < %s 2>&1 \
+# RUN:     -M no-aliases -show-encoding < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK-NO-RV64 %s
 
 # TODO: more exhaustive testing of immediate encoding.
