@@ -18,36 +18,10 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @sext_v4i1_v4f32(<4 x float> %src1, <4 x float> %src2) {
 ; CHECK-LABEL: sext_v4i1_v4f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcmp.f32 s2, s6
-; CHECK-NEXT:    movs r1, #0
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r1, #1
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    vcmp.f32 s0, s4
-; CHECK-NEXT:    csetm r1, ne
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov.w r2, #0
-; CHECK-NEXT:    vcmp.f32 s3, s7
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r2, #1
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, ne
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov.w r3, #0
-; CHECK-NEXT:    vcmp.f32 s1, s5
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r3, #1
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    csetm r3, ne
-; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r0, #1
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    vmov q0[2], q0[0], r2, r1
-; CHECK-NEXT:    csetm r0, ne
-; CHECK-NEXT:    vmov q0[3], q0[1], r0, r3
+; CHECK-NEXT:    vmov.i32 q2, #0x0
+; CHECK-NEXT:    vmov.i8 q3, #0xff
+; CHECK-NEXT:    vcmp.f32 ne, q0, q1
+; CHECK-NEXT:    vpsel q0, q3, q2
 ; CHECK-NEXT:    bx lr
 entry:
   %c = fcmp une <4 x float> %src1, %src2
@@ -72,81 +46,11 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @sext_v8i1_v8f32(<8 x half> %src1, <8 x half> %src2) {
 ; CHECK-LABEL: sext_v8i1_v8f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r6, lr}
-; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    vmovx.f16 s8, s5
-; CHECK-NEXT:    vmovx.f16 s10, s1
-; CHECK-NEXT:    vcmp.f16 s10, s8
-; CHECK-NEXT:    vmovx.f16 s8, s6
-; CHECK-NEXT:    vmovx.f16 s10, s2
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov.w r1, #0
-; CHECK-NEXT:    vcmp.f16 s10, s8
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r1, #1
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov.w r2, #0
-; CHECK-NEXT:    vcmp.f16 s1, s5
-; CHECK-NEXT:    vmovx.f16 s8, s7
-; CHECK-NEXT:    vmovx.f16 s10, s3
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r2, #1
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov.w r3, #0
-; CHECK-NEXT:    vcmp.f16 s10, s8
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r3, #1
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov.w r4, #0
-; CHECK-NEXT:    vcmp.f16 s2, s6
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r4, #1
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov.w r5, #0
-; CHECK-NEXT:    vcmp.f16 s3, s7
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r5, #1
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov.w r0, #0
-; CHECK-NEXT:    vcmp.f16 s0, s4
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r0, #1
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r12, ne
-; CHECK-NEXT:    cmp r4, #0
-; CHECK-NEXT:    csetm lr, ne
-; CHECK-NEXT:    cmp r5, #0
-; CHECK-NEXT:    csetm r4, ne
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, ne
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    csetm r0, ne
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, ne
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov.w r3, #0
-; CHECK-NEXT:    vmovx.f16 s4, s4
-; CHECK-NEXT:    vmovx.f16 s0, s0
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r3, #1
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    vcmp.f16 s0, s4
-; CHECK-NEXT:    csetm r3, ne
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r6, #1
-; CHECK-NEXT:    cmp r6, #0
-; CHECK-NEXT:    vmov.16 q0[0], r3
-; CHECK-NEXT:    csetm r5, ne
-; CHECK-NEXT:    vmov.16 q0[1], r5
-; CHECK-NEXT:    vmov.16 q0[2], r0
-; CHECK-NEXT:    vmov.16 q0[3], r1
-; CHECK-NEXT:    vmov.16 q0[4], r4
-; CHECK-NEXT:    vmov.16 q0[5], r2
-; CHECK-NEXT:    vmov.16 q0[6], r12
-; CHECK-NEXT:    vmov.16 q0[7], lr
-; CHECK-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-NEXT:    vmov.i16 q2, #0x0
+; CHECK-NEXT:    vmov.i8 q3, #0xff
+; CHECK-NEXT:    vcmp.f16 ne, q0, q1
+; CHECK-NEXT:    vpsel q0, q3, q2
+; CHECK-NEXT:    bx lr
 entry:
   %c = fcmp une <8 x half> %src1, %src2
   %0 = sext <8 x i1> %c to <8 x i16>
@@ -253,38 +157,10 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @zext_v4i1_v4f32(<4 x float> %src1, <4 x float> %src2) {
 ; CHECK-LABEL: zext_v4i1_v4f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vcmp.f32 s3, s7
-; CHECK-NEXT:    movs r1, #0
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r1, #1
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    vcmp.f32 s1, s5
-; CHECK-NEXT:    csetm r1, ne
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov.w r2, #0
-; CHECK-NEXT:    vcmp.f32 s2, s6
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r2, #1
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, ne
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov.w r3, #0
-; CHECK-NEXT:    vcmp.f32 s0, s4
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r3, #1
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    csetm r3, ne
-; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r0, #1
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    vmov.i32 q2, #0x1
-; CHECK-NEXT:    csetm r0, ne
-; CHECK-NEXT:    vmov q0[2], q0[0], r0, r3
-; CHECK-NEXT:    vmov q0[3], q0[1], r2, r1
-; CHECK-NEXT:    vand q0, q0, q2
+; CHECK-NEXT:    vmov.i32 q2, #0x0
+; CHECK-NEXT:    vmov.i32 q3, #0x1
+; CHECK-NEXT:    vcmp.f32 ne, q0, q1
+; CHECK-NEXT:    vpsel q0, q3, q2
 ; CHECK-NEXT:    bx lr
 entry:
   %c = fcmp une <4 x float> %src1, %src2
@@ -309,83 +185,11 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @zext_v8i1_v8f32(<8 x half> %src1, <8 x half> %src2) {
 ; CHECK-LABEL: zext_v8i1_v8f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r6, lr}
-; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    vmovx.f16 s8, s4
-; CHECK-NEXT:    vmovx.f16 s10, s0
-; CHECK-NEXT:    vcmp.f16 s10, s8
-; CHECK-NEXT:    vmovx.f16 s8, s5
-; CHECK-NEXT:    vmovx.f16 s10, s1
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov.w r1, #0
-; CHECK-NEXT:    vcmp.f16 s10, s8
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r1, #1
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov.w r3, #0
-; CHECK-NEXT:    vcmp.f16 s2, s6
-; CHECK-NEXT:    vmovx.f16 s8, s6
-; CHECK-NEXT:    vmovx.f16 s10, s2
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r3, #1
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov.w r2, #0
-; CHECK-NEXT:    vcmp.f16 s10, s8
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r2, #1
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov.w r4, #0
-; CHECK-NEXT:    vcmp.f16 s3, s7
-; CHECK-NEXT:    vmovx.f16 s8, s7
-; CHECK-NEXT:    vmovx.f16 s10, s3
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r4, #1
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov.w r5, #0
-; CHECK-NEXT:    vcmp.f16 s10, s8
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r5, #1
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov.w r0, #0
-; CHECK-NEXT:    vcmp.f16 s1, s5
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r0, #1
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r12, ne
-; CHECK-NEXT:    cmp r4, #0
-; CHECK-NEXT:    csetm lr, ne
-; CHECK-NEXT:    cmp r5, #0
-; CHECK-NEXT:    csetm r4, ne
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    csetm r0, ne
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, ne
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, ne
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    mov.w r3, #0
-; CHECK-NEXT:    vcmp.f16 s0, s4
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r3, #1
-; CHECK-NEXT:    cmp r3, #0
-; CHECK-NEXT:    csetm r3, ne
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne r6, #1
-; CHECK-NEXT:    cmp r6, #0
-; CHECK-NEXT:    vmov.i16 q0, #0x1
-; CHECK-NEXT:    csetm r5, ne
-; CHECK-NEXT:    vmov.16 q1[0], r5
-; CHECK-NEXT:    vmov.16 q1[1], r1
-; CHECK-NEXT:    vmov.16 q1[2], r3
-; CHECK-NEXT:    vmov.16 q1[3], r0
-; CHECK-NEXT:    vmov.16 q1[4], r2
-; CHECK-NEXT:    vmov.16 q1[5], lr
-; CHECK-NEXT:    vmov.16 q1[6], r4
-; CHECK-NEXT:    vmov.16 q1[7], r12
-; CHECK-NEXT:    vand q0, q1, q0
-; CHECK-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-NEXT:    vmov.i16 q2, #0x0
+; CHECK-NEXT:    vmov.i16 q3, #0x1
+; CHECK-NEXT:    vcmp.f16 ne, q0, q1
+; CHECK-NEXT:    vpsel q0, q3, q2
+; CHECK-NEXT:    bx lr
 entry:
   %c = fcmp une <8 x half> %src1, %src2
   %0 = zext <8 x i1> %c to <8 x i16>
