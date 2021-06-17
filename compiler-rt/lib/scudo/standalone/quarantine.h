@@ -170,8 +170,10 @@ private:
 template <typename Callback, typename Node> class GlobalQuarantine {
 public:
   typedef QuarantineCache<Callback> CacheT;
+  using ThisT = GlobalQuarantine<Callback, Node>;
 
   void init(uptr Size, uptr CacheSize) {
+    DCHECK(isAligned(reinterpret_cast<uptr>(this), alignof(ThisT)));
     DCHECK_EQ(atomic_load_relaxed(&MaxSize), 0U);
     DCHECK_EQ(atomic_load_relaxed(&MinSize), 0U);
     DCHECK_EQ(atomic_load_relaxed(&MaxCacheSize), 0U);

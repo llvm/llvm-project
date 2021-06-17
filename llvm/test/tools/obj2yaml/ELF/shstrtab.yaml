@@ -23,8 +23,8 @@ FileHeader:
   Type:  ET_EXEC
   SectionHeaderStringTable: .foo
 
-## Show the case when the e_shstrndx value is 0 and the name is not ".shstrtab"
-## (the key should be set).
+## Show the case when the e_shstrndx value is SHN_XINDEX and the name is not
+## ".shstrtab" (the key should be set).
 # RUN: yaml2obj --docnum=2 %s -o %t2.o
 # RUN: obj2yaml %t2.o > %t2.yaml
 # RUN: FileCheck %s --input-file=%t2.yaml --check-prefix=XINDEX

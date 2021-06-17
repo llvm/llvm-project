@@ -113,8 +113,6 @@ void SampleProfileSummaryBuilder::addRecord(
   }
   for (const auto &I : FS.getBodySamples()) {
     uint64_t Count = I.second.getSamples();
-    if (!sampleprof::FunctionSamples::ProfileIsProbeBased ||
-        (Count != sampleprof::FunctionSamples::InvalidProbeCount))
       addCount(Count);
   }
   for (const auto &I : FS.getCallsiteSamples())

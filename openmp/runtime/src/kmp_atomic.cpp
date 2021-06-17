@@ -732,7 +732,7 @@ static inline kmp_cmplx128_a16_t operator/(kmp_cmplx128_a16_t &lhs,
 
 #define OP_UPDATE_CRITICAL(TYPE, OP, LCK_ID)                                   \
   __kmp_acquire_atomic_lock(&ATOMIC_LOCK##LCK_ID, gtid);                       \
-  (*lhs) = (TYPE)((*lhs)OP((TYPE)rhs));                                        \
+  (*lhs) = (TYPE)((*lhs)OP rhs);                                               \
   __kmp_release_atomic_lock(&ATOMIC_LOCK##LCK_ID, gtid);
 
 // ------------------------------------------------------------------------
@@ -791,14 +791,14 @@ static inline kmp_cmplx128_a16_t operator/(kmp_cmplx128_a16_t &lhs,
   {                                                                            \
     TYPE old_value, new_value;                                                 \
     old_value = *(TYPE volatile *)lhs;                                         \
-    new_value = (TYPE)(old_value OP((TYPE)rhs));                               \
+    new_value = (TYPE)(old_value OP rhs);                                      \
     while (!KMP_COMPARE_AND_STORE_ACQ##BITS(                                   \
         (kmp_int##BITS *)lhs, *VOLATILE_CAST(kmp_int##BITS *) & old_value,     \
         *VOLATILE_CAST(kmp_int##BITS *) & new_value)) {                        \
       KMP_DO_PAUSE;                                                            \
                                                                                \
       old_value = *(TYPE volatile *)lhs;                                       \
-      new_value = (TYPE)(old_value OP((TYPE)rhs));                             \
+      new_value = (TYPE)(old_value OP rhs);                                    \
     }                                                                          \
   }
 

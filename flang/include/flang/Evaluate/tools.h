@@ -644,6 +644,16 @@ std::optional<Expr<SomeType>> Negation(
 std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &,
     RelationalOperator, Expr<SomeType> &&, Expr<SomeType> &&);
 
+// Create a relational operation between two identically-typed operands
+// and wrap it up in an Expr<LogicalResult>.
+template <typename T>
+Expr<LogicalResult> PackageRelation(
+    RelationalOperator opr, Expr<T> &&x, Expr<T> &&y) {
+  static_assert(IsSpecificIntrinsicType<T>);
+  return Expr<LogicalResult>{
+      Relational<SomeType>{Relational<T>{opr, std::move(x), std::move(y)}}};
+}
+
 template <int K>
 Expr<Type<TypeCategory::Logical, K>> LogicalNegation(
     Expr<Type<TypeCategory::Logical, K>> &&x) {

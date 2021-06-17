@@ -47,6 +47,11 @@ class SerializeToCubinPass
 public:
   SerializeToCubinPass();
 
+  StringRef getArgument() const override { return "gpu-to-cubin"; }
+  StringRef getDescription() const override {
+    return "Lower GPU kernel function to CUBIN binary annotations";
+  }
+
 private:
   void getDependentDialects(DialectRegistry &registry) const override;
 
@@ -126,7 +131,6 @@ SerializeToCubinPass::serializeISA(const std::string &isa) {
 // Register pass to serialize GPU kernel functions to a CUBIN binary annotation.
 void mlir::registerGpuSerializeToCubinPass() {
   PassRegistration<SerializeToCubinPass> registerSerializeToCubin(
-      "gpu-to-cubin", "Lower GPU kernel function to CUBIN binary annotations",
       [] {
         // Initialize LLVM NVPTX backend.
         LLVMInitializeNVPTXTarget();

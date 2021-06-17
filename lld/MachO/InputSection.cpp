@@ -64,6 +64,7 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
         minuendVA = toSym->getVA() + minuend.addend;
       else {
         auto *referentIsec = minuend.referent.get<InputSection *>();
+        assert(!::shouldOmitFromOutput(referentIsec));
         minuendVA = referentIsec->getVA(minuend.addend);
       }
       referentVA = minuendVA - fromSym->getVA();
@@ -82,6 +83,7 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
           referentVA -= firstTLVDataSection->addr;
       }
     } else if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
+      assert(!::shouldOmitFromOutput(referentIsec));
       referentVA = referentIsec->getVA(r.addend);
     }
     target->relocateOne(loc, r, referentVA, getVA() + r.offset);

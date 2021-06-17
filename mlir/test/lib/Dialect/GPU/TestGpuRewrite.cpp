@@ -24,6 +24,10 @@ struct TestGpuRewritePass
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<StandardOpsDialect, memref::MemRefDialect>();
   }
+  StringRef getArgument() const final { return "test-gpu-rewrite"; }
+  StringRef getDescription() const final {
+    return "Applies all rewrite patterns within the GPU dialect.";
+  }
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateGpuRewritePatterns(patterns);
@@ -34,8 +38,6 @@ struct TestGpuRewritePass
 
 namespace mlir {
 void registerTestAllReduceLoweringPass() {
-  PassRegistration<TestGpuRewritePass> pass(
-      "test-gpu-rewrite",
-      "Applies all rewrite patterns within the GPU dialect.");
+  PassRegistration<TestGpuRewritePass>();
 }
 } // namespace mlir

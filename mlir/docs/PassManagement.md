@@ -86,8 +86,7 @@ struct MyFunctionPass : public PassWrapper<MyFunctionPass,
 /// Register this pass so that it can be built via from a textual pass pipeline.
 /// (Pass registration is discussed more below)
 void registerMyPass() {
-  PassRegistration<MyFunctionPass>(
-    "flag-name-to-invoke-pass-via-mlir-opt", "Pass description here");
+  PassRegistration<MyFunctionPass>();
 }
 ```
 
@@ -503,7 +502,15 @@ struct MyPass ... {
   /// ensure that the options are initialized properly.
   MyPass() = default;
   MyPass(const MyPass& pass) {}
-
+  StringRef getArgument() const final {
+    // This is the argument used to refer to the pass in
+    // the textual format (on the commandline for example).
+    return "argument";
+  }
+  StringRef getDescription() const final {
+    // This is a brief description of the pass.
+    return  "description";
+  }
   /// Define the statistic to track during the execution of MyPass.
   Statistic exampleStat{this, "exampleStat", "An example statistic"};
 
@@ -562,21 +569,22 @@ example registration is shown below:
 
 ```c++
 void registerMyPass() {
-  PassRegistration<MyPass>("argument", "description");
+  PassRegistration<MyPass>();
 }
 ```
 
 *   `MyPass` is the name of the derived pass class.
-*   "argument" is the argument used to refer to the pass in the textual format.
-*   "description" is a brief description of the pass.
+*   The pass `getArgument()` method is used to get the identifier that will be
+    used to refer to the pass.
+*   The pass `getDescription()` method provides a short summary describing the
+    pass.
 
 For passes that cannot be default-constructed, `PassRegistration` accepts an
-optional third argument that takes a callback to create the pass:
+optional argument that takes a callback to create the pass:
 
 ```c++
 void registerMyPass() {
   PassRegistration<MyParametricPass>(
-    "argument", "description",
     []() -> std::unique_ptr<Pass> {
       std::unique_ptr<Pass> p = std::make_unique<MyParametricPass>(/*options*/);
       /*... non-trivial-logic to configure the pass ...*/;
@@ -710,7 +718,7 @@ std::unique_ptr<Pass> foo::createMyPass() {
 
 /// Register this pass.
 void foo::registerMyPass() {
-  PassRegistration<MyPass>("my-pass", "My pass summary");
+  PassRegistration<MyPass>();
 }
 ```
 

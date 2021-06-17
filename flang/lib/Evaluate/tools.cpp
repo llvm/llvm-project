@@ -475,14 +475,6 @@ Expr<SomeLogical> LogicalNegation(Expr<SomeLogical> &&x) {
       std::move(x.u));
 }
 
-template <typename T>
-Expr<LogicalResult> PackageRelation(
-    RelationalOperator opr, Expr<T> &&x, Expr<T> &&y) {
-  static_assert(IsSpecificIntrinsicType<T>);
-  return Expr<LogicalResult>{
-      Relational<SomeType>{Relational<T>{opr, std::move(x), std::move(y)}}};
-}
-
 template <TypeCategory CAT>
 Expr<LogicalResult> PromoteAndRelate(
     RelationalOperator opr, Expr<SomeKind<CAT>> &&x, Expr<SomeKind<CAT>> &&y) {

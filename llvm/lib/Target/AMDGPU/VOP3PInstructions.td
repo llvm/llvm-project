@@ -644,6 +644,7 @@ multiclass VOP3P_Real_vi<bits<7> op> {
             VOP3Pe <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
     let AssemblerPredicate = HasVOP3PInsts;
     let DecoderNamespace = "GFX8";
+    let VOP3P = 1;
   }
 }
 
@@ -786,12 +787,12 @@ let SubtargetPredicate = HasPackedFP32Ops in {
 // GFX10.
 //===----------------------------------------------------------------------===//
 
-let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
+let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10", VOP3P = 1 in {
   multiclass VOP3P_Real_gfx10<bits<7> op> {
     def _gfx10 : VOP3P_Real<!cast<VOP3P_Pseudo>(NAME), SIEncodingFamily.GFX10>,
                  VOP3Pe_gfx10 <op, !cast<VOP3P_Pseudo>(NAME).Pfl>;
   }
-} // End AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10"
+} // End AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10", VOP3P = 1
 
 multiclass VOP3P_Real_gfx10_gfx11<bits<7> op>
   : VOP3P_Real_gfx10<op>, VOP3P_Real_gfx11<op>;

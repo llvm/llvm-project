@@ -52,9 +52,11 @@ static SymbolMapTy getSectionSyms(ArrayRef<Defined *> syms) {
   // appear in the output file rather than the order they appeared in the input
   // files.
   for (auto &it : ret)
-    llvm::stable_sort(it.second, [](Defined *a, Defined *b) {
-      return a->getVA() < b->getVA();
-    });
+    parallelSort(
+        it.second.begin(), it.second.end(), [](Defined *a, Defined *b) {
+          return a->getVA() != b->getVA() ? a->getVA() < b->getVA()
+                                          : a->getName() < b->getName();
+        });
   return ret;
 }
 
@@ -65,8 +67,10 @@ static std::vector<Defined *> getSymbols() {
     if (isa<ObjFile>(file))
       for (Symbol *sym : file->symbols)
         if (auto *d = dyn_cast_or_null<Defined>(sym))
-          if (d->isLive() && d->isec && d->getFile() == file)
+          if (d->isLive() && d->isec && d->getFile() == file) {
+            assert(!shouldOmitFromOutput(d->isec));
             v.push_back(d);
+          }
   return v;
 }
 
@@ -142,6 +146,7 @@ void macho::writeMapFile() {
   os << "# Address\t    File  Name\n";
   for (InputSection *isec : inputSections) {
     auto symsIt = sectionSyms.find(isec);
+    assert(!shouldOmitFromOutput(isec) || (symsIt == sectionSyms.end()));
     if (symsIt == sectionSyms.end())
       continue;
     for (Symbol *sym : symsIt->second) {

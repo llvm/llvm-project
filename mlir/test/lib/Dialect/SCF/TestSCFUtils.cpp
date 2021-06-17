@@ -24,7 +24,9 @@ namespace {
 class TestSCFForUtilsPass
     : public PassWrapper<TestSCFForUtilsPass, FunctionPass> {
 public:
-  explicit TestSCFForUtilsPass() {}
+  StringRef getArgument() const final { return "test-scf-for-utils"; }
+  StringRef getDescription() const final { return "test scf.for utils"; }
+  explicit TestSCFForUtilsPass() = default;
 
   void runOnFunction() override {
     FuncOp func = getFunction();
@@ -54,7 +56,9 @@ public:
 class TestSCFIfUtilsPass
     : public PassWrapper<TestSCFIfUtilsPass, FunctionPass> {
 public:
-  explicit TestSCFIfUtilsPass() {}
+  StringRef getArgument() const final { return "test-scf-if-utils"; }
+  StringRef getDescription() const final { return "test scf.if utils"; }
+  explicit TestSCFIfUtilsPass() = default;
 
   void runOnFunction() override {
     int count = 0;
@@ -73,10 +77,8 @@ public:
 namespace mlir {
 namespace test {
 void registerTestSCFUtilsPass() {
-  PassRegistration<TestSCFForUtilsPass>("test-scf-for-utils",
-                                        "test scf.for utils");
-  PassRegistration<TestSCFIfUtilsPass>("test-scf-if-utils",
-                                       "test scf.if utils");
+  PassRegistration<TestSCFForUtilsPass>();
+  PassRegistration<TestSCFIfUtilsPass>();
 }
 } // namespace test
 } // namespace mlir

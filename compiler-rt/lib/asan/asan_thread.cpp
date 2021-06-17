@@ -240,17 +240,6 @@ void AsanThread::Init(const InitOptions *options) {
   }
   ClearShadowForThreadStackAndTLS();
   fake_stack_ = nullptr;
-  if (__asan_option_detect_stack_use_after_return &&
-      tid() == GetCurrentTidOrInvalid()) {
-    // AsyncSignalSafeLazyInitFakeStack makes use of threadlocals and must be
-    // called from the context of the thread it is initializing, not its parent.
-    // Most platforms call AsanThread::Init on the newly-spawned thread, but
-    // Fuchsia calls this function from the parent thread.  To support that
-    // approach, we avoid calling AsyncSignalSafeLazyInitFakeStack here; it will
-    // be called by the new thread when it first attempts to access the fake
-    // stack.
-    AsyncSignalSafeLazyInitFakeStack();
-  }
   int local = 0;
   VReport(1, "T%d: stack [%p,%p) size 0x%zx; local=%p\n", tid(),
           (void *)stack_bottom_, (void *)stack_top_, stack_top_ - stack_bottom_,

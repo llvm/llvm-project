@@ -29,6 +29,10 @@ namespace {
 
 struct TestAffineDataCopy
     : public PassWrapper<TestAffineDataCopy, FunctionPass> {
+  StringRef getArgument() const final { return PASS_NAME; }
+  StringRef getDescription() const final {
+    return "Tests affine data copy utility functions.";
+  }
   TestAffineDataCopy() = default;
   TestAffineDataCopy(const TestAffineDataCopy &pass){};
 
@@ -128,7 +132,6 @@ void TestAffineDataCopy::runOnFunction() {
 
 namespace mlir {
 void registerTestAffineDataCopyPass() {
-  PassRegistration<TestAffineDataCopy>(
-      PASS_NAME, "Tests affine data copy utility functions.");
+  PassRegistration<TestAffineDataCopy>();
 }
 } // namespace mlir

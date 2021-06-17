@@ -179,6 +179,10 @@ namespace {
 
 struct TosaTestQuantUtilAPI
     : public PassWrapper<TosaTestQuantUtilAPI, FunctionPass> {
+  StringRef getArgument() const final { return PASS_NAME; }
+  StringRef getDescription() const final {
+    return "TOSA Test: Exercise the APIs in QuantUtils.cpp.";
+  }
   void runOnFunction() override;
 };
 
@@ -196,7 +200,6 @@ void TosaTestQuantUtilAPI::runOnFunction() {
 
 namespace mlir {
 void registerTosaTestQuantUtilAPIPass() {
-  PassRegistration<TosaTestQuantUtilAPI>(
-      PASS_NAME, "TOSA Test: Exercise the APIs in QuantUtils.cpp.");
+  PassRegistration<TosaTestQuantUtilAPI>();
 }
 } // namespace mlir

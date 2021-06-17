@@ -615,7 +615,8 @@ class VectorType;
     /// Returns true if an argument of type Ty needs to be passed in a
     /// contiguous block of registers in calling convention CallConv.
     bool functionArgumentNeedsConsecutiveRegisters(
-        Type *Ty, CallingConv::ID CallConv, bool isVarArg) const override;
+        Type *Ty, CallingConv::ID CallConv, bool isVarArg,
+        const DataLayout &DL) const override;
 
     /// If a physical register, this returns the register that receives the
     /// exception address on entry to an EH pad.

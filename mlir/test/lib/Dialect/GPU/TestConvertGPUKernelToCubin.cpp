@@ -20,6 +20,10 @@ namespace {
 class TestSerializeToCubinPass
     : public PassWrapper<TestSerializeToCubinPass, gpu::SerializeToBlobPass> {
 public:
+  StringRef getArgument() const final { return "test-gpu-to-cubin"; }
+  StringRef getDescription() const final {
+    return "Lower GPU kernel function to CUBIN binary annotations";
+  }
   TestSerializeToCubinPass();
 
 private:
@@ -53,17 +57,15 @@ namespace mlir {
 namespace test {
 // Register test pass to serialize GPU module to a CUBIN binary annotation.
 void registerTestGpuSerializeToCubinPass() {
-  PassRegistration<TestSerializeToCubinPass> registerSerializeToCubin(
-      "test-gpu-to-cubin",
-      "Lower GPU kernel function to CUBIN binary annotations", [] {
-        // Initialize LLVM NVPTX backend.
-        LLVMInitializeNVPTXTarget();
-        LLVMInitializeNVPTXTargetInfo();
-        LLVMInitializeNVPTXTargetMC();
-        LLVMInitializeNVPTXAsmPrinter();
+  PassRegistration<TestSerializeToCubinPass>([] {
+    // Initialize LLVM NVPTX backend.
+    LLVMInitializeNVPTXTarget();
+    LLVMInitializeNVPTXTargetInfo();
+    LLVMInitializeNVPTXTargetMC();
+    LLVMInitializeNVPTXAsmPrinter();
 
-        return std::make_unique<TestSerializeToCubinPass>();
-      });
+    return std::make_unique<TestSerializeToCubinPass>();
+  });
 }
 } // namespace test
 } // namespace mlir

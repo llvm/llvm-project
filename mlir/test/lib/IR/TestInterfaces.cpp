@@ -17,6 +17,10 @@ namespace {
 /// application.
 struct TestTypeInterfaces
     : public PassWrapper<TestTypeInterfaces, OperationPass<ModuleOp>> {
+  StringRef getArgument() const final { return "test-type-interfaces"; }
+  StringRef getDescription() const final {
+    return "Test type interface support.";
+  }
   void runOnOperation() override {
     getOperation().walk([](Operation *op) {
       for (Type type : op->getResultTypes()) {
@@ -40,9 +44,6 @@ struct TestTypeInterfaces
 
 namespace mlir {
 namespace test {
-void registerTestInterfaces() {
-  PassRegistration<TestTypeInterfaces> pass("test-type-interfaces",
-                                            "Test type interface support.");
-}
+void registerTestInterfaces() { PassRegistration<TestTypeInterfaces>(); }
 } // namespace test
 } // namespace mlir

@@ -14,6 +14,10 @@ using namespace mlir;
 namespace {
 struct SideEffectsPass
     : public PassWrapper<SideEffectsPass, OperationPass<ModuleOp>> {
+  StringRef getArgument() const final { return "test-side-effects"; }
+  StringRef getDescription() const final {
+    return "Test side effects interfaces";
+  }
   void runOnOperation() override {
     auto module = getOperation();
 
@@ -68,8 +72,5 @@ struct SideEffectsPass
 } // end anonymous namespace
 
 namespace mlir {
-void registerSideEffectTestPasses() {
-  PassRegistration<SideEffectsPass>("test-side-effects",
-                                    "Test side effects interfaces");
-}
+void registerSideEffectTestPasses() { PassRegistration<SideEffectsPass>(); }
 } // namespace mlir

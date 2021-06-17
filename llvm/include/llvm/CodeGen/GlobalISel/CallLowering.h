@@ -568,6 +568,10 @@ public:
                  ArrayRef<ArrayRef<Register>> ArgRegs, Register SwiftErrorVReg,
                  std::function<unsigned()> GetCalleeReg) const;
 
+  /// For targets which want to use big-endian can enable it with
+  /// enableBigEndian() hook
+  virtual bool enableBigEndian() const { return false; }
+
   /// For targets which support the "returned" parameter attribute, returns
   /// true if the given type is a valid one to use with "returned".
   virtual bool isTypeIsValidForThisReturn(EVT Ty) const { return false; }

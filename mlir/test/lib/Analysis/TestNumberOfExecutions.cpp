@@ -20,6 +20,14 @@ namespace {
 
 struct TestNumberOfBlockExecutionsPass
     : public PassWrapper<TestNumberOfBlockExecutionsPass, FunctionPass> {
+  StringRef getArgument() const final {
+    return "test-print-number-of-block-executions";
+  }
+  StringRef getDescription() const final {
+    return "Print the contents of a constructed number of executions analysis "
+           "for "
+           "all blocks.";
+  }
   void runOnFunction() override {
     llvm::errs() << "Number of executions: " << getFunction().getName() << "\n";
     getAnalysis<NumberOfExecutions>().printBlockExecutions(
@@ -29,6 +37,14 @@ struct TestNumberOfBlockExecutionsPass
 
 struct TestNumberOfOperationExecutionsPass
     : public PassWrapper<TestNumberOfOperationExecutionsPass, FunctionPass> {
+  StringRef getArgument() const final {
+    return "test-print-number-of-operation-executions";
+  }
+  StringRef getDescription() const final {
+    return "Print the contents of a constructed number of executions analysis "
+           "for "
+           "all operations.";
+  }
   void runOnFunction() override {
     llvm::errs() << "Number of executions: " << getFunction().getName() << "\n";
     getAnalysis<NumberOfExecutions>().printOperationExecutions(
@@ -41,17 +57,11 @@ struct TestNumberOfOperationExecutionsPass
 namespace mlir {
 namespace test {
 void registerTestNumberOfBlockExecutionsPass() {
-  PassRegistration<TestNumberOfBlockExecutionsPass>(
-      "test-print-number-of-block-executions",
-      "Print the contents of a constructed number of executions analysis for "
-      "all blocks.");
+  PassRegistration<TestNumberOfBlockExecutionsPass>();
 }
 
 void registerTestNumberOfOperationExecutionsPass() {
-  PassRegistration<TestNumberOfOperationExecutionsPass>(
-      "test-print-number-of-operation-executions",
-      "Print the contents of a constructed number of executions analysis for "
-      "all operations.");
+  PassRegistration<TestNumberOfOperationExecutionsPass>();
 }
 } // namespace test
 } // namespace mlir
