@@ -15,13 +15,10 @@
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_UTILS_WEBASSEMBLYUTILITIES_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_UTILS_WEBASSEMBLYUTILITIES_H
 
-#include "llvm/ADT/Optional.h"
-
 namespace llvm {
 
 class MachineBasicBlock;
 class MachineInstr;
-class MachineFunction;
 class MachineOperand;
 class MCContext;
 class MCSymbolWasm;
@@ -50,10 +47,6 @@ inline bool isWasmVarAddressSpace(unsigned AS) {
 inline bool isValidAddressSpace(unsigned AS) {
   return isDefaultAddressSpace(AS) || isWasmVarAddressSpace(AS);
 }
-
-// Returns the index of the WebAssembly local to which the stack object
-// FrameIndex in MF should be allocated, or None.
-Optional<unsigned> getLocalForStackObject(MachineFunction &MF, int FrameIndex);
 
 bool isChild(const MachineInstr &MI, const WebAssemblyFunctionInfo &MFI);
 bool mayThrow(const MachineInstr &MI);
