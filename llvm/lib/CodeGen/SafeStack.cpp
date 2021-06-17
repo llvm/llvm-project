@@ -373,9 +373,13 @@ bool SafeStack::IsSafeStackAlloca(const Value *AllocaPtr, uint64_t AllocaSize) {
 
 Value *SafeStack::getStackGuard(IRBuilder<> &IRB, Function &F) {
   Value *StackGuardVar = TL.getIRStackGuard(IRB);
-  if (!StackGuardVar)
-    StackGuardVar =
-        F.getParent()->getOrInsertGlobal("__stack_chk_guard", StackPtrTy);
+  Module *M = F.getParent();
+
+  if (!StackGuardVar) {
+    TL.insertSSPDeclarations(*M);
+    return IRB.CreateCall(Intrinsic::getDeclaration(M, Intrinsic::stackguard));
+  }
+
   return IRB.CreateLoad(StackPtrTy, StackGuardVar, "StackGuard");
 }
 
