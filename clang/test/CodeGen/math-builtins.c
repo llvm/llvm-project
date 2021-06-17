@@ -133,12 +133,12 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   __builtin_powi(f,f);        __builtin_powif(f,f);       __builtin_powil(f,f);
 
-// NO__ERRNO: declare double @llvm.powi.f64(double, i32) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare float @llvm.powi.f32(float, i32) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare x86_fp80 @llvm.powi.f80(x86_fp80, i32) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare double @llvm.powi.f64(double, i32) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare float @llvm.powi.f32(float, i32) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare x86_fp80 @llvm.powi.f80(x86_fp80, i32) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @llvm.powi.f64.i32(double, i32) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare float @llvm.powi.f32.i32(float, i32) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare x86_fp80 @llvm.powi.f80.i32(x86_fp80, i32) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare double @llvm.powi.f64.i32(double, i32) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare float @llvm.powi.f32.i32(float, i32) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare x86_fp80 @llvm.powi.f80.i32(x86_fp80, i32) [[READNONE_INTRINSIC]]
 
   /* math */
   __builtin_acos(f);       __builtin_acosf(f);      __builtin_acosl(f); __builtin_acosf128(f);

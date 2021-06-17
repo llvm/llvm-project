@@ -600,6 +600,9 @@ template <typename T> Expr<T> Folder<T>::Reshape(FunctionRef<T> &&funcRef) {
 template <typename T>
 Expr<T> FoldMINorMAX(
     FoldingContext &context, FunctionRef<T> &&funcRef, Ordering order) {
+  static_assert(T::category == TypeCategory::Integer ||
+      T::category == TypeCategory::Real ||
+      T::category == TypeCategory::Character);
   std::vector<Constant<T> *> constantArgs;
   // Call Folding on all arguments, even if some are not constant,
   // to make operand promotion explicit.
@@ -608,8 +611,9 @@ Expr<T> FoldMINorMAX(
       constantArgs.push_back(cst);
     }
   }
-  if (constantArgs.size() != funcRef.arguments().size())
+  if (constantArgs.size() != funcRef.arguments().size()) {
     return Expr<T>(std::move(funcRef));
+  }
   CHECK(constantArgs.size() > 0);
   Expr<T> result{std::move(*constantArgs[0])};
   for (std::size_t i{1}; i < constantArgs.size(); ++i) {

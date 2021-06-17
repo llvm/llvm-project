@@ -1300,7 +1300,7 @@ static Instruction *foldFDivPowDivisor(BinaryOperator &I,
     Args.push_back(II->getArgOperand(0));
     Args.push_back(Builder.CreateFNegFMF(II->getArgOperand(1), &I));
     break;
-  case Intrinsic::powi:
+  case Intrinsic::powi: {
     // Require 'ninf' assuming that makes powi(X, -INT_MIN) acceptable.
     // That is, X ** (huge negative number) is 0.0, ~1.0, or INF and so
     // dividing by that is INF, ~1.0, or 0.0. Code that uses powi allows
@@ -1310,7 +1310,10 @@ static Instruction *foldFDivPowDivisor(BinaryOperator &I,
       return nullptr;
     Args.push_back(II->getArgOperand(0));
     Args.push_back(Builder.CreateNeg(II->getArgOperand(1)));
-    break;
+    Type *Tys[] = {I.getType(), II->getArgOperand(1)->getType()};
+    Value *Pow = Builder.CreateIntrinsic(IID, Tys, Args, &I);
+    return BinaryOperator::CreateFMulFMF(Op0, Pow, &I);
+  }
   case Intrinsic::exp:
   case Intrinsic::exp2:
     Args.push_back(Builder.CreateFNegFMF(II->getArgOperand(0), &I));

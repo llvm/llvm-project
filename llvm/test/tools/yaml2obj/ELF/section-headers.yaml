@@ -418,3 +418,39 @@ Sections:
     Sections:
       - Name: .strtab
       - Name: .shstrtab
+
+## Show that we can reference both the first and last section in the section
+## header table, via sh_link.
+
+# RUN: yaml2obj %s --docnum=14 -o %t14
+# RUN: llvm-readelf --sections %t14 | FileCheck %s --check-prefix=LINK
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_REL
+Sections:
+  - Name: .strtab
+    Type: SHT_STRTAB
+  - Type: SectionHeaderTable
+    Sections:
+      - Name: .strtab
+      - Name: .ref.first
+      - Name: .ref.last
+      - Name: .shstrtab
+  - Name: .ref.first
+    Type: SHT_PROGBITS
+    Link: .strtab
+  - Name: .ref.last
+    Type: SHT_PROGBITS
+    Link: .shstrtab
+  - Name: .shstrtab
+    Type: SHT_STRTAB
+
+# LINK:      There are 5 section headers
+# LINK:        [Nr] Name       Type     Address  Off      Size     ES       Flg Lk
+# LINK:        [ 1] .strtab
+# LINK-NEXT:   [ 2] .ref.first PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] [[#%x,]]      1
+# LINK-NEXT:   [ 3] .ref.last  PROGBITS [[#%x,]] [[#%x,]] [[#%x,]] [[#%x,]]      4
+# LINK-NEXT:   [ 4] .shstrtab

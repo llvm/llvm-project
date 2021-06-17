@@ -137,7 +137,6 @@ bool Options::VerifyOptions(CommandReturnObject &result) {
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
   } else {
     result.AppendError("invalid combination of options for the given command");
-    result.SetStatus(eReturnStatusFailed);
   }
 
   return options_are_valid;

@@ -545,8 +545,9 @@ void OmpStructureChecker::CheckDistLinear(
     // Get collapse level, if given, to find which loops are "associated."
     std::int64_t collapseVal{GetOrdCollapseLevel(x)};
     // Include the top loop if no collapse is specified
-    if (collapseVal == 0)
+    if (collapseVal == 0) {
       collapseVal = 1;
+    }
 
     // Match the loop index variables with the collected symbols from linear
     // clauses.
@@ -560,8 +561,9 @@ void OmpStructureChecker::CheckDistLinear(
             indexVars.erase(*(itrVal.symbol));
           }
           collapseVal--;
-          if (collapseVal == 0)
+          if (collapseVal == 0) {
             break;
+          }
         }
         // Get the next DoConstruct if block is not empty.
         const auto &block{std::get<parser::Block>(loop->t)};
@@ -782,8 +784,9 @@ void OmpStructureChecker::Enter(const parser::OpenMPExecutableAllocate &x) {
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   const auto &objectList{std::get<std::optional<parser::OmpObjectList>>(x.t)};
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_allocate);
-  if (objectList)
+  if (objectList) {
     CheckIsVarPartOfAnotherVar(dir.source, *objectList);
+  }
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPExecutableAllocate &x) {

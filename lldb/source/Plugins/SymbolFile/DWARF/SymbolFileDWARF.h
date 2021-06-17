@@ -317,6 +317,8 @@ public:
   static lldb::LanguageType LanguageTypeFromDWARF(uint64_t val);
 
   static lldb::LanguageType GetLanguage(DWARFUnit &unit);
+  /// Same as GetLanguage() but reports all C++ versions as C++ (no version).
+  static lldb::LanguageType GetLanguageFamily(DWARFUnit &unit);
 
 protected:
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb_private::Type *>

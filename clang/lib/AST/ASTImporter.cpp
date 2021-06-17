@@ -322,6 +322,21 @@ namespace clang {
       }
     }
 
+    void updateLookupTableForTemplateParameters(TemplateParameterList &Params,
+                                                DeclContext *OldDC) {
+      ASTImporterLookupTable *LT = Importer.SharedState->getLookupTable();
+      if (!LT)
+        return;
+
+      for (NamedDecl *TP : Params)
+        LT->update(TP, OldDC);
+    }
+
+    void updateLookupTableForTemplateParameters(TemplateParameterList &Params) {
+      updateLookupTableForTemplateParameters(
+          Params, Importer.getToContext().getTranslationUnitDecl());
+    }
+
   public:
     explicit ASTNodeImporter(ASTImporter &Importer) : Importer(Importer) {}
 
@@ -2609,6 +2624,8 @@ ASTNodeImporter::VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D) {
   ToAlias->setAccess(D->getAccess());
   ToAlias->setLexicalDeclContext(LexicalDC);
   LexicalDC->addDeclInternal(ToAlias);
+  if (DC != Importer.getToContext().getTranslationUnitDecl())
+    updateLookupTableForTemplateParameters(*ToTemplateParameters);
   return ToAlias;
 }
 
@@ -5511,6 +5528,7 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   D2->setLexicalDeclContext(LexicalDC);
 
   addDeclToContexts(D, D2);
+  updateLookupTableForTemplateParameters(**TemplateParamsOrErr);
 
   if (FoundByLookup) {
     auto *Recent =
@@ -5654,6 +5672,7 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
       // Add this partial specialization to the class template.
       ClassTemplate->AddPartialSpecialization(PartSpec2, InsertPos);
 
+    updateLookupTableForTemplateParameters(*ToTPList);
   } else { // Not a partial specialization.
     if (GetImportedOrCreateDecl(
             D2, D, Importer.getToContext(), D->getTagKind(), DC,
@@ -5803,6 +5822,8 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateDecl(VarTemplateDecl *D) {
   ToVarTD->setAccess(D->getAccess());
   ToVarTD->setLexicalDeclContext(LexicalDC);
   LexicalDC->addDeclInternal(ToVarTD);
+  if (DC != Importer.getToContext().getTranslationUnitDecl())
+    updateLookupTableForTemplateParameters(**TemplateParamsOrErr);
 
   if (FoundByLookup) {
     auto *Recent =
@@ -5928,6 +5949,9 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
 
       D2 = ToPartial;
 
+      // FIXME: Use this update if VarTemplatePartialSpecializationDecl is fixed
+      // to adopt template parameters.
+      // updateLookupTableForTemplateParameters(**ToTPListOrErr);
     } else { // Full specialization
       if (GetImportedOrCreateDecl(D2, D, Importer.getToContext(), DC,
                                   *BeginLocOrErr, *IdLocOrErr, VarTemplate,
@@ -6016,14 +6040,30 @@ ASTNodeImporter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   auto ParamsOrErr = import(D->getTemplateParameters());
   if (!ParamsOrErr)
     return ParamsOrErr.takeError();
+  TemplateParameterList *Params = *ParamsOrErr;
 
   FunctionDecl *TemplatedFD;
   if (Error Err = importInto(TemplatedFD, D->getTemplatedDecl()))
     return std::move(Err);
 
+  // Template parameters of the ClassTemplateDecl and FunctionTemplateDecl are
+  // shared, if the FunctionTemplateDecl is a deduction guide for the class.
+  // At import the ClassTemplateDecl object is always created first (FIXME: is
+  // this really true?) because the dependency, then the FunctionTemplateDecl.
+  // The DeclContext of the template parameters is changed when the
+  // FunctionTemplateDecl is created, but was set already when the class
+  // template was created. So here it is not the TU (default value) any more.
+  // FIXME: The DeclContext of the parameters is now set finally to the
+  // CXXDeductionGuideDecl object that was imported later. This may not be the
+  // same that is in the original AST, specially if there are multiple deduction
+  // guides.
+  DeclContext *OldParamDC = nullptr;
+  if (Params->size() > 0)
+    OldParamDC = Params->getParam(0)->getDeclContext();
+
   FunctionTemplateDecl *ToFunc;
   if (GetImportedOrCreateDecl(ToFunc, D, Importer.getToContext(), DC, Loc, Name,
-                              *ParamsOrErr, TemplatedFD))
+                              Params, TemplatedFD))
     return ToFunc;
 
   TemplatedFD->setDescribedFunctionTemplate(ToFunc);
@@ -6031,6 +6071,7 @@ ASTNodeImporter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   ToFunc->setAccess(D->getAccess());
   ToFunc->setLexicalDeclContext(LexicalDC);
   LexicalDC->addDeclInternal(ToFunc);
+  updateLookupTableForTemplateParameters(*Params, OldParamDC);
 
   if (FoundByLookup) {
     auto *Recent =

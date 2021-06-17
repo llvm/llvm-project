@@ -27,16 +27,8 @@ extern void *memset(void *, int, size_t);
 namespace llvm {
 namespace libc_benchmarks {
 
-enum Function { memcpy, memset };
-
 static cl::opt<std::string>
     StudyName("study-name", cl::desc("The name for this study"), cl::Required);
-
-static cl::opt<Function>
-    MemoryFunction("function", cl::desc("Sets the function to benchmark:"),
-                   cl::values(clEnumVal(memcpy, "__llvm_libc::memcpy"),
-                              clEnumVal(memset, "__llvm_libc::memset")),
-                   cl::Required);
 
 static cl::opt<std::string>
     SizeDistributionName("size-distribution-name",
@@ -75,12 +67,12 @@ struct ParameterType {
   unsigned SizeBytes : 16;   // max : 16 KiB - 1
 };
 
-struct MemcpyBenchmark {
+#if defined(LIBC_BENCHMARK_FUNCTION_MEMCPY)
+struct Benchmark {
   static constexpr auto GetDistributions = &getMemcpySizeDistributions;
   static constexpr size_t BufferCount = 2;
-  static void amend(Study &S) { S.Configuration.Function = "memcpy"; }
 
-  MemcpyBenchmark(const size_t BufferSize)
+  Benchmark(const size_t BufferSize)
       : SrcBuffer(BufferSize), DstBuffer(BufferSize) {}
 
   inline auto functor() {
@@ -94,13 +86,12 @@ struct MemcpyBenchmark {
   AlignedBuffer SrcBuffer;
   AlignedBuffer DstBuffer;
 };
-
-struct MemsetBenchmark {
+#elif defined(LIBC_BENCHMARK_FUNCTION_MEMSET)
+struct Benchmark {
   static constexpr auto GetDistributions = &getMemsetSizeDistributions;
   static constexpr size_t BufferCount = 1;
-  static void amend(Study &S) { S.Configuration.Function = "memset"; }
 
-  MemsetBenchmark(const size_t BufferSize) : DstBuffer(BufferSize) {}
+  Benchmark(const size_t BufferSize) : DstBuffer(BufferSize) {}
 
   inline auto functor() {
     return [this](ParameterType P) {
@@ -112,9 +103,11 @@ struct MemsetBenchmark {
 
   AlignedBuffer DstBuffer;
 };
+#else
+#error "Missing LIBC_BENCHMARK_FUNCTION_XXX definition"
+#endif
 
-template <typename Benchmark> struct Harness : Benchmark {
-  using Benchmark::functor;
+struct Harness : Benchmark {
 
   Harness(const size_t BufferSize, size_t BatchParameterCount,
           std::function<unsigned()> SizeSampler,
@@ -140,11 +133,6 @@ private:
   std::function<unsigned()> OffsetSampler;
 };
 
-struct IBenchmark {
-  virtual ~IBenchmark() {}
-  virtual Study run() = 0;
-};
-
 size_t getL1DataCacheSize() {
   const std::vector<CacheInfo> &CacheInfos = HostState::get().Caches;
   const auto IsL1DataCache = [](const CacheInfo &CI) {
@@ -156,7 +144,7 @@ size_t getL1DataCacheSize() {
   report_fatal_error("Unable to read L1 Cache Data Size");
 }
 
-template <typename Benchmark> struct MemfunctionBenchmark : IBenchmark {
+struct MemfunctionBenchmark {
   MemfunctionBenchmark(int64_t L1Size = getL1DataCacheSize())
       : AvailableSize(L1Size - L1LeftAsideBytes - ParameterStorageBytes),
         BufferSize(AvailableSize / Benchmark::BufferCount),
@@ -217,12 +205,10 @@ template <typename Benchmark> struct MemfunctionBenchmark : IBenchmark {
     else
       SC.SizeDistributionName = SizeDistributionName;
     SC.AccessAlignment = MaybeAlign(AlignedAccess);
-
-    // Delegate specific flags and configuration.
-    Benchmark::amend(Study);
+    SC.Function = LIBC_BENCHMARK_FUNCTION_NAME;
   }
 
-  Study run() override {
+  Study run() {
     if (SweepMode)
       runSweepMode();
     else
@@ -280,8 +266,7 @@ private:
   void runTrials(const BenchmarkOptions &Options,
                  std::function<unsigned()> SizeSampler,
                  std::function<unsigned()> OffsetSampler) {
-    Harness<Benchmark> B(BufferSize, BatchParameterCount, SizeSampler,
-                         OffsetSampler);
+    Harness B(BufferSize, BatchParameterCount, SizeSampler, OffsetSampler);
     for (size_t i = 0; i < NumTrials; ++i) {
       const BenchmarkResult Result = benchmark(Options, B, B.functor());
       Study.Measurements.push_back(Result.BestGuess);
@@ -313,15 +298,6 @@ private:
   }
 };
 
-std::unique_ptr<IBenchmark> getMemfunctionBenchmark() {
-  switch (MemoryFunction) {
-  case memcpy:
-    return std::make_unique<MemfunctionBenchmark<MemcpyBenchmark>>();
-  case memset:
-    return std::make_unique<MemfunctionBenchmark<MemsetBenchmark>>();
-  }
-}
-
 void writeStudy(const Study &S) {
   std::error_code EC;
   raw_fd_ostream FOS(Output, EC);
@@ -337,8 +313,8 @@ void writeStudy(const Study &S) {
 
 void main() {
   checkRequirements();
-  auto MB = getMemfunctionBenchmark();
-  writeStudy(MB->run());
+  MemfunctionBenchmark MB;
+  writeStudy(MB.run());
 }
 
 } // namespace libc_benchmarks

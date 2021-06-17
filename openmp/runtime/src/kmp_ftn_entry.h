@@ -128,12 +128,10 @@ int FTN_STDCALL FTN_GET_BLOCKTIME(void) {
   return __kmps_get_blocktime();
 #else
   int gtid, tid;
-  kmp_info_t *thread;
   kmp_team_p *team;
 
   gtid = __kmp_entry_gtid();
   tid = __kmp_tid_from_gtid(gtid);
-  thread = __kmp_thread_from_gtid(gtid);
   team = __kmp_threads[gtid]->th.th_team;
 
   /* These must match the settings used in __kmp_wait_sleep() */

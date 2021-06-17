@@ -100,6 +100,8 @@ struct CFGViewerLegacyPass : public FunctionPass {
   }
 
   bool runOnFunction(Function &F) override {
+    if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
+      return false;
     auto *BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
     auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
     viewCFG(F, BFI, BPI, getMaxFreq(F, BFI));
@@ -115,13 +117,15 @@ struct CFGViewerLegacyPass : public FunctionPass {
     AU.setPreservesAll();
   }
 };
-}
+} // namespace
 
 char CFGViewerLegacyPass::ID = 0;
 INITIALIZE_PASS(CFGViewerLegacyPass, "view-cfg", "View CFG of function", false,
                 true)
 
 PreservedAnalyses CFGViewerPass::run(Function &F, FunctionAnalysisManager &AM) {
+  if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
+    return PreservedAnalyses::all();
   auto *BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
   auto *BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
   viewCFG(F, BFI, BPI, getMaxFreq(F, BFI));
@@ -136,6 +140,8 @@ struct CFGOnlyViewerLegacyPass : public FunctionPass {
   }
 
   bool runOnFunction(Function &F) override {
+    if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
+      return false;
     auto *BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
     auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
     viewCFG(F, BFI, BPI, getMaxFreq(F, BFI), /*CFGOnly=*/true);
@@ -151,7 +157,7 @@ struct CFGOnlyViewerLegacyPass : public FunctionPass {
     AU.setPreservesAll();
   }
 };
-}
+} // namespace
 
 char CFGOnlyViewerLegacyPass::ID = 0;
 INITIALIZE_PASS(CFGOnlyViewerLegacyPass, "view-cfg-only",
@@ -159,6 +165,8 @@ INITIALIZE_PASS(CFGOnlyViewerLegacyPass, "view-cfg-only",
 
 PreservedAnalyses CFGOnlyViewerPass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
+  if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
+    return PreservedAnalyses::all();
   auto *BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
   auto *BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
   viewCFG(F, BFI, BPI, getMaxFreq(F, BFI), /*CFGOnly=*/true);
@@ -173,6 +181,8 @@ struct CFGPrinterLegacyPass : public FunctionPass {
   }
 
   bool runOnFunction(Function &F) override {
+    if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
+      return false;
     auto *BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
     auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
     writeCFGToDotFile(F, BFI, BPI, getMaxFreq(F, BFI));
@@ -188,7 +198,7 @@ struct CFGPrinterLegacyPass : public FunctionPass {
     AU.setPreservesAll();
   }
 };
-}
+} // namespace
 
 char CFGPrinterLegacyPass::ID = 0;
 INITIALIZE_PASS(CFGPrinterLegacyPass, "dot-cfg",
@@ -196,6 +206,8 @@ INITIALIZE_PASS(CFGPrinterLegacyPass, "dot-cfg",
 
 PreservedAnalyses CFGPrinterPass::run(Function &F,
                                       FunctionAnalysisManager &AM) {
+  if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
+    return PreservedAnalyses::all();
   auto *BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
   auto *BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
   writeCFGToDotFile(F, BFI, BPI, getMaxFreq(F, BFI));
@@ -210,6 +222,8 @@ struct CFGOnlyPrinterLegacyPass : public FunctionPass {
   }
 
   bool runOnFunction(Function &F) override {
+    if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
+      return false;
     auto *BPI = &getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
     auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
     writeCFGToDotFile(F, BFI, BPI, getMaxFreq(F, BFI), /*CFGOnly=*/true);
@@ -224,7 +238,7 @@ struct CFGOnlyPrinterLegacyPass : public FunctionPass {
     AU.setPreservesAll();
   }
 };
-}
+} // namespace
 
 char CFGOnlyPrinterLegacyPass::ID = 0;
 INITIALIZE_PASS(CFGOnlyPrinterLegacyPass, "dot-cfg-only",
@@ -233,6 +247,8 @@ INITIALIZE_PASS(CFGOnlyPrinterLegacyPass, "dot-cfg-only",
 
 PreservedAnalyses CFGOnlyPrinterPass::run(Function &F,
                                           FunctionAnalysisManager &AM) {
+  if (!CFGFuncName.empty() && !F.getName().contains(CFGFuncName))
+    return PreservedAnalyses::all();
   auto *BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
   auto *BPI = &AM.getResult<BranchProbabilityAnalysis>(F);
   writeCFGToDotFile(F, BFI, BPI, getMaxFreq(F, BFI), /*CFGOnly=*/true);

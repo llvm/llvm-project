@@ -145,7 +145,7 @@ public:
   /// \endcode{.cpp}
   ///
   virtual Expected<shared::WrapperFunctionResult>
-  runWrapper(JITTargetAddress WrapperFnAddr, ArrayRef<uint8_t> ArgBuffer) = 0;
+  runWrapper(JITTargetAddress WrapperFnAddr, ArrayRef<char> ArgBuffer) = 0;
 
   /// Disconnect from the target process.
   ///
@@ -161,6 +161,21 @@ protected:
   unsigned PageSize = 0;
   MemoryAccess *MemAccess = nullptr;
   jitlink::JITLinkMemoryManager *MemMgr = nullptr;
+};
+
+/// Call a wrapper function via TargetProcessControl::runWrapper.
+class TPCCaller {
+public:
+  TPCCaller(TargetProcessControl &TPC, JITTargetAddress WrapperFnAddr)
+      : TPC(TPC), WrapperFnAddr(WrapperFnAddr) {}
+  Expected<shared::WrapperFunctionResult> operator()(const char *ArgData,
+                                                     size_t ArgSize) const {
+    return TPC.runWrapper(WrapperFnAddr, ArrayRef<char>(ArgData, ArgSize));
+  }
+
+private:
+  TargetProcessControl &TPC;
+  JITTargetAddress WrapperFnAddr;
 };
 
 /// A TargetProcessControl implementation targeting the current process.
@@ -187,8 +202,7 @@ public:
                               ArrayRef<std::string> Args) override;
 
   Expected<shared::WrapperFunctionResult>
-  runWrapper(JITTargetAddress WrapperFnAddr,
-             ArrayRef<uint8_t> ArgBuffer) override;
+  runWrapper(JITTargetAddress WrapperFnAddr, ArrayRef<char> ArgBuffer) override;
 
   Error disconnect() override;
 

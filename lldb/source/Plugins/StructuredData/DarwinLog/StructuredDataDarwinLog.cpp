@@ -809,7 +809,6 @@ protected:
                        StructuredDataDarwinLog::GetStaticPluginName())) {
       result.AppendError("failed to get StructuredDataPlugin for "
                          "the process");
-      result.SetStatus(eReturnStatusFailed);
     }
     StructuredDataDarwinLog &plugin =
         *static_cast<StructuredDataDarwinLog *>(plugin_sp.get());
@@ -833,7 +832,6 @@ protected:
     // Report results.
     if (!error.Success()) {
       result.AppendError(error.AsCString());
-      result.SetStatus(eReturnStatusFailed);
       // Our configuration failed, so we're definitely disabled.
       plugin.SetEnabled(false);
     } else {

@@ -110,8 +110,8 @@ char const *__kmp_barrier_type_name[bs_last_barrier] = {"plain", "forkjoin"
                                                         "reduction"
 #endif // KMP_FAST_REDUCTION_BARRIER
 };
-char const *__kmp_barrier_pattern_name[bp_last_bar] = {"linear", "tree",
-                                                       "hyper", "hierarchical"};
+char const *__kmp_barrier_pattern_name[bp_last_bar] = {
+    "linear", "tree", "hyper", "hierarchical", "dist"};
 
 int __kmp_allThreadsSpecified = 0;
 size_t __kmp_align_alloc = CACHE_LINE;

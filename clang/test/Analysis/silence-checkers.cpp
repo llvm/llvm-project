@@ -11,6 +11,12 @@
 // RUN:   -analyzer-checker=cplusplus.NewDelete\
 // RUN:   -analyzer-config silence-checkers="unix"
 
+// RUN: %clang_analyze_cc1 -verify="deadstore-silenced" %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=apiModeling \
+// RUN:   -analyzer-checker=deadcode \
+// RUN:   -analyzer-config silence-checkers="deadcode.DeadStores"
+
 #include "Inputs/system-header-simulator-cxx.h"
 
 typedef __typeof(sizeof(int)) size_t;
@@ -37,4 +43,18 @@ void test_delete_ZERO_SIZE_PTR() {
   // ZERO_SIZE_PTR is specially handled but only for malloc family
   delete Ptr; // no-silence-warning{{Argument to 'delete' is a constant address (16), which is not memory allocated by 'new' [cplusplus.NewDelete]}}
               // unix-silenced-warning@-1{{Argument to 'delete' is a constant address (16), which is not memory allocated by 'new' [cplusplus.NewDelete]}}
+}
+
+// deadstore-silenced-no-diagnostics
+
+int foo() {
+  int x = 42;
+  return x;
+}
+
+void g() {
+  int y;
+  y = 7;
+  int x = foo();
+  y = 10;
 }

@@ -995,17 +995,13 @@ StmtResult Sema::BuildCoreturnStmt(SourceLocation Loc, Expr *E,
   }
 
   // Move the return value if we can
-  if (E) {
-    const VarDecl *NRVOCandidate = this->getCopyElisionCandidate(
-        E->getType(), E, CES_ImplicitlyMovableCXX20);
-    if (NRVOCandidate) {
-      InitializedEntity Entity =
-          InitializedEntity::InitializeResult(Loc, E->getType(), NRVOCandidate);
-      ExprResult MoveResult = this->PerformMoveOrCopyInitialization(
-          Entity, NRVOCandidate, E->getType(), E);
-      if (MoveResult.get())
-        E = MoveResult.get();
-    }
+  NamedReturnInfo NRInfo = getNamedReturnInfo(E, /*ForceCXX20=*/true);
+  if (NRInfo.isMoveEligible()) {
+    InitializedEntity Entity = InitializedEntity::InitializeResult(
+        Loc, E->getType(), NRInfo.Candidate);
+    ExprResult MoveResult = PerformMoveOrCopyInitialization(Entity, NRInfo, E);
+    if (MoveResult.get())
+      E = MoveResult.get();
   }
 
   // FIXME: If the operand is a reference to a variable that's about to go out
@@ -1570,7 +1566,7 @@ bool CoroutineStmtBuilder::makeGroDeclAndReturnStmt() {
     // Trigger a nice error message.
     InitializedEntity Entity =
         InitializedEntity::InitializeResult(Loc, FnRetType, false);
-    S.PerformMoveOrCopyInitialization(Entity, nullptr, FnRetType, ReturnValue);
+    S.PerformCopyInitialization(Entity, SourceLocation(), ReturnValue);
     noteMemberDeclaredHere(S, ReturnValue, Fn);
     return false;
   }
@@ -1586,8 +1582,8 @@ bool CoroutineStmtBuilder::makeGroDeclAndReturnStmt() {
     return false;
 
   InitializedEntity Entity = InitializedEntity::InitializeVariable(GroDecl);
-  ExprResult Res = S.PerformMoveOrCopyInitialization(Entity, nullptr, GroType,
-                                                     this->ReturnValue);
+  ExprResult Res =
+      S.PerformCopyInitialization(Entity, SourceLocation(), ReturnValue);
   if (Res.isInvalid())
     return false;
 

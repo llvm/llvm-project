@@ -236,8 +236,9 @@ int CFI_establish(CFI_cdesc_t *descriptor, void *base_addr,
   }
   if (type == CFI_type_struct || type == CFI_type_other ||
       IsCharacterType(type)) {
-    if (elem_len <= 0)
+    if (elem_len <= 0) {
       return CFI_INVALID_ELEM_LEN;
+    }
   } else {
     elem_len = MinElemLen(type);
     assert(elem_len > 0 && "Unknown element length for type");

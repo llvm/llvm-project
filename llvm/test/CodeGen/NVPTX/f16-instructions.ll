@@ -806,7 +806,7 @@ define half @test_bitcast_i16tohalf(i16 %a) #0 {
 
 
 declare half @llvm.sqrt.f16(half %a) #0
-declare half @llvm.powi.f16(half %a, i32 %b) #0
+declare half @llvm.powi.f16.i32(half %a, i32 %b) #0
 declare half @llvm.sin.f16(half %a) #0
 declare half @llvm.cos.f16(half %a) #0
 declare half @llvm.pow.f16(half %a, half %b) #0
@@ -845,7 +845,7 @@ define half @test_sqrt(half %a) #0 {
 ;;; Can't do this yet: requires libcall.
 ; XCHECK-LABEL: test_powi(
 ;define half @test_powi(half %a, i32 %b) #0 {
-;  %r = call half @llvm.powi.f16(half %a, i32 %b)
+;  %r = call half @llvm.powi.f16.i32(half %a, i32 %b)
 ;  ret half %r
 ;}
 

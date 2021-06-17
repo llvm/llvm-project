@@ -12,6 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "M68kSubtarget.h"
+#include "GlSel/M68kCallLowering.h"
+#include "GlSel/M68kLegalizerInfo.h"
+#include "GlSel/M68kRegisterBankInfo.cpp"
 
 #include "M68k.h"
 #include "M68kMachineFunction.h"
@@ -51,7 +54,30 @@ M68kSubtarget::M68kSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
       UserReservedRegister(M68k::NUM_TARGET_REGS), TM(TM), TSInfo(),
       InstrInfo(initializeSubtargetDependencies(CPU, TT, FS, TM)),
       FrameLowering(*this, this->getStackAlignment()), TLInfo(TM, *this),
-      TargetTriple(TT) {}
+      TargetTriple(TT) {
+  CallLoweringInfo.reset(new M68kCallLowering(*getTargetLowering()));
+  Legalizer.reset(new M68kLegalizerInfo(*this));
+
+  auto *RBI = new M68kRegisterBankInfo(*getRegisterInfo());
+  RegBankInfo.reset(RBI);
+  InstSelector.reset(createM68kInstructionSelector(TM, *this, *RBI));
+}
+
+const CallLowering *M68kSubtarget::getCallLowering() const {
+  return CallLoweringInfo.get();
+}
+
+InstructionSelector *M68kSubtarget::getInstructionSelector() const {
+  return InstSelector.get();
+}
+
+const LegalizerInfo *M68kSubtarget::getLegalizerInfo() const {
+  return Legalizer.get();
+}
+
+const RegisterBankInfo *M68kSubtarget::getRegBankInfo() const {
+  return RegBankInfo.get();
+}
 
 bool M68kSubtarget::isPositionIndependent() const {
   return TM.isPositionIndependent();

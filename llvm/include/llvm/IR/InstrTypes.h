@@ -248,11 +248,11 @@ public:
   }
 #include "llvm/IR/Instruction.def"
 
-  static BinaryOperator *CreateWithCopiedFlags(BinaryOps Opc,
-                                               Value *V1, Value *V2,
-                                               Instruction *CopyO,
-                                               const Twine &Name = "") {
-    BinaryOperator *BO = Create(Opc, V1, V2, Name);
+  static BinaryOperator *
+  CreateWithCopiedFlags(BinaryOps Opc, Value *V1, Value *V2, Instruction *CopyO,
+                        const Twine &Name = "",
+                        Instruction *InsertBefore = nullptr) {
+    BinaryOperator *BO = Create(Opc, V1, V2, Name, InsertBefore);
     BO->copyIRFlags(CopyO);
     return BO;
   }

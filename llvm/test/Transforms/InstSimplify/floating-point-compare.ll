@@ -176,7 +176,7 @@ declare <2 x float> @llvm.fabs.v2f32(<2 x float>)
 declare <3 x float> @llvm.fabs.v3f32(<3 x float>)
 declare <2 x double> @llvm.fabs.v2f64(<2 x double>)
 declare float @llvm.sqrt.f32(float)
-declare double @llvm.powi.f64(double,i32)
+declare double @llvm.powi.f64.i32(double,i32)
 declare float @llvm.exp.f32(float)
 declare float @llvm.minnum.f32(float, float)
 declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>)
@@ -248,10 +248,10 @@ define i1 @orderedLessZeroPowi(double,double) {
 ; CHECK-NEXT:    ret i1 false
 ;
   ; Even constant exponent
-  %a = call double @llvm.powi.f64(double %0, i32 2)
+  %a = call double @llvm.powi.f64.i32(double %0, i32 2)
   %square = fmul double %1, %1
   ; Odd constant exponent with provably non-negative base
-  %b = call double @llvm.powi.f64(double %square, i32 3)
+  %b = call double @llvm.powi.f64.i32(double %square, i32 3)
   %c = fadd double %a, %b
   %olt = fcmp olt double %b, 0.000000e+00
   ret i1 %olt

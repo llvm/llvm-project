@@ -279,15 +279,15 @@ generic-32bit)
     check-cxx-cxxabi
 ;;
 generic-gcc)
-    export CC=gcc
-    export CXX=g++
+    export CC=gcc-11
+    export CXX=g++-11
     clean
     generate-cmake
     check-cxx-cxxabi
 ;;
-generic-gcc-next)
-    export CC=gcc-11
-    export CXX=g++-11
+generic-gcc-prev)
+    export CC=gcc-10
+    export CXX=g++-10
     clean
     generate-cmake
     check-cxx-cxxabi

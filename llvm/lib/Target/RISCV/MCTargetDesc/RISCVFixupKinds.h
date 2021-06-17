@@ -16,73 +16,96 @@
 namespace llvm {
 namespace RISCV {
 enum Fixups {
-  // fixup_riscv_hi20 - 20-bit fixup corresponding to hi(foo) for
-  // instructions like lui
+  // 20-bit fixup corresponding to %hi(foo) for instructions like lui
   fixup_riscv_hi20 = FirstTargetFixupKind,
-  // fixup_riscv_lo12_i - 12-bit fixup corresponding to lo(foo) for
-  // instructions like addi
+  // 12-bit fixup corresponding to %lo(foo) for instructions like addi
   fixup_riscv_lo12_i,
-  // fixup_riscv_lo12_s - 12-bit fixup corresponding to lo(foo) for
-  // the S-type store instructions
+  // 12-bit fixup corresponding to %lo(foo) for the S-type store instructions
   fixup_riscv_lo12_s,
-  // fixup_riscv_pcrel_hi20 - 20-bit fixup corresponding to pcrel_hi(foo) for
-  // instructions like auipc
+  // 20-bit fixup corresponding to %pcrel_hi(foo) for instructions like auipc
   fixup_riscv_pcrel_hi20,
-  // fixup_riscv_pcrel_lo12_i - 12-bit fixup corresponding to pcrel_lo(foo) for
-  // instructions like addi
+  // 12-bit fixup corresponding to %pcrel_lo(foo) for instructions like addi
   fixup_riscv_pcrel_lo12_i,
-  // fixup_riscv_pcrel_lo12_s - 12-bit fixup corresponding to pcrel_lo(foo) for
-  // the S-type store instructions
-  fixup_riscv_pcrel_lo12_s,
-  // fixup_riscv_got_hi20 - 20-bit fixup corresponding to got_pcrel_hi(foo) for
-  // instructions like auipc
-  fixup_riscv_got_hi20,
-  // fixup_riscv_tprel_hi20 - 20-bit fixup corresponding to tprel_hi(foo) for
-  // instructions like lui
-  fixup_riscv_tprel_hi20,
-  // fixup_riscv_tprel_lo12_i - 12-bit fixup corresponding to tprel_lo(foo) for
-  // instructions like addi
-  fixup_riscv_tprel_lo12_i,
-  // fixup_riscv_tprel_lo12_s - 12-bit fixup corresponding to tprel_lo(foo) for
-  // the S-type store instructions
-  fixup_riscv_tprel_lo12_s,
-  // fixup_riscv_tprel_add - A fixup corresponding to %tprel_add(foo) for the
-  // add_tls instruction. Used to provide a hint to the linker.
-  fixup_riscv_tprel_add,
-  // fixup_riscv_tls_got_hi20 - 20-bit fixup corresponding to
-  // tls_ie_pcrel_hi(foo) for instructions like auipc
-  fixup_riscv_tls_got_hi20,
-  // fixup_riscv_tls_gd_hi20 - 20-bit fixup corresponding to
-  // tls_gd_pcrel_hi(foo) for instructions like auipc
-  fixup_riscv_tls_gd_hi20,
-  // fixup_riscv_jal - 20-bit fixup for symbol references in the jal
-  // instruction
-  fixup_riscv_jal,
-  // fixup_riscv_branch - 12-bit fixup for symbol references in the branch
+  // 12-bit fixup corresponding to %pcrel_lo(foo) for the S-type store
   // instructions
+  fixup_riscv_pcrel_lo12_s,
+  // 20-bit fixup corresponding to %got_pcrel_hi(foo) for instructions like
+  // auipc
+  fixup_riscv_got_hi20,
+  // 20-bit fixup corresponding to %tprel_hi(foo) for instructions like lui
+  fixup_riscv_tprel_hi20,
+  // 12-bit fixup corresponding to %tprel_lo(foo) for instructions like addi
+  fixup_riscv_tprel_lo12_i,
+  // 12-bit fixup corresponding to %tprel_lo(foo) for the S-type store
+  // instructions
+  fixup_riscv_tprel_lo12_s,
+  // Fixup corresponding to %tprel_add(foo) for PseudoAddTPRel, used as a linker
+  // hint
+  fixup_riscv_tprel_add,
+  // 20-bit fixup corresponding to %tls_ie_pcrel_hi(foo) for instructions like
+  // auipc
+  fixup_riscv_tls_got_hi20,
+  // 20-bit fixup corresponding to %tls_gd_pcrel_hi(foo) for instructions like
+  // auipc
+  fixup_riscv_tls_gd_hi20,
+  // 20-bit fixup for symbol references in the jal instruction
+  fixup_riscv_jal,
+  // 12-bit fixup for symbol references in the branch instructions
   fixup_riscv_branch,
-  // fixup_riscv_rvc_jump - 11-bit fixup for symbol references in the
-  // compressed jump instruction
+  // 11-bit fixup for symbol references in the compressed jump instruction
   fixup_riscv_rvc_jump,
-  // fixup_riscv_rvc_branch - 8-bit fixup for symbol references in the
-  // compressed branch instruction
+  // 8-bit fixup for symbol references in the compressed branch instruction
   fixup_riscv_rvc_branch,
-  // fixup_riscv_call - A fixup representing a call attached to the auipc
+  // Fixup representing a legacy no-pic function call attached to the auipc
   // instruction in a pair composed of adjacent auipc+jalr instructions.
   fixup_riscv_call,
-  // fixup_riscv_call_plt - A fixup representing a procedure linkage table call
-  // attached to the auipc instruction in a pair composed of adjacent auipc+jalr
-  // instructions.
+  // Fixup representing a function call attached to the auipc instruction in a
+  // pair composed of adjacent auipc+jalr instructions.
   fixup_riscv_call_plt,
-  // fixup_riscv_relax - Used to generate an R_RISCV_RELAX relocation type,
-  // which indicates the linker may relax the instruction pair.
+  // Used to generate an R_RISCV_RELAX relocation, which indicates the linker
+  // may relax the instruction pair.
   fixup_riscv_relax,
-  // fixup_riscv_align - Used to generate an R_RISCV_ALIGN relocation type,
-  // which indicates the linker should fixup the alignment after linker
-  // relaxation.
+  // Used to generate an R_RISCV_ALIGN relocation, which indicates the linker
+  // should fixup the alignment after linker relaxation.
   fixup_riscv_align,
+  // 8-bit fixup corresponding to R_RISCV_SET8 for local label assignment.
+  fixup_riscv_set_8,
+  // 8-bit fixup corresponding to R_RISCV_ADD8 for 8-bit symbolic difference
+  // paired relocations.
+  fixup_riscv_add_8,
+  // 8-bit fixup corresponding to R_RISCV_SUB8 for 8-bit symbolic difference
+  // paired relocations.
+  fixup_riscv_sub_8,
+  // 16-bit fixup corresponding to R_RISCV_SET16 for local label assignment.
+  fixup_riscv_set_16,
+  // 16-bit fixup corresponding to R_RISCV_ADD16 for 16-bit symbolic difference
+  // paired reloctions.
+  fixup_riscv_add_16,
+  // 16-bit fixup corresponding to R_RISCV_SUB16 for 16-bit symbolic difference
+  // paired reloctions.
+  fixup_riscv_sub_16,
+  // 32-bit fixup corresponding to R_RISCV_SET32 for local label assignment.
+  fixup_riscv_set_32,
+  // 32-bit fixup corresponding to R_RISCV_ADD32 for 32-bit symbolic difference
+  // paired relocations.
+  fixup_riscv_add_32,
+  // 32-bit fixup corresponding to R_RISCV_SUB32 for 32-bit symbolic difference
+  // paired relocations.
+  fixup_riscv_sub_32,
+  // 64-bit fixup corresponding to R_RISCV_ADD64 for 64-bit symbolic difference
+  // paired relocations.
+  fixup_riscv_add_64,
+  // 64-bit fixup corresponding to R_RISCV_SUB64 for 64-bit symbolic difference
+  // paired relocations.
+  fixup_riscv_sub_64,
+  // 6-bit fixup corresponding to R_RISCV_SET6 for local label assignment in
+  // DWARF CFA.
+  fixup_riscv_set_6b,
+  // 6-bit fixup corresponding to R_RISCV_SUB6 for local label assignment in
+  // DWARF CFA.
+  fixup_riscv_sub_6b,
 
-  // fixup_riscv_invalid - used as a sentinel and a marker, must be last fixup
+  // Used as a sentinel, must be the last
   fixup_riscv_invalid,
   NumTargetFixupKinds = fixup_riscv_invalid - FirstTargetFixupKind
 };

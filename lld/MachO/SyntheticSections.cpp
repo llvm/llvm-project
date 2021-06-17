@@ -647,6 +647,9 @@ void FunctionStartsSection::finalizeContents() {
     if (const auto *defined = dyn_cast<Defined>(sym)) {
       if (!defined->isec || !isCodeSection(defined->isec) || !defined->isLive())
         continue;
+      if (const auto *concatIsec = dyn_cast<ConcatInputSection>(defined->isec))
+        if (concatIsec->shouldOmitFromOutput())
+          continue;
       // TODO: Add support for thumbs, in that case
       // the lowest bit of nextAddr needs to be set to 1.
       addrs.push_back(defined->getVA());

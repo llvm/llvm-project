@@ -43,8 +43,12 @@
 ; CHECK: .loc    1 23 9 is_stmt 0 discriminator 3623878657 # unroll.c:23:9
 ;;
 ;; Check that variable __llvm_fs_discriminator__ is generated.
-; CHECK: .type   __llvm_fs_discriminator__,@object
-; CHECK: .comm __llvm_fs_discriminator__,1,1
+; CHECK: .type   __llvm_fs_discriminator__,@object # @__llvm_fs_discriminator__
+; CHECK: .section        .rodata,"a",@progbits
+; CHECK: .weak   __llvm_fs_discriminator__
+; CHECK: __llvm_fs_discriminator__:
+; CHECK: .byte   1
+; CHECK: .size   __llvm_fs_discriminator__, 1
 
 target triple = "x86_64-unknown-linux-gnu"
 

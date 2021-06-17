@@ -13,21 +13,21 @@
 ; RUN: llc -mtriple thumbv7-unknown-none-musleabihf -float-abi soft -filetype asm -o - %s | FileCheck %s
 ; RUN: llc -mtriple thumbv7-unknown-none-musleabihf -float-abi hard -filetype asm -o - %s | FileCheck %s
 
-declare float @llvm.powi.f32(float, i32)
+declare float @llvm.powi.f32.i32(float, i32)
 
 define float @powi_f32(float %f, i32 %i) {
 entry:
-  %0 = call float @llvm.powi.f32(float %f, i32 %i)
+  %0 = call float @llvm.powi.f32.i32(float %f, i32 %i)
   ret float %0
 }
 
 ; CHECK: b __powisf2
 
-declare double @llvm.powi.f64(double, i32)
+declare double @llvm.powi.f64.i32(double, i32)
 
 define double @powi_f64(double %d, i32 %i) {
 entry:
-  %0 = call double @llvm.powi.f64(double %d, i32 %i)
+  %0 = call double @llvm.powi.f64.i32(double %d, i32 %i)
   ret double %0
 }
 

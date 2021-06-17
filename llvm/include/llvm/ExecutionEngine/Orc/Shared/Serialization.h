@@ -58,6 +58,11 @@ public:
   static const char *getName() { return "void"; }
 };
 
+template <> class SerializationTypeName<char> {
+public:
+  static const char *getName() { return "char"; }
+};
+
 template <> class SerializationTypeName<int8_t> {
 public:
   static const char *getName() { return "int8_t"; }

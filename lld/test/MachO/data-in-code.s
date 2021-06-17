@@ -5,10 +5,9 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/foo.s -o %t/foo.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/bar.s -o %t/bar.o
 # RUN: %lld %t/foo.o %t/bar.o -o %t/main.exe
-# RUN: llvm-objdump --private-headers %t/main.exe > %t/objdump
+# RUN: llvm-otool -l %t/main.exe > %t/objdump
 # RUN: llvm-objdump --macho --data-in-code %t/main.exe >> %t/objdump
 # RUN: FileCheck %s < %t/objdump
-
 
 # CHECK-LABEL:  sectname __text
 # CHECK-NEXT:   segname __TEXT
@@ -25,6 +24,11 @@
 # CHECK-NEXT:   offset length kind
 # CHECK-NEXT:   [[#%x,TEXT + 28]] 24 JUMP_TABLE32
 # CHECK-NEXT:   [[#%x,TEXT + 68]] 12 JUMP_TABLE32
+
+# RUN: %lld %t/foo.o %t/bar.o -no_data_in_code_info -o %t/main.exe
+# RUN: llvm-otool -l %t/main.exe | FileCheck --check-prefix=OMIT %s
+
+# OMIT-NOT: LC_DATA_IN_CODE
 
 #--- foo.s
 .text

@@ -29,6 +29,10 @@ namespace {
 /// Checks for out of bound memref access subscripts..
 struct TestMemRefBoundCheck
     : public PassWrapper<TestMemRefBoundCheck, FunctionPass> {
+  StringRef getArgument() const final { return "test-memref-bound-check"; }
+  StringRef getDescription() const final {
+    return "Check memref access bounds in a Function";
+  }
   void runOnFunction() override;
 };
 
@@ -46,9 +50,6 @@ void TestMemRefBoundCheck::runOnFunction() {
 
 namespace mlir {
 namespace test {
-void registerMemRefBoundCheck() {
-  PassRegistration<TestMemRefBoundCheck>(
-      "test-memref-bound-check", "Check memref access bounds in a Function");
-}
+void registerMemRefBoundCheck() { PassRegistration<TestMemRefBoundCheck>(); }
 } // namespace test
 } // namespace mlir

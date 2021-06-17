@@ -2697,9 +2697,9 @@ void Attribute::dump() const {
   llvm::errs() << "\n";
 }
 
-void Type::print(raw_ostream &os) { ModulePrinter(os).printType(*this); }
+void Type::print(raw_ostream &os) const { ModulePrinter(os).printType(*this); }
 
-void Type::dump() { print(llvm::errs()); }
+void Type::dump() const { print(llvm::errs()); }
 
 void AffineMap::dump() const {
   print(llvm::errs());
@@ -2742,7 +2742,7 @@ void Value::print(raw_ostream &os) {
   // TODO: Improve BlockArgument print'ing.
   BlockArgument arg = this->cast<BlockArgument>();
   os << "<block argument> of type '" << arg.getType()
-     << "' at index: " << arg.getArgNumber() << '\n';
+     << "' at index: " << arg.getArgNumber();
 }
 void Value::print(raw_ostream &os, AsmState &state) {
   if (auto *op = getDefiningOp())
@@ -2751,7 +2751,7 @@ void Value::print(raw_ostream &os, AsmState &state) {
   // TODO: Improve BlockArgument print'ing.
   BlockArgument arg = this->cast<BlockArgument>();
   os << "<block argument> of type '" << arg.getType()
-     << "' at index: " << arg.getArgNumber() << '\n';
+     << "' at index: " << arg.getArgNumber();
 }
 
 void Value::dump() {

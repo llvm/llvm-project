@@ -358,7 +358,7 @@ public:
 class RunWrapper
     : public shared::RPCFunction<RunWrapper,
                                  shared::WrapperFunctionResult(
-                                     JITTargetAddress, std::vector<uint8_t>)> {
+                                     JITTargetAddress, std::vector<char>)> {
 public:
   static const char *getName() { return "RunWrapper"; }
 };
@@ -580,14 +580,12 @@ private:
         ProgramNameOverride);
   }
 
-  shared::WrapperFunctionResult
-  runWrapper(JITTargetAddress WrapperFnAddr,
-             const std::vector<uint8_t> &ArgBuffer) {
+  shared::WrapperFunctionResult runWrapper(JITTargetAddress WrapperFnAddr,
+                                           const std::vector<char> &ArgBuffer) {
     using WrapperFnTy = shared::detail::CWrapperFunctionResult (*)(
         const char *Data, uint64_t Size);
     auto *WrapperFn = jitTargetAddressToFunction<WrapperFnTy>(WrapperFnAddr);
-    return WrapperFn(reinterpret_cast<const char *>(ArgBuffer.data()),
-                     ArgBuffer.size());
+    return WrapperFn(ArgBuffer.data(), ArgBuffer.size());
   }
 
   void closeConnection() { Finished = true; }

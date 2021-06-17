@@ -12,10 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "gtest/gtest.h"
 
 #include "../../test/lib/Dialect/Test/TestAttributes.h"
+#include "../../test/lib/Dialect/Test/TestDialect.h"
 #include "../../test/lib/Dialect/Test/TestTypes.h"
 
 using namespace mlir;
@@ -85,6 +88,74 @@ TEST(InterfaceAttachment, Type) {
   EXPECT_FALSE(i8other.isa<TestExternalTypeInterface>());
 }
 
+/// External interface model for the test type from the test dialect.
+struct TestTypeModel
+    : public TestExternalTypeInterface::ExternalModel<TestTypeModel,
+                                                      test::TestType> {
+  unsigned getBitwidthPlusArg(Type type, unsigned arg) const { return arg; }
+
+  static unsigned staticGetSomeValuePlusArg(unsigned arg) { return 10 + arg; }
+};
+
+TEST(InterfaceAttachment, TypeDelayedContextConstruct) {
+  // Put the interface in the registry.
+  DialectRegistry registry;
+  registry.insert<test::TestDialect>();
+  registry.addTypeInterface<test::TestDialect, test::TestType, TestTypeModel>();
+
+  // Check that when a context is constructed with the given registry, the type
+  // interface gets registered.
+  MLIRContext context(registry);
+  context.loadDialect<test::TestDialect>();
+  test::TestType testType = test::TestType::get(&context);
+  auto iface = testType.dyn_cast<TestExternalTypeInterface>();
+  ASSERT_TRUE(iface != nullptr);
+  EXPECT_EQ(iface.getBitwidthPlusArg(42), 42u);
+  EXPECT_EQ(iface.staticGetSomeValuePlusArg(10), 20u);
+}
+
+TEST(InterfaceAttachment, TypeDelayedContextAppend) {
+  // Put the interface in the registry.
+  DialectRegistry registry;
+  registry.insert<test::TestDialect>();
+  registry.addTypeInterface<test::TestDialect, test::TestType, TestTypeModel>();
+
+  // Check that when the registry gets appended to the context, the interface
+  // becomes available for objects in loaded dialects.
+  MLIRContext context;
+  context.loadDialect<test::TestDialect>();
+  test::TestType testType = test::TestType::get(&context);
+  EXPECT_FALSE(testType.isa<TestExternalTypeInterface>());
+  context.appendDialectRegistry(registry);
+  EXPECT_TRUE(testType.isa<TestExternalTypeInterface>());
+}
+
+TEST(InterfaceAttachment, RepeatedRegistration) {
+  DialectRegistry registry;
+  registry.addTypeInterface<BuiltinDialect, IntegerType, Model>();
+  MLIRContext context(registry);
+
+  // Should't fail on repeated registration through the dialect registry.
+  context.appendDialectRegistry(registry);
+}
+
+TEST(InterfaceAttachment, TypeBuiltinDelayed) {
+  // Builtin dialect needs to registration or loading, but delayed interface
+  // registration must still work.
+  DialectRegistry registry;
+  registry.addTypeInterface<BuiltinDialect, IntegerType, Model>();
+
+  MLIRContext context(registry);
+  IntegerType i16 = IntegerType::get(&context, 16);
+  EXPECT_TRUE(i16.isa<TestExternalTypeInterface>());
+
+  MLIRContext initiallyEmpty;
+  IntegerType i32 = IntegerType::get(&initiallyEmpty, 32);
+  EXPECT_FALSE(i32.isa<TestExternalTypeInterface>());
+  initiallyEmpty.appendDialectRegistry(registry);
+  EXPECT_TRUE(i32.isa<TestExternalTypeInterface>());
+}
+
 /// The interface provides a default implementation that expects
 /// ConcreteType::getWidth to exist, which is the case for IntegerType. So this
 /// just derives from the ExternalModel.
@@ -126,9 +197,9 @@ TEST(InterfaceAttachment, Fallback) {
 }
 
 /// External model for attribute interfaces.
-struct TextExternalIntegerAttrModel
+struct TestExternalIntegerAttrModel
     : public TestExternalAttrInterface::ExternalModel<
-          TextExternalIntegerAttrModel, IntegerAttr> {
+          TestExternalIntegerAttrModel, IntegerAttr> {
   const Dialect *getDialectPtr(Attribute attr) const {
     return &attr.cast<IntegerAttr>().getDialect();
   }
@@ -143,11 +214,162 @@ TEST(InterfaceAttachment, Attribute) {
   // that the basics work for attributes.
   IntegerAttr attr = IntegerAttr::get(IntegerType::get(&context, 32), 42);
   ASSERT_FALSE(attr.isa<TestExternalAttrInterface>());
-  IntegerAttr::attachInterface<TextExternalIntegerAttrModel>(context);
+  IntegerAttr::attachInterface<TestExternalIntegerAttrModel>(context);
   auto iface = attr.dyn_cast<TestExternalAttrInterface>();
   ASSERT_TRUE(iface != nullptr);
   EXPECT_EQ(iface.getDialectPtr(), &attr.getDialect());
   EXPECT_EQ(iface.getSomeNumber(), 42);
+}
+
+/// External model for an interface attachable to a non-builtin attribute.
+struct TestExternalSimpleAAttrModel
+    : public TestExternalAttrInterface::ExternalModel<
+          TestExternalSimpleAAttrModel, test::SimpleAAttr> {
+  const Dialect *getDialectPtr(Attribute attr) const {
+    return &attr.getDialect();
+  }
+
+  static int getSomeNumber() { return 21; }
+};
+
+TEST(InterfaceAttachmentTest, AttributeDelayed) {
+  // Attribute interfaces use the exact same mechanism as types, so just check
+  // that the delayed registration work for attributes.
+  DialectRegistry registry;
+  registry.insert<test::TestDialect>();
+  registry.addAttrInterface<test::TestDialect, test::SimpleAAttr,
+                            TestExternalSimpleAAttrModel>();
+
+  MLIRContext context(registry);
+  context.loadDialect<test::TestDialect>();
+  auto attr = test::SimpleAAttr::get(&context);
+  EXPECT_TRUE(attr.isa<TestExternalAttrInterface>());
+
+  MLIRContext initiallyEmpty;
+  initiallyEmpty.loadDialect<test::TestDialect>();
+  attr = test::SimpleAAttr::get(&initiallyEmpty);
+  EXPECT_FALSE(attr.isa<TestExternalAttrInterface>());
+  initiallyEmpty.appendDialectRegistry(registry);
+  EXPECT_TRUE(attr.isa<TestExternalAttrInterface>());
+}
+
+/// External interface model for the module operation. Only provides non-default
+/// methods.
+struct TestExternalOpModel
+    : public TestExternalOpInterface::ExternalModel<TestExternalOpModel,
+                                                    ModuleOp> {
+  unsigned getNameLengthPlusArg(Operation *op, unsigned arg) const {
+    return op->getName().getStringRef().size() + arg;
+  }
+
+  static unsigned getNameLengthPlusArgTwice(unsigned arg) {
+    return ModuleOp::getOperationName().size() + 2 * arg;
+  }
+};
+
+/// External interface model for the func operation. Provides non-deafult and
+/// overrides default methods.
+struct TestExternalOpOverridingModel
+    : public TestExternalOpInterface::FallbackModel<
+          TestExternalOpOverridingModel> {
+  unsigned getNameLengthPlusArg(Operation *op, unsigned arg) const {
+    return op->getName().getStringRef().size() + arg;
+  }
+
+  static unsigned getNameLengthPlusArgTwice(unsigned arg) {
+    return FuncOp::getOperationName().size() + 2 * arg;
+  }
+
+  unsigned getNameLengthTimesArg(Operation *op, unsigned arg) const {
+    return 42;
+  }
+
+  static unsigned getNameLengthMinusArg(unsigned arg) { return 21; }
+};
+
+TEST(InterfaceAttachment, Operation) {
+  MLIRContext context;
+
+  // Initially, the operation doesn't have the interface.
+  auto moduleOp = ModuleOp::create(UnknownLoc::get(&context));
+  ASSERT_FALSE(isa<TestExternalOpInterface>(moduleOp.getOperation()));
+
+  // We can attach an external interface and now the operaiton has it.
+  ModuleOp::attachInterface<TestExternalOpModel>(context);
+  auto iface = dyn_cast<TestExternalOpInterface>(moduleOp.getOperation());
+  ASSERT_TRUE(iface != nullptr);
+  EXPECT_EQ(iface.getNameLengthPlusArg(10), 16u);
+  EXPECT_EQ(iface.getNameLengthTimesArg(3), 18u);
+  EXPECT_EQ(iface.getNameLengthPlusArgTwice(18), 42u);
+  EXPECT_EQ(iface.getNameLengthMinusArg(5), 1u);
+
+  // Default implementation can be overridden.
+  auto funcOp = FuncOp::create(UnknownLoc::get(&context), "function",
+                               FunctionType::get(&context, {}, {}));
+  ASSERT_FALSE(isa<TestExternalOpInterface>(funcOp.getOperation()));
+  FuncOp::attachInterface<TestExternalOpOverridingModel>(context);
+  iface = dyn_cast<TestExternalOpInterface>(funcOp.getOperation());
+  ASSERT_TRUE(iface != nullptr);
+  EXPECT_EQ(iface.getNameLengthPlusArg(10), 14u);
+  EXPECT_EQ(iface.getNameLengthTimesArg(0), 42u);
+  EXPECT_EQ(iface.getNameLengthPlusArgTwice(8), 20u);
+  EXPECT_EQ(iface.getNameLengthMinusArg(1000), 21u);
+
+  // Another context doesn't have the interfaces registered.
+  MLIRContext other;
+  auto otherModuleOp = ModuleOp::create(UnknownLoc::get(&other));
+  ASSERT_FALSE(isa<TestExternalOpInterface>(otherModuleOp.getOperation()));
+}
+
+struct TestExternalTestOpModel
+    : public TestExternalOpInterface::ExternalModel<TestExternalTestOpModel,
+                                                    test::OpJ> {
+  unsigned getNameLengthPlusArg(Operation *op, unsigned arg) const {
+    return op->getName().getStringRef().size() + arg;
+  }
+
+  static unsigned getNameLengthPlusArgTwice(unsigned arg) {
+    return test::OpJ::getOperationName().size() + 2 * arg;
+  }
+};
+
+TEST(InterfaceAttachment, OperationDelayedContextConstruct) {
+  DialectRegistry registry;
+  registry.insert<test::TestDialect>();
+  registry.addOpInterface<ModuleOp, TestExternalOpModel>();
+  registry.addOpInterface<test::OpJ, TestExternalTestOpModel>();
+
+  // Construct the context directly from a registry. The interfaces are expected
+  // to be readily available on operations.
+  MLIRContext context(registry);
+  context.loadDialect<test::TestDialect>();
+  ModuleOp module = ModuleOp::create(UnknownLoc::get(&context));
+  OpBuilder builder(module);
+  auto op =
+      builder.create<test::OpJ>(builder.getUnknownLoc(), builder.getI32Type());
+  EXPECT_TRUE(isa<TestExternalOpInterface>(module.getOperation()));
+  EXPECT_TRUE(isa<TestExternalOpInterface>(op.getOperation()));
+}
+
+TEST(InterfaceAttachment, OperationDelayedContextAppend) {
+  DialectRegistry registry;
+  registry.insert<test::TestDialect>();
+  registry.addOpInterface<ModuleOp, TestExternalOpModel>();
+  registry.addOpInterface<test::OpJ, TestExternalTestOpModel>();
+
+  // Construct the context, create ops, and only then append the registry. The
+  // interfaces are expected to be available after appending the registry.
+  MLIRContext context;
+  context.loadDialect<test::TestDialect>();
+  ModuleOp module = ModuleOp::create(UnknownLoc::get(&context));
+  OpBuilder builder(module);
+  auto op =
+      builder.create<test::OpJ>(builder.getUnknownLoc(), builder.getI32Type());
+  EXPECT_FALSE(isa<TestExternalOpInterface>(module.getOperation()));
+  EXPECT_FALSE(isa<TestExternalOpInterface>(op.getOperation()));
+  context.appendDialectRegistry(registry);
+  EXPECT_TRUE(isa<TestExternalOpInterface>(module.getOperation()));
+  EXPECT_TRUE(isa<TestExternalOpInterface>(op.getOperation()));
 }
 
 } // end namespace

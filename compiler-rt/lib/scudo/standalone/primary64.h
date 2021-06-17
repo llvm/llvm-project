@@ -59,6 +59,7 @@ public:
   static bool canAllocate(uptr Size) { return Size <= SizeClassMap::MaxSize; }
 
   void init(s32 ReleaseToOsInterval) {
+    DCHECK(isAligned(reinterpret_cast<uptr>(this), alignof(ThisT)));
     DCHECK_EQ(PrimaryBase, 0U);
     // Reserve the space required for the Primary.
     PrimaryBase = reinterpret_cast<uptr>(

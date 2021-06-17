@@ -358,6 +358,7 @@ public:
 
   static constexpr int DIGITS{bits - 1}; // don't count the sign bit
   static constexpr Integer HUGE() { return MASKR(bits - 1); }
+  static constexpr Integer Least() { return MASKL(1); }
   static constexpr int RANGE{// in the sense of SELECTED_INT_KIND
       // This magic value is LOG10(2.)*1E12.
       static_cast<int>(((bits - 1) * 301029995664) / 1000000000000)};

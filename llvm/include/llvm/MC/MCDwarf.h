@@ -387,13 +387,6 @@ public:
   static void Encode(MCContext &Context, MCDwarfLineTableParams Params,
                      int64_t LineDelta, uint64_t AddrDelta, raw_ostream &OS);
 
-  /// Utility function to encode a Dwarf pair of LineDelta and AddrDeltas using
-  /// fixed length operands. Returns (Offset, Size, SetDelta).
-  static std::tuple<uint32_t, uint32_t, bool> fixedEncode(MCContext &Context,
-                                                          int64_t LineDelta,
-                                                          uint64_t AddrDelta,
-                                                          raw_ostream &OS);
-
   /// Utility function to emit the encoding to a streamer.
   static void Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
                    int64_t LineDelta, uint64_t AddrDelta);
@@ -667,8 +660,7 @@ public:
   static void Emit(MCObjectStreamer &streamer, MCAsmBackend *MAB, bool isEH);
   static void EmitAdvanceLoc(MCObjectStreamer &Streamer, uint64_t AddrDelta);
   static void EncodeAdvanceLoc(MCContext &Context, uint64_t AddrDelta,
-                               raw_ostream &OS, uint32_t *Offset = nullptr,
-                               uint32_t *Size = nullptr);
+                               raw_ostream &OS);
 };
 
 } // end namespace llvm

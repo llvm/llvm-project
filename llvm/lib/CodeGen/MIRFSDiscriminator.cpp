@@ -19,10 +19,12 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/SampleProfileLoaderBaseUtil.h"
 #include <unordered_map>
 
 using namespace llvm;
 using namespace sampleprof;
+using namespace sampleprofutil;
 
 #define DEBUG_TYPE "mirfs-discriminators"
 
@@ -127,17 +129,7 @@ bool MIRAddFSDiscriminators::runOnMachineFunction(MachineFunction &MF) {
   }
 
   if (Changed) {
-    Module *M = MF.getFunction().getParent();
-    const char *FSDiscriminatorVar = "__llvm_fs_discriminator__";
-    if (!M->getGlobalVariable(FSDiscriminatorVar)) {
-      auto &Context = M->getContext();
-      // Create a global variable to flag that FSDiscriminators are used.
-      // Using "common" linkage so that it will not gc GC'ed.
-      new GlobalVariable(*M, Type::getInt1Ty(Context), false,
-                         GlobalValue::CommonLinkage,
-                         ConstantInt::getFalse(Context), FSDiscriminatorVar);
-    }
-
+    createFSDiscriminatorVariable(MF.getFunction().getParent());
     LLVM_DEBUG(dbgs() << "Num of FS Discriminators: " << NumNewD << "\n");
   }
 

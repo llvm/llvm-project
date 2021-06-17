@@ -253,8 +253,6 @@ C++20 Specific Configuration Macros:
   This macro is used to re-enable redundant members of `allocator<T>`,
   including `pointer`, `reference`, `rebind`, `address`, `max_size`,
   `construct`, `destroy`, and the two-argument overload of `allocate`.
-  It also re-enables the library-provided explicit specializations
-  of `allocator<void>` and `allocator<const void>`.
 
 **_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS**:
   This macro is used to re-enable the `argument_type`, `result_type`,

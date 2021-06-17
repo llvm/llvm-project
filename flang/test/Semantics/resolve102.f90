@@ -85,3 +85,18 @@ program threeCycle
   call p2
   call p3
 end program
+
+module mutualSpecExprs
+contains
+  pure integer function f(n)
+    integer, intent(in) :: n
+    real arr(g(n))
+    f = size(arr)
+  end function
+  pure integer function g(n)
+    integer, intent(in) :: n
+    !ERROR: Procedure 'f' is referenced before being sufficiently defined in a context where it must be so
+    real arr(f(n))
+    g = size(arr)
+  end function
+end

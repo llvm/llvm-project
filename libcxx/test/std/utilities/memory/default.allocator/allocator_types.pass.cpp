@@ -18,10 +18,18 @@
 //     typedef ptrdiff_t difference_type;
 //     typedef T         value_type;
 //
+//     typedef T*        pointer;           // deprecated in C++17, removed in C++20
+//     typedef T const*  const_pointer;     // deprecated in C++17, removed in C++20
+//     typedef T&        reference;         // deprecated in C++17, removed in C++20
+//     typedef T const&  const_reference;   // deprecated in C++17, removed in C++20
+//     template< class U > struct rebind { typedef allocator<U> other; }; // deprecated in C++17, removed in C++20
+//
 //     typedef true_type propagate_on_container_move_assignment;
 //     typedef true_type is_always_equal;
 // ...
 // };
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <memory>
 #include <type_traits>
@@ -29,36 +37,30 @@
 
 #include "test_macros.h"
 
-template <typename T, typename U>
-TEST_CONSTEXPR_CXX20 bool test()
-{
-    static_assert((std::is_same<typename std::allocator<T>::size_type, std::size_t>::value), "");
-    static_assert((std::is_same<typename std::allocator<T>::difference_type, std::ptrdiff_t>::value), "");
-    static_assert((std::is_same<typename std::allocator<T>::value_type, T>::value), "");
-    static_assert((std::is_same<typename std::allocator<T>::propagate_on_container_move_assignment, std::true_type>::value), "");
-    static_assert((std::is_same<typename std::allocator<T>::is_always_equal, std::true_type>::value), "");
+struct U;
 
-    std::allocator<T> a;
-    std::allocator<T> a2 = a;
-    a2 = a;
-    std::allocator<U> a3 = a2;
-    (void)a3;
+template <typename T>
+void test() {
+    typedef std::allocator<T> Alloc;
+    static_assert((std::is_same<typename Alloc::size_type, std::size_t>::value), "");
+    static_assert((std::is_same<typename Alloc::difference_type, std::ptrdiff_t>::value), "");
+    static_assert((std::is_same<typename Alloc::value_type, T>::value), "");
+    static_assert((std::is_same<typename Alloc::propagate_on_container_move_assignment, std::true_type>::value), "");
+    static_assert((std::is_same<typename Alloc::is_always_equal, std::true_type>::value), "");
 
-    return true;
+#if TEST_STD_VER <= 17
+    static_assert((std::is_same<typename Alloc::pointer, T*>::value), "");
+    static_assert((std::is_same<typename Alloc::const_pointer, T const*>::value), "");
+    static_assert((std::is_same<typename Alloc::reference, T&>::value), "");
+    static_assert((std::is_same<typename Alloc::const_reference, T const&>::value), "");
+    static_assert((std::is_same<typename Alloc::template rebind<U>::other, std::allocator<U> >::value), "");
+#endif
 }
 
-int main(int, char**)
-{
-    test<char, int>();
-#ifdef _LIBCPP_VERSION // extension
-    test<char const, int const>();
-#endif // _LIBCPP_VERSION
-
-#if TEST_STD_VER > 17
-    static_assert(test<char, int>());
-#ifdef _LIBCPP_VERSION // extension
-    static_assert(test<char const, int const>());
-#endif // _LIBCPP_VERSION
+int main(int, char**) {
+    test<char>();
+#ifdef _LIBCPP_VERSION
+    test<char const>(); // extension
 #endif
     return 0;
 }

@@ -70,9 +70,11 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/SampleProfileLoaderBaseUtil.h"
 #include <utility>
 
 using namespace llvm;
+using namespace sampleprofutil;
 
 #define DEBUG_TYPE "add-discriminators"
 
@@ -171,6 +173,10 @@ static bool addDiscriminators(Function &F) {
   // Simlarly, if the function has no debug info, do nothing.
   if (NoDiscriminators || !F.getSubprogram())
     return false;
+
+  // Create FSDiscriminatorVariable if flow sensitive discriminators are used.
+  if (EnableFSDiscriminator)
+    createFSDiscriminatorVariable(F.getParent());
 
   bool Changed = false;
 

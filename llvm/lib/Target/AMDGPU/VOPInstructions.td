@@ -150,6 +150,8 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily> :
   InstSI <ps.OutOperandList, ps.InOperandList, ps.Mnemonic # ps.AsmOperands, []>,
   SIMCInstr <ps.PseudoInstr, EncodingFamily> {
 
+  let VALU = 1;
+  let VOP3 = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
   let UseNamedOperandTable = 1;
@@ -169,6 +171,9 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily> :
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
   let SchedRW              = ps.SchedRW;
+  let mayLoad              = ps.mayLoad;
+  let mayStore             = ps.mayStore;
+  let TRANS                = ps.TRANS;
 
   VOPProfile Pfl = ps.Pfl;
 }
@@ -521,6 +526,8 @@ class VOP_SDWA_Real <VOP_SDWA_Pseudo ps> :
   InstSI <ps.OutOperandList, ps.InOperandList, ps.Mnemonic # ps.AsmOperands, []>,
   SIMCInstr <ps.PseudoInstr, SIEncodingFamily.SDWA> {
 
+  let VALU = 1;
+  let SDWA = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
@@ -542,17 +549,21 @@ class VOP_SDWA_Real <VOP_SDWA_Pseudo ps> :
   let DisableEncoding      = ps.DisableEncoding;
   let TSFlags              = ps.TSFlags;
   let SchedRW              = ps.SchedRW;
+  let mayLoad              = ps.mayLoad;
+  let mayStore             = ps.mayStore;
+  let TRANS                = ps.TRANS;
 }
 
 class Base_VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
   InstSI <ps.OutOperandList, ps.InOperandList, ps.Mnemonic # ps.AsmOperands9, []> {
 
+  let VALU = 1;
+  let SDWA = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
   let Defs = ps.Defs;
   let Uses = ps.Uses;
-  let SchedRW = ps.SchedRW;
   let hasSideEffects = ps.hasSideEffects;
 
   let Constraints     = ps.Constraints;
@@ -571,6 +582,9 @@ class Base_VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
   let DisableEncoding      = ps.DisableEncoding;
   let TSFlags              = ps.TSFlags;
   let SchedRW              = ps.SchedRW;
+  let mayLoad              = ps.mayLoad;
+  let mayStore             = ps.mayStore;
+  let TRANS                = ps.TRANS;
 }
 
 class VOP_SDWA9_Real <VOP_SDWA_Pseudo ps> :
@@ -650,12 +664,13 @@ class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
   InstSI <ps.OutOperandList, ps.InOperandList, ps.Mnemonic # ps.AsmOperands, []>,
   SIMCInstr <ps.PseudoInstr, EncodingFamily> {
 
+  let VALU = 1;
+  let DPP = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
   let Defs = ps.Defs;
   let Uses = ps.Uses;
-  let SchedRW = ps.SchedRW;
   let hasSideEffects = ps.hasSideEffects;
 
   let Constraints     = ps.Constraints;
@@ -673,6 +688,9 @@ class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
   let DisableEncoding      = ps.DisableEncoding;
   let TSFlags              = ps.TSFlags;
   let SchedRW              = ps.SchedRW;
+  let mayLoad              = ps.mayLoad;
+  let mayStore             = ps.mayStore;
+  let TRANS                = ps.TRANS;
 }
 
 class VOP_DPP <string OpName, VOPProfile P, bit IsDPP16,

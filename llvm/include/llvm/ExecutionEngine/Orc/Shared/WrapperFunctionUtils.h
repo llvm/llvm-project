@@ -372,13 +372,15 @@ public:
     if (!ArgBuffer)
       return ArgBuffer.takeError();
 
-    WrapperFunctionResult ResultBuffer =
+    Expected<WrapperFunctionResult> ResultBuffer =
         Caller(ArgBuffer->data(), ArgBuffer->size());
-    if (auto ErrMsg = ResultBuffer.getOutOfBandError())
+    if (!ResultBuffer)
+      return ResultBuffer.takeError();
+    if (auto ErrMsg = ResultBuffer->getOutOfBandError())
       return make_error<StringError>(ErrMsg, inconvertibleErrorCode());
 
     return detail::ResultDeserializer<SPSRetTagT, RetT>::deserialize(
-        Result, ResultBuffer.data(), ResultBuffer.size());
+        Result, ResultBuffer->data(), ResultBuffer->size());
   }
 
   /// Handle a call to a wrapper function.

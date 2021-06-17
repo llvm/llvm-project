@@ -132,6 +132,22 @@ std::optional<ConstantSubscripts> AsConstantExtents(
   }
 }
 
+Shape AsShape(const ConstantSubscripts &shape) {
+  Shape result;
+  for (const auto &extent : shape) {
+    result.emplace_back(ExtentExpr{extent});
+  }
+  return result;
+}
+
+std::optional<Shape> AsShape(const std::optional<ConstantSubscripts> &shape) {
+  if (shape) {
+    return AsShape(*shape);
+  } else {
+    return std::nullopt;
+  }
+}
+
 Shape Fold(FoldingContext &context, Shape &&shape) {
   for (auto &dim : shape) {
     dim = Fold(context, std::move(dim));
@@ -188,6 +204,14 @@ MaybeExtentExpr GetSize(Shape &&shape) {
     }
   }
   return extent;
+}
+
+ConstantSubscript GetSize(const ConstantSubscripts &shape) {
+  ConstantSubscript size{1};
+  for (auto dim : std::move(shape)) {
+    size *= dim;
+  }
+  return size;
 }
 
 bool ContainsAnyImpliedDoIndex(const ExtentExpr &expr) {
@@ -490,16 +514,10 @@ auto GetShapeHelper::operator()(const Symbol &symbol) const -> Result {
           [&](const semantics::ProcBindingDetails &binding) {
             return (*this)(binding.symbol());
           },
-          [&](const semantics::UseDetails &use) {
-            return (*this)(use.symbol());
-          },
-          [&](const semantics::HostAssocDetails &assoc) {
-            return (*this)(assoc.symbol());
-          },
           [](const semantics::TypeParamDetails &) { return ScalarShape(); },
           [](const auto &) { return Result{}; },
       },
-      symbol.details());
+      symbol.GetUltimate().details());
 }
 
 auto GetShapeHelper::operator()(const Component &component) const -> Result {

@@ -13,7 +13,7 @@
 #if LLVM_SUPPORT_XCODE_SIGNPOSTS
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Mutex.h"
-#endif // if LLVM_SUPPORT_XCODE_SIGNPOSTS
+#endif
 
 using namespace llvm;
 

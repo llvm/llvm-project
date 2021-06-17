@@ -230,7 +230,6 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
   // When the producer has index semantics, we have to transform the indices of
   // the producer according to the tiling of the consumer, i.e. offset them by
   // the values computed in `loopRanges`.
-  assert(!isa<IndexedGenericOp>(producer) && "unexpected op");
   if (producer.hasIndexSemantics()) {
     assert(clonedOp->getNumRegions() == 1 &&
            clonedOp->getRegion(0).getBlocks().size() == 1 &&
@@ -426,10 +425,6 @@ mlir::linalg::fuseProducerOfBuffer(OpBuilder &b, OpOperand &consumerOpOperand,
   if (!fusableDependence)
     return llvm::None;
 
-  // Canonicalize indexed generic ops before fusion.
-  if (isa<IndexedGenericOp>(fusableDependence->getDependentOp()))
-    return llvm::None;
-
   LinalgOp producerOp = dyn_cast<LinalgOp>(fusableDependence->getDependentOp());
   if (!producerOp)
     return llvm::None;
@@ -507,10 +502,6 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpOperand &consumerOpOperand) {
 Optional<FusionInfo>
 mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpResult producerOpResult,
                                    OpOperand &consumerOpOperand) {
-  // Canonicalize indexed generic ops before fusion.
-  if (isa<IndexedGenericOp>(producerOpResult.getOwner()))
-    return llvm::None;
-
   auto producerOp = dyn_cast<LinalgOp>(producerOpResult.getOwner());
   if (!producerOp)
     return llvm::None;
@@ -765,9 +756,6 @@ FusableOpDependencesTy mlir::linalg::findAllFusableDependences(
       Optional<LinalgDependenceGraph::LinalgDependenceGraphElem>
           fusableDependence = findFusableProducer(*opOperand, dependenceGraph);
       if (!fusableDependence)
-        continue;
-      // Canonicalize indexed generic ops before fusion.
-      if (isa<IndexedGenericOp>(fusableDependence->getDependentOp()))
         continue;
       LinalgOp producerOp =
           dyn_cast<LinalgOp>(fusableDependence->getDependentOp());

@@ -19,6 +19,10 @@ using namespace mlir;
 namespace {
 struct TestCallGraphPass
     : public PassWrapper<TestCallGraphPass, OperationPass<ModuleOp>> {
+  StringRef getArgument() const final { return "test-print-callgraph"; }
+  StringRef getDescription() const final {
+    return "Print the contents of a constructed callgraph.";
+  }
   void runOnOperation() override {
     llvm::errs() << "Testing : " << getOperation()->getAttr("test.name")
                  << "\n";
@@ -29,9 +33,6 @@ struct TestCallGraphPass
 
 namespace mlir {
 namespace test {
-void registerTestCallGraphPass() {
-  PassRegistration<TestCallGraphPass> pass(
-      "test-print-callgraph", "Print the contents of a constructed callgraph.");
-}
+void registerTestCallGraphPass() { PassRegistration<TestCallGraphPass>(); }
 } // namespace test
 } // namespace mlir

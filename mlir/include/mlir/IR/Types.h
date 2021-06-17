@@ -156,8 +156,8 @@ public:
   bool isIntOrIndexOrFloat() const;
 
   /// Print the current type.
-  void print(raw_ostream &os);
-  void dump();
+  void print(raw_ostream &os) const;
+  void dump() const;
 
   friend ::llvm::hash_code hash_value(Type arg);
 

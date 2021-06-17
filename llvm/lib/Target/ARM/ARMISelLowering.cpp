@@ -1825,8 +1825,9 @@ EVT ARMTargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &,
     return getPointerTy(DL);
 
   // MVE has a predicate register.
-  if (Subtarget->hasMVEIntegerOps() &&
-      (VT == MVT::v4i32 || VT == MVT::v8i16 || VT == MVT::v16i8))
+  if ((Subtarget->hasMVEIntegerOps() &&
+       (VT == MVT::v4i32 || VT == MVT::v8i16 || VT == MVT::v16i8)) ||
+      (Subtarget->hasMVEFloatOps() && (VT == MVT::v4f32 || VT == MVT::v8f16)))
     return MVT::getVectorVT(MVT::i1, VT.getVectorElementCount());
   return VT.changeVectorElementTypeToInteger();
 }
@@ -20130,7 +20131,8 @@ Align ARMTargetLowering::getABIAlignmentForCallingConv(
 /// [N x i32] or [N x i64]. This allows front-ends to skip emitting padding when
 /// passing according to AAPCS rules.
 bool ARMTargetLowering::functionArgumentNeedsConsecutiveRegisters(
-    Type *Ty, CallingConv::ID CallConv, bool isVarArg) const {
+    Type *Ty, CallingConv::ID CallConv, bool isVarArg,
+    const DataLayout &DL) const {
   if (getEffectiveCallingConv(CallConv, isVarArg) !=
       CallingConv::ARM_AAPCS_VFP)
     return false;

@@ -71,9 +71,9 @@ subroutine s4
   block
     import, none
     integer :: i
-    !ERROR: Use of 'm' as a procedure conflicts with its declaration
+    !ERROR: 'm' is not a callable procedure
     i = m()
-    !ERROR: Use of 'm' as a procedure conflicts with its declaration
+    !ERROR: 'm' is not a callable procedure
     call m()
   end block
 end

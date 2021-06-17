@@ -20,6 +20,8 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
+#include <string>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -209,14 +211,20 @@ void CommandMangler::adjust(std::vector<std::string> &Cmd) const {
   Cmd = tooling::getStripPluginsAdjuster()(Cmd, "");
   Cmd = tooling::getClangSyntaxOnlyAdjuster()(Cmd, "");
 
+  std::vector<std::string> ToAppend;
   if (ResourceDir && !Has("-resource-dir"))
-    Cmd.push_back(("-resource-dir=" + *ResourceDir));
+    ToAppend.push_back(("-resource-dir=" + *ResourceDir));
 
   // Don't set `-isysroot` if it is already set or if `--sysroot` is set.
   // `--sysroot` is a superset of the `-isysroot` argument.
   if (Sysroot && !Has("-isysroot") && !Has("--sysroot")) {
-    Cmd.push_back("-isysroot");
-    Cmd.push_back(*Sysroot);
+    ToAppend.push_back("-isysroot");
+    ToAppend.push_back(*Sysroot);
+  }
+
+  if (!ToAppend.empty()) {
+    Cmd = tooling::getInsertArgumentAdjuster(
+        std::move(ToAppend), tooling::ArgumentInsertPosition::END)(Cmd, "");
   }
 
   if (!Cmd.empty()) {
@@ -503,7 +511,6 @@ void ArgStripper::process(std::vector<std::string> &Args) const {
   }
   Args.resize(Write);
 }
-
 
 std::string printArgv(llvm::ArrayRef<llvm::StringRef> Args) {
   std::string Buf;

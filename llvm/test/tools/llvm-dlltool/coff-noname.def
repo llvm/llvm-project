@@ -1,4 +1,6 @@
-; RUN: llvm-dlltool -k -m i386 --input-def %s --output-lib %t.a
+; RUN: llvm-dlltool -k -m i386 -d %s -l %t.a
+; RUN: llvm-readobj %t.a | FileCheck %s
+; RUN: llvm-dlltool --kill-at --machine i386 --input-def %s --output-lib %t.a
 ; RUN: llvm-readobj %t.a | FileCheck %s
 
 LIBRARY test.dll

@@ -28,27 +28,27 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp> class allocator;
 
-#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS)
+#if _LIBCPP_STD_VER <= 17
 template <>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 allocator<void>
+class _LIBCPP_TEMPLATE_VIS allocator<void>
 {
 public:
-    typedef void*             pointer;
-    typedef const void*       const_pointer;
-    typedef void              value_type;
+    _LIBCPP_DEPRECATED_IN_CXX17 typedef void*             pointer;
+    _LIBCPP_DEPRECATED_IN_CXX17 typedef const void*       const_pointer;
+    _LIBCPP_DEPRECATED_IN_CXX17 typedef void              value_type;
 
-    template <class _Up> struct rebind {typedef allocator<_Up> other;};
+    template <class _Up> struct _LIBCPP_DEPRECATED_IN_CXX17 rebind {typedef allocator<_Up> other;};
 };
 
 template <>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 allocator<const void>
+class _LIBCPP_TEMPLATE_VIS allocator<const void>
 {
 public:
-    typedef const void*       pointer;
-    typedef const void*       const_pointer;
-    typedef const void        value_type;
+    _LIBCPP_DEPRECATED_IN_CXX17 typedef const void*       pointer;
+    _LIBCPP_DEPRECATED_IN_CXX17 typedef const void*       const_pointer;
+    _LIBCPP_DEPRECATED_IN_CXX17 typedef const void        value_type;
 
-    template <class _Up> struct rebind {typedef allocator<_Up> other;};
+    template <class _Up> struct _LIBCPP_DEPRECATED_IN_CXX17 rebind {typedef allocator<_Up> other;};
 };
 #endif
 

@@ -181,22 +181,22 @@ define void @test_pow(float %float, double %double, fp128 %fp128) {
   ret void
 }
 
-declare float @llvm.powi.f32(float, i32)
-declare double @llvm.powi.f64(double, i32)
-declare fp128 @llvm.powi.f128(fp128, i32)
+declare float @llvm.powi.f32.i32(float, i32)
+declare double @llvm.powi.f64.i32(double, i32)
+declare fp128 @llvm.powi.f128.i32(fp128, i32)
 
 define void @test_powi(float %float, double %double, i32 %exponent, fp128 %fp128) {
 ; CHECK-LABEL: test_powi:
 
-   %powifloat = call float @llvm.powi.f32(float %float, i32 %exponent)
+   %powifloat = call float @llvm.powi.f32.i32(float %float, i32 %exponent)
    store float %powifloat, float* @varfloat
 ; CHECK: bl __powisf2
 
-   %powidouble = call double @llvm.powi.f64(double %double, i32 %exponent)
+   %powidouble = call double @llvm.powi.f64.i32(double %double, i32 %exponent)
    store double %powidouble, double* @vardouble
 ; CHECK: bl __powidf2
 
-   %powifp128 = call fp128 @llvm.powi.f128(fp128 %fp128, i32 %exponent)
+   %powifp128 = call fp128 @llvm.powi.f128.i32(fp128 %fp128, i32 %exponent)
    store fp128 %powifp128, fp128* @varfp128
 ; CHECK: bl __powitf2
   ret void

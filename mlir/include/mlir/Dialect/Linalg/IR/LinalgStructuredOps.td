@@ -32,7 +32,7 @@ class LinalgStructuredBase_Op<string mnemonic, list<OpTrait> props>
     // always be 0 for index-free linalg ops. For IndexedGeneric, this must be
     // equal to numLoops.
     unsigned getNumPayloadInductionVariables() {
-      return isa<IndexedGenericOp>(this->getOperation()) ? getNumLoops() : 0;
+      return 0;
     }
 
     // Return whether the op accesses the iteration indices.
@@ -671,140 +671,6 @@ def GenericOp : GenericOpBase<"generic"> {
   let hasFolder = 1;
 }
 
-/// GenericOp with Indexing (i.e. multi-for style in which the region is passed
-/// the enclosing loop induction variables)
-def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
-  let description = [{
-    Indexed Generic Linalg op form where the key properties of the computation
-    are specified as attributes. In pretty form, a `linalg.indexed_generic` op
-    is written as:
-
-      ```mlir
-      linalg.indexed_generic #trait_attribute
-          ins(%A, %B : memref<?x?xf32, stride_specification>,
-                       memref<?x?xf32, stride_specification>)
-          outs(%C : memref<?x?xf32, stride_specification>)
-          attrs = {other-optional-attributes}
-          {region}
-      ```
-
-    Where #trait_attributes is an alias of a dictionary attribute containing:
-      - doc [optional]: a documentation string
-      - indexing_maps: a list of AffineMapAttr, one AffineMapAttr per each input
-        and output view. Such AffineMapAttr specifies the mapping between the
-        loops and the indexing within each view.
-      - library_call [optional]: a StringAttr containing the name of an
-        external library function that the linalg.indexed_generic operation
-        maps to.  The external library is assumed to be dynamically linked and
-        no strong compile-time guarantees are provided. In the absence of such
-        a library call, linalg.indexed_generic will always lower to loops.
-      - iterator_types: an ArrayAttr they type of the enclosing loops; Each
-        element of the list represents and iterator of one of the following
-        types:
-          parallel, reduction, window
-
-    Example:
-    Defining a #matmul_trait attribute in MLIR can be done as follows:
-
-    ```mlir
-    #matmul_accesses = [
-      (m, n, k) -> (m, k),
-      (m, n, k) -> (k, n),
-      (m, n, k) -> (m, n)
-    ]
-    #matmul_trait = {
-      doc = "C(m, n) += A(m, k) * B(k, n)",
-      indexing_maps = #matmul_accesses,
-      library_call = "linalg_matmul",
-      iterator_types = ["parallel", "parallel", "reduction"]
-    }
-    ```
-
-    And can be reused in multiple places as:
-
-    ```mlir
-      linalg.indexed_generic #matmul_trait
-         ins(%A, %B : memref<?x?xf32, stride_specification>,
-                      memref<?x?xf32, stride_specification>)
-        outs(%C : memref<?x?xf32, stride_specification>) {
-      (%offset_m: index, %offset_n: index, %offset_k: index,
-       %a: f32, %b: f32, %c: f32) :
-        "some_optional_computation"(%offset_m, %offset_n, %offset_k)
-        %d = mulf %a, %b: f32
-        %e = addf %c, %d: f32
-        linalg_yield %e : f32
-    }
-    ```
-
-    This may lower to either:
-
-    ```mlir
-    call @linalg_matmul(%offset_m, %offset_n, %offset_k, %A, %B, %C) :
-      (index, index, index,
-       memref<?x?xf32, stride_specification>,
-       memref<?x?xf32, stride_specification>,
-       memref<?x?xf32, stride_specification>)
-      -> ()
-    ```
-
-    or IR resembling:
-
-    ```mlir
-    scf.for %m = %c0 to %M step %c1 {
-      scf.for %n = %c0 to %N step %c1 {
-        scf.for %k = %c0 to %K step %c1 {
-          %a = load %A[%m, %k] : memref<?x?xf32, stride_specification>
-          %b = load %B[%k, %n] : memref<?x?xf32, stride_specification>
-          %c = load %C[%m, %n] : memref<?x?xf32, stride_specification>
-          "some_optional_computation"(%m, %n, %k)
-          %d = mulf %a, %b: f32
-          %e = addf %c, %d: f32
-          store %d, %C[%m, %n] : memref<?x?x?xf32, stride_specification>
-        }
-      }
-    }
-    ```
-
-    To allow progressive lowering from the value world (a.k.a tensor values) to
-    the buffer world (a.k.a memref values), a `linalg.indexed_generic` op
-    allows mixing tensors and buffers operands and tensor results.
-
-    ```mlir
-    %C = linalg.indexed_generic #trait_attribute
-       ins(%A, %B : tensor<?x?xf32>, memref<?x?xf32, stride_specification>)
-      outs(%C : tensor<?x?xf32>)
-      {other-optional-attributes}
-      {region_with_index_arguments}
-      -> (tensor<?x?xf32>)
-    ```
-  }];
-
-  let builders = [
-    OpBuilder<(ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
-      "ValueRange":$outputs, "ArrayRef<AffineMap>":$indexingMaps,
-      "ArrayRef<StringRef>":$iteratorTypes, "StringRef":$doc,
-      "StringRef":$libraryCall,
-      CArg<"function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>",
-           "nullptr">)>,
-    OpBuilder<(ins "ValueRange":$inputs, "ValueRange":$outputBuffers,
-      "ArrayRef<AffineMap>":$indexingMaps, "ArrayRef<StringRef>":$iteratorTypes,
-      "StringRef":$doc, "StringRef":$libraryCall,
-      CArg<"function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>",
-           "nullptr">)>,
-    OpBuilder<(ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
-      "ValueRange":$outputs, "ArrayRef<AffineMap>":$indexingMaps,
-      "ArrayRef<StringRef>":$iteratorTypes,
-      CArg<"function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>",
-           "nullptr">)>,
-    OpBuilder<(ins "ValueRange":$inputs, "ValueRange":$outputBuffers,
-      "ArrayRef<AffineMap>":$indexingMaps, "ArrayRef<StringRef>":$iteratorTypes,
-      CArg<"function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>",
-           "nullptr">)>
-  ];
-  let verifier = [{ return ::verify(*this); }];
-
-  let hasCanonicalizer = 1;
-}
 
 //===----------------------------------------------------------------------===//
 // Named Linalg ops, implemented as a declarative configurations of generic ops.
