@@ -172,3 +172,7 @@ _bar:
 _main:
   callq "-[Foo doFoo:andBar:]"
   ret
+
+.section  __DWARF,__debug_aranges,regular,debug
+ltmp1:
+  .byte 0

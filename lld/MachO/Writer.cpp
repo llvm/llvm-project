@@ -748,7 +748,7 @@ static DenseMap<const InputSection *, size_t> buildInputSectionPriorities() {
   for (const InputFile *file : inputFiles) {
     if (isa<ObjFile>(file))
       for (Symbol *sym : file->symbols)
-        if (auto *d = dyn_cast<Defined>(sym))
+        if (auto *d = dyn_cast_or_null<Defined>(sym))
           addSym(*d);
   }
 
