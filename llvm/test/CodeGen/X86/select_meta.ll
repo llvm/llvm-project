@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-unknown-unknown -print-after-all < %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple=x86_64-unknown-unknown -codegenprepare -S < %s 2>&1 | FileCheck %s
 
 ; Function Attrs: norecurse nounwind readnone uwtable
 define i32 @foo(i32, i32, i32) {
