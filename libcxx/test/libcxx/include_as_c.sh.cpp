@@ -14,8 +14,6 @@
 // file as C, but we're passing C++ flags on the command-line.
 // UNSUPPORTED: gcc
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 // Test that the C wrapper headers can be included when compiling them as C.
 
 // NOTE: It's not common or recommended to have libc++ in the header search
@@ -43,7 +41,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <tgmath.h>
+// The clang-shipped tgmath.h header doesn't work with MSVC/UCRT's complex
+// headers in C mode, see PR46207.
+#ifndef _MSC_VER
+#    include <tgmath.h>
+#endif
 #include <wchar.h>
 #include <wctype.h>
 
