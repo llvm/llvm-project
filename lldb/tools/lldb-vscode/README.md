@@ -195,3 +195,18 @@ This loads the coredump file `/cores/123.core` associated with the program
   "program": "/tmp/a.out"
 }
 ```
+
+## Building lldb-vscode
+
+For a minimal setup on building lldb-vscode:
+- Clone the LLVM repo to `$LLVM_ROOT`.
+- Create a build directory, for example at `$LLVM_ROOT/build`.
+- Inside the build directory run: `cmake $LLVM_ROOT/llvm/
+  -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="lldb" -G Ninja`.
+  - We suggest building in `Release` mode as building DEBUG binaries requires
+    considerably more resources. You can check
+    [Building LLVM with CMake documentation](https://llvm.org/docs/CMake.html)
+    for more details about cmake flags.
+
+- Afterwards you can build lldb-vscode with `cmake --build $LLVM_ROOT/build --target
+  lldb-vscode`.
