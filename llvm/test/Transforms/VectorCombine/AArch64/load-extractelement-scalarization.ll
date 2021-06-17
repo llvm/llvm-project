@@ -476,10 +476,9 @@ define i32 @load_multiple_extracts_with_variable_indices_large_vector_only_first
 ; CHECK-LABEL: @load_multiple_extracts_with_variable_indices_large_vector_only_first_valid(
 ; CHECK-NEXT:    [[CMP_IDX_0:%.*]] = icmp ult i64 [[IDX_0:%.*]], 16
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP_IDX_0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <16 x i32>, <16 x i32>* [[X:%.*]], i32 0, i64 [[IDX_0]]
-; CHECK-NEXT:    [[E_0:%.*]] = load i32, i32* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <16 x i32>, <16 x i32>* [[X]], i32 0, i64 [[IDX_1:%.*]]
-; CHECK-NEXT:    [[E_1:%.*]] = load i32, i32* [[TMP2]], align 4
+; CHECK-NEXT:    [[LV:%.*]] = load <16 x i32>, <16 x i32>* [[X:%.*]], align 64
+; CHECK-NEXT:    [[E_0:%.*]] = extractelement <16 x i32> [[LV]], i64 [[IDX_0]]
+; CHECK-NEXT:    [[E_1:%.*]] = extractelement <16 x i32> [[LV]], i64 [[IDX_1:%.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[E_0]], [[E_1]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
