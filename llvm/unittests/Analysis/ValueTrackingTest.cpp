@@ -813,6 +813,35 @@ TEST(ValueTracking, propagatesPoison) {
       "declare {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)\n"
       "declare {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)\n"
       "declare {i32, i1} @llvm.umul.with.overflow.i32(i32 %a, i32 %b)\n"
+      "declare float @llvm.sqrt.f32(float)\n"
+      "declare float @llvm.powi.f32(float, i32)\n"
+      "declare float @llvm.sin.f32(float)\n"
+      "declare float @llvm.cos.f32(float)\n"
+      "declare float @llvm.pow.f32(float, float)\n"
+      "declare float @llvm.exp.f32(float)\n"
+      "declare float @llvm.exp2.f32(float)\n"
+      "declare float @llvm.log.f32(float)\n"
+      "declare float @llvm.log10.f32(float)\n"
+      "declare float @llvm.log2.f32(float)\n"
+      "declare float @llvm.fma.f32(float, float, float)\n"
+      "declare float @llvm.fabs.f32(float)\n"
+      "declare float @llvm.minnum.f32(float, float)\n"
+      "declare float @llvm.maxnum.f32(float, float)\n"
+      "declare float @llvm.minimum.f32(float, float)\n"
+      "declare float @llvm.maximum.f32(float, float)\n"
+      "declare float @llvm.copysign.f32(float, float)\n"
+      "declare float @llvm.floor.f32(float)\n"
+      "declare float @llvm.ceil.f32(float)\n"
+      "declare float @llvm.trunc.f32(float)\n"
+      "declare float @llvm.rint.f32(float)\n"
+      "declare float @llvm.nearbyint.f32(float)\n"
+      "declare float @llvm.round.f32(float)\n"
+      "declare float @llvm.roundeven.f32(float)\n"
+      "declare i32 @llvm.lround.f32(float)\n"
+      "declare i64 @llvm.llround.f32(float)\n"
+      "declare i32 @llvm.lrint.f32(float)\n"
+      "declare i64 @llvm.llrint.f32(float)\n"
+      "declare float @llvm.fmuladd.f32(float, float, float)\n"
       "define void @f(i32 %x, i32 %y, float %fx, float %fy, "
       "i1 %cond, i8* %p) {\n";
   std::string AsmTail = "  ret void\n}";
@@ -845,7 +874,36 @@ TEST(ValueTracking, propagatesPoison) {
       {true, "call {i32, i1} @llvm.smul.with.overflow.i32(i32 %x, i32 %y)"},
       {true, "call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %x, i32 %y)"},
       {true, "call {i32, i1} @llvm.usub.with.overflow.i32(i32 %x, i32 %y)"},
-      {true, "call {i32, i1} @llvm.umul.with.overflow.i32(i32 %x, i32 %y)"}};
+      {true, "call {i32, i1} @llvm.umul.with.overflow.i32(i32 %x, i32 %y)"},
+      {false, "call float @llvm.sqrt.f32(float %fx)"},
+      {false, "call float @llvm.powi.f32(float %fx, i32 %x)"},
+      {false, "call float @llvm.sin.f32(float %fx)"},
+      {false, "call float @llvm.cos.f32(float %fx)"},
+      {false, "call float @llvm.pow.f32(float %fx, float %fy)"},
+      {false, "call float @llvm.exp.f32(float %fx)"},
+      {false, "call float @llvm.exp2.f32(float %fx)"},
+      {false, "call float @llvm.log.f32(float %fx)"},
+      {false, "call float @llvm.log10.f32(float %fx)"},
+      {false, "call float @llvm.log2.f32(float %fx)"},
+      {false, "call float @llvm.fma.f32(float %fx, float %fx, float %fy)"},
+      {false, "call float @llvm.fabs.f32(float %fx)"},
+      {false, "call float @llvm.minnum.f32(float %fx, float %fy)"},
+      {false, "call float @llvm.maxnum.f32(float %fx, float %fy)"},
+      {false, "call float @llvm.minimum.f32(float %fx, float %fy)"},
+      {false, "call float @llvm.maximum.f32(float %fx, float %fy)"},
+      {false, "call float @llvm.copysign.f32(float %fx, float %fy)"},
+      {false, "call float @llvm.floor.f32(float %fx)"},
+      {false, "call float @llvm.ceil.f32(float %fx)"},
+      {false, "call float @llvm.trunc.f32(float %fx)"},
+      {false, "call float @llvm.rint.f32(float %fx)"},
+      {false, "call float @llvm.nearbyint.f32(float %fx)"},
+      {false, "call float @llvm.round.f32(float %fx)"},
+      {false, "call float @llvm.roundeven.f32(float %fx)"},
+      {false, "call i32 @llvm.lround.f32(float %fx)"},
+      {false, "call i64 @llvm.llround.f32(float %fx)"},
+      {false, "call i32 @llvm.lrint.f32(float %fx)"},
+      {false, "call i64 @llvm.llrint.f32(float %fx)"},
+      {false, "call float @llvm.fmuladd.f32(float %fx, float %fx, float %fy)"}};
 
   std::string AssemblyStr = AsmHead;
   for (auto &Itm : Data)
