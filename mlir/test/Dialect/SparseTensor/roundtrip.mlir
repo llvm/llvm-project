@@ -53,3 +53,16 @@ func @sparse_values(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xf64> {
   %0 = sparse_tensor.values %arg0 : tensor<128xf64, #SparseVector> to memref<?xf64>
   return %0 : memref<?xf64>
 }
+
+// -----
+
+#DenseMatrix = #sparse_tensor.encoding<{dimLevelType = ["dense","dense"]}>
+
+// CHECK-LABEL: func @sparse_to_tensor(
+//  CHECK-SAME: %[[A:.*]]: memref<?xf64>)
+//       CHECK: %[[T:.*]] = sparse_tensor.tensor %[[A]] : memref<?xf64> to tensor<16x32xf64, #{{.*}}>
+//       CHECK: return %[[T]] : tensor<16x32xf64, #{{.*}}>
+func @sparse_to_tensor(%arg0: memref<?xf64>) -> tensor<16x32xf64, #DenseMatrix> {
+  %0 = sparse_tensor.tensor %arg0 : memref<?xf64> to tensor<16x32xf64, #DenseMatrix>
+  return %0 : tensor<16x32xf64, #DenseMatrix>
+}

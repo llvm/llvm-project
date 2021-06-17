@@ -1,5 +1,9 @@
 // RUN: mlir-opt %s --sparse-tensor-conversion | FileCheck %s
 
+#DenseVector = #sparse_tensor.encoding<{
+  dimLevelType = ["dense"]
+}>
+
 #SparseVector = #sparse_tensor.encoding<{
   dimLevelType = ["compressed"]
 }>
@@ -184,4 +188,13 @@ func @sparse_valuesi16(%arg0: tensor<128xi16, #SparseVector>) -> memref<?xi16> {
 func @sparse_valuesi8(%arg0: tensor<128xi8, #SparseVector>) -> memref<?xi8> {
   %0 = sparse_tensor.values %arg0: tensor<128xi8, #SparseVector> to memref<?xi8>
   return %0 : memref<?xi8>
+}
+
+// CHECK-LABEL: func @sparse_reconstruct(
+//  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>
+//       CHECK: return %[[A]] : !llvm.ptr<i8>
+func @sparse_reconstruct(%arg0: tensor<128xf32, #DenseVector> {linalg.inplaceable = true}) -> tensor<128xf32, #DenseVector> {
+  %0 = sparse_tensor.values %arg0 : tensor<128xf32, #DenseVector> to memref<?xf32>
+  %1 = sparse_tensor.tensor %0 : memref<?xf32> to tensor<128xf32, #DenseVector>
+  return %1 : tensor<128xf32, #DenseVector>
 }
