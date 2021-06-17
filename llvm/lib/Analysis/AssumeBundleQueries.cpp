@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "assume-queries"
-
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -17,6 +15,8 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/DebugCounter.h"
+
+#define DEBUG_TYPE "assume-queries"
 
 using namespace llvm;
 using namespace llvm::PatternMatch;

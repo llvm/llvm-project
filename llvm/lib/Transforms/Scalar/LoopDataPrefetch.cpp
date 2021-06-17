@@ -13,7 +13,6 @@
 #include "llvm/Transforms/Scalar/LoopDataPrefetch.h"
 #include "llvm/InitializePasses.h"
 
-#define DEBUG_TYPE "loop-data-prefetch"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -33,6 +32,9 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+
+#define DEBUG_TYPE "loop-data-prefetch"
+
 using namespace llvm;
 
 // By default, we limit this to creating 16 PHIs (which is a little over half
