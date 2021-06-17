@@ -92,33 +92,16 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
 bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                             const MCAsmLayout *Layout,
                                             const MCFixup *Fixup) const {
-  bool IsSymbolicDifference = false;
-  if (const auto *MBE = dyn_cast<MCBinaryExpr>(getSubExpr())) {
-    if (isa<MCBinaryExpr>(MBE->getLHS()) && isa<MCConstantExpr>(MBE->getRHS()))
-      MBE = cast<MCBinaryExpr>(MBE->getLHS());
-    IsSymbolicDifference = isa<MCSymbolRefExpr>(MBE->getLHS()) &&
-                           isa<MCSymbolRefExpr>(MBE->getRHS());
-  }
+  // Explicitly drop the layout and assembler to prevent any symbolic folding in
+  // the expression handling.  This is required to preserve symbolic difference
+  // expressions to emit the paired relocations.
+  if (!getSubExpr()->evaluateAsRelocatable(Res, nullptr, nullptr))
+    return false;
 
-  // Some custom fixup types are not valid with symbol difference expressions
-  if (IsSymbolicDifference) {
-    switch (getKind()) {
-    default:
-      break;
-    case VK_RISCV_LO:
-    case VK_RISCV_HI:
-    case VK_RISCV_PCREL_LO:
-    case VK_RISCV_PCREL_HI:
-    case VK_RISCV_GOT_HI:
-    case VK_RISCV_TPREL_LO:
-    case VK_RISCV_TPREL_HI:
-    case VK_RISCV_TPREL_ADD:
-    case VK_RISCV_TLS_GOT_HI:
-    case VK_RISCV_TLS_GD_HI:
-      return false;
-    }
-  }
-  return getSubExpr()->evaluateAsRelocatable(Res, Layout, Fixup);
+  Res =
+      MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), getKind());
+  // Custom fixup types are not valid with symbol difference expressions.
+  return Res.getSymB() ? getKind() == VK_RISCV_None : true;
 }
 
 void RISCVMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
