@@ -566,13 +566,11 @@ protected:
       if (num_files == 0) {
         if (!GetDefaultFile(target, file, result)) {
           result.AppendError("No file supplied and no default file available.");
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
       } else if (num_files > 1) {
         result.AppendError("Only one file at a time is allowed for file and "
                            "line breakpoints.");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       } else
         file = m_options.m_filenames.GetFileSpecAtIndex(0);
@@ -604,7 +602,6 @@ protected:
       } else {
         result.AppendError("Only one shared library can be specified for "
                            "address breakpoints.");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
       break;
@@ -639,7 +636,6 @@ protected:
             result.AppendWarning(
                 "Function name regex does not accept glob patterns.");
         }
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
 
@@ -657,7 +653,6 @@ protected:
         if (!GetDefaultFile(target, file, result)) {
           result.AppendError(
               "No files provided and could not find default file.");
-          result.SetStatus(eReturnStatusFailed);
           return false;
         } else {
           m_options.m_filenames.Append(file);
@@ -669,7 +664,6 @@ protected:
         result.AppendErrorWithFormat(
             "Source text regular expression could not be compiled: \"%s\"",
             llvm::toString(std::move(err)).c_str());
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
       bp_sp = target.CreateSourceRegexBreakpoint(
@@ -688,7 +682,6 @@ protected:
             "Error setting extra exception arguments: %s",
             precond_error.AsCString());
         target.RemoveBreakpointByID(bp_sp->GetID());
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     } break;
@@ -703,7 +696,6 @@ protected:
         result.AppendErrorWithFormat(
             "Error setting extra exception arguments: %s", error.AsCString());
         target.RemoveBreakpointByID(bp_sp->GetID());
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     } break;
@@ -723,7 +715,6 @@ protected:
             result.AppendErrorWithFormat("Invalid breakpoint name: %s",
                                          name.c_str());
             target.RemoveBreakpointByID(bp_sp->GetID());
-            result.SetStatus(eReturnStatusFailed);
             return false;
           }
         }
@@ -750,7 +741,6 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else if (!bp_sp) {
       result.AppendError("Breakpoint creation failed: No breakpoint created.");
-      result.SetStatus(eReturnStatusFailed);
     }
 
     return result.Succeeded();
@@ -767,12 +757,10 @@ private:
       if (cur_frame == nullptr) {
         result.AppendError(
             "No selected frame to use to find the default file.");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       } else if (!cur_frame->HasDebugInformation()) {
         result.AppendError("Cannot use the selected frame to find the default "
                            "file, it has no debug info.");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       } else {
         const SymbolContext &sc =
@@ -782,7 +770,6 @@ private:
         } else {
           result.AppendError("Can't find the file for the selected frame to "
                              "use as the default file.");
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
       }
@@ -923,7 +910,6 @@ protected:
 
     if (num_breakpoints == 0) {
       result.AppendError("No breakpoints exist to be enabled.");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -1037,7 +1023,6 @@ protected:
 
     if (num_breakpoints == 0) {
       result.AppendError("No breakpoints exist to be disabled.");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -1223,7 +1208,6 @@ protected:
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
       } else {
         result.AppendError("Invalid breakpoint ID.");
-        result.SetStatus(eReturnStatusFailed);
       }
     }
 
@@ -1321,7 +1305,6 @@ protected:
     // Early return if there's no breakpoint at all.
     if (num_breakpoints == 0) {
       result.AppendError("Breakpoint clear: No breakpoint cleared.");
-      result.SetStatus(eReturnStatusFailed);
       return result.Succeeded();
     }
 
@@ -1368,7 +1351,6 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
       result.AppendError("Breakpoint clear: No breakpoint cleared.");
-      result.SetStatus(eReturnStatusFailed);
     }
 
     return result.Succeeded();
@@ -1473,7 +1455,6 @@ protected:
 
     if (num_breakpoints == 0) {
       result.AppendError("No breakpoints exist to be deleted.");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -1512,7 +1493,6 @@ protected:
         }
         if (valid_bp_ids.GetSize() == 0) {
           result.AppendError("No disabled breakpoints.");
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
       } else {
@@ -1726,7 +1706,6 @@ protected:
     const size_t argc = command.GetArgumentCount();
     if (argc == 0) {
       result.AppendError("No names provided.");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -1741,7 +1720,6 @@ protected:
       if (!BreakpointID::StringIsBreakpointName(entry.ref(), error)) {
         result.AppendErrorWithFormat("Invalid breakpoint name: %s - %s",
                                      entry.c_str(), error.AsCString());
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     }
@@ -1754,7 +1732,6 @@ protected:
       if (!bp_sp) {
         result.AppendErrorWithFormatv("Could not find specified breakpoint {0}",
                                       bp_id);
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     }
@@ -1836,7 +1813,6 @@ protected:
     size_t num_breakpoints = breakpoints.GetSize();
     if (num_breakpoints == 0) {
       result.SetError("No breakpoints, cannot add names.");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -1849,7 +1825,6 @@ protected:
     if (result.Succeeded()) {
       if (valid_bp_ids.GetSize() == 0) {
         result.SetError("No breakpoints specified, cannot add names.");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
       size_t num_valid_ids = valid_bp_ids.GetSize();
@@ -1923,7 +1898,6 @@ protected:
     size_t num_breakpoints = breakpoints.GetSize();
     if (num_breakpoints == 0) {
       result.SetError("No breakpoints, cannot delete names.");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -1936,7 +1910,6 @@ protected:
     if (result.Succeeded()) {
       if (valid_bp_ids.GetSize() == 0) {
         result.SetError("No breakpoints specified, cannot delete names.");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
       ConstString bp_name(m_name_options.m_name.GetCurrentValue());
@@ -2212,7 +2185,6 @@ protected:
 
     if (!error.Success()) {
       result.AppendError(error.AsCString());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -2341,7 +2313,6 @@ protected:
     if (!error.Success()) {
       result.AppendErrorWithFormat("error serializing breakpoints: %s.",
                                    error.AsCString());
-      result.SetStatus(eReturnStatusFailed);
     }
     return result.Succeeded();
   }
@@ -2434,7 +2405,6 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
     } else {
       result.AppendError(
           "No breakpoint specified and no last created breakpoint.");
-      result.SetStatus(eReturnStatusFailed);
     }
     return;
   }
@@ -2476,14 +2446,12 @@ void CommandObjectMultiwordBreakpoint::VerifyIDs(
           result.AppendErrorWithFormat(
               "'%s' is not a currently valid breakpoint/location id.\n",
               id_str.GetData());
-          result.SetStatus(eReturnStatusFailed);
         }
       } else {
         i = valid_ids->GetSize() + 1;
         result.AppendErrorWithFormat(
             "'%d' is not a currently valid breakpoint ID.\n",
             cur_bp_id.GetBreakpointID());
-        result.SetStatus(eReturnStatusFailed);
       }
     }
   }

@@ -154,7 +154,6 @@ protected:
       result.AppendErrorWithFormat(
           "thread disappeared while computing backtraces: 0x%" PRIx64 "\n",
           tid);
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -173,7 +172,6 @@ protected:
       result.AppendErrorWithFormat(
           "error displaying backtrace for thread: \"0x%4.4x\"\n",
           thread->GetIndexID());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
     if (m_options.m_extended_backtrace) {
@@ -385,7 +383,6 @@ protected:
 
       if (thread == nullptr) {
         result.AppendError("no selected thread in process");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     } else {
@@ -395,7 +392,6 @@ protected:
       if (!llvm::to_integer(thread_idx_cstr, step_thread_idx)) {
         result.AppendErrorWithFormat("invalid thread index '%s'.\n",
                                      thread_idx_cstr);
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
       thread =
@@ -404,7 +400,6 @@ protected:
         result.AppendErrorWithFormat(
             "Thread index %u is out of range (valid values are 0 - %u).\n",
             step_thread_idx, num_threads);
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     }
@@ -412,14 +407,12 @@ protected:
     if (m_step_type == eStepTypeScripted) {
       if (m_class_options.GetName().empty()) {
         result.AppendErrorWithFormat("empty class name for scripted step.");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       } else if (!GetDebugger().GetScriptInterpreter()->CheckObjectExists(
                      m_class_options.GetName().c_str())) {
         result.AppendErrorWithFormat(
             "class for scripted step: \"%s\" does not exist.",
             m_class_options.GetName().c_str());
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     }
@@ -428,7 +421,6 @@ protected:
         m_step_type != eStepTypeInto) {
       result.AppendErrorWithFormat(
           "end line option is only valid for step into");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -461,7 +453,6 @@ protected:
                                                    error)) {
             result.AppendErrorWithFormat("invalid end-line option: %s.",
                                          error.AsCString());
-            result.SetStatus(eReturnStatusFailed);
             return false;
           }
         } else if (m_options.m_end_line_is_block_end) {
@@ -469,7 +460,6 @@ protected:
           Block *block = frame->GetSymbolContext(eSymbolContextBlock).block;
           if (!block) {
             result.AppendErrorWithFormat("Could not find the current block.");
-            result.SetStatus(eReturnStatusFailed);
             return false;
           }
 
@@ -479,7 +469,6 @@ protected:
           if (!block_range.GetBaseAddress().IsValid()) {
             result.AppendErrorWithFormat(
                 "Could not find the current block address.");
-            result.SetStatus(eReturnStatusFailed);
             return false;
           }
           lldb::addr_t pc_offset_in_block =
@@ -538,7 +527,6 @@ protected:
           new_plan_status);
     } else {
       result.AppendError("step type is not supported");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -570,7 +558,6 @@ protected:
 
       if (!error.Success()) {
         result.AppendMessage(error.AsCString());
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
 
@@ -594,7 +581,6 @@ protected:
       }
     } else {
       result.SetError(new_plan_status);
-      result.SetStatus(eReturnStatusFailed);
     }
     return result.Succeeded();
   }
@@ -650,7 +636,6 @@ public:
     Process *process = m_exe_ctx.GetProcessPtr();
     if (process == nullptr) {
       result.AppendError("no process exists. Cannot continue");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -671,7 +656,6 @@ public:
           if (entry.ref().getAsInteger(0, thread_idx)) {
             result.AppendErrorWithFormat(
                 "invalid thread index argument: \"%s\".\n", entry.c_str());
-            result.SetStatus(eReturnStatusFailed);
             return false;
           }
           Thread *thread =
@@ -682,14 +666,12 @@ public:
           } else {
             result.AppendErrorWithFormat("invalid thread index %u.\n",
                                          thread_idx);
-            result.SetStatus(eReturnStatusFailed);
             return false;
           }
         }
 
         if (resume_threads.empty()) {
           result.AppendError("no valid thread indexes were specified");
-          result.SetStatus(eReturnStatusFailed);
           return false;
         } else {
           if (resume_threads.size() == 1)
@@ -729,7 +711,6 @@ public:
         Thread *current_thread = GetDefaultThread();
         if (current_thread == nullptr) {
           result.AppendError("the process doesn't have a current thread");
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
         // Set the actions that the threads should each take when resuming
@@ -772,13 +753,11 @@ public:
       } else {
         result.AppendErrorWithFormat("Failed to resume process: %s\n",
                                      error.AsCString());
-        result.SetStatus(eReturnStatusFailed);
       }
     } else {
       result.AppendErrorWithFormat(
           "Process cannot be continued from its current state (%s).\n",
           StateAsCString(state));
-      result.SetStatus(eReturnStatusFailed);
     }
 
     return result.Succeeded();
@@ -916,7 +895,6 @@ protected:
     Process *process = m_exe_ctx.GetProcessPtr();
     if (process == nullptr) {
       result.AppendError("need a valid process to step");
-      result.SetStatus(eReturnStatusFailed);
     } else {
       Thread *thread = nullptr;
       std::vector<uint32_t> line_numbers;
@@ -928,7 +906,6 @@ protected:
           if (!llvm::to_integer(command.GetArgumentAtIndex(i), line_number)) {
             result.AppendErrorWithFormat("invalid line number: '%s'.\n",
                                          command.GetArgumentAtIndex(i));
-            result.SetStatus(eReturnStatusFailed);
             return false;
           } else
             line_numbers.push_back(line_number);
@@ -936,7 +913,6 @@ protected:
       } else if (m_options.m_until_addrs.empty()) {
         result.AppendErrorWithFormat("No line number or address provided:\n%s",
                                      GetSyntax().str().c_str());
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
 
@@ -953,7 +929,6 @@ protected:
         result.AppendErrorWithFormat(
             "Thread index %u is out of range (valid values are 0 - %u).\n",
             m_options.m_thread_idx, num_threads);
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
 
@@ -965,7 +940,6 @@ protected:
         result.AppendErrorWithFormat(
             "Frame index %u is out of range for thread %u.\n",
             m_options.m_frame_idx, m_options.m_thread_idx);
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
 
@@ -985,7 +959,6 @@ protected:
                                        "frame %u of thread index %u.\n",
                                        m_options.m_frame_idx,
                                        m_options.m_thread_idx);
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
 
@@ -1045,7 +1018,6 @@ protected:
             result.AppendErrorWithFormat(
                 "Until target outside of the current function.\n");
 
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
 
@@ -1061,14 +1033,12 @@ protected:
           new_plan_sp->SetOkayToDiscard(false);
         } else {
           result.SetError(new_plan_status);
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
       } else {
         result.AppendErrorWithFormat(
             "Frame index %u of thread %u has no debug information.\n",
             m_options.m_frame_idx, m_options.m_thread_idx);
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
 
@@ -1098,7 +1068,6 @@ protected:
       } else {
         result.AppendErrorWithFormat("Failed to resume process: %s.\n",
                                      error.AsCString());
-        result.SetStatus(eReturnStatusFailed);
       }
     }
     return result.Succeeded();
@@ -1150,13 +1119,11 @@ protected:
     Process *process = m_exe_ctx.GetProcessPtr();
     if (process == nullptr) {
       result.AppendError("no process");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     } else if (command.GetArgumentCount() != 1) {
       result.AppendErrorWithFormat(
           "'%s' takes exactly one thread index argument:\nUsage: %s\n",
           m_cmd_name.c_str(), m_cmd_syntax.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -1164,7 +1131,6 @@ protected:
     if (!llvm::to_integer(command.GetArgumentAtIndex(0), index_id)) {
       result.AppendErrorWithFormat("Invalid thread index '%s'",
                                    command.GetArgumentAtIndex(0));
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -1173,7 +1139,6 @@ protected:
     if (new_thread == nullptr) {
       result.AppendErrorWithFormat("invalid thread #%s.\n",
                                    command.GetArgumentAtIndex(0));
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -1292,7 +1257,6 @@ public:
     if (!thread_sp) {
       result.AppendErrorWithFormat("thread no longer exists: 0x%" PRIx64 "\n",
                                    tid);
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -1304,7 +1268,6 @@ public:
                                 m_options.m_json_stopinfo)) {
       result.AppendErrorWithFormat("error displaying info for thread: \"%d\"\n",
                                    thread->GetIndexID());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
     return true;
@@ -1342,7 +1305,6 @@ public:
     if (!thread_sp) {
       result.AppendErrorWithFormat("thread no longer exists: 0x%" PRIx64 "\n",
                                    tid);
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -1465,7 +1427,6 @@ protected:
       if (!error.Success()) {
         result.AppendErrorWithFormat("Unwinding expression failed - %s.",
                                      error.AsCString());
-        result.SetStatus(eReturnStatusFailed);
       } else {
         bool success =
             thread->SetSelectedFrameByIndexNoisily(0, result.GetOutputStream());
@@ -1475,7 +1436,6 @@ protected:
         } else {
           result.AppendErrorWithFormat(
               "Could not select 0th frame after unwinding expression.");
-          result.SetStatus(eReturnStatusFailed);
         }
       }
       return result.Succeeded();
@@ -1488,7 +1448,6 @@ protected:
 
     if (frame_sp->IsInlined()) {
       result.AppendError("Don't know how to return from inlined frames.");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -1510,7 +1469,6 @@ protected:
         else
           result.AppendErrorWithFormat(
               "Unknown error evaluating result expression.");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     }
@@ -1523,7 +1481,6 @@ protected:
       result.AppendErrorWithFormat(
           "Error returning from frame %d of thread %d: %s.", frame_idx,
           thread_sp->GetIndexID(), error.AsCString());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -1625,14 +1582,12 @@ protected:
       lldb::addr_t callAddr = dest.GetCallableLoadAddress(target);
       if (callAddr == LLDB_INVALID_ADDRESS) {
         result.AppendErrorWithFormat("Invalid destination address.");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
 
       if (!reg_ctx->SetPC(callAddr)) {
         result.AppendErrorWithFormat("Error changing PC value for thread %d.",
                                      thread->GetIndexID());
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     } else {
@@ -1649,7 +1604,6 @@ protected:
       if (!file) {
         result.AppendErrorWithFormat(
             "No source file available for the current location.");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
 
@@ -1776,7 +1730,6 @@ public:
           if (!success) {
             result.SetError("Error dumping plans:");
             result.AppendError(tmp_strm.GetString());
-            result.SetStatus(eReturnStatusFailed);
             return false;
           }
           // Otherwise, add our data to the output:
@@ -1853,7 +1806,6 @@ public:
       result.AppendErrorWithFormat("Too many arguments, expected one - the "
                                    "thread plan index - but got %zu.",
                                    args.GetArgumentCount());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -1862,14 +1814,12 @@ public:
       result.AppendErrorWithFormat(
           "Invalid thread index: \"%s\" - should be unsigned int.",
           args.GetArgumentAtIndex(0));
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
     if (thread_plan_idx == 0) {
       result.AppendErrorWithFormat(
           "You wouldn't really want me to discard the base thread plan.");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -1880,7 +1830,6 @@ public:
       result.AppendErrorWithFormat(
           "Could not find User thread plan with index %s.",
           args.GetArgumentAtIndex(0));
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
   }
@@ -1936,13 +1885,11 @@ public:
       if (!llvm::to_integer(args.GetArgumentAtIndex(i), tid)) {
         result.AppendErrorWithFormat("invalid thread specification: \"%s\"\n",
                                      args.GetArgumentAtIndex(i));
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
       if (!process->PruneThreadPlansForTID(tid)) {
         result.AppendErrorWithFormat("Could not find unreported tid: \"%s\"\n",
                                      args.GetArgumentAtIndex(i));
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     }
