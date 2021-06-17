@@ -52,9 +52,11 @@ static SymbolMapTy getSectionSyms(ArrayRef<Defined *> syms) {
   // appear in the output file rather than the order they appeared in the input
   // files.
   for (auto &it : ret)
-    llvm::stable_sort(it.second, [](Defined *a, Defined *b) {
-      return a->getVA() < b->getVA();
-    });
+    parallelSort(
+        it.second.begin(), it.second.end(), [](Defined *a, Defined *b) {
+          return a->getVA() != b->getVA() ? a->getVA() < b->getVA()
+                                          : a->getName() < b->getName();
+        });
   return ret;
 }
 
