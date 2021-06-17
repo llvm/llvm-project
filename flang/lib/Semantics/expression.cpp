@@ -1246,70 +1246,107 @@ void ArrayConstructorContext::Push(MaybeExpr &&x) {
           std::move(*boz)));
     }
   }
-  if (auto dyType{x->GetType()}) {
-    DynamicTypeWithLength xType{*dyType};
-    if (Expr<SomeCharacter> * charExpr{UnwrapExpr<Expr<SomeCharacter>>(*x)}) {
-      CHECK(xType.category() == TypeCategory::Character);
-      xType.length =
-          std::visit([](const auto &kc) { return kc.LEN(); }, charExpr->u);
+  std::optional<DynamicType> dyType{x->GetType()};
+  if (!dyType) {
+    if (auto *boz{std::get_if<BOZLiteralConstant>(&x->u)}) {
+      if (!type_) {
+        // Treat an array constructor of BOZ as if default integer.
+        if (exprAnalyzer_.context().ShouldWarn(
+                common::LanguageFeature::BOZAsDefaultInteger)) {
+          exprAnalyzer_.Say(
+              "BOZ literal in array constructor without explicit type is assumed to be default INTEGER"_en_US);
+        }
+        x = AsGenericExpr(ConvertToKind<TypeCategory::Integer>(
+            exprAnalyzer_.GetDefaultKind(TypeCategory::Integer),
+            std::move(*boz)));
+        dyType = x.value().GetType();
+      } else if (auto cast{ConvertToType(*type_, std::move(*x))}) {
+        x = std::move(cast);
+        dyType = *type_;
+      } else {
+        if (!(messageDisplayedSet_ & 0x80)) {
+          exprAnalyzer_.Say(
+              "BOZ literal is not suitable for use in this array constructor"_err_en_US);
+          messageDisplayedSet_ |= 0x80;
+        }
+        return;
+      }
+    } else { // procedure name, &c.
+      if (!(messageDisplayedSet_ & 0x40)) {
+        exprAnalyzer_.Say(
+            "Item is not suitable for use in an array constructor"_err_en_US);
+        messageDisplayedSet_ |= 0x40;
+      }
+      return;
     }
-    if (!type_) {
-      // If there is no explicit type-spec in an array constructor, the type
-      // of the array is the declared type of all of the elements, which must
-      // be well-defined and all match.
-      // TODO: Possible language extension: use the most general type of
-      // the values as the type of a numeric constructed array, convert all
-      // of the other values to that type.  Alternative: let the first value
-      // determine the type, and convert the others to that type.
-      CHECK(!explicitType_);
-      type_ = std::move(xType);
-      constantLength_ = ToInt64(type_->length);
+  } else if (dyType->IsUnlimitedPolymorphic()) {
+    if (!(messageDisplayedSet_ & 8)) {
+      exprAnalyzer_.Say("Cannot have an unlimited polymorphic value in an "
+                        "array constructor"_err_en_US); // C7113
+      messageDisplayedSet_ |= 8;
+    }
+    return;
+  }
+  DynamicTypeWithLength xType{dyType.value()};
+  if (Expr<SomeCharacter> * charExpr{UnwrapExpr<Expr<SomeCharacter>>(*x)}) {
+    CHECK(xType.category() == TypeCategory::Character);
+    xType.length =
+        std::visit([](const auto &kc) { return kc.LEN(); }, charExpr->u);
+  }
+  if (!type_) {
+    // If there is no explicit type-spec in an array constructor, the type
+    // of the array is the declared type of all of the elements, which must
+    // be well-defined and all match.
+    // TODO: Possible language extension: use the most general type of
+    // the values as the type of a numeric constructed array, convert all
+    // of the other values to that type.  Alternative: let the first value
+    // determine the type, and convert the others to that type.
+    CHECK(!explicitType_);
+    type_ = std::move(xType);
+    constantLength_ = ToInt64(type_->length);
+    values_.Push(std::move(*x));
+  } else if (!explicitType_) {
+    if (type_->IsTkCompatibleWith(xType) && xType.IsTkCompatibleWith(*type_)) {
       values_.Push(std::move(*x));
-    } else if (!explicitType_) {
-      if (type_->IsTkCompatibleWith(xType) &&
-          xType.IsTkCompatibleWith(*type_)) {
-        values_.Push(std::move(*x));
-        if (auto thisLen{ToInt64(xType.LEN())}) {
-          if (constantLength_) {
-            if (exprAnalyzer_.context().warnOnNonstandardUsage() &&
-                *thisLen != *constantLength_) {
-              if (!(messageDisplayedSet_ & 1)) {
-                exprAnalyzer_.Say(
-                    "Character literal in array constructor without explicit "
-                    "type has different length than earlier elements"_en_US);
-                messageDisplayedSet_ |= 1;
-              }
+      if (auto thisLen{ToInt64(xType.LEN())}) {
+        if (constantLength_) {
+          if (exprAnalyzer_.context().warnOnNonstandardUsage() &&
+              *thisLen != *constantLength_) {
+            if (!(messageDisplayedSet_ & 1)) {
+              exprAnalyzer_.Say(
+                  "Character literal in array constructor without explicit "
+                  "type has different length than earlier elements"_en_US);
+              messageDisplayedSet_ |= 1;
             }
-            if (*thisLen > *constantLength_) {
-              // Language extension: use the longest literal to determine the
-              // length of the array constructor's character elements, not the
-              // first, when there is no explicit type.
-              *constantLength_ = *thisLen;
-              type_->length = xType.LEN();
-            }
-          } else {
-            constantLength_ = *thisLen;
+          }
+          if (*thisLen > *constantLength_) {
+            // Language extension: use the longest literal to determine the
+            // length of the array constructor's character elements, not the
+            // first, when there is no explicit type.
+            *constantLength_ = *thisLen;
             type_->length = xType.LEN();
           }
-        }
-      } else {
-        if (!(messageDisplayedSet_ & 2)) {
-          exprAnalyzer_.Say(
-              "Values in array constructor must have the same declared type "
-              "when no explicit type appears"_err_en_US); // C7110
-          messageDisplayedSet_ |= 2;
+        } else {
+          constantLength_ = *thisLen;
+          type_->length = xType.LEN();
         }
       }
     } else {
-      if (auto cast{ConvertToType(*type_, std::move(*x))}) {
-        values_.Push(std::move(*cast));
-      } else if (!(messageDisplayedSet_ & 4)) {
+      if (!(messageDisplayedSet_ & 2)) {
         exprAnalyzer_.Say(
-            "Value in array constructor of type '%s' could not "
-            "be converted to the type of the array '%s'"_err_en_US,
-            x->GetType()->AsFortran(), type_->AsFortran()); // C7111, C7112
-        messageDisplayedSet_ |= 4;
+            "Values in array constructor must have the same declared type "
+            "when no explicit type appears"_err_en_US); // C7110
+        messageDisplayedSet_ |= 2;
       }
+    }
+  } else {
+    if (auto cast{ConvertToType(*type_, std::move(*x))}) {
+      values_.Push(std::move(*cast));
+    } else if (!(messageDisplayedSet_ & 4)) {
+      exprAnalyzer_.Say("Value in array constructor of type '%s' could not "
+                        "be converted to the type of the array '%s'"_err_en_US,
+          x->GetType()->AsFortran(), type_->AsFortran()); // C7111, C7112
+      messageDisplayedSet_ |= 4;
     }
   }
 }
@@ -1355,16 +1392,7 @@ void ArrayConstructorContext::Add(const parser::AcValue::Triplet &triplet) {
 
 void ArrayConstructorContext::Add(const parser::Expr &expr) {
   auto restorer{exprAnalyzer_.GetContextualMessages().SetLocation(expr.source)};
-  if (MaybeExpr v{exprAnalyzer_.Analyze(expr)}) {
-    if (auto exprType{v->GetType()}) {
-      if (!(messageDisplayedSet_ & 8) && exprType->IsUnlimitedPolymorphic()) {
-        exprAnalyzer_.Say("Cannot have an unlimited polymorphic value in an "
-                          "array constructor"_err_en_US); // C7113
-        messageDisplayedSet_ |= 8;
-      }
-    }
-    Push(std::move(*v));
-  }
+  Push(exprAnalyzer_.Analyze(expr));
 }
 
 void ArrayConstructorContext::Add(const parser::AcImpliedDo &impliedDo) {
