@@ -1893,6 +1893,23 @@ void plusIntOperator()
                      cxxOperatorCallExpr(
                          forFunction(functionDecl(hasName("plusIntOperator"))),
                          hasOperatorName("+"), hasUnaryOperand(expr())))));
+
+  Code = R"cpp(
+struct HasOpArrow
+{
+    int& operator*();
+};
+void foo()
+{
+    HasOpArrow s1;
+    *s1;
+}
+)cpp";
+
+  EXPECT_TRUE(
+      matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                             cxxOperatorCallExpr(hasOperatorName("*"),
+                                                 hasUnaryOperand(expr())))));
 }
 
 TEST(Matcher, UnaryOperatorTypes) {
