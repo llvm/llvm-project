@@ -346,10 +346,7 @@ class DataFlowSanitizer {
 
   enum { ShadowWidthBits = 8, ShadowWidthBytes = ShadowWidthBits / 8 };
 
-  enum {
-    OriginWidthBits = 32,
-    OriginWidthBytes = OriginWidthBits / 8
-  };
+  enum { OriginWidthBits = 32, OriginWidthBytes = OriginWidthBits / 8 };
 
   /// Which ABI should be used for instrumented functions?
   enum InstrumentedABI {
@@ -2947,8 +2944,9 @@ bool DFSanVisitor::visitWrappedCallBase(Function &F, CallBase &CB) {
         TName += utostr(FT->getNumParams() - N);
         TName += "$";
         TName += F.getName();
-        Constant *T = DFSF.DFS.getOrBuildTrampolineFunction(ParamFT, TName);
-        Args.push_back(T);
+        Constant *Trampoline =
+            DFSF.DFS.getOrBuildTrampolineFunction(ParamFT, TName);
+        Args.push_back(Trampoline);
         Args.push_back(
             IRB.CreateBitCast(*I, Type::getInt8PtrTy(*DFSF.DFS.Ctx)));
       } else {
