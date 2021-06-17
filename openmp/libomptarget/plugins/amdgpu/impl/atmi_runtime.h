@@ -75,48 +75,6 @@ hsa_status_t atmi_module_register_from_memory_to_place(
 atmi_machine_t *atmi_machine_get_info();
 /** @} */
 
-/** \defgroup memory_functions ATMI Data Management
- * @{
- */
-/**
- * @brief Allocate memory from the specified memory place.
- *
- * @detail This function allocates memory from the specified memory place. If
- * the memory
- * place belongs primarily to the CPU, then the memory will be accessible by
- * other GPUs and CPUs in the system. If the memory place belongs primarily to a
- * GPU,
- * then it cannot be accessed by other devices in the system.
- *
- * @param[in] ptr The pointer to the memory that will be allocated.
- *
- * @param[in] size The size of the allocation in bytes.
- *
- * @param[in] place The memory place in the system to perform the allocation.
- *
- * @retval ::HSA_STATUS_SUCCESS The function has executed successfully.
- *
- * @retval ::HSA_STATUS_ERROR The function encountered errors.
- *
- */
-hsa_status_t atmi_malloc(void **ptr, size_t size, int DeviceId,
-                         atmi_devtype_t DeviceType);
-/**
- * @brief Frees memory that was previously allocated.
- *
- * @detail This function frees memory that was previously allocated by calling
- * @p atmi_malloc. It throws an error otherwise. It is illegal to access a
- * pointer after a call to this function.
- *
- * @param[in] ptr The pointer to the memory that has to be freed.
- *
- * @retval ::HSA_STATUS_SUCCESS The function has executed successfully.
- *
- * @retval ::HSA_STATUS_ERROR The function encountered errors.
- *
- */
-hsa_status_t atmi_free(void *ptr);
-
 hsa_status_t atmi_memcpy_h2d(hsa_signal_t signal, void *deviceDest,
                              const void *hostSrc, size_t size,
                              hsa_agent_t agent);
