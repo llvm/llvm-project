@@ -466,8 +466,7 @@ static void printHelp(const opt::OptTable &OptTable, raw_ostream &OS,
   OS << "\nPass @FILE as argument to read options from FILE.\n";
 }
 
-static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue,
-                                                  uint8_t DefaultVisibility) {
+static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue) {
   // Parse value given with --add-symbol option and create the
   // new symbol if possible. The value format for --add-symbol is:
   //
@@ -478,17 +477,7 @@ static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue,
   // <section> - optional section name. If not given ABS symbol is created
   // <value> - symbol value, can be decimal or hexadecimal number prefixed
   //           with 0x.
-  // <flags> - optional flags affecting symbol type, binding or visibility:
-  //           The following are currently supported:
-  //
-  //           global, local, weak, default, hidden, file, section, object,
-  //           indirect-function.
-  //
-  //           The following flags are ignored and provided for GNU
-  //           compatibility only:
-  //
-  //           warning, debug, constructor, indirect, synthetic,
-  //           unique-object, before=<symbol>.
+  // <flags> - optional flags affecting symbol type, binding or visibility.
   NewSymbolInfo SI;
   StringRef Value;
   std::tie(SI.SymbolName, Value) = FlagValue.split('=');
@@ -512,86 +501,73 @@ static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue,
     return createStringError(errc::invalid_argument, "bad symbol value: '%s'",
                              Flags[0].str().c_str());
 
-  SI.Visibility = DefaultVisibility;
-  using Functor = std::function<void(void)>;
+  using Functor = std::function<void()>;
   SmallVector<StringRef, 6> UnsupportedFlags;
   for (size_t I = 1, NumFlags = Flags.size(); I < NumFlags; ++I)
     static_cast<Functor>(
         StringSwitch<Functor>(Flags[I])
-            .CaseLower("global", [&SI] { SI.Bind = ELF::STB_GLOBAL; })
-            .CaseLower("local", [&SI] { SI.Bind = ELF::STB_LOCAL; })
-            .CaseLower("weak", [&SI] { SI.Bind = ELF::STB_WEAK; })
-            .CaseLower("default", [&SI] { SI.Visibility = ELF::STV_DEFAULT; })
-            .CaseLower("hidden", [&SI] { SI.Visibility = ELF::STV_HIDDEN; })
+            .CaseLower("global",
+                       [&] { SI.Flags.push_back(SymbolFlag::Global); })
+            .CaseLower("local", [&] { SI.Flags.push_back(SymbolFlag::Local); })
+            .CaseLower("weak", [&] { SI.Flags.push_back(SymbolFlag::Weak); })
+            .CaseLower("default",
+                       [&] { SI.Flags.push_back(SymbolFlag::Default); })
+            .CaseLower("hidden",
+                       [&] { SI.Flags.push_back(SymbolFlag::Hidden); })
             .CaseLower("protected",
-                       [&SI] { SI.Visibility = ELF::STV_PROTECTED; })
-            .CaseLower("file", [&SI] { SI.Type = ELF::STT_FILE; })
-            .CaseLower("section", [&SI] { SI.Type = ELF::STT_SECTION; })
-            .CaseLower("object", [&SI] { SI.Type = ELF::STT_OBJECT; })
-            .CaseLower("function", [&SI] { SI.Type = ELF::STT_FUNC; })
-            .CaseLower("indirect-function",
-                       [&SI] { SI.Type = ELF::STT_GNU_IFUNC; })
-            .CaseLower("debug", [] {})
-            .CaseLower("constructor", [] {})
-            .CaseLower("warning", [] {})
-            .CaseLower("indirect", [] {})
-            .CaseLower("synthetic", [] {})
-            .CaseLower("unique-object", [] {})
-            .StartsWithLower("before", [] {})
+                       [&] { SI.Flags.push_back(SymbolFlag::Protected); })
+            .CaseLower("file", [&] { SI.Flags.push_back(SymbolFlag::File); })
+            .CaseLower("section",
+                       [&] { SI.Flags.push_back(SymbolFlag::Section); })
+            .CaseLower("object",
+                       [&] { SI.Flags.push_back(SymbolFlag::Object); })
+            .CaseLower("function",
+                       [&] { SI.Flags.push_back(SymbolFlag::Function); })
+            .CaseLower(
+                "indirect-function",
+                [&] { SI.Flags.push_back(SymbolFlag::IndirectFunction); })
+            .CaseLower("debug", [&] { SI.Flags.push_back(SymbolFlag::Debug); })
+            .CaseLower("constructor",
+                       [&] { SI.Flags.push_back(SymbolFlag::Constructor); })
+            .CaseLower("warning",
+                       [&] { SI.Flags.push_back(SymbolFlag::Warning); })
+            .CaseLower("indirect",
+                       [&] { SI.Flags.push_back(SymbolFlag::Indirect); })
+            .CaseLower("synthetic",
+                       [&] { SI.Flags.push_back(SymbolFlag::Synthetic); })
+            .CaseLower("unique-object",
+                       [&] { SI.Flags.push_back(SymbolFlag::UniqueObject); })
+            .StartsWithLower("before=",
+                             [&] {
+                               StringRef SymNamePart =
+                                   Flags[I].split('=').second;
+
+                               if (!SymNamePart.empty())
+                                 SI.BeforeSyms.push_back(SymNamePart);
+                             })
             .Default([&] { UnsupportedFlags.push_back(Flags[I]); }))();
   if (!UnsupportedFlags.empty())
     return createStringError(errc::invalid_argument,
                              "unsupported flag%s for --add-symbol: '%s'",
                              UnsupportedFlags.size() > 1 ? "s" : "",
                              join(UnsupportedFlags, "', '").c_str());
+
   return SI;
 }
 
 Expected<const ELFConfig &> ConfigManager::getELFConfig() const {
-  if (!ELF) {
-    if (Common.StripSwiftSymbols || Common.KeepUndefined)
-      return createStringError(llvm::errc::invalid_argument,
-                               "option not supported by llvm-objcopy for ELF");
+  if (Common.StripSwiftSymbols || Common.KeepUndefined)
+    return createStringError(llvm::errc::invalid_argument,
+                             "option not supported by llvm-objcopy for ELF");
 
-    // Parse lazy options.
-    ELFConfig ResConfig;
-
-    if (NewSymbolVisibility) {
-      const uint8_t Invalid = 0xff;
-      ResConfig.NewSymbolVisibility =
-          StringSwitch<uint8_t>(*NewSymbolVisibility)
-              .Case("default", ELF::STV_DEFAULT)
-              .Case("hidden", ELF::STV_HIDDEN)
-              .Case("internal", ELF::STV_INTERNAL)
-              .Case("protected", ELF::STV_PROTECTED)
-              .Default(Invalid);
-
-      if (ResConfig.NewSymbolVisibility == Invalid)
-        return createStringError(errc::invalid_argument,
-                                 "'%s' is not a valid symbol visibility",
-                                 NewSymbolVisibility->str().c_str());
-    }
-
-    for (StringRef Arg : SymbolsToAdd) {
-      Expected<NewSymbolInfo> NSI = parseNewSymbolInfo(
-          Arg,
-          ResConfig.NewSymbolVisibility.getValueOr((uint8_t)ELF::STV_DEFAULT));
-      if (!NSI)
-        return NSI.takeError();
-      ResConfig.SymbolsToAdd.push_back(*NSI);
-    }
-
-    ELF = std::move(ResConfig);
-  }
-
-  return *ELF;
+  return ELF;
 }
 
 Expected<const COFFConfig &> ConfigManager::getCOFFConfig() const {
   if (Common.AllowBrokenLinks || !Common.SplitDWO.empty() ||
       !Common.SymbolsPrefix.empty() || !Common.AllocSectionsPrefix.empty() ||
       !Common.DumpSection.empty() || !Common.KeepSection.empty() ||
-      NewSymbolVisibility || !Common.SymbolsToGlobalize.empty() ||
+      ELF.NewSymbolVisibility || !Common.SymbolsToGlobalize.empty() ||
       !Common.SymbolsToKeep.empty() || !Common.SymbolsToLocalize.empty() ||
       !Common.SymbolsToWeaken.empty() || !Common.SymbolsToKeepGlobal.empty() ||
       !Common.SectionsToRename.empty() || !Common.SetSectionAlignment.empty() ||
@@ -599,8 +575,8 @@ Expected<const COFFConfig &> ConfigManager::getCOFFConfig() const {
       Common.StripDWO || Common.StripNonAlloc || Common.StripSections ||
       Common.StripSwiftSymbols || Common.KeepUndefined || Common.Weaken ||
       Common.DecompressDebugSections ||
-      Common.DiscardMode == DiscardType::Locals || !SymbolsToAdd.empty() ||
-      Common.EntryExpr) {
+      Common.DiscardMode == DiscardType::Locals ||
+      !Common.SymbolsToAdd.empty() || Common.EntryExpr) {
     return createStringError(llvm::errc::invalid_argument,
                              "option not supported by llvm-objcopy for COFF");
   }
@@ -611,7 +587,7 @@ Expected<const COFFConfig &> ConfigManager::getCOFFConfig() const {
 Expected<const MachOConfig &> ConfigManager::getMachOConfig() const {
   if (Common.AllowBrokenLinks || !Common.SplitDWO.empty() ||
       !Common.SymbolsPrefix.empty() || !Common.AllocSectionsPrefix.empty() ||
-      !Common.KeepSection.empty() || NewSymbolVisibility ||
+      !Common.KeepSection.empty() || ELF.NewSymbolVisibility ||
       !Common.SymbolsToGlobalize.empty() || !Common.SymbolsToKeep.empty() ||
       !Common.SymbolsToLocalize.empty() || !Common.SymbolsToWeaken.empty() ||
       !Common.SymbolsToKeepGlobal.empty() || !Common.SectionsToRename.empty() ||
@@ -621,7 +597,7 @@ Expected<const MachOConfig &> ConfigManager::getMachOConfig() const {
       Common.StripAllGNU || Common.StripDWO || Common.StripNonAlloc ||
       Common.StripSections || Common.Weaken || Common.DecompressDebugSections ||
       Common.StripUnneeded || Common.DiscardMode == DiscardType::Locals ||
-      !SymbolsToAdd.empty() || Common.EntryExpr) {
+      !Common.SymbolsToAdd.empty() || Common.EntryExpr) {
     return createStringError(llvm::errc::invalid_argument,
                              "option not supported by llvm-objcopy for MachO");
   }
@@ -633,8 +609,8 @@ Expected<const WasmConfig &> ConfigManager::getWasmConfig() const {
   if (!Common.AddGnuDebugLink.empty() || Common.ExtractPartition ||
       !Common.SplitDWO.empty() || !Common.SymbolsPrefix.empty() ||
       !Common.AllocSectionsPrefix.empty() ||
-      Common.DiscardMode != DiscardType::None || NewSymbolVisibility ||
-      !SymbolsToAdd.empty() || !Common.RPathToAdd.empty() ||
+      Common.DiscardMode != DiscardType::None || ELF.NewSymbolVisibility ||
+      !Common.SymbolsToAdd.empty() || !Common.RPathToAdd.empty() ||
       !Common.OnlySection.empty() || !Common.SymbolsToGlobalize.empty() ||
       !Common.SymbolsToKeep.empty() || !Common.SymbolsToLocalize.empty() ||
       !Common.SymbolsToRemove.empty() ||
@@ -705,6 +681,7 @@ parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
 
   ConfigManager ConfigMgr;
   CommonConfig &Config = ConfigMgr.Common;
+  ELFConfig &ELFConfig = ConfigMgr.ELF;
   Config.InputFilename = Positional[0];
   Config.OutputFilename = Positional[Positional.size() == 1 ? 0 : 1];
   if (InputArgs.hasArg(OBJCOPY_target) &&
@@ -743,9 +720,23 @@ parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
                            .Case("ihex", FileFormat::IHex)
                            .Default(FileFormat::Unspecified);
 
-  if (InputArgs.hasArg(OBJCOPY_new_symbol_visibility))
-    ConfigMgr.NewSymbolVisibility =
+  if (InputArgs.hasArg(OBJCOPY_new_symbol_visibility)) {
+    const uint8_t Invalid = 0xff;
+    StringRef VisibilityStr =
         InputArgs.getLastArgValue(OBJCOPY_new_symbol_visibility);
+
+    ELFConfig.NewSymbolVisibility = StringSwitch<uint8_t>(VisibilityStr)
+                                        .Case("default", ELF::STV_DEFAULT)
+                                        .Case("hidden", ELF::STV_HIDDEN)
+                                        .Case("internal", ELF::STV_INTERNAL)
+                                        .Case("protected", ELF::STV_PROTECTED)
+                                        .Default(Invalid);
+
+    if (ELFConfig.NewSymbolVisibility == Invalid)
+      return createStringError(errc::invalid_argument,
+                               "'%s' is not a valid symbol visibility",
+                               VisibilityStr.str().c_str());
+  }
 
   Config.OutputFormat = StringSwitch<FileFormat>(OutputFormat)
                             .Case("binary", FileFormat::Binary)
@@ -992,8 +983,13 @@ parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
             addSymbolsFromFile(Config.SymbolsToKeep, DC.Alloc, Arg->getValue(),
                                SymbolMatchStyle, ErrorCallback))
       return std::move(E);
-  for (auto Arg : InputArgs.filtered(OBJCOPY_add_symbol))
-    ConfigMgr.SymbolsToAdd.push_back(Arg->getValue());
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_add_symbol)) {
+    Expected<NewSymbolInfo> SymInfo = parseNewSymbolInfo(Arg->getValue());
+    if (!SymInfo)
+      return SymInfo.takeError();
+
+    Config.SymbolsToAdd.push_back(*SymInfo);
+  }
 
   Config.AllowBrokenLinks = InputArgs.hasArg(OBJCOPY_allow_broken_links);
 
