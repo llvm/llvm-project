@@ -180,11 +180,11 @@ template <class T, class Allocator, class Predicate>
 */
 
 #include <__config>
-#include <initializer_list>
-#include <memory>
-#include <limits>
-#include <iterator>
 #include <algorithm>
+#include <initializer_list>
+#include <iterator>
+#include <limits>
+#include <memory>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
