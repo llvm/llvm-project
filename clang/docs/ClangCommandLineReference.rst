@@ -933,7 +933,7 @@ Generalize pointers in CFI indirect call type signature checks
 
 Restrict sanitizer coverage instrumentation exclusively to modules and functions that match the provided special case list, except the blocked ones
 
-.. option:: -fsanitize-coverage-ignorelist=<arg>, -fsanitize-coverage-blacklist=<arg>, -fsanitize-coverage-blocklist=<arg>
+.. option:: -fsanitize-coverage-ignorelist=<arg>, -fsanitize-coverage-blacklist=<arg>
 
 Disable sanitizer coverage instrumentation for modules and functions that match the provided special case list, even the allowed ones
 
