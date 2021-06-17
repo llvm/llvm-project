@@ -148,8 +148,8 @@
 ; CHECK-NEXT:         Function Alias Analysis Results
 ; CHECK-NEXT:         Memory SSA
 ; CHECK-NEXT:         MemCpy Optimization
-; CHECK-NEXT:         Dead Store Elimination
 ; CHECK-NEXT:         Natural Loop Information
+; CHECK-NEXT:         Dead Store Elimination
 ; CHECK-NEXT:         Canonicalize natural loops
 ; CHECK-NEXT:         LCSSA Verifier
 ; CHECK-NEXT:         Loop-Closed SSA Form Pass
