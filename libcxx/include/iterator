@@ -242,16 +242,19 @@ constexpr reverse_iterator<Iterator> make_reverse_iterator(Iterator i); // C++14
 
 template <class Container>
 class back_insert_iterator
+    : public iterator<output_iterator_tag, void, void, void, void> // until C++17
 {
 protected:
     Container* container;
 public:
     typedef Container                   container_type;
     typedef void                        value_type;
-    typedef void                        difference_type;
+    typedef void                        difference_type; // until C++20
+    typedef ptrdiff_t                   difference_type; // since C++20
     typedef void                        reference;
     typedef void                        pointer;
 
+    constexpr back_insert_iterator() noexcept = default; // since C++20
     explicit back_insert_iterator(Container& x);  // constexpr in C++20
     back_insert_iterator& operator=(const typename Container::value_type& value);  // constexpr in C++20
     back_insert_iterator& operator*();  // constexpr in C++20
@@ -263,16 +266,19 @@ template <class Container> back_insert_iterator<Container> back_inserter(Contain
 
 template <class Container>
 class front_insert_iterator
+    : public iterator<output_iterator_tag, void, void, void, void> // until C++17
 {
 protected:
     Container* container;
 public:
     typedef Container                    container_type;
     typedef void                         value_type;
-    typedef void                         difference_type;
+    typedef void                         difference_type; // until C++20
+    typedef ptrdiff_t                    difference_type; // since C++20
     typedef void                         reference;
     typedef void                         pointer;
 
+    constexpr front_insert_iterator() noexcept = default; // since C++20
     explicit front_insert_iterator(Container& x);  // constexpr in C++20
     front_insert_iterator& operator=(const typename Container::value_type& value);  // constexpr in C++20
     front_insert_iterator& operator*();  // constexpr in C++20
@@ -284,6 +290,7 @@ template <class Container> front_insert_iterator<Container> front_inserter(Conta
 
 template <class Container>
 class insert_iterator
+    : public iterator<output_iterator_tag, void, void, void, void> // until C++17
 {
 protected:
     Container* container;
@@ -291,10 +298,12 @@ protected:
 public:
     typedef Container              container_type;
     typedef void                   value_type;
-    typedef void                   difference_type;
+    typedef void                   difference_type; // until C++20
+    typedef ptrdiff_t              difference_type; // since C++20
     typedef void                   reference;
     typedef void                   pointer;
 
+    insert_iterator() = default; // since C++20
     insert_iterator(Container& x, typename Container::iterator i);  // constexpr in C++20
     insert_iterator& operator=(const typename Container::value_type& value);  // constexpr in C++20
     insert_iterator& operator*();  // constexpr in C++20
@@ -380,9 +389,15 @@ class istream_iterator
     : public iterator<input_iterator_tag, T, Distance, const T*, const T&> // until C++17
 {
 public:
-    typedef charT char_type;
-    typedef traits traits_type;
-    typedef basic_istream<charT,traits> istream_type;
+    typedef input_iterator_tag           iterator_category;
+    typedef T                            value_type;
+    typedef Distance                     difference_type;
+    typedef const T*                     pointer;
+    typedef const T&                     reference;
+
+    typedef charT                        char_type;
+    typedef traits                       traits_type;
+    typedef basic_istream<charT, traits> istream_type;
 
     constexpr istream_iterator();
     istream_iterator(istream_type& s);
@@ -404,13 +419,21 @@ bool operator!=(const istream_iterator<T,charT,traits,Distance>& x,
 
 template <class T, class charT = char, class traits = char_traits<charT> >
 class ostream_iterator
-    : public iterator<output_iterator_tag, void, void, void ,void> // until C++17
+    : public iterator<output_iterator_tag, void, void, void, void> // until C++17
 {
 public:
+    typedef output_iterator_tag         iterator_category;
+    typedef void                        value_type;
+    typedef void                        difference_type; // until C++20
+    typedef ptrdiff_t                   difference_type; // since C++20
+    typedef void                        pointer;
+    typedef void                        reference;
+
     typedef charT char_type;
     typedef traits traits_type;
     typedef basic_ostream<charT,traits> ostream_type;
 
+    constexpr ostream_iterator() noexcept = default; // since C++20
     ostream_iterator(ostream_type& s);
     ostream_iterator(ostream_type& s, const charT* delimiter);
     ostream_iterator(const ostream_iterator& x);
@@ -424,16 +447,20 @@ public:
 
 template<class charT, class traits = char_traits<charT> >
 class istreambuf_iterator
-    : public iterator<input_iterator_tag, charT,                // until C++17
-                      typename traits::off_type, unspecified,
-                      charT>
+    : public iterator<input_iterator_tag, charT, traits::off_type, unspecified, charT> // until C++17
 {
 public:
-    typedef charT                         char_type;
-    typedef traits                        traits_type;
-    typedef typename traits::int_type     int_type;
-    typedef basic_streambuf<charT,traits> streambuf_type;
-    typedef basic_istream<charT,traits>   istream_type;
+    typedef input_iterator_tag              iterator_category;
+    typedef charT                           value_type;
+    typedef traits::off_type                difference_type;
+    typedef unspecified                     pointer;
+    typedef charT                           reference;
+
+    typedef charT                           char_type;
+    typedef traits                          traits_type;
+    typedef traits::int_type                int_type;
+    typedef basic_streambuf<charT, traits>  streambuf_type;
+    typedef basic_istream<charT, traits>    istream_type;
 
     istreambuf_iterator() noexcept;
     istreambuf_iterator(istream_type& s) noexcept;
@@ -460,11 +487,19 @@ class ostreambuf_iterator
     : public iterator<output_iterator_tag, void, void, void, void> // until C++17
 {
 public:
-    typedef charT                         char_type;
-    typedef traits                        traits_type;
-    typedef basic_streambuf<charT,traits> streambuf_type;
-    typedef basic_ostream<charT,traits>   ostream_type;
+    typedef output_iterator_tag            iterator_category;
+    typedef void                           value_type;
+    typedef void                           difference_type; // until C++20
+    typedef ptrdiff_t                      difference_type; // since C++20
+    typedef void                           pointer;
+    typedef void                           reference;
 
+    typedef charT                          char_type;
+    typedef traits                         traits_type;
+    typedef basic_streambuf<charT, traits> streambuf_type;
+    typedef basic_ostream<charT, traits>   ostream_type;
+
+    constexpr ostreambuf_iterator() noexcept = default; // since C++20
     ostreambuf_iterator(ostream_type& s) noexcept;
     ostreambuf_iterator(streambuf_type* s) noexcept;
     ostreambuf_iterator& operator=(charT c);
@@ -851,11 +886,18 @@ protected:
 public:
     typedef output_iterator_tag iterator_category;
     typedef void value_type;
+#if _LIBCPP_STD_VER > 17
+    typedef ptrdiff_t difference_type;
+#else
     typedef void difference_type;
+#endif
     typedef void pointer;
     typedef void reference;
     typedef _Container container_type;
 
+#if _LIBCPP_STD_VER > 17
+    _LIBCPP_INLINE_VISIBILITY constexpr back_insert_iterator() noexcept = default;
+#endif
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 explicit back_insert_iterator(_Container& __x) : container(_VSTD::addressof(__x)) {}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 back_insert_iterator& operator=(const typename _Container::value_type& __value_)
         {container->push_back(__value_); return *this;}
@@ -889,11 +931,18 @@ protected:
 public:
     typedef output_iterator_tag iterator_category;
     typedef void value_type;
+#if _LIBCPP_STD_VER > 17
+    typedef ptrdiff_t difference_type;
+#else
     typedef void difference_type;
+#endif
     typedef void pointer;
     typedef void reference;
     typedef _Container container_type;
 
+#if _LIBCPP_STD_VER > 17
+    _LIBCPP_INLINE_VISIBILITY constexpr front_insert_iterator() noexcept = default;
+#endif
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 explicit front_insert_iterator(_Container& __x) : container(_VSTD::addressof(__x)) {}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 front_insert_iterator& operator=(const typename _Container::value_type& __value_)
         {container->push_front(__value_); return *this;}
@@ -928,11 +977,18 @@ protected:
 public:
     typedef output_iterator_tag iterator_category;
     typedef void value_type;
+#if _LIBCPP_STD_VER > 17
+    typedef ptrdiff_t difference_type;
+#else
     typedef void difference_type;
+#endif
     typedef void pointer;
     typedef void reference;
     typedef _Container container_type;
 
+#if _LIBCPP_STD_VER > 17
+    _LIBCPP_INLINE_VISIBILITY insert_iterator() = default;
+#endif
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 insert_iterator(_Container& __x, typename _Container::iterator __i)
         : container(_VSTD::addressof(__x)), iter(__i) {}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17 insert_iterator& operator=(const typename _Container::value_type& __value_)
@@ -1037,7 +1093,7 @@ public:
     typedef output_iterator_tag             iterator_category;
     typedef void                            value_type;
 #if _LIBCPP_STD_VER > 17
-    typedef std::ptrdiff_t                  difference_type;
+    typedef ptrdiff_t                       difference_type;
 #else
     typedef void                            difference_type;
 #endif
@@ -1051,6 +1107,9 @@ private:
     ostream_type* __out_stream_;
     const char_type* __delim_;
 public:
+#if _LIBCPP_STD_VER > 17
+    _LIBCPP_INLINE_VISIBILITY constexpr ostream_iterator() noexcept = default;
+#endif
     _LIBCPP_INLINE_VISIBILITY ostream_iterator(ostream_type& __s) _NOEXCEPT
         : __out_stream_(_VSTD::addressof(__s)), __delim_(nullptr) {}
     _LIBCPP_INLINE_VISIBILITY ostream_iterator(ostream_type& __s, const _CharT* __delimiter) _NOEXCEPT
@@ -1159,7 +1218,7 @@ public:
     typedef output_iterator_tag                 iterator_category;
     typedef void                                value_type;
 #if _LIBCPP_STD_VER > 17
-    typedef std::ptrdiff_t                      difference_type;
+    typedef ptrdiff_t                           difference_type;
 #else
     typedef void                                difference_type;
 #endif
@@ -1173,6 +1232,9 @@ public:
 private:
     streambuf_type* __sbuf_;
 public:
+#if _LIBCPP_STD_VER > 17
+    _LIBCPP_INLINE_VISIBILITY constexpr ostreambuf_iterator() noexcept = default;
+#endif
     _LIBCPP_INLINE_VISIBILITY ostreambuf_iterator(ostream_type& __s) _NOEXCEPT
         : __sbuf_(__s.rdbuf()) {}
     _LIBCPP_INLINE_VISIBILITY ostreambuf_iterator(streambuf_type* __s) _NOEXCEPT

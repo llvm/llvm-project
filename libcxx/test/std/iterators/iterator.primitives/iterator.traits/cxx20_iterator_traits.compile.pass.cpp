@@ -50,12 +50,12 @@ constexpr bool has_iterator_concept_v = requires {
   typename Traits::iterator_concept;
 };
 
-template <class Iter, class Category, class Diff = void>
+template <class Iter, class Category>
 constexpr bool testIOIterator() {
   using Traits = std::iterator_traits<Iter>;
   static_assert(std::same_as<typename Traits::iterator_category, Category>);
   static_assert(std::same_as<typename Traits::value_type, void>);
-  static_assert(std::same_as<typename Traits::difference_type, Diff>);
+  static_assert(std::same_as<typename Traits::difference_type, std::ptrdiff_t>);
   static_assert(std::same_as<typename Traits::reference, void>);
   static_assert(std::same_as<typename Traits::pointer, void>);
   static_assert(!has_iterator_concept_v<Traits>);
@@ -200,8 +200,8 @@ static_assert(testConstWithoutConcept<std::istream_iterator<int, char>, int, std
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 static_assert(testWithoutConcept<std::istreambuf_iterator<char>, char, long long, char, char*, std::input_iterator_tag>());
 static_assert(testWithoutConcept<std::move_iterator<int*>, int, std::ptrdiff_t, int&&, int*, std::random_access_iterator_tag>());
-static_assert(testIOIterator<std::ostream_iterator<int, char>, std::output_iterator_tag, std::ptrdiff_t>());
-static_assert(testIOIterator<std::ostreambuf_iterator<int, char>, std::output_iterator_tag, std::ptrdiff_t>());
+static_assert(testIOIterator<std::ostream_iterator<int, char>, std::output_iterator_tag>());
+static_assert(testIOIterator<std::ostreambuf_iterator<int, char>, std::output_iterator_tag>());
 static_assert(testConstWithoutConcept<std::cregex_iterator, std::cmatch, std::forward_iterator_tag>());
 static_assert(testConstWithoutConcept<std::cregex_token_iterator, std::csub_match, std::forward_iterator_tag>());
 #endif // !_LIBCPP_HAS_NO_LOCALIZATION

@@ -9,13 +9,22 @@
 // <iterator>
 
 // template <class charT, class traits = char_traits<charT> >
-// class ostreambuf_iterator {
+// class ostreambuf_iterator
+//  : public iterator<output_iterator_tag, void, void, void, void> // until C++17
+// {
 // public:
-//   typedef charT                          char_type;
-//   typedef traits                         traits_type;
-//   typedef basic_streambuf<charT, traits> streambuf_type;
-//   typedef basic_ostream<charT, traits>   ostream_type;
-//   ...
+//     typedef output_iterator_tag            iterator_category;
+//     typedef void                           value_type;
+//     typedef void                           difference_type; // until C++20
+//     typedef ptrdiff_t                      difference_type; // since C++20
+//     typedef void                           pointer;
+//     typedef void                           reference;
+//
+//     typedef charT                          char_type;
+//     typedef traits                         traits_type;
+//     typedef basic_streambuf<charT, traits> streambuf_type;
+//     typedef basic_ostream<charT, traits>   ostream_type;
+//     ...
 
 #include <cstddef>
 #include <iterator>
