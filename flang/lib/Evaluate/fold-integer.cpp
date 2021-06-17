@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "fold-implementation.h"
+#include "fold-reduction.h"
 #include "flang/Evaluate/check-expression.h"
 
 namespace Fortran::evaluate {
@@ -474,6 +475,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           },
           sx->u);
     }
+  } else if (name == "maxval") {
+    return FoldMaxvalMinval<T>(context, std::move(funcRef),
+        RelationalOperator::GT, T::Scalar::Least());
   } else if (name == "merge") {
     return FoldMerge<T>(context, std::move(funcRef));
   } else if (name == "merge_bits") {
@@ -492,6 +496,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
   } else if (name == "min0" || name == "min1") {
     return RewriteSpecificMINorMAX(context, std::move(funcRef));
+  } else if (name == "minval") {
+    return FoldMaxvalMinval<T>(
+        context, std::move(funcRef), RelationalOperator::LT, T::Scalar::HUGE());
   } else if (name == "mod") {
     return FoldElementalIntrinsic<T, T, T>(context, std::move(funcRef),
         ScalarFuncWithContext<T, T, T>(
@@ -650,8 +657,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   // TODO:
   // cshift, dot_product, eoshift,
   // findloc, iall, iany, iparity, ibits, image_status, ishftc,
-  // matmul, maxloc, maxval,
-  // minloc, minval, not, pack, product, reduce,
+  // matmul, maxloc, minloc, not, pack, product, reduce,
   // sign, spread, sum, transfer, transpose, unpack
   return Expr<T>{std::move(funcRef)};
 }
