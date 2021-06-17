@@ -957,12 +957,6 @@ Optional<DILineInfo> ObjFile::getDILineInfo(uint32_t offset,
   return dwarf->getDILineInfo(offset, sectionIndex);
 }
 
-static StringRef ltrim1(StringRef s, const char *chars) {
-  if (!s.empty() && strchr(chars, s[0]))
-    return s.substr(1);
-  return s;
-}
-
 void ImportFile::parse() {
   const char *buf = mb.getBufferStart();
   const auto *hdr = reinterpret_cast<const coff_import_header *>(buf);
