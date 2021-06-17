@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple=riscv64 -show-encoding --mattr=+experimental-v %s \
-# RUN:   -M no-aliases | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
+# RUN:   --riscv-no-aliases | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 # RUN: not llvm-mc -triple=riscv64 -show-encoding %s 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=CHECK-ERROR
 # RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+experimental-v %s \

@@ -1,6 +1,6 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+c,+experimental-zbproposedc -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+c,+experimental-zbproposedc -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+c,+experimental-zbproposedc,+experimental-b -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+c,+experimental-zbproposedc,+experimental-b -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+c,+experimental-zbproposedc < %s \
 # RUN:     | llvm-objdump --mattr=+c,+experimental-zbproposedc -M no-aliases -d -r - \

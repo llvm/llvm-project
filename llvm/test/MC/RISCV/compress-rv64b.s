@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple riscv64 -mattr=+c,+experimental-zbproposedc,+experimental-b -show-encoding < %s \
 # RUN:   | FileCheck -check-prefixes=CHECK-ALIAS %s
 # RUN: llvm-mc -triple riscv64 -mattr=+c,+experimental-zbproposedc,+experimental-b -show-encoding \
-# RUN:   -M no-aliases < %s | FileCheck -check-prefixes=CHECK-INST %s
+# RUN:   -riscv-no-aliases < %s | FileCheck -check-prefixes=CHECK-INST %s
 # RUN: llvm-mc -triple riscv64 -mattr=+c,+experimental-zbproposedc,+experimental-b -filetype=obj < %s \
 # RUN:   | llvm-objdump  --triple=riscv64 --mattr=+c,+experimental-zbproposedc,+experimental-b -d - \
 # RUN:   | FileCheck -check-prefixes=CHECK-BYTES,CHECK-ALIAS %s
