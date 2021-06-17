@@ -244,19 +244,10 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 /// branch instruction. However, if the trip count (and multiple) are not known,
 /// loop unrolling will mostly produce more code that is no faster.
 ///
-/// TripCount is an upper bound on the number of times the loop header runs.
-/// Note that the trip count does not need to be exact, it can be any upper
-/// bound on the true trip count.
-///
-/// Similarly, TripMultiple divides the number of times that the LatchBlock may
-/// execute without exiting the loop.
-///
-/// If AllowRuntime is true then UnrollLoop will consider unrolling loops that
-/// have a runtime (i.e. not compile time constant) trip count.  Unrolling these
-/// loops require a unroll "prologue" that runs "RuntimeTripCount % Count"
-/// iterations before branching into the unrolled loop.  UnrollLoop will not
-/// runtime-unroll the loop if computing RuntimeTripCount will be expensive and
-/// AllowExpensiveTripCount is false.
+/// If Runtime is true then UnrollLoop will try to insert a prologue or
+/// epilogue that ensures the latch has a trip multiple of Count. UnrollLoop
+/// will not runtime-unroll the loop if computing the run-time trip count will
+/// be expensive and AllowExpensiveTripCount is false.
 ///
 /// The LoopInfo Analysis that is passed will be kept consistent.
 ///
@@ -296,15 +287,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     return LoopUnrollResult::Unmodified;
   }
 
-  // Don't enter the unroll code if there is nothing to do.
-  if (ULO.TripCount == 0 && ULO.Count < 2) {
-    LLVM_DEBUG(dbgs() << "Won't unroll; almost nothing to do\n");
-    return LoopUnrollResult::Unmodified;
-  }
-
   assert(ULO.Count > 0);
-  assert(ULO.TripMultiple > 0);
-  assert(ULO.TripCount == 0 || ULO.TripCount % ULO.TripMultiple == 0);
 
   // All these values should be taken only after peeling because they might have
   // changed.
@@ -365,11 +348,10 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   const bool PreserveOnlyFirst = CompletelyUnroll && MaxOrZero;
 
-  // We assume a run-time trip count if the compiler cannot
-  // figure out the loop trip count and the unroll-runtime
-  // flag is specified.
-  bool RuntimeTripCount = !CompletelyUnroll && ULO.TripCount == 0 &&
-                          ULO.TripMultiple % ULO.Count != 0 && ULO.AllowRuntime;
+  // There's no point in performing runtime unrolling if this unroll count
+  // results in a full unroll.
+  if (CompletelyUnroll)
+    ULO.Runtime = false;
 
   // Go through all exits of L and see if there are any phi-nodes there. We just
   // conservatively assume that they're inserted to preserve LCSSA form, which
@@ -399,8 +381,9 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     return LoopUnrollResult::Unmodified;
   }
 
-  // Loops containing convergent instructions must have a count that divides
-  // their TripMultiple.
+  // Loops containing convergent instructions cannot use runtime unrolling,
+  // as the prologue/epilogue may add additional control-dependencies to
+  // convergent operations.
   LLVM_DEBUG(
       {
         bool HasConvergent = false;
@@ -408,22 +391,21 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
           for (auto &I : *BB)
             if (auto *CB = dyn_cast<CallBase>(&I))
               HasConvergent |= CB->isConvergent();
-        assert((!HasConvergent || ULO.TripMultiple % ULO.Count == 0) &&
-               "Unroll count must divide trip multiple if loop contains a "
-               "convergent operation.");
+        assert((!HasConvergent || !ULO.Runtime) &&
+               "Can't runtime unroll if loop contains a convergent operation.");
       });
 
   bool EpilogProfitability =
       UnrollRuntimeEpilog.getNumOccurrences() ? UnrollRuntimeEpilog
                                               : isEpilogProfitable(L);
 
-  if (RuntimeTripCount &&
+  if (ULO.Runtime &&
       !UnrollRuntimeLoopRemainder(L, ULO.Count, ULO.AllowExpensiveTripCount,
                                   EpilogProfitability, ULO.UnrollRemainder,
                                   ULO.ForgetAllSCEV, LI, SE, DT, AC, TTI,
                                   PreserveLCSSA, RemainderLoop)) {
     if (ULO.Force)
-      RuntimeTripCount = false;
+      ULO.Runtime = false;
     else {
       LLVM_DEBUG(dbgs() << "Won't unroll; remainder loop could not be "
                            "generated when assuming runtime trip count\n");
@@ -446,7 +428,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   } else {
     LLVM_DEBUG(dbgs() << "UNROLLING loop %" << Header->getName() << " by "
                       << ULO.Count);
-    if (RuntimeTripCount)
+    if (ULO.Runtime)
       LLVM_DEBUG(dbgs() << " with run-time trip count");
     LLVM_DEBUG(dbgs() << "!\n");
 
@@ -455,7 +437,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         OptimizationRemark Diag(DEBUG_TYPE, "PartialUnrolled", L->getStartLoc(),
                                 L->getHeader());
         Diag << "unrolled loop by a factor of " << NV("UnrollCount", ULO.Count);
-        if (RuntimeTripCount)
+        if (ULO.Runtime)
           Diag << " with run-time trip count";
         return Diag;
       });
@@ -714,7 +696,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       return None;
     }
 
-    if (RuntimeTripCount) {
+    if (ULO.Runtime) {
       // If runtime unrolling inserts a prologue, information about non-latch
       // exits may be stale.
       if (IsLatch && j != 0)
