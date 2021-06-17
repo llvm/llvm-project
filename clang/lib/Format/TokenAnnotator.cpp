@@ -3639,6 +3639,9 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
   if (Style.BreakInheritanceList == FormatStyle::BILS_BeforeComma &&
       Right.is(TT_InheritanceComma))
     return true;
+  if (Style.BreakInheritanceList == FormatStyle::BILS_AfterComma &&
+      Left.is(TT_InheritanceComma))
+    return true;
   if (Right.is(tok::string_literal) && Right.TokenText.startswith("R\""))
     // Multiline raw string literals are special wrt. line breaks. The author
     // has made a deliberate choice and might have aligned the contents of the
