@@ -14,7 +14,7 @@ define i8 @drop_nuw() {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    call void @use(i8 [[IV]])
+; CHECK-NEXT:    call void @use(i8 zeroext [[IV]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
@@ -27,7 +27,7 @@ entry:
 
 loop:
   %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
-  call void @use(i8 %iv)
+  call void @use(i8 zeroext %iv)
 
   %iv.next = add nuw i8 %iv, 1
   %cmp = icmp eq i8 %iv, -1
@@ -44,7 +44,7 @@ define i8 @drop_nsw() {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 127, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    call void @use(i8 [[IV]])
+; CHECK-NEXT:    call void @use(i8 zeroext [[IV]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[IV_NEXT]], 127
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
@@ -57,7 +57,7 @@ entry:
 
 loop:
   %iv = phi i8 [ 127, %entry ], [ %iv.next, %loop ]
-  call void @use(i8 %iv)
+  call void @use(i8 zeroext %iv)
 
   %iv.next = add nsw i8 %iv, -1
   %cmp = icmp eq i8 %iv, -128
@@ -74,7 +74,7 @@ define i8 @already_postinc() {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    call void @use(i8 [[IV]])
+; CHECK-NEXT:    call void @use(i8 zeroext [[IV]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[IV_NEXT]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
@@ -87,7 +87,7 @@ entry:
 
 loop:
   %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
-  call void @use(i8 %iv)
+  call void @use(i8 zeroext %iv)
 
   %iv.next = add nuw i8 %iv, 1
   %cmp = icmp eq i8 %iv.next, -1

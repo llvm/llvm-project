@@ -215,11 +215,11 @@ entry:
 define void @test13() {
 ; CHECK-LABEL: @test13
 ; CHECK: tail call void @bar(%struct.foo* byval(%struct.foo) %f)
-; CHECK: tail call void @bar(%struct.foo* null)
+; CHECK: tail call void @bar(%struct.foo* byval(%struct.foo) null)
 entry:
   %f = alloca %struct.foo
   call void @bar(%struct.foo* byval(%struct.foo) %f)
-  call void @bar(%struct.foo* null)
+  call void @bar(%struct.foo* byval(%struct.foo) null)
   ret void
 }
 
