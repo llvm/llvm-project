@@ -8,8 +8,6 @@
 
 // test <stdlib.h>
 
-// XFAIL: LIBCXX-WINDOWS-FIXME
-
 #include <stdlib.h>
 #include <type_traits>
 #include <cassert>

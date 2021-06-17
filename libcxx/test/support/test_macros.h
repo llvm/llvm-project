@@ -209,7 +209,6 @@
 #  elif defined(_WIN32)
 #    if defined(_MSC_VER) && !defined(__MINGW32__)
 #      define TEST_HAS_QUICK_EXIT
-#      define TEST_HAS_ALIGNED_ALLOC
 #      define TEST_HAS_TIMESPEC_GET
 #    endif
 #  elif defined(__APPLE__)
