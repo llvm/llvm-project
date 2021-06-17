@@ -4132,7 +4132,6 @@ mlir::LLVMConversionTarget::LLVMConversionTarget(MLIRContext &ctx)
     : ConversionTarget(ctx) {
   this->addLegalDialect<LLVM::LLVMDialect>();
   this->addIllegalOp<LLVM::DialectCastOp>();
-  this->addIllegalOp<math::TanhOp>();
 }
 
 std::unique_ptr<OperationPass<ModuleOp>> mlir::createLowerToLLVMPass() {
