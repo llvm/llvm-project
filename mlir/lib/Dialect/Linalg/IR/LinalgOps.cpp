@@ -525,69 +525,8 @@ void GenericOp::build(
         /*doc=*/"",
         /*libraryCall=*/"", bodyBuild);
 }
-void IndexedGenericOp::build(
-    OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,
-    ValueRange inputs, ValueRange outputs, ArrayRef<AffineMap> indexingMaps,
-    ArrayRef<StringRef> iteratorTypes, StringRef doc, StringRef libraryCall,
-    function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>
-        bodyBuild) {
-  build(builder, result, resultTensorTypes, inputs, outputs,
-        builder.getAffineMapArrayAttr(indexingMaps),
-        builder.getStrArrayAttr(iteratorTypes),
-        doc.empty() ? StringAttr() : builder.getStringAttr(doc),
-        libraryCall.empty() ? StringAttr()
-                            : builder.getStringAttr(libraryCall));
-  if (!bodyBuild)
-    return;
 
-  unsigned nLoops = iteratorTypes.size();
-  SmallVector<Type, 4> blockArgTypes(nLoops, builder.getIndexType());
-  for (ValueRange container : {inputs, outputs})
-    for (Value v : container)
-      blockArgTypes.push_back(getElementTypeOrSelf(v));
-
-  OpBuilder::InsertionGuard guard(builder);
-  auto &region = *result.regions.front();
-  Block *bodyBlock = builder.createBlock(&region, region.end(), blockArgTypes);
-  bodyBuild(builder, result.location,
-            bodyBlock->getArguments().take_front(nLoops),
-            bodyBlock->getArguments().drop_front(nLoops));
-}
-
-void IndexedGenericOp::build(
-    OpBuilder &builder, OperationState &result, ValueRange inputs,
-    ValueRange outputs, ArrayRef<AffineMap> indexingMaps,
-    ArrayRef<StringRef> iteratorTypes, StringRef doc, StringRef libraryCall,
-    function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>
-        bodyBuild) {
-  build(builder, result, TypeRange{}, inputs, outputs, indexingMaps,
-        iteratorTypes, doc, libraryCall, bodyBuild);
-}
-
-void IndexedGenericOp::build(
-    OpBuilder &builder, OperationState &result, ValueRange inputs,
-    ValueRange outputs, ArrayRef<AffineMap> indexingMaps,
-    ArrayRef<StringRef> iteratorTypes,
-    function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>
-        bodyBuild) {
-  build(builder, result, inputs, outputs, indexingMaps, iteratorTypes,
-        /*doc=*/"", /*libraryCall=*/"", bodyBuild);
-}
-
-void IndexedGenericOp::build(
-    OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,
-    ValueRange inputs, ValueRange outputs, ArrayRef<AffineMap> indexingMaps,
-    ArrayRef<StringRef> iteratorTypes,
-    function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>
-        bodyBuild) {
-  build(builder, result, resultTensorTypes, inputs, outputs, indexingMaps,
-        iteratorTypes,
-        /*doc=*/"",
-        /*libraryCall=*/"", bodyBuild);
-}
-
-template <typename GenericOpType>
-static void printGenericOp(OpAsmPrinter &p, GenericOpType op) {
+static void print(OpAsmPrinter &p, GenericOp op) {
   p << op.getOperationName() << " ";
 
   // Print extra attributes.
@@ -626,12 +565,6 @@ static void printGenericOp(OpAsmPrinter &p, GenericOpType op) {
 
   // Print results.
   printNamedStructuredOpResults(p, op.result_tensors().getTypes());
-}
-
-static void print(OpAsmPrinter &p, GenericOp op) { printGenericOp(p, op); }
-
-static void print(OpAsmPrinter &p, IndexedGenericOp op) {
-  printGenericOp(p, op);
 }
 
 static ParseResult parseGenericOp(OpAsmParser &parser, OperationState &result) {
@@ -704,67 +637,12 @@ void GenericOp::getEffects(
                         outputBuffers);
 }
 
-void IndexedGenericOp::getEffects(
-    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
-        &effects) {
-  SmallVector<Value> inputBuffers = getInputBufferOperands();
-  SmallVector<Value> outputBuffers = getOutputBufferOperands();
-  getGenericEffectsImpl(effects, getOperation()->getResults(), inputBuffers,
-                        outputBuffers);
-}
-
 template <typename GenericOpType>
 static LogicalResult verifyGenericOp(GenericOpType op) {
   return success();
 }
 
 static LogicalResult verify(GenericOp op) { return verifyGenericOp(op); }
-
-static LogicalResult verify(IndexedGenericOp op) { return verifyGenericOp(op); }
-
-namespace {
-
-/// Replace indexed_generic ops by generic ops that access the iteration indices
-/// using index operation calls.
-struct ConvertIndexedToGenericOp : OpRewritePattern<IndexedGenericOp> {
-  using OpRewritePattern<IndexedGenericOp>::OpRewritePattern;
-  LogicalResult matchAndRewrite(IndexedGenericOp indexedOp,
-                                PatternRewriter &rewriter) const override {
-    // Replace all uses of the index block arguments.
-    BlockAndValueMapping bvm;
-    if (Block *body = indexedOp.getBody()) {
-      rewriter.setInsertionPointToStart(body);
-      for (const auto &en : llvm::enumerate(
-               body->getArguments().take_front(indexedOp.getNumLoops()))) {
-        Value index = rewriter.create<IndexOp>(indexedOp.getLoc(), en.index());
-        bvm.map(en.value(), index);
-      }
-    }
-
-    // Create a generic replacement operation and clone the body.
-    rewriter.setInsertionPointAfter(indexedOp);
-    SmallVector<Value> inputOperands = indexedOp.getInputOperands();
-    SmallVector<Value> outputOperands = indexedOp.getOutputOperands();
-    SmallVector<StringRef> iterators = llvm::to_vector<4>(
-        indexedOp.iterator_types().getAsValueRange<StringAttr>());
-    GenericOp genericOp = rewriter.create<GenericOp>(
-        indexedOp.getLoc(), indexedOp->getResultTypes(), inputOperands,
-        outputOperands, indexedOp.getIndexingMaps(), iterators);
-    Region &genericRegion = genericOp.region();
-    Region &indexedRegion = indexedOp.region();
-    rewriter.cloneRegionBefore(indexedRegion, genericRegion,
-                               genericRegion.begin(), bvm);
-
-    rewriter.replaceOp(indexedOp, genericOp->getResults());
-    return success();
-  }
-};
-} // namespace
-
-void IndexedGenericOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                                   MLIRContext *context) {
-  results.add<ConvertIndexedToGenericOp>(context);
-}
 
 //===----------------------------------------------------------------------===//
 // InitTensorOp
@@ -3230,7 +3108,7 @@ struct DeduplicateInputs : public OpInterfaceRewritePattern<LinalgOp> {
                                 PatternRewriter &rewriter) const override {
     // This pattern reduces the number of arguments of an op, which breaks
     // the invariants of semantically charged named ops.
-    if (!isa<GenericOp, IndexedGenericOp>(op))
+    if (!isa<GenericOp>(op))
       return failure();
 
     // Associate each input to an equivalent "canonical" input that has the same
@@ -3290,10 +3168,6 @@ struct DeduplicateInputs : public OpInterfaceRewritePattern<LinalgOp> {
     // the value from the original op.
     newLinalgOp.setNumInputs(canonicalInput.size());
 
-    // linalg.indexed_generic payloads have additional arguments prepended to
-    // the block arg list.
-    int bbArgBaseOffset = newLinalgOp.getNumPayloadInductionVariables();
-
     // Repair the payload entry block by RAUW'ing redundant arguments and
     // erasing them.
     Block &payload = newOp->getRegion(0).front();
@@ -3305,10 +3179,10 @@ struct DeduplicateInputs : public OpInterfaceRewritePattern<LinalgOp> {
       unsigned operandNumber = opOperand->getOperandNumber();
       if (canonicalInputIndices[operandNumber] == operandNumber)
         continue;
-      payload.getArgument(bbArgBaseOffset + operandNumber)
-          .replaceAllUsesWith(payload.getArgument(
-              bbArgBaseOffset + canonicalInputIndices[operandNumber]));
-      payload.eraseArgument(bbArgBaseOffset + operandNumber);
+      payload.getArgument(operandNumber)
+          .replaceAllUsesWith(
+              payload.getArgument(canonicalInputIndices[operandNumber]));
+      payload.eraseArgument(operandNumber);
     }
 
     rewriter.replaceOp(op, newOp->getResults());
@@ -3316,7 +3190,7 @@ struct DeduplicateInputs : public OpInterfaceRewritePattern<LinalgOp> {
   }
 };
 
-/// Remove generic/indexed_generic operations (on tensors) that are just copying
+/// Remove generic operations (on tensors) that are just copying
 /// the values from inputs to the results. Requirements are
 /// 1) All iterator types are parallel
 /// 2) The body contains just a yield operation with the yielded values being
@@ -3335,7 +3209,7 @@ struct RemoveIdentityLinalgOps : public OpInterfaceRewritePattern<LinalgOp> {
       }
     }
 
-    if (!isa<GenericOp, IndexedGenericOp>(op))
+    if (!isa<GenericOp>(op))
       return failure();
     if (!op.hasTensorSemantics())
       return failure();
