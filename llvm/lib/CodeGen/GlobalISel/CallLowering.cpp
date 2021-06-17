@@ -224,7 +224,7 @@ void CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
   assert(OrigArg.Regs.size() == SplitVTs.size() && "Regs / types mismatch");
 
   bool NeedsRegBlock = TLI->functionArgumentNeedsConsecutiveRegisters(
-      OrigArg.Ty, CallConv, false);
+      OrigArg.Ty, CallConv, false, DL);
   for (unsigned i = 0, e = SplitVTs.size(); i < e; ++i) {
     Type *SplitTy = SplitVTs[i].getTypeForEVT(Ctx);
     SplitArgs.emplace_back(OrigArg.Regs[i], SplitTy, OrigArg.Flags[0],
