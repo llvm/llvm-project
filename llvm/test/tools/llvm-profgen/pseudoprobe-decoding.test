@@ -4,9 +4,9 @@ PERF_RECORD_MMAP2 2854748/2854748: [0x400000(0x1000) @ 0 00:1d 123291722 526021]
 
 ; CHECK: Pseudo Probe Desc:
 ; CHECK: GUID: 6699318081062747564 Name: foo
-; CHECK: Hash: 138950591924
+; CHECK: Hash: 563088904013236
 ; CHECK: GUID: 15822663052811949562 Name: main
-; CHECK: Hash: 4294967295
+; CHECK: Hash: 281479271677951
 ; CHECK: GUID: 16434608426314478903 Name: bar
 ; CHECK: Hash: 72617220756
 
@@ -15,15 +15,8 @@ PERF_RECORD_MMAP2 2854748/2854748: [0x400000(0x1000) @ 0 00:1d 123291722 526021]
 ; CHECK:      <bar>:
 
 ; CHECK:       [Probe]: FUNC: bar Index: 1  Type: Block
+; CHECK-NEXT:  [Probe]: FUNC: bar Index: 4  Type: Block
 ; CHECK-NEXT:      754: imull $2863311531, %edi, %eax
-
-; CHECK:       [Probe]: FUNC: bar Index: 2  Type: Block  Dangling
-; CHECK-NEXT:  [Probe]: FUNC: bar Index: 3  Type: Block  Dangling
-; CHECK-NEXT:      768: cmovbl  %esi, %ecx
-
-; CHECK:       [Probe]: FUNC: bar Index: 4  Type: Block
-; CHECK-NEXT:      76e: popq  %rbp
-
 
 ; CHECK:      <foo>:
 ; CHECK:       [Probe]: FUNC: foo Index: 1  Type: Block
@@ -37,20 +30,17 @@ PERF_RECORD_MMAP2 2854748/2854748: [0x400000(0x1000) @ 0 00:1d 123291722 526021]
 ; CHECK-NEXT:      783: addl  $1, %ecx
 
 ; CHECK:       [Probe]: FUNC: foo Index: 3  Type: Block
-; CHECK-NEXT:      7a9: cmpl  %eax, %ecx
+; CHECK-NEXT:      78e:	movl	%ecx, %edx
 
 ; CHECK:       [Probe]: FUNC: foo Index: 4  Type: Block
 ; CHECK-NEXT:  [Probe]: FUNC: bar Index: 1  Type: Block  Inlined: @ foo:8
+; CHECK-NEXT:  [Probe]:	FUNC: bar Index: 4  Type: Block  Inlined: @ foo:8
 ; CHECK-NEXT:      7bf: addl  %ecx, %edx
 
-; CHECK:       [Probe]: FUNC: bar Index: 2  Type: Block  Dangling  Inlined: @ foo:8
-; CHECK-NEXT:  [Probe]: FUNC: bar Index: 3  Type: Block  Dangling  Inlined: @ foo:8
-; CHECK-NEXT:      7c8: cmovel  %esi, %eax
 
-; CHECK:       [Probe]: FUNC: bar Index: 4  Type: Block  Inlined: @ foo:8
-; CHECK-NEXT:      7cd: movl  %eax, %esi
 ; CHECK:       [Probe]: FUNC: foo Index: 6  Type: Block
 ; CHECK-NEXT:  [Probe]: FUNC: foo Index: 2  Type: Block
+; CHECK-NEXT:      7cf:	addl	$1, %ecx
 
 ; CHECK:       [Probe]: FUNC: foo Index: 7  Type: Block
 ; CHECK-NEXT:      7de: movl  $2098432, %edi
@@ -72,18 +62,13 @@ PERF_RECORD_MMAP2 2854748/2854748: [0x400000(0x1000) @ 0 00:1d 123291722 526021]
 ; CHECK-NEXT:      803: addl  $1, %ecx
 
 ; CHECK:       [Probe]: FUNC: foo Index: 3  Type: Block  Inlined: @ main:2
-; CHECK-NEXT:      829: cmpl  %eax, %ecx
+; CHECK-NEXT:      80e:	movl	%ecx, %edx
 
 ; CHECK:       [Probe]: FUNC: foo Index: 4  Type: Block  Inlined: @ main:2
 ; CHECK-NEXT:  [Probe]: FUNC: bar Index: 1  Type: Block  Inlined: @ main:2 @ foo:8
+; CHECK-NEXT:  [Probe]:	FUNC: bar Index: 4  Type: Block  Inlined: @ main:2 @ foo:8
 ; CHECK-NEXT:      83f: addl  %ecx, %edx
 
-; CHECK:       [Probe]: FUNC: bar Index: 2  Type: Block  Dangling  Inlined: @ main:2 @ foo:8
-; CHECK-NEXT:  [Probe]: FUNC: bar Index: 3  Type: Block  Dangling  Inlined: @ main:2 @ foo:8
-; CHECK-NEXT:      848: cmovel  %esi, %eax
-
-; CHECK:       [Probe]: FUNC: bar Index: 4  Type: Block  Inlined: @ main:2 @ foo:8
-; CHECK-NEXT:      84d: movl  %eax, %esi
 ; CHECK:       [Probe]: FUNC: foo Index: 6  Type: Block  Inlined: @ main:2
 ; CHECK-NEXT:  [Probe]: FUNC: foo Index: 2  Type: Block  Inlined: @ main:2
 ; CHECK-NEXT:      84f: addl  $1, %ecx
