@@ -17,6 +17,8 @@ HANDLE_NODETYPE(CALL)
 HANDLE_NODETYPE(RET_CALL)
 HANDLE_NODETYPE(RETURN)
 HANDLE_NODETYPE(ARGUMENT)
+HANDLE_NODETYPE(LOCAL_GET)
+HANDLE_NODETYPE(LOCAL_SET)
 // A wrapper node for TargetExternalSymbol, TargetGlobalAddress, and MCSymbol
 HANDLE_NODETYPE(Wrapper)
 // A special wapper used in PIC code for __memory_base/__table_base relative
