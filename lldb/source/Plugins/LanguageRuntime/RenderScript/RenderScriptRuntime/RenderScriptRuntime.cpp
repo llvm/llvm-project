@@ -2228,7 +2228,7 @@ bool RenderScriptRuntime::RefreshAllocation(AllocationDetails *alloc,
   return JITAllocationSize(alloc, frame_ptr);
 }
 
-// Function attempts to set the type_name member of the paramaterised Element
+// Function attempts to set the type_name member of the parameterised Element
 // object. This string should be the name of the struct type the Element
 // represents. We need this string for pretty printing the Element to users.
 void RenderScriptRuntime::FindStructTypeName(Element &elem,
