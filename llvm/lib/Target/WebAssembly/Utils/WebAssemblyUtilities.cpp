@@ -13,8 +13,12 @@
 
 #include "WebAssemblyUtilities.h"
 #include "WebAssemblyMachineFunctionInfo.h"
+#include "WebAssemblySubtarget.h"
+#include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/MC/MCContext.h"
 using namespace llvm;
 
@@ -23,6 +27,50 @@ const char *const WebAssembly::CxaRethrowFn = "__cxa_rethrow";
 const char *const WebAssembly::StdTerminateFn = "_ZSt9terminatev";
 const char *const WebAssembly::PersonalityWrapperFn =
     "_Unwind_Wasm_CallPersonality";
+
+// In an ideal world, when objects are added to the MachineFrameInfo by
+// FunctionLoweringInfo::set, we could somehow hook into target-specific code to
+// ensure they are assigned the right stack ID.  However there isn't a hook that
+// runs between then and DAG building time, though, so instead we hoist stack
+// objects lazily when they are first used, and comprehensively after the DAG is
+// built via the PreprocessISelDAG hook, called by the
+// SelectionDAGISel::runOnMachineFunction.  We have to do it in two places
+// because we want to do it while building the selection DAG for uses of alloca,
+// but not all alloca instructions are used so we have to follow up afterwards.
+Optional<unsigned> WebAssembly::getLocalForStackObject(MachineFunction &MF,
+                                                       int FrameIndex) {
+  auto &MFI = MF.getFrameInfo();
+
+  // If already hoisted to a local, done.
+  if (MFI.getStackID(FrameIndex) == TargetStackID::WasmLocal)
+    return static_cast<unsigned>(MFI.getObjectOffset(FrameIndex));
+
+  // If not allocated in the object address space, this object will be in
+  // linear memory.
+  const AllocaInst *AI = MFI.getObjectAllocation(FrameIndex);
+  if (!AI || !isWasmVarAddressSpace(AI->getType()->getAddressSpace()))
+    return None;
+
+  // Otherwise, allocate this object in the named value stack, outside of linear
+  // memory.
+  SmallVector<EVT, 4> ValueVTs;
+  const WebAssemblyTargetLowering &TLI =
+      *MF.getSubtarget<WebAssemblySubtarget>().getTargetLowering();
+  WebAssemblyFunctionInfo *FuncInfo = MF.getInfo<WebAssemblyFunctionInfo>();
+  ComputeValueVTs(TLI, MF.getDataLayout(), AI->getAllocatedType(), ValueVTs);
+  MFI.setStackID(FrameIndex, TargetStackID::WasmLocal);
+  // Abuse SP offset to record the index of the first local in the object.
+  unsigned Local = FuncInfo->getParams().size() + FuncInfo->getLocals().size();
+  MFI.setObjectOffset(FrameIndex, Local);
+  // Allocate WebAssembly locals for each non-aggregate component of the
+  // allocation.
+  for (EVT ValueVT : ValueVTs)
+    FuncInfo->addLocal(ValueVT.getSimpleVT());
+  // Abuse object size to record number of WebAssembly locals allocated to
+  // this object.
+  MFI.setObjectSize(FrameIndex, ValueVTs.size());
+  return static_cast<unsigned>(Local);
+}
 
 /// Test whether MI is a child of some other node in an expression tree.
 bool WebAssembly::isChild(const MachineInstr &MI,
