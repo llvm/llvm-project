@@ -59,7 +59,6 @@ if (current_toolchain == default_toolchain) {
 
   copy("copy_headers") {
     sources = [
-      "__algorithm/unwrap_iter.h",
       "__availability",
       "__bit_reference",
       "__bits",
