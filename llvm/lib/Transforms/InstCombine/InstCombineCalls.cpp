@@ -1935,8 +1935,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       for (unsigned i = 0; i != DstNumElts; ++i)
         Mask.push_back(IdxN + i);
 
-      Value *Shuffle =
-          Builder.CreateShuffleVector(Vec, UndefValue::get(VecTy), Mask);
+      Value *Shuffle = Builder.CreateShuffleVector(Vec, Mask);
       replaceInstUsesWith(CI, Shuffle);
       return eraseInstFromFunction(CI);
     }
