@@ -1417,6 +1417,39 @@ struct Attributor {
                                           const AbstractAttribute &AA,
                                           bool &UsedAssumedInformation);
 
+  /// If \p V is assumed simplified, return it, if it is unclear yet,
+  /// return None, otherwise return `nullptr`.
+  Optional<Value *> getAssumedSimplified(const IRPosition &IRP,
+                                         const AbstractAttribute &AA,
+                                         bool &UsedAssumedInformation) {
+    return getAssumedSimplified(IRP, &AA, UsedAssumedInformation);
+  }
+
+  /// Register \p CB as a simplification callback.
+  /// `Attributor::getAssumedSimplified` will use these callbacks before
+  /// we it will ask `AAValueSimplify`. It is important to ensure this
+  /// is called before `identifyDefaultAbstractAttributes`, assuming the
+  /// latter is called at all.
+  using SimplifictionCallbackTy = std::function<Optional<Value *>(
+      const IRPosition &, const AbstractAttribute *, bool &)>;
+  void registerSimplificationCallback(const IRPosition &IRP,
+                                      const SimplifictionCallbackTy &CB) {
+    SimplificationCallbacks[IRP].emplace_back(CB);
+  }
+
+private:
+  /// The vector with all simplification callbacks registered by outside AAs.
+  DenseMap<IRPosition, SmallVector<SimplifictionCallbackTy, 1>>
+      SimplificationCallbacks;
+
+  /// If \p V is assumed simplified, return it, if it is unclear yet,
+  /// return None, otherwise return `nullptr`. Same as the public version
+  /// except that it can be used without recording dependences on any \p AA.
+  Optional<Value *> getAssumedSimplified(const IRPosition &V,
+                                         const AbstractAttribute *AA,
+                                         bool &UsedAssumedInformation);
+
+public:
   /// Return true if \p AA (or its context instruction) is assumed dead.
   ///
   /// If \p LivenessAA is not provided it is queried.
@@ -3213,11 +3246,6 @@ struct AAValueSimplify : public StateWrapper<BooleanState, AbstractAttribute> {
   using Base = StateWrapper<BooleanState, AbstractAttribute>;
   AAValueSimplify(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
-  /// Return an assumed simplified value if a single candidate is found. If
-  /// there cannot be one, return original value. If it is not clear yet, return
-  /// the Optional::NoneType.
-  virtual Optional<Value *> getAssumedSimplifiedValue(Attributor &A) const = 0;
-
   /// Create an abstract attribute view for the position \p IRP.
   static AAValueSimplify &createForPosition(const IRPosition &IRP,
                                             Attributor &A);
@@ -3236,6 +3264,16 @@ struct AAValueSimplify : public StateWrapper<BooleanState, AbstractAttribute> {
 
   /// Unique ID (due to the unique address)
   static const char ID;
+
+private:
+  /// Return an assumed simplified value if a single candidate is found. If
+  /// there cannot be one, return original value. If it is not clear yet, return
+  /// the Optional::NoneType.
+  ///
+  /// Use `Attributor::getAssumedSimplified` for value simplification.
+  virtual Optional<Value *> getAssumedSimplifiedValue(Attributor &A) const = 0;
+
+  friend struct Attributor;
 };
 
 struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute> {

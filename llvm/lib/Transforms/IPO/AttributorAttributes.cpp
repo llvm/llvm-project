@@ -2027,12 +2027,11 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
             A.getAAFor<AANoUndef>(*this, CalleeArgumentIRP, DepClassTy::NONE);
         if (!NoUndefAA.isKnownNoUndef())
           continue;
-        auto &ValueSimplifyAA = A.getAAFor<AAValueSimplify>(
-            *this, IRPosition::value(*ArgVal), DepClassTy::NONE);
-        if (!ValueSimplifyAA.isKnown())
+        bool UsedAssumedInformation = false;
+        Optional<Value *> SimplifiedVal = A.getAssumedSimplified(
+            IRPosition::value(*ArgVal), *this, UsedAssumedInformation);
+        if (UsedAssumedInformation)
           continue;
-        Optional<Value *> SimplifiedVal =
-            ValueSimplifyAA.getAssumedSimplifiedValue(A);
         if (!SimplifiedVal.hasValue() ||
             isa<UndefValue>(*SimplifiedVal.getValue())) {
           KnownUBInsts.insert(&I);
@@ -2196,11 +2195,10 @@ private:
   // use for specific processing.
   Optional<Value *> stopOnUndefOrAssumed(Attributor &A, const Value *V,
                                          Instruction *I) {
-    const auto &ValueSimplifyAA = A.getAAFor<AAValueSimplify>(
-        *this, IRPosition::value(*V), DepClassTy::REQUIRED);
-    Optional<Value *> SimplifiedV =
-        ValueSimplifyAA.getAssumedSimplifiedValue(A);
-    if (!ValueSimplifyAA.isKnown()) {
+    bool UsedAssumedInformation = false;
+    Optional<Value *> SimplifiedV = A.getAssumedSimplified(
+        IRPosition::value(*V), *this, UsedAssumedInformation);
+    if (UsedAssumedInformation) {
       // Don't depend on assumed values.
       return llvm::None;
     }
@@ -4547,20 +4545,15 @@ struct AAValueSimplifyImpl : AAValueSimplify {
   }
 
   /// Helper function for querying AAValueSimplify and updating candicate.
-  /// \param QueryingValue Value trying to unify with SimplifiedValue
+  /// \param IRP The value position we are trying to unify with SimplifiedValue
   /// \param AccumulatedSimplifiedValue Current simplification result.
   static bool checkAndUpdate(Attributor &A, const AbstractAttribute &QueryingAA,
-                             Value &QueryingValue,
+                             const IRPosition &IRP,
                              Optional<Value *> &AccumulatedSimplifiedValue) {
     // FIXME: Add a typecast support.
-
-    auto &ValueSimplifyAA = A.getAAFor<AAValueSimplify>(
-        QueryingAA,
-        IRPosition::value(QueryingValue, QueryingAA.getCallBaseContext()),
-        DepClassTy::REQUIRED);
-
+    bool UsedAssumedInformation = false;
     Optional<Value *> QueryingValueSimplified =
-        ValueSimplifyAA.getAssumedSimplifiedValue(A);
+        A.getAssumedSimplified(IRP, QueryingAA, UsedAssumedInformation);
 
     if (!QueryingValueSimplified.hasValue())
       return true;
@@ -4579,7 +4572,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
         isa<UndefValue>(QueryingValueSimplifiedUnwrapped))
       return true;
 
-    LLVM_DEBUG(dbgs() << "[ValueSimplify] " << QueryingValue
+    LLVM_DEBUG(dbgs() << "[ValueSimplify] " << IRP.getAssociatedValue()
                       << " is assumed to be "
                       << QueryingValueSimplifiedUnwrapped << "\n");
 
@@ -4719,7 +4712,7 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
         if (auto *C = dyn_cast<Constant>(&ArgOp))
           if (C->isThreadDependent())
             return false;
-      return checkAndUpdate(A, *this, ArgOp, SimplifiedAssociatedValue);
+      return checkAndUpdate(A, *this, ACSArgPos, SimplifiedAssociatedValue);
     };
 
     // Generate a answer specific to a call site context.
@@ -4756,7 +4749,9 @@ struct AAValueSimplifyReturned : AAValueSimplifyImpl {
     auto Before = SimplifiedAssociatedValue;
 
     auto PredForReturned = [&](Value &V) {
-      return checkAndUpdate(A, *this, V, SimplifiedAssociatedValue);
+      return checkAndUpdate(A, *this,
+                            IRPosition::value(V, getCallBaseContext()),
+                            SimplifiedAssociatedValue);
     };
 
     if (!A.checkForAllReturnedValues(PredForReturned, *this))
@@ -4911,7 +4906,9 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
                           << "\n");
         return false;
       }
-      return checkAndUpdate(A, *this, V, SimplifiedAssociatedValue);
+      return checkAndUpdate(A, *this,
+                            IRPosition::value(V, getCallBaseContext()),
+                            SimplifiedAssociatedValue);
     };
 
     bool Dummy = false;
@@ -8069,9 +8066,9 @@ struct AANoUndefImpl : AANoUndef {
     // A position whose simplified value does not have any value is
     // considered to be dead. We don't manifest noundef in such positions for
     // the same reason above.
-    auto &ValueSimplifyAA =
-        A.getAAFor<AAValueSimplify>(*this, getIRPosition(), DepClassTy::NONE);
-    if (!ValueSimplifyAA.getAssumedSimplifiedValue(A).hasValue())
+    bool UsedAssumedInformation = false;
+    if (!A.getAssumedSimplified(getIRPosition(), *this, UsedAssumedInformation)
+             .hasValue())
       return ChangeStatus::UNCHANGED;
     return AANoUndef::manifest(A);
   }

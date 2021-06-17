@@ -599,6 +599,43 @@ Attributor::getAssumedConstant(const Value &V, const AbstractAttribute &AA,
   return CI;
 }
 
+Optional<Value *>
+Attributor::getAssumedSimplified(const IRPosition &IRP,
+                                 const AbstractAttribute *AA,
+                                 bool &UsedAssumedInformation) {
+  // First check all callbacks provided by outside AAs. If any of them returns
+  // a non-null value that is different from the associated value, or None, we
+  // assume it's simpliied.
+  for (auto &CB : SimplificationCallbacks[IRP]) {
+    Optional<Value *> SimplifiedV = CB(IRP, AA, UsedAssumedInformation);
+    if (!SimplifiedV.hasValue() ||
+        (*SimplifiedV && *SimplifiedV != &IRP.getAssociatedValue()))
+      return SimplifiedV;
+  }
+
+  // If no high-level/outside simplification occured, use AAValueSimplify.
+  const auto &ValueSimplifyAA =
+      getOrCreateAAFor<AAValueSimplify>(IRP, AA, DepClassTy::NONE);
+  Optional<Value *> SimplifiedV =
+      ValueSimplifyAA.getAssumedSimplifiedValue(*this);
+  bool IsKnown = ValueSimplifyAA.isKnown();
+  UsedAssumedInformation |= !IsKnown;
+  if (!SimplifiedV.hasValue()) {
+    if (AA)
+      recordDependence(ValueSimplifyAA, *AA, DepClassTy::OPTIONAL);
+    return llvm::None;
+  }
+  if (*SimplifiedV == nullptr)
+    return const_cast<Value *>(&IRP.getAssociatedValue());
+  if (Value *SimpleV =
+          AA::getWithType(**SimplifiedV, *IRP.getAssociatedType())) {
+    if (AA)
+      recordDependence(ValueSimplifyAA, *AA, DepClassTy::OPTIONAL);
+    return SimpleV;
+  }
+  return const_cast<Value *>(&IRP.getAssociatedValue());
+}
+
 Attributor::~Attributor() {
   // The abstract attributes are allocated via the BumpPtrAllocator Allocator,
   // thus we cannot delete them. We can, and want to, destruct them though.
@@ -2142,8 +2179,11 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   for (Argument &Arg : F.args()) {
     IRPosition ArgPos = IRPosition::argument(Arg);
 
-    // Every argument might be simplified.
-    getOrCreateAAFor<AAValueSimplify>(ArgPos);
+    // Every argument might be simplified. We have to go through the Attributor
+    // interface though as outside AAs can register custom simplification
+    // callbacks.
+    bool UsedAssumedInformation;
+    getAssumedSimplified(ArgPos, /* AA */ nullptr, UsedAssumedInformation);
 
     // Every argument might be dead.
     getOrCreateAAFor<AAIsDead>(ArgPos);
@@ -2215,8 +2255,11 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       // Every call site argument might be dead.
       getOrCreateAAFor<AAIsDead>(CBArgPos);
 
-      // Call site argument might be simplified.
-      getOrCreateAAFor<AAValueSimplify>(CBArgPos);
+      // Call site argument might be simplified. We have to go through the
+      // Attributor interface though as outside AAs can register custom
+      // simplification callbacks.
+      bool UsedAssumedInformation;
+      getAssumedSimplified(CBArgPos, /* AA */ nullptr, UsedAssumedInformation);
 
       // Every call site argument might be marked "noundef".
       getOrCreateAAFor<AANoUndef>(CBArgPos);
