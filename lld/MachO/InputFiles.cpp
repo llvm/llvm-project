@@ -178,13 +178,12 @@ static bool checkCompatibility(const InputFile *input) {
     return false;
   }
 
-  if (it->minimum <= config->platformInfo.minimum)
-    return true;
+  if (it->minimum > config->platformInfo.minimum)
+    warn(toString(input) + " has version " + it->minimum.getAsString() +
+         ", which is newer than target minimum of " +
+         config->platformInfo.minimum.getAsString());
 
-  error(toString(input) + " has version " + it->minimum.getAsString() +
-        ", which is newer than target minimum of " +
-        config->platformInfo.minimum.getAsString());
-  return false;
+  return true;
 }
 
 // Open a given file path and return it as a memory-mapped file.
