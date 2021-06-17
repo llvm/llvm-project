@@ -22,6 +22,7 @@ get_foo_addr:
 _start:
   .functype _start () -> ()
   call get_foo_addr
+  call foo
   end_function
 
 .weak foo
@@ -75,7 +76,10 @@ _start:
 # RUN: obj2yaml %t3.wasm | FileCheck %s --check-prefix=IMPORT
 
 #      IMPORT:  - Type:            IMPORT
-#      IMPORT:      - Module:          GOT.func
+#      IMPORT:        Field:           foo
+# IMPORT-NEXT:        Kind:            FUNCTION
+# IMPORT-NEXT:        SigIndex:        0
+# IMPORT-NEXT:      - Module:          GOT.func
 # IMPORT-NEXT:        Field:           foo
 # IMPORT-NEXT:        Kind:            GLOBAL
 # IMPORT-NEXT:        GlobalType:      I32
