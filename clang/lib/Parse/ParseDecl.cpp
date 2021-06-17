@@ -1650,13 +1650,6 @@ void Parser::ProhibitCXX11Attributes(ParsedAttributesWithRange &Attrs,
   }
 }
 
-void Parser::DiagnoseCXX11AttributeExtension(ParsedAttributesWithRange &Attrs) {
-  for (const ParsedAttr &PA : Attrs) {
-    if (PA.isCXX11Attribute() || PA.isC2xAttribute())
-      Diag(PA.getLoc(), diag::ext_cxx11_attr_placement) << PA << PA.getRange();
-  }
-}
-
 // Usually, `__attribute__((attrib)) class Foo {} var` means that attribute
 // applies to var, not the type Foo.
 // As an exception to the rule, __declspec(align(...)) before the
