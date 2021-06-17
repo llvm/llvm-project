@@ -269,7 +269,7 @@ static std::optional<Expr<SubscriptInteger>> SymbolLEN(const Symbol &symbol) {
       return len;
     } else if (IsDescriptor(ultimate) && !ultimate.owner().IsDerivedType()) {
       return Expr<SubscriptInteger>{DescriptorInquiry{
-          NamedEntity{ultimate}, DescriptorInquiry::Field::Len}};
+          NamedEntity{symbol}, DescriptorInquiry::Field::Len}};
     }
   }
   return std::nullopt;
