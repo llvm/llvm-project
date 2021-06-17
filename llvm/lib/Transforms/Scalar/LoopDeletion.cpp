@@ -314,8 +314,6 @@ breakBackedgeIfNotTaken(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
     return LoopDeletionResult::Unmodified;
 
   auto *BTC = SE.getBackedgeTakenCount(L);
-  if (!isa<SCEVCouldNotCompute>(BTC) && SE.isKnownNonZero(BTC))
-    return LoopDeletionResult::Unmodified;
   if (!BTC->isZero() && !canProveExitOnFirstIteration(L, DT, SE, LI))
     return LoopDeletionResult::Unmodified;
 
