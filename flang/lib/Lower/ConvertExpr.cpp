@@ -385,11 +385,8 @@ public:
             return genAllocatableOrPointerUnbox(boxAddr).toExtendedValue();
           },
           [&val](auto &) { return val.toExtendedValue(); });
-    llvm_unreachable("all symbols should be in the map");
-    auto addr = builder.createTemporary(getLoc(), converter.genType(sym),
-                                        toStringRef(sym->name()));
-    symMap.addSymbol(sym, addr);
-    return addr;
+    LLVM_DEBUG(llvm::dbgs() << "unknown symbol: " << sym << '\n');
+    fir::emitFatalError(getLoc(), "symbol is not mapped to any IR value");
   }
 
   /// Generate a load of a value from an address.
