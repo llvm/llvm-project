@@ -964,7 +964,8 @@ bool MVEGatherScatterLowering::optimiseOffsets(Value *Offsets, BasicBlock *BB,
   // Get the value that is added to/multiplied with the phi
   Value *OffsSecondOperand = Offs->getOperand(OffsSecondOp);
 
-  if (IncrementPerRound->getType() != OffsSecondOperand->getType())
+  if (IncrementPerRound->getType() != OffsSecondOperand->getType() ||
+      !L->isLoopInvariant(OffsSecondOperand))
     // Something has gone wrong, abort
     return false;
 
