@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__dfsan_shadow_width_bits = weak_odr constant i32 [[#SBITS:]]
 
 define i32* @gepop([10 x [20 x i32]]* %p, i32 %a, i32 %b, i32 %c) {
-  ; CHECK: @"dfs$gepop"
+  ; CHECK: @gepop.dfsan
   ; CHECK_ORIGIN: %[[#PO:]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align [[ALIGN_O:4]]
   ; CHECK: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN_S:2]]
   ; CHECK: %e = getelementptr [10 x [20 x i32]], [10 x [20 x i32]]* %p, i32 %a, i32 %b, i32 %c

@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
 
 // CHECK: Taint value 0x8 {{.*}} origin tracking ()
 // CHECK: Origin value: {{.*}}, Taint value was stored to memory at
-// CHECK-NOT: {{.*}} in dfs$SignalHandler {{.*}}origin_with_signals.cpp{{.*}}
+// CHECK-NOT: {{.*}} in SignalHandler.dfsan {{.*}}origin_with_signals.cpp{{.*}}
 
 // CHECK: #0 {{.*}} in main {{.*}}origin_with_signals.cpp:[[@LINE-14]]
 

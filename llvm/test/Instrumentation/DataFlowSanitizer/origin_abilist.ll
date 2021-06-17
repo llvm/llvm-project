@@ -11,7 +11,7 @@ define i32 @discard(i32 %a, i32 %b) {
 }
 
 define i32 @call_discard(i32 %a, i32 %b) {
-  ; CHECK: @"dfs$call_discard"
+  ; CHECK: @call_discard.dfsan
   ; CHECK: %r = call i32 @discard(i32 %a, i32 %b)
   ; CHECK: store i32 0, i32* @__dfsan_retval_origin_tls, align 4
   ; CHECK: ret i32 %r
@@ -27,7 +27,7 @@ define i32 @functional(i32 %a, i32 %b) {
 }
 
 define i32 @call_functional(i32 %a, i32 %b) {
-  ; CHECK: @"dfs$call_functional"
+  ; CHECK: @call_functional.dfsan
   ; CHECK: [[BO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
   ; CHECK: [[AO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
   ; CHECK: [[RO:%.*]] = select i1 {{.*}}, i32 [[BO]], i32 [[AO]]
@@ -43,7 +43,7 @@ define i32 @uninstrumented(i32 %a, i32 %b) {
 }
 
 define i32 @call_uninstrumented(i32 %a, i32 %b) {
-  ; CHECK: @"dfs$call_uninstrumented"
+  ; CHECK: @call_uninstrumented.dfsan
   ; CHECK: %r = call i32 @uninstrumented(i32 %a, i32 %b)
   ; CHECK: store i32 0, i32* @__dfsan_retval_origin_tls, align 4
   ; CHECK: ret i32 %r
@@ -60,7 +60,7 @@ define i32 @g(i32 %a, i32 %b) {
 @discardg = alias i32 (i32, i32), i32 (i32, i32)* @g
 
 define i32 @call_discardg(i32 %a, i32 %b) {
-  ; CHECK: @"dfs$call_discardg"
+  ; CHECK: @call_discardg.dfsan
   ; CHECK: %r = call i32 @discardg(i32 %a, i32 %b)
   ; CHECK: store i32 0, i32* @__dfsan_retval_origin_tls, align 4
   ; CHECK: ret i32 %r
@@ -107,14 +107,14 @@ define void @cb_without_ret(i32 %a, i32 %b) {
 }
 
 define i32 (i32, i32)* @ret_custom() {
-  ; CHECK: @"dfs$ret_custom"
+  ; CHECK: @ret_custom.dfsan
   ; CHECK: store i32 0, i32* @__dfsan_retval_origin_tls, align 4
   
   ret i32 (i32, i32)* @custom_with_ret
 }
 
 define void @call_custom_without_ret(i32 %a, i32 %b) {
-  ; CHECK: @"dfs$call_custom_without_ret"
+  ; CHECK: @call_custom_without_ret.dfsan
   ; CHECK: [[BO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
   ; CHECK: [[AO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
   ; CHECK: [[BS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align 2
@@ -127,7 +127,7 @@ define void @call_custom_without_ret(i32 %a, i32 %b) {
 }
 
 define i32 @call_custom_with_ret(i32 %a, i32 %b) {
-  ; CHECK: @"dfs$call_custom_with_ret"
+  ; CHECK: @call_custom_with_ret.dfsan
   ; CHECK: %originreturn = alloca i32, align 4
   ; CHECK: [[BO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
   ; CHECK: [[AO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
@@ -145,7 +145,7 @@ define i32 @call_custom_with_ret(i32 %a, i32 %b) {
 }
 
 define void @call_custom_varg_without_ret(i32 %a, i32 %b) {
-  ; CHECK: @"dfs$call_custom_varg_without_ret"
+  ; CHECK: @call_custom_varg_without_ret.dfsan
   ; CHECK: %originva = alloca [1 x i32], align 4
   ; CHECK: [[BO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
   ; CHECK: [[AO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
@@ -166,7 +166,7 @@ define void @call_custom_varg_without_ret(i32 %a, i32 %b) {
 }
 
 define i32 @call_custom_varg_with_ret(i32 %a, i32 %b) {
-  ; CHECK: @"dfs$call_custom_varg_with_ret"
+  ; CHECK: @call_custom_varg_with_ret.dfsan
   ; CHECK: %originreturn = alloca i32, align 4
   ; CHECK: %originva = alloca [1 x i32], align 4
   ; CHECK: [[BO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
@@ -192,14 +192,14 @@ define i32 @call_custom_varg_with_ret(i32 %a, i32 %b) {
 }
 
 define i32 @call_custom_cb_with_ret(i32 %a, i32 %b) {
-  ; CHECK: @"dfs$call_custom_cb_with_ret"
+  ; CHECK: @call_custom_cb_with_ret.dfsan
   ; CHECK: %originreturn = alloca i32, align 4
   ; CHECK: [[BO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
   ; CHECK: [[AO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
   ; CHECK: %labelreturn = alloca i[[#SBITS]], align [[#SBYTES]]
   ; CHECK: [[BS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align 2
   ; CHECK: [[AS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align 2
-  ; CHECK: {{.*}} = call i32 @__dfso_custom_cb_with_ret(i32 (i32 (i32, i32)*, i32, i32, i[[#SBITS]], i[[#SBITS]], i[[#SBITS]]*, i32, i32, i32*)* @"dfst0$custom_cb_with_ret", i8* bitcast (i32 (i32, i32)* @"dfs$cb_with_ret" to i8*), i32 %a, i32 %b, i[[#SBITS]] zeroext 0, i[[#SBITS]] zeroext [[AS]], i[[#SBITS]] zeroext [[BS]], i[[#SBITS]]* %labelreturn, i32 zeroext 0, i32 zeroext [[AO]], i32 zeroext [[BO]], i32* %originreturn)
+  ; CHECK: {{.*}} = call i32 @__dfso_custom_cb_with_ret(i32 (i32 (i32, i32)*, i32, i32, i[[#SBITS]], i[[#SBITS]], i[[#SBITS]]*, i32, i32, i32*)* @"dfst0$custom_cb_with_ret", i8* bitcast (i32 (i32, i32)* @cb_with_ret.dfsan to i8*), i32 %a, i32 %b, i[[#SBITS]] zeroext 0, i[[#SBITS]] zeroext [[AS]], i[[#SBITS]] zeroext [[BS]], i[[#SBITS]]* %labelreturn, i32 zeroext 0, i32 zeroext [[AO]], i32 zeroext [[BO]], i32* %originreturn)
   ; CHECK: [[RS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* %labelreturn, align [[#SBYTES]]
   ; CHECK: [[RO:%.*]] = load i32, i32* %originreturn, align 4
   ; CHECK: store i[[#SBITS]] [[RS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align 2
@@ -210,12 +210,12 @@ define i32 @call_custom_cb_with_ret(i32 %a, i32 %b) {
 }
 
 define void @call_custom_cb_without_ret(i32 %a, i32 %b) {
-  ; CHECK: @"dfs$call_custom_cb_without_ret"
+  ; CHECK: @call_custom_cb_without_ret.dfsan
   ; CHECK: [[BO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
   ; CHECK: [[AO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
   ; CHECK: [[BS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align 2
   ; CHECK: [[AS:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align 2
-  ; CHECK: call void @__dfso_custom_cb_without_ret(void (void (i32, i32)*, i32, i32, i[[#SBITS]], i[[#SBITS]], i32, i32)* @"dfst0$custom_cb_without_ret", i8* bitcast (void (i32, i32)* @"dfs$cb_without_ret" to i8*), i32 %a, i32 %b, i[[#SBITS]] zeroext 0, i[[#SBITS]] zeroext [[AS]], i[[#SBITS]] zeroext [[BS]], i32 zeroext 0, i32 zeroext [[AO]], i32 zeroext [[BO]])
+  ; CHECK: call void @__dfso_custom_cb_without_ret(void (void (i32, i32)*, i32, i32, i[[#SBITS]], i[[#SBITS]], i32, i32)* @"dfst0$custom_cb_without_ret", i8* bitcast (void (i32, i32)* @cb_without_ret.dfsan to i8*), i32 %a, i32 %b, i[[#SBITS]] zeroext 0, i[[#SBITS]] zeroext [[AS]], i[[#SBITS]] zeroext [[BS]], i32 zeroext 0, i32 zeroext [[AO]], i32 zeroext [[BO]])
   ; CHECK-NEXT: ret void
 
   call void @custom_cb_without_ret(void (i32, i32)* @cb_without_ret, i32 %a, i32 %b)
@@ -223,7 +223,7 @@ define void @call_custom_cb_without_ret(i32 %a, i32 %b) {
 }
 
 ; CHECK: define i32 @discardg(i32 %0, i32 %1)
-; CHECK: [[R:%.*]] = call i32 @"dfs$g"
+; CHECK: [[R:%.*]] = call i32 @g.dfsan
 ; CHECK-NEXT: %_dfsret = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align 2
 ; CHECK-NEXT: %_dfsret_o = load i32, i32* @__dfsan_retval_origin_tls, align 4
 ; CHECK-NEXT: ret i32 [[R]]

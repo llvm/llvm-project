@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
 // CHECK: #0 {{.*}} in main {{.*}}origin_track_ld.c:[[@LINE-6]]
 
 // CHECK: Origin value: {{.*}}, Taint value was stored to memory at
-// CHECK: #0 {{.*}} in dfs$foo {{.*}}origin_track_ld.c:[[@LINE-15]]
+// CHECK: #0 {{.*}} in foo.dfsan {{.*}}origin_track_ld.c:[[@LINE-15]]
 // CHECK: #1 {{.*}} in main {{.*}}origin_track_ld.c:[[@LINE-10]]
 
 // CHECK: Origin value: {{.*}}, Taint value was stored to memory at

@@ -10,7 +10,7 @@ declare void @llvm.memmove.p0i8.p0i8.i32(i8*, i8*, i32, i1)
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
 
 define void @memcpy(i8* %d, i8* %s, i32 %l) {
-  ; CHECK: @"dfs$memcpy"
+  ; CHECK: @memcpy.dfsan
   ; CHECK: [[L64:%.*]] = zext i32 %l to i64
   ; CHECK: call void @__dfsan_mem_origin_transfer(i8* %d, i8* %s, i64 [[L64]])
   ; CHECK: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align [[#SBYTES]] {{.*}}, i8* align [[#SBYTES]] {{.*}}, i32 {{.*}}, i1 false)
@@ -21,7 +21,7 @@ define void @memcpy(i8* %d, i8* %s, i32 %l) {
 }
 
 define void @memmove(i8* %d, i8* %s, i32 %l) {
-  ; CHECK: @"dfs$memmove"
+  ; CHECK: @memmove.dfsan
   ; CHECK: [[L64:%.*]] = zext i32 %l to i64
   ; CHECK: call void @__dfsan_mem_origin_transfer(i8* %d, i8* %s, i64 [[L64]])
   ; CHECK: call void @llvm.memmove.p0i8.p0i8.i32(i8* align [[#SBYTES]] {{.*}}, i8* align [[#SBYTES]] {{.*}}, i32 {{.*}}, i1 false)
@@ -32,7 +32,7 @@ define void @memmove(i8* %d, i8* %s, i32 %l) {
 }
 
 define void @memset(i8* %p, i8 %v) {
-  ; CHECK: @"dfs$memset"
+  ; CHECK: @memset.dfsan
   ; CHECK: [[O:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
   ; CHECK: [[S:%.*]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align [[ALIGN:2]]
   ; CHECK: call void @__dfsan_set_label(i[[#SBITS]] [[S]], i32 [[O]], i8* %p, i64 1)
