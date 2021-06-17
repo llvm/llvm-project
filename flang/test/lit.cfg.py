@@ -75,6 +75,21 @@ else:
    tools.append(ToolSubst('%flang_fc1', command=FindTool('f18'),
     unresolved='fatal'))
 
+# Define some variables to help us test that the flang runtime doesn't depend on
+# the C++ runtime libraries. For this we need a C compiler. If for some reason
+# we don't have one, we can just disable the test.
+if config.cc:
+    libruntime = os.path.join(config.flang_lib_dir, 'libFortranRuntime.a')
+    includes = os.path.join(config.flang_src_dir, 'runtime')
+
+    if os.path.isfile(libruntime) and os.path.isdir(includes):
+        config.available_features.add('c-compiler')
+        tools.append(ToolSubst('%cc', command=config.cc, unresolved='fatal'))
+        tools.append(ToolSubst('%libruntime', command=libruntime,
+            unresolved='fatal'))
+        tools.append(ToolSubst('%runtimeincludes', command=includes,
+            unresolved='fatal'))
+
 if config.flang_standalone_build:
     llvm_config.add_tool_substitutions(tools, [config.flang_llvm_tools_dir])
 else:
