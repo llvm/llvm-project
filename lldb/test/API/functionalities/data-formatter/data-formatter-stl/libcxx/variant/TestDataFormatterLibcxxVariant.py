@@ -14,8 +14,9 @@ class LibcxxVariantDataFormatterTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @add_test_categories(["libc++"])
-    ## We are skipping clang version less that 5.0 since this test requires -std=c++17
-    @skipIf(oslist=no_match(["macosx"]), compiler="clang", compiler_version=['<', '5.0'])
+    ## Clang 7.0 is the oldest Clang that can reliably parse newer libc++ versions
+    ## with -std=c++17.
+    @skipIf(oslist=no_match(["macosx"]), compiler="clang", compiler_version=['<', '7.0'])
     ## We are skipping gcc version less that 5.1 since this test requires -std=c++17
     @skipIf(compiler="gcc", compiler_version=['<', '5.1'])
     ## std::get is unavailable for std::variant before macOS 10.14
