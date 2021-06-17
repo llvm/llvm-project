@@ -132,10 +132,9 @@ bool MIRAddFSDiscriminators::runOnMachineFunction(MachineFunction &MF) {
     if (!M->getGlobalVariable(FSDiscriminatorVar)) {
       auto &Context = M->getContext();
       // Create a global variable to flag that FSDiscriminators are used.
-      // Using "common" linkage so that it will not gc GC'ed.
-      new GlobalVariable(*M, Type::getInt1Ty(Context), false,
-                         GlobalValue::CommonLinkage,
-                         ConstantInt::getFalse(Context), FSDiscriminatorVar);
+      new GlobalVariable(*M, Type::getInt1Ty(Context), true,
+                         GlobalValue::WeakAnyLinkage,
+                         ConstantInt::getTrue(Context), FSDiscriminatorVar);
     }
 
     LLVM_DEBUG(dbgs() << "Num of FS Discriminators: " << NumNewD << "\n");
