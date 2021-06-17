@@ -16,10 +16,7 @@
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/TypeName.h"
-
-#define DEBUG_TYPE "interfaces"
 
 namespace mlir {
 namespace detail {
@@ -232,19 +229,7 @@ public:
     std::pair<TypeID, void *> elements[] = {
         std::make_pair(IfaceModels::Interface::getInterfaceID(),
                        new (malloc(sizeof(IfaceModels))) IfaceModels())...};
-    // Insert directly into the right position to keep the interfaces sorted.
-    for (auto &element : elements) {
-      TypeID id = element.first;
-      auto it =
-          llvm::lower_bound(interfaces, id, [](const auto &it, TypeID id) {
-            return compare(it.first, id);
-          });
-      if (it != interfaces.end() && it->first == id) {
-        LLVM_DEBUG(llvm::dbgs() << "Ignoring repeated interface registration");
-        continue;
-      }
-      interfaces.insert(it, element);
-    }
+    insert(elements);
   }
 
 private:
@@ -254,6 +239,8 @@ private:
   }
 
   InterfaceMap() = default;
+
+  void insert(ArrayRef<std::pair<TypeID, void *>> elements);
 
   template <typename... Ts>
   static InterfaceMap getImpl(std::tuple<Ts...> *) {
