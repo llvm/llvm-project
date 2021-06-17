@@ -323,10 +323,15 @@ def FeaturePCONFIG : SubtargetFeature<"pconfig", "HasPCONFIG", "true",
                                       "platform configuration instruction">;
 // On recent X86 (port bound) processors, its preferable to combine to a single shuffle
 // using a variable mask over multiple fixed shuffles.
-def FeatureFastVariableShuffle
-    : SubtargetFeature<"fast-variable-shuffle",
-                       "HasFastVariableShuffle",
-                       "true", "Shuffles with variable masks are fast">;
+def FeatureFastVariableCrossLaneShuffle
+    : SubtargetFeature<"fast-variable-crosslane-shuffle",
+                       "HasFastVariableCrossLaneShuffle",
+                       "true", "Cross-lane shuffles with variable masks are fast">;
+def FeatureFastVariablePerLaneShuffle
+    : SubtargetFeature<"fast-variable-perlane-shuffle",
+                       "HasFastVariablePerLaneShuffle",
+                       "true", "Per-lane shuffles with variable masks are fast">;
+
 // On some X86 processors, a vzeroupper instruction should be inserted after
 // using ymm/zmm registers before executing code that may use SSE instructions.
 def FeatureInsertVZEROUPPER
@@ -639,7 +644,8 @@ def ProcessorFeatures {
                                       FeatureFastScalarFSQRT,
                                       FeatureFastSHLDRotate,
                                       FeatureFast15ByteNOP,
-                                      FeatureFastVariableShuffle,
+                                      FeatureFastVariableCrossLaneShuffle,
+                                      FeatureFastVariablePerLaneShuffle,
                                       FeaturePOPCNTFalseDeps,
                                       FeatureLZCNTFalseDeps,
                                       FeatureInsertVZEROUPPER];
@@ -667,7 +673,8 @@ def ProcessorFeatures {
                                       FeatureFastVectorFSQRT,
                                       FeatureFastSHLDRotate,
                                       FeatureFast15ByteNOP,
-                                      FeatureFastVariableShuffle,
+                                      FeatureFastVariableCrossLaneShuffle,
+                                      FeatureFastVariablePerLaneShuffle,
                                       FeaturePOPCNTFalseDeps,
                                       FeatureInsertVZEROUPPER];
   list<SubtargetFeature> SKLFeatures =
@@ -693,7 +700,8 @@ def ProcessorFeatures {
                                       FeatureFastVectorFSQRT,
                                       FeatureFastSHLDRotate,
                                       FeatureFast15ByteNOP,
-                                      FeatureFastVariableShuffle,
+                                      FeatureFastVariableCrossLaneShuffle,
+                                      FeatureFastVariablePerLaneShuffle,
                                       FeaturePrefer256Bit,
                                       FeaturePOPCNTFalseDeps,
                                       FeatureInsertVZEROUPPER];
@@ -730,7 +738,8 @@ def ProcessorFeatures {
                                       FeatureFastVectorFSQRT,
                                       FeatureFastSHLDRotate,
                                       FeatureFast15ByteNOP,
-                                      FeatureFastVariableShuffle,
+                                      FeatureFastVariableCrossLaneShuffle,
+                                      FeatureFastVariablePerLaneShuffle,
                                       FeaturePrefer256Bit,
                                       FeatureInsertVZEROUPPER];
   list<SubtargetFeature> CNLFeatures =
