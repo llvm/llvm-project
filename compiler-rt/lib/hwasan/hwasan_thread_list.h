@@ -200,4 +200,4 @@ class HwasanThreadList {
 void InitThreadList(uptr storage, uptr size);
 HwasanThreadList &hwasanThreadList();
 
-} // namespace
+} // namespace __hwasan
