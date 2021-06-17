@@ -1170,8 +1170,7 @@ def data_in_code_info : Flag<["-"], "data_in_code_info">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;
 def no_data_in_code_info : Flag<["-"], "no_data_in_code_info">,
-    HelpText<"This option is undocumented in ld64">,
-    Flags<[HelpHidden]>,
+    HelpText<"Do not emit data-in-code information">,
     Group<grp_undocumented>;
 def debug_snapshot : Flag<["-"], "debug_snapshot">,
     HelpText<"This option is undocumented in ld64">,
