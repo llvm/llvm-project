@@ -65,6 +65,7 @@ add_mlir_library(MLIRTestDialect
   MLIRReduce
   MLIRStandard
   MLIRStandardOpsTransforms
+  MLIRTensor
   MLIRTransformUtils
   MLIRTransforms
 )
