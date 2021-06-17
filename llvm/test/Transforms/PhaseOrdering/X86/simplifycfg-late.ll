@@ -9,32 +9,16 @@ target triple = "x86_64--"
 define i32 @f(i32 %c) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i32 [[C:%.*]], label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 42, label [[RETURN:%.*]]
-; CHECK-NEXT:    i32 43, label [[SW_BB1:%.*]]
-; CHECK-NEXT:    i32 44, label [[SW_BB2:%.*]]
-; CHECK-NEXT:    i32 45, label [[SW_BB3:%.*]]
-; CHECK-NEXT:    i32 46, label [[SW_BB4:%.*]]
-; CHECK-NEXT:    i32 47, label [[SW_BB5:%.*]]
-; CHECK-NEXT:    i32 48, label [[SW_BB6:%.*]]
-; CHECK-NEXT:    ]
-; CHECK:       sw.bb1:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       sw.bb2:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       sw.bb3:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       sw.bb4:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       sw.bb5:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       sw.bb6:
-; CHECK-NEXT:    br label [[RETURN]]
-; CHECK:       sw.default:
-; CHECK-NEXT:    br label [[RETURN]]
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = add i32 [[C:%.*]], -42
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[SWITCH_TABLEIDX]], 7
+; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_LOOKUP:%.*]], label [[RETURN:%.*]]
+; CHECK:       switch.lookup:
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[SWITCH_TABLEIDX]] to i64
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [7 x i32], [7 x i32]* @switch.table.f, i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, i32* [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ 15, [[SW_DEFAULT]] ], [ 1, [[SW_BB6]] ], [ 62, [[SW_BB5]] ], [ 27, [[SW_BB4]] ], [ -1, [[SW_BB3]] ], [ 0, [[SW_BB2]] ], [ 123, [[SW_BB1]] ], [ 55, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 15
 ;
 entry:
   switch i32 %c, label %sw.default [
