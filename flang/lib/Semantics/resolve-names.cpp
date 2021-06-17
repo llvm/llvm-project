@@ -6164,16 +6164,10 @@ void ResolveNamesVisitor::HandleProcedureName(
       symbol = &MakeSymbol(context().globalScope(), name.source, Attrs{});
     }
     Resolve(name, *symbol);
-    if (symbol->has<ModuleDetails>()) {
-      SayWithDecl(name, *symbol,
-          "Use of '%s' as a procedure conflicts with its declaration"_err_en_US);
-      return;
-    }
     if (!symbol->attrs().test(Attr::INTRINSIC)) {
-      if (!CheckImplicitNoneExternal(name.source, *symbol)) {
-        return;
+      if (CheckImplicitNoneExternal(name.source, *symbol)) {
+        MakeExternal(*symbol);
       }
-      MakeExternal(*symbol);
     }
     ConvertToProcEntity(*symbol);
     SetProcFlag(name, *symbol, flag);
