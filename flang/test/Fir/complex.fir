@@ -43,6 +43,16 @@ func @conj(%a : !fir.complex<4>) -> !fir.complex<4> {
   return %3 : !fir.complex<4>
 }
 
+// LLVMIR-LABEL: @issue846
+func @issue846(%z : !fir.complex<4>) -> !fir.complex<8> {
+  // Verify that addc rewrite is not disturbing fir.convert rewrite.
+  // LLVMIR-COUNT-2: fadd
+  %add = fir.addc %z, %z : !fir.complex<4>
+  // LLVMIR-COUNT-2: fpext
+  %cast = fir.convert %add : (!fir.complex<4>) -> !fir.complex<8>
+  return %cast : !fir.complex<8>
+}
+
 func private @print_complex(f32, f32)
 
 func @main() -> i32 {
