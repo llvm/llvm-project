@@ -20,13 +20,9 @@
 ; OBJC: -ObjC forced load of has-objc-category.o
 ; OBJC: _OBJC_CLASS_$_Foo forced load of has-objc-symbol.o
 
-; RUN: %lld -lSystem %t/foo.a %t/main.o -o %t/no-force-load -why_load | \
-; RUN:   FileCheck %s --allow-empty --check-prefix=NO-LOAD
+; RUN: %lld -lSystem %t/foo.a %t/main.o -o %t/no-force-load -why_load | count 0
 
-; RUN: %lld -lSystem -framework CoreFoundation %t/objc.a %t/main.o -o %t/no-objc -why_load | \
-; RUN:   FileCheck %s --allow-empty --check-prefix=NO-LOAD
-
-; NO-LOAD-NOT: forced load
+; RUN: %lld -lSystem -framework CoreFoundation %t/objc.a %t/main.o -o %t/no-objc -why_load | count 0
 
 ;--- foo.ll
 
