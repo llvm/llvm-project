@@ -553,6 +553,7 @@ public:
   void CopyToExportRegsIfNeeded(const Value *V);
   void ExportFromCurrentBlock(const Value *V);
   void LowerCallTo(const CallBase &CB, SDValue Callee, bool IsTailCall,
+                   bool IsMustTailCall,
                    const BasicBlock *EHPadBB = nullptr,
                    const TargetLowering::PtrAuthInfo *PAI = nullptr);
 

@@ -538,7 +538,7 @@ private:
 
   void verifySwiftErrorCall(CallBase &Call, const Value *SwiftErrorVal);
   void verifySwiftErrorValue(const Value *SwiftErrorVal);
-  void verifySwiftTailCCMustTailAttrs(AttrBuilder Attrs, StringRef Context);
+  void verifyTailCCMustTailAttrs(AttrBuilder Attrs, StringRef Context);
   void verifyMustTailCall(CallInst &CI);
   bool verifyAttributeCount(AttributeList Attrs, unsigned Params);
   void verifyAttributeTypes(AttributeSet Attrs, bool IsFunction,
@@ -3408,17 +3408,18 @@ void Verifier::visitCallBase(CallBase &Call) {
   visitInstruction(Call);
 }
 
-void Verifier::verifySwiftTailCCMustTailAttrs(AttrBuilder Attrs, StringRef Context) {
+void Verifier::verifyTailCCMustTailAttrs(AttrBuilder Attrs,
+                                         StringRef Context) {
   Assert(!Attrs.contains(Attribute::InAlloca),
-         Twine("inalloca attribute not allowed in swifttailcc ") + Context);
+         Twine("inalloca attribute not allowed in ") + Context);
   Assert(!Attrs.contains(Attribute::InReg),
-         Twine("inreg attribute not allowed in swifttailcc ") + Context);
+         Twine("inreg attribute not allowed in ") + Context);
   Assert(!Attrs.contains(Attribute::SwiftError),
-         Twine("swifterror attribute not allowed in swifttailcc ") + Context);
+         Twine("swifterror attribute not allowed in ") + Context);
   Assert(!Attrs.contains(Attribute::Preallocated),
-         Twine("preallocated attribute not allowed in swifttailcc ") + Context);
+         Twine("preallocated attribute not allowed in ") + Context);
   Assert(!Attrs.contains(Attribute::ByRef),
-         Twine("byref attribute not allowed in swifttailcc ") + Context);
+         Twine("byref attribute not allowed in ") + Context);
 }
 
 /// Two types are "congruent" if they are identical, or if they are both pointer
@@ -3512,20 +3513,26 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
 
   AttributeList CallerAttrs = F->getAttributes();
   AttributeList CalleeAttrs = CI.getAttributes();
-  if (CI.getCallingConv() == CallingConv::SwiftTail) {
+  if (CI.getCallingConv() == CallingConv::SwiftTail ||
+      CI.getCallingConv() == CallingConv::Tail) {
+    StringRef CCName =
+        CI.getCallingConv() == CallingConv::Tail ? "tailcc" : "swifttailcc";
+
     // - Only sret, byval, swiftself, and swiftasync ABI-impacting attributes
     //   are allowed in swifttailcc call
     for (int I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
       AttrBuilder ABIAttrs = getParameterABIAttributes(I, CallerAttrs);
-      verifySwiftTailCCMustTailAttrs(ABIAttrs, "musttail caller");
+      SmallString<32> Context{CCName, StringRef(" musttail caller")};
+      verifyTailCCMustTailAttrs(ABIAttrs, Context);
     }
     for (int I = 0, E = CalleeTy->getNumParams(); I != E; ++I) {
       AttrBuilder ABIAttrs = getParameterABIAttributes(I, CalleeAttrs);
-      verifySwiftTailCCMustTailAttrs(ABIAttrs, "musttail callee");
+      SmallString<32> Context{CCName, StringRef(" musttail callee")};
+      verifyTailCCMustTailAttrs(ABIAttrs, Context);
     }
     // - Varargs functions are not allowed
-    Assert(!CallerTy->isVarArg(),
-           "cannot guarantee swifttailcc tail call for varargs function");
+    Assert(!CallerTy->isVarArg(), Twine("cannot guarantee ") + CCName +
+                                      " tail call for varargs function");
     return;
   }
 
