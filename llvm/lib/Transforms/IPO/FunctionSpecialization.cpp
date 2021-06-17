@@ -35,6 +35,7 @@
 #include "llvm/Transforms/Scalar/SCCP.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
+#include <cmath>
 
 using namespace llvm;
 
@@ -269,8 +270,8 @@ private:
         Cost += getUserBonus(User, TTI, LI);
 
     // Increase the cost if it is inside the loop.
-    auto LoopDepth = LI.getLoopDepth(I->getParent()) + 1;
-    Cost *= (AvgLoopIterationCount ^ LoopDepth);
+    auto LoopDepth = LI.getLoopDepth(I->getParent());
+    Cost *= std::pow((double)AvgLoopIterationCount, LoopDepth);
     return Cost;
   }
 
