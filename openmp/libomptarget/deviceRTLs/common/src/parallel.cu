@@ -331,7 +331,7 @@ EXTERN void __kmpc_parallel_51(kmp_Ident *ident, kmp_int32 global_tid,
         (1 + (IsActiveParallelRegion ? OMP_ACTIVE_PARALLEL_LEVEL : 0));
 
   // Master signals work to activate workers.
-  __kmpc_barrier_simple_spmd(nullptr, 0);
+  __kmpc_barrier_simple_spmd(ident, 0);
 
   // OpenMP [2.5, Parallel Construct, p.49]
   // There is an implied barrier at the end of a parallel region. After the
@@ -339,7 +339,7 @@ EXTERN void __kmpc_parallel_51(kmp_Ident *ident, kmp_int32 global_tid,
   // execution of the enclosing task region.
   //
   // The master waits at this barrier until all workers are done.
-  __kmpc_barrier_simple_spmd(nullptr, 0);
+  __kmpc_barrier_simple_spmd(ident, 0);
 
   // Decrement parallel level for non-SPMD warps.
   for (int I = 0; I < NumWarps; ++I)

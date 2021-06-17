@@ -53,54 +53,5 @@ int bar(int n){
   return a;
 }
 
-// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l29}}(
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
-// CHECK: br label {{%?}}[[EXEC:.+]]
-//
-// CHECK: [[EXEC]]
 // CHECK-NOT: call void @__kmpc_push_proc_bind
-// CHECK: {{call|invoke}} void [[OP1:@.+]](
-// CHECK: br label {{%?}}[[DONE:.+]]
-//
-// CHECK: [[DONE]]
-// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 1)
-// CHECK: br label {{%?}}[[EXIT:.+]]
-//
-// CHECK: [[EXIT]]
-// CHECK: ret void
-// CHECK: }
-
-// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l33}}(
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
-// CHECK: br label {{%?}}[[EXEC:.+]]
-//
-// CHECK: [[EXEC]]
-// CHECK-NOT: call void @__kmpc_push_proc_bind
-// CHECK: {{call|invoke}} void [[OP1:@.+]](
-// CHECK: br label {{%?}}[[DONE:.+]]
-//
-// CHECK: [[DONE]]
-// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 1)
-// CHECK: br label {{%?}}[[EXIT:.+]]
-//
-// CHECK: [[EXIT]]
-// CHECK: ret void
-// CHECK: }
-
-// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l38}}(
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1)
-// CHECK: br label {{%?}}[[EXEC:.+]]
-//
-// CHECK: [[EXEC]]
-// CHECK-NOT: call void @__kmpc_push_proc_bind
-// CHECK: {{call|invoke}} void [[OP1:@.+]](
-// CHECK: br label {{%?}}[[DONE:.+]]
-//
-// CHECK: [[DONE]]
-// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 1)
-// CHECK: br label {{%?}}[[EXIT:.+]]
-//
-// CHECK: [[EXIT]]
-// CHECK: ret void
-// CHECK: }
 #endif
