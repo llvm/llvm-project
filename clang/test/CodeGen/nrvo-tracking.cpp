@@ -29,8 +29,6 @@ L(2, t, X&);
 
 // CHECK-LABEL: define{{.*}} void @_Z2l3v
 // CHECK:       call {{.*}} @_ZN1XC1Ev
-// CHECK-NEXT:  call {{.*}} @_ZN1XC1EOS_
-// CHECK-NEXT:  call void @llvm.lifetime.end
 // CHECK-NEXT:  call void @llvm.lifetime.end
 // CHECK-NEXT:  ret void
 L(3, t, T);
@@ -152,7 +150,11 @@ F(8, (t), decltype(auto));
   }; }()();                                    \
 }
 
-//B(1, X); // Uncomment this line at your own peril ;)
+// CHECK-LABEL: define{{.*}} void @_Z2b1v
+// CHECK:       call {{.*}} @_ZN1XC1Ev
+// CHECK-NEXT:  call void @llvm.lifetime.end
+// CHECK-NEXT:  ret void
+B(1, X);
 
 // CHECK-LABEL: define{{.*}} void @_Z2b2v
 // CHECK:       call {{.*}} @_ZN1XC1Ev
@@ -164,8 +166,6 @@ B(2, X&);
 
 // CHECK-LABEL: define{{.*}} void @_Z2b3v
 // CHECK:       call {{.*}} @_ZN1XC1Ev
-// CHECK-NEXT:  call {{.*}} @_ZN1XC1EOS_
-// CHECK-NEXT:  call void @llvm.lifetime.end
 // CHECK-NEXT:  call void @llvm.lifetime.end
 // CHECK-NEXT:  ret void
 B(3, T);
@@ -187,3 +187,26 @@ B(4, T&);
 B(5, );
 
 #undef B
+
+// CHECK-LABEL: define{{.*}} void @_Z6f_attrv
+// CHECK:       call {{.*}} @_ZN1XC1Ev
+// CHECK-NEXT:  call void @llvm.lifetime.end
+// CHECK-NEXT:  ret void
+template<class T = X> [[gnu::cdecl]] static inline auto tf_attr() -> X {
+  T t;
+  return t;
+}
+void f_attr() { auto t = tf_attr(); }
+
+// CHECK-LABEL: define{{.*}} void @_Z6b_attrv
+// CHECK:       call {{.*}} @_ZN1XC1Ev
+// CHECK-NEXT:  call void @llvm.lifetime.end
+// CHECK-NEXT:  ret void
+void b_attr() {
+  auto t = []<class T = X>() {
+    return ^X() [[clang::vectorcall]] {
+      T t;
+      return t;
+    };
+  }()();
+}

@@ -364,13 +364,11 @@ OwningPtr<Descriptor> RTNAME(Reshape)(const Descriptor &source,
       resultRank >= 0 && resultRank <= static_cast<SubscriptValue>(maxRank));
 
   // Extract and check the shape of the result; compute its element count.
-  SubscriptValue lowerBound[maxRank]; // all 1's
   SubscriptValue resultExtent[maxRank];
   std::size_t shapeElementBytes{shape.ElementBytes()};
   std::size_t resultElements{1};
   SubscriptValue shapeSubscript{shape.GetDimension(0).LowerBound()};
   for (SubscriptValue j{0}; j < resultRank; ++j, ++shapeSubscript) {
-    lowerBound[j] = 1;
     resultExtent[j] = GetInt64(
         shape.Element<char>(&shapeSubscript), shapeElementBytes, terminator);
     RUNTIME_CHECK(terminator, resultExtent[j] >= 0);
@@ -434,7 +432,10 @@ OwningPtr<Descriptor> RTNAME(Reshape)(const Descriptor &source,
     }
   }
   // Allocate storage for the result's data.
-  int status{result->Allocate(lowerBound, resultExtent)};
+  for (int j{0}; j < resultRank; ++j) {
+    result->GetDimension(j).SetBounds(1, resultExtent[j]);
+  }
+  int status{result->Allocate()};
   if (status != CFI_SUCCESS) {
     terminator.Crash("RESHAPE: Allocate failed (error %d)", status);
   }

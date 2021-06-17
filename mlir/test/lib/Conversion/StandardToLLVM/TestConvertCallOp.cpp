@@ -38,6 +38,11 @@ public:
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<LLVM::LLVMDialect>();
   }
+  StringRef getArgument() const final { return "test-convert-call-op"; }
+  StringRef getDescription() const final {
+    return "Tests conversion of `std.call` to `llvm.call` in "
+           "presence of custom types";
+  }
 
   void runOnOperation() override {
     ModuleOp m = getOperation();
@@ -68,11 +73,6 @@ public:
 
 namespace mlir {
 namespace test {
-void registerConvertCallOpPass() {
-  PassRegistration<TestConvertCallOp>(
-      "test-convert-call-op",
-      "Tests conversion of `std.call` to `llvm.call` in "
-      "presence of custom types");
-}
+void registerConvertCallOpPass() { PassRegistration<TestConvertCallOp>(); }
 } // namespace test
 } // namespace mlir

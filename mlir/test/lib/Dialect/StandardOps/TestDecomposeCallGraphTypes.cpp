@@ -27,6 +27,12 @@ struct TestDecomposeCallGraphTypes
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<test::TestDialect>();
   }
+  StringRef getArgument() const final {
+    return "test-decompose-call-graph-types";
+  }
+  StringRef getDescription() const final {
+    return "Decomposes types at call graph boundaries.";
+  }
   void runOnOperation() override {
     ModuleOp module = getOperation();
     auto *context = &getContext();
@@ -87,9 +93,7 @@ struct TestDecomposeCallGraphTypes
 namespace mlir {
 namespace test {
 void registerTestDecomposeCallGraphTypes() {
-  PassRegistration<TestDecomposeCallGraphTypes> pass(
-      "test-decompose-call-graph-types",
-      "Decomposes types at call graph boundaries.");
+  PassRegistration<TestDecomposeCallGraphTypes>();
 }
 } // namespace test
 } // namespace mlir

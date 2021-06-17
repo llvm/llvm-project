@@ -18,6 +18,10 @@ namespace {
 /// locations.
 struct TestOpaqueLoc
     : public PassWrapper<TestOpaqueLoc, OperationPass<ModuleOp>> {
+  StringRef getArgument() const final { return "test-opaque-loc"; }
+  StringRef getDescription() const final {
+    return "Changes all leaf locations to opaque locations";
+  }
 
   /// A simple structure which is used for testing as an underlying location in
   /// OpaqueLoc.
@@ -82,9 +86,6 @@ struct TestOpaqueLoc
 
 namespace mlir {
 namespace test {
-void registerTestOpaqueLoc() {
-  PassRegistration<TestOpaqueLoc> pass(
-      "test-opaque-loc", "Changes all leaf locations to opaque locations");
-}
+void registerTestOpaqueLoc() { PassRegistration<TestOpaqueLoc>(); }
 } // namespace test
 } // namespace mlir

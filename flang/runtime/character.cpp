@@ -83,10 +83,9 @@ static void Compare(Descriptor &result, const Descriptor &x,
   RUNTIME_CHECK(
       terminator, x.rank() == y.rank() || x.rank() == 0 || y.rank() == 0);
   int rank{std::max(x.rank(), y.rank())};
-  SubscriptValue lb[maxRank], ub[maxRank], xAt[maxRank], yAt[maxRank];
+  SubscriptValue ub[maxRank], xAt[maxRank], yAt[maxRank];
   SubscriptValue elements{1};
   for (int j{0}; j < rank; ++j) {
-    lb[j] = 1;
     if (x.rank() > 0 && y.rank() > 0) {
       SubscriptValue xUB{x.GetDimension(j).Extent()};
       SubscriptValue yUB{y.GetDimension(j).Extent()};
@@ -101,11 +100,15 @@ static void Compare(Descriptor &result, const Descriptor &x,
       ub[j] = (x.rank() ? x : y).GetDimension(j).Extent();
     }
     elements *= ub[j];
-    xAt[j] = yAt[j] = 1;
   }
+  x.GetLowerBounds(xAt);
+  y.GetLowerBounds(yAt);
   result.Establish(
       TypeCategory::Logical, 1, nullptr, rank, ub, CFI_attribute_allocatable);
-  if (result.Allocate(lb, ub) != CFI_SUCCESS) {
+  for (int j{0}; j < rank; ++j) {
+    result.GetDimension(j).SetBounds(1, ub[j]);
+  }
+  if (result.Allocate() != CFI_SUCCESS) {
     terminator.Crash("Compare: could not allocate storage for result");
   }
   std::size_t xChars{x.ElementBytes() >> shift<CHAR>};
@@ -146,18 +149,21 @@ template <typename CHAR, bool ADJUSTR>
 static void AdjustLRHelper(Descriptor &result, const Descriptor &string,
     const Terminator &terminator) {
   int rank{string.rank()};
-  SubscriptValue lb[maxRank], ub[maxRank], stringAt[maxRank];
+  SubscriptValue ub[maxRank], stringAt[maxRank];
   SubscriptValue elements{1};
   for (int j{0}; j < rank; ++j) {
-    lb[j] = 1;
     ub[j] = string.GetDimension(j).Extent();
     elements *= ub[j];
     stringAt[j] = 1;
   }
+  string.GetLowerBounds(stringAt);
   std::size_t elementBytes{string.ElementBytes()};
   result.Establish(string.type(), elementBytes, nullptr, rank, ub,
       CFI_attribute_allocatable);
-  if (result.Allocate(lb, ub) != CFI_SUCCESS) {
+  for (int j{0}; j < rank; ++j) {
+    result.GetDimension(j).SetBounds(1, ub[j]);
+  }
+  if (result.Allocate() != CFI_SUCCESS) {
     terminator.Crash("ADJUSTL/R: could not allocate storage for result");
   }
   for (SubscriptValue resultAt{0}; elements-- > 0;
@@ -199,17 +205,19 @@ template <typename INT, typename CHAR>
 static void LenTrim(Descriptor &result, const Descriptor &string,
     const Terminator &terminator) {
   int rank{string.rank()};
-  SubscriptValue lb[maxRank], ub[maxRank], stringAt[maxRank];
+  SubscriptValue ub[maxRank], stringAt[maxRank];
   SubscriptValue elements{1};
   for (int j{0}; j < rank; ++j) {
-    lb[j] = 1;
     ub[j] = string.GetDimension(j).Extent();
     elements *= ub[j];
-    stringAt[j] = 1;
   }
+  string.GetLowerBounds(stringAt);
   result.Establish(TypeCategory::Integer, sizeof(INT), nullptr, rank, ub,
       CFI_attribute_allocatable);
-  if (result.Allocate(lb, ub) != CFI_SUCCESS) {
+  for (int j{0}; j < rank; ++j) {
+    result.GetDimension(j).SetBounds(1, ub[j]);
+  }
+  if (result.Allocate() != CFI_SUCCESS) {
     terminator.Crash("LEN_TRIM: could not allocate storage for result");
   }
   std::size_t stringElementChars{string.ElementBytes() >> shift<CHAR>};
@@ -370,21 +378,27 @@ static void GeneralCharFunc(Descriptor &result, const Descriptor &string,
           : arg.rank()   ? arg.rank()
           : back         ? back->rank()
                          : 0};
-  SubscriptValue lb[maxRank], ub[maxRank], stringAt[maxRank], argAt[maxRank],
+  SubscriptValue ub[maxRank], stringAt[maxRank], argAt[maxRank],
       backAt[maxRank];
   SubscriptValue elements{1};
   for (int j{0}; j < rank; ++j) {
-    lb[j] = 1;
     ub[j] = string.rank() ? string.GetDimension(j).Extent()
         : arg.rank()      ? arg.GetDimension(j).Extent()
         : back            ? back->GetDimension(j).Extent()
                           : 1;
     elements *= ub[j];
-    stringAt[j] = argAt[j] = backAt[j] = 1;
+  }
+  string.GetLowerBounds(stringAt);
+  arg.GetLowerBounds(argAt);
+  if (back) {
+    back->GetLowerBounds(backAt);
   }
   result.Establish(TypeCategory::Integer, sizeof(INT), nullptr, rank, ub,
       CFI_attribute_allocatable);
-  if (result.Allocate(lb, ub) != CFI_SUCCESS) {
+  for (int j{0}; j < rank; ++j) {
+    result.GetDimension(j).SetBounds(1, ub[j]);
+  }
+  if (result.Allocate() != CFI_SUCCESS) {
     terminator.Crash("SCAN/VERIFY: could not allocate storage for result");
   }
   std::size_t stringElementChars{string.ElementBytes() >> shift<CHAR>};
@@ -471,7 +485,7 @@ static void MaxMinHelper(Descriptor &accumulator, const Descriptor &x,
   RUNTIME_CHECK(terminator,
       accumulator.rank() == 0 || x.rank() == 0 ||
           accumulator.rank() == x.rank());
-  SubscriptValue lb[maxRank], ub[maxRank], xAt[maxRank];
+  SubscriptValue ub[maxRank], xAt[maxRank];
   SubscriptValue elements{1};
   std::size_t accumChars{accumulator.ElementBytes() >> shift<CHAR>};
   std::size_t xChars{x.ElementBytes() >> shift<CHAR>};
@@ -480,10 +494,8 @@ static void MaxMinHelper(Descriptor &accumulator, const Descriptor &x,
       accumChars != chars || (accumulator.rank() == 0 && x.rank() > 0)};
   int rank{std::max(accumulator.rank(), x.rank())};
   for (int j{0}; j < rank; ++j) {
-    lb[j] = 1;
     if (x.rank() > 0) {
       ub[j] = x.GetDimension(j).Extent();
-      xAt[j] = x.GetDimension(j).LowerBound();
       if (accumulator.rank() > 0) {
         SubscriptValue accumExt{accumulator.GetDimension(j).Extent()};
         if (accumExt != ub[j]) {
@@ -495,17 +507,20 @@ static void MaxMinHelper(Descriptor &accumulator, const Descriptor &x,
       }
     } else {
       ub[j] = accumulator.GetDimension(j).Extent();
-      xAt[j] = 1;
     }
     elements *= ub[j];
   }
+  x.GetLowerBounds(xAt);
   void *old{nullptr};
   const CHAR *accumData{accumulator.OffsetElement<CHAR>()};
   if (reallocate) {
     old = accumulator.raw().base_addr;
     accumulator.set_base_addr(nullptr);
     accumulator.raw().elem_len = chars << shift<CHAR>;
-    RUNTIME_CHECK(terminator, accumulator.Allocate(lb, ub) == CFI_SUCCESS);
+    for (int j{0}; j < rank; ++j) {
+      accumulator.GetDimension(j).SetBounds(1, ub[j]);
+    }
+    RUNTIME_CHECK(terminator, accumulator.Allocate() == CFI_SUCCESS);
   }
   for (CHAR *result{accumulator.OffsetElement<CHAR>()}; elements-- > 0;
        accumData += accumChars, result += chars, x.IncrementSubscripts(xAt)) {
@@ -553,10 +568,9 @@ void RTNAME(CharacterConcatenate)(Descriptor &accumulator,
       accumulator.rank() == 0 || from.rank() == 0 ||
           accumulator.rank() == from.rank());
   int rank{std::max(accumulator.rank(), from.rank())};
-  SubscriptValue lb[maxRank], ub[maxRank], fromAt[maxRank];
+  SubscriptValue ub[maxRank], fromAt[maxRank];
   SubscriptValue elements{1};
   for (int j{0}; j < rank; ++j) {
-    lb[j] = 1;
     if (accumulator.rank() > 0 && from.rank() > 0) {
       ub[j] = accumulator.GetDimension(j).Extent();
       SubscriptValue fromUB{from.GetDimension(j).Extent()};
@@ -571,7 +585,6 @@ void RTNAME(CharacterConcatenate)(Descriptor &accumulator,
           (accumulator.rank() ? accumulator : from).GetDimension(j).Extent();
     }
     elements *= ub[j];
-    fromAt[j] = 1;
   }
   std::size_t oldBytes{accumulator.ElementBytes()};
   void *old{accumulator.raw().base_addr};
@@ -579,12 +592,16 @@ void RTNAME(CharacterConcatenate)(Descriptor &accumulator,
   std::size_t fromBytes{from.ElementBytes()};
   accumulator.raw().elem_len += fromBytes;
   std::size_t newBytes{accumulator.ElementBytes()};
-  if (accumulator.Allocate(lb, ub) != CFI_SUCCESS) {
+  for (int j{0}; j < rank; ++j) {
+    accumulator.GetDimension(j).SetBounds(1, ub[j]);
+  }
+  if (accumulator.Allocate() != CFI_SUCCESS) {
     terminator.Crash(
         "CharacterConcatenate: could not allocate storage for result");
   }
   const char *p{static_cast<const char *>(old)};
   char *to{static_cast<char *>(accumulator.raw().base_addr)};
+  from.GetLowerBounds(fromAt);
   for (; elements-- > 0;
        to += newBytes, p += oldBytes, from.IncrementSubscripts(fromAt)) {
     std::memcpy(to, p, oldBytes);
@@ -601,8 +618,7 @@ void RTNAME(CharacterConcatenateScalar1)(
   accumulator.set_base_addr(nullptr);
   std::size_t oldLen{accumulator.ElementBytes()};
   accumulator.raw().elem_len += chars;
-  RUNTIME_CHECK(
-      terminator, accumulator.Allocate(nullptr, nullptr) == CFI_SUCCESS);
+  RUNTIME_CHECK(terminator, accumulator.Allocate() == CFI_SUCCESS);
   std::memcpy(accumulator.OffsetElement<char>(oldLen), from, chars);
   FreeMemory(old);
 }
@@ -650,9 +666,10 @@ void RTNAME(CharacterAssign)(Descriptor &lhs, const Descriptor &rhs,
       for (int j{0}; j < rank; ++j) {
         lhsAt[j] = rhsAt[j];
         ub[j] = rhs.GetDimension(j).UpperBound();
+        lhs.GetDimension(j).SetBounds(lhsAt[j], ub[j]);
       }
     }
-    RUNTIME_CHECK(terminator, lhs.Allocate(lhsAt, ub) == CFI_SUCCESS);
+    RUNTIME_CHECK(terminator, lhs.Allocate() == CFI_SUCCESS);
   }
   switch (lhs.raw().type) {
   case CFI_type_char:
@@ -941,7 +958,7 @@ void RTNAME(Repeat)(Descriptor &result, const Descriptor &string,
   std::size_t origBytes{string.ElementBytes()};
   result.Establish(string.type(), origBytes * ncopies, nullptr, 0, nullptr,
       CFI_attribute_allocatable);
-  if (result.Allocate(nullptr, nullptr) != CFI_SUCCESS) {
+  if (result.Allocate() != CFI_SUCCESS) {
     terminator.Crash("REPEAT could not allocate storage for result");
   }
   const char *from{string.OffsetElement()};
@@ -975,7 +992,7 @@ void RTNAME(Trim)(Descriptor &result, const Descriptor &string,
   }
   result.Establish(string.type(), resultBytes, nullptr, 0, nullptr,
       CFI_attribute_allocatable);
-  RUNTIME_CHECK(terminator, result.Allocate(nullptr, nullptr) == CFI_SUCCESS);
+  RUNTIME_CHECK(terminator, result.Allocate() == CFI_SUCCESS);
   std::memcpy(result.OffsetElement(), string.OffsetElement(), resultBytes);
 }
 

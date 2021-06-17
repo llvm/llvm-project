@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect -mlir-elide-elementsattrs-if-larger=2 -print-op-graph %s -o %t 2>&1 | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -mlir-elide-elementsattrs-if-larger=2 -view-op-graph %s -o %t 2>&1 | FileCheck %s
 
 // CHECK-LABEL: digraph "merge_blocks"
 // CHECK{LITERAL}: value: [[...]] : tensor\<2x2xi32\>}

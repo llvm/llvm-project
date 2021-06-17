@@ -517,7 +517,7 @@ Optional<DWARFYAML::Data> ELFDumper<ELFT>::dumpDWARFSections(
 
     if (ELFYAML::RawContentSection *RawSec =
             dyn_cast<ELFYAML::RawContentSection>(C.get())) {
-      // FIXME: The debugDebug* functions should take the content as stored in
+      // FIXME: The dumpDebug* functions should take the content as stored in
       // RawSec. Currently, they just use the last section with the matching
       // name, which defeats this attempt to skip reading a section header
       // string table with the same name as a DWARF section.

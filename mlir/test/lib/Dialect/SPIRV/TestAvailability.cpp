@@ -23,6 +23,10 @@ namespace {
 struct PrintOpAvailability
     : public PassWrapper<PrintOpAvailability, FunctionPass> {
   void runOnFunction() override;
+  StringRef getArgument() const final { return "test-spirv-op-availability"; }
+  StringRef getDescription() const final {
+    return "Test SPIR-V op availability";
+  }
 };
 } // end anonymous namespace
 
@@ -78,8 +82,7 @@ void PrintOpAvailability::runOnFunction() {
 
 namespace mlir {
 void registerPrintOpAvailabilityPass() {
-  PassRegistration<PrintOpAvailability> printOpAvailabilityPass(
-      "test-spirv-op-availability", "Test SPIR-V op availability");
+  PassRegistration<PrintOpAvailability>();
 }
 } // namespace mlir
 
@@ -91,6 +94,10 @@ namespace {
 /// A pass for testing SPIR-V op availability.
 struct ConvertToTargetEnv
     : public PassWrapper<ConvertToTargetEnv, FunctionPass> {
+  StringRef getArgument() const override { return "test-spirv-target-env"; }
+  StringRef getDescription() const override {
+    return "Test SPIR-V target environment";
+  }
   void runOnFunction() override;
 };
 
@@ -225,7 +232,6 @@ ConvertToSubgroupBallot::matchAndRewrite(Operation *op,
 
 namespace mlir {
 void registerConvertToTargetEnvPass() {
-  PassRegistration<ConvertToTargetEnv> convertToTargetEnvPass(
-      "test-spirv-target-env", "Test SPIR-V target environment");
+  PassRegistration<ConvertToTargetEnv>();
 }
 } // namespace mlir

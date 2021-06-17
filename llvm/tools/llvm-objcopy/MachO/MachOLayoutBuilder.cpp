@@ -356,6 +356,7 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
     // LC_ENCRYPT_INFO/LC_ENCRYPTION_INFO_64 need to be adjusted.
     case MachO::LC_ENCRYPTION_INFO:
     case MachO::LC_ENCRYPTION_INFO_64:
+    case MachO::LC_LINKER_OPTIMIZATION_HINT:
     case MachO::LC_LOAD_DYLINKER:
     case MachO::LC_MAIN:
     case MachO::LC_RPATH:

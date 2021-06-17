@@ -1923,7 +1923,7 @@ bool ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc,
     return false;
 
   // Build the section index, which adds sections to the section header string
-  // table first, so that we can finalise the section header string table.
+  // table first, so that we can finalize the section header string table.
   State.buildSectionIndex();
   State.buildSymbolIndexes();
 

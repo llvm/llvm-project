@@ -6,11 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Implements ALL, ANY, COUNT, IPARITY, & PARITY for all required operand
-// types and shapes.
+// Implements ALL, ANY, COUNT, IALL, IANY, IPARITY, & PARITY for all required
+// operand types and shapes.
 //
-// DOT_PRODUCT, FINDLOC, SUM, and PRODUCT are in their own eponymous source
-// files; NORM2, MAXLOC, MINLOC, MAXVAL, and MINVAL are in extrema.cpp.
+// DOT_PRODUCT, FINDLOC, MATMUL, SUM, and PRODUCT are in their own eponymous
+// source files.
+// NORM2, MAXLOC, MINLOC, MAXVAL, and MINVAL are in extrema.cpp.
+//
+// TODO: IALL, IANY
 
 #include "reduction.h"
 #include "reduction-templates.h"
@@ -18,7 +21,41 @@
 
 namespace Fortran::runtime {
 
-// IPARITY()
+// IALL, IANY, IPARITY
+
+template <typename INTERMEDIATE> class IntegerAndAccumulator {
+public:
+  explicit IntegerAndAccumulator(const Descriptor &array) : array_{array} {}
+  void Reinitialize() { and_ = ~INTERMEDIATE{0}; }
+  template <typename A> void GetResult(A *p, int /*zeroBasedDim*/ = -1) const {
+    *p = static_cast<A>(and_);
+  }
+  template <typename A> bool AccumulateAt(const SubscriptValue at[]) {
+    and_ &= *array_.Element<A>(at);
+    return true;
+  }
+
+private:
+  const Descriptor &array_;
+  INTERMEDIATE and_{~INTERMEDIATE{0}};
+};
+
+template <typename INTERMEDIATE> class IntegerOrAccumulator {
+public:
+  explicit IntegerOrAccumulator(const Descriptor &array) : array_{array} {}
+  void Reinitialize() { or_ = 0; }
+  template <typename A> void GetResult(A *p, int /*zeroBasedDim*/ = -1) const {
+    *p = static_cast<A>(or_);
+  }
+  template <typename A> bool AccumulateAt(const SubscriptValue at[]) {
+    or_ |= *array_.Element<A>(at);
+    return true;
+  }
+
+private:
+  const Descriptor &array_;
+  INTERMEDIATE or_{0};
+};
 
 template <typename INTERMEDIATE> class IntegerXorAccumulator {
 public:
@@ -38,6 +75,82 @@ private:
 };
 
 extern "C" {
+CppTypeFor<TypeCategory::Integer, 1> RTNAME(IAll1)(const Descriptor &x,
+    const char *source, int line, int dim, const Descriptor *mask) {
+  return GetTotalReduction<TypeCategory::Integer, 1>(x, source, line, dim, mask,
+      IntegerAndAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x}, "IALL");
+}
+CppTypeFor<TypeCategory::Integer, 2> RTNAME(IAll2)(const Descriptor &x,
+    const char *source, int line, int dim, const Descriptor *mask) {
+  return GetTotalReduction<TypeCategory::Integer, 2>(x, source, line, dim, mask,
+      IntegerAndAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x}, "IALL");
+}
+CppTypeFor<TypeCategory::Integer, 4> RTNAME(IAll4)(const Descriptor &x,
+    const char *source, int line, int dim, const Descriptor *mask) {
+  return GetTotalReduction<TypeCategory::Integer, 4>(x, source, line, dim, mask,
+      IntegerAndAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x}, "IALL");
+}
+CppTypeFor<TypeCategory::Integer, 8> RTNAME(IAll8)(const Descriptor &x,
+    const char *source, int line, int dim, const Descriptor *mask) {
+  return GetTotalReduction<TypeCategory::Integer, 8>(x, source, line, dim, mask,
+      IntegerAndAccumulator<CppTypeFor<TypeCategory::Integer, 8>>{x}, "IALL");
+}
+#ifdef __SIZEOF_INT128__
+CppTypeFor<TypeCategory::Integer, 16> RTNAME(IAll16)(const Descriptor &x,
+    const char *source, int line, int dim, const Descriptor *mask) {
+  return GetTotalReduction<TypeCategory::Integer, 16>(x, source, line, dim,
+      mask, IntegerAndAccumulator<CppTypeFor<TypeCategory::Integer, 16>>{x},
+      "IALL");
+}
+#endif
+void RTNAME(IAllDim)(Descriptor &result, const Descriptor &x, int dim,
+    const char *source, int line, const Descriptor *mask) {
+  Terminator terminator{source, line};
+  auto catKind{x.type().GetCategoryAndKind()};
+  RUNTIME_CHECK(terminator,
+      catKind.has_value() && catKind->first == TypeCategory::Integer);
+  PartialIntegerReduction<IntegerAndAccumulator>(
+      result, x, dim, catKind->second, mask, "IALL", terminator);
+}
+
+CppTypeFor<TypeCategory::Integer, 1> RTNAME(IAny1)(const Descriptor &x,
+    const char *source, int line, int dim, const Descriptor *mask) {
+  return GetTotalReduction<TypeCategory::Integer, 1>(x, source, line, dim, mask,
+      IntegerOrAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x}, "IANY");
+}
+CppTypeFor<TypeCategory::Integer, 2> RTNAME(IAny2)(const Descriptor &x,
+    const char *source, int line, int dim, const Descriptor *mask) {
+  return GetTotalReduction<TypeCategory::Integer, 2>(x, source, line, dim, mask,
+      IntegerOrAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x}, "IANY");
+}
+CppTypeFor<TypeCategory::Integer, 4> RTNAME(IAny4)(const Descriptor &x,
+    const char *source, int line, int dim, const Descriptor *mask) {
+  return GetTotalReduction<TypeCategory::Integer, 4>(x, source, line, dim, mask,
+      IntegerOrAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x}, "IANY");
+}
+CppTypeFor<TypeCategory::Integer, 8> RTNAME(IAny8)(const Descriptor &x,
+    const char *source, int line, int dim, const Descriptor *mask) {
+  return GetTotalReduction<TypeCategory::Integer, 8>(x, source, line, dim, mask,
+      IntegerOrAccumulator<CppTypeFor<TypeCategory::Integer, 8>>{x}, "IANY");
+}
+#ifdef __SIZEOF_INT128__
+CppTypeFor<TypeCategory::Integer, 16> RTNAME(IAny16)(const Descriptor &x,
+    const char *source, int line, int dim, const Descriptor *mask) {
+  return GetTotalReduction<TypeCategory::Integer, 16>(x, source, line, dim,
+      mask, IntegerOrAccumulator<CppTypeFor<TypeCategory::Integer, 16>>{x},
+      "IANY");
+}
+#endif
+void RTNAME(IAnyDim)(Descriptor &result, const Descriptor &x, int dim,
+    const char *source, int line, const Descriptor *mask) {
+  Terminator terminator{source, line};
+  auto catKind{x.type().GetCategoryAndKind()};
+  RUNTIME_CHECK(terminator,
+      catKind.has_value() && catKind->first == TypeCategory::Integer);
+  PartialIntegerReduction<IntegerOrAccumulator>(
+      result, x, dim, catKind->second, mask, "IANY", terminator);
+}
+
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(IParity1)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Integer, 1>(x, source, line, dim, mask,

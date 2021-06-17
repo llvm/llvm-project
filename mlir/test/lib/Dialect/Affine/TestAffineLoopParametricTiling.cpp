@@ -22,6 +22,10 @@ using namespace mlir;
 namespace {
 struct TestAffineLoopParametricTiling
     : public PassWrapper<TestAffineLoopParametricTiling, FunctionPass> {
+  StringRef getArgument() const final { return "test-affine-parametric-tile"; }
+  StringRef getDescription() const final {
+    return "Tile affine loops using SSA values as tile sizes";
+  }
   void runOnFunction() override;
 };
 } // end anonymous namespace
@@ -83,9 +87,7 @@ void TestAffineLoopParametricTiling::runOnFunction() {
 namespace mlir {
 namespace test {
 void registerTestAffineLoopParametricTilingPass() {
-  PassRegistration<TestAffineLoopParametricTiling>(
-      "test-affine-parametric-tile",
-      "Tile affine loops using SSA values as tile sizes");
+  PassRegistration<TestAffineLoopParametricTiling>();
 }
 } // namespace test
 } // namespace mlir

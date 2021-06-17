@@ -515,6 +515,31 @@ int __kmp_str_match(char const *target, int len, char const *data) {
   return ((len > 0) ? i >= len : (!target[i] && (len || !data[i])));
 } // __kmp_str_match
 
+// If data contains all of target, returns true, otherwise returns false.
+// len should be the length of target
+bool __kmp_str_contains(char const *target, int len, char const *data) {
+  int i = 0, j = 0, start = 0;
+  if (target == NULL || data == NULL) {
+    return FALSE;
+  }
+  while (target[i]) {
+    if (!data[j])
+      return FALSE;
+    if (TOLOWER(target[i]) != TOLOWER(data[j])) {
+      j = start + 1;
+      start = j;
+      i = 0;
+    } else {
+      if (i == 0)
+        start = j;
+      j++;
+      i++;
+    }
+  }
+
+  return i == len;
+} // __kmp_str_contains
+
 int __kmp_str_match_false(char const *data) {
   int result =
       __kmp_str_match("false", 1, data) || __kmp_str_match("off", 2, data) ||

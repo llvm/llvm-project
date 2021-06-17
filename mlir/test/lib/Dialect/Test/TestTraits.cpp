@@ -32,6 +32,8 @@ OpFoldResult TestInvolutionTraitSuccesfulOperationFolderOp::fold(
 
 namespace {
 struct TestTraitFolder : public PassWrapper<TestTraitFolder, FunctionPass> {
+  StringRef getArgument() const final { return "test-trait-folder"; }
+  StringRef getDescription() const final { return "Run trait folding"; }
   void runOnFunction() override {
     (void)applyPatternsAndFoldGreedily(getFunction(),
                                        RewritePatternSet(&getContext()));
@@ -40,7 +42,5 @@ struct TestTraitFolder : public PassWrapper<TestTraitFolder, FunctionPass> {
 } // end anonymous namespace
 
 namespace mlir {
-void registerTestTraitsPass() {
-  PassRegistration<TestTraitFolder>("test-trait-folder", "Run trait folding");
-}
+void registerTestTraitsPass() { PassRegistration<TestTraitFolder>(); }
 } // namespace mlir

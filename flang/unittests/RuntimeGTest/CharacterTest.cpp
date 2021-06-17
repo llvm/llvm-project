@@ -30,10 +30,12 @@ OwningPtr<Descriptor> CreateDescriptor(const std::vector<SubscriptValue> &shape,
 
   OwningPtr<Descriptor> descriptor{Descriptor::Create(sizeof(CHAR), length,
       nullptr, shape.size(), nullptr, CFI_attribute_allocatable)};
-  if ((shape.empty() ? descriptor->Allocate()
-                     : descriptor->Allocate(
-                           std::vector<SubscriptValue>(shape.size(), 1).data(),
-                           shape.data())) != 0) {
+  int rank{static_cast<int>(shape.size())};
+  // Use a weird lower bound of 2 to flush out subscripting bugs
+  for (int j{0}; j < rank; ++j) {
+    descriptor->GetDimension(j).SetBounds(2, shape[j] + 1);
+  }
+  if (descriptor->Allocate() != 0) {
     return nullptr;
   }
 
@@ -245,7 +247,7 @@ void RunExtremumTests(const char *which,
     ASSERT_TRUE(x->IsAllocated());
     ASSERT_NE(y, nullptr);
     ASSERT_TRUE(y->IsAllocated());
-    function(*x, *y, /* sourceFile = */ nullptr, /* sourceLine = */ 0);
+    function(*x, *y, __FILE__, __LINE__);
 
     std::size_t length = x->ElementBytes() / sizeof(CHAR);
     for (std::size_t i = 0; i < t.x.size(); ++i) {
@@ -296,8 +298,7 @@ void RunAllocationTest(const char *xRaw, const char *yRaw) {
   ASSERT_TRUE(y->IsAllocated());
 
   void *old = x->raw().base_addr;
-  RTNAME(CharacterMin)
-  (*x, *y, /* sourceFile = */ nullptr, /* sourceLine = */ 0);
+  RTNAME(CharacterMin)(*x, *y, __FILE__, __LINE__);
   EXPECT_EQ(old, x->raw().base_addr);
 }
 

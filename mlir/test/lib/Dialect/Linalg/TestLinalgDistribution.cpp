@@ -40,6 +40,8 @@ static LinalgLoopDistributionOptions getDistributionOptions() {
 namespace {
 struct TestLinalgDistribution
     : public PassWrapper<TestLinalgDistribution, FunctionPass> {
+  StringRef getArgument() const final { return "test-linalg-distribution"; }
+  StringRef getDescription() const final { return "Test Linalg distribution."; }
   TestLinalgDistribution() = default;
   TestLinalgDistribution(const TestLinalgDistribution &pass) {}
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -72,8 +74,7 @@ void TestLinalgDistribution::runOnFunction() {
 namespace mlir {
 namespace test {
 void registerTestLinalgDistribution() {
-  PassRegistration<TestLinalgDistribution> testTestLinalgDistributionPass(
-      "test-linalg-distribution", "Test Linalg distribution.");
+  PassRegistration<TestLinalgDistribution>();
 }
 } // namespace test
 } // namespace mlir

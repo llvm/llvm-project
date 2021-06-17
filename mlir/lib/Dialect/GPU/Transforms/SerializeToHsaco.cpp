@@ -50,6 +50,11 @@ class SerializeToHsacoPass
 public:
   SerializeToHsacoPass();
 
+  StringRef getArgument() const override { return "gpu-to-hsaco"; }
+  StringRef getDescription() const override {
+    return "Lower GPU kernel function to HSACO binary annotations";
+  }
+
 private:
   void getDependentDialects(DialectRegistry &registry) const override;
 
@@ -268,7 +273,6 @@ SerializeToHsacoPass::serializeISA(const std::string &isa) {
 // Register pass to serialize GPU kernel functions to a HSACO binary annotation.
 void mlir::registerGpuSerializeToHsacoPass() {
   PassRegistration<SerializeToHsacoPass> registerSerializeToHSACO(
-      "gpu-to-hsaco", "Lower GPU kernel function to HSACO binary annotations",
       [] {
         // Initialize LLVM AMDGPU backend.
         LLVMInitializeAMDGPUAsmParser();
