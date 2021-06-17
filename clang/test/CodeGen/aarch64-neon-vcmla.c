@@ -207,7 +207,7 @@ float32x2_t test_vcmla_laneq_f32(float32x2_t acc, float32x2_t lhs, float32x4_t r
 // CHECK-LABEL: @test_vcmlaq_lane_f32(
 // CHECK: [[CPLX:%.*]] = bitcast <2 x float> %rhs to i64
 // CHECK: [[CPLX_VEC:%.*]] = insertelement <2 x i64> undef, i64 [[CPLX]], i32 0
-// CHECK: [[DUP:%.*]] = shufflevector <2 x i64> [[CPLX_VEC]], <2 x i64> undef, <2 x i32> zeroinitializer
+// CHECK: [[DUP:%.*]] = shufflevector <2 x i64> [[CPLX_VEC]], <2 x i64> poison, <2 x i32> zeroinitializer
 // CHECK: [[DUP_FLT:%.*]] = bitcast <2 x i64> [[DUP]] to <4 x float>
 // CHECK: [[RES:%.*]] = call <4 x float> @llvm.aarch64.neon.vcmla.rot0.v4f32(<4 x float> %acc, <4 x float> %lhs, <4 x float> [[DUP_FLT]])
 // CHECK: ret <4 x float> [[RES]]
@@ -287,7 +287,7 @@ float32x2_t test_vcmla_rot90_laneq_f32(float32x2_t acc, float32x2_t lhs, float32
 // CHECK-LABEL: @test_vcmlaq_rot90_lane_f32(
 // CHECK: [[CPLX:%.*]] = bitcast <2 x float> %rhs to i64
 // CHECK: [[CPLX_VEC:%.*]] = insertelement <2 x i64> undef, i64 [[CPLX]], i32 0
-// CHECK: [[DUP:%.*]] = shufflevector <2 x i64> [[CPLX_VEC]], <2 x i64> undef, <2 x i32> zeroinitializer
+// CHECK: [[DUP:%.*]] = shufflevector <2 x i64> [[CPLX_VEC]], <2 x i64> poison, <2 x i32> zeroinitializer
 // CHECK: [[DUP_FLT:%.*]] = bitcast <2 x i64> [[DUP]] to <4 x float>
 // CHECK: [[RES:%.*]] = call <4 x float> @llvm.aarch64.neon.vcmla.rot90.v4f32(<4 x float> %acc, <4 x float> %lhs, <4 x float> [[DUP_FLT]])
 // CHECK: ret <4 x float> [[RES]]
@@ -367,7 +367,7 @@ float32x2_t test_vcmla_rot180_laneq_f32(float32x2_t acc, float32x2_t lhs, float3
 // CHECK-LABEL: @test_vcmlaq_rot180_lane_f32(
 // CHECK: [[CPLX:%.*]] = bitcast <2 x float> %rhs to i64
 // CHECK: [[CPLX_VEC:%.*]] = insertelement <2 x i64> undef, i64 [[CPLX]], i32 0
-// CHECK: [[DUP:%.*]] = shufflevector <2 x i64> [[CPLX_VEC]], <2 x i64> undef, <2 x i32> zeroinitializer
+// CHECK: [[DUP:%.*]] = shufflevector <2 x i64> [[CPLX_VEC]], <2 x i64> poison, <2 x i32> zeroinitializer
 // CHECK: [[DUP_FLT:%.*]] = bitcast <2 x i64> [[DUP]] to <4 x float>
 // CHECK: [[RES:%.*]] = call <4 x float> @llvm.aarch64.neon.vcmla.rot180.v4f32(<4 x float> %acc, <4 x float> %lhs, <4 x float> [[DUP_FLT]])
 // CHECK: ret <4 x float> [[RES]]
@@ -447,7 +447,7 @@ float32x2_t test_vcmla_rot270_laneq_f32(float32x2_t acc, float32x2_t lhs, float3
 // CHECK-LABEL: @test_vcmlaq_rot270_lane_f32(
 // CHECK: [[CPLX:%.*]] = bitcast <2 x float> %rhs to i64
 // CHECK: [[CPLX_VEC:%.*]] = insertelement <2 x i64> undef, i64 [[CPLX]], i32 0
-// CHECK: [[DUP:%.*]] = shufflevector <2 x i64> [[CPLX_VEC]], <2 x i64> undef, <2 x i32> zeroinitializer
+// CHECK: [[DUP:%.*]] = shufflevector <2 x i64> [[CPLX_VEC]], <2 x i64> poison, <2 x i32> zeroinitializer
 // CHECK: [[DUP_FLT:%.*]] = bitcast <2 x i64> [[DUP]] to <4 x float>
 // CHECK: [[RES:%.*]] = call <4 x float> @llvm.aarch64.neon.vcmla.rot270.v4f32(<4 x float> %acc, <4 x float> %lhs, <4 x float> [[DUP_FLT]])
 // CHECK: ret <4 x float> [[RES]]
