@@ -181,7 +181,8 @@ public:
   /// castRegion - Used by ExprEngine::VisitCast to handle casts from
   ///  a MemRegion* to a specific location type.  'R' is the region being
   ///  casted and 'CastToTy' the result type of the cast.
-  const MemRegion *castRegion(const MemRegion *region, QualType CastToTy);
+  Optional<const MemRegion *> castRegion(const MemRegion *region,
+                                         QualType CastToTy);
 
   virtual StoreRef removeDeadBindings(Store store, const StackFrameContext *LCtx,
                                       SymbolReaper &SymReaper) = 0;

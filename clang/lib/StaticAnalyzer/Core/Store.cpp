@@ -71,7 +71,8 @@ const ElementRegion *StoreManager::GetElementZeroRegion(const SubRegion *R,
   return MRMgr.getElementRegion(T, idx, R, Ctx);
 }
 
-const MemRegion *StoreManager::castRegion(const MemRegion *R, QualType CastToTy) {
+Optional<const MemRegion *> StoreManager::castRegion(const MemRegion *R,
+                                                     QualType CastToTy) {
   ASTContext &Ctx = StateMgr.getContext();
 
   // Handle casts to Objective-C objects.
@@ -88,7 +89,7 @@ const MemRegion *StoreManager::castRegion(const MemRegion *R, QualType CastToTy)
 
     // We don't know what to make of it.  Return a NULL region, which
     // will be interpreted as UnknownVal.
-    return nullptr;
+    return None;
   }
 
   // Now assume we are casting from pointer to pointer. Other cases should
@@ -168,7 +169,7 @@ const MemRegion *StoreManager::castRegion(const MemRegion *R, QualType CastToTy)
       // If we cannot compute a raw offset, throw up our hands and return
       // a NULL MemRegion*.
       if (!baseR)
-        return nullptr;
+        return None;
 
       CharUnits off = rawOff.getOffset();
 
