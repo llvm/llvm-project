@@ -2837,12 +2837,25 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
   auto *SubVT = VectorType::get(ScalarTy, VF);
 
   // Vectorize the interleaved store group.
+  MaskForGaps = createBitMaskForGaps(Builder, VF.getKnownMinValue(), *Group);
+  assert((!MaskForGaps || useMaskedInterleavedAccesses(*TTI)) &&
+         "masked interleaved groups are not allowed.");
+  assert((!MaskForGaps || !VF.isScalable()) &&
+         "masking gaps for scalable vectors is not yet supported.");
   for (unsigned Part = 0; Part < UF; Part++) {
     // Collect the stored vector from each member.
     SmallVector<Value *, 4> StoredVecs;
     for (unsigned i = 0; i < InterleaveFactor; i++) {
-      // Interleaved store group doesn't allow a gap, so each index has a member
-      assert(Group->getMember(i) && "Fail to get a member from an interleaved store group");
+      assert((Group->getMember(i) || MaskForGaps) &&
+             "Fail to get a member from an interleaved store group");
+      Instruction *Member = Group->getMember(i);
+
+      // Skip the gaps in the group.
+      if (!Member) {
+        Value *Undef = PoisonValue::get(SubVT);
+        StoredVecs.push_back(Undef);
+        continue;
+      }
 
       Value *StoredVec = State.get(StoredValues[i], Part);
 
@@ -2866,16 +2879,21 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
         "interleaved.vec");
 
     Instruction *NewStoreInstr;
-    if (BlockInMask) {
-      Value *BlockInMaskPart = State.get(BlockInMask, Part);
-      Value *ShuffledMask = Builder.CreateShuffleVector(
-          BlockInMaskPart,
-          createReplicatedMask(InterleaveFactor, VF.getKnownMinValue()),
-          "interleaved.mask");
-      NewStoreInstr = Builder.CreateMaskedStore(
-          IVec, AddrParts[Part], Group->getAlign(), ShuffledMask);
-    }
-    else
+    if (BlockInMask || MaskForGaps) {
+      Value *GroupMask = MaskForGaps;
+      if (BlockInMask) {
+        Value *BlockInMaskPart = State.get(BlockInMask, Part);
+        Value *ShuffledMask = Builder.CreateShuffleVector(
+            BlockInMaskPart,
+            createReplicatedMask(InterleaveFactor, VF.getKnownMinValue()),
+            "interleaved.mask");
+        GroupMask = MaskForGaps ? Builder.CreateBinOp(Instruction::And,
+                                                      ShuffledMask, MaskForGaps)
+                                : ShuffledMask;
+      }
+      NewStoreInstr = Builder.CreateMaskedStore(IVec, AddrParts[Part],
+                                                Group->getAlign(), GroupMask);
+    } else
       NewStoreInstr =
           Builder.CreateAlignedStore(IVec, AddrParts[Part], Group->getAlign());
 
@@ -5274,12 +5292,19 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
 
   // Check if masking is required.
   // A Group may need masking for one of two reasons: it resides in a block that
-  // needs predication, or it was decided to use masking to deal with gaps.
+  // needs predication, or it was decided to use masking to deal with gaps
+  // (either a gap at the end of a load-access that may result in a speculative
+  // load, or any gaps in a store-access).
   bool PredicatedAccessRequiresMasking =
       Legal->blockNeedsPredication(I->getParent()) && Legal->isMaskRequired(I);
-  bool AccessWithGapsRequiresMasking =
-      Group->requiresScalarEpilogue() && !isScalarEpilogueAllowed();
-  if (!PredicatedAccessRequiresMasking && !AccessWithGapsRequiresMasking)
+  bool LoadAccessWithGapsRequiresEpilogMasking =
+      isa<LoadInst>(I) && Group->requiresScalarEpilogue() &&
+      !isScalarEpilogueAllowed();
+  bool StoreAccessWithGapsRequiresMasking =
+      isa<StoreInst>(I) && (Group->getNumMembers() < Group->getFactor());
+  if (!PredicatedAccessRequiresMasking &&
+      !LoadAccessWithGapsRequiresEpilogMasking &&
+      !StoreAccessWithGapsRequiresMasking)
     return true;
 
   // If masked interleaving is required, we expect that the user/target had
@@ -7118,18 +7143,16 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
   unsigned InterleaveFactor = Group->getFactor();
   auto *WideVecTy = VectorType::get(ValTy, VF * InterleaveFactor);
 
-  // Holds the indices of existing members in an interleaved load group.
-  // An interleaved store group doesn't need this as it doesn't allow gaps.
+  // Holds the indices of existing members in the interleaved group.
   SmallVector<unsigned, 4> Indices;
-  if (isa<LoadInst>(I)) {
-    for (unsigned i = 0; i < InterleaveFactor; i++)
-      if (Group->getMember(i))
-        Indices.push_back(i);
-  }
+  for (unsigned IF = 0; IF < InterleaveFactor; IF++)
+    if (Group->getMember(IF))
+      Indices.push_back(IF);
 
   // Calculate the cost of the whole interleaved group.
   bool UseMaskForGaps =
-      Group->requiresScalarEpilogue() && !isScalarEpilogueAllowed();
+      (Group->requiresScalarEpilogue() && !isScalarEpilogueAllowed()) ||
+      (isa<StoreInst>(I) && (Group->getNumMembers() < Group->getFactor()));
   InstructionCost Cost = TTI.getInterleavedMemoryOpCost(
       I->getOpcode(), WideVecTy, Group->getFactor(), Indices, Group->getAlign(),
       AS, TTI::TCK_RecipThroughput, Legal->isMaskRequired(I), UseMaskForGaps);
