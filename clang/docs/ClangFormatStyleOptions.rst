@@ -773,7 +773,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 **AllowShortIfStatementsOnASingleLine** (``ShortIfStyle``)
-  If ``true``, ``if (a) return;`` can be put on a single line.
+  Dependent on the value, ``if (a) return;`` can be put on a single line.
 
   Possible values:
 
@@ -783,28 +783,67 @@ the configuration (without a prefix: ``Auto``).
     .. code-block:: c++
 
       if (a)
-        return ;
+        return;
+
+      if (b)
+        return;
+      else
+        return;
+
+      if (c)
+        return;
       else {
         return;
       }
 
   * ``SIS_WithoutElse`` (in configuration: ``WithoutElse``)
-    Without else put short ifs on the same line only if
-    the else is not a compound statement.
+    Put short ifs on the same line only if there is no else statement.
 
     .. code-block:: c++
 
       if (a) return;
+
+      if (b)
+        return;
       else
         return;
 
-  * ``SIS_Always`` (in configuration: ``Always``)
-    Always put short ifs on the same line if
-    the else is not a compound statement or not.
+      if (c)
+        return;
+      else {
+        return;
+      }
+
+  * ``SIS_OnlyFirstIf`` (in configuration: ``OnlyFirstIf``)
+    Put short ifs, but not else ifs nor else statements, on the same line.
 
     .. code-block:: c++
 
       if (a) return;
+
+      if (b) return;
+      else if (b)
+        return;
+      else
+        return;
+
+      if (c) return;
+      else {
+        return;
+      }
+
+  * ``SIS_AllIfsAndElse`` (in configuration: ``AllIfsAndElse``)
+    Always put short ifs, else ifs and else statements on the same
+    line.
+
+    .. code-block:: c++
+
+      if (a) return;
+
+      if (b) return;
+      else return;
+
+      if (c) return;
       else {
         return;
       }
@@ -2176,7 +2215,10 @@ the configuration (without a prefix: ``Auto``).
       private:
 
       protected:
+
       };
+
+
 
 **EmptyLineBeforeAccessModifier** (``EmptyLineBeforeAccessModifierStyle``)
   Defines in which cases to put empty line before access modifiers.
@@ -2244,6 +2286,8 @@ the configuration (without a prefix: ``Auto``).
 
       protected:
       };
+
+
 
 **ExperimentalAutoDetectBinPacking** (``bool``)
   If ``true``, clang-format detects whether function calls and
@@ -3441,15 +3485,32 @@ the configuration (without a prefix: ``Auto``).
        }             // foo
      }
 
-**SpacesInAngles** (``bool``)
-  If ``true``, spaces will be inserted after ``<`` and before ``>``
-  in template argument lists.
+**SpacesInAngles** (``SpacesInAnglesStyle``)
+  The SpacesInAnglesStyle to use for template argument lists.
 
-  .. code-block:: c++
+  Possible values:
 
-     true:                                  false:
-     static_cast< int >(arg);       vs.     static_cast<int>(arg);
-     std::function< void(int) > fct;        std::function<void(int)> fct;
+  * ``SIAS_Never`` (in configuration: ``Never``)
+    Remove spaces after ``<`` and before ``>``.
+
+    .. code-block:: c++
+
+       static_cast<int>(arg);
+       std::function<void(int)> fct;
+
+  * ``SIAS_Always`` (in configuration: ``Always``)
+    Add spaces after ``<`` and before ``>``.
+
+    .. code-block:: c++
+
+       static_cast< int >(arg);
+       std::function< void(int) > fct;
+
+  * ``SIAS_Leave`` (in configuration: ``Leave``)
+    Keep a single space after ``<`` and before ``>`` if any spaces were
+    present. Option ``Standard: Cpp03`` takes precedence.
+
+
 
 **SpacesInCStyleCastParentheses** (``bool``)
   If ``true``, spaces may be inserted into C style casts.
