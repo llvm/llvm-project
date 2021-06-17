@@ -909,7 +909,11 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
 
   if (CheckFile.getNumOccurrences()) {
     llvm::SmallString<256> Path;
-    llvm::sys::fs::real_path(CheckFile, Path, /*expand_tilde=*/true);
+    if (auto Error =
+            llvm::sys::fs::real_path(CheckFile, Path, /*expand_tilde=*/true)) {
+      elog("Failed to resolve path {0}: {1}", CheckFile, Error.message());
+      return 1;
+    }
     log("Entering check mode (no LSP server)");
     uint32_t Begin = 0, End = std::numeric_limits<uint32_t>::max();
     if (!CheckFileLines.empty()) {
