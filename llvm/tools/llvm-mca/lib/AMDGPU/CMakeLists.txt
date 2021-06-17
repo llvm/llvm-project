@@ -6,6 +6,7 @@ include_directories(
 set(LLVM_LINK_COMPONENTS
   AMDGPU
   Core
+  MCA
   Support
   )
 

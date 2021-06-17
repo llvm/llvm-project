@@ -63,7 +63,7 @@ public:
                   const MCInstrInfo &MCII)
       : STI(STI), SrcMgr(SrcMgr), MCII(MCII) {}
 
-  virtual ~CustomBehaviour() {}
+  virtual ~CustomBehaviour();
 
   // Before the llvm-mca pipeline dispatches an instruction, it first checks
   // for any register or resource dependencies / hazards. If it doesn't find
