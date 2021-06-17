@@ -351,26 +351,31 @@ SDValue AVRTargetLowering::LowerShifts(SDValue Op, SelectionDAG &DAG) const {
       ShiftAmount -= 4;
     } else if (Op.getOpcode() == ISD::SHL && ShiftAmount == 7) {
       // Optimize LSL when ShiftAmount == 7.
-      Victim = DAG.getNode(AVRISD::LSL7, dl, VT, Victim);
+      Victim = DAG.getNode(AVRISD::LSLBN, dl, VT, Victim,
+                           DAG.getConstant(7, dl, VT));
       ShiftAmount = 0;
     } else if (Op.getOpcode() == ISD::SRL && ShiftAmount == 7) {
       // Optimize LSR when ShiftAmount == 7.
-      Victim = DAG.getNode(AVRISD::LSR7, dl, VT, Victim);
+      Victim = DAG.getNode(AVRISD::LSRBN, dl, VT, Victim,
+                           DAG.getConstant(7, dl, VT));
       ShiftAmount = 0;
     } else if (Op.getOpcode() == ISD::SRA && ShiftAmount == 7) {
       // Optimize ASR when ShiftAmount == 7.
-      Victim = DAG.getNode(AVRISD::ASR7, dl, VT, Victim);
+      Victim = DAG.getNode(AVRISD::ASRBN, dl, VT, Victim,
+                           DAG.getConstant(7, dl, VT));
       ShiftAmount = 0;
     }
   } else if (VT.getSizeInBits() == 16) {
     if (4 <= ShiftAmount && ShiftAmount < 8)
       switch (Op.getOpcode()) {
       case ISD::SHL:
-        Victim = DAG.getNode(AVRISD::LSL4, dl, VT, Victim);
+        Victim = DAG.getNode(AVRISD::LSLWN, dl, VT, Victim,
+                             DAG.getConstant(4, dl, VT));
         ShiftAmount -= 4;
         break;
       case ISD::SRL:
-        Victim = DAG.getNode(AVRISD::LSR4, dl, VT, Victim);
+        Victim = DAG.getNode(AVRISD::LSRWN, dl, VT, Victim,
+                             DAG.getConstant(4, dl, VT));
         ShiftAmount -= 4;
         break;
       default:
@@ -379,15 +384,18 @@ SDValue AVRTargetLowering::LowerShifts(SDValue Op, SelectionDAG &DAG) const {
     else if (8 <= ShiftAmount && ShiftAmount < 12)
       switch (Op.getOpcode()) {
       case ISD::SHL:
-        Victim = DAG.getNode(AVRISD::LSL8, dl, VT, Victim);
+        Victim = DAG.getNode(AVRISD::LSLWN, dl, VT, Victim,
+                             DAG.getConstant(8, dl, VT));
         ShiftAmount -= 8;
         break;
       case ISD::SRL:
-        Victim = DAG.getNode(AVRISD::LSR8, dl, VT, Victim);
+        Victim = DAG.getNode(AVRISD::LSRWN, dl, VT, Victim,
+                             DAG.getConstant(8, dl, VT));
         ShiftAmount -= 8;
         break;
       case ISD::SRA:
-        Victim = DAG.getNode(AVRISD::ASR8, dl, VT, Victim);
+        Victim = DAG.getNode(AVRISD::ASRWN, dl, VT, Victim,
+                             DAG.getConstant(8, dl, VT));
         ShiftAmount -= 8;
         break;
       default:
@@ -396,11 +404,13 @@ SDValue AVRTargetLowering::LowerShifts(SDValue Op, SelectionDAG &DAG) const {
     else if (12 <= ShiftAmount)
       switch (Op.getOpcode()) {
       case ISD::SHL:
-        Victim = DAG.getNode(AVRISD::LSL12, dl, VT, Victim);
+        Victim = DAG.getNode(AVRISD::LSLWN, dl, VT, Victim,
+                             DAG.getConstant(12, dl, VT));
         ShiftAmount -= 12;
         break;
       case ISD::SRL:
-        Victim = DAG.getNode(AVRISD::LSR12, dl, VT, Victim);
+        Victim = DAG.getNode(AVRISD::LSRWN, dl, VT, Victim,
+                             DAG.getConstant(12, dl, VT));
         ShiftAmount -= 12;
         break;
       default:

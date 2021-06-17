@@ -36,18 +36,14 @@ enum NodeType {
   /// TargetExternalSymbol, and TargetGlobalAddress.
   WRAPPER,
   LSL,     ///< Logical shift left.
-  LSL4,    ///< Logical shift left 4 bits.
-  LSL8,    ///< Logical shift left 8 bits.
-  LSL12,   ///< Logical shift left 12 bits.
+  LSLBN,   ///< Byte logical shift left N bits.
+  LSLWN,   ///< Word logical shift left N bits.
   LSR,     ///< Logical shift right.
-  LSR4,    ///< Logical shift right 4 bits.
-  LSR8,    ///< Logical shift right 8 bits.
-  LSR12,   ///< Logical shift right 12 bits.
+  LSRBN,   ///< Byte logical shift right N bits.
+  LSRWN,   ///< Word logical shift right N bits.
   ASR,     ///< Arithmetic shift right.
-  ASR8,    ///< Arithmetic shift right 8 bits.
-  LSL7,    ///< Logical shift left 7 bits.
-  LSR7,    ///< Logical shift right 7 bits.
-  ASR7,    ///< Arithmetic shift right 7 bits.
+  ASRBN,   ///< Byte arithmetic shift right N bits.
+  ASRWN,   ///< Word arithmetic shift right N bits.
   ROR,     ///< Bit rotate right.
   ROL,     ///< Bit rotate left.
   LSLLOOP, ///< A loop of single logical shift left instructions.
