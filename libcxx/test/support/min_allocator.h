@@ -372,41 +372,13 @@ public:
     static TEST_CONSTEXPR_CXX14 min_pointer pointer_to(const T& t) {return min_pointer(std::addressof(t));}
 
     friend TEST_CONSTEXPR_CXX14 bool operator==(min_pointer x, min_pointer y) {return x.ptr_ == y.ptr_;}
-    friend TEST_CONSTEXPR_CXX14 bool operator!=(min_pointer x, min_pointer y) {return !(x == y);}
+    friend TEST_CONSTEXPR_CXX14 bool operator!=(min_pointer x, min_pointer y) {return x.ptr_ != y.ptr_;}
+    friend TEST_CONSTEXPR_CXX14 bool operator==(min_pointer x, std::nullptr_t) {return x.ptr_ == nullptr;}
+    friend TEST_CONSTEXPR_CXX14 bool operator!=(min_pointer x, std::nullptr_t) {return x.ptr_ != nullptr;}
+    friend TEST_CONSTEXPR_CXX14 bool operator==(std::nullptr_t, min_pointer x) {return x.ptr_ == nullptr;}
+    friend TEST_CONSTEXPR_CXX14 bool operator!=(std::nullptr_t, min_pointer x) {return x.ptr_ != nullptr;}
     template <class U, class XID> friend class min_pointer;
 };
-
-template <class T, class ID>
-TEST_CONSTEXPR_CXX14 inline
-bool
-operator==(min_pointer<T, ID> x, std::nullptr_t)
-{
-    return !static_cast<bool>(x);
-}
-
-template <class T, class ID>
-TEST_CONSTEXPR_CXX14 inline
-bool
-operator==(std::nullptr_t, min_pointer<T, ID> x)
-{
-    return !static_cast<bool>(x);
-}
-
-template <class T, class ID>
-TEST_CONSTEXPR_CXX14 inline
-bool
-operator!=(min_pointer<T, ID> x, std::nullptr_t)
-{
-    return static_cast<bool>(x);
-}
-
-template <class T, class ID>
-TEST_CONSTEXPR_CXX14 inline
-bool
-operator!=(std::nullptr_t, min_pointer<T, ID> x)
-{
-    return static_cast<bool>(x);
-}
 
 template <class T>
 class min_allocator
