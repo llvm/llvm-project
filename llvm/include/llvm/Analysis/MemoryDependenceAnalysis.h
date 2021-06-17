@@ -20,17 +20,9 @@
 #include "llvm/ADT/PointerSumType.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/ErrorHandling.h"
-#include <cassert>
-#include <cstdint>
-#include <utility>
-#include <vector>
 
 namespace llvm {
 
@@ -38,13 +30,8 @@ class AAResults;
 class AssumptionCache;
 class BatchAAResults;
 class DominatorTree;
-class Function;
-class Instruction;
-class LoadInst;
 class PHITransAddr;
-class TargetLibraryInfo;
 class PhiValues;
-class Value;
 
 /// A memory dependence query can return one of three different answers.
 class MemDepResult {
@@ -344,7 +331,7 @@ private:
   // A map from instructions to their non-local dependencies.
   using NonLocalDepMapType = DenseMap<Instruction *, PerInstNLInfo>;
 
-  NonLocalDepMapType NonLocalDeps;
+  NonLocalDepMapType NonLocalDepsMap;
 
   // A reverse mapping from dependencies to the dependees.  This is
   // used when removing instructions to keep the cache coherent.
@@ -501,13 +488,13 @@ private:
                                    DenseMap<BasicBlock *, Value *> &Visited,
                                    bool SkipFirstBlock = false,
                                    bool IsIncomplete = false);
-  MemDepResult GetNonLocalInfoForBlock(Instruction *QueryInst,
+  MemDepResult getNonLocalInfoForBlock(Instruction *QueryInst,
                                        const MemoryLocation &Loc, bool isLoad,
                                        BasicBlock *BB, NonLocalDepInfo *Cache,
                                        unsigned NumSortedEntries,
                                        BatchAAResults &BatchAA);
 
-  void RemoveCachedNonLocalPointerDependencies(ValueIsLoadPair P);
+  void removeCachedNonLocalPointerDependencies(ValueIsLoadPair P);
 
   void verifyRemoved(Instruction *Inst) const;
 };
