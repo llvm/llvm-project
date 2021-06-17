@@ -26,10 +26,12 @@ namespace scudo {
 template <class Allocator> struct alignas(SCUDO_CACHE_LINE_SIZE) TSD {
   typename Allocator::CacheT Cache;
   typename Allocator::QuarantineCacheT QuarantineCache;
+  using ThisT = TSD<Allocator>;
   u8 DestructorIterations = 0;
 
   void init(Allocator *Instance) {
     DCHECK_EQ(DestructorIterations, 0U);
+    DCHECK(isAligned(reinterpret_cast<uptr>(this), alignof(ThisT)));
     Instance->initCache(&Cache);
     DestructorIterations = PTHREAD_DESTRUCTOR_ITERATIONS;
   }
