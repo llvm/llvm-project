@@ -18,16 +18,16 @@
 ; ELF: $__profd_foo_inline = comdat noduplicates
 ; ELF: $__profd_foo_extern = comdat any
 
-@__profn_foo = hidden constant [3 x i8] c"foo"
+@__profn_foo = private constant [3 x i8] c"foo"
 @__profn_foo_weak = weak hidden constant [8 x i8] c"foo_weak"
 @"__profn_linkage.ll:foo_internal" = internal constant [23 x i8] c"linkage.ll:foo_internal"
 @__profn_foo_inline = linkonce_odr hidden constant [10 x i8] c"foo_inline"
 @__profn_foo_extern = linkonce_odr hidden constant [10 x i8] c"foo_extern"
 
-; ELF: @__profc_foo = hidden global{{.*}}section "__llvm_prf_cnts", comdat($__profd_foo)
-; ELF: @__profd_foo = hidden global{{.*}}section "__llvm_prf_data", comdat
-; MACHO: @__profc_foo = hidden global
-; MACHO: @__profd_foo = hidden global
+; ELF: @__profc_foo = private global {{.*}} section "__llvm_prf_cnts", comdat($__profd_foo)
+; ELF: @__profd_foo = private global {{.*}} section "__llvm_prf_data", comdat
+; MACHO: @__profc_foo = private global
+; MACHO: @__profd_foo = private global
 ; COFF: @__profc_foo = internal global
 ; COFF-NOT: comdat
 ; COFF: @__profd_foo = internal global

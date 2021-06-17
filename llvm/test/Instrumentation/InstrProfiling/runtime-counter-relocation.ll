@@ -3,7 +3,7 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-@__profn_foo = hidden constant [3 x i8] c"foo"
+@__profn_foo = private constant [3 x i8] c"foo"
 ; RELOC: @__llvm_profile_counter_bias = linkonce_odr hidden global i64 0
 
 ; CHECK-LABEL: define void @foo

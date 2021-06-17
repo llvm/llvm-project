@@ -10,17 +10,17 @@
 ; MACHO: @__llvm_profile_runtime = external global i32
 ; WIN: @__llvm_profile_runtime = external global i32
 
-@__profn_foo = hidden constant [3 x i8] c"foo"
+@__profn_foo = private constant [3 x i8] c"foo"
 ; CHECK-NOT: __profn_foo
 @__profn_bar = hidden constant [4 x i8] c"bar\00"
 ; CHECK-NOT: __profn_bar
 @__profn_baz = hidden constant [3 x i8] c"baz"
 ; CHECK-NOT: __profn_baz
 
-; ELF:   @__profc_foo = hidden global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", comdat($__profd_foo), align 8
-; ELF:   @__profd_foo = hidden {{.*}}, section "__llvm_prf_data", comdat, align 8
-; MACHO: @__profc_foo = hidden global [1 x i64] zeroinitializer, section "__DATA,__llvm_prf_cnts", align 8
-; MACHO: @__profd_foo = hidden {{.*}}, section "__DATA,__llvm_prf_data,regular,live_support", align 8
+; ELF:   @__profc_foo = private global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", comdat($__profd_foo), align 8
+; ELF:   @__profd_foo = private {{.*}}, section "__llvm_prf_data", comdat, align 8
+; MACHO: @__profc_foo = private global [1 x i64] zeroinitializer, section "__DATA,__llvm_prf_cnts", align 8
+; MACHO: @__profd_foo = private {{.*}}, section "__DATA,__llvm_prf_data,regular,live_support", align 8
 ; WIN:   @__profc_foo = internal global [1 x i64] zeroinitializer, section ".lprfc$M", align 8
 ; WIN:   @__profd_foo = internal {{.*}}, section ".lprfd$M", align 8
 define void @foo() {
@@ -34,7 +34,7 @@ define void @foo() {
 ; MACHO: @__profd_bar = hidden {{.*}}, section "__DATA,__llvm_prf_data,regular,live_support", align 8
 ; WIN:   @__profc_bar = internal global [1 x i64] zeroinitializer, section ".lprfc$M", align 8
 ; WIN:   @__profd_bar = internal {{.*}}, section ".lprfd$M", align 8
-define void @bar() {
+define linkonce_odr void @bar() {
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @__profn_bar, i32 0, i32 0), i64 0, i32 1, i32 0)
   ret void
 }
@@ -45,7 +45,7 @@ define void @bar() {
 ; MACHO: @__profd_baz = hidden {{.*}}, section "__DATA,__llvm_prf_data,regular,live_support", align 8
 ; WIN:   @__profc_baz = internal global [3 x i64] zeroinitializer, section ".lprfc$M", align 8
 ; WIN:   @__profd_baz = internal {{.*}}, section ".lprfd$M", align 8
-define void @baz() {
+define linkonce_odr void @baz() {
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_baz, i32 0, i32 0), i64 0, i32 3, i32 0)
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_baz, i32 0, i32 0), i64 0, i32 3, i32 1)
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_baz, i32 0, i32 0), i64 0, i32 3, i32 2)
