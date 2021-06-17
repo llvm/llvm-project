@@ -425,8 +425,7 @@ void SafeStack::findInsts(Function &F,
   for (Argument &Arg : F.args()) {
     if (!Arg.hasByValAttr())
       continue;
-    uint64_t Size =
-        DL.getTypeStoreSize(Arg.getType()->getPointerElementType());
+    uint64_t Size = DL.getTypeStoreSize(Arg.getParamByValType());
     if (IsSafeStackAlloca(&Arg, Size))
       continue;
 
@@ -527,7 +526,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   }
 
   for (Argument *Arg : ByValArguments) {
-    Type *Ty = Arg->getType()->getPointerElementType();
+    Type *Ty = Arg->getParamByValType();
     uint64_t Size = DL.getTypeStoreSize(Ty);
     if (Size == 0)
       Size = 1; // Don't create zero-sized stack objects.
@@ -584,7 +583,7 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   for (Argument *Arg : ByValArguments) {
     unsigned Offset = SSL.getObjectOffset(Arg);
     MaybeAlign Align(SSL.getObjectAlignment(Arg));
-    Type *Ty = Arg->getType()->getPointerElementType();
+    Type *Ty = Arg->getParamByValType();
 
     uint64_t Size = DL.getTypeStoreSize(Ty);
     if (Size == 0)
