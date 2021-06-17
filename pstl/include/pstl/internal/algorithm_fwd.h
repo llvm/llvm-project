@@ -264,15 +264,15 @@ template <class _RandomAccessIterator, class _Predicate>
 _RandomAccessIterator __brick_find_if(_RandomAccessIterator, _RandomAccessIterator, _Predicate,
                                       /*is_vector=*/std::true_type) noexcept;
 
-template <class _ExecutionPolicy, class _ForwardIterator, class _Predicate, class _IsVector>
+template <class _Tag, class _ExecutionPolicy, class _ForwardIterator, class _Predicate>
 _ForwardIterator
-__pattern_find_if(_ExecutionPolicy&&, _ForwardIterator, _ForwardIterator, _Predicate, _IsVector,
-                  /*is_parallel=*/std::false_type) noexcept;
+__pattern_find_if(_Tag __tag, _ExecutionPolicy&&, _ForwardIterator __first, _ForwardIterator __last,
+                  _Predicate __pred) noexcept;
 
-template <class _ExecutionPolicy, class _RandomAccessIterator, class _Predicate, class _IsVector>
+template <class _IsVector, class _ExecutionPolicy, class _RandomAccessIterator, class _Predicate>
 _RandomAccessIterator
-__pattern_find_if(_ExecutionPolicy&&, _RandomAccessIterator, _RandomAccessIterator, _Predicate, _IsVector,
-                  /*is_parallel=*/std::true_type);
+__pattern_find_if(__parallel_tag<_IsVector> __tag, _ExecutionPolicy&& __exec, _RandomAccessIterator __first,
+                  _RandomAccessIterator __last, _Predicate __pred);
 
 //------------------------------------------------------------------------
 // find_end
