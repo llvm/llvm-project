@@ -312,9 +312,10 @@ static void encodeBinding(const Symbol *sym, const OutputSection *osec,
 
 // Non-weak bindings need to have their dylib ordinal encoded as well.
 static int16_t ordinalForDylibSymbol(const DylibSymbol &dysym) {
-  return config->namespaceKind == NamespaceKind::flat || dysym.isDynamicLookup()
-             ? static_cast<int16_t>(BIND_SPECIAL_DYLIB_FLAT_LOOKUP)
-             : dysym.getFile()->ordinal;
+  if (config->namespaceKind == NamespaceKind::flat || dysym.isDynamicLookup())
+    return static_cast<int16_t>(BIND_SPECIAL_DYLIB_FLAT_LOOKUP);
+  assert(dysym.getFile()->isReferenced());
+  return dysym.getFile()->ordinal;
 }
 
 static void encodeDylibOrdinal(int16_t ordinal, raw_svector_ostream &os) {
@@ -464,7 +465,7 @@ void StubHelperSection::setup() {
           "Needed to perform lazy binding.");
     return;
   }
-  stubBinder->refState = RefState::Strong;
+  stubBinder->reference(RefState::Strong);
   in.got->addEntry(stubBinder);
 
   inputSections.push_back(in.imageLoaderCache);

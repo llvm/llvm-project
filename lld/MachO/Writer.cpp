@@ -615,7 +615,7 @@ void Writer::scanSymbols() {
       if (dysym->isDynamicLookup())
         continue;
       dysym->getFile()->refState =
-          std::max(dysym->getFile()->refState, dysym->refState);
+          std::max(dysym->getFile()->refState, dysym->getRefState());
     }
   }
 }
@@ -687,6 +687,19 @@ template <class LP> void Writer::createLoadCommands() {
         dylibFile->reexport = false;
         continue;
       }
+
+      // Don't emit load commands for a dylib that is not referenced if:
+      // - it was added implicitly (via a reexport, an LC_LOAD_DYLINKER --
+      //   if it's on the linker command line, it's explicit)
+      // - or it's marked MH_DEAD_STRIPPABLE_DYLIB
+      // - or the flag -dead_strip_dylibs is used
+      // FIXME: `isReferenced()` is currently computed before dead code
+      // stripping, so references from dead code keep a dylib alive. This
+      // matches ld64, but it's something we should do better.
+      if (!dylibFile->isReferenced() &&
+          (!dylibFile->explicitlyLinked || dylibFile->deadStrippable ||
+           config->deadStripDylibs))
+        continue;
 
       dylibFile->ordinal = dylibOrdinal++;
       LoadCommandType lcType =

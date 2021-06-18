@@ -157,6 +157,14 @@ public:
   RefState refState;
   bool reexport = false;
   bool forceWeakImport = false;
+  bool deadStrippable = false;
+  bool explicitlyLinked = false;
+
+  unsigned numReferencedSymbols = 0;
+
+  bool isReferenced() const {
+    return numReferencedSymbols > 0;
+  }
 
   // An executable can be used as a bundle loader that will load the output
   // file being linked, and that contains symbols referenced, but not
