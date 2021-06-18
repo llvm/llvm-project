@@ -417,7 +417,6 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   // through another exit first.
   const unsigned ExactTripCount = ExitingBI ?
     SE->getSmallConstantTripCount(L,ExitingBI->getParent()) : 0;
-  const bool ExactUnroll = (ExactTripCount && ExactTripCount == ULO.Count);
 
   // Loops containing convergent instructions must have a count that divides
   // their TripMultiple.
