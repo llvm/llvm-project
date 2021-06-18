@@ -361,6 +361,9 @@ struct __rebind_alloc_helper {
 template <class _Tp>
 struct __is_default_allocator : false_type { };
 
+template <class _Tp>
+struct __is_default_allocator<allocator<_Tp> > : true_type { };
+
 // __is_cpp17_move_insertable
 template <class _Alloc, class = void>
 struct __is_cpp17_move_insertable
