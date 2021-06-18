@@ -2388,12 +2388,9 @@ struct AAReachabilityImpl : AAReachability {
     return "reachable";
   }
 
-  /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A) override { indicatePessimisticFixpoint(); }
-
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-    return indicatePessimisticFixpoint();
+    return ChangeStatus::UNCHANGED;
   }
 };
 
