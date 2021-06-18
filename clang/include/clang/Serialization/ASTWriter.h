@@ -450,7 +450,7 @@ private:
 
   /// A mapping from each known submodule to its ID number, which will
   /// be a positive integer.
-  llvm::DenseMap<Module *, unsigned> SubmoduleIDs;
+  llvm::DenseMap<const Module *, unsigned> SubmoduleIDs;
 
   /// A list of the module file extension writers.
   std::vector<std::unique_ptr<ModuleFileExtensionWriter>>
@@ -671,7 +671,7 @@ public:
   /// Retrieve or create a submodule ID for this module, or return 0 if
   /// the submodule is neither local (a submodle of the currently-written module)
   /// nor from an imported module.
-  unsigned getLocalOrImportedSubmoduleID(Module *Mod);
+  unsigned getLocalOrImportedSubmoduleID(const Module *Mod);
 
   /// Note that the identifier II occurs at the given offset
   /// within the identifier table.
