@@ -2226,15 +2226,15 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::FunctionReference &funcRef,
     if (auto *proc{std::get_if<ProcedureDesignator>(&callee->u)}) {
       return MakeFunctionRef(
           call.source, std::move(*proc), std::move(callee->arguments));
-    } else if (structureConstructor) {
+    }
+    CHECK(std::holds_alternative<semantics::SymbolRef>(callee->u));
+    const Symbol &symbol{*std::get<semantics::SymbolRef>(callee->u)};
+    if (structureConstructor) {
       // Structure constructor misparsed as function reference?
-      CHECK(std::holds_alternative<semantics::SymbolRef>(callee->u));
-      const Symbol &derivedType{*std::get<semantics::SymbolRef>(callee->u)};
       const auto &designator{std::get<parser::ProcedureDesignator>(call.t)};
       if (const auto *name{std::get_if<parser::Name>(&designator.u)}) {
         semantics::Scope &scope{context_.FindScope(name->source)};
-        semantics::DerivedTypeSpec dtSpec{
-            name->source, derivedType.GetUltimate()};
+        semantics::DerivedTypeSpec dtSpec{name->source, symbol.GetUltimate()};
         if (!CheckIsValidForwardReference(dtSpec)) {
           return std::nullopt;
         }
@@ -2245,6 +2245,13 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::FunctionReference &funcRef,
             mutableRef.ConvertToStructureConstructor(type.derivedTypeSpec());
         return Analyze(structureConstructor->value());
       }
+    }
+    if (!context_.HasError(symbol)) {
+      AttachDeclaration(
+          Say("'%s' is called like a function but is not a procedure"_err_en_US,
+              symbol.name()),
+          symbol);
+      context_.SetError(symbol);
     }
   }
   return std::nullopt;
