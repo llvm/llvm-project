@@ -4140,6 +4140,12 @@ int __kmp_execute_tasks_oncore(kmp_info_t *thread, kmp_int32 gtid,
 #endif /* USE_ITT_BUILD */
                                kmp_int32 is_constrained);
 
+extern int __kmp_nesting_mode;
+extern int __kmp_nesting_mode_nlevels;
+extern int *__kmp_nesting_nth_level;
+extern void __kmp_init_nesting_mode();
+extern void __kmp_set_nesting_mode_threads();
+
 /// This class safely opens and closes a C-style FILE* object using RAII
 /// semantics. There are also methods which allow using stdout or stderr as
 /// the underlying FILE* object. With the implicit conversion operator to

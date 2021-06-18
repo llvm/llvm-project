@@ -1016,6 +1016,28 @@ static void __kmp_stg_print_warnings(kmp_str_buf_t *buffer, char const *name,
 } // __kmp_stg_print_warnings
 
 // -----------------------------------------------------------------------------
+// KMP_NESTING_MODE
+
+static void __kmp_stg_parse_nesting_mode(char const *name, char const *value,
+                                         void *data) {
+  __kmp_stg_parse_int(name, value, 0, INT_MAX, &__kmp_nesting_mode);
+#if KMP_AFFINITY_SUPPORTED && KMP_USE_HWLOC
+  if (__kmp_nesting_mode > 0)
+    __kmp_affinity_top_method = affinity_top_method_hwloc;
+#endif
+} // __kmp_stg_parse_nesting_mode
+
+static void __kmp_stg_print_nesting_mode(kmp_str_buf_t *buffer,
+                                         char const *name, void *data) {
+  if (__kmp_env_format) {
+    KMP_STR_BUF_PRINT_NAME;
+  } else {
+    __kmp_str_buf_print(buffer, "   %s", name);
+  }
+  __kmp_str_buf_print(buffer, "=%d\n", __kmp_nesting_mode);
+} // __kmp_stg_print_nesting_mode
+
+// -----------------------------------------------------------------------------
 // OMP_NESTED, OMP_NUM_THREADS
 
 static void __kmp_stg_parse_nested(char const *name, char const *value,
@@ -5106,6 +5128,8 @@ static kmp_setting_t __kmp_stg_table[] = {
     {"KMP_WARNINGS", __kmp_stg_parse_warnings, __kmp_stg_print_warnings, NULL,
      0, 0},
 
+    {"KMP_NESTING_MODE", __kmp_stg_parse_nesting_mode,
+     __kmp_stg_print_nesting_mode, NULL, 0, 0},
     {"OMP_NESTED", __kmp_stg_parse_nested, __kmp_stg_print_nested, NULL, 0, 0},
     {"OMP_NUM_THREADS", __kmp_stg_parse_num_threads,
      __kmp_stg_print_num_threads, NULL, 0, 0},

@@ -6848,6 +6848,8 @@ static void __kmp_do_serial_initialize(void) {
   __kmp_global.g.g_dynamic = FALSE;
   __kmp_global.g.g_dynamic_mode = dynamic_default;
 
+  __kmp_init_nesting_mode();
+
   __kmp_env_initialize(NULL);
 
 #if KMP_HAVE_MWAIT || KMP_HAVE_UMWAIT
@@ -7039,6 +7041,9 @@ static void __kmp_do_middle_initialize(void) {
   if (__kmp_dflt_team_nth > __kmp_sys_max_nth) {
     __kmp_dflt_team_nth = __kmp_sys_max_nth;
   }
+
+  if (__kmp_nesting_mode > 0)
+    __kmp_set_nesting_mode_threads();
 
   // There's no harm in continuing if the following check fails,
   // but it indicates an error in the previous logic.
@@ -8699,4 +8704,90 @@ void __kmp_hidden_helper_threads_initz_routine() {
   TCW_SYNC_4(__kmp_init_hidden_helper, FALSE);
 
   __kmp_hidden_helper_threads_deinitz_release();
+}
+
+/* Nesting Mode:
+   Set via KMP_NESTING_MODE, which takes an integer.
+   Note: we skip duplicate topology levels, and skip levels with only
+      one entity.
+   KMP_NESTING_MODE=0 is the default, and doesn't use nesting mode.
+   KMP_NESTING_MODE=1 sets as many nesting levels as there are distinct levels
+      in the topology, and initializes the number of threads at each of those
+      levels to the number of entities at each level, respectively, below the
+      entity at the parent level.
+   KMP_NESTING_MODE=N, where N>1, attempts to create up to N nesting levels,
+      but starts with nesting OFF -- max-active-levels-var is 1 -- and requires
+      the user to turn nesting on explicitly. This is an even more experimental
+      option to this experimental feature, and may change or go away in the
+      future.
+*/
+
+// Allocate space to store nesting levels
+void __kmp_init_nesting_mode() {
+  int levels = KMP_HW_LAST;
+  __kmp_nesting_mode_nlevels = levels;
+  __kmp_nesting_nth_level = (int *)KMP_INTERNAL_MALLOC(levels * sizeof(int));
+  for (int i = 0; i < levels; ++i)
+    __kmp_nesting_nth_level[i] = 0;
+  if (__kmp_nested_nth.size < levels) {
+    __kmp_nested_nth.nth =
+        (int *)KMP_INTERNAL_REALLOC(__kmp_nested_nth.nth, levels * sizeof(int));
+    __kmp_nested_nth.size = levels;
+  }
+}
+
+// Set # threads for top levels of nesting; must be called after topology set
+void __kmp_set_nesting_mode_threads() {
+  kmp_info_t *thread = __kmp_threads[__kmp_entry_gtid()];
+
+  if (__kmp_nesting_mode == 1)
+    __kmp_nesting_mode_nlevels = KMP_MAX_ACTIVE_LEVELS_LIMIT;
+  else if (__kmp_nesting_mode > 1)
+    __kmp_nesting_mode_nlevels = __kmp_nesting_mode;
+
+  if (__kmp_topology) { // use topology info
+    int loc, hw_level;
+    for (loc = 0, hw_level = 0; hw_level < __kmp_topology->get_depth() &&
+                                loc < __kmp_nesting_mode_nlevels;
+         loc++, hw_level++) {
+      __kmp_nesting_nth_level[loc] = __kmp_topology->get_ratio(hw_level);
+      if (__kmp_nesting_nth_level[loc] == 1)
+        loc--;
+    }
+    // Make sure all cores are used
+    if (__kmp_nesting_mode > 1 && loc > 1) {
+      int core_level = __kmp_topology->get_level(KMP_HW_CORE);
+      int num_cores = __kmp_topology->get_count(core_level);
+      int upper_levels = 1;
+      for (int level = 0; level < loc - 1; ++level)
+        upper_levels *= __kmp_nesting_nth_level[level];
+      if (upper_levels * __kmp_nesting_nth_level[loc - 1] < num_cores)
+        __kmp_nesting_nth_level[loc - 1] =
+            num_cores / __kmp_nesting_nth_level[loc - 2];
+    }
+    __kmp_nesting_mode_nlevels = loc;
+    __kmp_nested_nth.used = __kmp_nesting_mode_nlevels;
+  } else { // no topology info available; provide a reasonable guesstimation
+    if (__kmp_avail_proc >= 4) {
+      __kmp_nesting_nth_level[0] = __kmp_avail_proc / 2;
+      __kmp_nesting_nth_level[1] = 2;
+      __kmp_nesting_mode_nlevels = 2;
+    } else {
+      __kmp_nesting_nth_level[0] = __kmp_avail_proc;
+      __kmp_nesting_mode_nlevels = 1;
+    }
+    __kmp_nested_nth.used = __kmp_nesting_mode_nlevels;
+  }
+  for (int i = 0; i < __kmp_nesting_mode_nlevels; ++i) {
+    __kmp_nested_nth.nth[i] = __kmp_nesting_nth_level[i];
+  }
+  set__nproc(thread, __kmp_nesting_nth_level[0]);
+  if (__kmp_nesting_mode > 1 && __kmp_nesting_mode_nlevels > __kmp_nesting_mode)
+    __kmp_nesting_mode_nlevels = __kmp_nesting_mode;
+  if (get__max_active_levels(thread) > 1) {
+    // if max levels was set, set nesting mode levels to same
+    __kmp_nesting_mode_nlevels = get__max_active_levels(thread);
+  }
+  if (__kmp_nesting_mode == 1) // turn on nesting for this case only
+    set__max_active_levels(thread, __kmp_nesting_mode_nlevels);
 }
