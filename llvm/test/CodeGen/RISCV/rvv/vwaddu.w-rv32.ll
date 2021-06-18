@@ -1343,9 +1343,7 @@ define <vscale x 1 x i16> @intrinsic_vwaddu.w_mask_wv_tie_nxv1i16_nxv1i16_nxv1i8
 ; CHECK-LABEL: intrinsic_vwaddu.w_mask_wv_tie_nxv1i16_nxv1i16_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8,mf8,tu,mu
-; CHECK-NEXT:    vmv1r.v v25, v8
-; CHECK-NEXT:    vwaddu.wv v25, v8, v9, v0.t
-; CHECK-NEXT:    vmv1r.v v8, v25
+; CHECK-NEXT:    vwaddu.wv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i16> @llvm.riscv.vwaddu.w.mask.nxv1i16.nxv1i8(
@@ -1362,9 +1360,7 @@ define <vscale x 2 x i16> @intrinsic_vwaddu.w_mask_wv_tie_nxv2i16_nxv2i16_nxv2i8
 ; CHECK-LABEL: intrinsic_vwaddu.w_mask_wv_tie_nxv2i16_nxv2i16_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8,mf4,tu,mu
-; CHECK-NEXT:    vmv1r.v v25, v8
-; CHECK-NEXT:    vwaddu.wv v25, v8, v9, v0.t
-; CHECK-NEXT:    vmv1r.v v8, v25
+; CHECK-NEXT:    vwaddu.wv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i16> @llvm.riscv.vwaddu.w.mask.nxv2i16.nxv2i8(
@@ -1381,9 +1377,7 @@ define <vscale x 4 x i16> @intrinsic_vwaddu.w_mask_wv_tie_nxv4i16_nxv4i16_nxv4i8
 ; CHECK-LABEL: intrinsic_vwaddu.w_mask_wv_tie_nxv4i16_nxv4i16_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8,mf2,tu,mu
-; CHECK-NEXT:    vmv1r.v v25, v8
-; CHECK-NEXT:    vwaddu.wv v25, v8, v9, v0.t
-; CHECK-NEXT:    vmv1r.v v8, v25
+; CHECK-NEXT:    vwaddu.wv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i16> @llvm.riscv.vwaddu.w.mask.nxv4i16.nxv4i8(
@@ -1400,9 +1394,7 @@ define <vscale x 8 x i16> @intrinsic_vwaddu.w_mask_wv_tie_nxv8i16_nxv8i16_nxv8i8
 ; CHECK-LABEL: intrinsic_vwaddu.w_mask_wv_tie_nxv8i16_nxv8i16_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8,m1,tu,mu
-; CHECK-NEXT:    vmv2r.v v26, v8
-; CHECK-NEXT:    vwaddu.wv v26, v8, v10, v0.t
-; CHECK-NEXT:    vmv2r.v v8, v26
+; CHECK-NEXT:    vwaddu.wv v8, v8, v10, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i16> @llvm.riscv.vwaddu.w.mask.nxv8i16.nxv8i8(
@@ -1419,9 +1411,7 @@ define <vscale x 16 x i16> @intrinsic_vwaddu.w_mask_wv_tie_nxv16i16_nxv16i16_nxv
 ; CHECK-LABEL: intrinsic_vwaddu.w_mask_wv_tie_nxv16i16_nxv16i16_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8,m2,tu,mu
-; CHECK-NEXT:    vmv4r.v v28, v8
-; CHECK-NEXT:    vwaddu.wv v28, v8, v12, v0.t
-; CHECK-NEXT:    vmv4r.v v8, v28
+; CHECK-NEXT:    vwaddu.wv v8, v8, v12, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i16> @llvm.riscv.vwaddu.w.mask.nxv16i16.nxv16i8(
@@ -1438,9 +1428,7 @@ define <vscale x 32 x i16> @intrinsic_vwaddu.w_mask_wv_tie_nxv32i16_nxv32i16_nxv
 ; CHECK-LABEL: intrinsic_vwaddu.w_mask_wv_tie_nxv32i16_nxv32i16_nxv32i8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8,m4,tu,mu
-; CHECK-NEXT:    vmv8r.v v24, v8
-; CHECK-NEXT:    vwaddu.wv v24, v8, v16, v0.t
-; CHECK-NEXT:    vmv8r.v v8, v24
+; CHECK-NEXT:    vwaddu.wv v8, v8, v16, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 32 x i16> @llvm.riscv.vwaddu.w.mask.nxv32i16.nxv32i8(
@@ -1457,9 +1445,7 @@ define <vscale x 1 x i32> @intrinsic_vwaddu.w_mask_wv_tie_nxv1i32_nxv1i32_nxv1i1
 ; CHECK-LABEL: intrinsic_vwaddu.w_mask_wv_tie_nxv1i32_nxv1i32_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e16,mf4,tu,mu
-; CHECK-NEXT:    vmv1r.v v25, v8
-; CHECK-NEXT:    vwaddu.wv v25, v8, v9, v0.t
-; CHECK-NEXT:    vmv1r.v v8, v25
+; CHECK-NEXT:    vwaddu.wv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i32> @llvm.riscv.vwaddu.w.mask.nxv1i32.nxv1i16(
@@ -1476,9 +1462,7 @@ define <vscale x 2 x i32> @intrinsic_vwaddu.w_mask_wv_tie_nxv2i32_nxv2i32_nxv2i1
 ; CHECK-LABEL: intrinsic_vwaddu.w_mask_wv_tie_nxv2i32_nxv2i32_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e16,mf2,tu,mu
-; CHECK-NEXT:    vmv1r.v v25, v8
-; CHECK-NEXT:    vwaddu.wv v25, v8, v9, v0.t
-; CHECK-NEXT:    vmv1r.v v8, v25
+; CHECK-NEXT:    vwaddu.wv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i32> @llvm.riscv.vwaddu.w.mask.nxv2i32.nxv2i16(
@@ -1495,9 +1479,7 @@ define <vscale x 4 x i32> @intrinsic_vwaddu.w_mask_wv_tie_nxv4i32_nxv4i32_nxv4i1
 ; CHECK-LABEL: intrinsic_vwaddu.w_mask_wv_tie_nxv4i32_nxv4i32_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e16,m1,tu,mu
-; CHECK-NEXT:    vmv2r.v v26, v8
-; CHECK-NEXT:    vwaddu.wv v26, v8, v10, v0.t
-; CHECK-NEXT:    vmv2r.v v8, v26
+; CHECK-NEXT:    vwaddu.wv v8, v8, v10, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i32> @llvm.riscv.vwaddu.w.mask.nxv4i32.nxv4i16(
@@ -1514,9 +1496,7 @@ define <vscale x 8 x i32> @intrinsic_vwaddu.w_mask_wv_tie_nxv8i32_nxv8i32_nxv8i1
 ; CHECK-LABEL: intrinsic_vwaddu.w_mask_wv_tie_nxv8i32_nxv8i32_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e16,m2,tu,mu
-; CHECK-NEXT:    vmv4r.v v28, v8
-; CHECK-NEXT:    vwaddu.wv v28, v8, v12, v0.t
-; CHECK-NEXT:    vmv4r.v v8, v28
+; CHECK-NEXT:    vwaddu.wv v8, v8, v12, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i32> @llvm.riscv.vwaddu.w.mask.nxv8i32.nxv8i16(
@@ -1533,9 +1513,7 @@ define <vscale x 16 x i32> @intrinsic_vwaddu.w_mask_wv_tie_nxv16i32_nxv16i32_nxv
 ; CHECK-LABEL: intrinsic_vwaddu.w_mask_wv_tie_nxv16i32_nxv16i32_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e16,m4,tu,mu
-; CHECK-NEXT:    vmv8r.v v24, v8
-; CHECK-NEXT:    vwaddu.wv v24, v8, v16, v0.t
-; CHECK-NEXT:    vmv8r.v v8, v24
+; CHECK-NEXT:    vwaddu.wv v8, v8, v16, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 16 x i32> @llvm.riscv.vwaddu.w.mask.nxv16i32.nxv16i16(
@@ -1552,9 +1530,7 @@ define <vscale x 1 x i64> @intrinsic_vwaddu.w_mask_wv_tie_nxv1i64_nxv1i64_nxv1i3
 ; CHECK-LABEL: intrinsic_vwaddu.w_mask_wv_tie_nxv1i64_nxv1i64_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32,mf2,tu,mu
-; CHECK-NEXT:    vmv1r.v v25, v8
-; CHECK-NEXT:    vwaddu.wv v25, v8, v9, v0.t
-; CHECK-NEXT:    vmv1r.v v8, v25
+; CHECK-NEXT:    vwaddu.wv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i64> @llvm.riscv.vwaddu.w.mask.nxv1i64.nxv1i32(
@@ -1571,9 +1547,7 @@ define <vscale x 2 x i64> @intrinsic_vwaddu.w_mask_wv_tie_nxv2i64_nxv2i64_nxv2i3
 ; CHECK-LABEL: intrinsic_vwaddu.w_mask_wv_tie_nxv2i64_nxv2i64_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32,m1,tu,mu
-; CHECK-NEXT:    vmv2r.v v26, v8
-; CHECK-NEXT:    vwaddu.wv v26, v8, v10, v0.t
-; CHECK-NEXT:    vmv2r.v v8, v26
+; CHECK-NEXT:    vwaddu.wv v8, v8, v10, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 2 x i64> @llvm.riscv.vwaddu.w.mask.nxv2i64.nxv2i32(
@@ -1590,9 +1564,7 @@ define <vscale x 4 x i64> @intrinsic_vwaddu.w_mask_wv_tie_nxv4i64_nxv4i64_nxv4i3
 ; CHECK-LABEL: intrinsic_vwaddu.w_mask_wv_tie_nxv4i64_nxv4i64_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32,m2,tu,mu
-; CHECK-NEXT:    vmv4r.v v28, v8
-; CHECK-NEXT:    vwaddu.wv v28, v8, v12, v0.t
-; CHECK-NEXT:    vmv4r.v v8, v28
+; CHECK-NEXT:    vwaddu.wv v8, v8, v12, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 4 x i64> @llvm.riscv.vwaddu.w.mask.nxv4i64.nxv4i32(
@@ -1609,9 +1581,7 @@ define <vscale x 8 x i64> @intrinsic_vwaddu.w_mask_wv_tie_nxv8i64_nxv8i64_nxv8i3
 ; CHECK-LABEL: intrinsic_vwaddu.w_mask_wv_tie_nxv8i64_nxv8i64_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e32,m4,tu,mu
-; CHECK-NEXT:    vmv8r.v v24, v8
-; CHECK-NEXT:    vwaddu.wv v24, v8, v16, v0.t
-; CHECK-NEXT:    vmv8r.v v8, v24
+; CHECK-NEXT:    vwaddu.wv v8, v8, v16, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i64> @llvm.riscv.vwaddu.w.mask.nxv8i64.nxv8i32(
