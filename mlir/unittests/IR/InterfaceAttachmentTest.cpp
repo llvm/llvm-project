@@ -12,10 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "gtest/gtest.h"
 
 #include "../../test/lib/Dialect/Test/TestAttributes.h"
+#include "../../test/lib/Dialect/Test/TestDialect.h"
 #include "../../test/lib/Dialect/Test/TestTypes.h"
 
 using namespace mlir;
@@ -148,6 +150,74 @@ TEST(InterfaceAttachment, Attribute) {
   ASSERT_TRUE(iface != nullptr);
   EXPECT_EQ(iface.getDialectPtr(), &attr.getDialect());
   EXPECT_EQ(iface.getSomeNumber(), 42);
+}
+
+/// External interface model for the module operation. Only provides non-default
+/// methods.
+struct TestExternalOpModel
+    : public TestExternalOpInterface::ExternalModel<TestExternalOpModel,
+                                                    ModuleOp> {
+  unsigned getNameLengthPlusArg(Operation *op, unsigned arg) const {
+    return op->getName().getStringRef().size() + arg;
+  }
+
+  static unsigned getNameLengthPlusArgTwice(unsigned arg) {
+    return ModuleOp::getOperationName().size() + 2 * arg;
+  }
+};
+
+/// External interface model for the func operation. Provides non-deafult and
+/// overrides default methods.
+struct TestExternalOpOverridingModel
+    : public TestExternalOpInterface::FallbackModel<
+          TestExternalOpOverridingModel> {
+  unsigned getNameLengthPlusArg(Operation *op, unsigned arg) const {
+    return op->getName().getStringRef().size() + arg;
+  }
+
+  static unsigned getNameLengthPlusArgTwice(unsigned arg) {
+    return FuncOp::getOperationName().size() + 2 * arg;
+  }
+
+  unsigned getNameLengthTimesArg(Operation *op, unsigned arg) const {
+    return 42;
+  }
+
+  static unsigned getNameLengthMinusArg(unsigned arg) { return 21; }
+};
+
+TEST(InterfaceAttachment, Operation) {
+  MLIRContext context;
+
+  // Initially, the operation doesn't have the interface.
+  auto moduleOp = ModuleOp::create(UnknownLoc::get(&context));
+  ASSERT_FALSE(isa<TestExternalOpInterface>(moduleOp.getOperation()));
+
+  // We can attach an external interface and now the operaiton has it.
+  ModuleOp::attachInterface<TestExternalOpModel>(context);
+  auto iface = dyn_cast<TestExternalOpInterface>(moduleOp.getOperation());
+  ASSERT_TRUE(iface != nullptr);
+  EXPECT_EQ(iface.getNameLengthPlusArg(10), 16u);
+  EXPECT_EQ(iface.getNameLengthTimesArg(3), 18u);
+  EXPECT_EQ(iface.getNameLengthPlusArgTwice(18), 42u);
+  EXPECT_EQ(iface.getNameLengthMinusArg(5), 1u);
+
+  // Default implementation can be overridden.
+  auto funcOp = FuncOp::create(UnknownLoc::get(&context), "function",
+                               FunctionType::get(&context, {}, {}));
+  ASSERT_FALSE(isa<TestExternalOpInterface>(funcOp.getOperation()));
+  FuncOp::attachInterface<TestExternalOpOverridingModel>(context);
+  iface = dyn_cast<TestExternalOpInterface>(funcOp.getOperation());
+  ASSERT_TRUE(iface != nullptr);
+  EXPECT_EQ(iface.getNameLengthPlusArg(10), 14u);
+  EXPECT_EQ(iface.getNameLengthTimesArg(0), 42u);
+  EXPECT_EQ(iface.getNameLengthPlusArgTwice(8), 20u);
+  EXPECT_EQ(iface.getNameLengthMinusArg(1000), 21u);
+
+  // Another context doesn't have the interfaces registered.
+  MLIRContext other;
+  auto otherModuleOp = ModuleOp::create(UnknownLoc::get(&other));
+  ASSERT_FALSE(isa<TestExternalOpInterface>(otherModuleOp.getOperation()));
 }
 
 } // end namespace
