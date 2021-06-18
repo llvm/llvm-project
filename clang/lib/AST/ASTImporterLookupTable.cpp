@@ -117,6 +117,19 @@ void ASTImporterLookupTable::remove(NamedDecl *ND) {
     remove(ReDC, ND);
 }
 
+void ASTImporterLookupTable::update(NamedDecl *ND, DeclContext *OldDC) {
+  assert(OldDC != ND->getDeclContext() &&
+         "DeclContext should be changed before update");
+  if (contains(ND->getDeclContext(), ND)) {
+    assert(!contains(OldDC, ND) &&
+           "Decl should not be found in the old context if already in the new");
+    return;
+  }
+
+  remove(OldDC, ND);
+  add(ND);
+}
+
 ASTImporterLookupTable::LookupResult
 ASTImporterLookupTable::lookup(DeclContext *DC, DeclarationName Name) const {
   auto DCI = LookupTable.find(DC->getPrimaryContext());
@@ -129,6 +142,10 @@ ASTImporterLookupTable::lookup(DeclContext *DC, DeclarationName Name) const {
     return {};
 
   return NamesI->second;
+}
+
+bool ASTImporterLookupTable::contains(DeclContext *DC, NamedDecl *ND) const {
+  return 0 < lookup(DC, ND->getDeclName()).count(ND);
 }
 
 void ASTImporterLookupTable::dump(DeclContext *DC) const {
