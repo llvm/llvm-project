@@ -102,7 +102,7 @@ RUN: ld.lld -### -m i386pep foo.o -whole-archive bar.a -no-whole-archive baz.a |
 WHOLE-ARCHIVE: foo.o -wholearchive:bar.a baz.a
 
 RUN: ld.lld -### -m i386pep foo.o | FileCheck -check-prefix MINGW-FLAG %s
-MINGW-FLAG: -lldmingw
+MINGW-FLAG: lld-link -lldmingw
 
 RUN: ld.lld -### -m i386pep foo.o --exclude-all-symbols | FileCheck -check-prefix EXCLUDE-ALL %s
 RUN: ld.lld -### -m i386pep foo.o -exclude-all-symbols | FileCheck -check-prefix EXCLUDE-ALL %s
