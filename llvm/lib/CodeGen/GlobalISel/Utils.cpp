@@ -673,6 +673,19 @@ Optional<APInt> llvm::ConstantFoldExtOp(unsigned Opcode, const Register Op1,
   return None;
 }
 
+Optional<APFloat> llvm::ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy,
+                                               Register Src,
+                                               const MachineRegisterInfo &MRI) {
+  assert(Opcode == TargetOpcode::G_SITOFP || Opcode == TargetOpcode::G_UITOFP);
+  if (auto MaybeSrcVal = getConstantVRegVal(Src, MRI)) {
+    APFloat DstVal(getFltSemanticForLLT(DstTy));
+    DstVal.convertFromAPInt(*MaybeSrcVal, Opcode == TargetOpcode::G_SITOFP,
+                            APFloat::rmNearestTiesToEven);
+    return DstVal;
+  }
+  return None;
+}
+
 bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
                                   GISelKnownBits *KB) {
   Optional<DefinitionAndSourceRegister> DefSrcReg =

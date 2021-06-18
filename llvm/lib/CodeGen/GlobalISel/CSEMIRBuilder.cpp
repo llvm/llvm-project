@@ -203,6 +203,16 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
       return buildConstant(Dst, *MaybeCst);
     break;
   }
+  case TargetOpcode::G_SITOFP:
+  case TargetOpcode::G_UITOFP: {
+    // Try to constant fold these.
+    assert(SrcOps.size() == 1 && "Invalid sources");
+    assert(DstOps.size() == 1 && "Invalid dsts");
+    if (Optional<APFloat> Cst = ConstantFoldIntToFloat(
+            Opc, DstOps[0].getLLTTy(*getMRI()), SrcOps[0].getReg(), *getMRI()))
+      return buildFConstant(DstOps[0], *Cst);
+    break;
+  }
   }
   bool CanCopy = checkCopyToDefsPossible(DstOps);
   if (!canPerformCSEForOpc(Opc))
