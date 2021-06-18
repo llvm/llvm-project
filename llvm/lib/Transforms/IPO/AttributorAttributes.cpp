@@ -8245,7 +8245,7 @@ struct AACallEdgesFunction : public AACallEdges {
   SetVector<Function *> CalledFunctions;
 
   /// Does this function have a call to a function that we don't know about.
-  bool HasUnknownCallee;
+  bool HasUnknownCallee = false;
 };
 
 } // namespace
@@ -8256,11 +8256,7 @@ AACallGraphNode *AACallEdgeIterator::operator*() const {
 }
 
 void AttributorCallGraph::print() {
-  std::string Filename = "AttributorCallGraph.dot";
-  std::error_code EC;
-
-  raw_fd_ostream File(Filename, EC, sys::fs::OF_TextWithCRLF);
-  llvm::WriteGraph(File, this);
+  llvm::WriteGraph(outs(), this);
 }
 
 const char AAReturnedValues::ID = 0;

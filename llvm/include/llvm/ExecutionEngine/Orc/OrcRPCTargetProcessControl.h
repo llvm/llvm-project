@@ -362,8 +362,10 @@ public:
              << formatv("{0:x16}", WrapperFnAddr) << " with "
              << formatv("{0:x16}", ArgBuffer.size()) << " argument buffer\n";
     });
-    auto Result =
-        EP.template callB<orcrpctpc::RunWrapper>(WrapperFnAddr, ArgBuffer);
+    auto Result = EP.template callB<orcrpctpc::RunWrapper>(
+        WrapperFnAddr,
+        ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(ArgBuffer.data()),
+                          ArgBuffer.size()));
     return Result;
   }
 

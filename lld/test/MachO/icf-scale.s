@@ -2,7 +2,7 @@
 # RUN: rm -rf %t*
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
-# RUN: %lld -lSystem -icf all -o %t %t.o
+# RUN: %lld -lSystem --icf=all -o %t %t.o
 # RUN: llvm-objdump -d --syms %t | FileCheck %s
 
 ## When ICF has fewer than 1 Ki functions to segregate into equivalence classes,

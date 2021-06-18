@@ -33,9 +33,16 @@ if (OPENMP_STANDALONE_BUILD)
   list(APPEND CMAKE_MODULE_PATH ${LLVM_CMAKE_DIR})
   include(AddLLVM)
 else()
+  # Note that OPENMP_STANDALONE_BUILD is FALSE, when
+  # openmp is built with -DLLVM_ENABLE_RUNTIMES="openmp" vs
+  # -DLLVM_ENABLE_PROJECTS="openmp", but openmp build
+  # is actually done as a standalone project build with many
+  # LLVM CMake variables propagated to it.
   list(APPEND LIBOMPTARGET_LLVM_INCLUDE_DIRS
     ${LLVM_MAIN_INCLUDE_DIR} ${LLVM_BINARY_DIR}/include
     )
+  message(STATUS
+    "Using LLVM include directories: ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}")
 endif()
 
 ################################################################################
