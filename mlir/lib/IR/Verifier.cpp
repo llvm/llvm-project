@@ -44,7 +44,9 @@ namespace {
 class OperationVerifier {
 public:
   explicit OperationVerifier(MLIRContext *context)
-      : parallelismEnabled(context->isMultithreadingEnabled()) {}
+      // TODO: Re-enable parallelism once deadlocks found in D104207 are
+      // resolved.
+      : parallelismEnabled(false) {}
 
   /// Verify the given operation.
   LogicalResult verifyOpAndDominance(Operation &op);
