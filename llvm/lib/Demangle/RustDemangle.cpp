@@ -625,8 +625,15 @@ void Demangler::demangleOptionalBinder() {
 //         | "p"                          // placeholder
 //         | <backref>
 void Demangler::demangleConst() {
+  if (Error || RecursionLevel >= MaxRecursionLevel) {
+    Error = true;
+    return;
+  }
+  SwapAndRestore<size_t> SaveRecursionLevel(RecursionLevel, RecursionLevel + 1);
+
+  char C = consume();
   BasicType Type;
-  if (parseBasicType(consume(), Type)) {
+  if (parseBasicType(C, Type)) {
     switch (Type) {
     case BasicType::I8:
     case BasicType::I16:
@@ -652,10 +659,11 @@ void Demangler::demangleConst() {
       print('_');
       break;
     default:
-      // FIXME demangle backreferences.
       Error = true;
       break;
     }
+  } else if (C == 'B') {
+    demangleBackref([&] { demangleConst(); });
   } else {
     Error = true;
   }
