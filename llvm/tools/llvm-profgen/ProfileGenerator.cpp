@@ -179,19 +179,20 @@ void ProfileGenerator::findDisjointRanges(RangeSample &DisjointRanges,
     Boundaries[End].addEndCount(Count);
   }
 
-  uint64_t BeginAddress = 0;
+  uint64_t BeginAddress = UINT64_MAX;
   int Count = 0;
   for (auto Item : Boundaries) {
     uint64_t Address = Item.first;
     BoundaryPoint &Point = Item.second;
     if (Point.BeginCount) {
-      if (BeginAddress)
+      if (BeginAddress != UINT64_MAX)
         DisjointRanges[{BeginAddress, Address - 1}] = Count;
       Count += Point.BeginCount;
       BeginAddress = Address;
     }
     if (Point.EndCount) {
-      assert(BeginAddress && "First boundary point cannot be 'end' point");
+      assert((BeginAddress != UINT64_MAX) &&
+             "First boundary point cannot be 'end' point");
       DisjointRanges[{BeginAddress, Address}] = Count;
       Count -= Point.EndCount;
       BeginAddress = Address + 1;
