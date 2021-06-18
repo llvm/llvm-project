@@ -15,6 +15,10 @@
 
 namespace Fortran::runtime::io {
 
+// Max size of a group, symbol or component identifier that can appear in
+// NAMELIST input, plus a byte for NUL termination.
+static constexpr std::size_t nameBufferSize{201};
+
 bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
   IoStatementState &io{*cookie};
   io.CheckFormattedStmtType<Direction::Output>("OutputNamelist");
@@ -56,22 +60,29 @@ bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
   return EmitWithAdvance('/');
 }
 
+static constexpr bool IsLegalIdStart(char32_t ch) {
+  return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || ch == '_' ||
+      ch == '@' || ch == '$';
+}
+
+static constexpr bool IsLegalIdChar(char32_t ch) {
+  return IsLegalIdStart(ch) || (ch >= '0' && ch <= '9');
+}
+
+static constexpr char NormalizeIdChar(char32_t ch) {
+  return static_cast<char>(ch >= 'A' && ch <= 'Z' ? ch - 'A' + 'a' : ch);
+}
+
 static bool GetLowerCaseName(
     IoStatementState &io, char buffer[], std::size_t maxLength) {
-  if (auto ch{io.GetCurrentChar()}) {
-    static const auto IsLegalIdStart{[](char32_t ch) -> bool {
-      return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') ||
-          ch == '_' || ch == '@' || ch == '$';
-    }};
+  if (auto ch{io.GetNextNonBlank()}) {
     if (IsLegalIdStart(*ch)) {
       std::size_t j{0};
       do {
-        buffer[j] =
-            static_cast<char>(*ch >= 'A' && *ch <= 'Z' ? *ch - 'A' + 'a' : *ch);
+        buffer[j] = NormalizeIdChar(*ch);
         io.HandleRelativePosition(1);
         ch = io.GetCurrentChar();
-      } while (++j < maxLength && ch &&
-          (IsLegalIdStart(*ch) || (*ch >= '0' && *ch <= '9')));
+      } while (++j < maxLength && ch && IsLegalIdChar(*ch));
       buffer[j++] = '\0';
       if (j <= maxLength) {
         return true;
@@ -118,8 +129,8 @@ static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
     const Descriptor &source, const char *name) {
   IoErrorHandler &handler{io.GetIoErrorHandler()};
   io.HandleRelativePosition(1); // skip '('
-  // Allow for blanks in subscripts; it's nonstandard, but not ambiguous
-  // within the parentheses
+  // Allow for blanks in subscripts; they're nonstandard, but not
+  // ambiguous within the parentheses.
   SubscriptValue lower[maxRank], upper[maxRank], stride[maxRank];
   int j{0};
   std::size_t elemLen{source.ElementBytes()};
@@ -211,6 +222,38 @@ static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
   return false;
 }
 
+static bool HandleComponent(IoStatementState &io, Descriptor &desc,
+    const Descriptor &source, const char *name) {
+  IoErrorHandler &handler{io.GetIoErrorHandler()};
+  io.HandleRelativePosition(1); // skip '%'
+  char compName[nameBufferSize];
+  if (GetLowerCaseName(io, compName, sizeof compName)) {
+    const DescriptorAddendum *addendum{source.Addendum()};
+    if (const typeInfo::DerivedType *
+        type{addendum ? addendum->derivedType() : nullptr}) {
+      if (const typeInfo::Component *
+          comp{type->FindDataComponent(compName, std::strlen(compName))}) {
+        comp->EstablishDescriptor(desc, source, nullptr, handler);
+        return true;
+      } else {
+        handler.SignalError(
+            "NAMELIST component reference '%%%s' of input group item %s is not "
+            "a component of its derived type",
+            compName, name);
+      }
+    } else {
+      handler.SignalError("NAMELIST component reference '%%%s' of input group "
+                          "item %s for non-derived type",
+          compName, name);
+    }
+  } else {
+    handler.SignalError("NAMELIST component reference of input group item %s "
+                        "has no name after '%'",
+        name);
+  }
+  return false;
+}
+
 bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   IoStatementState &io{*cookie};
   io.CheckFormattedStmtType<Direction::Input>("InputNamelist");
@@ -225,7 +268,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
     return false;
   }
   io.HandleRelativePosition(1);
-  char name[101];
+  char name[nameBufferSize];
   if (!GetLowerCaseName(io, name, sizeof name)) {
     handler.SignalError("NAMELIST input group has no name");
     return false;
@@ -268,15 +311,14 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
     next = io.GetCurrentChar();
     if (next && (*next == '(' || *next == '%')) {
       do {
+        Descriptor &mutableDescriptor{staticDesc[whichStaticDesc].descriptor()};
+        whichStaticDesc ^= 1;
         if (*next == '(') {
-          Descriptor &mutableDescriptor{
-              staticDesc[whichStaticDesc].descriptor()};
-          whichStaticDesc ^= 1;
           HandleSubscripts(io, mutableDescriptor, *useDescriptor, name);
-          useDescriptor = &mutableDescriptor;
         } else {
-          handler.Crash("unimplemented: component references in NAMELIST");
+          HandleComponent(io, mutableDescriptor, *useDescriptor, name);
         }
+        useDescriptor = &mutableDescriptor;
         next = io.GetCurrentChar();
       } while (next && (*next == '(' || *next == '%'));
     }
