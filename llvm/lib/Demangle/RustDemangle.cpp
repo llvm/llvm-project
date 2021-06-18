@@ -480,6 +480,17 @@ void Demangler::demangleType() {
   case 'F':
     demangleFnSig();
     break;
+  case 'D':
+    demangleDynBounds();
+    if (consumeIf('L')) {
+      if (auto Lifetime = parseBase62Number()) {
+        print(" + ");
+        printLifetime(Lifetime);
+      }
+    } else {
+      Error = true;
+    }
+    break;
   default:
     Position = Start;
     demanglePath(rust_demangle::InType::Yes);
@@ -527,6 +538,16 @@ void Demangler::demangleFnSig() {
     print(" -> ");
     demangleType();
   }
+}
+
+// <dyn-bounds> = [<binder>] {<dyn-trait>} "E"
+void Demangler::demangleDynBounds() {
+  SwapAndRestore<size_t> SaveBoundLifetimes(BoundLifetimes, BoundLifetimes);
+  print("dyn ");
+  demangleOptionalBinder();
+  // FIXME demangle {dyn-trait}
+  if (!consumeIf('E'))
+    Error = true;
 }
 
 // Demangles optional binder and updates the number of bound lifetimes.

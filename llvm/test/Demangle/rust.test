@@ -232,6 +232,22 @@ CHECK: function::<extern "cdecl" fn()>
 CHECK: function::<unsafe extern "C-cmse-nonsecure-call" fn()>
        _RIC8functionFUK21C_cmse_nonsecure_callEuE
 
+; Trait objects
+
+CHECK: trait::<dyn >
+       _RIC5traitDEL_E
+
+CHECK: trait::<dyn for<'a> >
+       _RIC5traitDG_EL_E
+
+CHECK: trait::<for<'a> fn(dyn for<'b> + 'a)>
+       _RIC5traitFG_DG_EL0_EuE
+
+; Invalid trait object, missing lifetime.
+
+CHECK: _RIC5traitDEE
+       _RIC5traitDEE
+
 ; Binders
 
 CHECK: binders::<for<'a> fn(&'a _)>
