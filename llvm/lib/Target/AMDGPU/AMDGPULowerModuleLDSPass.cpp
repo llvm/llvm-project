@@ -37,6 +37,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
@@ -45,6 +46,11 @@
 #define DEBUG_TYPE "amdgpu-lower-module-lds"
 
 using namespace llvm;
+
+static cl::opt<bool> SuperAlignLDSGlobals(
+    "amdgpu-super-align-lds-globals",
+    cl::desc("Increase alignment of LDS if it is not on align boundary"),
+    cl::init(true), cl::Hidden);
 
 namespace {
 
@@ -174,31 +180,27 @@ private:
 
     // Increase the alignment of LDS globals if necessary to maximise the chance
     // that we can use aligned LDS instructions to access them.
-    for (auto *GV : FoundLocalVars) {
-      unsigned AlignValue = GV->getAlignment();
-      if (AlignValue == 0) {
-        GV->setAlignment(DL.getABITypeAlign(GV->getValueType()));
-        continue;
+    if (SuperAlignLDSGlobals) {
+      for (auto *GV : FoundLocalVars) {
+        Align Alignment = AMDGPU::getAlign(DL, GV);
+        TypeSize GVSize = DL.getTypeAllocSize(GV->getValueType());
+
+        if (GVSize > 8) {
+          // We might want to use a b96 or b128 load/store
+          Alignment = std::max(Alignment, Align(16));
+        } else if (GVSize > 4) {
+          // We might want to use a b64 load/store
+          Alignment = std::max(Alignment, Align(8));
+        } else if (GVSize > 2) {
+          // We might want to use a b32 load/store
+          Alignment = std::max(Alignment, Align(4));
+        } else if (GVSize > 1) {
+          // We might want to use a b16 load/store
+          Alignment = std::max(Alignment, Align(2));
+        }
+
+        GV->setAlignment(Alignment);
       }
-
-      Align Alignment(AlignValue);
-      TypeSize GVSize = DL.getTypeAllocSize(GV->getValueType());
-
-      if (GVSize > 8) {
-        // We might want to use a b96 or b128 load/store
-        Alignment = std::max(Alignment, Align(16));
-      } else if (GVSize > 4) {
-        // We might want to use a b64 load/store
-        Alignment = std::max(Alignment, Align(8));
-      } else if (GVSize > 2) {
-        // We might want to use a b32 load/store
-        Alignment = std::max(Alignment, Align(4));
-      } else if (GVSize > 1) {
-        // We might want to use a b16 load/store
-        Alignment = std::max(Alignment, Align(2));
-      }
-
-      GV->setAlignment(Alignment);
     }
 
     // Sort by alignment, descending, to minimise padding.
