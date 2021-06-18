@@ -64,6 +64,9 @@ public:
   Block &back() { return blocks.back(); }
   Block &front() { return blocks.front(); }
 
+  /// Return true if this region has exactly one block.
+  bool hasOneBlock() { return !empty() && std::next(begin()) == end(); }
+
   /// getSublistAccess() - Returns pointer to member of region.
   static BlockListType Region::*getSublistAccess(Block *) {
     return &Region::blocks;
@@ -234,6 +237,11 @@ public:
   /// ancestor of 'block' that lies in this region. Returns nullptr if the
   /// latter fails.
   Block *findAncestorBlockInRegion(Block &block);
+
+  /// Returns 'op' if 'op' lies in this region, or otherwise finds the
+  /// ancestor of 'op' that lies in this region. Returns nullptr if the
+  /// latter fails.
+  Operation *findAncestorOpInRegion(Operation &op);
 
   /// Drop all operand uses from operations within this region, which is
   /// an essential step in breaking cyclic dependences between references when
