@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "memtag.h"
 #include "tests/scudo_unit_test.h"
 
 // Match Android's default configuration, which disables Scudo's mismatch
@@ -33,6 +34,8 @@ __scudo_default_options() {
 // for Fuchsia builds.
 #if !SCUDO_FUCHSIA
 int main(int argc, char **argv) {
+  if (scudo::archSupportsMemoryTagging())
+    scudo::enableSystemMemoryTaggingTestOnly();
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
