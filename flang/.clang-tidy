@@ -1,2 +1,2 @@
-Checks: '-llvm-include-order,-readability-identifier-naming,-misc-no-recursion,-clang-diagnostic-*'
+Checks: '-llvm-include-order,-readability-identifier-naming,-clang-diagnostic-*'
 InheritParentConfig: true
