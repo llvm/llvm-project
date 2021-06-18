@@ -326,18 +326,6 @@ uint32_t Breakpoint::GetIgnoreCount() const {
   return m_options_up->GetIgnoreCount();
 }
 
-bool Breakpoint::IgnoreCountShouldStop() {
-  uint32_t ignore = GetIgnoreCount();
-  if (ignore != 0) {
-    // When we get here we know the location that caused the stop doesn't have
-    // an ignore count, since by contract we call it first...  So we don't have
-    // to find & decrement it, we only have to decrement our own ignore count.
-    DecrementIgnoreCount();
-    return false;
-  } else
-    return true;
-}
-
 uint32_t Breakpoint::GetHitCount() const { return m_hit_counter.GetValue(); }
 
 bool Breakpoint::IsOneShot() const { return m_options_up->IsOneShot(); }

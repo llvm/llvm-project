@@ -297,6 +297,10 @@ protected:
 
   void DecrementIgnoreCount();
 
+  /// BreakpointLocation::IgnoreCountShouldStop  can only be called once
+  /// per stop.  This method checks first against the loc and then the owner.
+  /// It also takes care of decrementing the ignore counters.
+  /// If it returns false we should continue, otherwise stop.
   bool IgnoreCountShouldStop();
 
 private:
