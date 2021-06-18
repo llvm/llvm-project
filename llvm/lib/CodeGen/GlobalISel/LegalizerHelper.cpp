@@ -2791,17 +2791,15 @@ LegalizerHelper::lowerLoad(MachineInstr &MI) {
       LLT PtrTy = MRI.getType(PtrReg);
       unsigned AnyExtSize = NextPowerOf2(DstTy.getSizeInBits());
       LLT AnyExtTy = LLT::scalar(AnyExtSize);
-      Register LargeLdReg = MRI.createGenericVirtualRegister(AnyExtTy);
-      Register SmallLdReg = MRI.createGenericVirtualRegister(AnyExtTy);
       auto LargeLoad = MIRBuilder.buildLoadInstr(
-        TargetOpcode::G_ZEXTLOAD, LargeLdReg, PtrReg, *LargeMMO);
+        TargetOpcode::G_ZEXTLOAD, AnyExtTy, PtrReg, *LargeMMO);
 
       auto OffsetCst = MIRBuilder.buildConstant(
         LLT::scalar(PtrTy.getSizeInBits()), LargeSplitSize / 8);
       Register PtrAddReg = MRI.createGenericVirtualRegister(PtrTy);
       auto SmallPtr =
         MIRBuilder.buildPtrAdd(PtrAddReg, PtrReg, OffsetCst);
-      auto SmallLoad = MIRBuilder.buildLoad(SmallLdReg, SmallPtr,
+      auto SmallLoad = MIRBuilder.buildLoad(AnyExtTy, SmallPtr,
                                             *SmallMMO);
 
       auto ShiftAmt = MIRBuilder.buildConstant(AnyExtTy, LargeSplitSize);
