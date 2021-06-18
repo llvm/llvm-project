@@ -545,9 +545,18 @@ void Demangler::demangleDynBounds() {
   SwapAndRestore<size_t> SaveBoundLifetimes(BoundLifetimes, BoundLifetimes);
   print("dyn ");
   demangleOptionalBinder();
-  // FIXME demangle {dyn-trait}
-  if (!consumeIf('E'))
-    Error = true;
+  for (size_t I = 0; !Error && !consumeIf('E'); ++I) {
+    if (I > 0)
+      print(" + ");
+    demangleDynTrait();
+  }
+}
+
+// <dyn-trait> = <path> {<dyn-trait-assoc-binding>}
+// <dyn-trait-assoc-binding> = "p" <undisambiguated-identifier> <type>
+void Demangler::demangleDynTrait() {
+  demanglePath(InType::Yes);
+  // FIXME demangle {<dyn-trait-assoc-binding>}
 }
 
 // Demangles optional binder and updates the number of bound lifetimes.
