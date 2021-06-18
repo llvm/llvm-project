@@ -1863,8 +1863,9 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
           // MOLD= procedure pointer
           const Symbol *last{GetLastSymbol(*mold)};
           CHECK(last);
-          auto procPointer{
-              characteristics::Procedure::Characterize(*last, context)};
+          auto procPointer{IsProcedure(*last)
+                  ? characteristics::Procedure::Characterize(*last, context)
+                  : std::nullopt};
           // procPointer is null if there was an error with the analysis
           // associated with the procedure pointer
           if (procPointer) {
@@ -2000,12 +2001,9 @@ static bool CheckAssociated(SpecificCall &call, FoldingContext &context) {
                                 "POINTER"_err_en_US),
               *pointerSymbol);
         } else {
-          const auto pointerProc{characteristics::Procedure::Characterize(
-              *pointerSymbol, context)};
           if (const auto &targetArg{call.arguments[1]}) {
             if (const auto *targetExpr{targetArg->UnwrapExpr()}) {
-              std::optional<characteristics::Procedure> targetProc{
-                  std::nullopt};
+              std::optional<characteristics::Procedure> pointerProc, targetProc;
               const Symbol *targetSymbol{GetLastSymbol(*targetExpr)};
               bool isCall{false};
               std::string targetName;
@@ -2018,13 +2016,18 @@ static bool CheckAssociated(SpecificCall &call, FoldingContext &context) {
                   targetName = targetProcRef->proc().GetName() + "()";
                   isCall = true;
                 }
-              } else if (targetSymbol && !targetProc) {
+              } else if (targetSymbol) {
                 // proc that's not a call
-                targetProc = characteristics::Procedure::Characterize(
-                    *targetSymbol, context);
+                if (IsProcedure(*targetSymbol)) {
+                  targetProc = characteristics::Procedure::Characterize(
+                      *targetSymbol, context);
+                }
                 targetName = targetSymbol->name().ToString();
               }
-
+              if (IsProcedure(*pointerSymbol)) {
+                pointerProc = characteristics::Procedure::Characterize(
+                    *pointerSymbol, context);
+              }
               if (pointerProc) {
                 if (targetProc) {
                   // procedure pointer and procedure target

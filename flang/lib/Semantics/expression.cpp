@@ -1860,6 +1860,7 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
             Say(sc.component.source, "'%s' is not a procedure"_err_en_US,
                 sc.component.source),
             *sym);
+        return std::nullopt;
       }
       if (auto *dtExpr{UnwrapExpr<Expr<SomeDerived>>(*base)}) {
         if (sym->has<semantics::GenericDetails>()) {
