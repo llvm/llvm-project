@@ -239,7 +239,8 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
   // Because this is exposed via libclang we must disable RemoveFileOnSignal.
   return CI.createDefaultOutputFile(/*Binary=*/true, InFile, /*Extension=*/"",
                                     /*RemoveFileOnSignal=*/false,
-                                    /*CreateMissingDirectories=*/true);
+                                    /*CreateMissingDirectories=*/true,
+                                    /*ForceUseTemporary=*/true);
 }
 
 bool GenerateModuleInterfaceAction::BeginSourceFileAction(
