@@ -1,6 +1,6 @@
 // Check typeid() + type_info
 
-// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O3 -S -o - -emit-llvm -fcxx-exceptions -fexceptions -fexperimental-relative-c++-abi-vtables | FileCheck %s
+// RUN: %clang_cc1 %s -triple=aarch64-unknown-fuchsia -O3 -S -o - -emit-llvm -fcxx-exceptions -fexceptions | FileCheck %s
 
 // CHECK: %class.A = type { i32 (...)** }
 // CHECK: %class.B = type { %class.A }
