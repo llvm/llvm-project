@@ -23,6 +23,7 @@ define <2 x half> @select_v2f16(i1 zeroext %c, <2 x half> %a, <2 x half> %b) {
 ; CHECK-NEXT:    vfmv.f.s ft1, v25
 ; CHECK-NEXT:    vsetivli zero, 2, e16,mf4,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v8, ft1
+; CHECK-NEXT:    vsetvli zero, zero, e16,mf4,tu,mu
 ; CHECK-NEXT:    vfmv.s.f v8, ft0
 ; CHECK-NEXT:    ret
   %v = select i1 %c, <2 x half> %a, <2 x half> %b
@@ -52,6 +53,7 @@ define <2 x half> @selectcc_v2f16(half %a, half %b, <2 x half> %c, <2 x half> %d
 ; CHECK-NEXT:  .LBB1_5:
 ; CHECK-NEXT:    vfmv.f.s ft0, v8
 ; CHECK-NEXT:  .LBB1_6:
+; CHECK-NEXT:    vsetvli zero, zero, e16,mf4,tu,mu
 ; CHECK-NEXT:    vfmv.s.f v25, ft0
 ; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    ret
@@ -1046,6 +1048,7 @@ define <2 x float> @select_v2f32(i1 zeroext %c, <2 x float> %a, <2 x float> %b) 
 ; CHECK-NEXT:    vfmv.f.s ft1, v25
 ; CHECK-NEXT:    vsetivli zero, 2, e32,mf2,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v8, ft1
+; CHECK-NEXT:    vsetvli zero, zero, e32,mf2,tu,mu
 ; CHECK-NEXT:    vfmv.s.f v8, ft0
 ; CHECK-NEXT:    ret
   %v = select i1 %c, <2 x float> %a, <2 x float> %b
@@ -1075,6 +1078,7 @@ define <2 x float> @selectcc_v2f32(float %a, float %b, <2 x float> %c, <2 x floa
 ; CHECK-NEXT:  .LBB9_5:
 ; CHECK-NEXT:    vfmv.f.s ft0, v8
 ; CHECK-NEXT:  .LBB9_6:
+; CHECK-NEXT:    vsetvli zero, zero, e32,mf2,tu,mu
 ; CHECK-NEXT:    vfmv.s.f v25, ft0
 ; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    ret
@@ -2280,6 +2284,7 @@ define <2 x double> @select_v2f64(i1 zeroext %c, <2 x double> %a, <2 x double> %
 ; CHECK-NEXT:    vfmv.f.s ft1, v25
 ; CHECK-NEXT:    vsetivli zero, 2, e64,m1,ta,mu
 ; CHECK-NEXT:    vfmv.v.f v8, ft1
+; CHECK-NEXT:    vsetvli zero, zero, e64,m1,tu,mu
 ; CHECK-NEXT:    vfmv.s.f v8, ft0
 ; CHECK-NEXT:    ret
   %v = select i1 %c, <2 x double> %a, <2 x double> %b
@@ -2309,6 +2314,7 @@ define <2 x double> @selectcc_v2f64(double %a, double %b, <2 x double> %c, <2 x 
 ; CHECK-NEXT:  .LBB17_5:
 ; CHECK-NEXT:    vfmv.f.s ft0, v8
 ; CHECK-NEXT:  .LBB17_6:
+; CHECK-NEXT:    vsetvli zero, zero, e64,m1,tu,mu
 ; CHECK-NEXT:    vfmv.s.f v25, ft0
 ; CHECK-NEXT:    vmv1r.v v8, v25
 ; CHECK-NEXT:    ret
