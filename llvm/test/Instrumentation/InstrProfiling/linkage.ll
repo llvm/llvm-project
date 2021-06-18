@@ -12,11 +12,11 @@
 ; MACHO: @__llvm_profile_runtime = external global i32
 ; ELF-NOT: @__llvm_profile_runtime = external global i32
 
-; ELF: $__profd_foo = comdat noduplicates
-; ELF: $__profd_foo_weak = comdat noduplicates
-; ELF: $"__profd_linkage.ll:foo_internal" = comdat noduplicates
-; ELF: $__profd_foo_inline = comdat noduplicates
-; ELF: $__profd_foo_extern = comdat any
+; ELF: $__profc_foo = comdat noduplicates
+; ELF: $__profc_foo_weak = comdat noduplicates
+; ELF: $"__profc_linkage.ll:foo_internal" = comdat noduplicates
+; ELF: $__profc_foo_inline = comdat noduplicates
+; ELF: $__profc_foo_extern = comdat any
 
 @__profn_foo = private constant [3 x i8] c"foo"
 @__profn_foo_weak = weak hidden constant [8 x i8] c"foo_weak"
@@ -24,8 +24,8 @@
 @__profn_foo_inline = linkonce_odr hidden constant [10 x i8] c"foo_inline"
 @__profn_foo_extern = linkonce_odr hidden constant [10 x i8] c"foo_extern"
 
-; ELF: @__profc_foo = private global {{.*}} section "__llvm_prf_cnts", comdat($__profd_foo), align 8
-; ELF: @__profd_foo = private global {{.*}} section "__llvm_prf_data", comdat, align 8
+; ELF: @__profc_foo = private global {{.*}} section "__llvm_prf_cnts", comdat
+; ELF: @__profd_foo = private global {{.*}} section "__llvm_prf_data", comdat($__profc_foo)
 ; MACHO: @__profc_foo = private global
 ; MACHO: @__profd_foo = private global
 ; COFF: @__profc_foo = private global
@@ -36,19 +36,19 @@ define void @foo() {
   ret void
 }
 
-; ELF: @__profc_foo_weak = weak hidden global {{.*}} section "__llvm_prf_cnts", comdat($__profd_foo_weak), align 8
-; ELF: @__profd_foo_weak = weak hidden global {{.*}} section "__llvm_prf_data", comdat, align 8
+; ELF: @__profc_foo_weak = weak hidden global{{.*}}section "__llvm_prf_cnts", comdat, align 8
+; ELF: @__profd_foo_weak = private global{{.*}}section "__llvm_prf_data", comdat($__profc_foo_weak)
 ; MACHO: @__profc_foo_weak = weak hidden global
 ; MACHO: @__profd_foo_weak = weak hidden global
 ; COFF: @__profc_foo_weak = weak hidden global
-; COFF: @__profd_foo_weak = weak hidden global
+; COFF: @__profd_foo_weak = private global
 define weak void @foo_weak() {
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @__profn_foo_weak, i32 0, i32 0), i64 0, i32 1, i32 0)
   ret void
 }
 
-; ELF: @"__profc_linkage.ll:foo_internal" = private global {{.*}} section "__llvm_prf_cnts", comdat($"__profd_linkage.ll:foo_internal"), align 8
-; ELF: @"__profd_linkage.ll:foo_internal" = private global {{.*}} section "__llvm_prf_data", comdat, align 8
+; ELF: @"__profc_linkage.ll:foo_internal" = private global{{.*}}section "__llvm_prf_cnts", comdat, align 8
+; ELF: @"__profd_linkage.ll:foo_internal" = private global{{.*}}section "__llvm_prf_data", comdat($"__profc_linkage.ll:foo_internal"), align 8
 ; MACHO: @"__profc_linkage.ll:foo_internal" = private global
 ; MACHO: @"__profd_linkage.ll:foo_internal" = private global
 ; COFF: @"__profc_linkage.ll:foo_internal" = private global
@@ -58,23 +58,23 @@ define internal void @foo_internal() {
   ret void
 }
 
-; ELF: @__profc_foo_inline = linkonce_odr hidden global {{.*}} section "__llvm_prf_cnts", comdat($__profd_foo_inline), align 8
-; ELF: @__profd_foo_inline = linkonce_odr hidden global {{.*}} section "__llvm_prf_data", comdat, align 8
+; ELF: @__profc_foo_inline = linkonce_odr hidden global{{.*}}section "__llvm_prf_cnts", comdat, align 8
+; ELF: @__profd_foo_inline = private global{{.*}}section "__llvm_prf_data", comdat($__profc_foo_inline), align 8
 ; MACHO: @__profc_foo_inline = linkonce_odr hidden global
 ; MACHO: @__profd_foo_inline = linkonce_odr hidden global
 ; COFF: @__profc_foo_inline = linkonce_odr hidden global{{.*}} section ".lprfc$M", align 8
-; COFF: @__profd_foo_inline = linkonce_odr hidden global{{.*}} section ".lprfd$M", align 8
+; COFF: @__profd_foo_inline = private global{{.*}} section ".lprfd$M", align 8
 define linkonce_odr void @foo_inline() {
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @__profn_foo_inline, i32 0, i32 0), i64 0, i32 1, i32 0)
   ret void
 }
 
-; ELF: @__profc_foo_extern = linkonce_odr hidden global {{.*}}section "__llvm_prf_cnts", comdat($__profd_foo_extern), align 8
-; ELF: @__profd_foo_extern = linkonce_odr hidden global {{.*}}section "__llvm_prf_data", comdat, align 8
+; ELF: @__profc_foo_extern = linkonce_odr hidden global {{.*}}section "__llvm_prf_cnts", comdat, align 8
+; ELF: @__profd_foo_extern = private global {{.*}}section "__llvm_prf_data", comdat($__profc_foo_extern), align 8
 ; MACHO: @__profc_foo_extern = linkonce_odr hidden global
 ; MACHO: @__profd_foo_extern = linkonce_odr hidden global
 ; COFF: @__profc_foo_extern = linkonce_odr hidden global {{.*}}section ".lprfc$M", comdat, align 8
-; COFF: @__profd_foo_extern = linkonce_odr hidden global {{.*}}section ".lprfd$M", comdat, align 8
+; COFF: @__profd_foo_extern = private global {{.*}}section ".lprfd$M", comdat($__profc_foo_extern), align 8
 define available_externally void @foo_extern() {
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @__profn_foo_extern, i32 0, i32 0), i64 0, i32 1, i32 0)
   ret void
