@@ -603,20 +603,6 @@ void test_strchr() {
 #endif
 }
 
-void test_calloc() {
-  // With any luck this sequence of calls will cause calloc to return the same
-  // pointer both times.  This is probably the best we can do to test this
-  // function.
-  char *crv = (char *) calloc(4096, 1);
-  ASSERT_ZERO_LABEL(crv[0]);
-  dfsan_set_label(i_label, crv, 100);
-  free(crv);
-
-  crv = (char *) calloc(4096, 1);
-  ASSERT_ZERO_LABEL(crv[0]);
-  free(crv);
-}
-
 void test_recvmmsg() {
   int sockfds[2];
   int ret = socketpair(AF_UNIX, SOCK_DGRAM, 0, sockfds);
@@ -1935,7 +1921,6 @@ int main(void) {
 
   test__dl_get_tls_static_info();
   test_bcmp();
-  test_calloc();
   test_clock_gettime();
   test_ctime_r();
   test_dfsan_set_write_callback();

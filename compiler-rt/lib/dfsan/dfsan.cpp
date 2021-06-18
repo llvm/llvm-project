@@ -1113,7 +1113,7 @@ static void DFsanInit(int argc, char **argv, char **envp) {
   if (!(init_addr >= UnusedAddr() && init_addr < AppAddr()))
     MmapFixedNoAccess(UnusedAddr(), AppAddr() - UnusedAddr());
 
-  InitializeInterceptors();
+  initialize_interceptors();
 
   // Register the fini callback to run when the program terminates successfully
   // or it is killed by the runtime.
