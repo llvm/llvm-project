@@ -587,7 +587,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
 
         // If this is a #else with a #else before it, report the error.
         if (CondInfo.FoundElse)
-          Diag(Tok, diag::pp_err_else_after_else) << PED_Elif;
+          Diag(Tok, diag::pp_err_else_after_else);
 
         // Note that we've seen a #else in this conditional.
         CondInfo.FoundElse = true;
@@ -611,7 +611,8 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
         PPConditionalInfo &CondInfo = CurPPLexer->peekConditionalLevel();
 
         // If this is a #elif with a #else before it, report the error.
-        if (CondInfo.FoundElse) Diag(Tok, diag::pp_err_elif_after_else);
+        if (CondInfo.FoundElse)
+          Diag(Tok, diag::pp_err_elif_after_else) << PED_Elif;
 
         // If this is in a skipping block or if we're already handled this #if
         // block, don't bother parsing the condition.
