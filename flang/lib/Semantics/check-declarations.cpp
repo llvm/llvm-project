@@ -575,6 +575,12 @@ void CheckHelper::CheckPointerInitialization(const Symbol &symbol) {
         // or an unrestricted specific intrinsic function.
         const Symbol &ultimate{(*proc->init())->GetUltimate()};
         if (ultimate.attrs().test(Attr::INTRINSIC)) {
+          if (!context_.intrinsics().IsSpecificIntrinsicFunction(
+                  ultimate.name().ToString())) { // C1030
+            context_.Say(
+                "Intrinsic procedure '%s' is not a specific intrinsic permitted for use as the initializer for procedure pointer '%s'"_err_en_US,
+                ultimate.name(), symbol.name());
+          }
         } else if (!ultimate.attrs().test(Attr::EXTERNAL) &&
             ultimate.owner().kind() != Scope::Kind::Module) {
           context_.Say("Procedure pointer '%s' initializer '%s' is neither "
@@ -715,8 +721,14 @@ void CheckHelper::CheckProcEntity(
   if (symbol.attrs().test(Attr::POINTER)) {
     CheckPointerInitialization(symbol);
     if (const Symbol * interface{details.interface().symbol()}) {
-      if (interface->attrs().test(Attr::ELEMENTAL) &&
-          !interface->attrs().test(Attr::INTRINSIC)) {
+      if (interface->attrs().test(Attr::INTRINSIC)) {
+        if (!context_.intrinsics().IsSpecificIntrinsicFunction(
+                interface->name().ToString())) { // C1515
+          messages_.Say(
+              "Intrinsic procedure '%s' is not a specific intrinsic permitted for use as the definition of the interface to procedure pointer '%s'"_err_en_US,
+              interface->name(), symbol.name());
+        }
+      } else if (interface->attrs().test(Attr::ELEMENTAL)) {
         messages_.Say("Procedure pointer '%s' may not be ELEMENTAL"_err_en_US,
             symbol.name()); // C1517
       }
