@@ -22,6 +22,12 @@ namespace {
 class TestGpuGreedyParallelLoopMappingPass
     : public PassWrapper<TestGpuGreedyParallelLoopMappingPass,
                          OperationPass<FuncOp>> {
+  StringRef getArgument() const final {
+    return "test-gpu-greedy-parallel-loop-mapping";
+  }
+  StringRef getDescription() const final {
+    return "Greedily maps all parallel loops to gpu hardware ids.";
+  }
   void runOnOperation() override {
     Operation *op = getOperation();
     for (Region &region : op->getRegions())
@@ -33,9 +39,7 @@ class TestGpuGreedyParallelLoopMappingPass
 namespace mlir {
 namespace test {
 void registerTestGpuParallelLoopMappingPass() {
-  PassRegistration<TestGpuGreedyParallelLoopMappingPass> registration(
-      "test-gpu-greedy-parallel-loop-mapping",
-      "Greedily maps all parallel loops to gpu hardware ids.");
+  PassRegistration<TestGpuGreedyParallelLoopMappingPass>();
 }
 } // namespace test
 } // namespace mlir

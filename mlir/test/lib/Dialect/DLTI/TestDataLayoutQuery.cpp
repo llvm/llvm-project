@@ -21,6 +21,8 @@ namespace {
 /// result types.
 struct TestDataLayoutQuery
     : public PassWrapper<TestDataLayoutQuery, FunctionPass> {
+  StringRef getArgument() const final { return "test-data-layout-query"; }
+  StringRef getDescription() const final { return "Test data layout queries"; }
   void runOnFunction() override {
     FuncOp func = getFunction();
     Builder builder(func.getContext());
@@ -48,9 +50,6 @@ struct TestDataLayoutQuery
 
 namespace mlir {
 namespace test {
-void registerTestDataLayoutQuery() {
-  PassRegistration<TestDataLayoutQuery>("test-data-layout-query",
-                                        "Test data layout queries");
-}
+void registerTestDataLayoutQuery() { PassRegistration<TestDataLayoutQuery>(); }
 } // namespace test
 } // namespace mlir

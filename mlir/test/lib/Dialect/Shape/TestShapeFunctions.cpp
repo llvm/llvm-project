@@ -20,6 +20,10 @@ namespace {
 struct ReportShapeFnPass
     : public PassWrapper<ReportShapeFnPass, OperationPass<ModuleOp>> {
   void runOnOperation() override;
+  StringRef getArgument() const final { return "test-shape-function-report"; }
+  StringRef getDescription() const final {
+    return "Test pass to report associated shape functions";
+  }
 };
 } // end anonymous namespace
 
@@ -82,8 +86,6 @@ void ReportShapeFnPass::runOnOperation() {
 
 namespace mlir {
 void registerShapeFunctionTestPasses() {
-  PassRegistration<ReportShapeFnPass>(
-      "test-shape-function-report",
-      "Test pass to report associated shape functions");
+  PassRegistration<ReportShapeFnPass>();
 }
 } // namespace mlir

@@ -20,6 +20,11 @@ namespace {
 class TestDynamicPipelinePass
     : public PassWrapper<TestDynamicPipelinePass, OperationPass<>> {
 public:
+  StringRef getArgument() const final { return "test-dynamic-pipeline"; }
+  StringRef getDescription() const final {
+    return "Tests the dynamic pipeline feature by applying "
+           "a pipeline on a selected set of functions";
+  }
   void getDependentDialects(DialectRegistry &registry) const override {
     OpPassManager pm(ModuleOp::getOperationName(),
                      OpPassManager::Nesting::Implicit);
@@ -106,9 +111,7 @@ public:
 namespace mlir {
 namespace test {
 void registerTestDynamicPipelinePass() {
-  PassRegistration<TestDynamicPipelinePass>(
-      "test-dynamic-pipeline", "Tests the dynamic pipeline feature by applying "
-                               "a pipeline on a selected set of functions");
+  PassRegistration<TestDynamicPipelinePass>();
 }
 } // namespace test
 } // namespace mlir

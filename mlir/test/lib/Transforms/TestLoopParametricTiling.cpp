@@ -25,6 +25,14 @@ namespace {
 class SimpleParametricLoopTilingPass
     : public PassWrapper<SimpleParametricLoopTilingPass, FunctionPass> {
 public:
+  StringRef getArgument() const final {
+    return "test-extract-fixed-outer-loops";
+  }
+  StringRef getDescription() const final {
+    return "test application of parametric tiling to the outer loops so that "
+           "the "
+           "ranges of outer loops become static";
+  }
   SimpleParametricLoopTilingPass() = default;
   SimpleParametricLoopTilingPass(const SimpleParametricLoopTilingPass &) {}
   explicit SimpleParametricLoopTilingPass(ArrayRef<int64_t> outerLoopSizes) {
@@ -51,10 +59,7 @@ public:
 namespace mlir {
 namespace test {
 void registerSimpleParametricTilingPass() {
-  PassRegistration<SimpleParametricLoopTilingPass>(
-      "test-extract-fixed-outer-loops",
-      "test application of parametric tiling to the outer loops so that the "
-      "ranges of outer loops become static");
+  PassRegistration<SimpleParametricLoopTilingPass>();
 }
 } // namespace test
 } // namespace mlir

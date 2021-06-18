@@ -42,6 +42,10 @@ static llvm::cl::opt<bool> clTestLoopFusionTransformation(
 namespace {
 
 struct TestLoopFusion : public PassWrapper<TestLoopFusion, FunctionPass> {
+  StringRef getArgument() const final { return "test-loop-fusion"; }
+  StringRef getDescription() const final {
+    return "Tests loop fusion utility functions.";
+  }
   void runOnFunction() override;
 };
 
@@ -198,9 +202,6 @@ void TestLoopFusion::runOnFunction() {
 
 namespace mlir {
 namespace test {
-void registerTestLoopFusion() {
-  PassRegistration<TestLoopFusion>("test-loop-fusion",
-                                   "Tests loop fusion utility functions.");
-}
+void registerTestLoopFusion() { PassRegistration<TestLoopFusion>(); }
 } // namespace test
 } // namespace mlir
