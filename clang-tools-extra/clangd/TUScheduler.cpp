@@ -1506,6 +1506,10 @@ bool TUScheduler::update(PathRef File, ParseInputs Inputs,
     FD->Contents = Inputs.Contents;
   }
   FD->Worker->update(std::move(Inputs), WantDiags, ContentChanged);
+  // There might be synthetic update requests, don't change the LastActiveFile
+  // in such cases.
+  if (ContentChanged)
+    LastActiveFile = File.str();
   return NewFile;
 }
 
@@ -1535,6 +1539,10 @@ void TUScheduler::runQuick(llvm::StringRef Name, llvm::StringRef Path,
 void TUScheduler::runWithSemaphore(llvm::StringRef Name, llvm::StringRef Path,
                                    llvm::unique_function<void()> Action,
                                    Semaphore &Sem) {
+  if (Path.empty())
+    Path = LastActiveFile;
+  else
+    LastActiveFile = Path.str();
   if (!PreambleTasks) {
     WithContext WithProvidedContext(Opts.ContextProvider(Path));
     return Action();
@@ -1559,6 +1567,7 @@ void TUScheduler::runWithAST(
         "trying to get AST for non-added document", ErrorCode::InvalidParams));
     return;
   }
+  LastActiveFile = File.str();
 
   It->second->Worker->runWithAST(Name, std::move(Action), Invalidation);
 }
@@ -1573,6 +1582,7 @@ void TUScheduler::runWithPreamble(llvm::StringRef Name, PathRef File,
         ErrorCode::InvalidParams));
     return;
   }
+  LastActiveFile = File.str();
 
   if (!PreambleTasks) {
     trace::Span Tracer(Name);

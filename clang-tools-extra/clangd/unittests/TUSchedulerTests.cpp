@@ -1264,6 +1264,69 @@ TEST_F(TUSchedulerTests, IncluderCache) {
       << "association still valid";
 }
 
+TEST_F(TUSchedulerTests, PreservesLastActiveFile) {
+  for (bool Sync : {false, true}) {
+    auto Opts = optsForTest();
+    if (Sync)
+      Opts.AsyncThreadsCount = 0;
+    TUScheduler S(CDB, Opts);
+
+    auto CheckNoFileActionsSeesLastActiveFile =
+        [&](llvm::StringRef LastActiveFile) {
+          ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+          std::atomic<int> Counter(0);
+          // We only check for run and runQuick as runWithAST and
+          // runWithPreamble is always bound to a file.
+          S.run("run-UsesLastActiveFile", /*Path=*/"", [&] {
+            ++Counter;
+            EXPECT_EQ(LastActiveFile, boundPath());
+          });
+          S.runQuick("runQuick-UsesLastActiveFile", /*Path=*/"", [&] {
+            ++Counter;
+            EXPECT_EQ(LastActiveFile, boundPath());
+          });
+          ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+          EXPECT_EQ(2, Counter.load());
+        };
+
+    // Check that we see no file initially
+    CheckNoFileActionsSeesLastActiveFile("");
+
+    // Now check that every action scheduled with a particular file changes the
+    // LastActiveFile.
+    auto Path = testPath("run.cc");
+    S.run(Path, Path, [] {});
+    CheckNoFileActionsSeesLastActiveFile(Path);
+
+    Path = testPath("runQuick.cc");
+    S.runQuick(Path, Path, [] {});
+    CheckNoFileActionsSeesLastActiveFile(Path);
+
+    Path = testPath("runWithAST.cc");
+    S.update(Path, getInputs(Path, ""), WantDiagnostics::No);
+    S.runWithAST(Path, Path, [](llvm::Expected<InputsAndAST> Inp) {
+      EXPECT_TRUE(bool(Inp));
+    });
+    CheckNoFileActionsSeesLastActiveFile(Path);
+
+    Path = testPath("runWithPreamble.cc");
+    S.update(Path, getInputs(Path, ""), WantDiagnostics::No);
+    S.runWithPreamble(
+        Path, Path, TUScheduler::Stale,
+        [](llvm::Expected<InputsAndPreamble> Inp) { EXPECT_TRUE(bool(Inp)); });
+    CheckNoFileActionsSeesLastActiveFile(Path);
+
+    Path = testPath("update.cc");
+    S.update(Path, getInputs(Path, ""), WantDiagnostics::No);
+    CheckNoFileActionsSeesLastActiveFile(Path);
+
+    // An update with the same contents should not change LastActiveFile.
+    auto LastActive = Path;
+    Path = testPath("runWithAST.cc");
+    S.update(Path, getInputs(Path, ""), WantDiagnostics::No);
+    CheckNoFileActionsSeesLastActiveFile(LastActive);
+  }
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
