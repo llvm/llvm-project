@@ -142,8 +142,6 @@ static const std::map<std::string, KernelArgMD::ValueKind> ArgValueKind = {
 
 ATLMachine g_atl_machine;
 
-std::vector<hsa_amd_memory_pool_t> atl_gpu_kernarg_pools;
-
 /*
    atlc is all internal global values.
    The structure atl_context_t is defined in atl_internal.h
@@ -198,10 +196,6 @@ static hsa_status_t get_memory_pool_info(hsa_amd_memory_pool_t memory_pool,
     if (HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_FINE_GRAINED & global_flag) {
       ATLMemory new_mem(memory_pool, *proc, ATMI_MEMTYPE_FINE_GRAINED);
       proc->addMemory(new_mem);
-      if (HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT & global_flag) {
-        DEBUG_PRINT("GPU kernel args pool handle: %lu\n", memory_pool.handle);
-        atl_gpu_kernarg_pools.push_back(memory_pool);
-      }
     } else {
       ATLMemory new_mem(memory_pool, *proc, ATMI_MEMTYPE_COARSE_GRAINED);
       proc->addMemory(new_mem);
