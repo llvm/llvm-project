@@ -70,6 +70,9 @@
 # LOAD-NEXT:    name /usr/lib/libSystem.dylib
 # LOAD:          cmd LC_LOAD_DYLIB
 # LOAD-NEXT: cmdsize
+# LOAD-NEXT:    name [[DIR]]/libreexporter.dylib
+# LOAD:          cmd LC_LOAD_DYLIB
+# LOAD-NEXT: cmdsize
 # LOAD-NEXT:    name /System/Library/Frameworks/Foo.framework/Versions/A/Foo
 # LOAD:          cmd LC_LOAD_DYLIB
 # LOAD-NEXT: cmdsize
@@ -77,9 +80,6 @@
 # LOAD:          cmd LC_LOAD_DYLIB
 # LOAD-NEXT: cmdsize
 # LOAD-NEXT:    name /usr/lib/libtoplevel.dylib
-# LOAD:          cmd LC_LOAD_DYLIB
-# LOAD-NEXT: cmdsize
-# LOAD-NEXT:    name [[DIR]]/libreexporter.dylib
 
 # RUN: %lld -no_implicit_dylibs -syslibroot %t -o %t/no-implicit -lSystem -L%t -lreexporter %t/test.o
 # RUN: llvm-objdump --bind --no-show-raw-insn -d %t/no-implicit | FileCheck %s --check-prefix=NO-IMPLICIT
