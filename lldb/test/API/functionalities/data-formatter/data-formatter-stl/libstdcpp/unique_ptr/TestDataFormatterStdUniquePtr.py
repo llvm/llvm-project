@@ -63,6 +63,7 @@ class StdUniquePtrDataFormatterTestCase(TestBase):
     @skipIfWindows  # libstdcpp not ported to Windows
     @skipIfDarwin  # doesn't compile on Darwin
     @skipIfwatchOS  # libstdcpp not ported to watchos
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     @add_test_categories(["libstdcxx"])
     def test_recursive_unique_ptr(self):
         # Tests that LLDB can handle when we have a loop in the unique_ptr
@@ -90,4 +91,3 @@ class StdUniquePtrDataFormatterTestCase(TestBase):
         self.assertEqual(2, frame.GetValueForVariablePath("f1->fp->data").GetValueAsUnsigned())
         self.assertEqual(1, frame.GetValueForVariablePath("f1->fp.object.fp.object.data").GetValueAsUnsigned())
         self.assertEqual(1, frame.GetValueForVariablePath("f1->fp->fp->data").GetValueAsUnsigned())
-
