@@ -149,7 +149,7 @@ public:
 
   static bool classof(const InputFile *f) { return f->kind() == DylibKind; }
 
-  StringRef dylibName;
+  StringRef installName;
   DylibFile *exportingFile = nullptr;
   DylibFile *umbrella;
   uint32_t compatibilityVersion = 0;
