@@ -1,5 +1,6 @@
 ___asan_default_options
 ___asan_default_suppressions
+___asan_detect_use_after_return_always
 ___asan_on_error
 ___asan_set_shadow_00
 ___asan_set_shadow_f1
