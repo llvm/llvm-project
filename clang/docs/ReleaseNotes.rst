@@ -259,6 +259,9 @@ clang-format
 - ``git-clang-format`` no longer formats changes to symbolic links. (Fixes
   https://llvm.org/PR46992.)
 
+- Makes ``PointerAligment: Right`` working with ``AlignConsecutiveDeclarations``.
+  (Fixes https://llvm.org/PR27353)
+
 libclang
 --------
 
