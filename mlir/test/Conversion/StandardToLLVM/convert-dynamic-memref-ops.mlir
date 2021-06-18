@@ -1,5 +1,5 @@
-// RUN: mlir-opt -convert-std-to-llvm %s | FileCheck %s
-// RUN: mlir-opt -convert-std-to-llvm='use-aligned-alloc=1' %s | FileCheck %s --check-prefix=ALIGNED-ALLOC
+// RUN: mlir-opt -split-input-file -convert-std-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -convert-std-to-llvm='use-aligned-alloc=1' %s | FileCheck %s --check-prefix=ALIGNED-ALLOC
 
 // CHECK-LABEL: func @check_strided_memref_arguments(
 // CHECK-COUNT-2: !llvm.ptr<f32>
@@ -529,3 +529,98 @@ func @memref_reshape(%input : memref<2x3xf32>, %shape : memref<?xindex>) {
 
 // CHECK: ^bb3:
 // CHECK:   llvm.return
+
+// -----
+
+// ALIGNED-ALLOC-LABEL: @memref_of_memref
+func @memref_of_memref() {
+  // Sizeof computation is as usual.
+  // ALIGNED-ALLOC: %[[NULL:.*]] = llvm.mlir.null
+  // ALIGNED-ALLOC: %[[PTR:.*]] = llvm.getelementptr
+  // ALIGNED-ALLOC: %[[SIZEOF:.*]] = llvm.ptrtoint
+
+  // Static alignment should be computed as ceilPowerOf2(2 * sizeof(pointer) +
+  // (1 + 2 * rank) * sizeof(index) = ceilPowerOf2(2 * 8 + 3 * 8) = 64.
+  // ALIGNED-ALLOC: llvm.mlir.constant(64 : index)
+
+  // Check that the types are converted as expected.
+  // ALIGNED-ALLOC: llvm.call @aligned_alloc
+  // ALIGNED-ALLOC: llvm.bitcast %{{.*}} : !llvm.ptr<i8> to
+  // ALIGNED-ALLOC-SAME: !llvm.
+  // ALIGNED-ALLOC-SAME: [[INNER:ptr<struct<\(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>\)>>]]
+  // ALIGNED-ALLOC: llvm.mlir.undef
+  // ALIGNED-ALLOC-SAME: !llvm.struct<([[INNER]], [[INNER]], i64, array<1 x i64>, array<1 x i64>)>
+  %0 = memref.alloc() : memref<1xmemref<1xf32>>
+  return
+}
+
+// -----
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32>> } {
+  // ALIGNED-ALLOC-LABEL: @memref_of_memref_32
+  func @memref_of_memref_32() {
+    // Sizeof computation is as usual.
+    // ALIGNED-ALLOC: %[[NULL:.*]] = llvm.mlir.null
+    // ALIGNED-ALLOC: %[[PTR:.*]] = llvm.getelementptr
+    // ALIGNED-ALLOC: %[[SIZEOF:.*]] = llvm.ptrtoint
+
+    // Static alignment should be computed as ceilPowerOf2(2 * sizeof(pointer) +
+    // (1 + 2 * rank) * sizeof(index) = ceilPowerOf2(2 * 8 + 3 * 4) = 32.
+    // ALIGNED-ALLOC: llvm.mlir.constant(32 : index)
+
+    // Check that the types are converted as expected.
+    // ALIGNED-ALLOC: llvm.call @aligned_alloc
+    // ALIGNED-ALLOC: llvm.bitcast %{{.*}} : !llvm.ptr<i8> to
+    // ALIGNED-ALLOC-SAME: !llvm.
+    // ALIGNED-ALLOC-SAME: [[INNER:ptr<struct<\(ptr<f32>, ptr<f32>, i32, array<1 x i32>, array<1 x i32>\)>>]]
+    // ALIGNED-ALLOC: llvm.mlir.undef
+    // ALIGNED-ALLOC-SAME: !llvm.struct<([[INNER]], [[INNER]], i32, array<1 x i32>, array<1 x i32>)>
+    %0 = memref.alloc() : memref<1xmemref<1xf32>>
+    return
+  }
+}
+
+
+// -----
+
+// ALIGNED-ALLOC-LABEL: @memref_of_memref_of_memref
+func @memref_of_memref_of_memref() {
+  // Sizeof computation is as usual, also check the type.
+  // ALIGNED-ALLOC: %[[NULL:.*]] = llvm.mlir.null : !llvm.ptr<
+  // ALIGNED-ALLOC-SAME:   struct<(
+  // ALIGNED-ALLOC-SAME:     [[INNER:ptr<struct<\(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>\)>>]],
+  // ALIGNED-ALLOC-SAME:     [[INNER]],
+  // ALIGNED-ALLOC-SAME:     i64, array<1 x i64>, array<1 x i64>
+  // ALIGNED-ALLOC-SAME:   )>
+  // ALIGNED-ALLOC-SAME: >
+  // ALIGNED-ALLOC: %[[PTR:.*]] = llvm.getelementptr
+  // ALIGNED-ALLOC: %[[SIZEOF:.*]] = llvm.ptrtoint
+
+  // Static alignment should be computed as ceilPowerOf2(2 * sizeof(pointer) +
+  // (1 + 2 * rank) * sizeof(index) = ceilPowerOf2(2 * 8 + 3 * 8) = 64.
+  // ALIGNED-ALLOC: llvm.mlir.constant(64 : index)
+  // ALIGNED-ALLOC: llvm.call @aligned_alloc
+  %0 = memref.alloc() : memref<1 x memref<2 x memref<3 x f32>>>
+  return
+}
+
+// -----
+
+// ALIGNED-ALLOC-LABEL: @ranked_unranked
+func @ranked_unranked() {
+  // ALIGNED-ALLOC: llvm.mlir.null
+  // ALIGNED-ALLOC-SAME: !llvm.[[INNER:ptr<struct<\(i64, ptr<i8>\)>>]]
+  // ALIGNED-ALLOC: llvm.getelementptr
+  // ALIGNED-ALLOC: llvm.ptrtoint
+
+  // Static alignment should be computed as ceilPowerOf2(sizeof(index) +
+  // sizeof(pointer)) = 16.
+  // ALIGNED-ALLOC: llvm.mlir.constant(16 : index)
+  // ALIGNED-ALLOC: llvm.call @aligned_alloc
+  // ALIGNED-ALLOC: llvm.bitcast
+  // ALIGNED-ALLOC-SAME: !llvm.ptr<i8> to !llvm.[[INNER]]
+  %0 = memref.alloc() : memref<1 x memref<* x f32>>
+  memref.cast %0 : memref<1 x memref<* x f32>> to memref<* x memref<* x f32>>
+  return
+}
+

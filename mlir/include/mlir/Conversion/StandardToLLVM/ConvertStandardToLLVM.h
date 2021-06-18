@@ -29,6 +29,7 @@ namespace mlir {
 
 class BaseMemRefType;
 class ComplexType;
+class DataLayoutAnalysis;
 class LLVMTypeConverter;
 class UnrankedMemRefType;
 
@@ -62,10 +63,14 @@ public:
   using TypeConverter::convertType;
 
   /// Create an LLVMTypeConverter using the default LowerToLLVMOptions.
-  LLVMTypeConverter(MLIRContext *ctx);
+  /// Optionally takes a data layout analysis to use in conversions.
+  LLVMTypeConverter(MLIRContext *ctx,
+                    const DataLayoutAnalysis *analysis = nullptr);
 
-  /// Create an LLVMTypeConverter using custom LowerToLLVMOptions.
-  LLVMTypeConverter(MLIRContext *ctx, const LowerToLLVMOptions &options);
+  /// Create an LLVMTypeConverter using custom LowerToLLVMOptions. Optionally
+  /// takes a data layout analysis to use in conversions.
+  LLVMTypeConverter(MLIRContext *ctx, const LowerToLLVMOptions &options,
+                    const DataLayoutAnalysis *analysis = nullptr);
 
   /// Convert a function type.  The arguments and results are converted one by
   /// one and results are packed into a wrapped LLVM IR structure type. `result`
@@ -124,6 +129,11 @@ public:
   /// Returns the data layout to use during and after conversion.
   const llvm::DataLayout &getDataLayout() { return options.dataLayout; }
 
+  /// Returns the data layout analysis to query during conversion.
+  const DataLayoutAnalysis *getDataLayoutAnalysis() const {
+    return dataLayoutAnalysis;
+  }
+
   /// Gets the LLVM representation of the index type. The returned type is an
   /// integer type with the size configured for this type converter.
   Type getIndexType();
@@ -133,6 +143,13 @@ public:
 
   /// Gets the pointer bitwidth.
   unsigned getPointerBitwidth(unsigned addressSpace = 0);
+
+  /// Returns the size of the memref descriptor object in bytes.
+  unsigned getMemRefDescriptorSize(MemRefType type, const DataLayout &layout);
+
+  /// Returns the size of the unranked memref descriptor object in bytes.
+  unsigned getUnrankedMemRefDescriptorSize(UnrankedMemRefType type,
+                                           const DataLayout &layout);
 
 protected:
   /// Pointer to the LLVM dialect.
@@ -207,11 +224,14 @@ private:
   /// Convert a memref type to a bare pointer to the memref element type.
   Type convertMemRefToBarePtr(BaseMemRefType type);
 
-  // Convert a 1D vector type into an LLVM vector type.
+  /// Convert a 1D vector type into an LLVM vector type.
   Type convertVectorType(VectorType type);
 
   /// Options for customizing the llvm lowering.
   LowerToLLVMOptions options;
+
+  /// Data layout analysis mapping scopes to layouts active in them.
+  const DataLayoutAnalysis *dataLayoutAnalysis;
 };
 
 /// Helper class to produce LLVM dialect operations extracting or inserting
@@ -634,11 +654,6 @@ private:
     return op->getResult(0).getType().cast<MemRefType>();
   }
 
-  LogicalResult match(Operation *op) const override {
-    MemRefType memRefType = getMemRefResultType(op);
-    return success(isConvertibleAndHasIdentityMaps(memRefType));
-  }
-
   // An `alloc` is converted into a definition of a memref descriptor value and
   // a call to `malloc` to allocate the underlying data buffer.  The memref
   // descriptor is of the LLVM structure type where:
@@ -655,8 +670,9 @@ private:
 
   // An `alloca` is converted into a definition of a memref descriptor value and
   // an llvm.alloca to allocate the underlying data buffer.
-  void rewrite(Operation *op, ArrayRef<Value> operands,
-               ConversionPatternRewriter &rewriter) const override;
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
 };
 
 namespace LLVM {

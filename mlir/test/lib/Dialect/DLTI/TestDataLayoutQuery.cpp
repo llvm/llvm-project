@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDialect.h"
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Pass/Pass.h"
@@ -23,28 +24,14 @@ struct TestDataLayoutQuery
   void runOnFunction() override {
     FuncOp func = getFunction();
     Builder builder(func.getContext());
-    DenseMap<Operation *, DataLayout> layouts;
+    const DataLayoutAnalysis &layouts = getAnalysis<DataLayoutAnalysis>();
 
     func.walk([&](test::DataLayoutQueryOp op) {
       // Skip the ops with already processed in a deeper call.
       if (op->getAttr("size"))
         return;
 
-      auto scope = op->getParentOfType<test::OpWithDataLayoutOp>();
-      if (!layouts.count(scope)) {
-        layouts.try_emplace(
-            scope, scope ? cast<DataLayoutOpInterface>(scope.getOperation())
-                         : nullptr);
-      }
-      auto module = op->getParentOfType<ModuleOp>();
-      if (!layouts.count(module))
-        layouts.try_emplace(module, module);
-
-      Operation *closest = (scope && module && module->isProperAncestor(scope))
-                               ? scope.getOperation()
-                               : module.getOperation();
-
-      const DataLayout &layout = layouts.find(closest)->getSecond();
+      const DataLayout &layout = layouts.getAbove(op);
       unsigned size = layout.getTypeSize(op.getType());
       unsigned bitsize = layout.getTypeSizeInBits(op.getType());
       unsigned alignment = layout.getTypeABIAlignment(op.getType());
