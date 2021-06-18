@@ -21,6 +21,7 @@ TEST(Demangle, demangleTest) {
             "invocation function for block in foo(int)");
   EXPECT_EQ(demangle("?foo@@YAXH@Z"), "void __cdecl foo(int)");
   EXPECT_EQ(demangle("foo"), "foo");
+  EXPECT_EQ(demangle("_RNvC3foo3bar"), "foo::bar");
 
   // Regression test for demangling of optional template-args for vendor
   // extended type qualifier (https://bugs.llvm.org/show_bug.cgi?id=48009)
