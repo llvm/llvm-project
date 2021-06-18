@@ -77,9 +77,10 @@ static uint64_t debugStrOffsetsHeaderSize(DataExtractor StrOffsetsData,
   return 8;    // unit length: 4 bytes, version: 2 bytes, padding: 2 bytes.
 }
 
-// Holds data for Skeleton and Split Compilation Unit Headers as defined in
-// Dwarf 5 specification, 7.5.1.2 and Dwarf 4 specification 7.5.1.1.
-struct CompileUnitHeader {
+// Holds data for Skeleton, Split Compilation, and Type Unit Headers (only in
+// v5) as defined in Dwarf 5 specification, 7.5.1.2, 7.5.1.3 and Dwarf 4
+// specification 7.5.1.1.
+struct InfoSectionUnitHeader {
   // unit_length field. Note that the type is uint64_t even in 32-bit dwarf.
   uint64_t Length = 0;
 
@@ -108,9 +109,10 @@ struct CompileUnitHeader {
   uint8_t HeaderSize = 0;
 };
 
-// Parse and return the header of the compile unit.
-static Expected<CompileUnitHeader> parseCompileUnitHeader(StringRef Info) {
-  CompileUnitHeader Header;
+// Parse and return the header of an info section compile/type unit.
+static Expected<InfoSectionUnitHeader>
+parseInfoSectionUnitHeader(StringRef Info) {
+  InfoSectionUnitHeader Header;
   Error Err = Error::success();
   uint64_t Offset = 0;
   DWARFDataExtractor InfoData(Info, true, 0);
@@ -141,15 +143,22 @@ static Expected<CompileUnitHeader> parseCompileUnitHeader(StringRef Info) {
     MinHeaderLength = 7;
   }
   if (Header.Length < MinHeaderLength) {
-    return make_error<DWPError>(
-        "compile unit length is too small: expected at least " +
-        utostr(MinHeaderLength) + " got " + utostr(Header.Length) + ".");
+    return make_error<DWPError>("unit length is too small: expected at least " +
+                                utostr(MinHeaderLength) + " got " +
+                                utostr(Header.Length) + ".");
   }
   if (Header.Version >= 5) {
     Header.UnitType = InfoData.getU8(&Offset);
     Header.AddrSize = InfoData.getU8(&Offset);
     Header.DebugAbbrevOffset = InfoData.getU32(&Offset);
     Header.Signature = InfoData.getU64(&Offset);
+    if (Header.UnitType == dwarf::DW_UT_split_type) {
+      // Type offset.
+      MinHeaderLength += 4;
+      if (Header.Length < MinHeaderLength)
+        return make_error<DWPError>("type unit is missing type offset");
+      InfoData.getU32(&Offset);
+    }
   } else {
     // Note that, address_size and debug_abbrev_offset fields have switched
     // places between dwarf version 4 and 5.
@@ -165,7 +174,7 @@ static void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
                                    MCSection *StrOffsetSection,
                                    StringRef CurStrSection,
                                    StringRef CurStrOffsetSection,
-                                   const CompileUnitHeader &Header) {
+                                   const InfoSectionUnitHeader &Header) {
   // Could possibly produce an error or warning if one of these was non-null but
   // the other was null.
   if (CurStrSection.empty() || CurStrOffsetSection.empty())
@@ -259,14 +268,9 @@ getIndexedString(dwarf::Form Form, DataExtractor InfoData, uint64_t &InfoOffset,
   return StrData.getCStr(&StrOffset);
 }
 
-static Expected<CompileUnitIdentifiers> getCUIdentifiers(StringRef Abbrev,
-                                                         StringRef Info,
-                                                         StringRef StrOffsets,
-                                                         StringRef Str) {
-  Expected<CompileUnitHeader> HeaderOrError = parseCompileUnitHeader(Info);
-  if (!HeaderOrError)
-    return HeaderOrError.takeError();
-  CompileUnitHeader &Header = *HeaderOrError;
+static Expected<CompileUnitIdentifiers>
+getCUIdentifiers(InfoSectionUnitHeader &Header, StringRef Abbrev,
+                 StringRef Info, StringRef StrOffsets, StringRef Str) {
   DataExtractor InfoData(Info, true, 0);
   uint64_t Offset = Header.HeaderSize;
   if (Header.Version >= 5 && Header.UnitType != dwarf::DW_UT_split_compile)
@@ -540,13 +544,14 @@ static Error handleSection(
     const StringMap<std::pair<MCSection *, DWARFSectionKind>> &KnownSections,
     const MCSection *StrSection, const MCSection *StrOffsetSection,
     const MCSection *TypesSection, const MCSection *CUIndexSection,
-    const MCSection *TUIndexSection, const SectionRef &Section, MCStreamer &Out,
+    const MCSection *TUIndexSection, const MCSection *InfoSection,
+    const SectionRef &Section, MCStreamer &Out,
     std::deque<SmallString<32>> &UncompressedSections,
     uint32_t (&ContributionOffsets)[8], UnitIndexEntry &CurEntry,
     StringRef &CurStrSection, StringRef &CurStrOffsetSection,
-    std::vector<StringRef> &CurTypesSection, StringRef &InfoSection,
-    StringRef &AbbrevSection, StringRef &CurCUIndexSection,
-    StringRef &CurTUIndexSection) {
+    std::vector<StringRef> &CurTypesSection,
+    std::vector<StringRef> &CurInfoSection, StringRef &AbbrevSection,
+    StringRef &CurCUIndexSection, StringRef &CurTUIndexSection) {
   if (Section.isBSS())
     return Error::success();
 
@@ -574,21 +579,14 @@ static Error handleSection(
 
   if (DWARFSectionKind Kind = SectionPair->second.second) {
     auto Index = getContributionIndex(Kind);
-    if (Kind != DW_SECT_EXT_TYPES) {
+    if (Kind != DW_SECT_EXT_TYPES && Kind != DW_SECT_INFO) {
       CurEntry.Contributions[Index].Offset = ContributionOffsets[Index];
       ContributionOffsets[Index] +=
           (CurEntry.Contributions[Index].Length = Contents.size());
     }
 
-    switch (Kind) {
-    case DW_SECT_INFO:
-      InfoSection = Contents;
-      break;
-    case DW_SECT_ABBREV:
+    if (Kind == DW_SECT_ABBREV) {
       AbbrevSection = Contents;
-      break;
-    default:
-      break;
     }
   }
 
@@ -603,6 +601,8 @@ static Error handleSection(
     CurCUIndexSection = Contents;
   else if (OutSection == TUIndexSection)
     CurTUIndexSection = Contents;
+  else if (OutSection == InfoSection)
+    CurInfoSection.push_back(Contents);
   else {
     Out.SwitchSection(OutSection);
     Out.emitBytes(Contents);
@@ -656,8 +656,9 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
   MCSection *const TypesSection = MCOFI.getDwarfTypesDWOSection();
   MCSection *const CUIndexSection = MCOFI.getDwarfCUIndexSection();
   MCSection *const TUIndexSection = MCOFI.getDwarfTUIndexSection();
+  MCSection *const InfoSection = MCOFI.getDwarfInfoDWOSection();
   const StringMap<std::pair<MCSection *, DWARFSectionKind>> KnownSections = {
-      {"debug_info.dwo", {MCOFI.getDwarfInfoDWOSection(), DW_SECT_INFO}},
+      {"debug_info.dwo", {InfoSection, DW_SECT_INFO}},
       {"debug_types.dwo", {MCOFI.getDwarfTypesDWOSection(), DW_SECT_EXT_TYPES}},
       {"debug_str_offsets.dwo", {StrOffsetSection, DW_SECT_STR_OFFSETS}},
       {"debug_str.dwo", {StrSection, static_cast<DWARFSectionKind>(0)}},
@@ -692,7 +693,7 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
     StringRef CurStrSection;
     StringRef CurStrOffsetSection;
     std::vector<StringRef> CurTypesSection;
-    StringRef InfoSection;
+    std::vector<StringRef> CurInfoSection;
     StringRef AbbrevSection;
     StringRef CurCUIndexSection;
     StringRef CurTUIndexSection;
@@ -700,40 +701,85 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
     for (const auto &Section : Obj.sections())
       if (auto Err = handleSection(
               KnownSections, StrSection, StrOffsetSection, TypesSection,
-              CUIndexSection, TUIndexSection, Section, Out,
+              CUIndexSection, TUIndexSection, InfoSection, Section, Out,
               UncompressedSections, ContributionOffsets, CurEntry,
-              CurStrSection, CurStrOffsetSection, CurTypesSection, InfoSection,
-              AbbrevSection, CurCUIndexSection, CurTUIndexSection))
+              CurStrSection, CurStrOffsetSection, CurTypesSection,
+              CurInfoSection, AbbrevSection, CurCUIndexSection,
+              CurTUIndexSection))
         return Err;
 
-    if (InfoSection.empty())
+    if (CurInfoSection.empty())
       continue;
 
-    Expected<CompileUnitHeader> CompileUnitHeaderOrErr =
-        parseCompileUnitHeader(InfoSection);
-    if (!CompileUnitHeaderOrErr)
-      return CompileUnitHeaderOrErr.takeError();
-    CompileUnitHeader &CompileUnitHeader = *CompileUnitHeaderOrErr;
+    Expected<InfoSectionUnitHeader> HeaderOrErr =
+        parseInfoSectionUnitHeader(CurInfoSection.front());
+    if (!HeaderOrErr)
+      return HeaderOrErr.takeError();
+    InfoSectionUnitHeader &Header = *HeaderOrErr;
 
     writeStringsAndOffsets(Out, Strings, StrOffsetSection, CurStrSection,
-                           CurStrOffsetSection, CompileUnitHeader);
+                           CurStrOffsetSection, Header);
 
+    uint32_t &InfoSectionOffset =
+        ContributionOffsets[getContributionIndex(DW_SECT_INFO)];
     if (CurCUIndexSection.empty()) {
-      Expected<CompileUnitIdentifiers> EID = getCUIdentifiers(
-          AbbrevSection, InfoSection, CurStrOffsetSection, CurStrSection);
-      if (!EID)
-        return createFileError(Input, EID.takeError());
-      const auto &ID = *EID;
-      auto P = IndexEntries.insert(std::make_pair(ID.Signature, CurEntry));
-      if (!P.second)
-        return buildDuplicateError(*P.first, ID, "");
-      P.first->second.Name = ID.Name;
-      P.first->second.DWOName = ID.DWOName;
+      bool FoundCUUnit = false;
+      Out.SwitchSection(InfoSection);
+      for (StringRef Info : CurInfoSection) {
+        if (FoundCUUnit)
+          break;
+        uint64_t UnitOffset = 0;
+        while (Info.size() > UnitOffset) {
+          Expected<InfoSectionUnitHeader> HeaderOrError =
+              parseInfoSectionUnitHeader(Info.substr(UnitOffset, Info.size()));
+          if (!HeaderOrError)
+            return HeaderOrError.takeError();
+          InfoSectionUnitHeader &Header = *HeaderOrError;
+
+          UnitIndexEntry Entry = CurEntry;
+          auto &C = Entry.Contributions[getContributionIndex(DW_SECT_INFO)];
+          C.Offset = InfoSectionOffset;
+          C.Length = Header.Length + 4;
+
+          if (Header.Version < 5 ||
+              Header.UnitType == dwarf::DW_UT_split_compile) {
+            Expected<CompileUnitIdentifiers> EID = getCUIdentifiers(
+                Header, AbbrevSection, Info.substr(UnitOffset, C.Length),
+                CurStrOffsetSection, CurStrSection);
+
+            if (!EID)
+              return createFileError(Input, EID.takeError());
+            const auto &ID = *EID;
+            auto P = IndexEntries.insert(std::make_pair(ID.Signature, Entry));
+            if (!P.second)
+              return buildDuplicateError(*P.first, ID, "");
+            P.first->second.Name = ID.Name;
+            P.first->second.DWOName = ID.DWOName;
+
+            Out.emitBytes(Info.substr(UnitOffset, C.Length));
+            InfoSectionOffset += C.Length;
+            FoundCUUnit = true;
+            break;
+          }
+          UnitOffset += Header.Length + 4;
+        }
+      }
+
+      if (!FoundCUUnit)
+        return make_error<DWPError>("no compile unit found in file: " + Input);
+
+      // Add types from the .debug_types section from DWARF < 5.
       addAllTypes(Out, TypeIndexEntries, TypesSection, CurTypesSection,
                   CurEntry,
                   ContributionOffsets[getContributionIndex(DW_SECT_EXT_TYPES)]);
+
       continue;
     }
+
+    if (CurInfoSection.size() != 1)
+      return make_error<DWPError>("expected exactly one occurrence of a debug "
+                                  "info section in a .dwp file");
+    StringRef DwpSingleInfoSection = CurInfoSection.front();
 
     DWARFUnitIndex CUIndex(DW_SECT_INFO);
     DataExtractor CUIndexData(CurCUIndexSection, Obj.isLittleEndian(), 0);
@@ -744,14 +790,23 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
           "unsupported cu_index version: " + utostr(CUIndex.getVersion()) +
           " (only version 2 is supported)");
 
+    Out.SwitchSection(InfoSection);
     for (const DWARFUnitIndex::Entry &E : CUIndex.getRows()) {
       auto *I = E.getContributions();
       if (!I)
         continue;
       auto P = IndexEntries.insert(std::make_pair(E.getSignature(), CurEntry));
+      StringRef CUInfoSection =
+          getSubsection(DwpSingleInfoSection, E, DW_SECT_INFO);
+      Expected<InfoSectionUnitHeader> HeaderOrError =
+          parseInfoSectionUnitHeader(CUInfoSection);
+      if (!HeaderOrError)
+        return HeaderOrError.takeError();
+      InfoSectionUnitHeader &Header = *HeaderOrError;
+
       Expected<CompileUnitIdentifiers> EID = getCUIdentifiers(
-          getSubsection(AbbrevSection, E, DW_SECT_ABBREV),
-          getSubsection(InfoSection, E, DW_SECT_INFO),
+          Header, getSubsection(AbbrevSection, E, DW_SECT_ABBREV),
+          CUInfoSection,
           getSubsection(CurStrOffsetSection, E, DW_SECT_STR_OFFSETS),
           CurStrSection);
       if (!EID)
@@ -771,6 +826,11 @@ static Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
         C.Length = I->Length;
         ++I;
       }
+      unsigned Index = getContributionIndex(DW_SECT_INFO);
+      auto &C = NewEntry.Contributions[Index];
+      Out.emitBytes(CUInfoSection);
+      C.Offset = InfoSectionOffset;
+      InfoSectionOffset += C.Length;
     }
 
     if (!CurTypesSection.empty()) {
