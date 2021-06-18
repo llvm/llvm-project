@@ -4344,6 +4344,28 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
+  if (ST.needsAlignedVGPRs() &&
+      (MI.getOpcode() == AMDGPU::DS_GWS_INIT ||
+       MI.getOpcode() == AMDGPU::DS_GWS_SEMA_BR ||
+       MI.getOpcode() == AMDGPU::DS_GWS_BARRIER)) {
+    const MachineOperand *Op = getNamedOperand(MI, AMDGPU::OpName::data0);
+    Register Reg = Op->getReg();
+    bool Aligned = true;
+    if (Reg.isPhysical()) {
+      Aligned = !(RI.getHWRegIndex(Reg) & 1);
+    } else {
+      const TargetRegisterClass &RC = *MRI.getRegClass(Reg);
+      Aligned = RI.getRegSizeInBits(RC) > 32 && RI.isProperlyAlignedRC(RC) &&
+                !(RI.getChannelFromSubReg(Op->getSubReg()) & 1);
+    }
+
+    if (!Aligned) {
+      ErrInfo = "Subtarget requires even aligned vector registers "
+                "for DS_GWS instructions";
+      return false;
+    }
+  }
+
   return true;
 }
 
