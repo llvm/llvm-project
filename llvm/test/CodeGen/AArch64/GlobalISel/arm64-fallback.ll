@@ -91,28 +91,6 @@ define void @nonpow2_add_narrowing(i128 %x, i128 %y) {
   ret void
 }
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %{{[0-9]+}}:_(s96) = G_INSERT %{{[0-9]+}}:_, %{{[0-9]+}}:_(s32), 64 (in function: nonpow2_or_narrowing)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_or_narrowing
-; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_or_narrowing:
-define void @nonpow2_or_narrowing() {
-  %a = add i128 undef, undef
-  %b = trunc i128 %a to i96
-  %a2 = add i128 undef, undef
-  %b2 = trunc i128 %a2 to i96
-  %dummy = or i96 %b, %b2
-  store i96 %dummy, i96* undef
-  ret void
-}
-
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %0:_(s96) = G_INSERT %10:_, %8:_(s32), 64 (in function: nonpow2_load_narrowing)
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for nonpow2_load_narrowing
-; FALLBACK-WITH-REPORT-OUT-LABEL: nonpow2_load_narrowing:
-define void @nonpow2_load_narrowing() {
-  %dummy = load i96, i96* undef
-  store i96 %dummy, i96* undef
-  ret void
-}
-
 ; Currently can't handle vector lengths that aren't an exact multiple of
 ; natively supported vector lengths. Test that the fall-back works for those.
 ; FALLBACK-WITH-REPORT-ERR-G_IMPLICIT_DEF-LEGALIZABLE: (FIXME: this is what is expected once we can legalize non-pow-of-2 G_IMPLICIT_DEF) remark: <unknown>:0:0: unable to legalize instruction: %1:_(<7 x s64>) = G_ADD %0, %0 (in function: nonpow2_vector_add_fewerelements
