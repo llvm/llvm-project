@@ -87,7 +87,8 @@ getLocationFromLoc(llvm::SourceMgr &sourceMgr, Location loc,
       if (Optional<llvm::SMRange> range =
               AsmParserState::convertIdLocToRange(loc)) {
         auto lineCol = sourceMgr.getLineAndColumn(range->End);
-        location->range.end.character = lineCol.second - 1;
+        location->range.end.character =
+            std::max(fileLoc.getColumn() + 1, lineCol.second - 1);
       }
       return WalkResult::interrupt();
     }
