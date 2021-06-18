@@ -241,41 +241,6 @@ static hsa_status_t get_agent_info(hsa_agent_t agent, void *data) {
   return err;
 }
 
-hsa_status_t get_fine_grained_region(hsa_region_t region, void *data) {
-  hsa_region_segment_t segment;
-  hsa_region_get_info(region, HSA_REGION_INFO_SEGMENT, &segment);
-  if (segment != HSA_REGION_SEGMENT_GLOBAL) {
-    return HSA_STATUS_SUCCESS;
-  }
-  hsa_region_global_flag_t flags;
-  hsa_region_get_info(region, HSA_REGION_INFO_GLOBAL_FLAGS, &flags);
-  if (flags & HSA_REGION_GLOBAL_FLAG_FINE_GRAINED) {
-    hsa_region_t *ret = reinterpret_cast<hsa_region_t *>(data);
-    *ret = region;
-    return HSA_STATUS_INFO_BREAK;
-  }
-  return HSA_STATUS_SUCCESS;
-}
-
-/* Determines if a memory region can be used for kernarg allocations.  */
-static hsa_status_t get_kernarg_memory_region(hsa_region_t region, void *data) {
-  hsa_region_segment_t segment;
-  hsa_region_get_info(region, HSA_REGION_INFO_SEGMENT, &segment);
-  if (HSA_REGION_SEGMENT_GLOBAL != segment) {
-    return HSA_STATUS_SUCCESS;
-  }
-
-  hsa_region_global_flag_t flags;
-  hsa_region_get_info(region, HSA_REGION_INFO_GLOBAL_FLAGS, &flags);
-  if (flags & HSA_REGION_GLOBAL_FLAG_KERNARG) {
-    hsa_region_t *ret = reinterpret_cast<hsa_region_t *>(data);
-    *ret = region;
-    return HSA_STATUS_INFO_BREAK;
-  }
-
-  return HSA_STATUS_SUCCESS;
-}
-
 static hsa_status_t init_compute_and_memory() {
   hsa_status_t err;
 
@@ -393,38 +358,6 @@ static hsa_status_t init_compute_and_memory() {
     DEBUG_PRINT("\nFine Memories : %d", fine_memories_size);
     DEBUG_PRINT("\tCoarse Memories : %d\n", coarse_memories_size);
     proc_index++;
-  }
-  proc_index = 0;
-  hsa_region_t atl_cpu_kernarg_region;
-  atl_cpu_kernarg_region.handle = (uint64_t)-1;
-  if (cpu_procs.size() > 0) {
-    err = hsa_agent_iterate_regions(
-        cpu_procs[0].agent(), get_fine_grained_region, &atl_cpu_kernarg_region);
-    if (err == HSA_STATUS_INFO_BREAK) {
-      err = HSA_STATUS_SUCCESS;
-    }
-    err = (atl_cpu_kernarg_region.handle == (uint64_t)-1) ? HSA_STATUS_ERROR
-                                                          : HSA_STATUS_SUCCESS;
-    if (err != HSA_STATUS_SUCCESS) {
-      printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-             "Finding a CPU kernarg memory region handle",
-             get_error_string(err));
-      return err;
-    }
-  }
-  hsa_region_t atl_gpu_kernarg_region;
-  /* Find a memory region that supports kernel arguments.  */
-  atl_gpu_kernarg_region.handle = (uint64_t)-1;
-  if (gpu_procs.size() > 0) {
-    hsa_agent_iterate_regions(gpu_procs[0].agent(), get_kernarg_memory_region,
-                              &atl_gpu_kernarg_region);
-    err = (atl_gpu_kernarg_region.handle == (uint64_t)-1) ? HSA_STATUS_ERROR
-                                                          : HSA_STATUS_SUCCESS;
-    if (err != HSA_STATUS_SUCCESS) {
-      printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
-             "Finding a kernarg memory region", get_error_string(err));
-      return err;
-    }
   }
   if (num_procs > 0)
     return HSA_STATUS_SUCCESS;
