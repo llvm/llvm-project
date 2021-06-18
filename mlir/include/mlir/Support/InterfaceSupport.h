@@ -14,6 +14,7 @@
 #define MLIR_SUPPORT_INTERFACESUPPORT_H
 
 #include "mlir/Support/TypeID.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/TypeName.h"
 
