@@ -129,10 +129,6 @@ public:
                           uint64_t Value, bool IsResolved,
                           const MCSubtargetInfo *STI) const = 0;
 
-  /// Check whether the given target requires emitting differences of two
-  /// symbols as a set of relocations.
-  virtual bool requiresDiffExpressionRelocations() const { return false; }
-
   /// @}
 
   /// \name Target Relaxation Interfaces
@@ -168,6 +164,16 @@ public:
   /// \param STI the subtarget information for the associated instruction.
   virtual void relaxInstruction(MCInst &Inst,
                                 const MCSubtargetInfo &STI) const {};
+
+  virtual bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
+                                  MCAsmLayout &Layout, bool &WasRelaxed) const {
+    return false;
+  }
+
+  virtual bool relaxDwarfCFA(MCDwarfCallFrameFragment &DF, MCAsmLayout &Layout,
+                             bool &WasRelaxed) const {
+    return false;
+  }
 
   /// @}
 

@@ -42,20 +42,6 @@ public:
 
   void setForceRelocs() { ForceRelocs = true; }
 
-  // Returns true if relocations will be forced for shouldForceRelocation by
-  // default. This will be true if relaxation is enabled or had previously
-  // been enabled.
-  bool willForceRelocations() const {
-    return ForceRelocs || STI.getFeatureBits()[RISCV::FeatureRelax];
-  }
-
-  // Generate diff expression relocations if the relax feature is enabled or had
-  // previously been enabled, otherwise it is safe for the assembler to
-  // calculate these internally.
-  bool requiresDiffExpressionRelocations() const override {
-    return willForceRelocations();
-  }
-
   // Return Size with extra Nop Bytes for alignment directive in code section.
   bool shouldInsertExtraNopBytesForCodeAlign(const MCAlignFragment &AF,
                                              unsigned &Size) override;
@@ -107,6 +93,11 @@ public:
 
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
+
+  bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF, MCAsmLayout &Layout,
+                          bool &WasRelaxed) const override;
+  bool relaxDwarfCFA(MCDwarfCallFrameFragment &DF, MCAsmLayout &Layout,
+                     bool &WasRelaxed) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
 
