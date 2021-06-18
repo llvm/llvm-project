@@ -147,7 +147,7 @@ may vary. Below are a set of plugins that are known to work:
 
 ### Visual Studio Code
 
-Provides MLIR language IDE features for VS code:
+Provides [MLIR](https://mlir.llvm.org/) language IDE features for VS code:
 
 *   Syntax highlighting for .mlir files and `mlir` markdown blocks
 *   go-to-definition and cross references
