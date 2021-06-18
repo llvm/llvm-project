@@ -40,6 +40,10 @@ namespace WasmYAML {
 struct Object;
 }
 
+namespace XCOFFYAML {
+struct Object;
+}
+
 namespace ArchYAML {
 struct Archive;
 }
@@ -58,6 +62,7 @@ bool yaml2macho(YamlObjectFile &Doc, raw_ostream &Out, ErrorHandler EH);
 bool yaml2minidump(MinidumpYAML::Object &Doc, raw_ostream &Out,
                    ErrorHandler EH);
 bool yaml2wasm(WasmYAML::Object &Doc, raw_ostream &Out, ErrorHandler EH);
+bool yaml2xcoff(XCOFFYAML::Object &Doc, raw_ostream &Out, ErrorHandler EH);
 
 bool convertYAML(Input &YIn, raw_ostream &Out, ErrorHandler ErrHandler,
                  unsigned DocNum = 1, uint64_t MaxSize = UINT64_MAX);

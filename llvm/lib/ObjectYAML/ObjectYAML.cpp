@@ -59,6 +59,9 @@ void MappingTraits<YamlObjectFile>::mapping(IO &IO,
     } else if (IO.mapTag("!WASM")) {
       ObjectFile.Wasm.reset(new WasmYAML::Object());
       MappingTraits<WasmYAML::Object>::mapping(IO, *ObjectFile.Wasm);
+    } else if (IO.mapTag("!XCOFF")) {
+      ObjectFile.Xcoff.reset(new XCOFFYAML::Object());
+      MappingTraits<XCOFFYAML::Object>::mapping(IO, *ObjectFile.Xcoff);
     } else if (const Node *N = In.getCurrentNode()) {
       if (N->getRawTag().empty())
         IO.setError("YAML Object File missing document type tag!");
