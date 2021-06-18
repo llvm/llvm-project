@@ -980,7 +980,7 @@ bool DylibFile::handleLDSymbol(StringRef originalName) {
 
   StringRef action;
   StringRef name;
-  std::tie(action, name) = originalName.drop_front(4 /* $ld$ */).split('$');
+  std::tie(action, name) = originalName.drop_front(strlen("$ld$")).split('$');
   if (action == "previous")
     handleLDPreviousSymbol(name, originalName);
   else if (action == "install_name")
@@ -1003,8 +1003,8 @@ void DylibFile::handleLDPreviousSymbol(StringRef name, StringRef originalName) {
   std::tie(compatVersion, name) = name.split('$');
   std::tie(platformStr, name) = name.split('$');
   std::tie(startVersion, name) = name.split('$');
-  std::tie(endVersion, symbolName) = name.split('$');
-  std::tie(symbolName, rest) = symbolName.split('$');
+  std::tie(endVersion, name) = name.split('$');
+  std::tie(symbolName, rest) = name.split('$');
   // TODO: ld64 contains some logic for non-empty symbolName as well.
   if (!symbolName.empty())
     return;
@@ -1047,14 +1047,10 @@ void DylibFile::handleLDInstallNameSymbol(StringRef name,
   StringRef condition, installName;
   std::tie(condition, installName) = name.split('$');
   VersionTuple version;
-  if (!condition.startswith("os") ||
-      version.tryParse(condition.drop_front(2 /* os */))) {
+  if (!condition.consume_front("os") || version.tryParse(condition))
     warn("failed to parse os version, symbol '" + originalName + "' ignored");
-    return;
-  }
-  if (version != config->platformInfo.minimum)
-    return;
-  dylibName = saver.save(installName);
+  else if (version == config->platformInfo.minimum)
+    dylibName = saver.save(installName);
 }
 
 ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f)
