@@ -948,7 +948,9 @@ private:
           Fortran::lower::StatementContext stmtCtx;
           auto maskCond = createFIRExpr(loc, info.maskExpr, stmtCtx);
           stmtCtx.finalize();
-          auto ifOp = builder->create<fir::IfOp>(loc, maskCond,
+          auto maskCondCast =
+              builder->createConvert(loc, builder->getI1Type(), maskCond);
+          auto ifOp = builder->create<fir::IfOp>(loc, maskCondCast,
                                                  /*withElseRegion=*/false);
           builder->setInsertionPointToStart(&ifOp.thenRegion().front());
         }
