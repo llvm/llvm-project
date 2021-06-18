@@ -67,7 +67,8 @@ static Optional<lsp::Location> getLocationFromLoc(FileLineColLoc loc) {
 /// one couldn't be created. `uri` is an optional additional filter that, when
 /// present, is used to filter sub locations that do not share the same uri.
 static Optional<lsp::Location>
-getLocationFromLoc(Location loc, const lsp::URIForFile *uri = nullptr) {
+getLocationFromLoc(llvm::SourceMgr &sourceMgr, Location loc,
+                   const lsp::URIForFile *uri = nullptr) {
   Optional<lsp::Location> location;
   loc->walk([&](Location nestedLoc) {
     FileLineColLoc fileLoc = nestedLoc.dyn_cast<FileLineColLoc>();
@@ -77,6 +78,17 @@ getLocationFromLoc(Location loc, const lsp::URIForFile *uri = nullptr) {
     Optional<lsp::Location> sourceLoc = getLocationFromLoc(fileLoc);
     if (sourceLoc && (!uri || sourceLoc->uri == *uri)) {
       location = *sourceLoc;
+      llvm::SMLoc loc = sourceMgr.FindLocForLineAndColumn(
+          sourceMgr.getMainFileID(), fileLoc.getLine(), fileLoc.getColumn());
+
+      // Use range of potential identifier starting at location, else length 1
+      // range.
+      location->range.end.character += 1;
+      if (Optional<llvm::SMRange> range =
+              AsmParserState::convertIdLocToRange(loc)) {
+        auto lineCol = sourceMgr.getLineAndColumn(range->End);
+        location->range.end.character = lineCol.second - 1;
+      }
       return WalkResult::interrupt();
     }
     return WalkResult::advance();
@@ -195,7 +207,8 @@ static void printDefBlockName(raw_ostream &os,
 }
 
 /// Convert the given MLIR diagnostic to the LSP form.
-static lsp::Diagnostic getLspDiagnoticFromDiag(Diagnostic &diag,
+static lsp::Diagnostic getLspDiagnoticFromDiag(llvm::SourceMgr &sourceMgr,
+                                               Diagnostic &diag,
                                                const lsp::URIForFile &uri) {
   lsp::Diagnostic lspDiag;
   lspDiag.source = "mlir";
@@ -208,7 +221,7 @@ static lsp::Diagnostic getLspDiagnoticFromDiag(Diagnostic &diag,
   // TODO: For simplicity, we just grab the first one. It may be likely that we
   // will need a more interesting heuristic here.'
   Optional<lsp::Location> lspLocation =
-      getLocationFromLoc(diag.getLocation(), &uri);
+      getLocationFromLoc(sourceMgr, diag.getLocation(), &uri);
   if (lspLocation)
     lspDiag.range = lspLocation->range;
 
@@ -232,7 +245,8 @@ static lsp::Diagnostic getLspDiagnoticFromDiag(Diagnostic &diag,
   std::vector<lsp::DiagnosticRelatedInformation> relatedDiags;
   for (Diagnostic &note : diag.getNotes()) {
     lsp::Location noteLoc;
-    if (Optional<lsp::Location> loc = getLocationFromLoc(note.getLocation()))
+    if (Optional<lsp::Location> loc =
+            getLocationFromLoc(sourceMgr, note.getLocation()))
       noteLoc = *loc;
     else
       noteLoc.uri = uri;
@@ -306,7 +320,7 @@ MLIRDocument::MLIRDocument(const lsp::URIForFile &uri, StringRef contents,
     : context(registry) {
   context.allowUnregisteredDialects();
   ScopedDiagnosticHandler handler(&context, [&](Diagnostic &diag) {
-    diagnostics.push_back(getLspDiagnoticFromDiag(diag, uri));
+    diagnostics.push_back(getLspDiagnoticFromDiag(sourceMgr, diag, uri));
   });
 
   // Try to parsed the given IR string.

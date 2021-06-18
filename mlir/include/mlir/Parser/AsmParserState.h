@@ -104,6 +104,10 @@ public:
   /// state.
   iterator_range<OperationDefIterator> getOpDefs() const;
 
+  /// Returns (heuristically) the range of an identifier given a SMLoc
+  /// corresponding to the start of an identifier location.
+  static llvm::SMRange convertIdLocToRange(llvm::SMLoc loc);
+
   //===--------------------------------------------------------------------===//
   // Populate State
   //===--------------------------------------------------------------------===//
