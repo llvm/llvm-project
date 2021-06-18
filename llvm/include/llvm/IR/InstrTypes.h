@@ -1729,13 +1729,13 @@ public:
   /// Extract the byval type for a call or parameter.
   Type *getParamByValType(unsigned ArgNo) const {
     Type *Ty = Attrs.getParamByValType(ArgNo);
-    return Ty;
+    return Ty ? Ty : getArgOperand(ArgNo)->getType()->getPointerElementType();
   }
 
   /// Extract the preallocated type for a call or parameter.
   Type *getParamPreallocatedType(unsigned ArgNo) const {
     Type *Ty = Attrs.getParamPreallocatedType(ArgNo);
-    return Ty;
+    return Ty ? Ty : getArgOperand(ArgNo)->getType()->getPointerElementType();
   }
 
   /// Extract the number of dereferenceable bytes for a call or
