@@ -185,7 +185,7 @@ isl::union_map tryFlattenSequence(isl::union_map Schedule) {
   // Would cause an infinite loop.
   if (!isDimBoundedByConstant(ScatterSet, 0)) {
     LLVM_DEBUG(dbgs() << "Abort; dimension is not of fixed size\n");
-    return {};
+    return nullptr;
   }
 
   auto AllDomains = Schedule.domain();
@@ -216,7 +216,7 @@ isl::union_map tryFlattenSequence(isl::union_map Schedule) {
 
     if (!isDimBoundedByParameter(FirstSubScatter, 0)) {
       LLVM_DEBUG(dbgs() << "Abort; sequence step is not bounded\n");
-      return {};
+      return nullptr;
     }
 
     auto FirstSubScatterMap = isl::map::from_range(FirstSubScatter);
@@ -275,7 +275,7 @@ isl::union_map tryFlattenLoop(isl::union_map Schedule) {
 
   if (!isDimBoundedByConstant(SubExtent, 0)) {
     LLVM_DEBUG(dbgs() << "Abort; dimension not bounded by constant\n");
-    return {};
+    return nullptr;
   }
 
   auto Min = SubExtent.dim_min(0);
@@ -287,7 +287,7 @@ isl::union_map tryFlattenLoop(isl::union_map Schedule) {
 
   if (!MinVal || !MaxVal || MinVal.is_nan() || MaxVal.is_nan()) {
     LLVM_DEBUG(dbgs() << "Abort; dimension bounds could not be determined\n");
-    return {};
+    return nullptr;
   }
 
   auto FirstSubScheduleAff = scheduleExtractDimAff(SubSchedule, 0);

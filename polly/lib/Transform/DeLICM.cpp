@@ -730,7 +730,8 @@ private:
     auto DefEltSched = ValInst.apply_domain(WrittenTranslator);
     simplify(DefEltSched);
 
-    Knowledge Proposed(EltZone, {}, filterKnownValInst(EltKnown), DefEltSched);
+    Knowledge Proposed(EltZone, nullptr, filterKnownValInst(EltKnown),
+                       DefEltSched);
     if (isConflicting(Proposed))
       return false;
 
@@ -941,7 +942,7 @@ private:
     auto Occupied = LifetimeTranslator.range();
     simplify(Occupied);
 
-    Knowledge Proposed(Occupied, {}, EltLifetimeInst, Written);
+    Knowledge Proposed(Occupied, nullptr, EltLifetimeInst, Written);
     if (isConflicting(Proposed))
       return false;
 
@@ -1218,7 +1219,7 @@ public:
       return false;
     }
 
-    Zone = OriginalZone = Knowledge({}, EltUnused, EltKnown, EltWritten);
+    Zone = OriginalZone = Knowledge(nullptr, EltUnused, EltKnown, EltWritten);
     LLVM_DEBUG(dbgs() << "Computed Zone:\n"; OriginalZone.print(dbgs(), 4));
 
     assert(Zone.isUsable() && OriginalZone.isUsable());
