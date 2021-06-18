@@ -1,7 +1,7 @@
-// RUN: %clang_dfsan -gmlt -mllvm -dfsan-track-origins=1 -mllvm -dfsan-fast-16-labels=true %s -o %t
+// RUN: %clang_dfsan -gmlt -mllvm -dfsan-track-origins=1 %s -o %t
 //
 // RUN: %run %t >%t.out 2>&1
-// RUN: FileCheck %s --check-prefix=CHECK < %t.out
+// RUN: FileCheck %s < %t.out
 //
 // RUN: DFSAN_OPTIONS=origin_history_size=2 %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK2 < %t.out

@@ -1,6 +1,4 @@
-; RUN: opt < %s -dfsan -dfsan-fast-16-labels=true -dfsan-abilist=%S/Inputs/abilist.txt -S | FileCheck %s --check-prefixes=CHECK,TLS_ABI
-; RUN: opt < %s -dfsan -dfsan-fast-8-labels=true -dfsan-abilist=%S/Inputs/abilist.txt -S | FileCheck %s --check-prefixes=CHECK,TLS_ABI
-; RUN: opt < %s -dfsan -dfsan-abilist=%S/Inputs/abilist.txt -S | FileCheck %s --check-prefixes=CHECK,LEGACY
+; RUN: opt < %s -dfsan -dfsan-abilist=%S/Inputs/abilist.txt -S | FileCheck %s --check-prefixes=CHECK,TLS_ABI
 ; RUN: opt < %s -dfsan -dfsan-args-abi -dfsan-abilist=%S/Inputs/abilist.txt -S | FileCheck %s --check-prefixes=CHECK,ARGS_ABI
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -33,19 +31,12 @@ define {i1, i7} @call_functional({i32, i1} %a, [2 x i7] %b) {
   ; TLS_ABI-NEXT: %[[#REG+10]] = insertvalue { i[[#SBITS]], i[[#SBITS]] } %[[#REG+9]], i[[#SBITS]] %[[#REG+8]], 1
   ; TLS_ABI: store { i[[#SBITS]], i[[#SBITS]] } %[[#REG+10]], { i[[#SBITS]], i[[#SBITS]] }* bitcast ([100 x i64]* @__dfsan_retval_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
 
-  ; LEGACY: @"dfs$call_functional"
-  ; LEGACY: [[B:%.*]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align [[ALIGN:2]]
-  ; LEGACY: [[A:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
-  ; LEGACY: [[U:%.*]] = call zeroext i[[#SBITS]] @__dfsan_union(i[[#SBITS]] zeroext [[A]], i[[#SBITS]] zeroext [[B]])
-  ; LEGACY: [[PH:%.*]] = phi i[[#SBITS]] [ [[U]], {{.*}} ], [ [[A]], {{.*}} ]
-  ; LEGACY: store i[[#SBITS]] [[PH]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
-
-  ; ARGS_ABI: @"dfs$call_functional"
-  ; ARGS_ABI: [[U:%.*]]  = call zeroext i[[#SBITS]] @__dfsan_union(i[[#SBITS]] zeroext %2, i[[#SBITS]] zeroext %3)
-  ; ARGS_ABI: [[PH:%.*]] = phi i[[#SBITS]] [ %7, {{.*}} ], [ %2, {{.*}} ]
-  ; ARGS_ABI: [[R0:%.*]] = insertvalue { { i1, i7 }, i[[#SBITS]] } undef, { i1, i7 } %r, 0
-  ; ARGS_ABI: [[R1:%.*]] = insertvalue { { i1, i7 }, i[[#SBITS]] } [[R0]], i[[#SBITS]] [[PH]], 1
-  ; ARGS_ABI: ret { { i1, i7 }, i[[#SBITS]] } [[R1]]
+  ; ARGS_ABI: @"dfs$call_functional"({ i32, i1 } %0, [2 x i7] %1, i[[#SBITS]] %2, i[[#SBITS]] %3)
+  ; ARGS_ABI: %[[#U:]]  = or i[[#SBITS]] %2, %3
+  ; ARGS_ABI: %r = call { i1, i7 } @functional({ i32, i1 } %0, [2 x i7] %1)
+  ; ARGS_ABI: %[[#R:]] = insertvalue { { i1, i7 }, i[[#SBITS]] } undef, { i1, i7 } %r, 0
+  ; ARGS_ABI: %[[#R+1]] = insertvalue { { i1, i7 }, i[[#SBITS]] } %[[#R]], i[[#SBITS]] %[[#U]], 1
+  ; ARGS_ABI: ret { { i1, i7 }, i[[#SBITS]] } %[[#R+1]]
 
   %r = call {i1, i7} @functional({i32, i1} %a, [2 x i7] %b)
   ret {i1, i7} %r
