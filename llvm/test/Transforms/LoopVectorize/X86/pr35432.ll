@@ -83,7 +83,7 @@ define i32 @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP27:%.*]] = add i8 [[TMP23]], -1
 ; CHECK-NEXT:    [[TMP28:%.*]] = zext i8 [[TMP26]] to i32
 ; CHECK-NEXT:    [[TMP29:%.*]] = zext i8 [[TMP27]] to i32
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP0:!llvm.loop !.*]]
 ; CHECK:       middle.block:

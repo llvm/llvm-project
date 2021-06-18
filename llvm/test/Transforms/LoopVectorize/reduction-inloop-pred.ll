@@ -1551,7 +1551,7 @@ define float @reduction_conditional(float* %A, float* %B, float* %C, float %S) {
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = fadd fast <4 x float> [[VEC_PHI]], [[PREDPHI_V]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP12]], <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i1> [[TMP11]]
 ; CHECK-NEXT:    [[PREDPHI3]] = select <4 x i1> [[TMP13]], <4 x float> [[VEC_PHI]], <4 x float> [[PREDPHI]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
 ; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP28:![0-9]+]]
 ; CHECK:       middle.block:

@@ -10,7 +10,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32*, i32** %a, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32** [[TMP2]] to <4 x i32*>*
 ; CHECK-NEXT:    store <4 x i32*> [[TMP1]], <4 x i32*>* [[TMP3]], align 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
 ; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
 ;
@@ -40,7 +40,7 @@ for.end:
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32*, i32** %a, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32** [[TMP2]] to <4 x i32*>*
 ; CHECK-NEXT:    store <4 x i32*> [[DOTSPLAT]], <4 x i32*>* [[TMP3]], align 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK:         br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 define void @uniform_vector_gep_stored(i32** %a, i32 *%b, i64 %n) {

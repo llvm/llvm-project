@@ -46,7 +46,7 @@ define i32 @foo(i32* nocapture %A, i32* nocapture %B, i32 %n) {
 ; CHECK-NEXT:    [[PREDPHI7:%.*]] = select <4 x i1> [[TMP16]], <4 x i32> [[TMP13]], <4 x i32> [[PREDPHI]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = bitcast i32* [[TMP6]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[PREDPHI7]], <4 x i32>* [[TMP17]], align 4, !alias.scope !0, !noalias !3
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], [[LOOP5:!llvm.loop !.*]]
 ; CHECK:       middle.block:

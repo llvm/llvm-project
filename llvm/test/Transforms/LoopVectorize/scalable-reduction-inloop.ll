@@ -19,7 +19,7 @@ define i8 @reduction_add_trunc(i8* noalias nocapture %A) {
 ; CHECK-NEXT:    [[TMP29:%.*]] = add <vscale x 8 x i32> [[TMP15]], [[TMP27]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP31:%.*]] = mul i32 [[TMP30]], 16
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], [[TMP31]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP31]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i32 [[INDEX_NEXT]], {{%.*}}
 ; CHECK-NEXT:    [[TMP33:%.*]] = trunc <vscale x 8 x i32> [[TMP28]] to <vscale x 8 x i8>
 ; CHECK-NEXT:    [[TMP34]] = zext <vscale x 8 x i8> [[TMP33]] to <vscale x 8 x i32>
