@@ -328,7 +328,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (((match(Op0, m_ZExt(m_Value(X))) && match(Op1, m_ZExt(m_Value(Y)))) ||
        (match(Op0, m_SExt(m_Value(X))) && match(Op1, m_SExt(m_Value(Y))))) &&
       X->getType()->isIntOrIntVectorTy(1) && X->getType() == Y->getType() &&
-      (Op0->hasOneUse() || Op1->hasOneUse() || X == Y)) {
+      (Op0->hasOneUse() || Op1->hasOneUse())) {
     Value *And = Builder.CreateAnd(X, Y, "mulbool");
     return CastInst::Create(Instruction::ZExt, And, I.getType());
   }
