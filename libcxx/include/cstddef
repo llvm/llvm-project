@@ -46,11 +46,11 @@ Types:
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-using ::ptrdiff_t;
-using ::size_t;
+using ::ptrdiff_t _LIBCPP_USING_IF_EXISTS;
+using ::size_t _LIBCPP_USING_IF_EXISTS;
 
 #if !defined(_LIBCPP_CXX03_LANG)
-using ::max_align_t;
+using ::max_align_t _LIBCPP_USING_IF_EXISTS;
 #endif
 
 template <class _Tp> struct __libcpp_is_integral                     { enum { value = 0 }; };
