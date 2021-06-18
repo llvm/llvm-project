@@ -529,7 +529,7 @@ static void replaceCommonSymbols() {
     if (common == nullptr)
       continue;
 
-    auto *isec = make<InputSection>();
+    auto *isec = make<ConcatInputSection>();
     isec->file = common->getFile();
     isec->name = section_names::common;
     isec->segname = segment_names::data;
@@ -1037,6 +1037,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->implicitDylibs = !args.hasArg(OPT_no_implicit_dylibs);
   config->emitFunctionStarts = !args.hasArg(OPT_no_function_starts);
   config->emitBitcodeBundle = args.hasArg(OPT_bitcode_bundle);
+  config->dedupLiterals = args.hasArg(OPT_deduplicate_literals);
 
   // FIXME: Add a commandline flag for this too.
   config->zeroModTime = getenv("ZERO_AR_DATE");

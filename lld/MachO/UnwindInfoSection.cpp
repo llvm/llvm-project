@@ -214,7 +214,7 @@ template <class Ptr>
 static void
 relocateCompactUnwind(ConcatOutputSection *compactUnwindSection,
                       std::vector<CompactUnwindEntry<Ptr>> &cuVector) {
-  for (const InputSection *isec : compactUnwindSection->inputs) {
+  for (const ConcatInputSection *isec : compactUnwindSection->inputs) {
     assert(isec->parent == compactUnwindSection);
 
     uint8_t *buf =
@@ -238,7 +238,7 @@ relocateCompactUnwind(ConcatOutputSection *compactUnwindSection,
         if (referentIsec->shouldOmitFromOutput())
           referentVA = UINT64_MAX; // Tombstone value
         else
-          referentVA = referentIsec->getVA() + r.addend;
+          referentVA = referentIsec->getVA(r.addend);
       }
 
       writeAddress(buf + r.offset, referentVA, r.length);

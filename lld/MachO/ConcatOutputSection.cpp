@@ -25,7 +25,7 @@ using namespace llvm::MachO;
 using namespace lld;
 using namespace lld::macho;
 
-void ConcatOutputSection::addInput(InputSection *input) {
+void ConcatOutputSection::addInput(ConcatInputSection *input) {
   if (inputs.empty()) {
     align = input->align;
     flags = input->flags;
@@ -154,7 +154,7 @@ bool ConcatOutputSection::needsThunks() const {
 uint64_t ConcatOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
   uint64_t branchRange = target->branchRange;
   size_t endIdx = inputs.size();
-  InputSection *isec = inputs[callIdx];
+  ConcatInputSection *isec = inputs[callIdx];
   uint64_t isecVA = isec->getVA();
   // Tally the non-stub functions which still have call sites
   // remaining to process, which yields the maximum number
@@ -188,7 +188,7 @@ uint64_t ConcatOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
 void ConcatOutputSection::finalize() {
   uint64_t isecAddr = addr;
   uint64_t isecFileOff = fileOff;
-  auto finalizeOne = [&](InputSection *isec) {
+  auto finalizeOne = [&](ConcatInputSection *isec) {
     isecAddr = alignTo(isecAddr, isec->align);
     isecFileOff = alignTo(isecFileOff, isec->align);
     isec->outSecOff = isecAddr - addr;
@@ -199,7 +199,7 @@ void ConcatOutputSection::finalize() {
   };
 
   if (!needsThunks()) {
-    for (InputSection *isec : inputs)
+    for (ConcatInputSection *isec : inputs)
       finalizeOne(isec);
     size = isecAddr - addr;
     fileSize = isecFileOff - fileOff;
@@ -221,7 +221,7 @@ void ConcatOutputSection::finalize() {
        ++callIdx) {
     if (finalIdx == callIdx)
       finalizeOne(inputs[finalIdx++]);
-    InputSection *isec = inputs[callIdx];
+    ConcatInputSection *isec = inputs[callIdx];
     assert(isec->isFinal);
     uint64_t isecVA = isec->getVA();
     // Assign addresses up-to the forward branch-range limit
@@ -290,7 +290,7 @@ void ConcatOutputSection::finalize() {
         // unfinalized inputs[finalIdx].
         fatal(Twine(__FUNCTION__) + ": FIXME: thunk range overrun");
       }
-      thunkInfo.isec = make<InputSection>();
+      thunkInfo.isec = make<ConcatInputSection>();
       thunkInfo.isec->name = isec->name;
       thunkInfo.isec->segname = isec->segname;
       thunkInfo.isec->parent = this;
