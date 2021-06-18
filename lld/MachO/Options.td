@@ -60,6 +60,10 @@ def deduplicate_literals: Flag<["--"], "deduplicate-literals">,
 def print_dylib_search: Flag<["--"], "print-dylib-search">,
     HelpText<"Print which paths lld searched when trying to find dylibs">,
     Group<grp_lld>;
+def icf_eq: Joined<["--"], "icf=">,
+    HelpText<"Set level for identical code folding (default: none)">,
+    MetaVarName<"[none,safe,all]">,
+    Group<grp_lld>;
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
 // dated 2018-03-07 and cross checked with ld64 source code in repo
@@ -275,12 +279,8 @@ def no_branch_islands : Flag<["-"], "no_branch_islands">,
     HelpText<"Disable infra for branches beyond the maximum branch distance.">,
     Flags<[HelpHidden]>,
     Group<grp_opts>;
-def icf: Separate<["-"], "icf">,
-    HelpText<"Set level for identical code folding (default: none)">,
-    MetaVarName<"[none,safe,all]">,
-    Group<grp_opts>;
 def no_deduplicate : Flag<["-"], "no_deduplicate">,
-    HelpText<"Disable code deduplicaiton (synonym for `-icf none')">,
+    HelpText<"Disable code deduplicaiton (synonym for `--icf=none')">,
     Group<grp_opts>;
 
 def grp_version : OptionGroup<"version">, HelpText<"VERSION TARGETING">;

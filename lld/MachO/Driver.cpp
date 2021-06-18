@@ -700,22 +700,22 @@ getUndefinedSymbolTreatment(const ArgList &args) {
 
 static ICFLevel getICFLevel(const ArgList &args) {
   bool noDeduplicate = args.hasArg(OPT_no_deduplicate);
-  StringRef icfLevelStr = args.getLastArgValue(OPT_icf);
+  StringRef icfLevelStr = args.getLastArgValue(OPT_icf_eq);
   auto icfLevel = StringSwitch<ICFLevel>(icfLevelStr)
                       .Cases("none", "", ICFLevel::none)
                       .Case("safe", ICFLevel::safe)
                       .Case("all", ICFLevel::all)
                       .Default(ICFLevel::unknown);
   if (icfLevel == ICFLevel::unknown) {
-    warn(Twine("unknown -icf OPTION `") + icfLevelStr +
+    warn(Twine("unknown --icf=OPTION `") + icfLevelStr +
          "', defaulting to `none'");
     icfLevel = ICFLevel::none;
   } else if (icfLevel != ICFLevel::none && noDeduplicate) {
-    warn(Twine("`-icf " + icfLevelStr +
+    warn(Twine("`--icf=" + icfLevelStr +
                "' conflicts with -no_deduplicate, setting to `none'"));
     icfLevel = ICFLevel::none;
   } else if (icfLevel == ICFLevel::safe) {
-    warn(Twine("`-icf safe' is not yet implemented, reverting to `none'"));
+    warn(Twine("`--icf=safe' is not yet implemented, reverting to `none'"));
     icfLevel = ICFLevel::none;
   }
   return icfLevel;

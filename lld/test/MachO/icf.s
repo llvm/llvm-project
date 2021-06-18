@@ -2,7 +2,7 @@
 # RUN: rm -rf %t; mkdir %t
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/main.o
-# RUN: %lld -lSystem -icf all -o %t/main %t/main.o
+# RUN: %lld -lSystem --icf=all -o %t/main %t/main.o
 # RUN: llvm-objdump -d --syms %t/main | FileCheck %s
 
 # CHECK-LABEL: SYMBOL TABLE:
