@@ -219,7 +219,7 @@ int formatString(char *Buffer, uptr BufferLength, const char *Format, ...) {
 }
 
 void ScopedString::append(const char *Format, va_list Args) {
-  DCHECK_LT(Length, String.size());
+  RAW_CHECK(Length <= String.size());
   va_list ArgsCopy;
   va_copy(ArgsCopy, Args);
   // formatString doesn't currently support a null buffer or zero buffer length,
@@ -232,7 +232,7 @@ void ScopedString::append(const char *Format, va_list Args) {
   formatString(String.data() + Length, AdditionalLength, Format, ArgsCopy);
   va_end(ArgsCopy);
   Length = strlen(String.data());
-  CHECK_LT(Length, String.size());
+  RAW_CHECK(Length < String.size());
 }
 
 FORMAT(2, 3)
@@ -247,7 +247,7 @@ FORMAT(1, 2)
 void Printf(const char *Format, ...) {
   va_list Args;
   va_start(Args, Format);
-  ScopedString Msg(1024);
+  ScopedString Msg;
   Msg.append(Format, Args);
   outputRaw(Msg.data());
   va_end(Args);
