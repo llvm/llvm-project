@@ -58,14 +58,14 @@ DylibFile *loadDylib(llvm::MemoryBufferRef mbref, DylibFile *umbrella = nullptr,
 
 // Search for all possible combinations of `{root}/{name}.{extension}`.
 // If \p extensions are not specified, then just search for `{root}/{name}`.
-llvm::Optional<llvm::StringRef>
+llvm::Optional<std::string>
 findPathCombination(const llvm::Twine &name,
                     const std::vector<llvm::StringRef> &roots,
                     ArrayRef<llvm::StringRef> extensions = {""});
 
 // If -syslibroot is specified, absolute paths to non-object files may be
 // rerooted.
-llvm::StringRef rerootPath(llvm::StringRef path);
+std::string rerootPath(llvm::StringRef path);
 
 llvm::Optional<InputFile *> loadArchiveMember(MemoryBufferRef, uint32_t modTime,
                                               StringRef archiveName,
