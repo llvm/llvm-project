@@ -152,6 +152,9 @@ public:
 
   void Post(const parser::AccDefaultClause &);
 
+  bool Pre(const parser::AccClause::Attach &);
+  bool Pre(const parser::AccClause::Detach &);
+
   bool Pre(const parser::AccClause::Copy &x) {
     ResolveAccObjectList(x.v, Symbol::Flag::AccCopyIn);
     ResolveAccObjectList(x.v, Symbol::Flag::AccCopyOut);
@@ -222,6 +225,8 @@ private:
       const parser::Name &, const Symbol &, Symbol::Flag);
   void AllowOnlyArrayAndSubArray(const parser::AccObjectList &objectList);
   void DoNotAllowAssumedSizedArray(const parser::AccObjectList &objectList);
+  void EnsureAllocatableOrPointer(
+      const llvm::acc::Clause clause, const parser::AccObjectList &objectList);
 };
 
 // Data-sharing and Data-mapping attributes for data-refs in OpenMP construct
@@ -847,6 +852,45 @@ void AccAttributeVisitor::PrivatizeAssociatedLoopIndex(
     loop = it != block.end() ? GetDoConstructIf(*it) : nullptr;
   }
   CHECK(level == 0);
+}
+
+void AccAttributeVisitor::EnsureAllocatableOrPointer(
+    const llvm::acc::Clause clause, const parser::AccObjectList &objectList) {
+  for (const auto &accObject : objectList.v) {
+    std::visit(
+        common::visitors{
+            [&](const parser::Designator &designator) {
+              const auto &lastName{GetLastName(designator)};
+              if (!IsAllocatableOrPointer(*lastName.symbol))
+                context_.Say(designator.source,
+                    "Argument `%s` on the %s clause must be a variable or "
+                    "array with the POINTER or ALLOCATABLE attribute"_err_en_US,
+                    lastName.symbol->name(),
+                    parser::ToUpperCaseLetters(
+                        llvm::acc::getOpenACCClauseName(clause).str()));
+            },
+            [&](const auto &name) {
+              context_.Say(name.source,
+                  "Argument on the %s clause must be a variable or "
+                  "array with the POINTER or ALLOCATABLE attribute"_err_en_US,
+                  parser::ToUpperCaseLetters(
+                      llvm::acc::getOpenACCClauseName(clause).str()));
+            },
+        },
+        accObject.u);
+  }
+}
+
+bool AccAttributeVisitor::Pre(const parser::AccClause::Attach &x) {
+  // Restriction - line 1708-1709
+  EnsureAllocatableOrPointer(llvm::acc::Clause::ACCC_attach, x.v);
+  return true;
+}
+
+bool AccAttributeVisitor::Pre(const parser::AccClause::Detach &x) {
+  // Restriction - line 1715-1717
+  EnsureAllocatableOrPointer(llvm::acc::Clause::ACCC_detach, x.v);
+  return true;
 }
 
 void AccAttributeVisitor::Post(const parser::AccDefaultClause &x) {

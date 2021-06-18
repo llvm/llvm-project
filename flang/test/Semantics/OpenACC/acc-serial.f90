@@ -21,6 +21,8 @@ program openacc_serial_validity
   real :: reduction_r
   logical :: reduction_l
   real(8), dimension(N, N) :: aa, bb, cc
+  real(8), dimension(:), allocatable :: dd
+  real(8), pointer :: p
   logical :: ifCondition = .TRUE.
   type(atype) :: t
   type(atype), dimension(10) :: ta
@@ -128,7 +130,8 @@ program openacc_serial_validity
   !$acc serial deviceptr(aa, bb) no_create(cc)
   !$acc end serial
 
-  !$acc serial attach(aa, bb, cc)
+  !ERROR: Argument `aa` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
+  !$acc serial attach(aa, dd, p)
   !$acc end serial
 
   !$acc serial firstprivate(bb, cc)
