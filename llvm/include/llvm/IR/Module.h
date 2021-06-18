@@ -909,10 +909,6 @@ public:
   int getStackProtectorGuardOffset() const;
   void setStackProtectorGuardOffset(int Offset);
 
-  /// Get/set the stack alignment overridden from the default.
-  unsigned getOverrideStackAlignment() const;
-  void setOverrideStackAlignment(unsigned Align);
-
   /// @name Utility functions for querying and setting the build SDK version
   /// @{
 

@@ -314,8 +314,8 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
     resetTargetOptions(F);
     I = std::make_unique<X86Subtarget>(
         TargetTriple, CPU, TuneCPU, FS, *this,
-        MaybeAlign(F.getParent()->getOverrideStackAlignment()),
-        PreferVectorWidthOverride, RequiredVectorWidth);
+        MaybeAlign(Options.StackAlignmentOverride), PreferVectorWidthOverride,
+        RequiredVectorWidth);
   }
   return I.get();
 }
