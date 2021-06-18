@@ -348,12 +348,15 @@ config("compiler_defaults") {
       ]
     }
   }
+
+  cflags_objcc = cflags_cc
 }
 
 config("no_exceptions") {
   if (host_os != "win") {
     cflags_cc = [ "-fno-exceptions" ]
   }
+  cflags_objcc = cflags_cc
 }
 
 config("no_rtti") {
@@ -362,6 +365,7 @@ config("no_rtti") {
   } else {
     cflags_cc = [ "-fno-rtti" ]
   }
+  cflags_objcc = cflags_cc
 }
 
 # To make an archive that can be distributed, you need to remove this config and
@@ -414,6 +418,16 @@ config("crt_code") {
       "-Werror=thread-safety-beta",
     ]
   }
+}
+
+config("lldb_code") {
+  if (host_os != "win") {
+    cflags = [ "-fno-strict-aliasing" ]
+  }
+  include_dirs = [
+    "//lldb/include",
+    "$root_gen_dir/lldb/include",
+  ]
 }
 
 config("warn_covered_switch_default") {
