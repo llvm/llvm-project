@@ -102,7 +102,7 @@
 							},
 							"env": {
 								"type": "array",
-								"description": "Additional environment variables.",
+								"description": "Additional environment variables to set when launching the program. This is an array of strings that contains the variable name followed by an optional '=' character and the environment variable's value. Example:  [\"FOO=BAR\", \"BAZ\"]",
 								"default": []
 							},
 							"stopOnEntry": {
