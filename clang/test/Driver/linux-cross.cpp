@@ -136,4 +136,6 @@
 
 // RUN: %clang -### %s --target=x86_64-linux-muslx32 --sysroot= \
 // RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=MUSL_X32
+// RUN: %clang -### %s --target=i686-linux-musl -mx32 --sysroot= \
+// RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=MUSL_X32
 // MUSL_X32: "-dynamic-linker" "/lib/ld-musl-x32.so.1"
