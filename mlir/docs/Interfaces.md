@@ -384,6 +384,9 @@ comprised of the following components:
     -   Additional C++ code that is generated in the declaration of the
         interface class. This allows for defining methods and more on the user
         facing interface class, that do not need to hook into the IR entity.
+        These declarations are _not_ implicitly visible in default
+        implementations of interface methods, but static declarations may be
+        accessed with full name qualification.
 
 `OpInterface` classes may additionally contain the following:
 
@@ -430,6 +433,8 @@ Interface methods are comprised of the following components:
     -   `ConcreteAttr`/`ConcreteOp`/`ConcreteType` is an implicitly defined
         `typename` that can be used to refer to the type of the derived IR
         entity currently being operated on.
+    -   This may refer to static fields of the interface class using the
+        qualified name, e.g., `TestOpInterface::staticMethod()`.
 
 ODS also allows for generating declarations for the `InterfaceMethod`s of an
 operation if the operation specifies the interface with
