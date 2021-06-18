@@ -776,18 +776,22 @@ public:
       return LT.first * 2 * OpCost;
     }
 
+    // We cannot scalarize scalable vectors, so return Invalid.
+    if (isa<ScalableVectorType>(Ty))
+      return InstructionCost::getInvalid();
+
     // Else, assume that we need to scalarize this op.
     // TODO: If one of the types get legalized by splitting, handle this
     // similarly to what getCastInstrCost() does.
-    if (auto *VTy = dyn_cast<VectorType>(Ty)) {
-      unsigned Num = cast<FixedVectorType>(VTy)->getNumElements();
+    if (auto *VTy = dyn_cast<FixedVectorType>(Ty)) {
       InstructionCost Cost = thisT()->getArithmeticInstrCost(
           Opcode, VTy->getScalarType(), CostKind, Opd1Info, Opd2Info,
           Opd1PropInfo, Opd2PropInfo, Args, CxtI);
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
       SmallVector<Type *> Tys(Args.size(), Ty);
-      return getScalarizationOverhead(VTy, Args, Tys) + Num * Cost;
+      return getScalarizationOverhead(VTy, Args, Tys) +
+             VTy->getNumElements() * Cost;
     }
 
     // We don't know anything about this scalar instruction.
