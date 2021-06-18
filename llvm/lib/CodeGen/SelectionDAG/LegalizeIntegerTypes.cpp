@@ -1998,15 +1998,8 @@ SDValue DAGTypeLegalizer::PromoteIntOp_FPOWI(SDNode *N) {
   // sizeof(int) the libcall might not be according to the targets ABI. Instead
   // we rewrite to a libcall here directly, letting makeLibCall handle promotion
   // if the target accepts it according to shouldSignExtendTypeInLibCall.
-  RTLIB::Libcall LC;
-  switch (N->getSimpleValueType(0).SimpleTy) {
-  default: llvm_unreachable("Unexpected request for libcall!");
-  case MVT::f32: LC = RTLIB::POWI_F32; break;
-  case MVT::f64: LC = RTLIB::POWI_F64; break;
-  case MVT::f80: LC = RTLIB::POWI_F80; break;
-  case MVT::f128: LC = RTLIB::POWI_F128; break;
-  case MVT::ppcf128: LC = RTLIB::POWI_PPCF128; break;
-  }
+  RTLIB::Libcall LC = RTLIB::getPOWI(N->getValueType(0));
+  assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fpowi.");
   if (!TLI.getLibcallName(LC)) {
     // Some targets don't have a powi libcall; use pow instead.
     // FIXME: Implement this if some target needs it.

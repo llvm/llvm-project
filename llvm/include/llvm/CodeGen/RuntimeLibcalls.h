@@ -33,6 +33,15 @@ namespace RTLIB {
 #undef HANDLE_LIBCALL
   };
 
+  /// GetFPLibCall - Helper to return the right libcall for the given floating
+  /// point type, or UNKNOWN_LIBCALL if there is none.
+  Libcall getFPLibCall(EVT VT,
+                       Libcall Call_F32,
+                       Libcall Call_F64,
+                       Libcall Call_F80,
+                       Libcall Call_F128,
+                       Libcall Call_PPCF128);
+
   /// getFPEXT - Return the FPEXT_*_* value for the given types, or
   /// UNKNOWN_LIBCALL if there is none.
   Libcall getFPEXT(EVT OpVT, EVT RetVT);
@@ -56,6 +65,10 @@ namespace RTLIB {
   /// getUINTTOFP - Return the UINTTOFP_*_* value for the given types, or
   /// UNKNOWN_LIBCALL if there is none.
   Libcall getUINTTOFP(EVT OpVT, EVT RetVT);
+
+  /// getPOWI - Return the POWI_* value for the given types, or
+  /// UNKNOWN_LIBCALL if there is none.
+  Libcall getPOWI(EVT RetVT);
 
   /// Return the SYNC_FETCH_AND_* value for the given opcode and type, or
   /// UNKNOWN_LIBCALL if there is none.
