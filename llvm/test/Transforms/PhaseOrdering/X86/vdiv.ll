@@ -72,7 +72,7 @@ define void @vdiv(double* %x, double* %y, double %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds double, double* [[TMP16]], i64 12
 ; CHECK-NEXT:    [[TMP23:%.*]] = bitcast double* [[TMP22]] to <4 x double>*
 ; CHECK-NEXT:    store <4 x double> [[TMP15]], <4 x double>* [[TMP23]], align 8, !tbaa [[TBAA3]], !alias.scope !10, !noalias !7
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
