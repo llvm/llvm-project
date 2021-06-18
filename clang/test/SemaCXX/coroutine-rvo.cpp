@@ -39,15 +39,14 @@ struct suspend_never {
 };
 
 struct MoveOnly {
-  MoveOnly() {};
+  MoveOnly() = default;
   MoveOnly(const MoveOnly&) = delete;
-  MoveOnly(MoveOnly&&) noexcept {};
-  ~MoveOnly() {};
+  MoveOnly(MoveOnly &&) = default;
 };
 
 struct NoCopyNoMove {
   NoCopyNoMove() = default;
-  NoCopyNoMove(const NoCopyNoMove &) = delete; // expected-note 4{{'NoCopyNoMove' has been explicitly marked deleted here}}
+  NoCopyNoMove(const NoCopyNoMove &) = delete;
 };
 
 template <typename T>
@@ -63,13 +62,12 @@ struct task {
 
 task<NoCopyNoMove> local2val() {
   NoCopyNoMove value;
-  co_return value; // expected-error {{call to deleted constructor of 'NoCopyNoMove'}}
-  // expected-error@-1 {{value reference to type 'NoCopyNoMove' cannot bind to lvalue of type 'NoCopyNoMove'}}
+  co_return value;
 }
 
 task<NoCopyNoMove &> local2ref() {
   NoCopyNoMove value;
-  co_return value; // expected-error {{call to deleted constructor of 'NoCopyNoMove'}}
+  co_return value; // expected-error {{non-const lvalue reference to type 'NoCopyNoMove' cannot bind to a temporary of type 'NoCopyNoMove'}}
 }
 
 // We need the move constructor for construction of the coroutine.
@@ -82,8 +80,7 @@ task<NoCopyNoMove> lvalue2val(NoCopyNoMove &value) {
 }
 
 task<NoCopyNoMove> rvalue2val(NoCopyNoMove &&value) {
-  co_return value; // expected-error {{rvalue reference to type 'NoCopyNoMove' cannot bind to lvalue of type 'NoCopyNoMove'}}
-  // expected-error@-1 {{call to deleted constructor of 'NoCopyNoMove'}}
+  co_return value;
 }
 
 task<NoCopyNoMove &> lvalue2ref(NoCopyNoMove &value) {
@@ -91,7 +88,7 @@ task<NoCopyNoMove &> lvalue2ref(NoCopyNoMove &value) {
 }
 
 task<NoCopyNoMove &> rvalue2ref(NoCopyNoMove &&value) {
-  co_return value; // expected-error {{call to deleted constructor of 'NoCopyNoMove'}}
+  co_return value; // expected-error {{non-const lvalue reference to type 'NoCopyNoMove' cannot bind to a temporary of type 'NoCopyNoMove'}}
 }
 
 struct To {
