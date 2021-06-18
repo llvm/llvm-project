@@ -276,7 +276,6 @@ static void InitInstrumentation() {
   }
 
   InitThreads();
-  hwasanThreadList().CreateCurrentThread();
 
   hwasan_instrumentation_inited = 1;
 }
