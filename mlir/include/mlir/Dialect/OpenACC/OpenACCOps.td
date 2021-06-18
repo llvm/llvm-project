@@ -283,6 +283,8 @@ def OpenACC_EnterDataOp : OpenACC_Op<"enter_data", [AttrSizedOperandSegments]> {
     ( `attach` `(` $attachOperands^ `:` type($attachOperands) `)` )?
     attr-dict-with-keyword
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -331,6 +333,8 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data", [AttrSizedOperandSegments]> {
     ( `detach` `(` $detachOperands^ `:` type($detachOperands) `)` )?
     attr-dict-with-keyword
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -529,6 +533,8 @@ def OpenACC_UpdateOp : OpenACC_Op<"update", [AttrSizedOperandSegments]> {
     ( `device` `(` $deviceOperands^ `:` type($deviceOperands) `)` )?
     attr-dict-with-keyword
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
