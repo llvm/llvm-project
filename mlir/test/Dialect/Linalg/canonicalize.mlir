@@ -842,39 +842,6 @@ func @fold_tiled_loop_inputs(%A: memref<192xf32>, %A_tensor: tensor<192xf32>,
 
 // -----
 
-#map = affine_map<(d0, d1) -> (d0, d1)>
-
-func @indexed_generic(%arg0: memref<?x?xindex>, %arg1: memref<?x?xindex>) {
-  linalg.indexed_generic {
-      indexing_maps = [#map, #map],
-      iterator_types = ["parallel", "parallel"]}
-    ins(%arg0 : memref<?x?xindex>)
-   outs(%arg1 : memref<?x?xindex>) {
-  ^bb0(%arg4: index, %arg5: index, %arg6: index, %arg7: index):
-    %0 = addi %arg4, %arg5 : index
-    %1 = addi %0, %arg6 : index
-    %2 = addi %1, %arg7 : index
-    linalg.yield %2 : index
-  }
-  return
-}
-
-//      CHECK: #[[MAP:.+]] = affine_map<(d0, d1) -> (d0, d1)>
-//      CHECK: func @indexed_generic
-// CHECK-NEXT:   linalg.generic {
-// CHECK-SAME:     indexing_maps = [#[[MAP]], #[[MAP]]], iterator_types = ["parallel", "parallel"]}
-// CHECK-SAME:      ins(%[[ARG0:[A-Za-z0-9_]+]] : memref<?x?xindex>)
-// CHECK-SAME:     outs(%[[ARG1:[A-Za-z0-9_]+]] : memref<?x?xindex>)
-//      CHECK:   ^bb0(%[[ARG2:[A-Za-z0-9_]+]]: index, %[[ARG3:[A-Za-z0-9_]+]]: index):
-// CHECK-NEXT:     %[[IDX0:.+]] = linalg.index 0 : index
-// CHECK-NEXT:     %[[IDX1:.+]] = linalg.index 1 : index
-// CHECK-NEXT:     %[[SUM0:.+]] = addi %[[IDX0]], %[[IDX1]] : index
-// CHECK-NEXT:     %[[SUM1:.+]] = addi %[[SUM0]], %[[ARG2]] : index
-// CHECK-NEXT:     %[[SUM2:.+]] = addi %[[SUM1]], %[[ARG3]] : index
-// CHECK-NEXT:     linalg.yield %[[SUM2]] : index
-
-// -----
-
 func @tensor_pad_cast_fold(%arg0: tensor<4x4xf32>) -> tensor<4x4xf32> {
   %c0 = constant 0 : index
   %cst = constant 0.0 : f32

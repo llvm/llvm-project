@@ -202,10 +202,6 @@ public:
   LogicalResult
   matchAndRewrite(LinalgOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    // Canonicalize indexed generic operations before bufferization.
-    if (isa<IndexedGenericOp>(op))
-      return failure();
-
     // GenericOpAdaptor below expects an `operand_segment_sizes` attribute.
     if (!op->hasAttr("operand_segment_sizes"))
       return failure();
