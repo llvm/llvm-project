@@ -833,6 +833,8 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
         case AMDGPU::EXEC_HI:
         case AMDGPU::SCC:
         case AMDGPU::M0:
+        case AMDGPU::M0_LO16:
+        case AMDGPU::M0_HI16:
         case AMDGPU::SRC_SHARED_BASE:
         case AMDGPU::SRC_SHARED_LIMIT:
         case AMDGPU::SRC_PRIVATE_BASE:
