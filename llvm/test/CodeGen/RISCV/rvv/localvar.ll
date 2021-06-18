@@ -290,18 +290,18 @@ define void @local_var_m2_with_bp(i64 %n) {
 define i64 @fixed_object(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, i64 %8) nounwind {
 ; RV64IV-LABEL: fixed_object:
 ; RV64IV:       # %bb.0:
-; RV64IV-NEXT:    addi sp, sp, -32
+; RV64IV-NEXT:    addi sp, sp, -16
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 3
 ; RV64IV-NEXT:    sub sp, sp, a0
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    slli a0, a0, 3
 ; RV64IV-NEXT:    add a0, sp, a0
-; RV64IV-NEXT:    ld a0, 32(a0)
+; RV64IV-NEXT:    ld a0, 16(a0)
 ; RV64IV-NEXT:    csrr a1, vlenb
 ; RV64IV-NEXT:    slli a1, a1, 3
 ; RV64IV-NEXT:    add sp, sp, a1
-; RV64IV-NEXT:    addi sp, sp, 32
+; RV64IV-NEXT:    addi sp, sp, 16
 ; RV64IV-NEXT:    ret
   %fixed_size = alloca i32
   %rvv_vector = alloca <vscale x 8 x i64>, align 8
