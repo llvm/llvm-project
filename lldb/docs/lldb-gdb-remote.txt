@@ -348,7 +348,7 @@ read packet: OK/E<error code>;AAAAAAAAA
 //  response is returned, or an error otherwise.
 //
 // PROCESS TRACE STOPPING
-//  Stopping a process trace doesn't stop the active traces initiated with
+//  Stopping a process trace stops the active traces initiated with
 //  "thread tracing".
 //
 // THREAD TRACE STOPPING

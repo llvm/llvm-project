@@ -223,6 +223,39 @@ public:
   ///     \b true if the thread is traced by this instance, \b false otherwise.
   virtual bool IsTraced(const Thread &thread) = 0;
 
+  /// \return
+  ///     A description of the parameters to use for the \a Trace::Start method.
+  virtual const char *GetStartConfigurationHelp() = 0;
+
+  /// Start tracing a live process.
+  ///
+  /// \param[in] configuration
+  ///     See \a SBTrace::Start(const lldb::SBStructuredData &) for more
+  ///     information.
+  ///
+  /// \return
+  ///     \a llvm::Error::success if the operation was successful, or
+  ///     \a llvm::Error otherwise.
+  virtual llvm::Error Start(
+      StructuredData::ObjectSP configuration = StructuredData::ObjectSP()) = 0;
+
+  /// Start tracing live threads.
+  ///
+  /// \param[in] tids
+  ///     Threads to trace. This method tries to trace as many threads as
+  ///     possible.
+  ///
+  /// \param[in] configuration
+  ///     See \a SBTrace::Start(const lldb::SBThread &, const
+  ///     lldb::SBStructuredData &) for more information.
+  ///
+  /// \return
+  ///     \a llvm::Error::success if the operation was successful, or
+  ///     \a llvm::Error otherwise.
+  virtual llvm::Error Start(
+      llvm::ArrayRef<lldb::tid_t> tids,
+      StructuredData::ObjectSP configuration = StructuredData::ObjectSP()) = 0;
+
   /// Stop tracing live threads.
   ///
   /// \param[in] tids
@@ -231,9 +264,9 @@ public:
   /// \return
   ///     \a llvm::Error::success if the operation was successful, or
   ///     \a llvm::Error otherwise.
-  llvm::Error StopThreads(const std::vector<lldb::tid_t> &tids);
+  llvm::Error Stop(llvm::ArrayRef<lldb::tid_t> tids);
 
-  /// Stop tracing a live process.
+  /// Stop tracing all current and future threads of a live process.
   ///
   /// \param[in] request
   ///     The information determining which threads or process to stop tracing.
@@ -241,7 +274,7 @@ public:
   /// \return
   ///     \a llvm::Error::success if the operation was successful, or
   ///     \a llvm::Error otherwise.
-  llvm::Error StopProcess();
+  llvm::Error Stop();
 
   /// Get the trace file of the given post mortem thread.
   llvm::Expected<const FileSpec &> GetPostMortemTraceFile(lldb::tid_t tid);
@@ -258,7 +291,7 @@ protected:
   /// \return
   ///     A vector of bytes with the requested data, or an \a llvm::Error in
   ///     case of failures.
-  llvm::Expected<std::vector<uint8_t>>
+  llvm::Expected<llvm::ArrayRef<uint8_t>>
   GetLiveThreadBinaryData(lldb::tid_t tid, llvm::StringRef kind);
 
   /// Get binary data of the current process given a data identifier.
@@ -269,7 +302,7 @@ protected:
   /// \return
   ///     A vector of bytes with the requested data, or an \a llvm::Error in
   ///     case of failures.
-  llvm::Expected<std::vector<uint8_t>>
+  llvm::Expected<llvm::ArrayRef<uint8_t>>
   GetLiveProcessBinaryData(llvm::StringRef kind);
 
   /// Get the size of the data returned by \a GetLiveThreadBinaryData

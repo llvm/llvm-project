@@ -312,7 +312,7 @@ Expected<CommandObjectSP> CommandObjectTraceProxy::DoGetProxyCommandObject() {
     return createStringError(inconvertibleErrorCode(),
                              "Process must be alive.");
 
-  if (Expected<TraceSP &> trace_sp = process_sp->GetTarget().GetTraceOrCreate())
+  if (Expected<TraceSP> trace_sp = process_sp->GetTarget().GetTraceOrCreate())
     return GetDelegateCommand(**trace_sp);
   else
     return createStringError(inconvertibleErrorCode(),
