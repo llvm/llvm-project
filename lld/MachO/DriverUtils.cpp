@@ -263,6 +263,9 @@ Optional<InputFile *> macho::loadArchiveMember(MemoryBufferRef mb,
                                                uint32_t modTime,
                                                StringRef archiveName,
                                                bool objCOnly) {
+  if (config->zeroModTime)
+    modTime = 0;
+
   switch (identify_magic(mb.getBuffer())) {
   case file_magic::macho_object:
     if (!objCOnly || hasObjCSection(mb))
@@ -280,6 +283,9 @@ Optional<InputFile *> macho::loadArchiveMember(MemoryBufferRef mb,
 }
 
 uint32_t macho::getModTime(StringRef path) {
+  if (config->zeroModTime)
+    return 0;
+
   fs::file_status stat;
   if (!fs::status(path, stat))
     if (fs::exists(stat))

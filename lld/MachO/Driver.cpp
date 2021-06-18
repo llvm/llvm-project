@@ -986,6 +986,9 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->emitFunctionStarts = !args.hasArg(OPT_no_function_starts);
   config->emitBitcodeBundle = args.hasArg(OPT_bitcode_bundle);
 
+  // FIXME: Add a commandline flag for this too.
+  config->zeroModTime = getenv("ZERO_AR_DATE");
+
   std::array<PlatformKind, 3> encryptablePlatforms{
       PlatformKind::iOS, PlatformKind::watchOS, PlatformKind::tvOS};
   config->emitEncryptionInfo =
