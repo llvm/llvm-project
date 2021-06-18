@@ -34,6 +34,8 @@
         integer, parameter :: omp_memspace_handle_kind = c_intptr_t
         integer, parameter :: omp_alloctrait_key_kind = omp_integer_kind
         integer, parameter :: omp_alloctrait_val_kind = c_intptr_t
+        integer, parameter :: omp_interop_kind = c_intptr_t
+        integer, parameter :: omp_interop_fr_kind = omp_integer_kind
 
         type omp_alloctrait
           integer(kind=omp_alloctrait_key_kind) key
@@ -155,6 +157,16 @@
         integer (kind=omp_pause_resource_kind), parameter :: omp_pause_resume = 0
         integer (kind=omp_pause_resource_kind), parameter :: omp_pause_soft = 1
         integer (kind=omp_pause_resource_kind), parameter :: omp_pause_hard = 2
+
+        integer (kind=omp_interop_fr_kind), parameter :: omp_ifr_cuda = 1
+        integer (kind=omp_interop_fr_kind), parameter :: omp_ifr_cuda_driver = 2
+        integer (kind=omp_interop_fr_kind), parameter :: omp_ifr_opencl = 3
+        integer (kind=omp_interop_fr_kind), parameter :: omp_ifr_sycl = 4
+        integer (kind=omp_interop_fr_kind), parameter :: omp_ifr_hip = 5
+        integer (kind=omp_interop_fr_kind), parameter :: omp_ifr_level_zero = 6
+        integer (kind=omp_interop_fr_kind), parameter :: omp_ifr_last = 7
+
+        integer (kind=omp_interop_kind), parameter :: omp_interop_none = 0
 
         interface
 
