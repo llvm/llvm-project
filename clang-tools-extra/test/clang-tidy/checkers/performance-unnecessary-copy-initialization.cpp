@@ -1,10 +1,20 @@
 // RUN: %check_clang_tidy %s performance-unnecessary-copy-initialization %t
 
+template <typename T>
+struct Iterator {
+  void operator++();
+  const T &operator*() const;
+  bool operator!=(const Iterator &) const;
+  typedef const T &const_reference;
+};
+
 struct ExpensiveToCopyType {
   ExpensiveToCopyType();
   virtual ~ExpensiveToCopyType();
   const ExpensiveToCopyType &reference() const;
   const ExpensiveToCopyType *pointer() const;
+  Iterator<ExpensiveToCopyType> begin() const;
+  Iterator<ExpensiveToCopyType> end() const;
   void nonConstMethod();
   bool constMethod() const;
 };
@@ -588,4 +598,42 @@ void positiveUnusedReferenceIsRemoved() {
   // CHECK-MESSAGES: [[@LINE-1]]:8: warning: the variable 'TrailingCommentRemoved' is copy-constructed from a const reference but is never used;
   // CHECK-FIXES-NOT: auto TrailingCommentRemoved = ExpensiveTypeReference(); // Trailing comment.
   // clang-format on
+}
+
+void negativeloopedOverObjectIsModified() {
+  ExpensiveToCopyType Orig;
+  for (const auto &Element : Orig) {
+    const auto Copy = Element;
+    Orig.nonConstMethod();
+    Copy.constMethod();
+  }
+
+  auto Lambda = []() {
+    ExpensiveToCopyType Orig;
+    for (const auto &Element : Orig) {
+      const auto Copy = Element;
+      Orig.nonConstMethod();
+      Copy.constMethod();
+    }
+  };
+}
+
+void negativeReferenceIsInitializedOutsideOfBlock() {
+  ExpensiveToCopyType Orig;
+  const auto &E2 = Orig;
+  if (1 != 2 * 3) {
+    const auto C2 = E2;
+    Orig.nonConstMethod();
+    C2.constMethod();
+  }
+
+  auto Lambda = []() {
+    ExpensiveToCopyType Orig;
+    const auto &E2 = Orig;
+    if (1 != 2 * 3) {
+      const auto C2 = E2;
+      Orig.nonConstMethod();
+      C2.constMethod();
+    }
+  };
 }
