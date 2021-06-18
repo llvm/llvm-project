@@ -4495,9 +4495,13 @@ static Value *SimplifyExtractElementInst(Value *Vec, Value *Idx,
   // find a previously computed scalar that was inserted into the vector.
   if (auto *IdxC = dyn_cast<ConstantInt>(Idx)) {
     // For fixed-length vector, fold into undef if index is out of bounds.
-    if (isa<FixedVectorType>(VecVTy) &&
-        IdxC->getValue().uge(cast<FixedVectorType>(VecVTy)->getNumElements()))
+    unsigned MinNumElts = VecVTy->getElementCount().getKnownMinValue();
+    if (isa<FixedVectorType>(VecVTy) && IdxC->getValue().uge(MinNumElts))
       return PoisonValue::get(VecVTy->getElementType());
+    // Handle case where an element is extracted from a splat.
+    if (IdxC->getValue().ult(MinNumElts))
+      if (auto *Splat = getSplatValue(Vec))
+        return Splat;
     if (Value *Elt = findScalarElement(Vec, IdxC->getZExtValue()))
       return Elt;
   }

@@ -55,13 +55,9 @@ define i8 @extractelement_bitcast_wrong_insert(<vscale x 2 x i32> %a, i32 %x) {
   ret i8 %r
 }
 
-; TODO: Instcombine could optimize to return %v.
 define i32 @extractelement_shuffle_in_range(i32 %v) {
 ; CHECK-LABEL: @extractelement_shuffle_in_range(
-; CHECK-NEXT:    [[IN:%.*]] = insertelement <vscale x 4 x i32> undef, i32 [[V:%.*]], i32 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[IN]], <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = extractelement <vscale x 4 x i32> [[SPLAT]], i32 1
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 %v
 ;
   %in = insertelement <vscale x 4 x i32> undef, i32 %v, i32 0
   %splat = shufflevector <vscale x 4 x i32> %in, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
