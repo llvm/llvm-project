@@ -27,7 +27,7 @@
 //          TYPE (uint4)
 //            0 - block probe, 1 - indirect call, 2 - direct call
 //          ATTRIBUTE (uint3)
-//            1 - reserved, 2 - dangling
+//            1 - reserved
 //          ADDRESS_TYPE (uint1)
 //            0 - code address, 1 - address delta
 //          CODE_ADDRESS (uint64 or ULEB128)

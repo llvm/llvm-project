@@ -2,9 +2,9 @@
 ; RUN: opt < %s -simplifycfg -S -o %t
 ; RUN: FileCheck %s < %t
 
-; Test to make sure the dangling probe's metadata not being dropped.
+; Test to make sure the dangling probe is gone.
 ; CHECK: define dso_local i32 @foo
-; CHECK: call void @llvm.pseudoprobe(i64 -4224472938262609671, i64 5, i32 2, i64 -1), !dbg ![[#]]
+; CHECK-NOT: call void @llvm.pseudoprobe(i64 -4224472938262609671, i64 5
 
 ; Function Attrs: nounwind uwtable
 define dso_local i32 @foo(i32* nocapture %marker, i32* nocapture %move_ordering, i32* nocapture %moves, i32 %num_moves) local_unnamed_addr #0 !dbg !10 {

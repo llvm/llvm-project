@@ -524,14 +524,11 @@ void PseudoProbeCSProfileGenerator::populateBodySamplesWithProbes(
   for (auto PI : ProbeCounter) {
     const PseudoProbe *Probe = PI.first;
     uint64_t Count = PI.second;
-    // Ignore dangling probes since they will be reported later if needed.
-    if (Probe->isDangling())
-      continue;
     FunctionSamples &FunctionProfile =
         getFunctionProfileForLeafProbe(ContextStrStack, Probe, Binary);
     // Record the current frame and FunctionProfile whenever samples are
     // collected for non-danglie probes. This is for reporting all of the
-    // dangling probes of the frame later.
+    // zero count probes of the frame later.
     FrameSamples[Probe->getInlineTreeNode()] = &FunctionProfile;
     FunctionProfile.addBodySamplesForProbe(Probe->Index, Count);
     FunctionProfile.addTotalSamples(Count);
@@ -568,7 +565,6 @@ void PseudoProbeCSProfileGenerator::populateBodySamplesWithProbes(
     for (auto &I : FrameSamples) {
       auto *FunctionProfile = I.second;
       for (auto *Probe : I.first->getProbes()) {
-        if (!Probe->isDangling())
           FunctionProfile->addBodySamplesForProbe(Probe->Index, 0);
       }
     }

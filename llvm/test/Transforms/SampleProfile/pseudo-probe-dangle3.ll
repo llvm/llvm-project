@@ -1,10 +1,10 @@
-; Test after FoldValueComparisonIntoPredecessors, one dangling probe is generated
+; Test after FoldValueComparisonIntoPredecessors, one dangling probe is gone
 ; RUN: opt -S -passes='pseudo-probe,simplifycfg' < %s | FileCheck %s
 
 
 ; CHECK: if.end80:                                         ; preds = %if.end
 ; CHECK-NEXT:   call void @llvm.pseudoprobe(i64 -2281696412744416103, i64 3, i32 0, i64 -1)
-; CHECK-NEXT:   call void @llvm.pseudoprobe(i64 -2281696412744416103, i64 4, i32 2, i64 -1)
+; CHECK-NOT:   call void @llvm.pseudoprobe(i64 -2281696412744416103, i64 4
 
 define dso_local i32 @readCBPandCoeffsFromNAL(i1 %c, i32 %x, i32 %y) local_unnamed_addr {
 ;
