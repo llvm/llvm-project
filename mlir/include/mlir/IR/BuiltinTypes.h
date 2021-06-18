@@ -192,6 +192,12 @@ public:
 #define GET_TYPEDEF_CLASSES
 #include "mlir/IR/BuiltinTypes.h.inc"
 
+//===----------------------------------------------------------------------===//
+// Tablegen Interface Declarations
+//===----------------------------------------------------------------------===//
+
+#include "mlir/IR/BuiltinTypeInterfaces.h.inc"
+
 namespace mlir {
 //===----------------------------------------------------------------------===//
 // MemRefType
@@ -266,7 +272,8 @@ inline bool BaseMemRefType::classof(Type type) {
 }
 
 inline bool BaseMemRefType::isValidElementType(Type type) {
-  return type.isIntOrIndexOrFloat() || type.isa<ComplexType, VectorType>();
+  return type.isIntOrIndexOrFloat() || type.isa<ComplexType, VectorType>() ||
+         type.isa<MemRefElementTypeInterface>();
 }
 
 inline bool FloatType::classof(Type type) {

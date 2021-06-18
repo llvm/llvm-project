@@ -349,6 +349,8 @@ Type LLVMTypeConverter::convertMemRefType(MemRefType type) {
   // unpack the `sizes` and `strides` arrays.
   SmallVector<Type, 5> types =
       getMemRefDescriptorFields(type, /*unpackAggregates=*/false);
+  if (types.empty())
+    return {};
   return LLVM::LLVMStructType::getLiteral(&getContext(), types);
 }
 
@@ -368,6 +370,8 @@ SmallVector<Type, 2> LLVMTypeConverter::getUnrankedMemRefDescriptorFields() {
 }
 
 Type LLVMTypeConverter::convertUnrankedMemRefType(UnrankedMemRefType type) {
+  if (!convertType(type.getElementType()))
+    return {};
   return LLVM::LLVMStructType::getLiteral(&getContext(),
                                           getUnrankedMemRefDescriptorFields());
 }
