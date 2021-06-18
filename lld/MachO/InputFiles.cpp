@@ -621,7 +621,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       InputSection *isec = subsecEntry.isec;
 
       uint64_t subsecAddr = sectionAddr + subsecEntry.offset;
-      uint64_t symbolOffset = sym.n_value - subsecAddr;
+      size_t symbolOffset = sym.n_value - subsecAddr;
       uint64_t symbolSize =
           j + 1 < symbolIndices.size()
               ? nList[symbolIndices[j + 1]].n_value - sym.n_value
