@@ -2,23 +2,23 @@
 # RUN: rm -rf %t; mkdir %t
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t/main.o
-# RUN: %lld -lSystem -icf all -o %t/all %t/main.o 2>&1 \
+# RUN: %lld -lSystem --icf=all -o %t/all %t/main.o 2>&1 \
 # RUN:     | FileCheck %s --check-prefix=DIAG-EMPTY --allow-empty
-# RUN: %lld -lSystem -icf none -o %t/none %t/main.o 2>&1 \
+# RUN: %lld -lSystem --icf=none -o %t/none %t/main.o 2>&1 \
 # RUN:     | FileCheck %s --check-prefix=DIAG-EMPTY --allow-empty
 # RUN: %lld -lSystem -no_deduplicate -o %t/no_dedup %t/main.o 2>&1 \
 # RUN:     | FileCheck %s --check-prefix=DIAG-EMPTY --allow-empty
-# RUN: not %lld -lSystem -icf safe -o %t/safe %t/main.o 2>&1 \
+# RUN: not %lld -lSystem --icf=safe -o %t/safe %t/main.o 2>&1 \
 # RUN:     | FileCheck %s --check-prefix=DIAG-SAFE
-# RUN: not %lld -lSystem -icf junk -o %t/junk %t/main.o 2>&1 \
+# RUN: not %lld -lSystem --icf=junk -o %t/junk %t/main.o 2>&1 \
 # RUN:     | FileCheck %s --check-prefix=DIAG-JUNK
-# RUN: not %lld -lSystem -icf all -no_deduplicate -o %t/clash %t/main.o 2>&1 \
+# RUN: not %lld -lSystem --icf=all -no_deduplicate -o %t/clash %t/main.o 2>&1 \
 # RUN:     | FileCheck %s --check-prefix=DIAG-CLASH
 
 # DIAG-EMPTY-NOT: {{.}}
-# DIAG-SAFE: `-icf safe' is not yet implemented, reverting to `none'
-# DIAG-JUNK: unknown -icf OPTION `junk', defaulting to `none'
-# DIAG-CLASH: `-icf all' conflicts with -no_deduplicate, setting to `none'
+# DIAG-SAFE: `--icf=safe' is not yet implemented, reverting to `none'
+# DIAG-JUNK: unknown --icf=OPTION `junk', defaulting to `none'
+# DIAG-CLASH: `--icf=all' conflicts with -no_deduplicate, setting to `none'
 
 # RUN: llvm-objdump -d --syms %t/all | FileCheck %s --check-prefix=FOLD
 # RUN: llvm-objdump -d --syms %t/none | FileCheck %s --check-prefix=NOOP
