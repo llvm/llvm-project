@@ -215,7 +215,7 @@ const DeclTypeSpec *Scope::GetType(const SomeExpr &expr) {
       case TypeCategory::Complex:
         return &MakeNumericType(dyType->category(), KindExpr{dyType->kind()});
       case TypeCategory::Character:
-        if (const ParamValue * lenParam{dyType->charLength()}) {
+        if (const ParamValue * lenParam{dyType->charLengthParamValue()}) {
           return &MakeCharacterType(
               ParamValue{*lenParam}, KindExpr{dyType->kind()});
         } else {
