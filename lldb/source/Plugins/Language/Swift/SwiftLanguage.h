@@ -83,6 +83,8 @@ public:
 
   static lldb_private::ConstString GetPluginNameStatic();
 
+  bool SymbolNameFitsToLanguage(Mangled mangled) const override;
+
   //------------------------------------------------------------------
   // PluginInterface protocol
   //------------------------------------------------------------------

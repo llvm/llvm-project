@@ -105,6 +105,11 @@ lldb_private::ConstString SwiftLanguage::GetPluginNameStatic() {
   return g_name;
 }
 
+bool SwiftLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
+  return SwiftLanguageRuntime::IsSwiftMangledName(
+      mangled.GetMangledName().GetStringRef());
+}
+
 bool SwiftLanguage::IsTopLevelFunction(Function &function) {
   static ConstString g_main("main");
 
