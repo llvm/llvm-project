@@ -2059,10 +2059,6 @@ static bool SinkCommonCodeFromPredecessors(BasicBlock *BB,
     return NumPHIInsts <= 1;
   };
 
-  // If no instructions can be sunk, early-return.
-  if (ScanIdx == 0)
-    return false;
-
   // We've determined that we are going to sink last ScanIdx instructions,
   // and recorded them in InstructionsToSink. Now, some instructions may be
   // unprofitable to sink. But that determination depends on the instructions
