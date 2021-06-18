@@ -5,8 +5,8 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mattr=+avx2 | FileCheck %s -check-prefixes=AVX,AVX2
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mattr=+xop,+avx | FileCheck %s -check-prefixes=AVX,AVX1
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mattr=+xop,+avx2 | FileCheck %s -check-prefixes=AVX,AVX2
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mattr=+avx512f | FileCheck %s -check-prefixes=AVX,AVX512
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mattr=+avx512bw | FileCheck %s -check-prefixes=AVX,AVX512
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mattr=+avx512f | FileCheck %s -check-prefixes=AVX,AVX512,AVX512F
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -cost-model -analyze -mattr=+avx512bw | FileCheck %s -check-prefixes=AVX,AVX512,AVX512BW
 
 ; Verify the cost of vector bswap instructions.
 
@@ -81,9 +81,13 @@ define <8 x i64> @var_bswap_v8i64(<8 x i64> %a) {
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bswap = call <8 x i64> @llvm.bswap.v8i64(<8 x i64> %a)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %bswap
 ;
-; AVX512-LABEL: 'var_bswap_v8i64'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %bswap = call <8 x i64> @llvm.bswap.v8i64(<8 x i64> %a)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %bswap
+; AVX512F-LABEL: 'var_bswap_v8i64'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bswap = call <8 x i64> @llvm.bswap.v8i64(<8 x i64> %a)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %bswap
+;
+; AVX512BW-LABEL: 'var_bswap_v8i64'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bswap = call <8 x i64> @llvm.bswap.v8i64(<8 x i64> %a)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %bswap
 ;
   %bswap = call <8 x i64> @llvm.bswap.v8i64(<8 x i64> %a)
   ret <8 x i64> %bswap
@@ -148,9 +152,13 @@ define <16 x i32> @var_bswap_v16i32(<16 x i32> %a) {
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bswap = call <16 x i32> @llvm.bswap.v16i32(<16 x i32> %a)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %bswap
 ;
-; AVX512-LABEL: 'var_bswap_v16i32'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %bswap = call <16 x i32> @llvm.bswap.v16i32(<16 x i32> %a)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %bswap
+; AVX512F-LABEL: 'var_bswap_v16i32'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bswap = call <16 x i32> @llvm.bswap.v16i32(<16 x i32> %a)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %bswap
+;
+; AVX512BW-LABEL: 'var_bswap_v16i32'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bswap = call <16 x i32> @llvm.bswap.v16i32(<16 x i32> %a)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %bswap
 ;
   %bswap = call <16 x i32> @llvm.bswap.v16i32(<16 x i32> %a)
   ret <16 x i32> %bswap
@@ -215,9 +223,13 @@ define <32 x i16> @var_bswap_v32i16(<32 x i16> %a) {
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bswap = call <32 x i16> @llvm.bswap.v32i16(<32 x i16> %a)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <32 x i16> %bswap
 ;
-; AVX512-LABEL: 'var_bswap_v32i16'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 124 for instruction: %bswap = call <32 x i16> @llvm.bswap.v32i16(<32 x i16> %a)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <32 x i16> %bswap
+; AVX512F-LABEL: 'var_bswap_v32i16'
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %bswap = call <32 x i16> @llvm.bswap.v32i16(<32 x i16> %a)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <32 x i16> %bswap
+;
+; AVX512BW-LABEL: 'var_bswap_v32i16'
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bswap = call <32 x i16> @llvm.bswap.v32i16(<32 x i16> %a)
+; AVX512BW-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <32 x i16> %bswap
 ;
   %bswap = call <32 x i16> @llvm.bswap.v32i16(<32 x i16> %a)
   ret <32 x i16> %bswap
