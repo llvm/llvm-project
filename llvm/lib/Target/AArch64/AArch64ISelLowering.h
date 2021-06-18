@@ -178,9 +178,6 @@ enum NodeType : unsigned {
   // element must be identical.
   BSP,
 
-  // Vector arithmetic negation
-  NEG,
-
   // Vector shuffles
   ZIP1,
   ZIP2,
