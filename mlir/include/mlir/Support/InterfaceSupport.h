@@ -19,6 +19,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TypeName.h"
 
+#define DEBUG_TYPE "interfaces"
+
 namespace mlir {
 namespace detail {
 //===----------------------------------------------------------------------===//
