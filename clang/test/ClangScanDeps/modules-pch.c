@@ -8,6 +8,6 @@
 
 // Scan dependencies of the TU:
 //
-// RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch/cdb_tu.json > %t/cdb_tu.json
-// RUN: clang-scan-deps -compilation-database %t/cdb_tu.json -format experimental-full \
+// RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch/cdb_tu.json > %t/cdb.json
+// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full \
 // RUN:   -generate-modules-path-args -module-files-dir %t/build
