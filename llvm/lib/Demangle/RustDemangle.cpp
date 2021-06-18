@@ -109,7 +109,9 @@ bool Demangler::demangle(StringView Mangled) {
     Error = true;
     return false;
   }
-  Input = Mangled;
+  size_t Dot = Mangled.find('.');
+  Input = Mangled.substr(0, Dot);
+  StringView Suffix = Mangled.dropFront(Dot);
 
   demanglePath(rust_demangle::InType::No);
 
@@ -120,6 +122,12 @@ bool Demangler::demangle(StringView Mangled) {
 
   if (Position != Input.size())
     Error = true;
+
+  if (!Suffix.empty()) {
+    print(" (");
+    print(Suffix);
+    print(")");
+  }
 
   return !Error;
 }
