@@ -22,6 +22,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BuryPointer.h"
+#include "llvm/Support/FileSystem.h"
 #include <cassert>
 #include <list>
 #include <memory>
@@ -165,11 +166,10 @@ class CompilerInstance : public ModuleLoader {
   /// failed.
   struct OutputFile {
     std::string Filename;
-    std::string TempFilename;
+    Optional<llvm::sys::fs::TempFile> File;
 
-    OutputFile(std::string filename, std::string tempFilename)
-        : Filename(std::move(filename)), TempFilename(std::move(tempFilename)) {
-    }
+    OutputFile(std::string filename, Optional<llvm::sys::fs::TempFile> file)
+        : Filename(std::move(filename)), File(std::move(file)) {}
   };
 
   /// The list of active output files.
