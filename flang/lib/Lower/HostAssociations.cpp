@@ -98,6 +98,9 @@ mlir::Type Fortran::lower::HostAssociations::getArgumentType(
   llvm::SmallVector<mlir::Type> tupleTys;
   for (const auto *sym : symbols) {
     auto varTy = Fortran::lower::translateSymbolToFIRType(converter, *sym);
+    if (!fir::isa_trivial(varTy))
+      TODO(converter.getCurrentLocation(),
+           "non trivial associated variable in internal procedure");
     tupleTys.emplace_back(fir::PointerType::get(varTy));
   }
   argType = fir::ReferenceType::get(mlir::TupleType::get(ctxt, tupleTys));
