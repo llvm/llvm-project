@@ -622,11 +622,6 @@ def PrintOpStats : Pass<"print-op-stats"> {
   let constructor = "mlir::createPrintOpStatsPass()";
 }
 
-def PrintOp : Pass<"print-op-graph", "ModuleOp"> {
-  let summary = "Print op graph per-Region";
-  let constructor = "mlir::createPrintOpGraphPass()";
-}
-
 def SCCP : Pass<"sccp"> {
   let summary = "Sparse Conditional Constant Propagation";
   let description = [{

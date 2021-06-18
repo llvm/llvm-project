@@ -125,20 +125,33 @@ void registerPassPipeline(
 
 /// Register a specific dialect pass allocator function with the system,
 /// typically used through the PassRegistration template.
+/// Deprecated: please use the alternate version below.
 void registerPass(StringRef arg, StringRef description,
                   const PassAllocatorFunction &function);
 
+/// Register a specific dialect pass allocator function with the system,
+/// typically used through the PassRegistration template.
+void registerPass(const PassAllocatorFunction &function);
+
 /// PassRegistration provides a global initializer that registers a Pass
-/// allocation routine for a concrete pass instance. The third argument is
+/// allocation routine for a concrete pass instance. The argument is
 /// optional and provides a callback to construct a pass that does not have
 /// a default constructor.
 ///
 /// Usage:
 ///
 ///   /// At namespace scope.
-///   static PassRegistration<MyPass> reg("my-pass", "My Pass Description.");
+///   static PassRegistration<MyPass> reg;
 ///
 template <typename ConcretePass> struct PassRegistration {
+  PassRegistration(const PassAllocatorFunction &constructor) {
+    registerPass(constructor);
+  }
+  PassRegistration()
+      : PassRegistration([] { return std::make_unique<ConcretePass>(); }) {}
+
+  /// Constructor below are deprecated.
+
   PassRegistration(StringRef arg, StringRef description,
                    const PassAllocatorFunction &constructor) {
     registerPass(arg, description, constructor);
