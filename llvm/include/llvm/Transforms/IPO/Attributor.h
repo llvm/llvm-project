@@ -4018,6 +4018,37 @@ struct DOTGraphTraits<AttributorCallGraph *> : public DefaultDOTGraphTraits {
   }
 };
 
+struct AAExecutionDomain
+    : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+  AAExecutionDomain(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAExecutionDomain &createForPosition(const IRPosition &IRP,
+                                              Attributor &A);
+
+  /// See AbstractAttribute::getName().
+  const std::string getName() const override { return "AAExecutionDomain"; }
+
+  /// See AbstractAttribute::getIdAddr().
+  const char *getIdAddr() const override { return &ID; }
+
+  /// Check if an instruction is executed only by the initial thread.
+  virtual bool isExecutedByInitialThreadOnly(const Instruction &) const = 0;
+
+  /// Check if a basic block is executed only by the initial thread.
+  virtual bool isExecutedByInitialThreadOnly(const BasicBlock &) const = 0;
+
+  /// This function should return true if the type of the \p AA is
+  /// AAExecutionDomain.
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
 /// Run options, used by the pass manager.
 enum AttributorRunOption {
   NONE = 0,
