@@ -14,7 +14,15 @@
 
 # With flat_namespace, the linker automatically looks in foo.dylib and
 # bar.dylib too, but it doesn't add a LC_LOAD_DYLIB for it.
-# RUN: %lld -flat_namespace -lSystem %t/main.o %t/baz.dylib -o %t/out
+# RUN: %lld -flat_namespace -lSystem %t/main.o %t/baz.dylib -o %t/out -t | \
+# RUN:   FileCheck --check-prefix=T %s
+## FIXME: The `bar.dylib` line should use `T-NEXT`, but on Windows we load
+## libSystem.tbd with different slash styles and end up loading it twice
+## for that reason.
+# T:      main.o
+# T-NEXT: baz.dylib
+# T:      bar.dylib
+# T-NEXT: foo.dylib
 # RUN: llvm-objdump --macho --all-headers %t/out \
 # RUN:     | FileCheck --check-prefix=HEADERBITS %s
 # RUN: llvm-objdump --macho --bind --lazy-bind --weak-bind %t/out \
