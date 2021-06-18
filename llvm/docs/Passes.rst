@@ -127,6 +127,9 @@ postscript or some other suitable format.
 This pass, only available in ``opt``, prints the control flow graph into a
 ``.dot`` graph.  This graph can then be processed with the :program:`dot` tool
 to convert it to postscript or some other suitable format.
+Additionally the ``-cfg-func-name=<substring>`` option can be used to filter the
+functions that are printed. All functions that contain the specified substring
+will be printed.
 
 ``-dot-cfg-only``: Print CFG of function to "dot" file (with no function bodies)
 --------------------------------------------------------------------------------
@@ -135,6 +138,9 @@ This pass, only available in ``opt``, prints the control flow graph into a
 ``.dot`` graph, omitting the function bodies.  This graph can then be processed
 with the :program:`dot` tool to convert it to postscript or some other suitable
 format.
+Additionally the ``-cfg-func-name=<substring>`` option can be used to filter the
+functions that are printed. All functions that contain the specified substring
+will be printed.
 
 ``-dot-dom``: Print dominance tree of function to "dot" file
 ------------------------------------------------------------
@@ -1192,12 +1198,18 @@ instead just tries to ensure that code is well-formed.
 -----------------------------------
 
 Displays the control flow graph using the GraphViz tool.
+Additionally the ``-cfg-func-name=<substring>`` option can be used to filter the
+functions that are displayed. All functions that contain the specified substring
+will be displayed.
 
 ``-view-cfg-only``: View CFG of function (with no function bodies)
 ------------------------------------------------------------------
 
 Displays the control flow graph using the GraphViz tool, but omitting function
 bodies.
+Additionally the ``-cfg-func-name=<substring>`` option can be used to filter the
+functions that are displayed. All functions that contain the specified substring
+will be displayed.
 
 ``-view-dom``: View dominance tree of function
 ----------------------------------------------
