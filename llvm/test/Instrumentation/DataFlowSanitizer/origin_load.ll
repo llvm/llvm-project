@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
 
 define {} @load0({}* %p) {
-  ; CHECK-LABEL: @"dfs$load0"
+  ; CHECK-LABEL: @load0.dfsan
   ; CHECK-NEXT: %a = load {}, {}* %p, align 1
   ; CHECK-NEXT: store {} zeroinitializer, {}* bitcast ([100 x i64]* @__dfsan_retval_tls to {}*), align [[ALIGN:2]]
   ; CHECK-NEXT: store i32 0, i32* @__dfsan_retval_origin_tls, align 4
@@ -18,7 +18,7 @@ define {} @load0({}* %p) {
 }
 
 define i16 @load_non_escaped_alloca() {
-  ; CHECK-LABEL: @"dfs$load_non_escaped_alloca"
+  ; CHECK-LABEL: @load_non_escaped_alloca.dfsan
   ; CHECK-NEXT: %[[#S_ALLOCA:]] = alloca i[[#SBITS]], align [[#SBYTES]]
   ; CHECK-NEXT: %_dfsa = alloca i32, align 4
   ; CHECK:      %[[#SHADOW:]] = load i[[#SBITS]], i[[#SBITS]]* %[[#S_ALLOCA]], align [[#SBYTES]]
@@ -33,7 +33,7 @@ define i16 @load_non_escaped_alloca() {
 }
 
 define i16* @load_escaped_alloca() {
-  ; CHECK-LABEL:  @"dfs$load_escaped_alloca"
+  ; CHECK-LABEL:  @load_escaped_alloca.dfsan
   ; CHECK:        %[[#INTP:]] = ptrtoint i16* %p to i64
   ; CHECK-NEXT:   %[[#SHADOW_ADDR:]] = and i64 %[[#INTP]], [[#%.10d,MASK:]]
   ; CHECK-NEXT:   %[[#SHADOW_PTR0:]] = inttoptr i64 %[[#SHADOW_ADDR]] to i[[#SBITS]]*
@@ -56,7 +56,7 @@ define i16* @load_escaped_alloca() {
 
 @X = constant i1 1
 define i1 @load_global() {
-  ; CHECK-LABEL: @"dfs$load_global"
+  ; CHECK-LABEL: @load_global.dfsan
   ; CHECK: %a = load i1, i1* @X, align 1
   ; CHECK-NEXT: store i[[#SBITS]] 0, i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; CHECK-NEXT: store i32 0, i32* @__dfsan_retval_origin_tls, align 4
@@ -66,7 +66,7 @@ define i1 @load_global() {
 }
 
 define i1 @load1(i1* %p) {
-  ; CHECK-LABEL:             @"dfs$load1"
+  ; CHECK-LABEL:             @load1.dfsan
 
   ; COMBINE_LOAD_PTR-NEXT: %[[#PO:]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
@@ -93,7 +93,7 @@ define i1 @load1(i1* %p) {
 }
 
 define i16 @load16(i1 %i, i16* %p) {
-  ; CHECK-LABEL: @"dfs$load16"
+  ; CHECK-LABEL: @load16.dfsan
 
   ; COMBINE_LOAD_PTR-NEXT: %[[#PO:]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align [[ALIGN]]
@@ -123,7 +123,7 @@ define i16 @load16(i1 %i, i16* %p) {
 }
 
 define i32 @load32(i32* %p) {
-  ; CHECK-LABEL: @"dfs$load32"
+  ; CHECK-LABEL: @load32.dfsan
 
   ; COMBINE_LOAD_PTR-NEXT: %[[#PO:]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
@@ -155,7 +155,7 @@ define i32 @load32(i32* %p) {
 }
 
 define i64 @load64(i64* %p) {
-  ; CHECK-LABEL: @"dfs$load64"
+  ; CHECK-LABEL: @load64.dfsan
 
   ; COMBINE_LOAD_PTR-NEXT: %[[#PO:]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
@@ -196,7 +196,7 @@ define i64 @load64(i64* %p) {
 }
 
 define i64 @load64_align2(i64* %p) {
-  ; CHECK-LABEL: @"dfs$load64_align2"
+  ; CHECK-LABEL: @load64_align2.dfsan
 
   ; COMBINE_LOAD_PTR-NEXT: %[[#PO:]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
@@ -220,7 +220,7 @@ define i64 @load64_align2(i64* %p) {
 }
 
 define i128 @load128(i128* %p) {
-  ; CHECK-LABEL: @"dfs$load128"
+  ; CHECK-LABEL: @load128.dfsan
 
   ; COMBINE_LOAD_PTR-NEXT: %[[#PO:]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
@@ -271,7 +271,7 @@ define i128 @load128(i128* %p) {
 }
 
 define i17 @load17(i17* %p) {
-  ; CHECK-LABEL: @"dfs$load17"
+  ; CHECK-LABEL: @load17.dfsan
 
   ; COMBINE_LOAD_PTR-NEXT: %[[#PO:]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
