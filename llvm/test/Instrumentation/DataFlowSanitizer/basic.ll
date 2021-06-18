@@ -11,7 +11,6 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK_ORIGIN: @__dfsan_track_origins = weak_odr constant i32 1
 ; CHECK: @__dfsan_shadow_width_bits = weak_odr constant i32 [[#SBITS:]]
 ; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
-; CHECK: @__dfsan_shadow_ptr_mask = external global i64
 
 define i8 @load(i8* %p) {
   ; CHECK-LABEL: define i8 @load.dfsan
