@@ -15,9 +15,6 @@
 // are not modular
 // XFAIL: LIBCXX-WINDOWS-FIXME
 
-// TEMPORARY HACK UNTIL WE FIGURE OUT WHAT THE ISSUE IS TO AVOID BREAKING ALL CI
-// UNSUPPORTED: apple-clang
-
 // Some headers are not available when these features are disabled, but they
 // still get built as part of the 'std' module, which breaks the build.
 // UNSUPPORTED: libcpp-has-no-threads
@@ -33,7 +30,7 @@
 // RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++11 -DINVALIDATE_CACHE_CXX11 %s
 // RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++14 -DINVALIDATE_CACHE_CXX14 %s
 // RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++17 -DINVALIDATE_CACHE_CXX17 %s
-// RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++20 -DINVALIDATE_CACHE_CXX20 %s
+// RUN: %{cxx} %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -std=c++2a -DINVALIDATE_CACHE_CXX20 %s
 
 #include <vector>
 
