@@ -447,9 +447,9 @@ void M68kFrameLowering::BuildCFI(MachineBasicBlock &MBB,
       .addCFIIndex(CFIIndex);
 }
 
-void M68kFrameLowering::emitCalleeSavedFrameMoves(
+void M68kFrameLowering::emitPrologueCalleeSavedFrameMoves(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    const DebugLoc &DL, bool IsProlog) const {
+    const DebugLoc &DL) const {
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineModuleInfo &MMI = MF.getMMI();
@@ -656,7 +656,7 @@ void M68kFrameLowering::emitPrologue(MachineFunction &MF,
 
     // Emit DWARF info specifying the offsets of the callee-saved registers.
     if (PushedRegs)
-      emitCalleeSavedFrameMoves(MBB, MBBI, DL, true);
+      emitPrologueCalleeSavedFrameMoves(MBB, MBBI, DL);
   }
 
   // TODO Interrupt handlers
