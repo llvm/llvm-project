@@ -423,23 +423,26 @@ private:
   void updateMutableProperties(mlir::Value addr, mlir::ValueRange lbounds,
                                mlir::ValueRange extents,
                                mlir::ValueRange lengths) {
+    auto castAndStore = [&](mlir::Value val, mlir::Value addr) {
+      auto type = fir::dyn_cast_ptrEleTy(addr.getType());
+      builder.create<fir::StoreOp>(loc, builder.createConvert(loc, type, val),
+                                   addr);
+    };
     const auto &mutableProperties = box.getMutableProperties();
-    auto eleTy = fir::dyn_cast_ptrEleTy(mutableProperties.addr.getType());
-    builder.create<fir::StoreOp>(loc, builder.createConvert(loc, eleTy, addr),
-                                 mutableProperties.addr);
+    castAndStore(addr, mutableProperties.addr);
     for (auto [extent, extentVar] :
          llvm::zip(extents, mutableProperties.extents))
-      builder.create<fir::StoreOp>(loc, extent, extentVar);
+      castAndStore(extent, extentVar);
     if (!mutableProperties.lbounds.empty()) {
       if (lbounds.empty()) {
         auto one =
             builder.createIntegerConstant(loc, builder.getIndexType(), 1);
         for (auto lboundVar : mutableProperties.lbounds)
-          builder.create<fir::StoreOp>(loc, one, lboundVar);
+          castAndStore(one, lboundVar);
       } else {
         for (auto [lbound, lboundVar] :
              llvm::zip(lbounds, mutableProperties.lbounds))
-          builder.create<fir::StoreOp>(loc, lbound, lboundVar);
+          castAndStore(lbound, lboundVar);
       }
     }
     if (box.isCharacter())
@@ -448,7 +451,7 @@ private:
       // MutableBoxValue.
       for (auto [len, lenVar] :
            llvm::zip(lengths, mutableProperties.deferredParams))
-        builder.create<fir::StoreOp>(loc, len, lenVar);
+        castAndStore(len, lenVar);
     else if (box.isDerivedWithLengthParameters())
       TODO(loc, "update allocatable derived type length parameters");
   }
@@ -1093,19 +1096,35 @@ void Fortran::lower::associateMutableBoxWithShift(
       [&](const fir::BoxValue &arr) {
         // Rebox array fir.box to the pointer type and apply potential new lower
         // bounds.
-        mlir::Value shift;
-        if (!lbounds.empty()) {
-          auto shiftType =
-              fir::ShiftType::get(builder.getContext(), lbounds.size());
-          shift = builder.create<fir::ShiftOp>(loc, shiftType, lbounds);
-        } else if (const auto &lbs = arr.getLBounds(); !lbs.empty()) {
-          auto shiftType =
-              fir::ShiftType::get(builder.getContext(), lbs.size());
-          shift = builder.create<fir::ShiftOp>(loc, shiftType, lbs);
+        mlir::ValueRange newLbounds = lbounds.empty()
+                                          ? mlir::ValueRange{arr.getLBounds()}
+                                          : mlir::ValueRange{lbounds};
+        if (box.isDescribedByVariables()) {
+          // LHS is a contiguous pointer described by local variables. Open RHS
+          // fir.box to update the LHS.
+          auto rawAddr = builder.create<fir::BoxAddrOp>(loc, arr.getMemTy(),
+                                                        arr.getAddr());
+          auto extents = Fortran::lower::getExtents(builder, loc, source);
+          llvm::SmallVector<mlir::Value> lenParams;
+          if (arr.isCharacter()) {
+            lenParams.emplace_back(
+                Fortran::lower::readCharLen(builder, loc, source));
+          } else if (arr.isDerivedWithLengthParameters()) {
+            TODO(loc, "pointer assignment to derived with length parameters");
+          }
+          writer.updateMutableBox(rawAddr, newLbounds, extents, lenParams);
+        } else {
+          mlir::Value shift;
+          if (!newLbounds.empty()) {
+            auto shiftType =
+                fir::ShiftType::get(builder.getContext(), newLbounds.size());
+            shift = builder.create<fir::ShiftOp>(loc, shiftType, newLbounds);
+          }
+          auto reboxed =
+              builder.create<fir::ReboxOp>(loc, box.getBoxTy(), arr.getAddr(),
+                                           shift, /*slice=*/mlir::Value());
+          writer.updateWithIrBox(reboxed);
         }
-        auto reboxed = builder.create<fir::ReboxOp>(
-            loc, box.getBoxTy(), arr.getAddr(), shift, /*slice=*/mlir::Value());
-        writer.updateWithIrBox(reboxed);
       },
       [&](const fir::MutableBoxValue &) {
         // No point implementing this, if right-hand side is a
@@ -1196,20 +1215,36 @@ void Fortran::lower::associateMutableBoxWithRemap(
       },
       [&](const fir::BoxValue &arr) {
         // Rebox right-hand side fir.box with a new shape and type.
-        auto shapeType =
-            fir::ShapeShiftType::get(builder.getContext(), extents.size());
-        SmallVector<mlir::Value> shapeArgs;
-        auto idxTy = builder.getIndexType();
-        for (auto [lbnd, ext] : llvm::zip(lbounds, extents)) {
-          auto lb = builder.createConvert(loc, idxTy, lbnd);
-          shapeArgs.push_back(lb);
-          shapeArgs.push_back(ext);
+        if (box.isDescribedByVariables()) {
+          // LHS is a contiguous pointer described by local variables. Open RHS
+          // fir.box to update the LHS.
+          auto rawAddr = builder.create<fir::BoxAddrOp>(loc, arr.getMemTy(),
+                                                        arr.getAddr());
+          llvm::SmallVector<mlir::Value> lenParams;
+          if (arr.isCharacter()) {
+            lenParams.emplace_back(
+                Fortran::lower::readCharLen(builder, loc, source));
+          } else if (arr.isDerivedWithLengthParameters()) {
+            TODO(loc, "pointer assignment to derived with length parameters");
+          }
+          writer.updateMutableBox(rawAddr, lbounds, extents, lenParams);
+        } else {
+          auto shapeType =
+              fir::ShapeShiftType::get(builder.getContext(), extents.size());
+          llvm::SmallVector<mlir::Value> shapeArgs;
+          auto idxTy = builder.getIndexType();
+          for (auto [lbnd, ext] : llvm::zip(lbounds, extents)) {
+            auto lb = builder.createConvert(loc, idxTy, lbnd);
+            shapeArgs.push_back(lb);
+            shapeArgs.push_back(ext);
+          }
+          auto shape =
+              builder.create<fir::ShapeShiftOp>(loc, shapeType, shapeArgs);
+          auto reboxed =
+              builder.create<fir::ReboxOp>(loc, box.getBoxTy(), arr.getAddr(),
+                                           shape, /*slice=*/mlir::Value());
+          writer.updateWithIrBox(reboxed);
         }
-        auto shape =
-            builder.create<fir::ShapeShiftOp>(loc, shapeType, shapeArgs);
-        auto reboxed = builder.create<fir::ReboxOp>(
-            loc, box.getBoxTy(), arr.getAddr(), shape, /*slice=*/mlir::Value());
-        writer.updateWithIrBox(reboxed);
       },
       [&](const fir::MutableBoxValue &) {
         // No point implementing this, if right-hand side is a pointer or
