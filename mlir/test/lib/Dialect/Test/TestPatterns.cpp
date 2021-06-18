@@ -59,6 +59,14 @@ namespace {
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
+// Test Reduce Pattern Interface
+//===----------------------------------------------------------------------===//
+
+void mlir::test::populateTestReductionPatterns(RewritePatternSet &patterns) {
+  populateWithGenerated(patterns);
+}
+
+//===----------------------------------------------------------------------===//
 // Canonicalizer Driver.
 //===----------------------------------------------------------------------===//
 
