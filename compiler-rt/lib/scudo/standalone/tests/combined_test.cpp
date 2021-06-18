@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "memtag.h"
 #include "tests/scudo_unit_test.h"
 
 #include "allocator_config.h"
@@ -398,7 +399,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, DisableMemoryTagging) {
     // Check that disabling memory tagging works correctly.
     void *P = Allocator->allocate(2048, Origin);
     EXPECT_DEATH(reinterpret_cast<char *>(P)[2048] = 0xaa, "");
-    scudo::disableMemoryTagChecksTestOnly();
+    scudo::ScopedDisableMemoryTagChecks NoTagChecks;
     Allocator->disableMemoryTagging();
     reinterpret_cast<char *>(P)[2048] = 0xaa;
     Allocator->deallocate(P, Origin);
@@ -409,10 +410,6 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, DisableMemoryTagging) {
     Allocator->deallocate(P, Origin);
 
     Allocator->releaseToOS();
-
-    // Disabling memory tag checks may interfere with subsequent tests.
-    // Re-enable them now.
-    scudo::enableMemoryTagChecksTestOnly();
   }
 }
 
