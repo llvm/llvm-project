@@ -72,15 +72,15 @@ public:
     RawWeights = !!BFI;  // Print RawWeights when BFI is available.
   }
 
-  const BlockFrequencyInfo *getBFI() { return BFI; }
+  const BlockFrequencyInfo *getBFI() const { return BFI; }
 
-  const BranchProbabilityInfo *getBPI() { return BPI; }
+  const BranchProbabilityInfo *getBPI() const { return BPI; }
 
-  const Function *getFunction() { return this->F; }
+  const Function *getFunction() const { return this->F; }
 
-  uint64_t getMaxFreq() { return MaxFreq; }
+  uint64_t getMaxFreq() const { return MaxFreq; }
 
-  uint64_t getFreq(const BasicBlock *BB) {
+  uint64_t getFreq(const BasicBlock *BB) const {
     return BFI->getBlockFreq(BB).getFrequency();
   }
 
