@@ -1,19 +1,20 @@
 # RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o %t.dwp
 # RUN: not llvm-dwp %t.dwp -o %t 2>&1 | FileCheck %s
 
-# CHECK: error: unsupported cu_index version: 5 (only version 2 is supported)
+# CHECK: error: incompatible cu_index versions, found 2 and expecting 5
     .section .debug_info.dwo, "e", @progbits
     .long	.Ldebug_info_dwo_end0-.Ldebug_info_dwo_start0 # Length of Unit
 .Ldebug_info_dwo_start0:
     .short 5                       # DWARF version number
-    .byte 5                        # DWARF Unit type
+    .byte 5                        # DWARF Unit type (DW_UT_split_compile)
     .byte 8                        # Address Size (in bytes)
     .long 0                        # Offset Into Abbrev. Section
     .quad	-346972125991005518
+    .byte	0                               # Abbrev [9] 0xb:0x37 DW_TAG_compile_unit
 .Ldebug_info_dwo_end0:
     .section .debug_cu_index, "", @progbits
 ## Header:
-    .short 5                        # Version
+    .short 2                        # Version
     .space 2                        # Padding
     .long 2                         # Section count
     .long 1                         # Unit count
