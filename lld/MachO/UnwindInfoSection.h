@@ -13,9 +13,6 @@
 #include "SyntheticSections.h"
 
 #include "mach-o/compact_unwind_encoding.h"
-#include "llvm/ADT/DenseMap.h"
-
-#include <vector>
 
 namespace lld {
 namespace macho {
