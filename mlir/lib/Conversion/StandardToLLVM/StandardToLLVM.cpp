@@ -1878,10 +1878,9 @@ struct AllocOpLowering : public AllocLikeOpLLVMLowering {
 
     Value alignedPtr = allocatedPtr;
     if (alignment) {
-      auto intPtrType = getIntPtrType(memRefType.getMemorySpaceAsInt());
       // Compute the aligned type pointer.
       Value allocatedInt =
-          rewriter.create<LLVM::PtrToIntOp>(loc, intPtrType, allocatedPtr);
+          rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), allocatedPtr);
       Value alignmentInt =
           createAligned(rewriter, loc, allocatedInt, alignment);
       alignedPtr =
