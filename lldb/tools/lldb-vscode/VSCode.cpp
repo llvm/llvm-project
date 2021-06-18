@@ -42,7 +42,7 @@ VSCode::VSCode()
       focus_tid(LLDB_INVALID_THREAD_ID), sent_terminated_event(false),
       stop_at_entry(false), is_attach(false), reverse_request_seq(0),
       waiting_for_run_in_terminal(false),
-      progress_event_queue(
+      progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }) {
   const char *log_file_path = getenv("LLDBVSCODE_LOG");
 #if defined(_WIN32)
@@ -322,8 +322,9 @@ void VSCode::SendOutput(OutputType o, const llvm::StringRef output) {
 //   };
 // }
 
-void VSCode::SendProgressEvent(const ProgressEvent &event) {
-  progress_event_queue.Push(event);
+void VSCode::SendProgressEvent(uint64_t progress_id, const char *message,
+                               uint64_t completed, uint64_t total) {
+  progress_event_reporter.Push(progress_id, message, completed, total);
 }
 
 void __attribute__((format(printf, 3, 4)))
