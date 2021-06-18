@@ -20427,6 +20427,9 @@ static SDValue foldShuffleOfConcatUndefs(ShuffleVectorSDNode *Shuf,
   for (unsigned i = 0; i != NumElts; ++i) {
     if (Mask[i] == -1)
       continue;
+    // If we reference the upper (undef) subvector then the element is undef.
+    if ((Mask[i] % NumElts) >= HalfNumElts)
+      continue;
     int M = Mask[i] < (int)NumElts ? Mask[i] : Mask[i] - (int)HalfNumElts;
     if (i < HalfNumElts)
       Mask0[i] = M;
