@@ -832,7 +832,7 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
     return;
 
   // Initialize symbols.
-  DylibFile *exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
+  exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
   if (const load_command *cmd = findCommand(hdr, LC_DYLD_INFO_ONLY)) {
     auto *c = reinterpret_cast<const dyld_info_command *>(cmd);
     parseTrie(buf + c->export_off, c->export_size,
@@ -846,9 +846,12 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
     error("LC_DYLD_INFO_ONLY not found in " + toString(this));
     return;
   }
+}
 
-  const uint8_t *p =
-      reinterpret_cast<const uint8_t *>(hdr) + target->headerSize;
+void DylibFile::parseLoadCommands(MemoryBufferRef mb, DylibFile *umbrella) {
+  auto *hdr = reinterpret_cast<const mach_header *>(mb.getBufferStart());
+  const uint8_t *p = reinterpret_cast<const uint8_t *>(mb.getBufferStart()) +
+                     target->headerSize;
   for (uint32_t i = 0, n = hdr->ncmds; i < n; ++i) {
     auto *cmd = reinterpret_cast<const load_command *>(p);
     p += cmd->cmdsize;
@@ -877,6 +880,13 @@ DylibFile::DylibFile(MemoryBufferRef mb, DylibFile *umbrella,
   }
 }
 
+// Some versions of XCode ship with .tbd files that don't have the right
+// platform settings.
+static constexpr std::array<StringRef, 3> skipPlatformChecks{
+    "/usr/lib/system/libsystem_kernel.dylib",
+    "/usr/lib/system/libsystem_platform.dylib",
+    "/usr/lib/system/libsystem_pthread.dylib"};
+
 DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
                      bool isBundleLoader)
     : InputFile(DylibKind, interface), refState(RefState::Unreferenced),
@@ -890,13 +900,6 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   compatibilityVersion = interface.getCompatibilityVersion().rawValue();
   currentVersion = interface.getCurrentVersion().rawValue();
 
-  // Some versions of XCode ship with .tbd files that don't have the right
-  // platform settings.
-  static constexpr std::array<StringRef, 3> skipPlatformChecks{
-      "/usr/lib/system/libsystem_kernel.dylib",
-      "/usr/lib/system/libsystem_platform.dylib",
-      "/usr/lib/system/libsystem_pthread.dylib"};
-
   if (!is_contained(skipPlatformChecks, dylibName) &&
       !is_contained(interface.targets(), config->platformInfo.target)) {
     error(toString(this) + " is incompatible with " +
@@ -904,7 +907,7 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
     return;
   }
 
-  DylibFile *exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
+  exportingFile = isImplicitlyLinked(dylibName) ? this : umbrella;
   auto addSymbol = [&](const Twine &name) -> void {
     symbols.push_back(symtab->addDylib(saver.save(name), exportingFile,
                                        /*isWeakDef=*/false,
@@ -934,10 +937,11 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
       break;
     }
   }
+}
 
+void DylibFile::parseReexports(const llvm::MachO::InterfaceFile &interface) {
   const InterfaceFile *topLevel =
       interface.getParent() == nullptr ? &interface : interface.getParent();
-
   for (InterfaceFileRef intfRef : interface.reexportedLibraries()) {
     InterfaceFile::const_target_range targets = intfRef.targets();
     if (is_contained(skipPlatformChecks, intfRef.getInstallName()) ||
