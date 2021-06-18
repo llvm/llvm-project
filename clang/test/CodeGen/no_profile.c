@@ -9,11 +9,11 @@
 int g(int);
 
 void __attribute__((no_profile)) no_instr() {
-// CHECK: define {{.*}} void @no_instr() [[ATTR:#[0-9]+]]
+// CHECK: define {{.*}}void @no_instr() [[ATTR:#[0-9]+]]
 }
 
 void instr(void) {
-// CHECK: define {{.*}} void @instr() [[ATTR2:#[0-9]+]]
+// CHECK: define {{.*}}void @instr() [[ATTR2:#[0-9]+]]
 }
 // CHECK: attributes [[ATTR]] = {{.*}} noprofile
 // CHECK: attributes [[ATTR2]] = {
