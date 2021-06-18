@@ -1,5 +1,6 @@
 ; Check the optimizer doesn't crash at inlining the function top and all of its callees are inlined.
 ; RUN: opt < %s -O3 -S | FileCheck %s
+; RUN: opt < %s -O3 -inline-enable-priority-order=true -S | FileCheck %s
 
 define dso_local void (...)* @second(i8** %p) {
 entry:

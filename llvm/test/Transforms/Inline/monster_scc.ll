@@ -41,7 +41,9 @@
 ;
 ; RUN: opt -S < %s -inline -inline-threshold=150 -enable-new-pm=0 | FileCheck %s --check-prefixes=CHECK,OLD
 ; RUN: opt -S < %s -passes=inline -inline-threshold=150 | FileCheck %s --check-prefixes=CHECK,NEW
+; RUN: opt -S < %s -passes=inline -inline-threshold=150 -inline-enable-priority-order=true | FileCheck %s --check-prefixes=CHECK,PO
 ; RUN: opt -S < %s -passes=inliner-wrapper -inline-threshold=150 | FileCheck %s --check-prefixes=CHECK,NEW
+; RUN: opt -S < %s -passes=inliner-wrapper -inline-threshold=150 -inline-enable-priority-order=true | FileCheck %s --check-prefixes=CHECK,PO
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -68,6 +70,21 @@ declare void @_Z1gi(i32)
 ; NEW-NOT: call
 ; NEW: call void @_Z1fILb0ELi2EEvPbS0_(
 ; NEW-NOT: call
+; PO-NOT: call
+; PO: call void @_Z1fILb1ELi1EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb1ELi2EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb1ELi3EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1gi(
+; PO-NOT: call
+; PO: call void @_Z1fILb1ELi1EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb0ELi1EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb0ELi0EEvPbS0_(
+; PO-NOT: call
 define void @_Z1fILb0ELi0EEvPbS0_(i8* %B, i8* %E) {
 entry:
   %cmp = icmp eq i8* %B, %E
@@ -112,6 +129,13 @@ if.end3:
 ; NEW-NOT: call
 ; NEW: call void @_Z1fILb0ELi2EEvPbS0_(
 ; NEW-NOT: call
+; PO-NOT: call
+; PO: call void @_Z1gi(
+; PO-NOT: call
+; PO: call void @_Z1fILb1ELi1EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb0ELi1EEvPbS0_(
+; PO-NOT: call
 define void @_Z1fILb1ELi0EEvPbS0_(i8* %B, i8* %E) {
 entry:
   call void @_Z1gi(i32 0)
@@ -159,6 +183,19 @@ if.end3:
 ; NEW-NOT: call
 ; NEW: call void @_Z1fILb0ELi3EEvPbS0_(
 ; NEW-NOT: call
+; PO-NOT: call
+; PO: call void @_Z1fILb1ELi2EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb1ELi3EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1gi(
+; PO-NOT: call
+; PO: call void @_Z1fILb1ELi1EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb0ELi1EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb0ELi0EEvPbS0_(
+; PO-NOT: call
 define void @_Z1fILb0ELi1EEvPbS0_(i8* %B, i8* %E) {
 entry:
   %cmp = icmp eq i8* %B, %E
@@ -203,6 +240,21 @@ if.end3:
 ; NEW-NOT: call
 ; NEW: call void @_Z1fILb0ELi3EEvPbS0_(
 ; NEW-NOT: call
+; PO-NOT: call
+; PO: call void @_Z1gi(
+; PO-NOT: call
+; PO: call void @_Z1fILb1ELi2EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb1ELi3EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1gi(
+; PO-NOT: call
+; PO: call void @_Z1fILb1ELi1EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb0ELi1EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb0ELi0EEvPbS0_(
+; PO-NOT: call
 define void @_Z1fILb1ELi1EEvPbS0_(i8* %B, i8* %E) {
 entry:
   call void @_Z1gi(i32 1)
@@ -251,6 +303,17 @@ if.end3:
 ; NEW-NOT: call
 ; NEW: call void @_Z1fILb0ELi4EEvPbS0_(
 ; NEW-NOT: call
+; PO-NOT: call
+; PO: call void @_Z1fILb1ELi3EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1gi(
+; PO-NOT: call
+; PO: call void @_Z1fILb1ELi1EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb0ELi1EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb0ELi0EEvPbS0_(
+; PO-NOT: call
 define void @_Z1fILb0ELi2EEvPbS0_(i8* %B, i8* %E) {
 entry:
   %cmp = icmp eq i8* %B, %E
@@ -301,6 +364,19 @@ if.end3:
 ; NEW-NOT: call
 ; NEW: call void @_Z1fILb0ELi4EEvPbS0_(
 ; NEW-NOT: call
+; PO-NOT: call
+; PO: call void @_Z1gi(
+; PO-NOT: call
+; PO: call void @_Z1fILb1ELi3EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1gi(
+; PO-NOT: call
+; PO: call void @_Z1fILb1ELi1EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb0ELi1EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb0ELi0EEvPbS0_(
+; PO-NOT: call
 define void @_Z1fILb1ELi2EEvPbS0_(i8* %B, i8* %E) {
 entry:
   call void @_Z1gi(i32 2)
@@ -340,6 +416,15 @@ if.end3:
 ; NEW-NOT: call
 ; NEW: call void @_Z1fILb0ELi0EEvPbS0_(
 ; NEW-NOT: call
+; PO-NOT: call
+; PO: call void @_Z1gi(
+; PO-NOT: call
+; PO: call void @_Z1fILb1ELi1EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb0ELi1EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb0ELi0EEvPbS0_(
+; PO-NOT: call
 define void @_Z1fILb0ELi3EEvPbS0_(i8* %B, i8* %E) {
 entry:
   %cmp = icmp eq i8* %B, %E
@@ -364,13 +449,35 @@ if.end3:
 }
 
 ; CHECK-LABEL: define void @_Z1fILb1ELi3EEvPbS0_(
-; CHECK-NOT: call
-; CHECK: call void @_Z1gi(
-; CHECK-NOT: call
-; CHECK: call void @_Z1fILb1ELi0EEvPbS0_(
-; CHECK-NOT: call
-; CHECK: call void @_Z1fILb0ELi0EEvPbS0_(
-; CHECK-NOT: call
+; OLD-NOT: call
+; OLD: call void @_Z1gi(
+; OLD-NOT: call
+; OLD: call void @_Z1fILb1ELi0EEvPbS0_(
+; OLD-NOT: call
+; OLD: call void @_Z1fILb0ELi0EEvPbS0_(
+; OLD-NOT: call
+; NEW-NOT: call
+; NEW: call void @_Z1gi(
+; NEW-NOT: call
+; NEW: call void @_Z1fILb1ELi0EEvPbS0_(
+; NEW-NOT: call
+; NEW: call void @_Z1fILb0ELi0EEvPbS0_(
+; NEW-NOT: call
+; PO-NOT: call
+; PO: call void @_Z1gi(
+; PO-NOT: call
+; PO: call void @_Z1gi(
+; PO-NOT: call
+; PO: call void @_Z1fILb1ELi1EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb0ELi1EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb1ELi1EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb1ELi2EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb0ELi2EEvPbS0_(
+; PO-NOT: call
 define void @_Z1fILb1ELi3EEvPbS0_(i8* %B, i8* %E) {
 entry:
   call void @_Z1gi(i32 3)
@@ -416,6 +523,13 @@ entry:
 ; NEW-NOT: call
 ; NEW: call void @_Z1fILb0ELi1EEvPbS0_(
 ; NEW-NOT: call
+; PO-NOT: call
+; PO: call void @_Z1gi(
+; PO-NOT: call
+; PO: call void @_Z1fILb1ELi1EEvPbS0_(
+; PO-NOT: call
+; PO: call void @_Z1fILb0ELi1EEvPbS0_(
+; PO-NOT: call
 define void @_Z1fILb1ELi4EEvPbS0_(i8* %B, i8* %E) {
 entry:
   call void @_Z1fILb1ELi0EEvPbS0_(i8* %B, i8* %E)
