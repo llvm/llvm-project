@@ -56,7 +56,6 @@ using namespace __hwasan;
 // Fake std::nothrow_t to avoid including <new>.
 namespace std {
   struct nothrow_t {};
-  enum class align_val_t : size_t {};
 }  // namespace std
 
 
@@ -73,6 +72,32 @@ INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
 void *operator new[](size_t size, std::nothrow_t const&) {
   OPERATOR_NEW_BODY(true /*nothrow*/);
 }
+
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete(void *ptr)
+    NOEXCEPT {
+  OPERATOR_DELETE_BODY;
+}
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete[](
+    void *ptr) NOEXCEPT {
+  OPERATOR_DELETE_BODY;
+}
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete(
+    void *ptr, std::nothrow_t const &) {
+  OPERATOR_DELETE_BODY;
+}
+INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete[](
+    void *ptr, std::nothrow_t const &) {
+  OPERATOR_DELETE_BODY;
+}
+
+#endif  // OPERATOR_NEW_BODY
+
+#ifdef OPERATOR_NEW_ALIGN_BODY
+
+namespace std {
+enum class align_val_t : size_t {};
+}  // namespace std
+
 INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void *operator new(
     size_t size, std::align_val_t align) {
   OPERATOR_NEW_ALIGN_BODY(false /*nothrow*/);
@@ -90,16 +115,6 @@ INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void *operator new[](
   OPERATOR_NEW_ALIGN_BODY(true /*nothrow*/);
 }
 
-INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-void operator delete(void *ptr) NOEXCEPT { OPERATOR_DELETE_BODY; }
-INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-void operator delete[](void *ptr) NOEXCEPT { OPERATOR_DELETE_BODY; }
-INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-void operator delete(void *ptr, std::nothrow_t const&) { OPERATOR_DELETE_BODY; }
-INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-void operator delete[](void *ptr, std::nothrow_t const&) {
-  OPERATOR_DELETE_BODY;
-}
 INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete(
     void *ptr, std::align_val_t align) NOEXCEPT {
   OPERATOR_DELETE_BODY;
@@ -117,4 +132,4 @@ INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete[](
   OPERATOR_DELETE_BODY;
 }
 
-#endif // OPERATOR_NEW_BODY
+#endif  // OPERATOR_NEW_ALIGN_BODY
