@@ -814,7 +814,7 @@ void WasmObjectWriter::writeImportSection(ArrayRef<wasm::WasmImport> Imports,
       encodeULEB128(NumElements, W->OS); // initial
       break;
     case wasm::WASM_EXTERNAL_TAG:
-      encodeULEB128(Import.Tag.Attribute, W->OS);
+      W->OS << char(Import.Tag.Attribute);
       encodeULEB128(Import.Tag.SigIndex, W->OS);
       break;
     default:
@@ -848,7 +848,7 @@ void WasmObjectWriter::writeTagSection(ArrayRef<wasm::WasmTagType> Tags) {
 
   encodeULEB128(Tags.size(), W->OS);
   for (const wasm::WasmTagType &Tag : Tags) {
-    encodeULEB128(Tag.Attribute, W->OS);
+    W->OS << char(Tag.Attribute);
     encodeULEB128(Tag.SigIndex, W->OS);
   }
 
