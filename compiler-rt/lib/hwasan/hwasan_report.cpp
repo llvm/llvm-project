@@ -547,6 +547,12 @@ void ReportTailOverwritten(StackTrace *stack, uptr tagged_addr, uptr orig_size,
   Report("ERROR: %s: %s; heap object [%p,%p) of size %zd\n", SanitizerToolName,
          bug_type, untagged_addr, untagged_addr + orig_size, orig_size);
   Printf("\n%s", d.Default());
+  Printf(
+      "Stack of invalid access unknown. Issue detected at deallocation "
+      "time.\n");
+  Printf("%s", d.Allocation());
+  Printf("deallocated here:\n");
+  Printf("%s", d.Default());
   stack->Print();
   HwasanChunkView chunk = FindHeapChunkByAddress(untagged_addr);
   if (chunk.Beg()) {
