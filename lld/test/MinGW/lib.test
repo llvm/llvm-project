@@ -4,7 +4,7 @@ RUN: not ld.lld -### -m i386pep -lfoo -L%t/lib 2>&1 | FileCheck -check-prefix=LI
 LIB1: unable to find library -lfoo
 
 RUN: echo > %t/lib/libfoo.dll.a
-RUN: ld.lld -### -m i386pep -lfoo -L%t/lib | FileCheck -check-prefix=LIB2 %s
+RUN: ld.lld -### -m i386pep -lfoo -L%t/lib 2>&1 | FileCheck -check-prefix=LIB2 %s
 LIB2: libfoo.dll.a
 
 RUN: not ld.lld -### -m i386pep -l:barefilename -L%t/lib 2>&1 | FileCheck -check-prefix=LIB-LITERAL-FAIL %s
@@ -21,20 +21,20 @@ RUN: not ld.lld -### -m i386pep -non_shared -lfoo -L%t/lib 2>&1 | FileCheck -che
 LIB3: unable to find library -lfoo
 
 RUN: echo > %t/lib/libfoo.a
-RUN: ld.lld -### -m i386pep -Bstatic -lfoo -L%t/lib | FileCheck -check-prefix=LIB4 %s
+RUN: ld.lld -### -m i386pep -Bstatic -lfoo -L%t/lib 2>&1 | FileCheck -check-prefix=LIB4 %s
 LIB4: libfoo.a
 
 RUN: echo > %t/lib/libbar.dll.a
 RUN: echo > %t/lib/libbar.a
-RUN: ld.lld -### -m i386pep -Bstatic -lfoo -Bdynamic -lbar -L%t/lib | FileCheck -check-prefix=LIB5 %s
-RUN: ld.lld -### -m i386pep -Bstatic -lfoo -dy -lbar -L%t/lib | FileCheck -check-prefix=LIB5 %s
-RUN: ld.lld -### -m i386pep -Bstatic -lfoo -call_shared -lbar -L%t/lib | FileCheck -check-prefix=LIB5 %s
+RUN: ld.lld -### -m i386pep -Bstatic -lfoo -Bdynamic -lbar -L%t/lib 2>&1 | FileCheck -check-prefix=LIB5 %s
+RUN: ld.lld -### -m i386pep -Bstatic -lfoo -dy -lbar -L%t/lib 2>&1 | FileCheck -check-prefix=LIB5 %s
+RUN: ld.lld -### -m i386pep -Bstatic -lfoo -call_shared -lbar -L%t/lib 2>&1 | FileCheck -check-prefix=LIB5 %s
 LIB5:      libfoo.a
 LIB5-SAME: libbar.dll.a
 
 RUN: echo > %t/lib/noprefix.dll.a
 RUN: echo > %t/lib/msvcstyle.lib
-RUN: ld.lld -### -m i386pep -L%t/lib -lnoprefix -lmsvcstyle | FileCheck -check-prefix=OTHERSTYLES %s
+RUN: ld.lld -### -m i386pep -L%t/lib -lnoprefix -lmsvcstyle 2>&1 | FileCheck -check-prefix=OTHERSTYLES %s
 OTHERSTYLES: noprefix.dll.a
 OTHERSTYLES-SAME: msvcstyle.lib
 
