@@ -21,8 +21,8 @@
 ; ELF:   @__profd_foo = private {{.*}}, section "__llvm_prf_data", comdat, align 8
 ; MACHO: @__profc_foo = private global [1 x i64] zeroinitializer, section "__DATA,__llvm_prf_cnts", align 8
 ; MACHO: @__profd_foo = private {{.*}}, section "__DATA,__llvm_prf_data,regular,live_support", align 8
-; WIN:   @__profc_foo = internal global [1 x i64] zeroinitializer, section ".lprfc$M", align 8
-; WIN:   @__profd_foo = internal {{.*}}, section ".lprfd$M", align 8
+; WIN:   @__profc_foo = private global [1 x i64] zeroinitializer, section ".lprfc$M", align 8
+; WIN:   @__profd_foo = private {{.*}}, section ".lprfd$M", align 8
 define void @foo() {
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_foo, i32 0, i32 0), i64 0, i32 1, i32 0)
   ret void
@@ -32,8 +32,8 @@ define void @foo() {
 ; ELF:   @__profd_bar = private {{.*}}, section "__llvm_prf_data", comdat, align 8
 ; MACHO: @__profc_bar = private global [1 x i64] zeroinitializer, section "__DATA,__llvm_prf_cnts", align 8
 ; MACHO: @__profd_bar = private {{.*}}, section "__DATA,__llvm_prf_data,regular,live_support", align 8
-; WIN:   @__profc_bar = internal global [1 x i64] zeroinitializer, section ".lprfc$M", align 8
-; WIN:   @__profd_bar = internal {{.*}}, section ".lprfd$M", align 8
+; WIN:   @__profc_bar = private global [1 x i64] zeroinitializer, section ".lprfc$M", align 8
+; WIN:   @__profd_bar = private {{.*}}, section ".lprfd$M", align 8
 define void @bar() {
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_bar, i32 0, i32 0), i64 0, i32 1, i32 0)
   ret void
@@ -43,8 +43,8 @@ define void @bar() {
 ; ELF:   @__profd_baz = private {{.*}}, section "__llvm_prf_data", comdat, align 8
 ; MACHO: @__profc_baz = private global [3 x i64] zeroinitializer, section "__DATA,__llvm_prf_cnts", align 8
 ; MACHO: @__profd_baz = private {{.*}}, section "__DATA,__llvm_prf_data,regular,live_support", align 8
-; WIN:   @__profc_baz = internal global [3 x i64] zeroinitializer, section ".lprfc$M", align 8
-; WIN:   @__profd_baz = internal {{.*}}, section ".lprfd$M", align 8
+; WIN:   @__profc_baz = private global [3 x i64] zeroinitializer, section ".lprfc$M", align 8
+; WIN:   @__profd_baz = private {{.*}}, section ".lprfd$M", align 8
 define void @baz() {
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_baz, i32 0, i32 0), i64 0, i32 3, i32 0)
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_baz, i32 0, i32 0), i64 0, i32 3, i32 1)
