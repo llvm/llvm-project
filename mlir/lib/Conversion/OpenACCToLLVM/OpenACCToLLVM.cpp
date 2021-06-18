@@ -140,6 +140,7 @@ void mlir::populateOpenACCToLLVMConversionPatterns(
   patterns.add<LegalizeDataOpForLLVMTranslation<acc::DataOp>>(converter);
   patterns.add<LegalizeDataOpForLLVMTranslation<acc::EnterDataOp>>(converter);
   patterns.add<LegalizeDataOpForLLVMTranslation<acc::ExitDataOp>>(converter);
+  patterns.add<LegalizeDataOpForLLVMTranslation<acc::ParallelOp>>(converter);
   patterns.add<LegalizeDataOpForLLVMTranslation<acc::UpdateOp>>(converter);
 }
 
@@ -199,6 +200,24 @@ void ConvertOpenACCToLLVMPass::runOnOperation() {
         return allDataOperandsAreConverted(op.copyoutOperands()) &&
                allDataOperandsAreConverted(op.deleteOperands()) &&
                allDataOperandsAreConverted(op.detachOperands());
+      });
+
+  target.addDynamicallyLegalOp<acc::ParallelOp>(
+      [allDataOperandsAreConverted](acc::ParallelOp op) {
+        return allDataOperandsAreConverted(op.reductionOperands()) &&
+               allDataOperandsAreConverted(op.copyOperands()) &&
+               allDataOperandsAreConverted(op.copyinOperands()) &&
+               allDataOperandsAreConverted(op.copyinReadonlyOperands()) &&
+               allDataOperandsAreConverted(op.copyoutOperands()) &&
+               allDataOperandsAreConverted(op.copyoutZeroOperands()) &&
+               allDataOperandsAreConverted(op.createOperands()) &&
+               allDataOperandsAreConverted(op.createZeroOperands()) &&
+               allDataOperandsAreConverted(op.noCreateOperands()) &&
+               allDataOperandsAreConverted(op.presentOperands()) &&
+               allDataOperandsAreConverted(op.devicePtrOperands()) &&
+               allDataOperandsAreConverted(op.attachOperands()) &&
+               allDataOperandsAreConverted(op.gangPrivateOperands()) &&
+               allDataOperandsAreConverted(op.gangFirstPrivateOperands());
       });
 
   target.addDynamicallyLegalOp<acc::UpdateOp>(
