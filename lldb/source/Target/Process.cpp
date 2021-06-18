@@ -387,7 +387,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_profile_data_comm_mutex(), m_profile_data(), m_iohandler_sync(0),
       m_memory_cache(*this), m_allocated_memory_cache(*this),
       m_should_detach(false), m_next_event_action_up(), m_public_run_lock(),
-      m_private_run_lock(), m_finalizing(false),
+      m_private_run_lock(), m_finalizing(false), m_finalize_called(false),
       m_clear_thread_plans_on_stop(false), m_force_next_event_delivery(false),
       m_last_broadcast_state(eStateInvalid), m_destroy_in_process(false),
       m_can_interpret_function_calls(false), m_warnings_issued(),
@@ -463,8 +463,7 @@ const ProcessPropertiesSP &Process::GetGlobalProperties() {
 }
 
 void Process::Finalize() {
-  if (m_finalizing.exchange(true))
-    return;
+  m_finalizing = true;
 
   // Destroy this process if needed
   switch (GetPrivateState()) {
@@ -476,7 +475,7 @@ void Process::Finalize() {
   case eStateStepping:
   case eStateCrashed:
   case eStateSuspended:
-    DestroyImpl(false);
+    Destroy(false);
     break;
 
   case eStateInvalid:
@@ -539,6 +538,7 @@ void Process::Finalize() {
   m_private_run_lock.TrySetRunning(); // This will do nothing if already locked
   m_private_run_lock.SetStopped();
   m_structured_data_plugin_map.clear();
+  m_finalize_called = true;
 }
 
 void Process::RegisterNotificationCallbacks(const Notifications &callbacks) {
@@ -1353,7 +1353,7 @@ bool Process::StateChangedIsHijackedForSynchronousResume() {
 StateType Process::GetPrivateState() { return m_private_state.GetValue(); }
 
 void Process::SetPrivateState(StateType new_state) {
-  if (m_finalizing)
+  if (m_finalize_called)
     return;
 
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_STATE |
@@ -1403,7 +1403,11 @@ void Process::SetPrivateState(StateType new_state) {
                 StateAsCString(new_state), m_mod_id.GetStopID());
     }
 
-    m_private_state_broadcaster.BroadcastEvent(event_sp);
+    // Use our target to get a shared pointer to ourselves...
+    if (m_finalize_called && !PrivateStateThreadIsValid())
+      BroadcastEvent(event_sp);
+    else
+      m_private_state_broadcaster.BroadcastEvent(event_sp);
   } else {
     LLDB_LOGF(log,
               "Process::SetPrivateState (%s) state didn't change. Ignoring...",
@@ -3173,12 +3177,9 @@ Status Process::Detach(bool keep_stopped) {
 Status Process::Destroy(bool force_kill) {
   // If we've already called Process::Finalize then there's nothing useful to
   // be done here.  Finalize has actually called Destroy already.
-  if (m_finalizing)
+  if (m_finalize_called)
     return {};
-  return DestroyImpl(force_kill);
-}
 
-Status Process::DestroyImpl(bool force_kill) {
   // Tell ourselves we are in the process of destroying the process, so that we
   // don't do any unnecessary work that might hinder the destruction.  Remember
   // to set this back to false when we are done.  That way if the attempt
