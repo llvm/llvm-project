@@ -929,10 +929,12 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
 #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Init,
 #include "llvm/ProfileData/InstrProfData.inc"
   };
-  // If code never references data variables (the symbol is unneeded), and
-  // linker GC cannot discard data variables while the text section is retained,
-  // data variables can be private. This optimization applies on COFF and ELF.
-  if (!DataReferencedByCode && !TT.isOSBinFormatMachO()) {
+  // If linker GC cannot discard data variables while the text section is
+  // retained, data variables can be private. This optimization applies on ELF.
+  // On COFF, when DataReferencedByCode is false, __profd_ is never a comdat
+  // leader, this is applicable as well.
+  if (TT.isOSBinFormatELF() ||
+      (!DataReferencedByCode && TT.isOSBinFormatCOFF())) {
     Linkage = GlobalValue::PrivateLinkage;
     Visibility = GlobalValue::DefaultVisibility;
   }
