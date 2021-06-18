@@ -36,19 +36,47 @@ define void @test1() {
 ; PEEL2:       entry.peel.newph:
 ; PEEL2-NEXT:    br label [[FOR_BODY:%.*]]
 ; PEEL2:       for.body:
-; PEEL2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* @a, i64 0, i64 [[INDVARS_IV_NEXT_PEEL4]]
-; PEEL2-NEXT:    [[TMP2:%.*]] = trunc i64 [[INDVARS_IV_NEXT_PEEL4]] to i32
+; PEEL2-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_PEEL4]], [[ENTRY_PEEL_NEWPH]] ], [ [[INDVARS_IV_NEXT_7:%.*]], [[FOR_BODY_6:%.*]] ]
+; PEEL2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* @a, i64 0, i64 [[INDVARS_IV]]
+; PEEL2-NEXT:    [[TMP2:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; PEEL2-NEXT:    store i32 [[TMP2]], i32* [[ARRAYIDX]], align 4
-; PEEL2-NEXT:    store i32 3, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @a, i64 0, i64 3), align 4
-; PEEL2-NEXT:    store i32 4, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @a, i64 0, i64 4), align 4
-; PEEL2-NEXT:    store i32 5, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @a, i64 0, i64 5), align 4
-; PEEL2-NEXT:    store i32 6, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @a, i64 0, i64 6), align 4
-; PEEL2-NEXT:    store i32 7, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @a, i64 0, i64 7), align 4
-; PEEL2-NEXT:    store i32 8, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @a, i64 1, i64 0), align 4
-; PEEL2-NEXT:    store i32 9, i32* getelementptr ([8 x i32], [8 x i32]* @a, i64 1, i64 1), align 4
+; PEEL2-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; PEEL2-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* @a, i64 0, i64 [[INDVARS_IV_NEXT]]
+; PEEL2-NEXT:    [[TMP3:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; PEEL2-NEXT:    store i32 [[TMP3]], i32* [[ARRAYIDX_1]], align 4
+; PEEL2-NEXT:    [[INDVARS_IV_NEXT_1:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT]], 1
+; PEEL2-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* @a, i64 0, i64 [[INDVARS_IV_NEXT_1]]
+; PEEL2-NEXT:    [[TMP4:%.*]] = trunc i64 [[INDVARS_IV_NEXT_1]] to i32
+; PEEL2-NEXT:    store i32 [[TMP4]], i32* [[ARRAYIDX_2]], align 4
+; PEEL2-NEXT:    [[INDVARS_IV_NEXT_2:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_1]], 1
+; PEEL2-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* @a, i64 0, i64 [[INDVARS_IV_NEXT_2]]
+; PEEL2-NEXT:    [[TMP5:%.*]] = trunc i64 [[INDVARS_IV_NEXT_2]] to i32
+; PEEL2-NEXT:    store i32 [[TMP5]], i32* [[ARRAYIDX_3]], align 4
+; PEEL2-NEXT:    [[INDVARS_IV_NEXT_3:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_2]], 1
+; PEEL2-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* @a, i64 0, i64 [[INDVARS_IV_NEXT_3]]
+; PEEL2-NEXT:    [[TMP6:%.*]] = trunc i64 [[INDVARS_IV_NEXT_3]] to i32
+; PEEL2-NEXT:    store i32 [[TMP6]], i32* [[ARRAYIDX_4]], align 4
+; PEEL2-NEXT:    [[INDVARS_IV_NEXT_4:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_3]], 1
+; PEEL2-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* @a, i64 0, i64 [[INDVARS_IV_NEXT_4]]
+; PEEL2-NEXT:    [[TMP7:%.*]] = trunc i64 [[INDVARS_IV_NEXT_4]] to i32
+; PEEL2-NEXT:    store i32 [[TMP7]], i32* [[ARRAYIDX_5]], align 4
+; PEEL2-NEXT:    [[INDVARS_IV_NEXT_5:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_4]], 1
+; PEEL2-NEXT:    [[EXITCOND_5:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT_5]], 8
+; PEEL2-NEXT:    br i1 [[EXITCOND_5]], label [[FOR_BODY_6]], label [[FOR_EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
+; PEEL2:       for.exit.loopexit:
 ; PEEL2-NEXT:    br label [[FOR_EXIT]]
 ; PEEL2:       for.exit:
 ; PEEL2-NEXT:    ret void
+; PEEL2:       for.body.6:
+; PEEL2-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* @a, i64 0, i64 [[INDVARS_IV_NEXT_5]]
+; PEEL2-NEXT:    [[TMP8:%.*]] = trunc i64 [[INDVARS_IV_NEXT_5]] to i32
+; PEEL2-NEXT:    store i32 [[TMP8]], i32* [[ARRAYIDX_6]], align 4
+; PEEL2-NEXT:    [[INDVARS_IV_NEXT_6:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_5]], 1
+; PEEL2-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* @a, i64 0, i64 [[INDVARS_IV_NEXT_6]]
+; PEEL2-NEXT:    [[TMP9:%.*]] = trunc i64 [[INDVARS_IV_NEXT_6]] to i32
+; PEEL2-NEXT:    store i32 [[TMP9]], i32* [[ARRAYIDX_7]], align 4
+; PEEL2-NEXT:    [[INDVARS_IV_NEXT_7]] = add nuw nsw i64 [[INDVARS_IV_NEXT_6]], 1
+; PEEL2-NEXT:    br label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ;
 ; PEEL8-LABEL: @test1(
 ; PEEL8-NEXT:  entry:
@@ -132,40 +160,58 @@ define void @test1() {
 ; PEEL8:       entry.peel.newph:
 ; PEEL8-NEXT:    br label [[FOR_BODY:%.*]]
 ; PEEL8:       for.body:
-; PEEL8-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* @a, i64 0, i64 [[INDVARS_IV_NEXT_PEEL34]]
-; PEEL8-NEXT:    [[TMP8:%.*]] = trunc i64 [[INDVARS_IV_NEXT_PEEL34]] to i32
+; PEEL8-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_PEEL34]], [[ENTRY_PEEL_NEWPH]] ], [ [[INDVARS_IV_NEXT_7:%.*]], [[FOR_BODY_7:%.*]] ]
+; PEEL8-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* @a, i64 0, i64 [[INDVARS_IV]]
+; PEEL8-NEXT:    [[TMP8:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; PEEL8-NEXT:    store i32 [[TMP8]], i32* [[ARRAYIDX]], align 4
-; PEEL8-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_PEEL34]], 1
+; PEEL8-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; PEEL8-NEXT:    br i1 true, label [[FOR_BODY_1:%.*]], label [[FOR_EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
+; PEEL8:       for.exit.loopexit:
+; PEEL8-NEXT:    br label [[FOR_EXIT]]
+; PEEL8:       for.exit:
+; PEEL8-NEXT:    ret void
+; PEEL8:       for.body.1:
 ; PEEL8-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* @a, i64 0, i64 [[INDVARS_IV_NEXT]]
 ; PEEL8-NEXT:    [[TMP9:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; PEEL8-NEXT:    store i32 [[TMP9]], i32* [[ARRAYIDX_1]], align 4
 ; PEEL8-NEXT:    [[INDVARS_IV_NEXT_1:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT]], 1
+; PEEL8-NEXT:    br i1 true, label [[FOR_BODY_2:%.*]], label [[FOR_EXIT_LOOPEXIT]], !llvm.loop [[LOOP0]]
+; PEEL8:       for.body.2:
 ; PEEL8-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* @a, i64 0, i64 [[INDVARS_IV_NEXT_1]]
 ; PEEL8-NEXT:    [[TMP10:%.*]] = trunc i64 [[INDVARS_IV_NEXT_1]] to i32
 ; PEEL8-NEXT:    store i32 [[TMP10]], i32* [[ARRAYIDX_2]], align 4
 ; PEEL8-NEXT:    [[INDVARS_IV_NEXT_2:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_1]], 1
+; PEEL8-NEXT:    br i1 true, label [[FOR_BODY_3:%.*]], label [[FOR_EXIT_LOOPEXIT]], !llvm.loop [[LOOP0]]
+; PEEL8:       for.body.3:
 ; PEEL8-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* @a, i64 0, i64 [[INDVARS_IV_NEXT_2]]
 ; PEEL8-NEXT:    [[TMP11:%.*]] = trunc i64 [[INDVARS_IV_NEXT_2]] to i32
 ; PEEL8-NEXT:    store i32 [[TMP11]], i32* [[ARRAYIDX_3]], align 4
 ; PEEL8-NEXT:    [[INDVARS_IV_NEXT_3:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_2]], 1
+; PEEL8-NEXT:    br i1 true, label [[FOR_BODY_4:%.*]], label [[FOR_EXIT_LOOPEXIT]], !llvm.loop [[LOOP0]]
+; PEEL8:       for.body.4:
 ; PEEL8-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* @a, i64 0, i64 [[INDVARS_IV_NEXT_3]]
 ; PEEL8-NEXT:    [[TMP12:%.*]] = trunc i64 [[INDVARS_IV_NEXT_3]] to i32
 ; PEEL8-NEXT:    store i32 [[TMP12]], i32* [[ARRAYIDX_4]], align 4
 ; PEEL8-NEXT:    [[INDVARS_IV_NEXT_4:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_3]], 1
+; PEEL8-NEXT:    br i1 true, label [[FOR_BODY_5:%.*]], label [[FOR_EXIT_LOOPEXIT]], !llvm.loop [[LOOP0]]
+; PEEL8:       for.body.5:
 ; PEEL8-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* @a, i64 0, i64 [[INDVARS_IV_NEXT_4]]
 ; PEEL8-NEXT:    [[TMP13:%.*]] = trunc i64 [[INDVARS_IV_NEXT_4]] to i32
 ; PEEL8-NEXT:    store i32 [[TMP13]], i32* [[ARRAYIDX_5]], align 4
 ; PEEL8-NEXT:    [[INDVARS_IV_NEXT_5:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_4]], 1
+; PEEL8-NEXT:    br i1 true, label [[FOR_BODY_6:%.*]], label [[FOR_EXIT_LOOPEXIT]], !llvm.loop [[LOOP0]]
+; PEEL8:       for.body.6:
 ; PEEL8-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* @a, i64 0, i64 [[INDVARS_IV_NEXT_5]]
 ; PEEL8-NEXT:    [[TMP14:%.*]] = trunc i64 [[INDVARS_IV_NEXT_5]] to i32
 ; PEEL8-NEXT:    store i32 [[TMP14]], i32* [[ARRAYIDX_6]], align 4
 ; PEEL8-NEXT:    [[INDVARS_IV_NEXT_6:%.*]] = add nuw nsw i64 [[INDVARS_IV_NEXT_5]], 1
+; PEEL8-NEXT:    br i1 true, label [[FOR_BODY_7]], label [[FOR_EXIT_LOOPEXIT]], !llvm.loop [[LOOP0]]
+; PEEL8:       for.body.7:
 ; PEEL8-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds [8 x i32], [8 x i32]* @a, i64 0, i64 [[INDVARS_IV_NEXT_6]]
 ; PEEL8-NEXT:    [[TMP15:%.*]] = trunc i64 [[INDVARS_IV_NEXT_6]] to i32
 ; PEEL8-NEXT:    store i32 [[TMP15]], i32* [[ARRAYIDX_7]], align 4
-; PEEL8-NEXT:    br label [[FOR_EXIT]]
-; PEEL8:       for.exit:
-; PEEL8-NEXT:    ret void
+; PEEL8-NEXT:    [[INDVARS_IV_NEXT_7]] = add nuw nsw i64 [[INDVARS_IV_NEXT_6]], 1
+; PEEL8-NEXT:    br i1 true, label [[FOR_BODY]], label [[FOR_EXIT_LOOPEXIT]], !llvm.loop [[LOOP2:![0-9]+]]
 ;
 ; PEEL2UNROLL2-LABEL: @test1(
 ; PEEL2UNROLL2-NEXT:  entry:
