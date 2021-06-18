@@ -80,8 +80,12 @@ const Scope *FindPureProcedureContaining(const Scope &start) {
   // N.B. We only need to examine the innermost containing program unit
   // because an internal subprogram of a pure subprogram must also
   // be pure (C1592).
-  const Scope &scope{GetProgramUnitContaining(start)};
-  return IsPureProcedure(scope) ? &scope : nullptr;
+  if (start.IsGlobal()) {
+    return nullptr;
+  } else {
+    const Scope &scope{GetProgramUnitContaining(start)};
+    return IsPureProcedure(scope) ? &scope : nullptr;
+  }
 }
 
 static bool MightHaveCompatibleDerivedtypes(
