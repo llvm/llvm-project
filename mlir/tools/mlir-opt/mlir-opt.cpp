@@ -68,6 +68,7 @@ void registerTestGpuSerializeToCubinPass();
 void registerTestGpuSerializeToHsacoPass();
 void registerTestDataLayoutQuery();
 void registerTestDecomposeCallGraphTypes();
+void registerTestDiagnosticsPass();
 void registerTestDialect(DialectRegistry &);
 void registerTestDominancePass();
 void registerTestDynamicPipelinePass();
@@ -140,6 +141,7 @@ void registerTestPasses() {
   test::registerTestAliasAnalysisPass();
   test::registerTestCallGraphPass();
   test::registerTestConstantFold();
+  test::registerTestDiagnosticsPass();
 #if MLIR_CUDA_CONVERSIONS_ENABLED
   test::registerTestGpuSerializeToCubinPass();
 #endif
