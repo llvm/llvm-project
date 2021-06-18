@@ -3986,6 +3986,41 @@ bool CombinerHelper::matchICmpToTrueFalseKnownBits(MachineInstr &MI,
   return true;
 }
 
+bool CombinerHelper::matchBitfieldExtractFromAnd(
+    MachineInstr &MI, std::function<void(MachineIRBuilder &)> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_AND);
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+  if (!getTargetLowering().isConstantUnsignedBitfieldExtactLegal(
+          TargetOpcode::G_UBFX, Ty, Ty))
+    return false;
+
+  int64_t AndImm, LSBImm;
+  Register ShiftSrc;
+  const unsigned Size = Ty.getScalarSizeInBits();
+  if (!mi_match(MI.getOperand(0).getReg(), MRI,
+                m_GAnd(m_OneNonDBGUse(m_GLShr(m_Reg(ShiftSrc), m_ICst(LSBImm))),
+                       m_ICst(AndImm))))
+    return false;
+
+  // The mask is a mask of the low bits iff imm & (imm+1) == 0.
+  auto MaybeMask = static_cast<uint64_t>(AndImm);
+  if (MaybeMask & (MaybeMask + 1))
+    return false;
+
+  // LSB must fit within the register.
+  if (static_cast<uint64_t>(LSBImm) >= Size)
+    return false;
+
+  uint64_t Width = APInt(Size, AndImm).countTrailingOnes();
+  MatchInfo = [=](MachineIRBuilder &B) {
+    auto WidthCst = B.buildConstant(Ty, Width);
+    auto LSBCst = B.buildConstant(Ty, LSBImm);
+    B.buildInstr(TargetOpcode::G_UBFX, {Dst}, {ShiftSrc, LSBCst, WidthCst});
+  };
+  return true;
+}
+
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
   if (tryCombineCopy(MI))
     return true;
