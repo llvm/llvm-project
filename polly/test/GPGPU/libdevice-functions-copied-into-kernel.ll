@@ -65,7 +65,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %expf = tail call float @expf(float %A.arr.i.val)
   %cosf = tail call float @cosf(float %expf)
   %logf = tail call float @logf(float %cosf)
-  %powi = tail call float @llvm.powi.f32(float %logf, i32 2)
+  %powi = tail call float @llvm.powi.f32.i32(float %logf, i32 2)
   %exp = tail call float @llvm.exp.f32(float %powi)
   %B.arr.i = getelementptr inbounds float, float* %B, i64 %indvars.iv
   store float %exp, float* %B.arr.i, align 4
@@ -86,7 +86,7 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 declare float @expf(float) #0
 declare float @cosf(float) #0
 declare float @logf(float) #0
-declare float @llvm.powi.f32(float, i32) #0
+declare float @llvm.powi.f32.i32(float, i32) #0
 declare float @llvm.exp.f32(float) #0
 
 attributes #0 = { nounwind readnone }
