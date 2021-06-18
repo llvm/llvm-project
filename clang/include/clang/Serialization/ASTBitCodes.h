@@ -1429,6 +1429,9 @@ enum DeclCode {
   /// \brief A ConceptDecl record.
   DECL_CONCEPT,
 
+  /// An UnresolvedUsingIfExistsDecl record.
+  DECL_UNRESOLVED_USING_IF_EXISTS,
+
   /// \brief A StaticAssertDecl record.
   DECL_STATIC_ASSERT,
 

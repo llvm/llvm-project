@@ -3093,9 +3093,15 @@ Decl *TemplateDeclInstantiator::VisitUsingDecl(UsingDecl *D) {
       if (auto *BaseShadow = CUSD->getNominatedBaseClassShadowDecl())
         OldTarget = BaseShadow;
 
-    NamedDecl *InstTarget =
-        cast_or_null<NamedDecl>(SemaRef.FindInstantiatedDecl(
-            Shadow->getLocation(), OldTarget, TemplateArgs));
+    NamedDecl *InstTarget = nullptr;
+    if (auto *EmptyD =
+            dyn_cast<UnresolvedUsingIfExistsDecl>(Shadow->getTargetDecl())) {
+      InstTarget = UnresolvedUsingIfExistsDecl::Create(
+          SemaRef.Context, Owner, EmptyD->getLocation(), EmptyD->getDeclName());
+    } else {
+      InstTarget = cast_or_null<NamedDecl>(SemaRef.FindInstantiatedDecl(
+          Shadow->getLocation(), OldTarget, TemplateArgs));
+    }
     if (!InstTarget)
       return nullptr;
 
@@ -3218,13 +3224,16 @@ Decl *TemplateDeclInstantiator::instantiateUnresolvedUsingDecl(
   SourceLocation EllipsisLoc =
       InstantiatingSlice ? SourceLocation() : D->getEllipsisLoc();
 
+  bool IsUsingIfExists = D->template hasAttr<UsingIfExistsAttr>();
   NamedDecl *UD = SemaRef.BuildUsingDeclaration(
       /*Scope*/ nullptr, D->getAccess(), D->getUsingLoc(),
       /*HasTypename*/ TD, TypenameLoc, SS, NameInfo, EllipsisLoc,
       ParsedAttributesView(),
-      /*IsInstantiation*/ true);
-  if (UD)
+      /*IsInstantiation*/ true, IsUsingIfExists);
+  if (UD) {
+    SemaRef.InstantiateAttrs(TemplateArgs, D, UD);
     SemaRef.Context.setInstantiatedFromUsingDecl(UD, D);
+  }
 
   return UD;
 }
@@ -3237,6 +3246,11 @@ Decl *TemplateDeclInstantiator::VisitUnresolvedUsingTypenameDecl(
 Decl *TemplateDeclInstantiator::VisitUnresolvedUsingValueDecl(
     UnresolvedUsingValueDecl *D) {
   return instantiateUnresolvedUsingDecl(D);
+}
+
+Decl *TemplateDeclInstantiator::VisitUnresolvedUsingIfExistsDecl(
+    UnresolvedUsingIfExistsDecl *D) {
+  llvm_unreachable("referring to unresolved decl out of UsingShadowDecl");
 }
 
 Decl *TemplateDeclInstantiator::VisitUsingPackDecl(UsingPackDecl *D) {
