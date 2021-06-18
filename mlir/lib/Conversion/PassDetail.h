@@ -19,6 +19,10 @@ class StandardOpsDialect;
 template <typename ConcreteDialect>
 void registerDialect(DialectRegistry &registry);
 
+namespace acc {
+class OpenACCDialect;
+} // end namespace acc
+
 namespace complex {
 class ComplexDialect;
 } // end namespace complex

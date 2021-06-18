@@ -503,13 +503,13 @@ def OpenACC_UpdateOp : OpenACC_Op<"update", [AttrSizedOperandSegments]> {
     ```
   }];
 
-  let arguments = (ins Optional<IntOrIndex>:$asyncOperand,
+  let arguments = (ins Optional<I1>:$ifCond,
+                       Optional<IntOrIndex>:$asyncOperand,
                        Optional<IntOrIndex>:$waitDevnum,
                        Variadic<IntOrIndex>:$waitOperands,
                        UnitAttr:$async,
                        UnitAttr:$wait,
                        Variadic<IntOrIndex>:$deviceTypeOperands,
-                       Optional<I1>:$ifCond,
                        Variadic<AnyType>:$hostOperands,
                        Variadic<AnyType>:$deviceOperands,
                        UnitAttr:$ifPresent);
