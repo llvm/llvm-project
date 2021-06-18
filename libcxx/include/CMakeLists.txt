@@ -122,6 +122,7 @@ set(files
   __ranges/concepts.h
   __ranges/data.h
   __ranges/empty.h
+  __ranges/empty_view.h
   __ranges/enable_borrowed_range.h
   __ranges/view_interface.h
   __ranges/view.h
