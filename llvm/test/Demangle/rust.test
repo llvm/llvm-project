@@ -9,6 +9,11 @@ CHECK: hello::rust
 CHECK: a::b::c
        _RNvNvC1a1b1c
 
+; Instantiating crate
+
+CHECK: crate
+       _RC5crateC3foo
+
 ; Closure namespace
 
 CHECK: crate::{closure#0}
