@@ -427,6 +427,14 @@ void HwasanOnDeadlySignal(int signo, void *info, void *context) {
   HandleDeadlySignal(info, context, GetTid(), &OnStackUnwind, nullptr);
 }
 
+void Thread::InitStackAndTls() {
+  uptr tls_size;
+  uptr stack_size;
+  GetThreadStackAndTls(IsMainThread(), &stack_bottom_, &stack_size, &tls_begin_,
+                       &tls_size);
+  stack_top_ = stack_bottom_ + stack_size;
+  tls_end_ = tls_begin_ + tls_size;
+}
 
 } // namespace __hwasan
 
