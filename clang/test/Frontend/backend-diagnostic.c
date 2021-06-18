@@ -6,9 +6,9 @@
 //
 // RUN: not %clang_cc1 %s -fwarn-stack-size=0 -no-integrated-as -S -o - -triple=i386-apple-darwin 2> %t.err
 // RUN: FileCheck < %t.err %s --check-prefix=REGULAR --check-prefix=ASM
-// RUN: not %clang_cc1 %s -fwarn-stack-size=0 -no-integrated-as -S -o - -triple=i386-apple-darwin -Werror=frame-larger-than= 2> %t.err
+// RUN: not %clang_cc1 %s -fwarn-stack-size=0 -no-integrated-as -S -o - -triple=i386-apple-darwin -Werror=frame-larger-than 2> %t.err
 // RUN: FileCheck < %t.err %s --check-prefix=PROMOTE --check-prefix=ASM
-// RUN: not %clang_cc1 %s -fwarn-stack-size=0 -no-integrated-as -S -o - -triple=i386-apple-darwin -Wno-frame-larger-than= 2> %t.err
+// RUN: not %clang_cc1 %s -fwarn-stack-size=0 -no-integrated-as -S -o - -triple=i386-apple-darwin -Wno-frame-larger-than 2> %t.err
 // RUN: FileCheck < %t.err %s --check-prefix=IGNORE --check-prefix=ASM
 //
 // RUN: %clang_cc1 %s -S -o - -triple=i386-apple-darwin -verify -no-integrated-as
