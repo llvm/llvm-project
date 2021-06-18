@@ -901,7 +901,7 @@ public:
   class ValueTypeActionImpl {
     /// ValueTypeActions - For each value type, keep a LegalizeTypeAction enum
     /// that indicates how instruction selection should deal with the type.
-    LegalizeTypeAction ValueTypeActions[MVT::LAST_VALUETYPE];
+    LegalizeTypeAction ValueTypeActions[MVT::VALUETYPE_SIZE];
 
   public:
     ValueTypeActionImpl() {
@@ -1228,8 +1228,8 @@ public:
     if (ValVT.isExtended() || MemVT.isExtended()) return Expand;
     unsigned ValI = (unsigned) ValVT.getSimpleVT().SimpleTy;
     unsigned MemI = (unsigned) MemVT.getSimpleVT().SimpleTy;
-    assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValI < MVT::LAST_VALUETYPE &&
-           MemI < MVT::LAST_VALUETYPE && "Table isn't big enough!");
+    assert(ExtType < ISD::LAST_LOADEXT_TYPE && ValI < MVT::VALUETYPE_SIZE &&
+           MemI < MVT::VALUETYPE_SIZE && "Table isn't big enough!");
     unsigned Shift = 4 * ExtType;
     return (LegalizeAction)((LoadExtActions[ValI][MemI] >> Shift) & 0xf);
   }
@@ -1253,7 +1253,7 @@ public:
     if (ValVT.isExtended() || MemVT.isExtended()) return Expand;
     unsigned ValI = (unsigned) ValVT.getSimpleVT().SimpleTy;
     unsigned MemI = (unsigned) MemVT.getSimpleVT().SimpleTy;
-    assert(ValI < MVT::LAST_VALUETYPE && MemI < MVT::LAST_VALUETYPE &&
+    assert(ValI < MVT::VALUETYPE_SIZE && MemI < MVT::VALUETYPE_SIZE &&
            "Table isn't big enough!");
     return TruncStoreActions[ValI][MemI];
   }
@@ -2938,9 +2938,9 @@ private:
 
   /// This indicates the default register class to use for each ValueType the
   /// target supports natively.
-  const TargetRegisterClass *RegClassForVT[MVT::LAST_VALUETYPE];
-  uint16_t NumRegistersForVT[MVT::LAST_VALUETYPE];
-  MVT RegisterTypeForVT[MVT::LAST_VALUETYPE];
+  const TargetRegisterClass *RegClassForVT[MVT::VALUETYPE_SIZE];
+  uint16_t NumRegistersForVT[MVT::VALUETYPE_SIZE];
+  MVT RegisterTypeForVT[MVT::VALUETYPE_SIZE];
 
   /// This indicates the "representative" register class to use for each
   /// ValueType the target supports natively. This information is used by the
@@ -2948,36 +2948,36 @@ private:
   /// register class is the largest legal super-reg register class of the
   /// register class of the specified type. e.g. On x86, i8, i16, and i32's
   /// representative class would be GR32.
-  const TargetRegisterClass *RepRegClassForVT[MVT::LAST_VALUETYPE];
+  const TargetRegisterClass *RepRegClassForVT[MVT::VALUETYPE_SIZE];
 
   /// This indicates the "cost" of the "representative" register class for each
   /// ValueType. The cost is used by the scheduler to approximate register
   /// pressure.
-  uint8_t RepRegClassCostForVT[MVT::LAST_VALUETYPE];
+  uint8_t RepRegClassCostForVT[MVT::VALUETYPE_SIZE];
 
   /// For any value types we are promoting or expanding, this contains the value
   /// type that we are changing to.  For Expanded types, this contains one step
   /// of the expand (e.g. i64 -> i32), even if there are multiple steps required
   /// (e.g. i64 -> i16).  For types natively supported by the system, this holds
   /// the same type (e.g. i32 -> i32).
-  MVT TransformToType[MVT::LAST_VALUETYPE];
+  MVT TransformToType[MVT::VALUETYPE_SIZE];
 
   /// For each operation and each value type, keep a LegalizeAction that
   /// indicates how instruction selection should deal with the operation.  Most
   /// operations are Legal (aka, supported natively by the target), but
   /// operations that are not should be described.  Note that operations on
   /// non-legal value types are not described here.
-  LegalizeAction OpActions[MVT::LAST_VALUETYPE][ISD::BUILTIN_OP_END];
+  LegalizeAction OpActions[MVT::VALUETYPE_SIZE][ISD::BUILTIN_OP_END];
 
   /// For each load extension type and each value type, keep a LegalizeAction
   /// that indicates how instruction selection should deal with a load of a
   /// specific value type and extension type. Uses 4-bits to store the action
   /// for each of the 4 load ext types.
-  uint16_t LoadExtActions[MVT::LAST_VALUETYPE][MVT::LAST_VALUETYPE];
+  uint16_t LoadExtActions[MVT::VALUETYPE_SIZE][MVT::VALUETYPE_SIZE];
 
   /// For each value type pair keep a LegalizeAction that indicates whether a
   /// truncating store of a specific value type and truncating type is legal.
-  LegalizeAction TruncStoreActions[MVT::LAST_VALUETYPE][MVT::LAST_VALUETYPE];
+  LegalizeAction TruncStoreActions[MVT::VALUETYPE_SIZE][MVT::VALUETYPE_SIZE];
 
   /// For each indexed mode and each value type, keep a quad of LegalizeAction
   /// that indicates how instruction selection should deal with the load /
@@ -2985,15 +2985,15 @@ private:
   ///
   /// The first dimension is the value_type for the reference. The second
   /// dimension represents the various modes for load store.
-  uint16_t IndexedModeActions[MVT::LAST_VALUETYPE][ISD::LAST_INDEXED_MODE];
+  uint16_t IndexedModeActions[MVT::VALUETYPE_SIZE][ISD::LAST_INDEXED_MODE];
 
   /// For each condition code (ISD::CondCode) keep a LegalizeAction that
   /// indicates how instruction selection should deal with the condition code.
   ///
   /// Because each CC action takes up 4 bits, we need to have the array size be
   /// large enough to fit all of the value types. This can be done by rounding
-  /// up the MVT::LAST_VALUETYPE value to the next multiple of 8.
-  uint32_t CondCodeActions[ISD::SETCC_INVALID][(MVT::LAST_VALUETYPE + 7) / 8];
+  /// up the MVT::VALUETYPE_SIZE value to the next multiple of 8.
+  uint32_t CondCodeActions[ISD::SETCC_INVALID][(MVT::VALUETYPE_SIZE + 7) / 8];
 
   ValueTypeActionImpl ValueTypeActions;
 
