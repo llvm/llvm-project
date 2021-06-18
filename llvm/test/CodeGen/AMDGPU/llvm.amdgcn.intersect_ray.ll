@@ -1,4 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx1013 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: not --crash llc -march=amdgcn -mcpu=gfx1012 -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=ERR %s
 
 ; uint4 llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(uint node_ptr, float ray_extent, float4 ray_origin, float4 ray_dir, float4 ray_inv_dir, uint4 texture_descr)
 ; uint4 llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(uint node_ptr, float ray_extent, float4 ray_origin, half4 ray_dir, half4 ray_inv_dir, uint4 texture_descr)
@@ -12,6 +14,7 @@ declare <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(i64, float, <4 
 
 ; GCN-LABEL: {{^}}image_bvh_intersect_ray:
 ; GCN: image_bvh_intersect_ray v[0:3], v[0:15], s[0:3]{{$}}
+; ERR: in function image_bvh_intersect_ray{{.*}}intrinsic not supported on subtarget
 ; Arguments are flattened to represent the actual VGPR_A layout, so we have no
 ; extra moves in the generated kernel.
 define amdgpu_ps <4 x float> @image_bvh_intersect_ray(i32 %node_ptr, float %ray_extent, float %ray_origin_x, float %ray_origin_y, float %ray_origin_z, float %ray_dir_x, float %ray_dir_y, float %ray_dir_z, float %ray_inv_dir_x, float %ray_inv_dir_y, float %ray_inv_dir_z, <4 x i32> inreg %tdescr) {
