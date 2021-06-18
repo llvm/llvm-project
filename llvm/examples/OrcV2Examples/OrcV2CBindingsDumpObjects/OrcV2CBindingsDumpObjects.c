@@ -51,7 +51,7 @@ LLVMOrcThreadSafeModuleRef createDemoModule() {
   return TSM;
 }
 
-LLVMErrorRef dumpObjectsTransform(LLVMMemoryBufferRef *ObjInOut, void *Ctx) {
+LLVMErrorRef dumpObjectsTransform(void *Ctx, LLVMMemoryBufferRef *ObjInOut) {
   LLVMOrcDumpObjectsRef DumpObjects = *(LLVMOrcDumpObjectsRef *)Ctx;
   return LLVMOrcDumpObjects_CallOperator(DumpObjects, ObjInOut);
 }

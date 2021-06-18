@@ -524,7 +524,7 @@ void LLVMOrcObjectTransformLayerSetTransform(
       ->setTransform([TransformFunction, Ctx](std::unique_ptr<MemoryBuffer> Obj)
                          -> Expected<std::unique_ptr<MemoryBuffer>> {
         LLVMMemoryBufferRef ObjBuffer = wrap(Obj.release());
-        if (LLVMErrorRef Err = TransformFunction(&ObjBuffer, Ctx)) {
+        if (LLVMErrorRef Err = TransformFunction(Ctx, &ObjBuffer)) {
           assert(!ObjBuffer && "ObjBuffer was not reset to null on error");
           return unwrap(Err);
         }
