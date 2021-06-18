@@ -429,6 +429,14 @@ public:
     // is 4 bytes.
     uint64_t Offset = ((Desc.TSFlags & ARMII::FormMask) == ARMII::ThumbFrm) ? 4 : 8;
 
+    // A Thumb instruction BLX(i) can be 16-bit aligned while targets Arm code
+    // which is 32-bit aligned. The target address for the case is calculated as
+    //   targetAddress = Align(PC,4) + imm32;
+    // where
+    //   Align(x, y) = y * (x DIV y);
+    if (Inst.getOpcode() == ARM::tBLXi)
+      Addr &= ~0x3;
+
     Target = Addr + Imm + Offset;
     return true;
   }

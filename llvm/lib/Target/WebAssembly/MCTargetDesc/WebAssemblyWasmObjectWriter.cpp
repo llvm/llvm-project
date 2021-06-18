@@ -104,8 +104,8 @@ unsigned WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
       return wasm::R_WASM_GLOBAL_INDEX_LEB;
     if (SymA.isFunction())
       return wasm::R_WASM_FUNCTION_INDEX_LEB;
-    if (SymA.isEvent())
-      return wasm::R_WASM_EVENT_INDEX_LEB;
+    if (SymA.isTag())
+      return wasm::R_WASM_TAG_INDEX_LEB;
     if (SymA.isTable())
       return wasm::R_WASM_TABLE_NUMBER_LEB;
     return wasm::R_WASM_MEMORY_ADDR_LEB;

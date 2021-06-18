@@ -118,20 +118,7 @@ TEST_F(ScalarEvolutionExpanderTest, ExpandPtrTypeSCEV) {
 
   ScalarEvolution SE = buildSE(*F);
   auto *S = SE.getSCEV(CastB);
-  SCEVExpander Exp(SE, M.getDataLayout(), "expander");
-  Value *V =
-      Exp.expandCodeFor(cast<SCEVAddExpr>(S)->getOperand(1), nullptr, Br);
-
-  // Expect the expansion code contains:
-  //   %0 = bitcast i32* %bitcast2 to i8*
-  //   %uglygep = getelementptr i8, i8* %0, i64 -1
-  //   %1 = bitcast i8* %uglygep to i32*
-  EXPECT_TRUE(isa<BitCastInst>(V));
-  Instruction *Gep = cast<Instruction>(V)->getPrevNode();
-  EXPECT_TRUE(isa<GetElementPtrInst>(Gep));
-  EXPECT_TRUE(isa<ConstantInt>(Gep->getOperand(1)));
-  EXPECT_EQ(cast<ConstantInt>(Gep->getOperand(1))->getSExtValue(), -1);
-  EXPECT_TRUE(isa<BitCastInst>(Gep->getPrevNode()));
+  EXPECT_TRUE(isa<SCEVUnknown>(S));
 }
 
 // Make sure that SCEV doesn't introduce illegal ptrtoint/inttoptr instructions

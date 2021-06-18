@@ -14,15 +14,15 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
 
 define {i8*, i32} @pass_struct({i8*, i32} %s) {
-  ; NO_COMBINE_LOAD_PTR: @"dfs$pass_struct"
+  ; NO_COMBINE_LOAD_PTR: @pass_struct.dfsan
   ; NO_COMBINE_LOAD_PTR: [[L:%.*]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN:2]]
   ; NO_COMBINE_LOAD_PTR: store { i[[#SBITS]], i[[#SBITS]] } [[L]], { i[[#SBITS]], i[[#SBITS]] }* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
 
-  ; ARGS_ABI: @"dfs$pass_struct"
+  ; ARGS_ABI: @pass_struct.dfsan
   ; ARGS_ABI-SAME: ({ i8*, i32 } {{%.*}}, i[[#SBITS]] {{%.*}})
   ; ARGS_ABI: ret { { i8*, i32 }, i[[#SBITS]] }
 
-  ; DEBUG_NONZERO_LABELS: @"dfs$pass_struct"
+  ; DEBUG_NONZERO_LABELS: @pass_struct.dfsan
   ; DEBUG_NONZERO_LABELS: [[L:%.*]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN:2]]
   ; DEBUG_NONZERO_LABELS: [[L0:%.*]] = extractvalue { i[[#SBITS]], i[[#SBITS]] } [[L]], 0
   ; DEBUG_NONZERO_LABELS: [[L1:%.*]] = extractvalue { i[[#SBITS]], i[[#SBITS]] } [[L]], 1
@@ -37,17 +37,17 @@ define {i8*, i32} @pass_struct({i8*, i32} %s) {
 %StructOfAggr = type {i8*, [4 x i2], <4 x i3>, {i1, i1}}
 
 define %StructOfAggr @pass_struct_of_aggregate(%StructOfAggr %s) {
-  ; NO_COMBINE_LOAD_PTR: @"dfs$pass_struct_of_aggregate"
+  ; NO_COMBINE_LOAD_PTR: @pass_struct_of_aggregate.dfsan
   ; NO_COMBINE_LOAD_PTR: %1 = load { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }, { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }*), align [[ALIGN:2]]
   ; NO_COMBINE_LOAD_PTR: store { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } } %1, { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }*), align [[ALIGN]]
 
-  ; ARGS_ABI: @"dfs$pass_struct_of_aggregate"
+  ; ARGS_ABI: @pass_struct_of_aggregate.dfsan
   ; ARGS_ABI: ret { %StructOfAggr, i[[#SBITS]] }
   ret %StructOfAggr %s
 }
 
 define {} @load_empty_struct({}* %p) {
-  ; NO_COMBINE_LOAD_PTR: @"dfs$load_empty_struct"
+  ; NO_COMBINE_LOAD_PTR: @load_empty_struct.dfsan
   ; NO_COMBINE_LOAD_PTR: store {} zeroinitializer, {}* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to {}*), align 2
 
   %a = load {}, {}* %p
@@ -57,7 +57,7 @@ define {} @load_empty_struct({}* %p) {
 @Y = constant {i1, i32} {i1 1, i32 1}
 
 define {i1, i32} @load_global_struct() {
-  ; NO_COMBINE_LOAD_PTR: @"dfs$load_global_struct"
+  ; NO_COMBINE_LOAD_PTR: @load_global_struct.dfsan
   ; NO_COMBINE_LOAD_PTR: store { i[[#SBITS]], i[[#SBITS]] } zeroinitializer, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to { i[[#SBITS]], i[[#SBITS]] }*), align 2
 
   %a = load {i1, i32}, {i1, i32}* @Y
@@ -65,14 +65,14 @@ define {i1, i32} @load_global_struct() {
 }
 
 define {i1, i32} @select_struct(i1 %c, {i1, i32} %a, {i1, i32} %b) {
-  ; NO_SELECT_CONTROL: @"dfs$select_struct"
+  ; NO_SELECT_CONTROL: @select_struct.dfsan
   ; NO_SELECT_CONTROL: [[B:%.*]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 [[#mul(2, SBYTES) + 2]]) to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN:2]]
   ; NO_SELECT_CONTROL: [[A:%.*]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
   ; NO_SELECT_CONTROL: [[C:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; NO_SELECT_CONTROL: [[S:%.*]] = select i1 %c, { i[[#SBITS]], i[[#SBITS]] } [[A]], { i[[#SBITS]], i[[#SBITS]] } [[B]]
   ; NO_SELECT_CONTROL: store { i[[#SBITS]], i[[#SBITS]] } [[S]], { i[[#SBITS]], i[[#SBITS]] }* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
 
-  ; FAST: @"dfs$select_struct"
+  ; FAST: @select_struct.dfsan
   ; FAST: %[[#R:]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 [[#mul(2, SBYTES) + 2]]) to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN:2]]
   ; FAST: %[[#R+1]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
   ; FAST: %[[#R+2]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
@@ -90,7 +90,7 @@ define {i1, i32} @select_struct(i1 %c, {i1, i32} %a, {i1, i32} %b) {
 }
 
 define { i32, i32 } @asm_struct(i32 %0, i32 %1) {
-  ; FAST: @"dfs$asm_struct"
+  ; FAST: @asm_struct.dfsan
   ; FAST: [[E1:%.*]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align [[ALIGN:2]]
   ; FAST: [[E0:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; FAST: [[E01:%.*]] = or i[[#SBITS]] [[E0]], [[E1]]
@@ -104,13 +104,13 @@ entry:
 }
 
 define {i32, i32} @const_struct() {
-  ; FAST: @"dfs$const_struct"
+  ; FAST: @const_struct.dfsan
   ; FAST: store { i[[#SBITS]], i[[#SBITS]] } zeroinitializer, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to { i[[#SBITS]], i[[#SBITS]] }*), align 2
   ret {i32, i32} { i32 42, i32 11 }
 }
 
 define i1 @extract_struct({i1, i5} %s) {
-  ; FAST: @"dfs$extract_struct"
+  ; FAST: @extract_struct.dfsan
   ; FAST: [[SM:%.*]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN:2]]
   ; FAST: [[EM:%.*]] = extractvalue { i[[#SBITS]], i[[#SBITS]] } [[SM]], 0
   ; FAST: store i[[#SBITS]] [[EM]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
@@ -120,7 +120,7 @@ define i1 @extract_struct({i1, i5} %s) {
 }
 
 define {i1, i5} @insert_struct({i1, i5} %s, i5 %e1) {
-  ; FAST: @"dfs$insert_struct"
+  ; FAST: @insert_struct.dfsan
   ; FAST: [[EM:%.*]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 [[#mul(2, SBYTES)]]) to i[[#SBITS]]*), align [[ALIGN:2]]
   ; FAST: [[SM:%.*]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
   ; FAST: [[SM1:%.*]] = insertvalue { i[[#SBITS]], i[[#SBITS]] } [[SM]], i[[#SBITS]] [[EM]], 1
@@ -130,13 +130,13 @@ define {i1, i5} @insert_struct({i1, i5} %s, i5 %e1) {
 }
 
 define {i1, i1} @load_struct({i1, i1}* %p) {
-  ; NO_COMBINE_LOAD_PTR: @"dfs$load_struct"
+  ; NO_COMBINE_LOAD_PTR: @load_struct.dfsan
   ; NO_COMBINE_LOAD_PTR: [[OL:%.*]] = or i[[#SBITS]]
   ; NO_COMBINE_LOAD_PTR: [[S0:%.*]] = insertvalue { i[[#SBITS]], i[[#SBITS]] } undef, i[[#SBITS]] [[OL]], 0
   ; NO_COMBINE_LOAD_PTR: [[S1:%.*]] = insertvalue { i[[#SBITS]], i[[#SBITS]] } [[S0]], i[[#SBITS]] [[OL]], 1
   ; NO_COMBINE_LOAD_PTR: store { i[[#SBITS]], i[[#SBITS]] } [[S1]], { i[[#SBITS]], i[[#SBITS]] }* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to { i[[#SBITS]], i[[#SBITS]] }*), align 2
 
-  ; EVENT_CALLBACKS: @"dfs$load_struct"
+  ; EVENT_CALLBACKS: @load_struct.dfsan
   ; EVENT_CALLBACKS: [[OL0:%.*]] = or i[[#SBITS]]
   ; EVENT_CALLBACKS: [[OL1:%.*]] = or i[[#SBITS]] [[OL0]],
   ; EVENT_CALLBACKS: [[S0:%.*]] = insertvalue { i[[#SBITS]], i[[#SBITS]] } undef, i[[#SBITS]] [[OL1]], 0
@@ -147,7 +147,7 @@ define {i1, i1} @load_struct({i1, i1}* %p) {
 }
 
 define void @store_struct({i1, i1}* %p, {i1, i1} %s) {
-  ; FAST: @"dfs$store_struct"
+  ; FAST: @store_struct.dfsan
   ; FAST: [[S:%.*]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN:2]]
   ; FAST: [[E0:%.*]] = extractvalue { i[[#SBITS]], i[[#SBITS]] } [[S]], 0
   ; FAST: [[E1:%.*]] = extractvalue { i[[#SBITS]], i[[#SBITS]] } [[S]], 1
@@ -157,11 +157,11 @@ define void @store_struct({i1, i1}* %p, {i1, i1} %s) {
   ; FAST: [[P1:%.*]] = getelementptr i[[#SBITS]], i[[#SBITS]]* [[P]], i32 1
   ; FAST: store i[[#SBITS]] [[E]], i[[#SBITS]]* [[P1]], align [[#SBYTES]]
 
-  ; EVENT_CALLBACKS: @"dfs$store_struct"
+  ; EVENT_CALLBACKS: @store_struct.dfsan
   ; EVENT_CALLBACKS: [[OL:%.*]] = or i[[#SBITS]]
   ; EVENT_CALLBACKS: call void @__dfsan_store_callback(i[[#SBITS]] [[OL]]
 
-  ; COMBINE_STORE_PTR: @"dfs$store_struct"
+  ; COMBINE_STORE_PTR: @store_struct.dfsan
   ; COMBINE_STORE_PTR: [[PL:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN:2]]
   ; COMBINE_STORE_PTR: [[SL:%.*]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
   ; COMBINE_STORE_PTR: [[SL0:%.*]] = extractvalue { i[[#SBITS]], i[[#SBITS]] } [[SL]], 0
@@ -178,7 +178,7 @@ define void @store_struct({i1, i1}* %p, {i1, i1} %s) {
 }
 
 define i2 @extract_struct_of_aggregate11(%StructOfAggr %s) {
-  ; FAST: @"dfs$extract_struct_of_aggregate11"
+  ; FAST: @extract_struct_of_aggregate11.dfsan
   ; FAST: [[E:%.*]] = load { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }, { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }*), align [[ALIGN:2]]
   ; FAST: [[E11:%.*]] = extractvalue { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } } [[E]], 1, 1
   ; FAST: store i[[#SBITS]] [[E11]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
@@ -188,7 +188,7 @@ define i2 @extract_struct_of_aggregate11(%StructOfAggr %s) {
 }
 
 define [4 x i2] @extract_struct_of_aggregate1(%StructOfAggr %s) {
-  ; FAST: @"dfs$extract_struct_of_aggregate1"
+  ; FAST: @extract_struct_of_aggregate1.dfsan
   ; FAST: [[E:%.*]] = load { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }, { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }*), align [[ALIGN:2]]
   ; FAST: [[E1:%.*]] = extractvalue { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } } [[E]], 1
   ; FAST: store [4 x i[[#SBITS]]] [[E1]], [4 x i[[#SBITS]]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to [4 x i[[#SBITS]]]*), align [[ALIGN]]
@@ -197,7 +197,7 @@ define [4 x i2] @extract_struct_of_aggregate1(%StructOfAggr %s) {
 }
 
 define <4 x i3> @extract_struct_of_aggregate2(%StructOfAggr %s) {
-  ; FAST: @"dfs$extract_struct_of_aggregate2"
+  ; FAST: @extract_struct_of_aggregate2.dfsan
   ; FAST: [[E:%.*]] = load { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }, { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }*), align [[ALIGN:2]]
   ; FAST: [[E2:%.*]] = extractvalue { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } } [[E]], 2
   ; FAST: store i[[#SBITS]] [[E2]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
@@ -206,7 +206,7 @@ define <4 x i3> @extract_struct_of_aggregate2(%StructOfAggr %s) {
 }
 
 define { i1, i1 } @extract_struct_of_aggregate3(%StructOfAggr %s) {
-  ; FAST: @"dfs$extract_struct_of_aggregate3"
+  ; FAST: @extract_struct_of_aggregate3.dfsan
   ; FAST: [[E:%.*]] = load { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }, { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }*), align [[ALIGN:2]]
   ; FAST: [[E3:%.*]] = extractvalue { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } } [[E]], 3
   ; FAST: store { i[[#SBITS]], i[[#SBITS]] } [[E3]], { i[[#SBITS]], i[[#SBITS]] }* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
@@ -215,7 +215,7 @@ define { i1, i1 } @extract_struct_of_aggregate3(%StructOfAggr %s) {
 }
 
 define i1 @extract_struct_of_aggregate31(%StructOfAggr %s) {
-  ; FAST: @"dfs$extract_struct_of_aggregate31"
+  ; FAST: @extract_struct_of_aggregate31.dfsan
   ; FAST: [[E:%.*]] = load { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }, { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }*), align [[ALIGN:2]]
   ; FAST: [[E31:%.*]] = extractvalue { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } } [[E]], 3, 1
   ; FAST: store i[[#SBITS]] [[E31]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
@@ -224,7 +224,7 @@ define i1 @extract_struct_of_aggregate31(%StructOfAggr %s) {
 }
 
 define %StructOfAggr @insert_struct_of_aggregate11(%StructOfAggr %s, i2 %e11) {
-  ; FAST: @"dfs$insert_struct_of_aggregate11"
+  ; FAST: @insert_struct_of_aggregate11.dfsan
   ; FAST: [[E11:%.*]]  = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 [[#mul(8, SBYTES)]]) to i[[#SBITS]]*), align [[ALIGN:2]]
   ; FAST: [[S:%.*]] = load { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }, { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } }*), align [[ALIGN]]
   ; FAST: [[S1:%.*]] = insertvalue { i[[#SBITS]], [4 x i[[#SBITS]]], i[[#SBITS]], { i[[#SBITS]], i[[#SBITS]] } } [[S]], i[[#SBITS]] [[E11]], 1, 1
@@ -235,7 +235,7 @@ define %StructOfAggr @insert_struct_of_aggregate11(%StructOfAggr %s, i2 %e11) {
 }
 
 define {i8*, i32} @call_struct({i8*, i32} %s) {
-  ; FAST: @"dfs$call_struct"
+  ; FAST: @call_struct.dfsan
   ; FAST: [[S:%.*]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN:2]]
   ; FAST: store { i[[#SBITS]], i[[#SBITS]] } [[S]], { i[[#SBITS]], i[[#SBITS]] }* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
   ; FAST: %_dfsret = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
@@ -248,7 +248,7 @@ define {i8*, i32} @call_struct({i8*, i32} %s) {
 declare %StructOfAggr @fun_with_many_aggr_args(<2 x i7> %v, [2 x i5] %a, {i3, i3} %s)
 
 define %StructOfAggr @call_many_aggr_args(<2 x i7> %v, [2 x i5] %a, {i3, i3} %s) {
-  ; FAST: @"dfs$call_many_aggr_args"
+  ; FAST: @call_many_aggr_args.dfsan
   ; FAST: [[S:%.*]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 [[#mul(2, SBYTES) + 2]]) to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN:2]]
   ; FAST: [[A:%.*]] = load [2 x i[[#SBITS]]], [2 x i[[#SBITS]]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to [2 x i[[#SBITS]]]*), align [[ALIGN]]
   ; FAST: [[V:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]

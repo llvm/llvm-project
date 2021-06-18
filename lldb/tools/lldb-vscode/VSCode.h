@@ -114,7 +114,7 @@ struct VSCode {
   uint32_t reverse_request_seq;
   std::map<std::string, RequestCallback> request_handlers;
   bool waiting_for_run_in_terminal;
-  ProgressEventFilterQueue progress_event_queue;
+  ProgressEventReporter progress_event_reporter;
   // Keep track of the last stop thread index IDs as threads won't go away
   // unless we send a "thread" event to indicate the thread exited.
   llvm::DenseSet<lldb::tid_t> thread_ids;
@@ -125,10 +125,6 @@ struct VSCode {
   int64_t GetLineForPC(int64_t sourceReference, lldb::addr_t pc) const;
   ExceptionBreakpoint *GetExceptionBreakpoint(const std::string &filter);
   ExceptionBreakpoint *GetExceptionBreakpoint(const lldb::break_id_t bp_id);
-  // Send the JSON in "json_str" to the "out" stream. Correctly send the
-  // "Content-Length:" field followed by the length, followed by the raw
-  // JSON bytes.
-  void SendJSON(const std::string &json_str);
 
   // Serialize the JSON value into a string and send the JSON packet to
   // the "out" stream.
@@ -138,7 +134,8 @@ struct VSCode {
 
   void SendOutput(OutputType o, const llvm::StringRef output);
 
-  void SendProgressEvent(const ProgressEvent &event);
+  void SendProgressEvent(uint64_t progress_id, const char *message,
+                         uint64_t completed, uint64_t total);
 
   void __attribute__((format(printf, 3, 4)))
   SendFormattedOutput(OutputType o, const char *format, ...);
@@ -208,6 +205,12 @@ struct VSCode {
   ///     The callback to execute when the given request is triggered by the
   ///     IDE.
   void RegisterRequestCallback(std::string request, RequestCallback callback);
+
+private:
+  // Send the JSON in "json_str" to the "out" stream. Correctly send the
+  // "Content-Length:" field followed by the length, followed by the raw
+  // JSON bytes.
+  void SendJSON(const std::string &json_str);
 };
 
 extern VSCode g_vsc;

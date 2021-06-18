@@ -899,7 +899,7 @@ public:
       TOut.emitImportName(WasmSym, ImportName);
     }
 
-    if (DirectiveID.getString() == ".eventtype") {
+    if (DirectiveID.getString() == ".tagtype") {
       auto SymName = expectIdent();
       if (SymName.empty())
         return true;
@@ -909,8 +909,8 @@ public:
         return true;
       WasmSym->setSignature(Signature.get());
       addSignature(std::move(Signature));
-      WasmSym->setType(wasm::WASM_SYMBOL_TYPE_EVENT);
-      TOut.emitEventType(WasmSym);
+      WasmSym->setType(wasm::WASM_SYMBOL_TYPE_TAG);
+      TOut.emitTagType(WasmSym);
       // TODO: backend also calls TOut.emitIndIdx, but that is not implemented.
       return expect(AsmToken::EndOfStatement, "EOL");
     }

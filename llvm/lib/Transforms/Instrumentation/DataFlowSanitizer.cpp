@@ -451,7 +451,7 @@ class DataFlowSanitizer {
   TransformedFunction getCustomFunctionType(FunctionType *T);
   InstrumentedABI getInstrumentedABI();
   WrapperKind getWrapperKind(Function *F);
-  void addGlobalNamePrefix(GlobalValue *GV);
+  void addGlobalNameSuffix(GlobalValue *GV);
   Function *buildWrapperFunction(Function *F, StringRef NewFName,
                                  GlobalValue::LinkageTypes NewFLink,
                                  FunctionType *NewFT);
@@ -1114,9 +1114,9 @@ DataFlowSanitizer::WrapperKind DataFlowSanitizer::getWrapperKind(Function *F) {
   return WK_Warning;
 }
 
-void DataFlowSanitizer::addGlobalNamePrefix(GlobalValue *GV) {
-  std::string GVName = std::string(GV->getName()), Prefix = "dfs$";
-  GV->setName(Prefix + GVName);
+void DataFlowSanitizer::addGlobalNameSuffix(GlobalValue *GV) {
+  std::string GVName = std::string(GV->getName()), Suffix = ".dfsan";
+  GV->setName(GVName + Suffix);
 
   // Try to change the name of the function in module inline asm.  We only do
   // this for specific asm directives, currently only ".symver", to try to avoid
@@ -1127,8 +1127,13 @@ void DataFlowSanitizer::addGlobalNamePrefix(GlobalValue *GV) {
   std::string SearchStr = ".symver " + GVName + ",";
   size_t Pos = Asm.find(SearchStr);
   if (Pos != std::string::npos) {
-    Asm.replace(Pos, SearchStr.size(),
-                ".symver " + Prefix + GVName + "," + Prefix);
+    Asm.replace(Pos, SearchStr.size(), ".symver " + GVName + Suffix + ",");
+    Pos = Asm.find("@");
+
+    if (Pos == std::string::npos)
+      report_fatal_error("unsupported .symver: " + Asm);
+
+    Asm.replace(Pos, 1, Suffix + "@");
     GV->getParent()->setModuleInlineAsm(Asm);
   }
 }
@@ -1416,7 +1421,7 @@ bool DataFlowSanitizer::runImpl(Module &M) {
 
     bool GAInst = isInstrumented(GA), FInst = isInstrumented(F);
     if (GAInst && FInst) {
-      addGlobalNamePrefix(GA);
+      addGlobalNameSuffix(GA);
     } else if (GAInst != FInst) {
       // Non-instrumented alias of an instrumented function, or vice versa.
       // Replace the alias with a native-ABI wrapper of the aliasee.  The pass
@@ -1445,8 +1450,9 @@ bool DataFlowSanitizer::runImpl(Module &M) {
                               FT->getReturnType()->isVoidTy());
 
     if (isInstrumented(&F)) {
-      // Instrumented functions get a 'dfs$' prefix.  This allows us to more
-      // easily identify cases of mismatching ABIs.
+      // Instrumented functions get a '.dfsan' suffix.  This allows us to more
+      // easily identify cases of mismatching ABIs. This naming scheme is
+      // mangling-compatible (see Itanium ABI), using a vendor-specific suffix.
       if (getInstrumentedABI() == IA_Args && !IsZeroArgsVoidRet) {
         FunctionType *NewFT = getArgsFunctionType(FT);
         Function *NewF = Function::Create(NewFT, F.getLinkage(),
@@ -1478,9 +1484,9 @@ bool DataFlowSanitizer::runImpl(Module &M) {
         NewF->takeName(&F);
         F.eraseFromParent();
         *FI = NewF;
-        addGlobalNamePrefix(NewF);
+        addGlobalNameSuffix(NewF);
       } else {
-        addGlobalNamePrefix(&F);
+        addGlobalNameSuffix(&F);
       }
     } else if (!IsZeroArgsVoidRet || getWrapperKind(&F) == WK_Custom) {
       // Build a wrapper function for F.  The wrapper simply calls F, and is

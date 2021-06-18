@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare i32 @g()
 
-; CHECK: define { i32, i[[#SBITS]] } @"dfs$f"(i32 %0, i32 %1, i[[#SBITS]] %2, i[[#SBITS]] %3)
+; CHECK: define { i32, i[[#SBITS]] } @f.dfsan(i32 %0, i32 %1, i[[#SBITS]] %2, i[[#SBITS]] %3)
 define i32 @f(i32, i32) {
   ; CHECK: [[LOCALLABELALLOCA:%.*]] = alloca i[[#SBITS]]
   %i = alloca i32
@@ -17,7 +17,7 @@ define i32 @f(i32, i32) {
   ; CHECK: br i1 [[ARGCMP2]]
   %x = add i32 %0, %1
   store i32 %x, i32* %i
-  ; CHECK: [[CALL:%.*]] = call { i32, i[[#SBITS]] } @"dfs$g"()
+  ; CHECK: [[CALL:%.*]] = call { i32, i[[#SBITS]] } @g.dfsan()
   ; CHECK: [[CALLLABEL:%.*]] = extractvalue { i32, i[[#SBITS]] } [[CALL]], 1
   ; CHECK: [[CALLCMP:%.*]] = icmp ne i[[#SBITS]] [[CALLLABEL]], 0
   ; CHECK: br i1 [[CALLCMP]]

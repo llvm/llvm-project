@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Check that we reuse unions where possible.
 
-; CHECK-LABEL: @"dfs$f"
+; CHECK-LABEL: @f.dfsan
 define void @f(i32 %x, i32 %y) {
   ; CHECK: or i[[#SBITS]]
   %xay = add i32 %x, %y
@@ -24,7 +24,7 @@ define void @f(i32 %x, i32 %y) {
 ; In this case, we compute the unions on both sides because neither block
 ; dominates the other.
 
-; CHECK-LABEL: @"dfs$g"
+; CHECK-LABEL: @g.dfsan
 define void @g(i1 %p, i32 %x, i32 %y) {
   br i1 %p, label %l1, label %l2
 
@@ -46,7 +46,7 @@ l3:
 
 ; In this case, we know that the label for %xayax subsumes the label for %xay.
 
-; CHECK-LABEL: @"dfs$h"
+; CHECK-LABEL: @h.dfsan
 define i32 @h(i32 %x, i32 %y) {
   ; CHECK: or i[[#SBITS]]
   %xay = add i32 %x, %y

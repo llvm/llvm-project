@@ -154,7 +154,7 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
       case WebAssembly::OPERAND_SIGNATURE:
       case WebAssembly::OPERAND_TYPEINDEX:
       case WebAssembly::OPERAND_GLOBAL:
-      case WebAssembly::OPERAND_EVENT:
+      case WebAssembly::OPERAND_TAG:
         FixupKind = MCFixupKind(WebAssembly::fixup_uleb128_i32);
         break;
       case WebAssembly::OPERAND_OFFSET64:

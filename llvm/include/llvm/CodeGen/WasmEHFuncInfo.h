@@ -24,7 +24,7 @@ class Function;
 class MachineBasicBlock;
 
 namespace WebAssembly {
-enum EventTag { CPP_EXCEPTION = 0, C_LONGJMP = 1 };
+enum Tag { CPP_EXCEPTION = 0, C_LONGJMP = 1 };
 }
 
 using BBOrMBB = PointerUnion<const BasicBlock *, MachineBasicBlock *>;

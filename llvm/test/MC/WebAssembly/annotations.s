@@ -8,7 +8,7 @@
   .type    test_annotation,@function
 test_annotation:
   .functype   test_annotation () -> ()
-  .eventtype  __cpp_exception i32
+  .tagtype  __cpp_exception i32
   try
   br        0
   catch     __cpp_exception

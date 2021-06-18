@@ -2476,11 +2476,11 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
   }
 }
 
-unsigned ASTWriter::getLocalOrImportedSubmoduleID(Module *Mod) {
+unsigned ASTWriter::getLocalOrImportedSubmoduleID(const Module *Mod) {
   if (!Mod)
     return 0;
 
-  llvm::DenseMap<Module *, unsigned>::iterator Known = SubmoduleIDs.find(Mod);
+  auto Known = SubmoduleIDs.find(Mod);
   if (Known != SubmoduleIDs.end())
     return Known->second;
 

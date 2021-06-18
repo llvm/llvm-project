@@ -168,23 +168,23 @@ static void checkGlobalType(const Symbol *existing, const InputFile *file,
   }
 }
 
-static void checkEventType(const Symbol *existing, const InputFile *file,
-                           const WasmEventType *newType,
-                           const WasmSignature *newSig) {
-  auto existingEvent = dyn_cast<EventSymbol>(existing);
-  if (!isa<EventSymbol>(existing)) {
-    reportTypeError(existing, file, WASM_SYMBOL_TYPE_EVENT);
+static void checkTagType(const Symbol *existing, const InputFile *file,
+                         const WasmTagType *newType,
+                         const WasmSignature *newSig) {
+  const auto *existingTag = dyn_cast<TagSymbol>(existing);
+  if (!isa<TagSymbol>(existing)) {
+    reportTypeError(existing, file, WASM_SYMBOL_TYPE_TAG);
     return;
   }
 
-  const WasmEventType *oldType = cast<EventSymbol>(existing)->getEventType();
-  const WasmSignature *oldSig = existingEvent->signature;
+  const WasmTagType *oldType = cast<TagSymbol>(existing)->getTagType();
+  const WasmSignature *oldSig = existingTag->signature;
   if (newType->Attribute != oldType->Attribute)
-    error("Event type mismatch: " + existing->getName() + "\n>>> defined as " +
+    error("Tag type mismatch: " + existing->getName() + "\n>>> defined as " +
           toString(*oldType) + " in " + toString(existing->getFile()) +
           "\n>>> defined as " + toString(*newType) + " in " + toString(file));
   if (*newSig != *oldSig)
-    warn("Event signature mismatch: " + existing->getName() +
+    warn("Tag signature mismatch: " + existing->getName() +
          "\n>>> defined as " + toString(*oldSig) + " in " +
          toString(existing->getFile()) + "\n>>> defined as " +
          toString(*newSig) + " in " + toString(file));
@@ -413,16 +413,16 @@ Symbol *SymbolTable::addDefinedGlobal(StringRef name, uint32_t flags,
   return s;
 }
 
-Symbol *SymbolTable::addDefinedEvent(StringRef name, uint32_t flags,
-                                     InputFile *file, InputEvent *event) {
-  LLVM_DEBUG(dbgs() << "addDefinedEvent:" << name << "\n");
+Symbol *SymbolTable::addDefinedTag(StringRef name, uint32_t flags,
+                                   InputFile *file, InputTag *tag) {
+  LLVM_DEBUG(dbgs() << "addDefinedTag:" << name << "\n");
 
   Symbol *s;
   bool wasInserted;
   std::tie(s, wasInserted) = insert(name, file);
 
   auto replaceSym = [&]() {
-    replaceSymbol<DefinedEvent>(s, name, flags, file, event);
+    replaceSymbol<DefinedTag>(s, name, flags, file, tag);
   };
 
   if (wasInserted || s->isLazy()) {
@@ -430,7 +430,7 @@ Symbol *SymbolTable::addDefinedEvent(StringRef name, uint32_t flags,
     return s;
   }
 
-  checkEventType(s, file, &event->getType(), &event->signature);
+  checkTagType(s, file, &tag->getType(), &tag->signature);
 
   if (shouldReplace(s, file, flags))
     replaceSym();
