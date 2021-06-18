@@ -18,6 +18,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
@@ -35,6 +36,11 @@ using namespace llvm;
 #define DEBUG_TYPE "loop-delete"
 
 STATISTIC(NumDeleted, "Number of loops deleted");
+
+static cl::opt<bool> EnableSymbolicExecution(
+    "loop-deletion-enable-symbolic-execution", cl::Hidden, cl::init(true),
+    cl::desc("Break backedge through symbolic execution of 1st iteration "
+             "attempting to prove that the backedge is never taken"));
 
 enum class LoopDeletionResult {
   Unmodified,
@@ -168,6 +174,171 @@ static bool isLoopNeverExecuted(Loop *L) {
   return true;
 }
 
+static Value *
+getValueOnFirstIteration(Value *V, DenseMap<Value *, Value *> &FirstIterValue,
+                         const SimplifyQuery &SQ) {
+  // Quick hack: do not flood cache with non-instruction values.
+  if (!isa<Instruction>(V))
+    return V;
+  // Do we already know cached result?
+  auto Existing = FirstIterValue.find(V);
+  if (Existing != FirstIterValue.end())
+    return Existing->second;
+  Value *FirstIterV = nullptr;
+  if (auto *BO = dyn_cast<BinaryOperator>(V)) {
+    Value *LHS =
+        getValueOnFirstIteration(BO->getOperand(0), FirstIterValue, SQ);
+    Value *RHS =
+        getValueOnFirstIteration(BO->getOperand(1), FirstIterValue, SQ);
+    FirstIterV = SimplifyBinOp(BO->getOpcode(), LHS, RHS, SQ);
+  }
+  if (!FirstIterV)
+    FirstIterV = V;
+  FirstIterValue[V] = FirstIterV;
+  return FirstIterV;
+}
+
+// Try to prove that one of conditions that dominates the latch must exit on 1st
+// iteration.
+static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
+                                         LoopInfo &LI) {
+  // Disabled by option.
+  if (!EnableSymbolicExecution)
+    return false;
+
+  BasicBlock *Latch = L->getLoopLatch();
+
+  if (!Latch)
+    return false;
+
+  LoopBlocksRPO RPOT(L);
+  RPOT.perform(&LI);
+
+  // For the optimization to be correct, we need RPOT to have a property that
+  // each block is processed after all its predecessors, which may only be
+  // violated for headers of the current loop and all nested loops. Irreducible
+  // CFG provides multiple ways to break this assumption, so we do not want to
+  // deal with it.
+  if (containsIrreducibleCFG<const BasicBlock *>(RPOT, LI))
+    return false;
+
+  BasicBlock *Header = L->getHeader();
+  // Blocks that are reachable on the 1st iteration.
+  SmallPtrSet<BasicBlock *, 4> LiveBlocks;
+  // Edges that are reachable on the 1st iteration.
+  DenseSet<BasicBlockEdge> LiveEdges;
+  LiveBlocks.insert(L->getHeader());
+
+  SmallPtrSet<BasicBlock *, 4> Visited;
+  auto MarkLiveEdge = [&](BasicBlock *From, BasicBlock *To) {
+    assert(LiveBlocks.count(From) && "Must be live!");
+    assert((LI.isLoopHeader(To) || !Visited.count(To)) &&
+           "Only canonical backedges are allowed. Irreducible CFG?");
+    assert((LiveBlocks.count(To) || !Visited.count(To)) &&
+           "We already discarded this block as dead!");
+    LiveBlocks.insert(To);
+    LiveEdges.insert({ From, To });
+  };
+
+  auto MarkAllSuccessorsLive = [&](BasicBlock *BB) {
+    for (auto *Succ : successors(BB))
+      MarkLiveEdge(BB, Succ);
+  };
+
+  // Check if there is only one predecessor on 1st iteration. Note that because
+  // we iterate in RPOT, we have already visited all its (non-latch)
+  // predecessors.
+  auto GetSolePredecessorOnFirstIteration = [&](BasicBlock * BB)->BasicBlock * {
+    if (BB == Header)
+      return L->getLoopPredecessor();
+    BasicBlock *OnlyPred = nullptr;
+    for (auto *Pred : predecessors(BB))
+      if (OnlyPred != Pred && LiveEdges.count({ Pred, BB })) {
+        // 2 live preds.
+        if (OnlyPred)
+          return nullptr;
+        OnlyPred = Pred;
+      }
+
+    assert(OnlyPred && "No live predecessors?");
+    return OnlyPred;
+  };
+  DenseMap<Value *, Value *> FirstIterValue;
+
+  // Use the following algorithm to prove we never take the latch on the 1st
+  // iteration:
+  // 1. Traverse in topological order, so that whenever we visit a block, all
+  //    its predecessors are already visited.
+  // 2. If we can prove that the block may have only 1 predecessor on the 1st
+  //    iteration, map all its phis onto input from this predecessor.
+  // 3a. If we can prove which successor of out block is taken on the 1st
+  //     iteration, mark this successor live.
+  // 3b. If we cannot prove it, conservatively assume that all successors are
+  //     live.
+  auto &DL = L->getHeader()->getModule()->getDataLayout();
+  const SimplifyQuery SQ(DL);
+  for (auto *BB : RPOT) {
+    Visited.insert(BB);
+
+    // This block is not reachable on the 1st iterations.
+    if (!LiveBlocks.count(BB))
+      continue;
+
+    // Skip inner loops.
+    if (LI.getLoopFor(BB) != L) {
+      MarkAllSuccessorsLive(BB);
+      continue;
+    }
+
+    // If this block has only one live pred, map its phis onto their SCEVs.
+    if (auto *OnlyPred = GetSolePredecessorOnFirstIteration(BB))
+      for (auto &PN : BB->phis()) {
+        if (!PN.getType()->isIntegerTy())
+          continue;
+        auto *Incoming = PN.getIncomingValueForBlock(OnlyPred);
+        if (DT.dominates(Incoming, BB->getTerminator())) {
+          Value *FirstIterV =
+              getValueOnFirstIteration(Incoming, FirstIterValue, SQ);
+          FirstIterValue[&PN] = FirstIterV;
+        }
+      }
+
+    using namespace PatternMatch;
+    ICmpInst::Predicate Pred;
+    Value *LHS, *RHS;
+    BasicBlock *IfTrue, *IfFalse;
+    auto *Term = BB->getTerminator();
+    // TODO: Handle switch.
+    if (!match(Term, m_Br(m_ICmp(Pred, m_Value(LHS), m_Value(RHS)),
+                          m_BasicBlock(IfTrue), m_BasicBlock(IfFalse)))) {
+      MarkAllSuccessorsLive(BB);
+      continue;
+    }
+
+    if (!LHS->getType()->isIntegerTy()) {
+      MarkAllSuccessorsLive(BB);
+      continue;
+    }
+
+    // Can we prove constant true or false for this condition?
+    LHS = getValueOnFirstIteration(LHS, FirstIterValue, SQ);
+    RHS = getValueOnFirstIteration(RHS, FirstIterValue, SQ);
+    auto *KnownCondition =
+        dyn_cast_or_null<ConstantInt>(SimplifyICmpInst(Pred, LHS, RHS, SQ));
+    if (!KnownCondition) {
+      MarkAllSuccessorsLive(BB);
+      continue;
+    }
+    if (KnownCondition->isAllOnesValue())
+      MarkLiveEdge(BB, IfTrue);
+    else
+      MarkLiveEdge(BB, IfFalse);
+  }
+
+  // We can break the latch if it wasn't live.
+  return !LiveEdges.count({ Latch, Header });
+}
+
 /// If we can prove the backedge is untaken, remove it.  This destroys the
 /// loop, but leaves the (now trivially loop invariant) control flow and
 /// side effects (if any) in place.
@@ -181,7 +352,9 @@ breakBackedgeIfNotTaken(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
     return LoopDeletionResult::Unmodified;
 
   auto *BTC = SE.getBackedgeTakenCount(L);
-  if (!BTC->isZero())
+  if (!isa<SCEVCouldNotCompute>(BTC) && SE.isKnownNonZero(BTC))
+    return LoopDeletionResult::Unmodified;
+  if (!BTC->isZero() && !canProveExitOnFirstIteration(L, DT, LI))
     return LoopDeletionResult::Unmodified;
 
   breakLoopBackedge(L, DT, SE, LI, MSSA);
