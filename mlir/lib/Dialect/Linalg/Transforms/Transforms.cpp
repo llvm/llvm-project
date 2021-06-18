@@ -637,3 +637,68 @@ LogicalResult AffineMinRangeCanonicalizationPattern::matchAndRewrite(
 
   return failure();
 }
+
+static SmallVector<StringRef> getNParallelLoopsAttrs(unsigned nParallelLoops) {
+  return SmallVector<StringRef>(nParallelLoops, getParallelIteratorTypeName());
+}
+
+/// Rewrite a PadTensorOp into a sequence of InitTensorOp, FillOp (to initialize
+/// with pad_val) and GenericOp (to copy contents).
+LogicalResult PadTensorOpTransformationPattern::matchAndRewrite(
+    linalg::PadTensorOp padOp, PatternRewriter &rewriter) const {
+
+  auto inputShapedType = padOp.source().getType().cast<ShapedType>();
+  auto resultShapedType = padOp.result().getType().cast<ShapedType>();
+
+  // Bail on non-static shapes.
+  if (!inputShapedType.hasStaticShape())
+    return failure();
+  if (!resultShapedType.hasStaticShape())
+    return failure();
+
+  // Only support padding with a constant for now, i.e. either:
+  //   1. A BBarg from a different block.
+  //   2. A value defined outside of the current block.
+  Block &block = padOp.region().front();
+  auto yieldOp = cast<YieldOp>(block.getTerminator());
+  assert(yieldOp.getNumOperands() == 1 && "expected single operand yield");
+  Value padValue = yieldOp.values().front();
+  Operation *definingOp = padValue.getDefiningOp();
+  if (definingOp && definingOp->getBlock() == &block)
+    return failure();
+  if (!definingOp && padValue.cast<BlockArgument>().getOwner() == &block)
+    return failure();
+
+  // Create tensor with the padded shape
+  Location loc = padOp.getLoc();
+  SmallVector<Value> indices(resultShapedType.getRank(),
+                             rewriter.create<ConstantIndexOp>(loc, 0));
+  Value initTensor = rewriter.create<InitTensorOp>(
+      loc, resultShapedType.getShape(), resultShapedType.getElementType());
+
+  // Initialize tensor with the pad value
+  Value tmpTensor =
+      rewriter.create<linalg::FillOp>(loc, initTensor, padValue).result();
+
+  // Copy original contents into new tensor
+  // Uses linalg.generic, but could be done with std.subtensor_insert
+  SmallVector<AffineExpr, 4> outputExprs;
+  for (unsigned i = 0; i < resultShapedType.getRank(); ++i) {
+    outputExprs.push_back(getAffineDimExpr(i, rewriter.getContext()) +
+                          padOp.static_low()[i].cast<IntegerAttr>().getInt());
+  }
+
+  SmallVector<AffineMap, 2> transferMaps = {
+      rewriter.getMultiDimIdentityMap(inputShapedType.getRank()),
+      AffineMap::get(resultShapedType.getRank(),
+                     /*symbolCount=*/0, outputExprs, rewriter.getContext())};
+
+  rewriter.replaceOpWithNewOp<linalg::GenericOp>(
+      padOp, resultShapedType, padOp.source(), tmpTensor, transferMaps,
+      getNParallelLoopsAttrs(resultShapedType.getRank()),
+      [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
+        nestedBuilder.create<linalg::YieldOp>(nestedLoc, args[0]);
+      });
+
+  return success();
+}
