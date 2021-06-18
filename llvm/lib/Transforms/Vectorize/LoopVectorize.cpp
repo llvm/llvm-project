@@ -379,15 +379,6 @@ cl::opt<bool> PrintVPlansInDotFormat(
     "vplan-print-in-dot-format", cl::init(false), cl::Hidden,
     cl::desc("Use dot format instead of plain text when dumping VPlans"));
 
-/// A helper function that returns the type of loaded or stored value.
-static Type *getMemInstValueType(Value *I) {
-  assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
-         "Expected Load or Store instruction");
-  if (auto *LI = dyn_cast<LoadInst>(I))
-    return LI->getType();
-  return cast<StoreInst>(I)->getValueOperand()->getType();
-}
-
 /// A helper function that returns true if the given type is irregular. The
 /// type is irregular if its allocated size doesn't equal the store size of an
 /// element of the corresponding vector type.
@@ -1504,7 +1495,7 @@ public:
     bool SI = isa<StoreInst>(V);
     if (!LI && !SI)
       return false;
-    auto *Ty = getMemInstValueType(V);
+    auto *Ty = getLoadStoreType(V);
     Align Align = getLoadStoreAlignment(V);
     return (LI && isLegalMaskedGather(Ty, Align)) ||
            (SI && isLegalMaskedScatter(Ty, Align));
@@ -2695,7 +2686,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
   const DataLayout &DL = Instr->getModule()->getDataLayout();
 
   // Prepare for the vector type of the interleaved load/store.
-  Type *ScalarTy = getMemInstValueType(Instr);
+  Type *ScalarTy = getLoadStoreType(Instr);
   unsigned InterleaveFactor = Group->getFactor();
   assert(!VF.isScalable() && "scalable vectors not yet supported.");
   auto *VecTy = VectorType::get(ScalarTy, VF * InterleaveFactor);
@@ -2887,7 +2878,7 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(
           Decision == LoopVectorizationCostModel::CM_GatherScatter) &&
          "CM decision is not to widen the memory instruction");
 
-  Type *ScalarDataTy = getMemInstValueType(Instr);
+  Type *ScalarDataTy = getLoadStoreType(Instr);
 
   auto *DataTy = VectorType::get(ScalarDataTy, VF);
   const Align Alignment = getLoadStoreAlignment(Instr);
@@ -5353,7 +5344,7 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I) const {
     if (!Legal->isMaskRequired(I))
       return false;
     auto *Ptr = getLoadStorePointerOperand(I);
-    auto *Ty = getMemInstValueType(I);
+    auto *Ty = getLoadStoreType(I);
     const Align Alignment = getLoadStoreAlignment(I);
     return isa<LoadInst>(I) ? !(isLegalMaskedLoad(Ty, Ptr, Alignment) ||
                                 isLegalMaskedGather(Ty, Alignment))
@@ -5380,7 +5371,7 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   // If the instruction's allocated size doesn't equal it's type size, it
   // requires padding and will be scalarized.
   auto &DL = I->getModule()->getDataLayout();
-  auto *ScalarTy = getMemInstValueType(I);
+  auto *ScalarTy = getLoadStoreType(I);
   if (hasIrregularType(ScalarTy, DL))
     return false;
 
@@ -5400,7 +5391,7 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   assert(useMaskedInterleavedAccesses(TTI) &&
          "Masked interleave-groups for predicated accesses are not enabled.");
 
-  auto *Ty = getMemInstValueType(I);
+  auto *Ty = getLoadStoreType(I);
   const Align Alignment = getLoadStoreAlignment(I);
   return isa<LoadInst>(I) ? TTI.isLegalMaskedLoad(Ty, Alignment)
                           : TTI.isLegalMaskedStore(Ty, Alignment);
@@ -6945,7 +6936,7 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   if (VF.isScalable())
     return InstructionCost::getInvalid();
 
-  Type *ValTy = getMemInstValueType(I);
+  Type *ValTy = getLoadStoreType(I);
   auto SE = PSE.getSE();
 
   unsigned AS = getLoadStoreAddressSpace(I);
@@ -6997,7 +6988,7 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
 InstructionCost
 LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
                                                     ElementCount VF) {
-  Type *ValTy = getMemInstValueType(I);
+  Type *ValTy = getLoadStoreType(I);
   auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
   Value *Ptr = getLoadStorePointerOperand(I);
   unsigned AS = getLoadStoreAddressSpace(I);
@@ -7027,7 +7018,7 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
                                                 ElementCount VF) {
   assert(Legal->isUniformMemOp(*I));
 
-  Type *ValTy = getMemInstValueType(I);
+  Type *ValTy = getLoadStoreType(I);
   auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
   const Align Alignment = getLoadStoreAlignment(I);
   unsigned AS = getLoadStoreAddressSpace(I);
@@ -7053,7 +7044,7 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
 InstructionCost
 LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
                                                  ElementCount VF) {
-  Type *ValTy = getMemInstValueType(I);
+  Type *ValTy = getLoadStoreType(I);
   auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
   const Align Alignment = getLoadStoreAlignment(I);
   const Value *Ptr = getLoadStorePointerOperand(I);
@@ -7072,7 +7063,7 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
   if (VF.isScalable())
     return InstructionCost::getInvalid();
 
-  Type *ValTy = getMemInstValueType(I);
+  Type *ValTy = getLoadStoreType(I);
   auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
   unsigned AS = getLoadStoreAddressSpace(I);
 
@@ -7225,7 +7216,7 @@ LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
   // Calculate scalar cost only. Vectorization cost should be ready at this
   // moment.
   if (VF.isScalar()) {
-    Type *ValTy = getMemInstValueType(I);
+    Type *ValTy = getLoadStoreType(I);
     const Align Alignment = getLoadStoreAlignment(I);
     unsigned AS = getLoadStoreAddressSpace(I);
 
@@ -7686,7 +7677,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
       if (Decision == CM_Scalarize)
         Width = ElementCount::getFixed(1);
     }
-    VectorTy = ToVectorTy(getMemInstValueType(I), Width);
+    VectorTy = ToVectorTy(getLoadStoreType(I), Width);
     return getMemoryInstructionCost(I, VF);
   }
   case Instruction::BitCast:
