@@ -22,6 +22,7 @@
 #include <unordered_map>
 
 using namespace llvm;
+using namespace sampleprof;
 
 #define DEBUG_TYPE "mirfs-discriminators"
 
@@ -33,9 +34,8 @@ INITIALIZE_PASS(MIRAddFSDiscriminators, DEBUG_TYPE,
 
 char &llvm::MIRAddFSDiscriminatorsID = MIRAddFSDiscriminators::ID;
 
-FunctionPass *llvm::createMIRAddFSDiscriminatorsPass(unsigned LowBit,
-                                                     unsigned HighBit) {
-  return new MIRAddFSDiscriminators(LowBit, HighBit);
+FunctionPass *llvm::createMIRAddFSDiscriminatorsPass(FSDiscriminatorPass P) {
+  return new MIRAddFSDiscriminators(P);
 }
 
 // Compute a hash value using debug line number, and the line numbers from the

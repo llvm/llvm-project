@@ -190,7 +190,10 @@ enum class SecProfSummaryFlags : uint32_t {
   SecFlagPartial = (1 << 0),
   /// SecFlagContext means this is context-sensitive profile for
   /// CSSPGO
-  SecFlagFullContext = (1 << 1)
+  SecFlagFullContext = (1 << 1),
+  /// SecFlagFSDiscriminator means this profile uses flow-sensitive
+  /// discriminators.
+  SecFlagFSDiscriminator = (1 << 2)
 };
 
 enum class SecFuncMetadataFlags : uint32_t {
@@ -890,6 +893,9 @@ public:
 
   /// Whether the profile contains any ".__uniq." suffix in a name.
   static bool HasUniqSuffix;
+
+  /// If this profile uses flow sensitive discriminators.
+  static bool ProfileIsFS;
 
   /// GUIDToFuncNameMap saves the mapping from GUID to the symbol name, for
   /// all the function symbols defined or declared in current module.
