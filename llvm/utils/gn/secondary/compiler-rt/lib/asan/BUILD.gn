@@ -135,7 +135,6 @@ target(asan_target_type, "asan") {
       # asan
       "-Wl,-U,___asan_default_options",
       "-Wl,-U,___asan_default_suppressions",
-      "-Wl,-U,___asan_detect_use_after_return_always",
       "-Wl,-U,___asan_on_error",
       "-Wl,-U,___asan_set_shadow_00",
       "-Wl,-U,___asan_set_shadow_f1",
