@@ -293,9 +293,9 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
   case file_magic::macho_dynamically_linked_shared_lib:
   case file_magic::macho_dynamically_linked_shared_lib_stub:
   case file_magic::tapi_file:
-    if (Optional<DylibFile *> dylibFile = loadDylib(mbref)) {
-      (*dylibFile)->explicitlyLinked = true;
-      newFile = *dylibFile;
+    if (DylibFile * dylibFile = loadDylib(mbref)) {
+      dylibFile->explicitlyLinked = true;
+      newFile = dylibFile;
     }
     break;
   case file_magic::bitcode:
@@ -307,9 +307,8 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
     // as a bundle loader.
     if (!isBundleLoader)
       error(path + ": unhandled file type");
-    if (Optional<DylibFile *> dylibFile =
-            loadDylib(mbref, nullptr, isBundleLoader))
-      newFile = *dylibFile;
+    if (DylibFile *dylibFile = loadDylib(mbref, nullptr, isBundleLoader))
+      newFile = dylibFile;
     break;
   default:
     error(path + ": unhandled file type");
