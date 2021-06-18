@@ -78,10 +78,10 @@ entry:
   ; 0x40000 / 64 = 4096 (for wave64)
   %a = load volatile i32, i32 addrspace(5)* %aptr
 
-  ; MUBUF:   s_add_u32 s32, s32, 0x40000
+  ; MUBUF:   s_add_i32 s32, s32, 0x40000
   ; MUBUF:   buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s32 ; 4-byte Folded Spill
-  ; MUBUF:   s_sub_u32 s32, s32, 0x40000
-  ; FLATSCR: s_add_u32 [[SOFF:s[0-9]+]], s32, 0x1000
+  ; MUBUF:   s_add_i32 s32, s32, 0xfffc0000
+  ; FLATSCR: s_add_i32 [[SOFF:s[0-9]+]], s32, 0x1000
   ; FLATSCR: scratch_store_dword off, v{{[0-9]+}}, [[SOFF]] ; 4-byte Folded Spill
   call void asm sideeffect "", "s,s,s,s,s,s,s,s,v"(i32 %asm0.0, i32 %asm1.0, i32 %asm2.0, i32 %asm3.0, i32 %asm4.0, i32 %asm5.0, i32 %asm6.0, i32 %asm7.0, i32 %a)
 
@@ -97,10 +97,10 @@ entry:
 
   call void asm sideeffect "", "~{v0},~{v1},~{v2},~{v3},~{v4},~{v5},~{v6},~{v7}"() #0
 
-  ; MUBUF:   s_add_u32 s32, s32, 0x40000
+  ; MUBUF:   s_add_i32 s32, s32, 0x40000
   ; MUBUF:   buffer_load_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s32 ; 4-byte Folded Reload
-  ; MUBUF:   s_sub_u32 s32, s32, 0x40000
-  ; FLATSCR: s_add_u32 [[SOFF:s[0-9]+]], s32, 0x1000
+  ; MUBUF:   s_add_i32 s32, s32, 0xfffc0000
+  ; FLATSCR: s_add_i32 [[SOFF:s[0-9]+]], s32, 0x1000
   ; FLATSCR: scratch_load_dword v{{[0-9]+}}, off, [[SOFF]] ; 4-byte Folded Reload
 
    ; Force %a to spill with no free SGPRs
@@ -202,9 +202,9 @@ entry:
 
   %aptr = getelementptr i32, i32 addrspace(5)* %buf, i32 1
   ; 0x40000 / 64 = 4096 (for wave64)
-  ; MUBUF:   s_add_u32 s4, s32, 0x40000
+  ; MUBUF:   s_add_i32 s4, s32, 0x40000
   ; MUBUF:   buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s4 ; 4-byte Folded Spill
-  ; FLATSCR: s_add_u32 s0, s32, 0x1000
+  ; FLATSCR: s_add_i32 s0, s32, 0x1000
   ; FLATSCR: scratch_store_dword off, v{{[0-9]+}}, s0 ; 4-byte Folded Spill
   %a = load volatile i32, i32 addrspace(5)* %aptr
 
@@ -257,7 +257,7 @@ entry:
   %bufv2 = bitcast i8 addrspace(5)* %alloca to <2 x i32> addrspace(5)*
 
   ; 0x3ff00 / 64 = 4092 (for wave64)
-  ; MUBUF: s_add_u32 s4, s32, 0x3ff00
+  ; MUBUF: s_add_i32 s4, s32, 0x3ff00
   ; MUBUF: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s4 ; 4-byte Folded Spill
   ; MUBUF: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s4 offset:4 ; 4-byte Folded Spill
   ; FLATSCR: scratch_store_dwordx2 off, v[{{[0-9:]+}}], s32 offset:4092 ; 8-byte Folded Spill
