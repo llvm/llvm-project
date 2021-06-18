@@ -1540,6 +1540,18 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &CI) {
       Constant *ShAmt = ConstantInt::get(DestTy, DestBitSize - SrcBitSize);
       return BinaryOperator::CreateAShr(Builder.CreateShl(X, ShAmt), ShAmt);
     }
+
+    // If we are replacing shifted-in high zero bits with sign bits, convert
+    // the logic shift to arithmetic shift and eliminate the cast to
+    // intermediate type:
+    // sext (trunc (lshr Y, C)) --> sext/trunc (ashr Y, C)
+    Value *Y;
+    if (Src->hasOneUse() &&
+        match(X, m_LShr(m_Value(Y),
+                        m_SpecificIntAllowUndef(XBitSize - SrcBitSize)))) {
+      Value *Ashr = Builder.CreateAShr(Y, XBitSize - SrcBitSize);
+      return CastInst::CreateIntegerCast(Ashr, DestTy, /* isSigned */ true);
+    }
   }
 
   if (ICmpInst *ICI = dyn_cast<ICmpInst>(Src))
