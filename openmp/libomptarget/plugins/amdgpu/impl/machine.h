@@ -79,8 +79,7 @@ hsa_amd_memory_pool_t get_memory_pool(const ATLProcessor &proc,
                                       const int mem_id);
 
 extern ATLMachine g_atl_machine;
-template <typename T> T &get_processor(atmi_place_t place) {
-  int dev_id = place.device_id;
+template <typename T> T &get_processor(int dev_id) {
   if (dev_id == -1) {
     // user is asking runtime to pick a device
     // best device of this type? pick 0 for now
