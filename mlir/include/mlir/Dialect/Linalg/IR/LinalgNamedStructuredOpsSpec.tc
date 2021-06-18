@@ -155,7 +155,7 @@ ods_def<DepthwiseConvInputNHWCFilterHWCFOp>:
 def depthwise_conv_2d_input_nhwc_filter_hwcf
       (I: f32(N, IH, IW, CI), K: f32(KH, KW, CI, CO))
    -> (O: f32(N, OH, OW, CI, CO))
-  attr(strides: 2xi64)
+  attr(strides: 2xi64, dilations: 2xi64)
 """A general depth-wise 2-D convolution operation.
 
 This operation performs depth-wise 2-D convolution over an input `I` and filter
@@ -164,7 +164,7 @@ This operation performs depth-wise 2-D convolution over an input `I` and filter
 ```
   O(n, oh, ow, ci, co) = AddFOp<kh, kw>(
       O(n, oh, ow, ci, co),
-      MulFOp(I(n, oh * strides[0] + kh, ow * strides[1] + kw, ci),
+      MulFOp(I(n, oh * strides[0] + kh * dilations[0], ow * strides[1] + kw * dilations[1], ci),
                K(kh, kw, ci, co)));
 ```
 
@@ -186,7 +186,7 @@ Linalg reshape op which collapses `CI` and `CO` into one dimension.
 {
   O(n, oh, ow, ci, co) = AddFOp<kh, kw>(
       O(n, oh, ow, ci, co),
-      MulFOp(I(n, oh * strides[0] + kh, ow * strides[1] + kw, ci),
+      MulFOp(I(n, oh * strides[0] + kh * dilations[0], ow * strides[1] + kw * dilations[1], ci),
                K(kh, kw, ci, co)));
 }
 
@@ -194,7 +194,7 @@ ods_def<DepthwiseConvInputNHWCFilterHWCOp>:
 def depthwise_conv_2d_input_nhwc_filter_hwc
       (I: f32(N, IH, IW, C), K: f32(KH, KW, C))
    -> (O: f32(N, OH, OW, C))
-  attr(strides: 2xi64)
+  attr(strides: 2xi64, dilations: 2xi64)
 """A depth-wise 2-D convolution operation.
 
 This operation performs depth-wise 2-D convolution over an input `I` and filter
@@ -203,7 +203,7 @@ This operation performs depth-wise 2-D convolution over an input `I` and filter
 ```
 O(n, oh, ow, c) = AddFOp<kh, kw>(
     O(n, oh, ow, c),
-    MulFOp(I(n, oh * strides[0] + kh, ow * strides[1] + kw, c),
+    MulFOp(I(n, oh * strides[0] + kh * dilations[0], ow * strides[1] + kw * dilations[1], c),
              K(kh, kw, c)));
 ```
 
@@ -223,7 +223,7 @@ Note: this op only supports channel multiplier == 1.
 {
   O(n, oh, ow, c) = AddFOp<kh, kw>(
       O(n, oh, ow, c),
-      MulFOp(I(n, oh * strides[0] + kh, ow * strides[1] + kw, c),
+      MulFOp(I(n, oh * strides[0] + kh * dilations[0], ow * strides[1] + kw * dilations[1], c),
                K(kh, kw, c)));
 }
 
