@@ -58,6 +58,11 @@ public:
     return interfaceMap.lookup<T>();
   }
 
+  /// Returns true if the type has the interface with the given ID.
+  bool hasInterface(TypeID interfaceID) const {
+    return interfaceMap.contains(interfaceID);
+  }
+
   /// Return the unique identifier representing the concrete type class.
   TypeID getTypeID() const { return typeID; }
 

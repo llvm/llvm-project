@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/DialectInterface.h"
@@ -31,7 +32,7 @@ DialectAsmParser::~DialectAsmParser() {}
 
 void DialectRegistry::addDialectInterface(
     StringRef dialectName, TypeID interfaceTypeID,
-    InterfaceAllocatorFunction allocator) {
+    DialectInterfaceAllocatorFunction allocator) {
   assert(allocator && "unexpected null interface allocation function");
   auto it = registry.find(dialectName.str());
   assert(it != registry.end() &&
@@ -40,8 +41,8 @@ void DialectRegistry::addDialectInterface(
   // Bail out if the interface with the given ID is already in the registry for
   // the given dialect. We expect a small number (dozens) of interfaces so a
   // linear search is fine here.
-  auto &dialectInterfaces = interfaces[it->second.first];
-  for (const auto &kvp : dialectInterfaces) {
+  auto &ifaces = interfaces[it->second.first];
+  for (const auto &kvp : ifaces.dialectInterfaces) {
     if (kvp.first == interfaceTypeID) {
       LLVM_DEBUG(llvm::dbgs()
                  << "[" DEBUG_TYPE
@@ -51,7 +52,36 @@ void DialectRegistry::addDialectInterface(
     }
   }
 
-  dialectInterfaces.emplace_back(interfaceTypeID, allocator);
+  ifaces.dialectInterfaces.emplace_back(interfaceTypeID, allocator);
+}
+
+void DialectRegistry::addObjectInterface(
+    StringRef dialectName, TypeID interfaceTypeID,
+    ObjectInterfaceAllocatorFunction allocator) {
+  assert(allocator && "unexpected null interface allocation function");
+
+  // Builtin dialect has an empty prefix and is always registered.
+  TypeID dialectTypeID;
+  if (!dialectName.empty()) {
+    auto it = registry.find(dialectName.str());
+    assert(it != registry.end() &&
+           "adding an interface for an op from an unregistered dialect");
+    dialectTypeID = it->second.first;
+  } else {
+    dialectTypeID = TypeID::get<BuiltinDialect>();
+  }
+
+  auto &ifaces = interfaces[dialectTypeID];
+  for (const auto &kvp : ifaces.objectInterfaces) {
+    if (kvp.first == interfaceTypeID) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "[" DEBUG_TYPE
+                    "] repeated interface object interface registration");
+      return;
+    }
+  }
+
+  ifaces.objectInterfaces.emplace_back(interfaceTypeID, allocator);
 }
 
 DialectAllocatorFunctionRef
@@ -79,11 +109,15 @@ void DialectRegistry::registerDelayedInterfaces(Dialect *dialect) const {
     return;
 
   // Add an interface if it is not already present.
-  for (const auto &kvp : it->second) {
+  for (const auto &kvp : it->getSecond().dialectInterfaces) {
     if (dialect->getRegisteredInterface(kvp.first))
       continue;
     dialect->addInterface(kvp.second(dialect));
   }
+
+  // Add attribute, operation and type interfaces.
+  for (const auto &kvp : it->getSecond().objectInterfaces)
+    kvp.second(dialect->getContext());
 }
 
 //===----------------------------------------------------------------------===//

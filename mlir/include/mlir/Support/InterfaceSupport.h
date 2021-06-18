@@ -16,6 +16,7 @@
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/TypeName.h"
 
 namespace mlir {
@@ -236,8 +237,10 @@ public:
           llvm::lower_bound(interfaces, id, [](const auto &it, TypeID id) {
             return compare(it.first, id);
           });
-      if (it != interfaces.end() && it->first == id)
-        llvm::report_fatal_error("Interface already registered");
+      if (it != interfaces.end() && it->first == id) {
+        LLVM_DEBUG(llvm::dbgs() << "Ignoring repeated interface registration");
+        continue;
+      }
       interfaces.insert(it, element);
     }
   }
