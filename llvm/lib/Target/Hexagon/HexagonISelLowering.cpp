@@ -3554,8 +3554,9 @@ bool HexagonTargetLowering::shouldReduceLoadWidth(SDNode *Load,
   return true;
 }
 
-Value *HexagonTargetLowering::emitLoadLinked(IRBuilder<> &Builder, Value *Addr,
-      AtomicOrdering Ord) const {
+Value *HexagonTargetLowering::emitLoadLinked(IRBuilderBase &Builder,
+                                             Value *Addr,
+                                             AtomicOrdering Ord) const {
   BasicBlock *BB = Builder.GetInsertBlock();
   Module *M = BB->getParent()->getParent();
   auto PT = cast<PointerType>(Addr->getType());
@@ -3577,8 +3578,9 @@ Value *HexagonTargetLowering::emitLoadLinked(IRBuilder<> &Builder, Value *Addr,
 
 /// Perform a store-conditional operation to Addr. Return the status of the
 /// store. This should be 0 if the store succeeded, non-zero otherwise.
-Value *HexagonTargetLowering::emitStoreConditional(IRBuilder<> &Builder,
-      Value *Val, Value *Addr, AtomicOrdering Ord) const {
+Value *HexagonTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
+                                                   Value *Val, Value *Addr,
+                                                   AtomicOrdering Ord) const {
   BasicBlock *BB = Builder.GetInsertBlock();
   Module *M = BB->getParent()->getParent();
   Type *Ty = Val->getType();
