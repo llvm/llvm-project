@@ -760,7 +760,15 @@ DylibFile *findDylib(StringRef path, DylibFile *umbrella,
               resolveDylibPath((root + path).str()))
         return loadDylib(*dylibPath, umbrella);
 
-  // TODO: Expand @loader_path, @executable_path, @rpath etc, handle -dylib_path
+  // TODO: Expand @loader_path, @rpath etc, handle -dylib_file
+  SmallString<128> newPath;
+  if (config->outputType == MH_EXECUTE &&
+      path.consume_front("@executable_path/")) {
+    // ld64 allows overriding this with the undocumented flag -executable_path.
+    // lld doesn't currently implement that flag.
+    path::append(newPath, sys::path::parent_path(config->outputFile), path);
+    path = newPath;
+  }
 
   if (currentTopLevelTapi) {
     for (InterfaceFile &child :
