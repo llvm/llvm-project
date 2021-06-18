@@ -78,9 +78,9 @@ static HeaderFileType getOutputType(const InputArgList &args) {
   }
 }
 
-static Optional<StringRef> findLibrary(StringRef name) {
+static Optional<std::string> findLibrary(StringRef name) {
   if (config->searchDylibsFirst) {
-    if (Optional<StringRef> path = findPathCombination(
+    if (Optional<std::string> path = findPathCombination(
             "lib" + name, config->librarySearchPaths, {".tbd", ".dylib"}))
       return path;
     return findPathCombination("lib" + name, config->librarySearchPaths,
@@ -337,7 +337,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
 
 static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
                        bool isReexport, bool isExplicit, bool forceLoad) {
-  if (Optional<StringRef> path = findLibrary(name)) {
+  if (Optional<std::string> path = findLibrary(name)) {
     if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
             addFile(*path, forceLoad, isExplicit))) {
       if (isNeeded)
