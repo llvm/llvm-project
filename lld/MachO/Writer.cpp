@@ -609,9 +609,10 @@ void Writer::scanSymbols() {
   TimeTraceScope timeScope("Scan symbols");
   for (const Symbol *sym : symtab->getSymbols()) {
     if (const auto *defined = dyn_cast<Defined>(sym)) {
-      if (defined->overridesWeakDef)
+      if (defined->overridesWeakDef && defined->isLive())
         in.weakBinding->addNonWeakDefinition(defined);
     } else if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
+      // This branch intentionally doesn't check isLive().
       if (dysym->isDynamicLookup())
         continue;
       dysym->getFile()->refState =

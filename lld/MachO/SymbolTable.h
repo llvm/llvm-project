@@ -40,7 +40,7 @@ public:
   Defined *addDefined(StringRef name, InputFile *, InputSection *,
                       uint64_t value, uint64_t size, bool isWeakDef,
                       bool isPrivateExtern, bool isThumb,
-                      bool isReferencedDynamically);
+                      bool isReferencedDynamically, bool noDeadStrip);
 
   Symbol *addUndefined(StringRef name, InputFile *, bool isWeakRef);
 
