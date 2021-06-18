@@ -339,7 +339,7 @@ queue(_Container)
 template<class _Container,
          class _Alloc,
          class = _EnableIf<!__is_allocator<_Container>::value>,
-         class = _EnableIf<__is_allocator<_Alloc>::value>
+         class = _EnableIf<uses_allocator<_Container, _Alloc>::value>
 >
 queue(_Container, _Alloc)
     -> queue<typename _Container::value_type, _Container>;
@@ -554,7 +554,7 @@ template<class _Compare,
          class _Alloc,
          class = _EnableIf<!__is_allocator<_Compare>::value>,
          class = _EnableIf<!__is_allocator<_Container>::value>,
-         class = _EnableIf<__is_allocator<_Alloc>::value>
+         class = _EnableIf<uses_allocator<_Container, _Alloc>::value>
 >
 priority_queue(_Compare, _Container, _Alloc)
     -> priority_queue<typename _Container::value_type, _Container, _Compare>;
