@@ -2623,8 +2623,23 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     // Need special instructions for atomics that affect ordering.
     if (Order != AtomicOrdering::NotAtomic &&
         Order != AtomicOrdering::Unordered &&
-        Order != AtomicOrdering::Monotonic)
-      return false;
+        Order != AtomicOrdering::Monotonic) {
+      assert(I.getOpcode() != TargetOpcode::G_ZEXTLOAD);
+      if (MemSizeInBytes > 64)
+        return false;
+
+      if (I.getOpcode() == TargetOpcode::G_LOAD) {
+        static unsigned Opcodes[] = {AArch64::LDARB, AArch64::LDARH,
+                                     AArch64::LDARW, AArch64::LDARX};
+        I.setDesc(TII.get(Opcodes[Log2_32(MemSizeInBytes)]));
+      } else {
+        static unsigned Opcodes[] = {AArch64::STLRB, AArch64::STLRH,
+                                     AArch64::STLRW, AArch64::STLRX};
+        I.setDesc(TII.get(Opcodes[Log2_32(MemSizeInBytes)]));
+      }
+      constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+      return true;
+    }
 
 #ifndef NDEBUG
     const Register PtrReg = I.getOperand(1).getReg();
