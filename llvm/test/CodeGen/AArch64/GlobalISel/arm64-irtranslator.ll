@@ -1246,14 +1246,14 @@ define float @test_pow_intrin(float %l, float %r) {
   ret float %res
 }
 
-declare float @llvm.powi.f32(float, i32)
+declare float @llvm.powi.f32.i32(float, i32)
 define float @test_powi_intrin(float %l, i32 %r) {
 ; CHECK-LABEL: name: test_powi_intrin
 ; CHECK: [[LHS:%[0-9]+]]:_(s32) = COPY $s0
 ; CHECK: [[RHS:%[0-9]+]]:_(s32) = COPY $w0
 ; CHECK: [[RES:%[0-9]+]]:_(s32) = nnan ninf nsz arcp contract afn reassoc G_FPOWI [[LHS]], [[RHS]]
 ; CHECK: $s0 = COPY [[RES]]
-  %res = call nnan ninf nsz arcp contract afn reassoc float @llvm.powi.f32(float %l, i32 %r)
+  %res = call nnan ninf nsz arcp contract afn reassoc float @llvm.powi.f32.i32(float %l, i32 %r)
   ret float %res
 }
 

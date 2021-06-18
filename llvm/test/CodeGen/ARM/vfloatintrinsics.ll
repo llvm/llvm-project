@@ -14,7 +14,7 @@ define %v2f32 @test_v2f32.sqrt(%v2f32 %a) {
 ; CHECK-LABEL: test_v2f32.powi:{{.*}}
 define %v2f32 @test_v2f32.powi(%v2f32 %a, i32 %b) {
   ; CHECK: pow
-  %1 = call %v2f32 @llvm.powi.v2f32(%v2f32 %a, i32 %b)
+  %1 = call %v2f32 @llvm.powi.v2f32.i32(%v2f32 %a, i32 %b)
   ret %v2f32 %1
 }
 ; CHECK-LABEL: test_v2f32.sin:{{.*}}
@@ -109,7 +109,7 @@ define %v2f32 @test_v2f32.nearbyint(%v2f32 %a) {
 }
 
 declare %v2f32 @llvm.sqrt.v2f32(%v2f32) #0
-declare %v2f32 @llvm.powi.v2f32(%v2f32, i32) #0
+declare %v2f32 @llvm.powi.v2f32.i32(%v2f32, i32) #0
 declare %v2f32 @llvm.sin.v2f32(%v2f32) #0
 declare %v2f32 @llvm.cos.v2f32(%v2f32) #0
 declare %v2f32 @llvm.pow.v2f32(%v2f32, %v2f32) #0
@@ -138,7 +138,7 @@ define %v4f32 @test_v4f32.sqrt(%v4f32 %a) {
 ; CHECK-LABEL: test_v4f32.powi:{{.*}}
 define %v4f32 @test_v4f32.powi(%v4f32 %a, i32 %b) {
   ; CHECK: pow
-  %1 = call %v4f32 @llvm.powi.v4f32(%v4f32 %a, i32 %b)
+  %1 = call %v4f32 @llvm.powi.v4f32.i32(%v4f32 %a, i32 %b)
   ret %v4f32 %1
 }
 ; CHECK-LABEL: test_v4f32.sin:{{.*}}
@@ -233,7 +233,7 @@ define %v4f32 @test_v4f32.nearbyint(%v4f32 %a) {
 }
 
 declare %v4f32 @llvm.sqrt.v4f32(%v4f32) #0
-declare %v4f32 @llvm.powi.v4f32(%v4f32, i32) #0
+declare %v4f32 @llvm.powi.v4f32.i32(%v4f32, i32) #0
 declare %v4f32 @llvm.sin.v4f32(%v4f32) #0
 declare %v4f32 @llvm.cos.v4f32(%v4f32) #0
 declare %v4f32 @llvm.pow.v4f32(%v4f32, %v4f32) #0
@@ -262,7 +262,7 @@ define %v2f64 @test_v2f64.sqrt(%v2f64 %a) {
 ; CHECK-LABEL: test_v2f64.powi:{{.*}}
 define %v2f64 @test_v2f64.powi(%v2f64 %a, i32 %b) {
   ; CHECK: pow
-  %1 = call %v2f64 @llvm.powi.v2f64(%v2f64 %a, i32 %b)
+  %1 = call %v2f64 @llvm.powi.v2f64.i32(%v2f64 %a, i32 %b)
   ret %v2f64 %1
 }
 ; CHECK-LABEL: test_v2f64.sin:{{.*}}
@@ -358,7 +358,7 @@ define %v2f64 @test_v2f64.nearbyint(%v2f64 %a) {
 }
 
 declare %v2f64 @llvm.sqrt.v2f64(%v2f64) #0
-declare %v2f64 @llvm.powi.v2f64(%v2f64, i32) #0
+declare %v2f64 @llvm.powi.v2f64.i32(%v2f64, i32) #0
 declare %v2f64 @llvm.sin.v2f64(%v2f64) #0
 declare %v2f64 @llvm.cos.v2f64(%v2f64) #0
 declare %v2f64 @llvm.pow.v2f64(%v2f64, %v2f64) #0

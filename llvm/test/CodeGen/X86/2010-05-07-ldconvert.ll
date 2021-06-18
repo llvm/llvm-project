@@ -6,7 +6,7 @@ entry:
   %retval = alloca i32, align 4                   ; <i32*> [#uses=2]
   %r = alloca i32, align 4                        ; <i32*> [#uses=2]
   store i32 0, i32* %retval
-  %tmp = call x86_fp80 @llvm.powi.f80(x86_fp80 0xK3FFF8000000000000000, i32 -64) ; <x86_fp80> [#uses=1]
+  %tmp = call x86_fp80 @llvm.powi.f80.i32(x86_fp80 0xK3FFF8000000000000000, i32 -64) ; <x86_fp80> [#uses=1]
   %conv = fptosi x86_fp80 %tmp to i32             ; <i32> [#uses=1]
   store i32 %conv, i32* %r
   %tmp1 = load i32, i32* %r                            ; <i32> [#uses=1]
@@ -22,6 +22,6 @@ if.end:                                           ; preds = %if.then, %entry
   ret i32 %0
 }
 
-declare x86_fp80 @llvm.powi.f80(x86_fp80, i32) nounwind readonly
+declare x86_fp80 @llvm.powi.f80.i32(x86_fp80, i32) nounwind readonly
 
 declare void @_Z1fv()

@@ -260,14 +260,14 @@ define void @test_powi(<4 x float>* %X) nounwind {
 L.entry:
 
   %0 = load <4 x float>, <4 x float>* @A, align 16
-  %1 = call <4 x float> @llvm.powi.v4f32(<4 x float> %0, i32 2)
+  %1 = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> %0, i32 2)
 
   store <4 x float> %1, <4 x float>* %X, align 16
 
   ret void
 }
 
-declare <4 x float> @llvm.powi.v4f32(<4 x float>, i32) nounwind readonly
+declare <4 x float> @llvm.powi.v4f32.i32(<4 x float>, i32) nounwind readonly
 
 define void @test_sin(<4 x float>* %X) nounwind {
 

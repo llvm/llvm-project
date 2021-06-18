@@ -3,8 +3,8 @@
 
 ; CHECK: LLVM ERROR: Undefined external symbol "__powidf2"
 define double @powi(double, i32) {
-  %a = call double @llvm.powi.f64(double %0, i32 %1)
+  %a = call double @llvm.powi.f64.i32(double %0, i32 %1)
   ret double %a
 }
 
-declare double @llvm.powi.f64(double, i32) nounwind readnone
+declare double @llvm.powi.f64.i32(double, i32) nounwind readnone

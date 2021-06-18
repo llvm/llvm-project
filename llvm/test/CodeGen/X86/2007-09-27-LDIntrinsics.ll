@@ -17,7 +17,7 @@ declare x86_fp80 @llvm.sqrt.f80(x86_fp80)
 
 define x86_fp80 @bar(x86_fp80 %x) nounwind {
 entry:
-	%tmp2 = call x86_fp80 @llvm.powi.f80( x86_fp80 %x, i32 3 )
+	%tmp2 = call x86_fp80 @llvm.powi.f80.i32( x86_fp80 %x, i32 3 )
 	ret x86_fp80 %tmp2
 ; CHECK-LABEL: bar:
 ; CHECK: fldt 4(%esp)
@@ -27,4 +27,4 @@ entry:
 ; CHECK-NEXT: ret
 }
 
-declare x86_fp80 @llvm.powi.f80(x86_fp80, i32)
+declare x86_fp80 @llvm.powi.f80.i32(x86_fp80, i32)

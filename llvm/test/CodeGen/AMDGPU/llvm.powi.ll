@@ -14,7 +14,7 @@ define i16 @v_powi_f16(i16 %l, i32 %r) {
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %l.cast = bitcast i16 %l to half
-  %res = call half @llvm.powi.f16(half %l.cast, i32 %r)
+  %res = call half @llvm.powi.f16.i32(half %l.cast, i32 %r)
   %res.cast = bitcast half %res to i16
   ret i16 %res.cast
 }
@@ -28,7 +28,7 @@ define float @v_powi_f32(float %l, i32 %r) {
 ; GCN-NEXT:    v_mul_legacy_f32_e32 v0, v1, v0
 ; GCN-NEXT:    v_exp_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %res = call float @llvm.powi.f32(float %l, i32 %r)
+  %res = call float @llvm.powi.f32.i32(float %l, i32 %r)
   ret float %res
 }
 
@@ -38,7 +38,7 @@ define float @v_powi_0_f32(float %l) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %res = call float @llvm.powi.f32(float %l, i32 0)
+  %res = call float @llvm.powi.f32.i32(float %l, i32 0)
   ret float %res
 }
 
@@ -47,7 +47,7 @@ define float @v_powi_1_f32(float %l) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %res = call float @llvm.powi.f32(float %l, i32 1)
+  %res = call float @llvm.powi.f32.i32(float %l, i32 1)
   ret float %res
 }
 
@@ -83,7 +83,7 @@ define float @v_powi_neg1_f32(float %l) {
 ; GFX8-NEXT:    v_div_fmas_f32 v1, v1, v3, v4
 ; GFX8-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
-  %res = call float @llvm.powi.f32(float %l, i32 -1)
+  %res = call float @llvm.powi.f32.i32(float %l, i32 -1)
   ret float %res
 }
 
@@ -93,7 +93,7 @@ define float @v_powi_2_f32(float %l) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mul_f32_e32 v0, v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %res = call float @llvm.powi.f32(float %l, i32 2)
+  %res = call float @llvm.powi.f32.i32(float %l, i32 2)
   ret float %res
 }
 
@@ -131,7 +131,7 @@ define float @v_powi_neg2_f32(float %l) {
 ; GFX8-NEXT:    v_div_fmas_f32 v1, v1, v3, v4
 ; GFX8-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
-  %res = call float @llvm.powi.f32(float %l, i32 -2)
+  %res = call float @llvm.powi.f32.i32(float %l, i32 -2)
   ret float %res
 }
 
@@ -142,7 +142,7 @@ define float @v_powi_4_f32(float %l) {
 ; GCN-NEXT:    v_mul_f32_e32 v0, v0, v0
 ; GCN-NEXT:    v_mul_f32_e32 v0, v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %res = call float @llvm.powi.f32(float %l, i32 4)
+  %res = call float @llvm.powi.f32.i32(float %l, i32 4)
   ret float %res
 }
 
@@ -154,7 +154,7 @@ define float @v_powi_8_f32(float %l) {
 ; GCN-NEXT:    v_mul_f32_e32 v0, v0, v0
 ; GCN-NEXT:    v_mul_f32_e32 v0, v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %res = call float @llvm.powi.f32(float %l, i32 8)
+  %res = call float @llvm.powi.f32.i32(float %l, i32 8)
   ret float %res
 }
 
@@ -167,7 +167,7 @@ define float @v_powi_16_f32(float %l) {
 ; GCN-NEXT:    v_mul_f32_e32 v0, v0, v0
 ; GCN-NEXT:    v_mul_f32_e32 v0, v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %res = call float @llvm.powi.f32(float %l, i32 16)
+  %res = call float @llvm.powi.f32.i32(float %l, i32 16)
   ret float %res
 }
 
@@ -183,7 +183,7 @@ define float @v_powi_128_f32(float %l) {
 ; GCN-NEXT:    v_mul_f32_e32 v0, v0, v0
 ; GCN-NEXT:    v_mul_f32_e32 v0, v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %res = call float @llvm.powi.f32(float %l, i32 128)
+  %res = call float @llvm.powi.f32.i32(float %l, i32 128)
   ret float %res
 }
 
@@ -233,18 +233,18 @@ define float @v_powi_neg128_f32(float %l) {
 ; GFX8-NEXT:    v_div_fmas_f32 v1, v1, v3, v4
 ; GFX8-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
-  %res = call float @llvm.powi.f32(float %l, i32 -128)
+  %res = call float @llvm.powi.f32.i32(float %l, i32 -128)
   ret float %res
 }
 
 ; FIXME: f64 broken
 ; define double @v_powi_f64(double %l, i32 %r) {
-;   %res = call double @llvm.powi.f64(double %l, i32 %r)
+;   %res = call double @llvm.powi.f64.i32(double %l, i32 %r)
 ;   ret double %res
 ; }
 
-declare half @llvm.powi.f16(half, i32) #0
-declare float @llvm.powi.f32(float, i32) #0
-declare double @llvm.powi.f64(double, i32) #0
+declare half @llvm.powi.f16.i32(half, i32) #0
+declare float @llvm.powi.f32.i32(float, i32) #0
+declare double @llvm.powi.f64.i32(double, i32) #0
 
 attributes #0 = { nounwind readnone speculatable willreturn }
