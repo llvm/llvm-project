@@ -31,3 +31,16 @@ end subroutine
   !CHECK: fir.address_of(@_QFfooE.n.sometype)
   !CHECK: fir.address_of(@_QFfooE.c.sometype)
 ! CHECK:}
+
+subroutine char_comp_init()
+  implicit none  
+  type t
+     character(8) :: name='Empty'
+  end type t
+  type(t) :: a
+end subroutine
+
+! CHECK-LABEL: fir.global internal @_QE.di.t.name("Empty   ") : !fir.char<1,8>
+! CHECK-LABEL: fir.global internal @_QFchar_comp_initE.c.t : {{.*}} {
+  ! CHECK: fir.address_of(@_QE.di.t.name) : !fir.ref<!fir.char<1,8>>
+! CHECK: }

@@ -529,8 +529,7 @@ public:
         mlir::Value addrField = builder.create<fir::FieldIndexOp>(
             loc, fieldTy, addrFieldName, componentTy,
             /*typeParams=*/mlir::ValueRange{});
-        auto castAddr =
-            builder.createConvert(loc, addrFieldTy, fir::getBase(baseAddr));
+        auto castAddr = builder.createConvert(loc, addrFieldTy, baseAddr);
         auto val = builder.create<fir::InsertValueOp>(loc, componentTy, undef,
                                                       castAddr, addrField);
         res = builder.create<fir::InsertValueOp>(loc, recTy, res, val, field);
