@@ -849,6 +849,8 @@ bool GCOVProfiler::emitProfileNotes(
         continue;
       // TODO: Functions using scope-based EH are currently not supported.
       if (isUsingScopeBasedEH(F)) continue;
+      if (F.hasFnAttribute(llvm::Attribute::NoProfile))
+        continue;
 
       // Add the function line number to the lines of the entry block
       // to have a counter for the function definition.
