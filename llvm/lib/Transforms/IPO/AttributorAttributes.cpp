@@ -5016,7 +5016,8 @@ struct AAHeapToStackImpl : public AAHeapToStack {
       : AAHeapToStack(IRP, A) {}
 
   const std::string getAsStr() const override {
-    return "[H2S] Mallocs: " + std::to_string(MallocCalls.size());
+    return "[H2S] Mallocs Good/Bad: " + std::to_string(MallocCalls.size()) +
+           "/" + std::to_string(BadMallocCalls.size());
   }
 
   bool isAssumedHeapToStack(CallBase &CB) const override {
@@ -5125,10 +5126,29 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
   MustBeExecutedContextExplorer &Explorer =
       A.getInfoCache().getMustBeExecutedContextExplorer();
 
+  bool StackIsAccessibleByOtherThreads =
+      A.getInfoCache().stackIsAccessibleByOtherThreads();
+
   auto FreeCheck = [&](Instruction &I) {
+    // If the stack is not accessible by other threads, the "must-free" logic
+    // doesn't apply as the pointer could be shared and needs to be places in
+    // "shareable" memory.
+    if (!StackIsAccessibleByOtherThreads) {
+      auto &NoSyncAA =
+          A.getAAFor<AANoSync>(*this, getIRPosition(), DepClassTy::OPTIONAL);
+      if (!NoSyncAA.isAssumedNoSync()) {
+        LLVM_DEBUG(
+            dbgs() << "[H2S] found an escaping use, stack is not accessible by "
+                      "other threads and function is not nosync:\n");
+        return false;
+      }
+    }
     const auto &Frees = FreesForMalloc.lookup(&I);
-    if (Frees.size() != 1)
+    if (Frees.size() != 1) {
+      LLVM_DEBUG(dbgs() << "[H2S] did not find one free call but "
+                        << Frees.size() << "\n");
       return false;
+    }
     Instruction *UniqueFree = *Frees.begin();
     return Explorer.findInContextOf(UniqueFree, I.getNextNode());
   };
@@ -5169,12 +5189,12 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
 
         const auto &NoCaptureAA = A.getAAFor<AANoCapture>(
             *this, IRPosition::callsite_argument(*CB, ArgNo),
-            DepClassTy::REQUIRED);
+            DepClassTy::OPTIONAL);
 
         // If a callsite argument use is nofree, we are fine.
         const auto &ArgNoFreeAA = A.getAAFor<AANoFree>(
             *this, IRPosition::callsite_argument(*CB, ArgNo),
-            DepClassTy::REQUIRED);
+            DepClassTy::OPTIONAL);
 
         if (!NoCaptureAA.isAssumedNoCapture() ||
             !ArgNoFreeAA.isAssumedNoFree()) {
