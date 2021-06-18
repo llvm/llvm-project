@@ -12,7 +12,7 @@ test0:
 .Ltest0begin:
     # Test all types:
     .functype   test0 (i32, i64) -> (i32)
-    .eventtype  __cpp_exception i32
+    .tagtype  __cpp_exception i32
     .local      f32, f64, v128, v128
     # Explicit getlocal/setlocal:
     local.get   2
@@ -131,7 +131,7 @@ empty_fref_table:
 # CHECK-LABEL: test0:
 # CHECK-NEXT:  .Ltest0begin:
 # CHECK-NEXT:      .functype   test0 (i32, i64) -> (i32)
-# CHECK-NEXT:      .eventtype  __cpp_exception i32
+# CHECK-NEXT:      .tagtype  __cpp_exception i32
 # CHECK-NEXT:      .local      f32, f64
 # CHECK-NEXT:      local.get   2
 # CHECK-NEXT:      local.set   2

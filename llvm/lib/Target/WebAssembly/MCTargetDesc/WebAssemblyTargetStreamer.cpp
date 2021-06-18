@@ -91,9 +91,9 @@ void WebAssemblyTargetAsmStreamer::emitTableType(const MCSymbolWasm *Sym) {
   OS << '\n';
 }
 
-void WebAssemblyTargetAsmStreamer::emitEventType(const MCSymbolWasm *Sym) {
-  assert(Sym->isEvent());
-  OS << "\t.eventtype\t" << Sym->getName() << " ";
+void WebAssemblyTargetAsmStreamer::emitTagType(const MCSymbolWasm *Sym) {
+  assert(Sym->isTag());
+  OS << "\t.tagtype\t" << Sym->getName() << " ";
   OS << WebAssembly::typeListToString(Sym->getSignature()->Params);
   OS << "\n";
 }

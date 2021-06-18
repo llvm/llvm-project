@@ -209,7 +209,7 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
 void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
   for (auto &It : OutContext.getSymbols()) {
-    // Emit .globaltype, .eventtype, or .tabletype declarations.
+    // Emit .globaltype, .tagtype, or .tabletype declarations.
     auto Sym = cast<MCSymbolWasm>(It.getValue());
     if (Sym->getType() == wasm::WASM_SYMBOL_TYPE_GLOBAL) {
       // .globaltype already handled by emitGlobalVariable for defined
@@ -217,8 +217,8 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
       // written to the file.
       if (Sym->isUndefined())
         getTargetStreamer()->emitGlobalType(Sym);
-    } else if (Sym->getType() == wasm::WASM_SYMBOL_TYPE_EVENT)
-      getTargetStreamer()->emitEventType(Sym);
+    } else if (Sym->getType() == wasm::WASM_SYMBOL_TYPE_TAG)
+      getTargetStreamer()->emitTagType(Sym);
     else if (Sym->getType() == wasm::WASM_SYMBOL_TYPE_TABLE)
       getTargetStreamer()->emitTableType(Sym);
   }

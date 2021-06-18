@@ -27,7 +27,7 @@ class MCSymbolWasm : public MCSymbol {
   wasm::WasmSignature *Signature = nullptr;
   Optional<wasm::WasmGlobalType> GlobalType;
   Optional<wasm::WasmTableType> TableType;
-  Optional<wasm::WasmEventType> EventType;
+  Optional<wasm::WasmTagType> TagType;
 
   /// An expression describing how to calculate the size of a symbol. If a
   /// symbol has no size this field will be NULL.
@@ -47,7 +47,7 @@ public:
   bool isGlobal() const { return Type == wasm::WASM_SYMBOL_TYPE_GLOBAL; }
   bool isTable() const { return Type == wasm::WASM_SYMBOL_TYPE_TABLE; }
   bool isSection() const { return Type == wasm::WASM_SYMBOL_TYPE_SECTION; }
-  bool isEvent() const { return Type == wasm::WASM_SYMBOL_TYPE_EVENT; }
+  bool isTag() const { return Type == wasm::WASM_SYMBOL_TYPE_TAG; }
 
   Optional<wasm::WasmSymbolType> getType() const { return Type; }
 
@@ -143,11 +143,11 @@ public:
     setTableType({uint8_t(VT), Limits});
   }
 
-  const wasm::WasmEventType &getEventType() const {
-    assert(EventType.hasValue());
-    return EventType.getValue();
+  const wasm::WasmTagType &getTagType() const {
+    assert(TagType.hasValue());
+    return TagType.getValue();
   }
-  void setEventType(wasm::WasmEventType ET) { EventType = ET; }
+  void setTagType(wasm::WasmTagType ET) { TagType = ET; }
 };
 
 } // end namespace llvm

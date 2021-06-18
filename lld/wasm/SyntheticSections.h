@@ -113,9 +113,9 @@ public:
     assert(isSealed);
     return numImportedFunctions;
   }
-  uint32_t getNumImportedEvents() const {
+  uint32_t getNumImportedTags() const {
     assert(isSealed);
-    return numImportedEvents;
+    return numImportedTags;
   }
   uint32_t getNumImportedTables() const {
     assert(isSealed);
@@ -129,7 +129,7 @@ protected:
   bool isSealed = false;
   unsigned numImportedGlobals = 0;
   unsigned numImportedFunctions = 0;
-  unsigned numImportedEvents = 0;
+  unsigned numImportedTags = 0;
   unsigned numImportedTables = 0;
 };
 
@@ -169,24 +169,23 @@ public:
   uint64_t maxMemoryPages = 0;
 };
 
-// The event section contains a list of declared wasm events associated with the
-// module. Currently the only supported event kind is exceptions. A single event
-// entry represents a single event with an event tag. All C++ exceptions are
-// represented by a single event. An event entry in this section contains
-// information on what kind of event it is (e.g. exception) and the type of
-// values contained in a single event object. (In wasm, an event can contain
-// multiple values of primitive types. But for C++ exceptions, we just throw a
-// pointer which is an i32 value (for wasm32 architecture), so the signature of
-// C++ exception is (i32)->(void), because all event types are assumed to have
-// void return type to share WasmSignature with functions.)
-class EventSection : public SyntheticSection {
+// The tag section contains a list of declared wasm tags associated with the
+// module. Currently the only supported tag kind is exceptions. All C++
+// exceptions are represented by a single tag. A tag entry in this section
+// contains information on what kind of tag it is (e.g. exception) and the type
+// of values associated with the tag. (In Wasm, a tag can contain multiple
+// values of primitive types. But for C++ exceptions, we just throw a pointer
+// which is an i32 value (for wasm32 architecture), so the signature of C++
+// exception is (i32)->(void), because all exception tag types are assumed to
+// have void return type to share WasmSignature with functions.)
+class TagSection : public SyntheticSection {
 public:
-  EventSection() : SyntheticSection(llvm::wasm::WASM_SEC_EVENT) {}
+  TagSection() : SyntheticSection(llvm::wasm::WASM_SEC_TAG) {}
   void writeBody() override;
-  bool isNeeded() const override { return inputEvents.size() > 0; }
-  void addEvent(InputEvent *event);
+  bool isNeeded() const override { return inputTags.size() > 0; }
+  void addTag(InputTag *tag);
 
-  std::vector<InputEvent *> inputEvents;
+  std::vector<InputTag *> inputTags;
 };
 
 class GlobalSection : public SyntheticSection {
@@ -363,7 +362,7 @@ struct OutStruct {
   TableSection *tableSec;
   MemorySection *memorySec;
   GlobalSection *globalSec;
-  EventSection *eventSec;
+  TagSection *tagSec;
   ExportSection *exportSec;
   StartSection *startSec;
   ElemSection *elemSec;

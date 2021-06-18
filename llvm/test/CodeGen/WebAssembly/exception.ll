@@ -372,4 +372,4 @@ attributes #0 = { nounwind }
 attributes #1 = { noreturn }
 
 ; CHECK: __cpp_exception:
-; CHECK: .eventtype  __cpp_exception i32
+; CHECK: .tagtype  __cpp_exception i32

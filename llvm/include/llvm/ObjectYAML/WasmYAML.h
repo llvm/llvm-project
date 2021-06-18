@@ -77,7 +77,7 @@ struct Global {
   wasm::WasmInitExpr InitExpr;
 };
 
-struct Event {
+struct Tag {
   uint32_t Index;
   uint32_t Attribute;
   uint32_t SigIndex;
@@ -92,7 +92,7 @@ struct Import {
     Global GlobalImport;
     Table TableImport;
     Limits Memory;
-    Event EventImport;
+    Tag TagImport;
   };
 };
 
@@ -316,14 +316,14 @@ struct MemorySection : Section {
   std::vector<Limits> Memories;
 };
 
-struct EventSection : Section {
-  EventSection() : Section(wasm::WASM_SEC_EVENT) {}
+struct TagSection : Section {
+  TagSection() : Section(wasm::WASM_SEC_TAG) {}
 
   static bool classof(const Section *S) {
-    return S->Type == wasm::WASM_SEC_EVENT;
+    return S->Type == wasm::WASM_SEC_TAG;
   }
 
-  std::vector<Event> Events;
+  std::vector<Tag> Tags;
 };
 
 struct GlobalSection : Section {
@@ -425,7 +425,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::SymbolInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::InitFunction)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::ComdatEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::Comdat)
-LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::Event)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::Tag)
 
 namespace llvm {
 namespace yaml {
@@ -570,8 +570,8 @@ template <> struct ScalarEnumerationTraits<WasmYAML::RelocType> {
   static void enumeration(IO &IO, WasmYAML::RelocType &Kind);
 };
 
-template <> struct MappingTraits<WasmYAML::Event> {
-  static void mapping(IO &IO, WasmYAML::Event &Event);
+template <> struct MappingTraits<WasmYAML::Tag> {
+  static void mapping(IO &IO, WasmYAML::Tag &Tag);
 };
 
 } // end namespace yaml

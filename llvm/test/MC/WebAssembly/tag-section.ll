@@ -28,18 +28,18 @@ define i32 @test_throw1(i8* %p) {
 ; CHECK-NEXT:           - I32
 ; CHECK-NEXT:         ReturnTypes:      []
 
-; CHECK:        - Type:            EVENT
-; CHECK-NEXT:     Events:
+; CHECK:        - Type:            TAG
+; CHECK-NEXT:     Tags:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Attribute:       0
 ; CHECK-NEXT:         SigIndex:        1
 
 ; CHECK-NEXT:   - Type:            CODE
 ; CHECK-NEXT:     Relocations:
-; CHECK-NEXT:       - Type:            R_WASM_EVENT_INDEX_LEB
+; CHECK-NEXT:       - Type:            R_WASM_TAG_INDEX_LEB
 ; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:         Offset:          0x6
-; CHECK-NEXT:       - Type:            R_WASM_EVENT_INDEX_LEB
+; CHECK-NEXT:       - Type:            R_WASM_TAG_INDEX_LEB
 ; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:         Offset:          0x11
 
@@ -49,11 +49,11 @@ define i32 @test_throw1(i8* %p) {
 ; CHECK-NEXT:     SymbolTable:
 
 ; CHECK:            - Index:           1
-; CHECK-NEXT:         Kind:            EVENT
+; CHECK-NEXT:         Kind:            TAG
 ; CHECK-NEXT:         Name:            __cpp_exception
 ; CHECK-NEXT:         Flags:           [ BINDING_WEAK ]
-; CHECK-NEXT:         Event:           0
+; CHECK-NEXT:         Tag:             0
 
-; SEC:          Type: EVENT (0xD)
+; SEC:          Type: TAG (0xD)
 ; SEC-NEXT:     Size: 3
 ; SEC-NEXT:     Offset: 63

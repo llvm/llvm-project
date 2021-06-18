@@ -196,8 +196,8 @@ def P2Align : Operand<i32> {
   let PrintMethod = "printWebAssemblyP2AlignOperand";
 }
 
-let OperandType = "OPERAND_EVENT" in
-def event_op : Operand<i32>;
+let OperandType = "OPERAND_TAG" in
+def tag_op : Operand<i32>;
 
 } // OperandType = "OPERAND_P2ALIGN"
 
