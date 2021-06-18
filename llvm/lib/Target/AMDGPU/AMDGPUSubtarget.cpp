@@ -821,15 +821,17 @@ unsigned GCNSubtarget::getReservedNumSGPRs(const MachineFunction &MF) const {
 
 unsigned GCNSubtarget::getReservedNumSGPRs(const Function &F) const {
   // The logic to detect if the function has
-  // flat scratch init is same as how MachineFunctionInfo derives.
+  // flat scratch init is slightly different than how
+  // SIMachineFunctionInfo constructor derives.
+  // We don't use amdgpu-calls, amdgpu-stack-objects
+  // attributes and isAmdHsaOrMesa here as it doesn't really matter.
+  // TODO: Outline this derivation logic and have just
+  // one common function in the backend to avoid duplication.
+  bool isEntry = AMDGPU::isEntryFunctionCC(F.getCallingConv());
   bool FunctionHasFlatScratchInit = false;
-  bool HasCalls = F.hasFnAttribute("amdgpu-calls");
-  bool HasStackObjects = F.hasFnAttribute("amdgpu-stack-objects");
-  if (hasFlatAddressSpace() && AMDGPU::isEntryFunctionCC(F.getCallingConv()) &&
-      (isAmdHsaOrMesa(F) || enableFlatScratch()) &&
-      !flatScratchIsArchitected()) {
-    if (HasCalls || HasStackObjects || enableFlatScratch())
-      FunctionHasFlatScratchInit = true;
+  if (hasFlatAddressSpace() && isEntry && !flatScratchIsArchitected() &&
+      enableFlatScratch()) {
+    FunctionHasFlatScratchInit = true;
   }
   return getBaseReservedNumSGPRs(FunctionHasFlatScratchInit);
 }
