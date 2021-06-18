@@ -14,7 +14,7 @@
 
 TEST(ScudoStringsTest, Constructor) {
   scudo::ScopedString Str;
-  EXPECT_EQ(0, Str.length());
+  EXPECT_EQ(0ul, Str.length());
   EXPECT_EQ('\0', *Str.data());
 }
 
@@ -38,7 +38,7 @@ TEST(ScudoStringsTest, Clear) {
   scudo::ScopedString Str;
   Str.append("123");
   Str.clear();
-  EXPECT_EQ(0, Str.length());
+  EXPECT_EQ(0ul, Str.length());
   EXPECT_EQ('\0', *Str.data());
 }
 
@@ -47,7 +47,7 @@ TEST(ScudoStringsTest, ClearLarge) {
   for (int i = 0; i < 10000; ++i)
     Str.append("123");
   Str.clear();
-  EXPECT_EQ(0, Str.length());
+  EXPECT_EQ(0ul, Str.length());
   EXPECT_EQ('\0', *Str.data());
 }
 
