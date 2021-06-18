@@ -3882,6 +3882,7 @@ private:
 
 struct AACallGraphNode {
   AACallGraphNode(Attributor &A) : A(A) {}
+  virtual ~AACallGraphNode() {}
 
   virtual AACallEdgeIterator optimisticEdgesBegin() const = 0;
   virtual AACallEdgeIterator optimisticEdgesEnd() const = 0;
@@ -3944,6 +3945,7 @@ struct AACallEdges : public StateWrapper<BooleanState, AbstractAttribute>,
 // Synthetic root node for the Attributor's internal call graph.
 struct AttributorCallGraph : public AACallGraphNode {
   AttributorCallGraph(Attributor &A) : AACallGraphNode(A) {}
+  virtual ~AttributorCallGraph() {}
 
   AACallEdgeIterator optimisticEdgesBegin() const override {
     return AACallEdgeIterator(A, A.Functions.begin());
