@@ -2143,9 +2143,19 @@ static Instruction *foldFNegIntoConstant(Instruction &I) {
   if (match(FNegOp, m_FDiv(m_Value(X), m_Constant(C))))
     return BinaryOperator::CreateFDivFMF(X, ConstantExpr::getFNeg(C), &I);
   // -(C / X) --> (-C) / X
-  if (match(FNegOp, m_FDiv(m_Constant(C), m_Value(X))))
-    return BinaryOperator::CreateFDivFMF(ConstantExpr::getFNeg(C), X, &I);
+  if (match(FNegOp, m_FDiv(m_Constant(C), m_Value(X)))) {
+    Instruction *FDiv =
+        BinaryOperator::CreateFDivFMF(ConstantExpr::getFNeg(C), X, &I);
 
+    // Intersect 'nsz' and 'ninf' because those special value exceptions may not
+    // apply to the fdiv. Everything else propagates from the fneg.
+    // TODO: We could propagate nsz/ninf from fdiv alone?
+    FastMathFlags FMF = I.getFastMathFlags();
+    FastMathFlags OpFMF = FNegOp->getFastMathFlags();
+    FDiv->setHasNoSignedZeros(FMF.noSignedZeros() & OpFMF.noSignedZeros());
+    FDiv->setHasNoInfs(FMF.noInfs() & OpFMF.noInfs());
+    return FDiv;
+  }
   // With NSZ [ counter-example with -0.0: -(-0.0 + 0.0) != 0.0 + -0.0 ]:
   // -(X + C) --> -X + -C --> -C - X
   if (I.hasNoSignedZeros() && match(FNegOp, m_FAdd(m_Value(X), m_Constant(C))))
