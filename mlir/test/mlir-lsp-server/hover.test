@@ -128,6 +128,30 @@
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }
 // -----
-{"jsonrpc":"2.0","id":6,"method":"shutdown"}
+// Hover on a symbol reference.
+{"jsonrpc":"2.0","id":6,"method":"textDocument/hover","params":{
+  "textDocument":{"uri":"test:///foo.mlir"},
+  "position":{"line":0,"character":8}
+}}
+//      CHECK:  "id": 6,
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": {
+// CHECK-NEXT:    "contents": {
+// CHECK-NEXT:      "kind": "markdown",
+// CHECK-NEXT:      "value": "\"func\" : public @foo\n\nGeneric Form:\n\n```mlir\n\"func\"() ( {\n}) {sym_name = \"foo\", type = (i1) -> ()} : () -> ()\n```\n"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "range": {
+// CHECK-NEXT:      "end": {
+// CHECK-NEXT:        "character": 9,
+// CHECK-NEXT:        "line": 0
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "start": {
+// CHECK-NEXT:        "character": 5,
+// CHECK-NEXT:        "line": 0
+// CHECK-NEXT:      }
+// CHECK-NEXT:    }
+// CHECK-NEXT:  }
+// -----
+{"jsonrpc":"2.0","id":7,"method":"shutdown"}
 // -----
 {"jsonrpc":"2.0","method":"exit"}
