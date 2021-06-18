@@ -132,7 +132,6 @@ class Configuration(object):
         self.configure_link_flags()
         self.configure_env()
         self.configure_coverage()
-        self.configure_modules()
         self.configure_substitutions()
         self.configure_features()
 
@@ -469,28 +468,6 @@ class Configuration(object):
         if self.generate_coverage:
             self.cxx.flags += ['-g', '--coverage']
             self.cxx.compile_flags += ['-O0']
-
-    def configure_modules(self):
-        modules_flags = ['-fmodules', '-Xclang', '-fmodules-local-submodule-visibility']
-        supports_modules = self.cxx.hasCompileFlag(modules_flags)
-        enable_modules = self.get_lit_bool('enable_modules', default=False,
-                                                             env_var='LIBCXX_ENABLE_MODULES')
-        if enable_modules and not supports_modules:
-            self.lit_config.fatal(
-                '-fmodules is enabled but not supported by the compiler')
-        if not supports_modules:
-            return
-        module_cache = os.path.join(self.config.test_exec_root,
-                                   'modules.cache')
-        module_cache = os.path.realpath(module_cache)
-        if os.path.isdir(module_cache):
-            shutil.rmtree(module_cache)
-        os.makedirs(module_cache)
-        self.cxx.modules_flags += modules_flags + \
-            ['-fmodules-cache-path=' + module_cache]
-        if enable_modules:
-            self.config.available_features.add('-fmodules')
-            self.cxx.useModules()
 
     def quote(self, s):
         if platform.system() == 'Windows':
