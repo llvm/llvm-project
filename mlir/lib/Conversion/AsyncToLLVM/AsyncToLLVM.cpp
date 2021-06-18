@@ -1059,7 +1059,8 @@ void mlir::populateAsyncStructuralTypeConversionsAndLegality(
     ConversionTarget &target) {
   typeConverter.addConversion([&](TokenType type) { return type; });
   typeConverter.addConversion([&](ValueType type) {
-    return ValueType::get(typeConverter.convertType(type.getValueType()));
+    Type converted = typeConverter.convertType(type.getValueType());
+    return converted ? ValueType::get(converted) : converted;
   });
 
   patterns.add<ConvertExecuteOpTypes, ConvertAwaitOpTypes, ConvertYieldOpTypes>(
