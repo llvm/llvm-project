@@ -812,16 +812,9 @@ def Builtin_StringAttr : Builtin_Attr<"String"> {
   let parameters = (ins StringRefParameter<"">:$value,
                         AttributeSelfTypeParameter<"">:$type);
   let builders = [
-    AttrBuilderWithInferredContext<(ins "StringRef":$bytes,
-                                        "Type":$type), [{
-      return $_get(type.getContext(), bytes, type);
-    }]>,
-    AttrBuilder<(ins "StringRef":$bytes), [{
-      if (bytes.empty())
-        return get($_ctxt);
-      return $_get($_ctxt, bytes, NoneType::get($_ctxt));
-    }]>,
-
+    AttrBuilderWithInferredContext<(ins "const Twine &":$bytes, "Type":$type)>,
+    /// Build an string attr with NoneType.
+    AttrBuilder<(ins "const Twine &":$bytes)>,
     /// Build an empty string attr with NoneType.
     AttrBuilder<(ins)>
   ];

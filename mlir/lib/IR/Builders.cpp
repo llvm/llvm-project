@@ -19,7 +19,7 @@
 
 using namespace mlir;
 
-Identifier Builder::getIdentifier(StringRef str) {
+Identifier Builder::getIdentifier(const Twine &str) {
   return Identifier::get(str, context);
 }
 
@@ -200,7 +200,7 @@ FloatAttr Builder::getFloatAttr(Type type, const APFloat &value) {
   return FloatAttr::get(type, value);
 }
 
-StringAttr Builder::getStringAttr(StringRef bytes) {
+StringAttr Builder::getStringAttr(const Twine &bytes) {
   return StringAttr::get(context, bytes);
 }
 
