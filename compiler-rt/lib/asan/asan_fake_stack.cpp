@@ -187,7 +187,7 @@ void SetTLSFakeStack(FakeStack *fs) { }
 static FakeStack *GetFakeStack() {
   AsanThread *t = GetCurrentThread();
   if (!t) return nullptr;
-  return t->fake_stack();
+  return t->get_or_create_fake_stack();
 }
 
 static FakeStack *GetFakeStackFast() {
