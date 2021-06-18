@@ -174,6 +174,25 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
   return Expr<T>{std::move(funcRef)};
 }
 
+// for IALL, IANY, & IPARITY
+template <typename T>
+static Expr<T> FoldBitReduction(FoldingContext &context, FunctionRef<T> &&ref,
+    Scalar<T> (Scalar<T>::*operation)(const Scalar<T> &) const,
+    Scalar<T> identity) {
+  static_assert(T::category == TypeCategory::Integer);
+  using Element = Scalar<T>;
+  std::optional<ConstantSubscript> dim;
+  if (std::optional<Constant<T>> array{
+          ProcessReductionArgs<T>(context, ref.arguments(), dim, identity,
+              /*ARRAY=*/0, /*DIM=*/1, /*MASK=*/2)}) {
+    auto accumulator{[&](Element &element, const ConstantSubscripts &at) {
+      element = (element.*operation)(array->At(at));
+    }};
+    return Expr<T>{DoReduction(*array, dim, identity, accumulator)};
+  }
+  return Expr<T>{std::move(ref)};
+}
+
 template <int KIND>
 Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     FoldingContext &context,
@@ -311,6 +330,12 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     }
     return FoldElementalIntrinsic<T, T, T>(
         context, std::move(funcRef), ScalarFunc<T, T, T>(fptr));
+  } else if (name == "iall") {
+    return FoldBitReduction(
+        context, std::move(funcRef), &Scalar<T>::IAND, Scalar<T>{}.NOT());
+  } else if (name == "iany") {
+    return FoldBitReduction(
+        context, std::move(funcRef), &Scalar<T>::IOR, Scalar<T>{});
   } else if (name == "ibclr" || name == "ibset" || name == "ishft" ||
       name == "shifta" || name == "shiftr" || name == "shiftl") {
     // Second argument can be of any kind. However, it must be smaller or
@@ -393,6 +418,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     } else {
       DIE("kind() result not integral");
     }
+  } else if (name == "iparity") {
+    return FoldBitReduction(
+        context, std::move(funcRef), &Scalar<T>::IEOR, Scalar<T>{});
   } else if (name == "lbound") {
     return LBOUND(context, std::move(funcRef));
   } else if (name == "leadz" || name == "trailz" || name == "poppar" ||
@@ -540,6 +568,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           },
           cx->u)};
     }
+  } else if (name == "product") {
+    return FoldProduct<T>(context, std::move(funcRef), Scalar<T>{1});
   } else if (name == "radix") {
     return Expr<T>{2};
   } else if (name == "range") {
@@ -654,14 +684,15 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
             Fold(context, Expr<T>{8} * ConvertToType<T>(std::move(*bytes)))};
       }
     }
+  } else if (name == "sum") {
+    return FoldSum<T>(context, std::move(funcRef));
   } else if (name == "ubound") {
     return UBOUND(context, std::move(funcRef));
   }
   // TODO:
-  // cshift, dot_product, eoshift,
-  // findloc, iall, iany, iparity, ibits, image_status, ishftc,
-  // matmul, maxloc, minloc, pack, product, reduce,
-  // sign, spread, sum, transfer, transpose, unpack
+  // cshift, dot_product, eoshift, findloc, ibits, image_status, ishftc,
+  // matmul, maxloc, minloc, not, pack, sign, spread, transfer, transpose,
+  // unpack
   return Expr<T>{std::move(funcRef)};
 }
 
