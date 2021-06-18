@@ -1,0 +1,96 @@
+# REQUIRES: powerpc-registered-target
+
+# RUN: llvm-objdump -D %p/Inputs/xcoff-section-headers64.o | \
+# RUN:   FileCheck --check-prefixes=COMMON,PLAIN %s
+
+# RUN: llvm-objdump -D --symbol-description %p/Inputs/xcoff-section-headers64.o | \
+# RUN:   FileCheck --check-prefixes=COMMON,DESC %s
+
+# RUN: not --crash llvm-objdump -D -r --symbol-description %p/Inputs/xcoff-section-headers64.o 2>&1 | \
+# RUN:   FileCheck --check-prefix=ERROR %s
+# ERROR: 64-bit support not implemented yet
+
+## xcoff-section-headers64.o Compiled with IBM XL C/C++ for AIX, V16.1.0
+## compiler command: xlc -q64 -qtls -o xcoff-section-headers64.o -c test.c
+
+## test.c:
+## int a;
+## int b = 12345;
+## __thread int c;
+## __thread double d = 3.14159;
+##
+## int func(void)  {
+##   return a;
+## }
+
+COMMON:       Inputs/xcoff-section-headers64.o:	file format aix5coff64-rs6000
+COMMON:       Disassembly of section .text:
+COMMON-EMPTY:
+PLAIN:        0000000000000000 <.func>:
+DESC:         0000000000000000 (idx: 6) .func:
+COMMON-NEXT:         0: e8 62 00 08   ld 3, 8(2)
+COMMON-NEXT:         4: e8 63 00 02   lwa 3, 0(3)
+COMMON-NEXT:         8: 4e 80 00 20   blr
+COMMON-NEXT:         c: 00 00 00 00   <unknown>
+COMMON-NEXT:        10: 00 00 20 40   <unknown>
+COMMON-NEXT:        14: 00 00 00 01   <unknown>
+COMMON-NEXT:        18: 00 00 00 0c   <unknown>
+COMMON-NEXT:        1c: 00 04 66 75   <unknown>
+COMMON-NEXT:        20: 6e 63 00 00   xoris 3, 19, 0
+COMMON-NEXT:                  ...
+COMMON-EMPTY:
+COMMON-NEXT:  Disassembly of section .data:
+COMMON-EMPTY:
+PLAIN:        0000000000000080 <func>:
+DESC:         0000000000000080 (idx: 12) func[TC]:
+COMMON-NEXT:        80: 00 00 00 00   <unknown>
+COMMON-NEXT:        84: 00 00 00 a8   <unknown>
+COMMON-EMPTY:
+PLAIN:        0000000000000088 <a>:
+DESC:         0000000000000088 (idx: 16) a[TC]:
+COMMON-NEXT:        88: 00 00 00 00   <unknown>
+COMMON-NEXT:        8c: 00 00 00 c8   <unknown>
+COMMON-EMPTY:
+PLAIN:        0000000000000090 <b>:
+DESC:         0000000000000090 (idx: 20) b[TC]:
+COMMON-NEXT:        90: 00 00 00 00   <unknown>
+COMMON-NEXT:        94: 00 00 00 c0   <unknown>
+COMMON-EMPTY:
+PLAIN:        0000000000000098 <c>:
+DESC:         0000000000000098 (idx: 24) c[TC]:
+COMMON-NEXT:        98: 00 00 00 00   <unknown>
+COMMON-NEXT:        9c: 00 00 00 08   <unknown>
+COMMON-EMPTY:
+PLAIN:        00000000000000a0 <d>:
+DESC:         00000000000000a0 (idx: 28) d[TC]:
+COMMON-NEXT:                  ...
+COMMON-EMPTY:
+PLAIN:        00000000000000a8 <func>:
+DESC:         00000000000000a8 (idx: 10) func[DS]:
+COMMON-NEXT:                  ...
+COMMON-NEXT:        b4: 00 00 00 80   <unknown>
+COMMON-NEXT:                  ...
+COMMON-EMPTY:
+PLAIN:        00000000000000c0 <b>:
+DESC:         00000000000000c0 (idx: 18) b[RW]:
+COMMON-NEXT:        c0: 00 00 30 39   <unknown>
+COMMON-NEXT:        c4: 00 00 00 00   <unknown>
+COMMON-EMPTY:
+COMMON-NEXT:  Disassembly of section .bss:
+COMMON-EMPTY:
+PLAIN:        00000000000000c8 <a>:
+DESC:         00000000000000c8 (idx: 14) a[RW]:
+COMMON-NEXT:  ...
+COMMON-EMPTY:
+COMMON-NEXT:  Disassembly of section .tdata:
+COMMON-EMPTY:
+PLAIN:        0000000000000000 <d>:
+DESC:         0000000000000000 (idx: 26) d[TL]:
+COMMON-NEXT:         0: 40 09 21 f9   bdnzfl  9, 0x21f8
+COMMON-NEXT:         4: f0 1b 86 6e   <unknown>
+COMMON-EMPTY:
+COMMON-NEXT:  Disassembly of section .tbss:
+COMMON-EMPTY:
+PLAIN:        0000000000000008 <c>:
+DESC:         0000000000000008 (idx: 22) c[UL]:
+COMMON-NEXT:  ...
