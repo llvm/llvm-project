@@ -355,8 +355,6 @@ static hsa_status_t init_compute_and_memory() {
   }
 
   size_t num_procs = cpu_procs.size() + gpu_procs.size();
-  atmi_device_t *all_devices = reinterpret_cast<atmi_device_t *>(
-      malloc(num_procs * sizeof(atmi_device_t)));
   int num_iGPUs = 0;
   int num_dGPUs = 0;
   for (uint32_t i = 0; i < gpu_procs.size(); i++) {
@@ -378,8 +376,6 @@ static hsa_status_t init_compute_and_memory() {
   int gpus_end = cpu_procs.size() + gpu_procs.size();
   int proc_index = 0;
   for (int i = cpus_begin; i < cpus_end; i++) {
-    all_devices[i].type = cpu_procs[proc_index].type();
-
     std::vector<ATLMemory> memories = cpu_procs[proc_index].memories();
     int fine_memories_size = 0;
     int coarse_memories_size = 0;
@@ -400,8 +396,6 @@ static hsa_status_t init_compute_and_memory() {
   }
   proc_index = 0;
   for (int i = gpus_begin; i < gpus_end; i++) {
-    all_devices[i].type = gpu_procs[proc_index].type();
-
     std::vector<ATLMemory> memories = gpu_procs[proc_index].memories();
     int fine_memories_size = 0;
     int coarse_memories_size = 0;
