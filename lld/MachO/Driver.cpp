@@ -1073,9 +1073,11 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   config->deadStripDylibs = args.hasArg(OPT_dead_strip_dylibs);
   config->demangle = args.hasArg(OPT_demangle);
   config->implicitDylibs = !args.hasArg(OPT_no_implicit_dylibs);
-  config->emitFunctionStarts = !args.hasArg(OPT_no_function_starts);
+  config->emitFunctionStarts =
+      args.hasFlag(OPT_function_starts, OPT_no_function_starts, true);
   config->emitBitcodeBundle = args.hasArg(OPT_bitcode_bundle);
-  config->emitDataInCodeInfo = !args.hasArg(OPT_no_data_in_code_info);
+  config->emitDataInCodeInfo =
+      args.hasFlag(OPT_data_in_code_info, OPT_no_data_in_code_info, true);
   config->dedupLiterals = args.hasArg(OPT_deduplicate_literals);
 
   // FIXME: Add a commandline flag for this too.
