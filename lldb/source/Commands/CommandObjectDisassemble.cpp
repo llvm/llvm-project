@@ -414,7 +414,6 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
   if (!m_options.arch.IsValid()) {
     result.AppendError(
         "use the --arch option or set the target architecture to disassemble");
-    result.SetStatus(eReturnStatusFailed);
     return false;
   }
 
@@ -434,7 +433,6 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
       result.AppendErrorWithFormat(
           "Unable to find Disassembler plug-in for the '%s' architecture.\n",
           m_options.arch.GetArchitectureName());
-    result.SetStatus(eReturnStatusFailed);
     return false;
   } else if (flavor_string != nullptr && !disassembler->FlavorValidForArchSpec(
                                              m_options.arch, flavor_string))
@@ -450,7 +448,6 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
         GetCommandInterpreter().GetDebugger().GetTerminalWidth();
     GetOptions()->GenerateOptionUsage(result.GetErrorStream(), this,
                                       terminal_width);
-    result.SetStatus(eReturnStatusFailed);
     return false;
   }
 
@@ -475,7 +472,6 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
       GetRangesForSelectedMode(result);
   if (!ranges) {
     result.AppendError(toString(ranges.takeError()));
-    result.SetStatus(eReturnStatusFailed);
     return result.Succeeded();
   }
 
@@ -505,7 +501,6 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
             "Failed to disassemble memory at 0x%8.8" PRIx64 ".\n",
             cur_range.GetBaseAddress().GetLoadAddress(target));
       }
-      result.SetStatus(eReturnStatusFailed);
     }
     if (print_sc_header)
       result.GetOutputStream() << "\n";

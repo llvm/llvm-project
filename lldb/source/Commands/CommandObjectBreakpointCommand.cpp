@@ -371,7 +371,6 @@ protected:
 
     if (num_breakpoints == 0) {
       result.AppendError("No breakpoints exist to have commands added");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -545,14 +544,12 @@ protected:
 
     if (num_breakpoints == 0) {
       result.AppendError("No breakpoints exist to have commands deleted");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
     if (command.empty()) {
       result.AppendError(
           "No breakpoint specified from which to delete the commands");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -577,7 +574,6 @@ protected:
               result.AppendErrorWithFormat("Invalid breakpoint ID: %u.%u.\n",
                                            cur_bp_id.GetBreakpointID(),
                                            cur_bp_id.GetLocationID());
-              result.SetStatus(eReturnStatusFailed);
               return false;
             }
           } else {
@@ -628,14 +624,12 @@ protected:
 
     if (num_breakpoints == 0) {
       result.AppendError("No breakpoints exist for which to list commands");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
     if (command.empty()) {
       result.AppendError(
           "No breakpoint specified for which to list the commands");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -660,7 +654,6 @@ protected:
                 result.AppendErrorWithFormat("Invalid breakpoint ID: %u.%u.\n",
                                              cur_bp_id.GetBreakpointID(),
                                              cur_bp_id.GetLocationID());
-                result.SetStatus(eReturnStatusFailed);
                 return false;
               }
             }
@@ -695,7 +688,6 @@ protected:
         } else {
           result.AppendErrorWithFormat("Invalid breakpoint ID: %u.\n",
                                        cur_bp_id.GetBreakpointID());
-          result.SetStatus(eReturnStatusFailed);
         }
       }
     }
