@@ -135,7 +135,7 @@ DEFAULT_PARAMETERS = [
             ])),
 
   # Parameters to enable or disable parts of the test suite
-  Parameter(name='enable_experimental', choices=[True, False], type=bool, default=False,
+  Parameter(name='enable_experimental', choices=[True, False], type=bool, default=True,
             help="Whether to enable tests for experimental C++ libraries (typically Library Fundamentals TSes).",
             actions=lambda experimental: [] if not experimental else [
               AddFeature('c++experimental'),
