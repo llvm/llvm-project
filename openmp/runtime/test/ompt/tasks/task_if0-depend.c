@@ -63,8 +63,8 @@ int main() {
 // CHECK-SAME: parent_task_frame.reenter={{0x[0-f]+}},
 // CHECK-SAME: new_task_id=[[SECOND_TASK:[0-f]+]],
 // CHECK-SAME: codeptr_ra=[[RETURN_ADDRESS:0x[0-f]+]]{{[0-f][0-f]}},
-// CHECK-SAME: task_type=ompt_task_explicit|ompt_task_undeferred|
-// CHECK-SAME: ompt_task_mergeable=1207959556, has_dependences=yes
+// CHECK-SAME: task_type=ompt_task_taskwait|ompt_task_undeferred|
+// CHECK-SAME: ompt_task_mergeable=1207959568, has_dependences=yes
 
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_dependences:
 // CHECK-SAME: task_id=[[SECOND_TASK]], deps=[([[ADDRX]],
