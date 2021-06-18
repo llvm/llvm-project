@@ -730,7 +730,7 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     if (!IsNSA) {
       if (AddrSize > 8)
         AddrSize = 16;
-      else if (AddrSize > 4)
+      else if (AddrSize > 5)
         AddrSize = 8;
     } else {
       if (AddrSize > Info->VAddrDwords) {

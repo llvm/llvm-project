@@ -21,7 +21,7 @@ define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, 
 ; GFX9-NEXT: v_mov_b32_e32 v32, v12
 ; GFX9: ;;#ASMSTART
 ; GFX9-NEXT: ;;#ASMEND
-; GFX9: image_gather4_c_b_cl v[40:43], v[32:39], s[4:11], s[4:7] dmask:0x1
+; GFX9: image_gather4_c_b_cl v[40:43], v[32:36], s[4:11], s[4:7] dmask:0x1
 ; GFX9-NEXT: s_getpc_b64 s[4:5]
 ; GFX9-NEXT: s_add_u32 s4, s4, extern_func@gotpcrel32@lo+4
 ; GFX9-NEXT: s_addc_u32 s5, s5, extern_func@gotpcrel32@hi+12
@@ -53,7 +53,7 @@ define <4 x float> @non_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp, 
 ; GFX10: ;;#ASMSTART
 ; GFX10-NEXT: ;;#ASMEND
 
-; GFX10: image_gather4_c_b_cl v[40:43], v[32:39], s[4:11], s[4:7] dmask:0x1 dim:SQ_RSRC_IMG_2D
+; GFX10: image_gather4_c_b_cl v[40:43], v[32:36], s[4:11], s[4:7] dmask:0x1 dim:SQ_RSRC_IMG_2D
 ; GFX10-NEXT: s_waitcnt_depctr 0xffe3
 ; GFX10-NEXT: s_getpc_b64 s[4:5]
 ; GFX10-NEXT: s_add_u32 s4, s4, extern_func@gotpcrel32@lo+4
@@ -86,7 +86,7 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; The upper 3 sub-registers are unused.
 
 ; GFX9-LABEL: call_preserved_vgpr_tuple8:
-; GFX9: buffer_store_dword v56, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
+; GFX9: buffer_store_dword v45, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
 ; GFX9: buffer_store_dword v40, off, s[0:3], s33 offset:16 ; 4-byte Folded Spill
 ; GFX9-NEXT: buffer_store_dword v41, off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
 ; GFX9-NEXT: buffer_store_dword v42, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
@@ -99,7 +99,7 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX9-NEXT: v_mov_b32_e32 v41, v13
 ; GFX9-NEXT: v_mov_b32_e32 v40, v12
 
-; GFX9: image_gather4_c_b_cl v[0:3], v[40:47], s[36:43], s[4:7] dmask:0x1
+; GFX9: image_gather4_c_b_cl v[0:3], v[40:44], s[36:43], s[4:7] dmask:0x1
 ; GFX9-NEXT: s_getpc_b64 s[4:5]
 ; GFX9-NEXT: s_add_u32 s4, s4, extern_func@gotpcrel32@lo+4
 ; GFX9-NEXT: s_addc_u32 s5, s5, extern_func@gotpcrel32@hi+12
@@ -108,7 +108,7 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX9-NEXT: global_store_dwordx4 v[0:1], v[0:3], off
 ; GFX9-NEXT: s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT: s_swappc_b64 s[30:31], s[4:5]
-; GFX9-NEXT: image_gather4_c_b_cl v[0:3], v[40:47], s[36:43], s[4:7] dmask:0x1
+; GFX9-NEXT: image_gather4_c_b_cl v[0:3], v[40:44], s[36:43], s[4:7] dmask:0x1
 
 ; GFX9: buffer_load_dword v44, off, s[0:3], s33 ; 4-byte Folded Reload
 ; GFX9-NEXT: buffer_load_dword v43, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
@@ -116,7 +116,7 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX9-NEXT: buffer_load_dword v41, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
 ; GFX9-NEXT: buffer_load_dword v40, off, s[0:3], s33 offset:16 ; 4-byte Folded Reload
 
-; GFX9: buffer_load_dword v56, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
+; GFX9: buffer_load_dword v45, off, s[0:3], s32 offset:20 ; 4-byte Folded Reload
 ; GFX9: s_setpc_b64 s[4:5]
 ;
 ; GFX10-LABEL: call_preserved_vgpr_tuple8:
@@ -128,7 +128,7 @@ define <4 x float> @call_preserved_vgpr_tuple8(<8 x i32> %rsrc, <4 x i32> %samp,
 ; GFX10-NEXT: buffer_store_dword v44, off, s[0:3], s33 ; 4-byte Folded Spill
 
 
-; GFX10:      image_gather4_c_b_cl v[0:3], v[12:19], s[36:43], s[4:7] dmask:0x1 dim:SQ_RSRC_IMG_2D
+; GFX10:      image_gather4_c_b_cl v[0:3], v[12:16], s[36:43], s[4:7] dmask:0x1 dim:SQ_RSRC_IMG_2D
 ; GFX10-NEXT: s_waitcnt_depctr 0xffe3
 ; GFX10-NEXT: s_getpc_b64 s[4:5]
 ; GFX10-NEXT: s_add_u32 s4, s4, extern_func@gotpcrel32@lo+4
