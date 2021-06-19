@@ -137,6 +137,7 @@ def MIReadVGPR : SchedReadVariant<[
 // The latency values are 1 / (operations / cycle) / 4.
 multiclass SICommonWriteRes {
 
+  let RetireOOO = 1 in { // llvm-mca specific flag
   def : HWWriteRes<WriteBranch,  [HWBranch], 8>;
   def : HWWriteRes<WriteExport,  [HWExport], 4>;
   def : HWWriteRes<WriteLDS,     [HWLGKM],   5>; // Can be between 2 and 64
@@ -159,6 +160,7 @@ multiclass SICommonWriteRes {
   def : HWWriteRes<Write8PassMAI,  [HWXDL], 8>;
   let ResourceCycles = [16] in
   def : HWWriteRes<Write16PassMAI, [HWXDL], 16>;
+  } // End RetireOOO = 1
 
   def : ReadAdvance<MIVGPRRead, -2>;
 
@@ -182,6 +184,7 @@ let SchedModel = SIFullSpeedModel in {
 
 defm : SICommonWriteRes;
 
+let RetireOOO = 1 in { // llvm-mca specific flag
 def : HWVALUWriteRes<Write64Bit,       2>;
 def : HWVALUWriteRes<WriteIntMul,      4>;
 def : HWVALUWriteRes<WriteFloatFMA,    1>;
@@ -189,6 +192,7 @@ def : HWVALUWriteRes<WriteDouble,      4>;
 def : HWVALUWriteRes<WriteDoubleAdd,   2>;
 def : HWVALUWriteRes<WriteDoubleCvt,   4>;
 def : HWVALUWriteRes<WriteTrans64,     4>;
+} // End RetireOOO = 1
 
 def : InstRW<[WriteCopy], (instrs COPY)>;
 
@@ -198,6 +202,7 @@ let SchedModel = SIQuarterSpeedModel in {
 
 defm : SICommonWriteRes;
 
+let RetireOOO = 1 in { // llvm-mca specific flag
 def : HWVALUWriteRes<Write64Bit,       2>;
 def : HWVALUWriteRes<WriteIntMul,      4>;
 def : HWVALUWriteRes<WriteFloatFMA,    16>;
@@ -205,6 +210,7 @@ def : HWVALUWriteRes<WriteDouble,      16>;
 def : HWVALUWriteRes<WriteDoubleAdd,    8>;
 def : HWVALUWriteRes<WriteDoubleCvt,    4>;
 def : HWVALUWriteRes<WriteTrans64,     16>;
+} // End RetireOOO = 1
 
 def : InstRW<[WriteCopy], (instrs COPY)>;
 def : InstRW<[Write64Bit, MIReadVGPR], (instregex "^V_ACCVGPR_WRITE_B32_e64$")>;
@@ -218,6 +224,7 @@ let SchedModel = SIDPFullSpeedModel in {
 
 defm : SICommonWriteRes;
 
+let RetireOOO = 1 in { // llvm-mca specific flag
 def : HWVALUWriteRes<WriteFloatFMA,    1>;
 def : HWVALUWriteRes<WriteDouble,      1>;
 def : HWVALUWriteRes<WriteDoubleAdd,   1>;
@@ -225,6 +232,7 @@ def : HWVALUWriteRes<WriteDoubleCvt,   1>;
 def : HWVALUWriteRes<WriteTrans64,     4>;
 def : HWVALUWriteRes<WriteIntMul,      1>;
 def : HWVALUWriteRes<Write64Bit,       1>;
+} // End RetireOOO = 1
 
 def : InstRW<[WriteCopy], (instrs COPY)>;
 def : InstRW<[Write64Bit], (instregex "^V_ACCVGPR_WRITE_B32_e64$")>;
@@ -240,6 +248,7 @@ let SchedModel = GFX10SpeedModel in {
 
 // The latency values are 1 / (operations / cycle).
 // Add 1 stall cycle for VGPR read.
+let RetireOOO = 1 in { // llvm-mca specific flag
 def : HWWriteRes<Write32Bit,         [HWVALU, HWRC],   5>;
 def : HWWriteRes<WriteFloatCvt,      [HWVALU, HWRC],   5>;
 def : HWWriteRes<Write64Bit,         [HWVALU, HWRC],   6>;
@@ -259,6 +268,7 @@ def : HWWriteRes<WriteSALU,          [HWSALU,   HWRC], 2>;
 def : HWWriteRes<WriteSMEM,          [HWLGKM,   HWRC], 20>;
 def : HWWriteRes<WriteVMEM,          [HWVMEM,   HWRC], 320>;
 def : HWWriteRes<WriteBarrier,       [HWBranch],       2000>;
+} // End RetireOOO = 1
 
 def : InstRW<[WriteCopy], (instrs COPY)>;
 
