@@ -11,6 +11,7 @@ add_subdirectory(LLJITWithThinLTOSummaries)
 add_subdirectory(OrcV2CBindingsAddObjectFile)
 add_subdirectory(OrcV2CBindingsBasicUsage)
 add_subdirectory(OrcV2CBindingsDumpObjects)
+add_subdirectory(OrcV2CBindingsIRTransforms)
 add_subdirectory(OrcV2CBindingsReflectProcessSymbols)
 add_subdirectory(OrcV2CBindingsRemovableCode)
 

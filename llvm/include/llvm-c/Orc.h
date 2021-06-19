@@ -300,6 +300,13 @@ typedef struct LLVMOrcOpaqueThreadSafeContext *LLVMOrcThreadSafeContextRef;
 typedef struct LLVMOrcOpaqueThreadSafeModule *LLVMOrcThreadSafeModuleRef;
 
 /**
+ * A function for inspecting/mutating IR modules, suitable for use with
+ * LLVMOrcThreadSafeModuleWithModuleDo.
+ */
+typedef LLVMErrorRef (*LLVMOrcGenericIRModuleOperationFunction)(
+    void *Ctx, LLVMModuleRef M);
+
+/**
  * A reference to an orc::JITTargetMachineBuilder instance.
  */
 typedef struct LLVMOrcOpaqueJITTargetMachineBuilder
@@ -316,6 +323,30 @@ typedef struct LLVMOrcOpaqueObjectLayer *LLVMOrcObjectLayerRef;
 typedef struct LLVMOrcOpaqueObjectLinkingLayer *LLVMOrcObjectLinkingLayerRef;
 
 /**
+ * A reference to an orc::IRTransformLayer instance.
+ */
+typedef struct LLVMOrcOpaqueIRTransformLayer *LLVMOrcIRTransformLayerRef;
+
+/**
+ * A function for applying transformations as part of an transform layer.
+ *
+ * Implementations of this type are responsible for managing the lifetime
+ * of the Module pointed to by ModInOut: If the LLVMModuleRef value is
+ * overwritten then the function is responsible for disposing of the incoming
+ * module. If the module is simply accessed/mutated in-place then ownership
+ * returns to the caller and the function does not need to do any lifetime
+ * management.
+ *
+ * Clients can call LLVMOrcLLJITGetIRTransformLayer to obtain the transform
+ * layer of a LLJIT instance, and use LLVMOrcLLJITIRTransformLayerSetTransform
+ * to set the function. This can be used to override the default transform
+ * layer.
+ */
+typedef LLVMErrorRef (*LLVMOrcIRTransformLayerTransformFunction)(
+    void *Ctx, LLVMOrcThreadSafeModuleRef *ModInOut,
+    LLVMOrcMaterializationResponsibilityRef MR);
+
+/**
  * A reference to an orc::ObjectTransformLayer instance.
  */
 typedef struct LLVMOrcOpaqueObjectTransformLayer
@@ -323,6 +354,13 @@ typedef struct LLVMOrcOpaqueObjectTransformLayer
 
 /**
  * A function for applying transformations to an object file buffer.
+ *
+ * Implementations of this type are responsible for managing the lifetime
+ * of the memory buffer pointed to by ObjInOut: If the LLVMMemoryBufferRef
+ * value is overwritten then the function is responsible for disposing of the
+ * incoming buffer. If the buffer is simply accessed/mutated in-place then
+ * ownership returns to the caller and the function does not need to do any
+ * lifetime management.
  *
  * The transform is allowed to return an error, in which case the ObjInOut
  * buffer should be disposed of and set to null.
@@ -643,6 +681,14 @@ LLVMOrcCreateNewThreadSafeModule(LLVMModuleRef M,
 void LLVMOrcDisposeThreadSafeModule(LLVMOrcThreadSafeModuleRef TSM);
 
 /**
+ * Apply the given function to the module contained in this ThreadSafeModule.
+ */
+LLVMErrorRef
+LLVMOrcThreadSafeModuleWithModuleDo(LLVMOrcThreadSafeModuleRef TSM,
+                                    LLVMOrcGenericIRModuleOperationFunction F,
+                                    void *Ctx);
+
+/**
  * Create a JITTargetMachineBuilder by detecting the host.
  *
  * On success the client owns the resulting JITTargetMachineBuilder. It must be
@@ -732,6 +778,14 @@ void LLVMOrcObjectLayerEmit(LLVMOrcObjectLayerRef ObjLayer,
  * Dispose of an ObjectLayer.
  */
 void LLVMOrcDisposeObjectLayer(LLVMOrcObjectLayerRef ObjLayer);
+
+/**
+ * Set the transform function of the provided transform layer, passing through a
+ * pointer to user provided context.
+ */
+void LLVMOrcLLJITIRTransformLayerSetTransform(
+    LLVMOrcIRTransformLayerRef IRTransformLayer,
+    LLVMOrcIRTransformLayerTransformFunction TransformFunction, void *Ctx);
 
 /**
  * Set the transform function on an LLVMOrcObjectTransformLayer.
