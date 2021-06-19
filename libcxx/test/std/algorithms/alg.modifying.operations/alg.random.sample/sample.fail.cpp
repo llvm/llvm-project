@@ -36,9 +36,9 @@ template <class PopulationIterator, class SampleIterator> void test() {
 }
 
 int main(int, char**) {
-  // expected-error-re@algorithm:* {{static_assert failed{{( due to requirement '.*')?}} "SampleIterator must meet the requirements of RandomAccessIterator"}}
-  // expected-error@algorithm:* 2 {{does not provide a subscript operator}}
-  // expected-error@algorithm:* {{invalid operands}}
+  // expected-error-re@*:* {{static_assert failed{{( due to requirement '.*')?}} "SampleIterator must meet the requirements of RandomAccessIterator"}}
+  // expected-error@*:* 2 {{does not provide a subscript operator}}
+  // expected-error@*:* {{invalid operands}}
   test<cpp17_input_iterator<int *>, output_iterator<int *> >();
 
   return 0;
