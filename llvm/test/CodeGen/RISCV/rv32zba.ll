@@ -158,3 +158,225 @@ define i32 @addmul12(i32 %a, i32 %b) {
   %d = add i32 %c, %b
   ret i32 %d
 }
+
+define i32 @addmul18(i32 %a, i32 %b) {
+; RV32I-LABEL: addmul18:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a2, zero, 18
+; RV32I-NEXT:    mul a0, a0, a2
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: addmul18:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    addi a2, zero, 18
+; RV32IB-NEXT:    mul a0, a0, a2
+; RV32IB-NEXT:    add a0, a0, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBA-LABEL: addmul18:
+; RV32IBA:       # %bb.0:
+; RV32IBA-NEXT:    addi a2, zero, 18
+; RV32IBA-NEXT:    mul a0, a0, a2
+; RV32IBA-NEXT:    add a0, a0, a1
+; RV32IBA-NEXT:    ret
+  %c = mul i32 %a, 18
+  %d = add i32 %c, %b
+  ret i32 %d
+}
+
+define i32 @addmul20(i32 %a, i32 %b) {
+; RV32I-LABEL: addmul20:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a2, zero, 20
+; RV32I-NEXT:    mul a0, a0, a2
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: addmul20:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    addi a2, zero, 20
+; RV32IB-NEXT:    mul a0, a0, a2
+; RV32IB-NEXT:    add a0, a0, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBA-LABEL: addmul20:
+; RV32IBA:       # %bb.0:
+; RV32IBA-NEXT:    addi a2, zero, 20
+; RV32IBA-NEXT:    mul a0, a0, a2
+; RV32IBA-NEXT:    add a0, a0, a1
+; RV32IBA-NEXT:    ret
+  %c = mul i32 %a, 20
+  %d = add i32 %c, %b
+  ret i32 %d
+}
+
+define i32 @addmul24(i32 %a, i32 %b) {
+; RV32I-LABEL: addmul24:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a2, zero, 24
+; RV32I-NEXT:    mul a0, a0, a2
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: addmul24:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    addi a2, zero, 24
+; RV32IB-NEXT:    mul a0, a0, a2
+; RV32IB-NEXT:    add a0, a0, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBA-LABEL: addmul24:
+; RV32IBA:       # %bb.0:
+; RV32IBA-NEXT:    addi a2, zero, 24
+; RV32IBA-NEXT:    mul a0, a0, a2
+; RV32IBA-NEXT:    add a0, a0, a1
+; RV32IBA-NEXT:    ret
+  %c = mul i32 %a, 24
+  %d = add i32 %c, %b
+  ret i32 %d
+}
+
+define i32 @addmul36(i32 %a, i32 %b) {
+; RV32I-LABEL: addmul36:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a2, zero, 36
+; RV32I-NEXT:    mul a0, a0, a2
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: addmul36:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    addi a2, zero, 36
+; RV32IB-NEXT:    mul a0, a0, a2
+; RV32IB-NEXT:    add a0, a0, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBA-LABEL: addmul36:
+; RV32IBA:       # %bb.0:
+; RV32IBA-NEXT:    addi a2, zero, 36
+; RV32IBA-NEXT:    mul a0, a0, a2
+; RV32IBA-NEXT:    add a0, a0, a1
+; RV32IBA-NEXT:    ret
+  %c = mul i32 %a, 36
+  %d = add i32 %c, %b
+  ret i32 %d
+}
+
+define i32 @addmul40(i32 %a, i32 %b) {
+; RV32I-LABEL: addmul40:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a2, zero, 40
+; RV32I-NEXT:    mul a0, a0, a2
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: addmul40:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    addi a2, zero, 40
+; RV32IB-NEXT:    mul a0, a0, a2
+; RV32IB-NEXT:    add a0, a0, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBA-LABEL: addmul40:
+; RV32IBA:       # %bb.0:
+; RV32IBA-NEXT:    addi a2, zero, 40
+; RV32IBA-NEXT:    mul a0, a0, a2
+; RV32IBA-NEXT:    add a0, a0, a1
+; RV32IBA-NEXT:    ret
+  %c = mul i32 %a, 40
+  %d = add i32 %c, %b
+  ret i32 %d
+}
+
+define i32 @addmul72(i32 %a, i32 %b) {
+; RV32I-LABEL: addmul72:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a2, zero, 72
+; RV32I-NEXT:    mul a0, a0, a2
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: addmul72:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    addi a2, zero, 72
+; RV32IB-NEXT:    mul a0, a0, a2
+; RV32IB-NEXT:    add a0, a0, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBA-LABEL: addmul72:
+; RV32IBA:       # %bb.0:
+; RV32IBA-NEXT:    addi a2, zero, 72
+; RV32IBA-NEXT:    mul a0, a0, a2
+; RV32IBA-NEXT:    add a0, a0, a1
+; RV32IBA-NEXT:    ret
+  %c = mul i32 %a, 72
+  %d = add i32 %c, %b
+  ret i32 %d
+}
+
+define i32 @mul96(i32 %a) {
+; RV32I-LABEL: mul96:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a1, zero, 96
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: mul96:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    addi a1, zero, 96
+; RV32IB-NEXT:    mul a0, a0, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBA-LABEL: mul96:
+; RV32IBA:       # %bb.0:
+; RV32IBA-NEXT:    addi a1, zero, 96
+; RV32IBA-NEXT:    mul a0, a0, a1
+; RV32IBA-NEXT:    ret
+  %c = mul i32 %a, 96
+  ret i32 %c
+}
+
+define i32 @mul160(i32 %a) {
+; RV32I-LABEL: mul160:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a1, zero, 160
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: mul160:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    addi a1, zero, 160
+; RV32IB-NEXT:    mul a0, a0, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBA-LABEL: mul160:
+; RV32IBA:       # %bb.0:
+; RV32IBA-NEXT:    addi a1, zero, 160
+; RV32IBA-NEXT:    mul a0, a0, a1
+; RV32IBA-NEXT:    ret
+  %c = mul i32 %a, 160
+  ret i32 %c
+}
+
+define i32 @mul288(i32 %a) {
+; RV32I-LABEL: mul288:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a1, zero, 288
+; RV32I-NEXT:    mul a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32IB-LABEL: mul288:
+; RV32IB:       # %bb.0:
+; RV32IB-NEXT:    addi a1, zero, 288
+; RV32IB-NEXT:    mul a0, a0, a1
+; RV32IB-NEXT:    ret
+;
+; RV32IBA-LABEL: mul288:
+; RV32IBA:       # %bb.0:
+; RV32IBA-NEXT:    addi a1, zero, 288
+; RV32IBA-NEXT:    mul a0, a0, a1
+; RV32IBA-NEXT:    ret
+  %c = mul i32 %a, 288
+  ret i32 %c
+}
