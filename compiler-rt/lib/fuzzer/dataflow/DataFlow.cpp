@@ -90,8 +90,8 @@ static int PrintFunctions() {
   //      We'll need to make a proper in-process symbolizer work with DFSan.
   FILE *Pipe = popen("sed 's/(+/ /g; s/).*//g' "
                      "| llvm-symbolizer "
-                     "| grep 'dfs\\$' "
-                     "| sed 's/dfs\\$//g' "
+                     "| grep '\\.dfsan' "
+                     "| sed 's/\\.dfsan//g' "
                      "| c++filt",
                      "w");
   for (size_t I = 0; I < __dft.NumGuards; I++) {
