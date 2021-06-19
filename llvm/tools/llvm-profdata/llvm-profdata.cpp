@@ -327,11 +327,11 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
                               ProfileFormat OutputFormat, bool OutputSparse,
                               unsigned NumThreads, FailureMode FailMode) {
   if (OutputFilename.compare("-") == 0)
-    exitWithError("Cannot write indexed profdata format to stdout.");
+    exitWithError("cannot write indexed profdata format to stdout");
 
   if (OutputFormat != PF_Binary && OutputFormat != PF_Compact_Binary &&
       OutputFormat != PF_Ext_Binary && OutputFormat != PF_Text)
-    exitWithError("Unknown format is specified.");
+    exitWithError("unknown format is specified");
 
   std::mutex ErrorLock;
   SmallSet<instrprof_error, 4> WriterErrorCodes;
@@ -394,7 +394,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
   }
   if (NumErrors == Inputs.size() ||
       (NumErrors > 0 && FailMode == failIfAnyAreInvalid))
-    exitWithError("No profiles could be merged.");
+    exitWithError("no profile can be merged");
 
   writeInstrProfile(OutputFilename, OutputFormat, Contexts[0]->Writer);
 }
@@ -552,11 +552,11 @@ static void supplementInstrProfile(
     unsigned SupplMinSizeThreshold, float ZeroCounterThreshold,
     unsigned InstrProfColdThreshold) {
   if (OutputFilename.compare("-") == 0)
-    exitWithError("Cannot write indexed profdata format to stdout.");
+    exitWithError("cannot write indexed profdata format to stdout");
   if (Inputs.size() != 1)
-    exitWithError("Expect one input to be an instr profile.");
+    exitWithError("expect one input to be an instr profile");
   if (Inputs[0].Weight != 1)
-    exitWithError("Expect instr profile doesn't have weight.");
+    exitWithError("expect instr profile doesn't have weight");
 
   StringRef InstrFilename = Inputs[0].Filename;
 
@@ -784,7 +784,7 @@ static WeightedFile parseWeightedFile(const StringRef &WeightedFilename) {
 
   uint64_t Weight;
   if (WeightStr.getAsInteger(10, Weight) || Weight < 1)
-    exitWithError("Input weight must be a positive integer.");
+    exitWithError("input weight must be a positive integer");
 
   return {std::string(FileName), Weight};
 }
@@ -958,7 +958,7 @@ static int merge_main(int argc, const char *argv[]) {
   parseInputFilenamesFile(Buffer.get(), WeightedInputs);
 
   if (WeightedInputs.empty())
-    exitWithError("No input files specified. See " +
+    exitWithError("no input files specified. See " +
                   sys::path::filename(argv[0]) + " -help");
 
   if (DumpInputFileList) {
@@ -1007,7 +1007,7 @@ static void overlapInstrProfile(const std::string &BaseFilename,
   OverlapStats Overlap;
   Error E = Overlap.accumulateCounts(BaseFilename, TestFilename, IsCS);
   if (E)
-    exitWithError(std::move(E), "Error in getting profile count sums");
+    exitWithError(std::move(E), "error in getting profile count sums");
   if (Overlap.Base.CountSum < 1.0f) {
     OS << "Sum of edge counts for profile " << BaseFilename << " is 0.\n";
     exit(0);
