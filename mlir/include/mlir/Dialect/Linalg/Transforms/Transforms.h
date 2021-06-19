@@ -1076,6 +1076,15 @@ LogicalResult applyStagedPatterns(
     const FrozenRewritePatternSet &stage2Patterns,
     function_ref<LogicalResult(Operation *)> stage3Lambda = nullptr);
 
+/// Rewrite subtensor(pad_tensor(x)) into pad_tensor(subtensor(x)).
+struct SubTensorOfPadTensorSwapPattern
+    : public OpRewritePattern<SubTensorOp> {
+  using OpRewritePattern<SubTensorOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SubTensorOp subTensorOp,
+                                PatternRewriter &rewriter) const override;
+};
+
 } // namespace linalg
 } // namespace mlir
 
