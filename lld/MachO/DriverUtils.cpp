@@ -246,7 +246,7 @@ DylibFile *macho::loadDylib(MemoryBufferRef mbref, DylibFile *umbrella,
   return newFile;
 }
 
-Optional<std::string>
+Optional<StringRef>
 macho::findPathCombination(const Twine &name,
                            const std::vector<StringRef> &roots,
                            ArrayRef<StringRef> extensions) {
@@ -259,21 +259,21 @@ macho::findPathCombination(const Twine &name,
       bool exists = fs::exists(location);
       searchedDylib(location, exists);
       if (exists)
-        return location.str();
+        return saver.save(location.str());
     }
   }
   return {};
 }
 
-std::string macho::rerootPath(StringRef path) {
+StringRef macho::rerootPath(StringRef path) {
   if (!path::is_absolute(path, path::Style::posix) || path.endswith(".o"))
-    return std::string(path);
+    return path;
 
-  if (Optional<std::string> rerootedPath =
+  if (Optional<StringRef> rerootedPath =
           findPathCombination(path, config->systemLibraryRoots))
     return *rerootedPath;
 
-  return std::string(path);
+  return path;
 }
 
 Optional<InputFile *> macho::loadArchiveMember(MemoryBufferRef mb,
