@@ -523,6 +523,9 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
               }
               return result.value;
             }));
+  } else if (name == "not") {
+    return FoldElementalIntrinsic<T, T>(
+        context, std::move(funcRef), &Scalar<T>::NOT);
   } else if (name == "precision") {
     if (const auto *cx{UnwrapExpr<Expr<SomeReal>>(args[0])}) {
       return Expr<T>{std::visit(
@@ -657,7 +660,7 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   // TODO:
   // cshift, dot_product, eoshift,
   // findloc, iall, iany, iparity, ibits, image_status, ishftc,
-  // matmul, maxloc, minloc, not, pack, product, reduce,
+  // matmul, maxloc, minloc, pack, product, reduce,
   // sign, spread, sum, transfer, transpose, unpack
   return Expr<T>{std::move(funcRef)};
 }
