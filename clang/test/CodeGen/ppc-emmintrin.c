@@ -2,9 +2,9 @@
 // REQUIRES: powerpc-registered-target
 
 // RUN: %clang -S -emit-llvm -target powerpc64-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
-// RUN:  -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-BE
+// RUN:  -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-BE
 // RUN: %clang -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
-// RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-LE
+// RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-LE
 
 // CHECK-BE-DAG: @_mm_movemask_pd.perm_mask = internal constant <4 x i32> <i32 -2139062144, i32 -2139062144, i32 -2139062144, i32 -2139078656>, align 16
 // CHECK-BE-DAG: @_mm_shuffle_epi32.permute_selectors = internal constant [4 x i32] [i32 66051, i32 67438087, i32 134810123, i32 202182159], align 4
