@@ -10,10 +10,9 @@
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/Process.h"
-
-#include <mutex>
 
 namespace llvm {
 namespace orc {
@@ -21,6 +20,56 @@ namespace orc {
 ExecutorProcessControl::MemoryAccess::~MemoryAccess() {}
 
 ExecutorProcessControl::~ExecutorProcessControl() {}
+
+Error ExecutorProcessControl::associateJITSideWrapperFunctions(
+    JITDylib &JD, WrapperFunctionAssociationMap WFs) {
+
+  // Look up tag addresses.
+  auto &ES = JD.getExecutionSession();
+  auto TagAddrs =
+      ES.lookup({{&JD, JITDylibLookupFlags::MatchAllSymbols}},
+                SymbolLookupSet::fromMapKeys(
+                    WFs, SymbolLookupFlags::WeaklyReferencedSymbol));
+  if (!TagAddrs)
+    return TagAddrs.takeError();
+
+  // Associate tag addresses with implementations.
+  std::lock_guard<std::mutex> Lock(TagToFuncMapMutex);
+  for (auto &KV : *TagAddrs) {
+    auto TagAddr = KV.second.getAddress();
+    if (TagToFunc.count(TagAddr))
+      return make_error<StringError>("Tag " + formatv("{0:x16}", TagAddr) +
+                                         " (for " + *KV.first +
+                                         ") already registered",
+                                     inconvertibleErrorCode());
+    auto I = WFs.find(KV.first);
+    assert(I != WFs.end() && I->second &&
+           "AsyncWrapperFunction implementation missing");
+    TagToFunc[KV.second.getAddress()] =
+        std::make_shared<AsyncWrapperFunction>(std::move(I->second));
+  }
+  return Error::success();
+}
+
+void ExecutorProcessControl::runJITSideWrapperFunction(
+    SendResultFunction SendResult, JITTargetAddress TagAddr,
+    ArrayRef<char> ArgBuffer) {
+
+  std::shared_ptr<AsyncWrapperFunction> F;
+  {
+    std::lock_guard<std::mutex> Lock(TagToFuncMapMutex);
+    auto I = TagToFunc.find(TagAddr);
+    if (I != TagToFunc.end())
+      F = I->second;
+  }
+
+  if (F)
+    (*F)(std::move(SendResult), ArgBuffer.data(), ArgBuffer.size());
+  else
+    SendResult(shared::WrapperFunctionResult::createOutOfBandError(
+        ("No function registered for tag " + formatv("{0:x16}", TagAddr))
+            .str()));
+}
 
 SelfExecutorProcessControl::SelfExecutorProcessControl(
     std::shared_ptr<SymbolStringPool> SSP, Triple TargetTriple,
@@ -102,13 +151,13 @@ SelfExecutorProcessControl::runAsMain(JITTargetAddress MainFnAddr,
   return orc::runAsMain(jitTargetAddressToFunction<MainTy>(MainFnAddr), Args);
 }
 
-Expected<shared::WrapperFunctionResult>
-SelfExecutorProcessControl::runWrapper(JITTargetAddress WrapperFnAddr,
-                                       ArrayRef<char> ArgBuffer) {
-  using WrapperFnTy = shared::detail::CWrapperFunctionResult (*)(
-      const char *Data, uint64_t Size);
+void SelfExecutorProcessControl::runWrapperAsync(SendResultFunction SendResult,
+                                                 JITTargetAddress WrapperFnAddr,
+                                                 ArrayRef<char> ArgBuffer) {
+  using WrapperFnTy =
+      shared::detail::CWrapperFunctionResult (*)(const char *Data, size_t Size);
   auto *WrapperFn = jitTargetAddressToFunction<WrapperFnTy>(WrapperFnAddr);
-  return WrapperFn(ArgBuffer.data(), ArgBuffer.size());
+  SendResult(WrapperFn(ArgBuffer.data(), ArgBuffer.size()));
 }
 
 Error SelfExecutorProcessControl::disconnect() { return Error::success(); }
