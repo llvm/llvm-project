@@ -409,3 +409,29 @@ define i32 @masked_bit_wrong_pred(i32 %x, i32 %y) {
   %r = zext i1 %cmp to i32
   ret i32 %r
 }
+
+; Assert that zext(or(masked_bit_test, icmp)) can be correctly transformed to
+; or(shifted_masked_bit, zext(icmp))
+
+define void @zext_or_masked_bit_test(i32 %a, i32 %b, i32* %p) {
+; CHECK-LABEL: @zext_or_masked_bit_test
+; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* %p, align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[LD]], %b
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 %a, %b
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHR]], 1
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[EXT]]
+; CHECK-NEXT:    store i32 [[OR]], i32* %p, align 4
+; CHECK-NEXT:    ret void
+;
+  %ld = load i32, i32* %p, align 4
+  %shl = shl i32 1, %b
+  %and = and i32 %shl, %a
+  %tobool = icmp ne i32 %and, 0
+  %cmp = icmp eq i32 %ld, %b
+  %or = or i1 %tobool, %cmp
+  %conv = zext i1 %or to i32
+  store i32 %conv, i32* %p, align 4
+  ret void
+}
+
