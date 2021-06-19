@@ -471,18 +471,16 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
   //                 either reported (for non-weak symbols) or merged
   //                 (for weak symbols), but they do not go in the export
   //                 table of the output.
-  // N_PEXT: Does not occur in input files in practice,
-  //         a private extern must be external.
+  // N_PEXT: llvm-mc does not emit these, but `ld -r` (wherein ld64 emits
+  //         object files) may produce them. LLD does not yet support -r.
+  //         These are translation-unit scoped, identical to the `0` case.
   // 0: Translation-unit scoped. These are not in the symbol table during
   //    link, and not in the export table of the output either.
-
   bool isWeakDefCanBeHidden =
       (sym.n_desc & (N_WEAK_DEF | N_WEAK_REF)) == (N_WEAK_DEF | N_WEAK_REF);
 
-  if (sym.n_type & (N_EXT | N_PEXT)) {
-    assert((sym.n_type & N_EXT) && "invalid input");
+  if (sym.n_type & N_EXT) {
     bool isPrivateExtern = sym.n_type & N_PEXT;
-
     // lld's behavior for merging symbols is slightly different from ld64:
     // ld64 picks the winning symbol based on several criteria (see
     // pickBetweenRegularAtoms() in ld64's SymbolTable.cpp), while lld
@@ -533,8 +531,7 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
 template <class NList>
 static macho::Symbol *createAbsolute(const NList &sym, InputFile *file,
                                      StringRef name) {
-  if (sym.n_type & (N_EXT | N_PEXT)) {
-    assert((sym.n_type & N_EXT) && "invalid input");
+  if (sym.n_type & N_EXT) {
     return symtab->addDefined(name, file, nullptr, sym.n_value, /*size=*/0,
                               /*isWeakDef=*/false, sym.n_type & N_PEXT,
                               sym.n_desc & N_ARM_THUMB_DEF,

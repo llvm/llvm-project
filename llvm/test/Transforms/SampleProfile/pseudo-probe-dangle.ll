@@ -19,62 +19,35 @@ T:
 F:
 	br label %Merge
 Merge:
-;; Check branch T and F are gone, and their probes (probe 2 and 3) are dangling.
+;; Check branch T and F are gone, and their probes (probe 2 and 3) are gone too.
 ; JT-LABEL-NO: T
 ; JT-LABEL-NO: F
 ; JT-LABEL: Merge
-; JT: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 3, i32 2, i64 -1)
-; JT: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 2, i32 2, i64 -1)
+; JT-NOT: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 3
+; JT-NOT: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 2
 ; JT: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 4, i32 0, i64 -1)
-; ASM: .pseudoprobe	6699318081062747564 3 0 2
-; ASM: .pseudoprobe	6699318081062747564 2 0 2
+; ASM-NOT: .pseudoprobe	6699318081062747564 3
+; ASM-NOT: .pseudoprobe	6699318081062747564 2
 ; ASM: .pseudoprobe	6699318081062747564 4 0 0
 	ret i32 %call
 }
 
-;; Check block T and F are gone, and their probes (probe 2 and 3) are dangling.
+;; Check block T and F are gone, and their probes (probe 2 and 3) are gone too.
 ; MIR-tail: bb.0
 ; MIR-tail: PSEUDO_PROBE [[#GUID:]], 1, 0, 0
-; MIR-tail: PSEUDO_PROBE [[#GUID:]], 2, 0, 2
-; MIR-tail: PSEUDO_PROBE [[#GUID:]], 3, 0, 2
+; MIR-tail-NOT: PSEUDO_PROBE [[#GUID:]], 2
+; MIR-tail-NOT: PSEUDO_PROBE [[#GUID:]], 3
 ; MIR-tail: PSEUDO_PROBE [[#GUID:]], 4, 0, 0
 
 
-define void @foo2() {
-bb:
-  %tmp = call i32 @f1()
-  %tmp1 = icmp eq i32 %tmp, 1
-  br i1 %tmp1, label %bb5, label %bb8
-
-bb2:
-  %tmp4 = icmp ne i32 %tmp, 1
-  switch i1 %tmp4, label %bb2 [
-  i1 0, label %bb5
-  i1 1, label %bb8
-  ]
-
-bb5:
-;; Check the pseudo probe with id 3 only has one copy.
-; JT-COUNT-1: call void @llvm.pseudoprobe(i64 [[#GUID2:]], i64 3, i32 2, i64 -1)
-; JT-NOT: call void @llvm.pseudoprobe(i64 [[#GUID2:]], i64 3, i32 2, i64 -1)
-  %tmp6 = phi i1 [ %tmp1, %bb ], [ false, %bb2 ]
-  br i1 %tmp6, label %bb8, label %bb7
-
-bb7:
-  br label %bb8
-
-bb8:
-  ret void
-}
-
 define i32 @test(i32 %a, i32 %b, i32 %c) {
-;; Check block bb1 and bb2 are gone, and their probes (probe 2 and 3) are dangling.
+;; Check block bb1 and bb2 are gone, and their probes (probe 2 and 3) are gone too.
 ; SC-LABEL: @test(
 ; SC-LABEL-NO: bb1
 ; SC-LABEL-NO: bb2
 ; SC:    [[T1:%.*]] = icmp eq i32 [[B:%.*]], 0
-; SC-DAG:    call void @llvm.pseudoprobe(i64 [[#GUID3:]], i64 2, i32 2, i64 -1)
-; SC-DAG:    call void @llvm.pseudoprobe(i64 [[#GUID3]], i64 3, i32 2, i64 -1)
+; SC-NOT:    call void @llvm.pseudoprobe(i64 [[#]], i64 2
+; SC-NOT:    call void @llvm.pseudoprobe(i64 [[#]], i64 3
 ; SC:    [[T2:%.*]] = icmp sgt i32 [[C:%.*]], 1
 ; SC:    [[T3:%.*]] = add i32 [[A:%.*]], 1
 ; SC:    [[SPEC_SELECT:%.*]] = select i1 [[T2]], i32 [[T3]], i32 [[A]]

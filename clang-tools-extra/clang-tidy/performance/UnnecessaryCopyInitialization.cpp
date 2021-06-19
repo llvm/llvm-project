@@ -12,6 +12,7 @@
 #include "../utils/LexerUtils.h"
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
+#include "clang/AST/Decl.h"
 #include "clang/Basic/Diagnostic.h"
 
 namespace clang {
@@ -72,14 +73,14 @@ AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningFunctionCall) {
       .bind(InitFunctionCallId);
 }
 
-AST_MATCHER_FUNCTION(StatementMatcher, isInitializedFromReferenceToConst) {
+AST_MATCHER_FUNCTION(StatementMatcher, initializerReturnsReferenceToConst) {
   auto OldVarDeclRef =
       declRefExpr(to(varDecl(hasLocalStorage()).bind(OldVarDeclId)));
-  return declStmt(has(varDecl(hasInitializer(
+  return expr(
       anyOf(isConstRefReturningFunctionCall(), isConstRefReturningMethodCall(),
             ignoringImpCasts(OldVarDeclRef),
-            ignoringImpCasts(unaryOperator(
-                hasOperatorName("&"), hasUnaryOperand(OldVarDeclRef))))))));
+            ignoringImpCasts(unaryOperator(hasOperatorName("&"),
+                                           hasUnaryOperand(OldVarDeclRef)))));
 }
 
 // This checks that the variable itself is only used as const, and also makes
@@ -106,18 +107,14 @@ static bool isInitializingVariableImmutable(const VarDecl &InitializingVar,
   if (!isa<ReferenceType, PointerType>(T))
     return true;
 
-  auto Matches =
-      match(findAll(declStmt(has(varDecl(equalsNode(&InitializingVar))))
-                        .bind("declStmt")),
-            BlockStmt, Context);
-  // The reference or pointer is not initialized in the BlockStmt. We assume
-  // its pointee is not modified then.
-  if (Matches.empty())
+  // The reference or pointer is not declared and hence not initialized anywhere
+  // in the function. We assume its pointee is not modified then.
+  if (!InitializingVar.isLocalVarDecl() || !InitializingVar.hasInit()) {
     return true;
+  }
 
-  const auto *Initialization = selectFirst<DeclStmt>("declStmt", Matches);
-  Matches =
-      match(isInitializedFromReferenceToConst(), *Initialization, Context);
+  auto Matches = match(initializerReturnsReferenceToConst(),
+                       *InitializingVar.getInit(), Context);
   // The reference is initialized from a free function without arguments
   // returning a const reference. This is a global immutable object.
   if (selectFirst<CallExpr>(InitFunctionCallId, Matches) != nullptr)

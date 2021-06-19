@@ -779,12 +779,6 @@ bool TailDuplicator::duplicateSimpleBB(
       assert(PredBB->succ_size() <= 1);
     }
 
-    // For AutoFDO, since BB is going to be removed, we won't be able to sample
-    // it. To avoid assigning a zero weight for BB, move all its pseudo probes
-    // into Succ and mark them dangling. This should allow the counts inference
-    // a chance to get a more reasonable weight for BB.
-    TailBB->moveAndDanglePseudoProbes(PredBB);
-
     if (PredTBB)
       TII->insertBranch(*PredBB, PredTBB, PredFBB, PredCond, DL);
 

@@ -46,8 +46,6 @@ if.then:                                          ; preds = %while.body
   call void @llvm.pseudoprobe(i64 -2012135647395072713, i64 1, i32 0, i64 -1) #6, !dbg !44
   %rem.i = urem i32 %inc8, 3, !dbg !45
   %tobool.not.i = icmp eq i32 %rem.i, 0, !dbg !45
-  call void @llvm.pseudoprobe(i64 -2012135647395072713, i64 2, i32 2, i64 -1) #6, !dbg !46
-  call void @llvm.pseudoprobe(i64 -2012135647395072713, i64 3, i32 2, i64 -1) #6, !dbg !47
   %0 = sub i32 0, %s.07, !dbg !48
   %retval.0.p.i = select i1 %tobool.not.i, i32 %s.07, i32 %0, !dbg !48
   %retval.0.i = add i32 %retval.0.p.i, %inc8, !dbg !48

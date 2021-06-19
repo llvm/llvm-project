@@ -9,56 +9,56 @@
 ; CHECK-UNCOMPRESS:  3: 1
 ; CHECK-UNCOMPRESS:  4: 1
 ; CHECK-UNCOMPRESS:  7: 1 fb:1
-; CHECK-UNCOMPRESS:  !CFGChecksum: 120515930909
+; CHECK-UNCOMPRESS:  !CFGChecksum: 563070469352221
 ; CHECK-UNCOMPRESS: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:6 @ fa:8 @ fa]:4:1
 ; CHECK-UNCOMPRESS:  1: 1
 ; CHECK-UNCOMPRESS:  3: 1
 ; CHECK-UNCOMPRESS:  4: 1
 ; CHECK-UNCOMPRESS:  7: 1 fb:1
-; CHECK-UNCOMPRESS:  !CFGChecksum: 120515930909
+; CHECK-UNCOMPRESS:  !CFGChecksum: 563070469352221
 ; CHECK-UNCOMPRESS: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:6 @ fa]:4:1
 ; CHECK-UNCOMPRESS:  1: 1
 ; CHECK-UNCOMPRESS:  3: 1
 ; CHECK-UNCOMPRESS:  5: 1
 ; CHECK-UNCOMPRESS:  8: 1 fa:1
-; CHECK-UNCOMPRESS:  !CFGChecksum: 120515930909
+; CHECK-UNCOMPRESS:  !CFGChecksum: 563070469352221
 ; CHECK-UNCOMPRESS: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:6 @ fa:8 @ fa:7 @ fb:6 @ fa:7 @ fb]:3:1
 ; CHECK-UNCOMPRESS:  1: 1
 ; CHECK-UNCOMPRESS:  3: 1
 ; CHECK-UNCOMPRESS:  6: 1 fa:1
-; CHECK-UNCOMPRESS:  !CFGChecksum: 72617220756
+; CHECK-UNCOMPRESS:  !CFGChecksum: 563022570642068
 ; CHECK-UNCOMPRESS: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:6 @ fa:8 @ fa:7 @ fb]:3:1
 ; CHECK-UNCOMPRESS:  1: 1
 ; CHECK-UNCOMPRESS:  3: 1
 ; CHECK-UNCOMPRESS:  6: 1 fa:1
-; CHECK-UNCOMPRESS:  !CFGChecksum: 72617220756
+; CHECK-UNCOMPRESS:  !CFGChecksum: 563022570642068
 ; CHECK-UNCOMPRESS: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb]:3:1
 ; CHECK-UNCOMPRESS:  1: 1
 ; CHECK-UNCOMPRESS:  3: 1
 ; CHECK-UNCOMPRESS:  6: 1 fa:1
-; CHECK-UNCOMPRESS:  !CFGChecksum: 72617220756
+; CHECK-UNCOMPRESS:  !CFGChecksum: 563022570642068
 ; CHECK-UNCOMPRESS: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb]:3:1
 ; CHECK-UNCOMPRESS:  1: 1
 ; CHECK-UNCOMPRESS:  2: 1
 ; CHECK-UNCOMPRESS:  5: 1 fb:1
-; CHECK-UNCOMPRESS:  !CFGChecksum: 72617220756
+; CHECK-UNCOMPRESS:  !CFGChecksum: 563022570642068
 ; CHECK-UNCOMPRESS: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb]:3:1
 ; CHECK-UNCOMPRESS:  1: 1
 ; CHECK-UNCOMPRESS:  2: 1
 ; CHECK-UNCOMPRESS:  5: 1 fb:1
-; CHECK-UNCOMPRESS:  !CFGChecksum: 72617220756
+; CHECK-UNCOMPRESS:  !CFGChecksum: 563022570642068
 ; CHECK-UNCOMPRESS: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb]:3:1
 ; CHECK-UNCOMPRESS:  1: 1
 ; CHECK-UNCOMPRESS:  2: 1
 ; CHECK-UNCOMPRESS:  5: 1 fb:1
-; CHECK-UNCOMPRESS:  !CFGChecksum: 72617220756
+; CHECK-UNCOMPRESS:  !CFGChecksum: 563022570642068
 ; CHECK-UNCOMPRESS: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb:6 @ fa:8 @ fa:7 @ fb:6 @ fa:7 @ fb:6 @ fa]:2:1
 ; CHECK-UNCOMPRESS:  1: 1
 ; CHECK-UNCOMPRESS:  3: 1
-; CHECK-UNCOMPRESS:  !CFGChecksum: 120515930909
+; CHECK-UNCOMPRESS:  !CFGChecksum: 563070469352221
 ; CHECK-UNCOMPRESS: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:5 @ fb:5 @ fb:5 @ fb]:1:0
 ; CHECK-UNCOMPRESS:  5: 1 fb:1
-; CHECK-UNCOMPRESS:  !CFGChecksum: 72617220756
+; CHECK-UNCOMPRESS:  !CFGChecksum: 563022570642068
 
 
 ; CHECK: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb]:13:4
@@ -67,35 +67,35 @@
 ; CHECK:  3: 1
 ; CEHCK:  5: 4 fb:4
 ; CHECK:  6: 1 fa:1
-; CHECK !CFGChecksum: 72617220756
+; CHECK !CFGChecksum: 563022570642068
 ; CHECK: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:6 @ fa:8 @ fa:7 @ fb:6 @ fa]:6:2
 ; CHECK:  1: 2
 ; CHECK:  3: 2
 ; CHECK:  4: 1
 ; CHECK:  7: 1 fb:1
-; CHECK:  !CFGChecksum: 120515930909
+; CHECK:  !CFGChecksum: 563070469352221
 ; CHECK: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:6 @ fa:8 @ fa]:4:1
 ; CHECK:  1: 1
 ; CHECK:  3: 1
 ; CHECK:  4: 1
 ; CHECK:  7: 1 fb:1
-; CHECK:  !CFGChecksum: 120515930909
+; CHECK:  !CFGChecksum: 563070469352221
 ; CHECK: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:6 @ fa]:4:1
 ; CHECK:  1: 1
 ; CHECK:  3: 1
 ; CHECK:  5: 1
 ; CHECK:  8: 1 fa:1
-; CHECK:  !CFGChecksum: 120515930909
+; CHECK:  !CFGChecksum: 563070469352221
 ; CHECK: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:6 @ fa:8 @ fa:7 @ fb:6 @ fa:7 @ fb]:3:1
 ; CHECK:  1: 1
 ; CHECK:  3: 1
 ; CHECK:  6: 1 fa:1
-; CHECK:  !CFGChecksum: 72617220756
+; CHECK:  !CFGChecksum: 563022570642068
 ; CHECK: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:6 @ fa:8 @ fa:7 @ fb]:3:1
 ; CHECK:  1: 1
 ; CHECK:  3: 1
 ; CHECK:  6: 1 fa:1
-; CHECK:  !CFGChecksum: 72617220756
+; CHECK:  !CFGChecksum: 563022570642068
 
 
 

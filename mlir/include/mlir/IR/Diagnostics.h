@@ -530,9 +530,20 @@ struct SourceMgrDiagnosticHandlerImpl;
 /// This class is a utility diagnostic handler for use with llvm::SourceMgr.
 class SourceMgrDiagnosticHandler : public ScopedDiagnosticHandler {
 public:
+  /// This type represents a functor used to filter out locations when printing
+  /// a diagnostic. It should return true if the provided location is okay to
+  /// display, false otherwise. If all locations in a diagnostic are filtered
+  /// out, the first location is used as the sole location. When deciding
+  /// whether or not to filter a location, this function should not recurse into
+  /// any nested location. This recursion is handled automatically by the
+  /// caller.
+  using ShouldShowLocFn = llvm::unique_function<bool(Location)>;
+
   SourceMgrDiagnosticHandler(llvm::SourceMgr &mgr, MLIRContext *ctx,
-                             raw_ostream &os);
-  SourceMgrDiagnosticHandler(llvm::SourceMgr &mgr, MLIRContext *ctx);
+                             raw_ostream &os,
+                             ShouldShowLocFn &&shouldShowLocFn = {});
+  SourceMgrDiagnosticHandler(llvm::SourceMgr &mgr, MLIRContext *ctx,
+                             ShouldShowLocFn &&shouldShowLocFn = {});
   ~SourceMgrDiagnosticHandler();
 
   /// Emit the given diagnostic information with the held source manager.
@@ -553,9 +564,17 @@ protected:
   /// The output stream to use when printing diagnostics.
   raw_ostream &os;
 
+  /// A functor used when determining if a location for a diagnostic should be
+  /// shown. If null, all locations should be shown.
+  ShouldShowLocFn shouldShowLocFn;
+
 private:
   /// Convert a location into the given memory buffer into an SMLoc.
   llvm::SMLoc convertLocToSMLoc(FileLineColLoc loc);
+
+  /// Given a location, returns the first nested location (including 'loc') that
+  /// can be shown to the user.
+  Optional<Location> findLocToShow(Location loc);
 
   /// The maximum depth that a call stack will be printed.
   /// TODO: This should be a tunable flag.

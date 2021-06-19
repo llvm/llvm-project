@@ -250,6 +250,7 @@ void InitThreads() {
   ProtectGap(thread_space_end,
              __hwasan_shadow_memory_dynamic_address - thread_space_end);
   InitThreadList(thread_space_start, thread_space_end - thread_space_start);
+  hwasanThreadList().CreateCurrentThread();
 }
 
 bool MemIsApp(uptr p) {
