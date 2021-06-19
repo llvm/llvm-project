@@ -12,4 +12,4 @@ RUN: not llvm-profdata show %p/Inputs/compressed.profraw -o %t 2>&1 | FileCheck 
 
 REQUIRES: !zlib
 
-CHECK: error: {{.*}} Profile uses zlib compression but the profile reader was built without zlib support
+CHECK: error: {{.+}}: profile uses zlib compression but the profile reader was built without zlib support
