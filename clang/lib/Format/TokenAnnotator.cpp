@@ -229,7 +229,19 @@ private:
     }
 
     if (Left->is(TT_OverloadedOperatorLParen)) {
-      Contexts.back().IsExpression = false;
+      // Find the previous kw_operator token.
+      FormatToken *Prev = Left;
+      while (!Prev->is(tok::kw_operator)) {
+        Prev = Prev->Previous;
+        assert(Prev && "Expect a kw_operator prior to the OperatorLParen!");
+      }
+
+      // If faced with "a.operator*(argument)" or "a->operator*(argument)",
+      // i.e. the operator is called as a member function,
+      // then the argument must be an expression.
+      bool OperatorCalledAsMemberFunction =
+          Prev->Previous && Prev->Previous->isOneOf(tok::period, tok::arrow);
+      Contexts.back().IsExpression = OperatorCalledAsMemberFunction;
     } else if (Style.Language == FormatStyle::LK_JavaScript &&
                (Line.startsWith(Keywords.kw_type, tok::identifier) ||
                 Line.startsWith(tok::kw_export, Keywords.kw_type,
@@ -397,9 +409,13 @@ private:
           !CurrentToken->Next->HasUnescapedNewline &&
           !CurrentToken->Next->isTrailingComment())
         HasMultipleParametersOnALine = true;
+      bool ProbablyFunctionTypeLParen =
+          (CurrentToken->is(tok::l_paren) && CurrentToken->Next &&
+           CurrentToken->Next->isOneOf(tok::star, tok::amp, tok::caret));
       if ((CurrentToken->Previous->isOneOf(tok::kw_const, tok::kw_auto) ||
            CurrentToken->Previous->isSimpleTypeSpecifier()) &&
-          !CurrentToken->isOneOf(tok::l_brace, tok::l_paren))
+          !(CurrentToken->is(tok::l_brace) ||
+            (CurrentToken->is(tok::l_paren) && !ProbablyFunctionTypeLParen)))
         Contexts.back().IsExpression = false;
       if (CurrentToken->isOneOf(tok::semi, tok::colon)) {
         MightBeObjCForRangeLoop = false;

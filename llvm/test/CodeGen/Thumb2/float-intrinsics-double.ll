@@ -14,12 +14,12 @@ define double @sqrt_d(double %a) {
   ret double %1
 }
 
-declare double     @llvm.powi.f64(double %Val, i32 %power)
+declare double     @llvm.powi.f64.i32(double %Val, i32 %power)
 define double @powi_d(double %a, i32 %b) {
 ; CHECK-LABEL: powi_d:
 ; SOFT: {{(bl|b)}} __powidf2
 ; HARD: b __powidf2
-  %1 = call double @llvm.powi.f64(double %a, i32 %b)
+  %1 = call double @llvm.powi.f64.i32(double %a, i32 %b)
   ret double %1
 }
 

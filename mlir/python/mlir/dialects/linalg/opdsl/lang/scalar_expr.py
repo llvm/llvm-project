@@ -22,7 +22,6 @@ __all__ = [
     "ScalarAssign",
     "ScalarApplyFn",
     "ScalarArg",
-    "ScalarCapture",
     "ScalarConst",
     "ScalarIndex",
     "ScalarExpression",
@@ -55,19 +54,6 @@ class ScalarArg:
 
   def __repr__(self):
     return f"(ScalarArg({self.arg})"
-
-
-class ScalarCapture:
-  """A type of ScalarExpression that references a named capture."""
-
-  def __init__(self, capture: str):
-    self.capture = capture
-
-  def expr(self) -> "ScalarExpression":
-    return ScalarExpression(scalar_capture=self)
-
-  def __repr__(self):
-    return f"(ScalarCapture({self.capture})"
 
 
 class ScalarConst:
@@ -116,7 +102,6 @@ class ScalarExpression(YAMLObject):
   Can be one of:
     - ScalarApplyFn
     - ScalarArg
-    - ScalarCapture
     - ScalarConst
     - ScalarIndex
     - ScalarSymbolicCast
@@ -126,18 +111,15 @@ class ScalarExpression(YAMLObject):
   def __init__(self,
                scalar_apply: Optional[ScalarApplyFn] = None,
                scalar_arg: Optional[ScalarArg] = None,
-               scalar_capture: Optional[ScalarCapture] = None,
                scalar_const: Optional[ScalarConst] = None,
                scalar_index: Optional[ScalarIndex] = None,
                symbolic_cast: Optional[ScalarSymbolicCast] = None):
-    if (bool(scalar_apply) + bool(scalar_arg) + bool(scalar_capture) +
-        bool(scalar_const) + bool(scalar_index) + bool(symbolic_cast)) != 1:
-      raise ValueError(
-          "One of 'scalar_apply', 'scalar_arg', 'scalar_capture', 'scalar_const', "
-          "'scalar_index', 'symbolic_cast' must be specified")
+    if (bool(scalar_apply) + bool(scalar_arg) + bool(scalar_const) +
+        bool(scalar_index) + bool(symbolic_cast)) != 1:
+      raise ValueError("One of 'scalar_apply', 'scalar_arg', 'scalar_const', "
+                       "'scalar_index', 'symbolic_cast' must be specified")
     self.scalar_apply = scalar_apply
     self.scalar_arg = scalar_arg
-    self.scalar_capture = scalar_capture
     self.scalar_const = scalar_const
     self.scalar_index = scalar_index
     self.symbolic_cast = symbolic_cast
@@ -151,8 +133,6 @@ class ScalarExpression(YAMLObject):
           ))
     elif self.scalar_arg:
       return dict(scalar_arg=self.scalar_arg.arg)
-    elif self.scalar_capture:
-      return dict(scalar_capture=self.scalar_capture.capture)
     elif self.scalar_const:
       return dict(scalar_const=self.scalar_const.value)
     elif self.scalar_index:

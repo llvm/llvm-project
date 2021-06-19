@@ -3104,11 +3104,15 @@ struct IndexCastOpLowering : public ConvertOpToLLVMPattern<IndexCastOp> {
     IndexCastOpAdaptor transformed(operands);
 
     auto targetType =
-        typeConverter->convertType(indexCastOp.getResult().getType())
+        typeConverter->convertType(indexCastOp.getResult().getType());
+    auto targetElementType =
+        typeConverter
+            ->convertType(getElementTypeOrSelf(indexCastOp.getResult()))
             .cast<IntegerType>();
-    auto sourceType = transformed.in().getType().cast<IntegerType>();
-    unsigned targetBits = targetType.getWidth();
-    unsigned sourceBits = sourceType.getWidth();
+    auto sourceElementType =
+        getElementTypeOrSelf(transformed.in()).cast<IntegerType>();
+    unsigned targetBits = targetElementType.getWidth();
+    unsigned sourceBits = sourceElementType.getWidth();
 
     if (targetBits == sourceBits)
       rewriter.replaceOp(indexCastOp, transformed.in());

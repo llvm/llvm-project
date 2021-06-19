@@ -1955,6 +1955,9 @@ void Sema::RecordParsingTemplateParameterDepth(unsigned Depth) {
 
 // Check that the type of the VarDecl has an accessible copy constructor and
 // resolve its destructor's exception specification.
+// This also performs initialization of block variables when they are moved
+// to the heap. It uses the same rules as applicable for implicit moves
+// according to the C++ standard in effect ([class.copy.elision]p3).
 static void checkEscapingByref(VarDecl *VD, Sema &S) {
   QualType T = VD->getType();
   EnterExpressionEvaluationContext scope(
@@ -1962,9 +1965,18 @@ static void checkEscapingByref(VarDecl *VD, Sema &S) {
   SourceLocation Loc = VD->getLocation();
   Expr *VarRef =
       new (S.Context) DeclRefExpr(S.Context, VD, false, T, VK_LValue, Loc);
-  ExprResult Result = S.PerformMoveOrCopyInitialization(
-      InitializedEntity::InitializeBlock(Loc, T, false), VD, VD->getType(),
-      VarRef, /*AllowNRVO=*/true);
+  ExprResult Result;
+  auto IE = InitializedEntity::InitializeBlock(Loc, T, false);
+  if (S.getLangOpts().CPlusPlus2b) {
+    auto *E = ImplicitCastExpr::Create(S.Context, T, CK_NoOp, VarRef, nullptr,
+                                       VK_XValue, FPOptionsOverride());
+    Result = S.PerformCopyInitialization(IE, SourceLocation(), E);
+  } else {
+    Result = S.PerformMoveOrCopyInitialization(
+        IE, Sema::NamedReturnInfo{VD, Sema::NamedReturnInfo::MoveEligible},
+        VarRef);
+  }
+
   if (!Result.isInvalid()) {
     Result = S.MaybeCreateExprWithCleanups(Result);
     Expr *Init = Result.getAs<Expr>();

@@ -60,6 +60,7 @@
 
 namespace llvm {
 
+template <class GraphType> struct GraphTraits;
 class Module;
 class Value;
 

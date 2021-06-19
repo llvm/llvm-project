@@ -495,6 +495,10 @@ defm : Zn3WriteResInt<WriteRMW, [Zn3AGU012, Zn3Store], Znver3Model.StoreLatency,
 // Loads, stores, and moves, not folded with other operations.
 defm : Zn3WriteResInt<WriteLoad, [Zn3AGU012, Zn3Load], !add(Znver3Model.LoadLatency, 1), [1, 1], 1>;
 
+// Model the effect of clobbering the read-write mask operand of the GATHER operation.
+// Does not cost anything by itself, only has latency, matching that of the WriteLoad,
+defm : Zn3WriteResInt<WriteVecMaskedGatherWriteback, [], !add(Znver3Model.LoadLatency, 1), [], 0>;
+
 def Zn3WriteMOVSlow : SchedWriteRes<[Zn3AGU012, Zn3Load]> {
   let Latency = !add(Znver3Model.LoadLatency, 1);
   let ResourceCycles = [3, 1];
@@ -1143,9 +1147,9 @@ defm : Zn3WriteResXMMPair<WriteShuffle, [Zn3FPVShuf01], 1, [1], 1>;  // Vector s
 defm : Zn3WriteResXMMPair<WriteShuffleX, [Zn3FPVShuf01], 1, [1], 1>; // Vector shuffles (XMM).
 defm : Zn3WriteResYMMPair<WriteShuffleY, [Zn3FPVShuf01], 1, [1], 1>; // Vector shuffles (YMM).
 defm : X86WriteResPairUnsupported<WriteShuffleZ>; // Vector shuffles (ZMM).
-defm : Zn3WriteResXMMPair<WriteVarShuffle, [Zn3FPVShift01], 1, [1], 1>;  // Vector variable shuffles.
-defm : Zn3WriteResXMMPair<WriteVarShuffleX, [Zn3FPVShift01], 1, [1], 1>; // Vector variable shuffles (XMM).
-defm : Zn3WriteResYMMPair<WriteVarShuffleY, [Zn3FPVShift01], 1, [1], 1>; // Vector variable shuffles (YMM).
+defm : Zn3WriteResXMMPair<WriteVarShuffle, [Zn3FPVShuf01], 1, [1], 1>;  // Vector variable shuffles.
+defm : Zn3WriteResXMMPair<WriteVarShuffleX, [Zn3FPVShuf01], 1, [1], 1>; // Vector variable shuffles (XMM).
+defm : Zn3WriteResYMMPair<WriteVarShuffleY, [Zn3FPVShuf01], 1, [1], 1>; // Vector variable shuffles (YMM).
 defm : X86WriteResPairUnsupported<WriteVarShuffleZ>; // Vector variable shuffles (ZMM).
 defm : Zn3WriteResXMMPair<WriteBlend, [Zn3FPVMisc0123], 1, [1], 1>; // Vector blends.
 defm : Zn3WriteResYMMPair<WriteBlendY, [Zn3FPVMisc0123], 1, [1], 1>; // Vector blends (YMM).
@@ -1414,7 +1418,7 @@ def Zn3WriteVPERMYm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPVShuf]> {
 def : InstRW<[Zn3WriteVPERMYm], (instrs VPERMQYmi, VPERMDYrm)>;
 
 defm : Zn3WriteResYMMPair<WriteVPMOV256, [Zn3FPVShuf01], 4, [3], 2, /*LoadUOps=*/-1>; // 256-bit width packed vector width-changing move.
-defm : Zn3WriteResYMMPair<WriteVarShuffle256, [Zn3FPVShift01], 1, [1], 2>; // 256-bit width vector variable shuffles.
+defm : Zn3WriteResYMMPair<WriteVarShuffle256, [Zn3FPVShuf01], 1, [1], 2>; // 256-bit width vector variable shuffles.
 defm : Zn3WriteResXMMPair<WriteVarVecShift, [Zn3FPVShift01], 1, [1], 1>; // Variable vector shifts.
 defm : Zn3WriteResYMMPair<WriteVarVecShiftY, [Zn3FPVShift01], 1, [1], 1>; // Variable vector shifts (YMM).
 defm : X86WriteResPairUnsupported<WriteVarVecShiftZ>; // Variable vector shifts (ZMM).

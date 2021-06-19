@@ -119,11 +119,6 @@ LogicalResult verifyStructuredOpInterface(Operation *op);
 } // namespace linalg
 } // namespace mlir
 
-namespace mlir {
-namespace linalg {
-class IndexedGenericOp;
-} // namespace linalg
-} // namespace mlir
 #include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
 
 #define GET_OP_CLASSES

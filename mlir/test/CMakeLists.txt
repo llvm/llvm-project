@@ -42,9 +42,11 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
   set(MLIR_INTEGRATION_TEST_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
   # Copy test data over.
-  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.mtx
+  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/mttkrp_b.tns
+            ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.mtx
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.tns
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/wide.mtx
+            ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/zero.mtx
           DESTINATION ${MLIR_INTEGRATION_TEST_DIR}/data/)
 endif()
 

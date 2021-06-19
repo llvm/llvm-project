@@ -85,6 +85,8 @@ class VOP2_Real <VOP2_Pseudo ps, int EncodingFamily> :
   InstSI <ps.OutOperandList, ps.InOperandList, ps.Mnemonic # ps.AsmOperands, []>,
   SIMCInstr <ps.PseudoInstr, EncodingFamily> {
 
+  let VALU = 1;
+  let VOP2 = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
@@ -103,6 +105,8 @@ class VOP2_Real <VOP2_Pseudo ps, int EncodingFamily> :
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
   let SchedRW              = ps.SchedRW;
+  let mayLoad              = ps.mayLoad;
+  let mayStore             = ps.mayStore;
 }
 
 class VOP2_SDWA_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :

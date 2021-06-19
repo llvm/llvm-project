@@ -58,6 +58,11 @@ public:
     return interfaceMap.lookup<T>();
   }
 
+  /// Returns true if the type has the interface with the given ID.
+  bool hasInterface(TypeID interfaceID) const {
+    return interfaceMap.contains(interfaceID);
+  }
+
   /// Return the unique identifier representing the concrete type class.
   TypeID getTypeID() const { return typeID; }
 
@@ -67,14 +72,24 @@ private:
       : dialect(dialect), interfaceMap(std::move(interfaceMap)),
         typeID(typeID) {}
 
+  /// Give StorageUserBase access to the mutable lookup.
+  template <typename ConcreteT, typename BaseT, typename StorageT,
+            typename UniquerT, template <typename T> class... Traits>
+  friend class detail::StorageUserBase;
+
+  /// Look up the specified abstract type in the MLIRContext and return a
+  /// (mutable) pointer to it. Return a null pointer if the type could not
+  /// be found in the context.
+  static AbstractType *lookupMutable(TypeID typeID, MLIRContext *context);
+
   /// This is the dialect that this type was registered to.
-  Dialect &dialect;
+  const Dialect &dialect;
 
   /// This is a collection of the interfaces registered to this type.
   detail::InterfaceMap interfaceMap;
 
   /// The unique identifier of the derived Type class.
-  TypeID typeID;
+  const TypeID typeID;
 };
 
 //===----------------------------------------------------------------------===//
@@ -105,11 +120,11 @@ private:
   /// Set the abstract type for this storage instance. This is used by the
   /// TypeUniquer when initializing a newly constructed type storage object.
   void initialize(const AbstractType &abstractTy) {
-    abstractType = &abstractTy;
+    abstractType = const_cast<AbstractType *>(&abstractTy);
   }
 
   /// The abstract description for this type.
-  const AbstractType *abstractType;
+  AbstractType *abstractType;
 };
 
 /// Default storage type for types that require no additional initialization or

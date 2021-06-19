@@ -22,6 +22,12 @@ if config.target_arch == 'x86_64':
   # the x86_64 implementation is for testing purposes only there is no
   # equivalent target feature implemented on x86_64.
   clang_hwasan_common_cflags += ["-mcmodel=large"]
+
+  # The callback instrumentation used on x86_64 has a 1/64 chance of choosing a
+  # stack tag of 0.  This causes stack tests to become flaky, so we force tags
+  # to be generated via calls to __hwasan_generate_tag, which never returns 0.
+  # TODO: See if we can remove this once we use the outlined instrumentation.
+  clang_hwasan_common_cflags += ["-mllvm", "-hwasan-generate-tags-with-calls=1"]
 clang_hwasan_cflags = clang_hwasan_common_cflags + ["-mllvm", "-hwasan-globals",
                                                    "-mllvm", "-hwasan-use-short-granules",
                                                    "-mllvm", "-hwasan-instrument-landing-pads=0",

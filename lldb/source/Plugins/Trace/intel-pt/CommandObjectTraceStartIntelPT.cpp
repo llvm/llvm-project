@@ -9,6 +9,7 @@
 #include "CommandObjectTraceStartIntelPT.h"
 
 #include "TraceIntelPT.h"
+#include "TraceIntelPTConstants.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Trace.h"
@@ -48,7 +49,7 @@ Status CommandObjectThreadTraceStartIntelPT::CommandOptions::SetOptionValue(
 
 void CommandObjectThreadTraceStartIntelPT::CommandOptions::
     OptionParsingStarting(ExecutionContext *execution_context) {
-  m_thread_buffer_size = 4 * 1024; // 4KB
+  m_thread_buffer_size = kThreadBufferSize;
 }
 
 llvm::ArrayRef<OptionDefinition>
@@ -58,7 +59,7 @@ CommandObjectThreadTraceStartIntelPT::CommandOptions::GetDefinitions() {
 
 bool CommandObjectThreadTraceStartIntelPT::DoExecuteOnThreads(
     Args &command, CommandReturnObject &result,
-    const std::vector<lldb::tid_t> &tids) {
+    llvm::ArrayRef<lldb::tid_t> tids) {
   if (Error err = m_trace.Start(tids, m_options.m_thread_buffer_size))
     result.SetError(toString(std::move(err)));
   else
@@ -108,8 +109,8 @@ Status CommandObjectProcessTraceStartIntelPT::CommandOptions::SetOptionValue(
 
 void CommandObjectProcessTraceStartIntelPT::CommandOptions::
     OptionParsingStarting(ExecutionContext *execution_context) {
-  m_thread_buffer_size = 4 * 1024;               // 4KB
-  m_process_buffer_size_limit = 5 * 1024 * 1024; // 500MB
+  m_thread_buffer_size = kThreadBufferSize;
+  m_process_buffer_size_limit = kProcessBufferSizeLimit;
 }
 
 llvm::ArrayRef<OptionDefinition>

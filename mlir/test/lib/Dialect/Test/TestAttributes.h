@@ -21,6 +21,8 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
 
+#include "TestAttrInterfaces.h.inc"
+
 #define GET_ATTRDEF_CLASSES
 #include "TestAttrDefs.h.inc"
 

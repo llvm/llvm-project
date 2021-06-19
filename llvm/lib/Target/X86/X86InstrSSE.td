@@ -7882,12 +7882,12 @@ let mayLoad = 1, hasSideEffects = 0 in {
             (ins VR128:$src1, memop128:$src2, VR128:$mask),
             !strconcat(OpcodeStr,
               "\t{$mask, $src2, $dst|$dst, $src2, $mask}"),
-            []>, VEX, Sched<[WriteLoad]>;
+            []>, VEX, Sched<[WriteLoad, WriteVecMaskedGatherWriteback]>;
   def Yrm : AVX28I<opc, MRMSrcMem4VOp3, (outs RC256:$dst, RC256:$mask_wb),
             (ins RC256:$src1, memop256:$src2, RC256:$mask),
             !strconcat(OpcodeStr,
               "\t{$mask, $src2, $dst|$dst, $src2, $mask}"),
-            []>, VEX, VEX_L, Sched<[WriteLoad]>;
+            []>, VEX, VEX_L, Sched<[WriteLoad, WriteVecMaskedGatherWriteback]>;
 }
 }
 

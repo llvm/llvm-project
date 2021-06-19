@@ -520,6 +520,15 @@ func @index_cast(%arg0: index, %arg1: i1) {
   return
 }
 
+// CHECK-LABEL: @vector_index_cast
+func @vector_index_cast(%arg0: vector<2xindex>, %arg1: vector<2xi1>) {
+// CHECK-NEXT: = llvm.trunc %{{.*}} : vector<2xi{{.*}}> to vector<2xi1>
+  %0 = index_cast %arg0: vector<2xindex> to vector<2xi1>
+// CHECK-NEXT: = llvm.sext %{{.*}} : vector<2xi1> to vector<2xi{{.*}}>
+  %1 = index_cast %arg1: vector<2xi1> to vector<2xindex>
+  return
+}
+
 // Checking conversion of signed integer types to floating point.
 // CHECK-LABEL: @sitofp
 func @sitofp(%arg0 : i32, %arg1 : i64) {

@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -test-linalg-tensor-fusion-transform-patterns -canonicalize -cse --split-input-file | FileCheck %s
-// RUN: mlir-opt %s -test-linalg-tiled-loop-fusion-transform-patterns -canonicalize -cse  --split-input-file | FileCheck %s --check-prefix=TLOOP
+// RUN: mlir-opt %s -test-linalg-tensor-fusion-transform-patterns -resolve-shaped-type-result-dims -canonicalize -cse --split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-linalg-tiled-loop-fusion-transform-patterns -resolve-shaped-type-result-dims -canonicalize -cse  --split-input-file | FileCheck %s --check-prefix=TLOOP
 
 module {
   func @matmul_fusion(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,

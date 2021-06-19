@@ -477,6 +477,7 @@ def setupSysPath():
     pluginPath = os.path.join(scriptPath, 'plugins')
     toolsLLDBVSCode = os.path.join(scriptPath, 'tools', 'lldb-vscode')
     toolsLLDBServerPath = os.path.join(scriptPath, 'tools', 'lldb-server')
+    intelpt = os.path.join(scriptPath, 'tools', 'intelpt')
 
     # Insert script dir, plugin dir and lldb-server dir to the sys.path.
     sys.path.insert(0, pluginPath)
@@ -484,8 +485,11 @@ def setupSysPath():
     # "import lldb_vscode_testcase" from the VSCode tests
     sys.path.insert(0, toolsLLDBVSCode)
     # Adding test/tools/lldb-server to the path makes it easy
-    sys.path.insert(0, toolsLLDBServerPath)
     # to "import lldbgdbserverutils" from the lldb-server tests
+    sys.path.insert(0, toolsLLDBServerPath)
+    # Adding test/tools/intelpt to the path makes it easy
+    # to "import intelpt_testcase" from the lldb-server tests
+    sys.path.insert(0, intelpt)
 
     # This is the root of the lldb git/svn checkout
     # When this changes over to a package instead of a standalone script, this

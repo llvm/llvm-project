@@ -13,8 +13,8 @@ define <4 x float> @vld2(<8 x float>* %pSrc) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <4 x float>, <4 x float> } [[LDN]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x float>, <4 x float> } [[LDN]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x float>, <4 x float> } [[LDN]], 0
-; CHECK-NEXT:    [[L26:%.*]] = fmul <4 x float> [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[L43:%.*]] = fmul <4 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[L26:%.*]] = fmul fast <4 x float> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[L43:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[L6:%.*]] = fadd fast <4 x float> [[L43]], [[L26]]
 ; CHECK-NEXT:    ret <4 x float> [[L6]]
 ;
@@ -39,10 +39,10 @@ define <4 x float> @vld3(<12 x float>* %pSrc) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float> } [[LDN]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float> } [[LDN]], 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float> } [[LDN]], 0
-; CHECK-NEXT:    [[L29:%.*]] = fmul <4 x float> [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[L46:%.*]] = fmul <4 x float> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[L29:%.*]] = fmul fast <4 x float> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[L46:%.*]] = fmul fast <4 x float> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[L6:%.*]] = fadd fast <4 x float> [[L46]], [[L29]]
-; CHECK-NEXT:    [[L73:%.*]] = fmul <4 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[L73:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[L9:%.*]] = fadd fast <4 x float> [[L6]], [[L73]]
 ; CHECK-NEXT:    ret <4 x float> [[L9]]
 ;
@@ -72,11 +72,11 @@ define <4 x float> @vld4(<16 x float>* %pSrc) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } [[LDN]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } [[LDN]], 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } [[LDN]], 0
-; CHECK-NEXT:    [[L312:%.*]] = fmul <4 x float> [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    [[L59:%.*]] = fmul <4 x float> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[L312:%.*]] = fmul fast <4 x float> [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    [[L59:%.*]] = fmul fast <4 x float> [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    [[L7:%.*]] = fadd fast <4 x float> [[L59]], [[L312]]
-; CHECK-NEXT:    [[L86:%.*]] = fmul <4 x float> [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[L103:%.*]] = fmul <4 x float> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[L86:%.*]] = fmul fast <4 x float> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[L103:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[L12:%.*]] = fadd fast <4 x float> [[L103]], [[L86]]
 ; CHECK-NEXT:    ret <4 x float> [[L12]]
 ;
@@ -106,8 +106,8 @@ define <4 x float> @twosrc(<8 x float>* %pSrc1, <8 x float>* %pSrc2) {
 ; CHECK-NEXT:    [[LDN7:%.*]] = call { <4 x float>, <4 x float> } @llvm.aarch64.neon.ld2.v4f32.p0v4f32(<4 x float>* [[TMP3]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x float>, <4 x float> } [[LDN7]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <4 x float>, <4 x float> } [[LDN7]], 1
-; CHECK-NEXT:    [[L46:%.*]] = fmul <4 x float> [[TMP4]], [[TMP2]]
-; CHECK-NEXT:    [[L63:%.*]] = fmul <4 x float> [[TMP5]], [[TMP1]]
+; CHECK-NEXT:    [[L46:%.*]] = fmul fast <4 x float> [[TMP4]], [[TMP2]]
+; CHECK-NEXT:    [[L63:%.*]] = fmul fast <4 x float> [[TMP5]], [[TMP1]]
 ; CHECK-NEXT:    [[L8:%.*]] = fadd fast <4 x float> [[L63]], [[L46]]
 ; CHECK-NEXT:    ret <4 x float> [[L8]]
 ;
@@ -133,7 +133,7 @@ define <4 x float> @twosrc2(<8 x float>* %pSrc1, <8 x float>* %pSrc2) {
 ; CHECK-NEXT:    [[LDN4:%.*]] = call { <4 x float>, <4 x float> } @llvm.aarch64.neon.ld2.v4f32.p0v4f32(<4 x float>* [[TMP3]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x float>, <4 x float> } [[LDN4]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <4 x float>, <4 x float> } [[LDN4]], 1
-; CHECK-NEXT:    [[L43:%.*]] = fmul <4 x float> [[TMP4]], [[TMP2]]
+; CHECK-NEXT:    [[L43:%.*]] = fmul fast <4 x float> [[TMP4]], [[TMP2]]
 ; CHECK-NEXT:    [[L6:%.*]] = fmul fast <4 x float> [[TMP5]], [[TMP1]]
 ; CHECK-NEXT:    [[L8:%.*]] = fadd fast <4 x float> [[L6]], [[L43]]
 ; CHECK-NEXT:    ret <4 x float> [[L8]]

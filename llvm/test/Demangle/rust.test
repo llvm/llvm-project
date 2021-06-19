@@ -448,6 +448,14 @@ CHECK: _RIC7backrefSB9_E
 CHECK: _RIC7backrefKBa_E
        _RIC7backrefKBa_E
 
+; Dot suffix
+
+CHECK: dot (.llvm.1234)
+       _RC3dot.llvm.1234
+
+CHECK: dot (.llvm.6789)
+       _RC3dotC5crate.llvm.6789
+
 ; Invalid mangled characters
 
 CHECK: _RNvC2a.1c

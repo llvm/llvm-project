@@ -16,9 +16,8 @@
 
 #if SANITIZER_FUCHSIA
 #include "sanitizer_symbolizer_fuchsia.h"
-#  elif SANITIZER_RTEMS
-#    include "sanitizer_symbolizer_rtems.h"
 #  endif
+
 #  include <limits.h>
 #  include <unwind.h>
 

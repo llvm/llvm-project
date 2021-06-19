@@ -9677,7 +9677,8 @@ multiclass avx512_gather<bits<8> opc, string OpcodeStr, X86VectorVTInfo _,
             (ins _.RC:$src1, MaskRC:$mask, memop:$src2),
             !strconcat(OpcodeStr#_.Suffix,
             "\t{$src2, ${dst} {${mask}}|${dst} {${mask}}, $src2}"),
-            []>, EVEX, EVEX_K, EVEX_CD8<_.EltSize, CD8VT1>, Sched<[WriteLoad]>;
+            []>, EVEX, EVEX_K, EVEX_CD8<_.EltSize, CD8VT1>,
+            Sched<[WriteLoad, WriteVecMaskedGatherWriteback]>;
 }
 
 multiclass avx512_gather_q_pd<bits<8> dopc, bits<8> qopc,

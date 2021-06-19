@@ -217,9 +217,13 @@ void InterfaceGenerator::emitConceptDecl(Interface &interface) {
 }
 
 void InterfaceGenerator::emitModelDecl(Interface &interface) {
+  // Emit the basic model and the fallback model.
   for (const char *modelClass : {"Model", "FallbackModel"}) {
     os << "  template<typename " << valueTemplate << ">\n";
     os << "  class " << modelClass << " : public Concept {\n  public:\n";
+    os << "    using Interface = " << interface.getCppNamespace()
+       << (interface.getCppNamespace().empty() ? "" : "::")
+       << interface.getName() << ";\n";
     os << "    " << modelClass << "() : Concept{";
     llvm::interleaveComma(
         interface.getMethods(), os,
@@ -236,6 +240,40 @@ void InterfaceGenerator::emitModelDecl(Interface &interface) {
     }
     os << "  };\n";
   }
+
+  // Emit the template for the external model.
+  os << "  template<typename ConcreteModel, typename " << valueTemplate
+     << ">\n";
+  os << "  class ExternalModel : public FallbackModel<ConcreteModel> {\n";
+  os << "  public:\n";
+
+  // Emit declarations for methods that have default implementations. Other
+  // methods are expected to be implemented by the concrete derived model.
+  for (auto &method : interface.getMethods()) {
+    if (!method.getDefaultImplementation())
+      continue;
+    os << "    ";
+    if (method.isStatic())
+      os << "static ";
+    emitCPPType(method.getReturnType(), os);
+    os << method.getName() << "(";
+    if (!method.isStatic()) {
+      emitCPPType(valueType, os);
+      os << "tablegen_opaque_val";
+      if (!method.arg_empty())
+        os << ", ";
+    }
+    llvm::interleaveComma(method.getArguments(), os,
+                          [&](const InterfaceMethod::Argument &arg) {
+                            emitCPPType(arg.type, os);
+                            os << arg.name;
+                          });
+    os << ")";
+    if (!method.isStatic())
+      os << " const";
+    os << ";\n";
+  }
+  os << "  };\n";
 }
 
 void InterfaceGenerator::emitModelMethodsDef(Interface &interface) {
@@ -298,6 +336,42 @@ void InterfaceGenerator::emitModelMethodsDef(Interface &interface) {
         [&](const InterfaceMethod::Argument &arg) { os << arg.name; });
     os << ");\n}\n";
   }
+
+  // Emit default implementations for the external model.
+  for (auto &method : interface.getMethods()) {
+    if (!method.getDefaultImplementation())
+      continue;
+    os << "template<typename ConcreteModel, typename " << valueTemplate
+       << ">\n";
+    emitCPPType(method.getReturnType(), os);
+    os << "detail::" << interface.getName()
+       << "InterfaceTraits::ExternalModel<ConcreteModel, " << valueTemplate
+       << ">::";
+
+    os << method.getName() << "(";
+    if (!method.isStatic()) {
+      emitCPPType(valueType, os);
+      os << "tablegen_opaque_val";
+      if (!method.arg_empty())
+        os << ", ";
+    }
+    llvm::interleaveComma(method.getArguments(), os,
+                          [&](const InterfaceMethod::Argument &arg) {
+                            emitCPPType(arg.type, os);
+                            os << arg.name;
+                          });
+    os << ")";
+    if (!method.isStatic())
+      os << " const";
+
+    os << " {\n";
+
+    // Use the empty context for static methods.
+    tblgen::FmtContext ctx;
+    os << tblgen::tgfmt(method.getDefaultImplementation()->trim(),
+                        method.isStatic() ? &ctx : &nonStaticMethodFmt);
+    os << "\n}\n";
+  }
 }
 
 void InterfaceGenerator::emitTraitDecl(Interface &interface,
@@ -325,7 +399,7 @@ void InterfaceGenerator::emitTraitDecl(Interface &interface,
     os << "    " << (method.isStatic() ? "static " : "");
     emitCPPType(method.getReturnType(), os);
     emitMethodNameAndArgs(method, os, valueType, /*addThisArg=*/false,
-                          /*addConst=*/!isOpInterface);
+                          /*addConst=*/!isOpInterface && !method.isStatic());
     os << " {\n      " << tblgen::tgfmt(defaultImpl->trim(), &traitMethodFmt)
        << "\n    }\n";
   }
@@ -343,11 +417,6 @@ void InterfaceGenerator::emitTraitDecl(Interface &interface,
     os << tblgen::tgfmt(*extraTraitDecls, &traitMethodFmt) << "\n";
 
   os << "  };\n";
-
-  // Emit a utility wrapper trait class.
-  os << llvm::formatv("  template <typename {1}>\n"
-                      "  struct Trait : public {0}Trait<{1}> {{};\n",
-                      interfaceName, valueTemplate);
 }
 
 void InterfaceGenerator::emitInterfaceDecl(Interface interface) {
@@ -368,7 +437,13 @@ void InterfaceGenerator::emitInterfaceDecl(Interface interface) {
      << "struct " << interfaceTraitsName << " {\n";
   emitConceptDecl(interface);
   emitModelDecl(interface);
-  os << "};\n} // end namespace detail\n";
+  os << "};";
+
+  // Emit the derived trait for the interface.
+  os << "template <typename " << valueTemplate << ">\n";
+  os << "struct " << interface.getName() << "Trait;\n";
+
+  os << "\n} // end namespace detail\n";
 
   // Emit the main interface class declaration.
   os << llvm::formatv("class {0} : public ::mlir::{3}<{1}, detail::{2}> {\n"
@@ -377,8 +452,10 @@ void InterfaceGenerator::emitInterfaceDecl(Interface interface) {
                       interfaceName, interfaceName, interfaceTraitsName,
                       interfaceBaseType);
 
-  // Emit the derived trait for the interface.
-  emitTraitDecl(interface, interfaceName, interfaceTraitsName);
+  // Emit a utility wrapper trait class.
+  os << llvm::formatv("  template <typename {1}>\n"
+                      "  struct Trait : public detail::{0}Trait<{1}> {{};\n",
+                      interfaceName, valueTemplate);
 
   // Insert the method declarations.
   bool isOpInterface = isa<OpInterface>(interface);
@@ -394,6 +471,10 @@ void InterfaceGenerator::emitInterfaceDecl(Interface interface) {
     os << *extraDecls << "\n";
 
   os << "};\n";
+
+  os << "namespace detail {\n";
+  emitTraitDecl(interface, interfaceName, interfaceTraitsName);
+  os << "}// namespace detail\n";
 
   emitModelMethodsDef(interface);
 

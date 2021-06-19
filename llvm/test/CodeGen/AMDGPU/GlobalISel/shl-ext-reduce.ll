@@ -547,21 +547,18 @@ define amdgpu_ps i32 @s_shl_i32_zext_i16(i16 inreg %x) {
 ;
 ; GFX8-LABEL: s_shl_i32_zext_i16:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX8-NEXT:    s_and_b32 s0, s0, 0x3fff
 ; GFX8-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_shl_i32_zext_i16:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX9-NEXT:    s_and_b32 s0, s0, 0x3fff
 ; GFX9-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: s_shl_i32_zext_i16:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX10-NEXT:    s_and_b32 s0, s0, 0x3fff
 ; GFX10-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX10-NEXT:    ; return to shader part epilog

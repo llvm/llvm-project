@@ -42,9 +42,12 @@ void Descriptor::Establish(TypeCode t, std::size_t elementBytes, void *p,
   // incoming element length is replaced by 4 so that it will be valid
   // for all CHARACTER kinds.
   std::size_t workaroundElemLen{elementBytes ? elementBytes : 4};
-  RUNTIME_CHECK(terminator,
-      ISO::CFI_establish(&raw_, p, attribute, t.raw(), workaroundElemLen, rank,
-          extent) == CFI_SUCCESS);
+  int cfiStatus{ISO::CFI_establish(
+      &raw_, p, attribute, t.raw(), workaroundElemLen, rank, extent)};
+  if (cfiStatus != CFI_SUCCESS) {
+    terminator.Crash(
+        "Descriptor::Establish: CFI_establish returned %d", cfiStatus, t.raw());
+  }
   if (elementBytes == 0) {
     raw_.elem_len = 0;
     for (int j{0}; j < rank; ++j) {
@@ -75,7 +78,8 @@ void Descriptor::Establish(int characterKind, std::size_t characters, void *p,
 
 void Descriptor::Establish(const typeInfo::DerivedType &dt, void *p, int rank,
     const SubscriptValue *extent, ISO::CFI_attribute_t attribute) {
-  Establish(CFI_type_struct, dt.sizeInBytes, p, rank, extent, attribute, true);
+  Establish(TypeCode{TypeCategory::Derived, 0}, dt.sizeInBytes(), p, rank,
+      extent, attribute, true);
   DescriptorAddendum *a{Addendum()};
   Terminator terminator{__FILE__, __LINE__};
   RUNTIME_CHECK(terminator, a != nullptr);
@@ -109,8 +113,8 @@ OwningPtr<Descriptor> Descriptor::Create(int characterKind,
 OwningPtr<Descriptor> Descriptor::Create(const typeInfo::DerivedType &dt,
     void *p, int rank, const SubscriptValue *extent,
     ISO::CFI_attribute_t attribute) {
-  return Create(TypeCode{CFI_type_struct}, dt.sizeInBytes, p, rank, extent,
-      attribute, dt.LenParameters());
+  return Create(TypeCode{TypeCategory::Derived, 0}, dt.sizeInBytes(), p, rank,
+      extent, attribute, dt.LenParameters());
 }
 
 std::size_t Descriptor::SizeInBytes() const {
@@ -146,14 +150,6 @@ int Descriptor::Allocate() {
     }
   }
   return 0;
-}
-
-int Descriptor::Allocate(const SubscriptValue lb[], const SubscriptValue ub[]) {
-  int result{ISO::CFI_allocate(&raw_, lb, ub, ElementBytes())};
-  if (result == CFI_SUCCESS) {
-    // TODO: derived type initialization
-  }
-  return result;
 }
 
 int Descriptor::Deallocate(bool finalize) {

@@ -19,6 +19,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LegalizeTypes.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -572,7 +573,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FPOW(SDNode *N) {
 SDValue DAGTypeLegalizer::SoftenFloatRes_FPOWI(SDNode *N) {
   bool IsStrict = N->isStrictFPOpcode();
   unsigned Offset = IsStrict ? 1 : 0;
-  assert(N->getOperand(1 + Offset).getValueType() == MVT::i32 &&
+  assert((N->getOperand(1 + Offset).getValueType() == MVT::i16 ||
+          N->getOperand(1 + Offset).getValueType() == MVT::i32) &&
          "Unsupported power type!");
   RTLIB::Libcall LC = RTLIB::getPOWI(N->getValueType(0));
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fpowi.");
@@ -580,6 +582,14 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FPOWI(SDNode *N) {
     // Some targets don't have a powi libcall; use pow instead.
     // FIXME: Implement this if some target needs it.
     DAG.getContext()->emitError("Don't know how to soften fpowi to fpow");
+    return DAG.getUNDEF(N->getValueType(0));
+  }
+
+  if (DAG.getLibInfo().getIntSize() !=
+      N->getOperand(1 + Offset).getValueType().getSizeInBits()) {
+    // If the exponent does not match with sizeof(int) a libcall to RTLIB::POWI
+    // would use the wrong type for the argument.
+    DAG.getContext()->emitError("POWI exponent does not match sizeof(int)");
     return DAG.getUNDEF(N->getValueType(0));
   }
 

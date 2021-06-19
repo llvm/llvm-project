@@ -109,8 +109,9 @@ public:
     return len_[which];
   }
   static constexpr std::size_t SizeInBytes(int lenParameters) {
-    return sizeof(DescriptorAddendum) - sizeof(typeInfo::TypeParameterValue) +
-        lenParameters * sizeof(typeInfo::TypeParameterValue);
+    // TODO: Don't waste that last word if lenParameters == 0
+    return sizeof(DescriptorAddendum) +
+        std::max(lenParameters - 1, 0) * sizeof(typeInfo::TypeParameterValue);
   }
   std::size_t SizeInBytes() const;
 
@@ -304,9 +305,12 @@ public:
 
   std::size_t Elements() const;
 
+  // Allocate() assumes Elements() and ElementBytes() work;
+  // define the extents of the dimensions and the element length
+  // before calling.  It (re)computes the byte strides after
+  // allocation.
   // TODO: SOURCE= and MOLD=
   int Allocate();
-  int Allocate(const SubscriptValue lb[], const SubscriptValue ub[]);
   int Deallocate(bool finalize = true);
   void Destroy(bool finalize = true) const;
 

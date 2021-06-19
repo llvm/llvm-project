@@ -199,6 +199,9 @@ using AllocatorCache = AsanAllocator::AllocatorCache;
 struct AsanThreadLocalMallocStorage {
   uptr quarantine_cache[16];
   AllocatorCache allocator_cache;
+#if SANITIZER_AMDGPU
+  uptr quarantine_cache_dev[16];
+#endif
   void CommitBack();
  private:
   // These objects are allocated via mmap() and are zero-initialized.
@@ -232,4 +235,35 @@ void PrintInternalAllocatorStats();
 void AsanSoftRssLimitExceededCallback(bool exceeded);
 
 }  // namespace __asan
+
+#if SANITIZER_AMDGPU
+#include <stddef.h> // for size_t
+#include <stdint.h> // for uint32_t
+
+typedef enum {
+  HSA_STATUS_SUCCESS = 0x0,
+  // Skip all other hsa_status_t definitions as they are not used here
+  HSA_STATUS_ERROR_FATAL = 0x1026
+} hsa_status_t;
+
+typedef struct hsa_amd_memory_pool_s {
+  uint64_t handle;
+} hsa_amd_memory_pool_t;
+
+typedef struct hsa_agent_s hsa_agent_t;
+
+namespace __asan {
+hsa_status_t asan_hsa_amd_memory_pool_allocate(
+  hsa_amd_memory_pool_t memory_pool, size_t size, uint32_t flags, void **ptr,
+  BufferedStackTrace *stack);
+hsa_status_t asan_hsa_amd_memory_pool_free(
+  void *ptr,
+  BufferedStackTrace *stack);
+hsa_status_t asan_hsa_amd_agents_allow_access(
+  uint32_t num_agents, const hsa_agent_t *agents, const uint32_t *flags,
+  const void *ptr,
+  BufferedStackTrace *stack);
+} // namespace __asan
+#endif
+
 #endif  // ASAN_ALLOCATOR_H

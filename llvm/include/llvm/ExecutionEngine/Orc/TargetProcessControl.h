@@ -19,6 +19,7 @@
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
+#include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 
@@ -137,14 +138,14 @@ public:
   virtual Expected<int32_t> runAsMain(JITTargetAddress MainFnAddr,
                                       ArrayRef<std::string> Args) = 0;
 
-  /// Run a wrapper function with signature:
+  /// Run a wrapper function in the executor.
   ///
   /// \code{.cpp}
   ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
   /// \endcode{.cpp}
   ///
-  virtual Expected<tpctypes::WrapperFunctionResult>
-  runWrapper(JITTargetAddress WrapperFnAddr, ArrayRef<uint8_t> ArgBuffer) = 0;
+  virtual Expected<shared::WrapperFunctionResult>
+  runWrapper(JITTargetAddress WrapperFnAddr, ArrayRef<char> ArgBuffer) = 0;
 
   /// Disconnect from the target process.
   ///
@@ -160,6 +161,21 @@ protected:
   unsigned PageSize = 0;
   MemoryAccess *MemAccess = nullptr;
   jitlink::JITLinkMemoryManager *MemMgr = nullptr;
+};
+
+/// Call a wrapper function via TargetProcessControl::runWrapper.
+class TPCCaller {
+public:
+  TPCCaller(TargetProcessControl &TPC, JITTargetAddress WrapperFnAddr)
+      : TPC(TPC), WrapperFnAddr(WrapperFnAddr) {}
+  Expected<shared::WrapperFunctionResult> operator()(const char *ArgData,
+                                                     size_t ArgSize) const {
+    return TPC.runWrapper(WrapperFnAddr, ArrayRef<char>(ArgData, ArgSize));
+  }
+
+private:
+  TargetProcessControl &TPC;
+  JITTargetAddress WrapperFnAddr;
 };
 
 /// A TargetProcessControl implementation targeting the current process.
@@ -185,9 +201,8 @@ public:
   Expected<int32_t> runAsMain(JITTargetAddress MainFnAddr,
                               ArrayRef<std::string> Args) override;
 
-  Expected<tpctypes::WrapperFunctionResult>
-  runWrapper(JITTargetAddress WrapperFnAddr,
-             ArrayRef<uint8_t> ArgBuffer) override;
+  Expected<shared::WrapperFunctionResult>
+  runWrapper(JITTargetAddress WrapperFnAddr, ArrayRef<char> ArgBuffer) override;
 
   Error disconnect() override;
 

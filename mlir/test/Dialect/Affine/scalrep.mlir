@@ -515,6 +515,30 @@ func @vector_load_store_load_no_cse(%in : memref<512xf32>, %out : memref<512xf32
   return
 }
 
+// CHECK-LABEL: func @reduction_multi_store
+func @reduction_multi_store() -> memref<1xf32> {
+  %A = memref.alloc() : memref<1xf32>
+  %cf0 = constant 0.0 : f32
+  %cf5 = constant 5.0 : f32
+
+ affine.store %cf0, %A[0] : memref<1xf32>
+  affine.for %i = 0 to 100 step 2 {
+    %l = affine.load %A[0] : memref<1xf32>
+    %s = addf %l, %cf5 : f32
+    // Store to load forwarding from this store should happen.
+    affine.store %s, %A[0] : memref<1xf32>
+    %m = affine.load %A[0] : memref<1xf32>
+   "test.foo"(%m) : (f32) -> ()
+  }
+
+// CHECK:       affine.for
+// CHECK:         affine.load
+// CHECK:         affine.store %[[S:.*]],
+// CHECK-NEXT:    "test.foo"(%[[S]])
+
+  return %A : memref<1xf32>
+}
+
 // CHECK-LABEL: func @vector_load_affine_apply_store_load
 func @vector_load_affine_apply_store_load(%in : memref<512xf32>, %out : memref<512xf32>) {
   %cf1 = constant 1: index

@@ -15,23 +15,6 @@
 namespace llvm {
 namespace orc {
 
-// Counterpart for readDebugObjectInfo() in TargetProcess/JITLoaderGDB.cpp
-static std::vector<uint8_t>
-writeDebugObjectInfo(sys::MemoryBlock TargetMemBlock) {
-  auto DebugObjAddr = pointerToJITTargetAddress(TargetMemBlock.base());
-  uint64_t DebugObjSize = TargetMemBlock.allocatedSize();
-
-  std::vector<uint8_t> ArgBuffer;
-  ArgBuffer.resize(sizeof(decltype(DebugObjAddr)) +
-                   sizeof(decltype(DebugObjSize)));
-
-  BinaryStreamWriter ArgWriter(ArgBuffer, support::endianness::big);
-  cantFail(ArgWriter.writeInteger(DebugObjAddr));
-  cantFail(ArgWriter.writeInteger(DebugObjSize));
-
-  return ArgBuffer;
-}
-
 Expected<std::unique_ptr<TPCDebugObjectRegistrar>>
 createJITLoaderGDBRegistrar(TargetProcessControl &TPC) {
   auto ProcessHandle = TPC.loadDylib(nullptr);
@@ -54,8 +37,7 @@ createJITLoaderGDBRegistrar(TargetProcessControl &TPC) {
   assert((*Result)[0].size() == 1 &&
          "Unexpected number of addresses in result");
 
-  return std::make_unique<TPCDebugObjectRegistrar>(TPC, (*Result)[0][0],
-                                                   &writeDebugObjectInfo);
+  return std::make_unique<TPCDebugObjectRegistrar>(TPC, (*Result)[0][0]);
 }
 
 } // namespace orc

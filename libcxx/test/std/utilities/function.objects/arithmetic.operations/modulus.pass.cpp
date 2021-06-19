@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // <functional>
 
 // modulus
@@ -20,9 +22,11 @@ int main(int, char**)
 {
     typedef std::modulus<int> F;
     const F f = F();
+#if TEST_STD_VER <= 17
     static_assert((std::is_same<int, F::first_argument_type>::value), "" );
     static_assert((std::is_same<int, F::second_argument_type>::value), "" );
     static_assert((std::is_same<int, F::result_type>::value), "" );
+#endif
     assert(f(36, 8) == 4);
 #if TEST_STD_VER > 11
     typedef std::modulus<> F2;

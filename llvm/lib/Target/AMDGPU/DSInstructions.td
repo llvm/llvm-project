@@ -52,20 +52,25 @@ class DS_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
   let Uses = !if(has_m0_read, [M0, EXEC], [EXEC]);
 }
 
-class DS_Real <DS_Pseudo ds> :
-  InstSI <ds.OutOperandList, ds.InOperandList, ds.Mnemonic # ds.AsmOperands, []>,
+class DS_Real <DS_Pseudo ps> :
+  InstSI <ps.OutOperandList, ps.InOperandList, ps.Mnemonic # ps.AsmOperands, []>,
   Enc64 {
 
   let isPseudo = 0;
   let isCodeGenOnly = 0;
+  let LGKM_CNT = 1;
   let DS = 1;
   let UseNamedOperandTable = 1;
 
   // copy relevant pseudo op flags
-  let SubtargetPredicate = ds.SubtargetPredicate;
-  let OtherPredicates    = ds.OtherPredicates;
-  let AsmMatchConverter  = ds.AsmMatchConverter;
-  let SchedRW            = ds.SchedRW;
+  let SubtargetPredicate = ps.SubtargetPredicate;
+  let OtherPredicates    = ps.OtherPredicates;
+  let AsmMatchConverter  = ps.AsmMatchConverter;
+  let SchedRW            = ps.SchedRW;
+  let mayLoad            = ps.mayLoad;
+  let mayStore           = ps.mayStore;
+  let IsAtomicRet        = ps.IsAtomicRet;
+  let IsAtomicNoRet      = ps.IsAtomicNoRet;
 
   // encoding fields
   bits<10> vdst;
@@ -77,11 +82,11 @@ class DS_Real <DS_Pseudo ds> :
   bits<8> offset1;
 
   bits<16> offset;
-  let offset0 = !if(ds.has_offset, offset{7-0}, ?);
-  let offset1 = !if(ds.has_offset, offset{15-8}, ?);
+  let offset0 = !if(ps.has_offset, offset{7-0}, ?);
+  let offset1 = !if(ps.has_offset, offset{15-8}, ?);
 
-  bits<1> acc = !if(ds.has_vdst, vdst{9},
-                    !if(!or(ds.has_data0, ds.has_gws_data0), data0{9}, 0));
+  bits<1> acc = !if(ps.has_vdst, vdst{9},
+                    !if(!or(ps.has_data0, ps.has_gws_data0), data0{9}, 0));
 }
 
 
@@ -1184,23 +1189,23 @@ defm DS_MAX_SRC2_F64        : DS_Real_gfx6_gfx7_gfx10<0x0d3>;
 // GFX8, GFX9 (VI).
 //===----------------------------------------------------------------------===//
 
-class DS_Real_vi <bits<8> op, DS_Pseudo ds> :
-  DS_Real <ds>,
-  SIMCInstr <ds.Mnemonic, SIEncodingFamily.VI> {
+class DS_Real_vi <bits<8> op, DS_Pseudo ps> :
+  DS_Real <ps>,
+  SIMCInstr <ps.Mnemonic, SIEncodingFamily.VI> {
   let AssemblerPredicate = isGFX8GFX9;
   let DecoderNamespace = "GFX8";
 
   // encoding
-  let Inst{7-0}   = !if(ds.has_offset0, offset0, 0);
-  let Inst{15-8}  = !if(ds.has_offset1, offset1, 0);
-  let Inst{16}    = !if(ds.has_gds, gds, ds.gdsValue);
+  let Inst{7-0}   = !if(ps.has_offset0, offset0, 0);
+  let Inst{15-8}  = !if(ps.has_offset1, offset1, 0);
+  let Inst{16}    = !if(ps.has_gds, gds, ps.gdsValue);
   let Inst{24-17} = op;
   let Inst{25}    = acc;
   let Inst{31-26} = 0x36; // ds prefix
-  let Inst{39-32} = !if(ds.has_addr, addr, !if(ds.has_gws_data0, data0{7-0}, 0));
-  let Inst{47-40} = !if(ds.has_data0, data0{7-0}, 0);
-  let Inst{55-48} = !if(ds.has_data1, data1{7-0}, 0);
-  let Inst{63-56} = !if(ds.has_vdst, vdst{7-0}, 0);
+  let Inst{39-32} = !if(ps.has_addr, addr, !if(ps.has_gws_data0, data0{7-0}, 0));
+  let Inst{47-40} = !if(ps.has_data0, data0{7-0}, 0);
+  let Inst{55-48} = !if(ps.has_data1, data1{7-0}, 0);
+  let Inst{63-56} = !if(ps.has_vdst, vdst{7-0}, 0);
 }
 
 def DS_ADD_U32_vi         : DS_Real_vi<0x0,  DS_ADD_U32>;

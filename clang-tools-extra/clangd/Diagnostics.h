@@ -171,7 +171,6 @@ private:
   SourceManager *OrigSrcMgr = nullptr;
 
   llvm::DenseSet<std::pair<unsigned, unsigned>> IncludedErrorLocations;
-  bool LastPrimaryDiagnosticWasSuppressed = false;
 };
 
 /// Determine whether a (non-clang-tidy) diagnostic is suppressed by config.

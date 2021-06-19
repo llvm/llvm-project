@@ -207,6 +207,97 @@ if (ExampleOpInterface example = dyn_cast<ExampleOpInterface>(op))
   llvm::errs() << "hook returned = " << example.exampleInterfaceHook() << "\n";
 ```
 
+#### External Models for Attribute, Operation and Type Interfaces
+
+It may be desirable to provide an interface implementation for an IR object
+without modifying the definition of said object. Notably, this allows to
+implement interfaces for attributes, operations and types outside of the dialect
+that defines them, for example, to provide interfaces for built-in types.
+
+This is achieved by extending the concept-based polymorphism model with two more
+classes derived from `Concept` as follows.
+
+```c++
+struct ExampleTypeInterfaceTraits {
+  struct Concept {
+    virtual unsigned exampleInterfaceHook(Type type) const = 0;
+    virtual unsigned exampleStaticInterfaceHook() const = 0;
+  };
+
+  template <typename ConcreteType>
+  struct Model : public Concept { /*...*/ };
+
+  /// Unlike `Model`, `FallbackModel` passes the type object through to the
+  /// hook, making it accessible in the method body even if the method is not
+  /// defined in the class itself and thus has no `this` access. ODS
+  /// automatically generates this class for all interfaces.
+  template <typename ConcreteType>
+  struct FallbackModel : public Concept {
+    unsigned exampleInterfaceHook(Type type) const override {
+      getImpl()->exampleInterfaceHook(type);
+    }
+    unsigned exampleStaticInterfaceHook() const override {
+      ConcreteType::exampleStaticInterfaceHook();
+    }
+  };
+
+  /// `ExternalModel` provides a place for default implementations of interface
+  /// methods by explicitly separating the model class, which implements the
+  /// interface, from the type class, for which the interface is being
+  /// implemented. Default implementations can be then defined generically
+  /// making use of `cast<ConcreteType>`. If `ConcreteType` does not provide
+  /// the APIs required by the default implementation, custom implementations
+  /// may use `FallbackModel` directly to override the default implementation.
+  /// Being located in a class template, it never gets instantiated and does not
+  /// lead to compilation errors. ODS automatically generates this class and
+  /// places default method implementations in it.
+  template <typename ConcreteModel, typename ConcreteType>
+  struct ExternalModel : public FallbackModel<ConcreteModel> {
+    unsigned exampleInterfaceHook(Type type) const override {
+      // Default implementation can be provided here.
+      return type.cast<ConcreteType>().callSomeTypeSpecificMethod();
+    }
+  };
+};
+```
+
+External models can be provided for attribute, operation and type interfaces by
+deriving either `FallbackModel` or `ExternalModel` and by registering the model
+class with the relevant class in a given context. Other contexts will not see
+the interface unless registered.
+
+```c++
+/// External interface implementation for a concrete class. This does not
+/// require modifying the definition of the type class itself.
+struct ExternalModelExample
+    : public ExampleTypeInterface::ExternalModel<ExternalModelExample,
+                                                 IntegerType> {
+  static unsigned exampleStaticInterfaceHook() {
+    // Implementation is provided here.
+    return IntegerType::someStaticMethod();
+  }
+
+  // No need to define `exampleInterfaceHook` that has a default implementation
+  // in `ExternalModel`. But it can be overridden if desired.
+}
+
+int main() {
+  MLIRContext context;
+  /* ... */;
+
+  // Register the interface model with the type in the given context before
+  // using it. The dialect contaiing the type is expected to have been loaded
+  // at this point.
+  IntegerType::registerInterface<ExternalModelExample>(context);
+}
+```
+
+Note: It is strongly encouraged to only use this mechanism if you "own" the
+interface being externally applied. This prevents a situation where neither the
+owner of the dialect containing the object nor the owner of the interface are
+aware of an interface implementation, which can lead to duplicate or
+diverging implementations.
+
 #### Dialect Fallback for OpInterface
 
 Some dialects have an open ecosystem and don't register all of the possible
@@ -215,9 +306,9 @@ implementing an `OpInterface` for these operation. When an operation isn't
 registered or does not provide an implementation for an interface, the query
 will fallback to the dialect itself.
 
-A second model is used for such cases and automatically generated when
-using ODS (see below) with the name `FallbackModel`. This model can be implemented
-for a particular dialect:
+A second model is used for such cases and automatically generated when using ODS
+(see below) with the name `FallbackModel`. This model can be implemented for a
+particular dialect:
 
 ```c++
 // This is the implementation of a dialect fallback for `ExampleOpInterface`.
@@ -299,6 +390,9 @@ comprised of the following components:
     -   Additional C++ code that is generated in the declaration of the
         interface class. This allows for defining methods and more on the user
         facing interface class, that do not need to hook into the IR entity.
+        These declarations are _not_ implicitly visible in default
+        implementations of interface methods, but static declarations may be
+        accessed with full name qualification.
 
 `OpInterface` classes may additionally contain the following:
 
@@ -345,6 +439,8 @@ Interface methods are comprised of the following components:
     -   `ConcreteAttr`/`ConcreteOp`/`ConcreteType` is an implicitly defined
         `typename` that can be used to refer to the type of the derived IR
         entity currently being operated on.
+    -   This may refer to static fields of the interface class using the
+        qualified name, e.g., `TestOpInterface::staticMethod()`.
 
 ODS also allows for generating declarations for the `InterfaceMethod`s of an
 operation if the operation specifies the interface with

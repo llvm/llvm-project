@@ -20,6 +20,12 @@ public:
   TestGLSLCanonicalizationPass() = default;
   TestGLSLCanonicalizationPass(const TestGLSLCanonicalizationPass &) {}
   void runOnOperation() override;
+  StringRef getArgument() const final {
+    return "test-spirv-glsl-canonicalization";
+  }
+  StringRef getDescription() const final {
+    return "Tests SPIR-V canonicalization patterns for GLSL extension.";
+  }
 };
 } // namespace
 
@@ -31,8 +37,6 @@ void TestGLSLCanonicalizationPass::runOnOperation() {
 
 namespace mlir {
 void registerTestSpirvGLSLCanonicalizationPass() {
-  PassRegistration<TestGLSLCanonicalizationPass> registration(
-      "test-spirv-glsl-canonicalization",
-      "Tests SPIR-V canonicalization patterns for GLSL extension.");
+  PassRegistration<TestGLSLCanonicalizationPass>();
 }
 } // namespace mlir

@@ -144,7 +144,7 @@ BreakpointLocationSP BreakpointSite::GetOwnerAtIndex(size_t index) {
   return m_owners.GetByIndex(index);
 }
 
-bool BreakpointSite::ValidForThisThread(Thread *thread) {
+bool BreakpointSite::ValidForThisThread(Thread &thread) {
   std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
   return m_owners.ValidForThisThread(thread);
 }

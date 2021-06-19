@@ -663,7 +663,7 @@ define float @fpow_s(float %a, float %b) nounwind {
   ret float %1
 }
 
-declare float @llvm.powi.f32(float %Val, i32 %power)
+declare float @llvm.powi.f32.i32(float %Val, i32 %power)
 
 define float @fpowi_s(float %a, i32 %b) nounwind {
 ; RV64I-LABEL: fpowi_s:
@@ -675,7 +675,7 @@ define float @fpowi_s(float %a, i32 %b) nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call float @llvm.powi.f32(float %a, i32 %b)
+  %1 = call float @llvm.powi.f32.i32(float %a, i32 %b)
   ret float %1
 }
 

@@ -82,7 +82,7 @@ def indices(O=TensorDef(T, S.M, S.K, output=True)):
 # CHECK: assignments:
 # CHECK:  -
 # CHECK:    arg: O
-# CHECK:      scalar_capture: value
+# CHECK:      scalar_arg: value
 @linalg_structured_op
-def fill(O=TensorDef(T, S.M, S.K, output=True), value=CaptureDef(T)):
+def fill(value=ScalarDef(T), O=TensorDef(T, S.M, S.K, output=True)):
   O[D.m, D.n] = value

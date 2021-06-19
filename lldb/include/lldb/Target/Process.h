@@ -2469,56 +2469,6 @@ void PruneThreadPlans();
   lldb::StructuredDataPluginSP
   GetStructuredDataPlugin(ConstString type_name) const;
 
-  /// Deprecated
-  ///
-  /// Starts tracing with the configuration provided in options. To enable
-  /// tracing on the complete process the thread_id in the options should be
-  /// set to LLDB_INVALID_THREAD_ID. The API returns a user_id which is needed
-  /// by other API's that manipulate the trace instance. The handling of
-  /// erroneous or unsupported configuration is left to the trace technology
-  /// implementations in the server, as they could be returned as an error, or
-  /// rounded to a valid configuration to start tracing. In the later case the
-  /// GetTraceConfig should supply the actual used trace configuration.
-  virtual lldb::user_id_t StartTrace(const TraceOptions &options,
-                                     Status &error) {
-    error.SetErrorString("Not implemented");
-    return LLDB_INVALID_UID;
-  }
-
-  /// Deprecated
-  ///
-  /// Stops the tracing instance leading to deletion of the trace data. The
-  /// tracing instance is identified by the user_id which is obtained when
-  /// tracing was started from the StartTrace. In case tracing of the complete
-  /// process needs to be stopped the thread_id should be set to
-  /// LLDB_INVALID_THREAD_ID. In the other case that tracing on an individual
-  /// thread needs to be stopped a thread_id can be supplied.
-  virtual Status StopTrace(lldb::user_id_t uid, lldb::tid_t thread_id) {
-    return Status("Not implemented");
-  }
-
-  /// Deprecated
-  ///
-  /// Provides the trace data as raw bytes. A buffer needs to be supplied to
-  /// copy the trace data. The exact behavior of this API may vary across
-  /// trace technology, as some may support partial reading of the trace data
-  /// from a specified offset while some may not. The thread_id should be used
-  /// to select a particular thread for trace extraction.
-  virtual Status GetData(lldb::user_id_t uid, lldb::tid_t thread_id,
-                         llvm::MutableArrayRef<uint8_t> &buffer,
-                         size_t offset = 0) {
-    return Status("Not implemented");
-  }
-
-  /// Deprecated
-  ///
-  /// Similar API as above except for obtaining meta data
-  virtual Status GetMetaData(lldb::user_id_t uid, lldb::tid_t thread_id,
-                             llvm::MutableArrayRef<uint8_t> &buffer,
-                             size_t offset = 0) {
-    return Status("Not implemented");
-  }
-
 protected:
   friend class Trace;
   ///  Get the processor tracing type supported for this process.

@@ -411,11 +411,11 @@ declare fp128 @rintl(fp128) #1
 
 define fp128 @libcall_powil(fp128 %a, i32 %b) {
 entry:
-  %0 = tail call fp128 @llvm.powi.f128(fp128 %a, i32 %b)
+  %0 = tail call fp128 @llvm.powi.f128.i32(fp128 %a, i32 %b)
   ret fp128 %0
 }
 
-declare fp128 @llvm.powi.f128(fp128, i32) #3
+declare fp128 @llvm.powi.f128.i32(fp128, i32) #3
 
 ; ALL-LABEL:     libcall2_copysignl:
 ; NOT-R2R6-DAG: daddiu $[[R2:[0-9]+]], $zero, 1

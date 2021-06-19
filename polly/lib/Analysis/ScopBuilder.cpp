@@ -1615,7 +1615,8 @@ void ScopBuilder::addUserAssumptions(
       }
     }
     ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "UserAssumption", CI)
-             << "Use user assumption: " << stringFromIslObj(AssumptionCtx));
+             << "Use user assumption: "
+             << stringFromIslObj(AssumptionCtx, "null"));
     isl::set newContext =
         scop->getContext().intersect(isl::manage(AssumptionCtx));
     scop->setContext(newContext);
@@ -2869,7 +2870,7 @@ void ScopBuilder::addUserContext() {
   isl::set UserContext = isl::set(scop->getIslCtx(), UserContextStr.c_str());
   isl::space Space = scop->getParamSpace();
   if (Space.dim(isl::dim::param) != UserContext.dim(isl::dim::param)) {
-    std::string SpaceStr = Space.to_str();
+    std::string SpaceStr = stringFromIslObj(Space, "null");
     errs() << "Error: the context provided in -polly-context has not the same "
            << "number of dimensions than the computed context. Due to this "
            << "mismatch, the -polly-context option is ignored. Please provide "
@@ -2883,7 +2884,7 @@ void ScopBuilder::addUserContext() {
     std::string NameUserContext = UserContext.get_dim_name(isl::dim::param, i);
 
     if (NameContext != NameUserContext) {
-      std::string SpaceStr = Space.to_str();
+      std::string SpaceStr = stringFromIslObj(Space, "null");
       errs() << "Error: the name of dimension " << i
              << " provided in -polly-context "
              << "is '" << NameUserContext << "', but the name in the computed "

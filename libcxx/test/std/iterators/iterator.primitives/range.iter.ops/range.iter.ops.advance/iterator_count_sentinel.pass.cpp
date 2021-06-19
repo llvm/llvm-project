@@ -17,10 +17,7 @@
 #include <array>
 #include <cassert>
 
-#include "test_standard_function.h"
 #include "test_iterators.h"
-
-static_assert(is_function_like<decltype(std::ranges::advance)>());
 
 using range_t = std::array<int, 10>;
 

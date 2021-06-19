@@ -808,11 +808,6 @@ static bool addSanitizerDynamicList(const ToolChain &TC, const ArgList &Args,
   // the option, so don't try to pass it.
   if (TC.getTriple().getOS() == llvm::Triple::Solaris)
     return true;
-  // Myriad is static linking only.  Furthermore, some versions of its
-  // linker have the bug where --export-dynamic overrides -static, so
-  // don't use --export-dynamic on that platform.
-  if (TC.getTriple().getVendor() == llvm::Triple::Myriad)
-    return true;
   SmallString<128> SanRT(TC.getCompilerRT(Args, Sanitizer));
   if (llvm::sys::fs::exists(SanRT + ".syms")) {
     CmdArgs.push_back(Args.MakeArgString("--dynamic-list=" + SanRT + ".syms"));
@@ -822,6 +817,9 @@ static bool addSanitizerDynamicList(const ToolChain &TC, const ArgList &Args,
 }
 
 static const char *getAsNeededOption(const ToolChain &TC, bool as_needed) {
+  assert(!TC.getTriple().isOSAIX() &&
+         "AIX linker does not support any form of --as-needed option yet.");
+
   // While the Solaris 11.2 ld added --as-needed/--no-as-needed as aliases
   // for the native forms -z ignore/-z record, they are missing in Illumos,
   // so always use the native form.
@@ -1507,7 +1505,8 @@ static void AddUnwindLibrary(const ToolChain &TC, const Driver &D,
 
   LibGccType LGT = getLibGccType(TC, D, Args);
   bool AsNeeded = LGT == LibGccType::UnspecifiedLibGcc &&
-                  !TC.getTriple().isAndroid() && !TC.getTriple().isOSCygMing();
+                  !TC.getTriple().isAndroid() &&
+                  !TC.getTriple().isOSCygMing() && !TC.getTriple().isOSAIX();
   if (AsNeeded)
     CmdArgs.push_back(getAsNeededOption(TC, true));
 

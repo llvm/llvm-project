@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "fold-implementation.h"
+#include "fold-reduction.h"
 
 namespace Fortran::evaluate {
 
@@ -109,10 +110,16 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     return Expr<T>{Scalar<T>::HUGE()};
   } else if (name == "max") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Greater);
+  } else if (name == "maxval") {
+    return FoldMaxvalMinval<T>(context, std::move(funcRef),
+        RelationalOperator::GT, T::Scalar::HUGE().Negate());
   } else if (name == "merge") {
     return FoldMerge<T>(context, std::move(funcRef));
   } else if (name == "min") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
+  } else if (name == "minval") {
+    return FoldMaxvalMinval<T>(
+        context, std::move(funcRef), RelationalOperator::LT, T::Scalar::HUGE());
   } else if (name == "real") {
     if (auto *expr{args[0].value().UnwrapExpr()}) {
       return ToReal<KIND>(context, std::move(*expr));
@@ -124,7 +131,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     return Expr<T>{Scalar<T>::TINY()};
   }
   // TODO: cshift, dim, dot_product, eoshift, fraction, matmul,
-  // maxval, minval, modulo, nearest, norm2, pack, product,
+  // maxloc, minloc, modulo, nearest, norm2, pack, product,
   // reduce, rrspacing, scale, set_exponent, spacing, spread,
   // sum, transfer, transpose, unpack, bessel_jn (transformational) and
   // bessel_yn (transformational)

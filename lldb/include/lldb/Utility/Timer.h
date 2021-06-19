@@ -9,7 +9,6 @@
 #ifndef LLDB_UTILITY_TIMER_H
 #define LLDB_UTILITY_TIMER_H
 
-#include "llvm/Config/config.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Signposts.h"
@@ -47,7 +46,11 @@ public:
 
   /// Default constructor.
   Timer(Category &category, const char *format, ...)
-      __attribute__((format(printf, 3, 4)));
+#if !defined(_MSC_VER)
+  // MSVC appears to have trouble recognizing the this argument in the constructor.
+      __attribute__((format(printf, 3, 4)))
+#endif
+    ;
 
   /// Destructor
   ~Timer();

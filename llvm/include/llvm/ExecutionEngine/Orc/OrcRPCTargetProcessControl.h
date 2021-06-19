@@ -354,17 +354,18 @@ public:
     return Result;
   }
 
-  Expected<tpctypes::WrapperFunctionResult>
+  Expected<shared::WrapperFunctionResult>
   runWrapper(JITTargetAddress WrapperFnAddr,
-             ArrayRef<uint8_t> ArgBuffer) override {
+             ArrayRef<char> ArgBuffer) override {
     DEBUG_WITH_TYPE("orc", {
       dbgs() << "Running as wrapper function "
              << formatv("{0:x16}", WrapperFnAddr) << " with "
              << formatv("{0:x16}", ArgBuffer.size()) << " argument buffer\n";
     });
-    auto Result =
-        EP.template callB<orcrpctpc::RunWrapper>(WrapperFnAddr, ArgBuffer);
-    // dbgs() << "Returned from runWrapper...\n";
+    auto Result = EP.template callB<orcrpctpc::RunWrapper>(
+        WrapperFnAddr,
+        ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(ArgBuffer.data()),
+                          ArgBuffer.size()));
     return Result;
   }
 

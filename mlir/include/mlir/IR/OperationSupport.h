@@ -162,7 +162,9 @@ public:
   /// Look up the specified operation in the specified MLIRContext and return a
   /// pointer to it if present.  Otherwise, return a null pointer.
   static const AbstractOperation *lookup(StringRef opName,
-                                         MLIRContext *context);
+                                         MLIRContext *context) {
+    return lookupMutable(opName, context);
+  }
 
   /// This constructor is used by Dialect objects when they register the list of
   /// operations they contain.
@@ -193,6 +195,15 @@ private:
                     FoldHookFn &&foldHook,
                     GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
                     detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait);
+
+  /// Give Op access to lookupMutable.
+  template <typename ConcreteType, template <typename T> class... Traits>
+  friend class Op;
+
+  /// Look up the specified operation in the specified MLIRContext and return a
+  /// pointer to it if present.  Otherwise, return a null pointer.
+  static AbstractOperation *lookupMutable(StringRef opName,
+                                          MLIRContext *context);
 
   /// A map of interfaces that were registered to this operation.
   detail::InterfaceMap interfaceMap;
@@ -484,7 +495,11 @@ namespace detail {
 /// This class contains the information for a trailing operand storage.
 struct TrailingOperandStorage final
     : public llvm::TrailingObjects<TrailingOperandStorage, OpOperand> {
+#if defined(BYTE_ORDER) && defined(BIG_ENDIAN) && (BYTE_ORDER == BIG_ENDIAN)
+  TrailingOperandStorage() : numOperands(0), capacity(0), reserved(0) {}
+#else
   TrailingOperandStorage() : reserved(0), capacity(0), numOperands(0) {}
+#endif
   ~TrailingOperandStorage() {
     for (auto &operand : getOperands())
       operand.~OpOperand();
@@ -495,12 +510,21 @@ struct TrailingOperandStorage final
     return {getTrailingObjects<OpOperand>(), numOperands};
   }
 
+#if defined(BYTE_ORDER) && defined(BIG_ENDIAN) && (BYTE_ORDER == BIG_ENDIAN)
+  /// The number of operands within the storage.
+  unsigned numOperands;
+  /// The total capacity number of operands that the storage can hold.
+  unsigned capacity : 31;
+  /// We reserve a range of bits for use by the operand storage.
+  unsigned reserved : 1;
+#else
   /// We reserve a range of bits for use by the operand storage.
   unsigned reserved : 1;
   /// The total capacity number of operands that the storage can hold.
   unsigned capacity : 31;
   /// The number of operands within the storage.
   unsigned numOperands;
+#endif
 };
 
 /// This class handles the management of operation operands. Operands are

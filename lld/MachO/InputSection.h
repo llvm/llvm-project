@@ -23,6 +23,7 @@ namespace macho {
 
 class InputFile;
 class OutputSection;
+class Defined;
 
 class InputSection {
 public:
@@ -54,8 +55,20 @@ public:
   uint32_t align = 1;
   uint32_t flags = 0;
   uint32_t callSiteCount = 0;
-  bool isFinal = false; // is address assigned?
 
+  // is address assigned?
+  bool isFinal = false;
+
+  bool isHashableForICF(bool isText) const;
+  void hashForICF();
+  InputSection *canonical() { return replacement ? replacement : this; }
+
+  // ICF can't fold functions with LSDA+personality
+  bool hasPersonality = false;
+  // Points to the surviving section after this one is folded by ICF
+  InputSection *replacement = nullptr;
+  // Equivalence-class ID for ICF
+  uint64_t icfEqClass[2] = {0, 0};
 
   ArrayRef<uint8_t> data;
   std::vector<Reloc> relocs;
@@ -98,6 +111,8 @@ public:
     return isec->kind() == ConcatKind;
   }
 
+  void foldIdentical(ConcatInputSection *redundant);
+
   // With subsections_via_symbols, most symbols have their own InputSection,
   // and for weak symbols (e.g. from inline functions), only the
   // InputSection from one translation unit will make it to the output,
@@ -109,6 +124,18 @@ public:
   uint32_t numRefs = 0;
   uint64_t outSecOff = 0;
 };
+
+// Helper functions to make it easy to sprinkle asserts.
+
+inline bool shouldOmitFromOutput(InputSection *isec) {
+  return isa<ConcatInputSection>(isec) &&
+         cast<ConcatInputSection>(isec)->shouldOmitFromOutput();
+}
+
+inline bool isCoalescedWeak(InputSection *isec) {
+  return isa<ConcatInputSection>(isec) &&
+         cast<ConcatInputSection>(isec)->isCoalescedWeak();
+}
 
 // We allocate a lot of these and binary search on them, so they should be as
 // compact as possible. Hence the use of 31 rather than 64 bits for the hash.

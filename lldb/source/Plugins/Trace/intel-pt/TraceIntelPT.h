@@ -79,6 +79,8 @@ public:
 
   bool IsTraced(const Thread &thread) override;
 
+  const char *GetStartConfigurationHelp() override;
+
   /// Start tracing a live process.
   ///
   /// \param[in] thread_buffer_size
@@ -98,7 +100,11 @@ public:
   ///     \a llvm::Error otherwise.
   llvm::Error Start(size_t thread_buffer_size, size_t total_buffer_size_limit);
 
-  /// Start tracing a live threads.
+  /// \copydoc Trace::Start
+  llvm::Error Start(StructuredData::ObjectSP configuration =
+                        StructuredData::ObjectSP()) override;
+
+  /// Start tracing live threads.
   ///
   /// \param[in] tids
   ///     Threads to trace.
@@ -109,8 +115,13 @@ public:
   /// \return
   ///     \a llvm::Error::success if the operation was successful, or
   ///     \a llvm::Error otherwise.
-  llvm::Error Start(const std::vector<lldb::tid_t> &tids,
+  llvm::Error Start(llvm::ArrayRef<lldb::tid_t> tids,
                     size_t thread_buffer_size);
+
+  /// \copydoc Trace::Start
+  llvm::Error Start(llvm::ArrayRef<lldb::tid_t> tids,
+                    StructuredData::ObjectSP configuration =
+                        StructuredData::ObjectSP()) override;
 
   /// Get the thread buffer content for a live thread
   llvm::Expected<std::vector<uint8_t>> GetLiveThreadBuffer(lldb::tid_t tid);

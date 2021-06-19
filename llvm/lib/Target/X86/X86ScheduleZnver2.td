@@ -178,6 +178,10 @@ def : WriteRes<WriteStoreNT, [Zn2AGU]>;
 def : WriteRes<WriteMove,    [Zn2ALU]>;
 def : WriteRes<WriteLoad,    [Zn2AGU]> { let Latency = 8; }
 
+// Model the effect of clobbering the read-write mask operand of the GATHER operation.
+// Does not cost anything by itself, only has latency, matching that of the WriteLoad,
+def : WriteRes<WriteVecMaskedGatherWriteback, []> { let Latency = 8; let NumMicroOps = 0; }
+
 def : WriteRes<WriteZero,  []>;
 def : WriteRes<WriteLEA, [Zn2ALU]>;
 defm : Zn2WriteResPair<WriteALU,   [Zn2ALU], 1>;

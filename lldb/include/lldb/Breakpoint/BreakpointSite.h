@@ -148,7 +148,7 @@ public:
   /// return
   ///     \b true if the collection contains at least one location that
   ///     would be valid for this thread, false otherwise.
-  bool ValidForThisThread(Thread *thread);
+  bool ValidForThisThread(Thread &thread);
 
   /// Print a description of this breakpoint site to the stream \a s.
   /// GetDescription tells you about the breakpoint site's owners. Use

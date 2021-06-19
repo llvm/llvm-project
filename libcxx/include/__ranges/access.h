@@ -11,7 +11,9 @@
 
 #include <__config>
 #include <__iterator/concepts.h>
+#include <__iterator/readable_traits.h>
 #include <__ranges/enable_borrowed_range.h>
+#include <concepts>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

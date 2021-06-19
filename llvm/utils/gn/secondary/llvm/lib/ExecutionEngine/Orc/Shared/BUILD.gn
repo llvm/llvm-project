@@ -4,6 +4,5 @@ static_library("Shared") {
   sources = [
     "OrcError.cpp",
     "RPCError.cpp",
-    "TargetProcessControlTypes.cpp",
   ]
 }

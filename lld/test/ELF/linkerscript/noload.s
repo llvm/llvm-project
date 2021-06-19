@@ -10,7 +10,11 @@
 # CHECK-NEXT: .no_input_sec_noload NOBITS 0000000000011000 [[OFF]]           000001
 
 # CHECK:      Type Offset   VirtAddr           PhysAddr
+# CHECK-NEXT: LOAD 0x001000 0x0000000000000000 0x0000000000000000
 # CHECK-NEXT: LOAD 0x001000 0x0000000000020000 0x0000000000020000
+
+# CHECK:      00 .data_noload_a .data_noload_b .no_input_sec_noload {{$}}
+# CHECK:      01 .text {{$}}
 
 #--- asm
 .section .text,"ax",@progbits

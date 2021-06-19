@@ -220,8 +220,7 @@ define i32 @uabd16b_rdx_i32(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uabdl.8h v2, v0, v1
 ; CHECK-NEXT:    uabal2.8h v2, v0, v1
-; CHECK-NEXT:    uaddlp.4s v0, v2
-; CHECK-NEXT:    addv.4s s0, v0
+; CHECK-NEXT:    uaddlv.8h s0, v2
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %aext = zext <16 x i8> %a to <16 x i32>
@@ -239,8 +238,7 @@ define i32 @sabd16b_rdx_i32(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sabdl.8h v2, v0, v1
 ; CHECK-NEXT:    sabal2.8h v2, v0, v1
-; CHECK-NEXT:    uaddlp.4s v0, v2
-; CHECK-NEXT:    addv.4s s0, v0
+; CHECK-NEXT:    uaddlv.8h s0, v2
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
   %aext = sext <16 x i8> %a to <16 x i32>

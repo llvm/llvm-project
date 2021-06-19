@@ -159,5 +159,19 @@ unsigned SampleCoverageTracker::computeCoverage(unsigned Used,
   return Total > 0 ? Used * 100 / Total : 100;
 }
 
+/// Create a global variable to flag FSDiscriminators are used.
+void createFSDiscriminatorVariable(Module *M) {
+  const char *FSDiscriminatorVar = "__llvm_fs_discriminator__";
+  if (M->getGlobalVariable(FSDiscriminatorVar))
+    return;
+
+  auto &Context = M->getContext();
+  // Place this variable to llvm.used so it won't be GC'ed.
+  appendToUsed(*M, {new GlobalVariable(*M, Type::getInt1Ty(Context), true,
+                                       GlobalValue::WeakODRLinkage,
+                                       ConstantInt::getTrue(Context),
+                                       FSDiscriminatorVar)});
+}
+
 } // end of namespace sampleprofutil
 } // end of namespace llvm

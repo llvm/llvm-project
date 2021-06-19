@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__ranges/view_interface.h>
+#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

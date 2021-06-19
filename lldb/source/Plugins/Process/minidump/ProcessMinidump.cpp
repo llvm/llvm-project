@@ -880,7 +880,6 @@ public:
     if (argc > 0) {
       result.AppendErrorWithFormat("'%s' take no arguments, only options",
                                    m_cmd_name.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
     SetDefaultOptionsIfNoneAreSet();

@@ -18,10 +18,7 @@ namespace lld {
 namespace wasm {
 
 // For --unresolved-symbols.
-// The `ImportFuncs` mode is an additional mode that corresponds to the
-// --allow-undefined flag which turns undefined functions in imports
-// as opposed ed to Ignore or Warn which turn them into unreachables.
-enum class UnresolvedPolicy { ReportError, Warn, Ignore, ImportFuncs };
+enum class UnresolvedPolicy { ReportError, Warn, Ignore };
 
 // This struct contains the global configuration for the linker.
 // Most fields are direct mapping from the command line options
@@ -43,6 +40,7 @@ struct Configuration {
   bool importMemory;
   bool sharedMemory;
   bool importTable;
+  bool importUndefined;
   llvm::Optional<bool> is64;
   bool mergeDataSegments;
   bool pie;

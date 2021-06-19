@@ -92,29 +92,16 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
 bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                             const MCAsmLayout *Layout,
                                             const MCFixup *Fixup) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Layout, Fixup))
+  // Explicitly drop the layout and assembler to prevent any symbolic folding in
+  // the expression handling.  This is required to preserve symbolic difference
+  // expressions to emit the paired relocations.
+  if (!getSubExpr()->evaluateAsRelocatable(Res, nullptr, nullptr))
     return false;
 
-  // Some custom fixup types are not valid with symbol difference expressions
-  if (Res.getSymA() && Res.getSymB()) {
-    switch (getKind()) {
-    default:
-      return true;
-    case VK_RISCV_LO:
-    case VK_RISCV_HI:
-    case VK_RISCV_PCREL_LO:
-    case VK_RISCV_PCREL_HI:
-    case VK_RISCV_GOT_HI:
-    case VK_RISCV_TPREL_LO:
-    case VK_RISCV_TPREL_HI:
-    case VK_RISCV_TPREL_ADD:
-    case VK_RISCV_TLS_GOT_HI:
-    case VK_RISCV_TLS_GD_HI:
-      return false;
-    }
-  }
-
-  return true;
+  Res =
+      MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), getKind());
+  // Custom fixup types are not valid with symbol difference expressions.
+  return Res.getSymB() ? getKind() == VK_RISCV_None : true;
 }
 
 void RISCVMCExpr::visitUsedExpr(MCStreamer &Streamer) const {

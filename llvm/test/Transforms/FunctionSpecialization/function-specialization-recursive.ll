@@ -39,14 +39,7 @@ ret.block:
 
 define i32 @main() {
 ; CHECK-LABEL: @main(
-; CHECK-NEXT:    [[TEMP_I:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TEMP_I]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull [[TMP1]])
-; CHECK-NEXT:    call void @print_val(i32 1)
-; CHECK-NEXT:    store i32 2, i32* [[TEMP_I]], align 4
-; CHECK-NEXT:    call void @recursiveFunc(i32* nonnull [[TEMP_I]])
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[TEMP_I]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[TMP2]])
+; CHECK-NEXT:    call void @recursiveFunc(i32* nonnull @Global)
 ; CHECK-NEXT:    ret i32 0
 ;
   call void @recursiveFunc(i32* nonnull @Global)

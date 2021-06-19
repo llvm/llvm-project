@@ -257,10 +257,9 @@ void AsanThread::Init(const InitOptions *options) {
           &local);
 }
 
-// Fuchsia and RTEMS don't use ThreadStart.
-// asan_fuchsia.c/asan_rtems.c define CreateMainThread and
-// SetThreadStackAndTls.
-#if !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
+// Fuchsia doesn't use ThreadStart.
+// asan_fuchsia.c definies CreateMainThread and SetThreadStackAndTls.
+#if !SANITIZER_FUCHSIA
 
 thread_return_t AsanThread::ThreadStart(tid_t os_id) {
   Init();
@@ -317,7 +316,7 @@ void AsanThread::SetThreadStackAndTls(const InitOptions *options) {
   }
 }
 
-#endif  // !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
+#endif  // !SANITIZER_FUCHSIA
 
 void AsanThread::ClearShadowForThreadStackAndTLS() {
   if (stack_top_ != stack_bottom_)
@@ -422,9 +421,6 @@ static bool ThreadStackContainsAddress(ThreadContextBase *tctx_base,
 }
 
 AsanThread *GetCurrentThread() {
-  if (SANITIZER_RTEMS && !asan_inited)
-    return nullptr;
-
   AsanThreadContext *context =
       reinterpret_cast<AsanThreadContext *>(AsanTSDGet());
   if (!context) {

@@ -11,10 +11,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK_ORIGIN: @__dfsan_track_origins = weak_odr constant i32 1
 ; CHECK: @__dfsan_shadow_width_bits = weak_odr constant i32 [[#SBITS:]]
 ; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
-; CHECK: @__dfsan_shadow_ptr_mask = external global i64
 
 define i8 @load(i8* %p) {
-  ; CHECK-LABEL: define i8 @"dfs$load"
+  ; CHECK-LABEL: define i8 @load.dfsan
   ; CHECK: and i64 {{.*}}, [[SHADOW_MASK]]
   ; CHECK: ret i8 %a
   %a = load i8, i8* %p
@@ -22,7 +21,7 @@ define i8 @load(i8* %p) {
 }
 
 define void @store(i8* %p) {
-  ; CHECK-LABEL: define void @"dfs$store"
+  ; CHECK-LABEL: define void @store.dfsan
   ; CHECK: and i64 {{.*}}, [[SHADOW_MASK]]
   ; CHECK: ret void
   store i8 0, i8* %p

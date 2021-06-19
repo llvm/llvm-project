@@ -3377,12 +3377,8 @@ static ArrayRef<MCPhysReg> get64BitArgumentXMMs(MachineFunction &MF,
     return None;
   }
 
-  const Function &F = MF.getFunction();
-  bool NoImplicitFloatOps = F.hasFnAttribute(Attribute::NoImplicitFloat);
   bool isSoftFloat = Subtarget.useSoftFloat();
-  assert(!(isSoftFloat && NoImplicitFloatOps) &&
-         "SSE register cannot be used when SSE is disabled!");
-  if (isSoftFloat || NoImplicitFloatOps || !Subtarget.hasSSE1())
+  if (isSoftFloat || !Subtarget.hasSSE1())
     // Kernel mode asks for SSE to be disabled, so there are no XMM argument
     // registers.
     return None;
@@ -3453,11 +3449,6 @@ void VarArgsLoweringHelper::createVarArgAreaAndStoreRegisters(
     FuncInfo->setVarArgsFrameIndex(
         FrameInfo.CreateFixedObject(1, StackSize, true));
   }
-
-  // Figure out if XMM registers are in use.
-  assert(!(Subtarget.useSoftFloat() &&
-           TheFunction.hasFnAttribute(Attribute::NoImplicitFloat)) &&
-         "SSE register cannot be used when SSE is disabled!");
 
   // 64-bit calling conventions support varargs and register parameters, so we
   // have to do extra work to spill them in the prologue.
@@ -18444,7 +18435,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, const X86Subtarget &Subtarget,
 
   // Try to collapse shuffles into using a vector type with fewer elements but
   // wider element types. We cap this to not form integers or floating point
-  // elements wider than 64 bits, but it might be interesting to form i128
+  // elements wider than 64 bits. It does not seem beneficial to form i128
   // integers to handle flipping the low and high halves of AVX 256-bit vectors.
   SmallVector<int, 16> WidenedMask;
   if (VT.getScalarSizeInBits() < 64 && !Is1BitVector &&
@@ -41805,41 +41796,44 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineSelectOfTwoConstants(N, DAG))
     return V;
 
-  // Canonicalize min/max:
-  // (x > 0) ? x : 0 -> (x >= 0) ? x : 0
-  // (x < -1) ? x : -1 -> (x <= -1) ? x : -1
-  // This allows use of COND_S / COND_NS (see TranslateX86CC) which eliminates
-  // the need for an extra compare against zero. e.g.
-  // (a - b) > 0 : (a - b) ? 0 -> (a - b) >= 0 : (a - b) ? 0
-  // subl   %esi, %edi
-  // testl  %edi, %edi
-  // movl   $0, %eax
-  // cmovgl %edi, %eax
-  // =>
-  // xorl   %eax, %eax
-  // subl   %esi, $edi
-  // cmovsl %eax, %edi
-  //
-  // We can also canonicalize
-  //  (x s> 1) ? x : 1 -> (x s>= 1) ? x : 1 -> (x s> 0) ? x : 1
-  //  (x u> 1) ? x : 1 -> (x u>= 1) ? x : 1 -> (x != 0) ? x : 1
-  // This allows the use of a test instruction for the compare.
   if (N->getOpcode() == ISD::SELECT && Cond.getOpcode() == ISD::SETCC &&
-      Cond.hasOneUse() &&
-      LHS == Cond.getOperand(0) && RHS == Cond.getOperand(1)) {
+      Cond.hasOneUse()) {
+    EVT CondVT = Cond.getValueType();
+    SDValue Cond0 = Cond.getOperand(0);
+    SDValue Cond1 = Cond.getOperand(1);
     ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
-    if ((CC == ISD::SETGT && (isNullConstant(RHS) || isOneConstant(RHS))) ||
-        (CC == ISD::SETLT && isAllOnesConstant(RHS))) {
-      ISD::CondCode NewCC = CC == ISD::SETGT ? ISD::SETGE : ISD::SETLE;
-      Cond = DAG.getSetCC(SDLoc(Cond), Cond.getValueType(),
-                          Cond.getOperand(0), Cond.getOperand(1), NewCC);
-      return DAG.getSelect(DL, VT, Cond, LHS, RHS);
-    }
-    if (CC == ISD::SETUGT && isOneConstant(RHS)) {
-      ISD::CondCode NewCC = ISD::SETUGE;
-      Cond = DAG.getSetCC(SDLoc(Cond), Cond.getValueType(),
-                          Cond.getOperand(0), Cond.getOperand(1), NewCC);
-      return DAG.getSelect(DL, VT, Cond, LHS, RHS);
+
+    // Canonicalize min/max:
+    // (x > 0) ? x : 0 -> (x >= 0) ? x : 0
+    // (x < -1) ? x : -1 -> (x <= -1) ? x : -1
+    // This allows use of COND_S / COND_NS (see TranslateX86CC) which eliminates
+    // the need for an extra compare against zero. e.g.
+    // (a - b) > 0 : (a - b) ? 0 -> (a - b) >= 0 : (a - b) ? 0
+    // subl   %esi, %edi
+    // testl  %edi, %edi
+    // movl   $0, %eax
+    // cmovgl %edi, %eax
+    // =>
+    // xorl   %eax, %eax
+    // subl   %esi, $edi
+    // cmovsl %eax, %edi
+    //
+    // We can also canonicalize
+    //  (x s> 1) ? x : 1 -> (x s>= 1) ? x : 1 -> (x s> 0) ? x : 1
+    //  (x u> 1) ? x : 1 -> (x u>= 1) ? x : 1 -> (x != 0) ? x : 1
+    // This allows the use of a test instruction for the compare.
+    if (LHS == Cond0 && RHS == Cond1) {
+      if ((CC == ISD::SETGT && (isNullConstant(RHS) || isOneConstant(RHS))) ||
+          (CC == ISD::SETLT && isAllOnesConstant(RHS))) {
+        ISD::CondCode NewCC = CC == ISD::SETGT ? ISD::SETGE : ISD::SETLE;
+        Cond = DAG.getSetCC(SDLoc(Cond), CondVT, Cond0, Cond1, NewCC);
+        return DAG.getSelect(DL, VT, Cond, LHS, RHS);
+      }
+      if (CC == ISD::SETUGT && isOneConstant(RHS)) {
+        ISD::CondCode NewCC = ISD::SETUGE;
+        Cond = DAG.getSetCC(SDLoc(Cond), CondVT, Cond0, Cond1, NewCC);
+        return DAG.getSelect(DL, VT, Cond, LHS, RHS);
+      }
     }
   }
 

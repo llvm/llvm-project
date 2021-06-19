@@ -86,11 +86,9 @@ bool CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
       result.AppendError("'' is not a valid search word.\n");
-      result.SetStatus(eReturnStatusFailed);
     }
   } else {
     result.AppendError("'apropos' must be called with exactly one argument.\n");
-    result.SetStatus(eReturnStatusFailed);
   }
 
   return result.Succeeded();

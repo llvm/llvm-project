@@ -18,7 +18,7 @@
 #define LLVM_SUPPORT_SIGNPOSTS_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Config/config.h"
+#include "llvm/Config/llvm-config.h"
 #include <memory>
 
 #if LLVM_SUPPORT_XCODE_SIGNPOSTS

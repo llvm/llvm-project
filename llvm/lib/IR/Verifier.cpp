@@ -1839,40 +1839,51 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
          V);
 
   if (PointerType *PTy = dyn_cast<PointerType>(Ty)) {
-    SmallPtrSet<Type*, 4> Visited;
-    if (!PTy->getElementType()->isSized(&Visited)) {
-      Assert(!Attrs.hasAttribute(Attribute::ByVal) &&
-             !Attrs.hasAttribute(Attribute::ByRef) &&
-             !Attrs.hasAttribute(Attribute::InAlloca) &&
-             !Attrs.hasAttribute(Attribute::Preallocated),
-             "Attributes 'byval', 'byref', 'inalloca', and 'preallocated' do not "
-             "support unsized types!",
-             V);
+    if (Attrs.hasAttribute(Attribute::ByVal)) {
+      SmallPtrSet<Type *, 4> Visited;
+      Assert(Attrs.getByValType()->isSized(&Visited),
+             "Attribute 'byval' does not support unsized types!", V);
     }
-    if (!isa<PointerType>(PTy->getElementType()))
-      Assert(!Attrs.hasAttribute(Attribute::SwiftError),
-             "Attribute 'swifterror' only applies to parameters "
-             "with pointer to pointer type!",
-             V);
-
     if (Attrs.hasAttribute(Attribute::ByRef)) {
-      Assert(Attrs.getByRefType() == PTy->getElementType(),
-             "Attribute 'byref' type does not match parameter!", V);
+      SmallPtrSet<Type *, 4> Visited;
+      Assert(Attrs.getByRefType()->isSized(&Visited),
+             "Attribute 'byref' does not support unsized types!", V);
     }
-
-    if (Attrs.hasAttribute(Attribute::ByVal) && Attrs.getByValType()) {
-      Assert(Attrs.getByValType() == PTy->getElementType(),
-             "Attribute 'byval' type does not match parameter!", V);
-    }
-
-    if (Attrs.hasAttribute(Attribute::Preallocated)) {
-      Assert(Attrs.getPreallocatedType() == PTy->getElementType(),
-             "Attribute 'preallocated' type does not match parameter!", V);
-    }
-
     if (Attrs.hasAttribute(Attribute::InAlloca)) {
-      Assert(Attrs.getInAllocaType() == PTy->getElementType(),
-             "Attribute 'inalloca' type does not match parameter!", V);
+      SmallPtrSet<Type *, 4> Visited;
+      Assert(Attrs.getInAllocaType()->isSized(&Visited),
+             "Attribute 'inalloca' does not support unsized types!", V);
+    }
+    if (Attrs.hasAttribute(Attribute::Preallocated)) {
+      SmallPtrSet<Type *, 4> Visited;
+      Assert(Attrs.getPreallocatedType()->isSized(&Visited),
+             "Attribute 'preallocated' does not support unsized types!", V);
+    }
+    if (!PTy->isOpaque()) {
+      if (!isa<PointerType>(PTy->getElementType()))
+        Assert(!Attrs.hasAttribute(Attribute::SwiftError),
+               "Attribute 'swifterror' only applies to parameters "
+               "with pointer to pointer type!",
+               V);
+      if (Attrs.hasAttribute(Attribute::ByRef)) {
+        Assert(Attrs.getByRefType() == PTy->getElementType(),
+               "Attribute 'byref' type does not match parameter!", V);
+      }
+
+      if (Attrs.hasAttribute(Attribute::ByVal) && Attrs.getByValType()) {
+        Assert(Attrs.getByValType() == PTy->getElementType(),
+               "Attribute 'byval' type does not match parameter!", V);
+      }
+
+      if (Attrs.hasAttribute(Attribute::Preallocated)) {
+        Assert(Attrs.getPreallocatedType() == PTy->getElementType(),
+               "Attribute 'preallocated' type does not match parameter!", V);
+      }
+
+      if (Attrs.hasAttribute(Attribute::InAlloca)) {
+        Assert(Attrs.getInAllocaType() == PTy->getElementType(),
+               "Attribute 'inalloca' type does not match parameter!", V);
+      }
     }
   } else {
     Assert(!Attrs.hasAttribute(Attribute::ByVal),

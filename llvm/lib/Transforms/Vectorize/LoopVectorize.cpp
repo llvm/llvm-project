@@ -5098,6 +5098,7 @@ void InnerLoopVectorizer::widenCallInstruction(CallInst &I, VPValue *Def,
          "Either the intrinsic cost or vector call cost must be valid");
 
   for (unsigned Part = 0; Part < UF; ++Part) {
+    SmallVector<Type *, 2> TysForDecl = {CI->getType()};
     SmallVector<Value *, 4> Args;
     for (auto &I : enumerate(ArgOperands.operands())) {
       // Some intrinsics have a scalar argument - don't replace it with a
@@ -5105,15 +5106,17 @@ void InnerLoopVectorizer::widenCallInstruction(CallInst &I, VPValue *Def,
       Value *Arg;
       if (!UseVectorIntrinsic || !hasVectorInstrinsicScalarOpd(ID, I.index()))
         Arg = State.get(I.value(), Part);
-      else
+      else {
         Arg = State.get(I.value(), VPIteration(0, 0));
+        if (hasVectorInstrinsicOverloadedScalarOpd(ID, I.index()))
+          TysForDecl.push_back(Arg->getType());
+      }
       Args.push_back(Arg);
     }
 
     Function *VectorF;
     if (UseVectorIntrinsic) {
       // Use vector version of the intrinsic.
-      Type *TysForDecl[] = {CI->getType()};
       if (VF.isVector())
         TysForDecl[0] = VectorType::get(CI->getType()->getScalarType(), VF);
       VectorF = Intrinsic::getDeclaration(M, ID, TysForDecl);
@@ -5961,7 +5964,9 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
                     << (MaxVectorElementCount * WidestType) << " bits.\n");
 
   if (!MaxVectorElementCount) {
-    LLVM_DEBUG(dbgs() << "LV: The target has no vector registers.\n");
+    LLVM_DEBUG(dbgs() << "LV: The target has no "
+                      << (ComputeScalableMaxVF ? "scalable" : "fixed")
+                      << " vector registers.\n");
     return ElementCount::getFixed(1);
   }
 
@@ -9727,12 +9732,14 @@ Value *VPTransformState::get(VPValue *Def, unsigned Part) {
   }
 
   auto *LastInst = cast<Instruction>(get(Def, {Part, LastLane}));
-
-  // Set the insert point after the last scalarized instruction. This
-  // ensures the insertelement sequence will directly follow the scalar
-  // definitions.
+  // Set the insert point after the last scalarized instruction or after the
+  // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
+  // will directly follow the scalar definitions.
   auto OldIP = Builder.saveIP();
-  auto NewIP = std::next(BasicBlock::iterator(LastInst));
+  auto NewIP =
+      isa<PHINode>(LastInst)
+          ? BasicBlock::iterator(LastInst->getParent()->getFirstNonPHI())
+          : std::next(BasicBlock::iterator(LastInst));
   Builder.SetInsertPoint(&*NewIP);
 
   // However, if we are vectorizing, we need to construct the vector values.

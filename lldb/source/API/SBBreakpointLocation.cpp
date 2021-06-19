@@ -227,7 +227,7 @@ SBError SBBreakpointLocation::SetScriptCallbackFunction(
     Status error;
     std::lock_guard<std::recursive_mutex> guard(
         loc_sp->GetTarget().GetAPIMutex());
-    BreakpointOptions *bp_options = loc_sp->GetLocationOptions();
+    BreakpointOptions &bp_options = loc_sp->GetLocationOptions();
     error = loc_sp->GetBreakpoint()
         .GetTarget()
         .GetDebugger()
@@ -254,7 +254,7 @@ SBBreakpointLocation::SetScriptCallbackBody(const char *callback_body_text) {
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
         loc_sp->GetTarget().GetAPIMutex());
-    BreakpointOptions *bp_options = loc_sp->GetLocationOptions();
+    BreakpointOptions &bp_options = loc_sp->GetLocationOptions();
     Status error =
         loc_sp->GetBreakpoint()
             .GetTarget()
@@ -283,7 +283,7 @@ void SBBreakpointLocation::SetCommandLineCommands(SBStringList &commands) {
   std::unique_ptr<BreakpointOptions::CommandData> cmd_data_up(
       new BreakpointOptions::CommandData(*commands, eScriptLanguageNone));
 
-  loc_sp->GetLocationOptions()->SetCommandDataCallback(cmd_data_up);
+  loc_sp->GetLocationOptions().SetCommandDataCallback(cmd_data_up);
 }
 
 bool SBBreakpointLocation::GetCommandLineCommands(SBStringList &commands) {
@@ -295,7 +295,7 @@ bool SBBreakpointLocation::GetCommandLineCommands(SBStringList &commands) {
     return false;
   StringList command_list;
   bool has_commands =
-      loc_sp->GetLocationOptions()->GetCommandLineCallbacks(command_list);
+      loc_sp->GetLocationOptions().GetCommandLineCallbacks(command_list);
   if (has_commands)
     commands.AppendList(command_list);
   return has_commands;

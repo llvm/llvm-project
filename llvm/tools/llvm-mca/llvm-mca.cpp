@@ -32,6 +32,9 @@
 #include "Views/SchedulerStatistics.h"
 #include "Views/SummaryView.h"
 #include "Views/TimelineView.h"
+#ifdef HAS_AMDGPU
+#include "lib/AMDGPU/AMDGPUCustomBehaviour.h"
+#endif
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -42,6 +45,7 @@
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MCA/CodeEmitter.h"
 #include "llvm/MCA/Context.h"
+#include "llvm/MCA/CustomBehaviour.h"
 #include "llvm/MCA/InstrBuilder.h"
 #include "llvm/MCA/Pipeline.h"
 #include "llvm/MCA/Stages/EntryStage.h"
@@ -220,6 +224,12 @@ static cl::opt<bool> ShowEncoding(
     cl::desc("Print encoding information in the instruction info view"),
     cl::cat(ViewOptions), cl::init(false));
 
+static cl::opt<bool> DisableCustomBehaviour(
+    "disable-cb",
+    cl::desc(
+        "Disable custom behaviour (use the default class which does nothing)."),
+    cl::cat(ViewOptions), cl::init(false));
+
 namespace {
 
 const Target *getTarget(const char *ProgName) {
@@ -283,6 +293,39 @@ static void processViewOptions(bool IsOutOfOrder) {
   processOptionImpl(PrintSchedulerStats, Default);
   if (IsOutOfOrder)
     processOptionImpl(PrintRetireStats, Default);
+}
+
+std::unique_ptr<mca::InstrPostProcess>
+createInstrPostProcess(const Triple &TheTriple, const MCSubtargetInfo &STI,
+                       const MCInstrInfo &MCII) {
+  // Might be a good idea to have a separate flag so that InstrPostProcess
+  // can be used with or without CustomBehaviour
+  if (DisableCustomBehaviour)
+    return std::make_unique<mca::InstrPostProcess>(STI, MCII);
+#ifdef HAS_AMDGPU
+  if (TheTriple.isAMDGPU())
+    return std::make_unique<mca::AMDGPUInstrPostProcess>(STI, MCII);
+#endif
+  return std::make_unique<mca::InstrPostProcess>(STI, MCII);
+}
+
+std::unique_ptr<mca::CustomBehaviour>
+createCustomBehaviour(const Triple &TheTriple, const MCSubtargetInfo &STI,
+                      const mca::SourceMgr &SrcMgr, const MCInstrInfo &MCII) {
+  // Build the appropriate CustomBehaviour object for the current target.
+  // The CustomBehaviour class should never depend on the source code,
+  // but it can depend on the list of mca::Instruction and any classes
+  // that can be built using just the target info. If you need extra
+  // information from the source code or the list of MCInst, consider
+  // adding that information to the mca::Instruction class and setting
+  // it during InstrBuilder::createInstruction().
+  if (DisableCustomBehaviour)
+    return std::make_unique<mca::CustomBehaviour>(STI, SrcMgr, MCII);
+#ifdef HAS_AMDGPU
+  if (TheTriple.isAMDGPU())
+    return std::make_unique<mca::AMDGPUCustomBehaviour>(STI, SrcMgr, MCII);
+#endif
+  return std::make_unique<mca::CustomBehaviour>(STI, SrcMgr, MCII);
 }
 
 // Returns true on success.
@@ -498,6 +541,8 @@ int main(int argc, char **argv) {
     // Lower the MCInst sequence into an mca::Instruction sequence.
     ArrayRef<MCInst> Insts = Region->getInstructions();
     mca::CodeEmitter CE(*STI, *MAB, *MCE, Insts);
+    std::unique_ptr<mca::InstrPostProcess> IPP =
+        createInstrPostProcess(TheTriple, *STI, *MCII);
     std::vector<std::unique_ptr<mca::Instruction>> LoweredSequence;
     for (const MCInst &MCI : Insts) {
       Expected<std::unique_ptr<mca::Instruction>> Inst =
@@ -519,6 +564,8 @@ int main(int argc, char **argv) {
         }
         return 1;
       }
+
+      IPP->postProcessInstruction(Inst.get(), MCI);
 
       LoweredSequence.emplace_back(std::move(Inst.get()));
     }
@@ -547,8 +594,17 @@ int main(int argc, char **argv) {
       continue;
     }
 
+    // Create the CustomBehaviour object for enforcing Target Specific
+    // behaviours and dependencies that aren't expressed well enough
+    // in the tablegen. CB cannot depend on the list of MCInst or
+    // the source code (but it can depend on the list of
+    // mca::Instruction or any objects that can be reconstructed
+    // from the target information).
+    std::unique_ptr<mca::CustomBehaviour> CB =
+        createCustomBehaviour(TheTriple, *STI, S, *MCII);
+
     // Create a basic pipeline simulating an out-of-order backend.
-    auto P = MCA.createDefaultPipeline(PO, S);
+    auto P = MCA.createDefaultPipeline(PO, S, *CB);
     mca::PipelinePrinter Printer(*P, PrintJson ? mca::View::OK_JSON
                                                : mca::View::OK_READABLE);
 

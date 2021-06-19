@@ -139,7 +139,6 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
           }
           s.Printf("\n");
           result.AppendError(s.GetString());
-          result.SetStatus(eReturnStatusFailed);
           return false;
         } else if (!sub_cmd_obj) {
           StreamString error_msg_stream;
@@ -147,7 +146,6 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
               &error_msg_stream, cmd_string.c_str(),
               m_interpreter.GetCommandPrefix(), sub_command.c_str());
           result.AppendError(error_msg_stream.GetString());
-          result.SetStatus(eReturnStatusFailed);
           return false;
         } else {
           GenerateAdditionalHelpAvenuesMessage(
@@ -193,7 +191,6 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
                                              m_interpreter.GetCommandPrefix(),
                                              "");
         result.AppendError(error_msg_stream.GetString());
-        result.SetStatus(eReturnStatusFailed);
       }
     }
   }

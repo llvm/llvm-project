@@ -22,13 +22,13 @@ int globalBuff[8];
 
 template<bool IsNoexcept>
 struct View : std::ranges::view_base {
-  int start = 0;
-  constexpr explicit View(int start) : start(start) {}
-  View() noexcept(IsNoexcept) = default;
+  int start_ = 0;
+  explicit View() noexcept(IsNoexcept) = default;
+  constexpr explicit View(int start) : start_(start) {}
   View(View&&) noexcept(IsNoexcept) = default;
   View& operator=(View&&) noexcept(IsNoexcept) = default;
-  constexpr friend int* begin(View& view) { return globalBuff + view.start; }
-  constexpr friend int* begin(View const& view) { return globalBuff + view.start; }
+  constexpr friend int* begin(View& view) { return globalBuff + view.start_; }
+  constexpr friend int* begin(View const& view) { return globalBuff + view.start_; }
   constexpr friend int* end(View&) { return globalBuff + 8; }
   constexpr friend int* end(View const&) { return globalBuff + 8; }
 };
@@ -37,13 +37,13 @@ static_assert(std::ranges::view<View<false>>);
 
 template<bool IsNoexcept>
 struct CopyableView : std::ranges::view_base {
-  int start = 0;
-  CopyableView() noexcept(IsNoexcept) = default;
+  int start_ = 0;
+  explicit CopyableView() noexcept(IsNoexcept) = default;
   CopyableView(CopyableView const&) noexcept(IsNoexcept) = default;
   CopyableView& operator=(CopyableView const&) noexcept(IsNoexcept) = default;
-  constexpr explicit CopyableView(int start) noexcept : start(start) {}
-  constexpr friend int* begin(CopyableView& view) { return globalBuff + view.start; }
-  constexpr friend int* begin(CopyableView const& view) { return globalBuff + view.start; }
+  constexpr explicit CopyableView(int start) noexcept : start_(start) {}
+  constexpr friend int* begin(CopyableView& view) { return globalBuff + view.start_; }
+  constexpr friend int* begin(CopyableView const& view) { return globalBuff + view.start_; }
   constexpr friend int* end(CopyableView&) { return globalBuff + 8; }
   constexpr friend int* end(CopyableView const&) { return globalBuff + 8; }
 };
@@ -51,23 +51,22 @@ static_assert(std::ranges::view<CopyableView<true>>);
 static_assert(std::ranges::view<CopyableView<false>>);
 
 struct Range {
-  int start = 0;
-  constexpr explicit Range(int start) noexcept : start(start) {}
-  constexpr friend int* begin(Range const& range) { return globalBuff + range.start; }
+  int start_;
+  constexpr explicit Range(int start) noexcept : start_(start) {}
+  constexpr friend int* begin(Range const& range) { return globalBuff + range.start_; }
+  constexpr friend int* begin(Range& range) { return globalBuff + range.start_; }
   constexpr friend int* end(Range const&) { return globalBuff + 8; }
-  constexpr friend int* begin(Range& range) { return globalBuff + range.start; }
   constexpr friend int* end(Range&) { return globalBuff + 8; }
 };
 
 struct BorrowableRange {
-  int start = 0;
-  constexpr explicit BorrowableRange(int start) noexcept : start(start) {}
-  constexpr friend int* begin(BorrowableRange const& range) { return globalBuff + range.start; }
+  int start_;
+  constexpr explicit BorrowableRange(int start) noexcept : start_(start) {}
+  constexpr friend int* begin(BorrowableRange const& range) { return globalBuff + range.start_; }
+  constexpr friend int* begin(BorrowableRange& range) { return globalBuff + range.start_; }
   constexpr friend int* end(BorrowableRange const&) { return globalBuff + 8; }
-  constexpr friend int* begin(BorrowableRange& range) { return globalBuff + range.start; }
   constexpr friend int* end(BorrowableRange&) { return globalBuff + 8; }
 };
-
 template<>
 inline constexpr bool std::ranges::enable_borrowed_range<BorrowableRange> = true;
 
@@ -81,8 +80,6 @@ struct RandomAccessRange {
   constexpr random_access_iterator<int*> begin() { return random_access_iterator<int*>{globalBuff}; }
   constexpr sentinel end() { return {}; }
 };
-
-
 template<>
 inline constexpr bool std::ranges::enable_borrowed_range<RandomAccessRange> = true;
 

@@ -114,8 +114,8 @@ void ImportSection::addImport(Symbol *sym) {
     f->setFunctionIndex(numImportedFunctions++);
   else if (auto *g = dyn_cast<GlobalSymbol>(sym))
     g->setGlobalIndex(numImportedGlobals++);
-  else if (auto *e = dyn_cast<EventSymbol>(sym))
-    e->setEventIndex(numImportedEvents++);
+  else if (auto *t = dyn_cast<TagSymbol>(sym))
+    t->setTagIndex(numImportedTags++);
   else
     cast<TableSymbol>(sym)->setTableNumber(numImportedTables++);
 }
@@ -165,10 +165,10 @@ void ImportSection::writeBody() {
     } else if (auto *globalSym = dyn_cast<GlobalSymbol>(sym)) {
       import.Kind = WASM_EXTERNAL_GLOBAL;
       import.Global = *globalSym->getGlobalType();
-    } else if (auto *eventSym = dyn_cast<EventSymbol>(sym)) {
-      import.Kind = WASM_EXTERNAL_EVENT;
-      import.Event.Attribute = eventSym->getEventType()->Attribute;
-      import.Event.SigIndex = out.typeSec->lookupType(*eventSym->signature);
+    } else if (auto *tagSym = dyn_cast<TagSymbol>(sym)) {
+      import.Kind = WASM_EXTERNAL_TAG;
+      import.Tag.Attribute = tagSym->getTagType()->Attribute;
+      import.Tag.SigIndex = out.typeSec->lookupType(*tagSym->signature);
     } else {
       auto *tableSym = cast<TableSymbol>(sym);
       import.Kind = WASM_EXTERNAL_TABLE;
@@ -267,25 +267,24 @@ void MemorySection::writeBody() {
     writeUleb128(os, maxMemoryPages, "max pages");
 }
 
-void EventSection::writeBody() {
+void TagSection::writeBody() {
   raw_ostream &os = bodyOutputStream;
 
-  writeUleb128(os, inputEvents.size(), "event count");
-  for (InputEvent *e : inputEvents) {
-    WasmEventType type = e->getType();
-    type.SigIndex = out.typeSec->lookupType(e->signature);
-    writeEventType(os, type);
+  writeUleb128(os, inputTags.size(), "tag count");
+  for (InputTag *t : inputTags) {
+    WasmTagType type = t->getType();
+    type.SigIndex = out.typeSec->lookupType(t->signature);
+    writeTagType(os, type);
   }
 }
 
-void EventSection::addEvent(InputEvent *event) {
-  if (!event->live)
+void TagSection::addTag(InputTag *tag) {
+  if (!tag->live)
     return;
-  uint32_t eventIndex =
-      out.importSec->getNumImportedEvents() + inputEvents.size();
-  LLVM_DEBUG(dbgs() << "addEvent: " << eventIndex << "\n");
-  event->assignIndex(eventIndex);
-  inputEvents.push_back(event);
+  uint32_t tagIndex = out.importSec->getNumImportedTags() + inputTags.size();
+  LLVM_DEBUG(dbgs() << "addTag: " << tagIndex << "\n");
+  tag->assignIndex(tagIndex);
+  inputTags.push_back(tag);
 }
 
 void GlobalSection::assignIndexes() {
@@ -505,8 +504,8 @@ void LinkingSection::writeBody() {
         writeUleb128(sub.os, g->getGlobalIndex(), "index");
         if (sym->isDefined() || (flags & WASM_SYMBOL_EXPLICIT_NAME) != 0)
           writeStr(sub.os, sym->getName(), "sym name");
-      } else if (auto *e = dyn_cast<EventSymbol>(sym)) {
-        writeUleb128(sub.os, e->getEventIndex(), "index");
+      } else if (auto *t = dyn_cast<TagSymbol>(sym)) {
+        writeUleb128(sub.os, t->getTagIndex(), "index");
         if (sym->isDefined() || (flags & WASM_SYMBOL_EXPLICIT_NAME) != 0)
           writeStr(sub.os, sym->getName(), "sym name");
       } else if (auto *t = dyn_cast<TableSymbol>(sym)) {

@@ -850,12 +850,12 @@ void IslNodeBuilder::createIf(__isl_take isl_ast_node *If) {
 __isl_give isl_id_to_ast_expr *
 IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
                                   __isl_keep isl_ast_node *Node) {
-  isl_id_to_ast_expr *NewAccesses =
-      isl_id_to_ast_expr_alloc(Stmt->getParent()->getIslCtx().get(), 0);
+  isl::id_to_ast_expr NewAccesses =
+      isl::id_to_ast_expr::alloc(Stmt->getParent()->getIslCtx(), 0);
 
-  auto *Build = IslAstInfo::getBuild(Node);
-  assert(Build && "Could not obtain isl_ast_build from user node");
-  Stmt->setAstBuild(isl::manage_copy(Build));
+  isl::ast_build Build = IslAstInfo::getBuild(isl::manage_copy(Node));
+  assert(!Build.is_null() && "Could not obtain isl_ast_build from user node");
+  Stmt->setAstBuild(Build);
 
   for (auto *MA : *Stmt) {
     if (!MA->hasNewAccessRelation()) {
@@ -876,13 +876,12 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
     assert(MA->isAffine() &&
            "Only affine memory accesses can be code generated");
 
-    auto Schedule = isl_ast_build_get_schedule(Build);
+    isl::union_map Schedule = Build.get_schedule();
 
 #ifndef NDEBUG
     if (MA->isRead()) {
       auto Dom = Stmt->getDomain().release();
-      auto SchedDom = isl_set_from_union_set(
-          isl_union_map_domain(isl_union_map_copy(Schedule)));
+      auto SchedDom = isl_set_from_union_set(Schedule.domain().release());
       auto AccDom = isl_map_domain(MA->getAccessRelation().release());
       Dom = isl_set_intersect_params(Dom,
                                      Stmt->getParent()->getContext().release());
@@ -898,25 +897,20 @@ IslNodeBuilder::createNewAccesses(ScopStmt *Stmt,
     }
 #endif
 
-    auto PWAccRel =
-        MA->applyScheduleToAccessRelation(isl::manage(Schedule)).release();
+    isl::pw_multi_aff PWAccRel = MA->applyScheduleToAccessRelation(Schedule);
 
     // isl cannot generate an index expression for access-nothing accesses.
-    isl::set AccDomain =
-        isl::manage(isl_pw_multi_aff_domain(isl_pw_multi_aff_copy(PWAccRel)));
+    isl::set AccDomain = PWAccRel.domain();
     isl::set Context = S.getContext();
     AccDomain = AccDomain.intersect_params(Context);
-    if (AccDomain.is_empty()) {
-      isl_pw_multi_aff_free(PWAccRel);
+    if (AccDomain.is_empty())
       continue;
-    }
 
-    auto AccessExpr = isl_ast_build_access_from_pw_multi_aff(Build, PWAccRel);
-    NewAccesses =
-        isl_id_to_ast_expr_set(NewAccesses, MA->getId().release(), AccessExpr);
+    isl::ast_expr AccessExpr = Build.access_from(PWAccRel);
+    NewAccesses = NewAccesses.set(MA->getId(), AccessExpr);
   }
 
-  return NewAccesses;
+  return NewAccesses.release();
 }
 
 void IslNodeBuilder::createSubstitutions(__isl_take isl_ast_expr *Expr,

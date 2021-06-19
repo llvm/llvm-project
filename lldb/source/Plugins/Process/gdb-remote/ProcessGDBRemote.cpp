@@ -1832,8 +1832,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
               // If the current pc is a breakpoint site then the StopInfo
               // should be set to Breakpoint Otherwise, it will be set to
               // Trace.
-              if (bp_site_sp &&
-                  bp_site_sp->ValidForThisThread(thread_sp.get())) {
+              if (bp_site_sp && bp_site_sp->ValidForThisThread(*thread_sp)) {
                 thread_sp->SetStopInfo(
                     StopInfo::CreateStopReasonWithBreakpointSiteID(
                         *thread_sp, bp_site_sp->GetID()));
@@ -1853,7 +1852,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
                 // breakpoint here, that will be taken care of when the thread
                 // resumes and notices that there's a breakpoint under the pc.
                 handled = true;
-                if (bp_site_sp->ValidForThisThread(thread_sp.get())) {
+                if (bp_site_sp->ValidForThisThread(*thread_sp)) {
                   thread_sp->SetStopInfo(
                       StopInfo::CreateStopReasonWithBreakpointSiteID(
                           *thread_sp, bp_site_sp->GetID()));
@@ -1919,7 +1918,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
             // as such. This can happen when the thread is involuntarily
             // interrupted (e.g. due to stops on other threads) just as it is
             // about to execute the breakpoint instruction.
-            if (bp_site_sp && bp_site_sp->ValidForThisThread(thread_sp.get())) {
+            if (bp_site_sp && bp_site_sp->ValidForThisThread(*thread_sp)) {
               thread_sp->SetStopInfo(
                   StopInfo::CreateStopReasonWithBreakpointSiteID(
                       *thread_sp, bp_site_sp->GetID()));
@@ -1944,7 +1943,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
                 // reason.  We don't need to worry about stepping over the
                 // breakpoint here, that will be taken care of when the thread
                 // resumes and notices that there's a breakpoint under the pc.
-                if (bp_site_sp->ValidForThisThread(thread_sp.get())) {
+                if (bp_site_sp->ValidForThisThread(*thread_sp)) {
                   if (m_breakpoint_pc_offset != 0)
                     thread_sp->GetRegisterContext()->SetPC(pc);
                   thread_sp->SetStopInfo(
@@ -5247,7 +5246,6 @@ public:
                                    "amount to be transferred when "
                                    "reading/writing",
                                    m_cmd_name.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -5288,7 +5286,6 @@ public:
       result.AppendErrorWithFormat(
           "'%s' takes a one or more packet content arguments",
           m_cmd_name.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -5338,7 +5335,6 @@ public:
     if (command.empty()) {
       result.AppendErrorWithFormat("'%s' takes a command string argument",
                                    m_cmd_name.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 

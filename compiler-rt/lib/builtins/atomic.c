@@ -24,10 +24,14 @@
 //===----------------------------------------------------------------------===//
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
-#include <string.h>
 
 #include "assembly.h"
+
+// We use __builtin_mem* here to avoid dependencies on libc-provided headers.
+#define memcpy __builtin_memcpy
+#define memcmp __builtin_memcmp
 
 // Clang objects if you redefine a builtin.  This little hack allows us to
 // define a function with the same name as an intrinsic.

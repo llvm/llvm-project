@@ -8274,6 +8274,16 @@ TEST_F(FormatTest, UnderstandsOverloadedOperators) {
   verifyFormat("using A::operator+;");
   verifyFormat("inline A operator^(const A &lhs, const A &rhs) {}\n"
                "int i;");
+
+  // Calling an operator as a member function.
+  verifyFormat("void f() { a.operator*(); }");
+  verifyFormat("void f() { a.operator*(b & b); }");
+  verifyFormat("void f() { a->operator&(a * b); }");
+  verifyFormat("void f() { NS::a.operator+(*b * *b); }");
+  // TODO: Calling an operator as a non-member function is hard to distinguish.
+  // https://llvm.org/PR50629
+  // verifyFormat("void f() { operator*(a & a); }");
+  // verifyFormat("void f() { operator&(a, b * b); }");
 }
 
 TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
@@ -8707,6 +8717,11 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyIndependentOfContext("MACRO('0' <= c && c <= '9');");
   verifyFormat("void f() { f(float{1}, a * a); }");
   verifyFormat("void f() { f(float(1), a * a); }");
+
+  verifyFormat("f((void (*)(int))g);");
+  verifyFormat("f((void (&)(int))g);");
+  verifyFormat("f((void (^)(int))g);");
+
   // FIXME: Is there a way to make this work?
   // verifyIndependentOfContext("MACRO(A *a);");
   verifyFormat("MACRO(A &B);");
@@ -8761,6 +8776,13 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
                "operator()() && {}");
   verifyGoogleFormat("template <typename T>\n"
                      "auto x() & -> int {}");
+
+  // Should be binary operators when used as an argument expression (overloaded
+  // operator invoked as a member function).
+  verifyFormat("void f() { a.operator()(a * a); }");
+  verifyFormat("void f() { a->operator()(a & a); }");
+  verifyFormat("void f() { a.operator()(*a & *a); }");
+  verifyFormat("void f() { a->operator()(*a * *a); }");
 }
 
 TEST_F(FormatTest, UnderstandsAttributes) {

@@ -56,6 +56,8 @@ public:
   }
   ::llvm::StringRef getArgument() const override { return "{2}"; }
 
+  ::llvm::StringRef getDescription() const override { return "{3}"; }
+
   /// Returns the derived pass name.
   static constexpr ::llvm::StringLiteral getPassName() {
     return ::llvm::StringLiteral("{0}");
@@ -74,7 +76,7 @@ public:
 
   /// Return the dialect that must be loaded in the context before this pass.
   void getDependentDialects(::mlir::DialectRegistry &registry) const override {
-    {3}
+    {4}
   }
 
 protected:
@@ -122,7 +124,8 @@ static void emitPassDecl(const Pass &pass, raw_ostream &os) {
                                   dependentDialect);
   }
   os << llvm::formatv(passDeclBegin, defName, pass.getBaseClass(),
-                      pass.getArgument(), dependentDialectRegistrations);
+                      pass.getArgument(), pass.getSummary(),
+                      dependentDialectRegistrations);
   emitPassOptionDecls(pass, os);
   emitPassStatisticDecls(pass, os);
   os << "};\n";
@@ -154,8 +157,8 @@ const char *const passRegistrationCode = R"(
 //===----------------------------------------------------------------------===//
 
 inline void register{0}Pass() {{
-  ::mlir::registerPass("{1}", "{2}", []() -> std::unique_ptr<::mlir::Pass> {{
-    return {3};
+  ::mlir::registerPass([]() -> std::unique_ptr<::mlir::Pass> {{
+    return {1};
   });
 }
 )";
@@ -175,7 +178,6 @@ static void emitRegistration(ArrayRef<Pass> passes, raw_ostream &os) {
   os << "#ifdef GEN_PASS_REGISTRATION\n";
   for (const Pass &pass : passes) {
     os << llvm::formatv(passRegistrationCode, pass.getDef()->getName(),
-                        pass.getArgument(), pass.getSummary(),
                         pass.getConstructor());
   }
 

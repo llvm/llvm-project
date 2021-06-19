@@ -555,19 +555,14 @@ void PseudoProbeCSProfileGenerator::populateBodySamplesWithProbes(
       }
     }
 
-    // Report dangling probes for frames that have real samples collected.
-    // Dangling probes are the probes associated to an empty block. With this
-    // place holder, sample count on a dangling probe will not be trusted by the
-    // compiler and we will rely on the counts inference algorithm to get the
-    // probe a reasonable count. Use InvalidProbeCount to mark sample count for
-    // a dangling probe.
+    // Assign zero count for remaining probes without sample hits to
+    // differentiate from probes optimized away, of which the counts are unknown
+    // and will be inferred by the compiler.
     for (auto &I : FrameSamples) {
       auto *FunctionProfile = I.second;
       for (auto *Probe : I.first->getProbes()) {
-        if (Probe->isDangling()) {
-          FunctionProfile->addBodySamplesForProbe(
-              Probe->Index, FunctionSamples::InvalidProbeCount);
-        }
+        if (!Probe->isDangling())
+          FunctionProfile->addBodySamplesForProbe(Probe->Index, 0);
       }
     }
   }

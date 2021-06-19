@@ -5,14 +5,6 @@
 # RUN:     %t/main.s -o %t/main.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin \
 # RUN:     %t/renames.s -o %t/renames.o
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin \
-# RUN:     %t/error.s -o %t/error.o
-
-# RUN: not %lld            -o %t/error %t/main.o %t/error.o -lSystem 2>&1 | \
-# RUN:     FileCheck %s --check-prefix=ERROR
-
-## Check the error diagnostic for merging mismatched section types
-# ERROR: Cannot merge section __pointers (type=0x0) into __nl_symbol_ptr (type=0x6): inconsistent types
 
 ## Check that section and segment renames happen as expected
 # RUN: %lld                -o %t/ydata %t/main.o %t/renames.o -lSystem
@@ -149,18 +141,6 @@ __IMPORT__pointers:
 .section __TEXT,__StaticInit
 .global __TEXT__StaticInit
 __TEXT__StaticInit:
-  .space 8
-
-#--- error.s
-
-.section __DATA,__nl_symbol_ptr
-.global __DATA__nl_symbol_ptr
-__DATA__nl_symbol_ptr:
-  .space 8
-
-.section __IMPORT,__pointers
-.global __IMPORT__pointers
-__IMPORT__pointers:
   .space 8
 
 #--- main.s

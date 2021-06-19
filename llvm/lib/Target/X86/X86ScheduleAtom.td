@@ -165,6 +165,7 @@ def : WriteRes<WriteLoad,    [AtomPort0]>;
 def : WriteRes<WriteStore,   [AtomPort0]>;
 def : WriteRes<WriteStoreNT, [AtomPort0]>;
 def : WriteRes<WriteMove,    [AtomPort01]>;
+defm : X86WriteResUnsupported<WriteVecMaskedGatherWriteback>;
 
 // Treat misc copies as a move.
 def : InstRW<[WriteMove], (instrs COPY)>;

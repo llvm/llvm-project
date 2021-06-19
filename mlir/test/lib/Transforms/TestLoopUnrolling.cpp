@@ -33,6 +33,10 @@ static unsigned getNestingDepth(Operation *op) {
 class TestLoopUnrollingPass
     : public PassWrapper<TestLoopUnrollingPass, FunctionPass> {
 public:
+  StringRef getArgument() const final { return "test-loop-unrolling"; }
+  StringRef getDescription() const final {
+    return "Tests loop unrolling transformation";
+  }
   TestLoopUnrollingPass() = default;
   TestLoopUnrollingPass(const TestLoopUnrollingPass &) {}
   explicit TestLoopUnrollingPass(uint64_t unrollFactorParam,
@@ -65,8 +69,7 @@ public:
 namespace mlir {
 namespace test {
 void registerTestLoopUnrollingPass() {
-  PassRegistration<TestLoopUnrollingPass>(
-      "test-loop-unrolling", "Tests loop unrolling transformation");
+  PassRegistration<TestLoopUnrollingPass>();
 }
 } // namespace test
 } // namespace mlir

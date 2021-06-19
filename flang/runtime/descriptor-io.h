@@ -17,6 +17,7 @@
 #include "edit-output.h"
 #include "io-stmt.h"
 #include "terminator.h"
+#include "type-info.h"
 #include "flang/Common/uint128.h"
 
 namespace Fortran::runtime::io::descr {
@@ -25,7 +26,8 @@ inline A &ExtractElement(IoStatementState &io, const Descriptor &descriptor,
     const SubscriptValue subscripts[]) {
   A *p{descriptor.Element<A>(subscripts)};
   if (!p) {
-    io.GetIoErrorHandler().Crash("ExtractElement: subscripts out of range");
+    io.GetIoErrorHandler().Crash(
+        "ExtractElement: null base address or subscripts out of range");
   }
   return *p;
 }
@@ -217,6 +219,67 @@ inline bool FormattedLogicalIO(
 }
 
 template <Direction DIR>
+static bool DescriptorIO(IoStatementState &, const Descriptor &);
+
+template <Direction DIR>
+static bool DefaultFormattedComponentIO(IoStatementState &io,
+    const typeInfo::Component &component, const Descriptor &origDescriptor,
+    const SubscriptValue origSubscripts[], Terminator &terminator) {
+  if (component.genre() == typeInfo::Component::Genre::Data) {
+    // Create a descriptor for the component
+    StaticDescriptor<maxRank, true, 16 /*?*/> statDesc;
+    Descriptor &desc{statDesc.descriptor()};
+    component.EstablishDescriptor(
+        desc, origDescriptor, origSubscripts, terminator);
+    return DescriptorIO<DIR>(io, desc);
+  } else {
+    // Component is itself a descriptor
+    char *pointer{
+        origDescriptor.Element<char>(origSubscripts) + component.offset()};
+    RUNTIME_CHECK(
+        terminator, component.genre() == typeInfo::Component::Genre::Automatic);
+    const Descriptor &compDesc{*reinterpret_cast<const Descriptor *>(pointer)};
+    return DescriptorIO<DIR>(io, compDesc);
+  }
+}
+
+template <Direction DIR>
+static bool FormattedDerivedTypeIO(
+    IoStatementState &io, const Descriptor &descriptor) {
+  Terminator &terminator{io.GetIoErrorHandler()};
+  const DescriptorAddendum *addendum{descriptor.Addendum()};
+  RUNTIME_CHECK(terminator, addendum != nullptr);
+  const typeInfo::DerivedType *type{addendum->derivedType()};
+  RUNTIME_CHECK(terminator, type != nullptr);
+  if (false) {
+    // TODO: user-defined derived type formatted I/O
+  } else {
+    // Default derived type formatting
+    const Descriptor &compArray{type->component()};
+    RUNTIME_CHECK(terminator, compArray.rank() == 1);
+    std::size_t numComponents{compArray.Elements()};
+    std::size_t numElements{descriptor.Elements()};
+    SubscriptValue subscripts[maxRank];
+    descriptor.GetLowerBounds(subscripts);
+    for (std::size_t j{0}; j < numElements;
+         ++j, descriptor.IncrementSubscripts(subscripts)) {
+      SubscriptValue at[maxRank];
+      compArray.GetLowerBounds(at);
+      for (std::size_t k{0}; k < numComponents;
+           ++k, compArray.IncrementSubscripts(at)) {
+        const typeInfo::Component &component{
+            *compArray.Element<typeInfo::Component>(at)};
+        if (!DefaultFormattedComponentIO<DIR>(
+                io, component, descriptor, subscripts, terminator)) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
+template <Direction DIR>
 static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
   if (!io.get_if<IoDirectionState<DIR>>()) {
     io.GetIoErrorHandler().Crash(
@@ -233,7 +296,9 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
     SubscriptValue subscripts[maxRank];
     descriptor.GetLowerBounds(subscripts);
     std::size_t numElements{descriptor.Elements()};
-    if (descriptor.IsContiguous()) { // contiguous unformatted I/O
+    if (false) {
+      // TODO: user-defined derived type unformatted I/O
+    } else if (descriptor.IsContiguous()) { // contiguous unformatted I/O
       char &x{ExtractElement<char>(io, descriptor, subscripts)};
       auto totalBytes{numElements * elementBytes};
       if constexpr (DIR == Direction::Output) {
@@ -360,10 +425,7 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
         return false;
       }
     case TypeCategory::Derived:
-      io.GetIoErrorHandler().Crash(
-          "DescriptorIO: Unimplemented: derived type I/O",
-          static_cast<int>(descriptor.type().raw()));
-      return false;
+      return FormattedDerivedTypeIO<DIR>(io, descriptor);
     }
   }
   io.GetIoErrorHandler().Crash("DescriptorIO: Bad type code (%d) in descriptor",

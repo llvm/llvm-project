@@ -76,6 +76,8 @@ public:
   using FallbackModel = typename Traits::template FallbackModel<T>;
   using InterfaceBase =
       Interface<ConcreteType, ValueT, Traits, BaseType, BaseTrait>;
+  template <typename T, typename U>
+  using ExternalModel = typename Traits::template ExternalModel<T, U>;
 
   /// This is a special trait that registers a given interface with an object.
   template <typename ConcreteT>
@@ -140,6 +142,25 @@ struct FilterTypes {
           typename FilterTypeT<Pred<Es>::value>::template type<Es>>()...));
 };
 
+namespace {
+/// Type trait indicating whether all template arguments are
+/// trivially-destructible.
+template <typename... Args>
+struct all_trivially_destructible;
+
+template <typename Arg, typename... Args>
+struct all_trivially_destructible<Arg, Args...> {
+  static constexpr const bool value =
+      std::is_trivially_destructible<Arg>::value &&
+      all_trivially_destructible<Args...>::value;
+};
+
+template <>
+struct all_trivially_destructible<> {
+  static constexpr const bool value = true;
+};
+} // namespace
+
 /// This class provides an efficient mapping between a given `Interface` type,
 /// and a particular implementation of its concept.
 class InterfaceMap {
@@ -199,6 +220,18 @@ public:
     });
   }
 
+  /// Insert the given models as implementations of the corresponding interfaces
+  /// for the concrete attribute class.
+  template <typename... IfaceModels>
+  void insert() {
+    static_assert(all_trivially_destructible<IfaceModels...>::value,
+                  "interface models must be trivially destructible");
+    std::pair<TypeID, void *> elements[] = {
+        std::make_pair(IfaceModels::Interface::getInterfaceID(),
+                       new (malloc(sizeof(IfaceModels))) IfaceModels())...};
+    insert(elements);
+  }
+
 private:
   /// Compare two TypeID instances by comparing the underlying pointer.
   static bool compare(TypeID lhs, TypeID rhs) {
@@ -206,6 +239,8 @@ private:
   }
 
   InterfaceMap() = default;
+
+  void insert(ArrayRef<std::pair<TypeID, void *>> elements);
 
   template <typename... Ts>
   static InterfaceMap getImpl(std::tuple<Ts...> *) {

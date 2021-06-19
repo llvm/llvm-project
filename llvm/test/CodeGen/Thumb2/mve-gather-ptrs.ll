@@ -234,16 +234,9 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @ptr_v4i16_sext(<4 x i16*>* %offptr) {
 ; CHECK-LABEL: ptr_v4i16_sext:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vmov r0, r1, d1
-; CHECK-NEXT:    vmov r2, r3, d0
-; CHECK-NEXT:    ldrh r0, [r0]
-; CHECK-NEXT:    ldrh r2, [r2]
-; CHECK-NEXT:    ldrh r1, [r1]
-; CHECK-NEXT:    ldrh r3, [r3]
-; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
-; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
-; CHECK-NEXT:    vmovlb.s16 q0, q0
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vldrh.s32 q0, [r1, q1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i16*>, <4 x i16*>* %offptr, align 4
@@ -255,6 +248,20 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @ptr_v4i16_zext(<4 x i16*>* %offptr) {
 ; CHECK-LABEL: ptr_v4i16_zext:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vldrh.u32 q0, [r1, q1]
+; CHECK-NEXT:    bx lr
+entry:
+  %offs = load <4 x i16*>, <4 x i16*>* %offptr, align 4
+  %gather = call <4 x i16> @llvm.masked.gather.v4i16.v4p0i16(<4 x i16*> %offs, i32 2, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i16> undef)
+  %ext = zext <4 x i16> %gather to <4 x i32>
+  ret <4 x i32> %ext
+}
+
+define arm_aapcs_vfpcc <4 x i16> @ptr_v4i16(<4 x i16*>* %offptr) {
+; CHECK-LABEL: ptr_v4i16:
+; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    vmov r2, r3, d0
@@ -264,13 +271,11 @@ define arm_aapcs_vfpcc <4 x i32> @ptr_v4i16_zext(<4 x i16*>* %offptr) {
 ; CHECK-NEXT:    ldrh r3, [r3]
 ; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
 ; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
-; CHECK-NEXT:    vmovlb.u16 q0, q0
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i16*>, <4 x i16*>* %offptr, align 4
   %gather = call <4 x i16> @llvm.masked.gather.v4i16.v4p0i16(<4 x i16*> %offs, i32 2, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i16> undef)
-  %ext = zext <4 x i16> %gather to <4 x i32>
-  ret <4 x i32> %ext
+  ret <4 x i16> %gather
 }
 
 define arm_aapcs_vfpcc <8 x i32> @ptr_v8i16_sext(<8 x i16*>* %offptr) {
@@ -367,6 +372,25 @@ entry:
   %offs = load <8 x half*>, <8 x half*>* %offptr, align 4
   %gather = call <8 x half> @llvm.masked.gather.v8f16.v8p0f16(<8 x half*> %offs, i32 2, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x half> undef)
   ret <8 x half> %gather
+}
+
+define arm_aapcs_vfpcc <4 x half> @ptr_v4f16(<4 x half*>* %offptr) {
+; CHECK-LABEL: ptr_v4f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vmov r0, r1, d2
+; CHECK-NEXT:    vldr.16 s8, [r1]
+; CHECK-NEXT:    vldr.16 s0, [r0]
+; CHECK-NEXT:    vmov r0, r1, d3
+; CHECK-NEXT:    vins.f16 s0, s8
+; CHECK-NEXT:    vldr.16 s4, [r1]
+; CHECK-NEXT:    vldr.16 s1, [r0]
+; CHECK-NEXT:    vins.f16 s1, s4
+; CHECK-NEXT:    bx lr
+entry:
+  %offs = load <4 x half*>, <4 x half*>* %offptr, align 4
+  %gather = call <4 x half> @llvm.masked.gather.v4f16.v4p0f16(<4 x half*> %offs, i32 2, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x half> undef)
+  ret <4 x half> %gather
 }
 
 ; i8
@@ -499,20 +523,46 @@ entry:
   ret <8 x i16> %ext
 }
 
+define arm_aapcs_vfpcc <8 x i8> @ptr_v8i8(<8 x i8*>* %offptr) {
+; CHECK-LABEL: ptr_v8i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r6, lr}
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
+; CHECK-NEXT:    vmov r1, r2, d0
+; CHECK-NEXT:    vmov r3, r12, d1
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vmov r4, r5, d0
+; CHECK-NEXT:    vmov r0, lr, d1
+; CHECK-NEXT:    ldrb r1, [r1]
+; CHECK-NEXT:    ldrb r6, [r3]
+; CHECK-NEXT:    ldrb r2, [r2]
+; CHECK-NEXT:    ldrb r4, [r4]
+; CHECK-NEXT:    ldrb r5, [r5]
+; CHECK-NEXT:    vmov.16 q0[0], r4
+; CHECK-NEXT:    ldrb r0, [r0]
+; CHECK-NEXT:    vmov.16 q0[1], r5
+; CHECK-NEXT:    ldrb.w r3, [lr]
+; CHECK-NEXT:    vmov.16 q0[2], r0
+; CHECK-NEXT:    ldrb.w r12, [r12]
+; CHECK-NEXT:    vmov.16 q0[3], r3
+; CHECK-NEXT:    vmov.16 q0[4], r1
+; CHECK-NEXT:    vmov.16 q0[5], r2
+; CHECK-NEXT:    vmov.16 q0[6], r6
+; CHECK-NEXT:    vmov.16 q0[7], r12
+; CHECK-NEXT:    pop {r4, r5, r6, pc}
+entry:
+  %offs = load <8 x i8*>, <8 x i8*>* %offptr, align 4
+  %gather = call <8 x i8> @llvm.masked.gather.v8i8.v8p0i8(<8 x i8*> %offs, i32 1, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i8> undef)
+  ret <8 x i8> %gather
+}
+
 define arm_aapcs_vfpcc <4 x i32> @ptr_v4i8_sext32(<4 x i8*>* %offptr) {
 ; CHECK-LABEL: ptr_v4i8_sext32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vmov r0, r1, d1
-; CHECK-NEXT:    vmov r2, r3, d0
-; CHECK-NEXT:    ldrb r0, [r0]
-; CHECK-NEXT:    ldrb r2, [r2]
-; CHECK-NEXT:    ldrb r1, [r1]
-; CHECK-NEXT:    ldrb r3, [r3]
-; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
-; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
-; CHECK-NEXT:    vmovlb.s8 q0, q0
-; CHECK-NEXT:    vmovlb.s16 q0, q0
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vldrb.s32 q0, [r1, q1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i8*>, <4 x i8*>* %offptr, align 4
@@ -524,23 +574,34 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @ptr_v4i8_zext32(<4 x i8*>* %offptr) {
 ; CHECK-LABEL: ptr_v4i8_zext32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vmov r0, r1, d1
-; CHECK-NEXT:    vmov r2, r3, d0
-; CHECK-NEXT:    vmov.i32 q0, #0xff
-; CHECK-NEXT:    ldrb r0, [r0]
-; CHECK-NEXT:    ldrb r2, [r2]
-; CHECK-NEXT:    ldrb r1, [r1]
-; CHECK-NEXT:    ldrb r3, [r3]
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
-; CHECK-NEXT:    vmov q1[3], q1[1], r3, r1
-; CHECK-NEXT:    vand q0, q1, q0
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    vldrb.u32 q0, [r1, q1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <4 x i8*>, <4 x i8*>* %offptr, align 4
   %gather = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*> %offs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> undef)
   %ext = zext <4 x i8> %gather to <4 x i32>
   ret <4 x i32> %ext
+}
+
+define arm_aapcs_vfpcc <4 x i8> @ptr_v4i8(<4 x i8*>* %offptr) {
+; CHECK-LABEL: ptr_v4i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vmov r0, r1, d1
+; CHECK-NEXT:    vmov r2, r3, d0
+; CHECK-NEXT:    ldrb r0, [r0]
+; CHECK-NEXT:    ldrb r2, [r2]
+; CHECK-NEXT:    ldrb r1, [r1]
+; CHECK-NEXT:    ldrb r3, [r3]
+; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    bx lr
+entry:
+  %offs = load <4 x i8*>, <4 x i8*>* %offptr, align 4
+  %gather = call <4 x i8> @llvm.masked.gather.v4i8.v4p0i8(<4 x i8*> %offs, i32 1, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i8> undef)
+  ret <4 x i8> %gather
 }
 
 define arm_aapcs_vfpcc <8 x i32> @ptr_v8i8_sext32(<8 x i8*>* %offptr) {
@@ -623,17 +684,17 @@ define void @foo_ptr_p_int32_t(i32* %dest, i32** %src, i32 %n) {
 ; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
-; CHECK-NEXT:  .LBB22_1: @ %vector.body.preheader
+; CHECK-NEXT:  .LBB26_1: @ %vector.body.preheader
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    add.w lr, r3, r2, lsr #2
-; CHECK-NEXT:  .LBB22_2: @ %vector.body
+; CHECK-NEXT:  .LBB26_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
 ; CHECK-NEXT:    vptt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrwt.u32 q1, [q0]
 ; CHECK-NEXT:    vstrwt.32 q1, [r0], #16
-; CHECK-NEXT:    le lr, .LBB22_2
+; CHECK-NEXT:    le lr, .LBB26_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.end
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -668,17 +729,17 @@ define void @foo_ptr_p_float(float* %dest, float** %src, i32 %n) {
 ; CHECK-NEXT:    cmp r2, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
-; CHECK-NEXT:  .LBB23_1: @ %vector.body.preheader
+; CHECK-NEXT:  .LBB27_1: @ %vector.body.preheader
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    add.w lr, r3, r2, lsr #2
-; CHECK-NEXT:  .LBB23_2: @ %vector.body
+; CHECK-NEXT:  .LBB27_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
 ; CHECK-NEXT:    vptt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrwt.u32 q1, [q0]
 ; CHECK-NEXT:    vstrwt.32 q1, [r0], #16
-; CHECK-NEXT:    le lr, .LBB23_2
+; CHECK-NEXT:    le lr, .LBB27_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.end
 ; CHECK-NEXT:    pop {r7, pc}
 entry:

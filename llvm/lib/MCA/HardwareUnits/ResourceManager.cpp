@@ -114,8 +114,8 @@ ResourceManager::ResourceManager(const MCSchedModel &SM)
       Resource2Groups(SM.getNumProcResourceKinds() - 1, 0),
       ProcResID2Mask(SM.getNumProcResourceKinds(), 0),
       ResIndex2ProcResID(SM.getNumProcResourceKinds() - 1, 0),
-      ProcResUnitMask(0), ReservedResourceGroups(0),
-      AvailableBuffers(~0ULL), ReservedBuffers(0) {
+      ProcResUnitMask(0), ReservedResourceGroups(0), AvailableBuffers(~0ULL),
+      ReservedBuffers(0) {
   computeProcResourceMasks(SM, ProcResID2Mask);
 
   // initialize vector ResIndex2ProcResID.
@@ -286,6 +286,15 @@ uint64_t ResourceManager::checkAvailability(const InstrDesc &Desc) const {
     unsigned Index = getResourceStateIndex(E.first);
     if (!Resources[Index]->isReady(NumUnits))
       BusyResourceMask |= E.first;
+  }
+
+  uint64_t ImplicitUses = Desc.ImplicitlyUsedProcResUnits;
+  while (ImplicitUses) {
+    uint64_t Use = ImplicitUses & -ImplicitUses;
+    ImplicitUses ^= Use;
+    unsigned Index = getResourceStateIndex(Use);
+    if (!Resources[Index]->isReady(/* NumUnits */ 1))
+      BusyResourceMask |= Index;
   }
 
   BusyResourceMask &= ProcResUnitMask;

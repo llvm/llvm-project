@@ -50,14 +50,13 @@ struct ParallelizationCandidate {
 void AffineParallelize::runOnFunction() {
   FuncOp f = getFunction();
 
-  // The walker proceeds in post-order, but we need to process outer loops first
-  // to control the number of outer parallel loops, so push candidate loops to
-  // the front of a deque.
-  std::deque<ParallelizationCandidate> parallelizableLoops;
-  f.walk([&](AffineForOp loop) {
+  // The walker proceeds in pre-order to process the outer loops first
+  // and control the number of outer parallel loops.
+  std::vector<ParallelizationCandidate> parallelizableLoops;
+  f.walk<WalkOrder::PreOrder>([&](AffineForOp loop) {
     SmallVector<LoopReduction> reductions;
     if (isLoopParallel(loop, parallelReductions ? &reductions : nullptr))
-      parallelizableLoops.emplace_back(loop, std::move(reductions));
+      parallelizableLoops.push_back({loop, std::move(reductions)});
   });
 
   for (const ParallelizationCandidate &candidate : parallelizableLoops) {

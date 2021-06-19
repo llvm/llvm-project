@@ -250,6 +250,20 @@ func @empty_if2(%cond: i1) {
 // CHECK-NOT:       scf.if
 // CHECK:           return
 
+// ----
+
+func @empty_else(%cond: i1, %v : memref<i1>) {
+  scf.if %cond {
+    memref.store %cond, %v[] : memref<i1>
+  } else {
+  }
+  return
+}
+
+// CHECK-LABEL: func @empty_else
+// CHECK:         scf.if
+// CHECK-NOT:     else
+
 // -----
 
 func @to_select1(%cond: i1) -> index {
@@ -475,9 +489,9 @@ func @replace_single_iteration_loop_1() {
 // CHECK-LABEL: @replace_single_iteration_loop_2
 func @replace_single_iteration_loop_2() {
   // CHECK: %[[LB:.*]] = constant 5
-	%c5 = constant 5 : index
-	%c6 = constant 6 : index
-	%c11 = constant 11 : index
+  %c5 = constant 5 : index
+  %c6 = constant 6 : index
+  %c11 = constant 11 : index
   // CHECK: %[[INIT:.*]] = "test.init"
   %init = "test.init"() : () -> i32
   // CHECK-NOT: scf.for
@@ -883,3 +897,33 @@ func @combineIfs4(%arg0 : i1, %arg2: i64) {
 // CHECK-NEXT:       "test.firstCodeTrue"() : () -> ()
 // CHECK-NEXT:       "test.secondCodeTrue"() : () -> ()
 // CHECK-NEXT:     }
+
+// -----
+
+// CHECK-LABEL: func @propagate_into_execute_region
+func @propagate_into_execute_region() {
+  %cond = constant 0 : i1
+  affine.for %i = 0 to 100 {
+    "test.foo"() : () -> ()
+    %v = scf.execute_region -> i64 {
+      cond_br %cond, ^bb1, ^bb2
+
+    ^bb1:
+      %c1 = constant 1 : i64
+      br ^bb3(%c1 : i64)
+
+    ^bb2:
+      %c2 = constant 2 : i64
+      br ^bb3(%c2 : i64)
+
+    ^bb3(%x : i64):
+      scf.yield %x : i64
+    }
+    "test.bar"(%v) : (i64) -> ()
+    // CHECK:      %[[C2:.*]] = constant 2 : i64
+    // CHECK:        scf.execute_region -> i64 {
+    // CHECK-NEXT:     scf.yield %[[C2]] : i64
+    // CHECK-NEXT:   }
+  }
+  return
+}

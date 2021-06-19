@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected,cxx20_2b -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx20_2b -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify=expected,cxx11 -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
+// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected,cxx20_2b,cxx2b    -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx11_20,cxx20_2b -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify=expected,cxx11_20,cxx11    -triple x86_64-linux -Wno-string-plus-int -Wno-pointer-arith -Wno-zero-length-array -Wno-c99-designator -fcxx-exceptions -pedantic %s -Wno-comment -Wno-tautological-pointer-compare -Wno-bool-conversion
 
 namespace StaticAssertFoldTest {
 
@@ -1938,13 +1938,18 @@ namespace Lifetime {
   }
 
   constexpr int &get(int &&n) { return n; }
+  // cxx2b-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
+  // cxx2b-error@-2 {{no return statement in constexpr function}} See PR40598
   constexpr int &&get_rv(int &&n) { return static_cast<int&&>(n); }
   struct S {
     int &&r;
     int &s;
     int t;
     constexpr S() : r(get_rv(0)), s(get(0)), t(r) {} // expected-note {{read of object outside its lifetime}}
-    constexpr S(int) : r(get_rv(0)), s(get(0)), t(s) {} // expected-note {{read of object outside its lifetime}}
+    constexpr S(int) : r(get_rv(0)), s(get(0)), t(s) {}
+    // cxx2b-warning@-1 {{reference 's' is not yet bound to a value when used here}}
+    // cxx2b-note@-2    {{read of uninitialized object is not allowed in a constant expression}}
+    // cxx11_20-note@-3 {{read of object outside its lifetime}}
   };
   constexpr int k1 = S().t; // expected-error {{constant expression}} expected-note {{in call}}
   constexpr int k2 = S(0).t; // expected-error {{constant expression}} expected-note {{in call}}

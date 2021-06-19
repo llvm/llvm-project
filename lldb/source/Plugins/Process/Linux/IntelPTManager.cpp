@@ -442,11 +442,7 @@ Error IntelPTManager::TraceStop(lldb::tid_t tid) {
 
 Error IntelPTManager::TraceStop(const TraceStopRequest &request) {
   if (request.IsProcessTracing()) {
-    if (!IsProcessTracingEnabled()) {
-      return createStringError(inconvertibleErrorCode(),
-                               "Process not currently traced");
-    }
-    ClearProcessTracing();
+    Clear();
     return Error::success();
   } else {
     Error error = Error::success();
