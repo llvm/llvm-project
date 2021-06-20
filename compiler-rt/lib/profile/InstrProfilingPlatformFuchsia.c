@@ -134,7 +134,7 @@ void __llvm_profile_initialize(void) {
   uint64_t CountersSize = CountersEnd - CountersBegin;
 
   /* Don't publish a VMO if there are no counters. */
-  if (!CounterSize)
+  if (!CountersSize)
     return;
 
   zx_status_t Status;
