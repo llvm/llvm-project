@@ -138,7 +138,6 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["atomic", "memory"],
     "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
     "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
-    "unimplemented": True,
   }, {
     "name": "__cpp_lib_atomic_wait",
     "values": { "c++20": 201907 },
