@@ -115,6 +115,7 @@ bool GCOVFile::readGCNO(GCOVBuffer &buf) {
   while ((tag = buf.getWord())) {
     if (!buf.readInt(length))
       return false;
+    uint32_t pos = buf.cursor.tell();
     if (tag == GCOV_TAG_FUNCTION) {
       functions.push_back(std::make_unique<GCOVFunction>(*this));
       fn = functions.back().get();
@@ -162,7 +163,9 @@ bool GCOVFile::readGCNO(GCOVBuffer &buf) {
         return false;
       }
       GCOVBlock *src = fn->blocks[srcNo].get();
-      for (uint32_t i = 0, e = (length - 1) / 2; i != e; ++i) {
+      const uint32_t e =
+          version >= GCOV::V1200 ? (length / 4 - 1) / 2 : (length - 1) / 2;
+      for (uint32_t i = 0; i != e; ++i) {
         uint32_t dstNo = buf.getWord(), flags = buf.getWord();
         GCOVBlock *dst = fn->blocks[dstNo].get();
         auto arc = std::make_unique<GCOVArc>(*src, *dst, flags);
@@ -194,6 +197,10 @@ bool GCOVFile::readGCNO(GCOVBuffer &buf) {
         }
       }
     }
+    pos += version >= GCOV::V1200 ? length : 4 * length;
+    if (pos < buf.cursor.tell())
+      return false;
+    buf.de.skip(buf.cursor, pos - buf.cursor.tell());
   }
 
   GCNOInitialized = true;
@@ -268,11 +275,14 @@ bool GCOVFile::readGCDA(GCOVBuffer &buf) {
         }
       }
     } else if (tag == GCOV_TAG_COUNTER_ARCS && fn) {
-      if (length != 2 * fn->arcs.size()) {
+      uint32_t expected = 2 * fn->arcs.size();
+      if (version >= GCOV::V1200)
+        expected *= 4;
+      if (length != expected) {
         errs() << fn->Name
                << format(
                       ": GCOV_TAG_COUNTER_ARCS mismatch, got %u, expected %u\n",
-                      length, unsigned(2 * fn->arcs.size()));
+                      length, expected);
         return false;
       }
       for (std::unique_ptr<GCOVArc> &arc : fn->arcs) {
@@ -296,7 +306,7 @@ bool GCOVFile::readGCDA(GCOVBuffer &buf) {
           fn->treeArcs[i - 1]->src.count += fn->treeArcs[i - 1]->count;
       }
     }
-    pos += 4 * length;
+    pos += version >= GCOV::V1200 ? length : 4 * length;
     if (pos < buf.cursor.tell())
       return false;
     buf.de.skip(buf.cursor, pos - buf.cursor.tell());
