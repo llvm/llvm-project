@@ -79,6 +79,7 @@ public:
 
   static bool SaveCore(const lldb::ProcessSP &process_sp,
                        const lldb_private::FileSpec &outfile,
+                       lldb::SaveCoreStyle &core_style,
                        lldb_private::Status &error);
 
   static bool MagicBytesMatch(lldb::DataBufferSP &data_sp);
