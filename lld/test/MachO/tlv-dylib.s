@@ -69,11 +69,29 @@
 # FLAGS-NEXT:   segname __DATA
 # FLAGS-NEXT:      addr
 # FLAGS-NEXT:      size 0x0000000000000008
-# FLAGS-NEXT:    offset
+# FLAGS-NEXT:    offset 0
 # FLAGS-NEXT:     align 2^3 (8)
 # FLAGS-NEXT:    reloff 0
 # FLAGS-NEXT:    nreloc 0
 # FLAGS-NEXT:      type S_THREAD_LOCAL_ZEROFILL
+# FLAGS:       sectname __bss
+# FLAGS-NEXT:   segname __DATA
+# FLAGS-NEXT:      addr
+# FLAGS-NEXT:      size 0x0000000000002000
+# FLAGS-NEXT:    offset 0
+# FLAGS-NEXT:     align 2^0 (1)
+# FLAGS-NEXT:    reloff 0
+# FLAGS-NEXT:    nreloc 0
+# FLAGS-NEXT:      type S_ZEROFILL
+# FLAGS:       sectname __common
+# FLAGS-NEXT:   segname __DATA
+# FLAGS-NEXT:      addr
+# FLAGS-NEXT:      size 0x0000000000004000
+# FLAGS-NEXT:    offset 0
+# FLAGS-NEXT:     align 2^14 (16384)
+# FLAGS-NEXT:    reloff 0
+# FLAGS-NEXT:    nreloc 0
+# FLAGS-NEXT:      type S_ZEROFILL
 
 #--- libtlv.s
 .section __DATA,__thread_vars,thread_local_variables
@@ -95,6 +113,12 @@ _main:
 
 ## Add some TLVs to test too, so that we can test the ordering
 ## of __thread_ptrs, __thread_data, and __thread_bss.
+## Also add a .bss and a .comm for good measure too. Since they
+## are both zerofill, they end up after __thread_bss.
+.comm _com, 0x4000
+.bss
+.zero 0x2000
+
 .section __DATA,__thread_data,thread_local_regular
 _tfoo$tlv$init:
   .quad 123
