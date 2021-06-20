@@ -23,6 +23,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/SafeMachO.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
+#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
@@ -6204,10 +6205,256 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
   return num_loaded_sections > 0;
 }
 
+struct all_image_infos_header {
+  uint32_t version;         // currently 1
+  uint32_t imgcount;        // number of binary images
+  uint64_t entries_fileoff; // file offset in the corefile of where the array of
+                            // struct entry's begin.
+  uint32_t entries_size;    // size of 'struct entry'.
+  uint32_t unused;
+};
+
+struct image_entry {
+  uint64_t filepath_offset;  // offset in corefile to c-string of the file path,
+                             // UINT64_MAX if unavailable.
+  uuid_t uuid;               // uint8_t[16].  should be set to all zeroes if
+                             // uuid is unknown.
+  uint64_t load_address;     // UINT64_MAX if unknown.
+  uint64_t seg_addrs_offset; // offset to the array of struct segment_vmaddr's.
+  uint32_t segment_count;    // The number of segments for this binary.
+  uint32_t unused;
+
+  image_entry() {
+    filepath_offset = UINT64_MAX;
+    memset(&uuid, 0, sizeof(uuid_t));
+    segment_count = 0;
+    load_address = UINT64_MAX;
+    seg_addrs_offset = UINT64_MAX;
+    unused = 0;
+  }
+  image_entry(const image_entry &rhs) {
+    filepath_offset = rhs.filepath_offset;
+    memcpy(&uuid, &rhs.uuid, sizeof(uuid_t));
+    segment_count = rhs.segment_count;
+    seg_addrs_offset = rhs.seg_addrs_offset;
+    load_address = rhs.load_address;
+    unused = rhs.unused;
+  }
+};
+
+struct segment_vmaddr {
+  char segname[16];
+  uint64_t vmaddr;
+  uint64_t unused;
+
+  segment_vmaddr() {
+    memset(&segname, 0, 16);
+    vmaddr = UINT64_MAX;
+    unused = 0;
+  }
+  segment_vmaddr(const segment_vmaddr &rhs) {
+    memcpy(&segname, &rhs.segname, 16);
+    vmaddr = rhs.vmaddr;
+    unused = rhs.unused;
+  }
+};
+
+// Write the payload for the "all image infos" LC_NOTE into
+// the supplied all_image_infos_payload, assuming that this
+// will be written into the corefile starting at
+// initial_file_offset.
+//
+// The placement of this payload is a little tricky.  We're
+// laying this out as
+//
+// 1. header (struct all_image_info_header)
+// 2. Array of fixed-size (struct image_entry)'s, one
+//    per binary image present in the process.
+// 3. Arrays of (struct segment_vmaddr)'s, a varying number
+//    for each binary image.
+// 4. Variable length c-strings of binary image filepaths,
+//    one per binary.
+//
+// To compute where everything will be laid out in the
+// payload, we need to iterate over the images and calculate
+// how many segment_vmaddr structures each image will need,
+// and how long each image's filepath c-string is. There
+// are some multiple passes over the image list while calculating
+// everything.
+
+static offset_t
+CreateAllImageInfosPayload(const lldb::ProcessSP &process_sp,
+                           offset_t initial_file_offset,
+                           StreamString &all_image_infos_payload) {
+  Target &target = process_sp->GetTarget();
+  const ModuleList &modules = target.GetImages();
+  size_t modules_count = modules.GetSize();
+
+  std::set<std::string> executing_uuids;
+  ThreadList &thread_list(process_sp->GetThreadList());
+  for (uint32_t i = 0; i < thread_list.GetSize(); i++) {
+    ThreadSP thread_sp = thread_list.GetThreadAtIndex(i);
+    uint32_t stack_frame_count = thread_sp->GetStackFrameCount();
+    for (uint32_t j = 0; j < stack_frame_count; j++) {
+      StackFrameSP stack_frame_sp = thread_sp->GetStackFrameAtIndex(j);
+      Address pc = stack_frame_sp->GetFrameCodeAddress();
+      ModuleSP module_sp = pc.GetModule();
+      if (module_sp) {
+        UUID uuid = module_sp->GetUUID();
+        if (uuid.IsValid()) {
+          executing_uuids.insert(uuid.GetAsString());
+        }
+      }
+    }
+  }
+
+  struct all_image_infos_header infos;
+  infos.version = 1;
+  infos.imgcount = modules_count;
+  infos.entries_size = sizeof(image_entry);
+  infos.entries_fileoff = initial_file_offset + sizeof(all_image_infos_header);
+  infos.unused = 0;
+
+  all_image_infos_payload.PutHex32(infos.version);
+  all_image_infos_payload.PutHex32(infos.imgcount);
+  all_image_infos_payload.PutHex64(infos.entries_fileoff);
+  all_image_infos_payload.PutHex32(infos.entries_size);
+  all_image_infos_payload.PutHex32(infos.unused);
+
+  // First create the structures for all of the segment name+vmaddr vectors
+  // for each module, so we will know the size of them as we add the
+  // module entries.
+  std::vector<std::vector<segment_vmaddr>> modules_segment_vmaddrs;
+  for (size_t i = 0; i < modules_count; i++) {
+    ModuleSP module = modules.GetModuleAtIndex(i);
+
+    SectionList *sections = module->GetSectionList();
+    size_t sections_count = sections->GetSize();
+    std::vector<segment_vmaddr> segment_vmaddrs;
+    for (size_t j = 0; j < sections_count; j++) {
+      SectionSP section = sections->GetSectionAtIndex(j);
+      if (!section->GetParent().get()) {
+        addr_t vmaddr = section->GetLoadBaseAddress(&target);
+        if (vmaddr == LLDB_INVALID_ADDRESS)
+          continue;
+        ConstString name = section->GetName();
+        segment_vmaddr seg_vmaddr;
+        strncpy(seg_vmaddr.segname, name.AsCString(),
+                sizeof(seg_vmaddr.segname));
+        seg_vmaddr.vmaddr = vmaddr;
+        seg_vmaddr.unused = 0;
+        segment_vmaddrs.push_back(seg_vmaddr);
+      }
+    }
+    modules_segment_vmaddrs.push_back(segment_vmaddrs);
+  }
+
+  offset_t size_of_vmaddr_structs = 0;
+  for (size_t i = 0; i < modules_segment_vmaddrs.size(); i++) {
+    size_of_vmaddr_structs +=
+        modules_segment_vmaddrs[i].size() * sizeof(segment_vmaddr);
+  }
+
+  offset_t size_of_filepath_cstrings = 0;
+  for (size_t i = 0; i < modules_count; i++) {
+    ModuleSP module_sp = modules.GetModuleAtIndex(i);
+    size_of_filepath_cstrings += module_sp->GetFileSpec().GetPath().size() + 1;
+  }
+
+  // Calculate the file offsets of our "all image infos" payload in the
+  // corefile. initial_file_offset the original value passed in to this method.
+
+  offset_t start_of_entries =
+      initial_file_offset + sizeof(all_image_infos_header);
+  offset_t start_of_seg_vmaddrs =
+      start_of_entries + sizeof(image_entry) * modules_count;
+  offset_t start_of_filenames = start_of_seg_vmaddrs + size_of_vmaddr_structs;
+
+  offset_t final_file_offset = start_of_filenames + size_of_filepath_cstrings;
+
+  // Now write the one-per-module 'struct image_entry' into the
+  // StringStream; keep track of where the struct segment_vmaddr
+  // entries for each module will end up in the corefile.
+
+  offset_t current_string_offset = start_of_filenames;
+  offset_t current_segaddrs_offset = start_of_seg_vmaddrs;
+  std::vector<struct image_entry> image_entries;
+  for (size_t i = 0; i < modules_count; i++) {
+    ModuleSP module_sp = modules.GetModuleAtIndex(i);
+
+    struct image_entry ent;
+    memcpy(&ent.uuid, module_sp->GetUUID().GetBytes().data(), sizeof(ent.uuid));
+    if (modules_segment_vmaddrs[i].size() > 0) {
+      ent.segment_count = modules_segment_vmaddrs[i].size();
+      ent.seg_addrs_offset = current_segaddrs_offset;
+    }
+    ent.filepath_offset = current_string_offset;
+    ObjectFile *objfile = module_sp->GetObjectFile();
+    if (objfile) {
+      Address base_addr(objfile->GetBaseAddress());
+      if (base_addr.IsValid()) {
+        ent.load_address = base_addr.GetLoadAddress(&target);
+      }
+    }
+
+    all_image_infos_payload.PutHex64(ent.filepath_offset);
+    all_image_infos_payload.PutRawBytes(ent.uuid, sizeof(ent.uuid));
+    all_image_infos_payload.PutHex64(ent.load_address);
+    all_image_infos_payload.PutHex64(ent.seg_addrs_offset);
+    all_image_infos_payload.PutHex32(ent.segment_count);
+
+    if (executing_uuids.find(module_sp->GetUUID().GetAsString()) !=
+        executing_uuids.end())
+      all_image_infos_payload.PutHex32(1);
+    else
+      all_image_infos_payload.PutHex32(0);
+
+    current_segaddrs_offset += ent.segment_count * sizeof(segment_vmaddr);
+    current_string_offset += module_sp->GetFileSpec().GetPath().size() + 1;
+  }
+
+  // Now write the struct segment_vmaddr entries into the StringStream.
+
+  for (size_t i = 0; i < modules_segment_vmaddrs.size(); i++) {
+    if (modules_segment_vmaddrs[i].size() == 0)
+      continue;
+    for (struct segment_vmaddr segvm : modules_segment_vmaddrs[i]) {
+      all_image_infos_payload.PutRawBytes(segvm.segname, sizeof(segvm.segname));
+      all_image_infos_payload.PutHex64(segvm.vmaddr);
+      all_image_infos_payload.PutHex64(segvm.unused);
+    }
+  }
+
+  for (size_t i = 0; i < modules_count; i++) {
+    ModuleSP module_sp = modules.GetModuleAtIndex(i);
+    std::string filepath = module_sp->GetFileSpec().GetPath();
+    all_image_infos_payload.PutRawBytes(filepath.data(), filepath.size() + 1);
+  }
+
+  return final_file_offset;
+}
+
+// Temp struct used to combine contiguous memory regions with
+// identical permissions.
+struct page_object {
+  addr_t addr;
+  addr_t size;
+  uint32_t prot;
+};
+
 bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
-                               const FileSpec &outfile, Status &error) {
+                               const FileSpec &outfile,
+                               lldb::SaveCoreStyle &core_style, Status &error) {
   if (!process_sp)
     return false;
+
+  // For Mach-O, we can only create full corefiles or dirty-page-only
+  // corefiles.  The default is dirty-page-only.
+  if (core_style != SaveCoreStyle::eSaveCoreFull) {
+    core_style = SaveCoreStyle::eSaveCoreDirtyOnly;
+  } else {
+    core_style = SaveCoreStyle::eSaveCoreFull;
+  }
 
   Target &target = process_sp->GetTarget();
   const ArchSpec target_arch = target.GetArchitecture();
@@ -6242,14 +6489,10 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
       Status range_error = process_sp->GetMemoryRegionInfo(0, range_info);
       const uint32_t addr_byte_size = target_arch.GetAddressByteSize();
       const ByteOrder byte_order = target_arch.GetByteOrder();
+      std::vector<page_object> pages_to_copy;
+
       if (range_error.Success()) {
         while (range_info.GetRange().GetRangeBase() != LLDB_INVALID_ADDRESS) {
-          const addr_t addr = range_info.GetRange().GetRangeBase();
-          const addr_t size = range_info.GetRange().GetByteSize();
-
-          if (size == 0)
-            break;
-
           // Calculate correct protections
           uint32_t prot = 0;
           if (range_info.GetReadable() == MemoryRegionInfo::eYes)
@@ -6259,38 +6502,79 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
           if (range_info.GetExecutable() == MemoryRegionInfo::eYes)
             prot |= VM_PROT_EXECUTE;
 
+          const addr_t addr = range_info.GetRange().GetRangeBase();
+          const addr_t size = range_info.GetRange().GetByteSize();
+
+          if (size == 0)
+            break;
+
           if (prot != 0) {
-            uint32_t cmd_type = LC_SEGMENT_64;
-            uint32_t segment_size = sizeof(llvm::MachO::segment_command_64);
-            if (addr_byte_size == 4) {
-              cmd_type = LC_SEGMENT;
-              segment_size = sizeof(llvm::MachO::segment_command);
+            addr_t pagesize = range_info.GetPageSize();
+            const llvm::Optional<std::vector<addr_t>> &dirty_page_list =
+                range_info.GetDirtyPageList();
+            if (core_style == SaveCoreStyle::eSaveCoreDirtyOnly &&
+                dirty_page_list.hasValue()) {
+              core_style = SaveCoreStyle::eSaveCoreDirtyOnly;
+              for (addr_t dirtypage : dirty_page_list.getValue()) {
+                page_object obj = {
+                    .addr = dirtypage, .size = pagesize, .prot = prot};
+                pages_to_copy.push_back(obj);
+              }
+            } else {
+              page_object obj = {.addr = addr, .size = size, .prot = prot};
+              pages_to_copy.push_back(obj);
             }
-            llvm::MachO::segment_command_64 segment = {
-                cmd_type,     // uint32_t cmd;
-                segment_size, // uint32_t cmdsize;
-                {0},          // char segname[16];
-                addr, // uint64_t vmaddr;    // uint32_t for 32-bit Mach-O
-                size, // uint64_t vmsize;    // uint32_t for 32-bit Mach-O
-                0,    // uint64_t fileoff;   // uint32_t for 32-bit Mach-O
-                size, // uint64_t filesize;  // uint32_t for 32-bit Mach-O
-                prot, // uint32_t maxprot;
-                prot, // uint32_t initprot;
-                0,    // uint32_t nsects;
-                0};   // uint32_t flags;
-            segment_load_commands.push_back(segment);
-          } else {
-            // No protections and a size of 1 used to be returned from old
-            // debugservers when we asked about a region that was past the
-            // last memory region and it indicates the end...
-            if (size == 1)
-              break;
           }
 
           range_error = process_sp->GetMemoryRegionInfo(
               range_info.GetRange().GetRangeEnd(), range_info);
           if (range_error.Fail())
             break;
+        }
+
+        // Combine contiguous entries that have the same
+        // protections so we don't have an excess of
+        // load commands.
+        std::vector<page_object> combined_page_objects;
+        page_object last_obj;
+        last_obj.addr = LLDB_INVALID_ADDRESS;
+        for (page_object obj : pages_to_copy) {
+          if (last_obj.addr == LLDB_INVALID_ADDRESS) {
+            last_obj = obj;
+            continue;
+          }
+          if (last_obj.addr + last_obj.size == obj.addr &&
+              last_obj.prot == obj.prot) {
+            last_obj.size += obj.size;
+            continue;
+          }
+          combined_page_objects.push_back(last_obj);
+          last_obj = obj;
+        }
+
+        for (page_object obj : combined_page_objects) {
+          uint32_t cmd_type = LC_SEGMENT_64;
+          uint32_t segment_size = sizeof(llvm::MachO::segment_command_64);
+          if (addr_byte_size == 4) {
+            cmd_type = LC_SEGMENT;
+            segment_size = sizeof(llvm::MachO::segment_command);
+          }
+          llvm::MachO::segment_command_64 segment = {
+              cmd_type,     // uint32_t cmd;
+              segment_size, // uint32_t cmdsize;
+              {0},          // char segname[16];
+              obj.addr,     // uint64_t vmaddr;    // uint32_t for 32-bit
+                            // Mach-O
+              obj.size,     // uint64_t vmsize;    // uint32_t for 32-bit
+                            // Mach-O
+              0,            // uint64_t fileoff;   // uint32_t for 32-bit Mach-O
+              obj.size,     // uint64_t filesize;  // uint32_t for 32-bit
+                            // Mach-O
+              obj.prot,     // uint32_t maxprot;
+              obj.prot,     // uint32_t initprot;
+              0,            // uint32_t nsects;
+              0};           // uint32_t flags;
+          segment_load_commands.push_back(segment);
         }
 
         StreamString buffer(Stream::eBinary, addr_byte_size, byte_order);
@@ -6363,6 +6647,10 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
           mach_header.sizeofcmds += 8 + LC_THREAD_data.GetSize();
         }
 
+        // LC_NOTE "all image infos"
+        mach_header.ncmds++;
+        mach_header.sizeofcmds += sizeof(llvm::MachO::note_command);
+
         // Write the mach header
         buffer.PutHex32(mach_header.magic);
         buffer.PutHex32(mach_header.cputype);
@@ -6378,10 +6666,33 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         // Skip the mach header and all load commands and align to the next
         // 0x1000 byte boundary
         addr_t file_offset = buffer.GetSize() + mach_header.sizeofcmds;
-        if (file_offset & 0x00000fff) {
-          file_offset += 0x00001000ull;
-          file_offset &= (~0x00001000ull + 1);
-        }
+
+        file_offset = llvm::alignTo(file_offset, 16);
+
+        // Create the "all image infos" LC_NOTE payload
+        StreamString all_image_infos_payload(Stream::eBinary, addr_byte_size,
+                                             byte_order);
+        offset_t all_image_infos_payload_start = file_offset;
+        file_offset = CreateAllImageInfosPayload(process_sp, file_offset,
+                                                 all_image_infos_payload);
+
+        // Add the "all image infos" LC_NOTE load command
+        llvm::MachO::note_command all_image_info_note = {
+            LC_NOTE,                           /* uint32_t cmd */
+            sizeof(llvm::MachO::note_command), /* uint32_t cmdsize */
+            "all image infos",                 /* char data_owner[16] */
+            all_image_infos_payload_start,     /* uint64_t offset */
+            file_offset - all_image_infos_payload_start /* uint64_t size */
+        };
+        buffer.PutHex32(all_image_info_note.cmd);
+        buffer.PutHex32(all_image_info_note.cmdsize);
+        buffer.PutRawBytes(all_image_info_note.data_owner,
+                           sizeof(all_image_info_note.data_owner));
+        buffer.PutHex64(all_image_info_note.offset);
+        buffer.PutHex64(all_image_info_note.size);
+
+        // Align to 4096-byte page boundary for the LC_SEGMENTs.
+        file_offset = llvm::alignTo(file_offset, 4096);
 
         for (auto &segment : segment_load_commands) {
           segment.fileoff = file_offset;
@@ -6398,14 +6709,6 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
 
         // Write out all of the segment load commands
         for (const auto &segment : segment_load_commands) {
-          printf("0x%8.8x 0x%8.8x [0x%16.16" PRIx64 " - 0x%16.16" PRIx64
-                 ") [0x%16.16" PRIx64 " 0x%16.16" PRIx64
-                 ") 0x%8.8x 0x%8.8x 0x%8.8x 0x%8.8x]\n",
-                 segment.cmd, segment.cmdsize, segment.vmaddr,
-                 segment.vmaddr + segment.vmsize, segment.fileoff,
-                 segment.filesize, segment.maxprot, segment.initprot,
-                 segment.nsects, segment.flags);
-
           buffer.PutHex32(segment.cmd);
           buffer.PutHex32(segment.cmdsize);
           buffer.PutRawBytes(segment.segname, sizeof(segment.segname));
@@ -6440,6 +6743,20 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
           error =
               core_file.get()->Write(buffer.GetString().data(), bytes_written);
           if (error.Success()) {
+
+            if (core_file.get()->SeekFromStart(all_image_info_note.offset) ==
+                -1) {
+              error.SetErrorStringWithFormat(
+                  "Unable to seek to corefile pos to write all iamge infos");
+              return false;
+            }
+
+            bytes_written = all_image_infos_payload.GetString().size();
+            error = core_file.get()->Write(
+                all_image_infos_payload.GetString().data(), bytes_written);
+            if (!error.Success())
+              return false;
+
             // Now write the file data for all memory segments in the process
             for (const auto &segment : segment_load_commands) {
               if (core_file.get()->SeekFromStart(segment.fileoff) == -1) {
@@ -6449,9 +6766,10 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
                 break;
               }
 
-              printf("Saving %" PRId64
-                     " bytes of data for memory region at 0x%" PRIx64 "\n",
-                     segment.vmsize, segment.vmaddr);
+              target.GetDebugger().GetAsyncOutputStream()->Printf(
+                  "Saving %" PRId64
+                  " bytes of data for memory region at 0x%" PRIx64 "\n",
+                  segment.vmsize, segment.vmaddr);
               addr_t bytes_left = segment.vmsize;
               addr_t addr = segment.vmaddr;
               Status memory_read_error;
@@ -6492,4 +6810,122 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
                  // this process
   }
   return false;
+}
+
+ObjectFileMachO::MachOCorefileAllImageInfos
+ObjectFileMachO::GetCorefileAllImageInfos() {
+  MachOCorefileAllImageInfos image_infos;
+
+  // Look for an "all image infos" LC_NOTE.
+  lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
+  for (uint32_t i = 0; i < m_header.ncmds; ++i) {
+    const uint32_t cmd_offset = offset;
+    llvm::MachO::load_command lc;
+    if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
+      break;
+    if (lc.cmd == LC_NOTE) {
+      char data_owner[17];
+      m_data.CopyData(offset, 16, data_owner);
+      data_owner[16] = '\0';
+      offset += 16;
+      uint64_t fileoff = m_data.GetU64_unchecked(&offset);
+      offset += 4; /* size unused */
+
+      if (strcmp("all image infos", data_owner) == 0) {
+        offset = fileoff;
+        // Read the struct all_image_infos_header.
+        uint32_t version = m_data.GetU32(&offset);
+        if (version != 1) {
+          return image_infos;
+        }
+        uint32_t imgcount = m_data.GetU32(&offset);
+        uint64_t entries_fileoff = m_data.GetU64(&offset);
+        offset += 4; // uint32_t entries_size;
+        offset += 4; // uint32_t unused;
+
+        offset = entries_fileoff;
+        for (uint32_t i = 0; i < imgcount; i++) {
+          // Read the struct image_entry.
+          offset_t filepath_offset = m_data.GetU64(&offset);
+          uuid_t uuid;
+          memcpy(&uuid, m_data.GetData(&offset, sizeof(uuid_t)),
+                 sizeof(uuid_t));
+          uint64_t load_address = m_data.GetU64(&offset);
+          offset_t seg_addrs_offset = m_data.GetU64(&offset);
+          uint32_t segment_count = m_data.GetU32(&offset);
+          uint32_t currently_executing = m_data.GetU32(&offset);
+
+          MachOCorefileImageEntry image_entry;
+          image_entry.filename = (const char *)m_data.GetCStr(&filepath_offset);
+          image_entry.uuid = UUID::fromData(uuid, sizeof(uuid_t));
+          image_entry.load_address = load_address;
+          image_entry.currently_executing = currently_executing;
+
+          offset_t seg_vmaddrs_offset = seg_addrs_offset;
+          for (uint32_t j = 0; j < segment_count; j++) {
+            char segname[17];
+            m_data.CopyData(seg_vmaddrs_offset, 16, segname);
+            segname[16] = '\0';
+            seg_vmaddrs_offset += 16;
+            uint64_t vmaddr = m_data.GetU64(&seg_vmaddrs_offset);
+            seg_vmaddrs_offset += 8; /* unused */
+
+            std::tuple<ConstString, addr_t> new_seg{ConstString(segname),
+                                                    vmaddr};
+            image_entry.segment_load_addresses.push_back(new_seg);
+          }
+          image_infos.all_image_infos.push_back(image_entry);
+        }
+      }
+    }
+    offset = cmd_offset + lc.cmdsize;
+  }
+
+  return image_infos;
+}
+
+bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
+  MachOCorefileAllImageInfos image_infos = GetCorefileAllImageInfos();
+  bool added_images = false;
+  if (image_infos.IsValid()) {
+    for (const MachOCorefileImageEntry &image : image_infos.all_image_infos) {
+      ModuleSpec module_spec;
+      module_spec.GetUUID() = image.uuid;
+      module_spec.GetFileSpec() = FileSpec(image.filename.c_str());
+      if (image.currently_executing) {
+        Symbols::DownloadObjectAndSymbolFile(module_spec, true);
+        if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
+          process.GetTarget().GetOrCreateModule(module_spec, false);
+        }
+      }
+      Status error;
+      ModuleSP module_sp =
+          process.GetTarget().GetOrCreateModule(module_spec, false, &error);
+      if (!module_sp.get() || !module_sp->GetObjectFile()) {
+        if (image.load_address != LLDB_INVALID_ADDRESS) {
+          module_sp = process.ReadModuleFromMemory(module_spec.GetFileSpec(),
+                                                   image.load_address);
+        }
+      }
+      if (module_sp.get() && module_sp->GetObjectFile()) {
+        added_images = true;
+        if (module_sp->GetObjectFile()->GetType() ==
+            ObjectFile::eTypeExecutable) {
+          process.GetTarget().SetExecutableModule(module_sp, eLoadDependentsNo);
+        }
+        for (auto name_vmaddr_tuple : image.segment_load_addresses) {
+          SectionList *sectlist = module_sp->GetObjectFile()->GetSectionList();
+          if (sectlist) {
+            SectionSP sect_sp =
+                sectlist->FindSectionByName(std::get<0>(name_vmaddr_tuple));
+            if (sect_sp) {
+              process.GetTarget().SetSectionLoadAddress(
+                  sect_sp, std::get<1>(name_vmaddr_tuple));
+            }
+          }
+        }
+      }
+    }
+  }
+  return added_images;
 }

@@ -58,6 +58,7 @@ public:
 
   static bool SaveCore(const lldb::ProcessSP &process_sp,
                        const lldb_private::FileSpec &outfile,
+                       lldb::SaveCoreStyle &core_style,
                        lldb_private::Status &error);
 
   static bool MagicBytesMatch(lldb::DataBufferSP &data_sp, lldb::addr_t offset,
@@ -115,6 +116,8 @@ public:
   bool GetCorefileMainBinaryInfo(lldb::addr_t &address,
                                  lldb_private::UUID &uuid,
                                  ObjectFile::BinaryType &type) override;
+
+  bool LoadCoreFileImages(lldb_private::Process &process) override;
 
   lldb::RegisterContextSP
   GetThreadContextAtIndex(uint32_t idx, lldb_private::Thread &thread) override;
@@ -208,6 +211,31 @@ protected:
                               uint32_t cmd_idx);
 
   bool SectionIsLoadable(const lldb_private::Section *section);
+
+  /// A corefile may include metadata about all of the binaries that were
+  /// present in the process when the corefile was taken.  This is only
+  /// implemented for Mach-O files for now; we'll generalize it when we
+  /// have other systems that can include the same.
+  struct MachOCorefileImageEntry {
+    std::string filename;
+    lldb_private::UUID uuid;
+    lldb::addr_t load_address = LLDB_INVALID_ADDRESS;
+    bool currently_executing;
+    std::vector<std::tuple<lldb_private::ConstString, lldb::addr_t>>
+        segment_load_addresses;
+  };
+
+  struct MachOCorefileAllImageInfos {
+    std::vector<MachOCorefileImageEntry> all_image_infos;
+    bool IsValid() { return all_image_infos.size() > 0; }
+  };
+
+  /// Get the list of binary images that were present in the process
+  /// when the corefile was produced.
+  /// \return
+  ///     The MachOCorefileAllImageInfos object returned will have
+  ///     IsValid() == false if the information is unavailable.
+  MachOCorefileAllImageInfos GetCorefileAllImageInfos();
 
   llvm::MachO::mach_header m_header;
   static lldb_private::ConstString GetSegmentNameTEXT();
