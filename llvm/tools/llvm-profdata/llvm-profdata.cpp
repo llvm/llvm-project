@@ -2506,9 +2506,6 @@ static int show_main(int argc, const char *argv[]) {
 
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data summary\n");
 
-  if (OutputFilename.empty())
-    OutputFilename = "-";
-
   if (Filename == OutputFilename) {
     errs() << sys::path::filename(argv[0])
            << ": Input file name cannot be the same as the output file name!\n";
