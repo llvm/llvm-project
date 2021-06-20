@@ -549,7 +549,7 @@ Symbol *LinkerDriver::addUndefined(StringRef name) {
 StringRef LinkerDriver::mangleMaybe(Symbol *s) {
   // If the plain symbol name has already been resolved, do nothing.
   Undefined *unmangled = dyn_cast<Undefined>(s);
-  if (!unmangled)
+  if (!unmangled || unmangled->getWeakAlias())
     return "";
 
   // Otherwise, see if a similar, mangled symbol exists in the symbol table.
