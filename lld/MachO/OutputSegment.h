@@ -51,7 +51,7 @@ public:
   uint64_t fileOff = 0;
   uint64_t fileSize = 0;
   uint64_t vmSize = 0;
-  int inputOrder = std::numeric_limits<int>::max();
+  int inputOrder = UnspecifiedInputOrder;
   StringRef name;
   uint32_t maxProt = 0;
   uint32_t initProt = 0;

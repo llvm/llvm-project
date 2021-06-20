@@ -1341,6 +1341,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
           }
         }
       }
+      assert(inputSections.size() < UnspecifiedInputOrder);
     }
 
     if (config->deadStrip)
