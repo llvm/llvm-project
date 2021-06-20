@@ -2082,9 +2082,7 @@ bool AMDGPULegalizerInfo::legalizeFPTOI(MachineInstr &MI,
   const LLT S32 = LLT::scalar(32);
 
   const LLT SrcLT = MRI.getType(Src);
-  const LLT DstLT = MRI.getType(Dst);
-
-  assert((SrcLT == S32 || SrcLT == S64) && DstLT == S64);
+  assert((SrcLT == S32 || SrcLT == S64) && MRI.getType(Dst) == S64);
 
   unsigned Flags = MI.getFlags();
 
