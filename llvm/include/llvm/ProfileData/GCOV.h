@@ -190,7 +190,7 @@ public:
 
   bool readGCNO(GCOVBuffer &Buffer);
   bool readGCDA(GCOVBuffer &Buffer);
-  GCOV::GCOVVersion getVersion() const { return Version; }
+  GCOV::GCOVVersion getVersion() const { return version; }
   void print(raw_ostream &OS) const;
   void dump() const;
 
@@ -199,13 +199,13 @@ public:
 
 public:
   bool GCNOInitialized = false;
-  GCOV::GCOVVersion Version;
-  uint32_t Checksum = 0;
+  GCOV::GCOVVersion version;
+  uint32_t checksum = 0;
   StringRef cwd;
   SmallVector<std::unique_ptr<GCOVFunction>, 16> functions;
-  std::map<uint32_t, GCOVFunction *> IdentToFunction;
-  uint32_t RunCount = 0;
-  uint32_t ProgramCount = 0;
+  std::map<uint32_t, GCOVFunction *> identToFunction;
+  uint32_t runCount = 0;
+  uint32_t programCount = 0;
 
   using iterator = pointee_iterator<
       SmallVectorImpl<std::unique_ptr<GCOVFunction>>::const_iterator>;
