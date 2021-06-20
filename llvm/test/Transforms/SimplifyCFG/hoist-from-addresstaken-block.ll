@@ -10,7 +10,7 @@ define i32 @test_inline_constraint_S_label_tailmerged(i1 %in) {
 ; CHECK-NEXT:    ret i32 [[COMMON_RETVAL]]
 ;
   call void asm sideeffect "adr x0, $0", "S"(i8* blockaddress(@test_inline_constraint_S_label_tailmerged, %loc))
-br i1 %in, label %loc, label %loc2
+  br i1 %in, label %loc, label %loc2
 loc:
   br label %common.ret
 loc2:
@@ -18,4 +18,22 @@ loc2:
 common.ret:
   %common.retval = phi i32 [ 0, %loc ], [ 42, %loc2 ]
   ret i32 %common.retval
+}
+
+define i32 @test_inline_constraint_S_label_tailmerged2(i1 %in) {
+; CHECK-LABEL: @test_inline_constraint_S_label_tailmerged2(
+; CHECK-NEXT:  common.ret:
+; CHECK-NEXT:    call void asm sideeffect "adr x0, $0", "S"(i8* blockaddress(@test_inline_constraint_S_label_tailmerged, [[COMMON_RET:%.*]]))
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[IN:%.*]], i32 0, i32 42
+; CHECK-NEXT:    ret i32 [[DOT]]
+;
+  call void asm sideeffect "adr x0, $0", "S"(i8* blockaddress(@test_inline_constraint_S_label_tailmerged, %loc))
+  br i1 %in, label %loc, label %loc2
+common.ret:
+  %common.retval = phi i32 [ 0, %loc ], [ 42, %loc2 ]
+  ret i32 %common.retval
+loc:
+  br label %common.ret
+loc2:
+  br label %common.ret
 }
