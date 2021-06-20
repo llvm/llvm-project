@@ -1085,6 +1085,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::ctpop:
     if (auto *I = foldCtpop(*II, *this))
       return I;
+
+    // If the operand is a select with constant arm(s), try to hoist ctpop.
+    if (auto *Sel = dyn_cast<SelectInst>(II->getArgOperand(0)))
+      if (Instruction *R = FoldOpIntoSelect(*II, Sel))
+        return R;
     break;
 
   case Intrinsic::fshl:
