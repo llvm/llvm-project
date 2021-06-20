@@ -6516,12 +6516,17 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
                 dirty_page_list.hasValue()) {
               core_style = SaveCoreStyle::eSaveCoreDirtyOnly;
               for (addr_t dirtypage : dirty_page_list.getValue()) {
-                page_object obj = {
-                    .addr = dirtypage, .size = pagesize, .prot = prot};
+                page_object obj;
+                obj.addr = dirtypage;
+                obj.size = pagesize;
+                obj.prot = prot;
                 pages_to_copy.push_back(obj);
               }
             } else {
-              page_object obj = {.addr = addr, .size = size, .prot = prot};
+              page_object obj;
+              obj.addr = addr;
+              obj.size = size;
+              obj.prot = prot;
               pages_to_copy.push_back(obj);
             }
           }
