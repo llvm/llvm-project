@@ -12,8 +12,8 @@
 
 
 // template <class InputIterator, class Allocator = allocator<typename iterator_traits<InputIterator>::value_type>>
-//    deque(InputIterator, InputIterator, Allocator = Allocator())
-//    -> deque<typename iterator_traits<InputIterator>::value_type, Allocator>;
+//    vector(InputIterator, InputIterator, Allocator = Allocator())
+//    -> vector<typename iterator_traits<InputIterator>::value_type, Allocator>;
 //
 
 
@@ -113,5 +113,34 @@ int main(int, char**)
     assert(vec.size() == 0);
     }
 
-  return 0;
+    {
+        typedef test_allocator<short> Alloc;
+        typedef test_allocator<int> ConvertibleToAlloc;
+
+        {
+        std::vector<short, Alloc> source;
+        std::vector vec(source, Alloc(2));
+        static_assert(std::is_same_v<decltype(vec), decltype(source)>);
+        }
+
+        {
+        std::vector<short, Alloc> source;
+        std::vector vec(source, ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(vec), decltype(source)>);
+        }
+
+        {
+        std::vector<short, Alloc> source;
+        std::vector vec(std::move(source), Alloc(2));
+        static_assert(std::is_same_v<decltype(vec), decltype(source)>);
+        }
+
+        {
+        std::vector<short, Alloc> source;
+        std::vector vec(std::move(source), ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(vec), decltype(source)>);
+        }
+    }
+
+    return 0;
 }

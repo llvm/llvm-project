@@ -20,7 +20,7 @@
 
 namespace Fortran::runtime::typeInfo {
 
-struct Component;
+class Component;
 
 class DerivedType {
 public:

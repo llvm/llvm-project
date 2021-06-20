@@ -2,7 +2,7 @@
 ; RUN: opt < %s -S -loop-unroll -pass-remarks=loop-unroll -pass-remarks-with-hotness -unroll-count=4 2>&1 | FileCheck -check-prefix=PARTIAL-UNROLL %s
 
 ; COMPLETE-UNROLL: remark: {{.*}}: completely unrolled loop with 16 iterations (hotness: 300)
-; PARTIAL-UNROLL: remark: {{.*}}: unrolled loop by a factor of 4 {{.*}} (hotness: 300)
+; PARTIAL-UNROLL: remark: {{.*}}: unrolled loop by a factor of 4 (hotness: 300)
 
 define i32 @sum() !prof !0 {
 entry:

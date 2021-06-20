@@ -425,15 +425,8 @@ void PseudoProbeUpdatePass::runOnFunction(Function &F,
   for (auto &Block : F) {
     for (auto &I : Block) {
       if (Optional<PseudoProbe> Probe = extractProbe(I)) {
-        // Do not count dangling probes since they are logically deleted and the
-        // current block that a dangling probe resides in doesn't reflect the
-        // execution count of the probe. The original samples of the probe will
-        // be distributed among the rest probes if there are any, this is
-        // less-than-deal but at least we don't lose any samples.
-        if (!Probe->isDangling()) {
-          uint64_t Hash = computeCallStackHash(I);
-          ProbeFactors[{Probe->Id, Hash}] += BBProfileCount(&Block);
-        }
+        uint64_t Hash = computeCallStackHash(I);
+        ProbeFactors[{Probe->Id, Hash}] += BBProfileCount(&Block);
       }
     }
   }
@@ -442,14 +435,10 @@ void PseudoProbeUpdatePass::runOnFunction(Function &F,
   for (auto &Block : F) {
     for (auto &I : Block) {
       if (Optional<PseudoProbe> Probe = extractProbe(I)) {
-        // Ignore danling probes since they are logically deleted and should do
-        // not consume any profile samples in the subsequent profile annotation.
-        if (!Probe->isDangling()) {
-          uint64_t Hash = computeCallStackHash(I);
-          float Sum = ProbeFactors[{Probe->Id, Hash}];
-          if (Sum != 0)
-            setProbeDistributionFactor(I, BBProfileCount(&Block) / Sum);
-        }
+        uint64_t Hash = computeCallStackHash(I);
+        float Sum = ProbeFactors[{Probe->Id, Hash}];
+        if (Sum != 0)
+          setProbeDistributionFactor(I, BBProfileCount(&Block) / Sum);
       }
     }
   }

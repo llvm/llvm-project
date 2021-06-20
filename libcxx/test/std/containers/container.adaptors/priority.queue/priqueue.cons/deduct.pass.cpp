@@ -104,21 +104,76 @@ int main(int, char**)
     }
 
     {
-//  This one is odd - you can pass an allocator in to use, but the allocator
-//  has to match the type of the one used by the underlying container
-    typedef long double T;
-    typedef std::greater<T> Comp;
-    typedef test_allocator<T> Alloc;
-    typedef std::deque<T, Alloc> Cont;
+        typedef short T;
+        typedef std::greater<T> Comp;
+        typedef test_allocator<T> Alloc;
+        typedef std::deque<T, Alloc> Cont;
+        typedef test_allocator<int> ConvertibleToAlloc;
+        static_assert(std::uses_allocator_v<Cont, ConvertibleToAlloc> &&
+                      !std::is_same_v<typename Cont::allocator_type, ConvertibleToAlloc>);
 
-    Cont c{2,3,0,1};
-    std::priority_queue<T, Cont, Comp> source(Comp(), c);
-    std::priority_queue pri(source, Alloc(2)); // queue(queue &, allocator)
-    static_assert(std::is_same_v<decltype(pri)::value_type, T>, "");
-    static_assert(std::is_same_v<decltype(pri)::container_type, Cont>, "");
-    assert(pri.size() == 4);
-    assert(pri.top() == 0);
+        {
+        Comp comp;
+        Cont cont;
+        std::priority_queue pri(comp, cont, Alloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+
+        {
+        Comp comp;
+        Cont cont;
+        std::priority_queue pri(comp, cont, ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+
+        {
+        Comp comp;
+        Cont cont;
+        std::priority_queue pri(comp, std::move(cont), Alloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+
+        {
+        Comp comp;
+        Cont cont;
+        std::priority_queue pri(comp, std::move(cont), ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
     }
 
-  return 0;
+    {
+        typedef short T;
+        typedef std::greater<T> Comp;
+        typedef test_allocator<T> Alloc;
+        typedef std::deque<T, Alloc> Cont;
+        typedef test_allocator<int> ConvertibleToAlloc;
+        static_assert(std::uses_allocator_v<Cont, ConvertibleToAlloc> &&
+                      !std::is_same_v<typename Cont::allocator_type, ConvertibleToAlloc>);
+
+        {
+        std::priority_queue<T, Cont, Comp> source;
+        std::priority_queue pri(source, Alloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+
+        {
+        std::priority_queue<T, Cont, Comp> source;
+        std::priority_queue pri(source, ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+
+        {
+        std::priority_queue<T, Cont, Comp> source;
+        std::priority_queue pri(std::move(source), Alloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+
+        {
+        std::priority_queue<T, Cont, Comp> source;
+        std::priority_queue pri(std::move(source), ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(pri), std::priority_queue<T, Cont, Comp>>);
+        }
+    }
+
+    return 0;
 }
