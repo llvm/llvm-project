@@ -275,7 +275,8 @@ def main():
     builder = common.FunctionTestBuilder(
       run_list=filecheck_run_list,
       flags=ti.args,
-      scrubber_args=[])
+      scrubber_args=[],
+      path=ti.path)
 
     for prefixes, args, extra_commands, triple_in_cmd in run_list:
       # Execute non-filechecked runline.

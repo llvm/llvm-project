@@ -115,7 +115,8 @@ def main():
             'function_signature': False,
             'check_attributes': False,
             'replace_value_regex': []}),
-      scrubber_args = [])
+      scrubber_args = [],
+      path=test)
 
     for prefixes, opt_args in prefix_list:
       common.debug('Extracted opt cmd:', opt_basename, opt_args, file=sys.stderr)
