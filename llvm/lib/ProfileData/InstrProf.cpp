@@ -77,47 +77,48 @@ static cl::opt<unsigned> StaticFuncStripDirNamePrefix(
 static std::string getInstrProfErrString(instrprof_error Err) {
   switch (Err) {
   case instrprof_error::success:
-    return "Success";
+    return "success";
   case instrprof_error::eof:
-    return "End of File";
+    return "end of File";
   case instrprof_error::unrecognized_format:
-    return "Unrecognized instrumentation profile encoding format";
+    return "unrecognized instrumentation profile encoding format";
   case instrprof_error::bad_magic:
-    return "Invalid instrumentation profile data (bad magic)";
+    return "invalid instrumentation profile data (bad magic)";
   case instrprof_error::bad_header:
-    return "Invalid instrumentation profile data (file header is corrupt)";
+    return "invalid instrumentation profile data (file header is corrupt)";
   case instrprof_error::unsupported_version:
-    return "Unsupported instrumentation profile format version";
+    return "unsupported instrumentation profile format version";
   case instrprof_error::unsupported_hash_type:
-    return "Unsupported instrumentation profile hash type";
+    return "unsupported instrumentation profile hash type";
   case instrprof_error::too_large:
-    return "Too much profile data";
+    return "too much profile data";
   case instrprof_error::truncated:
-    return "Truncated profile data";
+    return "truncated profile data";
   case instrprof_error::malformed:
-    return "Malformed instrumentation profile data";
+    return "malformed instrumentation profile data";
   case instrprof_error::invalid_prof:
-    return "Invalid profile created. Please file a bug "
+    return "invalid profile created. Please file a bug "
            "at: " BUG_REPORT_URL
            " and include the profraw files that caused this error.";
   case instrprof_error::unknown_function:
-    return "No profile data available for function";
+    return "no profile data available for function";
   case instrprof_error::hash_mismatch:
-    return "Function control flow change detected (hash mismatch)";
+    return "function control flow change detected (hash mismatch)";
   case instrprof_error::count_mismatch:
-    return "Function basic block count change detected (counter mismatch)";
+    return "function basic block count change detected (counter mismatch)";
   case instrprof_error::counter_overflow:
-    return "Counter overflow";
+    return "counter overflow";
   case instrprof_error::value_site_count_mismatch:
-    return "Function value site count change detected (counter mismatch)";
+    return "function value site count change detected (counter mismatch)";
   case instrprof_error::compress_failed:
-    return "Failed to compress data (zlib)";
+    return "failed to compress data (zlib)";
   case instrprof_error::uncompress_failed:
-    return "Failed to uncompress data (zlib)";
+    return "failed to uncompress data (zlib)";
   case instrprof_error::empty_raw_profile:
-    return "Empty raw profile file";
+    return "empty raw profile file";
   case instrprof_error::zlib_unavailable:
-    return "Profile uses zlib compression but the profile reader was built without zlib support";
+    return "profile uses zlib compression but the profile reader was built "
+           "without zlib support";
   }
   llvm_unreachable("A value of instrprof_error has no message.");
 }
