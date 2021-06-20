@@ -938,6 +938,13 @@ static Value *foldOperationIntoSelectOperand(Instruction &I, Value *SO,
   if (auto *Cast = dyn_cast<CastInst>(&I))
     return Builder.CreateCast(Cast->getOpcode(), SO, I.getType());
 
+  if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+    assert(canConstantFoldCallTo(II, cast<Function>(II->getCalledOperand())) &&
+           "Expected constant-foldable intrinsic");
+
+    return Builder.CreateIntrinsic(II->getIntrinsicID(), I.getType(), SO);
+  }
+
   assert(I.isBinaryOp() && "Unexpected opcode for select folding");
 
   // Figure out if the constant is the left or the right argument.
