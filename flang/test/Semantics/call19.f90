@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Ensures that things that aren't procedures aren't allowed to be called.
 module m
   integer :: i
