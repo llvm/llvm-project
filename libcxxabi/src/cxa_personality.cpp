@@ -245,7 +245,7 @@ readSLEB128(const uint8_t** data)
 /// @returns decoded value
 static
 uintptr_t
-readEncodedPointer(const uint8_t** data, uint8_t encoding, uintptr_t base = 0)
+readEncodedPointer(const uint8_t** data, uint8_t encoding, uintptr_t /*base*/ = 0)
 {
     uintptr_t result = 0;
     if (encoding == DW_EH_PE_omit)

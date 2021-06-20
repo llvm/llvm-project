@@ -430,6 +430,22 @@ public:
     return ContextStr.split(" @ ");
   }
 
+  // Reconstruct a new context with the last k frames, return the context-less
+  // name if K = 1
+  StringRef getContextWithLastKFrames(uint32_t K) {
+    if (K == 1)
+      return getNameWithoutContext();
+
+    size_t I = FullContext.size();
+    while (K--) {
+      I = FullContext.find_last_of(" @ ", I);
+      if (I == StringRef::npos)
+        return FullContext;
+      I -= 2;
+    }
+    return FullContext.slice(I + 3, StringRef::npos);
+  }
+
   // Decode context string for a frame to get function name and location.
   // `ContextStr` is in the form of `FuncName:StartLine.Discriminator`.
   static void decodeContextString(StringRef ContextStr, StringRef &FName,
@@ -582,21 +598,9 @@ public:
   ErrorOr<uint64_t> findSamplesAt(uint32_t LineOffset,
                                   uint32_t Discriminator) const {
     const auto &ret = BodySamples.find(LineLocation(LineOffset, Discriminator));
-    if (ret == BodySamples.end()) {
-      // For CSSPGO, in order to conserve profile size, we no longer write out
-      // locations profile for those not hit during training, so we need to
-      // treat them as zero instead of error here.
-      if (FunctionSamples::ProfileIsCS || FunctionSamples::ProfileIsProbeBased)
-        return 0;
+    if (ret == BodySamples.end())
       return std::error_code();
-    } else {
-      // Return error for an invalid sample count which is usually assigned to
-      // dangling probe.
-      if (FunctionSamples::ProfileIsProbeBased &&
-          ret->second.getSamples() == FunctionSamples::InvalidProbeCount)
-        return std::error_code();
-      return ret->second.getSamples();
-    }
+    return ret->second.getSamples();
   }
 
   /// Returns the call target map collected at a given location.
@@ -874,10 +878,6 @@ public:
       const DILocation *DIL,
       SampleProfileReaderItaniumRemapper *Remapper = nullptr) const;
 
-  // The invalid sample count is used to represent samples collected for a
-  // dangling probe.
-  static constexpr uint64_t InvalidProbeCount = UINT64_MAX;
-
   static bool ProfileIsProbeBased;
 
   static bool ProfileIsCS;
@@ -993,8 +993,9 @@ public:
       : ProfileMap(Profiles){};
   // Trim and merge cold context profile when requested.
   void trimAndMergeColdContextProfiles(uint64_t ColdCountThreshold,
-                                       bool TrimColdContext = true,
-                                       bool MergeColdContext = true);
+                                       bool TrimColdContext,
+                                       bool MergeColdContext,
+                                       uint32_t ColdContextFrameLength);
   // Canonicalize context profile name and attributes.
   void canonicalizeContextProfiles();
 

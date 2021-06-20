@@ -10,32 +10,37 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: gcc-10
 
-// ranges::next(first, n)
+// ranges::next(it)
 
 #include <iterator>
-
-#include <array>
 #include <cassert>
 
-#include "check_round_trip.h"
 #include "test_iterators.h"
 
-using range_t = std::array<int, 10>;
+template <class It>
+constexpr void check() {
+  int range[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+  assert(&*std::ranges::next(It(&range[0])) == &range[1]);
+  assert(&*std::ranges::next(It(&range[1])) == &range[2]);
+  assert(&*std::ranges::next(It(&range[2])) == &range[3]);
+  assert(&*std::ranges::next(It(&range[3])) == &range[4]);
+  assert(&*std::ranges::next(It(&range[4])) == &range[5]);
+  assert(&*std::ranges::next(It(&range[5])) == &range[6]);
+}
 
-constexpr bool check_iterator() {
-  constexpr auto range = range_t{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  assert(std::ranges::next(cpp17_input_iterator(&range[0])) == cpp17_input_iterator(&range[1]));
-  assert(std::ranges::next(cpp20_input_iterator(&range[1])).base() == &range[2]);
-  assert(std::ranges::next(forward_iterator(&range[2])) == forward_iterator(&range[3]));
-  assert(std::ranges::next(bidirectional_iterator(&range[3])) == bidirectional_iterator(&range[4]));
-  assert(std::ranges::next(random_access_iterator(&range[4])) == random_access_iterator(&range[5]));
-  assert(std::ranges::next(contiguous_iterator(&range[5])) == contiguous_iterator(&range[6]));
-  assert(std::ranges::next(output_iterator(&range[6])).base() == &range[7]);
+constexpr bool test() {
+  check<cpp17_input_iterator<int*>>();
+  check<cpp20_input_iterator<int*>>();
+  check<forward_iterator<int*>>();
+  check<bidirectional_iterator<int*>>();
+  check<random_access_iterator<int*>>();
+  check<contiguous_iterator<int*>>();
+  check<output_iterator<int*>>();
   return true;
 }
 
 int main(int, char**) {
-  static_assert(check_iterator());
-  check_iterator();
+  test();
+  static_assert(test());
   return 0;
 }

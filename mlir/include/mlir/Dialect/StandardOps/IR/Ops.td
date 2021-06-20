@@ -1204,9 +1204,10 @@ def FPTruncOp : ArithmeticCastOp<"fptrunc">, Arguments<(ins AnyType:$in)> {
 def IndexCastOp : ArithmeticCastOp<"index_cast">, Arguments<(ins AnyType:$in)> {
   let summary = "cast between index and integer types";
   let description = [{
-    Casts between integer scalars and 'index' scalars. Index is an integer of
-    platform-specific bit width. If casting to a wider integer, the value is
-    sign-extended. If casting to a narrower integer, the value is truncated.
+    Casts between scalar or vector integers and corresponding 'index' scalar or
+    vectors. Index is an integer of platform-specific bit width. If casting to
+    a wider integer, the value is sign-extended. If casting to a narrower
+    integer, the value is truncated.
   }];
 
   let hasFolder = 1;

@@ -91,6 +91,10 @@ private:
 };
 
 struct TestDominancePass : public PassWrapper<TestDominancePass, FunctionPass> {
+  StringRef getArgument() const final { return "test-print-dominance"; }
+  StringRef getDescription() const final {
+    return "Print the dominance information for multiple regions.";
+  }
 
   void runOnFunction() override {
     llvm::errs() << "Testing : " << getFunction().getName() << "\n";
@@ -120,10 +124,6 @@ struct TestDominancePass : public PassWrapper<TestDominancePass, FunctionPass> {
 
 namespace mlir {
 namespace test {
-void registerTestDominancePass() {
-  PassRegistration<TestDominancePass>(
-      "test-print-dominance",
-      "Print the dominance information for multiple regions.");
-}
+void registerTestDominancePass() { PassRegistration<TestDominancePass>(); }
 } // namespace test
 } // namespace mlir

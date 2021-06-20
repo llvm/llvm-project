@@ -38,7 +38,7 @@ define i8 @v_shl_i8(i8 %value, i8 %amount) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v1, 0xff, v1
-; GFX11-NEXT:    v_lshlrev_b16_e64 v0, v1, v0
+; GFX11-NEXT:    v_lshlrev_b16 v0, v1, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = shl i8 %value, %amount
   ret i8 %result
@@ -74,7 +74,7 @@ define i8 @v_shl_i8_7(i8 %value) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_lshlrev_b16_e64 v0, 7, v0
+; GFX11-NEXT:    v_lshlrev_b16 v0, 7, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = shl i8 %value, 7
   ret i8 %result
@@ -807,7 +807,7 @@ define i16 @v_shl_i16(i16 %value, i16 %amount) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_lshlrev_b16_e64 v0, v1, v0
+; GFX11-NEXT:    v_lshlrev_b16 v0, v1, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = shl i16 %value, %amount
   ret i16 %result
@@ -933,7 +933,7 @@ define amdgpu_ps half @shl_i16_sv(i16 inreg %value, i16 %amount) {
 ;
 ; GFX11-LABEL: shl_i16_sv:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_lshlrev_b16_e64 v0, v0, s0
+; GFX11-NEXT:    v_lshlrev_b16 v0, v0, s0
 ; GFX11-NEXT:    ; return to shader part epilog
   %result = shl i16 %value, %amount
   %cast = bitcast i16 %result to half
@@ -964,7 +964,7 @@ define amdgpu_ps half @shl_i16_vs(i16 %value, i16 inreg %amount) {
 ;
 ; GFX11-LABEL: shl_i16_vs:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_lshlrev_b16_e64 v0, s0, v0
+; GFX11-NEXT:    v_lshlrev_b16 v0, s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
   %result = shl i16 %value, %amount
   %cast = bitcast i16 %result to half

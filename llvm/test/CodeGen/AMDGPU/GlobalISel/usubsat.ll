@@ -48,10 +48,10 @@ define i7 @v_usubsat_i7(i7 %lhs, i7 %rhs) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_lshlrev_b16_e64 v0, 9, v0
-; GFX11-NEXT:    v_lshlrev_b16_e64 v1, 9, v1
-; GFX11-NEXT:    v_sub_nc_u16_e64 v0, v0, v1 clamp
-; GFX11-NEXT:    v_lshrrev_b16_e64 v0, 9, v0
+; GFX11-NEXT:    v_lshlrev_b16 v0, 9, v0
+; GFX11-NEXT:    v_lshlrev_b16 v1, 9, v1
+; GFX11-NEXT:    v_sub_nc_u16 v0, v0, v1 clamp
+; GFX11-NEXT:    v_lshrrev_b16 v0, 9, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call i7 @llvm.usub.sat.i7(i7 %lhs, i7 %rhs)
   ret i7 %result
@@ -104,8 +104,8 @@ define amdgpu_ps i7 @s_usubsat_i7(i7 inreg %lhs, i7 inreg %rhs) {
 ; GFX11-NEXT:    s_bfe_u32 s2, 9, 0x100000
 ; GFX11-NEXT:    s_lshl_b32 s0, s0, s2
 ; GFX11-NEXT:    s_lshl_b32 s1, s1, s2
-; GFX11-NEXT:    v_sub_nc_u16_e64 v0, s0, s1 clamp
-; GFX11-NEXT:    v_lshrrev_b16_e64 v0, 9, v0
+; GFX11-NEXT:    v_sub_nc_u16 v0, s0, s1 clamp
+; GFX11-NEXT:    v_lshrrev_b16 v0, 9, v0
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
   %result = call i7 @llvm.usub.sat.i7(i7 %lhs, i7 %rhs)
@@ -155,10 +155,10 @@ define i8 @v_usubsat_i8(i8 %lhs, i8 %rhs) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_lshlrev_b16_e64 v0, 8, v0
-; GFX11-NEXT:    v_lshlrev_b16_e64 v1, 8, v1
-; GFX11-NEXT:    v_sub_nc_u16_e64 v0, v0, v1 clamp
-; GFX11-NEXT:    v_lshrrev_b16_e64 v0, 8, v0
+; GFX11-NEXT:    v_lshlrev_b16 v0, 8, v0
+; GFX11-NEXT:    v_lshlrev_b16 v1, 8, v1
+; GFX11-NEXT:    v_sub_nc_u16 v0, v0, v1 clamp
+; GFX11-NEXT:    v_lshrrev_b16 v0, 8, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call i8 @llvm.usub.sat.i8(i8 %lhs, i8 %rhs)
   ret i8 %result
@@ -211,8 +211,8 @@ define amdgpu_ps i8 @s_usubsat_i8(i8 inreg %lhs, i8 inreg %rhs) {
 ; GFX11-NEXT:    s_bfe_u32 s2, 8, 0x100000
 ; GFX11-NEXT:    s_lshl_b32 s0, s0, s2
 ; GFX11-NEXT:    s_lshl_b32 s1, s1, s2
-; GFX11-NEXT:    v_sub_nc_u16_e64 v0, s0, s1 clamp
-; GFX11-NEXT:    v_lshrrev_b16_e64 v0, 8, v0
+; GFX11-NEXT:    v_sub_nc_u16 v0, s0, s1 clamp
+; GFX11-NEXT:    v_lshrrev_b16 v0, 8, v0
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
   %result = call i8 @llvm.usub.sat.i8(i8 %lhs, i8 %rhs)
@@ -310,7 +310,7 @@ define i16 @v_usubsat_v2i8(i16 %lhs.arg, i16 %rhs.arg) {
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX11-NEXT:    v_and_b32_e32 v0, s0, v0
 ; GFX11-NEXT:    v_and_b32_e32 v1, s0, v1
-; GFX11-NEXT:    v_lshlrev_b16_e64 v1, 8, v1
+; GFX11-NEXT:    v_lshlrev_b16 v1, 8, v1
 ; GFX11-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %lhs = bitcast i16 %lhs.arg to <2 x i8>
@@ -426,7 +426,7 @@ define amdgpu_ps i16 @s_usubsat_v2i8(i16 inreg %lhs.arg, i16 inreg %rhs.arg) {
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX11-NEXT:    v_and_b32_e32 v0, s0, v0
 ; GFX11-NEXT:    v_and_b32_e32 v1, s0, v1
-; GFX11-NEXT:    v_lshlrev_b16_e64 v1, 8, v1
+; GFX11-NEXT:    v_lshlrev_b16 v1, 8, v1
 ; GFX11-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -1925,7 +1925,7 @@ define i16 @v_usubsat_i16(i16 %lhs, i16 %rhs) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_sub_nc_u16_e64 v0, v0, v1 clamp
+; GFX11-NEXT:    v_sub_nc_u16 v0, v0, v1 clamp
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call i16 @llvm.usub.sat.i16(i16 %lhs, i16 %rhs)
   ret i16 %result
@@ -1963,7 +1963,7 @@ define amdgpu_ps i16 @s_usubsat_i16(i16 inreg %lhs, i16 inreg %rhs) {
 ;
 ; GFX11-LABEL: s_usubsat_i16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_sub_nc_u16_e64 v0, s0, s1 clamp
+; GFX11-NEXT:    v_sub_nc_u16 v0, s0, s1 clamp
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
   %result = call i16 @llvm.usub.sat.i16(i16 %lhs, i16 %rhs)
@@ -1997,7 +1997,7 @@ define amdgpu_ps half @usubsat_i16_sv(i16 inreg %lhs, i16 %rhs) {
 ;
 ; GFX11-LABEL: usubsat_i16_sv:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_sub_nc_u16_e64 v0, s0, v0 clamp
+; GFX11-NEXT:    v_sub_nc_u16 v0, s0, v0 clamp
 ; GFX11-NEXT:    ; return to shader part epilog
   %result = call i16 @llvm.usub.sat.i16(i16 %lhs, i16 %rhs)
   %cast = bitcast i16 %result to half
@@ -2031,7 +2031,7 @@ define amdgpu_ps half @usubsat_i16_vs(i16 %lhs, i16 inreg %rhs) {
 ;
 ; GFX11-LABEL: usubsat_i16_vs:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_sub_nc_u16_e64 v0, v0, s0 clamp
+; GFX11-NEXT:    v_sub_nc_u16 v0, v0, s0 clamp
 ; GFX11-NEXT:    ; return to shader part epilog
   %result = call i16 @llvm.usub.sat.i16(i16 %lhs, i16 %rhs)
   %cast = bitcast i16 %result to half
@@ -2930,7 +2930,7 @@ define i64 @v_usubsat_i64(i64 %lhs, i64 %rhs) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_sub_co_u32_e64 v4, vcc_lo, v0, v2
+; GFX11-NEXT:    v_sub_co_u32 v4, vcc_lo, v0, v2
 ; GFX11-NEXT:    v_sub_co_ci_u32_e32 v5, vcc_lo, v1, v3, vcc_lo
 ; GFX11-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc_lo
@@ -3068,7 +3068,7 @@ define amdgpu_ps <2 x float> @usubsat_i64_sv(i64 inreg %lhs, i64 %rhs) {
 ;
 ; GFX11-LABEL: usubsat_i64_sv:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_sub_co_u32_e64 v2, vcc_lo, s0, v0
+; GFX11-NEXT:    v_sub_co_u32 v2, vcc_lo, s0, v0
 ; GFX11-NEXT:    v_sub_co_ci_u32_e32 v3, vcc_lo, s1, v1, vcc_lo
 ; GFX11-NEXT:    v_cmp_lt_u64_e32 vcc_lo, s[0:1], v[0:1]
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc_lo
@@ -3121,7 +3121,7 @@ define amdgpu_ps <2 x float> @usubsat_i64_vs(i64 %lhs, i64 inreg %rhs) {
 ;
 ; GFX11-LABEL: usubsat_i64_vs:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_sub_co_u32_e64 v2, vcc_lo, v0, s0
+; GFX11-NEXT:    v_sub_co_u32 v2, vcc_lo, v0, s0
 ; GFX11-NEXT:    v_subrev_co_ci_u32_e32 v3, vcc_lo, s1, v1, vcc_lo
 ; GFX11-NEXT:    v_cmp_gt_u64_e32 vcc_lo, s[0:1], v[0:1]
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc_lo
@@ -3198,10 +3198,10 @@ define <2 x i64> @v_usubsat_v2i64(<2 x i64> %lhs, <2 x i64> %rhs) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_sub_co_u32_e64 v8, vcc_lo, v0, v4
+; GFX11-NEXT:    v_sub_co_u32 v8, vcc_lo, v0, v4
 ; GFX11-NEXT:    v_sub_co_ci_u32_e32 v9, vcc_lo, v1, v5, vcc_lo
 ; GFX11-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[0:1], v[4:5]
-; GFX11-NEXT:    v_sub_co_u32_e64 v4, s0, v2, v6
+; GFX11-NEXT:    v_sub_co_u32 v4, s0, v2, v6
 ; GFX11-NEXT:    v_subb_u32_e64 v5, s0, v3, v7, s0
 ; GFX11-NEXT:    v_cmp_lt_u64_e64 s0, v[2:3], v[6:7]
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v8, 0, vcc_lo
@@ -3664,7 +3664,7 @@ define amdgpu_ps <4 x float> @usubsat_i128_sv(i128 inreg %lhs, i128 %rhs) {
 ; GFX11-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[2:3], v[2:3]
 ; GFX11-NEXT:    v_cndmask_b32_e32 v4, v5, v4, vcc_lo
-; GFX11-NEXT:    v_sub_co_u32_e64 v0, vcc_lo, s0, v0
+; GFX11-NEXT:    v_sub_co_u32 v0, vcc_lo, s0, v0
 ; GFX11-NEXT:    v_sub_co_ci_u32_e32 v1, vcc_lo, s1, v1, vcc_lo
 ; GFX11-NEXT:    v_and_b32_e32 v4, 1, v4
 ; GFX11-NEXT:    v_sub_co_ci_u32_e32 v2, vcc_lo, s2, v2, vcc_lo
@@ -3778,7 +3778,7 @@ define amdgpu_ps <4 x float> @usubsat_i128_vs(i128 %lhs, i128 inreg %rhs) {
 ; GFX11-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[2:3], v[2:3]
 ; GFX11-NEXT:    v_cndmask_b32_e32 v4, v5, v4, vcc_lo
-; GFX11-NEXT:    v_sub_co_u32_e64 v0, vcc_lo, v0, s0
+; GFX11-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, s0
 ; GFX11-NEXT:    v_subrev_co_ci_u32_e32 v1, vcc_lo, s1, v1, vcc_lo
 ; GFX11-NEXT:    v_and_b32_e32 v4, 1, v4
 ; GFX11-NEXT:    v_subrev_co_ci_u32_e32 v2, vcc_lo, s2, v2, vcc_lo
@@ -3961,13 +3961,13 @@ define <2 x i128> @v_usubsat_v2i128(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GFX11-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[6:7], v[14:15]
 ; GFX11-NEXT:    v_cmp_ne_u32_e64 s0, 0, v16
 ; GFX11-NEXT:    v_cndmask_b32_e64 v18, 0, 1, vcc_lo
-; GFX11-NEXT:    v_sub_co_u32_e64 v0, vcc_lo, v0, v8
+; GFX11-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v8
 ; GFX11-NEXT:    v_sub_co_ci_u32_e32 v1, vcc_lo, v1, v9, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v8, v18, v17, s1
 ; GFX11-NEXT:    v_sub_co_ci_u32_e32 v2, vcc_lo, v2, v10, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s0
 ; GFX11-NEXT:    v_sub_co_ci_u32_e32 v3, vcc_lo, v3, v11, vcc_lo
-; GFX11-NEXT:    v_sub_co_u32_e64 v4, vcc_lo, v4, v12
+; GFX11-NEXT:    v_sub_co_u32 v4, vcc_lo, v4, v12
 ; GFX11-NEXT:    v_and_b32_e32 v8, 1, v8
 ; GFX11-NEXT:    v_sub_co_ci_u32_e32 v5, vcc_lo, v5, v13, vcc_lo
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, 0, s0

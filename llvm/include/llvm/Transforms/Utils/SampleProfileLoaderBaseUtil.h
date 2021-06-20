@@ -19,10 +19,12 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 namespace llvm {
 using namespace sampleprof;
@@ -92,6 +94,10 @@ private:
 /// Return true if the given callsite is hot wrt to hot cutoff threshold.
 bool callsiteIsHot(const FunctionSamples *CallsiteFS, ProfileSummaryInfo *PSI,
                    bool ProfAccForSymsInList);
+
+/// Create a global variable to flag FSDiscriminators are used.
+void createFSDiscriminatorVariable(Module *M);
+
 } // end of namespace sampleprofutil
 } // end of namespace llvm
 

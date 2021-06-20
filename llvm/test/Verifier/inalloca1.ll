@@ -16,7 +16,7 @@ declare void @e(i64* readonly inalloca(i64) %p)
 ; CHECK: Attributes {{.*}} are incompatible
 
 declare void @f(void ()* inalloca(void()) %p)
-; CHECK: do not support unsized types
+; CHECK: Attribute 'inalloca' does not support unsized types
 
 declare void @g(i32* inalloca(i32) %p, i32 %p2)
 ; CHECK: inalloca isn't on the last parameter!

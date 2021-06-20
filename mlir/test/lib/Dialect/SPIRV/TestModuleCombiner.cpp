@@ -20,6 +20,10 @@ class TestModuleCombinerPass
     : public PassWrapper<TestModuleCombinerPass,
                          OperationPass<mlir::ModuleOp>> {
 public:
+  StringRef getArgument() const final { return "test-spirv-module-combiner"; }
+  StringRef getDescription() const final {
+    return "Tests SPIR-V module combiner library";
+  }
   TestModuleCombinerPass() = default;
   TestModuleCombinerPass(const TestModuleCombinerPass &) {}
   void runOnOperation() override;
@@ -41,7 +45,6 @@ void TestModuleCombinerPass::runOnOperation() {
 
 namespace mlir {
 void registerTestSpirvModuleCombinerPass() {
-  PassRegistration<TestModuleCombinerPass> registration(
-      "test-spirv-module-combiner", "Tests SPIR-V module combiner library");
+  PassRegistration<TestModuleCombinerPass>();
 }
 } // namespace mlir

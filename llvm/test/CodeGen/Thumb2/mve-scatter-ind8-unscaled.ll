@@ -16,7 +16,7 @@ entry:
   ret void
 }
 
-; Expand
+; Expanded ?
 define arm_aapcs_vfpcc void @unscaled_v8i8_i8(i8* %base, <8 x i8>* %offptr, <8 x i8> %input) {
 ; CHECK-LABEL: unscaled_v8i8_i8:
 ; CHECK:       @ %bb.0: @ %entry
@@ -79,7 +79,7 @@ entry:
   ret void
 }
 
-; Expand
+; Expand - sext offsets
 define arm_aapcs_vfpcc void @unscaled_v16i8_sext(i8* %base, <16 x i8>* %offptr, <16 x i8> %input) {
 ; CHECK-LABEL: unscaled_v16i8_sext:
 ; CHECK:       @ %bb.0: @ %entry
@@ -142,7 +142,7 @@ entry:
   ret void
 }
 
-; Expand
+; Expand - sext offsets
 define arm_aapcs_vfpcc void @unscaled_v16i8_i16(i8* %base, <16 x i16>* %offptr, <16 x i8> %input) {
 ; CHECK-LABEL: unscaled_v16i8_i16:
 ; CHECK:       @ %bb.0: @ %entry
@@ -205,7 +205,7 @@ entry:
   ret void
 }
 
-; Expand
+; Could be manually scaled offsets
 define arm_aapcs_vfpcc void @unscaled_v16i8_scaled(i32* %base, <16 x i8>* %offptr, <16 x i8> %input) {
 ; CHECK-LABEL: unscaled_v16i8_scaled:
 ; CHECK:       @ %bb.0: @ %entry
@@ -273,7 +273,7 @@ entry:
   ret void
 }
 
-; Expand
+; Expand - large offsets
 define arm_aapcs_vfpcc void @unscaled_v16i8_i8_next(i8* %base, <16 x i32>* %offptr, <16 x i8> %input) {
 ; CHECK-LABEL: unscaled_v16i8_i8_next:
 ; CHECK:       @ %bb.0: @ %entry
@@ -335,7 +335,6 @@ entry:
   ret void
 }
 
-; Expand
 define arm_aapcs_vfpcc void @trunc_unsigned_unscaled_i64_i8(i8* %base, <16 x i8>* %offptr, <16 x i64> %input) {
 ; CHECK-LABEL: trunc_unsigned_unscaled_i64_i8:
 ; CHECK:       @ %bb.0: @ %entry
@@ -396,7 +395,6 @@ entry:
   ret void
 }
 
-; Expand
 define arm_aapcs_vfpcc void @trunc_unsigned_unscaled_i32_i8(i8* %base, <16 x i8>* %offptr, <16 x i32> %input) {
 ; CHECK-LABEL: trunc_unsigned_unscaled_i32_i8:
 ; CHECK:       @ %bb.0: @ %entry
@@ -441,7 +439,6 @@ entry:
   ret void
 }
 
-; Expand
 define arm_aapcs_vfpcc void @trunc_unsigned_unscaled_i16_i8(i8* %base, <16 x i8>* %offptr, <16 x i16> %input) {
 ; CHECK-LABEL: trunc_unsigned_unscaled_i16_i8:
 ; CHECK:       @ %bb.0: @ %entry

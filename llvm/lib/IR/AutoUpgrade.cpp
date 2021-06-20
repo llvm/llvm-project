@@ -778,7 +778,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         Intrinsic::lifetime_start : Intrinsic::invariant_start;
       auto Args = F->getFunctionType()->params();
       Type* ObjectPtr[1] = {Args[1]};
-      if (F->getName() != Intrinsic::getName(ID, ObjectPtr)) {
+      if (F->getName() != Intrinsic::getName(ID, ObjectPtr, F->getParent())) {
         rename(F);
         NewFn = Intrinsic::getDeclaration(F->getParent(), ID, ObjectPtr);
         return true;
@@ -792,7 +792,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
 
       auto Args = F->getFunctionType()->params();
       Type* ObjectPtr[1] = {Args[IsLifetimeEnd ? 1 : 2]};
-      if (F->getName() != Intrinsic::getName(ID, ObjectPtr)) {
+      if (F->getName() != Intrinsic::getName(ID, ObjectPtr, F->getParent())) {
         rename(F);
         NewFn = Intrinsic::getDeclaration(F->getParent(), ID, ObjectPtr);
         return true;
@@ -814,7 +814,8 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   case 'm': {
     if (Name.startswith("masked.load.")) {
       Type *Tys[] = { F->getReturnType(), F->arg_begin()->getType() };
-      if (F->getName() != Intrinsic::getName(Intrinsic::masked_load, Tys)) {
+      if (F->getName() !=
+          Intrinsic::getName(Intrinsic::masked_load, Tys, F->getParent())) {
         rename(F);
         NewFn = Intrinsic::getDeclaration(F->getParent(),
                                           Intrinsic::masked_load,
@@ -825,7 +826,8 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     if (Name.startswith("masked.store.")) {
       auto Args = F->getFunctionType()->params();
       Type *Tys[] = { Args[0], Args[1] };
-      if (F->getName() != Intrinsic::getName(Intrinsic::masked_store, Tys)) {
+      if (F->getName() !=
+          Intrinsic::getName(Intrinsic::masked_store, Tys, F->getParent())) {
         rename(F);
         NewFn = Intrinsic::getDeclaration(F->getParent(),
                                           Intrinsic::masked_store,
@@ -837,7 +839,8 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     // to the new overload which includes an address space
     if (Name.startswith("masked.gather.")) {
       Type *Tys[] = {F->getReturnType(), F->arg_begin()->getType()};
-      if (F->getName() != Intrinsic::getName(Intrinsic::masked_gather, Tys)) {
+      if (F->getName() !=
+          Intrinsic::getName(Intrinsic::masked_gather, Tys, F->getParent())) {
         rename(F);
         NewFn = Intrinsic::getDeclaration(F->getParent(),
                                           Intrinsic::masked_gather, Tys);
@@ -847,7 +850,8 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     if (Name.startswith("masked.scatter.")) {
       auto Args = F->getFunctionType()->params();
       Type *Tys[] = {Args[0], Args[1]};
-      if (F->getName() != Intrinsic::getName(Intrinsic::masked_scatter, Tys)) {
+      if (F->getName() !=
+          Intrinsic::getName(Intrinsic::masked_scatter, Tys, F->getParent())) {
         rename(F);
         NewFn = Intrinsic::getDeclaration(F->getParent(),
                                           Intrinsic::masked_scatter, Tys);
@@ -928,7 +932,8 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     if (Name.startswith("objectsize.")) {
       Type *Tys[2] = { F->getReturnType(), F->arg_begin()->getType() };
       if (F->arg_size() == 2 || F->arg_size() == 3 ||
-          F->getName() != Intrinsic::getName(Intrinsic::objectsize, Tys)) {
+          F->getName() !=
+              Intrinsic::getName(Intrinsic::objectsize, Tys, F->getParent())) {
         rename(F);
         NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::objectsize,
                                           Tys);
@@ -941,7 +946,8 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     if (Name == "prefetch") {
       // Handle address space overloading.
       Type *Tys[] = {F->arg_begin()->getType()};
-      if (F->getName() != Intrinsic::getName(Intrinsic::prefetch, Tys)) {
+      if (F->getName() !=
+          Intrinsic::getName(Intrinsic::prefetch, Tys, F->getParent())) {
         rename(F);
         NewFn =
             Intrinsic::getDeclaration(F->getParent(), Intrinsic::prefetch, Tys);

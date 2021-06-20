@@ -643,7 +643,7 @@ struct SemiNCAInfo {
         Bucket;
     SmallDenseSet<TreeNodePtr, 8> Visited;
     SmallVector<TreeNodePtr, 8> Affected;
-#ifndef NDEBUG
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
     SmallVector<TreeNodePtr, 8> VisitedUnaffected;
 #endif
   };
@@ -852,7 +852,7 @@ struct SemiNCAInfo {
       TN->setIDom(NCD);
     }
 
-#ifndef NDEBUG
+#if defined(LLVM_ENABLE_ABI_BREAKING_CHECKS) && !defined(NDEBUG)
     for (const TreeNodePtr TN : II.VisitedUnaffected)
       assert(TN->getLevel() == TN->getIDom()->getLevel() + 1 &&
              "TN should have been updated by an affected ancestor");
@@ -918,7 +918,7 @@ struct SemiNCAInfo {
     LLVM_DEBUG(dbgs() << "Deleting edge " << BlockNamePrinter(From) << " -> "
                       << BlockNamePrinter(To) << "\n");
 
-#ifndef NDEBUG
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
     // Ensure that the edge was in fact deleted from the CFG before informing
     // the DomTree about it.
     // The check is O(N), so run it only in debug configuration.

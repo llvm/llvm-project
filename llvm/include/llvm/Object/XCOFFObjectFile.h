@@ -538,20 +538,19 @@ private:
 };
 
 class TBVectorExt {
-  friend class XCOFFTracebackTable;
-
   uint16_t Data;
-  uint32_t VecParmsInfo;
+  SmallString<32> VecParmsInfo;
 
-  TBVectorExt(StringRef TBvectorStrRef);
+  TBVectorExt(StringRef TBvectorStrRef, Error &Err);
 
 public:
+  static Expected<TBVectorExt> create(StringRef TBvectorStrRef);
   uint8_t getNumberOfVRSaved() const;
   bool isVRSavedOnStack() const;
   bool hasVarArgs() const;
   uint8_t getNumberOfVectorParms() const;
   bool hasVMXInstruction() const;
-  SmallString<32> getVectorParmsInfoString() const;
+  SmallString<32> getVectorParmsInfo() const { return VecParmsInfo; };
 };
 
 /// This class provides methods to extract traceback table data from a buffer.

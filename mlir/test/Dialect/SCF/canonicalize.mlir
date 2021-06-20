@@ -250,6 +250,20 @@ func @empty_if2(%cond: i1) {
 // CHECK-NOT:       scf.if
 // CHECK:           return
 
+// ----
+
+func @empty_else(%cond: i1, %v : memref<i1>) {
+  scf.if %cond {
+    memref.store %cond, %v[] : memref<i1>
+  } else {
+  }
+  return
+}
+
+// CHECK-LABEL: func @empty_else
+// CHECK:         scf.if
+// CHECK-NOT:     else
+
 // -----
 
 func @to_select1(%cond: i1) -> index {
@@ -475,9 +489,9 @@ func @replace_single_iteration_loop_1() {
 // CHECK-LABEL: @replace_single_iteration_loop_2
 func @replace_single_iteration_loop_2() {
   // CHECK: %[[LB:.*]] = constant 5
-	%c5 = constant 5 : index
-	%c6 = constant 6 : index
-	%c11 = constant 11 : index
+  %c5 = constant 5 : index
+  %c6 = constant 6 : index
+  %c11 = constant 11 : index
   // CHECK: %[[INIT:.*]] = "test.init"
   %init = "test.init"() : () -> i32
   // CHECK-NOT: scf.for

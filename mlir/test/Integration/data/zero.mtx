@@ -1,0 +1,6 @@
+%%MatrixMarket matrix coordinate real general
+%
+% This is a test sparse matrix in Matrix Market Exchange Format.
+% see https://math.nist.gov/MatrixMarket
+%
+5 5 0

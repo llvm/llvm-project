@@ -42,6 +42,12 @@ struct TestLinalgTransforms
                     gpu::GPUDialect>();
     // clang-format on
   }
+  StringRef getArgument() const final {
+    return "test-linalg-transform-patterns";
+  }
+  StringRef getDescription() const final {
+    return "Test Linalg transformation patterns by applying them greedily.";
+  }
 
   void runOnFunction() override;
 
@@ -612,9 +618,7 @@ void TestLinalgTransforms::runOnFunction() {
 namespace mlir {
 namespace test {
 void registerTestLinalgTransforms() {
-  PassRegistration<TestLinalgTransforms> testTransformPatternsPass(
-      "test-linalg-transform-patterns",
-      "Test Linalg transformation patterns by applying them greedily.");
+  PassRegistration<TestLinalgTransforms>();
 }
 } // namespace test
 } // namespace mlir

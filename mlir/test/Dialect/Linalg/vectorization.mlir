@@ -386,9 +386,9 @@ func @generic_vectorize_tensor(%arg0: tensor<4x256xf32>,
   //       CHECK:   %[[R9:.*]] = vector.transfer_write %[[TAN]], %[[ARG0]][%[[C0]], %[[C0]]] {{.*}} : vector<4x256xf32>, tensor<4x256xf32>
     linalg.yield %6, %8, %c1_f32, %9, %10, %11, %12, %13, %14, %15 : f32, f32,
       f32, f32, f32, f32, f32, f32, f32, f32
-  } -> tensor<4x256xf32>, tensor<4x256xf32>, tensor<4x256xf32>,
+  } -> (tensor<4x256xf32>, tensor<4x256xf32>, tensor<4x256xf32>,
     tensor<4x256xf32>, tensor<4x256xf32>, tensor<4x256xf32>, tensor<4x256xf32>,
-    tensor<4x256xf32>, tensor<4x256xf32>, tensor<4x256xf32>
+    tensor<4x256xf32>, tensor<4x256xf32>, tensor<4x256xf32>)
   //       CHECK:   return %[[R0]], %[[R1]], %[[R2]], %[[R3]], %[[R4]], %[[R5]], %[[R6]], %[[R7]], %[[R8]], %[[R9]] : tensor<4x256xf32>, tensor<4x256xf32>, tensor<4x256xf32>, tensor<4x256xf32>, tensor<4x256xf32>, tensor<4x256xf32>, tensor<4x256xf32>, tensor<4x256xf32>, tensor<4x256xf32>, tensor<4x256xf32>
   return %r#0, %r#1, %r#2, %r#3, %r#4, %r#5, %r#6, %r#7, %r#8, %r#9:
     tensor<4x256xf32>, tensor<4x256xf32>, tensor<4x256xf32>,

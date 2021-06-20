@@ -467,3 +467,60 @@ define i8 @not_or_neg_use2(i8 %x, i8 %y)  {
   %not = xor i8 %o, -1
   ret i8 %not
 }
+
+define i1 @not_select_bool(i1 %x, i1 %y, i1 %z) {
+; CHECK-LABEL: @not_select_bool(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[X:%.*]], i1 [[Y:%.*]], i1 [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[SEL]], true
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %sel = select i1 %x, i1 %y, i1 %z
+  %r = xor i1 %sel, true
+  ret i1 %r
+}
+
+define i1 @not_select_bool_const1(i1 %x, i1 %y) {
+; CHECK-LABEL: @not_select_bool_const1(
+; CHECK-NEXT:    [[NOT_X:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[NOT_X]], i1 true, i1 [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[SEL]], true
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %sel = select i1 %x, i1 %y, i1 true
+  %r = xor i1 %sel, true
+  ret i1 %r
+}
+
+define i1 @not_select_bool_const2(i1 %x, i1 %y) {
+; CHECK-LABEL: @not_select_bool_const2(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[X:%.*]], i1 [[Y:%.*]], i1 false
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[SEL]], true
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %sel = select i1 %x, i1 %y, i1 false
+  %r = xor i1 %sel, true
+  ret i1 %r
+}
+
+define i1 @not_select_bool_const3(i1 %x, i1 %y) {
+; CHECK-LABEL: @not_select_bool_const3(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[X:%.*]], i1 true, i1 [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[SEL]], true
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %sel = select i1 %x, i1 true, i1 %y
+  %r = xor i1 %sel, true
+  ret i1 %r
+}
+
+define i1 @not_select_bool_const4(i1 %x, i1 %y) {
+; CHECK-LABEL: @not_select_bool_const4(
+; CHECK-NEXT:    [[NOT_X:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[NOT_X]], i1 [[Y:%.*]], i1 false
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[SEL]], true
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %sel = select i1 %x, i1 false, i1 %y
+  %r = xor i1 %sel, true
+  ret i1 %r
+}

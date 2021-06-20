@@ -4,7 +4,10 @@
 # An additional requirement that is *not* handled by this script is the
 # installation of Xcode, which requires manual intervention.
 
-source secrets.env
+if [[ -z "${BUILDKITE_AGENT_TOKEN}" ]]; then
+  echo "The BUILDKITE_AGENT_TOKEN environment variable must be set to a BuildKite Agent token when calling this script."
+  exit 1
+fi
 
 # Install Homebrew
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"

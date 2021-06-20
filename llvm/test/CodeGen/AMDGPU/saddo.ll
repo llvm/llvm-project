@@ -108,7 +108,7 @@ define amdgpu_kernel void @saddo_i64_zext(i64 addrspace(1)* %out, i64 %a, i64 %b
 ; GFX11-NEXT:    v_cmp_lt_i64_e64 s1, s[2:3], s[6:7]
 ; GFX11-NEXT:    s_xor_b32 s0, s0, s1
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX11-NEXT:    v_add_co_u32_e64 v0, s0, s2, v0
+; GFX11-NEXT:    v_add_co_u32 v0, s0, s2, v0
 ; GFX11-NEXT:    v_addc_u32_e64 v1, s0, s3, 0, s0
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
 ; GFX11-NEXT:    s_endpgm
@@ -549,7 +549,7 @@ define amdgpu_kernel void @v_saddo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* 
 ; GFX11-NEXT:    global_load_b64 v[0:1], v6, s[8:9]
 ; GFX11-NEXT:    global_load_b64 v[2:3], v6, s[10:11]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_add_co_u32_e64 v4, vcc_lo, v0, v2
+; GFX11-NEXT:    v_add_co_u32 v4, vcc_lo, v0, v2
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v5, vcc_lo, v1, v3, vcc_lo
 ; GFX11-NEXT:    v_cmp_gt_i64_e32 vcc_lo, 0, v[2:3]
 ; GFX11-NEXT:    v_cmp_lt_i64_e64 s0, v[4:5], v[0:1]

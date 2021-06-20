@@ -8,9 +8,18 @@
 
 #include "src/string/memcpy.h"
 #include "src/__support/common.h"
-#include "src/string/memory_utils/memcpy_utils.h"
+#include "src/string/memory_utils/elements.h"
 
 namespace __llvm_libc {
+
+using _1 = scalar::UINT8;
+using _2 = scalar::UINT16;
+using _3 = Chained<scalar::UINT16, scalar::UINT8>;
+using _4 = scalar::UINT32;
+using _8 = scalar::UINT64;
+using _16 = Repeated<scalar::UINT64, 2>;
+using _32 = Repeated<scalar::UINT64, 4>;
+using _64 = Repeated<scalar::UINT64, 8>;
 
 // Design rationale
 // ================
@@ -37,24 +46,24 @@ static void memcpy_aarch64(char *__restrict dst, const char *__restrict src,
   if (count == 0)
     return;
   if (count == 1)
-    return CopyBlock<1>(dst, src);
+    return Copy<_1>(dst, src);
   if (count == 2)
-    return CopyBlock<2>(dst, src);
+    return Copy<_2>(dst, src);
   if (count == 3)
-    return CopyBlock<3>(dst, src);
+    return Copy<_3>(dst, src);
   if (count == 4)
-    return CopyBlock<4>(dst, src);
+    return Copy<_4>(dst, src);
   if (count < 8)
-    return CopyBlockOverlap<4>(dst, src, count);
+    return Copy<HeadTail<_4>>(dst, src, count);
   if (count < 16)
-    return CopyBlockOverlap<8>(dst, src, count);
+    return Copy<HeadTail<_8>>(dst, src, count);
   if (count < 32)
-    return CopyBlockOverlap<16>(dst, src, count);
+    return Copy<HeadTail<_16>>(dst, src, count);
   if (count < 64)
-    return CopyBlockOverlap<32>(dst, src, count);
+    return Copy<HeadTail<_32>>(dst, src, count);
   if (count < 128)
-    return CopyBlockOverlap<64>(dst, src, count);
-  return CopySrcAlignedBlocks<64, 16>(dst, src, count);
+    return Copy<HeadTail<_64>>(dst, src, count);
+  return Copy<Align<_16, Arg::Src>::Then<Loop<_64>>>(dst, src, count);
 }
 
 LLVM_LIBC_FUNCTION(void *, memcpy,

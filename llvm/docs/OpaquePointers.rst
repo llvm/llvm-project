@@ -91,7 +91,9 @@ Transition Plan
 ===============
 
 LLVM currently has many places that depend on pointee types. Each dependency on
-pointee types needs to be resolved in some way or another.
+pointee types needs to be resolved in some way or another. This essentially
+translates to figuring out how to remove all calls to
+``PointerType::getElementType`` and ``Type::getPointerElementType()``.
 
 Making everything use opaque pointers in one huge commit is infeasible. This
 needs to be done incrementally. The following steps need to be done, in no
@@ -99,17 +101,29 @@ particular order:
 
 * Introduce the opaque pointer type
 
-* Various ABI attributes and instructions that need a type can be changed one at
-  a time
+  * Already done
 
-  * This has already happened for many instructions like loads, stores, GEPs,
+* Remove remaining in-tree users of pointee types
+
+  * There are many miscellaneous uses that should be cleaned up individually
+
+  * Some of the larger use cases are mentioned below
+
+* Various ABI attributes and instructions that rely on pointee types need to be
+  modified to specify the type separately
+
+  * This has already happened for all instructions like loads, stores, GEPs,
     and various attributes like ``byval``
 
-* Fix up existing in-tree users of pointee types to not rely on LLVM pointer
-  pointee types
+  * More cases may be found as work continues
 
-  * Specifically ``PointerType::getElementType`` and
-    ``Type::getPointerElementType()``
+* Remove calls to and deprecate ``IRBuilder`` methods that rely on pointee types
+
+  * For example, some of the ``IRBuilder::CreateGEP()`` methods use the pointer
+    operand's pointee type to determine the GEP operand type
+
+  * Some methods are already deprecated with ``LLVM_ATTRIBUTE_DEPRECATED``, such
+    as some overloads of ``IRBuilder::CreateLoad()``
 
 * Allow bitcode auto-upgrade of legacy pointer type to the new opaque pointer
   type (not to be turned on until ready)
@@ -123,8 +137,14 @@ particular order:
 
   * This is mostly Clang, see ``clang::CodeGen::Address::getElementType()``
 
+* Figure out how to name overloaded intrinsics with pointer parameters
+
+  * See ``getMangledTypeStr()``
+
 * Add option to internally treat all pointer types opaque pointers and see what
   breaks, starting with LLVM tests, then run Clang over large codebases
+
+  * We don't want to start mass-updating tests until we're fairly confident that opaque pointers won't cause major issues
 
 * Replace legacy pointer types in LLVM tests with opaque pointer types
 

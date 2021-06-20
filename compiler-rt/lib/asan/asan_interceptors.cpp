@@ -23,25 +23,25 @@
 #include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_libc.h"
 
-// There is no general interception at all on Fuchsia and RTEMS.
+// There is no general interception at all on Fuchsia.
 // Only the functions in asan_interceptors_memintrinsics.cpp are
 // really defined to replace libc functions.
-#if !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
+#if !SANITIZER_FUCHSIA
 
-#if SANITIZER_POSIX
-#include "sanitizer_common/sanitizer_posix.h"
-#endif
+#  if SANITIZER_POSIX
+#    include "sanitizer_common/sanitizer_posix.h"
+#  endif
 
-#if ASAN_INTERCEPT__UNWIND_RAISEEXCEPTION || \
-    ASAN_INTERCEPT__SJLJ_UNWIND_RAISEEXCEPTION
-#include <unwind.h>
-#endif
+#  if ASAN_INTERCEPT__UNWIND_RAISEEXCEPTION || \
+      ASAN_INTERCEPT__SJLJ_UNWIND_RAISEEXCEPTION
+#    include <unwind.h>
+#  endif
 
-#if defined(__i386) && SANITIZER_LINUX
-#define ASAN_PTHREAD_CREATE_VERSION "GLIBC_2.1"
-#elif defined(__mips__) && SANITIZER_LINUX
-#define ASAN_PTHREAD_CREATE_VERSION "GLIBC_2.2"
-#endif
+#  if defined(__i386) && SANITIZER_LINUX
+#    define ASAN_PTHREAD_CREATE_VERSION "GLIBC_2.1"
+#  elif defined(__mips__) && SANITIZER_LINUX
+#    define ASAN_PTHREAD_CREATE_VERSION "GLIBC_2.2"
+#  endif
 
 namespace __asan {
 

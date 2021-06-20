@@ -1371,18 +1371,44 @@ struct CombineIfs : public OpRewritePattern<IfOp> {
   }
 };
 
+/// Pattern to remove an empty else branch.
+struct RemoveEmptyElseBranch : public OpRewritePattern<IfOp> {
+  using OpRewritePattern<IfOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(IfOp ifOp,
+                                PatternRewriter &rewriter) const override {
+    // Cannot remove else region when there are operation results.
+    if (ifOp.getNumResults())
+      return failure();
+    Block *elseBlock = ifOp.elseBlock();
+    if (!elseBlock || !llvm::hasSingleElement(*elseBlock))
+      return failure();
+    auto newIfOp = rewriter.cloneWithoutRegions(ifOp);
+    rewriter.inlineRegionBefore(ifOp.thenRegion(), newIfOp.thenRegion(),
+                                newIfOp.thenRegion().begin());
+    rewriter.eraseOp(ifOp);
+    return success();
+  }
+};
+
 } // namespace
 
 void IfOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                        MLIRContext *context) {
-  results.add<RemoveUnusedResults, RemoveStaticCondition,
-              ConvertTrivialIfToSelect, ConditionPropagation,
-              ReplaceIfYieldWithConditionOrValue, CombineIfs>(context);
+  results
+      .add<RemoveUnusedResults, RemoveStaticCondition, ConvertTrivialIfToSelect,
+           ConditionPropagation, ReplaceIfYieldWithConditionOrValue, CombineIfs,
+           RemoveEmptyElseBranch>(context);
 }
 
 Block *IfOp::thenBlock() { return &thenRegion().back(); }
 YieldOp IfOp::thenYield() { return cast<YieldOp>(&thenBlock()->back()); }
-Block *IfOp::elseBlock() { return &elseRegion().back(); }
+Block *IfOp::elseBlock() {
+  Region &r = elseRegion();
+  if (r.empty())
+    return nullptr;
+  return &r.back();
+}
 YieldOp IfOp::elseYield() { return cast<YieldOp>(&elseBlock()->back()); }
 
 //===----------------------------------------------------------------------===//

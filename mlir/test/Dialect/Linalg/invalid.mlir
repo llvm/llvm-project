@@ -449,7 +449,7 @@ func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?xf32>, %c3: memref<?x?x?x
 func @incorrect_region_arg_count(%m: memref<?x?xf32>) {
   // expected-error @+3 {{region expects 3 args, got 2}}
   %res = linalg.matmul ins(%m, %m : memref<?x?xf32>, memref<?x?xf32>)
-                       -> tensor<?x?xf32>, tensor<?x?xf32>
+                       -> (tensor<?x?xf32>, tensor<?x?xf32>)
   return
 }
 

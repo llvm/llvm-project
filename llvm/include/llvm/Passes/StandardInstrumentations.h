@@ -145,7 +145,7 @@ public:
                     FunctionAnalysisManager::Invalidator &);
   };
 
-#ifndef NDEBUG
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
   SmallVector<StringRef, 8> PassStack;
 #endif
 

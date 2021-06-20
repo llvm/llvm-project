@@ -495,6 +495,10 @@ defm : Zn3WriteResInt<WriteRMW, [Zn3AGU012, Zn3Store], Znver3Model.StoreLatency,
 // Loads, stores, and moves, not folded with other operations.
 defm : Zn3WriteResInt<WriteLoad, [Zn3AGU012, Zn3Load], !add(Znver3Model.LoadLatency, 1), [1, 1], 1>;
 
+// Model the effect of clobbering the read-write mask operand of the GATHER operation.
+// Does not cost anything by itself, only has latency, matching that of the WriteLoad,
+defm : Zn3WriteResInt<WriteVecMaskedGatherWriteback, [], !add(Znver3Model.LoadLatency, 1), [], 0>;
+
 def Zn3WriteMOVSlow : SchedWriteRes<[Zn3AGU012, Zn3Load]> {
   let Latency = !add(Znver3Model.LoadLatency, 1);
   let ResourceCycles = [3, 1];

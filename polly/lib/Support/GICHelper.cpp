@@ -85,9 +85,10 @@ APInt polly::APIntFromVal(__isl_take isl_val *Val) {
 template <typename ISLTy, typename ISL_CTX_GETTER, typename ISL_PRINTER>
 static inline std::string stringFromIslObjInternal(__isl_keep ISLTy *isl_obj,
                                                    ISL_CTX_GETTER ctx_getter_fn,
-                                                   ISL_PRINTER printer_fn) {
+                                                   ISL_PRINTER printer_fn,
+                                                   std::string DefaultValue) {
   if (!isl_obj)
-    return "null";
+    return DefaultValue;
   isl_ctx *ctx = ctx_getter_fn(isl_obj);
   isl_printer *p = isl_printer_to_str(ctx);
   p = printer_fn(p, isl_obj);
@@ -96,68 +97,42 @@ static inline std::string stringFromIslObjInternal(__isl_keep ISLTy *isl_obj,
   if (char_str)
     string = char_str;
   else
-    string = "null";
+    string = DefaultValue;
   free(char_str);
   isl_printer_free(p);
   return string;
 }
 
-std::string polly::stringFromIslObj(__isl_keep isl_map *map) {
-  return stringFromIslObjInternal(map, isl_map_get_ctx, isl_printer_print_map);
-}
+#define ISL_C_OBJECT_TO_STRING(name)                                           \
+  std::string polly::stringFromIslObj(__isl_keep isl_##name *Obj,              \
+                                      std::string DefaultValue) {              \
+    return stringFromIslObjInternal(Obj, isl_##name##_get_ctx,                 \
+                                    isl_printer_print_##name, DefaultValue);   \
+  }
 
-std::string polly::stringFromIslObj(__isl_keep isl_set *set) {
-  return stringFromIslObjInternal(set, isl_set_get_ctx, isl_printer_print_set);
-}
-
-std::string polly::stringFromIslObj(__isl_keep isl_union_map *umap) {
-  return stringFromIslObjInternal(umap, isl_union_map_get_ctx,
-                                  isl_printer_print_union_map);
-}
-
-std::string polly::stringFromIslObj(__isl_keep isl_union_set *uset) {
-  return stringFromIslObjInternal(uset, isl_union_set_get_ctx,
-                                  isl_printer_print_union_set);
-}
-
-std::string polly::stringFromIslObj(__isl_keep isl_schedule *schedule) {
-  return stringFromIslObjInternal(schedule, isl_schedule_get_ctx,
-                                  isl_printer_print_schedule);
-}
-
-std::string polly::stringFromIslObj(__isl_keep isl_multi_aff *maff) {
-  return stringFromIslObjInternal(maff, isl_multi_aff_get_ctx,
-                                  isl_printer_print_multi_aff);
-}
-
-std::string polly::stringFromIslObj(__isl_keep isl_pw_multi_aff *pma) {
-  return stringFromIslObjInternal(pma, isl_pw_multi_aff_get_ctx,
-                                  isl_printer_print_pw_multi_aff);
-}
-
-std::string polly::stringFromIslObj(__isl_keep isl_multi_pw_aff *mpa) {
-  return stringFromIslObjInternal(mpa, isl_multi_pw_aff_get_ctx,
-                                  isl_printer_print_multi_pw_aff);
-}
-
-std::string polly::stringFromIslObj(__isl_keep isl_union_pw_multi_aff *upma) {
-  return stringFromIslObjInternal(upma, isl_union_pw_multi_aff_get_ctx,
-                                  isl_printer_print_union_pw_multi_aff);
-}
-
-std::string polly::stringFromIslObj(__isl_keep isl_aff *aff) {
-  return stringFromIslObjInternal(aff, isl_aff_get_ctx, isl_printer_print_aff);
-}
-
-std::string polly::stringFromIslObj(__isl_keep isl_pw_aff *pwaff) {
-  return stringFromIslObjInternal(pwaff, isl_pw_aff_get_ctx,
-                                  isl_printer_print_pw_aff);
-}
-
-std::string polly::stringFromIslObj(__isl_keep isl_space *space) {
-  return stringFromIslObjInternal(space, isl_space_get_ctx,
-                                  isl_printer_print_space);
-}
+ISL_C_OBJECT_TO_STRING(aff)
+ISL_C_OBJECT_TO_STRING(ast_expr)
+ISL_C_OBJECT_TO_STRING(ast_node)
+ISL_C_OBJECT_TO_STRING(basic_map)
+ISL_C_OBJECT_TO_STRING(basic_set)
+ISL_C_OBJECT_TO_STRING(map)
+ISL_C_OBJECT_TO_STRING(set)
+ISL_C_OBJECT_TO_STRING(id)
+ISL_C_OBJECT_TO_STRING(multi_aff)
+ISL_C_OBJECT_TO_STRING(multi_pw_aff)
+ISL_C_OBJECT_TO_STRING(multi_union_pw_aff)
+ISL_C_OBJECT_TO_STRING(point)
+ISL_C_OBJECT_TO_STRING(pw_aff)
+ISL_C_OBJECT_TO_STRING(pw_multi_aff)
+ISL_C_OBJECT_TO_STRING(schedule)
+ISL_C_OBJECT_TO_STRING(schedule_node)
+ISL_C_OBJECT_TO_STRING(space)
+ISL_C_OBJECT_TO_STRING(union_access_info)
+ISL_C_OBJECT_TO_STRING(union_flow)
+ISL_C_OBJECT_TO_STRING(union_set)
+ISL_C_OBJECT_TO_STRING(union_map)
+ISL_C_OBJECT_TO_STRING(union_pw_aff)
+ISL_C_OBJECT_TO_STRING(union_pw_multi_aff)
 
 static void replace(std::string &str, const std::string &find,
                     const std::string &replace) {

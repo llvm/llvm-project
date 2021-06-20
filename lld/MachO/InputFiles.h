@@ -104,6 +104,7 @@ public:
   llvm::DWARFUnit *compileUnit = nullptr;
   const uint32_t modTime;
   std::vector<ConcatInputSection *> debugSections;
+  ArrayRef<llvm::MachO::data_in_code_entry> dataInCodeEntries;
 
 private:
   template <class LP> void parse();
@@ -118,6 +119,7 @@ private:
   void parseRelocations(ArrayRef<Section> sectionHeaders, const Section &,
                         SubsectionMap &);
   void parseDebugInfo();
+  void parseDataInCode();
 };
 
 // command-line -sectcreate file

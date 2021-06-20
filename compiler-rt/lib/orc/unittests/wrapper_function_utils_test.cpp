@@ -66,6 +66,13 @@ TEST(WrapperFunctionUtilsTest, WrapperFunctionResultFromOutOfBandError) {
   EXPECT_TRUE(strcmp(R.getOutOfBandError(), TestString) == 0);
 }
 
+static void voidNoop() {}
+
+static __orc_rt_CWrapperFunctionResult voidNoopWrapper(const char *ArgData,
+                                                       size_t ArgSize) {
+  return WrapperFunction<void()>::handle(ArgData, ArgSize, voidNoop).release();
+}
+
 static __orc_rt_CWrapperFunctionResult addWrapper(const char *ArgData,
                                                   size_t ArgSize) {
   return WrapperFunction<int32_t(int32_t, int32_t)>::handle(
@@ -86,7 +93,11 @@ __orc_rt_jit_dispatch(__orc_rt_Opaque *Ctx, const void *FnTag,
       ArgData, ArgSize);
 }
 
-TEST(WrapperFunctionUtilsTest, WrapperFunctionCallAndHandle) {
+TEST(WrapperFunctionUtilsTest, WrapperFunctionCallVoidNoopAndHandle) {
+  EXPECT_FALSE(!!WrapperFunction<void()>::call((void *)&voidNoopWrapper));
+}
+
+TEST(WrapperFunctionUtilsTest, WrapperFunctionCallAddWrapperAndHandle) {
   int32_t Result;
   EXPECT_FALSE(!!WrapperFunction<int32_t(int32_t, int32_t)>::call(
       (void *)&addWrapper, Result, 1, 2));

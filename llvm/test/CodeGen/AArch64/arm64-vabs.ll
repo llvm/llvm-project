@@ -218,12 +218,9 @@ define i16 @uabd16b_rdx(<16 x i8>* %a, <16 x i8>* %b) {
 define i32 @uabd16b_rdx_i32(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: uabd16b_rdx_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    uabd.16b v0, v0, v1
-; CHECK-NEXT:    ushll2.8h v1, v0, #0
-; CHECK-NEXT:    ushll.8h v0, v0, #0
-; CHECK-NEXT:    uaddl2.4s v2, v0, v1
-; CHECK-NEXT:    uaddl.4s v0, v0, v1
-; CHECK-NEXT:    add.4s v0, v0, v2
+; CHECK-NEXT:    uabdl.8h v2, v0, v1
+; CHECK-NEXT:    uabal2.8h v2, v0, v1
+; CHECK-NEXT:    uaddlp.4s v0, v2
 ; CHECK-NEXT:    addv.4s s0, v0
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -240,12 +237,9 @@ define i32 @uabd16b_rdx_i32(<16 x i8> %a, <16 x i8> %b) {
 define i32 @sabd16b_rdx_i32(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: sabd16b_rdx_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sabd.16b v0, v0, v1
-; CHECK-NEXT:    ushll2.8h v1, v0, #0
-; CHECK-NEXT:    ushll.8h v0, v0, #0
-; CHECK-NEXT:    uaddl2.4s v2, v0, v1
-; CHECK-NEXT:    uaddl.4s v0, v0, v1
-; CHECK-NEXT:    add.4s v0, v0, v2
+; CHECK-NEXT:    sabdl.8h v2, v0, v1
+; CHECK-NEXT:    sabal2.8h v2, v0, v1
+; CHECK-NEXT:    uaddlp.4s v0, v2
 ; CHECK-NEXT:    addv.4s s0, v0
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret

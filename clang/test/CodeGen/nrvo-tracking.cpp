@@ -193,8 +193,8 @@ B(5, );
 // CHECK-NEXT:  call void @llvm.lifetime.end
 // CHECK-NEXT:  ret void
 template<class T = X> [[gnu::cdecl]] static inline auto tf_attr() -> X {
-    T t;
-    return t;
+  T t;
+  return t;
 }
 void f_attr() { auto t = tf_attr(); }
 
@@ -203,8 +203,10 @@ void f_attr() { auto t = tf_attr(); }
 // CHECK-NEXT:  call void @llvm.lifetime.end
 // CHECK-NEXT:  ret void
 void b_attr() {
-  auto t = []<class T = X>() { return ^ X () [[clang::vectorcall]] {
+  auto t = []<class T = X>() {
+    return ^X() [[clang::vectorcall]] {
       T t;
       return t;
-  }; }()();
+    };
+  }()();
 }

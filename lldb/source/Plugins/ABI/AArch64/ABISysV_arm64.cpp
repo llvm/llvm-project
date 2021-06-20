@@ -787,6 +787,56 @@ lldb::addr_t ABISysV_arm64::FixAddress(addr_t pc, addr_t mask) {
   return (pc & pac_sign_extension) ? pc | mask : pc & (~mask);
 }
 
+// Reads code or data address mask for the current Linux process.
+static lldb::addr_t ReadLinuxProcessAddressMask(lldb::ProcessSP process_sp,
+                                                llvm::StringRef reg_name) {
+  // Linux configures user-space virtual addresses with top byte ignored.
+  // We set default value of mask such that top byte is masked out.
+  uint64_t address_mask = ~((1ULL << 56) - 1);
+  // If Pointer Authentication feature is enabled then Linux exposes
+  // PAC data and code mask register. Try reading relevant register
+  // below and merge it with default address mask calculated above.
+  lldb::ThreadSP thread_sp = process_sp->GetThreadList().GetSelectedThread();
+  if (thread_sp) {
+    lldb::RegisterContextSP reg_ctx_sp = thread_sp->GetRegisterContext();
+    if (reg_ctx_sp) {
+      const RegisterInfo *reg_info =
+          reg_ctx_sp->GetRegisterInfoByName(reg_name, 0);
+      if (reg_info) {
+        lldb::addr_t mask_reg_val = reg_ctx_sp->ReadRegisterAsUnsigned(
+            reg_info->kinds[eRegisterKindLLDB], LLDB_INVALID_ADDRESS);
+        if (mask_reg_val != LLDB_INVALID_ADDRESS)
+          address_mask |= mask_reg_val;
+      }
+    }
+  }
+  return address_mask;
+}
+
+lldb::addr_t ABISysV_arm64::FixCodeAddress(lldb::addr_t pc) {
+  if (lldb::ProcessSP process_sp = GetProcessSP()) {
+    if (process_sp->GetTarget().GetArchitecture().GetTriple().isOSLinux() &&
+        !process_sp->GetCodeAddressMask())
+      process_sp->SetCodeAddressMask(
+          ReadLinuxProcessAddressMask(process_sp, "code_mask"));
+
+    return FixAddress(pc, process_sp->GetCodeAddressMask());
+  }
+  return pc;
+}
+
+lldb::addr_t ABISysV_arm64::FixDataAddress(lldb::addr_t pc) {
+  if (lldb::ProcessSP process_sp = GetProcessSP()) {
+    if (process_sp->GetTarget().GetArchitecture().GetTriple().isOSLinux() &&
+        !process_sp->GetDataAddressMask())
+      process_sp->SetDataAddressMask(
+          ReadLinuxProcessAddressMask(process_sp, "data_mask"));
+
+    return FixAddress(pc, process_sp->GetDataAddressMask());
+  }
+  return pc;
+}
+
 void ABISysV_arm64::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 "SysV ABI for AArch64 targets", CreateInstance);

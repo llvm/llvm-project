@@ -127,6 +127,7 @@ enum SpillOpcodeKey {
   SOK_AccumulatorSpill,
   SOK_UAccumulatorSpill,
   SOK_SPESpill,
+  SOK_PairedG8Spill,
   SOK_LastOpcodeSpill // This must be last on the enum.
 };
 
@@ -136,14 +137,16 @@ enum SpillOpcodeKey {
   {                                                                            \
     PPC::LWZ, PPC::LD, PPC::LFD, PPC::LFS, PPC::RESTORE_CR,                    \
         PPC::RESTORE_CRBIT, PPC::LVX, PPC::LXVD2X, PPC::LXSDX, PPC::LXSSPX,    \
-        PPC::SPILLTOVSR_LD, NoInstr, NoInstr, NoInstr, PPC::EVLDD              \
+        PPC::SPILLTOVSR_LD, NoInstr, NoInstr, NoInstr, PPC::EVLDD,             \
+        PPC::RESTORE_QUADWORD                                                  \
   }
 
 #define Pwr9LoadOpcodes                                                        \
   {                                                                            \
     PPC::LWZ, PPC::LD, PPC::LFD, PPC::LFS, PPC::RESTORE_CR,                    \
         PPC::RESTORE_CRBIT, PPC::LVX, PPC::LXV, PPC::DFLOADf64,                \
-        PPC::DFLOADf32, PPC::SPILLTOVSR_LD, NoInstr, NoInstr, NoInstr, NoInstr \
+        PPC::DFLOADf32, PPC::SPILLTOVSR_LD, NoInstr, NoInstr, NoInstr,         \
+        NoInstr, PPC::RESTORE_QUADWORD                                         \
   }
 
 #define Pwr10LoadOpcodes                                                       \
@@ -151,21 +154,23 @@ enum SpillOpcodeKey {
     PPC::LWZ, PPC::LD, PPC::LFD, PPC::LFS, PPC::RESTORE_CR,                    \
         PPC::RESTORE_CRBIT, PPC::LVX, PPC::LXV, PPC::DFLOADf64,                \
         PPC::DFLOADf32, PPC::SPILLTOVSR_LD, PPC::LXVP, PPC::RESTORE_ACC,       \
-        PPC::RESTORE_UACC, NoInstr                                             \
+        PPC::RESTORE_UACC, NoInstr, PPC::RESTORE_QUADWORD                      \
   }
 
 #define Pwr8StoreOpcodes                                                       \
   {                                                                            \
     PPC::STW, PPC::STD, PPC::STFD, PPC::STFS, PPC::SPILL_CR, PPC::SPILL_CRBIT, \
         PPC::STVX, PPC::STXVD2X, PPC::STXSDX, PPC::STXSSPX,                    \
-        PPC::SPILLTOVSR_ST, NoInstr, NoInstr, NoInstr, PPC::EVSTDD             \
+        PPC::SPILLTOVSR_ST, NoInstr, NoInstr, NoInstr, PPC::EVSTDD,            \
+        PPC::SPILL_QUADWORD                                                    \
   }
 
 #define Pwr9StoreOpcodes                                                       \
   {                                                                            \
     PPC::STW, PPC::STD, PPC::STFD, PPC::STFS, PPC::SPILL_CR, PPC::SPILL_CRBIT, \
         PPC::STVX, PPC::STXV, PPC::DFSTOREf64, PPC::DFSTOREf32,                \
-        PPC::SPILLTOVSR_ST, NoInstr, NoInstr, NoInstr, NoInstr                 \
+        PPC::SPILLTOVSR_ST, NoInstr, NoInstr, NoInstr, NoInstr,                \
+        PPC::SPILL_QUADWORD                                                    \
   }
 
 #define Pwr10StoreOpcodes                                                      \
@@ -173,7 +178,7 @@ enum SpillOpcodeKey {
     PPC::STW, PPC::STD, PPC::STFD, PPC::STFS, PPC::SPILL_CR, PPC::SPILL_CRBIT, \
         PPC::STVX, PPC::STXV, PPC::DFSTOREf64, PPC::DFSTOREf32,                \
         PPC::SPILLTOVSR_ST, PPC::STXVP, PPC::SPILL_ACC, PPC::SPILL_UACC,       \
-        NoInstr                                                                \
+        NoInstr, PPC::SPILL_QUADWORD                                           \
   }
 
 // Initialize arrays for load and store spill opcodes on supported subtargets.

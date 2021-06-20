@@ -2296,7 +2296,7 @@ void Writer<ELFT>::addStartStopSymbols(OutputSection *sec) {
 }
 
 static bool needsPtLoad(OutputSection *sec) {
-  if (!(sec->flags & SHF_ALLOC) || sec->noload)
+  if (!(sec->flags & SHF_ALLOC))
     return false;
 
   // Don't allocate VA space for TLS NOBITS sections. The PT_TLS PHDR is

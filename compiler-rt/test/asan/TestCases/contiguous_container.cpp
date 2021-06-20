@@ -65,11 +65,7 @@ void TestThrow() {
   assert(__asan_address_is_poisoned(x + 14));
   ThrowAndCatch();
   assert(!__asan_address_is_poisoned(x + 13));
-  // FIXME: invert the assertion below once we fix
-  // https://code.google.com/p/address-sanitizer/issues/detail?id=258
-  // This assertion works only w/o UAR.
-  if (!__asan_get_current_fake_stack())
-    assert(!__asan_address_is_poisoned(x + 14));
+  assert(!__asan_address_is_poisoned(x + 14));
   __sanitizer_annotate_contiguous_container(x, x + 32, x + 14, x + 32);
   assert(!__asan_address_is_poisoned(x + 13));
   assert(!__asan_address_is_poisoned(x + 14));

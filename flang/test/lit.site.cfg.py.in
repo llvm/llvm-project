@@ -9,8 +9,10 @@ config.flang_src_dir = "@FLANG_SOURCE_DIR@"
 config.flang_tools_dir = "@FLANG_TOOLS_DIR@"
 config.flang_intrinsic_modules_dir = "@FLANG_INTRINSIC_MODULES_DIR@"
 config.flang_llvm_tools_dir = "@CMAKE_BINARY_DIR@/bin"
+config.flang_lib_dir = "@CMAKE_BINARY_DIR@/lib"
 config.python_executable = "@PYTHON_EXECUTABLE@"
 config.flang_standalone_build = @FLANG_STANDALONE_BUILD@
+config.cc = "@CMAKE_C_COMPILER@"
 
 # Control the regression test for flang-new driver
 import lit.util

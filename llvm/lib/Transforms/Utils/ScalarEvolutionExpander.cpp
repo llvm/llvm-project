@@ -29,6 +29,12 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
+#ifdef LLVM_ENABLE_ABI_BREAKING_CHECKS
+#define SCEV_DEBUG_WITH_TYPE(TYPE, X) DEBUG_WITH_TYPE(TYPE, X)
+#else
+#define SCEV_DEBUG_WITH_TYPE(TYPE, X)
+#endif
+
 using namespace llvm;
 
 cl::opt<unsigned> llvm::SCEVCheapExpansionBudget(
@@ -1225,7 +1231,7 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
       // We should not look for a incomplete PHI. Getting SCEV for a incomplete
       // PHI has no meaning at all.
       if (!PN.isComplete()) {
-        DEBUG_WITH_TYPE(
+        SCEV_DEBUG_WITH_TYPE(
             DebugType, dbgs() << "One incomplete PHI is found: " << PN << "\n");
         continue;
       }
@@ -2086,8 +2092,9 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
       Phi->replaceAllUsesWith(V);
       DeadInsts.emplace_back(Phi);
       ++NumElim;
-      DEBUG_WITH_TYPE(DebugType, dbgs()
-                      << "INDVARS: Eliminated constant iv: " << *Phi << '\n');
+      SCEV_DEBUG_WITH_TYPE(DebugType,
+                           dbgs() << "INDVARS: Eliminated constant iv: " << *Phi
+                                  << '\n');
       continue;
     }
 
@@ -2144,9 +2151,9 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
             TruncExpr == SE.getSCEV(IsomorphicInc) &&
             SE.LI.replacementPreservesLCSSAForm(IsomorphicInc, OrigInc) &&
             hoistIVInc(OrigInc, IsomorphicInc)) {
-          DEBUG_WITH_TYPE(DebugType,
-                          dbgs() << "INDVARS: Eliminated congruent iv.inc: "
-                                 << *IsomorphicInc << '\n');
+          SCEV_DEBUG_WITH_TYPE(
+              DebugType, dbgs() << "INDVARS: Eliminated congruent iv.inc: "
+                                << *IsomorphicInc << '\n');
           Value *NewInc = OrigInc;
           if (OrigInc->getType() != IsomorphicInc->getType()) {
             Instruction *IP = nullptr;
@@ -2165,10 +2172,11 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
         }
       }
     }
-    DEBUG_WITH_TYPE(DebugType, dbgs() << "INDVARS: Eliminated congruent iv: "
-                                      << *Phi << '\n');
-    DEBUG_WITH_TYPE(DebugType, dbgs() << "INDVARS: Original iv: "
-                                      << *OrigPhiRef << '\n');
+    SCEV_DEBUG_WITH_TYPE(DebugType,
+                         dbgs() << "INDVARS: Eliminated congruent iv: " << *Phi
+                                << '\n');
+    SCEV_DEBUG_WITH_TYPE(
+        DebugType, dbgs() << "INDVARS: Original iv: " << *OrigPhiRef << '\n');
     ++NumElim;
     Value *NewIV = OrigPhiRef;
     if (OrigPhiRef->getType() != Phi->getType()) {

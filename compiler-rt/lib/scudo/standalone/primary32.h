@@ -67,8 +67,8 @@ public:
     if (SCUDO_TRUSTY)
       reportError("SizeClassAllocator32 is not supported on Trusty");
 
+    DCHECK(isAligned(reinterpret_cast<uptr>(this), alignof(ThisT)));
     PossibleRegions.init();
-
     u32 Seed;
     const u64 Time = getMonotonicTime();
     if (!getRandom(reinterpret_cast<void *>(&Seed), sizeof(Seed)))

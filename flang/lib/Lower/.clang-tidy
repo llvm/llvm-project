@@ -1,4 +1,4 @@
-Checks: 'readability-identifier-naming,llvm-include-order,clang-diagnostic-*'
+Checks: '-readability-braces-around-statements,readability-identifier-naming,llvm-include-order,clang-diagnostic-*'
 InheritParentConfig: true
 CheckOptions:
   - key:             readability-identifier-naming.MemberCase

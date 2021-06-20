@@ -1,9 +1,9 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN:     -mattr=-altivec -xcoff-traceback-table=true < %s | \
+; RUN:     -mattr=+altivec -vec-extabi -xcoff-traceback-table=true < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK-ASM,COMMON %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -function-sections \
-; RUN:     -mcpu=pwr4 -mattr=-altivec < %s | \
+; RUN:     -mcpu=pwr4 -mattr=+altivec -vec-extabi  < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK-FUNC,COMMON %s
 
 define float @bar() #0 {
@@ -26,6 +26,16 @@ entry:
   ret float %add
 }
 
+define <4 x i32> @foov() #0 {
+entry:
+  %taken = alloca <4 x i32>, align 16
+  %data = alloca <4 x i32>, align 16
+  store <4 x i32> <i32 123, i32 0, i32 0, i32 0>, <4 x i32>* %data, align 16
+  call void asm sideeffect "", "~{v31},~{v30},~{v29},~{v28}"() 
+  %0 = load <4 x i32>, <4 x i32>* %taken, align 16
+  ret <4 x i32> %0
+}
+
 ; COMMON:       .vbyte  4, 0x00000000                   # Traceback table begin
 ; COMMON-NEXT:  .byte   0x00                            # Version = 0
 ; COMMON-NEXT:  .byte   0x09                            # Language = CPlusPlus
@@ -46,3 +56,28 @@ entry:
 ; COMMON-NEXT:  .byte   "bar"                           # Function Name
 ; COMMON-NEXT:  .byte   0x1f                            # AllocaUsed
 ; COMMON-NEXT:                                        # -- End function
+
+; COMMON:     L..foov0:
+; COMMON-NEXT:  .vbyte  4, 0x00000000                   # Traceback table begin
+; COMMON-NEXT:  .byte   0x00                            # Version = 0
+; COMMON-NEXT:  .byte   0x09                            # Language = CPlusPlus
+; COMMON-NEXT:  .byte   0x20                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; COMMON-NEXT:                                         # +HasTraceBackTableOffset, -IsInternalProcedure
+; COMMON-NEXT:                                         # -HasControlledStorage, -IsTOCless
+; COMMON-NEXT:                                         # -IsFloatingPointPresent
+; COMMON-NEXT:                                         # -IsFloatingPointOperationLogOrAbortEnabled
+; COMMON-NEXT:  .byte   0x40                            # -IsInterruptHandler, +IsFunctionNamePresent, -IsAllocaUsed
+; COMMON-NEXT:                                         # OnConditionDirective = 0, -IsCRSaved, -IsLRSaved
+; COMMON-NEXT:  .byte   0x80                            # +IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
+; COMMON-NEXT:  .byte   0x80                            # +HasVectorInfo, -HasExtensionTable, NumOfGPRsSaved = 0
+; COMMON-NEXT:  .byte   0x00                            # NumberOfFixedParms = 0
+; COMMON-NEXT:  .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack
+; CHECK-ASM-NEXT:   .vbyte  4, L..foov0-.foov               # Function size
+; CHECK-FUNC-NEXT:  .vbyte  4, L..foov0-.foov[PR]           # Function size
+; COMMON-NEXT:  .vbyte  2, 0x0004                       # Function name len = 4
+; COMMON-NEXT:  .byte   "foov"                          # Function Name 
+; COMMON-NEXT:  .byte   0x12                            # NumOfVRsSaved = 4, +IsVRSavedOnStack, -HasVarArgs
+; COMMON-NEXT:  .byte   0x01                            # NumOfVectorParams = 0, +HasVMXInstruction
+; COMMON-NEXT:  .vbyte  4, 0x00000000                   # Vector Parameter type =
+; COMMON-NEXT:  .vbyte  2, 0x0000                       # Padding 
+; COMMON-NEXT:                                         # -- End function

@@ -54,6 +54,40 @@ def TestTypeInterface : TypeInterface<"TestTypeInterface"> {
   }];
 }
 
+def TestExternalTypeInterface : TypeInterface<"TestExternalTypeInterface"> {
+  let cppNamespace = "::mlir";
+  let methods = [
+    InterfaceMethod<"Returns the bitwidth of the type plus 'arg'.",
+      "unsigned", "getBitwidthPlusArg", (ins "unsigned":$arg)>,
+    StaticInterfaceMethod<"Returns some value plus 'arg'.",
+      "unsigned", "staticGetSomeValuePlusArg", (ins "unsigned":$arg)>,
+    InterfaceMethod<"Returns the argument doubled.",
+      "unsigned", "getBitwidthPlusDoubleArgument", (ins "unsigned":$arg), "",
+      "return $_type.getIntOrFloatBitWidth() + 2 * arg;">,
+    StaticInterfaceMethod<"Returns the argument.",
+      "unsigned", "staticGetArgument", (ins "unsigned":$arg), "",
+      "return arg;">,
+  ];
+}
+
+def TestExternalFallbackTypeInterface
+    : TypeInterface<"TestExternalFallbackTypeInterface"> {
+  let cppNamespace = "::mlir";
+  let methods = [
+    InterfaceMethod<"Returns the bitwidth of the given integer type.",
+      "unsigned", "getBitwidth", (ins), "", "return $_type.getWidth();">,
+  ];
+}
+
+def TestExternalAttrInterface : AttrInterface<"TestExternalAttrInterface"> {
+  let cppNamespace = "::mlir";
+  let methods = [
+    InterfaceMethod<"Gets the dialect pointer.", "const ::mlir::Dialect *",
+      "getDialectPtr">,
+    StaticInterfaceMethod<"Returns some number.", "int", "getSomeNumber">,
+  ];
+}
+
 def TestEffectOpInterface
     : EffectOpInterfaceBase<"TestEffectOpInterface",
                             "::mlir::TestEffects::Effect"> {

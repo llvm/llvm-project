@@ -203,7 +203,6 @@
 #include "llvm/Transforms/Scalar/SimpleLoopUnswitch.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Scalar/Sink.h"
-#include "llvm/Transforms/Scalar/SpeculateAroundPHIs.h"
 #include "llvm/Transforms/Scalar/SpeculativeExecution.h"
 #include "llvm/Transforms/Scalar/StraightLineStrengthReduce.h"
 #include "llvm/Transforms/Scalar/StructurizeCFG.h"
@@ -1447,11 +1446,6 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // LoopSink (and other loop passes since the last simplifyCFG) might have
   // resulted in single-entry-single-exit or empty blocks. Clean up the CFG.
   OptimizePM.addPass(SimplifyCFGPass());
-
-  // Optimize PHIs by speculating around them when profitable. Note that this
-  // pass needs to be run after any PRE or similar pass as it is essentially
-  // inserting redundancies into the program. This even includes SimplifyCFG.
-  OptimizePM.addPass(SpeculateAroundPHIsPass());
 
   if (PTO.Coroutines)
     OptimizePM.addPass(CoroCleanupPass());

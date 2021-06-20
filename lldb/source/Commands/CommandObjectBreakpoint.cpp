@@ -713,7 +713,7 @@ protected:
 
     // Now set the various options that were passed in:
     if (bp_sp) {
-      bp_sp->GetOptions()->CopyOverSetOptions(m_bp_opts.GetBreakpointOptions());
+      bp_sp->GetOptions().CopyOverSetOptions(m_bp_opts.GetBreakpointOptions());
 
       if (!m_options.m_breakpoint_names.empty()) {
         Status name_error;
@@ -863,10 +863,10 @@ protected:
             BreakpointLocation *location =
                 bp->FindLocationByID(cur_bp_id.GetLocationID()).get();
             if (location)
-              location->GetLocationOptions()->CopyOverSetOptions(
+              location->GetLocationOptions().CopyOverSetOptions(
                   m_bp_opts.GetBreakpointOptions());
           } else {
-            bp->GetOptions()->CopyOverSetOptions(
+            bp->GetOptions().CopyOverSetOptions(
                 m_bp_opts.GetBreakpointOptions());
           }
         }
@@ -1769,7 +1769,7 @@ protected:
         bp_name->SetHelp(m_bp_id.m_help_string.GetStringValue().str().c_str());
 
       if (bp_sp)
-        target.ConfigureBreakpointName(*bp_name, *bp_sp->GetOptions(),
+        target.ConfigureBreakpointName(*bp_name, bp_sp->GetOptions(),
                                        m_access_options.GetPermissions());
       else
         target.ConfigureBreakpointName(*bp_name,

@@ -85,6 +85,9 @@ public:
 
   uint32_t GetPluginVersion() override;
 
+  lldb::addr_t FixCodeAddress(lldb::addr_t pc) override;
+  lldb::addr_t FixDataAddress(lldb::addr_t pc) override;
+
 protected:
   lldb::ValueObjectSP
   GetReturnValueObjectImpl(lldb_private::Thread &thread,

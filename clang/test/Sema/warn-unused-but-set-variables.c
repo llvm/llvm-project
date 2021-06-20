@@ -23,6 +23,10 @@ int f0() {
   int a;
   w = (a = 0);
 
+  // Following gcc, warn for a volatile variable.
+  volatile int b; // expected-warning{{variable 'b' set but not used}}
+  b = 0;
+
   int x;
   x = 0;
   return x;

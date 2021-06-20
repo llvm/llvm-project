@@ -689,7 +689,7 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
                    StringRef ProfileSymbolListFile, bool CompressAllSections,
                    bool UseMD5, bool GenPartialProfile,
                    bool SampleMergeColdContext, bool SampleTrimColdContext,
-                   FailureMode FailMode) {
+                   bool SampleColdContextFrameDepth, FailureMode FailMode) {
   using namespace sampleprof;
   StringMap<FunctionSamples> ProfileMap;
   SmallVector<std::unique_ptr<sampleprof::SampleProfileReader>, 5> Readers;
@@ -758,9 +758,9 @@ mergeSampleProfile(const WeightedFileVector &Inputs, SymbolRemapper *Remapper,
 
     // Trim and merge cold context profile using cold threshold above;
     SampleContextTrimmer(ProfileMap)
-        .trimAndMergeColdContextProfiles(SampleProfColdThreshold,
-                                         SampleTrimColdContext,
-                                         SampleMergeColdContext);
+        .trimAndMergeColdContextProfiles(
+            SampleProfColdThreshold, SampleTrimColdContext,
+            SampleMergeColdContext, SampleColdContextFrameDepth);
   }
 
   auto WriterOrErr =
@@ -914,6 +914,10 @@ static int merge_main(int argc, const char *argv[]) {
       "sample-trim-cold-context", cl::init(false), cl::Hidden,
       cl::desc(
           "Trim context sample profiles whose count is below cold threshold"));
+  cl::opt<uint32_t> SampleColdContextFrameDepth(
+      "sample-frame-depth-for-cold-context", cl::init(1), cl::ZeroOrMore,
+      cl::desc("Keep the last K frames while merging cold profile. 1 means the "
+               "context-less base profile"));
   cl::opt<bool> GenPartialProfile(
       "gen-partial-profile", cl::init(false), cl::Hidden,
       cl::desc("Generate a partial profile (only meaningful for -extbinary)"));
@@ -985,7 +989,8 @@ static int merge_main(int argc, const char *argv[]) {
     mergeSampleProfile(WeightedInputs, Remapper.get(), OutputFilename,
                        OutputFormat, ProfileSymbolListFile, CompressAllSections,
                        UseMD5, GenPartialProfile, SampleMergeColdContext,
-                       SampleTrimColdContext, FailureMode);
+                       SampleTrimColdContext, SampleColdContextFrameDepth,
+                       FailureMode);
 
   return 0;
 }

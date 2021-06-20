@@ -5,8 +5,7 @@
 // RUN: not %run %t -1 2>&1 | FileCheck --check-prefixes=CHECK,LSYM %s
 // RUN: not %env_hwasan_opts=symbolize=0 %run %t -1 2>&1 | FileCheck --check-prefixes=CHECK,LNOSYM %s
 
-// Global aliasing is not implemented on x86.
-// XFAIL: x86_64
+// REQUIRES: pointer-tagging
 
 int x = 1;
 

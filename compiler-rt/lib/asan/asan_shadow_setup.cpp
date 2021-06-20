@@ -13,12 +13,11 @@
 
 #include "sanitizer_common/sanitizer_platform.h"
 
-// asan_fuchsia.cpp and asan_rtems.cpp have their own
-// InitializeShadowMemory implementation.
-#if !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
+// asan_fuchsia.cpp has their own InitializeShadowMemory implementation.
+#if !SANITIZER_FUCHSIA
 
-#include "asan_internal.h"
-#include "asan_mapping.h"
+#  include "asan_internal.h"
+#  include "asan_mapping.h"
 
 namespace __asan {
 
@@ -123,4 +122,4 @@ void InitializeShadowMemory() {
 
 }  // namespace __asan
 
-#endif  // !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
+#endif  // !SANITIZER_FUCHSIA

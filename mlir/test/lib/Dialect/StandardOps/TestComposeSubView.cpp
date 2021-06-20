@@ -20,6 +20,10 @@ using namespace mlir;
 namespace {
 struct TestComposeSubViewPass
     : public PassWrapper<TestComposeSubViewPass, FunctionPass> {
+  StringRef getArgument() const final { return "test-compose-subview"; }
+  StringRef getDescription() const final {
+    return "Test combining composed subviews";
+  }
   void runOnFunction() override;
   void getDependentDialects(DialectRegistry &registry) const override;
 };
@@ -39,8 +43,7 @@ void TestComposeSubViewPass::runOnFunction() {
 namespace mlir {
 namespace test {
 void registerTestComposeSubView() {
-  PassRegistration<TestComposeSubViewPass> pass(
-      "test-compose-subview", "Test combining composed subviews");
+  PassRegistration<TestComposeSubViewPass>();
 }
 } // namespace test
 } // namespace mlir

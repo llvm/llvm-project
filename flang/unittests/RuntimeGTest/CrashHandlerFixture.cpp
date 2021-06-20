@@ -28,7 +28,10 @@
 // Register the crash handler above when creating each unit test in this suite
 void CrashHandlerFixture::SetUp() {
   static bool isCrashHanlderRegistered{false};
-  if (!isCrashHanlderRegistered)
+
+  if (!isCrashHanlderRegistered) {
     Fortran::runtime::Terminator::RegisterCrashHandler(CatchCrash);
+  }
+
   isCrashHanlderRegistered = true;
 }

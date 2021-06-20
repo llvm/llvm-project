@@ -8899,10 +8899,6 @@ static QualType getDecltypeForExpr(Sema &S, Expr *E) {
   if (E->isTypeDependent())
     return S.Context.DependentTy;
 
-  Expr *IDExpr = E;
-  if (auto *ImplCastExpr = dyn_cast<ImplicitCastExpr>(E))
-    IDExpr = ImplCastExpr->getSubExpr();
-
   // C++11 [dcl.type.simple]p4:
   //   The type denoted by decltype(e) is defined as follows:
 
@@ -8913,7 +8909,7 @@ static QualType getDecltypeForExpr(Sema &S, Expr *E) {
   // Note that this does not pick up the implicit 'const' for a template
   // parameter object. This rule makes no difference before C++20 so we apply
   // it unconditionally.
-  if (const auto *SNTTPE = dyn_cast<SubstNonTypeTemplateParmExpr>(IDExpr))
+  if (const auto *SNTTPE = dyn_cast<SubstNonTypeTemplateParmExpr>(E))
     return SNTTPE->getParameterType(S.Context);
 
   //     - if e is an unparenthesized id-expression or an unparenthesized class
@@ -8922,22 +8918,21 @@ static QualType getDecltypeForExpr(Sema &S, Expr *E) {
   //       functions, the program is ill-formed;
   //
   // We apply the same rules for Objective-C ivar and property references.
-  if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(IDExpr)) {
+  if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E)) {
     const ValueDecl *VD = DRE->getDecl();
     if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(VD))
       return TPO->getType().getUnqualifiedType();
     return VD->getType();
-  } else if (const MemberExpr *ME = dyn_cast<MemberExpr>(IDExpr)) {
+  } else if (const MemberExpr *ME = dyn_cast<MemberExpr>(E)) {
     if (const ValueDecl *VD = ME->getMemberDecl())
       if (isa<FieldDecl>(VD) || isa<VarDecl>(VD))
         return VD->getType();
-  } else if (const ObjCIvarRefExpr *IR = dyn_cast<ObjCIvarRefExpr>(IDExpr)) {
+  } else if (const ObjCIvarRefExpr *IR = dyn_cast<ObjCIvarRefExpr>(E)) {
     return IR->getDecl()->getType();
-  } else if (const ObjCPropertyRefExpr *PR =
-                 dyn_cast<ObjCPropertyRefExpr>(IDExpr)) {
+  } else if (const ObjCPropertyRefExpr *PR = dyn_cast<ObjCPropertyRefExpr>(E)) {
     if (PR->isExplicitProperty())
       return PR->getExplicitProperty()->getType();
-  } else if (auto *PE = dyn_cast<PredefinedExpr>(IDExpr)) {
+  } else if (auto *PE = dyn_cast<PredefinedExpr>(E)) {
     return PE->getType();
   }
 
@@ -8950,8 +8945,8 @@ static QualType getDecltypeForExpr(Sema &S, Expr *E) {
   //   entity.
   using namespace sema;
   if (S.getCurLambda()) {
-    if (isa<ParenExpr>(IDExpr)) {
-      if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(IDExpr->IgnoreParens())) {
+    if (isa<ParenExpr>(E)) {
+      if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParens())) {
         if (VarDecl *Var = dyn_cast<VarDecl>(DRE->getDecl())) {
           QualType T = S.getCapturedDeclRefType(Var, DRE->getLocation());
           if (!T.isNull())

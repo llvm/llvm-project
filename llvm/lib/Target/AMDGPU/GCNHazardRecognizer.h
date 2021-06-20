@@ -48,6 +48,7 @@ private:
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;
   TargetSchedModel TSchedModel;
+  bool RunLdsBranchVmemWARHazardFixup;
 
   /// RegUnits of uses in the current soft memory clause.
   BitVector ClauseUses;

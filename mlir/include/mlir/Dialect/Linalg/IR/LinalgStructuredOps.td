@@ -178,7 +178,6 @@ def CopyOp : LinalgStructured_Op<"copy", [CopyOpInterface]> {
   }];
 
   let hasFolder = 1;
-  let hasCanonicalizer = 1;
   let skipDefaultBuilders = 1;
 }
 
@@ -230,7 +229,6 @@ def FillOp : LinalgStructured_Op<"fill", []> {
   let verifier = [{ return ::verify(*this); }];
 
   let hasFolder = 1;
-  let hasCanonicalizer = 1;
 }
 
 /// A base class for pooling operation such as conv. The arguments must contain
@@ -427,7 +425,6 @@ def ConvOp : PoolingBase_Op<"conv", []> {
   let verifier = [{ return ::verify(*this); }];
 
   let hasFolder = 1;
-  let hasCanonicalizer = 1;
 }
 
 // Only support buffer semantics.
@@ -490,7 +487,6 @@ class SingleInputPoolingBase_Op<string mnemonic>
   let verifier = [{ return ::verify(*this); }];
 
   let hasFolder = 1;
-  let hasCanonicalizer = 1;
 }
 
 def PoolingMaxOp: SingleInputPoolingBase_Op<"pooling_max"> {
@@ -673,7 +669,6 @@ def GenericOp : GenericOpBase<"generic"> {
   let verifier = [{ return ::verify(*this); }];
 
   let hasFolder = 1;
-  let hasCanonicalizer = 1;
 }
 
 /// GenericOp with Indexing (i.e. multi-for style in which the region is passed

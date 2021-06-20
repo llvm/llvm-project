@@ -244,7 +244,7 @@ public:
   std::unique_ptr<ScriptInterpreterLocker> AcquireInterpreterLock() override;
 
   void CollectDataForBreakpointCommandCallback(
-      std::vector<BreakpointOptions *> &bp_options_vec,
+      std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
       CommandReturnObject &result) override;
 
   void
@@ -252,20 +252,19 @@ public:
                                           CommandReturnObject &result) override;
 
   /// Set the callback body text into the callback for the breakpoint.
-  Status SetBreakpointCommandCallback(BreakpointOptions *bp_options,
+  Status SetBreakpointCommandCallback(BreakpointOptions &bp_options,
                                       const char *callback_body) override;
 
   Status SetBreakpointCommandCallbackFunction(
-      BreakpointOptions *bp_options,
-      const char *function_name,
+      BreakpointOptions &bp_options, const char *function_name,
       StructuredData::ObjectSP extra_args_sp) override;
 
   /// This one is for deserialization:
   Status SetBreakpointCommandCallback(
-      BreakpointOptions *bp_options,
+      BreakpointOptions &bp_options,
       std::unique_ptr<BreakpointOptions::CommandData> &data_up) override;
 
-  Status SetBreakpointCommandCallback(BreakpointOptions *bp_options,
+  Status SetBreakpointCommandCallback(BreakpointOptions &bp_options,
                                       const char *command_body_text,
                                       StructuredData::ObjectSP extra_args_sp,
                                       bool uses_extra_args);

@@ -141,6 +141,20 @@ TEST(XCOFFObjectFileTest, XCOFFTracebackTableAPIParmsType) {
   XCOFFTracebackTable TT3 = *TTOrErr3;
   ASSERT_TRUE(TT3.getParmsType());
   EXPECT_EQ(TT3.getParmsType().getValue(), "d, i, f, f");
+
+  V[6] = 0x04;
+  V[7] = 0x1E;
+  V[8] = 0xAC;
+  V[9] = 0xAA;
+  V[10] = 0xAA;
+  V[11] = 0xAA;
+  Size = sizeof(V);
+  Expected<XCOFFTracebackTable> TTOrErr4 = XCOFFTracebackTable::create(V, Size);
+  ASSERT_THAT_EXPECTED(TTOrErr4, Succeeded());
+  XCOFFTracebackTable TT4 = *TTOrErr4;
+  ASSERT_TRUE(TT4.getParmsType());
+  EXPECT_EQ(TT4.getParmsType().getValue(),
+            "f, f, d, i, i, f, f, f, f, f, f, f, f, f, f, f, f, ...");
 }
 
 const uint8_t TBTableData[] = {
@@ -205,7 +219,7 @@ TEST(XCOFFObjectFileTest, XCOFFTracebackTableAPIHasVectorInfo) {
   EXPECT_EQ(VecExt.getNumberOfVectorParms(), 2u);
   EXPECT_TRUE(VecExt.hasVMXInstruction());
 
-  EXPECT_EQ(VecExt.getVectorParmsInfoString(), "vf, vf");
+  EXPECT_EQ(VecExt.getVectorParmsInfo(), "vf, vf");
 
   ASSERT_TRUE(TT.getExtensionTable());
   EXPECT_EQ(TT.getExtensionTable().getValue(),
@@ -216,7 +230,7 @@ TEST(XCOFFObjectFileTest, XCOFFTracebackTableAPIHasVectorInfo) {
 
 TEST(XCOFFObjectFileTest, XCOFFTracebackTableAPIHasVectorInfo1) {
   const uint8_t TBTableData[] = {
-      0x00, 0x00, 0x2A, 0x40, 0x80, 0xc0, 0x03, 0x05, 0x48, 0xc0, 0x00, 0x00,
+      0x00, 0x00, 0x2A, 0x40, 0x80, 0xc0, 0x03, 0x05, 0x48, 0xc5, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x02, 0x05, 0x05, 0x00, 0x00,
       0x06, 0x06, 0x00, 0x00, 0x00, 0x07, 0x61, 0x64, 0x64, 0x5f, 0x61, 0x6c,
       0x6c, 0x11, 0x07, 0x90, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00};
@@ -227,7 +241,7 @@ TEST(XCOFFObjectFileTest, XCOFFTracebackTableAPIHasVectorInfo1) {
   XCOFFTracebackTable TT = *TTOrErr;
 
   ASSERT_TRUE(TT.getParmsType());
-  EXPECT_EQ(TT.getParmsType().getValue(), "v, i, f, i, d, i");
+  EXPECT_EQ(TT.getParmsType().getValue(), "v, i, f, i, d, i, v, v");
 
   ASSERT_TRUE(TT.getVectorExt());
   TBVectorExt VecExt = TT.getVectorExt().getValue();
@@ -239,7 +253,7 @@ TEST(XCOFFObjectFileTest, XCOFFTracebackTableAPIHasVectorInfo1) {
   EXPECT_EQ(VecExt.getNumberOfVectorParms(), 3u);
   EXPECT_TRUE(VecExt.hasVMXInstruction());
 
-  EXPECT_EQ(VecExt.getVectorParmsInfoString(), "vi, vs, vc");
+  EXPECT_EQ(VecExt.getVectorParmsInfo(), "vi, vs, vc");
 
   ASSERT_TRUE(TT.getExtensionTable());
   EXPECT_EQ(TT.getExtensionTable().getValue(),
@@ -495,4 +509,50 @@ TEST(XCOFFObjectFileTest, XCOFFGetCsectAuxRef64) {
   EXPECT_THAT_ERROR(
       ExpectErr.takeError(),
       FailedWithMessage("csect symbol \".data\" contains no auxiliary entry"));
+}
+
+TEST(XCOFFObjectFileTest, XCOFFTracebackTableErrorAtParameterType) {
+  const uint8_t TBTableData[] = {0x00, 0x00, 0x22, 0x40, 0x80, 0x00, 0x01,
+                                 0x05, 0x58, 0x00, 0x10, 0x00, 0x00, 0x00,
+                                 0x00, 0x40, 0x00, 0x07, 0x61, 0x64, 0x64,
+                                 0x5f, 0x61, 0x6c, 0x6c, 0x00, 0x00, 0x00};
+  uint64_t Size = 28;
+  Expected<XCOFFTracebackTable> TTOrErr =
+      XCOFFTracebackTable::create(TBTableData, Size);
+
+  EXPECT_THAT_ERROR(
+      TTOrErr.takeError(),
+      FailedWithMessage("ParmsType encodes can not map to ParmsNum parameters "
+                        "in parseParmsType."));
+}
+
+TEST(XCOFFObjectFileTest, XCOFFTracebackTableErrorAtParameterTypeWithVecInfo) {
+  const uint8_t TBTableData[] = {
+      0x00, 0x00, 0x2A, 0x40, 0x80, 0xc0, 0x03, 0x05, 0x48, 0xc0, 0x00, 0x10,
+      0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x02, 0x05, 0x05, 0x00, 0x00,
+      0x06, 0x06, 0x00, 0x00, 0x00, 0x07, 0x61, 0x64, 0x64, 0x5f, 0x61, 0x6c,
+      0x6c, 0x11, 0x07, 0x90, 0x00, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00};
+  uint64_t Size = 44;
+  Expected<XCOFFTracebackTable> TTOrErr =
+      XCOFFTracebackTable::create(TBTableData, Size);
+
+  EXPECT_THAT_ERROR(
+      TTOrErr.takeError(),
+      FailedWithMessage("ParmsType encodes can not map to ParmsNum parameters "
+                        "in parseParmsTypeWithVecInfo."));
+}
+
+TEST(XCOFFObjectFileTest, XCOFFTracebackTableErrorAtVecParameterType) {
+  const uint8_t TBTableData[] = {
+      0x00, 0x00, 0x2A, 0x40, 0x80, 0xc0, 0x03, 0x05, 0x48, 0xc0, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00, 0x02, 0x05, 0x05, 0x00, 0x00,
+      0x06, 0x06, 0x00, 0x00, 0x00, 0x07, 0x61, 0x64, 0x64, 0x5f, 0x61, 0x6c,
+      0x6c, 0x11, 0x07, 0x90, 0x00, 0x00, 0x20, 0x20, 0x00, 0x00, 0x00};
+  uint64_t Size = 44;
+  Expected<XCOFFTracebackTable> TTOrErr =
+      XCOFFTracebackTable::create(TBTableData, Size);
+
+  EXPECT_THAT_ERROR(TTOrErr.takeError(),
+                    FailedWithMessage("ParmsType encodes more than ParmsNum "
+                                      "parameters in parseVectorParmsType."));
 }

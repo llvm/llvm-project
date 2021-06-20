@@ -6,8 +6,6 @@
 ## It also checks that the last section in __LINKEDIT covers the last byte of
 ## the segment.
 
-## FIXME: Include LC_DATA_IN_CODE in this test when we add support for it.
-
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/foo.s -o %t/foo.o
 # RUN: %lld %t/foo.o -dylib -o %t/libfoo.dylib
 
@@ -38,6 +36,11 @@
 # CHECK:      cmd LC_FUNCTION_STARTS
 # CHECK-NEXT: cmdsize
 # CHECK-NEXT: dataoff [[#FUNCSTARTS_OFF: EXPORT_OFF + EXPORT_SIZE]]
+# CHECK-NEXT: datasize [[#FUNCSTARTS_SIZE:]]
+
+# CHECK:      cmd LC_DATA_IN_CODE
+# CHECK-NEXT: cmdsize
+# CHECK-NEXT: dataoff [[#DIC_OFF: FUNCSTARTS_OFF + FUNCSTARTS_SIZE]]
 
 # CHECK:      cmd LC_CODE_SIGNATURE
 # CHECK-NEXT: cmdsize 16
@@ -56,3 +59,8 @@ _main:
   callq _foo
   callq _weak_foo
   ret
+
+.p2align 2, 0x90
+.data_region jt32
+.long 0
+.end_data_region

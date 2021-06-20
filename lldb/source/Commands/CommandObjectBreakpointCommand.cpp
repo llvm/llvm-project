@@ -245,20 +245,18 @@ are no syntax errors may indicate that a function was declared but never called.
                               std::string &line) override {
     io_handler.SetIsDone(true);
 
-    std::vector<BreakpointOptions *> *bp_options_vec =
-        (std::vector<BreakpointOptions *> *)io_handler.GetUserData();
-    for (BreakpointOptions *bp_options : *bp_options_vec) {
-      if (!bp_options)
-        continue;
-
+    std::vector<std::reference_wrapper<BreakpointOptions>> *bp_options_vec =
+        (std::vector<std::reference_wrapper<BreakpointOptions>> *)
+            io_handler.GetUserData();
+    for (BreakpointOptions &bp_options : *bp_options_vec) {
       auto cmd_data = std::make_unique<BreakpointOptions::CommandData>();
       cmd_data->user_source.SplitIntoLines(line.c_str(), line.size());
-      bp_options->SetCommandDataCallback(cmd_data);
+      bp_options.SetCommandDataCallback(cmd_data);
     }
   }
 
   void CollectDataForBreakpointCommandCallback(
-      std::vector<BreakpointOptions *> &bp_options_vec,
+      std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
       CommandReturnObject &result) {
     m_interpreter.GetLLDBCommandsFromIOHandler(
         "> ",             // Prompt
@@ -268,16 +266,16 @@ are no syntax errors may indicate that a function was declared but never called.
   }
 
   /// Set a one-liner as the callback for the breakpoint.
-  void
-  SetBreakpointCommandCallback(std::vector<BreakpointOptions *> &bp_options_vec,
-                               const char *oneliner) {
-    for (auto bp_options : bp_options_vec) {
+  void SetBreakpointCommandCallback(
+      std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
+      const char *oneliner) {
+    for (BreakpointOptions &bp_options : bp_options_vec) {
       auto cmd_data = std::make_unique<BreakpointOptions::CommandData>();
 
       cmd_data->user_source.AppendString(oneliner);
       cmd_data->stop_on_error = m_options.m_stop_on_error;
 
-      bp_options->SetCommandDataCallback(cmd_data);
+      bp_options.SetCommandDataCallback(cmd_data);
     }
   }
 
@@ -400,20 +398,17 @@ protected:
         if (cur_bp_id.GetBreakpointID() != LLDB_INVALID_BREAK_ID) {
           Breakpoint *bp =
               target.GetBreakpointByID(cur_bp_id.GetBreakpointID()).get();
-          BreakpointOptions *bp_options = nullptr;
           if (cur_bp_id.GetLocationID() == LLDB_INVALID_BREAK_ID) {
             // This breakpoint does not have an associated location.
-            bp_options = bp->GetOptions();
+            m_bp_options_vec.push_back(bp->GetOptions());
           } else {
             BreakpointLocationSP bp_loc_sp(
                 bp->FindLocationByID(cur_bp_id.GetLocationID()));
             // This breakpoint does have an associated location. Get its
             // breakpoint options.
             if (bp_loc_sp)
-              bp_options = bp_loc_sp->GetLocationOptions();
+              m_bp_options_vec.push_back(bp_loc_sp->GetLocationOptions());
           }
-          if (bp_options)
-            m_bp_options_vec.push_back(bp_options);
         }
       }
 
@@ -456,9 +451,10 @@ private:
   OptionGroupPythonClassWithDict m_func_options;
   OptionGroupOptions m_all_options;
 
-  std::vector<BreakpointOptions *> m_bp_options_vec; // This stores the
-                                                     // breakpoint options that
-                                                     // we are currently
+  std::vector<std::reference_wrapper<BreakpointOptions>>
+      m_bp_options_vec; // This stores the
+                        // breakpoint options that
+                        // we are currently
   // collecting commands for.  In the CollectData... calls we need to hand this
   // off to the IOHandler, which may run asynchronously. So we have to have
   // some way to keep it alive, and not leak it. Making it an ivar of the
@@ -678,9 +674,9 @@ protected:
               baton =
                   bp_loc_sp
                       ->GetOptionsSpecifyingKind(BreakpointOptions::eCallback)
-                      ->GetBaton();
+                      .GetBaton();
             else
-              baton = bp->GetOptions()->GetBaton();
+              baton = bp->GetOptions().GetBaton();
 
             if (baton) {
               result.GetOutputStream().Printf("Breakpoint %s:\n",

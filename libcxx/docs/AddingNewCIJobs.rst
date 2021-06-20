@@ -17,7 +17,7 @@ If you need to run the job on your own machines, please follow the
 `Buildkite guide <https://buildkite.com/docs/agent/v3>`_ to setup your
 own agents. Make sure you tag your agents in a way that you'll be able
 to recognize them when defining your job below. Finally, in order for the
-agent to register itself to Buildkite, it will need a ``BUILDKITE_AGENT_TOKEN``.
+agent to register itself to Buildkite, it will need a BuildKite Agent token.
 Please contact a maintainer to get your token.
 
 Then, simply add a job to the Buildkite pipeline by editing ``libcxx/utils/ci/buildkite-pipeline.yml``.

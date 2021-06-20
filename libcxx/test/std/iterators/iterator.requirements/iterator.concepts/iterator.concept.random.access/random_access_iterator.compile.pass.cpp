@@ -18,12 +18,12 @@
 #include "test_iterators.h"
 #include "test_macros.h"
 
-static_assert(!std::random_access_iterator<cpp17_input_iterator<int*> >);
-static_assert(!std::random_access_iterator<cpp20_input_iterator<int*> >);
-static_assert(!std::random_access_iterator<forward_iterator<int*> >);
-static_assert(!std::random_access_iterator<bidirectional_iterator<int*> >);
-static_assert( std::random_access_iterator<random_access_iterator<int*> >);
-static_assert( std::random_access_iterator<contiguous_iterator<int*> >);
+static_assert(!std::random_access_iterator<cpp17_input_iterator<int*>>);
+static_assert(!std::random_access_iterator<cpp20_input_iterator<int*>>);
+static_assert(!std::random_access_iterator<forward_iterator<int*>>);
+static_assert(!std::random_access_iterator<bidirectional_iterator<int*>>);
+static_assert( std::random_access_iterator<random_access_iterator<int*>>);
+static_assert( std::random_access_iterator<contiguous_iterator<int*>>);
 
 static_assert(std::random_access_iterator<int*>);
 static_assert(std::random_access_iterator<int const*>);
@@ -40,11 +40,7 @@ struct wrong_iterator_category {
 
     reference operator*() const;
     pointer operator->() const;
-    friend bool operator==(const self&, const self&);
-    friend bool operator< (const self&, const self&);
-    friend bool operator<=(const self&, const self&);
-    friend bool operator> (const self&, const self&);
-    friend bool operator>=(const self&, const self&);
+    auto operator<=>(const self&) const = default;
 
     self& operator++();
     self operator++(int);
@@ -76,143 +72,113 @@ struct common_base {
 
     reference operator*() const;
     pointer operator->() const;
-    friend bool operator==(const self&, const self&);
-    friend bool operator< (const self&, const self&);
-    friend bool operator<=(const self&, const self&);
-    friend bool operator> (const self&, const self&);
-    friend bool operator>=(const self&, const self&);
-
     self& operator++();
     self operator++(int);
-
     self& operator--();
     self operator--(int);
+    auto operator<=>(const common_base&) const = default;
 };
 
-struct simple_random_access_iterator
-  : common_base<simple_random_access_iterator> {
-
+struct simple_random_access_iterator : common_base<simple_random_access_iterator> {
     self& operator+=(difference_type n);
     self operator+(difference_type n) const;
     friend self operator+(difference_type n, self x);
-
     self& operator-=(difference_type n);
     self operator-(difference_type n) const;
     difference_type operator-(const self&) const;
-
     reference operator[](difference_type n) const;
+    auto operator<=>(const self&) const = default;
 };
 static_assert(std::bidirectional_iterator<simple_random_access_iterator>);
 static_assert(std::random_access_iterator<simple_random_access_iterator>);
 
-struct no_plus_equals
-  : common_base<no_plus_equals> {
-
+struct no_plus_equals : common_base<no_plus_equals> {
  /* self& operator+=(difference_type n); */
     self operator+(difference_type n) const;
     friend self operator+(difference_type n, self x);
-
     self& operator-=(difference_type n);
     self operator-(difference_type n) const;
     difference_type operator-(const self&) const;
-
     reference operator[](difference_type n) const;
+    auto operator<=>(const self&) const = default;
 };
 static_assert( std::bidirectional_iterator<no_plus_equals>);
 static_assert(!std::random_access_iterator<no_plus_equals>);
 
-struct no_plus_difference_type
-  : common_base<no_plus_difference_type> {
-
+struct no_plus_difference_type : common_base<no_plus_difference_type> {
     self& operator+=(difference_type n);
  /* self operator+(difference_type n) const; */
     friend self operator+(difference_type n, self x);
-
     self& operator-=(difference_type n);
     self operator-(difference_type n) const;
     difference_type operator-(const self&) const;
-
     reference operator[](difference_type n) const;
+    auto operator<=>(const self&) const = default;
 };
 static_assert( std::bidirectional_iterator<no_plus_difference_type>);
 static_assert(!std::random_access_iterator<no_plus_difference_type>);
 
-struct difference_type_no_plus
-  : common_base<difference_type_no_plus> {
-
+struct difference_type_no_plus : common_base<difference_type_no_plus> {
     self& operator+=(difference_type n);
     self operator+(difference_type n) const;
  /* friend self operator+(difference_type n, self x); */
-
     self& operator-=(difference_type n);
     self operator-(difference_type n) const;
     difference_type operator-(const self&) const;
-
     reference operator[](difference_type n) const;
+    auto operator<=>(const self&) const = default;
 };
 static_assert( std::bidirectional_iterator<difference_type_no_plus>);
 static_assert(!std::random_access_iterator<difference_type_no_plus>);
 
-struct no_minus_equals
-  : common_base<no_minus_equals> {
-
+struct no_minus_equals : common_base<no_minus_equals> {
     self& operator+=(difference_type n);
     self operator+(difference_type n) const;
     friend self operator+(difference_type n, self x);
-
  /* self& operator-=(difference_type n); */
     self operator-(difference_type n) const;
     difference_type operator-(const self&) const;
-
     reference operator[](difference_type n) const;
+    auto operator<=>(const self&) const = default;
 };
 static_assert( std::bidirectional_iterator<no_minus_equals>);
 static_assert(!std::random_access_iterator<no_minus_equals>);
 
-struct no_minus
-  : common_base<no_minus> {
-
+struct no_minus : common_base<no_minus> {
     self& operator+=(difference_type n);
     self operator+(difference_type n) const;
     friend self operator+(difference_type n, self x);
-
     self& operator-=(difference_type n);
  /* self operator-(difference_type n) const; */
     difference_type operator-(const self&) const;
-
     reference operator[](difference_type n) const;
+    auto operator<=>(const self&) const = default;
 };
 static_assert( std::bidirectional_iterator<no_minus>);
 static_assert(!std::random_access_iterator<no_minus>);
 
-struct not_sized_sentinel
-  : common_base<not_sized_sentinel> {
-
+struct not_sized_sentinel : common_base<not_sized_sentinel> {
     self& operator+=(difference_type n);
     self operator+(difference_type n) const;
     friend self operator+(difference_type n, self x);
-
     self& operator-=(difference_type n);
     self operator-(difference_type n) const;
  /* difference_type operator-(const self&) const; */
-
     reference operator[](difference_type n) const;
+    auto operator<=>(const self&) const = default;
 };
 static_assert( std::bidirectional_iterator<not_sized_sentinel>);
 static_assert(!std::random_access_iterator<not_sized_sentinel>);
 
-struct no_subscript
-  : common_base<no_subscript> {
-
+struct no_subscript : common_base<no_subscript> {
     self& operator+=(difference_type n);
     self operator+(difference_type n) const;
     friend self operator+(difference_type n, self x);
-
     self& operator-=(difference_type n);
     self operator-(difference_type n) const;
     difference_type operator-(const self&) const;
-
  /* reference operator[](difference_type n) const; */
+    auto operator<=>(const self&) const = default;
 };
 static_assert( std::bidirectional_iterator<no_subscript>);
 static_assert(!std::random_access_iterator<no_subscript>);

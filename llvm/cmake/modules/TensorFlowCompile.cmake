@@ -32,7 +32,8 @@ function(tfcompile model tag_set signature_def_key fname cpp_class)
     tfgetmodel(${model} LLVM_ML_MODELS_ABSOLUTE)
     message("Using model at " ${LLVM_ML_MODELS_ABSOLUTE})
     add_custom_command(OUTPUT ${obj_file} ${hdr_file}
-      COMMAND "XLA_FLAGS=\"--xla_cpu_multi_thread_eigen=false\"" ${TENSORFLOW_AOT_COMPILER} aot_compile_cpu
+      COMMAND ${TENSORFLOW_AOT_COMPILER} aot_compile_cpu
+            --multithreading false
             --dir ${LLVM_ML_MODELS_ABSOLUTE}
             --tag_set ${tag_set}
             --signature_def_key ${signature_def_key}

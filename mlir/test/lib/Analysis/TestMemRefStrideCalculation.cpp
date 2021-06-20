@@ -15,6 +15,12 @@ using namespace mlir;
 namespace {
 struct TestMemRefStrideCalculation
     : public PassWrapper<TestMemRefStrideCalculation, FunctionPass> {
+  StringRef getArgument() const final {
+    return "test-memref-stride-calculation";
+  }
+  StringRef getDescription() const final {
+    return "Test operation constant folding";
+  }
   void runOnFunction() override;
 };
 } // end anonymous namespace
@@ -51,8 +57,7 @@ void TestMemRefStrideCalculation::runOnFunction() {
 namespace mlir {
 namespace test {
 void registerTestMemRefStrideCalculation() {
-  PassRegistration<TestMemRefStrideCalculation> pass(
-      "test-memref-stride-calculation", "Test operation constant folding");
+  PassRegistration<TestMemRefStrideCalculation>();
 }
 } // namespace test
 } // namespace mlir

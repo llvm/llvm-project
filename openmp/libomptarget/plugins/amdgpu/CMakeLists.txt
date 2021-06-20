@@ -75,7 +75,9 @@ target_link_libraries(
   PRIVATE
   elf_common
   hsa-runtime64::hsa-runtime64
-  pthread dl elf
+  dl
+  ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES}
+  ${OPENMP_PTHREAD_LIB}
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
   "-Wl,-z,defs"
   )

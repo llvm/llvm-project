@@ -295,11 +295,11 @@ struct Procedure {
   bool operator==(const Procedure &) const;
   bool operator!=(const Procedure &that) const { return !(*this == that); }
 
-  // Characterizes the procedure represented by a symbol, which may be an
+  // Characterizes a procedure.  If a Symbol, it may be an
   // "unrestricted specific intrinsic function".
+  // Error messages are produced when a procedure cannot be characterized.
   static std::optional<Procedure> Characterize(
       const semantics::Symbol &, FoldingContext &);
-  // This function is the initial point of entry for characterizing procedure
   static std::optional<Procedure> Characterize(
       const ProcedureDesignator &, FoldingContext &);
   static std::optional<Procedure> Characterize(

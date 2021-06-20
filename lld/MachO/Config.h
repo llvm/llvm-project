@@ -104,6 +104,7 @@ struct Configuration {
   bool adhocCodesign = false;
   bool emitFunctionStarts = false;
   bool emitBitcodeBundle = false;
+  bool emitDataInCodeInfo = false;
   bool emitEncryptionInfo = false;
   bool timeTraceEnabled = false;
   bool dataConst = false;

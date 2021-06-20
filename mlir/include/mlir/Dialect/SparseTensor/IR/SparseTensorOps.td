@@ -58,9 +58,9 @@ def SparseTensor_ToPointersOp : SparseTensor_Op<"pointers", [NoSideEffect]>,
   let description = [{
      Returns the pointers array of the sparse storage scheme at the
      given dimension for the given sparse tensor. This is similar to the
-     `buffer_cast` operation in the sense that it provides a bridge
+     `memref.buffer_cast` operation in the sense that it provides a bridge
      between a tensor world view and a bufferized world view. Unlike the
-     `buffer_cast` operation, however, this sparse operation actually
+     `memref.buffer_cast` operation, however, this sparse operation actually
      lowers into a call into a support library to obtain access to the
      pointers array.
 
@@ -82,9 +82,9 @@ def SparseTensor_ToIndicesOp : SparseTensor_Op<"indices", [NoSideEffect]>,
   let description = [{
      Returns the indices array of the sparse storage scheme at the
      given dimension for the given sparse tensor. This is similar to the
-     `buffer_cast` operation in the sense that it provides a bridge
+     `memref.buffer_cast` operation in the sense that it provides a bridge
      between a tensor world view and a bufferized world view. Unlike the
-     `buffer_cast` operation, however, this sparse operation actually
+     `memref.buffer_cast` operation, however, this sparse operation actually
      lowers into a call into a support library to obtain access to the
      indices array.
 
@@ -106,9 +106,9 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [NoSideEffect]>,
   let description = [{
      Returns the values array of the sparse storage scheme for the given
      sparse tensor, independent of the actual dimension. This is similar to
-     the `buffer_cast` operation in the sense that it provides a bridge
+     the `memref.buffer_cast` operation in the sense that it provides a bridge
      between a tensor world view and a bufferized world view. Unlike the
-     `buffer_cast` operation, however, this sparse operation actually
+     `memref.buffer_cast` operation, however, this sparse operation actually
      lowers into a call into a support library to obtain access to the
      values array.
 
@@ -119,6 +119,35 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [NoSideEffect]>,
     ```
   }];
   let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($result)";
+}
+
+def SparseTensor_ToTensorOp : SparseTensor_Op<"tensor", [NoSideEffect]>,
+    Arguments<(ins Variadic<AnyStridedMemRefOfRank<1>>:$memrefs)>,
+    Results<(outs AnyTensor:$result)> {
+  let summary = "Reconstructs tensor from arrays(s)";
+  let description = [{
+    Reconstructs the sparse tensor from the sparse storage scheme array(s).
+    This is similar to the `memref.load` operation in the sense that it
+    provides a bridge between a bufferized world view and a tensor world
+    view. Unlike the `memref.load` operation, however, this sparse operation
+    is used only temporarily to maintain a correctly typed intermediate
+    representation during progressive bufferization. Eventually the operation
+    is folded away.
+
+    The input arrays are defined unambigously by the sparsity annotations
+    (pointers and indices for overhead storage in every compressed dimension,
+    followed by one final values array).
+
+    Examples:
+
+    ```mlir
+    %1 = sparse_tensor.tensor %0 : memref<?xf64> to tensor<64x64xf64, #Dense>
+
+    %3 = sparse_tensor.tensor %0, %1, %2 :
+       memref<?xindex>, memref<?xindex>, memref<?xf32> to tensor<10x10xf32, #CSR>
+    ```
+  }];
+  let assemblyFormat = "$memrefs attr-dict `:` type($memrefs) `to` type($result)";
 }
 
 #endif // SPARSETENSOR_OPS

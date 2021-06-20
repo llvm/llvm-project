@@ -2514,6 +2514,12 @@ LLVMTypeRef LLVMIntrinsicGetType(LLVMContextRef Ctx, unsigned ID,
  */
 const char *LLVMIntrinsicGetName(unsigned ID, size_t *NameLength);
 
+/** Deprecated: Use LLVMIntrinsicCopyOverloadedName2 instead. */
+const char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
+                                            LLVMTypeRef *ParamTypes,
+                                            size_t ParamCount,
+                                            size_t *NameLength);
+
 /**
  * Copies the name of an overloaded intrinsic identified by a given list of
  * parameter types.
@@ -2521,12 +2527,14 @@ const char *LLVMIntrinsicGetName(unsigned ID, size_t *NameLength);
  * Unlike LLVMIntrinsicGetName, the caller is responsible for freeing the
  * returned string.
  *
+ * This version also supports unnamed types.
+ *
  * @see llvm::Intrinsic::getName()
  */
-const char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
-                                            LLVMTypeRef *ParamTypes,
-                                            size_t ParamCount,
-                                            size_t *NameLength);
+const char *LLVMIntrinsicCopyOverloadedName2(LLVMModuleRef Mod, unsigned ID,
+                                             LLVMTypeRef *ParamTypes,
+                                             size_t ParamCount,
+                                             size_t *NameLength);
 
 /**
  * Obtain if the intrinsic identified by the given ID is overloaded.

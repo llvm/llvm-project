@@ -407,7 +407,7 @@ class RegisterCommandsTestCase(TestBase):
                     has_avx = True
                 # Darwin reports AVX registers as part of "Floating Point Registers"
                 elif self.platformIsDarwin() and 'floating point registers' in set_name:
-                    has_avx = registerSet.GetFirstValueByName('ymm0').IsValid()
+                    has_avx = registerSet.GetChildMemberWithName('ymm0').IsValid()
 
                 # FreeBSD/NetBSD reports missing register sets differently
                 # at the moment and triggers false positive here.

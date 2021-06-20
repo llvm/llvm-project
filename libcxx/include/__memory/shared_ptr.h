@@ -1594,11 +1594,20 @@ template <class _Tp = void> struct owner_less;
 template <class _Tp> struct owner_less;
 #endif
 
+
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS owner_less<shared_ptr<_Tp> >
+#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
     : binary_function<shared_ptr<_Tp>, shared_ptr<_Tp>, bool>
+#endif
 {
-    typedef bool result_type;
+_LIBCPP_SUPPRESS_DEPRECATED_POP
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+    _LIBCPP_DEPRECATED_IN_CXX17 typedef bool result_type;
+    _LIBCPP_DEPRECATED_IN_CXX17 typedef shared_ptr<_Tp> first_argument_type;
+    _LIBCPP_DEPRECATED_IN_CXX17 typedef shared_ptr<_Tp> second_argument_type;
+#endif
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(shared_ptr<_Tp> const& __x, shared_ptr<_Tp> const& __y) const _NOEXCEPT
         {return __x.owner_before(__y);}
@@ -1610,11 +1619,19 @@ struct _LIBCPP_TEMPLATE_VIS owner_less<shared_ptr<_Tp> >
         {return __x.owner_before(__y);}
 };
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS owner_less<weak_ptr<_Tp> >
+#if !defined(_LIBCPP_ABI_NO_BINDER_BASES)
     : binary_function<weak_ptr<_Tp>, weak_ptr<_Tp>, bool>
+#endif
 {
-    typedef bool result_type;
+_LIBCPP_SUPPRESS_DEPRECATED_POP
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+    _LIBCPP_DEPRECATED_IN_CXX17 typedef bool result_type;
+    _LIBCPP_DEPRECATED_IN_CXX17 typedef weak_ptr<_Tp> first_argument_type;
+    _LIBCPP_DEPRECATED_IN_CXX17 typedef weak_ptr<_Tp> second_argument_type;
+#endif
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(  weak_ptr<_Tp> const& __x,   weak_ptr<_Tp> const& __y) const _NOEXCEPT
         {return __x.owner_before(__y);}
@@ -1690,11 +1707,13 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS hash;
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS hash<shared_ptr<_Tp> >
 {
-    typedef shared_ptr<_Tp>      argument_type;
-    typedef size_t               result_type;
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS)
+    _LIBCPP_DEPRECATED_IN_CXX17 typedef shared_ptr<_Tp> argument_type;
+    _LIBCPP_DEPRECATED_IN_CXX17 typedef size_t          result_type;
+#endif
 
     _LIBCPP_INLINE_VISIBILITY
-    result_type operator()(const argument_type& __ptr) const _NOEXCEPT
+    size_t operator()(const shared_ptr<_Tp>& __ptr) const _NOEXCEPT
     {
         return hash<typename shared_ptr<_Tp>::element_type*>()(__ptr.get());
     }

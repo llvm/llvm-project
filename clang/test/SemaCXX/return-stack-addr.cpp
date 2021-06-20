@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected,cxx2b          %s
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx11_20       %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify=expected,cxx11_20,cxx11 %s
+// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected       %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected       %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify=expected,cxx11 %s
 
 int* ret_local() {
   int x = 1;
@@ -29,8 +29,7 @@ int* ret_local_array_element_const_index() {
 
 int& ret_local_ref() {
   int x = 1;
-  return x; // cxx11_20-warning {{reference to stack memory}}
-  // cxx2b-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
+  return x;  // expected-warning {{reference to stack memory}}
 }
 
 int* ret_local_addrOf() {
@@ -155,10 +154,8 @@ void ret_from_lambda() {
   (void) [&]() -> int& { return b; };
   (void) [=]() mutable -> int& { return a; };
   (void) [=]() mutable -> int& { return b; };
-  (void) [&]() -> int& { int a; return a; }; // cxx11_20-warning {{reference to stack}}
-  // cxx2b-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
-  (void) [=]() -> int& { int a; return a; }; // cxx11_20-warning {{reference to stack}}
-  // cxx2b-error@-1 {{non-const lvalue reference to type 'int' cannot bind to a temporary of type 'int'}}
+  (void) [&]() -> int& { int a; return a; }; // expected-warning {{reference to stack}}
+  (void) [=]() -> int& { int a; return a; }; // expected-warning {{reference to stack}}
   (void) [&]() -> int& { int &a = b; return a; };
   (void) [=]() mutable -> int& { int &a = b; return a; };
 

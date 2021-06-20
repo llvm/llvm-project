@@ -56,7 +56,7 @@ inline void registerMLIRPassesForFortranTools() {
   mlir::registerPrintOpStatsPass();
   mlir::registerInlinerPass();
   mlir::registerSCCPPass();
-  mlir::registerMemRefDataFlowOptPass();
+  mlir::registerAffineScalarReplacementPass();
   mlir::registerSymbolDCEPass();
   mlir::registerLocationSnapshotPass();
   mlir::registerAffinePipelineDataTransferPass();

@@ -110,6 +110,18 @@ public:
   uint64_t outSecOff = 0;
 };
 
+// Helper functions to make it easy to sprinkle asserts.
+
+inline bool shouldOmitFromOutput(InputSection *isec) {
+  return isa<ConcatInputSection>(isec) &&
+         cast<ConcatInputSection>(isec)->shouldOmitFromOutput();
+}
+
+inline bool isCoalescedWeak(InputSection *isec) {
+  return isa<ConcatInputSection>(isec) &&
+         cast<ConcatInputSection>(isec)->isCoalescedWeak();
+}
+
 // We allocate a lot of these and binary search on them, so they should be as
 // compact as possible. Hence the use of 31 rather than 64 bits for the hash.
 struct StringPiece {
@@ -239,6 +251,7 @@ constexpr const char debugInfo[] = "__debug_info";
 constexpr const char debugStr[] = "__debug_str";
 constexpr const char ehFrame[] = "__eh_frame";
 constexpr const char export_[] = "__export";
+constexpr const char dataInCode[] = "__data_in_code";
 constexpr const char functionStarts[] = "__func_starts";
 constexpr const char got[] = "__got";
 constexpr const char header[] = "__mach_header";

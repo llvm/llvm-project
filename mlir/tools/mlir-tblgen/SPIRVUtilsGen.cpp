@@ -227,6 +227,8 @@ static void emitModelDecl(const Availability &availability, raw_ostream &os) {
        << "    }\n"
        << "  };\n";
   }
+  os << "  template<typename ConcreteModel, typename ConcreteOp>\n";
+  os << "  class ExternalModel : public FallbackModel<ConcreteOp> {};\n";
 }
 
 static void emitInterfaceDecl(const Availability &availability,

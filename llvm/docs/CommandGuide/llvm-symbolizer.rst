@@ -359,7 +359,7 @@ OPTIONS
 
   .. code-block:: console
 
-    $ llvm-symbolizer --obj=test.elf 0x400490 --print-source-context-lines=2
+    $ llvm-symbolizer --obj=test.elf 0x400490 --print-source-context-lines=3
     baz()
     /tmp/test.cpp:11:0
     10  :   volatile int k = 42;

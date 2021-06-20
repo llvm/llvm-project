@@ -20,6 +20,7 @@ class LinuxCoreTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     _aarch64_pid = 37688
+    _aarch64_pac_pid = 387
     _i386_pid = 32306
     _x86_64_pid = 32259
     _s390x_pid = 1045
@@ -254,6 +255,18 @@ class LinuxCoreTestCase(TestBase):
         self.assertEqual(mod_path, exe_inside)
         self.check_all(process, self._x86_64_pid,
                        self._x86_64_regions, "a.out")
+
+        self.dbg.DeleteTarget(target)
+
+    @skipIfLLVMTargetMissing("AArch64")
+    def test_aarch64_pac(self):
+        """Test that lldb can unwind stack for AArch64 elf core file with PAC enabled."""
+
+        target = self.dbg.CreateTarget("linux-aarch64-pac.out")
+        self.assertTrue(target, VALID_TARGET)
+        process = target.LoadCore("linux-aarch64-pac.core")
+
+        self.check_all(process, self._aarch64_pac_pid, self._aarch64_regions, "a.out")
 
         self.dbg.DeleteTarget(target)
 

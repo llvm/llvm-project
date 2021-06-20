@@ -173,17 +173,13 @@ int __asan_address_is_poisoned(void const volatile *addr) {
 }
 
 uptr __asan_region_is_poisoned(uptr beg, uptr size) {
-  if (!size) return 0;
+  if (!size)
+    return 0;
   uptr end = beg + size;
-  if (SANITIZER_MYRIAD2) {
-    // On Myriad, address not in DRAM range need to be treated as
-    // unpoisoned.
-    if (!AddrIsInMem(beg) && !AddrIsInShadow(beg)) return 0;
-    if (!AddrIsInMem(end) && !AddrIsInShadow(end)) return 0;
-  } else {
-    if (!AddrIsInMem(beg)) return beg;
-    if (!AddrIsInMem(end)) return end;
-  }
+  if (!AddrIsInMem(beg))
+    return beg;
+  if (!AddrIsInMem(end))
+    return end;
   CHECK_LT(beg, end);
   uptr aligned_b = RoundUpTo(beg, SHADOW_GRANULARITY);
   uptr aligned_e = RoundDownTo(end, SHADOW_GRANULARITY);
@@ -192,8 +188,7 @@ uptr __asan_region_is_poisoned(uptr beg, uptr size) {
   // First check the first and the last application bytes,
   // then check the SHADOW_GRANULARITY-aligned region by calling
   // mem_is_zero on the corresponding shadow.
-  if (!__asan::AddressIsPoisoned(beg) &&
-      !__asan::AddressIsPoisoned(end - 1) &&
+  if (!__asan::AddressIsPoisoned(beg) && !__asan::AddressIsPoisoned(end - 1) &&
       (shadow_end <= shadow_beg ||
        __sanitizer::mem_is_zero((const char *)shadow_beg,
                                 shadow_end - shadow_beg)))

@@ -1357,9 +1357,11 @@ CompilerType TypeSystemClang::CreateRecordType(
 }
 
 namespace {
-  bool IsValueParam(const clang::TemplateArgument &argument) {
-    return argument.getKind() == TemplateArgument::Integral;
-  }
+/// Returns true iff the given TemplateArgument should be represented as an
+/// NonTypeTemplateParmDecl in the AST.
+bool IsValueParam(const clang::TemplateArgument &argument) {
+  return argument.getKind() == TemplateArgument::Integral;
+}
 }
 
 static TemplateParameterList *CreateTemplateParameterList(
@@ -1463,6 +1465,99 @@ void TypeSystemClang::CreateFunctionTemplateSpecializationInfo(
                                                template_args_ptr, nullptr);
 }
 
+/// Returns true if the given template parameter can represent the given value.
+/// For example, `typename T` can represent `int` but not integral values such
+/// as `int I = 3`.
+static bool TemplateParameterAllowsValue(NamedDecl *param,
+                                         const TemplateArgument &value) {
+  if (auto *type_param = llvm::dyn_cast<TemplateTypeParmDecl>(param)) {
+    // Compare the argument kind, i.e. ensure that <typename> != <int>.
+    if (value.getKind() != TemplateArgument::Type)
+      return false;
+  } else if (auto *type_param =
+                 llvm::dyn_cast<NonTypeTemplateParmDecl>(param)) {
+    // Compare the argument kind, i.e. ensure that <typename> != <int>.
+    if (!IsValueParam(value))
+      return false;
+    // Compare the integral type, i.e. ensure that <int> != <char>.
+    if (type_param->getType() != value.getIntegralType())
+      return false;
+  } else {
+    // There is no way to create other parameter decls at the moment, so we
+    // can't reach this case during normal LLDB usage. Log that this happened
+    // and assert.
+    Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
+    LLDB_LOG(log,
+             "Don't know how to compare template parameter to passed"
+             " value. Decl kind of parameter is: {0}",
+             param->getDeclKindName());
+    lldbassert(false && "Can't compare this TemplateParmDecl subclass");
+    // In release builds just fall back to marking the parameter as not
+    // accepting the value so that we don't try to fit an instantiation to a
+    // template that doesn't fit. E.g., avoid that `S<1>` is being connected to
+    // `template<typename T> struct S;`.
+    return false;
+  }
+  return true;
+}
+
+/// Returns true if the given class template declaration could produce an
+/// instantiation with the specified values.
+/// For example, `<typename T>` allows the arguments `float`, but not for
+/// example `bool, float` or `3` (as an integer parameter value).
+static bool ClassTemplateAllowsToInstantiationArgs(
+    ClassTemplateDecl *class_template_decl,
+    const TypeSystemClang::TemplateParameterInfos &instantiation_values) {
+
+  TemplateParameterList &params = *class_template_decl->getTemplateParameters();
+
+  // Save some work by iterating only once over the found parameters and
+  // calculate the information related to parameter packs.
+
+  // Contains the first pack parameter (or non if there are none).
+  llvm::Optional<NamedDecl *> pack_parameter;
+  // Contains the number of non-pack parameters.
+  size_t non_pack_params = params.size();
+  for (size_t i = 0; i < params.size(); ++i) {
+    NamedDecl *param = params.getParam(i);
+    if (param->isParameterPack()) {
+      pack_parameter = param;
+      non_pack_params = i;
+      break;
+    }
+  }
+
+  // The found template needs to have compatible non-pack template arguments.
+  // E.g., ensure that <typename, typename> != <typename>.
+  // The pack parameters are compared later.
+  if (non_pack_params != instantiation_values.args.size())
+    return false;
+
+  // Ensure that <typename...> != <typename>.
+  if (pack_parameter.hasValue() != instantiation_values.hasParameterPack())
+    return false;
+
+  // Compare the first pack parameter that was found with the first pack
+  // parameter value. The special case of having an empty parameter pack value
+  // always fits to a pack parameter.
+  // E.g., ensure that <int...> != <typename...>.
+  if (pack_parameter && !instantiation_values.packed_args->args.empty() &&
+      !TemplateParameterAllowsValue(
+          *pack_parameter, instantiation_values.packed_args->args.front()))
+    return false;
+
+  // Compare all the non-pack parameters now.
+  // E.g., ensure that <int> != <long>.
+  for (const auto pair : llvm::zip_first(instantiation_values.args, params)) {
+    const TemplateArgument &passed_arg = std::get<0>(pair);
+    NamedDecl *found_param = std::get<1>(pair);
+    if (!TemplateParameterAllowsValue(found_param, passed_arg))
+      return false;
+  }
+
+  return class_template_decl;
+}
+
 ClassTemplateDecl *TypeSystemClang::CreateClassTemplateDecl(
     DeclContext *decl_ctx, OptionalClangModuleID owning_module,
     lldb::AccessType access_type, const char *class_name, int kind,
@@ -1476,12 +1571,22 @@ ClassTemplateDecl *TypeSystemClang::CreateClassTemplateDecl(
   IdentifierInfo &identifier_info = ast.Idents.get(class_name);
   DeclarationName decl_name(&identifier_info);
 
+  // Search the AST for an existing ClassTemplateDecl that could be reused.
   clang::DeclContext::lookup_result result = decl_ctx->lookup(decl_name);
-
   for (NamedDecl *decl : result) {
     class_template_decl = dyn_cast<clang::ClassTemplateDecl>(decl);
-    if (class_template_decl)
-      return class_template_decl;
+    if (!class_template_decl)
+      continue;
+    // The class template has to be able to represents the instantiation
+    // values we received. Without this we might end up putting an instantiation
+    // with arguments such as <int, int> to a template such as:
+    //     template<typename T> struct S;
+    // Connecting the instantiation to an incompatible template could cause
+    // problems later on.
+    if (!ClassTemplateAllowsToInstantiationArgs(class_template_decl,
+                                                template_param_infos))
+      continue;
+    return class_template_decl;
   }
 
   llvm::SmallVector<NamedDecl *, 8> template_param_decls;

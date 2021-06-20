@@ -1091,7 +1091,6 @@ __kmp_acquire_queuing_lock_timed_template(kmp_queuing_lock_t *lck,
   volatile kmp_int32 *head_id_p = &lck->lk.head_id;
   volatile kmp_int32 *tail_id_p = &lck->lk.tail_id;
   volatile kmp_uint32 *spin_here_p;
-  kmp_int32 need_mf = 1;
 
 #if OMPT_SUPPORT
   ompt_state_t prev_state = ompt_state_undefined;
@@ -1142,7 +1141,6 @@ __kmp_acquire_queuing_lock_timed_template(kmp_queuing_lock_t *lck,
                 if ( t > 0 ) condition in the enqueued case below, which is not
                 necessary for this state transition */
 
-      need_mf = 0;
       /* try (-1,0)->(tid,tid) */
       enqueued = KMP_COMPARE_AND_STORE_ACQ64((volatile kmp_int64 *)tail_id_p,
                                              KMP_PACK_64(-1, 0),
@@ -1164,7 +1162,6 @@ __kmp_acquire_queuing_lock_timed_template(kmp_queuing_lock_t *lck,
       if (tail == 0) {
         enqueued = FALSE;
       } else {
-        need_mf = 0;
         /* try (h,t) or (h,h)->(h,tid) */
         enqueued = KMP_COMPARE_AND_STORE_ACQ32(tail_id_p, tail, gtid + 1);
 

@@ -501,9 +501,7 @@ void HWAddressSanitizer::initializeModule() {
 
   // x86_64 currently has two modes:
   // - Intel LAM (default)
-  // - pointer aliasing
-  // Pointer aliasing mode is heap only.  LAM mode is heap+stack, with support
-  // planned for globals as well.
+  // - pointer aliasing (heap only)
   bool IsX86_64 = TargetTriple.getArch() == Triple::x86_64;
   UsePageAliases = ClUsePageAliases && IsX86_64;
   InstrumentWithCalls = IsX86_64 ? true : ClInstrumentWithCalls;
@@ -554,8 +552,7 @@ void HWAddressSanitizer::initializeModule() {
     bool InstrumentGlobals =
         ClGlobals.getNumOccurrences() ? ClGlobals : NewRuntime;
 
-    // TODO: Support globals for x86_64 in non-aliasing mode.
-    if (InstrumentGlobals && !IsX86_64)
+    if (InstrumentGlobals && !UsePageAliases)
       instrumentGlobals();
 
     bool InstrumentPersonalityFunctions =
@@ -1494,7 +1491,7 @@ void HWAddressSanitizer::instrumentGlobals() {
   Hasher.update(M.getSourceFileName());
   MD5::MD5Result Hash;
   Hasher.final(Hash);
-  uint8_t Tag = Hash[0];
+  uint8_t Tag = Hash[0] & TagMaskByte;
 
   for (GlobalVariable *GV : Globals) {
     // Skip tag 0 in order to avoid collisions with untagged memory.

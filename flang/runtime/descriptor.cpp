@@ -148,14 +148,6 @@ int Descriptor::Allocate() {
   return 0;
 }
 
-int Descriptor::Allocate(const SubscriptValue lb[], const SubscriptValue ub[]) {
-  int result{ISO::CFI_allocate(&raw_, lb, ub, ElementBytes())};
-  if (result == CFI_SUCCESS) {
-    // TODO: derived type initialization
-  }
-  return result;
-}
-
 int Descriptor::Deallocate(bool finalize) {
   Destroy(finalize);
   return ISO::CFI_deallocate(&raw_);

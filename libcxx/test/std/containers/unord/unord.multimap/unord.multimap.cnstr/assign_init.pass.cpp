@@ -36,7 +36,7 @@ int main(int, char**)
     {
         typedef test_allocator<std::pair<const int, std::string> > A;
         typedef std::unordered_multimap<int, std::string,
-                                   test_hash<std::hash<int> >,
+                                   test_hash<int>,
                                    test_equal_to<int>,
                                    A
                                    > C;
@@ -87,7 +87,7 @@ int main(int, char**)
     {
         typedef min_allocator<std::pair<const int, std::string> > A;
         typedef std::unordered_multimap<int, std::string,
-                                   test_hash<std::hash<int> >,
+                                   test_hash<int>,
                                    test_equal_to<int>,
                                    A
                                    > C;

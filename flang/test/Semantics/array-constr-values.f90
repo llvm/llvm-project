@@ -43,7 +43,6 @@ subroutine arrayconstructorvalues()
 
   ! C7113
   !ERROR: Cannot have an unlimited polymorphic value in an array constructor
-  !ERROR: Values in array constructor must have the same declared type when no explicit type appears
   intarray = (/ unlim_polymorphic, 2, 3, 4, 5/)
 
   ! C7114
@@ -51,6 +50,9 @@ subroutine arrayconstructorvalues()
   !ERROR: ABSTRACT derived type 'base_type' may not be used in a structure constructor
   !ERROR: Values in array constructor must have the same declared type when no explicit type appears
   intarray = (/ base_type(10), 2, 3, 4, 5 /)
+
+  !ERROR: Item is not suitable for use in an array constructor
+  intarray(1:1) = [ arrayconstructorvalues ]
 end subroutine arrayconstructorvalues
 subroutine checkC7115()
   real, dimension(10), parameter :: good1 = [(99.9, i = 1, 10)]

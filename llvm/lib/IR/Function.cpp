@@ -831,37 +831,53 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
   return Result;
 }
 
+StringRef Intrinsic::getBaseName(ID id) {
+  assert(id < num_intrinsics && "Invalid intrinsic ID!");
+  return IntrinsicNameTable[id];
+}
+
 StringRef Intrinsic::getName(ID id) {
   assert(id < num_intrinsics && "Invalid intrinsic ID!");
   assert(!Intrinsic::isOverloaded(id) &&
          "This version of getName does not support overloading");
-  return IntrinsicNameTable[id];
+  return getBaseName(id);
 }
 
-std::string Intrinsic::getName(ID Id, ArrayRef<Type *> Tys, Module *M,
-                               FunctionType *FT) {
-  assert(Id < num_intrinsics && "Invalid intrinsic ID!");
+static std::string getIntrinsicNameImpl(Intrinsic::ID Id, ArrayRef<Type *> Tys,
+                                        Module *M, FunctionType *FT,
+                                        bool EarlyModuleCheck) {
+
+  assert(Id < Intrinsic::num_intrinsics && "Invalid intrinsic ID!");
   assert((Tys.empty() || Intrinsic::isOverloaded(Id)) &&
          "This version of getName is for overloaded intrinsics only");
+  (void)EarlyModuleCheck;
+  assert((!EarlyModuleCheck || M ||
+          !any_of(Tys, [](Type *T) { return isa<PointerType>(T); })) &&
+         "Intrinsic overloading on pointer types need to provide a Module");
   bool HasUnnamedType = false;
-  std::string Result(IntrinsicNameTable[Id]);
-  for (Type *Ty : Tys) {
+  std::string Result(Intrinsic::getBaseName(Id));
+  for (Type *Ty : Tys)
     Result += "." + getMangledTypeStr(Ty, HasUnnamedType);
-  }
-  assert((M || !HasUnnamedType) && "unnamed types need a module");
-  if (M && HasUnnamedType) {
+  if (HasUnnamedType) {
+    assert(M && "unnamed types need a module");
     if (!FT)
-      FT = getType(M->getContext(), Id, Tys);
+      FT = Intrinsic::getType(M->getContext(), Id, Tys);
     else
-      assert((FT == getType(M->getContext(), Id, Tys)) &&
+      assert((FT == Intrinsic::getType(M->getContext(), Id, Tys)) &&
              "Provided FunctionType must match arguments");
     return M->getUniqueIntrinsicName(Result, Id, FT);
   }
   return Result;
 }
 
-std::string Intrinsic::getName(ID Id, ArrayRef<Type *> Tys) {
-  return getName(Id, Tys, nullptr, nullptr);
+std::string Intrinsic::getName(ID Id, ArrayRef<Type *> Tys, Module *M,
+                               FunctionType *FT) {
+  assert(M && "We need to have a Module");
+  return getIntrinsicNameImpl(Id, Tys, M, FT, true);
+}
+
+std::string Intrinsic::getNameNoUnnamedTypes(ID Id, ArrayRef<Type *> Tys) {
+  return getIntrinsicNameImpl(Id, Tys, nullptr, nullptr, false);
 }
 
 /// IIT_Info - These are enumerators that describe the entries returned by the

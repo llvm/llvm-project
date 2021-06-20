@@ -154,7 +154,7 @@ define amdgpu_ps float @global_load_saddr_i8_offset_neg4097(i8 addrspace(1)* inr
 ;
 ; GFX11-LABEL: global_load_saddr_i8_offset_neg4097:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_co_u32_e64 v0, s[0:1], 0xfffff000, s2
+; GFX11-NEXT:    v_add_co_u32 v0, s[0:1], 0xfffff000, s2
 ; GFX11-NEXT:    v_addc_u32_e64 v1, s[0:1], -1, s3, s[0:1]
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off offset:-1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -187,7 +187,7 @@ define amdgpu_ps float @global_load_saddr_i8_offset_neg4098(i8 addrspace(1)* inr
 ;
 ; GFX11-LABEL: global_load_saddr_i8_offset_neg4098:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_co_u32_e64 v0, s[0:1], 0xfffff000, s2
+; GFX11-NEXT:    v_add_co_u32 v0, s[0:1], 0xfffff000, s2
 ; GFX11-NEXT:    v_addc_u32_e64 v1, s[0:1], -1, s3, s[0:1]
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off offset:-2
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -416,7 +416,7 @@ define amdgpu_ps float @global_load_saddr_i8_offset_4294967296(i8 addrspace(1)* 
 ;
 ; GFX11-LABEL: global_load_saddr_i8_offset_4294967296:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_co_u32_e64 v0, s[0:1], 0, s2
+; GFX11-NEXT:    v_add_co_u32 v0, s[0:1], 0, s2
 ; GFX11-NEXT:    v_addc_u32_e64 v1, s[0:1], 1, s3, s[0:1]
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -448,7 +448,7 @@ define amdgpu_ps float @global_load_saddr_i8_offset_4294967297(i8 addrspace(1)* 
 ;
 ; GFX11-LABEL: global_load_saddr_i8_offset_4294967297:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_co_u32_e64 v0, s[0:1], 0, s2
+; GFX11-NEXT:    v_add_co_u32 v0, s[0:1], 0, s2
 ; GFX11-NEXT:    v_addc_u32_e64 v1, s[0:1], 1, s3, s[0:1]
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off offset:1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -480,7 +480,7 @@ define amdgpu_ps float @global_load_saddr_i8_offset_4294971391(i8 addrspace(1)* 
 ;
 ; GFX11-LABEL: global_load_saddr_i8_offset_4294971391:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_co_u32_e64 v0, s[0:1], 0, s2
+; GFX11-NEXT:    v_add_co_u32 v0, s[0:1], 0, s2
 ; GFX11-NEXT:    v_addc_u32_e64 v1, s[0:1], 1, s3, s[0:1]
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off offset:-1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -512,7 +512,7 @@ define amdgpu_ps float @global_load_saddr_i8_offset_4294971392(i8 addrspace(1)* 
 ;
 ; GFX11-LABEL: global_load_saddr_i8_offset_4294971392:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_co_u32_e64 v0, s[0:1], 0x1000, s2
+; GFX11-NEXT:    v_add_co_u32 v0, s[0:1], 0x1000, s2
 ; GFX11-NEXT:    v_addc_u32_e64 v1, s[0:1], 1, s3, s[0:1]
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -545,7 +545,7 @@ define amdgpu_ps float @global_load_saddr_i8_offset_neg4294967295(i8 addrspace(1
 ;
 ; GFX11-LABEL: global_load_saddr_i8_offset_neg4294967295:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_co_u32_e64 v0, s[0:1], 0x1000, s2
+; GFX11-NEXT:    v_add_co_u32 v0, s[0:1], 0x1000, s2
 ; GFX11-NEXT:    v_addc_u32_e64 v1, s[0:1], -1, s3, s[0:1]
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off offset:1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -577,7 +577,7 @@ define amdgpu_ps float @global_load_saddr_i8_offset_neg4294967296(i8 addrspace(1
 ;
 ; GFX11-LABEL: global_load_saddr_i8_offset_neg4294967296:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_co_u32_e64 v0, s[0:1], 0, s2
+; GFX11-NEXT:    v_add_co_u32 v0, s[0:1], 0, s2
 ; GFX11-NEXT:    v_addc_u32_e64 v1, s[0:1], -1, s3, s[0:1]
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -609,7 +609,7 @@ define amdgpu_ps float @global_load_saddr_i8_offset_neg4294967297(i8 addrspace(1
 ;
 ; GFX11-LABEL: global_load_saddr_i8_offset_neg4294967297:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_co_u32_e64 v0, s[0:1], 0, s2
+; GFX11-NEXT:    v_add_co_u32 v0, s[0:1], 0, s2
 ; GFX11-NEXT:    v_addc_u32_e64 v1, s[0:1], -1, s3, s[0:1]
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off offset:-1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -703,9 +703,9 @@ define amdgpu_ps float @global_load_saddr_i8_zext_vgpr_offset_4096(i8 addrspace(
 ;
 ; GFX11-LABEL: global_load_saddr_i8_zext_vgpr_offset_4096:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_co_u32_e64 v0, s[0:1], s2, v0
+; GFX11-NEXT:    v_add_co_u32 v0, s[0:1], s2, v0
 ; GFX11-NEXT:    v_addc_u32_e64 v1, s[0:1], s3, 0, s[0:1]
-; GFX11-NEXT:    v_add_co_u32_e64 v0, vcc, 0x1000, v0
+; GFX11-NEXT:    v_add_co_u32 v0, vcc, 0x1000, v0
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -776,9 +776,9 @@ define amdgpu_ps float @global_load_saddr_i8_zext_vgpr_offset_neg4097(i8 addrspa
 ;
 ; GFX11-LABEL: global_load_saddr_i8_zext_vgpr_offset_neg4097:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_co_u32_e64 v0, s[0:1], s2, v0
+; GFX11-NEXT:    v_add_co_u32 v0, s[0:1], s2, v0
 ; GFX11-NEXT:    v_addc_u32_e64 v1, s[0:1], s3, 0, s[0:1]
-; GFX11-NEXT:    v_add_co_u32_e64 v0, vcc, 0xfffff000, v0
+; GFX11-NEXT:    v_add_co_u32 v0, vcc, 0xfffff000, v0
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc, -1, v1, vcc
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off offset:-1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -1239,7 +1239,7 @@ define amdgpu_ps float @global_load_i8_vgpr64_sgpr32(i8 addrspace(1)* %vbase, i3
 ;
 ; GFX11-LABEL: global_load_i8_vgpr64_sgpr32:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_co_u32_e64 v0, vcc, v0, s2
+; GFX11-NEXT:    v_add_co_u32 v0, vcc, v0, s2
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -1274,7 +1274,7 @@ define amdgpu_ps float @global_load_i8_vgpr64_sgpr32_offset_4095(i8 addrspace(1)
 ;
 ; GFX11-LABEL: global_load_i8_vgpr64_sgpr32_offset_4095:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_add_co_u32_e64 v0, vcc, v0, s2
+; GFX11-NEXT:    v_add_co_u32 v0, vcc, v0, s2
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX11-NEXT:    global_load_u8 v0, v[0:1], off offset:-1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -1325,7 +1325,7 @@ define amdgpu_ps float @global_load_saddr_f32_natural_addressing(float addrspace
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
-; GFX11-NEXT:    v_add_co_u32_e64 v0, vcc, s2, v0
+; GFX11-NEXT:    v_add_co_u32 v0, vcc, s2, v0
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s3, v1, vcc
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -1449,7 +1449,7 @@ define amdgpu_ps float @global_load_f32_saddr_zext_vgpr_range_too_large(float ad
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
-; GFX11-NEXT:    v_add_co_u32_e64 v0, vcc, s2, v0
+; GFX11-NEXT:    v_add_co_u32 v0, vcc, s2, v0
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc, s3, v1, vcc
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -3304,6 +3304,23 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(float addrspace(1)* inreg %arg) 
 ; GFX10-NEXT:    s_cbranch_scc0 BB128_1
 ; GFX10-NEXT:  ; %bb.2: ; %bb2
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: global_addr_64bit_lsr_iv:
+; GFX11:       ; %bb.0: ; %bb
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    s_mov_b64 s[0:1], 0
+; GFX11-NEXT:  BB128_1: ; %bb3
+; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX11-NEXT:    s_add_u32 s4, s2, s0
+; GFX11-NEXT:    s_addc_u32 s5, s3, s1
+; GFX11-NEXT:    s_add_u32 s0, s0, 4
+; GFX11-NEXT:    global_load_b32 v1, v0, s[4:5] glc dlc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_addc_u32 s1, s1, 0
+; GFX11-NEXT:    s_cmpk_eq_i32 s0, 0x400
+; GFX11-NEXT:    s_cbranch_scc0 BB128_1
+; GFX11-NEXT:  ; %bb.2: ; %bb2
+; GFX11-NEXT:    s_endpgm
 bb:
   br label %bb3
 
@@ -3363,6 +3380,25 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(float addrspace(1)* in
 ; GFX10-NEXT:    s_cbranch_scc0 BB129_1
 ; GFX10-NEXT:  ; %bb.2: ; %bb2
 ; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: global_addr_64bit_lsr_iv_multiload:
+; GFX11:       ; %bb.0: ; %bb
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    s_mov_b64 s[0:1], 0
+; GFX11-NEXT:  BB129_1: ; %bb3
+; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX11-NEXT:    s_add_u32 s4, s2, s0
+; GFX11-NEXT:    s_addc_u32 s5, s3, s1
+; GFX11-NEXT:    s_add_u32 s0, s0, 4
+; GFX11-NEXT:    global_load_b32 v1, v0, s[4:5] glc dlc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    global_load_b32 v1, v0, s[4:5] glc dlc
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_addc_u32 s1, s1, 0
+; GFX11-NEXT:    s_cmpk_eq_i32 s0, 0x400
+; GFX11-NEXT:    s_cbranch_scc0 BB129_1
+; GFX11-NEXT:  ; %bb.2: ; %bb2
+; GFX11-NEXT:    s_endpgm
 bb:
   br label %bb3
 

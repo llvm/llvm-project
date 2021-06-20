@@ -30,16 +30,13 @@ func @generalize_matmul_tensor_i32(%A : tensor<16x8xi32>, %B: tensor<8x32xi32>, 
 
 // -----
 
-func @generalize_fill_rng_2d_f32(%O: tensor<16x32xf32>) -> tensor<16x32xf32> {
-  %0 = linalg.fill_rng_2d outs(%O : tensor<16x32xf32>) -> tensor<16x32xf32>
+func @generalize_fill_rng_2d_f32(%min: f64, %max: f64, %seed: i32, %O: tensor<16x32xf32>) -> tensor<16x32xf32> {
+  %0 = linalg.fill_rng_2d ins(%min, %max, %seed: f64, f64, i32) outs(%O : tensor<16x32xf32>) -> tensor<16x32xf32>
   return %0: tensor<16x32xf32>
 }
 
 // CHECK-LABEL: @generalize_fill_rng_2d_f32
-// CHECK-SAME: (%[[O:.+]]: tensor<16x32xf32>)
-// CHECK-DAG:    %[[MIN:.+]] = constant -1000 : i64
-// CHECK-DAG:    %[[MAX:.+]] = constant 1000 : i64
-// CHECK-DAG:    %[[SEED:.+]] = constant 42 : i32
+// CHECK-DAG:  ^{{.*}}(%[[MIN:.+]]: f64, %[[MAX:.+]]: f64, %[[SEED:.+]]: i32, %[[O:.+]]: f32
 // CHECK-DAG:    %[[IDX0:.+]] = linalg.index 0 : index
 // CHECK-DAG:    %[[IDX1:.+]] = linalg.index 1 : index
 // CHECK-DAG:    %[[IDX0_CAST:.+]] = index_cast %[[IDX0]] : index to i32
@@ -50,27 +47,24 @@ func @generalize_fill_rng_2d_f32(%O: tensor<16x32xf32>) -> tensor<16x32xf32> {
 // CHECK-DAG:    %[[VAL1:.+]] = muli %[[VAL0]], %[[CST0]] : i32
 // CHECK-DAG:    %[[VAL2:.+]] = addi %[[VAL1]], %[[CST1]] : i32
 // Skip random number computation for the second index.
-// CHECK-DAG:    %[[MIN_CAST1:.+]] = sitofp %[[MIN]] : i64 to f64
-// CHECK-DAG:    %[[MAX_CAST:.+]] = sitofp %[[MAX]] : i64 to f64
-// CHECK-DAG:    %[[DIFF:.+]] = subf %[[MAX_CAST]], %[[MIN_CAST1]] : f64
+// CHECK-DAG:    %[[DIFF:.+]] = subf %[[MAX]], %[[MIN]] : f64
 // CHECK-DAG:    %[[CST2:.+]] = constant 2.3283063999999999E-10 : f64
 // CHECK-DAG:    %[[FACT:.+]] = mulf %[[DIFF]], %[[CST2]] : f64
 // CHECK-DAG:    %[[VAL4:.+]] = mulf %{{.+}}, %[[FACT]] : f64
-// CHECK-DAG:    %[[MIN_CAST2:.+]] = sitofp %[[MIN]] : i64 to f64
-// CHECK-DAG:    %[[VAL5:.+]] = addf %[[VAL4]], %[[MIN_CAST2]] : f64
+// CHECK-DAG:    %[[VAL5:.+]] = addf %[[VAL4]], %[[MIN]] : f64
 // CHECK-DAG:    %[[VAL6:.+]] = fptrunc %[[VAL5]] : f64 to f32
 // CHECK-NEXT:   linalg.yield %[[VAL6]] : f32
 // CHECK-NEXT: -> tensor<16x32xf32>
 
 // -----
 
-func @generalize_fill_rng_2d_i32(%O: tensor<16x32xi32>) -> tensor<16x32xi32> {
-  %0 = linalg.fill_rng_2d outs(%O : tensor<16x32xi32>) -> tensor<16x32xi32>
+func @generalize_fill_rng_2d_i32(%min: f64, %max: f64, %seed: i32, %O: tensor<16x32xi32>) -> tensor<16x32xi32> {
+  %0 = linalg.fill_rng_2d ins(%min, %max, %seed: f64, f64, i32) outs(%O : tensor<16x32xi32>) -> tensor<16x32xi32>
   return %0: tensor<16x32xi32>
 }
 
 // CHECK-LABEL: @generalize_fill_rng_2d_i32
-// CHECK-SAME: (%[[O:.+]]: tensor<16x32xi32>)
+// CHECK: ^{{.*}}(%[[MIN:.+]]: f64, %[[MAX:.+]]: f64, %[[SEED:.+]]: i32, %[[O:.+]]: i32
 // Verifies floating point to integer cast.
 // CHECK:        %[[VAL6:.+]] = fptosi %{{.+}} : f64 to i32
 // CHECK-NEXT:   linalg.yield %[[VAL6]] : i32

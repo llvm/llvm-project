@@ -61,6 +61,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -1940,7 +1941,7 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
 
   // Check the function uses floating-point processor instructions or not
   for (unsigned Reg = PPC::F0; Reg <= PPC::F31; ++Reg) {
-    if (MRI.isPhysRegUsed(Reg)) {
+    if (MRI.isPhysRegUsed(Reg, /* SkipRegMaskTest */ true)) {
       FirstHalfOfMandatoryField |= TracebackTable::IsFloatingPointPresentMask;
       break;
     }
@@ -1980,7 +1981,8 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
   FirstHalfOfMandatoryField |= TracebackTable::IsFunctionNamePresentMask;
 
   static_assert(XCOFF::AllocRegNo == 31, "Unexpected register usage!");
-  if (MRI.isPhysRegUsed(Subtarget->isPPC64() ? PPC::X31 : PPC::R31))
+  if (MRI.isPhysRegUsed(Subtarget->isPPC64() ? PPC::X31 : PPC::R31,
+                        /* SkipRegMaskTest */ true))
     FirstHalfOfMandatoryField |= TracebackTable::IsAllocaUsedMask;
 
   const SmallVectorImpl<Register> &MustSaveCRs = FI->getMustSaveCRs();
@@ -2025,6 +2027,20 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
       (SecondHalfOfMandatoryField & 0xff000000) >> 24, 1);
 
   // Set the 6th byte of mandatory field.
+
+  // Check whether has Vector Instruction,We only treat instructions uses vector
+  // register as vector instructions.
+  bool HasVectorInst = false;
+  for (unsigned Reg = PPC::V0; Reg <= PPC::V31; ++Reg)
+    if (MRI.isPhysRegUsed(Reg, /* SkipRegMaskTest */ true)) {
+      // Has VMX instruction.
+      HasVectorInst = true;
+      break;
+    }
+
+  if (FI->hasVectorParms() || HasVectorInst)
+    SecondHalfOfMandatoryField |= TracebackTable::HasVectorInfoMask;
+
   bool ShouldEmitEHBlock = TargetLoweringObjectFileXCOFF::ShouldEmitEHBlock(MF);
   if (ShouldEmitEHBlock)
     SecondHalfOfMandatoryField |= TracebackTable::HasExtensionTableMask;
@@ -2053,9 +2069,9 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
       (SecondHalfOfMandatoryField & 0x00ff0000) >> 16, 1);
 
   // Set the 7th byte of mandatory field.
-  uint32_t NumberOfFixedPara = FI->getFixedParamNum();
+  uint32_t NumberOfFixedParms = FI->getFixedParmsNum();
   SecondHalfOfMandatoryField |=
-      (NumberOfFixedPara << TracebackTable::NumberOfFixedParmsShift) &
+      (NumberOfFixedParms << TracebackTable::NumberOfFixedParmsShift) &
       TracebackTable::NumberOfFixedParmsMask;
   GENVALUECOMMENT("NumberOfFixedParms", SecondHalfOfMandatoryField,
                   NumberOfFixedParms);
@@ -2068,9 +2084,9 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
   // Always set parameter on stack.
   SecondHalfOfMandatoryField |= TracebackTable::HasParmsOnStackMask;
 
-  uint32_t NumberOfFPPara = FI->getFloatingPointParamNum();
+  uint32_t NumberOfFPParms = FI->getFloatingPointParmsNum();
   SecondHalfOfMandatoryField |=
-      (NumberOfFPPara << TracebackTable::NumberOfFloatingPointParmsShift) &
+      (NumberOfFPParms << TracebackTable::NumberOfFloatingPointParmsShift) &
       TracebackTable::NumberOfFloatingPointParmsMask;
 
   GENVALUECOMMENT("NumberOfFPParms", SecondHalfOfMandatoryField,
@@ -2083,18 +2099,25 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
   // Generate the optional fields of traceback table.
 
   // Parameter type.
-  if (NumberOfFixedPara || NumberOfFPPara) {
-    assert((SecondHalfOfMandatoryField & TracebackTable::HasVectorInfoMask) ==
-               0 &&
-           "VectorInfo has not been implemented.");
-    uint32_t ParaType = FI->getParameterType();
-    CommentOS << "Parameter type = "
-              << XCOFF::parseParmsType(ParaType,
-                                       NumberOfFixedPara + NumberOfFPPara);
-    EmitComment();
-    OutStreamer->emitIntValueInHexWithPadding(ParaType, sizeof(ParaType));
-  }
+  if (NumberOfFixedParms || NumberOfFPParms) {
+    uint32_t ParmsTypeValue = FI->getParmsType();
 
+    Expected<SmallString<32>> ParmsType =
+        FI->hasVectorParms()
+            ? XCOFF::parseParmsTypeWithVecInfo(
+                  ParmsTypeValue, NumberOfFixedParms, NumberOfFPParms,
+                  FI->getVectorParmsNum())
+            : XCOFF::parseParmsType(ParmsTypeValue, NumberOfFixedParms,
+                                    NumberOfFPParms);
+
+    assert(ParmsType && toString(ParmsType.takeError()).c_str());
+    if (ParmsType) {
+      CommentOS << "Parameter type = " << ParmsType.get();
+      EmitComment();
+    }
+    OutStreamer->emitIntValueInHexWithPadding(ParmsTypeValue,
+                                              sizeof(ParmsTypeValue));
+  }
   // Traceback table offset.
   OutStreamer->AddComment("Function size");
   if (FirstHalfOfMandatoryField & TracebackTable::HasTraceBackTableOffsetMask) {
@@ -2124,6 +2147,69 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
     uint8_t AllocReg = XCOFF::AllocRegNo;
     OutStreamer->AddComment("AllocaUsed");
     OutStreamer->emitIntValueInHex(AllocReg, sizeof(AllocReg));
+  }
+
+  if (SecondHalfOfMandatoryField & TracebackTable::HasVectorInfoMask) {
+    uint16_t VRData = 0;
+    // Calculate the number of VRs be saved.
+    // Vector registers 20 through 31 are marked as reserved and cannot be used
+    // in the default ABI.
+    const PPCSubtarget &Subtarget = MF->getSubtarget<PPCSubtarget>();
+    if (Subtarget.isAIXABI() && Subtarget.hasAltivec() &&
+        TM.getAIXExtendedAltivecABI()) {
+      for (unsigned Reg = PPC::V20; Reg <= PPC::V31; ++Reg)
+        if (MRI.isPhysRegModified(Reg)) {
+          // Number of VRs saved.
+          VRData |=
+              ((PPC::V31 - Reg + 1) << TracebackTable::NumberOfVRSavedShift) &
+              TracebackTable::NumberOfVRSavedMask;
+          // This bit is supposed to set only when the special register
+          // VRSAVE is saved on stack.
+          // However, IBM XL compiler sets the bit when any vector registers
+          // are saved on the stack. We will follow XL's behavior on AIX
+          // so that we don't get surprise behavior change for C code.
+          VRData |= TracebackTable::IsVRSavedOnStackMask;
+          break;
+        }
+    }
+
+    // Set has_varargs.
+    if (FI->getVarArgsFrameIndex())
+      VRData |= TracebackTable::HasVarArgsMask;
+
+    // Vector parameters number.
+    unsigned VectorParmsNum = FI->getVectorParmsNum();
+    VRData |= (VectorParmsNum << TracebackTable::NumberOfVectorParmsShift) &
+              TracebackTable::NumberOfVectorParmsMask;
+
+    if (HasVectorInst)
+      VRData |= TracebackTable::HasVMXInstructionMask;
+
+    GENVALUECOMMENT("NumOfVRsSaved", VRData, NumberOfVRSaved);
+    GENBOOLCOMMENT(", ", VRData, IsVRSavedOnStack);
+    GENBOOLCOMMENT(", ", VRData, HasVarArgs);
+    EmitComment();
+    OutStreamer->emitIntValueInHexWithPadding((VRData & 0xff00) >> 8, 1);
+
+    GENVALUECOMMENT("NumOfVectorParams", VRData, NumberOfVectorParms);
+    GENBOOLCOMMENT(", ", VRData, HasVMXInstruction);
+    EmitComment();
+    OutStreamer->emitIntValueInHexWithPadding(VRData & 0x00ff, 1);
+
+    uint32_t VecParmTypeValue = FI->getVecExtParmsType();
+
+    Expected<SmallString<32>> VecParmsType =
+        XCOFF::parseVectorParmsType(VecParmTypeValue, VectorParmsNum);
+    assert(VecParmsType && toString(VecParmsType.takeError()).c_str());
+    if (VecParmsType) {
+      CommentOS << "Vector Parameter type = " << VecParmsType.get();
+      EmitComment();
+    }
+    OutStreamer->emitIntValueInHexWithPadding(VecParmTypeValue,
+                                              sizeof(VecParmTypeValue));
+    // Padding 2 bytes.
+    CommentOS << "Padding";
+    EmitCommentAndValue(0, 2);
   }
 
   uint8_t ExtensionTableFlag = 0;
@@ -2156,7 +2242,6 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
     OutStreamer->AddComment("EHInfo Table");
     OutStreamer->emitValue(Exp, DL.getPointerSize());
   }
-
 #undef GENBOOLCOMMENT
 #undef GENVALUECOMMENT
 }

@@ -23,7 +23,7 @@
 
 using namespace llvm;
 using namespace llvm::orc;
-using namespace llvm::orc::tpctypes;
+using namespace llvm::orc::shared;
 
 namespace llvm {
 namespace orc {
@@ -155,54 +155,26 @@ Error deregisterEHFrameSection(const void *EHFrameSectionAddr,
 } // end namespace orc
 } // end namespace llvm
 
-extern "C" CWrapperFunctionResult
-llvm_orc_registerEHFrameSectionWrapper(uint8_t *Data, uint64_t Size) {
-  if (Size != sizeof(uint64_t) + sizeof(uint64_t))
-    return WrapperFunctionResult::from(
-               "Invalid arguments to llvm_orc_registerEHFrameSectionWrapper")
-        .release();
-
-  uint64_t EHFrameSectionAddr;
-  uint64_t EHFrameSectionSize;
-
-  {
-    BinaryStreamReader ArgReader(ArrayRef<uint8_t>(Data, Size),
-                                 support::endianness::big);
-    cantFail(ArgReader.readInteger(EHFrameSectionAddr));
-    cantFail(ArgReader.readInteger(EHFrameSectionSize));
-  }
-
-  if (auto Err = registerEHFrameSection(
-          jitTargetAddressToPointer<void *>(EHFrameSectionAddr),
-          EHFrameSectionSize)) {
-    auto ErrMsg = toString(std::move(Err));
-    return WrapperFunctionResult::from(ErrMsg).release();
-  }
-  return WrapperFunctionResult().release();
+static Error registerEHFrameWrapper(JITTargetAddress Addr, uint64_t Size) {
+  return llvm::orc::registerEHFrameSection(
+      jitTargetAddressToPointer<const void *>(Addr), Size);
 }
 
-extern "C" CWrapperFunctionResult
-llvm_orc_deregisterEHFrameSectionWrapper(uint8_t *Data, uint64_t Size) {
-  if (Size != sizeof(uint64_t) + sizeof(uint64_t))
-    return WrapperFunctionResult::from(
-               "Invalid arguments to llvm_orc_registerEHFrameSectionWrapper")
-        .release();
+static Error deregisterEHFrameWrapper(JITTargetAddress Addr, uint64_t Size) {
+  return llvm::orc::deregisterEHFrameSection(
+      jitTargetAddressToPointer<const void *>(Addr), Size);
+}
 
-  uint64_t EHFrameSectionAddr;
-  uint64_t EHFrameSectionSize;
+extern "C" orc::shared::detail::CWrapperFunctionResult
+llvm_orc_registerEHFrameSectionWrapper(const char *Data, uint64_t Size) {
+  return WrapperFunction<SPSError(SPSTargetAddress, uint64_t)>::handle(
+             Data, Size, registerEHFrameWrapper)
+      .release();
+}
 
-  {
-    BinaryStreamReader ArgReader(ArrayRef<uint8_t>(Data, Size),
-                                 support::endianness::big);
-    cantFail(ArgReader.readInteger(EHFrameSectionAddr));
-    cantFail(ArgReader.readInteger(EHFrameSectionSize));
-  }
-
-  if (auto Err = deregisterEHFrameSection(
-          jitTargetAddressToPointer<void *>(EHFrameSectionAddr),
-          EHFrameSectionSize)) {
-    auto ErrMsg = toString(std::move(Err));
-    return WrapperFunctionResult::from(ErrMsg).release();
-  }
-  return WrapperFunctionResult().release();
+extern "C" orc::shared::detail::CWrapperFunctionResult
+llvm_orc_deregisterEHFrameSectionWrapper(const char *Data, uint64_t Size) {
+  return WrapperFunction<SPSError(SPSTargetAddress, uint64_t)>::handle(
+             Data, Size, deregisterEHFrameWrapper)
+      .release();
 }

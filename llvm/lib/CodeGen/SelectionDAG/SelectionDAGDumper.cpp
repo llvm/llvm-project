@@ -145,7 +145,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     unsigned OpNo = getOpcode() == ISD::INTRINSIC_WO_CHAIN ? 0 : 1;
     unsigned IID = cast<ConstantSDNode>(getOperand(OpNo))->getZExtValue();
     if (IID < Intrinsic::num_intrinsics)
-      return Intrinsic::getName((Intrinsic::ID)IID, None);
+      return Intrinsic::getBaseName((Intrinsic::ID)IID).str();
     else if (!G)
       return "Unknown intrinsic";
     else if (const TargetIntrinsicInfo *TII = G->getTarget().getIntrinsicInfo())

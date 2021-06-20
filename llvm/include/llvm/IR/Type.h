@@ -28,7 +28,6 @@
 
 namespace llvm {
 
-template<class GraphType> struct GraphTraits;
 class IntegerType;
 class LLVMContext;
 class PointerType;

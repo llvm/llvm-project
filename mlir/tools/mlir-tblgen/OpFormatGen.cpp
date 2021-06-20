@@ -1343,6 +1343,7 @@ void OperationFormat::genParserTypeResolution(Operator &op,
     } else if (const NamedTypeConstraint *var = resolver.getVariable()) {
       if (Optional<StringRef> tform = resolver.getVarTransformer()) {
         FmtContext fmtContext;
+        fmtContext.addSubst("_ctxt", "parser.getBuilder().getContext()");
         if (var->isVariadic())
           fmtContext.withSelf(var->name + "Types");
         else

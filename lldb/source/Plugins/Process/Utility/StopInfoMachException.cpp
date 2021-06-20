@@ -509,7 +509,7 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
         // operating system thread ID, so we can't make any assumptions about
         // the thread ID so we must always report the breakpoint regardless
         // of the thread.
-        if (bp_site_sp->ValidForThisThread(&thread) ||
+        if (bp_site_sp->ValidForThisThread(thread) ||
             thread.GetProcess()->GetOperatingSystem() != nullptr)
           return StopInfo::CreateStopReasonWithBreakpointSiteID(
               thread, bp_site_sp->GetID());

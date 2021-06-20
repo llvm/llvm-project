@@ -47,10 +47,10 @@ define i8 @v_saddsat_i8(i8 %lhs, i8 %rhs) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_lshlrev_b16_e64 v1, 8, v1
-; GFX11-NEXT:    v_lshlrev_b16_e64 v0, 8, v0
+; GFX11-NEXT:    v_lshlrev_b16 v1, 8, v1
+; GFX11-NEXT:    v_lshlrev_b16 v0, 8, v0
 ; GFX11-NEXT:    v_add_nc_i16 v0, v0, v1 clamp
-; GFX11-NEXT:    v_ashrrev_i16_e64 v0, 8, v0
+; GFX11-NEXT:    v_ashrrev_i16 v0, 8, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call i8 @llvm.sadd.sat.i8(i8 %lhs, i8 %rhs)
   ret i8 %result
@@ -559,7 +559,7 @@ define i64 @v_saddsat_i64(i64 %lhs, i64 %rhs) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    v_add_co_u32_e64 v4, vcc_lo, v0, v2
+; GFX11-NEXT:    v_add_co_u32 v4, vcc_lo, v0, v2
 ; GFX11-NEXT:    v_bfrev_b32_e32 v6, -2
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v5, vcc_lo, v1, v3, vcc_lo
 ; GFX11-NEXT:    v_cmp_gt_i64_e64 s0, 0, v[2:3]

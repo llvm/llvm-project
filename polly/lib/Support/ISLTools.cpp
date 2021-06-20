@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/Support/ISLTools.h"
+#include "polly/Support/GICHelper.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <vector>
@@ -760,9 +761,9 @@ static void printSortedPolyhedra(isl::union_set USet, llvm::raw_ostream &OS,
   for (const isl::basic_set &BSet : BSets) {
     std::string Str;
     if (IsMap)
-      Str = isl::map(BSet.unwrap()).to_str();
+      Str = stringFromIslObj(isl::map(BSet.unwrap()));
     else
-      Str = isl::set(BSet).to_str();
+      Str = stringFromIslObj(isl::set(BSet));
     size_t OpenPos = Str.find_first_of('{');
     assert(OpenPos != std::string::npos);
     size_t ClosePos = Str.find_last_of('}');

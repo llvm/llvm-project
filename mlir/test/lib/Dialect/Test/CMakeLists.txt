@@ -5,6 +5,8 @@ set(LLVM_OPTIONAL_SOURCES
 )
 
 set(LLVM_TARGET_DEFINITIONS TestInterfaces.td)
+mlir_tablegen(TestAttrInterfaces.h.inc -gen-attr-interface-decls)
+mlir_tablegen(TestAttrInterfaces.cpp.inc -gen-attr-interface-defs)
 mlir_tablegen(TestTypeInterfaces.h.inc -gen-type-interface-decls)
 mlir_tablegen(TestTypeInterfaces.cpp.inc -gen-type-interface-defs)
 mlir_tablegen(TestOpInterfaces.h.inc -gen-op-interface-decls)

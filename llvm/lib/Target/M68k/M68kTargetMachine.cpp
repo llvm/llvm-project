@@ -13,14 +13,18 @@
 
 #include "M68kTargetMachine.h"
 #include "M68k.h"
-#include "TargetInfo/M68kTargetInfo.h"
-
 #include "M68kSubtarget.h"
 #include "M68kTargetObjectFile.h"
-
+#include "TargetInfo/M68kTargetInfo.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/InitializePasses.h"
+#include "llvm/PassRegistry.h"
 #include "llvm/Support/TargetRegistry.h"
 #include <memory>
 
@@ -30,6 +34,8 @@ using namespace llvm;
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kTarget() {
   RegisterTargetMachine<M68kTargetMachine> X(getTheM68kTarget());
+  auto *PR = PassRegistry::getPassRegistry();
+  initializeGlobalISel(*PR);
 }
 
 namespace {
@@ -134,7 +140,10 @@ public:
   const M68kSubtarget &getM68kSubtarget() const {
     return *getM68kTargetMachine().getSubtargetImpl();
   }
-
+  bool addIRTranslator() override;
+  bool addLegalizeMachineIR() override;
+  bool addRegBankSelect() override;
+  bool addGlobalInstructionSelect() override;
   bool addInstSelector() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
@@ -149,6 +158,26 @@ bool M68kPassConfig::addInstSelector() {
   // Install an instruction selector.
   addPass(createM68kISelDag(getM68kTargetMachine()));
   addPass(createM68kGlobalBaseRegPass());
+  return false;
+}
+
+bool M68kPassConfig::addIRTranslator() {
+  addPass(new IRTranslator());
+  return false;
+}
+
+bool M68kPassConfig::addLegalizeMachineIR() {
+  addPass(new Legalizer());
+  return false;
+}
+
+bool M68kPassConfig::addRegBankSelect() {
+  addPass(new RegBankSelect());
+  return false;
+}
+
+bool M68kPassConfig::addGlobalInstructionSelect() {
+  addPass(new InstructionSelect());
   return false;
 }
 

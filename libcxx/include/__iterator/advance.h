@@ -15,6 +15,7 @@
 #include <__function_like.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
+#include <__iterator/iterator_traits.h>
 #include <concepts>
 #include <limits>
 #include <type_traits>
@@ -70,11 +71,9 @@ namespace ranges {
 // [range.iter.op.advance]
 struct __advance_fn final : __function_like {
 private:
-  template <signed_integral _Tp>
-  static constexpr make_unsigned_t<_Tp> __abs(_Tp const __n) noexcept {
-    auto const __unsigned_n = __to_unsigned_like(__n);
-    auto const __complement = ~__unsigned_n + 1;
-    return __n < 0 ? __complement : __unsigned_n;
+  template <class _Tp>
+  static constexpr _Tp __abs(_Tp __n) noexcept {
+    return __n < 0 ? -__n : __n;
   }
 
   template <class _Ip>

@@ -20,6 +20,7 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/CommandLine.h"
@@ -256,7 +257,7 @@ struct UnitExtentReplacementInfo {
 } // namespace
 
 /// Utility function for replacing operands/results to a linalg generic
-/// operation on tensors with unit-extent dimensions. These can be replaced with
+/// operation with unit-extent dimensions. These can be replaced with
 /// an operand/result with the unit-extent dimension removed. This is only done
 /// if the indexing map used to access that didimensionmension has a
 /// AffineConstantExpr of value 0. Given the `type` of an result/operand of a
@@ -301,10 +302,19 @@ static UnitExtentReplacementInfo replaceUnitExtents(GenericOp genericOp,
     ++dim;
   }
   // Compute the tensor or scalar replacement type.
+  Type actualType = opOperand->get().getType();
   Type elementType = getElementTypeOrSelf(opOperand->get());
-  Type replacementType = elementType == opOperand->get().getType()
-                             ? elementType
-                             : RankedTensorType::get(newShape, elementType);
+  Type replacementType;
+  if (elementType == opOperand->get().getType()) {
+    replacementType = elementType;
+  } else if (actualType.isa<RankedTensorType>()) {
+    replacementType = RankedTensorType::get(newShape, elementType);
+  } else if (actualType.isa<MemRefType>()) {
+    assert(actualType.cast<MemRefType>().getAffineMaps().empty() &&
+           "unsupported strided memrefs");
+    replacementType = MemRefType::get(newShape, elementType);
+  }
+  assert(replacementType && "unsupported shaped type");
   UnitExtentReplacementInfo info = {replacementType,
                                     AffineMap::get(indexingMap.getNumDims(),
                                                    indexingMap.getNumSymbols(),
@@ -324,14 +334,53 @@ convertAffineMapArrayToExprs(ArrayAttr affineMapArrayAttr) {
   return reassociationExprs;
 }
 
-/// Pattern to replace tensors operands/results that are unit extents.
-struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOp> {
+/// Pattern to replace tensor/buffer operands/results that are unit extents.
+struct ReplaceUnitExtents : public OpRewritePattern<GenericOp> {
   using OpRewritePattern<GenericOp>::OpRewritePattern;
+
+  // Return the original value if the type is unchanged, or reshape it. Return a
+  // nullptr if this is an unsupported type.
+  Value maybeExpand(Value result, Type origResultType,
+                    ArrayAttr reassociationMap, Location loc,
+                    PatternRewriter &rewriter) const {
+    if (origResultType == result.getType())
+      return result;
+    if (origResultType.isa<RankedTensorType>()) {
+      return rewriter.create<linalg::TensorExpandShapeOp>(
+          loc, origResultType, result,
+          convertAffineMapArrayToExprs(reassociationMap));
+    }
+    if (origResultType.isa<MemRefType>()) {
+      return rewriter.create<linalg::ExpandShapeOp>(
+          loc, origResultType, result,
+          convertAffineMapArrayToExprs(reassociationMap));
+    }
+    return nullptr;
+  };
+
+  // Return the original value if the type is unchanged, or reshape it. Return a
+  // nullptr if this is an unsupported type.
+  Value maybeCollapse(Value operand, Type newInputOutputType,
+                      ArrayAttr reassociationMap, Location loc,
+                      PatternRewriter &rewriter) const {
+    auto operandType = operand.getType();
+    if (operandType == newInputOutputType)
+      return operand;
+    if (operandType.isa<MemRefType>()) {
+      return rewriter.create<linalg::CollapseShapeOp>(
+          loc, newInputOutputType, operand,
+          convertAffineMapArrayToExprs(reassociationMap));
+    }
+    if (operandType.isa<RankedTensorType>()) {
+      return rewriter.create<linalg::TensorCollapseShapeOp>(
+          loc, newInputOutputType, operand,
+          convertAffineMapArrayToExprs(reassociationMap));
+    }
+    return nullptr;
+  };
+
   LogicalResult matchAndRewrite(GenericOp genericOp,
                                 PatternRewriter &rewriter) const override {
-    if (!genericOp.hasTensorSemantics())
-      return failure();
-
     MLIRContext *context = rewriter.getContext();
     Location loc = genericOp.getLoc();
 
@@ -339,7 +388,6 @@ struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOp> {
     SmallVector<ArrayAttr> reassociationMaps;
     SmallVector<Type> newInputOutputTypes;
     bool doCanonicalization = false;
-
     for (OpOperand *opOperand : genericOp.getInputAndOutputOperands()) {
       UnitExtentReplacementInfo replacementInfo =
           replaceUnitExtents(genericOp, opOperand, context);
@@ -362,14 +410,13 @@ struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOp> {
     auto insertReshapes = [&](ValueRange values) {
       SmallVector<Value, 4> res;
       res.reserve(values.size());
-      for (auto operand : llvm::enumerate(values)) {
-        if (operand.value().getType() == newInputOutputTypes[flattenedIdx])
-          res.push_back(operand.value());
-        else {
-          res.push_back(rewriter.create<TensorCollapseShapeOp>(
-              loc, newInputOutputTypes[flattenedIdx], operand.value(),
-              convertAffineMapArrayToExprs(reassociationMaps[flattenedIdx])));
-        }
+      for (auto operand : values) {
+        auto reshapedValue =
+            maybeCollapse(operand, newInputOutputTypes[flattenedIdx],
+                          reassociationMaps[flattenedIdx], loc, rewriter);
+        assert(reshapedValue &&
+               "expected ranked MemRef or Tensor operand type");
+        res.push_back(reshapedValue);
         ++flattenedIdx;
       }
       return res;
@@ -396,15 +443,13 @@ struct ReplaceUnitExtentTensors : public OpRewritePattern<GenericOp> {
     SmallVector<Value, 4> resultReplacements;
     for (auto result : llvm::enumerate(replacementOp.getResults())) {
       unsigned index = result.index() + replacementOp.getNumInputs();
-      RankedTensorType origResultType = genericOp.getResult(result.index())
-                                            .getType()
-                                            .template cast<RankedTensorType>();
-      if (origResultType != result.value().getType()) {
-        resultReplacements.push_back(rewriter.create<TensorExpandShapeOp>(
-            loc, origResultType, result.value(),
-            convertAffineMapArrayToExprs(reassociationMaps[index])));
-      } else
-        resultReplacements.push_back(result.value());
+      auto origResultType = genericOp.getResult(result.index()).getType();
+
+      auto newResult = maybeExpand(result.value(), origResultType,
+                                   reassociationMaps[index], loc, rewriter);
+      assert(newResult &&
+             "unexpected output type other than ranked MemRef or Tensor");
+      resultReplacements.push_back(newResult);
     }
     rewriter.replaceOp(genericOp, resultReplacements);
     return success();
@@ -501,9 +546,8 @@ struct UseRankReducedSubTensorInsertOp
 void mlir::linalg::populateFoldUnitExtentDimsPatterns(
     RewritePatternSet &patterns) {
   auto *context = patterns.getContext();
-  patterns.add<FoldUnitDimLoops, ReplaceUnitExtentTensors,
-               UseRankReducedSubTensorOp, UseRankReducedSubTensorInsertOp>(
-      context);
+  patterns.add<FoldUnitDimLoops, ReplaceUnitExtents, UseRankReducedSubTensorOp,
+               UseRankReducedSubTensorInsertOp>(context);
   TensorCollapseShapeOp::getCanonicalizationPatterns(patterns, context);
   TensorExpandShapeOp::getCanonicalizationPatterns(patterns, context);
 }

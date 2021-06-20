@@ -202,8 +202,8 @@ public:
   /// hasn't been done already
   ///
   /// \return
-  ///    A pointer to the breakpoint options.
-  BreakpointOptions *GetLocationOptions();
+  ///    A reference to the breakpoint options.
+  BreakpointOptions &GetLocationOptions();
 
   /// Use this to access breakpoint options from this breakpoint location.
   /// This will return the options that have a setting for the specified
@@ -214,10 +214,10 @@ public:
   /// \return
   ///     A pointer to the containing breakpoint's options if this
   ///     location doesn't have its own copy.
-  const BreakpointOptions *GetOptionsSpecifyingKind(
-      BreakpointOptions::OptionKind kind) const;
+  const BreakpointOptions &
+  GetOptionsSpecifyingKind(BreakpointOptions::OptionKind kind) const;
 
-  bool ValidForThisThread(Thread *thread);
+  bool ValidForThisThread(Thread &thread);
 
   /// Invoke the callback action when the breakpoint is hit.
   ///

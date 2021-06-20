@@ -55,6 +55,9 @@ static std::unique_ptr<FrontendAction> CreateFrontendBaseAction(
   case DebugDumpParseTreeNoSema:
     return std::make_unique<DebugDumpParseTreeNoSemaAction>();
     break;
+  case DebugDumpAll:
+    return std::make_unique<DebugDumpAllAction>();
+    break;
   case DebugDumpProvenance:
     return std::make_unique<DebugDumpProvenanceAction>();
     break;

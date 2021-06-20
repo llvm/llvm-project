@@ -80,6 +80,6 @@
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     10    5.5    0.1    0.0       pop	{r3, r4, r5, r6, r7, pc}
+# CHECK-NEXT: 0.     10    5.5    2.7    0.0       pop	{r3, r4, r5, r6, r7, pc}
 # CHECK-NEXT: 1.     10    3.6    0.0    3.9       nop
-# CHECK-NEXT:        10    4.6    0.1    2.0       <total>
+# CHECK-NEXT:        10    4.6    1.4    2.0       <total>

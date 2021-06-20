@@ -23,7 +23,9 @@
 // constexpr void check_arg_id(size_t id);
 
 #include <format>
+
 #include <cassert>
+#include <string_view>
 
 #include "test_macros.h"
 

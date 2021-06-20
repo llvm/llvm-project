@@ -5713,8 +5713,11 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
       }
       Value *NewInst = ExtractAndExtendIfNeeded(Vec);
       CSEBlocks.insert(cast<Instruction>(Scalar)->getParent());
-      auto &Locs = ExternallyUsedValues[Scalar];
-      ExternallyUsedValues.insert({NewInst, Locs});
+      auto &NewInstLocs = ExternallyUsedValues[NewInst];
+      auto It = ExternallyUsedValues.find(Scalar);
+      assert(It != ExternallyUsedValues.end() &&
+             "Externally used scalar is not found in ExternallyUsedValues");
+      NewInstLocs.append(It->second);
       ExternallyUsedValues.erase(Scalar);
       // Required to update internally referenced instructions.
       Scalar->replaceAllUsesWith(NewInst);

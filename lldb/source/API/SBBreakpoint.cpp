@@ -384,7 +384,7 @@ void SBBreakpoint::SetThreadIndex(uint32_t index) {
   if (bkpt_sp) {
     std::lock_guard<std::recursive_mutex> guard(
         bkpt_sp->GetTarget().GetAPIMutex());
-    bkpt_sp->GetOptions()->GetThreadSpec()->SetIndex(index);
+    bkpt_sp->GetOptions().GetThreadSpec()->SetIndex(index);
   }
 }
 
@@ -397,7 +397,7 @@ uint32_t SBBreakpoint::GetThreadIndex() const {
     std::lock_guard<std::recursive_mutex> guard(
         bkpt_sp->GetTarget().GetAPIMutex());
     const ThreadSpec *thread_spec =
-        bkpt_sp->GetOptions()->GetThreadSpecNoCreate();
+        bkpt_sp->GetOptions().GetThreadSpecNoCreate();
     if (thread_spec != nullptr)
       thread_idx = thread_spec->GetIndex();
   }
@@ -414,7 +414,7 @@ void SBBreakpoint::SetThreadName(const char *thread_name) {
   if (bkpt_sp) {
     std::lock_guard<std::recursive_mutex> guard(
         bkpt_sp->GetTarget().GetAPIMutex());
-    bkpt_sp->GetOptions()->GetThreadSpec()->SetName(thread_name);
+    bkpt_sp->GetOptions().GetThreadSpec()->SetName(thread_name);
   }
 }
 
@@ -427,7 +427,7 @@ const char *SBBreakpoint::GetThreadName() const {
     std::lock_guard<std::recursive_mutex> guard(
         bkpt_sp->GetTarget().GetAPIMutex());
     const ThreadSpec *thread_spec =
-        bkpt_sp->GetOptions()->GetThreadSpecNoCreate();
+        bkpt_sp->GetOptions().GetThreadSpecNoCreate();
     if (thread_spec != nullptr)
       name = thread_spec->GetName();
   }
@@ -443,7 +443,7 @@ void SBBreakpoint::SetQueueName(const char *queue_name) {
   if (bkpt_sp) {
     std::lock_guard<std::recursive_mutex> guard(
         bkpt_sp->GetTarget().GetAPIMutex());
-    bkpt_sp->GetOptions()->GetThreadSpec()->SetQueueName(queue_name);
+    bkpt_sp->GetOptions().GetThreadSpec()->SetQueueName(queue_name);
   }
 }
 
@@ -456,7 +456,7 @@ const char *SBBreakpoint::GetQueueName() const {
     std::lock_guard<std::recursive_mutex> guard(
         bkpt_sp->GetTarget().GetAPIMutex());
     const ThreadSpec *thread_spec =
-        bkpt_sp->GetOptions()->GetThreadSpecNoCreate();
+        bkpt_sp->GetOptions().GetThreadSpecNoCreate();
     if (thread_spec)
       name = thread_spec->GetQueueName();
   }
@@ -506,7 +506,7 @@ void SBBreakpoint::SetCommandLineCommands(SBStringList &commands) {
   std::unique_ptr<BreakpointOptions::CommandData> cmd_data_up(
       new BreakpointOptions::CommandData(*commands, eScriptLanguageNone));
 
-  bkpt_sp->GetOptions()->SetCommandDataCallback(cmd_data_up);
+  bkpt_sp->GetOptions().SetCommandDataCallback(cmd_data_up);
 }
 
 bool SBBreakpoint::GetCommandLineCommands(SBStringList &commands) {
@@ -518,7 +518,7 @@ bool SBBreakpoint::GetCommandLineCommands(SBStringList &commands) {
     return false;
   StringList command_list;
   bool has_commands =
-      bkpt_sp->GetOptions()->GetCommandLineCallbacks(command_list);
+      bkpt_sp->GetOptions().GetCommandLineCallbacks(command_list);
   if (has_commands)
     commands.AppendList(command_list);
   return has_commands;
@@ -636,7 +636,7 @@ SBError SBBreakpoint::SetScriptCallbackFunction(
     Status error;
     std::lock_guard<std::recursive_mutex> guard(
         bkpt_sp->GetTarget().GetAPIMutex());
-    BreakpointOptions *bp_options = bkpt_sp->GetOptions();
+    BreakpointOptions &bp_options = bkpt_sp->GetOptions();
     error = bkpt_sp->GetTarget()
         .GetDebugger()
         .GetScriptInterpreter()
@@ -661,7 +661,7 @@ SBError SBBreakpoint::SetScriptCallbackBody(const char *callback_body_text) {
   if (bkpt_sp) {
     std::lock_guard<std::recursive_mutex> guard(
         bkpt_sp->GetTarget().GetAPIMutex());
-    BreakpointOptions *bp_options = bkpt_sp->GetOptions();
+    BreakpointOptions &bp_options = bkpt_sp->GetOptions();
     Status error =
         bkpt_sp->GetTarget()
             .GetDebugger()

@@ -703,7 +703,7 @@ int populate_kernelArgMD(msgpack::byte_range args_element,
 } // namespace
 
 static hsa_status_t get_code_object_custom_metadata(
-    void *binary, size_t binSize, int gpu,
+    void *binary, size_t binSize,
     std::map<std::string, atl_kernel_info_t> &KernelInfoTable) {
   // parse code object with different keys from v2
   // also, the kernel name is not the same as the symbol name -- so a
@@ -878,7 +878,7 @@ static hsa_status_t get_code_object_custom_metadata(
 }
 
 static hsa_status_t
-populate_InfoTables(hsa_executable_symbol_t symbol, int gpu,
+populate_InfoTables(hsa_executable_symbol_t symbol,
                     std::map<std::string, atl_kernel_info_t> &KernelInfoTable,
                     std::map<std::string, atl_symbol_info_t> &SymbolInfoTable) {
   hsa_symbol_kind_t type;
@@ -1020,16 +1020,11 @@ populate_InfoTables(hsa_executable_symbol_t symbol, int gpu,
 hsa_status_t RegisterModuleFromMemory(
     std::map<std::string, atl_kernel_info_t> &KernelInfoTable,
     std::map<std::string, atl_symbol_info_t> &SymbolInfoTable,
-    void *module_bytes, size_t module_size, int gpu,
+    void *module_bytes, size_t module_size, hsa_agent_t agent,
     hsa_status_t (*on_deserialized_data)(void *data, size_t size,
                                          void *cb_state),
     void *cb_state, std::vector<hsa_executable_t> &HSAExecutables) {
   hsa_status_t err;
-  assert(gpu >= 0);
-
-  DEBUG_PRINT("Trying to load module to GPU-%d\n", gpu);
-  ATLGPUProcessor &proc = get_processor<ATLGPUProcessor>(gpu);
-  hsa_agent_t agent = proc.agent();
   hsa_executable_t executable = {0};
   hsa_profile_t agent_profile;
 
@@ -1058,7 +1053,7 @@ hsa_status_t RegisterModuleFromMemory(
       // Some metadata info is not available through ROCr API, so use custom
       // code object metadata parsing to collect such metadata info
 
-      err = get_code_object_custom_metadata(module_bytes, module_size, gpu,
+      err = get_code_object_custom_metadata(module_bytes, module_size,
                                             KernelInfoTable);
       if (err != HSA_STATUS_SUCCESS) {
         DEBUG_PRINT("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,
@@ -1116,8 +1111,7 @@ hsa_status_t RegisterModuleFromMemory(
     err = hsa::executable_iterate_symbols(
         executable,
         [&](hsa_executable_t, hsa_executable_symbol_t symbol) -> hsa_status_t {
-          return populate_InfoTables(symbol, gpu, KernelInfoTable,
-                                     SymbolInfoTable);
+          return populate_InfoTables(symbol, KernelInfoTable, SymbolInfoTable);
         });
     if (err != HSA_STATUS_SUCCESS) {
       printf("[%s:%d] %s failed: %s\n", __FILE__, __LINE__,

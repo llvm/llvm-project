@@ -64,8 +64,9 @@ private:
         std::size_t tileArgNb = listTileExpr.size();
 
         const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
-        if (outer->IsDoConcurrent())
+        if (outer->IsDoConcurrent()) {
           return; // Tile is not allowed on DO CONURRENT
+        }
         for (const parser::DoConstruct *loop{&*outer}; loop && tileArgNb > 0;
              --tileArgNb) {
           const auto &block{std::get<parser::Block>(loop->t)};
@@ -90,8 +91,9 @@ private:
   template <typename C, typename D>
   void CheckDoConcurrentClauseRestriction(const C &x) {
     const auto &doCons{std::get<std::optional<parser::DoConstruct>>(x.t)};
-    if (!doCons->IsDoConcurrent())
+    if (!doCons->IsDoConcurrent()) {
       return;
+    }
     const auto &beginLoopDirective = std::get<D>(x.t);
     const auto &accClauseList =
         std::get<parser::AccClauseList>(beginLoopDirective.t);

@@ -85,7 +85,7 @@ func @multiple_results(%arg0: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
       ^bb0(%gen_arg1: f32, %out1: f32, %out2: f32):
         %tmp1 = math.exp %gen_arg1 : f32
         linalg.yield %tmp1, %tmp1 : f32, f32
-    } -> tensor<4xf32>, tensor<4xf32>
+    } -> (tensor<4xf32>, tensor<4xf32>)
     return %0, %1 : tensor<4xf32>, tensor<4xf32>
 }
 
@@ -118,7 +118,7 @@ func @dynamic_results(%arg0: tensor<?x?xf32>)
       ^bb0(%gen_arg1: f32, %out1: f32, %out2: f32):
         %tmp1 = math.exp %gen_arg1 : f32
         linalg.yield %tmp1, %tmp1 : f32, f32
-    } -> tensor<?x?xf32>, tensor<?x?xf32>
+    } -> (tensor<?x?xf32>, tensor<?x?xf32>)
     return %0, %1 : tensor<?x?xf32>, tensor<?x?xf32>
 }
 

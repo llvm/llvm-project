@@ -138,24 +138,21 @@ ASAN_REPORT_ERROR_N(load, false)
 ASAN_REPORT_ERROR_N(store, true)
 
 #define ASAN_MEMORY_ACCESS_CALLBACK_BODY(type, is_write, size, exp_arg, fatal) \
-    if (SANITIZER_MYRIAD2 && !AddrIsInMem(addr) && !AddrIsInShadow(addr))      \
-      return;                                                                  \
-    uptr sp = MEM_TO_SHADOW(addr);                                             \
-    uptr s = size <= SHADOW_GRANULARITY ? *reinterpret_cast<u8 *>(sp)          \
-                                        : *reinterpret_cast<u16 *>(sp);        \
-    if (UNLIKELY(s)) {                                                         \
-      if (UNLIKELY(size >= SHADOW_GRANULARITY ||                               \
-                   ((s8)((addr & (SHADOW_GRANULARITY - 1)) + size - 1)) >=     \
-                       (s8)s)) {                                               \
-        if (__asan_test_only_reported_buggy_pointer) {                         \
-          *__asan_test_only_reported_buggy_pointer = addr;                     \
-        } else {                                                               \
-          GET_CALLER_PC_BP_SP;                                                 \
-          ReportGenericError(pc, bp, sp, addr, is_write, size, exp_arg,        \
-                              fatal);                                          \
-        }                                                                      \
+  uptr sp = MEM_TO_SHADOW(addr);                                               \
+  uptr s = size <= SHADOW_GRANULARITY ? *reinterpret_cast<u8 *>(sp)            \
+                                      : *reinterpret_cast<u16 *>(sp);          \
+  if (UNLIKELY(s)) {                                                           \
+    if (UNLIKELY(size >= SHADOW_GRANULARITY ||                                 \
+                 ((s8)((addr & (SHADOW_GRANULARITY - 1)) + size - 1)) >=       \
+                     (s8)s)) {                                                 \
+      if (__asan_test_only_reported_buggy_pointer) {                           \
+        *__asan_test_only_reported_buggy_pointer = addr;                       \
+      } else {                                                                 \
+        GET_CALLER_PC_BP_SP;                                                   \
+        ReportGenericError(pc, bp, sp, addr, is_write, size, exp_arg, fatal);  \
       }                                                                        \
-    }
+    }                                                                          \
+  }
 
 #define ASAN_MEMORY_ACCESS_CALLBACK(type, is_write, size)                      \
   extern "C" NOINLINE INTERFACE_ATTRIBUTE                                      \
@@ -306,7 +303,6 @@ static void asan_atexit() {
 }
 
 static void InitializeHighMemEnd() {
-#if !SANITIZER_MYRIAD2
 #if !ASAN_FIXED_MAPPING
   kHighMemEnd = GetMaxUserVirtualAddress();
   // Increase kHighMemEnd to make sure it's properly
@@ -314,7 +310,6 @@ static void InitializeHighMemEnd() {
   kHighMemEnd |= (GetMmapGranularity() << SHADOW_SCALE) - 1;
 #endif  // !ASAN_FIXED_MAPPING
   CHECK_EQ((kHighMemBeg % GetMmapGranularity()), 0);
-#endif  // !SANITIZER_MYRIAD2
 }
 
 void PrintAddressSpaceLayout() {
@@ -570,9 +565,6 @@ static void UnpoisonDefaultStack() {
     const uptr page_size = GetPageSizeCached();
     top = curr_thread->stack_top();
     bottom = ((uptr)&local_stack - page_size) & ~(page_size - 1);
-  } else if (SANITIZER_RTEMS) {
-    // Give up On RTEMS.
-    return;
   } else {
     CHECK(!SANITIZER_FUCHSIA);
     // If we haven't seen this thread, try asking the OS for stack bounds.

@@ -112,10 +112,10 @@ entry:
 ; CHECK-NEXT:          .vbyte  4, 0x00000000                   # Traceback table begin
 ; CHECK-NEXT:          .byte   0x00                            # Version = 0
 ; CHECK-NEXT:          .byte   0x09                            # Language = CPlusPlus
-; CHECK-NEXT:          .byte   0x22                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; CHECK-NEXT:          .byte   0x20                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
 ; CHECK-NEXT:                                          # +HasTraceBackTableOffset, -IsInternalProcedure
 ; CHECK-NEXT:                                          # -HasControlledStorage, -IsTOCless
-; CHECK-NEXT:                                          # +IsFloatingPointPresent
+; CHECK-NEXT:                                          # -IsFloatingPointPresent
 ; CHECK-NEXT:                                          # -IsFloatingPointOperationLogOrAbortEnabled
 ; CHECK-NEXT:          .byte   0x41                            # -IsInterruptHandler, +IsFunctionNamePresent, -IsAllocaUsed
 ; CHECK-NEXT:                                          # OnConditionDirective = 0, -IsCRSaved, +IsLRSaved

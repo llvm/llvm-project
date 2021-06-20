@@ -85,6 +85,8 @@ class VOP2_Real <VOP2_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
   InstSI <ps.OutOperandList, ps.InOperandList, real_name # ps.AsmOperands, []>,
   SIMCInstr <ps.PseudoInstr, EncodingFamily> {
 
+  let VALU = 1;
+  let VOP2 = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
@@ -103,6 +105,8 @@ class VOP2_Real <VOP2_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
   let Uses                 = ps.Uses;
   let Defs                 = ps.Defs;
   let SchedRW              = ps.SchedRW;
+  let mayLoad              = ps.mayLoad;
+  let mayStore             = ps.mayStore;
 }
 
 class VOP2_SDWA_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
@@ -1169,7 +1173,7 @@ let AssemblerPredicate = isGFX11Only, DecoderNamespace = "GFX11" in {
 
 // We don't want to override separate decoderNamespaces within these
 multiclass VOP2_Realtriple_e64_gfx11<bits<6> op> {
-  defm NAME : VOP3_Realtriple_gfx11<{0, 1, 0, 0, op{5-0}}, NAME> ;
+  defm NAME : VOP3_Realtriple_gfx11<{0, 1, 0, 0, op{5-0}}, /*isSingle=*/ 0, NAME> ;
 }
 multiclass VOP2_Realtriple_e64_with_name_gfx11<bits<6> op, string opName,
                                                string asmName> {
@@ -1178,7 +1182,7 @@ multiclass VOP2_Realtriple_e64_with_name_gfx11<bits<6> op, string opName,
 
 multiclass VOP2be_Real_gfx11<bits<6> op, string opName, string asmName> :
   VOP2be_Real_e32_gfx11<op, opName, asmName>,
-  VOP3be_Realtriple_gfx11<{0, 1, 0, 0, op{5-0}}, opName, asmName>,
+  VOP3be_Realtriple_gfx11<{0, 1, 0, 0, op{5-0}}, /*isSingle=*/ 0, opName, asmName>,
   VOP2be_Real_dpp_gfx11<op, opName, asmName>,
   VOP2be_Real_dpp8_gfx11<op, opName, asmName>;
 
@@ -1244,19 +1248,19 @@ defm V_CVT_PK_RTZ_F16_F32  : VOP2_Real_FULL_with_name_gfx11<0x02f,
 defm V_PK_FMAC_F16     : VOP2Only_Real_gfx11<0x03c>;
 
 // VOP3 only.
-defm V_CNDMASK_B16        : VOP3_Realtriple_gfx11<0x25d>;
-defm V_LDEXP_F32          : VOP3_Realtriple_gfx11<0x31c>;
-defm V_BFM_B32            : VOP3_Realtriple_gfx11<0x31d>;
-defm V_BCNT_U32_B32       : VOP3_Realtriple_gfx11<0x31e>;
-defm V_MBCNT_LO_U32_B32   : VOP3_Realtriple_gfx11<0x31f>;
-defm V_MBCNT_HI_U32_B32   : VOP3_Realtriple_gfx11<0x320>;
-defm V_CVT_PKNORM_I16_F32 : VOP3_Realtriple_gfx11<0x321>;
-defm V_CVT_PKNORM_U16_F32 : VOP3_Realtriple_gfx11<0x322>;
-defm V_CVT_PK_U16_U32     : VOP3_Realtriple_gfx11<0x323>;
-defm V_CVT_PK_I16_I32     : VOP3_Realtriple_gfx11<0x324>;
-defm V_ADD_CO_U32         : VOP3be_Realtriple_gfx11<0x300>;
-defm V_SUB_CO_U32         : VOP3be_Realtriple_gfx11<0x301>;
-defm V_SUBREV_CO_U32      : VOP3be_Realtriple_gfx11<0x302>;
+defm V_CNDMASK_B16        : VOP3Only_Realtriple_gfx11<0x25d>;
+defm V_LDEXP_F32          : VOP3Only_Realtriple_gfx11<0x31c>;
+defm V_BFM_B32            : VOP3Only_Realtriple_gfx11<0x31d>;
+defm V_BCNT_U32_B32       : VOP3Only_Realtriple_gfx11<0x31e>;
+defm V_MBCNT_LO_U32_B32   : VOP3Only_Realtriple_gfx11<0x31f>;
+defm V_MBCNT_HI_U32_B32   : VOP3Only_Realtriple_gfx11<0x320>;
+defm V_CVT_PKNORM_I16_F32 : VOP3Only_Realtriple_gfx11<0x321>;
+defm V_CVT_PKNORM_U16_F32 : VOP3Only_Realtriple_gfx11<0x322>;
+defm V_CVT_PK_U16_U32     : VOP3Only_Realtriple_gfx11<0x323>;
+defm V_CVT_PK_I16_I32     : VOP3Only_Realtriple_gfx11<0x324>;
+defm V_ADD_CO_U32         : VOP3beOnly_Realtriple_gfx11<0x300>;
+defm V_SUB_CO_U32         : VOP3beOnly_Realtriple_gfx11<0x301>;
+defm V_SUBREV_CO_U32      : VOP3beOnly_Realtriple_gfx11<0x302>;
 
 let SubtargetPredicate = isGFX11Plus in {
   defm : VOP2eInstAliases<V_CNDMASK_B32_e32, V_CNDMASK_B32_e32_gfx11>;

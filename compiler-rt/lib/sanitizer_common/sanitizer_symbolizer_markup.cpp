@@ -16,14 +16,13 @@
 
 #if SANITIZER_FUCHSIA
 #include "sanitizer_symbolizer_fuchsia.h"
-#elif SANITIZER_RTEMS
-#include "sanitizer_symbolizer_rtems.h"
-#endif
-#include "sanitizer_stacktrace.h"
-#include "sanitizer_symbolizer.h"
+#  endif
 
-#include <limits.h>
-#include <unwind.h>
+#  include <limits.h>
+#  include <unwind.h>
+
+#  include "sanitizer_stacktrace.h"
+#  include "sanitizer_symbolizer.h"
 
 namespace __sanitizer {
 

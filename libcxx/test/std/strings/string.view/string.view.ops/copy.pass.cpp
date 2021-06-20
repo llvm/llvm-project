@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: gcc-10
+// XFAIL: gcc-10, gcc-11
 //     GCC's __builtin_strlen isn't constexpr yet
 // UNSUPPORTED: LIBCXX-DEBUG-FIXME
 

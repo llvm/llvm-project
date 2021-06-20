@@ -17,6 +17,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/RPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/RawByteChannel.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
+#include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -135,7 +136,7 @@ public:
   static const char *getName() { return "ReleaseOrFinalizeMemRequestElement"; }
 };
 
-template <> class SerializationTypeName<tpctypes::WrapperFunctionResult> {
+template <> class SerializationTypeName<shared::WrapperFunctionResult> {
 public:
   static const char *getName() { return "WrapperFunctionResult"; }
 };
@@ -234,40 +235,25 @@ public:
 
 template <typename ChannelT>
 class SerializationTraits<
-    ChannelT, tpctypes::WrapperFunctionResult, tpctypes::WrapperFunctionResult,
+    ChannelT, shared::WrapperFunctionResult, shared::WrapperFunctionResult,
     std::enable_if_t<std::is_base_of<RawByteChannel, ChannelT>::value>> {
 public:
-  static Error serialize(ChannelT &C,
-                         const tpctypes::WrapperFunctionResult &E) {
-    auto Data = E.getData();
-    if (auto Err = serializeSeq(C, static_cast<uint64_t>(Data.size())))
+  static Error serialize(ChannelT &C, const shared::WrapperFunctionResult &E) {
+    if (auto Err = serializeSeq(C, static_cast<uint64_t>(E.size())))
       return Err;
-    if (Data.size() == 0)
+    if (E.size() == 0)
       return Error::success();
-    return C.appendBytes(reinterpret_cast<const char *>(Data.data()),
-                         Data.size());
+    return C.appendBytes(E.data(), E.size());
   }
 
-  static Error deserialize(ChannelT &C, tpctypes::WrapperFunctionResult &E) {
-    tpctypes::CWrapperFunctionResult R;
+  static Error deserialize(ChannelT &C, shared::WrapperFunctionResult &E) {
 
-    R.Size = 0;
-    R.Data.ValuePtr = nullptr;
-    R.Destroy = nullptr;
-
-    if (auto Err = deserializeSeq(C, R.Size))
+    uint64_t Size;
+    if (auto Err = deserializeSeq(C, Size))
       return Err;
-    if (R.Size == 0)
-      return Error::success();
-    R.Data.ValuePtr = new uint8_t[R.Size];
-    if (auto Err =
-            C.readBytes(reinterpret_cast<char *>(R.Data.ValuePtr), R.Size)) {
-      R.Destroy = tpctypes::WrapperFunctionResult::destroyWithDeleteArray;
-      return Err;
-    }
 
-    E = tpctypes::WrapperFunctionResult(R);
-    return Error::success();
+    char *DataPtr = shared::WrapperFunctionResult::allocate(E, Size);
+    return C.readBytes(DataPtr, E.size());
   }
 };
 
@@ -371,7 +357,7 @@ public:
 
 class RunWrapper
     : public shared::RPCFunction<RunWrapper,
-                                 tpctypes::WrapperFunctionResult(
+                                 shared::WrapperFunctionResult(
                                      JITTargetAddress, std::vector<uint8_t>)> {
 public:
   static const char *getName() { return "RunWrapper"; }
@@ -594,13 +580,14 @@ private:
         ProgramNameOverride);
   }
 
-  tpctypes::WrapperFunctionResult
+  shared::WrapperFunctionResult
   runWrapper(JITTargetAddress WrapperFnAddr,
              const std::vector<uint8_t> &ArgBuffer) {
-    using WrapperFnTy = tpctypes::CWrapperFunctionResult (*)(
-        const uint8_t *Data, uint64_t Size);
+    using WrapperFnTy = shared::detail::CWrapperFunctionResult (*)(
+        const char *Data, uint64_t Size);
     auto *WrapperFn = jitTargetAddressToFunction<WrapperFnTy>(WrapperFnAddr);
-    return WrapperFn(ArgBuffer.data(), ArgBuffer.size());
+    return WrapperFn(reinterpret_cast<const char *>(ArgBuffer.data()),
+                     ArgBuffer.size());
   }
 
   void closeConnection() { Finished = true; }

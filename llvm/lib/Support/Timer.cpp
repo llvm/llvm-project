@@ -174,7 +174,7 @@ void Timer::stopTimer() {
   Running = false;
   Time += TimeRecord::getCurrentTime(false);
   Time -= StartTime;
-  Signposts->endInterval(this, getName());
+  Signposts->endInterval(this);
 }
 
 void Timer::clear() {

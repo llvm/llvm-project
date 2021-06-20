@@ -34,7 +34,7 @@ ScriptInterpreter::ScriptInterpreter(
           std::move(scripted_process_interface_up)) {}
 
 void ScriptInterpreter::CollectDataForBreakpointCommandCallback(
-    std::vector<BreakpointOptions *> &bp_options_vec,
+    std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
     CommandReturnObject &result) {
   result.SetStatus(eReturnStatusFailed);
   result.AppendError(
@@ -97,10 +97,10 @@ ScriptInterpreter::StringToLanguage(const llvm::StringRef &language) {
 }
 
 Status ScriptInterpreter::SetBreakpointCommandCallback(
-    std::vector<BreakpointOptions *> &bp_options_vec,
+    std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
     const char *callback_text) {
   Status return_error;
-  for (BreakpointOptions *bp_options : bp_options_vec) {
+  for (BreakpointOptions &bp_options : bp_options_vec) {
     return_error = SetBreakpointCommandCallback(bp_options, callback_text);
     if (return_error.Success())
       break;
@@ -109,10 +109,10 @@ Status ScriptInterpreter::SetBreakpointCommandCallback(
 }
 
 Status ScriptInterpreter::SetBreakpointCommandCallbackFunction(
-    std::vector<BreakpointOptions *> &bp_options_vec, const char *function_name,
-    StructuredData::ObjectSP extra_args_sp) {
+    std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
+    const char *function_name, StructuredData::ObjectSP extra_args_sp) {
   Status error;
-  for (BreakpointOptions *bp_options : bp_options_vec) {
+  for (BreakpointOptions &bp_options : bp_options_vec) {
     error = SetBreakpointCommandCallbackFunction(bp_options, function_name,
                                                  extra_args_sp);
     if (!error.Success())

@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__iterator/concepts.h>
+#include <__ranges/access.h>
 #include <__ranges/size.h>
 #include <type_traits>
 

@@ -72,7 +72,7 @@
 # PADMAX-NEXT: segname __TEXT
 # PADMAX-NEXT: addr
 # PADMAX-NEXT: size
-# PADMAX-NEXT: offset [[#%u, CMDSIZE + 0x20 + mul(0x400, N - 8)]]
+# PADMAX-NEXT: offset [[#%u, CMDSIZE + 0x20 + mul(0x400, N - 9)]]
 
 ################ All 3 kinds of LCDylib swamped by a larger override
 # RUN: %lld -o %t/libnull.dylib %t/null.o -dylib \

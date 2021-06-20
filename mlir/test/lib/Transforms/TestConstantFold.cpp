@@ -16,6 +16,10 @@ using namespace mlir;
 namespace {
 /// Simple constant folding pass.
 struct TestConstantFold : public PassWrapper<TestConstantFold, FunctionPass> {
+  StringRef getArgument() const final { return "test-constant-fold"; }
+  StringRef getDescription() const final {
+    return "Test operation constant folding";
+  }
   // All constants in the function post folding.
   SmallVector<Operation *, 8> existingConstants;
 
@@ -62,9 +66,6 @@ void TestConstantFold::runOnFunction() {
 
 namespace mlir {
 namespace test {
-void registerTestConstantFold() {
-  PassRegistration<TestConstantFold>("test-constant-fold",
-                                     "Test operation constant folding");
-}
+void registerTestConstantFold() { PassRegistration<TestConstantFold>(); }
 } // namespace test
 } // namespace mlir

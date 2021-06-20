@@ -134,7 +134,7 @@ bool BreakpointLocationCollection::ShouldStop(
   return shouldStop;
 }
 
-bool BreakpointLocationCollection::ValidForThisThread(Thread *thread) {
+bool BreakpointLocationCollection::ValidForThisThread(Thread &thread) {
   std::lock_guard<std::mutex> guard(m_collection_mutex);
   collection::iterator pos, begin = m_break_loc_collection.begin(),
                             end = m_break_loc_collection.end();

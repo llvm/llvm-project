@@ -178,13 +178,12 @@ static bool checkCompatibility(const InputFile *input) {
     return false;
   }
 
-  if (it->minimum <= config->platformInfo.minimum)
-    return true;
+  if (it->minimum > config->platformInfo.minimum)
+    warn(toString(input) + " has version " + it->minimum.getAsString() +
+         ", which is newer than target minimum of " +
+         config->platformInfo.minimum.getAsString());
 
-  error(toString(input) + " has version " + it->minimum.getAsString() +
-        ", which is newer than target minimum of " +
-        config->platformInfo.minimum.getAsString());
-  return false;
+  return true;
 }
 
 // Open a given file path and return it as a memory-mapped file.
@@ -254,9 +253,12 @@ void ObjFile::parseSections(ArrayRef<Section> sections) {
     ArrayRef<uint8_t> data = {isZeroFill(sec.flags) ? nullptr
                                                     : buf + sec.offset,
                               static_cast<size_t>(sec.size)};
-    if (sec.align >= 32)
+    if (sec.align >= 32) {
       error("alignment " + std::to_string(sec.align) + " of section " + name +
             " is too large");
+      subsections.push_back({});
+      continue;
+    }
     uint32_t align = 1 << sec.align;
     uint32_t flags = sec.flags;
 
@@ -700,11 +702,10 @@ template <class LP> void ObjFile::parse() {
   if (!checkCompatibility(this))
     return;
 
-  if (const load_command *cmd = findCommand(hdr, LC_LINKER_OPTION)) {
-    auto *c = reinterpret_cast<const linker_option_command *>(cmd);
-    StringRef data{reinterpret_cast<const char *>(c + 1),
-                   c->cmdsize - sizeof(linker_option_command)};
-    parseLCLinkerOption(this, c->count, data);
+  for (auto *cmd : findCommands<linker_option_command>(hdr, LC_LINKER_OPTION)) {
+    StringRef data{reinterpret_cast<const char *>(cmd + 1),
+                   cmd->cmdsize - sizeof(linker_option_command)};
+    parseLCLinkerOption(this, cmd->count, data);
   }
 
   ArrayRef<Section> sectionHeaders;
@@ -732,6 +733,8 @@ template <class LP> void ObjFile::parse() {
       parseRelocations(sectionHeaders, sectionHeaders[i], subsections[i]);
 
   parseDebugInfo();
+  if (config->emitDataInCodeInfo)
+    parseDataInCode();
 }
 
 void ObjFile::parseDebugInfo() {
@@ -755,6 +758,21 @@ void ObjFile::parseDebugInfo() {
   // PR48637.
   auto it = units.begin();
   compileUnit = it->get();
+}
+
+void ObjFile::parseDataInCode() {
+  const auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
+  const load_command *cmd = findCommand(buf, LC_DATA_IN_CODE);
+  if (!cmd)
+    return;
+  const auto *c = reinterpret_cast<const linkedit_data_command *>(cmd);
+  dataInCodeEntries = {
+      reinterpret_cast<const data_in_code_entry *>(buf + c->dataoff),
+      c->datasize / sizeof(data_in_code_entry)};
+  assert(is_sorted(dataInCodeEntries, [](const data_in_code_entry &lhs,
+                                         const data_in_code_entry &rhs) {
+    return lhs.offset < rhs.offset;
+  }));
 }
 
 // The path can point to either a dylib or a .tbd file.

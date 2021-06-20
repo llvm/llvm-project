@@ -20,6 +20,8 @@ def sub_vsx0 : SubRegIndex<128>;
 def sub_vsx1 : SubRegIndex<128, 128>;
 def sub_pair0 : SubRegIndex<256>;
 def sub_pair1 : SubRegIndex<256, 256>;
+def sub_gp8_x0 : SubRegIndex<64>;
+def sub_gp8_x1 : SubRegIndex<64, 64>;
 }
 
 
@@ -119,6 +121,15 @@ class VSRPair<bits<5> num, string n, list<Register> subregs> : PPCReg<n> {
   let SubRegs = subregs;
 }
 
+// GP8Pair - Consecutive even-odd paired GP8.
+class GP8Pair<string n, bits<5> EvenIndex> : PPCReg<n> {
+  assert !eq(EvenIndex{0}, 0), "Index should be even.";
+  let HWEncoding{4-0} = EvenIndex;
+  let SubRegs = [!cast<GP8>("X"#EvenIndex), !cast<GP8>("X"#!add(EvenIndex, 1))];
+  let DwarfNumbers = [-1, -1];
+  let SubRegIndices = [sub_gp8_x0, sub_gp8_x1];
+}
+
 // General-purpose registers
 foreach Index = 0-31 in {
   def R#Index : GPR<Index, "r"#Index>, DwarfRegNum<[-2, Index]>;
@@ -183,6 +194,11 @@ let SubRegIndices = [sub_vsx0, sub_vsx1] in {
               [!cast<VR>("V"#Index), !cast<VR>("V"#!add(Index, 1))]>,
       DwarfRegNum<[-1, -1]>;
   }
+}
+
+// 16 paired even-odd consecutive GP8s.
+foreach Index = { 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 } in {
+  def G8p#!srl(Index, 1) : GP8Pair<"r"#Index, Index>;
 }
 
 // The representation of r0 when treated as the constant 0.
@@ -461,4 +477,19 @@ def VSRpRC :
                      VSRp24, VSRp25, VSRp31, VSRp30, VSRp29, VSRp28,
                      VSRp27, VSRp26)> {
   let Size = 256;
+}
+
+// Make AllocationOrder as similar as G8RC's to avoid potential spilling.
+// Similarly, we have an AltOrder for 64-bit ELF ABI which r2 is allocated
+// at last.
+def G8pRC :
+  RegisterClass<"PPC", [i128], 128,
+                (add (sequence "G8p%u", 1, 5),
+                     (sequence "G8p%u", 14, 7),
+                     G8p15, G8p6, G8p0)> {
+  let AltOrders = [(add (sub G8pRC, G8p1), G8p1)];
+  let AltOrderSelect = [{
+    return MF.getSubtarget<PPCSubtarget>().is64BitELFABI();
+  }];
+  let Size = 128;
 }

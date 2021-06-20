@@ -66,34 +66,122 @@ bool PPCFunctionInfo::isLiveInZExt(Register VReg) const {
 }
 
 void PPCFunctionInfo::appendParameterType(ParamType Type) {
-  uint32_t CopyParamType = ParameterType;
-  int Bits = 0;
 
-  // If it is fixed type, we only need to increase the FixedParamNum, for
-  // the bit encode of fixed type is bit of zero, we do not need to change the
-  // ParamType.
-  if (Type == FixedType) {
-    ++FixedParamNum;
+  ParamtersType.push_back(Type);
+  switch (Type) {
+  case FixedType:
+    ++FixedParmsNum;
+    return;
+  case ShortFloatingPoint:
+  case LongFloatingPoint:
+    ++FloatingParmsNum;
+    return;
+  case VectorChar:
+  case VectorShort:
+  case VectorInt:
+  case VectorFloat:
+    ++VectorParmsNum;
     return;
   }
+  llvm_unreachable("Error ParamType type.");
+}
 
-  ++FloatingPointParamNum;
+uint32_t PPCFunctionInfo::getVecExtParmsType() const {
 
-  for (int I = 0;
-       I < static_cast<int>(FloatingPointParamNum + FixedParamNum - 1); ++I) {
-    if (CopyParamType & XCOFF::TracebackTable::ParmTypeIsFloatingBit) {
+  uint32_t VectExtParamInfo = 0;
+  unsigned ShiftBits = 32 - XCOFF::TracebackTable::WidthOfParamType;
+  int Bits = 0;
+
+  if (!hasVectorParms())
+    return 0;
+
+  for (const auto &Elt : ParamtersType) {
+    switch (Elt) {
+    case VectorChar:
+      VectExtParamInfo <<= XCOFF::TracebackTable::WidthOfParamType;
+      VectExtParamInfo |=
+          XCOFF::TracebackTable::ParmTypeIsVectorCharBit >> ShiftBits;
+      Bits += XCOFF::TracebackTable::WidthOfParamType;
+      break;
+    case VectorShort:
+      VectExtParamInfo <<= XCOFF::TracebackTable::WidthOfParamType;
+      VectExtParamInfo |=
+          XCOFF::TracebackTable::ParmTypeIsVectorShortBit >> ShiftBits;
+      Bits += XCOFF::TracebackTable::WidthOfParamType;
+      break;
+    case VectorInt:
+      VectExtParamInfo <<= XCOFF::TracebackTable::WidthOfParamType;
+      VectExtParamInfo |=
+          XCOFF::TracebackTable::ParmTypeIsVectorIntBit >> ShiftBits;
+      Bits += XCOFF::TracebackTable::WidthOfParamType;
+      break;
+    case VectorFloat:
+      VectExtParamInfo <<= XCOFF::TracebackTable::WidthOfParamType;
+      VectExtParamInfo |=
+          XCOFF::TracebackTable::ParmTypeIsVectorFloatBit >> ShiftBits;
+      Bits += XCOFF::TracebackTable::WidthOfParamType;
+      break;
+    default:
+      break;
+    }
+
+    // There are only 32bits in the VectExtParamInfo.
+    if (Bits >= 32)
+      break;
+  }
+  return Bits < 32 ? VectExtParamInfo << (32 - Bits) : VectExtParamInfo;
+}
+
+uint32_t PPCFunctionInfo::getParmsType() const {
+  uint32_t ParamsTypeInfo = 0;
+  unsigned ShiftBits = 32 - XCOFF::TracebackTable::WidthOfParamType;
+
+  int Bits = 0;
+  for (const auto &Elt : ParamtersType) {
+
+    if (Bits > 31 || (Bits > 30 && (Elt != FixedType || hasVectorParms())))
+      break;
+
+    switch (Elt) {
+    case FixedType:
+      if (hasVectorParms()) {
+        //'00'  ==> fixed parameter if HasVectorParms is true.
+        ParamsTypeInfo <<= XCOFF::TracebackTable::WidthOfParamType;
+        ParamsTypeInfo |=
+            XCOFF::TracebackTable::ParmTypeIsFixedBits >> ShiftBits;
+        Bits += XCOFF::TracebackTable::WidthOfParamType;
+      } else {
+        //'0'  ==> fixed parameter if HasVectorParms is false.
+        ParamsTypeInfo <<= 1;
+        ++Bits;
+      }
+      break;
+    case ShortFloatingPoint:
       // '10'b => floating point short parameter.
+      ParamsTypeInfo <<= XCOFF::TracebackTable::WidthOfParamType;
+      ParamsTypeInfo |=
+          XCOFF::TracebackTable::ParmTypeIsFloatingBits >> ShiftBits;
+      Bits += XCOFF::TracebackTable::WidthOfParamType;
+      break;
+    case LongFloatingPoint:
       // '11'b => floating point long parameter.
-      CopyParamType <<= 2;
-      Bits += 2;
-    } else {
-      // '0'b => fixed parameter.
-      CopyParamType <<= 1;
-      ++Bits;
+      ParamsTypeInfo <<= XCOFF::TracebackTable::WidthOfParamType;
+      ParamsTypeInfo |=
+          XCOFF::TracebackTable::ParmTypeIsDoubleBits >> ShiftBits;
+      Bits += XCOFF::TracebackTable::WidthOfParamType;
+      break;
+    case VectorChar:
+    case VectorShort:
+    case VectorInt:
+    case VectorFloat:
+      //	'01' ==> vector parameter
+      ParamsTypeInfo <<= XCOFF::TracebackTable::WidthOfParamType;
+      ParamsTypeInfo |=
+          XCOFF::TracebackTable::ParmTypeIsVectorBits >> ShiftBits;
+      Bits += XCOFF::TracebackTable::WidthOfParamType;
+      break;
     }
   }
 
-  assert(Type != FixedType && "FixedType should already be handled.");
-  if (Bits < 31)
-    ParameterType |= Type << (30 - Bits);
+  return Bits < 32 ? ParamsTypeInfo << (32 - Bits) : ParamsTypeInfo;
 }

@@ -579,6 +579,7 @@ OpEmitter::OpEmitter(const Operator &op,
       opClass(op.getCppClassName(), op.getExtraClassDeclaration()),
       staticVerifierEmitter(staticVerifierEmitter) {
   verifyCtx.withOp("(*this->getOperation())");
+  verifyCtx.addSubst("_ctxt", "this->getOperation()->getContext()");
 
   genTraits();
 

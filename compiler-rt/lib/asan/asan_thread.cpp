@@ -240,27 +240,15 @@ void AsanThread::Init(const InitOptions *options) {
   }
   ClearShadowForThreadStackAndTLS();
   fake_stack_ = nullptr;
-  if (__asan_option_detect_stack_use_after_return &&
-      tid() == GetCurrentTidOrInvalid()) {
-    // AsyncSignalSafeLazyInitFakeStack makes use of threadlocals and must be
-    // called from the context of the thread it is initializing, not its parent.
-    // Most platforms call AsanThread::Init on the newly-spawned thread, but
-    // Fuchsia calls this function from the parent thread.  To support that
-    // approach, we avoid calling AsyncSignalSafeLazyInitFakeStack here; it will
-    // be called by the new thread when it first attempts to access the fake
-    // stack.
-    AsyncSignalSafeLazyInitFakeStack();
-  }
   int local = 0;
   VReport(1, "T%d: stack [%p,%p) size 0x%zx; local=%p\n", tid(),
           (void *)stack_bottom_, (void *)stack_top_, stack_top_ - stack_bottom_,
           &local);
 }
 
-// Fuchsia and RTEMS don't use ThreadStart.
-// asan_fuchsia.c/asan_rtems.c define CreateMainThread and
-// SetThreadStackAndTls.
-#if !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
+// Fuchsia doesn't use ThreadStart.
+// asan_fuchsia.c definies CreateMainThread and SetThreadStackAndTls.
+#if !SANITIZER_FUCHSIA
 
 thread_return_t AsanThread::ThreadStart(tid_t os_id) {
   Init();
@@ -317,7 +305,7 @@ void AsanThread::SetThreadStackAndTls(const InitOptions *options) {
   }
 }
 
-#endif  // !SANITIZER_FUCHSIA && !SANITIZER_RTEMS
+#endif  // !SANITIZER_FUCHSIA
 
 void AsanThread::ClearShadowForThreadStackAndTLS() {
   if (stack_top_ != stack_bottom_)
@@ -422,9 +410,6 @@ static bool ThreadStackContainsAddress(ThreadContextBase *tctx_base,
 }
 
 AsanThread *GetCurrentThread() {
-  if (SANITIZER_RTEMS && !asan_inited)
-    return nullptr;
-
   AsanThreadContext *context =
       reinterpret_cast<AsanThreadContext *>(AsanTSDGet());
   if (!context) {
