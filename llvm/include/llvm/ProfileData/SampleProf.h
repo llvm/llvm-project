@@ -598,21 +598,9 @@ public:
   ErrorOr<uint64_t> findSamplesAt(uint32_t LineOffset,
                                   uint32_t Discriminator) const {
     const auto &ret = BodySamples.find(LineLocation(LineOffset, Discriminator));
-    if (ret == BodySamples.end()) {
-      // For CSSPGO, in order to conserve profile size, we no longer write out
-      // locations profile for those not hit during training, so we need to
-      // treat them as zero instead of error here.
-      if (FunctionSamples::ProfileIsCS || FunctionSamples::ProfileIsProbeBased)
-        return 0;
+    if (ret == BodySamples.end())
       return std::error_code();
-    } else {
-      // Return error for an invalid sample count which is usually assigned to
-      // dangling probe.
-      if (FunctionSamples::ProfileIsProbeBased &&
-          ret->second.getSamples() == FunctionSamples::InvalidProbeCount)
-        return std::error_code();
-      return ret->second.getSamples();
-    }
+    return ret->second.getSamples();
   }
 
   /// Returns the call target map collected at a given location.
@@ -889,10 +877,6 @@ public:
   const FunctionSamples *findFunctionSamples(
       const DILocation *DIL,
       SampleProfileReaderItaniumRemapper *Remapper = nullptr) const;
-
-  // The invalid sample count is used to represent samples collected for a
-  // dangling probe.
-  static constexpr uint64_t InvalidProbeCount = UINT64_MAX;
 
   static bool ProfileIsProbeBased;
 
