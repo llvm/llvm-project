@@ -201,6 +201,18 @@ public:
   mlir::Type getBaseTy() const {
     return fir::dyn_cast_ptrOrBoxEleTy(getBoxTy());
   }
+
+  /// Return the memory type of the data address inside the box:
+  /// - for fir.box<fir.ptr<T>>, return fir.ptr<T>
+  /// - for fir.box<fir.heap<T>>, return fir.heap<T>
+  /// - for fir.box<T>, return fir.ref<T>
+  mlir::Type getMemTy() const {
+    auto ty = getBoxTy().getEleTy();
+    if (fir::isa_ref_type(ty))
+      return ty;
+    return fir::ReferenceType::get(ty);
+  }
+
   /// Get the scalar type related to the described entity
   mlir::Type getEleTy() const {
     auto type = getBaseTy();

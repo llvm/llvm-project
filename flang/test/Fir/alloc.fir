@@ -29,3 +29,10 @@ func @f4() -> !fir.heap<i32> {
   %1 = fir.allocmem i32, %0
   return %1 : !fir.heap<i32>
 }
+
+// CHECK-LABEL: define i32** @f5()
+func @f5() -> !fir.ref<!fir.ptr<!fir.array<?xi32>>> {
+  // CHECK: alloca i32*, i64 1
+  %1 = fir.alloca !fir.ptr<!fir.array<?xi32>>
+  return %1 : !fir.ref<!fir.ptr<!fir.array<?xi32>>>
+}

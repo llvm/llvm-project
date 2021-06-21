@@ -225,3 +225,94 @@ subroutine test_array_non_contig_remap_slice(p, x)
   ! CHECK: fir.store %[[rebox]] to %[[p]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
   p(2:11, 3:12) => x(51:350:3)
 end subroutine
+
+! -----------------------------------------------------------------------------
+!  Test pointer assignments that involves LHS pointers lowered to local variables
+!  instead of a fir.ref<fir.box>, and RHS that are fir.box
+! -----------------------------------------------------------------------------
+
+! CHECK-LABEL: func @_QPissue857(
+! CHECK-SAME: %[[rhs:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFissue857Tt{i:i32}>>>>
+subroutine issue857(rhs)
+  type t
+    integer :: i
+  end type
+  type(t), pointer :: rhs, lhs
+  ! CHECK: %[[lhs:.*]] = fir.alloca !fir.ptr<!fir.type<_QFissue857Tt{i:i32}>>
+  ! CHECK: %[[box_load:.*]] = fir.load %[[rhs]] : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFissue857Tt{i:i32}>>>>
+  ! CHECK: %[[addr:.*]] = fir.box_addr %[[box_load]] : (!fir.box<!fir.ptr<!fir.type<_QFissue857Tt{i:i32}>>>) -> !fir.ptr<!fir.type<_QFissue857Tt{i:i32}>>
+  ! CHECK: fir.store %[[addr]] to %[[lhs]] : !fir.ref<!fir.ptr<!fir.type<_QFissue857Tt{i:i32}>>>
+  lhs => rhs
+end subroutine
+
+! CHECK-LABEL: func @_QPissue857_array(
+! CHECK-SAME: %[[rhs:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFissue857_arrayTt{i:i32}>>>>>
+subroutine issue857_array(rhs)
+  type t
+    integer :: i
+  end type
+  type(t), contiguous,  pointer :: rhs(:), lhs(:)
+  ! CHECK-DAG: %[[lhs_addr:.*]] = fir.alloca !fir.ptr<!fir.array<?x!fir.type<_QFissue857_arrayTt{i:i32}>>> {uniq_name = "_QFissue857_arrayElhs.addr"}
+  ! CHECK-DAG: %[[lhs_lb:.*]] = fir.alloca index {uniq_name = "_QFissue857_arrayElhs.lb0"}
+  ! CHECK-DAG: %[[lhs_ext:.*]] = fir.alloca index {uniq_name = "_QFissue857_arrayElhs.ext0"}
+  ! CHECK: %[[box:.*]] = fir.load %[[rhs]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFissue857_arrayTt{i:i32}>>>>>
+  ! CHECK: %[[lb:.*]]:3 = fir.box_dims %[[box]], %c{{.*}} : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFissue857_arrayTt{i:i32}>>>>, index) -> (index, index, index)
+  ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFissue857_arrayTt{i:i32}>>>>) -> !fir.ptr<!fir.array<?x!fir.type<_QFissue857_arrayTt{i:i32}>>>
+  ! CHECK: %[[ext:.*]]:3 = fir.box_dims %[[box]], %c0{{.*}} : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFissue857_arrayTt{i:i32}>>>>, index) -> (index, index, index)
+  ! CHECK-DAG: fir.store %[[addr]] to %[[lhs_addr]] : !fir.ref<!fir.ptr<!fir.array<?x!fir.type<_QFissue857_arrayTt{i:i32}>>>>
+  ! CHECK-DAG: fir.store %[[ext]]#1 to %[[lhs_ext]] : !fir.ref<index>
+  ! CHECK-DAG: fir.store %[[lb]]#0 to %[[lhs_lb]] : !fir.ref<index>
+  lhs => rhs
+end subroutine
+
+! CHECK-LABEL: func @_QPissue857_array_shift(
+subroutine issue857_array_shift(rhs)
+  ! Test lower bounds is the one from the shift
+  type t
+    integer :: i
+  end type
+  type(t), contiguous,  pointer :: rhs(:), lhs(:)
+  ! CHECK: %[[lhs_lb:.*]] = fir.alloca index {uniq_name = "_QFissue857_array_shiftElhs.lb0"}
+  ! CHECK: %[[c42:.*]] = fir.convert %c42{{.*}} : (i64) -> index
+  ! CHECK: fir.store %[[c42]] to %[[lhs_lb]] : !fir.ref<index>
+  lhs(42:) => rhs
+end subroutine
+
+! CHECK-LABEL: func @_QPissue857_array_remap
+subroutine issue857_array_remap(rhs)
+  ! Test lower bounds is the one from the shift
+  type t
+    integer :: i
+  end type
+  type(t), contiguous,  pointer :: rhs(:, :), lhs(:)
+  ! CHECK-DAG: %[[lhs_addr:.*]] = fir.alloca !fir.ptr<!fir.array<?x!fir.type<_QFissue857_array_remapTt{i:i32}>>> {uniq_name = "_QFissue857_array_remapElhs.addr"}
+  ! CHECK-DAG: %[[lhs_lb:.*]] = fir.alloca index {uniq_name = "_QFissue857_array_remapElhs.lb0"}
+  ! CHECK-DAG: %[[lhs_ext:.*]] = fir.alloca index {uniq_name = "_QFissue857_array_remapElhs.ext0"}
+
+  ! CHECK: %[[c101:.*]] = fir.convert %c101_i64 : (i64) -> index
+  ! CHECK: %[[c200:.*]] = fir.convert %c200_i64 : (i64) -> index
+  ! CHECK: %[[sub:.*]] = subi %[[c200]], %[[c101]] : index
+  ! CHECK: %[[extent:.*]] = addi %[[sub]], %c1{{.*}} : index
+  ! CHECK: %[[addr:.*]] = fir.box_addr %{{.*}} : (!fir.box<!fir.ptr<!fir.array<?x?x!fir.type<_QFissue857_array_remapTt{i:i32}>>>>) -> !fir.ptr<!fir.array<?x?x!fir.type<_QFissue857_array_remapTt{i:i32}>>>
+  ! CHECK: %[[addr_cast:.*]] = fir.convert %[[addr]] : (!fir.ptr<!fir.array<?x?x!fir.type<_QFissue857_array_remapTt{i:i32}>>>) -> !fir.ptr<!fir.array<?x!fir.type<_QFissue857_array_remapTt{i:i32}>>>
+  ! CHECK: fir.store %[[addr_cast]] to %[[lhs_addr]] : !fir.ref<!fir.ptr<!fir.array<?x!fir.type<_QFissue857_array_remapTt{i:i32}>>>>
+  ! CHECK: fir.store %[[extent]] to %[[lhs_ext]] : !fir.ref<index>
+  ! CHECK: %[[c101_2:.*]] = fir.convert %c101{{.*}} : (i64) -> index
+  ! CHECK: fir.store %[[c101_2]] to %[[lhs_lb]] : !fir.ref<index>
+  lhs(101:200) => rhs
+end subroutine
+
+! CHECK-LABEL: func @_QPissue857_char
+subroutine issue857_char(rhs)
+  ! Only check that the length is taken from the fir.box created for the slice.
+  ! CHECK-DAG: %[[lhs1_len:.*]] = fir.alloca index {uniq_name = "_QFissue857_charElhs1.len"}
+  ! CHECK-DAG: %[[lhs2_len:.*]] = fir.alloca index {uniq_name = "_QFissue857_charElhs2.len"}
+  character(:), contiguous,  pointer ::  lhs1(:), lhs2(:, :)
+  character(*), target ::  rhs(100)
+  ! CHECK: %[[len:.*]] = fir.box_elesize %{{.*}} : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
+  ! CHECK: fir.store %[[len]] to %[[lhs1_len]] : !fir.ref<index>
+  lhs1 => rhs(1:50:1)
+  ! CHECK: %[[len2:.*]] = fir.box_elesize %{{.*}} : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
+  ! CHECK: fir.store %[[len2]] to %[[lhs2_len]] : !fir.ref<index>
+  lhs2(1:2, 1:25) => rhs(1:50:1)
+end subroutine
