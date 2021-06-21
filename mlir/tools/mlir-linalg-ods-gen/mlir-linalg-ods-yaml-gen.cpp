@@ -503,7 +503,6 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([
       return ::parseNamedStructuredOp<{0}>(parser, result/*TODO:, captures*/);
     }];
     let hasFolder = 1;
-    let hasCanonicalizer = 1;
 
     let extraClassDeclaration = structuredOpsBaseDecls # [{{
       // Auto-generated.
@@ -535,16 +534,10 @@ ArrayAttr {0}::iterator_types() {
 }
 )FMT";
 
-// Implementations of getCanonicalizationPatterns, fold and getEffects.
+// Implementations of fold and getEffects.
 // Parameters:
 // {0}: Class name
-const char structuredOpCanonicalizersAndFoldersFormat[] = R"FMT(
-void {0}::getCanonicalizationPatterns(
-    RewritePatternSet &results,
-    MLIRContext *context) {{
-  results.add<EraseDeadLinalgOp>(context);
-  results.add<FoldTensorCastOp>(context);
-}
+const char structuredOpFoldersFormat[] = R"FMT(
 LogicalResult {0}::fold(ArrayRef<Attribute>,
                         SmallVectorImpl<OpFoldResult> &) {{
   return foldMemRefCast(*this);
@@ -880,7 +873,7 @@ void {0}::regionBuilder(
   }
 
   // Canonicalizers and folders.
-  os << llvm::formatv(structuredOpCanonicalizersAndFoldersFormat, className);
+  os << llvm::formatv(structuredOpFoldersFormat, className);
 
   return success();
 }
