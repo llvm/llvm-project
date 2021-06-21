@@ -19271,7 +19271,7 @@ template <typename R, typename T>
 static auto getFirstIndexOf(R &&Range, const T &Val) {
   auto I = find(Range, Val);
   if (I == Range.end())
-    return -1L;
+    return static_cast<decltype(std::distance(Range.begin(), I))>(-1);
   return std::distance(Range.begin(), I);
 }
 
