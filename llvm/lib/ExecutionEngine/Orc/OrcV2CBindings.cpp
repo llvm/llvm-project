@@ -13,6 +13,7 @@
 
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 
@@ -93,6 +94,9 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThreadSafeModule, LLVMOrcThreadSafeModuleRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(JITTargetMachineBuilder,
                                    LLVMOrcJITTargetMachineBuilderRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ObjectLayer, LLVMOrcObjectLayerRef)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ObjectTransformLayer,
+                                   LLVMOrcObjectTransformLayerRef)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DumpObjects, LLVMOrcDumpObjectsRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LLJITBuilder, LLVMOrcLLJITBuilderRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LLJIT, LLVMOrcLLJITRef)
 
@@ -513,6 +517,44 @@ void LLVMOrcDisposeObjectLayer(LLVMOrcObjectLayerRef ObjLayer) {
   delete unwrap(ObjLayer);
 }
 
+void LLVMOrcObjectTransformLayerSetTransform(
+    LLVMOrcObjectTransformLayerRef ObjTransformLayer,
+    LLVMOrcObjectTransformLayerTransformFunction TransformFunction, void *Ctx) {
+  unwrap(ObjTransformLayer)
+      ->setTransform([TransformFunction, Ctx](std::unique_ptr<MemoryBuffer> Obj)
+                         -> Expected<std::unique_ptr<MemoryBuffer>> {
+        LLVMMemoryBufferRef ObjBuffer = wrap(Obj.release());
+        if (LLVMErrorRef Err = TransformFunction(&ObjBuffer, Ctx)) {
+          assert(!ObjBuffer && "ObjBuffer was not reset to null on error");
+          return unwrap(Err);
+        }
+        return std::unique_ptr<MemoryBuffer>(unwrap(ObjBuffer));
+      });
+}
+
+LLVMOrcDumpObjectsRef LLVMOrcCreateDumpObjects(const char *DumpDir,
+                                               const char *IdentifierOverride) {
+  assert(DumpDir && "DumpDir should not be null");
+  assert(IdentifierOverride && "IdentifierOverride should not be null");
+  return wrap(new DumpObjects(DumpDir, IdentifierOverride));
+}
+
+void LLVMOrcDisposeDumpObjects(LLVMOrcDumpObjectsRef DumpObjects) {
+  delete unwrap(DumpObjects);
+}
+
+LLVMErrorRef LLVMOrcDumpObjects_CallOperator(LLVMOrcDumpObjectsRef DumpObjects,
+                                             LLVMMemoryBufferRef *ObjBuffer) {
+  std::unique_ptr<MemoryBuffer> OB(unwrap(*ObjBuffer));
+  if (auto Result = (*unwrap(DumpObjects))(std::move(OB))) {
+    *ObjBuffer = wrap(Result->release());
+    return LLVMErrorSuccess;
+  } else {
+    *ObjBuffer = nullptr;
+    return wrap(Result.takeError());
+  }
+}
+
 LLVMOrcLLJITBuilderRef LLVMOrcCreateLLJITBuilder(void) {
   return wrap(new LLJITBuilder());
 }
@@ -630,6 +672,11 @@ LLVMErrorRef LLVMOrcLLJITLookup(LLVMOrcLLJITRef J,
 
 LLVMOrcObjectLayerRef LLVMOrcLLJITGetObjLinkingLayer(LLVMOrcLLJITRef J) {
   return wrap(&unwrap(J)->getObjLinkingLayer());
+}
+
+LLVMOrcObjectTransformLayerRef
+LLVMOrcLLJITGetObjTransformLayer(LLVMOrcLLJITRef J) {
+  return wrap(&unwrap(J)->getObjTransformLayer());
 }
 
 LLVMOrcObjectLayerRef

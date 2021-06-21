@@ -316,6 +316,29 @@ typedef struct LLVMOrcOpaqueObjectLayer *LLVMOrcObjectLayerRef;
 typedef struct LLVMOrcOpaqueObjectLinkingLayer *LLVMOrcObjectLinkingLayerRef;
 
 /**
+ * A reference to an orc::ObjectTransformLayer instance.
+ */
+typedef struct LLVMOrcOpaqueObjectTransformLayer
+    *LLVMOrcObjectTransformLayerRef;
+
+/**
+ * A function for applying transformations to an object file buffer.
+ *
+ * The transform is allowed to return an error, in which case the ObjInOut
+ * buffer should be disposed of and set to null.
+ */
+typedef LLVMErrorRef (*LLVMOrcObjectTransformLayerTransformFunction)(
+    LLVMMemoryBufferRef *ObjInOut, void *Ctx);
+
+/**
+ * A reference to an orc::DumpObjects object.
+ *
+ * Can be used to dump object files to disk with unique names. Useful as an
+ * ObjectTransformLayer transform.
+ */
+typedef struct LLVMOrcOpaqueDumpObjects *LLVMOrcDumpObjectsRef;
+
+/**
  * Attach a custom error reporter function to the ExecutionSession.
  *
  * The error reporter will be called to deliver failure notices that can not be
@@ -709,6 +732,41 @@ void LLVMOrcObjectLayerEmit(LLVMOrcObjectLayerRef ObjLayer,
  * Dispose of an ObjectLayer.
  */
 void LLVMOrcDisposeObjectLayer(LLVMOrcObjectLayerRef ObjLayer);
+
+/**
+ * Set the transform function on an LLVMOrcObjectTransformLayer.
+ */
+void LLVMOrcObjectTransformLayerSetTransform(
+    LLVMOrcObjectTransformLayerRef ObjTransformLayer,
+    LLVMOrcObjectTransformLayerTransformFunction TransformFunction, void *Ctx);
+
+/**
+ * Create a DumpObjects instance.
+ *
+ * DumpDir specifies the path to write dumped objects to. DumpDir may be empty
+ * in which case files will be dumped to the working directory.
+ *
+ * IdentifierOverride specifies a file name stem to use when dumping objects.
+ * If empty then each MemoryBuffer's identifier will be used (with a .o suffix
+ * added if not already present). If an identifier override is supplied it will
+ * be used instead, along with an incrementing counter (since all buffers will
+ * use the same identifier, the resulting files will be named <ident>.o,
+ * <ident>.2.o, <ident>.3.o, and so on). IdentifierOverride should not contain
+ * an extension, as a .o suffix will be added by DumpObjects.
+ */
+LLVMOrcDumpObjectsRef LLVMOrcCreateDumpObjects(const char *DumpDir,
+                                               const char *IdentifierOverride);
+
+/**
+ * Dispose of a DumpObjects instance.
+ */
+void LLVMOrcDisposeDumpObjects(LLVMOrcDumpObjectsRef DumpObjects);
+
+/**
+ * Dump the contents of the given MemoryBuffer.
+ */
+LLVMErrorRef LLVMOrcDumpObjects_CallOperator(LLVMOrcDumpObjectsRef DumpObjects,
+                                             LLVMMemoryBufferRef *ObjBuffer);
 
 LLVM_C_EXTERN_C_END
 
