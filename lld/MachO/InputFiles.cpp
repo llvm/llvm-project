@@ -242,29 +242,24 @@ InputFile::InputFile(Kind kind, const InterfaceFile &interface)
     : id(idCount++), fileKind(kind), name(saver.save(interface.getPath())) {}
 
 template <class Section>
-static void parseSection(ObjFile *file, const uint8_t *buf, const Section &sec,
-                         InputSection *isec) {
-  isec->file = file;
-  isec->name =
-      StringRef(sec.sectname, strnlen(sec.sectname, sizeof(sec.sectname)));
-  isec->segname =
-      StringRef(sec.segname, strnlen(sec.segname, sizeof(sec.segname)));
-  isec->data = {isZeroFill(sec.flags) ? nullptr : buf + sec.offset,
-                static_cast<size_t>(sec.size)};
-  if (sec.align >= 32)
-    error("alignment " + std::to_string(sec.align) + " of section " +
-          isec->name + " is too large");
-  else
-    isec->align = 1 << sec.align;
-  isec->flags = sec.flags;
-}
-
-template <class Section>
 void ObjFile::parseSections(ArrayRef<Section> sections) {
   subsections.reserve(sections.size());
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
 
   for (const Section &sec : sections) {
+    StringRef name =
+        StringRef(sec.sectname, strnlen(sec.sectname, sizeof(sec.sectname)));
+    StringRef segname =
+        StringRef(sec.segname, strnlen(sec.segname, sizeof(sec.segname)));
+    ArrayRef<uint8_t> data = {isZeroFill(sec.flags) ? nullptr
+                                                    : buf + sec.offset,
+                              static_cast<size_t>(sec.size)};
+    if (sec.align >= 32)
+      error("alignment " + std::to_string(sec.align) + " of section " + name +
+            " is too large");
+    uint32_t align = 1 << sec.align;
+    uint32_t flags = sec.flags;
+
     if (config->dedupLiterals &&
         (sectionType(sec.flags) == S_CSTRING_LITERALS ||
          isWordLiteralSection(sec.flags))) {
@@ -276,18 +271,18 @@ void ObjFile::parseSections(ArrayRef<Section> sections) {
 
       InputSection *isec;
       if (sectionType(sec.flags) == S_CSTRING_LITERALS) {
-        isec = make<CStringInputSection>();
-        parseSection(this, buf, sec, isec);
+        isec =
+            make<CStringInputSection>(segname, name, this, data, align, flags);
         // FIXME: parallelize this?
         cast<CStringInputSection>(isec)->splitIntoPieces();
       } else {
-        isec = make<WordLiteralInputSection>();
-        parseSection(this, buf, sec, isec);
+        isec = make<WordLiteralInputSection>(segname, name, this, data, align,
+                                             flags);
       }
       subsections.push_back({{0, isec}});
     } else {
-      auto *isec = make<ConcatInputSection>();
-      parseSection(this, buf, sec, isec);
+      auto *isec =
+          make<ConcatInputSection>(segname, name, this, data, align, flags);
       if (!(isDebugSection(isec->flags) &&
             isec->segname == segment_names::dwarf)) {
         subsections.push_back({{0, isec}});
@@ -667,10 +662,9 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
 OpaqueFile::OpaqueFile(MemoryBufferRef mb, StringRef segName,
                        StringRef sectName)
     : InputFile(OpaqueKind, mb) {
-  ConcatInputSection *isec = make<ConcatInputSection>();
+  ConcatInputSection *isec =
+      make<ConcatInputSection>(segName.take_front(16), sectName.take_front(16));
   isec->file = this;
-  isec->name = sectName.take_front(16);
-  isec->segname = segName.take_front(16);
   const auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   isec->data = {buf, mb.getBufferSize()};
   isec->live = true;

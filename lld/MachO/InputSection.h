@@ -62,7 +62,13 @@ public:
   std::vector<Reloc> relocs;
 
 protected:
-  explicit InputSection(Kind kind) : sectionKind(kind) {}
+  InputSection(Kind kind, StringRef segname, StringRef name)
+      : name(name), segname(segname), sectionKind(kind) {}
+
+  InputSection(Kind kind, StringRef segname, StringRef name, InputFile *file,
+               ArrayRef<uint8_t> data, uint32_t align, uint32_t flags)
+      : file(file), name(name), segname(segname), align(align), flags(flags),
+        data(data), sectionKind(kind) {}
 
 private:
   Kind sectionKind;
@@ -73,7 +79,13 @@ private:
 // contents merged before output.
 class ConcatInputSection : public InputSection {
 public:
-  ConcatInputSection() : InputSection(ConcatKind) {}
+  ConcatInputSection(StringRef segname, StringRef name)
+      : InputSection(ConcatKind, segname, name) {}
+
+  ConcatInputSection(StringRef segname, StringRef name, InputFile *file,
+                     ArrayRef<uint8_t> data, uint32_t align, uint32_t flags)
+      : InputSection(ConcatKind, segname, name, file, data, align, flags) {}
+
   uint64_t getFileOffset(uint64_t off) const override;
   uint64_t getOffset(uint64_t off) const override { return outSecOff + off; }
   uint64_t getVA() const { return InputSection::getVA(0); }
@@ -123,7 +135,10 @@ struct StringPiece {
 // conservative behavior we can certainly implement that.
 class CStringInputSection : public InputSection {
 public:
-  CStringInputSection() : InputSection(CStringLiteralKind) {}
+  CStringInputSection(StringRef segname, StringRef name, InputFile *file,
+                      ArrayRef<uint8_t> data, uint32_t align, uint32_t flags)
+      : InputSection(CStringLiteralKind, segname, name, file, data, align,
+                     flags) {}
   uint64_t getFileOffset(uint64_t off) const override;
   uint64_t getOffset(uint64_t off) const override;
   // FIXME implement this
@@ -152,7 +167,9 @@ public:
 
 class WordLiteralInputSection : public InputSection {
 public:
-  WordLiteralInputSection() : InputSection(WordLiteralKind) {}
+  WordLiteralInputSection(StringRef segname, StringRef name, InputFile *file,
+                          ArrayRef<uint8_t> data, uint32_t align,
+                          uint32_t flags);
   uint64_t getFileOffset(uint64_t off) const override;
   uint64_t getOffset(uint64_t off) const override;
   // FIXME implement this

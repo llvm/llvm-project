@@ -127,6 +127,13 @@ uint64_t CStringInputSection::getOffset(uint64_t off) const {
   return piece.outSecOff + addend;
 }
 
+WordLiteralInputSection::WordLiteralInputSection(StringRef segname,
+                                                 StringRef name,
+                                                 InputFile *file,
+                                                 ArrayRef<uint8_t> data,
+                                                 uint32_t align, uint32_t flags)
+    : InputSection(WordLiteralKind, segname, name, file, data, align, flags) {}
+
 uint64_t WordLiteralInputSection::getFileOffset(uint64_t off) const {
   return parent->fileOff + getOffset(off);
 }
