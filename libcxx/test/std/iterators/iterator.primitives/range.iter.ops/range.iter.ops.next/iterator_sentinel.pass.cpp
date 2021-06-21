@@ -46,10 +46,10 @@ private:
   std::ptrdiff_t count_ = 0;
 };
 
-template <std::input_or_output_iterator I>
-constexpr void check_assignable(I it, I last, int const* expected) {
+template <std::input_or_output_iterator It>
+constexpr void check_assignable(It it, It last, int const* expected) {
   {
-    auto result = std::ranges::next(std::move(it), std::move(last));
+    It result = std::ranges::next(std::move(it), std::move(last));
     assert(&*result == expected);
   }
 
@@ -63,8 +63,8 @@ constexpr void check_assignable(I it, I last, int const* expected) {
   }
 }
 
-template <std::input_or_output_iterator I>
-constexpr void check_sized_sentinel(I it, I last, int const* expected) {
+template <std::input_or_output_iterator It>
+constexpr void check_sized_sentinel(It it, It last, int const* expected) {
   auto n = (last.base() - it.base());
 
   {
@@ -80,7 +80,7 @@ constexpr void check_sized_sentinel(I it, I last, int const* expected) {
     auto result = std::ranges::next(std::move(strided_it), sent);
     assert(&*result == expected);
 
-    if constexpr (std::random_access_iterator<I>) {
+    if constexpr (std::random_access_iterator<It>) {
       assert(result.stride_count() == 1); // should have used exactly one +=
       assert(result.stride_displacement() == 1);
     } else {
@@ -90,13 +90,13 @@ constexpr void check_sized_sentinel(I it, I last, int const* expected) {
   }
 }
 
-template <std::input_or_output_iterator I>
-constexpr void check_sentinel(I it, I last, int const* expected) {
+template <std::input_or_output_iterator It>
+constexpr void check_sentinel(It it, It last, int const* expected) {
   auto n = (last.base() - it.base());
 
   {
     auto sent = sentinel_wrapper(last);
-    auto result = std::ranges::next(std::move(it), sent);
+    It result = std::ranges::next(std::move(it), sent);
     assert(&*result == expected);
   }
 
@@ -104,7 +104,7 @@ constexpr void check_sentinel(I it, I last, int const* expected) {
   {
     auto strided_it = stride_counting_iterator(it);
     auto sent = sentinel_wrapper(stride_counting_iterator(last));
-    auto result = std::ranges::next(std::move(strided_it), sent);
+    stride_counting_iterator result = std::ranges::next(std::move(strided_it), sent);
     assert(&*result == expected);
     assert(result.stride_count() == n); // must have used ++ until it hit the sentinel
   }
@@ -136,7 +136,7 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  static_assert(test());
   test();
+  static_assert(test());
   return 0;
 }

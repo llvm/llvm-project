@@ -48,23 +48,23 @@ private:
   std::ptrdiff_t count_ = 0;
 };
 
-template <std::input_or_output_iterator I, std::sentinel_for<I> S = I>
+template <std::input_or_output_iterator It, std::sentinel_for<It> Sent = It>
 constexpr void check_assignable_case(std::ptrdiff_t const n) {
   auto range = range_t{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  auto first = stride_counting_iterator(I(range.begin()));
-  std::ranges::advance(first, stride_counting_iterator(S(I(range.begin() + n))));
+  auto first = stride_counting_iterator(It(range.begin()));
+  std::ranges::advance(first, stride_counting_iterator(Sent(It(range.begin() + n))));
   assert(first.base().base() == range.begin() + n);
   assert(first.stride_count() == 0); // because we got here by assigning from last, not by incrementing
 }
 
-template <std::input_or_output_iterator I>
+template <std::input_or_output_iterator It>
 constexpr void check_sized_sentinel_case(std::ptrdiff_t const n) {
   auto range = range_t{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  auto first = stride_counting_iterator(I(range.begin()));
+  auto first = stride_counting_iterator(It(range.begin()));
   std::ranges::advance(first, distance_apriori_sentinel(n));
 
   assert(first.base().base() == range.begin() + n);
-  if constexpr (std::random_access_iterator<I>) {
+  if constexpr (std::random_access_iterator<It>) {
     assert(first.stride_count() == 1);
     assert(first.stride_displacement() == 1);
   } else {
@@ -73,11 +73,11 @@ constexpr void check_sized_sentinel_case(std::ptrdiff_t const n) {
   }
 }
 
-template <std::input_or_output_iterator I>
+template <std::input_or_output_iterator It>
 constexpr void check_sentinel_case(std::ptrdiff_t const n) {
   auto range = range_t{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  auto first = stride_counting_iterator(I(range.begin()));
-  auto const last = I(range.begin() + n);
+  auto first = stride_counting_iterator(It(range.begin()));
+  auto const last = It(range.begin() + n);
   std::ranges::advance(first, sentinel_wrapper(last));
   assert(first.base() == last);
   assert(first.stride_count() == n);
@@ -107,7 +107,7 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  static_assert(test());
   assert(test());
+  static_assert(test());
   return 0;
 }

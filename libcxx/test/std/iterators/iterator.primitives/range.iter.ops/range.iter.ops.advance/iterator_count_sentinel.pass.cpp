@@ -53,14 +53,15 @@ struct expected_t {
   std::ptrdiff_t result;
 };
 
-template <std::input_or_output_iterator I>
-constexpr void check_forward_sized_sentinel(std::ptrdiff_t const n, expected_t const expected, range_t& range) {
-  auto current = stride_counting_iterator(I(range.begin()));
-  auto const result = std::ranges::advance(current, n, distance_apriori_sentinel(range.size()));
+template <std::input_or_output_iterator It>
+constexpr void check_forward_sized_sentinel(std::ptrdiff_t n, expected_t expected, range_t& range) {
+  using Difference = std::iter_difference_t<It>;
+  auto current = stride_counting_iterator(It(range.begin()));
+  Difference const result = std::ranges::advance(current, n, distance_apriori_sentinel(range.size()));
   assert(current.base().base() == expected.coordinate);
   assert(result == expected.result);
 
-  if constexpr (std::random_access_iterator<I>) {
+  if constexpr (std::random_access_iterator<It>) {
     assert(current.stride_count() == 0 || current.stride_count() == 1);
     assert(current.stride_displacement() == current.stride_count());
   } else {
@@ -69,10 +70,11 @@ constexpr void check_forward_sized_sentinel(std::ptrdiff_t const n, expected_t c
   }
 }
 
-template <std::random_access_iterator I>
-constexpr void check_backward_sized_sentinel(std::ptrdiff_t const n, expected_t const expected, range_t& range) {
-  auto current = stride_counting_iterator(I(range.end()));
-  auto const result = std::ranges::advance(current, -n, stride_counting_iterator(I(range.begin())));
+template <std::random_access_iterator It>
+constexpr void check_backward_sized_sentinel(std::ptrdiff_t n, expected_t expected, range_t& range) {
+  using Difference = std::iter_difference_t<It>;
+  auto current = stride_counting_iterator(It(range.end()));
+  Difference const result = std::ranges::advance(current, -n, stride_counting_iterator(It(range.begin())));
   assert(current.base().base() == expected.coordinate);
   assert(result == expected.result);
 
@@ -80,19 +82,21 @@ constexpr void check_backward_sized_sentinel(std::ptrdiff_t const n, expected_t 
   assert(current.stride_displacement() == current.stride_count());
 }
 
-template <std::input_or_output_iterator I>
-constexpr void check_forward(std::ptrdiff_t const n, expected_t const expected, range_t& range) {
-  auto current = stride_counting_iterator(I(range.begin()));
-  auto const result = std::ranges::advance(current, n, sentinel_wrapper(I(range.end())));
+template <std::input_or_output_iterator It>
+constexpr void check_forward(std::ptrdiff_t n, expected_t expected, range_t& range) {
+  using Difference = std::iter_difference_t<It>;
+  auto current = stride_counting_iterator(It(range.begin()));
+  Difference const result = std::ranges::advance(current, n, sentinel_wrapper(It(range.end())));
   assert(current.base().base() == expected.coordinate);
   assert(result == expected.result);
   assert(current.stride_count() == n - result);
 }
 
-template <std::bidirectional_iterator I>
-constexpr void check_backward(std::ptrdiff_t const n, expected_t const expected, range_t& range) {
-  auto current = stride_counting_iterator(I(range.end()));
-  auto const result = std::ranges::advance(current, -n, stride_counting_iterator(I(range.begin())));
+template <std::bidirectional_iterator It>
+constexpr void check_backward(std::ptrdiff_t n, expected_t expected, range_t& range) {
+  using Difference = std::iter_difference_t<It>;
+  auto current = stride_counting_iterator(It(range.end()));
+  Difference const result = std::ranges::advance(current, -n, stride_counting_iterator(It(range.begin())));
   assert(current.base().base() == expected.coordinate);
   assert(result == expected.result);
   assert(current.stride_count() == n + result);
@@ -139,7 +143,7 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  static_assert(test());
   assert(test());
+  static_assert(test());
   return 0;
 }
