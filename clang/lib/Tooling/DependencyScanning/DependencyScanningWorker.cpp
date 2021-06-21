@@ -177,6 +177,7 @@ public:
     if (Opts->Targets.empty())
       Opts->Targets = {deduceDepTarget(Compiler.getFrontendOpts().OutputFile,
                                        Compiler.getFrontendOpts().Inputs)};
+    Opts->IncludeSystemHeaders = true;
 
     switch (Format) {
     case ScanningOutputFormat::Make:
