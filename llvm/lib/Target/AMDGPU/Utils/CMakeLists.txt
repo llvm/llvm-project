@@ -6,6 +6,7 @@ add_llvm_component_library(LLVMAMDGPUUtils
   AMDKernelCodeTUtils.cpp
 
   LINK_COMPONENTS
+  Analysis
   Core
   MC
   BinaryFormat
