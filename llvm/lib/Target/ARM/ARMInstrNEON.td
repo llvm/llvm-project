@@ -1534,6 +1534,13 @@ defm VLD2DUPd16x2wb : VLD2DUPWB<{0,1,1,?}, "16", VecListDPairSpacedAllLanes,
 defm VLD2DUPd32x2wb : VLD2DUPWB<{1,0,1,?}, "32", VecListDPairSpacedAllLanes,
                                 addrmode6dupalign64>;
 
+def VLD2DUPq8OddPseudoWB_fixed     : VLDQQWBfixedPseudo<IIC_VLD2dup>, Sched<[WriteVLD2]>;
+def VLD2DUPq16OddPseudoWB_fixed    : VLDQQWBfixedPseudo<IIC_VLD2dup>, Sched<[WriteVLD2]>;
+def VLD2DUPq32OddPseudoWB_fixed    : VLDQQWBfixedPseudo<IIC_VLD2dup>, Sched<[WriteVLD2]>;
+def VLD2DUPq8OddPseudoWB_register  : VLDQQWBPseudo<IIC_VLD2dup>, Sched<[WriteVLD2]>;
+def VLD2DUPq16OddPseudoWB_register : VLDQQWBPseudo<IIC_VLD2dup>, Sched<[WriteVLD2]>;
+def VLD2DUPq32OddPseudoWB_register : VLDQQWBPseudo<IIC_VLD2dup>, Sched<[WriteVLD2]>;
+
 //   VLD3DUP  : Vector Load (single 3-element structure to all lanes)
 class VLD3DUP<bits<4> op7_4, string Dt>
   : NLdSt<1, 0b10, 0b1110, op7_4, (outs DPR:$Vd, DPR:$dst2, DPR:$dst3),
@@ -1586,6 +1593,10 @@ def VLD3DUPq32_UPD : VLD3DUPWB<{1,0,1,?}, "32", addrmode6dupalign64>;
 def VLD3DUPd8Pseudo_UPD  : VLDQQWBPseudo<IIC_VLD3dupu>, Sched<[WriteVLD2]>;
 def VLD3DUPd16Pseudo_UPD : VLDQQWBPseudo<IIC_VLD3dupu>, Sched<[WriteVLD2]>;
 def VLD3DUPd32Pseudo_UPD : VLDQQWBPseudo<IIC_VLD3dupu>, Sched<[WriteVLD2]>;
+
+def VLD3DUPq8OddPseudo_UPD  : VLDQQQQWBPseudo<IIC_VLD3dupu>, Sched<[WriteVLD2]>;
+def VLD3DUPq16OddPseudo_UPD : VLDQQQQWBPseudo<IIC_VLD3dupu>, Sched<[WriteVLD2]>;
+def VLD3DUPq32OddPseudo_UPD : VLDQQQQWBPseudo<IIC_VLD3dupu>, Sched<[WriteVLD2]>;
 
 //   VLD4DUP  : Vector Load (single 4-element structure to all lanes)
 class VLD4DUP<bits<4> op7_4, string Dt>
@@ -1640,6 +1651,10 @@ def VLD4DUPq32_UPD : VLD4DUPWB<{1,?,1,?}, "32"> { let Inst{6} = Rn{5}; }
 def VLD4DUPd8Pseudo_UPD  : VLDQQWBPseudo<IIC_VLD4dupu>, Sched<[WriteVLD2]>;
 def VLD4DUPd16Pseudo_UPD : VLDQQWBPseudo<IIC_VLD4dupu>, Sched<[WriteVLD2]>;
 def VLD4DUPd32Pseudo_UPD : VLDQQWBPseudo<IIC_VLD4dupu>, Sched<[WriteVLD2]>;
+
+def VLD4DUPq8OddPseudo_UPD  : VLDQQQQWBPseudo<IIC_VLD4dupu>, Sched<[WriteVLD2]>;
+def VLD4DUPq16OddPseudo_UPD : VLDQQQQWBPseudo<IIC_VLD4dupu>, Sched<[WriteVLD2]>;
+def VLD4DUPq32OddPseudo_UPD : VLDQQQQWBPseudo<IIC_VLD4dupu>, Sched<[WriteVLD2]>;
 
 } // mayLoad = 1, hasSideEffects = 0, hasExtraDefRegAllocReq = 1
 
