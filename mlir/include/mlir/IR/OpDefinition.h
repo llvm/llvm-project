@@ -1779,7 +1779,17 @@ private:
   static AbstractOperation::VerifyInvariantsFn getVerifyInvariantsFn() {
     return &verifyInvariants;
   }
+
+  static constexpr bool hasNoDataMembers() {
+    // Checking that the derived class does not define any member by comparing
+    // its size to an ad-hoc EmptyOp.
+    class EmptyOp : public Op<EmptyOp, Traits...> {};
+    return sizeof(ConcreteType) == sizeof(EmptyOp);
+  }
+
   static LogicalResult verifyInvariants(Operation *op) {
+    static_assert(hasNoDataMembers(),
+                  "Op class shouldn't define new data members");
     return failure(
         failed(op_definition_impl::verifyTraits<VerifiableTraitsTupleT>(op)) ||
         failed(cast<ConcreteType>(op).verify()));
