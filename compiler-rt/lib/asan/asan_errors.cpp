@@ -533,7 +533,6 @@ static void PrintLegend(InternalScopedString *str) {
   PrintShadowByte(str, "  ASan internal:           ", kAsanInternalHeapMagic);
   PrintShadowByte(str, "  Left alloca redzone:     ", kAsanAllocaLeftMagic);
   PrintShadowByte(str, "  Right alloca redzone:    ", kAsanAllocaRightMagic);
-  PrintShadowByte(str, "  Shadow gap:              ", kAsanShadowGap);
 }
 
 static void PrintShadowBytes(InternalScopedString *str, const char *before,
