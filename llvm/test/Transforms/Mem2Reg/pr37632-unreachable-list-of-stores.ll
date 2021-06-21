@@ -5,7 +5,7 @@ define void @patatino() {
 ; CHECK-LABEL: @patatino(
 ; CHECK-NEXT:    ret void
 ; CHECK:       cantreachme:
-; CHECK-NEXT:    [[DEC:%.*]] = add nsw i32 undef, -1
+; CHECK-NEXT:    [[DEC:%.*]] = add nsw i32 poison, -1
 ; CHECK-NEXT:    br label [[CANTREACHME:%.*]]
 ;
   %a = alloca i32, align 4
