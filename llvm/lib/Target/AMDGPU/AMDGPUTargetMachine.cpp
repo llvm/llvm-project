@@ -162,6 +162,11 @@ static cl::opt<bool> EnableRegReassign(
   cl::init(true),
   cl::Hidden);
 
+static cl::opt<bool> OptVGPRLiveRange(
+    "amdgpu-opt-vgpr-liverange",
+    cl::desc("Enable VGPR liverange optimizations for if-else structure"),
+    cl::init(true), cl::Hidden);
+
 // Enable atomic optimization
 static cl::opt<bool> EnableAtomicOptimizations(
   "amdgpu-atomic-optimizations",
@@ -225,6 +230,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIPeepholeSDWAPass(*PR);
   initializeSIShrinkInstructionsPass(*PR);
   initializeSIOptimizeExecMaskingPreRAPass(*PR);
+  initializeSIOptimizeVGPRLiveRangePass(*PR);
   initializeSILoadStoreOptimizerPass(*PR);
   initializeAMDGPUFixFunctionBitcastsPass(*PR);
   initializeAMDGPUAlwaysInlinePass(*PR);
@@ -1190,6 +1196,12 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   if (TM->getOptLevel() > CodeGenOpt::Less)
     insertPass(&MachineSchedulerID, &SIFormMemoryClausesID);
 
+  // FIXME: when an instruction has a Killed operand, and the instruction is
+  // inside a bundle, seems only the BUNDLE instruction appears as the Kills of
+  // the register in LiveVariables, this would trigger a failure in verifier,
+  // we should fix it and enable the verifier.
+  if (OptVGPRLiveRange)
+    insertPass(&LiveVariablesID, &SIOptimizeVGPRLiveRangeID, false);
   // This must be run immediately after phi elimination and before
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.

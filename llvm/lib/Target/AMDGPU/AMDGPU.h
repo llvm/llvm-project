@@ -56,6 +56,7 @@ FunctionPass *createSILoadStoreOptimizerPass();
 FunctionPass *createSIWholeQuadModePass();
 FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIOptimizeExecMaskingPreRAPass();
+FunctionPass *createSIOptimizeVGPRLiveRangePass();
 FunctionPass *createSIFixSGPRCopiesPass();
 FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
@@ -296,6 +297,9 @@ struct AMDGPUUnifyMetadataPass : PassInfoMixin<AMDGPUUnifyMetadataPass> {
 
 void initializeSIOptimizeExecMaskingPreRAPass(PassRegistry&);
 extern char &SIOptimizeExecMaskingPreRAID;
+
+void initializeSIOptimizeVGPRLiveRangePass(PassRegistry &);
+extern char &SIOptimizeVGPRLiveRangeID;
 
 void initializeAMDGPUAnnotateUniformValuesPass(PassRegistry&);
 extern char &AMDGPUAnnotateUniformValuesPassID;
