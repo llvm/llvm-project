@@ -214,8 +214,6 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
       continue;
     }
     if (Feature == "+reference-types") {
-      // FIXME: Ensure address spaces 10 and 20 are marked as non-integral in
-      // the datalayout string.
       HasReferenceTypes = true;
       continue;
     }
