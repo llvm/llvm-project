@@ -28,6 +28,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -1006,9 +1007,12 @@ void ValueEnumerator::EnumerateOperandType(const Value *V) {
 
     EnumerateOperandType(Op);
   }
-  if (auto *CE = dyn_cast<ConstantExpr>(C))
+  if (auto *CE = dyn_cast<ConstantExpr>(C)) {
     if (CE->getOpcode() == Instruction::ShuffleVector)
       EnumerateOperandType(CE->getShuffleMaskForBitcode());
+    if (CE->getOpcode() == Instruction::GetElementPtr)
+      EnumerateType(cast<GEPOperator>(CE)->getSourceElementType());
+  }
 }
 
 void ValueEnumerator::EnumerateAttributes(AttributeList PAL) {

@@ -2425,11 +2425,11 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
                                          ArrayRef<Value *> Idxs, bool InBounds,
                                          Optional<unsigned> InRangeIndex,
                                          Type *OnlyIfReducedTy) {
+  PointerType *OrigPtrTy = cast<PointerType>(C->getType()->getScalarType());
   if (!Ty)
-    Ty = cast<PointerType>(C->getType()->getScalarType())->getElementType();
+    Ty = OrigPtrTy->getElementType();
   else
-    assert(Ty ==
-           cast<PointerType>(C->getType()->getScalarType())->getElementType());
+    assert(OrigPtrTy->isOpaqueOrPointeeTypeMatches(Ty));
 
   if (Constant *FC =
           ConstantFoldGetElementPtr(Ty, C, InBounds, InRangeIndex, Idxs))
@@ -2438,8 +2438,10 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   // Get the result type of the getelementptr!
   Type *DestTy = GetElementPtrInst::getIndexedType(Ty, Idxs);
   assert(DestTy && "GEP indices invalid!");
-  unsigned AS = C->getType()->getPointerAddressSpace();
-  Type *ReqTy = DestTy->getPointerTo(AS);
+  unsigned AS = OrigPtrTy->getAddressSpace();
+  Type *ReqTy = OrigPtrTy->isOpaque()
+      ? PointerType::get(OrigPtrTy->getContext(), AS)
+      : DestTy->getPointerTo(AS);
 
   auto EltCount = ElementCount::getFixed(0);
   if (VectorType *VecTy = dyn_cast<VectorType>(C->getType()))
