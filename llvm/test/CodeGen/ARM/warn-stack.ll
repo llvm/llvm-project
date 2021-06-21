@@ -1,4 +1,4 @@
-; RUN: llc -mtriple thumbv7-apple-ios3.0.0 -warn-stack-size=80 < %s 2>&1 >/dev/null | FileCheck %s
+; RUN: llc -mtriple thumbv7-apple-ios3.0.0 < %s 2>&1 >/dev/null | FileCheck %s
 ; Check the internal option that warns when the stack size exceeds the
 ; given amount.
 ; <rdar://13987214>
@@ -22,3 +22,6 @@ entry:
 }
 
 declare void @doit(i8*)
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"warn-stack-size", i32 80}
