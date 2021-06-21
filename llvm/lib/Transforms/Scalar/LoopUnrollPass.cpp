@@ -1120,18 +1120,29 @@ static LoopUnrollResult tryToUnrollLoop(
     return LoopUnrollResult::Unmodified;
   }
 
-  // Find trip count and trip multiple if count is not available
+  // Find the smallest exact trip count for any exit. This is an upper bound
+  // on the loop trip count, but an exit at an earlier iteration is still
+  // possible. An unroll by the smallest exact trip count guarantees that all
+  // brnaches relating to at least one exit can be eliminated. This is unlike
+  // the max trip count, which only guarantees that the backedge can be broken.
   unsigned TripCount = 0;
   unsigned TripMultiple = 1;
-  // If there are multiple exiting blocks but one of them is the latch, use the
-  // latch for the trip count estimation. Otherwise insist on a single exiting
-  // block for the trip count estimation.
-  BasicBlock *ExitingBlock = L->getLoopLatch();
-  if (!ExitingBlock || !L->isLoopExiting(ExitingBlock))
-    ExitingBlock = L->getExitingBlock();
-  if (ExitingBlock) {
-    TripCount = SE.getSmallConstantTripCount(L, ExitingBlock);
-    TripMultiple = SE.getSmallConstantTripMultiple(L, ExitingBlock);
+  SmallVector<BasicBlock *, 8> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+  for (BasicBlock *ExitingBlock : ExitingBlocks)
+    if (unsigned TC = SE.getSmallConstantTripCount(L, ExitingBlock))
+      if (!TripCount || TC < TripCount)
+        TripCount = TripMultiple = TC;
+
+  if (!TripCount) {
+    // If no exact trip count is known, determine the trip multiple of either
+    // the loop latch or the single exiting block.
+    // TODO: Relax for multiple exits.
+    BasicBlock *ExitingBlock = L->getLoopLatch();
+    if (!ExitingBlock || !L->isLoopExiting(ExitingBlock))
+      ExitingBlock = L->getExitingBlock();
+    if (ExitingBlock)
+      TripMultiple = SE.getSmallConstantTripMultiple(L, ExitingBlock);
   }
 
   // If the loop contains a convergent operation, the prelude we'd add
