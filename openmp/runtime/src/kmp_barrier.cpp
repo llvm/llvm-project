@@ -225,10 +225,9 @@ void __kmp_dist_barrier_wakeup(enum barrier_type bt, kmp_team_t *team,
   }
 }
 
-static void
-__kmp_dist_barrier_gather(enum barrier_type bt, kmp_info_t *this_thr, int gtid,
-                          int tid, void (*reduce)(void *, void *)
-                                       USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
+static void __kmp_dist_barrier_gather(
+    enum barrier_type bt, kmp_info_t *this_thr, int gtid, int tid,
+    void (*reduce)(void *, void *) USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
   KMP_TIME_DEVELOPER_PARTITIONED_BLOCK(KMP_dist_gather);
   kmp_team_t *team;
   distributedBarrier *b;
@@ -404,7 +403,7 @@ static void __kmp_dist_barrier_release(
         if (KMP_COMPARE_AND_STORE_ACQ32(&(this_thr->th.th_used_in_team), 2,
                                         0) ||
             this_thr->th.th_used_in_team.load() == 0) {
-          my_flag.wait(this_thr, true, itt_sync_obj);
+          my_flag.wait(this_thr, true USE_ITT_BUILD_ARG(itt_sync_obj));
         }
 #if USE_ITT_BUILD && USE_ITT_NOTIFY
         if ((__itt_sync_create_ptr && itt_sync_obj == NULL) || KMP_ITT_DEBUG) {
@@ -454,7 +453,7 @@ static void __kmp_dist_barrier_release(
         // Wait on go flag on team
         kmp_atomic_flag_64<false, true> my_flag(
             &(b->go[my_go_index].go), next_go, &(b->sleep[tid].sleep));
-        my_flag.wait(this_thr, true, itt_sync_obj);
+        my_flag.wait(this_thr, true USE_ITT_BUILD_ARG(itt_sync_obj));
         KMP_DEBUG_ASSERT(my_current_iter == b->iter[tid].iter ||
                          b->iter[tid].iter == 0);
         KMP_DEBUG_ASSERT(b->sleep[tid].sleep == false);
