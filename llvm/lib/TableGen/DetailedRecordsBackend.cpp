@@ -22,10 +22,8 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-#include <algorithm>
-#include <set>
 #include <string>
-#include <vector>
+#include <utility>
 
 #define DEBUG_TYPE "detailed-records-backend"
 
