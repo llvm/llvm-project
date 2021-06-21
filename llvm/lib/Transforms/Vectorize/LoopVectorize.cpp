@@ -5964,7 +5964,9 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
                     << (MaxVectorElementCount * WidestType) << " bits.\n");
 
   if (!MaxVectorElementCount) {
-    LLVM_DEBUG(dbgs() << "LV: The target has no vector registers.\n");
+    LLVM_DEBUG(dbgs() << "LV: The target has no "
+                      << (ComputeScalableMaxVF ? "scalable" : "fixed")
+                      << " vector registers.\n");
     return ElementCount::getFixed(1);
   }
 
