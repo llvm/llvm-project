@@ -24,6 +24,8 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -303,7 +305,7 @@ static VectorizationResult vectorizeLinalgIndex(OpBuilder &b, Operation *op,
   auto targetShape = linalgOp.computeStaticLoopSizes();
   // Compute a one-dimensional index vector for the index op dimension.
   SmallVector<int64_t> constantSeq =
-      llvm::seq<int64_t>(0, targetShape[indexOp.dim()]).asSmallVector();
+      llvm::to_vector<16>(llvm::seq<int64_t>(0, targetShape[indexOp.dim()]));
   ConstantOp constantOp =
       b.create<ConstantOp>(loc, b.getIndexVectorAttr(constantSeq));
   // Return the one-dimensional index vector if it lives in the trailing
@@ -318,7 +320,7 @@ static VectorizationResult vectorizeLinalgIndex(OpBuilder &b, Operation *op,
   auto broadCastOp = b.create<vector::BroadcastOp>(
       loc, VectorType::get(targetShape, b.getIndexType()), constantOp);
   SmallVector<int64_t> transposition =
-      llvm::seq<int64_t>(0, linalgOp.getNumLoops()).asSmallVector();
+      llvm::to_vector<16>(llvm::seq<int64_t>(0, linalgOp.getNumLoops()));
   std::swap(transposition.back(), transposition[indexOp.dim()]);
   auto transposeOp =
       b.create<vector::TransposeOp>(loc, broadCastOp, transposition);
