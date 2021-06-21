@@ -204,6 +204,8 @@ llvm::Error JSONTransport::run(MessageHandler &handler) {
       if (llvm::Expected<llvm::json::Value> doc = llvm::json::parse(json)) {
         if (!handleMessage(std::move(*doc), handler))
           return llvm::Error::success();
+      } else {
+        Logger::error("JSON parse error: {0}", llvm::toString(doc.takeError()));
       }
     }
   }
