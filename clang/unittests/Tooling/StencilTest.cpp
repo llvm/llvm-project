@@ -407,7 +407,7 @@ TEST_F(StencilTest, AccessOpSmartPointerDereference) {
     *x;
   )cc";
   StringRef Id = "id";
-  testExpr(Id, Snippet, access(Id, "field"), "(*x).field");
+  testExpr(Id, Snippet, access(Id, "field"), "x->field");
 }
 
 TEST_F(StencilTest, AccessOpSmartPointerMemberCall) {
