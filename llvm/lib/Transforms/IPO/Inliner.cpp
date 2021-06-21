@@ -99,10 +99,6 @@ static cl::opt<std::string> CGSCCInlineReplayFile(
         "by inlining from cgscc inline remarks."),
     cl::Hidden);
 
-static cl::opt<bool> InlineEnablePriorityOrder(
-    "inline-enable-priority-order", cl::Hidden, cl::init(false),
-    cl::desc("Enable the priority inline order for the inliner"));
-
 LegacyInlinerBase::LegacyInlinerBase(char &ID) : CallGraphSCCPass(ID) {}
 
 LegacyInlinerBase::LegacyInlinerBase(char &ID, bool InsertLifetime)
@@ -677,7 +673,6 @@ InlinerPass::getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
 template <typename T> class InlineOrder {
 public:
   using reference = T &;
-  using const_reference = const T &;
 
   virtual ~InlineOrder() {}
 
@@ -685,9 +680,9 @@ public:
 
   virtual void push(const T &Elt) = 0;
 
-  virtual T pop() = 0;
+  virtual void pop() = 0;
 
-  virtual const_reference front() = 0;
+  virtual reference front() = 0;
 
   virtual void erase_if(function_ref<bool(T)> Pred) = 0;
 
@@ -697,19 +692,18 @@ public:
 template <typename T, typename Container = SmallVector<T, 16>>
 class DefaultInlineOrder : public InlineOrder<T> {
   using reference = T &;
-  using const_reference = const T &;
 
 public:
   size_t size() override { return Calls.size() - FirstIndex; }
 
   void push(const T &Elt) override { Calls.push_back(Elt); }
 
-  T pop() override {
+  void pop() override {
     assert(size() > 0);
-    return Calls[FirstIndex++];
+    FirstIndex++;
   }
 
-  const_reference front() override {
+  reference front() override {
     assert(size() > 0);
     return Calls[FirstIndex];
   }
@@ -722,57 +716,6 @@ public:
 private:
   Container Calls;
   size_t FirstIndex = 0;
-};
-
-class PriorityInlineOrder : public InlineOrder<std::pair<CallBase *, int>> {
-  using T = std::pair<CallBase *, int>;
-  using reference = T &;
-  using const_reference = const T &;
-
-  static bool cmp(const T &P1, const T &P2) { return P1.second > P2.second; }
-
-  int evaluate(CallBase *CB) {
-    Function *Callee = CB->getCalledFunction();
-    return (int)Callee->getInstructionCount();
-  }
-
-public:
-  size_t size() override { return Heap.size(); }
-
-  void push(const T &Elt) override {
-    CallBase *CB = Elt.first;
-    const int InlineHistoryID = Elt.second;
-    const int Goodness = evaluate(CB);
-
-    Heap.push_back({CB, Goodness});
-    std::push_heap(Heap.begin(), Heap.end(), cmp);
-    InlineHistoryMap[CB] = InlineHistoryID;
-  }
-
-  T pop() override {
-    assert(size() > 0);
-    CallBase *CB = Heap.front().first;
-    T Result = std::make_pair(CB, InlineHistoryMap[CB]);
-    InlineHistoryMap.erase(CB);
-    std::pop_heap(Heap.begin(), Heap.end(), cmp);
-    Heap.pop_back();
-    return Result;
-  }
-
-  const_reference front() override {
-    assert(size() > 0);
-    CallBase *CB = Heap.front().first;
-    return *InlineHistoryMap.find(CB);
-  }
-
-  void erase_if(function_ref<bool(T)> Pred) override {
-    Heap.erase(std::remove_if(Heap.begin(), Heap.end(), Pred), Heap.end());
-    std::make_heap(Heap.begin(), Heap.end(), cmp);
-  }
-
-private:
-  SmallVector<T, 16> Heap;
-  DenseMap<CallBase *, int> InlineHistoryMap;
 };
 
 PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
@@ -797,8 +740,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
 
   // We use a single common worklist for calls across the entire SCC. We
   // process these in-order and append new calls introduced during inlining to
-  // the end. The PriorityInlineOrder is optional here, in which the smaller
-  // callee would have a higher priority to inline.
+  // the end.
   //
   // Note that this particular order of processing is actually critical to
   // avoid very bad behaviors. Consider *highly connected* call graphs where
@@ -820,12 +762,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   // this model, but it is uniformly spread across all the functions in the SCC
   // and eventually they all become too large to inline, rather than
   // incrementally maknig a single function grow in a super linear fashion.
-  std::unique_ptr<InlineOrder<std::pair<CallBase *, int>>> Calls;
-  if (InlineEnablePriorityOrder)
-    Calls = std::make_unique<PriorityInlineOrder>();
-  else
-    Calls = std::make_unique<DefaultInlineOrder<std::pair<CallBase *, int>>>();
-  assert(Calls != nullptr && "Expected an initialized InlineOrder");
+  DefaultInlineOrder<std::pair<CallBase *, int>> Calls;
 
   // Populate the initial list of calls in this SCC.
   for (auto &N : InitialC) {
@@ -840,7 +777,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       if (auto *CB = dyn_cast<CallBase>(&I))
         if (Function *Callee = CB->getCalledFunction()) {
           if (!Callee->isDeclaration())
-            Calls->push({CB, -1});
+            Calls.push({CB, -1});
           else if (!isa<IntrinsicInst>(I)) {
             using namespace ore;
             setInlineRemark(*CB, "unavailable definition");
@@ -854,7 +791,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
           }
         }
   }
-  if (Calls->empty())
+  if (Calls.empty())
     return PreservedAnalyses::all();
 
   // Capture updatable variable for the current SCC.
@@ -876,15 +813,15 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   SmallVector<Function *, 4> DeadFunctions;
 
   // Loop forward over all of the calls.
-  while (!Calls->empty()) {
+  while (!Calls.empty()) {
     // We expect the calls to typically be batched with sequences of calls that
     // have the same caller, so we first set up some shared infrastructure for
     // this caller. We also do any pruning we can at this layer on the caller
     // alone.
-    Function &F = *Calls->front().first->getCaller();
+    Function &F = *Calls.front().first->getCaller();
     LazyCallGraph::Node &N = *CG.lookup(F);
     if (CG.lookupSCC(N) != C) {
-      Calls->pop();
+      Calls.pop();
       continue;
     }
 
@@ -900,8 +837,9 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     // We bail out as soon as the caller has to change so we can update the
     // call graph and prepare the context of that new caller.
     bool DidInline = false;
-    while (!Calls->empty() && Calls->front().first->getCaller() == &F) {
-      auto P = Calls->pop();
+    while (!Calls.empty() && Calls.front().first->getCaller() == &F) {
+      auto &P = Calls.front();
+      Calls.pop();
       CallBase *CB = P.first;
       const int InlineHistoryID = P.second;
       Function &Callee = *CB->getCalledFunction();
@@ -971,7 +909,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
           }
           if (NewCallee)
             if (!NewCallee->isDeclaration())
-              Calls->push({ICB, NewHistoryID});
+              Calls.push({ICB, NewHistoryID});
         }
       }
 
@@ -988,7 +926,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
         // made dead by this operation on other functions).
         Callee.removeDeadConstantUsers();
         if (Callee.use_empty() && !CG.isLibFunction(Callee)) {
-          Calls->erase_if([&](const std::pair<CallBase *, int> &Call) {
+          Calls.erase_if([&](const std::pair<CallBase *, int> &Call) {
             return Call.first->getCaller() == &Callee;
           });
           // Clear the body and queue the function itself for deletion when we
