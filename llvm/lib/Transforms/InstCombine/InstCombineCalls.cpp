@@ -1080,6 +1080,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::ctlz:
     if (auto *I = foldCttzCtlz(*II, *this))
       return I;
+
+    // If the operand is a select with constant arm(s), try to hoist ctlz/cttz.
+    if (auto *Sel = dyn_cast<SelectInst>(II->getArgOperand(0)))
+      if (Instruction *R = FoldOpIntoSelect(*II, Sel))
+        return R;
     break;
 
   case Intrinsic::ctpop:
