@@ -30,7 +30,7 @@ void ConcatOutputSection::addInput(ConcatInputSection *input) {
     flags = input->flags;
   } else {
     align = std::max(align, input->align);
-    mergeFlags(input);
+    finalizeFlags(input);
   }
   inputs.push_back(input);
   input->parent = this;
@@ -331,30 +331,29 @@ void ConcatOutputSection::writeTo(uint8_t *buf) const {
   }
 }
 
-// TODO: this is most likely wrong; reconsider how section flags
-// are actually merged. The logic presented here was written without
-// any form of informed research.
-void ConcatOutputSection::mergeFlags(InputSection *input) {
-  uint8_t baseType = sectionType(flags);
-  uint8_t inputType = sectionType(input->flags);
-  if (baseType != inputType)
-    error("Cannot merge section " + input->name + " (type=0x" +
-          to_hexString(inputType) + ") into " + name + " (type=0x" +
-          to_hexString(baseType) + "): inconsistent types");
-
-  constexpr uint32_t strictFlags = S_ATTR_DEBUG | S_ATTR_STRIP_STATIC_SYMS |
-                                   S_ATTR_NO_DEAD_STRIP | S_ATTR_LIVE_SUPPORT;
-  if ((input->flags ^ flags) & strictFlags)
-    error("Cannot merge section " + input->name + " (flags=0x" +
-          to_hexString(input->flags) + ") into " + name + " (flags=0x" +
-          to_hexString(flags) + "): strict flags differ");
-
-  // Negate pure instruction presence if any section isn't pure.
-  uint32_t pureMask = ~S_ATTR_PURE_INSTRUCTIONS | (input->flags & flags);
-
-  // Merge the rest
-  flags |= input->flags;
-  flags &= pureMask;
+void ConcatOutputSection::finalizeFlags(InputSection *input) {
+  uint8_t inputType = input->flags & SECTION_TYPE;
+  switch (inputType) {
+  default /*type-unspec'ed*/:
+    // FIXME: Add additional logics here when supporting emitting obj files.
+    break;
+  case S_4BYTE_LITERALS:
+  case S_8BYTE_LITERALS:
+  case S_16BYTE_LITERALS:
+  case S_CSTRING_LITERALS:
+  case S_ZEROFILL:
+  case S_LAZY_SYMBOL_POINTERS:
+  case S_MOD_TERM_FUNC_POINTERS:
+  case S_THREAD_LOCAL_REGULAR:
+  case S_THREAD_LOCAL_ZEROFILL:
+  case S_THREAD_LOCAL_VARIABLES:
+  case S_THREAD_LOCAL_INIT_FUNCTION_POINTERS:
+  case S_THREAD_LOCAL_VARIABLE_POINTERS:
+  case S_NON_LAZY_SYMBOL_POINTERS:
+  case S_SYMBOL_STUBS:
+    flags |= input->flags;
+    break;
+  }
 }
 
 void ConcatOutputSection::eraseOmittedInputSections() {
