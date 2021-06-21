@@ -241,17 +241,10 @@ void InterfaceGenerator::emitModelDecl(Interface &interface) {
     os << "  };\n";
   }
 
+  // Emit the template for the external model.
   os << "  template<typename ConcreteModel, typename " << valueTemplate
      << ">\n";
   os << "  class ExternalModel : public FallbackModel<ConcreteModel> {\n";
-
-  // Emit the template for the external model if there are no extra class
-  // declarations.
-  if (interface.getExtraClassDeclaration()) {
-    os << "  };\n";
-    return;
-  }
-
   os << "  public:\n";
 
   // Emit declarations for methods that have default implementations. Other
@@ -345,9 +338,6 @@ void InterfaceGenerator::emitModelMethodsDef(Interface &interface) {
   }
 
   // Emit default implementations for the external model.
-  if (interface.getExtraClassDeclaration())
-    return;
-
   for (auto &method : interface.getMethods()) {
     if (!method.getDefaultImplementation())
       continue;
@@ -427,11 +417,6 @@ void InterfaceGenerator::emitTraitDecl(Interface &interface,
     os << tblgen::tgfmt(*extraTraitDecls, &traitMethodFmt) << "\n";
 
   os << "  };\n";
-
-  // Emit a utility wrapper trait class.
-  os << llvm::formatv("  template <typename {1}>\n"
-                      "  struct Trait : public {0}Trait<{1}> {{};\n",
-                      interfaceName, valueTemplate);
 }
 
 void InterfaceGenerator::emitInterfaceDecl(Interface interface) {
@@ -452,7 +437,13 @@ void InterfaceGenerator::emitInterfaceDecl(Interface interface) {
      << "struct " << interfaceTraitsName << " {\n";
   emitConceptDecl(interface);
   emitModelDecl(interface);
-  os << "};\n} // end namespace detail\n";
+  os << "};";
+
+  // Emit the derived trait for the interface.
+  os << "template <typename " << valueTemplate << ">\n";
+  os << "struct " << interface.getName() << "Trait;\n";
+
+  os << "\n} // end namespace detail\n";
 
   // Emit the main interface class declaration.
   os << llvm::formatv("class {0} : public ::mlir::{3}<{1}, detail::{2}> {\n"
@@ -461,8 +452,10 @@ void InterfaceGenerator::emitInterfaceDecl(Interface interface) {
                       interfaceName, interfaceName, interfaceTraitsName,
                       interfaceBaseType);
 
-  // Emit the derived trait for the interface.
-  emitTraitDecl(interface, interfaceName, interfaceTraitsName);
+  // Emit a utility wrapper trait class.
+  os << llvm::formatv("  template <typename {1}>\n"
+                      "  struct Trait : public detail::{0}Trait<{1}> {{};\n",
+                      interfaceName, valueTemplate);
 
   // Insert the method declarations.
   bool isOpInterface = isa<OpInterface>(interface);
@@ -478,6 +471,10 @@ void InterfaceGenerator::emitInterfaceDecl(Interface interface) {
     os << *extraDecls << "\n";
 
   os << "};\n";
+
+  os << "namespace detail {\n";
+  emitTraitDecl(interface, interfaceName, interfaceTraitsName);
+  os << "}// namespace detail\n";
 
   emitModelMethodsDef(interface);
 
