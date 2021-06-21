@@ -1359,7 +1359,6 @@ static LogicalResult bufferize(OpBuilder &b,
   //     subtensor is computed out of place into the inplace full tensor.
   //   - The result is not inplace. This is the case where the whole tensor is
   //     cloned and the clone needs to be updated.
-  Value source = subTensorInsertOp.source();
   if (!aliasInfo.isSourceEquivalentToAMatchingSubTensorOp(subTensorInsertOp) ||
       inPlace != InPlaceSpec::True) {
     LDBG("subtensor_insert needs extra source copy: "
