@@ -7,7 +7,7 @@ declare <2 x i8> @llvm.experimental.stepvector.v2i8()
 define <2 x i8> @stepvector_v2i8() {
 ; CHECK-LABEL: stepvector_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8,mf8,ta,mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
   %v = call <2 x i8> @llvm.experimental.stepvector.v2i8()
@@ -19,7 +19,7 @@ declare <4 x i8> @llvm.experimental.stepvector.v4i8()
 define <4 x i8> @stepvector_v4i8() {
 ; CHECK-LABEL: stepvector_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8,mf4,ta,mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
   %v = call <4 x i8> @llvm.experimental.stepvector.v4i8()
@@ -31,7 +31,7 @@ declare <8 x i8> @llvm.experimental.stepvector.v8i8()
 define <8 x i8> @stepvector_v8i8() {
 ; CHECK-LABEL: stepvector_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
   %v = call <8 x i8> @llvm.experimental.stepvector.v8i8()
@@ -43,7 +43,7 @@ declare <16 x i8> @llvm.experimental.stepvector.v16i8()
 define <16 x i8> @stepvector_v16i8() {
 ; CHECK-LABEL: stepvector_v16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8,m1,ta,mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
   %v = call <16 x i8> @llvm.experimental.stepvector.v16i8()
@@ -55,7 +55,7 @@ declare <2 x i16> @llvm.experimental.stepvector.v2i16()
 define <2 x i16> @stepvector_v2i16() {
 ; CHECK-LABEL: stepvector_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16,mf4,ta,mu
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
   %v = call <2 x i16> @llvm.experimental.stepvector.v2i16()
@@ -67,7 +67,7 @@ declare <4 x i16> @llvm.experimental.stepvector.v4i16()
 define <4 x i16> @stepvector_v4i16() {
 ; CHECK-LABEL: stepvector_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
   %v = call <4 x i16> @llvm.experimental.stepvector.v4i16()
@@ -79,7 +79,7 @@ declare <8 x i16> @llvm.experimental.stepvector.v8i16()
 define <8 x i16> @stepvector_v8i16() {
 ; CHECK-LABEL: stepvector_v8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16,m1,ta,mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
   %v = call <8 x i16> @llvm.experimental.stepvector.v8i16()
@@ -93,14 +93,14 @@ define <16 x i16> @stepvector_v16i16() {
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    lui a0, %hi(.LCPI7_0)
 ; LMULMAX1-NEXT:    addi a0, a0, %lo(.LCPI7_0)
-; LMULMAX1-NEXT:    vsetivli zero, 8, e16,m1,ta,mu
+; LMULMAX1-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; LMULMAX1-NEXT:    vle16.v v9, (a0)
 ; LMULMAX1-NEXT:    vid.v v8
 ; LMULMAX1-NEXT:    ret
 ;
 ; LMULMAX2-LABEL: stepvector_v16i16:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    vsetivli zero, 16, e16,m2,ta,mu
+; LMULMAX2-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
 ; LMULMAX2-NEXT:    vid.v v8
 ; LMULMAX2-NEXT:    ret
   %v = call <16 x i16> @llvm.experimental.stepvector.v16i16()
@@ -112,7 +112,7 @@ declare <2 x i32> @llvm.experimental.stepvector.v2i32()
 define <2 x i32> @stepvector_v2i32() {
 ; CHECK-LABEL: stepvector_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32,mf2,ta,mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
   %v = call <2 x i32> @llvm.experimental.stepvector.v2i32()
@@ -124,7 +124,7 @@ declare <4 x i32> @llvm.experimental.stepvector.v4i32()
 define <4 x i32> @stepvector_v4i32() {
 ; CHECK-LABEL: stepvector_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32,m1,ta,mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
   %v = call <4 x i32> @llvm.experimental.stepvector.v4i32()
@@ -138,14 +138,14 @@ define <8 x i32> @stepvector_v8i32() {
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    lui a0, %hi(.LCPI10_0)
 ; LMULMAX1-NEXT:    addi a0, a0, %lo(.LCPI10_0)
-; LMULMAX1-NEXT:    vsetivli zero, 4, e32,m1,ta,mu
+; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; LMULMAX1-NEXT:    vle32.v v9, (a0)
 ; LMULMAX1-NEXT:    vid.v v8
 ; LMULMAX1-NEXT:    ret
 ;
 ; LMULMAX2-LABEL: stepvector_v8i32:
 ; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    vsetivli zero, 8, e32,m2,ta,mu
+; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; LMULMAX2-NEXT:    vid.v v8
 ; LMULMAX2-NEXT:    ret
   %v = call <8 x i32> @llvm.experimental.stepvector.v8i32()
@@ -159,7 +159,7 @@ define <16 x i32> @stepvector_v16i32() {
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    lui a0, %hi(.LCPI11_0)
 ; LMULMAX1-NEXT:    addi a0, a0, %lo(.LCPI11_0)
-; LMULMAX1-NEXT:    vsetivli zero, 4, e32,m1,ta,mu
+; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; LMULMAX1-NEXT:    vle32.v v9, (a0)
 ; LMULMAX1-NEXT:    lui a0, %hi(.LCPI11_1)
 ; LMULMAX1-NEXT:    addi a0, a0, %lo(.LCPI11_1)
@@ -174,7 +174,7 @@ define <16 x i32> @stepvector_v16i32() {
 ; LMULMAX2:       # %bb.0:
 ; LMULMAX2-NEXT:    lui a0, %hi(.LCPI11_0)
 ; LMULMAX2-NEXT:    addi a0, a0, %lo(.LCPI11_0)
-; LMULMAX2-NEXT:    vsetivli zero, 8, e32,m2,ta,mu
+; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; LMULMAX2-NEXT:    vle32.v v10, (a0)
 ; LMULMAX2-NEXT:    vid.v v8
 ; LMULMAX2-NEXT:    ret
