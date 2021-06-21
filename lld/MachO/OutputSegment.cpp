@@ -100,6 +100,8 @@ static int sectionOrder(OutputSection *osec) {
     // sections can be zerofills, we end up putting all TLV data sections at the
     // end of the segment.
     switch (sectionType(osec->flags)) {
+    case S_THREAD_LOCAL_VARIABLE_POINTERS:
+      return std::numeric_limits<int>::max() - 3;
     case S_THREAD_LOCAL_REGULAR:
       return std::numeric_limits<int>::max() - 2;
     case S_THREAD_LOCAL_ZEROFILL:
