@@ -632,7 +632,7 @@ struct SelectModifier: public Modifier {
 
     // If the value type is a vector, and we allow vector select, then in 50%
     // of the cases generate a vector select.
-    if (isa<FixedVectorType>(Val0->getType()) && (getRandom() % 1)) {
+    if (isa<FixedVectorType>(Val0->getType()) && (getRandom() & 1)) {
       unsigned NumElem =
           cast<FixedVectorType>(Val0->getType())->getNumElements();
       CondTy = FixedVectorType::get(CondTy, NumElem);
