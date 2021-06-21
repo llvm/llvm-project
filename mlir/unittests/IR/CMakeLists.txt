@@ -4,6 +4,7 @@ add_mlir_unittest(MLIRIRTests
   MemRefTypeTest.cpp
   OperationSupportTest.cpp
   ShapedTypeTest.cpp
+  SubElementInterfaceTest.cpp
 )
 target_link_libraries(MLIRIRTests
   PRIVATE

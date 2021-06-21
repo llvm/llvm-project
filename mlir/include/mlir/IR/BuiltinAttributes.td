@@ -15,6 +15,7 @@
 #define BUILTIN_ATTRIBUTES
 
 include "mlir/IR/BuiltinDialect.td"
+include "mlir/IR/SubElementInterfaces.td"
 
 // TODO: Currently the attributes defined in this file are prefixed with
 // `Builtin_`.  This is to differentiate the attributes here with the ones in
@@ -22,8 +23,9 @@ include "mlir/IR/BuiltinDialect.td"
 // to this file instead.
 
 // Base class for Builtin dialect attributes.
-class Builtin_Attr<string name, string baseCppClass = "::mlir::Attribute">
-    : AttrDef<Builtin_Dialect, name, [], baseCppClass> {
+class Builtin_Attr<string name, list<Trait> traits = [],
+                   string baseCppClass = "::mlir::Attribute">
+    : AttrDef<Builtin_Dialect, name, traits, baseCppClass> {
   let mnemonic = ?;
 }
 
@@ -62,7 +64,9 @@ def Builtin_AffineMapAttr : Builtin_Attr<"AffineMap"> {
 // ArrayAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_ArrayAttr : Builtin_Attr<"Array"> {
+def Builtin_ArrayAttr : Builtin_Attr<"Array", [
+    DeclareAttrInterfaceMethods<SubElementAttrInterface>
+  ]> {
   let summary = "A collection of other Attribute values";
   let description = [{
     Syntax:
@@ -133,7 +137,7 @@ def Builtin_ArrayAttr : Builtin_Attr<"Array"> {
 //===----------------------------------------------------------------------===//
 
 def Builtin_DenseIntOrFPElementsAttr
-    : Builtin_Attr<"DenseIntOrFPElements", "DenseElementsAttr"> {
+    : Builtin_Attr<"DenseIntOrFPElements", /*traits=*/[], "DenseElementsAttr"> {
   let summary = "An Attribute containing a dense multi-dimensional array of "
                 "integer or floating-point values";
   let description = [{
@@ -228,7 +232,7 @@ def Builtin_DenseIntOrFPElementsAttr
 //===----------------------------------------------------------------------===//
 
 def Builtin_DenseStringElementsAttr
-    : Builtin_Attr<"DenseStringElements", "DenseElementsAttr"> {
+    : Builtin_Attr<"DenseStringElements", /*traits=*/[], "DenseElementsAttr"> {
   let summary = "An Attribute containing a dense multi-dimensional array of "
                 "strings";
   let description = [{
@@ -277,7 +281,9 @@ def Builtin_DenseStringElementsAttr
 // DictionaryAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary"> {
+def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary", [
+    DeclareAttrInterfaceMethods<SubElementAttrInterface>
+  ]> {
   let summary = "An dictionary of named Attribute values";
   let description = [{
     Syntax:
@@ -589,7 +595,7 @@ def Builtin_OpaqueAttr : Builtin_Attr<"Opaque"> {
 //===----------------------------------------------------------------------===//
 
 def Builtin_OpaqueElementsAttr
-    : Builtin_Attr<"OpaqueElements", "ElementsAttr"> {
+    : Builtin_Attr<"OpaqueElements", /*traits=*/[], "ElementsAttr"> {
   let summary = "An opaque representation of a multi-dimensional array";
   let description = [{
     Syntax:
@@ -655,7 +661,7 @@ def Builtin_OpaqueElementsAttr
 //===----------------------------------------------------------------------===//
 
 def Builtin_SparseElementsAttr
-    : Builtin_Attr<"SparseElements", "ElementsAttr"> {
+    : Builtin_Attr<"SparseElements", /*traits=*/[], "ElementsAttr"> {
   let summary = "An opaque representation of a multi-dimensional array";
   let description = [{
     Syntax:
@@ -892,7 +898,9 @@ def Builtin_SymbolRefAttr : Builtin_Attr<"SymbolRef"> {
 // TypeAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_TypeAttr : Builtin_Attr<"Type"> {
+def Builtin_TypeAttr : Builtin_Attr<"Type", [
+    DeclareAttrInterfaceMethods<SubElementAttrInterface>
+  ]> {
   let summary = "An Attribute containing a Type";
   let description = [{
     Syntax:
