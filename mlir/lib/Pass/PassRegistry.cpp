@@ -116,10 +116,11 @@ void mlir::registerPass(StringRef arg, StringRef description,
   // arg before it.
   TypeID entryTypeID = function()->getTypeID();
   auto it = passRegistryTypeIDs->try_emplace(arg, entryTypeID).first;
-  if (it->second != entryTypeID) {
-    llvm_unreachable("pass allocator creates a different pass than previously "
-                     "registered");
-  }
+  if (it->second != entryTypeID)
+    llvm::report_fatal_error(
+        "pass allocator creates a different pass than previously "
+        "registered for pass " +
+        arg);
 }
 
 void mlir::registerPass(const PassAllocatorFunction &function) {
