@@ -98,9 +98,9 @@ void CommandReturnObject::AppendWarning(llvm::StringRef in_string) {
 }
 
 void CommandReturnObject::AppendError(llvm::StringRef in_string) {
+  SetStatus(eReturnStatusFailed);
   if (in_string.empty())
     return;
-  SetStatus(eReturnStatusFailed);
   error(GetErrorStream()) << in_string.rtrim() << '\n';
 }
 
@@ -113,6 +113,7 @@ void CommandReturnObject::SetError(const Status &error,
 }
 
 void CommandReturnObject::SetError(llvm::StringRef error_str) {
+  SetStatus(eReturnStatusFailed);
   if (error_str.empty())
     return;
 
@@ -123,10 +124,10 @@ void CommandReturnObject::SetError(llvm::StringRef error_str) {
 // append "\n" to the end of it.
 
 void CommandReturnObject::AppendRawError(llvm::StringRef in_string) {
+  SetStatus(eReturnStatusFailed);
   if (in_string.empty())
     return;
   GetErrorStream() << in_string;
-  SetStatus(eReturnStatusFailed);
 }
 
 void CommandReturnObject::SetStatus(ReturnStatus status) { m_status = status; }
