@@ -2427,8 +2427,7 @@ struct NoReassocOpConversion : public FIROpConversion<fir::NoReassocOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::NoReassocOp noreassoc, OperandTy operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    noreassoc.replaceAllUsesWith(operands[0]);
-    rewriter.eraseOp(noreassoc);
+    rewriter.replaceOp(noreassoc, operands[0]);
     return success();
   }
 };
@@ -2647,8 +2646,7 @@ struct UnboxCharOpConversion : public FIROpConversion<fir::UnboxCharOp> {
         genExtractValueWithIndex(loc, tuple, ty, rewriter, ctx, 0);
     auto len1 = genExtractValueWithIndex(loc, tuple, ty, rewriter, ctx, 1);
     auto len = integerCast(loc, rewriter, lenTy, len1);
-    unboxchar.replaceAllUsesWith(ArrayRef<mlir::Value>{ptr, len});
-    rewriter.eraseOp(unboxchar);
+    rewriter.replaceOp(unboxchar, ArrayRef<mlir::Value>{ptr, len});
     return success();
   }
 };
@@ -2674,9 +2672,8 @@ struct UnboxOpConversion : public FIROpConversion<fir::UnboxOp> {
     mlir::Value attr = genLoadWithIndex(loc, tuple, ty, rewriter, oty, c0, 5);
     mlir::Value xtra = genLoadWithIndex(loc, tuple, ty, rewriter, oty, c0, 6);
     // FIXME: add dims, etc.
-    std::vector<mlir::Value> repls{ptr, len, ver, rank, type, attr, xtra};
-    unbox.replaceAllUsesWith(repls);
-    rewriter.eraseOp(unbox);
+    llvm::SmallVector<mlir::Value> repls{ptr, len, ver, rank, type, attr, xtra};
+    rewriter.replaceOp(unbox, repls);
     return success();
   }
 
@@ -2712,9 +2709,8 @@ struct UnboxProcOpConversion : public FIROpConversion<fir::UnboxProcOp> {
         genExtractValueWithIndex(loc, tuple, ty, rewriter, ctx, 0);
     mlir::Value host =
         genExtractValueWithIndex(loc, tuple, ty, rewriter, ctx, 1);
-    std::vector<mlir::Value> repls{ptr, host};
-    unboxproc.replaceAllUsesWith(repls);
-    rewriter.eraseOp(unboxproc);
+    llvm::SmallVector<mlir::Value> repls{ptr, host};
+    rewriter.replaceOp(unboxproc, repls);
     return success();
   }
 };
@@ -2882,7 +2878,6 @@ struct AddcOpConversion : public FIROpConversion<fir::AddcOp> {
     // result: (x + x') + i(y + y')
     auto r =
         complexSum<mlir::LLVM::FAddOp>(addc, operands, rewriter, lowerTy());
-    addc.replaceAllUsesWith(r.getResult());
     rewriter.replaceOp(addc, r.getResult());
     return success();
   }
@@ -2898,7 +2893,6 @@ struct SubcOpConversion : public FIROpConversion<fir::SubcOp> {
     // result: (x - x') + i(y - y')
     auto r =
         complexSum<mlir::LLVM::FSubOp>(subc, operands, rewriter, lowerTy());
-    subc.replaceAllUsesWith(r.getResult());
     rewriter.replaceOp(subc, r.getResult());
     return success();
   }
@@ -2935,7 +2929,6 @@ struct MulcOpConversion : public FIROpConversion<fir::MulcOp> {
     auto ra = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
     auto r_ = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ty, ra, rr, c0);
     auto r = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ty, r_, ri, c1);
-    mulc.replaceAllUsesWith(r.getResult());
     rewriter.replaceOp(mulc, r.getResult());
     return success();
   }
@@ -2977,7 +2970,6 @@ struct DivcOpConversion : public FIROpConversion<fir::DivcOp> {
     auto ra = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
     auto r_ = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ty, ra, rr, c0);
     auto r = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ty, r_, ri, c1);
-    divc.replaceAllUsesWith(r.getResult());
     rewriter.replaceOp(divc, r.getResult());
     return success();
   }
