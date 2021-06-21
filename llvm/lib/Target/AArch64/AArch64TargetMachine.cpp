@@ -161,6 +161,18 @@ static cl::opt<bool>
                         cl::desc("Enable the AAcrh64 branch target pass"),
                         cl::init(true));
 
+static cl::opt<unsigned> SVEVectorBitsMaxOpt(
+    "aarch64-sve-vector-bits-max",
+    cl::desc("Assume SVE vector registers are at most this big, "
+             "with zero meaning no maximum size is assumed."),
+    cl::init(0), cl::Hidden);
+
+static cl::opt<unsigned> SVEVectorBitsMinOpt(
+    "aarch64-sve-vector-bits-min",
+    cl::desc("Assume SVE vector registers are at least this big, "
+             "with zero meaning no minimum size is assumed."),
+    cl::init(0), cl::Hidden);
+
 extern cl::opt<bool> EnableHomogeneousPrologEpilog;
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
@@ -349,14 +361,54 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
 
-  auto &I = SubtargetMap[CPU + FS];
+  SmallString<512> Key;
+
+  unsigned MinSVEVectorSize = 0;
+  unsigned MaxSVEVectorSize = 0;
+  Attribute VScaleRangeAttr = F.getFnAttribute(Attribute::VScaleRange);
+  if (VScaleRangeAttr.isValid()) {
+    std::tie(MinSVEVectorSize, MaxSVEVectorSize) =
+        VScaleRangeAttr.getVScaleRangeArgs();
+    MinSVEVectorSize *= 128;
+    MaxSVEVectorSize *= 128;
+  } else {
+    MinSVEVectorSize = SVEVectorBitsMinOpt;
+    MaxSVEVectorSize = SVEVectorBitsMaxOpt;
+  }
+
+  assert(MinSVEVectorSize % 128 == 0 &&
+         "SVE requires vector length in multiples of 128!");
+  assert(MaxSVEVectorSize % 128 == 0 &&
+         "SVE requires vector length in multiples of 128!");
+  assert((MaxSVEVectorSize >= MinSVEVectorSize || MaxSVEVectorSize == 0) &&
+         "Minimum SVE vector size should not be larger than its maximum!");
+
+  // Sanitize user input in case of no asserts
+  if (MaxSVEVectorSize == 0)
+    MinSVEVectorSize = (MinSVEVectorSize / 128) * 128;
+  else {
+    MinSVEVectorSize =
+        (std::min(MinSVEVectorSize, MaxSVEVectorSize) / 128) * 128;
+    MaxSVEVectorSize =
+        (std::max(MinSVEVectorSize, MaxSVEVectorSize) / 128) * 128;
+  }
+
+  Key += "SVEMin";
+  Key += std::to_string(MinSVEVectorSize);
+  Key += "SVEMax";
+  Key += std::to_string(MaxSVEVectorSize);
+  Key += CPU;
+  Key += FS;
+
+  auto &I = SubtargetMap[Key];
   if (!I) {
     // This needs to be done before we create a new subtarget since any
     // creation will depend on the TM and the code generation flags on the
     // function that reside in TargetOptions.
     resetTargetOptions(F);
     I = std::make_unique<AArch64Subtarget>(TargetTriple, CPU, FS, *this,
-                                            isLittle);
+                                           isLittle, MinSVEVectorSize,
+                                           MaxSVEVectorSize);
   }
   return I.get();
 }
