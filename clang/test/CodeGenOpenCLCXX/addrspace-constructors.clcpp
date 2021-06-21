@@ -11,8 +11,7 @@ struct X {
   int x;
 
   // Local variables are handled in local_addrspace_init.clcpp
-  // FIXME: __private and __generic constructors clash for __private variable
-  // X() /*__generic*/ = default;
+  X() /*__generic*/ : x(0) {}
   X() __private : x(0) {}
   X() __global : x(0) {}
   constexpr X() __constant : x(0) {}
@@ -30,7 +29,7 @@ __global X gx;
 // CHECK: @_ZZ1kE3cx2 = internal addrspace(2) constant %struct.X { i32 1 }
 
 kernel void k() {
-  // Check that the constructor for px is executed
+  // Check that the constructor for px calls the __private constructor.
   // CHECK: %px = alloca %struct.X
   // CHECK-NEXT: call spir_func void @_ZN1XC1Ev(%struct.X* {{.*}}%px)
   __private X px;
