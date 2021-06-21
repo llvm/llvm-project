@@ -546,7 +546,7 @@ void Writer::populateTargetFeatures() {
 static bool shouldImport(Symbol *sym) {
   if (!sym->isUndefined())
     return false;
-  if (sym->isWeak() && !config->relocatable)
+  if (sym->isWeak() && !config->relocatable && !config->isPic)
     return false;
   if (!sym->isLive())
     return false;
