@@ -13,7 +13,9 @@
 // constexpr begin() const noexcept;
 
 #include <format>
+
 #include <cassert>
+#include <string_view>
 
 #include "test_macros.h"
 

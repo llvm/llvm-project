@@ -15,7 +15,9 @@
 //                            size_t num_args = 0) noexcept
 
 #include <format>
+
 #include <cassert>
+#include <string_view>
 #include <type_traits>
 
 #include "test_macros.h"

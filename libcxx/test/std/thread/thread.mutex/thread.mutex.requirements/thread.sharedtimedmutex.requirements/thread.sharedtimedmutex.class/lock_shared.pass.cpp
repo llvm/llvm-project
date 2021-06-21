@@ -20,11 +20,13 @@
 
 // void lock_shared();
 
-#include <shared_mutex>
 #include <thread>
-#include <vector>
-#include <cstdlib>
+
+#include <atomic>
 #include <cassert>
+#include <cstdlib>
+#include <shared_mutex>
+#include <vector>
 
 #include "make_test_thread.h"
 #include "test_macros.h"

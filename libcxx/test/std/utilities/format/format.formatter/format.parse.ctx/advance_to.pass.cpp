@@ -13,7 +13,9 @@
 // constexpr void advance_to(const_iterator it);
 
 #include <format>
+
 #include <cassert>
+#include <string_view>
 
 #include "test_macros.h"
 
