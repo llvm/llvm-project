@@ -189,7 +189,7 @@ public:
       return false;
 
     // If the instruction doesn't need an AVLReg and the SEW matches, consider
-    // it/ compatible.
+    // it compatible.
     if (InstrInfo.hasAVLReg() && InstrInfo.AVLReg == RISCV::NoRegister) {
       if (SEW == InstrInfo.SEW)
         return true;
