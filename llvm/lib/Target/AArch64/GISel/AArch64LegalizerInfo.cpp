@@ -669,6 +669,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarize(1);
   getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF).lower();
 
+  // TODO: Custom lowering for v2s32, v4s32, v2s64.
+  getActionDefinitionsBuilder(G_BITREVERSE).legalFor({s32, s64, v8s8, v16s8});
+
   getActionDefinitionsBuilder(G_SHUFFLE_VECTOR)
       .legalIf([=](const LegalityQuery &Query) {
         const LLT &DstTy = Query.Types[0];
