@@ -127,7 +127,8 @@ void mlir::registerPass(const PassAllocatorFunction &function) {
   StringRef arg = pass->getArgument();
   if (arg.empty())
     llvm::report_fatal_error(
-        "Trying to register a pass that does not override `getArgument()`");
+        "Trying to register a pass that does not override `getArgument()`: " +
+        pass->getName());
   registerPass(arg, pass->getDescription(), function);
 }
 
