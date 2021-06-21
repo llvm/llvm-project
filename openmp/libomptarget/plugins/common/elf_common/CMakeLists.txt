@@ -15,6 +15,7 @@ add_library(elf_common OBJECT elf_common.cpp)
 llvm_update_compile_flags(elf_common)
 set(LINK_LLVM_LIBS LLVMBinaryFormat LLVMObject LLVMSupport)
 target_link_libraries(elf_common INTERFACE ${LINK_LLVM_LIBS} ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES})
+include_directories(${LIBOMPTARGET_LLVM_INCLUDE_DIRS})
 add_dependencies(elf_common ${LINK_LLVM_LIBS})
 
 # The code uses Debug.h, which requires threads support.
