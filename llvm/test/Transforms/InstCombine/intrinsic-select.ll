@@ -106,8 +106,7 @@ define i32 @cttz_sel_const_true_false_extra_use(i1 %b) {
 
 define i32 @ctpop_sel_const_true_false(i1 %b) {
 ; CHECK-LABEL: @ctpop_sel_const_true_false(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 5, i32 -7
-; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.ctpop.i32(i32 [[S]]), !range [[RNG3:![0-9]+]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[B:%.*]], i32 2, i32 30
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %s = select i1 %b, i32 5, i32 -7
@@ -117,8 +116,8 @@ define i32 @ctpop_sel_const_true_false(i1 %b) {
 
 define i32 @ctpop_sel_const_true(i1 %b, i32 %x) {
 ; CHECK-LABEL: @ctpop_sel_const_true(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 5, i32 [[X:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.ctpop.i32(i32 [[S]]), !range [[RNG1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG1]]
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[B:%.*]], i32 2, i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %s = select i1 %b, i32 5, i32 %x
@@ -128,8 +127,8 @@ define i32 @ctpop_sel_const_true(i1 %b, i32 %x) {
 
 define <3 x i7> @ctpop_sel_const_false(<3 x i1> %b, <3 x i7> %x) {
 ; CHECK-LABEL: @ctpop_sel_const_false(
-; CHECK-NEXT:    [[S:%.*]] = select <3 x i1> [[B:%.*]], <3 x i7> [[X:%.*]], <3 x i7> <i7 7, i7 -1, i7 0>
-; CHECK-NEXT:    [[C:%.*]] = call <3 x i7> @llvm.ctpop.v3i7(<3 x i7> [[S]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i7> @llvm.ctpop.v3i7(<3 x i7> [[X:%.*]])
+; CHECK-NEXT:    [[C:%.*]] = select <3 x i1> [[B:%.*]], <3 x i7> [[TMP1]], <3 x i7> <i7 3, i7 7, i7 0>
 ; CHECK-NEXT:    ret <3 x i7> [[C]]
 ;
   %s = select <3 x i1> %b, <3 x i7> %x, <3 x i7> <i7 7, i7 -1, i7 0>
@@ -141,7 +140,7 @@ define i32 @ctpop_sel_const_true_false_extra_use(i1 %b) {
 ; CHECK-LABEL: @ctpop_sel_const_true_false_extra_use(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 5, i32 7
 ; CHECK-NEXT:    call void @use(i32 [[S]])
-; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.ctpop.i32(i32 [[S]]), !range [[RNG4:![0-9]+]]
+; CHECK-NEXT:    [[C:%.*]] = call i32 @llvm.ctpop.i32(i32 [[S]]), !range [[RNG3:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %s = select i1 %b, i32 5, i32 7
