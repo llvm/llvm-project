@@ -298,6 +298,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LegalisationCost.first * Entry->Cost + 1;
     if (Entry)
       return LegalisationCost.first * Entry->Cost;
+    break;
   }
   default:
     break;
