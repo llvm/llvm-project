@@ -139,6 +139,12 @@ public:
     return result;
   }
 
+  MPFRNumber expm1() const {
+    MPFRNumber result;
+    mpfr_expm1(result.value, value, MPFR_RNDN);
+    return result;
+  }
+
   MPFRNumber floor() const {
     MPFRNumber result;
     mpfr_floor(result.value, value);
@@ -309,6 +315,8 @@ unaryOperation(Operation op, InputType input) {
     return mpfrInput.exp();
   case Operation::Exp2:
     return mpfrInput.exp2();
+  case Operation::Expm1:
+    return mpfrInput.expm1();
   case Operation::Floor:
     return mpfrInput.floor();
   case Operation::Round:
