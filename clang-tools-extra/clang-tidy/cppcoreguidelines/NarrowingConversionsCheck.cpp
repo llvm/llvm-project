@@ -35,6 +35,8 @@ auto hasAnyListedName(const std::string &Names) {
 NarrowingConversionsCheck::NarrowingConversionsCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
+      WarnOnIntegerNarrowingConversion(
+          Options.get("WarnOnIntegerNarrowingConversion", true)),
       WarnOnFloatingPointNarrowingConversion(
           Options.get("WarnOnFloatingPointNarrowingConversion", true)),
       WarnWithinTemplateInstantiation(
@@ -45,6 +47,8 @@ NarrowingConversionsCheck::NarrowingConversionsCheck(StringRef Name,
 
 void NarrowingConversionsCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "WarnOnIntegerNarrowingConversion",
+                WarnOnIntegerNarrowingConversion);
   Options.store(Opts, "WarnOnFloatingPointNarrowingConversion",
                 WarnOnFloatingPointNarrowingConversion);
   Options.store(Opts, "WarnWithinTemplateInstantiation",
@@ -294,34 +298,37 @@ void NarrowingConversionsCheck::handleIntegralCast(const ASTContext &Context,
                                                    SourceLocation SourceLoc,
                                                    const Expr &Lhs,
                                                    const Expr &Rhs) {
-  const BuiltinType *ToType = getBuiltinType(Lhs);
-  // From [conv.integral]p7.3.8:
-  // Conversions to unsigned integer is well defined so no warning is issued.
-  // "The resulting value is the smallest unsigned value equal to the source
-  // value modulo 2^n where n is the number of bits used to represent the
-  // destination type."
-  if (ToType->isUnsignedInteger())
-    return;
-  const BuiltinType *FromType = getBuiltinType(Rhs);
-
-  // With this option, we don't warn on conversions that have equivalent width
-  // in bits. eg. uint32 <-> int32.
-  if (!WarnOnEquivalentBitWidth) {
-    uint64_t FromTypeSize = Context.getTypeSize(FromType);
-    uint64_t ToTypeSize = Context.getTypeSize(ToType);
-    if (FromTypeSize == ToTypeSize)
+  if (WarnOnIntegerNarrowingConversion) {
+    const BuiltinType *ToType = getBuiltinType(Lhs);
+    // From [conv.integral]p7.3.8:
+    // Conversions to unsigned integer is well defined so no warning is issued.
+    // "The resulting value is the smallest unsigned value equal to the source
+    // value modulo 2^n where n is the number of bits used to represent the
+    // destination type."
+    if (ToType->isUnsignedInteger())
       return;
-  }
+    const BuiltinType *FromType = getBuiltinType(Rhs);
 
-  llvm::APSInt IntegerConstant;
-  if (getIntegerConstantExprValue(Context, Rhs, IntegerConstant)) {
-    if (!isWideEnoughToHold(Context, IntegerConstant, *ToType))
-      diagNarrowIntegerConstantToSignedInt(SourceLoc, Lhs, Rhs, IntegerConstant,
-                                           Context.getTypeSize(FromType));
-    return;
+    // With this option, we don't warn on conversions that have equivalent width
+    // in bits. eg. uint32 <-> int32.
+    if (!WarnOnEquivalentBitWidth) {
+      uint64_t FromTypeSize = Context.getTypeSize(FromType);
+      uint64_t ToTypeSize = Context.getTypeSize(ToType);
+      if (FromTypeSize == ToTypeSize)
+        return;
+    }
+
+    llvm::APSInt IntegerConstant;
+    if (getIntegerConstantExprValue(Context, Rhs, IntegerConstant)) {
+      if (!isWideEnoughToHold(Context, IntegerConstant, *ToType))
+        diagNarrowIntegerConstantToSignedInt(SourceLoc, Lhs, Rhs,
+                                             IntegerConstant,
+                                             Context.getTypeSize(FromType));
+      return;
+    }
+    if (!isWideEnoughToHold(Context, *FromType, *ToType))
+      diagNarrowTypeToSignedInt(SourceLoc, Lhs, Rhs);
   }
-  if (!isWideEnoughToHold(Context, *FromType, *ToType))
-    diagNarrowTypeToSignedInt(SourceLoc, Lhs, Rhs);
 }
 
 void NarrowingConversionsCheck::handleIntegralToBoolean(

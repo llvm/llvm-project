@@ -13,7 +13,8 @@ Guidelines, corresponding to rule ES.46. See
 https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#es46-avoid-lossy-narrowing-truncating-arithmetic-conversions.
 
 We enforce only part of the guideline, more specifically, we flag narrowing conversions from:
- - an integer to a narrower integer (e.g. ``char`` to ``unsigned char``),
+ - an integer to a narrower integer (e.g. ``char`` to ``unsigned char``)
+   if WarnOnIntegerNarrowingConversion Option is set,
  - an integer to a narrower floating-point (e.g. ``uint64_t`` to ``float``),
  - a floating-point to an integer (e.g. ``double`` to ``int``),
  - a floating-point to a narrower floating-point (e.g. ``double`` to ``float``)
@@ -29,6 +30,11 @@ This check will flag:
 
 Options
 -------
+
+.. option:: WarnOnIntegerNarrowingConversion
+
+    When `true`, the check will warn on narrowing integer conversion
+    (e.g. ``int`` to ``size_t``). `true` by default.
 
 .. option:: WarnOnFloatingPointNarrowingConversion
 
