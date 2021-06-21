@@ -300,6 +300,31 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LegalisationCost.first * Entry->Cost;
     break;
   }
+  case Intrinsic::ctpop: {
+    static const CostTblEntry CtpopCostTbl[] = {
+        {ISD::CTPOP, MVT::v2i64, 4},
+        {ISD::CTPOP, MVT::v4i32, 3},
+        {ISD::CTPOP, MVT::v8i16, 2},
+        {ISD::CTPOP, MVT::v16i8, 1},
+        {ISD::CTPOP, MVT::i64,   4},
+        {ISD::CTPOP, MVT::v2i32, 3},
+        {ISD::CTPOP, MVT::v4i16, 2},
+        {ISD::CTPOP, MVT::v8i8,  1},
+        {ISD::CTPOP, MVT::i32,   5},
+    };
+    auto LT = TLI->getTypeLegalizationCost(DL, RetTy);
+    MVT MTy = LT.second;
+    if (const auto *Entry = CostTableLookup(CtpopCostTbl, ISD::CTPOP, MTy)) {
+      // Extra cost of +1 when illegal vector types are legalized by promoting
+      // the integer type.
+      int ExtraCost = MTy.isVector() && MTy.getScalarSizeInBits() !=
+                                            RetTy->getScalarSizeInBits()
+                          ? 1
+                          : 0;
+      return LT.first * Entry->Cost + ExtraCost;
+    }
+    break;
+  }
   default:
     break;
   }
