@@ -99,9 +99,11 @@ private:
 /// surrounding requested memory to be checked for invalid accesses.
 class AddressSanitizerPass : public PassInfoMixin<AddressSanitizerPass> {
 public:
-  explicit AddressSanitizerPass(bool CompileKernel = false,
-                                bool Recover = false,
-                                bool UseAfterScope = false);
+  explicit AddressSanitizerPass(
+      bool CompileKernel = false, bool Recover = false,
+      bool UseAfterScope = false,
+      AsanDetectStackUseAfterReturnMode UseAfterReturn =
+          AsanDetectStackUseAfterReturnMode::Runtime);
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
 
@@ -109,6 +111,7 @@ private:
   bool CompileKernel;
   bool Recover;
   bool UseAfterScope;
+  AsanDetectStackUseAfterReturnMode UseAfterReturn;
 };
 
 /// Public interface to the address sanitizer module pass for instrumenting code
@@ -135,9 +138,11 @@ private:
 };
 
 // Insert AddressSanitizer (address sanity checking) instrumentation
-FunctionPass *createAddressSanitizerFunctionPass(bool CompileKernel = false,
-                                                 bool Recover = false,
-                                                 bool UseAfterScope = false);
+FunctionPass *createAddressSanitizerFunctionPass(
+    bool CompileKernel = false, bool Recover = false,
+    bool UseAfterScope = false,
+    AsanDetectStackUseAfterReturnMode UseAfterReturn =
+        AsanDetectStackUseAfterReturnMode::Runtime);
 ModulePass *createModuleAddressSanitizerLegacyPassPass(
     bool CompileKernel = false, bool Recover = false, bool UseGlobalsGC = true,
     bool UseOdrIndicator = true,

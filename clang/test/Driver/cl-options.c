@@ -452,7 +452,6 @@
 // RUN:     /FAs \
 // RUN:     /FAu \
 // RUN:     /favor:blend \
-// RUN:     /fsanitize-address-use-after-return \
 // RUN:     /fno-sanitize-address-vcasan-lib \
 // RUN:     /Fifoo \
 // RUN:     /Fmfoo \

@@ -192,6 +192,12 @@ StringRef AsanDtorKindToString(llvm::AsanDtorKind kind);
 
 llvm::AsanDtorKind AsanDtorKindFromString(StringRef kind);
 
+StringRef AsanDetectStackUseAfterReturnModeToString(
+    llvm::AsanDetectStackUseAfterReturnMode mode);
+
+llvm::AsanDetectStackUseAfterReturnMode
+AsanDetectStackUseAfterReturnModeFromString(StringRef modeStr);
+
 } // namespace clang
 
 #endif // LLVM_CLANG_BASIC_SANITIZERS_H
