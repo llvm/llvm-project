@@ -256,7 +256,7 @@ public:
   ///  by FoldingSet.
   void Profile(llvm::FoldingSetNodeID &ID) const { Profile(ID, *this); }
 
-  /// getConcreteValue - If a symbol is contrained to equal a specific integer
+  /// getConcreteValue - If a symbol is constrained to equal a specific integer
   ///  constant then this method returns that value.  Otherwise, it returns
   ///  NULL.
   const llvm::APSInt *getConcreteValue() const {
