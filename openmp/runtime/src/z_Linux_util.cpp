@@ -515,6 +515,7 @@ static void *__kmp_launch_worker(void *thr) {
     KMP_OS_OPENBSD
   if (__kmp_stkoffset > 0 && gtid > 0) {
     padding = KMP_ALLOCA(gtid * __kmp_stkoffset);
+    (void)padding;
   }
 #endif
 
