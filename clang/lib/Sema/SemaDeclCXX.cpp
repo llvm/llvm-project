@@ -7749,16 +7749,11 @@ private:
 
     if (Args[0]->getType()->isOverloadableType())
       S.LookupOverloadedBinOp(CandidateSet, OO, Fns, Args);
-    else if (OO == OO_EqualEqual ||
-             !Args[0]->getType()->isFunctionPointerType()) {
+    else
       // FIXME: We determine whether this is a valid expression by checking to
       // see if there's a viable builtin operator candidate for it. That isn't
       // really what the rules ask us to do, but should give the right results.
-      //
-      // Note that the builtin operator for relational comparisons on function
-      // pointers is the only known case which cannot be used.
       S.AddBuiltinOperatorCandidates(OO, FD->getLocation(), Args, CandidateSet);
-    }
 
     Result R;
 
@@ -7802,11 +7797,14 @@ private:
           return Result::deleted();
       }
 
-      // C++2a [class.compare.default]p3 [P2002R0]:
-      //   A defaulted comparison function is constexpr-compatible if [...]
-      //   no overlod resolution performed [...] results in a non-constexpr
-      //   function.
+      bool NeedsDeducing =
+          OO == OO_Spaceship && FD->getReturnType()->isUndeducedAutoType();
+
       if (FunctionDecl *BestFD = Best->Function) {
+        // C++2a [class.compare.default]p3 [P2002R0]:
+        //   A defaulted comparison function is constexpr-compatible if
+        //   [...] no overlod resolution performed [...] results in a
+        //   non-constexpr function.
         assert(!BestFD->isDeleted() && "wrong overload resolution result");
         // If it's not constexpr, explain why not.
         if (Diagnose == ExplainConstexpr && !BestFD->isConstexpr()) {
@@ -7819,10 +7817,8 @@ private:
           return Result::deleted();
         }
         R.Constexpr &= BestFD->isConstexpr();
-      }
 
-      if (OO == OO_Spaceship && FD->getReturnType()->isUndeducedAutoType()) {
-        if (auto *BestFD = Best->Function) {
+        if (NeedsDeducing) {
           // If any callee has an undeduced return type, deduce it now.
           // FIXME: It's not clear how a failure here should be handled. For
           // now, we produce an eager diagnostic, because that is forward
@@ -7848,10 +7844,9 @@ private:
             }
             return Result::deleted();
           }
-          if (auto *Info = S.Context.CompCategories.lookupInfoForType(
-              BestFD->getCallResultType())) {
-            R.Category = Info->Kind;
-          } else {
+          auto *Info = S.Context.CompCategories.lookupInfoForType(
+              BestFD->getCallResultType());
+          if (!Info) {
             if (Diagnose == ExplainDeleted) {
               S.Diag(Subobj.Loc, diag::note_defaulted_comparison_cannot_deduce)
                   << Subobj.Kind << Subobj.Decl
@@ -7862,12 +7857,25 @@ private:
             }
             return Result::deleted();
           }
-        } else {
-          QualType T = Best->BuiltinParamTypes[0];
-          assert(T == Best->BuiltinParamTypes[1] &&
-                 "builtin comparison for different types?");
-          assert(Best->BuiltinParamTypes[2].isNull() &&
-                 "invalid builtin comparison");
+          R.Category = Info->Kind;
+        }
+      } else {
+        QualType T = Best->BuiltinParamTypes[0];
+        assert(T == Best->BuiltinParamTypes[1] &&
+               "builtin comparison for different types?");
+        assert(Best->BuiltinParamTypes[2].isNull() &&
+               "invalid builtin comparison");
+
+        // The builtin operator for relational comparisons on function
+        // pointers is the only known case which cannot be used.
+        if (OO != OO_EqualEqual && T->isFunctionPointerType()) {
+          if (Diagnose == ExplainDeleted)
+            S.Diag(Subobj.Loc, diag::note_defaulted_comparison_selected_invalid)
+                << Subobj.Kind << Subobj.Decl << T;
+          return Result::deleted();
+        }
+
+        if (NeedsDeducing) {
           Optional<ComparisonCategoryType> Cat =
               getComparisonCategoryForBuiltinCmp(T);
           assert(Cat && "no category for builtin comparison?");
