@@ -45,6 +45,7 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
   file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.mtx
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.tns
             ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/wide.mtx
+            ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/zero.mtx
           DESTINATION ${MLIR_INTEGRATION_TEST_DIR}/data/)
 endif()
 
