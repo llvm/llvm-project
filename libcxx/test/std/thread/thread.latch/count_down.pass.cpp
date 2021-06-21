@@ -9,9 +9,8 @@
 // UNSUPPORTED: libcpp-has-no-threads
 // UNSUPPORTED: c++03, c++11
 
-// This test requires the dylib support introduced in D68480,
-// which hasn't shipped yet.
-// XFAIL: use_system_cxx_lib && x86_64-apple
+// This test requires the dylib support introduced in D68480, which shipped in
+// macOS 11.0.
 // XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.15
 // XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.14
 // XFAIL: use_system_cxx_lib && x86_64-apple-macosx10.13
