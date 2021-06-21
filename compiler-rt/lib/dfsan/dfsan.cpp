@@ -88,8 +88,72 @@ int __dfsan_get_track_origins() {
 // 45-46 are cleared to bring the address into the range
 // [0x100000008000,0x200000000000).  See the function shadow_for below.
 //
+// On Linux/MIPS64, memory is laid out as follows:
 //
+// +--------------------+ 0x10000000000 (top of memory)
+// | application memory |
+// +--------------------+ 0xF000008000 (kAppAddr)
+// |                    |
+// |       unused       |
+// |                    |
+// +--------------------+ 0x2000000000 (kUnusedAddr)
+// |   shadow memory    |
+// +--------------------+ 0x1000008000 (kShadowAddr)
+// |       unused       |
+// +--------------------+ 0x0000010000
+// | reserved by kernel |
+// +--------------------+ 0x0000000000
 
+// On Linux/AArch64 (39-bit VMA), memory is laid out as follow:
+//
+// +--------------------+ 0x8000000000 (top of memory)
+// | application memory |
+// +--------------------+ 0x7000008000 (kAppAddr)
+// |                    |
+// |       unused       |
+// |                    |
+// +--------------------+ 0x1000000000 (kUnusedAddr)
+// |   shadow memory    |
+// +--------------------+ 0x0000010000 (kShadowAddr)
+// | reserved by kernel |
+// +--------------------+ 0x0000000000
+
+// On Linux/AArch64 (42-bit VMA), memory is laid out as follow:
+//
+// +--------------------+ 0x40000000000 (top of memory)
+// | application memory |
+// +--------------------+ 0x3ff00008000 (kAppAddr)
+// |                    |
+// |       unused       |
+// |                    |
+// +--------------------+ 0x8000000000 (kUnusedAddr)
+// |   shadow memory    |
+// +--------------------+ 0x0000010000 (kShadowAddr)
+// | reserved by kernel |
+// +--------------------+ 0x0000000000
+
+// On Linux/AArch64 (48-bit VMA), memory is laid out as follow:
+//
+// +--------------------+ 0x1000000000000 (top of memory)
+// | application memory |
+// +--------------------+ 0xffff00008000 (kAppAddr)
+// |       unused       |
+// +--------------------+ 0xaaaab0000000 (top of PIE address)
+// | application PIE    |
+// +--------------------+ 0xaaaaa0000000 (top of PIE address)
+// |                    |
+// |       unused       |
+// |                    |
+// +--------------------+ 0x8000000000 (kUnusedAddr)
+// |   shadow memory    |
+// +--------------------+ 0x0000010000 (kShadowAddr)
+// | reserved by kernel |
+// +--------------------+ 0x0000000000
+
+#ifdef DFSAN_RUNTIME_VMA
+// Runtime detected VMA size.
+int __dfsan::vmaSize;
+#endif
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE
 dfsan_label __dfsan_union_load(const dfsan_label *ls, uptr n) {
@@ -835,6 +899,22 @@ void dfsan_clear_thread_local_state() {
   }
 }
 
+static void InitializePlatformEarly() {
+  AvoidCVE_2016_2143();
+#ifdef DFSAN_RUNTIME_VMA
+  __dfsan::vmaSize =
+    (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1);
+  if (__dfsan::vmaSize == 39 || __dfsan::vmaSize == 42 ||
+      __dfsan::vmaSize == 48) {
+    __dfsan_shadow_ptr_mask = ShadowMask();
+  } else {
+    Printf("FATAL: DataFlowSanitizer: unsupported VMA range\n");
+    Printf("FATAL: Found %d - Supported 39, 42, and 48\n", __dfsan::vmaSize);
+    Die();
+  }
+#endif
+}
+
 extern "C" void dfsan_flush() {
   if (!MmapFixedSuperNoReserve(ShadowAddr(), UnusedAddr() - ShadowAddr()))
     Die();
@@ -847,9 +927,9 @@ static void DFsanInit(int argc, char **argv, char **envp) {
   dfsan_init_is_running = true;
   SanitizerToolName = "DataflowSanitizer";
 
-  AvoidCVE_2016_2143();
-
   InitializeFlags();
+
+  ::InitializePlatformEarly();
 
   dfsan_flush();
   if (common_flags()->use_madv_dontdump)
