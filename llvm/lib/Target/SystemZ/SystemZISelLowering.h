@@ -437,6 +437,10 @@ public:
     EVT ScVT = VT.getScalarType();
     return ScVT == MVT::f32 || ScVT == MVT::f64 || ScVT == MVT::f128;
   }
+  bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override {
+    ConstantInt* Mask = dyn_cast<ConstantInt>(AndI.getOperand(1));
+    return Mask && Mask->getValue().isIntN(16);
+  }
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &,
                          EVT) const override;
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
