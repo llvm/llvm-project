@@ -241,10 +241,17 @@ void InterfaceGenerator::emitModelDecl(Interface &interface) {
     os << "  };\n";
   }
 
-  // Emit the template for the external model.
   os << "  template<typename ConcreteModel, typename " << valueTemplate
      << ">\n";
   os << "  class ExternalModel : public FallbackModel<ConcreteModel> {\n";
+
+  // Emit the template for the external model if there are no extra class
+  // declarations.
+  if (interface.getExtraClassDeclaration()) {
+    os << "  };\n";
+    return;
+  }
+
   os << "  public:\n";
 
   // Emit declarations for methods that have default implementations. Other
@@ -338,6 +345,9 @@ void InterfaceGenerator::emitModelMethodsDef(Interface &interface) {
   }
 
   // Emit default implementations for the external model.
+  if (interface.getExtraClassDeclaration())
+    return;
+
   for (auto &method : interface.getMethods()) {
     if (!method.getDefaultImplementation())
       continue;
