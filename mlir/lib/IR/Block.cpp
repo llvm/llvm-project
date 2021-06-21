@@ -346,8 +346,8 @@ unsigned PredecessorIterator::getSuccessorIndex() const {
 SuccessorRange::SuccessorRange() : SuccessorRange(nullptr, 0) {}
 
 SuccessorRange::SuccessorRange(Block *block) : SuccessorRange() {
-  if (!llvm::hasSingleElement(*block->getParent())) {
-    Operation *term = block->getTerminator();
+  if (!block->empty() && !llvm::hasSingleElement(*block->getParent())) {
+    Operation *term = &block->back();
     if ((count = term->getNumSuccessors()))
       base = term->getBlockOperands().data();
   }
