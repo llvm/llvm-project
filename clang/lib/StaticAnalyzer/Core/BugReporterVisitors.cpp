@@ -2314,11 +2314,11 @@ PathDiagnosticPieceRef Tracker::handle(StoreInfo SI, TrackingOptions Opts) {
 
 bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
                                        const Expr *E,
-                                       PathSensitiveBugReport &report,
-                                       bugreporter::TrackingKind TKind,
-                                       bool EnableNullFPSuppression) {
-  return Tracker::create(report)
-      ->track(E, InputNode, {TKind, EnableNullFPSuppression})
+
+                                       PathSensitiveBugReport &Report,
+                                       TrackingOptions Opts) {
+  return Tracker::create(Report)
+      ->track(E, InputNode, Opts)
       .FoundSomethingToTrack;
 }
 
@@ -2375,9 +2375,9 @@ NilReceiverBRVisitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
   // The receiver was nil, and hence the method was skipped.
   // Register a BugReporterVisitor to issue a message telling us how
   // the receiver was null.
-  bugreporter::trackExpressionValue(
-      N, Receiver, BR, bugreporter::TrackingKind::Thorough,
-      /*EnableNullFPSuppression*/ false);
+  bugreporter::trackExpressionValue(N, Receiver, BR,
+                                    {bugreporter::TrackingKind::Thorough,
+                                     /*EnableNullFPSuppression*/ false});
   // Issue a message saying that the method was skipped.
   PathDiagnosticLocation L(Receiver, BRC.getSourceManager(),
                                      N->getLocationContext());

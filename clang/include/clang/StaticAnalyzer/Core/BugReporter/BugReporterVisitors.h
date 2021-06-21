@@ -353,9 +353,7 @@ public:
 ///         statement. Note that returning \c true does not actually imply
 ///         that any visitors were added.
 bool trackExpressionValue(const ExplodedNode *N, const Expr *E,
-                          PathSensitiveBugReport &R,
-                          TrackingKind TKind = TrackingKind::Thorough,
-                          bool EnableNullFPSuppression = true);
+                          PathSensitiveBugReport &R, TrackingOptions Opts = {});
 
 /// Track how the value got stored into the given region and where it came
 /// from.
