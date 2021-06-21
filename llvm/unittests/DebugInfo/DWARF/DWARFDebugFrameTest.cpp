@@ -162,6 +162,8 @@ TEST(DWARFDebugFrame, InvalidCFIOpcodesTest) {
       dwarf::DW_CFA_offset_extended_sf,
       dwarf::DW_CFA_def_cfa_sf,
       dwarf::DW_CFA_def_cfa_offset_sf,
+      dwarf::DW_CFA_LLVM_def_aspace_cfa,
+      dwarf::DW_CFA_LLVM_def_aspace_cfa_sf,
       dwarf::DW_CFA_val_offset,
       dwarf::DW_CFA_val_offset_sf,
       dwarf::DW_CFA_val_expression,
@@ -268,7 +270,8 @@ TEST(DWARFDebugFrame, ParseTruncatedCFITest) {
   };
 
   for (uint8_t Inst : {dwarf::DW_CFA_offset_extended, dwarf::DW_CFA_register,
-                       dwarf::DW_CFA_def_cfa, dwarf::DW_CFA_val_offset})
+                       dwarf::DW_CFA_def_cfa, dwarf::DW_CFA_LLVM_def_aspace_cfa,
+                       dwarf::DW_CFA_val_offset})
     CheckOp_ULEB128_ULEB128(Inst);
 
   // A test for an instruction with two operands: ULEB128, SLEB128.
@@ -284,8 +287,9 @@ TEST(DWARFDebugFrame, ParseTruncatedCFITest) {
                           "malformed sleb128, extends past end"));
   };
 
-  for (uint8_t Inst : {dwarf::DW_CFA_offset_extended_sf,
-                       dwarf::DW_CFA_def_cfa_sf, dwarf::DW_CFA_val_offset_sf})
+  for (uint8_t Inst :
+       {dwarf::DW_CFA_offset_extended_sf, dwarf::DW_CFA_def_cfa_sf,
+        dwarf::DW_CFA_LLVM_def_aspace_cfa_sf, dwarf::DW_CFA_val_offset_sf})
     CheckOp_ULEB128_SLEB128(Inst);
 
   // Unable to read a truncated DW_CFA_def_cfa_expression instruction.
@@ -1541,6 +1545,104 @@ TEST(DWARFDebugFrame, UnwindTable_DW_CFA_def_cfa) {
   EXPECT_EQ(
       Rows[4].getCFAValue(),
       dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg1, CFAOff2));
+  EXPECT_EQ(Rows[4].getRegisterLocations().size(), 1u);
+  EXPECT_EQ(Rows[4].getRegisterLocations(), VerifyLocs);
+}
+
+TEST(DWARFDebugFrame, UnwindTable_DW_CFA_LLVM_def_aspace_cfa) {
+  // Test that DW_CFA_LLVM_def_aspace_cfa, DW_CFA_LLVM_def_aspace_cfa_sf,
+  // DW_CFA_def_cfa_register, DW_CFA_def_cfa_offset, and
+  // DW_CFA_def_cfa_offset_sf works as expected when parsed in the state
+  // machine.
+  dwarf::CIE TestCIE = createCIE(/*IsDWARF64=*/false,
+                                 /*Offset=*/0x0,
+                                 /*Length=*/0xff);
+
+  dwarf::FDE TestFDE(/*IsDWARF64=*/true,
+                     /*Offset=*/0x3333abcdabcd,
+                     /*Length=*/0x4444abcdabcd,
+                     /*CIEPointer=*/0x1111abcdabcd,
+                     /*InitialLocation=*/0x1000,
+                     /*AddressRange=*/0x1000,
+                     /*Cie=*/&TestCIE,
+                     /*LSDAAddress=*/None,
+                     /*Arch=*/Triple::x86_64);
+
+  // Make a CIE that has a valid CFA definition and a single register unwind
+  // rule for register that we will verify is in all of the pushed rows.
+  constexpr uint8_t CFAReg1 = 12;
+  constexpr uint8_t CFAOff1 = 32;
+  constexpr uint8_t CFAReg2 = 13;
+  constexpr uint8_t CFAOff2 = 48;
+  constexpr uint8_t Reg = 13;
+  constexpr uint8_t InReg = 14;
+  constexpr uint8_t AddrSpace = 2;
+
+  EXPECT_THAT_ERROR(
+      parseCFI(TestCIE, {dwarf::DW_CFA_LLVM_def_aspace_cfa, CFAReg1, CFAOff1,
+                         AddrSpace, dwarf::DW_CFA_register, Reg, InReg}),
+      Succeeded());
+
+  // Make a FDE with DWARF call frame instruction opcodes that use all of the
+  // DW_CFA_def_cfa* opcodes. This will verify that all opcodes that should
+  // create a row are correctly working.
+  EXPECT_THAT_ERROR(
+      parseCFI(
+          TestFDE,
+          {
+              dwarf::DW_CFA_advance_loc | 4, dwarf::DW_CFA_def_cfa_register,
+              CFAReg2, dwarf::DW_CFA_advance_loc | 4,
+              dwarf::DW_CFA_def_cfa_offset, CFAOff2,
+              dwarf::DW_CFA_advance_loc | 4, dwarf::DW_CFA_def_cfa_offset_sf,
+              0x7c, // -4 SLEB to make offset = 32 (CFAOff1)
+              dwarf::DW_CFA_advance_loc | 4, dwarf::DW_CFA_def_cfa_sf, CFAReg1,
+              0x7a, // -6 SLEB to make CFA offset 48 (CFAOff2)
+          }),
+      Succeeded());
+
+  // Create locations that we expect the UnwindRow objects to contain after
+  // parsing the DWARF call frame instructions.
+  dwarf::RegisterLocations VerifyLocs;
+  VerifyLocs.setRegisterLocation(
+      Reg, dwarf::UnwindLocation::createIsRegisterPlusOffset(InReg, 0));
+
+  // Verify we catch state machine error.
+  Expected<dwarf::UnwindTable> RowsOrErr = dwarf::UnwindTable::create(&TestFDE);
+  EXPECT_THAT_ERROR(RowsOrErr.takeError(), Succeeded());
+  const dwarf::UnwindTable &Rows = RowsOrErr.get();
+  EXPECT_EQ(Rows.size(), 5u);
+  EXPECT_EQ(Rows[0].getAddress(), 0x1000u);
+  EXPECT_EQ(Rows[0].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg1, CFAOff1,
+                                                              AddrSpace));
+  EXPECT_EQ(Rows[0].getRegisterLocations().size(), 1u);
+  EXPECT_EQ(Rows[0].getRegisterLocations(), VerifyLocs);
+
+  EXPECT_EQ(Rows[1].getAddress(), 0x1004u);
+  EXPECT_EQ(Rows[1].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg2, CFAOff1,
+                                                              AddrSpace));
+  EXPECT_EQ(Rows[1].getRegisterLocations().size(), 1u);
+  EXPECT_EQ(Rows[1].getRegisterLocations(), VerifyLocs);
+
+  EXPECT_EQ(Rows[2].getAddress(), 0x1008u);
+  EXPECT_EQ(Rows[2].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg2, CFAOff2,
+                                                              AddrSpace));
+  EXPECT_EQ(Rows[2].getRegisterLocations().size(), 1u);
+  EXPECT_EQ(Rows[2].getRegisterLocations(), VerifyLocs);
+
+  EXPECT_EQ(Rows[3].getAddress(), 0x100cu);
+  EXPECT_EQ(Rows[3].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg2, CFAOff1,
+                                                              AddrSpace));
+  EXPECT_EQ(Rows[3].getRegisterLocations().size(), 1u);
+  EXPECT_EQ(Rows[3].getRegisterLocations(), VerifyLocs);
+
+  EXPECT_EQ(Rows[4].getAddress(), 0x1010u);
+  EXPECT_EQ(Rows[4].getCFAValue(),
+            dwarf::UnwindLocation::createIsRegisterPlusOffset(CFAReg1, CFAOff2,
+                                                              AddrSpace));
   EXPECT_EQ(Rows[4].getRegisterLocations().size(), 1u);
   EXPECT_EQ(Rows[4].getRegisterLocations(), VerifyLocs);
 }
