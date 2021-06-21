@@ -176,20 +176,27 @@ std::string macho::createResponseFile(const InputArgList &args) {
   return std::string(data.str());
 }
 
-Optional<std::string> macho::resolveDylibPath(StringRef path) {
+static void searchedDylib(const Twine &path, bool found) {
+  if (config->printDylibSearch)
+    message("searched " + path + (found ? ", found " : ", not found"));
+  if (!found)
+    depTracker->logFileNotFound(path);
+}
+
+Optional<std::string> macho::resolveDylibPath(StringRef dylibPath) {
   // TODO: if a tbd and dylib are both present, we should check to make sure
   // they are consistent.
-  if (fs::exists(path))
-    return std::string(path);
-  else
-    depTracker->logFileNotFound(path);
+  bool dylibExists = fs::exists(dylibPath);
+  searchedDylib(dylibPath, dylibExists);
+  if (dylibExists)
+    return std::string(dylibPath);
 
-  SmallString<261> location = path;
-  path::replace_extension(location, ".tbd");
-  if (fs::exists(location))
-    return std::string(location);
-  else
-    depTracker->logFileNotFound(location);
+  SmallString<261> tbdPath = dylibPath;
+  path::replace_extension(tbdPath, ".tbd");
+  bool tbdExists = fs::exists(tbdPath);
+  searchedDylib(tbdPath, tbdExists);
+  if (tbdExists)
+    return std::string(tbdPath);
   return {};
 }
 
@@ -249,10 +256,10 @@ macho::findPathCombination(const Twine &name,
     path::append(base, name);
     for (StringRef ext : extensions) {
       Twine location = base + ext;
-      if (fs::exists(location))
+      bool exists = fs::exists(location);
+      searchedDylib(location, exists);
+      if (exists)
         return saver.save(location.str());
-      else
-        depTracker->logFileNotFound(location);
     }
   }
   return {};
