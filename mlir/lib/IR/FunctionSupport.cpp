@@ -40,7 +40,7 @@ DictionaryAttr mlir::function_like_impl::getArgAttrDict(Operation *op,
   ArrayAttr attrs = op->getAttrOfType<ArrayAttr>(getArgDictAttrName());
   DictionaryAttr argAttrs =
       attrs ? attrs[index].cast<DictionaryAttr>() : DictionaryAttr();
-  return (argAttrs && !argAttrs.empty()) ? argAttrs : DictionaryAttr();
+  return argAttrs;
 }
 
 DictionaryAttr mlir::function_like_impl::getResultAttrDict(Operation *op,
@@ -48,7 +48,7 @@ DictionaryAttr mlir::function_like_impl::getResultAttrDict(Operation *op,
   ArrayAttr attrs = op->getAttrOfType<ArrayAttr>(getResultDictAttrName());
   DictionaryAttr resAttrs =
       attrs ? attrs[index].cast<DictionaryAttr>() : DictionaryAttr();
-  return (resAttrs && !resAttrs.empty()) ? resAttrs : DictionaryAttr();
+  return resAttrs;
 }
 
 void mlir::function_like_impl::detail::setArgResAttrDict(
