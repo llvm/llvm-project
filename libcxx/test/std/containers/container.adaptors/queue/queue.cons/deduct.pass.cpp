@@ -72,21 +72,70 @@ int main(int, char**)
     }
 
     {
-//  This one is odd - you can pass an allocator in to use, but the allocator
-//  has to match the type of the one used by the underlying container
-    typedef short T;
-    typedef test_allocator<T> Alloc;
-    typedef std::deque<T, Alloc> Container;
+        typedef short T;
+        typedef test_allocator<T> Alloc;
+        typedef std::list<T, Alloc> Cont;
+        typedef test_allocator<int> ConvertibleToAlloc;
+        static_assert(std::uses_allocator_v<Cont, ConvertibleToAlloc> &&
+                      !std::is_same_v<typename Cont::allocator_type, ConvertibleToAlloc>);
 
-    Container c{0,1,2,3};
-    std::queue<T, Container> source(c);
-    std::queue que(source, Alloc(2)); // queue(queue &, allocator)
-    static_assert(std::is_same_v<decltype(que)::value_type, T>, "");
-    static_assert(std::is_same_v<decltype(que)::container_type, Container>, "");
-    assert(que.size() == 4);
-    assert(que.back() == 3);
+        {
+        Cont cont;
+        std::queue que(cont, Alloc(2));
+        static_assert(std::is_same_v<decltype(que), std::queue<T, Cont>>);
+        }
+
+        {
+        Cont cont;
+        std::queue que(cont, ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(que), std::queue<T, Cont>>);
+        }
+
+        {
+        Cont cont;
+        std::queue que(std::move(cont), Alloc(2));
+        static_assert(std::is_same_v<decltype(que), std::queue<T, Cont>>);
+        }
+
+        {
+        Cont cont;
+        std::queue que(std::move(cont), ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(que), std::queue<T, Cont>>);
+        }
     }
 
+    {
+        typedef short T;
+        typedef test_allocator<T> Alloc;
+        typedef std::list<T, Alloc> Cont;
+        typedef test_allocator<int> ConvertibleToAlloc;
+        static_assert(std::uses_allocator_v<Cont, ConvertibleToAlloc> &&
+                      !std::is_same_v<typename Cont::allocator_type, ConvertibleToAlloc>);
 
-  return 0;
+        {
+        std::queue<T, Cont> source;
+        std::queue que(source, Alloc(2));
+        static_assert(std::is_same_v<decltype(que), std::queue<T, Cont>>);
+        }
+
+        {
+        std::queue<T, Cont> source;
+        std::queue que(source, ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(que), std::queue<T, Cont>>);
+        }
+
+        {
+        std::queue<T, Cont> source;
+        std::queue que(std::move(source), Alloc(2));
+        static_assert(std::is_same_v<decltype(que), std::queue<T, Cont>>);
+        }
+
+        {
+        std::queue<T, Cont> source;
+        std::queue que(std::move(source), ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(que), std::queue<T, Cont>>);
+        }
+    }
+
+    return 0;
 }
