@@ -13,6 +13,7 @@
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
+#include <map>
 #include <mutex>
 #include <vector>
 
@@ -173,15 +174,21 @@ protected:
   ObjectFile *m_objfile;
   collection m_symbols;
   FileRangeToIndexMap m_file_addr_to_index;
-  UniqueCStringMap<uint32_t> m_name_to_index;
-  UniqueCStringMap<uint32_t> m_basename_to_index;
-  UniqueCStringMap<uint32_t> m_method_to_index;
-  UniqueCStringMap<uint32_t> m_selector_to_index;
+
+  /// Maps function names to symbol indices (grouped by FunctionNameTypes)
+  std::map<lldb::FunctionNameType, UniqueCStringMap<uint32_t>>
+      m_name_to_symbol_indices;
   mutable std::recursive_mutex
       m_mutex; // Provide thread safety for this symbol table
   bool m_file_addr_to_index_computed : 1, m_name_indexes_computed : 1;
 
 private:
+  UniqueCStringMap<uint32_t> &
+  GetNameToSymbolIndexMap(lldb::FunctionNameType type) {
+    auto map = m_name_to_symbol_indices.find(type);
+    assert(map != m_name_to_symbol_indices.end());
+    return map->second;
+  }
   bool CheckSymbolAtIndex(size_t idx, Debug symbol_debug_type,
                           Visibility symbol_visibility) const {
     switch (symbol_debug_type) {
