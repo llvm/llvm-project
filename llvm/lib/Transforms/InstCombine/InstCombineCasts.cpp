@@ -2798,9 +2798,9 @@ Instruction *InstCombinerImpl::visitAddrSpaceCast(AddrSpaceCastInst &CI) {
   PointerType *SrcTy = cast<PointerType>(Src->getType()->getScalarType());
   PointerType *DestTy = cast<PointerType>(CI.getType()->getScalarType());
 
-  Type *DestElemTy = DestTy->getElementType();
-  if (SrcTy->getElementType() != DestElemTy) {
-    Type *MidTy = PointerType::get(DestElemTy, SrcTy->getAddressSpace());
+  if (!SrcTy->hasSameElementTypeAs(DestTy)) {
+    Type *MidTy =
+        PointerType::getWithSamePointeeType(DestTy, SrcTy->getAddressSpace());
     // Handle vectors of pointers.
     if (VectorType *VT = dyn_cast<VectorType>(CI.getType()))
       MidTy = VectorType::get(MidTy, VT->getElementCount());

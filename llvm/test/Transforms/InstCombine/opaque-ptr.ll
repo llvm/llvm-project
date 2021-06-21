@@ -35,20 +35,44 @@ define ptr @bitcast_typed_to_opaque_constexpr() {
   ret ptr bitcast (i8* @g to ptr)
 }
 
-;define ptr @addrspacecast_opaque_to_opaque(ptr addrspace(1) %a) {
-;  %b = addrspacecast ptr addrspace(1) %a to ptr
-;  ret ptr %b
-;}
+define ptr @addrspacecast_opaque_to_opaque(ptr addrspace(1) %a) {
+; CHECK-LABEL: @addrspacecast_opaque_to_opaque(
+; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(1) [[A:%.*]] to ptr
+; CHECK-NEXT:    ret ptr [[B]]
+;
+  %b = addrspacecast ptr addrspace(1) %a to ptr
+  ret ptr %b
+}
 
-;define ptr @addrspacecast_typed_to_opaque(i8 addrspace(1)* %a) {
-;  %b = addrspacecast i8 addrspace(1)* %a to ptr
-;  ret ptr %b
-;}
+define ptr @addrspacecast_typed_to_opaque(i8 addrspace(1)* %a) {
+; CHECK-LABEL: @addrspacecast_typed_to_opaque(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8 addrspace(1)* [[A:%.*]] to ptr addrspace(1)
+; CHECK-NEXT:    [[B:%.*]] = addrspacecast ptr addrspace(1) [[TMP1]] to ptr
+; CHECK-NEXT:    ret ptr [[B]]
+;
+  %b = addrspacecast i8 addrspace(1)* %a to ptr
+  ret ptr %b
+}
 
-;define i8* @addrspacecast_opaque_to_typed(ptr addrspace(1) %a) {
-;  %b = addrspacecast ptr addrspace(1) %a to i8*
-;  ret i8* %b
-;}
+define i8* @addrspacecast_opaque_to_typed(ptr addrspace(1) %a) {
+; CHECK-LABEL: @addrspacecast_opaque_to_typed(
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast ptr addrspace(1) [[A:%.*]] to i8 addrspace(1)*
+; CHECK-NEXT:    [[B:%.*]] = addrspacecast i8 addrspace(1)* [[TMP1]] to i8*
+; CHECK-NEXT:    ret i8* [[B]]
+;
+  %b = addrspacecast ptr addrspace(1) %a to i8*
+  ret i8* %b
+}
+
+define ptr addrspace(1) @bitcast_and_addrspacecast_eliminable(ptr %a) {
+; CHECK-LABEL: @bitcast_and_addrspacecast_eliminable(
+; CHECK-NEXT:    [[C:%.*]] = addrspacecast ptr [[A:%.*]] to ptr addrspace(1)
+; CHECK-NEXT:    ret ptr addrspace(1) [[C]]
+;
+  %b = bitcast ptr %a to i8*
+  %c = addrspacecast i8* %b to ptr addrspace(1)
+  ret ptr addrspace(1) %c
+}
 
 define ptr @gep_constexpr_1(ptr %a) {
 ; CHECK-LABEL: @gep_constexpr_1(
