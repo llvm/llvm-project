@@ -8256,11 +8256,7 @@ AACallGraphNode *AACallEdgeIterator::operator*() const {
 }
 
 void AttributorCallGraph::print() {
-  std::string Filename = "AttributorCallGraph.dot";
-  std::error_code EC;
-
-  raw_fd_ostream File(Filename, EC, sys::fs::OF_TextWithCRLF);
-  llvm::WriteGraph(File, this);
+  llvm::WriteGraph(outs(), this);
 }
 
 const char AAReturnedValues::ID = 0;
