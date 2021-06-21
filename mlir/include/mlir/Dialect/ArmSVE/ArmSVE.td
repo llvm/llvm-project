@@ -356,6 +356,37 @@ def VectorScaleOp : ArmSVE_Op<"vector_scale",
     "attr-dict `:` type($res)";
 }
 
+def ScalableLoadOp : ArmSVE_Op<"load">,
+    Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base, Index:$index)>,
+    Results<(outs ScalableVectorOf<[AnyType]>:$result)> {
+  let summary = "Load scalable vector from memory";
+  let description = [{
+    Load a slice of memory into a scalable vector.
+  }];
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return base().getType().cast<MemRefType>();
+    }
+  }];
+  let assemblyFormat = "$base `[` $index `]` attr-dict `:` "
+    "type($result) `from` type($base)";
+}
+
+def ScalableStoreOp : ArmSVE_Op<"store">,
+    Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base, Index:$index,
+               ScalableVectorOf<[AnyType]>:$value)> {
+  let summary = "Store scalable vector into memory";
+  let description = [{
+    Store a scalable vector on a slice of memory.
+  }];
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return base().getType().cast<MemRefType>();
+    }
+  }];
+  let assemblyFormat = "$value `,` $base `[` $index `]` attr-dict `:` "
+    "type($value) `to` type($base)";
+}
 
 def ScalableAddIOp : ScalableIOp<"addi", "addition", [Commutative]>;
 
