@@ -15,5 +15,5 @@ define i32 @test(i8* %p)  {
 }
 
 ; CHECK-DAG: .globaltype
-; CHECK-DAG: .eventtype
+; CHECK-DAG: .tagtype
 ; CHECK-DAG: .functype
