@@ -994,22 +994,10 @@ StmtResult Sema::BuildCoreturnStmt(SourceLocation Loc, Expr *E,
     E = R.get();
   }
 
-  // Move the return value if we can
-  NamedReturnInfo NRInfo = getNamedReturnInfo(E, /*ForceCXX20=*/true);
-  if (NRInfo.isMoveEligible()) {
-    InitializedEntity Entity = InitializedEntity::InitializeResult(
-        Loc, E->getType(), NRInfo.Candidate);
-    ExprResult MoveResult = PerformMoveOrCopyInitialization(Entity, NRInfo, E);
-    if (MoveResult.get())
-      E = MoveResult.get();
-  }
-
-  // FIXME: If the operand is a reference to a variable that's about to go out
-  // of scope, we should treat the operand as an xvalue for this overload
-  // resolution.
   VarDecl *Promise = FSI->CoroutinePromise;
   ExprResult PC;
   if (E && (isa<InitListExpr>(E) || !E->getType()->isVoidType())) {
+    getNamedReturnInfo(E, /*ForceCXX2b=*/true);
     PC = buildPromiseCall(*this, Promise, Loc, "return_value", E);
   } else {
     E = MakeFullDiscardedValueExpr(E).get();
