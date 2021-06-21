@@ -10,7 +10,6 @@
 #
 ##===----------------------------------------------------------------------===##
 
-include_directories(${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIRS})
 include_directories(${LIBOMPTARGET_SRC_DIR})
 include_directories(${LIBOMPTARGET_INCLUDE_DIR})
 include_directories(${GRPC_INCLUDE_DIR})
@@ -28,4 +27,4 @@ target_link_libraries(openmp-offloading-server
         grpc++
         protobuf
         ${OPENMP_PTHREAD_LIB}
-        "-ldl" "-lomp" "-fopenmp" "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../../exports" ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES})
+        "-ldl" "-lomp" "-fopenmp" "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../../exports")
