@@ -13,8 +13,6 @@
 #include "simple_packed_serialization.h"
 #include "gtest/gtest.h"
 
-#include <stdio.h>
-
 using namespace __orc_rt;
 
 TEST(SimplePackedSerializationTest, SPSOutputBuffer) {
