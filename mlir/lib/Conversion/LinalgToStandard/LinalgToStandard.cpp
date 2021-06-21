@@ -100,10 +100,6 @@ LogicalResult mlir::linalg::LinalgOpToLibraryCallRewrite::matchAndRewrite(
   if (isa<CopyOp>(op))
     return failure();
 
-  // Canonicalize indexed generic operations before library call conversion.
-  if (isa<IndexedGenericOp>(op))
-    return failure();
-
   auto libraryCallName = getLibraryCallSymbolRef(op, rewriter);
   if (!libraryCallName)
     return failure();
