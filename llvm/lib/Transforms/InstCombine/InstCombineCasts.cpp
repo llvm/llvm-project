@@ -953,6 +953,9 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
   return nullptr;
 }
 
+/// Transform (zext icmp) to bitwise / integer operations in order to
+/// eliminate it. If DoTransform is false, just test whether the given
+/// (zext icmp) can be transformed.
 Instruction *InstCombinerImpl::transformZExtICmp(ICmpInst *Cmp, ZExtInst &Zext,
                                                  bool DoTransform) {
   // If we are just checking for a icmp eq of a single bit and zext'ing it
@@ -1039,6 +1042,9 @@ Instruction *InstCombinerImpl::transformZExtICmp(ICmpInst *Cmp, ZExtInst &Zext,
     if (Cmp->hasOneUse() && match(Cmp->getOperand(1), m_ZeroInt()) &&
         match(Cmp->getOperand(0),
               m_OneUse(m_c_And(m_Shl(m_One(), m_Value(ShAmt)), m_Value(X))))) {
+      if (!DoTransform)
+        return Cmp;
+
       if (Cmp->getPredicate() == ICmpInst::ICMP_EQ)
         X = Builder.CreateNot(X);
       Value *Lshr = Builder.CreateLShr(X, ShAmt);
