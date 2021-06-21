@@ -5214,6 +5214,7 @@ static void getIntOperandsFromRegisterString(StringRef RegString,
 
     assert(AllIntFields &&
             "Unexpected non-integer value in special register string.");
+    (void)AllIntFields;
   }
 }
 

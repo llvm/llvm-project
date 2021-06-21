@@ -3047,6 +3047,7 @@ static int getIntOperandFromRegisterString(StringRef RegString) {
 
   assert(AllIntFields &&
           "Unexpected non-integer value in special register string.");
+  (void)AllIntFields;
 
   // Need to combine the integer fields of the string into a single value
   // based on the bit encoding of MRS/MSR instruction.
