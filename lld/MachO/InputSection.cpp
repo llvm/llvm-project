@@ -128,7 +128,7 @@ uint64_t CStringInputSection::getOffset(uint64_t off) const {
 }
 
 bool macho::isCodeSection(const InputSection *isec) {
-  uint32_t type = isec->flags & SECTION_TYPE;
+  uint32_t type = sectionType(isec->flags);
   if (type != S_REGULAR && type != S_COALESCED)
     return false;
 
