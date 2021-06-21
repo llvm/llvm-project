@@ -45,6 +45,23 @@ private:
   DependencyConsumer &C;
 };
 
+/// A listener that collects the names and paths to imported modules.
+class ImportCollectingListener : public ASTReaderListener {
+public:
+  ImportCollectingListener(
+      std::map<std::string, std::string> &PrebuiltModuleFiles)
+      : PrebuiltModuleFiles(PrebuiltModuleFiles) {}
+
+  bool needsImportVisitation() const override { return true; }
+
+  void visitImport(StringRef ModuleName, StringRef Filename) override {
+    PrebuiltModuleFiles[std::string(ModuleName)] = std::string(Filename);
+  }
+
+private:
+  std::map<std::string, std::string> &PrebuiltModuleFiles;
+};
+
 /// A clang tool that runs the preprocessor in a mode that's optimized for
 /// dependency scanning for the given compiler invocation.
 class DependencyScanningAction : public tooling::ToolAction {
@@ -103,6 +120,25 @@ public:
     Compiler.setFileManager(FileMgr);
     Compiler.createSourceManager(*FileMgr);
 
+    std::map<std::string, std::string> PrebuiltModuleFiles;
+    if (!Compiler.getPreprocessorOpts().ImplicitPCHInclude.empty()) {
+      /// Collect the modules that were prebuilt as part of the PCH.
+      ImportCollectingListener Listener(PrebuiltModuleFiles);
+      ASTReader::readASTFileControlBlock(
+          Compiler.getPreprocessorOpts().ImplicitPCHInclude,
+          Compiler.getFileManager(), Compiler.getPCHContainerReader(),
+          /*FindModuleFileExtensions=*/false, Listener,
+          /*ValidateDiagnosticOptions=*/false);
+    }
+    /// Make a backup of the original prebuilt module file arguments.
+    std::map<std::string, std::string, std::less<>> OrigPrebuiltModuleFiles =
+        Compiler.getHeaderSearchOpts().PrebuiltModuleFiles;
+    /// Configure the compiler with discovered prebuilt modules. This will
+    /// prevent the implicit build of duplicate modules and force reuse of
+    /// existing prebuilt module files instead.
+    Compiler.getHeaderSearchOpts().PrebuiltModuleFiles.insert(
+        PrebuiltModuleFiles.begin(), PrebuiltModuleFiles.end());
+
     // Create the dependency collector that will collect the produced
     // dependencies.
     //
@@ -124,7 +160,8 @@ public:
       break;
     case ScanningOutputFormat::Full:
       Compiler.addDependencyCollector(std::make_shared<ModuleDepCollector>(
-          std::move(Opts), Compiler, Consumer));
+          std::move(Opts), Compiler, Consumer,
+          std::move(OrigPrebuiltModuleFiles)));
       break;
     }
 
