@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Annotations.h"
 #include "FeatureModule.h"
 #include "Selection.h"
 #include "TestTU.h"
@@ -51,6 +52,37 @@ TEST(FeatureModulesTest, ContributesTweak) {
       &Set);
   ASSERT_TRUE(bool(Actual));
   EXPECT_EQ(Actual->get()->id(), TweakID);
+}
+
+TEST(FeatureModulesTest, SuppressDiags) {
+  struct DiagModifierModule final : public FeatureModule {
+    struct Listener : public FeatureModule::ASTListener {
+      void sawDiagnostic(const clang::Diagnostic &Info,
+                         clangd::Diag &Diag) override {
+        Diag.Severity = DiagnosticsEngine::Ignored;
+      }
+    };
+    std::unique_ptr<ASTListener> astListeners() override {
+      return std::make_unique<Listener>();
+    };
+  };
+  FeatureModuleSet FMS;
+  FMS.add(std::make_unique<DiagModifierModule>());
+
+  Annotations Code("[[test]]; /* error-ok */");
+  TestTU TU;
+  TU.Code = Code.code().str();
+
+  {
+    auto AST = TU.build();
+    EXPECT_THAT(*AST.getDiagnostics(), testing::Not(testing::IsEmpty()));
+  }
+
+  TU.FeatureModules = &FMS;
+  {
+    auto AST = TU.build();
+    EXPECT_THAT(*AST.getDiagnostics(), testing::IsEmpty());
+  }
 }
 
 } // namespace
