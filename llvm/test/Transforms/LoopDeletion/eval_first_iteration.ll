@@ -723,3 +723,46 @@ done:                                             ; preds = %backedge
 failure:
   unreachable
 }
+
+; TODO: We can break the backedge here.
+define i32 @test_switch(i32 %limit) {
+; CHECK-LABEL: @test_switch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LOOP_GUARD:%.*]] = icmp sgt i32 [[LIMIT:%.*]], 0
+; CHECK-NEXT:    br i1 [[LOOP_GUARD]], label [[LOOP_PREHEADER:%.*]], label [[FAILURE:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ [[SUM_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[LIMIT]], [[SUM]]
+; CHECK-NEXT:    [[IS_POSITIVE:%.*]] = icmp sgt i32 [[SUB]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[IS_POSITIVE]], i32 [[SUB]], i32 0
+; CHECK-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[SEL]]
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ne i32 [[SUM_NEXT]], [[LIMIT]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[DONE:%.*]]
+; CHECK:       done:
+; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi i32 [ [[SUM_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[SUM_NEXT_LCSSA]]
+; CHECK:       failure:
+; CHECK-NEXT:    unreachable
+;
+entry:
+  %loop_guard = icmp sgt i32 %limit, 0
+  br i1 %loop_guard, label %loop, label %failure
+
+loop:                                             ; preds = %backedge, %entry
+  %sum = phi i32 [ 0, %entry ], [ %sum.next, %loop ]
+  %sub = sub i32 %limit, %sum
+  %is.positive = icmp sgt i32 %sub, 0
+  %sel = select i1 %is.positive, i32 %sub, i32 0
+  %sum.next = add i32 %sum, %sel
+  %loop.cond = icmp ne i32 %sum.next, %limit
+  br i1 %loop.cond, label %loop, label %done
+
+done:                                             ; preds = %backedge
+  %sum.next.lcssa = phi i32 [ %sum.next, %loop ]
+  ret i32 %sum.next.lcssa
+
+failure:
+  unreachable
+}
