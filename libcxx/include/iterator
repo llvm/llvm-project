@@ -125,6 +125,13 @@ template<indirectly_readable I, indirectly_regular_unary_invocable<I> Proj>
 template<weakly_incrementable I, indirectly_regular_unary_invocable<I> Proj>
   struct incrementable_traits<projected<I, Proj>>;         // since C++20
 
+// [alg.req.ind.move], concept indirectly_movable
+template<class In, class Out>
+  concept indirectly_movable = see below;                  // since C++20
+
+template<class In, class Out>
+  concept indirectly_movable_storable = see below;         // since C++20
+
 template<class Category, class T, class Distance = ptrdiff_t,
          class Pointer = T*, class Reference = T&>
 struct iterator                                            // deprecated in C++17

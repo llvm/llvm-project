@@ -10,14 +10,23 @@
 // UNSUPPORTED: libcpp-no-concepts
 // UNSUPPORTED: gcc-10
 
-// unique_ptr
-
-#include <optional>
+// template<class In, class Out>
+// concept indirectly_movable_storable;
 
 #include <iterator>
 
-static_assert(!std::indirectly_readable<std::optional<int> >);
-static_assert(!std::indirectly_writable<std::optional<int>, int>);
-static_assert(!std::weakly_incrementable<std::optional<int> >);
-static_assert(!std::indirectly_movable<std::optional<int>, std::optional<int>>);
-static_assert(!std::indirectly_movable_storable<std::optional<int>, std::optional<int>>);
+#include <concepts>
+
+template<class I, class O>
+  requires std::indirectly_movable<I, O>
+constexpr bool indirectly_movable_storable_subsumption() {
+  return false;
+}
+
+template<class I, class O>
+  requires std::indirectly_movable_storable<I, O>
+constexpr bool indirectly_movable_storable_subsumption() {
+  return true;
+}
+
+static_assert(indirectly_movable_storable_subsumption<int*, int*>());
