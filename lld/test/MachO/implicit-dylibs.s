@@ -26,18 +26,18 @@
 ## Bar.framework is nested within Foo.framework.
 # RUN: %lld -dylib -lSystem %t/framework-bar.o -o %t/System/Library/Frameworks/Foo.framework/Frameworks/Bar.framework/Versions/A/Bar \
 # RUN:   -install_name /System/Library/Frameworks/Foo.framework/Frameworks/Bar.framework/Versions/A/Bar
-# RUN: ln -sf %t/System/Library/Frameworks/Foo.framework/Frameworks/Bar.framework/Versions/A/Bar \
+# RUN: ln -sf Versions/A/Bar \
 # RUN:   %t/System/Library/Frameworks/Foo.framework/Frameworks/Bar.framework/Bar
 
 ## Have Foo re-export Bar.
 # RUN: %lld -dylib -F %t/System/Library/Frameworks/Foo.framework/Frameworks \
 # RUN:   -framework Bar -sub_umbrella Bar -lSystem %t/framework-foo.o -o %t/System/Library/Frameworks/Foo.framework/Versions/A/Foo \
 # RUN:   -install_name /System/Library/Frameworks/Foo.framework/Versions/A/Foo
-# RUN: ln -sf %t/System/Library/Frameworks/Foo.framework/Versions/A/Foo %t/System/Library/Frameworks/Foo.framework/Foo
+# RUN: ln -sf Versions/A/Foo %t/System/Library/Frameworks/Foo.framework/Foo
 
 # RUN: %lld -dylib -lSystem %t/framework-baz.o -o %t/Baz.framework/Versions/A/Baz \
 # RUN:   -install_name %t/Baz.framework/Versions/A/Baz
-# RUN: ln -sf %t/Baz.framework/Versions/A/Baz %t/Baz.framework/Baz
+# RUN: ln -sf Versions/A/Baz %t/Baz.framework/Baz
 
 # RUN: %lld -dylib -syslibroot %t -framework Foo -F %t -framework Baz \
 # RUN:   -lc++ -ltoplevel -lunused %t/usr/lib/system/libsublevel.dylib %t/libfoo.dylib \

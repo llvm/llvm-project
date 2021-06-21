@@ -4,8 +4,8 @@
 # RUN: mkdir -p %t/Foo.framework/Versions/A
 # RUN: %lld -dylib -install_name %t/Foo.framework/Versions/A/Foo %t/foo.o -o %t/Foo.framework/Versions/A/Foo
 # RUN: %lld -dylib -install_name %t/Foo.framework/Versions/A/Foobar %t/foo.o -o %t/Foo.framework/Versions/A/Foobar
-# RUN: ln -sf %t/Foo.framework/Versions/A %t/Foo.framework/Versions/Current
-# RUN: ln -sf %t/Foo.framework/Versions/Current/Foo %t/Foo.framework/Foo
+# RUN: ln -sf A %t/Foo.framework/Versions/Current
+# RUN: ln -sf Versions/Current/Foo %t/Foo.framework/Foo
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 # RUN: %lld -lSystem -F%t -framework Foo %t/test.o -o %t/test
