@@ -28,7 +28,7 @@ define float @sqrt_f32(float %a) nounwind {
   ret float %1
 }
 
-declare float @llvm.powi.f32(float, i32)
+declare float @llvm.powi.f32.i32(float, i32)
 
 define float @powi_f32(float %a, i32 %b) nounwind {
 ; RV32IF-LABEL: powi_f32:
@@ -49,7 +49,7 @@ define float @powi_f32(float %a, i32 %b) nounwind {
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
-  %1 = call float @llvm.powi.f32(float %a, i32 %b)
+  %1 = call float @llvm.powi.f32.i32(float %a, i32 %b)
   ret float %1
 }
 

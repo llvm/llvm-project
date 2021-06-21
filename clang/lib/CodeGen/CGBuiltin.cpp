@@ -2946,10 +2946,21 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   case Builtin::BI__builtin_powi:
   case Builtin::BI__builtin_powif:
-  case Builtin::BI__builtin_powil:
-    return RValue::get(emitBinaryMaybeConstrainedFPBuiltin(
-        *this, E, Intrinsic::powi, Intrinsic::experimental_constrained_powi));
+  case Builtin::BI__builtin_powil: {
+    llvm::Value *Src0 = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Src1 = EmitScalarExpr(E->getArg(1));
 
+    if (Builder.getIsFPConstrained()) {
+      CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);
+      Function *F = CGM.getIntrinsic(Intrinsic::experimental_constrained_powi,
+                                     Src0->getType());
+      return RValue::get(Builder.CreateConstrainedFPCall(F, { Src0, Src1 }));
+    }
+
+    Function *F = CGM.getIntrinsic(Intrinsic::powi,
+                                   { Src0->getType(), Src1->getType() });
+    return RValue::get(Builder.CreateCall(F, { Src0, Src1 }));
+  }
   case Builtin::BI__builtin_isgreater:
   case Builtin::BI__builtin_isgreaterequal:
   case Builtin::BI__builtin_isless:

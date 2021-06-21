@@ -4044,6 +4044,17 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                                     Exponent));
       break;
     }
+    unsigned Offset = Node->isStrictFPOpcode() ? 1 : 0;
+    bool ExponentHasSizeOfInt =
+        DAG.getLibInfo().getIntSize() ==
+        Node->getOperand(1 + Offset).getValueType().getSizeInBits();
+    if (!ExponentHasSizeOfInt) {
+      // If the exponent does not match with sizeof(int) a libcall to
+      // RTLIB::POWI would use the wrong type for the argument.
+      DAG.getContext()->emitError("POWI exponent does not match sizeof(int)");
+      Results.push_back(DAG.getUNDEF(Node->getValueType(0)));
+      break;
+    }
     ExpandFPLibCall(Node, LC, Results);
     break;
   }

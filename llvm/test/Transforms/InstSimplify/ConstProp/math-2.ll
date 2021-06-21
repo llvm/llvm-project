@@ -90,12 +90,12 @@ define float @i_powf() {
   ret float %res
 }
 
-declare double @llvm.powi.f64(double, i32)
+declare double @llvm.powi.f64.i32(double, i32)
 define double @i_powi() {
 ; CHECK-LABEL: @i_powi(
 ; CHECK-NEXT:    ret double 1.000000e+00
 ;
-  %res = tail call fast double @llvm.powi.f64(double 1.0, i32 2)
+  %res = tail call fast double @llvm.powi.f64.i32(double 1.0, i32 2)
   ret double %res
 }
 
