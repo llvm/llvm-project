@@ -124,6 +124,8 @@ class MTBUF_Real <MTBUF_Pseudo ps> :
   let SchedRW            = ps.SchedRW;
   let mayLoad            = ps.mayLoad;
   let mayStore           = ps.mayStore;
+  let IsAtomicRet        = ps.IsAtomicRet;
+  let IsAtomicNoRet      = ps.IsAtomicNoRet;
 
   bits<12> offset;
   bits<5>  cpol;
@@ -362,6 +364,8 @@ class MUBUF_Real <MUBUF_Pseudo ps> :
   let SchedRW              = ps.SchedRW;
   let mayLoad              = ps.mayLoad;
   let mayStore             = ps.mayStore;
+  let IsAtomicRet          = ps.IsAtomicRet;
+  let IsAtomicNoRet        = ps.IsAtomicNoRet;
 
   bits<12> offset;
   bits<5>  cpol;
