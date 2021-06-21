@@ -1,17 +1,13 @@
 ; RUN: llc -enable-fs-discriminator < %s | FileCheck %s
 ;
-; Check that fs-afdo discriminators are generated.
+;; Check that fs-afdo discriminators are generated.
 ; CHECK: .loc    1 7 3 is_stmt 0 discriminator 2 # foo.c:7:3
 ; Check: .loc    1 9 5 is_stmt 1 discriminator 2 # foo.c:9:5
 ; CHECK: .loc    1 9 5 is_stmt 0 discriminator 268435458 # foo.c:9:5
 ; CHECK: .loc    1 7 3 is_stmt 1 discriminator 3892314114 # foo.c:7:3
-; Check that variable __llvm_fs_discriminator__ is generated.
-; CHECK: .type   __llvm_fs_discriminator__,@object # @__llvm_fs_discriminator__
-; CHECK: .section        .rodata,"a",@progbits
-; CHECK: .weak   __llvm_fs_discriminator__
-; CHECK: __llvm_fs_discriminator__:
-; CHECK: .byte   1
-; CHECK: .size   __llvm_fs_discriminator__, 1
+;; Check that variable __llvm_fs_discriminator__ is generated.
+; CHECK: .type   __llvm_fs_discriminator__,@object
+; CHECK: .comm __llvm_fs_discriminator__,1,1
 
 target triple = "x86_64-unknown-linux-gnu"
 
