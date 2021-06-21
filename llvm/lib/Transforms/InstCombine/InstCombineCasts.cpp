@@ -2548,7 +2548,7 @@ Instruction *InstCombinerImpl::optimizeBitCastFromPhi(CastInst &CI,
         NewV = combineLoadToNewType(*LI, DestTy);
         // Remove the old load and its use in the old phi, which itself becomes
         // dead once the whole transform finishes.
-        replaceInstUsesWith(*LI, UndefValue::get(LI->getType()));
+        replaceInstUsesWith(*LI, PoisonValue::get(LI->getType()));
         eraseInstFromFunction(*LI);
       } else if (auto *BCI = dyn_cast<BitCastInst>(V)) {
         NewV = BCI->getOperand(0);

@@ -981,10 +981,10 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
     // that this code is not reachable.  We do this instead of inserting
     // an unreachable instruction directly because we cannot modify the
     // CFG.
-    StoreInst *SI = new StoreInst(UndefValue::get(LI.getType()),
+    StoreInst *SI = new StoreInst(PoisonValue::get(LI.getType()),
                                   Constant::getNullValue(Op->getType()), &LI);
     SI->setDebugLoc(LI.getDebugLoc());
-    return replaceInstUsesWith(LI, UndefValue::get(LI.getType()));
+    return replaceInstUsesWith(LI, PoisonValue::get(LI.getType()));
   }
 
   if (Op->hasOneUse()) {
@@ -1332,7 +1332,7 @@ static bool removeBitcastsFromLoadStoreOnMinMax(InstCombinerImpl &IC,
     IC.Builder.SetInsertPoint(USI);
     combineStoreToNewValue(IC, *USI, NewLI);
   }
-  IC.replaceInstUsesWith(*LI, UndefValue::get(LI->getType()));
+  IC.replaceInstUsesWith(*LI, PoisonValue::get(LI->getType()));
   IC.eraseInstFromFunction(*LI);
   return true;
 }
@@ -1439,8 +1439,8 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   // store X, null    -> turns into 'unreachable' in SimplifyCFG
   // store X, GEP(null, Y) -> turns into 'unreachable' in SimplifyCFG
   if (canSimplifyNullStoreOrGEP(SI)) {
-    if (!isa<UndefValue>(Val))
-      return replaceOperand(SI, 0, UndefValue::get(Val->getType()));
+    if (!isa<PoisonValue>(Val))
+      return replaceOperand(SI, 0, PoisonValue::get(Val->getType()));
     return nullptr;  // Do not modify these!
   }
 
