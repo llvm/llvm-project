@@ -1214,9 +1214,9 @@ func @assume_alignment(%0: memref<4x4xf16>) {
 
 // -----
 
-func @subtensor_wrong_dynamic_type(%t: tensor<8x16x4xf32>, %idx : index) {
+func @slice_wrong_dynamic_type(%t: tensor<8x16x4xf32>, %idx : index) {
       // expected-error @+1 {{expected result type to be 'tensor<4x4x4xf32>' or a rank-reduced version. (mismatch of result sizes)}}
-  %0 = subtensor %t[0, 2, 0][4, 4, 4][1, 1, 1]
+  %0 = tensor.extract_slice %t[0, 2, 0][4, 4, 4][1, 1, 1]
     : tensor<8x16x4xf32> to tensor<?x4x4xf32>
 
   return
@@ -1224,9 +1224,9 @@ func @subtensor_wrong_dynamic_type(%t: tensor<8x16x4xf32>, %idx : index) {
 
 // -----
 
-func @subtensor_wrong_static_type(%t: tensor<8x16x4xf32>, %idx : index) {
+func @slice_wrong_static_type(%t: tensor<8x16x4xf32>, %idx : index) {
       // expected-error @+1 {{expected result type to be 'tensor<?x3x?xf32>' or a rank-reduced version. (mismatch of result sizes)}}
-  %0 = subtensor %t[0, 0, 0][%idx, 3, %idx][1, 1, 1]
+  %0 = tensor.extract_slice %t[0, 0, 0][%idx, 3, %idx][1, 1, 1]
     : tensor<8x16x4xf32> to tensor<4x4x4xf32>
 
   return

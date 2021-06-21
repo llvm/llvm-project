@@ -717,10 +717,10 @@ OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
   // The size at the given index is now known to be a dynamic size.
   unsigned unsignedIndex = index.getValue().getZExtValue();
 
-  if (auto subtensor = dyn_cast_or_null<mlir::SubTensorOp>(definingOp)) {
-    assert(subtensor.isDynamicSize(unsignedIndex) &&
-           "Expected dynamic subtensor size");
-    return subtensor.getDynamicSize(unsignedIndex);
+  if (auto sliceOp = dyn_cast_or_null<tensor::ExtractSliceOp>(definingOp)) {
+    assert(sliceOp.isDynamicSize(unsignedIndex) &&
+           "Expected dynamic slice size");
+    return sliceOp.getDynamicSize(unsignedIndex);
   }
 
   // Fold dim to the size argument for an `AllocOp`, `ViewOp`, or `SubViewOp`.
@@ -1314,7 +1314,7 @@ void ReinterpretCastOp::build(OpBuilder &b, OperationState &result,
 }
 
 // TODO: ponder whether we want to allow missing trailing sizes/strides that are
-// completed automatically, like we have for subview and subtensor.
+// completed automatically, like we have for subview and extract_slice.
 static LogicalResult verify(ReinterpretCastOp op) {
   // The source and result memrefs should be in the same memory space.
   auto srcType = op.source().getType().cast<BaseMemRefType>();

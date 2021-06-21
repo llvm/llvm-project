@@ -48,8 +48,8 @@ using llvm::dbgs;
 ///      are 2 cases:
 ///      a) buffer case: use the SSA value of the views and a simple alias
 ///         analysis on subview ops to determine producer-consumer dependences;
-///      b) tensor case: use SSA use-def chains on subtensor ops;
-///   2. greedily fuse the linalg ops that produce the subview/subtensor.
+///      b) tensor case: use SSA use-def chains on extract_slice ops;
+///   2. greedily fuse the linalg ops that produce the subview/extract_slice.
 ///   3. inspect the fused ops and determine whether they have other remaining
 ///      LinalgOp uses. If not, then erase the original producing linalg op.
 ///
@@ -73,13 +73,14 @@ getShapeDefiningLoopRange(LinalgOp op, unsigned loopDepth,
   // Extract the subranges from the linearized ranges.
   for (OpOperand *opOperand : op.getInputAndOutputOperands()) {
     // The method `getRangeFromOperandShape` requires using SubViewOp or
-    // SubTensorOps. If the value isnt defined from there continue.
+    // ExtractSliceOps. If the value isn't defined from there continue.
     // todo: The method should be adapted to get the values from
     // `ViewInterface`. The interface needs a `getOrCreateRanges` method which
     // currently returns a `linalg.range`. The fix here is to move this op to
     // `std` dialect and add the method to `ViewInterface`.
-    if (fromSubViewOpOnly && !isa_and_nonnull<memref::SubViewOp, SubTensorOp>(
-                                 opOperand->get().getDefiningOp()))
+    if (fromSubViewOpOnly &&
+        !isa_and_nonnull<memref::SubViewOp, tensor::ExtractSliceOp>(
+            opOperand->get().getDefiningOp()))
       continue;
 
     AffineMap map = op.getTiedIndexingMap(opOperand);
@@ -221,7 +222,7 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
     SmallVector<int64_t, 4> staticSizesVector(rank, ShapedType::kDynamicSize);
     SmallVector<int64_t, 4> staticStridesVector(
         rank, ShapedType::kDynamicStrideOrOffset);
-    resultTypes.push_back(SubTensorOp::inferResultType(
+    resultTypes.push_back(tensor::ExtractSliceOp::inferResultType(
         t.cast<RankedTensorType>(), staticOffsetsVector, staticSizesVector,
         staticStridesVector));
   }
@@ -252,15 +253,15 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
 }
 
 /// Get the loop range for a dimension `dim` based on the `shapedOperand`. It is
-/// expected to be defined by a subview op or a subtensor op.
+/// expected to be defined by a subview op or an extract_slice op.
 static Range getRangeFromOperandShape(OpBuilder &b, Location loc,
                                       Value shapedOperand, unsigned dim) {
   Operation *shapeProducingOp = shapedOperand.getDefiningOp();
   if (auto subViewOp = dyn_cast<memref::SubViewOp>(shapeProducingOp))
     return subViewOp.getOrCreateRanges(b, loc)[dim];
-  if (auto subTensorOp = dyn_cast<SubTensorOp>(shapeProducingOp))
-    return subTensorOp.getOrCreateRanges(b, loc)[dim];
-  llvm_unreachable("SubviewOp or SubTensorOp expected");
+  if (auto sliceOp = dyn_cast<tensor::ExtractSliceOp>(shapeProducingOp))
+    return sliceOp.getOrCreateRanges(b, loc)[dim];
+  llvm_unreachable("SubviewOp or ExtractSliceOp expected");
 }
 
 /// Fuses the producer into the loop immediately enclosing the consumer.
@@ -439,8 +440,8 @@ mlir::linalg::fuseProducerOfBuffer(OpBuilder &b, OpOperand &consumerOpOperand,
   if (!producerMap)
     return llvm::None;
 
-  // Must be a subview or a slice to guarantee there are loops we can fuse
-  // into.
+  // Must be a subview or an extract_slice to guarantee there are loops we can
+  // fuse into.
   auto subView = consumerOpOperand.get().getDefiningOp<memref::SubViewOp>();
   if (!subView) {
     LLVM_DEBUG(llvm::dbgs() << "\nNot fusable (not a subview)");
@@ -473,8 +474,8 @@ static void getProducerOfTensor(Value tensor, OpResult &opResult) {
       opResult = tensor.cast<OpResult>();
       return;
     }
-    if (auto subTensorOp = tensor.getDefiningOp<SubTensorOp>()) {
-      tensor = subTensorOp.source();
+    if (auto sliceOp = tensor.getDefiningOp<tensor::ExtractSliceOp>()) {
+      tensor = sliceOp.source();
       continue;
     }
     if (auto blockArg = tensor.dyn_cast<BlockArgument>()) {
@@ -512,11 +513,11 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpResult producerOpResult,
 
   Value inputTensor = consumerOpOperand.get();
 
-  // Must be a subtensor to guarantee there are loops we can fuse into.
-  auto subTensor = inputTensor.getDefiningOp<SubTensorOp>();
-  if (!subTensor) {
+  // Must be an extract_slice op to guarantee there are loops we can fuse into.
+  auto sliceOp = inputTensor.getDefiningOp<tensor::ExtractSliceOp>();
+  if (!sliceOp) {
     LLVM_DEBUG(llvm::dbgs()
-               << "\nNot fusable, not a subtensor: " << inputTensor);
+               << "\nNot fusable, not an extract_slice op: " << inputTensor);
     return {};
   }
 
