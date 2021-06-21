@@ -146,6 +146,15 @@ dfsan_union(dfsan_label l1, dfsan_label l2) {
   return l1 | l2;
 }
 
+static const uptr kOriginAlign = sizeof(dfsan_origin);
+static const uptr kOriginAlignMask = ~(kOriginAlign - 1UL);
+
+static uptr OriginAlignUp(uptr u) {
+  return (u + kOriginAlign - 1) & kOriginAlignMask;
+}
+
+static uptr OriginAlignDown(uptr u) { return u & kOriginAlignMask; }
+
 // Return the origin of the first taint byte in the size bytes from the address
 // addr.
 static dfsan_origin GetOriginIfTainted(uptr addr, uptr size) {
@@ -205,15 +214,6 @@ static u32 ChainOrigin(u32 id, StackTrace *stack, bool from_init = false) {
   return chained.raw_id();
 }
 
-static const uptr kOriginAlign = sizeof(dfsan_origin);
-static const uptr kOriginAlignMask = ~(kOriginAlign - 1UL);
-
-static uptr AlignUp(uptr u) {
-  return (u + kOriginAlign - 1) & kOriginAlignMask;
-}
-
-static uptr AlignDown(uptr u) { return u & kOriginAlignMask; }
-
 static void ChainAndWriteOriginIfTainted(uptr src, uptr size, uptr dst,
                                          StackTrace *stack) {
   dfsan_origin o = GetOriginIfTainted(src, size);
@@ -231,14 +231,14 @@ static void ChainAndWriteOriginIfTainted(uptr src, uptr size, uptr dst,
 static void CopyOrigin(const void *dst, const void *src, uptr size,
                        StackTrace *stack) {
   uptr d = (uptr)dst;
-  uptr beg = AlignDown(d);
+  uptr beg = OriginAlignDown(d);
   // Copy left unaligned origin if that memory is tainted.
   if (beg < d) {
     ChainAndWriteOriginIfTainted((uptr)src, beg + kOriginAlign - d, beg, stack);
     beg += kOriginAlign;
   }
 
-  uptr end = AlignDown(d + size);
+  uptr end = OriginAlignDown(d + size);
   // If both ends fall into the same 4-byte slot, we are done.
   if (end < beg)
     return;
@@ -252,11 +252,11 @@ static void CopyOrigin(const void *dst, const void *src, uptr size,
     return;
 
   // Align src up.
-  uptr s = AlignUp((uptr)src);
-  dfsan_origin *src_o = (dfsan_origin *)origin_for((void *)s);
-  u32 *src_s = (u32 *)shadow_for((void *)s);
-  dfsan_origin *src_end = (dfsan_origin *)origin_for((void *)(s + (end - beg)));
-  dfsan_origin *dst_o = (dfsan_origin *)origin_for((void *)beg);
+  uptr src_a = OriginAlignUp((uptr)src);
+  dfsan_origin *src_o = origin_for((void *)src_a);
+  u32 *src_s = (u32 *)shadow_for((void *)src_a);
+  dfsan_origin *src_end = origin_for((void *)(src_a + (end - beg)));
+  dfsan_origin *dst_o = origin_for((void *)beg);
   dfsan_origin last_src_o = 0;
   dfsan_origin last_dst_o = 0;
   for (; src_o < src_end; ++src_o, ++src_s, ++dst_o) {
@@ -276,34 +276,33 @@ static void CopyOrigin(const void *dst, const void *src, uptr size,
 static void ReverseCopyOrigin(const void *dst, const void *src, uptr size,
                               StackTrace *stack) {
   uptr d = (uptr)dst;
-  uptr end = AlignDown(d + size);
+  uptr end = OriginAlignDown(d + size);
 
   // Copy right unaligned origin if that memory is tainted.
   if (end < d + size)
     ChainAndWriteOriginIfTainted((uptr)src + (end - d), (d + size) - end, end,
                                  stack);
 
-  uptr beg = AlignDown(d);
+  uptr beg = OriginAlignDown(d);
 
   if (beg + kOriginAlign < end) {
     // Align src up.
-    uptr s = AlignUp((uptr)src);
-    dfsan_origin *src =
-        (dfsan_origin *)origin_for((void *)(s + end - beg - kOriginAlign));
-    u32 *src_s = (u32 *)shadow_for((void *)(s + end - beg - kOriginAlign));
-    dfsan_origin *src_begin = (dfsan_origin *)origin_for((void *)s);
-    dfsan_origin *dst =
-        (dfsan_origin *)origin_for((void *)(end - kOriginAlign));
-    dfsan_origin src_o = 0;
-    dfsan_origin dst_o = 0;
-    for (; src >= src_begin; --src, --src_s, --dst) {
-      if (!*src_s)
+    uptr src_a = OriginAlignUp((uptr)src);
+    void *src_end = (void *)(src_a + end - beg - kOriginAlign);
+    dfsan_origin *src_end_o = origin_for(src_end);
+    u32 *src_end_s = (u32 *)shadow_for(src_end);
+    dfsan_origin *src_begin_o = origin_for((void *)src_a);
+    dfsan_origin *dst = origin_for((void *)(end - kOriginAlign));
+    dfsan_origin last_src_o = 0;
+    dfsan_origin last_dst_o = 0;
+    for (; src_end_o >= src_begin_o; --src_end_o, --src_end_s, --dst) {
+      if (!*src_end_s)
         continue;
-      if (*src != src_o) {
-        src_o = *src;
-        dst_o = ChainOrigin(src_o, stack);
+      if (*src_end_o != last_src_o) {
+        last_src_o = *src_end_o;
+        last_dst_o = ChainOrigin(last_src_o, stack);
       }
-      *dst = dst_o;
+      *dst = last_dst_o;
     }
   }
 
@@ -345,8 +344,8 @@ static void SetOrigin(const void *dst, uptr size, u32 origin) {
   // Here we extend the range such that its left and right bounds are both
   // 4 byte aligned.
   uptr x = unaligned_origin_for((uptr)dst);
-  uptr beg = AlignDown(x);
-  uptr end = AlignUp(x + size);  // align up.
+  uptr beg = OriginAlignDown(x);
+  uptr end = OriginAlignUp(x + size);  // align up.
   u64 origin64 = ((u64)origin << 32) | origin;
   // This is like memset, but the value is 32-bit. We unroll by 2 to write
   // 64 bits at once. May want to unroll further to get 128-bit stores.

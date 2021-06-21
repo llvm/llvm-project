@@ -543,6 +543,8 @@ private:
   void verifyAttributeTypes(AttributeSet Attrs, bool IsFunction,
                             const Value *V);
   void verifyParameterAttrs(AttributeSet Attrs, Type *Ty, const Value *V);
+  void checkUnsignedBaseTenFuncAttr(AttributeList Attrs, StringRef Attr,
+                                    const Value *V);
   void verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                            const Value *V, bool IsIntrinsic);
   void verifyFunctionMetadata(ArrayRef<std::pair<unsigned, MDNode *>> MDs);
@@ -1899,6 +1901,17 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
   }
 }
 
+void Verifier::checkUnsignedBaseTenFuncAttr(AttributeList Attrs, StringRef Attr,
+                                            const Value *V) {
+  if (Attrs.hasFnAttribute(Attr)) {
+    StringRef S = Attrs.getAttribute(AttributeList::FunctionIndex, Attr)
+                      .getValueAsString();
+    unsigned N;
+    if (S.getAsInteger(10, N))
+      CheckFailed("\"" + Attr + "\" takes an unsigned integer: " + S, V);
+  }
+}
+
 // Check parameter attributes against a function type.
 // The value V is printed in error messages.
 void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
@@ -2098,26 +2111,9 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       CheckFailed("invalid value for 'frame-pointer' attribute: " + FP, V);
   }
 
-  if (Attrs.hasFnAttribute("patchable-function-prefix")) {
-    StringRef S = Attrs
-                      .getAttribute(AttributeList::FunctionIndex,
-                                    "patchable-function-prefix")
-                      .getValueAsString();
-    unsigned N;
-    if (S.getAsInteger(10, N))
-      CheckFailed(
-          "\"patchable-function-prefix\" takes an unsigned integer: " + S, V);
-  }
-  if (Attrs.hasFnAttribute("patchable-function-entry")) {
-    StringRef S = Attrs
-                      .getAttribute(AttributeList::FunctionIndex,
-                                    "patchable-function-entry")
-                      .getValueAsString();
-    unsigned N;
-    if (S.getAsInteger(10, N))
-      CheckFailed(
-          "\"patchable-function-entry\" takes an unsigned integer: " + S, V);
-  }
+  checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-prefix", V);
+  checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-entry", V);
+  checkUnsignedBaseTenFuncAttr(Attrs, "warn-stack-size", V);
 }
 
 void Verifier::verifyFunctionMetadata(
