@@ -1146,9 +1146,10 @@ struct Attributor {
   /// function.
   /// NOTE: ForceUpdate is ignored in any stage other than the update stage.
   template <typename AAType>
-  const AAType &
-  getOrCreateAAFor(IRPosition IRP, const AbstractAttribute *QueryingAA,
-                   DepClassTy DepClass, bool ForceUpdate = false) {
+  const AAType &getOrCreateAAFor(IRPosition IRP,
+                                 const AbstractAttribute *QueryingAA,
+                                 DepClassTy DepClass, bool ForceUpdate = false,
+                                 bool UpdateAfterInit = true) {
     if (!shouldPropagateCallBaseContext(IRP))
       IRP = IRP.stripCallBaseContext();
 
@@ -1216,12 +1217,14 @@ struct Attributor {
 
     // Allow seeded attributes to declare dependencies.
     // Remember the seeding state.
-    AttributorPhase OldPhase = Phase;
-    Phase = AttributorPhase::UPDATE;
+    if (UpdateAfterInit) {
+      AttributorPhase OldPhase = Phase;
+      Phase = AttributorPhase::UPDATE;
 
-    updateAA(AA);
+      updateAA(AA);
 
-    Phase = OldPhase;
+      Phase = OldPhase;
+    }
 
     if (QueryingAA && AA.getState().isValidState())
       recordDependence(AA, const_cast<AbstractAttribute &>(*QueryingAA),
