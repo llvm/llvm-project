@@ -714,7 +714,7 @@ func @init_tensor_dim_of_linalg_result(%arg_0 : tensor<?xf32>,
     outs(%arg_0, %arg_1 : tensor<?xf32>, tensor<?xf32>) {
   ^bb0(%in: f32, %out_0: f32, %out_1: f32):
     linalg.yield %in, %in : f32, f32
-  } -> tensor<?xf32>, tensor<?xf32>
+  } -> (tensor<?xf32>, tensor<?xf32>)
 
   %c0 = constant 0 : index
   %num_elem_0 = memref.dim %0, %c0 : tensor<?xf32>
@@ -778,7 +778,7 @@ func @remove_no_op(%arg0 : tensor<?x?x?xf32>, %arg1 : tensor<?x?x?xf32>)
     outs(%3, %3 : tensor<?x?x?xf32>, tensor<?x?x?xf32>) {
   ^bb0(%arg2 : f32, %arg3 : f32, %arg4 : f32, %arg5 : f32):
     linalg.yield %arg3, %arg2 : f32, f32
-  } -> tensor<?x?x?xf32>, tensor<?x?x?xf32>
+  } -> (tensor<?x?x?xf32>, tensor<?x?x?xf32>)
   return %4, %5 : tensor<?x?x?xf32>, tensor<?x?x?xf32>
 }
 // CHECK-LABEL: func @remove_no_op
@@ -832,7 +832,7 @@ func @keep_not_noop(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>)
     outs(%2, %2 : tensor<?x?xf32>, tensor<?x?xf32>) {
     ^bb0(%arg3: f32, %arg4 : f32, %arg5 : f32, %arg6 : f32):
       linalg.yield %arg2, %arg4 : f32, f32
-    } -> tensor<?x?xf32>, tensor<?x?xf32>
+    } -> (tensor<?x?xf32>, tensor<?x?xf32>)
   return %3#0, %3#1 : tensor<?x?xf32>, tensor<?x?xf32>
 }
 // CHECK-LABEL: func @keep_not_noop
