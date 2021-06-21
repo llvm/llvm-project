@@ -242,4 +242,8 @@ FIELD(HasDeclaredCopyConstructorWithConstParam, 1, MERGE_OR)
 /// const-qualified reference parameter or a non-reference parameter.
 FIELD(HasDeclaredCopyAssignmentWithConstParam, 1, MERGE_OR)
 
+/// Whether the destructor is no-return. Either explicitly, or if any
+/// base classes or fields have a no-return destructor
+FIELD(IsAnyDestructorNoReturn, 1, NO_MERGE)
+
 #undef FIELD
