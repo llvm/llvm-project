@@ -2842,6 +2842,20 @@ Optional<mlir::vector::DistributeOps> mlir::vector::distributPointwiseVectorOp(
   return ops;
 }
 
+/// Converts TransferRead op used by ExtractMap op into a smaller dimension
+/// TransferRead.
+/// Example:
+/// ```
+/// %a = vector.transfer_read %A[%c0, %c0, %c0], %cf0:
+///   memref<64x64x64xf32>, vector<64x4x32xf32>
+/// %e = vector.extract_map %a[%id] : vector<64x4x32xf32> to vector<2x4x1xf32>
+/// ```
+/// to:
+/// ```
+/// %id1 = affine.apply affine_map<()[s0] -> (s0 * 2)> (%id)
+/// %e = vector.transfer_read %A[%id1, %c0, %id1], %cf0 :
+///   memref<64x64x64xf32>, vector<2x4x1xf32>
+/// ```
 struct TransferReadExtractPattern
     : public OpRewritePattern<vector::TransferReadOp> {
   TransferReadExtractPattern(MLIRContext *context)
@@ -2858,18 +2872,23 @@ struct TransferReadExtractPattern
       return failure();
 
     SmallVector<Value, 4> indices(read.indices().begin(), read.indices().end());
-    AffineMap map = extract.map();
+    AffineMap indexMap = extract.map().compose(read.permutation_map());
     unsigned idCount = 0;
     ImplicitLocOpBuilder lb(read.getLoc(), rewriter);
-    for (auto expr : map.getResults()) {
+    for (auto it :
+         llvm::zip(indexMap.getResults(), extract.map().getResults())) {
       AffineExpr d0, d1;
       bindDims(read.getContext(), d0, d1);
-      unsigned pos = expr.cast<AffineDimExpr>().getPosition();
+      auto indexExpr = std::get<0>(it).dyn_cast<AffineDimExpr>();
+      if (!indexExpr)
+        continue;
+      unsigned indexPos = indexExpr.getPosition();
+      unsigned vectorPos = std::get<1>(it).cast<AffineDimExpr>().getPosition();
       auto scale = getAffineConstantExpr(
-          extract.getResultType().getDimSize(pos), read.getContext());
-      indices[pos] =
-          makeComposedAffineApply(rewriter, read.getLoc(), d0 + scale * d1,
-                                  {indices[pos], extract.ids()[idCount++]});
+          extract.getResultType().getDimSize(vectorPos), read.getContext());
+      indices[indexPos] = makeComposedAffineApply(
+          rewriter, read.getLoc(), d0 + scale * d1,
+          {indices[indexPos], extract.ids()[idCount++]});
     }
     Value newRead = lb.create<vector::TransferReadOp>(
         extract.getType(), read.source(), indices, read.permutation_map(),
@@ -2895,18 +2914,24 @@ struct TransferWriteInsertPattern
       return failure();
     SmallVector<Value, 4> indices(write.indices().begin(),
                                   write.indices().end());
-    AffineMap map = insert.map();
+    AffineMap indexMap = insert.map().compose(write.permutation_map());
     unsigned idCount = 0;
     Location loc = write.getLoc();
-    for (auto expr : map.getResults()) {
+    for (auto it :
+         llvm::zip(indexMap.getResults(), insert.map().getResults())) {
       AffineExpr d0, d1;
       bindDims(write.getContext(), d0, d1);
-      unsigned pos = expr.cast<AffineDimExpr>().getPosition();
+      auto indexExpr = std::get<0>(it).dyn_cast<AffineDimExpr>();
+      if (!indexExpr)
+        continue;
+      unsigned indexPos = indexExpr.getPosition();
+      unsigned vectorPos = std::get<1>(it).cast<AffineDimExpr>().getPosition();
       auto scale = getAffineConstantExpr(
-          insert.getSourceVectorType().getDimSize(pos), write.getContext());
-      indices[pos] =
+          insert.getSourceVectorType().getDimSize(vectorPos),
+          write.getContext());
+      indices[indexPos] =
           makeComposedAffineApply(rewriter, loc, d0 + scale * d1,
-                                  {indices[pos], insert.ids()[idCount++]});
+                                  {indices[indexPos], insert.ids()[idCount++]});
     }
     rewriter.create<vector::TransferWriteOp>(
         loc, insert.vector(), write.source(), indices, write.permutation_map(),
