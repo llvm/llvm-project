@@ -84,6 +84,7 @@ void convertConstantExprsToInstructions(
     Instruction *I,
     std::map<Use *, std::vector<std::vector<ConstantExpr *>>> &CEPaths,
     SmallPtrSetImpl<Instruction *> *Insts) {
+  SmallPtrSet<ConstantExpr *, 8> Visited;
   for (Use &U : I->operands()) {
     // The operand U is either not a constant expression operand or the
     // constant expression paths do not belong to U, ignore U.
@@ -102,7 +103,6 @@ void convertConstantExprsToInstructions(
     // constant expressions along all paths to corresponding instructions.
     auto *II = I;
     auto &Paths = CEPaths[&U];
-    SmallPtrSet<ConstantExpr *, 8> Visited;
     for (auto &Path : Paths) {
       for (auto *CE : Path) {
         if (!Visited.insert(CE).second)
