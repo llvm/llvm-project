@@ -110,6 +110,10 @@ class MTBUF_Real <MTBUF_Pseudo ps> :
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
+  let VM_CNT = 1;
+  let EXP_CNT = 1;
+  let MTBUF = 1;
+
   // copy relevant pseudo op flags
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let SubtargetPredicate = ps.SubtargetPredicate;
@@ -340,6 +344,10 @@ class MUBUF_Real <MUBUF_Pseudo ps> :
 
   let isPseudo = 0;
   let isCodeGenOnly = 0;
+
+  let VM_CNT = 1;
+  let EXP_CNT = 1;
+  let MUBUF = 1;
 
   // copy relevant pseudo op flags
   let SubtargetPredicate   = ps.SubtargetPredicate;
