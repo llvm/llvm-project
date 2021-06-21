@@ -156,6 +156,27 @@ def EqualOp : Complex_Op<"eq",
 }
 
 //===----------------------------------------------------------------------===//
+// ExpOp
+//===----------------------------------------------------------------------===//
+
+def ExpOp : ComplexUnaryOp<"exp", [SameOperandsAndResultType]> {
+  let summary = "computes exponential of a complex number";
+  let description = [{
+    The `exp` op takes a single complex number and computes the exponential of
+    it, i.e. `exp(x)` or `e^(x)`, where `x` is the input tensor.
+    `e` denotes Euler's number and is approximately equal to 2.718281.
+
+    Example:
+
+    ```mlir
+    %a = complex.exp %b : complex<f32>
+    ```
+  }];
+
+  let results = (outs Complex<AnyFloat>:$result);
+}
+
+//===----------------------------------------------------------------------===//
 // ImOp
 //===----------------------------------------------------------------------===//
 
