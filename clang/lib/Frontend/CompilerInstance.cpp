@@ -766,11 +766,9 @@ void CompilerInstance::clearOutputFiles(bool EraseFiles) {
   }
 }
 
-std::unique_ptr<raw_pwrite_stream>
-CompilerInstance::createDefaultOutputFile(bool Binary, StringRef InFile,
-                                          StringRef Extension,
-                                          bool RemoveFileOnSignal,
-                                          bool CreateMissingDirectories) {
+std::unique_ptr<raw_pwrite_stream> CompilerInstance::createDefaultOutputFile(
+    bool Binary, StringRef InFile, StringRef Extension, bool RemoveFileOnSignal,
+    bool CreateMissingDirectories, bool ForceUseTemporary) {
   StringRef OutputPath = getFrontendOpts().OutputFile;
   Optional<SmallString<128>> PathStorage;
   if (OutputPath.empty()) {
@@ -783,9 +781,8 @@ CompilerInstance::createDefaultOutputFile(bool Binary, StringRef InFile,
     }
   }
 
-  // Force a temporary file if RemoveFileOnSignal was disabled.
   return createOutputFile(OutputPath, Binary, RemoveFileOnSignal,
-                          getFrontendOpts().UseTemporary || !RemoveFileOnSignal,
+                          getFrontendOpts().UseTemporary || ForceUseTemporary,
                           CreateMissingDirectories);
 }
 
