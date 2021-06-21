@@ -31,7 +31,8 @@ entry:
 ; COM: CHECK-NORUNTIME-NOT: load i32, i32* @__asan_option_detect_stack_use_after_return
 
 ; CHECK-RUNTIME: [[UAR_ENABLED_BB:^[0-9]+]]:
-; CHECK: [[FAKE_STACK_RT:%[0-9]+]] = call i64 @__asan_stack_malloc_
+; CHECK-RUNTIME: [[FAKE_STACK_RT:%[0-9]+]] = call i64 @__asan_stack_malloc_
+; CHECK-ALWAYS: [[FAKE_STACK_RT:%[0-9]+]] = call i64 @__asan_stack_malloc_always_
 
 ; CHECK-RUNTIME: [[FAKE_STACK_BB:^[0-9]+]]:
 ; CHECK-RUNTIME: [[FAKE_STACK:%[0-9]+]] = phi i64 [ 0, %entry ], [ [[FAKE_STACK_RT]], %[[UAR_ENABLED_BB]] ]
