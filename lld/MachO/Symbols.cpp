@@ -71,15 +71,6 @@ uint64_t Defined::getVA() const {
   return isec->getVA(value);
 }
 
-uint64_t Defined::getFileOffset() const {
-  if (isAbsolute()) {
-    error("absolute symbol " + toString(*this) +
-          " does not have a file offset");
-    return 0;
-  }
-  return isec->getFileOffset(value);
-}
-
 uint64_t DylibSymbol::getVA() const {
   return isInStubs() ? getStubVA() : Symbol::getVA();
 }

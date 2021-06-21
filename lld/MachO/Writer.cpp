@@ -240,7 +240,7 @@ class LCMain : public LoadCommand {
       c->entryoff =
           in.stubs->fileOff + config->entry->stubsIndex * target->stubSize;
     else
-      c->entryoff = config->entry->getFileOffset();
+      c->entryoff = config->entry->getVA() - in.header->addr;
 
     c->stacksize = 0;
   }
