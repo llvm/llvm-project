@@ -539,11 +539,8 @@ generateTransferOpSlices(Type shapedElementType, VectorType vectorType,
   //   'vector<2x1x2x4xf32>'. The memref rank is 3, and the effective
   //   vector rank is 4 - 2 = 2, and so 'indexOffset' = 3 - 2 = 1.
   //
-  unsigned vectorRank = vectorType.getRank();
-  if (auto sourceVectorElementType = shapedElementType.dyn_cast<VectorType>()) {
-    assert(vectorRank >= sourceVectorElementType.getRank());
-    vectorRank -= sourceVectorElementType.getRank();
-  }
+  if (auto sourceVectorElementType = shapedElementType.dyn_cast<VectorType>())
+    assert(vectorType.getRank() >= sourceVectorElementType.getRank());
   auto isBroadcast = [](AffineExpr expr) {
     if (auto constExpr = expr.dyn_cast<AffineConstantExpr>())
       return constExpr.getValue() == 0;
