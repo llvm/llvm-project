@@ -638,18 +638,6 @@ Value *MVEGatherScatterLowering::tryCreateMaskedScatterOffset(
       InputTy = PreTruncTy;
     }
   }
-  if (InputTy->getPrimitiveSizeInBits() < 128 &&
-      InputTy->isIntOrIntVectorTy()) {
-    // If we can't find a trunc to incorporate into the instruction, create an
-    // implicit one with a zext, so that we can still create a scatter. We know
-    // that the input type is 4x/8x/16x and of type i8/i16/i32, so any type
-    // smaller than 128 bits will divide evenly into a 128bit vector.
-    InputTy = InputTy->getWithNewBitWidth(
-        128 / cast<FixedVectorType>(InputTy)->getNumElements());
-    Input = Builder.CreateZExt(Input, InputTy);
-    LLVM_DEBUG(dbgs() << "masked scatters: Small input type, extending with:\n"
-                      << *Input << "\n");
-  }
   if (InputTy->getPrimitiveSizeInBits() != 128) {
     LLVM_DEBUG(dbgs() << "masked scatters: cannot create scatters for "
                          "non-standard input types. Expanding.\n");
