@@ -134,7 +134,7 @@ TEST(StringExtrasTest, printHTMLEscaped) {
   EXPECT_EQ("ABCdef123&amp;&lt;&gt;&quot;&apos;", OS.str());
 }
 
-TEST(StringExtras, ConvertToSnakeFromCamelCase) {
+TEST(StringExtrasTest, ConvertToSnakeFromCamelCase) {
   auto testConvertToSnakeCase = [](llvm::StringRef input,
                                    llvm::StringRef expected) {
     EXPECT_EQ(convertToSnakeFromCamelCase(input), expected.str());
@@ -154,7 +154,7 @@ TEST(StringExtras, ConvertToSnakeFromCamelCase) {
   testConvertToSnakeCase("op__name", "op__name");
 }
 
-TEST(StringExtras, ConvertToCamelFromSnakeCase) {
+TEST(StringExtrasTest, ConvertToCamelFromSnakeCase) {
   auto testConvertToCamelCase = [](bool capitalizeFirst, llvm::StringRef input,
                                    llvm::StringRef expected) {
     EXPECT_EQ(convertToCamelFromSnakeCase(input, capitalizeFirst),
@@ -191,7 +191,7 @@ constexpr uint64_t MaxUint64 = std::numeric_limits<uint64_t>::max();
 constexpr int64_t MaxInt64 = std::numeric_limits<int64_t>::max();
 constexpr int64_t MinInt64 = std::numeric_limits<int64_t>::min();
 
-TEST(StringExtras, UToStr) {
+TEST(StringExtrasTest, UToStr) {
   EXPECT_EQ("0", utostr(0));
   EXPECT_EQ("0", utostr(0, /*isNeg=*/false));
   EXPECT_EQ("1", utostr(1));
@@ -208,7 +208,7 @@ TEST(StringExtras, UToStr) {
   EXPECT_EQ("-" + std::to_string(MaxUint64), utostr(MaxUint64, /*isNeg=*/true));
 }
 
-TEST(StringExtras, IToStr) {
+TEST(StringExtrasTest, IToStr) {
   EXPECT_EQ("0", itostr(0));
   EXPECT_EQ("1", itostr(1));
   EXPECT_EQ("-1", itostr(-1));
@@ -216,7 +216,7 @@ TEST(StringExtras, IToStr) {
   EXPECT_EQ(std::to_string(MaxInt64), itostr(MaxInt64));
 }
 
-TEST(StringExtras, ListSeparator) {
+TEST(StringExtrasTest, ListSeparator) {
   ListSeparator LS;
   StringRef S = LS;
   EXPECT_EQ(S, "");
