@@ -5,15 +5,6 @@ FileHeader:
   Type:            ET_EXEC
   Machine:         EM_X86_64
 Sections:
-  - Name:            .text
-# Zero length sections are not exported to IHex
-# 'SegmentAddr' and 'ExtendedAddr' records aren't
-# created either.
-    Type:            SHT_PROGBITS
-    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    Address:         0x7FFFFFFF
-    AddressAlign:    0x8
-    Size:            0
   - Name:            .text1
 # Section address is sign-extended 32-bit address
 # Data fits 32-bit range
