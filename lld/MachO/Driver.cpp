@@ -698,6 +698,29 @@ getUndefinedSymbolTreatment(const ArgList &args) {
   return treatment;
 }
 
+static ICFLevel getICFLevel(const ArgList &args) {
+  bool noDeduplicate = args.hasArg(OPT_no_deduplicate);
+  StringRef icfLevelStr = args.getLastArgValue(OPT_icf);
+  auto icfLevel = StringSwitch<ICFLevel>(icfLevelStr)
+                      .Cases("none", "", ICFLevel::none)
+                      .Case("safe", ICFLevel::safe)
+                      .Case("all", ICFLevel::all)
+                      .Default(ICFLevel::unknown);
+  if (icfLevel == ICFLevel::unknown) {
+    warn(Twine("unknown -icf OPTION `") + icfLevelStr +
+         "', defaulting to `none'");
+    icfLevel = ICFLevel::none;
+  } else if (icfLevel != ICFLevel::none && noDeduplicate) {
+    warn(Twine("`-icf " + icfLevelStr +
+               "' conflicts with -no_deduplicate, setting to `none'"));
+    icfLevel = ICFLevel::none;
+  } else if (icfLevel == ICFLevel::safe) {
+    warn(Twine("`-icf safe' is not yet implemented, reverting to `none'"));
+    icfLevel = ICFLevel::none;
+  }
+  return icfLevel;
+}
+
 static void warnIfDeprecatedOption(const Option &opt) {
   if (!opt.getGroup().isValid())
     return;
@@ -1095,6 +1118,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
                                 : NamespaceKind::flat;
 
   config->undefinedSymbolTreatment = getUndefinedSymbolTreatment(args);
+
+  config->icfLevel = getICFLevel(args);
 
   if (config->outputType == MH_EXECUTE)
     config->entry = symtab->addUndefined(args.getLastArgValue(OPT_e, "_main"),

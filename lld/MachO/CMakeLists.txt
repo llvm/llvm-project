@@ -15,6 +15,7 @@ add_lld_library(lldMachO2
   DriverUtils.cpp
   Dwarf.cpp
   ExportTrie.cpp
+  ICF.cpp
   InputFiles.cpp
   InputSection.cpp
   LTO.cpp

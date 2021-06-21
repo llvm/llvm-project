@@ -642,10 +642,16 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       auto *concatIsec = cast<ConcatInputSection>(isec);
 
       auto *nextIsec = make<ConcatInputSection>(*concatIsec);
-      nextIsec->data = isec->data.slice(symbolOffset);
       nextIsec->numRefs = 0;
       nextIsec->wasCoalesced = false;
-      isec->data = isec->data.slice(0, symbolOffset);
+      if (isZeroFill(isec->flags)) {
+        // Zero-fill sections have NULL data.data() non-zero data.size()
+        nextIsec->data = {nullptr, isec->data.size() - symbolOffset};
+        isec->data = {nullptr, symbolOffset};
+      } else {
+        nextIsec->data = isec->data.slice(symbolOffset);
+        isec->data = isec->data.slice(0, symbolOffset);
+      }
 
       // By construction, the symbol will be at offset zero in the new
       // subsection.

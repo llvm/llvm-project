@@ -275,6 +275,13 @@ def no_branch_islands : Flag<["-"], "no_branch_islands">,
     HelpText<"Disable infra for branches beyond the maximum branch distance.">,
     Flags<[HelpHidden]>,
     Group<grp_opts>;
+def icf: Separate<["-"], "icf">,
+    HelpText<"Set level for identical code folding (default: none)">,
+    MetaVarName<"[none,safe,all]">,
+    Group<grp_opts>;
+def no_deduplicate : Flag<["-"], "no_deduplicate">,
+    HelpText<"Disable code deduplicaiton (synonym for `-icf none')">,
+    Group<grp_opts>;
 
 def grp_version : OptionGroup<"version">, HelpText<"VERSION TARGETING">;
 
@@ -599,10 +606,6 @@ def version_details : Flag<["-"], "version_details">,
     Group<grp_rare>;
 def no_weak_imports : Flag<["-"], "no_weak_imports">,
     HelpText<"Fail if any symbols are weak imports, allowed to be NULL at runtime">,
-    Flags<[HelpHidden]>,
-    Group<grp_rare>;
-def no_deduplicate : Flag<["-"], "no_deduplicate">,
-    HelpText<"Omit the deduplication pass">,
     Flags<[HelpHidden]>,
     Group<grp_rare>;
 def verbose_deduplicate : Flag<["-"], "verbose_deduplicate">,
