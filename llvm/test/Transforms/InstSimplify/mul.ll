@@ -42,11 +42,9 @@ define <2 x i8> @mul_by_0_vec_undef_elt(<2 x i8> %a) {
   ret <2 x i8> %b
 }
 
-; TODO: this should be poison
-
 define i32 @poison(i32 %x) {
 ; CHECK-LABEL: @poison(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    ret i32 poison
 ;
   %v = mul i32 %x, poison
   ret i32 %v
