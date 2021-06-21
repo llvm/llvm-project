@@ -9,7 +9,7 @@
 // The LiveIntervalCalc class is an extension of LiveRangeCalc targeted to the
 // computation and modification of the LiveInterval variants of LiveRanges.
 // LiveIntervals are meant to track liveness of registers and stack slots and
-// LiveIntervalCalc adds to LiveRangeCalc all the machinery requied to
+// LiveIntervalCalc adds to LiveRangeCalc all the machinery required to
 // construct the liveness of virtual registers tracked by a LiveInterval.
 //
 //===----------------------------------------------------------------------===//
