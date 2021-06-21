@@ -62,6 +62,26 @@ private:
   std::map<std::string, std::string> &PrebuiltModuleFiles;
 };
 
+/// Transform arbitrary file name into an object-like file name.
+static std::string makeObjFileName(StringRef FileName) {
+  SmallString<128> ObjFileName(FileName);
+  llvm::sys::path::replace_extension(ObjFileName, "o");
+  return std::string(ObjFileName.str());
+}
+
+/// Deduce the dependency target based on the output file and input files.
+static std::string
+deduceDepTarget(const std::string &OutputFile,
+                const SmallVectorImpl<FrontendInputFile> &InputFiles) {
+  if (OutputFile != "-")
+    return OutputFile;
+
+  if (InputFiles.empty() || !InputFiles.front().isFile())
+    return "clang-scan-deps\\ dependency";
+
+  return makeObjFileName(InputFiles.front().getFile());
+}
+
 /// A clang tool that runs the preprocessor in a mode that's optimized for
 /// dependency scanning for the given compiler invocation.
 class DependencyScanningAction : public tooling::ToolAction {
@@ -150,9 +170,11 @@ public:
     // and thus won't write out the extra '.d' files to disk.
     auto Opts = std::make_unique<DependencyOutputOptions>(
         std::move(Compiler.getInvocation().getDependencyOutputOpts()));
-    // We need at least one -MT equivalent for the generator to work.
+    // We need at least one -MT equivalent for the generator of make dependency
+    // files to work.
     if (Opts->Targets.empty())
-      Opts->Targets = {"clang-scan-deps dependency"};
+      Opts->Targets = {deduceDepTarget(Compiler.getFrontendOpts().OutputFile,
+                                       Compiler.getFrontendOpts().Inputs)};
 
     switch (Format) {
     case ScanningOutputFormat::Make:
