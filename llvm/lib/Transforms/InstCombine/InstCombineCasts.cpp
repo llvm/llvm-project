@@ -2603,57 +2603,6 @@ Instruction *InstCombinerImpl::optimizeBitCastFromPhi(CastInst &CI,
   return RetVal;
 }
 
-static Instruction *convertBitCastToGEP(BitCastInst &CI, IRBuilderBase &Builder,
-                                        const DataLayout &DL) {
-  Value *Src = CI.getOperand(0);
-  PointerType *SrcPTy = cast<PointerType>(Src->getType());
-  PointerType *DstPTy = cast<PointerType>(CI.getType());
-
-  // Bitcasts involving opaque pointers cannot be converted into a GEP.
-  if (SrcPTy->isOpaque() || DstPTy->isOpaque())
-    return nullptr;
-
-  Type *DstElTy = DstPTy->getElementType();
-  Type *SrcElTy = SrcPTy->getElementType();
-
-  // When the type pointed to is not sized the cast cannot be
-  // turned into a gep.
-  if (!SrcElTy->isSized())
-    return nullptr;
-
-  // If the source and destination are pointers, and this cast is equivalent
-  // to a getelementptr X, 0, 0, 0...  turn it into the appropriate gep.
-  // This can enhance SROA and other transforms that want type-safe pointers.
-  unsigned NumZeros = 0;
-  while (SrcElTy && SrcElTy != DstElTy) {
-    SrcElTy = GetElementPtrInst::getTypeAtIndex(SrcElTy, (uint64_t)0);
-    ++NumZeros;
-  }
-
-  // If we found a path from the src to dest, create the getelementptr now.
-  if (SrcElTy == DstElTy) {
-    SmallVector<Value *, 8> Idxs(NumZeros + 1, Builder.getInt32(0));
-    GetElementPtrInst *GEP =
-        GetElementPtrInst::Create(SrcPTy->getElementType(), Src, Idxs);
-
-    // If the source pointer is dereferenceable, then assume it points to an
-    // allocated object and apply "inbounds" to the GEP.
-    bool CanBeNull, CanBeFreed;
-    if (Src->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed)) {
-      // In a non-default address space (not 0), a null pointer can not be
-      // assumed inbounds, so ignore that case (dereferenceable_or_null).
-      // The reason is that 'null' is not treated differently in these address
-      // spaces, and we consequently ignore the 'gep inbounds' special case
-      // for 'null' which allows 'inbounds' on 'null' if the indices are
-      // zeros.
-      if (SrcPTy->getAddressSpace() == 0 || !CanBeNull)
-        GEP->setIsInBounds();
-    }
-    return GEP;
-  }
-  return nullptr;
-}
-
 Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
   // If the operands are integer typed then apply the integer transforms,
   // otherwise just apply the common ones.
@@ -2667,6 +2616,11 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
     return replaceInstUsesWith(CI, Src);
 
   if (isa<PointerType>(SrcTy) && isa<PointerType>(DestTy)) {
+    PointerType *SrcPTy = cast<PointerType>(SrcTy);
+    PointerType *DstPTy = cast<PointerType>(DestTy);
+    Type *DstElTy = DstPTy->getElementType();
+    Type *SrcElTy = SrcPTy->getElementType();
+
     // If we are casting a alloca to a pointer to a type of the same
     // size, rewrite the allocation instruction to allocate the "right" type.
     // There is no need to modify malloc calls because it is their bitcast that
@@ -2675,8 +2629,43 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
       if (Instruction *V = PromoteCastOfAllocation(CI, *AI))
         return V;
 
-    if (Instruction *I = convertBitCastToGEP(CI, Builder, DL))
-      return I;
+    // When the type pointed to is not sized the cast cannot be
+    // turned into a gep.
+    Type *PointeeType =
+        cast<PointerType>(Src->getType()->getScalarType())->getElementType();
+    if (!PointeeType->isSized())
+      return nullptr;
+
+    // If the source and destination are pointers, and this cast is equivalent
+    // to a getelementptr X, 0, 0, 0...  turn it into the appropriate gep.
+    // This can enhance SROA and other transforms that want type-safe pointers.
+    unsigned NumZeros = 0;
+    while (SrcElTy && SrcElTy != DstElTy) {
+      SrcElTy = GetElementPtrInst::getTypeAtIndex(SrcElTy, (uint64_t)0);
+      ++NumZeros;
+    }
+
+    // If we found a path from the src to dest, create the getelementptr now.
+    if (SrcElTy == DstElTy) {
+      SmallVector<Value *, 8> Idxs(NumZeros + 1, Builder.getInt32(0));
+      GetElementPtrInst *GEP =
+          GetElementPtrInst::Create(SrcPTy->getElementType(), Src, Idxs);
+
+      // If the source pointer is dereferenceable, then assume it points to an
+      // allocated object and apply "inbounds" to the GEP.
+      bool CanBeNull, CanBeFreed;
+      if (Src->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed)) {
+        // In a non-default address space (not 0), a null pointer can not be
+        // assumed inbounds, so ignore that case (dereferenceable_or_null).
+        // The reason is that 'null' is not treated differently in these address
+        // spaces, and we consequently ignore the 'gep inbounds' special case
+        // for 'null' which allows 'inbounds' on 'null' if the indices are
+        // zeros.
+        if (SrcPTy->getAddressSpace() == 0 || !CanBeNull)
+          GEP->setIsInBounds();
+      }
+      return GEP;
+    }
   }
 
   if (FixedVectorType *DestVTy = dyn_cast<FixedVectorType>(DestTy)) {
