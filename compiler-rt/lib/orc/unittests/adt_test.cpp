@@ -78,3 +78,10 @@ TEST(ADTTest, StringViewConstructFromCharPtr) {
   for (unsigned I = 0; I != S.size(); ++I)
     EXPECT_EQ(S[I], Str[I]) << "Unexpected span element value";
 }
+
+TEST(ADTTest, StringViewEquality) {
+  EXPECT_EQ("", string_view());
+  EXPECT_FALSE(string_view("aab") == string_view("aac"));
+  EXPECT_FALSE(string_view("aab") != string_view("aab"));
+  EXPECT_NE(string_view("aab"), string_view("aac"));
+}
