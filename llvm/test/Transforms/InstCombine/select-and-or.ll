@@ -420,3 +420,31 @@ define i1 @not_false_not_use3(i1 %x, i1 %y) {
   %r = select i1 %notx, i1 false, i1 %noty
   ret i1 %r
 }
+
+; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=35399
+
+@g1 = external global i16
+@g2 = external global i16
+
+define i1 @demorgan_select_infloop1(i1 %L) {
+; CHECK-LABEL: @demorgan_select_infloop1(
+; CHECK-NEXT:    [[NOT_L:%.*]] = xor i1 [[L:%.*]], true
+; CHECK-NEXT:    [[C15:%.*]] = select i1 [[NOT_L]], i1 xor (i1 and (i1 icmp eq (i16* getelementptr inbounds (i16, i16* @g2, i64 1), i16* @g1), i1 icmp ne (i16* getelementptr inbounds (i16, i16* @g2, i64 1), i16* @g1)), i1 true), i1 false
+; CHECK-NEXT:    ret i1 [[C15]]
+;
+  %not.L = xor i1 %L, true
+  %C15 = select i1 %not.L, i1 xor (i1 and (i1 icmp eq (i16* getelementptr inbounds (i16, i16* @g2, i64 1), i16* @g1), i1 icmp ne (i16* getelementptr inbounds (i16, i16* @g2, i64 1), i16* @g1)), i1 true), i1 false
+  ret i1 %C15
+}
+
+
+define i1 @demorgan_select_infloop2(i1 %L) {
+; CHECK-LABEL: @demorgan_select_infloop2(
+; CHECK-NEXT:    [[NOT_L:%.*]] = xor i1 [[L:%.*]], true
+; CHECK-NEXT:    [[C15:%.*]] = select i1 [[NOT_L]], i1 true, i1 xor (i1 and (i1 icmp eq (i16* getelementptr inbounds (i16, i16* @g2, i64 1), i16* @g1), i1 icmp ne (i16* getelementptr inbounds (i16, i16* @g2, i64 1), i16* @g1)), i1 true)
+; CHECK-NEXT:    ret i1 [[C15]]
+;
+  %not.L = xor i1 %L, true
+  %C15 = select i1 %not.L, i1 true, i1 xor (i1 and (i1 icmp eq (i16* getelementptr inbounds (i16, i16* @g2, i64 1), i16* @g1), i1 icmp ne (i16* getelementptr inbounds (i16, i16* @g2, i64 1), i16* @g1)), i1 true)
+  ret i1 %C15
+}
