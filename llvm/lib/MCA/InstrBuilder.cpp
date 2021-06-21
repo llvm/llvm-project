@@ -391,15 +391,7 @@ void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
   if (!NumVariadicOps)
     return;
 
-  // FIXME: if an instruction opcode is flagged 'mayStore', and it has no
-  // "unmodeledSideEffects', then this logic optimistically assumes that any
-  // extra register operands in the variadic sequence is not a register
-  // definition.
-  //
-  // Otherwise, we conservatively assume that any register operand from the
-  // variadic sequence is both a register read and a register write.
-  bool AssumeUsesOnly = MCDesc.mayStore() && !MCDesc.mayLoad() &&
-                        !MCDesc.hasUnmodeledSideEffects();
+  bool AssumeUsesOnly = !MCDesc.variadicOpsAreDefs();
   CurrentDef = NumExplicitDefs + NumImplicitDefs + MCDesc.hasOptionalDef();
   for (unsigned I = 0, OpIndex = MCDesc.getNumOperands();
        I < NumVariadicOps && !AssumeUsesOnly; ++I, ++OpIndex) {
@@ -466,12 +458,7 @@ void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
 
   CurrentUse += NumImplicitUses;
 
-  // FIXME: If an instruction opcode is marked as 'mayLoad', and it has no
-  // "unmodeledSideEffects", then this logic optimistically assumes that any
-  // extra register operand in the variadic sequence is not a register
-  // definition.
-  bool AssumeDefsOnly = !MCDesc.mayStore() && MCDesc.mayLoad() &&
-                        !MCDesc.hasUnmodeledSideEffects();
+  bool AssumeDefsOnly = MCDesc.variadicOpsAreDefs();
   for (unsigned I = 0, OpIndex = MCDesc.getNumOperands();
        I < NumVariadicOps && !AssumeDefsOnly; ++I, ++OpIndex) {
     const MCOperand &Op = MCI.getOperand(OpIndex);
