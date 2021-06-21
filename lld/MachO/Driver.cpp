@@ -235,6 +235,8 @@ static std::vector<ArchiveMember> getArchiveMembers(MemoryBufferRef mb) {
   return v;
 }
 
+static DenseMap<StringRef, ArchiveFile *> loadedArchives;
+
 static InputFile *addFile(StringRef path, bool forceLoadArchive,
                           bool isExplicit = true,
                           bool isBundleLoader = false) {
@@ -247,6 +249,13 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
   file_magic magic = identify_magic(mbref.getBuffer());
   switch (magic) {
   case file_magic::archive: {
+    // Avoid loading archives twice. If the archives are being force-loaded,
+    // loading them twice would create duplicate symbol errors. In the
+    // non-force-loading case, this is just a minor performance optimization.
+    ArchiveFile *&cachedFile = loadedArchives[path];
+    if (cachedFile)
+      return cachedFile;
+
     std::unique_ptr<object::Archive> file = CHECK(
         object::Archive::create(mbref), path + ": failed to parse archive");
 
@@ -286,7 +295,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
       }
     }
 
-    newFile = make<ArchiveFile>(std::move(file));
+    newFile = cachedFile = make<ArchiveFile>(std::move(file));
     break;
   }
   case file_magic::macho_object:
