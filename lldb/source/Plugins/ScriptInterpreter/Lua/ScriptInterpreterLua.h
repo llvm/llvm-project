@@ -9,6 +9,8 @@
 #ifndef liblldb_ScriptInterpreterLua_h_
 #define liblldb_ScriptInterpreterLua_h_
 
+#include <vector>
+
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Utility/Status.h"
@@ -72,21 +74,21 @@ public:
   llvm::Error LeaveSession();
 
   void CollectDataForBreakpointCommandCallback(
-      std::vector<BreakpointOptions *> &bp_options_vec,
+      std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
       CommandReturnObject &result) override;
 
-  Status SetBreakpointCommandCallback(BreakpointOptions *bp_options,
+  Status SetBreakpointCommandCallback(BreakpointOptions &bp_options,
                                       const char *command_body_text) override;
 
   Status SetBreakpointCommandCallbackFunction(
-      BreakpointOptions *bp_options, const char *function_name,
+      BreakpointOptions &bp_options, const char *function_name,
       StructuredData::ObjectSP extra_args_sp) override;
 
 private:
   std::unique_ptr<Lua> m_lua;
   bool m_session_is_active = false;
 
-  Status RegisterBreakpointCallback(BreakpointOptions *bp_options,
+  Status RegisterBreakpointCallback(BreakpointOptions &bp_options,
                                     const char *command_body_text,
                                     StructuredData::ObjectSP extra_args_sp);
 };
