@@ -8245,7 +8245,7 @@ struct AACallEdgesFunction : public AACallEdges {
   SetVector<Function *> CalledFunctions;
 
   /// Does this function have a call to a function that we don't know about.
-  bool HasUnknownCallee;
+  bool HasUnknownCallee = false;
 };
 
 } // namespace

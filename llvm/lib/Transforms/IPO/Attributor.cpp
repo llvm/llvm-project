@@ -2181,7 +2181,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     // Every argument might be simplified. We have to go through the Attributor
     // interface though as outside AAs can register custom simplification
     // callbacks.
-    bool UsedAssumedInformation;
+    bool UsedAssumedInformation = false;
     getAssumedSimplified(ArgPos, /* AA */ nullptr, UsedAssumedInformation);
 
     // Every argument might be dead.
@@ -2257,7 +2257,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       // Call site argument might be simplified. We have to go through the
       // Attributor interface though as outside AAs can register custom
       // simplification callbacks.
-      bool UsedAssumedInformation;
+      bool UsedAssumedInformation = false;
       getAssumedSimplified(CBArgPos, /* AA */ nullptr, UsedAssumedInformation);
 
       // Every call site argument might be marked "noundef".
