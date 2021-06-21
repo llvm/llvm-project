@@ -23,6 +23,17 @@ GuidAdapter::GuidAdapter(StringRef Guid)
 GuidAdapter::GuidAdapter(ArrayRef<uint8_t> Guid)
     : FormatAdapter(std::move(Guid)) {}
 
+// From https://docs.microsoft.com/en-us/windows/win32/msi/guid documentation:
+// The GUID data type is a text string representing a Class identifier (ID).
+// All GUIDs must be authored in uppercase.
+// The valid format for a GUID is {XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX} where
+// X is a hex digit (0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F).
+//
+// The individual string components must be padded to comply with the specific
+// lengths of {8-4-4-4-12} characters.
+// The llvm-yaml2obj tool checks that a GUID follow that format:
+// - the total length to be 38 (including the curly braces.
+// - there is a dash at the positions: 8, 13, 18 and 23.
 void GuidAdapter::format(raw_ostream &Stream, StringRef Style) {
   assert(Item.size() == 16 && "Expected 16-byte GUID");
   struct MSGuid {
@@ -33,11 +44,11 @@ void GuidAdapter::format(raw_ostream &Stream, StringRef Style) {
   };
   const MSGuid *G = reinterpret_cast<const MSGuid *>(Item.data());
   Stream
-      << '{' << format_hex_no_prefix(G->Data1, sizeof(G->Data1), /*Upper=*/true)
-      << '-' << format_hex_no_prefix(G->Data2, sizeof(G->Data2), /*Upper=*/true)
-      << '-' << format_hex_no_prefix(G->Data3, sizeof(G->Data3), /*Upper=*/true)
-      << '-' << format_hex_no_prefix(G->Data4 >> 48, 2, /*Upper=*/true) << '-'
-      << format_hex_no_prefix(G->Data4 & ((1ULL << 48) - 1), 6, /*Upper=*/true)
+      << '{' << format_hex_no_prefix(G->Data1, 8, /*Upper=*/true)
+      << '-' << format_hex_no_prefix(G->Data2, 4, /*Upper=*/true)
+      << '-' << format_hex_no_prefix(G->Data3, 4, /*Upper=*/true)
+      << '-' << format_hex_no_prefix(G->Data4 >> 48, 4, /*Upper=*/true) << '-'
+      << format_hex_no_prefix(G->Data4 & ((1ULL << 48) - 1), 12, /*Upper=*/true)
       << '}';
 }
 
