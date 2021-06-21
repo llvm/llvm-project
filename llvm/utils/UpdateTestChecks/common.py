@@ -351,27 +351,6 @@ class FunctionTestBuilder:
         for l in scrubbed_body.splitlines():
           print('  ' + l, file=sys.stderr)
       for prefix in prefixes:
-        if func in self._func_dict[prefix]:
-          if (self._func_dict[prefix][func] is None or
-              str(self._func_dict[prefix][func]) != scrubbed_body or
-              self._func_dict[prefix][func].args_and_sig != args_and_sig or
-                  self._func_dict[prefix][func].attrs != attrs):
-            if (self._func_dict[prefix][func] is not None and
-                self._func_dict[prefix][func].is_same_except_arg_names(
-                scrubbed_extra,
-                args_and_sig,
-                attrs)):
-              self._func_dict[prefix][func].scrub = scrubbed_extra
-              self._func_dict[prefix][func].args_and_sig = args_and_sig
-              continue
-            else:
-              # This means a previous RUN line produced a body for this function
-              # that is different from the one produced by this current RUN line,
-              # so the body can't be common accross RUN lines. We use None to
-              # indicate that.
-              self._func_dict[prefix][func] = None
-              continue
-
         # Replace function names matching the regex.
         for regex in self._replace_value_regex:
           # Pattern that matches capture groups in the regex in leftmost order.
@@ -394,7 +373,29 @@ class FunctionTestBuilder:
                 func_repl = group_regex.sub(re.escape(g), func_repl, count=1)
             # Substitute function call names that match the regex with the same
             # capture groups set.
-            scrubbed_body = re.sub(func_repl, '{{' + func_repl + '}}', scrubbed_body)
+            scrubbed_body = re.sub(func_repl, '{{' + func_repl + '}}',
+                                   scrubbed_body)
+
+        if func in self._func_dict[prefix]:
+          if (self._func_dict[prefix][func] is None or
+              str(self._func_dict[prefix][func]) != scrubbed_body or
+              self._func_dict[prefix][func].args_and_sig != args_and_sig or
+                  self._func_dict[prefix][func].attrs != attrs):
+            if (self._func_dict[prefix][func] is not None and
+                self._func_dict[prefix][func].is_same_except_arg_names(
+                scrubbed_extra,
+                args_and_sig,
+                attrs)):
+              self._func_dict[prefix][func].scrub = scrubbed_extra
+              self._func_dict[prefix][func].args_and_sig = args_and_sig
+              continue
+            else:
+              # This means a previous RUN line produced a body for this function
+              # that is different from the one produced by this current RUN line,
+              # so the body can't be common accross RUN lines. We use None to
+              # indicate that.
+              self._func_dict[prefix][func] = None
+              continue
 
         self._func_dict[prefix][func] = function_body(
             scrubbed_body, scrubbed_extra, args_and_sig, attrs)
