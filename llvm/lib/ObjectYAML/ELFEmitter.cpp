@@ -563,7 +563,7 @@ unsigned ELFState<ELFT>::toSectionIndex(StringRef S, StringRef LocSec,
          !SectionHeaders.Sections);
   size_t FirstExcluded =
       SectionHeaders.Sections ? SectionHeaders.Sections->size() : 0;
-  if (Index >= FirstExcluded) {
+  if (Index > FirstExcluded) {
     if (LocSym.empty())
       reportError("unable to link '" + LocSec + "' to excluded section '" + S +
                   "'");
