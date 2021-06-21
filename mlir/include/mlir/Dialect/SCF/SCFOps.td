@@ -55,6 +55,70 @@ def ConditionOp : SCF_Op<"condition",
   let verifier = ?;
 }
 
+//===----------------------------------------------------------------------===//
+// ExecuteRegionOp
+//===----------------------------------------------------------------------===//
+
+def ExecuteRegionOp : SCF_Op<"execute_region"> {
+  let summary = "operation that executes its region exactly once";
+  let description = [{
+    The `execute_region` operation executes the region held exactly once. The op
+    cannot have any operands, nor does its region have any arguments. All SSA
+    values that dominate the op can be accessed inside. The op's region can have
+    multiple blocks and the blocks can have terminators the same way as FuncOp.
+    The values returned from this op's region define the op's results.  The op
+    primarily provides control flow encapsulation and isolation from a parent
+    op's control flow restrictions if any; for example, it allows representation
+    of inlined calls in the inside of structured control flow ops with
+    restrictions like affine.for/if, scf.for/if ops, and thus the optimization
+    of IR in such a mixed form.
+
+    Example:
+
+    ```mlir
+    scf.for %i = 0 to 128 step %c1 {
+      %y = scf.execute_region -> i32 {
+        %x = load %A[%i] : memref<128xi32>
+        scf.yield %x : i32
+      }
+    }
+
+    affine.for %i = 0 to 100 {
+      "foo"() : () -> ()
+      %v = scf.execute_region -> i64 {
+        cond_br %cond, ^bb1, ^bb2
+
+      ^bb1:
+        %c1 = constant 1 : i64
+        br ^bb3(%c1 : i64)
+
+      ^bb2:
+        %c2 = constant 2 : i64
+        br ^bb3(%c2 : i64)
+
+      ^bb3(%x : i64):
+        scf.yield %x : i64
+      }
+      "bar"(%v) : (i64) -> ()
+    }
+    ```
+  }];
+
+  let results = (outs Variadic<AnyType>);
+
+  let regions = (region AnyRegion:$region);
+
+  // TODO: If the parent is a func like op (which would be the case if all other
+  // ops are from the std dialect), the inliner logic could be readily used to
+  // inline.
+  let hasCanonicalizer = 0;
+
+  // TODO: can fold if it returns a constant.
+  // TODO: Single block execute_region ops can be readily inlined irrespective
+  // of which op is a parent. Add a fold for this.
+  let hasFolder = 0;
+}
+
 def ForOp : SCF_Op<"for",
       [DeclareOpInterfaceMethods<LoopLikeOpInterface>,
        DeclareOpInterfaceMethods<RegionBranchOpInterface>,
@@ -598,8 +662,8 @@ def WhileOp : SCF_Op<"while",
 }
 
 def YieldOp : SCF_Op<"yield", [NoSideEffect, ReturnLike, Terminator,
-                               ParentOneOf<["IfOp, ForOp", "ParallelOp",
-                                            "WhileOp"]>]> {
+                               ParentOneOf<["ExecuteRegionOp, ForOp",
+                                            "IfOp, ParallelOp, WhileOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
     "scf.yield" yields an SSA value from the SCF dialect op region and

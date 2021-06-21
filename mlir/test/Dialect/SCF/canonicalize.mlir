@@ -897,3 +897,33 @@ func @combineIfs4(%arg0 : i1, %arg2: i64) {
 // CHECK-NEXT:       "test.firstCodeTrue"() : () -> ()
 // CHECK-NEXT:       "test.secondCodeTrue"() : () -> ()
 // CHECK-NEXT:     }
+
+// -----
+
+// CHECK-LABEL: func @propagate_into_execute_region
+func @propagate_into_execute_region() {
+  %cond = constant 0 : i1
+  affine.for %i = 0 to 100 {
+    "test.foo"() : () -> ()
+    %v = scf.execute_region -> i64 {
+      cond_br %cond, ^bb1, ^bb2
+
+    ^bb1:
+      %c1 = constant 1 : i64
+      br ^bb3(%c1 : i64)
+
+    ^bb2:
+      %c2 = constant 2 : i64
+      br ^bb3(%c2 : i64)
+
+    ^bb3(%x : i64):
+      scf.yield %x : i64
+    }
+    "test.bar"(%v) : (i64) -> ()
+    // CHECK:      %[[C2:.*]] = constant 2 : i64
+    // CHECK:        scf.execute_region -> i64 {
+    // CHECK-NEXT:     scf.yield %[[C2]] : i64
+    // CHECK-NEXT:   }
+  }
+  return
+}
