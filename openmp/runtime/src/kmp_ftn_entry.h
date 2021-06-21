@@ -58,6 +58,16 @@ extern "C" {
 #define KMP_DEREF *
 #endif
 
+// For API with specific C vs. Fortran interfaces (ompc_* exists in
+// kmp_csupport.cpp), only create GOMP versioned symbols of the API for the
+// APPEND Fortran entries in this file. The GOMP versioned symbols of the C API
+// will take place where the ompc_* functions are defined.
+#if KMP_FTN_ENTRIES == KMP_FTN_APPEND
+#define KMP_EXPAND_NAME_IF_APPEND(name) KMP_EXPAND_NAME(name)
+#else
+#define KMP_EXPAND_NAME_IF_APPEND(name) name
+#endif
+
 void FTN_STDCALL FTN_SET_STACKSIZE(int KMP_DEREF arg) {
 #ifdef KMP_STUB
   __kmps_set_stacksize(KMP_DEREF arg);
@@ -445,7 +455,8 @@ public:
  * Set the value of the affinity-format-var ICV on the current device to the
  * format specified in the argument.
  */
-void FTN_STDCALL FTN_SET_AFFINITY_FORMAT(char const *format, size_t size) {
+void FTN_STDCALL KMP_EXPAND_NAME_IF_APPEND(FTN_SET_AFFINITY_FORMAT)(
+    char const *format, size_t size) {
 #ifdef KMP_STUB
   return;
 #else
@@ -466,7 +477,8 @@ void FTN_STDCALL FTN_SET_AFFINITY_FORMAT(char const *format, size_t size) {
  * affinity-format-var ICV on the current device to buffer. If the return value
  * is larger than size, the affinity format specification is truncated.
  */
-size_t FTN_STDCALL FTN_GET_AFFINITY_FORMAT(char *buffer, size_t size) {
+size_t FTN_STDCALL KMP_EXPAND_NAME_IF_APPEND(FTN_GET_AFFINITY_FORMAT)(
+    char *buffer, size_t size) {
 #ifdef KMP_STUB
   return 0;
 #else
@@ -488,7 +500,8 @@ size_t FTN_STDCALL FTN_GET_AFFINITY_FORMAT(char *buffer, size_t size) {
  * specified by the format argument. If the format is NULL or a zero-length
  * string, the value of the affinity-format-var ICV is used.
  */
-void FTN_STDCALL FTN_DISPLAY_AFFINITY(char const *format, size_t size) {
+void FTN_STDCALL KMP_EXPAND_NAME_IF_APPEND(FTN_DISPLAY_AFFINITY)(
+    char const *format, size_t size) {
 #ifdef KMP_STUB
   return;
 #else
@@ -513,8 +526,8 @@ void FTN_STDCALL FTN_DISPLAY_AFFINITY(char const *format, size_t size) {
  * return value is larger than size, the affinity format specification is
  * truncated.
  */
-size_t FTN_STDCALL FTN_CAPTURE_AFFINITY(char *buffer, char const *format,
-                                        size_t buf_size, size_t for_size) {
+size_t FTN_STDCALL KMP_EXPAND_NAME_IF_APPEND(FTN_CAPTURE_AFFINITY)(
+    char *buffer, char const *format, size_t buf_size, size_t for_size) {
 #if defined(KMP_STUB)
   return 0;
 #else
@@ -1345,7 +1358,8 @@ int FTN_STDCALL FTN_GET_DEVICE_NUM(void) {
 }
 
 // Compiler will ensure that this is only called from host in sequential region
-int FTN_STDCALL FTN_PAUSE_RESOURCE(kmp_pause_status_t kind, int device_num) {
+int FTN_STDCALL KMP_EXPAND_NAME(FTN_PAUSE_RESOURCE)(kmp_pause_status_t kind,
+                                                    int device_num) {
 #ifdef KMP_STUB
   return 1; // just fail
 #else
@@ -1362,7 +1376,8 @@ int FTN_STDCALL FTN_PAUSE_RESOURCE(kmp_pause_status_t kind, int device_num) {
 }
 
 // Compiler will ensure that this is only called from host in sequential region
-int FTN_STDCALL FTN_PAUSE_RESOURCE_ALL(kmp_pause_status_t kind) {
+int FTN_STDCALL
+    KMP_EXPAND_NAME(FTN_PAUSE_RESOURCE_ALL)(kmp_pause_status_t kind) {
 #ifdef KMP_STUB
   return 1; // just fail
 #else
@@ -1536,8 +1551,15 @@ KMP_VERSION_SYMBOL(FTN_GET_INITIAL_DEVICE, 45, "OMP_4.5");
 
 // OMP_5.0 versioned symbols
 // KMP_VERSION_SYMBOL(FTN_GET_DEVICE_NUM, 50, "OMP_5.0");
-// KMP_VERSION_SYMBOL(FTN_PAUSE_RESOURCE, 50, "OMP_5.0");
-// KMP_VERSION_SYMBOL(FTN_PAUSE_RESOURCE_ALL, 50, "OMP_5.0");
+KMP_VERSION_SYMBOL(FTN_PAUSE_RESOURCE, 50, "OMP_5.0");
+KMP_VERSION_SYMBOL(FTN_PAUSE_RESOURCE_ALL, 50, "OMP_5.0");
+// The C versions (KMP_FTN_PLAIN) of these symbols are in kmp_csupport.c
+#if KMP_FTN_ENTRIES == KMP_FTN_APPEND
+KMP_VERSION_SYMBOL(FTN_CAPTURE_AFFINITY, 50, "OMP_5.0");
+KMP_VERSION_SYMBOL(FTN_DISPLAY_AFFINITY, 50, "OMP_5.0");
+KMP_VERSION_SYMBOL(FTN_GET_AFFINITY_FORMAT, 50, "OMP_5.0");
+KMP_VERSION_SYMBOL(FTN_SET_AFFINITY_FORMAT, 50, "OMP_5.0");
+#endif
 // KMP_VERSION_SYMBOL(FTN_GET_SUPPORTED_ACTIVE_LEVELS, 50, "OMP_5.0");
 // KMP_VERSION_SYMBOL(FTN_FULFILL_EVENT, 50, "OMP_5.0");
 

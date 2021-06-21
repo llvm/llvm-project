@@ -107,6 +107,8 @@ OMP_4.0 {
 } OMP_3.1;
 OMP_4.5 {
 } OMP_4.0;
+OMP_5.0 {
+} OMP_4.5;
 
 # sets up GCC GOMP_ version dependency chain
 GOMP_1.0 {

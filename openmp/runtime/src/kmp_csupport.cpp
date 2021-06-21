@@ -1997,8 +1997,7 @@ int ompc_get_team_size(int level) {
 }
 
 /* OpenMP 5.0 Affinity Format API */
-
-void ompc_set_affinity_format(char const *format) {
+void KMP_EXPAND_NAME(ompc_set_affinity_format)(char const *format) {
   if (!__kmp_init_serial) {
     __kmp_serial_initialize();
   }
@@ -2006,7 +2005,7 @@ void ompc_set_affinity_format(char const *format) {
                          format, KMP_STRLEN(format) + 1);
 }
 
-size_t ompc_get_affinity_format(char *buffer, size_t size) {
+size_t KMP_EXPAND_NAME(ompc_get_affinity_format)(char *buffer, size_t size) {
   size_t format_size;
   if (!__kmp_init_serial) {
     __kmp_serial_initialize();
@@ -2019,7 +2018,7 @@ size_t ompc_get_affinity_format(char *buffer, size_t size) {
   return format_size;
 }
 
-void ompc_display_affinity(char const *format) {
+void KMP_EXPAND_NAME(ompc_display_affinity)(char const *format) {
   int gtid;
   if (!TCR_4(__kmp_init_middle)) {
     __kmp_middle_initialize();
@@ -2029,8 +2028,8 @@ void ompc_display_affinity(char const *format) {
   __kmp_aux_display_affinity(gtid, format);
 }
 
-size_t ompc_capture_affinity(char *buffer, size_t buf_size,
-                             char const *format) {
+size_t KMP_EXPAND_NAME(ompc_capture_affinity)(char *buffer, size_t buf_size,
+                                              char const *format) {
   int gtid;
   size_t num_required;
   kmp_str_buf_t capture_buf;
@@ -4401,3 +4400,35 @@ void __kmpc_error(ident_t *loc, int severity, const char *message) {
 
   __kmp_str_free(&src_loc);
 }
+
+#ifdef KMP_USE_VERSION_SYMBOLS
+// For GOMP compatibility there are two versions of each omp_* API.
+// One is the plain C symbol and one is the Fortran symbol with an appended
+// underscore. When we implement a specific ompc_* version of an omp_*
+// function, we want the plain GOMP versioned symbol to alias the ompc_* version
+// instead of the Fortran versions in kmp_ftn_entry.h
+extern "C" {
+// Have to undef these from omp.h so they aren't translated into
+// their ompc counterparts in the KMP_VERSION_OMPC_SYMBOL macros below
+#ifdef omp_set_affinity_format
+#undef omp_set_affinity_format
+#endif
+#ifdef omp_get_affinity_format
+#undef omp_get_affinity_format
+#endif
+#ifdef omp_display_affinity
+#undef omp_display_affinity
+#endif
+#ifdef omp_capture_affinity
+#undef omp_capture_affinity
+#endif
+KMP_VERSION_OMPC_SYMBOL(ompc_set_affinity_format, omp_set_affinity_format, 50,
+                        "OMP_5.0");
+KMP_VERSION_OMPC_SYMBOL(ompc_get_affinity_format, omp_get_affinity_format, 50,
+                        "OMP_5.0");
+KMP_VERSION_OMPC_SYMBOL(ompc_display_affinity, omp_display_affinity, 50,
+                        "OMP_5.0");
+KMP_VERSION_OMPC_SYMBOL(ompc_capture_affinity, omp_capture_affinity, 50,
+                        "OMP_5.0");
+} // extern "C"
+#endif
