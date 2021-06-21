@@ -28,6 +28,10 @@ using namespace mlir::linalg;
 namespace {
 struct TestLinalgCodegenStrategy
     : public PassWrapper<TestLinalgCodegenStrategy, FunctionPass> {
+  StringRef getArgument() const final { return "test-linalg-codegen-strategy"; }
+  StringRef getDescription() const final {
+    return "Test Linalg Codegen Strategy.";
+  }
   TestLinalgCodegenStrategy() = default;
   TestLinalgCodegenStrategy(const TestLinalgCodegenStrategy &pass) {}
 
@@ -227,8 +231,7 @@ void TestLinalgCodegenStrategy::runOnFunction() {
 namespace mlir {
 namespace test {
 void registerTestLinalgCodegenStrategy() {
-  PassRegistration<TestLinalgCodegenStrategy> testLinalgCodegenStrategyPass(
-      "test-linalg-codegen-strategy", "Test Linalg Codegen Strategy.");
+  PassRegistration<TestLinalgCodegenStrategy>();
 }
 } // namespace test
 } // namespace mlir

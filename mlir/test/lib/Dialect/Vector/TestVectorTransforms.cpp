@@ -27,6 +27,12 @@ struct TestVectorToVectorConversion
     : public PassWrapper<TestVectorToVectorConversion, FunctionPass> {
   TestVectorToVectorConversion() = default;
   TestVectorToVectorConversion(const TestVectorToVectorConversion &pass) {}
+  StringRef getArgument() const final {
+    return "test-vector-to-vector-conversion";
+  }
+  StringRef getDescription() const final {
+    return "Test conversion patterns between ops in the vector dialect";
+  }
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect>();
@@ -69,6 +75,13 @@ private:
 
 struct TestVectorSlicesConversion
     : public PassWrapper<TestVectorSlicesConversion, FunctionPass> {
+  StringRef getArgument() const final {
+    return "test-vector-slices-conversion";
+  }
+  StringRef getDescription() const final {
+    return "Test conversion patterns that lower slices ops in the vector "
+           "dialect";
+  }
   void runOnFunction() override {
     RewritePatternSet patterns(&getContext());
     populateVectorSlicesLoweringPatterns(patterns);
@@ -78,6 +91,13 @@ struct TestVectorSlicesConversion
 
 struct TestVectorContractionConversion
     : public PassWrapper<TestVectorContractionConversion, FunctionPass> {
+  StringRef getArgument() const final {
+    return "test-vector-contraction-conversion";
+  }
+  StringRef getDescription() const final {
+    return "Test conversion patterns that lower contract ops in the vector "
+           "dialect";
+  }
   TestVectorContractionConversion() = default;
   TestVectorContractionConversion(const TestVectorContractionConversion &pass) {
   }
@@ -146,6 +166,13 @@ struct TestVectorContractionConversion
 
 struct TestVectorUnrollingPatterns
     : public PassWrapper<TestVectorUnrollingPatterns, FunctionPass> {
+  StringRef getArgument() const final {
+    return "test-vector-unrolling-patterns";
+  }
+  StringRef getDescription() const final {
+    return "Test conversion patterns to unroll contract ops in the vector "
+           "dialect";
+  }
   TestVectorUnrollingPatterns() = default;
   TestVectorUnrollingPatterns(const TestVectorUnrollingPatterns &pass) {}
   void runOnFunction() override {
@@ -199,6 +226,13 @@ struct TestVectorUnrollingPatterns
 
 struct TestVectorDistributePatterns
     : public PassWrapper<TestVectorDistributePatterns, FunctionPass> {
+  StringRef getArgument() const final {
+    return "test-vector-distribute-patterns";
+  }
+  StringRef getDescription() const final {
+    return "Test conversion patterns to distribute vector ops in the vector "
+           "dialect";
+  }
   TestVectorDistributePatterns() = default;
   TestVectorDistributePatterns(const TestVectorDistributePatterns &pass) {}
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -249,6 +283,10 @@ struct TestVectorDistributePatterns
 
 struct TestVectorToLoopPatterns
     : public PassWrapper<TestVectorToLoopPatterns, FunctionPass> {
+  StringRef getArgument() const final { return "test-vector-to-forloop"; }
+  StringRef getDescription() const final {
+    return "Test conversion patterns to break up a vector op into a for loop";
+  }
   TestVectorToLoopPatterns() = default;
   TestVectorToLoopPatterns(const TestVectorToLoopPatterns &pass) {}
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -312,6 +350,13 @@ struct TestVectorTransferUnrollingPatterns
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect>();
   }
+  StringRef getArgument() const final {
+    return "test-vector-transfer-unrolling-patterns";
+  }
+  StringRef getDescription() const final {
+    return "Test conversion patterns to unroll transfer ops in the vector "
+           "dialect";
+  }
   void runOnFunction() override {
     MLIRContext *ctx = &getContext();
     RewritePatternSet patterns(ctx);
@@ -332,6 +377,13 @@ struct TestVectorTransferUnrollingPatterns
 struct TestVectorTransferFullPartialSplitPatterns
     : public PassWrapper<TestVectorTransferFullPartialSplitPatterns,
                          FunctionPass> {
+  StringRef getArgument() const final {
+    return "test-vector-transfer-full-partial-split";
+  }
+  StringRef getDescription() const final {
+    return "Test conversion patterns to split "
+           "transfer ops via scf.if + linalg ops";
+  }
   TestVectorTransferFullPartialSplitPatterns() = default;
   TestVectorTransferFullPartialSplitPatterns(
       const TestVectorTransferFullPartialSplitPatterns &pass) {}
@@ -361,6 +413,10 @@ struct TestVectorTransferFullPartialSplitPatterns
 
 struct TestVectorTransferOpt
     : public PassWrapper<TestVectorTransferOpt, FunctionPass> {
+  StringRef getArgument() const final { return "test-vector-transferop-opt"; }
+  StringRef getDescription() const final {
+    return "Test optimization transformations for transfer ops";
+  }
   void runOnFunction() override { transferOpflowOpt(getFunction()); }
 };
 
@@ -368,6 +424,12 @@ struct TestVectorTransferLoweringPatterns
     : public PassWrapper<TestVectorTransferLoweringPatterns, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect>();
+  }
+  StringRef getArgument() const final {
+    return "test-vector-transfer-lowering-patterns";
+  }
+  StringRef getDescription() const final {
+    return "Test conversion patterns to lower transfer ops to other vector ops";
   }
   void runOnFunction() override {
     RewritePatternSet patterns(&getContext());
@@ -382,6 +444,13 @@ struct TestVectorMultiReductionLoweringPatterns
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect>();
   }
+  StringRef getArgument() const final {
+    return "test-vector-multi-reduction-lowering-patterns";
+  }
+  StringRef getDescription() const final {
+    return "Test conversion patterns to lower vector.multi_reduction to other "
+           "vector ops";
+  }
   void runOnFunction() override {
     RewritePatternSet patterns(&getContext());
     populateVectorMultiReductionLoweringPatterns(patterns);
@@ -394,53 +463,27 @@ struct TestVectorMultiReductionLoweringPatterns
 namespace mlir {
 namespace test {
 void registerTestVectorConversions() {
-  PassRegistration<TestVectorToVectorConversion> vectorToVectorPass(
-      "test-vector-to-vector-conversion",
-      "Test conversion patterns between ops in the vector dialect");
+  PassRegistration<TestVectorToVectorConversion>();
 
-  PassRegistration<TestVectorSlicesConversion> slicesPass(
-      "test-vector-slices-conversion",
-      "Test conversion patterns that lower slices ops in the vector dialect");
+  PassRegistration<TestVectorSlicesConversion>();
 
-  PassRegistration<TestVectorContractionConversion> contractionPass(
-      "test-vector-contraction-conversion",
-      "Test conversion patterns that lower contract ops in the vector dialect");
+  PassRegistration<TestVectorContractionConversion>();
 
-  PassRegistration<TestVectorUnrollingPatterns> contractionUnrollingPass(
-      "test-vector-unrolling-patterns",
-      "Test conversion patterns to unroll contract ops in the vector dialect");
+  PassRegistration<TestVectorUnrollingPatterns>();
 
-  PassRegistration<TestVectorTransferUnrollingPatterns> transferOpUnrollingPass(
-      "test-vector-transfer-unrolling-patterns",
-      "Test conversion patterns to unroll transfer ops in the vector dialect");
+  PassRegistration<TestVectorTransferUnrollingPatterns>();
 
-  PassRegistration<TestVectorTransferFullPartialSplitPatterns>
-      vectorTransformFullPartialPass("test-vector-transfer-full-partial-split",
-                                     "Test conversion patterns to split "
-                                     "transfer ops via scf.if + linalg ops");
+  PassRegistration<TestVectorTransferFullPartialSplitPatterns>();
 
-  PassRegistration<TestVectorDistributePatterns> distributePass(
-      "test-vector-distribute-patterns",
-      "Test conversion patterns to distribute vector ops in the vector "
-      "dialect");
+  PassRegistration<TestVectorDistributePatterns>();
 
-  PassRegistration<TestVectorToLoopPatterns> vectorToForLoop(
-      "test-vector-to-forloop",
-      "Test conversion patterns to break up a vector op into a for loop");
+  PassRegistration<TestVectorToLoopPatterns>();
 
-  PassRegistration<TestVectorTransferOpt> transferOpOpt(
-      "test-vector-transferop-opt",
-      "Test optimization transformations for transfer ops");
+  PassRegistration<TestVectorTransferOpt>();
 
-  PassRegistration<TestVectorTransferLoweringPatterns> transferOpLoweringPass(
-      "test-vector-transfer-lowering-patterns",
-      "Test conversion patterns to lower transfer ops to other vector ops");
+  PassRegistration<TestVectorTransferLoweringPatterns>();
 
-  PassRegistration<TestVectorMultiReductionLoweringPatterns>
-      multiDimReductionOpLoweringPass(
-          "test-vector-multi-reduction-lowering-patterns",
-          "Test conversion patterns to lower vector.multi_reduction to other "
-          "vector ops");
+  PassRegistration<TestVectorMultiReductionLoweringPatterns>();
 }
 } // namespace test
 } // namespace mlir

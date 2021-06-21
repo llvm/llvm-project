@@ -25,6 +25,10 @@ namespace {
 /// This pass applies the permutation on the first maximal perfect nest.
 struct TestAffineLoopUnswitching
     : public PassWrapper<TestAffineLoopUnswitching, FunctionPass> {
+  StringRef getArgument() const final { return PASS_NAME; }
+  StringRef getDescription() const final {
+    return "Tests affine loop unswitching / if/else hoisting";
+  }
   TestAffineLoopUnswitching() = default;
   TestAffineLoopUnswitching(const TestAffineLoopUnswitching &pass) {}
 
@@ -54,7 +58,6 @@ void TestAffineLoopUnswitching::runOnFunction() {
 
 namespace mlir {
 void registerTestAffineLoopUnswitchingPass() {
-  PassRegistration<TestAffineLoopUnswitching>(
-      PASS_NAME, "Tests affine loop unswitching / if/else hoisting");
+  PassRegistration<TestAffineLoopUnswitching>();
 }
 } // namespace mlir
