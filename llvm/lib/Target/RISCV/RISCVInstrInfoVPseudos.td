@@ -1936,6 +1936,22 @@ multiclass VPseudoTernaryV_VI<Operand ImmType = simm5, string Constraint = ""> {
 multiclass VPseudoTernaryV_VV_VX_AAXA<string Constraint = ""> {
   defm "" : VPseudoTernaryV_VV<Constraint>;
   defm "" : VPseudoTernaryV_VX_AAXA<Constraint>;
+
+  foreach m = MxList.m in {
+    // Add a commutable version for use by IR mul+add.
+    // NOTE: We need this because we use a tail undisturbed policy on the
+    // intrinsic version so we can't commute those instructions since it would
+    // change which input operand is tied to the destination. That would
+    // remove user control of the tail elements.
+    let isCommutable = 1, ForceTailAgnostic = true, VLMul = m.value in {
+      def "_VV_" # m.MX # "_COMMUTABLE" : VPseudoTernaryNoMask<m.vrclass,
+                                                               m.vrclass,
+                                                               m.vrclass,
+                                                               Constraint>;
+      def "_VX_" # m.MX # "_COMMUTABLE" :
+         VPseudoTernaryNoMask<m.vrclass, GPR, m.vrclass, Constraint>;
+    }
+  }
 }
 
 multiclass VPseudoTernaryV_VV_VF_AAXA<string Constraint = ""> {
@@ -1943,7 +1959,7 @@ multiclass VPseudoTernaryV_VV_VF_AAXA<string Constraint = ""> {
   defm "" : VPseudoTernaryV_VF_AAXA<Constraint>;
 
   foreach m = MxList.m in {
-    // Add a commutable version for use by IR fma.
+    // Add a commutable version for use by IR mul+add.
     // NOTE: We need this because we use a tail undisturbed policy on the
     // intrinsic version so we can't commute those instructions since it would
     // change which input operand is tied to the destination. That would
