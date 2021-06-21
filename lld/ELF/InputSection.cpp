@@ -547,8 +547,7 @@ static uint32_t getARMUndefinedRelativeWeakVA(RelType type, uint32_t a,
 }
 
 // The comment above getARMUndefinedRelativeWeakVA applies to this function.
-static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t type, uint64_t a,
-                                                  uint64_t p) {
+static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t type, uint64_t p) {
   switch (type) {
   // Unresolved branch relocations to weak references resolve to next
   // instruction, this is 4 bytes on from P.
@@ -556,7 +555,7 @@ static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t type, uint64_t a,
   case R_AARCH64_CONDBR19:
   case R_AARCH64_JUMP26:
   case R_AARCH64_TSTBR14:
-    return p + 4 + a;
+    return p + 4;
   // Unresolved non branch pc-relative relocations
   case R_AARCH64_PREL16:
   case R_AARCH64_PREL32:
@@ -564,7 +563,7 @@ static uint64_t getAArch64UndefinedRelativeWeakVA(uint64_t type, uint64_t a,
   case R_AARCH64_ADR_PREL_LO21:
   case R_AARCH64_LD_PREL_LO19:
   case R_AARCH64_PLT32:
-    return p + a;
+    return p;
   }
   llvm_unreachable("AArch64 pc-relative relocation expected\n");
 }
@@ -786,7 +785,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
       if (config->emachine == EM_ARM)
         dest = getARMUndefinedRelativeWeakVA(type, a, p);
       else if (config->emachine == EM_AARCH64)
-        dest = getAArch64UndefinedRelativeWeakVA(type, a, p);
+        dest = getAArch64UndefinedRelativeWeakVA(type, p) + a;
       else if (config->emachine == EM_PPC)
         dest = p;
       else if (config->emachine == EM_RISCV)
