@@ -574,6 +574,68 @@ void ExportSection::finalizeContents() {
 
 void ExportSection::writeTo(uint8_t *buf) const { trieBuilder.writeTo(buf); }
 
+DataInCodeSection::DataInCodeSection()
+    : LinkEditSection(segment_names::linkEdit, section_names::dataInCode) {}
+
+template <class LP>
+static std::vector<MachO::data_in_code_entry> collectDataInCodeEntries() {
+  using SegmentCommand = typename LP::segment_command;
+  using Section = typename LP::section;
+
+  std::vector<MachO::data_in_code_entry> dataInCodeEntries;
+  for (const InputFile *inputFile : inputFiles) {
+    if (!isa<ObjFile>(inputFile))
+      continue;
+    const ObjFile *objFile = cast<ObjFile>(inputFile);
+    const auto *c = reinterpret_cast<const SegmentCommand *>(
+        findCommand(objFile->mb.getBufferStart(), LP::segmentLCType));
+    if (!c)
+      continue;
+    ArrayRef<Section> sections{reinterpret_cast<const Section *>(c + 1),
+                               c->nsects};
+
+    ArrayRef<MachO::data_in_code_entry> entries = objFile->dataInCodeEntries;
+    if (entries.empty())
+      continue;
+    // For each code subsection find 'data in code' entries residing in it.
+    // Compute the new offset values as
+    // <offset within subsection> + <subsection address> - <__TEXT address>.
+    for (size_t i = 0, n = sections.size(); i < n; ++i) {
+      const SubsectionMap &subsecMap = objFile->subsections[i];
+      for (const SubsectionEntry &subsecEntry : subsecMap) {
+        const InputSection *isec = subsecEntry.isec;
+        if (!isCodeSection(isec))
+          continue;
+        if (cast<ConcatInputSection>(isec)->shouldOmitFromOutput())
+          continue;
+        const uint64_t beginAddr = sections[i].addr + subsecEntry.offset;
+        auto it = llvm::lower_bound(
+            entries, beginAddr,
+            [](const MachO::data_in_code_entry &entry, uint64_t addr) {
+              return entry.offset < addr;
+            });
+        const uint64_t endAddr = beginAddr + isec->getFileSize();
+        for (const auto end = entries.end();
+             it != end && it->offset + it->length <= endAddr; ++it)
+          dataInCodeEntries.push_back(
+              {static_cast<uint32_t>(isec->getVA(it->offset - beginAddr) -
+                                     in.header->addr),
+               it->length, it->kind});
+      }
+    }
+  }
+  return dataInCodeEntries;
+}
+
+void DataInCodeSection::finalizeContents() {
+  entries = target->wordSize == 8 ? collectDataInCodeEntries<LP64>()
+                                  : collectDataInCodeEntries<ILP32>();
+}
+
+void DataInCodeSection::writeTo(uint8_t *buf) const {
+  memcpy(buf, entries.data(), getRawSize());
+}
+
 FunctionStartsSection::FunctionStartsSection()
     : LinkEditSection(segment_names::linkEdit, section_names::functionStarts) {}
 

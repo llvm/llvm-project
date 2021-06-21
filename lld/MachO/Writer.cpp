@@ -71,6 +71,7 @@ public:
   SymtabSection *symtabSection = nullptr;
   IndirectSymtabSection *indirectSymtabSection = nullptr;
   CodeSignatureSection *codeSignatureSection = nullptr;
+  DataInCodeSection *dataInCodeSection = nullptr;
   FunctionStartsSection *functionStartsSection = nullptr;
 
   LCUuid *uuidCommand = nullptr;
@@ -140,6 +141,25 @@ public:
 
 private:
   FunctionStartsSection *functionStartsSection;
+};
+
+class LCDataInCode final : public LoadCommand {
+public:
+  explicit LCDataInCode(DataInCodeSection *dataInCodeSection)
+      : dataInCodeSection(dataInCodeSection) {}
+
+  uint32_t getSize() const override { return sizeof(linkedit_data_command); }
+
+  void writeTo(uint8_t *buf) const override {
+    auto *c = reinterpret_cast<linkedit_data_command *>(buf);
+    c->cmd = LC_DATA_IN_CODE;
+    c->cmdsize = getSize();
+    c->dataoff = dataInCodeSection->fileOff;
+    c->datasize = dataInCodeSection->getFileSize();
+  }
+
+private:
+  DataInCodeSection *dataInCodeSection;
 };
 
 class LCDysymtab final : public LoadCommand {
@@ -646,6 +666,7 @@ template <class LP> void Writer::createLoadCommands() {
       make<LCDysymtab>(symtabSection, indirectSymtabSection));
   if (functionStartsSection)
     in.header->addLoadCommand(make<LCFunctionStarts>(functionStartsSection));
+  in.header->addLoadCommand(make<LCDataInCode>(dataInCodeSection));
   if (config->emitEncryptionInfo)
     in.header->addLoadCommand(make<LCEncryptionInfo<LP>>());
   for (StringRef path : config->runtimePaths)
@@ -844,6 +865,7 @@ template <class LP> void Writer::createOutputSections() {
   indirectSymtabSection = make<IndirectSymtabSection>();
   if (config->adhocCodesign)
     codeSignatureSection = make<CodeSignatureSection>();
+  dataInCodeSection = make<DataInCodeSection>();
   if (config->emitFunctionStarts)
     functionStartsSection = make<FunctionStartsSection>();
   if (config->emitBitcodeBundle)
@@ -944,8 +966,15 @@ void Writer::finalizeLinkEditSegment() {
   TimeTraceScope timeScope("Finalize __LINKEDIT segment");
   // Fill __LINKEDIT contents.
   std::vector<LinkEditSection *> linkEditSections{
-      in.rebase,  in.binding,    in.weakBinding,        in.lazyBinding,
-      in.exports, symtabSection, indirectSymtabSection, functionStartsSection,
+      in.rebase,
+      in.binding,
+      in.weakBinding,
+      in.lazyBinding,
+      in.exports,
+      symtabSection,
+      indirectSymtabSection,
+      dataInCodeSection,
+      functionStartsSection,
   };
   parallelForEach(linkEditSections, [](LinkEditSection *osec) {
     if (osec)
