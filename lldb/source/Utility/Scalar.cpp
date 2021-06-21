@@ -160,7 +160,7 @@ void Scalar::GetValue(Stream *s, bool show_type) const {
   case e_void:
     break;
   case e_int:
-    s->PutCString(m_integer.toString(10));
+    s->PutCString(llvm::toString(m_integer, 10));
     break;
   case e_float:
     llvm::SmallString<24> string;
