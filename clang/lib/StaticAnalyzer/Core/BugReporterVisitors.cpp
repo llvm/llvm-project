@@ -1855,14 +1855,17 @@ namespace {
 /// An error is emitted at line 3. This visitor realizes that the branch
 /// on line 2 is a control dependency of line 3, and tracks it's condition via
 /// trackExpressionValue().
-class TrackControlDependencyCondBRVisitor final : public BugReporterVisitor {
+class TrackControlDependencyCondBRVisitor final
+    : public TrackingBugReporterVisitor {
   const ExplodedNode *Origin;
   ControlDependencyCalculator ControlDeps;
   llvm::SmallSet<const CFGBlock *, 32> VisitedBlocks;
 
 public:
-  TrackControlDependencyCondBRVisitor(const ExplodedNode *O)
-  : Origin(O), ControlDeps(&O->getCFG()) {}
+  TrackControlDependencyCondBRVisitor(TrackerRef ParentTracker,
+                                      const ExplodedNode *O)
+      : TrackingBugReporterVisitor(ParentTracker), Origin(O),
+        ControlDeps(&O->getCFG()) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     static int x = 0;
@@ -1960,9 +1963,9 @@ TrackControlDependencyCondBRVisitor::VisitNode(const ExplodedNode *N,
       // isn't sufficient, because a new visitor is created for each tracked
       // expression, hence the BugReport level set.
       if (BR.addTrackedCondition(N)) {
-        bugreporter::trackExpressionValue(
-            N, Condition, BR, bugreporter::TrackingKind::Condition,
-            /*EnableNullFPSuppression=*/false);
+        getParentTracker().track(Condition, N,
+                                 {bugreporter::TrackingKind::Condition,
+                                  /*EnableNullFPSuppression=*/false});
         return constructDebugPieceForTrackedCondition(Condition, N, BRC);
       }
     }
@@ -2078,7 +2081,8 @@ public:
     if (LVState->getAnalysisManager()
             .getAnalyzerOptions()
             .ShouldTrackConditions) {
-      Report.addVisitor<TrackControlDependencyCondBRVisitor>(InputNode);
+      Report.addVisitor<TrackControlDependencyCondBRVisitor>(
+          &getParentTracker(), InputNode);
       Result.FoundSomethingToTrack = true;
     }
 
