@@ -425,12 +425,6 @@ spv.module Logical GLSL450
   requires #spv.vce<v1.0, [Shader], [SPV_KHR_16bit_storage]>
   attributes {foo = "bar"} { }
 
-// Module with explicit spv.mlir.endmodule
-// CHECK: spv.module
-spv.module Logical GLSL450 {
-  spv.mlir.endmodule
-}
-
 // Module with function
 // CHECK: spv.module
 spv.module Logical GLSL450 {
@@ -476,15 +470,6 @@ spv.module Logical GLSL450 {
 
 // -----
 
-// Module with wrong terminator
-// expected-error@+2 {{expects regions to end with 'spv.mlir.endmodule'}}
-// expected-note@+1 {{in custom textual format, the absence of terminator implies 'spv.mlir.endmodule'}}
-"spv.module"() ({
-  %0 = spv.Constant true
-}) {addressing_model = 0 : i32, memory_model = 1 : i32} : () -> ()
-
-// -----
-
 // Use non SPIR-V op inside module
 spv.module Logical GLSL450 {
   // expected-error @+1 {{'spv.module' can only contain spv.* ops}}
@@ -507,17 +492,6 @@ spv.module Logical GLSL450 {
 spv.module Logical GLSL450 {
   // expected-error @+1 {{'spv.module' cannot contain external functions}}
   spv.func @extern() -> () "None"
-}
-
-// -----
-
-//===----------------------------------------------------------------------===//
-// spv.mlir.endmodule
-//===----------------------------------------------------------------------===//
-
-func @module_end_not_in_module() -> () {
-  // expected-error @+1 {{op must appear in a module-like op's block}}
-  spv.mlir.endmodule
 }
 
 // -----

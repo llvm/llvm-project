@@ -85,6 +85,19 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+class GPUModuleEndConversion final
+    : public OpConversionPattern<gpu::ModuleEndOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::ModuleEndOp endOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.eraseOp(endOp);
+    return success();
+  }
+};
+
 /// Pattern to convert a gpu.return into a SPIR-V return.
 // TODO: This can go to DRR when GPU return has operands.
 class GPUReturnOpConversion final : public OpConversionPattern<gpu::ReturnOp> {
@@ -301,12 +314,10 @@ LogicalResult GPUModuleConversion::matchAndRewrite(
       StringRef(spvModuleName));
 
   // Move the region from the module op into the SPIR-V module.
-  Region &spvModuleRegion = spvModule.body();
+  Region &spvModuleRegion = spvModule.getRegion();
   rewriter.inlineRegionBefore(moduleOp.body(), spvModuleRegion,
                               spvModuleRegion.begin());
-  // The spv.module build method adds a block with a terminator. Remove that
-  // block. The terminator of the module op in the remaining block will be
-  // legalized later.
+  // The spv.module build method adds a block. Remove that.
   rewriter.eraseBlock(&spvModuleRegion.back());
   rewriter.eraseOp(moduleOp);
   return success();
@@ -330,15 +341,11 @@ LogicalResult GPUReturnOpConversion::matchAndRewrite(
 // GPU To SPIRV Patterns.
 //===----------------------------------------------------------------------===//
 
-namespace {
-#include "GPUToSPIRV.cpp.inc"
-}
-
 void mlir::populateGPUToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                       RewritePatternSet &patterns) {
-  populateWithGenerated(patterns);
   patterns.add<
-      GPUFuncOpConversion, GPUModuleConversion, GPUReturnOpConversion,
+      GPUFuncOpConversion, GPUModuleConversion, GPUModuleEndConversion,
+      GPUReturnOpConversion,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
       LaunchConfigConversion<gpu::GridDimOp, spirv::BuiltIn::NumWorkgroups>,
       LaunchConfigConversion<gpu::ThreadIdOp,
