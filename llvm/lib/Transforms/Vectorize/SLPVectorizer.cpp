@@ -8239,7 +8239,7 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
     return false;
 
   LLVM_DEBUG(dbgs() << "SLP: array mappable to vector: " << *IEI << "\n");
-  return tryToVectorizeList(BuildVectorInsts, R, /*AllowReorder=*/false);
+  return tryToVectorizeList(BuildVectorInsts, R, /*AllowReorder=*/true);
 }
 
 bool SLPVectorizerPass::vectorizeSimpleInstructions(
