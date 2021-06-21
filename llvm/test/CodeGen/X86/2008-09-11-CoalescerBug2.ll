@@ -32,7 +32,7 @@ define i32 @func_44(i16 signext %p_46) nounwind {
 ; SOURCE-SCHED-NEXT:    pushl $0
 ; SOURCE-SCHED-NEXT:    pushl %ecx
 ; SOURCE-SCHED-NEXT:    pushl %edx
-; SOURCE-SCHED-NEXT:    calll func_48
+; SOURCE-SCHED-NEXT:    calll func_48@PLT
 ; SOURCE-SCHED-NEXT:    addl $28, %esp
 ; SOURCE-SCHED-NEXT:    retl
 entry:

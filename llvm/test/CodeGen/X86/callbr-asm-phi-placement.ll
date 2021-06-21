@@ -20,7 +20,7 @@ define void @test1(i8* %arg, i8** %mem) nounwind {
 ; CHECK-NEXT:  .LBB0_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq (%r14), %rbx
-; CHECK-NEXT:    callq foo
+; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:    movq %rbx, %rdi
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP

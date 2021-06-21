@@ -9,19 +9,19 @@
 define dso_local void @PR35765() {
 ; CHECK-LABEL: PR35765:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movb {{.*}}(%rip), %cl
+; CHECK-NEXT:    movb s1(%rip), %cl
 ; CHECK-NEXT:    addb $-118, %cl
 ; CHECK-NEXT:    movl $4, %eax
 ; CHECK-NEXT:    shll %cl, %eax
-; CHECK-NEXT:    movzwl {{.*}}(%rip), %ecx
-; CHECK-NEXT:    movzwl {{.*}}(%rip), %edx
+; CHECK-NEXT:    movzwl x(%rip), %ecx
+; CHECK-NEXT:    movzwl s2(%rip), %edx
 ; CHECK-NEXT:    notl %edx
 ; CHECK-NEXT:    orl $63488, %edx # imm = 0xF800
 ; CHECK-NEXT:    movzwl %dx, %edx
 ; CHECK-NEXT:    orl %ecx, %edx
 ; CHECK-NEXT:    xorl %eax, %edx
 ; CHECK-NEXT:    movslq %edx, %rax
-; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, ll(%rip)
 ; CHECK-NEXT:    retq
 entry:
   %bf.load.i = load i16, i16* bitcast ({ i8, i8 }* @s1 to i16*), align 2

@@ -33,14 +33,14 @@ define float @half_to_float() strictfp {
 ; X64-NOF16C:       ## %bb.0:
 ; X64-NOF16C-NEXT:    pushq %rax
 ; X64-NOF16C-NEXT:    .cfi_def_cfa_offset 16
-; X64-NOF16C-NEXT:    movzwl {{.*}}(%rip), %edi
+; X64-NOF16C-NEXT:    movzwl _a(%rip), %edi
 ; X64-NOF16C-NEXT:    callq ___extendhfsf2
 ; X64-NOF16C-NEXT:    popq %rax
 ; X64-NOF16C-NEXT:    retq
 ;
 ; X64-F16C-LABEL: half_to_float:
 ; X64-F16C:       ## %bb.0:
-; X64-F16C-NEXT:    movzwl {{.*}}(%rip), %eax
+; X64-F16C-NEXT:    movzwl _a(%rip), %eax
 ; X64-F16C-NEXT:    vmovd %eax, %xmm0
 ; X64-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X64-F16C-NEXT:    retq
@@ -74,7 +74,7 @@ define double @half_to_double() strictfp {
 ; X64-NOF16C:       ## %bb.0:
 ; X64-NOF16C-NEXT:    pushq %rax
 ; X64-NOF16C-NEXT:    .cfi_def_cfa_offset 16
-; X64-NOF16C-NEXT:    movzwl {{.*}}(%rip), %edi
+; X64-NOF16C-NEXT:    movzwl _a(%rip), %edi
 ; X64-NOF16C-NEXT:    callq ___extendhfsf2
 ; X64-NOF16C-NEXT:    cvtss2sd %xmm0, %xmm0
 ; X64-NOF16C-NEXT:    popq %rax
@@ -82,7 +82,7 @@ define double @half_to_double() strictfp {
 ;
 ; X64-F16C-LABEL: half_to_double:
 ; X64-F16C:       ## %bb.0:
-; X64-F16C-NEXT:    movzwl {{.*}}(%rip), %eax
+; X64-F16C-NEXT:    movzwl _a(%rip), %eax
 ; X64-F16C-NEXT:    vmovd %eax, %xmm0
 ; X64-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X64-F16C-NEXT:    vcvtss2sd %xmm0, %xmm0, %xmm0
@@ -117,7 +117,7 @@ define x86_fp80 @half_to_fp80() strictfp {
 ; X64-NOF16C:       ## %bb.0:
 ; X64-NOF16C-NEXT:    pushq %rax
 ; X64-NOF16C-NEXT:    .cfi_def_cfa_offset 16
-; X64-NOF16C-NEXT:    movzwl {{.*}}(%rip), %edi
+; X64-NOF16C-NEXT:    movzwl _a(%rip), %edi
 ; X64-NOF16C-NEXT:    callq ___extendhfsf2
 ; X64-NOF16C-NEXT:    movss %xmm0, {{[0-9]+}}(%rsp)
 ; X64-NOF16C-NEXT:    flds {{[0-9]+}}(%rsp)
@@ -127,7 +127,7 @@ define x86_fp80 @half_to_fp80() strictfp {
 ;
 ; X64-F16C-LABEL: half_to_fp80:
 ; X64-F16C:       ## %bb.0:
-; X64-F16C-NEXT:    movzwl {{.*}}(%rip), %eax
+; X64-F16C-NEXT:    movzwl _a(%rip), %eax
 ; X64-F16C-NEXT:    vmovd %eax, %xmm0
 ; X64-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; X64-F16C-NEXT:    vmovss %xmm0, -{{[0-9]+}}(%rsp)
@@ -169,7 +169,7 @@ define void @float_to_half(float %0) strictfp {
 ; X64-NOF16C-NEXT:    pushq %rax
 ; X64-NOF16C-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NOF16C-NEXT:    callq ___truncsfhf2
-; X64-NOF16C-NEXT:    movw %ax, {{.*}}(%rip)
+; X64-NOF16C-NEXT:    movw %ax, _a(%rip)
 ; X64-NOF16C-NEXT:    popq %rax
 ; X64-NOF16C-NEXT:    retq
 ;
@@ -178,7 +178,7 @@ define void @float_to_half(float %0) strictfp {
 ; X64-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-F16C-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X64-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; X64-F16C-NEXT:    vpextrw $0, %xmm0, {{.*}}(%rip)
+; X64-F16C-NEXT:    vpextrw $0, %xmm0, _a(%rip)
 ; X64-F16C-NEXT:    retq
   %2 = tail call half @llvm.experimental.constrained.fptrunc.f16.f32(float %0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   store half %2, half* @a, align 2
@@ -215,7 +215,7 @@ define void @double_to_half(double %0) strictfp {
 ; X64-NOF16C-NEXT:    pushq %rax
 ; X64-NOF16C-NEXT:    .cfi_def_cfa_offset 16
 ; X64-NOF16C-NEXT:    callq ___truncdfhf2
-; X64-NOF16C-NEXT:    movw %ax, {{.*}}(%rip)
+; X64-NOF16C-NEXT:    movw %ax, _a(%rip)
 ; X64-NOF16C-NEXT:    popq %rax
 ; X64-NOF16C-NEXT:    retq
 ;
@@ -224,7 +224,7 @@ define void @double_to_half(double %0) strictfp {
 ; X64-F16C-NEXT:    pushq %rax
 ; X64-F16C-NEXT:    .cfi_def_cfa_offset 16
 ; X64-F16C-NEXT:    callq ___truncdfhf2
-; X64-F16C-NEXT:    movw %ax, {{.*}}(%rip)
+; X64-F16C-NEXT:    movw %ax, _a(%rip)
 ; X64-F16C-NEXT:    popq %rax
 ; X64-F16C-NEXT:    retq
   %2 = tail call half @llvm.experimental.constrained.fptrunc.f16.f64(double %0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -265,7 +265,7 @@ define void @fp80_to_half(x86_fp80 %0) strictfp {
 ; X64-NOF16C-NEXT:    fstpt (%rsp)
 ; X64-NOF16C-NEXT:    wait
 ; X64-NOF16C-NEXT:    callq ___truncxfhf2
-; X64-NOF16C-NEXT:    movw %ax, {{.*}}(%rip)
+; X64-NOF16C-NEXT:    movw %ax, _a(%rip)
 ; X64-NOF16C-NEXT:    addq $24, %rsp
 ; X64-NOF16C-NEXT:    retq
 ;
@@ -277,7 +277,7 @@ define void @fp80_to_half(x86_fp80 %0) strictfp {
 ; X64-F16C-NEXT:    fstpt (%rsp)
 ; X64-F16C-NEXT:    wait
 ; X64-F16C-NEXT:    callq ___truncxfhf2
-; X64-F16C-NEXT:    movw %ax, {{.*}}(%rip)
+; X64-F16C-NEXT:    movw %ax, _a(%rip)
 ; X64-F16C-NEXT:    addq $24, %rsp
 ; X64-F16C-NEXT:    retq
   %2 = tail call half @llvm.experimental.constrained.fptrunc.f16.f80(x86_fp80 %0, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -332,30 +332,30 @@ define void @add() strictfp {
 ; X64-NOF16C:       ## %bb.0:
 ; X64-NOF16C-NEXT:    pushq %rax
 ; X64-NOF16C-NEXT:    .cfi_def_cfa_offset 16
-; X64-NOF16C-NEXT:    movzwl {{.*}}(%rip), %edi
+; X64-NOF16C-NEXT:    movzwl _a(%rip), %edi
 ; X64-NOF16C-NEXT:    callq ___extendhfsf2
 ; X64-NOF16C-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
-; X64-NOF16C-NEXT:    movzwl {{.*}}(%rip), %edi
+; X64-NOF16C-NEXT:    movzwl _b(%rip), %edi
 ; X64-NOF16C-NEXT:    callq ___extendhfsf2
 ; X64-NOF16C-NEXT:    addss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 4-byte Folded Reload
 ; X64-NOF16C-NEXT:    callq ___truncsfhf2
-; X64-NOF16C-NEXT:    movw %ax, {{.*}}(%rip)
+; X64-NOF16C-NEXT:    movw %ax, _c(%rip)
 ; X64-NOF16C-NEXT:    popq %rax
 ; X64-NOF16C-NEXT:    retq
 ;
 ; X64-F16C-LABEL: add:
 ; X64-F16C:       ## %bb.0:
-; X64-F16C-NEXT:    movzwl {{.*}}(%rip), %eax
+; X64-F16C-NEXT:    movzwl _a(%rip), %eax
 ; X64-F16C-NEXT:    vmovd %eax, %xmm0
 ; X64-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; X64-F16C-NEXT:    movzwl {{.*}}(%rip), %eax
+; X64-F16C-NEXT:    movzwl _b(%rip), %eax
 ; X64-F16C-NEXT:    vmovd %eax, %xmm1
 ; X64-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; X64-F16C-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; X64-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-F16C-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; X64-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; X64-F16C-NEXT:    vpextrw $0, %xmm0, {{.*}}(%rip)
+; X64-F16C-NEXT:    vpextrw $0, %xmm0, _c(%rip)
 ; X64-F16C-NEXT:    retq
   %1 = load half, half* @a, align 2
   %2 = tail call float @llvm.experimental.constrained.fpext.f32.f16(half %1, metadata !"fpexcept.strict") #0

@@ -27,7 +27,7 @@ define void @fn2() nounwind optsize {
 ; CHECK-NEXT:    pushl %ebx
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    movl $48, (%esp)
-; CHECK-NEXT:    calll putchar
+; CHECK-NEXT:    calll putchar@PLT
 ; CHECK-NEXT:    movl h, %eax
 ; CHECK-NEXT:    movl c, %ecx
 ; CHECK-NEXT:    movl j, %edx

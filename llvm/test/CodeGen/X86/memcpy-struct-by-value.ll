@@ -24,7 +24,7 @@ define void @test1(%struct.large* nocapture %x) nounwind {
 ; NOFAST32-NEXT:    movl $1024, %ecx # imm = 0x400
 ; NOFAST32-NEXT:    movl %esp, %edi
 ; NOFAST32-NEXT:    rep;movsl (%esi), %es:(%edi)
-; NOFAST32-NEXT:    calll foo
+; NOFAST32-NEXT:    calll foo@PLT
 ; NOFAST32-NEXT:    addl $4100, %esp # imm = 0x1004
 ; NOFAST32-NEXT:    popl %esi
 ; NOFAST32-NEXT:    popl %edi
@@ -39,7 +39,7 @@ define void @test1(%struct.large* nocapture %x) nounwind {
 ; FAST32-NEXT:    movl $4096, %ecx # imm = 0x1000
 ; FAST32-NEXT:    movl %esp, %edi
 ; FAST32-NEXT:    rep;movsb (%esi), %es:(%edi)
-; FAST32-NEXT:    calll foo
+; FAST32-NEXT:    calll foo@PLT
 ; FAST32-NEXT:    addl $4100, %esp # imm = 0x1004
 ; FAST32-NEXT:    popl %esi
 ; FAST32-NEXT:    popl %edi
@@ -52,7 +52,7 @@ define void @test1(%struct.large* nocapture %x) nounwind {
 ; NOFAST-NEXT:    movl $512, %ecx # imm = 0x200
 ; NOFAST-NEXT:    movq %rsp, %rdi
 ; NOFAST-NEXT:    rep;movsq (%rsi), %es:(%rdi)
-; NOFAST-NEXT:    callq foo
+; NOFAST-NEXT:    callq foo@PLT
 ; NOFAST-NEXT:    addq $4104, %rsp # imm = 0x1008
 ; NOFAST-NEXT:    retq
 ;
@@ -63,7 +63,7 @@ define void @test1(%struct.large* nocapture %x) nounwind {
 ; FAST-NEXT:    movl $4096, %ecx # imm = 0x1000
 ; FAST-NEXT:    movq %rsp, %rdi
 ; FAST-NEXT:    rep;movsb (%rsi), %es:(%rdi)
-; FAST-NEXT:    callq foo
+; FAST-NEXT:    callq foo@PLT
 ; FAST-NEXT:    addq $4104, %rsp # imm = 0x1008
 ; FAST-NEXT:    retq
   call void @foo(%struct.large* align 8 byval(%struct.large) %x)
@@ -81,7 +81,7 @@ define void @test2(%struct.large* nocapture %x) nounwind minsize {
 ; NOFAST32-NEXT:    movl $1024, %ecx # imm = 0x400
 ; NOFAST32-NEXT:    movl %esp, %edi
 ; NOFAST32-NEXT:    rep;movsl (%esi), %es:(%edi)
-; NOFAST32-NEXT:    calll foo
+; NOFAST32-NEXT:    calll foo@PLT
 ; NOFAST32-NEXT:    addl $4100, %esp # imm = 0x1004
 ; NOFAST32-NEXT:    popl %esi
 ; NOFAST32-NEXT:    popl %edi
@@ -96,7 +96,7 @@ define void @test2(%struct.large* nocapture %x) nounwind minsize {
 ; FAST32-NEXT:    movl $4096, %ecx # imm = 0x1000
 ; FAST32-NEXT:    movl %esp, %edi
 ; FAST32-NEXT:    rep;movsb (%esi), %es:(%edi)
-; FAST32-NEXT:    calll foo
+; FAST32-NEXT:    calll foo@PLT
 ; FAST32-NEXT:    addl $4100, %esp # imm = 0x1004
 ; FAST32-NEXT:    popl %esi
 ; FAST32-NEXT:    popl %edi
@@ -109,7 +109,7 @@ define void @test2(%struct.large* nocapture %x) nounwind minsize {
 ; NOFAST-NEXT:    movl $512, %ecx # imm = 0x200
 ; NOFAST-NEXT:    movq %rsp, %rdi
 ; NOFAST-NEXT:    rep;movsq (%rsi), %es:(%rdi)
-; NOFAST-NEXT:    callq foo
+; NOFAST-NEXT:    callq foo@PLT
 ; NOFAST-NEXT:    addq $4104, %rsp # imm = 0x1008
 ; NOFAST-NEXT:    retq
 ;
@@ -120,7 +120,7 @@ define void @test2(%struct.large* nocapture %x) nounwind minsize {
 ; FAST-NEXT:    movl $4096, %ecx # imm = 0x1000
 ; FAST-NEXT:    movq %rsp, %rdi
 ; FAST-NEXT:    rep;movsb (%rsi), %es:(%rdi)
-; FAST-NEXT:    callq foo
+; FAST-NEXT:    callq foo@PLT
 ; FAST-NEXT:    addq $4104, %rsp # imm = 0x1008
 ; FAST-NEXT:    retq
   call void @foo(%struct.large* align 8 byval(%struct.large) %x)
@@ -142,7 +142,7 @@ define void @test3(%struct.large_oddsize* nocapture %x) nounwind minsize {
 ; NOFAST32-NEXT:    movl $4095, %ecx # imm = 0xFFF
 ; NOFAST32-NEXT:    movl %esp, %edi
 ; NOFAST32-NEXT:    rep;movsb (%esi), %es:(%edi)
-; NOFAST32-NEXT:    calll foo_oddsize
+; NOFAST32-NEXT:    calll foo_oddsize@PLT
 ; NOFAST32-NEXT:    addl $4100, %esp # imm = 0x1004
 ; NOFAST32-NEXT:    popl %esi
 ; NOFAST32-NEXT:    popl %edi
@@ -157,7 +157,7 @@ define void @test3(%struct.large_oddsize* nocapture %x) nounwind minsize {
 ; FAST32-NEXT:    movl $4095, %ecx # imm = 0xFFF
 ; FAST32-NEXT:    movl %esp, %edi
 ; FAST32-NEXT:    rep;movsb (%esi), %es:(%edi)
-; FAST32-NEXT:    calll foo_oddsize
+; FAST32-NEXT:    calll foo_oddsize@PLT
 ; FAST32-NEXT:    addl $4100, %esp # imm = 0x1004
 ; FAST32-NEXT:    popl %esi
 ; FAST32-NEXT:    popl %edi
@@ -170,7 +170,7 @@ define void @test3(%struct.large_oddsize* nocapture %x) nounwind minsize {
 ; NOFAST-NEXT:    movl $4095, %ecx # imm = 0xFFF
 ; NOFAST-NEXT:    movq %rsp, %rdi
 ; NOFAST-NEXT:    rep;movsb (%rsi), %es:(%rdi)
-; NOFAST-NEXT:    callq foo_oddsize
+; NOFAST-NEXT:    callq foo_oddsize@PLT
 ; NOFAST-NEXT:    addq $4104, %rsp # imm = 0x1008
 ; NOFAST-NEXT:    retq
 ;
@@ -181,7 +181,7 @@ define void @test3(%struct.large_oddsize* nocapture %x) nounwind minsize {
 ; FAST-NEXT:    movl $4095, %ecx # imm = 0xFFF
 ; FAST-NEXT:    movq %rsp, %rdi
 ; FAST-NEXT:    rep;movsb (%rsi), %es:(%rdi)
-; FAST-NEXT:    callq foo_oddsize
+; FAST-NEXT:    callq foo_oddsize@PLT
 ; FAST-NEXT:    addq $4104, %rsp # imm = 0x1008
 ; FAST-NEXT:    retq
   call void @foo_oddsize(%struct.large_oddsize* align 8 byval(%struct.large_oddsize) %x)

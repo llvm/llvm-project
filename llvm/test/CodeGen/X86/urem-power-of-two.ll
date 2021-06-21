@@ -106,12 +106,12 @@ define i8 @and_pow_2(i8 %x, i8 %y) {
 define <4 x i32> @vec_const_uniform_pow_2(<4 x i32> %x) {
 ; X86-LABEL: vec_const_uniform_pow_2:
 ; X86:       # %bb.0:
-; X86-NEXT:    andps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vec_const_uniform_pow_2:
 ; X64:       # %bb.0:
-; X64-NEXT:    andps {{.*}}(%rip), %xmm0
+; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    retq
   %urem = urem <4 x i32> %x, <i32 16, i32 16, i32 16, i32 16>
   ret <4 x i32> %urem
@@ -120,12 +120,12 @@ define <4 x i32> @vec_const_uniform_pow_2(<4 x i32> %x) {
 define <4 x i32> @vec_const_nonuniform_pow_2(<4 x i32> %x) {
 ; X86-LABEL: vec_const_nonuniform_pow_2:
 ; X86:       # %bb.0:
-; X86-NEXT:    andps {{\.LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: vec_const_nonuniform_pow_2:
 ; X64:       # %bb.0:
-; X64-NEXT:    andps {{.*}}(%rip), %xmm0
+; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    retq
   %urem = urem <4 x i32> %x, <i32 2, i32 4, i32 8, i32 16>
   ret <4 x i32> %urem

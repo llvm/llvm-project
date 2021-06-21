@@ -13,7 +13,7 @@ define <1 x double> @pr23103(<1 x double>* align 8 %Vp) {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    callq foo
+; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8

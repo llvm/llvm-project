@@ -91,7 +91,7 @@ define void @cmpxchg16b_global_with_offset() nounwind {
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    lock cmpxchg16b _cmpxchg16b_global+{{.*}}(%rip)
+; CHECK-NEXT:    lock cmpxchg16b _cmpxchg16b_global+16(%rip)
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
 ;
@@ -138,8 +138,8 @@ define void @fetch_and_nand(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB2_1
 ; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
-; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
-; CHECK-NEXT:    movq %rdx, _var+{{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, _var(%rip)
+; CHECK-NEXT:    movq %rdx, _var+8(%rip)
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
 ;
@@ -206,8 +206,8 @@ define void @fetch_and_or(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB3_1
 ; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
-; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
-; CHECK-NEXT:    movq %rdx, _var+{{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, _var(%rip)
+; CHECK-NEXT:    movq %rdx, _var+8(%rip)
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
 ;
@@ -274,8 +274,8 @@ define void @fetch_and_add(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB4_1
 ; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
-; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
-; CHECK-NEXT:    movq %rdx, _var+{{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, _var(%rip)
+; CHECK-NEXT:    movq %rdx, _var+8(%rip)
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
 ;
@@ -342,8 +342,8 @@ define void @fetch_and_sub(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB5_1
 ; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
-; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
-; CHECK-NEXT:    movq %rdx, _var+{{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, _var(%rip)
+; CHECK-NEXT:    movq %rdx, _var+8(%rip)
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
 ;
@@ -413,8 +413,8 @@ define void @fetch_and_min(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB6_1
 ; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
-; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
-; CHECK-NEXT:    movq %rdx, _var+{{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, _var(%rip)
+; CHECK-NEXT:    movq %rdx, _var+8(%rip)
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
 ;
@@ -484,8 +484,8 @@ define void @fetch_and_max(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB7_1
 ; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
-; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
-; CHECK-NEXT:    movq %rdx, _var+{{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, _var(%rip)
+; CHECK-NEXT:    movq %rdx, _var+8(%rip)
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
 ;
@@ -555,8 +555,8 @@ define void @fetch_and_umin(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB8_1
 ; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
-; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
-; CHECK-NEXT:    movq %rdx, _var+{{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, _var(%rip)
+; CHECK-NEXT:    movq %rdx, _var+8(%rip)
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
 ;
@@ -626,8 +626,8 @@ define void @fetch_and_umax(i128* %p, i128 %bits) {
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
 ; CHECK-NEXT:    jne LBB9_1
 ; CHECK-NEXT:  ## %bb.2: ## %atomicrmw.end
-; CHECK-NEXT:    movq %rax, {{.*}}(%rip)
-; CHECK-NEXT:    movq %rdx, _var+{{.*}}(%rip)
+; CHECK-NEXT:    movq %rax, _var(%rip)
+; CHECK-NEXT:    movq %rdx, _var+8(%rip)
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
 ;

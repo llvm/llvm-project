@@ -5,12 +5,12 @@
 define <8 x i64> @avx512_funnel_shift_q_512(<8 x i64> %a0, <8 x i64> %a1) {
 ; X86-LABEL: avx512_funnel_shift_q_512:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpshldvq {{\.LCPI[0-9]+_[0-9]+}}, %zmm1, %zmm0
+; X86-NEXT:    vpshldvq {{\.?LCPI[0-9]+_[0-9]+}}, %zmm1, %zmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: avx512_funnel_shift_q_512:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpshldvq {{.*}}(%rip), %zmm1, %zmm0
+; X64-NEXT:    vpshldvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm0
 ; X64-NEXT:    retq
   %1 =  shl <8 x i64> %a0, <i64 31, i64 33, i64 31, i64 33, i64 31, i64 33, i64 31, i64 33>
   %2 = lshr <8 x i64> %a1, <i64 33, i64 31, i64 33, i64 31, i64 33, i64 31, i64 33, i64 31>
@@ -32,12 +32,12 @@ define <8 x i64> @avx512_funnel_shift_q_512_splat(<8 x i64> %a0, <8 x i64> %a1) 
 define <16 x i32> @avx512_funnel_shift_d_512(<16 x i32> %a0, <16 x i32> %a1) {
 ; X86-LABEL: avx512_funnel_shift_d_512:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpshldvd {{\.LCPI[0-9]+_[0-9]+}}, %zmm1, %zmm0
+; X86-NEXT:    vpshldvd {{\.?LCPI[0-9]+_[0-9]+}}, %zmm1, %zmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: avx512_funnel_shift_d_512:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpshldvd {{.*}}(%rip), %zmm1, %zmm0
+; X64-NEXT:    vpshldvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm0
 ; X64-NEXT:    retq
   %1 =  shl <16 x i32> %a0, <i32 15, i32 17, i32 15, i32 17, i32 15, i32 17, i32 15, i32 17, i32 15, i32 17, i32 15, i32 17, i32 15, i32 17, i32 15, i32 17>
   %2 = lshr <16 x i32> %a1, <i32 17, i32 15, i32 17, i32 15, i32 17, i32 15, i32 17, i32 15, i32 17, i32 15, i32 17, i32 15, i32 17, i32 15, i32 17, i32 15>
@@ -59,12 +59,12 @@ define <16 x i32> @avx512_funnel_shift_d_512_splat(<16 x i32> %a0, <16 x i32> %a
 define <32 x i16> @avx512_funnel_shift_w_512(<32 x i16> %a0, <32 x i16> %a1) {
 ; X86-LABEL: avx512_funnel_shift_w_512:
 ; X86:       # %bb.0:
-; X86-NEXT:    vpshldvw {{\.LCPI[0-9]+_[0-9]+}}, %zmm1, %zmm0
+; X86-NEXT:    vpshldvw {{\.?LCPI[0-9]+_[0-9]+}}, %zmm1, %zmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: avx512_funnel_shift_w_512:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpshldvw {{.*}}(%rip), %zmm1, %zmm0
+; X64-NEXT:    vpshldvw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm0
 ; X64-NEXT:    retq
   %1 =  shl <32 x i16> %a0, <i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9>
   %2 = lshr <32 x i16> %a1, <i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7, i16 9, i16 7>

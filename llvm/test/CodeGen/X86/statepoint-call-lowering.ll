@@ -20,7 +20,7 @@ define i1 @test_i1_return() gc "statepoint-example" {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq return_i1
+; CHECK-NEXT:    callq return_i1@PLT
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -38,7 +38,7 @@ define i32 @test_i32_return() gc "statepoint-example" {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq return_i32
+; CHECK-NEXT:    callq return_i32@PLT
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -54,7 +54,7 @@ define i32* @test_i32ptr_return() gc "statepoint-example" {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq return_i32ptr
+; CHECK-NEXT:    callq return_i32ptr@PLT
 ; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -70,7 +70,7 @@ define float @test_float_return() gc "statepoint-example" {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq return_float
+; CHECK-NEXT:    callq return_float@PLT
 ; CHECK-NEXT:  .Ltmp3:
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -86,7 +86,7 @@ define %struct @test_struct_return() gc "statepoint-example" {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    callq return_struct
+; CHECK-NEXT:    callq return_struct@PLT
 ; CHECK-NEXT:  .Ltmp4:
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -103,7 +103,7 @@ define i1 @test_relocate(i32 addrspace(1)* %a) gc "statepoint-example" {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movq %rdi, (%rsp)
-; CHECK-NEXT:    callq return_i1
+; CHECK-NEXT:    callq return_i1@PLT
 ; CHECK-NEXT:  .Ltmp5:
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -123,7 +123,7 @@ define void @test_void_vararg() gc "statepoint-example" {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movl $42, %edi
 ; CHECK-NEXT:    movl $43, %esi
-; CHECK-NEXT:    callq varargf
+; CHECK-NEXT:    callq varargf@PLT
 ; CHECK-NEXT:  .Ltmp6:
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -168,14 +168,14 @@ define i1 @test_cross_bb(i32 addrspace(1)* %a, i1 %external_cond) gc "statepoint
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movl %esi, %ebp
 ; CHECK-NEXT:    movq %rdi, (%rsp)
-; CHECK-NEXT:    callq return_i1
+; CHECK-NEXT:    callq return_i1@PLT
 ; CHECK-NEXT:  .Ltmp8:
 ; CHECK-NEXT:    testb $1, %bpl
 ; CHECK-NEXT:    je .LBB8_2
 ; CHECK-NEXT:  # %bb.1: # %left
 ; CHECK-NEXT:    movl %eax, %ebx
 ; CHECK-NEXT:    movq (%rsp), %rdi
-; CHECK-NEXT:    callq consume
+; CHECK-NEXT:    callq consume@PLT
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    jmp .LBB8_3
 ; CHECK-NEXT:  .LBB8_2: # %right
@@ -225,7 +225,7 @@ define void @test_attributes(%struct2* byval(%struct2) %s) gc "statepoint-exampl
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset 8
 ; CHECK-NEXT:    pushq %rcx
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset 8
-; CHECK-NEXT:    callq consume_attributes
+; CHECK-NEXT:    callq consume_attributes@PLT
 ; CHECK-NEXT:  .Ltmp9:
 ; CHECK-NEXT:    addq $32, %rsp
 ; CHECK-NEXT:    .cfi_adjust_cfa_offset -32

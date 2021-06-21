@@ -1905,13 +1905,13 @@ define <2 x i64> @test_mm_mask_set1_epi32(<2 x i64> %__O, i8 zeroext %__M)  {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpbroadcastd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0 {%k1}
+; X86-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 {%k1}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_mask_set1_epi32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm0 {%k1}
+; X64-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1}
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__O to <4 x i32>
@@ -1927,13 +1927,13 @@ define <2 x i64> @test_mm_maskz_set1_epi32(i8 zeroext %__M) {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpbroadcastd {{\.LCPI[0-9]+_[0-9]+}}, %xmm0 {%k1} {z}
+; X86-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_maskz_set1_epi32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm0 {%k1} {z}
+; X64-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1} {z}
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast i8 %__M to <8 x i1>
@@ -1948,13 +1948,13 @@ define <4 x i64> @test_mm256_mask_set1_epi32(<4 x i64> %__O, i8 zeroext %__M)  {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpbroadcastd {{\.LCPI[0-9]+_[0-9]+}}, %ymm0 {%k1}
+; X86-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0 {%k1}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_mask_set1_epi32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm0 {%k1}
+; X64-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0 {%k1}
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__O to <8 x i32>
@@ -1969,13 +1969,13 @@ define <4 x i64> @test_mm256_maskz_set1_epi32(i8 zeroext %__M)  {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vpbroadcastd {{\.LCPI[0-9]+_[0-9]+}}, %ymm0 {%k1} {z}
+; X86-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0 {%k1} {z}
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_maskz_set1_epi32:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm0 {%k1} {z}
+; X64-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0 {%k1} {z}
 ; X64-NEXT:    retq
 entry:
   %0 = bitcast i8 %__M to <8 x i1>

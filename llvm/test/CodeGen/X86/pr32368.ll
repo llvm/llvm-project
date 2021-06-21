@@ -7,16 +7,16 @@
 define <4 x float> @PR32368_128(<4 x float>) {
 ; SSE-LABEL: PR32368_128:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    addps %xmm0, %xmm0
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: PR32368_128:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vaddps %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: PR32368_128:
@@ -61,9 +61,9 @@ define <8 x float> @PR32368_256(<8 x float>) {
 ;
 ; AVX1-LABEL: PR32368_256:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    vaddps %ymm0, %ymm0, %ymm0
-; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: PR32368_256:
@@ -138,9 +138,9 @@ define <16 x float> @PR32368_512(<16 x float>) {
 ;
 ; AVX512-LABEL: PR32368_512:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpandd {{.*}}(%rip){1to16}, %zmm0, %zmm0
+; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
 ; AVX512-NEXT:    vaddps %zmm0, %zmm0, %zmm0
-; AVX512-NEXT:    vpandd {{.*}}(%rip){1to16}, %zmm0, %zmm0
+; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %2 = bitcast <16 x float> %0 to <16 x i32>
   %3 = and <16 x i32> %2, <i32 -292, i32 -292, i32 -292, i32 -292, i32 -292, i32 -292, i32 -292, i32 -292, i32 -292, i32 -292, i32 -292, i32 -292, i32 -292, i32 -292, i32 -292, i32 -292>

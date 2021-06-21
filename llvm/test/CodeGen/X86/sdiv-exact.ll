@@ -96,8 +96,8 @@ define <4 x i32> @test5(<4 x i32> %x) {
 ;
 ; X64-LABEL: test5:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpmulld {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %div = sdiv exact <4 x i32> %x, <i32 24, i32 24, i32 25, i32 25>
   ret <4 x i32> %div
@@ -124,8 +124,8 @@ define <4 x i32> @test6(<4 x i32> %x) {
 ;
 ; X64-LABEL: test6:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpmulld {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %div = sdiv exact <4 x i32> %x, <i32 24, i32 24, i32 26, i32 26>
   ret <4 x i32> %div
@@ -146,7 +146,7 @@ define <4 x i32> @test7(<4 x i32> %x) {
 ;
 ; X64-LABEL: test7:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpmulld {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %div = sdiv exact <4 x i32> %x, <i32 25, i32 25, i32 27, i32 27>
   ret <4 x i32> %div
@@ -171,8 +171,8 @@ define <4 x i32> @test8(<4 x i32> %x) {
 ;
 ; X64-LABEL: test8:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpmulld {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %div = sdiv exact <4 x i32> %x, <i32 1, i32 1, i32 24, i32 24>
   ret <4 x i32> %div

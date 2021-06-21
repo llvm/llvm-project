@@ -12,7 +12,7 @@ define void @f(i32* %x, i32 %c32, i32* %y) nounwind {
 ; CHECK-NEXT:    movq %rdx, %r14
 ; CHECK-NEXT:    movl %esi, %ebp
 ; CHECK-NEXT:    movl (%rdi), %ebx
-; CHECK-NEXT:    callq free_v
+; CHECK-NEXT:    callq free_v@PLT
 ; CHECK-NEXT:    testl %ebp, %ebp
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %left

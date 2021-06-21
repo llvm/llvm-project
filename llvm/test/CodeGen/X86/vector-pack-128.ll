@@ -12,14 +12,14 @@ define <8 x i16> @trunc_concat_packssdw_128(<4 x i32> %a0, <4 x i32> %a1) nounwi
 ; SSE-LABEL: trunc_concat_packssdw_128:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    psrad $17, %xmm0
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm1
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    packssdw %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc_concat_packssdw_128:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsrad $17, %xmm0, %xmm0
-; AVX1-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -34,7 +34,7 @@ define <8 x i16> @trunc_concat_packssdw_128(<4 x i32> %a0, <4 x i32> %a1) nounwi
 ; AVX512-LABEL: trunc_concat_packssdw_128:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsrad $17, %xmm0, %xmm0
-; AVX512-NEXT:    vpandd {{.*}}(%rip){1to4}, %xmm1, %xmm1
+; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
 ; AVX512-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = ashr <4 x i32> %a0, <i32 17, i32 17, i32 17, i32 17>
@@ -48,21 +48,21 @@ define <8 x i16> @trunc_concat_packusdw_128(<4 x i32> %a0, <4 x i32> %a1) nounwi
 ; SSE2-LABEL: trunc_concat_packusdw_128:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psrld $17, %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    packssdw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: trunc_concat_packusdw_128:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    psrld $17, %xmm0
-; SSE4-NEXT:    pand {{.*}}(%rip), %xmm1
+; SSE4-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE4-NEXT:    packusdw %xmm1, %xmm0
 ; SSE4-NEXT:    retq
 ;
 ; AVX1-LABEL: trunc_concat_packusdw_128:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsrld $17, %xmm0, %xmm0
-; AVX1-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -77,7 +77,7 @@ define <8 x i16> @trunc_concat_packusdw_128(<4 x i32> %a0, <4 x i32> %a1) nounwi
 ; AVX512-LABEL: trunc_concat_packusdw_128:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsrld $17, %xmm0, %xmm0
-; AVX512-NEXT:    vpandd {{.*}}(%rip){1to4}, %xmm1, %xmm1
+; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
 ; AVX512-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = lshr <4 x i32> %a0, <i32 17, i32 17, i32 17, i32 17>
@@ -91,14 +91,14 @@ define <16 x i8> @trunc_concat_packsswb_128(<8 x i16> %a0, <8 x i16> %a1) nounwi
 ; SSE-LABEL: trunc_concat_packsswb_128:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    psraw $15, %xmm0
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm1
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    packsswb %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: trunc_concat_packsswb_128:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsraw $15, %xmm0, %xmm0
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = ashr <8 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
@@ -112,14 +112,14 @@ define <16 x i8> @trunc_concat_packuswb_128(<8 x i16> %a0, <8 x i16> %a1) nounwi
 ; SSE-LABEL: trunc_concat_packuswb_128:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    psrlw $15, %xmm0
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm1
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    packuswb %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: trunc_concat_packuswb_128:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsrlw $15, %xmm0, %xmm0
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = lshr <8 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
@@ -135,7 +135,7 @@ define <8 x i16> @concat_trunc_packssdw_128(<4 x i32> %a0, <4 x i32> %a1) nounwi
 ; SSE2-LABEL: concat_trunc_packssdw_128:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psrad $17, %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    packssdw %xmm0, %xmm0
 ; SSE2-NEXT:    packuswb %xmm1, %xmm1
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -144,14 +144,14 @@ define <8 x i16> @concat_trunc_packssdw_128(<4 x i32> %a0, <4 x i32> %a1) nounwi
 ; SSE4-LABEL: concat_trunc_packssdw_128:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    psrad $17, %xmm0
-; SSE4-NEXT:    pand {{.*}}(%rip), %xmm1
+; SSE4-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE4-NEXT:    packssdw %xmm1, %xmm0
 ; SSE4-NEXT:    retq
 ;
 ; AVX1-LABEL: concat_trunc_packssdw_128:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsrad $17, %xmm0, %xmm0
-; AVX1-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -168,7 +168,7 @@ define <8 x i16> @concat_trunc_packssdw_128(<4 x i32> %a0, <4 x i32> %a1) nounwi
 ; AVX512-LABEL: concat_trunc_packssdw_128:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsrad $17, %xmm0, %xmm0
-; AVX512-NEXT:    vpandd {{.*}}(%rip){1to4}, %xmm1, %xmm1
+; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
 ; AVX512-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = ashr <4 x i32> %a0, <i32 17, i32 17, i32 17, i32 17>
@@ -183,7 +183,7 @@ define <8 x i16> @concat_trunc_packusdw_128(<4 x i32> %a0, <4 x i32> %a1) nounwi
 ; SSE2-LABEL: concat_trunc_packusdw_128:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    psrld $17, %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE2-NEXT:    packssdw %xmm0, %xmm0
 ; SSE2-NEXT:    packuswb %xmm1, %xmm1
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -192,14 +192,14 @@ define <8 x i16> @concat_trunc_packusdw_128(<4 x i32> %a0, <4 x i32> %a1) nounwi
 ; SSE4-LABEL: concat_trunc_packusdw_128:
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    psrld $17, %xmm0
-; SSE4-NEXT:    pand {{.*}}(%rip), %xmm1
+; SSE4-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE4-NEXT:    packusdw %xmm1, %xmm0
 ; SSE4-NEXT:    retq
 ;
 ; AVX1-LABEL: concat_trunc_packusdw_128:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsrld $17, %xmm0, %xmm0
-; AVX1-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -214,7 +214,7 @@ define <8 x i16> @concat_trunc_packusdw_128(<4 x i32> %a0, <4 x i32> %a1) nounwi
 ; AVX512-LABEL: concat_trunc_packusdw_128:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsrld $17, %xmm0, %xmm0
-; AVX512-NEXT:    vpandd {{.*}}(%rip){1to4}, %xmm1, %xmm1
+; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
 ; AVX512-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = lshr <4 x i32> %a0, <i32 17, i32 17, i32 17, i32 17>
@@ -229,14 +229,14 @@ define <16 x i8> @concat_trunc_packsswb_128(<8 x i16> %a0, <8 x i16> %a1) nounwi
 ; SSE-LABEL: concat_trunc_packsswb_128:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    psraw $15, %xmm0
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm1
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    packsswb %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: concat_trunc_packsswb_128:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsraw $15, %xmm0, %xmm0
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = ashr <8 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
@@ -251,14 +251,14 @@ define <16 x i8> @concat_trunc_packuswb_128(<8 x i16> %a0, <8 x i16> %a1) nounwi
 ; SSE-LABEL: concat_trunc_packuswb_128:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    psrlw $15, %xmm0
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm1
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    packuswb %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: concat_trunc_packuswb_128:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsrlw $15, %xmm0, %xmm0
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = lshr <8 x i16> %a0, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>

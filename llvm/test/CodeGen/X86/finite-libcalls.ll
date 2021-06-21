@@ -44,7 +44,7 @@ define x86_fp80 @exp_f80(x86_fp80 %x) #0 {
 ; GNU-NEXT:    subq $24, %rsp
 ; GNU-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; GNU-NEXT:    fstpt (%rsp)
-; GNU-NEXT:    callq expl
+; GNU-NEXT:    callq expl@PLT
 ; GNU-NEXT:    addq $24, %rsp
 ; GNU-NEXT:    retq
 ;
@@ -115,7 +115,7 @@ define x86_fp80 @exp2_f80(x86_fp80 %x) #0 {
 ; GNU-NEXT:    subq $24, %rsp
 ; GNU-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; GNU-NEXT:    fstpt (%rsp)
-; GNU-NEXT:    callq exp2l
+; GNU-NEXT:    callq exp2l@PLT
 ; GNU-NEXT:    addq $24, %rsp
 ; GNU-NEXT:    retq
 ;
@@ -186,7 +186,7 @@ define x86_fp80 @log_f80(x86_fp80 %x) #0 {
 ; GNU-NEXT:    subq $24, %rsp
 ; GNU-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; GNU-NEXT:    fstpt (%rsp)
-; GNU-NEXT:    callq logl
+; GNU-NEXT:    callq logl@PLT
 ; GNU-NEXT:    addq $24, %rsp
 ; GNU-NEXT:    retq
 ;
@@ -257,7 +257,7 @@ define x86_fp80 @log2_f80(x86_fp80 %x) #0 {
 ; GNU-NEXT:    subq $24, %rsp
 ; GNU-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; GNU-NEXT:    fstpt (%rsp)
-; GNU-NEXT:    callq log2l
+; GNU-NEXT:    callq log2l@PLT
 ; GNU-NEXT:    addq $24, %rsp
 ; GNU-NEXT:    retq
 ;
@@ -328,7 +328,7 @@ define x86_fp80 @log10_f80(x86_fp80 %x) #0 {
 ; GNU-NEXT:    subq $24, %rsp
 ; GNU-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; GNU-NEXT:    fstpt (%rsp)
-; GNU-NEXT:    callq log10l
+; GNU-NEXT:    callq log10l@PLT
 ; GNU-NEXT:    addq $24, %rsp
 ; GNU-NEXT:    retq
 ;
@@ -407,7 +407,7 @@ define x86_fp80 @pow_f80(x86_fp80 %x) #0 {
 ; GNU-NEXT:    fld %st(0)
 ; GNU-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; GNU-NEXT:    fstpt (%rsp)
-; GNU-NEXT:    callq powl
+; GNU-NEXT:    callq powl@PLT
 ; GNU-NEXT:    addq $40, %rsp
 ; GNU-NEXT:    retq
 ;

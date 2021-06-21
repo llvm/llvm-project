@@ -96,7 +96,7 @@ define <4 x double> @signbits_ashr_sitofp_0(<4 x i64> %a0) nounwind {
 ;
 ; X64-AVX2-LABEL: signbits_ashr_sitofp_0:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpsrlvq {{.*}}(%rip), %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpsrlvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [1073741824,536870912,268435456,134217728]
 ; X64-AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vpsubq %ymm1, %ymm0, %ymm0
@@ -309,7 +309,7 @@ define <2 x double> @signbits_sext_shl_sitofp(<2 x i16> %a0) nounwind {
 ; X64-AVX2-LABEL: signbits_sext_shl_sitofp:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vpmovsxwq %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpsllvq {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpsllvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X64-AVX2-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; X64-AVX2-NEXT:    retq
@@ -402,7 +402,7 @@ define float @signbits_ashr_sextvecinreg_bitops_extract_sitofp(<2 x i64> %a0, <4
 ;
 ; X64-AVX2-LABEL: signbits_ashr_sextvecinreg_bitops_extract_sitofp:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpsrlvq {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpsrlvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,8]
 ; X64-AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
@@ -515,7 +515,7 @@ define <4 x i32> @signbits_mask_ashr_smax(<4 x i32> %a0, <4 x i32> %a1) {
 ; X86-NEXT:    vpsrad $25, %xmm1, %xmm1
 ; X86-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; X86-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-AVX1-LABEL: signbits_mask_ashr_smax:
@@ -524,7 +524,7 @@ define <4 x i32> @signbits_mask_ashr_smax(<4 x i32> %a0, <4 x i32> %a1) {
 ; X64-AVX1-NEXT:    vpsrad $25, %xmm1, %xmm1
 ; X64-AVX1-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: signbits_mask_ashr_smax:
@@ -534,7 +534,7 @@ define <4 x i32> @signbits_mask_ashr_smax(<4 x i32> %a0, <4 x i32> %a1) {
 ; X64-AVX2-NEXT:    vpsravd %xmm2, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX2-NEXT:    retq
   %1 = ashr <4 x i32> %a0, <i32 25, i32 26, i32 27, i32 0>
   %2 = ashr <4 x i32> %a1, <i32 25, i32 26, i32 27, i32 0>
@@ -553,7 +553,7 @@ define <4 x i32> @signbits_mask_ashr_smin(<4 x i32> %a0, <4 x i32> %a1) {
 ; X86-NEXT:    vpsrad $25, %xmm1, %xmm1
 ; X86-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; X86-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-AVX1-LABEL: signbits_mask_ashr_smin:
@@ -562,7 +562,7 @@ define <4 x i32> @signbits_mask_ashr_smin(<4 x i32> %a0, <4 x i32> %a1) {
 ; X64-AVX1-NEXT:    vpsrad $25, %xmm1, %xmm1
 ; X64-AVX1-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: signbits_mask_ashr_smin:
@@ -572,7 +572,7 @@ define <4 x i32> @signbits_mask_ashr_smin(<4 x i32> %a0, <4 x i32> %a1) {
 ; X64-AVX2-NEXT:    vpsravd %xmm2, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX2-NEXT:    retq
   %1 = ashr <4 x i32> %a0, <i32 25, i32 26, i32 27, i32 0>
   %2 = ashr <4 x i32> %a1, <i32 25, i32 26, i32 27, i32 0>
@@ -591,7 +591,7 @@ define <4 x i32> @signbits_mask_ashr_umax(<4 x i32> %a0, <4 x i32> %a1) {
 ; X86-NEXT:    vpsrad $25, %xmm1, %xmm1
 ; X86-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; X86-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-AVX1-LABEL: signbits_mask_ashr_umax:
@@ -600,7 +600,7 @@ define <4 x i32> @signbits_mask_ashr_umax(<4 x i32> %a0, <4 x i32> %a1) {
 ; X64-AVX1-NEXT:    vpsrad $25, %xmm1, %xmm1
 ; X64-AVX1-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: signbits_mask_ashr_umax:
@@ -610,7 +610,7 @@ define <4 x i32> @signbits_mask_ashr_umax(<4 x i32> %a0, <4 x i32> %a1) {
 ; X64-AVX2-NEXT:    vpsravd %xmm2, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX2-NEXT:    retq
   %1 = ashr <4 x i32> %a0, <i32 25, i32 26, i32 27, i32 0>
   %2 = ashr <4 x i32> %a1, <i32 25, i32 26, i32 27, i32 0>
@@ -629,7 +629,7 @@ define <4 x i32> @signbits_mask_ashr_umin(<4 x i32> %a0, <4 x i32> %a1) {
 ; X86-NEXT:    vpsrad $25, %xmm1, %xmm1
 ; X86-NEXT:    vpminud %xmm1, %xmm0, %xmm0
 ; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; X86-NEXT:    vpand {{\.LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-AVX1-LABEL: signbits_mask_ashr_umin:
@@ -638,7 +638,7 @@ define <4 x i32> @signbits_mask_ashr_umin(<4 x i32> %a0, <4 x i32> %a1) {
 ; X64-AVX1-NEXT:    vpsrad $25, %xmm1, %xmm1
 ; X64-AVX1-NEXT:    vpminud %xmm1, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; X64-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: signbits_mask_ashr_umin:
@@ -648,7 +648,7 @@ define <4 x i32> @signbits_mask_ashr_umin(<4 x i32> %a0, <4 x i32> %a1) {
 ; X64-AVX2-NEXT:    vpsravd %xmm2, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vpminud %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-AVX2-NEXT:    retq
   %1 = ashr <4 x i32> %a0, <i32 25, i32 26, i32 27, i32 0>
   %2 = ashr <4 x i32> %a1, <i32 25, i32 26, i32 27, i32 0>
@@ -674,7 +674,7 @@ define void @cross_bb_signbits_insert_subvec(<32 x i8>* %ptr, <32 x i8> %x, <32 
 ; X86-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm0
 ; X86-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; X86-NEXT:    vandnps %ymm1, %ymm0, %ymm1
-; X86-NEXT:    vandps {{\.LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
 ; X86-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; X86-NEXT:    vmovaps %ymm0, (%eax)
 ; X86-NEXT:    vzeroupper
@@ -688,7 +688,7 @@ define void @cross_bb_signbits_insert_subvec(<32 x i8>* %ptr, <32 x i8> %x, <32 
 ; X64-AVX1-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm0
 ; X64-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; X64-AVX1-NEXT:    vandnps %ymm1, %ymm0, %ymm1
-; X64-AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; X64-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; X64-AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; X64-AVX1-NEXT:    vmovaps %ymm0, (%rdi)
 ; X64-AVX1-NEXT:    vzeroupper
@@ -698,7 +698,7 @@ define void @cross_bb_signbits_insert_subvec(<32 x i8>* %ptr, <32 x i8> %x, <32 
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; X64-AVX2-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm0
-; X64-AVX2-NEXT:    vpblendvb %ymm0, {{.*}}(%rip), %ymm1, %ymm0
+; X64-AVX2-NEXT:    vpblendvb %ymm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; X64-AVX2-NEXT:    vmovdqa %ymm0, (%rdi)
 ; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq

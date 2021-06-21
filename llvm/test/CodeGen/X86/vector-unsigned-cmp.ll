@@ -481,7 +481,7 @@ define <8 x i16> @PR47448_uge(i16 signext %0) {
 ; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; AVX1-NEXT:    vpmaxuw {{.*}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vpmaxuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX1-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -490,7 +490,7 @@ define <8 x i16> @PR47448_uge(i16 signext %0) {
 ; AVX2-NEXT:    andl $7, %edi
 ; AVX2-NEXT:    vmovd %edi, %xmm0
 ; AVX2-NEXT:    vpbroadcastw %xmm0, %xmm0
-; AVX2-NEXT:    vpmaxuw {{.*}}(%rip), %xmm0, %xmm1
+; AVX2-NEXT:    vpmaxuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; AVX2-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %2 = and i16 %0, 7
@@ -508,7 +508,7 @@ define <8 x i16> @PR47448_ugt(i16 signext %0) {
 ; SSE-NEXT:    movd %edi, %xmm0
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; SSE-NEXT:    pcmpgtw {{.*}}(%rip), %xmm0
+; SSE-NEXT:    pcmpgtw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: PR47448_ugt:
@@ -517,7 +517,7 @@ define <8 x i16> @PR47448_ugt(i16 signext %0) {
 ; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; AVX1-NEXT:    vpcmpgtw {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpgtw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: PR47448_ugt:
@@ -525,7 +525,7 @@ define <8 x i16> @PR47448_ugt(i16 signext %0) {
 ; AVX2-NEXT:    andl $7, %edi
 ; AVX2-NEXT:    vmovd %edi, %xmm0
 ; AVX2-NEXT:    vpbroadcastw %xmm0, %xmm0
-; AVX2-NEXT:    vpcmpgtw {{.*}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpgtw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %2 = and i16 %0, 7
   %3 = insertelement <8 x i16> undef, i16 %2, i32 0

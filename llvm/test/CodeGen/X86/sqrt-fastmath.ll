@@ -84,10 +84,10 @@ define float @finite_f32_estimate_ieee_ninf(float %f) #1 {
 ; SSE-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; SSE-NEXT:    mulss %xmm2, %xmm3
 ; SSE-NEXT:    mulss %xmm1, %xmm2
-; SSE-NEXT:    addss {{.*}}(%rip), %xmm2
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    mulss %xmm3, %xmm2
-; SSE-NEXT:    cmpltss {{.*}}(%rip), %xmm0
+; SSE-NEXT:    cmpltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    andnps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -96,11 +96,11 @@ define float @finite_f32_estimate_ieee_ninf(float %f) #1 {
 ; AVX1-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
 ; AVX1-NEXT:    vmulss %xmm1, %xmm0, %xmm2
 ; AVX1-NEXT:    vmulss %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vaddss {{.*}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vmulss {{.*}}(%rip), %xmm2, %xmm2
-; AVX1-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vmulss %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vcmpltss {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vcmpltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vandnps %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -109,11 +109,11 @@ define float @finite_f32_estimate_ieee_ninf(float %f) #1 {
 ; AVX512-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
 ; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm2
 ; AVX512-NEXT:    vfmadd213ss {{.*#+}} xmm1 = (xmm2 * xmm1) + mem
-; AVX512-NEXT:    vmulss {{.*}}(%rip), %xmm2, %xmm2
+; AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; AVX512-NEXT:    vmulss %xmm1, %xmm2, %xmm1
 ; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
 ; AVX512-NEXT:    vandps %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vcmpltss {{.*}}(%rip), %xmm0, %k1
+; AVX512-NEXT:    vcmpltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k1
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm1, %xmm0
@@ -145,7 +145,7 @@ define float @finite_f32_estimate_daz_ninf(float %f) #4 {
 ; SSE-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; SSE-NEXT:    mulss %xmm2, %xmm3
 ; SSE-NEXT:    mulss %xmm1, %xmm2
-; SSE-NEXT:    addss {{.*}}(%rip), %xmm2
+; SSE-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE-NEXT:    mulss %xmm3, %xmm2
 ; SSE-NEXT:    xorps %xmm1, %xmm1
 ; SSE-NEXT:    cmpeqss %xmm1, %xmm0
@@ -157,8 +157,8 @@ define float @finite_f32_estimate_daz_ninf(float %f) #4 {
 ; AVX1-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
 ; AVX1-NEXT:    vmulss %xmm1, %xmm0, %xmm2
 ; AVX1-NEXT:    vmulss %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vaddss {{.*}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vmulss {{.*}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; AVX1-NEXT:    vmulss %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vcmpeqss %xmm2, %xmm0, %xmm0
@@ -170,7 +170,7 @@ define float @finite_f32_estimate_daz_ninf(float %f) #4 {
 ; AVX512-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
 ; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm2
 ; AVX512-NEXT:    vfmadd213ss {{.*#+}} xmm1 = (xmm2 * xmm1) + mem
-; AVX512-NEXT:    vmulss {{.*}}(%rip), %xmm2, %xmm2
+; AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; AVX512-NEXT:    vmulss %xmm1, %xmm2, %xmm1
 ; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vcmpeqss %xmm2, %xmm0, %k1
@@ -228,10 +228,10 @@ define float @sqrtf_check_denorms_ninf(float %x) #3 {
 ; SSE-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; SSE-NEXT:    mulss %xmm2, %xmm3
 ; SSE-NEXT:    mulss %xmm1, %xmm2
-; SSE-NEXT:    addss {{.*}}(%rip), %xmm2
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    mulss %xmm3, %xmm2
-; SSE-NEXT:    cmpltss {{.*}}(%rip), %xmm0
+; SSE-NEXT:    cmpltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    andnps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -240,11 +240,11 @@ define float @sqrtf_check_denorms_ninf(float %x) #3 {
 ; AVX1-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
 ; AVX1-NEXT:    vmulss %xmm1, %xmm0, %xmm2
 ; AVX1-NEXT:    vmulss %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vaddss {{.*}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vmulss {{.*}}(%rip), %xmm2, %xmm2
-; AVX1-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vmulss %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vcmpltss {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vcmpltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vandnps %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -253,11 +253,11 @@ define float @sqrtf_check_denorms_ninf(float %x) #3 {
 ; AVX512-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
 ; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm2
 ; AVX512-NEXT:    vfmadd213ss {{.*#+}} xmm1 = (xmm2 * xmm1) + mem
-; AVX512-NEXT:    vmulss {{.*}}(%rip), %xmm2, %xmm2
+; AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; AVX512-NEXT:    vmulss %xmm1, %xmm2, %xmm1
 ; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
 ; AVX512-NEXT:    vandps %xmm2, %xmm0, %xmm0
-; AVX512-NEXT:    vcmpltss {{.*}}(%rip), %xmm0, %k1
+; AVX512-NEXT:    vcmpltss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %k1
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovss %xmm0, %xmm1, %xmm1 {%k1}
 ; AVX512-NEXT:    vmovaps %xmm1, %xmm0
@@ -289,8 +289,8 @@ define <4 x float> @sqrt_v4f32_check_denorms_ninf(<4 x float> %x) #3 {
 ; SSE-NEXT:    movaps {{.*#+}} xmm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; SSE-NEXT:    mulps %xmm1, %xmm3
 ; SSE-NEXT:    mulps %xmm2, %xmm1
-; SSE-NEXT:    addps {{.*}}(%rip), %xmm1
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    mulps %xmm3, %xmm1
 ; SSE-NEXT:    movaps {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
 ; SSE-NEXT:    cmpleps %xmm0, %xmm2
@@ -302,10 +302,10 @@ define <4 x float> @sqrt_v4f32_check_denorms_ninf(<4 x float> %x) #3 {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vrsqrtps %xmm0, %xmm1
 ; AVX1-NEXT:    vmulps %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vmulps {{.*}}(%rip), %xmm2, %xmm3
+; AVX1-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm3
 ; AVX1-NEXT:    vmulps %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vaddps {{.*}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vmulps %xmm1, %xmm3, %xmm1
 ; AVX1-NEXT:    vmovaps {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
 ; AVX1-NEXT:    vcmpleps %xmm0, %xmm2, %xmm0
@@ -356,8 +356,8 @@ define float @f32_estimate(float %x) #1 {
 ; SSE-NEXT:    rsqrtss %xmm0, %xmm1
 ; SSE-NEXT:    mulss %xmm1, %xmm0
 ; SSE-NEXT:    mulss %xmm1, %xmm0
-; SSE-NEXT:    addss {{.*}}(%rip), %xmm0
-; SSE-NEXT:    mulss {{.*}}(%rip), %xmm1
+; SSE-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    mulss %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -366,8 +366,8 @@ define float @f32_estimate(float %x) #1 {
 ; AVX1-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
 ; AVX1-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmulss %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vaddss {{.*}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vmulss {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vmulss %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -376,7 +376,7 @@ define float @f32_estimate(float %x) #1 {
 ; AVX512-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
 ; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + mem
-; AVX512-NEXT:    vmulss {{.*}}(%rip), %xmm1, %xmm1
+; AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX512-NEXT:    vmulss %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
   %sqrt = tail call float @llvm.sqrt.f32(float %x)
@@ -416,8 +416,8 @@ define <4 x float> @v4f32_estimate(<4 x float> %x) #1 {
 ; SSE-NEXT:    rsqrtps %xmm0, %xmm1
 ; SSE-NEXT:    mulps %xmm1, %xmm0
 ; SSE-NEXT:    mulps %xmm1, %xmm0
-; SSE-NEXT:    addps {{.*}}(%rip), %xmm0
-; SSE-NEXT:    mulps {{.*}}(%rip), %xmm1
+; SSE-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    mulps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -426,8 +426,8 @@ define <4 x float> @v4f32_estimate(<4 x float> %x) #1 {
 ; AVX1-NEXT:    vrsqrtps %xmm0, %xmm1
 ; AVX1-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmulps %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vmulps {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -499,8 +499,8 @@ define <8 x float> @v8f32_estimate(<8 x float> %x) #1 {
 ; AVX1-NEXT:    vrsqrtps %ymm0, %ymm1
 ; AVX1-NEXT:    vmulps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vmulps %ymm1, %ymm0, %ymm0
-; AVX1-NEXT:    vaddps {{.*}}(%rip), %ymm0, %ymm0
-; AVX1-NEXT:    vmulps {{.*}}(%rip), %ymm1, %ymm1
+; AVX1-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; AVX1-NEXT:    vmulps %ymm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -611,7 +611,7 @@ define <16 x float> @v16f32_estimate(<16 x float> %x) #1 {
 ; AVX512-NEXT:    vrsqrt14ps %zmm0, %zmm1
 ; AVX512-NEXT:    vmulps %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vfmadd213ps {{.*#+}} zmm0 = (zmm1 * zmm0) + mem
-; AVX512-NEXT:    vmulps {{.*}}(%rip){1to16}, %zmm1, %zmm1
+; AVX512-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
 ; AVX512-NEXT:    vmulps %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %sqrt = tail call <16 x float> @llvm.sqrt.v16f32(<16 x float> %x)
@@ -630,8 +630,8 @@ define float @div_sqrt_fabs_f32(float %x, float %y, float %z) {
 ; SSE-NEXT:    rsqrtss %xmm1, %xmm2
 ; SSE-NEXT:    mulss %xmm2, %xmm1
 ; SSE-NEXT:    mulss %xmm2, %xmm1
-; SSE-NEXT:    addss {{.*}}(%rip), %xmm1
-; SSE-NEXT:    mulss {{.*}}(%rip), %xmm2
+; SSE-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE-NEXT:    mulss %xmm0, %xmm2
 ; SSE-NEXT:    mulss %xmm1, %xmm2
 ; SSE-NEXT:    movaps %xmm2, %xmm0
@@ -644,8 +644,8 @@ define float @div_sqrt_fabs_f32(float %x, float %y, float %z) {
 ; AVX1-NEXT:    vrsqrtss %xmm1, %xmm1, %xmm2
 ; AVX1-NEXT:    vmulss %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vmulss %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vaddss {{.*}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vmulss {{.*}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; AVX1-NEXT:    vmulss %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vmulss %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
@@ -657,7 +657,7 @@ define float @div_sqrt_fabs_f32(float %x, float %y, float %z) {
 ; AVX512-NEXT:    vrsqrtss %xmm1, %xmm1, %xmm2
 ; AVX512-NEXT:    vmulss %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vfmadd213ss {{.*#+}} xmm1 = (xmm2 * xmm1) + mem
-; AVX512-NEXT:    vmulss {{.*}}(%rip), %xmm2, %xmm2
+; AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; AVX512-NEXT:    vmulss %xmm0, %xmm2, %xmm0
 ; AVX512-NEXT:    vmulss %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
@@ -678,8 +678,8 @@ define <4 x float> @div_sqrt_fabs_v4f32(<4 x float> %x, <4 x float> %y, <4 x flo
 ; SSE-NEXT:    rsqrtps %xmm1, %xmm2
 ; SSE-NEXT:    mulps %xmm2, %xmm1
 ; SSE-NEXT:    mulps %xmm2, %xmm1
-; SSE-NEXT:    addps {{.*}}(%rip), %xmm1
-; SSE-NEXT:    mulps {{.*}}(%rip), %xmm2
+; SSE-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE-NEXT:    mulps %xmm1, %xmm2
 ; SSE-NEXT:    mulps %xmm2, %xmm0
 ; SSE-NEXT:    retq
@@ -691,8 +691,8 @@ define <4 x float> @div_sqrt_fabs_v4f32(<4 x float> %x, <4 x float> %y, <4 x flo
 ; AVX1-NEXT:    vrsqrtps %xmm1, %xmm2
 ; AVX1-NEXT:    vmulps %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vmulps %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vaddps {{.*}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vmulps {{.*}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; AVX1-NEXT:    vmulps %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
@@ -728,10 +728,10 @@ define <4 x float> @div_sqrt_fabs_v4f32_fmf(<4 x float> %x, <4 x float> %y, <4 x
 ; SSE-NEXT:    rsqrtps %xmm2, %xmm3
 ; SSE-NEXT:    mulps %xmm3, %xmm2
 ; SSE-NEXT:    mulps %xmm3, %xmm2
-; SSE-NEXT:    addps {{.*}}(%rip), %xmm2
-; SSE-NEXT:    mulps {{.*}}(%rip), %xmm3
+; SSE-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSE-NEXT:    mulps %xmm2, %xmm3
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    divps %xmm1, %xmm3
 ; SSE-NEXT:    mulps %xmm3, %xmm0
 ; SSE-NEXT:    retq
@@ -741,10 +741,10 @@ define <4 x float> @div_sqrt_fabs_v4f32_fmf(<4 x float> %x, <4 x float> %y, <4 x
 ; AVX1-NEXT:    vrsqrtps %xmm2, %xmm3
 ; AVX1-NEXT:    vmulps %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vmulps %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vaddps {{.*}}(%rip), %xmm2, %xmm2
-; AVX1-NEXT:    vmulps {{.*}}(%rip), %xmm3, %xmm3
+; AVX1-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3
 ; AVX1-NEXT:    vmulps %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vandps {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vdivps %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
@@ -777,7 +777,7 @@ define double @div_sqrt_fabs_f64(double %x, double %y, double %z) {
 ; SSE-LABEL: div_sqrt_fabs_f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    sqrtsd %xmm2, %xmm2
-; SSE-NEXT:    andpd {{.*}}(%rip), %xmm1
+; SSE-NEXT:    andpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    mulsd %xmm2, %xmm1
 ; SSE-NEXT:    divsd %xmm1, %xmm0
 ; SSE-NEXT:    retq
@@ -785,7 +785,7 @@ define double @div_sqrt_fabs_f64(double %x, double %y, double %z) {
 ; AVX-LABEL: div_sqrt_fabs_f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vsqrtsd %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vandpd {{.*}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vmulsd %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vdivsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -811,8 +811,8 @@ define float @div_sqrt_f32(float %x, float %y) {
 ; SSE-NEXT:    rsqrtss %xmm2, %xmm1
 ; SSE-NEXT:    mulss %xmm1, %xmm2
 ; SSE-NEXT:    mulss %xmm1, %xmm2
-; SSE-NEXT:    addss {{.*}}(%rip), %xmm2
-; SSE-NEXT:    mulss {{.*}}(%rip), %xmm1
+; SSE-NEXT:    addss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    mulss %xmm0, %xmm1
 ; SSE-NEXT:    mulss %xmm2, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
@@ -825,8 +825,8 @@ define float @div_sqrt_f32(float %x, float %y) {
 ; AVX1-NEXT:    vrsqrtss %xmm1, %xmm1, %xmm2
 ; AVX1-NEXT:    vmulss %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vmulss %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vaddss {{.*}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vmulss {{.*}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vaddss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; AVX1-NEXT:    vmulss %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    vmulss %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
@@ -838,7 +838,7 @@ define float @div_sqrt_f32(float %x, float %y) {
 ; AVX512-NEXT:    vrsqrtss %xmm1, %xmm1, %xmm2
 ; AVX512-NEXT:    vmulss %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vfmadd213ss {{.*#+}} xmm1 = (xmm2 * xmm1) + mem
-; AVX512-NEXT:    vmulss {{.*}}(%rip), %xmm2, %xmm2
+; AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; AVX512-NEXT:    vmulss %xmm0, %xmm2, %xmm0
 ; AVX512-NEXT:    vmulss %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
@@ -862,8 +862,8 @@ define <4 x float> @div_sqrt_v4f32(<4 x float> %x, <4 x float> %y) {
 ; SSE-NEXT:    rsqrtps %xmm2, %xmm1
 ; SSE-NEXT:    mulps %xmm1, %xmm2
 ; SSE-NEXT:    mulps %xmm1, %xmm2
-; SSE-NEXT:    addps {{.*}}(%rip), %xmm2
-; SSE-NEXT:    mulps {{.*}}(%rip), %xmm1
+; SSE-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    mulps %xmm2, %xmm1
 ; SSE-NEXT:    mulps %xmm1, %xmm0
 ; SSE-NEXT:    retq
@@ -875,8 +875,8 @@ define <4 x float> @div_sqrt_v4f32(<4 x float> %x, <4 x float> %y) {
 ; AVX1-NEXT:    vrsqrtps %xmm1, %xmm2
 ; AVX1-NEXT:    vmulps %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vmulps %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vaddps {{.*}}(%rip), %xmm1, %xmm1
-; AVX1-NEXT:    vmulps {{.*}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
 ; AVX1-NEXT:    vmulps %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq

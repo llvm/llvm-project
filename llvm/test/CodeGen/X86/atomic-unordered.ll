@@ -321,7 +321,7 @@ define i256 @load_i256(i256* %ptr) {
 ; CHECK-O0-NEXT:    movl $32, %edi
 ; CHECK-O0-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; CHECK-O0-NEXT:    xorl %ecx, %ecx
-; CHECK-O0-NEXT:    callq __atomic_load
+; CHECK-O0-NEXT:    callq __atomic_load@PLT
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
 ; CHECK-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; CHECK-O0-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
@@ -347,7 +347,7 @@ define i256 @load_i256(i256* %ptr) {
 ; CHECK-O3-NEXT:    movq %rsp, %rdx
 ; CHECK-O3-NEXT:    movl $32, %edi
 ; CHECK-O3-NEXT:    xorl %ecx, %ecx
-; CHECK-O3-NEXT:    callq __atomic_load
+; CHECK-O3-NEXT:    callq __atomic_load@PLT
 ; CHECK-O3-NEXT:    vmovups (%rsp), %ymm0
 ; CHECK-O3-NEXT:    vmovups %ymm0, (%rbx)
 ; CHECK-O3-NEXT:    movq %rbx, %rax
@@ -377,7 +377,7 @@ define void @store_i256(i256* %ptr, i256 %v) {
 ; CHECK-O0-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
 ; CHECK-O0-NEXT:    movl $32, %edi
 ; CHECK-O0-NEXT:    xorl %ecx, %ecx
-; CHECK-O0-NEXT:    callq __atomic_store
+; CHECK-O0-NEXT:    callq __atomic_store@PLT
 ; CHECK-O0-NEXT:    addq $40, %rsp
 ; CHECK-O0-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-O0-NEXT:    retq
@@ -395,7 +395,7 @@ define void @store_i256(i256* %ptr, i256 %v) {
 ; CHECK-O3-NEXT:    movl $32, %edi
 ; CHECK-O3-NEXT:    movq %rax, %rsi
 ; CHECK-O3-NEXT:    xorl %ecx, %ecx
-; CHECK-O3-NEXT:    callq __atomic_store
+; CHECK-O3-NEXT:    callq __atomic_store@PLT
 ; CHECK-O3-NEXT:    addq $40, %rsp
 ; CHECK-O3-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-O3-NEXT:    retq
@@ -2379,7 +2379,7 @@ define i64 @fold_constant(i64 %arg) {
 ; CHECK-O3-LABEL: fold_constant:
 ; CHECK-O3:       # %bb.0:
 ; CHECK-O3-NEXT:    movq %rdi, %rax
-; CHECK-O3-NEXT:    addq {{.*}}(%rip), %rax
+; CHECK-O3-NEXT:    addq Constant(%rip), %rax
 ; CHECK-O3-NEXT:    retq
   %v = load atomic i64, i64* @Constant unordered, align 8
   %ret = add i64 %v, %arg
@@ -2389,14 +2389,14 @@ define i64 @fold_constant(i64 %arg) {
 define i64 @fold_constant_clobber(i64* %p, i64 %arg) {
 ; CHECK-O0-LABEL: fold_constant_clobber:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq {{.*}}(%rip), %rax
+; CHECK-O0-NEXT:    movq Constant(%rip), %rax
 ; CHECK-O0-NEXT:    movq $5, (%rdi)
 ; CHECK-O0-NEXT:    addq %rsi, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-CUR-LABEL: fold_constant_clobber:
 ; CHECK-O3-CUR:       # %bb.0:
-; CHECK-O3-CUR-NEXT:    movq {{.*}}(%rip), %rax
+; CHECK-O3-CUR-NEXT:    movq Constant(%rip), %rax
 ; CHECK-O3-CUR-NEXT:    movq $5, (%rdi)
 ; CHECK-O3-CUR-NEXT:    addq %rsi, %rax
 ; CHECK-O3-CUR-NEXT:    retq
@@ -2404,7 +2404,7 @@ define i64 @fold_constant_clobber(i64* %p, i64 %arg) {
 ; CHECK-O3-EX-LABEL: fold_constant_clobber:
 ; CHECK-O3-EX:       # %bb.0:
 ; CHECK-O3-EX-NEXT:    movq %rsi, %rax
-; CHECK-O3-EX-NEXT:    addq {{.*}}(%rip), %rax
+; CHECK-O3-EX-NEXT:    addq Constant(%rip), %rax
 ; CHECK-O3-EX-NEXT:    movq $5, (%rdi)
 ; CHECK-O3-EX-NEXT:    retq
   %v = load atomic i64, i64* @Constant unordered, align 8
@@ -2416,14 +2416,14 @@ define i64 @fold_constant_clobber(i64* %p, i64 %arg) {
 define i64 @fold_constant_fence(i64 %arg) {
 ; CHECK-O0-LABEL: fold_constant_fence:
 ; CHECK-O0:       # %bb.0:
-; CHECK-O0-NEXT:    movq {{.*}}(%rip), %rax
+; CHECK-O0-NEXT:    movq Constant(%rip), %rax
 ; CHECK-O0-NEXT:    mfence
 ; CHECK-O0-NEXT:    addq %rdi, %rax
 ; CHECK-O0-NEXT:    retq
 ;
 ; CHECK-O3-CUR-LABEL: fold_constant_fence:
 ; CHECK-O3-CUR:       # %bb.0:
-; CHECK-O3-CUR-NEXT:    movq {{.*}}(%rip), %rax
+; CHECK-O3-CUR-NEXT:    movq Constant(%rip), %rax
 ; CHECK-O3-CUR-NEXT:    mfence
 ; CHECK-O3-CUR-NEXT:    addq %rdi, %rax
 ; CHECK-O3-CUR-NEXT:    retq
@@ -2431,7 +2431,7 @@ define i64 @fold_constant_fence(i64 %arg) {
 ; CHECK-O3-EX-LABEL: fold_constant_fence:
 ; CHECK-O3-EX:       # %bb.0:
 ; CHECK-O3-EX-NEXT:    movq %rdi, %rax
-; CHECK-O3-EX-NEXT:    addq {{.*}}(%rip), %rax
+; CHECK-O3-EX-NEXT:    addq Constant(%rip), %rax
 ; CHECK-O3-EX-NEXT:    mfence
 ; CHECK-O3-EX-NEXT:    retq
   %v = load atomic i64, i64* @Constant unordered, align 8

@@ -9,7 +9,7 @@ define i32 @main() {
 ; CHECK-LABEL: main:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    ## InlineAsm Start
-; CHECK-NEXT:    bsrl LCPI0_0, %eax
+; CHECK-NEXT:    bsrl {{\.?LCPI[0-9]+_[0-9]+}}, %eax
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    retl
 entry:

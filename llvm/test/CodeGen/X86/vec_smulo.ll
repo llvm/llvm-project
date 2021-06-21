@@ -1434,7 +1434,7 @@ define <16 x i32> @smulo_v16i8(<16 x i8> %a0, <16 x i8> %a1, <16 x i8>* %p2) nou
 ; AVX2-NEXT:    vpsrlw $8, %ymm0, %ymm1
 ; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX2-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX2-NEXT:    vpackuswb %xmm2, %xmm0, %xmm2
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0

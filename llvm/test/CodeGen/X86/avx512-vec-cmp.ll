@@ -1192,8 +1192,8 @@ define <2 x i64> @test45(<2 x i16> %x, <2 x i16> %y) #0 {
 ; AVX512-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x75,0xc1]
 ; AVX512-NEXT:    vpmovzxwq %xmm0, %xmm0 ## encoding: [0xc4,0xe2,0x79,0x34,0xc0]
 ; AVX512-NEXT:    ## xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
-; AVX512-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdb,0x05,A,A,A,A]
-; AVX512-NEXT:    ## fixup A - offset: 4, value: LCPI59_0-4, kind: reloc_riprel_4byte
+; AVX512-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdb,0x05,A,A,A,A]
+; AVX512-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; AVX512-NEXT:    retq ## encoding: [0xc3]
 ;
 ; SKX-LABEL: test45:
@@ -1213,8 +1213,8 @@ define <2 x i64> @test46(<2 x float> %x, <2 x float> %y) #0 {
 ; AVX512-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0xc2,0xc1,0x00]
 ; AVX512-NEXT:    vpermilps $212, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xd4]
 ; AVX512-NEXT:    ## xmm0 = xmm0[0,1,1,3]
-; AVX512-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0x54,0x05,A,A,A,A]
-; AVX512-NEXT:    ## fixup A - offset: 4, value: LCPI60_0-4, kind: reloc_riprel_4byte
+; AVX512-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0x54,0x05,A,A,A,A]
+; AVX512-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; AVX512-NEXT:    retq ## encoding: [0xc3]
 ;
 ; SKX-LABEL: test46:
@@ -1457,8 +1457,8 @@ define void @half_vec_compare(<2 x half>* %x, <2 x i8>* %y) {
 ; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z} ## encoding: [0x62,0xf3,0x7d,0xc9,0x25,0xc0,0xff]
 ; KNL-NEXT:    vpmovdw %zmm0, %ymm0 ## encoding: [0x62,0xf2,0x7e,0x48,0x33,0xc0]
 ; KNL-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x63,0xc0]
-; KNL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdb,0x05,A,A,A,A]
-; KNL-NEXT:    ## fixup A - offset: 4, value: LCPI68_0-4, kind: reloc_riprel_4byte
+; KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdb,0x05,A,A,A,A]
+; KNL-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; KNL-NEXT:    vpextrw $0, %xmm0, (%rsi) ## encoding: [0xc4,0xe3,0x79,0x15,0x06,0x00]
 ; KNL-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; KNL-NEXT:    retq ## encoding: [0xc3]
@@ -1487,8 +1487,8 @@ define void @half_vec_compare(<2 x half>* %x, <2 x i8>* %y) {
 ; AVX512BW-NEXT:    korw %k1, %k0, %k0 ## encoding: [0xc5,0xfc,0x45,0xc1]
 ; AVX512BW-NEXT:    vpmovm2w %k0, %zmm0 ## encoding: [0x62,0xf2,0xfe,0x48,0x28,0xc0]
 ; AVX512BW-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x63,0xc0]
-; AVX512BW-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdb,0x05,A,A,A,A]
-; AVX512BW-NEXT:    ## fixup A - offset: 4, value: LCPI68_0-4, kind: reloc_riprel_4byte
+; AVX512BW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdb,0x05,A,A,A,A]
+; AVX512BW-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; AVX512BW-NEXT:    vpextrw $0, %xmm0, (%rsi) ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x15,0x06,0x00]
 ; AVX512BW-NEXT:    vzeroupper ## encoding: [0xc5,0xf8,0x77]
 ; AVX512BW-NEXT:    retq ## encoding: [0xc3]
@@ -1518,8 +1518,8 @@ define void @half_vec_compare(<2 x half>* %x, <2 x i8>* %y) {
 ; SKX-NEXT:    korw %k0, %k1, %k0 ## encoding: [0xc5,0xf4,0x45,0xc0]
 ; SKX-NEXT:    vpmovm2w %k0, %xmm0 ## encoding: [0x62,0xf2,0xfe,0x08,0x28,0xc0]
 ; SKX-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x63,0xc0]
-; SKX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xdb,0x05,A,A,A,A]
-; SKX-NEXT:    ## fixup A - offset: 4, value: LCPI68_0-4, kind: reloc_riprel_4byte
+; SKX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xdb,0x05,A,A,A,A]
+; SKX-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; SKX-NEXT:    vpextrw $0, %xmm0, (%rsi) ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x15,0x06,0x00]
 ; SKX-NEXT:    retq ## encoding: [0xc3]
 entry:
@@ -1537,7 +1537,7 @@ define <8 x i64> @cmp_swap_bug(<16 x i8>* %x, <8 x i64> %y, <8 x i64> %z) {
 ; KNL-NEXT:    vmovdqa (%rdi), %xmm2 ## encoding: [0xc5,0xf9,0x6f,0x17]
 ; KNL-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
 ; KNL-NEXT:    ## encoding: [0xc4,0xe2,0x69,0x00,0x15,A,A,A,A]
-; KNL-NEXT:    ## fixup A - offset: 5, value: LCPI69_0-4, kind: reloc_riprel_4byte
+; KNL-NEXT:    ## fixup A - offset: 5, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; KNL-NEXT:    vpxor %xmm3, %xmm3, %xmm3 ## encoding: [0xc5,0xe1,0xef,0xdb]
 ; KNL-NEXT:    vpcmpgtb %xmm2, %xmm3, %xmm2 ## encoding: [0xc5,0xe1,0x64,0xd2]
 ; KNL-NEXT:    vpmovsxbd %xmm2, %zmm2 ## encoding: [0x62,0xf2,0x7d,0x48,0x21,0xd2]
@@ -1550,7 +1550,7 @@ define <8 x i64> @cmp_swap_bug(<16 x i8>* %x, <8 x i64> %y, <8 x i64> %z) {
 ; AVX512BW-NEXT:    vmovdqa (%rdi), %xmm2 ## encoding: [0xc5,0xf9,0x6f,0x17]
 ; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
 ; AVX512BW-NEXT:    ## encoding: [0xc4,0xe2,0x69,0x00,0x15,A,A,A,A]
-; AVX512BW-NEXT:    ## fixup A - offset: 5, value: LCPI69_0-4, kind: reloc_riprel_4byte
+; AVX512BW-NEXT:    ## fixup A - offset: 5, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; AVX512BW-NEXT:    vpmovb2m %zmm2, %k1 ## encoding: [0x62,0xf2,0x7e,0x48,0x29,0xca]
 ; AVX512BW-NEXT:    vpblendmq %zmm0, %zmm1, %zmm0 {%k1} ## encoding: [0x62,0xf2,0xf5,0x49,0x64,0xc0]
 ; AVX512BW-NEXT:    retq ## encoding: [0xc3]

@@ -107,7 +107,7 @@ define i32 @loop_shared_header(i8* %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:    movl %r14d, %r15d
 ; CHECK-NEXT:    movl $1, %esi
 ; CHECK-NEXT:    movq %r15, %rdi
-; CHECK-NEXT:    callq cli_calloc
+; CHECK-NEXT:    callq cli_calloc@PLT
 ; CHECK-NEXT:    testl %r13d, %r13d
 ; CHECK-NEXT:    je .LBB1_26
 ; CHECK-NEXT:  # %bb.2: # %if.end19
@@ -124,7 +124,7 @@ define i32 @loop_shared_header(i8* %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:  # %bb.5: # %if.end50
 ; CHECK-NEXT:    movq %rbx, %rdi
 ; CHECK-NEXT:    movq %r15, %rdx
-; CHECK-NEXT:    callq memcpy
+; CHECK-NEXT:    callq memcpy@PLT
 ; CHECK-NEXT:    cmpl $4, %r14d
 ; CHECK-NEXT:    jb .LBB1_29
 ; CHECK-NEXT:  # %bb.6: # %shared_preheader
@@ -204,10 +204,10 @@ define i32 @loop_shared_header(i8* %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:    jne .LBB1_27
 ; CHECK-NEXT:  .LBB1_21: # %if.end41.us1436.i
 ; CHECK-NEXT:  .LBB1_23: # %if.then99.i
-; CHECK-NEXT:    movq .str.6@{{.*}}(%rip), %rdi
+; CHECK-NEXT:    movq .str.6@GOTPCREL(%rip), %rdi
 ; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    callq cli_dbgmsg
+; CHECK-NEXT:    callq cli_dbgmsg@PLT
 ; CHECK-NEXT:  .LBB1_27: # %cleanup
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    addq $8, %rsp

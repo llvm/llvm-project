@@ -10,7 +10,7 @@ define i32 @t() nounwind  {
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [10,11,12,13]
 ; CHECK-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $1, (%esp)
-; CHECK-NEXT:    calll foo
+; CHECK-NEXT:    calll foo@PLT
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movl %ebp, %esp
 ; CHECK-NEXT:    popl %ebp

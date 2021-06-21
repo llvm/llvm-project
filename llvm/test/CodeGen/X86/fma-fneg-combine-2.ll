@@ -111,13 +111,13 @@ declare <4 x float> @llvm.x86.sse.rcp.ps(<4 x float>)
 define float @negated_constant(float %x) {
 ; FMA3-LABEL: negated_constant:
 ; FMA3:       # %bb.0:
-; FMA3-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm1
+; FMA3-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; FMA3-NEXT:    vfnmsub132ss {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1
 ; FMA3-NEXT:    retq
 ;
 ; FMA4-LABEL: negated_constant:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vmulss {{.*}}(%rip), %xmm0, %xmm1
+; FMA4-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
 ; FMA4-NEXT:    vfnmsubss {{.*#+}} xmm0 = -(xmm0 * mem) - xmm1
 ; FMA4-NEXT:    retq
   %m = fmul float %x, 42.0

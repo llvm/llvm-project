@@ -10,7 +10,7 @@
 define fp128 @get_fp128() {
 ; CHECK-LABEL: get_fp128:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movaps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    movaps my_fp128(%rip), %xmm0
 ; CHECK-NEXT:    retq
 entry:
   %0 = load fp128, fp128* @my_fp128, align 16

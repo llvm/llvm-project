@@ -139,7 +139,7 @@ define dso_local void @foo(i32* %a0, i32* %a1, i32* %a2, i32* %a3, i32* %a4, i32
 ; CHECK-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    addss %xmm0, %xmm2
 ; CHECK-NEXT:    addss %xmm1, %xmm2
-; CHECK-NEXT:    movss %xmm2, {{.*}}(%rip)
+; CHECK-NEXT:    movss %xmm2, i6000(%rip)
 ; CHECK-NEXT:    testb %dil, %dil
 ; CHECK-NEXT:    jne .LBB0_36
 ; CHECK-NEXT:    jmp .LBB0_9

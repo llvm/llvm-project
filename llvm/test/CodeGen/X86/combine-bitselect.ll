@@ -13,33 +13,33 @@
 define <2 x i64> @bitselect_v2i64_rr(<2 x i64>, <2 x i64>) {
 ; SSE-LABEL: bitselect_v2i64_rr:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    orps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; XOP-LABEL: bitselect_v2i64_rr:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vpcmov {{.*}}(%rip), %xmm0, %xmm1, %xmm0
+; XOP-NEXT:    vpcmov {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1, %xmm0
 ; XOP-NEXT:    retq
 ;
 ; AVX-LABEL: bitselect_v2i64_rr:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vandps {{.*}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vorps %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: bitselect_v2i64_rr:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
-; AVX512F-NEXT:    vandps {{.*}}(%rip), %xmm1, %xmm1
+; AVX512F-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512F-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX512F-NEXT:    vorps %xmm0, %xmm1, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: bitselect_v2i64_rr:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpternlogq $216, {{.*}}(%rip), %xmm1, %xmm0
+; AVX512VL-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
   %3 = and <2 x i64> %0, <i64 4294967296, i64 12884901890>
   %4 = and <2 x i64> %1, <i64 -4294967297, i64 -12884901891>
@@ -51,37 +51,37 @@ define <2 x i64> @bitselect_v2i64_rm(<2 x i64>, <2 x i64>* nocapture readonly) {
 ; SSE-LABEL: bitselect_v2i64_rm:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps (%rdi), %xmm1
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    orps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; XOP-LABEL: bitselect_v2i64_rm:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vmovdqa (%rdi), %xmm1
-; XOP-NEXT:    vpcmov {{.*}}(%rip), %xmm0, %xmm1, %xmm0
+; XOP-NEXT:    vpcmov {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1, %xmm0
 ; XOP-NEXT:    retq
 ;
 ; AVX-LABEL: bitselect_v2i64_rm:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps (%rdi), %xmm1
-; AVX-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vandps {{.*}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vorps %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: bitselect_v2i64_rm:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps (%rdi), %xmm1
-; AVX512F-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
-; AVX512F-NEXT:    vandps {{.*}}(%rip), %xmm1, %xmm1
+; AVX512F-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512F-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX512F-NEXT:    vorps %xmm0, %xmm1, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: bitselect_v2i64_rm:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm1
-; AVX512VL-NEXT:    vpternlogq $216, {{.*}}(%rip), %xmm1, %xmm0
+; AVX512VL-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
   %3 = load <2 x i64>, <2 x i64>* %1
   %4 = and <2 x i64> %0, <i64 8589934593, i64 3>
@@ -94,37 +94,37 @@ define <2 x i64> @bitselect_v2i64_mr(<2 x i64>* nocapture readonly, <2 x i64>) {
 ; SSE-LABEL: bitselect_v2i64_mr:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps (%rdi), %xmm1
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    orps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; XOP-LABEL: bitselect_v2i64_mr:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vmovdqa (%rdi), %xmm1
-; XOP-NEXT:    vpcmov {{.*}}(%rip), %xmm0, %xmm1, %xmm0
+; XOP-NEXT:    vpcmov {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1, %xmm0
 ; XOP-NEXT:    retq
 ;
 ; AVX-LABEL: bitselect_v2i64_mr:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps (%rdi), %xmm1
-; AVX-NEXT:    vandps {{.*}}(%rip), %xmm1, %xmm1
-; AVX-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vorps %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: bitselect_v2i64_mr:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps (%rdi), %xmm1
-; AVX512F-NEXT:    vandps {{.*}}(%rip), %xmm1, %xmm1
-; AVX512F-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
+; AVX512F-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX512F-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512F-NEXT:    vorps %xmm0, %xmm1, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: bitselect_v2i64_mr:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm1
-; AVX512VL-NEXT:    vpternlogq $216, {{.*}}(%rip), %xmm1, %xmm0
+; AVX512VL-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
   %3 = load <2 x i64>, <2 x i64>* %0
   %4 = and <2 x i64> %3, <i64 12884901890, i64 4294967296>
@@ -138,8 +138,8 @@ define <2 x i64> @bitselect_v2i64_mm(<2 x i64>* nocapture readonly, <2 x i64>* n
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps (%rdi), %xmm1
 ; SSE-NEXT:    movaps (%rsi), %xmm0
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    orps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -154,8 +154,8 @@ define <2 x i64> @bitselect_v2i64_mm(<2 x i64>* nocapture readonly, <2 x i64>* n
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX-NEXT:    vmovaps (%rsi), %xmm1
-; AVX-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vandps {{.*}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vorps %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -163,8 +163,8 @@ define <2 x i64> @bitselect_v2i64_mm(<2 x i64>* nocapture readonly, <2 x i64>* n
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX512F-NEXT:    vmovaps (%rsi), %xmm1
-; AVX512F-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
-; AVX512F-NEXT:    vandps {{.*}}(%rip), %xmm1, %xmm1
+; AVX512F-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512F-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX512F-NEXT:    vorps %xmm0, %xmm1, %xmm0
 ; AVX512F-NEXT:    retq
 ;
@@ -295,36 +295,36 @@ define <2 x i64> @bitselect_v2i64_broadcast_rrm(<2 x i64> %a0, <2 x i64> %a1, i6
 define <4 x i64> @bitselect_v4i64_rr(<4 x i64>, <4 x i64>) {
 ; SSE-LABEL: bitselect_v4i64_rr:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm1
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm0
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm3
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSE-NEXT:    orps %xmm3, %xmm1
-; SSE-NEXT:    andps {{.*}}(%rip), %xmm2
+; SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE-NEXT:    orps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; XOP-LABEL: bitselect_v4i64_rr:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vpcmov {{.*}}(%rip), %ymm0, %ymm1, %ymm0
+; XOP-NEXT:    vpcmov {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1, %ymm0
 ; XOP-NEXT:    retq
 ;
 ; AVX-LABEL: bitselect_v4i64_rr:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX-NEXT:    vandps {{.*}}(%rip), %ymm1, %ymm1
+; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; AVX-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: bitselect_v4i64_rr:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX512F-NEXT:    vandps {{.*}}(%rip), %ymm1, %ymm1
+; AVX512F-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512F-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; AVX512F-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: bitselect_v4i64_rr:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpternlogq $216, {{.*}}(%rip), %ymm1, %ymm0
+; AVX512VL-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
   %3 = and <4 x i64> %0, <i64 4294967296, i64 12884901890, i64 12884901890, i64 12884901890>
   %4 = and <4 x i64> %1, <i64 -4294967297, i64 -12884901891, i64 -12884901891, i64 -12884901891>
@@ -352,29 +352,29 @@ define <4 x i64> @bitselect_v4i64_rm(<4 x i64>, <4 x i64>* nocapture readonly) {
 ; XOP-LABEL: bitselect_v4i64_rm:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vmovdqa (%rdi), %ymm1
-; XOP-NEXT:    vpcmov {{.*}}(%rip), %ymm0, %ymm1, %ymm0
+; XOP-NEXT:    vpcmov {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1, %ymm0
 ; XOP-NEXT:    retq
 ;
 ; AVX-LABEL: bitselect_v4i64_rm:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps (%rdi), %ymm1
-; AVX-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX-NEXT:    vandps {{.*}}(%rip), %ymm1, %ymm1
+; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; AVX-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: bitselect_v4i64_rm:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps (%rdi), %ymm1
-; AVX512F-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX512F-NEXT:    vandps {{.*}}(%rip), %ymm1, %ymm1
+; AVX512F-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512F-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; AVX512F-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: bitselect_v4i64_rm:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %ymm1
-; AVX512VL-NEXT:    vpternlogq $216, {{.*}}(%rip), %ymm1, %ymm0
+; AVX512VL-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
   %3 = load <4 x i64>, <4 x i64>* %1
   %4 = and <4 x i64> %0, <i64 8589934593, i64 3, i64 8589934593, i64 3>
@@ -403,29 +403,29 @@ define <4 x i64> @bitselect_v4i64_mr(<4 x i64>* nocapture readonly, <4 x i64>) {
 ; XOP-LABEL: bitselect_v4i64_mr:
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vmovdqa (%rdi), %ymm1
-; XOP-NEXT:    vpcmov {{.*}}(%rip), %ymm0, %ymm1, %ymm0
+; XOP-NEXT:    vpcmov {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1, %ymm0
 ; XOP-NEXT:    retq
 ;
 ; AVX-LABEL: bitselect_v4i64_mr:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps (%rdi), %ymm1
-; AVX-NEXT:    vandps {{.*}}(%rip), %ymm1, %ymm1
-; AVX-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: bitselect_v4i64_mr:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps (%rdi), %ymm1
-; AVX512F-NEXT:    vandps {{.*}}(%rip), %ymm1, %ymm1
-; AVX512F-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX512F-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
+; AVX512F-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX512F-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: bitselect_v4i64_mr:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %ymm1
-; AVX512VL-NEXT:    vpternlogq $216, {{.*}}(%rip), %ymm1, %ymm0
+; AVX512VL-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
   %3 = load <4 x i64>, <4 x i64>* %0
   %4 = and <4 x i64> %3, <i64 12884901890, i64 4294967296, i64 12884901890, i64 4294967296>
@@ -460,8 +460,8 @@ define <4 x i64> @bitselect_v4i64_mm(<4 x i64>* nocapture readonly, <4 x i64>* n
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX-NEXT:    vmovaps (%rsi), %ymm1
-; AVX-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX-NEXT:    vandps {{.*}}(%rip), %ymm1, %ymm1
+; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; AVX-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; AVX-NEXT:    retq
 ;
@@ -469,8 +469,8 @@ define <4 x i64> @bitselect_v4i64_mm(<4 x i64>* nocapture readonly, <4 x i64>* n
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX512F-NEXT:    vmovaps (%rsi), %ymm1
-; AVX512F-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
-; AVX512F-NEXT:    vandps {{.*}}(%rip), %ymm1, %ymm1
+; AVX512F-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512F-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; AVX512F-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; AVX512F-NEXT:    retq
 ;
@@ -653,7 +653,7 @@ define <8 x i64> @bitselect_v8i64_rr(<8 x i64>, <8 x i64>) {
 ;
 ; AVX512-LABEL: bitselect_v8i64_rr:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpternlogq $216, {{.*}}(%rip), %zmm1, %zmm0
+; AVX512-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %3 = and <8 x i64> %0, <i64 4294967296, i64 12884901890, i64 12884901890, i64 12884901890, i64 4294967296, i64 12884901890, i64 12884901890, i64 12884901890>
   %4 = and <8 x i64> %1, <i64 -4294967297, i64 -12884901891, i64 -12884901891, i64 -12884901891, i64 -4294967297, i64 -12884901891, i64 -12884901891, i64 -12884901891>
@@ -715,7 +715,7 @@ define <8 x i64> @bitselect_v8i64_rm(<8 x i64>, <8 x i64>* nocapture readonly) {
 ; AVX512-LABEL: bitselect_v8i64_rm:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovdqa64 (%rdi), %zmm1
-; AVX512-NEXT:    vpternlogq $216, {{.*}}(%rip), %zmm1, %zmm0
+; AVX512-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %3 = load <8 x i64>, <8 x i64>* %1
   %4 = and <8 x i64> %0, <i64 8589934593, i64 3, i64 8589934593, i64 3, i64 8589934593, i64 3, i64 8589934593, i64 3>
@@ -778,7 +778,7 @@ define <8 x i64> @bitselect_v8i64_mr(<8 x i64>* nocapture readonly, <8 x i64>) {
 ; AVX512-LABEL: bitselect_v8i64_mr:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovdqa64 (%rdi), %zmm1
-; AVX512-NEXT:    vpternlogq $216, {{.*}}(%rip), %zmm1, %zmm0
+; AVX512-NEXT:    vpternlogq $216, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %3 = load <8 x i64>, <8 x i64>* %0
   %4 = and <8 x i64> %3, <i64 12884901890, i64 4294967296, i64 12884901890, i64 4294967296, i64 12884901890, i64 4294967296, i64 12884901890, i64 4294967296>
@@ -982,7 +982,7 @@ define <4 x i1> @bitselect_v4i1_loop(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE-NEXT:    pcmpeqd %xmm0, %xmm2
 ; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [12,12,12,12]
 ; SSE-NEXT:    pcmpeqd %xmm1, %xmm0
-; SSE-NEXT:    pcmpeqd {{.*}}(%rip), %xmm1
+; SSE-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE-NEXT:    pand %xmm2, %xmm1
 ; SSE-NEXT:    pandn %xmm0, %xmm2
 ; SSE-NEXT:    por %xmm1, %xmm2
@@ -993,8 +993,8 @@ define <4 x i1> @bitselect_v4i1_loop(<4 x i32> %a0, <4 x i32> %a1) {
 ; XOP:       # %bb.0: # %bb
 ; XOP-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; XOP-NEXT:    vpcomneqd %xmm2, %xmm0, %xmm0
-; XOP-NEXT:    vpcomeqd {{.*}}(%rip), %xmm1, %xmm2
-; XOP-NEXT:    vpcomeqd {{.*}}(%rip), %xmm1, %xmm1
+; XOP-NEXT:    vpcomeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm2
+; XOP-NEXT:    vpcomeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; XOP-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
 ; XOP-NEXT:    retq
 ;
@@ -1002,8 +1002,8 @@ define <4 x i1> @bitselect_v4i1_loop(<4 x i32> %a0, <4 x i32> %a1) {
 ; AVX1:       # %bb.0: # %bb
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpcmpeqd {{.*}}(%rip), %xmm1, %xmm2
-; AVX1-NEXT:    vpcmpeqd {{.*}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm2
+; AVX1-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -1022,8 +1022,8 @@ define <4 x i1> @bitselect_v4i1_loop(<4 x i32> %a0, <4 x i32> %a1) {
 ; AVX512F:       # %bb.0: # %bb
 ; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    vpcmpeqd {{.*}}(%rip){1to16}, %zmm1, %k1
-; AVX512F-NEXT:    vpcmpeqd {{.*}}(%rip){1to16}, %zmm1, %k2
+; AVX512F-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %k1
+; AVX512F-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %k2
 ; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k0 {%k2}
 ; AVX512F-NEXT:    vptestmd %zmm0, %zmm0, %k1 {%k1}
 ; AVX512F-NEXT:    korw %k0, %k1, %k1
@@ -1034,8 +1034,8 @@ define <4 x i1> @bitselect_v4i1_loop(<4 x i32> %a0, <4 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: bitselect_v4i1_loop:
 ; AVX512VL:       # %bb.0: # %bb
-; AVX512VL-NEXT:    vpcmpeqd {{.*}}(%rip){1to4}, %xmm1, %k1
-; AVX512VL-NEXT:    vpcmpeqd {{.*}}(%rip){1to4}, %xmm1, %k2
+; AVX512VL-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %k1
+; AVX512VL-NEXT:    vpcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %k2
 ; AVX512VL-NEXT:    vptestnmd %xmm0, %xmm0, %k0 {%k2}
 ; AVX512VL-NEXT:    vptestmd %xmm0, %xmm0, %k1 {%k1}
 ; AVX512VL-NEXT:    korw %k0, %k1, %k1

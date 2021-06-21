@@ -33,7 +33,7 @@ define void @test(<16 x i32> %a0, <16 x i32> %b0, <16 x i32> %a1, <16 x i32> %b1
 ; X86-NEXT:    kmovw %k0, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
 ; X86-NEXT:    kmovw %k1, {{[-0-9]+}}(%e{{[sb]}}p) # 2-byte Spill
 ; X86-NEXT:    vzeroupper
-; X86-NEXT:    calll dummy
+; X86-NEXT:    calll dummy@PLT
 ; X86-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k0 # 2-byte Reload
 ; X86-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k1 # 2-byte Reload
 ; X86-NEXT:    kmovw %k0, %eax
@@ -88,7 +88,7 @@ define void @test(<16 x i32> %a0, <16 x i32> %b0, <16 x i32> %a1, <16 x i32> %b1
 ; X64-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; X64-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; X64-NEXT:    vzeroupper
-; X64-NEXT:    callq dummy
+; X64-NEXT:    callq dummy@PLT
 ; X64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k0 # 2-byte Reload
 ; X64-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
 ; X64-NEXT:    kmovw %k0, %eax

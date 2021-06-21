@@ -16,7 +16,7 @@ define void @_Z25RawPointerPerformanceTestPvRN5clang6ActionE(i8* %Val, %"struct.
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    subq $24, %rsp
-; CHECK-NEXT:    cmpl $0, {{.*}}(%rip)
+; CHECK-NEXT:    cmpl $0, _NumTrials(%rip)
 ; CHECK-NEXT:    je LBB0_3
 ; CHECK-NEXT:  ## %bb.1: ## %bb.nph
 ; CHECK-NEXT:    movq %rsi, %rbx
@@ -32,7 +32,7 @@ define void @_Z25RawPointerPerformanceTestPvRN5clang6ActionE(i8* %Val, %"struct.
 ; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    incl %ebp
-; CHECK-NEXT:    cmpl {{.*}}(%rip), %ebp
+; CHECK-NEXT:    cmpl _NumTrials(%rip), %ebp
 ; CHECK-NEXT:    jb LBB0_2
 ; CHECK-NEXT:  LBB0_3: ## %return
 ; CHECK-NEXT:    addq $24, %rsp
@@ -45,7 +45,7 @@ define void @_Z25RawPointerPerformanceTestPvRN5clang6ActionE(i8* %Val, %"struct.
 ; pre-RA-NEXT:    pushq %rbp
 ; pre-RA-NEXT:    pushq %rbx
 ; pre-RA-NEXT:    subq $24, %rsp
-; pre-RA-NEXT:    cmpl $0, {{.*}}(%rip)
+; pre-RA-NEXT:    cmpl $0, _NumTrials(%rip)
 ; pre-RA-NEXT:    je LBB0_3
 ; pre-RA-NEXT:  ## %bb.1: ## %bb.nph
 ; pre-RA-NEXT:    movq %rsi, %rbx
@@ -61,7 +61,7 @@ define void @_Z25RawPointerPerformanceTestPvRN5clang6ActionE(i8* %Val, %"struct.
 ; pre-RA-NEXT:    incl %ebp
 ; pre-RA-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; pre-RA-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
-; pre-RA-NEXT:    cmpl {{.*}}(%rip), %ebp
+; pre-RA-NEXT:    cmpl _NumTrials(%rip), %ebp
 ; pre-RA-NEXT:    jb LBB0_2
 ; pre-RA-NEXT:  LBB0_3: ## %return
 ; pre-RA-NEXT:    addq $24, %rsp

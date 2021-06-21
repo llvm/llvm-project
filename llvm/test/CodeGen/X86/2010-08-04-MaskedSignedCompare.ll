@@ -11,20 +11,20 @@ define dso_local i32 @main() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpq {{.*}}(%rip), %rax
+; CHECK-NEXT:    cmpq g_16(%rip), %rax
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    testb $-106, %al
 ; CHECK-NEXT:    jle .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
-; CHECK-NEXT:    movl $1, {{.*}}(%rip)
+; CHECK-NEXT:    movl $1, g_38(%rip)
 ; CHECK-NEXT:    movl $1, %esi
 ; CHECK-NEXT:    jmp .LBB0_3
 ; CHECK-NEXT:  .LBB0_1: # %entry.if.end_crit_edge
-; CHECK-NEXT:    movl {{.*}}(%rip), %esi
+; CHECK-NEXT:    movl g_38(%rip), %esi
 ; CHECK-NEXT:  .LBB0_3: # %if.end
 ; CHECK-NEXT:    movl $.L.str, %edi
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    callq printf
+; CHECK-NEXT:    callq printf@PLT
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq

@@ -55,7 +55,7 @@ define void @t3(i16 %t) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %ecx
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    sarw %cl, {{.*}}(%rip)
+; X64-NEXT:    sarw %cl, X(%rip)
 ; X64-NEXT:    retq
        %shamt = and i16 %t, 31
        %tmp = load i16, i16* @X
