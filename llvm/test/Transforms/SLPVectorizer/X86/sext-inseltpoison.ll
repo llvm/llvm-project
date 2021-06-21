@@ -417,9 +417,9 @@ define <4 x i64> @loadext_4i16_to_4i64(i16* %p0) {
 ; SSE2-NEXT:    [[TMP4:%.*]] = load <2 x i16>, <2 x i16>* [[TMP3]], align 1
 ; SSE2-NEXT:    [[TMP5:%.*]] = sext <2 x i16> [[TMP2]] to <2 x i64>
 ; SSE2-NEXT:    [[TMP6:%.*]] = sext <2 x i16> [[TMP4]] to <2 x i64>
-; SSE2-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; SSE2-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; SSE2-NEXT:    [[V12:%.*]] = shufflevector <4 x i64> poison, <4 x i64> [[TMP7]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; SSE2-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[TMP6]], <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; SSE2-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[TMP6]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; SSE2-NEXT:    [[V31:%.*]] = shufflevector <4 x i64> [[V12]], <4 x i64> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; SSE2-NEXT:    ret <4 x i64> [[V31]]
 ;
