@@ -50,6 +50,12 @@ public:
     return interfaceMap.lookup<T>();
   }
 
+  /// Returns true if the attribute has the interface with the given ID
+  /// registered.
+  bool hasInterface(TypeID interfaceID) const {
+    return interfaceMap.contains(interfaceID);
+  }
+
   /// Return the unique identifier representing the concrete attribute class.
   TypeID getTypeID() const { return typeID; }
 
