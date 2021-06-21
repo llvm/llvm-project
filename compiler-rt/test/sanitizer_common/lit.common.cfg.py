@@ -31,6 +31,9 @@ config.available_features.add(config.tool_name)
 if config.host_os == 'Linux' and config.tool_name == "lsan" and config.target_arch == 'i386':
   config.available_features.add("lsan-x86")
 
+if config.arm_thumb:
+  config.available_features.add('thumb')
+
 if config.host_os == 'Darwin':
   # On Darwin, we default to `abort_on_error=1`, which would make tests run
   # much slower. Let's override this and run lit tests with 'abort_on_error=0'.
