@@ -196,21 +196,15 @@ bool MetadataTracking::isReplaceable(const Metadata &MD) {
 }
 
 SmallVector<Metadata *, 4> ReplaceableMetadataImpl::getAllArgListUsers() {
-  SmallVector<std::pair<OwnerTy, uint64_t> *> MDUsersWithID;
+  SmallVector<Metadata *, 4> MDUsers;
   for (auto Pair : UseMap) {
     OwnerTy Owner = Pair.second.first;
     if (!Owner.is<Metadata *>())
       continue;
     Metadata *OwnerMD = Owner.get<Metadata *>();
     if (OwnerMD->getMetadataID() == Metadata::DIArgListKind)
-      MDUsersWithID.push_back(&UseMap[Pair.first]);
+      MDUsers.push_back(OwnerMD);
   }
-  llvm::sort(MDUsersWithID, [](auto UserA, auto UserB) {
-    return UserA->second < UserB->second;
-  });
-  SmallVector<Metadata *> MDUsers;
-  for (auto UserWithID : MDUsersWithID)
-    MDUsers.push_back(UserWithID->first.get<Metadata *>());
   return MDUsers;
 }
 
