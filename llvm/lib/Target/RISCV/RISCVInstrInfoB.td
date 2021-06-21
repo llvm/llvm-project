@@ -970,6 +970,25 @@ def : Pat<(add (shl GPR:$rs1, (XLenVT 2)), GPR:$rs2),
           (SH2ADD GPR:$rs1, GPR:$rs2)>;
 def : Pat<(add (shl GPR:$rs1, (XLenVT 3)), GPR:$rs2),
           (SH3ADD GPR:$rs1, GPR:$rs2)>;
+
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 6)), GPR:$rs2),
+          (SH1ADD (SH1ADD GPR:$rs1, GPR:$rs1), GPR:$rs2)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 10)), GPR:$rs2),
+          (SH1ADD (SH2ADD GPR:$rs1, GPR:$rs1), GPR:$rs2)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 18)), GPR:$rs2),
+          (SH1ADD (SH3ADD GPR:$rs1, GPR:$rs1), GPR:$rs2)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 12)), GPR:$rs2),
+          (SH2ADD (SH1ADD GPR:$rs1, GPR:$rs1), GPR:$rs2)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 20)), GPR:$rs2),
+          (SH2ADD (SH2ADD GPR:$rs1, GPR:$rs1), GPR:$rs2)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 36)), GPR:$rs2),
+          (SH2ADD (SH3ADD GPR:$rs1, GPR:$rs1), GPR:$rs2)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 24)), GPR:$rs2),
+          (SH3ADD (SH1ADD GPR:$rs1, GPR:$rs1), GPR:$rs2)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 40)), GPR:$rs2),
+          (SH3ADD (SH2ADD GPR:$rs1, GPR:$rs1), GPR:$rs2)>;
+def : Pat<(add (mul_oneuse GPR:$rs1, (XLenVT 72)), GPR:$rs2),
+          (SH3ADD (SH3ADD GPR:$rs1, GPR:$rs1), GPR:$rs2)>;
 } // Predicates = [HasStdExtZba]
 
 let Predicates = [HasStdExtZba, IsRV64] in {
