@@ -32,6 +32,14 @@ public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
+/// Pass to perform interprocedural constant propagation by specializing
+/// functions
+class FunctionSpecializationPass
+    : public PassInfoMixin<FunctionSpecializationPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_SCCP_H
