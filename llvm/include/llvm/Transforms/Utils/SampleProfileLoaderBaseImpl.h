@@ -279,7 +279,12 @@ SampleProfileLoaderBaseImpl<BT>::getInstWeightImpl(const InstructionT &Inst) {
 
   const DILocation *DIL = DLoc;
   uint32_t LineOffset = FunctionSamples::getOffset(DIL);
-  uint32_t Discriminator = DIL->getBaseDiscriminator();
+  uint32_t Discriminator;
+  if (EnableFSDiscriminator)
+    Discriminator = DIL->getDiscriminator();
+  else
+    Discriminator = DIL->getBaseDiscriminator();
+
   ErrorOr<uint64_t> R = FS->findSamplesAt(LineOffset, Discriminator);
   if (R) {
     bool FirstMark =
@@ -298,11 +303,9 @@ SampleProfileLoaderBaseImpl<BT>::getInstWeightImpl(const InstructionT &Inst) {
         return Remark;
       });
     }
-    LLVM_DEBUG(dbgs() << "    " << DLoc.getLine() << "."
-                      << DIL->getBaseDiscriminator() << ":" << Inst
-                      << " (line offset: " << LineOffset << "."
-                      << DIL->getBaseDiscriminator() << " - weight: " << R.get()
-                      << ")\n");
+    LLVM_DEBUG(dbgs() << "    " << DLoc.getLine() << "." << Discriminator << ":"
+                      << Inst << " (line offset: " << LineOffset << "."
+                      << Discriminator << " - weight: " << R.get() << ")\n");
   }
   return R;
 }

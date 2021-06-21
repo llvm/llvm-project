@@ -2,6 +2,7 @@ Basic tests for testing text dump functions.
 
 RUN: llvm-profdata show --all-functions -counts --text %p/Inputs/basic.proftext > %t-basic.proftext1
 RUN: llvm-profdata merge -o %t-basic.proftext2 --text  %p/Inputs/basic.proftext
+RUN: llvm-profdata merge --text %p/Inputs/basic.proftext | diff %t-basic.proftext2 -
 
 RUN: llvm-profdata merge -binary -o %t-basic.profdata1 %t-basic.proftext1
 RUN: llvm-profdata merge -o %t-basic.profdata2 %t-basic.proftext2

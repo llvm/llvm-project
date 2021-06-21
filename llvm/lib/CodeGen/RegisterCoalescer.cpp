@@ -1557,7 +1557,9 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   // If the virtual SrcReg is completely eliminated, update all DBG_VALUEs
   // to describe DstReg instead.
   if (MRI->use_nodbg_empty(SrcReg)) {
-    for (MachineOperand &UseMO : MRI->use_operands(SrcReg)) {
+    for (MachineRegisterInfo::use_iterator UI = MRI->use_begin(SrcReg);
+         UI != MRI->use_end();) {
+      MachineOperand &UseMO = *UI++;
       MachineInstr *UseMI = UseMO.getParent();
       if (UseMI->isDebugValue()) {
         if (Register::isPhysicalRegister(DstReg))

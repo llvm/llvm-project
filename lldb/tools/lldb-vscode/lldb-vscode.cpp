@@ -389,7 +389,8 @@ void ProgressEventThreadFunction() {
         const char *message = lldb::SBDebugger::GetProgressFromEvent(
             event, progress_id, completed, total, is_debugger_specific);
         if (message)
-          g_vsc.SendProgressEvent(progress_id, message, completed, total);
+          g_vsc.SendProgressEvent(
+              ProgressEvent(progress_id, message, completed, total));
       }
     }
   }
@@ -1411,8 +1412,7 @@ void request_modules(const llvm::json::Object &request) {
 // }
 void request_initialize(const llvm::json::Object &request) {
   g_vsc.debugger = lldb::SBDebugger::Create(true /*source_init_files*/);
-  // TODO: reenable once confirmed that this doesn't make the buildbots flaky
-  // g_vsc.progress_event_thread = std::thread(ProgressEventThreadFunction);
+  g_vsc.progress_event_thread = std::thread(ProgressEventThreadFunction);
 
   // Create an empty target right away since we might get breakpoint requests
   // before we are given an executable to launch in a "launch" request, or a

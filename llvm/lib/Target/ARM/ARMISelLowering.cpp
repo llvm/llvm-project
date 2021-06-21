@@ -18169,6 +18169,8 @@ bool ARMTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
     auto *RHS = dyn_cast<ConstantSDNode>(Op->getOperand(1));
     if (!RHS || RHS->getZExtValue() != 4)
       return false;
+    if (Alignment < Align(4))
+      return false;
 
     Offset = Op->getOperand(1);
     Base = Op->getOperand(0);

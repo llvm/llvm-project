@@ -941,8 +941,14 @@ static Value *foldOperationIntoSelectOperand(Instruction &I, Value *SO,
   if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
     assert(canConstantFoldCallTo(II, cast<Function>(II->getCalledOperand())) &&
            "Expected constant-foldable intrinsic");
+    Intrinsic::ID IID = II->getIntrinsicID();
+    SmallVector<Value *, 2> Args = {SO};
 
-    return Builder.CreateIntrinsic(II->getIntrinsicID(), I.getType(), SO);
+    // Propagate the zero-is-undef argument to the new instruction.
+    if (IID == Intrinsic::ctlz || IID == Intrinsic::cttz)
+      Args.push_back(II->getArgOperand(1));
+
+    return Builder.CreateIntrinsic(IID, I.getType(), Args);
   }
 
   assert(I.isBinaryOp() && "Unexpected opcode for select folding");

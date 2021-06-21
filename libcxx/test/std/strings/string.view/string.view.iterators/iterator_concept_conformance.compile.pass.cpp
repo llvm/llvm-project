@@ -31,6 +31,8 @@ static_assert(std::sized_sentinel_for<iterator, iterator>);
 static_assert(std::sized_sentinel_for<iterator, const_iterator>);
 static_assert(!std::sized_sentinel_for<iterator, reverse_iterator>);
 static_assert(!std::sized_sentinel_for<iterator, const_reverse_iterator>);
+static_assert(std::indirectly_movable<iterator, char*>);
+static_assert(std::indirectly_movable_storable<iterator, char*>);
 
 static_assert(std::contiguous_iterator<const_iterator>);
 static_assert(!std::indirectly_writable<const_iterator, char>);

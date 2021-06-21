@@ -245,25 +245,23 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
       MarkLiveEdge(BB, Succ);
   };
 
-  // Check if there is only one value coming from all live predecessor blocks.
-  // Note that because we iterate in RPOT, we have already visited all its
-  // (non-latch) predecessors.
-  auto GetSoleInputOnFirstIteration = [&](PHINode & PN)->Value * {
-    BasicBlock *BB = PN.getParent();
+  // Check if there is only one predecessor on 1st iteration. Note that because
+  // we iterate in RPOT, we have already visited all its (non-latch)
+  // predecessors.
+  auto GetSolePredecessorOnFirstIteration = [&](BasicBlock * BB)->BasicBlock * {
     if (BB == Header)
-      return PN.getIncomingValueForBlock(L->getLoopPredecessor());
-    Value *OnlyInput = nullptr;
+      return L->getLoopPredecessor();
+    BasicBlock *OnlyPred = nullptr;
     for (auto *Pred : predecessors(BB))
-      if (LiveEdges.count({ Pred, BB })) {
-        Value *Incoming = PN.getIncomingValueForBlock(Pred);
-        // Two inputs.
-        if (OnlyInput && OnlyInput != Incoming)
+      if (OnlyPred != Pred && LiveEdges.count({ Pred, BB })) {
+        // 2 live preds.
+        if (OnlyPred)
           return nullptr;
-        OnlyInput = Incoming;
+        OnlyPred = Pred;
       }
 
-    assert(OnlyInput && "No live predecessors?");
-    return OnlyInput;
+    assert(OnlyPred && "No live predecessors?");
+    return OnlyPred;
   };
   DenseMap<Value *, Value *> FirstIterValue;
 
@@ -292,17 +290,18 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
       continue;
     }
 
-    // If Phi has only one input from all live input blocks, use it.
-    for (auto &PN : BB->phis()) {
-      if (!PN.getType()->isIntegerTy())
-        continue;
-      auto *Incoming = GetSoleInputOnFirstIteration(PN);
-      if (Incoming && DT.dominates(Incoming, BB->getTerminator())) {
-        Value *FirstIterV =
-            getValueOnFirstIteration(Incoming, FirstIterValue, SQ);
-        FirstIterValue[&PN] = FirstIterV;
+    // If this block has only one live pred, map its phis onto their SCEVs.
+    if (auto *OnlyPred = GetSolePredecessorOnFirstIteration(BB))
+      for (auto &PN : BB->phis()) {
+        if (!PN.getType()->isIntegerTy())
+          continue;
+        auto *Incoming = PN.getIncomingValueForBlock(OnlyPred);
+        if (DT.dominates(Incoming, BB->getTerminator())) {
+          Value *FirstIterV =
+              getValueOnFirstIteration(Incoming, FirstIterValue, SQ);
+          FirstIterValue[&PN] = FirstIterV;
+        }
       }
-    }
 
     using namespace PatternMatch;
     ICmpInst::Predicate Pred;

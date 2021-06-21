@@ -42,19 +42,26 @@ unsigned X86WinCOFFObjectWriter::getRelocType(MCContext &Ctx,
                                               const MCFixup &Fixup,
                                               bool IsCrossSection,
                                               const MCAsmBackend &MAB) const {
+  const bool Is64Bit = getMachine() == COFF::IMAGE_FILE_MACHINE_AMD64;
   unsigned FixupKind = Fixup.getKind();
   if (IsCrossSection) {
-    if (FixupKind != FK_Data_4 && FixupKind != llvm::X86::reloc_signed_4byte) {
+    // IMAGE_REL_AMD64_REL64 does not exist. We treat FK_Data_8 as FK_PCRel_4 so
+    // that .quad a-b can lower to IMAGE_REL_AMD64_REL32. This allows generic
+    // instrumentation to not bother with the COFF limitation. A negative value
+    // needs attention.
+    if (FixupKind == FK_Data_4 || FixupKind == llvm::X86::reloc_signed_4byte ||
+        (FixupKind == FK_Data_8 && Is64Bit)) {
+      FixupKind = FK_PCRel_4;
+    } else {
       Ctx.reportError(Fixup.getLoc(), "Cannot represent this expression");
       return COFF::IMAGE_REL_AMD64_ADDR32;
     }
-    FixupKind = FK_PCRel_4;
   }
 
   MCSymbolRefExpr::VariantKind Modifier = Target.isAbsolute() ?
     MCSymbolRefExpr::VK_None : Target.getSymA()->getKind();
 
-  if (getMachine() == COFF::IMAGE_FILE_MACHINE_AMD64) {
+  if (Is64Bit) {
     switch (FixupKind) {
     case FK_PCRel_4:
     case X86::reloc_riprel_4byte:
