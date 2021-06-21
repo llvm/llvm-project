@@ -316,6 +316,8 @@ static void writeInstrProfile(StringRef OutputFilename,
     if (Error E = Writer.writeText(Output))
       warn(std::move(E));
   } else {
+    if (Output.is_displayed())
+      exitWithError("cannot write a non-text format profile to the terminal");
     if (Error E = Writer.write(Output))
       warn(std::move(E));
   }
@@ -326,9 +328,6 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
                               StringRef OutputFilename,
                               ProfileFormat OutputFormat, bool OutputSparse,
                               unsigned NumThreads, FailureMode FailMode) {
-  if (OutputFilename.compare("-") == 0)
-    exitWithError("cannot write indexed profdata format to stdout");
-
   if (OutputFormat != PF_Binary && OutputFormat != PF_Compact_Binary &&
       OutputFormat != PF_Ext_Binary && OutputFormat != PF_Text)
     exitWithError("unknown format is specified");
@@ -863,8 +862,7 @@ static int merge_main(int argc, const char *argv[]) {
   cl::alias RemappingFileA("r", cl::desc("Alias for --remapping-file"),
                            cl::aliasopt(RemappingFile));
   cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
-                                      cl::init("-"), cl::Required,
-                                      cl::desc("Output file"));
+                                      cl::init("-"), cl::desc("Output file"));
   cl::alias OutputFilenameA("o", cl::desc("Alias for --output"),
                             cl::aliasopt(OutputFilename));
   cl::opt<ProfileKinds> ProfileKind(
