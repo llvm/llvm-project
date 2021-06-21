@@ -71,7 +71,6 @@ concept __signed_integer_like = signed_integral<_Tp>;
 
 template<class _Ip>
 concept weakly_incrementable =
-  default_initializable<_Ip> &&
   movable<_Ip> &&
   requires(_Ip __i) {
     typename iter_difference_t<_Ip>;
