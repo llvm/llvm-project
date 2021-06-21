@@ -88,6 +88,7 @@ def : WriteRes<WriteStoreNT, [SLM_IEC_RSV01, SLM_MEC_RSV]>;
 def : WriteRes<WriteLoad,    [SLM_MEC_RSV]> { let Latency = 3; }
 def : WriteRes<WriteMove,    [SLM_IEC_RSV01]>;
 def : WriteRes<WriteZero,    []>;
+defm : X86WriteResUnsupported<WriteVecMaskedGatherWriteback>;
 
 // Load/store MXCSR.
 // FIXME: These are probably wrong. They are copy pasted from WriteStore/Load.
