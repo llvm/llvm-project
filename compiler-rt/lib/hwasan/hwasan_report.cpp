@@ -341,13 +341,22 @@ void PrintAddressDescription(
     uptr mem = ShadowToMem(reinterpret_cast<uptr>(candidate));
     HwasanChunkView chunk = FindHeapChunkByAddress(mem);
     if (chunk.IsAllocated()) {
+      uptr offset;
+      const char *whence;
+      if (untagged_addr < chunk.End() && untagged_addr >= chunk.Beg()) {
+        offset = untagged_addr - chunk.Beg();
+        whence = "inside";
+      } else if (candidate == left) {
+        offset = untagged_addr - chunk.End();
+        whence = "to the right of";
+      } else {
+        offset = chunk.Beg() - untagged_addr;
+        whence = "to the left of";
+      }
       Printf("%s", d.Location());
-      Printf("%p is located %zd bytes to the %s of %zd-byte region [%p,%p)\n",
-             untagged_addr,
-             candidate == left ? untagged_addr - chunk.End()
-                               : chunk.Beg() - untagged_addr,
-             candidate == left ? "right" : "left", chunk.UsedSize(),
-             chunk.Beg(), chunk.End());
+      Printf("%p is located %zd bytes %s %zd-byte region [%p,%p)\n",
+             untagged_addr, offset, whence, chunk.UsedSize(), chunk.Beg(),
+             chunk.End());
       Printf("%s", d.Allocation());
       Printf("allocated here:\n");
       Printf("%s", d.Default());
