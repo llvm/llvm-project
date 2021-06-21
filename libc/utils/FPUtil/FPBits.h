@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_UTILS_FPUTIL_FP_BITS_H
 #define LLVM_LIBC_UTILS_FPUTIL_FP_BITS_H
 
+#include "PlatformDefs.h"
+
 #include "utils/CPP/TypeTraits.h"
 
 #include <stdint.h>
@@ -39,13 +41,17 @@ template <typename T> struct FPUIntType {};
 template <> struct FPUIntType<float> { using Type = uint32_t; };
 template <> struct FPUIntType<double> { using Type = uint64_t; };
 
-#if !(defined(__x86_64__) || defined(__i386__))
-// TODO: This has to be extended for visual studio where long double and
-// double are equivalent.
+#ifdef LONG_DOUBLE_IS_DOUBLE
+template <> struct MantissaWidth<long double> {
+  static constexpr unsigned value = MantissaWidth<double>::value;
+};
+template <> struct FPUIntType<long double> {
+  using Type = FPUIntType<double>::Type;
+};
+#elif !defined(SPECIAL_X86_LONG_DOUBLE)
 template <> struct MantissaWidth<long double> {
   static constexpr unsigned value = 112;
 };
-
 template <> struct FPUIntType<long double> { using Type = __uint128_t; };
 #endif
 
@@ -150,7 +156,7 @@ template <typename T> union FPBits {
 } // namespace fputil
 } // namespace __llvm_libc
 
-#if defined(__x86_64__) || defined(__i386__)
+#ifdef SPECIAL_X86_LONG_DOUBLE
 #include "utils/FPUtil/LongDoubleBitsX86.h"
 #endif
 
