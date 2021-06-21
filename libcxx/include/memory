@@ -99,7 +99,7 @@ struct allocator_traits
 };
 
 template <>
-class allocator<void> // deprecated in C++17, removed in C++20
+class allocator<void> // removed in C++20
 {
 public:
     typedef void*                                 pointer;
