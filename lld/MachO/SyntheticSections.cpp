@@ -633,7 +633,8 @@ void DataInCodeSection::finalizeContents() {
 }
 
 void DataInCodeSection::writeTo(uint8_t *buf) const {
-  memcpy(buf, entries.data(), getRawSize());
+  if (!entries.empty())
+    memcpy(buf, entries.data(), getRawSize());
 }
 
 FunctionStartsSection::FunctionStartsSection()
