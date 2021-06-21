@@ -32,6 +32,11 @@
 # ALL-LOAD: T _main
 # ALL-LOAD: T _unused
 
+## Multiple archives defining the same symbols aren't an issue, due to lazy
+## loading
+# RUN: cp %t/test.a %t/test2.a
+# RUN: %lld %t/test.a %t/test2.a %t/main.o -o /dev/null
+
 #--- 2.s
 .globl _boo
 _boo:
