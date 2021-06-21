@@ -218,7 +218,6 @@ NonLazyPointerSectionBase::NonLazyPointerSectionBase(const char *segname,
                                                      const char *name)
     : SyntheticSection(segname, name) {
   align = target->wordSize;
-  flags = S_NON_LAZY_SYMBOL_POINTERS;
 }
 
 void macho::addNonLazyBindingEntries(const Symbol *sym,
@@ -252,6 +251,17 @@ void NonLazyPointerSectionBase::writeTo(uint8_t *buf) const {
   for (size_t i = 0, n = entries.size(); i < n; ++i)
     if (auto *defined = dyn_cast<Defined>(entries[i]))
       write64le(&buf[i * target->wordSize], defined->getVA());
+}
+
+GotSection::GotSection()
+    : NonLazyPointerSectionBase(segment_names::dataConst, section_names::got) {
+  flags = S_NON_LAZY_SYMBOL_POINTERS;
+}
+
+TlvPointerSection::TlvPointerSection()
+    : NonLazyPointerSectionBase(segment_names::data,
+                                section_names::threadPtrs) {
+  flags = S_THREAD_LOCAL_VARIABLE_POINTERS;
 }
 
 BindingSection::BindingSection()
