@@ -1664,7 +1664,8 @@ Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B) {
 static Value *createPowWithIntegerExponent(Value *Base, Value *Expo, Module *M,
                                            IRBuilderBase &B) {
   Value *Args[] = {Base, Expo};
-  Function *F = Intrinsic::getDeclaration(M, Intrinsic::powi, Base->getType());
+  Type *Types[] = {Base->getType(), Expo->getType()};
+  Function *F = Intrinsic::getDeclaration(M, Intrinsic::powi, Types);
   return B.CreateCall(F, Args);
 }
 
@@ -1765,24 +1766,19 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
       return FMul;
     }
 
-    APSInt IntExpo(32, /*isUnsigned=*/false);
+    APSInt IntExpo(TLI->getIntSize(), /*isUnsigned=*/false);
     // powf(x, n) -> powi(x, n) if n is a constant signed integer value
     if (ExpoF->isInteger() &&
         ExpoF->convertToInteger(IntExpo, APFloat::rmTowardZero, &Ignored) ==
             APFloat::opOK) {
       return createPowWithIntegerExponent(
-          Base, ConstantInt::get(B.getInt32Ty(), IntExpo), M, B);
+          Base, ConstantInt::get(B.getIntNTy(TLI->getIntSize()), IntExpo), M, B);
     }
   }
 
   // powf(x, itofp(y)) -> powi(x, y)
   if (AllowApprox && (isa<SIToFPInst>(Expo) || isa<UIToFPInst>(Expo))) {
-    // FIXME: Currently we always use 32 bits for the exponent in llvm.powi. In
-    // the future we want to use the target dependent "size of int", or
-    // otherwise we could end up using the wrong type for the exponent when
-    // mapping llvm.powi back to an rtlib call. See
-    // https://reviews.llvm.org/D99439 for such a fix.
-    if (Value *ExpoI = getIntToFPVal(Expo, B, 32))
+    if (Value *ExpoI = getIntToFPVal(Expo, B, TLI->getIntSize()))
       return createPowWithIntegerExponent(Base, ExpoI, M, B);
   }
 

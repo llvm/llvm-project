@@ -10,7 +10,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 
 define internal fastcc void @d(i8* %c) unnamed_addr #0 {
 entry:
-  %cmp = icmp ule i8* %c, getelementptr inbounds (i8, i8* @a, i64 65535)
+  %cmp = icmp ule i8* %c, @a
   %add.ptr = getelementptr inbounds i8, i8* %c, i64 -65535
   br label %while.cond
 
@@ -18,7 +18,7 @@ while.cond:
   br i1 icmp ne (i8 0, i8 0), label %cont, label %while.end
 
 cont:
-  %a.mux = select i1 %cmp, i8* @a, i8* %add.ptr
+  %a.mux = select i1 %cmp, i8* @a, i8* %c
   switch i64 0, label %while.cond [
     i64 -1, label %handler.pointer_overflow.i
     i64 0, label %handler.pointer_overflow.i
@@ -26,7 +26,7 @@ cont:
 
 handler.pointer_overflow.i:
   %a.mux.lcssa4 = phi i8* [ %a.mux, %cont ], [ %a.mux, %cont ]
-; ALWAYS: [ %scevgep, %cont ], [ %scevgep, %cont ]
+; ALWAYS: [ %umax, %cont ], [ %umax, %cont ]
 ; NEVER: [ %a.mux, %cont ], [ %a.mux, %cont ]
 ; In cheap mode, use either one as long as it's consistent.
 ; CHEAP: [ %[[VAL:.*]], %cont ], [ %[[VAL]], %cont ]

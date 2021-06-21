@@ -304,7 +304,7 @@ public:
   void replaceAllUsesWith(Metadata *MD);
 
   /// Returns the list of all DIArgList users of this.
-  SmallVector<Metadata *, 4> getAllArgListUsers();
+  SmallVector<Metadata *> getAllArgListUsers();
 
   /// Resolve all uses of this.
   ///
@@ -385,7 +385,7 @@ public:
   Type *getType() const { return V->getType(); }
   LLVMContext &getContext() const { return V->getContext(); }
 
-  SmallVector<Metadata *, 4> getAllArgListUsers() {
+  SmallVector<Metadata *> getAllArgListUsers() {
     return ReplaceableMetadataImpl::getAllArgListUsers();
   }
 

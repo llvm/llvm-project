@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 
 define {} @load0({}* %p) {
-  ; CHECK-LABEL:           @"dfs$load0"
+  ; CHECK-LABEL:           @load0.dfsan
   ; CHECK-NEXT:            %a = load {}, {}* %p, align 1
   ; CHECK-NEXT:            store {} zeroinitializer, {}* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to {}*), align [[ALIGN:2]]
   ; CHECK-NEXT:            ret {} %a
@@ -20,7 +20,7 @@ define {} @load0({}* %p) {
 }
 
 define i8 @load8(i8* %p) {
-  ; CHECK-LABEL:           @"dfs$load8"
+  ; CHECK-LABEL:           @load8.dfsan
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint i8* %p to i64
   ; CHECK-NEXT:            %[[#SHADOW_ADDR:]] = and i64 %[[#INTP]], [[#%.10d,MASK:]]
@@ -36,7 +36,7 @@ define i8 @load8(i8* %p) {
 }
 
 define i16 @load16(i16* %p) {
-  ; CHECK-LABEL:           @"dfs$load16"
+  ; CHECK-LABEL:           @load16.dfsan
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint i16* %p to i64
   ; CHECK-NEXT:            %[[#SHADOW_ADDR:]] = and i64 %[[#INTP]], [[#MASK]]
@@ -56,7 +56,7 @@ define i16 @load16(i16* %p) {
 }
 
 define i32 @load32(i32* %p) {
-  ; CHECK-LABEL:           @"dfs$load32"
+  ; CHECK-LABEL:           @load32.dfsan
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint i32* %p to i64
   ; CHECK-NEXT:            %[[#SHADOW_ADDR:]] = and i64 %[[#INTP]], [[#MASK]]
@@ -78,7 +78,7 @@ define i32 @load32(i32* %p) {
 }
 
 define i64 @load64(i64* %p) {
-  ; CHECK-LABEL:           @"dfs$load64"
+  ; CHECK-LABEL:           @load64.dfsan
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint i64* %p to i64
   ; CHECK-NEXT:            %[[#SHADOW_ADDR:]] = and i64 %[[#INTP]], [[#MASK]]
@@ -102,7 +102,7 @@ define i64 @load64(i64* %p) {
 }
 
 define i128 @load128(i128* %p) {
-  ; CHECK-LABEL:           @"dfs$load128"
+  ; CHECK-LABEL:           @load128.dfsan
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint i128* %p to i64
   ; CHECK-NEXT:            %[[#SHADOW_ADDR:]] = and i64 %[[#INTP]], [[#MASK]]
@@ -130,7 +130,7 @@ define i128 @load128(i128* %p) {
 
 
 define i17 @load17(i17* %p) {
-  ; CHECK-LABEL:           @"dfs$load17"
+  ; CHECK-LABEL:           @load17.dfsan
   ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint i17* %p to i64
   ; CHECK-NEXT:            %[[#SHADOW_ADDR:]] = and i64 %[[#INTP]], [[#MASK]]
@@ -147,7 +147,7 @@ define i17 @load17(i17* %p) {
 
 @X = constant i1 1
 define i1 @load_global() {
-  ; CHECK-LABEL:           @"dfs$load_global"
+  ; CHECK-LABEL:           @load_global.dfsan
   ; CHECK-NEXT:            %a = load i1, i1* @X
   ; CHECK-NEXT:            store i[[#SBITS]] 0, i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; CHECK-NEXT:            ret i1 %a

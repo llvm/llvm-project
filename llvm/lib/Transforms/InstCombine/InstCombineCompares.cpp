@@ -279,9 +279,28 @@ InstCombinerImpl::foldCmpLoadFromIndexedGlobal(GetElementPtrInst *GEP,
       Idx = Builder.CreateTrunc(Idx, IntPtrTy);
   }
 
+  // If inbounds keyword is not present, Idx * ElementSize can overflow.
+  // Let's assume that ElementSize is 2 and the wanted value is at offset 0.
+  // Then, there are two possible values for Idx to match offset 0:
+  // 0x00..00, 0x80..00.
+  // Emitting 'icmp eq Idx, 0' isn't correct in this case because the
+  // comparison is false if Idx was 0x80..00.
+  // We need to erase the highest countTrailingZeros(ElementSize) bits of Idx.
+  unsigned ElementSize =
+      DL.getTypeAllocSize(Init->getType()->getArrayElementType());
+  auto MaskIdx = [&](Value* Idx){
+    if (!GEP->isInBounds() && countTrailingZeros(ElementSize) != 0) {
+      Value *Mask = ConstantInt::get(Idx->getType(), -1);
+      Mask = Builder.CreateLShr(Mask, countTrailingZeros(ElementSize));
+      Idx = Builder.CreateAnd(Idx, Mask);
+    }
+    return Idx;
+  };
+
   // If the comparison is only true for one or two elements, emit direct
   // comparisons.
   if (SecondTrueElement != Overdefined) {
+    Idx = MaskIdx(Idx);
     // None true -> false.
     if (FirstTrueElement == Undefined)
       return replaceInstUsesWith(ICI, Builder.getFalse());
@@ -302,6 +321,7 @@ InstCombinerImpl::foldCmpLoadFromIndexedGlobal(GetElementPtrInst *GEP,
   // If the comparison is only false for one or two elements, emit direct
   // comparisons.
   if (SecondFalseElement != Overdefined) {
+    Idx = MaskIdx(Idx);
     // None false -> true.
     if (FirstFalseElement == Undefined)
       return replaceInstUsesWith(ICI, Builder.getTrue());
@@ -323,6 +343,7 @@ InstCombinerImpl::foldCmpLoadFromIndexedGlobal(GetElementPtrInst *GEP,
   // where it is true, emit the range check.
   if (TrueRangeEnd != Overdefined) {
     assert(TrueRangeEnd != FirstTrueElement && "Should emit single compare");
+    Idx = MaskIdx(Idx);
 
     // Generate (i-FirstTrue) <u (TrueRangeEnd-FirstTrue+1).
     if (FirstTrueElement) {
@@ -338,6 +359,7 @@ InstCombinerImpl::foldCmpLoadFromIndexedGlobal(GetElementPtrInst *GEP,
   // False range check.
   if (FalseRangeEnd != Overdefined) {
     assert(FalseRangeEnd != FirstFalseElement && "Should emit single compare");
+    Idx = MaskIdx(Idx);
     // Generate (i-FirstFalse) >u (FalseRangeEnd-FirstFalse).
     if (FirstFalseElement) {
       Value *Offs = ConstantInt::get(Idx->getType(), -FirstFalseElement);
@@ -364,6 +386,7 @@ InstCombinerImpl::foldCmpLoadFromIndexedGlobal(GetElementPtrInst *GEP,
       Ty = DL.getSmallestLegalIntType(Init->getContext(), ArrayElementCount);
 
     if (Ty) {
+      Idx = MaskIdx(Idx);
       Value *V = Builder.CreateIntCast(Idx, Ty, false);
       V = Builder.CreateLShr(ConstantInt::get(Ty, MagicBitvector), V);
       V = Builder.CreateAnd(ConstantInt::get(Ty, 1), V);
@@ -3267,14 +3290,24 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
     // constant folded and the select turned into a bitwise or.
     Value *Op1 = nullptr, *Op2 = nullptr;
     ConstantInt *CI = nullptr;
-    if (Constant *C = dyn_cast<Constant>(LHSI->getOperand(1))) {
-      Op1 = ConstantExpr::getICmp(I.getPredicate(), C, RHSC);
+
+    auto SimplifyOp = [&](Value *V) {
+      Value *Op = nullptr;
+      if (Constant *C = dyn_cast<Constant>(V)) {
+        Op = ConstantExpr::getICmp(I.getPredicate(), C, RHSC);
+      } else if (RHSC->isNullValue()) {
+        // If null is being compared, check if it can be further simplified.
+        Op = SimplifyICmpInst(I.getPredicate(), V, RHSC, SQ);
+      }
+      return Op;
+    };
+    Op1 = SimplifyOp(LHSI->getOperand(1));
+    if (Op1)
       CI = dyn_cast<ConstantInt>(Op1);
-    }
-    if (Constant *C = dyn_cast<Constant>(LHSI->getOperand(2))) {
-      Op2 = ConstantExpr::getICmp(I.getPredicate(), C, RHSC);
+
+    Op2 = SimplifyOp(LHSI->getOperand(2));
+    if (Op2)
       CI = dyn_cast<ConstantInt>(Op2);
-    }
 
     // We only want to perform this transformation if it will not lead to
     // additional code. This is true if either both sides of the select

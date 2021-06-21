@@ -119,8 +119,8 @@ define i32 @test8(i32* %p) {
 ; ordering imposed.
 define i32 @test9() {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    store i32 undef, i32* null, align 536870912
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    store i32 poison, i32* null, align 536870912
+; CHECK-NEXT:    ret i32 poison
 ;
   %x = load atomic i32, i32* null unordered, align 4
   ret i32 %x
@@ -177,7 +177,7 @@ define i32 @test11_no_null_opt() #0 {
 ; ordering imposed.
 define i32 @test12() {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    store atomic i32 undef, i32* null unordered, align 536870912
+; CHECK-NEXT:    store atomic i32 poison, i32* null unordered, align 536870912
 ; CHECK-NEXT:    ret i32 0
 ;
   store atomic i32 0, i32* null unordered, align 4

@@ -402,6 +402,15 @@ def shl_ashr_to_sext_inreg : GICombineRule<
     [{ return Helper.matchAshrShlToSextInreg(*${root}, ${info}); }]),
   (apply [{ return Helper.applyAshShlToSextInreg(*${root}, ${info});}])
 >;
+
+// Fold and(and(x, C1), C2) -> C1&C2 ? and(x, C1&C2) : 0
+def overlapping_and: GICombineRule <
+  (defs root:$root, build_fn_matchinfo:$info),
+  (match (wip_match_opcode G_AND):$root,
+         [{ return Helper.matchOverlappingAnd(*${root}, ${info}); }]),
+  (apply [{ return Helper.applyBuildFn(*${root}, ${info}); }])
+>;
+
 // Fold (x & y) -> x or (x & y) -> y when (x & y) is known to equal x or equal y.
 def redundant_and: GICombineRule <
   (defs root:$root, register_matchinfo:$matchinfo),
@@ -643,7 +652,8 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         i2p_to_p2i, anyext_trunc_fold,
                                         fneg_fneg_fold, right_identity_one]>;
 
-def const_combines : GICombineGroup<[constant_fp_op, const_ptradd_to_i2p]>;
+def const_combines : GICombineGroup<[constant_fp_op, const_ptradd_to_i2p,
+                                     overlapping_and]>;
 
 def known_bits_simplifications : GICombineGroup<[
   redundant_and, redundant_sext_inreg, redundant_or, urem_pow2_to_mask,

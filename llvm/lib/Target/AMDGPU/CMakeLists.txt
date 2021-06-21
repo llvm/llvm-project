@@ -83,6 +83,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPURegBankCombiner.cpp
   AMDGPURegisterBankInfo.cpp
   AMDGPURegPressAnalysis.cpp
+  AMDGPUReplaceLDSUseWithPointer.cpp
   AMDGPURewriteOutArguments.cpp
   AMDGPUSubtarget.cpp
   AMDGPUTargetMachine.cpp
@@ -137,6 +138,7 @@ add_llvm_target(AMDGPUCodeGen
   SIMemoryLegalizer.cpp
   SIOptimizeExecMasking.cpp
   SIOptimizeExecMaskingPreRA.cpp
+  SIOptimizeVGPRLiveRange.cpp
   SIPeepholeSDWA.cpp
   SIPostRABundler.cpp
   SIPreEmitPeephole.cpp

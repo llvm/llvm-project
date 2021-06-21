@@ -57,6 +57,13 @@ enum class UndefinedSymbolTreatment {
   dynamic_lookup,
 };
 
+enum class ICFLevel {
+  unknown,
+  none,
+  safe,
+  all,
+};
+
 struct SectionAlign {
   llvm::StringRef segName;
   llvm::StringRef sectName;
@@ -126,6 +133,7 @@ struct Configuration {
   NamespaceKind namespaceKind = NamespaceKind::twolevel;
   UndefinedSymbolTreatment undefinedSymbolTreatment =
       UndefinedSymbolTreatment::error;
+  ICFLevel icfLevel = ICFLevel::none;
   llvm::MachO::HeaderFileType outputType;
   std::vector<llvm::StringRef> systemLibraryRoots;
   std::vector<llvm::StringRef> librarySearchPaths;

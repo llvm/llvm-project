@@ -78,7 +78,7 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
   ];
 
   let verify = [{
-    auto concreteOp = cast<ConcreteOpType>($_op);
+    auto concreteOp = cast<ConcreteOp>($_op);
     for (unsigned i = 0, e = $_op->getNumSuccessors(); i != e; ++i) {
       Optional<OperandRange> operands = concreteOp.getSuccessorOperands(i);
       if (failed(detail::verifyBranchSuccessorOperands($_op, i, operands)))
@@ -154,7 +154,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
   ];
 
   let verify = [{
-    static_assert(!ConcreteOpType::template hasTrait<OpTrait::ZeroRegion>(),
+    static_assert(!ConcreteOp::template hasTrait<OpTrait::ZeroRegion>(),
                   "expected operation to have non-zero regions");
     return success();
   }];

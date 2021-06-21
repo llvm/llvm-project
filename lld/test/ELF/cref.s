@@ -7,7 +7,7 @@
 // RUN: llvm-ar rcs %t.a %ta.o
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t3.o
 // RUN: ld.lld -shared -o %t1.so %t1.o
-// RUN: ld.lld -o /dev/null %t1.so %t2.o %t3.o %t.a -gc-sections -cref | FileCheck -strict-whitespace %s
+// RUN: ld.lld -o /dev/null %t1.so %t2.o %t3.o %t.a --gc-sections --cref | FileCheck -strict-whitespace %s
 
 //      CHECK: Symbol                                            File
 // CHECK-NEXT: foo                                               {{.*}}1.so

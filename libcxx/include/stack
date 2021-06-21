@@ -239,7 +239,7 @@ stack(_Container)
 template<class _Container,
          class _Alloc,
          class = _EnableIf<!__is_allocator<_Container>::value>,
-         class = _EnableIf<__is_allocator<_Alloc>::value>
+         class = _EnableIf<uses_allocator<_Container, _Alloc>::value>
          >
 stack(_Container, _Alloc)
     -> stack<typename _Container::value_type, _Container>;

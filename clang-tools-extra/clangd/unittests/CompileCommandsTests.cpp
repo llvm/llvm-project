@@ -41,13 +41,14 @@ TEST(CommandMangler, Everything) {
   Mangler.ClangPath = testPath("fake/clang");
   Mangler.ResourceDir = testPath("fake/resources");
   Mangler.Sysroot = testPath("fake/sysroot");
-  std::vector<std::string> Cmd = {"clang++", "-Xclang", "-load", "-Xclang",
-                                  "plugin",  "-MF",     "dep",   "foo.cc"};
+  std::vector<std::string> Cmd = {"clang++", "-Xclang", "-load",
+                                  "-Xclang", "plugin",  "-MF",
+                                  "dep",     "--",      "foo.cc"};
   Mangler.adjust(Cmd);
-  EXPECT_THAT(Cmd, ElementsAre(testPath("fake/clang++"), "foo.cc",
-                               "-fsyntax-only",
+  EXPECT_THAT(Cmd, ElementsAre(testPath("fake/clang++"), "-fsyntax-only",
                                "-resource-dir=" + testPath("fake/resources"),
-                               "-isysroot", testPath("fake/sysroot")));
+                               "-isysroot", testPath("fake/sysroot"), "--",
+                               "foo.cc"));
 }
 
 TEST(CommandMangler, ResourceDir) {
@@ -378,4 +379,3 @@ TEST(PrintArgvTest, All) {
 } // namespace
 } // namespace clangd
 } // namespace clang
-

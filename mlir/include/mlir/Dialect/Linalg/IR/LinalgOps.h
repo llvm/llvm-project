@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_LINALG_LINALGOPS_H_
 
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/AffineExpr.h"
@@ -119,11 +120,6 @@ LogicalResult verifyStructuredOpInterface(Operation *op);
 } // namespace linalg
 } // namespace mlir
 
-namespace mlir {
-namespace linalg {
-class IndexedGenericOp;
-} // namespace linalg
-} // namespace mlir
 #include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
 
 #define GET_OP_CLASSES

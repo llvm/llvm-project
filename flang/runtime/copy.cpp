@@ -26,20 +26,20 @@ void CopyElement(const Descriptor &to, const SubscriptValue toAt[],
     if (const auto *derived{addendum->derivedType()}) {
       RUNTIME_CHECK(terminator,
           from.Addendum() && derived == from.Addendum()->derivedType());
-      const Descriptor &componentDesc{derived->component.descriptor()};
+      const Descriptor &componentDesc{derived->component()};
       const typeInfo::Component *component{
           componentDesc.OffsetElement<typeInfo::Component>()};
       std::size_t nComponents{componentDesc.Elements()};
       for (std::size_t j{0}; j < nComponents; ++j, ++component) {
-        if (component->genre == typeInfo::Component::Genre::Allocatable ||
-            component->genre == typeInfo::Component::Genre::Automatic) {
+        if (component->genre() == typeInfo::Component::Genre::Allocatable ||
+            component->genre() == typeInfo::Component::Genre::Automatic) {
           Descriptor &toDesc{
-              *reinterpret_cast<Descriptor *>(toPtr + component->offset)};
+              *reinterpret_cast<Descriptor *>(toPtr + component->offset())};
           if (toDesc.raw().base_addr != nullptr) {
             toDesc.set_base_addr(nullptr);
             RUNTIME_CHECK(terminator, toDesc.Allocate() == CFI_SUCCESS);
             const Descriptor &fromDesc{*reinterpret_cast<const Descriptor *>(
-                fromPtr + component->offset)};
+                fromPtr + component->offset())};
             CopyArray(toDesc, fromDesc, terminator);
           }
         }

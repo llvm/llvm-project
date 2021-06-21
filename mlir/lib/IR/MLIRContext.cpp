@@ -356,11 +356,11 @@ MLIRContext::MLIRContext(const DialectRegistry &registry)
     printStackTraceOnDiagnostic(clOptions->printStackTraceOnDiagnostic);
   }
 
-  // Ensure the builtin dialect is always pre-loaded.
-  getOrLoadDialect<BuiltinDialect>();
-
   // Pre-populate the registry.
   registry.appendTo(impl->dialectsRegistry);
+
+  // Ensure the builtin dialect is always pre-loaded.
+  getOrLoadDialect<BuiltinDialect>();
 
   // Initialize several common attributes and types to avoid the need to lock
   // the context when accessing them.
@@ -696,8 +696,8 @@ ParseResult AbstractOperation::parseAssembly(OpAsmParser &parser,
 
 /// Look up the specified operation in the operation set and return a pointer
 /// to it if present. Otherwise, return a null pointer.
-const AbstractOperation *AbstractOperation::lookup(StringRef opName,
-                                                   MLIRContext *context) {
+AbstractOperation *AbstractOperation::lookupMutable(StringRef opName,
+                                                    MLIRContext *context) {
   auto &impl = context->getImpl();
   auto it = impl.registeredOperations.find(opName);
   if (it != impl.registeredOperations.end())

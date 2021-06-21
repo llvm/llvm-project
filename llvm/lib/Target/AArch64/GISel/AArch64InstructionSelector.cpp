@@ -2163,6 +2163,40 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     I.eraseFromParent();
     return true;
   }
+  case TargetOpcode::G_OR: {
+    // Look for operations that take the lower `Width=Size-ShiftImm` bits of
+    // `ShiftSrc` and insert them into the upper `Width` bits of `MaskSrc` via
+    // shifting and masking that we can replace with a BFI (encoded as a BFM).
+    Register Dst = I.getOperand(0).getReg();
+    LLT Ty = MRI.getType(Dst);
+
+    if (!Ty.isScalar())
+      return false;
+
+    unsigned Size = Ty.getSizeInBits();
+    if (Size != 32 && Size != 64)
+      return false;
+
+    Register ShiftSrc;
+    int64_t ShiftImm;
+    Register MaskSrc;
+    int64_t MaskImm;
+    if (!mi_match(
+            Dst, MRI,
+            m_GOr(m_OneNonDBGUse(m_GShl(m_Reg(ShiftSrc), m_ICst(ShiftImm))),
+                  m_OneNonDBGUse(m_GAnd(m_Reg(MaskSrc), m_ICst(MaskImm))))))
+      return false;
+
+    if (ShiftImm > Size || ((1ULL << ShiftImm) - 1ULL) != uint64_t(MaskImm))
+      return false;
+
+    int64_t Immr = Size - ShiftImm;
+    int64_t Imms = Size - ShiftImm - 1;
+    unsigned Opc = Size == 32 ? AArch64::BFMWri : AArch64::BFMXri;
+    emitInstr(Opc, {Dst}, {MaskSrc, ShiftSrc, Immr, Imms}, MIB);
+    I.eraseFromParent();
+    return true;
+  }
   default:
     return false;
   }

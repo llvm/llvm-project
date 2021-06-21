@@ -397,7 +397,7 @@ define void @test_bitcast_i16tohalf(i16 %a, half* %p) #0 {
 }
 
 declare half @llvm.sqrt.f16(half %a) #0
-declare half @llvm.powi.f16(half %a, i32 %b) #0
+declare half @llvm.powi.f16.i32(half %a, i32 %b) #0
 declare half @llvm.sin.f16(half %a) #0
 declare half @llvm.cos.f16(half %a) #0
 declare half @llvm.pow.f16(half %a, half %b) #0
@@ -444,7 +444,7 @@ define void @test_sqrt(half* %p) #0 {
 ; CHECK-LIBCALL: bl __aeabi_f2h
 define void @test_fpowi(half* %p, i32 %b) #0 {
   %a = load half, half* %p, align 2
-  %r = call half @llvm.powi.f16(half %a, i32 %b)
+  %r = call half @llvm.powi.f16.i32(half %a, i32 %b)
   store half %r, half* %p
   ret void
 }

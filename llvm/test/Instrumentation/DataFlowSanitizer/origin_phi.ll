@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
 
 define i32 @phiop(i32 %a, i32 %b, i1 %c) {
-  ; CHECK: @"dfs$phiop"
+  ; CHECK: @phiop.dfsan
   ; CHECK: entry:
   ; CHECK: [[BO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
   ; CHECK: [[AO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4

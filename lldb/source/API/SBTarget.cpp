@@ -26,6 +26,7 @@
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBSymbolContextList.h"
+#include "lldb/API/SBTrace.h"
 #include "lldb/Breakpoint/BreakpointID.h"
 #include "lldb/Breakpoint/BreakpointIDList.h"
 #include "lldb/Breakpoint/BreakpointList.h"
@@ -2454,6 +2455,34 @@ SBEnvironment SBTarget::GetEnvironment() {
   return LLDB_RECORD_RESULT(SBEnvironment());
 }
 
+lldb::SBTrace SBTarget::GetTrace() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBTrace, SBTarget, GetTrace);
+  TargetSP target_sp(GetSP());
+
+  if (target_sp)
+    return LLDB_RECORD_RESULT(SBTrace(target_sp->GetTrace()));
+
+  return LLDB_RECORD_RESULT(SBTrace());
+}
+
+lldb::SBTrace SBTarget::CreateTrace(lldb::SBError &error) {
+  LLDB_RECORD_METHOD(lldb::SBTrace, SBTarget, CreateTrace, (lldb::SBError &),
+                     error);
+  TargetSP target_sp(GetSP());
+  error.Clear();
+
+  if (target_sp) {
+    if (llvm::Expected<lldb::TraceSP> trace_sp = target_sp->CreateTrace()) {
+      return LLDB_RECORD_RESULT(SBTrace(*trace_sp));
+    } else {
+      error.SetErrorString(llvm::toString(trace_sp.takeError()).c_str());
+    }
+  } else {
+    error.SetErrorString("missing target");
+  }
+  return LLDB_RECORD_RESULT(SBTrace());
+}
+
 namespace lldb_private {
 namespace repro {
 
@@ -2715,6 +2744,8 @@ void RegisterMethods<SBTarget>(Registry &R) {
                        GetInstructionsWithFlavor,
                        (lldb::addr_t, const char *, const void *, size_t));
   LLDB_REGISTER_METHOD(lldb::SBEnvironment, SBTarget, GetEnvironment, ());
+  LLDB_REGISTER_METHOD(lldb::SBTrace, SBTarget, GetTrace, ());
+  LLDB_REGISTER_METHOD(lldb::SBTrace, SBTarget, CreateTrace, (lldb::SBError &));
 }
 
 }

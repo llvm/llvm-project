@@ -70,6 +70,7 @@ add_flang_library(FortranRuntime
   tools.cpp
   transformational.cpp
   type-code.cpp
+  type-info.cpp
   unit.cpp
   unit-map.cpp
 

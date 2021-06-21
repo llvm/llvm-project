@@ -283,7 +283,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 // #   define __cpp_lib_atomic_shared_ptr                  201711L
 # endif
 # if !defined(_LIBCPP_HAS_NO_THREADS)
-// #   define __cpp_lib_atomic_value_initialization        201911L
+#   define __cpp_lib_atomic_value_initialization        201911L
 # endif
 # if !defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_atomic_wait)
 #   define __cpp_lib_atomic_wait                        201907L

@@ -5,7 +5,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare i32 @f(i32)
 
-; CHECK-LABEL: @"dfs$inner_callee"
+; CHECK-LABEL: @inner_callee.dfsan
 define i32 @inner_callee(i32) {
   %r = call i32 @f(i32 %0)
 
@@ -16,10 +16,10 @@ define i32 @inner_callee(i32) {
   ret i32 %r
 }
 
-; CHECK-LABEL: @"dfs$musttail_call"
+; CHECK-LABEL: @musttail_call.dfsan
 define i32 @musttail_call(i32) {
   ; CHECK: store{{.*}}__dfsan_arg_tls
-  ; CHECK-NEXT: musttail call i32 @"dfs$inner_callee"
+  ; CHECK-NEXT: musttail call i32 @inner_callee.dfsan
   %r = musttail call i32 @inner_callee(i32 %0)
 
   ; For "musttail" calls we can not insert any shadow manipulating code between
@@ -32,9 +32,9 @@ define i32 @musttail_call(i32) {
   ret i32 %r
 }
 
-; CHECK-LABEL: @"dfs$outer_caller"
+; CHECK-LABEL: @outer_caller.dfsan
 define i32 @outer_caller() {
-  ; CHECK: call{{.*}}@"dfs$musttail_call"
+  ; CHECK: call{{.*}}@musttail_call.dfsan
   ; CHECK-NEXT: load{{.*}}__dfsan_retval_tls
   ; CHECK_ORIGIN-NEXT: load{{.*}}__dfsan_retval_origin_tls
   %r = call i32 @musttail_call(i32 0)
@@ -47,10 +47,10 @@ define i32 @outer_caller() {
 
 declare i32* @mismatching_callee(i32)
 
-; CHECK-LABEL: define i8* @"dfs$mismatching_musttail_call"
+; CHECK-LABEL: define i8* @mismatching_musttail_call.dfsan
 define i8* @mismatching_musttail_call(i32) {
   %r = musttail call i32* @mismatching_callee(i32 %0)
-  ; CHECK: musttail call i32* @"dfs$mismatching_callee"
+  ; CHECK: musttail call i32* @mismatching_callee.dfsan
   ; COMM: No instrumentation between call and ret.
   ; CHECK-NEXT: bitcast i32* {{.*}} to i8*
   %c = bitcast i32* %r to i8*

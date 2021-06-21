@@ -734,54 +734,6 @@ void MCDwarfLineAddr::Encode(MCContext &Context, MCDwarfLineTableParams Params,
   }
 }
 
-std::tuple<uint32_t, uint32_t, bool>
-MCDwarfLineAddr::fixedEncode(MCContext &Context, int64_t LineDelta,
-                             uint64_t AddrDelta, raw_ostream &OS) {
-  uint32_t Offset, Size;
-  if (LineDelta != INT64_MAX) {
-    OS << char(dwarf::DW_LNS_advance_line);
-    encodeSLEB128(LineDelta, OS);
-  }
-
-  // Use address delta to adjust address or use absolute address to adjust
-  // address.
-  bool SetDelta;
-  // According to DWARF spec., the DW_LNS_fixed_advance_pc opcode takes a
-  // single uhalf (unencoded) operand. So, the maximum value of AddrDelta
-  // is 65535. We set a conservative upper bound for it for relaxation.
-  if (AddrDelta > 60000) {
-    const MCAsmInfo *asmInfo = Context.getAsmInfo();
-    unsigned AddrSize = asmInfo->getCodePointerSize();
-
-    OS << char(dwarf::DW_LNS_extended_op);
-    encodeULEB128(1 + AddrSize, OS);
-    OS << char(dwarf::DW_LNE_set_address);
-    // Generate fixup for the address.
-    Offset = OS.tell();
-    Size = AddrSize;
-    SetDelta = false;
-    OS.write_zeros(AddrSize);
-  } else {
-    OS << char(dwarf::DW_LNS_fixed_advance_pc);
-    // Generate fixup for 2-bytes address delta.
-    Offset = OS.tell();
-    Size = 2;
-    SetDelta = true;
-    OS << char(0);
-    OS << char(0);
-  }
-
-  if (LineDelta == INT64_MAX) {
-    OS << char(dwarf::DW_LNS_extended_op);
-    OS << char(1);
-    OS << char(dwarf::DW_LNE_end_sequence);
-  } else {
-    OS << char(dwarf::DW_LNS_copy);
-  }
-
-  return std::make_tuple(Offset, Size, SetDelta);
-}
-
 // Utility function to write a tuple for .debug_abbrev.
 static void EmitAbbrev(MCStreamer *MCOS, uint64_t Name, uint64_t Form) {
   MCOS->emitULEB128IntValue(Name);
@@ -1940,54 +1892,28 @@ void MCDwarfFrameEmitter::EmitAdvanceLoc(MCObjectStreamer &Streamer,
 }
 
 void MCDwarfFrameEmitter::EncodeAdvanceLoc(MCContext &Context,
-                                           uint64_t AddrDelta, raw_ostream &OS,
-                                           uint32_t *Offset, uint32_t *Size) {
+                                           uint64_t AddrDelta,
+                                           raw_ostream &OS) {
   // Scale the address delta by the minimum instruction length.
   AddrDelta = ScaleAddrDelta(Context, AddrDelta);
-
-  bool WithFixups = false;
-  if (Offset && Size)
-    WithFixups = true;
+  if (AddrDelta == 0)
+    return;
 
   support::endianness E =
       Context.getAsmInfo()->isLittleEndian() ? support::little : support::big;
-  if (AddrDelta == 0) {
-    if (WithFixups) {
-      *Offset = 0;
-      *Size = 0;
-    }
-  } else if (isUIntN(6, AddrDelta)) {
+
+  if (isUIntN(6, AddrDelta)) {
     uint8_t Opcode = dwarf::DW_CFA_advance_loc | AddrDelta;
-    if (WithFixups) {
-      *Offset = OS.tell();
-      *Size = 6;
-      OS << uint8_t(dwarf::DW_CFA_advance_loc);
-    } else
-      OS << Opcode;
+    OS << Opcode;
   } else if (isUInt<8>(AddrDelta)) {
     OS << uint8_t(dwarf::DW_CFA_advance_loc1);
-    if (WithFixups) {
-      *Offset = OS.tell();
-      *Size = 8;
-      OS.write_zeros(1);
-    } else
-      OS << uint8_t(AddrDelta);
+    OS << uint8_t(AddrDelta);
   } else if (isUInt<16>(AddrDelta)) {
     OS << uint8_t(dwarf::DW_CFA_advance_loc2);
-    if (WithFixups) {
-      *Offset = OS.tell();
-      *Size = 16;
-      OS.write_zeros(2);
-    } else
-      support::endian::write<uint16_t>(OS, AddrDelta, E);
+    support::endian::write<uint16_t>(OS, AddrDelta, E);
   } else {
     assert(isUInt<32>(AddrDelta));
     OS << uint8_t(dwarf::DW_CFA_advance_loc4);
-    if (WithFixups) {
-      *Offset = OS.tell();
-      *Size = 32;
-      OS.write_zeros(4);
-    } else
-      support::endian::write<uint32_t>(OS, AddrDelta, E);
+    support::endian::write<uint32_t>(OS, AddrDelta, E);
   }
 }

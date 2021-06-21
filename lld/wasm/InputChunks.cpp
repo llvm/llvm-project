@@ -106,19 +106,18 @@ void InputChunk::relocate(uint8_t *buf) const {
 
   for (const WasmRelocation &rel : relocations) {
     uint8_t *loc = buf + rel.Offset - inputSectionOffset;
-    auto value = file->calcNewValue(rel, tombstone, this);
     LLVM_DEBUG(dbgs() << "apply reloc: type=" << relocTypeToString(rel.Type));
     if (rel.Type != R_WASM_TYPE_INDEX_LEB)
       LLVM_DEBUG(dbgs() << " sym=" << file->getSymbols()[rel.Index]->getName());
     LLVM_DEBUG(dbgs() << " addend=" << rel.Addend << " index=" << rel.Index
-                      << " value=" << value << " offset=" << rel.Offset
-                      << "\n");
+                      << " offset=" << rel.Offset << "\n");
+    auto value = file->calcNewValue(rel, tombstone, this);
 
     switch (rel.Type) {
     case R_WASM_TYPE_INDEX_LEB:
     case R_WASM_FUNCTION_INDEX_LEB:
     case R_WASM_GLOBAL_INDEX_LEB:
-    case R_WASM_EVENT_INDEX_LEB:
+    case R_WASM_TAG_INDEX_LEB:
     case R_WASM_MEMORY_ADDR_LEB:
     case R_WASM_TABLE_NUMBER_LEB:
       encodeULEB128(value, loc, 5);
@@ -209,7 +208,7 @@ static unsigned writeCompressedReloc(uint8_t *buf, const WasmRelocation &rel,
   case R_WASM_TYPE_INDEX_LEB:
   case R_WASM_FUNCTION_INDEX_LEB:
   case R_WASM_GLOBAL_INDEX_LEB:
-  case R_WASM_EVENT_INDEX_LEB:
+  case R_WASM_TAG_INDEX_LEB:
   case R_WASM_MEMORY_ADDR_LEB:
   case R_WASM_MEMORY_ADDR_LEB64:
   case R_WASM_TABLE_NUMBER_LEB:
@@ -229,7 +228,7 @@ static unsigned getRelocWidthPadded(const WasmRelocation &rel) {
   case R_WASM_TYPE_INDEX_LEB:
   case R_WASM_FUNCTION_INDEX_LEB:
   case R_WASM_GLOBAL_INDEX_LEB:
-  case R_WASM_EVENT_INDEX_LEB:
+  case R_WASM_TAG_INDEX_LEB:
   case R_WASM_MEMORY_ADDR_LEB:
   case R_WASM_TABLE_NUMBER_LEB:
   case R_WASM_TABLE_INDEX_SLEB:

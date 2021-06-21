@@ -23,6 +23,7 @@ let Command = "process trace start intel pt" in {
          "the sum of the sizes of all thread traces of this process, excluding "
          "the ones created with the \"thread trace start\" command. "
          "Whenever a thread is attempted to be traced due to this command and "
-         "the limit would be reached, the process is stopped with a \"tracing\" "
-         "reason, so that the user can retrace the process if needed.">;
+         "the limit would be reached, the process is stopped with a "
+         "\"processor trace\" reason, so that the user can retrace the process "
+         "if needed. Defaults to 500MB.">;
 }

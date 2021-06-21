@@ -104,12 +104,11 @@ SelfTargetProcessControl::runAsMain(JITTargetAddress MainFnAddr,
 
 Expected<shared::WrapperFunctionResult>
 SelfTargetProcessControl::runWrapper(JITTargetAddress WrapperFnAddr,
-                                     ArrayRef<uint8_t> ArgBuffer) {
+                                     ArrayRef<char> ArgBuffer) {
   using WrapperFnTy = shared::detail::CWrapperFunctionResult (*)(
       const char *Data, uint64_t Size);
   auto *WrapperFn = jitTargetAddressToFunction<WrapperFnTy>(WrapperFnAddr);
-  return WrapperFn(reinterpret_cast<const char *>(ArgBuffer.data()),
-                   ArgBuffer.size());
+  return WrapperFn(ArgBuffer.data(), ArgBuffer.size());
 }
 
 Error SelfTargetProcessControl::disconnect() { return Error::success(); }

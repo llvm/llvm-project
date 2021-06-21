@@ -887,25 +887,22 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   // Allocate statically the array of pointers to value profile nodes for
   // the current function.
   Constant *ValuesPtrExpr = ConstantPointerNull::get(Int8PtrTy);
-  if (ValueProfileStaticAlloc && !needsRuntimeRegistrationOfSectionRange(TT)) {
-    uint64_t NS = 0;
-    for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
-      NS += PD.NumValueSites[Kind];
-    if (NS) {
-      ArrayType *ValuesTy = ArrayType::get(Type::getInt64Ty(Ctx), NS);
-
-      auto *ValuesVar =
-          new GlobalVariable(*M, ValuesTy, false, Linkage,
-                             Constant::getNullValue(ValuesTy),
-                             getVarName(Inc, getInstrProfValuesVarPrefix()));
-      ValuesVar->setVisibility(Visibility);
-      ValuesVar->setSection(
-          getInstrProfSectionName(IPSK_vals, TT.getObjectFormat()));
-      ValuesVar->setAlignment(Align(8));
-      MaybeSetComdat(ValuesVar);
-      ValuesPtrExpr =
-          ConstantExpr::getBitCast(ValuesVar, Type::getInt8PtrTy(Ctx));
-    }
+  uint64_t NS = 0;
+  for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
+    NS += PD.NumValueSites[Kind];
+  if (NS > 0 && ValueProfileStaticAlloc &&
+      !needsRuntimeRegistrationOfSectionRange(TT)) {
+    ArrayType *ValuesTy = ArrayType::get(Type::getInt64Ty(Ctx), NS);
+    auto *ValuesVar = new GlobalVariable(
+        *M, ValuesTy, false, Linkage, Constant::getNullValue(ValuesTy),
+        getVarName(Inc, getInstrProfValuesVarPrefix()));
+    ValuesVar->setVisibility(Visibility);
+    ValuesVar->setSection(
+        getInstrProfSectionName(IPSK_vals, TT.getObjectFormat()));
+    ValuesVar->setAlignment(Align(8));
+    MaybeSetComdat(ValuesVar);
+    ValuesPtrExpr =
+        ConstantExpr::getBitCast(ValuesVar, Type::getInt8PtrTy(Ctx));
   }
 
   // Create data variable.
@@ -929,10 +926,15 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
 #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Init,
 #include "llvm/ProfileData/InstrProfData.inc"
   };
-  // If code never references data variables (the symbol is unneeded), and
-  // linker GC cannot discard data variables while the text section is retained,
-  // data variables can be private. This optimization applies on COFF and ELF.
-  if (!DataReferencedByCode && !TT.isOSBinFormatMachO()) {
+  // If the data variable is not referenced by code (if we don't emit
+  // @llvm.instrprof.value.profile, NS will be 0), and the counter keeps the
+  // data variable live under linker GC, the data variable can be private. This
+  // optimization applies to ELF.
+  //
+  // On COFF, a comdat leader cannot be local so we require DataReferencedByCode
+  // to be false.
+  if (NS == 0 && (TT.isOSBinFormatELF() ||
+                  (!DataReferencedByCode && TT.isOSBinFormatCOFF()))) {
     Linkage = GlobalValue::PrivateLinkage;
     Visibility = GlobalValue::DefaultVisibility;
   }

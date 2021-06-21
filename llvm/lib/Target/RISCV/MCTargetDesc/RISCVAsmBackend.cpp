@@ -9,6 +9,7 @@
 #include "RISCVAsmBackend.h"
 #include "RISCVMCExpr.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -18,7 +19,10 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Endian.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -70,7 +74,26 @@ RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_riscv_call", 0, 64, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_riscv_call_plt", 0, 64, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_riscv_relax", 0, 0, 0},
-      {"fixup_riscv_align", 0, 0, 0}};
+      {"fixup_riscv_align", 0, 0, 0},
+
+      {"fixup_riscv_set_8", 0, 8, 0},
+      {"fixup_riscv_add_8", 0, 8, 0},
+      {"fixup_riscv_sub_8", 0, 8, 0},
+
+      {"fixup_riscv_set_16", 0, 16, 0},
+      {"fixup_riscv_add_16", 0, 16, 0},
+      {"fixup_riscv_sub_16", 0, 16, 0},
+
+      {"fixup_riscv_set_32", 0, 32, 0},
+      {"fixup_riscv_add_32", 0, 32, 0},
+      {"fixup_riscv_sub_32", 0, 32, 0},
+
+      {"fixup_riscv_add_64", 0, 64, 0},
+      {"fixup_riscv_sub_64", 0, 64, 0},
+
+      {"fixup_riscv_set_6b", 2, 6, 0},
+      {"fixup_riscv_sub_6b", 2, 6, 0},
+  };
   static_assert((array_lengthof(Infos)) == RISCV::NumTargetFixupKinds,
                 "Not all fixup kinds added to Infos array");
 
@@ -179,6 +202,135 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
   Inst = std::move(Res);
 }
 
+bool RISCVAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
+                                         MCAsmLayout &Layout,
+                                         bool &WasRelaxed) const {
+  MCContext &C = Layout.getAssembler().getContext();
+
+  int64_t LineDelta = DF.getLineDelta();
+  const MCExpr &AddrDelta = DF.getAddrDelta();
+  SmallVectorImpl<char> &Data = DF.getContents();
+  SmallVectorImpl<MCFixup> &Fixups = DF.getFixups();
+  size_t OldSize = Data.size();
+
+  int64_t Value;
+  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Layout);
+  assert(IsAbsolute && "CFA with invalid expression");
+  (void)IsAbsolute;
+
+  Data.clear();
+  Fixups.clear();
+  raw_svector_ostream OS(Data);
+
+  // INT64_MAX is a signal that this is actually a DW_LNE_end_sequence.
+  if (LineDelta != INT64_MAX) {
+    OS << uint8_t(dwarf::DW_LNS_advance_line);
+    encodeSLEB128(LineDelta, OS);
+  }
+
+  unsigned Offset;
+  std::pair<unsigned, unsigned> Fixup;
+
+  // According to the DWARF specification, the `DW_LNS_fixed_advance_pc` opcode
+  // takes a single unsigned half (unencoded) operand. The maximum encodable
+  // value is therefore 65535.  Set a conservative upper bound for relaxation.
+  if (Value > 60000) {
+    unsigned PtrSize = C.getAsmInfo()->getCodePointerSize();
+
+    OS << uint8_t(dwarf::DW_LNS_extended_op);
+    encodeULEB128(PtrSize + 1, OS);
+
+    OS << uint8_t(dwarf::DW_LNE_set_address);
+    Offset = OS.tell();
+    Fixup = PtrSize == 4 ? std::make_pair(RISCV::fixup_riscv_add_32,
+                                          RISCV::fixup_riscv_sub_32)
+                         : std::make_pair(RISCV::fixup_riscv_add_64,
+                                          RISCV::fixup_riscv_sub_64);
+    OS.write_zeros(PtrSize);
+  } else {
+    OS << uint8_t(dwarf::DW_LNS_fixed_advance_pc);
+    Offset = OS.tell();
+    Fixup = {RISCV::fixup_riscv_add_16, RISCV::fixup_riscv_sub_16};
+    support::endian::write<uint16_t>(OS, 0, support::little);
+  }
+
+  const MCBinaryExpr &MBE = cast<MCBinaryExpr>(AddrDelta);
+  Fixups.push_back(MCFixup::create(
+      Offset, MBE.getLHS(), static_cast<MCFixupKind>(std::get<0>(Fixup))));
+  Fixups.push_back(MCFixup::create(
+      Offset, MBE.getRHS(), static_cast<MCFixupKind>(std::get<1>(Fixup))));
+
+  if (LineDelta == INT64_MAX) {
+    OS << uint8_t(dwarf::DW_LNS_extended_op);
+    OS << uint8_t(1);
+    OS << uint8_t(dwarf::DW_LNE_end_sequence);
+  } else {
+    OS << uint8_t(dwarf::DW_LNS_copy);
+  }
+
+  WasRelaxed = OldSize != Data.size();
+  return true;
+}
+
+bool RISCVAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
+                                    MCAsmLayout &Layout,
+                                    bool &WasRelaxed) const {
+
+  const MCExpr &AddrDelta = DF.getAddrDelta();
+  SmallVectorImpl<char> &Data = DF.getContents();
+  SmallVectorImpl<MCFixup> &Fixups = DF.getFixups();
+  size_t OldSize = Data.size();
+
+  int64_t Value;
+  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, Layout);
+  assert(IsAbsolute && "CFA with invalid expression");
+  (void)IsAbsolute;
+
+  Data.clear();
+  Fixups.clear();
+  raw_svector_ostream OS(Data);
+
+  assert(
+      Layout.getAssembler().getContext().getAsmInfo()->getMinInstAlignment() ==
+          1 &&
+      "expected 1-byte alignment");
+  if (Value == 0) {
+    WasRelaxed = OldSize != Data.size();
+    return true;
+  }
+
+  auto AddFixups = [&Fixups, &AddrDelta](unsigned Offset,
+                                         std::pair<unsigned, unsigned> Fixup) {
+    const MCBinaryExpr &MBE = cast<MCBinaryExpr>(AddrDelta);
+    Fixups.push_back(MCFixup::create(
+        Offset, MBE.getLHS(), static_cast<MCFixupKind>(std::get<0>(Fixup))));
+    Fixups.push_back(MCFixup::create(
+        Offset, MBE.getRHS(), static_cast<MCFixupKind>(std::get<1>(Fixup))));
+  };
+
+  if (isUIntN(6, Value)) {
+    OS << uint8_t(dwarf::DW_CFA_advance_loc);
+    AddFixups(0, {RISCV::fixup_riscv_set_6b, RISCV::fixup_riscv_sub_6b});
+  } else if (isUInt<8>(Value)) {
+    OS << uint8_t(dwarf::DW_CFA_advance_loc1);
+    support::endian::write<uint8_t>(OS, 0, support::little);
+    AddFixups(1, {RISCV::fixup_riscv_set_8, RISCV::fixup_riscv_sub_8});
+  } else if (isUInt<16>(Value)) {
+    OS << uint8_t(dwarf::DW_CFA_advance_loc2);
+    support::endian::write<uint16_t>(OS, 0, support::little);
+    AddFixups(1, {RISCV::fixup_riscv_set_16, RISCV::fixup_riscv_sub_16});
+  } else if (isUInt<32>(Value)) {
+    OS << uint8_t(dwarf::DW_CFA_advance_loc4);
+    support::endian::write<uint32_t>(OS, 0, support::little);
+    AddFixups(1, {RISCV::fixup_riscv_set_32, RISCV::fixup_riscv_sub_32});
+  } else {
+    llvm_unreachable("unsupported CFA encoding");
+  }
+
+  WasRelaxed = OldSize != Data.size();
+  return true;
+}
+
 // Given a compressed control flow instruction this function returns
 // the expanded instruction.
 unsigned RISCVAsmBackend::getRelaxedOpcode(unsigned Op) const {
@@ -227,12 +379,25 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case RISCV::fixup_riscv_tls_got_hi20:
   case RISCV::fixup_riscv_tls_gd_hi20:
     llvm_unreachable("Relocation should be unconditionally forced\n");
+  case RISCV::fixup_riscv_set_8:
+  case RISCV::fixup_riscv_add_8:
+  case RISCV::fixup_riscv_sub_8:
+  case RISCV::fixup_riscv_set_16:
+  case RISCV::fixup_riscv_add_16:
+  case RISCV::fixup_riscv_sub_16:
+  case RISCV::fixup_riscv_set_32:
+  case RISCV::fixup_riscv_add_32:
+  case RISCV::fixup_riscv_sub_32:
+  case RISCV::fixup_riscv_add_64:
+  case RISCV::fixup_riscv_sub_64:
   case FK_Data_1:
   case FK_Data_2:
   case FK_Data_4:
   case FK_Data_8:
   case FK_Data_6b:
     return Value;
+  case RISCV::fixup_riscv_set_6b:
+    return Value & 0x03;
   case RISCV::fixup_riscv_lo12_i:
   case RISCV::fixup_riscv_pcrel_lo12_i:
   case RISCV::fixup_riscv_tprel_lo12_i:

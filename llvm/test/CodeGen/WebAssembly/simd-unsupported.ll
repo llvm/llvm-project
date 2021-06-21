@@ -392,9 +392,9 @@ define <4 x float> @cos_v4f32(<4 x float> %x) {
 
 ; CHECK-LABEL: powi_v4f32:
 ; CHECK: call $push[[L:[0-9]+]]=, __powisf2
-declare <4 x float> @llvm.powi.v4f32(<4 x float>, i32)
+declare <4 x float> @llvm.powi.v4f32.i32(<4 x float>, i32)
 define <4 x float> @powi_v4f32(<4 x float> %x, i32 %y) {
-  %v = call <4 x float> @llvm.powi.v4f32(<4 x float> %x, i32 %y)
+  %v = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> %x, i32 %y)
   ret <4 x float> %v
 }
 
@@ -492,9 +492,9 @@ define <2 x double> @cos_v2f64(<2 x double> %x) {
 
 ; CHECK-LABEL: powi_v2f64:
 ; CHECK: call $push[[L:[0-9]+]]=, __powidf2
-declare <2 x double> @llvm.powi.v2f64(<2 x double>, i32)
+declare <2 x double> @llvm.powi.v2f64.i32(<2 x double>, i32)
 define <2 x double> @powi_v2f64(<2 x double> %x, i32 %y) {
-  %v = call <2 x double> @llvm.powi.v2f64(<2 x double> %x, i32 %y)
+  %v = call <2 x double> @llvm.powi.v2f64.i32(<2 x double> %x, i32 %y)
   ret <2 x double> %v
 }
 

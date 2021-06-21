@@ -113,7 +113,8 @@ def main():
     builder = common.FunctionTestBuilder(
       run_list=prefix_list,
       flags=ti.args,
-      scrubber_args=[])
+      scrubber_args=[],
+      path=ti.path)
 
     for prefixes, opt_args, preprocess_cmd in prefix_list:
       common.debug('Extracted opt cmd: ' + opt_basename + ' ' + opt_args)

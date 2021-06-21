@@ -87,20 +87,30 @@ define i1 @test_non_latch() {
 ; CHECK-NEXT:    store i64 -8661621401413125213, i64* [[A2_1]], align 8
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[START:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV]], 2
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT:%.*]], label [[LATCH]]
+; CHECK-NEXT:    br label [[LATCH:%.*]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[A1]], i64 0, i64 [[IV]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[A2]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[A1]], i64 0, i64 0
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[A2]], i64 0, i64 0
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load i64, i64* [[GEP1]], align 8
 ; CHECK-NEXT:    [[LOAD2:%.*]] = load i64, i64* [[GEP2]], align 8
 ; CHECK-NEXT:    [[EXITCOND2:%.*]] = icmp eq i64 [[LOAD1]], [[LOAD2]]
-; CHECK-NEXT:    br i1 [[EXITCOND2]], label [[LOOP]], label [[EXIT]]
+; CHECK-NEXT:    br i1 [[EXITCOND2]], label [[LOOP_1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[EXIT_VAL:%.*]] = phi i1 [ false, [[LATCH]] ], [ true, [[LOOP]] ]
+; CHECK-NEXT:    [[EXIT_VAL:%.*]] = phi i1 [ false, [[LATCH]] ], [ false, [[LATCH_1:%.*]] ], [ true, [[LOOP_2:%.*]] ], [ false, [[LATCH_2:%.*]] ]
 ; CHECK-NEXT:    ret i1 [[EXIT_VAL]]
+; CHECK:       loop.1:
+; CHECK-NEXT:    br label [[LATCH_1]]
+; CHECK:       latch.1:
+; CHECK-NEXT:    [[GEP1_1:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[A1]], i64 0, i64 1
+; CHECK-NEXT:    [[GEP2_1:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[A2]], i64 0, i64 1
+; CHECK-NEXT:    [[LOAD1_1:%.*]] = load i64, i64* [[GEP1_1]], align 8
+; CHECK-NEXT:    [[LOAD2_1:%.*]] = load i64, i64* [[GEP2_1]], align 8
+; CHECK-NEXT:    [[EXITCOND2_1:%.*]] = icmp eq i64 [[LOAD1_1]], [[LOAD2_1]]
+; CHECK-NEXT:    br i1 [[EXITCOND2_1]], label [[LOOP_2]], label [[EXIT]]
+; CHECK:       loop.2:
+; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[LATCH_2]]
+; CHECK:       latch.2:
+; CHECK-NEXT:    br label [[EXIT]]
 ;
 start:
   %a1 = alloca [2 x i64], align 8

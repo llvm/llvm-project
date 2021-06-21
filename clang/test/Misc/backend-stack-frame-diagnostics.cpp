@@ -36,18 +36,11 @@ void frameSizeWarning();
 void frameSizeWarning(int) {}
 
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wframe-larger-than="
+#pragma GCC diagnostic ignored "-Wframe-larger-than"
 void frameSizeWarningIgnored() {
   char buffer[80];
   doIt(buffer);
 }
-#pragma GCC diagnostic pop
-
-#pragma GCC diagnostic push
-#ifndef IS_SYSHEADER
-// expected-warning@+2 {{unknown warning group '-Wframe-larger-than'}}
-#endif
-#pragma GCC diagnostic ignored "-Wframe-larger-than"
 #pragma GCC diagnostic pop
 
 void frameSizeLocalClassWarning() {

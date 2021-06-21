@@ -483,7 +483,7 @@ define void @unloopCriticalEdge() nounwind {
 ; CHECK:       for.cond.i:
 ; CHECK-NEXT:    br label [[FOR_COND_I]]
 ; CHECK:       Proc2.exit:
-; CHECK-NEXT:    br label [[FOR_COND31]]
+; CHECK-NEXT:    unreachable
 ; CHECK:       for.end94:
 ; CHECK-NEXT:    ret void
 ;

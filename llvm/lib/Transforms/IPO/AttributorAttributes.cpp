@@ -30,9 +30,10 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/ArgumentPromotion.h"
 #include "llvm/Transforms/Utils/Local.h"
-
 #include <cassert>
 
 using namespace llvm;
@@ -134,6 +135,7 @@ PIPE_OPERATOR(AAPrivatizablePtr)
 PIPE_OPERATOR(AAUndefinedBehavior)
 PIPE_OPERATOR(AAPotentialValues)
 PIPE_OPERATOR(AANoUndef)
+PIPE_OPERATOR(AACallEdges)
 
 #undef PIPE_OPERATOR
 } // namespace llvm
@@ -2025,12 +2027,11 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
             A.getAAFor<AANoUndef>(*this, CalleeArgumentIRP, DepClassTy::NONE);
         if (!NoUndefAA.isKnownNoUndef())
           continue;
-        auto &ValueSimplifyAA = A.getAAFor<AAValueSimplify>(
-            *this, IRPosition::value(*ArgVal), DepClassTy::NONE);
-        if (!ValueSimplifyAA.isKnown())
+        bool UsedAssumedInformation = false;
+        Optional<Value *> SimplifiedVal = A.getAssumedSimplified(
+            IRPosition::value(*ArgVal), *this, UsedAssumedInformation);
+        if (UsedAssumedInformation)
           continue;
-        Optional<Value *> SimplifiedVal =
-            ValueSimplifyAA.getAssumedSimplifiedValue(A);
         if (!SimplifiedVal.hasValue() ||
             isa<UndefValue>(*SimplifiedVal.getValue())) {
           KnownUBInsts.insert(&I);
@@ -2194,11 +2195,10 @@ private:
   // use for specific processing.
   Optional<Value *> stopOnUndefOrAssumed(Attributor &A, const Value *V,
                                          Instruction *I) {
-    const auto &ValueSimplifyAA = A.getAAFor<AAValueSimplify>(
-        *this, IRPosition::value(*V), DepClassTy::REQUIRED);
-    Optional<Value *> SimplifiedV =
-        ValueSimplifyAA.getAssumedSimplifiedValue(A);
-    if (!ValueSimplifyAA.isKnown()) {
+    bool UsedAssumedInformation = false;
+    Optional<Value *> SimplifiedV = A.getAssumedSimplified(
+        IRPosition::value(*V), *this, UsedAssumedInformation);
+    if (UsedAssumedInformation) {
       // Don't depend on assumed values.
       return llvm::None;
     }
@@ -2386,12 +2386,9 @@ struct AAReachabilityImpl : AAReachability {
     return "reachable";
   }
 
-  /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A) override { indicatePessimisticFixpoint(); }
-
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-    return indicatePessimisticFixpoint();
+    return ChangeStatus::UNCHANGED;
   }
 };
 
@@ -4548,20 +4545,15 @@ struct AAValueSimplifyImpl : AAValueSimplify {
   }
 
   /// Helper function for querying AAValueSimplify and updating candicate.
-  /// \param QueryingValue Value trying to unify with SimplifiedValue
+  /// \param IRP The value position we are trying to unify with SimplifiedValue
   /// \param AccumulatedSimplifiedValue Current simplification result.
   static bool checkAndUpdate(Attributor &A, const AbstractAttribute &QueryingAA,
-                             Value &QueryingValue,
+                             const IRPosition &IRP,
                              Optional<Value *> &AccumulatedSimplifiedValue) {
     // FIXME: Add a typecast support.
-
-    auto &ValueSimplifyAA = A.getAAFor<AAValueSimplify>(
-        QueryingAA,
-        IRPosition::value(QueryingValue, QueryingAA.getCallBaseContext()),
-        DepClassTy::REQUIRED);
-
+    bool UsedAssumedInformation = false;
     Optional<Value *> QueryingValueSimplified =
-        ValueSimplifyAA.getAssumedSimplifiedValue(A);
+        A.getAssumedSimplified(IRP, QueryingAA, UsedAssumedInformation);
 
     if (!QueryingValueSimplified.hasValue())
       return true;
@@ -4580,7 +4572,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
         isa<UndefValue>(QueryingValueSimplifiedUnwrapped))
       return true;
 
-    LLVM_DEBUG(dbgs() << "[ValueSimplify] " << QueryingValue
+    LLVM_DEBUG(dbgs() << "[ValueSimplify] " << IRP.getAssociatedValue()
                       << " is assumed to be "
                       << QueryingValueSimplifiedUnwrapped << "\n");
 
@@ -4632,10 +4624,10 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     auto *C = SimplifiedAssociatedValue.hasValue()
                   ? dyn_cast<Constant>(SimplifiedAssociatedValue.getValue())
                   : UndefValue::get(V.getType());
-    if (C && C != &V) {
+    if (C && C != &V && !V.user_empty()) {
       Value *NewV = AA::getWithType(*C, *V.getType());
       // We can replace the AssociatedValue with the constant.
-      if (!V.user_empty() && &V != C && NewV) {
+      if (NewV && NewV != &V) {
         LLVM_DEBUG(dbgs() << "[ValueSimplify] " << V << " -> " << *NewV
                           << " :: " << *this << "\n");
         if (A.changeValueAfterManifest(V, *NewV))
@@ -4720,7 +4712,7 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
         if (auto *C = dyn_cast<Constant>(&ArgOp))
           if (C->isThreadDependent())
             return false;
-      return checkAndUpdate(A, *this, ArgOp, SimplifiedAssociatedValue);
+      return checkAndUpdate(A, *this, ACSArgPos, SimplifiedAssociatedValue);
     };
 
     // Generate a answer specific to a call site context.
@@ -4757,7 +4749,9 @@ struct AAValueSimplifyReturned : AAValueSimplifyImpl {
     auto Before = SimplifiedAssociatedValue;
 
     auto PredForReturned = [&](Value &V) {
-      return checkAndUpdate(A, *this, V, SimplifiedAssociatedValue);
+      return checkAndUpdate(A, *this,
+                            IRPosition::value(V, getCallBaseContext()),
+                            SimplifiedAssociatedValue);
     };
 
     if (!A.checkForAllReturnedValues(PredForReturned, *this))
@@ -4774,35 +4768,34 @@ struct AAValueSimplifyReturned : AAValueSimplifyImpl {
 
     if (SimplifiedAssociatedValue.hasValue() &&
         !SimplifiedAssociatedValue.getValue())
-      return Changed;
+      return Changed | AAValueSimplify::manifest(A);
 
-    Value &V = getAssociatedValue();
     auto *C = SimplifiedAssociatedValue.hasValue()
                   ? dyn_cast<Constant>(SimplifiedAssociatedValue.getValue())
-                  : UndefValue::get(V.getType());
-    if (C && C != &V) {
-      auto PredForReturned =
-          [&](Value &V, const SmallSetVector<ReturnInst *, 4> &RetInsts) {
-            // We can replace the AssociatedValue with the constant.
-            if (&V == C || isa<UndefValue>(V))
-              return true;
+                  : UndefValue::get(getAssociatedType());
+    if (!C || C == &getAssociatedValue())
+      return Changed | AAValueSimplify::manifest(A);
 
-            for (ReturnInst *RI : RetInsts) {
-              if (RI->getFunction() != getAnchorScope())
-                continue;
-              Value *NewV =
-                  AA::getWithType(*C, *RI->getReturnValue()->getType());
-              if (!NewV)
-                continue;
-              LLVM_DEBUG(dbgs() << "[ValueSimplify] " << V << " -> " << *NewV
-                                << " in " << *RI << " :: " << *this << "\n");
-              if (A.changeUseAfterManifest(RI->getOperandUse(0), *NewV))
-                Changed = ChangeStatus::CHANGED;
-            }
+    auto PredForReturned =
+        [&](Value &V, const SmallSetVector<ReturnInst *, 4> &RetInsts) {
+          // We can replace the AssociatedValue with the constant.
+          if (&V == C || isa<UndefValue>(V))
             return true;
-          };
-      A.checkForAllReturnedValuesAndReturnInsts(PredForReturned, *this);
-    }
+
+          for (ReturnInst *RI : RetInsts) {
+            if (RI->getFunction() != getAnchorScope())
+              continue;
+            Value *NewV = AA::getWithType(*C, *RI->getReturnValue()->getType());
+            if (!NewV)
+              continue;
+            LLVM_DEBUG(dbgs() << "[ValueSimplify] " << V << " -> " << *NewV
+                              << " in " << *RI << " :: " << *this << "\n");
+            if (A.changeUseAfterManifest(RI->getOperandUse(0), *NewV))
+              Changed = ChangeStatus::CHANGED;
+          }
+          return true;
+        };
+    A.checkForAllReturnedValuesAndReturnInsts(PredForReturned, *this);
 
     return Changed | AAValueSimplify::manifest(A);
   }
@@ -4913,7 +4906,9 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
                           << "\n");
         return false;
       }
-      return checkAndUpdate(A, *this, V, SimplifiedAssociatedValue);
+      return checkAndUpdate(A, *this,
+                            IRPosition::value(V, getCallBaseContext()),
+                            SimplifiedAssociatedValue);
     };
 
     bool Dummy = false;
@@ -5017,7 +5012,8 @@ struct AAHeapToStackImpl : public AAHeapToStack {
       : AAHeapToStack(IRP, A) {}
 
   const std::string getAsStr() const override {
-    return "[H2S] Mallocs: " + std::to_string(MallocCalls.size());
+    return "[H2S] Mallocs Good/Bad: " + std::to_string(MallocCalls.size()) +
+           "/" + std::to_string(BadMallocCalls.size());
   }
 
   bool isAssumedHeapToStack(CallBase &CB) const override {
@@ -5126,10 +5122,29 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
   MustBeExecutedContextExplorer &Explorer =
       A.getInfoCache().getMustBeExecutedContextExplorer();
 
+  bool StackIsAccessibleByOtherThreads =
+      A.getInfoCache().stackIsAccessibleByOtherThreads();
+
   auto FreeCheck = [&](Instruction &I) {
+    // If the stack is not accessible by other threads, the "must-free" logic
+    // doesn't apply as the pointer could be shared and needs to be places in
+    // "shareable" memory.
+    if (!StackIsAccessibleByOtherThreads) {
+      auto &NoSyncAA =
+          A.getAAFor<AANoSync>(*this, getIRPosition(), DepClassTy::OPTIONAL);
+      if (!NoSyncAA.isAssumedNoSync()) {
+        LLVM_DEBUG(
+            dbgs() << "[H2S] found an escaping use, stack is not accessible by "
+                      "other threads and function is not nosync:\n");
+        return false;
+      }
+    }
     const auto &Frees = FreesForMalloc.lookup(&I);
-    if (Frees.size() != 1)
+    if (Frees.size() != 1) {
+      LLVM_DEBUG(dbgs() << "[H2S] did not find one free call but "
+                        << Frees.size() << "\n");
       return false;
+    }
     Instruction *UniqueFree = *Frees.begin();
     return Explorer.findInContextOf(UniqueFree, I.getNextNode());
   };
@@ -5170,12 +5185,12 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
 
         const auto &NoCaptureAA = A.getAAFor<AANoCapture>(
             *this, IRPosition::callsite_argument(*CB, ArgNo),
-            DepClassTy::REQUIRED);
+            DepClassTy::OPTIONAL);
 
         // If a callsite argument use is nofree, we are fine.
         const auto &ArgNoFreeAA = A.getAAFor<AANoFree>(
             *this, IRPosition::callsite_argument(*CB, ArgNo),
-            DepClassTy::REQUIRED);
+            DepClassTy::OPTIONAL);
 
         if (!NoCaptureAA.isAssumedNoCapture() ||
             !ArgNoFreeAA.isAssumedNoFree()) {
@@ -8051,9 +8066,9 @@ struct AANoUndefImpl : AANoUndef {
     // A position whose simplified value does not have any value is
     // considered to be dead. We don't manifest noundef in such positions for
     // the same reason above.
-    auto &ValueSimplifyAA =
-        A.getAAFor<AAValueSimplify>(*this, getIRPosition(), DepClassTy::NONE);
-    if (!ValueSimplifyAA.getAssumedSimplifiedValue(A).hasValue())
+    bool UsedAssumedInformation = false;
+    if (!A.getAssumedSimplified(getIRPosition(), *this, UsedAssumedInformation)
+             .hasValue())
       return ChangeStatus::UNCHANGED;
     return AANoUndef::manifest(A);
   }
@@ -8133,7 +8148,116 @@ struct AANoUndefCallSiteReturned final
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(noundef) }
 };
+
+struct AACallEdgesFunction : public AACallEdges {
+  AACallEdgesFunction(const IRPosition &IRP, Attributor &A)
+      : AACallEdges(IRP, A) {}
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    ChangeStatus Change = ChangeStatus::UNCHANGED;
+    bool OldHasUnknownCallee = HasUnknownCallee;
+
+    auto AddCalledFunction = [&](Function *Fn) {
+      if (CalledFunctions.insert(Fn)) {
+        Change = ChangeStatus::CHANGED;
+        LLVM_DEBUG(dbgs() << "[AACallEdges] New call edge: " << Fn->getName()
+                          << "\n");
+      }
+    };
+
+    auto VisitValue = [&](Value &V, const Instruction *CtxI, bool &HasUnknown,
+                          bool Stripped) -> bool {
+      if (Function *Fn = dyn_cast<Function>(&V)) {
+        AddCalledFunction(Fn);
+      } else {
+        LLVM_DEBUG(dbgs() << "[AACallEdges] Unrecognized value: " << V << "\n");
+        HasUnknown = true;
+      }
+
+      // Explore all values.
+      return true;
+    };
+
+    // Process any value that we might call.
+    auto ProcessCalledOperand = [&](Value *V, Instruction *Ctx) {
+      if (!genericValueTraversal<AACallEdges, bool>(A, IRPosition::value(*V),
+                                                    *this, HasUnknownCallee,
+                                                    VisitValue, nullptr, false))
+        // If we haven't gone through all values, assume that there are unknown
+        // callees.
+        HasUnknownCallee = true;
+    };
+
+    auto ProcessCallInst = [&](Instruction &Inst) {
+      CallBase &CB = static_cast<CallBase &>(Inst);
+
+      // Process callee metadata if available.
+      if (auto *MD = Inst.getMetadata(LLVMContext::MD_callees)) {
+        for (auto &Op : MD->operands()) {
+          Function *Callee = mdconst::extract_or_null<Function>(Op);
+          if (Callee)
+            AddCalledFunction(Callee);
+        }
+        // Callees metadata grantees that the called function is one of its
+        // operands, So we are done.
+        return true;
+      }
+
+      // The most simple case.
+      ProcessCalledOperand(CB.getCalledOperand(), &Inst);
+
+      // Process callback functions.
+      SmallVector<const Use *, 4u> CallbackUses;
+      AbstractCallSite::getCallbackUses(CB, CallbackUses);
+      for (const Use *U : CallbackUses)
+        ProcessCalledOperand(U->get(), &Inst);
+
+      return true;
+    };
+
+    // Visit all callable instructions.
+    if (!A.checkForAllCallLikeInstructions(ProcessCallInst, *this))
+      // If we haven't looked at all call like instructions, assume that there
+      // are unknown callees.
+      HasUnknownCallee = true;
+    // Track changes.
+    if (OldHasUnknownCallee != HasUnknownCallee)
+      Change = ChangeStatus::CHANGED;
+
+    return Change;
+  }
+
+  virtual const SetVector<Function *> &getOptimisticEdges() const override {
+    return CalledFunctions;
+  };
+
+  virtual bool hasUnknownCallee() const override { return HasUnknownCallee; }
+
+  const std::string getAsStr() const override {
+    return "CallEdges[" + std::to_string(HasUnknownCallee) + "," +
+           std::to_string(CalledFunctions.size()) + "]";
+  }
+
+  void trackStatistics() const override {}
+
+  /// Optimistic set of functions that might be called by this function.
+  SetVector<Function *> CalledFunctions;
+
+  /// Does this function have a call to a function that we don't know about.
+  bool HasUnknownCallee = false;
+};
+
 } // namespace
+
+AACallGraphNode *AACallEdgeIterator::operator*() const {
+  return static_cast<AACallGraphNode *>(const_cast<AACallEdges *>(
+      &A.getOrCreateAAFor<AACallEdges>(IRPosition::function(**I))));
+}
+
+void AttributorCallGraph::print() {
+  llvm::WriteGraph(outs(), this);
+}
 
 const char AAReturnedValues::ID = 0;
 const char AANoUnwind::ID = 0;
@@ -8158,6 +8282,7 @@ const char AAMemoryLocation::ID = 0;
 const char AAValueConstantRange::ID = 0;
 const char AAPotentialValues::ID = 0;
 const char AANoUndef::ID = 0;
+const char AACallEdges::ID = 0;
 
 // Macro magic to create the static generator function for attributes that
 // follow the naming scheme.
@@ -8277,6 +8402,7 @@ CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoFree)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAHeapToStack)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAReachability)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAUndefinedBehavior)
+CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AACallEdges)
 
 CREATE_NON_RET_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAMemoryBehavior)
 

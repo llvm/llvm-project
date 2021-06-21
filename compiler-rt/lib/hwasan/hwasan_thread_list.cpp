@@ -12,4 +12,4 @@ void InitThreadList(uptr storage, uptr size) {
       new (thread_list_placeholder) HwasanThreadList(storage, size);
 }
 
-} // namespace
+} // namespace __hwasan

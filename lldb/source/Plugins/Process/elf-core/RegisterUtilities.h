@@ -55,6 +55,10 @@ namespace AMD64 {
 enum { NT_REGS = 33, NT_FPREGS = 35 };
 }
 
+namespace I386 {
+enum { NT_REGS = 33, NT_FPREGS = 35 };
+}
+
 } // namespace NETBSD
 
 namespace OPENBSD {
@@ -106,6 +110,7 @@ constexpr RegsetDesc FPR_Desc[] = {
     {llvm::Triple::Linux, llvm::Triple::x86, llvm::ELF::NT_PRXFPREG},
     {llvm::Triple::Linux, llvm::Triple::UnknownArch, llvm::ELF::NT_FPREGSET},
     {llvm::Triple::NetBSD, llvm::Triple::aarch64, NETBSD::AARCH64::NT_FPREGS},
+    {llvm::Triple::NetBSD, llvm::Triple::x86, NETBSD::I386::NT_FPREGS},
     {llvm::Triple::NetBSD, llvm::Triple::x86_64, NETBSD::AMD64::NT_FPREGS},
     {llvm::Triple::OpenBSD, llvm::Triple::UnknownArch, OPENBSD::NT_FPREGS},
 };

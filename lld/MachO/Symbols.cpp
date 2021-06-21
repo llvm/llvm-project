@@ -40,7 +40,9 @@ bool Symbol::isLive() const {
     // no_dead_strip or live_support. In that case, the section will know
     // that it's live but `used` might be false. Non-absolute symbols always
     // have to use the section's `live` bit as source of truth.
-    return d->isAbsolute() ? used : d->isec->isLive(d->value);
+    if (d->isAbsolute())
+      return used;
+    return d->isec->canonical()->isLive(d->value);
   }
 
   assert(!isa<CommonSymbol>(this) &&
@@ -57,7 +59,7 @@ uint64_t Defined::getVA() const {
   if (isAbsolute())
     return value;
 
-  if (!isec->isFinal) {
+  if (!isec->canonical()->isFinal) {
     // A target arch that does not use thunks ought never ask for
     // the address of a function that has not yet been finalized.
     assert(target->usesThunks());
@@ -68,7 +70,7 @@ uint64_t Defined::getVA() const {
     // expedient to return a contrived out-of-range address.
     return TargetInfo::outOfRangeVA;
   }
-  return isec->getVA(value);
+  return isec->canonical()->getVA(value);
 }
 
 uint64_t DylibSymbol::getVA() const {

@@ -300,6 +300,13 @@ typedef struct LLVMOrcOpaqueThreadSafeContext *LLVMOrcThreadSafeContextRef;
 typedef struct LLVMOrcOpaqueThreadSafeModule *LLVMOrcThreadSafeModuleRef;
 
 /**
+ * A function for inspecting/mutating IR modules, suitable for use with
+ * LLVMOrcThreadSafeModuleWithModuleDo.
+ */
+typedef LLVMErrorRef (*LLVMOrcGenericIRModuleOperationFunction)(
+    void *Ctx, LLVMModuleRef M);
+
+/**
  * A reference to an orc::JITTargetMachineBuilder instance.
  */
 typedef struct LLVMOrcOpaqueJITTargetMachineBuilder
@@ -314,6 +321,60 @@ typedef struct LLVMOrcOpaqueObjectLayer *LLVMOrcObjectLayerRef;
  * A reference to an orc::ObjectLinkingLayer instance.
  */
 typedef struct LLVMOrcOpaqueObjectLinkingLayer *LLVMOrcObjectLinkingLayerRef;
+
+/**
+ * A reference to an orc::IRTransformLayer instance.
+ */
+typedef struct LLVMOrcOpaqueIRTransformLayer *LLVMOrcIRTransformLayerRef;
+
+/**
+ * A function for applying transformations as part of an transform layer.
+ *
+ * Implementations of this type are responsible for managing the lifetime
+ * of the Module pointed to by ModInOut: If the LLVMModuleRef value is
+ * overwritten then the function is responsible for disposing of the incoming
+ * module. If the module is simply accessed/mutated in-place then ownership
+ * returns to the caller and the function does not need to do any lifetime
+ * management.
+ *
+ * Clients can call LLVMOrcLLJITGetIRTransformLayer to obtain the transform
+ * layer of a LLJIT instance, and use LLVMOrcLLJITIRTransformLayerSetTransform
+ * to set the function. This can be used to override the default transform
+ * layer.
+ */
+typedef LLVMErrorRef (*LLVMOrcIRTransformLayerTransformFunction)(
+    void *Ctx, LLVMOrcThreadSafeModuleRef *ModInOut,
+    LLVMOrcMaterializationResponsibilityRef MR);
+
+/**
+ * A reference to an orc::ObjectTransformLayer instance.
+ */
+typedef struct LLVMOrcOpaqueObjectTransformLayer
+    *LLVMOrcObjectTransformLayerRef;
+
+/**
+ * A function for applying transformations to an object file buffer.
+ *
+ * Implementations of this type are responsible for managing the lifetime
+ * of the memory buffer pointed to by ObjInOut: If the LLVMMemoryBufferRef
+ * value is overwritten then the function is responsible for disposing of the
+ * incoming buffer. If the buffer is simply accessed/mutated in-place then
+ * ownership returns to the caller and the function does not need to do any
+ * lifetime management.
+ *
+ * The transform is allowed to return an error, in which case the ObjInOut
+ * buffer should be disposed of and set to null.
+ */
+typedef LLVMErrorRef (*LLVMOrcObjectTransformLayerTransformFunction)(
+    void *Ctx, LLVMMemoryBufferRef *ObjInOut);
+
+/**
+ * A reference to an orc::DumpObjects object.
+ *
+ * Can be used to dump object files to disk with unique names. Useful as an
+ * ObjectTransformLayer transform.
+ */
+typedef struct LLVMOrcOpaqueDumpObjects *LLVMOrcDumpObjectsRef;
 
 /**
  * Attach a custom error reporter function to the ExecutionSession.
@@ -620,6 +681,14 @@ LLVMOrcCreateNewThreadSafeModule(LLVMModuleRef M,
 void LLVMOrcDisposeThreadSafeModule(LLVMOrcThreadSafeModuleRef TSM);
 
 /**
+ * Apply the given function to the module contained in this ThreadSafeModule.
+ */
+LLVMErrorRef
+LLVMOrcThreadSafeModuleWithModuleDo(LLVMOrcThreadSafeModuleRef TSM,
+                                    LLVMOrcGenericIRModuleOperationFunction F,
+                                    void *Ctx);
+
+/**
  * Create a JITTargetMachineBuilder by detecting the host.
  *
  * On success the client owns the resulting JITTargetMachineBuilder. It must be
@@ -709,6 +778,49 @@ void LLVMOrcObjectLayerEmit(LLVMOrcObjectLayerRef ObjLayer,
  * Dispose of an ObjectLayer.
  */
 void LLVMOrcDisposeObjectLayer(LLVMOrcObjectLayerRef ObjLayer);
+
+/**
+ * Set the transform function of the provided transform layer, passing through a
+ * pointer to user provided context.
+ */
+void LLVMOrcLLJITIRTransformLayerSetTransform(
+    LLVMOrcIRTransformLayerRef IRTransformLayer,
+    LLVMOrcIRTransformLayerTransformFunction TransformFunction, void *Ctx);
+
+/**
+ * Set the transform function on an LLVMOrcObjectTransformLayer.
+ */
+void LLVMOrcObjectTransformLayerSetTransform(
+    LLVMOrcObjectTransformLayerRef ObjTransformLayer,
+    LLVMOrcObjectTransformLayerTransformFunction TransformFunction, void *Ctx);
+
+/**
+ * Create a DumpObjects instance.
+ *
+ * DumpDir specifies the path to write dumped objects to. DumpDir may be empty
+ * in which case files will be dumped to the working directory.
+ *
+ * IdentifierOverride specifies a file name stem to use when dumping objects.
+ * If empty then each MemoryBuffer's identifier will be used (with a .o suffix
+ * added if not already present). If an identifier override is supplied it will
+ * be used instead, along with an incrementing counter (since all buffers will
+ * use the same identifier, the resulting files will be named <ident>.o,
+ * <ident>.2.o, <ident>.3.o, and so on). IdentifierOverride should not contain
+ * an extension, as a .o suffix will be added by DumpObjects.
+ */
+LLVMOrcDumpObjectsRef LLVMOrcCreateDumpObjects(const char *DumpDir,
+                                               const char *IdentifierOverride);
+
+/**
+ * Dispose of a DumpObjects instance.
+ */
+void LLVMOrcDisposeDumpObjects(LLVMOrcDumpObjectsRef DumpObjects);
+
+/**
+ * Dump the contents of the given MemoryBuffer.
+ */
+LLVMErrorRef LLVMOrcDumpObjects_CallOperator(LLVMOrcDumpObjectsRef DumpObjects,
+                                             LLVMMemoryBufferRef *ObjBuffer);
 
 LLVM_C_EXTERN_C_END
 

@@ -814,7 +814,7 @@ TEST(ValueTracking, propagatesPoison) {
       "declare {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)\n"
       "declare {i32, i1} @llvm.umul.with.overflow.i32(i32 %a, i32 %b)\n"
       "declare float @llvm.sqrt.f32(float)\n"
-      "declare float @llvm.powi.f32(float, i32)\n"
+      "declare float @llvm.powi.f32.i32(float, i32)\n"
       "declare float @llvm.sin.f32(float)\n"
       "declare float @llvm.cos.f32(float)\n"
       "declare float @llvm.pow.f32(float, float)\n"
@@ -876,7 +876,7 @@ TEST(ValueTracking, propagatesPoison) {
       {true, "call {i32, i1} @llvm.usub.with.overflow.i32(i32 %x, i32 %y)"},
       {true, "call {i32, i1} @llvm.umul.with.overflow.i32(i32 %x, i32 %y)"},
       {false, "call float @llvm.sqrt.f32(float %fx)"},
-      {false, "call float @llvm.powi.f32(float %fx, i32 %x)"},
+      {false, "call float @llvm.powi.f32.i32(float %fx, i32 %x)"},
       {false, "call float @llvm.sin.f32(float %fx)"},
       {false, "call float @llvm.cos.f32(float %fx)"},
       {false, "call float @llvm.pow.f32(float %fx, float %fy)"},

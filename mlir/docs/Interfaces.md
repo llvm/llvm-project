@@ -207,12 +207,12 @@ if (ExampleOpInterface example = dyn_cast<ExampleOpInterface>(op))
   llvm::errs() << "hook returned = " << example.exampleInterfaceHook() << "\n";
 ```
 
-#### External Models for Attribute/Type Interfaces
+#### External Models for Attribute, Operation and Type Interfaces
 
-It may be desirable to provide an interface implementation for an attribute or a
-type without modifying the definition of said attribute or type. Notably, this
-allows to implement interfaces for attributes and types outside of the dialect
-that defines them and, in particular, provide interfaces for built-in types.
+It may be desirable to provide an interface implementation for an IR object
+without modifying the definition of said object. Notably, this allows to
+implement interfaces for attributes, operations and types outside of the dialect
+that defines them, for example, to provide interfaces for built-in types.
 
 This is achieved by extending the concept-based polymorphism model with two more
 classes derived from `Concept` as follows.
@@ -261,9 +261,9 @@ struct ExampleTypeInterfaceTraits {
 };
 ```
 
-External models can be provided for attribute and type interfaces by deriving
-either `FallbackModel` or `ExternalModel` and by registering the model class
-with the attribute or type class in a given context. Other contexts will not see
+External models can be provided for attribute, operation and type interfaces by
+deriving either `FallbackModel` or `ExternalModel` and by registering the model
+class with the relevant class in a given context. Other contexts will not see
 the interface unless registered.
 
 ```c++
@@ -291,6 +291,12 @@ int main() {
   IntegerType::registerInterface<ExternalModelExample>(context);
 }
 ```
+
+Note: It is strongly encouraged to only use this mechanism if you "own" the
+interface being externally applied. This prevents a situation where neither the
+owner of the dialect containing the object nor the owner of the interface are
+aware of an interface implementation, which can lead to duplicate or
+diverging implementations.
 
 #### Dialect Fallback for OpInterface
 
@@ -384,6 +390,9 @@ comprised of the following components:
     -   Additional C++ code that is generated in the declaration of the
         interface class. This allows for defining methods and more on the user
         facing interface class, that do not need to hook into the IR entity.
+        These declarations are _not_ implicitly visible in default
+        implementations of interface methods, but static declarations may be
+        accessed with full name qualification.
 
 `OpInterface` classes may additionally contain the following:
 
@@ -430,6 +439,8 @@ Interface methods are comprised of the following components:
     -   `ConcreteAttr`/`ConcreteOp`/`ConcreteType` is an implicitly defined
         `typename` that can be used to refer to the type of the derived IR
         entity currently being operated on.
+    -   This may refer to static fields of the interface class using the
+        qualified name, e.g., `TestOpInterface::staticMethod()`.
 
 ODS also allows for generating declarations for the `InterfaceMethod`s of an
 operation if the operation specifies the interface with

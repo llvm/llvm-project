@@ -964,7 +964,7 @@ static void readConfigs(opt::InputArgList &args) {
       args.hasFlag(OPT_check_sections, OPT_no_check_sections, true);
   config->chroot = args.getLastArgValue(OPT_chroot);
   config->compressDebugSections = getCompressDebugSections(args);
-  config->cref = args.hasFlag(OPT_cref, OPT_no_cref, false);
+  config->cref = args.hasArg(OPT_cref);
   config->defineCommon = args.hasFlag(OPT_define_common, OPT_no_define_common,
                                       !args.hasArg(OPT_relocatable));
   config->optimizeBBJumps =

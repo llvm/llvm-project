@@ -202,7 +202,6 @@ protected:
       return result.Succeeded();
     } else {
       result.AppendErrorWithFormat("Unable to get the reproducer generator");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 

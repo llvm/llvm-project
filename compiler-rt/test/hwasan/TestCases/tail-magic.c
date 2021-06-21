@@ -27,8 +27,10 @@ int main(int argc, char **argv) {
   overwrite_tail();
   free(p);
 // CHECK: ERROR: HWAddressSanitizer: allocation-tail-overwritten; heap object [{{.*}}) of size 20
-// CHECK: in main {{.*}}tail-magic.c:[[@LINE-2]]
+// CHECK: Stack of invalid access unknown. Issue detected at deallocation time.
+// CHECK: deallocated here:
+// CHECK: in main {{.*}}tail-magic.c:[[@LINE-4]]
 // CHECK: allocated here:
-// CHECK: in main {{.*}}tail-magic.c:[[@LINE-7]]
+// CHECK: in main {{.*}}tail-magic.c:[[@LINE-9]]
 // CHECK: Tail contains: .. .. .. .. 42 {{.. .. ..}} 66
 }

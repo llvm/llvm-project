@@ -10,6 +10,7 @@
 #define LLVM_LIBC_UTILS_FPUTIL_SQRT_H
 
 #include "FPBits.h"
+#include "PlatformDefs.h"
 
 #include "utils/CPP/TypeTraits.h"
 
@@ -61,7 +62,12 @@ template <> inline void normalize<double>(int &exponent, uint64_t &mantissa) {
   }
 }
 
-#if !(defined(__x86_64__) || defined(__i386__))
+#ifdef LONG_DOUBLE_IS_DOUBLE
+template <>
+inline void normalize<long double>(int &exponent, uint64_t &mantissa) {
+  normalize<double>(exponent, mantissa);
+}
+#elif !defined(SPECIAL_X86_LONG_DOUBLE)
 template <>
 inline void normalize<long double>(int &exponent, __uint128_t &mantissa) {
   // Use binary search to shift the leading 1 bit similar to float.
@@ -179,8 +185,8 @@ static inline T sqrt(T x) {
 } // namespace fputil
 } // namespace __llvm_libc
 
-#if (defined(__x86_64__) || defined(__i386__))
+#ifdef SPECIAL_X86_LONG_DOUBLE
 #include "SqrtLongDoubleX86.h"
-#endif // defined(__x86_64__) || defined(__i386__)
+#endif // SPECIAL_X86_LONG_DOUBLE
 
 #endif // LLVM_LIBC_UTILS_FPUTIL_SQRT_H
