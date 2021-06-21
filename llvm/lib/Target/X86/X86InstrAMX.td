@@ -53,6 +53,9 @@ let Predicates = [HasAMXTILE, In64BitMode] in {
     def PTILELOADDV : PseudoI<(outs TILE:$dst), (ins GR16:$src1,
                                                      GR16:$src2,
                                                      opaquemem:$src3), []>;
+    def PTILELOADDT1V : PseudoI<(outs TILE:$dst), (ins GR16:$src1,
+                                                       GR16:$src2,
+                                                       opaquemem:$src3), []>;
     def PTILESTOREDV : PseudoI<(outs), (ins GR16:$src1,
                                             GR16:$src2, opaquemem:$src3,
                                             TILE:$src4), []>;
