@@ -20,6 +20,7 @@
 #include <cassert>
 #include <climits>
 #include <cstring>
+#include <utility>
 
 namespace llvm {
 class FoldingSetNodeID;
