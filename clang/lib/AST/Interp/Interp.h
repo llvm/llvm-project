@@ -118,7 +118,8 @@ bool AddSubMulHelper(InterpState &S, CodePtr OpPC, unsigned Bits, const T &LHS,
   const Expr *E = S.Current->getExpr(OpPC);
   QualType Type = E->getType();
   if (S.checkingForUndefinedBehavior()) {
-    auto Trunc = Value.trunc(Result.bitWidth()).toString(10);
+    SmallString<32> Trunc;
+    Value.trunc(Result.bitWidth()).toString(Trunc, 10);
     auto Loc = E->getExprLoc();
     S.report(Loc, diag::warn_integer_constant_overflow) << Trunc << Type;
     return true;
