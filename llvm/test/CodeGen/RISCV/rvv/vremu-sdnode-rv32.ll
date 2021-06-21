@@ -31,8 +31,7 @@ define <vscale x 1 x i8> @vremu_vi_nxv1i8_0(<vscale x 1 x i8> %va) {
 ; CHECK-NEXT:    vmulhu.vx v25, v8, a0
 ; CHECK-NEXT:    vsrl.vi v25, v25, 5
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v25, v25, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v25
+; CHECK-NEXT:    vnmsac.vx v8, a0, v25
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i8> undef, i8 -7, i32 0
   %splat = shufflevector <vscale x 1 x i8> %head, <vscale x 1 x i8> undef, <vscale x 1 x i32> zeroinitializer
@@ -70,8 +69,7 @@ define <vscale x 2 x i8> @vremu_vi_nxv2i8_0(<vscale x 2 x i8> %va) {
 ; CHECK-NEXT:    vmulhu.vx v25, v8, a0
 ; CHECK-NEXT:    vsrl.vi v25, v25, 5
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v25, v25, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v25
+; CHECK-NEXT:    vnmsac.vx v8, a0, v25
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i8> undef, i8 -7, i32 0
   %splat = shufflevector <vscale x 2 x i8> %head, <vscale x 2 x i8> undef, <vscale x 2 x i32> zeroinitializer
@@ -109,8 +107,7 @@ define <vscale x 4 x i8> @vremu_vi_nxv4i8_0(<vscale x 4 x i8> %va) {
 ; CHECK-NEXT:    vmulhu.vx v25, v8, a0
 ; CHECK-NEXT:    vsrl.vi v25, v25, 5
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v25, v25, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v25
+; CHECK-NEXT:    vnmsac.vx v8, a0, v25
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i8> undef, i8 -7, i32 0
   %splat = shufflevector <vscale x 4 x i8> %head, <vscale x 4 x i8> undef, <vscale x 4 x i32> zeroinitializer
@@ -148,8 +145,7 @@ define <vscale x 8 x i8> @vremu_vi_nxv8i8_0(<vscale x 8 x i8> %va) {
 ; CHECK-NEXT:    vmulhu.vx v25, v8, a0
 ; CHECK-NEXT:    vsrl.vi v25, v25, 5
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v25, v25, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v25
+; CHECK-NEXT:    vnmsac.vx v8, a0, v25
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i8> undef, i8 -7, i32 0
   %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> undef, <vscale x 8 x i32> zeroinitializer
@@ -187,8 +183,7 @@ define <vscale x 16 x i8> @vremu_vi_nxv16i8_0(<vscale x 16 x i8> %va) {
 ; CHECK-NEXT:    vmulhu.vx v26, v8, a0
 ; CHECK-NEXT:    vsrl.vi v26, v26, 5
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v26, v26, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v26
+; CHECK-NEXT:    vnmsac.vx v8, a0, v26
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x i8> undef, i8 -7, i32 0
   %splat = shufflevector <vscale x 16 x i8> %head, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
@@ -226,8 +221,7 @@ define <vscale x 32 x i8> @vremu_vi_nxv32i8_0(<vscale x 32 x i8> %va) {
 ; CHECK-NEXT:    vmulhu.vx v28, v8, a0
 ; CHECK-NEXT:    vsrl.vi v28, v28, 5
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v28, v28, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v28
+; CHECK-NEXT:    vnmsac.vx v8, a0, v28
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 32 x i8> undef, i8 -7, i32 0
   %splat = shufflevector <vscale x 32 x i8> %head, <vscale x 32 x i8> undef, <vscale x 32 x i32> zeroinitializer
@@ -265,8 +259,7 @@ define <vscale x 64 x i8> @vremu_vi_nxv64i8_0(<vscale x 64 x i8> %va) {
 ; CHECK-NEXT:    vmulhu.vx v16, v8, a0
 ; CHECK-NEXT:    vsrl.vi v16, v16, 5
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v16, v16, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v16
+; CHECK-NEXT:    vnmsac.vx v8, a0, v16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 64 x i8> undef, i8 -7, i32 0
   %splat = shufflevector <vscale x 64 x i8> %head, <vscale x 64 x i8> undef, <vscale x 64 x i32> zeroinitializer
@@ -305,8 +298,7 @@ define <vscale x 1 x i16> @vremu_vi_nxv1i16_0(<vscale x 1 x i16> %va) {
 ; CHECK-NEXT:    vmulhu.vx v25, v8, a0
 ; CHECK-NEXT:    vsrl.vi v25, v25, 13
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v25, v25, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v25
+; CHECK-NEXT:    vnmsac.vx v8, a0, v25
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i16> undef, i16 -7, i32 0
   %splat = shufflevector <vscale x 1 x i16> %head, <vscale x 1 x i16> undef, <vscale x 1 x i32> zeroinitializer
@@ -345,8 +337,7 @@ define <vscale x 2 x i16> @vremu_vi_nxv2i16_0(<vscale x 2 x i16> %va) {
 ; CHECK-NEXT:    vmulhu.vx v25, v8, a0
 ; CHECK-NEXT:    vsrl.vi v25, v25, 13
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v25, v25, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v25
+; CHECK-NEXT:    vnmsac.vx v8, a0, v25
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i16> undef, i16 -7, i32 0
   %splat = shufflevector <vscale x 2 x i16> %head, <vscale x 2 x i16> undef, <vscale x 2 x i32> zeroinitializer
@@ -385,8 +376,7 @@ define <vscale x 4 x i16> @vremu_vi_nxv4i16_0(<vscale x 4 x i16> %va) {
 ; CHECK-NEXT:    vmulhu.vx v25, v8, a0
 ; CHECK-NEXT:    vsrl.vi v25, v25, 13
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v25, v25, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v25
+; CHECK-NEXT:    vnmsac.vx v8, a0, v25
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i16> undef, i16 -7, i32 0
   %splat = shufflevector <vscale x 4 x i16> %head, <vscale x 4 x i16> undef, <vscale x 4 x i32> zeroinitializer
@@ -425,8 +415,7 @@ define <vscale x 8 x i16> @vremu_vi_nxv8i16_0(<vscale x 8 x i16> %va) {
 ; CHECK-NEXT:    vmulhu.vx v26, v8, a0
 ; CHECK-NEXT:    vsrl.vi v26, v26, 13
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v26, v26, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v26
+; CHECK-NEXT:    vnmsac.vx v8, a0, v26
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i16> undef, i16 -7, i32 0
   %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
@@ -465,8 +454,7 @@ define <vscale x 16 x i16> @vremu_vi_nxv16i16_0(<vscale x 16 x i16> %va) {
 ; CHECK-NEXT:    vmulhu.vx v28, v8, a0
 ; CHECK-NEXT:    vsrl.vi v28, v28, 13
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v28, v28, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v28
+; CHECK-NEXT:    vnmsac.vx v8, a0, v28
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x i16> undef, i16 -7, i32 0
   %splat = shufflevector <vscale x 16 x i16> %head, <vscale x 16 x i16> undef, <vscale x 16 x i32> zeroinitializer
@@ -505,8 +493,7 @@ define <vscale x 32 x i16> @vremu_vi_nxv32i16_0(<vscale x 32 x i16> %va) {
 ; CHECK-NEXT:    vmulhu.vx v16, v8, a0
 ; CHECK-NEXT:    vsrl.vi v16, v16, 13
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v16, v16, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v16
+; CHECK-NEXT:    vnmsac.vx v8, a0, v16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 32 x i16> undef, i16 -7, i32 0
   %splat = shufflevector <vscale x 32 x i16> %head, <vscale x 32 x i16> undef, <vscale x 32 x i32> zeroinitializer
@@ -545,8 +532,7 @@ define <vscale x 1 x i32> @vremu_vi_nxv1i32_0(<vscale x 1 x i32> %va) {
 ; CHECK-NEXT:    vmulhu.vx v25, v8, a0
 ; CHECK-NEXT:    vsrl.vi v25, v25, 29
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v25, v25, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v25
+; CHECK-NEXT:    vnmsac.vx v8, a0, v25
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i32> undef, i32 -7, i32 0
   %splat = shufflevector <vscale x 1 x i32> %head, <vscale x 1 x i32> undef, <vscale x 1 x i32> zeroinitializer
@@ -585,8 +571,7 @@ define <vscale x 2 x i32> @vremu_vi_nxv2i32_0(<vscale x 2 x i32> %va) {
 ; CHECK-NEXT:    vmulhu.vx v25, v8, a0
 ; CHECK-NEXT:    vsrl.vi v25, v25, 29
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v25, v25, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v25
+; CHECK-NEXT:    vnmsac.vx v8, a0, v25
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i32> undef, i32 -7, i32 0
   %splat = shufflevector <vscale x 2 x i32> %head, <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer
@@ -625,8 +610,7 @@ define <vscale x 4 x i32> @vremu_vi_nxv4i32_0(<vscale x 4 x i32> %va) {
 ; CHECK-NEXT:    vmulhu.vx v26, v8, a0
 ; CHECK-NEXT:    vsrl.vi v26, v26, 29
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v26, v26, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v26
+; CHECK-NEXT:    vnmsac.vx v8, a0, v26
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i32> undef, i32 -7, i32 0
   %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
@@ -665,8 +649,7 @@ define <vscale x 8 x i32> @vremu_vi_nxv8i32_0(<vscale x 8 x i32> %va) {
 ; CHECK-NEXT:    vmulhu.vx v28, v8, a0
 ; CHECK-NEXT:    vsrl.vi v28, v28, 29
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v28, v28, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v28
+; CHECK-NEXT:    vnmsac.vx v8, a0, v28
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i32> undef, i32 -7, i32 0
   %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> undef, <vscale x 8 x i32> zeroinitializer
@@ -705,8 +688,7 @@ define <vscale x 16 x i32> @vremu_vi_nxv16i32_0(<vscale x 16 x i32> %va) {
 ; CHECK-NEXT:    vmulhu.vx v16, v8, a0
 ; CHECK-NEXT:    vsrl.vi v16, v16, 29
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v16, v16, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v16
+; CHECK-NEXT:    vnmsac.vx v8, a0, v16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x i32> undef, i32 -7, i32 0
   %splat = shufflevector <vscale x 16 x i32> %head, <vscale x 16 x i32> undef, <vscale x 16 x i32> zeroinitializer
@@ -759,8 +741,7 @@ define <vscale x 1 x i64> @vremu_vi_nxv1i64_0(<vscale x 1 x i64> %va) {
 ; CHECK-NEXT:    addi a0, zero, 61
 ; CHECK-NEXT:    vsrl.vx v25, v25, a0
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v25, v25, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v25
+; CHECK-NEXT:    vnmsac.vx v8, a0, v25
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i64> undef, i64 -7, i32 0
@@ -814,8 +795,7 @@ define <vscale x 2 x i64> @vremu_vi_nxv2i64_0(<vscale x 2 x i64> %va) {
 ; CHECK-NEXT:    addi a0, zero, 61
 ; CHECK-NEXT:    vsrl.vx v26, v26, a0
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v26, v26, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v26
+; CHECK-NEXT:    vnmsac.vx v8, a0, v26
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i64> undef, i64 -7, i32 0
@@ -869,8 +849,7 @@ define <vscale x 4 x i64> @vremu_vi_nxv4i64_0(<vscale x 4 x i64> %va) {
 ; CHECK-NEXT:    addi a0, zero, 61
 ; CHECK-NEXT:    vsrl.vx v28, v28, a0
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v28, v28, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v28
+; CHECK-NEXT:    vnmsac.vx v8, a0, v28
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i64> undef, i64 -7, i32 0
@@ -924,8 +903,7 @@ define <vscale x 8 x i64> @vremu_vi_nxv8i64_0(<vscale x 8 x i64> %va) {
 ; CHECK-NEXT:    addi a0, zero, 61
 ; CHECK-NEXT:    vsrl.vx v16, v16, a0
 ; CHECK-NEXT:    addi a0, zero, -7
-; CHECK-NEXT:    vmul.vx v16, v16, a0
-; CHECK-NEXT:    vsub.vv v8, v8, v16
+; CHECK-NEXT:    vnmsac.vx v8, a0, v16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i64> undef, i64 -7, i32 0
