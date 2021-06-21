@@ -2004,7 +2004,8 @@ static int overlap_main(int argc, const char *argv[]) {
   return 0;
 }
 
-typedef struct ValueSitesStats {
+namespace {
+struct ValueSitesStats {
   ValueSitesStats()
       : TotalNumValueSites(0), TotalNumValueSitesWithValueProfile(0),
         TotalNumValues(0) {}
@@ -2012,7 +2013,8 @@ typedef struct ValueSitesStats {
   uint64_t TotalNumValueSitesWithValueProfile;
   uint64_t TotalNumValues;
   std::vector<unsigned> ValueSitesHistogram;
-} ValueSitesStats;
+};
+} // namespace
 
 static void traverseAllValueSites(const InstrProfRecord &Func, uint32_t VK,
                                   ValueSitesStats &Stats, raw_fd_ostream &OS,
