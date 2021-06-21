@@ -38,7 +38,7 @@ int main(int, char**)
 {
     {
         typedef std::unordered_multimap<int, std::string,
-                                   test_hash<std::hash<int> >,
+                                   test_hash<int>,
                                    test_equal_to<int>,
                                    test_allocator<std::pair<const int, std::string> >
                                    > C;
@@ -54,7 +54,7 @@ int main(int, char**)
         };
         C c(cpp17_input_iterator<P*>(a), cpp17_input_iterator<P*>(a + sizeof(a)/sizeof(a[0])),
             7,
-            test_hash<std::hash<int> >(8),
+            test_hash<int>(8),
             test_equal_to<int>(9),
             test_allocator<std::pair<const int, std::string> >(10)
            );
@@ -87,14 +87,14 @@ int main(int, char**)
         assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
         assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
+        assert(c.hash_function() == test_hash<int>(8));
         assert(c.key_eq() == test_equal_to<int>(9));
         assert((c.get_allocator() == test_allocator<std::pair<const int, std::string> >(10)));
     }
 #if TEST_STD_VER >= 11
     {
         typedef std::unordered_multimap<int, std::string,
-                                   test_hash<std::hash<int> >,
+                                   test_hash<int>,
                                    test_equal_to<int>,
                                    min_allocator<std::pair<const int, std::string> >
                                    > C;
@@ -110,7 +110,7 @@ int main(int, char**)
         };
         C c(cpp17_input_iterator<P*>(a), cpp17_input_iterator<P*>(a + sizeof(a)/sizeof(a[0])),
             7,
-            test_hash<std::hash<int> >(8),
+            test_hash<int>(8),
             test_equal_to<int>(9),
             min_allocator<std::pair<const int, std::string> >()
            );
@@ -143,14 +143,14 @@ int main(int, char**)
         assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
         assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
+        assert(c.hash_function() == test_hash<int>(8));
         assert(c.key_eq() == test_equal_to<int>(9));
         assert((c.get_allocator() == min_allocator<std::pair<const int, std::string> >()));
     }
     {
         typedef explicit_allocator<std::pair<const int, std::string>> A;
         typedef std::unordered_multimap<int, std::string,
-                                   test_hash<std::hash<int> >,
+                                   test_hash<int>,
                                    test_equal_to<int>,
                                    A
                                    > C;
@@ -166,7 +166,7 @@ int main(int, char**)
         };
         C c(cpp17_input_iterator<P*>(a), cpp17_input_iterator<P*>(a + sizeof(a)/sizeof(a[0])),
             7,
-            test_hash<std::hash<int> >(8),
+            test_hash<int>(8),
             test_equal_to<int>(9),
             A{}
            );
@@ -199,7 +199,7 @@ int main(int, char**)
         assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
         assert(std::fabs(c.load_factor() - (float)c.size()/c.bucket_count()) < FLT_EPSILON);
         assert(c.max_load_factor() == 1);
-        assert(c.hash_function() == test_hash<std::hash<int> >(8));
+        assert(c.hash_function() == test_hash<int>(8));
         assert(c.key_eq() == test_equal_to<int>(9));
         assert(c.get_allocator() == A{});
     }
