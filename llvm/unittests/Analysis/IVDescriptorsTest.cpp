@@ -44,9 +44,8 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
 }
 
 // This tests that IVDescriptors can obtain the induction binary operator for
-// integer induction variables. And hasUnsafeAlgebra() and
-// getUnsafeAlgebraInst() correctly return the expected behavior, i.e. no unsafe
-// algebra.
+// integer induction variables. And getExactFPMathInst() correctly return the
+// expected behavior, i.e. no FMF algebra.
 TEST(IVDescriptorsTest, LoopWithSingleLatch) {
   // Parse the module.
   LLVMContext Context;
