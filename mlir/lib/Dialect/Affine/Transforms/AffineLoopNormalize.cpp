@@ -91,7 +91,7 @@ void mlir::normalizeAffineParallel(AffineParallelOp op) {
 /// bound is set to the trip count of the loop. For now, original loops must
 /// have lower bound with a single result only. There is no such restriction on
 /// upper bounds.
-static void normalizeAffineFor(AffineForOp op) {
+void mlir::normalizeAffineFor(AffineForOp op) {
   if (succeeded(promoteIfSingleIteration(op)))
     return;
 
