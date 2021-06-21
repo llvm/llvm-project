@@ -99,12 +99,8 @@ Constant *BitcodeReaderValueList::getConstantFwdRef(unsigned Idx, Type *Ty) {
     resize(Idx + 1);
 
   if (Value *V = ValuePtrs[Idx]) {
-    if (Ty != V->getType()) {
-      Ty->dump();
-      V->getType()->dump();
-      V->dump();
+    if (Ty != V->getType())
       report_fatal_error("Type mismatch in constant table!");
-    }
     return cast<Constant>(V);
   }
 
