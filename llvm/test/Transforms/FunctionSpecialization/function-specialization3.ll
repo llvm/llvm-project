@@ -1,7 +1,5 @@
 ; RUN: opt -function-specialization -func-specialization-avg-iters-cost=3 -S < %s | \
 ; RUN:   FileCheck %s --check-prefixes=COMMON,DISABLED
-; RUN: opt -function-specialization -func-specialization-avg-iters-cost=4 -S < %s | \
-; RUN:   FileCheck %s --check-prefixes=COMMON,FORCE
 ; RUN: opt -function-specialization -force-function-specialization -S < %s | \
 ; RUN:   FileCheck %s --check-prefixes=COMMON,FORCE
 ; RUN: opt -function-specialization -func-specialization-avg-iters-cost=3 -force-function-specialization -S < %s | \
