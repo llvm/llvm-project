@@ -16,6 +16,8 @@
 namespace llvm {
 namespace mca {
 
+CustomBehaviour::~CustomBehaviour() {}
+
 unsigned CustomBehaviour::checkCustomHazard(ArrayRef<InstRef> IssuedInst,
                                             const InstRef &IR) {
   // 0 signifies that there are no hazards that need to be waited on
