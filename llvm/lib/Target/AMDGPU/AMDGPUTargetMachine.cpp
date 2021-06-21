@@ -193,6 +193,11 @@ static cl::opt<bool> EnableStructurizerWorkarounds(
     cl::desc("Enable workarounds for the StructurizeCFG pass"), cl::init(true),
     cl::Hidden);
 
+static cl::opt<bool> EnableLDSReplaceWithPointer(
+    "amdgpu-enable-lds-replace-with-pointer",
+    cl::desc("Enable LDS replace with pointer pass"), cl::init(true),
+    cl::Hidden);
+
 static cl::opt<bool, true> EnableLowerModuleLDS(
     "amdgpu-enable-lower-module-lds", cl::desc("Enable lower module lds pass"),
     cl::location(AMDGPUTargetMachine::EnableLowerModuleLDS), cl::init(true),
@@ -240,6 +245,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULateCodeGenPreparePass(*PR);
   initializeAMDGPUPropagateAttributesEarlyPass(*PR);
   initializeAMDGPUPropagateAttributesLatePass(*PR);
+  initializeAMDGPUReplaceLDSUseWithPointerPass(*PR);
   initializeAMDGPULowerModuleLDSPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
@@ -503,6 +509,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         }
         if (PassName == "amdgpu-always-inline") {
           PM.addPass(AMDGPUAlwaysInlinePass());
+          return true;
+        }
+        if (PassName == "amdgpu-replace-lds-use-with-pointer") {
+          PM.addPass(AMDGPUReplaceLDSUseWithPointerPass());
           return true;
         }
         if (PassName == "amdgpu-lower-module-lds") {
@@ -889,8 +899,15 @@ void AMDGPUPassConfig::addIRPasses() {
   addPass(createAMDGPUOpenCLEnqueuedBlockLoweringPass());
 
   // Can increase LDS used by kernel so runs before PromoteAlloca
-  if (EnableLowerModuleLDS)
+  if (EnableLowerModuleLDS) {
+    // The pass "amdgpu-replace-lds-use-with-pointer" need to be run before the
+    // pass "amdgpu-lower-module-lds", and also it required to be run only if
+    // "amdgpu-lower-module-lds" pass is enabled.
+    if (EnableLDSReplaceWithPointer)
+      addPass(createAMDGPUReplaceLDSUseWithPointerPass());
+
     addPass(createAMDGPULowerModuleLDSPass());
+  }
 
   if (TM.getOptLevel() > CodeGenOpt::None) {
     addPass(createInferAddressSpacesPass());
