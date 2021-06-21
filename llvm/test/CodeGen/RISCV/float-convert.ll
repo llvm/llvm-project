@@ -207,7 +207,7 @@ define float @fcvt_s_w_load(i32* %p) nounwind {
 ; RV64IF-LABEL: fcvt_s_w_load:
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    lw a0, 0(a0)
-; RV64IF-NEXT:    fcvt.s.l ft0, a0
+; RV64IF-NEXT:    fcvt.s.w ft0, a0
 ; RV64IF-NEXT:    fmv.x.w a0, ft0
 ; RV64IF-NEXT:    ret
   %a = load i32, i32* %p
@@ -242,7 +242,7 @@ define float @fcvt_s_wu_load(i32* %p) nounwind {
 ; RV64IF-LABEL: fcvt_s_wu_load:
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    lwu a0, 0(a0)
-; RV64IF-NEXT:    fcvt.s.lu ft0, a0
+; RV64IF-NEXT:    fcvt.s.wu ft0, a0
 ; RV64IF-NEXT:    fmv.x.w a0, ft0
 ; RV64IF-NEXT:    ret
   %a = load i32, i32* %p

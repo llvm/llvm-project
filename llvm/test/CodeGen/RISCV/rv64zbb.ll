@@ -1060,13 +1060,13 @@ define signext i32 @ctpop_i32_load(i32* %p) nounwind {
 ; RV64IB-LABEL: ctpop_i32_load:
 ; RV64IB:       # %bb.0:
 ; RV64IB-NEXT:    lwu a0, 0(a0)
-; RV64IB-NEXT:    cpop a0, a0
+; RV64IB-NEXT:    cpopw a0, a0
 ; RV64IB-NEXT:    ret
 ;
 ; RV64IBB-LABEL: ctpop_i32_load:
 ; RV64IBB:       # %bb.0:
 ; RV64IBB-NEXT:    lwu a0, 0(a0)
-; RV64IBB-NEXT:    cpop a0, a0
+; RV64IBB-NEXT:    cpopw a0, a0
 ; RV64IBB-NEXT:    ret
   %a = load i32, i32* %p
   %1 = call i32 @llvm.ctpop.i32(i32 %a)
