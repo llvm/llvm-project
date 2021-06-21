@@ -126,25 +126,24 @@ void __kmp_affinity_determine_capable(const char *env_var) {
 
 #if KMP_OS_LINUX
 #define KMP_CPU_SET_SIZE_LIMIT (1024 * 1024)
+#define KMP_CPU_SET_TRY_SIZE CACHE_LINE
 #elif KMP_OS_FREEBSD
 #define KMP_CPU_SET_SIZE_LIMIT (sizeof(cpuset_t))
 #endif
 
 #if KMP_OS_LINUX
-  // If Linux* OS:
-  // If the syscall fails or returns a suggestion for the size,
-  // then we don't have to search for an appropriate size.
   long gCode;
-  long sCode;
   unsigned char *buf;
   buf = (unsigned char *)KMP_INTERNAL_MALLOC(KMP_CPU_SET_SIZE_LIMIT);
-  gCode = syscall(__NR_sched_getaffinity, 0, KMP_CPU_SET_SIZE_LIMIT, buf);
+
+  // If the syscall returns a suggestion for the size,
+  // then we don't have to search for an appropriate size.
+  gCode = syscall(__NR_sched_getaffinity, 0, KMP_CPU_SET_TRY_SIZE, buf);
   KA_TRACE(30, ("__kmp_affinity_determine_capable: "
                 "initial getaffinity call returned %ld errno = %d\n",
                 gCode, errno));
 
-  // if ((gCode < 0) && (errno == ENOSYS))
-  if (gCode < 0) {
+  if (gCode < 0 && errno != EINVAL) {
     // System call not supported
     if (__kmp_affinity_verbose ||
         (__kmp_affinity_warnings && (__kmp_affinity_type != affinity_none) &&
@@ -161,43 +160,14 @@ void __kmp_affinity_determine_capable(const char *env_var) {
     KMP_AFFINITY_DISABLE();
     KMP_INTERNAL_FREE(buf);
     return;
-  }
-  if (gCode > 0) { // Linux* OS only
+  } else if (gCode > 0) {
     // The optimal situation: the OS returns the size of the buffer it expects.
-    //
-    // A verification of correct behavior is that setaffinity on a NULL
-    // buffer with the same size fails with errno set to EFAULT.
-    sCode = syscall(__NR_sched_setaffinity, 0, gCode, NULL);
-    KA_TRACE(30, ("__kmp_affinity_determine_capable: "
-                  "setaffinity for mask size %ld returned %ld errno = %d\n",
-                  gCode, sCode, errno));
-    if (sCode < 0) {
-      if (errno == ENOSYS) {
-        if (__kmp_affinity_verbose ||
-            (__kmp_affinity_warnings &&
-             (__kmp_affinity_type != affinity_none) &&
-             (__kmp_affinity_type != affinity_default) &&
-             (__kmp_affinity_type != affinity_disabled))) {
-          int error = errno;
-          kmp_msg_t err_code = KMP_ERR(error);
-          __kmp_msg(kmp_ms_warning, KMP_MSG(SetAffSysCallNotSupported, env_var),
-                    err_code, __kmp_msg_null);
-          if (__kmp_generate_warnings == kmp_warnings_off) {
-            __kmp_str_free(&err_code.str);
-          }
-        }
-        KMP_AFFINITY_DISABLE();
-        KMP_INTERNAL_FREE(buf);
-      }
-      if (errno == EFAULT) {
-        KMP_AFFINITY_ENABLE(gCode);
-        KA_TRACE(10, ("__kmp_affinity_determine_capable: "
-                      "affinity supported (mask size %d)\n",
-                      (int)__kmp_affin_mask_size));
-        KMP_INTERNAL_FREE(buf);
-        return;
-      }
-    }
+    KMP_AFFINITY_ENABLE(gCode);
+    KA_TRACE(10, ("__kmp_affinity_determine_capable: "
+                  "affinity supported (mask size %d)\n",
+                  (int)__kmp_affin_mask_size));
+    KMP_INTERNAL_FREE(buf);
+    return;
   }
 
   // Call the getaffinity system call repeatedly with increasing set sizes
@@ -238,43 +208,12 @@ void __kmp_affinity_determine_capable(const char *env_var) {
       continue;
     }
 
-    sCode = syscall(__NR_sched_setaffinity, 0, gCode, NULL);
-    KA_TRACE(30, ("__kmp_affinity_determine_capable: "
-                  "setaffinity for mask size %ld returned %ld errno = %d\n",
-                  gCode, sCode, errno));
-    if (sCode < 0) {
-      if (errno == ENOSYS) { // Linux* OS only
-        // We shouldn't get here
-        KA_TRACE(30, ("__kmp_affinity_determine_capable: "
-                      "inconsistent OS call behavior: errno == ENOSYS for mask "
-                      "size %d\n",
-                      size));
-        if (__kmp_affinity_verbose ||
-            (__kmp_affinity_warnings &&
-             (__kmp_affinity_type != affinity_none) &&
-             (__kmp_affinity_type != affinity_default) &&
-             (__kmp_affinity_type != affinity_disabled))) {
-          int error = errno;
-          kmp_msg_t err_code = KMP_ERR(error);
-          __kmp_msg(kmp_ms_warning, KMP_MSG(SetAffSysCallNotSupported, env_var),
-                    err_code, __kmp_msg_null);
-          if (__kmp_generate_warnings == kmp_warnings_off) {
-            __kmp_str_free(&err_code.str);
-          }
-        }
-        KMP_AFFINITY_DISABLE();
-        KMP_INTERNAL_FREE(buf);
-        return;
-      }
-      if (errno == EFAULT) {
-        KMP_AFFINITY_ENABLE(gCode);
-        KA_TRACE(10, ("__kmp_affinity_determine_capable: "
-                      "affinity supported (mask size %d)\n",
-                      (int)__kmp_affin_mask_size));
-        KMP_INTERNAL_FREE(buf);
-        return;
-      }
-    }
+    KMP_AFFINITY_ENABLE(gCode);
+    KA_TRACE(10, ("__kmp_affinity_determine_capable: "
+                  "affinity supported (mask size %d)\n",
+                  (int)__kmp_affin_mask_size));
+    KMP_INTERNAL_FREE(buf);
+    return;
   }
 #elif KMP_OS_FREEBSD
   long gCode;
@@ -294,11 +233,7 @@ void __kmp_affinity_determine_capable(const char *env_var) {
     return;
   }
 #endif
-  // save uncaught error code
-  // int error = errno;
   KMP_INTERNAL_FREE(buf);
-  // restore uncaught error code, will be printed at the next KMP_WARNING below
-  // errno = error;
 
   // Affinity is not supported
   KMP_AFFINITY_DISABLE();
