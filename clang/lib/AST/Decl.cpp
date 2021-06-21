@@ -4581,6 +4581,13 @@ RecordDecl::field_iterator RecordDecl::field_begin() const {
 void RecordDecl::completeDefinition() {
   assert(!isCompleteDefinition() && "Cannot redefine record!");
   TagDecl::completeDefinition();
+
+  ASTContext &Ctx = getASTContext();
+
+  // Layouts are dumped when computed, so if we are dumping for all complete
+  // types, we need to force usage to get types that wouldn't be used elsewhere.
+  if (Ctx.getLangOpts().DumpRecordLayoutsComplete)
+    (void)Ctx.getASTRecordLayout(this);
 }
 
 /// isMsStruct - Get whether or not this record uses ms_struct layout.
