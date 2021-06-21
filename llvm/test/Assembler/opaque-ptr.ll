@@ -41,12 +41,28 @@ define void @store(ptr %a, i32 %i) {
     ret void
 }
 
-; CHECK: define void @gep(ptr %a)
-; CHECK:     %b = getelementptr i8, ptr %a, i32 2
-; CHECK:     ret void
-define void @gep(ptr %a) {
-    %b = getelementptr i8, ptr %a, i32 2
-    ret void
+; CHECK: define ptr @gep(ptr %a)
+; CHECK:     %res = getelementptr i8, ptr %a, i32 2
+; CHECK:     ret ptr %res
+define ptr @gep(ptr %a) {
+  %res = getelementptr i8, ptr %a, i32 2
+  ret ptr %res
+}
+
+; CHECK: define <2 x ptr> @gep_vec1(ptr %a)
+; CHECK:     %res = getelementptr i8, ptr %a, <2 x i32> <i32 1, i32 2>
+; CHECK:     ret <2 x ptr> %res
+define <2 x ptr> @gep_vec1(ptr %a) {
+  %res = getelementptr i8, ptr %a, <2 x i32> <i32 1, i32 2>
+  ret <2 x ptr> %res
+}
+
+; CHECK: define <2 x ptr> @gep_vec2(<2 x ptr> %a)
+; CHECK:     %res = getelementptr i8, <2 x ptr> %a, i32 2
+; CHECK:     ret <2 x ptr> %res
+define <2 x ptr> @gep_vec2(<2 x ptr> %a) {
+  %res = getelementptr i8, <2 x ptr> %a, i32 2
+  ret <2 x ptr> %res
 }
 
 ; CHECK: define void @cmpxchg(ptr %p, i32 %a, i32 %b)
