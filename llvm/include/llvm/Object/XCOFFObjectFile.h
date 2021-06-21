@@ -370,7 +370,7 @@ public:
   const void *getPointerToSymbolTable() const { return SymbolTblPtr; }
 
   Expected<StringRef> getSymbolSectionName(XCOFFSymbolRef Ref) const;
-
+  unsigned getSymbolSectionID(SymbolRef Sym) const;
   XCOFFSymbolRef toSymbolRef(DataRefImpl Ref) const;
 
   // File header related interfaces.

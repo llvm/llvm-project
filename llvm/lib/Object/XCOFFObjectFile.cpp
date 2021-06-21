@@ -214,7 +214,7 @@ uint64_t XCOFFObjectFile::getCommonSymbolSizeImpl(DataRefImpl Symb) const {
 
 Expected<SymbolRef::Type>
 XCOFFObjectFile::getSymbolType(DataRefImpl Symb) const {
-  llvm_unreachable("Not yet implemented!");
+  // TODO: Return the correct symbol type.
   return SymbolRef::ST_Other;
 }
 
@@ -394,7 +394,7 @@ void XCOFFObjectFile::getRelocationTypeName(
 
 Expected<uint32_t> XCOFFObjectFile::getSymbolFlags(DataRefImpl Symb) const {
   uint32_t Result = 0;
-  llvm_unreachable("Not yet implemented!");
+  // TODO: Return correct symbol flags.
   return Result;
 }
 
@@ -511,6 +511,11 @@ XCOFFObjectFile::getSymbolSectionName(XCOFFSymbolRef SymEntPtr) const {
           getSectionNameInternal(SecRef.get()));
     return SecRef.takeError();
   }
+}
+
+unsigned XCOFFObjectFile::getSymbolSectionID(SymbolRef Sym) const {
+  XCOFFSymbolRef XCOFFSymRef(Sym.getRawDataRefImpl(), this);
+  return XCOFFSymRef.getSectionNumber();
 }
 
 bool XCOFFObjectFile::isReservedSectionNumber(int16_t SectionNumber) {
