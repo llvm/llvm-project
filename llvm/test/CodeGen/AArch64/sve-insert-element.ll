@@ -273,3 +273,82 @@ define <vscale x 2 x double> @test_insert_into_undef_nxv2f64(double %a) {
   %b = insertelement <vscale x 2 x double> undef, double %a, i32 0
   ret <vscale x 2 x double> %b
 }
+
+; Insert scalar at index
+define <vscale x 2 x half> @test_insert_with_index_nxv2f16(half %h, i64 %idx) {
+; CHECK-LABEL: test_insert_with_index_nxv2f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.d, x0
+; CHECK-NEXT:    index z2.d, #0, #1
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    cmpeq p0.d, p0/z, z2.d, z1.d
+; CHECK-NEXT:    mov z0.h, p0/m, h0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 2 x half> undef, half %h, i64 %idx
+  ret <vscale x 2 x half> %res
+}
+
+define <vscale x 4 x half> @test_insert_with_index_nxv4f16(half %h, i64 %idx) {
+; CHECK-LABEL: test_insert_with_index_nxv4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.s, w0
+; CHECK-NEXT:    index z2.s, #0, #1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    cmpeq p0.s, p0/z, z2.s, z1.s
+; CHECK-NEXT:    mov z0.h, p0/m, h0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 4 x half> undef, half %h, i64 %idx
+  ret <vscale x 4 x half> %res
+}
+
+define <vscale x 8 x half> @test_insert_with_index_nxv8f16(half %h, i64 %idx) {
+; CHECK-LABEL: test_insert_with_index_nxv8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.h, w0
+; CHECK-NEXT:    index z2.h, #0, #1
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    cmpeq p0.h, p0/z, z2.h, z1.h
+; CHECK-NEXT:    mov z0.h, p0/m, h0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 8 x half> undef, half %h, i64 %idx
+  ret <vscale x 8 x half> %res
+}
+
+define <vscale x 2 x float> @test_insert_with_index_nxv2f32(float %f, i64 %idx) {
+; CHECK-LABEL: test_insert_with_index_nxv2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.d, x0
+; CHECK-NEXT:    index z2.d, #0, #1
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    cmpeq p0.d, p0/z, z2.d, z1.d
+; CHECK-NEXT:    mov z0.s, p0/m, s0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 2 x float> undef, float %f, i64 %idx
+  ret <vscale x 2 x float> %res
+}
+
+define <vscale x 4 x float> @test_insert_with_index_nxv4f32(float %f, i64 %idx) {
+; CHECK-LABEL: test_insert_with_index_nxv4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.s, w0
+; CHECK-NEXT:    index z2.s, #0, #1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    cmpeq p0.s, p0/z, z2.s, z1.s
+; CHECK-NEXT:    mov z0.s, p0/m, s0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 4 x float> undef, float %f, i64 %idx
+  ret <vscale x 4 x float> %res
+}
+
+define <vscale x 2 x double> @test_insert_with_index_nxv2f64(double %d, i64 %idx) {
+; CHECK-LABEL: test_insert_with_index_nxv2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.d, x0
+; CHECK-NEXT:    index z2.d, #0, #1
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    cmpeq p0.d, p0/z, z2.d, z1.d
+; CHECK-NEXT:    mov z0.d, p0/m, d0
+; CHECK-NEXT:    ret
+  %res = insertelement <vscale x 2 x double> undef, double %d, i64 %idx
+  ret <vscale x 2 x double> %res
+}
