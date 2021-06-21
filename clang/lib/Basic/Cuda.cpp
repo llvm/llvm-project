@@ -105,7 +105,6 @@ static const CudaArchToStringMap arch_names[] = {
     GFX(1010), // gfx1010
     GFX(1011), // gfx1011
     GFX(1012), // gfx1012
-    GFX(1013), // gfx1013
     GFX(1030), // gfx1030
     GFX(1031), // gfx1031
     GFX(1032), // gfx1032
