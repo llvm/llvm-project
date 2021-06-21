@@ -125,6 +125,72 @@ entry:
   ret void
 }
 
+define void @insert_store_nonconst_large_alignment(<4 x i32>* %q, i32 zeroext %s, i32 %idx) {
+; CHECK-LABEL: @insert_store_nonconst_large_alignment(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 4
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <4 x i32>, <4 x i32>* [[Q:%.*]], i32 0, i32 [[IDX]]
+; CHECK-NEXT:    store i32 [[S:%.*]], i32* [[TMP0]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp = icmp ult i32 %idx, 4
+  call void @llvm.assume(i1 %cmp)
+  %i = load <4 x i32>, <4 x i32>* %q, align 128
+  %vecins = insertelement <4 x i32> %i, i32 %s, i32 %idx
+  store <4 x i32> %vecins, <4 x i32>* %q, align 128
+  ret void
+}
+
+define void @insert_store_nonconst_align_maximum_8(<8 x i64>* %q, i64 %s, i32 %idx) {
+; CHECK-LABEL: @insert_store_nonconst_align_maximum_8(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i64>, <8 x i64>* [[Q:%.*]], i32 0, i32 [[IDX]]
+; CHECK-NEXT:    store i64 [[S:%.*]], i64* [[TMP1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %cmp = icmp ult i32 %idx, 2
+  call void @llvm.assume(i1 %cmp)
+  %i = load <8 x i64>, <8 x i64>* %q, align 8
+  %vecins = insertelement <8 x i64> %i, i64 %s, i32 %idx
+  store <8 x i64> %vecins, <8 x i64>* %q, align 8
+  ret void
+}
+
+define void @insert_store_nonconst_align_maximum_4(<8 x i64>* %q, i64 %s, i32 %idx) {
+; CHECK-LABEL: @insert_store_nonconst_align_maximum_4(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i64>, <8 x i64>* [[Q:%.*]], i32 0, i32 [[IDX]]
+; CHECK-NEXT:    store i64 [[S:%.*]], i64* [[TMP1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %cmp = icmp ult i32 %idx, 2
+  call void @llvm.assume(i1 %cmp)
+  %i = load <8 x i64>, <8 x i64>* %q, align 4
+  %vecins = insertelement <8 x i64> %i, i64 %s, i32 %idx
+  store <8 x i64> %vecins, <8 x i64>* %q, align 4
+  ret void
+}
+
+define void @insert_store_nonconst_align_larger(<8 x i64>* %q, i64 %s, i32 %idx) {
+; CHECK-LABEL: @insert_store_nonconst_align_larger(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i64>, <8 x i64>* [[Q:%.*]], i32 0, i32 [[IDX]]
+; CHECK-NEXT:    store i64 [[S:%.*]], i64* [[TMP1]], align 2
+; CHECK-NEXT:    ret void
+;
+  %cmp = icmp ult i32 %idx, 2
+  call void @llvm.assume(i1 %cmp)
+  %i = load <8 x i64>, <8 x i64>* %q, align 4
+  %vecins = insertelement <8 x i64> %i, i64 %s, i32 %idx
+  store <8 x i64> %vecins, <8 x i64>* %q, align 2
+  ret void
+}
+
 define void @insert_store_nonconst_index_known_valid_by_assume(<16 x i8>* %q, i8 zeroext %s, i32 %idx) {
 ; CHECK-LABEL: @insert_store_nonconst_index_known_valid_by_assume(
 ; CHECK-NEXT:  entry:
