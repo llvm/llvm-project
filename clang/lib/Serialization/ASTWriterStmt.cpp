@@ -2223,6 +2223,11 @@ void ASTStmtWriter::VisitOMPTileDirective(OMPTileDirective *D) {
   Code = serialization::STMT_OMP_TILE_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPUnrollDirective(OMPUnrollDirective *D) {
+  VisitOMPLoopBasedDirective(D);
+  Code = serialization::STMT_OMP_UNROLL_DIRECTIVE;
+}
+
 void ASTStmtWriter::VisitOMPForDirective(OMPForDirective *D) {
   VisitOMPLoopDirective(D);
   Record.writeBool(D->hasCancel());

@@ -3441,6 +3441,7 @@ public:
   void EmitOMPParallelDirective(const OMPParallelDirective &S);
   void EmitOMPSimdDirective(const OMPSimdDirective &S);
   void EmitOMPTileDirective(const OMPTileDirective &S);
+  void EmitOMPUnrollDirective(const OMPUnrollDirective &S);
   void EmitOMPForDirective(const OMPForDirective &S);
   void EmitOMPForSimdDirective(const OMPForSimdDirective &S);
   void EmitOMPSectionsDirective(const OMPSectionsDirective &S);

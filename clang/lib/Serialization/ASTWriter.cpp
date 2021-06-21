@@ -6050,6 +6050,13 @@ void OMPClauseWriter::VisitOMPSizesClause(OMPSizesClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
+void OMPClauseWriter::VisitOMPFullClause(OMPFullClause *C) {}
+
+void OMPClauseWriter::VisitOMPPartialClause(OMPPartialClause *C) {
+  Record.AddStmt(C->getFactor());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
 void OMPClauseWriter::VisitOMPAllocatorClause(OMPAllocatorClause *C) {
   Record.AddStmt(C->getAllocator());
   Record.AddSourceLocation(C->getLParenLoc());

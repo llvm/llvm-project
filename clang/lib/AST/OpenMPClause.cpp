@@ -942,6 +942,36 @@ OMPSizesClause *OMPSizesClause::CreateEmpty(const ASTContext &C,
   return new (Mem) OMPSizesClause(NumSizes);
 }
 
+OMPFullClause *OMPFullClause::Create(const ASTContext &C,
+                                     SourceLocation StartLoc,
+                                     SourceLocation EndLoc) {
+  OMPFullClause *Clause = CreateEmpty(C);
+  Clause->setLocStart(StartLoc);
+  Clause->setLocEnd(EndLoc);
+  return Clause;
+}
+
+OMPFullClause *OMPFullClause::CreateEmpty(const ASTContext &C) {
+  return new (C) OMPFullClause();
+}
+
+OMPPartialClause *OMPPartialClause::Create(const ASTContext &C,
+                                           SourceLocation StartLoc,
+                                           SourceLocation LParenLoc,
+                                           SourceLocation EndLoc,
+                                           Expr *Factor) {
+  OMPPartialClause *Clause = CreateEmpty(C);
+  Clause->setLocStart(StartLoc);
+  Clause->setLParenLoc(LParenLoc);
+  Clause->setLocEnd(EndLoc);
+  Clause->setFactor(Factor);
+  return Clause;
+}
+
+OMPPartialClause *OMPPartialClause::CreateEmpty(const ASTContext &C) {
+  return new (C) OMPPartialClause();
+}
+
 OMPAllocateClause *
 OMPAllocateClause::Create(const ASTContext &C, SourceLocation StartLoc,
                           SourceLocation LParenLoc, Expr *Allocator,
@@ -1600,6 +1630,18 @@ void OMPClausePrinter::VisitOMPSizesClause(OMPSizesClause *Node) {
     First = false;
   }
   OS << ")";
+}
+
+void OMPClausePrinter::VisitOMPFullClause(OMPFullClause *Node) { OS << "full"; }
+
+void OMPClausePrinter::VisitOMPPartialClause(OMPPartialClause *Node) {
+  OS << "partial";
+
+  if (Expr *Factor = Node->getFactor()) {
+    OS << '(';
+    Factor->printPretty(OS, nullptr, Policy, 0);
+    OS << ')';
+  }
 }
 
 void OMPClausePrinter::VisitOMPAllocatorClause(OMPAllocatorClause *Node) {
