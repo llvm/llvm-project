@@ -2143,7 +2143,7 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
           if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context))
             return ExprError(
                 Diag((*ArraySize)->getBeginLoc(), diag::err_array_too_large)
-                << Value->toString(10) << (*ArraySize)->getSourceRange());
+                << toString(*Value, 10) << (*ArraySize)->getSourceRange());
         }
 
         KnownArraySize = Value->getZExtValue();

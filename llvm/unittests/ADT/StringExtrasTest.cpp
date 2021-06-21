@@ -229,3 +229,48 @@ TEST(StringExtrasTest, ListSeparator) {
   S = LS2;
   EXPECT_EQ(S, " ");
 }
+
+TEST(StringExtrasTest, toStringAPInt) {
+  bool isSigned;
+
+  EXPECT_EQ(toString(APInt(8, 0), 2, true, true), "0b0");
+  EXPECT_EQ(toString(APInt(8, 0), 8, true, true), "00");
+  EXPECT_EQ(toString(APInt(8, 0), 10, true, true), "0");
+  EXPECT_EQ(toString(APInt(8, 0), 16, true, true), "0x0");
+  EXPECT_EQ(toString(APInt(8, 0), 36, true, false), "0");
+
+  isSigned = false;
+  EXPECT_EQ(toString(APInt(8, 255, isSigned), 2, isSigned, true), "0b11111111");
+  EXPECT_EQ(toString(APInt(8, 255, isSigned), 8, isSigned, true), "0377");
+  EXPECT_EQ(toString(APInt(8, 255, isSigned), 10, isSigned, true), "255");
+  EXPECT_EQ(toString(APInt(8, 255, isSigned), 16, isSigned, true), "0xFF");
+  EXPECT_EQ(toString(APInt(8, 255, isSigned), 36, isSigned, false), "73");
+
+  isSigned = true;
+  EXPECT_EQ(toString(APInt(8, 255, isSigned), 2, isSigned, true), "-0b1");
+  EXPECT_EQ(toString(APInt(8, 255, isSigned), 8, isSigned, true), "-01");
+  EXPECT_EQ(toString(APInt(8, 255, isSigned), 10, isSigned, true), "-1");
+  EXPECT_EQ(toString(APInt(8, 255, isSigned), 16, isSigned, true), "-0x1");
+  EXPECT_EQ(toString(APInt(8, 255, isSigned), 36, isSigned, false), "-1");
+}
+
+TEST(StringExtrasTest, toStringAPSInt) {
+  bool isUnsigned;
+
+  EXPECT_EQ(toString(APSInt(APInt(8, 0), false), 2), "0");
+  EXPECT_EQ(toString(APSInt(APInt(8, 0), false), 8), "0");
+  EXPECT_EQ(toString(APSInt(APInt(8, 0), false), 10), "0");
+  EXPECT_EQ(toString(APSInt(APInt(8, 0), false), 16), "0");
+
+  isUnsigned = true;
+  EXPECT_EQ(toString(APSInt(APInt(8, 255), isUnsigned), 2), "11111111");
+  EXPECT_EQ(toString(APSInt(APInt(8, 255), isUnsigned), 8), "377");
+  EXPECT_EQ(toString(APSInt(APInt(8, 255), isUnsigned), 10), "255");
+  EXPECT_EQ(toString(APSInt(APInt(8, 255), isUnsigned), 16), "FF");
+
+  isUnsigned = false;
+  EXPECT_EQ(toString(APSInt(APInt(8, 255), isUnsigned), 2), "-1");
+  EXPECT_EQ(toString(APSInt(APInt(8, 255), isUnsigned), 8), "-1");
+  EXPECT_EQ(toString(APSInt(APInt(8, 255), isUnsigned), 10), "-1");
+  EXPECT_EQ(toString(APSInt(APInt(8, 255), isUnsigned), 16), "-1");
+}

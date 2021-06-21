@@ -290,7 +290,7 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
   }
   std::string getDetail(const TemplateArgumentLoc &TAL) {
     if (TAL.getArgument().getKind() == TemplateArgument::Integral)
-      return TAL.getArgument().getAsIntegral().toString(10);
+      return toString(TAL.getArgument().getAsIntegral(), 10);
     return "";
   }
   std::string getDetail(const TemplateName &TN) {

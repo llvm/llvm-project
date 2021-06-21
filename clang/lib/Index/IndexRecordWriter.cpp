@@ -250,7 +250,7 @@ IndexRecordWriter::beginRecord(StringRef Filename, hash_code RecordHash,
   {
     llvm::raw_string_ostream RN(RecordName);
     RN << path::filename(Filename);
-    RN << "-" << APInt(64, RecordHash).toString(36, /*Signed=*/false);
+    RN << "-" << toString(APInt(64, RecordHash), 36, /*Signed=*/false);
   }
   SmallString<256> RecordPath = RecordsPath.str();
   appendInteriorRecordPath(RecordName, RecordPath);

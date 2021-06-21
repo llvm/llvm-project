@@ -405,7 +405,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
             if (!Info.isValidAsmImmediate(IntResult))
               return StmtError(Diag(InputExpr->getBeginLoc(),
                                     diag::err_invalid_asm_value_for_constraint)
-                               << IntResult.toString(10)
+                               << toString(IntResult, 10)
                                << Info.getConstraintStr()
                                << InputExpr->getSourceRange());
         }

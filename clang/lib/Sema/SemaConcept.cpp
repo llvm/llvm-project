@@ -25,6 +25,8 @@
 #include "clang/Basic/OperatorPrecedence.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/StringExtras.h"
+
 using namespace clang;
 using namespace sema;
 
@@ -573,9 +575,9 @@ static void diagnoseWellFormedUnsatisfiedConstraintExpr(Sema &S,
           S.Diag(SubstExpr->getBeginLoc(),
                  diag::note_atomic_constraint_evaluated_to_false_elaborated)
               << (int)First << SubstExpr
-              << SimplifiedLHS.Val.getInt().toString(10)
+              << toString(SimplifiedLHS.Val.getInt(), 10)
               << BinaryOperator::getOpcodeStr(BO->getOpcode())
-              << SimplifiedRHS.Val.getInt().toString(10);
+              << toString(SimplifiedRHS.Val.getInt(), 10);
           return;
         }
       }
