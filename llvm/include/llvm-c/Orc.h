@@ -328,7 +328,7 @@ typedef struct LLVMOrcOpaqueObjectTransformLayer
  * buffer should be disposed of and set to null.
  */
 typedef LLVMErrorRef (*LLVMOrcObjectTransformLayerTransformFunction)(
-    LLVMMemoryBufferRef *ObjInOut, void *Ctx);
+    void *Ctx, LLVMMemoryBufferRef *ObjInOut);
 
 /**
  * A reference to an orc::DumpObjects object.
