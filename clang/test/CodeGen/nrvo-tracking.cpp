@@ -29,8 +29,6 @@ L(2, t, X&);
 
 // CHECK-LABEL: define{{.*}} void @_Z2l3v
 // CHECK:       call {{.*}} @_ZN1XC1Ev
-// CHECK-NEXT:  call {{.*}} @_ZN1XC1EOS_
-// CHECK-NEXT:  call void @llvm.lifetime.end
 // CHECK-NEXT:  call void @llvm.lifetime.end
 // CHECK-NEXT:  ret void
 L(3, t, T);
@@ -152,7 +150,11 @@ F(8, (t), decltype(auto));
   }; }()();                                    \
 }
 
-//B(1, X); // Uncomment this line at your own peril ;)
+// CHECK-LABEL: define{{.*}} void @_Z2b1v
+// CHECK:       call {{.*}} @_ZN1XC1Ev
+// CHECK-NEXT:  call void @llvm.lifetime.end
+// CHECK-NEXT:  ret void
+B(1, X);
 
 // CHECK-LABEL: define{{.*}} void @_Z2b2v
 // CHECK:       call {{.*}} @_ZN1XC1Ev
@@ -164,8 +166,6 @@ B(2, X&);
 
 // CHECK-LABEL: define{{.*}} void @_Z2b3v
 // CHECK:       call {{.*}} @_ZN1XC1Ev
-// CHECK-NEXT:  call {{.*}} @_ZN1XC1EOS_
-// CHECK-NEXT:  call void @llvm.lifetime.end
 // CHECK-NEXT:  call void @llvm.lifetime.end
 // CHECK-NEXT:  ret void
 B(3, T);
