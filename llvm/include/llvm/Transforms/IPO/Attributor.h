@@ -102,6 +102,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
@@ -115,6 +116,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
@@ -126,6 +128,7 @@ struct Attributor;
 struct AbstractAttribute;
 struct InformationCache;
 struct AAIsDead;
+struct AttributorCallGraph;
 
 class AAManager;
 class AAResults;
@@ -1760,6 +1763,7 @@ private:
   ///}
 
   friend AADepGraph;
+  friend AttributorCallGraph;
 };
 
 /// An interface to query the internal state of an abstract attribute.
@@ -3853,6 +3857,159 @@ struct AANoUndef
 
   /// Unique ID (due to the unique address)
   static const char ID;
+};
+
+struct AACallGraphNode;
+struct AACallEdges;
+
+/// An Iterator for call edges, creates AACallEdges attributes in a lazy way.
+/// This iterator becomes invalid if the underlying edge list changes.
+/// So This shouldn't outlive a iteration of Attributor.
+class AACallEdgeIterator
+    : public iterator_adaptor_base<AACallEdgeIterator,
+                                   SetVector<Function *>::iterator> {
+  AACallEdgeIterator(Attributor &A, SetVector<Function *>::iterator Begin)
+      : iterator_adaptor_base(Begin), A(A) {}
+
+public:
+  AACallGraphNode *operator*() const;
+
+private:
+  Attributor &A;
+  friend AACallEdges;
+  friend AttributorCallGraph;
+};
+
+struct AACallGraphNode {
+  AACallGraphNode(Attributor &A) : A(A) {}
+
+  virtual AACallEdgeIterator optimisticEdgesBegin() const = 0;
+  virtual AACallEdgeIterator optimisticEdgesEnd() const = 0;
+
+  /// Iterator range for exploring the call graph.
+  iterator_range<AACallEdgeIterator> optimisticEdgesRange() const {
+    return iterator_range<AACallEdgeIterator>(optimisticEdgesBegin(),
+                                              optimisticEdgesEnd());
+  }
+
+protected:
+  /// Reference to Attributor needed for GraphTraits implementation.
+  Attributor &A;
+};
+
+/// An abstract state for querying live call edges.
+/// This interface uses the Attributor's optimistic liveness
+/// information to compute the edges that are alive.
+struct AACallEdges : public StateWrapper<BooleanState, AbstractAttribute>,
+                     AACallGraphNode {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+
+  AACallEdges(const IRPosition &IRP, Attributor &A)
+      : Base(IRP), AACallGraphNode(A) {}
+
+  /// Get the optimistic edges.
+  virtual const SetVector<Function *> &getOptimisticEdges() const = 0;
+
+  /// Is there in this function call with a unknown Callee.
+  virtual bool hasUnknownCallee() const = 0;
+
+  /// Iterator for exploring the call graph.
+  AACallEdgeIterator optimisticEdgesBegin() const override {
+    return AACallEdgeIterator(A, getOptimisticEdges().begin());
+  }
+
+  /// Iterator for exploring the call graph.
+  AACallEdgeIterator optimisticEdgesEnd() const override {
+    return AACallEdgeIterator(A, getOptimisticEdges().end());
+  }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AACallEdges &createForPosition(const IRPosition &IRP, Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AACallEdges"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is AACallEdges.
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+// Synthetic root node for the Attributor's internal call graph.
+struct AttributorCallGraph : public AACallGraphNode {
+  AttributorCallGraph(Attributor &A) : AACallGraphNode(A) {}
+
+  AACallEdgeIterator optimisticEdgesBegin() const override {
+    return AACallEdgeIterator(A, A.Functions.begin());
+  }
+
+  AACallEdgeIterator optimisticEdgesEnd() const override {
+    return AACallEdgeIterator(A, A.Functions.end());
+  }
+
+  /// Force populate the entire call graph.
+  void populateAll() const {
+    for (const AACallGraphNode *AA : optimisticEdgesRange()) {
+      // Nothing else to do here.
+      (void)AA;
+    }
+  }
+
+  void print();
+};
+
+template <> struct GraphTraits<AACallGraphNode *> {
+  using NodeRef = AACallGraphNode *;
+  using ChildIteratorType = AACallEdgeIterator;
+
+  static AACallEdgeIterator child_begin(AACallGraphNode *Node) {
+    return Node->optimisticEdgesBegin();
+  }
+
+  static AACallEdgeIterator child_end(AACallGraphNode *Node) {
+    return Node->optimisticEdgesEnd();
+  }
+};
+
+template <>
+struct GraphTraits<AttributorCallGraph *>
+    : public GraphTraits<AACallGraphNode *> {
+  using nodes_iterator = AACallEdgeIterator;
+
+  static AACallGraphNode *getEntryNode(AttributorCallGraph *G) {
+    return static_cast<AACallGraphNode *>(G);
+  }
+
+  static AACallEdgeIterator nodes_begin(const AttributorCallGraph *G) {
+    return G->optimisticEdgesBegin();
+  }
+
+  static AACallEdgeIterator nodes_end(const AttributorCallGraph *G) {
+    return G->optimisticEdgesEnd();
+  }
+};
+
+template <>
+struct DOTGraphTraits<AttributorCallGraph *> : public DefaultDOTGraphTraits {
+  DOTGraphTraits(bool Simple = false) : DefaultDOTGraphTraits(Simple) {}
+
+  std::string getNodeLabel(const AACallGraphNode *Node,
+                           const AttributorCallGraph *Graph) {
+    const AACallEdges *AACE = static_cast<const AACallEdges *>(Node);
+    return AACE->getAssociatedFunction()->getName().str();
+  }
+
+  static bool isNodeHidden(const AACallGraphNode *Node,
+                           const AttributorCallGraph *Graph) {
+    // Hide the synth root.
+    return static_cast<const AACallGraphNode *>(Graph) == Node;
+  }
 };
 
 /// Run options, used by the pass manager.
