@@ -953,7 +953,7 @@ define double @fma_undef_op0(double %x, double %y) {
 
 define double @fma_poison_op0(double %x, double %y) {
 ; CHECK-LABEL: @fma_poison_op0(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double poison
 ;
   %r = call double @llvm.fma.f64(double poison, double %x, double %y)
   ret double %r
@@ -969,7 +969,7 @@ define double @fma_undef_op1(double %x, double %y) {
 
 define double @fma_poison_op1(double %x, double %y) {
 ; CHECK-LABEL: @fma_poison_op1(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double poison
 ;
   %r = call double @llvm.fma.f64(double %x, double poison, double %y)
   ret double %r
@@ -985,7 +985,7 @@ define double @fma_undef_op2(double %x, double %y) {
 
 define double @fma_poison_op2(double %x, double %y) {
 ; CHECK-LABEL: @fma_poison_op2(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double poison
 ;
   %r = call double @llvm.fma.f64(double %x, double %y, double poison)
   ret double %r
@@ -1001,7 +1001,7 @@ define double @fmuladd_undef_op0(double %x, double %y) {
 
 define double @fmuladd_poison_op0(double %x, double %y) {
 ; CHECK-LABEL: @fmuladd_poison_op0(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double poison
 ;
   %r = call double @llvm.fmuladd.f64(double poison, double %x, double %y)
   ret double %r
@@ -1017,7 +1017,7 @@ define double @fmuladd_undef_op1(double %x, double %y) {
 
 define double @fmuladd_poison_op1(double %x, double %y) {
 ; CHECK-LABEL: @fmuladd_poison_op1(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double poison
 ;
   %r = call double @llvm.fmuladd.f64(double %x, double poison, double %y)
   ret double %r
@@ -1033,7 +1033,7 @@ define double @fmuladd_undef_op2(double %x, double %y) {
 
 define double @fmuladd_poison_op2(double %x, double %y) {
 ; CHECK-LABEL: @fmuladd_poison_op2(
-; CHECK-NEXT:    ret double 0x7FF8000000000000
+; CHECK-NEXT:    ret double poison
 ;
   %r = call double @llvm.fmuladd.f64(double %x, double %y, double poison)
   ret double %r
