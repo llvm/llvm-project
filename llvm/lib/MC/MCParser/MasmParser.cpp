@@ -5889,9 +5889,9 @@ bool MasmParser::parseDirectiveInclude() {
   std::string Filename;
   SMLoc IncludeLoc = getTok().getLoc();
 
-  if (!parseAngleBracketString(Filename))
+  if (parseAngleBracketString(Filename))
     Filename = parseStringTo(AsmToken::EndOfStatement);
-  if (check(!Filename.empty(), "missing filename in 'include' directive") ||
+  if (check(Filename.empty(), "missing filename in 'include' directive") ||
       check(getTok().isNot(AsmToken::EndOfStatement),
             "unexpected token in 'include' directive") ||
       // Attempt to switch the lexer to the included file before consuming the
