@@ -872,7 +872,7 @@ IndirectSymtabSection::IndirectSymtabSection()
 
 uint32_t IndirectSymtabSection::getNumSymbols() const {
   return in.got->getEntries().size() + in.tlvPointers->getEntries().size() +
-         in.stubs->getEntries().size();
+         2 * in.stubs->getEntries().size();
 }
 
 bool IndirectSymtabSection::isNeeded() const {
@@ -886,9 +886,9 @@ void IndirectSymtabSection::finalizeContents() {
   off += in.got->getEntries().size();
   in.tlvPointers->reserved1 = off;
   off += in.tlvPointers->getEntries().size();
-  // There is a 1:1 correspondence between stubs and LazyPointerSection
-  // entries, so they can share the same sub-array in the table.
-  in.stubs->reserved1 = in.lazyPointers->reserved1 = off;
+  in.stubs->reserved1 = off;
+  off += in.stubs->getEntries().size();
+  in.lazyPointers->reserved1 = off;
 }
 
 static uint32_t indirectValue(const Symbol *sym) {
@@ -906,6 +906,15 @@ void IndirectSymtabSection::writeTo(uint8_t *buf) const {
     write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
     ++off;
   }
+  for (const Symbol *sym : in.stubs->getEntries()) {
+    write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
+    ++off;
+  }
+  // There is a 1:1 correspondence between stubs and LazyPointerSection
+  // entries. But giving __stubs and __la_symbol_ptr the same reserved1
+  // (the offset into the indirect symbol table) so that they both refer
+  // to the same range of offsets confuses `strip`, so write the stubs
+  // symbol table offsets a second time.
   for (const Symbol *sym : in.stubs->getEntries()) {
     write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
     ++off;
