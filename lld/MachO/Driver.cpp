@@ -255,8 +255,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
     // We don't take a reference to cachedFile here because the
     // loadArchiveMember() call below may recursively call addFile() and
     // invalidate this reference.
-    ArchiveFile *cachedFile = loadedArchives[path];
-    if (cachedFile)
+    if (ArchiveFile *cachedFile = loadedArchives[path])
       return cachedFile;
 
     std::unique_ptr<object::Archive> file = CHECK(
