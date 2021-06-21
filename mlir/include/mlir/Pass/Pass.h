@@ -73,9 +73,13 @@ public:
   /// register the Affine dialect but does not need to register Linalg.
   virtual void getDependentDialects(DialectRegistry &registry) const {}
 
-  /// Returns the command line argument used when registering this pass. Return
+  /// Return the command line argument used when registering this pass. Return
   /// an empty string if one does not exist.
   virtual StringRef getArgument() const { return ""; }
+
+  /// Return the command line description used when registering this pass.
+  /// Return an empty string if one does not exist.
+  virtual StringRef getDescription() const { return ""; }
 
   /// Returns the name of the operation that this pass operates on, or None if
   /// this is a generic OperationPass.
