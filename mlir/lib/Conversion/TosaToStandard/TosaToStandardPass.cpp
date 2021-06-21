@@ -35,6 +35,7 @@ public:
     target.addIllegalOp<tosa::SliceOp>();
     target.addIllegalOp<tosa::ApplyScaleOp>();
     target.addLegalDialect<StandardOpsDialect>();
+    target.addLegalDialect<tensor::TensorDialect>();
 
     mlir::tosa::populateTosaToStandardConversionPatterns(&patterns);
     if (failed(applyPartialConversion(getOperation(), target,

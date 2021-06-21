@@ -9,7 +9,7 @@
 func @main() {
   %const = constant dense<10.0> : tensor<2xf32>
   %insert_val = constant dense<20.0> : tensor<1xf32>
-  %inserted = subtensor_insert %insert_val into %const[0][1][1] : tensor<1xf32> into tensor<2xf32>
+  %inserted = tensor.insert_slice %insert_val into %const[0][1][1] : tensor<1xf32> into tensor<2xf32>
 
   %unranked = tensor.cast %inserted : tensor<2xf32> to tensor<*xf32>
   call @print_memref_f32(%unranked) : (tensor<*xf32>) -> ()

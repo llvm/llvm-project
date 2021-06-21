@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
@@ -128,14 +129,13 @@ static LogicalResult padOperandToSmallestStaticBoundingBox(
   // Already static shape, no need to pad.
   if (llvm::none_of(opToPad.getShape(opOperand), ShapedType::isDynamic))
     return success();
-  auto subtensor = opOperand->get().getDefiningOp<SubTensorOp>();
-  // Not a subtensor, cannot construct a static bounding box.
-  if (!subtensor)
+  auto sliceOp = opOperand->get().getDefiningOp<tensor::ExtractSliceOp>();
+  // Not a slice op, cannot construct a static bounding box.
+  if (!sliceOp)
     return failure();
   SmallVector<int64_t> staticSizes;
   staticSizes.reserve(opToPad.getRank(opOperand));
-  auto shapedOp =
-      cast<OffsetSizeAndStrideOpInterface>(subtensor.getOperation());
+  auto shapedOp = cast<OffsetSizeAndStrideOpInterface>(sliceOp.getOperation());
   for (auto size : shapedOp.getMixedSizes()) {
     auto indexAttr = size.is<Attribute>()
                          ? size.get<Attribute>().dyn_cast<IntegerAttr>()
@@ -195,8 +195,8 @@ static LogicalResult rewriteAsPaddedOp(PatternRewriter &rewriter,
   linalg::LinalgOp paddedOp =
       opToPad.clone(rewriter, loc, resultTensorTypes, newOperands);
 
-  // Recover the subtensor out of the new static results. This keeps the
-  // original linalg op around because it uses the dims of the original results.
+  // Recover the slice out of the new static results. This keeps the original
+  // linalg op around because it uses the dims of the original results.
   // This later folds away.
   SmallVector<Value> paddedSubviewResults;
   paddedSubviewResults.reserve(opToPad->getNumResults());
@@ -211,7 +211,7 @@ static LogicalResult rewriteAsPaddedOp(PatternRewriter &rewriter,
           return dimOp.getResult();
         }));
     SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
-    paddedSubviewResults.push_back(rewriter.create<SubTensorOp>(
+    paddedSubviewResults.push_back(rewriter.create<tensor::ExtractSliceOp>(
         loc, std::get<1>(it), offsets, sizes, strides));
   }
   // Replace the transient `opToPad` locally, except for uses that we just
@@ -679,7 +679,7 @@ LogicalResult PadTensorOpTransformationPattern::matchAndRewrite(
       rewriter.create<linalg::FillOp>(loc, initTensor, padValue).result();
 
   // Copy original contents into new tensor
-  // Uses linalg.generic, but could be done with std.subtensor_insert
+  // Uses linalg.generic, but could be done with tensor.insert_slice
   SmallVector<AffineExpr, 4> outputExprs;
   for (unsigned i = 0; i < resultShapedType.getRank(); ++i) {
     outputExprs.push_back(getAffineDimExpr(i, rewriter.getContext()) +
@@ -719,13 +719,13 @@ static OpFoldResult asOpFoldResult(OpBuilder &builder, Value val) {
   return val;
 }
 
-LogicalResult SubTensorOfPadTensorSwapPattern::matchAndRewrite(
-    SubTensorOp subTensorOp, PatternRewriter &rewriter) const {
-  auto padOp = subTensorOp.source().getDefiningOp<PadTensorOp>();
+LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
+    tensor::ExtractSliceOp sliceOp, PatternRewriter &rewriter) const {
+  auto padOp = sliceOp.source().getDefiningOp<PadTensorOp>();
   if (!padOp)
     return failure();
   // Only unit stride supported.
-  if (!subTensorOp.hasUnitStride())
+  if (!sliceOp.hasUnitStride())
     return failure();
   // Only constant padding value supported.
   Value padValue = padOp.getConstantPaddingValue();
@@ -734,7 +734,7 @@ LogicalResult SubTensorOfPadTensorSwapPattern::matchAndRewrite(
 
   // Helper variables and functions for various arithmetic operations. These are
   // used extensively for computing new offset/length and padding values.
-  Location loc = subTensorOp.getLoc();
+  Location loc = sliceOp.getLoc();
   AffineExpr dim0, dim1;
   bindDims(rewriter.getContext(), dim0, dim1);
   // Add two integers.
@@ -786,8 +786,8 @@ LogicalResult SubTensorOfPadTensorSwapPattern::matchAndRewrite(
   int64_t rank = padOp.getSourceType().getRank();
   for (unsigned dim = 0; dim < rank; ++dim) {
     auto low = asValue(rewriter, loc, padOp.getMixedLowPad()[dim]);
-    auto offset = asValue(rewriter, loc, subTensorOp.getMixedOffsets()[dim]);
-    auto length = asValue(rewriter, loc, subTensorOp.getMixedSizes()[dim]);
+    auto offset = asValue(rewriter, loc, sliceOp.getMixedOffsets()[dim]);
+    auto length = asValue(rewriter, loc, sliceOp.getMixedSizes()[dim]);
     auto srcSize = rewriter.createOrFold<memref::DimOp>(
         loc, padOp.source(), dim);
 
@@ -805,19 +805,19 @@ LogicalResult SubTensorOfPadTensorSwapPattern::matchAndRewrite(
     //
     // The original read could also have started in the high padding zone.
     // In that case, set the offset to the end of source tensor. The new
-    // SubTensorOp length will be zero in that case. (Effectively reading no
+    // ExtractSliceOp length will be zero in that case. (Effectively reading no
     // data from the source.)
     Value newOffset = min(max(sub(offset, low), zero), srcSize);
     newOffsets.push_back(asOpFoldResult(rewriter, newOffset));
 
-    // The original SubTensorOp was reading until position `offset + length`.
+    // The original ExtractSliceOp was reading until position `offset + length`.
     // Therefore, the corresponding position within the source tensor is:
     //
     // offset + length - low
     //
-    // In case the original SubTensorOp stopped reading within the low padding
-    // zone, this value can be negative. In that case, the end position of the
-    // read should be zero. (Similar to newOffset.)
+    // In case the original ExtractSliceOp stopped reading within the low
+    // padding zone, this value can be negative. In that case, the end position
+    // of the read should be zero. (Similar to newOffset.)
     //
     // The original read could also have stopped in the high padding zone.
     // In that case, set the end positition of the read should be the end of the
@@ -825,7 +825,7 @@ LogicalResult SubTensorOfPadTensorSwapPattern::matchAndRewrite(
     //
     // endLoc = min(max(offset - low + length, 0), srcSize)
     //
-    // The new SubTensorOp length is `endLoc - newOffset`.
+    // The new ExtractSliceOp length is `endLoc - newOffset`.
     Value endLoc = min(max(add(sub(offset, low), length), zero), srcSize);
     Value newLength = sub(endLoc, newOffset);
     newLengths.push_back(asOpFoldResult(rewriter, newLength));
@@ -842,7 +842,7 @@ LogicalResult SubTensorOfPadTensorSwapPattern::matchAndRewrite(
     }
 
     // The amount of high padding is simply the number of elements remaining,
-    // so that the result has the same length as the original SubTensorOp.
+    // so that the result has the same length as the original ExtractSliceOp.
     Value newHigh = sub(sub(length, newLength), newLow);
     appendIndex(newHigh, newHighs, staticNewHighs);
 
@@ -852,22 +852,20 @@ LogicalResult SubTensorOfPadTensorSwapPattern::matchAndRewrite(
 
   // Insert cast to ensure that types match. (May be folded away.)
   auto castResult = [&](Value val) -> Value {
-    auto castOp = rewriter.create<tensor::CastOp>(
-        loc, subTensorOp.getType(), val);
+    auto castOp = rewriter.create<tensor::CastOp>(loc, sliceOp.getType(), val);
     return castOp;
   };
 
   // In cases where the original data source is unused: Emit a GenerateOp and
-  // do not generate a SubTensorOp. (The result shape of the SubTensorOp would
+  // do not generate a SliceOp. (The result shape of the SliceOp would
   // have a dimension of size 0, the semantics of which is unclear.)
   auto createGenerateOp = [&]() {
-    // The shape of the GenerateOp is the same as the existing SubTensorOp.
-    RankedTensorType type = subTensorOp.getType();
+    // The shape of the GenerateOp is the same as the existing SliceOp.
+    RankedTensorType type = sliceOp.getType();
     SmallVector<Value> dynDims;
     for (unsigned i = 0; i < type.getRank(); ++i) {
       if (type.isDynamicDim(i))
-        dynDims.push_back(
-            asValue(rewriter, loc, subTensorOp.getMixedOffsets()[i]));
+        dynDims.push_back(asValue(rewriter, loc, sliceOp.getMixedOffsets()[i]));
     }
 
     // Create GenerateOp.
@@ -891,14 +889,14 @@ LogicalResult SubTensorOfPadTensorSwapPattern::matchAndRewrite(
     return castResult(generateOp);
   };
 
-  // Emit a SubTensorOp and a PadTensorOp. Should not be used in cases where
-  // the result shape of the new SubTensorOp has a zero dimension.
+  // Emit a SliceOp and a PadTensorOp. Should not be used in cases where
+  // the result shape of the new SliceOp has a zero dimension.
   auto createPadTensorOfSubTensor = [&]() {
     // Create pad_tensor(subtensor(x)).
-    auto newSubTensorOp = rewriter.create<SubTensorOp>(
+    auto newSliceOp = rewriter.create<tensor::ExtractSliceOp>(
         loc, padOp.source(), newOffsets, newLengths, newStrides);
     auto newPadTensorOp = rewriter.create<PadTensorOp>(
-        loc, newSubTensorOp, staticNewLows, staticNewHighs, newLows, newHighs);
+        loc, newSliceOp, staticNewLows, staticNewHighs, newLows, newHighs);
 
     // Copy region to new PadTensorOp.
     BlockAndValueMapping bvm;
@@ -911,27 +909,29 @@ LogicalResult SubTensorOfPadTensorSwapPattern::matchAndRewrite(
   // Rewrite subtensor(pad_tensor(x)) into a GenerateOp it is statically known
   // that the original data source x is not used.
   if (hasZeroLen) {
-    rewriter.replaceOp(subTensorOp, createGenerateOp());
+    rewriter.replaceOp(sliceOp, createGenerateOp());
     return success();
   }
 
   // If there are dynamic dimensions: Generate an scf.if check to avoid creating
-  // SubTensorOps with result dimensions of size 0 at runtime.
+  // SliceOps with result dimensions of size 0 at runtime.
   if (dynHasZeroLenCond) {
     auto result = rewriter.create<scf::IfOp>(
-        loc, subTensorOp.getType(), dynHasZeroLenCond,
-        /*thenBuilder=*/[&](OpBuilder &b, Location loc) {
+        loc, sliceOp.getType(), dynHasZeroLenCond,
+        /*thenBuilder=*/
+        [&](OpBuilder &b, Location loc) {
           b.create<scf::YieldOp>(loc, createGenerateOp());
         },
-        /*elseBuilder=*/[&](OpBuilder &b, Location loc) {
+        /*elseBuilder=*/
+        [&](OpBuilder &b, Location loc) {
           b.create<scf::YieldOp>(loc, createPadTensorOfSubTensor());
         });
-    rewriter.replaceOp(subTensorOp, result.getResult(0));
+    rewriter.replaceOp(sliceOp, result.getResult(0));
     return success();
   }
 
   // All shapes are static and the data source is actually used. Rewrite into
   // pad_tensor(subtensor(x)).
-  rewriter.replaceOp(subTensorOp, createPadTensorOfSubTensor());
+  rewriter.replaceOp(sliceOp, createPadTensorOfSubTensor());
   return success();
 }
