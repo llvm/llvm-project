@@ -166,8 +166,13 @@ settings of this extension.
 
 This extension is actively developed within the
 [LLVM monorepo](https://github.com/llvm/llvm-project/tree/main/mlir/utils/vscode),
-at `mlir/utils/vscode`. When developing or deploying this extension within the
-LLVM monorepo, a few extra setup steps are required:
+at `mlir/utils/vscode`. As such, contributions should follow the
+[normal LLVM guidelines](https://llvm.org/docs/Contributing.html), with code
+reviews sent to
+[phabricator](https://llvm.org/docs/Contributing.html#how-to-submit-a-patch).
+
+When developing or deploying this extension within the LLVM monorepo, a few
+extra setup steps are required:
 
 *   Copy `mlir/utils/textmate/mlir.json` to the extension directory and rename
     to `grammar.json`.
