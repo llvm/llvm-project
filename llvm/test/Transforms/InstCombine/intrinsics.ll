@@ -61,7 +61,7 @@ define <2 x i32> @cttz_vec(<2 x i32> %a) {
 ; Make sure we don't add range metadata to i1 cttz.
 define i1 @cttz_i1(i1 %arg) {
 ; CHECK-LABEL: @cttz_i1(
-; CHECK-NEXT:    [[CNT:%.*]] = call i1 @llvm.cttz.i1(i1 [[ARG:%.*]], i1 false) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[CNT:%.*]] = xor i1 [[ARG:%.*]], true
 ; CHECK-NEXT:    ret i1 [[CNT]]
 ;
   %cnt = call i1 @llvm.cttz.i1(i1 %arg, i1 false) nounwind readnone
@@ -78,7 +78,7 @@ define i1 @cttz_i1_zero_is_undef(i1 %arg) {
 
 define <2 x i1> @cttz_v2i1(<2 x i1> %arg) {
 ; CHECK-LABEL: @cttz_v2i1(
-; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i1> @llvm.cttz.v2i1(<2 x i1> [[ARG:%.*]], i1 false) #[[ATTR2]]
+; CHECK-NEXT:    [[CNT:%.*]] = xor <2 x i1> [[ARG:%.*]], <i1 true, i1 true>
 ; CHECK-NEXT:    ret <2 x i1> [[CNT]]
 ;
   %cnt = call <2 x i1> @llvm.cttz.v2i1(<2 x i1> %arg, i1 false) nounwind readnone
@@ -87,8 +87,7 @@ define <2 x i1> @cttz_v2i1(<2 x i1> %arg) {
 
 define <2 x i1> @cttz_v2i1_zero_is_undef(<2 x i1> %arg) {
 ; CHECK-LABEL: @cttz_v2i1_zero_is_undef(
-; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i1> @llvm.cttz.v2i1(<2 x i1> [[ARG:%.*]], i1 true) #[[ATTR2]]
-; CHECK-NEXT:    ret <2 x i1> [[CNT]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %cnt = call <2 x i1> @llvm.cttz.v2i1(<2 x i1> %arg, i1 true) nounwind readnone
   ret <2 x i1> %cnt
@@ -117,7 +116,7 @@ define <2 x i1> @cttz_knownbits_vec(<2 x i32> %arg) {
 define i32 @cttz_knownbits2(i32 %arg) {
 ; CHECK-LABEL: @cttz_knownbits2(
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[ARG:%.*]], 4
-; CHECK-NEXT:    [[CNT:%.*]] = call i32 @llvm.cttz.i32(i32 [[OR]], i1 true) #[[ATTR2]], !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[CNT:%.*]] = call i32 @llvm.cttz.i32(i32 [[OR]], i1 true) #[[ATTR2:[0-9]+]], !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[CNT]]
 ;
   %or = or i32 %arg, 4
@@ -179,7 +178,7 @@ define <2 x i8> @ctlz_vec(<2 x i8> %a) {
 ; Make sure we don't add range metadata to i1 ctlz.
 define i1 @ctlz_i1(i1 %arg) {
 ; CHECK-LABEL: @ctlz_i1(
-; CHECK-NEXT:    [[CNT:%.*]] = call i1 @llvm.ctlz.i1(i1 [[ARG:%.*]], i1 false) #[[ATTR2]]
+; CHECK-NEXT:    [[CNT:%.*]] = xor i1 [[ARG:%.*]], true
 ; CHECK-NEXT:    ret i1 [[CNT]]
 ;
   %cnt = call i1 @llvm.ctlz.i1(i1 %arg, i1 false) nounwind readnone
@@ -196,7 +195,7 @@ define i1 @ctlz_i1_zero_is_undef(i1 %arg) {
 
 define <2 x i1> @ctlz_v2i1(<2 x i1> %arg) {
 ; CHECK-LABEL: @ctlz_v2i1(
-; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i1> @llvm.ctlz.v2i1(<2 x i1> [[ARG:%.*]], i1 false) #[[ATTR2]]
+; CHECK-NEXT:    [[CNT:%.*]] = xor <2 x i1> [[ARG:%.*]], <i1 true, i1 true>
 ; CHECK-NEXT:    ret <2 x i1> [[CNT]]
 ;
   %cnt = call <2 x i1> @llvm.ctlz.v2i1(<2 x i1> %arg, i1 false) nounwind readnone
@@ -205,8 +204,7 @@ define <2 x i1> @ctlz_v2i1(<2 x i1> %arg) {
 
 define <2 x i1> @ctlz_v2i1_zero_is_undef(<2 x i1> %arg) {
 ; CHECK-LABEL: @ctlz_v2i1_zero_is_undef(
-; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i1> @llvm.ctlz.v2i1(<2 x i1> [[ARG:%.*]], i1 true) #[[ATTR2]]
-; CHECK-NEXT:    ret <2 x i1> [[CNT]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %cnt = call <2 x i1> @llvm.ctlz.v2i1(<2 x i1> %arg, i1 true) nounwind readnone
   ret <2 x i1> %cnt
