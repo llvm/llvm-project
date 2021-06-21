@@ -13,7 +13,7 @@ declare i32 @custom_fun_two_callbacks(
 
 declare i8 @a_callback_fun(i32, double)
 
-; CHECK-LABEL: @"dfs$call_custom_funs_with_callbacks"
+; CHECK-LABEL: @call_custom_funs_with_callbacks.dfsan
 define void @call_custom_funs_with_callbacks(i8 (i32, double)* %callback_arg) {
   ;; The callback should have attribute 'nonnull':
   ; CHECK: call signext i32 @__dfsw_custom_fun_one_callback(

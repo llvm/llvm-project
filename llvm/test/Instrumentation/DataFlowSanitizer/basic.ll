@@ -14,7 +14,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__dfsan_shadow_ptr_mask = external global i64
 
 define i8 @load(i8* %p) {
-  ; CHECK-LABEL: define i8 @"dfs$load"
+  ; CHECK-LABEL: define i8 @load.dfsan
   ; CHECK: and i64 {{.*}}, [[SHADOW_MASK]]
   ; CHECK: ret i8 %a
   %a = load i8, i8* %p
@@ -22,7 +22,7 @@ define i8 @load(i8* %p) {
 }
 
 define void @store(i8* %p) {
-  ; CHECK-LABEL: define void @"dfs$store"
+  ; CHECK-LABEL: define void @store.dfsan
   ; CHECK: and i64 {{.*}}, [[SHADOW_MASK]]
   ; CHECK: ret void
   store i8 0, i8* %p

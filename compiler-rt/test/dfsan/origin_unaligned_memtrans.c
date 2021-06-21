@@ -47,16 +47,16 @@ int main(int argc, char *argv[]) {
 
 // CHECK0: Taint value 0x8 {{.*}} origin tracking ()
 // CHECK0: Origin value: {{.*}}, Taint value was stored to memory at
-// CHECK0: #0 {{.*}} in dfs$fn_i {{.*}}origin_unaligned_memtrans.c:[[@LINE-18]]
+// CHECK0: #0 {{.*}} in fn_i.dfsan {{.*}}origin_unaligned_memtrans.c:[[@LINE-18]]
 // CHECK0: #1 {{.*}} in main {{.*}}origin_unaligned_memtrans.c:[[@LINE-8]]
 
 // CHECK0: Origin value: {{.*}}, Taint value was stored to memory at
-// CHECK0: #0 {{.*}} in dfs$fn_h {{.*}}origin_unaligned_memtrans.c:[[@LINE-26]]
+// CHECK0: #0 {{.*}} in fn_h.dfsan {{.*}}origin_unaligned_memtrans.c:[[@LINE-26]]
 // CHECK0: #1 {{.*}} in main {{.*}}origin_unaligned_memtrans.c:[[@LINE-13]]
 
 // CHECK0: Origin value: {{.*}}, Taint value was stored to memory at
-// CHECK0: #0 {{.*}} in dfs$fn_g {{.*}}origin_unaligned_memtrans.c:[[@LINE-38]]
-// CHECK0: #1 {{.*}} in dfs$fn_f {{.*}}origin_unaligned_memtrans.c:[[@LINE-35]]
+// CHECK0: #0 {{.*}} in fn_g.dfsan {{.*}}origin_unaligned_memtrans.c:[[@LINE-38]]
+// CHECK0: #1 {{.*}} in fn_f.dfsan {{.*}}origin_unaligned_memtrans.c:[[@LINE-35]]
 // CHECK0: #2 {{.*}} in main {{.*}}origin_unaligned_memtrans.c:[[@LINE-19]]
 
 // CHECK0: Origin value: {{.*}}, Taint value was created at
@@ -64,16 +64,16 @@ int main(int argc, char *argv[]) {
 
 // CHECK10: Taint value 0x10 {{.*}} origin tracking
 // CHECK10: Origin value: {{.*}}, Taint value was stored to memory at
-// CHECK10: #0 {{.*}} in dfs$fn_i {{.*}}origin_unaligned_memtrans.c:[[@LINE-35]]
+// CHECK10: #0 {{.*}} in fn_i.dfsan {{.*}}origin_unaligned_memtrans.c:[[@LINE-35]]
 // CHECK10: #1 {{.*}} in main {{.*}}origin_unaligned_memtrans.c:[[@LINE-25]]
 
 // CHECK10: Origin value: {{.*}}, Taint value was stored to memory at
-// CHECK10: #0 {{.*}} in dfs$fn_h {{.*}}origin_unaligned_memtrans.c:[[@LINE-43]]
+// CHECK10: #0 {{.*}} in fn_h.dfsan {{.*}}origin_unaligned_memtrans.c:[[@LINE-43]]
 // CHECK10: #1 {{.*}} in main {{.*}}origin_unaligned_memtrans.c:[[@LINE-30]]
 
 // CHECK10: Origin value: {{.*}}, Taint value was stored to memory at
-// CHECK10: #0 {{.*}} in dfs$fn_g {{.*}}origin_unaligned_memtrans.c:[[@LINE-55]]
-// CHECK10: #1 {{.*}} in dfs$fn_f {{.*}}origin_unaligned_memtrans.c:[[@LINE-52]]
+// CHECK10: #0 {{.*}} in fn_g.dfsan {{.*}}origin_unaligned_memtrans.c:[[@LINE-55]]
+// CHECK10: #1 {{.*}} in fn_f.dfsan {{.*}}origin_unaligned_memtrans.c:[[@LINE-52]]
 // CHECK10: #2 {{.*}} in main {{.*}}origin_unaligned_memtrans.c:[[@LINE-36]]
 
 // CHECK10: Origin value: {{.*}}, Taint value was created at

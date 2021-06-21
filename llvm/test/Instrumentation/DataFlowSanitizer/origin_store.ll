@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
 
 define void @store_zero_to_non_escaped_alloca() {
-  ; CHECK-LABEL: @"dfs$store_zero_to_non_escaped_alloca"
+  ; CHECK-LABEL: @store_zero_to_non_escaped_alloca.dfsan
   ; CHECK-NEXT: [[A:%.*]] = alloca i[[#SBITS]], align [[#SBYTES]]
   ; CHECK-NEXT: %_dfsa = alloca i32, align 4
   ; CHECK-NEXT: %p = alloca i16, align 2
@@ -21,7 +21,7 @@ define void @store_zero_to_non_escaped_alloca() {
 }
 
 define void @store_nonzero_to_non_escaped_alloca(i16 %a) {
-  ; CHECK-LABEL: @"dfs$store_nonzero_to_non_escaped_alloca"
+  ; CHECK-LABEL: @store_nonzero_to_non_escaped_alloca.dfsan
   ; CHECK: %[[#AO:]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
   ; CHECK: %_dfsa = alloca i32, align 4
   ; CHECK: store i32 %[[#AO]], i32* %_dfsa, align 4
@@ -34,12 +34,12 @@ define void @store_nonzero_to_non_escaped_alloca(i16 %a) {
 declare void @foo(i16* %p)
 
 define void @store_zero_to_escaped_alloca() {
-  ; CHECK-LABEL: @"dfs$store_zero_to_escaped_alloca"
+  ; CHECK-LABEL: @store_zero_to_escaped_alloca.dfsan
   ; CHECK:       %[[#SA:]] = bitcast i[[#SBITS]]* {{.*}} to i[[#NUM_BITS:mul(SBITS,2)]]*
   ; CHECK-NEXT:  store i[[#NUM_BITS]] 0, i[[#NUM_BITS]]* %[[#SA]], align [[#SBYTES]]
   ; CHECK-NEXT:  store i16 1, i16* %p, align 2
   ; CHECK-NEXT:  store i[[#SBITS]] 0, i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN:2]]
-  ; CHECK-NEXT:  call void @"dfs$foo"(i16* %p)
+  ; CHECK-NEXT:  call void @foo.dfsan(i16* %p)
 
   %p = alloca i16
   store i16 1, i16* %p
@@ -48,7 +48,7 @@ define void @store_zero_to_escaped_alloca() {
 }
 
 define void @store_nonzero_to_escaped_alloca(i16 %a) {
-  ; CHECK-LABEL:  @"dfs$store_nonzero_to_escaped_alloca"
+  ; CHECK-LABEL:  @store_nonzero_to_escaped_alloca.dfsan
   ; CHECK-NEXT:   %[[#AO:]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
   ; CHECK-NEXT:   %[[#AS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; CHECK:        %[[#INTP:]] = ptrtoint i16* %p to i64
@@ -73,7 +73,7 @@ define void @store_nonzero_to_escaped_alloca(i16 %a) {
 }
 
 define void @store64_align8(i64* %p, i64 %a) {
-  ; CHECK-LABEL: @"dfs$store64_align8"
+  ; CHECK-LABEL: @store64_align8.dfsan
 
   ; COMBINE_STORE_PTR-NEXT: %[[#PO:]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
   ; COMBINE_STORE_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
@@ -103,7 +103,7 @@ define void @store64_align8(i64* %p, i64 %a) {
 }
 
 define void @store64_align2(i64* %p, i64 %a) {
-  ; CHECK-LABEL: @"dfs$store64_align2"
+  ; CHECK-LABEL: @store64_align2.dfsan
 
   ; COMBINE_STORE_PTR-NEXT: %[[#PO:]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
   ; COMBINE_STORE_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
@@ -130,7 +130,7 @@ define void @store64_align2(i64* %p, i64 %a) {
 }
 
 define void @store96_align8(i96* %p, i96 %a) {
-  ; CHECK-LABEL: @"dfs$store96_align8"
+  ; CHECK-LABEL: @store96_align8.dfsan
 
   ; COMBINE_STORE_PTR-NEXT: %[[#PO:]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 0), align 4
   ; COMBINE_STORE_PTR-NEXT: %[[#PS:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]

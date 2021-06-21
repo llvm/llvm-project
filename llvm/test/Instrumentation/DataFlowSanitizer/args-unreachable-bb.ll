@@ -5,7 +5,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__dfsan_shadow_width_bits = weak_odr constant i32 [[#SBITS:]]
 ; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
 
-; CHECK-LABEL: @"dfs$unreachable_bb1"
+; CHECK-LABEL: @unreachable_bb1.dfsan
 define i8 @unreachable_bb1() {
   ; CHECK: ret { i8, i[[#SBITS]] } { i8 1, i[[#SBITS]] 0 }
   ; CHECK-NOT: bb2:
@@ -25,7 +25,7 @@ bb4:
 
 declare void @abort() noreturn
 
-; CHECK-LABEL: @"dfs$unreachable_bb2"
+; CHECK-LABEL: @unreachable_bb2.dfsan
 define i8 @unreachable_bb2() {
   call void @abort() noreturn
   ; CHECK-NOT: i8 12

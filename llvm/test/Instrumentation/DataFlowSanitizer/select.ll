@@ -9,7 +9,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
 
 define i8 @select8(i1 %c, i8 %t, i8 %f) {
-  ; TRACK_CF: @"dfs$select8"
+  ; TRACK_CF: @select8.dfsan
   ; TRACK_CF: %[[#R:]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 4) to i[[#SBITS]]*), align [[ALIGN:2]]
   ; TRACK_CF: %[[#R+1]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align [[ALIGN]]
   ; TRACK_CF: %[[#R+2]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
@@ -19,7 +19,7 @@ define i8 @select8(i1 %c, i8 %t, i8 %f) {
   ; TRACK_CF: store i[[#SBITS]] %[[#RO]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; TRACK_CF: ret i8 %a
 
-  ; NO_TRACK_CF: @"dfs$select8"
+  ; NO_TRACK_CF: @select8.dfsan
   ; NO_TRACK_CF: %[[#R:]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 4) to i[[#SBITS]]*), align [[ALIGN:2]]
   ; NO_TRACK_CF: %[[#R+1]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align [[ALIGN]]
   ; NO_TRACK_CF: %[[#R+2]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
@@ -33,7 +33,7 @@ define i8 @select8(i1 %c, i8 %t, i8 %f) {
 }
 
 define i8 @select8e(i1 %c, i8 %tf) {
-  ; TRACK_CF: @"dfs$select8e"
+  ; TRACK_CF: @select8e.dfsan
   ; TRACK_CF: %[[#R:]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align [[ALIGN]]
   ; TRACK_CF: %[[#R+1]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; TRACK_CF: %[[#RO:]] = or i[[#SBITS]] %[[#R+1]], %[[#R]]
@@ -41,7 +41,7 @@ define i8 @select8e(i1 %c, i8 %tf) {
   ; TRACK_CF: store i[[#SBITS]] %[[#RO]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; TRACK_CF: ret i8 %a
 
-  ; NO_TRACK_CF: @"dfs$select8e"
+  ; NO_TRACK_CF: @select8e.dfsan
   ; NO_TRACK_CF: %[[#R:]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align [[ALIGN]]
   ; NO_TRACK_CF: %[[#R+1]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; NO_TRACK_CF: %a = select i1 %c, i8 %tf, i8 %tf
@@ -53,7 +53,7 @@ define i8 @select8e(i1 %c, i8 %tf) {
 }
 
 define <4 x i8> @select8v(<4 x i1> %c, <4 x i8> %t, <4 x i8> %f) {
-  ; TRACK_CF: @"dfs$select8v"
+  ; TRACK_CF: @select8v.dfsan
   ; TRACK_CF: %[[#R:]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 4) to i[[#SBITS]]*), align [[ALIGN:2]]
   ; TRACK_CF: %[[#R+1]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align [[ALIGN]]
   ; TRACK_CF: %[[#R+2]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
@@ -63,7 +63,7 @@ define <4 x i8> @select8v(<4 x i1> %c, <4 x i8> %t, <4 x i8> %f) {
   ; TRACK_CF: store i[[#SBITS]] %[[#RO]], i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_retval_tls to i[[#SBITS]]*), align [[ALIGN]]
   ; TRACK_CF: ret <4 x i8> %a
 
-  ; NO_TRACK_CF: @"dfs$select8v"
+  ; NO_TRACK_CF: @select8v.dfsan
   ; NO_TRACK_CF: %[[#R:]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 4) to i[[#SBITS]]*), align [[ALIGN:2]]
   ; NO_TRACK_CF: %[[#R+1]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align [[ALIGN]]
   ; NO_TRACK_CF: %[[#R+2]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]

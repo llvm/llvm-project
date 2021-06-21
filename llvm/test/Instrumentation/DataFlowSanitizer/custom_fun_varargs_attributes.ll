@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Declare a custom varargs function.
 declare i16 @custom_varargs(i64, ...)
 
-; CHECK-LABEL: @"dfs$call_custom_varargs"
+; CHECK-LABEL: @call_custom_varargs.dfsan
 define void @call_custom_varargs(i8* %buf) {
   ;; All arguments have an annotation.  Check that the transformed function
   ;; preserves each annotation.

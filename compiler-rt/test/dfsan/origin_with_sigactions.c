@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
 
 // CHECK: Taint value 0x8 {{.*}} origin tracking ()
 // CHECK: Origin value: {{.*}}, Taint value was stored to memory at
-// CHECK-NOT: {{.*}} in dfs$CopyXtoYtoU {{.*}}origin_with_sigactions.c{{.*}}
+// CHECK-NOT: {{.*}} in CopyXtoYtoU.dfsan {{.*}}origin_with_sigactions.c{{.*}}
 
 // CHECK: #0 {{.*}} in main {{.*}}origin_with_sigactions.c:[[@LINE-26]]
 

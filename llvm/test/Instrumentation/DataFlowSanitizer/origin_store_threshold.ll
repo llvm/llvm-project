@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
 
 define void @store_threshold([2 x i64]* %p, [2 x i64] %a) {
-  ; CHECK: @"dfs$store_threshold"
+  ; CHECK: @store_threshold.dfsan
   ; CHECK: [[AO:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
   ; CHECK: [[AS:%.*]] = load [2 x i[[#SBITS]]], [2 x i[[#SBITS]]]* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__dfsan_arg_tls to i64), i64 2) to [2 x i[[#SBITS]]]*), align 2
   ; CHECK: [[AS0:%.*]] = extractvalue [2 x i[[#SBITS]]] [[AS]], 0
