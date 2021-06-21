@@ -123,11 +123,6 @@ static const Align MinOriginAlignment = Align(4);
 static const unsigned ArgTLSSize = 800;
 static const unsigned RetvalTLSSize = 800;
 
-// External symbol to be used when generating the shadow address for
-// architectures with multiple VMAs. Instead of using a constant integer
-// the runtime will set the external mask based on the VMA range.
-const char DFSanExternShadowPtrMask[] = "__dfsan_shadow_ptr_mask";
-
 // The -dfsan-preserve-alignment flag controls whether this pass assumes that
 // alignment requirements provided by the input IR are correct.  For example,
 // if the input IR contains a load with alignment 8, this flag will cause
@@ -403,7 +398,6 @@ class DataFlowSanitizer {
   Constant *ArgOriginTLS;
   Constant *RetvalTLS;
   Constant *RetvalOriginTLS;
-  Constant *ExternalShadowMask;
   FunctionType *DFSanUnionLoadFnTy;
   FunctionType *DFSanLoadLabelAndOriginFnTy;
   FunctionType *DFSanUnimplementedFnTy;
@@ -437,7 +431,6 @@ class DataFlowSanitizer {
   DFSanABIList ABIList;
   DenseMap<Value *, Function *> UnwrappedFnMap;
   AttrBuilder ReadOnlyNoneAttrs;
-  bool DFSanRuntimeShadowMask = false;
 
   Value *getShadowOffset(Value *Addr, IRBuilder<> &IRB);
   Value *getShadowAddress(Value *Addr, Instruction *Pos);
@@ -1013,6 +1006,11 @@ bool DataFlowSanitizer::init(Module &M) {
   Triple TargetTriple(M.getTargetTriple());
   const DataLayout &DL = M.getDataLayout();
 
+  if (TargetTriple.getOS() != Triple::Linux)
+    report_fatal_error("unsupported operating system");
+  if (TargetTriple.getArch() != Triple::x86_64)
+    report_fatal_error("unsupported architecture");
+
   Mod = &M;
   Ctx = &M.getContext();
   Int8Ptr = Type::getInt8PtrTy(*Ctx);
@@ -1024,27 +1022,9 @@ bool DataFlowSanitizer::init(Module &M) {
   ZeroPrimitiveShadow = ConstantInt::getSigned(PrimitiveShadowTy, 0);
   ZeroOrigin = ConstantInt::getSigned(OriginTy, 0);
 
-  // TODO: these should be platform-specific and set in the switch-stmt below.
   ShadowBase = ConstantInt::get(IntptrTy, 0x100000008000LL);
   OriginBase = ConstantInt::get(IntptrTy, 0x200000008000LL);
-
-  switch (TargetTriple.getArch()) {
-  case Triple::x86_64:
-    ShadowPtrMask = ConstantInt::getSigned(IntptrTy, ~0x600000000000LL);
-    break;
-  case Triple::mips64:
-  case Triple::mips64el:
-    ShadowPtrMask = ConstantInt::getSigned(IntptrTy, ~0xE000000000LL);
-    break;
-  case Triple::aarch64:
-  case Triple::aarch64_be:
-    // AArch64 supports multiple VMAs and the shadow mask is set at runtime.
-    DFSanRuntimeShadowMask = true;
-    break;
-  default:
-    report_fatal_error("unsupported triple");
-  }
-
+  ShadowPtrMask = ConstantInt::getSigned(IntptrTy, ~0x600000000000LL);
   Type *DFSanUnionLoadArgs[2] = {PrimitiveShadowPtrTy, IntptrTy};
   DFSanUnionLoadFnTy = FunctionType::get(PrimitiveShadowTy, DFSanUnionLoadArgs,
                                          /*isVarArg=*/false);
@@ -1389,9 +1369,6 @@ bool DataFlowSanitizer::runImpl(Module &M) {
   });
 
   injectMetadataGlobals(M);
-
-  ExternalShadowMask =
-      Mod->getOrInsertGlobal(DFSanExternShadowPtrMask, IntptrTy);
 
   initializeCallbackFunctions(M);
   initializeRuntimeFunctions(M);
@@ -1741,13 +1718,8 @@ void DFSanFunction::setShadow(Instruction *I, Value *Shadow) {
 Value *DataFlowSanitizer::getShadowOffset(Value *Addr, IRBuilder<> &IRB) {
   // Returns Addr & shadow_mask
   assert(Addr != RetvalTLS && "Reinstrumenting?");
-  Value *ShadowPtrMaskValue;
-  if (DFSanRuntimeShadowMask)
-    ShadowPtrMaskValue = IRB.CreateLoad(IntptrTy, ExternalShadowMask);
-  else
-    ShadowPtrMaskValue = ShadowPtrMask;
   return IRB.CreateAnd(IRB.CreatePtrToInt(Addr, IntptrTy),
-                       IRB.CreatePtrToInt(ShadowPtrMaskValue, IntptrTy));
+                       IRB.CreatePtrToInt(ShadowPtrMask, IntptrTy));
 }
 
 std::pair<Value *, Value *>
