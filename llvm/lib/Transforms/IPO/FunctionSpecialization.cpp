@@ -247,7 +247,7 @@ private:
 
     // Otherwise, set the specialization cost to be the cost of all the
     // instructions in the function and penalty for specializing more functions.
-    unsigned Penalty = (NumFuncSpecialized + 1);
+    unsigned Penalty = NumFuncSpecialized + 1;
     return Metrics.NumInsts * InlineConstants::InstrCost * Penalty;
   }
 
@@ -506,7 +506,6 @@ private:
       CallSitesToRewrite.push_back(&CS);
     }
     for (auto *CS : CallSitesToRewrite) {
-
       if ((CS->getFunction() == Clone && CS->getArgOperand(ArgNo) == &Arg) ||
           CS->getArgOperand(ArgNo) == C) {
         CS->setCalledFunction(Clone);
