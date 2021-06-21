@@ -17,6 +17,9 @@
 // RUN:   | opt -S -mem2reg \
 // RUN:   | FileCheck --check-prefixes=CHECK,CHECK-A32-SOFTFP %s
 
+// REQUIRES: arm-registered-target
+// REQUIRES: aarch64-registered-target
+
 #include <arm_neon.h>
 
 // CHECK-A64-LABEL: @test_vcvt_f32_bf16(
