@@ -1243,23 +1243,34 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   for (const auto &Path : DriverArgs.getAllArgValues(options::OPT__SLASH_imsvc))
     addSystemInclude(DriverArgs, CC1Args, Path);
 
+  auto AddSystemIncludesFromEnv = [&](StringRef Var) -> bool {
+    SmallVector<StringRef, 8> Dirs;
+    if (auto Val = llvm::sys::Process::GetEnv(Var)) {
+      StringRef(*Val).split(Dirs, ";", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+      if (!Dirs.empty()) {
+        addSystemIncludes(DriverArgs, CC1Args, Dirs);
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Add %INCLUDE%-like dirs via /external:env: flags.
+  for (const auto &Var :
+       DriverArgs.getAllArgValues(options::OPT__SLASH_external_env)) {
+    AddSystemIncludesFromEnv(Var);
+  }
+
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
-  // Honor %INCLUDE%. It should know essential search paths with vcvarsall.bat.
-  // Skip if the user expressly set a vctoolsdir
+  // Honor %INCLUDE% and %EXTERNAL_INCLUDE%. It should have essential search
+  // paths set by vcvarsall.bat. Skip if the user expressly set a vctoolsdir.
   if (!DriverArgs.getLastArg(options::OPT__SLASH_vctoolsdir,
                              options::OPT__SLASH_winsysroot)) {
-    if (llvm::Optional<std::string> cl_include_dir =
-            llvm::sys::Process::GetEnv("INCLUDE")) {
-      SmallVector<StringRef, 8> Dirs;
-      StringRef(*cl_include_dir)
-          .split(Dirs, ";", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
-      for (StringRef Dir : Dirs)
-        addSystemInclude(DriverArgs, CC1Args, Dir);
-      if (!Dirs.empty())
-        return;
-    }
+    if (AddSystemIncludesFromEnv("INCLUDE") |
+        AddSystemIncludesFromEnv("EXTERNAL_INCLUDE"))
+      return;
   }
 
   // When built with access to the proper Windows APIs, try to actually find
