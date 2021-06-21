@@ -218,6 +218,10 @@ static wasm::ValType getType(const TargetRegisterClass *RC) {
     return wasm::ValType::F64;
   if (RC == &WebAssembly::V128RegClass)
     return wasm::ValType::V128;
+  if (RC == &WebAssembly::EXTERNREFRegClass)
+    return wasm::ValType::EXTERNREF;
+  if (RC == &WebAssembly::FUNCREFRegClass)
+    return wasm::ValType::FUNCREF;
   llvm_unreachable("Unexpected register class");
 }
 
