@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! C750 Each bound in the explicit-shape-spec shall be a specification
 ! expression in which there are no references to specification functions or
 ! the intrinsic functions ALLOCATED, ASSOCIATED, EXTENDS_TYPE_OF, PRESENT,

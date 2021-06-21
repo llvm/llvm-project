@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang -fopenmp
+! REQUIRES: shell
 use omp_lib
 ! Check OpenMP 2.13.6 atomic Construct
 

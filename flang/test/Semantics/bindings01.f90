@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Confirm enforcement of constraints and restrictions in 7.5.7.3
 ! and C733, C734 and C779, C780, C782, C783, C784, and C785.
 

@@ -1,4 +1,5 @@
 ! RUN: %S/test_modfile.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Test declarations with coarray-spec
 
 ! Different ways of declaring the same coarray.

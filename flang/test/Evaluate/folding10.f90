@@ -1,4 +1,5 @@
 ! RUN: %S/test_folding.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Tests folding of SHAPE(TRANSFER(...))
 
 module m

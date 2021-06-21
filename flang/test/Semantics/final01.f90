@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Test FINAL subroutine constraints C786-C789
 module m1
   external :: external

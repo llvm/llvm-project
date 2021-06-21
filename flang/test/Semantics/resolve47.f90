@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 module m1
   !ERROR: Logical constant '.true.' may not be used as a defined operator
   interface operator(.TRUE.)

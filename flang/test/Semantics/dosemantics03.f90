@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1 -pedantic -Werror
+! REQUIRES: shell
 
 ! Issue 458 -- semantic checks for a normal DO loop.  The DO variable
 ! and the initial, final, and step expressions must be INTEGER if the

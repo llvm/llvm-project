@@ -1,4 +1,5 @@
 ! RUN: %S/test_symbols.sh %s %t %flang_fc1 -fopenmp
+! REQUIRES: shell
 
 ! 2.15.1.1 Predetermined rules for associated do-loops index variable
 !   a) The loop iteration variable(s) in the associated do-loop(s) of a do,

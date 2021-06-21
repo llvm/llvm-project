@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Test 15.7 C1594 - prohibited assignments in pure subprograms
 
 module used

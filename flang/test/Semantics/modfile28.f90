@@ -1,4 +1,5 @@
 ! RUN: %S/test_modfile.sh %s %t %flang_fc1
+! REQUIRES: shell
 
 ! Test UTF-8 support in character literals
 ! Note: Module files are encoded in UTF-8.

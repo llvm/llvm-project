@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Confirm enforcement of constraints and restrictions in 7.7
 ! C7107, C7108, C7109
 

@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
   character(kind=1,len=50) internal_file
   character(kind=2,len=50) internal_file2
   character(kind=4,len=50) internal_file4

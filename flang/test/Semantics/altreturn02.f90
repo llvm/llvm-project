@@ -1,4 +1,5 @@
 ! RUN: %S/test_errors.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Check subroutine with alt return
 
        SUBROUTINE TEST (N, *, *)
