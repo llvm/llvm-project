@@ -348,12 +348,52 @@ struct WmmaMmaOpToNVVMLowering
   }
 };
 
+/// Convert GPU MMA ConstantMatrixOp to a chain of InsertValueOp.
+struct WmmaConstantOpToNVVMLowering
+    : public ConvertOpToLLVMPattern<gpu::SubgroupMmaConstantMatrixOp> {
+  using ConvertOpToLLVMPattern<
+      gpu::SubgroupMmaConstantMatrixOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::SubgroupMmaConstantMatrixOp subgroupMmaConstantOp,
+                  ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (failed(areAllLLVMTypes(subgroupMmaConstantOp.getOperation(), operands,
+                               rewriter)))
+      return failure();
+    Location loc = subgroupMmaConstantOp.getLoc();
+    Value cst = operands[0];
+    LLVM::LLVMStructType type = convertMMAToLLVMType(
+        subgroupMmaConstantOp.getType().cast<gpu::MMAMatrixType>());
+    // If the element type is a vector create a vector from the operand.
+    if (auto vecType = type.getBody()[0].dyn_cast<VectorType>()) {
+      Value vecCst = rewriter.create<LLVM::UndefOp>(loc, vecType);
+      for (int64_t vecEl = 0; vecEl < vecType.getNumElements(); vecEl++) {
+        Value idx = rewriter.create<LLVM::ConstantOp>(
+            loc, typeConverter->convertType(rewriter.getIntegerType(32)),
+            rewriter.getI32ArrayAttr(vecEl));
+        vecCst = rewriter.create<LLVM::InsertElementOp>(loc, vecType, vecCst,
+                                                        cst, idx);
+      }
+      cst = vecCst;
+    }
+    Value matrixStruct = rewriter.create<LLVM::UndefOp>(loc, type);
+    for (size_t i : llvm::seq(size_t(0), type.getBody().size())) {
+      matrixStruct = rewriter.create<LLVM::InsertValueOp>(
+          loc, matrixStruct, cst, rewriter.getI32ArrayAttr(i));
+    }
+    rewriter.replaceOp(subgroupMmaConstantOp, matrixStruct);
+    return success();
+  }
+};
+
 } // anonymous namespace
 
 namespace mlir {
 void populateGpuWMMAToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                              RewritePatternSet &patterns) {
   patterns.insert<WmmaLoadOpToNVVMLowering, WmmaMmaOpToNVVMLowering,
-                  WmmaStoreOpToNVVMLowering>(converter);
+                  WmmaStoreOpToNVVMLowering, WmmaConstantOpToNVVMLowering>(
+      converter);
 }
 } // namespace mlir
