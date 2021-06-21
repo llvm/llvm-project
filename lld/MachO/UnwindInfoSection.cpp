@@ -105,7 +105,7 @@ struct SecondLevelPage {
 
 template <class Ptr> class UnwindInfoSectionImpl : public UnwindInfoSection {
 public:
-  void prepareRelocations(InputSection *) override;
+  void prepareRelocations(ConcatInputSection *) override;
   void finalize() override;
   void writeTo(uint8_t *buf) const override;
 
@@ -132,7 +132,7 @@ private:
 // actually end up in the final binary. Second, personality pointers always
 // reside in the GOT and must be treated specially.
 template <class Ptr>
-void UnwindInfoSectionImpl<Ptr>::prepareRelocations(InputSection *isec) {
+void UnwindInfoSectionImpl<Ptr>::prepareRelocations(ConcatInputSection *isec) {
   assert(isec->segname == segment_names::ld &&
          isec->name == section_names::compactUnwind);
   assert(!isec->shouldOmitFromOutput() &&
@@ -200,10 +200,12 @@ void UnwindInfoSectionImpl<Ptr>::prepareRelocations(InputSection *isec) {
 // finalization of __DATA. Moreover, the finalization of unwind info depends on
 // the exact addresses that it references. So it is safe for compact unwind to
 // reference addresses in __TEXT, but not addresses in any other segment.
-static void checkTextSegment(InputSection *isec) {
+static ConcatInputSection *checkTextSegment(InputSection *isec) {
   if (isec->segname != segment_names::text)
     error("compact unwind references address in " + toString(isec) +
           " which is not in segment __TEXT");
+  // __text should always be a ConcatInputSection.
+  return cast<ConcatInputSection>(isec);
 }
 
 // We need to apply the relocations to the pre-link compact unwind section
@@ -234,8 +236,8 @@ relocateCompactUnwind(ConcatOutputSection *compactUnwindSection,
           referentVA = referentSym->gotIndex + 1;
         }
       } else if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
-        checkTextSegment(referentIsec);
-        if (referentIsec->shouldOmitFromOutput())
+        ConcatInputSection *concatIsec = checkTextSegment(referentIsec);
+        if (concatIsec->shouldOmitFromOutput())
           referentVA = UINT64_MAX; // Tombstone value
         else
           referentVA = referentIsec->getVA(r.addend);
