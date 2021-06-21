@@ -873,13 +873,15 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
     //       operation from the operand to the exception object (15.1) can be
     //       omitted by constructing the automatic object directly into the
     //       exception object
-    NamedReturnInfo NRInfo =
-        IsThrownVarInScope ? getNamedReturnInfo(Ex) : NamedReturnInfo();
+    const VarDecl *NRVOVariable = nullptr;
+    if (IsThrownVarInScope)
+      NRVOVariable = getCopyElisionCandidate(QualType(), Ex, CES_Strict);
 
     InitializedEntity Entity = InitializedEntity::InitializeException(
         OpLoc, ExceptionObjectTy,
-        /*NRVO=*/NRInfo.isCopyElidable());
-    ExprResult Res = PerformMoveOrCopyInitialization(Entity, NRInfo, Ex);
+        /*NRVO=*/NRVOVariable != nullptr);
+    ExprResult Res = PerformMoveOrCopyInitialization(
+        Entity, NRVOVariable, QualType(), Ex, IsThrownVarInScope);
     if (Res.isInvalid())
       return ExprError();
     Ex = Res.get();
