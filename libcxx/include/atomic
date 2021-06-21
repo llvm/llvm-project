@@ -67,7 +67,8 @@ struct atomic
     bool is_lock_free() const volatile noexcept;
     bool is_lock_free() const noexcept;
 
-    atomic() noexcept = default;
+    atomic() noexcept = default; // until C++20
+    constexpr atomic() noexcept(is_nothrow_default_constructible_v<T>); // since C++20
     constexpr atomic(T desr) noexcept;
     atomic(const atomic&) = delete;
     atomic& operator=(const atomic&) = delete;
@@ -201,7 +202,8 @@ struct atomic<T*>
     bool is_lock_free() const volatile noexcept;
     bool is_lock_free() const noexcept;
 
-    atomic() noexcept = default;
+    atomic() noexcept = default; // until C++20
+    constexpr atomic() noexcept; // since C++20
     constexpr atomic(T* desr) noexcept;
     atomic(const atomic&) = delete;
     atomic& operator=(const atomic&) = delete;
@@ -509,7 +511,8 @@ typedef atomic<uintmax_t> atomic_uintmax_t;
 
 typedef struct atomic_flag
 {
-    atomic_flag() noexcept = default;
+    atomic_flag() noexcept = default; // until C++20
+    constexpr atomic_flag() noexcept; // since C++20
     atomic_flag(const atomic_flag&) = delete;
     atomic_flag& operator=(const atomic_flag&) = delete;
     atomic_flag& operator=(const atomic_flag&) volatile = delete;
@@ -1680,8 +1683,13 @@ struct __atomic_base  // false
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY void notify_all() _NOEXCEPT
         {__cxx_atomic_notify_all(&__a_);}
 
+#if _LIBCPP_STD_VER > 17
+    _LIBCPP_INLINE_VISIBILITY constexpr
+    __atomic_base() noexcept(is_nothrow_default_constructible_v<_Tp>) : __a_(_Tp()) {}
+#else
     _LIBCPP_INLINE_VISIBILITY
     __atomic_base() _NOEXCEPT _LIBCPP_DEFAULT
+#endif
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
     __atomic_base(_Tp __d) _NOEXCEPT : __a_(__d) {}
@@ -1707,8 +1715,10 @@ struct __atomic_base<_Tp, true>
     : public __atomic_base<_Tp, false>
 {
     typedef __atomic_base<_Tp, false> __base;
-    _LIBCPP_INLINE_VISIBILITY
+
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     __atomic_base() _NOEXCEPT _LIBCPP_DEFAULT
+
     _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR __atomic_base(_Tp __d) _NOEXCEPT : __base(__d) {}
 
@@ -1790,8 +1800,15 @@ struct atomic
     typedef __atomic_base<_Tp> __base;
     typedef _Tp value_type;
     typedef value_type difference_type;
+
+#if _LIBCPP_STD_VER > 17
+    _LIBCPP_INLINE_VISIBILITY
+    atomic() = default;
+#else
     _LIBCPP_INLINE_VISIBILITY
     atomic() _NOEXCEPT _LIBCPP_DEFAULT
+#endif
+
     _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR atomic(_Tp __d) _NOEXCEPT : __base(__d) {}
 
@@ -1815,8 +1832,10 @@ struct atomic<_Tp*>
     typedef __atomic_base<_Tp*> __base;
     typedef _Tp* value_type;
     typedef ptrdiff_t difference_type;
+
     _LIBCPP_INLINE_VISIBILITY
     atomic() _NOEXCEPT _LIBCPP_DEFAULT
+
     _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR atomic(_Tp* __d) _NOEXCEPT : __base(__d) {}
 
@@ -1892,7 +1911,7 @@ atomic_is_lock_free(const atomic<_Tp>* __o) _NOEXCEPT
 // atomic_init
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_INLINE_VISIBILITY
 void
 atomic_init(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
@@ -1900,7 +1919,7 @@ atomic_init(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NO
 }
 
 template <class _Tp>
-_LIBCPP_INLINE_VISIBILITY
+_LIBCPP_DEPRECATED_IN_CXX20 _LIBCPP_INLINE_VISIBILITY
 void
 atomic_init(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __d) _NOEXCEPT
 {
@@ -2541,8 +2560,13 @@ typedef struct atomic_flag
     void notify_all() _NOEXCEPT
         {__cxx_atomic_notify_all(&__a_);}
 
+#if _LIBCPP_STD_VER > 17
+    _LIBCPP_INLINE_VISIBILITY constexpr
+    atomic_flag() _NOEXCEPT : __a_(false) {}
+#else
     _LIBCPP_INLINE_VISIBILITY
     atomic_flag() _NOEXCEPT _LIBCPP_DEFAULT
+#endif
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
     atomic_flag(bool __b) _NOEXCEPT : __a_(__b) {} // EXTENSION
