@@ -277,7 +277,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:  }
 // CHECK-NEXT: }
 
-
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
 // CHECK-NEXT:   "offset": 198,
@@ -384,7 +383,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "void (*)()"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "isPostfix": false,
 // CHECK-NEXT:          "opcode": "&",
 // CHECK-NEXT:          "canOverflow": false,
@@ -501,7 +500,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "int"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "value": "4"
 // CHECK-NEXT:       }
 // CHECK-NEXT:      ]
@@ -510,7 +509,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
-
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
@@ -792,7 +790,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
 
-
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
 // CHECK-NEXT:   "offset": 378,
@@ -951,7 +948,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "int *"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "operatorNewDecl": {
 // CHECK-NEXT:         "id": "0x{{.*}}",
 // CHECK-NEXT:         "kind": "FunctionDecl",
@@ -982,7 +979,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "void"
 // CHECK-NEXT:      },
-// CHECK-NEXT:      "valueCategory": "rvalue",
+// CHECK-NEXT:      "valueCategory": "prvalue",
 // CHECK-NEXT:      "operatorDeleteDecl": {
 // CHECK-NEXT:       "id": "0x{{.*}}",
 // CHECK-NEXT:       "kind": "FunctionDecl",
@@ -1010,7 +1007,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "int *"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "castKind": "LValueToRValue",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
@@ -1113,7 +1110,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "int *"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "isArray": true,
 // CHECK-NEXT:        "operatorNewDecl": {
 // CHECK-NEXT:         "id": "0x{{.*}}",
@@ -1142,7 +1139,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "unsigned long"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "castKind": "IntegralCast",
 // CHECK-NEXT:          "inner": [
 // CHECK-NEXT:           {
@@ -1163,7 +1160,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "int"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "value": "2"
 // CHECK-NEXT:           }
 // CHECK-NEXT:          ]
@@ -1191,7 +1188,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "void"
 // CHECK-NEXT:      },
-// CHECK-NEXT:      "valueCategory": "rvalue",
+// CHECK-NEXT:      "valueCategory": "prvalue",
 // CHECK-NEXT:      "isArray": true,
 // CHECK-NEXT:      "isArrayAsWritten": true,
 // CHECK-NEXT:      "operatorDeleteDecl": {
@@ -1221,7 +1218,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "int *"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "castKind": "LValueToRValue",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
@@ -1324,7 +1321,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "int *"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "isGlobal": true,
 // CHECK-NEXT:        "operatorNewDecl": {
 // CHECK-NEXT:         "id": "0x{{.*}}",
@@ -1356,7 +1353,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "void"
 // CHECK-NEXT:      },
-// CHECK-NEXT:      "valueCategory": "rvalue",
+// CHECK-NEXT:      "valueCategory": "prvalue",
 // CHECK-NEXT:      "isGlobal": true,
 // CHECK-NEXT:      "operatorDeleteDecl": {
 // CHECK-NEXT:       "id": "0x{{.*}}",
@@ -1385,7 +1382,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "int *"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "castKind": "LValueToRValue",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
@@ -1424,7 +1421,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
-
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {},
@@ -1883,7 +1879,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
 
-
 // CHECK:  "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:  "loc": {
 // CHECK-NEXT:   "offset": 598,
@@ -2042,7 +2037,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "T *"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue"
+// CHECK-NEXT:            "valueCategory": "prvalue"
 // CHECK-NEXT:           }
 // CHECK-NEXT:          ]
 // CHECK-NEXT:         }
@@ -2067,7 +2062,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "void"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -2105,7 +2100,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
-
 
 // CHECK:  "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:  "loc": {
@@ -2267,7 +2261,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "<dependent type>"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "opcode": "=",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
@@ -2340,7 +2334,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "T"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue"
+// CHECK-NEXT:          "valueCategory": "prvalue"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:       },
@@ -2363,7 +2357,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "<dependent type>"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "opcode": "=",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
@@ -2436,7 +2430,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "T"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "list": true,
 // CHECK-NEXT:          "inner": [
 // CHECK-NEXT:           {
@@ -2457,7 +2451,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "void"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue"
+// CHECK-NEXT:            "valueCategory": "prvalue"
 // CHECK-NEXT:           }
 // CHECK-NEXT:          ]
 // CHECK-NEXT:         }
@@ -2482,7 +2476,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "<dependent type>"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "opcode": "=",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
@@ -2525,7 +2519,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "<dependent type>"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "inner": [
 // CHECK-NEXT:             {
 // CHECK-NEXT:              "id": "0x{{.*}}",
@@ -2545,7 +2539,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "type": {
 // CHECK-NEXT:               "qualType": "<dependent type>"
 // CHECK-NEXT:              },
-// CHECK-NEXT:              "valueCategory": "rvalue",
+// CHECK-NEXT:              "valueCategory": "prvalue",
 // CHECK-NEXT:              "isPostfix": false,
 // CHECK-NEXT:              "opcode": "&",
 // CHECK-NEXT:              "canOverflow": false,
@@ -2602,7 +2596,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "T"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue"
+// CHECK-NEXT:          "valueCategory": "prvalue"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:       }
@@ -2612,7 +2606,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
-
 
 // CHECK:  "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:  "loc": {
@@ -2774,7 +2767,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "<dependent type>"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "opcode": "=",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
@@ -2869,7 +2862,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "int"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue"
+// CHECK-NEXT:          "valueCategory": "prvalue"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:       }
@@ -2879,7 +2872,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
-
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
@@ -2987,7 +2979,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "U [3]"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "array_filler": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:            "id": "0x{{.*}}",
@@ -3007,7 +2999,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "U"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "field": {
 // CHECK-NEXT:             "id": "0x{{.*}}",
 // CHECK-NEXT:             "kind": "FieldDecl",
@@ -3035,7 +3027,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "U"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "field": {
 // CHECK-NEXT:             "id": "0x{{.*}}",
 // CHECK-NEXT:             "kind": "FieldDecl",
@@ -3063,7 +3055,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "type": {
 // CHECK-NEXT:               "qualType": "int"
 // CHECK-NEXT:              },
-// CHECK-NEXT:              "valueCategory": "rvalue",
+// CHECK-NEXT:              "valueCategory": "prvalue",
 // CHECK-NEXT:              "value": "1"
 // CHECK-NEXT:             }
 // CHECK-NEXT:            ]
@@ -3078,7 +3070,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
-
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
@@ -3233,7 +3224,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "int"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "castKind": "LValueToRValue",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
@@ -3289,7 +3280,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
-
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
@@ -3444,7 +3434,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "int"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "value": "12"
 // CHECK-NEXT:           }
 // CHECK-NEXT:          ]
@@ -3469,7 +3459,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "bool"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "castKind": "IntegralToBoolean",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
@@ -3490,7 +3480,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "int"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "castKind": "LValueToRValue",
 // CHECK-NEXT:          "inner": [
 // CHECK-NEXT:           {
@@ -3583,7 +3573,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "bool"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "value": "true",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
@@ -3604,7 +3594,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "bool"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "opcode": "==",
 // CHECK-NEXT:          "inner": [
 // CHECK-NEXT:           {
@@ -3625,7 +3615,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "unsigned long"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "name": "sizeof",
 // CHECK-NEXT:            "inner": [
 // CHECK-NEXT:             {
@@ -3699,7 +3689,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "unsigned long"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "castKind": "IntegralCast",
 // CHECK-NEXT:            "inner": [
 // CHECK-NEXT:             {
@@ -3720,7 +3710,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "type": {
 // CHECK-NEXT:               "qualType": "int"
 // CHECK-NEXT:              },
-// CHECK-NEXT:              "valueCategory": "rvalue",
+// CHECK-NEXT:              "valueCategory": "prvalue",
 // CHECK-NEXT:              "value": "1"
 // CHECK-NEXT:             }
 // CHECK-NEXT:            ]
@@ -3787,7 +3777,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "bool"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "value": "true",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
@@ -3808,7 +3798,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "bool"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "opcode": "==",
 // CHECK-NEXT:          "inner": [
 // CHECK-NEXT:           {
@@ -3829,7 +3819,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "unsigned long"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "name": "sizeof",
 // CHECK-NEXT:            "inner": [
 // CHECK-NEXT:             {
@@ -3903,7 +3893,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "unsigned long"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "castKind": "IntegralCast",
 // CHECK-NEXT:            "inner": [
 // CHECK-NEXT:             {
@@ -3924,7 +3914,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "type": {
 // CHECK-NEXT:               "qualType": "int"
 // CHECK-NEXT:              },
-// CHECK-NEXT:              "valueCategory": "rvalue",
+// CHECK-NEXT:              "valueCategory": "prvalue",
 // CHECK-NEXT:              "value": "1"
 // CHECK-NEXT:             }
 // CHECK-NEXT:            ]
@@ -3973,7 +3963,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
-
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
@@ -4100,7 +4089,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "int"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "value": "0"
 // CHECK-NEXT:           }
 // CHECK-NEXT:          ]
@@ -4169,7 +4158,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "int"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "castKind": "LValueToRValue",
 // CHECK-NEXT:            "inner": [
 // CHECK-NEXT:             {
@@ -4224,7 +4213,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "bool"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "castKind": "IntegralToBoolean",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
@@ -4245,7 +4234,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "int"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "castKind": "LValueToRValue",
 // CHECK-NEXT:          "inner": [
 // CHECK-NEXT:           {
@@ -4558,7 +4547,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "int *"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "castKind": "ArrayToPointerDecay",
 // CHECK-NEXT:            "inner": [
 // CHECK-NEXT:             {
@@ -4659,7 +4648,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "int *"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "opcode": "+",
 // CHECK-NEXT:            "inner": [
 // CHECK-NEXT:             {
@@ -4680,7 +4669,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "type": {
 // CHECK-NEXT:               "qualType": "int *"
 // CHECK-NEXT:              },
-// CHECK-NEXT:              "valueCategory": "rvalue",
+// CHECK-NEXT:              "valueCategory": "prvalue",
 // CHECK-NEXT:              "castKind": "ArrayToPointerDecay",
 // CHECK-NEXT:              "inner": [
 // CHECK-NEXT:               {
@@ -4731,7 +4720,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "type": {
 // CHECK-NEXT:               "qualType": "long"
 // CHECK-NEXT:              },
-// CHECK-NEXT:              "valueCategory": "rvalue",
+// CHECK-NEXT:              "valueCategory": "prvalue",
 // CHECK-NEXT:              "value": "10"
 // CHECK-NEXT:             }
 // CHECK-NEXT:            ]
@@ -4758,7 +4747,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "bool"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "opcode": "!=",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
@@ -4780,7 +4769,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:           "desugaredQualType": "int *",
 // CHECK-NEXT:           "qualType": "int *"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "castKind": "LValueToRValue",
 // CHECK-NEXT:          "inner": [
 // CHECK-NEXT:           {
@@ -4834,7 +4823,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:           "desugaredQualType": "int *",
 // CHECK-NEXT:           "qualType": "int *"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "castKind": "LValueToRValue",
 // CHECK-NEXT:          "inner": [
 // CHECK-NEXT:           {
@@ -4987,7 +4976,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "int"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "castKind": "LValueToRValue",
 // CHECK-NEXT:            "inner": [
 // CHECK-NEXT:             {
@@ -5032,7 +5021,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                 "desugaredQualType": "int *",
 // CHECK-NEXT:                 "qualType": "int *"
 // CHECK-NEXT:                },
-// CHECK-NEXT:                "valueCategory": "rvalue",
+// CHECK-NEXT:                "valueCategory": "prvalue",
 // CHECK-NEXT:                "castKind": "LValueToRValue",
 // CHECK-NEXT:                "inner": [
 // CHECK-NEXT:                 {
@@ -5157,7 +5146,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "Container"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "ctorType": {
 // CHECK-NEXT:           "qualType": "void () noexcept"
 // CHECK-NEXT:          },
@@ -5329,7 +5318,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "int *"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "inner": [
 // CHECK-NEXT:             {
 // CHECK-NEXT:              "id": "0x{{.*}}",
@@ -5349,7 +5338,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "type": {
 // CHECK-NEXT:               "qualType": "<bound member function type>"
 // CHECK-NEXT:              },
-// CHECK-NEXT:              "valueCategory": "rvalue",
+// CHECK-NEXT:              "valueCategory": "prvalue",
 // CHECK-NEXT:              "name": "begin",
 // CHECK-NEXT:              "isArrow": false,
 // CHECK-NEXT:              "referencedMemberDecl": "0x{{.*}}",
@@ -5477,7 +5466,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "int *"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "inner": [
 // CHECK-NEXT:             {
 // CHECK-NEXT:              "id": "0x{{.*}}",
@@ -5497,7 +5486,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "type": {
 // CHECK-NEXT:               "qualType": "<bound member function type>"
 // CHECK-NEXT:              },
-// CHECK-NEXT:              "valueCategory": "rvalue",
+// CHECK-NEXT:              "valueCategory": "prvalue",
 // CHECK-NEXT:              "name": "end",
 // CHECK-NEXT:              "isArrow": false,
 // CHECK-NEXT:              "referencedMemberDecl": "0x{{.*}}",
@@ -5579,7 +5568,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "bool"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "opcode": "!=",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
@@ -5601,7 +5590,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:           "desugaredQualType": "int *",
 // CHECK-NEXT:           "qualType": "int *"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "castKind": "LValueToRValue",
 // CHECK-NEXT:          "inner": [
 // CHECK-NEXT:           {
@@ -5655,7 +5644,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:           "desugaredQualType": "int *",
 // CHECK-NEXT:           "qualType": "int *"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "castKind": "LValueToRValue",
 // CHECK-NEXT:          "inner": [
 // CHECK-NEXT:           {
@@ -5808,7 +5797,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "int"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "castKind": "LValueToRValue",
 // CHECK-NEXT:            "inner": [
 // CHECK-NEXT:             {
@@ -5853,7 +5842,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                 "desugaredQualType": "int *",
 // CHECK-NEXT:                 "qualType": "int *"
 // CHECK-NEXT:                },
-// CHECK-NEXT:                "valueCategory": "rvalue",
+// CHECK-NEXT:                "valueCategory": "prvalue",
 // CHECK-NEXT:                "castKind": "LValueToRValue",
 // CHECK-NEXT:                "inner": [
 // CHECK-NEXT:                 {
@@ -6119,7 +6108,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "int *"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "castKind": "ArrayToPointerDecay",
 // CHECK-NEXT:            "inner": [
 // CHECK-NEXT:             {
@@ -6220,7 +6209,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "int *"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "opcode": "+",
 // CHECK-NEXT:            "inner": [
 // CHECK-NEXT:             {
@@ -6241,7 +6230,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "type": {
 // CHECK-NEXT:               "qualType": "int *"
 // CHECK-NEXT:              },
-// CHECK-NEXT:              "valueCategory": "rvalue",
+// CHECK-NEXT:              "valueCategory": "prvalue",
 // CHECK-NEXT:              "castKind": "ArrayToPointerDecay",
 // CHECK-NEXT:              "inner": [
 // CHECK-NEXT:               {
@@ -6292,7 +6281,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "type": {
 // CHECK-NEXT:               "qualType": "long"
 // CHECK-NEXT:              },
-// CHECK-NEXT:              "valueCategory": "rvalue",
+// CHECK-NEXT:              "valueCategory": "prvalue",
 // CHECK-NEXT:              "value": "10"
 // CHECK-NEXT:             }
 // CHECK-NEXT:            ]
@@ -6319,7 +6308,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "bool"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "opcode": "!=",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
@@ -6341,7 +6330,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:           "desugaredQualType": "int *",
 // CHECK-NEXT:           "qualType": "int *"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "castKind": "LValueToRValue",
 // CHECK-NEXT:          "inner": [
 // CHECK-NEXT:           {
@@ -6395,7 +6384,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:           "desugaredQualType": "int *",
 // CHECK-NEXT:           "qualType": "int *"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "valueCategory": "prvalue",
 // CHECK-NEXT:          "castKind": "LValueToRValue",
 // CHECK-NEXT:          "inner": [
 // CHECK-NEXT:           {
@@ -6548,7 +6537,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "int"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "castKind": "LValueToRValue",
 // CHECK-NEXT:            "inner": [
 // CHECK-NEXT:             {
@@ -6593,7 +6582,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                 "desugaredQualType": "int *",
 // CHECK-NEXT:                 "qualType": "int *"
 // CHECK-NEXT:                },
-// CHECK-NEXT:                "valueCategory": "rvalue",
+// CHECK-NEXT:                "valueCategory": "prvalue",
 // CHECK-NEXT:                "castKind": "LValueToRValue",
 // CHECK-NEXT:                "inner": [
 // CHECK-NEXT:                 {
@@ -6659,7 +6648,6 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
-
 
 // CHECK:  "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:  "loc": {
@@ -6802,7 +6790,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "<dependent type>"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "resultDependent": true,
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
@@ -6878,7 +6866,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "int"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "value": "1"
 // CHECK-NEXT:           }
 // CHECK-NEXT:          ]
@@ -6904,7 +6892,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "int"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "value": "0"
 // CHECK-NEXT:           }
 // CHECK-NEXT:          ]
@@ -6930,7 +6918,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "<dependent type>"
 // CHECK-NEXT:        },
-// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "valueCategory": "prvalue",
 // CHECK-NEXT:        "resultDependent": true,
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
@@ -6999,7 +6987,7 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "int"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "valueCategory": "prvalue",
 // CHECK-NEXT:            "value": "0"
 // CHECK-NEXT:           }
 // CHECK-NEXT:          ]

@@ -59,7 +59,9 @@ void JSONNodeDumper::Visit(const Stmt *S) {
     switch (E->getValueKind()) {
     case VK_LValue: Category = "lvalue"; break;
     case VK_XValue: Category = "xvalue"; break;
-    case VK_RValue: Category = "rvalue"; break;
+    case VK_PRValue:
+      Category = "prvalue";
+      break;
     }
     JOS.attribute("valueCategory", Category);
   }
