@@ -454,6 +454,11 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
     return IC.replaceInstUsesWith(II, ConstantInt::getNullValue(II.getType()));
   }
 
+  // If the operand is a select with constant arm(s), try to hoist ctlz/cttz.
+  if (auto *Sel = dyn_cast<SelectInst>(Op0))
+    if (Instruction *R = IC.FoldOpIntoSelect(II, Sel))
+      return R;
+
   if (IsTZ) {
     // cttz(-x) -> cttz(x)
     if (match(Op0, m_Neg(m_Value(X))))
@@ -572,6 +577,11 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
     Value *NarrowPop = IC.Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, X);
     return CastInst::Create(Instruction::ZExt, NarrowPop, Ty);
   }
+
+  // If the operand is a select with constant arm(s), try to hoist ctpop.
+  if (auto *Sel = dyn_cast<SelectInst>(Op0))
+    if (Instruction *R = IC.FoldOpIntoSelect(II, Sel))
+      return R;
 
   KnownBits Known(BitWidth);
   IC.computeKnownBits(Op0, Known, 0, &II);
@@ -1080,21 +1090,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::ctlz:
     if (auto *I = foldCttzCtlz(*II, *this))
       return I;
-
-    // If the operand is a select with constant arm(s), try to hoist ctlz/cttz.
-    if (auto *Sel = dyn_cast<SelectInst>(II->getArgOperand(0)))
-      if (Instruction *R = FoldOpIntoSelect(*II, Sel))
-        return R;
     break;
 
   case Intrinsic::ctpop:
     if (auto *I = foldCtpop(*II, *this))
       return I;
-
-    // If the operand is a select with constant arm(s), try to hoist ctpop.
-    if (auto *Sel = dyn_cast<SelectInst>(II->getArgOperand(0)))
-      if (Instruction *R = FoldOpIntoSelect(*II, Sel))
-        return R;
     break;
 
   case Intrinsic::fshl:
