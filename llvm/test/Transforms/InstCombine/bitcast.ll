@@ -584,8 +584,7 @@ declare void @f1()
 declare void @f2()
 define i8* @select_bitcast_unsized_pointer(i1 %c) {
 ; CHECK-LABEL: @select_bitcast_unsized_pointer(
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C:%.*]], void ()* @f1, void ()* @f2
-; CHECK-NEXT:    [[B:%.*]] = bitcast void ()* [[S]] to i8*
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[C:%.*]], i8* bitcast (void ()* @f1 to i8*), i8* bitcast (void ()* @f2 to i8*)
 ; CHECK-NEXT:    ret i8* [[B]]
 ;
   %s = select i1 %c, void ()* @f1, void ()* @f2
