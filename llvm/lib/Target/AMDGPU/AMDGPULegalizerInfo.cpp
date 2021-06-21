@@ -820,7 +820,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   auto &FPToI = getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
     .legalFor({{S32, S32}, {S32, S64}, {S32, S16}})
-    .customFor({{S64, S64}})
+    .customFor({{S64, S32}, {S64, S64}})
     .narrowScalarFor({{S64, S16}}, changeTo(0, S32));
   if (ST.has16BitInsts())
     FPToI.legalFor({{S16, S16}});
@@ -2070,9 +2070,10 @@ bool AMDGPULegalizerInfo::legalizeITOFP(
 
 // TODO: Copied from DAG implementation. Verify logic and document how this
 // actually works.
-bool AMDGPULegalizerInfo::legalizeFPTOI(
-  MachineInstr &MI, MachineRegisterInfo &MRI,
-  MachineIRBuilder &B, bool Signed) const {
+bool AMDGPULegalizerInfo::legalizeFPTOI(MachineInstr &MI,
+                                        MachineRegisterInfo &MRI,
+                                        MachineIRBuilder &B,
+                                        bool Signed) const {
 
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
@@ -2080,24 +2081,59 @@ bool AMDGPULegalizerInfo::legalizeFPTOI(
   const LLT S64 = LLT::scalar(64);
   const LLT S32 = LLT::scalar(32);
 
-  assert(MRI.getType(Src) == S64 && MRI.getType(Dst) == S64);
+  const LLT SrcLT = MRI.getType(Src);
+  const LLT DstLT = MRI.getType(Dst);
+
+  assert((SrcLT == S32 || SrcLT == S64) && DstLT == S64);
 
   unsigned Flags = MI.getFlags();
 
-  auto Trunc = B.buildIntrinsicTrunc(S64, Src, Flags);
-  auto K0 = B.buildFConstant(S64, BitsToDouble(UINT64_C(0x3df0000000000000)));
-  auto K1 = B.buildFConstant(S64, BitsToDouble(UINT64_C(0xc1f0000000000000)));
+  // The basic idea of converting a floating point number into a pair of 32-bit
+  // integers is illustrated as follows:
+  //
+  //     tf := trunc(val);
+  //    hif := floor(tf * 2^-32);
+  //    lof := tf - hif * 2^32; // lof is always positive due to floor.
+  //     hi := fptoi(hif);
+  //     lo := fptoi(lof);
+  //
+  auto Trunc = B.buildIntrinsicTrunc(SrcLT, Src, Flags);
+  MachineInstrBuilder Sign;
+  if (Signed && SrcLT == S32) {
+    // However, a 32-bit floating point number has only 23 bits mantissa and
+    // it's not enough to hold all the significant bits of `lof` if val is
+    // negative. To avoid the loss of precision, We need to take the absolute
+    // value after truncating and flip the result back based on the original
+    // signedness.
+    Sign = B.buildAShr(S32, Src, B.buildConstant(S32, 31));
+    Trunc = B.buildFAbs(S32, Trunc, Flags);
+  }
+  MachineInstrBuilder K0, K1;
+  if (SrcLT == S64) {
+    K0 = B.buildFConstant(S64,
+                          BitsToDouble(UINT64_C(/*2^-32*/ 0x3df0000000000000)));
+    K1 = B.buildFConstant(S64,
+                          BitsToDouble(UINT64_C(/*-2^32*/ 0xc1f0000000000000)));
+  } else {
+    K0 = B.buildFConstant(S32, BitsToFloat(UINT32_C(/*2^-32*/ 0x2f800000)));
+    K1 = B.buildFConstant(S32, BitsToFloat(UINT32_C(/*-2^32*/ 0xcf800000)));
+  }
 
-  auto Mul = B.buildFMul(S64, Trunc, K0, Flags);
-  auto FloorMul = B.buildFFloor(S64, Mul, Flags);
-  auto Fma = B.buildFMA(S64, FloorMul, K1, Trunc, Flags);
+  auto Mul = B.buildFMul(SrcLT, Trunc, K0, Flags);
+  auto FloorMul = B.buildFFloor(SrcLT, Mul, Flags);
+  auto Fma = B.buildFMA(SrcLT, FloorMul, K1, Trunc, Flags);
 
-  auto Hi = Signed ?
-    B.buildFPTOSI(S32, FloorMul) :
-    B.buildFPTOUI(S32, FloorMul);
+  auto Hi = (Signed && SrcLT == S64) ? B.buildFPTOSI(S32, FloorMul)
+                                     : B.buildFPTOUI(S32, FloorMul);
   auto Lo = B.buildFPTOUI(S32, Fma);
 
-  B.buildMerge(Dst, { Lo, Hi });
+  if (Signed && SrcLT == S32) {
+    // Flip the result based on the signedness, which is either all 0s or 1s.
+    Sign = B.buildMerge(S64, {Sign, Sign});
+    // r := xor({lo, hi}, sign) - sign;
+    B.buildSub(Dst, B.buildXor(S64, B.buildMerge(S64, {Lo, Hi}), Sign), Sign);
+  } else
+    B.buildMerge(Dst, {Lo, Hi});
   MI.eraseFromParent();
 
   return true;
