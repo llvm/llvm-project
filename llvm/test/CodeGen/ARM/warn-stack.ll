@@ -4,7 +4,7 @@
 ; <rdar://13987214>
 
 ; CHECK-NOT: nowarn
-define void @nowarn() nounwind ssp "frame-pointer"="all" {
+define void @nowarn() nounwind ssp "frame-pointer"="all" "warn-stack-size"="80" {
 entry:
   %buffer = alloca [12 x i8], align 1
   %arraydecay = getelementptr inbounds [12 x i8], [12 x i8]* %buffer, i64 0, i64 0
@@ -13,7 +13,7 @@ entry:
 }
 
 ; CHECK: warning: stack size limit exceeded (92) in warn
-define void @warn() nounwind ssp "frame-pointer"="all" {
+define void @warn() nounwind ssp "frame-pointer"="all" "warn-stack-size"="80" {
 entry:
   %buffer = alloca [80 x i8], align 1
   %arraydecay = getelementptr inbounds [80 x i8], [80 x i8]* %buffer, i64 0, i64 0
@@ -22,6 +22,3 @@ entry:
 }
 
 declare void @doit(i8*)
-
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"warn-stack-size", i32 80}
