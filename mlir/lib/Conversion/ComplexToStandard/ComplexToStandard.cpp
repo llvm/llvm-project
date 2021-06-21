@@ -313,6 +313,28 @@ struct ExpOpConversion : public OpConversionPattern<complex::ExpOp> {
     return success();
   }
 };
+
+struct NegOpConversion : public OpConversionPattern<complex::NegOp> {
+  using OpConversionPattern<complex::NegOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::NegOp op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    complex::NegOp::Adaptor transformed(operands);
+    auto loc = op.getLoc();
+    auto type = transformed.complex().getType().cast<ComplexType>();
+    auto elementType = type.getElementType().cast<FloatType>();
+
+    Value real =
+        rewriter.create<complex::ReOp>(loc, elementType, transformed.complex());
+    Value imag =
+        rewriter.create<complex::ImOp>(loc, elementType, transformed.complex());
+    Value negReal = rewriter.create<NegFOp>(loc, real);
+    Value negImag = rewriter.create<NegFOp>(loc, imag);
+    rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, negReal, negImag);
+    return success();
+  }
+};
 } // namespace
 
 void mlir::populateComplexToStandardConversionPatterns(
@@ -320,7 +342,8 @@ void mlir::populateComplexToStandardConversionPatterns(
   patterns.add<AbsOpConversion,
                ComparisonOpConversion<complex::EqualOp, CmpFPredicate::OEQ>,
                ComparisonOpConversion<complex::NotEqualOp, CmpFPredicate::UNE>,
-               DivOpConversion, ExpOpConversion>(patterns.getContext());
+               DivOpConversion, ExpOpConversion, NegOpConversion>(
+      patterns.getContext());
 }
 
 namespace {
@@ -340,7 +363,7 @@ void ConvertComplexToStandardPass::runOnFunction() {
   target.addLegalDialect<StandardOpsDialect, math::MathDialect,
                          complex::ComplexDialect>();
   target.addIllegalOp<complex::AbsOp, complex::DivOp, complex::EqualOp,
-                      complex::ExpOp, complex::NotEqualOp>();
+                      complex::ExpOp, complex::NotEqualOp, complex::NegOp>();
   if (failed(applyPartialConversion(function, target, std::move(patterns))))
     signalPassFailure();
 }
