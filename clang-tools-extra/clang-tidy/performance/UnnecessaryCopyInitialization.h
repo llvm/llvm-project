@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_UNNECESSARY_COPY_INITIALIZATION_H
 
 #include "../ClangTidyCheck.h"
+#include "clang/AST/Decl.h"
 
 namespace clang {
 namespace tidy {
