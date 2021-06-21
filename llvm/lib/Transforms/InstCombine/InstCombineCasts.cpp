@@ -2608,6 +2608,11 @@ static Instruction *convertBitCastToGEP(BitCastInst &CI, IRBuilderBase &Builder,
   Value *Src = CI.getOperand(0);
   PointerType *SrcPTy = cast<PointerType>(Src->getType());
   PointerType *DstPTy = cast<PointerType>(CI.getType());
+
+  // Bitcasts involving opaque pointers cannot be converted into a GEP.
+  if (SrcPTy->isOpaque() || DstPTy->isOpaque())
+    return nullptr;
+
   Type *DstElTy = DstPTy->getElementType();
   Type *SrcElTy = SrcPTy->getElementType();
 
