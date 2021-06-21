@@ -68,6 +68,68 @@
 
 #include <memory>
 
+// Unfortunately the signpost header pulls in the system MachO header, too.
+#ifdef CPU_TYPE_ARM
+#undef CPU_TYPE_ARM
+#endif
+#ifdef CPU_TYPE_ARM64
+#undef CPU_TYPE_ARM64
+#endif
+#ifdef CPU_TYPE_ARM64_32
+#undef CPU_TYPE_ARM64_32
+#endif
+#ifdef CPU_TYPE_I386
+#undef CPU_TYPE_I386
+#endif
+#ifdef CPU_TYPE_X86_64
+#undef CPU_TYPE_X86_64
+#endif
+#ifdef MH_DYLINKER
+#undef MH_DYLINKER
+#endif
+#ifdef MH_OBJECT
+#undef MH_OBJECT
+#endif
+#ifdef LC_VERSION_MIN_MACOSX
+#undef LC_VERSION_MIN_MACOSX
+#endif
+#ifdef LC_VERSION_MIN_IPHONEOS
+#undef LC_VERSION_MIN_IPHONEOS
+#endif
+#ifdef LC_VERSION_MIN_TVOS
+#undef LC_VERSION_MIN_TVOS
+#endif
+#ifdef LC_VERSION_MIN_WATCHOS
+#undef LC_VERSION_MIN_WATCHOS
+#endif
+#ifdef LC_BUILD_VERSION
+#undef LC_BUILD_VERSION
+#endif
+#ifdef PLATFORM_MACOS
+#undef PLATFORM_MACOS
+#endif
+#ifdef PLATFORM_MACCATALYST
+#undef PLATFORM_MACCATALYST
+#endif
+#ifdef PLATFORM_IOS
+#undef PLATFORM_IOS
+#endif
+#ifdef PLATFORM_IOSSIMULATOR
+#undef PLATFORM_IOSSIMULATOR
+#endif
+#ifdef PLATFORM_TVOS
+#undef PLATFORM_TVOS
+#endif
+#ifdef PLATFORM_TVOSSIMULATOR
+#undef PLATFORM_TVOSSIMULATOR
+#endif
+#ifdef PLATFORM_WATCHOS
+#undef PLATFORM_WATCHOS
+#endif
+#ifdef PLATFORM_WATCHOSSIMULATOR
+#undef PLATFORM_WATCHOSSIMULATOR
+#endif
+
 #define THUMB_ADDRESS_BIT_MASK 0xfffffffffffffffeull
 using namespace lldb;
 using namespace lldb_private;
@@ -745,11 +807,11 @@ static uint32_t MachHeaderSizeFromMagic(uint32_t magic) {
   switch (magic) {
   case MH_MAGIC:
   case MH_CIGAM:
-    return sizeof(struct mach_header);
+    return sizeof(struct llvm::MachO::mach_header);
 
   case MH_MAGIC_64:
   case MH_CIGAM_64:
-    return sizeof(struct mach_header_64);
+    return sizeof(struct llvm::MachO::mach_header_64);
     break;
 
   default:
@@ -1068,7 +1130,7 @@ bool ObjectFileMachO::ParseHeader() {
     // None found.
     return false;
   } else {
-    memset(&m_header, 0, sizeof(struct mach_header));
+    memset(&m_header, 0, sizeof(struct llvm::MachO::mach_header));
   }
   return false;
 }
@@ -1281,7 +1343,7 @@ bool ObjectFileMachO::IsStripped() {
       for (uint32_t i = 0; i < m_header.ncmds; ++i) {
         const lldb::offset_t load_cmd_offset = offset;
 
-        load_command lc;
+        llvm::MachO::load_command lc;
         if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
           break;
         if (lc.cmd == LC_DYSYMTAB) {
@@ -1308,7 +1370,7 @@ ObjectFileMachO::EncryptedFileRanges ObjectFileMachO::GetEncryptedFileRanges() {
   EncryptedFileRanges result;
   lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
 
-  encryption_info_command encryption_cmd;
+  llvm::MachO::encryption_info_command encryption_cmd;
   for (uint32_t i = 0; i < m_header.ncmds; ++i) {
     const lldb::offset_t load_cmd_offset = offset;
     if (m_data.GetU32(&offset, &encryption_cmd, 2) == nullptr)
@@ -1333,8 +1395,8 @@ ObjectFileMachO::EncryptedFileRanges ObjectFileMachO::GetEncryptedFileRanges() {
   return result;
 }
 
-void ObjectFileMachO::SanitizeSegmentCommand(segment_command_64 &seg_cmd,
-                                             uint32_t cmd_idx) {
+void ObjectFileMachO::SanitizeSegmentCommand(
+    llvm::MachO::segment_command_64 &seg_cmd, uint32_t cmd_idx) {
   if (m_length == 0 || seg_cmd.filesize == 0)
     return;
 
@@ -1390,7 +1452,8 @@ void ObjectFileMachO::SanitizeSegmentCommand(segment_command_64 &seg_cmd,
   }
 }
 
-static uint32_t GetSegmentPermissions(const segment_command_64 &seg_cmd) {
+static uint32_t
+GetSegmentPermissions(const llvm::MachO::segment_command_64 &seg_cmd) {
   uint32_t result = 0;
   if (seg_cmd.initprot & VM_PROT_READ)
     result |= ePermissionsReadable;
@@ -1561,11 +1624,10 @@ struct ObjectFileMachO::SegmentParsingContext {
       : EncryptedRanges(std::move(EncryptedRanges)), UnifiedList(UnifiedList) {}
 };
 
-void ObjectFileMachO::ProcessSegmentCommand(const load_command &load_cmd_,
-                                            lldb::offset_t offset,
-                                            uint32_t cmd_idx,
-                                            SegmentParsingContext &context) {
-  segment_command_64 load_cmd;
+void ObjectFileMachO::ProcessSegmentCommand(
+    const llvm::MachO::load_command &load_cmd_, lldb::offset_t offset,
+    uint32_t cmd_idx, SegmentParsingContext &context) {
+  llvm::MachO::segment_command_64 load_cmd;
   memcpy(&load_cmd, &load_cmd_, sizeof(load_cmd_));
 
   if (!m_data.GetU8(&offset, (uint8_t *)load_cmd.segname, 16))
@@ -1666,7 +1728,7 @@ void ObjectFileMachO::ProcessSegmentCommand(const load_command &load_cmd_,
     m_sections_up->AddSection(unified_section_sp);
   }
 
-  struct section_64 sect64;
+  llvm::MachO::section_64 sect64;
   ::memset(&sect64, 0, sizeof(sect64));
   // Push a section into our mach sections for the section at index zero
   // (NO_SECT) if we don't have any mach sections yet...
@@ -1838,8 +1900,8 @@ void ObjectFileMachO::ProcessSegmentCommand(const load_command &load_cmd_,
   }
 }
 
-void ObjectFileMachO::ProcessDysymtabCommand(const load_command &load_cmd,
-                                             lldb::offset_t offset) {
+void ObjectFileMachO::ProcessDysymtabCommand(
+    const llvm::MachO::load_command &load_cmd, lldb::offset_t offset) {
   m_dysymtab.cmd = load_cmd.cmd;
   m_dysymtab.cmdsize = load_cmd.cmdsize;
   m_data.GetU32(&offset, &m_dysymtab.ilocalsym,
@@ -1859,7 +1921,7 @@ void ObjectFileMachO::CreateSections(SectionList &unified_section_list) {
   offset = MachHeaderSizeFromMagic(m_header.magic);
 
   SegmentParsingContext context(GetEncryptedFileRanges(), unified_section_list);
-  struct load_command load_cmd;
+  llvm::MachO::load_command load_cmd;
   for (uint32_t i = 0; i < m_header.ncmds; ++i) {
     const lldb::offset_t load_cmd_offset = offset;
     if (m_data.GetU32(&offset, &load_cmd, 2) == nullptr)
@@ -2183,9 +2245,9 @@ size_t ObjectFileMachO::ParseSymtab() {
   Progress progress(llvm::formatv("Parsing symbol table for {0}",
                                   m_file.GetFilename().AsCString("<Unknown>")));
 
-  struct symtab_command symtab_load_command = {0, 0, 0, 0, 0, 0};
-  struct linkedit_data_command function_starts_load_command = {0, 0, 0, 0};
-  struct dyld_info_command dyld_info = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  llvm::MachO::symtab_command symtab_load_command = {0, 0, 0, 0, 0, 0};
+  llvm::MachO::linkedit_data_command function_starts_load_command = {0, 0, 0, 0};
+  llvm::MachO::dyld_info_command dyld_info = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   // The data element of type bool indicates that this entry is thumb
   // code.
   typedef AddressDataArray<lldb::addr_t, bool, 100> FunctionStarts;
@@ -2216,7 +2278,7 @@ size_t ObjectFileMachO::ParseSymtab() {
   for (i = 0; i < m_header.ncmds; ++i) {
     const lldb::offset_t cmd_offset = offset;
     // Read in the load command and load command size
-    struct load_command lc;
+    llvm::MachO::load_command lc;
     if (m_data.GetU32(&offset, &lc, 2) == nullptr)
       break;
     // Watch for the symbol table load command
@@ -4885,7 +4947,7 @@ UUID ObjectFileMachO::GetUUID(const llvm::MachO::mach_header &header,
                               const lldb_private::DataExtractor &data,
                               lldb::offset_t lc_offset) {
   uint32_t i;
-  struct uuid_command load_cmd;
+  llvm::MachO::uuid_command load_cmd;
 
   lldb::offset_t offset = lc_offset;
   for (i = 0; i < header.ncmds; ++i) {
@@ -5033,7 +5095,7 @@ void ObjectFileMachO::GetAllArchSpecs(const llvm::MachO::mach_header &header,
     return add_triple(base_triple);
   }
 
-  struct load_command load_cmd;
+  llvm::MachO::load_command load_cmd;
 
   // See if there is an LC_VERSION_MIN_* load command that can give
   // us the OS type.
@@ -5043,7 +5105,7 @@ void ObjectFileMachO::GetAllArchSpecs(const llvm::MachO::mach_header &header,
     if (data.GetU32(&offset, &load_cmd, 2) == NULL)
       break;
 
-    struct version_min_command version_min;
+    llvm::MachO::version_min_command version_min;
     switch (load_cmd.cmd) {
     case llvm::MachO::LC_VERSION_MIN_MACOSX:
     case llvm::MachO::LC_VERSION_MIN_IPHONEOS:
@@ -5095,7 +5157,7 @@ void ObjectFileMachO::GetAllArchSpecs(const llvm::MachO::mach_header &header,
 
     do {
       if (load_cmd.cmd == llvm::MachO::LC_BUILD_VERSION) {
-        struct build_version_command build_version;
+        llvm::MachO::build_version_command build_version;
         if (load_cmd.cmdsize < sizeof(build_version)) {
           // Malformed load command.
           break;
@@ -5176,7 +5238,7 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    struct load_command load_cmd;
+    llvm::MachO::load_command load_cmd;
     lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
     std::vector<std::string> rpath_paths;
     std::vector<std::string> rpath_relative_paths;
@@ -5312,7 +5374,7 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    struct load_command load_cmd;
+    llvm::MachO::load_command load_cmd;
     lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
     uint32_t i;
     lldb::addr_t start_address = LLDB_INVALID_ADDRESS;
@@ -5469,7 +5531,7 @@ uint32_t ObjectFileMachO::GetNumThreadContexts() {
       m_thread_context_offsets_valid = true;
       lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
       FileRangeArray::Entry file_range;
-      thread_command thread_cmd;
+      llvm::MachO::thread_command thread_cmd;
       for (uint32_t i = 0; i < m_header.ncmds; ++i) {
         const uint32_t cmd_offset = offset;
         if (m_data.GetU32(&offset, &thread_cmd, 2) == nullptr)
@@ -5498,7 +5560,7 @@ std::string ObjectFileMachO::GetIdentifierString() {
     lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const uint32_t cmd_offset = offset;
-      load_command lc;
+      llvm::MachO::load_command lc;
       if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
         break;
       if (lc.cmd == LC_NOTE) {
@@ -5538,7 +5600,7 @@ std::string ObjectFileMachO::GetIdentifierString() {
     offset = MachHeaderSizeFromMagic(m_header.magic);
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const uint32_t cmd_offset = offset;
-      struct ident_command ident_command;
+      llvm::MachO::ident_command ident_command;
       if (m_data.GetU32(&offset, &ident_command, 2) == nullptr)
         break;
       if (ident_command.cmd == LC_IDENT && ident_command.cmdsize != 0) {
@@ -5567,7 +5629,7 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &address, UUID &uuid,
     lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const uint32_t cmd_offset = offset;
-      load_command lc;
+      llvm::MachO::load_command lc;
       if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
         break;
       if (lc.cmd == LC_NOTE) {
@@ -5777,7 +5839,7 @@ llvm::VersionTuple ObjectFileMachO::GetVersion() {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    struct dylib_command load_cmd;
+    llvm::MachO::dylib_command load_cmd;
     lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
     uint32_t version_cmd = 0;
     uint64_t version = 0;
@@ -5944,7 +6006,7 @@ llvm::VersionTuple ObjectFileMachO::GetMinimumOSVersion() {
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const lldb::offset_t load_cmd_offset = offset;
 
-      version_min_command lc;
+      llvm::MachO::version_min_command lc;
       if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
         break;
       if (lc.cmd == llvm::MachO::LC_VERSION_MIN_MACOSX ||
@@ -6005,7 +6067,7 @@ llvm::VersionTuple ObjectFileMachO::GetSDKVersion() {
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const lldb::offset_t load_cmd_offset = offset;
 
-      version_min_command lc;
+      llvm::MachO::version_min_command lc;
       if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
         break;
       if (lc.cmd == llvm::MachO::LC_VERSION_MIN_MACOSX ||
@@ -6034,7 +6096,7 @@ llvm::VersionTuple ObjectFileMachO::GetSDKVersion() {
       for (uint32_t i = 0; i < m_header.ncmds; ++i) {
         const lldb::offset_t load_cmd_offset = offset;
 
-        version_min_command lc;
+        llvm::MachO::version_min_command lc;
         if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
           break;
         if (lc.cmd == llvm::MachO::LC_BUILD_VERSION) {
@@ -6223,7 +6285,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
     }
 
     if (make_core) {
-      std::vector<segment_command_64> segment_load_commands;
+      std::vector<llvm::MachO::segment_command_64> segment_load_commands;
       //                uint32_t range_info_idx = 0;
       MemoryRegionInfo range_info;
       Status range_error = process_sp->GetMemoryRegionInfo(0, range_info);
@@ -6248,12 +6310,12 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
 
           if (prot != 0) {
             uint32_t cmd_type = LC_SEGMENT_64;
-            uint32_t segment_size = sizeof(segment_command_64);
+            uint32_t segment_size = sizeof(llvm::MachO::segment_command_64);
             if (addr_byte_size == 4) {
               cmd_type = LC_SEGMENT;
-              segment_size = sizeof(segment_command);
+              segment_size = sizeof(llvm::MachO::segment_command);
             }
-            segment_command_64 segment = {
+            llvm::MachO::segment_command_64 segment = {
                 cmd_type,     // uint32_t cmd;
                 segment_size, // uint32_t cmdsize;
                 {0},          // char segname[16];
@@ -6282,7 +6344,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
 
         StreamString buffer(Stream::eBinary, addr_byte_size, byte_order);
 
-        mach_header_64 mach_header;
+        llvm::MachO::mach_header_64 mach_header;
         if (addr_byte_size == 8) {
           mach_header.magic = MH_MAGIC_64;
         } else {
@@ -6337,11 +6399,11 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
 
         // The size of the load command is the size of the segments...
         if (addr_byte_size == 8) {
-          mach_header.sizeofcmds =
-              segment_load_commands.size() * sizeof(struct segment_command_64);
+          mach_header.sizeofcmds = segment_load_commands.size() *
+                                   sizeof(llvm::MachO::segment_command_64);
         } else {
-          mach_header.sizeofcmds =
-              segment_load_commands.size() * sizeof(struct segment_command);
+          mach_header.sizeofcmds = segment_load_commands.size() *
+                                   sizeof(llvm::MachO::segment_command);
         }
 
         // and the size of all LC_THREAD load command
