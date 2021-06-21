@@ -14,6 +14,29 @@
 
 // expected-no-diagnostics
 
+// Check support for pure and deleted virtual functions
+struct base {
+  __host__
+  __device__
+  virtual void pv() = 0;
+  __host__
+  __device__
+  virtual void dv() = delete;
+};
+struct derived:base {
+  __host__
+  __device__
+  virtual void pv() override {};
+};
+__device__ void test_vf() {
+    derived d;
+}
+// CHECK: @_ZTV7derived = linkonce_odr unnamed_addr addrspace(1) constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* null, i8* bitcast (void (%struct.derived*)* @_ZN7derived2pvEv to i8*), i8* bitcast (void ()* @__cxa_deleted_virtual to i8*)] }, comdat, align 8
+// CHECK: @_ZTV4base = linkonce_odr unnamed_addr addrspace(1) constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* null, i8* bitcast (void ()* @__cxa_pure_virtual to i8*), i8* bitcast (void ()* @__cxa_deleted_virtual to i8*)] }, comdat, align 8
+
+// CHECK: define{{.*}}void @__cxa_pure_virtual()
+// CHECK: define{{.*}}void @__cxa_deleted_virtual()
+
 struct Number {
   __device__ Number(float _x) : x(_x) {}
   float x;
