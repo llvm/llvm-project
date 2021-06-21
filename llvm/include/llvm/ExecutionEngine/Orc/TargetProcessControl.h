@@ -145,7 +145,7 @@ public:
   /// \endcode{.cpp}
   ///
   virtual Expected<shared::WrapperFunctionResult>
-  runWrapper(JITTargetAddress WrapperFnAddr, ArrayRef<uint8_t> ArgBuffer) = 0;
+  runWrapper(JITTargetAddress WrapperFnAddr, ArrayRef<char> ArgBuffer) = 0;
 
   /// Disconnect from the target process.
   ///
@@ -170,9 +170,7 @@ public:
       : TPC(TPC), WrapperFnAddr(WrapperFnAddr) {}
   Expected<shared::WrapperFunctionResult> operator()(const char *ArgData,
                                                      size_t ArgSize) const {
-    return TPC.runWrapper(
-        WrapperFnAddr,
-        ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(ArgData), ArgSize));
+    return TPC.runWrapper(WrapperFnAddr, ArrayRef<char>(ArgData, ArgSize));
   }
 
 private:
@@ -204,8 +202,7 @@ public:
                               ArrayRef<std::string> Args) override;
 
   Expected<shared::WrapperFunctionResult>
-  runWrapper(JITTargetAddress WrapperFnAddr,
-             ArrayRef<uint8_t> ArgBuffer) override;
+  runWrapper(JITTargetAddress WrapperFnAddr, ArrayRef<char> ArgBuffer) override;
 
   Error disconnect() override;
 
