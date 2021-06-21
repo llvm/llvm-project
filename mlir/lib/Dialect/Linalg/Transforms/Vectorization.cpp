@@ -671,52 +671,6 @@ static SmallVector<Value> ofrToIndexValues(OpBuilder &builder, Location loc,
   return result;
 }
 
-/// Rewrite a PadTensorOp into a sequence of InitTensorOp, TransferReadOp and
-/// TransferWriteOp. For now, this only applies when all low and high paddings
-/// are determined to be zero.
-struct GenericPadTensorOpVectorizationPattern
-    : public OpRewritePattern<PadTensorOp> {
-  using OpRewritePattern<PadTensorOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(PadTensorOp padOp,
-                                PatternRewriter &rewriter) const override {
-    /// Given an OpFoldResult, return true if its value is guaranteed to be a
-    /// zero integer.
-    auto isZeroInt = [&](OpFoldResult ofr) {
-      return isEqualConstantIntOrValue(ofr, rewriter.getIndexAttr(0)); };
-    // Low padding must be static 0.
-    if (!llvm::all_of(padOp.getMixedLowPad(), isZeroInt)) return failure();
-    // High padding must be static 0.
-    if (!llvm::all_of(padOp.getMixedHighPad(), isZeroInt)) return failure();
-    // Pad value must be a constant.
-    auto padValue = padOp.getConstantPaddingValue();
-    if (!padValue) return failure();
-
-    // Bail on non-static shapes.
-    auto resultShapedType = padOp.result().getType().cast<ShapedType>();
-    if (!resultShapedType.hasStaticShape())
-      return failure();
-    VectorType vectorType = extractVectorTypeFromShapedValue(padOp.result());
-    if (!vectorType)
-      return failure();
-
-    // Now we can rewrite as InitTensorOp + TransferReadOp@[0..0] +
-    // TransferWriteOp@[0..0].
-    SmallVector<Value> indices(
-        resultShapedType.getRank(),
-        rewriter.create<ConstantIndexOp>(padOp.getLoc(), 0));
-    Value read = rewriter.create<vector::TransferReadOp>(
-        padOp.getLoc(), vectorType, padOp.source(), indices, padValue);
-    Value init = rewriter.create<InitTensorOp>(
-        padOp.getLoc(), resultShapedType.getShape(),
-        resultShapedType.getElementType());
-    rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(padOp, read, init,
-                                                         indices);
-
-    return success();
-  }
-};
-
 /// Base pattern for rewriting PadTensorOps whose result is consumed by a given
 /// operation type OpTy.
 template <typename OpTy>
@@ -995,13 +949,14 @@ struct PadTensorOpVectorizationWithSubTensorInsertPattern
 
 void mlir::linalg::populatePadTensorOpVectorizationPatterns(
     RewritePatternSet &patterns, PatternBenefit baseBenefit) {
-  patterns.add<GenericPadTensorOpVectorizationPattern>(
-      patterns.getContext(), baseBenefit);
+  // TODO: Canonicalizer handles simple cases where low = 0 and high = 0, but a
+  // generic vectorization pattern is still missing.
+
   // Try these specialized patterns first before resorting to the generic one.
   patterns.add<PadTensorOpVectorizationWithTransferReadPattern,
                PadTensorOpVectorizationWithTransferWritePattern,
                PadTensorOpVectorizationWithSubTensorInsertPattern>(
-      patterns.getContext(), baseBenefit.getBenefit() + 1);
+      patterns.getContext(), baseBenefit);
 }
 
 // TODO: cleanup all the convolution vectorization patterns.
