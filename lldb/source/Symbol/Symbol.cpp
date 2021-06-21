@@ -23,13 +23,12 @@ using namespace lldb;
 using namespace lldb_private;
 
 Symbol::Symbol()
-    : SymbolContextScope(), m_uid(UINT32_MAX), m_type_data(0),
-      m_type_data_resolved(false), m_is_synthetic(false), m_is_debug(false),
-      m_is_external(false), m_size_is_sibling(false),
+    : SymbolContextScope(), m_type_data_resolved(false), m_is_synthetic(false),
+      m_is_debug(false), m_is_external(false), m_size_is_sibling(false),
       m_size_is_synthesized(false), m_size_is_valid(false),
       m_demangled_is_synthesized(false), m_contains_linker_annotations(false),
-      m_is_weak(false), m_type(eSymbolTypeInvalid), m_mangled(), m_addr_range(),
-      m_flags() {}
+      m_is_weak(false), m_type(eSymbolTypeInvalid), m_mangled(),
+      m_addr_range() {}
 
 Symbol::Symbol(uint32_t symID, llvm::StringRef name, SymbolType type, bool external,
                bool is_debug, bool is_trampoline, bool is_artificial,

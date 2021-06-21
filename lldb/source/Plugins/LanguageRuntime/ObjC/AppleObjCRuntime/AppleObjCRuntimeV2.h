@@ -116,9 +116,9 @@ private:
     void UpdateSignature(const RemoteNXMapTable &hash_table);
 
   protected:
-    uint32_t m_count;
-    uint32_t m_num_buckets;
-    lldb::addr_t m_buckets_ptr;
+    uint32_t m_count = 0;
+    uint32_t m_num_buckets = 0;
+    lldb::addr_t m_buckets_ptr = 0;
   };
 
   class NonPointerISACache {

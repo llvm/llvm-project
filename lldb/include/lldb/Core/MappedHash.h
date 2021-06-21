@@ -47,19 +47,17 @@ public:
 
     uint32_t
         magic; // HASH_MAGIC or HASH_CIGAM magic value to allow endian detection
-    uint16_t version;         // Version number
-    uint16_t hash_function;   // The hash function enumeration that was used
-    uint32_t bucket_count;    // The number of buckets in this hash table
-    uint32_t hashes_count;    // The total number of unique hash values and hash
-                              // data offsets in this table
+    uint16_t version = 1; // Version number
+    uint16_t hash_function =
+        eHashFunctionDJB;      // The hash function enumeration that was used
+    uint32_t bucket_count = 0; // The number of buckets in this hash table
+    uint32_t hashes_count = 0; // The total number of unique hash values and
+                               // hash data offsets in this table
     uint32_t header_data_len; // The size in bytes of the "header_data" template
                               // member below
     HeaderData header_data;   //
 
-    Header()
-        : magic(HASH_MAGIC), version(1), hash_function(eHashFunctionDJB),
-          bucket_count(0), hashes_count(0), header_data_len(sizeof(T)),
-          header_data() {}
+    Header() : magic(HASH_MAGIC), header_data_len(sizeof(T)), header_data() {}
 
     virtual ~Header() = default;
 

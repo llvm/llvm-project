@@ -108,14 +108,12 @@ protected:
 
 private:
   struct libBacktraceRecording_info {
-    uint16_t queue_info_version;
-    uint16_t queue_info_data_offset;
-    uint16_t item_info_version;
-    uint16_t item_info_data_offset;
+    uint16_t queue_info_version = 0;
+    uint16_t queue_info_data_offset = 0;
+    uint16_t item_info_version = 0;
+    uint16_t item_info_data_offset = 0;
 
-    libBacktraceRecording_info()
-        : queue_info_version(0), queue_info_data_offset(0),
-          item_info_version(0), item_info_data_offset(0) {}
+    libBacktraceRecording_info() {}
   };
 
   // A structure which reflects the data recorded in the
@@ -186,44 +184,39 @@ private:
   };
 
   struct LibdispatchVoucherOffsets {
-    uint16_t vo_version;
-    uint16_t vo_activity_ids_count;
-    uint16_t vo_activity_ids_count_size;
-    uint16_t vo_activity_ids_array;
-    uint16_t vo_activity_ids_array_entry_size;
+    uint16_t vo_version = UINT16_MAX;
+    uint16_t vo_activity_ids_count = UINT16_MAX;
+    uint16_t vo_activity_ids_count_size = UINT16_MAX;
+    uint16_t vo_activity_ids_array = UINT16_MAX;
+    uint16_t vo_activity_ids_array_entry_size = UINT16_MAX;
 
     LibdispatchVoucherOffsets()
-        : vo_version(UINT16_MAX), vo_activity_ids_count(UINT16_MAX),
-          vo_activity_ids_count_size(UINT16_MAX),
-          vo_activity_ids_array(UINT16_MAX),
-          vo_activity_ids_array_entry_size(UINT16_MAX) {}
+
+    {}
 
     bool IsValid() { return vo_version != UINT16_MAX; }
   };
 
   struct LibdispatchTSDIndexes {
-    uint16_t dti_version;
-    uint64_t dti_queue_index;
-    uint64_t dti_voucher_index;
-    uint64_t dti_qos_class_index;
+    uint16_t dti_version = UINT16_MAX;
+    uint64_t dti_queue_index = UINT64_MAX;
+    uint64_t dti_voucher_index = UINT64_MAX;
+    uint64_t dti_qos_class_index = UINT64_MAX;
 
-    LibdispatchTSDIndexes()
-        : dti_version(UINT16_MAX), dti_queue_index(UINT64_MAX),
-          dti_voucher_index(UINT64_MAX), dti_qos_class_index(UINT64_MAX) {}
+    LibdispatchTSDIndexes() {}
 
     bool IsValid() { return dti_version != UINT16_MAX; }
   };
 
   struct LibpthreadOffsets {
-    uint16_t plo_version;
-    uint16_t plo_pthread_tsd_base_offset;
-    uint16_t plo_pthread_tsd_base_address_offset;
-    uint16_t plo_pthread_tsd_entry_size;
+    uint16_t plo_version = UINT16_MAX;
+    uint16_t plo_pthread_tsd_base_offset = UINT16_MAX;
+    uint16_t plo_pthread_tsd_base_address_offset = UINT16_MAX;
+    uint16_t plo_pthread_tsd_entry_size = UINT16_MAX;
 
     LibpthreadOffsets()
-        : plo_version(UINT16_MAX), plo_pthread_tsd_base_offset(UINT16_MAX),
-          plo_pthread_tsd_base_address_offset(UINT16_MAX),
-          plo_pthread_tsd_entry_size(UINT16_MAX) {}
+
+    {}
 
     bool IsValid() { return plo_version != UINT16_MAX; }
   };

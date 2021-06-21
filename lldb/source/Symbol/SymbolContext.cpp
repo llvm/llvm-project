@@ -26,9 +26,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SymbolContext::SymbolContext()
-    : target_sp(), module_sp(), comp_unit(nullptr), function(nullptr),
-      block(nullptr), line_entry(), symbol(nullptr), variable(nullptr) {}
+SymbolContext::SymbolContext() : target_sp(), module_sp(), line_entry() {}
 
 SymbolContext::SymbolContext(const ModuleSP &m, CompileUnit *cu, Function *f,
                              Block *b, LineEntry *le, Symbol *s)

@@ -98,20 +98,17 @@ protected:
                              lldb_private::FileSpec *lc_id_dylinker);
 
   struct DYLDAllImageInfos {
-    uint32_t version;
-    uint32_t dylib_info_count;            // Version >= 1
-    lldb::addr_t dylib_info_addr;         // Version >= 1
-    lldb::addr_t notification;            // Version >= 1
-    bool processDetachedFromSharedRegion; // Version >= 1
-    bool libSystemInitialized;            // Version >= 2
-    lldb::addr_t dyldImageLoadAddress;    // Version >= 2
+    uint32_t version = 0;
+    uint32_t dylib_info_count = 0;                            // Version >= 1
+    lldb::addr_t dylib_info_addr = LLDB_INVALID_ADDRESS;      // Version >= 1
+    lldb::addr_t notification = LLDB_INVALID_ADDRESS;         // Version >= 1
+    bool processDetachedFromSharedRegion = false;             // Version >= 1
+    bool libSystemInitialized = false;                        // Version >= 2
+    lldb::addr_t dyldImageLoadAddress = LLDB_INVALID_ADDRESS; // Version >= 2
 
     DYLDAllImageInfos()
-        : version(0), dylib_info_count(0),
-          dylib_info_addr(LLDB_INVALID_ADDRESS),
-          notification(LLDB_INVALID_ADDRESS),
-          processDetachedFromSharedRegion(false), libSystemInitialized(false),
-          dyldImageLoadAddress(LLDB_INVALID_ADDRESS) {}
+
+    {}
 
     void Clear() {
       version = 0;

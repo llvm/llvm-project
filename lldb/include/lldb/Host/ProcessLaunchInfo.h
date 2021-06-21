@@ -176,10 +176,10 @@ protected:
   Flags m_flags; // Bitwise OR of bits from lldb::LaunchFlags
   std::vector<FileAction> m_file_actions; // File actions for any other files
   std::shared_ptr<PseudoTerminal> m_pty;
-  uint32_t m_resume_count; // How many times do we resume after launching
+  uint32_t m_resume_count = 0; // How many times do we resume after launching
   Host::MonitorChildProcessCallback m_monitor_callback;
-  void *m_monitor_callback_baton;
-  bool m_monitor_signals;
+  void *m_monitor_callback_baton = nullptr;
+  bool m_monitor_signals = false;
   std::string m_event_data; // A string passed to the plugin launch, having no
                             // meaning to the upper levels of lldb.
   lldb::ListenerSP m_listener_sp;

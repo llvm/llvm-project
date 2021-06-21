@@ -21,7 +21,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBCompileUnit::SBCompileUnit() : m_opaque_ptr(nullptr) {
+SBCompileUnit::SBCompileUnit() {
   LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBCompileUnit);
 }
 

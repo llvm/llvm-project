@@ -22,13 +22,13 @@
 #include "ELFHeader.h"
 
 struct ELFNote {
-  elf::elf_word n_namesz;
-  elf::elf_word n_descsz;
-  elf::elf_word n_type;
+  elf::elf_word n_namesz = 0;
+  elf::elf_word n_descsz = 0;
+  elf::elf_word n_type = 0;
 
   std::string n_name;
 
-  ELFNote() : n_namesz(0), n_descsz(0), n_type(0) {}
+  ELFNote() {}
 
   /// Parse an ELFNote entry from the given DataExtractor starting at position
   /// \p offset.

@@ -245,9 +245,7 @@ void UnwindPlan::Row::Dump(Stream &s, const UnwindPlan *unwind_plan,
   }
 }
 
-UnwindPlan::Row::Row()
-    : m_offset(0), m_cfa_value(), m_afa_value(), m_register_locations(),
-      m_unspecified_registers_are_undefined(false) {}
+UnwindPlan::Row::Row() : m_cfa_value(), m_afa_value(), m_register_locations() {}
 
 bool UnwindPlan::Row::GetRegisterInfo(
     uint32_t reg_num,

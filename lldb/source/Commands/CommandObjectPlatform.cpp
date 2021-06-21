@@ -1215,8 +1215,7 @@ protected:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions()
-        : Options(), match_info(), show_args(false), verbose(false) {}
+    CommandOptions() : Options(), match_info() {}
 
     ~CommandOptions() override = default;
 
@@ -1351,8 +1350,8 @@ protected:
     // Instance variables to hold the values for command options.
 
     ProcessInstanceInfoMatch match_info;
-    bool show_args;
-    bool verbose;
+    bool show_args = false;
+    bool verbose = false;
   };
 
   CommandOptions m_options;

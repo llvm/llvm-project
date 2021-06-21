@@ -226,10 +226,10 @@ private:
   size_t GetByteSize() const { return m_end - m_start; }
 
   /// A pointer to the first byte of data.
-  uint8_t *m_start;
+  uint8_t *m_start = nullptr;
 
   /// A pointer to the byte that is past the end of the data.
-  uint8_t *m_end;
+  uint8_t *m_end = nullptr;
 
   /// The byte order of the data we are extracting from.
   lldb::ByteOrder m_byte_order;

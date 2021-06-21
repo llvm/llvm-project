@@ -65,10 +65,7 @@ public:
   static llvm::Expected<const char *>
   GetStreamOpenModeFromOptions(OpenOptions options);
 
-  File()
-      : IOObject(eFDTypeFile), m_is_interactive(eLazyBoolCalculate),
-        m_is_real_terminal(eLazyBoolCalculate),
-        m_supports_colors(eLazyBoolCalculate){};
+  File() : IOObject(eFDTypeFile){};
 
   /// Read bytes from a file from the current file position into buf.
   ///
@@ -360,9 +357,9 @@ public:
   static bool classof(const File *file) { return file->isA(&ID); }
 
 protected:
-  LazyBool m_is_interactive;
-  LazyBool m_is_real_terminal;
-  LazyBool m_supports_colors;
+  LazyBool m_is_interactive = eLazyBoolCalculate;
+  LazyBool m_is_real_terminal = eLazyBoolCalculate;
+  LazyBool m_supports_colors = eLazyBoolCalculate;
 
   void CalculateInteractiveAndTerminal();
 
@@ -373,9 +370,7 @@ private:
 
 class NativeFile : public File {
 public:
-  NativeFile()
-      : m_descriptor(kInvalidDescriptor), m_own_descriptor(false),
-        m_stream(kInvalidStream), m_options(), m_own_stream(false) {}
+  NativeFile() : m_descriptor(kInvalidDescriptor), m_stream(kInvalidStream) {}
 
   NativeFile(FILE *fh, bool transfer_ownership)
       : m_descriptor(kInvalidDescriptor), m_own_descriptor(false), m_stream(fh),
@@ -422,10 +417,10 @@ protected:
 
   // Member variables
   int m_descriptor;
-  bool m_own_descriptor;
+  bool m_own_descriptor = false;
   FILE *m_stream;
-  OpenOptions m_options;
-  bool m_own_stream;
+  OpenOptions m_options{};
+  bool m_own_stream = false;
   std::mutex offset_access_mutex;
 
 private:

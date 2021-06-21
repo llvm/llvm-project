@@ -22,8 +22,7 @@ using namespace lldb_private;
 using namespace lldb_private::repro;
 
 ProcessInfo::ProcessInfo()
-    : m_executable(), m_arguments(), m_environment(), m_uid(UINT32_MAX),
-      m_gid(UINT32_MAX), m_arch(), m_pid(LLDB_INVALID_PROCESS_ID) {}
+    : m_executable(), m_arguments(), m_environment(), m_arch() {}
 
 ProcessInfo::ProcessInfo(const char *name, const ArchSpec &arch,
                          lldb::pid_t pid)

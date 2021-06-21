@@ -101,9 +101,9 @@ public:
     /// DIE offset base so die offsets in hash_data can be CU relative.
     dw_offset_t die_base_offset;
     AtomArray atoms;
-    uint32_t atom_mask;
-    size_t min_hash_data_byte_size;
-    bool hash_data_has_fixed_byte_size;
+    uint32_t atom_mask = 0;
+    size_t min_hash_data_byte_size = 0;
+    bool hash_data_has_fixed_byte_size = true;
   };
 
   class Header : public MappedHash::Header<Prologue> {

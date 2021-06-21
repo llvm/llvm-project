@@ -60,7 +60,7 @@ public:
     eDumpGroupExport = (eDumpOptionCommand | eDumpOptionName | eDumpOptionValue)
   };
 
-  OptionValue() : m_value_was_set(false) {}
+  OptionValue() {}
 
   virtual ~OptionValue() = default;
 
@@ -329,12 +329,12 @@ protected:
 
   lldb::OptionValueWP m_parent_wp;
   std::function<void()> m_callback;
-  bool m_value_was_set; // This can be used to see if a value has been set
-                        // by a call to SetValueFromCString(). It is often
-                        // handy to know if an option value was set from the
-                        // command line or as a setting, versus if we just have
-                        // the default value that was already populated in the
-                        // option value.
+  bool m_value_was_set = false; // This can be used to see if a value has been
+                                // set by a call to SetValueFromCString(). It is
+                                // often handy to know if an option value was
+                                // set from the command line or as a setting,
+                                // versus if we just have the default value that
+                                // was already populated in the option value.
 };
 
 } // namespace lldb_private

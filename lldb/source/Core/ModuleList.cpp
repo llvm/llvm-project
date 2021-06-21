@@ -204,8 +204,7 @@ PathMappingList ModuleListProperties::GetSymlinkMappings() const {
   return m_symlink_paths;
 }
 
-ModuleList::ModuleList()
-    : m_modules(), m_modules_mutex(), m_notifier(nullptr) {}
+ModuleList::ModuleList() : m_modules(), m_modules_mutex() {}
 
 ModuleList::ModuleList(const ModuleList &rhs)
     : m_modules(), m_modules_mutex(), m_notifier(nullptr) {
