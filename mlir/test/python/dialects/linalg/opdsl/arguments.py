@@ -9,15 +9,15 @@ from mlir.dialects.linalg.opdsl.lang import *
 # CHECK:     name: A
 # CHECK:     usage: input
 # CHECK:     shape: affine_map<()[s0, s1, s2] -> (s0, s2)>
-# CHECK:     element_type_var: T
+# CHECK:     type_var: T
 # CHECK:     name: B
 # CHECK:     usage: input
 # CHECK:     shape: affine_map<()[s0, s1, s2] -> (s2, s1)>
-# CHECK:     element_type_var: T
+# CHECK:     type_var: T
 # CHECK:     name: C
 # CHECK:     usage: output
 # CHECK:     shape: affine_map<()[s0, s1, s2] -> (s0, s1)>
-# CHECK:     element_type_var: U
+# CHECK:     type_var: U
 @linalg_structured_op
 def matmul(
     A=TensorDef(T, S.M, S.K),
@@ -28,10 +28,11 @@ def matmul(
 
 # CHECK: ---
 # CHECK-LABEL: fill
-# CHECK: captures:
-# CHECK: - !<LinalgCaptureDef>
-# CHECK:   name: value
-# CHECK:   type_var: T
+# CHECK: args:
+# CHECK:     name: value
+# CHECK:     usage: input
+# CHECK-NOT: shape:
+# CHECK:     type_var: T
 @linalg_structured_op
-def fill(O=TensorDef(T, S.M, S.K, output=True), value=CaptureDef(T)):
+def fill(value=ScalarDef(T), O=TensorDef(T, S.M, S.K, output=True)):
   O[D.m, D.n] = value
