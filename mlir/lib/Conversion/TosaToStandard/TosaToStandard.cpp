@@ -12,7 +12,6 @@
 
 #include "mlir/Conversion/TosaToStandard/TosaToStandard.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -43,7 +42,7 @@ public:
     SmallVector<int64_t> strides;
     strides.resize(sliceOp.getType().template cast<ShapedType>().getRank(), 1);
 
-    rewriter.replaceOpWithNewOp<tensor::ExtractSliceOp>(
+    rewriter.replaceOpWithNewOp<SubTensorOp>(
         sliceOp, sliceOp.getType(), input, ValueRange({}), ValueRange({}),
         ValueRange({}), sliceOp.start(), sliceOp.size(),
         rewriter.getI64ArrayAttr(strides));

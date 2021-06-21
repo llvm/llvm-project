@@ -77,7 +77,7 @@
 //        out of the function at each call site.
 //
 //   iii. as an optimization over ii., it may be possible to reuse an argument
-//        and only want to return a slice.
+//        and only want to return a subtensor.
 //        This may forego allocation by letting *all* callers decide whether to
 //        pass a new *aliasing* memref function argument (i.e. a subview).
 //        Without loss of generality, callers may agree to allocate a new buffer
@@ -284,7 +284,7 @@ LLVM_ATTRIBUTE_UNUSED static InPlaceSpec getInPlace(Value v) {
 //   5. Wheher an op bufferizes to a memory read.
 //   6. Wheher an op bufferizes to a memory write.
 // These interfaces are necessary to distinguish between various cases and allow
-// special inplace behavior for (ExtractSliceOp, InsertSliceOp) pairs.
+// special inplace behavior for (SubTensorOp, SubTensorInsertOp) pairs.
 //===----------------------------------------------------------------------===//
 
 /// Return `true` if the op is explicitly supported by bufferization or if it
@@ -295,8 +295,8 @@ static bool hasKnownBufferizationAliasingBehavior(Operation *op) {
       // clang-format off
       isa<LinalgOp,
           ReturnOp,
-          ExtractSliceOp,
-          InsertSliceOp,
+          SubTensorOp,
+          SubTensorInsertOp,
           VectorTransferOpInterface>(op)
       // clang-format on
       || (none_of(op->getResultTypes(),
@@ -339,7 +339,8 @@ static OpResult getInplaceableOpResult(VectorTransferOpInterface op,
 /// Return the OpResult that may bufferize into the same buffer as `opOperand`
 /// when the op is bufferized inplace.
 /// Return null if no such result exists.
-static OpResult getInplaceableOpResult(InsertSliceOp op, OpOperand &opOperand) {
+static OpResult getInplaceableOpResult(SubTensorInsertOp op,
+                                       OpOperand &opOperand) {
   if (opOperand.get() != op.dest())
     return OpResult();
   return op->getResult(0);
@@ -356,12 +357,12 @@ static OpResult getInplaceableOpResult(OpOperand &opOperand) {
         // Ops that perform destructive updates on operand(s) to produce
         // result(s).
         .Case<LinalgOp,
-              InsertSliceOp,
+              SubTensorInsertOp,
               VectorTransferOpInterface>(
             [&](auto op) { return getInplaceableOpResult(op, opOperand); })
-        // ExtractSliceOp is special, when bufferized inplace it just returns an
+        // SubTensorOp is special, when bufferized inplace it just returns an
         // alias to its operand. Its result is never inplaceable on its operand.
-        .Case([&](ExtractSliceOp op) { return OpResult(); })
+        .Case([&](SubTensorOp op) { return OpResult(); })
         // Other ops.
         .Default([&](Operation *op) { return OpResult(); });
   // clang-format on
@@ -379,10 +380,10 @@ static Optional<OpResult> getAliasingOpResult(OpOperand &opOperand) {
   return TypeSwitch<Operation *, OpResult>(opOperand.getOwner())
       // ReturnOp has no result.
       .Case([&](ReturnOp op) { return OpResult(); })
-      // ExtractSliceOp is different: its result is not inplaceable on op.source
+      // SubTensorOp is different: its result is not inplaceable on op.source
       // but when bufferized inplace, the result is an aliasing subregion of
       // op.source.
-      .Case([&](ExtractSliceOp op) { return op->getResult(0); })
+      .Case([&](SubTensorOp op) { return op->getResult(0); })
       .Default(
           [&](Operation *op) { return getInplaceableOpResult(opOperand); });
 }
@@ -394,9 +395,8 @@ static bool bufferizesToMemoryRead(OpOperand &opOperand) {
   // it. Conservatively return true.
   if (!maybeOpResult)
     return true;
-  // ExtractSliceOp alone doesn't bufferize to a memory read, one of its uses
-  // may.
-  if (isa<ExtractSliceOp>(opOperand.getOwner()))
+  // SubTensorOp alone doesn't bufferize to a memory read, one of its uses may.
+  if (isa<SubTensorOp>(opOperand.getOwner()))
     return false;
   if (auto linalgOp = dyn_cast<LinalgOp>(opOperand.getOwner()))
     return linalgOp.isInputTensor(&opOperand) ||
@@ -425,9 +425,8 @@ bufferizesToMemoryWrite(OpOperand &opOperand,
   // A ReturnOp is not a write.
   if (isa<ReturnOp>(opOperand.getOwner()))
     return false;
-  // ExtractSliceOp alone doesn't bufferize to a memory write, one of its uses
-  // may.
-  if (maybeOpResult->getDefiningOp<ExtractSliceOp>())
+  // SubTensorOp alone doesn't bufferize to a memory write, one of its uses may.
+  if (maybeOpResult->getDefiningOp<SubTensorOp>())
     return false;
   // If we have a matching OpResult, this is a write.
   // Additionally allow to restrict to only inPlace write, if so specified.
@@ -443,10 +442,10 @@ namespace {
 
 /// The BufferizationAliasInfo class maintains a list of buffer aliases and
 /// equivalence classes to support bufferization.
-/// ExtractSliceOps have special behavior, they act as a level of indirection
-/// for bufferization. They don't create reads or writes themselves and analysis
+/// SubTensorOps have special behavior, they act as a level of indirection for
+/// bufferization. They don't create reads or writes themselves and analysis
 /// needs to look through their uses.
-/// ExtractSliceOp + InsertSliceOp have special joint behavior: they may
+/// SubTensorOp + SubTensorInsertOp have special joint behavior: they may
 /// bufferize to the same buffer (i.e. subview), which is what introduces the
 /// need for bufferization classes.
 /// Some of these functionalities could be refactored in a Bufferizer class that
@@ -470,7 +469,7 @@ public:
 
   /// Return true if the buffer to which `operand` would bufferize is equivalent
   /// to some use that would bufferize to a write to a buffer.
-  bool aliasesInPlaceWrite(ExtractSliceOp extractSliceOp) const;
+  bool aliasesInPlaceWrite(SubTensorOp subTensorOp) const;
 
   /// Merge result's and operand's aliasing sets and iterate to a fixed point.
   void bufferizeInPlace(OpResult result, OpOperand &operand,
@@ -496,10 +495,10 @@ public:
   bool existsNonDominatingRead(OpOperand &opOperand,
                                const DominanceInfo &domInfo) const;
 
-  /// Return true if the source of a `insertSliceOp` bufferizes to an
-  /// equivalent ExtractSliceOp.
-  bool isSourceEquivalentToAMatchingExtractSliceOp(
-      InsertSliceOp insertSliceOp) const;
+  /// Return true if the source of a `subTensorInsertOp` bufferizes to an
+  /// equivalent SubTensorOp.
+  bool isSourceEquivalentToAMatchingSubTensorOp(
+      SubTensorInsertOp subTensorInsertOp) const;
 
   /// Print to `os`.
   void print(raw_ostream &os) const;
@@ -520,13 +519,13 @@ private:
   /// Iteratively merge alias sets until a fixed-point.
   void mergeAliasesToFixedPoint();
 
-  /// Return true if the (ExtractSliceOp, InsertSliceOp) pair match (i.e.
+  /// Return true if the (SubTensorOp, SubTensorInsertOp) pair match (i.e.
   /// equivalent operand / result and same offset/sizes/strides specification).
   ///
   /// This is one particular type of relationship between ops on tensors that
   /// reduce to an equivalence on buffers. This should be generalized and
   /// exposed as interfaces on the proper types.
-  bool areEquivalentExtractSliceOps(ExtractSliceOp st, InsertSliceOp sti) const;
+  bool areEquivalentSubTensorOps(SubTensorOp st, SubTensorInsertOp sti) const;
 
   /// Return true if there is a `candidateOp` that would write to memory after
   /// bufferization and such that:
@@ -659,10 +658,10 @@ bool BufferizationAliasInfo::aliasesNonWriteableBuffer(
 /// Return true if the buffer to which `operand` would bufferize is equivalent
 /// to some use that would bufferize to a write to a buffer.
 bool BufferizationAliasInfo::aliasesInPlaceWrite(
-    ExtractSliceOp extractSliceOp) const {
+    SubTensorOp subTensorOp) const {
   LDBG("----Start aliasesInPlaceWrite\n");
-  LDBG("-------for op: " << *extractSliceOp.getOperation() << '\n');
-  for (Value v : getAliasInfoRef(extractSliceOp.result())) {
+  LDBG("-------for op: " << *subTensorOp.getOperation() << '\n');
+  for (Value v : getAliasInfoRef(subTensorOp.result())) {
     for (auto &use : v.getUses()) {
       if (bufferizesToMemoryWrite(use, InPlaceSpec::True)) {
         LDBG("-----------wants to bufferize to inPlace write: "
@@ -671,7 +670,7 @@ bool BufferizationAliasInfo::aliasesInPlaceWrite(
       }
     }
   }
-  LDBG("----------->extract_slice does not alias an inplace write");
+  LDBG("----------->subtensor does not alias an inplace write");
   return false;
 }
 
@@ -797,16 +796,16 @@ bool BufferizationAliasInfo::existsNonDominatingRead(
   return false;
 }
 
-/// Return true if the source of a `insertSliceOp` bufferizes to an
-/// equivalent ExtractSliceOp.
-bool BufferizationAliasInfo::isSourceEquivalentToAMatchingExtractSliceOp(
-    InsertSliceOp insertSliceOp) const {
-  auto leaderIt = equivalentInfo.findLeader(insertSliceOp.source());
+/// Return true if the source of a `subTensorInsertOp` bufferizes to an
+/// equivalent SubTensorOp.
+bool BufferizationAliasInfo::isSourceEquivalentToAMatchingSubTensorOp(
+    SubTensorInsertOp subTensorInsertOp) const {
+  auto leaderIt = equivalentInfo.findLeader(subTensorInsertOp.source());
   for (auto mit = leaderIt, meit = equivalentInfo.member_end(); mit != meit;
        ++mit) {
-    if (areEquivalentExtractSliceOps(
-            dyn_cast_or_null<ExtractSliceOp>(mit->v.getDefiningOp()),
-            insertSliceOp))
+    if (areEquivalentSubTensorOps(
+            dyn_cast_or_null<SubTensorOp>(mit->v.getDefiningOp()),
+            subTensorInsertOp))
       return true;
   }
   return false;
@@ -875,8 +874,8 @@ void BufferizationAliasInfo::mergeAliasesToFixedPoint() {
 /// This is one particular type of relationship between ops on tensors that
 /// reduce to an equivalence on buffers. This should be generalized and exposed
 /// as interfaces on the proper types.
-bool BufferizationAliasInfo::areEquivalentExtractSliceOps(
-    ExtractSliceOp st, InsertSliceOp sti) const {
+bool BufferizationAliasInfo::areEquivalentSubTensorOps(
+    SubTensorOp st, SubTensorInsertOp sti) const {
   if (!st || !sti)
     return false;
   if (!equivalentInfo.isEquivalent(st.source(), sti.dest()))
@@ -951,47 +950,47 @@ bool BufferizationAliasInfo::isClobberedWriteBeforeRead(
     return false;
   }
 
-  // The case `opToBufferize` isa ExtractSliceOp is important enough that we
-  // look for it specifically. The key information to discover is whether the
-  // aliasing read or write come from a matching InsertSliceOp.
+  // The case `opToBufferize` isa SubTensorOp is important enough that we look
+  // for it specifically. The key information to discover is whether the
+  // aliasing read or write come from a matching SubTensorInsertOp.
   // Such a pattern is introduced by tiling and is the key inplace condition
   // not to miss.
-  if (auto extractSliceOp = dyn_cast<ExtractSliceOp>(opToBufferize)) {
-    if (auto insertSliceOp = dyn_cast<InsertSliceOp>(aliasingReadOp)) {
-      // %1 = extract_slice %0[%offset_sizes_and_strides_1]
+  if (auto subTensorOp = dyn_cast<SubTensorOp>(opToBufferize)) {
+    if (auto subTensorInsertOp = dyn_cast<SubTensorInsertOp>(aliasingReadOp)) {
+      // %1 = subtensor %0[%offset_sizes_and_strides_1]
       //
       // ... // 0 or more of inplace compute that reduces to: %X is an
       //     // aliasingWrite equivalent to %1.
       // %W = inplace_write(%1)
       //
-      // // aliasingRead %Y in insert_slice
-      // ... = insert_slice %W into %R[%offset_sizes_and_strides_1]
-      if (aliasingRead.get() == insertSliceOp.dest() &&
+      // // aliasingRead %Y in subtensor_insert
+      // ... = subtensor_insert %W into %R[%offset_sizes_and_strides_1]
+      if (aliasingRead.get() == subTensorInsertOp.dest() &&
           // TODO: This is currently too restrictive and misses clobberings.
           // When available, use container-containee analysis: the condition
           // should be that the `aliasingWrite` is contained within
-          // `insertSliceOp.source()`.
+          // `subTensorInsertOp.source()`.
           equivalentInfo.isEquivalent(aliasingWrite.get(),
-                                      insertSliceOp.source()) &&
-          areEquivalentExtractSliceOps(extractSliceOp, insertSliceOp)) {
-        LDBG("---->clobbering matching extract_slice/insert_slice\n");
+                                      subTensorInsertOp.source()) &&
+          areEquivalentSubTensorOps(subTensorOp, subTensorInsertOp)) {
+        LDBG("---->clobbering matching subtensor/subtensor_insert\n");
         return true;
       }
-      // %1 = extract_slice %0[%offset_sizes_and_strides_1]
+      // %1 = subtensor %0[%offset_sizes_and_strides_1]
       //
       // ... // bunch of inplace ops that reduce to %X, equivalent to %1.
       // %X = inplace_write(%1)
       //
-      // // aliasingRead %X in insert_slice
-      // // aliasingWrite %Y in insert_slice
-      // ... = insert_slice %X into %Y[%offset_sizes_and_strides_1]
+      // // aliasingRead %X in subtensor_insert
+      // // aliasingWrite %Y in subtensor_insert
+      // ... = subtensor_insert %X into %Y[%offset_sizes_and_strides_1]
       if (aliasingReadOp == aliasingWriteOp) {
-        assert(aliasingRead.get() == insertSliceOp.source() &&
-               "expected read to source of insert_slice");
-        assert(aliasingWrite.get() == insertSliceOp.dest() &&
-               "expected write to dest of insert_slice");
-        if (areEquivalentExtractSliceOps(extractSliceOp, insertSliceOp)) {
-          LDBG("---->clobbering matching extract_slice/insert_slice\n");
+        assert(aliasingRead.get() == subTensorInsertOp.source() &&
+               "expected read to source of subtensor_insert");
+        assert(aliasingWrite.get() == subTensorInsertOp.dest() &&
+               "expected write to dest of subtensor_insert");
+        if (areEquivalentSubTensorOps(subTensorOp, subTensorInsertOp)) {
+          LDBG("---->clobbering matching subtensor/subtensor_insert\n");
           return true;
         }
       }
@@ -1263,114 +1262,114 @@ static LogicalResult bufferize(OpBuilder &b, ReturnOp returnOp,
   return success();
 }
 
-/// Bufferize ExtractSliceOp to subview with optional alloc + copy depending on
+/// Bufferize SubTensorOp to subview with optional alloc + copy depending on
 /// whether or not it is marked inplaceable.
-/// Note that `getInplaceableOpResult` on a ExtractSliceOp always returns null.
-/// As consequence a ExtractSliceOp always alloc + copy when taken in
+/// Note that `getInplaceableOpResult` on a SubTensorOp always returns null.
+/// As consequence a SubTensorOp always alloc + copy when taken in
 /// isolation.
-static LogicalResult bufferize(OpBuilder &b, ExtractSliceOp extractSliceOp,
+static LogicalResult bufferize(OpBuilder &b, SubTensorOp subTensorOp,
                                BlockAndValueMapping &bvm,
                                const BufferizationAliasInfo &aliasInfo) {
-  LDBG("bufferize: " << *extractSliceOp << '\n');
+  LDBG("bufferize: " << *subTensorOp << '\n');
 
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
-  b.setInsertionPoint(extractSliceOp);
+  b.setInsertionPoint(subTensorOp);
 
-  Location loc = extractSliceOp.getLoc();
+  Location loc = subTensorOp.getLoc();
   // Bail if source was not bufferized.
-  Value srcMemref = lookup(bvm, extractSliceOp.source());
+  Value srcMemref = lookup(bvm, subTensorOp.source());
   if (!srcMemref)
     return failure();
   auto srcMemrefType = srcMemref.getType().cast<MemRefType>();
-  auto dstTensorType =
-      extractSliceOp.result().getType().cast<RankedTensorType>();
+  auto dstTensorType = subTensorOp.result().getType().cast<RankedTensorType>();
 
   // If not inplaceable, alloc.
   Value alloc;
-  auto inPlace = getInPlace(extractSliceOp->getResult(0));
+  auto inPlace = getInPlace(subTensorOp->getResult(0));
   if (inPlace != InPlaceSpec::True) {
-    alloc = createNewAllocDeallocPairForShapedValue(b, loc,
-                                                    extractSliceOp.result());
+    alloc =
+        createNewAllocDeallocPairForShapedValue(b, loc, subTensorOp.result());
     b.setInsertionPointAfter(alloc.getDefiningOp());
   }
 
   // Bufferize to subview.
   auto subviewMemRefType =
       memref::SubViewOp::inferRankReducedResultType(
-          dstTensorType.getRank(), srcMemrefType,
-          extractSliceOp.getMixedOffsets(), extractSliceOp.getMixedSizes(),
-          extractSliceOp.getMixedStrides())
+          dstTensorType.getRank(), srcMemrefType, subTensorOp.getMixedOffsets(),
+          subTensorOp.getMixedSizes(), subTensorOp.getMixedStrides())
           .cast<MemRefType>();
   Value subView = b.create<memref::SubViewOp>(
-      loc, subviewMemRefType, srcMemref, extractSliceOp.getMixedOffsets(),
-      extractSliceOp.getMixedSizes(), extractSliceOp.getMixedStrides());
+      loc, subviewMemRefType, srcMemref, subTensorOp.getMixedOffsets(),
+      subTensorOp.getMixedSizes(), subTensorOp.getMixedStrides());
 
   /// If not inplaceable, copy.
   if (alloc) {
-    b.create<CopyOp>(extractSliceOp.getLoc(), subView, alloc);
+    b.create<CopyOp>(subTensorOp.getLoc(), subView, alloc);
     subView = alloc;
   }
 
-  map(bvm, extractSliceOp.result(), subView);
+  map(bvm, subTensorOp.result(), subView);
   return success();
 }
 
-static LogicalResult bufferize(OpBuilder &b, InsertSliceOp insertSliceOp,
+static LogicalResult bufferize(OpBuilder &b,
+                               SubTensorInsertOp subTensorInsertOp,
                                BlockAndValueMapping &bvm,
                                const BufferizationAliasInfo &aliasInfo) {
-  LDBG("bufferize: " << *insertSliceOp << '\n');
+  LDBG("bufferize: " << *subTensorInsertOp << '\n');
 
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
-  b.setInsertionPoint(insertSliceOp);
-  Location loc = insertSliceOp.getLoc();
+  b.setInsertionPoint(subTensorInsertOp);
+  Location loc = subTensorInsertOp.getLoc();
 
-  Value dstMemref = lookup(bvm, insertSliceOp.dest());
+  Value dstMemref = lookup(bvm, subTensorInsertOp.dest());
   if (!dstMemref)
     return failure();
-  auto inPlace = getInPlace(insertSliceOp->getResult(0));
+  auto inPlace = getInPlace(subTensorInsertOp->getResult(0));
   if (inPlace != InPlaceSpec::True) {
-    // Since insert_slice arise from tiling and introducing loops, this
+    // Since subtensor_insert arise from tiling and introducing loops, this
     // case is generally a deal breaker. When used with loops, this ends up
     // cloning the whole tensor on every single iteration and is a symptom
     // of a catastrophically bad scheduling decision.
     // TODO: be very loud about it or even consider failing the pass.
-    Value newDstMemref =
-        createNewAllocDeallocPairForShapedValue(b, loc, insertSliceOp.result());
+    Value newDstMemref = createNewAllocDeallocPairForShapedValue(
+        b, loc, subTensorInsertOp.result());
     b.setInsertionPointAfter(newDstMemref.getDefiningOp());
-    b.create<CopyOp>(insertSliceOp.getLoc(), dstMemref, newDstMemref);
+    b.create<CopyOp>(subTensorInsertOp.getLoc(), dstMemref, newDstMemref);
     dstMemref = newDstMemref;
   }
   auto dstMemrefType = dstMemref.getType().cast<MemRefType>();
 
-  Value srcMemref = lookup(bvm, insertSliceOp.source());
+  Value srcMemref = lookup(bvm, subTensorInsertOp.source());
   if (!srcMemref)
     return failure();
   auto subviewMemRefType =
       memref::SubViewOp::inferRankReducedResultType(
-          insertSliceOp.getSourceType().getRank(), dstMemrefType,
-          insertSliceOp.getMixedOffsets(), insertSliceOp.getMixedSizes(),
-          insertSliceOp.getMixedStrides())
+          subTensorInsertOp.getSourceType().getRank(), dstMemrefType,
+          subTensorInsertOp.getMixedOffsets(),
+          subTensorInsertOp.getMixedSizes(),
+          subTensorInsertOp.getMixedStrides())
           .cast<MemRefType>();
 
   // A copy of the source buffer is needed if either:
   //   - The producer of `source` is not inplace. This is the case where a
-  //     slice is computed out of place into the inplace full tensor.
+  //     subtensor is computed out of place into the inplace full tensor.
   //   - The result is not inplace. This is the case where the whole tensor is
   //     cloned and the clone needs to be updated.
-  if (!aliasInfo.isSourceEquivalentToAMatchingExtractSliceOp(insertSliceOp) ||
+  if (!aliasInfo.isSourceEquivalentToAMatchingSubTensorOp(subTensorInsertOp) ||
       inPlace != InPlaceSpec::True) {
-    LDBG("insert_slice needs extra source copy: " << insertSliceOp.source()
-                                                  << " -> copy\n");
+    LDBG("subtensor_insert needs extra source copy: "
+         << subTensorInsertOp.source() << " -> copy\n");
     // Take a subview of the dst.
     Value subView = b.create<memref::SubViewOp>(
-        loc, subviewMemRefType, dstMemref, insertSliceOp.getMixedOffsets(),
-        insertSliceOp.getMixedSizes(), insertSliceOp.getMixedStrides());
-    b.create<CopyOp>(insertSliceOp.getLoc(), srcMemref, subView);
+        loc, subviewMemRefType, dstMemref, subTensorInsertOp.getMixedOffsets(),
+        subTensorInsertOp.getMixedSizes(), subTensorInsertOp.getMixedStrides());
+    b.create<CopyOp>(subTensorInsertOp.getLoc(), srcMemref, subView);
   }
 
-  map(bvm, insertSliceOp.result(), dstMemref);
+  map(bvm, subTensorInsertOp.result(), dstMemref);
 
   return success();
 }
@@ -1434,54 +1433,54 @@ static LogicalResult bufferize(OpBuilder &b, VectorTransferOpInterface op,
 //===----------------------------------------------------------------------===//
 
 ///
-/// Rationale for bufferizing `%1 = tensor.extract_slice %0[...]` inplace.
+/// Rationale for bufferizing `%1 = subtensor %0[...]` inplace.
 /// ===========================================================
 ///
-/// When bufferized out of place, a ExtractSlice lowers to alloc + copy. This
+/// When bufferized out of place, a SubTensorOp lowers to alloc + copy. This
 /// cannot change the flow of information for either the source or the
 /// result buffers.
 ///
-/// When bufferized inplace, a ExtractSliceOp does not by itself create any read
-/// or write from memory. Instead, it has the effect of merging the alias sets
-/// of the source and the result buffers.
+/// When bufferized inplace, a SubTensorOp does not by itself create any read or
+/// write from memory. Instead, it has the effect of merging the alias sets of
+/// the source and the result buffers.
 ///
 /// An analysis is required to ensure inplace bufferization would not result in
 /// RaW dependence violations.
-static void bufferizableInPlaceAnalysis(ExtractSliceOp extractSliceOp,
+static void bufferizableInPlaceAnalysis(SubTensorOp subTensorOp,
                                         BufferizationAliasInfo &aliasInfo,
                                         const DominanceInfo &domInfo) {
   LDBG('\n');
-  LDBG("Try to bufferize extract_slice inplace: " << *extractSliceOp << '\n');
+  LDBG("Try to bufferize subtensor inplace: " << *subTensorOp << '\n');
 
-  // If `extractSliceOp` were to be bufferized inplace, it cannot end up
+  // If `subTensorOp` were to be bufferized inplace, it cannot end up
   // aliasing a write into a non-writeable buffer.
   bool wouldCreateAliasingWriteToNonWriteableBuffer =
-      aliasInfo.aliasesInPlaceWrite(extractSliceOp) &&
-      aliasInfo.aliasesNonWriteableBuffer(extractSliceOp->getOpOperand(0));
+      aliasInfo.aliasesInPlaceWrite(subTensorOp) &&
+      aliasInfo.aliasesNonWriteableBuffer(subTensorOp->getOpOperand(0));
 
   if (wouldCreateAliasingWriteToNonWriteableBuffer)
     LDBG("->the corresponding buffer is not writeable\n");
   LDBG("->bufferizes to writeable inplace buffer\n");
 
-  // In any of extractSliceOp.result's aliases, can we find 2 such that we hit
+  // In any of subTensorOp.result's aliases, can we find 2 such that we hit
   // an interfering write?
-  Value s = extractSliceOp.source(), r = extractSliceOp.result();
+  Value s = subTensorOp.source(), r = subTensorOp.result();
   bool foundInterference = wouldCreateAliasingWriteToNonWriteableBuffer ||
                            // Do not consider (s, s) and (r, r) as all the
                            // aliasings already exist by construction; we are
                            // interested in new interfering aliases only.
                            aliasInfo.wouldCreateReadAfterWriteInterference(
-                               s, r, extractSliceOp, domInfo) ||
+                               s, r, subTensorOp, domInfo) ||
                            aliasInfo.wouldCreateReadAfterWriteInterference(
-                               r, s, extractSliceOp, domInfo);
+                               r, s, subTensorOp, domInfo);
   if (foundInterference) {
-    setInPlaceOpResult(extractSliceOp->getResult(0), InPlaceSpec::False);
+    setInPlaceOpResult(subTensorOp->getResult(0), InPlaceSpec::False);
   } else {
-    setInPlaceOpResult(extractSliceOp->getResult(0), InPlaceSpec::True);
-    aliasInfo.bufferizeInPlace(extractSliceOp->getResult(0),
-                               extractSliceOp->getOpOperand(0));
+    setInPlaceOpResult(subTensorOp->getResult(0), InPlaceSpec::True);
+    aliasInfo.bufferizeInPlace(subTensorOp->getResult(0),
+                               subTensorOp->getOpOperand(0));
   }
-  LDBG("Done bufferizing extract_slice\n");
+  LDBG("Done bufferizing subtensor\n");
 }
 
 /// Analyze the (opOperand, result) pair to determine whether the result can
@@ -1491,8 +1490,8 @@ static void bufferizableInPlaceAnalysis(OpOperand &operand, OpResult result,
                                         BufferizationAliasInfo &aliasInfo,
                                         const DominanceInfo &domInfo) {
   Operation *op = result.getDefiningOp();
-  assert(result && !isa<ExtractSliceOp>(op) &&
-         "expected OpResult not coming from a ExtractSliceOp");
+  assert(result && !isa<SubTensorOp>(op) &&
+         "expected OpResult not coming from a SubTensorOp");
 
   int64_t resultNumber = result.getResultNumber();
   (void)resultNumber;
@@ -1542,47 +1541,48 @@ static void inPlaceAnalysisFuncOpInternals(FuncOp funcOp,
          "expected a funcOp definition with a body");
 
   // Collect ops so we can build our own traversal.
-  SmallVector<ExtractSliceOp> extractSliceOps;
-  SmallVector<InsertSliceOp> insertSliceOps;
-  SmallVector<Operation *> nonSliceOps;
+  SmallVector<SubTensorOp> subTensorOps;
+  SmallVector<SubTensorInsertOp> subTensorInsertOps;
+  SmallVector<Operation *> nonSubTensorOps;
   funcOp.walk([&](Operation *op) {
-    if (auto extractSliceOp = dyn_cast<ExtractSliceOp>(op))
-      return extractSliceOps.push_back(extractSliceOp);
-    if (auto insertSliceOp = dyn_cast<InsertSliceOp>(op))
-      return insertSliceOps.push_back(insertSliceOp);
+    if (auto subTensorOp = dyn_cast<SubTensorOp>(op))
+      return subTensorOps.push_back(subTensorOp);
+    if (auto subTensorInsertOp = dyn_cast<SubTensorInsertOp>(op))
+      return subTensorInsertOps.push_back(subTensorInsertOp);
     auto isaTensor = [](Type t) { return t.isa<TensorType>(); };
     // No tensors => no buffers.
     if (none_of(op->getOperandTypes(), isaTensor) &&
         none_of(op->getResultTypes(), isaTensor))
       return;
-    nonSliceOps.push_back(op);
+    nonSubTensorOps.push_back(op);
   });
 
-  // Bufferize InsertSliceOp greedily: we almost never want to bufferize
+  // Bufferize SubTensorInsertOp greedily: we almost never want to bufferize
   // the tensor "inserted into" to become out-of-place. This implementation
-  // does not distinguish between different InsertSliceOp. If we want
-  // finer-grained behavior, we could order the InsertSliceOp with some metric.
-  // Walk InsertSliceOp in reverse for better interference behavior.
-  for (InsertSliceOp insertSliceOp : reverse(insertSliceOps)) {
-    OpOperand &destOpOperand = insertSliceOp->getOpOperand(1);
+  // does not distinguish between different SubTensorInsertOps. If we want
+  // finer-grained behavior, we could order the SubTensorInsertOps with some
+  // metric.
+  // Walk SubTensorInsertOps in reverse for better interference behavior.
+  for (SubTensorInsertOp subTensorInsertOp : reverse(subTensorInsertOps)) {
+    OpOperand &destOpOperand = subTensorInsertOp->getOpOperand(1);
     bufferizableInPlaceAnalysis(destOpOperand,
                                 getInplaceableOpResult(destOpOperand),
                                 aliasInfo, domInfo);
   }
 
-  // Bufferize all ops except ExtractSliceOp and InsertSliceOp which are handled
-  // separately.
+  // Bufferize all ops except SubTensorOp and SubTensorInsertOp which are
+  // handled separately.
   // Walk other ops in reverse for better interference behavior.
-  for (Operation *op : reverse(nonSliceOps))
+  for (Operation *op : reverse(nonSubTensorOps))
     for (OpOperand &opOperand : op->getOpOperands())
       if (OpResult result = getInplaceableOpResult(opOperand))
         bufferizableInPlaceAnalysis(opOperand, result, aliasInfo, domInfo);
 
-  // Finally, bufferize ExtractSliceOp.
-  // Walk ExtractSliceOps in reverse for better clobbering behavior: it is
-  // easier to detect clobbers of smaller slices before larger ones.
-  for (ExtractSliceOp extractSliceOp : reverse(extractSliceOps))
-    bufferizableInPlaceAnalysis(extractSliceOp, aliasInfo, domInfo);
+  // Finally, bufferize SubTensorOp.
+  // Walk SubTensorOps in reverse for better clobbering behavior: it is easier
+  // to detect clobbers of smaller subtensors before larger ones.
+  for (SubTensorOp subTensorOp : reverse(subTensorOps))
+    bufferizableInPlaceAnalysis(subTensorOp, aliasInfo, domInfo);
 
   LDBG("End InPlaceAnalysisFuncOpInternals:\n" << funcOp << '\n');
 }
@@ -1611,8 +1611,8 @@ bufferizeFuncOpInternals(FuncOp funcOp, BlockAndValueMapping &bvm,
             .Case<memref::DimOp,
                   LinalgOp,
                   ReturnOp,
-                  ExtractSliceOp,
-                  InsertSliceOp,
+                  SubTensorOp,
+                  SubTensorInsertOp,
                   VectorTransferOpInterface>(
                 [&](auto op) { return bufferize(b, op, bvm, aliasInfo); })
             // clang-format on

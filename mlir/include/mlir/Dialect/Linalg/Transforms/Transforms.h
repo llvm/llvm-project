@@ -12,7 +12,6 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/Utils.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/Identifier.h"
 #include "mlir/IR/PatternMatch.h"
@@ -1078,12 +1077,12 @@ LogicalResult applyStagedPatterns(
     const FrozenRewritePatternSet &stage2Patterns,
     function_ref<LogicalResult(Operation *)> stage3Lambda = nullptr);
 
-/// Rewrite extract_slice(pad_tensor(x)) into pad_tensor(extract_slice(x)).
-struct ExtractSliceOfPadTensorSwapPattern
-    : public OpRewritePattern<tensor::ExtractSliceOp> {
-  using OpRewritePattern<tensor::ExtractSliceOp>::OpRewritePattern;
+/// Rewrite subtensor(pad_tensor(x)) into pad_tensor(subtensor(x)).
+struct SubTensorOfPadTensorSwapPattern
+    : public OpRewritePattern<SubTensorOp> {
+  using OpRewritePattern<SubTensorOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(tensor::ExtractSliceOp sliceOp,
+  LogicalResult matchAndRewrite(SubTensorOp subTensorOp,
                                 PatternRewriter &rewriter) const override;
 };
 
