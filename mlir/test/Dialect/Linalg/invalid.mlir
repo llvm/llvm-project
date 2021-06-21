@@ -96,13 +96,28 @@ func @generic_wrong_dim_in_map(%arg0: memref<1xi32>) {
 // -----
 
 func @generic_one_d_view(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
-  // expected-error @+1 {{expected shaped value rank (1) to match the result rank of indexing_map #0 (2)}}
+  // expected-error @+1 {{expected operand rank (1) to match the result rank of indexing_map #0 (2)}}
   linalg.generic {
     indexing_maps =  [ affine_map<() -> (0, 0)> ],
     iterator_types = []}
       outs(%arg0 : memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
     ^bb(%f : f32):
       linalg.yield %f: f32
+  }
+}
+
+// -----
+
+func @generic_scalar_view(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
+  %cst = constant 0.0 : f32
+  // expected-error @+1 {{expected operand rank (0) to match the result rank of indexing_map #0 (1)}}
+  linalg.generic {
+    indexing_maps =  [ affine_map<() -> (0)>, affine_map<() -> (0, 0)> ],
+    iterator_types = []}
+      ins(%cst : f32)
+      outs(%arg0 : memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
+    ^bb(%0 : f32, %1 : f32):
+      linalg.yield %0: f32
   }
 }
 
@@ -174,7 +189,7 @@ func @generic_empty_region(%arg0: memref<f32>) {
 // -----
 
 func @generic_mismatched_num_arguments(%arg0: memref<f32>) {
-  // expected-error @+1 {{expected as many non-induction variable region arguments as the number of shaped operands}}
+  // expected-error @+1 {{expected as many non-induction variable region arguments as the number of input/output operands}}
   linalg.generic {
       indexing_maps =  [ affine_map<() -> ()>, affine_map<() -> ()> ],
       iterator_types = []}
@@ -186,8 +201,8 @@ func @generic_mismatched_num_arguments(%arg0: memref<f32>) {
 
 // -----
 
-func @generic_block_arg_type(%arg0: memref<f32>) {
-  // expected-error @+1 {{expected type of bb argument #0 ('i1') to match element type of corresponding shaped operand ('f32')}}
+func @generic_shaped_operand_block_arg_type(%arg0: memref<f32>) {
+  // expected-error @+1 {{expected type of bb argument #0 ('i1') to match element or self type of the corresponding operand ('f32')}}
   linalg.generic {
     indexing_maps =  [ affine_map<() -> ()> ],
     iterator_types = []}
@@ -199,8 +214,21 @@ func @generic_block_arg_type(%arg0: memref<f32>) {
 
 // -----
 
+func @generic_scalar_operand_block_arg_type(%arg0: f32) {
+  // expected-error @+1 {{expected type of bb argument #0 ('i1') to match element or self type of the corresponding operand ('f32')}}
+  linalg.generic {
+    indexing_maps =  [ affine_map<() -> ()> ],
+    iterator_types = []}
+      outs(%arg0 : f32) {
+    ^bb(%i: i1):
+    linalg.yield %i : i1
+  }
+}
+
+// -----
+
 func @indexed_generic_block_arg_count(%arg0: memref<?xf32>) {
-  // expected-error @+1 {{expected as many non-induction variable region arguments as the number of shaped operands}}
+  // expected-error @+1 {{expected as many non-induction variable region arguments as the number of input/output operands}}
   linalg.indexed_generic {
     indexing_maps =  [ affine_map<(i) -> (i)> ],
     iterator_types = ["parallel"]}
@@ -226,7 +254,7 @@ func @indexed_generic_block_induction_var_arg_type(%arg0: memref<?xf32>) {
 // -----
 
 func @indexed_generic_block_arg_type(%arg0: memref<?xf32>) {
-  // expected-error @+1 {{expected type of bb argument #1 ('i1') to match element type of corresponding shaped operand ('f32')}}
+  // expected-error @+1 {{expected type of bb argument #1 ('i1') to match element or self type of the corresponding operand ('f32')}}
   linalg.indexed_generic {
     indexing_maps =  [ affine_map<(d0) -> (d0)> ],
     iterator_types = ["parallel"]}
@@ -239,7 +267,7 @@ func @indexed_generic_block_arg_type(%arg0: memref<?xf32>) {
 // -----
 
 func @indexed_generic_arg_count(%arg0: memref<f32>) {
-  // expected-error @+1 {{expected as many non-induction variable region arguments as the number of shaped operands}}
+  // expected-error @+1 {{expected as many non-induction variable region arguments as the number of input/output operands}}
   linalg.indexed_generic {
     indexing_maps =  [ affine_map<()[] -> ()> ],
     iterator_types = []}
@@ -401,7 +429,7 @@ func @reshape(%arg0: memref<?x?x?xf32>) {
 func @pooling_rank_mismatch(%arg0: memref<?x?x?xf32>,
                             %arg1: memref<2x3xf32>,
                             %arg2: memref<?x?x?xf32>) {
-  // expected-error @+1 {{expected shaped value rank (2) to match the result rank of indexing_map #1 (3)}}
+  // expected-error @+1 {{expected operand rank (2) to match the result rank of indexing_map #1 (3)}}
   linalg.pooling_max(%arg0, %arg1, %arg2) {strides = [2, 1, 2]}:
     memref<?x?x?xf32>, memref<2x3xf32>, memref<?x?x?xf32>
   return
@@ -410,7 +438,7 @@ func @pooling_rank_mismatch(%arg0: memref<?x?x?xf32>,
 // -----
 
 func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?xf32>, %c3: memref<?x?x?xf32>) {
-  // expected-error @+1 {{expected shaped value rank (2) to match the result rank of indexing_map #1 (3)}}
+  // expected-error @+1 {{expected operand rank (2) to match the result rank of indexing_map #1 (3)}}
   linalg.batch_matmul ins(%a3, %b3: memref<?x?x?xf32>, memref<?x?xf32>)
                      outs(%c3 : memref<?x?x?xf32>)
   return
@@ -714,7 +742,7 @@ func @illegal_fill_tensor_with_memref_return
 // -----
 
 func @invalid_static_matmul(%arg0: memref<2x4xf32>, %arg1: memref<3x4xf32>, %arg2: memref<2x4xf32>) {
-  // expected-error @+1 {{inferred shaped operand #1 has shape's dimension #0 to be 4, but found 3}}
+  // expected-error @+1 {{inferred input/output operand #1 has shape's dimension #0 to be 4, but found 3}}
   linalg.matmul ins(%arg0, %arg1 : memref<2x4xf32>, memref<3x4xf32>)
                       outs(%arg2 :memref<2x4xf32>)
   return
@@ -723,7 +751,7 @@ func @invalid_static_matmul(%arg0: memref<2x4xf32>, %arg1: memref<3x4xf32>, %arg
 // -----
 
 func @invalid_static_2d_conv(%input : memref<1x3x4x2xf32>, %filter: memref<3x2x2x1xf32>, %output: memref<1x2x3x1xf32>) {
-  // expected-error @+1 {{inferred shaped operand #0 has shape's dimension #1 to be greater than or equal to 4, but found 3}}
+  // expected-error @+1 {{inferred input/output operand #0 has shape's dimension #1 to be greater than or equal to 4, but found 3}}
   linalg.conv_2d_input_nhwc_filter_hwcf
     { dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64>}
     ins(%input, %filter : memref<1x3x4x2xf32>, memref<3x2x2x1xf32>)

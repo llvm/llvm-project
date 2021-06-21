@@ -586,6 +586,19 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
+        Return true if the `opOperand` is a scalar value.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isScalar",
+      /*args=*/(ins "OpOperand*":$opOperand),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        assert(opOperand->getOwner() == this->getOperation());
+        return !opOperand->get().getType().template isa<ShapedType>();
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the input or output indexing map for `opOperand`.
       }],
       /*retTy=*/"AffineMap",
@@ -694,10 +707,13 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return this->getOperation()->getNumResults() == 0 &&
-          llvm::all_of(getInputAndOutputOperands(),
-            [](OpOperand *opOperand) {
-              return opOperand->get().getType().template isa<MemRefType>();
-            });
+          llvm::all_of(getInputOperands(), [&](OpOperand *opOperand) {
+            return isScalar(opOperand) ||
+              opOperand->get().getType().template isa<MemRefType>();
+          }) &&
+          llvm::all_of(getOutputOperands(), [](OpOperand *opOperand) {
+            return opOperand->get().getType().template isa<MemRefType>();
+          });
       }]
     >,
     InterfaceMethod<
@@ -709,8 +725,12 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return llvm::all_of(getInputAndOutputOperands(),
-          [](OpOperand *opOperand) {
+        return
+          llvm::all_of(getInputOperands(), [&](OpOperand *opOperand) {
+            return isScalar(opOperand) ||
+              opOperand->get().getType().template isa<RankedTensorType>();
+          }) &&
+          llvm::all_of(getOutputOperands(), [](OpOperand *opOperand) {
             return opOperand->get().getType().template isa<RankedTensorType>();
           });
       }]
