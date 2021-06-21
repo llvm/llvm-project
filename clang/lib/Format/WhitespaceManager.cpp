@@ -1068,9 +1068,6 @@ void WhitespaceManager::alignArrayInitializersLeftJustified(
     Changes[CellIter->Index].Spaces = CellDescs.InitialSpaces;
   ++CellIter;
   for (auto i = 1U; i < CellDescs.CellCount; i++, ++CellIter) {
-    unsigned NetWidth = 0U;
-    if (isSplitCell(*CellIter))
-      NetWidth = getNetWidth(Cells.begin(), CellIter, CellDescs.InitialSpaces);
     auto MaxNetWidth = getMaximumNetWidth(
         Cells.begin(), CellIter, CellDescs.InitialSpaces, CellDescs.CellCount);
     auto ThisNetWidth =
