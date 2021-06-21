@@ -1,12 +1,12 @@
 ; RUN: opt -function-specialization -force-function-specialization -S < %s | FileCheck %s
 
-; FIXME: Function foo gets specialised even though it contains an instrinsic
+; Check that function foo does not gets specialised as it contains an instrinsic
 ; that is marked as NoDuplicate.
 ; Please note that the use of the hardwareloop intrinsic is arbitrary; it's
 ; just an easy to use intrinsic that has NoDuplicate.
 
-; CHECK: @foo.1(
-; CHECK: @foo.2(
+; CHECK-NOT: @foo.1(
+; CHECK-NOT: @foo.2(
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
