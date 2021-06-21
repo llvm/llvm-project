@@ -94,7 +94,7 @@
 // or stores.
 //
 // The frame pointer might be chosen to be r7 or r11, depending on the target
-// architecture and operating system. See ARMSubtarget::useR7AsFramePointer for
+// architecture and operating system. See ARMSubtarget::getFramePointerReg for
 // details.
 //
 // Outgoing function arguments must be at the bottom of the stack frame when

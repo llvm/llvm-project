@@ -681,7 +681,7 @@ bool Thumb1FrameLowering::emitPopSpecialFixUp(MachineBasicBlock &MBB,
   // R7 may be used as a frame pointer, hence marked as not generally
   // allocatable, however there's no reason to not use it as a temporary for
   // restoring LR.
-  if (STI.useR7AsFramePointer())
+  if (STI.getFramePointerReg() == ARM::R7)
     PopFriendly.set(ARM::R7);
 
   assert(PopFriendly.any() && "No allocatable pop-friendly register?!");
