@@ -421,3 +421,36 @@ void shouldNotReportLeak() {
   Derived *p = (Derived *)allocate();
   delete p;
 }
+
+template<void *allocate_fn(size_t)>
+void* allocate_via_nttp(size_t n) {
+  return allocate_fn(n);
+}
+
+template<void deallocate_fn(void*)>
+void deallocate_via_nttp(void* ptr) {
+  deallocate_fn(ptr);
+}
+
+void testNTTPNewNTTPDelete() {
+  void* p = allocate_via_nttp<::operator new>(10);
+  deallocate_via_nttp<::operator delete>(p);
+} // no warn
+
+void testNTTPNewDirectDelete() {
+  void* p = allocate_via_nttp<::operator new>(10);
+  ::operator delete(p);
+} // no warn
+
+void testDirectNewNTTPDelete() {
+  void* p = ::operator new(10);
+  deallocate_via_nttp<::operator delete>(p);
+}
+
+void not_free(void*) {
+}
+
+void testLeakBecauseNTTPIsNotDeallocation() {
+  void* p = ::operator new(10);
+  deallocate_via_nttp<not_free>(p);
+}  // leak-warning{{Potential leak of memory pointed to by 'p'}}
