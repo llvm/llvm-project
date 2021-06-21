@@ -79,7 +79,6 @@ protected:
               result.AppendErrorWithFormat(
                   "Failed to detach from process: %s\n",
                   detach_error.AsCString());
-              result.SetStatus(eReturnStatusFailed);
             }
           } else {
             Status destroy_error(process->Destroy(false));
@@ -89,7 +88,6 @@ protected:
             } else {
               result.AppendErrorWithFormat("Failed to kill process: %s\n",
                                            destroy_error.AsCString());
-              result.SetStatus(eReturnStatusFailed);
             }
           }
         }
@@ -162,7 +160,6 @@ protected:
     if (exe_module_sp == nullptr) {
       result.AppendError("no file in target, create a debug target using the "
                          "'target create' command");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -261,11 +258,9 @@ protected:
       } else {
         result.AppendError(
             "no error returned from Target::Launch, and target has no process");
-        result.SetStatus(eReturnStatusFailed);
       }
     } else {
       result.AppendError(error.AsCString());
-      result.SetStatus(eReturnStatusFailed);
     }
     return result.Succeeded();
   }
@@ -397,7 +392,6 @@ protected:
     if (command.GetArgumentCount()) {
       result.AppendErrorWithFormat("Invalid arguments for '%s'.\nUsage: %s\n",
                                    m_cmd_name.c_str(), m_cmd_syntax.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -412,11 +406,9 @@ protected:
       } else {
         result.AppendError(
             "no error returned from Target::Attach, and target has no process");
-        result.SetStatus(eReturnStatusFailed);
       }
     } else {
       result.AppendErrorWithFormat("attach failed: %s\n", error.AsCString());
-      result.SetStatus(eReturnStatusFailed);
     }
 
     if (!result.Succeeded())
@@ -536,7 +528,6 @@ protected:
         result.AppendErrorWithFormat(
             "The '%s' command does not take any arguments.\n",
             m_cmd_name.c_str());
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
 
@@ -608,13 +599,11 @@ protected:
       } else {
         result.AppendErrorWithFormat("Failed to resume process: %s.\n",
                                      error.AsCString());
-        result.SetStatus(eReturnStatusFailed);
       }
     } else {
       result.AppendErrorWithFormat(
           "Process cannot be continued from its current state (%s).\n",
           StateAsCString(state));
-      result.SetStatus(eReturnStatusFailed);
     }
     return result.Succeeded();
   }
@@ -706,7 +695,6 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       result.AppendErrorWithFormat("Detach failed: %s\n", error.AsCString());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
     return result.Succeeded();
@@ -778,7 +766,6 @@ protected:
       result.AppendErrorWithFormat(
           "'%s' takes exactly one argument:\nUsage: %s\n", m_cmd_name.c_str(),
           m_cmd_syntax.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -788,7 +775,6 @@ protected:
           "Process %" PRIu64
           " is currently being debugged, kill the process before connecting.\n",
           process->GetID());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -810,7 +796,6 @@ protected:
                   error);
     if (error.Fail() || process_sp == nullptr) {
       result.AppendError(error.AsCString("Error connecting to the process"));
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
     return true;
@@ -950,7 +935,6 @@ protected:
         result.AppendErrorWithFormat("failed to load '%s': %s",
                                      image_path.str().c_str(),
                                      error.AsCString());
-        result.SetStatus(eReturnStatusFailed);
       }
     }
     return result.Succeeded();
@@ -1002,7 +986,6 @@ protected:
       if (entry.ref().getAsInteger(0, image_token)) {
         result.AppendErrorWithFormat("invalid image index argument '%s'",
                                      entry.ref().str().c_str());
-        result.SetStatus(eReturnStatusFailed);
         break;
       } else {
         Status error(process->GetTarget().GetPlatform()->UnloadImage(
@@ -1014,7 +997,6 @@ protected:
         } else {
           result.AppendErrorWithFormat("failed to unload image: %s",
                                        error.AsCString());
-          result.SetStatus(eReturnStatusFailed);
           break;
         }
       }
@@ -1081,7 +1063,6 @@ protected:
       if (signo == LLDB_INVALID_SIGNAL_NUMBER) {
         result.AppendErrorWithFormat("Invalid signal argument '%s'.\n",
                                      command.GetArgumentAtIndex(0));
-        result.SetStatus(eReturnStatusFailed);
       } else {
         Status error(process->Signal(signo));
         if (error.Success()) {
@@ -1089,14 +1070,12 @@ protected:
         } else {
           result.AppendErrorWithFormat("Failed to send signal %i: %s\n", signo,
                                        error.AsCString());
-          result.SetStatus(eReturnStatusFailed);
         }
       }
     } else {
       result.AppendErrorWithFormat(
           "'%s' takes exactly one signal number argument:\nUsage: %s\n",
           m_cmd_name.c_str(), m_cmd_syntax.c_str());
-      result.SetStatus(eReturnStatusFailed);
     }
     return result.Succeeded();
   }
@@ -1121,7 +1100,6 @@ protected:
     Process *process = m_exe_ctx.GetProcessPtr();
     if (process == nullptr) {
       result.AppendError("no process to halt");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -1133,12 +1111,10 @@ protected:
       } else {
         result.AppendErrorWithFormat("Failed to halt process: %s\n",
                                      error.AsCString());
-        result.SetStatus(eReturnStatusFailed);
       }
     } else {
       result.AppendErrorWithFormat("'%s' takes no arguments:\nUsage: %s\n",
                                    m_cmd_name.c_str(), m_cmd_syntax.c_str());
-      result.SetStatus(eReturnStatusFailed);
     }
     return result.Succeeded();
   }
@@ -1163,7 +1139,6 @@ protected:
     Process *process = m_exe_ctx.GetProcessPtr();
     if (process == nullptr) {
       result.AppendError("no process to kill");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -1174,12 +1149,10 @@ protected:
       } else {
         result.AppendErrorWithFormat("Failed to kill process: %s\n",
                                      error.AsCString());
-        result.SetStatus(eReturnStatusFailed);
       }
     } else {
       result.AppendErrorWithFormat("'%s' takes no arguments:\nUsage: %s\n",
                                    m_cmd_name.c_str(), m_cmd_syntax.c_str());
-      result.SetStatus(eReturnStatusFailed);
     }
     return result.Succeeded();
   }
@@ -1212,16 +1185,13 @@ protected:
         } else {
           result.AppendErrorWithFormat(
               "Failed to save core file for process: %s\n", error.AsCString());
-          result.SetStatus(eReturnStatusFailed);
         }
       } else {
         result.AppendErrorWithFormat("'%s' takes one arguments:\nUsage: %s\n",
                                      m_cmd_name.c_str(), m_cmd_syntax.c_str());
-        result.SetStatus(eReturnStatusFailed);
       }
     } else {
       result.AppendError("invalid process");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -1288,7 +1258,6 @@ protected:
 
     if (command.GetArgumentCount()) {
       result.AppendError("'process status' takes no arguments");
-      result.SetStatus(eReturnStatusFailed);
       return result.Succeeded();
     }
 
@@ -1308,7 +1277,6 @@ protected:
       PlatformSP platform_sp = process->GetTarget().GetPlatform();
       if (!platform_sp) {
         result.AppendError("Couldn'retrieve the target's platform");
-        result.SetStatus(eReturnStatusFailed);
         return result.Succeeded();
       }
 
@@ -1317,7 +1285,6 @@ protected:
 
       if (!expected_crash_info) {
         result.AppendError(llvm::toString(expected_crash_info.takeError()));
-        result.SetStatus(eReturnStatusFailed);
         return result.Succeeded();
       }
 
@@ -1486,7 +1453,6 @@ protected:
     if (!process_sp) {
       result.AppendError("No current process; cannot handle signals until you "
                          "have a valid process.\n");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -1498,7 +1464,6 @@ protected:
         !VerifyCommandOptionValue(m_options.stop, stop_action)) {
       result.AppendError("Invalid argument for command option --stop; must be "
                          "true or false.\n");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -1506,7 +1471,6 @@ protected:
         !VerifyCommandOptionValue(m_options.notify, notify_action)) {
       result.AppendError("Invalid argument for command option --notify; must "
                          "be true or false.\n");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -1514,7 +1478,6 @@ protected:
         !VerifyCommandOptionValue(m_options.pass, pass_action)) {
       result.AppendError("Invalid argument for command option --pass; must be "
                          "true or false.\n");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 

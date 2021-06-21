@@ -87,14 +87,12 @@ protected:
       result.AppendError(
           "a single path to a JSON file containing a trace session"
           "is required");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
     auto end_with_failure = [&result](llvm::Error err) -> bool {
       result.AppendErrorWithFormat("%s\n",
                                    llvm::toString(std::move(err)).c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     };
 
@@ -190,7 +188,6 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       result.AppendErrorWithFormat("%s\n", error.AsCString());
-      result.SetStatus(eReturnStatusFailed);
     }
     return result.Succeeded();
   }
@@ -281,7 +278,6 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       result.AppendErrorWithFormat("%s\n", error.AsCString());
-      result.SetStatus(eReturnStatusFailed);
     }
     return result.Succeeded();
   }
