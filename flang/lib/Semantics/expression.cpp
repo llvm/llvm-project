@@ -1827,6 +1827,12 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
       if (context_.HasError(sym)) {
         return std::nullopt;
       }
+      if (!IsProcedure(*sym)) {
+        AttachDeclaration(
+            Say(sc.component.source, "'%s' is not a procedure"_err_en_US,
+                sc.component.source),
+            *sym);
+      }
       if (auto *dtExpr{UnwrapExpr<Expr<SomeDerived>>(*base)}) {
         if (sym->has<semantics::GenericDetails>()) {
           AdjustActuals adjustment{
@@ -2091,9 +2097,15 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
           return CalleeAndArguments{
               semantics::SymbolRef{*symbol}, std::move(arguments)};
         }
-      } else {
+      } else if (IsProcedure(*symbol)) {
         return CalleeAndArguments{
             ProcedureDesignator{*symbol}, std::move(arguments)};
+      }
+      if (!context_.HasError(*symbol)) {
+        AttachDeclaration(
+            Say(name.source, "'%s' is not a callable procedure"_err_en_US,
+                name.source),
+            *symbol);
       }
     } else if (std::optional<SpecificCall> specificCall{
                    context_.intrinsics().Probe(
