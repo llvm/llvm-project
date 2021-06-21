@@ -81,6 +81,12 @@ private:
                                Align Alignment);
   // Check whether Ptr is hidden behind a bitcast and look through it
   void lookThroughBitcast(Value *&Ptr);
+  // Decompose a ptr into Base and Offsets, potentially using a GEP to return a
+  // scalar base and vector offsets, or else fallback to using a base of 0 and
+  // offset of Ptr where possible.
+  Value *decomposePtr(Value *Ptr, Value *&Offsets, int &Scale,
+                      FixedVectorType *Ty, Type *MemoryTy,
+                      IRBuilder<> &Builder);
   // Check for a getelementptr and deduce base and offsets from it, on success
   // returning the base directly and the offsets indirectly using the Offsets
   // argument
@@ -211,6 +217,33 @@ static bool checkOffsetSize(Value *Offsets, unsigned TargetElemCount) {
     }
   }
   return true;
+}
+
+Value *MVEGatherScatterLowering::decomposePtr(Value *Ptr, Value *&Offsets,
+                                              int &Scale, FixedVectorType *Ty,
+                                              Type *MemoryTy,
+                                              IRBuilder<> &Builder) {
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
+    if (Value *V = decomposeGEP(Offsets, Ty, GEP, Builder)) {
+      Scale =
+          computeScale(GEP->getSourceElementType()->getPrimitiveSizeInBits(),
+                       MemoryTy->getScalarSizeInBits());
+      return Scale == -1 ? nullptr : V;
+    }
+  }
+
+  // If we couldn't use the GEP (or it doesn't exist), attempt to use a
+  // BasePtr of 0 with Ptr as the Offsets, so long as there are only 4
+  // elements.
+  FixedVectorType *PtrTy = cast<FixedVectorType>(Ptr->getType());
+  if (PtrTy->getNumElements() != 4 || MemoryTy->getScalarSizeInBits() == 32)
+    return nullptr;
+  Value *Zero = ConstantInt::get(Builder.getInt32Ty(), 0);
+  Value *BasePtr = Builder.CreateIntToPtr(Zero, Builder.getInt8PtrTy());
+  Offsets = Builder.CreatePtrToInt(
+      Ptr, FixedVectorType::get(Builder.getInt32Ty(), 4));
+  Scale = 0;
+  return BasePtr;
 }
 
 Value *MVEGatherScatterLowering::decomposeGEP(Value *&Offsets,
@@ -446,14 +479,14 @@ Value *MVEGatherScatterLowering::tryCreateMaskedGatherOffset(
     IntrinsicInst *I, Value *Ptr, Instruction *&Root, IRBuilder<> &Builder) {
   using namespace PatternMatch;
 
-  Type *OriginalTy = I->getType();
-  Type *ResultTy = OriginalTy;
+  Type *MemoryTy = I->getType();
+  Type *ResultTy = MemoryTy;
 
   unsigned Unsigned = 1;
   // The size of the gather was already checked in isLegalTypeAndAlignment;
   // if it was not a full vector width an appropriate extend should follow.
   auto *Extend = Root;
-  if (OriginalTy->getPrimitiveSizeInBits() < 128) {
+  if (MemoryTy->getPrimitiveSizeInBits() < 128) {
     // Only transform gathers with exactly one use
     if (!I->hasOneUse())
       return nullptr;
@@ -478,32 +511,26 @@ Value *MVEGatherScatterLowering::tryCreateMaskedGatherOffset(
     }
   }
 
-  GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr);
   Value *Offsets;
-  Value *BasePtr =
-      decomposeGEP(Offsets, cast<FixedVectorType>(ResultTy), GEP, Builder);
+  int Scale;
+  Value *BasePtr = decomposePtr(
+      Ptr, Offsets, Scale, cast<FixedVectorType>(ResultTy), MemoryTy, Builder);
   if (!BasePtr)
     return nullptr;
 
-  int Scale =
-      computeScale(GEP->getSourceElementType()->getPrimitiveSizeInBits(),
-                   OriginalTy->getScalarSizeInBits());
-  if (Scale == -1)
-    return nullptr;
   Root = Extend;
-
   Value *Mask = I->getArgOperand(2);
   if (!match(Mask, m_One()))
     return Builder.CreateIntrinsic(
         Intrinsic::arm_mve_vldr_gather_offset_predicated,
         {ResultTy, BasePtr->getType(), Offsets->getType(), Mask->getType()},
-        {BasePtr, Offsets, Builder.getInt32(OriginalTy->getScalarSizeInBits()),
+        {BasePtr, Offsets, Builder.getInt32(MemoryTy->getScalarSizeInBits()),
          Builder.getInt32(Scale), Builder.getInt32(Unsigned), Mask});
   else
     return Builder.CreateIntrinsic(
         Intrinsic::arm_mve_vldr_gather_offset,
         {ResultTy, BasePtr->getType(), Offsets->getType()},
-        {BasePtr, Offsets, Builder.getInt32(OriginalTy->getScalarSizeInBits()),
+        {BasePtr, Offsets, Builder.getInt32(MemoryTy->getScalarSizeInBits()),
          Builder.getInt32(Scale), Builder.getInt32(Unsigned)});
 }
 
@@ -617,17 +644,11 @@ Value *MVEGatherScatterLowering::tryCreateMaskedScatterOffset(
     return nullptr;
   }
 
-  GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr);
   Value *Offsets;
-  Value *BasePtr =
-      decomposeGEP(Offsets, cast<FixedVectorType>(InputTy), GEP, Builder);
+  int Scale;
+  Value *BasePtr = decomposePtr(
+      Ptr, Offsets, Scale, cast<FixedVectorType>(InputTy), MemoryTy, Builder);
   if (!BasePtr)
-    return nullptr;
-
-  int Scale =
-      computeScale(GEP->getSourceElementType()->getPrimitiveSizeInBits(),
-                   MemoryTy->getScalarSizeInBits());
-  if (Scale == -1)
     return nullptr;
 
   if (!match(Mask, m_One()))
