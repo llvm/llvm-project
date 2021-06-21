@@ -16,24 +16,54 @@
 #include "flang/Common/Fortran.h"
 #include <cinttypes>
 #include <memory>
+#include <optional>
 
 namespace Fortran::runtime::typeInfo {
 
+struct Component;
+
 class DerivedType {
 public:
-  ~DerivedType();
+  ~DerivedType(); // never defined
 
+  const Descriptor &binding() const { return binding_.descriptor(); }
+  const Descriptor &name() const { return name_.descriptor(); }
+  std::uint64_t sizeInBytes() const { return sizeInBytes_; }
+  const Descriptor &parent() const { return parent_.descriptor(); }
+  std::uint64_t typeHash() const { return typeHash_; }
+  const Descriptor &uninstatiated() const {
+    return uninstantiated_.descriptor();
+  }
+  const Descriptor &kindParameter() const {
+    return kindParameter_.descriptor();
+  }
+  const Descriptor &lenParameterKind() const {
+    return lenParameterKind_.descriptor();
+  }
+  const Descriptor &component() const { return component_.descriptor(); }
+  const Descriptor &procPtr() const { return procPtr_.descriptor(); }
+  const Descriptor &special() const { return special_.descriptor(); }
+
+  std::size_t LenParameters() const { return lenParameterKind().Elements(); }
+
+  // Finds a data component by name in this derived type or tis ancestors.
+  const Component *FindDataComponent(
+      const char *name, std::size_t nameLen) const;
+
+  FILE *Dump(FILE * = stdout) const;
+
+private:
   // This member comes first because it's used like a vtable by generated code.
   // It includes all of the ancestor types' bindings, if any, first,
   // with any overrides from descendants already applied to them.  Local
   // bindings then follow in alphabetic order of binding name.
   StaticDescriptor<1, true>
-      binding; // TYPE(BINDING), DIMENSION(:), POINTER, CONTIGUOUS
+      binding_; // TYPE(BINDING), DIMENSION(:), POINTER, CONTIGUOUS
 
-  StaticDescriptor<0> name; // CHARACTER(:), POINTER
+  StaticDescriptor<0> name_; // CHARACTER(:), POINTER
 
-  std::uint64_t sizeInBytes{0};
-  StaticDescriptor<0, true> parent; // TYPE(DERIVEDTYPE), POINTER
+  std::uint64_t sizeInBytes_{0};
+  StaticDescriptor<0, true> parent_; // TYPE(DERIVEDTYPE), POINTER
 
   // Instantiations of a parameterized derived type with KIND type
   // parameters will point this data member to the description of
@@ -41,32 +71,30 @@ public:
   // module via use association.  The original uninstantiated derived
   // type description will point to itself.  Derived types that have
   // no KIND type parameters will have a null pointer here.
-  StaticDescriptor<0, true> uninstantiated; // TYPE(DERIVEDTYPE), POINTER
+  StaticDescriptor<0, true> uninstantiated_; // TYPE(DERIVEDTYPE), POINTER
 
   // TODO: flags for SEQUENCE, BIND(C), any PRIVATE component(? see 7.5.2)
-  std::uint64_t typeHash{0};
+  std::uint64_t typeHash_{0};
 
   // These pointer targets include all of the items from the parent, if any.
-  StaticDescriptor<1> kindParameter; // pointer to rank-1 array of INTEGER(8)
-  StaticDescriptor<1> lenParameterKind; // pointer to rank-1 array of INTEGER(1)
+  StaticDescriptor<1> kindParameter_; // pointer to rank-1 array of INTEGER(8)
+  StaticDescriptor<1>
+      lenParameterKind_; // pointer to rank-1 array of INTEGER(1)
 
   // This array of local data components includes the parent component.
   // Components are in alphabetic order.
+  // TODO pmk: fix to be "component order"
   // It does not include procedure pointer components.
   StaticDescriptor<1, true>
-      component; // TYPE(COMPONENT), POINTER, DIMENSION(:), CONTIGUOUS
+      component_; // TYPE(COMPONENT), POINTER, DIMENSION(:), CONTIGUOUS
 
   // Procedure pointer components
   StaticDescriptor<1, true>
-      procPtr; // TYPE(PROCPTR), POINTER, DIMENSION(:), CONTIGUOUS
+      procPtr_; // TYPE(PROCPTR), POINTER, DIMENSION(:), CONTIGUOUS
 
   // Does not include special bindings from ancestral types.
   StaticDescriptor<1, true>
-      special; // TYPE(SPECIALBINDING), POINTER, DIMENSION(:), CONTIGUOUS
-
-  std::size_t LenParameters() const {
-    return lenParameterKind.descriptor().Elements();
-  }
+      special_; // TYPE(SPECIALBINDING), POINTER, DIMENSION(:), CONTIGUOUS
 };
 
 using ProcedurePointer = void (*)(); // TYPE(C_FUNPTR)
@@ -76,33 +104,70 @@ struct Binding {
   StaticDescriptor<0> name; // CHARACTER(:), POINTER
 };
 
-struct Value {
+class Value {
+public:
   enum class Genre : std::uint8_t {
     Deferred = 1,
     Explicit = 2,
     LenParameter = 3
   };
-  Genre genre{Genre::Explicit};
+
+  std::optional<TypeParameterValue> GetValue(const Descriptor *) const;
+
+private:
+  Genre genre_{Genre::Explicit};
   // The value encodes an index into the table of LEN type parameters in
   // a descriptor's addendum for genre == Genre::LenParameter.
-  TypeParameterValue value{0};
+  TypeParameterValue value_{0};
 };
 
-struct Component {
-  enum class Genre : std::uint8_t { Data, Pointer, Allocatable, Automatic };
-  StaticDescriptor<0> name; // CHARACTER(:), POINTER
-  Genre genre{Genre::Data};
-  std::uint8_t category; // common::TypeCategory
-  std::uint8_t kind{0};
-  std::uint8_t rank{0};
-  std::uint64_t offset{0};
-  Value characterLen; // for TypeCategory::Character
-  StaticDescriptor<0, true> derivedType; // TYPE(DERIVEDTYPE), POINTER
+class Component {
+public:
+  enum class Genre : std::uint8_t {
+    Data = 1,
+    Pointer = 2,
+    Allocatable = 3,
+    Automatic = 4
+  };
+
+  const Descriptor &name() const { return name_.descriptor(); }
+  Genre genre() const { return genre_; }
+  TypeCategory category() const { return static_cast<TypeCategory>(category_); }
+  int kind() const { return kind_; }
+  int rank() const { return rank_; }
+  std::uint64_t offset() const { return offset_; }
+  const Value &characterLen() const { return characterLen_; }
+  const DerivedType *derivedType() const {
+    return derivedType_.descriptor().OffsetElement<const DerivedType>();
+  }
+  const Value *lenValue() const {
+    return lenValue_.descriptor().OffsetElement<const Value>();
+  }
+  const Value *bounds() const {
+    return bounds_.descriptor().OffsetElement<const Value>();
+  }
+  const char *initialization() const { return initialization_; }
+
+  // Creates a pointer descriptor from a component description.
+  void EstablishDescriptor(Descriptor &, const Descriptor &container,
+      const SubscriptValue[], Terminator &) const;
+
+  FILE *Dump(FILE * = stdout) const;
+
+private:
+  StaticDescriptor<0> name_; // CHARACTER(:), POINTER
+  Genre genre_{Genre::Data};
+  std::uint8_t category_; // common::TypeCategory
+  std::uint8_t kind_{0};
+  std::uint8_t rank_{0};
+  std::uint64_t offset_{0};
+  Value characterLen_; // for TypeCategory::Character
+  StaticDescriptor<0, true> derivedType_; // TYPE(DERIVEDTYPE), POINTER
   StaticDescriptor<1, true>
-      lenValue; // TYPE(VALUE), POINTER, DIMENSION(:), CONTIGUOUS
+      lenValue_; // TYPE(VALUE), POINTER, DIMENSION(:), CONTIGUOUS
   StaticDescriptor<2, true>
-      bounds; // TYPE(VALUE), POINTER, DIMENSION(2,:), CONTIGUOUS
-  char *initialization{nullptr}; // for Genre::Data and Pointer
+      bounds_; // TYPE(VALUE), POINTER, DIMENSION(2,:), CONTIGUOUS
+  const char *initialization_{nullptr}; // for Genre::Data and Pointer
   // TODO: cobounds
   // TODO: `PRIVATE` attribute
 };

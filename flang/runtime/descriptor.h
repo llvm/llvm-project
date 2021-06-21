@@ -109,8 +109,9 @@ public:
     return len_[which];
   }
   static constexpr std::size_t SizeInBytes(int lenParameters) {
-    return sizeof(DescriptorAddendum) - sizeof(typeInfo::TypeParameterValue) +
-        lenParameters * sizeof(typeInfo::TypeParameterValue);
+    // TODO: Don't waste that last word if lenParameters == 0
+    return sizeof(DescriptorAddendum) +
+        std::max(lenParameters - 1, 0) * sizeof(typeInfo::TypeParameterValue);
   }
   std::size_t SizeInBytes() const;
 
