@@ -207,12 +207,12 @@ if (ExampleOpInterface example = dyn_cast<ExampleOpInterface>(op))
   llvm::errs() << "hook returned = " << example.exampleInterfaceHook() << "\n";
 ```
 
-#### External Models for Attribute/Type Interfaces
+#### External Models for Attribute, Operation and Type Interfaces
 
-It may be desirable to provide an interface implementation for an attribute or a
-type without modifying the definition of said attribute or type. Notably, this
-allows to implement interfaces for attributes and types outside of the dialect
-that defines them and, in particular, provide interfaces for built-in types.
+It may be desirable to provide an interface implementation for an IR object
+without modifying the definition of said object. Notably, this allows to
+implement interfaces for attributes, operations and types outside of the dialect
+that defines them, for example, to provide interfaces for built-in types.
 
 This is achieved by extending the concept-based polymorphism model with two more
 classes derived from `Concept` as follows.
@@ -261,9 +261,9 @@ struct ExampleTypeInterfaceTraits {
 };
 ```
 
-External models can be provided for attribute and type interfaces by deriving
-either `FallbackModel` or `ExternalModel` and by registering the model class
-with the attribute or type class in a given context. Other contexts will not see
+External models can be provided for attribute, operation and type interfaces by
+deriving either `FallbackModel` or `ExternalModel` and by registering the model
+class with the relevant class in a given context. Other contexts will not see
 the interface unless registered.
 
 ```c++

@@ -162,7 +162,9 @@ public:
   /// Look up the specified operation in the specified MLIRContext and return a
   /// pointer to it if present.  Otherwise, return a null pointer.
   static const AbstractOperation *lookup(StringRef opName,
-                                         MLIRContext *context);
+                                         MLIRContext *context) {
+    return lookupMutable(opName, context);
+  }
 
   /// This constructor is used by Dialect objects when they register the list of
   /// operations they contain.
@@ -193,6 +195,15 @@ private:
                     FoldHookFn &&foldHook,
                     GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
                     detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait);
+
+  /// Give Op access to lookupMutable.
+  template <typename ConcreteType, template <typename T> class... Traits>
+  friend class Op;
+
+  /// Look up the specified operation in the specified MLIRContext and return a
+  /// pointer to it if present.  Otherwise, return a null pointer.
+  static AbstractOperation *lookupMutable(StringRef opName,
+                                          MLIRContext *context);
 
   /// A map of interfaces that were registered to this operation.
   detail::InterfaceMap interfaceMap;
