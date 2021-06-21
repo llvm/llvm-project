@@ -27,7 +27,7 @@ namespace detail {
 // DO NOT USE DIRECTLY.
 // Must be kept in-sync with compiler-rt/lib/orc/c-api.h.
 union CWrapperFunctionResultDataUnion {
-  const char *ValuePtr;
+  char *ValuePtr;
   char Value[sizeof(ValuePtr)];
 };
 
@@ -74,7 +74,7 @@ public:
   ~WrapperFunctionResult() {
     if ((R.Size > sizeof(R.Data.Value)) ||
         (R.Size == 0 && R.Data.ValuePtr != nullptr))
-      free((void *)R.Data.ValuePtr);
+      free(R.Data.ValuePtr);
   }
 
   /// Release ownership of the contained detail::CWrapperFunctionResult.
