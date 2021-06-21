@@ -439,6 +439,15 @@ T *castValues(const std::unique_ptr<AttributeDiff> &RawAttr) {
   return CastAttr;
 }
 
+template <typename T> void sortTargetValues(std::vector<T> &TargValues) {
+  llvm::sort(TargValues, [](const auto &ValA, const auto &ValB) {
+    return ValA.getOrder() < ValB.getOrder();
+  });
+  llvm::sort(TargValues, [](const auto &ValA, const auto &ValB) {
+    return ValA.getOrder() == ValB.getOrder() && ValA.getVal() < ValB.getVal();
+  });
+}
+
 template <typename T>
 void printVecVal(std::string Indent, const DiffOutput &Attr, raw_ostream &OS) {
   if (Attr.Values.empty())
@@ -455,10 +464,8 @@ void printVecVal(std::string Indent, const DiffOutput &Attr, raw_ostream &OS) {
   });
 
   for (auto *Vec : SortedAttrs) {
-    llvm::sort(Vec->TargValues, [](const auto &ValA, const auto &ValB) {
-      return ValA.getOrder() == ValB.getOrder() &&
-             ValA.getVal() < ValB.getVal();
-    });
+    sortTargetValues<DiffScalarVal<StringRef, AD_Diff_Scalar_Str>>(
+        Vec->TargValues);
     OS << Indent << "\t" << getTargetTripleName(Vec->Targ) << "\n";
     for (auto &Item : Vec->TargValues)
       Item.print(OS, Indent);
@@ -482,10 +489,7 @@ void printVecVal<DiffSymVec>(std::string Indent, const DiffOutput &Attr,
     return ValA->Targ < ValB->Targ;
   });
   for (auto *SymVec : SortedAttrs) {
-    llvm::sort(SymVec->TargValues, [](const auto &ValA, const auto &ValB) {
-      return ValA.getOrder() == ValB.getOrder() &&
-             ValA.getVal() < ValB.getVal();
-    });
+    sortTargetValues<SymScalar>(SymVec->TargValues);
     OS << Indent << "\t" << getTargetTripleName(SymVec->Targ) << "\n";
     for (auto &Item : SymVec->TargValues)
       Item.print(OS, Indent, SymVec->Targ);
