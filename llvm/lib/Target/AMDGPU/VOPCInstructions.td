@@ -104,6 +104,8 @@ class VOPC_Real <VOPC_Pseudo ps, int EncodingFamily> :
   InstSI <ps.OutOperandList, ps.InOperandList, ps.PseudoInstr # " " # ps.AsmOperands, []>,
   SIMCInstr <ps.PseudoInstr, EncodingFamily> {
 
+  let VALU = 1;
+  let VOPC = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
