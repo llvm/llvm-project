@@ -104,21 +104,18 @@ define void @_Z4loopi(i32 %width) {
 ; ROTATED_LATER_NEWPM-NEXT:    br i1 [[CMP13_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; ROTATED_LATER_NEWPM:       for.body.preheader:
 ; ROTATED_LATER_NEWPM-NEXT:    [[TMP0:%.*]] = add nsw i32 [[WIDTH]], -1
-; ROTATED_LATER_NEWPM-NEXT:    [[INC_1:%.*]] = add nuw nsw i32 0, 1
 ; ROTATED_LATER_NEWPM-NEXT:    br label [[FOR_BODY:%.*]]
 ; ROTATED_LATER_NEWPM:       for.cond.cleanup:
 ; ROTATED_LATER_NEWPM-NEXT:    tail call void @f0()
 ; ROTATED_LATER_NEWPM-NEXT:    tail call void @f2()
 ; ROTATED_LATER_NEWPM-NEXT:    br label [[RETURN]]
 ; ROTATED_LATER_NEWPM:       for.body:
-; ROTATED_LATER_NEWPM-NEXT:    [[INC_PHI:%.*]] = phi i32 [ [[INC_0:%.*]], [[FOR_BODY_FOR_BODY_CRIT_EDGE:%.*]] ], [ [[INC_1]], [[FOR_BODY_PREHEADER]] ]
+; ROTATED_LATER_NEWPM-NEXT:    [[I_04:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; ROTATED_LATER_NEWPM-NEXT:    tail call void @f0()
 ; ROTATED_LATER_NEWPM-NEXT:    tail call void @f1()
-; ROTATED_LATER_NEWPM-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_PHI]], [[TMP0]]
-; ROTATED_LATER_NEWPM-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_FOR_BODY_CRIT_EDGE]]
-; ROTATED_LATER_NEWPM:       for.body.for.body_crit_edge:
-; ROTATED_LATER_NEWPM-NEXT:    [[INC_0]] = add nuw nsw i32 [[INC_PHI]], 1
-; ROTATED_LATER_NEWPM-NEXT:    br label [[FOR_BODY]]
+; ROTATED_LATER_NEWPM-NEXT:    [[INC]] = add nuw nsw i32 [[I_04]], 1
+; ROTATED_LATER_NEWPM-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[TMP0]]
+; ROTATED_LATER_NEWPM-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
 ; ROTATED_LATER_NEWPM:       return:
 ; ROTATED_LATER_NEWPM-NEXT:    ret void
 ;
@@ -155,21 +152,18 @@ define void @_Z4loopi(i32 %width) {
 ; ROTATE_NEWPM-NEXT:    br i1 [[CMP13_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; ROTATE_NEWPM:       for.body.preheader:
 ; ROTATE_NEWPM-NEXT:    [[TMP0:%.*]] = add nsw i32 [[WIDTH]], -1
-; ROTATE_NEWPM-NEXT:    [[INC_1:%.*]] = add nuw nsw i32 0, 1
 ; ROTATE_NEWPM-NEXT:    br label [[FOR_BODY:%.*]]
 ; ROTATE_NEWPM:       for.cond.cleanup:
 ; ROTATE_NEWPM-NEXT:    tail call void @f0()
 ; ROTATE_NEWPM-NEXT:    tail call void @f2()
 ; ROTATE_NEWPM-NEXT:    br label [[RETURN]]
 ; ROTATE_NEWPM:       for.body:
-; ROTATE_NEWPM-NEXT:    [[INC_PHI:%.*]] = phi i32 [ [[INC_0:%.*]], [[FOR_BODY_FOR_BODY_CRIT_EDGE:%.*]] ], [ [[INC_1]], [[FOR_BODY_PREHEADER]] ]
+; ROTATE_NEWPM-NEXT:    [[I_04:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
 ; ROTATE_NEWPM-NEXT:    tail call void @f0()
 ; ROTATE_NEWPM-NEXT:    tail call void @f1()
-; ROTATE_NEWPM-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC_PHI]], [[TMP0]]
-; ROTATE_NEWPM-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_FOR_BODY_CRIT_EDGE]]
-; ROTATE_NEWPM:       for.body.for.body_crit_edge:
-; ROTATE_NEWPM-NEXT:    [[INC_0]] = add nuw nsw i32 [[INC_PHI]], 1
-; ROTATE_NEWPM-NEXT:    br label [[FOR_BODY]]
+; ROTATE_NEWPM-NEXT:    [[INC]] = add nuw nsw i32 [[I_04]], 1
+; ROTATE_NEWPM-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[TMP0]]
+; ROTATE_NEWPM-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
 ; ROTATE_NEWPM:       return:
 ; ROTATE_NEWPM-NEXT:    ret void
 ;
