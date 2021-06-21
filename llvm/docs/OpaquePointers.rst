@@ -108,11 +108,20 @@ particular order:
 * Fix up existing in-tree users of pointee types to not rely on LLVM pointer
   pointee types
 
+  * Specifically ``PointerType::getElementType`` and
+    ``Type::getPointerElementType()``
+
 * Allow bitcode auto-upgrade of legacy pointer type to the new opaque pointer
   type (not to be turned on until ready)
 
+  * To support legacy bitcode, such as legacy stores/loads, we need to track
+    pointee types for all values since legacy instructions may infer the types
+    from a pointer operand's pointee type
+
 * Migrate frontends to not keep track of frontend pointee types via LLVM pointer
   pointee types
+
+  * This is mostly Clang, see ``clang::CodeGen::Address::getElementType()``
 
 * Add option to internally treat all pointer types opaque pointers and see what
   breaks, starting with LLVM tests, then run Clang over large codebases
