@@ -2253,7 +2253,7 @@ public:
   /// Return the define behavior context, or if not available, its approximation
   /// from all other contexts.
   isl::set getBestKnownDefinedBehaviorContext() const {
-    if (DefinedBehaviorContext)
+    if (!DefinedBehaviorContext.is_null())
       return DefinedBehaviorContext;
 
     return Context.intersect_params(AssumedContext).subtract(InvalidContext);
