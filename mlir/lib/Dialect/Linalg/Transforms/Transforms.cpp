@@ -731,9 +731,6 @@ LogicalResult SubTensorOfPadTensorSwapPattern::matchAndRewrite(
   Value padValue = padOp.getConstantPaddingValue();
   if (!padValue)
     return failure();
-  // Only zero low padding supported at the moment.
-  if (!padOp.hasZeroLowPad())
-    return failure();
 
   // Helper variables and functions for various arithmetic operations. These are
   // used extensively for computing new offset/length and padding values.
@@ -788,33 +785,53 @@ LogicalResult SubTensorOfPadTensorSwapPattern::matchAndRewrite(
 
   int64_t rank = padOp.getSourceType().getRank();
   for (unsigned dim = 0; dim < rank; ++dim) {
+    auto low = asValue(rewriter, loc, padOp.getMixedLowPad()[dim]);
     auto offset = asValue(rewriter, loc, subTensorOp.getMixedOffsets()[dim]);
     auto length = asValue(rewriter, loc, subTensorOp.getMixedSizes()[dim]);
     auto srcSize = rewriter.createOrFold<memref::DimOp>(
         loc, padOp.source(), dim);
 
-    // Existing low padding is zero, so new low padding is also zero.
-    Value newLow = zero;
+    // The new amount of low padding is `low - offset`. Except for the case
+    // where none of the low padding is read. In that case, the new amount of
+    // low padding is zero.
+    Value newLow = max(zero, sub(low, offset));
     appendIndex(newLow, newLows, staticNewLows);
 
-    // There is no low padding, so the offset remains unchanged. Except for the
-    // case where the SubTensorOp starts reading from a position within the high
-    // padding. In that case, set the offset to the end of source tensor. The
-    // new SubTensorOp length will be zero in that case. (Effectively reading no
+    // Start reading the data from position `offset - low`. Since the original
+    // read may have started in the low padding zone, this value could be
+    // negative. Therefore, start reading from:
+    //
+    // max(offset - low, 0)
+    //
+    // The original read could also have started in the high padding zone.
+    // In that case, set the offset to the end of source tensor. The new
+    // SubTensorOp length will be zero in that case. (Effectively reading no
     // data from the source.)
-    Value newOffset = min(offset, srcSize);
+    Value newOffset = min(max(sub(offset, low), zero), srcSize);
     newOffsets.push_back(asOpFoldResult(rewriter, newOffset));
 
-    // The new SubTensorOp starts reading at `newOffset` and reads until
-    // `offset + length`. This position may be outside of the source (i.e.,
-    // within the high padding). In that case, read only until the end of the
-    // source. In mathematical terms:
+    // The original SubTensorOp was reading until position `offset + length`.
+    // Therefore, the corresponding position within the source tensor is:
     //
-    // endLoc = min(offset + length, srcSize)
+    // offset + length - low
+    //
+    // In case the original SubTensorOp stopped reading within the low padding
+    // zone, this value can be negative. In that case, the end position of the
+    // read should be zero. (Similar to newOffset.)
+    //
+    // The original read could also have stopped in the high padding zone.
+    // In that case, set the end positition of the read should be the end of the
+    // source tensor. (Similar to newOffset.)
+    //
+    // endLoc = min(max(offset - low + length, 0), srcSize)
     //
     // The new SubTensorOp length is `endLoc - newOffset`.
-    Value newLength = sub(min(add(offset, length), srcSize), newOffset);
+    Value endLoc = min(max(add(sub(offset, low), length), zero), srcSize);
+    Value newLength = sub(endLoc, newOffset);
     newLengths.push_back(asOpFoldResult(rewriter, newLength));
+
+    // Check if newLength is zero. In that case, no SubTensorOp should be
+    // executed.
     if (auto newLengthInt = getConstantIntValue(newLength)) {
       hasZeroLen |= *newLengthInt == 0;
     } else {
@@ -824,13 +841,9 @@ LogicalResult SubTensorOfPadTensorSwapPattern::matchAndRewrite(
           ? rewriter.create<AndOp>(loc, check, dynHasZeroLenCond) : check;
     }
 
-    // The number of elements available to read from the source (starting from
-    // the new offset) is `maxRead = srcSize - newOffset`. The original
-    // SubTensorOp may have read a larger number of elements `length > maxRead`.
-    // In that case, the missing number of elements `length - maxRead` must be
-    // paddded. (If `maxRead > length`, more than enough data is available to
-    // read and no high padding is needed.)
-    Value newHigh = max(zero, add(sub(newOffset, srcSize), length));
+    // The amount of high padding is simply the number of elements remaining,
+    // so that the result has the same length as the original SubTensorOp.
+    Value newHigh = sub(sub(length, newLength), newLow);
     appendIndex(newHigh, newHighs, staticNewHighs);
 
     // Only unit stride supported.
