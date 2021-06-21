@@ -571,8 +571,6 @@ int main(int argc, const char **argv) {
         AdjustedArgs.insert(AdjustedArgs.end(), FlagsEnd, Args.end());
         return AdjustedArgs;
       });
-  AdjustingCompilations->appendArgumentsAdjuster(
-      tooling::getClangStripSerializeDiagnosticAdjuster());
 
   SharedStream Errs(llvm::errs());
   // Print out the dependency results to STDOUT by default.
