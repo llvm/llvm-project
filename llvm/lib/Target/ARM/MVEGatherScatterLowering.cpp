@@ -1167,6 +1167,8 @@ bool MVEGatherScatterLowering::runOnFunction(Function &F) {
   bool Changed = false;
 
   for (BasicBlock &BB : F) {
+    SimplifyInstructionsInBlock(&BB);
+
     for (Instruction &I : BB) {
       IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
       if (II && II->getIntrinsicID() == Intrinsic::masked_gather &&
