@@ -921,7 +921,7 @@ bool LoopVectorizationLegality::canVectorizeFPMath(
   // have the isOrdered flag set, which indicates that we can move the
   // reduction operations in-loop.
   return (all_of(getReductionVars(), [&](auto &Reduction) -> bool {
-    RecurrenceDescriptor RdxDesc = Reduction.second;
+    const RecurrenceDescriptor &RdxDesc = Reduction.second;
     return !RdxDesc.hasExactFPMath() || RdxDesc.isOrdered();
   }));
 }
