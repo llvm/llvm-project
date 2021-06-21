@@ -8,7 +8,7 @@ import multiprocessing
 import sys
 import os.path
 this_dir = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(os.path.dirname(this_dir))
+sys.path.append(os.path.join(os.path.dirname(this_dir), 'lib'))
 
 from libscanbuild.analyze import scan_build
 

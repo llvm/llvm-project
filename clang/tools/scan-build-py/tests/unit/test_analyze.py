@@ -18,9 +18,9 @@ class ReportDirectoryTest(unittest.TestCase):
     # scan-build can be easily matched up to compare results.
     def test_directory_name_comparison(self):
         with libear.TemporaryDirectory() as tmpdir, \
-             sut.report_directory(tmpdir, False) as report_dir1, \
-             sut.report_directory(tmpdir, False) as report_dir2, \
-             sut.report_directory(tmpdir, False) as report_dir3:
+             sut.report_directory(tmpdir, False, 'html') as report_dir1, \
+             sut.report_directory(tmpdir, False, 'html') as report_dir2, \
+             sut.report_directory(tmpdir, False, 'html') as report_dir3:
             self.assertLess(report_dir1, report_dir2)
             self.assertLess(report_dir2, report_dir3)
 

@@ -291,6 +291,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-symbolizer
   llvm-xray
   sancov
+  scan-build-py
   CACHE STRING "")
 
 set(LLVM_DISTRIBUTION_COMPONENTS
