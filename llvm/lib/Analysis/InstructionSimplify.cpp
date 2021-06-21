@@ -3353,6 +3353,10 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
 
   Type *ITy = GetCompareTy(LHS); // The return type.
 
+  // icmp poison, X -> poison
+  if (isa<PoisonValue>(RHS))
+    return PoisonValue::get(ITy);
+
   // For EQ and NE, we can always pick a value for the undef to make the
   // predicate pass or fail, so we can return undef.
   // Matches behavior in llvm::ConstantFoldCompareInstruction.

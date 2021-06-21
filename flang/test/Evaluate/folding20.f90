@@ -1,4 +1,5 @@
 ! RUN: %S/test_folding.sh %s %t %flang_fc1
+! REQUIRES: shell
 ! Tests intrinsic MAXVAL/MINVAL function folding
 module m
   logical, parameter :: test_imaxidentity = maxval([integer::]) == -huge(0) - 1

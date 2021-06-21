@@ -723,7 +723,8 @@ class GdbRemoteTestCaseBase(Base):
                  "permissions",
                  "flags",
                  "name",
-                 "error"])
+                 "error",
+                 "dirty-pages"])
             self.assertIsNotNone(val)
 
         mem_region_dict["name"] = seven.unhexlify(mem_region_dict.get("name", ""))

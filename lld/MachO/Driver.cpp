@@ -78,9 +78,9 @@ static HeaderFileType getOutputType(const InputArgList &args) {
   }
 }
 
-static Optional<std::string> findLibrary(StringRef name) {
+static Optional<StringRef> findLibrary(StringRef name) {
   if (config->searchDylibsFirst) {
-    if (Optional<std::string> path = findPathCombination(
+    if (Optional<StringRef> path = findPathCombination(
             "lib" + name, config->librarySearchPaths, {".tbd", ".dylib"}))
       return path;
     return findPathCombination("lib" + name, config->librarySearchPaths,
@@ -252,8 +252,10 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
     // Avoid loading archives twice. If the archives are being force-loaded,
     // loading them twice would create duplicate symbol errors. In the
     // non-force-loading case, this is just a minor performance optimization.
-    ArchiveFile *&cachedFile = loadedArchives[path];
-    if (cachedFile)
+    // We don't take a reference to cachedFile here because the
+    // loadArchiveMember() call below may recursively call addFile() and
+    // invalidate this reference.
+    if (ArchiveFile *cachedFile = loadedArchives[path])
       return cachedFile;
 
     std::unique_ptr<object::Archive> file = CHECK(
@@ -295,7 +297,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
       }
     }
 
-    newFile = cachedFile = make<ArchiveFile>(std::move(file));
+    newFile = loadedArchives[path] = make<ArchiveFile>(std::move(file));
     break;
   }
   case file_magic::macho_object:
@@ -337,7 +339,7 @@ static InputFile *addFile(StringRef path, bool forceLoadArchive,
 
 static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
                        bool isReexport, bool isExplicit, bool forceLoad) {
-  if (Optional<std::string> path = findLibrary(name)) {
+  if (Optional<StringRef> path = findLibrary(name)) {
     if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
             addFile(*path, forceLoad, isExplicit))) {
       if (isNeeded)
@@ -1338,6 +1340,7 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
           }
         }
       }
+      assert(inputSections.size() < UnspecifiedInputOrder);
     }
 
     if (config->deadStrip)

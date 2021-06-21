@@ -63,7 +63,7 @@ using namespace llvm;
 
 namespace {
 
-typedef struct Address {
+struct Address {
   enum {
     RegBase,
     FrameIndexBase
@@ -81,7 +81,7 @@ typedef struct Address {
    : BaseType(RegBase), Offset(0) {
      Base.Reg = 0;
    }
-} Address;
+};
 
 class PPCFastISel final : public FastISel {
 

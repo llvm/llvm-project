@@ -971,10 +971,10 @@ public:
     SmallVector<MachineInstr *, 4> Insts; /// Vector of DBG_VALUEs to insert.
   };
 
-  typedef struct {
+  struct LocAndProperties {
     LocIdx Loc;
     DbgValueProperties Properties;
-  } LocAndProperties;
+  };
 
   /// Collection of transfers (DBG_VALUEs) to be inserted.
   SmallVector<Transfer, 32> Transfers;

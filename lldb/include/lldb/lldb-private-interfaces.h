@@ -54,7 +54,9 @@ typedef ObjectFile *(*ObjectFileCreateMemoryInstance)(
     const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
     const lldb::ProcessSP &process_sp, lldb::addr_t offset);
 typedef bool (*ObjectFileSaveCore)(const lldb::ProcessSP &process_sp,
-                                   const FileSpec &outfile, Status &error);
+                                   const FileSpec &outfile,
+                                   lldb::SaveCoreStyle &core_style,
+                                   Status &error);
 typedef EmulateInstruction *(*EmulateInstructionCreateInstance)(
     const ArchSpec &arch, InstructionType inst_type);
 typedef OperatingSystem *(*OperatingSystemCreateInstance)(Process *process,

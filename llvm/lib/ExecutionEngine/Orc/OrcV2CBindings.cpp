@@ -94,6 +94,7 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThreadSafeModule, LLVMOrcThreadSafeModuleRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(JITTargetMachineBuilder,
                                    LLVMOrcJITTargetMachineBuilderRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ObjectLayer, LLVMOrcObjectLayerRef)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(IRTransformLayer, LLVMOrcIRTransformLayerRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ObjectTransformLayer,
                                    LLVMOrcObjectTransformLayerRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DumpObjects, LLVMOrcDumpObjectsRef)
@@ -427,6 +428,14 @@ void LLVMOrcDisposeThreadSafeContext(LLVMOrcThreadSafeContextRef TSCtx) {
   delete unwrap(TSCtx);
 }
 
+LLVMErrorRef
+LLVMOrcThreadSafeModuleWithModuleDo(LLVMOrcThreadSafeModuleRef TSM,
+                                    LLVMOrcGenericIRModuleOperationFunction F,
+                                    void *Ctx) {
+  return wrap(unwrap(TSM)->withModuleDo(
+      [&](Module &M) { return unwrap(F(Ctx, wrap(&M))); }));
+}
+
 LLVMOrcThreadSafeModuleRef
 LLVMOrcCreateNewThreadSafeModule(LLVMModuleRef M,
                                  LLVMOrcThreadSafeContextRef TSCtx) {
@@ -515,6 +524,23 @@ void LLVMOrcObjectLayerEmit(LLVMOrcObjectLayerRef ObjLayer,
 
 void LLVMOrcDisposeObjectLayer(LLVMOrcObjectLayerRef ObjLayer) {
   delete unwrap(ObjLayer);
+}
+
+void LLVMOrcLLJITIRTransformLayerSetTransform(
+    LLVMOrcIRTransformLayerRef IRTransformLayer,
+    LLVMOrcIRTransformLayerTransformFunction TransformFunction, void *Ctx) {
+  unwrap(IRTransformLayer)
+      ->setTransform(
+          [=](ThreadSafeModule TSM,
+              MaterializationResponsibility &R) -> Expected<ThreadSafeModule> {
+            LLVMOrcThreadSafeModuleRef TSMRef =
+                wrap(new ThreadSafeModule(std::move(TSM)));
+            if (LLVMErrorRef Err = TransformFunction(Ctx, &TSMRef, wrap(&R))) {
+              assert(!TSMRef && "TSMRef was not reset to null on error");
+              return unwrap(Err);
+            }
+            return std::move(*unwrap(TSMRef));
+          });
 }
 
 void LLVMOrcObjectTransformLayerSetTransform(
@@ -694,4 +720,8 @@ void LLVMOrcRTDyldObjectLinkingLayerRegisterJITEventListener(
   assert(Listener && "Listener must not be null");
   reinterpret_cast<RTDyldObjectLinkingLayer *>(unwrap(RTDyldObjLinkingLayer))
       ->registerJITEventListener(*unwrap(Listener));
+}
+
+LLVMOrcIRTransformLayerRef LLVMOrcLLJITGetIRTransformLayer(LLVMOrcLLJITRef J) {
+  return wrap(&unwrap(J)->getIRTransformLayer());
 }

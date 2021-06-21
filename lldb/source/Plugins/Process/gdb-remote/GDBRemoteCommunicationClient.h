@@ -592,6 +592,7 @@ protected:
       UINT32_MAX; // from reply to qGDBServerVersion, zero if
                   // qGDBServerVersion is not supported
   std::chrono::seconds m_default_packet_timeout;
+  int m_target_vm_page_size = 0; // target system VM page size; 0 unspecified
   uint64_t m_max_packet_size = 0;    // as returned by qSupported
   std::string m_qSupported_response; // the complete response to qSupported
 

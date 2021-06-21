@@ -20,6 +20,12 @@ namespace macho {
 class InputSection;
 class OutputSegment;
 
+// The default order value for OutputSections that are not constructed from
+// InputSections (i.e. SyntheticSections). We make it less than INT_MAX in order
+// not to conflict with the ordering of zerofill sections, which must always be
+// placed at the end of their segment.
+constexpr int UnspecifiedInputOrder = std::numeric_limits<int>::max() - 1024;
+
 // Output sections represent the finalized sections present within the final
 // linked executable. They can represent special sections (like the symbol
 // table), or represent coalesced sections from the various inputs given to the
@@ -61,7 +67,7 @@ public:
   // For output sections that don't have explicit ordering requirements, their
   // output order should be based on the order of the input sections they
   // contain.
-  int inputOrder = std::numeric_limits<int>::max();
+  int inputOrder = UnspecifiedInputOrder;
 
   uint32_t index = 0;
   uint64_t addr = 0;

@@ -29,6 +29,7 @@ group("unittests") {
     "Linker:LinkerTests",
     "MC:MCTests",
     "MI:MITests",
+    "MIR:MIRTests",
     "Object:ObjectTests",
     "ObjectYAML:ObjectYAMLTests",
     "Option:OptionTests",

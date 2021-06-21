@@ -111,7 +111,6 @@ define void @test_loop(i32 %N, i32* noalias nocapture readonly %A, i32* noalias 
 ; CHECK:       for.body4.lr.ph:
 ; CHECK-NEXT:    [[I_028:%.*]] = phi i32 [ [[INC11:%.*]], [[FOR_COND_CLEANUP3:%.*]] ], [ 0, [[FOR_BODY4_LR_PH_PREHEADER]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i32 [[I_028]]
-; CHECK-NEXT:    store i32 0, i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[I_028]], [[N]]
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
 ; CHECK:       for.body4:
@@ -179,7 +178,6 @@ define i32 @test_if(i1 %c, i32* %p, i32 %i) {
 ; CHECK-NEXT:    [[PH:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[BB3:%.*]] ]
 ; CHECK-NEXT:    [[INC]] = add i32 [[PH]], 1
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i32 [[PH]]
-; CHECK-NEXT:    store i32 [[I:%.*]], i32* [[GEP]], align 4
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB2:%.*]], label [[BB3]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3]]
@@ -216,7 +214,6 @@ define i32 @test_if2(i1 %c, i32* %p, i32 %i) {
 ; CHECK-NEXT:    [[PH:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[BB2:%.*]] ], [ [[INC]], [[BB3:%.*]] ]
 ; CHECK-NEXT:    [[INC]] = add i32 [[PH]], 1
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i32 [[PH]]
-; CHECK-NEXT:    store i32 [[I:%.*]], i32* [[GEP]], align 4
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB2]], label [[BB3]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    store i32 2, i32* [[GEP]], align 4

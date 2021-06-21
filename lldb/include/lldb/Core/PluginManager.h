@@ -191,7 +191,8 @@ public:
   GetObjectFileCreateMemoryCallbackForPluginName(ConstString name);
 
   static Status SaveCore(const lldb::ProcessSP &process_sp,
-                         const FileSpec &outfile);
+                         const FileSpec &outfile,
+                         lldb::SaveCoreStyle &core_style);
 
   // ObjectContainer
   static bool

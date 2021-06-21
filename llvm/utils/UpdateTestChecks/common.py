@@ -291,11 +291,12 @@ class function_body(object):
     return self.scrub
 
 class FunctionTestBuilder:
-  def __init__(self, run_list, flags, scrubber_args):
+  def __init__(self, run_list, flags, scrubber_args, path):
     self._verbose = flags.verbose
     self._record_args = flags.function_signature
     self._check_attributes = flags.check_attributes
     self._scrubber_args = scrubber_args
+    self._path = path
     # Strip double-quotes if input was read by UTC_ARGS
     self._replace_value_regex = list(map(lambda x: x.strip('"'), flags.replace_value_regex))
     self._func_dict = {}
@@ -309,7 +310,7 @@ class FunctionTestBuilder:
 
   def finish_and_get_func_dict(self):
     for prefix in self._get_failed_prefixes():
-      warn('Prefix %s had conflicting output from different RUN lines for all functions' % (prefix,))
+      warn('Prefix %s had conflicting output from different RUN lines for all functions in test %s' % (prefix,self._path,))
     return self._func_dict
 
   def func_order(self):

@@ -1,5 +1,6 @@
 ; RUN: opt < %s -inline -S | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(inline)' -inline-enable-priority-order=true -S | FileCheck %s
 
 ; Test that the inliner correctly handles inlining into invoke sites
 ; by appending selectors and forwarding _Unwind_Resume directly to the
