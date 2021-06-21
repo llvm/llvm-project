@@ -5,7 +5,7 @@
 ; } f;
 
 ; no known LLVM frontends produce appropriate unique identifiers for C types,
-; so we don't produce type units for them
+; so we don't produce type units for them.
 ; CHECK-NOT: DW_TAG_type_unit
 
 source_filename = "test/DebugInfo/X86/c-type-units.ll"
