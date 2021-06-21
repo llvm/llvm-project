@@ -34,12 +34,12 @@ void markLive() {
   // store ConcatInputSections in our worklist.
   SmallVector<ConcatInputSection *, 256> worklist;
 
-  auto enqueue = [&](InputSection *isec) {
+  auto enqueue = [&](InputSection *isec, uint64_t off) {
+    if (isec->isLive(off))
+      return;
+    isec->markLive(off);
     if (auto s = dyn_cast<ConcatInputSection>(isec)) {
       assert(!s->isCoalescedWeak());
-      if (s->live)
-        return;
-      s->live = true;
       worklist.push_back(s);
     }
   };
@@ -48,7 +48,7 @@ void markLive() {
     s->used = true;
     if (auto *d = dyn_cast<Defined>(s))
       if (d->isec)
-        enqueue(d->isec);
+        enqueue(d->isec, d->value);
   };
 
   // Add GC roots.
@@ -104,14 +104,16 @@ void markLive() {
   for (InputSection *isec : inputSections) {
     // Sections marked no_dead_strip
     if (isec->flags & S_ATTR_NO_DEAD_STRIP) {
-      enqueue(isec);
+      assert(isa<ConcatInputSection>(isec));
+      enqueue(isec, 0);
       continue;
     }
 
     // mod_init_funcs, mod_term_funcs sections
     if (sectionType(isec->flags) == S_MOD_INIT_FUNC_POINTERS ||
         sectionType(isec->flags) == S_MOD_TERM_FUNC_POINTERS) {
-      enqueue(isec);
+      assert(isa<ConcatInputSection>(isec));
+      enqueue(isec, 0);
       continue;
     }
 
@@ -138,7 +140,7 @@ void markLive() {
         if (auto *s = r.referent.dyn_cast<Symbol *>())
           addSym(s);
         else
-          enqueue(r.referent.get<InputSection *>());
+          enqueue(r.referent.get<InputSection *>(), r.addend);
       }
       continue;
     }
@@ -155,7 +157,7 @@ void markLive() {
         if (auto *s = r.referent.dyn_cast<Symbol *>())
           addSym(s);
         else
-          enqueue(r.referent.get<InputSection *>());
+          enqueue(r.referent.get<InputSection *>(), r.addend);
       }
     }
 
@@ -177,7 +179,7 @@ void markLive() {
         else
           referentLive = r.referent.get<InputSection *>()->isLive(r.addend);
         if (referentLive)
-          enqueue(isec);
+          enqueue(isec, 0);
       }
     }
 

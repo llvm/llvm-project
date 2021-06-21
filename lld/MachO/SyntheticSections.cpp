@@ -1121,7 +1121,8 @@ void CStringSection::finalize() {
   // contents.
   for (const CStringInputSection *isec : inputs)
     for (size_t i = 0, e = isec->pieces.size(); i != e; ++i)
-      builder.add(isec->getCachedHashStringRef(i));
+      if (isec->pieces[i].live)
+        builder.add(isec->getCachedHashStringRef(i));
 
   // Fix the string table content. After this, the contents will never change.
   builder.finalizeInOrder();
@@ -1131,6 +1132,8 @@ void CStringSection::finalize() {
   // to a corresponding SectionPiece for easy access.
   for (CStringInputSection *isec : inputs) {
     for (size_t i = 0, e = isec->pieces.size(); i != e; ++i) {
+      if (!isec->pieces[i].live)
+        continue;
       isec->pieces[i].outSecOff =
           builder.getOffset(isec->getCachedHashStringRef(i));
       isec->isFinal = true;
@@ -1155,22 +1158,28 @@ void WordLiteralSection::addInput(WordLiteralInputSection *isec) {
   const uint8_t *buf = isec->data.data();
   switch (sectionType(isec->flags)) {
   case S_4BYTE_LITERALS: {
-    for (size_t i = 0, e = isec->data.size() / 4; i < e; ++i) {
-      uint32_t value = *reinterpret_cast<const uint32_t *>(buf + i * 4);
+    for (size_t off = 0, e = isec->data.size(); off < e; off += 4) {
+      if (!isec->isLive(off))
+        continue;
+      uint32_t value = *reinterpret_cast<const uint32_t *>(buf + off);
       literal4Map.emplace(value, literal4Map.size());
     }
     break;
   }
   case S_8BYTE_LITERALS: {
-    for (size_t i = 0, e = isec->data.size() / 8; i < e; ++i) {
-      uint64_t value = *reinterpret_cast<const uint64_t *>(buf + i * 8);
+    for (size_t off = 0, e = isec->data.size(); off < e; off += 8) {
+      if (!isec->isLive(off))
+        continue;
+      uint64_t value = *reinterpret_cast<const uint64_t *>(buf + off);
       literal8Map.emplace(value, literal8Map.size());
     }
     break;
   }
   case S_16BYTE_LITERALS: {
-    for (size_t i = 0, e = isec->data.size() / 16; i < e; ++i) {
-      UInt128 value = *reinterpret_cast<const UInt128 *>(buf + i * 16);
+    for (size_t off = 0, e = isec->data.size(); off < e; off += 16) {
+      if (!isec->isLive(off))
+        continue;
+      UInt128 value = *reinterpret_cast<const UInt128 *>(buf + off);
       literal16Map.emplace(value, literal16Map.size());
     }
     break;
