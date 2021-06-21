@@ -4805,7 +4805,7 @@ public:
     bool isMoveEligible() const { return S != None; };
     bool isCopyElidable() const { return S == MoveEligibleAndCopyElidable; }
   };
-  NamedReturnInfo getNamedReturnInfo(Expr *&E, bool ForceCXX2b = false);
+  NamedReturnInfo getNamedReturnInfo(const Expr *E, bool ForceCXX20 = false);
   NamedReturnInfo getNamedReturnInfo(const VarDecl *VD,
                                      bool ForceCXX20 = false);
   const VarDecl *getCopyElisionCandidate(NamedReturnInfo &Info,
