@@ -28,6 +28,7 @@ public:
   enum Kind {
     ConcatKind,
     CStringLiteralKind,
+    WordLiteralKind,
   };
 
   Kind kind() const { return sectionKind; }
@@ -146,6 +147,17 @@ public:
   std::vector<StringPiece> pieces;
 };
 
+class WordLiteralInputSection : public InputSection {
+public:
+  WordLiteralInputSection() : InputSection(WordLiteralKind) {}
+  uint64_t getFileOffset(uint64_t off) const override;
+  uint64_t getOffset(uint64_t off) const override;
+
+  static bool classof(const InputSection *isec) {
+    return isec->kind() == WordLiteralKind;
+  }
+};
+
 inline uint8_t sectionType(uint32_t flags) {
   return flags & llvm::MachO::SECTION_TYPE;
 }
@@ -167,6 +179,12 @@ inline bool isThreadLocalData(uint32_t flags) {
 inline bool isDebugSection(uint32_t flags) {
   return (flags & llvm::MachO::SECTION_ATTRIBUTES_USR) ==
          llvm::MachO::S_ATTR_DEBUG;
+}
+
+inline bool isWordLiteralSection(uint32_t flags) {
+  return sectionType(flags) == llvm::MachO::S_4BYTE_LITERALS ||
+         sectionType(flags) == llvm::MachO::S_8BYTE_LITERALS ||
+         sectionType(flags) == llvm::MachO::S_16BYTE_LITERALS;
 }
 
 bool isCodeSection(const InputSection *);
@@ -197,6 +215,7 @@ constexpr const char indirectSymbolTable[] = "__ind_sym_tab";
 constexpr const char const_[] = "__const";
 constexpr const char lazySymbolPtr[] = "__la_symbol_ptr";
 constexpr const char lazyBinding[] = "__lazy_binding";
+constexpr const char literals[] = "__literals";
 constexpr const char moduleInitFunc[] = "__mod_init_func";
 constexpr const char moduleTermFunc[] = "__mod_term_func";
 constexpr const char nonLazySymbolPtr[] = "__nl_symbol_ptr";

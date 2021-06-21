@@ -1141,6 +1141,64 @@ void CStringSection::finalize() {
   }
 }
 
+// This section is actually emitted as __TEXT,__const by ld64, but clang may
+// emit input sections of that name, and LLD doesn't currently support mixing
+// synthetic and concat-type OutputSections. To work around this, I've given
+// our merged-literals section a different name.
+WordLiteralSection::WordLiteralSection()
+    : SyntheticSection(segment_names::text, section_names::literals) {
+  align = 16;
+}
+
+void WordLiteralSection::addInput(WordLiteralInputSection *isec) {
+  isec->parent = this;
+  // We do all processing of the InputSection here, so it will be effectively
+  // finalized.
+  isec->isFinal = true;
+  const uint8_t *buf = isec->data.data();
+  switch (sectionType(isec->flags)) {
+  case S_4BYTE_LITERALS: {
+    for (size_t i = 0, e = isec->data.size() / 4; i < e; ++i) {
+      uint32_t value = *reinterpret_cast<const uint32_t *>(buf + i * 4);
+      literal4Map.emplace(value, literal4Map.size());
+    }
+    break;
+  }
+  case S_8BYTE_LITERALS: {
+    for (size_t i = 0, e = isec->data.size() / 8; i < e; ++i) {
+      uint64_t value = *reinterpret_cast<const uint64_t *>(buf + i * 8);
+      literal8Map.emplace(value, literal8Map.size());
+    }
+    break;
+  }
+  case S_16BYTE_LITERALS: {
+    for (size_t i = 0, e = isec->data.size() / 16; i < e; ++i) {
+      UInt128 value = *reinterpret_cast<const UInt128 *>(buf + i * 16);
+      literal16Map.emplace(value, literal16Map.size());
+    }
+    break;
+  }
+  default:
+    llvm_unreachable("invalid literal section type");
+  }
+}
+
+void WordLiteralSection::writeTo(uint8_t *buf) const {
+  // Note that we don't attempt to do any endianness conversion in addInput(),
+  // so we don't do it here either -- just write out the original value,
+  // byte-for-byte.
+  for (const auto &p : literal16Map)
+    memcpy(buf + p.second * 16, &p.first, 16);
+  buf += literal16Map.size() * 16;
+
+  for (const auto &p : literal8Map)
+    memcpy(buf + p.second * 8, &p.first, 8);
+  buf += literal8Map.size() * 8;
+
+  for (const auto &p : literal4Map)
+    memcpy(buf + p.second * 4, &p.first, 4);
+}
+
 void macho::createSyntheticSymbols() {
   auto addHeaderSymbol = [](const char *name) {
     symtab->addSynthetic(name, in.header->isec, /*value=*/0,

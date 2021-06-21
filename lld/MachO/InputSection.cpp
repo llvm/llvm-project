@@ -127,6 +127,25 @@ uint64_t CStringInputSection::getOffset(uint64_t off) const {
   return piece.outSecOff + addend;
 }
 
+uint64_t WordLiteralInputSection::getFileOffset(uint64_t off) const {
+  return parent->fileOff + getOffset(off);
+}
+
+uint64_t WordLiteralInputSection::getOffset(uint64_t off) const {
+  auto *osec = cast<WordLiteralSection>(parent);
+  const uint8_t *buf = data.data();
+  switch (sectionType(flags)) {
+  case S_4BYTE_LITERALS:
+    return osec->getLiteral4Offset(buf + off);
+  case S_8BYTE_LITERALS:
+    return osec->getLiteral8Offset(buf + off);
+  case S_16BYTE_LITERALS:
+    return osec->getLiteral16Offset(buf + off);
+  default:
+    llvm_unreachable("invalid literal section type");
+  }
+}
+
 bool macho::isCodeSection(const InputSection *isec) {
   uint32_t type = sectionType(isec->flags);
   if (type != S_REGULAR && type != S_COALESCED)
