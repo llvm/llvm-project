@@ -322,6 +322,12 @@ TEST(ArgsTest, GetShellSafeArgument) {
   EXPECT_EQ(Args::GetShellSafeArgument(bash, "a\""), "a\\\"");
   EXPECT_EQ(Args::GetShellSafeArgument(bash, "a\"b"), "a\\\"b");
 
+  FileSpec zsh("/bin/zsh", FileSpec::Style::posix);
+  EXPECT_EQ(Args::GetShellSafeArgument(zsh, R"('";()<>&|\)"),
+            R"(\'\"\;\(\)\<\>\&\|\\)");
+  // Normal characters and expressions that shouldn't be escaped.
+  EXPECT_EQ(Args::GetShellSafeArgument(zsh, "aA$1*"), "aA$1*");
+
   // String that doesn't need to be escaped
   EXPECT_EQ(Args::GetShellSafeArgument(bash, "a"), "a");
 
