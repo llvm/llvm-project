@@ -218,15 +218,18 @@ static bool allSameBlock(ArrayRef<Value *> VL) {
   return true;
 }
 
+/// \returns True if the value is a constant (but not globals/constant
+/// expressions).
+static bool isConstant(Value *V) {
+  return isa<Constant>(V) && !isa<ConstantExpr>(V) && !isa<GlobalValue>(V);
+}
+
 /// \returns True if all of the values in \p VL are constants (but not
 /// globals/constant expressions).
 static bool allConstant(ArrayRef<Value *> VL) {
   // Constant expressions and globals can't be vectorized like normal integer/FP
   // constants.
-  for (Value *i : VL)
-    if (!isa<Constant>(i) || isa<ConstantExpr>(i) || isa<GlobalValue>(i))
-      return false;
-  return true;
+  return all_of(VL, isConstant);
 }
 
 /// \returns True if all of the values in \p VL are identical.
@@ -4725,6 +4728,8 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL) const {
   // Iterate in reverse order to consider insert elements with the high cost.
   for (unsigned I = VL.size(); I > 0; --I) {
     unsigned Idx = I - 1;
+    if (isConstant(VL[Idx]))
+      continue;
     if (!UniqueElements.insert(VL[Idx]).second)
       ShuffledElements.insert(Idx);
   }
@@ -4810,96 +4815,65 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
 }
 
 Value *BoUpSLP::gather(ArrayRef<Value *> VL) {
+  // List of instructions/lanes from current block and/or the blocks which are
+  // part of the current loop. These instructions will be inserted at the end to
+  // make it possible to optimize loops and hoist invariant instructions out of
+  // the loops body with better chances for success.
+  SmallVector<std::pair<Value *, unsigned>, 4> PostponedInsts;
+  SmallSet<int, 4> PostponedIndices;
+  Loop *L = LI->getLoopFor(Builder.GetInsertBlock());
+  auto &&CheckPredecessor = [](BasicBlock *InstBB, BasicBlock *InsertBB) {
+    SmallPtrSet<BasicBlock *, 4> Visited;
+    while (InsertBB && InsertBB != InstBB && Visited.insert(InsertBB).second)
+      InsertBB = InsertBB->getSinglePredecessor();
+    return InsertBB && InsertBB == InstBB;
+  };
+  for (int I = 0, E = VL.size(); I < E; ++I) {
+    if (auto *Inst = dyn_cast<Instruction>(VL[I]))
+      if ((CheckPredecessor(Inst->getParent(), Builder.GetInsertBlock()) ||
+           getTreeEntry(Inst) || (L && (L->contains(Inst)))) &&
+          PostponedIndices.insert(I).second)
+        PostponedInsts.emplace_back(Inst, I);
+  }
+
+  auto &&CreateInsertElement = [this](Value *Vec, Value *V, unsigned Pos) {
+    // No need to insert undefs elements - exit.
+    if (isa<UndefValue>(V))
+      return Vec;
+    Vec = Builder.CreateInsertElement(Vec, V, Builder.getInt32(Pos));
+    auto *InsElt = dyn_cast<InsertElementInst>(Vec);
+    if (!InsElt)
+      return Vec;
+    GatherSeq.insert(InsElt);
+    CSEBlocks.insert(InsElt->getParent());
+    // Add to our 'need-to-extract' list.
+    if (TreeEntry *Entry = getTreeEntry(V)) {
+      // Find which lane we need to extract.
+      unsigned FoundLane =
+          std::distance(Entry->Scalars.begin(), find(Entry->Scalars, V));
+      assert(FoundLane < Entry->Scalars.size() && "Couldn't find extract lane");
+      if (!Entry->ReuseShuffleIndices.empty()) {
+        FoundLane = std::distance(Entry->ReuseShuffleIndices.begin(),
+                                  find(Entry->ReuseShuffleIndices, FoundLane));
+      }
+      ExternalUses.emplace_back(V, InsElt, FoundLane);
+    }
+    return Vec;
+  };
   Value *Val0 =
       isa<StoreInst>(VL[0]) ? cast<StoreInst>(VL[0])->getValueOperand() : VL[0];
   FixedVectorType *VecTy = FixedVectorType::get(Val0->getType(), VL.size());
   Value *Vec = PoisonValue::get(VecTy);
-  unsigned InsIndex = 0;
-  for (Value *Val : VL) {
-    Vec = Builder.CreateInsertElement(Vec, Val, Builder.getInt32(InsIndex++));
-    auto *InsElt = dyn_cast<InsertElementInst>(Vec);
-    if (!InsElt)
+  for (int I = 0, E = VL.size(); I < E; ++I) {
+    if (PostponedIndices.contains(I))
       continue;
-    GatherSeq.insert(InsElt);
-    CSEBlocks.insert(InsElt->getParent());
-    // Add to our 'need-to-extract' list.
-    if (TreeEntry *Entry = getTreeEntry(Val)) {
-      // Find which lane we need to extract.
-      int FoundLane =
-          findLaneForValue(Entry->Scalars, Entry->ReuseShuffleIndices, Val);
-      ExternalUses.push_back(ExternalUser(Val, InsElt, FoundLane));
-    }
+    Vec = CreateInsertElement(Vec, VL[I], I);
   }
+  // Append instructions, which are/may be part of the loop, in the end to make
+  // it possible to hoist non-loop-based instructions.
+  for (const std::pair<Value *, unsigned> &Pair : PostponedInsts)
+    Vec = CreateInsertElement(Vec, Pair.first, Pair.second);
 
-  return Vec;
-}
-
-Value *BoUpSLP::vectorizeTree(ArrayRef<Value *> VL) {
-  InstructionsState S = getSameOpcode(VL);
-  if (S.getOpcode()) {
-    if (TreeEntry *E = getTreeEntry(S.OpValue)) {
-      if (E->isSame(VL)) {
-        Value *V = vectorizeTree(E);
-        if (VL.size() == E->Scalars.size() && !E->ReuseShuffleIndices.empty()) {
-          // Reshuffle to get only unique values.
-          // If some of the scalars are duplicated in the vectorization tree
-          // entry, we do not vectorize them but instead generate a mask for the
-          // reuses. But if there are several users of the same entry, they may
-          // have different vectorization factors. This is especially important
-          // for PHI nodes. In this case, we need to adapt the resulting
-          // instruction for the user vectorization factor and have to reshuffle
-          // it again to take only unique elements of the vector. Without this
-          // code the function incorrectly returns reduced vector instruction
-          // with the same elements, not with the unique ones.
-          // block:
-          // %phi = phi <2 x > { .., %entry} {%shuffle, %block}
-          // %2 = shuffle <2 x > %phi, %poison, <4 x > <0, 0, 1, 1>
-          // ... (use %2)
-          // %shuffle = shuffle <2 x> %2, poison, <2 x> {0, 2}
-          // br %block
-          SmallVector<int, 4> UniqueIdxs;
-          SmallSet<int, 4> UsedIdxs;
-          int Pos = 0;
-          for (int Idx : E->ReuseShuffleIndices) {
-            if (UsedIdxs.insert(Idx).second)
-              UniqueIdxs.emplace_back(Pos);
-            ++Pos;
-          }
-          V = Builder.CreateShuffleVector(V, UniqueIdxs, "shrink.shuffle");
-        }
-        return V;
-      }
-    }
-  }
-
-  // Check that every instruction appears once in this bundle.
-  SmallVector<int, 4> ReuseShuffleIndicies;
-  SmallVector<Value *, 4> UniqueValues;
-  if (VL.size() > 2) {
-    DenseMap<Value *, unsigned> UniquePositions;
-    for (Value *V : VL) {
-      auto Res = UniquePositions.try_emplace(V, UniqueValues.size());
-      ReuseShuffleIndicies.emplace_back(Res.first->second);
-      if (Res.second || isa<Constant>(V))
-        UniqueValues.emplace_back(V);
-    }
-    // Do not shuffle single element or if number of unique values is not power
-    // of 2.
-    if (UniqueValues.size() == VL.size() || UniqueValues.size() <= 1 ||
-        !llvm::isPowerOf2_32(UniqueValues.size()))
-      ReuseShuffleIndicies.clear();
-    else
-      VL = UniqueValues;
-  }
-
-  Value *Vec = gather(VL);
-  if (!ReuseShuffleIndicies.empty()) {
-    Vec = Builder.CreateShuffleVector(Vec, ReuseShuffleIndicies, "shuffle");
-    if (auto *I = dyn_cast<Instruction>(Vec)) {
-      GatherSeq.insert(I);
-      CSEBlocks.insert(I->getParent());
-    }
-  }
   return Vec;
 }
 
@@ -4907,11 +4881,13 @@ namespace {
 /// Merges shuffle masks and emits final shuffle instruction, if required.
 class ShuffleInstructionBuilder {
   IRBuilderBase &Builder;
+  const unsigned VF = 0;
   bool IsFinalized = false;
   SmallVector<int, 4> Mask;
 
 public:
-  ShuffleInstructionBuilder(IRBuilderBase &Builder) : Builder(Builder) {}
+  ShuffleInstructionBuilder(IRBuilderBase &Builder, unsigned VF)
+      : Builder(Builder), VF(VF) {}
 
   /// Adds a mask, inverting it before applying.
   void addInversedMask(ArrayRef<unsigned> SubMask) {
@@ -4938,8 +4914,9 @@ public:
     SmallVector<int, 4> NewMask(SubMask.size(), SubMask.size());
     int TermValue = std::min(Mask.size(), SubMask.size());
     for (int I = 0, E = SubMask.size(); I < E; ++I) {
-      if (SubMask[I] >= TermValue || Mask[SubMask[I]] >= TermValue) {
-        NewMask[I] = E;
+      if (SubMask[I] >= TermValue || SubMask[I] == UndefMaskElem ||
+          Mask[SubMask[I]] >= TermValue) {
+        NewMask[I] = UndefMaskElem;
         continue;
       }
       NewMask[I] = Mask[SubMask[I]];
@@ -4949,7 +4926,14 @@ public:
 
   Value *finalize(Value *V) {
     IsFinalized = true;
-    if (Mask.empty())
+    unsigned ValueVF = cast<FixedVectorType>(V->getType())->getNumElements();
+    if (VF == ValueVF && Mask.empty())
+      return V;
+    SmallVector<int, 4> NormalizedMask(VF, UndefMaskElem);
+    std::iota(NormalizedMask.begin(), NormalizedMask.end(), 0);
+    addMask(NormalizedMask);
+
+    if (VF == ValueVF && ShuffleVectorInst::isIdentityMask(Mask))
       return V;
     return Builder.CreateShuffleVector(V, Mask, "shuffle");
   }
@@ -4961,6 +4945,120 @@ public:
 };
 } // namespace
 
+Value *BoUpSLP::vectorizeTree(ArrayRef<Value *> VL) {
+  unsigned VF = VL.size();
+  InstructionsState S = getSameOpcode(VL);
+  if (S.getOpcode()) {
+    if (TreeEntry *E = getTreeEntry(S.OpValue))
+      if (E->isSame(VL)) {
+        Value *V = vectorizeTree(E);
+        if (VF != cast<FixedVectorType>(V->getType())->getNumElements()) {
+          if (!E->ReuseShuffleIndices.empty()) {
+            // Reshuffle to get only unique values.
+            // If some of the scalars are duplicated in the vectorization tree
+            // entry, we do not vectorize them but instead generate a mask for
+            // the reuses. But if there are several users of the same entry,
+            // they may have different vectorization factors. This is especially
+            // important for PHI nodes. In this case, we need to adapt the
+            // resulting instruction for the user vectorization factor and have
+            // to reshuffle it again to take only unique elements of the vector.
+            // Without this code the function incorrectly returns reduced vector
+            // instruction with the same elements, not with the unique ones.
+
+            // block:
+            // %phi = phi <2 x > { .., %entry} {%shuffle, %block}
+            // %2 = shuffle <2 x > %phi, %poison, <4 x > <0, 0, 1, 1>
+            // ... (use %2)
+            // %shuffle = shuffle <2 x> %2, poison, <2 x> {0, 2}
+            // br %block
+            SmallVector<int> UniqueIdxs;
+            SmallSet<int, 4> UsedIdxs;
+            int Pos = 0;
+            int Sz = VL.size();
+            for (int Idx : E->ReuseShuffleIndices) {
+              if (Idx != Sz && UsedIdxs.insert(Idx).second)
+                UniqueIdxs.emplace_back(Pos);
+              ++Pos;
+            }
+            assert(VF >= UsedIdxs.size() && "Expected vectorization factor "
+                                            "less than original vector size.");
+            UniqueIdxs.append(VF - UsedIdxs.size(), UndefMaskElem);
+            V = Builder.CreateShuffleVector(V, UniqueIdxs, "shrink.shuffle");
+          } else {
+            assert(VF < cast<FixedVectorType>(V->getType())->getNumElements() &&
+                   "Expected vectorization factor less "
+                   "than original vector size.");
+            SmallVector<int> UniformMask(VF, 0);
+            std::iota(UniformMask.begin(), UniformMask.end(), 0);
+            V = Builder.CreateShuffleVector(V, UniformMask, "shrink.shuffle");
+          }
+        }
+        return V;
+      }
+  }
+
+  // Check that every instruction appears once in this bundle.
+  SmallVector<int> ReuseShuffleIndicies;
+  SmallVector<Value *> UniqueValues;
+  if (VL.size() > 2) {
+    DenseMap<Value *, unsigned> UniquePositions;
+    unsigned NumValues =
+        std::distance(VL.begin(), find_if(reverse(VL), [](Value *V) {
+                                    return !isa<UndefValue>(V);
+                                  }).base());
+    VF = std::max<unsigned>(VF, PowerOf2Ceil(NumValues));
+    int UniqueVals = 0;
+    bool HasUndefs = false;
+    for (Value *V : VL.drop_back(VL.size() - VF)) {
+      if (isa<UndefValue>(V)) {
+        ReuseShuffleIndicies.emplace_back(UndefMaskElem);
+        HasUndefs = true;
+        continue;
+      }
+      if (isConstant(V)) {
+        ReuseShuffleIndicies.emplace_back(UniqueValues.size());
+        UniqueValues.emplace_back(V);
+        continue;
+      }
+      auto Res = UniquePositions.try_emplace(V, UniqueValues.size());
+      ReuseShuffleIndicies.emplace_back(Res.first->second);
+      if (Res.second) {
+        UniqueValues.emplace_back(V);
+        ++UniqueVals;
+      }
+    }
+    if (HasUndefs && UniqueVals == 1 && UniqueValues.size() == 1) {
+      // Emit pure splat vector.
+      // FIXME: why it is not identified as an identity.
+      unsigned NumUndefs = count(ReuseShuffleIndicies, UndefMaskElem);
+      if (NumUndefs == ReuseShuffleIndicies.size() - 1)
+        ReuseShuffleIndicies.append(VF - ReuseShuffleIndicies.size(),
+                                    UndefMaskElem);
+      else
+        ReuseShuffleIndicies.assign(VF, 0);
+    } else if (UniqueValues.size() >= VF - 1 || UniqueValues.size() <= 1) {
+      ReuseShuffleIndicies.clear();
+      UniqueValues.clear();
+      UniqueValues.append(VL.begin(), std::next(VL.begin(), NumValues));
+    }
+    UniqueValues.append(VF - UniqueValues.size(),
+                        UndefValue::get(VL[0]->getType()));
+    VL = UniqueValues;
+  }
+
+  ShuffleInstructionBuilder ShuffleBuilder(Builder, VF);
+  Value *Vec = gather(VL);
+  if (!ReuseShuffleIndicies.empty()) {
+    ShuffleBuilder.addMask(ReuseShuffleIndicies);
+    Vec = ShuffleBuilder.finalize(Vec);
+    if (auto *I = dyn_cast<Instruction>(Vec)) {
+      GatherSeq.insert(I);
+      CSEBlocks.insert(I->getParent());
+    }
+  }
+  return Vec;
+}
+
 Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
   IRBuilder<>::InsertPointGuard Guard(Builder);
 
@@ -4969,8 +5067,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     return E->VectorizedValue;
   }
 
-  ShuffleInstructionBuilder ShuffleBuilder(Builder);
   bool NeedToShuffleReuses = !E->ReuseShuffleIndices.empty();
+  unsigned VF = E->Scalars.size();
+  if (NeedToShuffleReuses)
+    VF = E->ReuseShuffleIndices.size();
+  ShuffleInstructionBuilder ShuffleBuilder(Builder, VF);
   if (E->State == TreeEntry::NeedToGather) {
     setInsertPointAfterBundle(E);
     Value *Vec;

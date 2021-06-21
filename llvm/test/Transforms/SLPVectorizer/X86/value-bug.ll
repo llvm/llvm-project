@@ -13,27 +13,27 @@ define void @test() {
 ; CHECK-NEXT:  bb279:
 ; CHECK-NEXT:    br label [[BB283:%.*]]
 ; CHECK:       bb283:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x float> [ undef, [[BB279:%.*]] ], [ [[TMP11:%.*]], [[EXIT:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x float> [ undef, [[BB279]] ], [ undef, [[EXIT]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x float> [ poison, [[BB279:%.*]] ], [ [[TMP11:%.*]], [[EXIT:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x float> [ poison, [[BB279]] ], [ poison, [[EXIT]] ]
 ; CHECK-NEXT:    br label [[BB284:%.*]]
 ; CHECK:       bb284:
 ; CHECK-NEXT:    [[TMP2:%.*]] = fpext <2 x float> [[TMP0]] to <2 x double>
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub <2 x double> [[TMP2]], undef
-; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP3]], undef
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub <2 x double> [[TMP2]], poison
+; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP3]], poison
 ; CHECK-NEXT:    br label [[BB21_I:%.*]]
 ; CHECK:       bb21.i:
 ; CHECK-NEXT:    br i1 undef, label [[BB22_I:%.*]], label [[EXIT]]
 ; CHECK:       bb22.i:
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> undef, [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> poison, [[TMP4]]
 ; CHECK-NEXT:    br label [[BB32_I:%.*]]
 ; CHECK:       bb32.i:
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x double> [ [[TMP5]], [[BB22_I]] ], [ zeroinitializer, [[BB32_I]] ]
 ; CHECK-NEXT:    br i1 undef, label [[BB32_I]], label [[BB21_I]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[TMP7:%.*]] = fpext <2 x float> [[TMP1]] to <2 x double>
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP7]], <double undef, double 0.000000e+00>
-; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> undef, [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd <2 x double> [[TMP9]], undef
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP7]], <double poison, double 0.000000e+00>
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> poison, [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd <2 x double> [[TMP9]], poison
 ; CHECK-NEXT:    [[TMP11]] = fptrunc <2 x double> [[TMP10]] to <2 x float>
 ; CHECK-NEXT:    br label [[BB283]]
 ;
