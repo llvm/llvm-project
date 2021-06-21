@@ -86,7 +86,6 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBThreadCollection.cpp
   SBThreadPlan.cpp
   SBTrace.cpp
-  SBTraceOptions.cpp
   SBType.cpp
   SBTypeCategory.cpp
   SBTypeEnumMember.cpp

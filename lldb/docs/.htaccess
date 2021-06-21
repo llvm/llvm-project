@@ -82,7 +82,6 @@ Redirect 301 /python_reference/lldb.SBThread-class.html https://lldb.llvm.org/py
 Redirect 301 /python_reference/lldb.SBThreadCollection-class.html https://lldb.llvm.org/python_api/lldb.SBThreadCollection.html
 Redirect 301 /python_reference/lldb.SBThreadPlan-class.html https://lldb.llvm.org/python_api/lldb.SBThreadPlan.html
 Redirect 301 /python_reference/lldb.SBTrace-class.html https://lldb.llvm.org/python_api/lldb.SBTrace.html
-Redirect 301 /python_reference/lldb.SBTraceOptions-class.html https://lldb.llvm.org/python_api/lldb.SBTraceOptions.html
 Redirect 301 /python_reference/lldb.SBType-class.html https://lldb.llvm.org/python_api/lldb.SBType.html
 Redirect 301 /python_reference/lldb.SBTypeCategory-class.html https://lldb.llvm.org/python_api/lldb.SBTypeCategory.html
 Redirect 301 /python_reference/lldb.SBTypeEnumMember-class.html https://lldb.llvm.org/python_api/lldb.SBTypeEnumMember.html

@@ -224,31 +224,6 @@ public:
 
   SBStructuredData GetExtendedCrashInformation();
 
-  /// Start Tracing with the given SBTraceOptions.
-  ///
-  /// \param[in] options
-  ///     Class containing trace options like trace buffer size, meta
-  ///     data buffer size, TraceType and any custom parameters
-  ///     {formatted as a JSON Dictionary}. In case of errors in
-  ///     formatting, an error would be reported.
-  ///     It must be noted that tracing options such as buffer sizes
-  ///     or other custom parameters passed maybe invalid for some
-  ///     trace technologies. In such cases the trace implementations
-  ///     could choose to either throw an error or could round off to
-  ///     the nearest valid options to start tracing if the passed
-  ///     value is not supported. To obtain the actual used trace
-  ///     options please use the GetTraceConfig API. For the custom
-  ///     parameters, only the parameters recognized by the target
-  ///     would be used and others would be ignored.
-  ///
-  /// \param[out] error
-  ///     An error explaining what went wrong.
-  ///
-  /// \return
-  ///     A SBTrace instance, which should be used
-  ///     to get the trace data or other trace related operations.
-  lldb::SBTrace StartTrace(SBTraceOptions &options, lldb::SBError &error);
-
   uint32_t GetNumSupportedHardwareWatchpoints(lldb::SBError &error) const;
 
   /// Load a shared library into this process.
@@ -301,13 +276,13 @@ public:
   /// paths till you find a matching library.
   ///
   /// \param[in] image_spec
-  ///     The name of the shared library that you want to load.  
+  ///     The name of the shared library that you want to load.
   ///     If image_spec is a relative path, the relative path will be
   ///     appended to the search paths.
   ///     If the image_spec is an absolute path, just the basename is used.
   ///
   /// \param[in] paths
-  ///     A list of paths to search for the library whose basename is 
+  ///     A list of paths to search for the library whose basename is
   ///     local_spec.
   ///
   /// \param[out] loaded_path
@@ -325,7 +300,7 @@ public:
   ///     library can't be opened.
   uint32_t LoadImageUsingPaths(const lldb::SBFileSpec &image_spec,
                                SBStringList &paths,
-                               lldb::SBFileSpec &loaded_path, 
+                               lldb::SBFileSpec &loaded_path,
                                lldb::SBError &error);
 
   lldb::SBError UnloadImage(uint32_t image_token);
