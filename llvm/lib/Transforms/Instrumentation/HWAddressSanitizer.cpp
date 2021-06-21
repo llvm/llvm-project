@@ -264,11 +264,15 @@ private:
   /// If InTls is true, then
   ///   extern char *__hwasan_tls;
   ///   shadow = (mem>>Scale) + align_up(__hwasan_shadow, kShadowBaseAlignment)
+  ///
+  /// If WithFrameRecord is true, then __hwasan_tls will be used to access the
+  /// ring buffer for storing stack allocations on targets that support it.
   struct ShadowMapping {
     int Scale;
     uint64_t Offset;
     bool InGlobal;
     bool InTls;
+    bool WithFrameRecord;
 
     void init(Triple &TargetTriple, bool InstrumentWithCalls);
     unsigned getObjectAlignment() const { return 1U << Scale; }
@@ -1042,15 +1046,13 @@ Value *HWAddressSanitizer::getHwasanThreadSlotPtr(IRBuilder<> &IRB, Type *Ty) {
 }
 
 void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
-  if (!Mapping.InTls) {
+  if (!Mapping.InTls)
     ShadowBase = getShadowNonTls(IRB);
-    return;
-  }
-
-  if (!WithFrameRecord && TargetTriple.isAndroid()) {
+  else if (!WithFrameRecord && TargetTriple.isAndroid())
     ShadowBase = getDynamicShadowIfunc(IRB);
+
+  if (!WithFrameRecord && ShadowBase)
     return;
-  }
 
   Value *SlotPtr = getHwasanThreadSlotPtr(IRB, IntptrTy);
   assert(SlotPtr);
@@ -1106,15 +1108,17 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
     IRB.CreateStore(ThreadLongNew, SlotPtr);
   }
 
-  // Get shadow base address by aligning RecordPtr up.
-  // Note: this is not correct if the pointer is already aligned.
-  // Runtime library will make sure this never happens.
-  ShadowBase = IRB.CreateAdd(
-      IRB.CreateOr(
-          ThreadLongMaybeUntagged,
-          ConstantInt::get(IntptrTy, (1ULL << kShadowBaseAlignment) - 1)),
-      ConstantInt::get(IntptrTy, 1), "hwasan.shadow");
-  ShadowBase = IRB.CreateIntToPtr(ShadowBase, Int8PtrTy);
+  if (!ShadowBase) {
+    // Get shadow base address by aligning RecordPtr up.
+    // Note: this is not correct if the pointer is already aligned.
+    // Runtime library will make sure this never happens.
+    ShadowBase = IRB.CreateAdd(
+        IRB.CreateOr(
+            ThreadLongMaybeUntagged,
+            ConstantInt::get(IntptrTy, (1ULL << kShadowBaseAlignment) - 1)),
+        ConstantInt::get(IntptrTy, 1), "hwasan.shadow");
+    ShadowBase = IRB.CreateIntToPtr(ShadowBase, Int8PtrTy);
+  }
 }
 
 Value *HWAddressSanitizer::readRegister(IRBuilder<> &IRB, StringRef Name) {
@@ -1273,7 +1277,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
   IRBuilder<> EntryIRB(InsertPt);
   emitPrologue(EntryIRB,
                /*WithFrameRecord*/ ClRecordStackHistory &&
-                   !AllocasToInstrument.empty());
+                   Mapping.WithFrameRecord && !AllocasToInstrument.empty());
 
   if (!AllocasToInstrument.empty()) {
     Value *StackTag =
@@ -1540,25 +1544,31 @@ void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
     InGlobal = false;
     InTls = false;
     Offset = 0;
+    WithFrameRecord = true;
   } else if (ClMappingOffset.getNumOccurrences() > 0) {
     InGlobal = false;
     InTls = false;
     Offset = ClMappingOffset;
+    WithFrameRecord = false;
   } else if (ClEnableKhwasan || InstrumentWithCalls) {
     InGlobal = false;
     InTls = false;
     Offset = 0;
+    WithFrameRecord = false;
   } else if (ClWithIfunc) {
     InGlobal = true;
     InTls = false;
     Offset = kDynamicShadowSentinel;
+    WithFrameRecord = false;
   } else if (ClWithTls) {
     InGlobal = false;
     InTls = true;
     Offset = kDynamicShadowSentinel;
+    WithFrameRecord = true;
   } else {
     InGlobal = false;
     InTls = false;
     Offset = kDynamicShadowSentinel;
+    WithFrameRecord = false;
   }
 }
