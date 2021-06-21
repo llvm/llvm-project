@@ -31,6 +31,7 @@ public:
 
   using ImplType = AttributeStorage;
   using ValueType = void;
+  using AbstractType = AbstractAttribute;
 
   constexpr Attribute() : impl(nullptr) {}
   /* implicit */ Attribute(const ImplType *impl)

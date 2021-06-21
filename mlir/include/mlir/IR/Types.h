@@ -79,6 +79,8 @@ public:
 
   using ImplType = TypeStorage;
 
+  using AbstractType = AbstractType;
+
   constexpr Type() : impl(nullptr) {}
   /* implicit */ Type(const ImplType *impl)
       : impl(const_cast<ImplType *>(impl)) {}
