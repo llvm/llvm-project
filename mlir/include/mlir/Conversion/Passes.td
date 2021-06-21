@@ -367,8 +367,7 @@ def ConvertShapeToStandard : Pass<"convert-shape-to-std", "ModuleOp"> {
   let dependentDialects = [
     "memref::MemRefDialect",
     "StandardOpsDialect",
-    "scf::SCFDialect",
-    "tensor::TensorDialect"
+    "scf::SCFDialect"
   ];
 }
 
@@ -505,7 +504,7 @@ def TosaToSCF : Pass<"tosa-to-scf"> {
 
 def TosaToStandard : Pass<"tosa-to-standard"> {
   let summary = "Lower TOSA to the Standard dialect";
-  let dependentDialects = ["StandardOpsDialect", "tensor::TensorDialect"];
+  let dependentDialects = ["StandardOpsDialect"];
   let description = [{
     Pass that converts TOSA operations to the equivalent operations using the
     operations in the Standard dialect.

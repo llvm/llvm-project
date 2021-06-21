@@ -529,9 +529,9 @@ static void applyPadTensorToGenericPatterns(FuncOp funcOp) {
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
-static void applyExtractSliceOfPadTensorSwapPattern(FuncOp funcOp) {
+static void applySubTensorOfPadTensorSwapPattern(FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
-  patterns.add<ExtractSliceOfPadTensorSwapPattern>(funcOp.getContext());
+  patterns.add<SubTensorOfPadTensorSwapPattern>(funcOp.getContext());
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
@@ -614,7 +614,7 @@ void TestLinalgTransforms::runOnFunction() {
   if (testTransformPadTensor)
     return applyPadTensorToGenericPatterns(getFunction());
   if (testSwapSubTensorPadTensor)
-    return applyExtractSliceOfPadTensorSwapPattern(getFunction());
+    return applySubTensorOfPadTensorSwapPattern(getFunction());
   if (testAffineMinSCFCanonicalizationPatterns)
     return applyAffineMinSCFCanonicalizationPatterns(getFunction());
   if (testTileAndPadPattern)

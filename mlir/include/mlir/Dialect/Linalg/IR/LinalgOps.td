@@ -579,11 +579,12 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
 
     Tensor-based version:
 
-    The body region of the loop contains `extract_slice` operations applied to
+    The body region of the loop contains `subtensor` operations applied to
     every tensor argument of TiledLoopOp.
 
     The body region must contain exactly one block that terminates with
-    `linalg.yield` with the operands resulting from `insert_slice` operations.
+    `linalg.yield` with the operands resulting from `subtensor_insert`
+    operations.
 
     Example:
 
@@ -593,16 +594,16 @@ def Linalg_TiledLoopOp : Linalg_Op<"tiled_loop", [
         outs(%out : tensor<24x64xi8>)
         iterators("parallel")
         distribution("block_x") {
-      %lhs_sub = tensor.extract_slice %lhs[%i, 0] [%c4, %c64] [1, 1]
+      %lhs_sub = subtensor %lhs[%i, 0] [%c4, %c64] [1, 1]
           : tensor<24x64xi8> to tensor<?x?xi8>
-      %rhs_sub = tensor.extract_slice %rhs[%i, 0] [%c4, %c64] [1, 1]
+      %rhs_sub = subtensor %rhs[%i, 0] [%c4, %c64] [1, 1]
           : tensor<24x64xi8> to tensor<?x?xi8>
-      %out_sub = tensor.extract_slice %out[%i, 0] [%c4, %c64] [1, 1]
+      %out_sub = subtensor %out[%i, 0] [%c4, %c64] [1, 1]
           : tensor<24x64xi8> to tensor<?x?xi8>
 
       %result_sub = linalg.generic ...
 
-      %result = tensor.insert_slice %result_sub into %out[%i, 0][%c4, %c64][1, 1]
+      %result = subtensor_insert %result_sub into %out[%i, 0][%c4, %c64][1, 1]
         : tensor<?x?xi8> into tensor<24x64xi8>
       linalg.yield %result : tensor<24x64xi8>
     }
