@@ -118,6 +118,7 @@ struct FileHeader {
   Optional<ELF_EM> Machine;
   ELF_EF Flags;
   llvm::yaml::Hex64 Entry;
+  Optional<StringRef> SectionHeaderStringTable;
 
   Optional<llvm::yaml::Hex64> EPhOff;
   Optional<llvm::yaml::Hex16> EPhEntSize;
