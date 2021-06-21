@@ -3135,7 +3135,9 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
 
   assert(PendingPHIs.empty() && "stale PHIs");
 
-  if (!DL->isLittleEndian()) {
+  // Targets which want to use big endian can enable it using
+  // enableBigEndian()
+  if (!DL->isLittleEndian() && !CLI->enableBigEndian()) {
     // Currently we don't properly handle big endian code.
     OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
                                F.getSubprogram(), &F.getEntryBlock());
