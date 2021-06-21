@@ -3105,7 +3105,8 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
        (PatchedName.startswith("j") &&
         ParseConditionCode(PatchedName.substr(1)) != X86::COND_INVALID))) {
     StringRef NextTok = Parser.getTok().getString();
-    if (NextTok == "short") {
+    if (Parser.isParsingMasm() ? NextTok.equals_lower("short")
+                               : NextTok == "short") {
       SMLoc NameEndLoc =
           NameLoc.getFromPointer(NameLoc.getPointer() + Name.size());
       // Eat the short keyword.
