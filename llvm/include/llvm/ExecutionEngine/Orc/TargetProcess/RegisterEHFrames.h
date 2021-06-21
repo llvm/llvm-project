@@ -9,12 +9,14 @@
 // Support for dynamically registering and deregistering eh-frame sections
 // in-process via libunwind.
 //
+// FIXME: The functionality in this file should be moved to the ORC runtime.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_REGISTEREHFRAMES_H
 #define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_REGISTEREHFRAMES_H
 
-#include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
+#include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -31,10 +33,10 @@ Error deregisterEHFrameSection(const void *EHFrameSectionAddr,
 } // end namespace orc
 } // end namespace llvm
 
-extern "C" llvm::orc::tpctypes::CWrapperFunctionResult
-llvm_orc_registerEHFrameSectionWrapper(uint8_t *Data, uint64_t Size);
+extern "C" llvm::orc::shared::detail::CWrapperFunctionResult
+llvm_orc_registerEHFrameSectionWrapper(const char *Data, uint64_t Size);
 
-extern "C" llvm::orc::tpctypes::CWrapperFunctionResult
-llvm_orc_deregisterEHFrameSectionWrapper(uint8_t *Data, uint64_t Size);
+extern "C" llvm::orc::shared::detail::CWrapperFunctionResult
+llvm_orc_deregisterEHFrameSectionWrapper(const char *Data, uint64_t Size);
 
 #endif // LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_REGISTEREHFRAMES_H
