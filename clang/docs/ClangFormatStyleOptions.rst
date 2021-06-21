@@ -204,6 +204,41 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+**AlignArrayOfStructures** (``ArrayInitializerAlignmentStyle``)
+  if not ``None``, when using initialization for an array of structs
+  aligns the fields into columns.
+
+  Possible values:
+
+  * ``AIAS_Left`` (in configuration: ``Left``)
+    Align array column and left justify the columns e.g.:
+
+    .. code-block:: c++
+
+      struct test demo[] =
+      {
+          {56, 23,    "hello"},
+          {-1, 93463, "world"},
+          {7,  5,     "!!"   }
+      };
+
+  * ``AIAS_Right`` (in configuration: ``Right``)
+    Align array column and right justify the columns e.g.:
+
+    .. code-block:: c++
+
+      struct test demo[] =
+      {
+          {56,    23, "hello"},
+          {-1, 93463, "world"},
+          { 7,     5,    "!!"}
+      };
+
+  * ``AIAS_None`` (in configuration: ``None``)
+    Don't align array initializer columns.
+
+
+
 **AlignConsecutiveAssignments** (``AlignConsecutiveStyle``)
   Style of aligning consecutive assignments.
 
