@@ -73,6 +73,8 @@ def assembly_file : MLJoinedOrSeparate<"Ta">,
 def error_on_warning : MLFlag<"WX">, Alias<fatal_warnings>;
 def parse_only : MLFlag<"Zs">, HelpText<"Run a syntax-check only">,
                  Alias<filetype>, AliasArgs<["null"]>;
+def ignore_include_envvar : MLFlag<"X">,
+                            HelpText<"Ignore the INCLUDE environment variable">;
 
 def tiny_model_support : UnsupportedFlag<"AT">, HelpText<"">;
 def alternate_linker : UnsupportedJoined<"Bl">, HelpText<"">;
@@ -105,7 +107,6 @@ def listing_title : UnsupportedSeparate<"St">, HelpText<"">;
 def listing_false_conditionals : UnsupportedFlag<"Sx">, HelpText<"">;
 def extra_warnings : UnsupportedFlag<"w">, HelpText<"">;
 def warning_level : UnsupportedJoined<"W">, HelpText<"">;
-def ignore_include_envvar : UnsupportedFlag<"X">, HelpText<"">;
 def line_number_info : UnsupportedFlag<"Zd">, HelpText<"">;
 def export_all_symbols : UnsupportedFlag<"Zf">, HelpText<"">;
 def codeview_info : UnsupportedFlag<"Zi">, HelpText<"">;
