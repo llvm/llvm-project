@@ -292,6 +292,12 @@ int main() {
 }
 ```
 
+Note: It is strongly encouraged to only use this mechanism if you "own" the
+interface being externally applied. This prevents a situation where neither the
+owner of the dialect containing the object nor the owner of the interface are
+aware of an interface implementation, which can lead to duplicate or
+diverging implementations.
+
 #### Dialect Fallback for OpInterface
 
 Some dialects have an open ecosystem and don't register all of the possible
