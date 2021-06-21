@@ -2102,6 +2102,8 @@ equivalentUnaryOperator<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
     return UO_Minus;
   case OO_Amp:
     return UO_AddrOf;
+  case OO_Star:
+    return UO_Deref;
   case OO_Tilde:
     return UO_Not;
   case OO_Exclaim:
