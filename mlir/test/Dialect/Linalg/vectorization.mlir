@@ -515,12 +515,13 @@ func @matmul_i8_i8_i32(%a: memref<4x6xi8>, %b: memref<6x12xi8>, %c: memref<4x12x
 // CHECK-LABEL: func @pad_static(
 //  CHECK-SAME:                  %[[ARG0:.*]]: tensor<2x?x2xf32>, %[[PAD:.*]]: f32
 //   CHECK-NOT:   linalg.pad_tensor
-//   CHECK-DAG:   %[[C1:.*]] = constant 1 : index
+//   CHECK-DAG:   %[[C0:.*]] = constant 0 : index
+//   CHECK-DAG:   %[[C2:.*]] = constant 2 : index
 //   CHECK-DAG:   %[[INIT:.*]] = linalg.init_tensor [2, 3, 4] : tensor<2x3x4xf32>
 //   CHECK-DAG:   %[[VEC:.*]] = vector.broadcast %[[PAD]] : f32 to vector<2x3x4xf32>
 //       CHECK:   %[[FILL:.*]] = vector.transfer_write %[[VEC]], %[[INIT]]{{.*}} : vector<2x3x4xf32>, tensor<2x3x4xf32>
-//   CHECK-DAG:   %[[DIM1:.*]] = memref.dim %[[ARG0]], %[[C1]]
-//       CHECK:   %[[RESULT:.*]] = subtensor_insert %[[ARG0]] into %2[0, 0, 2] [2, %[[DIM1]], 2] [1, 1, 1] : tensor<2x?x2xf32> into tensor<2x3x4xf32>
+//       CHECK:   %[[READ:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]], %[[C0]]], %[[PAD]] {in_bounds = [true, false, true]} : tensor<2x?x2xf32>, vector<2x3x2xf32>
+//       CHECK:   %[[RESULT:.*]] = vector.transfer_write %[[READ]], %[[FILL]][%[[C0]], %[[C0]], %[[C2]]] {in_bounds = [true, true, true]} : vector<2x3x2xf32>, tensor<2x3x4xf32>
 //       CHECK:   return %[[RESULT]]
 func @pad_static(%arg0: tensor<2x?x2xf32>, %pad_value: f32) -> tensor<2x3x4xf32> {
   %0 = linalg.pad_tensor %arg0 low[0, 0, 2] high[0, 1, 0] {
