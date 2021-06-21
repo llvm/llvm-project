@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -std=c++2b -verify=expected,cxx20_2b -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -verify=expected,cxx20_2b -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 -verify=expected,cxx98_17 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -verify=expected,cxx98_17 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 -verify=expected,cxx98_17 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++98 -verify=expected,cxx98_17 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++2b -verify=expected,cxx20_2b,cxx2b    -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -verify=expected,cxx98_20,cxx20_2b -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -verify=expected,cxx98_17,cxx98_20 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 -verify=expected,cxx98_17,cxx98_20 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 -verify=expected,cxx98_17,cxx98_20 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 -verify=expected,cxx98_17,cxx98_20 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
 
 namespace dr300 { // dr300: yes
   template<typename R, typename A> void f(R (&)(A)) {}
@@ -628,7 +628,8 @@ namespace dr349 { // dr349: no
   struct A {
     template <class T> operator T ***() {
       int ***p = 0;
-      return p; // expected-error {{cannot initialize return object of type 'const int ***' with an lvalue of type 'int ***'}}
+      return p; // cxx98_20-error {{cannot initialize return object of type 'const int ***' with an lvalue of type 'int ***'}}
+      // cxx2b-error@-1 {{cannot initialize return object of type 'const int ***' with an rvalue of type 'int ***'}}
     }
   };
 

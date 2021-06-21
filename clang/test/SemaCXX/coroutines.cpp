@@ -1,9 +1,9 @@
 // This file contains references to sections of the Coroutines TS, which can be
 // found at http://wg21.link/coroutines.
 
-// RUN: %clang_cc1 -std=c++2b                 -fsyntax-only -verify=expected,cxx20_2b %s -fcxx-exceptions -fexceptions -Wunused-result
-// RUN: %clang_cc1 -std=c++20                 -fsyntax-only -verify=expected,cxx20_2b %s -fcxx-exceptions -fexceptions -Wunused-result
-// RUN: %clang_cc1 -std=c++14 -fcoroutines-ts -fsyntax-only -verify=expected          %s -fcxx-exceptions -fexceptions -Wunused-result
+// RUN: %clang_cc1 -std=c++2b                 -fsyntax-only -verify=expected,cxx20_2b,cxx2b    %s -fcxx-exceptions -fexceptions -Wunused-result
+// RUN: %clang_cc1 -std=c++20                 -fsyntax-only -verify=expected,cxx14_20,cxx20_2b %s -fcxx-exceptions -fexceptions -Wunused-result
+// RUN: %clang_cc1 -std=c++14 -fcoroutines-ts -fsyntax-only -verify=expected,cxx14_20          %s -fcxx-exceptions -fexceptions -Wunused-result
 
 void no_coroutine_traits_bad_arg_await() {
   co_await a; // expected-error {{include <experimental/coroutine>}}
@@ -934,7 +934,8 @@ struct std::experimental::coroutine_traits<int, mismatch_gro_type_tag2> {
 };
 
 extern "C" int f(mismatch_gro_type_tag2) {
-  // expected-error@-1 {{cannot initialize return object of type 'int' with an lvalue of type 'void *'}}
+  // cxx2b-error@-1 {{cannot initialize return object of type 'int' with an rvalue of type 'void *'}}
+  // cxx14_20-error@-2 {{cannot initialize return object of type 'int' with an lvalue of type 'void *'}}
   co_return; //expected-note {{function is a coroutine due to use of 'co_return' here}}
 }
 
