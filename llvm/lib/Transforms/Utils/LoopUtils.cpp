@@ -58,7 +58,6 @@ using namespace llvm::PatternMatch;
 
 static const char *LLVMLoopDisableNonforced = "llvm.loop.disable_nonforced";
 static const char *LLVMLoopDisableLICM = "llvm.licm.disable";
-static const char *LLVMLoopMustProgress = "llvm.loop.mustprogress";
 
 bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                    MemorySSAUpdater *MSSAU,
@@ -255,48 +254,6 @@ void llvm::addStringMetadataToLoop(Loop *TheLoop, const char *StringMD,
   TheLoop->setLoopID(NewLoopID);
 }
 
-/// Find string metadata for loop
-///
-/// If it has a value (e.g. {"llvm.distribute", 1} return the value as an
-/// operand or null otherwise.  If the string metadata is not found return
-/// Optional's not-a-value.
-Optional<const MDOperand *> llvm::findStringMetadataForLoop(const Loop *TheLoop,
-                                                            StringRef Name) {
-  MDNode *MD = findOptionMDForLoop(TheLoop, Name);
-  if (!MD)
-    return None;
-  switch (MD->getNumOperands()) {
-  case 1:
-    return nullptr;
-  case 2:
-    return &MD->getOperand(1);
-  default:
-    llvm_unreachable("loop metadata has 0 or 1 operand");
-  }
-}
-
-static Optional<bool> getOptionalBoolLoopAttribute(const Loop *TheLoop,
-                                                   StringRef Name) {
-  MDNode *MD = findOptionMDForLoop(TheLoop, Name);
-  if (!MD)
-    return None;
-  switch (MD->getNumOperands()) {
-  case 1:
-    // When the value is absent it is interpreted as 'attribute set'.
-    return true;
-  case 2:
-    if (ConstantInt *IntMD =
-            mdconst::extract_or_null<ConstantInt>(MD->getOperand(1).get()))
-      return IntMD->getZExtValue();
-    return true;
-  }
-  llvm_unreachable("unexpected number of options");
-}
-
-bool llvm::getBooleanLoopAttribute(const Loop *TheLoop, StringRef Name) {
-  return getOptionalBoolLoopAttribute(TheLoop, Name).getValueOr(false);
-}
-
 Optional<ElementCount>
 llvm::getOptionalElementCountLoopAttribute(const Loop *TheLoop) {
   Optional<int> Width =
@@ -309,20 +266,6 @@ llvm::getOptionalElementCountLoopAttribute(const Loop *TheLoop) {
   }
 
   return None;
-}
-
-llvm::Optional<int> llvm::getOptionalIntLoopAttribute(const Loop *TheLoop,
-                                                      StringRef Name) {
-  const MDOperand *AttrMD =
-      findStringMetadataForLoop(TheLoop, Name).getValueOr(nullptr);
-  if (!AttrMD)
-    return None;
-
-  ConstantInt *IntMD = mdconst::extract_or_null<ConstantInt>(AttrMD->get());
-  if (!IntMD)
-    return None;
-
-  return IntMD->getSExtValue();
 }
 
 Optional<MDNode *> llvm::makeFollowupLoopID(
@@ -412,10 +355,6 @@ bool llvm::hasDisableAllTransformsHint(const Loop *L) {
 
 bool llvm::hasDisableLICMTransformsHint(const Loop *L) {
   return getBooleanLoopAttribute(L, LLVMLoopDisableLICM);
-}
-
-bool llvm::hasMustProgress(const Loop *L) {
-  return getBooleanLoopAttribute(L, LLVMLoopMustProgress);
 }
 
 TransformationMode llvm::hasUnrollTransformation(const Loop *L) {
