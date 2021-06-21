@@ -32,6 +32,9 @@ class LimitDebugInfoTestCase(TestBase):
 
     @skipIf(bugnumber="pr46284", debug_info="gmodules")
     @skipIfWindows # Clang emits type info even with -flimit-debug-info
+    # Requires DW_CC_pass_by_* attributes from Clang 7 to correctly call
+    # by-value functions.
+    @skipIf(compiler="clang", compiler_version=['<', '7.0'])
     def test_one_and_two_debug(self):
         self.build()
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
@@ -68,6 +71,9 @@ class LimitDebugInfoTestCase(TestBase):
 
     @skipIf(bugnumber="pr46284", debug_info="gmodules")
     @skipIfWindows # Clang emits type info even with -flimit-debug-info
+    # Requires DW_CC_pass_by_* attributes from Clang 7 to correctly call
+    # by-value functions.
+    @skipIf(compiler="clang", compiler_version=['<', '7.0'])
     def test_two_debug(self):
         self.build(dictionary=dict(STRIP_ONE="1"))
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
@@ -108,6 +114,9 @@ class LimitDebugInfoTestCase(TestBase):
 
     @skipIf(bugnumber="pr46284", debug_info="gmodules")
     @skipIfWindows # Clang emits type info even with -flimit-debug-info
+    # Requires DW_CC_pass_by_* attributes from Clang 7 to correctly call
+    # by-value functions.
+    @skipIf(compiler="clang", compiler_version=['<', '7.0'])
     def test_one_debug(self):
         self.build(dictionary=dict(STRIP_TWO="1"))
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
