@@ -6579,8 +6579,8 @@ ScalarEvolution::getLoopProperties(const Loop *L) {
 }
 
 bool ScalarEvolution::loopIsFiniteByAssumption(const Loop *L) {
-  // TODO: Use the loop metadata form of mustprogress as well.
-  if (!L->getHeader()->getParent()->mustProgress())
+  if (!L->getHeader()->getParent()->mustProgress() &&
+      !hasMustProgress(L))
     return false;
 
   // A loop without side effects must be finite.
