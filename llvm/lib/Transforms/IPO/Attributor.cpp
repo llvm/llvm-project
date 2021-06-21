@@ -1358,8 +1358,7 @@ ChangeStatus Attributor::cleanupIR() {
         unsigned Idx = CB->getArgOperandNo(U);
         CB->removeParamAttr(Idx, Attribute::NoUndef);
         Function *Fn = CB->getCalledFunction();
-        assert(Fn && "Expected callee when call argument is replaced!");
-        if (Fn->arg_size() > Idx)
+        if (Fn && Fn->arg_size() > Idx)
           Fn->removeParamAttr(Idx, Attribute::NoUndef);
       }
     }
