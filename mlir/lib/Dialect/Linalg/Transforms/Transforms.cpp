@@ -700,3 +700,225 @@ LogicalResult PadTensorOpTransformationPattern::matchAndRewrite(
 
   return success();
 }
+
+/// Given an OpFoldResult, return a Value. If the OpFoldResult is an Attribute,
+/// it must be of type Integer.
+static Value asValue(OpBuilder &builder, Location loc, OpFoldResult ofr) {
+  if (auto val = ofr.dyn_cast<Value>())
+    return val;
+  auto intVal = getConstantIntValue(ofr);
+  assert(intVal && "expected Value or IntegerAttr");
+  return builder.create<ConstantIndexOp>(loc, *intVal);
+}
+
+/// Given a value, try to extract a constant index-type integer as an Attribute.
+/// If this fails, return the original value.
+static OpFoldResult asOpFoldResult(OpBuilder &builder, Value val) {
+  if (auto constInt = getConstantIntValue(val))
+    return builder.getIndexAttr(*constInt);
+  return val;
+}
+
+LogicalResult SubTensorOfPadTensorSwapPattern::matchAndRewrite(
+    SubTensorOp subTensorOp, PatternRewriter &rewriter) const {
+  auto padOp = subTensorOp.source().getDefiningOp<PadTensorOp>();
+  if (!padOp)
+    return failure();
+  // Only unit stride supported.
+  if (!subTensorOp.hasUnitStride())
+    return failure();
+  // Only constant padding value supported.
+  Value padValue = padOp.getConstantPaddingValue();
+  if (!padValue)
+    return failure();
+  // Only zero low padding supported at the moment.
+  if (!padOp.hasZeroLowPad())
+    return failure();
+
+  // Helper variables and functions for various arithmetic operations. These are
+  // used extensively for computing new offset/length and padding values.
+  Location loc = subTensorOp.getLoc();
+  AffineExpr dim0, dim1;
+  bindDims(rewriter.getContext(), dim0, dim1);
+  // Add two integers.
+  auto addMap = AffineMap::get(2, 0, {dim0 + dim1});
+  auto add = [&](Value v1, Value v2) {
+    return rewriter.createOrFold<AffineApplyOp>(loc, addMap,
+                                                ValueRange{v1, v2});
+  };
+  // Subtract two integers.
+  auto subMap = AffineMap::get(2, 0, {dim0 - dim1});
+  auto sub = [&](Value v1, Value v2) {
+    return rewriter.createOrFold<AffineApplyOp>(loc, subMap,
+                                                ValueRange{v1, v2});
+  };
+  // Take the minimum of two integers.
+  auto idMap = AffineMap::getMultiDimIdentityMap(2, rewriter.getContext());
+  auto min = [&](Value v1, Value v2) {
+    return rewriter.createOrFold<AffineMinOp>(loc, idMap, ValueRange{v1, v2});
+  };
+  // Take the maximum of two integers.
+  auto max = [&](Value v1, Value v2) {
+    return rewriter.createOrFold<AffineMaxOp>(loc, idMap, ValueRange{v1, v2});
+  };
+  // Zero index-typed integer.
+  auto zero = rewriter.create<ConstantIndexOp>(loc, 0);
+
+  // Helper function for filling static/dynamic low/high padding indices vectors
+  // of PadTensorOp.
+  auto appendIndex = [&](Value val, SmallVector<Value> &dynIndices,
+                         SmallVector<int64_t> &staticIndices) {
+    if (auto constInt = getConstantIntValue(val)) {
+      staticIndices.push_back(*constInt);
+    } else {
+      staticIndices.push_back(ShapedType::kDynamicSize);
+      dynIndices.push_back(val);
+    }
+  };
+
+  // Compute new offsets, lengths, low padding, high padding.
+  SmallVector<OpFoldResult> newOffsets, newLengths, newStrides;
+  SmallVector<Value> newLows, newHighs;
+  SmallVector<int64_t> staticNewLows, staticNewHighs;
+  // Set to true if the original data source is not read at all.
+  bool hasZeroLen = false;
+  // Same as hasZeroLen, but for dynamic dimension sizes. This condition
+  // is true if the original data source turns out to be unused at runtime.
+  Value dynHasZeroLenCond;
+
+  int64_t rank = padOp.getSourceType().getRank();
+  for (unsigned dim = 0; dim < rank; ++dim) {
+    auto offset = asValue(rewriter, loc, subTensorOp.getMixedOffsets()[dim]);
+    auto length = asValue(rewriter, loc, subTensorOp.getMixedSizes()[dim]);
+    auto srcSize = rewriter.createOrFold<memref::DimOp>(
+        loc, padOp.source(), dim);
+
+    // Existing low padding is zero, so new low padding is also zero.
+    Value newLow = zero;
+    appendIndex(newLow, newLows, staticNewLows);
+
+    // There is no low padding, so the offset remains unchanged. Except for the
+    // case where the SubTensorOp starts reading from a position within the high
+    // padding. In that case, set the offset to the end of source tensor. The
+    // new SubTensorOp length will be zero in that case. (Effectively reading no
+    // data from the source.)
+    Value newOffset = min(offset, srcSize);
+    newOffsets.push_back(asOpFoldResult(rewriter, newOffset));
+
+    // The new SubTensorOp starts reading at `newOffset` and reads until
+    // `offset + length`. This position may be outside of the source (i.e.,
+    // within the high padding). In that case, read only until the end of the
+    // source. In mathematical terms:
+    //
+    // endLoc = min(offset + length, srcSize)
+    //
+    // The new SubTensorOp length is `endLoc - newOffset`.
+    Value newLength = sub(min(add(offset, length), srcSize), newOffset);
+    newLengths.push_back(asOpFoldResult(rewriter, newLength));
+    if (auto newLengthInt = getConstantIntValue(newLength)) {
+      hasZeroLen |= *newLengthInt == 0;
+    } else {
+      Value check = rewriter.create<CmpIOp>(
+          loc, CmpIPredicate::eq, newLength, zero);
+      dynHasZeroLenCond = dynHasZeroLenCond
+          ? rewriter.create<AndOp>(loc, check, dynHasZeroLenCond) : check;
+    }
+
+    // The number of elements available to read from the source (starting from
+    // the new offset) is `maxRead = srcSize - newOffset`. The original
+    // SubTensorOp may have read a larger number of elements `length > maxRead`.
+    // In that case, the missing number of elements `length - maxRead` must be
+    // paddded. (If `maxRead > length`, more than enough data is available to
+    // read and no high padding is needed.)
+    Value newHigh = max(zero, add(sub(newOffset, srcSize), length));
+    appendIndex(newHigh, newHighs, staticNewHighs);
+
+    // Only unit stride supported.
+    newStrides.push_back(rewriter.getIndexAttr(1));
+  }
+
+  // Insert cast to ensure that types match. (May be folded away.)
+  auto castResult = [&](Value val) -> Value {
+    auto castOp = rewriter.create<tensor::CastOp>(
+        loc, subTensorOp.getType(), val);
+    return castOp;
+  };
+
+  // In cases where the original data source is unused: Emit a GenerateOp and
+  // do not generate a SubTensorOp. (The result shape of the SubTensorOp would
+  // have a dimension of size 0, the semantics of which is unclear.)
+  auto createGenerateOp = [&]() {
+    // The shape of the GenerateOp is the same as the existing SubTensorOp.
+    RankedTensorType type = subTensorOp.getType();
+    SmallVector<Value> dynDims;
+    for (unsigned i = 0; i < type.getRank(); ++i) {
+      if (type.isDynamicDim(i))
+        dynDims.push_back(
+            asValue(rewriter, loc, subTensorOp.getMixedOffsets()[i]));
+    }
+
+    // Create GenerateOp.
+    auto generateOp  = rewriter.create<tensor::GenerateOp>(loc, type, dynDims);
+
+    // Copy region to new op.
+    BlockAndValueMapping bvm;
+    padOp.region().cloneInto(&generateOp.getRegion(), bvm);
+    // Rewrite linalg::YieldOp to tensor::YieldOp.
+    {
+      OpBuilder::InsertionGuard guard(rewriter);
+      auto yieldOp = dyn_cast<linalg::YieldOp>(
+          generateOp.getRegion().front().getTerminator());
+      assert(yieldOp && "malformed PadTensorOp: expected YieldOp terminator");
+      assert(yieldOp.values().size() == 1);
+      rewriter.setInsertionPoint(yieldOp);
+      rewriter.replaceOpWithNewOp<tensor::YieldOp>(
+          yieldOp, yieldOp.values()[0]);
+    }
+
+    return castResult(generateOp);
+  };
+
+  // Emit a SubTensorOp and a PadTensorOp. Should not be used in cases where
+  // the result shape of the new SubTensorOp has a zero dimension.
+  auto createPadTensorOfSubTensor = [&]() {
+    // Create pad_tensor(subtensor(x)).
+    auto newSubTensorOp = rewriter.create<SubTensorOp>(
+        loc, padOp.source(), newOffsets, newLengths, newStrides);
+    auto newPadTensorOp = rewriter.create<PadTensorOp>(
+        loc, newSubTensorOp, staticNewLows, staticNewHighs, newLows, newHighs);
+
+    // Copy region to new PadTensorOp.
+    BlockAndValueMapping bvm;
+    padOp.region().cloneInto(&newPadTensorOp.getRegion(), bvm);
+
+    // Cast result and return.
+    return castResult(newPadTensorOp);
+  };
+
+  // Rewrite subtensor(pad_tensor(x)) into a GenerateOp it is statically known
+  // that the original data source x is not used.
+  if (hasZeroLen) {
+    rewriter.replaceOp(subTensorOp, createGenerateOp());
+    return success();
+  }
+
+  // If there are dynamic dimensions: Generate an scf.if check to avoid creating
+  // SubTensorOps with result dimensions of size 0 at runtime.
+  if (dynHasZeroLenCond) {
+    auto result = rewriter.create<scf::IfOp>(
+        loc, subTensorOp.getType(), dynHasZeroLenCond,
+        /*thenBuilder=*/[&](OpBuilder &b, Location loc) {
+          b.create<scf::YieldOp>(loc, createGenerateOp());
+        },
+        /*elseBuilder=*/[&](OpBuilder &b, Location loc) {
+          b.create<scf::YieldOp>(loc, createPadTensorOfSubTensor());
+        });
+    rewriter.replaceOp(subTensorOp, result.getResult(0));
+    return success();
+  }
+
+  // All shapes are static and the data source is actually used. Rewrite into
+  // pad_tensor(subtensor(x)).
+  rewriter.replaceOp(subTensorOp, createPadTensorOfSubTensor());
+  return success();
+}
