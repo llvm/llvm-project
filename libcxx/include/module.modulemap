@@ -452,14 +452,17 @@ module std [system] {
     export *
 
     module __ranges {
-      module access                 { header "__ranges/access.h"                 }
-      module concepts               { header "__ranges/concepts.h"               }
-      module data                   { header "__ranges/data.h"                   }
-      module empty                  { header "__ranges/empty.h"                  }
-      module enable_borrowed_range  { header "__ranges/enable_borrowed_range.h"  }
-      module enable_view            { header "__ranges/enable_view.h"            }
-      module size                   { header "__ranges/size.h"                   }
-      module view_interface         { header "__ranges/view_interface.h"         }
+      module access                 { header "__ranges/access.h"                }
+      module concepts               { header "__ranges/concepts.h"              }
+      module data                   { header "__ranges/data.h"                  }
+      module empty                  { header "__ranges/empty.h"                 }
+      module empty_view             { header "__ranges/empty_view.h"            }
+      module enable_borrowed_range  { header "__ranges/enable_borrowed_range.h" }
+      module enable_view            { header "__ranges/enable_view.h"           }
+      module ref_view               { header "__ranges/ref_view.h"              }
+      module size                   { header "__ranges/size.h"                  }
+      module subrange               { header "__ranges/subrange.h"              }
+      module view_interface         { header "__ranges/view_interface.h"        }
     }
   }
   module ratio {
