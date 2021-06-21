@@ -325,7 +325,7 @@ void InterfaceGenerator::emitTraitDecl(Interface &interface,
     os << "    " << (method.isStatic() ? "static " : "");
     emitCPPType(method.getReturnType(), os);
     emitMethodNameAndArgs(method, os, valueType, /*addThisArg=*/false,
-                          /*addConst=*/!isOpInterface);
+                          /*addConst=*/!isOpInterface && !method.isStatic());
     os << " {\n      " << tblgen::tgfmt(defaultImpl->trim(), &traitMethodFmt)
        << "\n    }\n";
   }
