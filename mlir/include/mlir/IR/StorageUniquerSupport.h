@@ -93,9 +93,9 @@ public:
   /// call will abort otherwise.
   template <typename... IfaceModels>
   static void attachInterface(MLIRContext &context) {
-    typename ConcreteT::AbstractType *abstract =
-        ConcreteT::AbstractType::lookupMutable(TypeID::get<ConcreteT>(),
-                                               &context);
+    typename ConcreteT::AbstractTy *abstract =
+        ConcreteT::AbstractTy::lookupMutable(TypeID::get<ConcreteT>(),
+                                             &context);
     if (!abstract)
       llvm::report_fatal_error("Registering an interface for an attribute/type "
                                "that is not itself registered.");
