@@ -16,6 +16,4 @@ RUN: diff %t-basic.dump3 %t-basic.dump4
 RUN: diff %t-basic.proftext5 %t-basic.proftext6
 
 RUN: not llvm-profdata merge -gcc -o %t-basic-profdata3 %t-basic.proftext2 2>&1 | FileCheck %s --check-prefix=UNKNOWN
-UNKNOWN: Unknown
-
-
+UNKNOWN: unknown format is specified
