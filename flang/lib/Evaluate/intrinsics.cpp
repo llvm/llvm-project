@@ -1102,9 +1102,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"put", DefaultInt, Rank::vector, Optionality::optional},
             {"get", DefaultInt, Rank::vector, Optionality::optional,
                 common::Intent::Out}},
-        {}, Rank::elemental,
-        IntrinsicClass::impureSubroutine}, // TODO: at most one argument can be
-                                           // present
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"system_clock",
         {{"count", AnyInt, Rank::scalar, Optionality::optional,
              common::Intent::Out},
@@ -2167,15 +2165,18 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
     FoldingContext &context, const IntrinsicProcTable &intrinsics) const {
 
   // All special cases handled here before the table probes below must
-  // also be recognized as special names in IsIntrinsic().
+  // also be recognized as special names in IsIntrinsicSubroutine().
   if (call.isSubroutineCall) {
     if (call.name == "__builtin_c_f_pointer") {
       return HandleC_F_Pointer(arguments, context);
+    } else if (call.name == "random_seed") {
+      if (arguments.size() != 0 && arguments.size() != 1) {
+        context.messages().Say(
+            "RANDOM_SEED must have either 1 or no arguments"_err_en_US);
+      }
     }
-  } else {
-    if (call.name == "null") {
-      return HandleNull(arguments, context);
-    }
+  } else if (call.name == "null") {
+    return HandleNull(arguments, context);
   }
 
   if (call.isSubroutineCall) {
