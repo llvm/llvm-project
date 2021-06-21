@@ -35,7 +35,7 @@ static bool allowUndefined(const Symbol* sym) {
   // Undefined functions and globals with explicit import name are allowed to be
   // undefined at link time.
   if (auto *f = dyn_cast<UndefinedFunction>(sym))
-    if (f->importName)
+    if (f->importName || config->importUndefined)
       return true;
   if (auto *g = dyn_cast<UndefinedGlobal>(sym))
     if (g->importName)
@@ -56,19 +56,19 @@ static void reportUndefined(Symbol *sym) {
       warn(toString(sym->getFile()) + ": undefined symbol: " + toString(*sym));
       break;
     case UnresolvedPolicy::Ignore:
-      if (auto *f = dyn_cast<UndefinedFunction>(sym)) {
-        if (!f->stubFunction) {
-          LLVM_DEBUG(dbgs()
-                     << "ignoring undefined symbol: " + toString(*sym) + "\n");
-          f->stubFunction = symtab->createUndefinedStub(*f->getSignature());
-          f->stubFunction->markLive();
-          // Mark the function itself as a stub which prevents it from being
-          // assigned a table entry.
-          f->isStub = true;
+      LLVM_DEBUG(dbgs() << "ignoring undefined symbol: " + toString(*sym) +
+                               "\n");
+      if (!config->importUndefined) {
+        if (auto *f = dyn_cast<UndefinedFunction>(sym)) {
+          if (!f->stubFunction) {
+            f->stubFunction = symtab->createUndefinedStub(*f->getSignature());
+            f->stubFunction->markLive();
+            // Mark the function itself as a stub which prevents it from being
+            // assigned a table entry.
+            f->isStub = true;
+          }
         }
       }
-      break;
-    case UnresolvedPolicy::ImportFuncs:
       break;
     }
   }

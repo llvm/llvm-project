@@ -558,8 +558,7 @@ static bool shouldImport(Symbol *sym) {
   if (isa<DataSymbol>(sym))
     return false;
 
-  if ((config->isPic || config->relocatable) ||
-      config->unresolvedSymbols == UnresolvedPolicy::ImportFuncs)
+  if (config->isPic || config->relocatable || config->importUndefined)
     return true;
   if (config->allowUndefinedSymbols.count(sym->getName()) != 0)
     return true;
