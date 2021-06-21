@@ -1841,7 +1841,7 @@ public:
           return;
         }
         IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI);
-        write(StringRef(Intrinsic::getName(II->getIntrinsicID(), {}))
+        write(Intrinsic::getBaseName(II->getIntrinsicID())
                   .drop_front(StringRef("llvm.matrix.").size()));
         write(".");
         std::string Tmp;

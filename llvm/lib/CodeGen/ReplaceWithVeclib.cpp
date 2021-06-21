@@ -142,7 +142,7 @@ static bool replaceWithCallToVeclib(const TargetLibraryInfo &TLI,
   // converted to scalar above.
   std::string ScalarName;
   if (Intrinsic::isOverloaded(IntrinsicID)) {
-    ScalarName = Intrinsic::getName(IntrinsicID, ScalarTypes);
+    ScalarName = Intrinsic::getName(IntrinsicID, ScalarTypes, CI.getModule());
   } else {
     ScalarName = Intrinsic::getName(IntrinsicID).str();
   }
