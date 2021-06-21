@@ -29,11 +29,12 @@ namespace llvm {
 namespace mca {
 
 std::unique_ptr<Pipeline>
-Context::createDefaultPipeline(const PipelineOptions &Opts, SourceMgr &SrcMgr) {
+Context::createDefaultPipeline(const PipelineOptions &Opts, SourceMgr &SrcMgr,
+                               CustomBehaviour &CB) {
   const MCSchedModel &SM = STI.getSchedModel();
 
   if (!SM.isOutOfOrder())
-    return createInOrderPipeline(Opts, SrcMgr);
+    return createInOrderPipeline(Opts, SrcMgr, CB);
 
   // Create the hardware units defining the backend.
   auto RCU = std::make_unique<RetireControlUnit>(SM);
@@ -69,13 +70,14 @@ Context::createDefaultPipeline(const PipelineOptions &Opts, SourceMgr &SrcMgr) {
 }
 
 std::unique_ptr<Pipeline>
-Context::createInOrderPipeline(const PipelineOptions &Opts, SourceMgr &SrcMgr) {
+Context::createInOrderPipeline(const PipelineOptions &Opts, SourceMgr &SrcMgr,
+                               CustomBehaviour &CB) {
   const MCSchedModel &SM = STI.getSchedModel();
   auto PRF = std::make_unique<RegisterFile>(SM, MRI, Opts.RegisterFileSize);
 
   // Create the pipeline stages.
   auto Entry = std::make_unique<EntryStage>(SrcMgr);
-  auto InOrderIssue = std::make_unique<InOrderIssueStage>(STI, *PRF);
+  auto InOrderIssue = std::make_unique<InOrderIssueStage>(STI, *PRF, CB);
   auto StagePipeline = std::make_unique<Pipeline>();
 
   // Pass the ownership of all the hardware units to this Context.

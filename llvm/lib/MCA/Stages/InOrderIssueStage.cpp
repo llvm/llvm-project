@@ -43,8 +43,8 @@ void StallInfo::cycleEnd() {
 }
 
 InOrderIssueStage::InOrderIssueStage(const MCSubtargetInfo &STI,
-                                     RegisterFile &PRF)
-    : STI(STI), PRF(PRF), RM(STI.getSchedModel()), NumIssued(), SI(),
+                                     RegisterFile &PRF, CustomBehaviour &CB)
+    : STI(STI), PRF(PRF), RM(STI.getSchedModel()), CB(CB), NumIssued(), SI(),
       CarryOver(), Bandwidth(), LastWriteBackCycle() {}
 
 unsigned InOrderIssueStage::getIssueWidth() const {
@@ -122,6 +122,11 @@ bool InOrderIssueStage::canExecute(const InstRef &IR) {
 
   if (hasResourceHazard(RM, IR)) {
     SI.update(IR, /* delay */ 1, StallInfo::StallKind::DISPATCH);
+    return false;
+  }
+
+  if (unsigned CustomStallCycles = CB.checkCustomHazard(IssuedInst, IR)) {
+    SI.update(IR, CustomStallCycles, StallInfo::StallKind::CUSTOM_STALL);
     return false;
   }
 
@@ -331,6 +336,11 @@ void InOrderIssueStage::notifyStallEvent() {
         HWStallEvent(HWStallEvent::DispatchGroupStall, IR));
     notifyEvent<HWPressureEvent>(
         HWPressureEvent(HWPressureEvent::RESOURCES, IR));
+    break;
+  }
+  case StallInfo::StallKind::CUSTOM_STALL: {
+    notifyEvent<HWStallEvent>(
+        HWStallEvent(HWStallEvent::CustomBehaviourStall, IR));
     break;
   }
   }
