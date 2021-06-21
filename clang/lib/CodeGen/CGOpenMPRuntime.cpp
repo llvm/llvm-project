@@ -10593,7 +10593,12 @@ CGOpenMPRuntime::registerTargetFirstprivateCopy(CodeGenFunction &CGF,
                              FileID, Line);
     llvm::raw_svector_ostream OS(Buffer);
     OS << "__omp_offloading_firstprivate_" << llvm::format("_%x", DeviceID)
-       << llvm::format("_%x_", FileID) << VD->getName() << "_l" << Line;
+       << llvm::format("_%x_", FileID);
+    if (CGM.getLangOpts().CPlusPlus) {
+      CGM.getCXXABI().getMangleContext().mangleTypeName(VD->getType(), OS);
+      OS << "_";
+    }
+    OS << VD->getName() << "_l" << Line;
     VarName = OS.str();
   }
   Linkage = llvm::GlobalValue::InternalLinkage;
