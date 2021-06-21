@@ -399,7 +399,7 @@ static bool rewriteSingleStoreAlloca(AllocaInst *AI, AllocaInfo &Info,
     // If the replacement value is the load, this must occur in unreachable
     // code.
     if (ReplVal == LI)
-      ReplVal = UndefValue::get(LI->getType());
+      ReplVal = PoisonValue::get(LI->getType());
 
     // If the load was marked as nonnull we don't want to lose
     // that information when we erase this Load. So we preserve
@@ -508,7 +508,7 @@ static bool promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
       // If the replacement value is the load, this must occur in unreachable
       // code.
       if (ReplVal == LI)
-        ReplVal = UndefValue::get(LI->getType());
+        ReplVal = PoisonValue::get(LI->getType());
 
       LI->replaceAllUsesWith(ReplVal);
     }
@@ -672,7 +672,7 @@ void PromoteMem2Reg::run() {
     // unreachable basic blocks that were not processed by walking the dominator
     // tree. Just delete the users now.
     if (!A->use_empty())
-      A->replaceAllUsesWith(UndefValue::get(A->getType()));
+      A->replaceAllUsesWith(PoisonValue::get(A->getType()));
     A->eraseFromParent();
   }
 
