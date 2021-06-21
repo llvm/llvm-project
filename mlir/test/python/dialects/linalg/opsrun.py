@@ -131,6 +131,33 @@ def test_matmul_generic():
 test_matmul_generic()
 
 
+def test_fill_builtin():
+  with Context() as ctx, Location.unknown():
+    module = Module.create()
+    f64 = F64Type.get()
+    i32 = IntegerType.get_signless(32)
+    with InsertionPoint(module.body):
+
+      @builtin.FuncOp.from_py_func(f64, f64, i32, MemRefType.get((4, 16), i32))
+      def fill_on_buffers(min, max, seed, out):
+        linalg.fill_rng_2d(min, max, seed, outs=[out])
+
+    execution_engine = ExecutionEngine(transform(module, fill_boiler))
+
+    # TODO: FFI-based solution to allow testing and printing with python code.
+    # Prepare arguments: one result i32.
+    # Arguments must be passed as pointers.
+    c_int_p = ctypes.c_int * 1
+    res = c_int_p(-1)
+    execution_engine.invoke("main", res)
+
+    log("RESULT: ", res[0])
+    # CHECK: RESULT: -480
+
+
+test_fill_builtin()
+
+
 def test_fill_generic():
   with Context() as ctx, Location.unknown():
     module = Module.create()
