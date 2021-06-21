@@ -82,36 +82,6 @@ static constexpr auto TAG = "[" DEBUG_TYPE "]";
 
 namespace {
 
-struct AAExecutionDomain
-    : public StateWrapper<BooleanState, AbstractAttribute> {
-  using Base = StateWrapper<BooleanState, AbstractAttribute>;
-  AAExecutionDomain(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
-
-  /// Create an abstract attribute view for the position \p IRP.
-  static AAExecutionDomain &createForPosition(const IRPosition &IRP,
-                                              Attributor &A);
-
-  /// See AbstractAttribute::getName().
-  const std::string getName() const override { return "AAExecutionDomain"; }
-
-  /// See AbstractAttribute::getIdAddr().
-  const char *getIdAddr() const override { return &ID; }
-
-  /// Check if an instruction is executed by a single thread.
-  virtual bool isSingleThreadExecution(const Instruction &) const = 0;
-
-  virtual bool isSingleThreadExecution(const BasicBlock &) const = 0;
-
-  /// This function should return true if the type of the \p AA is
-  /// AAExecutionDomain.
-  static bool classof(const AbstractAttribute *AA) {
-    return (AA->getIdAddr() == &ID);
-  }
-
-  /// Unique ID (due to the unique address)
-  static const char ID;
-};
-
 struct AAICVTracker;
 
 /// OpenMP specific information. For now, stores RFIs and ICVs also needed for
@@ -2314,11 +2284,11 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
   ChangeStatus updateImpl(Attributor &A) override;
 
   /// Check if an instruction is executed by a single thread.
-  bool isSingleThreadExecution(const Instruction &I) const override {
-    return isSingleThreadExecution(*I.getParent());
+  bool isExecutedByInitialThreadOnly(const Instruction &I) const override {
+    return isExecutedByInitialThreadOnly(*I.getParent());
   }
 
-  bool isSingleThreadExecution(const BasicBlock &BB) const override {
+  bool isExecutedByInitialThreadOnly(const BasicBlock &BB) const override {
     return SingleThreadedBBs.contains(&BB);
   }
 
@@ -2339,7 +2309,8 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
     const auto &ExecutionDomainAA = A.getAAFor<AAExecutionDomain>(
         *this, IRPosition::function(*ACS.getInstruction()->getFunction()),
         DepClassTy::REQUIRED);
-    return ExecutionDomainAA.isSingleThreadExecution(*ACS.getInstruction());
+    return ExecutionDomainAA.isExecutedByInitialThreadOnly(
+        *ACS.getInstruction());
   };
 
   if (!A.checkForAllCallSites(PredForCallSite, *this,
