@@ -224,8 +224,8 @@ define <2 x double> @f12(<2 x double> %a0, <4 x float> %a1) #0 {
 define <4 x float> @f13(<4 x float> %a, <4 x float> %b, <4 x float> %c) #0 {
 ; SSE-X86-LABEL: f13:
 ; SSE-X86:       # %bb.0:
-; SSE-X86-NEXT:    subl $108, %esp
-; SSE-X86-NEXT:    .cfi_def_cfa_offset 112
+; SSE-X86-NEXT:    subl $100, %esp
+; SSE-X86-NEXT:    .cfi_def_cfa_offset 104
 ; SSE-X86-NEXT:    movups %xmm2, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; SSE-X86-NEXT:    movups %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; SSE-X86-NEXT:    movups %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
@@ -282,7 +282,7 @@ define <4 x float> @f13(<4 x float> %a, <4 x float> %b, <4 x float> %c) #0 {
 ; SSE-X86-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; SSE-X86-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; SSE-X86-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE-X86-NEXT:    addl $108, %esp
+; SSE-X86-NEXT:    addl $100, %esp
 ; SSE-X86-NEXT:    .cfi_def_cfa_offset 4
 ; SSE-X86-NEXT:    retl
 ;
@@ -296,7 +296,7 @@ define <4 x float> @f13(<4 x float> %a, <4 x float> %b, <4 x float> %c) #0 {
 ; SSE-X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE-X64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; SSE-X64-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,3,3,3]
-; SSE-X64-NEXT:    callq fmaf
+; SSE-X64-NEXT:    callq fmaf@PLT
 ; SSE-X64-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; SSE-X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-X64-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
@@ -304,14 +304,14 @@ define <4 x float> @f13(<4 x float> %a, <4 x float> %b, <4 x float> %c) #0 {
 ; SSE-X64-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE-X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
 ; SSE-X64-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
-; SSE-X64-NEXT:    callq fmaf
+; SSE-X64-NEXT:    callq fmaf@PLT
 ; SSE-X64-NEXT:    unpcklps (%rsp), %xmm0 # 16-byte Folded Reload
 ; SSE-X64-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; SSE-X64-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; SSE-X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; SSE-X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
-; SSE-X64-NEXT:    callq fmaf
+; SSE-X64-NEXT:    callq fmaf@PLT
 ; SSE-X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
@@ -319,7 +319,7 @@ define <4 x float> @f13(<4 x float> %a, <4 x float> %b, <4 x float> %c) #0 {
 ; SSE-X64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,1,1]
 ; SSE-X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
 ; SSE-X64-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,1,1]
-; SSE-X64-NEXT:    callq fmaf
+; SSE-X64-NEXT:    callq fmaf@PLT
 ; SSE-X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; SSE-X64-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; SSE-X64-NEXT:    unpcklpd (%rsp), %xmm1 # 16-byte Folded Reload
@@ -381,7 +381,7 @@ define <2 x double> @f14(<2 x double> %a, <2 x double> %b, <2 x double> %c) #0 {
 ; SSE-X64-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-X64-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-X64-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; SSE-X64-NEXT:    callq fma
+; SSE-X64-NEXT:    callq fma@PLT
 ; SSE-X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-X64-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-X64-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
@@ -389,7 +389,7 @@ define <2 x double> @f14(<2 x double> %a, <2 x double> %b, <2 x double> %c) #0 {
 ; SSE-X64-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE-X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Reload
 ; SSE-X64-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
-; SSE-X64-NEXT:    callq fma
+; SSE-X64-NEXT:    callq fma@PLT
 ; SSE-X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; SSE-X64-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; SSE-X64-NEXT:    movaps %xmm1, %xmm0

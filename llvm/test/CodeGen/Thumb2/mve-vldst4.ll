@@ -8,14 +8,14 @@ define void @vldst4(half* nocapture readonly %pIn, half* nocapture %pOut, i32 %n
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    .pad #24
-; CHECK-NEXT:    sub sp, #24
+; CHECK-NEXT:    .pad #16
+; CHECK-NEXT:    sub sp, #16
 ; CHECK-NEXT:    mul r12, r3, r2
 ; CHECK-NEXT:    lsrs.w r2, r12, #2
 ; CHECK-NEXT:    beq.w .LBB0_3
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph
 ; CHECK-NEXT:    mvn r3, #7
-; CHECK-NEXT:    ldr r2, [sp, #96]
+; CHECK-NEXT:    ldr r2, [sp, #88]
 ; CHECK-NEXT:    and.w r3, r3, r12, lsr #2
 ; CHECK-NEXT:    sub.w r12, r3, #8
 ; CHECK-NEXT:    movs r3, #1
@@ -123,7 +123,7 @@ define void @vldst4(half* nocapture readonly %pIn, half* nocapture %pOut, i32 %n
 ; CHECK-NEXT:    vstrh.16 q4, [r1, #-48]
 ; CHECK-NEXT:    le lr, .LBB0_2
 ; CHECK-NEXT:  .LBB0_3: @ %while.end
-; CHECK-NEXT:    add sp, #24
+; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    pop {r7, pc}
 entry:

@@ -651,7 +651,7 @@ define <2 x i64> @vector_i128_i64(<2 x i64> %x, <2 x i64> %y, <2 x i64>* %divdst
 ; X86-LABEL: vector_i128_i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $72, %esp
+; X86-NEXT:    subl $64, %esp
 ; X86-NEXT:    movdqu %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-NEXT:    movdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -696,7 +696,7 @@ define <2 x i64> @vector_i128_i64(<2 x i64> %x, <2 x i64> %y, <2 x i64>* %divdst
 ; X86-NEXT:    paddq %xmm2, %xmm1
 ; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; X86-NEXT:    psubq %xmm1, %xmm0
-; X86-NEXT:    addl $72, %esp
+; X86-NEXT:    addl $64, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;

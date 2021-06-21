@@ -1055,45 +1055,45 @@ define void @DCT_mve7(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    .pad #88
-; CHECK-NEXT:    sub sp, #88
-; CHECK-NEXT:    str r1, [sp, #28] @ 4-byte Spill
+; CHECK-NEXT:    .pad #72
+; CHECK-NEXT:    sub sp, #72
+; CHECK-NEXT:    str r1, [sp, #20] @ 4-byte Spill
 ; CHECK-NEXT:    ldr r1, [r0, #4]
 ; CHECK-NEXT:    subs r1, #7
-; CHECK-NEXT:    str r1, [sp, #24] @ 4-byte Spill
+; CHECK-NEXT:    str r1, [sp, #16] @ 4-byte Spill
 ; CHECK-NEXT:    cmp r1, #2
 ; CHECK-NEXT:    blo.w .LBB6_5
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    ldr r3, [r0, #8]
 ; CHECK-NEXT:    ldr r1, [r0]
 ; CHECK-NEXT:    adds r0, r3, #3
-; CHECK-NEXT:    str r3, [sp, #20] @ 4-byte Spill
+; CHECK-NEXT:    str r3, [sp, #12] @ 4-byte Spill
 ; CHECK-NEXT:    bic r0, r0, #3
 ; CHECK-NEXT:    add.w r9, r1, r3, lsl #2
 ; CHECK-NEXT:    subs r1, r0, #4
 ; CHECK-NEXT:    movs r0, #1
 ; CHECK-NEXT:    lsls r5, r3, #2
 ; CHECK-NEXT:    add.w r1, r0, r1, lsr #2
-; CHECK-NEXT:    str r1, [sp, #16] @ 4-byte Spill
+; CHECK-NEXT:    str r1, [sp, #8] @ 4-byte Spill
 ; CHECK-NEXT:    rsb r1, r3, r3, lsl #3
 ; CHECK-NEXT:    lsls r1, r1, #2
-; CHECK-NEXT:    str r1, [sp, #12] @ 4-byte Spill
+; CHECK-NEXT:    str r1, [sp, #4] @ 4-byte Spill
 ; CHECK-NEXT:  .LBB6_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB6_3 Depth 2
 ; CHECK-NEXT:    adds r1, r0, #6
-; CHECK-NEXT:    str r1, [sp, #44] @ 4-byte Spill
-; CHECK-NEXT:    adds r1, r0, #5
-; CHECK-NEXT:    str r1, [sp, #40] @ 4-byte Spill
-; CHECK-NEXT:    adds r1, r0, #4
 ; CHECK-NEXT:    str r1, [sp, #36] @ 4-byte Spill
-; CHECK-NEXT:    adds r1, r0, #3
-; CHECK-NEXT:    ldr r7, [sp, #20] @ 4-byte Reload
+; CHECK-NEXT:    adds r1, r0, #5
 ; CHECK-NEXT:    str r1, [sp, #32] @ 4-byte Spill
+; CHECK-NEXT:    adds r1, r0, #4
+; CHECK-NEXT:    str r1, [sp, #28] @ 4-byte Spill
+; CHECK-NEXT:    adds r1, r0, #3
+; CHECK-NEXT:    ldr r7, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    str r1, [sp, #24] @ 4-byte Spill
 ; CHECK-NEXT:    vmov.i32 q2, #0x0
-; CHECK-NEXT:    ldr r1, [sp, #28] @ 4-byte Reload
+; CHECK-NEXT:    ldr r1, [sp, #20] @ 4-byte Reload
 ; CHECK-NEXT:    adds r4, r0, #2
-; CHECK-NEXT:    ldr r6, [sp, #16] @ 4-byte Reload
+; CHECK-NEXT:    ldr r6, [sp, #8] @ 4-byte Reload
 ; CHECK-NEXT:    add.w r8, r0, #1
 ; CHECK-NEXT:    mov r3, r9
 ; CHECK-NEXT:    vmov q4, q2
@@ -1102,7 +1102,7 @@ define void @DCT_mve7(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    vmov q6, q2
 ; CHECK-NEXT:    vmov q1, q2
 ; CHECK-NEXT:    mov r12, r7
-; CHECK-NEXT:    vstrw.32 q2, [sp, #64] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q2, [sp, #56] @ 16-byte Spill
 ; CHECK-NEXT:    dls lr, r6
 ; CHECK-NEXT:  .LBB6_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB6_2 Depth=1
@@ -1117,7 +1117,7 @@ define void @DCT_mve7(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vldrwt.u32 q0, [r10]
 ; CHECK-NEXT:    vfmat.f32 q6, q0, q7
-; CHECK-NEXT:    vstrw.32 q6, [sp, #48] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q6, [sp, #40] @ 16-byte Spill
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vldrwt.u32 q0, [r11]
 ; CHECK-NEXT:    vfmat.f32 q1, q0, q7
@@ -1129,17 +1129,17 @@ define void @DCT_mve7(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrwt.u32 q0, [r6]
 ; CHECK-NEXT:    vmov q3, q1
-; CHECK-NEXT:    vldrw.u32 q1, [sp, #64] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q1, [sp, #56] @ 16-byte Reload
 ; CHECK-NEXT:    adds r7, r6, r5
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vfmat.f32 q1, q0, q7
-; CHECK-NEXT:    vstrw.32 q1, [sp, #64] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q1, [sp, #56] @ 16-byte Spill
 ; CHECK-NEXT:    vmov q1, q3
 ; CHECK-NEXT:    vmov q3, q2
 ; CHECK-NEXT:    vmov q2, q4
 ; CHECK-NEXT:    vmov q4, q5
 ; CHECK-NEXT:    vmov q5, q6
-; CHECK-NEXT:    vldrw.u32 q6, [sp, #48] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q6, [sp, #40] @ 16-byte Reload
 ; CHECK-NEXT:    sub.w r12, r12, #4
 ; CHECK-NEXT:    adds r6, r7, r5
 ; CHECK-NEXT:    vpstt
@@ -1168,7 +1168,7 @@ define void @DCT_mve7(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    vadd.f32 s0, s2, s0
 ; CHECK-NEXT:    vadd.f32 s10, s18, s19
 ; CHECK-NEXT:    vadd.f32 s9, s16, s17
-; CHECK-NEXT:    vldrw.u32 q4, [sp, #64] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q4, [sp, #56] @ 16-byte Reload
 ; CHECK-NEXT:    vadd.f32 s2, s3, s1
 ; CHECK-NEXT:    vadd.f32 s6, s18, s19
 ; CHECK-NEXT:    vadd.f32 s5, s16, s17
@@ -1183,25 +1183,25 @@ define void @DCT_mve7(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    vadd.f32 s8, s8, s20
 ; CHECK-NEXT:    vadd.f32 s6, s5, s6
 ; CHECK-NEXT:    vstr s4, [r1]
-; CHECK-NEXT:    ldr r1, [sp, #32] @ 4-byte Reload
+; CHECK-NEXT:    ldr r1, [sp, #24] @ 4-byte Reload
 ; CHECK-NEXT:    add.w r1, r2, r1, lsl #2
 ; CHECK-NEXT:    vstr s6, [r1]
-; CHECK-NEXT:    ldr r1, [sp, #36] @ 4-byte Reload
+; CHECK-NEXT:    ldr r1, [sp, #28] @ 4-byte Reload
 ; CHECK-NEXT:    add.w r1, r2, r1, lsl #2
 ; CHECK-NEXT:    vstr s12, [r1]
-; CHECK-NEXT:    ldr r1, [sp, #40] @ 4-byte Reload
+; CHECK-NEXT:    ldr r1, [sp, #32] @ 4-byte Reload
 ; CHECK-NEXT:    add.w r1, r2, r1, lsl #2
 ; CHECK-NEXT:    vstr s10, [r1]
-; CHECK-NEXT:    ldr r1, [sp, #44] @ 4-byte Reload
+; CHECK-NEXT:    ldr r1, [sp, #36] @ 4-byte Reload
 ; CHECK-NEXT:    add.w r1, r2, r1, lsl #2
 ; CHECK-NEXT:    vstr s8, [r1]
-; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    ldr r1, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    add r9, r1
-; CHECK-NEXT:    ldr r1, [sp, #24] @ 4-byte Reload
+; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    blo.w .LBB6_2
 ; CHECK-NEXT:  .LBB6_5: @ %for.cond.cleanup
-; CHECK-NEXT:    add sp, #88
+; CHECK-NEXT:    add sp, #72
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
@@ -1345,44 +1345,44 @@ define void @DCT_mve8(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    .pad #104
-; CHECK-NEXT:    sub sp, #104
-; CHECK-NEXT:    str r1, [sp, #28] @ 4-byte Spill
+; CHECK-NEXT:    .pad #88
+; CHECK-NEXT:    sub sp, #88
+; CHECK-NEXT:    str r1, [sp, #20] @ 4-byte Spill
 ; CHECK-NEXT:    ldr r1, [r0, #4]
 ; CHECK-NEXT:    subs r1, #8
-; CHECK-NEXT:    str r1, [sp, #24] @ 4-byte Spill
+; CHECK-NEXT:    str r1, [sp, #16] @ 4-byte Spill
 ; CHECK-NEXT:    cmp r1, #2
 ; CHECK-NEXT:    blo.w .LBB7_5
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    ldr r3, [r0, #8]
 ; CHECK-NEXT:    ldr r1, [r0]
 ; CHECK-NEXT:    adds r0, r3, #3
-; CHECK-NEXT:    str r3, [sp, #20] @ 4-byte Spill
+; CHECK-NEXT:    str r3, [sp, #12] @ 4-byte Spill
 ; CHECK-NEXT:    bic r0, r0, #3
 ; CHECK-NEXT:    add.w r12, r1, r3, lsl #2
 ; CHECK-NEXT:    subs r1, r0, #4
 ; CHECK-NEXT:    movs r0, #1
 ; CHECK-NEXT:    lsls r5, r3, #2
 ; CHECK-NEXT:    add.w r1, r0, r1, lsr #2
-; CHECK-NEXT:    str r1, [sp, #16] @ 4-byte Spill
+; CHECK-NEXT:    str r1, [sp, #8] @ 4-byte Spill
 ; CHECK-NEXT:    lsls r1, r3, #5
-; CHECK-NEXT:    str r1, [sp, #12] @ 4-byte Spill
+; CHECK-NEXT:    str r1, [sp, #4] @ 4-byte Spill
 ; CHECK-NEXT:  .LBB7_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB7_3 Depth 2
 ; CHECK-NEXT:    adds r1, r0, #7
-; CHECK-NEXT:    str r1, [sp, #44] @ 4-byte Spill
-; CHECK-NEXT:    adds r1, r0, #6
-; CHECK-NEXT:    str r1, [sp, #40] @ 4-byte Spill
-; CHECK-NEXT:    adds r1, r0, #5
-; CHECK-NEXT:    ldr r7, [sp, #20] @ 4-byte Reload
 ; CHECK-NEXT:    str r1, [sp, #36] @ 4-byte Spill
-; CHECK-NEXT:    adds r1, r0, #4
-; CHECK-NEXT:    ldr.w r9, [sp, #28] @ 4-byte Reload
-; CHECK-NEXT:    vmov.i32 q3, #0x0
-; CHECK-NEXT:    ldr r6, [sp, #16] @ 4-byte Reload
-; CHECK-NEXT:    adds r4, r0, #3
+; CHECK-NEXT:    adds r1, r0, #6
 ; CHECK-NEXT:    str r1, [sp, #32] @ 4-byte Spill
+; CHECK-NEXT:    adds r1, r0, #5
+; CHECK-NEXT:    ldr r7, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    str r1, [sp, #28] @ 4-byte Spill
+; CHECK-NEXT:    adds r1, r0, #4
+; CHECK-NEXT:    ldr.w r9, [sp, #20] @ 4-byte Reload
+; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    ldr r6, [sp, #8] @ 4-byte Reload
+; CHECK-NEXT:    adds r4, r0, #3
+; CHECK-NEXT:    str r1, [sp, #24] @ 4-byte Spill
 ; CHECK-NEXT:    add.w r8, r0, #2
 ; CHECK-NEXT:    adds r1, r0, #1
 ; CHECK-NEXT:    mov r3, r12
@@ -1392,8 +1392,8 @@ define void @DCT_mve8(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    vmov q7, q3
 ; CHECK-NEXT:    vmov q2, q3
 ; CHECK-NEXT:    mov r10, r7
-; CHECK-NEXT:    vstrw.32 q3, [sp, #64] @ 16-byte Spill
-; CHECK-NEXT:    vstrw.32 q3, [sp, #80] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q3, [sp, #56] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q3, [sp, #72] @ 16-byte Spill
 ; CHECK-NEXT:    dls lr, r6
 ; CHECK-NEXT:  .LBB7_3: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB7_2 Depth=1
@@ -1404,7 +1404,7 @@ define void @DCT_mve8(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    vldrwt.u32 q0, [r9], #16
 ; CHECK-NEXT:    vldrwt.u32 q1, [r3], #16
 ; CHECK-NEXT:    vfmat.f32 q6, q1, q0
-; CHECK-NEXT:    vstrw.32 q6, [sp, #48] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q6, [sp, #40] @ 16-byte Spill
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vldrwt.u32 q1, [r11]
 ; CHECK-NEXT:    vfmat.f32 q7, q1, q0
@@ -1415,23 +1415,23 @@ define void @DCT_mve8(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrwt.u32 q1, [r6]
 ; CHECK-NEXT:    vmov q4, q2
-; CHECK-NEXT:    vldrw.u32 q2, [sp, #64] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q2, [sp, #56] @ 16-byte Reload
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vfmat.f32 q2, q1, q0
-; CHECK-NEXT:    vstrw.32 q2, [sp, #64] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q2, [sp, #56] @ 16-byte Spill
 ; CHECK-NEXT:    adds r7, r6, r5
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vldrwt.u32 q1, [r7]
-; CHECK-NEXT:    vldrw.u32 q2, [sp, #80] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q2, [sp, #72] @ 16-byte Reload
 ; CHECK-NEXT:    adds r6, r7, r5
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vfmat.f32 q2, q1, q0
-; CHECK-NEXT:    vstrw.32 q2, [sp, #80] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q2, [sp, #72] @ 16-byte Spill
 ; CHECK-NEXT:    vmov q2, q4
 ; CHECK-NEXT:    vmov q4, q3
 ; CHECK-NEXT:    vmov q3, q5
 ; CHECK-NEXT:    vmov q5, q6
-; CHECK-NEXT:    vldrw.u32 q6, [sp, #48] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q6, [sp, #40] @ 16-byte Reload
 ; CHECK-NEXT:    adds r7, r6, r5
 ; CHECK-NEXT:    vpstt
 ; CHECK-NEXT:    vldrwt.u32 q1, [r6]
@@ -1459,12 +1459,12 @@ define void @DCT_mve8(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    vadd.f32 s6, s24, s25
 ; CHECK-NEXT:    vadd.f32 s14, s18, s19
 ; CHECK-NEXT:    vadd.f32 s7, s16, s17
-; CHECK-NEXT:    vldrw.u32 q4, [sp, #64] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q4, [sp, #56] @ 16-byte Reload
 ; CHECK-NEXT:    vadd.f32 s8, s8, s9
 ; CHECK-NEXT:    vadd.f32 s13, s10, s11
 ; CHECK-NEXT:    vadd.f32 s10, s18, s19
 ; CHECK-NEXT:    vadd.f32 s9, s16, s17
-; CHECK-NEXT:    vldrw.u32 q4, [sp, #80] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q4, [sp, #72] @ 16-byte Reload
 ; CHECK-NEXT:    vadd.f32 s0, s2, s0
 ; CHECK-NEXT:    vadd.f32 s11, s18, s19
 ; CHECK-NEXT:    vadd.f32 s15, s16, s17
@@ -1484,26 +1484,26 @@ define void @DCT_mve8(%struct.DCT_InstanceTypeDef* nocapture readonly %S, float*
 ; CHECK-NEXT:    vstr s10, [r1]
 ; CHECK-NEXT:    add.w r1, r2, r4, lsl #2
 ; CHECK-NEXT:    vstr s14, [r1]
-; CHECK-NEXT:    ldr r1, [sp, #32] @ 4-byte Reload
+; CHECK-NEXT:    ldr r1, [sp, #24] @ 4-byte Reload
 ; CHECK-NEXT:    vadd.f32 s4, s3, s1
 ; CHECK-NEXT:    add.w r1, r2, r1, lsl #2
 ; CHECK-NEXT:    vstr s8, [r1]
-; CHECK-NEXT:    ldr r1, [sp, #36] @ 4-byte Reload
+; CHECK-NEXT:    ldr r1, [sp, #28] @ 4-byte Reload
 ; CHECK-NEXT:    add.w r1, r2, r1, lsl #2
 ; CHECK-NEXT:    vstr s12, [r1]
-; CHECK-NEXT:    ldr r1, [sp, #40] @ 4-byte Reload
+; CHECK-NEXT:    ldr r1, [sp, #32] @ 4-byte Reload
 ; CHECK-NEXT:    add.w r1, r2, r1, lsl #2
 ; CHECK-NEXT:    vstr s4, [r1]
-; CHECK-NEXT:    ldr r1, [sp, #44] @ 4-byte Reload
+; CHECK-NEXT:    ldr r1, [sp, #36] @ 4-byte Reload
 ; CHECK-NEXT:    add.w r1, r2, r1, lsl #2
 ; CHECK-NEXT:    vstr s6, [r1]
-; CHECK-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
+; CHECK-NEXT:    ldr r1, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    add r12, r1
-; CHECK-NEXT:    ldr r1, [sp, #24] @ 4-byte Reload
+; CHECK-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    blo.w .LBB7_2
 ; CHECK-NEXT:  .LBB7_5: @ %for.cond.cleanup
-; CHECK-NEXT:    add sp, #104
+; CHECK-NEXT:    add sp, #88
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
