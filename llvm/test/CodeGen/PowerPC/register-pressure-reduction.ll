@@ -37,10 +37,10 @@ define float @foo_float(float %0, float %1, float %2, float %3) {
 ; CHECK-FMA-NEXT:    xsmaddasp f1, f4, f2
 ; CHECK-FMA-NEXT:    xsmaddasp f1, f3, f0
 ; CHECK-FMA-NEXT:    blr
-  %5 = fmul reassoc nsz float %1, %0
-  %6 = fsub reassoc nsz float %2, %3
-  %7 = fmul reassoc nsz float %6, 0x3DB2533FE0000000
-  %8 = fadd reassoc nsz float %7, %5
+  %5 = fmul contract reassoc nsz float %1, %0
+  %6 = fsub contract reassoc nsz float %2, %3
+  %7 = fmul contract reassoc nsz float %6, 0x3DB2533FE0000000
+  %8 = fadd contract reassoc nsz float %7, %5
   ret float %8
 }
 
@@ -73,10 +73,10 @@ define double @foo_double(double %0, double %1, double %2, double %3) {
 ; CHECK-FMA-NEXT:    xsmaddadp f1, f4, f2
 ; CHECK-FMA-NEXT:    xsmaddadp f1, f3, f0
 ; CHECK-FMA-NEXT:    blr
-  %5 = fmul reassoc nsz double %1, %0
-  %6 = fsub reassoc nsz double %2, %3
-  %7 = fmul reassoc nsz double %6, 0x3DB2533FE68CADDE
-  %8 = fadd reassoc nsz double %7, %5
+  %5 = fmul contract reassoc nsz double %1, %0
+  %6 = fsub contract reassoc nsz double %2, %3
+  %7 = fmul contract reassoc nsz double %6, 0x3DB2533FE68CADDE
+  %8 = fadd contract reassoc nsz double %7, %5
   ret double %8
 }
 
@@ -125,11 +125,11 @@ define float @foo_float_reuse_const(float %0, float %1, float %2, float %3) {
 ; CHECK-FMA-NEXT:    xsmulsp f0, f2, f5
 ; CHECK-FMA-NEXT:    stfs f0, 0(r3)
 ; CHECK-FMA-NEXT:    blr
-  %5 = fmul reassoc nsz float %1, %0
-  %6 = fsub reassoc nsz float %2, %3
-  %7 = fmul reassoc nsz float %6, 0x3DB2533FE0000000
-  %8 = fadd reassoc nsz float %7, %5
-  %9 = fmul reassoc nsz float %1, 0xBDB2533FE0000000
+  %5 = fmul contract reassoc nsz float %1, %0
+  %6 = fsub contract reassoc nsz float %2, %3
+  %7 = fmul contract reassoc nsz float %6, 0x3DB2533FE0000000
+  %8 = fadd contract reassoc nsz float %7, %5
+  %9 = fmul contract reassoc nsz float %1, 0xBDB2533FE0000000
   store float %9, float* @global_val, align 4
   ret float %8
 }
