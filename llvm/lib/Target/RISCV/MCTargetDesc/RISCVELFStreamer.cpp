@@ -15,9 +15,13 @@
 #include "RISCVBaseInfo.h"
 #include "RISCVMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/RISCVAttributes.h"
 
@@ -167,3 +171,92 @@ size_t RISCVTargetELFStreamer::calculateContentSize() const {
   }
   return Result;
 }
+
+namespace {
+class RISCVELFStreamer : public MCELFStreamer {
+  static std::pair<unsigned, unsigned> getRelocPairForSize(unsigned Size) {
+    switch (Size) {
+    default:
+      llvm_unreachable("unsupported fixup size");
+    case 1:
+      return std::make_pair(RISCV::fixup_riscv_add_8, RISCV::fixup_riscv_sub_8);
+    case 2:
+      return std::make_pair(RISCV::fixup_riscv_add_16,
+                            RISCV::fixup_riscv_sub_16);
+    case 4:
+      return std::make_pair(RISCV::fixup_riscv_add_32,
+                            RISCV::fixup_riscv_sub_32);
+    case 8:
+      return std::make_pair(RISCV::fixup_riscv_add_64,
+                            RISCV::fixup_riscv_sub_64);
+    }
+  }
+
+  static bool requiresFixups(MCContext &C, const MCExpr *Value,
+                             const MCExpr *&LHS, const MCExpr *&RHS) {
+    const auto *MBE = dyn_cast<MCBinaryExpr>(Value);
+    if (MBE == nullptr)
+      return false;
+
+    MCValue E;
+    if (!Value->evaluateAsRelocatable(E, nullptr, nullptr))
+      return false;
+    if (E.getSymA() == nullptr || E.getSymB() == nullptr)
+      return false;
+
+    const auto &A = E.getSymA()->getSymbol();
+    const auto &B = E.getSymB()->getSymbol();
+
+    LHS =
+        MCBinaryExpr::create(MCBinaryExpr::Add, MCSymbolRefExpr::create(&A, C),
+                             MCConstantExpr::create(E.getConstant(), C), C);
+    RHS = E.getSymB();
+
+    return (A.isInSection() ? A.getSection().hasInstructions()
+                            : !A.getName().empty()) ||
+           (B.isInSection() ? B.getSection().hasInstructions()
+                            : !B.getName().empty());
+  }
+
+public:
+  RISCVELFStreamer(MCContext &C, std::unique_ptr<MCAsmBackend> MAB,
+                   std::unique_ptr<MCObjectWriter> MOW,
+                   std::unique_ptr<MCCodeEmitter> MCE)
+      : MCELFStreamer(C, std::move(MAB), std::move(MOW), std::move(MCE)) {}
+
+  void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override {
+    const MCExpr *A, *B;
+    if (!requiresFixups(getContext(), Value, A, B))
+      return MCELFStreamer::emitValueImpl(Value, Size, Loc);
+
+    MCStreamer::emitValueImpl(Value, Size, Loc);
+
+    MCDataFragment *DF = getOrCreateDataFragment();
+    flushPendingLabels(DF, DF->getContents().size());
+    MCDwarfLineEntry::make(this, getCurrentSectionOnly());
+
+    unsigned Add, Sub;
+    std::tie(Add, Sub) = getRelocPairForSize(Size);
+
+    DF->getFixups().push_back(MCFixup::create(
+        DF->getContents().size(), A, static_cast<MCFixupKind>(Add), Loc));
+    DF->getFixups().push_back(MCFixup::create(
+        DF->getContents().size(), B, static_cast<MCFixupKind>(Sub), Loc));
+
+    DF->getContents().resize(DF->getContents().size() + Size, 0);
+  }
+};
+} // namespace
+
+namespace llvm {
+MCELFStreamer *createRISCVELFStreamer(MCContext &C,
+                                      std::unique_ptr<MCAsmBackend> MAB,
+                                      std::unique_ptr<MCObjectWriter> MOW,
+                                      std::unique_ptr<MCCodeEmitter> MCE,
+                                      bool RelaxAll) {
+  RISCVELFStreamer *S =
+      new RISCVELFStreamer(C, std::move(MAB), std::move(MOW), std::move(MCE));
+  S->getAssembler().setRelaxAll(RelaxAll);
+  return S;
+}
+} // namespace llvm

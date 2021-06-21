@@ -92,14 +92,19 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
 bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                             const MCAsmLayout *Layout,
                                             const MCFixup *Fixup) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Layout, Fixup))
-    return false;
+  bool IsSymbolicDifference = false;
+  if (const auto *MBE = dyn_cast<MCBinaryExpr>(getSubExpr())) {
+    if (isa<MCBinaryExpr>(MBE->getLHS()) && isa<MCConstantExpr>(MBE->getRHS()))
+      MBE = cast<MCBinaryExpr>(MBE->getLHS());
+    IsSymbolicDifference = isa<MCSymbolRefExpr>(MBE->getLHS()) &&
+                           isa<MCSymbolRefExpr>(MBE->getRHS());
+  }
 
   // Some custom fixup types are not valid with symbol difference expressions
-  if (Res.getSymA() && Res.getSymB()) {
+  if (IsSymbolicDifference) {
     switch (getKind()) {
     default:
-      return true;
+      break;
     case VK_RISCV_LO:
     case VK_RISCV_HI:
     case VK_RISCV_PCREL_LO:
@@ -113,8 +118,7 @@ bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
       return false;
     }
   }
-
-  return true;
+  return getSubExpr()->evaluateAsRelocatable(Res, Layout, Fixup);
 }
 
 void RISCVMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
