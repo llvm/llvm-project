@@ -1,13 +1,7 @@
 ; REQUIRES: asserts
+; RUN: opt -stats -function-specialization -S < %s 2>&1 | FileCheck %s
 
-; RUN: opt -stats -function-specialization -deadargelim -inline -S < %s 2>&1 | FileCheck %s
-
-; CHECK: 2 deadargelim             - Number of unread args removed
-; CHECK: 1 deadargelim             - Number of unused return values removed
 ; CHECK: 2 function-specialization - Number of functions specialized
-; CHECK: 4 inline                  - Number of functions deleted because all callers found
-; CHECK: 4 inline                  - Number of functions inlined
-; CHECK: 6 inline-cost             - Number of call sites analyzed
 
 define i64 @main(i64 %x, i1 %flag) {
 entry:
