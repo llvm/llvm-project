@@ -9730,12 +9730,14 @@ Value *VPTransformState::get(VPValue *Def, unsigned Part) {
   }
 
   auto *LastInst = cast<Instruction>(get(Def, {Part, LastLane}));
-
-  // Set the insert point after the last scalarized instruction. This
-  // ensures the insertelement sequence will directly follow the scalar
-  // definitions.
+  // Set the insert point after the last scalarized instruction or after the
+  // last PHI, if LastInst is a PHI. This ensures the insertelement sequence
+  // will directly follow the scalar definitions.
   auto OldIP = Builder.saveIP();
-  auto NewIP = std::next(BasicBlock::iterator(LastInst));
+  auto NewIP =
+      isa<PHINode>(LastInst)
+          ? BasicBlock::iterator(LastInst->getParent()->getFirstNonPHI())
+          : std::next(BasicBlock::iterator(LastInst));
   Builder.SetInsertPoint(&*NewIP);
 
   // However, if we are vectorizing, we need to construct the vector values.
