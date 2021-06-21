@@ -26,6 +26,7 @@
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
@@ -167,6 +168,8 @@ ChangeStatus llvm::operator&(ChangeStatus L, ChangeStatus R) {
 Value *AA::getWithType(Value &V, Type &Ty) {
   if (V.getType() == &Ty)
     return &V;
+  if (isa<PoisonValue>(V))
+    return PoisonValue::get(&Ty);
   if (isa<UndefValue>(V))
     return UndefValue::get(&Ty);
   if (auto *C = dyn_cast<Constant>(&V)) {
