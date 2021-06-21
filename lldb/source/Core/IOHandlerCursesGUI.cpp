@@ -461,7 +461,7 @@ public:
   void Printf(const char *format, ...) __attribute__((format(printf, 2, 3))) {
     va_list args;
     va_start(args, format);
-    vwprintw(m_window, format, args);
+    vw_printw(m_window, format, args);
     va_end(args);
   }
 
