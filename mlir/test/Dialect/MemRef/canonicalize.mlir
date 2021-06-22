@@ -367,3 +367,56 @@ func @tensor_cast_to_memref(%arg0 : tensor<4x6x16x32xi8>) ->
   %1 = memref.buffer_cast %0 : memref<?x?x16x32xi8>
   return %1 : memref<?x?x16x32xi8>
 }
+
+// -----
+
+// CHECK-LABEL: func @alloc_const_fold
+func @alloc_const_fold() -> memref<?xf32> {
+  // CHECK-NEXT: %0 = memref.alloc() : memref<4xf32>
+  %c4 = constant 4 : index
+  %a = memref.alloc(%c4) : memref<?xf32>
+
+  // CHECK-NEXT: %1 = memref.cast %0 : memref<4xf32> to memref<?xf32>
+  // CHECK-NEXT: return %1 : memref<?xf32>
+  return %a : memref<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @alloc_alignment_const_fold
+func @alloc_alignment_const_fold() -> memref<?xf32> {
+  // CHECK-NEXT: %0 = memref.alloc() {alignment = 4096 : i64} : memref<4xf32>
+  %c4 = constant 4 : index
+  %a = memref.alloc(%c4) {alignment = 4096 : i64} : memref<?xf32>
+
+  // CHECK-NEXT: %1 = memref.cast %0 : memref<4xf32> to memref<?xf32>
+  // CHECK-NEXT: return %1 : memref<?xf32>
+  return %a : memref<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @alloc_const_fold_with_symbols1(
+//  CHECK: %[[c1:.+]] = constant 1 : index
+//  CHECK: %[[mem1:.+]] = memref.alloc({{.*}})[%[[c1]], %[[c1]]] : memref<?xi32, #map>
+//  CHECK: return %[[mem1]] : memref<?xi32, #map>
+#map0 = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
+func @alloc_const_fold_with_symbols1(%arg0 : index) -> memref<?xi32, #map0> {
+  %c1 = constant 1 : index
+  %0 = memref.alloc(%arg0)[%c1, %c1] : memref<?xi32, #map0>
+  return %0 : memref<?xi32, #map0>
+}
+
+// -----
+
+// CHECK-LABEL: func @alloc_const_fold_with_symbols2(
+//  CHECK: %[[c1:.+]] = constant 1 : index
+//  CHECK: %[[mem1:.+]] = memref.alloc()[%[[c1]], %[[c1]]] : memref<1xi32, #map>
+//  CHECK: %[[mem2:.+]] = memref.cast %[[mem1]] : memref<1xi32, #map> to memref<?xi32, #map>
+//  CHECK: return %[[mem2]] : memref<?xi32, #map>
+#map0 = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
+func @alloc_const_fold_with_symbols2() -> memref<?xi32, #map0> {
+  %c1 = constant 1 : index
+  %0 = memref.alloc(%c1)[%c1, %c1] : memref<?xi32, #map0>
+  return %0 : memref<?xi32, #map0>
+}

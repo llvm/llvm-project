@@ -357,28 +357,6 @@ func @fold_memref_cast_chain(%0: memref<42x42xf64>) {
   return
 }
 
-// CHECK-LABEL: func @alloc_const_fold
-func @alloc_const_fold() -> memref<?xf32> {
-  // CHECK-NEXT: %0 = memref.alloc() : memref<4xf32>
-  %c4 = constant 4 : index
-  %a = memref.alloc(%c4) : memref<?xf32>
-
-  // CHECK-NEXT: %1 = memref.cast %0 : memref<4xf32> to memref<?xf32>
-  // CHECK-NEXT: return %1 : memref<?xf32>
-  return %a : memref<?xf32>
-}
-
-// CHECK-LABEL: func @alloc_alignment_const_fold
-func @alloc_alignment_const_fold() -> memref<?xf32> {
-  // CHECK-NEXT: %0 = memref.alloc() {alignment = 4096 : i64} : memref<4xf32>
-  %c4 = constant 4 : index
-  %a = memref.alloc(%c4) {alignment = 4096 : i64} : memref<?xf32>
-
-  // CHECK-NEXT: %1 = memref.cast %0 : memref<4xf32> to memref<?xf32>
-  // CHECK-NEXT: return %1 : memref<?xf32>
-  return %a : memref<?xf32>
-}
-
 // CHECK-LABEL: func @dead_alloc_fold
 func @dead_alloc_fold() {
   // CHECK-NEXT: return
