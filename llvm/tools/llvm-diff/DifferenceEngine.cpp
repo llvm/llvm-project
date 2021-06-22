@@ -404,6 +404,7 @@ class FunctionDifferenceEngine {
     return false;
   }
 
+public:
   bool equivalentAsOperands(const Constant *L, const Constant *R) {
     // Use equality as a preliminary filter.
     if (L == R)
@@ -443,6 +444,24 @@ class FunctionDifferenceEngine {
         if (!equivalentAsOperands(CVL->getOperand(i), CVR->getOperand(i)))
           return false;
       }
+      return true;
+    }
+
+    // If L and R are ConstantArrays, compare the element count and types.
+    if (isa<ConstantArray>(L)) {
+      const ConstantArray *CAL = cast<ConstantArray>(L);
+      const ConstantArray *CAR = cast<ConstantArray>(R);
+      // Sometimes a type may be equivalent, but not uniquified---e.g. it may
+      // contain a GEP instruction. Do a deeper comparison of the types.
+      if (CAL->getType()->getNumElements() != CAR->getType()->getNumElements())
+        return false;
+
+      for (unsigned I = 0; I < CAL->getType()->getNumElements(); ++I) {
+        if (!equivalentAsOperands(CAL->getAggregateElement(I),
+                                  CAR->getAggregateElement(I)))
+          return false;
+      }
+
       return true;
     }
 
@@ -766,7 +785,8 @@ bool DifferenceEngine::equivalentAsOperands(const GlobalValue *L,
     const GlobalVariable *GVR = cast<GlobalVariable>(R);
     if (GVL->hasLocalLinkage() && GVL->hasUniqueInitializer() &&
         GVR->hasLocalLinkage() && GVR->hasUniqueInitializer())
-      return GVL->getInitializer() == GVR->getInitializer();
+      return FunctionDifferenceEngine(*this).equivalentAsOperands(
+          GVL->getInitializer(), GVR->getInitializer());
   }
 
   return L->getName() == R->getName();
