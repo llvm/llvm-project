@@ -353,6 +353,105 @@ unsigned GCNSubtarget::getConstantBusLimit(unsigned Opcode) const {
   return 2;
 }
 
+/// This list was mostly derived from experimentation.
+bool GCNSubtarget::zeroesHigh16BitsOfDest(unsigned Opcode) const {
+  switch (Opcode) {
+  case AMDGPU::V_CVT_F16_F32_e32:
+  case AMDGPU::V_CVT_F16_F32_e64:
+  case AMDGPU::V_CVT_F16_U16_e32:
+  case AMDGPU::V_CVT_F16_U16_e64:
+  case AMDGPU::V_CVT_F16_I16_e32:
+  case AMDGPU::V_CVT_F16_I16_e64:
+  case AMDGPU::V_RCP_F16_e64:
+  case AMDGPU::V_RCP_F16_e32:
+  case AMDGPU::V_RSQ_F16_e64:
+  case AMDGPU::V_RSQ_F16_e32:
+  case AMDGPU::V_SQRT_F16_e64:
+  case AMDGPU::V_SQRT_F16_e32:
+  case AMDGPU::V_LOG_F16_e64:
+  case AMDGPU::V_LOG_F16_e32:
+  case AMDGPU::V_EXP_F16_e64:
+  case AMDGPU::V_EXP_F16_e32:
+  case AMDGPU::V_SIN_F16_e64:
+  case AMDGPU::V_SIN_F16_e32:
+  case AMDGPU::V_COS_F16_e64:
+  case AMDGPU::V_COS_F16_e32:
+  case AMDGPU::V_FLOOR_F16_e64:
+  case AMDGPU::V_FLOOR_F16_e32:
+  case AMDGPU::V_CEIL_F16_e64:
+  case AMDGPU::V_CEIL_F16_e32:
+  case AMDGPU::V_TRUNC_F16_e64:
+  case AMDGPU::V_TRUNC_F16_e32:
+  case AMDGPU::V_RNDNE_F16_e64:
+  case AMDGPU::V_RNDNE_F16_e32:
+  case AMDGPU::V_FRACT_F16_e64:
+  case AMDGPU::V_FRACT_F16_e32:
+  case AMDGPU::V_FREXP_MANT_F16_e64:
+  case AMDGPU::V_FREXP_MANT_F16_e32:
+  case AMDGPU::V_FREXP_EXP_I16_F16_e64:
+  case AMDGPU::V_FREXP_EXP_I16_F16_e32:
+  case AMDGPU::V_LDEXP_F16_e64:
+  case AMDGPU::V_LDEXP_F16_e32:
+  case AMDGPU::V_LSHLREV_B16_e64:
+  case AMDGPU::V_LSHLREV_B16_e32:
+  case AMDGPU::V_LSHRREV_B16_e64:
+  case AMDGPU::V_LSHRREV_B16_e32:
+  case AMDGPU::V_ASHRREV_I16_e64:
+  case AMDGPU::V_ASHRREV_I16_e32:
+  case AMDGPU::V_ADD_U16_e64:
+  case AMDGPU::V_ADD_U16_e32:
+  case AMDGPU::V_SUB_U16_e64:
+  case AMDGPU::V_SUB_U16_e32:
+  case AMDGPU::V_SUBREV_U16_e64:
+  case AMDGPU::V_SUBREV_U16_e32:
+  case AMDGPU::V_MUL_LO_U16_e64:
+  case AMDGPU::V_MUL_LO_U16_e32:
+  case AMDGPU::V_ADD_F16_e64:
+  case AMDGPU::V_ADD_F16_e32:
+  case AMDGPU::V_SUB_F16_e64:
+  case AMDGPU::V_SUB_F16_e32:
+  case AMDGPU::V_SUBREV_F16_e64:
+  case AMDGPU::V_SUBREV_F16_e32:
+  case AMDGPU::V_MUL_F16_e64:
+  case AMDGPU::V_MUL_F16_e32:
+  case AMDGPU::V_MAX_F16_e64:
+  case AMDGPU::V_MAX_F16_e32:
+  case AMDGPU::V_MIN_F16_e64:
+  case AMDGPU::V_MIN_F16_e32:
+  case AMDGPU::V_MAX_U16_e64:
+  case AMDGPU::V_MAX_U16_e32:
+  case AMDGPU::V_MIN_U16_e64:
+  case AMDGPU::V_MIN_U16_e32:
+  case AMDGPU::V_MAX_I16_e64:
+  case AMDGPU::V_MAX_I16_e32:
+  case AMDGPU::V_MIN_I16_e64:
+  case AMDGPU::V_MIN_I16_e32:
+    // On gfx10, all 16-bit instructions preserve the high bits.
+    return getGeneration() <= AMDGPUSubtarget::GFX9;
+  case AMDGPU::V_MAD_F16_e64:
+  case AMDGPU::V_MADAK_F16:
+  case AMDGPU::V_MADMK_F16:
+  case AMDGPU::V_MAC_F16_e64:
+  case AMDGPU::V_MAC_F16_e32:
+  case AMDGPU::V_FMAMK_F16:
+  case AMDGPU::V_FMAAK_F16:
+  case AMDGPU::V_MAD_U16_e64:
+  case AMDGPU::V_MAD_I16_e64:
+  case AMDGPU::V_FMA_F16_e64:
+  case AMDGPU::V_FMAC_F16_e64:
+  case AMDGPU::V_FMAC_F16_e32:
+  case AMDGPU::V_DIV_FIXUP_F16_e64:
+    // In gfx9, the preferred handling of the unused high 16-bits changed. Most
+    // instructions maintain the legacy behavior of 0ing. Some instructions
+    // changed to preserving the high bits.
+    return getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS;
+  case AMDGPU::V_MAD_MIXLO_F16:
+  case AMDGPU::V_MAD_MIXHI_F16:
+  default:
+    return false;
+  }
+}
+
 unsigned AMDGPUSubtarget::getMaxLocalMemSizeWithWaveCount(unsigned NWaves,
   const Function &F) const {
   if (NWaves == 1)

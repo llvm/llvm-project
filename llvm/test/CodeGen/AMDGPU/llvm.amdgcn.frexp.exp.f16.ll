@@ -35,8 +35,7 @@ entry:
 ; GCN-LABEL: {{^}}frexp_exp_f16_zext
 ; GCN: buffer_load_ushort v[[A_F16:[0-9]+]]
 ; VI:  v_frexp_exp_i16_f16_e32 v[[R_I16:[0-9]+]], v[[A_F16]]
-; VI:  v_and_b32_e32 v[[R_I32:[0-9]+]], 0xffff, v[[R_I16]]
-; GCN: buffer_store_dword v[[R_I32]]
+; GCN: buffer_store_dword v[[R_I16]]
 define amdgpu_kernel void @frexp_exp_f16_zext(
     i32 addrspace(1)* %r,
     half addrspace(1)* %a) {
