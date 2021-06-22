@@ -215,3 +215,19 @@ func @mismatched_types() {
   %0 = memref.get_global @gv : memref<3xf32>
   return
 }
+
+// -----
+
+func @copy_different_shape(%arg0: memref<2xf32>, %arg1: memref<3xf32>) {
+  // expected-error @+1 {{op requires the same shape for all operands}}
+  memref.copy %arg0, %arg1 : memref<2xf32> to memref<3xf32>
+  return
+}
+
+// -----
+
+func @copy_different_eltype(%arg0: memref<2xf32>, %arg1: memref<2xf16>) {
+  // expected-error @+1 {{op requires the same element type for all operands}}
+  memref.copy %arg0, %arg1 : memref<2xf32> to memref<2xf16>
+  return
+}
