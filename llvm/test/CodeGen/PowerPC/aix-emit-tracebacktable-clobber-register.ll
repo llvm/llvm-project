@@ -69,7 +69,7 @@ entry:
 ; COMMON-NEXT:  .byte   0x40                            # -IsInterruptHandler, +IsFunctionNamePresent, -IsAllocaUsed
 ; COMMON-NEXT:                                         # OnConditionDirective = 0, -IsCRSaved, -IsLRSaved
 ; COMMON-NEXT:  .byte   0x80                            # +IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
-; COMMON-NEXT:  .byte   0x80                            # +HasVectorInfo, -HasExtensionTable, NumOfGPRsSaved = 0
+; COMMON-NEXT:  .byte   0xc0                            # +HasVectorInfo, +HasExtensionTable, NumOfGPRsSaved = 0
 ; COMMON-NEXT:  .byte   0x00                            # NumberOfFixedParms = 0
 ; COMMON-NEXT:  .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack
 ; CHECK-ASM-NEXT:   .vbyte  4, L..foov0-.foov               # Function size
@@ -80,4 +80,17 @@ entry:
 ; COMMON-NEXT:  .byte   0x01                            # NumOfVectorParams = 0, +HasVMXInstruction
 ; COMMON-NEXT:  .vbyte  4, 0x00000000                   # Vector Parameter type =
 ; COMMON-NEXT:  .vbyte  2, 0x0000                       # Padding 
+; COMMON-NEXT:  .byte   0x08                            # ExtensionTableFlag = TB_EH_INFO
+; COMMON-NEXT:  .align  2
+; COMMON-NEXT:  .vbyte  4, L..C2-TOC[TC0]               # EHInfo Table
+
+; COMMON:       .csect .eh_info_table[RW],2
+; COMMON-NEXT:__ehinfo.1:
+; COMMON-NEXT:  .vbyte  4, 0
+; COMMON-NEXT:  .align  2
+; COMMON-NEXT:  .vbyte  4, 0
+; COMMON-NEXT:  .vbyte  4, 0
 ; COMMON-NEXT:                                         # -- End function
+; COMMON:       .toc
+; COMMON:      L..C2:
+; COMMON-NEXT:  .tc __ehinfo.1[TC],__ehinfo.1
