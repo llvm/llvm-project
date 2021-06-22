@@ -1083,13 +1083,15 @@ struct Attributor {
   ///                  the abstract attributes.
   /// \param CGUpdater Helper to update an underlying call graph.
   /// \param Allowed If not null, a set limiting the attribute opportunities.
-  /// \param DeleteFns Whether to delete functions
+  /// \param DeleteFns Whether to delete functions.
+  /// \param RewriteSignatures Whether to rewrite function signatures.
   Attributor(SetVector<Function *> &Functions, InformationCache &InfoCache,
              CallGraphUpdater &CGUpdater,
-             DenseSet<const char *> *Allowed = nullptr, bool DeleteFns = true)
+             DenseSet<const char *> *Allowed = nullptr, bool DeleteFns = true,
+             bool RewriteSignatures = true)
       : Allocator(InfoCache.Allocator), Functions(Functions),
         InfoCache(InfoCache), CGUpdater(CGUpdater), Allowed(Allowed),
-        DeleteFns(DeleteFns) {}
+        DeleteFns(DeleteFns), RewriteSignatures(RewriteSignatures) {}
 
   ~Attributor();
 
@@ -1665,6 +1667,21 @@ public:
   ///
   static void createShallowWrapper(Function &F);
 
+  /// Make another copy of the function \p F such that the copied version has
+  /// internal linkage afterwards and can be analysed. Then we replace all uses
+  /// of the original function to the copied one
+  ///
+  /// Only non-locally linked functions that have `linkonce_odr` or `weak_odr`
+  /// linkage can be internalized because these linkages guarantee that other
+  /// definitions with the same name have the same semantics as this one.
+  ///
+  /// This will only be run if the `attributor-allow-deep-wrappers` option is
+  /// set, or if the function is called with \p Force set to true.
+  ///
+  /// If the function \p F failed to be internalized the return value will be a
+  /// null pointer.
+  static Function *internalizeFunction(Function &F, bool Force = false);
+
   /// Return the data layout associated with the anchor scope.
   const DataLayout &getDataLayout() const { return InfoCache.DL; }
 
@@ -1776,6 +1793,9 @@ private:
 
   /// Whether to delete functions.
   const bool DeleteFns;
+
+  /// Whether to rewrite signatures.
+  const bool RewriteSignatures;
 
   /// A set to remember the functions we already assume to be live and visited.
   DenseSet<const Function *> VisitedFunctions;
