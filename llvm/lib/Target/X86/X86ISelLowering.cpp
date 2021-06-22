@@ -29725,7 +29725,7 @@ static SDValue lowerAtomicArith(SDValue N, SelectionDAG &DAG,
     // during codegen and then dropped. Note that we expect (but don't assume),
     // that orderings other than seq_cst and acq_rel have been canonicalized to
     // a store or load.
-    if (AN->getOrdering() == AtomicOrdering::SequentiallyConsistent &&
+    if (AN->getSuccessOrdering() == AtomicOrdering::SequentiallyConsistent &&
         AN->getSyncScopeID() == SyncScope::System) {
       // Prefer a locked operation against a stack location to minimize cache
       // traffic.  This assumes that stack locations are very likely to be
@@ -29758,7 +29758,8 @@ static SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG,
   SDLoc dl(Node);
   EVT VT = Node->getMemoryVT();
 
-  bool IsSeqCst = Node->getOrdering() == AtomicOrdering::SequentiallyConsistent;
+  bool IsSeqCst =
+      Node->getSuccessOrdering() == AtomicOrdering::SequentiallyConsistent;
   bool IsTypeLegal = DAG.getTargetLoweringInfo().isTypeLegal(VT);
 
   // If this store is not sequentially consistent and the type is legal

@@ -47,7 +47,6 @@ ProgressEvent::ProgressEvent(uint64_t progress_id, Optional<StringRef> message,
       m_percentage = 100;
   } else {
     // Update event
-    assert(prev_event);
     m_percentage = std::min(
         (uint32_t)((double)completed / (double)total * 100.0), (uint32_t)99);
     if (prev_event->Reported()) {
@@ -67,6 +66,9 @@ Optional<ProgressEvent> ProgressEvent::Create(uint64_t progress_id,
                                               uint64_t completed,
                                               uint64_t total,
                                               const ProgressEvent *prev_event) {
+  // If it's an update without a previous event, we abort
+  if (completed > 0 && completed < total && !prev_event)
+    return None;
   ProgressEvent event(progress_id, message, completed, total, prev_event);
   // We shouldn't show unnamed start events in the IDE
   if (event.GetEventType() == progressStart && event.GetEventName().empty())

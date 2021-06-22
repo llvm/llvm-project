@@ -48,7 +48,11 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
     bool IsCrossSection, const MCAsmBackend &MAB) const {
   unsigned FixupKind = Fixup.getKind();
   if (IsCrossSection) {
-    if (FixupKind != FK_Data_4) {
+    // IMAGE_REL_ARM64_REL64 does not exist. We treat FK_Data_8 as FK_PCRel_4 so
+    // that .xword a-b can lower to IMAGE_REL_ARM64_REL32. This allows generic
+    // instrumentation to not bother with the COFF limitation. A negative value
+    // needs attention.
+    if (FixupKind != FK_Data_4 && FixupKind != FK_Data_8) {
       Ctx.reportError(Fixup.getLoc(), "Cannot represent this expression");
       return COFF::IMAGE_REL_ARM64_ADDR32;
     }

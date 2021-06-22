@@ -1721,11 +1721,25 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   if (Result->containsErrors())
     declarator.setInvalidType();
 
-  if (S.getLangOpts().OpenCL && Result->isOCLImage3dWOType() &&
-      !S.getOpenCLOptions().isSupported("cl_khr_3d_image_writes", S.getLangOpts())) {
-        S.Diag(DS.getTypeSpecTypeLoc(), diag::err_opencl_requires_extension)
-        << 0 << Result << "cl_khr_3d_image_writes";
-        declarator.setInvalidType();
+  if (S.getLangOpts().OpenCL) {
+    const auto &OpenCLOptions = S.getOpenCLOptions();
+    StringRef OptName;
+    // OpenCL C v3.0 s6.3.3 - OpenCL image types require __opencl_c_images
+    // support
+    if ((Result->isImageType() || Result->isSamplerT()) &&
+        (S.getLangOpts().OpenCLVersion >= 300 &&
+         !OpenCLOptions.isSupported("__opencl_c_images", S.getLangOpts())))
+      OptName = "__opencl_c_images";
+    else if (Result->isOCLImage3dWOType() &&
+             !OpenCLOptions.isSupported("cl_khr_3d_image_writes",
+                                        S.getLangOpts()))
+      OptName = "cl_khr_3d_image_writes";
+
+    if (!OptName.empty()) {
+      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_opencl_requires_extension)
+          << 0 << Result << OptName;
+      declarator.setInvalidType();
+    }
   }
 
   bool IsFixedPointType = DS.getTypeSpecType() == DeclSpec::TST_accum ||

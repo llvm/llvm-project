@@ -357,28 +357,6 @@ func @fold_memref_cast_chain(%0: memref<42x42xf64>) {
   return
 }
 
-// CHECK-LABEL: func @alloc_const_fold
-func @alloc_const_fold() -> memref<?xf32> {
-  // CHECK-NEXT: %0 = memref.alloc() : memref<4xf32>
-  %c4 = constant 4 : index
-  %a = memref.alloc(%c4) : memref<?xf32>
-
-  // CHECK-NEXT: %1 = memref.cast %0 : memref<4xf32> to memref<?xf32>
-  // CHECK-NEXT: return %1 : memref<?xf32>
-  return %a : memref<?xf32>
-}
-
-// CHECK-LABEL: func @alloc_alignment_const_fold
-func @alloc_alignment_const_fold() -> memref<?xf32> {
-  // CHECK-NEXT: %0 = memref.alloc() {alignment = 4096 : i64} : memref<4xf32>
-  %c4 = constant 4 : index
-  %a = memref.alloc(%c4) {alignment = 4096 : i64} : memref<?xf32>
-
-  // CHECK-NEXT: %1 = memref.cast %0 : memref<4xf32> to memref<?xf32>
-  // CHECK-NEXT: return %1 : memref<?xf32>
-  return %a : memref<?xf32>
-}
-
 // CHECK-LABEL: func @dead_alloc_fold
 func @dead_alloc_fold() {
   // CHECK-NEXT: return
@@ -1065,9 +1043,9 @@ func @memref_cast_folding_subview_static(%V: memref<16x16xf32>, %a: index, %b: i
 
 // -----
 
-// CHECK-LABEL: func @subtensor
+// CHECK-LABEL: func @slice
 // CHECK-SAME: %[[ARG0:[0-9a-z]*]]: index, %[[ARG1:[0-9a-z]*]]: index
-func @subtensor(%t: tensor<8x16x4xf32>, %arg0 : index, %arg1 : index)
+func @slice(%t: tensor<8x16x4xf32>, %arg0 : index, %arg1 : index)
   -> tensor<?x?x?xf32>
 {
   %c0 = constant 0 : index
@@ -1076,18 +1054,18 @@ func @subtensor(%t: tensor<8x16x4xf32>, %arg0 : index, %arg1 : index)
   %c7 = constant 7 : index
   %c11 = constant 11 : index
 
-  // CHECK: subtensor %{{.*}}[0, 0, 0] [7, 11, 2] [1, 1, 1] :
+  // CHECK: tensor.extract_slice %{{.*}}[0, 0, 0] [7, 11, 2] [1, 1, 1] :
   // CHECK-SAME: tensor<8x16x4xf32> to tensor<7x11x2xf32>
   // tensor.cast gets folded away in consumer.
   //  CHECK-NOT: tensor.cast
-  %1 = subtensor %t[%c0, %c0, %c0] [%c7, %c11, %c2] [%c1, %c1, %c1]
+  %1 = tensor.extract_slice %t[%c0, %c0, %c0] [%c7, %c11, %c2] [%c1, %c1, %c1]
     : tensor<8x16x4xf32> to tensor<?x?x?xf32>
 
-  // Test: subtensor with one dynamic operand can also be folded.
-  // CHECK: subtensor %{{.*}}[0, 0, 0] [2, %[[ARG0]], 2] [1, 1, 1] :
+  // Test: slice with one dynamic operand can also be folded.
+  // CHECK: tensor.extract_slice %{{.*}}[0, 0, 0] [2, %[[ARG0]], 2] [1, 1, 1] :
   // CHECK-SAME: tensor<7x11x2xf32> to tensor<2x?x2xf32>
   // CHECK: tensor.cast %{{.*}} : tensor<2x?x2xf32> to tensor<?x?x?xf32>
-  %2 = subtensor %1[%c0, %c0, %c0] [%c2, %arg0, %c2] [%c1, %c1, %c1]
+  %2 = tensor.extract_slice %1[%c0, %c0, %c0] [%c2, %arg0, %c2] [%c1, %c1, %c1]
     : tensor<?x?x?xf32> to tensor<?x?x?xf32>
 
   return %2 : tensor<?x?x?xf32>

@@ -627,10 +627,11 @@ LogicalResult SplitAtOpConversion::matchAndRewrite(
   Value index = b.create<SelectOp>(indexIsNegative, add, originalIndex);
 
   Value one = b.create<ConstantIndexOp>(1);
-  Value head = b.create<SubTensorOp>(transformed.operand(), zero, index, one);
+  Value head =
+      b.create<tensor::ExtractSliceOp>(transformed.operand(), zero, index, one);
   Value tailSize = b.create<SubIOp>(rank, index);
-  Value tail =
-      b.create<SubTensorOp>(transformed.operand(), index, tailSize, one);
+  Value tail = b.create<tensor::ExtractSliceOp>(transformed.operand(), index,
+                                                tailSize, one);
   rewriter.replaceOp(op, {head, tail});
   return success();
 }

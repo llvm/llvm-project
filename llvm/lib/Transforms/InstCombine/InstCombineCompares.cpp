@@ -3290,14 +3290,24 @@ Instruction *InstCombinerImpl::foldICmpInstWithConstantNotInt(ICmpInst &I) {
     // constant folded and the select turned into a bitwise or.
     Value *Op1 = nullptr, *Op2 = nullptr;
     ConstantInt *CI = nullptr;
-    if (Constant *C = dyn_cast<Constant>(LHSI->getOperand(1))) {
-      Op1 = ConstantExpr::getICmp(I.getPredicate(), C, RHSC);
+
+    auto SimplifyOp = [&](Value *V) {
+      Value *Op = nullptr;
+      if (Constant *C = dyn_cast<Constant>(V)) {
+        Op = ConstantExpr::getICmp(I.getPredicate(), C, RHSC);
+      } else if (RHSC->isNullValue()) {
+        // If null is being compared, check if it can be further simplified.
+        Op = SimplifyICmpInst(I.getPredicate(), V, RHSC, SQ);
+      }
+      return Op;
+    };
+    Op1 = SimplifyOp(LHSI->getOperand(1));
+    if (Op1)
       CI = dyn_cast<ConstantInt>(Op1);
-    }
-    if (Constant *C = dyn_cast<Constant>(LHSI->getOperand(2))) {
-      Op2 = ConstantExpr::getICmp(I.getPredicate(), C, RHSC);
+
+    Op2 = SimplifyOp(LHSI->getOperand(2));
+    if (Op2)
       CI = dyn_cast<ConstantInt>(Op2);
-    }
 
     // We only want to perform this transformation if it will not lead to
     // additional code. This is true if either both sides of the select

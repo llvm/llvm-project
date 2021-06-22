@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "fold-implementation.h"
+#include "fold-reduction.h"
 
 namespace Fortran::evaluate {
 
@@ -15,6 +16,7 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldIntrinsicFunction(
     FoldingContext &context,
     FunctionRef<Type<TypeCategory::Complex, KIND>> &&funcRef) {
   using T = Type<TypeCategory::Complex, KIND>;
+  using Part = typename T::Part;
   ActualArguments &args{funcRef.arguments()};
   auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
   CHECK(intrinsic);
@@ -40,7 +42,6 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldIntrinsicFunction(
         return Fold(context, ConvertToType<T>(std::move(*x)));
       } else {
         // CMPLX(X [, Y [, KIND]]) with non-complex X
-        using Part = typename T::Part;
         Expr<SomeType> re{std::move(*args[0].value().UnwrapExpr())};
         Expr<SomeType> im{args.size() >= 2 && args[1].has_value()
                 ? std::move(*args[1]->UnwrapExpr())
@@ -53,9 +54,14 @@ Expr<Type<TypeCategory::Complex, KIND>> FoldIntrinsicFunction(
     }
   } else if (name == "merge") {
     return FoldMerge<T>(context, std::move(funcRef));
+  } else if (name == "product") {
+    auto one{Scalar<Part>::FromInteger(value::Integer<8>{1}).value};
+    return FoldProduct<T>(context, std::move(funcRef), Scalar<T>{one});
+  } else if (name == "sum") {
+    return FoldSum<T>(context, std::move(funcRef));
   }
-  // TODO: cshift, dot_product, eoshift, matmul, pack, product,
-  // reduce, spread, sum, transfer, transpose, unpack
+  // TODO: cshift, dot_product, eoshift, matmul, pack, spread, transfer,
+  // transpose, unpack
   return Expr<T>{std::move(funcRef)};
 }
 

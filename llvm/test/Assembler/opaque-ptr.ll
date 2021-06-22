@@ -41,12 +41,46 @@ define void @store(ptr %a, i32 %i) {
     ret void
 }
 
-; CHECK: define void @gep(ptr %a)
-; CHECK:     %b = getelementptr i8, ptr %a, i32 2
-; CHECK:     ret void
-define void @gep(ptr %a) {
-    %b = getelementptr i8, ptr %a, i32 2
-    ret void
+; CHECK: define ptr @gep(ptr %a)
+; CHECK:     %res = getelementptr i8, ptr %a, i32 2
+; CHECK:     ret ptr %res
+define ptr @gep(ptr %a) {
+  %res = getelementptr i8, ptr %a, i32 2
+  ret ptr %res
+}
+
+; CHECK: define <2 x ptr> @gep_vec1(ptr %a)
+; CHECK:     %res = getelementptr i8, ptr %a, <2 x i32> <i32 1, i32 2>
+; CHECK:     ret <2 x ptr> %res
+define <2 x ptr> @gep_vec1(ptr %a) {
+  %res = getelementptr i8, ptr %a, <2 x i32> <i32 1, i32 2>
+  ret <2 x ptr> %res
+}
+
+; CHECK: define <2 x ptr> @gep_vec2(<2 x ptr> %a)
+; CHECK:     %res = getelementptr i8, <2 x ptr> %a, i32 2
+; CHECK:     ret <2 x ptr> %res
+define <2 x ptr> @gep_vec2(<2 x ptr> %a) {
+  %res = getelementptr i8, <2 x ptr> %a, i32 2
+  ret <2 x ptr> %res
+}
+
+; CHECK: define ptr @gep_constexpr(ptr %a)
+; CHECK:     ret ptr getelementptr (i16, ptr null, i32 3)
+define ptr @gep_constexpr(ptr %a) {
+  ret ptr getelementptr (i16, ptr null, i32 3)
+}
+
+; CHECK: define <2 x ptr> @gep_constexpr_vec1(ptr %a)
+; CHECK:     ret <2 x ptr> getelementptr (i16, ptr null, <2 x i32> <i32 3, i32 4>)
+define <2 x ptr> @gep_constexpr_vec1(ptr %a) {
+  ret <2 x ptr> getelementptr (i16, ptr null, <2 x i32> <i32 3, i32 4>)
+}
+
+; CHECK: define <2 x ptr> @gep_constexpr_vec2(<2 x ptr> %a)
+; CHECK:     ret <2 x ptr> getelementptr (i16, <2 x ptr> zeroinitializer, <2 x i32> <i32 3, i32 3>)
+define <2 x ptr> @gep_constexpr_vec2(<2 x ptr> %a) {
+  ret <2 x ptr> getelementptr (i16, <2 x ptr> zeroinitializer, i32 3)
 }
 
 ; CHECK: define void @cmpxchg(ptr %p, i32 %a, i32 %b)

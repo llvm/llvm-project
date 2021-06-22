@@ -1744,8 +1744,10 @@ public:
   static unsigned getBaseDiscriminatorBits() { return getBaseFSBitEnd(); }
 
   /// Returns the base discriminator for a given encoded discriminator \p D.
-  static unsigned getBaseDiscriminatorFromDiscriminator(unsigned D) {
-    if (EnableFSDiscriminator)
+  static unsigned
+  getBaseDiscriminatorFromDiscriminator(unsigned D,
+                                        bool IsFSDiscriminator = false) {
+    if (IsFSDiscriminator)
       return getMaskedDiscriminator(D, getBaseDiscriminatorBits());
     return getUnsignedFromPrefixEncoding(D);
   }
@@ -2198,7 +2200,8 @@ DILocation::cloneWithDiscriminator(unsigned Discriminator) const {
 }
 
 unsigned DILocation::getBaseDiscriminator() const {
-  return getBaseDiscriminatorFromDiscriminator(getDiscriminator());
+  return getBaseDiscriminatorFromDiscriminator(getDiscriminator(),
+                                               EnableFSDiscriminator);
 }
 
 unsigned DILocation::getDuplicationFactor() const {

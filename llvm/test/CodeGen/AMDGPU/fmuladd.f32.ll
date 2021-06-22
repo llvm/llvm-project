@@ -81,7 +81,7 @@ define amdgpu_kernel void @fmul_fadd_contract_f32(float addrspace(1)* %out, floa
   %r0 = load volatile float, float addrspace(1)* %in1
   %r1 = load volatile float, float addrspace(1)* %in2
   %r2 = load volatile float, float addrspace(1)* %in3
-  %mul = fmul float %r0, %r1
+  %mul = fmul contract float %r0, %r1
   %add = fadd contract float %mul, %r2
   store float %add, float addrspace(1)* %out
   ret void

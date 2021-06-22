@@ -1066,7 +1066,7 @@ Error WasmObjectFile::parseImportSection(ReadContext &Ctx) {
     }
     case wasm::WASM_EXTERNAL_TAG:
       NumImportedTags++;
-      Im.Tag.Attribute = readVarint32(Ctx);
+      Im.Tag.Attribute = readUint8(Ctx);
       Im.Tag.SigIndex = readVarint32(Ctx);
       break;
     default:
@@ -1143,7 +1143,7 @@ Error WasmObjectFile::parseTagSection(ReadContext &Ctx) {
   while (Count--) {
     wasm::WasmTag Tag;
     Tag.Index = NumImportedTags + Tags.size();
-    Tag.Type.Attribute = readVaruint32(Ctx);
+    Tag.Type.Attribute = readUint8(Ctx);
     Tag.Type.SigIndex = readVaruint32(Ctx);
     Tags.push_back(Tag);
   }

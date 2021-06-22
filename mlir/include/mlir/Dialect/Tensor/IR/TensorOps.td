@@ -13,6 +13,7 @@ include "mlir/Dialect/Tensor/IR/TensorBase.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/ViewLikeInterface.td"
 
 class Tensor_Op<string mnemonic, list<OpTrait> traits = []>
     : Op<Tensor_Dialect, mnemonic, traits> {
@@ -96,6 +97,144 @@ def Tensor_ExtractOp : Tensor_Op<"extract",
       build($_builder, $_state, resType, tensor, indices);
     }]>];
 
+  let hasFolder = 1;
+}
+
+
+//===----------------------------------------------------------------------===//
+// ExtractSliceOp
+//===----------------------------------------------------------------------===//
+
+def Tensor_ExtractSliceOp : BaseOpWithOffsetSizesAndStrides<
+    Tensor_Dialect, "extract_slice", [NoSideEffect, AttrSizedOperandSegments,
+                                      OffsetSizeAndStrideOpInterface]> {
+  let summary = "extract slice operation";
+  let description = [{
+    The "extract_slice" operation extract a tensor from another tensor as
+    specified by the operation's offsets, sizes and strides arguments.
+
+    The extract_slice operation supports the following arguments:
+
+    * source: the "base" tensor from which to extract a slice.
+    * offsets: tensor-rank number of offsets into the "base" tensor from which
+               to extract the slice.
+    * sizes: tensor-rank number of sizes which specify the sizes of the result
+             tensor type.
+    * strides: tensor-rank number of strides specifying subsampling in each
+               dimension.
+
+    The representation based on offsets, sizes and strides support a
+    partially-static specification via attributes specified through the
+    `static_offsets`, `static_sizes` and `static_strides` arguments. A special
+    sentinel value ShapedType::kDynamicSize and
+    ShapedType::kDynamicStrideOrOffset encodes that the corresponding entry has
+    a dynamic value.
+
+    After buffer-allocation, the "extract_slice" op is expected to lower into a
+    "subview" op.
+
+    An extract_slice operation may additionally reduce the rank of the resulting
+    tensor by removing dimensions that are statically known to be of size 1.
+
+    Example:
+
+    ```
+    // Rank-reducing extract_slice.
+    %1 = tensor.extract_slice %0[0, 0, 0][1, 16, 4][1, 1, 1] :
+      tensor<8x16x4xf32> to tensor<16x4xf32>
+    %3 = tensor.extract_slice %2[3, 4, 2][1, 6, 3][1, 1, 1] :
+      tensor<8x16x4xf32> to tensor<6x3xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    AnyRankedTensor:$source,
+    Variadic<Index>:$offsets,
+    Variadic<Index>:$sizes,
+    Variadic<Index>:$strides,
+    I64ArrayAttr:$static_offsets,
+    I64ArrayAttr:$static_sizes,
+    I64ArrayAttr:$static_strides
+  );
+  let results = (outs AnyRankedTensor:$result);
+
+  let assemblyFormat = [{
+    $source ``
+    custom<OperandsOrIntegersOffsetsOrStridesList>($offsets, $static_offsets)
+    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes)
+    custom<OperandsOrIntegersOffsetsOrStridesList>($strides, $static_strides)
+    attr-dict `:` type($source) `to` type($result)
+  }];
+
+  let builders = [
+    // Build an ExtractSliceOp with mixed static and dynamic entries and
+    // inferred result type.
+    OpBuilder<(ins "Value":$source, "ArrayRef<OpFoldResult>":$offsets,
+      "ArrayRef<OpFoldResult>":$sizes, "ArrayRef<OpFoldResult>":$strides,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build an ExtractSliceOp with mixed static and dynamic entries and custom
+    // result type. If the type passed is nullptr, it is inferred.
+    OpBuilder<(ins "RankedTensorType":$resultType, "Value":$source,
+      "ArrayRef<OpFoldResult>":$offsets, "ArrayRef<OpFoldResult>":$sizes,
+      "ArrayRef<OpFoldResult>":$strides,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build an ExtractSliceOp with dynamic entries and custom result type. If
+    // the type passed is nullptr, it is inferred.
+    OpBuilder<(ins "Value":$source, "ValueRange":$offsets,
+      "ValueRange":$sizes, "ValueRange":$strides,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build an ExtractSliceOp with dynamic entries and inferred result type.
+    OpBuilder<(ins "RankedTensorType":$resultType, "Value":$source,
+      "ValueRange":$offsets, "ValueRange":$sizes, "ValueRange":$strides,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
+  ];
+
+  let extraClassDeclaration = extraBaseClassDeclaration # [{
+    /// Returns the type of the base tensor operand.
+    RankedTensorType getSourceType() {
+      return source().getType().cast<RankedTensorType>();
+    }
+
+    /// The result of an extract_slice is always a tensor.
+    RankedTensorType getType() {
+      return getResult().getType().cast<RankedTensorType>();
+    }
+
+    /// An extract_slice result type can be fully inferred from the source type
+    /// and the static representation of offsets, sizes and strides. Special
+    /// sentinels encode the dynamic case.
+    static Type inferResultType(RankedTensorType sourceRankedTensorType,
+                                ArrayRef<int64_t> staticOffsets,
+                                ArrayRef<int64_t> staticSizes,
+                                ArrayRef<int64_t> staticStrides);
+    static Type inferResultType(RankedTensorType sourceRankedTensorType,
+                                ArrayRef<OpFoldResult> staticOffsets,
+                                ArrayRef<OpFoldResult> staticSizes,
+                                ArrayRef<OpFoldResult> staticStrides);
+    static Type inferRankReducedResultType(unsigned resultRank,
+                                           RankedTensorType sourceRankedTensorType,
+                                           ArrayRef<int64_t> staticOffsets,
+                                           ArrayRef<int64_t> staticSizes,
+                                           ArrayRef<int64_t> staticStrides);
+    static Type inferRankReducedResultType(unsigned resultRank,
+                                           RankedTensorType sourceRankedTensorType,
+                                           ArrayRef<OpFoldResult> staticOffsets,
+                                           ArrayRef<OpFoldResult> staticSizes,
+                                           ArrayRef<OpFoldResult> staticStrides);
+
+    /// Return the expected rank of each of the`static_offsets`, `static_sizes`
+    /// and `static_strides` attributes.
+    std::array<unsigned, 3> getArrayAttrMaxRanks() {
+      unsigned rank = getSourceType().getRank();
+      return {rank, rank, rank};
+    }
+
+    /// Return the number of leading operands before the `offsets`, `sizes` and
+    /// and `strides` operands.
+    static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 1; }
+  }];
+
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
 
@@ -200,7 +339,7 @@ def Tensor_InsertOp : Tensor_Op<"insert",
     The `tensor.insert` op writes a tensor into a tensor `dest`as specified by
     the operation's indices.
 
-    It returns a copy of `dest` with the proper subtensor updated with the value
+    It returns a copy of `dest` with the proper slice updated with the value
     of `scalar`.
 
     The arity of indices must match the rank of the tensor `dest` (i.e., if a
@@ -231,6 +370,107 @@ def Tensor_InsertOp : Tensor_Op<"insert",
       build($_builder, $_state, resType, scalar, dest, indices);
     }]>];
 
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// InsertSliceOp
+//===----------------------------------------------------------------------===//
+
+def Tensor_InsertSliceOp : BaseOpWithOffsetSizesAndStrides<
+    Tensor_Dialect, "insert_slice",
+    [NoSideEffect, AttrSizedOperandSegments, OffsetSizeAndStrideOpInterface,
+     TypesMatchWith<"expected result type to match dest type",
+                    "dest", "result", "$_self">]> {
+  let summary = "insert_slice operation";
+  let description = [{
+    The "insert_slice" operation insert a tensor `source` into another
+    tensor `dest` as specified by the operation's offsets, sizes and strides
+    arguments.
+
+    It returns a copy of `dest` with the proper slice updated with the value
+    of `source`.
+
+    The insert_slice operation supports the following arguments:
+
+    * source: the tensor that is inserted.
+    * dest: the tensor into which the source tensor is inserted.
+    * offsets: tensor-rank number of offsets into the `dest` tensor into which
+               the slice is inserted.
+    * sizes: tensor-rank number of sizes which specify the sizes of the result
+             tensor type.
+    * strides: tensor-rank number of strides that specify subsampling in each
+               dimension.
+
+    The representation based on offsets, sizes and strides support a
+    partially-static specification via attributes specified through the
+    `static_offsets`, `static_sizes` and `static_strides` arguments. A special
+    sentinel value ShapedType::kDynamicSize and
+    ShapedType::kDynamicStrideOrOffset encodes that the corresponding entry has
+    a dynamic value.
+
+    After buffer-allocation, the "insert_slice" op is expected to become an
+    in-place buffer update.
+  }];
+
+  let arguments = (ins
+    AnyRankedTensor:$source,
+    AnyRankedTensor:$dest,
+    Variadic<Index>:$offsets,
+    Variadic<Index>:$sizes,
+    Variadic<Index>:$strides,
+    I64ArrayAttr:$static_offsets,
+    I64ArrayAttr:$static_sizes,
+    I64ArrayAttr:$static_strides
+  );
+  let results = (outs AnyRankedTensor:$result);
+
+  let assemblyFormat = [{
+    $source `into` $dest ``
+    custom<OperandsOrIntegersOffsetsOrStridesList>($offsets, $static_offsets)
+    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes)
+    custom<OperandsOrIntegersOffsetsOrStridesList>($strides, $static_strides)
+    attr-dict `:` type($source) `into` type($dest)
+  }];
+
+  let verifier = ?;
+
+  let builders = [
+    // Build a InsertSliceOp with mixed static and dynamic entries.
+    OpBuilder<(ins "Value":$source, "Value":$dest,
+      "ArrayRef<OpFoldResult>":$offsets, "ArrayRef<OpFoldResult>":$sizes,
+      "ArrayRef<OpFoldResult>":$strides,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build a InsertSliceOp with dynamic entries.
+    OpBuilder<(ins "Value":$source, "Value":$dest,
+      "ValueRange":$offsets, "ValueRange":$sizes, "ValueRange":$strides,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
+  ];
+
+  let extraClassDeclaration = extraBaseClassDeclaration # [{
+    /// Returns the type of the base tensor operand.
+    RankedTensorType getSourceType() {
+      return source().getType().cast<RankedTensorType>();
+    }
+
+    /// The result of a insert_slice is always a tensor.
+    RankedTensorType getType() {
+      return getResult().getType().cast<RankedTensorType>();
+    }
+
+    /// Return the expected rank of each of the`static_offsets`, `static_sizes`
+    /// and `static_strides` attributes.
+    std::array<unsigned, 3> getArrayAttrMaxRanks() {
+      unsigned rank = getType().getRank();
+      return {rank, rank, rank};
+    }
+
+    /// Return the number of leading operands before the `offsets`, `sizes` and
+    /// and `strides` operands.
+    static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 2; }
+  }];
+
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
 

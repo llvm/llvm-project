@@ -1,0 +1,499 @@
+//===--------------------- SIOptimizeVGPRLiveRange.cpp  -------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+/// \file
+/// This pass tries to remove unnecessary VGPR live range in divergent if-else
+/// structure.
+///
+/// When we do structurization, we usually transform a if-else into two
+/// sucessive if-then (with a flow block to do predicate inversion). Consider a
+/// simple case after structurization: A divergent value %a was defined before
+/// if-else and used in both THEN (use in THEN is optional) and ELSE part:
+///    bb.if:
+///      %a = ...
+///      ...
+///    bb.then:
+///      ... = op %a
+///      ... // %a can be dead here
+///    bb.flow:
+///      ...
+///    bb.else:
+///      ... = %a
+///      ...
+///    bb.endif
+///
+///  As register allocator has no idea of the thread-control-flow, it will just
+///  assume %a would be alive in the whole range of bb.then because of a later
+///  use in bb.else. On AMDGPU architecture, the VGPR was accessed with respect
+///  to exec mask. For this if-else case, the lanes active in bb.then will be
+///  inactive in bb.else, and vice-verse. So we are safe to say that %a was dead
+///  after the last use in bb.then untill the end of the block. The reason is
+///  the instructions in bb.then will only overwrite lanes that will never be
+///  accessed in bb.else.
+///
+///  This pass aims to to tell register allocator that %a is in-fact dead,
+///  through inserting a phi-node in bb.flow saying that %a is undef when coming
+///  from bb.then, and then replace the uses in the bb.else with the result of
+///  newly inserted phi.
+///
+///  Two key conditions must be met to ensure correctness:
+///  1.) The def-point should be in the same loop-level as if-else-endif to make
+///      sure the second loop iteration still get correct data.
+///  2.) There should be no further uses after the IF-ELSE region.
+///
+//
+//===----------------------------------------------------------------------===//
+
+#include "AMDGPU.h"
+#include "GCNSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIMachineFunctionInfo.h"
+#include "llvm/CodeGen/LiveVariables.h"
+#include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/InitializePasses.h"
+
+using namespace llvm;
+
+#define DEBUG_TYPE "si-opt-vgpr-liverange"
+
+namespace {
+
+class SIOptimizeVGPRLiveRange : public MachineFunctionPass {
+private:
+  const SIRegisterInfo *TRI = nullptr;
+  const SIInstrInfo *TII = nullptr;
+  LiveVariables *LV = nullptr;
+  MachineDominatorTree *MDT = nullptr;
+  const MachineLoopInfo *Loops = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
+
+public:
+  static char ID;
+
+  MachineBasicBlock *getElseTarget(MachineBasicBlock *MBB) const;
+
+  void collectElseRegionBlocks(MachineBasicBlock *Flow,
+                               MachineBasicBlock *Endif,
+                               SmallSetVector<MachineBasicBlock *, 16> &) const;
+
+  void
+  collectCandidateRegisters(MachineBasicBlock *If, MachineBasicBlock *Flow,
+                            MachineBasicBlock *Endif,
+                            SmallSetVector<MachineBasicBlock *, 16> &ElseBlocks,
+                            SmallVectorImpl<Register> &CandidateRegs) const;
+
+  void findNonPHIUsesInBlock(Register Reg, MachineBasicBlock *MBB,
+                             SmallVectorImpl<MachineInstr *> &Uses) const;
+
+  void updateLiveRangeInThenRegion(Register Reg, MachineBasicBlock *If,
+                                   MachineBasicBlock *Flow) const;
+
+  void updateLiveRangeInElseRegion(
+      Register Reg, Register NewReg, MachineBasicBlock *Flow,
+      MachineBasicBlock *Endif,
+      SmallSetVector<MachineBasicBlock *, 16> &ElseBlocks) const;
+
+  void
+  optimizeLiveRange(Register Reg, MachineBasicBlock *If,
+                    MachineBasicBlock *Flow, MachineBasicBlock *Endif,
+                    SmallSetVector<MachineBasicBlock *, 16> &ElseBlocks) const;
+
+  SIOptimizeVGPRLiveRange() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  StringRef getPassName() const override {
+    return "SI Optimize VGPR LiveRange";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<LiveVariables>();
+    AU.addRequired<MachineDominatorTree>();
+    AU.addRequired<MachineLoopInfo>();
+    AU.addPreserved<LiveVariables>();
+    AU.addPreserved<MachineDominatorTree>();
+    AU.addPreserved<MachineLoopInfo>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().set(
+        MachineFunctionProperties::Property::IsSSA);
+  }
+};
+
+} // end anonymous namespace
+
+// Check whether the MBB is a else flow block and get the branching target which
+// is the Endif block
+MachineBasicBlock *
+SIOptimizeVGPRLiveRange::getElseTarget(MachineBasicBlock *MBB) const {
+  for (auto &BR : MBB->terminators()) {
+    if (BR.getOpcode() == AMDGPU::SI_ELSE)
+      return BR.getOperand(2).getMBB();
+  }
+  return nullptr;
+}
+
+void SIOptimizeVGPRLiveRange::collectElseRegionBlocks(
+    MachineBasicBlock *Flow, MachineBasicBlock *Endif,
+    SmallSetVector<MachineBasicBlock *, 16> &Blocks) const {
+  assert(Flow != Endif);
+
+  MachineBasicBlock *MBB = Endif;
+  unsigned Cur = 0;
+  while (MBB) {
+    for (auto *Pred : MBB->predecessors()) {
+      if (Pred != Flow && !Blocks.contains(Pred))
+        Blocks.insert(Pred);
+    }
+
+    if (Cur < Blocks.size())
+      MBB = Blocks[Cur++];
+    else
+      MBB = nullptr;
+  }
+
+  LLVM_DEBUG({
+    dbgs() << "Found Else blocks: ";
+    for (auto *MBB : Blocks)
+      dbgs() << printMBBReference(*MBB) << ' ';
+    dbgs() << '\n';
+  });
+}
+
+/// Find the instructions(excluding phi) in \p MBB that uses the \p Reg.
+void SIOptimizeVGPRLiveRange::findNonPHIUsesInBlock(
+    Register Reg, MachineBasicBlock *MBB,
+    SmallVectorImpl<MachineInstr *> &Uses) const {
+  for (auto &UseMI : MRI->use_nodbg_instructions(Reg)) {
+    if (UseMI.getParent() == MBB && !UseMI.isPHI())
+      Uses.push_back(&UseMI);
+  }
+}
+
+/// Collect the killed registers in the ELSE region which are not alive through
+/// the whole THEN region.
+void SIOptimizeVGPRLiveRange::collectCandidateRegisters(
+    MachineBasicBlock *If, MachineBasicBlock *Flow, MachineBasicBlock *Endif,
+    SmallSetVector<MachineBasicBlock *, 16> &ElseBlocks,
+    SmallVectorImpl<Register> &CandidateRegs) const {
+
+  SmallSet<Register, 8> KillsInElse;
+
+  for (auto *Else : ElseBlocks) {
+    for (auto &MI : Else->instrs()) {
+      if (MI.isDebugInstr())
+        continue;
+
+      for (auto &MO : MI.operands()) {
+        if (!MO.isReg() || !MO.getReg() || MO.isDef())
+          continue;
+
+        Register MOReg = MO.getReg();
+        // We can only optimize AGPR/VGPR virtual register
+        if (MOReg.isPhysical() || !TRI->isVectorRegister(*MRI, MOReg))
+          continue;
+
+        if (MO.isKill() && MO.readsReg()) {
+          LiveVariables::VarInfo &VI = LV->getVarInfo(MOReg);
+          const MachineBasicBlock *DefMBB = MRI->getVRegDef(MOReg)->getParent();
+          // Make sure two conditions are met:
+          // a.) the value is defined before/in the IF block
+          // b.) should be defined in the same loop-level.
+          if ((VI.AliveBlocks.test(If->getNumber()) || DefMBB == If) &&
+              Loops->getLoopFor(DefMBB) == Loops->getLoopFor(If))
+            KillsInElse.insert(MOReg);
+        }
+      }
+    }
+  }
+
+  // Check the phis in the Endif, looking for value coming from the ELSE
+  // region. Make sure the phi-use is the last use.
+  for (auto &MI : Endif->phis()) {
+    for (unsigned Idx = 1; Idx < MI.getNumOperands(); Idx += 2) {
+      auto &MO = MI.getOperand(Idx);
+      auto *Pred = MI.getOperand(Idx + 1).getMBB();
+      if (Pred == Flow)
+        continue;
+      assert(ElseBlocks.contains(Pred) && "Should be from Else region\n");
+
+      if (!MO.isReg() || !MO.getReg() || MO.isUndef())
+        continue;
+
+      Register Reg = MO.getReg();
+      if (Reg.isPhysical() || !TRI->isVectorRegister(*MRI, Reg))
+        continue;
+
+      LiveVariables::VarInfo &VI = LV->getVarInfo(Reg);
+
+      if (VI.isLiveIn(*Endif, Reg, *MRI)) {
+        LLVM_DEBUG(dbgs() << "Excluding " << printReg(Reg, TRI)
+                          << " as Live in Endif\n");
+        continue;
+      }
+      // Make sure two conditions are met:
+      // a.) the value is defined before/in the IF block
+      // b.) should be defined in the same loop-level.
+      const MachineBasicBlock *DefMBB = MRI->getVRegDef(Reg)->getParent();
+      if ((VI.AliveBlocks.test(If->getNumber()) || DefMBB == If) &&
+          Loops->getLoopFor(DefMBB) == Loops->getLoopFor(If))
+        KillsInElse.insert(Reg);
+    }
+  }
+
+  auto IsLiveThroughThen = [&](Register Reg) {
+    for (auto I = MRI->use_nodbg_begin(Reg), E = MRI->use_nodbg_end(); I != E;
+         ++I) {
+      if (!I->readsReg())
+        continue;
+      auto *UseMI = I->getParent();
+      auto *UseMBB = UseMI->getParent();
+      if (UseMBB == Flow || UseMBB == Endif) {
+        if (!UseMI->isPHI())
+          return true;
+
+        auto *IncomingMBB = UseMI->getOperand(I.getOperandNo() + 1).getMBB();
+        // The register is live through the path If->Flow or Flow->Endif.
+        // we should not optimize for such cases.
+        if ((UseMBB == Flow && IncomingMBB != If) ||
+            (UseMBB == Endif && IncomingMBB == Flow))
+          return true;
+      }
+    }
+    return false;
+  };
+
+  for (auto Reg : KillsInElse) {
+    if (!IsLiveThroughThen(Reg))
+      CandidateRegs.push_back(Reg);
+  }
+}
+
+// Re-calculate the liveness of \p Reg in the THEN-region
+void SIOptimizeVGPRLiveRange::updateLiveRangeInThenRegion(
+    Register Reg, MachineBasicBlock *If, MachineBasicBlock *Flow) const {
+
+  SmallPtrSet<MachineBasicBlock *, 16> PHIIncoming;
+
+  MachineBasicBlock *ThenEntry = nullptr;
+  for (auto *Succ : If->successors()) {
+    if (Succ != Flow) {
+      ThenEntry = Succ;
+      break;
+    }
+  }
+  assert(ThenEntry && "No successor in Then region?");
+
+  LiveVariables::VarInfo &OldVarInfo = LV->getVarInfo(Reg);
+  df_iterator_default_set<MachineBasicBlock *, 16> Visited;
+
+  for (MachineBasicBlock *MBB : depth_first_ext(ThenEntry, Visited)) {
+    if (MBB == Flow)
+      break;
+
+    // Clear Live bit, as we will recalculate afterwards
+    LLVM_DEBUG(dbgs() << "Clear AliveBlock " << printMBBReference(*MBB)
+                      << '\n');
+    OldVarInfo.AliveBlocks.reset(MBB->getNumber());
+  }
+
+  // Get the blocks the Reg should be alive through
+  for (auto I = MRI->use_nodbg_begin(Reg), E = MRI->use_nodbg_end(); I != E;
+       ++I) {
+    auto *UseMI = I->getParent();
+    if (UseMI->isPHI() && I->readsReg()) {
+      if (Visited.contains(UseMI->getParent()))
+        PHIIncoming.insert(UseMI->getOperand(I.getOperandNo() + 1).getMBB());
+    }
+  }
+
+  Visited.clear();
+
+  for (MachineBasicBlock *MBB : depth_first_ext(ThenEntry, Visited)) {
+    if (MBB == Flow)
+      break;
+
+    SmallVector<MachineInstr *> Uses;
+    // PHI instructions has been processed before.
+    findNonPHIUsesInBlock(Reg, MBB, Uses);
+
+    if (Uses.size() == 1) {
+      LLVM_DEBUG(dbgs() << "Found one Non-PHI use in "
+                        << printMBBReference(*MBB) << '\n');
+      LV->HandleVirtRegUse(Reg, MBB, *(*Uses.begin()));
+    } else if (Uses.size() > 1) {
+      // Process the instructions in-order
+      LLVM_DEBUG(dbgs() << "Found " << Uses.size() << " Non-PHI uses in "
+                        << printMBBReference(*MBB) << '\n');
+      for (MachineInstr &MI : *MBB) {
+        if (llvm::is_contained(Uses, &MI))
+          LV->HandleVirtRegUse(Reg, MBB, MI);
+      }
+    }
+
+    // Mark Reg alive through the block if this is a PHI incoming block
+    if (PHIIncoming.contains(MBB))
+      LV->MarkVirtRegAliveInBlock(OldVarInfo, MRI->getVRegDef(Reg)->getParent(),
+                                  MBB);
+  }
+
+  // Set the isKilled flag if we get new Kills in the THEN region.
+  for (auto *MI : OldVarInfo.Kills) {
+    if (Visited.contains(MI->getParent()))
+      MI->addRegisterKilled(Reg, TRI);
+  }
+}
+
+void SIOptimizeVGPRLiveRange::updateLiveRangeInElseRegion(
+    Register Reg, Register NewReg, MachineBasicBlock *Flow,
+    MachineBasicBlock *Endif,
+    SmallSetVector<MachineBasicBlock *, 16> &ElseBlocks) const {
+  LiveVariables::VarInfo &NewVarInfo = LV->getVarInfo(NewReg);
+  LiveVariables::VarInfo &OldVarInfo = LV->getVarInfo(Reg);
+
+  // Transfer aliveBlocks from Reg to NewReg
+  for (auto *MBB : ElseBlocks) {
+    unsigned BBNum = MBB->getNumber();
+    if (OldVarInfo.AliveBlocks.test(BBNum)) {
+      NewVarInfo.AliveBlocks.set(BBNum);
+      LLVM_DEBUG(dbgs() << "Removing ALiveBlock " << printMBBReference(*MBB)
+                        << '\n');
+      OldVarInfo.AliveBlocks.reset(BBNum);
+    }
+  }
+
+  // Transfer the possible Kills in ElseBlocks from Reg to NewReg
+  auto I = OldVarInfo.Kills.begin();
+  while (I != OldVarInfo.Kills.end()) {
+    if (ElseBlocks.contains((*I)->getParent())) {
+      NewVarInfo.Kills.push_back(*I);
+      I = OldVarInfo.Kills.erase(I);
+    } else {
+      ++I;
+    }
+  }
+}
+
+void SIOptimizeVGPRLiveRange::optimizeLiveRange(
+    Register Reg, MachineBasicBlock *If, MachineBasicBlock *Flow,
+    MachineBasicBlock *Endif,
+    SmallSetVector<MachineBasicBlock *, 16> &ElseBlocks) const {
+  // Insert a new PHI, marking the value from the THEN region being
+  // undef.
+  LLVM_DEBUG(dbgs() << "Optimizing " << printReg(Reg, TRI) << '\n');
+  const auto *RC = MRI->getRegClass(Reg);
+  Register NewReg = MRI->createVirtualRegister(RC);
+  Register UndefReg = MRI->createVirtualRegister(RC);
+  MachineInstrBuilder PHI = BuildMI(*Flow, Flow->getFirstNonPHI(), DebugLoc(),
+                                    TII->get(TargetOpcode::PHI), NewReg);
+  for (auto *Pred : Flow->predecessors()) {
+    if (Pred == If)
+      PHI.addReg(Reg).addMBB(Pred);
+    else
+      PHI.addReg(UndefReg, RegState::Undef).addMBB(Pred);
+  }
+
+  // Replace all uses in the ELSE region or the PHIs in ENDIF block
+  for (auto I = MRI->use_begin(Reg), E = MRI->use_end(); I != E;) {
+    MachineOperand &O = *I;
+    // This is a little bit tricky, the setReg() will update the linked list,
+    // so we have to increment the iterator before setReg() to avoid skipping
+    // some uses.
+    ++I;
+    auto *UseMI = O.getParent();
+    auto *UseBlock = UseMI->getParent();
+    // Replace uses in Endif block
+    if (UseBlock == Endif) {
+      assert(UseMI->isPHI() && "Uses should be PHI in Endif block");
+      O.setReg(NewReg);
+      continue;
+    }
+
+    // Replace uses in Else region
+    if (ElseBlocks.contains(UseBlock))
+      O.setReg(NewReg);
+  }
+
+  // The optimized Reg is not alive through Flow blocks anymore.
+  LiveVariables::VarInfo &OldVarInfo = LV->getVarInfo(Reg);
+  OldVarInfo.AliveBlocks.reset(Flow->getNumber());
+
+  updateLiveRangeInElseRegion(Reg, NewReg, Flow, Endif, ElseBlocks);
+  updateLiveRangeInThenRegion(Reg, If, Flow);
+}
+
+char SIOptimizeVGPRLiveRange::ID = 0;
+
+INITIALIZE_PASS_BEGIN(SIOptimizeVGPRLiveRange, DEBUG_TYPE,
+                      "SI Optimize VGPR LiveRange", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
+INITIALIZE_PASS_DEPENDENCY(LiveVariables)
+INITIALIZE_PASS_END(SIOptimizeVGPRLiveRange, DEBUG_TYPE,
+                    "SI Optimize VGPR LiveRange", false, false)
+
+char &llvm::SIOptimizeVGPRLiveRangeID = SIOptimizeVGPRLiveRange::ID;
+
+FunctionPass *llvm::createSIOptimizeVGPRLiveRangePass() {
+  return new SIOptimizeVGPRLiveRange();
+}
+
+bool SIOptimizeVGPRLiveRange::runOnMachineFunction(MachineFunction &MF) {
+
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  TII = ST.getInstrInfo();
+  TRI = &TII->getRegisterInfo();
+  MDT = &getAnalysis<MachineDominatorTree>();
+  Loops = &getAnalysis<MachineLoopInfo>();
+  LV = &getAnalysis<LiveVariables>();
+  MRI = &MF.getRegInfo();
+
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  bool MadeChange = false;
+
+  // TODO: we need to think about the order of visiting the blocks to get
+  // optimal result for nesting if-else cases.
+  for (MachineBasicBlock &MBB : MF) {
+    for (auto &MI : MBB.terminators()) {
+      // Detect the if-else blocks
+      if (MI.getOpcode() == AMDGPU::SI_IF) {
+        MachineBasicBlock *IfTarget = MI.getOperand(2).getMBB();
+        auto *Endif = getElseTarget(IfTarget);
+        if (!Endif)
+          continue;
+
+        SmallSetVector<MachineBasicBlock *, 16> ElseBlocks;
+        SmallVector<Register> CandidateRegs;
+
+        LLVM_DEBUG(dbgs() << "Checking IF-ELSE-ENDIF: "
+                          << printMBBReference(MBB) << ' '
+                          << printMBBReference(*IfTarget) << ' '
+                          << printMBBReference(*Endif) << '\n');
+
+        // Collect all the blocks in the ELSE region
+        collectElseRegionBlocks(IfTarget, Endif, ElseBlocks);
+
+        // Collect the registers can be optimized
+        collectCandidateRegisters(&MBB, IfTarget, Endif, ElseBlocks,
+                                  CandidateRegs);
+        MadeChange |= !CandidateRegs.empty();
+        // Now we are safe to optimize.
+        for (auto Reg : CandidateRegs)
+          optimizeLiveRange(Reg, &MBB, IfTarget, Endif, ElseBlocks);
+      }
+    }
+  }
+
+  return MadeChange;
+}

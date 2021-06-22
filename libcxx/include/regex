@@ -5905,7 +5905,6 @@ basic_regex<_CharT, _Traits>::__match_at_start_posix_subs(
         __states.back().__node_ = __st;
         __states.back().__flags_ = __flags;
         __states.back().__at_first_ = __at_first;
-        const _CharT* __current = __first;
         bool __matched = false;
         int __counter = 0;
         int __length = __last - __first;
@@ -5945,8 +5944,6 @@ basic_regex<_CharT, _Traits>::__match_at_start_posix_subs(
                     __states.pop_back();
                 break;
             case __state::__accept_and_consume:
-                __current = __s.__current_;
-                break;
             case __state::__repeat:
             case __state::__accept_but_not_consume:
                 break;

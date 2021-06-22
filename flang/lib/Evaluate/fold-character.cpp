@@ -102,8 +102,8 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
           CharacterUtils<KIND>::TRIM(std::get<Scalar<T>>(*scalar))}};
     }
   }
-  // TODO: cshift, eoshift, maxloc, minloc, pack, reduce,
-  // spread, transfer, transpose, unpack
+  // TODO: cshift, eoshift, maxloc, minloc, pack, spread, transfer,
+  // transpose, unpack
   return Expr<T>{std::move(funcRef)};
 }
 

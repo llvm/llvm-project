@@ -19,6 +19,7 @@ def MemRef_Dialect : Dialect {
     manipulation ops, which are not strongly associated with any particular
     other dialect or domain abstraction.
   }];
+  let dependentDialects = ["tensor::TensorDialect"];
   let hasConstantMaterializer = 1;
 }
 

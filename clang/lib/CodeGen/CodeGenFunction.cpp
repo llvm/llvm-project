@@ -1053,6 +1053,10 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     Fn->addFnAttr("packed-stack");
   }
 
+  if (CGM.getCodeGenOpts().WarnStackSize != UINT_MAX)
+    Fn->addFnAttr("warn-stack-size",
+                  std::to_string(CGM.getCodeGenOpts().WarnStackSize));
+
   if (RetTy->isVoidType()) {
     // Void type; nothing to return.
     ReturnValue = Address::invalid();

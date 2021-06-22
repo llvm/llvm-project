@@ -7,9 +7,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "fold-implementation.h"
+#include "fold-reduction.h"
 #include "flang/Evaluate/check-expression.h"
 
 namespace Fortran::evaluate {
+
+// for ALL & ANY
+template <typename T>
+static Expr<T> FoldAllAny(FoldingContext &context, FunctionRef<T> &&ref,
+    Scalar<T> (Scalar<T>::*operation)(const Scalar<T> &) const,
+    Scalar<T> identity) {
+  static_assert(T::category == TypeCategory::Logical);
+  using Element = Scalar<T>;
+  std::optional<ConstantSubscript> dim;
+  if (std::optional<Constant<T>> array{
+          ProcessReductionArgs<T>(context, ref.arguments(), dim, identity,
+              /*ARRAY(MASK)=*/0, /*DIM=*/1)}) {
+    auto accumulator{[&](Element &element, const ConstantSubscripts &at) {
+      element = (element.*operation)(array->At(at));
+    }};
+    return Expr<T>{DoReduction(*array, dim, identity, accumulator)};
+  }
+  return Expr<T>{std::move(ref)};
+}
 
 template <int KIND>
 Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
@@ -21,31 +41,11 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
   CHECK(intrinsic);
   std::string name{intrinsic->name};
   if (name == "all") {
-    if (!args[1]) { // TODO: ALL(x,DIM=d)
-      if (const auto *constant{UnwrapConstantValue<T>(args[0])}) {
-        bool result{true};
-        for (const auto &element : constant->values()) {
-          if (!element.IsTrue()) {
-            result = false;
-            break;
-          }
-        }
-        return Expr<T>{result};
-      }
-    }
+    return FoldAllAny(
+        context, std::move(funcRef), &Scalar<T>::AND, Scalar<T>{true});
   } else if (name == "any") {
-    if (!args[1]) { // TODO: ANY(x,DIM=d)
-      if (const auto *constant{UnwrapConstantValue<T>(args[0])}) {
-        bool result{false};
-        for (const auto &element : constant->values()) {
-          if (element.IsTrue()) {
-            result = true;
-            break;
-          }
-        }
-        return Expr<T>{result};
-      }
-    }
+    return FoldAllAny(
+        context, std::move(funcRef), &Scalar<T>::OR, Scalar<T>{false});
   } else if (name == "associated") {
     bool gotConstant{true};
     const Expr<SomeType> *firstArgExpr{args[0]->UnwrapExpr()};
@@ -127,8 +127,8 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
   }
   // TODO: btest, cshift, dot_product, eoshift, is_iostat_end,
   // is_iostat_eor, lge, lgt, lle, llt, logical, matmul, out_of_range,
-  // pack, parity, reduce, spread, transfer, transpose, unpack,
-  // extends_type_of, same_type_as
+  // pack, parity, spread, transfer, transpose, unpack, extends_type_of,
+  // same_type_as
   return Expr<T>{std::move(funcRef)};
 }
 

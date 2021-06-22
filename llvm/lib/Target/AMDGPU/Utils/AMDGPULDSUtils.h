@@ -14,12 +14,32 @@
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPULDSUTILS_H
 
 #include "AMDGPU.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/Constants.h"
 
 namespace llvm {
 
 class ConstantExpr;
 
 namespace AMDGPU {
+
+/// Collect reachable callees for each kernel defined in the module \p M and
+/// return collected callees at \p KernelToCallees.
+void collectReachableCallees(
+    Module &M,
+    DenseMap<Function *, SmallPtrSet<Function *, 8>> &KernelToCallees);
+
+/// For the given LDS global \p GV, visit all its users and collect all
+/// non-kernel functions within which \p GV is used and return collected list of
+/// such non-kernel functions.
+SmallPtrSet<Function *, 8> collectNonKernelAccessorsOfLDS(GlobalVariable *GV);
+
+/// Collect all the instructions where user \p U belongs to. \p U could be
+/// instruction itself or it could be a constant expression which is used within
+/// an instruction. If \p CollectKernelInsts is true, collect instructions only
+/// from kernels, otherwise collect instructions only from non-kernel functions.
+DenseMap<Function *, SmallPtrSet<Instruction *, 8>>
+getFunctionToInstsMap(User *U, bool CollectKernelInsts);
 
 bool isKernelCC(const Function *Func);
 

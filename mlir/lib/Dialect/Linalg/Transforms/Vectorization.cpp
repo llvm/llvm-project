@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
@@ -677,9 +678,9 @@ static SmallVector<Value> ofrToIndexValues(OpBuilder &builder, Location loc,
 }
 
 /// Rewrite a PadTensorOp into a sequence of InitTensorOp, FillOp and
-/// SubTensorInsertOp. For now, only constant padding values are supported.
+/// InsertSliceOp. For now, only constant padding values are supported.
 /// If there is enough static type information, TransferReadOps and
-/// TransferWriteOps may be generated instead of SubTensorInsertOps.
+/// TransferWriteOps may be generated instead of InsertSliceOps.
 struct GenericPadTensorOpVectorizationPattern
     : public OpRewritePattern<PadTensorOp> {
   using OpRewritePattern<PadTensorOp>::OpRewritePattern;
@@ -723,7 +724,7 @@ struct GenericPadTensorOpVectorizationPattern
       return success();
 
     // Neither source type nor PadTensorOp result type have static shape. Such
-    // PadTensorOps cannot be vectorized. Generate a SubTensorInsertOp instead
+    // PadTensorOps cannot be vectorized. Generate a InsertSliceOp instead
     // for copying the PadOp source.
 
     auto sourceType = padOp.getSourceType();
@@ -737,10 +738,10 @@ struct GenericPadTensorOpVectorizationPattern
         srcSizes.push_back(rewriter.getIndexAttr(sourceType.getDimSize(dim)));
       }
     }
-    // Strides of SubTensorInsertOp are all 1.
+    // Strides of InsertSliceOp are all 1.
     SmallVector<OpFoldResult> strides(sourceType.getRank(),
                                       rewriter.getIndexAttr(1));
-    rewriter.replaceOpWithNewOp<SubTensorInsertOp>(
+    rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
         padOp, padOp.source(), fill, padOp.getMixedLowPad(), srcSizes, strides);
 
     return success();
@@ -913,27 +914,29 @@ struct PadTensorOpVectorizationWithTransferReadPattern
 /// write. In such cases, the TransferWriteOp can write to the non-padded tensor
 /// value and apply out-of-bounds masking. E.g.:
 /// ```
-/// %0 = subtensor ...[...] [%s0, %s1] [1, 1] : tensor<...> to tensor<?x?xf32>
+/// %0 = tensor.extract_slice ...[...] [%s0, %s1] [1, 1]
+///     : tensor<...> to tensor<?x?xf32>
 /// %1 = linalg.pad_tensor %0 ... : tensor<?x?xf32> to tensor<17x5xf32>
 /// %2 = vector.transfer_write %vec, %1[...]
 ///     : vector<17x5xf32>, tensor<17x5xf32>
-/// %r = subtensor %2[0, 0] [%s0, %s1] [1, 1]
+/// %r = tensor.extract_slice %2[0, 0] [%s0, %s1] [1, 1]
 ///     : tensor<17x5xf32> to tensor<?x?xf32>
 /// ```
 /// is rewritten to:
 /// ```
-/// %0 = subtensor ...[...] [%s0, %s1] [1, 1] : tensor<...> to tensor<?x?xf32>
+/// %0 = tensor.extract_slice ...[...] [%s0, %s1] [1, 1]
+///     : tensor<...> to tensor<?x?xf32>
 /// %r = vector.transfer_write %vec, %0[...] : vector<17x5xf32>, tensor<?x?xf32>
 /// ```
-/// Note: It is important that the SubTensorOp %r resizes the result of the
+/// Note: It is important that the ExtractSliceOp %r resizes the result of the
 /// TransferWriteOp to the same size as the input of the TensorPadOp (or an even
 /// smaller size). Otherwise, %r's new (dynamic) dimensions would differ from
 /// %r's old dimensions.
 ///
 /// This rewrite is possible if:
 /// - Low padding is static 0.
-/// - `xferOp` has exactly one use, which is a SubTensorOp. This SubTensorOp
-///   trims the same amount of padding that was added beforehand.
+/// - `xferOp` has exactly one use, which is an ExtractSliceOp. This
+///   ExtractSliceOp trims the same amount of padding that was added beforehand.
 /// - Single, scalar padding value.
 struct PadTensorOpVectorizationWithTransferWritePattern
     : public VectorizePadTensorOpUserPattern<vector::TransferWriteOp> {
@@ -947,9 +950,9 @@ struct PadTensorOpVectorizationWithTransferWritePattern
     // Pad value must be a constant.
     auto padValue = padOp.getConstantPaddingValue();
     if (!padValue) return failure();
-    // TransferWriteOp result must be directly consumed by a SubTensorOp.
+    // TransferWriteOp result must be directly consumed by an ExtractSliceOp.
     if (!xferOp->hasOneUse()) return failure();
-    auto trimPadding = dyn_cast<SubTensorOp>(*xferOp->user_begin());
+    auto trimPadding = dyn_cast<tensor::ExtractSliceOp>(*xferOp->user_begin());
     if (!trimPadding) return failure();
     // Only static zero offsets supported when trimming padding.
     if (!trimPadding.hasZeroOffset()) return failure();
@@ -976,7 +979,8 @@ struct PadTensorOpVectorizationWithTransferWritePattern
   /// This is a conservative analysis. In case equal tensor sizes cannot be
   /// proven statically, this analysis returns `false` even though the tensor
   /// sizes may turn out to be equal at runtime.
-  bool hasSameTensorSize(Value beforePadding, SubTensorOp afterTrimming) const {
+  bool hasSameTensorSize(Value beforePadding,
+                         tensor::ExtractSliceOp afterTrimming) const {
     // If the input to PadTensorOp is a CastOp, try with with both CastOp result
     // and CastOp operand.
     if (auto castOp = beforePadding.getDefiningOp<tensor::CastOp>())
@@ -1002,21 +1006,22 @@ struct PadTensorOpVectorizationWithTransferWritePattern
     if (t1.getNumDynamicDims() == 0) return true;
 
     // All dynamic sizes must be the same. The only supported case at the moment
-    // is when `beforePadding` is a SubTensorOp (or a cast thereof).
+    // is when `beforePadding` is an ExtractSliceOp (or a cast thereof).
 
-    // Apart from CastOp, only SubTensorOp is supported.
-    auto beforeSubtensor = beforePadding.getDefiningOp<SubTensorOp>();
-    if (!beforeSubtensor) return false;
+    // Apart from CastOp, only ExtractSliceOp is supported.
+    auto beforeSlice = beforePadding.getDefiningOp<tensor::ExtractSliceOp>();
+    if (!beforeSlice)
+      return false;
 
-    assert(static_cast<size_t>(t1.getRank())
-           == beforeSubtensor.getMixedSizes().size());
+    assert(static_cast<size_t>(t1.getRank()) ==
+           beforeSlice.getMixedSizes().size());
     assert(static_cast<size_t>(t2.getRank())
            == afterTrimming.getMixedSizes().size());
 
     for (unsigned i = 0; i < t1.getRank(); ++i) {
       // Skip static dimensions.
       if (!t1.isDynamicDim(i)) continue;
-      auto size1 = beforeSubtensor.getMixedSizes()[i];
+      auto size1 = beforeSlice.getMixedSizes()[i];
       auto size2 = afterTrimming.getMixedSizes()[i];
 
       // Case 1: Same value or same constant int.
@@ -1042,10 +1047,11 @@ struct PadTensorOpVectorizationWithTransferWritePattern
   }
 };
 
-/// Rewrite use of PadTensorOp result in SubtensorInsertOp. E.g.:
+/// Rewrite use of PadTensorOp result in InsertSliceOp. E.g.:
 /// ```
 /// %0 = linalg.pad_tensor %src ... : tensor<?x?xf32> to tensor<17x5xf32>
-/// %r = subtensor_insert %0 into %dest[%a, %b, 0, 0] [1, 1, 17, 5] [1, 1, 1, 1]
+/// %r = tensor.insert_slice %0
+///     into %dest[%a, %b, 0, 0] [1, 1, 17, 5] [1, 1, 1, 1]
 ///     : tensor<17x5xf32> into tensor<?x?x17x5xf32>
 /// ```
 /// is rewritten to:
@@ -1063,13 +1069,13 @@ struct PadTensorOpVectorizationWithTransferWritePattern
 ///   (Implies that sizes of `insertOp` are all static.)
 /// - Only unit strides in `insertOp`.
 /// - Single, scalar padding value.
-struct PadTensorOpVectorizationWithSubTensorInsertPattern
-    : public VectorizePadTensorOpUserPattern<SubTensorInsertOp> {
-  using VectorizePadTensorOpUserPattern<SubTensorInsertOp>
-      ::VectorizePadTensorOpUserPattern;
+struct PadTensorOpVectorizationWithInsertSlicePattern
+    : public VectorizePadTensorOpUserPattern<tensor::InsertSliceOp> {
+  using VectorizePadTensorOpUserPattern<
+      tensor::InsertSliceOp>::VectorizePadTensorOpUserPattern;
 
   LogicalResult rewriteUser(PatternRewriter &rewriter, PadTensorOp padOp,
-                            SubTensorInsertOp insertOp) const override {
+                            tensor::InsertSliceOp insertOp) const override {
     // Low padding must be static 0.
     if (!padOp.hasZeroLowPad()) return failure();
     // Only unit stride supported.
@@ -1103,8 +1109,8 @@ struct PadTensorOpVectorizationWithSubTensorInsertPattern
     auto read = rewriter.create<vector::TransferReadOp>(
         padOp.getLoc(), vecType, padOp.source(), readIndices, padValue);
 
-    // Generate TransferWriteOp: Write to SubTensorInsertOp's dest tensor at
-    // specified offsets. Write is fully in-bounds because a SubTensorInsertOp's
+    // Generate TransferWriteOp: Write to InsertSliceOp's dest tensor at
+    // specified offsets. Write is fully in-bounds because a InsertSliceOp's
     // source must fit into the destination at the specified offsets.
     auto writeIndices =
         ofrToIndexValues(rewriter, padOp.getLoc(), insertOp.getMixedOffsets());
@@ -1123,7 +1129,7 @@ void mlir::linalg::populatePadTensorOpVectorizationPatterns(
   // Try these specialized patterns first before resorting to the generic one.
   patterns.add<PadTensorOpVectorizationWithTransferReadPattern,
                PadTensorOpVectorizationWithTransferWritePattern,
-               PadTensorOpVectorizationWithSubTensorInsertPattern>(
+               PadTensorOpVectorizationWithInsertSlicePattern>(
       patterns.getContext(), baseBenefit.getBenefit() + 1);
 }
 

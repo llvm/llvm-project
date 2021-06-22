@@ -15,7 +15,7 @@ import glob
 def prepare_cdb(name, target_dir):
     target_file = 'build_{0}.json'.format(name)
     this_dir, _ = os.path.split(__file__)
-    path = os.path.normpath(os.path.join(this_dir, '..', 'src'))
+    path = os.path.abspath(os.path.join(this_dir, '..', 'src'))
     source_dir = os.path.join(path, 'compilation_database')
     source_file = os.path.join(source_dir, target_file + '.in')
     target_file = os.path.join(target_dir, 'compile_commands.json')

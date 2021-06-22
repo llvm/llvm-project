@@ -46,7 +46,14 @@ EXTERN void __kmpc_data_sharing_init_stack() {
   // statically allocated shared memory slots. The size of a shared memory
   // slot is pre-determined to be 256 bytes.
   data_sharing_init_stack_common();
-  omptarget_nvptx_globalArgs.Init();
+}
+
+EXTERN void *__kmpc_alloc_shared(size_t DataSize) {
+  return (void *)SafeMalloc(DataSize, "Alloc Shared");
+}
+
+EXTERN void __kmpc_free_shared(void *FrameStart) {
+  SafeFree(FrameStart, "Free Shared");
 }
 
 // Initialize data sharing data structure. This function needs to be called

@@ -3932,7 +3932,7 @@ SDValue SystemZTargetLowering::lowerATOMIC_STORE(SDValue Op,
                                     Node->getMemOperand());
   // We have to enforce sequential consistency by performing a
   // serialization operation after the store.
-  if (Node->getOrdering() == AtomicOrdering::SequentiallyConsistent)
+  if (Node->getSuccessOrdering() == AtomicOrdering::SequentiallyConsistent)
     Chain = SDValue(DAG.getMachineNode(SystemZ::Serialize, SDLoc(Op),
                                        MVT::Other, Chain), 0);
   return Chain;
@@ -5565,7 +5565,7 @@ SystemZTargetLowering::LowerOperationWrapper(SDNode *N,
                                           DL, Tys, Ops, MVT::i128, MMO);
     // We have to enforce sequential consistency by performing a
     // serialization operation after the store.
-    if (cast<AtomicSDNode>(N)->getOrdering() ==
+    if (cast<AtomicSDNode>(N)->getSuccessOrdering() ==
         AtomicOrdering::SequentiallyConsistent)
       Res = SDValue(DAG.getMachineNode(SystemZ::Serialize, DL,
                                        MVT::Other, Res), 0);
@@ -7423,7 +7423,7 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadBinary(
   //  StartMBB:
   //   ...
   //   %OrigVal = L Disp(%Base)
-  //   # fall through to LoopMMB
+  //   # fall through to LoopMBB
   MBB = StartMBB;
   BuildMI(MBB, DL, TII->get(LOpcode), OrigVal).add(Base).addImm(Disp).addReg(0);
   MBB->addSuccessor(LoopMBB);
@@ -7435,7 +7435,7 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadBinary(
   //   %NewVal        = RLL %RotatedNewVal, 0(%NegBitShift)
   //   %Dest          = CS %OldVal, %NewVal, Disp(%Base)
   //   JNE LoopMBB
-  //   # fall through to DoneMMB
+  //   # fall through to DoneMBB
   MBB = LoopMBB;
   BuildMI(MBB, DL, TII->get(SystemZ::PHI), OldVal)
     .addReg(OrigVal).addMBB(StartMBB)
@@ -7543,7 +7543,7 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadMinMax(
   //  StartMBB:
   //   ...
   //   %OrigVal     = L Disp(%Base)
-  //   # fall through to LoopMMB
+  //   # fall through to LoopMBB
   MBB = StartMBB;
   BuildMI(MBB, DL, TII->get(LOpcode), OrigVal).add(Base).addImm(Disp).addReg(0);
   MBB->addSuccessor(LoopMBB);
@@ -7569,7 +7569,7 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadMinMax(
 
   //  UseAltMBB:
   //   %RotatedAltVal = RISBG %RotatedOldVal, %Src2, 32, 31 + BitSize, 0
-  //   # fall through to UpdateMMB
+  //   # fall through to UpdateMBB
   MBB = UseAltMBB;
   if (IsSubWord)
     BuildMI(MBB, DL, TII->get(SystemZ::RISBG32), RotatedAltVal)
@@ -7583,7 +7583,7 @@ MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadMinMax(
   //   %NewVal        = RLL %RotatedNewVal, 0(%NegBitShift)
   //   %Dest          = CS %OldVal, %NewVal, Disp(%Base)
   //   JNE LoopMBB
-  //   # fall through to DoneMMB
+  //   # fall through to DoneMBB
   MBB = UpdateMBB;
   BuildMI(MBB, DL, TII->get(SystemZ::PHI), RotatedNewVal)
     .addReg(RotatedOldVal).addMBB(LoopMBB)
@@ -7652,7 +7652,7 @@ SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr &MI,
   //  StartMBB:
   //   ...
   //   %OrigOldVal     = L Disp(%Base)
-  //   # fall through to LoopMMB
+  //   # fall through to LoopMBB
   MBB = StartMBB;
   BuildMI(MBB, DL, TII->get(LOpcode), OrigOldVal)
       .add(Base)
@@ -7699,7 +7699,7 @@ SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr &MI,
   //                      ^^ Rotate the new field to its proper position.
   //   %RetryOldVal  = CS %OldVal, %StoreVal, Disp(%Base)
   //   JNE LoopMBB
-  //   # fall through to ExitMMB
+  //   # fall through to ExitMBB
   MBB = SetMBB;
   BuildMI(MBB, DL, TII->get(SystemZ::RLL), StoreVal)
     .addReg(RetrySwapVal).addReg(NegBitShift).addImm(-BitSize);
@@ -7878,7 +7878,7 @@ MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
     //   %NextCountReg = AGHI %ThisCountReg, -1
     //   CGHI %NextCountReg, 0
     //   JLH LoopMBB
-    //   # fall through to DoneMMB
+    //   # fall through to DoneMBB
     //
     // The AGHI, CGHI and JLH should be converted to BRCTG by later passes.
     MBB = NextMBB;
@@ -7987,7 +7987,7 @@ MachineBasicBlock *SystemZTargetLowering::emitStringWrapper(
   MachineBasicBlock *LoopMBB = SystemZ::emitBlockAfter(StartMBB);
 
   //  StartMBB:
-  //   # fall through to LoopMMB
+  //   # fall through to LoopMBB
   MBB->addSuccessor(LoopMBB);
 
   //  LoopMBB:
@@ -7996,7 +7996,7 @@ MachineBasicBlock *SystemZTargetLowering::emitStringWrapper(
   //   R0L = %CharReg
   //   %End1Reg, %End2Reg = CLST %This1Reg, %This2Reg -- uses R0L
   //   JO LoopMBB
-  //   # fall through to DoneMMB
+  //   # fall through to DoneMBB
   //
   // The load of R0L can be hoisted by post-RA LICM.
   MBB = LoopMBB;

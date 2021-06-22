@@ -685,10 +685,30 @@ namespace llvm {
       return true;
     }
 
+    /// Returns true if this StringRef has the given prefix, ignoring case,
+    /// and removes that prefix.
+    bool consume_front_lower(StringRef Prefix) {
+      if (!startswith_lower(Prefix))
+        return false;
+
+      *this = drop_front(Prefix.size());
+      return true;
+    }
+
     /// Returns true if this StringRef has the given suffix and removes that
     /// suffix.
     bool consume_back(StringRef Suffix) {
       if (!endswith(Suffix))
+        return false;
+
+      *this = drop_back(Suffix.size());
+      return true;
+    }
+
+    /// Returns true if this StringRef has the given suffix, ignoring case,
+    /// and removes that suffix.
+    bool consume_back_lower(StringRef Suffix) {
+      if (!endswith_lower(Suffix))
         return false;
 
       *this = drop_back(Suffix.size());

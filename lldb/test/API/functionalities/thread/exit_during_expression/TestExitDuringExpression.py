@@ -23,6 +23,7 @@ class TestExitDuringExpression(TestBase):
         self.exiting_expression_test(True, True)
 
     @skipIfWindows
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"], bugnumber="llvm.org/pr48414")
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48414")
     @expectedFailureNetBSD
     def test_exit_before_one_thread_no_unwind(self):
@@ -109,4 +110,3 @@ class TestExitDuringExpression(TestBase):
         ret_val_value = ret_val.GetValueAsSigned(error)
         self.assertTrue(error.Success(), "Got ret_val's value")
         self.assertEqual(ret_val_value, 10, "We put the right value in ret_val")
-

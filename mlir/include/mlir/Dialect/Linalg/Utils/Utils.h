@@ -78,7 +78,7 @@ bool isProducerLastWriteOfView(const LinalgDependenceGraph &graph,
 bool isFusableInto(const LinalgDependenceGraph &graph, LinalgOp consumer,
                    Value consumedView, LinalgOp producer);
 
-/// Creates subtensor/subview ops for all `tiledOperands` of the given
+/// Creates extract_slice/subview ops for all `tiledOperands` of the given
 /// `linalgOp` with `builder`, assuming `linalgOp` is being fused into a loop
 /// nest for tiling with the given induction variables `ivs` and tile sizes
 /// `tileSizes`. `sizeBounds` are the iteration space bounds for *all* the
@@ -118,15 +118,17 @@ Optional<FusionInfo> fuseProducerOfBuffer(OpBuilder &b,
                                           const LinalgDependenceGraph &graph);
 /// Tensor counterpart of `fuseProducerOfBuffer`.
 /// This implements the fusion part of the "tileAndFuse on tensors"
-/// transformation and thus requires the `consumerOpOperand` to be a `subtensor`
-/// op (generally obtained by applying the tiling transformation).
+/// transformation and thus requires the `consumerOpOperand` to be a
+/// `extract_slice` op (generally obtained by applying the tiling
+/// transformation).
 Optional<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
                                           OpOperand &consumerOpOperand);
 /// Tensor counterpart of `fuseProducerOfBuffer`.
 /// This implements the fusion part of the "tileAndFuse on tensors"
-/// transformation and thus requires the `consumerOpOperand` to be a `subtensor`
-/// op (generally obtained by applying the tiling transformation).
-/// Assumes `producerOfTensor` is a Linalg op that produces `consumerOpOperand`.
+/// transformation and thus requires the `consumerOpOperand` to be a
+/// `extract_slice` op (generally obtained by applying the tiling
+/// transformation). Assumes `producerOfTensor` is a Linalg op that produces
+/// `consumerOpOperand`.
 Optional<FusionInfo> fuseProducerOfTensor(OpBuilder &b,
                                           OpResult producerOpResult,
                                           OpOperand &consumerOpOperand);

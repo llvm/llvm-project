@@ -217,3 +217,206 @@ func @no_fold_of_store(%arg : memref<32xi8>, %holder: memref<memref<?xi8>>) {
   return
 }
 
+// -----
+
+// Test case: Folding of memref.load(memref.buffer_cast(%v, %idxs))
+//            -> tensor.extract(%v, %idx)
+// CHECK-LABEL: func @load_from_buffer_cast(
+//  CHECK-SAME:     %[[IDX0:[0-9a-z]+]]: index, %[[IDX1:[0-9a-z]+]]: index
+//  CHECK-SAME:     %[[TENSOR:[0-9a-z]+]]: tensor<?x?xf32>
+//       CHECK:   %[[RES:.*]] = tensor.extract %[[TENSOR]][%[[IDX0]], %[[IDX1]]]
+//   CHECK-NOT:   memref.load
+//       CHECK:   return %[[RES]] : f32
+func @load_from_buffer_cast(%arg0: index, %arg1: index, %arg2: tensor<?x?xf32>) -> f32 {
+  %0 = memref.buffer_cast %arg2 : memref<?x?xf32>
+  %1 = memref.load %0[%arg0, %arg1] : memref<?x?xf32>
+  return %1 : f32
+}
+
+// -----
+
+
+// Test case: Basic folding of memref.dim(memref.tensor_load(m)) -> memref.dim(m).
+// CHECK-LABEL: func @dim_of_tensor_load(
+//  CHECK-SAME:     %[[MEMREF:[0-9a-z]*]]: memref<?xf32>
+//       CHECK:   %[[C0:.*]] = constant 0
+//       CHECK:   %[[D:.*]] = memref.dim %[[MEMREF]], %[[C0]]
+//       CHECK:   return %[[D]] : index
+func @dim_of_tensor_load(%arg0: memref<?xf32>) -> index {
+  %c0 = constant 0 : index
+  %0 = memref.tensor_load %arg0 : memref<?xf32>
+  %1 = memref.dim %0, %c0 : tensor<?xf32>
+  return %1 : index
+}
+
+// -----
+
+// Test case: Folding of memref.dim(tensor.generate %idx) -> %idx
+// CHECK-LABEL: func @dim_of_tensor.generate(
+//  CHECK-SAME:     %[[IDX0:[0-9a-z]+]]: index, %[[IDX1:[0-9a-z]+]]: index
+//   CHECK-NOT:   memref.dim
+//       CHECK:   return %[[IDX1]] : index
+func @dim_of_tensor.generate(%arg0: index, %arg1: index) -> index {
+  %c3 = constant 3 : index
+  %0 = tensor.generate %arg0, %arg1 {
+  ^bb0(%arg2: index, %arg3: index, %arg4: index, %arg5: index, %arg6: index):
+    tensor.yield %c3 : index
+  } : tensor<2x?x4x?x5xindex>
+  %1 = memref.dim %0, %c3 : tensor<2x?x4x?x5xindex>
+  return %1 : index
+}
+
+// -----
+
+// Test case: Folding of memref.dim(memref.alloca(%size), %idx) -> %size
+// CHECK-LABEL: func @dim_of_alloca(
+//  CHECK-SAME:     %[[SIZE:[0-9a-z]+]]: index
+//  CHECK-NEXT:   return %[[SIZE]] : index
+func @dim_of_alloca(%size: index) -> index {
+  %0 = memref.alloca(%size) : memref<?xindex>
+  %c0 = constant 0 : index
+  %1 = memref.dim %0, %c0 : memref<?xindex>
+  return %1 : index
+}
+
+// -----
+
+// Test case: Folding of memref.dim(memref.alloca(rank(%v)), %idx) -> rank(%v)
+// CHECK-LABEL: func @dim_of_alloca_with_dynamic_size(
+//  CHECK-SAME:     %[[MEM:[0-9a-z]+]]: memref<*xf32>
+//  CHECK-NEXT:   %[[RANK:.*]] = rank %[[MEM]] : memref<*xf32>
+//  CHECK-NEXT:   return %[[RANK]] : index
+func @dim_of_alloca_with_dynamic_size(%arg0: memref<*xf32>) -> index {
+  %0 = rank %arg0 : memref<*xf32>
+  %1 = memref.alloca(%0) : memref<?xindex>
+  %c0 = constant 0 : index
+  %2 = memref.dim %1, %c0 : memref<?xindex>
+  return %2 : index
+}
+
+// -----
+
+// Test case: Folding of memref.dim(memref.reshape %v %shp, %idx) -> memref.load %shp[%idx]
+// CHECK-LABEL: func @dim_of_memref_reshape(
+//  CHECK-SAME:     %[[MEM:[0-9a-z]+]]: memref<*xf32>,
+//  CHECK-SAME:     %[[SHP:[0-9a-z]+]]: memref<?xindex>
+//  CHECK-NEXT:   %[[IDX:.*]] = constant 3
+//  CHECK-NEXT:   %[[DIM:.*]] = memref.load %[[SHP]][%[[IDX]]]
+//  CHECK-NEXT:   memref.store
+//   CHECK-NOT:   memref.dim
+//       CHECK:   return %[[DIM]] : index
+func @dim_of_memref_reshape(%arg0: memref<*xf32>, %arg1: memref<?xindex>)
+    -> index {
+  %c3 = constant 3 : index
+  %0 = memref.reshape %arg0(%arg1)
+      : (memref<*xf32>, memref<?xindex>) -> memref<*xf32>
+  // Update the shape to test that he load ends up in the right place.
+  memref.store %c3, %arg1[%c3] : memref<?xindex>
+  %1 = memref.dim %0, %c3 : memref<*xf32>
+  return %1 : index
+}
+
+// -----
+
+// Test case: Folding of memref.dim(memref.reshape %v %shp, %idx) -> memref.load %shp[%idx]
+// CHECK-LABEL: func @dim_of_memref_reshape_i32(
+//  CHECK-SAME:     %[[MEM:[0-9a-z]+]]: memref<*xf32>,
+//  CHECK-SAME:     %[[SHP:[0-9a-z]+]]: memref<?xi32>
+//  CHECK-NEXT:   %[[IDX:.*]] = constant 3
+//  CHECK-NEXT:   %[[DIM:.*]] = memref.load %[[SHP]][%[[IDX]]]
+//  CHECK-NEXT:   %[[CAST:.*]] = index_cast %[[DIM]]
+//   CHECK-NOT:   memref.dim
+//       CHECK:   return %[[CAST]] : index
+func @dim_of_memref_reshape_i32(%arg0: memref<*xf32>, %arg1: memref<?xi32>)
+    -> index {
+  %c3 = constant 3 : index
+  %0 = memref.reshape %arg0(%arg1)
+      : (memref<*xf32>, memref<?xi32>) -> memref<*xf32>
+  %1 = memref.dim %0, %c3 : memref<*xf32>
+  return %1 : index
+}
+
+// -----
+
+// Test case: Folding memref.dim(tensor.cast %0, %idx) -> memref.dim %0, %idx
+// CHECK-LABEL: func @fold_dim_of_tensor.cast
+//  CHECK-SAME:   %[[ARG0:.[a-z0-9A-Z_]+]]: tensor<4x?xf32>
+//   CHECK-DAG:   %[[C1:.+]] = constant 1 : index
+//   CHECK-DAG:   %[[C4:.+]] = constant 4 : index
+//       CHECK:   %[[T0:.+]] = memref.dim %[[ARG0]], %[[C1]]
+//  CHECK-NEXT:   return %[[C4]], %[[T0]]
+func @fold_dim_of_tensor.cast(%arg0 : tensor<4x?xf32>) -> (index, index) {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+  %0 = tensor.cast %arg0 : tensor<4x?xf32> to tensor<?x?xf32>
+  %1 = memref.dim %0, %c0 : tensor<?x?xf32>
+  %2 = memref.dim %0, %c1 : tensor<?x?xf32>
+  return %1, %2: index, index
+}
+
+// -----
+
+// CHECK-LABEL: func @tensor_cast_to_memref
+//  CHECK-SAME:   %[[ARG0:.+]]: tensor<4x6x16x32xi8>
+//       CHECK:   %[[M:.+]] = memref.buffer_cast %[[ARG0]] : memref<4x6x16x32xi8>
+//       CHECK:   %[[M1:.+]] = memref.cast %[[M]] : memref<4x6x16x32xi8> to memref<?x?x16x32xi8>
+//       CHECK:   return %[[M1]] : memref<?x?x16x32xi8>
+func @tensor_cast_to_memref(%arg0 : tensor<4x6x16x32xi8>) ->
+  memref<?x?x16x32xi8> {
+  %0 = tensor.cast %arg0 : tensor<4x6x16x32xi8> to tensor<?x?x16x32xi8>
+  %1 = memref.buffer_cast %0 : memref<?x?x16x32xi8>
+  return %1 : memref<?x?x16x32xi8>
+}
+
+// -----
+
+// CHECK-LABEL: func @alloc_const_fold
+func @alloc_const_fold() -> memref<?xf32> {
+  // CHECK-NEXT: %0 = memref.alloc() : memref<4xf32>
+  %c4 = constant 4 : index
+  %a = memref.alloc(%c4) : memref<?xf32>
+
+  // CHECK-NEXT: %1 = memref.cast %0 : memref<4xf32> to memref<?xf32>
+  // CHECK-NEXT: return %1 : memref<?xf32>
+  return %a : memref<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @alloc_alignment_const_fold
+func @alloc_alignment_const_fold() -> memref<?xf32> {
+  // CHECK-NEXT: %0 = memref.alloc() {alignment = 4096 : i64} : memref<4xf32>
+  %c4 = constant 4 : index
+  %a = memref.alloc(%c4) {alignment = 4096 : i64} : memref<?xf32>
+
+  // CHECK-NEXT: %1 = memref.cast %0 : memref<4xf32> to memref<?xf32>
+  // CHECK-NEXT: return %1 : memref<?xf32>
+  return %a : memref<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @alloc_const_fold_with_symbols1(
+//  CHECK: %[[c1:.+]] = constant 1 : index
+//  CHECK: %[[mem1:.+]] = memref.alloc({{.*}})[%[[c1]], %[[c1]]] : memref<?xi32, #map>
+//  CHECK: return %[[mem1]] : memref<?xi32, #map>
+#map0 = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
+func @alloc_const_fold_with_symbols1(%arg0 : index) -> memref<?xi32, #map0> {
+  %c1 = constant 1 : index
+  %0 = memref.alloc(%arg0)[%c1, %c1] : memref<?xi32, #map0>
+  return %0 : memref<?xi32, #map0>
+}
+
+// -----
+
+// CHECK-LABEL: func @alloc_const_fold_with_symbols2(
+//  CHECK: %[[c1:.+]] = constant 1 : index
+//  CHECK: %[[mem1:.+]] = memref.alloc()[%[[c1]], %[[c1]]] : memref<1xi32, #map>
+//  CHECK: %[[mem2:.+]] = memref.cast %[[mem1]] : memref<1xi32, #map> to memref<?xi32, #map>
+//  CHECK: return %[[mem2]] : memref<?xi32, #map>
+#map0 = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
+func @alloc_const_fold_with_symbols2() -> memref<?xi32, #map0> {
+  %c1 = constant 1 : index
+  %0 = memref.alloc(%c1)[%c1, %c1] : memref<?xi32, #map0>
+  return %0 : memref<?xi32, #map0>
+}

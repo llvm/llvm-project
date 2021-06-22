@@ -26,3 +26,5 @@ static_assert(std::sentinel_for<iterator, iterator>);
 static_assert(!std::sentinel_for<iterator, reverse_iterator>);
 static_assert(std::sized_sentinel_for<iterator, iterator>);
 static_assert(!std::sized_sentinel_for<iterator, reverse_iterator>);
+static_assert(std::indirectly_movable<iterator, int*>);
+static_assert(std::indirectly_movable_storable<iterator, int*>);

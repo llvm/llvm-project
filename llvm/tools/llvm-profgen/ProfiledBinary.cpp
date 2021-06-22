@@ -440,7 +440,8 @@ FrameLocationStack ProfiledBinary::symbolize(const InstructionPointer &IP,
       FunctionName = FunctionSamples::getCanonicalFnName(FunctionName);
     LineLocation Line(CallerFrame.Line - CallerFrame.StartLine,
                       DILocation::getBaseDiscriminatorFromDiscriminator(
-                          CallerFrame.Discriminator));
+                          CallerFrame.Discriminator,
+                          /* IsFSDiscriminator */ false));
     FrameLocation Callsite(FunctionName.str(), Line);
     CallStack.push_back(Callsite);
   }

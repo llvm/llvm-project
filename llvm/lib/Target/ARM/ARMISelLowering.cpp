@@ -9844,7 +9844,7 @@ static SDValue LowerVecReduceF(SDValue Op, SelectionDAG &DAG,
 }
 
 static SDValue LowerAtomicLoadStore(SDValue Op, SelectionDAG &DAG) {
-  if (isStrongerThanMonotonic(cast<AtomicSDNode>(Op)->getOrdering()))
+  if (isStrongerThanMonotonic(cast<AtomicSDNode>(Op)->getSuccessOrdering()))
     // Acquire/Release load/store is not legal for targets without a dmb or
     // equivalent available.
     return SDValue();
@@ -18168,6 +18168,8 @@ bool ARMTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
       return false;
     auto *RHS = dyn_cast<ConstantSDNode>(Op->getOperand(1));
     if (!RHS || RHS->getZExtValue() != 4)
+      return false;
+    if (Alignment < Align(4))
       return false;
 
     Offset = Op->getOperand(1);
