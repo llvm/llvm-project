@@ -5,10 +5,10 @@
 ; CHECK: %llvm.amdgcn.kernel.k0.lds.t = type { [16 x i8], [8 x i8], [4 x i8], [2 x i8], [1 x i8] }
 
 ; Different properly aligned values, but same size of 1.
-; CHECK: %llvm.amdgcn.kernel.k1.lds.t = type { [1 x i8], [7 x i8], [1 x i8], [3 x i8], [1 x i8], [1 x i8], [1 x i8], [1 x i8] }
+; CHECK: %llvm.amdgcn.kernel.k1.lds.t = type { [1 x i8], [1 x i8], [1 x i8], [1 x i8], [1 x i8], [3 x i8], [1 x i8] }
 
 ; All are under-aligned, requires to fix each on different alignment boundary.
-; CHECK: %llvm.amdgcn.kernel.k2.lds.t = type { [9 x i8], [7 x i8], [5 x i8], [3 x i8], [3 x i8], [1 x i8], [2 x i8] }
+; CHECK: %llvm.amdgcn.kernel.k2.lds.t = type { [9 x i8], [1 x i8], [2 x i8], [3 x i8], [1 x i8], [5 x i8] }
 
 ; All LDS are underaligned, requires to allocate on 8 byte boundary
 ; CHECK: %llvm.amdgcn.kernel.k3.lds.t = type { [7 x i8], [1 x i8], [7 x i8], [1 x i8], [6 x i8], [2 x i8], [5 x i8] }
