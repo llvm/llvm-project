@@ -235,9 +235,10 @@ struct TestLinalgGreedyFusion
     MLIRContext *context = &getContext();
     RewritePatternSet patterns =
         linalg::getLinalgTilingCanonicalizationPatterns(context);
-    patterns.add<AffineMinSCFCanonicalizationPattern>(context);
+    patterns.add<AffineMinSCFCanonicalizationPattern,
+                 SubTensorOfPadTensorSwapPattern>(context);
     FrozenRewritePatternSet frozenPatterns(std::move(patterns));
-    while (succeeded(fuseLinalgOpsGreedily(getFunction()))) {
+    do {
       (void)applyPatternsAndFoldGreedily(getFunction(), frozenPatterns);
       PassManager pm(context);
       pm.addPass(createLoopInvariantCodeMotionPass());
@@ -246,7 +247,7 @@ struct TestLinalgGreedyFusion
       LogicalResult res = pm.run(getFunction()->getParentOfType<ModuleOp>());
       if (failed(res))
         this->signalPassFailure();
-    }
+    } while (succeeded(fuseLinalgOpsGreedily(getFunction())));
   }
 };
 
