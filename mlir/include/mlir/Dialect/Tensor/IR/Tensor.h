@@ -16,6 +16,21 @@
 #include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
+
+//===----------------------------------------------------------------------===//
+// Tensor Dialect Helpers
+//===----------------------------------------------------------------------===//
+
+namespace mlir {
+
+/// Return the list of Range (i.e. offset, size, stride). Each Range
+/// entry contains either the dynamic value or a ConstantIndexOp constructed
+/// with `b` at location `loc`.
+SmallVector<Range, 8> getOrCreateRanges(OffsetSizeAndStrideOpInterface op,
+                                        OpBuilder &b, Location loc);
+
+} // namespace mlir
 
 //===----------------------------------------------------------------------===//
 // Tensor Dialect
@@ -41,8 +56,8 @@ namespace tensor {
 /// source tensor. This is useful to fold a tensor.cast into a consuming op and
 /// implement canonicalization patterns for ops in different dialects that may
 /// consume the results of tensor.cast operations. Such foldable tensor.cast
-/// operations are typically inserted as `subtensor` ops and are canonicalized,
-/// to preserve the type compatibility of their uses.
+/// operations are typically inserted as `extract_slice` ops and are
+/// canonicalized, to preserve the type compatibility of their uses.
 ///
 /// Returns true when all conditions are met:
 /// 1. source and result are ranked tensors with same element type and rank.
@@ -64,7 +79,6 @@ bool canFoldIntoConsumerOp(CastOp castOp);
 /// Performs folding of any operand of `op` if it comes from a tensor::CastOp
 /// that can be folded.
 LogicalResult foldTensorCast(Operation *op);
-
 } // namespace tensor
 } // namespace mlir
 

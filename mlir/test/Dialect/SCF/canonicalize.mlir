@@ -659,10 +659,10 @@ func @matmul_on_tensors(%t0: tensor<32x1024xf32>, %t1: tensor<1024x1024xf32>) ->
     scf.yield %2 : tensor<?x?xf32>
   }
 //   CHECK-NOT: tensor.cast
-//       CHECK: %[[RES:.*]] = subtensor_insert %[[FOR_RES]] into %[[T1]][0, 0] [32, 1024] [1, 1] : tensor<32x1024xf32> into tensor<1024x1024xf32>
+//       CHECK: %[[RES:.*]] = tensor.insert_slice %[[FOR_RES]] into %[[T1]][0, 0] [32, 1024] [1, 1] : tensor<32x1024xf32> into tensor<1024x1024xf32>
 //       CHECK: return %[[RES]] : tensor<1024x1024xf32>
   %2 = tensor.cast %1 : tensor<?x?xf32> to tensor<32x1024xf32>
-  %res = subtensor_insert %2 into %t1[0, 0] [32, 1024] [1, 1] : tensor<32x1024xf32> into tensor<1024x1024xf32>
+  %res = tensor.insert_slice %2 into %t1[0, 0] [32, 1024] [1, 1] : tensor<32x1024xf32> into tensor<1024x1024xf32>
   return %res : tensor<1024x1024xf32>
 }
 

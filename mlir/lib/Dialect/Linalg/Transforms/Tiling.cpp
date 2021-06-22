@@ -254,18 +254,18 @@ tileLinalgOpImpl(OpBuilder &b, LinalgOp op, ValueRange tileSizes,
 
     res = op.clone(b, loc, resultTensorTypes, tiledOperands);
 
-    // Insert a subtensor_insert for each output tensor.
+    // Insert a insert_slice for each output tensor.
     unsigned resultIdx = 0;
     for (OpOperand *opOperand : op.getOutputTensorOperands()) {
       // TODO: use an interface/adaptor to avoid leaking position in
       // `tiledOperands`.
       Value outputTensor = tiledOperands[opOperand->getOperandNumber()];
-      if (auto subtensor = outputTensor.getDefiningOp<SubTensorOp>()) {
-        tensorResults.push_back(b.create<SubTensorInsertOp>(
-            loc, subtensor.source().getType(), res->getResult(resultIdx),
-            subtensor.source(), subtensor.offsets(), subtensor.sizes(),
-            subtensor.strides(), subtensor.static_offsets(),
-            subtensor.static_sizes(), subtensor.static_strides()));
+      if (auto sliceOp = outputTensor.getDefiningOp<tensor::ExtractSliceOp>()) {
+        tensorResults.push_back(b.create<tensor::InsertSliceOp>(
+            loc, sliceOp.source().getType(), res->getResult(resultIdx),
+            sliceOp.source(), sliceOp.offsets(), sliceOp.sizes(),
+            sliceOp.strides(), sliceOp.static_offsets(), sliceOp.static_sizes(),
+            sliceOp.static_strides()));
       } else {
         tensorResults.push_back(res->getResult(resultIdx));
       }
@@ -406,7 +406,7 @@ void mlir::linalg::populateLinalgTilingCanonicalizationPatterns(
   scf::ForOp::getCanonicalizationPatterns(patterns, ctx);
   scf::ParallelOp::getCanonicalizationPatterns(patterns, ctx);
   ConstantIndexOp::getCanonicalizationPatterns(patterns, ctx);
-  SubTensorOp::getCanonicalizationPatterns(patterns, ctx);
+  tensor::ExtractSliceOp::getCanonicalizationPatterns(patterns, ctx);
   memref::SubViewOp::getCanonicalizationPatterns(patterns, ctx);
   tensor::CastOp::getCanonicalizationPatterns(patterns, ctx);
   memref::ViewOp::getCanonicalizationPatterns(patterns, ctx);

@@ -19,6 +19,7 @@
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/SCF/Utils.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/Dialect/Vector/VectorUtils.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -42,13 +43,13 @@ namespace {
 /// instructions that need to be hoisted too.
 struct HoistableWrite {
   vector::TransferWriteOp transferWriteOp;
-  SubTensorInsertOp subTensorInsertOp;
+  tensor::InsertSliceOp insertSliceOp;
 };
 /// Represents a unit of hoistable TransferReadOp. This may comprise other
 /// instructions that need to be hoisted too.
 struct HoistableRead {
   vector::TransferReadOp transferReadOp;
-  SubTensorOp subTensorOp;
+  tensor::ExtractSliceOp extractSliceOp;
 };
 } // namespace
 
@@ -71,7 +72,8 @@ static bool isEqualOffsetSizeOrStride(OpFoldResult op1, OpFoldResult op2) {
 }
 
 /// Return true is all offsets, sizes and strides are equal.
-static bool sameOffsetsSizesAndStrides(SubTensorOp s, SubTensorInsertOp si) {
+static bool sameOffsetsSizesAndStrides(tensor::ExtractSliceOp s,
+                                       tensor::InsertSliceOp si) {
   if (s.static_offsets().size() != si.static_offsets().size())
     return false;
   if (s.static_sizes().size() != si.static_sizes().size())
@@ -99,38 +101,37 @@ static HoistableRead findMatchingTransferRead(HoistableWrite write,
 
   LLVM_DEBUG(DBGS() << "findMatchingTransferRead for: "
                     << *write.transferWriteOp.getOperation() << "\n");
-  if (write.subTensorInsertOp)
-    LLVM_DEBUG(DBGS() << "findMatchingTransferRead subTensorInsertOp: "
-                      << *write.subTensorInsertOp.getOperation() << "\n");
+  if (write.insertSliceOp)
+    LLVM_DEBUG(DBGS() << "findMatchingTransferRead inserSliceOp: "
+                      << *write.insertSliceOp.getOperation() << "\n");
 
   for (Operation *user : srcTensor.getUsers()) {
     LLVM_DEBUG(DBGS() << "findMatchingTransferRead inspect user: " << *user
                       << "\n");
 
-    // If HoistableWrite involves a SubTensorInsertOp, we need to find a
-    // matching SubTensorOp.
-    SubTensorOp subTensorOp;
+    // If HoistableWrite involves a InsertSliceOp, we need to find a
+    // matching ExtractSliceOp.
+    tensor::ExtractSliceOp sliceOp;
     Operation *maybeTransferReadUser = user;
-    if (write.subTensorInsertOp) {
-      subTensorOp = dyn_cast<SubTensorOp>(user);
-      if (!subTensorOp || subTensorOp.getResult().getType() !=
-                              write.subTensorInsertOp.source().getType())
+    if (write.insertSliceOp) {
+      sliceOp = dyn_cast<tensor::ExtractSliceOp>(user);
+      if (!sliceOp || sliceOp.getResult().getType() !=
+                          write.insertSliceOp.source().getType())
         continue;
 
       LLVM_DEBUG(DBGS() << "check whether sameOffsetsSizesAndStrides: "
-                        << *subTensorOp << " vs " << *write.subTensorInsertOp
-                        << "\n");
-      if (!sameOffsetsSizesAndStrides(subTensorOp, write.subTensorInsertOp))
+                        << *sliceOp << " vs " << *write.insertSliceOp << "\n");
+      if (!sameOffsetsSizesAndStrides(sliceOp, write.insertSliceOp))
         continue;
 
       LLVM_DEBUG(DBGS() << "sameOffsetsSizesAndStrides: SUCCESS\n");
-      // If we got here, subTensorOp is hoistable iff it has exactly 2 uses:
+      // If we got here, sliceOp is hoistable iff it has exactly 2 uses:
       //   1. the transfer_write we want to hoist.
       //   2. a matching transfer_read.
       // Anything else, we skip.
       bool skip = false;
       Operation *otherUser = nullptr;
-      for (Operation *u : subTensorOp->getUsers()) {
+      for (Operation *u : sliceOp->getUsers()) {
         if (u == write.transferWriteOp)
           continue;
         if (otherUser) {
@@ -149,7 +150,7 @@ static HoistableRead findMatchingTransferRead(HoistableWrite write,
     auto read = dyn_cast<vector::TransferReadOp>(maybeTransferReadUser);
     if (read && read.indices() == write.transferWriteOp.indices() &&
         read.getVectorType() == write.transferWriteOp.getVectorType())
-      return HoistableRead{read, subTensorOp};
+      return HoistableRead{read, sliceOp};
   }
   return HoistableRead();
 }
@@ -168,13 +169,13 @@ static bool tensorChunkAccessedByUnknownOp(HoistableWrite write,
       Operation *user = use.getOwner();
       // Skip the candidate use, only inspect the "other" uses.
       if (user == candidateRead.transferReadOp ||
-          user == candidateRead.subTensorOp || user == write.transferWriteOp ||
-          user == write.subTensorInsertOp)
+          user == candidateRead.extractSliceOp ||
+          user == write.transferWriteOp || user == write.insertSliceOp)
         continue;
-      // Consider all transitive uses through a subtensor / subtensor_insert.
+      // Consider all transitive uses through a extract_slice / insert_slice.
       // TODO: atm we just bail because a stronger analysis is needed for these
       // cases.
-      if (isa<SubTensorOp, SubTensorInsertOp>(user))
+      if (isa<tensor::ExtractSliceOp, tensor::InsertSliceOp>(user))
         return true;
       // Consider all transitive uses through a vector.transfer_write.
       if (auto writeUser = dyn_cast<vector::TransferWriteOp>(user)) {
@@ -214,7 +215,7 @@ static bool tensorChunkAccessedByUnknownOp(HoistableWrite write,
 
 /// Return the `forOp`-invariant HoistableWrite that produces `yieldOperand`.
 /// Return the null HoistableWrite() if it is not comprised of a
-/// vector.transfer_write + optional subtensor_insert or if any of the indexings
+/// vector.transfer_write + optional insert_slice or if any of the indexings
 /// is `forOp`-dependent.
 static HoistableWrite
 getLoopInvariantTransferWriteOpDefining(scf::ForOp forOp,
@@ -229,26 +230,26 @@ getLoopInvariantTransferWriteOpDefining(scf::ForOp forOp,
     return HoistableWrite{write, nullptr};
   }
 
-  if (auto subTensorInsertOp = v.getDefiningOp<SubTensorInsertOp>()) {
-    // Inserted subTensor must come from vector.transfer_write.
+  if (auto insertSliceOp = v.getDefiningOp<tensor::InsertSliceOp>()) {
+    // Inserted slice must come from vector.transfer_write.
     auto write =
-        subTensorInsertOp.source().getDefiningOp<vector::TransferWriteOp>();
+        insertSliceOp.source().getDefiningOp<vector::TransferWriteOp>();
     if (!write)
       return HoistableWrite();
 
     // Tensor inserted into must be a BBArg at position matching yieldOperand's.
-    auto bbArg = subTensorInsertOp.dest().dyn_cast<BlockArgument>();
+    auto bbArg = insertSliceOp.dest().dyn_cast<BlockArgument>();
     if (!bbArg || bbArg.getOwner()->getParentOp() != forOp ||
         bbArg.getArgNumber() != /*num iv=*/1 + yieldOperand.getOperandNumber())
       return HoistableWrite();
 
     // Indexing inserted into must not depend on `forOp`.
-    for (Value operand : subTensorInsertOp->getOperands().drop_front(
-             SubTensorInsertOp::getOffsetSizeAndStrideStartOperandIndex()))
+    for (Value operand : insertSliceOp->getOperands().drop_front(
+             tensor::InsertSliceOp::getOffsetSizeAndStrideStartOperandIndex()))
       if (!forOp.isDefinedOutsideOfLoop(operand))
         return HoistableWrite();
 
-    return HoistableWrite{write, subTensorInsertOp};
+    return HoistableWrite{write, insertSliceOp};
   }
 
   return HoistableWrite();
@@ -260,18 +261,18 @@ static void hoistReadWrite(HoistableRead read, HoistableWrite write,
   scf::ForOp forOp = cast<scf::ForOp>(tensorBBArg.getOwner()->getParentOp());
   assert(read.transferReadOp && write.transferWriteOp &&
          "expected transfer_read and transfer_write ops to be set");
-  assert(((read.subTensorOp && write.subTensorInsertOp) ||
-          (!read.subTensorOp && !write.subTensorInsertOp)) &&
-         "expected matching subtensor / subtensor_insert");
+  assert(((read.extractSliceOp && write.insertSliceOp) ||
+          (!read.extractSliceOp && !write.insertSliceOp)) &&
+         "expected matching extract_slice / insert_slice");
   LLVM_DEBUG(DBGS() << "In forOp:\n"
                     << *forOp.getOperation()
                     << "\nHoist: " << *read.transferReadOp.getOperation()
                     << "\nHoist: " << *write.transferWriteOp.getOperation()
                     << "\nInvolving: " << tensorBBArg << "\n");
 
-  // If a read subtensor is present, hoist it.
-  if (read.subTensorOp && failed(forOp.moveOutOfLoop({read.subTensorOp})))
-    llvm_unreachable("Unexpected failure moving subtensor out of loop");
+  // If a read slice is present, hoist it.
+  if (read.extractSliceOp && failed(forOp.moveOutOfLoop({read.extractSliceOp})))
+    llvm_unreachable("Unexpected failure moving extract_slice out of loop");
 
   // Hoist the transfer_read op.
   if (failed(forOp.moveOutOfLoop({read.transferReadOp})))
@@ -282,20 +283,20 @@ static void hoistReadWrite(HoistableRead read, HoistableWrite write,
   unsigned initArgNumber = tensorBBArg.getArgNumber() - /*numIvs=*/1;
 
   // Update the source tensor.
-  if (read.subTensorOp)
-    read.subTensorOp.sourceMutable().assign(forOp.initArgs()[initArgNumber]);
+  if (read.extractSliceOp)
+    read.extractSliceOp.sourceMutable().assign(forOp.initArgs()[initArgNumber]);
   else
     read.transferReadOp.sourceMutable().assign(forOp.initArgs()[initArgNumber]);
 
   // Hoist write after.
-  if (write.subTensorInsertOp)
-    write.subTensorInsertOp->moveAfter(forOp);
+  if (write.insertSliceOp)
+    write.insertSliceOp->moveAfter(forOp);
   write.transferWriteOp->moveAfter(forOp);
 
   // Update the yield.
   auto yieldOp = cast<scf::YieldOp>(forOp.region().front().getTerminator());
-  if (write.subTensorInsertOp)
-    yieldOp->setOperand(initArgNumber, write.subTensorInsertOp.dest());
+  if (write.insertSliceOp)
+    yieldOp->setOperand(initArgNumber, write.insertSliceOp.dest());
   else
     yieldOp->setOperand(initArgNumber, write.transferWriteOp.source());
 
@@ -306,13 +307,13 @@ static void hoistReadWrite(HoistableRead read, HoistableWrite write,
   // Transfer write has been hoisted, need to update the vector and tensor
   // source. Replace the result of the loop to use the new tensor created
   // outside the loop.
-  // Depending on whether a subtensor_insert is present or not, it carries the
+  // Depending on whether a insert_slice is present or not, it carries the
   // update on the tensor operands.
-  if (write.subTensorInsertOp) {
+  if (write.insertSliceOp) {
     newForOp.getResult(initArgNumber)
-        .replaceAllUsesWith(write.subTensorInsertOp.getResult());
-    write.transferWriteOp.sourceMutable().assign(read.subTensorOp.result());
-    write.subTensorInsertOp.destMutable().assign(read.subTensorOp.source());
+        .replaceAllUsesWith(write.insertSliceOp.getResult());
+    write.transferWriteOp.sourceMutable().assign(read.extractSliceOp.result());
+    write.insertSliceOp.destMutable().assign(read.extractSliceOp.source());
   } else {
     newForOp.getResult(initArgNumber)
         .replaceAllUsesWith(write.transferWriteOp.getResult(0));
@@ -350,9 +351,9 @@ void mlir::linalg::hoistRedundantVectorTransfersOnTensor(FuncOp func) {
         LLVM_DEBUG(dbgs() << "\n";
                    DBGS() << "Candidate write for hoisting: "
                           << *write.transferWriteOp.getOperation() << "\n");
-        if (write.subTensorInsertOp)
-          LLVM_DEBUG(DBGS() << "Candidate subtensor_insert for hoisting: "
-                            << *write.subTensorInsertOp.getOperation() << "\n");
+        if (write.insertSliceOp)
+          LLVM_DEBUG(DBGS() << "Candidate insert_slice for hoisting: "
+                            << *write.insertSliceOp.getOperation() << "\n");
         if (llvm::any_of(write.transferWriteOp.indices(),
                          [&forOp](Value index) {
                            return !forOp.isDefinedOutsideOfLoop(index);
@@ -788,8 +789,8 @@ LogicalResult mlir::linalg::hoistPaddingOnTensors(PadTensorOp &padTensorOp,
   // The implementation proceeds in a stack-like fashion:
   //   1. Iteratively clone and step into the loops, pushing the `packedTensor`
   //      deeper in the stack.
-  //   2. Create a SubTensorInsert at the top of the stack.
-  //   3. Iteratively pop and yield the result of the SubTensorInsertOp across
+  //   2. Create a InsertSliceOp at the top of the stack.
+  //   3. Iteratively pop and yield the result of the InsertSliceOp across
   //     the cloned loops.
   SmallVector<Value> clonedLoopIvs, leadingPackedTensorIndexings;
   clonedLoopIvs.reserve(nLoops);
@@ -799,10 +800,10 @@ LogicalResult mlir::linalg::hoistPaddingOnTensors(PadTensorOp &padTensorOp,
   backwardSlice.insert(padTensorOp);
   // Stack step 1. iteratively clone loops and push `packedTensor`.
   for (Operation *op : backwardSlice) {
-    // Specifically sit out in the subtenso(packedTensor) case: this is the
+    // Specifically sit out in the extract_slice(packedTensor) case: this is the
     // piece we seek to replace.
-    if (auto subTensor = dyn_cast<SubTensorOp>(op))
-      if (bvm.lookupOrDefault(subTensor.source()) == packedTensor)
+    if (auto sliceOp = dyn_cast<tensor::ExtractSliceOp>(op))
+      if (bvm.lookupOrDefault(sliceOp.source()) == packedTensor)
         continue;
     auto effects = dyn_cast<MemoryEffectOpInterface>(op);
     bool hasNoEffects = !effects || effects.hasNoEffect();
@@ -839,7 +840,7 @@ LogicalResult mlir::linalg::hoistPaddingOnTensors(PadTensorOp &padTensorOp,
     packedTensor = clonedForOp.getRegionIterArgs().front();
   }
 
-  // Stack step 2. create SubTensorInsertOp at the top of the stack.
+  // Stack step 2. create InsertSliceOp at the top of the stack.
   // offsets = [clonedLoopIvs, 0 .. 0].
   SmallVector<OpFoldResult> offsets(leadingPackedTensorIndexings.begin(),
                                     leadingPackedTensorIndexings.end());
@@ -856,8 +857,8 @@ LogicalResult mlir::linalg::hoistPaddingOnTensors(PadTensorOp &padTensorOp,
   SmallVector<OpFoldResult> strides(nLoops + paddedRank, b.getIndexAttr(1));
 
   Value inserted =
-      b.create<SubTensorInsertOp>(loc, bvm.lookup(padTensorOp.result()),
-                                  packedTensor, offsets, sizes, strides);
+      b.create<tensor::InsertSliceOp>(loc, bvm.lookup(padTensorOp.result()),
+                                      packedTensor, offsets, sizes, strides);
 
   // Stack step 3. iteratively pop the stack and propagate the yield.
   Value valueToYield = inserted;
@@ -869,7 +870,7 @@ LogicalResult mlir::linalg::hoistPaddingOnTensors(PadTensorOp &padTensorOp,
   }
 
   // Now the packed tensor is ready, replace the original padding op by a
-  // 1x..x1 SubTensor [originalLoopIvs, 0 .. 0][1 .. 1, paddedShape][1 .. 1].
+  // 1x..x1 slice [originalLoopIvs, 0 .. 0][1 .. 1, paddedShape][1 .. 1].
   b.setInsertionPoint(padTensorOp);
   SmallVector<Value> loopIterationCounts =
       llvm::to_vector<4>(llvm::map_range(packingLoops, [&](Operation *loop) {
@@ -888,8 +889,8 @@ LogicalResult mlir::linalg::hoistPaddingOnTensors(PadTensorOp &padTensorOp,
   packedTensor =
       scf::getForInductionVarOwner(clonedLoopIvs.front())->getResult(0);
   padTensorOp.replaceAllUsesWith(
-      b.create<SubTensorOp>(loc, padTensorOp.getResultType(), packedTensor,
-                            offsets, sizes, strides)
+      b.create<tensor::ExtractSliceOp>(loc, padTensorOp.getResultType(),
+                                       packedTensor, offsets, sizes, strides)
           ->getResult(0));
 
   Operation *toErase = padTensorOp;

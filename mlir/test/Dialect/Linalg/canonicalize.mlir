@@ -648,15 +648,15 @@ func @keep_not_noop(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>)
 
 // -----
 
-func @fold_init_tensor_with_subtensor
+func @fold_init_tensor_with_slice
   (%arg0 : index, %arg1 : index) -> tensor<5x?x20xf32>
 {
   %0 = linalg.init_tensor[%arg0, 10, 40] : tensor<?x10x40xf32>
-  %1 = subtensor %0[0, 0, 0] [5, %arg1, 20] [1, 1, 1]
+  %1 = tensor.extract_slice %0[0, 0, 0] [5, %arg1, 20] [1, 1, 1]
     : tensor<?x10x40xf32> to tensor<5x?x20xf32>
   return %1 : tensor<5x?x20xf32>
 }
-//      CHECK: func @fold_init_tensor_with_subtensor
+//      CHECK: func @fold_init_tensor_with_slice
 // CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: index
 // CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
 //      CHECK:   %[[T0:.+]] = linalg.init_tensor [5, %[[ARG1]], 20]
@@ -723,13 +723,13 @@ func @propogate_casts(%arg0 : tensor<?x?xf32>, %arg1 : f32, %arg2 : index,
   %1 = linalg.fill(%0, %arg1) : tensor<?x?xf32>, f32 -> tensor<?x?xf32>
   %2 = memref.dim %arg0, %c0 : tensor<?x?xf32>
   %3 = memref.dim %arg0, %c1 : tensor<?x?xf32>
-  %4 = subtensor_insert %arg0 into %1[%arg2, %arg3] [%2, %3] [1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
+  %4 = tensor.insert_slice %arg0 into %1[%arg2, %arg3] [%2, %3] [1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
   return %4 : tensor<?x?xf32>
 }
 // CHECK-LABEL: func @propogate_casts
 //       CHECK:   %[[INIT:.+]] = linalg.init_tensor [21, 42]
 //       CHECK:   %[[FILL:.+]] = linalg.fill(%[[INIT]], %{{.+}})
-//       CHECK:   %[[INSERTED:.+]] = subtensor_insert %{{.+}} into %[[FILL]]
+//       CHECK:   %[[INSERTED:.+]] = tensor.insert_slice %{{.+}} into %[[FILL]]
 //       CHECK:   %[[RESULT:.+]] = tensor.cast %[[INSERTED]]
 //       CHECK:   return %[[RESULT]]
 

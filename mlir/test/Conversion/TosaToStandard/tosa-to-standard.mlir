@@ -12,7 +12,7 @@ func @const_test() -> (tensor<i32>) {
 // -----
 
 func @slice(%arg0: tensor<6xf32>) ->() {
-  // CHECK: [[SLICE:%.+]] = subtensor %arg0[2] [1] [1]
+  // CHECK: [[SLICE:%.+]] = tensor.extract_slice %arg0[2] [1] [1]
   %0 = "tosa.slice"(%arg0) {start = [2], size = [1]} : (tensor<6xf32>)  -> (tensor<1xf32>)
   return
 }
