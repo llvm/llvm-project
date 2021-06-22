@@ -108,3 +108,12 @@ define ptr @load_bitcast_2(ptr %a) {
   %d = bitcast i8* %c to ptr
   ret ptr %d
 }
+
+define void @call(ptr %a) {
+; CHECK-LABEL: @call(
+; CHECK-NEXT:    call void [[A:%.*]]()
+; CHECK-NEXT:    ret void
+;
+  call void %a()
+  ret void
+}

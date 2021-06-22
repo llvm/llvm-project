@@ -2310,8 +2310,7 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
   if (IntrinsicInst *II = findInitTrampoline(Callee))
     return transformCallThroughTrampoline(Call, *II);
 
-  PointerType *PTy = cast<PointerType>(Callee->getType());
-  FunctionType *FTy = cast<FunctionType>(PTy->getElementType());
+  FunctionType *FTy = Call.getFunctionType();
   if (FTy->isVarArg()) {
     int ix = FTy->getNumParams();
     // See if we can optimize any arguments passed through the varargs area of
