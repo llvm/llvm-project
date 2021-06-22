@@ -917,27 +917,24 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
 
   Type *IntIdxTy = DL.getIndexType(Ptr->getType());
 
-  // If this is a constant expr gep that is effectively computing an
-  // "offsetof", fold it into 'cast int Size to T*' instead of 'gep 0, 0, 12'
-  for (unsigned i = 1, e = Ops.size(); i != e; ++i)
-      if (!isa<ConstantInt>(Ops[i])) {
+  // If this is "gep i8* Ptr, (sub 0, V)", fold this as:
+  // "inttoptr (sub (ptrtoint Ptr), V)"
+  if (Ops.size() == 2 && ResElemTy->isIntegerTy(8)) {
+    auto *CE = dyn_cast<ConstantExpr>(Ops[1]);
+    assert((!CE || CE->getType() == IntIdxTy) &&
+           "CastGEPIndices didn't canonicalize index types!");
+    if (CE && CE->getOpcode() == Instruction::Sub &&
+        CE->getOperand(0)->isNullValue()) {
+      Constant *Res = ConstantExpr::getPtrToInt(Ptr, CE->getType());
+      Res = ConstantExpr::getSub(Res, CE->getOperand(1));
+      Res = ConstantExpr::getIntToPtr(Res, ResTy);
+      return ConstantFoldConstant(Res, DL, TLI);
+    }
+  }
 
-        // If this is "gep i8* Ptr, (sub 0, V)", fold this as:
-        // "inttoptr (sub (ptrtoint Ptr), V)"
-        if (Ops.size() == 2 && ResElemTy->isIntegerTy(8)) {
-          auto *CE = dyn_cast<ConstantExpr>(Ops[1]);
-          assert((!CE || CE->getType() == IntIdxTy) &&
-                 "CastGEPIndices didn't canonicalize index types!");
-          if (CE && CE->getOpcode() == Instruction::Sub &&
-              CE->getOperand(0)->isNullValue()) {
-            Constant *Res = ConstantExpr::getPtrToInt(Ptr, CE->getType());
-            Res = ConstantExpr::getSub(Res, CE->getOperand(1));
-            Res = ConstantExpr::getIntToPtr(Res, ResTy);
-            return ConstantFoldConstant(Res, DL, TLI);
-          }
-        }
-        return nullptr;
-      }
+  for (unsigned i = 1, e = Ops.size(); i != e; ++i)
+    if (!isa<ConstantInt>(Ops[i]))
+      return nullptr;
 
   unsigned BitWidth = DL.getTypeSizeInBits(IntIdxTy);
   APInt Offset =
