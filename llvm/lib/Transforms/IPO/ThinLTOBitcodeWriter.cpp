@@ -69,15 +69,6 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
       ImportGV->setName(NewName);
       ImportGV->setVisibility(GlobalValue::HiddenVisibility);
     }
-
-    if (Function *F = dyn_cast<Function>(&ExportGV)) {
-      // Create a local alias with the original name to avoid breaking
-      // references from inline assembly.
-      GlobalAlias *A =
-          GlobalAlias::create(F->getValueType(), F->getAddressSpace(),
-                              GlobalValue::InternalLinkage, Name, F, &ExportM);
-      appendToCompilerUsed(ExportM, A);
-    }
   }
 
   if (!RenamedComdats.empty())
