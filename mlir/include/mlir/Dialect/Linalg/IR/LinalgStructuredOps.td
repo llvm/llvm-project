@@ -28,13 +28,6 @@ class LinalgStructuredBase_Op<string mnemonic, list<OpTrait> props>
   : Op<Linalg_Dialect, mnemonic, !listconcat(props, [
        LinalgStructuredInterface, InferShapedTypeOpInterface])> {
   code structuredOpsBaseDecls = [{
-    // Return the number of induction variables in the basic block. This should
-    // always be 0 for index-free linalg ops. For IndexedGeneric, this must be
-    // equal to numLoops.
-    unsigned getNumPayloadInductionVariables() {
-      return 0;
-    }
-
     // Return whether the op accesses the iteration indices.
     bool hasIndexSemantics() {
       Operation *op = this->getOperation();

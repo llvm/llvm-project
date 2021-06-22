@@ -3229,16 +3229,13 @@ struct RemoveIdentityLinalgOps : public OpInterfaceRewritePattern<LinalgOp> {
 
     // Get the argument number of the returned values. That is the operand
     // number to use for replacing uses of this operation.
-    unsigned numIndexArgs = op.getNumPayloadInductionVariables();
     SmallVector<Value, 4> returnedArgs;
     for (Value yieldVal : yieldOp.values()) {
       auto yieldArg = yieldVal.dyn_cast<BlockArgument>();
       if (!yieldArg || yieldArg.getOwner() != &body)
         return failure();
       unsigned argumentNumber = yieldArg.getArgNumber();
-      if (argumentNumber < numIndexArgs)
-        return failure();
-      returnedArgs.push_back(op->getOperand(argumentNumber - numIndexArgs));
+      returnedArgs.push_back(op->getOperand(argumentNumber));
     }
     if (returnedArgs.size() != op.getOperation()->getNumResults())
       return failure();
