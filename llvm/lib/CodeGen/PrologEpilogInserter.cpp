@@ -285,7 +285,7 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
     (void)Failed;
   }
   if (StackSize > Threshold) {
-    DiagnosticInfoStackSize DiagStackSize(F, StackSize);
+    DiagnosticInfoStackSize DiagStackSize(F, StackSize, DS_Warning, Threshold);
     F.getContext().diagnose(DiagStackSize);
   }
   ORE->emit([&]() {
