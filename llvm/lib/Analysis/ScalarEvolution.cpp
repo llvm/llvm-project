@@ -1071,10 +1071,17 @@ const SCEV *ScalarEvolution::getLosslessPtrToIntExpr(const SCEV *Op,
   if (const SCEV *S = UniqueSCEVs.FindNodeOrInsertPos(ID, IP))
     return S;
 
+  // It isn't legal for optimizations to construct new ptrtoint expressions
+  // for non-integral pointers.
+  if (getDataLayout().isNonIntegralPointerType(Op->getType()))
+    return getCouldNotCompute();
+
   Type *IntPtrTy = getDataLayout().getIntPtrType(Op->getType());
 
-  // We can only model ptrtoint if SCEV's effective (integer) type
+  // We can only trivially model ptrtoint if SCEV's effective (integer) type
   // is sufficiently wide to represent all possible pointer values.
+  // We could theoretically teach SCEV to truncate wider pointers, but
+  // that isn't implemented for now.
   if (getDataLayout().getTypeSizeInBits(getEffectiveSCEVType(Op->getType())) !=
       getDataLayout().getTypeSizeInBits(IntPtrTy))
     return getCouldNotCompute();
@@ -7527,6 +7534,10 @@ ScalarEvolution::ExitLimit::ExitLimit(
   for (auto *PredSet : PredSetList)
     for (auto *P : *PredSet)
       addPredicate(P);
+  assert((isa<SCEVCouldNotCompute>(E) || !E->getType()->isPointerTy()) &&
+         "Backedge count should be int");
+  assert((isa<SCEVCouldNotCompute>(M) || !M->getType()->isPointerTy()) &&
+         "Max backedge count should be int");
 }
 
 ScalarEvolution::ExitLimit::ExitLimit(
@@ -7952,6 +7963,16 @@ ScalarEvolution::computeExitLimitFromICmp(const Loop *L,
   switch (Pred) {
   case ICmpInst::ICMP_NE: {                     // while (X != Y)
     // Convert to: while (X-Y != 0)
+    if (LHS->getType()->isPointerTy()) {
+      LHS = getLosslessPtrToIntExpr(LHS);
+      if (isa<SCEVCouldNotCompute>(LHS))
+        return LHS;
+    }
+    if (RHS->getType()->isPointerTy()) {
+      RHS = getLosslessPtrToIntExpr(RHS);
+      if (isa<SCEVCouldNotCompute>(RHS))
+        return RHS;
+    }
     ExitLimit EL = howFarToZero(getMinusSCEV(LHS, RHS), L, ControlsExit,
                                 AllowPredicates);
     if (EL.hasAnyInfo()) return EL;
@@ -11515,6 +11536,22 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   }
 
   const SCEV *Start = IV->getStart();
+
+  // Preserve pointer-typed Start/RHS to pass to isLoopEntryGuardedByCond.
+  // Use integer-typed versions for actual computation.
+  const SCEV *OrigStart = Start;
+  const SCEV *OrigRHS = RHS;
+  if (Start->getType()->isPointerTy()) {
+    Start = getLosslessPtrToIntExpr(Start);
+    if (isa<SCEVCouldNotCompute>(Start))
+      return Start;
+  }
+  if (RHS->getType()->isPointerTy()) {
+    RHS = getLosslessPtrToIntExpr(RHS);
+    if (isa<SCEVCouldNotCompute>(RHS))
+      return RHS;
+  }
+
   const SCEV *End = RHS;
   // When the RHS is not invariant, we do not know the end bound of the loop and
   // cannot calculate the ExactBECount needed by ExitLimit. However, we can
@@ -11541,13 +11578,13 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   // result is as above, and if not max(End,Start) is Start so we get a backedge
   // count of zero.
   const SCEV *BECount;
-  if (isLoopEntryGuardedByCond(L, Cond, getMinusSCEV(Start, Stride), RHS))
+  if (isLoopEntryGuardedByCond(L, Cond, getMinusSCEV(OrigStart, Stride), OrigRHS))
     BECount = BECountIfBackedgeTaken;
   else {
     // If we know that RHS >= Start in the context of loop, then we know that
     // max(RHS, Start) = RHS at this point.
     if (isLoopEntryGuardedByCond(
-            L, IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE, RHS, Start))
+            L, IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE, OrigRHS, OrigStart))
       End = RHS;
     else
       End = IsSigned ? getSMaxExpr(RHS, Start) : getUMaxExpr(RHS, Start);
@@ -11624,6 +11661,17 @@ ScalarEvolution::howManyGreaterThans(const SCEV *LHS, const SCEV *RHS,
       End = RHS;
     else
       End = IsSigned ? getSMinExpr(RHS, Start) : getUMinExpr(RHS, Start);
+  }
+
+  if (Start->getType()->isPointerTy()) {
+    Start = getLosslessPtrToIntExpr(Start);
+    if (isa<SCEVCouldNotCompute>(Start))
+      return Start;
+  }
+  if (End->getType()->isPointerTy()) {
+    End = getLosslessPtrToIntExpr(End);
+    if (isa<SCEVCouldNotCompute>(End))
+      return End;
   }
 
   const SCEV *BECount = computeBECount(getMinusSCEV(Start, End), Stride);

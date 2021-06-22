@@ -14,10 +14,10 @@ while.body:
 ;CHECK-NEXT:    %indvar = phi i64 [ %indvar.next, %while.body ], [ 0, %while.body.preheader ]
 ;CHECK-NEXT:    %S.011 = phi i32 [ %add, %while.body ], [ undef, %while.body.preheader ]
 ;CHECK-NEXT:    %scevgep = getelementptr i32, i32* %buf, i64 %indvar
-;CHECK-NEXT:    %4 = load i32, i32* %scevgep, align 4
-;CHECK-NEXT:    %add = add nsw i32 %4, %S.011
+;CHECK-NEXT:    %5 = load i32, i32* %scevgep, align 4
+;CHECK-NEXT:    %add = add nsw i32 %5, %S.011
 ;CHECK-NEXT:    %indvar.next = add i64 %indvar, 1
-;CHECK-NEXT:    %exitcond = icmp eq i64 %indvar, %3
+;CHECK-NEXT:    %exitcond = icmp eq i64 %indvar, %4
 ;CHECK-NEXT:    br i1 %exitcond, label %while.end.loopexit, label %while.body
 
   %S.011 = phi i32 [ %add2, %while.body ], [ undef, %while.body.preheader ]
@@ -52,12 +52,12 @@ while.body:
 ;CHECK-LABEL: while.body:
 ;CHECK-NEXT:    %indvar = phi i64 [ %indvar.next, %while.body ], [ 0, %while.body.preheader ]
 ;CHECK-NEXT:    %S.011 = phi i32 [ %add, %while.body ], [ undef, %while.body.preheader ]
-;CHECK-NEXT:    %4 = mul nsw i64 %indvar, -1
-;CHECK-NEXT:    %scevgep = getelementptr i32, i32* %buf, i64 %4
-;CHECK-NEXT:    %5 = load i32, i32* %scevgep, align 4
-;CHECK-NEXT:    %add = add nsw i32 %5, %S.011
+;CHECK-NEXT:    %5 = mul nsw i64 %indvar, -1
+;CHECK-NEXT:    %scevgep = getelementptr i32, i32* %buf, i64 %5
+;CHECK-NEXT:    %6 = load i32, i32* %scevgep, align 4
+;CHECK-NEXT:    %add = add nsw i32 %6, %S.011
 ;CHECK-NEXT:    %indvar.next = add i64 %indvar, 1
-;CHECK-NEXT:    %exitcond = icmp eq i64 %indvar, %3
+;CHECK-NEXT:    %exitcond = icmp eq i64 %indvar, %4
 ;CHECK-NEXT:    br i1 %exitcond, label %while.end.loopexit, label %while.body
 
   %S.011 = phi i32 [ %add2, %while.body ], [ undef, %while.body.preheader ]
