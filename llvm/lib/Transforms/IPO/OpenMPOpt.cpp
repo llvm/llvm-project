@@ -1623,9 +1623,13 @@ private:
     };
     GlobalizationRFI.foreachUse(SCC, CreateAA);
 
+    // Create an ExecutionDomain AA for every function and a HeapToStack AA for
+    // every function if there is a device kernel.
     for (auto *F : SCC) {
       if (!F->isDeclaration())
         A.getOrCreateAAFor<AAExecutionDomain>(IRPosition::function(*F));
+      if (!OMPInfoCache.Kernels.empty())
+        A.getOrCreateAAFor<AAHeapToStack>(IRPosition::function(*F));
     }
   }
 };
