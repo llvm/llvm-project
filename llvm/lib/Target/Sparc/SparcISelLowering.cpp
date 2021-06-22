@@ -2988,9 +2988,10 @@ static SDValue LowerUMULO_SMULO(SDValue Op, SelectionDAG &DAG,
 }
 
 static SDValue LowerATOMIC_LOAD_STORE(SDValue Op, SelectionDAG &DAG) {
-  if (isStrongerThanMonotonic(cast<AtomicSDNode>(Op)->getOrdering()))
-  // Expand with a fence.
-  return SDValue();
+  if (isStrongerThanMonotonic(cast<AtomicSDNode>(Op)->getSuccessOrdering())) {
+    // Expand with a fence.
+    return SDValue();
+  }
 
   // Monotonic load/stores are legal.
   return Op;

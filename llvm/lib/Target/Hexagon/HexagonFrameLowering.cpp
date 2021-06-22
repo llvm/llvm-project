@@ -1552,7 +1552,7 @@ void HexagonFrameLowering::processFunctionBeforeFrameFinalized(
               auto *NewMMO = MF.getMachineMemOperand(
                   MMO->getPointerInfo(), MMO->getFlags(), MMO->getSize(),
                   MFI.getObjectAlign(FI), MMO->getAAInfo(), MMO->getRanges(),
-                  MMO->getSyncScopeID(), MMO->getOrdering(),
+                  MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
                   MMO->getFailureOrdering());
               new_memops.push_back(NewMMO);
               KeepOld = false;

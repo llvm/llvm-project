@@ -182,7 +182,7 @@ stable_hash llvm::stableHashValue(const MachineInstr &MI, bool HashVRegs,
     HashComponents.push_back(static_cast<unsigned>(Op->getSize()));
     HashComponents.push_back(static_cast<unsigned>(Op->getFlags()));
     HashComponents.push_back(static_cast<unsigned>(Op->getOffset()));
-    HashComponents.push_back(static_cast<unsigned>(Op->getOrdering()));
+    HashComponents.push_back(static_cast<unsigned>(Op->getSuccessOrdering()));
     HashComponents.push_back(static_cast<unsigned>(Op->getAddrSpace()));
     HashComponents.push_back(static_cast<unsigned>(Op->getSyncScopeID()));
     HashComponents.push_back(static_cast<unsigned>(Op->getBaseAlign().value()));

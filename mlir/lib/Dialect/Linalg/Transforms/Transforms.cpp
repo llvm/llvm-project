@@ -837,8 +837,10 @@ LogicalResult SubTensorOfPadTensorSwapPattern::matchAndRewrite(
     } else {
       Value check = rewriter.create<CmpIOp>(
           loc, CmpIPredicate::eq, newLength, zero);
-      dynHasZeroLenCond = dynHasZeroLenCond
-          ? rewriter.create<AndOp>(loc, check, dynHasZeroLenCond) : check;
+      dynHasZeroLenCond =
+          dynHasZeroLenCond
+              ? rewriter.create<OrOp>(loc, check, dynHasZeroLenCond)
+              : check;
     }
 
     // The amount of high padding is simply the number of elements remaining,

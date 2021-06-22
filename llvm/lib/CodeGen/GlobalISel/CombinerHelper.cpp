@@ -491,7 +491,7 @@ bool CombinerHelper::matchCombineExtendingLoads(MachineInstr &MI,
         LegalityQuery::MemDesc MMDesc;
         MMDesc.SizeInBits = MMO.getSizeInBits();
         MMDesc.AlignInBits = MMO.getAlign().value() * 8;
-        MMDesc.Ordering = MMO.getOrdering();
+        MMDesc.Ordering = MMO.getSuccessOrdering();
         LLT UseTy = MRI.getType(UseMI.getOperand(0).getReg());
         LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
         if (LI->getAction({MI.getOpcode(), {UseTy, SrcTy}, {MMDesc}}).Action !=
@@ -3661,7 +3661,7 @@ bool CombinerHelper::matchLoadOrCombine(
   LegalityQuery::MemDesc MMDesc;
   MMDesc.SizeInBits = WideMemSizeInBits;
   MMDesc.AlignInBits = MMO.getAlign().value() * 8;
-  MMDesc.Ordering = MMO.getOrdering();
+  MMDesc.Ordering = MMO.getSuccessOrdering();
   if (!isLegalOrBeforeLegalizer(
           {TargetOpcode::G_LOAD, {Ty, MRI.getType(Ptr)}, {MMDesc}}))
     return false;

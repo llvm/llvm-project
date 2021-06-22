@@ -235,8 +235,8 @@ static void applyPatterns(FuncOp funcOp) {
   patterns.add<LinalgPromotionPattern<FillOp>>(
       ctx,
       LinalgPromotionOptions()
-          .setOperandsToPromote({0})
-          .setUseFullTileBuffers({true})
+          .setOperandsToPromote({1})
+          .setUseFullTileBuffers({false, true})
           .setAlignment(32),
       LinalgTransformationFilter(
           Identifier::get("_promote_views_aligned_", ctx),
