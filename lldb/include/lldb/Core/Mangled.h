@@ -43,7 +43,8 @@ public:
   enum ManglingScheme {
     eManglingSchemeNone = 0,
     eManglingSchemeMSVC,
-    eManglingSchemeItanium
+    eManglingSchemeItanium,
+    eManglingSchemeRustV0
   };
 
   /// Default constructor.
