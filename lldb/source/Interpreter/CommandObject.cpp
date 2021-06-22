@@ -219,7 +219,6 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
       // A process that is not running is considered paused.
       if (GetFlags().Test(eCommandProcessMustBeLaunched)) {
         result.AppendError("Process must exist.");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     } else {
@@ -239,7 +238,6 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
       case eStateUnloaded:
         if (GetFlags().Test(eCommandProcessMustBeLaunched)) {
           result.AppendError("Process must be launched.");
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
         break;
@@ -249,7 +247,6 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
         if (GetFlags().Test(eCommandProcessMustBePaused)) {
           result.AppendError("Process is running.  Use 'process interrupt' to "
                              "pause execution.");
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
       }
@@ -351,7 +348,6 @@ bool CommandObject::ParseOptionsAndNotify(Args &args,
   Status error(group_options.NotifyOptionParsingFinished(&exe_ctx));
   if (error.Fail()) {
     result.AppendError(error.AsCString());
-    result.SetStatus(eReturnStatusFailed);
     return false;
   }
   return true;
