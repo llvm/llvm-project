@@ -4022,8 +4022,11 @@ static const char *__kmp_parse_single_omp_schedule(const char *name,
   else if (!__kmp_strcasecmp_with_sentinel("static", ptr, *delim))
     sched = kmp_sch_static;
 #if KMP_STATIC_STEAL_ENABLED
-  else if (!__kmp_strcasecmp_with_sentinel("static_steal", ptr, *delim))
-    sched = kmp_sch_static_steal;
+  else if (!__kmp_strcasecmp_with_sentinel("static_steal", ptr, *delim)) {
+    // replace static_steal with dynamic to better cope with ordered loops
+    sched = kmp_sch_dynamic_chunked;
+    sched_modifier = sched_type::kmp_sch_modifier_nonmonotonic;
+  }
 #endif
   else {
     // If there is no proper schedule kind, then this schedule is invalid
