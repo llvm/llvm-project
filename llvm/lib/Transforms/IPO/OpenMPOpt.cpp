@@ -1145,13 +1145,12 @@ private:
 
     auto CheckGlobalization = [&](Use &U, Function &Decl) {
       if (CallInst *CI = getCallIfRegularCall(U, &RFI)) {
-        auto Remark = [&](OptimizationRemarkAnalysis ORA) {
-          return ORA
+        auto Remark = [&](OptimizationRemarkMissed ORM) {
+          return ORM
                  << "Found thread data sharing on the GPU. "
                  << "Expect degraded performance due to data globalization.";
         };
-        emitRemark<OptimizationRemarkAnalysis>(CI, "OpenMPGlobalization",
-                                               Remark);
+        emitRemark<OptimizationRemarkMissed>(CI, "OpenMPGlobalization", Remark);
       }
 
       return false;
