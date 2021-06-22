@@ -276,17 +276,27 @@ public:
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
   // Simply fold the operator into the pointer to the sparse storage scheme.
-  // TODO: generalize this beyond all-dense linearized "sparse" tensors
   matchAndRewrite(ToTensorOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
-    if (auto call = operands[0].getDefiningOp<CallOp>()) {
-      Value arg = call.getOperand(0);
-      if (arg.getType().isa<LLVM::LLVMPointerType>()) {
-        rewriter.replaceOp(op, arg);
-        return success();
+    // Check that all arguments of the tensor reconstruction operators are calls
+    // into the support library that query exactly the same opaque pointer.
+    Value ptr;
+    for (Value op : operands) {
+      if (auto call = op.getDefiningOp<CallOp>()) {
+        Value arg = call.getOperand(0);
+        if (!arg.getType().isa<LLVM::LLVMPointerType>())
+          return failure();
+        if (!ptr)
+          ptr = arg;
+        else if (arg != ptr)
+          return failure();
       }
     }
-    return failure();
+    // If a single opaque pointer is found, perform the folding.
+    if (!ptr)
+      return failure();
+    rewriter.replaceOp(op, ptr);
+    return success();
   }
 };
 

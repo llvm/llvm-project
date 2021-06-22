@@ -367,7 +367,6 @@ static Dim toDim(SparseTensorEncodingAttr &enc, unsigned d) {
 /// Fills the per-dimension sparsity information for all tensors.
 static bool findSparseAnnotations(Merger &merger, linalg::GenericOp op) {
   bool annotated = false;
-  OpOperand *lhs = op.getOutputOperand(0);
   for (OpOperand *t : op.getInputAndOutputOperands()) {
     auto map = op.getTiedIndexingMap(t);
     if (!map.isProjectedPermutation())
@@ -378,12 +377,7 @@ static bool findSparseAnnotations(Merger &merger, linalg::GenericOp op) {
     assert(map.getNumResults() == op.getRank(t));
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
       unsigned idx = map.getDimPosition(perm(enc, d));
-      Dim dim = toDim(enc, d);
       merger.setDim(t->getOperandNumber(), idx, toDim(enc, d));
-      // Accept only all-dense annotated "sparse" output.
-      // TODO: support truly sparse outputs too
-      if (t == lhs && dim != Dim::kDense)
-        return false;
     }
   }
   return annotated;
@@ -495,6 +489,55 @@ static Optional<unsigned> buildTensorExp(Merger &merger, linalg::GenericOp op,
   }
   // Cannot build (yet).
   return None;
+}
+
+/// Returns true if given tensor co-iterates with conjunction only.
+/// For the output tensor, this defines a "simply dynamic" operation.
+/// For instance: A(I) = A(I) * B(I) * C(I)
+static unsigned isConjunction(Merger &merger, unsigned tensor, unsigned exp) {
+  switch (merger.exp(exp).kind) {
+  case Kind::kTensor:
+    return merger.exp(exp).e0 == tensor;
+  case Kind::kMulF:
+  case Kind::kMulI:
+    return isConjunction(merger, tensor, merger.exp(exp).e0) ||
+           isConjunction(merger, tensor, merger.exp(exp).e1);
+  default:
+    return false;
+  }
+}
+
+/// Returns true when the tensor expression is admissable for codegen.
+/// Since all sparse input tensors are admissable, we just need to check
+/// whether the output tensor in the tensor expression codegen is admissable.
+static bool isAdmissableTensorExp(Merger &merger, linalg::GenericOp op,
+                                  unsigned exp) {
+  OpOperand *lhs = op.getOutputOperand(0);
+  unsigned tensor = lhs->getOperandNumber();
+  auto enc = getSparseTensorEncoding(lhs->get().getType());
+  // An non-annotated output tensor is assumed dense, and becomes a random
+  // access n-dim memref. Admissable since inserstions cannot occur.
+  if (!enc)
+    return true;
+  // An all-dense annotated "sparse" output tensor becomes a linearized random
+  // access 1-dim memref. Also admissable since insertions cannot occur.
+  bool allDense = true;
+  unsigned numLoops = op.iterator_types().getValue().size();
+  for (unsigned i = 0; i < numLoops; i++)
+    if (merger.isDim(tensor, i, Dim::kSparse)) {
+      allDense = false;
+      break;
+    }
+  if (allDense)
+    return true;
+  // A tensor expression with a sparse output tensor that changes its values
+  // but not its nonzero structure, an operation called "simply dynamic" in
+  // [Bik96,Ch9], is also admissable without special codegen.
+  if (isConjunction(merger, tensor, exp))
+    return true;
+  // Reject for now since this requires changes to the nonzero structure.
+  // TODO: implement "workspaces" [Kjolstad2019]
+  return false;
 }
 
 /// Builds the iteration lattices in a bottom-up traversal given the remaining
@@ -1391,15 +1434,34 @@ static void genStmt(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
 }
 
 /// Converts the result computed by the sparse kernel into the required form.
-static void genResult(CodeGen &codegen, PatternRewriter &rewriter,
-                      linalg::GenericOp op) {
-  RankedTensorType resType = op.getOutputTensorTypes()[0];
-  Value result = codegen.buffers.back();
-  if (getSparseTensorEncoding(resType))
-    result = rewriter.create<ToTensorOp>(op.getLoc(), resType, result);
-  else
-    result =
-        rewriter.create<memref::TensorLoadOp>(op.getLoc(), resType, result);
+static void genResult(Merger &merger, CodeGen &codegen,
+                      PatternRewriter &rewriter, linalg::GenericOp op) {
+  Location loc = op.getLoc();
+  OpOperand *lhs = op.getOutputOperand(0);
+  Type resType = lhs->get().getType();
+  unsigned tensor = lhs->getOperandNumber();
+  auto map = op.getTiedIndexingMap(lhs);
+  auto enc = getSparseTensorEncoding(resType);
+  Value result = codegen.buffers.back(); // value array
+  if (enc) {
+    // The sparse annotation unambigiously defines the arrays needed
+    // to "reconstruct" the sparse tensor from the storage scheme
+    // (even though lowering should never need this eventually).
+    SmallVector<Value, 4> args;
+    for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
+      unsigned idx = map.getDimPosition(perm(enc, d));
+      if (merger.isDim(tensor, idx, Dim::kSparse)) {
+        args.push_back(codegen.pointers[tensor][idx]);
+        args.push_back(codegen.indices[tensor][idx]);
+      }
+    }
+    args.push_back(result);
+    result = rewriter.create<ToTensorOp>(loc, resType, args);
+  } else {
+    // To "reconstruct" an non-annotated tensor, sipmly load it
+    // from the bufferized value.
+    result = rewriter.create<memref::TensorLoadOp>(loc, resType, result);
+  }
   rewriter.replaceOp(op, result);
 }
 
@@ -1438,12 +1500,16 @@ public:
     if (!exp.hasValue())
       return failure(); // build failure
 
+    // Reject an inadmissable tensor expression.
+    if (!isAdmissableTensorExp(merger, op, exp.getValue()))
+      return failure();
+
     // Recursively generates code.
     CodeGen codegen(options, numTensors, numLoops);
     if (!genBuffers(merger, codegen, rewriter, op))
       return failure(); // could not bufferize
     genStmt(merger, codegen, rewriter, op, topSort, exp.getValue(), 0);
-    genResult(codegen, rewriter, op);
+    genResult(merger, codegen, rewriter, op);
     return success();
   }
 
