@@ -296,14 +296,15 @@ module {
 // TLOOP-SAME: (%[[C0]], %[[C0]]) to (%[[DIM_A_0]], %[[DIM_B_1]])
 // TLOOP-SAME: step (%[[C32]], %[[C64]])
 // TLOOP-SAME: ins (%[[A_:.*]] = %[[A]]: [[TY]],
-// TLOOP-SAME:      %[[B_:.*]] = %[[B]]: [[TY]])
+// TLOOP-SAME:      %[[B_:.*]] = %[[B]]: [[TY]],
+// TLOOP-SAME:      %[[C0_F32_:.*]] = %[[C0_F32]]
 // TLOOP-SAME: outs (%[[OUT_:.*]] = %[[OUT]]: [[TY]]) {
 
 // TLOOP:    %[[DIM_A__1:.*]] = memref.dim %[[A_]], %[[C1]] : [[TY]]
 // TLOOP:    %[[A_SUB:.*]] = subtensor %[[A_]][%[[I]], 0]
 // TLOOP:    %[[B_SUB:.*]] = subtensor %[[B_]][0, %[[J]]]
 // TLOOP:    %[[OUT_SUB:.*]] = subtensor %[[OUT_]][%[[I]], %[[J]]]
-// TLOOP:    %[[INIT_SUB:.*]] = linalg.fill(%[[OUT_SUB]], %[[C0_F32]])
+// TLOOP:    %[[INIT_SUB:.*]] = linalg.fill(%[[OUT_SUB]], %[[C0_F32_]])
 
 // TLOOP:    %[[AB_SUB:.*]] = linalg.tiled_loop (%[[K:.*]]) = (%[[C0]])
 // TLOOP-SAME: to (%[[DIM_A__1]]) step (%[[C16]])
@@ -398,3 +399,4 @@ module {
 // TLOOP:    linalg.yield %[[SUB_RESULT]] : [[TY]]
 // TLOOP:  }
 // TLOOP:  return %[[AB]] : [[TY]]
+
