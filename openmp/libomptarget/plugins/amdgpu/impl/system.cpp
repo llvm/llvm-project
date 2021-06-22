@@ -144,16 +144,6 @@ ATLMachine g_atl_machine;
 
 namespace core {
 
-hsa_status_t allow_access_to_all_gpu_agents(void *ptr) {
-  std::vector<ATLGPUProcessor> &gpu_procs =
-      g_atl_machine.processors<ATLGPUProcessor>();
-  std::vector<hsa_agent_t> agents;
-  for (uint32_t i = 0; i < gpu_procs.size(); i++) {
-    agents.push_back(gpu_procs[i].agent());
-  }
-  return hsa_amd_agents_allow_access(agents.size(), &agents[0], NULL, ptr);
-}
-
 // Implement memory_pool iteration function
 static hsa_status_t get_memory_pool_info(hsa_amd_memory_pool_t memory_pool,
                                          void *data) {
@@ -937,11 +927,6 @@ populate_InfoTables(hsa_executable_symbol_t symbol,
 
     DEBUG_PRINT("Symbol %s = %p (%u bytes)\n", name, (void *)info.addr,
                 info.size);
-    err = register_allocation(reinterpret_cast<void *>(info.addr),
-                              (size_t)info.size, ATMI_DEVTYPE_GPU);
-    if (err != HSA_STATUS_SUCCESS) {
-      return err;
-    }
     SymbolInfoTable[std::string(name)] = info;
     free(name);
   } else {
