@@ -248,9 +248,12 @@ private:
       Metrics.analyzeBasicBlock(&BB, (GetTTI)(*F), EphValues);
 
     // If the code metrics reveal that we shouldn't duplicate the function, we
-    // shouldn't specialize it. Set the specialization cost to the maximum.
-    if (Metrics.notDuplicatable)
-      return std::numeric_limits<unsigned>::max();
+    // shouldn't specialize it. Set the specialization cost to Invalid.
+    if (Metrics.notDuplicatable) {
+      InstructionCost C{};
+      C.setInvalid();
+      return C;
+    }
 
     // Otherwise, set the specialization cost to be the cost of all the
     // instructions in the function and penalty for specializing more functions.
@@ -417,6 +420,11 @@ private:
     // function where the argument takes on the given constant value. If so,
     // add the constant to Constants.
     auto FnSpecCost = getSpecializationCost(F);
+    if (!FnSpecCost.isValid()) {
+      LLVM_DEBUG(dbgs() << "FnSpecialization: Invalid specialisation cost.\n");
+      return false;
+    }
+
     LLVM_DEBUG(dbgs() << "FnSpecialization: func specialisation cost: ";
                FnSpecCost.print(dbgs()); dbgs() << "\n");
 
