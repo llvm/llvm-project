@@ -407,10 +407,6 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
   return Error::success();
 }
 
-namespace {
-
-} // anonymous namespace
-
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   ToolName = argv[0];
