@@ -9,6 +9,8 @@
 // OpenMP specific optimizations:
 //
 // - Deduplication of runtime calls, e.g., omp_get_thread_num.
+// - Replacing globalized device memory with stack memory.
+// - Replacing globalized device memory with shared memory.
 //
 //===----------------------------------------------------------------------===//
 
