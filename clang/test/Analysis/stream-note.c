@@ -77,3 +77,14 @@ void check_note_leak_2(int c) {
   fclose(F1);
   fclose(F2);
 }
+
+void check_track_null() {
+  FILE *F;
+  F = fopen("foo1.c", "r"); // expected-note {{Value assigned to 'F'}} expected-note {{Assuming pointer value is null}}
+  if (F != NULL) {          // expected-note {{Taking false branch}} expected-note {{'F' is equal to NULL}}
+    fclose(F);
+    return;
+  }
+  fclose(F); // expected-warning {{Stream pointer might be NULL}}
+  // expected-note@-1 {{Stream pointer might be NULL}}
+}
