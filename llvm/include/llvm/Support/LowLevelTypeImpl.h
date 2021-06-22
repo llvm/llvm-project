@@ -42,31 +42,37 @@ public:
   /// Get a low-level scalar or aggregate "bag of bits".
   static LLT scalar(unsigned SizeInBits) {
     assert(SizeInBits > 0 && "invalid scalar size");
-    return LLT{/*isPointer=*/false, /*isVector=*/false, /*NumElements=*/0,
-               SizeInBits, /*AddressSpace=*/0};
+    return LLT{/*isPointer=*/false, /*isVector=*/false,
+               ElementCount::getFixed(0), SizeInBits,
+               /*AddressSpace=*/0};
   }
 
   /// Get a low-level pointer in the given address space.
   static LLT pointer(unsigned AddressSpace, unsigned SizeInBits) {
     assert(SizeInBits > 0 && "invalid pointer size");
-    return LLT{/*isPointer=*/true, /*isVector=*/false, /*NumElements=*/0,
-               SizeInBits, AddressSpace};
+    return LLT{/*isPointer=*/true, /*isVector=*/false,
+               ElementCount::getFixed(0), SizeInBits, AddressSpace};
   }
 
   /// Get a low-level vector of some number of elements and element width.
   /// \p NumElements must be at least 2.
-  static LLT vector(uint16_t NumElements, unsigned ScalarSizeInBits) {
-    assert(NumElements > 1 && "invalid number of vector elements");
+  static LLT vector(uint16_t NumElements, unsigned ScalarSizeInBits,
+                    bool Scalable = false) {
+    assert(((!Scalable && NumElements > 1) || NumElements > 0) &&
+           "invalid number of vector elements");
     assert(ScalarSizeInBits > 0 && "invalid vector element size");
-    return LLT{/*isPointer=*/false, /*isVector=*/true, NumElements,
-               ScalarSizeInBits, /*AddressSpace=*/0};
+    return LLT{/*isPointer=*/false, /*isVector=*/true,
+               ElementCount::get(NumElements, Scalable), ScalarSizeInBits,
+               /*AddressSpace=*/0};
   }
 
   /// Get a low-level vector of some number of elements and element type.
-  static LLT vector(uint16_t NumElements, LLT ScalarTy) {
-    assert(NumElements > 1 && "invalid number of vector elements");
+  static LLT vector(uint16_t NumElements, LLT ScalarTy, bool Scalable = false) {
+    assert(((!Scalable && NumElements > 1) || NumElements > 0) &&
+           "invalid number of vector elements");
     assert(!ScalarTy.isVector() && "invalid vector element type");
-    return LLT{ScalarTy.isPointer(), /*isVector=*/true, NumElements,
+    return LLT{ScalarTy.isPointer(), /*isVector=*/true,
+               ElementCount::get(NumElements, Scalable),
                ScalarTy.getSizeInBits(),
                ScalarTy.isPointer() ? ScalarTy.getAddressSpace() : 0};
   }
@@ -79,9 +85,9 @@ public:
     return scalarOrVector(NumElements, LLT::scalar(ScalarSize));
   }
 
-  explicit LLT(bool isPointer, bool isVector, uint16_t NumElements,
+  explicit LLT(bool isPointer, bool isVector, ElementCount EC,
                unsigned SizeInBits, unsigned AddressSpace) {
-    init(isPointer, isVector, NumElements, SizeInBits, AddressSpace);
+    init(isPointer, isVector, EC, SizeInBits, AddressSpace);
   }
   explicit LLT() : IsPointer(false), IsVector(false), RawData(0) {}
 
@@ -98,18 +104,37 @@ public:
   /// Returns the number of elements in a vector LLT. Must only be called on
   /// vector types.
   uint16_t getNumElements() const {
+    if (isScalable())
+      llvm::reportInvalidSizeRequest(
+          "Possible incorrect use of LLT::getNumElements() for "
+          "scalable vector. Scalable flag may be dropped, use "
+          "LLT::getElementCount() instead");
+    return getElementCount().getKnownMinValue();
+  }
+
+  /// Returns true if the LLT is a scalable vector. Must only be called on
+  /// vector types.
+  bool isScalable() const {
+    assert(isVector() && "Expected a vector type");
+    return IsPointer ? getFieldValue(PointerVectorScalableFieldInfo)
+                     : getFieldValue(VectorScalableFieldInfo);
+  }
+
+  ElementCount getElementCount() const {
     assert(IsVector && "cannot get number of elements on scalar/aggregate");
-    if (!IsPointer)
-      return getFieldValue(VectorElementsFieldInfo);
-    else
-      return getFieldValue(PointerVectorElementsFieldInfo);
+    return ElementCount::get(IsPointer
+                                 ? getFieldValue(PointerVectorElementsFieldInfo)
+                                 : getFieldValue(VectorElementsFieldInfo),
+                             isScalable());
   }
 
   /// Returns the total size of the type. Must only be called on sized types.
   unsigned getSizeInBits() const {
     if (isPointer() || isScalar())
       return getScalarSizeInBits();
-    return getScalarSizeInBits() * getNumElements();
+    // FIXME: This should return a TypeSize in order to work for scalable
+    // vectors.
+    return getScalarSizeInBits() * getElementCount().getKnownMinValue();
   }
 
   /// Returns the total size of the type in bytes, i.e. number of whole bytes
@@ -125,7 +150,9 @@ public:
   /// If this type is a vector, return a vector with the same number of elements
   /// but the new element type. Otherwise, return the new element type.
   LLT changeElementType(LLT NewEltTy) const {
-    return isVector() ? LLT::vector(getNumElements(), NewEltTy) : NewEltTy;
+    return isVector() ? LLT::vector(getElementCount().getKnownMinValue(),
+                                    NewEltTy, isScalable())
+                      : NewEltTy;
   }
 
   /// If this type is a vector, return a vector with the same number of elements
@@ -134,13 +161,16 @@ public:
   LLT changeElementSize(unsigned NewEltSize) const {
     assert(!getScalarType().isPointer() &&
            "invalid to directly change element size for pointers");
-    return isVector() ? LLT::vector(getNumElements(), NewEltSize)
+    return isVector() ? LLT::vector(getElementCount().getKnownMinValue(),
+                                    NewEltSize, isScalable())
                       : LLT::scalar(NewEltSize);
   }
 
   /// Return a vector or scalar with the same element type and the new number of
   /// elements.
   LLT changeNumElements(unsigned NewNumElts) const {
+    assert((!isVector() || !isScalable()) &&
+           "Cannot use changeNumElements on a scalable vector");
     return LLT::scalarOrVector(NewNumElts, getScalarType());
   }
 
@@ -237,22 +267,37 @@ private:
   static const constexpr BitFieldInfo PointerSizeFieldInfo{16, 0};
   static const constexpr BitFieldInfo PointerAddressSpaceFieldInfo{
       24, PointerSizeFieldInfo[0] + PointerSizeFieldInfo[1]};
+  static_assert((PointerAddressSpaceFieldInfo[0] +
+                 PointerAddressSpaceFieldInfo[1]) <= 62,
+                "Insufficient bits to encode all data");
   /// * Vector-of-non-pointer (isPointer == 0 && isVector == 1):
   ///   NumElements: 16;
   ///   SizeOfElement: 32;
+  ///   Scalable: 1;
   static const constexpr BitFieldInfo VectorElementsFieldInfo{16, 0};
   static const constexpr BitFieldInfo VectorSizeFieldInfo{
       32, VectorElementsFieldInfo[0] + VectorElementsFieldInfo[1]};
+  static const constexpr BitFieldInfo VectorScalableFieldInfo{
+      1, VectorSizeFieldInfo[0] + VectorSizeFieldInfo[1]};
+  static_assert((VectorSizeFieldInfo[0] + VectorSizeFieldInfo[1]) <= 62,
+                "Insufficient bits to encode all data");
   /// * Vector-of-pointer (isPointer == 1 && isVector == 1):
   ///   NumElements: 16;
   ///   SizeOfElement: 16;
   ///   AddressSpace: 24;
+  ///   Scalable: 1;
   static const constexpr BitFieldInfo PointerVectorElementsFieldInfo{16, 0};
   static const constexpr BitFieldInfo PointerVectorSizeFieldInfo{
       16,
       PointerVectorElementsFieldInfo[1] + PointerVectorElementsFieldInfo[0]};
   static const constexpr BitFieldInfo PointerVectorAddressSpaceFieldInfo{
       24, PointerVectorSizeFieldInfo[1] + PointerVectorSizeFieldInfo[0]};
+  static const constexpr BitFieldInfo PointerVectorScalableFieldInfo{
+      1, PointerVectorAddressSpaceFieldInfo[0] +
+             PointerVectorAddressSpaceFieldInfo[1]};
+  static_assert((PointerVectorAddressSpaceFieldInfo[0] +
+                 PointerVectorAddressSpaceFieldInfo[1]) <= 62,
+                "Insufficient bits to encode all data");
 
   uint64_t IsPointer : 1;
   uint64_t IsVector : 1;
@@ -273,8 +318,8 @@ private:
     return getMask(FieldInfo) & (RawData >> FieldInfo[1]);
   }
 
-  void init(bool IsPointer, bool IsVector, uint16_t NumElements,
-            unsigned SizeInBits, unsigned AddressSpace) {
+  void init(bool IsPointer, bool IsVector, ElementCount EC, unsigned SizeInBits,
+            unsigned AddressSpace) {
     this->IsPointer = IsPointer;
     this->IsVector = IsVector;
     if (!IsVector) {
@@ -284,15 +329,20 @@ private:
         RawData = maskAndShift(SizeInBits, PointerSizeFieldInfo) |
                   maskAndShift(AddressSpace, PointerAddressSpaceFieldInfo);
     } else {
-      assert(NumElements > 1 && "invalid number of vector elements");
+      assert(EC.isVector() && "invalid number of vector elements");
       if (!IsPointer)
-        RawData = maskAndShift(NumElements, VectorElementsFieldInfo) |
-                  maskAndShift(SizeInBits, VectorSizeFieldInfo);
+        RawData =
+            maskAndShift(EC.getKnownMinValue(), VectorElementsFieldInfo) |
+            maskAndShift(SizeInBits, VectorSizeFieldInfo) |
+            maskAndShift(EC.isScalable() ? 1 : 0, VectorScalableFieldInfo);
       else
         RawData =
-            maskAndShift(NumElements, PointerVectorElementsFieldInfo) |
+            maskAndShift(EC.getKnownMinValue(),
+                         PointerVectorElementsFieldInfo) |
             maskAndShift(SizeInBits, PointerVectorSizeFieldInfo) |
-            maskAndShift(AddressSpace, PointerVectorAddressSpaceFieldInfo);
+            maskAndShift(AddressSpace, PointerVectorAddressSpaceFieldInfo) |
+            maskAndShift(EC.isScalable() ? 1 : 0,
+                         PointerVectorScalableFieldInfo);
     }
   }
 

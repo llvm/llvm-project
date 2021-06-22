@@ -118,7 +118,9 @@ public:
       return;
     }
     if (Ty.isVector()) {
-      OS << "GILLT_v" << Ty.getNumElements() << "s" << Ty.getScalarSizeInBits();
+      OS << (Ty.isScalable() ? "GILLT_nxv" : "GILLT_v")
+         << Ty.getElementCount().getKnownMinValue() << "s"
+         << Ty.getScalarSizeInBits();
       return;
     }
     if (Ty.isPointer()) {
@@ -136,8 +138,8 @@ public:
       return;
     }
     if (Ty.isVector()) {
-      OS << "LLT::vector(" << Ty.getNumElements() << ", "
-         << Ty.getScalarSizeInBits() << ")";
+      OS << "LLT::vector(" << Ty.getElementCount().getKnownMinValue() << ", "
+         << Ty.getScalarSizeInBits() << ", " << Ty.isScalable() << ")";
       return;
     }
     if (Ty.isPointer() && Ty.getSizeInBits() > 0) {
@@ -169,9 +171,14 @@ public:
     if (Ty.isPointer() && Ty.getAddressSpace() != Other.Ty.getAddressSpace())
       return Ty.getAddressSpace() < Other.Ty.getAddressSpace();
 
-    if (Ty.isVector() && Ty.getNumElements() != Other.Ty.getNumElements())
-      return Ty.getNumElements() < Other.Ty.getNumElements();
+    if (Ty.isVector() && Ty.getElementCount() != Other.Ty.getElementCount())
+      return std::make_tuple(Ty.isScalable(),
+                             Ty.getElementCount().getKnownMinValue()) <
+             std::make_tuple(Other.Ty.isScalable(),
+                             Other.Ty.getElementCount().getKnownMinValue());
 
+    assert((!Ty.isVector() || Ty.isScalable() == Other.Ty.isScalable()) &&
+           "Unexpected mismatch of scalable property");
     return Ty.getSizeInBits() < Other.Ty.getSizeInBits();
   }
 
@@ -187,12 +194,10 @@ class InstructionMatcher;
 static Optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT) {
   MVT VT(SVT);
 
-  if (VT.isScalableVector())
-    return None;
-
-  if (VT.isFixedLengthVector() && VT.getVectorNumElements() != 1)
-    return LLTCodeGen(
-        LLT::vector(VT.getVectorNumElements(), VT.getScalarSizeInBits()));
+  if (VT.isVector() && !VT.getVectorElementCount().isScalar())
+    return LLTCodeGen(LLT::vector(VT.getVectorNumElements(),
+                                  VT.getScalarSizeInBits(),
+                                  VT.isScalableVector()));
 
   if (VT.isInteger() || VT.isFloatingPoint())
     return LLTCodeGen(LLT::scalar(VT.getSizeInBits()));
