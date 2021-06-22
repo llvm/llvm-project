@@ -142,6 +142,11 @@ public:
     return charLengthParamValue_;
   }
   constexpr std::optional<std::int64_t> knownLength() const {
+#if !__clang__ && __GNUC__ == 7
+    if (knownLength_ < 0) {
+      return std::nullopt;
+    }
+#endif
     return knownLength_;
   }
   std::optional<Expr<SubscriptInteger>> GetCharLength() const;
@@ -217,7 +222,12 @@ private:
   TypeCategory category_{TypeCategory::Derived}; // overridable default
   int kind_{0};
   const semantics::ParamValue *charLengthParamValue_{nullptr};
+#if !__clang__ && __GNUC__ == 7
+  // GCC 7's optional<> lacks a constexpr operator=
+  std::int64_t knownLength_{-1};
+#else
   std::optional<std::int64_t> knownLength_;
+#endif
   const semantics::DerivedTypeSpec *derived_{nullptr}; // TYPE(T), CLASS(T)
 };
 
