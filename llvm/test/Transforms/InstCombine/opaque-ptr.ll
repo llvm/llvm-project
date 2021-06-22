@@ -27,6 +27,14 @@ define i8* @bitcast_opaque_to_typed(ptr %a) {
   ret i8* %b
 }
 
+@g = global i8 0
+define ptr @bitcast_typed_to_opaque_constexpr() {
+; CHECK-LABEL: @bitcast_typed_to_opaque_constexpr(
+; CHECK-NEXT:    ret ptr bitcast (i8* @g to ptr)
+;
+  ret ptr bitcast (i8* @g to ptr)
+}
+
 ;define ptr @addrspacecast_opaque_to_opaque(ptr addrspace(1) %a) {
 ;  %b = addrspacecast ptr addrspace(1) %a to ptr
 ;  ret ptr %b
