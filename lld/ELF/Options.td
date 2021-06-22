@@ -126,9 +126,7 @@ def color_diagnostics_eq: J<"color-diagnostics=">,
   HelpText<"Use colors in diagnostics (default: auto)">,
   MetaVarName<"[auto,always,never]">;
 
-defm cref: B<"cref",
-    "Output cross reference table",
-    "Do not output cross reference table">;
+def cref: FF<"cref">, HelpText<"Output cross reference table">;
 
 defm define_common: B<"define-common",
     "Assign space to common symbols",
