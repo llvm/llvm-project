@@ -103,7 +103,7 @@ struct WasmGlobal {
 
 struct WasmTagType {
   // Kind of tag. Currently only WASM_TAG_ATTRIBUTE_EXCEPTION is possible.
-  uint32_t Attribute;
+  uint8_t Attribute;
   uint32_t SigIndex;
 };
 
@@ -363,7 +363,7 @@ enum WasmSegmentFlag : unsigned {
 };
 
 // Kinds of tag attributes.
-enum WasmTagAttribute : unsigned {
+enum WasmTagAttribute : uint8_t {
   WASM_TAG_ATTRIBUTE_EXCEPTION = 0x0,
 };
 
