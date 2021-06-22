@@ -257,6 +257,7 @@ public:
     patterns.add<ConvertTosaOp<tosa::AddOp>>(ctx);
     patterns.add<ConvertTosaOp<tosa::SubOp>>(ctx);
     patterns.add<ConvertTosaOp<tosa::MulOp>>(ctx);
+    patterns.add<ConvertTosaOp<tosa::DivOp>>(ctx);
     patterns.add<ConvertTosaOp<tosa::MaximumOp>>(ctx);
     patterns.add<ConvertTosaOp<tosa::MinimumOp>>(ctx);
     patterns.add<ConvertTosaOp<tosa::EqualOp>>(ctx);
