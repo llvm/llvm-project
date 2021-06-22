@@ -40,6 +40,9 @@ public:
   bool inExpr = false;
   size_t pos = 0;
 
+  size_t lastLineNumber = 0;
+  size_t lastLineNumberOffset = 0;
+
 protected:
   MemoryBufferRef getCurrentMB();
 
