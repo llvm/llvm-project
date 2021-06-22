@@ -1741,8 +1741,8 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
 
     for (auto arg : args) {
       sizes[axis] = rewriter.create<memref::DimOp>(loc, arg, axisValue);
-      result = rewriter.create<SubTensorInsertOp>(loc, arg, result, offsets,
-                                                  sizes, strides);
+      result = rewriter.create<tensor::InsertSliceOp>(loc, arg, result, offsets,
+                                                      sizes, strides);
       offsets[axis] = rewriter.create<AddIOp>(loc, offsets[axis], sizes[axis]);
     }
     rewriter.replaceOp(op, result);

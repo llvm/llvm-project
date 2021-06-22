@@ -321,14 +321,14 @@ func @hoist_vector_transfer_pairs_disjoint_tensor(
 
 // -----
 
-// CHECK-LABEL: func @hoist_vector_transfer_pairs_tensor_and_subtensors
+// CHECK-LABEL: func @hoist_vector_transfer_pairs_tensor_and_slices
 //  CHECK-SAME:   %[[TENSOR0:[a-zA-Z0-9]*]]: tensor<?x?xf32>,
 //  CHECK-SAME:   %[[TENSOR1:[a-zA-Z0-9]*]]: tensor<?x?xf32>,
 //  CHECK-SAME:   %[[TENSOR2:[a-zA-Z0-9]*]]: tensor<?x?xf32>,
 //  CHECK-SAME:   %[[TENSOR3:[a-zA-Z0-9]*]]: tensor<?x?xf32>,
 //  CHECK-SAME:   %[[TENSOR4:[a-zA-Z0-9]*]]: tensor<?x?xf32>,
 //  CHECK-SAME:   %[[TENSOR5:[a-zA-Z0-9]*]]: tensor<?x?xf32>
-func @hoist_vector_transfer_pairs_tensor_and_subtensors(
+func @hoist_vector_transfer_pairs_tensor_and_slices(
     %tensor0: tensor<?x?xf32>, %tensor1: tensor<?x?xf32>, %tensor2: tensor<?x?xf32>,
     %tensor3: tensor<?x?xf32>, %tensor4: tensor<?x?xf32>, %tensor5: tensor<?x?xf32>,
     %val: index, %lb : index, %ub : index, %step: index) ->
@@ -349,7 +349,7 @@ func @hoist_vector_transfer_pairs_tensor_and_subtensors(
     -> (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>)  {
 
     // Hoisted
-    // CHECK:   %[[ST0:.*]] = subtensor %[[TENSOR0_ARG]][%[[I]], %[[I]]]{{.*}}: tensor<?x?xf32> to tensor<?x?xf32>
+    // CHECK:   %[[ST0:.*]] = tensor.extract_slice %[[TENSOR0_ARG]][%[[I]], %[[I]]]{{.*}}: tensor<?x?xf32> to tensor<?x?xf32>
     // CHECK:   %[[V0:.*]] = vector.transfer_read %[[ST0]]{{.*}} : tensor<?x?xf32>, vector<1xf32>
 
     //      CHECK:   %[[R:.*]]:3 = scf.for %[[J:.*]] = {{.*}} iter_args(
@@ -362,19 +362,19 @@ func @hoist_vector_transfer_pairs_tensor_and_subtensors(
     iter_args(%arg6 = %arg0, %arg7 = %arg1, %arg8 = %arg2)
     -> (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>)  {
       // Hoists.
-      %st0 = subtensor %arg6[%i, %i][%step, %step][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
+      %st0 = tensor.extract_slice %arg6[%i, %i][%step, %step][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
       %r0 = vector.transfer_read %st0[%c0, %c0], %cst: tensor<?x?xf32>, vector<1xf32>
 
-      // CHECK:     %[[ST1:.*]] = subtensor %[[TENSOR1_ARG_L2]][%[[J]],{{.*}}: tensor<?x?xf32> to tensor<?x?xf32>
+      // CHECK:     %[[ST1:.*]] = tensor.extract_slice %[[TENSOR1_ARG_L2]][%[[J]],{{.*}}: tensor<?x?xf32> to tensor<?x?xf32>
       // CHECK:     %[[V1:.*]] = vector.transfer_read %[[ST1]]{{.*}} : tensor<?x?xf32>, vector<2xf32>
-      // Does not hoist (subtensor depends on %j)
-      %st1 = subtensor %arg7[%j, %c0][%step, %step][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
+      // Does not hoist (slice depends on %j)
+      %st1 = tensor.extract_slice %arg7[%j, %c0][%step, %step][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
       %r1 = vector.transfer_read %st1[%c0, %c0], %cst: tensor<?x?xf32>, vector<2xf32>
 
-      // CHECK:     %[[ST2:.*]] = subtensor %[[TENSOR2_ARG_L2]][%[[I]],{{.*}}: tensor<?x?xf32> to tensor<?x?xf32>
+      // CHECK:     %[[ST2:.*]] = tensor.extract_slice %[[TENSOR2_ARG_L2]][%[[I]],{{.*}}: tensor<?x?xf32> to tensor<?x?xf32>
       // CHECK:     %[[V2:.*]] = vector.transfer_read %[[ST2]]{{.*}} : tensor<?x?xf32>, vector<3xf32>
-      // Does not hoist, 2 subtensor %arg8.
-      %st2 = subtensor %arg8[%i, %c0][%step, %step][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
+      // Does not hoist, 2 slice %arg8.
+      %st2 = tensor.extract_slice %arg8[%i, %c0][%step, %step][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
       %r2 = vector.transfer_read %st2[%c0, %c0], %cst: tensor<?x?xf32>, vector<3xf32>
 
       // CHECK:     %[[U0:.*]] = "some_use"(%[[V0_ARG_L2]]) : (vector<1xf32>) -> vector<1xf32>
@@ -388,25 +388,25 @@ func @hoist_vector_transfer_pairs_tensor_and_subtensors(
       %w0 = vector.transfer_write %u0, %st0[%c0, %c0] : vector<1xf32>, tensor<?x?xf32>
 
       // CHECK-DAG:     %[[STI1:.*]] = vector.transfer_write %[[U1]], %{{.*}} : vector<2xf32>, tensor<?x?xf32>
-      // Does not hoist (associated subtensor depends on %j).
+      // Does not hoist (associated slice depends on %j).
       %w1 = vector.transfer_write %u1, %st1[%i, %i] : vector<2xf32>, tensor<?x?xf32>
 
       // CHECK-DAG:     %[[STI2:.*]] = vector.transfer_write %[[U2]], %{{.*}} : vector<3xf32>, tensor<?x?xf32>
-      // Does not hoist, 2 subtensor / subtensor_insert for %arg8.
+      // Does not hoist, 2 slice / insert_slice for %arg8.
       %w2 = vector.transfer_write %u2, %st2[%c0, %c0] : vector<3xf32>, tensor<?x?xf32>
 
       // Hoists.
-      %sti0 = subtensor_insert %w0 into %arg6[%i, %i][%step, %step][1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
+      %sti0 = tensor.insert_slice %w0 into %arg6[%i, %i][%step, %step][1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
 
-      // CHECK-DAG:     subtensor_insert %[[STI1]] into %[[TENSOR1_ARG_L2]][%[[J]],{{.*}}: tensor<?x?xf32> into tensor<?x?xf32>
+      // CHECK-DAG:     tensor.insert_slice %[[STI1]] into %[[TENSOR1_ARG_L2]][%[[J]],{{.*}}: tensor<?x?xf32> into tensor<?x?xf32>
       // Does not hoist (depends on %j).
-      %sti1 = subtensor_insert %w1 into %arg7[%j, %c0][%step, %step][1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
+      %sti1 = tensor.insert_slice %w1 into %arg7[%j, %c0][%step, %step][1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
 
-      // CHECK-DAG:     subtensor_insert %[[STI2]] into %[[TENSOR2_ARG_L2]][%[[I]],{{.*}}: tensor<?x?xf32> into tensor<?x?xf32>
-      // Does not hoist, 2 subtensor / subtensor_insert for %arg8.
-      %sti2 = subtensor_insert %w2 into %arg8[%i, %c0][%step, %step][1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
-      %st22 = subtensor %sti2[%i, %c0][%step, %step][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
-      %sti22 = subtensor_insert %st22 into %arg8[%i, %c0][%step, %step][1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
+      // CHECK-DAG:     tensor.insert_slice %[[STI2]] into %[[TENSOR2_ARG_L2]][%[[I]],{{.*}}: tensor<?x?xf32> into tensor<?x?xf32>
+      // Does not hoist, 2 slice / insert_slice for %arg8.
+      %sti2 = tensor.insert_slice %w2 into %arg8[%i, %c0][%step, %step][1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
+      %st22 = tensor.extract_slice %sti2[%i, %c0][%step, %step][1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
+      %sti22 = tensor.insert_slice %st22 into %arg8[%i, %c0][%step, %step][1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
 
       // CHECK:     scf.yield {{.*}} : tensor<?x?xf32>, tensor<?x?xf32>, vector<1xf32>
       // CHECK:   }
@@ -416,7 +416,7 @@ func @hoist_vector_transfer_pairs_tensor_and_subtensors(
 
     // Hoisted
     // CHECK:   %[[STI0:.*]] = vector.transfer_write %[[R]]#2, %[[ST0]]{{.*}} : vector<1xf32>, tensor<?x?xf32>
-    // CHECK:   subtensor_insert %[[STI0]] into %[[TENSOR0_ARG]][%[[I]], %[[I]]]{{.*}} : tensor<?x?xf32> into tensor<?x?xf32>
+    // CHECK:   tensor.insert_slice %[[STI0]] into %[[TENSOR0_ARG]][%[[I]], %[[I]]]{{.*}} : tensor<?x?xf32> into tensor<?x?xf32>
 
     // CHECK:   scf.yield {{.*}} : tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>
     scf.yield %1#0, %1#1, %1#2 :

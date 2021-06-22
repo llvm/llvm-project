@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/Dialect/StandardOps/Utils/Utils.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/VectorOps.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Operation.h"
@@ -232,8 +233,8 @@ public:
   }
 };
 
-/// Convert `subtensor %t [offsets][sizes][strides] -> %st` to an alloc + copy
-/// pattern.
+/// Convert `extract_slice %t [offsets][sizes][strides] -> %st` to an
+/// alloc + copy pattern.
 /// ```
 ///   %a = alloc(sizes)
 ///   %sv = subview %source [offsets][sizes][strides]
@@ -242,21 +243,22 @@ public:
 ///
 /// This pattern is arguable a std pattern once linalg::CopyOp becomes
 /// std::CopyOp.
-class SubTensorOpConverter : public OpConversionPattern<SubTensorOp> {
+class ExtractSliceOpConverter
+    : public OpConversionPattern<tensor::ExtractSliceOp> {
 public:
-  using OpConversionPattern<SubTensorOp>::OpConversionPattern;
+  using OpConversionPattern<tensor::ExtractSliceOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(SubTensorOp op, ArrayRef<Value> operands,
+  matchAndRewrite(tensor::ExtractSliceOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    SubTensorOpAdaptor adaptor(operands, op->getAttrDictionary());
+    tensor::ExtractSliceOpAdaptor adaptor(operands, op->getAttrDictionary());
     Value sourceMemref = adaptor.source();
     assert(sourceMemref.getType().isa<MemRefType>());
 
     MemRefType subviewMemRefType =
         getTypeConverter()->convertType(op.getType()).cast<MemRefType>();
     // op.sizes() capture exactly the dynamic alloc operands matching the
-    // subviewMemRefType thanks to subview/subtensor canonicalization and
+    // subviewMemRefType thanks to subview/slice canonicalization and
     // verification.
     Value alloc = rewriter.create<memref::AllocOp>(
         op.getLoc(), subviewMemRefType, op.sizes());
@@ -269,7 +271,7 @@ public:
   }
 };
 
-/// Convert `subtensor_insert %source into %dest [offsets][sizes][strides] ->
+/// Convert `insert_slice %source into %dest [offsets][sizes][strides] ->
 /// %t` to an buffer_cast + subview + copy + tensor_load pattern.
 /// buffer_cast and tensor_load are inserted automatically by the
 /// conversion infra:
@@ -281,15 +283,15 @@ public:
 ///
 /// This pattern is arguable a std pattern once linalg::CopyOp becomes
 /// std::CopyOp.
-class SubTensorInsertOpConverter
-    : public OpConversionPattern<SubTensorInsertOp> {
+class InsertSliceOpConverter
+    : public OpConversionPattern<tensor::InsertSliceOp> {
 public:
-  using OpConversionPattern<SubTensorInsertOp>::OpConversionPattern;
+  using OpConversionPattern<tensor::InsertSliceOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(SubTensorInsertOp op, ArrayRef<Value> operands,
+  matchAndRewrite(tensor::InsertSliceOp op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    SubTensorInsertOpAdaptor adaptor(operands, op->getAttrDictionary());
+    tensor::InsertSliceOpAdaptor adaptor(operands, op->getAttrDictionary());
     Value sourceMemRef = adaptor.source();
     assert(sourceMemRef.getType().isa<MemRefType>());
 
@@ -323,7 +325,8 @@ struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
     // Mark all Standard operations legal.
     target.addLegalDialect<AffineDialect, math::MathDialect,
                            memref::MemRefDialect, StandardOpsDialect>();
-    target.addIllegalOp<InitTensorOp, SubTensorOp, SubTensorInsertOp>();
+    target.addIllegalOp<InitTensorOp, tensor::ExtractSliceOp,
+                        tensor::InsertSliceOp>();
 
     // Mark all Linalg operations illegal as long as they work on tensors.
     auto isLegalOperation = [&](Operation *op) {
@@ -355,8 +358,8 @@ void mlir::linalg::populateLinalgBufferizePatterns(
       BufferizeInitTensorOp,
       BufferizeTensorReshapeOp<TensorExpandShapeOp>,
       BufferizeTensorReshapeOp<TensorCollapseShapeOp>,
-      SubTensorOpConverter,
-      SubTensorInsertOpConverter
+      ExtractSliceOpConverter,
+      InsertSliceOpConverter
     >(typeConverter, patterns.getContext());
   // clang-format on
 }

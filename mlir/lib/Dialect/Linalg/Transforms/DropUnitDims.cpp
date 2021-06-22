@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -457,8 +458,8 @@ struct ReplaceUnitExtents : public OpRewritePattern<GenericOp> {
 };
 } // namespace
 
-/// Get the reassociation maps to fold the result of a subtensor (or source of a
-/// subtensor_insert) operation with given offsets, and sizes to its
+/// Get the reassociation maps to fold the result of a extract_slice (or source
+/// of a insert_slice) operation with given offsets, and sizes to its
 /// rank-reduced version. This is only done for the cases where the size is 1
 /// and offset is 0. Strictly speaking the offset 0 is not required in general,
 /// but non-zero offsets are not handled by SPIR-V backend at this point (and
@@ -486,41 +487,41 @@ getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes) {
 }
 
 namespace {
-/// Convert `subtensor` operations to rank-reduced versions.
-struct UseRankReducedSubTensorOp : public OpRewritePattern<SubTensorOp> {
-  using OpRewritePattern<SubTensorOp>::OpRewritePattern;
+/// Convert `extract_slice` operations to rank-reduced versions.
+struct UseRankReducedExtractSliceOp
+    : public OpRewritePattern<tensor::ExtractSliceOp> {
+  using OpRewritePattern<tensor::ExtractSliceOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(SubTensorOp subTensorOp,
+  LogicalResult matchAndRewrite(tensor::ExtractSliceOp sliceOp,
                                 PatternRewriter &rewriter) const override {
-    RankedTensorType resultType = subTensorOp.getType();
-    SmallVector<OpFoldResult> offsets = subTensorOp.getMixedOffsets();
-    SmallVector<OpFoldResult> sizes = subTensorOp.getMixedSizes();
-    SmallVector<OpFoldResult> strides = subTensorOp.getMixedStrides();
+    RankedTensorType resultType = sliceOp.getType();
+    SmallVector<OpFoldResult> offsets = sliceOp.getMixedOffsets();
+    SmallVector<OpFoldResult> sizes = sliceOp.getMixedSizes();
+    SmallVector<OpFoldResult> strides = sliceOp.getMixedStrides();
     auto reassociation = getReassociationMapForFoldingUnitDims(sizes);
     if (!reassociation ||
         reassociation->size() == static_cast<size_t>(resultType.getRank()))
       return failure();
-    auto rankReducedType =
-        SubTensorOp::inferRankReducedResultType(reassociation->size(),
-                                                subTensorOp.getSourceType(),
-                                                offsets, sizes, strides)
-            .cast<RankedTensorType>();
+    auto rankReducedType = tensor::ExtractSliceOp::inferRankReducedResultType(
+                               reassociation->size(), sliceOp.getSourceType(),
+                               offsets, sizes, strides)
+                               .cast<RankedTensorType>();
 
-    Location loc = subTensorOp.getLoc();
-    Value newSubTensor = rewriter.create<SubTensorOp>(
-        loc, rankReducedType, subTensorOp.source(), offsets, sizes, strides);
-    rewriter.replaceOpWithNewOp<TensorExpandShapeOp>(
-        subTensorOp, resultType, newSubTensor, *reassociation);
+    Location loc = sliceOp.getLoc();
+    Value newSlice = rewriter.create<tensor::ExtractSliceOp>(
+        loc, rankReducedType, sliceOp.source(), offsets, sizes, strides);
+    rewriter.replaceOpWithNewOp<TensorExpandShapeOp>(sliceOp, resultType,
+                                                     newSlice, *reassociation);
     return success();
   }
 };
 
-/// Convert `subtensor_insert` operations to rank-reduced versions.
-struct UseRankReducedSubTensorInsertOp
-    : public OpRewritePattern<SubTensorInsertOp> {
-  using OpRewritePattern<SubTensorInsertOp>::OpRewritePattern;
+/// Convert `insert_slice` operations to rank-reduced versions.
+struct UseRankReducedInsertSliceOp
+    : public OpRewritePattern<tensor::InsertSliceOp> {
+  using OpRewritePattern<tensor::InsertSliceOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(SubTensorInsertOp insertOp,
+  LogicalResult matchAndRewrite(tensor::InsertSliceOp insertOp,
                                 PatternRewriter &rewriter) const override {
     RankedTensorType sourceType = insertOp.getSourceType();
     SmallVector<OpFoldResult> offsets = insertOp.getMixedOffsets();
@@ -533,7 +534,7 @@ struct UseRankReducedSubTensorInsertOp
     Location loc = insertOp.getLoc();
     auto reshapedSource = rewriter.create<TensorCollapseShapeOp>(
         loc, insertOp.source(), *reassociation);
-    rewriter.replaceOpWithNewOp<SubTensorInsertOp>(
+    rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
         insertOp, reshapedSource, insertOp.dest(), insertOp.getMixedOffsets(),
         insertOp.getMixedSizes(), insertOp.getMixedStrides());
     return success();
@@ -546,8 +547,9 @@ struct UseRankReducedSubTensorInsertOp
 void mlir::linalg::populateFoldUnitExtentDimsPatterns(
     RewritePatternSet &patterns) {
   auto *context = patterns.getContext();
-  patterns.add<FoldUnitDimLoops, ReplaceUnitExtents, UseRankReducedSubTensorOp,
-               UseRankReducedSubTensorInsertOp>(context);
+  patterns.add<FoldUnitDimLoops, ReplaceUnitExtents,
+               UseRankReducedExtractSliceOp, UseRankReducedInsertSliceOp>(
+      context);
   TensorCollapseShapeOp::getCanonicalizationPatterns(patterns, context);
   TensorExpandShapeOp::getCanonicalizationPatterns(patterns, context);
 }
