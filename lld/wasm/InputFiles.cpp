@@ -93,7 +93,7 @@ void ObjFile::dumpInfo() const {
       "\n              Symbols : " + Twine(symbols.size()) +
       "\n     Function Imports : " + Twine(wasmObj->getNumImportedFunctions()) +
       "\n       Global Imports : " + Twine(wasmObj->getNumImportedGlobals()) +
-      "\n        Event Imports : " + Twine(wasmObj->getNumImportedEvents()) +
+      "\n          Tag Imports : " + Twine(wasmObj->getNumImportedTags()) +
       "\n        Table Imports : " + Twine(wasmObj->getNumImportedTables()));
 }
 
@@ -209,8 +209,8 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
     if (auto gs = dyn_cast<GlobalSymbol>(sym))
       return gs->getGlobalIndex();
     return sym->getGOTIndex();
-  case R_WASM_EVENT_INDEX_LEB:
-    return getEventSymbol(reloc.Index)->getEventIndex();
+  case R_WASM_TAG_INDEX_LEB:
+    return getTagSymbol(reloc.Index)->getTagIndex();
   case R_WASM_FUNCTION_OFFSET_I32:
   case R_WASM_FUNCTION_OFFSET_I64: {
     auto *f = cast<DefinedFunction>(sym);
@@ -343,10 +343,10 @@ void ObjFile::addLegacyIndirectFunctionTableIfNeeded(
   LLVM_DEBUG(dbgs() << "Synthesizing symbol for table import: " << info->Name
                     << "\n");
   const WasmGlobalType *globalType = nullptr;
-  const WasmEventType *eventType = nullptr;
+  const WasmTagType *tagType = nullptr;
   const WasmSignature *signature = nullptr;
   auto *wasmSym = make<WasmSymbol>(*info, globalType, &tableImport->Table,
-                                   eventType, signature);
+                                   tagType, signature);
   Symbol *sym = createUndefined(*wasmSym, false);
   // We're only sure it's a TableSymbol if the createUndefined succeeded.
   if (errorCount())
@@ -515,9 +515,9 @@ void ObjFile::parse(bool ignoreComdats) {
   for (const WasmGlobal &g : wasmObj->globals())
     globals.emplace_back(make<InputGlobal>(g, this));
 
-  // Populate `Events`.
-  for (const WasmEvent &e : wasmObj->events())
-    events.emplace_back(make<InputEvent>(types[e.Type.SigIndex], e, this));
+  // Populate `Tags`.
+  for (const WasmTag &t : wasmObj->tags())
+    tags.emplace_back(make<InputTag>(types[t.Type.SigIndex], t, this));
 
   // Populate `Symbols` based on the symbols in the object.
   symbols.reserve(wasmObj->getNumberOfSymbols());
@@ -556,8 +556,8 @@ GlobalSymbol *ObjFile::getGlobalSymbol(uint32_t index) const {
   return cast<GlobalSymbol>(symbols[index]);
 }
 
-EventSymbol *ObjFile::getEventSymbol(uint32_t index) const {
-  return cast<EventSymbol>(symbols[index]);
+TagSymbol *ObjFile::getTagSymbol(uint32_t index) const {
+  return cast<TagSymbol>(symbols[index]);
 }
 
 TableSymbol *ObjFile::getTableSymbol(uint32_t index) const {
@@ -612,12 +612,11 @@ Symbol *ObjFile::createDefined(const WasmSymbol &sym) {
       return nullptr;
     return make<SectionSymbol>(flags, section, this);
   }
-  case WASM_SYMBOL_TYPE_EVENT: {
-    InputEvent *event =
-        events[sym.Info.ElementIndex - wasmObj->getNumImportedEvents()];
+  case WASM_SYMBOL_TYPE_TAG: {
+    InputTag *tag = tags[sym.Info.ElementIndex - wasmObj->getNumImportedTags()];
     if (sym.isBindingLocal())
-      return make<DefinedEvent>(name, flags, this, event);
-    return symtab->addDefinedEvent(name, flags, this, event);
+      return make<DefinedTag>(name, flags, this, tag);
+    return symtab->addDefinedTag(name, flags, this, tag);
   }
   case WASM_SYMBOL_TYPE_TABLE: {
     InputTable *table =

@@ -4,7 +4,7 @@
 define void @test1(i32* %P) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    store i32 123, i32* undef, align 4
-; CHECK-NEXT:    store i32 undef, i32* null, align 536870912
+; CHECK-NEXT:    store i32 poison, i32* null, align 536870912
 ; CHECK-NEXT:    ret void
 ;
   store i32 undef, i32* %P
@@ -26,7 +26,7 @@ define void @test2(i32* %P) {
 define void @store_at_gep_off_null_inbounds(i64 %offset) {
 ; CHECK-LABEL: @store_at_gep_off_null_inbounds(
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i32, i32* null, i64 [[OFFSET:%.*]]
-; CHECK-NEXT:    store i32 undef, i32* [[PTR]], align 4
+; CHECK-NEXT:    store i32 poison, i32* [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %ptr = getelementptr inbounds i32, i32 *null, i64 %offset
@@ -37,7 +37,7 @@ define void @store_at_gep_off_null_inbounds(i64 %offset) {
 define void @store_at_gep_off_null_not_inbounds(i64 %offset) {
 ; CHECK-LABEL: @store_at_gep_off_null_not_inbounds(
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i32, i32* null, i64 [[OFFSET:%.*]]
-; CHECK-NEXT:    store i32 undef, i32* [[PTR]], align 4
+; CHECK-NEXT:    store i32 poison, i32* [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %ptr = getelementptr i32, i32 *null, i64 %offset
@@ -141,14 +141,14 @@ define void @test6(i32 %n, float* %a, i32* %gi) nounwind uwtable ssp {
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ 42, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
-; CHECK-NEXT:    store i32 [[STOREMERGE]], i32* [[GI:%.*]], align 4, [[TBAA0:!tbaa !.*]]
+; CHECK-NEXT:    store i32 [[STOREMERGE]], i32* [[GI:%.*]], align 4, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[STOREMERGE]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[STOREMERGE]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[IDXPROM]]
-; CHECK-NEXT:    store float 0.000000e+00, float* [[ARRAYIDX]], align 4, [[TBAA4:!tbaa !.*]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[GI]], align 4, [[TBAA0]]
+; CHECK-NEXT:    store float 0.000000e+00, float* [[ARRAYIDX]], align 4, !tbaa [[TBAA4:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[GI]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[TMP0]], 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.end:

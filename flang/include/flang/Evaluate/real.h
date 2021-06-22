@@ -55,6 +55,7 @@ public:
 
   constexpr Real() {} // +0.0
   constexpr Real(const Real &) = default;
+  constexpr Real(Real &&) = default;
   constexpr Real(const Word &bits) : word_{bits} {}
   constexpr Real &operator=(const Real &) = default;
   constexpr Real &operator=(Real &&) = default;

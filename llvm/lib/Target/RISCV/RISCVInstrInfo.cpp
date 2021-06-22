@@ -1170,7 +1170,13 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case CASE_VFMA_OPCODE_LMULS(FMACC, VV):
   case CASE_VFMA_OPCODE_LMULS(FMSAC, VV):
   case CASE_VFMA_OPCODE_LMULS(FNMACC, VV):
-  case CASE_VFMA_OPCODE_LMULS(FNMSAC, VV): {
+  case CASE_VFMA_OPCODE_LMULS(FNMSAC, VV):
+  case CASE_VFMA_OPCODE_LMULS(MADD, VX):
+  case CASE_VFMA_OPCODE_LMULS(NMSUB, VX):
+  case CASE_VFMA_OPCODE_LMULS(MACC, VX):
+  case CASE_VFMA_OPCODE_LMULS(NMSAC, VX):
+  case CASE_VFMA_OPCODE_LMULS(MACC, VV):
+  case CASE_VFMA_OPCODE_LMULS(NMSAC, VV): {
     // For these instructions we can only swap operand 1 and operand 3 by
     // changing the opcode.
     unsigned CommutableOpIdx1 = 1;
@@ -1183,7 +1189,9 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case CASE_VFMA_OPCODE_LMULS(FMADD, VV):
   case CASE_VFMA_OPCODE_LMULS(FMSUB, VV):
   case CASE_VFMA_OPCODE_LMULS(FNMADD, VV):
-  case CASE_VFMA_OPCODE_LMULS(FNMSUB, VV): {
+  case CASE_VFMA_OPCODE_LMULS(FNMSUB, VV):
+  case CASE_VFMA_OPCODE_LMULS(MADD, VV):
+  case CASE_VFMA_OPCODE_LMULS(NMSUB, VV): {
     // For these instructions we have more freedom. We can commute with the
     // other multiplicand or with the addend/subtrahend/minuend.
 
@@ -1288,7 +1296,13 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   case CASE_VFMA_OPCODE_LMULS(FMACC, VV):
   case CASE_VFMA_OPCODE_LMULS(FMSAC, VV):
   case CASE_VFMA_OPCODE_LMULS(FNMACC, VV):
-  case CASE_VFMA_OPCODE_LMULS(FNMSAC, VV): {
+  case CASE_VFMA_OPCODE_LMULS(FNMSAC, VV):
+  case CASE_VFMA_OPCODE_LMULS(MADD, VX):
+  case CASE_VFMA_OPCODE_LMULS(NMSUB, VX):
+  case CASE_VFMA_OPCODE_LMULS(MACC, VX):
+  case CASE_VFMA_OPCODE_LMULS(NMSAC, VX):
+  case CASE_VFMA_OPCODE_LMULS(MACC, VV):
+  case CASE_VFMA_OPCODE_LMULS(NMSAC, VV): {
     // It only make sense to toggle these between clobbering the
     // addend/subtrahend/minuend one of the multiplicands.
     assert((OpIdx1 == 1 || OpIdx2 == 1) && "Unexpected opcode index");
@@ -1309,6 +1323,12 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
       CASE_VFMA_CHANGE_OPCODE_LMULS(FMSAC, FMSUB, VV)
       CASE_VFMA_CHANGE_OPCODE_LMULS(FNMACC, FNMADD, VV)
       CASE_VFMA_CHANGE_OPCODE_LMULS(FNMSAC, FNMSUB, VV)
+      CASE_VFMA_CHANGE_OPCODE_LMULS(MACC, MADD, VX)
+      CASE_VFMA_CHANGE_OPCODE_LMULS(MADD, MACC, VX)
+      CASE_VFMA_CHANGE_OPCODE_LMULS(NMSAC, NMSUB, VX)
+      CASE_VFMA_CHANGE_OPCODE_LMULS(NMSUB, NMSAC, VX)
+      CASE_VFMA_CHANGE_OPCODE_LMULS(MACC, MADD, VV)
+      CASE_VFMA_CHANGE_OPCODE_LMULS(NMSAC, NMSUB, VV)
     }
 
     auto &WorkingMI = cloneIfNew(MI);
@@ -1319,7 +1339,9 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   case CASE_VFMA_OPCODE_LMULS(FMADD, VV):
   case CASE_VFMA_OPCODE_LMULS(FMSUB, VV):
   case CASE_VFMA_OPCODE_LMULS(FNMADD, VV):
-  case CASE_VFMA_OPCODE_LMULS(FNMSUB, VV): {
+  case CASE_VFMA_OPCODE_LMULS(FNMSUB, VV):
+  case CASE_VFMA_OPCODE_LMULS(MADD, VV):
+  case CASE_VFMA_OPCODE_LMULS(NMSUB, VV): {
     assert((OpIdx1 == 1 || OpIdx2 == 1) && "Unexpected opcode index");
     // If one of the operands, is the addend we need to change opcode.
     // Otherwise we're just swapping 2 of the multiplicands.
@@ -1332,6 +1354,8 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
         CASE_VFMA_CHANGE_OPCODE_LMULS(FMSUB, FMSAC, VV)
         CASE_VFMA_CHANGE_OPCODE_LMULS(FNMADD, FNMACC, VV)
         CASE_VFMA_CHANGE_OPCODE_LMULS(FNMSUB, FNMSAC, VV)
+        CASE_VFMA_CHANGE_OPCODE_LMULS(MADD, MACC, VV)
+        CASE_VFMA_CHANGE_OPCODE_LMULS(NMSUB, NMSAC, VV)
       }
 
       auto &WorkingMI = cloneIfNew(MI);

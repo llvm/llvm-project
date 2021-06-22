@@ -1970,6 +1970,13 @@ def NoInstrumentFunction : InheritableAttr {
   let SimpleHandler = 1;
 }
 
+def NoProfileFunction : InheritableAttr {
+  let Spellings = [GCC<"no_profile_instrument_function">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [NoProfileInstrumentFunctionDocs];
+  let SimpleHandler = 1;
+}
+
 def NotTailCalled : InheritableAttr {
   let Spellings = [Clang<"not_tail_called">];
   let Subjects = SubjectList<[Function]>;

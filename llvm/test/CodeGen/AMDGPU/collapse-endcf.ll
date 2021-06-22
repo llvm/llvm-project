@@ -86,7 +86,7 @@ bb.outer.end:                                     ; preds = %bb.inner.then, %bb
 ; GCN-NEXT: s_cbranch_execz [[THEN_INNER:BB[0-9_]+]]
 ; GCN-NEXT: ; %bb.{{[0-9]+}}:
 ; GCN:      store_dword
-; GCN-NEXT: {{^}}[[THEN_INNER]]:
+; GCN:      {{^}}[[THEN_INNER]]:
 ; GCN-NEXT: s_or_saveexec_b64 [[SAVEEXEC_INNER3:s\[[0-9:]+\]]], [[SAVEEXEC_INNER2]]
 ; GCN-NEXT: s_xor_b64 exec, exec, [[SAVEEXEC_INNER3]]
 ; GCN-NEXT: s_cbranch_execz [[ENDIF_OUTER]]
@@ -136,7 +136,7 @@ bb.outer.end:                                        ; preds = %bb, %bb.then, %b
 ; GCN:      store_dword
 ; GCN-NEXT: {{^}}[[THEN_OUTER_FLOW]]:
 ; GCN-NEXT: s_or_b64 exec, exec, [[SAVEEXEC_INNER_IF_OUTER_ELSE]]
-; GCN-NEXT: {{^}}[[THEN_OUTER]]:
+; GCN:      {{^}}[[THEN_OUTER]]:
 ; GCN-NEXT: s_or_saveexec_b64 [[SAVEEXEC_OUTER3:s\[[0-9:]+\]]], [[SAVEEXEC_OUTER2]]
 ; GCN-NEXT: s_xor_b64 exec, exec, [[SAVEEXEC_OUTER3]]
 ; GCN-NEXT: s_cbranch_execz [[ENDIF_OUTER:BB[0-9_]+]]

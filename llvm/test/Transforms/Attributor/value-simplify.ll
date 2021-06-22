@@ -14,6 +14,7 @@ declare i8* @llvm.call.preallocated.arg(token, i32)
 ;.
 ; CHECK: @[[CONSTAS3PTR:[a-zA-Z0-9_$"\\.-]+]] = addrspace(3) global i32 0, align 4
 ; CHECK: @[[S:[a-zA-Z0-9_$"\\.-]+]] = external global [[STRUCT_X:%.*]]
+; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal constant { [2 x i8*] } { [2 x i8*] [i8* bitcast (void (i8***)* @f1 to i8*), i8* bitcast (void (i1 (i8*)*)* @f2 to i8*)] }
 ;.
 define internal i32 addrspace(3)* @const_ptr_return_as3() {
 ; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
@@ -1086,6 +1087,129 @@ define i1 @icmp() {
   %c = icmp eq i8* null, null
   ret i1 %c
 }
+
+define void @test_callee_is_undef(void (i32)* %fn) {
+; IS__TUNIT____-LABEL: define {{[^@]+}}@test_callee_is_undef
+; IS__TUNIT____-SAME: (void (i32)* nocapture nofree [[FN:%.*]]) {
+; IS__TUNIT____-NEXT:    call void @callee_is_undef()
+; IS__TUNIT____-NEXT:    call void @unknown_calle_arg_is_undef(void (i32)* nocapture nofree [[FN]], i32 undef)
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____-LABEL: define {{[^@]+}}@test_callee_is_undef
+; IS__CGSCC____-SAME: (void (i32)* nocapture nofree [[FN:%.*]]) {
+; IS__CGSCC____-NEXT:    unreachable
+;
+  call void @callee_is_undef(void ()* undef)
+  call void @unknown_calle_arg_is_undef(void (i32)* %fn, i32 undef)
+  ret void
+}
+define internal void @callee_is_undef(void ()* %fn) {
+;
+; IS__TUNIT____-LABEL: define {{[^@]+}}@callee_is_undef() {
+; IS__TUNIT____-NEXT:    call void undef()
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____-LABEL: define {{[^@]+}}@callee_is_undef
+; IS__CGSCC____-SAME: (void ()* noalias nocapture nofree noundef nonnull [[FN:%.*]]) {
+; IS__CGSCC____-NEXT:    call void [[FN]]()
+; IS__CGSCC____-NEXT:    ret void
+;
+  call void %fn()
+  ret void
+}
+define internal void @unknown_calle_arg_is_undef(void (i32)* %fn, i32 %arg) {
+;
+; IS__TUNIT____-LABEL: define {{[^@]+}}@unknown_calle_arg_is_undef
+; IS__TUNIT____-SAME: (void (i32)* nocapture nofree noundef nonnull [[FN:%.*]], i32 [[ARG:%.*]]) {
+; IS__TUNIT____-NEXT:    call void [[FN]](i32 undef)
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____-LABEL: define {{[^@]+}}@unknown_calle_arg_is_undef
+; IS__CGSCC____-SAME: (void (i32)* nocapture nofree noundef nonnull [[FN:%.*]]) {
+; IS__CGSCC____-NEXT:    call void [[FN]](i32 undef)
+; IS__CGSCC____-NEXT:    ret void
+;
+  call void %fn(i32 %arg)
+  ret void
+}
+
+; Taken from 50683
+; {{{
+
+@g = internal constant { [2 x i8*] } { [2 x i8*] [i8* bitcast (void (i8***)* @f1 to i8*), i8* bitcast (void (i1 (i8*)*)* @f2 to i8*)] }
+
+define internal void @f1(i8*** %a) {
+; IS__TUNIT____: Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
+; IS__TUNIT____-LABEL: define {{[^@]+}}@f1
+; IS__TUNIT____-SAME: (i8*** nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR3]] {
+; IS__TUNIT____-NEXT:  entry:
+; IS__TUNIT____-NEXT:    [[X:%.*]] = getelementptr { [2 x i8*] }, { [2 x i8*] }* @g, i32 0, i32 0, i32 0
+; IS__TUNIT____-NEXT:    store i8** [[X]], i8*** [[A]], align 8
+; IS__TUNIT____-NEXT:    ret void
+;
+; IS__CGSCC____: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
+; IS__CGSCC____-LABEL: define {{[^@]+}}@f1
+; IS__CGSCC____-SAME: (i8*** nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR2]] {
+; IS__CGSCC____-NEXT:  entry:
+; IS__CGSCC____-NEXT:    [[X:%.*]] = getelementptr { [2 x i8*] }, { [2 x i8*] }* @g, i32 0, i32 0, i32 0
+; IS__CGSCC____-NEXT:    store i8** [[X]], i8*** [[A]], align 8
+; IS__CGSCC____-NEXT:    ret void
+;
+entry:
+  %x = getelementptr { [2 x i8*] }, { [2 x i8*] }* @g, i32 0, i32 0, i32 0
+  store i8** %x , i8*** %a, align 8
+  ret void
+}
+
+define internal void @f2(i1 (i8*)* %a) {
+; CHECK-LABEL: define {{[^@]+}}@f2
+; CHECK-SAME: (i1 (i8*)* [[A:%.*]]) {
+; CHECK-NEXT:  cont461:
+; CHECK-NEXT:    [[C1:%.*]] = bitcast i1 (i8*)* [[A]] to i8*
+; CHECK-NEXT:    call void @f3(i8* [[C1]], i1 (i8*)* nocapture nofree [[A]])
+; CHECK-NEXT:    ret void
+;
+cont461:
+  %c1 = bitcast i1 (i8*)* %a to i8*
+  call void @f3(i8* %c1, i1 (i8*)* %a)
+  ret void
+}
+
+define internal void @f3(i8* %a1, i1 (i8*)* %a) {
+; CHECK-LABEL: define {{[^@]+}}@f3
+; CHECK-SAME: (i8* [[A1:%.*]], i1 (i8*)* nocapture nofree [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALL20:%.*]] = call i1 @f9()
+; CHECK-NEXT:    br i1 [[CALL20]], label [[LAND_LHS_TRUE:%.*]], label [[IF_END40:%.*]]
+; CHECK:       land.lhs.true:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i1 [[A]](i8* [[A1]])
+; CHECK-NEXT:    br label [[IF_END40]]
+; CHECK:       if.end40:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %call20 = call i1 @f9()
+  br i1 %call20, label %land.lhs.true, label %if.end40
+
+land.lhs.true:
+  call i1 %a(i8* %a1)
+  br label %if.end40
+
+if.end40:
+  ret void
+}
+
+define linkonce_odr i1 @f9() {
+; CHECK-LABEL: define {{[^@]+}}@f9() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  ret i1 false
+}
+
+; }}}
+
 ;.
 ; IS__TUNIT_OPM: attributes #[[ATTR0]] = { nofree nosync nounwind willreturn }
 ; IS__TUNIT_OPM: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }

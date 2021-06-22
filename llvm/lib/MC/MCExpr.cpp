@@ -671,24 +671,6 @@ static void AttemptToFoldSymbolOffsetDifference(
   }
 }
 
-static bool canFold(const MCAssembler *Asm, const MCSymbolRefExpr *A,
-                    const MCSymbolRefExpr *B, bool InSet) {
-  if (InSet)
-    return true;
-
-  if (!Asm->getBackend().requiresDiffExpressionRelocations())
-    return true;
-
-  const MCSymbol &CheckSym = A ? A->getSymbol() : B->getSymbol();
-  if (!CheckSym.isInSection())
-    return true;
-
-  if (!CheckSym.getSection().hasInstructions())
-    return true;
-
-  return false;
-}
-
 /// Evaluate the result of an add between (conceptually) two MCValues.
 ///
 /// This routine conceptually attempts to construct an MCValue:
@@ -725,11 +707,8 @@ EvaluateSymbolicAdd(const MCAssembler *Asm, const MCAsmLayout *Layout,
   assert((!Layout || Asm) &&
          "Must have an assembler object if layout is given!");
 
-  // If we have a layout, we can fold resolved differences. Do not do this if
-  // the backend requires this to be emitted as individual relocations, unless
-  // the InSet flag is set to get the current difference anyway (used for
-  // example to calculate symbol sizes).
-  if (Asm && canFold(Asm, LHS_A, LHS_B, InSet)) {
+  // If we have a layout, we can fold resolved differences.
+  if (Asm) {
     // First, fold out any differences which are fully resolved. By
     // reassociating terms in
     //   Result = (LHS_A - LHS_B + LHS_Cst) + (RHS_A - RHS_B + RHS_Cst).

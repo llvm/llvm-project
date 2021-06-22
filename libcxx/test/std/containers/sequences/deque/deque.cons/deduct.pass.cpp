@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <array>
+// <deque>
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: libcpp-no-deduction-guides
 
@@ -95,5 +95,34 @@ int main(int, char**)
     assert(deq.size() == 0);
     }
 
-  return 0;
+    {
+        typedef test_allocator<short> Alloc;
+        typedef test_allocator<int> ConvertibleToAlloc;
+
+        {
+        std::deque<short, Alloc> source;
+        std::deque deq(source, Alloc(2));
+        static_assert(std::is_same_v<decltype(deq), decltype(source)>);
+        }
+
+        {
+        std::deque<short, Alloc> source;
+        std::deque deq(source, ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(deq), decltype(source)>);
+        }
+
+        {
+        std::deque<short, Alloc> source;
+        std::deque deq(std::move(source), Alloc(2));
+        static_assert(std::is_same_v<decltype(deq), decltype(source)>);
+        }
+
+        {
+        std::deque<short, Alloc> source;
+        std::deque deq(std::move(source), ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(deq), decltype(source)>);
+        }
+    }
+
+    return 0;
 }

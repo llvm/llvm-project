@@ -169,7 +169,7 @@ private:
   }
 };
 
-#if defined(__x86_64__) || defined(__i386__)
+#ifdef SPECIAL_X86_LONG_DOUBLE
 template <>
 inline void NormalFloat<long double>::initFromBits(FPBits<long double> bits) {
   sign = bits.encoding.sign;
@@ -256,7 +256,7 @@ template <> inline NormalFloat<long double>::operator long double() const {
   result.encoding.implicitBit = 1;
   return static_cast<long double>(result);
 }
-#endif
+#endif // SPECIAL_X86_LONG_DOUBLE
 
 } // namespace fputil
 } // namespace __llvm_libc

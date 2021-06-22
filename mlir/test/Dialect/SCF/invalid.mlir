@@ -428,7 +428,7 @@ func @parallel_invalid_yield(
 
 func @yield_invalid_parent_op() {
   "my.op"() ({
-   // expected-error@+1 {{'scf.yield' op expects parent op to be one of 'scf.if, scf.for, scf.parallel, scf.while'}}
+   // expected-error@+1 {{'scf.yield' op expects parent op to be one of 'scf.execute_region, scf.for, scf.if, scf.parallel, scf.while'}}
    scf.yield
   }) : () -> ()
   return
@@ -509,4 +509,15 @@ func @while_bad_terminator() {
     // expected-note@+1 {{terminator here}}
     "some.other_terminator"() : () -> ()
   }
+}
+
+// -----
+
+func @execute_region() {
+  // expected-error @+1 {{region cannot have any arguments}}
+  "scf.execute_region"() ({
+  ^bb0(%i : i32):
+    scf.yield
+  }) : () -> ()
+  return
 }

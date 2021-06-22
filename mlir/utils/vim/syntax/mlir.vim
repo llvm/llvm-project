@@ -53,8 +53,10 @@ syn match mlirOps /\<affine\.load\>/
 syn match mlirOps /\<affine\.parallel\>/
 syn match mlirOps /\<affine\.prefetch\>/
 syn match mlirOps /\<affine\.store\>/
-syn match mlirOps /\<loop\.for\>/
-syn match mlirOps /\<loop\.if\>/
+syn match mlirOps /\<scf\.execute_region\>/
+syn match mlirOps /\<scf\.for\>/
+syn match mlirOps /\<scf\.if\>/
+syn match mlirOps /\<scf\.yield\>/
 
 " TODO: dialect name prefixed ops (llvm or std).
 

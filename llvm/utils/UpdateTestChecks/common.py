@@ -291,11 +291,12 @@ class function_body(object):
     return self.scrub
 
 class FunctionTestBuilder:
-  def __init__(self, run_list, flags, scrubber_args):
+  def __init__(self, run_list, flags, scrubber_args, path):
     self._verbose = flags.verbose
     self._record_args = flags.function_signature
     self._check_attributes = flags.check_attributes
     self._scrubber_args = scrubber_args
+    self._path = path
     # Strip double-quotes if input was read by UTC_ARGS
     self._replace_value_regex = list(map(lambda x: x.strip('"'), flags.replace_value_regex))
     self._func_dict = {}
@@ -309,7 +310,7 @@ class FunctionTestBuilder:
 
   def finish_and_get_func_dict(self):
     for prefix in self._get_failed_prefixes():
-      warn('Prefix %s had conflicting output from different RUN lines for all functions' % (prefix,))
+      warn('Prefix %s had conflicting output from different RUN lines for all functions in test %s' % (prefix,self._path,))
     return self._func_dict
 
   def func_order(self):
@@ -350,27 +351,6 @@ class FunctionTestBuilder:
         for l in scrubbed_body.splitlines():
           print('  ' + l, file=sys.stderr)
       for prefix in prefixes:
-        if func in self._func_dict[prefix]:
-          if (self._func_dict[prefix][func] is None or
-              str(self._func_dict[prefix][func]) != scrubbed_body or
-              self._func_dict[prefix][func].args_and_sig != args_and_sig or
-                  self._func_dict[prefix][func].attrs != attrs):
-            if (self._func_dict[prefix][func] is not None and
-                self._func_dict[prefix][func].is_same_except_arg_names(
-                scrubbed_extra,
-                args_and_sig,
-                attrs)):
-              self._func_dict[prefix][func].scrub = scrubbed_extra
-              self._func_dict[prefix][func].args_and_sig = args_and_sig
-              continue
-            else:
-              # This means a previous RUN line produced a body for this function
-              # that is different from the one produced by this current RUN line,
-              # so the body can't be common accross RUN lines. We use None to
-              # indicate that.
-              self._func_dict[prefix][func] = None
-              continue
-
         # Replace function names matching the regex.
         for regex in self._replace_value_regex:
           # Pattern that matches capture groups in the regex in leftmost order.
@@ -393,7 +373,29 @@ class FunctionTestBuilder:
                 func_repl = group_regex.sub(re.escape(g), func_repl, count=1)
             # Substitute function call names that match the regex with the same
             # capture groups set.
-            scrubbed_body = re.sub(func_repl, '{{' + func_repl + '}}', scrubbed_body)
+            scrubbed_body = re.sub(func_repl, '{{' + func_repl + '}}',
+                                   scrubbed_body)
+
+        if func in self._func_dict[prefix]:
+          if (self._func_dict[prefix][func] is None or
+              str(self._func_dict[prefix][func]) != scrubbed_body or
+              self._func_dict[prefix][func].args_and_sig != args_and_sig or
+                  self._func_dict[prefix][func].attrs != attrs):
+            if (self._func_dict[prefix][func] is not None and
+                self._func_dict[prefix][func].is_same_except_arg_names(
+                scrubbed_extra,
+                args_and_sig,
+                attrs)):
+              self._func_dict[prefix][func].scrub = scrubbed_extra
+              self._func_dict[prefix][func].args_and_sig = args_and_sig
+              continue
+            else:
+              # This means a previous RUN line produced a body for this function
+              # that is different from the one produced by this current RUN line,
+              # so the body can't be common accross RUN lines. We use None to
+              # indicate that.
+              self._func_dict[prefix][func] = None
+              continue
 
         self._func_dict[prefix][func] = function_body(
             scrubbed_body, scrubbed_extra, args_and_sig, attrs)

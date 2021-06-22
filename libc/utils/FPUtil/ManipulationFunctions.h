@@ -12,6 +12,7 @@
 #include "FPBits.h"
 #include "NearestIntegerOperations.h"
 #include "NormalFloat.h"
+#include "PlatformDefs.h"
 
 #include "utils/CPP/TypeTraits.h"
 
@@ -178,8 +179,8 @@ static inline T nextafter(T from, T to) {
 } // namespace fputil
 } // namespace __llvm_libc
 
-#if (defined(__x86_64__) || defined(__i386__))
+#ifdef SPECIAL_X86_LONG_DOUBLE
 #include "NextAfterLongDoubleX86.h"
-#endif // defined(__x86_64__) || defined(__i386__)
+#endif // SPECIAL_X86_LONG_DOUBLE
 
 #endif // LLVM_LIBC_UTILS_FPUTIL_MANIPULATION_FUNCTIONS_H

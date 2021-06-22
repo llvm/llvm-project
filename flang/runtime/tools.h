@@ -333,5 +333,6 @@ std::optional<std::pair<TypeCategory, int>> inline constexpr GetResultType(
   }
   return std::nullopt;
 }
+
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_TOOLS_H_

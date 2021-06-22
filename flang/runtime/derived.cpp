@@ -15,7 +15,7 @@ namespace Fortran::runtime {
 static const typeInfo::SpecialBinding *FindFinal(
     const typeInfo::DerivedType &derived, int rank) {
   const typeInfo::SpecialBinding *elemental{nullptr};
-  const Descriptor &specialDesc{derived.special.descriptor()};
+  const Descriptor &specialDesc{derived.special()};
   std::size_t totalSpecialBindings{specialDesc.Elements()};
   for (std::size_t j{0}; j < totalSpecialBindings; ++j) {
     const auto &special{
@@ -59,15 +59,6 @@ static void CallFinalSubroutine(
   }
 }
 
-static inline SubscriptValue GetValue(
-    const typeInfo::Value &value, const Descriptor &descriptor) {
-  if (value.genre == typeInfo::Value::Genre::LenParameter) {
-    return descriptor.Addendum()->LenParameterValue(value.value);
-  } else {
-    return value.value;
-  }
-}
-
 // The order of finalization follows Fortran 2018 7.5.6.2, with
 // deallocation of non-parent components (and their consequent finalization)
 // taking place before parent component finalization.
@@ -76,46 +67,39 @@ void Destroy(const Descriptor &descriptor, bool finalize,
   if (finalize) {
     CallFinalSubroutine(descriptor, derived);
   }
-  const Descriptor &componentDesc{derived.component.descriptor()};
-  std::int64_t myComponents{componentDesc.GetDimension(0).Extent()};
+  const Descriptor &componentDesc{derived.component()};
+  auto myComponents{static_cast<SubscriptValue>(componentDesc.Elements())};
   std::size_t elements{descriptor.Elements()};
   std::size_t byteStride{descriptor.ElementBytes()};
   for (unsigned k{0}; k < myComponents; ++k) {
     const auto &comp{
         *componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(k)};
-    if (comp.genre == typeInfo::Component::Genre::Allocatable ||
-        comp.genre == typeInfo::Component::Genre::Automatic) {
+    if (comp.genre() == typeInfo::Component::Genre::Allocatable ||
+        comp.genre() == typeInfo::Component::Genre::Automatic) {
       for (std::size_t j{0}; j < elements; ++j) {
-        descriptor.OffsetElement<Descriptor>(j * byteStride + comp.offset)
+        descriptor.OffsetElement<Descriptor>(j * byteStride + comp.offset())
             ->Deallocate(finalize);
       }
-    } else if (comp.genre == typeInfo::Component::Genre::Data &&
-        comp.derivedType.descriptor().raw().base_addr) {
+    } else if (comp.genre() == typeInfo::Component::Genre::Data &&
+        comp.derivedType()) {
       SubscriptValue extent[maxRank];
-      const Descriptor &boundsDesc{comp.bounds.descriptor()};
-      for (int dim{0}; dim < comp.rank; ++dim) {
-        extent[dim] =
-            GetValue(
-                *boundsDesc.ZeroBasedIndexedElement<typeInfo::Value>(2 * dim),
-                descriptor) -
-            GetValue(*boundsDesc.ZeroBasedIndexedElement<typeInfo::Value>(
-                         2 * dim + 1),
-                descriptor) +
-            1;
+      const typeInfo::Value *bounds{comp.bounds()};
+      for (int dim{0}; dim < comp.rank(); ++dim) {
+        extent[dim] = bounds[2 * dim].GetValue(&descriptor).value_or(0) -
+            bounds[2 * dim + 1].GetValue(&descriptor).value_or(0) + 1;
       }
       StaticDescriptor<maxRank, true, 0> staticDescriptor;
       Descriptor &compDesc{staticDescriptor.descriptor()};
-      const auto &compType{*comp.derivedType.descriptor()
-                                .OffsetElement<typeInfo::DerivedType>()};
+      const typeInfo::DerivedType &compType{*comp.derivedType()};
       for (std::size_t j{0}; j < elements; ++j) {
         compDesc.Establish(compType,
-            descriptor.OffsetElement<char>(j * byteStride + comp.offset),
-            comp.rank, extent);
+            descriptor.OffsetElement<char>(j * byteStride + comp.offset()),
+            comp.rank(), extent);
         Destroy(compDesc, finalize, compType);
       }
     }
   }
-  const Descriptor &parentDesc{derived.parent.descriptor()};
+  const Descriptor &parentDesc{derived.parent()};
   if (const auto *parent{parentDesc.OffsetElement<typeInfo::DerivedType>()}) {
     Destroy(descriptor, finalize, *parent);
   }

@@ -705,6 +705,7 @@ struct MachineFunction {
   std::vector<CallSiteInfo> CallSitesInfo;
   std::vector<DebugValueSubstitution> DebugValueSubstitutions;
   MachineJumpTable JumpTableInfo;
+  std::vector<StringValue> MachineMetadataNodes;
   BlockStringValue Body;
 };
 
@@ -739,6 +740,9 @@ template <> struct MappingTraits<MachineFunction> {
     YamlIO.mapOptional("machineFunctionInfo", MF.MachineFuncInfo);
     if (!YamlIO.outputting() || !MF.JumpTableInfo.Entries.empty())
       YamlIO.mapOptional("jumpTable", MF.JumpTableInfo, MachineJumpTable());
+    if (!YamlIO.outputting() || !MF.MachineMetadataNodes.empty())
+      YamlIO.mapOptional("machineMetadataNodes", MF.MachineMetadataNodes,
+                         std::vector<StringValue>());
     YamlIO.mapOptional("body", MF.Body, BlockStringValue());
   }
 };

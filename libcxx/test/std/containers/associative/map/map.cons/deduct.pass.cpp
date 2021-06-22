@@ -133,5 +133,24 @@ int main(int, char**)
     assert(m.get_allocator().get_id() == 45);
     }
 
+    {
+    // Examples from LWG3025
+    std::map m{std::pair{1, 1}, {2, 2}, {3, 3}};
+    ASSERT_SAME_TYPE(decltype(m), std::map<int, int>);
+
+    std::map m2{m.begin(), m.end()};
+    ASSERT_SAME_TYPE(decltype(m2), std::map<int, int>);
+    }
+
+    {
+    // Examples from LWG3531
+    std::map m1{{std::pair{1, 2}, {3, 4}}, std::less<int>()};
+    ASSERT_SAME_TYPE(decltype(m1), std::map<int, int>);
+
+    using value_type = std::pair<const int, int>;
+    std::map m2{{value_type{1, 2}, {3, 4}}, std::less<int>()};
+    ASSERT_SAME_TYPE(decltype(m2), std::map<int, int>);
+    }
+
     return 0;
 }

@@ -66,11 +66,9 @@ enum class LoopUnrollResult {
 
 struct UnrollLoopOptions {
   unsigned Count;
-  unsigned TripCount;
   bool Force;
-  bool AllowRuntime;
+  bool Runtime;
   bool AllowExpensiveTripCount;
-  unsigned TripMultiple;
   bool UnrollRemainder;
   bool ForgetAllSCEV;
 };
@@ -103,9 +101,9 @@ bool isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
 bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
                         DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
                         const SmallPtrSetImpl<const Value *> &EphValues,
-                        OptimizationRemarkEmitter *ORE, unsigned &TripCount,
+                        OptimizationRemarkEmitter *ORE, unsigned TripCount,
                         unsigned MaxTripCount, bool MaxOrZero,
-                        unsigned &TripMultiple, unsigned LoopSize,
+                        unsigned TripMultiple, unsigned LoopSize,
                         TargetTransformInfo::UnrollingPreferences &UP,
                         TargetTransformInfo::PeelingPreferences &PP,
                         bool &UseUpperBound);

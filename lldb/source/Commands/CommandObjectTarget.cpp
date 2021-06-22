@@ -278,7 +278,6 @@ protected:
         result.AppendErrorWithFormatv("Cannot open '{0}': {1}.",
                                       core_file.GetPath(),
                                       llvm::toString(file.takeError()));
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     }
@@ -293,7 +292,6 @@ protected:
           result.AppendErrorWithFormatv("Cannot open '{0}': {1}.",
                                         symfile.GetPath(),
                                         llvm::toString(file.takeError()));
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
       }
@@ -366,13 +364,11 @@ protected:
               // make up a local file
               result.AppendError("remote --> local transfer without local "
                                  "path is not implemented yet");
-              result.SetStatus(eReturnStatusFailed);
               return false;
             }
           }
         } else {
           result.AppendError("no platform found for target");
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
       }
@@ -414,7 +410,6 @@ protected:
           if (error.Fail()) {
             result.AppendError(
                 error.AsCString("can't find plug-in for core file"));
-            result.SetStatus(eReturnStatusFailed);
             return false;
           } else {
             result.AppendMessageWithFormatv(
@@ -427,7 +422,6 @@ protected:
           result.AppendErrorWithFormatv(
               "Unable to find process plug-in for core file '{0}'\n",
               core_file.GetPath());
-          result.SetStatus(eReturnStatusFailed);
         }
       } else {
         result.AppendMessageWithFormat(
@@ -441,7 +435,6 @@ protected:
       result.AppendErrorWithFormat("'%s' takes exactly one executable path "
                                    "argument, or use the --core option.\n",
                                    m_cmd_name.c_str());
-      result.SetStatus(eReturnStatusFailed);
     }
 
     return result.Succeeded();
@@ -482,7 +475,6 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       result.AppendError("the 'target list' command takes no arguments\n");
-      result.SetStatus(eReturnStatusFailed);
     }
     return result.Succeeded();
   }
@@ -524,17 +516,14 @@ protected:
                 "index %u is out of range since there are no active targets\n",
                 target_idx);
           }
-          result.SetStatus(eReturnStatusFailed);
         }
       } else {
         result.AppendErrorWithFormat("invalid index string value '%s'\n",
                                      target_idx_arg);
-        result.SetStatus(eReturnStatusFailed);
       }
     } else {
       result.AppendError(
           "'target select' takes a single argument: a target index\n");
-      result.SetStatus(eReturnStatusFailed);
     }
     return result.Succeeded();
   }
@@ -584,7 +573,6 @@ protected:
       // Bail out if don't have any targets.
       if (num_targets == 0) {
         result.AppendError("no targets to delete");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
 
@@ -593,7 +581,6 @@ protected:
         if (entry.ref().getAsInteger(0, target_idx)) {
           result.AppendErrorWithFormat("invalid target index '%s'\n",
                                        entry.c_str());
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
         if (target_idx < num_targets) {
@@ -612,14 +599,12 @@ protected:
               "target index %u is out of range, the only valid index is 0\n",
               target_idx);
 
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     } else {
       target_sp = target_list.GetSelectedTarget();
       if (!target_sp) {
         result.AppendErrorWithFormat("no target is currently selected\n");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
       delete_target_list.push_back(target_sp);
@@ -852,7 +837,6 @@ protected:
           if (!regex.IsValid()) {
             result.GetErrorStream().Printf(
                 "error: invalid regular expression: '%s'\n", arg.c_str());
-            result.SetStatus(eReturnStatusFailed);
             return false;
           }
           use_var_name = true;
@@ -930,7 +914,6 @@ protected:
           } else
             result.AppendError("'target variable' takes one or more global "
                                "variable names as arguments\n");
-          result.SetStatus(eReturnStatusFailed);
         }
       } else {
         SymbolContextList sc_list;
@@ -1053,7 +1036,6 @@ protected:
     const size_t argc = command.GetArgumentCount();
     if (argc & 1) {
       result.AppendError("add requires an even number of arguments\n");
-      result.SetStatus(eReturnStatusFailed);
     } else {
       for (size_t i = 0; i < argc; i += 2) {
         const char *from = command.GetArgumentAtIndex(i);
@@ -1077,7 +1059,6 @@ protected:
             result.AppendError("<path-prefix> can't be empty\n");
           else
             result.AppendError("<new-path-prefix> can't be empty\n");
-          result.SetStatus(eReturnStatusFailed);
         }
       }
     }
@@ -1185,7 +1166,6 @@ protected:
         result.AppendErrorWithFormat(
             "<index> parameter is not an integer: '%s'.\n",
             command.GetArgumentAtIndex(0));
-        result.SetStatus(eReturnStatusFailed);
         return result.Succeeded();
       }
 
@@ -1207,13 +1187,11 @@ protected:
             result.AppendError("<path-prefix> can't be empty\n");
           else
             result.AppendError("<new-path-prefix> can't be empty\n");
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
       }
     } else {
       result.AppendError("insert requires at least three arguments\n");
-      result.SetStatus(eReturnStatusFailed);
       return result.Succeeded();
     }
     return result.Succeeded();
@@ -1238,7 +1216,6 @@ protected:
     Target *target = &GetSelectedTarget();
     if (command.GetArgumentCount() != 0) {
       result.AppendError("list takes no arguments\n");
-      result.SetStatus(eReturnStatusFailed);
       return result.Succeeded();
     }
 
@@ -1279,7 +1256,6 @@ protected:
     Target *target = &GetSelectedTarget();
     if (command.GetArgumentCount() != 1) {
       result.AppendError("query requires one argument\n");
-      result.SetStatus(eReturnStatusFailed);
       return result.Succeeded();
     }
 
@@ -1899,7 +1875,6 @@ protected:
                                             target->GetImages());
       if (num_dumped == 0) {
         result.AppendError("the target has no associated executable images");
-        result.SetStatus(eReturnStatusFailed);
       }
     } else {
       // Find the modules that match the basename or full path.
@@ -1924,7 +1899,6 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       result.AppendError("no matching executable images found");
-      result.SetStatus(eReturnStatusFailed);
     }
     return result.Succeeded();
   }
@@ -2043,7 +2017,6 @@ protected:
         }
       } else {
         result.AppendError("the target has no associated executable images");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     } else {
@@ -2080,7 +2053,6 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishResult);
     else {
       result.AppendError("no matching executable images found");
-      result.SetStatus(eReturnStatusFailed);
     }
     return result.Succeeded();
   }
@@ -2118,7 +2090,6 @@ protected:
       const size_t num_modules = target->GetImages().GetSize();
       if (num_modules == 0) {
         result.AppendError("the target has no associated executable images");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
 
@@ -2167,7 +2138,6 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishResult);
     else {
       result.AppendError("no matching executable images found");
-      result.SetStatus(eReturnStatusFailed);
     }
     return result.Succeeded();
   }
@@ -2197,7 +2167,6 @@ protected:
     const size_t num_modules = module_list.GetSize();
     if (num_modules == 0) {
       result.AppendError("the target has no associated executable images");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -2275,7 +2244,6 @@ protected:
       const size_t num_modules = target_modules.GetSize();
       if (num_modules == 0) {
         result.AppendError("the target has no associated executable images");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
       result.GetOutputStream().Format(
@@ -2315,7 +2283,6 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishResult);
     else {
       result.AppendError("no matching executable images found");
-      result.SetStatus(eReturnStatusFailed);
     }
     return result.Succeeded();
   }
@@ -2351,7 +2318,6 @@ protected:
 
     if (command.GetArgumentCount() == 0) {
       result.AppendError("file option must be specified.");
-      result.SetStatus(eReturnStatusFailed);
       return result.Succeeded();
     } else {
       // Dump specified images (by basename or fullpath)
@@ -2388,7 +2354,6 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishResult);
     else {
       result.AppendError("no source filenames matched any command arguments");
-      result.SetStatus(eReturnStatusFailed);
     }
     return result.Succeeded();
   }
@@ -2534,7 +2499,6 @@ protected:
                                            "or symbol file with UUID %s",
                                            strm.GetData());
             }
-            result.SetStatus(eReturnStatusFailed);
             return false;
           }
         } else {
@@ -2543,13 +2507,11 @@ protected:
           result.AppendErrorWithFormat(
               "Unable to locate the executable or symbol file with UUID %s",
               strm.GetData());
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
       } else {
         result.AppendError(
             "one or more executable image paths must be specified");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     } else {
@@ -2586,7 +2548,6 @@ protected:
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
           std::string resolved_path = file_spec.GetPath();
-          result.SetStatus(eReturnStatusFailed);
           if (resolved_path != entry.ref()) {
             result.AppendErrorWithFormat(
                 "invalid module path '%s' with resolved path '%s'\n",
@@ -2684,12 +2645,10 @@ protected:
         search_using_module_spec = false;
         result.AppendErrorWithFormat(
             "more than 1 module matched by name '%s'\n", arg_cstr);
-        result.SetStatus(eReturnStatusFailed);
       } else {
         search_using_module_spec = false;
         result.AppendErrorWithFormat("no object file for module '%s'\n",
                                      arg_cstr);
-        result.SetStatus(eReturnStatusFailed);
       }
     }
 
@@ -2723,7 +2682,6 @@ protected:
                 } else {
                   result.AppendError("one or more section name + load "
                                      "address pair must be specified");
-                  result.SetStatus(eReturnStatusFailed);
                   return false;
                 }
               } else {
@@ -2731,7 +2689,6 @@ protected:
                   result.AppendError("The \"--slide <offset>\" option can't "
                                      "be used in conjunction with setting "
                                      "section load addresses.\n");
-                  result.SetStatus(eReturnStatusFailed);
                   return false;
                 }
 
@@ -2750,7 +2707,6 @@ protected:
                               "thread specific sections are not yet "
                               "supported (section '%s')\n",
                               sect_name);
-                          result.SetStatus(eReturnStatusFailed);
                           break;
                         } else {
                           if (target->GetSectionLoadList()
@@ -2765,13 +2721,11 @@ protected:
                                                      "matches the section "
                                                      "name '%s'\n",
                                                      sect_name);
-                        result.SetStatus(eReturnStatusFailed);
                         break;
                       }
                     } else {
                       result.AppendErrorWithFormat(
                           "invalid load address string '%s'\n", load_addr_cstr);
-                      result.SetStatus(eReturnStatusFailed);
                       break;
                     }
                   } else {
@@ -2781,7 +2735,6 @@ protected:
                     else
                       result.AppendError("one or more section name + load "
                                          "address pair must be specified.\n");
-                    result.SetStatus(eReturnStatusFailed);
                     break;
                   }
                 }
@@ -2824,7 +2777,6 @@ protected:
                     result.AppendErrorWithFormat("failed to set PC value to "
                                                  "0x%" PRIx64 "\n",
                                                  file_entry_addr);
-                    result.SetStatus(eReturnStatusFailed);
                   }
                 }
               }
@@ -2832,13 +2784,11 @@ protected:
               module->GetFileSpec().GetPath(path, sizeof(path));
               result.AppendErrorWithFormat("no sections in object file '%s'\n",
                                            path);
-              result.SetStatus(eReturnStatusFailed);
             }
           } else {
             module->GetFileSpec().GetPath(path, sizeof(path));
             result.AppendErrorWithFormat("no object file for module '%s'\n",
                                          path);
-            result.SetStatus(eReturnStatusFailed);
           }
         } else {
           FileSpec *module_spec_file = module_spec.GetFileSpecPtr();
@@ -2847,7 +2797,6 @@ protected:
             result.AppendErrorWithFormat("invalid module '%s'.\n", path);
           } else
             result.AppendError("no module spec");
-          result.SetStatus(eReturnStatusFailed);
         }
       } else {
         std::string uuid_str;
@@ -2875,12 +2824,10 @@ protected:
               path[0] ? " file=" : "", path, !uuid_str.empty() ? " uuid=" : "",
               uuid_str.c_str());
         }
-        result.SetStatus(eReturnStatusFailed);
       }
     } else {
       result.AppendError("either the \"--file <module>\" or the \"--uuid "
                          "<uuid>\" option must be specified.\n");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
     return result.Succeeded();
@@ -2963,7 +2910,6 @@ protected:
     if (target == nullptr && !use_global_module_list) {
       result.AppendError("invalid target, create a debug target using the "
                          "'target create' command");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     } else {
       if (target) {
@@ -2987,18 +2933,15 @@ protected:
               result.AppendErrorWithFormat(
                   "Couldn't find module matching address: 0x%" PRIx64 ".",
                   m_options.m_module_addr);
-              result.SetStatus(eReturnStatusFailed);
             }
           } else {
             result.AppendErrorWithFormat(
                 "Couldn't find module containing address: 0x%" PRIx64 ".",
                 m_options.m_module_addr);
-            result.SetStatus(eReturnStatusFailed);
           }
         } else {
           result.AppendError(
               "Can only look up modules by address with a valid target.");
-          result.SetStatus(eReturnStatusFailed);
         }
         return result.Succeeded();
       }
@@ -3030,7 +2973,6 @@ protected:
             if (argc == 1) {
               result.AppendErrorWithFormat("no modules found that match '%s'",
                                            arg.c_str());
-              result.SetStatus(eReturnStatusFailed);
               return false;
             }
           }
@@ -3077,7 +3019,6 @@ protected:
             result.AppendError(
                 "the target has no associated executable images");
         }
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     }
@@ -3326,21 +3267,18 @@ protected:
     if (process == nullptr) {
       result.AppendError(
           "You must have a process running to use this command.");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
     ThreadList threads(process->GetThreadList());
     if (threads.GetSize() == 0) {
       result.AppendError("The process must be paused to use this command.");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
     ThreadSP thread(threads.GetThreadAtIndex(0));
     if (!thread) {
       result.AppendError("The process must be paused to use this command.");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -3365,7 +3303,6 @@ protected:
     } else {
       result.AppendError(
           "address-expression or function name option must be specified.");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -3373,7 +3310,6 @@ protected:
     if (num_matches == 0) {
       result.AppendErrorWithFormat("no unwind data found that matches '%s'.",
                                    m_options.m_str.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -3890,7 +3826,6 @@ protected:
       std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());
       if (target_modules.GetSize() == 0) {
         result.AppendError("the target has no associated executable images");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
 
@@ -4060,7 +3995,6 @@ protected:
     if (!symbol_fspec) {
       result.AppendError(
           "one or more executable image paths must be specified");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -4142,7 +4076,6 @@ protected:
                                    "use the --uuid option to resolve the "
                                    "ambiguity.\n",
                                    symfile_path);
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -4209,7 +4142,6 @@ protected:
         !llvm::sys::fs::is_regular_file(symbol_fspec.GetPath())
             ? "\n       please specify the full path to the symbol file"
             : "");
-    result.SetStatus(eReturnStatusFailed);
     return false;
   }
 
@@ -4773,7 +4705,6 @@ protected:
         // FIXME: Set the stop hook ID counter back.
         result.AppendErrorWithFormat("Couldn't add stop hook: %s",
                                      error.AsCString());
-        result.SetStatus(eReturnStatusFailed);
         target.UndoCreateStopHook(new_hook_sp->GetID());
         return false;
       }
@@ -4834,13 +4765,11 @@ protected:
         if (!llvm::to_integer(command.GetArgumentAtIndex(i), user_id)) {
           result.AppendErrorWithFormat("invalid stop hook id: \"%s\".\n",
                                        command.GetArgumentAtIndex(i));
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
         if (!target.RemoveStopHookByID(user_id)) {
           result.AppendErrorWithFormat("unknown stop hook id: \"%s\".\n",
                                        command.GetArgumentAtIndex(i));
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
       }
@@ -4889,14 +4818,12 @@ protected:
         if (!llvm::to_integer(command.GetArgumentAtIndex(i), user_id)) {
           result.AppendErrorWithFormat("invalid stop hook id: \"%s\".\n",
                                        command.GetArgumentAtIndex(i));
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
         success = target.SetStopHookActiveStateByID(user_id, m_enable);
         if (!success) {
           result.AppendErrorWithFormat("unknown stop hook id: \"%s\".\n",
                                        command.GetArgumentAtIndex(i));
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
       }

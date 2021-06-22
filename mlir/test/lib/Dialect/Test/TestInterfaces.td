@@ -88,6 +88,24 @@ def TestExternalAttrInterface : AttrInterface<"TestExternalAttrInterface"> {
   ];
 }
 
+def TestExternalOpInterface : OpInterface<"TestExternalOpInterface"> {
+  let cppNamespace = "::mlir";
+  let methods = [
+    InterfaceMethod<"Returns the length of the operation name plus arg.",
+      "unsigned", "getNameLengthPlusArg", (ins "unsigned":$arg)>,
+    StaticInterfaceMethod<
+      "Returns the length of the operation name plus arg twice.", "unsigned",
+      "getNameLengthPlusArgTwice", (ins "unsigned":$arg)>,
+    InterfaceMethod<
+      "Returns the length of the product of the operation name and arg.",
+      "unsigned", "getNameLengthTimesArg", (ins "unsigned":$arg), "",
+      "return arg * $_op->getName().getStringRef().size();">,
+    StaticInterfaceMethod<"Returns the length of the operation name minus arg.",
+      "unsigned", "getNameLengthMinusArg", (ins "unsigned":$arg), "",
+      "return ConcreteOp::getOperationName().size() - arg;">,
+  ];
+}
+
 def TestEffectOpInterface
     : EffectOpInterfaceBase<"TestEffectOpInterface",
                             "::mlir::TestEffects::Effect"> {

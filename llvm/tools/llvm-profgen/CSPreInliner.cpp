@@ -16,11 +16,6 @@
 using namespace llvm;
 using namespace sampleprof;
 
-static cl::opt<bool> EnableCSPreInliner(
-    "csspgo-preinliner", cl::Hidden, cl::init(false),
-    cl::desc("Run a global pre-inliner to merge context profile based on "
-             "estimated global top-down inline decisions"));
-
 // The switches specify inline thresholds used in SampleProfileLoader inlining.
 // TODO: the actual threshold to be tuned here because the size here is based
 // on machine code not LLVM IR.
@@ -179,9 +174,6 @@ void CSPreInliner::processFunction(const StringRef Name) {
 }
 
 void CSPreInliner::run() {
-  if (!EnableCSPreInliner)
-    return;
-
 #ifndef NDEBUG
   auto printProfileNames = [](StringMap<FunctionSamples> &Profiles,
                               bool IsInput) {

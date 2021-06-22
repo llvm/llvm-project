@@ -12,6 +12,7 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "UnwindInfoSection.h"
 #include "Writer.h"
 #include "lld/Common/Memory.h"
 #include "llvm/Support/Endian.h"
@@ -42,6 +43,67 @@ static uint64_t resolveSymbolVA(const Symbol *sym, uint8_t type) {
   else if (relocAttrs.hasAttr(RelocAttrBits::TLV))
     return sym->resolveTlvVA();
   return sym->getVA();
+}
+
+// ICF needs to hash any section that might potentially be duplicated so
+// that it can match on content rather than identity.
+bool InputSection::isHashableForICF(bool isText) const {
+  if (auto const *concatIsec = dyn_cast<ConcatInputSection>(this))
+    if (concatIsec->shouldOmitFromOutput())
+      return false;
+  switch (sectionType(flags)) {
+  case S_REGULAR:
+    if (isText)
+      return !hasPersonality;
+    // One might hope that we could hash __TEXT,__const subsections to fold
+    // references to duplicated values, but alas, many tests fail.
+    return false;
+  case S_CSTRING_LITERALS:
+  case S_4BYTE_LITERALS:
+  case S_8BYTE_LITERALS:
+  case S_16BYTE_LITERALS:
+  case S_LITERAL_POINTERS:
+    // FIXME(gkm): once literal sections are deduplicated, their content and
+    // identity correlate, so we can assign unique IDs to them rather than hash
+    // them.
+    return true;
+  case S_ZEROFILL:
+  case S_GB_ZEROFILL:
+  case S_NON_LAZY_SYMBOL_POINTERS:
+  case S_LAZY_SYMBOL_POINTERS:
+  case S_SYMBOL_STUBS:
+  case S_MOD_INIT_FUNC_POINTERS:
+  case S_MOD_TERM_FUNC_POINTERS:
+  case S_COALESCED:
+  case S_INTERPOSING:
+  case S_DTRACE_DOF:
+  case S_LAZY_DYLIB_SYMBOL_POINTERS:
+  case S_THREAD_LOCAL_REGULAR:
+  case S_THREAD_LOCAL_ZEROFILL:
+  case S_THREAD_LOCAL_VARIABLES:
+  case S_THREAD_LOCAL_VARIABLE_POINTERS:
+  case S_THREAD_LOCAL_INIT_FUNCTION_POINTERS:
+    return false;
+  default:
+    llvm_unreachable("Section type");
+  }
+}
+
+void InputSection::hashForICF() {
+  assert(data.data()); // zeroFill section data has nullptr with non-zero size
+  assert(icfEqClass[0] == 0); // don't overwrite a unique ID!
+  // Turn-on the top bit to guarantee that valid hashes have no collisions
+  // with the small-integer unique IDs for ICF-ineligible sections
+  icfEqClass[0] = xxHash64(data) | (1ull << 63);
+}
+
+void ConcatInputSection::foldIdentical(ConcatInputSection *copy) {
+  align = std::max(align, copy->align);
+  copy->live = false;
+  copy->wasCoalesced = true;
+  numRefs += copy->numRefs;
+  copy->numRefs = 0;
+  copy->replacement = this;
 }
 
 void ConcatInputSection::writeTo(uint8_t *buf) {

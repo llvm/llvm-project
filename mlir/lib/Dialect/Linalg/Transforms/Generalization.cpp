@@ -130,8 +130,8 @@ struct LinalgNamedOpGeneralizationPattern : RewritePattern {
     if (failed(marker.checkAndNotify(rewriter, linalgOp)))
       return failure();
 
-    // No nothing to do for linalg.generic and linalg.indexed_generic.
-    if (isa<GenericOp, IndexedGenericOp>(rootOp))
+    // No nothing to do for linalg.generic.
+    if (isa<GenericOp>(rootOp))
       return failure();
 
     GenericOp genericOp = createGenericOpFromNamedOp(linalgOp, rewriter);

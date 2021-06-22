@@ -36,14 +36,12 @@ ScriptInterpreter::ScriptInterpreter(
 void ScriptInterpreter::CollectDataForBreakpointCommandCallback(
     std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
     CommandReturnObject &result) {
-  result.SetStatus(eReturnStatusFailed);
   result.AppendError(
       "This script interpreter does not support breakpoint callbacks.");
 }
 
 void ScriptInterpreter::CollectDataForWatchpointCommandCallback(
     WatchpointOptions *bp_options, CommandReturnObject &result) {
-  result.SetStatus(eReturnStatusFailed);
   result.AppendError(
       "This script interpreter does not support watchpoint callbacks.");
 }

@@ -70,6 +70,55 @@ void mlir::scf::buildTerminatedBody(OpBuilder &builder, Location loc) {
 }
 
 //===----------------------------------------------------------------------===//
+// ExecuteRegionOp
+//===----------------------------------------------------------------------===//
+
+///
+/// (ssa-id `=`)? `execute_region` `->` function-result-type `{`
+///    block+
+/// `}`
+///
+/// Example:
+///   scf.execute_region -> i32 {
+///     %idx = load %rI[%i] : memref<128xi32>
+///     return %idx : i32
+///   }
+///
+static ParseResult parseExecuteRegionOp(OpAsmParser &parser,
+                                        OperationState &result) {
+  if (parser.parseOptionalArrowTypeList(result.types))
+    return failure();
+
+  // Introduce the body region and parse it.
+  Region *body = result.addRegion();
+  if (parser.parseRegion(*body, /*arguments=*/{}, /*argTypes=*/{}) ||
+      parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return success();
+}
+
+static void print(OpAsmPrinter &p, ExecuteRegionOp op) {
+  p << ExecuteRegionOp::getOperationName();
+  if (op.getNumResults() > 0)
+    p << " -> " << op.getResultTypes();
+
+  p.printRegion(op.region(),
+                /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/true);
+
+  p.printOptionalAttrDict(op->getAttrs());
+}
+
+static LogicalResult verify(ExecuteRegionOp op) {
+  if (op.region().empty())
+    return op.emitOpError("region needs to have at least one block");
+  if (op.region().front().getNumArguments() > 0)
+    return op.emitOpError("region cannot have any arguments");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ForOp
 //===----------------------------------------------------------------------===//
 
@@ -205,9 +254,9 @@ static ParseResult parseForOp(OpAsmParser &parser, OperationState &result) {
         parser.parseArrowTypeList(result.types))
       return failure();
     // Resolve input operands.
-    for (auto operand_type : llvm::zip(operands, result.types))
-      if (parser.resolveOperand(std::get<0>(operand_type),
-                                std::get<1>(operand_type), result.operands))
+    for (auto operandType : llvm::zip(operands, result.types))
+      if (parser.resolveOperand(std::get<0>(operandType),
+                                std::get<1>(operandType), result.operands))
         return failure();
   }
   // Induction variable.
@@ -240,7 +289,7 @@ bool ForOp::isDefinedOutsideOfLoop(Value value) {
 }
 
 LogicalResult ForOp::moveOutOfLoop(ArrayRef<Operation *> ops) {
-  for (auto op : ops)
+  for (auto *op : ops)
     op->moveBefore(*this);
   return success();
 }
@@ -1618,7 +1667,7 @@ bool ParallelOp::isDefinedOutsideOfLoop(Value value) {
 }
 
 LogicalResult ParallelOp::moveOutOfLoop(ArrayRef<Operation *> ops) {
-  for (auto op : ops)
+  for (auto *op : ops)
     op->moveBefore(*this);
   return success();
 }

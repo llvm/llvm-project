@@ -1,19 +1,33 @@
 if (DEFINED LLVM_HAVE_TF_AOT OR DEFINED LLVM_HAVE_TF_API)
+  include(TensorFlowCompile)
+  set(LLVM_INLINER_MODEL_PATH_DEFAULT "models/inliner-Oz")
+
+  # This url points to the most recent most which is known to be compatible with
+  # LLVM. When better models are published, this url should be updated to aid
+  # discoverability.
+  set(LLVM_INLINER_MODEL_CURRENT_URL "https://github.com/google/ml-compiler-opt/releases/download/inlining-Oz-v0.1/inlining-Oz-acabaf6-v0.1.tar.gz")
+
   if (DEFINED LLVM_HAVE_TF_AOT)
-    set(LLVM_INLINER_MODEL_PATH "models/inliner" 
-      CACHE STRING 
-      "ML-driven inliner policy location (path to saved model)")
-    include(TensorFlowCompile)
-    tfcompile(${LLVM_INLINER_MODEL_PATH} serve action InlinerSizeModel llvm::InlinerSizeModel)
-    list(APPEND GeneratedMLSources
-      ${GENERATED_HEADERS}
+    # If the path is empty, autogenerate the model
+    if (NOT DEFINED LLVM_INLINER_MODEL_PATH OR "${LLVM_INLINER_MODEL_PATH}" STREQUAL "")
+      set(LLVM_INLINER_MODEL_PATH "autogenerate")
+      message(WARNING "LLVM_INLINER_MODEL_PATH was not set: autogenerating a model to finish the build.")
+    endif()
+
+    tf_find_and_compile(
+      ${LLVM_INLINER_MODEL_PATH}
+      ${LLVM_INLINER_MODEL_CURRENT_URL}
+      ${LLVM_INLINER_MODEL_PATH_DEFAULT}
+      "models/inlining/config.py"
+      serve
+      action
+      InlinerSizeModel
+      llvm::InlinerSizeModel
     )
-    LIST(APPEND MLDeps tf_xla_runtime)
-    LIST(APPEND MLLinkDeps tf_xla_runtime ${GENERATED_OBJS})
   endif()
 
   if (DEFINED LLVM_HAVE_TF_API)
-    LIST(APPEND MLLinkDeps ${tensorflow_c_api})
+    list(APPEND MLLinkDeps ${tensorflow_c_api})
   endif()
 endif()
 

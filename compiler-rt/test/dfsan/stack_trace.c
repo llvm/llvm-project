@@ -36,9 +36,9 @@ int main(int argc, char *argv[]) {
   printf("==OUTPUT==\n%s==EOS==\n", buf);
 
   // CHECK: ==OUTPUT==
-  // CHECK: #0 {{.*}} in dfs$bar [[FILEPATH]]/stack_trace.c:15
-  // CHECK-COUNT-8: #{{[1-9]+}} {{.*}} in dfs$bar [[FILEPATH]]/stack_trace.c:18
-  // CHECK: #9 {{.*}} in dfs$baz [[FILEPATH]]/stack_trace.c:22
+  // CHECK: #0 {{.*}} in bar.dfsan [[FILEPATH]]/stack_trace.c:15
+  // CHECK-COUNT-8: #{{[1-9]+}} {{.*}} in bar.dfsan [[FILEPATH]]/stack_trace.c:18
+  // CHECK: #9 {{.*}} in baz.dfsan [[FILEPATH]]/stack_trace.c:22
   // CHECK: #10 {{.*}} in main [[FILEPATH]]/stack_trace.c:[[# @LINE - 7 ]]
   // CHECK: ==EOS==
 

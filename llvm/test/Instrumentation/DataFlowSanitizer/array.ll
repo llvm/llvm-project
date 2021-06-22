@@ -13,14 +13,14 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
 
 define [4 x i8] @pass_array([4 x i8] %a) {
-  ; NO_COMBINE_LOAD_PTR: @"dfs$pass_array"
+  ; NO_COMBINE_LOAD_PTR: @pass_array.dfsan
   ; NO_COMBINE_LOAD_PTR: %1 = load [4 x i[[#SBITS]]], [4 x i[[#SBITS]]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to [4 x i[[#SBITS]]]*), align [[ALIGN:2]]
   ; NO_COMBINE_LOAD_PTR: store [4 x i[[#SBITS]]] %1, [4 x i[[#SBITS]]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to [4 x i[[#SBITS]]]*), align [[ALIGN]]
 
-  ; ARGS_ABI: @"dfs$pass_array"
+  ; ARGS_ABI: @pass_array.dfsan
   ; ARGS_ABI: ret { [4 x i8], i[[#SBITS]] }
 
-  ; DEBUG_NONZERO_LABELS: @"dfs$pass_array"
+  ; DEBUG_NONZERO_LABELS: @pass_array.dfsan
   ; DEBUG_NONZERO_LABELS: [[L:%.*]] = load [4 x i[[#SBITS]]], [4 x i[[#SBITS]]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to [4 x i[[#SBITS]]]*), align [[ALIGN:2]]
   ; DEBUG_NONZERO_LABELS: [[L0:%.*]] = extractvalue [4 x i[[#SBITS]]] [[L]], 0
   ; DEBUG_NONZERO_LABELS: [[L1:%.*]] = extractvalue [4 x i[[#SBITS]]] [[L]], 1
@@ -38,24 +38,24 @@ define [4 x i8] @pass_array([4 x i8] %a) {
 %ArrayOfStruct = type [4 x {i8*, i32}]
 
 define %ArrayOfStruct @pass_array_of_struct(%ArrayOfStruct %as) {
-  ; NO_COMBINE_LOAD_PTR: @"dfs$pass_array_of_struct"
+  ; NO_COMBINE_LOAD_PTR: @pass_array_of_struct.dfsan
   ; NO_COMBINE_LOAD_PTR: %1 = load [4 x { i[[#SBITS]], i[[#SBITS]] }], [4 x { i[[#SBITS]], i[[#SBITS]] }]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to [4 x { i[[#SBITS]], i[[#SBITS]] }]*), align [[ALIGN:2]]
   ; NO_COMBINE_LOAD_PTR: store [4 x { i[[#SBITS]], i[[#SBITS]] }] %1, [4 x { i[[#SBITS]], i[[#SBITS]] }]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to [4 x { i[[#SBITS]], i[[#SBITS]] }]*), align [[ALIGN]]
 
-  ; ARGS_ABI: @"dfs$pass_array_of_struct"
+  ; ARGS_ABI: @pass_array_of_struct.dfsan
   ; ARGS_ABI: ret { [4 x { i8*, i32 }], i[[#SBITS]] }
   ret %ArrayOfStruct %as
 }
 
 define [4 x i1]* @alloca_ret_array() {
-  ; NO_COMBINE_LOAD_PTR: @"dfs$alloca_ret_array"
+  ; NO_COMBINE_LOAD_PTR: @alloca_ret_array.dfsan
   ; NO_COMBINE_LOAD_PTR: store i[[#SBITS]] 0, i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align 2
   %p = alloca [4 x i1]
   ret [4 x i1]* %p
 }
 
 define [4 x i1] @load_alloca_array() {
-  ; NO_COMBINE_LOAD_PTR-LABEL: @"dfs$load_alloca_array"
+  ; NO_COMBINE_LOAD_PTR-LABEL: @load_alloca_array.dfsan
   ; NO_COMBINE_LOAD_PTR-NEXT: %[[#R:]] = alloca i[[#SBITS]], align [[#SBYTES]]
   ; NO_COMBINE_LOAD_PTR-NEXT: %p = alloca [4 x i1]
   ; NO_COMBINE_LOAD_PTR-NEXT: %[[#R+1]] = load i[[#SBITS]], i[[#SBITS]]* %[[#R]], align [[#SBYTES]]
@@ -73,23 +73,23 @@ define [4 x i1] @load_alloca_array() {
 }
 
 define [0 x i1] @load_array0([0 x i1]* %p) {
-  ; NO_COMBINE_LOAD_PTR: @"dfs$load_array0"
+  ; NO_COMBINE_LOAD_PTR: @load_array0.dfsan
   ; NO_COMBINE_LOAD_PTR: store [0 x i[[#SBITS]]] zeroinitializer, [0 x i[[#SBITS]]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to [0 x i[[#SBITS]]]*), align 2
   %a = load [0 x i1], [0 x i1]* %p
   ret [0 x i1] %a
 }
 
 define [1 x i1] @load_array1([1 x i1]* %p) {
-  ; NO_COMBINE_LOAD_PTR: @"dfs$load_array1"
+  ; NO_COMBINE_LOAD_PTR: @load_array1.dfsan
   ; NO_COMBINE_LOAD_PTR: [[L:%.*]] = load i[[#SBITS]],
   ; NO_COMBINE_LOAD_PTR: [[S:%.*]] = insertvalue [1 x i[[#SBITS]]] undef, i[[#SBITS]] [[L]], 0
   ; NO_COMBINE_LOAD_PTR: store [1 x i[[#SBITS]]] [[S]], [1 x i[[#SBITS]]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to [1 x i[[#SBITS]]]*), align 2
 
-  ; EVENT_CALLBACKS: @"dfs$load_array1"
+  ; EVENT_CALLBACKS: @load_array1.dfsan
   ; EVENT_CALLBACKS: [[L:%.*]] = or i[[#SBITS]]
   ; EVENT_CALLBACKS: call void @__dfsan_load_callback(i[[#SBITS]] [[L]], i8* {{.*}})
 
-  ; FAST: @"dfs$load_array1"
+  ; FAST: @load_array1.dfsan
   ; FAST: [[P:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN:2]]
   ; FAST: [[L:%.*]] = load i[[#SBITS]], i[[#SBITS]]* {{.*}}, align [[#SBYTES]]
   ; FAST: [[U:%.*]] = or i[[#SBITS]] [[L]], [[P]]
@@ -101,7 +101,7 @@ define [1 x i1] @load_array1([1 x i1]* %p) {
 }
 
 define [2 x i1] @load_array2([2 x i1]* %p) {
-  ; NO_COMBINE_LOAD_PTR: @"dfs$load_array2"
+  ; NO_COMBINE_LOAD_PTR: @load_array2.dfsan
   ; NO_COMBINE_LOAD_PTR: [[P1:%.*]] = getelementptr i[[#SBITS]], i[[#SBITS]]* [[P0:%.*]], i64 1
   ; NO_COMBINE_LOAD_PTR-DAG: [[E1:%.*]] = load i[[#SBITS]], i[[#SBITS]]* [[P1]], align [[#SBYTES]]
   ; NO_COMBINE_LOAD_PTR-DAG: [[E0:%.*]] = load i[[#SBITS]], i[[#SBITS]]* [[P0]], align [[#SBYTES]]
@@ -110,12 +110,12 @@ define [2 x i1] @load_array2([2 x i1]* %p) {
   ; NO_COMBINE_LOAD_PTR: [[S2:%.*]] = insertvalue [2 x i[[#SBITS]]] [[S1]], i[[#SBITS]] [[U]], 1
   ; NO_COMBINE_LOAD_PTR: store [2 x i[[#SBITS]]] [[S2]], [2 x i[[#SBITS]]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to [2 x i[[#SBITS]]]*), align [[ALIGN:2]]
 
-  ; EVENT_CALLBACKS: @"dfs$load_array2"
+  ; EVENT_CALLBACKS: @load_array2.dfsan
   ; EVENT_CALLBACKS: [[O1:%.*]] = or i[[#SBITS]]
   ; EVENT_CALLBACKS: [[O2:%.*]] = or i[[#SBITS]] [[O1]]
   ; EVENT_CALLBACKS: call void @__dfsan_load_callback(i[[#SBITS]] [[O2]], i8* {{.*}})
 
-  ; FAST: @"dfs$load_array2"
+  ; FAST: @load_array2.dfsan
   ; FAST: [[P:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN:2]]
   ; FAST: [[O:%.*]] = or i[[#SBITS]]
   ; FAST: [[U:%.*]] = or i[[#SBITS]] [[O]], [[P]]
@@ -127,7 +127,7 @@ define [2 x i1] @load_array2([2 x i1]* %p) {
 }
 
 define [4 x i1] @load_array4([4 x i1]* %p) {
-  ; NO_COMBINE_LOAD_PTR: @"dfs$load_array4"
+  ; NO_COMBINE_LOAD_PTR: @load_array4.dfsan
   ; NO_COMBINE_LOAD_PTR: [[T:%.*]] = trunc i[[#mul(4, SBITS)]] {{.*}} to i[[#SBITS]]
   ; NO_COMBINE_LOAD_PTR: [[S1:%.*]] = insertvalue [4 x i[[#SBITS]]] undef, i[[#SBITS]] [[T]], 0
   ; NO_COMBINE_LOAD_PTR: [[S2:%.*]] = insertvalue [4 x i[[#SBITS]]] [[S1]], i[[#SBITS]] [[T]], 1
@@ -135,14 +135,14 @@ define [4 x i1] @load_array4([4 x i1]* %p) {
   ; NO_COMBINE_LOAD_PTR: [[S4:%.*]] = insertvalue [4 x i[[#SBITS]]] [[S3]], i[[#SBITS]] [[T]], 3
   ; NO_COMBINE_LOAD_PTR: store [4 x i[[#SBITS]]] [[S4]], [4 x i[[#SBITS]]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to [4 x i[[#SBITS]]]*), align 2
 
-  ; EVENT_CALLBACKS: @"dfs$load_array4"
+  ; EVENT_CALLBACKS: @load_array4.dfsan
   ; EVENT_CALLBACKS: [[O0:%.*]] = or i[[#mul(4, SBITS)]]
   ; EVENT_CALLBACKS: [[O1:%.*]] = or i[[#mul(4, SBITS)]] [[O0]]
   ; EVENT_CALLBACKS: [[O2:%.*]] = trunc i[[#mul(4, SBITS)]] [[O1]] to i[[#SBITS]]
   ; EVENT_CALLBACKS: [[O3:%.*]] = or i[[#SBITS]] [[O2]]
   ; EVENT_CALLBACKS: call void @__dfsan_load_callback(i[[#SBITS]] [[O3]], i8* {{.*}})
 
-  ; FAST: @"dfs$load_array4"
+  ; FAST: @load_array4.dfsan
   ; FAST: [[T:%.*]] = trunc i[[#mul(4, SBITS)]] {{.*}} to i[[#SBITS]]
   ; FAST: [[O:%.*]] = or i[[#SBITS]] [[T]]
   ; FAST: [[S1:%.*]] = insertvalue [4 x i[[#SBITS]]] undef, i[[#SBITS]] [[O]], 0
@@ -156,7 +156,7 @@ define [4 x i1] @load_array4([4 x i1]* %p) {
 }
 
 define i1 @extract_array([4 x i1] %a) {
-  ; NO_COMBINE_LOAD_PTR: @"dfs$extract_array"
+  ; NO_COMBINE_LOAD_PTR: @extract_array.dfsan
   ; NO_COMBINE_LOAD_PTR: [[AM:%.*]] = load [4 x i[[#SBITS]]], [4 x i[[#SBITS]]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to [4 x i[[#SBITS]]]*), align [[ALIGN:2]]
   ; NO_COMBINE_LOAD_PTR: [[EM:%.*]] = extractvalue [4 x i[[#SBITS]]] [[AM]], 2
   ; NO_COMBINE_LOAD_PTR: store i[[#SBITS]] [[EM]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align 2
@@ -165,7 +165,7 @@ define i1 @extract_array([4 x i1] %a) {
 }
 
 define [4 x i1] @insert_array([4 x i1] %a, i1 %e2) {
-  ; NO_COMBINE_LOAD_PTR: @"dfs$insert_array"
+  ; NO_COMBINE_LOAD_PTR: @insert_array.dfsan
   ; NO_COMBINE_LOAD_PTR: [[EM:%.*]] = load i[[#SBITS]], i[[#SBITS]]*
   ; NO_COMBINE_LOAD_PTR-SAME: inttoptr (i64 add (i64 ptrtoint ([[TLS_ARR]]* @__dfsan_arg_tls to i64), i64 [[#mul(4, SBYTES)]]) to i[[#SBITS]]*), align [[ALIGN:2]]
   ; NO_COMBINE_LOAD_PTR: [[AM:%.*]] = load [4 x i[[#SBITS]]], [4 x i[[#SBITS]]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to [4 x i[[#SBITS]]]*), align [[ALIGN]]
@@ -176,7 +176,7 @@ define [4 x i1] @insert_array([4 x i1] %a, i1 %e2) {
 }
 
 define void @store_alloca_array([4 x i1] %a) {
-  ; FAST: @"dfs$store_alloca_array"
+  ; FAST: @store_alloca_array.dfsan
   ; FAST: [[S:%.*]] = load [4 x i[[#SBITS]]], [4 x i[[#SBITS]]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to [4 x i[[#SBITS]]]*), align [[ALIGN:2]]
   ; FAST: [[SP:%.*]] = alloca i[[#SBITS]], align [[#SBYTES]]
   ; FAST: [[E0:%.*]] = extractvalue [4 x i[[#SBITS]]] [[S]], 0
@@ -193,19 +193,19 @@ define void @store_alloca_array([4 x i1] %a) {
 }
 
 define void @store_zero_array([4 x i1]* %p) {
-  ; FAST: @"dfs$store_zero_array"
+  ; FAST: @store_zero_array.dfsan
   ; FAST: store i[[#mul(4, SBITS)]] 0, i[[#mul(4, SBITS)]]* {{.*}}
   store [4 x i1] zeroinitializer, [4 x i1]* %p
   ret void
 }
 
 define void @store_array2([2 x i1] %a, [2 x i1]* %p) {
-  ; EVENT_CALLBACKS: @"dfs$store_array2"
+  ; EVENT_CALLBACKS: @store_array2.dfsan
   ; EVENT_CALLBACKS: [[E12:%.*]] = or i[[#SBITS]]
   ; EVENT_CALLBACKS: [[P:%.*]] = bitcast [2 x i1]* %p to i8*
   ; EVENT_CALLBACKS: call void @__dfsan_store_callback(i[[#SBITS]] [[E12]], i8* [[P]])
 
-  ; FAST: @"dfs$store_array2"
+  ; FAST: @store_array2.dfsan
   ; FAST: [[S:%.*]] = load [2 x i[[#SBITS]]], [2 x i[[#SBITS]]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to [2 x i[[#SBITS]]]*), align [[ALIGN:2]]
   ; FAST: [[E1:%.*]] = extractvalue [2 x i[[#SBITS]]] [[S]], 0
   ; FAST: [[E2:%.*]] = extractvalue [2 x i[[#SBITS]]] [[S]], 1
@@ -215,7 +215,7 @@ define void @store_array2([2 x i1] %a, [2 x i1]* %p) {
   ; FAST: [[SP1:%.*]] = getelementptr i[[#SBITS]], i[[#SBITS]]* [[SP]], i32 1
   ; FAST: store i[[#SBITS]] [[E12]], i[[#SBITS]]* [[SP1]], align [[#SBYTES]]
 
-  ; COMBINE_STORE_PTR: @"dfs$store_array2"
+  ; COMBINE_STORE_PTR: @store_array2.dfsan
   ; COMBINE_STORE_PTR: [[O:%.*]] = or i[[#SBITS]]
   ; COMBINE_STORE_PTR: [[U:%.*]] = or i[[#SBITS]] [[O]]
   ; COMBINE_STORE_PTR: [[P1:%.*]] = getelementptr i[[#SBITS]], i[[#SBITS]]* [[P:%.*]], i32 0
@@ -228,7 +228,7 @@ define void @store_array2([2 x i1] %a, [2 x i1]* %p) {
 }
 
 define void @store_array17([17 x i1] %a, [17 x i1]* %p) {
-  ; FAST: @"dfs$store_array17"
+  ; FAST: @store_array17.dfsan
   ; FAST: %[[#R:]]   = load [17 x i[[#SBITS]]], [17 x i[[#SBITS]]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to [17 x i[[#SBITS]]]*), align 2
   ; FAST: %[[#R+1]]  = extractvalue [17 x i[[#SBITS]]] %[[#R]], 0
   ; FAST: %[[#R+2]]  = extractvalue [17 x i[[#SBITS]]] %[[#R]], 1
@@ -283,13 +283,13 @@ define void @store_array17([17 x i1] %a, [17 x i1]* %p) {
 }
 
 define [2 x i32] @const_array() {
-  ; FAST: @"dfs$const_array"
+  ; FAST: @const_array.dfsan
   ; FAST: store [2 x i[[#SBITS]]] zeroinitializer, [2 x i[[#SBITS]]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to [2 x i[[#SBITS]]]*), align 2
   ret [2 x i32] [ i32 42, i32 11 ]
 }
 
 define [4 x i8] @call_array([4 x i8] %a) {
-  ; FAST-LABEL: @"dfs$call_array"
+  ; FAST-LABEL: @call_array.dfsan
   ; FAST: %[[#R:]] = load [4 x i[[#SBITS]]], [4 x i[[#SBITS]]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to [4 x i[[#SBITS]]]*), align [[ALIGN:2]]
   ; FAST: store [4 x i[[#SBITS]]] %[[#R]], [4 x i[[#SBITS]]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to [4 x i[[#SBITS]]]*), align [[ALIGN]]
   ; FAST: %_dfsret = load [4 x i[[#SBITS]]], [4 x i[[#SBITS]]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to [4 x i[[#SBITS]]]*), align [[ALIGN]]
@@ -302,20 +302,20 @@ define [4 x i8] @call_array([4 x i8] %a) {
 %LargeArr = type [1000 x i8]
 
 define i8 @fun_with_large_args(i1 %i, %LargeArr %a) {
-  ; FAST: @"dfs$fun_with_large_args"
+  ; FAST: @fun_with_large_args.dfsan
   ; FAST: store i[[#SBITS]] 0, i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align 2
   %r = extractvalue %LargeArr %a, 0
   ret i8 %r
 }
 
 define %LargeArr @fun_with_large_ret() {
-  ; FAST: @"dfs$fun_with_large_ret"
+  ; FAST: @fun_with_large_ret.dfsan
   ; FAST-NEXT: ret  [1000 x i8] zeroinitializer
   ret %LargeArr zeroinitializer
 }
 
 define i8 @call_fun_with_large_ret() {
-  ; FAST: @"dfs$call_fun_with_large_ret"
+  ; FAST: @call_fun_with_large_ret.dfsan
   ; FAST: store i[[#SBITS]] 0, i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_retval_tls to i[[#SBITS]]*), align 2
   %r = call %LargeArr @fun_with_large_ret()
   %e = extractvalue %LargeArr %r, 0
@@ -323,10 +323,10 @@ define i8 @call_fun_with_large_ret() {
 }
 
 define i8 @call_fun_with_large_args(i1 %i, %LargeArr %a) {
-  ; FAST: @"dfs$call_fun_with_large_args"
+  ; FAST: @call_fun_with_large_args.dfsan
   ; FAST: [[I:%.*]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN:2]]
   ; FAST: store i[[#SBITS]] [[I]], i[[#SBITS]]* bitcast ([[TLS_ARR]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN]]
-  ; FAST: %r = call i8 @"dfs$fun_with_large_args"(i1 %i, [1000 x i8] %a)
+  ; FAST: %r = call i8 @fun_with_large_args.dfsan(i1 %i, [1000 x i8] %a)
 
   %r = call i8 @fun_with_large_args(i1 %i, %LargeArr %a)
   ret i8 %r

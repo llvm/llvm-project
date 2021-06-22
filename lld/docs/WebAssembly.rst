@@ -72,7 +72,8 @@ WebAssembly-specific options:
 .. option:: --allow-undefined
 
   Allow undefined symbols in linked binary.  This is the legacy
-  flag which corresponds to ``--unresolved-symbols=import-functions``.
+  flag which corresponds to ``--unresolve-symbols=ignore`` +
+  ``--import-undefined``.
 
 .. option:: --unresolved-symbols=<method>
 
@@ -91,15 +92,16 @@ WebAssembly-specific options:
      this is trivial.  For direct function calls, the linker will generate a
      trapping stub function in place of the undefined function.
 
-  import-functions:
-
-     Generate WebAssembly imports for any undefined functions.  Undefined data
-     symbols are resolved to zero as in ``ignore-all``.  This corresponds to
-     the legacy ``--allow-undefined`` flag.
-
 .. option:: --import-memory
 
   Import memory from the environment.
+
+.. option:: --import-undefined
+
+   Generate WebAssembly imports for undefined symbols, where possible.  For
+   example, for function symbols this is always possible, but in general this
+   is not possible for undefined data symbols.  Undefined data symbols will
+   still be reported as normal (in accordance with ``--unresolved-symbols``).
 
 .. option:: --initial-memory=<value>
 

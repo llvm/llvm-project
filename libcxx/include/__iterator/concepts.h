@@ -167,7 +167,6 @@ concept contiguous_iterator =
     { _VSTD::to_address(__i) } -> same_as<add_pointer_t<iter_reference_t<_Ip>>>;
   };
 
-
 template<class _Ip>
 concept __has_arrow = input_iterator<_Ip> && (is_pointer_v<_Ip> || requires(_Ip __i) { __i.operator->(); });
 
@@ -235,6 +234,19 @@ concept indirect_strict_weak_order =
 template<class _Fp, class... _Its>
   requires (indirectly_readable<_Its> && ...) && invocable<_Fp, iter_reference_t<_Its>...>
 using indirect_result_t = invoke_result_t<_Fp, iter_reference_t<_Its>...>;
+
+template<class _In, class _Out>
+concept indirectly_movable =
+  indirectly_readable<_In> &&
+  indirectly_writable<_Out, iter_rvalue_reference_t<_In>>;
+
+template<class _In, class _Out>
+concept indirectly_movable_storable =
+  indirectly_movable<_In, _Out> &&
+  indirectly_writable<_Out, iter_value_t<_In>> &&
+  movable<iter_value_t<_In>> &&
+  constructible_from<iter_value_t<_In>, iter_rvalue_reference_t<_In>> &&
+  assignable_from<iter_value_t<_In>&, iter_rvalue_reference_t<_In>>;
 
 // clang-format on
 

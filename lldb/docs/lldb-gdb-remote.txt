@@ -348,7 +348,7 @@ read packet: OK/E<error code>;AAAAAAAAA
 //  response is returned, or an error otherwise.
 //
 // PROCESS TRACE STOPPING
-//  Stopping a process trace doesn't stop the active traces initiated with
+//  Stopping a process trace stops the active traces initiated with
 //  "thread tracing".
 //
 // THREAD TRACE STOPPING
@@ -869,10 +869,14 @@ distribution_id: optional. For linux, specifies distribution id (e.g. ubuntu, fe
 osmajor: optional, specifies the major version number of the OS (e.g. for macOS 10.12.2, it would be 10)
 osminor: optional, specifies the minor version number of the OS (e.g. for macOS 10.12.2, it would be 12)
 ospatch: optional, specifies the patch level number of the OS (e.g. for macOS 10.12.2, it would be 2)
+vm-page-size: optional, specifies the target system VM page size, base 10.
+           Needed for the "dirty-pages:" list in the qMemoryRegionInfo
+           packet, where a list of dirty pages is sent from the remote 
+           stub.  This page size tells lldb how large each dirty page is.
 addressing_bits: optional, specifies how many bits in addresses are
 		 significant for addressing, base 10.  If bits 38..0
 		 in a 64-bit pointer are significant for addressing,
-		 then the value is 39.  This is needed on e.g. Aarch64
+		 then the value is 39.  This is needed on e.g. AArch64
 		 v8.3 ABIs that use pointer authentication, so lldb
 		 knows which bits to clear/set to get the actual
 		 addresses.
@@ -1173,6 +1177,18 @@ tuples to return are:
     error:<ascii-byte-error-string>; // where <ascii-byte-error-string> is
                                      // a hex encoded string value that
                                      // contains an error string
+
+    dirty-pages:[<hexaddr>][,<hexaddr]; // A list of memory pages within this
+                 // region that are "dirty" -- they have been modified.
+                 // Page addresses are in base16.  The size of a page can
+                 // be found from the qHostInfo's page-size key-value.
+                 //
+                 // If the stub supports identifying dirty pages within a
+                 // memory region, this key should always be present for all
+                 // qMemoryRegionInfo replies.  This key with no pages 
+                 // listed ("dirty-pages:;") indicates no dirty pages in 
+                 // this memory region.  The *absence* of this key means
+                 // that this stub cannot determine dirty pages.
 
 If the address requested is not in a mapped region (e.g. we've jumped through
 a NULL pointer and are at 0x0) currently lldb expects to get back the size

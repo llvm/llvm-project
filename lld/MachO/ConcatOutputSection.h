@@ -40,6 +40,7 @@ public:
   void finalize() override;
   bool needsThunks() const;
   uint64_t estimateStubsInRangeVA(size_t callIdx) const;
+  void eraseOmittedInputSections();
 
   void writeTo(uint8_t *buf) const override;
 
@@ -51,7 +52,7 @@ public:
   }
 
 private:
-  void mergeFlags(InputSection *input);
+  void finalizeFlags(InputSection *input);
 
   size_t size = 0;
   uint64_t fileSize = 0;

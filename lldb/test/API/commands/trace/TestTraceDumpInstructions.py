@@ -1,17 +1,12 @@
 import lldb
+from intelpt_testcase import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
-class TestTraceDumpInstructions(TestBase):
+class TestTraceDumpInstructions(TraceIntelPTTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
-    NO_DEBUG_INFO_TESTCASE = True
-
-    def setUp(self):
-        TestBase.setUp(self)
-        if 'intel-pt' not in configuration.enabled_plugins:
-            self.skipTest("The intel-pt test plugin is not enabled")
 
     def testErrorMessages(self):
         # We first check the output when there are no targets

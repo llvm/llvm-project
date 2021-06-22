@@ -13,6 +13,7 @@
 
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 
@@ -93,6 +94,10 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThreadSafeModule, LLVMOrcThreadSafeModuleRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(JITTargetMachineBuilder,
                                    LLVMOrcJITTargetMachineBuilderRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ObjectLayer, LLVMOrcObjectLayerRef)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(IRTransformLayer, LLVMOrcIRTransformLayerRef)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ObjectTransformLayer,
+                                   LLVMOrcObjectTransformLayerRef)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DumpObjects, LLVMOrcDumpObjectsRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LLJITBuilder, LLVMOrcLLJITBuilderRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LLJIT, LLVMOrcLLJITRef)
 
@@ -423,6 +428,14 @@ void LLVMOrcDisposeThreadSafeContext(LLVMOrcThreadSafeContextRef TSCtx) {
   delete unwrap(TSCtx);
 }
 
+LLVMErrorRef
+LLVMOrcThreadSafeModuleWithModuleDo(LLVMOrcThreadSafeModuleRef TSM,
+                                    LLVMOrcGenericIRModuleOperationFunction F,
+                                    void *Ctx) {
+  return wrap(unwrap(TSM)->withModuleDo(
+      [&](Module &M) { return unwrap(F(Ctx, wrap(&M))); }));
+}
+
 LLVMOrcThreadSafeModuleRef
 LLVMOrcCreateNewThreadSafeModule(LLVMModuleRef M,
                                  LLVMOrcThreadSafeContextRef TSCtx) {
@@ -511,6 +524,61 @@ void LLVMOrcObjectLayerEmit(LLVMOrcObjectLayerRef ObjLayer,
 
 void LLVMOrcDisposeObjectLayer(LLVMOrcObjectLayerRef ObjLayer) {
   delete unwrap(ObjLayer);
+}
+
+void LLVMOrcLLJITIRTransformLayerSetTransform(
+    LLVMOrcIRTransformLayerRef IRTransformLayer,
+    LLVMOrcIRTransformLayerTransformFunction TransformFunction, void *Ctx) {
+  unwrap(IRTransformLayer)
+      ->setTransform(
+          [=](ThreadSafeModule TSM,
+              MaterializationResponsibility &R) -> Expected<ThreadSafeModule> {
+            LLVMOrcThreadSafeModuleRef TSMRef =
+                wrap(new ThreadSafeModule(std::move(TSM)));
+            if (LLVMErrorRef Err = TransformFunction(Ctx, &TSMRef, wrap(&R))) {
+              assert(!TSMRef && "TSMRef was not reset to null on error");
+              return unwrap(Err);
+            }
+            return std::move(*unwrap(TSMRef));
+          });
+}
+
+void LLVMOrcObjectTransformLayerSetTransform(
+    LLVMOrcObjectTransformLayerRef ObjTransformLayer,
+    LLVMOrcObjectTransformLayerTransformFunction TransformFunction, void *Ctx) {
+  unwrap(ObjTransformLayer)
+      ->setTransform([TransformFunction, Ctx](std::unique_ptr<MemoryBuffer> Obj)
+                         -> Expected<std::unique_ptr<MemoryBuffer>> {
+        LLVMMemoryBufferRef ObjBuffer = wrap(Obj.release());
+        if (LLVMErrorRef Err = TransformFunction(Ctx, &ObjBuffer)) {
+          assert(!ObjBuffer && "ObjBuffer was not reset to null on error");
+          return unwrap(Err);
+        }
+        return std::unique_ptr<MemoryBuffer>(unwrap(ObjBuffer));
+      });
+}
+
+LLVMOrcDumpObjectsRef LLVMOrcCreateDumpObjects(const char *DumpDir,
+                                               const char *IdentifierOverride) {
+  assert(DumpDir && "DumpDir should not be null");
+  assert(IdentifierOverride && "IdentifierOverride should not be null");
+  return wrap(new DumpObjects(DumpDir, IdentifierOverride));
+}
+
+void LLVMOrcDisposeDumpObjects(LLVMOrcDumpObjectsRef DumpObjects) {
+  delete unwrap(DumpObjects);
+}
+
+LLVMErrorRef LLVMOrcDumpObjects_CallOperator(LLVMOrcDumpObjectsRef DumpObjects,
+                                             LLVMMemoryBufferRef *ObjBuffer) {
+  std::unique_ptr<MemoryBuffer> OB(unwrap(*ObjBuffer));
+  if (auto Result = (*unwrap(DumpObjects))(std::move(OB))) {
+    *ObjBuffer = wrap(Result->release());
+    return LLVMErrorSuccess;
+  } else {
+    *ObjBuffer = nullptr;
+    return wrap(Result.takeError());
+  }
 }
 
 LLVMOrcLLJITBuilderRef LLVMOrcCreateLLJITBuilder(void) {
@@ -632,6 +700,11 @@ LLVMOrcObjectLayerRef LLVMOrcLLJITGetObjLinkingLayer(LLVMOrcLLJITRef J) {
   return wrap(&unwrap(J)->getObjLinkingLayer());
 }
 
+LLVMOrcObjectTransformLayerRef
+LLVMOrcLLJITGetObjTransformLayer(LLVMOrcLLJITRef J) {
+  return wrap(&unwrap(J)->getObjTransformLayer());
+}
+
 LLVMOrcObjectLayerRef
 LLVMOrcCreateRTDyldObjectLinkingLayerWithSectionMemoryManager(
     LLVMOrcExecutionSessionRef ES) {
@@ -647,4 +720,8 @@ void LLVMOrcRTDyldObjectLinkingLayerRegisterJITEventListener(
   assert(Listener && "Listener must not be null");
   reinterpret_cast<RTDyldObjectLinkingLayer *>(unwrap(RTDyldObjLinkingLayer))
       ->registerJITEventListener(*unwrap(Listener));
+}
+
+LLVMOrcIRTransformLayerRef LLVMOrcLLJITGetIRTransformLayer(LLVMOrcLLJITRef J) {
+  return wrap(&unwrap(J)->getIRTransformLayer());
 }

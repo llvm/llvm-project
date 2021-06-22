@@ -3082,26 +3082,37 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
 
 void Target::SetTrace(const TraceSP &trace_sp) { m_trace_sp = trace_sp; }
 
-TraceSP &Target::GetTrace() { return m_trace_sp; }
+TraceSP Target::GetTrace() { return m_trace_sp; }
 
-llvm::Expected<TraceSP &> Target::GetTraceOrCreate() {
-  if (!m_trace_sp && m_process_sp) {
-    llvm::Expected<TraceSupportedResponse> trace_type =
-        m_process_sp->TraceSupported();
-    if (!trace_type)
-      return llvm::createStringError(
-          llvm::inconvertibleErrorCode(), "Tracing is not supported. %s",
-          llvm::toString(trace_type.takeError()).c_str());
-    if (llvm::Expected<TraceSP> trace_sp =
-            Trace::FindPluginForLiveProcess(trace_type->name, *m_process_sp))
-      m_trace_sp = *trace_sp;
-    else
-      return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
-          "Couldn't start tracing the process. %s",
-          llvm::toString(trace_sp.takeError()).c_str());
-  }
+llvm::Expected<TraceSP> Target::CreateTrace() {
+  if (!m_process_sp)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "A process is required for tracing");
+  if (m_trace_sp)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "A trace already exists for the target");
+
+  llvm::Expected<TraceSupportedResponse> trace_type =
+      m_process_sp->TraceSupported();
+  if (!trace_type)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(), "Tracing is not supported. %s",
+        llvm::toString(trace_type.takeError()).c_str());
+  if (llvm::Expected<TraceSP> trace_sp =
+          Trace::FindPluginForLiveProcess(trace_type->name, *m_process_sp))
+    m_trace_sp = *trace_sp;
+  else
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Couldn't create a Trace object for the process. %s",
+        llvm::toString(trace_sp.takeError()).c_str());
   return m_trace_sp;
+}
+
+llvm::Expected<TraceSP> Target::GetTraceOrCreate() {
+  if (m_trace_sp)
+    return m_trace_sp;
+  return CreateTrace();
 }
 
 Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {

@@ -31,7 +31,7 @@
 # include <sys/time.h> // for gettimeofday and timeval
 #endif
 
-#if !defined(__APPLE__) && _POSIX_TIMERS > 0
+#if !defined(__APPLE__) && defined(_POSIX_TIMERS) && _POSIX_TIMERS > 0
 # define _LIBCPP_USE_CLOCK_GETTIME
 #endif
 

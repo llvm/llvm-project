@@ -102,6 +102,8 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
@@ -115,6 +117,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
@@ -126,6 +129,7 @@ struct Attributor;
 struct AbstractAttribute;
 struct InformationCache;
 struct AAIsDead;
+struct AttributorCallGraph;
 
 class AAManager;
 class AAResults;
@@ -815,7 +819,7 @@ struct InformationCache {
             [&](const Function &F) {
               return AG.getAnalysis<PostDominatorTreeAnalysis>(F);
             }),
-        AG(AG), CGSCC(CGSCC) {
+        AG(AG), CGSCC(CGSCC), TargetTriple(M.getTargetTriple()) {
     if (CGSCC)
       initializeModuleSlice(*CGSCC);
   }
@@ -965,6 +969,14 @@ struct InformationCache {
     return ModuleSlice.count(const_cast<Function *>(&F));
   }
 
+  /// Return true if the stack (llvm::Alloca) can be accessed by other threads.
+  bool stackIsAccessibleByOtherThreads() { return !targetIsGPU(); }
+
+  /// Return true if the target is a GPU.
+  bool targetIsGPU() {
+    return TargetTriple.isAMDGPU() || TargetTriple.isNVPTX();
+  }
+
 private:
   struct FunctionInfo {
     ~FunctionInfo();
@@ -1027,6 +1039,9 @@ private:
   /// A map for caching results of queries for isPotentiallyReachable
   DenseMap<std::pair<const Instruction *, const Instruction *>, bool>
       PotentiallyReachableMap;
+
+  /// The triple describing the target machine.
+  Triple TargetTriple;
 
   /// Give the Attributor access to the members so
   /// Attributor::identifyDefaultAbstractAttributes(...) can initialize them.
@@ -1131,9 +1146,10 @@ struct Attributor {
   /// function.
   /// NOTE: ForceUpdate is ignored in any stage other than the update stage.
   template <typename AAType>
-  const AAType &
-  getOrCreateAAFor(IRPosition IRP, const AbstractAttribute *QueryingAA,
-                   DepClassTy DepClass, bool ForceUpdate = false) {
+  const AAType &getOrCreateAAFor(IRPosition IRP,
+                                 const AbstractAttribute *QueryingAA,
+                                 DepClassTy DepClass, bool ForceUpdate = false,
+                                 bool UpdateAfterInit = true) {
     if (!shouldPropagateCallBaseContext(IRP))
       IRP = IRP.stripCallBaseContext();
 
@@ -1201,12 +1217,14 @@ struct Attributor {
 
     // Allow seeded attributes to declare dependencies.
     // Remember the seeding state.
-    AttributorPhase OldPhase = Phase;
-    Phase = AttributorPhase::UPDATE;
+    if (UpdateAfterInit) {
+      AttributorPhase OldPhase = Phase;
+      Phase = AttributorPhase::UPDATE;
 
-    updateAA(AA);
+      updateAA(AA);
 
-    Phase = OldPhase;
+      Phase = OldPhase;
+    }
 
     if (QueryingAA && AA.getState().isValidState())
       recordDependence(AA, const_cast<AbstractAttribute &>(*QueryingAA),
@@ -1402,6 +1420,39 @@ struct Attributor {
                                           const AbstractAttribute &AA,
                                           bool &UsedAssumedInformation);
 
+  /// If \p V is assumed simplified, return it, if it is unclear yet,
+  /// return None, otherwise return `nullptr`.
+  Optional<Value *> getAssumedSimplified(const IRPosition &IRP,
+                                         const AbstractAttribute &AA,
+                                         bool &UsedAssumedInformation) {
+    return getAssumedSimplified(IRP, &AA, UsedAssumedInformation);
+  }
+
+  /// Register \p CB as a simplification callback.
+  /// `Attributor::getAssumedSimplified` will use these callbacks before
+  /// we it will ask `AAValueSimplify`. It is important to ensure this
+  /// is called before `identifyDefaultAbstractAttributes`, assuming the
+  /// latter is called at all.
+  using SimplifictionCallbackTy = std::function<Optional<Value *>(
+      const IRPosition &, const AbstractAttribute *, bool &)>;
+  void registerSimplificationCallback(const IRPosition &IRP,
+                                      const SimplifictionCallbackTy &CB) {
+    SimplificationCallbacks[IRP].emplace_back(CB);
+  }
+
+private:
+  /// The vector with all simplification callbacks registered by outside AAs.
+  DenseMap<IRPosition, SmallVector<SimplifictionCallbackTy, 1>>
+      SimplificationCallbacks;
+
+  /// If \p V is assumed simplified, return it, if it is unclear yet,
+  /// return None, otherwise return `nullptr`. Same as the public version
+  /// except that it can be used without recording dependences on any \p AA.
+  Optional<Value *> getAssumedSimplified(const IRPosition &V,
+                                         const AbstractAttribute *AA,
+                                         bool &UsedAssumedInformation);
+
+public:
   /// Return true if \p AA (or its context instruction) is assumed dead.
   ///
   /// If \p LivenessAA is not provided it is queried.
@@ -1760,6 +1811,7 @@ private:
   ///}
 
   friend AADepGraph;
+  friend AttributorCallGraph;
 };
 
 /// An interface to query the internal state of an abstract attribute.
@@ -2700,6 +2752,8 @@ struct AAReachability : public StateWrapper<BooleanState, AbstractAttribute> {
   /// determines (and caches) reachability.
   bool isAssumedReachable(Attributor &A, const Instruction &From,
                           const Instruction &To) const {
+    if (!getState().isValidState())
+      return true;
     return A.getInfoCache().getPotentiallyReachable(From, To);
   }
 
@@ -2708,6 +2762,8 @@ struct AAReachability : public StateWrapper<BooleanState, AbstractAttribute> {
   /// determines (and caches) reachability.
   bool isKnownReachable(Attributor &A, const Instruction &From,
                         const Instruction &To) const {
+    if (!getState().isValidState())
+      return false;
     return A.getInfoCache().getPotentiallyReachable(From, To);
   }
 
@@ -3193,11 +3249,6 @@ struct AAValueSimplify : public StateWrapper<BooleanState, AbstractAttribute> {
   using Base = StateWrapper<BooleanState, AbstractAttribute>;
   AAValueSimplify(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
-  /// Return an assumed simplified value if a single candidate is found. If
-  /// there cannot be one, return original value. If it is not clear yet, return
-  /// the Optional::NoneType.
-  virtual Optional<Value *> getAssumedSimplifiedValue(Attributor &A) const = 0;
-
   /// Create an abstract attribute view for the position \p IRP.
   static AAValueSimplify &createForPosition(const IRPosition &IRP,
                                             Attributor &A);
@@ -3216,6 +3267,16 @@ struct AAValueSimplify : public StateWrapper<BooleanState, AbstractAttribute> {
 
   /// Unique ID (due to the unique address)
   static const char ID;
+
+private:
+  /// Return an assumed simplified value if a single candidate is found. If
+  /// there cannot be one, return original value. If it is not clear yet, return
+  /// the Optional::NoneType.
+  ///
+  /// Use `Attributor::getAssumedSimplified` for value simplification.
+  virtual Optional<Value *> getAssumedSimplifiedValue(Attributor &A) const = 0;
+
+  friend struct Attributor;
 };
 
 struct AAHeapToStack : public StateWrapper<BooleanState, AbstractAttribute> {
@@ -3847,6 +3908,192 @@ struct AANoUndef
   const char *getIdAddr() const override { return &ID; }
 
   /// This function should return true if the type of the \p AA is AANoUndef
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+struct AACallGraphNode;
+struct AACallEdges;
+
+/// An Iterator for call edges, creates AACallEdges attributes in a lazy way.
+/// This iterator becomes invalid if the underlying edge list changes.
+/// So This shouldn't outlive a iteration of Attributor.
+class AACallEdgeIterator
+    : public iterator_adaptor_base<AACallEdgeIterator,
+                                   SetVector<Function *>::iterator> {
+  AACallEdgeIterator(Attributor &A, SetVector<Function *>::iterator Begin)
+      : iterator_adaptor_base(Begin), A(A) {}
+
+public:
+  AACallGraphNode *operator*() const;
+
+private:
+  Attributor &A;
+  friend AACallEdges;
+  friend AttributorCallGraph;
+};
+
+struct AACallGraphNode {
+  AACallGraphNode(Attributor &A) : A(A) {}
+  virtual ~AACallGraphNode() {}
+
+  virtual AACallEdgeIterator optimisticEdgesBegin() const = 0;
+  virtual AACallEdgeIterator optimisticEdgesEnd() const = 0;
+
+  /// Iterator range for exploring the call graph.
+  iterator_range<AACallEdgeIterator> optimisticEdgesRange() const {
+    return iterator_range<AACallEdgeIterator>(optimisticEdgesBegin(),
+                                              optimisticEdgesEnd());
+  }
+
+protected:
+  /// Reference to Attributor needed for GraphTraits implementation.
+  Attributor &A;
+};
+
+/// An abstract state for querying live call edges.
+/// This interface uses the Attributor's optimistic liveness
+/// information to compute the edges that are alive.
+struct AACallEdges : public StateWrapper<BooleanState, AbstractAttribute>,
+                     AACallGraphNode {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+
+  AACallEdges(const IRPosition &IRP, Attributor &A)
+      : Base(IRP), AACallGraphNode(A) {}
+
+  /// Get the optimistic edges.
+  virtual const SetVector<Function *> &getOptimisticEdges() const = 0;
+
+  /// Is there in this function call with a unknown Callee.
+  virtual bool hasUnknownCallee() const = 0;
+
+  /// Iterator for exploring the call graph.
+  AACallEdgeIterator optimisticEdgesBegin() const override {
+    return AACallEdgeIterator(A, getOptimisticEdges().begin());
+  }
+
+  /// Iterator for exploring the call graph.
+  AACallEdgeIterator optimisticEdgesEnd() const override {
+    return AACallEdgeIterator(A, getOptimisticEdges().end());
+  }
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AACallEdges &createForPosition(const IRPosition &IRP, Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AACallEdges"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is AACallEdges.
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+// Synthetic root node for the Attributor's internal call graph.
+struct AttributorCallGraph : public AACallGraphNode {
+  AttributorCallGraph(Attributor &A) : AACallGraphNode(A) {}
+  virtual ~AttributorCallGraph() {}
+
+  AACallEdgeIterator optimisticEdgesBegin() const override {
+    return AACallEdgeIterator(A, A.Functions.begin());
+  }
+
+  AACallEdgeIterator optimisticEdgesEnd() const override {
+    return AACallEdgeIterator(A, A.Functions.end());
+  }
+
+  /// Force populate the entire call graph.
+  void populateAll() const {
+    for (const AACallGraphNode *AA : optimisticEdgesRange()) {
+      // Nothing else to do here.
+      (void)AA;
+    }
+  }
+
+  void print();
+};
+
+template <> struct GraphTraits<AACallGraphNode *> {
+  using NodeRef = AACallGraphNode *;
+  using ChildIteratorType = AACallEdgeIterator;
+
+  static AACallEdgeIterator child_begin(AACallGraphNode *Node) {
+    return Node->optimisticEdgesBegin();
+  }
+
+  static AACallEdgeIterator child_end(AACallGraphNode *Node) {
+    return Node->optimisticEdgesEnd();
+  }
+};
+
+template <>
+struct GraphTraits<AttributorCallGraph *>
+    : public GraphTraits<AACallGraphNode *> {
+  using nodes_iterator = AACallEdgeIterator;
+
+  static AACallGraphNode *getEntryNode(AttributorCallGraph *G) {
+    return static_cast<AACallGraphNode *>(G);
+  }
+
+  static AACallEdgeIterator nodes_begin(const AttributorCallGraph *G) {
+    return G->optimisticEdgesBegin();
+  }
+
+  static AACallEdgeIterator nodes_end(const AttributorCallGraph *G) {
+    return G->optimisticEdgesEnd();
+  }
+};
+
+template <>
+struct DOTGraphTraits<AttributorCallGraph *> : public DefaultDOTGraphTraits {
+  DOTGraphTraits(bool Simple = false) : DefaultDOTGraphTraits(Simple) {}
+
+  std::string getNodeLabel(const AACallGraphNode *Node,
+                           const AttributorCallGraph *Graph) {
+    const AACallEdges *AACE = static_cast<const AACallEdges *>(Node);
+    return AACE->getAssociatedFunction()->getName().str();
+  }
+
+  static bool isNodeHidden(const AACallGraphNode *Node,
+                           const AttributorCallGraph *Graph) {
+    // Hide the synth root.
+    return static_cast<const AACallGraphNode *>(Graph) == Node;
+  }
+};
+
+struct AAExecutionDomain
+    : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+  AAExecutionDomain(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAExecutionDomain &createForPosition(const IRPosition &IRP,
+                                              Attributor &A);
+
+  /// See AbstractAttribute::getName().
+  const std::string getName() const override { return "AAExecutionDomain"; }
+
+  /// See AbstractAttribute::getIdAddr().
+  const char *getIdAddr() const override { return &ID; }
+
+  /// Check if an instruction is executed only by the initial thread.
+  virtual bool isExecutedByInitialThreadOnly(const Instruction &) const = 0;
+
+  /// Check if a basic block is executed only by the initial thread.
+  virtual bool isExecutedByInitialThreadOnly(const BasicBlock &) const = 0;
+
+  /// This function should return true if the type of the \p AA is
+  /// AAExecutionDomain.
   static bool classof(const AbstractAttribute *AA) {
     return (AA->getIdAddr() == &ID);
   }

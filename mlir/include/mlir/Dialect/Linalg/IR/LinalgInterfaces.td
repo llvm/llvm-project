@@ -96,21 +96,6 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     //===------------------------------------------------------------------===//
     InterfaceMethod<
       /*desc=*/[{
-        Return the number of induction variables in the basic block. This should
-        always be 0 for index-free linalg ops. For IndexedGeneric, this must be
-        equal to numLoops
-      }],
-      /*retTy=*/"unsigned",
-      /*methodName=*/"getNumPayloadInductionVariables",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/""
-    >,
-    //===------------------------------------------------------------------===//
-    // Loop types handling.
-    //===------------------------------------------------------------------===//
-    InterfaceMethod<
-      /*desc=*/[{
         Return the number of parallel loops.
       }],
       /*retTy=*/"unsigned",
@@ -491,8 +476,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins "OpOperand *":$opOperand),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        unsigned bbArgNumber =
-          $_op.getNumPayloadInductionVariables() + opOperand->getOperandNumber();
+        unsigned bbArgNumber = opOperand->getOperandNumber();
         // Safeguard against the named linalg ops that are manually defined and
         // that only support buffer semantics: we should not be there.
         // Such ops have an empty regionBuilder and are not constructed with a

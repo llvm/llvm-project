@@ -47,18 +47,6 @@ static cl::opt<bool>
                    cl::desc("Call nonlazybind functions via direct GOT load"),
                    cl::init(false), cl::Hidden);
 
-static cl::opt<unsigned> SVEVectorBitsMax(
-    "aarch64-sve-vector-bits-max",
-    cl::desc("Assume SVE vector registers are at most this big, "
-             "with zero meaning no maximum size is assumed."),
-    cl::init(0), cl::Hidden);
-
-static cl::opt<unsigned> SVEVectorBitsMin(
-    "aarch64-sve-vector-bits-min",
-    cl::desc("Assume SVE vector registers are at least this big, "
-             "with zero meaning no minimum size is assumed."),
-    cl::init(0), cl::Hidden);
-
 static cl::opt<bool> UseAA("aarch64-use-aa", cl::init(true),
                            cl::desc("Enable the use of AA during codegen."));
 
@@ -210,14 +198,17 @@ void AArch64Subtarget::initializeProperties() {
 
 AArch64Subtarget::AArch64Subtarget(const Triple &TT, const std::string &CPU,
                                    const std::string &FS,
-                                   const TargetMachine &TM, bool LittleEndian)
+                                   const TargetMachine &TM, bool LittleEndian,
+                                   unsigned MinSVEVectorSizeInBitsOverride,
+                                   unsigned MaxSVEVectorSizeInBitsOverride)
     : AArch64GenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
       ReserveXRegister(AArch64::GPR64commonRegClass.getNumRegs()),
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
       IsLittle(LittleEndian),
-      TargetTriple(TT), FrameLowering(),
-      InstrInfo(initializeSubtargetDependencies(FS, CPU)), TSInfo(),
-      TLInfo(TM, *this) {
+      MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
+      MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
+      FrameLowering(), InstrInfo(initializeSubtargetDependencies(FS, CPU)),
+      TSInfo(), TLInfo(TM, *this) {
   if (AArch64::isX18ReservedByDefault(TT))
     ReserveXRegister.set(18);
 
@@ -354,28 +345,6 @@ void AArch64Subtarget::mirFileLoaded(MachineFunction &MF) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
   if (!MFI.isMaxCallFrameSizeComputed())
     MFI.computeMaxCallFrameSize(MF);
-}
-
-unsigned AArch64Subtarget::getMaxSVEVectorSizeInBits() const {
-  assert(HasSVE && "Tried to get SVE vector length without SVE support!");
-  assert(SVEVectorBitsMax % 128 == 0 &&
-         "SVE requires vector length in multiples of 128!");
-  assert((SVEVectorBitsMax >= SVEVectorBitsMin || SVEVectorBitsMax == 0) &&
-         "Minimum SVE vector size should not be larger than its maximum!");
-  if (SVEVectorBitsMax == 0)
-    return 0;
-  return (std::max(SVEVectorBitsMin, SVEVectorBitsMax) / 128) * 128;
-}
-
-unsigned AArch64Subtarget::getMinSVEVectorSizeInBits() const {
-  assert(HasSVE && "Tried to get SVE vector length without SVE support!");
-  assert(SVEVectorBitsMin % 128 == 0 &&
-         "SVE requires vector length in multiples of 128!");
-  assert((SVEVectorBitsMax >= SVEVectorBitsMin || SVEVectorBitsMax == 0) &&
-         "Minimum SVE vector size should not be larger than its maximum!");
-  if (SVEVectorBitsMax == 0)
-    return (SVEVectorBitsMin / 128) * 128;
-  return (std::min(SVEVectorBitsMin, SVEVectorBitsMax) / 128) * 128;
 }
 
 bool AArch64Subtarget::useSVEForFixedLengthVectors() const {

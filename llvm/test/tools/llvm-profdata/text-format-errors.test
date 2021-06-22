@@ -2,36 +2,36 @@ Tests for instrumentation profile bad encoding.
 
 1- Detect invalid count
 RUN: not llvm-profdata show %p/Inputs/invalid-count-later.proftext 2>&1 | FileCheck %s --check-prefix=INVALID-COUNT-LATER-SHOW
-INVALID-COUNT-LATER-SHOW: error: {{.*}}invalid-count-later.proftext: Malformed instrumentation profile data
+INVALID-COUNT-LATER-SHOW: error: {{.*}}invalid-count-later.proftext: malformed instrumentation profile data
 
 RUN: not llvm-profdata merge %p/Inputs/invalid-count-later.proftext %p/Inputs/invalid-count-later.proftext -o %t.out 2>&1 | FileCheck %s --check-prefix=INVALID-COUNT-LATER-MERGE
 RUN: not llvm-profdata merge -failure-mode=all %p/Inputs/invalid-count-later.proftext %p/Inputs/invalid-count-later.proftext -o %t.out 2>&1 | FileCheck %s --check-prefix=INVALID-COUNT-LATER-MERGE
-INVALID-COUNT-LATER-MERGE: warning: {{.*}}invalid-count-later.proftext: Malformed instrumentation profile data
-INVALID-COUNT-LATER-MERGE-NEXT: warning: {{.*}}invalid-count-later.proftext: Malformed instrumentation profile data
-INVALID-COUNT-LATER-MERGE-NEXT: error: No profiles could be merged.
+INVALID-COUNT-LATER-MERGE: warning: {{.*}}invalid-count-later.proftext: malformed instrumentation profile data
+INVALID-COUNT-LATER-MERGE-NEXT: warning: {{.*}}invalid-count-later.proftext: malformed instrumentation profile data
+INVALID-COUNT-LATER-MERGE-NEXT: error: no profile can be merged
 
 2- Detect bad hash
 RUN: not llvm-profdata show %p/Inputs/bad-hash.proftext 2>&1 | FileCheck %s --check-prefix=BAD-HASH-SHOW
-BAD-HASH-SHOW: error: {{.*}}bad-hash.proftext: Malformed instrumentation profile data
+BAD-HASH-SHOW: error: {{.*}}bad-hash.proftext: malformed instrumentation profile data
 
 RUN: not llvm-profdata merge %p/Inputs/bad-hash.proftext %p/Inputs/bad-hash.proftext -o %t.out 2>&1 | FileCheck %s --check-prefix=BAD-HASH-MERGE
-BAD-HASH-MERGE: warning: {{.*}}bad-hash.proftext: Malformed instrumentation profile data
-BAD-HASH-NEXT: error: No profiles could be merged.
+BAD-HASH-MERGE: warning: {{.*}}bad-hash.proftext: malformed instrumentation profile data
+BAD-HASH-NEXT: error: no profiles can be merged
 
 3- Detect no counts
 RUN: not llvm-profdata show %p/Inputs/no-counts.proftext 2>&1 | FileCheck %s --check-prefix=NO-COUNTS
-NO-COUNTS: error: {{.*}}no-counts.proftext: Malformed instrumentation profile data
+NO-COUNTS: error: {{.*}}no-counts.proftext: malformed instrumentation profile data
 
 4- Detect binary input
 RUN: not llvm-profdata show %p/Inputs/text-format-errors.text.bin 2>&1 | FileCheck %s --check-prefix=BINARY
-BINARY: error: {{.+}}: Unrecognized instrumentation profile encoding format
+BINARY: error: {{.+}}: unrecognized instrumentation profile encoding format
 BINARY: Perhaps you forgot to use the --sample option?
 
 5- Detect malformed value profile data
 RUN: not llvm-profdata show %p/Inputs/vp-malform.proftext 2>&1 | FileCheck %s --check-prefix=VP
 RUN: not llvm-profdata show %p/Inputs/vp-malform2.proftext 2>&1 | FileCheck %s --check-prefix=VP
-VP: Malformed instrumentation profile data
+VP: error: {{.+}}: malformed instrumentation profile data
 
 6- Detect truncated value profile data
 RUN: not llvm-profdata show %p/Inputs/vp-truncate.proftext 2>&1 | FileCheck %s --check-prefix=VPTRUNC
-VPTRUNC: Truncated profile data
+VPTRUNC: error: {{.+}}: truncated profile data

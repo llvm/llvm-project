@@ -127,8 +127,8 @@ void __clear_cache(void *start, void *end) {
     for (addr = xstart & ~(icache_line_size - 1); addr < xend;
          addr += icache_line_size)
       __asm __volatile("ic ivau, %0" ::"r"(addr));
+    __asm __volatile("dsb ish");
   }
-  __asm __volatile("dsb ish");
   __asm __volatile("isb sy");
 #elif defined(__powerpc64__)
   const size_t line_size = 32;

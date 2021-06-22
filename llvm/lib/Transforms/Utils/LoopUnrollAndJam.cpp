@@ -248,7 +248,7 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
   bool CompletelyUnroll = (Count == TripCount);
 
   // We use the runtime remainder in cases where we don't know trip multiple
-  if (TripMultiple == 1 || TripMultiple % Count != 0) {
+  if (TripMultiple % Count != 0) {
     if (!UnrollRuntimeLoopRemainder(L, Count, /*AllowExpensiveTripCount*/ false,
                                     /*UseEpilogRemainder*/ true,
                                     UnrollRemainder, /*ForgetAllSCEV*/ false,

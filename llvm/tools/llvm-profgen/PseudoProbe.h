@@ -24,7 +24,7 @@
 namespace llvm {
 namespace sampleprof {
 
-enum PseudoProbeAttributes { TAILCALL = 1, DANGLING = 2 };
+enum PseudoProbeAttributes { RESERVED = 1 };
 
 // Use func GUID and index as the location info of the inline site
 using InlineSite = std::tuple<uint64_t, uint32_t>;
@@ -102,7 +102,7 @@ A pseudo probe has the format like below:
   TYPE (uint4)
     0 - block probe, 1 - indirect call, 2 - direct call
   ATTRIBUTE (uint3)
-    1 - tail call, 2 - dangling
+    1 - reserved
   ADDRESS_TYPE (uint1)
     0 - code address, 1 - address delta
   CODE_ADDRESS (uint64 or ULEB128)
@@ -124,15 +124,6 @@ struct PseudoProbe {
         InlineTree(Tree){};
 
   bool isEntry() const { return Index == PseudoProbeFirstId; }
-
-  bool isDangling() const {
-    return Attribute & static_cast<uint8_t>(PseudoProbeAttributes::DANGLING);
-  }
-
-  bool isTailCall() const {
-    return Attribute & static_cast<uint8_t>(PseudoProbeAttributes::TAILCALL);
-  }
-
   bool isBlock() const { return Type == PseudoProbeType::Block; }
   bool isIndirectCall() const { return Type == PseudoProbeType::IndirectCall; }
   bool isDirectCall() const { return Type == PseudoProbeType::DirectCall; }

@@ -541,7 +541,6 @@ protected:
     if (argc != 0) {
       result.AppendErrorWithFormat("'%s' takes no arguments, only flags.\n",
                                    GetCommandName().str().c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -551,7 +550,6 @@ protected:
       if (target == nullptr) {
         result.AppendError("invalid target, create a debug target using the "
                            "'target create' command.");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     }
@@ -575,12 +573,10 @@ protected:
       }
       if (!m_module_list.GetSize()) {
         result.AppendError("No modules match the input.");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     } else if (target->GetImages().GetSize() == 0) {
       result.AppendError("The target has no associated executable images.");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -811,7 +807,6 @@ protected:
           result.AppendErrorWithFormat("Could not find line information for "
                                        "start of function: \"%s\".\n",
                                        source_info.function.GetCString());
-          result.SetStatus(eReturnStatusFailed);
           return 0;
         }
         sc.function->GetEndLineSourceInfo(end_file, end_line);
@@ -933,7 +928,6 @@ protected:
     if (argc != 0) {
       result.AppendErrorWithFormat("'%s' takes no arguments, only flags.\n",
                                    GetCommandName().str().c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -971,7 +965,6 @@ protected:
       if (num_matches == 0) {
         result.AppendErrorWithFormat("Could not find function named: \"%s\".\n",
                                      m_options.symbol_name.c_str());
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
 
@@ -1038,7 +1031,6 @@ protected:
               "no modules have source information for file address 0x%" PRIx64
               ".\n",
               m_options.address);
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
       } else {
@@ -1061,7 +1053,6 @@ protected:
                                            "is no line table information "
                                            "available for this address.\n",
                                            error_strm.GetData());
-              result.SetStatus(eReturnStatusFailed);
               return false;
             }
           }
@@ -1071,7 +1062,6 @@ protected:
           result.AppendErrorWithFormat(
               "no modules contain load address 0x%" PRIx64 ".\n",
               m_options.address);
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
       }
@@ -1191,7 +1181,6 @@ protected:
       if (num_matches == 0) {
         result.AppendErrorWithFormat("Could not find source file \"%s\".\n",
                                      m_options.file_name.c_str());
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
 
@@ -1215,7 +1204,6 @@ protected:
           result.AppendErrorWithFormat(
               "Multiple source files found matching: \"%s.\"\n",
               m_options.file_name.c_str());
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
       }
@@ -1245,7 +1233,6 @@ protected:
         } else {
           result.AppendErrorWithFormat("No comp unit found for: \"%s.\"\n",
                                        m_options.file_name.c_str());
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
       }

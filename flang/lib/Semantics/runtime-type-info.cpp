@@ -427,7 +427,7 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
           scope, SaveObjectName(".lpk."s + distinctName), std::move(lenKinds)));
   // Traverse the components of the derived type
   if (!isPDTdefinition) {
-    std::vector<evaluate::StructureConstructor> dataComponents;
+    std::vector<const Symbol *> dataComponentSymbols;
     std::vector<evaluate::StructureConstructor> procPtrComponents;
     std::vector<evaluate::StructureConstructor> specials;
     for (const auto &pair : dtScope) {
@@ -438,9 +438,8 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
               [&](const TypeParamDetails &) {
                 // already handled above in declaration order
               },
-              [&](const ObjectEntityDetails &object) {
-                dataComponents.emplace_back(DescribeComponent(
-                    symbol, object, scope, dtScope, distinctName, parameters));
+              [&](const ObjectEntityDetails &) {
+                dataComponentSymbols.push_back(&symbol);
               },
               [&](const ProcEntityDetails &proc) {
                 if (IsProcedurePointer(symbol)) {
@@ -460,6 +459,18 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
               },
           },
           symbol.details());
+    }
+    // Sort the data component symbols by offset before emitting them
+    std::sort(dataComponentSymbols.begin(), dataComponentSymbols.end(),
+        [](const Symbol *x, const Symbol *y) {
+          return x->offset() < y->offset();
+        });
+    std::vector<evaluate::StructureConstructor> dataComponents;
+    for (const Symbol *symbol : dataComponentSymbols) {
+      auto locationRestorer{common::ScopedSet(location_, symbol->name())};
+      dataComponents.emplace_back(
+          DescribeComponent(*symbol, symbol->get<ObjectEntityDetails>(), scope,
+              dtScope, distinctName, parameters));
     }
     AddValue(dtValues, derivedTypeSchema_, "component"s,
         SaveDerivedPointerTarget(scope, SaveObjectName(".c."s + distinctName),

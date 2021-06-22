@@ -48,7 +48,7 @@ public:
   using Base = {0}Base;
 
   {0}Base() : {1}(::mlir::TypeID::get<DerivedT>()) {{}
-  {0}Base(const {0}Base &) : {1}(::mlir::TypeID::get<DerivedT>()) {{}
+  {0}Base(const {0}Base &other) : {1}(other) {{}
 
   /// Returns the command-line argument attached to this pass.
   static constexpr ::llvm::StringLiteral getArgumentName() {

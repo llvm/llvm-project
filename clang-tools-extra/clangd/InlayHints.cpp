@@ -72,6 +72,19 @@ public:
     return true;
   }
 
+  bool VisitFunctionDecl(FunctionDecl *D) {
+    if (auto *AT = D->getReturnType()->getContainedAutoType()) {
+      QualType Deduced = AT->getDeducedType();
+      if (!Deduced.isNull()) {
+        addInlayHint(D->getFunctionTypeLoc().getRParenLoc(),
+                     InlayHintKind::TypeHint,
+                     "-> " + D->getReturnType().getAsString(TypeHintPolicy));
+      }
+    }
+
+    return true;
+  }
+
   bool VisitVarDecl(VarDecl *D) {
     // Do not show hints for the aggregate in a structured binding.
     // In the future, we may show hints for the individual bindings.

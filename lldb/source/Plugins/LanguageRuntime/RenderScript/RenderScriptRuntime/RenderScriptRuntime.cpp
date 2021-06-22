@@ -4187,7 +4187,6 @@ public:
       result.AppendErrorWithFormat("'%s' takes 1 argument of reduction name, "
                                    "and an optional kernel type list",
                                    m_cmd_name.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -4201,7 +4200,6 @@ public:
     auto coord = m_options.m_have_coord ? &m_options.m_coord : nullptr;
     if (!runtime->PlaceBreakpointOnReduction(target, outstream, name, coord,
                                              m_options.m_kernel_types)) {
-      result.SetStatus(eReturnStatusFailed);
       result.AppendError("Error: unable to place breakpoint on reduction");
       return false;
     }
@@ -4289,7 +4287,6 @@ public:
       result.AppendErrorWithFormat(
           "'%s' takes 1 argument of kernel name, and an optional coordinate.",
           m_cmd_name.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -4302,7 +4299,6 @@ public:
     auto name = command.GetArgumentAtIndex(0);
     auto coord = m_options.m_have_coord ? &m_options.m_coord : nullptr;
     if (!runtime->PlaceBreakpointOnKernel(target, outstream, name, coord)) {
-      result.SetStatus(eReturnStatusFailed);
       result.AppendErrorWithFormat(
           "Error: unable to set breakpoint on kernel '%s'", name);
       return false;
@@ -4340,7 +4336,6 @@ public:
     if (argc != 1) {
       result.AppendErrorWithFormat(
           "'%s' takes 1 argument of 'enable' or 'disable'", m_cmd_name.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -4359,7 +4354,6 @@ public:
     } else {
       result.AppendErrorWithFormat(
           "Argument must be either 'enable' or 'disable'");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -4566,7 +4560,6 @@ public:
       result.AppendErrorWithFormat("'%s' takes 1 argument, an allocation ID. "
                                    "As well as an optional -f argument",
                                    m_cmd_name.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -4581,7 +4574,6 @@ public:
     if (!success) {
       result.AppendErrorWithFormat("invalid allocation id argument '%s'",
                                    id_cstr);
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -4606,7 +4598,6 @@ public:
         std::string error = llvm::toString(file.takeError());
         result.AppendErrorWithFormat("Couldn't open file '%s': %s",
                                      path.c_str(), error.c_str());
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     } else
@@ -4715,7 +4706,6 @@ public:
       result.AppendErrorWithFormat(
           "'%s' takes 2 arguments, an allocation ID and filename to read from.",
           m_cmd_name.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -4730,7 +4720,6 @@ public:
     if (!success) {
       result.AppendErrorWithFormat("invalid allocation id argument '%s'",
                                    id_cstr);
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -4766,7 +4755,6 @@ public:
       result.AppendErrorWithFormat(
           "'%s' takes 2 arguments, an allocation ID and filename to read from.",
           m_cmd_name.c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -4781,7 +4769,6 @@ public:
     if (!success) {
       result.AppendErrorWithFormat("invalid allocation id argument '%s'",
                                    id_cstr);
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 

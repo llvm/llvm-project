@@ -1325,10 +1325,6 @@ bool SimplifyCFGOpt::PerformValueComparisonIntoPredecessorFolding(
     DTU->applyUpdates(Updates);
   }
 
-  // Here the BB is not a dead block but folded into its predecessors, so move
-  // the probe and mark it as dangling.
-  moveAndDanglePseudoProbes(BB, NewSI);
-
   ++NumFoldValueComparisonIntoPredecessors;
   return true;
 }
@@ -1407,6 +1403,12 @@ bool SimplifyCFGOpt::HoistThenElseCodeToIf(BranchInst *BI,
   // identical order.
   BasicBlock *BB1 = BI->getSuccessor(0); // The true destination.
   BasicBlock *BB2 = BI->getSuccessor(1); // The false destination
+
+  // If either of the blocks has it's address taken, then we can't do this fold,
+  // because the code we'd hoist would no longer run when we jump into the block
+  // by it's address.
+  if (BB1->hasAddressTaken() || BB2->hasAddressTaken())
+    return false;
 
   BasicBlock::iterator BB1_Itr = BB1->begin();
   BasicBlock::iterator BB2_Itr = BB2->begin();
@@ -2394,6 +2396,11 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
     // probability for ThenBB, which is fine since the optimization here takes
     // place regardless of the branch probability.
     if (isa<PseudoProbeInst>(I)) {
+      // The probe should be deleted so that it will not be over-counted when
+      // the samples collected on the non-conditional path are counted towards
+      // the conditional path. We leave it for the counts inference algorithm to
+      // figure out a proper count for an unknown probe.
+      SpeculatedDbgIntrinsics.push_back(I);
       continue;
     }
 
@@ -2469,19 +2476,11 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
                                          SpeculatedStore->getDebugLoc());
   }
 
-  // A hoisted conditional probe should be treated as dangling so that it will
-  // not be over-counted when the samples collected on the non-conditional path
-  // are counted towards the conditional path. We leave it for the counts
-  // inference algorithm to figure out a proper count for a danglng probe.
-  moveAndDanglePseudoProbes(ThenBB, BI);
-
   // Metadata can be dependent on the condition we are hoisting above.
   // Conservatively strip all metadata on the instruction. Drop the debug loc
   // to avoid making it appear as if the condition is a constant, which would
   // be misleading while debugging.
   for (auto &I : *ThenBB) {
-    assert(!isa<PseudoProbeInst>(I) &&
-           "Should not drop debug info from any pseudo probes.");
     if (!SpeculatedStoreValue || &I != SpeculatedStore)
       I.setDebugLoc(DebugLoc());
     I.dropUnknownNonDebugMetadata();
@@ -2819,6 +2818,11 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
       }
   }
   assert(DomBlock && "Failed to find root DomBlock");
+
+  // If either of the blocks has it's address taken, we can't do this fold.
+  if ((IfBlock1 && IfBlock1->hasAddressTaken()) ||
+      (IfBlock2 && IfBlock2->hasAddressTaken()))
+    return Changed;
 
   LLVM_DEBUG(dbgs() << "FOUND IF CONDITION!  " << *IfCond
                     << "  T: " << IfTrue->getName()

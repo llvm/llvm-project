@@ -100,5 +100,34 @@ int main(int, char**)
     assert(lst.size() == 0);
     }
 
-  return 0;
+    {
+        typedef test_allocator<short> Alloc;
+        typedef test_allocator<int> ConvertibleToAlloc;
+
+        {
+        std::list<short, Alloc> source;
+        std::list lst(source, Alloc(2));
+        static_assert(std::is_same_v<decltype(lst), decltype(source)>);
+        }
+
+        {
+        std::list<short, Alloc> source;
+        std::list lst(source, ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(lst), decltype(source)>);
+        }
+
+        {
+        std::list<short, Alloc> source;
+        std::list lst(std::move(source), Alloc(2));
+        static_assert(std::is_same_v<decltype(lst), decltype(source)>);
+        }
+
+        {
+        std::list<short, Alloc> source;
+        std::list lst(std::move(source), ConvertibleToAlloc(2));
+        static_assert(std::is_same_v<decltype(lst), decltype(source)>);
+        }
+    }
+
+    return 0;
 }

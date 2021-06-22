@@ -158,7 +158,6 @@ binImports(const std::vector<DefinedImportData *> &imports) {
   return v;
 }
 
-// Export table
 // See Microsoft PE/COFF spec 4.3 for details.
 
 // A chunk for the delay import descriptor table etnry.

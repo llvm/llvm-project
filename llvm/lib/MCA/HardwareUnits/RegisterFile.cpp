@@ -109,7 +109,12 @@ void RegisterFile::onInstructionExecuted(Instruction *IS) {
       return;
 
     MCPhysReg RegID = WS.getRegisterID();
-    assert(RegID != 0 && "A write of an invalid register?");
+
+    // This allows InstrPostProcess to remove register Defs
+    // by setting their RegisterID to 0.
+    if (!RegID)
+      continue;
+
     assert(WS.getCyclesLeft() != UNKNOWN_CYCLES &&
            "The number of cycles should be known at this point!");
     assert(WS.getCyclesLeft() <= 0 && "Invalid cycles left for this write!");
@@ -224,7 +229,11 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
                                     MutableArrayRef<unsigned> UsedPhysRegs) {
   WriteState &WS = *Write.getWriteState();
   MCPhysReg RegID = WS.getRegisterID();
-  assert(RegID && "Adding an invalid register definition?");
+
+  // This allows InstrPostProcess to remove register Defs
+  // by setting their RegisterID to 0.
+  if (!RegID)
+    return;
 
   LLVM_DEBUG({
     dbgs() << "[PRF] addRegisterWrite [ " << Write.getSourceIndex() << ", "
@@ -316,7 +325,11 @@ void RegisterFile::removeRegisterWrite(
 
   MCPhysReg RegID = WS.getRegisterID();
 
-  assert(RegID != 0 && "Invalidating an already invalid register?");
+  // This allows InstrPostProcess to remove register Defs
+  // by setting their RegisterID to 0.
+  if (!RegID)
+    return;
+
   assert(WS.getCyclesLeft() != UNKNOWN_CYCLES &&
          "Invalidating a write of unknown cycles!");
   assert(WS.getCyclesLeft() <= 0 && "Invalid cycles left for this write!");

@@ -11,3 +11,5 @@
 "`P2212R2 <https://wg21.link/P2212R2>`__","LWG","Relax Requirements for time_point::clock","February 2021","",""
 "`P2259R1 <https://wg21.link/P2259R1>`__","LWG","Repairing input range adaptors and counted_iterator","February 2021","",""
 "","","","","",""
+"`P1518R2 <https://wg21.link/P1518R2>`__","LWG","Stop overconstraining allocators in container deduction guides","June 2021","|Complete|","13.0"
+"","","","","",""

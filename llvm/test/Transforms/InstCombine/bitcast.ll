@@ -579,3 +579,15 @@ define i8* @bitcast_from_single_element_pointer_vector_to_pointer(<1 x i8*> %ptr
   %ptr = bitcast <1 x i8*> %ptrvec to i8*
   ret i8* %ptr
 }
+
+declare void @f1()
+declare void @f2()
+define i8* @select_bitcast_unsized_pointer(i1 %c) {
+; CHECK-LABEL: @select_bitcast_unsized_pointer(
+; CHECK-NEXT:    [[B:%.*]] = select i1 [[C:%.*]], i8* bitcast (void ()* @f1 to i8*), i8* bitcast (void ()* @f2 to i8*)
+; CHECK-NEXT:    ret i8* [[B]]
+;
+  %s = select i1 %c, void ()* @f1, void ()* @f2
+  %b = bitcast void ()* %s to i8*
+  ret i8* %b
+}
