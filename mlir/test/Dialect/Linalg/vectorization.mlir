@@ -586,7 +586,7 @@ func @pad_static_source(%arg0: tensor<2x5x2xf32>, %pad_value: f32) -> tensor<2x6
 //       CHECK:   %[[INIT:.*]] = linalg.init_tensor [6, %[[V1]], %[[V2]], %[[V5]]] : tensor<6x?x?x?xf32>
 //       CHECK:   %[[FILL:.*]] = linalg.fill(%[[INIT]], %{{.*}}) : tensor<6x?x?x?xf32>, f32 -> tensor<6x?x?x?xf32>
 //       CHECK:   %[[SRCDIM:.*]] = memref.dim %[[SRC]], %[[C3]] : tensor<1x2x2x?xf32>
-//       CHECK:   %[[RESULT:.*]] = subtensor_insert %[[SRC]] into %[[FILL]][2, %[[LOW]], 3, 3] [1, 2, 2, %[[SRCDIM]]] [1, 1, 1, 1] : tensor<1x2x2x?xf32> into tensor<6x?x?x?xf32>
+//       CHECK:   %[[RESULT:.*]] = tensor.insert_slice %[[SRC]] into %[[FILL]][2, %[[LOW]], 3, 3] [1, 2, 2, %[[SRCDIM]]] [1, 1, 1, 1] : tensor<1x2x2x?xf32> into tensor<6x?x?x?xf32>
 //       CHECK:   return %[[RESULT]]
 func @pad_static_dynamic(%arg0: tensor<1x2x2x?xf32>, %low: index, %high: index,
                   %pad_value: f32) -> tensor<6x?x?x?xf32> {
@@ -638,7 +638,7 @@ func @pad_and_transfer_write_static(
   } : tensor<5x6xf32> to tensor<10x13xf32>
   %1 = vector.transfer_write %arg1, %0[%c0, %c0]
       : vector<7x9xf32>, tensor<10x13xf32>
-  %2 = subtensor %1[0, 0] [5, 6] [1, 1] : tensor<10x13xf32> to tensor<5x6xf32>
+  %2 = tensor.extract_slice %1[0, 0] [5, 6] [1, 1] : tensor<10x13xf32> to tensor<5x6xf32>
   return %2 : tensor<5x6xf32>
 }
 
@@ -648,14 +648,14 @@ func @pad_and_transfer_write_static(
 //  CHECK-SAME:     %[[ARG0:.*]]: tensor<?x?xf32>, %[[ARG1:.*]]: vector<7x9xf32>, %[[SIZE:.*]]: index, %[[PADDING:.*]]: index
 //   CHECK-NOT:   linalg.pad_tensor
 //       CHECK:   %[[C0:.*]] = constant 0 : index
-//       CHECK:   %[[SUB:.*]] = subtensor %[[ARG0]][0, 0] [%[[SIZE]], 6] [1, 1] : tensor<?x?xf32> to tensor<?x6xf32>
+//       CHECK:   %[[SUB:.*]] = tensor.extract_slice %[[ARG0]][0, 0] [%[[SIZE]], 6] [1, 1] : tensor<?x?xf32> to tensor<?x6xf32>
 //       CHECK:   %[[RESULT:.*]] = vector.transfer_write %[[ARG1]], %[[SUB]][%[[C0]], %[[C0]]] : vector<7x9xf32>, tensor<?x6xf32>
 //       CHECK:   return %[[RESULT]]
 func @pad_and_transfer_write_dynamic_static(
     %arg0: tensor<?x?xf32>, %arg1: vector<7x9xf32>, %size: index, %padding: index) -> tensor<?x6xf32> {
   %c0 = constant 0 : index
   %c5 = constant 5.0 : f32
-  %s = subtensor %arg0[0, 0] [%size, 6] [1, 1]
+  %s = tensor.extract_slice %arg0[0, 0] [%size, 6] [1, 1]
       : tensor<?x?xf32> to tensor<?x6xf32>
   %0 = linalg.pad_tensor %s low[0, 0] high[%padding, 7] {
     ^bb0(%arg2: index, %arg3: index):
@@ -663,13 +663,13 @@ func @pad_and_transfer_write_dynamic_static(
   } : tensor<?x6xf32> to tensor<?x13xf32>
   %1 = vector.transfer_write %arg1, %0[%c0, %c0]
       : vector<7x9xf32>, tensor<?x13xf32>
-  %2 = subtensor %1[0, 0] [%size, 6] [1, 1] : tensor<?x13xf32> to tensor<?x6xf32>
+  %2 = tensor.extract_slice %1[0, 0] [%size, 6] [1, 1] : tensor<?x13xf32> to tensor<?x6xf32>
   return %2 : tensor<?x6xf32>
 }
 
 // -----
 
-// CHECK-LABEL: func @pad_and_subtensor_insert
+// CHECK-LABEL: func @pad_and_insert_slice
 //  CHECK-SAME:     %[[ARG0:.*]]: tensor<5x6xf32>, %[[ARG1:.*]]: tensor<12x13xf32>
 //   CHECK-NOT:   linalg.pad_tensor
 //   CHECK-DAG:   %[[C0:.*]] = constant 0 : index
@@ -677,7 +677,7 @@ func @pad_and_transfer_write_dynamic_static(
 //       CHECK:   %[[READ:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]]], %[[C5]] : tensor<5x6xf32>, vector<7x9xf32>
 //       CHECK:   %[[WRITE:.*]] = vector.transfer_write %[[READ]], %[[ARG1]][%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<7x9xf32>, tensor<12x13xf32>
 //       CHECK:   return %[[WRITE]]
-func @pad_and_subtensor_insert(
+func @pad_and_insert_slice(
     %arg0: tensor<5x6xf32>, %arg1: tensor<12x13xf32>) -> tensor<12x13xf32> {
   %c0 = constant 0 : index
   %c5 = constant 5.0 : f32
@@ -685,7 +685,7 @@ func @pad_and_subtensor_insert(
     ^bb0(%arg2: index, %arg3: index):
       linalg.yield %c5 : f32
   } : tensor<5x6xf32> to tensor<7x9xf32>
-  %r = subtensor_insert %0 into %arg1[0, 0][7, 9][1, 1] : tensor<7x9xf32> into tensor<12x13xf32>
+  %r = tensor.insert_slice %0 into %arg1[0, 0][7, 9][1, 1] : tensor<7x9xf32> into tensor<12x13xf32>
   return %r : tensor<12x13xf32>
 }
 

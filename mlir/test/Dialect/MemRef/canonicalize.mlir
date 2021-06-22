@@ -367,27 +367,3 @@ func @tensor_cast_to_memref(%arg0 : tensor<4x6x16x32xi8>) ->
   %1 = memref.buffer_cast %0 : memref<?x?x16x32xi8>
   return %1 : memref<?x?x16x32xi8>
 }
-
-// -----
-
-// TODO: Move this test to Tensor/canonicalize.mlir.
-func @subtensor_insert_propagate_dest_cast(%arg0 : tensor<2x?xi32>, %arg1 : tensor<i32>,
-    %arg2 : index, %arg3 : index) -> tensor<?x?xi32> {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
-  %c2 = constant 2 : index
-  %c8 = constant 8 : index
-  %0 = memref.dim %arg0, %c1 : tensor<2x?xi32>
-  %1 = tensor.extract %arg1[] : tensor<i32>
-  %2 = tensor.generate %arg2, %c8 {
-  ^bb0(%arg4: index, %arg5: index):
-    tensor.yield %1 : i32
-  } : tensor<?x?xi32>
-  %3 = subtensor_insert %arg0 into %2[%c0, %arg3] [%c2, %0] [%c1, %c1] : tensor<2x?xi32> into tensor<?x?xi32>
-  return %3 : tensor<?x?xi32>
-}
-// CHECK-LABEL: func @subtensor_insert_propagate_dest_cast
-//       CHECK:   %[[UPDATED:.+]] = subtensor_insert %{{.+}} into %{{.+}}[0, %{{.+}}] [2, %{{.+}}] [1, 1]
-//  CHECK-SAME:     tensor<2x?xi32> into tensor<?x8xi32>
-//       CHECK:   %[[CAST:.+]] = tensor.cast %[[UPDATED]]
-//       CHECK:   return %[[CAST]]
