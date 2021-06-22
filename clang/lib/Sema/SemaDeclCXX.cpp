@@ -7292,6 +7292,9 @@ void Sema::CheckExplicitlyDefaultedFunction(Scope *S, FunctionDecl *FD) {
     return;
   }
 
+  if (DefKind.isComparison())
+    UnusedPrivateFields.clear();
+
   if (DefKind.isSpecialMember()
           ? CheckExplicitlyDefaultedSpecialMember(cast<CXXMethodDecl>(FD),
                                                   DefKind.asSpecialMember())
