@@ -2,6 +2,8 @@
 target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64"
 
+@S = external local_unnamed_addr global i8*
+
 ; CHECK: [[SHARED_X:@.+]] = internal addrspace(3) global [16 x i8] undef
 ; CHECK: [[SHARED_Y:@.+]] = internal addrspace(3) global [4 x i8] undef
 
@@ -67,7 +69,7 @@ exit:
 define void @use(i8* %x) {
 entry:
   %addr = alloca i8*
-  store i8* %x, i8** %addr
+  store i8* %x, i8** @S
   ret void
 }
 
