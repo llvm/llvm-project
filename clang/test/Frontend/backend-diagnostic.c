@@ -15,9 +15,9 @@
 
 extern void doIt(char *);
 
-// REGULAR: warning: stack frame size of {{[0-9]+}} bytes in function 'stackSizeWarning'
-// PROMOTE: error: stack frame size of {{[0-9]+}} bytes in function 'stackSizeWarning'
-// IGNORE-NOT: stack frame size of {{[0-9]+}} bytes in function 'stackSizeWarning'
+// REGULAR: warning: stack frame size ([[#]]) exceeds limit ([[#]]) in function 'stackSizeWarning'
+// PROMOTE: error: stack frame size ([[#]]) exceeds limit ([[#]]) in function 'stackSizeWarning'
+// IGNORE-NOT: stack frame size ([[#]]) exceeds limit ([[#]]) in function 'stackSizeWarning'
 void stackSizeWarning() {
   char buffer[80];
   doIt(buffer);
