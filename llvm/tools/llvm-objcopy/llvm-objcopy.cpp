@@ -59,13 +59,14 @@
 #include <system_error>
 #include <utility>
 
-namespace llvm {
-namespace objcopy {
+using namespace llvm;
+using namespace llvm::objcopy;
+using namespace llvm::object;
 
 // The name this program was invoked as.
-StringRef ToolName;
+static StringRef ToolName;
 
-ErrorSuccess reportWarning(Error E) {
+static ErrorSuccess reportWarning(Error E) {
   assert(E);
   WithColor::warning(errs(), ToolName) << toString(std::move(E)) << '\n';
   return Error::success();
@@ -94,13 +95,6 @@ static Expected<DriverConfig> getDriverConfig(ArrayRef<const char *> Args) {
   else
     return parseObjcopyOptions(Args, reportWarning);
 }
-
-} // end namespace objcopy
-} // end namespace llvm
-
-using namespace llvm;
-using namespace llvm::object;
-using namespace llvm::objcopy;
 
 // For regular archives this function simply calls llvm::writeArchive,
 // For thin archives it writes the archive file itself as well as its members.
