@@ -1,10 +1,12 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -enable-misched=false < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: llc -march=amdgcn -mcpu=gfx906 -verify-machineinstrs -enable-misched=false < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX906 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -enable-misched=false < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX900 %s
 ; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs -enable-misched=false < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI %s
 ; RUN: llc -march=amdgcn -mcpu=hawaii -verify-machineinstrs -enable-misched=false < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI,CI %s
 
 ; GCN-LABEL: mixlo_simple:
 ; GCN: s_waitcnt
-; GFX9-NEXT: v_mad_mixlo_f16 v0, v0, v1, v2{{$}}
+; GFX900-NEXT: v_mad_mixlo_f16 v0, v0, v1, v2{{$}}
+; GFX906-NEXT: v_fma_mixlo_f16 v0, v0, v1, v2{{$}}
 ; GFX9-NEXT: s_setpc_b64
 
 ; CIVI: v_mac_f32_e32
@@ -16,7 +18,8 @@ define half @mixlo_simple(float %src0, float %src1, float %src2) #0 {
 }
 
 ; GCN-LABEL: {{^}}v_mad_mixlo_f16_f16lo_f16lo_f16lo:
-; GFX9: v_mad_mixlo_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1]{{$}}
+; GFX900: v_mad_mixlo_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1]{{$}}
+; GFX906: v_fma_mixlo_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1]{{$}}
 ; CI: v_mac_f32
 ; CIVI: v_cvt_f16_f32
 define half @v_mad_mixlo_f16_f16lo_f16lo_f16lo(half %src0, half %src1, half %src2) #0 {
@@ -30,7 +33,8 @@ define half @v_mad_mixlo_f16_f16lo_f16lo_f16lo(half %src0, half %src1, half %src
 
 ; GCN-LABEL: {{^}}v_mad_mixlo_f16_f16lo_f16lo_f32:
 ; GCN: s_waitcnt
-; GFX9-NEXT: v_mad_mixlo_f16 v0, v0, v1, v2 op_sel_hi:[1,1,0]{{$}}
+; GFX900-NEXT: v_mad_mixlo_f16 v0, v0, v1, v2 op_sel_hi:[1,1,0]{{$}}
+; GFX906-NEXT: v_fma_mixlo_f16 v0, v0, v1, v2 op_sel_hi:[1,1,0]{{$}}
 ; GFX9-NEXT: s_setpc_b64
 
 ; CIVI: v_mac_f32
@@ -44,7 +48,8 @@ define half @v_mad_mixlo_f16_f16lo_f16lo_f32(half %src0, half %src1, float %src2
 
 ; GCN-LABEL: {{^}}v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_post_cvt:
 ; GCN: s_waitcnt
-; GFX9-NEXT: v_mad_mixlo_f16 v0, v0, v1, v2 op_sel_hi:[1,1,0] clamp{{$}}
+; GFX900-NEXT: v_mad_mixlo_f16 v0, v0, v1, v2 op_sel_hi:[1,1,0] clamp{{$}}
+; GFX906-NEXT: v_fma_mixlo_f16 v0, v0, v1, v2 op_sel_hi:[1,1,0] clamp{{$}}
 ; GFX9-NEXT: s_setpc_b64
 
 ; CIVI: v_mac_f32_e32 v{{[0-9]}}, v{{[0-9]}}, v{{[0-9]$}}
@@ -60,7 +65,8 @@ define half @v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_post_cvt(half %src0, half %sr
 
 ; GCN-LABEL: {{^}}v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_pre_cvt:
 ; GCN: s_waitcnt
-; GFX9-NEXT: v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,0] clamp{{$}}
+; GFX900-NEXT: v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,0] clamp{{$}}
+; GFX906-NEXT: v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,0] clamp{{$}}
 ; GFX9-NEXT: v_cvt_f16_f32_e32 v0, v0
 ; GFX9-NEXT: s_setpc_b64
 
@@ -79,8 +85,13 @@ define half @v_mad_mixlo_f16_f16lo_f16lo_f32_clamp_pre_cvt(half %src0, half %src
 ; operation only clobbers relevant lane.
 ; GCN-LABEL: {{^}}v_mad_mix_v2f32:
 ; GCN: s_waitcnt
-; GFX9-NEXT: v_mad_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]{{$}}
-; GFX9-NEXT: v_mad_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]{{$}}
+
+; GFX900-NEXT: v_mad_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]{{$}}
+; GFX900-NEXT: v_mad_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]{{$}}
+
+; GFX906-NEXT: v_fma_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]{{$}}
+; GFX906-NEXT: v_fma_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]{{$}}
+
 ; GFX9-NEXT: v_mov_b32_e32 v0, v3
 ; GFX9-NEXT: s_setpc_b64
 define <2 x half> @v_mad_mix_v2f32(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) #0 {
@@ -94,9 +105,14 @@ define <2 x half> @v_mad_mix_v2f32(<2 x half> %src0, <2 x half> %src1, <2 x half
 
 ; GCN-LABEL: {{^}}v_mad_mix_v3f32:
 ; GCN: s_waitcnt
-; GFX9-NEXT: v_mad_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
-; GFX9-NEXT: v_mad_mixlo_f16 v3, v0, v2, v4 op_sel_hi:[1,1,1]
-; GFX9-NEXT: v_mad_mixhi_f16 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GFX900-NEXT: v_mad_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
+; GFX900-NEXT: v_mad_mixlo_f16 v3, v0, v2, v4 op_sel_hi:[1,1,1]
+; GFX900-NEXT: v_mad_mixhi_f16 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+
+; GFX906-NEXT: v_fma_mixlo_f16 v1, v1, v3, v5 op_sel_hi:[1,1,1]
+; GFX906-NEXT: v_fma_mixlo_f16 v3, v0, v2, v4 op_sel_hi:[1,1,1]
+; GFX906-NEXT: v_fma_mixhi_f16 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+
 ; GFX9-NEXT: v_mov_b32_e32 v0, v3
 ; GFX9-NEXT: s_setpc_b64
 define <3 x half> @v_mad_mix_v3f32(<3 x half> %src0, <3 x half> %src1, <3 x half> %src2) #0 {
@@ -110,10 +126,16 @@ define <3 x half> @v_mad_mix_v3f32(<3 x half> %src0, <3 x half> %src1, <3 x half
 
 ; GCN-LABEL: {{^}}v_mad_mix_v4f32:
 ; GCN: s_waitcnt
-; GFX9-NEXT: v_mad_mixlo_f16 v6, v1, v3, v5 op_sel_hi:[1,1,1]
-; GFX9-NEXT: v_mad_mixlo_f16 v7, v0, v2, v4 op_sel_hi:[1,1,1]
-; GFX9-NEXT: v_mad_mixhi_f16 v7, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
-; GFX9-NEXT: v_mad_mixhi_f16 v6, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GFX900-NEXT: v_mad_mixlo_f16 v6, v1, v3, v5 op_sel_hi:[1,1,1]
+; GFX900-NEXT: v_mad_mixlo_f16 v7, v0, v2, v4 op_sel_hi:[1,1,1]
+; GFX900-NEXT: v_mad_mixhi_f16 v7, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GFX900-NEXT: v_mad_mixhi_f16 v6, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+
+; GFX906-NEXT: v_fma_mixlo_f16 v6, v1, v3, v5 op_sel_hi:[1,1,1]
+; GFX906-NEXT: v_fma_mixlo_f16 v7, v0, v2, v4 op_sel_hi:[1,1,1]
+; GFX906-NEXT: v_fma_mixhi_f16 v7, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GFX906-NEXT: v_fma_mixhi_f16 v6, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+
 ; GFX9-NEXT: v_mov_b32_e32 v0, v7
 ; GFX9-NEXT: v_mov_b32_e32 v1, v6
 ; GFX9-NEXT: s_setpc_b64
@@ -128,8 +150,12 @@ define <4 x half> @v_mad_mix_v4f32(<4 x half> %src0, <4 x half> %src1, <4 x half
 
 ; FIXME: Fold clamp
 ; GCN-LABEL: {{^}}v_mad_mix_v2f32_clamp_postcvt:
-; GFX9: v_mad_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1] clamp{{$}}
-; GFX9-NEXT: v_mad_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp{{$}}
+; GFX900: v_mad_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1] clamp{{$}}
+; GFX900-NEXT: v_mad_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp{{$}}
+
+; GFX906: v_fma_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1] clamp{{$}}
+; GFX906-NEXT: v_fma_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp{{$}}
+
 ; GFX9-NEXT: v_mov_b32_e32 v0, v3
 ; GFX9-NEXT: s_setpc_b64
 define <2 x half> @v_mad_mix_v2f32_clamp_postcvt(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) #0 {
@@ -146,9 +172,15 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt(<2 x half> %src0, <2 x half> %s
 ; FIXME: Should be packed into 2 registers per argument?
 ; GCN-LABEL: {{^}}v_mad_mix_v3f32_clamp_postcvt:
 ; GCN: s_waitcnt
-; GFX9-DAG: v_mad_mixlo_f16 v{{[0-9]+}}, v0, v2, v4 op_sel_hi:[1,1,1] clamp
-; GFX9-DAG: v_mad_mixhi_f16 v{{[0-9]+}}, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GFX9-DAG: v_mad_mixlo_f16 v{{[0-9]+}}, v1, v3, v5 op_sel_hi:[1,1,1]
+; GFX900-DAG: v_mad_mixlo_f16 v{{[0-9]+}}, v0, v2, v4 op_sel_hi:[1,1,1] clamp
+; GFX900-DAG: v_mad_mixhi_f16 v{{[0-9]+}}, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GFX900-DAG: v_mad_mixlo_f16 v{{[0-9]+}}, v1, v3, v5 op_sel_hi:[1,1,1]
+
+; GFX906-DAG: v_fma_mixlo_f16 v{{[0-9]+}}, v0, v2, v4 op_sel_hi:[1,1,1] clamp
+; GFX906-DAG: v_fma_mixhi_f16 v{{[0-9]+}}, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GFX906-DAG: v_fma_mixlo_f16 v{{[0-9]+}}, v1, v3, v5 op_sel_hi:[1,1,1]
+
+
 ; GFX9-DAG: v_pk_max_f16 v1, v1, v1 clamp
 ; GFX9: v_mov_b32_e32 v0, v{{[0-9]+}}
 ; GFX9-NEXT: s_setpc_b64
@@ -165,10 +197,18 @@ define <3 x half> @v_mad_mix_v3f32_clamp_postcvt(<3 x half> %src0, <3 x half> %s
 
 ; GCN-LABEL: {{^}}v_mad_mix_v4f32_clamp_postcvt:
 ; GCN: s_waitcnt
-; GFX9-NEXT: v_mad_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1] clamp
-; GFX9-NEXT: v_mad_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GFX9-NEXT: v_mad_mixlo_f16 v2, v1, v3, v5 op_sel_hi:[1,1,1] clamp
-; GFX9-NEXT: v_mad_mixhi_f16 v2, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GFX900-NEXT: v_mad_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1] clamp
+; GFX900-NEXT: v_mad_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GFX900-NEXT: v_mad_mixlo_f16 v2, v1, v3, v5 op_sel_hi:[1,1,1] clamp
+; GFX900-NEXT: v_mad_mixhi_f16 v2, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+
+
+; GFX906-NEXT: v_fma_mixlo_f16 v6, v0, v2, v4 op_sel_hi:[1,1,1] clamp
+; GFX906-NEXT: v_fma_mixhi_f16 v6, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GFX906-NEXT: v_fma_mixlo_f16 v2, v1, v3, v5 op_sel_hi:[1,1,1] clamp
+; GFX906-NEXT: v_fma_mixhi_f16 v2, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+
+
 ; GFX9-NEXT: v_mov_b32_e32 v0, v6
 ; GFX9-NEXT: v_mov_b32_e32 v1, v2
 ; GFX9-NEXT: s_setpc_b64
@@ -185,8 +225,12 @@ define <4 x half> @v_mad_mix_v4f32_clamp_postcvt(<4 x half> %src0, <4 x half> %s
 
 ; GCN-LABEL: {{^}}v_mad_mix_v2f32_clamp_postcvt_lo:
 ; GCN: s_waitcnt
-; GFX9-NEXT: v_mad_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1] clamp
-; GFX9-NEXT: v_mad_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+; GFX900-NEXT: v_mad_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1] clamp
+; GFX900-NEXT: v_mad_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+
+; GFX906-NEXT: v_fma_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1] clamp
+; GFX906-NEXT: v_fma_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
+
 ; GFX9-NEXT: v_mov_b32_e32 v0, v3
 ; GFX9-NEXT: s_setpc_b64
 define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_lo(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) #0 {
@@ -204,8 +248,12 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_lo(<2 x half> %src0, <2 x half>
 
 ; GCN-LABEL: {{^}}v_mad_mix_v2f32_clamp_postcvt_hi:
 ; GCN: s_waitcnt
-; GFX9-NEXT: v_mad_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
-; GFX9-NEXT: v_mad_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GFX900-NEXT: v_mad_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
+; GFX900-NEXT: v_mad_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+
+; GFX906-NEXT: v_fma_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
+; GFX906-NEXT: v_fma_mixhi_f16 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+
 ; GFX9-NEXT: v_mov_b32_e32 v0, v3
 ; GFX9-NEXT: s_setpc_b64
 define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_hi(<2 x half> %src0, <2 x half> %src1, <2 x half> %src2) #0 {
@@ -223,8 +271,12 @@ define <2 x half> @v_mad_mix_v2f32_clamp_postcvt_hi(<2 x half> %src0, <2 x half>
 
 ; FIXME: Should be able to use mixlo/mixhi
 ; GCN-LABEL: {{^}}v_mad_mix_v2f32_clamp_precvt:
-; GFX9: v_mad_mix_f32 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GFX9-NEXT: v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
+; GFX900: v_mad_mix_f32 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GFX900-NEXT: v_mad_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
+
+; GFX906: v_fma_mix_f32 v3, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GFX906-NEXT: v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
+
 ; GFX9: v_cvt_f16_f32_e32 v1, v3
 ; GFX9: v_cvt_f16_f32_e32 v0, v0
 ; GFX9: v_pack_b32_f16 v0, v0, v1
@@ -243,9 +295,15 @@ define <2 x half> @v_mad_mix_v2f32_clamp_precvt(<2 x half> %src0, <2 x half> %sr
 ; FIXME: Handling undef 4th component
 ; GCN-LABEL: {{^}}v_mad_mix_v3f32_clamp_precvt:
 ; GCN: s_waitcnt
-; GFX9-NEXT: v_mad_mix_f32 v1, v1, v3, v5 op_sel_hi:[1,1,1] clamp
-; GFX9-NEXT: v_mad_mix_f32 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GFX9-NEXT: v_mad_mix_f32 v0, v0, v2, v4 op_sel_hi:[1,1,1] clamp
+; GFX900-NEXT: v_mad_mix_f32 v1, v1, v3, v5 op_sel_hi:[1,1,1] clamp
+; GFX900-NEXT: v_mad_mix_f32 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GFX900-NEXT: v_mad_mix_f32 v0, v0, v2, v4 op_sel_hi:[1,1,1] clamp
+
+; GFX906-NEXT: v_fma_mix_f32 v1, v1, v3, v5 op_sel_hi:[1,1,1] clamp
+; GFX906-NEXT: v_fma_mix_f32 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GFX906-NEXT: v_fma_mix_f32 v0, v0, v2, v4 op_sel_hi:[1,1,1] clamp
+
+
 ; GFX9-NEXT: v_cvt_f16_f32_e32 v2, v3
 ; GFX9-NEXT: v_cvt_f16_f32_e32 v0, v0
 ; GFX9-NEXT: v_cvt_f16_f32_e32 v1, v1
@@ -263,10 +321,16 @@ define <3 x half> @v_mad_mix_v3f32_clamp_precvt(<3 x half> %src0, <3 x half> %sr
 }
 
 ; GCN-LABEL: {{^}}v_mad_mix_v4f32_clamp_precvt:
-; GFX9: v_mad_mix_f32 v6, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GFX9: v_mad_mix_f32 v1, v1, v3, v5 op_sel_hi:[1,1,1] clamp
-; GFX9: v_mad_mix_f32 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
-; GFX9: v_mad_mix_f32 v0, v0, v2, v4 op_sel_hi:[1,1,1] clamp
+; GFX900: v_mad_mix_f32 v6, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GFX900: v_mad_mix_f32 v1, v1, v3, v5 op_sel_hi:[1,1,1] clamp
+; GFX900: v_mad_mix_f32 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GFX900: v_mad_mix_f32 v0, v0, v2, v4 op_sel_hi:[1,1,1] clamp
+
+
+; GFX906: v_fma_mix_f32 v6, v1, v3, v5 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GFX906: v_fma_mix_f32 v1, v1, v3, v5 op_sel_hi:[1,1,1] clamp
+; GFX906: v_fma_mix_f32 v3, v0, v2, v4 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
+; GFX906: v_fma_mix_f32 v0, v0, v2, v4 op_sel_hi:[1,1,1] clamp
 
 ; GFX9: v_cvt_f16_f32
 ; GFX9: v_cvt_f16_f32
