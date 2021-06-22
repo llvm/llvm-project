@@ -264,7 +264,7 @@ static InPlaceSpec getInPlace(BlockArgument bbArg) {
   return attr.getValue() ? InPlaceSpec::True : InPlaceSpec::False;
 }
 
-static InPlaceSpec getInPlace(Value v) {
+LLVM_ATTRIBUTE_UNUSED static InPlaceSpec getInPlace(Value v) {
   if (auto bbArg = v.dyn_cast<BlockArgument>())
     return getInPlace(bbArg);
   return getInPlace(v.cast<OpResult>());
@@ -937,11 +937,10 @@ bool BufferizationAliasInfo::isClobberedWriteBeforeRead(
   assert(!domInfo.properlyDominates(aliasingReadOp, aliasingWriteOp) &&
          "Unexpected aliasingReadOp properly dominates aliasingWriteOp");
 
-  bool opProducesRootRead =
-      rootRead.isa<OpResult>() && rootRead.getDefiningOp() == opToBufferize;
-  bool opProducesRootWrite =
-      rootWrite.isa<OpResult>() && rootWrite.getDefiningOp() == opToBufferize;
-  assert((opProducesRootRead || opProducesRootWrite) &&
+  assert(((rootRead.isa<OpResult>() &&
+           rootRead.getDefiningOp() == opToBufferize) ||
+          (rootWrite.isa<OpResult>() &&
+           rootWrite.getDefiningOp() == opToBufferize)) &&
          "Expected rootRead or rootWrite to be produced by opToBufferize");
 
   // Bail if the write does not dominate the read: it may clobber but only on
@@ -1494,12 +1493,12 @@ static void bufferizableInPlaceAnalysis(OpOperand &operand, OpResult result,
   assert(result && !isa<SubTensorOp>(op) &&
          "expected OpResult not coming from a SubTensorOp");
 
-  int64_t operandNumber = operand.getOperandNumber();
   int64_t resultNumber = result.getResultNumber();
+  (void)resultNumber;
   LDBG('\n');
-  LDBG("Try to bufferize inplace result #" << resultNumber << " (operand #"
-                                           << operandNumber << ") in " << result
-                                           << '\n');
+  LDBG("Try to bufferize inplace result #"
+       << resultNumber << " (operand #" << operand.getOperandNumber() << ") in "
+       << result << '\n');
 
   // `result` must bufferize to a writeable buffer to be a candidate.
   // This means the use->def chain not backpropagate to a function that is
