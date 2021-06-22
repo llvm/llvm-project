@@ -350,6 +350,8 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   const lldb::LanguageType lang_type = lldb::eLanguageTypeSwift;
 
   m_options.SetLanguage(lang_type);
+  m_options.SetGenerateDebugInfo(generate_debug_info);
+  
   uint32_t first_body_line = 0;
 
   // I have to pass some value for add_locals.  I'm passing "false" because
@@ -471,7 +473,14 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     StreamString jit_module_name;
     jit_module_name.Printf("%s%u", FunctionName(),
                            m_options.GetExpressionNumber());
-    m_execution_unit_sp->CreateJITModule(jit_module_name.GetString().data());
+    auto module = m_execution_unit_sp->CreateJITModule(jit_module_name.GetString().data());
+
+    auto *swift_runtime = SwiftLanguageRuntime::Get(process);
+    if (module && swift_runtime) {
+      ModuleList modules;
+      modules.Append(module, false);
+      swift_runtime->ModulesDidLoad(modules);
+    }
   }
 
   if (jit_error.Success()) {

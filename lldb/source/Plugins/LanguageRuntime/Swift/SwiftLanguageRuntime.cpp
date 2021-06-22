@@ -18,6 +18,7 @@
 #include "Utility/ARM64_DWARF_Registers.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/JITSection.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/ValueObjectConstResult.h"
@@ -543,6 +544,58 @@ void SwiftLanguageRuntime::ModulesDidLoad(const ModuleList &module_list) {
   }
 }
 
+bool SwiftLanguageRuntimeImpl::AddJitObjectFileToReflectionContext(
+    ObjectFile &obj_file, llvm::Triple::ObjectFormatType obj_format_type) {
+  assert(obj_file.GetType() == ObjectFile::eTypeJIT &&
+         "Not a JIT object file!");
+  std::unique_ptr<swift::SwiftObjectFileFormat> obj_file_format;
+  switch (obj_format_type) {
+  case llvm::Triple::MachO:
+    obj_file_format = std::make_unique<swift::SwiftObjectFileFormatMachO>();
+    break;
+  case llvm::Triple::ELF:
+    obj_file_format = std::make_unique<swift::SwiftObjectFileFormatELF>();
+    break;
+  case llvm::Triple::COFF:
+    obj_file_format = std::make_unique<swift::SwiftObjectFileFormatCOFF>();
+    break;
+  default:
+    if (Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES))
+      log->Printf("%s: Could not find out swift reflection section names for "
+                  "object format type.",
+                  __FUNCTION__);
+    return false;
+  }
+
+  return m_reflection_ctx->addImage(
+      [&](swift::ReflectionSectionKind section_kind)
+          -> std::pair<swift::remote::RemoteRef<void>, uint64_t> {
+        auto section_name =
+            ConstString(obj_file_format->getSectionName(section_kind));
+        for (auto section : *obj_file.GetSectionList()) {
+          JITSection *jit_section = llvm::dyn_cast<JITSection>(section.get());
+          if (jit_section && section->GetName() == section_name) {
+            DataExtractor extractor;
+            auto section_size = section->GetSectionData(extractor);
+            if (!section_size)
+              return {};
+            auto size = jit_section->getNonJitSize();
+            auto data = extractor.GetData();
+            if (section_size < size || !data.begin())
+              return {};
+
+            auto *Buf = malloc(size);
+            std::memcpy(Buf, data.begin(), size);
+            swift::remote::RemoteRef<void> remote_ref(section->GetFileAddress(),
+                                                      Buf);
+
+            return {remote_ref, size};
+          }
+        }
+        return {};
+      });
+}
+
 bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
     const lldb::ModuleSP &module_sp) {
   // This function is called from within SetupReflection so it cannot
@@ -558,6 +611,12 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
   Address start_address = obj_file->GetBaseAddress();
   auto load_ptr = static_cast<uintptr_t>(
       start_address.GetLoadAddress(&(m_process.GetTarget())));
+  if (obj_file->GetType() == ObjectFile::eTypeJIT) {
+    auto object_format_type =
+        module_sp->GetArchitecture().GetTriple().getObjectFormat();
+    return AddJitObjectFileToReflectionContext(*obj_file, object_format_type);
+  }
+
   if (load_ptr == 0 || load_ptr == LLDB_INVALID_ADDRESS) {
     if (obj_file->GetType() != ObjectFile::eTypeJIT)
       if (Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES))
