@@ -1304,11 +1304,13 @@ public:
   /// Return the atomic ordering requirements for this memory operation. For
   /// cmpxchg atomic operations, return the atomic ordering requirements when
   /// store occurs.
-  AtomicOrdering getOrdering() const { return MMO->getOrdering(); }
+  AtomicOrdering getSuccessOrdering() const {
+    return MMO->getSuccessOrdering();
+  }
 
   /// Return a single atomic ordering that is at least as strong as both the
   /// success and failure orderings for an atomic operation.  (For operations
-  /// other than cmpxchg, this is equivalent to getOrdering().)
+  /// other than cmpxchg, this is equivalent to getSuccessOrdering().)
   AtomicOrdering getMergedOrdering() const { return MMO->getMergedOrdering(); }
 
   /// Return true if the memory operation ordering is Unordered or higher.

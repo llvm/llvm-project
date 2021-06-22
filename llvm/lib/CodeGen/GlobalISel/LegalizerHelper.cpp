@@ -3846,8 +3846,7 @@ LegalizerHelper::reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx,
 
   // This implementation doesn't work for atomics. Give up instead of doing
   // something invalid.
-  if (MMO->getOrdering() != AtomicOrdering::NotAtomic ||
-      MMO->getFailureOrdering() != AtomicOrdering::NotAtomic)
+  if (MMO->isAtomic())
     return UnableToLegalize;
 
   bool IsLoad = MI.getOpcode() == TargetOpcode::G_LOAD;

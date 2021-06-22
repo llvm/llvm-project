@@ -2652,7 +2652,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     auto &MemOp = **I.memoperands_begin();
     uint64_t MemSizeInBytes = MemOp.getSize();
     unsigned MemSizeInBits = MemSizeInBytes * 8;
-    AtomicOrdering Order = MemOp.getOrdering();
+    AtomicOrdering Order = MemOp.getSuccessOrdering();
 
     // Need special instructions for atomics that affect ordering.
     if (Order != AtomicOrdering::NotAtomic &&

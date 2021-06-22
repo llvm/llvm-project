@@ -9844,7 +9844,7 @@ static SDValue LowerVecReduceF(SDValue Op, SelectionDAG &DAG,
 }
 
 static SDValue LowerAtomicLoadStore(SDValue Op, SelectionDAG &DAG) {
-  if (isStrongerThanMonotonic(cast<AtomicSDNode>(Op)->getOrdering()))
+  if (isStrongerThanMonotonic(cast<AtomicSDNode>(Op)->getSuccessOrdering()))
     // Acquire/Release load/store is not legal for targets without a dmb or
     // equivalent available.
     return SDValue();

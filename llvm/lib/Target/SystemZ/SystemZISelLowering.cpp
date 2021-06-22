@@ -3932,7 +3932,7 @@ SDValue SystemZTargetLowering::lowerATOMIC_STORE(SDValue Op,
                                     Node->getMemOperand());
   // We have to enforce sequential consistency by performing a
   // serialization operation after the store.
-  if (Node->getOrdering() == AtomicOrdering::SequentiallyConsistent)
+  if (Node->getSuccessOrdering() == AtomicOrdering::SequentiallyConsistent)
     Chain = SDValue(DAG.getMachineNode(SystemZ::Serialize, SDLoc(Op),
                                        MVT::Other, Chain), 0);
   return Chain;
@@ -5565,7 +5565,7 @@ SystemZTargetLowering::LowerOperationWrapper(SDNode *N,
                                           DL, Tys, Ops, MVT::i128, MMO);
     // We have to enforce sequential consistency by performing a
     // serialization operation after the store.
-    if (cast<AtomicSDNode>(N)->getOrdering() ==
+    if (cast<AtomicSDNode>(N)->getSuccessOrdering() ==
         AtomicOrdering::SequentiallyConsistent)
       Res = SDValue(DAG.getMachineNode(SystemZ::Serialize, DL,
                                        MVT::Other, Res), 0);
