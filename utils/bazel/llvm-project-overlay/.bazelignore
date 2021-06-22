@@ -1,0 +1,2 @@
+# Ignore the utils/bazel directory when this is overlayed onto the repo root.
+utils/bazel
