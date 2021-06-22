@@ -634,7 +634,7 @@ Optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     IsVolatile |= MMO->isVolatile();
     InstrAddrSpace |=
       toSIAtomicAddrSpace(MMO->getPointerInfo().getAddrSpace());
-    AtomicOrdering OpOrdering = MMO->getOrdering();
+    AtomicOrdering OpOrdering = MMO->getSuccessOrdering();
     if (OpOrdering != AtomicOrdering::NotAtomic) {
       const auto &IsSyncScopeInclusion =
           MMI->isSyncScopeInclusion(SSID, MMO->getSyncScopeID());
@@ -645,9 +645,9 @@ Optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
       }
 
       SSID = IsSyncScopeInclusion.getValue() ? SSID : MMO->getSyncScopeID();
-      Ordering =
-          isStrongerThan(Ordering, OpOrdering) ?
-              Ordering : MMO->getOrdering();
+      Ordering = isStrongerThan(Ordering, OpOrdering)
+                     ? Ordering
+                     : MMO->getSuccessOrdering();
       assert(MMO->getFailureOrdering() != AtomicOrdering::Release &&
              MMO->getFailureOrdering() != AtomicOrdering::AcquireRelease);
       FailureOrdering =

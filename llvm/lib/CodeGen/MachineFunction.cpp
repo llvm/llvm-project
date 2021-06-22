@@ -439,9 +439,10 @@ MachineMemOperand *MachineFunction::getMachineMemOperand(
 
 MachineMemOperand *MachineFunction::getMachineMemOperand(
     const MachineMemOperand *MMO, const MachinePointerInfo &PtrInfo, uint64_t Size) {
-  return new (Allocator) MachineMemOperand(
-      PtrInfo, MMO->getFlags(), Size, MMO->getBaseAlign(), AAMDNodes(), nullptr,
-      MMO->getSyncScopeID(), MMO->getOrdering(), MMO->getFailureOrdering());
+  return new (Allocator)
+      MachineMemOperand(PtrInfo, MMO->getFlags(), Size, MMO->getBaseAlign(),
+                        AAMDNodes(), nullptr, MMO->getSyncScopeID(),
+                        MMO->getSuccessOrdering(), MMO->getFailureOrdering());
 }
 
 MachineMemOperand *
@@ -457,10 +458,10 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
 
   // Do not preserve ranges, since we don't necessarily know what the high bits
   // are anymore.
-  return new (Allocator)
-      MachineMemOperand(PtrInfo.getWithOffset(Offset), MMO->getFlags(), Size,
-                        Alignment, MMO->getAAInfo(), nullptr, MMO->getSyncScopeID(),
-                        MMO->getOrdering(), MMO->getFailureOrdering());
+  return new (Allocator) MachineMemOperand(
+      PtrInfo.getWithOffset(Offset), MMO->getFlags(), Size, Alignment,
+      MMO->getAAInfo(), nullptr, MMO->getSyncScopeID(),
+      MMO->getSuccessOrdering(), MMO->getFailureOrdering());
 }
 
 MachineMemOperand *
@@ -472,7 +473,7 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
 
   return new (Allocator) MachineMemOperand(
       MPI, MMO->getFlags(), MMO->getSize(), MMO->getBaseAlign(), AAInfo,
-      MMO->getRanges(), MMO->getSyncScopeID(), MMO->getOrdering(),
+      MMO->getRanges(), MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
       MMO->getFailureOrdering());
 }
 
@@ -482,7 +483,7 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
   return new (Allocator) MachineMemOperand(
       MMO->getPointerInfo(), Flags, MMO->getSize(), MMO->getBaseAlign(),
       MMO->getAAInfo(), MMO->getRanges(), MMO->getSyncScopeID(),
-      MMO->getOrdering(), MMO->getFailureOrdering());
+      MMO->getSuccessOrdering(), MMO->getFailureOrdering());
 }
 
 MachineInstr::ExtraInfo *MachineFunction::createMIExtraInfo(
