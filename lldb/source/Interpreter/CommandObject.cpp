@@ -256,7 +256,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
   if (GetFlags().Test(eCommandProcessMustBeTraced)) {
     Target *target = m_exe_ctx.GetTargetPtr();
     if (target && !target->GetTrace()) {
-      result.SetError("Process is not being traced.");
+      result.AppendError("Process is not being traced.");
       return false;
     }
   }

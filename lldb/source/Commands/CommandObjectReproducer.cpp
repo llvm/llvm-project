@@ -162,7 +162,8 @@ GetLoaderFromPathOrCurrent(llvm::Optional<Loader> &loader_storage,
     return loader;
 
   // This is a soft error because this is expected to fail during capture.
-  result.SetError("Not specifying a reproducer is only support during replay.");
+  result.AppendError(
+      "Not specifying a reproducer is only support during replay.");
   result.SetStatus(eReturnStatusSuccessFinishNoResult);
   return nullptr;
 }
@@ -276,7 +277,7 @@ protected:
     auto &r = Reproducer::Instance();
 
     if (!r.IsCapturing() && !r.IsReplaying()) {
-      result.SetError(
+      result.AppendError(
           "forcing a crash is only supported when capturing a reproducer.");
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
       return false;
@@ -583,7 +584,7 @@ protected:
       return true;
     }
     case eReproducerProviderNone:
-      result.SetError("No valid provider specified.");
+      result.AppendError("No valid provider specified.");
       return false;
     }
 
