@@ -165,6 +165,16 @@ ChangeStatus llvm::operator&(ChangeStatus L, ChangeStatus R) {
 }
 ///}
 
+bool AA::isValidInScope(const Value &V, const Function *Scope) {
+  if (isa<Constant>(V))
+    return true;
+  if (auto *I = dyn_cast<Instruction>(&V))
+    return I->getFunction() == Scope;
+  if (auto *A = dyn_cast<Argument>(&V))
+    return A->getParent() == Scope;
+  return false;
+}
+
 Value *AA::getWithType(Value &V, Type &Ty) {
   if (V.getType() == &Ty)
     return &V;
