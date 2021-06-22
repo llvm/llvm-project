@@ -54,14 +54,14 @@ bool Sema::checkSYCLDeviceFunction(SourceLocation Loc, FunctionDecl *Callee) {
 // this was passed by value, and in SYCL2020, it is passed by reference.
 static QualType GetSYCLKernelObjectType(const FunctionDecl *KernelCaller) {
   assert(KernelCaller->getNumParams() > 0 && "Insufficient kernel parameters");
-  // SYCL 1.2.1
   QualType KernelParamTy = KernelCaller->getParamDecl(0)->getType();
 
   // SYCL 2020 kernels are passed by reference.
   if (KernelParamTy->isReferenceType())
-    KernelParamTy = KernelParamTy->getPointeeType();
+    return KernelParamTy->getPointeeType();
 
-  return KernelParamTy.getUnqualifiedType();
+  // SYCL 1.2.1
+  return KernelParamTy;
 }
 
 void Sema::AddSYCLKernelLambda(const FunctionDecl *FD) {
