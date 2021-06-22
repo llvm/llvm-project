@@ -5828,8 +5828,8 @@ TreeTransform<Derived>::TransformFunctionProtoType(TypeLocBuilder &TLB,
   return getDerived().TransformFunctionProtoType(
       TLB, TL, nullptr, Qualifiers(),
       [&](FunctionProtoType::ExceptionSpecInfo &ESI, bool &Changed) {
-        return This->TransformExceptionSpec(TL.getBeginLoc(), ESI,
-                                            ExceptionStorage, Changed);
+        return This->getDerived().TransformExceptionSpec(
+            TL.getBeginLoc(), ESI, ExceptionStorage, Changed);
       });
 }
 
