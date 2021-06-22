@@ -814,6 +814,12 @@ def NegSubInlineConstV216 : PatLeaf<(build_vector), [{
          (isNullConstantOrUndef(Src1) && isNegInlineImmediate(Src0.getNode()));
 }], getNegV2I16Imm>;
 
+
+def fp16_zeros_high_16bits : PatLeaf<(f16 VGPR_32:$src), [{
+  return fp16SrcZerosHighBits(N->getOpcode());
+}]>;
+
+
 //===----------------------------------------------------------------------===//
 // MUBUF/SMEM Patterns
 //===----------------------------------------------------------------------===//

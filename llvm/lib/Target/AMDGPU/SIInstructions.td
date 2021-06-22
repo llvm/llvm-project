@@ -1992,11 +1992,13 @@ def : GCNPat <
 //===----------------------------------------------------------------------===//
 // Miscellaneous Patterns
 //===----------------------------------------------------------------------===//
-def : GCNPat <
-  (i32 (AMDGPUfp16_zext f16:$src)),
-  (COPY $src)
->;
 
+// Eliminate a zero extension from an fp16 operation if it already
+// zeros the high bits of the 32-bit register.
+def : GCNPat<
+  (i32 (zext (i16 (bitconvert fp16_zeros_high_16bits:$src)))),
+  (COPY VSrc_b16:$src)
+>;
 
 def : GCNPat <
   (i32 (trunc i64:$a)),

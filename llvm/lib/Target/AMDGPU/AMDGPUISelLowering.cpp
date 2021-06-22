@@ -4353,7 +4353,6 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CVT_PK_I16_I32)
   NODE_NAME_CASE(CVT_PK_U16_U32)
   NODE_NAME_CASE(FP_TO_FP16)
-  NODE_NAME_CASE(FP16_ZEXT)
   NODE_NAME_CASE(BUILD_VERTICAL_VECTOR)
   NODE_NAME_CASE(CONST_DATA_PTR)
   NODE_NAME_CASE(PC_ADD_REL_OFFSET)
@@ -4483,8 +4482,7 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
 
     break;
   }
-  case AMDGPUISD::FP_TO_FP16:
-  case AMDGPUISD::FP16_ZEXT: {
+  case AMDGPUISD::FP_TO_FP16: {
     unsigned BitWidth = Known.getBitWidth();
 
     // High bits are zero.
@@ -4631,7 +4629,6 @@ unsigned AMDGPUTargetLowering::ComputeNumSignBitsForTargetNode(
   case AMDGPUISD::BUFFER_LOAD_USHORT:
     return 16;
   case AMDGPUISD::FP_TO_FP16:
-  case AMDGPUISD::FP16_ZEXT:
     return 16;
   default:
     return 1;

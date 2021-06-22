@@ -44,6 +44,63 @@ class R600InstrInfo;
 
 namespace {
 
+// Instructions that will be lowered with a final instruction that zeros the
+// high result bits.
+// XXX - only need to list legal operations.
+static bool fp16SrcZerosHighBits(unsigned Opc) {
+  switch (Opc) {
+  case ISD::FADD:
+  case ISD::FSUB:
+  case ISD::FMUL:
+  case ISD::FDIV:
+  case ISD::FREM:
+  case ISD::FMA:
+  case ISD::FMAD:
+  case ISD::FCANONICALIZE:
+  case ISD::FP_ROUND:
+  case ISD::UINT_TO_FP:
+  case ISD::SINT_TO_FP:
+  case ISD::FABS:
+    // Fabs is lowered to a bit operation, but it's an and which will clear the
+    // high bits anyway.
+  case ISD::FSQRT:
+  case ISD::FSIN:
+  case ISD::FCOS:
+  case ISD::FPOWI:
+  case ISD::FPOW:
+  case ISD::FLOG:
+  case ISD::FLOG2:
+  case ISD::FLOG10:
+  case ISD::FEXP:
+  case ISD::FEXP2:
+  case ISD::FCEIL:
+  case ISD::FTRUNC:
+  case ISD::FRINT:
+  case ISD::FNEARBYINT:
+  case ISD::FROUND:
+  case ISD::FFLOOR:
+  case ISD::FMINNUM:
+  case ISD::FMAXNUM:
+  case AMDGPUISD::FRACT:
+  case AMDGPUISD::CLAMP:
+  case AMDGPUISD::COS_HW:
+  case AMDGPUISD::SIN_HW:
+  case AMDGPUISD::FMIN3:
+  case AMDGPUISD::FMAX3:
+  case AMDGPUISD::FMED3:
+  case AMDGPUISD::FMAD_FTZ:
+  case AMDGPUISD::RCP:
+  case AMDGPUISD::RSQ:
+  case AMDGPUISD::RCP_IFLAG:
+  case AMDGPUISD::LDEXP:
+    return true;
+  default:
+    // fcopysign, select and others may be lowered to 32-bit bit operations
+    // which don't zero the high bits.
+    return false;
+  }
+}
+
 static bool isNullConstantOrUndef(SDValue V) {
   if (V.isUndef())
     return true;
