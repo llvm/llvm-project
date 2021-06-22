@@ -168,8 +168,8 @@ generic-32bit)
     check-cxx-cxxabi
 ;;
 generic-gcc)
-    export CC=gcc
-    export CXX=g++
+    export CC=gcc-10
+    export CXX=g++-10
     clean
     # FIXME: Re-enable experimental testing on GCC. GCC cares about the order
     #        in which we link -lc++experimental, which causes issues.
