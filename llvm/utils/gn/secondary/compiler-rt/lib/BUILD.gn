@@ -7,8 +7,10 @@ group("lib") {
     deps += [
       "//compiler-rt/lib/asan",
       "//compiler-rt/lib/builtins",
-      "//compiler-rt/lib/tsan",
       "//compiler-rt/lib/ubsan_minimal",
     ]
+    if (current_cpu == "x64" || current_cpu == "arm64") {
+      deps += [ "//compiler-rt/lib/tsan" ]
+    }
   }
 }
