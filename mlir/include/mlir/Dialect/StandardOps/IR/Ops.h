@@ -23,6 +23,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 
 // Pull in all enum type definitions and utility function declarations.
 #include "mlir/Dialect/StandardOps/IR/OpsEnums.h.inc"
@@ -33,6 +34,12 @@ class Builder;
 class FuncOp;
 class OpBuilder;
 class PatternRewriter;
+
+/// Return the list of Range (i.e. offset, size, stride). Each Range
+/// entry contains either the dynamic value or a ConstantIndexOp constructed
+/// with `b` at location `loc`.
+SmallVector<Range, 8> getOrCreateRanges(OffsetSizeAndStrideOpInterface op,
+                                        OpBuilder &b, Location loc);
 } // namespace mlir
 
 #define GET_OP_CLASSES

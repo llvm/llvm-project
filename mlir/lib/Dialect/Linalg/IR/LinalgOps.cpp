@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
@@ -747,23 +746,22 @@ struct ReplaceStaticShapeDims : OpRewritePattern<InitTensorOp> {
 
 namespace {
 /// Since `init_tensor` operation creates a tensor needed only for its shape, a
-/// slice of this is also needed only for its shape. The result can be
-/// replaced by a new init_tensor operation of the same size as the extract
-/// slice op.
-struct FoldInitTensorWithExtractSliceOp
-    : public OpRewritePattern<tensor::ExtractSliceOp> {
-  using OpRewritePattern<tensor::ExtractSliceOp>::OpRewritePattern;
+/// subtensor of this is also needed only for its shape. The result can be
+/// replaced by a new init_tensor operation of the same size as the subtensor
+/// op.
+struct FoldInitTensorWithSubTensorOp : public OpRewritePattern<SubTensorOp> {
+  using OpRewritePattern<SubTensorOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(tensor::ExtractSliceOp sliceOp,
+  LogicalResult matchAndRewrite(SubTensorOp subtensorOp,
                                 PatternRewriter &rewriter) const override {
-    if (!sliceOp.source().getDefiningOp<linalg::InitTensorOp>())
+    if (!subtensorOp.source().getDefiningOp<linalg::InitTensorOp>())
       return failure();
     rewriter.replaceOpWithNewOp<linalg::InitTensorOp>(
-        sliceOp, sliceOp.sizes(),
+        subtensorOp, subtensorOp.sizes(),
         llvm::to_vector<4>(llvm::map_range(
-            sliceOp.static_sizes(),
+            subtensorOp.static_sizes(),
             [](Attribute attr) { return attr.cast<IntegerAttr>().getInt(); })),
-        sliceOp.getSourceType().getElementType());
+        subtensorOp.getSourceType().getElementType());
     return success();
   }
 };
@@ -799,7 +797,7 @@ struct FoldInitTensorWithTensorReshapeOp
 
 void InitTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                MLIRContext *context) {
-  results.add<FoldInitTensorWithExtractSliceOp,
+  results.add<FoldInitTensorWithSubTensorOp,
               FoldInitTensorWithTensorReshapeOp<TensorExpandShapeOp>,
               FoldInitTensorWithTensorReshapeOp<TensorCollapseShapeOp>,
               ReplaceStaticShapeDims>(context);

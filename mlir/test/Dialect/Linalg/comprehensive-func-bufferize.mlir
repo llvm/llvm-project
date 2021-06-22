@@ -118,8 +118,8 @@ func @vec_not_inplace(%A : tensor<?xf32> {linalg.inplaceable = true}, %vec : vec
 
 // -----
 
-// CHECK-LABEL: func @insert_slice_fun
-func @insert_slice_fun(%A0 : tensor<?xf32>, %A1 : tensor<?xf32> {linalg.inplaceable = true},
+// CHECK-LABEL: func @subtensor_insert_fun
+func @subtensor_insert_fun(%A0 : tensor<?xf32>, %A1 : tensor<?xf32> {linalg.inplaceable = true},
                            %t0 : tensor<4xf32>, %t1 : tensor<4xf32> {linalg.inplaceable = true})
   ->  (tensor<?xf32>, tensor<?xf32>, tensor<?xf32>, tensor<?xf32>)
 {
@@ -128,40 +128,40 @@ func @insert_slice_fun(%A0 : tensor<?xf32>, %A1 : tensor<?xf32> {linalg.inplacea
   //      CHECK: %[[BUFFER_CAST_t0:.*]] = memref.buffer_cast {{.*}} : memref<4xf32
   //      CHECK: %[[BUFFER_CAST_t1:.*]] = memref.buffer_cast {{.*}} : memref<4xf32
 
-  // Alloc and copy the whole result tensor. Copy the tensor.extract_slice.
+  // Alloc and copy the whole result tensor. Copy the subtensor.
   //      CHECK: %[[REALLOC_A0:.*]] = memref.alloc
   //      CHECK: linalg.copy(%[[BUFFER_CAST_A0]]
   //      CHECK: %[[SV_A0:.*]] = memref.subview %[[REALLOC_A0]]
   //      CHECK: linalg.copy(%[[BUFFER_CAST_t0]], %[[SV_A0]])
-  %r0 = tensor.insert_slice %t0 into %A0[0][4][1] : tensor<4xf32> into tensor<?xf32>
+  %r0 = subtensor_insert %t0 into %A0[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
-  // Alloc and copy the whole result tensor. Copy the tensor.extract_slice.
+  // Alloc and copy the whole result tensor. Copy the subtensor.
   //      CHECK: %[[REALLOC_A0_2:.*]] = memref.alloc
   //      CHECK: linalg.copy(%[[BUFFER_CAST_A0]]
   //      CHECK: %[[SV_A0_2:.*]] = memref.subview %[[REALLOC_A0_2]]
   //      CHECK: linalg.copy(%[[BUFFER_CAST_t1]], %[[SV_A0_2]])
-  %r1 = tensor.insert_slice %t1 into %A0[0][4][1] : tensor<4xf32> into tensor<?xf32>
+  %r1 = subtensor_insert %t1 into %A0[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
-  //  Still alloc the large tensor because %A1 is read after. Copy the tensor.extract_slice.
+  //  Still alloc the large tensor because %A1 is read after. Copy the subtensor.
   //      CHECK: %[[REALLOC_A1:.*]] = memref.alloc
   //      CHECK: linalg.copy(%[[BUFFER_CAST_A1]]
   //      CHECK: %[[SV_A1:.*]] = memref.subview %[[REALLOC_A1]]
   //      CHECK: linalg.copy(%[[BUFFER_CAST_t0]], %[[SV_A1]])
-  %r2 = tensor.insert_slice %t0 into %A1[0][4][1] : tensor<4xf32> into tensor<?xf32>
+  %r2 = subtensor_insert %t0 into %A1[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
-  //  Do not realloc the large tensor. Copy the tensor.extract_slice.
+  //  Do not realloc the large tensor. Copy the subtensor.
   //  CHECK-NOT: alloc
   //      CHECK: %[[SV_A1_2:.*]] = memref.subview %[[BUFFER_CAST_A1]]
   //      CHECK: linalg.copy(%[[BUFFER_CAST_t1]], %[[SV_A1_2]])
-  %r3 = tensor.insert_slice %t1 into %A1[0][4][1] : tensor<4xf32> into tensor<?xf32>
+  %r3 = subtensor_insert %t1 into %A1[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
   return %r0, %r1, %r2, %r3: tensor<?xf32>, tensor<?xf32>, tensor<?xf32>, tensor<?xf32>
 }
 
 // -----
 
-// CHECK-LABEL: func @insert_slice_fun
-func @insert_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true}, %t : tensor<4xf32>)
+// CHECK-LABEL: func @subtensor_insert_fun
+func @subtensor_insert_fun(%A : tensor<?xf32> {linalg.inplaceable = true}, %t : tensor<4xf32>)
   -> tensor<?xf32>
 {
   %f0 = constant 0.0 : f32
@@ -172,7 +172,7 @@ func @insert_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true}, %t : tens
   //  CHECK-NOT: alloc
   //      CHECK: %[[SV:.*]] = memref.subview %[[BUFFER_CAST_A]]
   //      CHECK: linalg.copy(%[[BUFFER_CAST_B]], %[[SV]])
-  %r0 = tensor.insert_slice %t into %A[0][4][1] : tensor<4xf32> into tensor<?xf32>
+  %r0 = subtensor_insert %t into %A[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
   /// Overwrite BUFFER_CAST_A inplace.
   //      CHECK: linalg.fill(%[[BUFFER_CAST_A]]
@@ -182,8 +182,8 @@ func @insert_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true}, %t : tens
 
 // -----
 
-// CHECK-LABEL: func @insert_slice_fun
-func @insert_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true}, %t : tensor<4xf32>)
+// CHECK-LABEL: func @subtensor_insert_fun
+func @subtensor_insert_fun(%A : tensor<?xf32> {linalg.inplaceable = true}, %t : tensor<4xf32>)
   -> tensor<?xf32>
 {
   %f0 = constant 0.0 : f32
@@ -198,15 +198,15 @@ func @insert_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true}, %t : tens
   //      CHECK: %[[SV:.*]] = memref.subview %[[BUFFER_CAST_A]]
   /// Overwrite BUFFER_CAST_A inplace by copying into the subview.
   //      CHECK: linalg.copy(%[[BUFFER_CAST_B]], %[[SV]])
-  %r1 = tensor.insert_slice %t into %r0[0][4][1] : tensor<4xf32> into tensor<?xf32>
+  %r1 = subtensor_insert %t into %r0[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
   return %r1: tensor<?xf32>
 }
 
 // -----
 
-// CHECK-LABEL: func @insert_slice_fun_not_inplace
-func @insert_slice_fun_not_inplace(%A : tensor<?xf32>, %t : tensor<4xf32>)
+// CHECK-LABEL: func @subtensor_insert_fun_not_inplace
+func @subtensor_insert_fun_not_inplace(%A : tensor<?xf32>, %t : tensor<4xf32>)
   -> tensor<?xf32>
 {
   //      CHECK: %[[BUFFER_CAST_A:.*]] = memref.buffer_cast {{.*}} : memref<?xf32
@@ -217,14 +217,14 @@ func @insert_slice_fun_not_inplace(%A : tensor<?xf32>, %t : tensor<4xf32>)
   //      CHECK: %[[SV:.*]] = memref.subview %[[ALLOC]][0] [4] [1] : memref<?xf32> to memref<4xf32>
   //      CHECK: linalg.copy(%[[BUFFER_CAST_B]], %[[SV]]) : memref<4xf32, #map>, memref<4xf32>
   //      CHECK: memref.dealloc %[[ALLOC]] : memref<?xf32>
-  %r0 = tensor.insert_slice %t into %A[0][4][1] : tensor<4xf32> into tensor<?xf32>
+  %r0 = subtensor_insert %t into %A[0][4][1] : tensor<4xf32> into tensor<?xf32>
   return %r0: tensor<?xf32>
 }
 
 // -----
 
-// CHECK-LABEL: func @insert_slice_fun_not_inplace
-func @insert_slice_fun_not_inplace(%A : tensor<?xf32> {linalg.inplaceable = true}, %t : tensor<4xf32>)
+// CHECK-LABEL: func @subtensor_insert_fun_not_inplace
+func @subtensor_insert_fun_not_inplace(%A : tensor<?xf32> {linalg.inplaceable = true}, %t : tensor<4xf32>)
   -> (tensor<?xf32>, tensor<?xf32>)
 {
   %f0 = constant 0.0 : f32
@@ -232,10 +232,10 @@ func @insert_slice_fun_not_inplace(%A : tensor<?xf32> {linalg.inplaceable = true
   //  CHECK-DAG: %[[BUFFER_CAST_A:.*]] = memref.buffer_cast {{.*}} : memref<?xf32{{.*}}
   //  CHECK-DAG: %[[BUFFER_CAST_B:.*]] = memref.buffer_cast {{.*}} : memref<4xf32{{.*}}
 
-  // tensor.insert_slice is bufferized first, %A is inplaceable so we can make this inplace
+  // subtensor_insert is bufferized first, %A is inplaceable so we can make this inplace
   //  CHECK-DAG: %[[SV:.*]] = memref.subview %[[BUFFER_CAST_A]][0] [4] [1] : memref<?xf32, {{.*}}> to memref<4xf32, {{.*}}>
   //  CHECK-DAG: linalg.copy(%[[BUFFER_CAST_B]], %[[SV]]) : memref<4xf32, {{.*}}>, memref<4xf32, {{.*}}>
-  %r0 = tensor.insert_slice %t into %A[0][4][1] : tensor<4xf32> into tensor<?xf32>
+  %r0 = subtensor_insert %t into %A[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
   // fill would interfere with %r0 that is also being returned.
   // So we need to bufferize it out of place and make a new alloc.
@@ -253,8 +253,8 @@ func @insert_slice_fun_not_inplace(%A : tensor<?xf32> {linalg.inplaceable = true
 
 // -----
 
-// CHECK-LABEL: func @extract_slice_fun
-func @extract_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true})
+// CHECK-LABEL: func @subtensor_fun
+func @subtensor_fun(%A : tensor<?xf32> {linalg.inplaceable = true})
   ->  tensor<4xf32>
 {
   // This bufferizes to a pattern that the cross-function boundary pass needs to
@@ -268,8 +268,9 @@ func @extract_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true})
   //     CHECK: %[[BUFFER_CAST_A:.*]] = memref.buffer_cast {{.*}} : memref<?xf32
   //     CHECK: %[[SV:.*]] = memref.subview %[[BUFFER_CAST_A]][0] [4] [1]
   //     CHECK: %[[RES:.*]] = memref.tensor_load %[[SV]]
-  %r0 = tensor.extract_slice %A[0][4][1] : tensor<?xf32> to tensor<4xf32>
+  %r0 = subtensor %A[0][4][1] : tensor<?xf32> to tensor<4xf32>
 
   //     CHECK: return %[[RES]]
   return %r0: tensor<4xf32>
 }
+
