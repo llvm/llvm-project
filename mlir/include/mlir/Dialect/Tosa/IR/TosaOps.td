@@ -1384,7 +1384,7 @@ def Tosa_GatherOp : Tosa_Op<"gather", [NoSideEffect]> {
   let summary = "Gather operation,";
 
   let description = [{
-    Generate a tensor for which each element in the output is a subtensor of the
+    Generate a tensor for which each element in the output is a slice of the
     values tensor based on the value of indices.
   }];
 

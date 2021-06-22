@@ -10,7 +10,7 @@ from lldbsuite.test.lldbtest import *
 class TestTailCallFrameSBAPI(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipIf(compiler="clang", compiler_version=['<', '8.0'])
+    @skipIf(compiler="clang", compiler_version=['<', '10.0'])
     @skipIf(dwarf_version=['<', '4'])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr26265")
     def test_tail_call_frame_sbapi(self):

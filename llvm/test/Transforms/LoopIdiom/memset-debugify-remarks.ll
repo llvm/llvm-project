@@ -16,15 +16,14 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @_Z15my_basic_memsetPcS_c(i8* %ptr, i8* %end, i8 %value) {
 ; CHECK-LABEL: @_Z15my_basic_memsetPcS_c(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PTR1:%.*]] = ptrtoint i8* [[PTR:%.*]] to i64, !dbg [[DBG15:![0-9]+]]
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8* [[PTR]], [[END:%.*]], !dbg [[DBG15]]
+; CHECK-NEXT:    [[PTR2:%.*]] = ptrtoint i8* [[PTR:%.*]] to i64, !dbg [[DBG15:![0-9]+]]
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoint i8* [[END:%.*]] to i64, !dbg [[DBG15]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i8* [[PTR]], [[END]], !dbg [[DBG15]]
 ; CHECK-NEXT:    call void @llvm.dbg.value(metadata i1 [[CMP3]], metadata [[META9:![0-9]+]], metadata !DIExpression()), !dbg [[DBG15]]
 ; CHECK-NEXT:    br i1 [[CMP3]], label [[FOR_END:%.*]], label [[FOR_BODY_PREHEADER:%.*]], !dbg [[DBG16:![0-9]+]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 0, [[PTR1]], !dbg [[DBG17:![0-9]+]]
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, i8* [[END]], i64 [[TMP0]], !dbg [[DBG17]]
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = ptrtoint i8* [[SCEVGEP]] to i64, !dbg [[DBG17]]
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[PTR]], i8 [[VALUE:%.*]], i64 [[SCEVGEP2]], i1 false), !dbg [[DBG18:![0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[END1]], [[PTR2]], !dbg [[DBG17:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[PTR]], i8 [[VALUE:%.*]], i64 [[TMP0]], i1 false), !dbg [[DBG18:![0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]], !dbg [[DBG17]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[PTR_ADDR_04:%.*]] = phi i8* [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[PTR]], [[FOR_BODY_PREHEADER]] ], !dbg [[DBG19:![0-9]+]]

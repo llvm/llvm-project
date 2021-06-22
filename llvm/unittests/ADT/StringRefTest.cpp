@@ -392,6 +392,24 @@ TEST(StringRefTest, ConsumeFront) {
   EXPECT_TRUE(Str.consume_front(""));
 }
 
+TEST(StringRefTest, ConsumeFrontLower) {
+  StringRef Str("heLLo");
+  EXPECT_TRUE(Str.consume_front_lower(""));
+  EXPECT_EQ("heLLo", Str);
+  EXPECT_FALSE(Str.consume_front("HEl"));
+  EXPECT_EQ("heLLo", Str);
+  EXPECT_TRUE(Str.consume_front_lower("HEl"));
+  EXPECT_EQ("Lo", Str);
+  EXPECT_FALSE(Str.consume_front_lower("loworld"));
+  EXPECT_EQ("Lo", Str);
+  EXPECT_FALSE(Str.consume_front_lower("ol"));
+  EXPECT_EQ("Lo", Str);
+  EXPECT_TRUE(Str.consume_front_lower("lo"));
+  EXPECT_EQ("", Str);
+  EXPECT_FALSE(Str.consume_front_lower("o"));
+  EXPECT_TRUE(Str.consume_front_lower(""));
+}
+
 TEST(StringRefTest, EndsWith) {
   StringRef Str("hello");
   EXPECT_TRUE(Str.endswith(""));
@@ -425,6 +443,24 @@ TEST(StringRefTest, ConsumeBack) {
   EXPECT_EQ("", Str);
   EXPECT_FALSE(Str.consume_back("h"));
   EXPECT_TRUE(Str.consume_back(""));
+}
+
+TEST(StringRefTest, ConsumeBackLower) {
+  StringRef Str("heLLo");
+  EXPECT_TRUE(Str.consume_back_lower(""));
+  EXPECT_EQ("heLLo", Str);
+  EXPECT_FALSE(Str.consume_back("lO"));
+  EXPECT_EQ("heLLo", Str);
+  EXPECT_TRUE(Str.consume_back_lower("lO"));
+  EXPECT_EQ("heL", Str);
+  EXPECT_FALSE(Str.consume_back_lower("helhel"));
+  EXPECT_EQ("heL", Str);
+  EXPECT_FALSE(Str.consume_back_lower("hle"));
+  EXPECT_EQ("heL", Str);
+  EXPECT_TRUE(Str.consume_back_lower("hEl"));
+  EXPECT_EQ("", Str);
+  EXPECT_FALSE(Str.consume_back_lower("h"));
+  EXPECT_TRUE(Str.consume_back_lower(""));
 }
 
 TEST(StringRefTest, Find) {

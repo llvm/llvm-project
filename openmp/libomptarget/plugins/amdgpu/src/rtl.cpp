@@ -2118,3 +2118,11 @@ int32_t __tgt_rtl_synchronize(int32_t device_id, __tgt_async_info *AsyncInfo) {
   }
   return OFFLOAD_SUCCESS;
 }
+
+namespace core {
+hsa_status_t allow_access_to_all_gpu_agents(void *ptr) {
+  return hsa_amd_agents_allow_access(DeviceInfo.HSAAgents.size(),
+                                     &DeviceInfo.HSAAgents[0], NULL, ptr);
+}
+
+} // namespace core

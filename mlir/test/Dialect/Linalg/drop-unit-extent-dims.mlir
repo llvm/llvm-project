@@ -299,28 +299,28 @@ func @fold_unit_dim_for_init_tensor(%input: tensor<1x1000xf32>) -> tensor<1xf32>
 
 // -----
 
-func @fold_subtensor(
+func @fold_slice(
     %arg0 : tensor<1x?x?x1x?x1x1xf32>, %arg1 : tensor<1x?x?x?x?x1x1xf32>,
     %arg2 : index, %arg3 : index, %arg4 : index, %arg5 : index,
     %arg6 : index, %arg7 : index) -> (tensor<1x?x?x1x?x1x1xf32>, tensor<1x?x?x1x?x1x1xf32>) {
-  %0 = subtensor %arg0[0, %arg2, %arg3, 0, %arg4, 0, 0]
-                      [1, %arg5, %arg6, 1, %arg7, 1, 1] [1, 1, 1, 1, 1, 1, 1] :
+  %0 = tensor.extract_slice %arg0[0, %arg2, %arg3, 0, %arg4, 0, 0]
+                             [1, %arg5, %arg6, 1, %arg7, 1, 1] [1, 1, 1, 1, 1, 1, 1] :
       tensor<1x?x?x1x?x1x1xf32> to tensor<1x?x?x1x?x1x1xf32>
-  %1 = subtensor %arg1[%arg2, 0, %arg3, 0, 0, %arg4, 0]
-                      [1, %arg5, %arg6, 1, %arg7, 1, 1] [1, 1, 1, 1, 1, 1, 1] :
+  %1 = tensor.extract_slice %arg1[%arg2, 0, %arg3, 0, 0, %arg4, 0]
+                             [1, %arg5, %arg6, 1, %arg7, 1, 1] [1, 1, 1, 1, 1, 1, 1] :
       tensor<1x?x?x?x?x1x1xf32> to tensor<1x?x?x1x?x1x1xf32>
   return %0, %1 : tensor<1x?x?x1x?x1x1xf32>, tensor<1x?x?x1x?x1x1xf32>
 }
-//      CHECK: func @fold_subtensor
+//      CHECK: func @fold_slice
 // CHECK-SAME:   %[[ARG0:.+]]: tensor<1x?x?x1x?x1x1xf32>
 // CHECK-SAME:   %[[ARG1:.+]]: tensor<1x?x?x?x?x1x1xf32>
-//      CHECK:   %[[SUBTENSOR1:.+]] = subtensor %[[ARG0]]
+//      CHECK:   %[[SLICE1:.+]] = tensor.extract_slice %[[ARG0]]
 // CHECK-SAME:       to tensor<?x?x?xf32>
-//      CHECK:   %[[RESULT1:.+]] = linalg.tensor_expand_shape %[[SUBTENSOR1]]
+//      CHECK:   %[[RESULT1:.+]] = linalg.tensor_expand_shape %[[SLICE1]]
 // CHECK-SAME:       [0, 1], [2], [3, 4, 5, 6]
-//      CHECK:   %[[SUBTENSOR2:.+]] = subtensor %[[ARG1]]
+//      CHECK:   %[[SLICE2:.+]] = tensor.extract_slice %[[ARG1]]
 // CHECK-SAME:       to tensor<?x?x?xf32>
-//      CHECK:   %[[RESULT2:.+]] = linalg.tensor_expand_shape %[[SUBTENSOR2]]
+//      CHECK:   %[[RESULT2:.+]] = linalg.tensor_expand_shape %[[SLICE2]]
 // CHECK-SAME:       [0, 1], [2], [3, 4, 5, 6]
 //      CHECK:   return %[[RESULT1]], %[[RESULT2]]
 
@@ -430,25 +430,25 @@ func @unit_dim_for_reduction_inner(%arg0: tensor<?x1x?x1xf32>) -> tensor<?x1xf32
 
 // -----
 
-func @subtensor_unit_dims(%arg0: tensor<1x3xf32>) -> tensor<1x1xf32> {
-  %0 = subtensor %arg0[0, 2] [1, 1] [1, 1] : tensor<1x3xf32> to tensor<1x1xf32>
+func @slice_unit_dims(%arg0: tensor<1x3xf32>) -> tensor<1x1xf32> {
+  %0 = tensor.extract_slice %arg0[0, 2] [1, 1] [1, 1] : tensor<1x3xf32> to tensor<1x1xf32>
   return %0 : tensor<1x1xf32>
 }
-// CHECK-LABEL: func @subtensor_unit_dims
-//       CHECK:   %[[SUBTENSOR:.+]] = subtensor
+// CHECK-LABEL: func @slice_unit_dims
+//       CHECK:   %[[SLICE:.+]] = tensor.extract_slice
 //  CHECK-SAME:     tensor<1x3xf32> to tensor<f32>
-//       CHECK:   %[[RESULT:.+]] = linalg.tensor_expand_shape %[[SUBTENSOR]] []
+//       CHECK:   %[[RESULT:.+]] = linalg.tensor_expand_shape %[[SLICE]] []
 //       CHECK:   return %[[RESULT]]
 
 // -----
 
-func @subtensor_insert_unit_dims(%arg0: tensor<1x3xf32>, %arg1: tensor<1x1xf32>) -> tensor<1x3xf32> {
-  %0 = subtensor_insert %arg1 into %arg0[0, 2] [1, 1] [1, 1] : tensor<1x1xf32> into tensor<1x3xf32>
+func @insert_slice_unit_dims(%arg0: tensor<1x3xf32>, %arg1: tensor<1x1xf32>) -> tensor<1x3xf32> {
+  %0 = tensor.insert_slice %arg1 into %arg0[0, 2] [1, 1] [1, 1] : tensor<1x1xf32> into tensor<1x3xf32>
   return %0 : tensor<1x3xf32>
 }
-// CHECK-LABEL: func @subtensor_insert_unit_dims
+// CHECK-LABEL: func @insert_slice_unit_dims
 //       CHECK:   %[[RESHAPE:.+]] = linalg.tensor_collapse_shape %{{.+}} []
-//       CHECK:   %[[RESULT:.+]] = subtensor_insert %[[RESHAPE]]
+//       CHECK:   %[[RESULT:.+]] = tensor.insert_slice %[[RESHAPE]]
 //  CHECK-SAME:     tensor<f32> into tensor<1x3xf32>
 //       CHECK:   return %[[RESULT]]
 
