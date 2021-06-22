@@ -37,9 +37,12 @@ def main():
   if not object_encodings_map:
     sys.exit("no object encodings found in input")
 
+  # generate-cfi-funcs.py doesn't generate unwind info for _main.
+  object_encodings_map['_main'] = '00000000'
+
   program_symbols_map = {address:symbol
     for address, symbol in
-    re.findall(r"^%s(%s) g\s+F __TEXT,__text (x\1)$" % (hex8, hex8),
+    re.findall(r"^%s(%s) g\s+F __TEXT,__text (x\1|_main)$" % (hex8, hex8),
                objdump_string, re.MULTILINE)}
   if not program_symbols_map:
     sys.exit("no program symbols found in input")

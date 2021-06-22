@@ -256,9 +256,9 @@ relocateCompactUnwind(ConcatOutputSection *compactUnwindSection,
 // There should only be a handful of unique personality pointers, so we can
 // encode them as 2-bit indices into a small array.
 template <class Ptr>
-void encodePersonalities(
-    const std::vector<CompactUnwindEntry<Ptr> *> &cuPtrVector,
-    std::vector<uint32_t> &personalities) {
+static void
+encodePersonalities(const std::vector<CompactUnwindEntry<Ptr> *> &cuPtrVector,
+                    std::vector<uint32_t> &personalities) {
   for (CompactUnwindEntry<Ptr> *cu : cuPtrVector) {
     if (cu->personality == 0)
       continue;
@@ -278,6 +278,40 @@ void encodePersonalities(
   if (personalities.size() > 3)
     error("too many personalities (" + std::to_string(personalities.size()) +
           ") for compact unwind to encode");
+}
+
+// __unwind_info stores unwind data for address ranges. If several
+// adjacent functions have the same unwind encoding, LSDA, and personality
+// function, they share one unwind entry. For this to work, functions without
+// unwind info need explicit "no unwind info" unwind entries -- else the
+// unwinder would think they have the unwind info of the closest function
+// with unwind info right before in the image.
+template <class Ptr>
+static void addEntriesForFunctionsWithoutUnwindInfo(
+    std::vector<CompactUnwindEntry<Ptr>> &cuVector) {
+  DenseSet<Ptr> hasUnwindInfo;
+  for (CompactUnwindEntry<Ptr> &cuEntry : cuVector)
+    if (cuEntry.functionAddress != UINT64_MAX)
+      hasUnwindInfo.insert(cuEntry.functionAddress);
+
+  // Add explicit "has no unwind info" entries for all global and local symbols
+  // without unwind info.
+  auto markNoUnwindInfo = [&cuVector, &hasUnwindInfo](const Defined *d) {
+    if (d->isLive() && isCodeSection(d->isec)) {
+      Ptr ptr = d->getVA();
+      if (!hasUnwindInfo.count(ptr))
+        cuVector.push_back({ptr, 0, 0, 0, 0});
+    }
+  };
+  for (Symbol *sym : symtab->getSymbols())
+    if (auto *d = dyn_cast<Defined>(sym))
+      markNoUnwindInfo(d);
+  for (const InputFile *file : inputFiles)
+    if (auto *objFile = dyn_cast<ObjFile>(file))
+      for (Symbol *sym : objFile->symbols)
+        if (auto *d = dyn_cast_or_null<Defined>(sym))
+          if (!d->isExternal())
+            markNoUnwindInfo(d);
 }
 
 // Scan the __LD,__compact_unwind entries and compute the space needs of
@@ -300,6 +334,8 @@ template <class Ptr> void UnwindInfoSectionImpl<Ptr>::finalize() {
       compactUnwindSection->getSize() / sizeof(CompactUnwindEntry<Ptr>);
   cuVector.resize(cuCount);
   relocateCompactUnwind(compactUnwindSection, cuVector);
+
+  addEntriesForFunctionsWithoutUnwindInfo(cuVector);
 
   // Rather than sort & fold the 32-byte entries directly, we create a
   // vector of pointers to entries and sort & fold that instead.
