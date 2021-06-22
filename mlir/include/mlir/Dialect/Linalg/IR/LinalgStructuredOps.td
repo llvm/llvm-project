@@ -175,14 +175,14 @@ def CopyOp : LinalgStructured_Op<"copy", [CopyOpInterface]> {
 }
 
 def FillOp : LinalgStructured_Op<"fill", []> {
-  let arguments = (ins AnyShaped:$output,
-                   AnyTypeOf<[AnyComplex, AnyFloat, AnySignlessInteger,
-                              AnyVector]>:$value);
+  let arguments = (ins
+    AnyTypeOf<[AnyComplex, AnyFloat, AnySignlessInteger, AnyVector]>:$value,
+    AnyShaped:$output);
   let results = (outs Optional<AnyRankedTensor>:$result);
   let regions = (region AnyRegion:$region);
   let extraClassDeclaration = structuredOpsDecls # [{
-    ValueRange inputs() { return {}; }
-    ValueRange outputs() { return getOperands().take_front(); }
+    ValueRange inputs() { return getOperands().take_front(); }
+    ValueRange outputs() { return getOperands().take_back(); }
 
     // Rank-polymorphic.
     //   filling_value -> O(ivs) with parallel iterators.
@@ -196,6 +196,7 @@ def FillOp : LinalgStructured_Op<"fill", []> {
       MLIRContext *context = getContext();
       // filling_value -> O(ivs)
       return Builder(getContext()).getAffineMapArrayAttr({
+          AffineMap::get(getNumParallelLoops(), 0, {}, getContext()),
           extractOrIdentityMap(llvm::None, getNumParallelLoops(), context)});
     }
 
@@ -206,13 +207,13 @@ def FillOp : LinalgStructured_Op<"fill", []> {
     getRegionBuilder() {
       return &regionBuilder;
     }
-    static unsigned getNumRegionArgs() { return 1; }
+    static unsigned getNumRegionArgs() { return 2; }
   }];
 
   let assemblyFormat = [{
     `(` $output `,` $value `)` attr-dict `:`
         type($output) `,` type($value) (`->` type($result)^)?
-      custom<FillOpRegion>($region, ref(type($output)), ref($value))
+      custom<FillOpRegion>($region, ref(type($output)), ref(type($value)))
   }];
 
   let builders = [
