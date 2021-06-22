@@ -272,19 +272,19 @@ operator>=(const _Tp& __x, const _Tp& __y)
 
 // move_if_noexcept
 
+#ifndef _LIBCPP_CXX03_LANG
+template <class _Tp>
+using __move_if_noexcept_result_t =
+    typename conditional<!is_nothrow_move_constructible<_Tp>::value && is_copy_constructible<_Tp>::value, const _Tp&,
+                         _Tp&&>::type;
+#else // _LIBCPP_CXX03_LANG
+template <class _Tp>
+using __move_if_noexcept_result_t = const _Tp&;
+#endif
+
 template <class _Tp>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-#ifndef _LIBCPP_CXX03_LANG
-typename conditional
-<
-    !is_nothrow_move_constructible<_Tp>::value && is_copy_constructible<_Tp>::value,
-    const _Tp&,
-    _Tp&&
->::type
-#else  // _LIBCPP_CXX03_LANG
-const _Tp&
-#endif
-move_if_noexcept(_Tp& __x) _NOEXCEPT
+__move_if_noexcept_result_t<_Tp> move_if_noexcept(_Tp& __x) _NOEXCEPT
 {
     return _VSTD::move(__x);
 }
