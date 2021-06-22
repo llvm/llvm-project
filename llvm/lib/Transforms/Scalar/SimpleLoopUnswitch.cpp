@@ -2872,14 +2872,11 @@ static bool unswitchBestCondition(
         } else if (match(BI.getCondition(), m_LogicalOr())) {
           if (SuccBB == BI.getSuccessor(0))
             continue;
-        } else if (!PartialIVInfo.InstToDuplicate.empty()) {
-          if (PartialIVInfo.KnownValue->isOneValue() &&
-              SuccBB == BI.getSuccessor(1))
-            continue;
-          else if (!PartialIVInfo.KnownValue->isOneValue() &&
-                   SuccBB == BI.getSuccessor(0))
-            continue;
-        }
+        } else if ((PartialIVInfo.KnownValue->isOneValue() &&
+                    SuccBB == BI.getSuccessor(0)) ||
+                   (!PartialIVInfo.KnownValue->isOneValue() &&
+                    SuccBB == BI.getSuccessor(1)))
+          continue;
       }
 
       // This successor's domtree will not need to be duplicated after
