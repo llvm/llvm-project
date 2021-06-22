@@ -867,8 +867,7 @@ Constant *CastGEPIndices(Type *SrcElemTy, ArrayRef<Constant *> Ops,
 }
 
 /// Strip the pointer casts, but preserve the address space information.
-Constant *StripPtrCastKeepAS(Constant *Ptr, Type *&ElemTy,
-                             bool ForLoadOperand) {
+Constant *StripPtrCastKeepAS(Constant *Ptr, bool ForLoadOperand) {
   assert(Ptr->getType()->isPointerTy() && "Not a pointer type");
   auto *OldPtrTy = cast<PointerType>(Ptr->getType());
   Ptr = cast<Constant>(Ptr->stripPointerCasts());
@@ -880,8 +879,6 @@ Constant *StripPtrCastKeepAS(Constant *Ptr, Type *&ElemTy,
   }
 
   auto *NewPtrTy = cast<PointerType>(Ptr->getType());
-
-  ElemTy = NewPtrTy->getPointerElementType();
 
   // Preserve the address space number of the pointer.
   if (NewPtrTy->getAddressSpace() != OldPtrTy->getAddressSpace()) {
@@ -942,7 +939,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
             DL.getIndexedOffsetInType(
                 SrcElemTy,
                 makeArrayRef((Value * const *)Ops.data() + 1, Ops.size() - 1)));
-  Ptr = StripPtrCastKeepAS(Ptr, SrcElemTy, ForLoadOperand);
+  Ptr = StripPtrCastKeepAS(Ptr, ForLoadOperand);
 
   // If this is a GEP of a GEP, fold it all into a single GEP.
   while (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
@@ -964,7 +961,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
     Ptr = cast<Constant>(GEP->getOperand(0));
     SrcElemTy = GEP->getSourceElementType();
     Offset += APInt(BitWidth, DL.getIndexedOffsetInType(SrcElemTy, NestedOps));
-    Ptr = StripPtrCastKeepAS(Ptr, SrcElemTy, ForLoadOperand);
+    Ptr = StripPtrCastKeepAS(Ptr, ForLoadOperand);
   }
 
   // If the base value for this address is a literal integer value, fold the
@@ -988,8 +985,9 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   // we eliminate over-indexing of the notional static type array bounds.
   // This makes it easy to determine if the getelementptr is "inbounds".
   // Also, this helps GlobalOpt do SROA on GlobalVariables.
-  Type *Ty = PTy;
   SmallVector<Constant *, 32> NewIdxs;
+  Type *Ty = PTy;
+  SrcElemTy = PTy->getElementType();
 
   do {
     if (!Ty->isStructTy()) {
@@ -1074,7 +1072,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
 
   // If we ended up indexing a member with a type that doesn't match
   // the type of what the original indices indexed, add a cast.
-  if (Ty != ResElemTy)
+  if (C->getType() != ResTy)
     C = FoldBitCast(C, ResTy, DL);
 
   return C;
