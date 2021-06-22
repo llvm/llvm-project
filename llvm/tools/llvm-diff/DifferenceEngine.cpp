@@ -113,6 +113,12 @@ public:
 class FunctionDifferenceEngine {
   DifferenceEngine &Engine;
 
+  // Some initializers may reference the variable we're currently checking. This
+  // can cause an infinite loop. The Saved[LR]HS ivars can be checked to prevent
+  // recursing.
+  const Value *SavedLHS;
+  const Value *SavedRHS;
+
   /// The current mapping from old local values to new local values.
   DenseMap<const Value *, const Value *> Values;
 
@@ -412,7 +418,7 @@ public:
 
     if (L->getValueID() != R->getValueID())
       return false;
-    
+
     // Ask the engine about global values.
     if (isa<GlobalValue>(L))
       return Engine.equivalentAsOperands(cast<GlobalValue>(L),
@@ -465,12 +471,40 @@ public:
       return true;
     }
 
+    // If L and R are ConstantStructs, compare each field and type.
+    if (isa<ConstantStruct>(L)) {
+      const ConstantStruct *CSL = cast<ConstantStruct>(L);
+      const ConstantStruct *CSR = cast<ConstantStruct>(R);
+
+      const StructType *LTy = cast<StructType>(CSL->getType());
+      const StructType *RTy = cast<StructType>(CSR->getType());
+
+      // The StructTypes should have the same attributes. Don't use
+      // isLayoutIdentical(), because that just checks the element pointers,
+      // which may not work here.
+      if (LTy->getNumElements() != RTy->getNumElements() ||
+          LTy->isPacked() != RTy->isPacked())
+        return false;
+
+      for (unsigned I = 0; I < LTy->getNumElements(); I++) {
+        const Value *LAgg = CSL->getAggregateElement(I);
+        const Value *RAgg = CSR->getAggregateElement(I);
+
+        if (!equivalentAsOperands(LAgg, RAgg)) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
     return false;
   }
 
   bool equivalentAsOperands(const ConstantExpr *L, const ConstantExpr *R) {
     if (L == R)
       return true;
+
     if (L->getOpcode() != R->getOpcode())
       return false;
 
@@ -492,9 +526,23 @@ public:
     if (L->getNumOperands() != R->getNumOperands())
       return false;
 
-    for (unsigned I = 0, E = L->getNumOperands(); I != E; ++I)
-      if (!equivalentAsOperands(L->getOperand(I), R->getOperand(I)))
+    for (unsigned I = 0, E = L->getNumOperands(); I != E; ++I) {
+      const auto *LOp = L->getOperand(I);
+      const auto *ROp = R->getOperand(I);
+
+      if (LOp == SavedLHS || ROp == SavedRHS) {
+        if (LOp != SavedLHS || ROp != SavedRHS)
+          // If the left and right operands aren't both re-analyzing the
+          // variable, then the initialiers don't match, so report "false".
+          // Otherwise, we skip these operands..
+          return false;
+
+        continue;
+      }
+
+      if (!equivalentAsOperands(LOp, ROp))
         return false;
+    }
 
     return true;
   }
@@ -528,8 +576,11 @@ public:
   FunctionDifferenceEngine *this_() { return this; }
 
 public:
-  FunctionDifferenceEngine(DifferenceEngine &Engine) :
-    Engine(Engine), Queue(QueueSorter(*this_())) {}
+  FunctionDifferenceEngine(DifferenceEngine &Engine,
+                           const Value *SavedLHS = nullptr,
+                           const Value *SavedRHS = nullptr)
+      : Engine(Engine), SavedLHS(SavedLHS), SavedRHS(SavedRHS),
+        Queue(QueueSorter(*this_())) {}
 
   void diff(const Function *L, const Function *R) {
     if (L->arg_size() != R->arg_size())
@@ -785,8 +836,8 @@ bool DifferenceEngine::equivalentAsOperands(const GlobalValue *L,
     const GlobalVariable *GVR = cast<GlobalVariable>(R);
     if (GVL->hasLocalLinkage() && GVL->hasUniqueInitializer() &&
         GVR->hasLocalLinkage() && GVR->hasUniqueInitializer())
-      return FunctionDifferenceEngine(*this).equivalentAsOperands(
-          GVL->getInitializer(), GVR->getInitializer());
+      return FunctionDifferenceEngine(*this, GVL, GVR)
+          .equivalentAsOperands(GVL->getInitializer(), GVR->getInitializer());
   }
 
   return L->getName() == R->getName();

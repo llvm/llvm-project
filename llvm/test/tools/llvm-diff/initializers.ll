@@ -10,3 +10,29 @@ define void @foo() {
   %1 = getelementptr [2 x i16*], [2 x i16*]* @gv2, i64 0, i64 undef
   ret void
 }
+
+; A named structure may be renamed when the right module is read. This is due
+; to the LLParser being different between the left and right modules, and the
+; context renaming one.
+
+%struct.ty1 = type { i16, i16 }
+
+@gv3 = internal global [1 x %struct.ty1] [%struct.ty1 { i16 928, i16 0 }], align 16
+
+define void @bar() {
+  %1 = getelementptr [1 x %struct.ty1], [1 x %struct.ty1]* @gv3, i64 0, i64 undef
+  ret void
+}
+
+; An initializer may reference the variable it's initializing via bitcast /
+; GEP. Check that it doesn't cause an infinite loop.
+
+%struct.mutex = type { %struct.list_head }
+%struct.list_head = type { %struct.list_head*, %struct.list_head* }
+
+@vmx_l1d_flush_mutex = internal global %struct.mutex { %struct.list_head { %struct.list_head* bitcast (i8* getelementptr (i8, i8* bitcast (%struct.mutex* @vmx_l1d_flush_mutex to i8*), i64 16) to %struct.list_head*), %struct.list_head* bitcast (i8* getelementptr (i8, i8* bitcast (%struct.mutex* @vmx_l1d_flush_mutex to i8*), i64 16) to %struct.list_head*) } }, align 8
+
+define internal i32 @qux() {
+  call void undef(%struct.mutex* @vmx_l1d_flush_mutex)
+  ret i32 undef
+}
