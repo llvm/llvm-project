@@ -1,61 +1,149 @@
-Section,Description,Dependencies,Assignee,Patch,Complete
-[concepts],"Normally this would be more fine-grained, but it’s already been implemented.",,Christopher Di Bella,,✅
-[tuple.helper],Update <tuple> includes.,,,,
-[function.objects],"Comparison functions: equal_to, less, etc.",[concepts],Zoe Carver,`D100429 <https://llvm.org/D100429>`_,
-[memory.syn],Add specializations for uninitialized_* and destroy_*. ,"[concepts], [readable.traits]: iter_value_t",,,
-[readable.traits]: indirectly_readable_traits,indirectly_readable_traits only. ,[concepts],Christopher Di Bella,`D99461 <https://llvm.org/D99461>`_,✅
-[iterator.traits],Mainly updates to iterator_traits.,"[readable.traits]: indirectly_readable_traits, [concepts]",Christopher Di Bella,"`D99854 <https://llvm.org/D99854>`_, `D99855 <https://llvm.org/D99855>`_",✅
-[readable.traits]: iter_value_t,Finish implementing readable.traits.,"[readable.traits]: indirectly_readable_traits, [concepts], [iterator.traits]",Christopher Di Bella,`D99863 <https://llvm.org/D99863>`_,✅
-[specialized.algorithms],NOT FINISHED,NOT FINISHED,,,
-[strings],Adds begin/end and updates const_iterator.,[iterator.concepts],,,
-[views.span],Same as [strings],[iterator.concepts],,,
-[incrementable.traits],,[concepts],Christopher Di Bella,"`D99141 <https://llvm.org/D99141>`_, `D99863 <https://llvm.org/D99863>`_",✅
-[iterator.cust.move],Implement iter_move.,,Christopher Di Bella,`D99873 <https://llvm.org/D99873>`_,
-[iterator.cust.swap],Implement iter_swap.,"[concepts], [readable.traits]: iter_value_t",,,
-[iterator.concepts],"indirectly_readable, indirectly_writable, weakly_incrementable, incrementable, input_or_output_iterator, sentinel_for, sized_sentinel_for, input_iterator, output_iterator, forward_iterator, bidirectional_iterator, random_access_iterator, and contiguous_iterator.","[concepts], [readable.traits]: iter_value_t, [iterator.traits]",Christopher Di Bella,"indirectly_readable: `D100073 <https://llvm.org/D100073>`_
-indirectly_writable: `D100078 <https://llvm.org/D100078>`_ weakly_incrementable, incrementable: `D100080 <https://llvm.org/D100080>`_ input_or_output_iterator, sentinel_for: `D100160 <https://llvm.org/D100160>`_
-input_iterator: `D100271 <https://llvm.org/D100271>`_
-forward_iterator: `D100275 <https://llvm.org/D100275>`_
-bidirectional_iterator: `D100278 <https://llvm.org/D100278>`_",
-[indirectcallable.indirectinvocable],"indirectly_unary_invocable, indirectly_regular_unary_invocable, indirectly_unary_predicate, indirectly_binary_predicate, indirectly_equivalence_relation, and indirectly_strict_weak_order.","[concepts], [readable.traits]: iter_value_t, [iterator.traits]",,,
-[projected],,[iterator.concepts],,,
-[common.alg.req]: pt. 1,"indirectly_movable, indirectly_movable_storable, indirectly_copyable, and indirectly_copyable_storable.",[iterator.concepts],,,
-[common.alg.req]: pt. 2,indirectly_swappable,"[iterator.concepts], [iterator.cust.swap]",,,
-[common.alg.req]: pt. 3,indirectly_comparable,[projected],,,
-[common.alg.req]: pt. 4,"Note: could be done with pt. 1.           …                              permutable, mergeable, and sortable",[iterator.concepts],,,
-[std.iterator.tags],,[iterator.traits],,,
-[range.iter.op.advance],ranges::advance,[iterator.concepts],Christopher Di Bella,`D101922 <https://llvm.org/D101922>`_,
-[range.iter.op.distance],ranges::distance,"[iterator.concepts], [range.range], [range.sized]",Christopher Di Bella,`D102789 <https://llvm.org/D102789>`_,
-[range.iter.op.next],ranges::next,[iterator.concepts],Christopher Di Bella,`D102563 <https://llvm.org/D102563>`_,
-[range.iter.op.prev],ranges::prev,[iterator.concepts],Christopher Di Bella,`D102564 <https://llvm.org/D102564>`_,
-[predef.iterators],Updates to predefined iterators.,"[iterator.concepts], [iterator.cust.swap], [iterator.cust.move]",,,
-[move.sentinel],,[concepts] … Note: for testing it may be beneficial to have completed [predef.iterators]. ,,,
-[common.iterator],,"[iterator.concepts], [iterator.cust.swap], [iterator.cust.move]",Zoe Carver,,
-[default.sentinels],The empty std::default_sentinel_t.,,Zoe Carver,,✅
-[counted.iterator],,"[iterator.concepts], [iterator.cust.swap], [iterator.cust.move], [default.sentinels]",,,
-[stream.iterators],,[default.sentinels],,,
-[ranges.syn]: pt. 1,All the stuff not specified elsewhere. ,"[range.access], [iterator.concepts], [range.all], [range.subrange], unreachable, [range.empty]",,,
-[ranges.syn]: pt. 2,"iterator_t, sentinel_t, and safe_iterator_t",[range.access],Christopher Di Bella,"`D100255 <https://llvm.org/D100255>`_, `D100269 <https://llvm.org/D100269>`_",
-[range.access],"ranges::begin, end, cbegin, cend, rbegin, rend, crbegin, and crend",[iterator.concepts],Christopher Di Bella,`D100255 <https://llvm.org/D100255>`_,
-[ranges.primitives],"size, empty, data, and cdata",[iterator.concepts],Zoe Carver,,
-[range.range],,[range.access],,,
-[range.sized],ranges::sized_range,"[range.primitives], [range.range]",Christopher Di Bella,`D102434 <https://llvm.org/D102434>`_,✅
-[range.view],View and enable_view,[range.range],Louis Dionne,https://reviews.llvm.org/D101547,✅
-[range.refinements],"OutputRange, InputRange, ForwardRange, BidirectionalRange, RandomAccessRange, ContiguousRange, CommonRange, ViewableRange","[ranges.syn]: pt. 2, [range.range]",Christopher Di Bella,"input_range: `D100271 <https://llvm.org/D100271>`_
-forward_range: `D100275 <https://llvm.org/D100275>`_
-bidirectional_range: `D100278 <https://llvm.org/D100278>`_",
-[view.interface],[range.utility.helpers] and view_interface,"[ranges.syn]: pt. 2, [range.view], [range.iterator.operations.prev], [range.refinements]",Zoe Carver,`D101737 <https://llvm.org/D101737>`_,✅
-[range.subrange],,[view.interface],Zoe Carver,`D102006 <https://llvm.org/D102006>`_,
-[range.all],view::all,"[range.subrange], [range.view.ref]",Zoe Carver,`D102028 <https://llvm.org/D102028>`_,
-[range.view.ref],ref-view,[view.interface],Zoe Carver,`D102020 <https://llvm.org/D102020>`_,
-[range.filter],filter_view,[range.all],Louis Dionne,,
-[range.transform],transform_view,[range.all],Zoe Carver,,
-[range.iota],iota_view,[range.all],Louis Dionne,,
-[range.take],take_view,[range.all],Zoe Carver,,
-[range.join],join_view,[range.all],Christopher Di Bella,,
-[range.empty],empty_view,[view.interface],Zoe Carver,,✅
-[range.single],single_view,[view.interface],,,
-[range.split],split_view,[range.all],,,
-[range.counted],view::counted,[range.subrange],,,
-[range.common],common_view,[range.all],Zoe Carver,,
-[range.reverse],reverse_view,[range.all],,,
+Section,Description,Dependencies,Assignee,Complete
+[tuple.helper],Update <tuple> includes.,None,Unassigned,Not started
+`[range.cmp] <http://wg21.link/range.cmp>`_,"| `ranges::equal_to <https://llvm.org/D100429>`_
+| `ranges::not_equal_to <https://llvm.org/D100429>`_
+| `ranges::less <https://llvm.org/D100429>`_
+| `ranges::greater <https://llvm.org/D100429>`_
+| `ranges::less_equal <https://llvm.org/D100429>`_
+| `ranges::greater_equal <https://llvm.org/D100429>`_",None,Zoe Carver,✅
+`[readable.traits] <http://wg21.link/readable.traits>`_,"| `indirectly_readable_traits <https://llvm.org/D99461>`_
+| `iter_value_t <https://llvm.org/D99863>`_",None,Christopher Di Bella,✅
+`[incrementable.traits] <http://wg21.link/incrementable.traits>`_,"| `incrementable_traits <https://llvm.org/D99141>`_
+| `iter_difference_t <https://llvm.org/D99863>`_",,Christopher Di Bella,✅
+`[iterator.traits] <http://wg21.link/iterator.traits>`_,`Updates to iterator_traits <https://llvm.org/D99855>`_,"| indirectly_readable_traits
+| incrementable_traits",Christopher Di Bella,✅
+`[special.mem.concepts] <http://wg21.link/special.mem.concepts>`_,"| *no-throw-input-iterator*
+| *no-throw-sentinel-for*
+| *no-throw-input-range*
+| *no-throw-forward-iterator*
+| *no-throw-forward-range*","| [iterator.concepts]
+| [range.refinements]",Unassigned,Not started
+`[specialized.algorithms] <http://wg21.link/specialized.algorithms>`_,"| ranges::uninitialized_default_construct
+| ranges::uninitialized_default_construct_n
+| ranges::uninitialized_value_construct
+| ranges::uninitialized_value_construct_n
+| ranges::uninitialized_copy
+| ranges::uninitialized_copy_n
+| ranges::uninitialized_move
+| ranges::uninitialized_move_n
+| ranges::uninitialized_fill
+| ranges::uninitialized_fill_n
+| ranges::construct_at
+| ranges::destroy
+| ranges::destroy_at
+| ranges::destroy_n",[special.mem.concepts],Unassigned,Not started
+[strings],Adds begin/end and updates const_iterator.,[iterator.concepts],Unassigned,Not started
+[views.span],Same as [strings],[iterator.concepts],Unassigned,Not started
+`[iterator.cust.move] <http://wg21.link/iterator.cust.move>`_,`ranges::iter_move <https://llvm.org/D99873>`_,,Zoe Carver,✅
+`[iterator.cust.swap] <http://wg21.link/iterator.cust.swap>`_,`ranges::iter_swap <https://llvm.org/D102809>`_,iter_value_t,Zoe Carver,✅
+`[iterator.concepts] <http://wg21.link/iterator.concepts>`_,"| `indirectly_readable <https://llvm.org/D100073>`_
+| `indirectly_writable <https://llvm.org/D100073>`_
+| `weakly_incrementable <https://llvm.org/D100080>`_
+| `incrementable <https://llvm.org/D100080>`_
+| `input_or_output_iterator <https://llvm.org/D100160>`_
+| `sentinel_for <https://llvm.org/D100160>`_
+| `sized_sentinel_for <https://llvm.org/D101371>`_
+| `input_iterator <https://llvm.org/D100271>`_
+| output_iterator
+| `forward_iterator <https://llvm.org/D100275>`_
+| `bidirectional_iterator <https://llvm.org/D100278>`_
+| `random_access_iterator <https://llvm.org/D101316>`_
+| `contiguous_iterator <https://llvm.org/D101396>`_",iter_value_t,Christopher Di Bella,In progress
+`[indirectcallable.indirectinvocable] <http://wg21.link/indirectcallable.indirectinvocable>`_,"| indirectly_unary_invocable
+| `indirectly_regular_unary_invocable <https://llvm.org/D101277>`_
+| `indirectly_unary_predicate <https://llvm.org/D101277>`_
+| `indirectly_binary_predicate <https://llvm.org/D101277>`_
+| `indirectly_equivalence_relation <https://llvm.org/D101277>`_
+| `indirectly_strict_weak_order <https://llvm.org/D101277>`_",[readable.traits],Louis Dionne,✅
+`[projected] <http://wg21.link/projected>`_,`ranges::projected <https://llvm.org/D101277>`_,[iterator.concepts],Louis Dionne,✅
+`[common.alg.req] <http://wg21.link/common.alg.req>`_: pt. 1,"| `indirectly_movable <https://llvm.org/D102639>`_
+| `indirectly_movable_storable <https://llvm.org/D102639>`_
+| indirectly_copyable
+| indirectly_copyable_storable",[iterator.concepts],Zoe Carver,In progress
+[common.alg.req]: pt. 2,indirectly_swappable,"| [iterator.concepts]
+| [iterator.cust.swap]",Louis Dionne,Not started
+[common.alg.req]: pt. 3,indirectly_comparable,[projected],Louis Dionne,Not started
+[common.alg.req]: pt. 4,"| permutable
+| mergeable
+| sortable",[iterator.concepts],Unassigned,Not started
+[std.iterator.tags],,[iterator.traits],Unassigned,Not started
+`[range.iter.ops] <http://wg21.link/range.iter.ops>`_,"| `ranges::advance <https://llvm.org/D101922>`_
+| `ranges::distance <https://llvm.org/D102789>`_
+| `ranges::next <https://llvm.org/D102563>`_
+| `ranges::prev <https://llvm.org/D102564>`_",[iterator.concepts],Christopher Di Bella,In progress
+[predef.iterators],Updates to predefined iterators.,"| [iterator.concepts]
+| [iterator.cust.swap]
+| [iterator.cust.move]",Unassigned,Not started
+[move.sentinel],,[predef.iterators],Unassigned,Not started
+[common.iterator],,"| [iterator.concepts]
+| [iterator.cust.swap]
+| [iterator.cust.move]",Zoe Carver,Not started
+[default.sentinels],std::default_sentinel_t.,No dependencies,Unassigned,Not started
+[counted.iterator],,"| [iterator.concepts]
+| [iterator.cust.swap]
+| [iterator.cust.move]
+| [default.sentinels]",Unassigned,Not started
+[stream.iterators],,[default.sentinels],Unassigned,Not started
+`[range.access] <http://wg21.link/range.access>`_,"| `ranges::begin <https://llvm.org/D100255>`_
+| `ranges::end <https://llvm.org/D100255>`_
+| `range::cbegin <https://llvm.org/D100255>`_
+| `ranges::cend <https://llvm.org/D100255>`_
+| ranges::rbegin
+| ranges::rend
+| ranges::crbegin
+| ranges::crend
+| `ranges::size <https://llvm.org/D101079>`_
+| `ranges::ssize <https://llvm.org/D101189>`_
+| `ranges::empty <https://llvm.org/D101193>`_
+| `ranges::data <https://llvm.org/D101476>`_
+| ranges::cdata",[iterator.concepts],Christopher Di Bella and Zoe Carver,In progress
+`[range.range] <http://wg21.link/range.range>`_,"| `ranges::range <https://llvm.org/D100269>`_
+| `ranges::borrowed_range <https://llvm.org/D102426>`_
+| `ranges::enable_borrowed_range <https://llvm.org/D90999>`_
+| `ranges::iterator_t <https://llvm.org/D100255>`_
+| `ranges::sentinel_t <https://llvm.org/D100269>`_
+| `ranges::range_difference_t <https://llvm.org/D100269>`_
+| ranges::range_size_t
+| `ranges::range_value_t <https://llvm.org/D100269>`_
+| `ranges::range_reference_t <https://llvm.org/D100269>`_
+| `ranges::range_rvalue_reference_t <https://llvm.org/D100269>`_",[range.access],Christopher Di Bella,In progress
+`[range.sized] <http://wg21.link/range.sized>`_,"| `ranges::sized_range <https://llvm.org/D102434>`_
+| `ranges::disable_sized_range <https://llvm.org/D102434>`_","| [range.primitives]
+| [range.range]",Christopher Di Bella,✅
+`[range.view] <http://wg21.link/range.view>`_,"| `ranges::enable_view <https://llvm.org/D101547>`_
+| `ranges::view_base <https://llvm.org/D101547>`_
+| `ranges::view <https://llvm.org/D101547>`_",[range.range],Louis Dionne,✅
+`[range.refinements] <http://wg21.link/range.refinements>`_,"| ranges::output_range
+| `ranges::input_range <https://llvm.org/D100271>`_
+| `ranges::forward_range: `D100275 <https://llvm.org/D100275>`_
+| `ranges::bidirectional_range <https://llvm.org/D100278>`_
+| `ranges::random_access_range <https://llvm.org/D101316>`_
+| ranges::contiguous_range
+| `ranges::common_range <https://llvm.org/D100269>`_
+| ranges::viewable_range",[range.range],Christopher Di Bella,In progress
+`[range.utility.helpers] <http://wg21.link/range.utility.helpers>`_,"| *simple-view*
+| *has-arrow*
+| *not-same-as*","| [range.range]
+| [iterator.concept.input]",Zoe Carver,In progress
+`[view.interface] <http://wg21.link/view.interface>`_,"`ranges::view_interface <https://llvm.org/D101737>`_","| [ranges.range]
+| [range.view]
+| [range.iterator.op.prev]
+| [range.refinements]",Zoe Carver,In progress
+`[range.subrange] <http://wg21.link/range.subrange>`_,`ranges::subrange <https://llvm.org/D102006>`_,[view.interface],Zoe Carver,In progress
+`[range.dangling] <http://wg21.link/range.dangling>`_,"| ranges::dangling
+| ranges::borrowed_iterator_t
+| ranges::borrowed_subrange_t","| [range.range]
+| [range.subrange]",Unassigned,Not started
+`[range.all] <http://wg21.link/range.all>`_,`view::all <https://llvm.org/D102028>`_,"[range.subrange], [range.view.ref]",Zoe Carver,In progress
+`[range.view.ref] <http://wg21.link/range.view>`_,`ref-view <https://llvm.org/D102020>`_,[view.interface],Zoe Carver,In progress
+`[range.filter] <http://wg21.link/range.filter>`_,filter_view,[range.all],Louis Dionne,Not started
+`[range.transform] <http://wg21.link/range.transform>`_,`transform_view <https://llvm.org/D103056>`_,[range.all],Zoe Carver,In progress
+`[range.iota] <http://wg21.link/range.iota>`_,iota_view,[range.all],Louis Dionne,Not started
+`[range.take] <http://wg21.link/range.take>`_,take_view,[range.all],Zoe Carver,Not started
+`[range.join] <http://wg21.link/range.join>`_,join_view,[range.all],Christopher Di Bella,Not started
+`[range.empty] <http://wg21.link/range.empty>`_,`empty_view <https://reviews.llvm.org/D103208>`_,[view.interface],Zoe Carver,✅
+`[range.single] <http://wg21.link/range.single>`_,single_view,[view.interface],Unassigned,Not started
+`[range.split] <http://wg21.link/range.split>`_,split_view,[range.all],Unassigned,Not started
+`[range.counted] <http://wg21.link/range.counted>`_,view::counted,[range.subrange],Unassigned,Not started
+`[range.common] <http://wg21.link/range.common>`_,common_view,[range.all],Zoe Carver,Not started
+`[range.reverse] <http://wg21.link/range.reverse>`_,reverse_view,[range.all],Unassigned,Not started
