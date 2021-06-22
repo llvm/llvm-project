@@ -119,30 +119,32 @@ define i64 @v_udiv_i64(i64 %num, i64 %den) {
 ; CHECK-NEXT:    v_add_i32_e32 v8, vcc, 1, v10
 ; CHECK-NEXT:    v_addc_u32_e32 v12, vcc, 0, v11, vcc
 ; CHECK-NEXT:    v_add_i32_e32 v6, vcc, v6, v9
-; CHECK-NEXT:    v_sub_i32_e32 v7, vcc, v0, v7
-; CHECK-NEXT:    v_subb_u32_e64 v9, s[4:5], v1, v6, vcc
+; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v0, v7
+; CHECK-NEXT:    v_subb_u32_e64 v7, s[4:5], v1, v6, vcc
 ; CHECK-NEXT:    v_sub_i32_e64 v1, s[4:5], v1, v6
-; CHECK-NEXT:    v_cmp_ge_u32_e64 s[4:5], v7, v2
+; CHECK-NEXT:    v_cmp_ge_u32_e64 s[4:5], v0, v2
 ; CHECK-NEXT:    v_cndmask_b32_e64 v6, 0, -1, s[4:5]
-; CHECK-NEXT:    v_cmp_ge_u32_e64 s[4:5], v9, v3
-; CHECK-NEXT:    v_cndmask_b32_e64 v13, 0, -1, s[4:5]
+; CHECK-NEXT:    v_cmp_ge_u32_e64 s[4:5], v7, v3
+; CHECK-NEXT:    v_cndmask_b32_e64 v9, 0, -1, s[4:5]
 ; CHECK-NEXT:    v_subb_u32_e32 v1, vcc, v1, v3, vcc
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, v9, v3
-; CHECK-NEXT:    v_cndmask_b32_e32 v6, v13, v6, vcc
-; CHECK-NEXT:    v_sub_i32_e32 v7, vcc, v7, v2
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, v7, v3
+; CHECK-NEXT:    v_cndmask_b32_e32 v6, v9, v6, vcc
+; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v0, v2
 ; CHECK-NEXT:    v_subbrev_u32_e32 v1, vcc, 0, v1, vcc
-; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc, v7, v2
-; CHECK-NEXT:    v_cndmask_b32_e64 v7, 0, -1, vcc
+; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v2
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc
 ; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v3
-; CHECK-NEXT:    v_cndmask_b32_e64 v9, 0, -1, vcc
+; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, -1, vcc
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v3
-; CHECK-NEXT:    v_cndmask_b32_e32 v1, v9, v7, vcc
-; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
-; CHECK-NEXT:    v_cndmask_b32_e32 v1, v10, v8, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v3, v11, v12, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
+; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, v10, v8, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v1, v11, v12, vcc
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v6
-; CHECK-NEXT:    v_cndmask_b32_e32 v4, v4, v1, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v5, v5, v3, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v4, v4, v0, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v5, v5, v1, vcc
+; CHECK-NEXT:    ; implicit-def: $vgpr0
+; CHECK-NEXT:    ; implicit-def: $vgpr2
 ; CHECK-NEXT:  BB0_2: ; %Flow
 ; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], s[6:7]
 ; CHECK-NEXT:    s_xor_b64 exec, exec, s[6:7]
@@ -739,30 +741,32 @@ define <2 x i64> @v_udiv_v2i64(<2 x i64> %num, <2 x i64> %den) {
 ; CGP-NEXT:    v_add_i32_e32 v12, vcc, 1, v14
 ; CGP-NEXT:    v_addc_u32_e32 v16, vcc, 0, v15, vcc
 ; CGP-NEXT:    v_add_i32_e32 v10, vcc, v10, v13
-; CGP-NEXT:    v_sub_i32_e32 v11, vcc, v8, v11
-; CGP-NEXT:    v_subb_u32_e64 v13, s[4:5], v9, v10, vcc
+; CGP-NEXT:    v_sub_i32_e32 v8, vcc, v8, v11
+; CGP-NEXT:    v_subb_u32_e64 v11, s[4:5], v9, v10, vcc
 ; CGP-NEXT:    v_sub_i32_e64 v9, s[4:5], v9, v10
-; CGP-NEXT:    v_cmp_ge_u32_e64 s[4:5], v11, v4
+; CGP-NEXT:    v_cmp_ge_u32_e64 s[4:5], v8, v4
 ; CGP-NEXT:    v_cndmask_b32_e64 v10, 0, -1, s[4:5]
-; CGP-NEXT:    v_cmp_ge_u32_e64 s[4:5], v13, v5
-; CGP-NEXT:    v_cndmask_b32_e64 v17, 0, -1, s[4:5]
+; CGP-NEXT:    v_cmp_ge_u32_e64 s[4:5], v11, v5
+; CGP-NEXT:    v_cndmask_b32_e64 v13, 0, -1, s[4:5]
 ; CGP-NEXT:    v_subb_u32_e32 v9, vcc, v9, v5, vcc
-; CGP-NEXT:    v_cmp_eq_u32_e32 vcc, v13, v5
-; CGP-NEXT:    v_cndmask_b32_e32 v10, v17, v10, vcc
-; CGP-NEXT:    v_sub_i32_e32 v11, vcc, v11, v4
+; CGP-NEXT:    v_cmp_eq_u32_e32 vcc, v11, v5
+; CGP-NEXT:    v_cndmask_b32_e32 v10, v13, v10, vcc
+; CGP-NEXT:    v_sub_i32_e32 v8, vcc, v8, v4
 ; CGP-NEXT:    v_subbrev_u32_e32 v9, vcc, 0, v9, vcc
-; CGP-NEXT:    v_cmp_ge_u32_e32 vcc, v11, v4
-; CGP-NEXT:    v_cndmask_b32_e64 v11, 0, -1, vcc
+; CGP-NEXT:    v_cmp_ge_u32_e32 vcc, v8, v4
+; CGP-NEXT:    v_cndmask_b32_e64 v4, 0, -1, vcc
 ; CGP-NEXT:    v_cmp_ge_u32_e32 vcc, v9, v5
-; CGP-NEXT:    v_cndmask_b32_e64 v13, 0, -1, vcc
+; CGP-NEXT:    v_cndmask_b32_e64 v8, 0, -1, vcc
 ; CGP-NEXT:    v_cmp_eq_u32_e32 vcc, v9, v5
-; CGP-NEXT:    v_cndmask_b32_e32 v5, v13, v11, vcc
-; CGP-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v5
-; CGP-NEXT:    v_cndmask_b32_e32 v5, v14, v12, vcc
-; CGP-NEXT:    v_cndmask_b32_e32 v9, v15, v16, vcc
+; CGP-NEXT:    v_cndmask_b32_e32 v4, v8, v4, vcc
+; CGP-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
+; CGP-NEXT:    v_cndmask_b32_e32 v4, v14, v12, vcc
+; CGP-NEXT:    v_cndmask_b32_e32 v5, v15, v16, vcc
 ; CGP-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v10
-; CGP-NEXT:    v_cndmask_b32_e32 v0, v0, v5, vcc
-; CGP-NEXT:    v_cndmask_b32_e32 v1, v1, v9, vcc
+; CGP-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc
+; CGP-NEXT:    v_cndmask_b32_e32 v1, v1, v5, vcc
+; CGP-NEXT:    ; implicit-def: $vgpr8
+; CGP-NEXT:    ; implicit-def: $vgpr4
 ; CGP-NEXT:  BB2_2: ; %Flow2
 ; CGP-NEXT:    s_or_saveexec_b64 s[6:7], s[6:7]
 ; CGP-NEXT:    s_xor_b64 exec, exec, s[6:7]
@@ -901,30 +905,32 @@ define <2 x i64> @v_udiv_v2i64(<2 x i64> %num, <2 x i64> %den) {
 ; CGP-NEXT:    v_add_i32_e32 v10, vcc, 1, v12
 ; CGP-NEXT:    v_addc_u32_e32 v14, vcc, 0, v13, vcc
 ; CGP-NEXT:    v_add_i32_e32 v8, vcc, v8, v11
-; CGP-NEXT:    v_sub_i32_e32 v9, vcc, v2, v9
-; CGP-NEXT:    v_subb_u32_e64 v11, s[4:5], v3, v8, vcc
+; CGP-NEXT:    v_sub_i32_e32 v2, vcc, v2, v9
+; CGP-NEXT:    v_subb_u32_e64 v9, s[4:5], v3, v8, vcc
 ; CGP-NEXT:    v_sub_i32_e64 v3, s[4:5], v3, v8
-; CGP-NEXT:    v_cmp_ge_u32_e64 s[4:5], v9, v6
+; CGP-NEXT:    v_cmp_ge_u32_e64 s[4:5], v2, v6
 ; CGP-NEXT:    v_cndmask_b32_e64 v8, 0, -1, s[4:5]
-; CGP-NEXT:    v_cmp_ge_u32_e64 s[4:5], v11, v7
-; CGP-NEXT:    v_cndmask_b32_e64 v15, 0, -1, s[4:5]
+; CGP-NEXT:    v_cmp_ge_u32_e64 s[4:5], v9, v7
+; CGP-NEXT:    v_cndmask_b32_e64 v11, 0, -1, s[4:5]
 ; CGP-NEXT:    v_subb_u32_e32 v3, vcc, v3, v7, vcc
-; CGP-NEXT:    v_cmp_eq_u32_e32 vcc, v11, v7
-; CGP-NEXT:    v_cndmask_b32_e32 v8, v15, v8, vcc
-; CGP-NEXT:    v_sub_i32_e32 v9, vcc, v9, v6
+; CGP-NEXT:    v_cmp_eq_u32_e32 vcc, v9, v7
+; CGP-NEXT:    v_cndmask_b32_e32 v8, v11, v8, vcc
+; CGP-NEXT:    v_sub_i32_e32 v2, vcc, v2, v6
 ; CGP-NEXT:    v_subbrev_u32_e32 v3, vcc, 0, v3, vcc
-; CGP-NEXT:    v_cmp_ge_u32_e32 vcc, v9, v6
-; CGP-NEXT:    v_cndmask_b32_e64 v9, 0, -1, vcc
+; CGP-NEXT:    v_cmp_ge_u32_e32 vcc, v2, v6
+; CGP-NEXT:    v_cndmask_b32_e64 v2, 0, -1, vcc
 ; CGP-NEXT:    v_cmp_ge_u32_e32 vcc, v3, v7
-; CGP-NEXT:    v_cndmask_b32_e64 v11, 0, -1, vcc
+; CGP-NEXT:    v_cndmask_b32_e64 v6, 0, -1, vcc
 ; CGP-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v7
-; CGP-NEXT:    v_cndmask_b32_e32 v3, v11, v9, vcc
-; CGP-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v3
-; CGP-NEXT:    v_cndmask_b32_e32 v3, v12, v10, vcc
-; CGP-NEXT:    v_cndmask_b32_e32 v7, v13, v14, vcc
+; CGP-NEXT:    v_cndmask_b32_e32 v2, v6, v2, vcc
+; CGP-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
+; CGP-NEXT:    v_cndmask_b32_e32 v2, v12, v10, vcc
+; CGP-NEXT:    v_cndmask_b32_e32 v3, v13, v14, vcc
 ; CGP-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v8
-; CGP-NEXT:    v_cndmask_b32_e32 v4, v4, v3, vcc
-; CGP-NEXT:    v_cndmask_b32_e32 v5, v5, v7, vcc
+; CGP-NEXT:    v_cndmask_b32_e32 v4, v4, v2, vcc
+; CGP-NEXT:    v_cndmask_b32_e32 v5, v5, v3, vcc
+; CGP-NEXT:    ; implicit-def: $vgpr2
+; CGP-NEXT:    ; implicit-def: $vgpr6
 ; CGP-NEXT:  BB2_6: ; %Flow
 ; CGP-NEXT:    s_or_saveexec_b64 s[6:7], s[6:7]
 ; CGP-NEXT:    s_xor_b64 exec, exec, s[6:7]
@@ -2399,30 +2405,32 @@ define i64 @v_udiv_i64_pow2_shl_denom(i64 %x, i64 %y) {
 ; CHECK-NEXT:    v_add_i32_e32 v8, vcc, 1, v10
 ; CHECK-NEXT:    v_addc_u32_e32 v12, vcc, 0, v11, vcc
 ; CHECK-NEXT:    v_add_i32_e32 v6, vcc, v6, v9
-; CHECK-NEXT:    v_sub_i32_e32 v7, vcc, v0, v7
-; CHECK-NEXT:    v_subb_u32_e64 v9, s[4:5], v1, v6, vcc
+; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v0, v7
+; CHECK-NEXT:    v_subb_u32_e64 v7, s[4:5], v1, v6, vcc
 ; CHECK-NEXT:    v_sub_i32_e64 v1, s[4:5], v1, v6
-; CHECK-NEXT:    v_cmp_ge_u32_e64 s[4:5], v7, v4
+; CHECK-NEXT:    v_cmp_ge_u32_e64 s[4:5], v0, v4
 ; CHECK-NEXT:    v_cndmask_b32_e64 v6, 0, -1, s[4:5]
-; CHECK-NEXT:    v_cmp_ge_u32_e64 s[4:5], v9, v5
-; CHECK-NEXT:    v_cndmask_b32_e64 v13, 0, -1, s[4:5]
+; CHECK-NEXT:    v_cmp_ge_u32_e64 s[4:5], v7, v5
+; CHECK-NEXT:    v_cndmask_b32_e64 v9, 0, -1, s[4:5]
 ; CHECK-NEXT:    v_subb_u32_e32 v1, vcc, v1, v5, vcc
-; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, v9, v5
-; CHECK-NEXT:    v_cndmask_b32_e32 v6, v13, v6, vcc
-; CHECK-NEXT:    v_sub_i32_e32 v7, vcc, v7, v4
+; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, v7, v5
+; CHECK-NEXT:    v_cndmask_b32_e32 v6, v9, v6, vcc
+; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v0, v4
 ; CHECK-NEXT:    v_subbrev_u32_e32 v1, vcc, 0, v1, vcc
-; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc, v7, v4
-; CHECK-NEXT:    v_cndmask_b32_e64 v7, 0, -1, vcc
+; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v4
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc
 ; CHECK-NEXT:    v_cmp_ge_u32_e32 vcc, v1, v5
-; CHECK-NEXT:    v_cndmask_b32_e64 v9, 0, -1, vcc
+; CHECK-NEXT:    v_cndmask_b32_e64 v4, 0, -1, vcc
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v5
-; CHECK-NEXT:    v_cndmask_b32_e32 v1, v9, v7, vcc
-; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
-; CHECK-NEXT:    v_cndmask_b32_e32 v1, v10, v8, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v5, v11, v12, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
+; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; CHECK-NEXT:    v_cndmask_b32_e32 v0, v10, v8, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v1, v11, v12, vcc
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v6
-; CHECK-NEXT:    v_cndmask_b32_e32 v2, v2, v1, vcc
-; CHECK-NEXT:    v_cndmask_b32_e32 v3, v3, v5, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v2, v2, v0, vcc
+; CHECK-NEXT:    v_cndmask_b32_e32 v3, v3, v1, vcc
+; CHECK-NEXT:    ; implicit-def: $vgpr0
+; CHECK-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; CHECK-NEXT:  BB7_2: ; %Flow
 ; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], s[6:7]
 ; CHECK-NEXT:    s_xor_b64 exec, exec, s[6:7]
@@ -2842,30 +2850,32 @@ define <2 x i64> @v_udiv_v2i64_pow2_shl_denom(<2 x i64> %x, <2 x i64> %y) {
 ; CGP-NEXT:    v_add_i32_e32 v12, vcc, 1, v14
 ; CGP-NEXT:    v_addc_u32_e32 v16, vcc, 0, v15, vcc
 ; CGP-NEXT:    v_add_i32_e32 v4, vcc, v4, v13
-; CGP-NEXT:    v_sub_i32_e32 v6, vcc, v5, v6
-; CGP-NEXT:    v_subb_u32_e64 v13, s[4:5], v7, v4, vcc
+; CGP-NEXT:    v_sub_i32_e32 v5, vcc, v5, v6
+; CGP-NEXT:    v_subb_u32_e64 v6, s[4:5], v7, v4, vcc
 ; CGP-NEXT:    v_sub_i32_e64 v4, s[4:5], v7, v4
-; CGP-NEXT:    v_cmp_ge_u32_e64 s[4:5], v6, v10
+; CGP-NEXT:    v_cmp_ge_u32_e64 s[4:5], v5, v10
 ; CGP-NEXT:    v_cndmask_b32_e64 v7, 0, -1, s[4:5]
-; CGP-NEXT:    v_cmp_ge_u32_e64 s[4:5], v13, v11
-; CGP-NEXT:    v_cndmask_b32_e64 v17, 0, -1, s[4:5]
+; CGP-NEXT:    v_cmp_ge_u32_e64 s[4:5], v6, v11
+; CGP-NEXT:    v_cndmask_b32_e64 v13, 0, -1, s[4:5]
 ; CGP-NEXT:    v_subb_u32_e32 v4, vcc, v4, v11, vcc
-; CGP-NEXT:    v_cmp_eq_u32_e32 vcc, v13, v11
-; CGP-NEXT:    v_cndmask_b32_e32 v7, v17, v7, vcc
-; CGP-NEXT:    v_sub_i32_e32 v6, vcc, v6, v10
+; CGP-NEXT:    v_cmp_eq_u32_e32 vcc, v6, v11
+; CGP-NEXT:    v_cndmask_b32_e32 v6, v13, v7, vcc
+; CGP-NEXT:    v_sub_i32_e32 v5, vcc, v5, v10
 ; CGP-NEXT:    v_subbrev_u32_e32 v4, vcc, 0, v4, vcc
-; CGP-NEXT:    v_cmp_ge_u32_e32 vcc, v6, v10
-; CGP-NEXT:    v_cndmask_b32_e64 v6, 0, -1, vcc
+; CGP-NEXT:    v_cmp_ge_u32_e32 vcc, v5, v10
+; CGP-NEXT:    v_cndmask_b32_e64 v5, 0, -1, vcc
 ; CGP-NEXT:    v_cmp_ge_u32_e32 vcc, v4, v11
-; CGP-NEXT:    v_cndmask_b32_e64 v13, 0, -1, vcc
+; CGP-NEXT:    v_cndmask_b32_e64 v7, 0, -1, vcc
 ; CGP-NEXT:    v_cmp_eq_u32_e32 vcc, v4, v11
-; CGP-NEXT:    v_cndmask_b32_e32 v4, v13, v6, vcc
+; CGP-NEXT:    v_cndmask_b32_e32 v4, v7, v5, vcc
 ; CGP-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
 ; CGP-NEXT:    v_cndmask_b32_e32 v4, v14, v12, vcc
-; CGP-NEXT:    v_cndmask_b32_e32 v6, v15, v16, vcc
-; CGP-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v7
+; CGP-NEXT:    v_cndmask_b32_e32 v5, v15, v16, vcc
+; CGP-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v6
 ; CGP-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc
-; CGP-NEXT:    v_cndmask_b32_e32 v1, v1, v6, vcc
+; CGP-NEXT:    v_cndmask_b32_e32 v1, v1, v5, vcc
+; CGP-NEXT:    ; implicit-def: $vgpr5
+; CGP-NEXT:    ; implicit-def: $vgpr10_vgpr11
 ; CGP-NEXT:  BB8_2: ; %Flow2
 ; CGP-NEXT:    s_or_saveexec_b64 s[6:7], s[6:7]
 ; CGP-NEXT:    s_xor_b64 exec, exec, s[6:7]
@@ -3004,30 +3014,32 @@ define <2 x i64> @v_udiv_v2i64_pow2_shl_denom(<2 x i64> %x, <2 x i64> %y) {
 ; CGP-NEXT:    v_add_i32_e32 v10, vcc, 1, v12
 ; CGP-NEXT:    v_addc_u32_e32 v14, vcc, 0, v13, vcc
 ; CGP-NEXT:    v_add_i32_e32 v6, vcc, v6, v11
-; CGP-NEXT:    v_sub_i32_e32 v7, vcc, v2, v7
-; CGP-NEXT:    v_subb_u32_e64 v11, s[4:5], v3, v6, vcc
+; CGP-NEXT:    v_sub_i32_e32 v2, vcc, v2, v7
+; CGP-NEXT:    v_subb_u32_e64 v7, s[4:5], v3, v6, vcc
 ; CGP-NEXT:    v_sub_i32_e64 v3, s[4:5], v3, v6
-; CGP-NEXT:    v_cmp_ge_u32_e64 s[4:5], v7, v8
+; CGP-NEXT:    v_cmp_ge_u32_e64 s[4:5], v2, v8
 ; CGP-NEXT:    v_cndmask_b32_e64 v6, 0, -1, s[4:5]
-; CGP-NEXT:    v_cmp_ge_u32_e64 s[4:5], v11, v9
-; CGP-NEXT:    v_cndmask_b32_e64 v15, 0, -1, s[4:5]
+; CGP-NEXT:    v_cmp_ge_u32_e64 s[4:5], v7, v9
+; CGP-NEXT:    v_cndmask_b32_e64 v11, 0, -1, s[4:5]
 ; CGP-NEXT:    v_subb_u32_e32 v3, vcc, v3, v9, vcc
-; CGP-NEXT:    v_cmp_eq_u32_e32 vcc, v11, v9
-; CGP-NEXT:    v_cndmask_b32_e32 v6, v15, v6, vcc
-; CGP-NEXT:    v_sub_i32_e32 v7, vcc, v7, v8
+; CGP-NEXT:    v_cmp_eq_u32_e32 vcc, v7, v9
+; CGP-NEXT:    v_cndmask_b32_e32 v6, v11, v6, vcc
+; CGP-NEXT:    v_sub_i32_e32 v2, vcc, v2, v8
 ; CGP-NEXT:    v_subbrev_u32_e32 v3, vcc, 0, v3, vcc
-; CGP-NEXT:    v_cmp_ge_u32_e32 vcc, v7, v8
-; CGP-NEXT:    v_cndmask_b32_e64 v7, 0, -1, vcc
+; CGP-NEXT:    v_cmp_ge_u32_e32 vcc, v2, v8
+; CGP-NEXT:    v_cndmask_b32_e64 v2, 0, -1, vcc
 ; CGP-NEXT:    v_cmp_ge_u32_e32 vcc, v3, v9
-; CGP-NEXT:    v_cndmask_b32_e64 v11, 0, -1, vcc
+; CGP-NEXT:    v_cndmask_b32_e64 v7, 0, -1, vcc
 ; CGP-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v9
-; CGP-NEXT:    v_cndmask_b32_e32 v3, v11, v7, vcc
-; CGP-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v3
-; CGP-NEXT:    v_cndmask_b32_e32 v3, v12, v10, vcc
-; CGP-NEXT:    v_cndmask_b32_e32 v7, v13, v14, vcc
+; CGP-NEXT:    v_cndmask_b32_e32 v2, v7, v2, vcc
+; CGP-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
+; CGP-NEXT:    v_cndmask_b32_e32 v2, v12, v10, vcc
+; CGP-NEXT:    v_cndmask_b32_e32 v3, v13, v14, vcc
 ; CGP-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v6
-; CGP-NEXT:    v_cndmask_b32_e32 v4, v4, v3, vcc
-; CGP-NEXT:    v_cndmask_b32_e32 v5, v5, v7, vcc
+; CGP-NEXT:    v_cndmask_b32_e32 v4, v4, v2, vcc
+; CGP-NEXT:    v_cndmask_b32_e32 v5, v5, v3, vcc
+; CGP-NEXT:    ; implicit-def: $vgpr2
+; CGP-NEXT:    ; implicit-def: $vgpr8_vgpr9
 ; CGP-NEXT:  BB8_6: ; %Flow
 ; CGP-NEXT:    s_or_saveexec_b64 s[6:7], s[6:7]
 ; CGP-NEXT:    s_xor_b64 exec, exec, s[6:7]
