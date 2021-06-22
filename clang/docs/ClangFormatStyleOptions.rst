@@ -2841,6 +2841,42 @@ the configuration (without a prefix: ``Auto``).
        bar();                               }
      }
 
+**LambdaBodyIndentation** (``LambdaBodyIndentationKind``)
+  The indentation style of lambda bodies. ``Signature`` (the default)
+  causes the lambda body to be indented one additional level relative to
+  the indentation level of the signature. ``OuterScope`` forces the lambda
+  body to be indented one additional level relative to the parent scope
+  containing the lambda signature. For callback-heavy code, it may improve
+  readability to have the signature indented two levels and to use
+  ``OuterScope``. The KJ style guide requires ``OuterScope`.
+  `KJ style guide
+  <https://github.com/capnproto/capnproto/blob/master/kjdoc/style-guide.md>`_
+
+  Possible values:
+
+  * ``LBI_Signature`` (in configuration: ``Signature``)
+    Align lambda body relative to the lambda signature. This is the default.
+
+    .. code-block:: c++
+
+       someMethod(
+           [](SomeReallyLongLambdaSignatureArgument foo) {
+             return;
+           });
+
+  * ``LBI_OuterScope`` (in configuration: ``OuterScope``)
+    Align lambda body relative to the indentation level of the outer scope
+    the lambda signature resides in.
+
+    .. code-block:: c++
+
+       someMethod(
+           [](SomeReallyLongLambdaSignatureArgument foo) {
+         return;
+       });
+
+
+
 **Language** (``LanguageKind``)
   Language, this format style is targeted at.
 

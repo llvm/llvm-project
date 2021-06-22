@@ -85,6 +85,15 @@ template <> struct ScalarEnumerationTraits<FormatStyle::LanguageStandard> {
   }
 };
 
+template <>
+struct ScalarEnumerationTraits<FormatStyle::LambdaBodyIndentationKind> {
+  static void enumeration(IO &IO,
+                          FormatStyle::LambdaBodyIndentationKind &Value) {
+    IO.enumCase(Value, "Signature", FormatStyle::LBI_Signature);
+    IO.enumCase(Value, "OuterScope", FormatStyle::LBI_OuterScope);
+  }
+};
+
 template <> struct ScalarEnumerationTraits<FormatStyle::UseTabStyle> {
   static void enumeration(IO &IO, FormatStyle::UseTabStyle &Value) {
     IO.enumCase(Value, "Never", FormatStyle::UT_Never);
@@ -649,6 +658,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("JavaScriptWrapImports", Style.JavaScriptWrapImports);
     IO.mapOptional("KeepEmptyLinesAtTheStartOfBlocks",
                    Style.KeepEmptyLinesAtTheStartOfBlocks);
+    IO.mapOptional("LambdaBodyIndentation", Style.LambdaBodyIndentation);
     IO.mapOptional("MacroBlockBegin", Style.MacroBlockBegin);
     IO.mapOptional("MacroBlockEnd", Style.MacroBlockEnd);
     IO.mapOptional("MaxEmptyLinesToKeep", Style.MaxEmptyLinesToKeep);
@@ -1040,6 +1050,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.JavaScriptQuotes = FormatStyle::JSQS_Leave;
   LLVMStyle.JavaScriptWrapImports = true;
   LLVMStyle.TabWidth = 8;
+  LLVMStyle.LambdaBodyIndentation = FormatStyle::LBI_Signature;
   LLVMStyle.MaxEmptyLinesToKeep = 1;
   LLVMStyle.KeepEmptyLinesAtTheStartOfBlocks = true;
   LLVMStyle.NamespaceIndentation = FormatStyle::NI_None;
