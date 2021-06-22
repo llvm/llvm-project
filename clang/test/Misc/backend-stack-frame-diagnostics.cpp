@@ -26,7 +26,7 @@ void frameSizeWarning(int, int) {}
 
 void frameSizeWarning();
 
-void frameSizeWarning() { // expected-warning-re {{stack frame size of {{[0-9]+}} bytes in function 'frameSizeWarning'}}
+void frameSizeWarning() { // expected-warning-re {{stack frame size ({{[0-9]+}}) exceeds limit ({{[0-9]+}}) in function 'frameSizeWarning'}}
   char buffer[80];
   doIt(buffer);
 }
@@ -45,7 +45,7 @@ void frameSizeWarningIgnored() {
 
 void frameSizeLocalClassWarning() {
   struct S {
-    S() { // expected-warning-re {{stack frame size of {{[0-9]+}} bytes in function 'frameSizeLocalClassWarning()::S::S'}}
+    S() { // expected-warning-re {{stack frame size ({{[0-9]+}}) exceeds limit ({{[0-9]+}}) in function 'frameSizeLocalClassWarning()::S::S'}}
       char buffer[80];
       doIt(buffer);
     }
@@ -55,7 +55,7 @@ void frameSizeLocalClassWarning() {
 
 void frameSizeLambdaWarning() {
   auto fn =
-      []() { // expected-warning-re {{stack frame size of {{[0-9]+}} bytes in lambda expression}}
+      []() { // expected-warning-re {{stack frame size ({{[0-9]+}}) exceeds limit ({{[0-9]+}}) in lambda expression}}
     char buffer[80];
     doIt(buffer);
   };
@@ -64,7 +64,7 @@ void frameSizeLambdaWarning() {
 
 void frameSizeBlocksWarning() {
   auto fn =
-      ^() { // expected-warning-re {{stack frame size of {{[0-9]+}} bytes in block literal}}
+      ^() { // expected-warning-re {{stack frame size ({{[0-9]+}}) exceeds limit ({{[0-9]+}}) in block literal}}
     char buffer[80];
     doIt(buffer);
   };
