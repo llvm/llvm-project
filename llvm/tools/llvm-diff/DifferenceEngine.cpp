@@ -287,6 +287,27 @@ class FunctionDifferenceEngine {
       }
       return false;
 
+    } else if (isa<CallBrInst>(L)) {
+      const CallBrInst &LI = cast<CallBrInst>(*L);
+      const CallBrInst &RI = cast<CallBrInst>(*R);
+      if (LI.getNumIndirectDests() != RI.getNumIndirectDests()) {
+        if (Complain)
+          Engine.log("callbr # of indirect destinations differ");
+        return true;
+      }
+
+      // Perform the "try unify" step so that we can equate the indirect
+      // destinations before checking the call site.
+      for (unsigned I = 0; I < LI.getNumIndirectDests(); I++)
+        tryUnify(LI.getIndirectDest(I), RI.getIndirectDest(I));
+
+      if (diffCallSites(LI, RI, Complain))
+        return true;
+
+      if (TryUnify)
+        tryUnify(LI.getDefaultDest(), RI.getDefaultDest());
+      return false;
+
     } else if (isa<BranchInst>(L)) {
       const BranchInst *LI = cast<BranchInst>(L);
       const BranchInst *RI = cast<BranchInst>(R);
