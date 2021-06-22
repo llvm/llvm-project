@@ -462,4 +462,14 @@ EXTERN void __kmpc_get_team_static_memory(int16_t isSPMDExecutionMode,
 EXTERN void __kmpc_restore_team_static_memory(int16_t isSPMDExecutionMode,
                                               int16_t is_shared);
 
+/// Allocate \p Bytes in "shareable" memory and return the address. Needs to be
+/// called balanced with __kmpc_free_shared like a stack (push/pop). Can be
+/// called by any thread, allocation happens per-thread.
+EXTERN void *__kmpc_alloc_shared(uint64_t Bytes);
+
+/// Deallocate \p Ptr. Needs to be called balanced with __kmpc_alloc_shared like
+/// a stack (push/pop). Can be called by any thread. \p Ptr must be allocated by
+/// __kmpc_alloc_shared by the same thread.
+EXTERN void __kmpc_free_shared(void *Ptr);
+
 #endif
