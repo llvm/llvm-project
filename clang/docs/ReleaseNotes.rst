@@ -259,6 +259,12 @@ clang-format
 - Option ``BreakInheritanceList`` gets a new style, ``AfterComma``. It breaks
   only after the commas that separate the base-specifiers.
 
+- Option ``LambdaBodyIndentation`` has been added to control how the body of a
+  lambda is indented. The default ``Signature`` value indents the body one level
+  relative to whatever indentation the signature has. ``OuterScope`` lets you
+  change that so that the lambda body is indented one level relative to the scope
+  containing the lambda, regardless of where the lambda signature was placed.
+
 - ``git-clang-format`` no longer formats changes to symbolic links. (Fixes
   https://llvm.org/PR46992.)
 
