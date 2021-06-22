@@ -93,23 +93,16 @@ MachineTypes getDefaultMachine() {
   return getMachine(Triple(sys::getDefaultTargetTriple()));
 }
 
-static bool consume_back_lower(StringRef &S, const char *Str) {
-  if (!S.endswith_lower(Str))
-    return false;
-  S = S.drop_back(strlen(Str));
-  return true;
-}
-
 Optional<std::string> getPrefix(StringRef Argv0) {
   StringRef ProgName = llvm::sys::path::stem(Argv0);
   // x86_64-w64-mingw32-dlltool -> x86_64-w64-mingw32
   // llvm-dlltool -> None
   // aarch64-w64-mingw32-llvm-dlltool-10.exe -> aarch64-w64-mingw32
   ProgName = ProgName.rtrim("0123456789.-");
-  if (!consume_back_lower(ProgName, "dlltool"))
+  if (!ProgName.consume_back_lower("dlltool"))
     return None;
-  consume_back_lower(ProgName, "llvm-");
-  consume_back_lower(ProgName, "-");
+  ProgName.consume_back_lower("llvm-");
+  ProgName.consume_back_lower("-");
   return ProgName.str();
 }
 
