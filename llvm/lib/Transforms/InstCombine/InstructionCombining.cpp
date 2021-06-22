@@ -2672,7 +2672,7 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
       } else {
         // Casts, GEP, or anything else: we're about to delete this instruction,
         // so it can not have any valid uses.
-        replaceInstUsesWith(*I, UndefValue::get(I->getType()));
+        replaceInstUsesWith(*I, PoisonValue::get(I->getType()));
       }
       eraseInstFromFunction(*I);
     }
@@ -2877,8 +2877,8 @@ Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
         return nullptr;
 
     // A value may still have uses before we process it here (for example, in
-    // another unreachable block), so convert those to undef.
-    replaceInstUsesWith(*Prev, UndefValue::get(Prev->getType()));
+    // another unreachable block), so convert those to poison.
+    replaceInstUsesWith(*Prev, PoisonValue::get(Prev->getType()));
     eraseInstFromFunction(*Prev);
     return &I;
   }
@@ -3071,7 +3071,8 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
       if (*EV.idx_begin() == 0) {
         Instruction::BinaryOps BinOp = WO->getBinaryOp();
         Value *LHS = WO->getLHS(), *RHS = WO->getRHS();
-        replaceInstUsesWith(*WO, UndefValue::get(WO->getType()));
+        // Replace the old instruction's uses with poison.
+        replaceInstUsesWith(*WO, PoisonValue::get(WO->getType()));
         eraseInstFromFunction(*WO);
         return BinaryOperator::Create(BinOp, LHS, RHS);
       }
