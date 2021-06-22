@@ -9375,63 +9375,6 @@ SDValue SITargetLowering::performXorCombine(SDNode *N,
   return SDValue();
 }
 
-// Instructions that will be lowered with a final instruction that zeros the
-// high result bits.
-// XXX - probably only need to list legal operations.
-static bool fp16SrcZerosHighBits(unsigned Opc) {
-  switch (Opc) {
-  case ISD::FADD:
-  case ISD::FSUB:
-  case ISD::FMUL:
-  case ISD::FDIV:
-  case ISD::FREM:
-  case ISD::FMA:
-  case ISD::FMAD:
-  case ISD::FCANONICALIZE:
-  case ISD::FP_ROUND:
-  case ISD::UINT_TO_FP:
-  case ISD::SINT_TO_FP:
-  case ISD::FABS:
-    // Fabs is lowered to a bit operation, but it's an and which will clear the
-    // high bits anyway.
-  case ISD::FSQRT:
-  case ISD::FSIN:
-  case ISD::FCOS:
-  case ISD::FPOWI:
-  case ISD::FPOW:
-  case ISD::FLOG:
-  case ISD::FLOG2:
-  case ISD::FLOG10:
-  case ISD::FEXP:
-  case ISD::FEXP2:
-  case ISD::FCEIL:
-  case ISD::FTRUNC:
-  case ISD::FRINT:
-  case ISD::FNEARBYINT:
-  case ISD::FROUND:
-  case ISD::FFLOOR:
-  case ISD::FMINNUM:
-  case ISD::FMAXNUM:
-  case AMDGPUISD::FRACT:
-  case AMDGPUISD::CLAMP:
-  case AMDGPUISD::COS_HW:
-  case AMDGPUISD::SIN_HW:
-  case AMDGPUISD::FMIN3:
-  case AMDGPUISD::FMAX3:
-  case AMDGPUISD::FMED3:
-  case AMDGPUISD::FMAD_FTZ:
-  case AMDGPUISD::RCP:
-  case AMDGPUISD::RSQ:
-  case AMDGPUISD::RCP_IFLAG:
-  case AMDGPUISD::LDEXP:
-    return true;
-  default:
-    // fcopysign, select and others may be lowered to 32-bit bit operations
-    // which don't zero the high bits.
-    return false;
-  }
-}
-
 SDValue SITargetLowering::performZeroExtendCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   if (!Subtarget->has16BitInsts() ||
@@ -9445,15 +9388,6 @@ SDValue SITargetLowering::performZeroExtendCombine(SDNode *N,
   SDValue Src = N->getOperand(0);
   if (Src.getValueType() != MVT::i16)
     return SDValue();
-
-  // (i32 zext (i16 (bitcast f16:$src))) -> fp16_zext $src
-  // FIXME: It is not universally true that the high bits are zeroed on gfx9.
-  if (Src.getOpcode() == ISD::BITCAST) {
-    SDValue BCSrc = Src.getOperand(0);
-    if (BCSrc.getValueType() == MVT::f16 &&
-        fp16SrcZerosHighBits(BCSrc.getOpcode()))
-      return DCI.DAG.getNode(AMDGPUISD::FP16_ZEXT, SDLoc(N), VT, BCSrc);
-  }
 
   return SDValue();
 }
