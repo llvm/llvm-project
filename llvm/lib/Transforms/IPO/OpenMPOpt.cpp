@@ -1122,9 +1122,8 @@ private:
   }
 
   void analysisGlobalization() {
-    RuntimeFunction GlobalizationRuntimeIDs[] = {
-        OMPRTL___kmpc_data_sharing_coalesced_push_stack,
-        OMPRTL___kmpc_data_sharing_push_stack};
+    RuntimeFunction GlobalizationRuntimeIDs[] = {OMPRTL___kmpc_alloc_shared,
+                                                 OMPRTL___kmpc_free_shared};
 
     for (const auto GlobalizationCallID : GlobalizationRuntimeIDs) {
       auto &RFI = OMPInfoCache.RFIs[GlobalizationCallID];
