@@ -206,9 +206,10 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
   if (!EnableSymbolicExecution)
     return false;
 
+  BasicBlock *Predecessor = L->getLoopPredecessor();
   BasicBlock *Latch = L->getLoopLatch();
 
-  if (!Latch)
+  if (!Predecessor || !Latch)
     return false;
 
   LoopBlocksRPO RPOT(L);
