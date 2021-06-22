@@ -49,3 +49,17 @@ define ptr @bitcast_typed_to_opaque_constexpr() {
 ;  %b = addrspacecast ptr addrspace(1) %a to i8*
 ;  ret i8* %b
 ;}
+
+define ptr @gep_constexpr_1(ptr %a) {
+; CHECK-LABEL: @gep_constexpr_1(
+; CHECK-NEXT:    ret ptr inttoptr (i64 6 to ptr)
+;
+  ret ptr getelementptr (i16, ptr null, i32 3)
+}
+
+define ptr @gep_constexpr_2(ptr %a) {
+; CHECK-LABEL: @gep_constexpr_2(
+; CHECK-NEXT:    ret ptr bitcast (i8* getelementptr (i8, i8* @g, i64 3) to ptr)
+;
+  ret ptr getelementptr (i8, ptr bitcast (i8* @g to ptr), i32 3)
+}
