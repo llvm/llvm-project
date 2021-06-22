@@ -21,14 +21,7 @@ using namespace lldb_private;
 #ifdef __APPLE__
 namespace {
 class XcodeSDKModuleTests : public testing::Test {
-  void SetUp() override {
-    HostInfoBase::Initialize();
-    PlatformMacOSX::Initialize();
-  }
-  void TearDown() override {
-    PlatformMacOSX::Terminate();
-    HostInfoBase::Terminate();
-  }
+  SubsystemRAII<HostInfoBase, PlatformMacOSX> subsystems;
 };
 } // namespace
 
