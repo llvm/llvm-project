@@ -179,8 +179,8 @@ define double @test_fast_mul_sub_f64(double %a, double %b, double %c) {
 ; NO-VSX-NEXT:    fnmsub 1, 2, 3, 1
 ; NO-VSX-NEXT:    blr
 entry:
-  %0 = fmul reassoc nsz double %b, %c
-  %1 = fsub reassoc nsz double %a, %0
+  %0 = fmul contract reassoc nsz double %b, %c
+  %1 = fsub contract reassoc nsz double %a, %0
   ret double %1
 }
 
@@ -199,9 +199,9 @@ define double @test_fast_2mul_sub_f64(double %a, double %b, double %c,
 ; NO-VSX-NEXT:    blr
                                       double %d) {
 entry:
-  %0 = fmul reassoc double %a, %b
-  %1 = fmul reassoc double %c, %d
-  %2 = fsub reassoc double %0, %1
+  %0 = fmul contract reassoc double %a, %b
+  %1 = fmul contract reassoc double %c, %d
+  %2 = fsub contract reassoc double %0, %1
   ret double %2
 }
 
@@ -233,8 +233,8 @@ define float @test_fast_mul_sub_f32(float %a, float %b, float %c) {
 ; NO-VSX-NEXT:    fnmsubs 1, 2, 3, 1
 ; NO-VSX-NEXT:    blr
 entry:
-  %0 = fmul reassoc float %b, %c
-  %1 = fsub reassoc nsz float %a, %0
+  %0 = fmul contract reassoc float %b, %c
+  %1 = fsub contract reassoc nsz float %a, %0
   ret float %1
 }
 
@@ -252,9 +252,9 @@ define float @test_fast_2mul_sub_f32(float %a, float %b, float %c, float %d) {
 ; NO-VSX-NEXT:    fmsubs 1, 1, 2, 0
 ; NO-VSX-NEXT:    blr
 entry:
-  %0 = fmul reassoc float %a, %b
-  %1 = fmul reassoc float %c, %d
-  %2 = fsub reassoc nsz float %0, %1
+  %0 = fmul contract reassoc float %a, %b
+  %1 = fmul contract reassoc float %c, %d
+  %2 = fsub contract reassoc nsz float %0, %1
   ret float %2
 }
 
