@@ -19,8 +19,6 @@
 // CHECK-DAG: declare i32 @llvm.nvvm.read.ptx.sreg.tid.x() [[attr1]]
 // CHECK: declare void @__kmpc_kernel_init(i32, i16)
 // CHECK-NOT: #
-// CHECK: declare void @__kmpc_data_sharing_init_stack()
-// CHECK-NOT: #
 // CHECK: declare float @_Z3sinf(float) [[attr2:#[0-9]*]]
 // CHECK: declare void @__kmpc_kernel_deinit(i16)
 // CHECK-NOT: #
