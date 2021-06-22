@@ -87,3 +87,24 @@ define ptr @gep_constexpr_2(ptr %a) {
 ;
   ret ptr getelementptr (i8, ptr bitcast (i8* @g to ptr), i32 3)
 }
+
+define ptr @load_bitcast_1(ptr %a) {
+; CHECK-LABEL: @load_bitcast_1(
+; CHECK-NEXT:    [[B1:%.*]] = load ptr, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    ret ptr [[B1]]
+;
+  %b = load i8*, ptr %a
+  %c = bitcast i8* %b to ptr
+  ret ptr %c
+}
+
+define ptr @load_bitcast_2(ptr %a) {
+; CHECK-LABEL: @load_bitcast_2(
+; CHECK-NEXT:    [[C1:%.*]] = load ptr, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    ret ptr [[C1]]
+;
+  %b = bitcast ptr %a to i8**
+  %c = load i8*, i8** %b
+  %d = bitcast i8* %c to ptr
+  ret ptr %d
+}
