@@ -439,7 +439,7 @@ endif()
 append_list_if(COMPILER_RT_HAS_LIBC c SANITIZER_COMMON_LINK_LIBS)
 
 if("${CMAKE_SYSTEM_NAME}" STREQUAL "Fuchsia")
-  list(APPEND SANITIZER_COMMON_LINK_FLAGS -Wl,-z,defs,-z,now,-z,relro)
+  list(APPEND SANITIZER_COMMON_LINK_FLAGS -Wl,-z,defs)
   list(APPEND SANITIZER_COMMON_LINK_LIBS zircon)
 endif()
 
