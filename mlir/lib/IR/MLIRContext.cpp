@@ -24,7 +24,6 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Support/DebugAction.h"
-#include "mlir/Support/ThreadLocalCache.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
@@ -275,10 +274,6 @@ public:
   llvm::StringMap<PointerUnion<Dialect *, MLIRContext *>,
                   llvm::BumpPtrAllocator &>
       identifiers;
-  /// A thread local cache of identifiers to reduce lock contention.
-  ThreadLocalCache<llvm::StringMap<
-      llvm::StringMapEntry<PointerUnion<Dialect *, MLIRContext *>> *>>
-      localIdentifierCache;
 
   /// An allocator used for AbstractAttribute and AbstractType objects.
   llvm::BumpPtrAllocator abstractDialectSymbolAllocator;
@@ -811,26 +806,18 @@ Identifier Identifier::get(const Twine &string, MLIRContext *context) {
     return Identifier(&*insertedIt.first);
   }
 
-  // Check for an existing instance in the local cache.
-  auto *&localEntry = (*impl.localIdentifierCache)[str];
-  if (localEntry)
-    return Identifier(localEntry);
-
   // Check for an existing identifier in read-only mode.
   {
     llvm::sys::SmartScopedReader<true> contextLock(impl.identifierMutex);
     auto it = impl.identifiers.find(str);
-    if (it != impl.identifiers.end()) {
-      localEntry = &*it;
-      return Identifier(localEntry);
-    }
+    if (it != impl.identifiers.end())
+      return Identifier(&*it);
   }
 
   // Acquire a writer-lock so that we can safely create the new instance.
   llvm::sys::SmartScopedWriter<true> contextLock(impl.identifierMutex);
   auto it = impl.identifiers.insert({str, getDialectOrContext()}).first;
-  localEntry = &*it;
-  return Identifier(localEntry);
+  return Identifier(&*it);
 }
 
 Dialect *Identifier::getDialect() {
