@@ -12,10 +12,10 @@
 # can also just start the image with a shell to debug CI failures.
 #
 # To start a Buildkite Agent, run it as:
-#   $ docker run --env-file secrets.env -it $(docker build -q .)
+#   $ docker run --env-file <secrets> -it $(docker build -q .)
 #
-# The environment variables in `secrets.env` must be replaced by the actual
-# tokens for this to work. These should obviously never be checked in.
+# The environment variables in `<secrets>` should be the ones necessary
+# to run a BuildKite agent.
 #
 # If you're only looking to run the Docker image locally for debugging a
 # build bot, see the `run-buildbot-container` script located in this directory.
