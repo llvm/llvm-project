@@ -286,6 +286,11 @@ public:
 
   unsigned getConstantBusLimit(unsigned Opcode) const;
 
+  /// Returns if the result of this instruction with a 16-bit result returned in
+  /// a 32-bit register implicitly zeroes the high 16-bits, rather than preserve
+  /// the original value.
+  bool zeroesHigh16BitsOfDest(unsigned Opcode) const;
+
   bool hasIntClamp() const {
     return HasIntClamp;
   }

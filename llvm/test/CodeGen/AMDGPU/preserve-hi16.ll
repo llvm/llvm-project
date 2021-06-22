@@ -248,7 +248,7 @@ define i32 @zext_div_fixup_f16(half %x, half %y, half %z) {
 ; GFX8-NEXT: s_setpc_b64
 
 ; GFX9: v_cvt_f16_f32_e32 v0, v0
-; GFX9-NEXT: v_and_b32_e32 v0, 0xffff, v0
+; GFX9-NEXT: s_setpc_b64
 
 ; GFX10: v_cvt_f16_f32_e32 v0, v0
 ; GFX10-NEXT: v_and_b32_e32 v0, 0xffff, v0
@@ -260,9 +260,13 @@ define i32 @zext_fptrunc_f16(float %x) {
 }
 
 ; GCN-LABEL: {{^}}zext_fptrunc_fma_f16:
+; GFX8: v_fma_f32 v0, v0, v1, v2
+; GFX8-NEXT: v_cvt_f16_f32_e32 v0, v0
+; GFX8-NEXT: s_setpc_b64
+
 ; GFX900: v_fma_f32 v0, v0, v1, v2
 ; GFX900-NEXT: v_cvt_f16_f32_e32 v0, v0
-; GFX900-NEXT: v_and_b32_e32 v0, 0xffff, v0
+; GFX900-NEXT: s_setpc_b64
 
 ; GFX906: v_fma_mixlo_f16 v0, v0, v1, v2
 ; GFX906-NEXT: v_and_b32_e32 v0, 0xffff, v0
