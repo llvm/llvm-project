@@ -56,7 +56,25 @@ size_t ScriptLexer::getLineNumber() {
     return 1;
   StringRef s = getCurrentMB().getBuffer();
   StringRef tok = tokens[pos - 1];
-  return s.substr(0, tok.data() - s.data()).count('\n') + 1;
+  const size_t tokOffset = tok.data() - s.data();
+
+  // For the first token, or when going backwards, start from the beginning of
+  // the buffer. If this token is after the previous token, start from the
+  // previous token.
+  size_t line = 1;
+  size_t start = 0;
+  if (lastLineNumberOffset > 0 && tokOffset >= lastLineNumberOffset) {
+    start = lastLineNumberOffset;
+    line = lastLineNumber;
+  }
+
+  line += s.substr(start, tokOffset - start).count('\n');
+
+  // Store the line number of this token for reuse.
+  lastLineNumberOffset = tokOffset;
+  lastLineNumber = line;
+
+  return line;
 }
 
 // Returns 0-based column number of the current token.
