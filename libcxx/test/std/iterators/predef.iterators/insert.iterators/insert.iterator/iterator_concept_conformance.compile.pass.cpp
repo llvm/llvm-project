@@ -23,3 +23,5 @@ static_assert(std::weakly_incrementable<iterator>);
 static_assert(std::input_or_output_iterator<iterator>);
 static_assert(!std::sentinel_for<iterator, iterator>);
 static_assert(!std::input_iterator<iterator>);
+static_assert(std::indirectly_movable<int*, iterator>);
+static_assert(std::indirectly_movable_storable<int*, iterator>);
