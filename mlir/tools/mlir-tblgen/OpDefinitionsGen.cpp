@@ -666,7 +666,7 @@ void OpEmitter::genAttrNameGetters() {
                               body << "::llvm::StringRef(\"" << attrName
                                    << "\")";
                             });
-      body << "};\n  return attrNames;";
+      body << "};\n  return ::llvm::makeArrayRef(attrNames);";
     }
   }
 
