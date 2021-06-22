@@ -14,9 +14,7 @@ add_mlir_dialect_library(MLIRStandard
   MLIRControlFlowInterfaces
   MLIRIR
   MLIRSideEffectInterfaces
-  MLIRTensor
   MLIRVectorInterfaces
-  MLIRViewLikeInterface
   )
 
 add_subdirectory(Transforms)

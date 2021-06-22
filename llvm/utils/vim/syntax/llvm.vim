@@ -25,16 +25,16 @@ syn match   llvmType /\<i\d\+\>/
 syn keyword llvmStatement add addrspacecast alloca and arcp ashr atomicrmw
 syn keyword llvmStatement bitcast br catchpad catchswitch catchret call callbr
 syn keyword llvmStatement cleanuppad cleanupret cmpxchg eq exact extractelement
-syn keyword llvmStatement extractvalue fadd fast fcmp fdiv fence fmul fpext
-syn keyword llvmStatement fptosi fptoui fptrunc free freeze frem fsub fneg getelementptr
-syn keyword llvmStatement icmp inbounds indirectbr insertelement insertvalue
-syn keyword llvmStatement inttoptr invoke landingpad load lshr malloc max min
-syn keyword llvmStatement mul nand ne ninf nnan nsw nsz nuw oeq oge ogt ole
-syn keyword llvmStatement olt one or ord phi ptrtoint resume ret sdiv select
-syn keyword llvmStatement sext sge sgt shl shufflevector sitofp sle slt srem
-syn keyword llvmStatement store sub switch trunc udiv ueq uge ugt uitofp ule ult
-syn keyword llvmStatement umax umin une uno unreachable unwind urem va_arg
-syn keyword llvmStatement xchg xor zext
+syn keyword llvmStatement extractvalue fadd fast fcmp fdiv fence fmul fneg fpext
+syn keyword llvmStatement fptosi fptoui fptrunc free freeze frem fsub
+syn keyword llvmStatement getelementptr icmp inbounds indirectbr insertelement
+syn keyword llvmStatement insertvalue inttoptr invoke landingpad load lshr
+syn keyword llvmStatement malloc max min mul nand ne ninf nnan nsw nsz nuw oeq
+syn keyword llvmStatement oge ogt ole olt one or ord phi ptrtoint resume ret
+syn keyword llvmStatement sdiv select sext sge sgt shl shufflevector sitofp
+syn keyword llvmStatement sle slt srem store sub switch trunc udiv ueq uge ugt
+syn keyword llvmStatement uitofp ule ult umax umin une uno unreachable unwind
+syn keyword llvmStatement urem va_arg xchg xor zext
 
 " Keywords.
 syn keyword llvmKeyword
