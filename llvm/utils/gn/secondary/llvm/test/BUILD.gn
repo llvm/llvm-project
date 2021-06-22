@@ -85,6 +85,10 @@ write_lit_config("lit_site_cfg") {
     "LLVM_BUILD_EXAMPLES=0",
     "LLVM_HAVE_TF_AOT=0",
     "LLVM_HAVE_TF_API=0",
+
+    # See https://reviews.llvm.org/D104332
+    # FIXME: Maybe set to mac_sdk_path if host_os == "mac"?
+    "CMAKE_OSX_SYSROOT=",
   ]
 
   if (host_cpu == "x64") {
