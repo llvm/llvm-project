@@ -1244,8 +1244,8 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     addSystemInclude(DriverArgs, CC1Args, Path);
 
   auto AddSystemIncludesFromEnv = [&](StringRef Var) -> bool {
-    SmallVector<StringRef, 8> Dirs;
     if (auto Val = llvm::sys::Process::GetEnv(Var)) {
+      SmallVector<StringRef, 8> Dirs;
       StringRef(*Val).split(Dirs, ";", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
       if (!Dirs.empty()) {
         addSystemIncludes(DriverArgs, CC1Args, Dirs);
@@ -1268,8 +1268,9 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   // paths set by vcvarsall.bat. Skip if the user expressly set a vctoolsdir.
   if (!DriverArgs.getLastArg(options::OPT__SLASH_vctoolsdir,
                              options::OPT__SLASH_winsysroot)) {
-    if (AddSystemIncludesFromEnv("INCLUDE") |
-        AddSystemIncludesFromEnv("EXTERNAL_INCLUDE"))
+    bool Found = AddSystemIncludesFromEnv("INCLUDE");
+    Found |= AddSystemIncludesFromEnv("EXTERNAL_INCLUDE");
+    if (Found)
       return;
   }
 
@@ -1292,7 +1293,7 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     }
 
     std::string WindowsSDKDir;
-    int major;
+    int major = 0;
     std::string windowsSDKIncludeVersion;
     std::string windowsSDKLibVersion;
     if (getWindowsSDKDir(getVFS(), DriverArgs, WindowsSDKDir, major,
