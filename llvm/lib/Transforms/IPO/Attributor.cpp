@@ -77,7 +77,7 @@ STATISTIC(NumAttributesManifested,
 // This will become more evolved once we perform two interleaved fixpoint
 // iterations: bottom-up and top-down.
 static cl::opt<unsigned>
-    MaxFixpointIterations("attributor-max-iterations", cl::Hidden,
+    SetFixpointIterations("attributor-max-iterations", cl::Hidden,
                           cl::desc("Maximal number of fixpoint iterations."),
                           cl::init(32));
 
@@ -1069,6 +1069,12 @@ void Attributor::runTillFixpoint() {
   // the abstract analysis.
 
   unsigned IterationCounter = 1;
+  unsigned MaxFixedPointIterations;
+  if (MaxFixpointIterations)
+    MaxFixedPointIterations = MaxFixpointIterations.getValue();
+  else
+    MaxFixedPointIterations = SetFixpointIterations;
+
 
   SmallVector<AbstractAttribute *, 32> ChangedAAs;
   SetVector<AbstractAttribute *> Worklist, InvalidAAs;
@@ -1148,7 +1154,7 @@ void Attributor::runTillFixpoint() {
     Worklist.clear();
     Worklist.insert(ChangedAAs.begin(), ChangedAAs.end());
 
-  } while (!Worklist.empty() && (IterationCounter++ < MaxFixpointIterations ||
+  } while (!Worklist.empty() && (IterationCounter++ < MaxFixedPointIterations ||
                                  VerifyMaxFixpointIterations));
 
   LLVM_DEBUG(dbgs() << "\n[Attributor] Fixpoint iteration done after: "
@@ -1187,9 +1193,9 @@ void Attributor::runTillFixpoint() {
   });
 
   if (VerifyMaxFixpointIterations &&
-      IterationCounter != MaxFixpointIterations) {
+      IterationCounter != MaxFixedPointIterations) {
     errs() << "\n[Attributor] Fixpoint iteration done after: "
-           << IterationCounter << "/" << MaxFixpointIterations
+           << IterationCounter << "/" << MaxFixedPointIterations
            << " iterations\n";
     llvm_unreachable("The fixpoint was not reached with exactly the number of "
                      "specified iterations!");
