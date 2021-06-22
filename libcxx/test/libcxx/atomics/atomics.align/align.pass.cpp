@@ -8,6 +8,13 @@
 //
 // UNSUPPORTED: libcpp-has-no-threads, c++03
 // REQUIRES: is-lockfree-runtime-function
+// ADDITIONAL_COMPILE_FLAGS: -Wno-psabi
+// ... since C++20 std::__atomic_base initializes, so we get a warning about an
+// ABI change for vector variants since the constructor code for that is
+// different if one were to compile with architecture-specific vector
+// extensions enabled.
+// This however isn't ABI breaking as it was impossible for any code to trigger
+// this without using libc++ internals.
 
 // GCC currently fails because it needs -fabi-version=6 to fix mangling of
 // std::atomic when used with __attribute__((vector(X))).

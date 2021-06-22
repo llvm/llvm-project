@@ -30,15 +30,13 @@ struct TestFn {
   void operator()() const {
     {
         typedef std::atomic<T> A;
-        A t;
-        std::atomic_init(&t, T(1));
+        A t(T(1));
         assert(std::atomic_fetch_or(&t, T(2)) == T(1));
         assert(t == T(3));
     }
     {
         typedef std::atomic<T> A;
-        volatile A t;
-        std::atomic_init(&t, T(3));
+        volatile A t(T(3));
         assert(std::atomic_fetch_or(&t, T(2)) == T(3));
         assert(t == T(3));
     }

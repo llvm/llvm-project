@@ -1,4 +1,4 @@
-//===-------- BasicOrcV2CBindings.c - Basic OrcV2 C Bindings Demo ---------===//
+//===------ OrcV2CBindingsBasicUsage.c - Basic OrcV2 C Bindings Demo ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

@@ -1085,6 +1085,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::ctpop:
     if (auto *I = foldCtpop(*II, *this))
       return I;
+
+    // If the operand is a select with constant arm(s), try to hoist ctpop.
+    if (auto *Sel = dyn_cast<SelectInst>(II->getArgOperand(0)))
+      if (Instruction *R = FoldOpIntoSelect(*II, Sel))
+        return R;
     break;
 
   case Intrinsic::fshl:
@@ -2270,10 +2275,10 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
         !CalleeF->isDeclaration()) {
       Instruction *OldCall = &Call;
       CreateNonTerminatorUnreachable(OldCall);
-      // If OldCall does not return void then replaceInstUsesWith undef.
+      // If OldCall does not return void then replaceInstUsesWith poison.
       // This allows ValueHandlers and custom metadata to adjust itself.
       if (!OldCall->getType()->isVoidTy())
-        replaceInstUsesWith(*OldCall, UndefValue::get(OldCall->getType()));
+        replaceInstUsesWith(*OldCall, PoisonValue::get(OldCall->getType()));
       if (isa<CallInst>(OldCall))
         return eraseInstFromFunction(*OldCall);
 
@@ -2286,13 +2291,15 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
     }
   }
 
+  // Calling a null function pointer is undefined if a null address isn't
+  // dereferenceable.
   if ((isa<ConstantPointerNull>(Callee) &&
        !NullPointerIsDefined(Call.getFunction())) ||
       isa<UndefValue>(Callee)) {
-    // If Call does not return void then replaceInstUsesWith undef.
+    // If Call does not return void then replaceInstUsesWith poison.
     // This allows ValueHandlers and custom metadata to adjust itself.
     if (!Call.getType()->isVoidTy())
-      replaceInstUsesWith(Call, UndefValue::get(Call.getType()));
+      replaceInstUsesWith(Call, PoisonValue::get(Call.getType()));
 
     if (Call.isTerminator()) {
       // Can't remove an invoke or callbr because we cannot change the CFG.

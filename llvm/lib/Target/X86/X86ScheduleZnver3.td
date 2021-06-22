@@ -582,7 +582,7 @@ def Zn3Write3OpsLEA : SchedWriteRes<[Zn3ALU0123]> {
   let NumMicroOps = 2;
 }
 
-// On Piledriver, a slow LEA is either a 3Ops LEA (base, index, offset),
+// On Znver3, a slow LEA is either a 3Ops LEA (base, index, offset),
 // or an LEA with a `Scale` value different than 1.
 def Zn3SlowLEAPredicate : MCSchedPredicate<
   CheckAny<[

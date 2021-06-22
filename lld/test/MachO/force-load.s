@@ -21,7 +21,7 @@
 ## Note that we do not call realpath() before dedup'ing the force-load
 ## arguments, so this is an error.
 # RUN: cd %t; not %lld -lSystem %t/foo.o -force_load %t/foo.a -force_load foo.a \
-# RUN:   %t/test.o -o /dev/null 2>&1
+# RUN:   %t/test.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=DUP
 
 # DUP: error: duplicate symbol: _bar
 

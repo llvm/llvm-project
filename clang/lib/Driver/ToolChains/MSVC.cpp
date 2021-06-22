@@ -1493,14 +1493,12 @@ static void TranslatePermissive(Arg *A, llvm::opt::DerivedArgList &DAL,
                                 const OptTable &Opts) {
   DAL.AddFlagArg(A, Opts.getOption(options::OPT__SLASH_Zc_twoPhase_));
   DAL.AddFlagArg(A, Opts.getOption(options::OPT_fno_operator_names));
-  // There is currently no /Zc:strictStrings- in clang-cl
 }
 
 static void TranslatePermissiveMinus(Arg *A, llvm::opt::DerivedArgList &DAL,
                                      const OptTable &Opts) {
   DAL.AddFlagArg(A, Opts.getOption(options::OPT__SLASH_Zc_twoPhase));
   DAL.AddFlagArg(A, Opts.getOption(options::OPT_foperator_names));
-  DAL.AddFlagArg(A, Opts.getOption(options::OPT__SLASH_Zc_strictStrings));
 }
 
 llvm::opt::DerivedArgList *

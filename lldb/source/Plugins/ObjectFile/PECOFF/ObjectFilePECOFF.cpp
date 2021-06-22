@@ -189,7 +189,9 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
 
 bool ObjectFilePECOFF::SaveCore(const lldb::ProcessSP &process_sp,
                                 const lldb_private::FileSpec &outfile,
+                                lldb::SaveCoreStyle &core_style,
                                 lldb_private::Status &error) {
+  core_style = eSaveCoreFull;
   return SaveMiniDump(process_sp, outfile, error);
 }
 

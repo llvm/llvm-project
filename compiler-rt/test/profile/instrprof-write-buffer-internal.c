@@ -13,7 +13,7 @@
 // WRITE-BUFFER: Maximum function count: 1
 // WRITE-BUFFER: Maximum internal block count: 0
 
-// ALREADY-DUMPED: error: {{.*}} Empty raw profile file
+// ALREADY-DUMPED: error: {{.+}}: empty raw profile file
 
 #include <stdint.h>
 #include <stdio.h>

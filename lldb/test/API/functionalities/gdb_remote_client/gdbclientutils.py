@@ -166,7 +166,7 @@ class MockGDBServerResponder:
         if packet == "QListThreadsInStopReply":
             return self.QListThreadsInStopReply()
         if packet.startswith("qMemoryRegionInfo:"):
-            return self.qMemoryRegionInfo()
+            return self.qMemoryRegionInfo(int(packet.split(':')[1], 16))
         if packet == "qQueryGDBServer":
             return self.qQueryGDBServer()
         if packet == "qHostInfo":
@@ -282,7 +282,7 @@ class MockGDBServerResponder:
     def QListThreadsInStopReply(self):
         return ""
 
-    def qMemoryRegionInfo(self):
+    def qMemoryRegionInfo(self, addr):
         return ""
 
     def qPathComplete(self):

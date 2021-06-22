@@ -1,6 +1,7 @@
 // REQUIRES: binutils_lto
 
-// RUN: %clang_pgogen=%t.profraw -fuse-ld=bfd -flto %s -o %t
+// RUN: rm -rf %t.profraw
+// RUN: %clang_pgogen=%t.profraw/ -fuse-ld=bfd -flto %s -o %t
 // RUN: %run %t
 // RUN: llvm-profdata merge %t.profraw -o %t.profdata
 // RUN: llvm-profdata show %t.profdata | FileCheck %s

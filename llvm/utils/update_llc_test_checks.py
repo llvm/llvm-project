@@ -114,7 +114,8 @@ def main():
             'function_signature': False,
             'check_attributes': False,
             'replace_value_regex': []}),
-        scrubber_args=[ti.args])
+        scrubber_args=[ti.args],
+        path=ti.path)
 
     for prefixes, llc_tool, llc_args, preprocess_cmd, triple_in_cmd, march_in_cmd in run_list:
       common.debug('Extracted LLC cmd:', llc_tool, llc_args)

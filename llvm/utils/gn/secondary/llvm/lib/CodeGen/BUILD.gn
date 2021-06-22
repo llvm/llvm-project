@@ -120,6 +120,7 @@ static_library("CodeGen") {
     "MachineLoopUtils.cpp",
     "MachineModuleInfo.cpp",
     "MachineModuleInfoImpls.cpp",
+    "MachineModuleSlotTracker.cpp",
     "MachineOperand.cpp",
     "MachineOptimizationRemarkEmitter.cpp",
     "MachineOutliner.cpp",

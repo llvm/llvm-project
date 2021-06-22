@@ -332,7 +332,6 @@ Status ProcessMachCore::DoLoadCore() {
     m_core_range_infos.Sort();
   }
 
-
   bool found_main_binary_definitively = false;
 
   addr_t objfile_binary_addr;
@@ -412,6 +411,14 @@ Status ProcessMachCore::DoLoadCore() {
         m_dyld_plugin_name = DynamicLoaderStatic::GetPluginNameStatic();
       }
     }
+  }
+
+  // If we have a "all image infos" LC_NOTE, try to load all of the
+  // binaries listed, and set their Section load addresses in the Target.
+  if (found_main_binary_definitively == false &&
+      core_objfile->LoadCoreFileImages(*this)) {
+    m_dyld_plugin_name = DynamicLoaderDarwinKernel::GetPluginNameStatic();
+    found_main_binary_definitively = true;
   }
 
   if (!found_main_binary_definitively &&

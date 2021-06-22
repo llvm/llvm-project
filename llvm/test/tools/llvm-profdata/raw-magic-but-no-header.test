@@ -3,4 +3,4 @@ RUN: not llvm-profdata show %t 2>&1 | FileCheck %s
 RUN: printf '\377lprofr\201' > %t
 RUN: not llvm-profdata show %t 2>&1 | FileCheck %s
 
-CHECK: error: {{.+}}: Invalid instrumentation profile data (file header is corrupt)
+CHECK: error: {{.+}}: invalid instrumentation profile data (file header is corrupt)

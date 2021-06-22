@@ -19,11 +19,9 @@ define i1 @bitcast_from_single_element_pointer_vector_to_pointer(<1 x i8*> %ptr1
   ret i1 %cmp
 }
 
-; TODO: these should return poison
-
 define i1 @poison(i32 %x) {
 ; CHECK-LABEL: @poison(
-; CHECK-NEXT:    ret i1 undef
+; CHECK-NEXT:    ret i1 poison
 ;
   %v = icmp eq i32 %x, poison
   ret i1 %v
@@ -31,7 +29,7 @@ define i1 @poison(i32 %x) {
 
 define i1 @poison2(i32 %x) {
 ; CHECK-LABEL: @poison2(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    ret i1 poison
 ;
   %v = icmp slt i32 %x, poison
   ret i1 %v
