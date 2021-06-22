@@ -2111,7 +2111,7 @@ template <class _Rp, class... _ArgTypes> class __value_func<_Rp(_ArgTypes...)>
     }
 
     _LIBCPP_INLINE_VISIBILITY
-    _LIBCPP_EXPLICIT operator bool() const _NOEXCEPT { return __f_ != nullptr; }
+    explicit operator bool() const _NOEXCEPT { return __f_ != nullptr; }
 
 #ifndef _LIBCPP_NO_RTTI
     _LIBCPP_INLINE_VISIBILITY
@@ -2597,7 +2597,7 @@ public:
 
     // function capacity:
     _LIBCPP_INLINE_VISIBILITY
-    _LIBCPP_EXPLICIT operator bool() const _NOEXCEPT {
+    explicit operator bool() const _NOEXCEPT {
       return static_cast<bool>(__f_);
     }
 

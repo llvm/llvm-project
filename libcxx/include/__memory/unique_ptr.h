@@ -296,7 +296,7 @@ public:
     return __ptr_.second();
   }
   _LIBCPP_INLINE_VISIBILITY
-  _LIBCPP_EXPLICIT operator bool() const _NOEXCEPT {
+  explicit operator bool() const _NOEXCEPT {
     return __ptr_.first() != nullptr;
   }
 
@@ -517,7 +517,7 @@ public:
     return __ptr_.second();
   }
   _LIBCPP_INLINE_VISIBILITY
-  _LIBCPP_EXPLICIT operator bool() const _NOEXCEPT {
+  explicit operator bool() const _NOEXCEPT {
     return __ptr_.first() != nullptr;
   }
 
