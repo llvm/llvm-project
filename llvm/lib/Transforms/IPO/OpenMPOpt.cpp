@@ -2311,7 +2311,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
   }
 
   bool isExecutedByInitialThreadOnly(const BasicBlock &BB) const override {
-    return SingleThreadedBBs.contains(&BB);
+    return isValidState() && SingleThreadedBBs.contains(&BB);
   }
 
   /// Set of basic blocks that are executed by a single thread.
@@ -2331,8 +2331,9 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
     const auto &ExecutionDomainAA = A.getAAFor<AAExecutionDomain>(
         *this, IRPosition::function(*ACS.getInstruction()->getFunction()),
         DepClassTy::REQUIRED);
-    return ExecutionDomainAA.isExecutedByInitialThreadOnly(
-        *ACS.getInstruction());
+    return ACS.isDirectCall() &&
+           ExecutionDomainAA.isExecutedByInitialThreadOnly(
+               *ACS.getInstruction());
   };
 
   if (!A.checkForAllCallSites(PredForCallSite, *this,
