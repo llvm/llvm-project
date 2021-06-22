@@ -6,6 +6,7 @@ import("//llvm/utils/gn/build/libs/pthread/enable.gni")
 import("//llvm/utils/gn/build/libs/xar/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
+import("//llvm/utils/gn/build/mac_sdk.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("//llvm/utils/llvm-lit/lit_path_function.gni")
 import("llvm_lit_site_cfg_files.gni")
@@ -85,10 +86,6 @@ write_lit_config("lit_site_cfg") {
     "LLVM_BUILD_EXAMPLES=0",
     "LLVM_HAVE_TF_AOT=0",
     "LLVM_HAVE_TF_API=0",
-
-    # See https://reviews.llvm.org/D104332
-    # FIXME: Maybe set to mac_sdk_path if host_os == "mac"?
-    "CMAKE_OSX_SYSROOT=",
   ]
 
   if (host_cpu == "x64") {
@@ -154,9 +151,15 @@ write_lit_config("lit_site_cfg") {
     extra_values += [ "GOLD_EXECUTABLE=" ]
   }
   if (host_os == "mac") {
-    extra_values += [ "LD64_EXECUTABLE=ld" ]
+    extra_values += [
+      "CMAKE_OSX_SYSROOT=" + rebase_path(mac_sdk_path, dir),
+      "LD64_EXECUTABLE=ld",
+    ]
   } else {
-    extra_values += [ "LD64_EXECUTABLE=" ]
+    extra_values += [
+      "CMAKE_OSX_SYSROOT=",
+      "LD64_EXECUTABLE=",
+    ]
   }
 
   if (llvm_enable_assertions) {
