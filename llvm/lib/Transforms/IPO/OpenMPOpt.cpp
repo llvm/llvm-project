@@ -2503,6 +2503,15 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
       auto *NewBuffer =
           ConstantExpr::getPointerCast(SharedMem, Int8Ty->getPointerTo());
 
+      auto Remark = [&](OptimizationRemark OR) {
+        return OR << "Replaced globalized variable with "
+                  << ore::NV("SharedMemory", AllocSize->getZExtValue())
+                  << ((AllocSize->getZExtValue() != 1) ? " bytes " : " byte ")
+                  << "of shared memory";
+      };
+      A.emitRemark<OptimizationRemark>(CB, "OpenMPReplaceGlobalization",
+                                       Remark);
+
       SharedMem->setAlignment(MaybeAlign(32));
 
       A.changeValueAfterManifest(*CB, *NewBuffer);
@@ -2657,7 +2666,8 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   OMPInformationCache InfoCache(M, AG, Allocator, /*CGSCC*/ Functions,
                                 OMPInModule.getKernels());
 
-  Attributor A(Functions, InfoCache, CGUpdater, nullptr, true, false);
+  Attributor A(Functions, InfoCache, CGUpdater, nullptr, true, false, OREGetter,
+               DEBUG_TYPE);
 
   OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
   bool Changed = OMPOpt.run(true);
@@ -2712,7 +2722,8 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
   OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG, Allocator,
                                 /*CGSCC*/ Functions, OMPInModule.getKernels());
 
-  Attributor A(Functions, InfoCache, CGUpdater, nullptr, false);
+  Attributor A(Functions, InfoCache, CGUpdater, nullptr, false, true, OREGetter,
+               DEBUG_TYPE);
 
   OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
   bool Changed = OMPOpt.run(false);
@@ -2788,7 +2799,8 @@ struct OpenMPOptCGSCCLegacyPass : public CallGraphSCCPass {
         *(Functions.back()->getParent()), AG, Allocator,
         /*CGSCC*/ Functions, OMPInModule.getKernels());
 
-    Attributor A(Functions, InfoCache, CGUpdater, nullptr, false);
+    Attributor A(Functions, InfoCache, CGUpdater, nullptr, false, true,
+                 OREGetter, DEBUG_TYPE);
 
     OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
     return OMPOpt.run(false);

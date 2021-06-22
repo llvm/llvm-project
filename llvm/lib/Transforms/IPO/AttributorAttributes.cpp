@@ -5048,6 +5048,17 @@ struct AAHeapToStackImpl : public AAHeapToStack {
       LLVM_DEBUG(dbgs() << "H2S: Removing malloc call: " << *MallocCall
                         << "\n");
 
+      auto Remark = [&](OptimizationRemark OR) {
+        LibFunc IsAllocShared;
+        if (auto *CB = dyn_cast<CallBase>(MallocCall)) {
+          TLI->getLibFunc(*CB, IsAllocShared);
+          if (IsAllocShared == LibFunc___kmpc_alloc_shared)
+            return OR << "Moving globalized variable to the stack.";
+        }
+        return OR << "Moving memory allocation from the heap to the stack.";
+      };
+      A.emitRemark<OptimizationRemark>(MallocCall, "HeapToStack", Remark);
+
       Align Alignment;
       Value *Size;
       if (isCallocLikeFn(MallocCall, TLI)) {
@@ -5194,6 +5205,23 @@ ChangeStatus AAHeapToStackImpl::updateImpl(Attributor &A) {
 
         if (!NoCaptureAA.isAssumedNoCapture() ||
             !ArgNoFreeAA.isAssumedNoFree()) {
+
+          // Emit a missed remark if this is missed OpenMP globalization.
+          auto Remark = [&](OptimizationRemarkMissed ORM) {
+            return ORM << "Could not move globalized variable to the stack. "
+                       << "Variable is potentially "
+                       << ((!NoCaptureAA.isAssumedNoCapture()) ? "captured."
+                                                               : "freed.");
+          };
+
+          LibFunc IsAllocShared;
+          if (auto *AllocShared = dyn_cast<CallBase>(&I)) {
+            TLI->getLibFunc(*AllocShared, IsAllocShared);
+            if (IsAllocShared == LibFunc___kmpc_alloc_shared)
+              A.emitRemark<OptimizationRemarkMissed>(
+                  AllocShared, "HeapToStackFailed", Remark);
+          }
+
           LLVM_DEBUG(dbgs() << "[H2S] Bad user: " << *UserI << "\n");
           ValidUsesOnly = false;
         }
