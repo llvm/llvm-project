@@ -2666,7 +2666,8 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   OMPInformationCache InfoCache(M, AG, Allocator, /*CGSCC*/ Functions,
                                 OMPInModule.getKernels());
 
-  Attributor A(Functions, InfoCache, CGUpdater, nullptr, true, false, OREGetter,
+  unsigned MaxFixponitIterations = (!OMPInModule.getKernels().empty()) ? 64 : 32;
+  Attributor A(Functions, InfoCache, CGUpdater, nullptr, true, false, MaxFixponitIterations, OREGetter,
                DEBUG_TYPE);
 
   OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
@@ -2722,7 +2723,8 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
   OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG, Allocator,
                                 /*CGSCC*/ Functions, OMPInModule.getKernels());
 
-  Attributor A(Functions, InfoCache, CGUpdater, nullptr, false, true, OREGetter,
+  unsigned MaxFixponitIterations = (!OMPInModule.getKernels().empty()) ? 64 : 32;
+  Attributor A(Functions, InfoCache, CGUpdater, nullptr, false, true, MaxFixponitIterations, OREGetter,
                DEBUG_TYPE);
 
   OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
@@ -2799,8 +2801,9 @@ struct OpenMPOptCGSCCLegacyPass : public CallGraphSCCPass {
         *(Functions.back()->getParent()), AG, Allocator,
         /*CGSCC*/ Functions, OMPInModule.getKernels());
 
+    unsigned MaxFixponitIterations = (!OMPInModule.getKernels().empty()) ? 64 : 32;
     Attributor A(Functions, InfoCache, CGUpdater, nullptr, false, true,
-                 OREGetter, DEBUG_TYPE);
+                 MaxFixponitIterations, OREGetter, DEBUG_TYPE);
 
     OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
     return OMPOpt.run(false);
