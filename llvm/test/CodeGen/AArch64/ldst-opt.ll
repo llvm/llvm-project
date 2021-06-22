@@ -1117,7 +1117,7 @@ define void @store-pair-post-indexed-double() nounwind {
 define void @post-indexed-sub-word(i32* %a, i32* %b, i64 %count) nounwind {
 ; CHECK-LABEL: post-indexed-sub-word
 ; CHECK: ldr w{{[0-9]+}}, [x{{[0-9]+}}], #-8
-; CHECK: str w{{[0-9]+}}, [x{{[0-9]+}}], #-8
+; CHECK: stp w{{[0-9]+}}, w{{[0-9]+}}, [x0, #-4]
   br label %for.body
 for.body:
   %phi1 = phi i32* [ %gep4, %for.body ], [ %b, %0 ]
@@ -1141,7 +1141,7 @@ end:
 define void @post-indexed-sub-doubleword(i64* %a, i64* %b, i64 %count) nounwind {
 ; CHECK-LABEL: post-indexed-sub-doubleword
 ; CHECK: ldr x{{[0-9]+}}, [x{{[0-9]+}}], #-16
-; CHECK: str x{{[0-9]+}}, [x{{[0-9]+}}], #-16
+; CHECK: stp x{{[0-9]+}}, x{{[0-9]+}}, [x0, #-8]
   br label %for.body
 for.body:
   %phi1 = phi i64* [ %gep4, %for.body ], [ %b, %0 ]
@@ -1165,7 +1165,7 @@ end:
 define void @post-indexed-sub-quadword(<2 x i64>* %a, <2 x i64>* %b, i64 %count) nounwind {
 ; CHECK-LABEL: post-indexed-sub-quadword
 ; CHECK: ldr q{{[0-9]+}}, [x{{[0-9]+}}], #-32
-; CHECK: str q{{[0-9]+}}, [x{{[0-9]+}}], #-32
+; CHECK: stp q{{[0-9]+}}, q{{[0-9]+}}, [x0, #-16]
   br label %for.body
 for.body:
   %phi1 = phi <2 x i64>* [ %gep4, %for.body ], [ %b, %0 ]
@@ -1189,7 +1189,7 @@ end:
 define void @post-indexed-sub-float(float* %a, float* %b, i64 %count) nounwind {
 ; CHECK-LABEL: post-indexed-sub-float
 ; CHECK: ldr s{{[0-9]+}}, [x{{[0-9]+}}], #-8
-; CHECK: str s{{[0-9]+}}, [x{{[0-9]+}}], #-8
+; CHECK: stp s{{[0-9]+}}, s{{[0-9]+}}, [x0, #-4]
   br label %for.body
 for.body:
   %phi1 = phi float* [ %gep4, %for.body ], [ %b, %0 ]
@@ -1213,7 +1213,7 @@ end:
 define void @post-indexed-sub-double(double* %a, double* %b, i64 %count) nounwind {
 ; CHECK-LABEL: post-indexed-sub-double
 ; CHECK: ldr d{{[0-9]+}}, [x{{[0-9]+}}], #-16
-; CHECK: str d{{[0-9]+}}, [x{{[0-9]+}}], #-16
+; CHECK: stp d{{[0-9]+}}, d{{[0-9]+}}, [x0, #-8]
   br label %for.body
 for.body:
   %phi1 = phi double* [ %gep4, %for.body ], [ %b, %0 ]
@@ -1237,7 +1237,7 @@ end:
 define void @post-indexed-sub-doubleword-offset-min(i64* %a, i64* %b, i64 %count) nounwind {
 ; CHECK-LABEL: post-indexed-sub-doubleword-offset-min
 ; CHECK: ldr x{{[0-9]+}}, [x{{[0-9]+}}], #-256
-; CHECK: str x{{[0-9]+}}, [x{{[0-9]+}}], #-256
+; CHECK: stp x{{[0-9]+}}, x{{[0-9]+}}, [x0], #-256
   br label %for.body
 for.body:
   %phi1 = phi i64* [ %gep4, %for.body ], [ %b, %0 ]
@@ -1262,8 +1262,7 @@ define void @post-indexed-doubleword-offset-out-of-range(i64* %a, i64* %b, i64 %
 ; CHECK-LABEL: post-indexed-doubleword-offset-out-of-range
 ; CHECK: ldr x{{[0-9]+}}, [x{{[0-9]+}}]
 ; CHECK: add x{{[0-9]+}}, x{{[0-9]+}}, #256
-; CHECK: str x{{[0-9]+}}, [x{{[0-9]+}}]
-; CHECK: add x{{[0-9]+}}, x{{[0-9]+}}, #256
+; CHECK: stp x{{[0-9]+}}, x{{[0-9]+}}, [x0], #256
 
   br label %for.body
 for.body:
