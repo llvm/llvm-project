@@ -241,6 +241,18 @@ llvm::Error InOrderIssueStage::tryIssue(InstRef &IR) {
     Bandwidth = Desc.EndGroup ? 0 : Bandwidth - NumMicroOps;
   }
 
+  // If the instruction has a latency of 0, we need to handle
+  // the execution and retirement now.
+  if (IS.isExecuted()) {
+    PRF.onInstructionExecuted(&IS);
+    notifyEvent<HWInstructionEvent>(
+        HWInstructionEvent(HWInstructionEvent::Executed, IR));
+    LLVM_DEBUG(dbgs() << "[E] Instruction #" << IR << " is executed\n");
+
+    retireInstruction(IR);
+    return llvm::ErrorSuccess();
+  }
+
   IssuedInst.push_back(IR);
 
   if (!IR.getInstruction()->getDesc().RetireOOO)

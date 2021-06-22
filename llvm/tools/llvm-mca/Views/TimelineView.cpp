@@ -288,8 +288,6 @@ void TimelineView::printTimeline(raw_ostream &OS) const {
   for (unsigned Iteration = 0; Iteration < Iterations; ++Iteration) {
     for (const MCInst &Inst : Source) {
       const TimelineViewEntry &Entry = Timeline[IID];
-      if (Entry.CycleRetired == 0)
-        return;
 
       unsigned SourceIndex = IID % Source.size();
       printTimelineViewEntry(FOS, Entry, Iteration, SourceIndex);
