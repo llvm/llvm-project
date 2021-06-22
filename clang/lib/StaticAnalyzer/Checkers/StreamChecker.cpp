@@ -306,7 +306,8 @@ private:
   /// If it can only be NULL a fatal error is emitted and nullptr returned.
   /// Otherwise the return value is a new state where the stream is constrained
   /// to be non-null.
-  ProgramStateRef ensureStreamNonNull(SVal StreamVal, CheckerContext &C,
+  ProgramStateRef ensureStreamNonNull(SVal StreamVal, const Expr *StreamE,
+                                      CheckerContext &C,
                                       ProgramStateRef State) const;
 
   /// Check that the stream is the opened state.
@@ -472,7 +473,8 @@ void StreamChecker::preFreopen(const FnDescription *Desc, const CallEvent &Call,
                                CheckerContext &C) const {
   // Do not allow NULL as passed stream pointer but allow a closed stream.
   ProgramStateRef State = C.getState();
-  State = ensureStreamNonNull(getStreamArg(Desc, Call), C, State);
+  State = ensureStreamNonNull(getStreamArg(Desc, Call),
+                              Call.getArgExpr(Desc->StreamArgNo), C, State);
   if (!State)
     return;
 
@@ -549,7 +551,8 @@ void StreamChecker::preFread(const FnDescription *Desc, const CallEvent &Call,
                              CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   SVal StreamVal = getStreamArg(Desc, Call);
-  State = ensureStreamNonNull(StreamVal, C, State);
+  State = ensureStreamNonNull(StreamVal, Call.getArgExpr(Desc->StreamArgNo), C,
+                              State);
   if (!State)
     return;
   State = ensureStreamOpened(StreamVal, C, State);
@@ -573,7 +576,8 @@ void StreamChecker::preFwrite(const FnDescription *Desc, const CallEvent &Call,
                               CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   SVal StreamVal = getStreamArg(Desc, Call);
-  State = ensureStreamNonNull(StreamVal, C, State);
+  State = ensureStreamNonNull(StreamVal, Call.getArgExpr(Desc->StreamArgNo), C,
+                              State);
   if (!State)
     return;
   State = ensureStreamOpened(StreamVal, C, State);
@@ -671,7 +675,8 @@ void StreamChecker::preFseek(const FnDescription *Desc, const CallEvent &Call,
                              CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   SVal StreamVal = getStreamArg(Desc, Call);
-  State = ensureStreamNonNull(StreamVal, C, State);
+  State = ensureStreamNonNull(StreamVal, Call.getArgExpr(Desc->StreamArgNo), C,
+                              State);
   if (!State)
     return;
   State = ensureStreamOpened(StreamVal, C, State);
@@ -790,7 +795,8 @@ void StreamChecker::preDefault(const FnDescription *Desc, const CallEvent &Call,
                                CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   SVal StreamVal = getStreamArg(Desc, Call);
-  State = ensureStreamNonNull(StreamVal, C, State);
+  State = ensureStreamNonNull(StreamVal, Call.getArgExpr(Desc->StreamArgNo), C,
+                              State);
   if (!State)
     return;
   State = ensureStreamOpened(StreamVal, C, State);
@@ -814,7 +820,8 @@ void StreamChecker::evalSetFeofFerror(const FnDescription *Desc,
 }
 
 ProgramStateRef
-StreamChecker::ensureStreamNonNull(SVal StreamVal, CheckerContext &C,
+StreamChecker::ensureStreamNonNull(SVal StreamVal, const Expr *StreamE,
+                                   CheckerContext &C,
                                    ProgramStateRef State) const {
   auto Stream = StreamVal.getAs<DefinedSVal>();
   if (!Stream)
@@ -827,8 +834,11 @@ StreamChecker::ensureStreamNonNull(SVal StreamVal, CheckerContext &C,
 
   if (!StateNotNull && StateNull) {
     if (ExplodedNode *N = C.generateErrorNode(StateNull)) {
-      C.emitReport(std::make_unique<PathSensitiveBugReport>(
-          BT_FileNull, "Stream pointer might be NULL.", N));
+      auto R = std::make_unique<PathSensitiveBugReport>(
+          BT_FileNull, "Stream pointer might be NULL.", N);
+      if (StreamE)
+        bugreporter::trackExpressionValue(N, StreamE, *R);
+      C.emitReport(std::move(R));
     }
     return nullptr;
   }
