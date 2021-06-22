@@ -16,6 +16,7 @@
 
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/StringConvert.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/MemoryRegionInfo.h"
@@ -285,6 +286,7 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_gdb_server_name.clear();
     m_gdb_server_version = UINT32_MAX;
     m_default_packet_timeout = seconds(0);
+    m_target_vm_page_size = 0;
     m_max_packet_size = 0;
     m_qSupported_response.clear();
     m_supported_async_json_packets_is_valid = false;
@@ -1192,6 +1194,12 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
               SetPacketTimeout(m_default_packet_timeout);
               ++num_keys_decoded;
             }
+          } else if (name.equals("vm-page-size")) {
+            int page_size;
+            if (!value.getAsInteger(0, page_size)) {
+              m_target_vm_page_size = page_size;
+              ++num_keys_decoded;
+            }
           }
         }
 
@@ -1503,8 +1511,29 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
           // Now convert the HEX bytes into a string value
           error_extractor.GetHexByteString(error_string);
           error.SetErrorString(error_string.c_str());
+        } else if (name.equals("dirty-pages")) {
+          std::vector<addr_t> dirty_page_list;
+          std::string comma_sep_str = value.str();
+          size_t comma_pos;
+          addr_t page;
+          while ((comma_pos = comma_sep_str.find(',')) != std::string::npos) {
+            comma_sep_str[comma_pos] = '\0';
+            page = StringConvert::ToUInt64(comma_sep_str.c_str(),
+                                           LLDB_INVALID_ADDRESS, 16);
+            if (page != LLDB_INVALID_ADDRESS)
+              dirty_page_list.push_back(page);
+            comma_sep_str.erase(0, comma_pos + 1);
+          }
+          page = StringConvert::ToUInt64(comma_sep_str.c_str(),
+                                         LLDB_INVALID_ADDRESS, 16);
+          if (page != LLDB_INVALID_ADDRESS)
+            dirty_page_list.push_back(page);
+          region_info.SetDirtyPageList(dirty_page_list);
         }
       }
+
+      if (m_target_vm_page_size != 0)
+        region_info.SetPageSize(m_target_vm_page_size);
 
       if (region_info.GetRange().IsValid()) {
         // We got a valid address range back but no permissions -- which means

@@ -1227,7 +1227,8 @@ lldb::SBError SBProcess::SaveCore(const char *file_name) {
   }
 
   FileSpec core_file(file_name);
-  error.ref() = PluginManager::SaveCore(process_sp, core_file);
+  SaveCoreStyle core_style = SaveCoreStyle::eSaveCoreFull;
+  error.ref() = PluginManager::SaveCore(process_sp, core_file, core_style);
   return LLDB_RECORD_RESULT(error);
 }
 
