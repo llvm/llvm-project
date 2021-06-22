@@ -77,6 +77,7 @@ class AffineDmaStartOp
                 AffineMapAccessInterface::Trait> {
 public:
   using Op::Op;
+  static ArrayRef<StringRef> getAttributeNames() { return {}; }
 
   static void build(OpBuilder &builder, OperationState &result, Value srcMemRef,
                     AffineMap srcMap, ValueRange srcIndices, Value destMemRef,
@@ -268,6 +269,7 @@ class AffineDmaWaitOp
                 AffineMapAccessInterface::Trait> {
 public:
   using Op::Op;
+  static ArrayRef<StringRef> getAttributeNames() { return {}; }
 
   static void build(OpBuilder &builder, OperationState &result, Value tagMemRef,
                     AffineMap tagMap, ValueRange tagIndices, Value numElements);

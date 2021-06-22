@@ -94,6 +94,7 @@ class DmaStartOp
     : public Op<DmaStartOp, OpTrait::VariadicOperands, OpTrait::ZeroResult> {
 public:
   using Op::Op;
+  static ArrayRef<StringRef> getAttributeNames() { return {}; }
 
   static void build(OpBuilder &builder, OperationState &result, Value srcMemRef,
                     ValueRange srcIndices, Value destMemRef,
@@ -217,6 +218,7 @@ class DmaWaitOp
     : public Op<DmaWaitOp, OpTrait::VariadicOperands, OpTrait::ZeroResult> {
 public:
   using Op::Op;
+  static ArrayRef<StringRef> getAttributeNames() { return {}; }
 
   static void build(OpBuilder &builder, OperationState &result, Value tagMemRef,
                     ValueRange tagIndices, Value numElements);

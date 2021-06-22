@@ -710,17 +710,30 @@ void AbstractOperation::insert(
     ParseAssemblyFn &&parseAssembly, PrintAssemblyFn &&printAssembly,
     VerifyInvariantsFn &&verifyInvariants, FoldHookFn &&foldHook,
     GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
-    detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait) {
-  AbstractOperation opInfo(name, dialect, typeID, std::move(parseAssembly),
-                           std::move(printAssembly),
-                           std::move(verifyInvariants), std::move(foldHook),
-                           std::move(getCanonicalizationPatterns),
-                           std::move(interfaceMap), std::move(hasTrait));
-
-  auto &impl = dialect.getContext()->getImpl();
+    detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait,
+    ArrayRef<StringRef> attrNames) {
+  MLIRContext *ctx = dialect.getContext();
+  auto &impl = ctx->getImpl();
   assert(impl.multiThreadedExecutionContext == 0 &&
          "Registering a new operation kind while in a multi-threaded execution "
          "context");
+
+  // Register the attribute names of this operation.
+  MutableArrayRef<Identifier> cachedAttrNames;
+  if (!attrNames.empty()) {
+    cachedAttrNames = MutableArrayRef<Identifier>(
+        impl.identifierAllocator.Allocate<Identifier>(attrNames.size()),
+        attrNames.size());
+    for (unsigned i : llvm::seq<unsigned>(0, attrNames.size()))
+      new (&cachedAttrNames[i]) Identifier(Identifier::get(attrNames[i], ctx));
+  }
+
+  // Register the information for this operation.
+  AbstractOperation opInfo(
+      name, dialect, typeID, std::move(parseAssembly), std::move(printAssembly),
+      std::move(verifyInvariants), std::move(foldHook),
+      std::move(getCanonicalizationPatterns), std::move(interfaceMap),
+      std::move(hasTrait), cachedAttrNames);
   if (!impl.registeredOperations.insert({name, std::move(opInfo)}).second) {
     llvm::errs() << "error: operation named '" << name
                  << "' is already registered.\n";
@@ -733,7 +746,8 @@ AbstractOperation::AbstractOperation(
     ParseAssemblyFn &&parseAssembly, PrintAssemblyFn &&printAssembly,
     VerifyInvariantsFn &&verifyInvariants, FoldHookFn &&foldHook,
     GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
-    detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait)
+    detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait,
+    ArrayRef<Identifier> attrNames)
     : name(Identifier::get(name, dialect.getContext())), dialect(dialect),
       typeID(typeID), interfaceMap(std::move(interfaceMap)),
       foldHookFn(std::move(foldHook)),
@@ -741,7 +755,8 @@ AbstractOperation::AbstractOperation(
       hasTraitFn(std::move(hasTrait)),
       parseAssemblyFn(std::move(parseAssembly)),
       printAssemblyFn(std::move(printAssembly)),
-      verifyInvariantsFn(std::move(verifyInvariants)) {}
+      verifyInvariantsFn(std::move(verifyInvariants)),
+      attributeNames(attrNames) {}
 
 //===----------------------------------------------------------------------===//
 // AbstractType
