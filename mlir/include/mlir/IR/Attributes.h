@@ -67,7 +67,9 @@ public:
   MLIRContext *getContext() const;
 
   /// Get the dialect this attribute is registered to.
-  Dialect &getDialect() const;
+  Dialect &getDialect() const {
+    return impl->getAbstractAttribute().getDialect();
+  }
 
   /// Print the attribute.
   void print(raw_ostream &os) const;
