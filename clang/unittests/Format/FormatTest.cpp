@@ -525,6 +525,7 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatement) {
                "}");
 
   FormatStyle AllowsMergedIf = getLLVMStyle();
+  AllowsMergedIf.IfMacros.push_back("MYIF");
   AllowsMergedIf.AlignEscapedNewlines = FormatStyle::ENAS_Left;
   AllowsMergedIf.AllowShortIfStatementsOnASingleLine =
       FormatStyle::SIS_WithoutElse;
@@ -564,17 +565,62 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatement) {
                "  f();\n"
                "}",
                AllowsMergedIf);
+  verifyFormat("MYIF (a)\n"
+               "  // comment\n"
+               "  f();",
+               AllowsMergedIf);
+  verifyFormat("{\n"
+               "  MYIF (a)\n"
+               "  label:\n"
+               "    f();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("#define A  \\\n"
+               "  MYIF (a) \\\n"
+               "  label:   \\\n"
+               "    f()",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a)\n"
+               "  ;",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a)\n"
+               "  MYIF (b) return;",
+               AllowsMergedIf);
+
+  verifyFormat("MYIF (a) // Can't merge this\n"
+               "  f();\n",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) /* still don't merge */\n"
+               "  f();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) { // Never merge this\n"
+               "  f();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) { /* Never merge this */\n"
+               "  f();\n"
+               "}",
+               AllowsMergedIf);
 
   AllowsMergedIf.ColumnLimit = 14;
+  // Where line-lengths matter, a 2-letter synonym that maintains line length.
+  // Not IF to avoid any confusion that IF is somehow special.
+  AllowsMergedIf.IfMacros.push_back("FI");
   verifyFormat("if (a) return;", AllowsMergedIf);
   verifyFormat("if (aaaaaaaaa)\n"
+               "  return;",
+               AllowsMergedIf);
+  verifyFormat("FI (a) return;", AllowsMergedIf);
+  verifyFormat("FI (aaaaaaaaa)\n"
                "  return;",
                AllowsMergedIf);
 
   AllowsMergedIf.ColumnLimit = 13;
   verifyFormat("if (a)\n  return;", AllowsMergedIf);
+  verifyFormat("FI (a)\n  return;", AllowsMergedIf);
 
   FormatStyle AllowsMergedIfElse = getLLVMStyle();
+  AllowsMergedIfElse.IfMacros.push_back("MYIF");
   AllowsMergedIfElse.AllowShortIfStatementsOnASingleLine =
       FormatStyle::SIS_AllIfsAndElse;
   verifyFormat("if (a)\n"
@@ -626,10 +672,60 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatement) {
                "  else if constexpr (c) return;\n"
                "  else return;",
                AllowsMergedIfElse);
+  verifyFormat("MYIF (a)\n"
+               "  // comment\n"
+               "  f();\n"
+               "else\n"
+               "  // comment\n"
+               "  f();",
+               AllowsMergedIfElse);
+  verifyFormat("{\n"
+               "  MYIF (a)\n"
+               "  label:\n"
+               "    f();\n"
+               "  else\n"
+               "  label:\n"
+               "    f();\n"
+               "}",
+               AllowsMergedIfElse);
+  verifyFormat("MYIF (a)\n"
+               "  ;\n"
+               "else\n"
+               "  ;",
+               AllowsMergedIfElse);
+  verifyFormat("MYIF (a) {\n"
+               "} else {\n"
+               "}",
+               AllowsMergedIfElse);
+  verifyFormat("MYIF (a) return;\n"
+               "else MYIF (b) return;\n"
+               "else return;",
+               AllowsMergedIfElse);
+  verifyFormat("MYIF (a) {\n"
+               "} else return;",
+               AllowsMergedIfElse);
+  verifyFormat("MYIF (a) {\n"
+               "} else MYIF (b) return;\n"
+               "else return;",
+               AllowsMergedIfElse);
+  verifyFormat("MYIF (a) return;\n"
+               "else MYIF (b) {\n"
+               "} else return;",
+               AllowsMergedIfElse);
+  verifyFormat("MYIF (a)\n"
+               "  MYIF (b) return;\n"
+               "  else return;",
+               AllowsMergedIfElse);
+  verifyFormat("MYIF constexpr (a)\n"
+               "  MYIF constexpr (b) return;\n"
+               "  else MYIF constexpr (c) return;\n"
+               "  else return;",
+               AllowsMergedIfElse);
 }
 
 TEST_F(FormatTest, FormatIfWithoutCompoundStatementButElseWith) {
   FormatStyle AllowsMergedIf = getLLVMStyle();
+  AllowsMergedIf.IfMacros.push_back("MYIF");
   AllowsMergedIf.AlignEscapedNewlines = FormatStyle::ENAS_Left;
   AllowsMergedIf.AllowShortIfStatementsOnASingleLine =
       FormatStyle::SIS_WithoutElse;
@@ -710,6 +806,135 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatementButElseWith) {
                "}",
                AllowsMergedIf);
   verifyFormat("if (a) {\n"
+               "  g();\n"
+               "} else if (b) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a)\n"
+               "  f();\n"
+               "else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a)\n"
+               "  f();\n"
+               "else\n"
+               "  g();\n",
+               AllowsMergedIf);
+
+  verifyFormat("MYIF (a) g();", AllowsMergedIf);
+  verifyFormat("MYIF (a) {\n"
+               "  g()\n"
+               "};",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a)\n"
+               "  g();\n"
+               "else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) {\n"
+               "  g();\n"
+               "} else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a)\n"
+               "  g();\n"
+               "else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a)\n"
+               "  g();\n"
+               "else MYIF (b)\n"
+               "  g();\n"
+               "else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a)\n"
+               "  g();\n"
+               "else if (b)\n"
+               "  g();\n"
+               "else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) {\n"
+               "  g();\n"
+               "} else MYIF (b)\n"
+               "  g();\n"
+               "else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) {\n"
+               "  g();\n"
+               "} else if (b)\n"
+               "  g();\n"
+               "else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a)\n"
+               "  g();\n"
+               "else MYIF (b) {\n"
+               "  g();\n"
+               "} else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a)\n"
+               "  g();\n"
+               "else if (b) {\n"
+               "  g();\n"
+               "} else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a)\n"
+               "  g();\n"
+               "else MYIF (b)\n"
+               "  g();\n"
+               "else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a)\n"
+               "  g();\n"
+               "else if (b)\n"
+               "  g();\n"
+               "else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a)\n"
+               "  g();\n"
+               "else MYIF (b) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a)\n"
+               "  g();\n"
+               "else if (b) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) {\n"
+               "  g();\n"
+               "} else MYIF (b) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) {\n"
                "  g();\n"
                "} else if (b) {\n"
                "  g();\n"
@@ -802,6 +1027,128 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatementButElseWith) {
                "  g();\n"
                "}",
                AllowsMergedIf);
+  verifyFormat("MYIF (a) f();\n"
+               "else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) f();\n"
+               "else {\n"
+               "  if (a) f();\n"
+               "  else {\n"
+               "    g();\n"
+               "  }\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+
+  verifyFormat("MYIF (a) g();", AllowsMergedIf);
+  verifyFormat("MYIF (a) {\n"
+               "  g()\n"
+               "};",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) g();\n"
+               "else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) {\n"
+               "  g();\n"
+               "} else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) g();\n"
+               "else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) g();\n"
+               "else MYIF (b)\n"
+               "  g();\n"
+               "else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) g();\n"
+               "else if (b)\n"
+               "  g();\n"
+               "else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) {\n"
+               "  g();\n"
+               "} else MYIF (b)\n"
+               "  g();\n"
+               "else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) {\n"
+               "  g();\n"
+               "} else if (b)\n"
+               "  g();\n"
+               "else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) g();\n"
+               "else MYIF (b) {\n"
+               "  g();\n"
+               "} else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) g();\n"
+               "else if (b) {\n"
+               "  g();\n"
+               "} else\n"
+               "  g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) g();\n"
+               "else MYIF (b)\n"
+               "  g();\n"
+               "else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) g();\n"
+               "else if (b)\n"
+               "  g();\n"
+               "else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) g();\n"
+               "else MYIF (b) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) g();\n"
+               "else if (b) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) {\n"
+               "  g();\n"
+               "} else MYIF (b) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) {\n"
+               "  g();\n"
+               "} else if (b) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
 
   AllowsMergedIf.AllowShortIfStatementsOnASingleLine =
       FormatStyle::SIS_AllIfsAndElse;
@@ -879,6 +1226,114 @@ TEST_F(FormatTest, FormatIfWithoutCompoundStatementButElseWith) {
                "  g();\n"
                "}",
                AllowsMergedIf);
+  verifyFormat("MYIF (a) f();\n"
+               "else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) f();\n"
+               "else {\n"
+               "  if (a) f();\n"
+               "  else {\n"
+               "    g();\n"
+               "  }\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+
+  verifyFormat("MYIF (a) g();", AllowsMergedIf);
+  verifyFormat("MYIF (a) {\n"
+               "  g()\n"
+               "};",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) g();\n"
+               "else g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) {\n"
+               "  g();\n"
+               "} else g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) g();\n"
+               "else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) g();\n"
+               "else MYIF (b) g();\n"
+               "else g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) g();\n"
+               "else if (b) g();\n"
+               "else g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) {\n"
+               "  g();\n"
+               "} else MYIF (b) g();\n"
+               "else g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) {\n"
+               "  g();\n"
+               "} else if (b) g();\n"
+               "else g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) g();\n"
+               "else MYIF (b) {\n"
+               "  g();\n"
+               "} else g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) g();\n"
+               "else if (b) {\n"
+               "  g();\n"
+               "} else g();",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) g();\n"
+               "else MYIF (b) g();\n"
+               "else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) g();\n"
+               "else if (b) g();\n"
+               "else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) g();\n"
+               "else MYIF (b) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) g();\n"
+               "else if (b) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) {\n"
+               "  g();\n"
+               "} else MYIF (b) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
+  verifyFormat("MYIF (a) {\n"
+               "  g();\n"
+               "} else if (b) {\n"
+               "  g();\n"
+               "} else {\n"
+               "  g();\n"
+               "}",
+               AllowsMergedIf);
 }
 
 TEST_F(FormatTest, FormatLoopsWithoutCompoundStatement) {
@@ -930,6 +1385,10 @@ TEST_F(FormatTest, FormatLoopsWithoutCompoundStatement) {
 
 TEST_F(FormatTest, FormatShortBracedStatements) {
   FormatStyle AllowSimpleBracedStatements = getLLVMStyle();
+  AllowSimpleBracedStatements.IfMacros.push_back("MYIF");
+  // Where line-lengths matter, a 2-letter synonym that maintains line length.
+  // Not IF to avoid any confusion that IF is somehow special.
+  AllowSimpleBracedStatements.IfMacros.push_back("FI");
   AllowSimpleBracedStatements.ColumnLimit = 40;
   AllowSimpleBracedStatements.AllowShortBlocksOnASingleLine =
       FormatStyle::SBS_Always;
@@ -945,11 +1404,17 @@ TEST_F(FormatTest, FormatShortBracedStatements) {
   verifyFormat("if (true) {}", AllowSimpleBracedStatements);
   verifyFormat("if constexpr (true) {}", AllowSimpleBracedStatements);
   verifyFormat("if CONSTEXPR (true) {}", AllowSimpleBracedStatements);
+  verifyFormat("MYIF (true) {}", AllowSimpleBracedStatements);
+  verifyFormat("MYIF constexpr (true) {}", AllowSimpleBracedStatements);
+  verifyFormat("MYIF CONSTEXPR (true) {}", AllowSimpleBracedStatements);
   verifyFormat("while (true) {}", AllowSimpleBracedStatements);
   verifyFormat("for (;;) {}", AllowSimpleBracedStatements);
   verifyFormat("if (true) { f(); }", AllowSimpleBracedStatements);
   verifyFormat("if constexpr (true) { f(); }", AllowSimpleBracedStatements);
   verifyFormat("if CONSTEXPR (true) { f(); }", AllowSimpleBracedStatements);
+  verifyFormat("MYIF (true) { f(); }", AllowSimpleBracedStatements);
+  verifyFormat("MYIF constexpr (true) { f(); }", AllowSimpleBracedStatements);
+  verifyFormat("MYIF CONSTEXPR (true) { f(); }", AllowSimpleBracedStatements);
   verifyFormat("while (true) { f(); }", AllowSimpleBracedStatements);
   verifyFormat("for (;;) { f(); }", AllowSimpleBracedStatements);
   verifyFormat("if (true) { fffffffffffffffffffffff(); }",
@@ -972,6 +1437,31 @@ TEST_F(FormatTest, FormatShortBracedStatements) {
                "}",
                AllowSimpleBracedStatements);
   verifyFormat("if (true) {\n"
+               "  f();\n"
+               "} else {\n"
+               "  f();\n"
+               "}",
+               AllowSimpleBracedStatements);
+  verifyFormat("FI (true) { fffffffffffffffffffffff(); }",
+               AllowSimpleBracedStatements);
+  verifyFormat("MYIF (true) {\n"
+               "  ffffffffffffffffffffffff();\n"
+               "}",
+               AllowSimpleBracedStatements);
+  verifyFormat("MYIF (true) {\n"
+               "  ffffffffffffffffffffffffffffffffffffffffffffffffffffff();\n"
+               "}",
+               AllowSimpleBracedStatements);
+  verifyFormat("MYIF (true) { //\n"
+               "  f();\n"
+               "}",
+               AllowSimpleBracedStatements);
+  verifyFormat("MYIF (true) {\n"
+               "  f();\n"
+               "  f();\n"
+               "}",
+               AllowSimpleBracedStatements);
+  verifyFormat("MYIF (true) {\n"
                "  f();\n"
                "} else {\n"
                "  f();\n"
@@ -1004,6 +1494,17 @@ TEST_F(FormatTest, FormatShortBracedStatements) {
                "  f();\n"
                "}",
                AllowSimpleBracedStatements);
+  verifyFormat("MYIF (true) {}", AllowSimpleBracedStatements);
+  verifyFormat("MYIF (true) {\n"
+               "  f();\n"
+               "}",
+               AllowSimpleBracedStatements);
+  verifyFormat("MYIF (true) {\n"
+               "  f();\n"
+               "} else {\n"
+               "  f();\n"
+               "}",
+               AllowSimpleBracedStatements);
 
   AllowSimpleBracedStatements.AllowShortLoopsOnASingleLine = false;
   verifyFormat("while (true) {}", AllowSimpleBracedStatements);
@@ -1026,11 +1527,17 @@ TEST_F(FormatTest, FormatShortBracedStatements) {
   verifyFormat("if (true) {}", AllowSimpleBracedStatements);
   verifyFormat("if constexpr (true) {}", AllowSimpleBracedStatements);
   verifyFormat("if CONSTEXPR (true) {}", AllowSimpleBracedStatements);
+  verifyFormat("MYIF (true) {}", AllowSimpleBracedStatements);
+  verifyFormat("MYIF constexpr (true) {}", AllowSimpleBracedStatements);
+  verifyFormat("MYIF CONSTEXPR (true) {}", AllowSimpleBracedStatements);
   verifyFormat("while (true) {}", AllowSimpleBracedStatements);
   verifyFormat("for (;;) {}", AllowSimpleBracedStatements);
   verifyFormat("if (true) { f(); }", AllowSimpleBracedStatements);
   verifyFormat("if constexpr (true) { f(); }", AllowSimpleBracedStatements);
   verifyFormat("if CONSTEXPR (true) { f(); }", AllowSimpleBracedStatements);
+  verifyFormat("MYIF (true) { f(); }", AllowSimpleBracedStatements);
+  verifyFormat("MYIF constexpr (true) { f(); }", AllowSimpleBracedStatements);
+  verifyFormat("MYIF CONSTEXPR (true) { f(); }", AllowSimpleBracedStatements);
   verifyFormat("while (true) { f(); }", AllowSimpleBracedStatements);
   verifyFormat("for (;;) { f(); }", AllowSimpleBracedStatements);
   verifyFormat("if (true) { fffffffffffffffffffffff(); }",
@@ -1064,6 +1571,37 @@ TEST_F(FormatTest, FormatShortBracedStatements) {
                "  f();\n"
                "}",
                AllowSimpleBracedStatements);
+  verifyFormat("FI (true) { fffffffffffffffffffffff(); }",
+               AllowSimpleBracedStatements);
+  verifyFormat("MYIF (true)\n"
+               "{\n"
+               "  ffffffffffffffffffffffff();\n"
+               "}",
+               AllowSimpleBracedStatements);
+  verifyFormat("MYIF (true)\n"
+               "{\n"
+               "  ffffffffffffffffffffffffffffffffffffffffffffffffffffff();\n"
+               "}",
+               AllowSimpleBracedStatements);
+  verifyFormat("MYIF (true)\n"
+               "{ //\n"
+               "  f();\n"
+               "}",
+               AllowSimpleBracedStatements);
+  verifyFormat("MYIF (true)\n"
+               "{\n"
+               "  f();\n"
+               "  f();\n"
+               "}",
+               AllowSimpleBracedStatements);
+  verifyFormat("MYIF (true)\n"
+               "{\n"
+               "  f();\n"
+               "} else\n"
+               "{\n"
+               "  f();\n"
+               "}",
+               AllowSimpleBracedStatements);
 
   AllowSimpleBracedStatements.AllowShortIfStatementsOnASingleLine =
       FormatStyle::SIS_Never;
@@ -1074,6 +1612,20 @@ TEST_F(FormatTest, FormatShortBracedStatements) {
                "}",
                AllowSimpleBracedStatements);
   verifyFormat("if (true)\n"
+               "{\n"
+               "  f();\n"
+               "} else\n"
+               "{\n"
+               "  f();\n"
+               "}",
+               AllowSimpleBracedStatements);
+  verifyFormat("MYIF (true) {}", AllowSimpleBracedStatements);
+  verifyFormat("MYIF (true)\n"
+               "{\n"
+               "  f();\n"
+               "}",
+               AllowSimpleBracedStatements);
+  verifyFormat("MYIF (true)\n"
                "{\n"
                "  f();\n"
                "} else\n"
@@ -1342,7 +1894,7 @@ TEST_F(FormatTest, ForEachLoops) {
 
   FormatStyle Style = getLLVMStyle();
   Style.SpaceBeforeParens =
-      FormatStyle::SBPO_ControlStatementsExceptForEachMacros;
+      FormatStyle::SBPO_ControlStatementsExceptControlMacros;
   verifyFormat("void f() {\n"
                "  foreach(Item *item, itemlist) {}\n"
                "  Q_FOREACH(Item *item, itemlist) {}\n"
@@ -17624,6 +18176,9 @@ TEST_F(FormatTest, ParsesConfiguration) {
               FormatStyle::SBPO_Always);
   CHECK_PARSE("SpaceBeforeParens: ControlStatements", SpaceBeforeParens,
               FormatStyle::SBPO_ControlStatements);
+  CHECK_PARSE("SpaceBeforeParens: ControlStatementsExceptControlMacros",
+              SpaceBeforeParens,
+              FormatStyle::SBPO_ControlStatementsExceptControlMacros);
   CHECK_PARSE("SpaceBeforeParens: NonEmptyParentheses", SpaceBeforeParens,
               FormatStyle::SBPO_NonEmptyParentheses);
   // For backward compatibility:
@@ -17631,6 +18186,9 @@ TEST_F(FormatTest, ParsesConfiguration) {
               FormatStyle::SBPO_Never);
   CHECK_PARSE("SpaceAfterControlStatementKeyword: true", SpaceBeforeParens,
               FormatStyle::SBPO_ControlStatements);
+  CHECK_PARSE("SpaceBeforeParens: ControlStatementsExceptForEachMacros",
+              SpaceBeforeParens,
+              FormatStyle::SBPO_ControlStatementsExceptControlMacros);
 
   Style.ColumnLimit = 123;
   FormatStyle BaseStyle = getLLVMStyle();
@@ -17777,6 +18335,11 @@ TEST_F(FormatTest, ParsesConfiguration) {
   BoostAndQForeach.push_back("Q_FOREACH");
   CHECK_PARSE("ForEachMacros: [BOOST_FOREACH, Q_FOREACH]", ForEachMacros,
               BoostAndQForeach);
+
+  Style.IfMacros.clear();
+  std::vector<std::string> CustomIfs;
+  CustomIfs.push_back("MYIF");
+  CHECK_PARSE("IfMacros: [MYIF]", IfMacros, CustomIfs);
 
   Style.AttributeMacros.clear();
   CHECK_PARSE("BasedOnStyle: LLVM", AttributeMacros,
@@ -20463,11 +21026,16 @@ TEST_F(FormatTest, AmbersandInLamda) {
 
 TEST_F(FormatTest, SpacesInConditionalStatement) {
   FormatStyle Spaces = getLLVMStyle();
+  Spaces.IfMacros.clear();
+  Spaces.IfMacros.push_back("MYIF");
   Spaces.SpacesInConditionalStatement = true;
   verifyFormat("for ( int i = 0; i; i++ )\n  continue;", Spaces);
   verifyFormat("if ( !a )\n  return;", Spaces);
   verifyFormat("if ( a )\n  return;", Spaces);
   verifyFormat("if constexpr ( a )\n  return;", Spaces);
+  verifyFormat("MYIF ( a )\n  return;", Spaces);
+  verifyFormat("MYIF ( a )\n  return;\nelse MYIF ( b )\n  return;", Spaces);
+  verifyFormat("MYIF ( a )\n  return;\nelse\n  return;", Spaces);
   verifyFormat("switch ( a )\ncase 1:\n  return;", Spaces);
   verifyFormat("while ( a )\n  return;", Spaces);
   verifyFormat("while ( (a && b) )\n  return;", Spaces);
@@ -20476,6 +21044,13 @@ TEST_F(FormatTest, SpacesInConditionalStatement) {
   // Check that space on the left of "::" is inserted as expected at beginning
   // of condition.
   verifyFormat("while ( ::func() )\n  return;", Spaces);
+
+  // Check impact of ControlStatementsExceptControlMacros is honored.
+  Spaces.SpaceBeforeParens =
+      FormatStyle::SBPO_ControlStatementsExceptControlMacros;
+  verifyFormat("MYIF( a )\n  return;", Spaces);
+  verifyFormat("MYIF( a )\n  return;\nelse MYIF( b )\n  return;", Spaces);
+  verifyFormat("MYIF( a )\n  return;\nelse\n  return;", Spaces);
 }
 
 TEST_F(FormatTest, AlternativeOperators) {

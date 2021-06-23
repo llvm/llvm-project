@@ -3124,10 +3124,7 @@ void Verifier::visitCallBase(CallBase &Call) {
          "Called function must be a pointer!", Call);
   PointerType *FPTy = cast<PointerType>(Call.getCalledOperand()->getType());
 
-  Assert(FPTy->getElementType()->isFunctionTy(),
-         "Called function is not pointer to function type!", Call);
-
-  Assert(FPTy->getElementType() == Call.getFunctionType(),
+  Assert(FPTy->isOpaqueOrPointeeTypeMatches(Call.getFunctionType()),
          "Called function is not the same type as the call!", Call);
 
   FunctionType *FTy = Call.getFunctionType();

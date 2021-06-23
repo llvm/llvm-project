@@ -23,9 +23,13 @@ typedef __sanitizer::CompactRingBuffer<uptr> StackAllocationsRingBuffer;
 
 class Thread {
  public:
-  void Init(uptr stack_buffer_start, uptr stack_buffer_size);
+  // These are optional parameters that can be passed to Init.
+  struct InitState;
+
+  void Init(uptr stack_buffer_start, uptr stack_buffer_size,
+            const InitState *state = nullptr);
   void InitRandomState();
-  void InitStackAndTls();
+  void InitStackAndTls(const InitState *state = nullptr);
 
   // Must be called from the thread itself.
   void InitStackRingBuffer(uptr stack_buffer_start, uptr stack_buffer_size);

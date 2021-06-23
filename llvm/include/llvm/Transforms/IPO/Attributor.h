@@ -4199,6 +4199,39 @@ struct AAExecutionDomain
   static const char ID;
 };
 
+/// An abstract Attribute for computing reachability between functions.
+struct AAFunctionReachability
+    : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+
+  AAFunctionReachability(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// If the function represented by this possition can reach \p Fn.
+  virtual bool canReach(Attributor &A, Function *Fn) const = 0;
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAFunctionReachability &createForPosition(const IRPosition &IRP,
+                                                   Attributor &A);
+
+  /// See AbstractAttribute::getName()
+  const std::string getName() const override { return "AAFuncitonReacability"; }
+
+  /// See AbstractAttribute::getIdAddr()
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is AACallEdges.
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+
+private:
+  /// Can this function reach a call with unknown calee.
+  virtual bool canReachUnknownCallee() const = 0;
+};
+
 /// Run options, used by the pass manager.
 enum AttributorRunOption {
   NONE = 0,

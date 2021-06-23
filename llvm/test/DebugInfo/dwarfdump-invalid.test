@@ -1,6 +1,0 @@
-; Verify that llvm-dwarfdump doesn't crash on broken input files.
-
-RUN: not llvm-dwarfdump %p/Inputs/invalid.elf 2>&1 | FileCheck %s --check-prefix=INVALID-ELF
-RUN: not llvm-dwarfdump %p/Inputs/invalid.elf.2 2>&1 | FileCheck %s --check-prefix=INVALID-ELF
-RUN: not llvm-dwarfdump %p/Inputs/invalid.elf.3 2>&1 | FileCheck %s --check-prefix=INVALID-ELF
-INVALID-ELF: Invalid data was encountered while parsing the file

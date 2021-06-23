@@ -52,6 +52,7 @@ namespace format {
   TYPE(FunctionDeclarationName)                                                \
   TYPE(FunctionLBrace)                                                         \
   TYPE(FunctionTypeLParen)                                                     \
+  TYPE(IfMacro)                                                                \
   TYPE(ImplicitStringLiteral)                                                  \
   TYPE(InheritanceColon)                                                       \
   TYPE(InheritanceComma)                                                       \

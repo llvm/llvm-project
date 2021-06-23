@@ -99,7 +99,7 @@ private:
   /// The order is the file from which the diff is found.
   InterfaceInputOrder Order;
   const MachO::Symbol *Val;
-  std::string stringifySymbolKind(MachO::SymbolKind Kind);
+  StringLiteral getSymbolNamePrefix(MachO::SymbolKind Kind);
   std::string stringifySymbolFlag(MachO::SymbolFlags Flag);
 };
 
