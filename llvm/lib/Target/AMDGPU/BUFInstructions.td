@@ -1924,13 +1924,6 @@ class MUBUF_Real_gfx6_gfx7<bits<8> op, MUBUF_Pseudo ps> :
 //===----------------------------------------------------------------------===//
 
 let AssemblerPredicate = isGFX10Plus, DecoderNamespace = "GFX10" in {
-  multiclass MUBUF_Real_gfx10_with_name<bits<8> op, string opName,
-                                        string asmName> {
-    def _gfx10 : MUBUF_Real_gfx10<op, !cast<MUBUF_Pseudo>(opName)> {
-      MUBUF_Pseudo ps = !cast<MUBUF_Pseudo>(opName);
-      let AsmString = asmName # ps.AsmOperands;
-    }
-  }
   multiclass MUBUF_Real_AllAddr_gfx10<bits<8> op> {
     def _BOTHEN_gfx10 :
       MUBUF_Real_gfx10<op, !cast<MUBUF_Pseudo>(NAME#"_BOTHEN")>;
