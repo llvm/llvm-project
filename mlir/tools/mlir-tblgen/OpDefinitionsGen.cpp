@@ -669,6 +669,8 @@ void OpEmitter::genAttrNameGetters() {
       body << "};\n  return ::llvm::makeArrayRef(attrNames);";
     }
   }
+  if (attributeNames.empty())
+    return;
 
   // Emit the getAttributeNameForIndex methods.
   {
