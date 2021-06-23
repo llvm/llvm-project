@@ -335,7 +335,7 @@ private:
 
   void refineUsesAlignment(Value *Ptr, Align A, const DataLayout &DL,
                            unsigned MaxDepth = 5) {
-    if (!MaxDepth)
+    if (!MaxDepth || A == 1)
       return;
 
     for (User *U : Ptr->users()) {
@@ -344,15 +344,20 @@ private:
         continue;
       }
       if (auto *SI = dyn_cast<StoreInst>(U)) {
-        SI->setAlignment(std::max(A, SI->getAlign()));
+        if (SI->getPointerOperand() == Ptr)
+          SI->setAlignment(std::max(A, SI->getAlign()));
         continue;
       }
       if (auto *AI = dyn_cast<AtomicRMWInst>(U)) {
-        AI->setAlignment(std::max(A, AI->getAlign()));
+        // None of atomicrmw operations can work on pointers, but let's
+        // check it anyway in case it will or we will process ConstantExpr.
+        if (AI->getPointerOperand() == Ptr)
+          AI->setAlignment(std::max(A, AI->getAlign()));
         continue;
       }
       if (auto *AI = dyn_cast<AtomicCmpXchgInst>(U)) {
-        AI->setAlignment(std::max(A, AI->getAlign()));
+        if (AI->getPointerOperand() == Ptr)
+          AI->setAlignment(std::max(A, AI->getAlign()));
         continue;
       }
       if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {

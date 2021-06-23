@@ -6,6 +6,7 @@
 ; CHECK: %llvm.amdgcn.kernel.k1.lds.t = type { [32 x i8] }
 ; CHECK: %llvm.amdgcn.kernel.k2.lds.t = type { i16, [2 x i8], i16 }
 ; CHECK: %llvm.amdgcn.kernel.k3.lds.t = type { [32 x i64], [32 x i32] }
+; CHECK: %llvm.amdgcn.kernel.k4.lds.t = type { [2 x i32 addrspace(3)*] }
 
 ; CHECK-NOT: @lds.1
 @lds.1 = internal unnamed_addr addrspace(3) global [32 x i8] undef, align 1
@@ -16,6 +17,9 @@
 ; CHECK: @llvm.amdgcn.kernel.k2.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k2.lds.t undef, align 4
 ; SUPER-ALIGN_ON:  @llvm.amdgcn.kernel.k3.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k3.lds.t undef, align 16
 ; SUPER-ALIGN_OFF: @llvm.amdgcn.kernel.k3.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k3.lds.t undef, align 8
+
+; SUPER-ALIGN_ON:  @llvm.amdgcn.kernel.k4.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k4.lds.t undef, align 16
+; SUPER-ALIGN_OFF: @llvm.amdgcn.kernel.k4.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k4.lds.t undef, align 4
 
 ; CHECK-LABEL: @k1
 ; CHECK:  %1 = getelementptr inbounds [32 x i8], [32 x i8] addrspace(3)* getelementptr inbounds (%llvm.amdgcn.kernel.k1.lds.t, %llvm.amdgcn.kernel.k1.lds.t addrspace(3)* @llvm.amdgcn.kernel.k1.lds, i32 0, i32 0), i32 0, i32 0
@@ -125,5 +129,26 @@ define amdgpu_kernel void @k3(i64 %x) {
   store i32 23, i32* %ptr3.ac, align 4
   store i32 24, i32* %ptr4.ac, align 4
 
+  ret void
+}
+
+@lds.6 = internal unnamed_addr addrspace(3) global [2 x i32 addrspace(3)*] undef, align 4
+
+; Check that aligment is not propagated if use is not a pointer operand.
+
+; CHECK-LABEL: @k4
+; SUPER-ALIGN_ON:  store i32 undef, i32 addrspace(3)* %ptr, align 8
+; SUPER-ALIGN_OFF: store i32 undef, i32 addrspace(3)* %ptr, align 4
+; CHECK:           store i32 addrspace(3)* %ptr, i32 addrspace(3)** undef, align 4
+; SUPER-ALIGN_ON:  %val1 = cmpxchg volatile i32 addrspace(3)* %ptr, i32 1, i32 2 monotonic monotonic, align 8
+; SUPER-ALIGN_OFF: %val1 = cmpxchg volatile i32 addrspace(3)* %ptr, i32 1, i32 2 monotonic monotonic, align 4
+; CHECK:           %val2 = cmpxchg volatile i32 addrspace(3)** undef, i32 addrspace(3)* %ptr, i32 addrspace(3)* undef monotonic monotonic, align 4
+define amdgpu_kernel void @k4() {
+  %gep = getelementptr inbounds i32 addrspace(3)*, i32 addrspace(3)* addrspace(3)* bitcast ([2 x i32 addrspace(3)*] addrspace(3)* @lds.6 to i32 addrspace(3)* addrspace(3)*), i64 1
+  %ptr = bitcast i32 addrspace(3)* addrspace(3)* %gep to i32 addrspace(3)*
+  store i32 undef, i32 addrspace(3)* %ptr, align 4
+  store i32 addrspace(3)* %ptr, i32 addrspace(3)** undef, align 4
+  %val1 = cmpxchg volatile i32 addrspace(3)* %ptr, i32 1, i32 2 monotonic monotonic, align 4
+  %val2 = cmpxchg volatile i32 addrspace(3)** undef, i32 addrspace(3)* %ptr, i32 addrspace(3)* undef monotonic monotonic, align 4
   ret void
 }
