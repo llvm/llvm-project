@@ -559,6 +559,7 @@ static bool hasSizeMismatch(ArrayRef<OpPassManager> lhs,
 /// Run this pass adaptor synchronously.
 void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
   AnalysisManager am = getAnalysisManager();
+  MLIRContext *context = &getContext();
 
   // Create the async executors if they haven't been created, or if the main
   // pipeline has changed.
@@ -574,8 +575,7 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
     for (auto &block : region) {
       for (auto &op : block) {
         // Add this operation iff the name matches any of the pass managers.
-        if (findPassManagerFor(mgrs, op.getName().getIdentifier(),
-                               getContext()))
+        if (findPassManagerFor(mgrs, op.getName().getIdentifier(), *context))
           opAMPairs.emplace_back(&op, am.nest(&op));
       }
     }
@@ -598,9 +598,9 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
     unsigned pmIndex = it - activePMs.begin();
 
     // Get the pass manager for this operation and execute it.
-    auto *pm = findPassManagerFor(asyncExecutors[pmIndex],
-                                  opPMPair.first->getName().getIdentifier(),
-                                  getContext());
+    auto *pm =
+        findPassManagerFor(asyncExecutors[pmIndex],
+                           opPMPair.first->getName().getIdentifier(), *context);
     assert(pm && "expected valid pass manager for operation");
 
     unsigned initGeneration = pm->impl->initializationGeneration;
@@ -614,7 +614,7 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
   };
 
   // Signal a failure if any of the executors failed.
-  if (failed(failableParallelForEach(&getContext(), opAMPairs, processFn)))
+  if (failed(failableParallelForEach(context, opAMPairs, processFn)))
     signalPassFailure();
 }
 
