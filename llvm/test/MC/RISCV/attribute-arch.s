@@ -9,9 +9,6 @@
 .attribute arch, "rv32i2"
 # CHECK: attribute      5, "rv32i2p0"
 
-.attribute arch, "rv32i2p"
-# CHECK: attribute      5, "rv32i2p0"
-
 .attribute arch, "rv32i2p0"
 # CHECK: attribute      5, "rv32i2p0"
 
@@ -33,11 +30,11 @@
 .attribute arch, "rv32ima2p0_fdc"
 # CHECK: attribute      5, "rv32i2p0_m2p0_a2p0_f2p0_d2p0_c2p0"
 
-.attribute arch, "rv32ima2p_fdc"
+.attribute arch, "rv32ima2p0_fdc"
 # CHECK: attribute      5, "rv32i2p0_m2p0_a2p0_f2p0_d2p0_c2p0"
 
 .attribute arch, "rv32iv"
-# CHECK: attribute      5, "rv32i2p0_v0p10"
+# CHECK: attribute      5, "rv32i2p0_v0p10_zvlsseg0p10"
 
 .attribute arch, "rv32izba"
 # CHECK: attribute      5, "rv32i2p0_zba1p0"

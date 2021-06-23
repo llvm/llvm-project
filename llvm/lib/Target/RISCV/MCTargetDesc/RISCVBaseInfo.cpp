@@ -14,9 +14,14 @@
 #include "RISCVBaseInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
+
+extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
+
 namespace RISCVSysReg {
 #define GET_SysRegsList_IMPL
 #include "RISCVGenSearchableTables.inc"
@@ -94,6 +99,15 @@ void validate(const Triple &TT, const FeatureBitset &FeatureBits) {
     report_fatal_error("RV32 target requires an RV32 CPU");
   if (TT.isArch64Bit() && FeatureBits[RISCV::FeatureRV32E])
     report_fatal_error("RV32E can't be enabled for an RV64 target");
+}
+
+void toFeatureVector(std::vector<std::string> &FeatureVector,
+                     const FeatureBitset &FeatureBits) {
+  for (auto Feature : RISCVFeatureKV) {
+    if (FeatureBits[Feature.Value] &&
+        llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.Key))
+      FeatureVector.push_back(std::string("+") + Feature.Key);
+  }
 }
 
 } // namespace RISCVFeatures
