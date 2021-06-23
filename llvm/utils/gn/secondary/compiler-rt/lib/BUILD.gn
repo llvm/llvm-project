@@ -1,13 +1,15 @@
 group("lib") {
   deps = [ "//compiler-rt/lib/profile" ]
   if (current_os == "linux") {
-    deps += [ "//compiler-rt/lib/msan" ]
+    deps += [
+      "//compiler-rt/lib/msan",
+      "//compiler-rt/lib/ubsan_minimal",
+     ]
   }
   if (current_os != "win") {
     deps += [
       "//compiler-rt/lib/asan",
       "//compiler-rt/lib/builtins",
-      "//compiler-rt/lib/ubsan_minimal",
     ]
     if (current_cpu == "x64" || current_cpu == "arm64") {
       deps += [ "//compiler-rt/lib/tsan" ]
