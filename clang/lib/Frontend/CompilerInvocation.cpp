@@ -1859,13 +1859,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
           << A->getSpelling() << T.str();
 
     const Option &O = A->getOption();
-    if (O.matches(OPT_mabi_EQ_vec_default))
-      Diags.Report(diag::err_aix_default_altivec_abi)
-          << A->getSpelling() << T.str();
-    else {
-      assert(O.matches(OPT_mabi_EQ_vec_extabi));
-      Opts.EnableAIXExtendedAltivecABI = 1;
-    }
+    Opts.EnableAIXExtendedAltivecABI = O.matches(OPT_mabi_EQ_vec_extabi);
   }
 
   bool NeedLocTracking = false;
