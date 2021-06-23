@@ -217,7 +217,7 @@ def FillOp : LinalgStructured_Op<"fill", []> {
   }];
 
   let builders = [
-    OpBuilder<(ins "Value":$output, "Value":$value)>
+    OpBuilder<(ins "Value":$value, "Value":$output)>
   ];
 
   let verifier = [{ return ::verify(*this); }];

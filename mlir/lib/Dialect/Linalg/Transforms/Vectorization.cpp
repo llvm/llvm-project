@@ -756,7 +756,7 @@ struct GenericPadTensorOpVectorizationPattern
     // pattern.)
     auto padValue = padOp.getConstantPaddingValue();
     if (padValue)
-      return rewriter.create<FillOp>(padOp.getLoc(), dest, padValue).result();
+      return rewriter.create<FillOp>(padOp.getLoc(), padValue, dest).result();
 
     // Fill could not be vectorized: Lower to tensor::GenerateOp with region.
     auto generateOp = rewriter.create<tensor::GenerateOp>(

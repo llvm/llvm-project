@@ -676,7 +676,7 @@ LogicalResult PadTensorOpTransformationPattern::matchAndRewrite(
 
   // Initialize tensor with the pad value
   Value tmpTensor =
-      rewriter.create<linalg::FillOp>(loc, initTensor, padValue).result();
+      rewriter.create<linalg::FillOp>(loc, padValue, initTensor).result();
 
   // Copy original contents into new tensor
   // Uses linalg.generic, but could be done with tensor.insert_slice
