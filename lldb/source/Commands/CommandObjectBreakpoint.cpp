@@ -1798,7 +1798,7 @@ public:
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     if (!m_name_options.m_name.OptionWasSet()) {
-      result.SetError("No name option provided.");
+      result.AppendError("No name option provided.");
       return false;
     }
 
@@ -1812,7 +1812,7 @@ protected:
 
     size_t num_breakpoints = breakpoints.GetSize();
     if (num_breakpoints == 0) {
-      result.SetError("No breakpoints, cannot add names.");
+      result.AppendError("No breakpoints, cannot add names.");
       return false;
     }
 
@@ -1824,7 +1824,7 @@ protected:
 
     if (result.Succeeded()) {
       if (valid_bp_ids.GetSize() == 0) {
-        result.SetError("No breakpoints specified, cannot add names.");
+        result.AppendError("No breakpoints specified, cannot add names.");
         return false;
       }
       size_t num_valid_ids = valid_bp_ids.GetSize();
@@ -1883,7 +1883,7 @@ public:
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     if (!m_name_options.m_name.OptionWasSet()) {
-      result.SetError("No name option provided.");
+      result.AppendError("No name option provided.");
       return false;
     }
 
@@ -1897,7 +1897,7 @@ protected:
 
     size_t num_breakpoints = breakpoints.GetSize();
     if (num_breakpoints == 0) {
-      result.SetError("No breakpoints, cannot delete names.");
+      result.AppendError("No breakpoints, cannot delete names.");
       return false;
     }
 
@@ -1909,7 +1909,7 @@ protected:
 
     if (result.Succeeded()) {
       if (valid_bp_ids.GetSize() == 0) {
-        result.SetError("No breakpoints specified, cannot delete names.");
+        result.AppendError("No breakpoints specified, cannot delete names.");
         return false;
       }
       ConstString bp_name(m_name_options.m_name.GetCurrentValue());

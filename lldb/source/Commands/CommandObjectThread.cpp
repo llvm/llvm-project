@@ -1728,7 +1728,7 @@ public:
               true /* condense_trivial */, m_options.m_unreported);
           // If we didn't find a TID, stop here and return an error.
           if (!success) {
-            result.SetError("Error dumping plans:");
+            result.AppendError("Error dumping plans:");
             result.AppendError(tmp_strm.GetString());
             return false;
           }
@@ -1966,7 +1966,7 @@ public:
     TraceSP trace_sp = process_sp->GetTarget().GetTrace();
 
     if (llvm::Error err = trace_sp->Stop(tids))
-      result.SetError(toString(std::move(err)));
+      result.AppendError(toString(std::move(err)));
     else
       result.SetStatus(eReturnStatusSuccessFinishResult);
 
@@ -2091,7 +2091,7 @@ protected:
                            trace_sp->GetCursorPosition(*thread_sp)) -
                        m_consecutive_repetitions * count;
     if (position < 0)
-      result.SetError("error: no more data");
+      result.AppendError("error: no more data");
     else
       trace_sp->DumpTraceInstructions(*thread_sp, result.GetOutputStream(),
                                       count, position, m_options.m_raw);

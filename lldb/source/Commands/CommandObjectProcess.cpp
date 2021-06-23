@@ -1649,7 +1649,7 @@ public:
     TraceSP trace_sp = process_sp->GetTarget().GetTrace();
 
     if (llvm::Error err = trace_sp->Stop())
-      result.SetError(toString(std::move(err)));
+      result.AppendError(toString(std::move(err)));
     else
       result.SetStatus(eReturnStatusSuccessFinishResult);
 
