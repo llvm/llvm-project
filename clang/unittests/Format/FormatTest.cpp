@@ -1181,6 +1181,13 @@ TEST_F(FormatTest, ElseIf) {
                "  g();\n"
                "else\n"
                "  h();");
+  verifyFormat("if (a)\n"
+               "  f();\n"
+               "else // comment\n"
+               "  if (b) {\n"
+               "    g();\n"
+               "    h();\n"
+               "  }");
   verifyFormat("if constexpr (a)\n"
                "  f();\n"
                "else if constexpr (b)\n"
