@@ -484,8 +484,25 @@ ParsedType Sema::getDestructorTypeForDecltype(const DeclSpec &DS,
 }
 
 bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
-                                  const UnqualifiedId &Name) {
+                                  const UnqualifiedId &Name, bool IsUDSuffix) {
   assert(Name.getKind() == UnqualifiedIdKind::IK_LiteralOperatorId);
+  if (!IsUDSuffix) {
+    // [over.literal] p8
+    //
+    // double operator""_Bq(long double);  // OK: not a reserved identifier
+    // double operator"" _Bq(long double); // ill-formed, no diagnostic required
+    IdentifierInfo *II = Name.Identifier;
+    ReservedIdentifierStatus Status = II->isReserved(PP.getLangOpts());
+    SourceLocation Loc = Name.getEndLoc();
+    if (Status != ReservedIdentifierStatus::NotReserved &&
+        !PP.getSourceManager().isInSystemHeader(Loc)) {
+      Diag(Loc, diag::warn_reserved_extern_symbol)
+          << II << static_cast<int>(Status)
+          << FixItHint::CreateReplacement(
+                 Name.getSourceRange(),
+                 (StringRef("operator\"\"") + II->getName()).str());
+    }
+  }
 
   if (!SS.isValid())
     return false;
