@@ -263,11 +263,15 @@ static cl::extrahelp
 /// @}
 //===----------------------------------------------------------------------===//
 
-static void error(StringRef Prefix, std::error_code EC) {
-  if (!EC)
+static void error(StringRef Prefix, Error Err) {
+  if (!Err)
     return;
-  WithColor::error() << Prefix << ": " << EC.message() << "\n";
+  WithColor::error() << Prefix << ": " << toString(std::move(Err)) << "\n";
   exit(1);
+}
+
+static void error(StringRef Prefix, std::error_code EC) {
+  error(Prefix, errorCodeToError(EC));
 }
 
 static DIDumpOptions getDumpOpts(DWARFContext &C) {
@@ -508,13 +512,13 @@ static bool handleArchive(StringRef Filename, Archive &Arch,
   Error Err = Error::success();
   for (auto Child : Arch.children(Err)) {
     auto BuffOrErr = Child.getMemoryBufferRef();
-    error(Filename, errorToErrorCode(BuffOrErr.takeError()));
+    error(Filename, BuffOrErr.takeError());
     auto NameOrErr = Child.getName();
-    error(Filename, errorToErrorCode(NameOrErr.takeError()));
+    error(Filename, NameOrErr.takeError());
     std::string Name = (Filename + "(" + NameOrErr.get() + ")").str();
     Result &= handleBuffer(Name, BuffOrErr.get(), HandleObj, OS);
   }
-  error(Filename, errorToErrorCode(std::move(Err)));
+  error(Filename, std::move(Err));
 
   return Result;
 }
@@ -522,7 +526,7 @@ static bool handleArchive(StringRef Filename, Archive &Arch,
 static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
                          HandlerFn HandleObj, raw_ostream &OS) {
   Expected<std::unique_ptr<Binary>> BinOrErr = object::createBinary(Buffer);
-  error(Filename, errorToErrorCode(BinOrErr.takeError()));
+  error(Filename, BinOrErr.takeError());
 
   bool Result = true;
   auto RecoverableErrorHandler = [&](Error E) {
@@ -553,7 +557,7 @@ static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
       } else
         consumeError(MachOOrErr.takeError());
       if (auto ArchiveOrErr = ObjForArch.getAsArchive()) {
-        error(ObjName, errorToErrorCode(ArchiveOrErr.takeError()));
+        error(ObjName, ArchiveOrErr.takeError());
         if (!handleArchive(ObjName, *ArchiveOrErr.get(), HandleObj, OS))
           Result = false;
         continue;
