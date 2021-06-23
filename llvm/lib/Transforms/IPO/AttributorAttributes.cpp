@@ -136,6 +136,7 @@ PIPE_OPERATOR(AAUndefinedBehavior)
 PIPE_OPERATOR(AAPotentialValues)
 PIPE_OPERATOR(AANoUndef)
 PIPE_OPERATOR(AACallEdges)
+PIPE_OPERATOR(AAFunctionReachability)
 
 #undef PIPE_OPERATOR
 } // namespace llvm
@@ -8276,6 +8277,118 @@ struct AACallEdgesFunction : public AACallEdges {
   bool HasUnknownCallee = false;
 };
 
+struct AAFunctionReachabilityFunction : public AAFunctionReachability {
+  AAFunctionReachabilityFunction(const IRPosition &IRP, Attributor &A)
+      : AAFunctionReachability(IRP, A) {}
+
+  bool canReach(Attributor &A, Function *Fn) const override {
+    // Assume that we can reach any function if we can reach a call with
+    // unknown callee.
+    if (CanReachUnknownCallee)
+      return true;
+
+    if (ReachableQueries.count(Fn))
+      return true;
+
+    if (UnreachableQueries.count(Fn))
+      return false;
+
+    const AACallEdges &AAEdges =
+        A.getAAFor<AACallEdges>(*this, getIRPosition(), DepClassTy::REQUIRED);
+
+    const SetVector<Function *> &Edges = AAEdges.getOptimisticEdges();
+    bool Result = checkIfReachable(A, Edges, Fn);
+
+    // Attributor returns attributes as const, so this function has to be
+    // const for users of this attribute to use it without having to do
+    // a const_cast.
+    // This is a hack for us to be able to cache queries.
+    auto *NonConstThis = const_cast<AAFunctionReachabilityFunction *>(this);
+
+    if (Result)
+      NonConstThis->ReachableQueries.insert(Fn);
+    else
+      NonConstThis->UnreachableQueries.insert(Fn);
+
+    return Result;
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    if (CanReachUnknownCallee)
+      return ChangeStatus::UNCHANGED;
+
+    const AACallEdges &AAEdges =
+        A.getAAFor<AACallEdges>(*this, getIRPosition(), DepClassTy::REQUIRED);
+    const SetVector<Function *> &Edges = AAEdges.getOptimisticEdges();
+    ChangeStatus Change = ChangeStatus::UNCHANGED;
+
+    if (AAEdges.hasUnknownCallee()) {
+      bool OldCanReachUnknown = CanReachUnknownCallee;
+      CanReachUnknownCallee = true;
+      return OldCanReachUnknown ? ChangeStatus::UNCHANGED
+                                : ChangeStatus::CHANGED;
+    }
+
+    // Check if any of the unreachable functions become reachable.
+    for (auto Current = UnreachableQueries.begin();
+         Current != UnreachableQueries.end();) {
+      if (!checkIfReachable(A, Edges, *Current)) {
+        Current++;
+        continue;
+      }
+      ReachableQueries.insert(*Current);
+      UnreachableQueries.erase(*Current++);
+      Change = ChangeStatus::CHANGED;
+    }
+
+    return Change;
+  }
+
+  const std::string getAsStr() const override {
+    size_t QueryCount = ReachableQueries.size() + UnreachableQueries.size();
+
+    return "FunctionReachability [" + std::to_string(ReachableQueries.size()) +
+           "," + std::to_string(QueryCount) + "]";
+  }
+
+  void trackStatistics() const override {}
+
+private:
+  bool canReachUnknownCallee() const override { return CanReachUnknownCallee; }
+
+  bool checkIfReachable(Attributor &A, const SetVector<Function *> &Edges,
+                        Function *Fn) const {
+    if (Edges.count(Fn))
+      return true;
+
+    for (Function *Edge : Edges) {
+      // We don't need a dependency if the result is reachable.
+      const AAFunctionReachability &EdgeReachability =
+          A.getAAFor<AAFunctionReachability>(*this, IRPosition::function(*Edge),
+                                             DepClassTy::NONE);
+
+      if (EdgeReachability.canReach(A, Fn))
+        return true;
+    }
+    for (Function *Fn : Edges)
+      A.getAAFor<AAFunctionReachability>(*this, IRPosition::function(*Fn),
+                                         DepClassTy::REQUIRED);
+
+    return false;
+  }
+
+  /// Set of functions that we know for sure is reachable.
+  SmallPtrSet<Function *, 8> ReachableQueries;
+
+  /// Set of functions that are unreachable, but might become reachable.
+  SmallPtrSet<Function *, 8> UnreachableQueries;
+
+  /// If we can reach a function with a call to a unknown function we assume
+  /// that we can reach any function.
+  bool CanReachUnknownCallee = false;
+};
+
 } // namespace
 
 AACallGraphNode *AACallEdgeIterator::operator*() const {
@@ -8311,6 +8424,7 @@ const char AAValueConstantRange::ID = 0;
 const char AAPotentialValues::ID = 0;
 const char AANoUndef::ID = 0;
 const char AACallEdges::ID = 0;
+const char AAFunctionReachability::ID = 0;
 
 // Macro magic to create the static generator function for attributes that
 // follow the naming scheme.
@@ -8431,6 +8545,7 @@ CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAHeapToStack)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAReachability)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAUndefinedBehavior)
 CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AACallEdges)
+CREATE_FUNCTION_ONLY_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAFunctionReachability)
 
 CREATE_NON_RET_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAMemoryBehavior)
 
