@@ -180,6 +180,11 @@ extern "C" {
  */
 #define AMD_COMGR_VERSION_2_3
 
+/**
+ * The function was introduced or changed in version 2.4 of the interface
+ * and has the symbol version string of ``"@amd_comgr_NAME@_2.4"``.
+ */
+#define AMD_COMGR_VERSION_2_4
 
 /** @} */
 
@@ -388,6 +393,16 @@ typedef struct amd_comgr_symbol_s {
 typedef struct amd_comgr_disassembly_info_s {
   uint64_t handle;
 } amd_comgr_disassembly_info_t;
+
+/**
+ * @brief A handle to a symbolizer information object.
+ *
+ * A symbolizer information object holds all the necessary information
+ * required to perform symbolization.
+ */
+typedef struct amd_comgr_symbolizer_info_s {
+  uint64_t handle;
+} amd_comgr_symbolizer_info_t;
 
 /**
  * @brief Return the number of isa names supported by this version of
@@ -717,6 +732,95 @@ amd_comgr_get_data_isa_name(
   amd_comgr_data_t data,
   size_t *size,
   char *isa_name) AMD_COMGR_VERSION_2_0;
+
+/**
+ * @brief Create a symbolizer info object.
+ *
+ * @param[in] code_object A data object denoting a code object for which
+ * symbolization should be performed. The kind of this object must be
+ * ::AMD_COMGR_DATA_KIND_RELOCATABLE, ::AMD_COMGR_DATA_KIND_EXECUTABLE,
+ * or ::AMD_COMGR_DATA_KIND_BYTES.
+ *
+ * @param[in] print_symbol_callback Function called by a successfull
+ * symbolize query. @p symbol is a null-terminated string containing the
+ * symbolization of the address and @p user_data is an arbitary user data.
+ * The callback does not own @p symbol, and it cannot be referenced once
+ * the callback returns.
+ *
+ * @param[out] symbolizer_info A handle to the symbolizer info object created.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The function has been executed
+ * successfully.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT if @p code_object is
+ * invalid or @p print_symbol_callback is null.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
+ * Unable to create @p symbolizer_info as out of resources.
+ */
+amd_comgr_status_t AMD_COMGR_API
+amd_comgr_create_symbolizer_info(
+    amd_comgr_data_t code_object,
+    void (*print_symbol_callback)(
+      const char *symbol,
+      void *user_data),
+    amd_comgr_symbolizer_info_t *symbolizer_info) AMD_COMGR_VERSION_2_4;
+
+/**
+ * @brief Destroy symbolizer info object.
+ *
+ * @param[in] symbolizer_info A handle to symbolizer info object to destroy.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS on successful execution.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT if @p
+ * symbolizer_info is invalid.
+ */
+amd_comgr_status_t AMD_COMGR_API
+amd_comgr_destroy_symbolizer_info(
+    amd_comgr_symbolizer_info_t symbolizer_info) AMD_COMGR_VERSION_2_4;
+
+/**
+ * @brief Symbolize an address.
+ *
+ * The @p address is symbolized using the symbol definitions of the
+ * @p code_object specified when the @p symbolizer_info was created.
+ * The @p print_symbol_callback callback function specified when the
+ * @p symbolizer_info was created is called passing the
+ * symbolization result as @p symbol and @p user_data value.
+ *
+ * If symbolization is not possible ::AMD_COMGR_STATUS_SUCCESS is returned and
+ * the string passed to the @p symbol argument of the @p print_symbol_callback
+ * specified when the @p symbolizer_info was created contains the text
+ * "<invalid>" or "??". This is consistent with `llvm-symbolizer` utility.
+ *
+ * @param[in] symbolizer_info A handle to symbolizer info object which should be
+ * used to symbolize the @p address.
+ *
+ * @param[in] address An unrelocated ELF address to which symbolization
+ * query should be performed.
+ *
+ * @param[in] is_code if true, the symbolizer symbolize the address as code
+ * and the symbolization result contains filename, function name, line number
+ * and column number, else the symbolizer symbolize the address as data and
+ * the symbolizaion result contains symbol name, symbol's starting address
+ * and symbol size.
+ *
+ * @param[in] user_data Arbitrary user-data passed to @p print_symbol_callback
+ * callback as described for @p symbolizer_info argument.
+ *
+ * @retval ::AMD_COMGR_STATUS_SUCCESS The function has
+ * been executed successfully.
+ *
+ * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p
+ * symbolizer_info is an invalid data object.
+ */
+amd_comgr_status_t AMD_COMGR_API
+amd_comgr_symbolize(
+    amd_comgr_symbolizer_info_t symbolizer_info,
+    uint64_t address,
+    bool is_code,
+    void *user_data) AMD_COMGR_VERSION_2_4;
 
  /**
  * @brief Get a handle to the metadata of a data object.

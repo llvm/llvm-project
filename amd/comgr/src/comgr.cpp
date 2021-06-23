@@ -42,6 +42,7 @@
 #include "comgr-objdump.h"
 #include "comgr-signal.h"
 #include "comgr-symbol.h"
+#include "comgr-symbolizer.h"
 
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -740,6 +741,56 @@ amd_comgr_status_t AMD_COMGR_API
   }
 
   return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t AMD_COMGR_API
+    // NOLINTNEXTLINE(readability-identifier-naming)
+    amd_comgr_create_symbolizer_info
+    //
+    (amd_comgr_data_t CodeObject,
+     void (*PrintSymbolCallback)(const char *, void *),
+     amd_comgr_symbolizer_info_t *SymbolizerInfo) {
+
+  DataObject *CodeObjectP = DataObject::convert(CodeObject);
+  if (!CodeObjectP || !PrintSymbolCallback ||
+      !(CodeObjectP->DataKind == AMD_COMGR_DATA_KIND_RELOCATABLE ||
+        CodeObjectP->DataKind == AMD_COMGR_DATA_KIND_EXECUTABLE ||
+        CodeObjectP->DataKind == AMD_COMGR_DATA_KIND_BYTES))
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+
+  ensureLLVMInitialized();
+
+  return Symbolizer::create(CodeObjectP, PrintSymbolCallback, SymbolizerInfo);
+}
+
+amd_comgr_status_t AMD_COMGR_API
+    // NOLINTNEXTLINE(readability-identifier-naming)
+    amd_comgr_destroy_symbolizer_info
+    //
+    (amd_comgr_symbolizer_info_t SymbolizerInfo) {
+
+  Symbolizer *SI = Symbolizer::convert(SymbolizerInfo);
+  if (!SI) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  delete SI;
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t AMD_COMGR_API
+    // NOLINTNEXTLINE(readability-identifier-naming)
+    amd_comgr_symbolize
+    //
+    (amd_comgr_symbolizer_info_t SymbolizeInfo, uint64_t Address, bool IsCode,
+     void *UserData) {
+
+  Symbolizer *SI = Symbolizer::convert(SymbolizeInfo);
+  if (!SI || !UserData) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  return SI->symbolize(Address, IsCode, UserData);
 }
 
 amd_comgr_status_t AMD_COMGR_API

@@ -137,6 +137,7 @@ add_comgr_test(options_test)
 add_comgr_test(demangle_test)
 add_comgr_test(file_map)
 add_comgr_test(lookup_code_object_test)
+add_comgr_test(symbolize_test)
 
 # Test : Compile HIP tests only if HIP-Clang is installed.
 if (DEFINED HIP_COMPILER AND "${HIP_COMPILER}" STREQUAL "clang")
