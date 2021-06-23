@@ -1384,12 +1384,6 @@ RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Rem>(Range LHS,
 //                  Constraint manager implementation details
 //===----------------------------------------------------------------------===//
 
-static SymbolRef simplify(ProgramStateRef State, SymbolRef Sym) {
-  SValBuilder &SVB = State->getStateManager().getSValBuilder();
-  SVal SimplifiedVal = SVB.simplifySVal(State, SVB.makeSymbolVal(Sym));
-  return SimplifiedVal.getAsSymbol();
-}
-
 class RangeConstraintManager : public RangedConstraintManager {
 public:
   RangeConstraintManager(ExprEngine *EE, SValBuilder &SVB)
@@ -1502,9 +1496,6 @@ private:
     if (NewConstraint.isEmpty())
       // This is an infeasible assumption.
       return nullptr;
-
-    if (SymbolRef SimplifiedSym = simplify(State, Sym))
-      Sym = SimplifiedSym;
 
     if (ProgramStateRef NewState = setConstraint(State, Sym, NewConstraint)) {
       if (auto Equality = EqualityInfo::extract(Sym, Int, Adjustment)) {
@@ -1962,7 +1953,7 @@ LLVM_NODISCARD ProgramStateRef EquivalenceClass::simplify(
     SValBuilder &SVB, RangeSet::Factory &F, ProgramStateRef State) {
   SymbolSet ClassMembers = getClassMembers(State);
   for (const SymbolRef &MemberSym : ClassMembers) {
-    SymbolRef SimplifiedMemberSym = ::simplify(State, MemberSym);
+    SymbolRef SimplifiedMemberSym = ento::simplify(State, MemberSym);
     if (SimplifiedMemberSym && MemberSym != SimplifiedMemberSym) {
       EquivalenceClass ClassOfSimplifiedSym =
           EquivalenceClass::find(State, SimplifiedMemberSym);
@@ -2288,7 +2279,6 @@ RangeConstraintManager::assumeSymNE(ProgramStateRef St, SymbolRef Sym,
     return St;
 
   llvm::APSInt Point = AdjustmentType.convert(Int) - Adjustment;
-
   RangeSet New = getRange(St, Sym);
   New = F.deletePoint(New, Point);
 
