@@ -414,9 +414,8 @@ define float @reduce_precision_fmf(float %x, float %y) {
 
 define float @negated_op(float %x) {
 ; CHECK-LABEL: @negated_op(
-; CHECK-NEXT:    [[NEGX:%.*]] = fneg float [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.maximum.f32(float [[X]], float [[NEGX]])
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %negx = fneg float %x
   %r = call float @llvm.maximum.f32(float %x, float %negx)
@@ -425,9 +424,8 @@ define float @negated_op(float %x) {
 
 define <2 x double> @negated_op_fmf_commute_vec(<2 x double> %x) {
 ; CHECK-LABEL: @negated_op_fmf_commute_vec(
-; CHECK-NEXT:    [[NEGX:%.*]] = fneg <2 x double> [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call nnan ninf nsz <2 x double> @llvm.maximum.v2f64(<2 x double> [[NEGX]], <2 x double> [[X]])
-; CHECK-NEXT:    ret <2 x double> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf nsz <2 x double> @llvm.fabs.v2f64(<2 x double> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %negx = fneg <2 x double> %x
   %r = call nsz nnan ninf <2 x double> @llvm.maximum.v2f64(<2 x double> %negx, <2 x double> %x)
