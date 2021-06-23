@@ -181,7 +181,7 @@ RUN: ld.lld -### -m i386pep foo.o --icf=all 2>&1 | FileCheck -check-prefix ICF %
 RUN: ld.lld -### -m i386pep foo.o -icf=all 2>&1 | FileCheck -check-prefix ICF %s
 ICF: -opt:icf
 
-RUN: ld.lld -### -m i386pep --start-group foo.o --end-group
+RUN: ld.lld -### -m i386pep --start-group foo.o --end-group 2> /dev/null
 
 RUN: ld.lld -### foo.o -m i386pe -shared --kill-at 2>&1 | FileCheck -check-prefix=KILL-AT %s
 RUN: ld.lld -### foo.o -m i386pe -shared -kill-at 2>&1 | FileCheck -check-prefix=KILL-AT %s
