@@ -24,9 +24,9 @@
 ; Use in func rewritten to access struct at address zero
 ; CHECK-LABEL: @func()
 ; CHECK: %dec = atomicrmw fsub float addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 0), float 1.0
-; CHECK: %val0 = load i32, i32 addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 2), align 4
+; CHECK: %val0 = load i32, i32 addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 2), align 8
 ; CHECK: %val1 = add i32 %val0, 4
-; CHECK: store i32 %val1, i32 addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 2), align 4
+; CHECK: store i32 %val1, i32 addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 2), align 8
 ; CHECK: %unused0 = atomicrmw add i64 addrspace(3)* @with_init, i64 1 monotonic
 define void @func() {
   %dec = atomicrmw fsub float addrspace(3)* @var0, float 1.0 monotonic
@@ -41,7 +41,7 @@ define void @func() {
 ; CHECK-LABEL: @kern_call()
 ; CHECK: call void @llvm.donothing() [ "ExplicitUse"(%llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds) ]
 ; CHECK: call void @func()
-; CHECK: %dec = atomicrmw fsub float addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 0), float 2.000000e+00 monotonic, align 4
+; CHECK: %dec = atomicrmw fsub float addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 0), float 2.000000e+00 monotonic, align 8
 define amdgpu_kernel void @kern_call() {
   call void @func()
   %dec = atomicrmw fsub float addrspace(3)* @var0, float 2.0 monotonic

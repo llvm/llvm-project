@@ -309,6 +309,10 @@ private:
         UsedList.erase(GV);
         GV->eraseFromParent();
       }
+
+      uint64_t Off = DL.getStructLayout(LDSTy)->getElementOffset(I);
+      Align A = commonAlignment(StructAlign, Off);
+      refineUsesAlignment(GEP, A, DL);
     }
 
     // Mark kernels with asm that reads the address of the allocated structure
@@ -327,6 +331,46 @@ private:
       }
     }
     return true;
+  }
+
+  void refineUsesAlignment(Value *Ptr, Align A, const DataLayout &DL,
+                           unsigned MaxDepth = 5) {
+    if (!MaxDepth)
+      return;
+
+    for (User *U : Ptr->users()) {
+      if (auto *LI = dyn_cast<LoadInst>(U)) {
+        LI->setAlignment(std::max(A, LI->getAlign()));
+        continue;
+      }
+      if (auto *SI = dyn_cast<StoreInst>(U)) {
+        SI->setAlignment(std::max(A, SI->getAlign()));
+        continue;
+      }
+      if (auto *AI = dyn_cast<AtomicRMWInst>(U)) {
+        AI->setAlignment(std::max(A, AI->getAlign()));
+        continue;
+      }
+      if (auto *AI = dyn_cast<AtomicCmpXchgInst>(U)) {
+        AI->setAlignment(std::max(A, AI->getAlign()));
+        continue;
+      }
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
+        unsigned BitWidth = DL.getIndexTypeSizeInBits(GEP->getType());
+        APInt Off(BitWidth, 0);
+        if (GEP->getPointerOperand() == Ptr &&
+            GEP->accumulateConstantOffset(DL, Off)) {
+          Align GA = commonAlignment(A, Off.getLimitedValue());
+          refineUsesAlignment(GEP, GA, DL, MaxDepth - 1);
+        }
+        continue;
+      }
+      if (auto *I = dyn_cast<Instruction>(U)) {
+        if (I->getOpcode() == Instruction::BitCast ||
+            I->getOpcode() == Instruction::AddrSpaceCast)
+          refineUsesAlignment(I, A, DL, MaxDepth - 1);
+      }
+    }
   }
 };
 
