@@ -34,6 +34,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/RWMutex.h"
+#include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 
@@ -259,6 +260,9 @@ public:
   //===--------------------------------------------------------------------===//
   // Other
   //===--------------------------------------------------------------------===//
+
+  /// The thread pool to use when processing MLIR tasks in parallel.
+  llvm::ThreadPool threadPool;
 
   /// This is a list of dialects that are created referring to this context.
   /// The MLIRContext owns the objects.
@@ -569,6 +573,12 @@ void MLIRContext::disableMultithreading(bool disable) {
   impl->affineUniquer.disableMultithreading(disable);
   impl->attributeUniquer.disableMultithreading(disable);
   impl->typeUniquer.disableMultithreading(disable);
+}
+
+llvm::ThreadPool &MLIRContext::getThreadPool() {
+  assert(isMultithreadingEnabled() &&
+         "expected multi-threading to be enabled within the context");
+  return impl->threadPool;
 }
 
 void MLIRContext::enterMultiThreadedExecution() {
