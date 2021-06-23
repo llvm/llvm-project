@@ -1407,11 +1407,10 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_free_hook, void *ptr) {
 
 #if SANITIZER_AMDGPU
 DECLARE_REAL(hsa_status_t, hsa_amd_memory_pool_allocate,
-             hsa_amd_memory_pool_t memory_pool, size_t size, uint32_t flags,
-             void **ptr)
+  hsa_amd_memory_pool_t memory_pool, size_t size, uint32_t flags, void **ptr)
 DECLARE_REAL(hsa_status_t, hsa_amd_memory_pool_free, void *ptr)
 DECLARE_REAL(hsa_status_t, hsa_amd_agents_allow_access, uint32_t num_agents,
-             const hsa_agent_t *agents, const uint32_t *flags, const void *ptr)
+  const hsa_agent_t *agents, const uint32_t *flags, const void *ptr)
 
 namespace __asan {
 
@@ -1510,6 +1509,5 @@ hsa_status_t asan_hsa_amd_agents_allow_access(
     return HSA_STATUS_ERROR_FATAL;
   }
 }
-
 }  // namespace __asan
 #endif

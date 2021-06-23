@@ -250,7 +250,13 @@ typedef struct hsa_amd_memory_pool_s {
   uint64_t handle;
 } hsa_amd_memory_pool_t;
 
-typedef struct hsa_agent_s hsa_agent_t;
+typedef struct hsa_signal_s {
+  uint64_t handle;
+} hsa_signal_t;
+
+typedef struct hsa_agent_s {
+  uint64_t handle;
+} hsa_agent_t;
 
 namespace __asan {
 hsa_status_t asan_hsa_amd_memory_pool_allocate(
