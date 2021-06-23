@@ -114,3 +114,20 @@ define void @call_arg(ptr %p, i32 %a) {
   call void %p(i32 %a)
   ret void
 }
+
+; CHECK: define void @invoke(ptr %p) personality void ()* @personality {
+; CHECK:   invoke void %p()
+; CHECK:     to label %continue unwind label %cleanup
+declare void @personality()
+define void @invoke(ptr %p) personality void ()* @personality {
+  invoke void %p()
+    to label %continue unwind label %cleanup
+
+continue:
+  ret void
+
+cleanup:
+  landingpad {}
+    cleanup
+  ret void
+}
