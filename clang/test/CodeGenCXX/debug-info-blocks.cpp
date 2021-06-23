@@ -12,7 +12,9 @@ void test() {
   ^{ (void)a; };
 }
 
-// CHECK: !DISubprogram(linkageName: "__Block_byref_object_copy_",
+// CHECK: !DISubprogram(name: "__Block_byref_object_copy_",
+// CHECK-SAME:          line: 11,
 // CHECK-SAME:          DISPFlagLocalToUnit | DISPFlagDefinition
-// CHECK: !DISubprogram(linkageName: "__Block_byref_object_dispose_",
+// CHECK: !DISubprogram(name: "__Block_byref_object_dispose_",
+// CHECK-SAME:          line: 11,
 // CHECK-SAME:          DISPFlagLocalToUnit | DISPFlagDefinition
