@@ -14,6 +14,7 @@
 #include "PassDetail.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/Threading.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/ADT/STLExtras.h"
@@ -580,61 +581,40 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
     }
   }
 
-  // A parallel diagnostic handler that provides deterministic diagnostic
-  // ordering.
-  ParallelDiagnosticHandler diagHandler(&getContext());
-
-  // An index for the current operation/analysis manager pair.
-  std::atomic<unsigned> opIt(0);
-
   // Get the current thread for this adaptor.
   PassInstrumentation::PipelineParentInfo parentInfo = {llvm::get_threadid(),
                                                         this};
   auto *instrumentor = am.getPassInstrumentor();
 
   // An atomic failure variable for the async executors.
-  std::atomic<bool> passFailed(false);
-  llvm::parallelForEach(
-      asyncExecutors.begin(),
-      std::next(asyncExecutors.begin(),
-                std::min(asyncExecutors.size(), opAMPairs.size())),
-      [&](MutableArrayRef<OpPassManager> pms) {
-        for (auto e = opAMPairs.size(); !passFailed && opIt < e;) {
-          // Get the next available operation index.
-          unsigned nextID = opIt++;
-          if (nextID >= e)
-            break;
+  std::vector<std::atomic<bool>> activePMs(asyncExecutors.size());
+  std::fill(activePMs.begin(), activePMs.end(), false);
+  auto processFn = [&](auto &opPMPair) {
+    // Find a pass manager for this operation.
+    auto it = llvm::find_if(activePMs, [](std::atomic<bool> &isActive) {
+      bool expectedInactive = false;
+      return isActive.compare_exchange_strong(expectedInactive, true);
+    });
+    unsigned pmIndex = it - activePMs.begin();
 
-          // Set the order id for this thread in the diagnostic handler.
-          diagHandler.setOrderIDForThread(nextID);
+    // Get the pass manager for this operation and execute it.
+    auto *pm = findPassManagerFor(asyncExecutors[pmIndex],
+                                  opPMPair.first->getName().getIdentifier(),
+                                  getContext());
+    assert(pm && "expected valid pass manager for operation");
 
-          // Get the pass manager for this operation and execute it.
-          auto &it = opAMPairs[nextID];
-          auto *pm = findPassManagerFor(
-              pms, it.first->getName().getIdentifier(), getContext());
-          assert(pm && "expected valid pass manager for operation");
+    unsigned initGeneration = pm->impl->initializationGeneration;
+    LogicalResult pipelineResult =
+        runPipeline(pm->getPasses(), opPMPair.first, opPMPair.second,
+                    verifyPasses, initGeneration, instrumentor, &parentInfo);
 
-          unsigned initGeneration = pm->impl->initializationGeneration;
-          LogicalResult pipelineResult =
-              runPipeline(pm->getPasses(), it.first, it.second, verifyPasses,
-                          initGeneration, instrumentor, &parentInfo);
-
-          // Drop this thread from being tracked by the diagnostic handler.
-          // After this task has finished, the thread may be used outside of
-          // this pass manager context meaning that we don't want to track
-          // diagnostics from it anymore.
-          diagHandler.eraseOrderIDForThread();
-
-          // Handle a failed pipeline result.
-          if (failed(pipelineResult)) {
-            passFailed = true;
-            break;
-          }
-        }
-      });
+    // Reset the active bit for this pass manager.
+    activePMs[pmIndex].store(false);
+    return pipelineResult;
+  };
 
   // Signal a failure if any of the executors failed.
-  if (passFailed)
+  if (failed(failableParallelForEach(&getContext(), opAMPairs, processFn)))
     signalPassFailure();
 }
 
