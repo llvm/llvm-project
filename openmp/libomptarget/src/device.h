@@ -88,6 +88,10 @@ public:
   }
 
   bool isRefCountInf() const { return RefCount == INFRefCount; }
+
+  std::string refCountToStr() const {
+    return isRefCountInf() ? "INF" : std::to_string(getRefCount());
+  }
 };
 
 typedef uintptr_t HstPtrBeginTy;
