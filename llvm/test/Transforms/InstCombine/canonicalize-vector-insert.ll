@@ -109,29 +109,6 @@ define <8 x i32> @valid_insertion_h(<8 x i32> %vec, <3 x i32> %subvec) {
 }
 
 ; ============================================================================ ;
-; Invalid canonicalizations
-; ============================================================================ ;
-
-; Idx must be the be a constant multiple of the subvector's minimum vector
-; length, otherwise the result is undefined.
-define <8 x i32> @idx_not_constant_multiple(<8 x i32> %vec, <4 x i32> %subvec) {
-; CHECK-LABEL: @idx_not_constant_multiple(
-; CHECK-NEXT:    ret <8 x i32> undef
-;
-  %1 = call <8 x i32> @llvm.experimental.vector.insert.v8i32.v4i32(<8 x i32> %vec, <4 x i32> %subvec, i64 2)
-  ret <8 x i32> %1
-}
-
-; If the insertion overruns the vector, the result is undefined.
-define <8 x i32> @insert_overrun(<8 x i32> %vec, <8 x i32> %subvec) {
-; CHECK-LABEL: @insert_overrun(
-; CHECK-NEXT:    ret <8 x i32> undef
-;
-  %1 = call <8 x i32> @llvm.experimental.vector.insert.v8i32.v8i32(<8 x i32> %vec, <8 x i32> %subvec, i64 4)
-  ret <8 x i32> %1
-}
-
-; ============================================================================ ;
 ; Scalable cases
 ; ============================================================================ ;
 
