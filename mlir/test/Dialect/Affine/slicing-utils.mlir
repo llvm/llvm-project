@@ -292,18 +292,3 @@ func @slicing_test_multiple_return(%arg0: index) -> (index, index) {
   %0:2 = "slicing-test-op"(%arg0, %arg0): (index, index) -> (index, index)
   return %0#0, %0#1 : index, index
 }
-
-// This test dumps 2 sets of outputs: first the test outputs themselves followed
-// by the module. These labels isolate the test outputs from the module dump.
-// FWD-LABEL: slicing_test
-// BWD-LABEL: slicing_test
-// FWDBWD-LABEL: slicing_test
-// FWD-LABEL: slicing_test_2
-// BWD-LABEL: slicing_test_2
-// FWDBWD-LABEL: slicing_test_2
-// FWD-LABEL: slicing_test_3
-// BWD-LABEL: slicing_test_3
-// FWDBWD-LABEL: slicing_test_3
-// FWD-LABEL: slicing_test_function_argument
-// BWD-LABEL: slicing_test_function_argument
-// FWDBWD-LABEL: slicing_test_function_argument
