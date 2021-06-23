@@ -73,7 +73,7 @@
 
 
 ; LOWER_LDS-LABEL: @f1
-; LOWER_LDS:   %1 = load i16, i16 addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 1), align 2
+; LOWER_LDS:   %1 = load i16, i16 addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 1), align 16
 ; LOWER_LDS:   %2 = getelementptr i8, i8 addrspace(3)* null, i16 %1
 ; LOWER_LDS:   %3 = bitcast i8 addrspace(3)* %2 to i32 addrspace(3)*
 ; LOWER_LDS:   store i32 7, i32 addrspace(3)* %3, align 4
@@ -153,7 +153,7 @@ define void @f2() {
 ; LOWER_LDS:   %4 = ptrtoint i64 addrspace(3)* getelementptr inbounds (%llvm.amdgcn.kernel.k1.lds.t, %llvm.amdgcn.kernel.k1.lds.t addrspace(3)* @llvm.amdgcn.kernel.k1.lds, i32 0, i32 0) to i16
 ; LOWER_LDS:   store i16 %4, i16 addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 2), align 2
 ; LOWER_LDS:   %5 = ptrtoint i32 addrspace(3)* getelementptr inbounds (%llvm.amdgcn.kernel.k1.lds.t, %llvm.amdgcn.kernel.k1.lds.t addrspace(3)* @llvm.amdgcn.kernel.k1.lds, i32 0, i32 1) to i16
-; LOWER_LDS:   store i16 %5, i16 addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 1), align 2
+; LOWER_LDS:   store i16 %5, i16 addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 1), align 16
 ; LOWER_LDS:   br label %6
 ;
 ; LOWER_LDS-LABEL: 6:
@@ -177,11 +177,9 @@ define void @f2() {
 ; GCN:         s_mov_b32 s32, 0
 ; GCN:         s_and_saveexec_b64 s[0:1], vcc
 ; GCN:         s_cbranch_execz BB2_2
-; GCN:         v_mov_b32_e32 v0, 24
-; GCN:         v_mov_b32_e32 v1, 0
-; GCN:         ds_write_b16 v1, v0 offset:18
-; GCN:         v_mov_b32_e32 v0, 32
-; GCN:         ds_write_b16 v1, v0 offset:16
+; GCN:         v_mov_b32_e32 v0, 0
+; GCN:         v_mov_b32_e32 v1, 0x180020
+; GCN:         ds_write_b32 v0, v1 offset:16
 ; GCN-LABEL: BB2_2:
 ; GCN:         s_or_b64 exec, exec, s[0:1]
 ; GCN:         s_getpc_b64 s[0:1]
