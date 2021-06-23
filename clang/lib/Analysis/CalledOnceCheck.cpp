@@ -478,7 +478,7 @@ bool mentionsAnyOfConventionalNames(const Expr *E) {
     return llvm::any_of(
         CONVENTIONAL_CONDITIONS,
         [ConditionName](const llvm::StringLiteral &Conventional) {
-          return ConditionName.contains_lower(Conventional);
+          return ConditionName.contains_insensitive(Conventional);
         });
   });
 }
