@@ -251,7 +251,7 @@ protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     Status error;
     if (command.empty()) {
-      result.SetError(
+      result.AppendError(
           "trace schema cannot be invoked without a plug-in as argument");
       return false;
     }
