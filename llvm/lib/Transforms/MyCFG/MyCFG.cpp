@@ -24,10 +24,16 @@ using namespace llvm;
 void traverseCFG(Function &F) {
   outs() << "===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in df_iterator:\n";
+  auto counter = 0;
   for (auto iterator = df_begin(&F.getEntryBlock()),
            IE = df_end(&F.getEntryBlock());
        iterator != IE; ++iterator) {
     outs() << iterator->getName() << "\n";
+
+    std::string name = iterator->getName().str();
+    name.append("\\l df: ").append(std::to_string(counter));
+    iterator->setName(name);
+    counter++;
     for (auto &instruction : **iterator) {
       outs() << instruction << "\n";
     }
@@ -36,10 +42,16 @@ void traverseCFG(Function &F) {
 
   outs() << "===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in idf_iterator:\n";
+  counter = 0;
   for (auto iterator = idf_begin(&F.getEntryBlock()),
            IE = idf_end(&F.getEntryBlock());
        iterator != IE; ++iterator) {
     outs() << iterator->getName() << "\n";
+
+    std::string name = iterator->getName().str();
+    name.append("\\l idf: ").append(std::to_string(counter));
+    iterator->setName(name);
+    counter++;
     for (auto &instruction : **iterator) {
       outs() << instruction << "\n";
     }
@@ -48,10 +60,16 @@ void traverseCFG(Function &F) {
 
   outs() << "===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in bf_iterator:\n";
+  counter = 0;
   for (auto iterator = bf_begin(&F.getEntryBlock()),
            IE = bf_end(&F.getEntryBlock());
        iterator != IE; ++iterator) {
     outs() << iterator->getName() << "\n";
+
+    std::string name = iterator->getName().str();
+    name.append("\\l bf: ").append(std::to_string(counter));
+    iterator->setName(name);
+    counter++;
     for (auto &instruction : **iterator) {
       outs() << instruction << "\n";
     }
@@ -59,11 +77,35 @@ void traverseCFG(Function &F) {
   outs() << "\n\n";
 
   outs() << "===============================================\n";
+  outs() << "Basic blocks of " << F.getName() << " in scc_iterator:\n";
+  counter = 0;
+  for (auto iterator = scc_begin(&F.getEntryBlock()),
+           IE = scc_end(&F.getEntryBlock());
+       iterator != IE; ++iterator) {
+//    outs() << iterator->getName() << "\n";
+//
+//    std::string name = iterator->getName().str();
+//    name.append("\\l scc: ").append(std::to_string(counter));
+//    iterator->setName(name);
+//    counter++;
+    for (auto &instruction : *iterator) {
+      outs() << instruction << "\n";
+    }
+  }
+  outs() << "\n\n";
+
+  outs() << "===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in po_iterator:\n";
+  counter = 0;
   for (auto iterator = po_begin(&F.getEntryBlock()),
            IE = po_end(&F.getEntryBlock());
        iterator != IE; ++iterator) {
     outs() << iterator->getName() << "\n";
+
+    std::string name = iterator->getName().str();
+    name.append("\\l po: ").append(std::to_string(counter));
+    iterator->setName(name);
+    counter++;
     for (auto &instruction : **iterator) {
       outs() << instruction << "\n";
     }
@@ -83,10 +125,16 @@ void traverseCFG(Function &F) {
 
   outs() << "===============================================\n";
   outs() << "Basic blocks of " << F.getName() << " in succ_iterator:\n";
+  counter = 0;
   for (auto iterator = succ_begin(&F.getEntryBlock()),
            IE = succ_end(&F.getEntryBlock());
        iterator != IE; ++iterator) {
     outs() << iterator->getName() << "\n";
+
+    std::string name = iterator->getName().str();
+    name.append(" \\l succ: ").append(std::to_string(counter));
+    iterator->setName(name);
+    counter++;
     for (auto &instruction : **iterator) {
       outs() << instruction << "\n";
     }
@@ -119,7 +167,12 @@ void traverseCheckpoints(Function &F, int nestedLevel) {
         auto *call = &cast<CallBase>(i);
         // use this hack to check if function is external
         if (call != nullptr && call->getCalledFunction() != nullptr && !call->getCalledFunction()->empty()) {
-          outs() << prefix << "Traversing nestedLevel function " << call->getCalledFunction()->getName() << " Instruction '" << i << "'\n";
+          auto calledFunction = call->getCalledFunction()->getName();
+          if (calledFunction == F.getName()) {
+            outs() << prefix << "Recursion is detected, skip this\n";
+            continue;
+          }
+          outs() << prefix << "Traversing nestedLevel function " << calledFunction << " Instruction '" << i << "'\n";
           traverseCheckpoints(*(call->getCalledFunction()), nestedLevel + 1);
           outs() << prefix << "Finished traversing nestedLevel function " << call->getCalledFunction()->getName() << "\n";
         } else {
