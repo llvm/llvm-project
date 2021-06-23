@@ -51,11 +51,9 @@ define <2 x i32> @neg_neg_vec(<2 x i32> %A) {
   ret <2 x i32> %C
 }
 
-; TODO: these should be poison
-
 define i32 @poison1(i32 %x) {
 ; CHECK-LABEL: @poison1(
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %v = sub i32 %x, poison
   ret i32 %v
@@ -63,7 +61,7 @@ define i32 @poison1(i32 %x) {
 
 define i32 @poison2(i32 %x) {
 ; CHECK-LABEL: @poison2(
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret i32 poison
 ;
   %v = sub i32 poison, %x
   ret i32 %v
