@@ -141,6 +141,12 @@ ASM_FUNCTION_ARM_MACHO_RE = re.compile(
      r'[ \t]*\.cfi_endproc\n',
      flags=(re.M | re.S))
 
+ASM_FUNCTION_THUMB_DARWIN_RE = re.compile(
+     r'^_(?P<func>[^:]+):\n'
+     r'(?P<body>.*?)\n'
+     r'[ \t]*\.data_region\n',
+     flags=(re.M | re.S))
+
 ASM_FUNCTION_ARM_IOS_RE = re.compile(
      r'^_(?P<func>[^:]+):\n'
      r'(?P<body>.*?)'
@@ -360,8 +366,10 @@ def get_run_handler(triple):
       'i686': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
       'x86': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
       'i386': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
+      'arm64_32-apple-ios': (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
       'aarch64': (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_RE),
       'aarch64-apple-darwin': (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
+      'aarch64-apple-ios': (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
       'hexagon': (scrub_asm_hexagon, ASM_FUNCTION_HEXAGON_RE),
       'r600': (scrub_asm_amdgpu, ASM_FUNCTION_AMDGPU_RE),
       'amdgcn': (scrub_asm_amdgpu, ASM_FUNCTION_AMDGPU_RE),
@@ -374,6 +382,7 @@ def get_run_handler(triple):
       'thumb': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
       'thumb-macho': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_MACHO_RE),
       'thumbv5-macho': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_MACHO_RE),
+      'thumbv7s-apple-darwin' : (scrub_asm_arm_eabi, ASM_FUNCTION_THUMB_DARWIN_RE),
       'thumbv7-apple-ios' : (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_IOS_RE),
       'm68k': (scrub_asm_m68k, ASM_FUNCTION_M68K_RE),
       'mips': (scrub_asm_mips, ASM_FUNCTION_MIPS_RE),
