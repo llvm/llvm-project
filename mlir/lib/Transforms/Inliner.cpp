@@ -15,6 +15,7 @@
 
 #include "PassDetail.h"
 #include "mlir/Analysis/CallGraph.h"
+#include "mlir/IR/Threading.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -662,20 +663,8 @@ LogicalResult InlinerPass::optimizeSCC(CallGraph &cg, CGUseList &useList,
     return success();
 
   // Optimize each of the nodes within the SCC in parallel.
-  // NOTE: This is simple now, because we don't enable optimizing nodes within
-  // children. When we remove this restriction, this logic will need to be
-  // reworked.
-  if (context->isMultithreadingEnabled() && nodesToVisit.size() > 1) {
-    if (failed(optimizeSCCAsync(nodesToVisit, context)))
+  if (failed(optimizeSCCAsync(nodesToVisit, context)))
       return failure();
-
-    // Otherwise, we are optimizing within a single thread.
-  } else {
-    for (CallGraphNode *node : nodesToVisit) {
-      if (failed(optimizeCallable(node, opPipelines[0])))
-        return failure();
-    }
-  }
 
   // Recompute the uses held by each of the nodes.
   for (CallGraphNode *node : nodesToVisit)
@@ -685,7 +674,7 @@ LogicalResult InlinerPass::optimizeSCC(CallGraph &cg, CGUseList &useList,
 
 LogicalResult
 InlinerPass::optimizeSCCAsync(MutableArrayRef<CallGraphNode *> nodesToVisit,
-                              MLIRContext *context) {
+                              MLIRContext *ctx) {
   // Ensure that there are enough pipeline maps for the optimizer to run in
   // parallel. Note: The number of pass managers here needs to remain constant
   // to prevent issues with pass instrumentations that rely on having the same
@@ -703,35 +692,24 @@ InlinerPass::optimizeSCCAsync(MutableArrayRef<CallGraphNode *> nodesToVisit,
   for (CallGraphNode *node : nodesToVisit)
     getAnalysisManager().nest(node->getCallableRegion()->getParentOp());
 
-  // An index for the current node to optimize.
-  std::atomic<unsigned> nodeIt(0);
+  // An atomic failure variable for the async executors.
+  std::vector<std::atomic<bool>> activePMs(opPipelines.size());
+  std::fill(activePMs.begin(), activePMs.end(), false);
+  return failableParallelForEach(ctx, nodesToVisit, [&](CallGraphNode *node) {
+    // Find a pass manager for this operation.
+    auto it = llvm::find_if(activePMs, [](std::atomic<bool> &isActive) {
+      bool expectedInactive = false;
+      return isActive.compare_exchange_strong(expectedInactive, true);
+    });
+    unsigned pmIndex = it - activePMs.begin();
 
-  // Optimize the nodes of the SCC in parallel.
-  ParallelDiagnosticHandler optimizerHandler(context);
-  std::atomic<bool> passFailed(false);
-  llvm::parallelForEach(
-      opPipelines.begin(), std::next(opPipelines.begin(), numThreads),
-      [&](llvm::StringMap<OpPassManager> &pipelines) {
-        for (auto e = nodesToVisit.size(); !passFailed && nodeIt < e;) {
-          // Get the next available operation index.
-          unsigned nextID = nodeIt++;
-          if (nextID >= e)
-            break;
+    // Optimize this callable node.
+    LogicalResult result = optimizeCallable(node, opPipelines[pmIndex]);
 
-          // Set the order for this thread so that diagnostics will be
-          // properly ordered, and reset after optimization has finished.
-          optimizerHandler.setOrderIDForThread(nextID);
-          LogicalResult pipelineResult =
-              optimizeCallable(nodesToVisit[nextID], pipelines);
-          optimizerHandler.eraseOrderIDForThread();
-
-          if (failed(pipelineResult)) {
-            passFailed = true;
-            break;
-          }
-        }
-      });
-  return failure(passFailed);
+    // Reset the active bit for this pass manager.
+    activePMs[pmIndex].store(false);
+    return result;
+  });
 }
 
 LogicalResult
