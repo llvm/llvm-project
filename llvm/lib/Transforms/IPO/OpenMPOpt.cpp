@@ -27,6 +27,7 @@
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/Assumptions.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/InitializePasses.h"
@@ -73,6 +74,9 @@ STATISTIC(NumOpenMPRuntimeFunctionUsesIdentified,
           "Number of OpenMP runtime function uses identified");
 STATISTIC(NumOpenMPTargetRegionKernels,
           "Number of OpenMP target region entry points (=kernels) identified");
+STATISTIC(NumOpenMPTargetRegionKernelsSPMD,
+          "Number of OpenMP target region entry points (=kernels) executed in "
+          "SPMD-mode instead of generic-mode");
 STATISTIC(NumOpenMPTargetRegionKernelsWithoutStateMachine,
           "Number of OpenMP target region entry points (=kernels) executed in "
           "generic-mode without a state machines");
@@ -481,6 +485,10 @@ struct KernelInfoState : AbstractState {
   /// State to track what parallel region we might reach.
   BooleanStateWithPtrSetVector<CallBase> ReachedUnknownParallelRegions;
 
+  /// State to track if we are in SPMD-mode, assumed or know, and why we decided
+  /// we cannot be.
+  BooleanStateWithPtrSetVector<Instruction> SPMDCompatibilityTracker;
+
   /// The __kmpc_target_init call in this kernel, if any. If we find more than
   /// one we abort as the kernel is malformed.
   CallBase *KernelInitCB = nullptr;
@@ -507,6 +515,7 @@ struct KernelInfoState : AbstractState {
   /// See AbstractState::indicatePessimisticFixpoint(...)
   ChangeStatus indicatePessimisticFixpoint() override {
     IsAtFixpoint = true;
+    SPMDCompatibilityTracker.indicatePessimisticFixpoint();
     ReachedUnknownParallelRegions.indicatePessimisticFixpoint();
     return ChangeStatus::CHANGED;
   }
@@ -522,6 +531,8 @@ struct KernelInfoState : AbstractState {
   const KernelInfoState &getAssumed() const { return *this; }
 
   bool operator==(const KernelInfoState &RHS) const {
+    if (SPMDCompatibilityTracker != RHS.SPMDCompatibilityTracker)
+      return false;
     if (ReachedKnownParallelRegions != RHS.ReachedKnownParallelRegions)
       return false;
     if (ReachedUnknownParallelRegions != RHS.ReachedUnknownParallelRegions)
@@ -552,6 +563,7 @@ struct KernelInfoState : AbstractState {
         indicatePessimisticFixpoint();
       KernelDeinitCB = KIS.KernelDeinitCB;
     }
+    SPMDCompatibilityTracker ^= KIS.SPMDCompatibilityTracker;
     ReachedKnownParallelRegions ^= KIS.ReachedKnownParallelRegions;
     ReachedUnknownParallelRegions ^= KIS.ReachedUnknownParallelRegions;
     return *this;
@@ -2669,8 +2681,10 @@ struct AAKernelInfo : public StateWrapper<KernelInfoState, AbstractAttribute> {
   const std::string getAsStr() const override {
     if (!isValidState())
       return "<invalid>";
-    return
-
+    return std::string(SPMDCompatibilityTracker.isAssumed() ? "SPMD"
+                                                            : "generic") +
+           std::string(SPMDCompatibilityTracker.isAtFixpoint() ? " [FIX]"
+                                                               : "") +
            std::string(" #PRs: ") +
            std::to_string(ReachedKnownParallelRegions.size()) +
            ", #Unknown PRs: " +
@@ -2745,8 +2759,9 @@ struct AAKernelInfoFunction : AAKernelInfo {
     assert((KernelInitCB && KernelDeinitCB) &&
            "Kernel without __kmpc_target_init or __kmpc_target_deinit!");
 
-    // For kernels we need to register a simplification callback so that the Attributor
-    // knows the constant arguments to ___kmpc_target_init and
+    // For kernels we might need to initialize/finalize the IsSPMD state and
+    // we need to register a simplification callback so that the Attributor
+    // knows the constant arguments to __kmpc_target_init and
     // __kmpc_target_deinit might actually change.
 
     Attributor::SimplifictionCallbackTy StateMachineSimplifyCB =
@@ -2767,10 +2782,45 @@ struct AAKernelInfoFunction : AAKernelInfo {
       return FalseVal;
     };
 
+    Attributor::SimplifictionCallbackTy IsSPMDModeSimplifyCB =
+        [&](const IRPosition &IRP, const AbstractAttribute *AA,
+            bool &UsedAssumedInformation) -> Optional<Value *> {
+      // IRP represents the "SPMDCompatibilityTracker" argument of an
+      // __kmpc_target_init or
+      // __kmpc_target_deinit call. We will answer this one with the internal
+      // state.
+      if (!isValidState())
+        return nullptr;
+      if (!SPMDCompatibilityTracker.isAtFixpoint()) {
+        if (AA)
+          A.recordDependence(*this, *AA, DepClassTy::OPTIONAL);
+        UsedAssumedInformation = true;
+      } else {
+        UsedAssumedInformation = false;
+      }
+      auto *Val = ConstantInt::getBool(IRP.getAnchorValue().getContext(),
+                                       SPMDCompatibilityTracker.isAssumed());
+      return Val;
+    };
+
+    constexpr const int InitIsSPMDArgNo = 1;
+    constexpr const int DeinitIsSPMDArgNo = 1;
     constexpr const int InitUseStateMachineArgNo = 2;
     A.registerSimplificationCallback(
         IRPosition::callsite_argument(*KernelInitCB, InitUseStateMachineArgNo),
         StateMachineSimplifyCB);
+    A.registerSimplificationCallback(
+        IRPosition::callsite_argument(*KernelInitCB, InitIsSPMDArgNo),
+        IsSPMDModeSimplifyCB);
+    A.registerSimplificationCallback(
+        IRPosition::callsite_argument(*KernelDeinitCB, DeinitIsSPMDArgNo),
+        IsSPMDModeSimplifyCB);
+
+    // Check if we know we are in SPMD-mode already.
+    ConstantInt *IsSPMDArg =
+        dyn_cast<ConstantInt>(KernelInitCB->getArgOperand(InitIsSPMDArgNo));
+    if (IsSPMDArg && !IsSPMDArg->isZero())
+      SPMDCompatibilityTracker.indicateOptimisticFixpoint();
   }
 
   /// Modify the IR based on the KernelInfoState as the fixpoint iteration is
@@ -2781,10 +2831,80 @@ struct AAKernelInfoFunction : AAKernelInfo {
     if (!KernelInitCB || !KernelDeinitCB)
       return ChangeStatus::UNCHANGED;
 
-    buildCustomStateMachine(A);
+    // Known SPMD-mode kernels need no manifest changes.
+    if (SPMDCompatibilityTracker.isKnown())
+      return ChangeStatus::UNCHANGED;
+
+    // If we can we change the execution mode to SPMD-mode otherwise we build a
+    // custom state machine.
+    if (!changeToSPMDMode(A))
+      buildCustomStateMachine(A);
 
     return ChangeStatus::CHANGED;
   }
+
+  bool changeToSPMDMode(Attributor &A) {
+    if (!SPMDCompatibilityTracker.isAssumed()) {
+      for (Instruction *NonCompatibleI : SPMDCompatibilityTracker) {
+        if (!NonCompatibleI)
+          continue;
+        auto Remark = [&](OptimizationRemarkAnalysis ORA) {
+          ORA << "Kernel will be executed in generic-mode due to this "
+                 "potential side-effect";
+          if (auto *CI = dyn_cast<CallBase>(NonCompatibleI)) {
+            if (Function *F = CI->getCalledFunction())
+              ORA << ", consider to add "
+                     "`__attribute__((assume(\"ompx_spmd_amenable\"))`"
+                     " to the called function '"
+                  << F->getName() << "'";
+          }
+          return ORA << ".";
+        };
+        A.emitRemark<OptimizationRemarkAnalysis>(
+            NonCompatibleI, "OpenMPKernelNonSPMDMode", Remark);
+
+        LLVM_DEBUG(dbgs() << TAG << "SPMD-incompatible side-effect: "
+                          << *NonCompatibleI << "\n");
+      }
+
+      return false;
+    }
+
+    // Adjust the global exec mode flag that tells the runtime what mode this
+    // kernel is executed in.
+    Function *Kernel = getAnchorScope();
+    GlobalVariable *ExecMode = Kernel->getParent()->getGlobalVariable(
+        (Kernel->getName() + "_exec_mode").str());
+    assert(ExecMode && "Kernel without exec mode?");
+    assert(ExecMode->getInitializer() &&
+           ExecMode->getInitializer()->isOneValue() &&
+           "Initially non-SPMD kernel has SPMD exec mode!");
+    ExecMode->setInitializer(
+        ConstantInt::get(ExecMode->getInitializer()->getType(), 0));
+
+    // Next rewrite the init and deinit calls to indicate we use SPMD-mode now.
+    const int InitIsSPMDArgNo = 1;
+    const int DeinitIsSPMDArgNo = 1;
+    const int InitUseStateMachineArgNo = 2;
+
+    auto &Ctx = getAnchorValue().getContext();
+    A.changeUseAfterManifest(KernelInitCB->getArgOperandUse(InitIsSPMDArgNo),
+                             *ConstantInt::getBool(Ctx, 1));
+    A.changeUseAfterManifest(
+        KernelInitCB->getArgOperandUse(InitUseStateMachineArgNo),
+        *ConstantInt::getBool(Ctx, 0));
+    A.changeUseAfterManifest(
+        KernelDeinitCB->getArgOperandUse(DeinitIsSPMDArgNo),
+        *ConstantInt::getBool(Ctx, 1));
+    ++NumOpenMPTargetRegionKernelsSPMD;
+
+    auto Remark = [&](OptimizationRemark OR) {
+      return OR << "Generic-mode kernel is changed to SPMD-mode.";
+    };
+    A.emitRemark<OptimizationRemark>(KernelInitCB, "OpenMPKernelSPMDMode",
+                                     Remark);
+    return true;
+  };
 
   ChangeStatus buildCustomStateMachine(Attributor &A) {
     assert(ReachedKnownParallelRegions.isValidState() &&
@@ -2809,7 +2929,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
         !IsSPMD->isZero())
       return ChangeStatus::UNCHANGED;
 
-    // First, indicate we use a custom state machine now.
+    // If not SPMD mode, indicate we use a custom state machine now.
     auto &Ctx = getAnchorValue().getContext();
     auto *FalseVal = ConstantInt::getBool(Ctx, 0);
     A.changeUseAfterManifest(
@@ -3064,6 +3184,28 @@ struct AAKernelInfoFunction : AAKernelInfo {
   ChangeStatus updateImpl(Attributor &A) override {
     KernelInfoState StateBefore = getState();
 
+    // Callback to check a read/write instruction.
+    auto CheckRWInst = [&](Instruction &I) {
+      // We handle calls later.
+      if (isa<CallBase>(I))
+        return true;
+      // We only care about write effects.
+      if (!I.mayWriteToMemory())
+        return true;
+      if (auto *SI = dyn_cast<StoreInst>(&I)) {
+        SmallVector<const Value *> Objects;
+        getUnderlyingObjects(SI->getPointerOperand(), Objects);
+        if (llvm::all_of(Objects,
+                         [](const Value *Obj) { return isa<AllocaInst>(Obj); }))
+          return true;
+      }
+      // For now we give up on everything but stores.
+      SPMDCompatibilityTracker.insert(&I);
+      return true;
+    };
+    if (!A.checkForAllReadWriteInstructions(CheckRWInst, *this))
+      SPMDCompatibilityTracker.indicatePessimisticFixpoint();
+
     // Callback to check a call instruction.
     auto CheckCallInst = [&](Instruction &I) {
       auto &CB = cast<CallBase>(I);
@@ -3101,6 +3243,10 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       return Fn && hasAssumption(*Fn, AssumptionStr);
     };
 
+    // Check for SPMD-mode assumptions.
+    if (HasAssumption(Callee, "ompx_spmd_amenable"))
+      SPMDCompatibilityTracker.indicateOptimisticFixpoint();
+
     // First weed out calls we do not care about, that is readonly/readnone
     // calls, intrinsics, and "no_openmp" calls. Neither of these can reach a
     // parallel region or anything else we are looking for.
@@ -3125,6 +3271,11 @@ struct AAKernelInfoCallSite : AAKernelInfo {
               HasAssumption(Callee, "omp_no_parallelism")))
           ReachedUnknownParallelRegions.insert(&CB);
 
+        // If SPMDCompatibilityTracker is not fixed, we need to give up on the
+        // idea we can run something unknown in SPMD-mode.
+        if (!SPMDCompatibilityTracker.isAtFixpoint())
+          SPMDCompatibilityTracker.insert(&CB);
+
         // We have updated the state for this unknown call properly, there won't
         // be any change so we indicate a fixpoint.
         indicateOptimisticFixpoint();
@@ -3137,6 +3288,37 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     const unsigned int WrapperFunctionArgNo = 6;
     RuntimeFunction RF = It->getSecond();
     switch (RF) {
+    // All the functions we know are compatible with SPMD mode.
+    case OMPRTL___kmpc_is_spmd_exec_mode:
+    case OMPRTL___kmpc_for_static_fini:
+    case OMPRTL___kmpc_global_thread_num:
+    case OMPRTL___kmpc_single:
+    case OMPRTL___kmpc_end_single:
+    case OMPRTL___kmpc_master:
+    case OMPRTL___kmpc_end_master:
+    case OMPRTL___kmpc_barrier:
+      break;
+    case OMPRTL___kmpc_for_static_init_4:
+    case OMPRTL___kmpc_for_static_init_4u:
+    case OMPRTL___kmpc_for_static_init_8:
+    case OMPRTL___kmpc_for_static_init_8u: {
+      // Check the schedule and allow static schedule in SPMD mode.
+      unsigned ScheduleArgOpNo = 2;
+      auto *ScheduleTypeCI =
+          dyn_cast<ConstantInt>(CB.getArgOperand(ScheduleArgOpNo));
+      unsigned ScheduleTypeVal =
+          ScheduleTypeCI ? ScheduleTypeCI->getZExtValue() : 0;
+      switch (OMPScheduleType(ScheduleTypeVal)) {
+      case OMPScheduleType::Static:
+      case OMPScheduleType::StaticChunked:
+      case OMPScheduleType::Distribute:
+      case OMPScheduleType::DistributeChunked:
+        break;
+      default:
+        SPMDCompatibilityTracker.insert(&CB);
+        break;
+      };
+    } break;
     case OMPRTL___kmpc_target_init:
       KernelInitCB = &CB;
       break;
@@ -3156,9 +3338,13 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       break;
     case OMPRTL___kmpc_omp_task:
       // We do not look into tasks right now, just give up.
+      SPMDCompatibilityTracker.insert(&CB);
       ReachedUnknownParallelRegions.insert(&CB);
       break;
     default:
+      // Unknown OpenMP runtime calls cannot be executed in SPMD-mode,
+      // generally.
+      SPMDCompatibilityTracker.insert(&CB);
       break;
     }
     // All other OpenMP runtime calls will not reach parallel regions so they

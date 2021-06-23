@@ -1,10 +1,12 @@
 ; RUN: opt -passes=openmp-opt -pass-remarks=openmp-opt -pass-remarks-missed=openmp-opt -pass-remarks-analysis=openmp-opt -disable-output < %s 2>&1 | FileCheck %s
 target triple = "nvptx64"
 
-; CHECK: remark: llvm/test/Transforms/OpenMP/custom_state_machines_remarks.c:11:1: Generic-mode kernel is executed with a customized state machine that requires a fallback [1 known parallel regions, 2 unkown parallel regions] (bad)
-; CHECK: remark: llvm/test/Transforms/OpenMP/custom_state_machines_remarks.c:13:5: State machine fallback caused by this call. If it is a false positive, use `__attribute__((assume("omp_no_openmp"))` (or "omp_no_parallelism")
-; CHECK: remark: llvm/test/Transforms/OpenMP/custom_state_machines_remarks.c:15:5: State machine fallback caused by this call. If it is a false positive, use `__attribute__((assume("omp_no_openmp"))` (or "omp_no_parallelism")
-; CHECK: remark: llvm/test/Transforms/OpenMP/custom_state_machines_remarks.c:20:1: Generic-mode kernel is executed with a customized state machine [1 known parallel regions] (good)
+; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:13:5: Kernel will be executed in generic-mode due to this potential side-effect, consider to add `__attribute__((assume("ompx_spmd_amenable"))` to the called function 'unknown'.
+; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:15:5: Kernel will be executed in generic-mode due to this potential side-effect, consider to add `__attribute__((assume("ompx_spmd_amenable"))` to the called function 'unknown'.
+; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:11:1: Generic-mode kernel is executed with a customized state machine that requires a fallback [1 known parallel regions, 2 unkown parallel regions] (bad).
+; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:13:5: State machine fallback caused by this call. If it is a false positive, use `__attribute__((assume("omp_no_openmp"))` (or "omp_no_parallelism").
+; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:15:5: State machine fallback caused by this call. If it is a false positive, use `__attribute__((assume("omp_no_openmp"))` (or "omp_no_parallelism").
+; CHECK: remark: llvm/test/Transforms/OpenMP/spmdization_remarks.c:20:1: Generic-mode kernel is changed to SPMD-mode.
 
 ;; void unknown(void);
 ;; void known(void) {
@@ -30,28 +32,28 @@ target triple = "nvptx64"
 ;;     known();
 ;;     known();
 ;;     known();
-;;     no_openmp();     // make it non-spmd
+;;     spmd_amenable();
 ;;   }
 ;; }
 
 %struct.ident_t = type { i32, i32, i32, i32, i8* }
 
-@0 = private unnamed_addr constant [113 x i8] c";llvm/test/Transforms/OpenMP/custom_state_machines_remarks.c;__omp_offloading_2a_d80d3d_test_fallback_l11;11;1;;\00", align 1
-@1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([113 x i8], [113 x i8]* @0, i32 0, i32 0) }, align 8
-@2 = private unnamed_addr constant [82 x i8] c";llvm/test/Transforms/OpenMP/custom_state_machines_remarks.c;test_fallback;11;1;;\00", align 1
-@3 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([82 x i8], [82 x i8]* @2, i32 0, i32 0) }, align 8
-@4 = private unnamed_addr constant [114 x i8] c";llvm/test/Transforms/OpenMP/custom_state_machines_remarks.c;__omp_offloading_2a_d80d3d_test_fallback_l11;11;25;;\00", align 1
-@5 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([114 x i8], [114 x i8]* @4, i32 0, i32 0) }, align 8
+@0 = private unnamed_addr constant [103 x i8] c";llvm/test/Transforms/OpenMP/spmdization_remarks.c;__omp_offloading_2a_d80d3d_test_fallback_l11;11;1;;\00", align 1
+@1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @0, i32 0, i32 0) }, align 8
+@2 = private unnamed_addr constant [72 x i8] c";llvm/test/Transforms/OpenMP/spmdization_remarks.c;test_fallback;11;1;;\00", align 1
+@3 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([72 x i8], [72 x i8]* @2, i32 0, i32 0) }, align 8
+@4 = private unnamed_addr constant [104 x i8] c";llvm/test/Transforms/OpenMP/spmdization_remarks.c;__omp_offloading_2a_d80d3d_test_fallback_l11;11;25;;\00", align 1
+@5 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([104 x i8], [104 x i8]* @4, i32 0, i32 0) }, align 8
 @__omp_offloading_2a_d80d3d_test_fallback_l11_exec_mode = weak constant i8 1
-@6 = private unnamed_addr constant [116 x i8] c";llvm/test/Transforms/OpenMP/custom_state_machines_remarks.c;__omp_offloading_2a_d80d3d_test_no_fallback_l20;20;1;;\00", align 1
-@7 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([116 x i8], [116 x i8]* @6, i32 0, i32 0) }, align 8
-@8 = private unnamed_addr constant [85 x i8] c";llvm/test/Transforms/OpenMP/custom_state_machines_remarks.c;test_no_fallback;20;1;;\00", align 1
-@9 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([85 x i8], [85 x i8]* @8, i32 0, i32 0) }, align 8
-@10 = private unnamed_addr constant [117 x i8] c";llvm/test/Transforms/OpenMP/custom_state_machines_remarks.c;__omp_offloading_2a_d80d3d_test_no_fallback_l20;20;25;;\00", align 1
-@11 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([117 x i8], [117 x i8]* @10, i32 0, i32 0) }, align 8
+@6 = private unnamed_addr constant [106 x i8] c";llvm/test/Transforms/OpenMP/spmdization_remarks.c;__omp_offloading_2a_d80d3d_test_no_fallback_l20;20;1;;\00", align 1
+@7 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([106 x i8], [106 x i8]* @6, i32 0, i32 0) }, align 8
+@8 = private unnamed_addr constant [75 x i8] c";llvm/test/Transforms/OpenMP/spmdization_remarks.c;test_no_fallback;20;1;;\00", align 1
+@9 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([75 x i8], [75 x i8]* @8, i32 0, i32 0) }, align 8
+@10 = private unnamed_addr constant [107 x i8] c";llvm/test/Transforms/OpenMP/spmdization_remarks.c;__omp_offloading_2a_d80d3d_test_no_fallback_l20;20;25;;\00", align 1
+@11 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([107 x i8], [107 x i8]* @10, i32 0, i32 0) }, align 8
 @__omp_offloading_2a_d80d3d_test_no_fallback_l20_exec_mode = weak constant i8 1
-@12 = private unnamed_addr constant [73 x i8] c";llvm/test/Transforms/OpenMP/custom_state_machines_remarks.c;known;4;1;;\00", align 1
-@13 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 2, i32 0, i8* getelementptr inbounds ([73 x i8], [73 x i8]* @12, i32 0, i32 0) }, align 8
+@12 = private unnamed_addr constant [63 x i8] c";llvm/test/Transforms/OpenMP/spmdization_remarks.c;known;4;1;;\00", align 1
+@13 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 2, i32 0, i8* getelementptr inbounds ([63 x i8], [63 x i8]* @12, i32 0, i32 0) }, align 8
 @G = external global i32
 @llvm.compiler.used = appending global [2 x i8*] [i8* @__omp_offloading_2a_d80d3d_test_fallback_l11_exec_mode, i8* @__omp_offloading_2a_d80d3d_test_no_fallback_l20_exec_mode], section "llvm.metadata"
 
@@ -127,8 +129,7 @@ user_code.entry:                                  ; preds = %entry
   %6 = call i32 @__kmpc_global_thread_num(%struct.ident_t* noundef nonnull @13) #3
   call void @__kmpc_parallel_51(%struct.ident_t* noundef nonnull @13, i32 %6, i32 noundef 1, i32 noundef -1, i32 noundef -1, i8* noundef bitcast (void (i32*, i32*)* @__omp_outlined__2 to i8*), i8* noundef bitcast (void (i16, i32)* @__omp_outlined__2_wrapper to i8*), i8** noundef nonnull %4, i64 noundef 0) #3, !dbg !43
   call void @llvm.lifetime.end.p0i8(i64 0, i8* nonnull %2) #3, !dbg !45
-  call void @no_openmp()
-  call void @no_parallelism()
+  call void @spmd_amenable()
   call void @__kmpc_target_deinit(%struct.ident_t* nonnull @11, i1 false, i1 true) #3, !dbg !46
   br label %common.ret
 }
@@ -159,8 +160,7 @@ declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #5
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
 declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #5
 
-declare void @no_openmp() #7
-declare void @no_parallelism() #8
+declare void @spmd_amenable() #7
 
 attributes #0 = { convergent norecurse nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
 attributes #1 = { convergent "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
@@ -169,8 +169,7 @@ attributes #3 = { nounwind }
 attributes #4 = { norecurse nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
 attributes #5 = { argmemonly nofree nosync nounwind willreturn }
 attributes #6 = { convergent nounwind }
-attributes #7 = { "llvm.assume"="omp_no_openmp" }
-attributes #8 = { "llvm.assume"="omp_no_parallelism" }
+attributes #7 = { "llvm.assume"="ompx_spmd_amenable" }
 
 !llvm.dbg.cu = !{!0}
 !omp_offload.info = !{!3, !4}
@@ -179,7 +178,7 @@ attributes #8 = { "llvm.assume"="omp_no_parallelism" }
 !llvm.ident = !{!14}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 13.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: DebugDirectivesOnly, enums: !2, splitDebugInlining: false, nameTableKind: None)
-!1 = !DIFile(filename: "custom_state_machines_remarks.c", directory: "/data/src/llvm-project")
+!1 = !DIFile(filename: "spmdization_remarks.c", directory: "/data/src/llvm-project")
 !2 = !{}
 !3 = !{i32 0, i32 42, i32 14159165, !"test_no_fallback", i32 20, i32 1}
 !4 = !{i32 0, i32 42, i32 14159165, !"test_fallback", i32 11, i32 0}
@@ -194,7 +193,7 @@ attributes #8 = { "llvm.assume"="omp_no_parallelism" }
 !13 = !{i32 7, !"frame-pointer", i32 2}
 !14 = !{!"clang version 13.0.0"}
 !15 = distinct !DISubprogram(name: "__omp_offloading_2a_d80d3d_test_fallback_l11", scope: !16, file: !16, line: 11, type: !17, scopeLine: 11, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
-!16 = !DIFile(filename: "llvm/test/Transforms/OpenMP/custom_state_machines_remarks.c", directory: "/data/src/llvm-project")
+!16 = !DIFile(filename: "llvm/test/Transforms/OpenMP/spmdization_remarks.c", directory: "/data/src/llvm-project")
 !17 = !DISubroutineType(types: !2)
 !18 = !DILocation(line: 11, column: 1, scope: !15)
 !19 = !DILocation(line: 0, scope: !15)
