@@ -2117,6 +2117,26 @@ struct FormatStyle {
   /// For example: BOOST_FOREACH.
   std::vector<std::string> ForEachMacros;
 
+  /// A vector of macros that should be interpreted as conditionals
+  /// instead of as function calls.
+  ///
+  /// These are expected to be macros of the form:
+  /// \code
+  ///   IF(...)
+  ///     <conditional-body>
+  ///   else IF(...)
+  ///     <conditional-body>
+  /// \endcode
+  ///
+  /// In the .clang-format configuration file, this can be configured like:
+  /// \code{.yaml}
+  ///   IfMacros: ['IF']
+  /// \endcode
+  ///
+  /// For example: `KJ_IF_MAYBE
+  /// <https://github.com/capnproto/capnproto/blob/master/kjdoc/tour.md#maybes>`_
+  std::vector<std::string> IfMacros;
+
   /// \brief A vector of macros that should be interpreted as type declarations
   /// instead of as function calls.
   ///
@@ -3033,8 +3053,10 @@ struct FormatStyle {
     /// \endcode
     SBPO_ControlStatements,
     /// Same as ``SBPO_ControlStatements`` except this option doesn't apply to
-    /// ForEach macros. This is useful in projects where ForEach macros are
-    /// treated as function calls instead of control statements.
+    /// ForEach and If macros. This is useful in projects where ForEach/If
+    /// macros are treated as function calls instead of control statements.
+    /// ``SBPO_ControlStatementsExceptForEachMacros`` remains an alias for
+    /// backward compatability.
     /// \code
     ///    void f() {
     ///      Q_FOREACH(...) {
@@ -3042,7 +3064,7 @@ struct FormatStyle {
     ///      }
     ///    }
     /// \endcode
-    SBPO_ControlStatementsExceptForEachMacros,
+    SBPO_ControlStatementsExceptControlMacros,
     /// Put a space before opening parentheses only if the parentheses are not
     /// empty i.e. '()'
     /// \code

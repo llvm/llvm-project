@@ -2377,6 +2377,28 @@ the configuration (without a prefix: ``Auto``).
 
   For example: BOOST_FOREACH.
 
+**IfMacros** (``std::vector<std::string>``)
+  A vector of macros that should be interpreted as conditionals
+  instead of as function calls.
+
+  These are expected to be macros of the form:
+
+  .. code-block:: c++
+
+    IF(...)
+      <conditional-body>
+    else IF(...)
+      <conditional-body>
+
+  In the .clang-format configuration file, this can be configured like:
+
+  .. code-block:: yaml
+
+    IfMacros: ['IF']
+
+  For example: `KJ_IF_MAYBE
+  <https://github.com/capnproto/capnproto/blob/master/kjdoc/tour.md#maybes>`_
+
 **IncludeBlocks** (``IncludeBlocksStyle``)
   Dependent on the value, multiple ``#include`` blocks can be sorted
   as one and divided based on category.
@@ -3480,10 +3502,12 @@ the configuration (without a prefix: ``Auto``).
          }
        }
 
-  * ``SBPO_ControlStatementsExceptForEachMacros`` (in configuration: ``ControlStatementsExceptForEachMacros``)
+  * ``SBPO_ControlStatementsExceptControlMacros`` (in configuration: ``ControlStatementsExceptControlMacros``)
     Same as ``SBPO_ControlStatements`` except this option doesn't apply to
-    ForEach macros. This is useful in projects where ForEach macros are
-    treated as function calls instead of control statements.
+    ForEach and If macros. This is useful in projects where ForEach/If
+    macros are treated as function calls instead of control statements.
+    ``SBPO_ControlStatementsExceptForEachMacros`` remains an alias for
+    backward compatability.
 
     .. code-block:: c++
 
