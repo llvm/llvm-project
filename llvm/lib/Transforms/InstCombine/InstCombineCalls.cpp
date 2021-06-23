@@ -1376,6 +1376,19 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return new FPExtInst(NewCall, II->getType());
     }
 
+    // max X, -X --> fabs X
+    // min X, -X --> -(fabs X)
+    // TODO: Remove one-use limitation? That is obviously better for max.
+    //       It would be an extra instruction for min (fnabs), but that is
+    //       still likely better for analysis and codegen.
+    if ((match(Arg0, m_OneUse(m_FNeg(m_Value(X)))) && Arg1 == X) ||
+        (match(Arg1, m_OneUse(m_FNeg(m_Value(X)))) && Arg0 == X)) {
+      Value *R = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, X, II);
+      if (IID == Intrinsic::minimum || IID == Intrinsic::minnum)
+        R = Builder.CreateFNegFMF(R, II);
+      return replaceInstUsesWith(*II, R);
+    }
+
     break;
   }
   case Intrinsic::fmuladd: {
