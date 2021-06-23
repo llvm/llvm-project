@@ -10,13 +10,13 @@ define i32 @lex(i1 %c0, i1 %c1, i32 %r0, i32 %r1, i32 %v) {
 ; CHECK-NEXT:    [[C1_NOT:%.*]] = xor i1 [[C1:%.*]], true
 ; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[C0_NOT]], i1 true, i1 [[C1_NOT]]
 ; CHECK-NEXT:    [[R0_MUX:%.*]] = select i1 [[C0_NOT]], i32 [[R0:%.*]], i32 [[R1:%.*]]
-; CHECK-NEXT:    br i1 [[BRMERGE]], label [[IF_THEN:%.*]], label [[DO_BODY:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ [[R0_MUX]], [[ENTRY:%.*]] ], [ [[R1]], [[DO_BODY]] ]
-; CHECK-NEXT:    ret i32 [[MERGE]]
+; CHECK-NEXT:    br i1 [[BRMERGE]], label [[COMMON_RET:%.*]], label [[DO_BODY:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[R0_MUX]], [[ENTRY:%.*]] ], [ [[R1]], [[DO_BODY]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       do.body:
 ; CHECK-NEXT:    call void @zzz()
-; CHECK-NEXT:    switch i32 [[V:%.*]], label [[IF_THEN]] [
+; CHECK-NEXT:    switch i32 [[V:%.*]], label [[COMMON_RET]] [
 ; CHECK-NEXT:    i32 10, label [[DO_BODY]]
 ; CHECK-NEXT:    i32 32, label [[DO_BODY]]
 ; CHECK-NEXT:    i32 9, label [[DO_BODY]]
