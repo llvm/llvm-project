@@ -9,7 +9,7 @@ module {
     %d0 = memref.dim %arg0, %c0 : memref<?x?xf32>
     %d1 = memref.dim %arg1, %c1 : memref<?x?xf32>
     %0 = memref.alloc(%d0, %d1) : memref<?x?xf32>
-    linalg.fill(%0, %cst) : memref<?x?xf32>, f32
+    linalg.fill(%cst, %0) : f32, memref<?x?xf32>
     linalg.matmul ins(%arg0, %arg1 : memref<?x?xf32>, memref<?x?xf32>)
       outs(%0 : memref<?x?xf32>)
     linalg.generic
@@ -42,7 +42,7 @@ module {
 //   CHECK-DAG:     %[[SV_ARG0:.+]] = memref.subview %[[ARG0]][%[[IV0]], 0]
 //   CHECK-DAG:     %[[SV_ARG1:.+]] = memref.subview %[[ARG1]][0, %[[IV1]]]
 //       CHECK:     %[[SV_TEMP_2:.+]] = memref.subview %[[TEMP]][%[[IV0]], %[[IV1]]]
-//       CHECK:     linalg.fill(%[[SV_TEMP_2]], %{{.+}})
+//       CHECK:     linalg.fill(%{{.+}}, %[[SV_TEMP_2]])
 //       CHECK:     linalg.matmul
 //  CHECK-SAME:       ins(%[[SV_ARG0]], %[[SV_ARG1]]
 //  CHECK-SAME:         : memref<?x?xf32, #[[MAP2]]>, memref<?x?xf32, #[[MAP2]]>)
@@ -69,13 +69,13 @@ module {
     %n3 = memref.dim %arg3, %c1 : memref<?x?xf32>
     %0 = memref.alloc(%m, %n1) : memref<?x?xf32>
     %1 = memref.alloc(%m, %n2) : memref<?x?xf32>
-    linalg.fill(%0, %cst) : memref<?x?xf32>, f32
+    linalg.fill(%cst, %0) : f32, memref<?x?xf32>
     linalg.matmul ins(%arg0, %arg1 : memref<?x?xf32>, memref<?x?xf32>)
       outs(%0 : memref<?x?xf32>)
-    linalg.fill(%1, %cst) : memref<?x?xf32>, f32
+    linalg.fill(%cst, %1) : f32, memref<?x?xf32>
     linalg.matmul ins(%0, %arg2 : memref<?x?xf32>, memref<?x?xf32>)
       outs(%1 : memref<?x?xf32>)
-    linalg.fill(%arg4, %cst) : memref<?x?xf32>, f32
+    linalg.fill(%cst, %arg4) : f32, memref<?x?xf32>
     linalg.matmul ins(%1, %arg3 : memref<?x?xf32>, memref<?x?xf32>)
       outs(%arg4 : memref<?x?xf32>)
     return
@@ -124,15 +124,15 @@ module {
 //       CHECK:     %[[N0:.+]] = memref.dim %[[ARG0]], %[[C1]]
 //       CHECK:     %[[SV_ARG0:.+]] = memref.subview %[[ARG0]][%[[IV0]], 0]
 //  CHECK-SAME:       [%[[TILE_M_5]], %[[N0]]]
-//       CHECK:     linalg.fill(%[[SV_ALLOC1]], %{{.+}})
+//       CHECK:     linalg.fill(%{{.+}}, %[[SV_ALLOC1]])
 //       CHECK:     linalg.matmul ins(%[[SV_ARG0]], %[[ARG1]]
 //  CHECK-SAME:        : memref<?x?xf32, #[[MAP1]]>, memref<?x?xf32>)
 //  CHECK-SAME:        outs(%[[SV_ALLOC1]] : memref<?x?xf32, #[[MAP1]]>)
-//       CHECK:     linalg.fill(%[[SV_ALLOC2]], %{{.+}})
+//       CHECK:     linalg.fill(%{{.+}}, %[[SV_ALLOC2]])
 //       CHECK:     linalg.matmul ins(%[[SV_ALLOC1]], %[[ARG2]]
 //  CHECK-SAME:        : memref<?x?xf32, #[[MAP1]]>, memref<?x?xf32>)
 //  CHECK-SAME:        outs(%[[SV_ALLOC2]] : memref<?x?xf32, #[[MAP1]]>)
-//       CHECK:     linalg.fill(%[[SV_ARG4_2]], %{{.+}})
+//       CHECK:     linalg.fill(%{{.+}}, %[[SV_ARG4_2]])
 //       CHECK:     linalg.matmul ins(%[[SV_ALLOC3]], %[[ARG3]]
 //  CHECK-SAME:        : memref<?x?xf32, #[[MAP1]]>, memref<?x?xf32>)
 //  CHECK-SAME:        outs(%[[SV_ARG4]] : memref<?x?xf32, #[[MAP1]]>)
