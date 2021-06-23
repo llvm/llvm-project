@@ -147,14 +147,6 @@ ASM_FUNCTION_ARM_IOS_RE = re.compile(
      r'^[ \t]*@[ \t]--[ \t]End[ \t]function',
      flags=(re.M | re.S))
 
-ASM_FUNCTION_THUMB_IOS_RE = re.compile(
-     r'^_(?P<func>[^:]+):[ \t]*\n'
-     r'^Lfunc_begin(?P<id>[0-9][1-9]*):\n'
-     r'(?P<body>.*?)'
-     r'^Lfunc_end(?P=id):\n'
-     r'^[ \t]*@[ \t]--[ \t]End[ \t]function',
-     flags=(re.M | re.S))
-
 ASM_FUNCTION_WASM32_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@"?(?P=func)"?\n'
     r'(?P<body>.*?)\n'
@@ -382,7 +374,7 @@ def get_run_handler(triple):
       'thumb': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
       'thumb-macho': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_MACHO_RE),
       'thumbv5-macho': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_MACHO_RE),
-      'thumbv7-apple-ios' : (scrub_asm_arm_eabi, ASM_FUNCTION_THUMB_IOS_RE),
+      'thumbv7-apple-ios' : (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_IOS_RE),
       'm68k': (scrub_asm_m68k, ASM_FUNCTION_M68K_RE),
       'mips': (scrub_asm_mips, ASM_FUNCTION_MIPS_RE),
       'msp430': (scrub_asm_msp430, ASM_FUNCTION_MSP430_RE),
