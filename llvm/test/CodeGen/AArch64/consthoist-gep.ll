@@ -1,11 +1,9 @@
 ; RUN: llc -mtriple=aarch64-none-unknown-linuxeabi -consthoist-gep %s -o - | FileCheck %s
 
-; CHECK-NOT:  adrp x10, global+332
-; CHECK-NOT:  add x10, x10, :lo12:global+332
-; CHECK:      adrp x10, global+528
-; CHECK-NEXT: and w12, w8, #0xffffff
-; CHECK-NEXT: ldr w8, [x11]
-; CHECK-NEXT: add x10, x10, :lo12:global+528
+; CHECK-NOT: adrp    x10, global+332
+; CHECK-NOT: add     x10, x10, :lo12:global+332
+; CHECK: adrp    x10, global+528
+; CHECK-NEXT: add     x10, x10, :lo12:global+528
 
 %struct.blam = type { %struct.bar, %struct.bar.0, %struct.wobble, %struct.wombat, i8, i16, %struct.snork.2, %struct.foo, %struct.snork.3, %struct.wobble.4, %struct.quux, [9 x i16], %struct.spam, %struct.zot }
 %struct.bar = type { i8, i8, %struct.snork }
