@@ -289,7 +289,7 @@ void *DeviceTy::getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase,
 // Decrement the reference counter if called from targetDataEnd.
 void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
                                bool UpdateRefCount, bool &IsHostPtr,
-                               bool MustContain) {
+                               bool MustContain, bool ForceDelete) {
   void *rc = NULL;
   IsHostPtr = false;
   IsLast = false;
@@ -304,13 +304,21 @@ void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
     // removed the mapping in deallocTgtPtr, another thread could retrieve the
     // mapping, increment and decrement back to zero, and then both threads
     // would try to remove the mapping, resulting in a double free.
-    IsLast = HT.getRefCount() == 1;
+    IsLast = HT.decShouldRemove(ForceDelete);
     const char *RefCountAction;
-    if (!UpdateRefCount)
+    if (!UpdateRefCount) {
       RefCountAction = "update suppressed";
-    else if (IsLast)
+    } else if (ForceDelete) {
+      HT.resetRefCount();
+      assert(IsLast == HT.decShouldRemove() &&
+             "expected correct IsLast prediction for reset");
+      if (IsLast)
+        RefCountAction = "reset, deferred final decrement";
+      else
+        RefCountAction = "reset";
+    } else if (IsLast) {
       RefCountAction = "deferred final decrement";
-    else {
+    } else {
       RefCountAction = "decremented";
       HT.decRefCount();
     }
@@ -350,7 +358,7 @@ void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size) {
   return NULL;
 }
 
-int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size, bool ForceDelete,
+int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size,
                             bool HasCloseModifier) {
   if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
       !HasCloseModifier)
@@ -361,17 +369,14 @@ int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size, bool ForceDelete,
   LookupResult lr = lookupMapping(HstPtrBegin, Size);
   if (lr.Flags.IsContained || lr.Flags.ExtendsBefore || lr.Flags.ExtendsAfter) {
     auto &HT = *lr.Entry;
-    if (ForceDelete)
-      HT.resetRefCount();
     if (HT.decRefCount() == 0) {
       DP("Deleting tgt data " DPxMOD " of size %" PRId64 "\n",
          DPxPTR(HT.TgtPtrBegin), Size);
       deleteData((void *)HT.TgtPtrBegin);
       INFO(OMP_INFOTYPE_MAPPING_CHANGED, DeviceID,
-           "Removing%s map entry with HstPtrBegin=" DPxMOD
-           ", TgtPtrBegin=" DPxMOD ", Size=%" PRId64 ", Name=%s\n",
-           (ForceDelete ? " (forced)" : ""), DPxPTR(HT.HstPtrBegin),
-           DPxPTR(HT.TgtPtrBegin), Size,
+           "Removing map entry with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD
+           ", Size=%" PRId64 ", Name=%s\n",
+           DPxPTR(HT.HstPtrBegin), DPxPTR(HT.TgtPtrBegin), Size,
            (HT.HstPtrName) ? getNameFromMapping(HT.HstPtrName).c_str()
                            : "unknown");
       HostDataToTargetMap.erase(lr.Entry);
