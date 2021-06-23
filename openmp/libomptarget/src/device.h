@@ -92,6 +92,14 @@ public:
   std::string refCountToStr() const {
     return isRefCountInf() ? "INF" : std::to_string(getRefCount());
   }
+
+  /// Should one decrement of the reference count (after resetting it if
+  /// \c AfterReset) remove this mapping?
+  bool decShouldRemove(bool AfterReset = false) const {
+    if (AfterReset)
+      return !isRefCountInf();
+    return getRefCount() == 1;
+  }
 };
 
 typedef uintptr_t HstPtrBeginTy;
@@ -178,8 +186,8 @@ struct DeviceTy {
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size);
   void *getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
                        bool UpdateRefCount, bool &IsHostPtr,
-                       bool MustContain = false);
-  int deallocTgtPtr(void *TgtPtrBegin, int64_t Size, bool ForceDelete,
+                       bool MustContain = false, bool ForceDelete = false);
+  int deallocTgtPtr(void *TgtPtrBegin, int64_t Size,
                     bool HasCloseModifier = false);
   int associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size);
   int disassociatePtr(void *HstPtrBegin);
