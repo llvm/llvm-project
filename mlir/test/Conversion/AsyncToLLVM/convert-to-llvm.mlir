@@ -170,12 +170,13 @@ func @async_execute_token_dependency(%arg0: f32, %arg1: memref<1xf32>) {
 
 // CHECK-LABEL: async_group_await_all
 func @async_group_await_all(%arg0: f32, %arg1: memref<1xf32>) {
-  // CHECK: %0 = call @mlirAsyncRuntimeCreateGroup()
-  %0 = async.create_group
+  %c = constant 1 : index
+  // CHECK: %[[GROUP:.*]] = call @mlirAsyncRuntimeCreateGroup
+  %0 = async.create_group %c : !async.group
 
   // CHECK: %[[TOKEN:.*]] = call @async_execute_fn
   %token = async.execute { async.yield }
-  // CHECK: call @mlirAsyncRuntimeAddTokenToGroup(%[[TOKEN]], %0)
+  // CHECK: call @mlirAsyncRuntimeAddTokenToGroup(%[[TOKEN]], %[[GROUP]])
   async.add_to_group %token, %0 : !async.token
 
   // CHECK: call @async_execute_fn_0
@@ -184,7 +185,7 @@ func @async_group_await_all(%arg0: f32, %arg1: memref<1xf32>) {
     async.yield
   }
 
-  // CHECK: call @mlirAsyncRuntimeAwaitAllInGroup(%0)
+  // CHECK: call @mlirAsyncRuntimeAwaitAllInGroup(%[[GROUP]])
   async.await_all %0
 
   return
