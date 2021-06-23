@@ -169,3 +169,5 @@ endfunction()
 
 add_libc_multi_impl_benchmark(memcpy)
 add_libc_multi_impl_benchmark(memset)
+add_libc_multi_impl_benchmark(bzero)
+add_libc_multi_impl_benchmark(memcmp)
