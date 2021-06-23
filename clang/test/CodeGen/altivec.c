@@ -4,12 +4,12 @@
 // RUN: %clang_cc1 -target-feature +altivec -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-LE
 // RUN: %clang_cc1 -target-feature +altivec -mabi=vec-extabi -target-cpu pwr8 -triple powerpc-unknown-aix -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BE
 // RUN: %clang_cc1 -target-feature +altivec -mabi=vec-extabi -target-cpu pwr8 -triple powerpc64-unknown-aix -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BE
-// RUN: not %clang_cc1 -target-feature +altivec -mabi=vec-default -target-cpu pwr8 -triple powerpc-unknown-aix -emit-llvm %s 2>&1 | FileCheck %s --check-prefix=AIX-ERROR
-// RUN: not %clang_cc1 -target-feature +altivec -mabi=vec-default -target-cpu pwr8 -triple powerpc64-unknown-aix -emit-llvm %s 2>&1 | FileCheck %s --check-prefix=AIX-ERROR
-// RUN: %clang -S -emit-llvm -maltivec -mabi=vec-extabi -mcpu=pwr8 -target powerpc-unknown-aix %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BE
-// RUN: %clang -S -emit-llvm -maltivec -mabi=vec-extabi -mcpu=pwr8 -target powerpc64-unknown-aix %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BE
-// RUN: not %clang -S -emit-llvm -maltivec -mabi=vec-default -mcpu=pwr8 -triple powerpc-unknown-aix -emit-llvm %s 2>&1 | FileCheck %s --check-prefix=AIX-ERROR
-// RUN: not %clang -S -emit-llvm -maltivec -mabi=vec-default -mcpu=pwr8 -triple powerpc64-unknown-aix -emit-llvm %s 2>&1 | FileCheck %s --check-prefix=AIX-ERROR
+// RUN: %clang_cc1 -target-feature +altivec -mabi=vec-default -target-cpu pwr8 -triple powerpc-unknown-aix -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BE
+// RUN: %clang_cc1 -target-feature +altivec -mabi=vec-default -target-cpu pwr8 -triple powerpc64-unknown-aix -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BE
+// RUN: %clang -S -emit-llvm -maltivec -mabi=vec-extabi -mcpu=pwr8 --target=powerpc-unknown-aix %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BE
+// RUN: %clang -S -emit-llvm -maltivec -mabi=vec-extabi -mcpu=pwr8 --target=powerpc64-unknown-aix %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BE
+// RUN: %clang -S -emit-llvm -maltivec -mabi=vec-default -mcpu=pwr8 --target=powerpc-unknown-aix -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BE
+// RUN: %clang -S -emit-llvm -maltivec -mabi=vec-default -mcpu=pwr8 --target=powerpc64-unknown-aix -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-BE
 // Check initialization
 
 vector int test0 = (vector int)(1);       // CHECK: @test0 ={{.*}} global <4 x i32> <i32 1, i32 1, i32 1, i32 1>
@@ -52,5 +52,3 @@ void test3() {
   vector float vf;
   vf++;                                    // CHECK: fadd <4 x float> {{.*}} <float 1.000000e+{{0+}}, float 1.000000e+{{0+}}, float 1.000000e+{{0+}}, float 1.000000e+{{0+}}>
 }
-
-// AIX-ERROR:  error: The default Altivec ABI on AIX is not yet supported, use '-mabi=vec-extabi' for the extended Altivec ABI
