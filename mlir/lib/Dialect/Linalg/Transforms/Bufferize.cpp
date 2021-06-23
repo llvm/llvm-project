@@ -187,7 +187,7 @@ public:
       return rewriter.notifyMatchFailure(op,
                                          "operand must be of a tensor type");
 
-    rewriter.create<FillOp>(op.getLoc(), adaptor.output(), adaptor.value());
+    rewriter.create<FillOp>(op.getLoc(), adaptor.value(), adaptor.output());
     rewriter.replaceOp(op, adaptor.output());
 
     return success();

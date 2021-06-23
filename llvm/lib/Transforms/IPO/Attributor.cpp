@@ -77,7 +77,7 @@ STATISTIC(NumAttributesManifested,
 // This will become more evolved once we perform two interleaved fixpoint
 // iterations: bottom-up and top-down.
 static cl::opt<unsigned>
-    MaxFixpointIterations("attributor-max-iterations", cl::Hidden,
+    SetFixpointIterations("attributor-max-iterations", cl::Hidden,
                           cl::desc("Maximal number of fixpoint iterations."),
                           cl::init(32));
 
@@ -1069,6 +1069,12 @@ void Attributor::runTillFixpoint() {
   // the abstract analysis.
 
   unsigned IterationCounter = 1;
+  unsigned MaxFixedPointIterations;
+  if (MaxFixpointIterations)
+    MaxFixedPointIterations = MaxFixpointIterations.getValue();
+  else
+    MaxFixedPointIterations = SetFixpointIterations;
+
 
   SmallVector<AbstractAttribute *, 32> ChangedAAs;
   SetVector<AbstractAttribute *> Worklist, InvalidAAs;
@@ -1148,7 +1154,7 @@ void Attributor::runTillFixpoint() {
     Worklist.clear();
     Worklist.insert(ChangedAAs.begin(), ChangedAAs.end());
 
-  } while (!Worklist.empty() && (IterationCounter++ < MaxFixpointIterations ||
+  } while (!Worklist.empty() && (IterationCounter++ < MaxFixedPointIterations ||
                                  VerifyMaxFixpointIterations));
 
   LLVM_DEBUG(dbgs() << "\n[Attributor] Fixpoint iteration done after: "
@@ -1187,9 +1193,9 @@ void Attributor::runTillFixpoint() {
   });
 
   if (VerifyMaxFixpointIterations &&
-      IterationCounter != MaxFixpointIterations) {
+      IterationCounter != MaxFixedPointIterations) {
     errs() << "\n[Attributor] Fixpoint iteration done after: "
-           << IterationCounter << "/" << MaxFixpointIterations
+           << IterationCounter << "/" << MaxFixedPointIterations
            << " iterations\n";
     llvm_unreachable("The fixpoint was not reached with exactly the number of "
                      "specified iterations!");
@@ -1621,19 +1627,12 @@ void Attributor::createShallowWrapper(Function &F) {
   NumFnShallowWrappersCreated++;
 }
 
-/// Make another copy of the function \p F such that the copied version has
-/// internal linkage afterwards and can be analysed. Then we replace all uses
-/// of the original function to the copied one
-///
-/// Only non-exactly defined functions that have `linkonce_odr` or `weak_odr`
-/// linkage can be internalized because these linkages guarantee that other
-/// definitions with the same name have the same semantics as this one
-///
-static Function *internalizeFunction(Function &F) {
-  assert(AllowDeepWrapper && "Cannot create a copy if not allowed.");
-  assert(!F.isDeclaration() && !F.hasExactDefinition() &&
-         !GlobalValue::isInterposableLinkage(F.getLinkage()) &&
-         "Trying to internalize function which cannot be internalized.");
+Function *Attributor::internalizeFunction(Function &F, bool Force) {
+  if (!AllowDeepWrapper && !Force)
+    return nullptr;
+  if (F.isDeclaration() || F.hasLocalLinkage() ||
+      GlobalValue::isInterposableLinkage(F.getLinkage()))
+    return nullptr;
 
   Module &M = *F.getParent();
   FunctionType *FnTy = F.getFunctionType();
@@ -1663,7 +1662,8 @@ static Function *internalizeFunction(Function &F) {
   SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
   F.getAllMetadata(MDs);
   for (auto MDIt : MDs)
-    Copied->addMetadata(MDIt.first, *MDIt.second);
+    if (!Copied->hasMetadata())
+      Copied->addMetadata(MDIt.first, *MDIt.second);
 
   M.getFunctionList().insert(F.getIterator(), Copied);
   F.replaceAllUsesWith(Copied);
@@ -1674,6 +1674,9 @@ static Function *internalizeFunction(Function &F) {
 
 bool Attributor::isValidFunctionSignatureRewrite(
     Argument &Arg, ArrayRef<Type *> ReplacementTypes) {
+
+  if (!RewriteSignatures)
+    return false;
 
   auto CallSiteCanBeChanged = [](AbstractCallSite ACS) {
     // Forbid the call site to cast the function return type. If we need to
@@ -2459,7 +2462,8 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
       Function *F = Functions[u];
       if (!F->isDeclaration() && !F->isDefinitionExact() && F->getNumUses() &&
           !GlobalValue::isInterposableLinkage(F->getLinkage())) {
-        Function *NewF = internalizeFunction(*F);
+        Function *NewF = Attributor::internalizeFunction(*F);
+        assert(NewF && "Could not internalize function.");
         Functions.insert(NewF);
 
         // Update call graph

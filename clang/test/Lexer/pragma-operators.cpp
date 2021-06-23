@@ -19,7 +19,7 @@ B(foo)
 #pragma warning(pop)
 
 #define pragma_L _Pragma(L"GCC diagnostic push")
-#define pragma_u8 _Pragma(u8"system_header")
+#define pragma_u8 _Pragma(u8"pack(1)")
 #define pragma_u _Pragma(u"GCC diagnostic pop")
 #define pragma_U _Pragma(U"comment(lib, \"libfoo\")")
 #define pragma_R _Pragma(R"(clang diagnostic ignored "-Wunused")")
@@ -27,7 +27,7 @@ B(foo)
 #define pragma_hello _Pragma(u8R"x(message R"y("Hello", world!)y")x")
 // CHECK: int n =
 // CHECK: #pragma GCC diagnostic push
-// CHECK: #pragma system_header
+// CHECK: #pragma pack(1)
 // CHECK: #pragma GCC diagnostic pop
 // CHECK: #pragma comment(lib, "libfoo")
 // CHECK: #pragma clang diagnostic ignored "-Wunused"

@@ -5316,23 +5316,63 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::experimental_vector_insert: {
-    VectorType *VecTy = cast<VectorType>(Call.getArgOperand(0)->getType());
-    VectorType *SubVecTy = cast<VectorType>(Call.getArgOperand(1)->getType());
+    Value *Vec = Call.getArgOperand(0);
+    Value *SubVec = Call.getArgOperand(1);
+    Value *Idx = Call.getArgOperand(2);
+    unsigned IdxN = cast<ConstantInt>(Idx)->getZExtValue();
 
+    VectorType *VecTy = cast<VectorType>(Vec->getType());
+    VectorType *SubVecTy = cast<VectorType>(SubVec->getType());
+
+    ElementCount VecEC = VecTy->getElementCount();
+    ElementCount SubVecEC = SubVecTy->getElementCount();
     Assert(VecTy->getElementType() == SubVecTy->getElementType(),
            "experimental_vector_insert parameters must have the same element "
            "type.",
            &Call);
+    Assert(IdxN % SubVecEC.getKnownMinValue() == 0,
+           "experimental_vector_insert index must be a constant multiple of "
+           "the subvector's known minimum vector length.");
+
+    // If this insertion is not the 'mixed' case where a fixed vector is
+    // inserted into a scalable vector, ensure that the insertion of the
+    // subvector does not overrun the parent vector.
+    if (VecEC.isScalable() == SubVecEC.isScalable()) {
+      Assert(
+          IdxN < VecEC.getKnownMinValue() &&
+              IdxN + SubVecEC.getKnownMinValue() <= VecEC.getKnownMinValue(),
+          "subvector operand of experimental_vector_insert would overrun the "
+          "vector being inserted into.");
+    }
     break;
   }
   case Intrinsic::experimental_vector_extract: {
+    Value *Vec = Call.getArgOperand(0);
+    Value *Idx = Call.getArgOperand(1);
+    unsigned IdxN = cast<ConstantInt>(Idx)->getZExtValue();
+
     VectorType *ResultTy = cast<VectorType>(Call.getType());
-    VectorType *VecTy = cast<VectorType>(Call.getArgOperand(0)->getType());
+    VectorType *VecTy = cast<VectorType>(Vec->getType());
+
+    ElementCount VecEC = VecTy->getElementCount();
+    ElementCount ResultEC = ResultTy->getElementCount();
 
     Assert(ResultTy->getElementType() == VecTy->getElementType(),
            "experimental_vector_extract result must have the same element "
            "type as the input vector.",
            &Call);
+    Assert(IdxN % ResultEC.getKnownMinValue() == 0,
+           "experimental_vector_extract index must be a constant multiple of "
+           "the result type's known minimum vector length.");
+
+    // If this extraction is not the 'mixed' case where a fixed vector is is
+    // extracted from a scalable vector, ensure that the extraction does not
+    // overrun the parent vector.
+    if (VecEC.isScalable() == ResultEC.isScalable()) {
+      Assert(IdxN < VecEC.getKnownMinValue() &&
+                 IdxN + ResultEC.getKnownMinValue() <= VecEC.getKnownMinValue(),
+             "experimental_vector_extract would overrun.");
+    }
     break;
   }
   case Intrinsic::experimental_noalias_scope_decl: {

@@ -428,7 +428,7 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     return false;
 
   if (args.hasArg(OPT_verbose) || args.hasArg(OPT__HASH_HASH_HASH))
-    lld::outs() << llvm::join(linkArgs, " ") << "\n";
+    lld::errs() << llvm::join(linkArgs, " ") << "\n";
 
   if (args.hasArg(OPT__HASH_HASH_HASH))
     return true;

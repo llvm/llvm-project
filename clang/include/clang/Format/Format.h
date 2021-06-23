@@ -2490,6 +2490,38 @@ struct FormatStyle {
   /// Language, this format style is targeted at.
   LanguageKind Language;
 
+  /// Indentation logic for lambda bodies.
+  enum LambdaBodyIndentationKind : unsigned char {
+    /// Align lambda body relative to the lambda signature. This is the default.
+    /// \code
+    ///    someMethod(
+    ///        [](SomeReallyLongLambdaSignatureArgument foo) {
+    ///          return;
+    ///        });
+    /// \endcode
+    LBI_Signature,
+    /// Align lambda body relative to the indentation level of the outer scope
+    /// the lambda signature resides in.
+    /// \code
+    ///    someMethod(
+    ///        [](SomeReallyLongLambdaSignatureArgument foo) {
+    ///      return;
+    ///    });
+    /// \endcode
+    LBI_OuterScope,
+  };
+
+  /// The indentation style of lambda bodies. ``Signature`` (the default)
+  /// causes the lambda body to be indented one additional level relative to
+  /// the indentation level of the signature. ``OuterScope`` forces the lambda
+  /// body to be indented one additional level relative to the parent scope
+  /// containing the lambda signature. For callback-heavy code, it may improve
+  /// readability to have the signature indented two levels and to use
+  /// ``OuterScope``. The KJ style guide requires ``OuterScope`.
+  /// `KJ style guide
+  /// <https://github.com/capnproto/capnproto/blob/master/kjdoc/style-guide.md>`_
+  LambdaBodyIndentationKind LambdaBodyIndentation;
+
   /// A regular expression matching macros that start a block.
   /// \code
   ///    # With:
@@ -3377,6 +3409,7 @@ struct FormatStyle {
            JavaScriptWrapImports == R.JavaScriptWrapImports &&
            KeepEmptyLinesAtTheStartOfBlocks ==
                R.KeepEmptyLinesAtTheStartOfBlocks &&
+           LambdaBodyIndentation == R.LambdaBodyIndentation &&
            MacroBlockBegin == R.MacroBlockBegin &&
            MacroBlockEnd == R.MacroBlockEnd &&
            MaxEmptyLinesToKeep == R.MaxEmptyLinesToKeep &&

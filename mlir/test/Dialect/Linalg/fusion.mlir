@@ -678,7 +678,7 @@ func @fusion_of_three(%arg0: memref<100x10xf32>,
 
 func @fill_and_conv(%arg0: memref<?x?x?x?xf32>, %arg1: memref<2x3x1x1xf32>, %arg2: memref<?x?x?x?xf32>) {
   %cst = constant 0.000000e+00 : f32
-  linalg.fill(%arg2, %cst) : memref<?x?x?x?xf32>, f32
+  linalg.fill(%cst, %arg2) : f32, memref<?x?x?x?xf32>
 
   %c4 = constant 4 : index
   %c1 = constant 1 : index

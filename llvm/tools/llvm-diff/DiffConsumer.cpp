@@ -17,34 +17,33 @@
 
 using namespace llvm;
 
-static void ComputeNumbering(Function *F, DenseMap<Value*,unsigned> &Numbering){
+static void ComputeNumbering(const Function *F,
+                             DenseMap<const Value *, unsigned> &Numbering) {
   unsigned IN = 0;
 
   // Arguments get the first numbers.
-  for (Function::arg_iterator
-         AI = F->arg_begin(), AE = F->arg_end(); AI != AE; ++AI)
-    if (!AI->hasName())
-      Numbering[&*AI] = IN++;
+  for (const auto &Arg : F->args())
+    if (!Arg.hasName())
+      Numbering[&Arg] = IN++;
 
   // Walk the basic blocks in order.
-  for (Function::iterator FI = F->begin(), FE = F->end(); FI != FE; ++FI) {
-    if (!FI->hasName())
-      Numbering[&*FI] = IN++;
+  for (const auto &Func : *F) {
+    if (!Func.hasName())
+      Numbering[&Func] = IN++;
 
     // Walk the instructions in order.
-    for (BasicBlock::iterator BI = FI->begin(), BE = FI->end(); BI != BE; ++BI)
+    for (const auto &BB : Func)
       // void instructions don't get numbers.
-      if (!BI->hasName() && !BI->getType()->isVoidTy())
-        Numbering[&*BI] = IN++;
+      if (!BB.hasName() && !BB.getType()->isVoidTy())
+        Numbering[&BB] = IN++;
   }
 
   assert(!Numbering.empty() && "asked for numbering but numbering was no-op");
 }
 
-
 void Consumer::anchor() { }
 
-void DiffConsumer::printValue(Value *V, bool isL) {
+void DiffConsumer::printValue(const Value *V, bool isL) {
   if (V->hasName()) {
     out << (isa<GlobalValue>(V) ? '@' : '%') << V->getName();
     return;
@@ -99,16 +98,16 @@ void DiffConsumer::header() {
       // Extra newline between functions.
       if (Differences) out << "\n";
 
-      Function *L = cast<Function>(I->L);
-      Function *R = cast<Function>(I->R);
+      const Function *L = cast<Function>(I->L);
+      const Function *R = cast<Function>(I->R);
       if (L->getName() != R->getName())
         out << "in function " << L->getName()
             << " / " << R->getName() << ":\n";
       else
         out << "in function " << L->getName() << ":\n";
     } else if (isa<BasicBlock>(I->L)) {
-      BasicBlock *L = cast<BasicBlock>(I->L);
-      BasicBlock *R = cast<BasicBlock>(I->R);
+      const BasicBlock *L = cast<BasicBlock>(I->L);
+      const BasicBlock *R = cast<BasicBlock>(I->R);
       if (L->hasName() && R->hasName() && L->getName() == R->getName())
         out << "  in block %" << L->getName() << ":\n";
       else {
@@ -139,7 +138,7 @@ bool DiffConsumer::hadDifferences() const {
   return Differences;
 }
 
-void DiffConsumer::enterContext(Value *L, Value *R) {
+void DiffConsumer::enterContext(const Value *L, const Value *R) {
   contexts.push_back(DiffContext(L, R));
   Indent += 2;
 }

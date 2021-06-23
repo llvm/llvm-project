@@ -50,27 +50,6 @@ private:
   I base_ = I{};
 };
 
-class move_tracker {
-public:
-  move_tracker() = default;
-
-  constexpr move_tracker(move_tracker&& other) noexcept : moves_{other.moves_ + 1} { other.moves_ = 0; }
-
-  constexpr move_tracker& operator=(move_tracker&& other) noexcept {
-    moves_ = other.moves_ + 1;
-    other.moves_ = 0;
-    return *this;
-  }
-
-  constexpr move_tracker(move_tracker const& other) = delete;
-  constexpr move_tracker& operator=(move_tracker const& other) = delete;
-
-  [[nodiscard]] constexpr int moves() const noexcept { return moves_; }
-
-private:
-  int moves_ = 0;
-};
-
 template <typename I>
 constexpr void unqualified_lookup_move(I first_, I last_, I result_first_, I result_last_) {
   auto first = ::check_unqualified_lookup::unqualified_lookup_wrapper{std::move(first_)};

@@ -1824,7 +1824,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
       const Function &F = *MI->getParent()->getParent();
       auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
       if (MemoryOpRemark::canHandle(MI, TLI)) {
-        MemoryOpRemark R(*ORE, "memsize", *DL, TLI);
+        MemoryOpRemark R(*ORE, "gisel-irtranslator-memsize", *DL, TLI);
         R.visit(MI);
       }
     }
@@ -2263,7 +2263,7 @@ bool IRTranslator::translateCallBase(const CallBase &CB,
       const Function &F = *CI->getParent()->getParent();
       auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
       if (MemoryOpRemark::canHandle(CI, TLI)) {
-        MemoryOpRemark R(*ORE, "memsize", *DL, TLI);
+        MemoryOpRemark R(*ORE, "gisel-irtranslator-memsize", *DL, TLI);
         R.visit(CI);
       }
     }

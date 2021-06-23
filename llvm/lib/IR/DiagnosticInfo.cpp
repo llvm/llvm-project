@@ -70,12 +70,10 @@ void DiagnosticInfoInlineAsm::print(DiagnosticPrinter &DP) const {
 }
 
 void DiagnosticInfoResourceLimit::print(DiagnosticPrinter &DP) const {
-  DP << getResourceName() << " limit";
-
+  DP << getResourceName() << " (" << getResourceSize() << ") exceeds limit";
   if (getResourceLimit() != 0)
-    DP << " of " << getResourceLimit();
-
-  DP << " exceeded (" <<  getResourceSize() << ") in " << getFunction();
+    DP << " (" << getResourceLimit() << ')';
+  DP << " in function '" << getFunction() << '\'';
 }
 
 void DiagnosticInfoDebugMetadataVersion::print(DiagnosticPrinter &DP) const {

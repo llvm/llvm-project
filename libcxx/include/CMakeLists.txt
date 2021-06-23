@@ -111,6 +111,7 @@ set(files
   __iterator/default_sentinel.h
   __iterator/incrementable_traits.h
   __iterator/iter_move.h
+  __iterator/iter_swap.h
   __iterator/iterator_traits.h
   __iterator/next.h
   __iterator/prev.h

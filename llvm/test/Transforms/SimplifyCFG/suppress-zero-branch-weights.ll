@@ -12,16 +12,16 @@ define i1 @repeated_signbits(i8 %condition) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext i8 [[CONDITION:%.*]] to i32
 ; CHECK-NEXT:    switch i32 [[SEXT]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[A:%.*]]
-; CHECK-NEXT:    i32 127, label [[A]]
-; CHECK-NEXT:    i32 -128, label [[A]]
-; CHECK-NEXT:    i32 -1, label [[A]]
+; CHECK-NEXT:    i32 0, label [[COMMON_RET:%.*]]
+; CHECK-NEXT:    i32 127, label [[COMMON_RET]]
+; CHECK-NEXT:    i32 -128, label [[COMMON_RET]]
+; CHECK-NEXT:    i32 -1, label [[COMMON_RET]]
 ; CHECK-NEXT:    ]
-; CHECK:       a:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ], [ false, [[DEFAULT]] ]
-; CHECK-NEXT:    ret i1 [[MERGE]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i1 [ false, [[DEFAULT]] ], [ true, [[ENTRY:%.*]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ]
+; CHECK-NEXT:    ret i1 [[COMMON_RET_OP]]
 ; CHECK:       default:
-; CHECK-NEXT:    br label [[A]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
   %sext = sext i8 %condition to i32

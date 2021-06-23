@@ -496,7 +496,7 @@ define void @test25() {
 ; CHECK-LABEL: @test25(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i64 poison, i64* null, align 536870912
-; CHECK-NEXT:    tail call void @foo25(i32 0, i64 0)
+; CHECK-NEXT:    tail call void @foo25(i32 0, i64 poison)
 ; CHECK-NEXT:    unreachable
 ;
 entry:

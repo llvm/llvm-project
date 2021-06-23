@@ -288,35 +288,35 @@ func @dot(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: memref<?xf32, of
 //       TILE-234:    linalg.dot ins(%[[sAi]], %[[sBi]]{{.*}} outs(
 
 func @fill_static(%arg0: memref<127x99xf32>, %arg1: f32) {
-  linalg.fill(%arg0, %arg1) : memref<127x99xf32>, f32
+  linalg.fill(%arg1, %arg0) : f32, memref<127x99xf32>
   return
 }
 // TILE-2-LABEL: func @fill_static
 //       TILE-2:   for
 //   TILE-2-NOT:   for
 //       TILE-2:       memref.subview{{.*}} : memref<127x99xf32>
-//       TILE-2:       linalg.fill{{.*}} : memref<?x99xf32, #[[$stride_99_1_layout_map]]>, f32
+//       TILE-2:       linalg.fill{{.*}} : f32, memref<?x99xf32, #[[$stride_99_1_layout_map]]>
 
 // TILE-02-LABEL: func @fill_static
 //       TILE-02:   for
 //   TILE-02-NOT:   for
 //       TILE-02:       memref.subview{{.*}} : memref<127x99xf32>
-//       TILE-02:       linalg.fill{{.*}} : memref<127x?xf32, #[[$stride_99_1_layout_map]]>, f32
+//       TILE-02:       linalg.fill{{.*}} : f32, memref<127x?xf32, #[[$stride_99_1_layout_map]]>
 
 // TILE-002-LABEL: func @fill_static
 //   TILE-002-NOT:   for
-//       TILE-002:     linalg.fill{{.*}} memref<127x99xf32>, f32
+//       TILE-002:     linalg.fill{{.*}} f32, memref<127x99xf32>
 
 // TILE-234-LABEL: func @fill_static
 //       TILE-234:   for
 //       TILE-234:     for
 //   TILE-234-NOT:   for
 //       TILE-234:       memref.subview{{.*}} : memref<127x99xf32>
-//       TILE-234:       linalg.fill{{.*}} : memref<?x?xf32, #[[$stride_99_1_layout_map]]>, f32
+//       TILE-234:       linalg.fill{{.*}} : f32, memref<?x?xf32, #[[$stride_99_1_layout_map]]>
 
 
 func @fill(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: f32) {
-  linalg.fill(%arg0, %arg1) : memref<?x?xf32, offset: ?, strides: [?, 1]>, f32
+  linalg.fill(%arg1, %arg0) : f32, memref<?x?xf32, offset: ?, strides: [?, 1]>
   return
 }
 // TILE-2-LABEL: func @fill

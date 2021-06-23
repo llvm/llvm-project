@@ -729,11 +729,39 @@ class PriorityInlineOrder : public InlineOrder<std::pair<CallBase *, int>> {
   using reference = T &;
   using const_reference = const T &;
 
-  static bool cmp(const T &P1, const T &P2) { return P1.second > P2.second; }
+  // Return true if S1 is more desirable than S2.
+  static bool isMoreDesirable(int S1, int S2) { return S1 < S2; }
+
+  static bool cmp(const T &P1, const T &P2) {
+    return isMoreDesirable(P2.second, P1.second);
+  }
 
   int evaluate(CallBase *CB) {
     Function *Callee = CB->getCalledFunction();
     return (int)Callee->getInstructionCount();
+  }
+
+  // A call site could become less desirable for inlining because of the size
+  // growth from prior inlining into the callee. This method is used to lazily
+  // update the desirability of a call site if it's decreasing. It is only
+  // called on pop() or front(), not every time the desirability changes. When
+  // the desirability of the front call site decreases, an updated one would be
+  // pushed right back into the heap. For simplicity, those cases where
+  // the desirability of a call site increases are ignored here.
+  void adjust() {
+    bool Changed = false;
+    do {
+      CallBase *CB = Heap.front().first;
+      const int PreviousGoodness = Heap.front().second;
+      const int CurrentGoodness = evaluate(CB);
+      Changed = isMoreDesirable(PreviousGoodness, CurrentGoodness);
+      if (Changed) {
+        std::pop_heap(Heap.begin(), Heap.end(), cmp);
+        Heap.pop_back();
+        Heap.push_back({CB, CurrentGoodness});
+        std::push_heap(Heap.begin(), Heap.end(), cmp);
+      }
+    } while (Changed);
   }
 
 public:
@@ -751,6 +779,8 @@ public:
 
   T pop() override {
     assert(size() > 0);
+    adjust();
+
     CallBase *CB = Heap.front().first;
     T Result = std::make_pair(CB, InlineHistoryMap[CB]);
     InlineHistoryMap.erase(CB);
@@ -761,6 +791,8 @@ public:
 
   const_reference front() override {
     assert(size() > 0);
+    adjust();
+
     CallBase *CB = Heap.front().first;
     return *InlineHistoryMap.find(CB);
   }

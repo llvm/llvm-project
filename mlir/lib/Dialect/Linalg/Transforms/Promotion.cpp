@@ -283,7 +283,7 @@ promoteSubViews(ImplicitLocOpBuilder &b,
             .Default([](auto) { return Value(); });
     if (!fillVal)
       return {};
-    b.create<linalg::FillOp>(promotionInfo->fullLocalView, fillVal);
+    b.create<linalg::FillOp>(fillVal, promotionInfo->fullLocalView);
   }
 
   // Copy data into the promoted buffers. Use callback if provided.

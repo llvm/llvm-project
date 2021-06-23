@@ -174,7 +174,7 @@ public:
            T::getParseAssemblyFn(), T::getPrintAssemblyFn(),
            T::getVerifyInvariantsFn(), T::getFoldHookFn(),
            T::getGetCanonicalizationPatternsFn(), T::getInterfaceMap(),
-           T::getHasTraitFn());
+           T::getHasTraitFn(), T::getAttributeNames());
   }
 
   /// Register a new operation in a Dialect object.
@@ -185,7 +185,26 @@ public:
          ParseAssemblyFn &&parseAssembly, PrintAssemblyFn &&printAssembly,
          VerifyInvariantsFn &&verifyInvariants, FoldHookFn &&foldHook,
          GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
-         detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait);
+         detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait,
+         ArrayRef<StringRef> attrNames);
+
+  /// Return the list of cached attribute names registered to this operation.
+  /// The order of attributes cached here is unique to each type of operation,
+  /// and the interpretation of this attribute list should generally be driven
+  /// by the respective operation. In many cases, this caching removes the need
+  /// to use the raw string name of a known attribute.
+  ///
+  /// For example the ODS generator, with an op defining the following
+  /// attributes:
+  ///
+  ///   let arguments = (ins I32Attr:$attr1, I32Attr:$attr2);
+  ///
+  /// ... may produce an order here of ["attr1", "attr2"]. This allows for the
+  /// ODS generator to directly access the cached name for a known attribute,
+  /// greatly simplifying the cost and complexity of attribute usage produced by
+  /// the generator.
+  ///
+  ArrayRef<Identifier> getAttributeNames() const { return attributeNames; }
 
 private:
   AbstractOperation(StringRef name, Dialect &dialect, TypeID typeID,
@@ -194,7 +213,8 @@ private:
                     VerifyInvariantsFn &&verifyInvariants,
                     FoldHookFn &&foldHook,
                     GetCanonicalizationPatternsFn &&getCanonicalizationPatterns,
-                    detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait);
+                    detail::InterfaceMap &&interfaceMap, HasTraitFn &&hasTrait,
+                    ArrayRef<Identifier> attrNames);
 
   /// Give Op access to lookupMutable.
   template <typename ConcreteType, template <typename T> class... Traits>
@@ -215,6 +235,11 @@ private:
   ParseAssemblyFn parseAssemblyFn;
   PrintAssemblyFn printAssemblyFn;
   VerifyInvariantsFn verifyInvariantsFn;
+
+  /// A list of attribute names registered to this operation in identifier form.
+  /// This allows for operation classes to use identifiers for attribute
+  /// lookup/creation/etc., as opposed to strings.
+  ArrayRef<Identifier> attributeNames;
 };
 
 //===----------------------------------------------------------------------===//

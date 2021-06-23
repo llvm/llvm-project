@@ -5,8 +5,8 @@ define void @widget(i32 %arg) {
 ; CHECK-LABEL: @widget(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[ARG:%.*]], 2
-; CHECK-NEXT:    br i1 [[SWITCH]], label [[BB2:%.*]], label [[INFLOOP:%.*]]
-; CHECK:       bb2:
+; CHECK-NEXT:    br i1 [[SWITCH]], label [[COMMON_RET:%.*]], label [[INFLOOP:%.*]]
+; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       infloop:
 ; CHECK-NEXT:    br label [[INFLOOP]]

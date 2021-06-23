@@ -302,8 +302,7 @@ public:
 //    ~sentry() = default;
 
     _LIBCPP_INLINE_VISIBILITY
-        _LIBCPP_EXPLICIT
-        operator bool() const {return __ok_;}
+    explicit operator bool() const {return __ok_;}
 };
 
 template <class _CharT, class _Traits>

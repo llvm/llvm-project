@@ -26,6 +26,7 @@ configure_lit_site_cfg(
   MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py
   PATHS
+  "CMAKE_OSX_SYSROOT"
   "LLVM_SOURCE_DIR"
   "LLVM_BINARY_DIR"
   "LLVM_TOOLS_DIR"

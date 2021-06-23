@@ -725,8 +725,13 @@ PointerType::PointerType(LLVMContext &C, unsigned AddrSpace)
   setSubclassData(AddrSpace);
 }
 
-PointerType *Type::getPointerTo(unsigned addrs) const {
-  return PointerType::get(const_cast<Type*>(this), addrs);
+PointerType *Type::getPointerTo(unsigned AddrSpace) const {
+  // Pointer to opaque pointer is opaque pointer.
+  if (auto *PTy = dyn_cast<PointerType>(this))
+    if (PTy->isOpaque())
+      return PointerType::get(getContext(), AddrSpace);
+
+  return PointerType::get(const_cast<Type*>(this), AddrSpace);
 }
 
 bool PointerType::isValidElementType(Type *ElemTy) {

@@ -25,11 +25,11 @@ define amdgpu_kernel void @k0() {
 ; CHECK-LABEL: @k0(
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(%llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds) ]
 ; CHECK-NEXT:    %lds.size.1.align.1.bc = bitcast [1 x i8] addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 1) to i8 addrspace(3)*
-; CHECK-NEXT:    store i8 1, i8 addrspace(3)* %lds.size.1.align.1.bc, align 1
+; CHECK-NEXT:    store i8 1, i8 addrspace(3)* %lds.size.1.align.1.bc, align 8
 ; CHECK-NEXT:    %lds.size.2.align.2.bc = bitcast [2 x i8] addrspace(3)* getelementptr inbounds (%llvm.amdgcn.kernel.k0.lds.t, %llvm.amdgcn.kernel.k0.lds.t addrspace(3)* @llvm.amdgcn.kernel.k0.lds, i32 0, i32 2) to i8 addrspace(3)*
-; CHECK-NEXT:    store i8 2, i8 addrspace(3)* %lds.size.2.align.2.bc, align 2
+; CHECK-NEXT:    store i8 2, i8 addrspace(3)* %lds.size.2.align.2.bc, align 4
 ; CHECK-NEXT:    %lds.size.4.align.4.bc = bitcast [4 x i8] addrspace(3)* getelementptr inbounds (%llvm.amdgcn.kernel.k0.lds.t, %llvm.amdgcn.kernel.k0.lds.t addrspace(3)* @llvm.amdgcn.kernel.k0.lds, i32 0, i32 1) to i8 addrspace(3)*
-; CHECK-NEXT:    store i8 4, i8 addrspace(3)* %lds.size.4.align.4.bc, align 4
+; CHECK-NEXT:    store i8 4, i8 addrspace(3)* %lds.size.4.align.4.bc, align 16
 ; CHECK-NEXT:    %lds.size.16.align.16.bc = bitcast [16 x i8] addrspace(3)* getelementptr inbounds (%llvm.amdgcn.kernel.k0.lds.t, %llvm.amdgcn.kernel.k0.lds.t addrspace(3)* @llvm.amdgcn.kernel.k0.lds, i32 0, i32 0) to i8 addrspace(3)*
 ; CHECK-NEXT:    store i8 16, i8 addrspace(3)* %lds.size.16.align.16.bc, align 16
 ; CHECK-NEXT:    ret void
@@ -53,9 +53,9 @@ define amdgpu_kernel void @k1() {
 ; CHECK-LABEL: @k1(
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(%llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds) ]
 ; CHECK-NEXT:    %lds.size.2.align.2.bc = bitcast [2 x i8] addrspace(3)* getelementptr inbounds (%llvm.amdgcn.kernel.k1.lds.t, %llvm.amdgcn.kernel.k1.lds.t addrspace(3)* @llvm.amdgcn.kernel.k1.lds, i32 0, i32 2) to i8 addrspace(3)*
-; CHECK-NEXT:    store i8 2, i8 addrspace(3)* %lds.size.2.align.2.bc, align 2
+; CHECK-NEXT:    store i8 2, i8 addrspace(3)* %lds.size.2.align.2.bc, align 4
 ; CHECK-NEXT:    %lds.size.4.align.4.bc = bitcast [4 x i8] addrspace(3)* getelementptr inbounds (%llvm.amdgcn.kernel.k1.lds.t, %llvm.amdgcn.kernel.k1.lds.t addrspace(3)* @llvm.amdgcn.kernel.k1.lds, i32 0, i32 1) to i8 addrspace(3)*
-; CHECK-NEXT:    store i8 4, i8 addrspace(3)* %lds.size.4.align.4.bc, align 4
+; CHECK-NEXT:    store i8 4, i8 addrspace(3)* %lds.size.4.align.4.bc, align 16
 ; CHECK-NEXT:    %lds.size.16.align.16.bc = bitcast [16 x i8] addrspace(3)* getelementptr inbounds (%llvm.amdgcn.kernel.k1.lds.t, %llvm.amdgcn.kernel.k1.lds.t addrspace(3)* @llvm.amdgcn.kernel.k1.lds, i32 0, i32 0) to i8 addrspace(3)*
 ; CHECK-NEXT:    store i8 16, i8 addrspace(3)* %lds.size.16.align.16.bc, align 16
 ; CHECK-NEXT:    ret void
@@ -101,9 +101,9 @@ define amdgpu_kernel void @1() {
 define void @f0() {
 ; CHECK-LABEL: @f0(
 ; CHECK-NEXT:    %lds.size.1.align.1.bc = bitcast [1 x i8] addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 1) to i8 addrspace(3)*
-; CHECK-NEXT:    store i8 1, i8 addrspace(3)* %lds.size.1.align.1.bc, align 1
+; CHECK-NEXT:    store i8 1, i8 addrspace(3)* %lds.size.1.align.1.bc, align 8
 ; CHECK-NEXT:    %lds.size.8.align.8.bc = bitcast [8 x i8] addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 0) to i8 addrspace(3)*
-; CHECK-NEXT:    store i8 8, i8 addrspace(3)* %lds.size.8.align.8.bc, align 4
+; CHECK-NEXT:    store i8 8, i8 addrspace(3)* %lds.size.8.align.8.bc, align 8
 ; CHECK-NEXT:    ret void
 ;
   %lds.size.1.align.1.bc = bitcast [1 x i8] addrspace(3)* @lds.size.1.align.1 to i8 addrspace(3)*

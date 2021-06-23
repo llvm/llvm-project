@@ -499,6 +499,11 @@ __OMP_ATTRS_SET(InaccessibleArgOnlyAttrs,
                                    EnumAttr(WillReturn), EnumAttr(NoFree))
                     : AttributeSet(EnumAttr(NoUnwind)))
 
+__OMP_ATTRS_SET(NoCaptureAttrs,
+                OptimisticAttributes
+                    ? AttributeSet(EnumAttr(NoCapture))
+                    : AttributeSet(EnumAttr(NoCapture)))
+
 #if 0
 __OMP_ATTRS_SET(InaccessibleOnlyAttrs,
                 OptimisticAttributes
@@ -839,6 +844,11 @@ __OMP_RTL_ATTRS(__kmpc_doacross_wait, BarrierAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs, AttributeSet(), ReadOnlyPtrAttrs))
 __OMP_RTL_ATTRS(__kmpc_doacross_fini, BarrierAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs))
+
+__OMP_RTL_ATTRS(__kmpc_alloc_shared, DefaultAttrs, ReturnPtrAttrs,
+                ParamAttrs())
+__OMP_RTL_ATTRS(__kmpc_free_shared, AllocAttrs, AttributeSet(),
+                ParamAttrs(NoCaptureAttrs))
 
 __OMP_RTL_ATTRS(__kmpc_alloc, DefaultAttrs, ReturnPtrAttrs, ParamAttrs())
 __OMP_RTL_ATTRS(__kmpc_free, AllocAttrs, AttributeSet(), ParamAttrs())

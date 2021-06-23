@@ -96,11 +96,11 @@ public:
   Block *getBlock() { return block; }
 
   /// Return the context this operation is associated with.
-  MLIRContext *getContext();
+  MLIRContext *getContext() { return location->getContext(); }
 
   /// Return the dialect this operation is associated with, or nullptr if the
   /// associated dialect is not registered.
-  Dialect *getDialect();
+  Dialect *getDialect() { return getName().getDialect(); }
 
   /// The source location the operation was defined or derived from.
   Location getLoc() { return location; }
@@ -110,11 +110,11 @@ public:
 
   /// Returns the region to which the instruction belongs. Returns nullptr if
   /// the instruction is unlinked.
-  Region *getParentRegion();
+  Region *getParentRegion() { return block ? block->getParent() : nullptr; }
 
   /// Returns the closest surrounding operation that contains this operation
   /// or nullptr if this is a top-level operation.
-  Operation *getParentOp();
+  Operation *getParentOp() { return block ? block->getParentOp() : nullptr; }
 
   /// Return the closest surrounding parent operation that is of type 'OpTy'.
   template <typename OpTy> OpTy getParentOfType() {

@@ -91,6 +91,7 @@ public:
                    SmallVectorImpl<MachineInstr *> &CopiesToReplace) const;
 
   bool tryFoldCndMask(MachineInstr &MI) const;
+  bool tryFoldZeroHighBits(MachineInstr &MI) const;
   void foldInstOperand(MachineInstr &MI, MachineOperand &OpToFold) const;
 
   const MachineOperand *isClamp(const MachineInstr &MI) const;
@@ -1188,6 +1189,27 @@ bool SIFoldOperands::tryFoldCndMask(MachineInstr &MI) const {
   return true;
 }
 
+bool SIFoldOperands::tryFoldZeroHighBits(MachineInstr &MI) const {
+  if (MI.getOpcode() != AMDGPU::V_AND_B32_e64 &&
+      MI.getOpcode() != AMDGPU::V_AND_B32_e32)
+    return false;
+
+  MachineOperand *Src0 = getImmOrMaterializedImm(*MRI, MI.getOperand(1));
+  if (!Src0->isImm() || Src0->getImm() != 0xffff)
+    return false;
+
+  Register Src1 = MI.getOperand(2).getReg();
+  MachineInstr *SrcDef = MRI->getVRegDef(Src1);
+  if (ST->zeroesHigh16BitsOfDest(SrcDef->getOpcode())) {
+    Register Dst = MI.getOperand(0).getReg();
+    MRI->replaceRegWith(Dst, SrcDef->getOperand(0).getReg());
+    MI.eraseFromParent();
+    return true;
+  }
+
+  return false;
+}
+
 void SIFoldOperands::foldInstOperand(MachineInstr &MI,
                                      MachineOperand &OpToFold) const {
   // We need mutate the operands of new mov instructions to add implicit
@@ -1720,6 +1742,9 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
     MachineOperand *CurrentKnownM0Val = nullptr;
     for (auto &MI : make_early_inc_range(*MBB)) {
       tryFoldCndMask(MI);
+
+      if (tryFoldZeroHighBits(MI))
+        continue;
 
       if (MI.isRegSequence() && tryFoldRegSequence(MI))
         continue;
