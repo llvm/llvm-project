@@ -75,8 +75,7 @@ define void @below_threshold(i32 %in, i32* %out) nounwind {
 ;
 ; RV64I-SMALL-LABEL: below_threshold:
 ; RV64I-SMALL:       # %bb.0: # %entry
-; RV64I-SMALL-NEXT:    slli a0, a0, 32
-; RV64I-SMALL-NEXT:    srli a0, a0, 32
+; RV64I-SMALL-NEXT:    sext.w a0, a0
 ; RV64I-SMALL-NEXT:    addi a2, zero, 2
 ; RV64I-SMALL-NEXT:    blt a2, a0, .LBB0_4
 ; RV64I-SMALL-NEXT:  # %bb.1: # %entry
@@ -109,8 +108,7 @@ define void @below_threshold(i32 %in, i32* %out) nounwind {
 ;
 ; RV64I-MEDIUM-LABEL: below_threshold:
 ; RV64I-MEDIUM:       # %bb.0: # %entry
-; RV64I-MEDIUM-NEXT:    slli a0, a0, 32
-; RV64I-MEDIUM-NEXT:    srli a0, a0, 32
+; RV64I-MEDIUM-NEXT:    sext.w a0, a0
 ; RV64I-MEDIUM-NEXT:    addi a2, zero, 2
 ; RV64I-MEDIUM-NEXT:    blt a2, a0, .LBB0_4
 ; RV64I-MEDIUM-NEXT:  # %bb.1: # %entry
@@ -236,8 +234,7 @@ define void @above_threshold(i32 %in, i32* %out) nounwind {
 ;
 ; RV64I-SMALL-LABEL: above_threshold:
 ; RV64I-SMALL:       # %bb.0: # %entry
-; RV64I-SMALL-NEXT:    slli a0, a0, 32
-; RV64I-SMALL-NEXT:    srli a0, a0, 32
+; RV64I-SMALL-NEXT:    sext.w a0, a0
 ; RV64I-SMALL-NEXT:    addi a0, a0, -1
 ; RV64I-SMALL-NEXT:    addi a2, zero, 5
 ; RV64I-SMALL-NEXT:    bltu a2, a0, .LBB1_9
@@ -272,8 +269,7 @@ define void @above_threshold(i32 %in, i32* %out) nounwind {
 ;
 ; RV64I-MEDIUM-LABEL: above_threshold:
 ; RV64I-MEDIUM:       # %bb.0: # %entry
-; RV64I-MEDIUM-NEXT:    slli a0, a0, 32
-; RV64I-MEDIUM-NEXT:    srli a0, a0, 32
+; RV64I-MEDIUM-NEXT:    sext.w a0, a0
 ; RV64I-MEDIUM-NEXT:    addi a0, a0, -1
 ; RV64I-MEDIUM-NEXT:    addi a2, zero, 5
 ; RV64I-MEDIUM-NEXT:    bltu a2, a0, .LBB1_9
