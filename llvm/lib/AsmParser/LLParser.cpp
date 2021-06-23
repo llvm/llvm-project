@@ -1469,8 +1469,13 @@ static inline GlobalValue *createGlobalFwdRef(Module *M, PointerType *PTy,
 }
 
 Value *LLParser::checkValidVariableType(LocTy Loc, const Twine &Name, Type *Ty,
-                                        Value *Val, bool /* IsCall */) {
-  if (Val->getType() == Ty)
+                                        Value *Val, bool IsCall) {
+  Type *ValTy = Val->getType();
+  if (ValTy == Ty)
+    return Val;
+  // For calls, we also allow opaque pointers.
+  if (IsCall && ValTy == PointerType::get(Ty->getContext(),
+                                          Ty->getPointerAddressSpace()))
     return Val;
   if (Ty->isLabelTy())
     error(Loc, "'" + Name + "' is not a basic block");

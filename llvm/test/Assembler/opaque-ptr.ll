@@ -98,3 +98,19 @@ define void @atomicrmw(ptr %a, i32 %i) {
     %b = atomicrmw add ptr %a, i32 %i acquire
     ret void
 }
+
+; CHECK: define void @call(ptr %p)
+; CHECK:     call void %p()
+; CHECK:     ret void
+define void @call(ptr %p) {
+  call void %p()
+  ret void
+}
+
+; CHECK: define void @call_arg(ptr %p, i32 %a)
+; CHECK:     call void %p(i32 %a)
+; CHECK:     ret void
+define void @call_arg(ptr %p, i32 %a) {
+  call void %p(i32 %a)
+  ret void
+}
