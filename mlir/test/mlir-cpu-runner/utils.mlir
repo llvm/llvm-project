@@ -19,7 +19,7 @@ func @print_1d() {
   %f = constant 2.00000e+00 : f32
   %A = memref.alloc() : memref<16xf32>
   %B = memref.cast %A: memref<16xf32> to memref<?xf32>
-  linalg.fill(%B, %f) : memref<?xf32>, f32
+  linalg.fill(%f, %B) : f32, memref<?xf32>
   %U = memref.cast %B :  memref<?xf32> to memref<*xf32>
   call @print_memref_f32(%U): (memref<*xf32>) -> ()
   memref.dealloc %A : memref<16xf32>
@@ -33,7 +33,7 @@ func @print_3d() {
   %f4 = constant 4.00000e+00 : f32
   %A = memref.alloc() : memref<3x4x5xf32>
   %B = memref.cast %A: memref<3x4x5xf32> to memref<?x?x?xf32>
-  linalg.fill(%B, %f) : memref<?x?x?xf32>, f32
+  linalg.fill(%f, %B) : f32, memref<?x?x?xf32>
 
   %c2 = constant 2 : index
   memref.store %f4, %B[%c2, %c2, %c2]: memref<?x?x?xf32>

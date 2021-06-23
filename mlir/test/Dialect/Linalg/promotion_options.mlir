@@ -23,9 +23,9 @@ func @gemm(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>)
 //      CHECK:       %[[T19:.+]] = memref.subview %[[T18]]
 //      CHECK:       %[[T20:.+]] = memref.alloc(%{{.*}}, %{{.*}}) : memref<?x?xf32, 3>
 //      CHECK:       %[[T21:.+]] = memref.subview %[[T20]]
-//      CHECK:       linalg.fill(%[[T19]], %[[C42]])
+//      CHECK:       linalg.fill(%[[C42]], %[[T19]])
 //      CHECK:       linalg.copy(%[[T7]], %[[T19]])
-//      CHECK:       linalg.fill(%[[T21]], %[[C42]])
+//      CHECK:       linalg.fill(%[[C42]], %[[T21]])
 //      CHECK:       linalg.copy(%[[T17]], %[[T21]])
 //      CHECK:       linalg.matmul ins(%[[T19]], %[[T12]]{{.*}} outs(%[[T21]]
 //  CHECK-NOT:       linalg.fill

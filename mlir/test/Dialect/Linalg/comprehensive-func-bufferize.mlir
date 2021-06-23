@@ -12,8 +12,8 @@ func @fill_inplace(%A : tensor<?xf32> {linalg.inplaceable = true}) -> tensor<?xf
 
   /// Inplaceable, no alloc
   // CHECK-NOT: alloc
-  //     CHECK: linalg.fill(%[[I]], %[[F0]]) : memref<?xf32, #[[$map_2d_dyn]]>, f32
-  %r = linalg.fill(%A, %f0) : tensor<?xf32>, f32 -> tensor<?xf32>
+  //     CHECK: linalg.fill(%[[F0]], %[[I]]) : f32, memref<?xf32, #[[$map_2d_dyn]]>
+  %r = linalg.fill(%f0, %A) : f32, tensor<?xf32> -> tensor<?xf32>
 
   //     CHECK:  %[[R:.*]] = memref.tensor_load %[[I]] : memref<?xf32, #[[$map_2d_dyn]]>
   //     CHECK:  return %[[R]] : tensor<?xf32>
@@ -37,8 +37,8 @@ func @not_inplace(%A : tensor<?xf32>) -> tensor<?xf32> {
   //     CHECK: %[[F0:.*]] = constant 0.000000e+00 : f32
   %f0 = constant 0.0 : f32
 
-  //     CHECK: linalg.fill(%[[I2]], %[[F0]]) : memref<?xf32, #[[$map_2d_dyn]]>, f32
-  %r = linalg.fill(%A, %f0) : tensor<?xf32>, f32 -> tensor<?xf32>
+  //     CHECK: linalg.fill(%[[F0]], %[[I2]]) : f32, memref<?xf32, #[[$map_2d_dyn]]>
+  %r = linalg.fill(%f0, %A) : f32, tensor<?xf32> -> tensor<?xf32>
 
   //     CHECK:  dealloc %[[ALLOC]] : memref<?xf32>
   //     CHECK:  %[[R:.*]] = memref.tensor_load %[[I2]] : memref<?xf32, #[[$map_2d_dyn]]>
@@ -58,8 +58,8 @@ func @not_inplace(%A : tensor<?x?xf32> {linalg.inplaceable = true}) -> tensor<?x
   /// Cross-op multiple uses of %A, the first op which has interfering reads must alloc.
   //       CHECK: %[[ALLOC:.*]] = memref.alloc
   //       CHECK: %[[CAST:.*]] = memref.cast %[[ALLOC]]
-  //       CHECK: linalg.fill(%[[CAST]]
-  %f = linalg.fill(%A, %f0) : tensor<?x?xf32>, f32 -> tensor<?x?xf32>
+  //       CHECK: linalg.fill({{.*}}, %[[CAST]]
+  %f = linalg.fill(%f0, %A) : f32, tensor<?x?xf32> -> tensor<?x?xf32>
 
   /// The second op has no interfering reads and can reuse.
   //   CHECK-NOT: alloc
@@ -175,8 +175,8 @@ func @insert_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true}, %t : tens
   %r0 = tensor.insert_slice %t into %A[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
   /// Overwrite BUFFER_CAST_A inplace.
-  //      CHECK: linalg.fill(%[[BUFFER_CAST_A]]
-  %r1 = linalg.fill(%r0, %f0) : tensor<?xf32>, f32 -> tensor<?xf32>
+  //      CHECK: linalg.fill({{.*}}, %[[BUFFER_CAST_A]]
+  %r1 = linalg.fill(%f0, %r0) : f32, tensor<?xf32> -> tensor<?xf32>
   return %r1: tensor<?xf32>
 }
 
@@ -191,8 +191,8 @@ func @insert_slice_fun(%A : tensor<?xf32> {linalg.inplaceable = true}, %t : tens
   //      CHECK: %[[BUFFER_CAST_A:.*]] = memref.buffer_cast {{.*}} : memref<?xf32
   //      CHECK: %[[BUFFER_CAST_B:.*]] = memref.buffer_cast {{.*}} : memref<4xf32
 
-  //      CHECK: linalg.fill(%[[BUFFER_CAST_A]]
-  %r0 = linalg.fill(%A, %f0) : tensor<?xf32>, f32 -> tensor<?xf32>
+  //      CHECK: linalg.fill({{.*}}, %[[BUFFER_CAST_A]]
+  %r0 = linalg.fill(%f0, %A) : f32, tensor<?xf32> -> tensor<?xf32>
 
   //  CHECK-NOT: alloc
   //      CHECK: %[[SV:.*]] = memref.subview %[[BUFFER_CAST_A]]
@@ -241,9 +241,9 @@ func @insert_slice_fun_not_inplace(%A : tensor<?xf32> {linalg.inplaceable = true
   // So we need to bufferize it out of place and make a new alloc.
   //  CHECK-DAG: %[[ALLOC:.*]] = memref.alloc({{.*}}) : memref<?xf32>
   //  CHECK-DAG: %[[ALLOC_CAST_DYNAMIC:.*]] = memref.cast %[[ALLOC]] : memref<?xf32> to memref<?xf32, {{.*}}
-  //      CHECK: linalg.fill(%[[ALLOC_CAST_DYNAMIC]]
+  //      CHECK: linalg.fill(%{{.*}}, %[[ALLOC_CAST_DYNAMIC]]
   //      CHECK: memref.dealloc %[[ALLOC]] : memref<?xf32>
-  %r1 = linalg.fill(%A, %f0) : tensor<?xf32>, f32 -> tensor<?xf32>
+  %r1 = linalg.fill(%f0, %A) : f32, tensor<?xf32> -> tensor<?xf32>
 
   //  CHECK-DAG: %[[RET_A:.*]] = memref.tensor_load %[[BUFFER_CAST_A]] : memref<?xf32, {{.*}}
   //  CHECK-DAG: %[[RET_B:.*]] = memref.tensor_load %[[ALLOC_CAST_DYNAMIC]] : memref<?xf32, {{.*}}

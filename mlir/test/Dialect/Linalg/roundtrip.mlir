@@ -153,12 +153,12 @@ func @ops(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 
 
 func @fill_view(%arg0: memref<?xf32, offset: ?, strides: [1]>, %arg1: f32) {
-  linalg.fill(%arg0, %arg1) : memref<?xf32, offset: ?, strides: [1]>, f32
+  linalg.fill(%arg1, %arg0) : f32, memref<?xf32, offset: ?, strides: [1]>
   return
 }
 // CHECK-LABEL: func @fill_view(
 //       CHECK:  %{{.*}}: memref<?xf32, #[[$strided1D]]>, %{{.*}}: f32) {
-//       CHECK:   linalg.fill(%{{.*}}, %{{.*}}) : memref<?xf32, #[[$strided1D]]>, f32
+//       CHECK:   linalg.fill(%{{.*}}, %{{.*}}) : f32, memref<?xf32, #[[$strided1D]]>
 
 // -----
 
@@ -174,12 +174,12 @@ func @transpose(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
 
 
 func @fill_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1: f32) {
-  linalg.fill(%arg0, %arg1) : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, f32
+  linalg.fill(%arg1, %arg0) : f32, memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>
   return
 }
 // CHECK-LABEL: func @fill_view3(
 //       CHECK:  %{{.*}}: memref<?x?x?xf32, #[[$strided3D]]>, %{{.*}}: f32) {
-//       CHECK:   linalg.fill(%{{.*}}, %{{.*}}) : memref<?x?x?xf32, #[[$strided3D]]>, f32
+//       CHECK:   linalg.fill(%{{.*}}, %{{.*}}) : f32, memref<?x?x?xf32, #[[$strided3D]]>
 
 // -----
 
@@ -429,9 +429,9 @@ func @generic_with_multiple_tensor_outputs(
     -> (tensor<i32>, tensor<i32>) {
   %c0 = constant 0 : index
   %0 = linalg.init_tensor [] : tensor<i32>
-  %1 = linalg.fill(%0, %arg2) : tensor<i32>, i32 -> tensor<i32>
+  %1 = linalg.fill(%arg2, %0) : i32, tensor<i32> -> tensor<i32>
   %2 = linalg.init_tensor [] : tensor<i32>
-  %3 = linalg.fill(%2, %arg2) : tensor<i32>, i32 -> tensor<i32>
+  %3 = linalg.fill(%arg2, %2) : i32, tensor<i32> -> tensor<i32>
   %4:2 = linalg.generic {
     indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>, affine_map<(d0) -> ()>, affine_map<(d0) -> ()>],
     iterator_types = ["reduction"]}
@@ -704,10 +704,10 @@ func @legal_collapsing_reshape_dynamic_memref
 
 func @fill_tensor(%arg0 : index, %arg1 : index, %arg2 : f32) -> tensor<?x?xf32> {
   %0 = linalg.init_tensor [%arg0, %arg1] : tensor<?x?xf32>
-  %1 = linalg.fill(%0, %arg2) : tensor<?x?xf32>, f32 -> tensor<?x?xf32>
+  %1 = linalg.fill(%arg2, %0) : f32, tensor<?x?xf32> -> tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
 }
-// CHECK: %{{.+}} = linalg.fill(%{{.+}}, %{{.+}}) : tensor<?x?xf32>, f32 -> tensor<?x?xf32>
+// CHECK: %{{.+}} = linalg.fill(%{{.+}}, %{{.+}}) : f32, tensor<?x?xf32> -> tensor<?x?xf32>
 
 // -----
 

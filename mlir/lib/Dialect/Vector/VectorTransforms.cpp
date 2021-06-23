@@ -2413,7 +2413,7 @@ static Value createSubViewIntersection(OpBuilder &b,
 ///      memref.cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view, ... : compatibleMemRefType, index, index
 ///    } else {
-///      %2 = linalg.fill(%alloc, %pad)
+///      %2 = linalg.fill(%pad, %alloc)
 ///      %3 = subview %view [...][...][...]
 ///      linalg.copy(%3, %alloc)
 ///      memref.cast %alloc: memref<B...> to compatibleMemRefType

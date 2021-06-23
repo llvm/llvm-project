@@ -435,8 +435,8 @@ void FillOp::build(OpBuilder &builder, OperationState &result, Value output,
                                  TypeRange{output.getType()}, {});
 }
 
-ParseResult parseFillOpRegion(OpAsmParser &parser, Region &r, Type outputType,
-                              Type valueType) {
+ParseResult parseFillOpRegion(OpAsmParser &parser, Region &r, Type valueType,
+                              Type outputType) {
   OpBuilder opBuilder(parser.getBuilder().getContext());
   fillStructuredOpRegion<FillOp>(opBuilder, r, TypeRange{valueType},
                                  TypeRange{outputType});

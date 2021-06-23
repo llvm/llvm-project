@@ -72,7 +72,7 @@ getReassociationIndicesForReshape(ShapedType sourceType, ShapedType targetType);
 ///
 /// Examples:
 ///
-/// 1. linalg.fill(%A, %f) : memref<f32>, f32
+/// 1. linalg.fill(%f, %A) : f32, memref<f32>
 ///   name mangles into `linalg_fill_viewf32_f32_impl`
 ///
 /// 2. linalg.dot %A, %B, %C :

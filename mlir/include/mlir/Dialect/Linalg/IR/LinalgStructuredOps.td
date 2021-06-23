@@ -211,9 +211,9 @@ def FillOp : LinalgStructured_Op<"fill", []> {
   }];
 
   let assemblyFormat = [{
-    `(` $output `,` $value `)` attr-dict `:`
-        type($output) `,` type($value) (`->` type($result)^)?
-      custom<FillOpRegion>($region, ref(type($output)), ref(type($value)))
+    `(` $value `,` $output `)` attr-dict `:`
+        type($value) `,` type($output) (`->` type($result)^)?
+      custom<FillOpRegion>($region, ref(type($value)), ref(type($output)))
   }];
 
   let builders = [
