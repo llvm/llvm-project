@@ -14,6 +14,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TextAPI/InterfaceFile.h"
+#include "llvm/TextAPI/Symbol.h"
 #include "llvm/TextAPI/Target.h"
 
 using namespace llvm;
@@ -59,16 +60,16 @@ DiffScalarVal<bool, AD_Diff_Scalar_Bool>::print(raw_ostream &OS,
 
 } // end namespace llvm
 
-std::string SymScalar::stringifySymbolKind(MachO::SymbolKind Kind) {
+StringLiteral SymScalar::getSymbolNamePrefix(MachO::SymbolKind Kind) {
   switch (Kind) {
   case MachO::SymbolKind::GlobalSymbol:
     return "";
   case MachO::SymbolKind::ObjectiveCClass:
-    return "_OBJC_METACLASS_$_";
+    return ObjC2MetaClassNamePrefix;
   case MachO::SymbolKind ::ObjectiveCClassEHType:
-    return "_OBJC_EHTYPE_$_";
+    return ObjC2EHTypePrefix;
   case MachO::SymbolKind ::ObjectiveCInstanceVariable:
-    return "_OBJC_IVAR_$_";
+    return ObjC2IVarPrefix;
   }
   llvm_unreachable("Unknown llvm::MachO::SymbolKind enum");
 }
@@ -96,15 +97,16 @@ void SymScalar::print(raw_ostream &OS, std::string Indent, MachO::Target Targ) {
     if (Targ.Arch == MachO::AK_i386 &&
         Targ.Platform == MachO::PlatformKind::macOS) {
       OS << Indent << "\t\t" << ((Order == lhs) ? "< " : "> ")
-         << ".objc_class_name_" << Val->getName()
+         << ObjC1ClassNamePrefix << Val->getName()
          << getFlagString(Val->getFlags()) << "\n";
       return;
     }
-    OS << Indent << "\t\t" << ((Order == lhs) ? "< " : "> ") << "_OBJC_CLASS_$_"
-       << Val->getName() << getFlagString(Val->getFlags()) << "\n";
+    OS << Indent << "\t\t" << ((Order == lhs) ? "< " : "> ")
+       << ObjC2ClassNamePrefix << Val->getName()
+       << getFlagString(Val->getFlags()) << "\n";
   }
   OS << Indent << "\t\t" << ((Order == lhs) ? "< " : "> ")
-     << stringifySymbolKind(Val->getKind()) << Val->getName()
+     << getSymbolNamePrefix(Val->getKind()) << Val->getName()
      << getFlagString(Val->getFlags()) << "\n";
 }
 
