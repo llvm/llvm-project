@@ -184,9 +184,8 @@ static unsigned matchOption(const OptTable::Info *I, StringRef Str,
     StringRef Prefix(*Pre);
     if (Str.startswith(Prefix)) {
       StringRef Rest = Str.substr(Prefix.size());
-      bool Matched = IgnoreCase
-          ? Rest.startswith_lower(I->Name)
-          : Rest.startswith(I->Name);
+      bool Matched = IgnoreCase ? Rest.startswith_insensitive(I->Name)
+                                : Rest.startswith(I->Name);
       if (Matched)
         return Prefix.size() + StringRef(I->Name).size();
     }

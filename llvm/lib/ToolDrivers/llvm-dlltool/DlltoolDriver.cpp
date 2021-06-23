@@ -99,10 +99,10 @@ Optional<std::string> getPrefix(StringRef Argv0) {
   // llvm-dlltool -> None
   // aarch64-w64-mingw32-llvm-dlltool-10.exe -> aarch64-w64-mingw32
   ProgName = ProgName.rtrim("0123456789.-");
-  if (!ProgName.consume_back_lower("dlltool"))
+  if (!ProgName.consume_back_insensitive("dlltool"))
     return None;
-  ProgName.consume_back_lower("llvm-");
-  ProgName.consume_back_lower("-");
+  ProgName.consume_back_insensitive("llvm-");
+  ProgName.consume_back_insensitive("-");
   return ProgName.str();
 }
 

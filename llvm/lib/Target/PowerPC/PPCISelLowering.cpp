@@ -15772,7 +15772,7 @@ PPCTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                           &PPC::G8RCRegClass);
 
   // GCC accepts 'cc' as an alias for 'cr0', and we need to do the same.
-  if (!R.second && StringRef("{cc}").equals_lower(Constraint)) {
+  if (!R.second && StringRef("{cc}").equals_insensitive(Constraint)) {
     R.first = PPC::CR0;
     R.second = &PPC::CRRCRegClass;
   }

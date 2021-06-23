@@ -8038,7 +8038,7 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
                         : std::make_pair(0U, &AArch64::PPRRegClass);
     }
   }
-  if (StringRef("{cc}").equals_lower(Constraint))
+  if (StringRef("{cc}").equals_insensitive(Constraint))
     return std::make_pair(unsigned(AArch64::NZCV), &AArch64::CCRRegClass);
 
   // Use the default implementation in TargetLowering to convert the register
