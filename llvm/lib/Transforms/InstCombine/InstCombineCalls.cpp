@@ -1876,13 +1876,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       unsigned SubVecNumElts = SubVecTy->getNumElements();
       unsigned IdxN = cast<ConstantInt>(Idx)->getZExtValue();
 
-      // The result of this call is undefined if IdxN is not a constant multiple
-      // of the SubVec's minimum vector length OR the insertion overruns Vec.
-      if (IdxN % SubVecNumElts != 0 || IdxN + SubVecNumElts > VecNumElts) {
-        replaceInstUsesWith(CI, UndefValue::get(CI.getType()));
-        return eraseInstFromFunction(CI);
-      }
-
       // An insert that entirely overwrites Vec with SubVec is a nop.
       if (VecNumElts == SubVecNumElts) {
         replaceInstUsesWith(CI, SubVec);
@@ -1929,14 +1922,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       unsigned DstNumElts = DstTy->getNumElements();
       unsigned VecNumElts = VecTy->getNumElements();
       unsigned IdxN = cast<ConstantInt>(Idx)->getZExtValue();
-
-      // The result of this call is undefined if IdxN is not a constant multiple
-      // of the result type's minimum vector length OR the extraction overruns
-      // Vec.
-      if (IdxN % DstNumElts != 0 || IdxN + DstNumElts > VecNumElts) {
-        replaceInstUsesWith(CI, UndefValue::get(CI.getType()));
-        return eraseInstFromFunction(CI);
-      }
 
       // Extracting the entirety of Vec is a nop.
       if (VecNumElts == DstNumElts) {
