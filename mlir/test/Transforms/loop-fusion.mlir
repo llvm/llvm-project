@@ -3330,3 +3330,69 @@ func @fuse_large_number_of_loops(%arg0: memref<20x10xf32, 1>, %arg1: memref<20x1
 // CHECK:         affine.for
 // CHECK:         affine.for
 // CHECK-NOT:     affine.for
+
+// -----
+
+// Expects fusion of producer into consumer at depth 4 and subsequent removal of
+// source loop.
+// CHECK-LABEL: func @unflatten4d
+func @unflatten4d(%arg1: memref<7x8x9x10xf32>) {
+  %m = memref.alloc() : memref<5040xf32>
+  %cf7 = constant 7.0 : f32
+
+  affine.for %i0 = 0 to 7 {
+    affine.for %i1 = 0 to 8 {
+      affine.for %i2 = 0 to 9 {
+        affine.for %i3 = 0 to 10 {
+          affine.store %cf7, %m[720 * %i0 + 90 * %i1 + 10 * %i2 + %i3] : memref<5040xf32>
+        }
+      }
+    }
+  }
+  affine.for %i0 = 0 to 7 {
+    affine.for %i1 = 0 to 8 {
+      affine.for %i2 = 0 to 9 {
+        affine.for %i3 = 0 to 10 {
+          %v0 = affine.load %m[720 * %i0 + 90 * %i1 + 10 * %i2 + %i3] : memref<5040xf32>
+          affine.store %v0, %arg1[%i0, %i1, %i2, %i3] : memref<7x8x9x10xf32>
+        }
+      }
+    }
+  }
+  return
+}
+
+// CHECK:        affine.for
+// CHECK-NEXT:     affine.for
+// CHECK-NEXT:       affine.for
+// CHECK-NEXT:         affine.for
+// CHECK-NOT:    affine.for
+// CHECK: return
+
+// -----
+
+// Expects fusion of producer into consumer at depth 2 and subsequent removal of
+// source loop.
+// CHECK-LABEL: func @unflatten2d_with_transpose
+func @unflatten2d_with_transpose(%arg1: memref<8x7xf32>) {
+  %m = memref.alloc() : memref<56xf32>
+  %cf7 = constant 7.0 : f32
+
+  affine.for %i0 = 0 to 7 {
+    affine.for %i1 = 0 to 8 {
+      affine.store %cf7, %m[8 * %i0 + %i1] : memref<56xf32>
+    }
+  }
+  affine.for %i0 = 0 to 8 {
+    affine.for %i1 = 0 to 7 {
+      %v0 = affine.load %m[%i0 + 8 * %i1] : memref<56xf32>
+      affine.store %v0, %arg1[%i0, %i1] : memref<8x7xf32>
+    }
+  }
+  return
+}
+
+// CHECK:        affine.for
+// CHECK-NEXT:     affine.for
+// CHECK-NOT:    affine.for
+// CHECK: return
