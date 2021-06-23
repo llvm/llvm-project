@@ -1,6 +1,4 @@
 ; RUN: opt -S -loop-reduce < %s | FileCheck %s
-; XFAIL: *
-; REQUIRES: asserts
 ;
 ;This test produces zero factor that becomes a denumerator and fails an assetion.
 
