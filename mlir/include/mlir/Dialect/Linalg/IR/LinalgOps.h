@@ -73,18 +73,18 @@ getReassociationIndicesForReshape(ShapedType sourceType, ShapedType targetType);
 /// Examples:
 ///
 /// 1. linalg.fill(%f, %A) : f32, memref<f32>
-///   name mangles into `linalg_fill_viewf32_f32_impl`
+///   name mangles into `linalg_fill_f32_viewf32`
 ///
 /// 2. linalg.dot %A, %B, %C :
 ///      (memref<?xf32, stride_specification>,
 ///       memref<?xf32, stride_specification>, memref<f32>)
-///   name mangles into `linalg_dot_viewxf32_viewxf32_viewf32_impl`
+///   name mangles into `linalg_dot_viewxf32_viewxf32_viewf32`
 ///
 /// 3. linalg.matmul(...) :
 ///      memref<?x?xf32, stride_specification>,
 ///      memref<?x?xf32, stride_specification>,
 ///      memref<?x?xf32, stride_specification>
-///   name mangles into `linalg_matmul_viewxxf32_viewxxf32_viewxxf32_impl`
+///   name mangles into `linalg_matmul_viewxxf32_viewxxf32_viewxxf32`
 std::string generateLibraryCallName(Operation *op);
 
 /// Returns `num` AffineDimExpr dimensions at positions
