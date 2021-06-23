@@ -426,8 +426,8 @@ void FillOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
   b.create<linalg::YieldOp>(block.getArgument(0));
 }
 
-void FillOp::build(OpBuilder &builder, OperationState &result, Value output,
-                   Value value) {
+void FillOp::build(OpBuilder &builder, OperationState &result, Value value,
+                   Value output) {
   build(builder, result, output.getType().dyn_cast<RankedTensorType>(), value,
         output);
   fillStructuredOpRegion<FillOp>(builder, *result.regions.front(),
@@ -1966,7 +1966,7 @@ struct FoldFillWithTensorReshape : OpRewritePattern<TensorReshapeOp> {
     auto newInit = rewriter.create<TensorReshapeOp>(
         loc, reshapeOp.getResultType(), oldFill.output(),
         reshapeOp.reassociation());
-    rewriter.replaceOpWithNewOp<FillOp>(reshapeOp, newInit, oldFill.value());
+    rewriter.replaceOpWithNewOp<FillOp>(reshapeOp, oldFill.value(), newInit);
 
     return success();
   }
