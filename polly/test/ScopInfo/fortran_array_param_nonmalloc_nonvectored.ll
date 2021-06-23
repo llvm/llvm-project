@@ -65,4 +65,4 @@ return:                                           ; preds = %return.loopexit, %e
   ret void
 }
 
-; CHECK: MayWriteAccess := [Reduction Type: NONE] [Fortran array descriptor: xs] [Scalar: 0]
+; CHECK: MustWriteAccess := [Reduction Type: NONE] [Fortran array descriptor: xs] [Scalar: 0]
