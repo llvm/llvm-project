@@ -2021,7 +2021,15 @@ void UnwrappedLineParser::parseIfThenElse() {
       parseBlock(/*MustBeDeclaration=*/false);
       addUnwrappedLine();
     } else if (FormatTok->Tok.is(tok::kw_if)) {
+      FormatToken *Previous = AllTokens[Tokens->getPosition() - 1];
+      bool PrecededByComment = Previous->is(tok::comment);
+      if (PrecededByComment) {
+        addUnwrappedLine();
+        ++Line->Level;
+      }
       parseIfThenElse();
+      if (PrecededByComment)
+        --Line->Level;
     } else {
       addUnwrappedLine();
       ++Line->Level;
