@@ -4287,16 +4287,16 @@ const SCEV *ScalarEvolution::getPointerBase(const SCEV *V) {
     return V;
 
   while (true) {
-    if (const SCEVIntegralCastExpr *Cast = dyn_cast<SCEVIntegralCastExpr>(V)) {
-      V = Cast->getOperand();
-    } else if (const SCEVNAryExpr *NAry = dyn_cast<SCEVNAryExpr>(V)) {
+    if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(V)) {
+      V = AddRec->getStart();
+    } else if (auto *Add = dyn_cast<SCEVAddExpr>(V)) {
       const SCEV *PtrOp = nullptr;
-      for (const SCEV *NAryOp : NAry->operands()) {
-        if (NAryOp->getType()->isPointerTy()) {
+      for (const SCEV *AddOp : Add->operands()) {
+        if (AddOp->getType()->isPointerTy()) {
           // Cannot find the base of an expression with multiple pointer ops.
           if (PtrOp)
             return V;
-          PtrOp = NAryOp;
+          PtrOp = AddOp;
         }
       }
       if (!PtrOp) // All operands were non-pointer.
