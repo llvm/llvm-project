@@ -189,11 +189,14 @@ namespace llvm {
               compareMemory(Data, RHS.Data, RHS.Length) == 0);
     }
 
-    /// equals_lower - Check for string equality, ignoring case.
+    /// Check for string equality, ignoring case.
     LLVM_NODISCARD
-    bool equals_lower(StringRef RHS) const {
-      return Length == RHS.Length && compare_lower(RHS) == 0;
+    bool equals_insensitive(StringRef RHS) const {
+      return Length == RHS.Length && compare_insensitive(RHS) == 0;
     }
+
+    LLVM_NODISCARD
+    bool equals_lower(StringRef RHS) const { return equals_insensitive(RHS); }
 
     /// compare - Compare two strings; the result is -1, 0, or 1 if this string
     /// is lexicographically less than, equal to, or greater than the \p RHS.
@@ -209,9 +212,12 @@ namespace llvm {
       return Length < RHS.Length ? -1 : 1;
     }
 
-    /// compare_lower - Compare two strings, ignoring case.
+    /// Compare two strings, ignoring case.
     LLVM_NODISCARD
-    int compare_lower(StringRef RHS) const;
+    int compare_insensitive(StringRef RHS) const;
+
+    LLVM_NODISCARD
+    int compare_lower(StringRef RHS) const { return compare_insensitive(RHS); }
 
     /// compare_numeric - Compare two strings, treating sequences of digits as
     /// numbers.
@@ -290,7 +296,12 @@ namespace llvm {
 
     /// Check if this string starts with the given \p Prefix, ignoring case.
     LLVM_NODISCARD
-    bool startswith_lower(StringRef Prefix) const;
+    bool startswith_insensitive(StringRef Prefix) const;
+
+    LLVM_NODISCARD
+    bool startswith_lower(StringRef Prefix) const {
+      return startswith_insensitive(Prefix);
+    }
 
     /// Check if this string ends with the given \p Suffix.
     LLVM_NODISCARD
@@ -301,7 +312,12 @@ namespace llvm {
 
     /// Check if this string ends with the given \p Suffix, ignoring case.
     LLVM_NODISCARD
-    bool endswith_lower(StringRef Suffix) const;
+    bool endswith_insensitive(StringRef Suffix) const;
+
+    LLVM_NODISCARD
+    bool endswith_lower(StringRef Prefix) const {
+      return endswith_insensitive(Prefix);
+    }
 
     /// @}
     /// @name String Searching
@@ -327,7 +343,12 @@ namespace llvm {
     /// \returns The index of the first occurrence of \p C, or npos if not
     /// found.
     LLVM_NODISCARD
-    size_t find_lower(char C, size_t From = 0) const;
+    size_t find_insensitive(char C, size_t From = 0) const;
+
+    LLVM_NODISCARD
+    size_t find_lower(char C, size_t From = 0) const {
+      return find_insensitive(C, From);
+    }
 
     /// Search for the first character satisfying the predicate \p F
     ///
@@ -365,7 +386,12 @@ namespace llvm {
     /// \returns The index of the first occurrence of \p Str, or npos if not
     /// found.
     LLVM_NODISCARD
-    size_t find_lower(StringRef Str, size_t From = 0) const;
+    size_t find_insensitive(StringRef Str, size_t From = 0) const;
+
+    LLVM_NODISCARD
+    size_t find_lower(StringRef Str, size_t From = 0) const {
+      return find_insensitive(Str, From);
+    }
 
     /// Search for the last character \p C in the string.
     ///
@@ -388,7 +414,12 @@ namespace llvm {
     /// \returns The index of the last occurrence of \p C, or npos if not
     /// found.
     LLVM_NODISCARD
-    size_t rfind_lower(char C, size_t From = npos) const;
+    size_t rfind_insensitive(char C, size_t From = npos) const;
+
+    LLVM_NODISCARD
+    size_t rfind_lower(char C, size_t From = npos) const {
+      return rfind_insensitive(C, From);
+    }
 
     /// Search for the last string \p Str in the string.
     ///
@@ -402,7 +433,10 @@ namespace llvm {
     /// \returns The index of the last occurrence of \p Str, or npos if not
     /// found.
     LLVM_NODISCARD
-    size_t rfind_lower(StringRef Str) const;
+    size_t rfind_insensitive(StringRef Str) const;
+
+    LLVM_NODISCARD
+    size_t rfind_lower(StringRef Str) const { return rfind_insensitive(Str); }
 
     /// Find the first character in the string that is \p C, or npos if not
     /// found. Same as find.
@@ -469,14 +503,24 @@ namespace llvm {
     /// Return true if the given string is a substring of *this, and false
     /// otherwise.
     LLVM_NODISCARD
+    bool contains_insensitive(StringRef Other) const {
+      return find_insensitive(Other) != npos;
+    }
+
+    LLVM_NODISCARD
     bool contains_lower(StringRef Other) const {
-      return find_lower(Other) != npos;
+      return contains_insensitive(Other);
     }
 
     /// Return true if the given character is contained in *this, and false
     /// otherwise.
     LLVM_NODISCARD
-    bool contains_lower(char C) const { return find_lower(C) != npos; }
+    bool contains_insensitive(char C) const {
+      return find_insensitive(C) != npos;
+    }
+
+    LLVM_NODISCARD
+    bool contains_lower(char C) const { return contains_insensitive(C); }
 
     /// @}
     /// @name Helpful Algorithms
@@ -687,12 +731,16 @@ namespace llvm {
 
     /// Returns true if this StringRef has the given prefix, ignoring case,
     /// and removes that prefix.
-    bool consume_front_lower(StringRef Prefix) {
-      if (!startswith_lower(Prefix))
+    bool consume_front_insensitive(StringRef Prefix) {
+      if (!startswith_insensitive(Prefix))
         return false;
 
       *this = drop_front(Prefix.size());
       return true;
+    }
+
+    bool consume_front_lower(StringRef Prefix) {
+      return consume_front_insensitive(Prefix);
     }
 
     /// Returns true if this StringRef has the given suffix and removes that
@@ -707,12 +755,16 @@ namespace llvm {
 
     /// Returns true if this StringRef has the given suffix, ignoring case,
     /// and removes that suffix.
-    bool consume_back_lower(StringRef Suffix) {
-      if (!endswith_lower(Suffix))
+    bool consume_back_insensitive(StringRef Suffix) {
+      if (!endswith_insensitive(Suffix))
         return false;
 
       *this = drop_back(Suffix.size());
       return true;
+    }
+
+    bool consume_back_lower(StringRef Suffix) {
+      return consume_back_insensitive(Suffix);
     }
 
     /// Return a reference to the substring from [Start, End).
