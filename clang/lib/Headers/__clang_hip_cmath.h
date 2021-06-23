@@ -52,8 +52,46 @@ __DEVICE__ int fpclassify(double __x) {
 __DEVICE__ float frexp(float __arg, int *__exp) {
   return ::frexpf(__arg, __exp);
 }
+
+#if defined(__OPENMP_AMDGCN__)
+// For OpenMP we work around some old system headers that have non-conforming
+// `isinf(float)` and `isnan(float)` implementations that return an `int`. We do
+// this by providing two versions of these functions, differing only in the
+// return type. To avoid conflicting definitions we disable implicit base
+// function generation. That means we will end up with two specializations, one
+// per type, but only one has a base function defined by the system header.
+#pragma omp begin declare variant match(                                       \
+    implementation = {extension(disable_implicit_base)})
+
+// FIXME: We lack an extension to customize the mangling of the variants, e.g.,
+//        add a suffix. This means we would clash with the names of the variants
+//        (note that we do not create implicit base functions here). To avoid
+//        this clash we add a new trait to some of them that is always true
+//        (this is LLVM after all ;)). It will only influence the mangled name
+//        of the variants inside the inner region and avoid the clash.
+#pragma omp begin declare variant match(implementation = {vendor(llvm)})
+
+__DEVICE__ int isinf(float __x) { return ::__isinff(__x); }
+__DEVICE__ int isinf(double __x) { return ::__isinf(__x); }
+__DEVICE__ int isfinite(float __x) { return ::__finitef(__x); }
+__DEVICE__ int isfinite(double __x) { return ::__finite(__x); }
+__DEVICE__ int isnan(float __x) { return ::__isnanf(__x); }
+__DEVICE__ int isnan(double __x) { return ::__isnan(__x); }
+
+#pragma omp end declare variant
+#endif // defined(__OPENMP_AMDGCN__)
+
+__DEVICE__ bool isinf(float __x) { return ::__isinff(__x); }
+__DEVICE__ bool isinf(double __x) { return ::__isinf(__x); }
 __DEVICE__ bool isfinite(float __x) { return ::__finitef(__x); }
 __DEVICE__ bool isfinite(double __x) { return ::__finite(__x); }
+__DEVICE__ bool isnan(float __x) { return ::__isnanf(__x); }
+__DEVICE__ bool isnan(double __x) { return ::__isnan(__x); }
+
+#if defined(__OPENMP_AMDGCN__)
+#pragma omp end declare variant
+#endif // defined(__OPENMP_AMDGCN__)
+
 __DEVICE__ bool isgreater(float __x, float __y) {
   return __builtin_isgreater(__x, __y);
 }
@@ -66,8 +104,6 @@ __DEVICE__ bool isgreaterequal(float __x, float __y) {
 __DEVICE__ bool isgreaterequal(double __x, double __y) {
   return __builtin_isgreaterequal(__x, __y);
 }
-__DEVICE__ bool isinf(float __x) { return ::__isinff(__x); }
-__DEVICE__ bool isinf(double __x) { return ::__isinf(__x); }
 __DEVICE__ bool isless(float __x, float __y) {
   return __builtin_isless(__x, __y);
 }
@@ -86,8 +122,6 @@ __DEVICE__ bool islessgreater(float __x, float __y) {
 __DEVICE__ bool islessgreater(double __x, double __y) {
   return __builtin_islessgreater(__x, __y);
 }
-__DEVICE__ bool isnan(float __x) { return ::__isnanf(__x); }
-__DEVICE__ bool isnan(double __x) { return ::__isnan(__x); }
 __DEVICE__ bool isnormal(float __x) { return __builtin_isnormal(__x); }
 __DEVICE__ bool isnormal(double __x) { return __builtin_isnormal(__x); }
 __DEVICE__ bool isunordered(float __x, float __y) {

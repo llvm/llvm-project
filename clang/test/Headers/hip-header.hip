@@ -8,6 +8,20 @@
 // RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
+// RUN:   -include cmath \
+// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
+// RUN:   -D__HIPCC_RTC__ | FileCheck %s  -check-prefixes=AMD_BOOL_RETURN
+// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
+// RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
+// RUN:   -internal-isystem %S/Inputs/include \
+// RUN:   -include cmath \
+// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
+// RUN:   -D__HIPCC_RTC__ -DUSE_ISNAN_WITH_INT_RETURN | FileCheck %s -check-prefixes=AMD_INT_RETURN
+// RUN: %clang_cc1 -include __clang_hip_runtime_wrapper.h \
+// RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
+// RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
 // RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -o - \
 // RUN:   -D__HIPCC_RTC__ -std=c++14 | FileCheck -check-prefixes=CHECK,CXX14 %s
@@ -83,4 +97,21 @@ __device__ float test_floor() {
 // CHECK: call {{.*}}double @__ocml_fmax_f64(double {{.*}}, double
 __device__ float test_max() {
   return max(5, 6.0);
+}
+
+// CHECK-LABEL: define{{.*}}@_Z10test_isnanv
+__device__ double test_isnan() {
+  double r = 0;
+  double d = 5.0;
+  float f = 5.0;
+
+  // AMD_INT_RETURN: call i32 @__ocml_isnan_f32(float
+  // AMD_BOOL_RETURN: call i32 @__ocml_isnan_f32(float
+  r += isnan(f);
+
+  // AMD_INT_RETURN: call i32 @__ocml_isnan_f64(double
+  // AMD_BOOL_RETURN: call i32 @__ocml_isnan_f64(double
+  r += isnan(d);
+
+  return r ;
 }
