@@ -99,13 +99,13 @@ void CommandReturnObject::AppendWarning(llvm::StringRef in_string) {
 
 void CommandReturnObject::AppendError(llvm::StringRef in_string) {
   SetStatus(eReturnStatusFailed);
-  assert(!in_string.empty() && "Expected a non-empty error message");
+  if (in_string.empty())
+    return;
   error(GetErrorStream()) << in_string.rtrim() << '\n';
 }
 
 void CommandReturnObject::SetError(const Status &error,
                                    const char *fallback_error_cstr) {
-  assert(error.Fail() && "Expected a failed Status");
   AppendError(error.AsCString(fallback_error_cstr));
 }
 
