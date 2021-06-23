@@ -63,7 +63,7 @@ DiffScalarVal<bool, AD_Diff_Scalar_Bool>::print(raw_ostream &OS,
 StringLiteral SymScalar::getSymbolNamePrefix(MachO::SymbolKind Kind) {
   switch (Kind) {
   case MachO::SymbolKind::GlobalSymbol:
-    return "";
+    return StringLiteral("");
   case MachO::SymbolKind::ObjectiveCClass:
     return ObjC2MetaClassNamePrefix;
   case MachO::SymbolKind ::ObjectiveCClassEHType:
