@@ -70,10 +70,10 @@ TheDest:
 ; Test folding switch -> branch
 define i32 @test4(i32 %C) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:  L1:
+; CHECK-NEXT:  common.ret:
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[C:%.*]], 0
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[COND]], i32 1, i32 0
-; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[COND]], i32 1, i32 0
+; CHECK-NEXT:    ret i32 [[DOT]]
 ;
   switch i32 %C, label %L1 [
   i32 0, label %L2
@@ -87,10 +87,10 @@ L2:
 ; Can fold into a cond branch!
 define i32 @test5(i32 %C) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:  L1:
+; CHECK-NEXT:  common.ret:
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[C:%.*]], 0
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[COND]], i32 1, i32 0
-; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[COND]], i32 1, i32 0
+; CHECK-NEXT:    ret i32 [[DOT]]
 ;
   switch i32 %C, label %L1 [
   i32 0, label %L2
