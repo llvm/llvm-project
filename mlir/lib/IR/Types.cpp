@@ -16,10 +16,6 @@ using namespace mlir::detail;
 // Type
 //===----------------------------------------------------------------------===//
 
-Dialect &Type::getDialect() const {
-  return impl->getAbstractType().getDialect();
-}
-
 MLIRContext *Type::getContext() const { return getDialect().getContext(); }
 
 bool Type::isBF16() const { return isa<BFloat16Type>(); }
