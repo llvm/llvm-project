@@ -4190,11 +4190,6 @@ template <class _Tp> struct __is_nothrow_swappable;
 
 // swap, swap_ranges
 
-template <class _ForwardIterator1, class _ForwardIterator2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
-_ForwardIterator2
-swap_ranges(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2);
-
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Tp>
 using __swap_result_t = typename enable_if<is_move_constructible<_Tp>::value && is_move_assignable<_Tp>::value>::type;
@@ -4221,7 +4216,9 @@ typename enable_if<
 >::type
 swap(_Tp (&__a)[_Np], _Tp (&__b)[_Np]) _NOEXCEPT_(__is_nothrow_swappable<_Tp>::value)
 {
-    _VSTD::swap_ranges(__a, __a + _Np, __b);
+    for (size_t __i = 0; __i != _Np; ++__i) {
+        swap(__a[__i], __b[__i]);
+    }
 }
 
 template <class _ForwardIterator1, class _ForwardIterator2>
