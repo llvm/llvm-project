@@ -1,4 +1,5 @@
-; RUN: llc -mtriple i386-windows-gnu -exception-model sjlj -filetype asm -o - %s | FileCheck %s
+; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39439.
+; RUN: llc -mtriple i386-windows-gnu -exception-model sjlj -filetype asm -o - %s -verify-machineinstrs=0 | FileCheck %s
 
 declare void @_Z20function_that_throwsv()
 declare i32 @__gxx_personality_sj0(...)
