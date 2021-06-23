@@ -64,6 +64,10 @@ EXTERN void __kmpc_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime) {
       omptarget_nvptx_threadPrivateContext->GetTopLevelTaskDescr(threadId);
   nThreads = GetNumberOfThreadsInBlock();
   threadLimit = ThreadLimit;
+
+  if (!isSPMDMode())
+    omptarget_nvptx_globalArgs.Init();
+
   __kmpc_impl_target_init();
 }
 

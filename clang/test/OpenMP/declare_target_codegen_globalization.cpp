@@ -33,7 +33,6 @@ int maini1() {
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[A_ADDR]], align 8
 // CHECK1-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK1-NEXT:    call void @__kmpc_spmd_kernel_init(i32 [[NVPTX_NUM_THREADS]], i16 1)
-// CHECK1-NEXT:    call void @__kmpc_data_sharing_init_stack_spmd()
 // CHECK1-NEXT:    br label [[DOTEXECUTE:%.*]]
 // CHECK1:       .execute:
 // CHECK1-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
@@ -81,39 +80,9 @@ int maini1() {
 // CHECK1-LABEL: define {{[^@]+}}@_Z3barv
 // CHECK1-SAME: () #[[ATTR2]] {
 // CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[A2:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB2:[0-9]+]])
-// CHECK1-NEXT:    [[TMP1:%.*]] = call i16 @__kmpc_parallel_level(%struct.ident_t* @[[GLOB2]], i32 [[TMP0]])
-// CHECK1-NEXT:    [[TMP2:%.*]] = icmp eq i16 [[TMP1]], 0
-// CHECK1-NEXT:    [[TMP3:%.*]] = call i8 @__kmpc_is_spmd_exec_mode() #[[ATTR3:[0-9]+]]
-// CHECK1-NEXT:    [[TMP4:%.*]] = icmp ne i8 [[TMP3]], 0
-// CHECK1-NEXT:    br i1 [[TMP4]], label [[DOTSPMD:%.*]], label [[DOTNON_SPMD:%.*]]
-// CHECK1:       .spmd:
-// CHECK1-NEXT:    br label [[DOTEXIT:%.*]]
-// CHECK1:       .non-spmd:
-// CHECK1-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], i64 4, i64 128
-// CHECK1-NEXT:    [[TMP6:%.*]] = call i8* @__kmpc_data_sharing_coalesced_push_stack(i64 [[TMP5]], i16 0)
-// CHECK1-NEXT:    [[TMP7:%.*]] = bitcast i8* [[TMP6]] to %struct._globalized_locals_ty*
-// CHECK1-NEXT:    br label [[DOTEXIT]]
-// CHECK1:       .exit:
-// CHECK1-NEXT:    [[_SELECT_STACK:%.*]] = phi %struct._globalized_locals_ty* [ null, [[DOTSPMD]] ], [ [[TMP7]], [[DOTNON_SPMD]] ]
-// CHECK1-NEXT:    [[TMP8:%.*]] = bitcast %struct._globalized_locals_ty* [[_SELECT_STACK]] to %struct._globalized_locals_ty.0*
-// CHECK1-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], %struct._globalized_locals_ty* [[_SELECT_STACK]], i32 0, i32 0
-// CHECK1-NEXT:    [[NVPTX_TID:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-// CHECK1-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[NVPTX_TID]], 31
-// CHECK1-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [32 x i32], [32 x i32]* [[A]], i32 0, i32 [[NVPTX_LANE_ID]]
-// CHECK1-NEXT:    [[A1:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0:%.*]], %struct._globalized_locals_ty.0* [[TMP8]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP10:%.*]] = select i1 [[TMP2]], i32* [[A1]], i32* [[TMP9]]
-// CHECK1-NEXT:    [[TMP11:%.*]] = select i1 [[TMP4]], i32* [[A2]], i32* [[TMP10]]
-// CHECK1-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooRi(i32* nonnull align 4 dereferenceable(4) [[TMP11]]) #[[ATTR4]]
-// CHECK1-NEXT:    store i32 [[CALL]], i32* [[RETVAL]], align 4
-// CHECK1-NEXT:    br i1 [[TMP4]], label [[DOTEXIT4:%.*]], label [[DOTNON_SPMD3:%.*]]
-// CHECK1:       .non-spmd3:
-// CHECK1-NEXT:    [[TMP12:%.*]] = bitcast %struct._globalized_locals_ty* [[_SELECT_STACK]] to i8*
-// CHECK1-NEXT:    call void @__kmpc_data_sharing_pop_stack(i8* [[TMP12]])
-// CHECK1-NEXT:    br label [[DOTEXIT4]]
-// CHECK1:       .exit4:
-// CHECK1-NEXT:    [[TMP13:%.*]] = load i32, i32* [[RETVAL]], align 4
-// CHECK1-NEXT:    ret i32 [[TMP13]]
+// CHECK1-NEXT:    [[A:%.*]] = call i8* @__kmpc_alloc_shared(i64 4)
+// CHECK1-NEXT:    [[A_ON_STACK:%.*]] = bitcast i8* [[A]] to i32*
+// CHECK1-NEXT:    [[CALL:%.*]] = call i32 @_Z3fooRi(i32* nonnull align 4 dereferenceable(4) [[A_ON_STACK]]) #[[ATTR4]]
+// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[A]])
+// CHECK1-NEXT:    ret i32 [[CALL]]
 //

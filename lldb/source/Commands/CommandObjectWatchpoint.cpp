@@ -941,11 +941,11 @@ protected:
     } else {
       const char *error_cstr = error.AsCString(nullptr);
       if (error_cstr)
-        result.GetErrorStream().Printf("error: %s\n", error_cstr);
+        result.AppendError(error_cstr);
       else
-        result.GetErrorStream().Printf("error: unable to find any variable "
-                                       "expression path that matches '%s'\n",
-                                       command.GetArgumentAtIndex(0));
+        result.AppendErrorWithFormat("unable to find any variable "
+                                     "expression path that matches '%s'",
+                                     command.GetArgumentAtIndex(0));
       return false;
     }
 
@@ -1065,10 +1065,8 @@ protected:
     // If no argument is present, issue an error message.  There's no way to
     // set a watchpoint.
     if (raw_command.trim().empty()) {
-      result.GetErrorStream().Printf("error: required argument missing; "
-                                     "specify an expression to evaluate into "
-                                     "the address to watch for\n");
-      result.SetStatus(eReturnStatusFailed);
+      result.AppendError("required argument missing; specify an expression "
+                         "to evaluate into the address to watch for");
       return false;
     }
 
@@ -1095,12 +1093,10 @@ protected:
     ExpressionResults expr_result =
         target->EvaluateExpression(expr, frame, valobj_sp, options);
     if (expr_result != eExpressionCompleted) {
-      result.GetErrorStream().Printf(
-          "error: expression evaluation of address to watch failed\n");
-      result.GetErrorStream() << "expression evaluated: \n" << expr << "\n";
+      result.AppendError("expression evaluation of address to watch failed");
+      result.AppendErrorWithFormat("expression evaluated: \n%s", expr.data());
       if (valobj_sp && !valobj_sp->GetError().Success())
-        result.GetErrorStream() << valobj_sp->GetError().AsCString() << "\n";
-      result.SetStatus(eReturnStatusFailed);
+        result.AppendError(valobj_sp->GetError().AsCString());
       return false;
     }
 
@@ -1108,9 +1104,7 @@ protected:
     bool success = false;
     addr = valobj_sp->GetValueAsUnsigned(0, &success);
     if (!success) {
-      result.GetErrorStream().Printf(
-          "error: expression did not evaluate to an address\n");
-      result.SetStatus(eReturnStatusFailed);
+      result.AppendError("expression did not evaluate to an address");
       return false;
     }
 

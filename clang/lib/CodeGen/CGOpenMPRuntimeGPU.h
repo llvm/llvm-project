@@ -440,15 +440,9 @@ private:
   /// The data for the single globalized variable.
   struct MappedVarData {
     /// Corresponding field in the global record.
-    const FieldDecl *FD = nullptr;
+    llvm::Value *GlobalizedVal = nullptr;
     /// Corresponding address.
     Address PrivateAddr = Address::invalid();
-    /// true, if only one element is required (for latprivates in SPMD mode),
-    /// false, if need to create based on the warp-size.
-    bool IsOnePerTeam = false;
-    MappedVarData() = delete;
-    MappedVarData(const FieldDecl *FD, bool IsOnePerTeam = false)
-        : FD(FD), IsOnePerTeam(IsOnePerTeam) {}
   };
   /// The map of local variables to their addresses in the global memory.
   using DeclToAddrMapTy = llvm::MapVector<const Decl *, MappedVarData>;
@@ -460,29 +454,12 @@ private:
     EscapedParamsTy EscapedParameters;
     llvm::SmallVector<const ValueDecl*, 4> EscapedVariableLengthDecls;
     llvm::SmallVector<llvm::Value *, 4> EscapedVariableLengthDeclsAddrs;
-    const RecordDecl *GlobalRecord = nullptr;
-    llvm::Optional<const RecordDecl *> SecondaryGlobalRecord = llvm::None;
-    llvm::Value *GlobalRecordAddr = nullptr;
     llvm::Value *IsInSPMDModeFlag = nullptr;
     std::unique_ptr<CodeGenFunction::OMPMapVars> MappedParams;
   };
   /// Maps the function to the list of the globalized variables with their
   /// addresses.
   llvm::SmallDenseMap<llvm::Function *, FunctionData> FunctionGlobalizedDecls;
-  /// List of records for the globalized variables in target/teams/distribute
-  /// contexts. Inner records are going to be joined into the single record,
-  /// while those resulting records are going to be joined into the single
-  /// union. This resulting union (one per CU) is the entry point for the static
-  /// memory management runtime functions.
-  struct GlobalPtrSizeRecsTy {
-    llvm::GlobalVariable *UseSharedMemory = nullptr;
-    llvm::GlobalVariable *RecSize = nullptr;
-    llvm::GlobalVariable *Buffer = nullptr;
-    SourceLocation Loc;
-    llvm::SmallVector<const RecordDecl *, 2> Records;
-    unsigned RegionCounter = 0;
-  };
-  llvm::SmallVector<GlobalPtrSizeRecsTy, 8> GlobalizedRecords;
   llvm::GlobalVariable *KernelTeamsReductionPtr = nullptr;
   /// List of the records with the list of fields for the reductions across the
   /// teams. Used to build the intermediate buffer for the fast teams

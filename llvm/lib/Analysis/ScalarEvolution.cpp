@@ -13658,49 +13658,47 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
     }
 
     // For now, limit to conditions that provide information about unknown
-    // expressions.
+    // expressions. RHS also cannot contain add recurrences.
     auto *LHSUnknown = dyn_cast<SCEVUnknown>(LHS);
-    if (!LHSUnknown)
+    if (!LHSUnknown || containsAddRecurrence(RHS))
       return;
 
     // Check whether LHS has already been rewritten. In that case we want to
     // chain further rewrites onto the already rewritten value.
     auto I = RewriteMap.find(LHSUnknown->getValue());
     const SCEV *RewrittenLHS = I != RewriteMap.end() ? I->second : LHS;
-
+    const SCEV *RewrittenRHS = nullptr;
     // TODO: use information from more predicates.
     switch (Predicate) {
     case CmpInst::ICMP_ULT:
-      if (!containsAddRecurrence(RHS))
-        RewriteMap[LHSUnknown->getValue()] = getUMinExpr(
-            RewrittenLHS, getMinusSCEV(RHS, getOne(RHS->getType())));
+      RewrittenRHS =
+          getUMinExpr(RewrittenLHS, getMinusSCEV(RHS, getOne(RHS->getType())));
       break;
     case CmpInst::ICMP_ULE:
-      if (!containsAddRecurrence(RHS))
-        RewriteMap[LHSUnknown->getValue()] = getUMinExpr(RewrittenLHS, RHS);
+      RewrittenRHS = getUMinExpr(RewrittenLHS, RHS);
       break;
     case CmpInst::ICMP_UGT:
-      if (!containsAddRecurrence(RHS))
-        RewriteMap[LHSUnknown->getValue()] =
-            getUMaxExpr(RewrittenLHS, getAddExpr(RHS, getOne(RHS->getType())));
+      RewrittenRHS =
+          getUMaxExpr(RewrittenLHS, getAddExpr(RHS, getOne(RHS->getType())));
       break;
     case CmpInst::ICMP_UGE:
-      if (!containsAddRecurrence(RHS))
-        RewriteMap[LHSUnknown->getValue()] = getUMaxExpr(RewrittenLHS, RHS);
+      RewrittenRHS = getUMaxExpr(RewrittenLHS, RHS);
       break;
     case CmpInst::ICMP_EQ:
       if (isa<SCEVConstant>(RHS))
-        RewriteMap[LHSUnknown->getValue()] = RHS;
+        RewrittenRHS = RHS;
       break;
     case CmpInst::ICMP_NE:
       if (isa<SCEVConstant>(RHS) &&
           cast<SCEVConstant>(RHS)->getValue()->isNullValue())
-        RewriteMap[LHSUnknown->getValue()] =
-            getUMaxExpr(RewrittenLHS, getOne(RHS->getType()));
+        RewrittenRHS = getUMaxExpr(RewrittenLHS, getOne(RHS->getType()));
       break;
     default:
       break;
     }
+
+    if (RewrittenRHS)
+      RewriteMap[LHSUnknown->getValue()] = RewrittenRHS;
   };
   // Starting at the loop predecessor, climb up the predecessor chain, as long
   // as there are predecessors that can be found that have unique successors
