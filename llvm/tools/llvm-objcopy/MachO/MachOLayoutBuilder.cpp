@@ -11,9 +11,8 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 
-namespace llvm {
-namespace objcopy {
-namespace macho {
+using namespace llvm;
+using namespace llvm::objcopy::macho;
 
 StringTableBuilder::Kind
 MachOLayoutBuilder::getStringTableBuilderKind(const Object &O, bool Is64Bit) {
@@ -395,7 +394,3 @@ Error MachOLayoutBuilder::layout() {
   Offset = layoutRelocations(Offset);
   return layoutTail(Offset);
 }
-
-} // end namespace macho
-} // end namespace objcopy
-} // end namespace llvm
