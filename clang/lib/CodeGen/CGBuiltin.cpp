@@ -14736,27 +14736,56 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_aesenc256kl_u8:
   case X86::BI__builtin_ia32_aesdec256kl_u8: {
     Intrinsic::ID IID;
+    StringRef StrNoErr, StrErr, StrEnd;
     switch (BuiltinID) {
     default: llvm_unreachable("Unexpected builtin");
     case X86::BI__builtin_ia32_aesenc128kl_u8:
       IID = Intrinsic::x86_aesenc128kl;
+      StrNoErr = "aesenc128kl_no_error";
+      StrErr = "aesenc128kl_error";
+      StrEnd = "aesenc128kl_end";
       break;
     case X86::BI__builtin_ia32_aesdec128kl_u8:
       IID = Intrinsic::x86_aesdec128kl;
+      StrNoErr = "aesdec128kl_no_error";
+      StrErr = "aesdec128kl_error";
+      StrEnd = "aesdec128kl_end";
       break;
     case X86::BI__builtin_ia32_aesenc256kl_u8:
       IID = Intrinsic::x86_aesenc256kl;
+      StrNoErr = "aesenc256kl_no_error";
+      StrErr = "aesenc256kl_error";
+      StrEnd = "aesenc256kl_end";
       break;
     case X86::BI__builtin_ia32_aesdec256kl_u8:
       IID = Intrinsic::x86_aesdec256kl;
+      StrNoErr = "aesdec256kl_no_error";
+      StrErr = "aesdec256kl_error";
+      StrEnd = "aesdec256kl_end";
       break;
     }
 
     Value *Call = Builder.CreateCall(CGM.getIntrinsic(IID), {Ops[1], Ops[2]});
 
-    Builder.CreateDefaultAlignedStore(Builder.CreateExtractValue(Call, 1),
-                                      Ops[0]);
+    BasicBlock *NoError = createBasicBlock(StrNoErr, this->CurFn);
+    BasicBlock *Error = createBasicBlock(StrErr, this->CurFn);
+    BasicBlock *End = createBasicBlock(StrEnd, this->CurFn);
 
+    Value *Ret = Builder.CreateExtractValue(Call, 0);
+    Value *Succ = Builder.CreateTrunc(Ret, Builder.getInt1Ty());
+    Value *Out = Builder.CreateExtractValue(Call, 1);
+    Builder.CreateCondBr(Succ, NoError, Error);
+
+    Builder.SetInsertPoint(NoError);
+    Builder.CreateDefaultAlignedStore(Out, Ops[0]);
+    Builder.CreateBr(End);
+
+    Builder.SetInsertPoint(Error);
+    Constant *Zero = llvm::Constant::getNullValue(Out->getType());
+    Builder.CreateDefaultAlignedStore(Zero, Ops[0]);
+    Builder.CreateBr(End);
+
+    Builder.SetInsertPoint(End);
     return Builder.CreateExtractValue(Call, 0);
   }
   case X86::BI__builtin_ia32_aesencwide128kl_u8:
@@ -14764,18 +14793,31 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_aesencwide256kl_u8:
   case X86::BI__builtin_ia32_aesdecwide256kl_u8: {
     Intrinsic::ID IID;
+    StringRef StrNoErr, StrErr, StrEnd;
     switch (BuiltinID) {
     case X86::BI__builtin_ia32_aesencwide128kl_u8:
       IID = Intrinsic::x86_aesencwide128kl;
+      StrNoErr = "aesencwide128kl_no_error";
+      StrErr = "aesencwide128kl_error";
+      StrEnd = "aesencwide128kl_end";
       break;
     case X86::BI__builtin_ia32_aesdecwide128kl_u8:
       IID = Intrinsic::x86_aesdecwide128kl;
+      StrNoErr = "aesdecwide128kl_no_error";
+      StrErr = "aesdecwide128kl_error";
+      StrEnd = "aesdecwide128kl_end";
       break;
     case X86::BI__builtin_ia32_aesencwide256kl_u8:
       IID = Intrinsic::x86_aesencwide256kl;
+      StrNoErr = "aesencwide256kl_no_error";
+      StrErr = "aesencwide256kl_error";
+      StrEnd = "aesencwide256kl_end";
       break;
     case X86::BI__builtin_ia32_aesdecwide256kl_u8:
       IID = Intrinsic::x86_aesdecwide256kl;
+      StrNoErr = "aesdecwide256kl_no_error";
+      StrErr = "aesdecwide256kl_error";
+      StrEnd = "aesdecwide256kl_end";
       break;
     }
 
@@ -14789,12 +14831,32 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
 
     Value *Call = Builder.CreateCall(CGM.getIntrinsic(IID), InOps);
 
+    BasicBlock *NoError = createBasicBlock(StrNoErr, this->CurFn);
+    BasicBlock *Error = createBasicBlock(StrErr, this->CurFn);
+    BasicBlock *End = createBasicBlock(StrEnd, this->CurFn);
+
+    Value *Ret = Builder.CreateExtractValue(Call, 0);
+    Value *Succ = Builder.CreateTrunc(Ret, Builder.getInt1Ty());
+    Builder.CreateCondBr(Succ, NoError, Error);
+
+    Builder.SetInsertPoint(NoError);
     for (int i = 0; i != 8; ++i) {
       Value *Extract = Builder.CreateExtractValue(Call, i + 1);
       Value *Ptr = Builder.CreateConstGEP1_32(Ops[0], i);
       Builder.CreateAlignedStore(Extract, Ptr, Align(16));
     }
+    Builder.CreateBr(End);
 
+    Builder.SetInsertPoint(Error);
+    for (int i = 0; i != 8; ++i) {
+      Value *Out = Builder.CreateExtractValue(Call, i + 1);
+      Constant *Zero = llvm::Constant::getNullValue(Out->getType());
+      Value *Ptr = Builder.CreateConstGEP1_32(Ops[0], i);
+      Builder.CreateAlignedStore(Zero, Ptr, Align(16));
+    }
+    Builder.CreateBr(End);
+
+    Builder.SetInsertPoint(End);
     return Builder.CreateExtractValue(Call, 0);
   }
   }
