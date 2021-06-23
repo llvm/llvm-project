@@ -149,11 +149,17 @@ DynamicLibrary DynamicLibrary::getPermanentLibrary(const char *FileName,
   // ManagedStatic can be added from static constructors in HandleSet::DLOpen.
   HandleSet& HS = *OpenedHandles;
 
+  printf("   -------- (getPermantentLibrary) --------\n");
+  printf("      get Lib: %s \n", FileName);
+
   void *Handle = HandleSet::DLOpen(FileName, Err);
   if (Handle != &Invalid) {
+    printf("      Handle != Invalid \n");
     SmartScopedLock<true> Lock(*SymbolsMutex);
     HS.AddLibrary(Handle, /*IsProcess*/ FileName == nullptr);
   }
+
+  printf("   ------- (\\getPermantentLibrary) --------\n");
 
   return DynamicLibrary(Handle);
 }
