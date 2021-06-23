@@ -74,6 +74,13 @@ define ptr addrspace(1) @bitcast_and_addrspacecast_eliminable(ptr %a) {
   ret ptr addrspace(1) %c
 }
 
+define ptr addrspace(1) @addrspacecast_typed_to_opaque_constexpr() {
+; CHECK-LABEL: @addrspacecast_typed_to_opaque_constexpr(
+; CHECK-NEXT:    ret ptr addrspace(1) addrspacecast (ptr bitcast (i8* @g to ptr) to ptr addrspace(1))
+;
+  ret ptr addrspace(1) addrspacecast (i8* @g to ptr addrspace(1))
+}
+
 define ptr @gep_constexpr_1(ptr %a) {
 ; CHECK-LABEL: @gep_constexpr_1(
 ; CHECK-NEXT:    ret ptr inttoptr (i64 6 to ptr)

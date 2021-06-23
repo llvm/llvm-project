@@ -2238,9 +2238,9 @@ Constant *ConstantExpr::getAddrSpaceCast(Constant *C, Type *DstTy,
   // bitcasting the pointer type and then converting the address space.
   PointerType *SrcScalarTy = cast<PointerType>(C->getType()->getScalarType());
   PointerType *DstScalarTy = cast<PointerType>(DstTy->getScalarType());
-  Type *DstElemTy = DstScalarTy->getElementType();
-  if (SrcScalarTy->getElementType() != DstElemTy) {
-    Type *MidTy = PointerType::get(DstElemTy, SrcScalarTy->getAddressSpace());
+  if (!SrcScalarTy->hasSameElementTypeAs(DstScalarTy)) {
+    Type *MidTy = PointerType::getWithSamePointeeType(
+        DstScalarTy, SrcScalarTy->getAddressSpace());
     if (VectorType *VT = dyn_cast<VectorType>(DstTy)) {
       // Handle vectors of pointers.
       MidTy = FixedVectorType::get(MidTy,
