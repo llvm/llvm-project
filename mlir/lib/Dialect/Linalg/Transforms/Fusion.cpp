@@ -648,7 +648,7 @@ static bool doesTransposeAccess(AffineMap map,
 /// parallel loops and appear in the result of the map
 ///
 /// Example 1:
-///   linalg.fill(%c, %cst)
+///   linalg.fill(%cst, %c)
 ///   linalg.matmul ins(%a, %b) outs(%c)
 ///     Number of parallel loops : 2
 ///     producerIndexMap = affine_map<(i, j) ->(i , j)>

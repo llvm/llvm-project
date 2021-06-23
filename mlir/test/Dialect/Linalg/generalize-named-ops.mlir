@@ -472,7 +472,7 @@ func @pooling_nhwc_min(%input: memref<?x?x?x?xf32>, %fake: memref<2x3xf32>, %ini
 // -----
 
 func @generalize_fill(%output: memref<?x?xf32>, %value : f32) {
-  linalg.fill(%output, %value) : memref<?x?xf32>, f32
+  linalg.fill(%value, %output) : f32, memref<?x?xf32>
   return
 }
 
