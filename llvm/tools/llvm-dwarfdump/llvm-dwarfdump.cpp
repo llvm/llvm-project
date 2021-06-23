@@ -494,7 +494,7 @@ static bool verifyObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   // fails.
   raw_ostream &stream = Quiet ? nulls() : OS;
   stream << "Verifying " << Filename.str() << ":\tfile format "
-  << Obj.getFileFormatName() << "\n";
+         << Obj.getFileFormatName() << "\n";
   bool Result = DICtx.verify(stream, getDumpOpts(DICtx));
   if (Result)
     stream << "No errors.\n";
@@ -540,8 +540,7 @@ static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
       if (!HandleObj(*Obj, *DICtx, Filename, OS))
         Result = false;
     }
-  }
-  else if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get()))
+  } else if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get()))
     for (auto &ObjForArch : Fat->objects()) {
       std::string ObjName =
           (Filename + "(" + ObjForArch.getArchFlagName() + ")").str();
@@ -572,7 +571,7 @@ static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
 static bool handleFile(StringRef Filename, HandlerFn HandleObj,
                        raw_ostream &OS) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
-  MemoryBuffer::getFileOrSTDIN(Filename);
+      MemoryBuffer::getFileOrSTDIN(Filename);
   error(Filename, BuffOrErr.getError());
   std::unique_ptr<MemoryBuffer> Buffer = std::move(BuffOrErr.get());
   return handleBuffer(Filename, *Buffer, HandleObj, OS);
@@ -669,7 +668,8 @@ int main(int argc, char **argv) {
   }
 
   // Unless dumping a specific DIE, default to --show-children.
-  if (!ShowChildren && !Verify && !OffsetRequested && Name.empty() && Find.empty())
+  if (!ShowChildren && !Verify && !OffsetRequested && Name.empty() &&
+      Find.empty())
     ShowChildren = true;
 
   // Defaults to a.out if no filenames specified.
