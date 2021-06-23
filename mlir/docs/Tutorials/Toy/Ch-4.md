@@ -172,7 +172,7 @@ func @main() {
 }
 ```
 
-We have two calls to multiple_transpose that we would like to inline into main,
+We have two calls to multiply_transpose that we would like to inline into main,
 but if we look at the output nothing has changed. We are missing one last subtle
 piece: there is a hidden type conversion on the edge of the call. If we look at
 the above, the operands to the generic_call are of type `tensor<2x3xf64>`, while
