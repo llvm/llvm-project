@@ -13668,21 +13668,34 @@ const SCEV *ScalarEvolution::applyLoopGuards(const SCEV *Expr, const Loop *L) {
     auto I = RewriteMap.find(LHSUnknown->getValue());
     const SCEV *RewrittenLHS = I != RewriteMap.end() ? I->second : LHS;
     const SCEV *RewrittenRHS = nullptr;
-    // TODO: use information from more predicates.
     switch (Predicate) {
     case CmpInst::ICMP_ULT:
       RewrittenRHS =
           getUMinExpr(RewrittenLHS, getMinusSCEV(RHS, getOne(RHS->getType())));
       break;
+    case CmpInst::ICMP_SLT:
+      RewrittenRHS =
+          getSMinExpr(RewrittenLHS, getMinusSCEV(RHS, getOne(RHS->getType())));
+      break;
     case CmpInst::ICMP_ULE:
       RewrittenRHS = getUMinExpr(RewrittenLHS, RHS);
+      break;
+    case CmpInst::ICMP_SLE:
+      RewrittenRHS = getSMinExpr(RewrittenLHS, RHS);
       break;
     case CmpInst::ICMP_UGT:
       RewrittenRHS =
           getUMaxExpr(RewrittenLHS, getAddExpr(RHS, getOne(RHS->getType())));
       break;
+    case CmpInst::ICMP_SGT:
+      RewrittenRHS =
+          getSMaxExpr(RewrittenLHS, getAddExpr(RHS, getOne(RHS->getType())));
+      break;
     case CmpInst::ICMP_UGE:
       RewrittenRHS = getUMaxExpr(RewrittenLHS, RHS);
+      break;
+    case CmpInst::ICMP_SGE:
+      RewrittenRHS = getSMaxExpr(RewrittenLHS, RHS);
       break;
     case CmpInst::ICMP_EQ:
       if (isa<SCEVConstant>(RHS))
