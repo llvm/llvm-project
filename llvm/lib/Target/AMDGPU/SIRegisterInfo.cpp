@@ -1874,6 +1874,8 @@ getAnyVGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::VReg_160RegClass;
   if (BitWidth <= 192)
     return &AMDGPU::VReg_192RegClass;
+  if (BitWidth <= 224)
+    return &AMDGPU::VReg_224RegClass;
   if (BitWidth <= 256)
     return &AMDGPU::VReg_256RegClass;
   if (BitWidth <= 512)
@@ -1896,6 +1898,8 @@ getAlignedVGPRClassForBitWidth(unsigned BitWidth) {
     return &AMDGPU::VReg_160_Align2RegClass;
   if (BitWidth <= 192)
     return &AMDGPU::VReg_192_Align2RegClass;
+  if (BitWidth <= 224)
+    return &AMDGPU::VReg_224_Align2RegClass;
   if (BitWidth <= 256)
     return &AMDGPU::VReg_256_Align2RegClass;
   if (BitWidth <= 512)
@@ -2036,6 +2040,11 @@ SIRegisterInfo::getPhysRegClass(MCRegister Reg) const {
     &AMDGPU::SReg_192RegClass,
     &AMDGPU::AReg_192_Align2RegClass,
     &AMDGPU::AReg_192RegClass,
+    &AMDGPU::VReg_224_Align2RegClass,
+    &AMDGPU::VReg_224RegClass,
+    &AMDGPU::SReg_224RegClass,
+    &AMDGPU::AReg_224_Align2RegClass,
+    &AMDGPU::AReg_224RegClass,
     &AMDGPU::VReg_256_Align2RegClass,
     &AMDGPU::VReg_256RegClass,
     &AMDGPU::SReg_256RegClass,

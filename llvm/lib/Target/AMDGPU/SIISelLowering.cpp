@@ -102,6 +102,15 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::v5i32, &AMDGPU::SGPR_160RegClass);
   addRegisterClass(MVT::v5f32, TRI->getVGPRClassForBitWidth(160));
 
+  addRegisterClass(MVT::v6i32, &AMDGPU::SGPR_192RegClass);
+  addRegisterClass(MVT::v6f32, TRI->getVGPRClassForBitWidth(192));
+
+  addRegisterClass(MVT::v3i64, &AMDGPU::SGPR_192RegClass);
+  addRegisterClass(MVT::v3f64, TRI->getVGPRClassForBitWidth(192));
+
+  addRegisterClass(MVT::v7i32, &AMDGPU::SGPR_224RegClass);
+  addRegisterClass(MVT::v7f32, TRI->getVGPRClassForBitWidth(224));
+
   addRegisterClass(MVT::v8i32, &AMDGPU::SGPR_256RegClass);
   addRegisterClass(MVT::v8f32, TRI->getVGPRClassForBitWidth(256));
 
@@ -145,6 +154,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::LOAD, MVT::v3i32, Custom);
   setOperationAction(ISD::LOAD, MVT::v4i32, Custom);
   setOperationAction(ISD::LOAD, MVT::v5i32, Custom);
+  setOperationAction(ISD::LOAD, MVT::v6i32, Custom);
+  setOperationAction(ISD::LOAD, MVT::v7i32, Custom);
   setOperationAction(ISD::LOAD, MVT::v8i32, Custom);
   setOperationAction(ISD::LOAD, MVT::v16i32, Custom);
   setOperationAction(ISD::LOAD, MVT::i1, Custom);
@@ -154,6 +165,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STORE, MVT::v3i32, Custom);
   setOperationAction(ISD::STORE, MVT::v4i32, Custom);
   setOperationAction(ISD::STORE, MVT::v5i32, Custom);
+  setOperationAction(ISD::STORE, MVT::v6i32, Custom);
+  setOperationAction(ISD::STORE, MVT::v7i32, Custom);
   setOperationAction(ISD::STORE, MVT::v8i32, Custom);
   setOperationAction(ISD::STORE, MVT::v16i32, Custom);
   setOperationAction(ISD::STORE, MVT::i1, Custom);
@@ -176,6 +189,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v16i16, MVT::v16i8, Expand);
   setTruncStoreAction(MVT::v32i16, MVT::v32i8, Expand);
 
+  setTruncStoreAction(MVT::v3i64, MVT::v3i16, Expand);
+  setTruncStoreAction(MVT::v3i64, MVT::v3i32, Expand);
   setTruncStoreAction(MVT::v4i64, MVT::v4i8, Expand);
   setTruncStoreAction(MVT::v8i64, MVT::v8i8, Expand);
   setTruncStoreAction(MVT::v8i64, MVT::v8i16, Expand);
@@ -203,8 +218,16 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::TRUNCATE, MVT::v2i32, Expand);
   setOperationAction(ISD::FP_ROUND, MVT::v2f32, Expand);
+  setOperationAction(ISD::TRUNCATE, MVT::v3i32, Expand);
+  setOperationAction(ISD::FP_ROUND, MVT::v3f32, Expand);
   setOperationAction(ISD::TRUNCATE, MVT::v4i32, Expand);
   setOperationAction(ISD::FP_ROUND, MVT::v4f32, Expand);
+  setOperationAction(ISD::TRUNCATE, MVT::v5i32, Expand);
+  setOperationAction(ISD::FP_ROUND, MVT::v5f32, Expand);
+  setOperationAction(ISD::TRUNCATE, MVT::v6i32, Expand);
+  setOperationAction(ISD::FP_ROUND, MVT::v6f32, Expand);
+  setOperationAction(ISD::TRUNCATE, MVT::v7i32, Expand);
+  setOperationAction(ISD::FP_ROUND, MVT::v7f32, Expand);
   setOperationAction(ISD::TRUNCATE, MVT::v8i32, Expand);
   setOperationAction(ISD::FP_ROUND, MVT::v8f32, Expand);
   setOperationAction(ISD::TRUNCATE, MVT::v16i32, Expand);
@@ -245,6 +268,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   // with > 4 elements.
   for (MVT VT : { MVT::v8i32, MVT::v8f32, MVT::v16i32, MVT::v16f32,
                   MVT::v2i64, MVT::v2f64, MVT::v4i16, MVT::v4f16,
+                  MVT::v3i64, MVT::v3f64, MVT::v6i32, MVT::v6f32,
                   MVT::v4i64, MVT::v4f64, MVT::v8i64, MVT::v8f64,
                   MVT::v16i64, MVT::v16f64, MVT::v32i32, MVT::v32f32 }) {
     for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op) {
@@ -288,6 +312,20 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::SCALAR_TO_VECTOR, Vec64, Promote);
     AddPromotedToType(ISD::SCALAR_TO_VECTOR, Vec64, MVT::v4i32);
+  }
+
+  for (MVT Vec64 : { MVT::v3i64, MVT::v3f64 }) {
+    setOperationAction(ISD::BUILD_VECTOR, Vec64, Promote);
+    AddPromotedToType(ISD::BUILD_VECTOR, Vec64, MVT::v6i32);
+
+    setOperationAction(ISD::EXTRACT_VECTOR_ELT, Vec64, Promote);
+    AddPromotedToType(ISD::EXTRACT_VECTOR_ELT, Vec64, MVT::v6i32);
+
+    setOperationAction(ISD::INSERT_VECTOR_ELT, Vec64, Promote);
+    AddPromotedToType(ISD::INSERT_VECTOR_ELT, Vec64, MVT::v6i32);
+
+    setOperationAction(ISD::SCALAR_TO_VECTOR, Vec64, Promote);
+    AddPromotedToType(ISD::SCALAR_TO_VECTOR, Vec64, MVT::v6i32);
   }
 
   for (MVT Vec64 : { MVT::v4i64, MVT::v4f64 }) {
@@ -365,9 +403,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v4i32, Custom);
   setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v4f32, Custom);
 
-  // Deal with vec5 vector operations when widened to vec8.
+  // Deal with vec5/6/7 vector operations when widened to vec8.
   setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v5i32, Custom);
   setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v5f32, Custom);
+  setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v6i32, Custom);
+  setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v6f32, Custom);
+  setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v7i32, Custom);
+  setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v7f32, Custom);
   setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v8i32, Custom);
   setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v8f32, Custom);
 
@@ -11697,6 +11739,8 @@ static int getAlignedAGPRClassID(unsigned UnalignedClassID) {
     return AMDGPU::VReg_160_Align2RegClassID;
   case AMDGPU::VReg_192RegClassID:
     return AMDGPU::VReg_192_Align2RegClassID;
+  case AMDGPU::VReg_224RegClassID:
+    return AMDGPU::VReg_224_Align2RegClassID;
   case AMDGPU::VReg_256RegClassID:
     return AMDGPU::VReg_256_Align2RegClassID;
   case AMDGPU::VReg_512RegClassID:
