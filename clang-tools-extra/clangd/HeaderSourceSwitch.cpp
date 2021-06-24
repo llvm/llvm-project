@@ -27,13 +27,13 @@ llvm::Optional<Path> getCorrespondingHeaderOrSource(
   // Lookup in a list of known extensions.
   auto SourceIter =
       llvm::find_if(SourceExtensions, [&PathExt](PathRef SourceExt) {
-        return SourceExt.equals_lower(PathExt);
+        return SourceExt.equals_insensitive(PathExt);
       });
   bool IsSource = SourceIter != std::end(SourceExtensions);
 
   auto HeaderIter =
       llvm::find_if(HeaderExtensions, [&PathExt](PathRef HeaderExt) {
-        return HeaderExt.equals_lower(PathExt);
+        return HeaderExt.equals_insensitive(PathExt);
       });
   bool IsHeader = HeaderIter != std::end(HeaderExtensions);
 

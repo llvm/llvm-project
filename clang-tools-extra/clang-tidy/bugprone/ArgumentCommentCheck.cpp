@@ -176,8 +176,8 @@ static bool sameName(StringRef InComment, StringRef InDecl, bool StrictMode) {
     return InComment == InDecl;
   InComment = InComment.trim('_');
   InDecl = InDecl.trim('_');
-  // FIXME: compare_lower only works for ASCII.
-  return InComment.compare_lower(InDecl) == 0;
+  // FIXME: compare_insensitive only works for ASCII.
+  return InComment.compare_insensitive(InDecl) == 0;
 }
 
 static bool looksLikeExpectMethod(const CXXMethodDecl *Expect) {
