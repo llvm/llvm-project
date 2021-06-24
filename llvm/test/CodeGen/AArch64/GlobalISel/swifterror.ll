@@ -100,9 +100,9 @@ define float @foo_if(%swift_error** swifterror %error_ptr_ref, i32 %cc) {
 ; CHECK: cbz w0
 ; CHECK: mov w0, #16
 ; CHECK: malloc
+; CHECK: mov x21, x0
 ; CHECK: mov [[ID:w[0-9]+]], #1
 ; CHECK: strb [[ID]], [x0, #8]
-; CHECK: mov x21, x0
 ; CHECK-NOT: x21
 ; CHECK: ret
 

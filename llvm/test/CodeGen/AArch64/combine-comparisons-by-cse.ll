@@ -716,24 +716,16 @@ return:                                           ; preds = %land.lhs.true, %con
 
 define void @cmp_shifted(i32 %in, i32 %lhs, i32 %rhs) {
 ; CHECK-LABEL: cmp_shifted:
-; CHECK:       // %bb.0:
+; CHECK:       // %bb.0: // %common.ret
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    cmp w0, #0 // =0
+; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    csinc w8, w8, wzr, gt
 ; CHECK-NEXT:    cmp w0, #2, lsl #12 // =8192
-; CHECK-NEXT:    b.lt .LBB10_2
-; CHECK-NEXT:  // %bb.1: // %true
-; CHECK-NEXT:    mov w0, #128
-; CHECK-NEXT:    b .LBB10_5
-; CHECK-NEXT:  .LBB10_2: // %false
-; CHECK-NEXT:    cmp w0, #1 // =1
-; CHECK-NEXT:    b.lt .LBB10_4
-; CHECK-NEXT:  // %bb.3: // %truer
-; CHECK-NEXT:    mov w0, #42
-; CHECK-NEXT:    b .LBB10_5
-; CHECK-NEXT:  .LBB10_4: // %falser
-; CHECK-NEXT:    mov w0, #1
-; CHECK-NEXT:  .LBB10_5: // %true
+; CHECK-NEXT:    mov w9, #128
+; CHECK-NEXT:    csel w0, w9, w8, ge
 ; CHECK-NEXT:    bl zoo
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

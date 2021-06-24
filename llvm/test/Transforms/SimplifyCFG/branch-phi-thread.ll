@@ -14,12 +14,15 @@ define i32 @test1(i32 %X, i1 %D) {
 ; CHECK-NEXT:  E:
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[C]], label [[B:%.*]], label [[F:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 345, [[B]] ], [ 123, [[F]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       B:
 ; CHECK-NEXT:    call void @f2()
-; CHECK-NEXT:    ret i32 345
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       F:
 ; CHECK-NEXT:    call void @f3()
-; CHECK-NEXT:    ret i32 123
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 E:
   %C = icmp eq i32 %X, 0		; <i1> [#uses=2]
@@ -42,12 +45,15 @@ define i32 @test2(i32 %X, i1 %D) {
 ; CHECK-NEXT:  E:
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[C]], label [[B:%.*]], label [[F:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 345, [[B]] ], [ 123, [[F]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       B:
 ; CHECK-NEXT:    call void @f2()
-; CHECK-NEXT:    ret i32 345
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       F:
 ; CHECK-NEXT:    call void @f3()
-; CHECK-NEXT:    ret i32 123
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 E:
   %C = icmp eq i32 %X, 0		; <i1> [#uses=2]
@@ -71,15 +77,18 @@ define i32 @test3(i32 %X, i1 %D, i32* %AP, i32* %BP) {
 ; CHECK-NEXT:  E:
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[C]], label [[B_CRITEDGE:%.*]], label [[F:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 345, [[B_CRITEDGE]] ], [ 123, [[F]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       B.critedge:
 ; CHECK-NEXT:    call void @f3()
 ; CHECK-NEXT:    [[XX_C:%.*]] = load i32, i32* [[AP:%.*]], align 4
 ; CHECK-NEXT:    store i32 [[XX_C]], i32* [[BP:%.*]], align 4
 ; CHECK-NEXT:    call void @f2()
-; CHECK-NEXT:    ret i32 345
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       F:
 ; CHECK-NEXT:    call void @f3()
-; CHECK-NEXT:    ret i32 123
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 E:
   %C = icmp eq i32 %X, 0		; <i1> [#uses=2]

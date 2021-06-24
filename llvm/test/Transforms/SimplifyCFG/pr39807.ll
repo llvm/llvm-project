@@ -4,7 +4,7 @@ declare void @personality()
 
 define void @test(i1 %b) personality void()* @personality !dbg !1 {
 ; CHECK:      invoke void @inlinable()
-; CHECK-NEXT:    to label %success unwind label %failure, !dbg ![[DBGLOC:[0-9]+]]
+; CHECK-NEXT:    to label %common.ret unwind label %failure, !dbg ![[DBGLOC:[0-9]+]]
     br i1 %b, label %if, label %else
 
 if:

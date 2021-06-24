@@ -177,13 +177,13 @@ define void @testing() {
 ; CHECK-NEXT:    b.gt .LBB5_6
 ; CHECK-NEXT:  // %bb.4: // %test5
 ; CHECK-NEXT:    add w11, w9, #4 // =4
-; CHECK-NEXT:    cmn w10, #444 // =444
+; CHECK-NEXT:    cmn w10, #443 // =443
 ; CHECK-NEXT:    str w11, [x8]
-; CHECK-NEXT:    b.gt .LBB5_6
+; CHECK-NEXT:    b.ge .LBB5_6
 ; CHECK-NEXT:  // %bb.5: // %test6
 ; CHECK-NEXT:    add w9, w9, #5 // =5
 ; CHECK-NEXT:    str w9, [x8]
-; CHECK-NEXT:  .LBB5_6: // %ret
+; CHECK-NEXT:  .LBB5_6: // %common.ret
 ; CHECK-NEXT:    ret
   %val = load i32, i32* @var_i32
   %val2 = load i32, i32* @var2_i32

@@ -5,6 +5,7 @@ declare void @bar(i32)
 
 define void @test(i1 %P, i32* %Q) {
 ; CHECK-LABEL: @test(
+; CHECK-NEXT:  common.ret:
 ; CHECK-NEXT:    store i32 1, i32* [[Q:%.*]], align 4
 ; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[Q]], align 4
 ; CHECK-NEXT:    call void @bar(i32 [[A]])
