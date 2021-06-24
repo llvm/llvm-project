@@ -35,6 +35,10 @@ std::unique_ptr<Pass> createParallelLoopSpecializationPass();
 std::unique_ptr<Pass>
 createParallelLoopTilingPass(llvm::ArrayRef<int64_t> tileSize = {});
 
+/// Creates a pass which folds arith ops on induction variable into
+/// loop range.
+std::unique_ptr<Pass> createForLoopRangeFoldingPass();
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//
