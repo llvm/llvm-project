@@ -10,9 +10,9 @@ declare i8* @bar(i32, i8*, i8*)
 ; If we do, we would ignore its fallthrough successor.
 
 ; CHECK-PROB: bb.0{{[0-9a-zA-Z.]*}}:
-; CHECK-PROB: successors: %bb.1(0x40000000), %bb.3(0x20000000), %bb.5(0x20000000)
+; CHECK-PROB: successors: %bb.1(0x40000000), %bb.3(0x20000000), %bb.4(0x20000000)
 ; CHECK-PROB: bb.2{{[0-9a-zA-Z.]*}}:
-; CHECK-PROB: successors: %bb.3(0x40000000), %bb.5(0x40000000)
+; CHECK-PROB: successors: %bb.3(0x40000000), %bb.4(0x40000000)
 
 define i32 @test(i32 %a, i32 %a2, i32* %p, i32* %p2) "frame-pointer"="all" {
 ; CHECK-LABEL: test:
@@ -43,22 +43,25 @@ define i32 @test(i32 %a, i32 %a2, i32* %p, i32* %p2) "frame-pointer"="all" {
 ; CHECK-NEXT:    mov r2, r8
 ; CHECK-NEXT:    bl _bar
 ; CHECK-NEXT:    cmp r5, #21
-; CHECK-NEXT:    itt eq
+; CHECK-NEXT:    itttt eq
+; CHECK-NEXT:    moveq r1, r0
 ; CHECK-NEXT:    streq.w r5, [r11]
-; CHECK-NEXT:    moveq pc, r0
+; CHECK-NEXT:    movweq r0, #1234
+; CHECK-NEXT:    moveq pc, r1
 ; CHECK-NEXT:  LBB0_1:
 ; CHECK-NEXT:    cmp r4, #42
-; CHECK-NEXT:    beq LBB0_3
+; CHECK-NEXT:    beq LBB0_4
 ; CHECK-NEXT:    ldr r0, [sp]
 ; CHECK-NEXT:    str r5, [r0]
+; CHECK-NEXT:    movw r0, #1234
 ; CHECK-NEXT:    mov pc, r10
 ; CHECK-NEXT:  Ltmp0:
 ; CHECK-NEXT:  LBB0_3:
-; CHECK-NEXT:    movw r0, #1234
-; CHECK-NEXT:    b LBB0_5
-; CHECK-NEXT:  Ltmp1:
-; CHECK-NEXT:  LBB0_4:
 ; CHECK-NEXT:    movw r0, #4567
+; CHECK-NEXT:    b LBB0_5
+; CHECK-NEXT:  LBB0_4:
+; CHECK-NEXT:    movw r0, #1234
+; CHECK-NEXT:  Ltmp1:
 ; CHECK-NEXT:  LBB0_5:
 ; CHECK-NEXT:    bl _foo
 ; CHECK-NEXT:    add sp, #4

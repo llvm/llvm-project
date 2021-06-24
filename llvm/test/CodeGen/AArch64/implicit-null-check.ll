@@ -13,7 +13,7 @@ define i32 @imp_null_check_load_fallthrough(i32* %x) {
 ; CHECK-NEXT:    ldr w0, [x0] // on-fault: .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %not_null
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_2: // %is_null
+; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    mov w0, #42
 ; CHECK-NEXT:    ret
  entry:
@@ -36,7 +36,7 @@ define i32 @imp_null_check_load_reorder(i32* %x) {
 ; CHECK-NEXT:    ldr w0, [x0] // on-fault: .LBB1_2
 ; CHECK-NEXT:  // %bb.1: // %not_null
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB1_2: // %is_null
+; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    mov w0, #42
 ; CHECK-NEXT:    ret
  entry:
@@ -58,7 +58,7 @@ define i32 @imp_null_check_unordered_load(i32* %x) {
 ; CHECK-NEXT:    ldr w0, [x0] // on-fault: .LBB2_2
 ; CHECK-NEXT:  // %bb.1: // %not_null
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB2_2: // %is_null
+; CHECK-NEXT:  .LBB2_2:
 ; CHECK-NEXT:    mov w0, #42
 ; CHECK-NEXT:    ret
  entry:
@@ -83,7 +83,7 @@ define i32 @imp_null_check_seq_cst_load(i32* %x) {
 ; CHECK-NEXT:  // %bb.1: // %not_null
 ; CHECK-NEXT:    ldar w0, [x0]
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB3_2: // %is_null
+; CHECK-NEXT:  .LBB3_2:
 ; CHECK-NEXT:    mov w0, #42
 ; CHECK-NEXT:    ret
  entry:
@@ -106,7 +106,7 @@ define i32 @imp_null_check_volatile_load(i32* %x) {
 ; CHECK-NEXT:  // %bb.1: // %not_null
 ; CHECK-NEXT:    ldr w0, [x0]
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB4_2: // %is_null
+; CHECK-NEXT:  .LBB4_2:
 ; CHECK-NEXT:    mov w0, #42
 ; CHECK-NEXT:    ret
  entry:
@@ -129,7 +129,7 @@ define i8 @imp_null_check_load_i8(i8* %x) {
 ; CHECK-NEXT:    ldrb w0, [x0] // on-fault: .LBB5_2
 ; CHECK-NEXT:  // %bb.1: // %not_null
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB5_2: // %is_null
+; CHECK-NEXT:  .LBB5_2:
 ; CHECK-NEXT:    mov w0, #42
 ; CHECK-NEXT:    ret
  entry:
@@ -149,15 +149,14 @@ define i256 @imp_null_check_load_i256(i256* %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cbz x0, .LBB6_2
 ; CHECK-NEXT:  // %bb.1: // %not_null
-; CHECK-NEXT:    ldp x8, x1, [x0]
 ; CHECK-NEXT:    ldp x2, x3, [x0, #16]
-; CHECK-NEXT:    mov x0, x8
+; CHECK-NEXT:    ldp x0, x1, [x0]
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB6_2: // %is_null
-; CHECK-NEXT:    mov w0, #42
+; CHECK-NEXT:  .LBB6_2:
 ; CHECK-NEXT:    mov x1, xzr
 ; CHECK-NEXT:    mov x2, xzr
 ; CHECK-NEXT:    mov x3, xzr
+; CHECK-NEXT:    mov w0, #42
 ; CHECK-NEXT:    ret
  entry:
   %c = icmp eq i256* %x, null
@@ -180,7 +179,7 @@ define i32 @imp_null_check_gep_load(i32* %x) {
 ; CHECK-NEXT:    ldr w0, [x0, #128] // on-fault: .LBB7_2
 ; CHECK-NEXT:  // %bb.1: // %not_null
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB7_2: // %is_null
+; CHECK-NEXT:  .LBB7_2:
 ; CHECK-NEXT:    mov w0, #42
 ; CHECK-NEXT:    ret
  entry:
@@ -204,7 +203,7 @@ define i32 @imp_null_check_add_result(i32* %x, i32 %p) {
 ; CHECK-NEXT:  // %bb.1: // %not_null
 ; CHECK-NEXT:    add w0, w8, w1
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB8_2: // %is_null
+; CHECK-NEXT:  .LBB8_2:
 ; CHECK-NEXT:    mov w0, #42
 ; CHECK-NEXT:    ret
  entry:
@@ -231,7 +230,7 @@ define i32 @imp_null_check_hoist_over_udiv(i32* %x, i32 %a, i32 %b) {
 ; CHECK-NEXT:    udiv w9, w1, w2
 ; CHECK-NEXT:    add w0, w8, w9
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB9_2: // %is_null
+; CHECK-NEXT:  .LBB9_2:
 ; CHECK-NEXT:    mov w0, #42
 ; CHECK-NEXT:    ret
  entry:
@@ -260,7 +259,7 @@ define i32 @imp_null_check_hoist_over_unrelated_load(i32* %x, i32* %y, i32* %z) 
 ; CHECK-NEXT:    ldr w0, [x0]
 ; CHECK-NEXT:    str w8, [x2]
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB10_2: // %is_null
+; CHECK-NEXT:  .LBB10_2:
 ; CHECK-NEXT:    mov w0, #42
 ; CHECK-NEXT:    ret
  entry:
@@ -287,7 +286,7 @@ define i32 @imp_null_check_gep_load_with_use_dep(i32* %x, i32 %a) {
 ; CHECK-NEXT:    add w8, w9, w8
 ; CHECK-NEXT:    add w0, w8, #4 // =4
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB11_2: // %is_null
+; CHECK-NEXT:  .LBB11_2:
 ; CHECK-NEXT:    mov w0, #42
 ; CHECK-NEXT:    ret
  entry:
@@ -316,7 +315,7 @@ define i32 @imp_null_check_load_fence1(i32* %x) {
 ; CHECK-NEXT:    dmb ishld
 ; CHECK-NEXT:    ldr w0, [x0]
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB12_2: // %is_null
+; CHECK-NEXT:  .LBB12_2:
 ; CHECK-NEXT:    mov w0, #42
 ; CHECK-NEXT:    ret
 entry:
@@ -342,7 +341,7 @@ define i32 @imp_null_check_load_fence2(i32* %x) {
 ; CHECK-NEXT:    dmb ish
 ; CHECK-NEXT:    ldr w0, [x0]
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB13_2: // %is_null
+; CHECK-NEXT:  .LBB13_2:
 ; CHECK-NEXT:    mov w0, #42
 ; CHECK-NEXT:    ret
 entry:
@@ -366,8 +365,7 @@ define void @imp_null_check_store(i32* %x) {
 ; CHECK-NEXT:  // %bb.1: // %not_null
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    str w8, [x0]
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB14_2: // %is_null
+; CHECK-NEXT:  .LBB14_2: // %common.ret
 ; CHECK-NEXT:    ret
  entry:
   %c = icmp eq i32* %x, null
@@ -389,8 +387,7 @@ define void @imp_null_check_unordered_store(i32* %x) {
 ; CHECK-NEXT:  // %bb.1: // %not_null
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    str w8, [x0]
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB15_2: // %is_null
+; CHECK-NEXT:  .LBB15_2: // %common.ret
 ; CHECK-NEXT:    ret
  entry:
   %c = icmp eq i32* %x, null
@@ -411,7 +408,7 @@ define i32 @imp_null_check_neg_gep_load(i32* %x) {
 ; CHECK-NEXT:    ldur w0, [x0, #-128] // on-fault: .LBB16_2
 ; CHECK-NEXT:  // %bb.1: // %not_null
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB16_2: // %is_null
+; CHECK-NEXT:  .LBB16_2:
 ; CHECK-NEXT:    mov w0, #42
 ; CHECK-NEXT:    ret
  entry:

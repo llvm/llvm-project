@@ -798,7 +798,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     if (SizeOp0 % NarrowSize != 0) {
       LLT ImplicitTy = NarrowTy;
       if (DstTy.isVector())
-        ImplicitTy = LLT::vector(DstTy.getNumElements(), ImplicitTy);
+        ImplicitTy = LLT::vector(DstTy.getElementCount(), ImplicitTy);
 
       Register ImplicitReg = MIRBuilder.buildUndef(ImplicitTy).getReg(0);
       MIRBuilder.buildAnyExt(DstReg, ImplicitReg);
@@ -2286,9 +2286,9 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
       LLT VecTy = MRI.getType(VecReg);
       Observer.changingInstr(MI);
 
-      widenScalarSrc(MI, LLT::vector(VecTy.getNumElements(),
-                                     WideTy.getSizeInBits()),
-                     1, TargetOpcode::G_SEXT);
+      widenScalarSrc(
+          MI, LLT::vector(VecTy.getElementCount(), WideTy.getSizeInBits()), 1,
+          TargetOpcode::G_SEXT);
 
       widenScalarDst(MI, WideTy, 0);
       Observer.changedInstr(MI);
@@ -2309,7 +2309,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
 
       Register VecReg = MI.getOperand(1).getReg();
       LLT VecTy = MRI.getType(VecReg);
-      LLT WideVecTy = LLT::vector(VecTy.getNumElements(), WideTy);
+      LLT WideVecTy = LLT::vector(VecTy.getElementCount(), WideTy);
 
       widenScalarSrc(MI, WideVecTy, 1, TargetOpcode::G_ANYEXT);
       widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_ANYEXT);
@@ -2469,7 +2469,7 @@ LegalizerHelper::lowerBitcast(MachineInstr &MI) {
         // %3:_(<2 x s8>) = G_BITCAST %2
         // %4:_(<2 x s8>) = G_BITCAST %3
         // %1:_(<4 x s16>) = G_CONCAT_VECTORS %3, %4
-        DstCastTy = LLT::vector(NumDstElt / NumSrcElt, DstEltTy);
+        DstCastTy = LLT::fixed_vector(NumDstElt / NumSrcElt, DstEltTy);
         SrcPartTy = SrcEltTy;
       } else if (NumSrcElt > NumDstElt) { // Source element type is smaller.
         //
@@ -2481,7 +2481,7 @@ LegalizerHelper::lowerBitcast(MachineInstr &MI) {
         // %3:_(s16) = G_BITCAST %2
         // %4:_(s16) = G_BITCAST %3
         // %1:_(<2 x s16>) = G_BUILD_VECTOR %3, %4
-        SrcPartTy = LLT::vector(NumSrcElt / NumDstElt, SrcEltTy);
+        SrcPartTy = LLT::fixed_vector(NumSrcElt / NumDstElt, SrcEltTy);
         DstCastTy = DstEltTy;
       }
 
@@ -3397,7 +3397,7 @@ LegalizerHelper::fewerElementsVectorCasts(MachineInstr &MI, unsigned TypeIdx,
     if (NumParts * NarrowTy.getNumElements() != DstTy.getNumElements())
       return UnableToLegalize;
 
-    NarrowTy1 = LLT::vector(NarrowTy.getNumElements(), SrcTy.getElementType());
+    NarrowTy1 = LLT::vector(NarrowTy.getElementCount(), SrcTy.getElementType());
   } else {
     NumParts = DstTy.getNumElements();
     NarrowTy1 = SrcTy.getElementType();
@@ -3441,9 +3441,9 @@ LegalizerHelper::fewerElementsVectorCmp(MachineInstr &MI, unsigned TypeIdx,
 
     NarrowTy0 = NarrowTy;
     NumParts = NarrowTy.isVector() ? (OldElts / NewElts) : DstTy.getNumElements();
-    NarrowTy1 = NarrowTy.isVector() ?
-      LLT::vector(NarrowTy.getNumElements(), SrcTy.getScalarSizeInBits()) :
-      SrcTy.getElementType();
+    NarrowTy1 = NarrowTy.isVector() ? LLT::vector(NarrowTy.getElementCount(),
+                                                  SrcTy.getScalarSizeInBits())
+                                    : SrcTy.getElementType();
 
   } else {
     unsigned NewElts = NarrowTy.isVector() ? NarrowTy.getNumElements() : 1;
@@ -3451,8 +3451,8 @@ LegalizerHelper::fewerElementsVectorCmp(MachineInstr &MI, unsigned TypeIdx,
 
     NumParts = NarrowTy.isVector() ? (OldElts / NewElts) :
       NarrowTy.getNumElements();
-    NarrowTy0 = LLT::vector(NarrowTy.getNumElements(),
-                            DstTy.getScalarSizeInBits());
+    NarrowTy0 =
+        LLT::vector(NarrowTy.getElementCount(), DstTy.getScalarSizeInBits());
     NarrowTy1 = NarrowTy;
   }
 
@@ -3523,8 +3523,9 @@ LegalizerHelper::fewerElementsVectorSelect(MachineInstr &MI, unsigned TypeIdx,
       if (CondTy.getNumElements() == NumParts)
         NarrowTy1 = CondTy.getElementType();
       else
-        NarrowTy1 = LLT::vector(CondTy.getNumElements() / NumParts,
-                                CondTy.getScalarSizeInBits());
+        NarrowTy1 =
+            LLT::vector(CondTy.getElementCount().divideCoefficientBy(NumParts),
+                        CondTy.getScalarSizeInBits());
     }
   } else {
     NumParts = CondTy.getNumElements();

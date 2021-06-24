@@ -4,24 +4,23 @@
 define i32 @invert_bcc(float %x, float %y) #0 {
 ; CHECK-LABEL: invert_bcc:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    b.ne LBB0_3
+; CHECK-NEXT:    mov w8, #42
+; CHECK-NEXT:    b.pl LBB0_3
 ; CHECK-NEXT:    b LBB0_2
 ; CHECK-NEXT:  LBB0_3:
-; CHECK-NEXT:    b.vc LBB0_1
-; CHECK-NEXT:    b LBB0_2
-; CHECK-NEXT:  LBB0_1: ; %bb2
-; CHECK-NEXT:    mov w8, #9
+; CHECK-NEXT:    b.gt LBB0_2
+; CHECK-NEXT:  ; %bb.1: ; %common.ret
+; CHECK-NEXT:    str w8, [x8]
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  LBB0_2: ; %bb2
 ; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w8, #9
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    ; InlineAsm End
-; CHECK-NEXT:    str w8, [x8]
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  LBB0_2: ; %bb1
-; CHECK-NEXT:    mov w8, #42
-; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    str w8, [x8]
 ; CHECK-NEXT:    ret
   %1 = fcmp ueq float %x, %y

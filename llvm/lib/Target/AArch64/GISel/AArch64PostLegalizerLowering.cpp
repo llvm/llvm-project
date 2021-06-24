@@ -705,7 +705,7 @@ bool applyDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
   Register DupSrc = MI.getOperand(1).getReg();
   // For types like <2 x s32>, we can use G_DUPLANE32, with a <4 x s32> source.
   // To do this, we can use a G_CONCAT_VECTORS to do the widening.
-  if (SrcTy == LLT::vector(2, LLT::scalar(32))) {
+  if (SrcTy == LLT::fixed_vector(2, LLT::scalar(32))) {
     assert(MRI.getType(MI.getOperand(0).getReg()).getNumElements() == 2 &&
            "Unexpected dest elements");
     auto Undef = B.buildUndef(SrcTy);

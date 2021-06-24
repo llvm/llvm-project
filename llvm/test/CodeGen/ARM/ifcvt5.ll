@@ -34,29 +34,33 @@ entry:
 define i32 @t1(i32 %a, i32 %b) "frame-pointer"="all" {
 ; A8-LABEL: t1:
 ; A8:       @ %bb.0: @ %entry
-; A8-NEXT:    cmp r0, #11
-; A8-NEXT:    movlt r0, #1
-; A8-NEXT:    bxlt lr
+; A8-NEXT:    mov r2, r0
+; A8-NEXT:    mov r0, #1
+; A8-NEXT:    cmp r2, #10
+; A8-NEXT:    bxle lr
 ; A8-NEXT:  LBB1_1: @ %cond_true
 ; A8-NEXT:    push {r7, lr}
 ; A8-NEXT:    mov r7, sp
 ; A8-NEXT:    mov r0, r1
 ; A8-NEXT:    bl _foo
 ; A8-NEXT:    mov r0, #0
-; A8-NEXT:    pop {r7, pc}
+; A8-NEXT:    pop {r7, lr}
+; A8-NEXT:    bx lr
 ;
 ; SWIFT-LABEL: t1:
 ; SWIFT:       @ %bb.0: @ %entry
-; SWIFT-NEXT:    cmp r0, #11
-; SWIFT-NEXT:    movlt r0, #1
-; SWIFT-NEXT:    bxlt lr
+; SWIFT-NEXT:    mov r2, r0
+; SWIFT-NEXT:    mov r0, #1
+; SWIFT-NEXT:    cmp r2, #10
+; SWIFT-NEXT:    bxle lr
 ; SWIFT-NEXT:  LBB1_1: @ %cond_true
 ; SWIFT-NEXT:    push {r7, lr}
 ; SWIFT-NEXT:    mov r7, sp
 ; SWIFT-NEXT:    mov r0, r1
 ; SWIFT-NEXT:    bl _foo
 ; SWIFT-NEXT:    mov r0, #0
-; SWIFT-NEXT:    pop {r7, pc}
+; SWIFT-NEXT:    pop {r7, lr}
+; SWIFT-NEXT:    bx lr
 entry:
 	%tmp1 = icmp sgt i32 %a, 10		; <i1> [#uses=1]
 	br i1 %tmp1, label %cond_true, label %UnifiedReturnBlock

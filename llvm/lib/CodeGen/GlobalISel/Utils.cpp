@@ -773,8 +773,9 @@ LLT llvm::getLCMType(LLT OrigTy, LLT TargetTy) {
         int GCDElts = greatestCommonDivisor(OrigTy.getNumElements(),
                                             TargetTy.getNumElements());
         // Prefer the original element type.
-        int Mul = OrigTy.getNumElements() * TargetTy.getNumElements();
-        return LLT::vector(Mul / GCDElts, OrigTy.getElementType());
+        ElementCount Mul = OrigTy.getElementCount() * TargetTy.getNumElements();
+        return LLT::vector(Mul.divideCoefficientBy(GCDElts),
+                           OrigTy.getElementType());
       }
     } else {
       if (OrigElt.getSizeInBits() == TargetSize)
@@ -782,12 +783,12 @@ LLT llvm::getLCMType(LLT OrigTy, LLT TargetTy) {
     }
 
     unsigned LCMSize = getLCMSize(OrigSize, TargetSize);
-    return LLT::vector(LCMSize / OrigElt.getSizeInBits(), OrigElt);
+    return LLT::fixed_vector(LCMSize / OrigElt.getSizeInBits(), OrigElt);
   }
 
   if (TargetTy.isVector()) {
     unsigned LCMSize = getLCMSize(OrigSize, TargetSize);
-    return LLT::vector(LCMSize / OrigSize, OrigTy);
+    return LLT::fixed_vector(LCMSize / OrigSize, OrigTy);
   }
 
   unsigned LCMSize = getLCMSize(OrigSize, TargetSize);
@@ -831,7 +832,7 @@ LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
     // scalar.
     if (GCD < OrigElt.getSizeInBits())
       return LLT::scalar(GCD);
-    return LLT::vector(GCD / OrigElt.getSizeInBits(), OrigElt);
+    return LLT::fixed_vector(GCD / OrigElt.getSizeInBits(), OrigElt);
   }
 
   if (TargetTy.isVector()) {
