@@ -276,6 +276,7 @@ group("test") {
     "//llvm/tools/llvm-readobj:symlinks",
     "//llvm/tools/llvm-reduce",
     "//llvm/tools/llvm-rtdyld",
+    "//llvm/tools/llvm-sim",
     "//llvm/tools/llvm-size",
     "//llvm/tools/llvm-split",
     "//llvm/tools/llvm-strings",
