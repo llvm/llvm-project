@@ -472,12 +472,8 @@ bool SjLjEHPrepare::setupEntryBlockAndCallSites(Function &F) {
 
   // Finally, for any returns from this function, if this function contains an
   // invoke, add a call to unregister the function context.
-  for (ReturnInst *Return : Returns) {
-    Instruction *InsertPoint = Return;
-    if (CallInst *CI = Return->getParent()->getTerminatingMustTailCall())
-      InsertPoint = CI;
-    CallInst::Create(UnregisterFn, FuncCtx, "", InsertPoint);
-  }
+  for (ReturnInst *Return : Returns)
+    CallInst::Create(UnregisterFn, FuncCtx, "", Return);
 
   return true;
 }
