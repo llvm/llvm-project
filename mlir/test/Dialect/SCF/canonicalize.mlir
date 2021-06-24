@@ -921,9 +921,30 @@ func @propagate_into_execute_region() {
     }
     "test.bar"(%v) : (i64) -> ()
     // CHECK:      %[[C2:.*]] = constant 2 : i64
-    // CHECK:        scf.execute_region -> i64 {
-    // CHECK-NEXT:     scf.yield %[[C2]] : i64
-    // CHECK-NEXT:   }
+    // CHECK: "test.foo"
+    // CHECK-NEXT: "test.bar"(%[[C2]]) : (i64) -> ()
   }
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @execute_region_elim
+func @execute_region_elim() {
+  affine.for %i = 0 to 100 {
+    "test.foo"() : () -> ()
+    %v = scf.execute_region -> i64 {
+      %x = "test.val"() : () -> i64
+      scf.yield %x : i64
+    }
+    "test.bar"(%v) : (i64) -> ()
+  }
+  return
+}
+
+// CHECK-NEXT:     affine.for %arg0 = 0 to 100 {
+// CHECK-NEXT:       "test.foo"() : () -> ()
+// CHECK-NEXT:       %[[VAL:.*]] = "test.val"() : () -> i64
+// CHECK-NEXT:       "test.bar"(%[[VAL]]) : (i64) -> ()
+// CHECK-NEXT:     }
+
