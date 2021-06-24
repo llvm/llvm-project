@@ -1,10 +1,28 @@
 // RUN:   mlir-opt %s                                                          \
-// RUN:               -convert-linalg-to-parallel-loops                        \
 // RUN:               -async-parallel-for                                      \
 // RUN:               -async-to-async-runtime                                  \
 // RUN:               -async-runtime-ref-counting                              \
 // FIXME:             -async-runtime-ref-counting-opt                          \
 // RUN:               -convert-async-to-llvm                                   \
+// RUN:               -convert-linalg-to-loops                                 \
+// RUN:               -convert-scf-to-std                                      \
+// RUN:               -std-expand                                              \
+// RUN:               -convert-vector-to-llvm                                  \
+// RUN:               -convert-std-to-llvm                                     \
+// RUN: | mlir-cpu-runner                                                      \
+// RUN: -e entry -entry-point-result=void -O3                                  \
+// RUN: -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext  \
+// RUN: -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext\
+// RUN: -shared-libs=%mlir_integration_test_dir/libmlir_async_runtime%shlibext \
+// RUN: | FileCheck %s --dump-input=always
+
+// RUN:   mlir-opt %s                                                          \
+// RUN:               -async-parallel-for=async-dispatch=false                 \
+// RUN:               -async-to-async-runtime                                  \
+// RUN:               -async-runtime-ref-counting                              \
+// FIXME:             -async-runtime-ref-counting-opt                          \
+// RUN:               -convert-async-to-llvm                                   \
+// RUN:               -convert-linalg-to-loops                                 \
 // RUN:               -convert-scf-to-std                                      \
 // RUN:               -std-expand                                              \
 // RUN:               -convert-vector-to-llvm                                  \
@@ -30,19 +48,20 @@
 
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
 
-func @linalg_generic(%lhs: memref<?x?xf32>,
-                     %rhs: memref<?x?xf32>,
-                     %sum: memref<?x?xf32>) {
-  linalg.generic {
-    indexing_maps = [#map0, #map0, #map0],
-    iterator_types = ["parallel", "parallel"]
-  }
-    ins(%lhs, %rhs : memref<?x?xf32>, memref<?x?xf32>)
-    outs(%sum : memref<?x?xf32>)
-  {
-    ^bb0(%lhs_in: f32, %rhs_in: f32, %sum_out: f32):
-      %0 = addf %lhs_in, %rhs_in : f32
-      linalg.yield %0 : f32
+func @scf_parallel(%lhs: memref<?x?xf32>,
+                   %rhs: memref<?x?xf32>,
+                   %sum: memref<?x?xf32>) {
+  %c0 = constant 0 : index
+  %c1 = constant 1 : index
+
+  %d0 = memref.dim %lhs, %c0 : memref<?x?xf32>
+  %d1 = memref.dim %lhs, %c1 : memref<?x?xf32>
+
+  scf.parallel (%i, %j) = (%c0, %c0) to (%d0, %d1) step (%c1, %c1) {
+    %lv = memref.load %lhs[%i, %j] : memref<?x?xf32>
+    %rv = memref.load %lhs[%i, %j] : memref<?x?xf32>
+    %r = addf %lv, %rv : f32
+    memref.store %r, %sum[%i, %j] : memref<?x?xf32>
   }
 
   return
@@ -70,7 +89,7 @@ func @entry() {
   %RHS = memref.cast %RHS10 : memref<1x10xf32> to memref<?x?xf32>
   %DST = memref.cast %DST10 : memref<1x10xf32> to memref<?x?xf32>
 
-  call @linalg_generic(%LHS, %RHS, %DST)
+  call @scf_parallel(%LHS, %RHS, %DST)
     : (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>) -> ()
 
   // CHECK: [2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
@@ -97,7 +116,7 @@ func @entry() {
   // Warm up.
   //
 
-  call @linalg_generic(%LHS0, %RHS0, %DST0)
+  call @scf_parallel(%LHS0, %RHS0, %DST0)
     : (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>) -> ()
 
   //
@@ -106,7 +125,7 @@ func @entry() {
 
   %t0 = call @rtclock() : () -> f64
   scf.for %i = %c0 to %cM step %c1 {
-    call @linalg_generic(%LHS0, %RHS0, %DST0)
+    call @scf_parallel(%LHS0, %RHS0, %DST0)
       : (memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>) -> ()
   }
   %t1 = call @rtclock() : () -> f64
