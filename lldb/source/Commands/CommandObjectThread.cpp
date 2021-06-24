@@ -2086,15 +2086,20 @@ protected:
     ThreadSP thread_sp =
         m_exe_ctx.GetProcessPtr()->GetThreadList().FindThreadByID(tid);
 
-    size_t count = m_options.m_count;
-    ssize_t position = m_options.m_position.getValueOr(
-                           trace_sp->GetCursorPosition(*thread_sp)) -
-                       m_consecutive_repetitions * count;
-    if (position < 0)
-      result.AppendError("error: no more data");
-    else
-      trace_sp->DumpTraceInstructions(*thread_sp, result.GetOutputStream(),
-                                      count, position, m_options.m_raw);
+    if (llvm::Optional<size_t> insn_count =
+            trace_sp->GetInstructionCount(*thread_sp)) {
+      size_t count = m_options.m_count;
+      ssize_t position =
+          m_options.m_position.getValueOr((ssize_t)*insn_count - 1) -
+          m_consecutive_repetitions * count;
+      if (position < 0)
+        result.AppendError("error: no more data");
+      else
+        trace_sp->DumpTraceInstructions(*thread_sp, result.GetOutputStream(),
+                                        count, position, m_options.m_raw);
+    } else {
+      result.AppendError("error: not traced");
+    }
     return true;
   }
 

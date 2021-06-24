@@ -275,7 +275,8 @@ CXXNewExpr *CXXNewExpr::CreateEmpty(const ASTContext &Ctx, bool IsArray,
 }
 
 bool CXXNewExpr::shouldNullCheckAllocation() const {
-  return getOperatorNew()
+  return !getOperatorNew()->hasAttr<ReturnsNonNullAttr>() &&
+         getOperatorNew()
              ->getType()
              ->castAs<FunctionProtoType>()
              ->isNothrow() &&

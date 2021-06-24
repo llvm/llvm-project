@@ -6771,7 +6771,7 @@ def warn_param_mismatched_alignment : Warning<
 def err_objc_object_assignment : Error<
   "cannot assign to class object (%0 invalid)">;
 def err_typecheck_invalid_operands : Error<
-  "invalid operands to binary expression (%0 and %1)">;
+  "invalid operands to binary expression (%0 and %1)">, Deferrable;
 def note_typecheck_invalid_operands_converted : Note<
   "%select{first|second}0 operand was implicitly converted to type %1">;
 def err_typecheck_logical_vector_expr_gnu_cpp_restrict : Error<

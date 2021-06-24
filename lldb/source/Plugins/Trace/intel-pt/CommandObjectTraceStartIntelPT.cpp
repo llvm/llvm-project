@@ -61,7 +61,7 @@ bool CommandObjectThreadTraceStartIntelPT::DoExecuteOnThreads(
     Args &command, CommandReturnObject &result,
     llvm::ArrayRef<lldb::tid_t> tids) {
   if (Error err = m_trace.Start(tids, m_options.m_thread_buffer_size))
-    result.SetError(toString(std::move(err)));
+    result.SetError(Status(std::move(err)));
   else
     result.SetStatus(eReturnStatusSuccessFinishResult);
 
@@ -122,7 +122,7 @@ bool CommandObjectProcessTraceStartIntelPT::DoExecute(
     Args &command, CommandReturnObject &result) {
   if (Error err = m_trace.Start(m_options.m_thread_buffer_size,
                                 m_options.m_process_buffer_size_limit))
-    result.SetError(toString(std::move(err)));
+    result.SetError(Status(std::move(err)));
   else
     result.SetStatus(eReturnStatusSuccessFinishResult);
 
