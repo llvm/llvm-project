@@ -15262,7 +15262,11 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue Hi = DAG.getLoad(MVT::i32, dl, LD->getChain(), BasePtr,
                              LD->getPointerInfo(), LD->getAlignment());
     Hi = DAG.getNode(ISD::BSWAP, dl, MVT::i32, Hi);
-    SDValue Res = DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Hi, Lo);
+    SDValue Res;
+    if (Subtarget.isLittleEndian())
+      Res = DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Hi, Lo);
+    else
+      Res = DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Lo, Hi);
     SDValue TF =
         DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
                     Hi.getOperand(0).getValue(1), Lo.getOperand(0).getValue(1));

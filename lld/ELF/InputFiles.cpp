@@ -669,15 +669,13 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
       continue;
     const Elf_Shdr &sec = objSections[i];
 
-    if (cgProfileSectionIndex && sec.sh_info == cgProfileSectionIndex) {
-      if (sec.sh_type == SHT_RELA)
-        cgProfileRela = CHECK(getObj().relas(sec), this);
-      else
-        warn(toString(this) + ": unsupported call graph section type");
-    }
-
-    if (sec.sh_type == SHT_REL || sec.sh_type == SHT_RELA)
+    if (sec.sh_type == SHT_REL || sec.sh_type == SHT_RELA) {
       this->sections[i] = createInputSection(sec);
+      if (cgProfileSectionIndex && sec.sh_info == cgProfileSectionIndex) {
+        if (sec.sh_type == SHT_RELA)
+          cgProfileRela = CHECK(getObj().relas(sec), this);
+      }
+    }
 
     // A SHF_LINK_ORDER section with sh_link=0 is handled as if it did not have
     // the flag.

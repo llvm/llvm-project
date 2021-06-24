@@ -1163,6 +1163,7 @@ The AMDGPU backend uses the following ELF header:
      *reserved*                           0x040      Reserved.
      *reserved*                           0x041      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1013``    0x042      ``gfx1013``
+     *reserved*                           0x043      Reserved.
      ==================================== ========== =============================
 
 Sections
