@@ -698,10 +698,6 @@ public:
   /// operands in the successor blocks which refer to FromMBB to refer to this.
   void transferSuccessorsAndUpdatePHIs(MachineBasicBlock *FromMBB);
 
-  /// move all pseudo probes in this block to the end of /c ToMBB To and tag
-  /// them dangling.
-  void moveAndDanglePseudoProbes(MachineBasicBlock *ToMBB);
-
   /// Return true if any of the successors have probabilities attached to them.
   bool hasSuccessorProbabilities() const { return !Probs.empty(); }
 

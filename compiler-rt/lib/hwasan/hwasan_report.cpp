@@ -341,13 +341,22 @@ void PrintAddressDescription(
     uptr mem = ShadowToMem(reinterpret_cast<uptr>(candidate));
     HwasanChunkView chunk = FindHeapChunkByAddress(mem);
     if (chunk.IsAllocated()) {
+      uptr offset;
+      const char *whence;
+      if (untagged_addr < chunk.End() && untagged_addr >= chunk.Beg()) {
+        offset = untagged_addr - chunk.Beg();
+        whence = "inside";
+      } else if (candidate == left) {
+        offset = untagged_addr - chunk.End();
+        whence = "to the right of";
+      } else {
+        offset = chunk.Beg() - untagged_addr;
+        whence = "to the left of";
+      }
       Printf("%s", d.Location());
-      Printf("%p is located %zd bytes to the %s of %zd-byte region [%p,%p)\n",
-             untagged_addr,
-             candidate == left ? untagged_addr - chunk.End()
-                               : chunk.Beg() - untagged_addr,
-             candidate == left ? "right" : "left", chunk.UsedSize(),
-             chunk.Beg(), chunk.End());
+      Printf("%p is located %zd bytes %s %zd-byte region [%p,%p)\n",
+             untagged_addr, offset, whence, chunk.UsedSize(), chunk.Beg(),
+             chunk.End());
       Printf("%s", d.Allocation());
       Printf("allocated here:\n");
       Printf("%s", d.Default());
@@ -538,6 +547,12 @@ void ReportTailOverwritten(StackTrace *stack, uptr tagged_addr, uptr orig_size,
   Report("ERROR: %s: %s; heap object [%p,%p) of size %zd\n", SanitizerToolName,
          bug_type, untagged_addr, untagged_addr + orig_size, orig_size);
   Printf("\n%s", d.Default());
+  Printf(
+      "Stack of invalid access unknown. Issue detected at deallocation "
+      "time.\n");
+  Printf("%s", d.Allocation());
+  Printf("deallocated here:\n");
+  Printf("%s", d.Default());
   stack->Print();
   HwasanChunkView chunk = FindHeapChunkByAddress(untagged_addr);
   if (chunk.Beg()) {
@@ -615,9 +630,24 @@ void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
   Printf("%s of size %zu at %p tags: %02x/%02x (ptr/mem) in thread T%zd\n",
          is_store ? "WRITE" : "READ", access_size, untagged_addr, ptr_tag,
          mem_tag, t->unique_id());
+  if (mem_tag < kShadowAlignment) {
+    tag_t *granule_ptr = reinterpret_cast<tag_t *>((untagged_addr + offset) &
+                                                   ~(kShadowAlignment - 1));
+    // If offset is 0, (untagged_addr + offset) is not aligned to granules.
+    // This is the offset of the leftmost accessed byte within the bad granule.
+    u8 in_granule_offset = (untagged_addr + offset) & (kShadowAlignment - 1);
+    // The first mismatch was a short granule that matched the ptr_tag.
+    if (granule_ptr[kShadowAlignment - 1] == ptr_tag) {
+      // If the access starts after the end of the short granule, then the first
+      // bad byte is the first byte of the access; otherwise it is the first
+      // byte past the end of the short granule
+      if (mem_tag > in_granule_offset) {
+        offset += mem_tag - in_granule_offset;
+      }
+    }
+  }
   if (offset != 0)
-    Printf("Invalid access starting at offset [%zu, %zu)\n", offset,
-           Min(access_size, static_cast<uptr>(offset) + (1 << kShadowScale)));
+    Printf("Invalid access starting at offset %zu\n", offset);
   Printf("%s", d.Default());
 
   stack->Print();

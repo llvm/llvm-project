@@ -381,16 +381,18 @@ OPTIONS
     $ llvm-symbolizer --obj=inlined.elf --verbose 0x4004be
     baz()
       Filename: /tmp/test.cpp
+      Function start filename: /tmp/test.cpp
       Function start line: 9
-      Function start address: 0x4004b0
+      Function start address: 0x4004b6
       Line: 11
       Column: 18
     main
       Filename: /tmp/test.cpp
+      Function start filename: /tmp/test.cpp
       Function start line: 14
       Function start address: 0x4004b0
       Line: 15
-      Column: 0
+      Column: 18
 
 .. option:: --version, -v
 

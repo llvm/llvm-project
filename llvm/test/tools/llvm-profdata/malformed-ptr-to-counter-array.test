@@ -51,4 +51,5 @@ RUN: printf '\101\0\0\0\0\0\0\0' >> %t.profraw
 RUN: printf '\3\0bar\0\0\0' >> %t.profraw
 
 RUN: not llvm-profdata merge -o /dev/null %t.profraw 2>&1 | FileCheck %s
-CHECK: Malformed instrumentation profile data
+CHECK: warning: {{.+}}: malformed instrumentation profile data
+CHECK: error: no profile can be merged

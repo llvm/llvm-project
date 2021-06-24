@@ -418,10 +418,6 @@ static Optional<LinalgLoops> linalgOpToLoopsImpl(PatternRewriter &rewriter,
       typename std::conditional<std::is_same<LoopTy, AffineForOp>::value,
                                 AffineStoreOp, memref::StoreOp>::type;
 
-  // Canonicalize indexed_generic operations before lowering them to loops.
-  if (isa<IndexedGenericOp>(linalgOp))
-    return llvm::None;
-
   // The flattened loopToOperandRangesMaps is expected to be an invertible
   // permutation map (which is asserted in the inverse calculation).
   assert(linalgOp.hasBufferSemantics() &&

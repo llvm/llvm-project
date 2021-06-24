@@ -87,27 +87,39 @@ def read_packet(f, verbose=False, trace_file=None):
 def packet_type_is(packet, packet_type):
     return 'type' in packet and packet['type'] == packet_type
 
+def dump_dap_log(log_file):
+    print("========= DEBUG ADAPTER PROTOCOL LOGS =========")
+    if log_file is None:
+        print("no log file available")
+    else:
+        with open(log_file, "r") as file:
+            print(file.read())
+    print("========= END =========")
 
-def read_packet_thread(vs_comm):
+
+def read_packet_thread(vs_comm, log_file):
     done = False
-    while not done:
-        packet = read_packet(vs_comm.recv, trace_file=vs_comm.trace_file)
-        # `packet` will be `None` on EOF. We want to pass it down to
-        # handle_recv_packet anyway so the main thread can handle unexpected
-        # termination of lldb-vscode and stop waiting for new packets.
-        done = not vs_comm.handle_recv_packet(packet)
+    try:
+        while not done:
+            packet = read_packet(vs_comm.recv, trace_file=vs_comm.trace_file)
+            # `packet` will be `None` on EOF. We want to pass it down to
+            # handle_recv_packet anyway so the main thread can handle unexpected
+            # termination of lldb-vscode and stop waiting for new packets.
+            done = not vs_comm.handle_recv_packet(packet)
+    finally:
+        dump_dap_log(log_file)
 
 
 class DebugCommunication(object):
 
-    def __init__(self, recv, send, init_commands):
+    def __init__(self, recv, send, init_commands, log_file=None):
         self.trace_file = None
         self.send = send
         self.recv = recv
         self.recv_packets = []
         self.recv_condition = threading.Condition()
         self.recv_thread = threading.Thread(target=read_packet_thread,
-                                            args=(self,))
+                                            args=(self, log_file))
         self.process_event_body = None
         self.exit_status = None
         self.initialize_body = None
@@ -943,7 +955,7 @@ class DebugAdaptor(DebugCommunication):
                                             stderr=subprocess.PIPE,
                                             env=adaptor_env)
             DebugCommunication.__init__(self, self.process.stdout,
-                                        self.process.stdin, init_commands)
+                                        self.process.stdin, init_commands, log_file)
         elif port is not None:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect(('127.0.0.1', port))

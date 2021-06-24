@@ -219,7 +219,6 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
       // A process that is not running is considered paused.
       if (GetFlags().Test(eCommandProcessMustBeLaunched)) {
         result.AppendError("Process must exist.");
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     } else {
@@ -239,7 +238,6 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
       case eStateUnloaded:
         if (GetFlags().Test(eCommandProcessMustBeLaunched)) {
           result.AppendError("Process must be launched.");
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
         break;
@@ -249,7 +247,6 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
         if (GetFlags().Test(eCommandProcessMustBePaused)) {
           result.AppendError("Process is running.  Use 'process interrupt' to "
                              "pause execution.");
-          result.SetStatus(eReturnStatusFailed);
           return false;
         }
       }
@@ -259,7 +256,7 @@ bool CommandObject::CheckRequirements(CommandReturnObject &result) {
   if (GetFlags().Test(eCommandProcessMustBeTraced)) {
     Target *target = m_exe_ctx.GetTargetPtr();
     if (target && !target->GetTrace()) {
-      result.SetError("Process is not being traced.");
+      result.AppendError("Process is not being traced.");
       return false;
     }
   }
@@ -351,7 +348,6 @@ bool CommandObject::ParseOptionsAndNotify(Args &args,
   Status error(group_options.NotifyOptionParsingFinished(&exe_ctx));
   if (error.Fail()) {
     result.AppendError(error.AsCString());
-    result.SetStatus(eReturnStatusFailed);
     return false;
   }
   return true;
@@ -1126,7 +1122,8 @@ CommandObject::ArgumentTableEntry CommandObject::g_arguments_data[] = {
     { eArgRawInput, "raw-input", CommandCompletions::eNoCompletion, { nullptr, false }, "Free-form text passed to a command without prior interpretation, allowing spaces without requiring quotes.  To pass arguments and free form text put two dashes ' -- ' between the last argument and any raw input." },
     { eArgTypeCommand, "command", CommandCompletions::eNoCompletion, { nullptr, false }, "An LLDB Command line command." },
     { eArgTypeColumnNum, "column", CommandCompletions::eNoCompletion, { nullptr, false }, "Column number in a source file." },
-    { eArgTypeModuleUUID, "module-uuid", CommandCompletions::eModuleUUIDCompletion, { nullptr, false }, "A module UUID value." }
+    { eArgTypeModuleUUID, "module-uuid", CommandCompletions::eModuleUUIDCompletion, { nullptr, false }, "A module UUID value." },
+    { eArgTypeSaveCoreStyle, "corefile-style", CommandCompletions::eNoCompletion, { nullptr, false }, "The type of corefile that lldb will try to create, dependant on this target's capabilities." }
     // clang-format on
 };
 

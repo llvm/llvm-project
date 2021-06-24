@@ -287,6 +287,7 @@ class DS_BVH_STACK<string opName>
   let DisableEncoding = "$addr_in";
   let has_gds = 0;
   let gdsValue = 0;
+  let hasSideEffects = 1;
 }
 
 class DS_1A_RET<string opName, RegisterClass rc = VGPR_32, bit HasTiedOutput = 0, Operand ofs = offset,

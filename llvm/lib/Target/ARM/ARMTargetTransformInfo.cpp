@@ -2188,12 +2188,39 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
     }
   }
 
+  // On v6m cores, there are very few registers available. We can easily end up
+  // spilling and reloading more registers in an unrolled loop. Look at the
+  // number of LCSSA phis as a rough measure of how many registers will need to
+  // be live out of the loop, reducing the default unroll count if more than 1
+  // value is needed.  In the long run, all of this should be being learnt by a
+  // machine.
+  unsigned UnrollCount = 4;
+  if (ST->isThumb1Only()) {
+    unsigned ExitingValues = 0;
+    SmallVector<BasicBlock *, 4> ExitBlocks;
+    L->getExitBlocks(ExitBlocks);
+    for (auto *Exit : ExitBlocks) {
+      // Count the number of LCSSA phis. Exclude values coming from GEP's as
+      // only the last is expected to be needed for address operands.
+      unsigned LiveOuts = count_if(Exit->phis(), [](auto &PH) {
+        return PH.getNumOperands() != 1 ||
+               !isa<GetElementPtrInst>(PH.getOperand(0));
+      });
+      ExitingValues = ExitingValues < LiveOuts ? LiveOuts : ExitingValues;
+    }
+    if (ExitingValues)
+      UnrollCount /= ExitingValues;
+    if (UnrollCount <= 1)
+      return;
+  }
+
   LLVM_DEBUG(dbgs() << "Cost of loop: " << Cost << "\n");
+  LLVM_DEBUG(dbgs() << "Default Runtime Unroll Count: " << UnrollCount << "\n");
 
   UP.Partial = true;
   UP.Runtime = true;
   UP.UnrollRemainder = true;
-  UP.DefaultUnrollRuntimeCount = 4;
+  UP.DefaultUnrollRuntimeCount = UnrollCount;
   UP.UnrollAndJam = true;
   UP.UnrollAndJamInnerLoopThreshold = 60;
 

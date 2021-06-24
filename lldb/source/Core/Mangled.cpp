@@ -72,6 +72,9 @@ Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef const name) {
   if (name.startswith("?"))
     return Mangled::eManglingSchemeMSVC;
 
+  if (name.startswith("_R"))
+    return Mangled::eManglingSchemeRustV0;
+
   if (name.startswith("_Z"))
     return Mangled::eManglingSchemeItanium;
 
@@ -199,6 +202,19 @@ static char *GetItaniumDemangledStr(const char *M) {
   return demangled_cstr;
 }
 
+static char *GetRustV0DemangledStr(const char *M) {
+  char *demangled_cstr = llvm::rustDemangle(M, nullptr, nullptr, nullptr);
+
+  if (Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DEMANGLE)) {
+    if (demangled_cstr && demangled_cstr[0])
+      LLDB_LOG(log, "demangled rustv0: {0} -> \"{1}\"", M, demangled_cstr);
+    else
+      LLDB_LOG(log, "demangled rustv0: {0} -> error: failed to demangle", M);
+  }
+
+  return demangled_cstr;
+}
+
 // Explicit demangling for scheduled requests during batch processing. This
 // makes use of ItaniumPartialDemangler's rich demangle info
 bool Mangled::DemangleWithRichManglingInfo(
@@ -256,6 +272,10 @@ bool Mangled::DemangleWithRichManglingInfo(
       return context.FromCxxMethodName(m_demangled);
     }
   }
+
+  case eManglingSchemeRustV0:
+    // Rich demangling scheme is not supported for Rust
+    return false;
   }
   llvm_unreachable("Fully covered switch above!");
 }
@@ -284,6 +304,9 @@ ConstString Mangled::GetDemangledName() const {
         demangled_name = GetItaniumDemangledStr(mangled_name);
         break;
       }
+      case eManglingSchemeRustV0:
+        demangled_name = GetRustV0DemangledStr(mangled_name);
+        break;
       case eManglingSchemeNone:
         llvm_unreachable("eManglingSchemeNone was handled already");
       }

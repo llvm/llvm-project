@@ -151,7 +151,7 @@ public:
     exception_ptr& operator=(const exception_ptr&) _NOEXCEPT;
     ~exception_ptr() _NOEXCEPT;
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_EXPLICIT operator bool() const _NOEXCEPT
+    _LIBCPP_INLINE_VISIBILITY explicit operator bool() const _NOEXCEPT
     {return __ptr_ != nullptr;}
 
     friend _LIBCPP_INLINE_VISIBILITY
@@ -205,7 +205,7 @@ public:
     exception_ptr& operator=(const exception_ptr& __other) _NOEXCEPT;
     exception_ptr& operator=(nullptr_t) _NOEXCEPT;
     ~exception_ptr() _NOEXCEPT;
-    _LIBCPP_EXPLICIT operator bool() const _NOEXCEPT;
+    explicit operator bool() const _NOEXCEPT;
 };
 
 _LIBCPP_FUNC_VIS

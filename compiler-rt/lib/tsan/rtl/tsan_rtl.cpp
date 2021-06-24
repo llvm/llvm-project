@@ -999,7 +999,6 @@ static void MemoryRangeSet(ThreadState *thr, uptr pc, uptr addr, uptr size,
     // Reset middle part.
     u64 *p1 = p;
     p = RoundDown(end, kPageSize);
-    UnmapOrDie((void*)p1, (uptr)p - (uptr)p1);
     if (!MmapFixedSuperNoReserve((uptr)p1, (uptr)p - (uptr)p1))
       Die();
     // Set the ending.

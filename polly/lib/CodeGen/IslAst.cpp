@@ -124,10 +124,6 @@ static void freeIslAstUserPayload(void *Ptr) {
   delete ((IslAstInfo::IslAstUserPayload *)Ptr);
 }
 
-IslAstInfo::IslAstUserPayload::~IslAstUserPayload() {
-  isl_ast_build_free(Build);
-}
-
 /// Print a string @p str in a single line using @p Printer.
 static isl_printer *printLine(__isl_take isl_printer *Printer,
                               const std::string &str,
@@ -286,8 +282,8 @@ astBuildAfterFor(__isl_take isl_ast_node *Node, __isl_keep isl_ast_build *Build,
   assert(Payload && "Post order visit assumes annotated for nodes");
 
   AstBuildUserInfo *BuildInfo = (AstBuildUserInfo *)User;
-  assert(!Payload->Build && "Build environment already set");
-  Payload->Build = isl_ast_build_copy(Build);
+  assert(Payload->Build.is_null() && "Build environment already set");
+  Payload->Build = isl::manage_copy(Build);
   Payload->IsInnermost = (Id == BuildInfo->LastForNodeId);
 
   Payload->IsInnermostParallel =
@@ -333,7 +329,7 @@ static __isl_give isl_ast_node *AtEachDomain(__isl_take isl_ast_node *Node,
   isl_id *Id = isl_id_alloc(isl_ast_build_get_ctx(Build), "", Payload);
   Id = isl_id_set_free_user(Id, freeIslAstUserPayload);
 
-  Payload->Build = isl_ast_build_copy(Build);
+  Payload->Build = isl::manage_copy(Build);
 
   return isl_ast_node_set_annotation(Node, Id);
 }
@@ -622,11 +618,7 @@ bool IslAstInfo::isExecutedInParallel(const isl::ast_node &Node) {
 
 isl::union_map IslAstInfo::getSchedule(const isl::ast_node &Node) {
   IslAstUserPayload *Payload = getNodePayload(Node);
-  if (!Payload)
-    return {};
-
-  isl::ast_build Build = isl::manage_copy(Payload->Build);
-  return Build.get_schedule();
+  return Payload ? Payload->Build.get_schedule() : isl::union_map();
 }
 
 isl::pw_aff
@@ -641,9 +633,9 @@ IslAstInfo::getBrokenReductions(const isl::ast_node &Node) {
   return Payload ? &Payload->BrokenReductions : nullptr;
 }
 
-isl_ast_build *IslAstInfo::getBuild(__isl_keep isl_ast_node *Node) {
-  IslAstUserPayload *Payload = getNodePayload(isl::manage_copy(Node));
-  return Payload ? Payload->Build : nullptr;
+isl::ast_build IslAstInfo::getBuild(const isl::ast_node &Node) {
+  IslAstUserPayload *Payload = getNodePayload(Node);
+  return Payload ? Payload->Build : isl::ast_build();
 }
 
 static std::unique_ptr<IslAstInfo> runIslAst(
@@ -706,7 +698,7 @@ static __isl_give isl_printer *cbPrintUser(__isl_take isl_printer *P,
     else
       P = isl_printer_print_str(P, "/* write */  ");
 
-    isl::ast_build Build = isl::manage_copy(IslAstInfo::getBuild(Node));
+    isl::ast_build Build = IslAstInfo::getBuild(isl::manage_copy(Node));
     if (MemAcc->isAffine()) {
       isl_pw_multi_aff *PwmaPtr =
           MemAcc->applyScheduleToAccessRelation(Build.get_schedule()).release();

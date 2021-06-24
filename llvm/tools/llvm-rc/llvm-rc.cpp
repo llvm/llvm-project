@@ -256,23 +256,16 @@ bool preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
   return true;
 }
 
-static bool consume_back_lower(StringRef &S, const char *Str) {
-  if (!S.endswith_lower(Str))
-    return false;
-  S = S.drop_back(strlen(Str));
-  return true;
-}
-
 static std::pair<bool, std::string> isWindres(llvm::StringRef Argv0) {
   StringRef ProgName = llvm::sys::path::stem(Argv0);
   // x86_64-w64-mingw32-windres -> x86_64-w64-mingw32, windres
   // llvm-rc -> "", llvm-rc
   // aarch64-w64-mingw32-llvm-windres-10.exe -> aarch64-w64-mingw32, llvm-windres
   ProgName = ProgName.rtrim("0123456789.-");
-  if (!consume_back_lower(ProgName, "windres"))
+  if (!ProgName.consume_back_lower("windres"))
     return std::make_pair<bool, std::string>(false, "");
-  consume_back_lower(ProgName, "llvm-");
-  consume_back_lower(ProgName, "-");
+  ProgName.consume_back_lower("llvm-");
+  ProgName.consume_back_lower("-");
   return std::make_pair<bool, std::string>(true, ProgName.str());
 }
 

@@ -31,7 +31,7 @@ class InputChunk;
 class InputFunction;
 class InputSegment;
 class InputGlobal;
-class InputEvent;
+class InputTag;
 class InputTable;
 class InputSection;
 
@@ -139,7 +139,7 @@ public:
   std::vector<InputChunk *> segments;
   std::vector<InputFunction *> functions;
   std::vector<InputGlobal *> globals;
-  std::vector<InputEvent *> events;
+  std::vector<InputTag *> tags;
   std::vector<InputTable *> tables;
   std::vector<InputChunk *> customSections;
   llvm::DenseMap<uint32_t, InputChunk *> customSectionsByIndex;
@@ -149,7 +149,7 @@ public:
   DataSymbol *getDataSymbol(uint32_t index) const;
   GlobalSymbol *getGlobalSymbol(uint32_t index) const;
   SectionSymbol *getSectionSymbol(uint32_t index) const;
-  EventSymbol *getEventSymbol(uint32_t index) const;
+  TagSymbol *getTagSymbol(uint32_t index) const;
   TableSymbol *getTableSymbol(uint32_t index) const;
 
 private:

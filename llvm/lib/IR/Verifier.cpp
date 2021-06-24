@@ -543,6 +543,8 @@ private:
   void verifyAttributeTypes(AttributeSet Attrs, bool IsFunction,
                             const Value *V);
   void verifyParameterAttrs(AttributeSet Attrs, Type *Ty, const Value *V);
+  void checkUnsignedBaseTenFuncAttr(AttributeList Attrs, StringRef Attr,
+                                    const Value *V);
   void verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                            const Value *V, bool IsIntrinsic);
   void verifyFunctionMetadata(ArrayRef<std::pair<unsigned, MDNode *>> MDs);
@@ -1899,6 +1901,17 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
   }
 }
 
+void Verifier::checkUnsignedBaseTenFuncAttr(AttributeList Attrs, StringRef Attr,
+                                            const Value *V) {
+  if (Attrs.hasFnAttribute(Attr)) {
+    StringRef S = Attrs.getAttribute(AttributeList::FunctionIndex, Attr)
+                      .getValueAsString();
+    unsigned N;
+    if (S.getAsInteger(10, N))
+      CheckFailed("\"" + Attr + "\" takes an unsigned integer: " + S, V);
+  }
+}
+
 // Check parameter attributes against a function type.
 // The value V is printed in error messages.
 void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
@@ -2098,26 +2111,9 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       CheckFailed("invalid value for 'frame-pointer' attribute: " + FP, V);
   }
 
-  if (Attrs.hasFnAttribute("patchable-function-prefix")) {
-    StringRef S = Attrs
-                      .getAttribute(AttributeList::FunctionIndex,
-                                    "patchable-function-prefix")
-                      .getValueAsString();
-    unsigned N;
-    if (S.getAsInteger(10, N))
-      CheckFailed(
-          "\"patchable-function-prefix\" takes an unsigned integer: " + S, V);
-  }
-  if (Attrs.hasFnAttribute("patchable-function-entry")) {
-    StringRef S = Attrs
-                      .getAttribute(AttributeList::FunctionIndex,
-                                    "patchable-function-entry")
-                      .getValueAsString();
-    unsigned N;
-    if (S.getAsInteger(10, N))
-      CheckFailed(
-          "\"patchable-function-entry\" takes an unsigned integer: " + S, V);
-  }
+  checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-prefix", V);
+  checkUnsignedBaseTenFuncAttr(Attrs, "patchable-function-entry", V);
+  checkUnsignedBaseTenFuncAttr(Attrs, "warn-stack-size", V);
 }
 
 void Verifier::verifyFunctionMetadata(
@@ -3128,10 +3124,7 @@ void Verifier::visitCallBase(CallBase &Call) {
          "Called function must be a pointer!", Call);
   PointerType *FPTy = cast<PointerType>(Call.getCalledOperand()->getType());
 
-  Assert(FPTy->getElementType()->isFunctionTy(),
-         "Called function is not pointer to function type!", Call);
-
-  Assert(FPTy->getElementType() == Call.getFunctionType(),
+  Assert(FPTy->isOpaqueOrPointeeTypeMatches(Call.getFunctionType()),
          "Called function is not the same type as the call!", Call);
 
   FunctionType *FTy = Call.getFunctionType();
@@ -5320,23 +5313,63 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::experimental_vector_insert: {
-    VectorType *VecTy = cast<VectorType>(Call.getArgOperand(0)->getType());
-    VectorType *SubVecTy = cast<VectorType>(Call.getArgOperand(1)->getType());
+    Value *Vec = Call.getArgOperand(0);
+    Value *SubVec = Call.getArgOperand(1);
+    Value *Idx = Call.getArgOperand(2);
+    unsigned IdxN = cast<ConstantInt>(Idx)->getZExtValue();
 
+    VectorType *VecTy = cast<VectorType>(Vec->getType());
+    VectorType *SubVecTy = cast<VectorType>(SubVec->getType());
+
+    ElementCount VecEC = VecTy->getElementCount();
+    ElementCount SubVecEC = SubVecTy->getElementCount();
     Assert(VecTy->getElementType() == SubVecTy->getElementType(),
            "experimental_vector_insert parameters must have the same element "
            "type.",
            &Call);
+    Assert(IdxN % SubVecEC.getKnownMinValue() == 0,
+           "experimental_vector_insert index must be a constant multiple of "
+           "the subvector's known minimum vector length.");
+
+    // If this insertion is not the 'mixed' case where a fixed vector is
+    // inserted into a scalable vector, ensure that the insertion of the
+    // subvector does not overrun the parent vector.
+    if (VecEC.isScalable() == SubVecEC.isScalable()) {
+      Assert(
+          IdxN < VecEC.getKnownMinValue() &&
+              IdxN + SubVecEC.getKnownMinValue() <= VecEC.getKnownMinValue(),
+          "subvector operand of experimental_vector_insert would overrun the "
+          "vector being inserted into.");
+    }
     break;
   }
   case Intrinsic::experimental_vector_extract: {
+    Value *Vec = Call.getArgOperand(0);
+    Value *Idx = Call.getArgOperand(1);
+    unsigned IdxN = cast<ConstantInt>(Idx)->getZExtValue();
+
     VectorType *ResultTy = cast<VectorType>(Call.getType());
-    VectorType *VecTy = cast<VectorType>(Call.getArgOperand(0)->getType());
+    VectorType *VecTy = cast<VectorType>(Vec->getType());
+
+    ElementCount VecEC = VecTy->getElementCount();
+    ElementCount ResultEC = ResultTy->getElementCount();
 
     Assert(ResultTy->getElementType() == VecTy->getElementType(),
            "experimental_vector_extract result must have the same element "
            "type as the input vector.",
            &Call);
+    Assert(IdxN % ResultEC.getKnownMinValue() == 0,
+           "experimental_vector_extract index must be a constant multiple of "
+           "the result type's known minimum vector length.");
+
+    // If this extraction is not the 'mixed' case where a fixed vector is is
+    // extracted from a scalable vector, ensure that the extraction does not
+    // overrun the parent vector.
+    if (VecEC.isScalable() == ResultEC.isScalable()) {
+      Assert(IdxN < VecEC.getKnownMinValue() &&
+                 IdxN + ResultEC.getKnownMinValue() <= VecEC.getKnownMinValue(),
+             "experimental_vector_extract would overrun.");
+    }
     break;
   }
   case Intrinsic::experimental_noalias_scope_decl: {

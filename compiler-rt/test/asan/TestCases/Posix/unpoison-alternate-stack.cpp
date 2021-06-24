@@ -6,8 +6,6 @@
 // RUN: %clangxx_asan -std=c++20 -fexceptions -O0 %s -o %t -pthread
 // RUN: %run %t
 
-// XFAIL: ios && !iossim
-
 #include <algorithm>
 #include <cassert>
 #include <cerrno>

@@ -443,9 +443,10 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   } else {
     if (auto *CondInst = dyn_cast<Instruction>(BI.getCondition()))
       Invariants = collectHomogenousInstGraphLoopInvariants(L, *CondInst, LI);
-    if (Invariants.empty())
-      // Couldn't find invariant inputs!
+    if (Invariants.empty()) {
+      LLVM_DEBUG(dbgs() << "   Couldn't find invariant inputs!\n");
       return false;
+    }
   }
 
   // Check that one of the branch's successors exits, and which one.
@@ -456,13 +457,17 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
     ExitDirection = false;
     LoopExitSuccIdx = 1;
     LoopExitBB = BI.getSuccessor(1);
-    if (L.contains(LoopExitBB))
+    if (L.contains(LoopExitBB)) {
+      LLVM_DEBUG(dbgs() << "   Branch doesn't exit the loop!\n");
       return false;
+    }
   }
   auto *ContinueBB = BI.getSuccessor(1 - LoopExitSuccIdx);
   auto *ParentBB = BI.getParent();
-  if (!areLoopExitPHIsLoopInvariant(L, *ParentBB, *LoopExitBB))
+  if (!areLoopExitPHIsLoopInvariant(L, *ParentBB, *LoopExitBB)) {
+    LLVM_DEBUG(dbgs() << "   Loop exit PHI's aren't loop-invariant!\n");
     return false;
+  }
 
   // When unswitching only part of the branch's condition, we need the exit
   // block to be reached directly from the partially unswitched input. This can
@@ -470,12 +475,11 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   // is a graph of `or` operations, or the exit block is along the false edge
   // and the condition is a graph of `and` operations.
   if (!FullUnswitch) {
-    if (ExitDirection) {
-      if (!match(BI.getCondition(), m_LogicalOr()))
-        return false;
-    } else {
-      if (!match(BI.getCondition(), m_LogicalAnd()))
-        return false;
+    if (ExitDirection ? !match(BI.getCondition(), m_LogicalOr())
+                      : !match(BI.getCondition(), m_LogicalAnd())) {
+      LLVM_DEBUG(dbgs() << "   Branch condition is in improper form for "
+                           "non-full unswitch!\n");
+      return false;
     }
   }
 
@@ -2868,14 +2872,11 @@ static bool unswitchBestCondition(
         } else if (match(BI.getCondition(), m_LogicalOr())) {
           if (SuccBB == BI.getSuccessor(0))
             continue;
-        } else if (!PartialIVInfo.InstToDuplicate.empty()) {
-          if (PartialIVInfo.KnownValue->isOneValue() &&
-              SuccBB == BI.getSuccessor(1))
-            continue;
-          else if (!PartialIVInfo.KnownValue->isOneValue() &&
-                   SuccBB == BI.getSuccessor(0))
-            continue;
-        }
+        } else if ((PartialIVInfo.KnownValue->isOneValue() &&
+                    SuccBB == BI.getSuccessor(0)) ||
+                   (!PartialIVInfo.KnownValue->isOneValue() &&
+                    SuccBB == BI.getSuccessor(1)))
+          continue;
       }
 
       // This successor's domtree will not need to be duplicated after

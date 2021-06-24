@@ -136,19 +136,12 @@ private:
 
 class GotSection final : public NonLazyPointerSectionBase {
 public:
-  GotSection()
-      : NonLazyPointerSectionBase(segment_names::dataConst,
-                                  section_names::got) {
-    // TODO: section_64::reserved1 should be an index into the indirect symbol
-    // table, which we do not currently emit
-  }
+  GotSection();
 };
 
 class TlvPointerSection final : public NonLazyPointerSectionBase {
 public:
-  TlvPointerSection()
-      : NonLazyPointerSectionBase(segment_names::data,
-                                  section_names::threadPtrs) {}
+  TlvPointerSection();
 };
 
 struct Location {

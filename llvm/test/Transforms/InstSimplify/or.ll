@@ -292,11 +292,9 @@ define <2 x i1> @or_with_not_op_commute4(<2 x i1> %a, <2 x i1> %b) {
   ret <2 x i1> %r
 }
 
-; TODO: this should be poison
-
 define i32 @poison(i32 %x) {
 ; CHECK-LABEL: @poison(
-; CHECK-NEXT:    ret i32 -1
+; CHECK-NEXT:    ret i32 poison
 ;
   %v = or i32 %x, poison
   ret i32 %v

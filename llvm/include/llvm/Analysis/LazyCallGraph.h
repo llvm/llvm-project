@@ -463,7 +463,7 @@ public:
     /// Dump a short description of this SCC to stderr.
     void dump() const;
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
     /// Verify invariants about the SCC.
     ///
     /// This will attempt to validate all of the basic invariants within an
@@ -584,7 +584,7 @@ public:
     /// Dump a short description of this RefSCC to stderr.
     void dump() const;
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
     /// Verify invariants about the RefSCC and all its SCCs.
     ///
     /// This will attempt to validate all of the invariants *within* the

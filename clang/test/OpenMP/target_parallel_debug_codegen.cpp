@@ -97,7 +97,6 @@ int main() {
 // CHECK1-NEXT:    [[TMP7:%.*]] = load i8*, i8** [[_TMP2]], align 8, !dbg [[DBG45]]
 // CHECK1-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x(), !dbg [[DBG45]]
 // CHECK1-NEXT:    call void @__kmpc_spmd_kernel_init(i32 [[NVPTX_NUM_THREADS]], i16 1), !dbg [[DBG45]]
-// CHECK1-NEXT:    call void @__kmpc_data_sharing_init_stack_spmd(), !dbg [[DBG45]]
 // CHECK1-NEXT:    br label [[DOTEXECUTE:%.*]], !dbg [[DBG45]]
 // CHECK1:       .execute:
 // CHECK1-NEXT:    [[TMP8:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
@@ -321,7 +320,6 @@ int main() {
 // CHECK1-NEXT:    [[TMP8:%.*]] = load i8*, i8** [[_TMP2]], align 8, !dbg [[DBG135]]
 // CHECK1-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x(), !dbg [[DBG135]]
 // CHECK1-NEXT:    call void @__kmpc_spmd_kernel_init(i32 [[NVPTX_NUM_THREADS]], i16 1), !dbg [[DBG135]]
-// CHECK1-NEXT:    call void @__kmpc_data_sharing_init_stack_spmd(), !dbg [[DBG135]]
 // CHECK1-NEXT:    br label [[DOTEXECUTE:%.*]], !dbg [[DBG135]]
 // CHECK1:       .execute:
 // CHECK1-NEXT:    [[TMP9:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB3:[0-9]+]])
@@ -539,7 +537,6 @@ int main() {
 // CHECK1-NEXT:    [[TMP11:%.*]] = load i8*, i8** [[_TMP3]], align 8, !dbg [[DBG210]]
 // CHECK1-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x(), !dbg [[DBG210]]
 // CHECK1-NEXT:    call void @__kmpc_spmd_kernel_init(i32 [[NVPTX_NUM_THREADS]], i16 1), !dbg [[DBG210]]
-// CHECK1-NEXT:    call void @__kmpc_data_sharing_init_stack_spmd(), !dbg [[DBG210]]
 // CHECK1-NEXT:    br label [[DOTEXECUTE:%.*]], !dbg [[DBG210]]
 // CHECK1:       .execute:
 // CHECK1-NEXT:    [[TMP12:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB5:[0-9]+]])

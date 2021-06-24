@@ -436,3 +436,38 @@ define float @reduce_precision_fmf(float %x, float %y) {
   %trunc = fptrunc double %minimum to float
   ret float %trunc
 }
+
+define float @negated_op(float %x) {
+; CHECK-LABEL: @negated_op(
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg float [[TMP1]]
+; CHECK-NEXT:    ret float [[TMP2]]
+;
+  %negx = fneg float %x
+  %r = call float @llvm.minimum.f32(float %x, float %negx)
+  ret float %r
+}
+
+define <2 x double> @negated_op_fmf_commute_vec(<2 x double> %x) {
+; CHECK-LABEL: @negated_op_fmf_commute_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf nsz <2 x double> @llvm.fabs.v2f64(<2 x double> [[X:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fneg nnan ninf nsz <2 x double> [[TMP1]]
+; CHECK-NEXT:    ret <2 x double> [[TMP2]]
+;
+  %negx = fneg <2 x double> %x
+  %r = call nsz nnan ninf <2 x double> @llvm.minimum.v2f64(<2 x double> %negx, <2 x double> %x)
+  ret <2 x double> %r
+}
+
+define double @negated_op_extra_use(double %x) {
+; CHECK-LABEL: @negated_op_extra_use(
+; CHECK-NEXT:    [[NEGX:%.*]] = fneg double [[X:%.*]]
+; CHECK-NEXT:    call void @use(double [[NEGX]])
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.minimum.f64(double [[NEGX]], double [[X]])
+; CHECK-NEXT:    ret double [[R]]
+;
+  %negx = fneg double %x
+  call void @use(double %negx)
+  %r = call double @llvm.minimum.f64(double %negx, double %x)
+  ret double %r
+}

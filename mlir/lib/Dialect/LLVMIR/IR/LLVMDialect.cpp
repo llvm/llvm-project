@@ -1050,6 +1050,16 @@ static ParseResult parseExtractValueOp(OpAsmParser &parser,
   return success();
 }
 
+OpFoldResult LLVM::ExtractValueOp::fold(ArrayRef<Attribute> operands) {
+  auto insertValueOp = container().getDefiningOp<InsertValueOp>();
+  while (insertValueOp) {
+    if (position() == insertValueOp.position())
+      return insertValueOp.value();
+    insertValueOp = insertValueOp.container().getDefiningOp<InsertValueOp>();
+  }
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // Printing/parsing for LLVM::InsertElementOp.
 //===----------------------------------------------------------------------===//

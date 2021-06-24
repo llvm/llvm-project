@@ -2437,8 +2437,8 @@ public:
       return true;
 
     if (m_PtrToInt(m_OffsetGep(m_Zero(), m_SpecificInt(1))).match(V)) {
-      Type *PtrTy = cast<Operator>(V)->getOperand(0)->getType();
-      auto *DerefTy = PtrTy->getPointerElementType();
+      auto *GEP = cast<GEPOperator>(cast<Operator>(V)->getOperand(0));
+      auto *DerefTy = GEP->getSourceElementType();
       if (isa<ScalableVectorType>(DerefTy) &&
           DL.getTypeAllocSizeInBits(DerefTy).getKnownMinSize() == 8)
         return true;

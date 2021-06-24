@@ -119,8 +119,9 @@ static LogicalResult verifyAllocLikeOp(AllocLikeOp op) {
   if (!memRefType.getAffineMaps().empty())
     numSymbols = memRefType.getAffineMaps().front().getNumSymbols();
   if (op.symbolOperands().size() != numSymbols)
-    return op.emitOpError(
-        "symbol operand count does not equal memref symbol count");
+    return op.emitOpError("symbol operand count does not equal memref symbol "
+                          "count: expected ")
+           << numSymbols << ", got " << op.symbolOperands().size();
 
   return success();
 }
@@ -146,7 +147,7 @@ struct SimplifyAllocConst : public OpRewritePattern<AllocLikeOp> {
                                 PatternRewriter &rewriter) const override {
     // Check to see if any dimensions operands are constants.  If so, we can
     // substitute and drop them.
-    if (llvm::none_of(alloc.getOperands(), [](Value operand) {
+    if (llvm::none_of(alloc.dynamicSizes(), [](Value operand) {
           return matchPattern(operand, matchConstantIndex());
         }))
       return failure();
@@ -157,7 +158,7 @@ struct SimplifyAllocConst : public OpRewritePattern<AllocLikeOp> {
     // and keep track of the resultant memref type to build.
     SmallVector<int64_t, 4> newShapeConstants;
     newShapeConstants.reserve(memrefType.getRank());
-    SmallVector<Value, 4> newOperands;
+    SmallVector<Value, 4> dynamicSizes;
 
     unsigned dynamicDimPos = 0;
     for (unsigned dim = 0, e = memrefType.getRank(); dim < e; ++dim) {
@@ -167,14 +168,15 @@ struct SimplifyAllocConst : public OpRewritePattern<AllocLikeOp> {
         newShapeConstants.push_back(dimSize);
         continue;
       }
-      auto *defOp = alloc.getOperand(dynamicDimPos).getDefiningOp();
+      auto dynamicSize = alloc.dynamicSizes()[dynamicDimPos];
+      auto *defOp = dynamicSize.getDefiningOp();
       if (auto constantIndexOp = dyn_cast_or_null<ConstantIndexOp>(defOp)) {
         // Dynamic shape dimension will be folded.
         newShapeConstants.push_back(constantIndexOp.getValue());
       } else {
-        // Dynamic shape dimension not folded; copy operand from old memref.
+        // Dynamic shape dimension not folded; copy dynamicSize from old memref.
         newShapeConstants.push_back(-1);
-        newOperands.push_back(alloc.getOperand(dynamicDimPos));
+        dynamicSizes.push_back(dynamicSize);
       }
       dynamicDimPos++;
     }
@@ -182,12 +184,13 @@ struct SimplifyAllocConst : public OpRewritePattern<AllocLikeOp> {
     // Create new memref type (which will have fewer dynamic dimensions).
     MemRefType newMemRefType =
         MemRefType::Builder(memrefType).setShape(newShapeConstants);
-    assert(static_cast<int64_t>(newOperands.size()) ==
+    assert(static_cast<int64_t>(dynamicSizes.size()) ==
            newMemRefType.getNumDynamicDims());
 
     // Create and insert the alloc op for the new memref.
     auto newAlloc = rewriter.create<AllocLikeOp>(
-        alloc.getLoc(), newMemRefType, newOperands, alloc.alignmentAttr());
+        alloc.getLoc(), newMemRefType, dynamicSizes, alloc.symbolOperands(),
+        alloc.alignmentAttr());
     // Insert a cast so we have the same type as the old alloc.
     auto resultCast =
         rewriter.create<CastOp>(alloc.getLoc(), newAlloc, alloc.getType());
@@ -717,10 +720,10 @@ OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
   // The size at the given index is now known to be a dynamic size.
   unsigned unsignedIndex = index.getValue().getZExtValue();
 
-  if (auto subtensor = dyn_cast_or_null<mlir::SubTensorOp>(definingOp)) {
-    assert(subtensor.isDynamicSize(unsignedIndex) &&
-           "Expected dynamic subtensor size");
-    return subtensor.getDynamicSize(unsignedIndex);
+  if (auto sliceOp = dyn_cast_or_null<tensor::ExtractSliceOp>(definingOp)) {
+    assert(sliceOp.isDynamicSize(unsignedIndex) &&
+           "Expected dynamic slice size");
+    return sliceOp.getDynamicSize(unsignedIndex);
   }
 
   // Fold dim to the size argument for an `AllocOp`, `ViewOp`, or `SubViewOp`.
@@ -794,84 +797,12 @@ struct DimOfCastOp : public OpRewritePattern<DimOp> {
     return success();
   }
 };
-
-/// Helper method to get the `Value` that is the shape of the `resultIdx`-th
-/// result at dimension `dimIndex` from the `ShapedTypeOpInterface`.
-/// TODO(ravishankarm): This is better put as a interface utility method
-/// somewhere, but that would imply the interface will depend on the `tensor`
-/// dialect. Ideally maybe a utility method in the `tensor` dialect.
-static Value getResultDimFromShapeInterface(OpBuilder &builder, OpResult result,
-                                            int64_t dimIndex) {
-  unsigned resultNumber = result.getResultNumber();
-  auto shapedTypeOp = dyn_cast<InferShapedTypeOpInterface>(result.getOwner());
-  Location loc = result.getOwner()->getLoc();
-  if (!shapedTypeOp)
-    return nullptr;
-
-  // The interface exposes two methods, one that returns the shape of all the
-  // results as `Value` and other that returns the shape as a list of
-  // `SmallVector<Value>`. The former takes precedence over the latter. So first
-  // check if the op implements the first interface method or the second, and
-  // get the value to use appropriately.
-  SmallVector<Value> reifiedResultShapes;
-  if (succeeded(shapedTypeOp.reifyReturnTypeShapes(
-          builder, result.getOwner()->getOperands(), reifiedResultShapes))) {
-    if (reifiedResultShapes.size() <= resultNumber)
-      return nullptr;
-    Value resultShape = reifiedResultShapes[resultNumber];
-    auto resultShapeType = resultShape.getType().dyn_cast<RankedTensorType>();
-    if (!resultShapeType || !resultShapeType.getElementType().isa<IndexType>())
-      return nullptr;
-    return builder.create<tensor::ExtractOp>(
-        loc, resultShape, builder.createOrFold<ConstantIndexOp>(loc, dimIndex));
-  }
-
-  SmallVector<SmallVector<Value>> reifiedResultShapesPerDim;
-  if (failed(shapedTypeOp.reifyReturnTypeShapesPerResultDim(
-          builder, reifiedResultShapesPerDim)))
-    return nullptr;
-  if (reifiedResultShapesPerDim.size() <= resultNumber ||
-      reifiedResultShapesPerDim[resultNumber].size() !=
-          static_cast<size_t>(result.getType().cast<ShapedType>().getRank()))
-    return nullptr;
-  OpFoldResult valueOrAttr = reifiedResultShapesPerDim[resultNumber][dimIndex];
-  if (auto attr = valueOrAttr.dyn_cast<Attribute>())
-    return builder.createOrFold<ConstantIndexOp>(
-        loc, attr.cast<IntegerAttr>().getInt());
-  return valueOrAttr.get<Value>();
-}
-
-/// Fold dim of an operation that implements the InferShapedTypeOpInterface
-struct DimOfShapedTypeOpInterface : public OpRewritePattern<DimOp> {
-  using OpRewritePattern<DimOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(DimOp dimOp,
-                                PatternRewriter &rewriter) const override {
-    OpResult dimValue = dimOp.memrefOrTensor().dyn_cast<OpResult>();
-    if (!dimValue)
-      return failure();
-    auto shapedTypeOp =
-        dyn_cast<InferShapedTypeOpInterface>(dimValue.getOwner());
-    if (!shapedTypeOp)
-      return failure();
-
-    Optional<int64_t> dimIndex = dimOp.getConstantIndex();
-    if (!dimIndex)
-      return failure();
-    Value replacement =
-        getResultDimFromShapeInterface(rewriter, dimValue, *dimIndex);
-    if (!replacement)
-      return failure();
-    rewriter.replaceOp(dimOp, replacement);
-    return success();
-  }
-};
 } // end anonymous namespace.
 
 void DimOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
   results.add<DimOfMemRefReshape, DimOfCastOp<BufferCastOp>,
-              DimOfCastOp<tensor::CastOp>, DimOfShapedTypeOpInterface>(context);
+              DimOfCastOp<tensor::CastOp>>(context);
 }
 
 // ---------------------------------------------------------------------------
@@ -1386,7 +1317,7 @@ void ReinterpretCastOp::build(OpBuilder &b, OperationState &result,
 }
 
 // TODO: ponder whether we want to allow missing trailing sizes/strides that are
-// completed automatically, like we have for subview and subtensor.
+// completed automatically, like we have for subview and extract_slice.
 static LogicalResult verify(ReinterpretCastOp op) {
   // The source and result memrefs should be in the same memory space.
   auto srcType = op.source().getType().cast<BaseMemRefType>();

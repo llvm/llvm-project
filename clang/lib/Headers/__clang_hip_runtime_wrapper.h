@@ -51,6 +51,23 @@ typedef __SIZE_TYPE__ size_t;
   #define nullptr NULL;
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+  __attribute__((__visibility__("default")))
+  __attribute__((weak))
+  __attribute__((noreturn))
+  __device__ void __cxa_pure_virtual(void) {
+    __builtin_trap();
+  }
+  __attribute__((__visibility__("default")))
+  __attribute__((weak))
+  __attribute__((noreturn))
+  __device__ void __cxa_deleted_virtual(void) {
+    __builtin_trap();
+  }
+}
+#endif //__cplusplus
+
 #if __HIP_ENABLE_DEVICE_MALLOC__
 extern "C" __device__ void *__hip_malloc(size_t __size);
 extern "C" __device__ void *__hip_free(void *__ptr);

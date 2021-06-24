@@ -4,7 +4,7 @@ module {
   func @basic_fusion(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
                      %arg2: memref<?x?xf32>) {
     %cst = constant 0.000000e+00 : f32
-    linalg.fill(%arg2, %cst) : memref<?x?xf32>, f32
+    linalg.fill(%cst, %arg2) : f32, memref<?x?xf32>
     linalg.matmul {__internal_linalg_transform__ = "basic_fusion"}
       ins(%arg0, %arg1 : memref<?x?xf32>, memref<?x?xf32>)
       outs(%arg2 : memref<?x?xf32>)
@@ -28,7 +28,7 @@ module {
 //  CHECK-DAG:   %[[C64:.+]] = constant 64 : index
 //  CHECK-DAG:   %[[C16:.+]] = constant 16 : index
 //  CHECK-DAG:   %[[CST:.+]] = constant 0.0{{.*}} : f32
-//  CHECK-DAG:   linalg.fill(%[[ARG2]], %[[CST]])
+//  CHECK-DAG:   linalg.fill(%[[CST]], %[[ARG2]])
 // CHECK-SAME:   __internal_linalg_transform__ = "after_basic_fusion_original"
 //  CHECK-DAG:   %[[M:.+]] = memref.dim %[[ARG0]], %[[C0]]
 //  CHECK-DAG:   %[[N:.+]] = memref.dim %[[ARG1]], %[[C1]]
@@ -53,7 +53,7 @@ module {
 //      CHECK:     %[[TILE_N_3:.+]] = affine.min #[[MAP5]](%[[IV1]])[%[[N_2]], %[[N]]]
 //      CHECK:     %[[SV3_2:.+]] = memref.subview %[[ARG2]][%[[IV0]], %[[IV1]]]
 // CHECK-SAME:       [%[[TILE_M_3]], %[[TILE_N_3]]]
-//      CHECK:     linalg.fill(%[[SV3_2]], %[[CST]])
+//      CHECK:     linalg.fill(%[[CST]], %[[SV3_2]])
 // CHECK-SAME:       __internal_linalg_transform__ = "after_basic_fusion_producer"
 //      CHECK:     scf.for %[[IV2:.+]] = %[[C0]] to %[[K]] step %[[C16]] {
 //      CHECK:       %[[TILE_K:.+]] = affine.min #[[MAP3]](%[[IV2]])[%[[K]]]
@@ -79,7 +79,7 @@ module {
                               %arg2: memref<?x?xf32>, %arg3: memref<?x?xf32>) {
     %cst = constant 0.000000e+00 : f32
     linalg.copy(%arg1, %arg2) : memref<?x?xf32>, memref<?x?xf32>
-    linalg.fill(%arg3, %cst) : memref<?x?xf32>, f32
+    linalg.fill(%cst, %arg3) : f32, memref<?x?xf32>
     linalg.matmul {__internal_linalg_transform__ = "rhs_fusion"}
       ins(%arg0, %arg2 : memref<?x?xf32>, memref<?x?xf32>)
       outs(%arg3 : memref<?x?xf32>)
@@ -161,7 +161,7 @@ module {
                               %arg2: memref<?x?xf32>, %arg3: memref<?x?xf32>) {
     %cst = constant 0.000000e+00 : f32
     linalg.copy(%arg0, %arg1) : memref<?x?xf32>, memref<?x?xf32>
-    linalg.fill(%arg3, %cst) : memref<?x?xf32>, f32
+    linalg.fill(%cst, %arg3) : f32, memref<?x?xf32>
     linalg.matmul {__internal_linalg_transform__ = "two_operand_fusion"}
       ins(%arg1, %arg2 : memref<?x?xf32>, memref<?x?xf32>)
       outs(%arg3 : memref<?x?xf32>)
@@ -186,7 +186,7 @@ module {
 //  CHECK-DAG:   %[[CST:.+]] = constant 0.0{{.*}} : f32
 //      CHECK:   linalg.copy(%[[ARG0]], %[[ARG1]])
 // CHECK-SAME:     __internal_linalg_transform__ = "after_two_operand_fusion_original"
-//      CHECK:   linalg.fill(%[[ARG3]], %[[CST]])
+//      CHECK:   linalg.fill(%[[CST]], %[[ARG3]])
 // CHECK-SAME:     __internal_linalg_transform__ = "after_two_operand_fusion_original"
 //  CHECK-DAG:   %[[M:.+]] = memref.dim %[[ARG1]], %[[C0]]
 //      CHECK:   scf.parallel (%[[IV0:.+]]) =
@@ -213,7 +213,7 @@ module {
 // CHECK-SAME:       [%[[TILE_M_5]], %[[K]]]
 //      CHECK:     linalg.copy(%[[SV3]], %[[SV3_2]])
 // CHECK-SAME:       __internal_linalg_transform__ = "after_two_operand_fusion_producer"
-//      CHECK:     linalg.fill(%[[SV2_2]], %[[CST]])
+//      CHECK:     linalg.fill(%[[CST]], %[[SV2_2]])
 // CHECK-SAME:       __internal_linalg_transform__ = "after_two_operand_fusion_producer"
 //  CHECK-DAG:     %[[N_2:.+]] = memref.dim %[[ARG2]], %[[C1]]
 //      CHECK:     scf.parallel (%[[IV1:.+]]) =
@@ -428,7 +428,7 @@ module {
     %c64 = constant 64 : index
     %c16 = constant 16 : index
     %cst = constant 0.000000e+00 : f32
-    linalg.fill(%arg2, %cst) : memref<?x?xf32>, f32
+    linalg.fill(%cst, %arg2) : f32, memref<?x?xf32>
     %0 = memref.dim %arg0, %c0 : memref<?x?xf32>
     %1 = memref.dim %arg1, %c1 : memref<?x?xf32>
     %2 = memref.dim %arg0, %c1 : memref<?x?xf32>
@@ -463,7 +463,7 @@ module {
   func @basic_conv_fusion(%arg0: memref<?x?x?x?xf32>, %arg1: memref<?x?x?x?xf32>,
                           %arg2: memref<?x?x?x?xf32>) {
     %cst = constant 0.000000e+00 : f32
-    linalg.fill(%arg2, %cst) : memref<?x?x?x?xf32>, f32
+    linalg.fill(%cst, %arg2) : f32, memref<?x?x?x?xf32>
     linalg.conv(%arg0, %arg1, %arg2) {
       dilations = [1, 1], strides = [1, 1],
       __internal_linalg_transform__ = "basic_fusion"} :

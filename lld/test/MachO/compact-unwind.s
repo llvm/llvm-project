@@ -33,7 +33,9 @@
 
 # CHECK:      SYMBOL TABLE:
 # CHECK-DAG:  [[#%x,MAIN:]]       g  F __TEXT,__text _main
+# CHECK-DAG:  [[#%x,QUUX:]]       g  F __TEXT,__text _quux
 # CHECK-DAG:  [[#%x,FOO:]]        l  F __TEXT,__text _foo
+# CHECK-DAG:  [[#%x,BAZ:]]        l  F __TEXT,__text _baz
 # CHECK-DAG:  [[#%x,EXCEPTION0:]] g  O __TEXT,__gcc_except_tab _exception0
 # CHECK-DAG:  [[#%x,EXCEPTION1:]] g  O __TEXT,__gcc_except_tab _exception1
 
@@ -44,6 +46,11 @@
 # CHECK:        LSDA descriptors:
 # CHECK-DAG:     function offset=0x[[#%.8x,FOO-BASE]],  LSDA offset=0x[[#%.8x,EXCEPTION0-BASE]]
 # CHECK-DAG:     function offset=0x[[#%.8x,MAIN-BASE]], LSDA offset=0x[[#%.8x,EXCEPTION1-BASE]]
+# CHECK:        Second level indices:
+# CHECK-DAG:     function offset=0x[[#%.8x,MAIN-BASE]], encoding
+# CHECK-DAG:     function offset=0x[[#%.8x,FOO-BASE]], encoding
+# CHECK-DAG:     function offset=0x[[#%.8x,BAZ-BASE]], encoding
+# CHECK-DAG:     function offset=0x[[#%.8x,QUUX-BASE]], encoding{{.*}}=0x00000000
 
 ## Check that we do not add rebase opcodes to the compact unwind section.
 # CHECK:      Rebase table:
@@ -83,7 +90,7 @@ _exception0:
   .space 1
 
 #--- main.s
-.globl _main, _my_personality, _exception1
+.globl _main, _quux, _my_personality, _exception1
 
 .text
 .p2align 2
@@ -94,6 +101,17 @@ _main:
   .cfi_def_cfa_offset 16
   ret
   .cfi_endproc
+
+## _quux has no unwind information.
+## (In real life, it'd be part of a separate TU that was built with
+## -fno-exceptions, while the previous and next TU might be Objective-C++
+## which has unwind info for Objective-C).
+.p2align 2
+_quux:
+  ret
+
+.globl _abs
+_abs = 4
 
 .p2align 2
 _baz:

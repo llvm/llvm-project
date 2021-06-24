@@ -17,7 +17,6 @@
 namespace __llvm_libc {
 namespace fputil {
 
-#if (defined(__x86_64__) || defined(__i386__))
 namespace internal {
 
 template <>
@@ -136,7 +135,6 @@ template <> inline long double sqrt<long double, 0>(long double x) {
     return out;
   }
 }
-#endif // defined(__x86_64__) || defined(__i386__)
 
 } // namespace fputil
 } // namespace __llvm_libc

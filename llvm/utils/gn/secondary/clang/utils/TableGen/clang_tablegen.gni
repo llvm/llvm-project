@@ -36,7 +36,7 @@ template("clang_tablegen") {
 
     args = [
              "-I",
-             rebase_path("//clang/include", root_out_dir),
+             rebase_path("//clang/include", root_build_dir),
            ] + invoker.args
     tblgen_target = "//clang/utils/TableGen:clang-tblgen"
   }

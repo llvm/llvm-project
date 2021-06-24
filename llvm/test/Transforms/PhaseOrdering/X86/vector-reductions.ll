@@ -292,14 +292,15 @@ define i1 @cmp_lt_gt(double %a, double %b, double %c) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[DIV]], 0x3EB0C6F7A0B5ED8D
 ; CHECK-NEXT:    [[CMP4:%.*]] = fcmp olt double [[DIV3]], 0x3EB0C6F7A0B5ED8D
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP]], i1 [[CMP4]], i1 false
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[CLEANUP:%.*]], label [[LOR_LHS_FALSE:%.*]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[COMMON_RET:%.*]], label [[LOR_LHS_FALSE:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i1 [ [[OR_COND1:%.*]], [[LOR_LHS_FALSE]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i1 [[COMMON_RET_OP]]
 ; CHECK:       lor.lhs.false:
 ; CHECK-NEXT:    [[CMP5:%.*]] = fcmp ule double [[DIV]], 1.000000e+00
 ; CHECK-NEXT:    [[CMP7:%.*]] = fcmp ule double [[DIV3]], 1.000000e+00
-; CHECK-NEXT:    [[OR_COND1:%.*]] = select i1 [[CMP5]], i1 true, i1 [[CMP7]]
-; CHECK-NEXT:    ret i1 [[OR_COND1]]
-; CHECK:       cleanup:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[OR_COND1]] = select i1 [[CMP5]], i1 true, i1 [[CMP7]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
   %fneg = fneg double %b

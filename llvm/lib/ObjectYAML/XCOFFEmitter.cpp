@@ -13,6 +13,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/BinaryFormat/XCOFF.h"
+#include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
@@ -31,12 +32,14 @@ constexpr uint32_t MaxRawDataSize = UINT32_MAX;
 class XCOFFWriter {
 public:
   XCOFFWriter(XCOFFYAML::Object &Obj, raw_ostream &OS, yaml::ErrorHandler EH)
-      : Obj(Obj), W(OS, support::big), ErrHandler(EH) {
+      : Obj(Obj), W(OS, support::big), ErrHandler(EH),
+        Strings(StringTableBuilder::XCOFF) {
     Is64Bit = Obj.Header.Magic == (llvm::yaml::Hex16)XCOFF::XCOFF64;
   }
   bool writeXCOFF();
 
 private:
+  bool nameShouldBeInStringTable(StringRef SymbolName);
   bool initFileHeader(uint64_t CurrentOffset);
   bool initSectionHeader(uint64_t &CurrentOffset);
   bool initRelocations(uint64_t &CurrentOffset);
@@ -51,6 +54,7 @@ private:
   bool Is64Bit = false;
   support::endian::Writer W;
   yaml::ErrorHandler ErrHandler;
+  StringTableBuilder Strings;
   uint64_t StartOffset;
   // Map the section name to its corrresponding section index.
   DenseMap<StringRef, int16_t> SectionIndexMap = {
@@ -68,6 +72,10 @@ static void writeName(StringRef StrName, support::endian::Writer W) {
   memcpy(Name, StrName.size() ? StrName.data() : SrcName, StrName.size());
   ArrayRef<char> NameRef(Name, XCOFF::NameSize);
   W.write(NameRef);
+}
+
+bool XCOFFWriter::nameShouldBeInStringTable(StringRef SymbolName) {
+  return SymbolName.size() > XCOFF::NameSize;
 }
 
 bool XCOFFWriter::initRelocations(uint64_t &CurrentOffset) {
@@ -139,7 +147,11 @@ bool XCOFFWriter::initFileHeader(uint64_t CurrentOffset) {
   for (const XCOFFYAML::Symbol &YamlSym : Obj.Symbols) {
     // Add the number of auxiliary symbols to the total number.
     InitFileHdr.NumberOfSymTableEntries += YamlSym.NumberOfAuxEntries;
+    if (nameShouldBeInStringTable(YamlSym.SymbolName))
+      Strings.add(YamlSym.SymbolName);
   }
+  // Finalize the string table.
+  Strings.finalize();
 
   // Calculate SymbolTableOffset for the file header.
   if (InitFileHdr.NumberOfSymTableEntries) {
@@ -157,6 +169,7 @@ bool XCOFFWriter::initFileHeader(uint64_t CurrentOffset) {
 }
 
 bool XCOFFWriter::assignAddressesAndIndices() {
+  Strings.clear();
   uint64_t CurrentOffset =
       XCOFF::FileHeaderSize32 /* TODO: + auxiliaryHeaderSize() */ +
       InitSections.size() * XCOFF::SectionHeaderSize32;
@@ -260,7 +273,14 @@ bool XCOFFWriter::writeSymbols() {
   if (PaddingSize > 0)
     W.OS.write_zeros(PaddingSize);
   for (const XCOFFYAML::Symbol &YamlSym : Obj.Symbols) {
-    writeName(YamlSym.SymbolName, W);
+    if (nameShouldBeInStringTable(YamlSym.SymbolName)) {
+      // For XCOFF32: A value of 0 indicates that the symbol name is in the
+      // string table.
+      W.write<int32_t>(0);
+      W.write<uint32_t>(Strings.getOffset(YamlSym.SymbolName));
+    } else {
+      writeName(YamlSym.SymbolName, W);
+    }
     W.write<uint32_t>(YamlSym.Value);
     W.write<int16_t>(
         YamlSym.SectionName.size() ? SectionIndexMap[YamlSym.SectionName] : 0);
@@ -297,8 +317,12 @@ bool XCOFFWriter::writeXCOFF() {
     if (!writeRelocations())
       return false;
   }
-  if (!Obj.Symbols.empty())
-    return writeSymbols();
+  if (!Obj.Symbols.empty()) {
+    if (!writeSymbols())
+      return false;
+    // Write the string table.
+    Strings.write(W.OS);
+  }
   return true;
 }
 

@@ -133,5 +133,24 @@ int main(int, char**)
     assert(m.get_allocator().get_id() == 45);
     }
 
+    {
+    // Examples from LWG3025
+    std::multimap m{std::pair{1, 1}, {2, 2}, {3, 3}};
+    ASSERT_SAME_TYPE(decltype(m), std::multimap<int, int>);
+
+    std::multimap m2{m.begin(), m.end()};
+    ASSERT_SAME_TYPE(decltype(m2), std::multimap<int, int>);
+    }
+
+    {
+    // Examples from LWG3531
+    std::multimap m1{{std::pair{1, 2}, {3, 4}}, std::less<int>()};
+    ASSERT_SAME_TYPE(decltype(m1), std::multimap<int, int>);
+
+    using value_type = std::pair<const int, int>;
+    std::multimap m2{{value_type{1, 2}, {3, 4}}, std::less<int>()};
+    ASSERT_SAME_TYPE(decltype(m2), std::multimap<int, int>);
+    }
+
     return 0;
 }

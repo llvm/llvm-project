@@ -494,14 +494,24 @@ declare noalias i8* @malloc(i64)
 
 declare <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>*, i32, <8 x i1>, <8 x i32>)
 
-declare double @llvm.powi.f64(double, i32)
-declare <2 x double> @llvm.powi.v2f64(<2 x double>, i32)
+declare double @llvm.powi.f64.i16(double, i16)
+declare <2 x double> @llvm.powi.v2f64.i16(<2 x double>, i16)
+declare double @llvm.powi.f64.i32(double, i32)
+declare <2 x double> @llvm.powi.v2f64.i32(<2 x double>, i32)
 
 define double @constant_fold_powi() {
 ; CHECK-LABEL: @constant_fold_powi(
 ; CHECK-NEXT:    ret double 9.000000e+00
 ;
-  %t0 = call double @llvm.powi.f64(double 3.00000e+00, i32 2)
+  %t0 = call double @llvm.powi.f64.i32(double 3.00000e+00, i32 2)
+  ret double %t0
+}
+
+define double @constant_fold_powi_i16() {
+; CHECK-LABEL: @constant_fold_powi_i16(
+; CHECK-NEXT:    ret double 9.000000e+00
+;
+  %t0 = call double @llvm.powi.f64.i16(double 3.00000e+00, i16 2)
   ret double %t0
 }
 
@@ -509,7 +519,15 @@ define <2 x double> @constant_fold_powi_vec() {
 ; CHECK-LABEL: @constant_fold_powi_vec(
 ; CHECK-NEXT:    ret <2 x double> <double 9.000000e+00, double 2.500000e+01>
 ;
-  %t0 = call <2 x double> @llvm.powi.v2f64(<2 x double> <double 3.00000e+00, double 5.00000e+00>, i32 2)
+  %t0 = call <2 x double> @llvm.powi.v2f64.i32(<2 x double> <double 3.00000e+00, double 5.00000e+00>, i32 2)
+  ret <2 x double> %t0
+}
+
+define <2 x double> @constant_fold_powi_vec_i16() {
+; CHECK-LABEL: @constant_fold_powi_vec_i16(
+; CHECK-NEXT:    ret <2 x double> <double 9.000000e+00, double 2.500000e+01>
+;
+  %t0 = call <2 x double> @llvm.powi.v2f64.i16(<2 x double> <double 3.00000e+00, double 5.00000e+00>, i16 2)
   ret <2 x double> %t0
 }
 

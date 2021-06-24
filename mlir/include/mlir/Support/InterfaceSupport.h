@@ -229,17 +229,7 @@ public:
     std::pair<TypeID, void *> elements[] = {
         std::make_pair(IfaceModels::Interface::getInterfaceID(),
                        new (malloc(sizeof(IfaceModels))) IfaceModels())...};
-    // Insert directly into the right position to keep the interfaces sorted.
-    for (auto &element : elements) {
-      TypeID id = element.first;
-      auto it =
-          llvm::lower_bound(interfaces, id, [](const auto &it, TypeID id) {
-            return compare(it.first, id);
-          });
-      if (it != interfaces.end() && it->first == id)
-        llvm::report_fatal_error("Interface already registered");
-      interfaces.insert(it, element);
-    }
+    insert(elements);
   }
 
 private:
@@ -249,6 +239,8 @@ private:
   }
 
   InterfaceMap() = default;
+
+  void insert(ArrayRef<std::pair<TypeID, void *>> elements);
 
   template <typename... Ts>
   static InterfaceMap getImpl(std::tuple<Ts...> *) {

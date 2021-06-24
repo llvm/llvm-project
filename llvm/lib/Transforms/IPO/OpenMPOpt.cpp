@@ -9,6 +9,8 @@
 // OpenMP specific optimizations:
 //
 // - Deduplication of runtime calls, e.g., omp_get_thread_num.
+// - Replacing globalized device memory with stack memory.
+// - Replacing globalized device memory with shared memory.
 //
 //===----------------------------------------------------------------------===//
 
@@ -26,6 +28,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
@@ -34,6 +37,7 @@
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
 
+using namespace llvm::PatternMatch;
 using namespace llvm;
 using namespace omp;
 
@@ -75,6 +79,8 @@ STATISTIC(
     "Number of OpenMP parallel regions replaced with ID in GPU state machines");
 STATISTIC(NumOpenMPParallelRegionsMerged,
           "Number of OpenMP parallel regions merged");
+STATISTIC(NumBytesMovedToSharedMemory,
+          "Amount of memory pushed to shared memory");
 
 #if !defined(NDEBUG)
 static constexpr auto TAG = "[" DEBUG_TYPE "]";
@@ -82,35 +88,15 @@ static constexpr auto TAG = "[" DEBUG_TYPE "]";
 
 namespace {
 
-struct AAExecutionDomain
-    : public StateWrapper<BooleanState, AbstractAttribute> {
-  using Base = StateWrapper<BooleanState, AbstractAttribute>;
-  AAExecutionDomain(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
-
-  /// Create an abstract attribute view for the position \p IRP.
-  static AAExecutionDomain &createForPosition(const IRPosition &IRP,
-                                              Attributor &A);
-
-  /// See AbstractAttribute::getName().
-  const std::string getName() const override { return "AAExecutionDomain"; }
-
-  /// See AbstractAttribute::getIdAddr().
-  const char *getIdAddr() const override { return &ID; }
-
-  /// Check if an instruction is executed by a single thread.
-  virtual bool isSingleThreadExecution(const Instruction &) const = 0;
-
-  virtual bool isSingleThreadExecution(const BasicBlock &) const = 0;
-
-  /// This function should return true if the type of the \p AA is
-  /// AAExecutionDomain.
-  static bool classof(const AbstractAttribute *AA) {
-    return (AA->getIdAddr() == &ID);
-  }
-
-  /// Unique ID (due to the unique address)
-  static const char ID;
+enum class AddressSpace : unsigned {
+  Generic = 0,
+  Global = 1,
+  Shared = 3,
+  Constant = 4,
+  Local = 5,
 };
+
+struct AAHeapToShared;
 
 struct AAICVTracker;
 
@@ -541,6 +527,9 @@ struct OpenMPOpt {
 
     if (IsModulePass) {
       Changed |= runAttributor();
+
+      // Recollect uses, in case Attributor deleted any.
+      OMPInfoCache.recollectUses();
 
       if (remarksEnabled())
         analysisGlobalization();
@@ -1152,29 +1141,22 @@ private:
   }
 
   void analysisGlobalization() {
-    RuntimeFunction GlobalizationRuntimeIDs[] = {
-        OMPRTL___kmpc_data_sharing_coalesced_push_stack,
-        OMPRTL___kmpc_data_sharing_push_stack};
+    auto &RFI = OMPInfoCache.RFIs[OMPRTL___kmpc_alloc_shared];
 
-    for (const auto GlobalizationCallID : GlobalizationRuntimeIDs) {
-      auto &RFI = OMPInfoCache.RFIs[GlobalizationCallID];
+    auto CheckGlobalization = [&](Use &U, Function &Decl) {
+      if (CallInst *CI = getCallIfRegularCall(U, &RFI)) {
+        auto Remark = [&](OptimizationRemarkMissed ORM) {
+          return ORM
+                 << "Found thread data sharing on the GPU. "
+                 << "Expect degraded performance due to data globalization.";
+        };
+        emitRemark<OptimizationRemarkMissed>(CI, "OpenMPGlobalization", Remark);
+      }
 
-      auto CheckGlobalization = [&](Use &U, Function &Decl) {
-        if (CallInst *CI = getCallIfRegularCall(U, &RFI)) {
-          auto Remark = [&](OptimizationRemarkAnalysis ORA) {
-            return ORA
-                   << "Found thread data sharing on the GPU. "
-                   << "Expect degraded performance due to data globalization.";
-          };
-          emitRemark<OptimizationRemarkAnalysis>(CI, "OpenMPGlobalization",
-                                                 Remark);
-        }
+      return false;
+    };
 
-        return false;
-      };
-
-      RFI.foreachUse(SCC, CheckGlobalization);
-    }
+    RFI.foreachUse(SCC, CheckGlobalization);
   }
 
   /// Maps the values stored in the offload arrays passed as arguments to
@@ -1635,10 +1617,20 @@ private:
 
       GetterRFI.foreachUse(SCC, CreateAA);
     }
+    auto &GlobalizationRFI = OMPInfoCache.RFIs[OMPRTL___kmpc_alloc_shared];
+    auto CreateAA = [&](Use &U, Function &F) {
+      A.getOrCreateAAFor<AAHeapToShared>(IRPosition::function(F));
+      return false;
+    };
+    GlobalizationRFI.foreachUse(SCC, CreateAA);
 
-    for (auto &F : M) {
-      if (!F.isDeclaration())
-        A.getOrCreateAAFor<AAExecutionDomain>(IRPosition::function(F));
+    // Create an ExecutionDomain AA for every function and a HeapToStack AA for
+    // every function if there is a device kernel.
+    for (auto *F : SCC) {
+      if (!F->isDeclaration())
+        A.getOrCreateAAFor<AAExecutionDomain>(IRPosition::function(*F));
+      if (!OMPInfoCache.Kernels.empty())
+        A.getOrCreateAAFor<AAHeapToStack>(IRPosition::function(*F));
     }
   }
 };
@@ -2314,12 +2306,12 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
   ChangeStatus updateImpl(Attributor &A) override;
 
   /// Check if an instruction is executed by a single thread.
-  bool isSingleThreadExecution(const Instruction &I) const override {
-    return isSingleThreadExecution(*I.getParent());
+  bool isExecutedByInitialThreadOnly(const Instruction &I) const override {
+    return isExecutedByInitialThreadOnly(*I.getParent());
   }
 
-  bool isSingleThreadExecution(const BasicBlock &BB) const override {
-    return SingleThreadedBBs.contains(&BB);
+  bool isExecutedByInitialThreadOnly(const BasicBlock &BB) const override {
+    return isValidState() && SingleThreadedBBs.contains(&BB);
   }
 
   /// Set of basic blocks that are executed by a single thread.
@@ -2339,7 +2331,9 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
     const auto &ExecutionDomainAA = A.getAAFor<AAExecutionDomain>(
         *this, IRPosition::function(*ACS.getInstruction()->getFunction()),
         DepClassTy::REQUIRED);
-    return ExecutionDomainAA.isSingleThreadExecution(*ACS.getInstruction());
+    return ACS.isDirectCall() &&
+           ExecutionDomainAA.isExecutedByInitialThreadOnly(
+               *ACS.getInstruction());
   };
 
   if (!A.checkForAllCallSites(PredForCallSite, *this,
@@ -2351,7 +2345,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
   // a constant zero.
   // TODO: Use AAValueSimplify to simplify and propogate constants.
   // TODO: Check more than a single use for thread ID's.
-  auto IsSingleThreadOnly = [&](BranchInst *Edge, BasicBlock *SuccessorBB) {
+  auto IsInitialThreadOnly = [&](BranchInst *Edge, BasicBlock *SuccessorBB) {
     if (!Edge || !Edge->isConditional())
       return false;
     if (Edge->getSuccessor(0) != SuccessorBB)
@@ -2360,6 +2354,21 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
     auto *Cmp = dyn_cast<CmpInst>(Edge->getCondition());
     if (!Cmp || !Cmp->isTrueWhenEqual() || !Cmp->isEquality())
       return false;
+
+    // Temporarily match the pattern generated by clang for teams regions.
+    // TODO: Remove this once the new runtime is in place.
+    ConstantInt *One, *NegOne;
+    CmpInst::Predicate Pred;
+    auto &&m_ThreadID = m_Intrinsic<Intrinsic::nvvm_read_ptx_sreg_tid_x>();
+    auto &&m_WarpSize = m_Intrinsic<Intrinsic::nvvm_read_ptx_sreg_warpsize>();
+    auto &&m_BlockSize = m_Intrinsic<Intrinsic::nvvm_read_ptx_sreg_ntid_x>();
+    if (match(Cmp, m_Cmp(Pred, m_ThreadID,
+                         m_And(m_Sub(m_BlockSize, m_ConstantInt(One)),
+                               m_Xor(m_Sub(m_WarpSize, m_ConstantInt(One)),
+                                     m_ConstantInt(NegOne))))))
+      if (One->isOne() && NegOne->isMinusOne() &&
+          Pred == CmpInst::Predicate::ICMP_EQ)
+        return true;
 
     ConstantInt *C = dyn_cast<ConstantInt>(Cmp->getOperand(1));
     if (!C || !C->isZero())
@@ -2381,15 +2390,15 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
     if (pred_begin(BB) == pred_end(BB))
       return SingleThreadedBBs.contains(BB);
 
-    bool IsSingleThreaded = true;
+    bool IsInitialThread = true;
     for (auto PredBB = pred_begin(BB), PredEndBB = pred_end(BB);
          PredBB != PredEndBB; ++PredBB) {
-      if (!IsSingleThreadOnly(dyn_cast<BranchInst>((*PredBB)->getTerminator()),
+      if (!IsInitialThreadOnly(dyn_cast<BranchInst>((*PredBB)->getTerminator()),
                               BB))
-        IsSingleThreaded &= SingleThreadedBBs.contains(*PredBB);
+        IsInitialThread &= SingleThreadedBBs.contains(*PredBB);
     }
 
-    return IsSingleThreaded;
+    return IsInitialThread;
   };
 
   for (auto *BB : RPOT) {
@@ -2402,10 +2411,154 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
              : ChangeStatus::CHANGED;
 }
 
+/// Try to replace memory allocation calls called by a single thread with a
+/// static buffer of shared memory.
+struct AAHeapToShared : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+  AAHeapToShared(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAHeapToShared &createForPosition(const IRPosition &IRP,
+                                           Attributor &A);
+
+  /// See AbstractAttribute::getName().
+  const std::string getName() const override { return "AAHeapToShared"; }
+
+  /// See AbstractAttribute::getIdAddr().
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAHeapToShared.
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+struct AAHeapToSharedFunction : public AAHeapToShared {
+  AAHeapToSharedFunction(const IRPosition &IRP, Attributor &A)
+      : AAHeapToShared(IRP, A) {}
+
+  const std::string getAsStr() const override {
+    return "[AAHeapToShared] " + std::to_string(MallocCalls.size()) +
+           " malloc calls eligible.";
+  }
+
+  /// See AbstractAttribute::trackStatistics().
+  void trackStatistics() const override {}
+
+  void initialize(Attributor &A) override {
+    auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
+    auto &RFI = OMPInfoCache.RFIs[OMPRTL___kmpc_alloc_shared];
+
+    for (User *U : RFI.Declaration->users())
+      if (CallBase *CB = dyn_cast<CallBase>(U))
+        MallocCalls.insert(CB);
+  }
+
+  ChangeStatus manifest(Attributor &A) override {
+    if (MallocCalls.empty())
+      return ChangeStatus::UNCHANGED;
+
+    auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
+    auto &FreeCall = OMPInfoCache.RFIs[OMPRTL___kmpc_free_shared];
+
+    Function *F = getAnchorScope();
+    auto *HS = A.lookupAAFor<AAHeapToStack>(IRPosition::function(*F), this,
+                                            DepClassTy::OPTIONAL);
+
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+    for (CallBase *CB : MallocCalls) {
+      // Skip replacing this if HeapToStack has already claimed it.
+      if (HS && HS->isKnownHeapToStack(*CB))
+        continue;
+
+      // Find the unique free call to remove it.
+      SmallVector<CallBase *, 4> FreeCalls;
+      for (auto *U : CB->users()) {
+        CallBase *C = dyn_cast<CallBase>(U);
+        if (C && C->getCalledFunction() == FreeCall.Declaration)
+          FreeCalls.push_back(C);
+      }
+      if (FreeCalls.size() != 1)
+        continue;
+
+      ConstantInt *AllocSize = dyn_cast<ConstantInt>(CB->getArgOperand(0));
+
+      LLVM_DEBUG(dbgs() << TAG << "Replace globalization call in "
+                        << CB->getCaller()->getName() << " with "
+                        << AllocSize->getZExtValue()
+                        << " bytes of shared memory\n");
+
+      // Create a new shared memory buffer of the same size as the allocation
+      // and replace all the uses of the original allocation with it.
+      Module *M = CB->getModule();
+      Type *Int8Ty = Type::getInt8Ty(M->getContext());
+      Type *Int8ArrTy = ArrayType::get(Int8Ty, AllocSize->getZExtValue());
+      auto *SharedMem = new GlobalVariable(
+          *M, Int8ArrTy, /* IsConstant */ false, GlobalValue::InternalLinkage,
+          UndefValue::get(Int8ArrTy), CB->getName(), nullptr,
+          GlobalValue::NotThreadLocal,
+          static_cast<unsigned>(AddressSpace::Shared));
+      auto *NewBuffer =
+          ConstantExpr::getPointerCast(SharedMem, Int8Ty->getPointerTo());
+
+      auto Remark = [&](OptimizationRemark OR) {
+        return OR << "Replaced globalized variable with "
+                  << ore::NV("SharedMemory", AllocSize->getZExtValue())
+                  << ((AllocSize->getZExtValue() != 1) ? " bytes " : " byte ")
+                  << "of shared memory";
+      };
+      A.emitRemark<OptimizationRemark>(CB, "OpenMPReplaceGlobalization",
+                                       Remark);
+
+      SharedMem->setAlignment(MaybeAlign(32));
+
+      A.changeValueAfterManifest(*CB, *NewBuffer);
+      A.deleteAfterManifest(*CB);
+      A.deleteAfterManifest(*FreeCalls.front());
+
+      NumBytesMovedToSharedMemory += AllocSize->getZExtValue();
+      Changed = ChangeStatus::CHANGED;
+    }
+
+    return Changed;
+  }
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    auto &OMPInfoCache = static_cast<OMPInformationCache &>(A.getInfoCache());
+    auto &RFI = OMPInfoCache.RFIs[OMPRTL___kmpc_alloc_shared];
+    Function *F = getAnchorScope();
+
+    auto NumMallocCalls = MallocCalls.size();
+
+    // Only consider malloc calls executed by a single thread with a constant.
+    for (User *U : RFI.Declaration->users()) {
+      const auto &ED = A.getAAFor<AAExecutionDomain>(
+          *this, IRPosition::function(*F), DepClassTy::REQUIRED);
+      if (CallBase *CB = dyn_cast<CallBase>(U))
+        if (!dyn_cast<ConstantInt>(CB->getArgOperand(0)) ||
+            !ED.isExecutedByInitialThreadOnly(*CB))
+          MallocCalls.erase(CB);
+    }
+
+    if (NumMallocCalls != MallocCalls.size())
+      return ChangeStatus::CHANGED;
+
+    return ChangeStatus::UNCHANGED;
+  }
+
+  /// Collection of all malloc calls in a function.
+  SmallPtrSet<CallBase *, 4> MallocCalls;
+};
+
 } // namespace
 
 const char AAICVTracker::ID = 0;
 const char AAExecutionDomain::ID = 0;
+const char AAHeapToShared::ID = 0;
 
 AAICVTracker &AAICVTracker::createForPosition(const IRPosition &IRP,
                                               Attributor &A) {
@@ -2454,6 +2607,27 @@ AAExecutionDomain &AAExecutionDomain::createForPosition(const IRPosition &IRP,
   return *AA;
 }
 
+AAHeapToShared &AAHeapToShared::createForPosition(const IRPosition &IRP,
+                                                  Attributor &A) {
+  AAHeapToSharedFunction *AA = nullptr;
+  switch (IRP.getPositionKind()) {
+  case IRPosition::IRP_INVALID:
+  case IRPosition::IRP_FLOAT:
+  case IRPosition::IRP_ARGUMENT:
+  case IRPosition::IRP_CALL_SITE_ARGUMENT:
+  case IRPosition::IRP_RETURNED:
+  case IRPosition::IRP_CALL_SITE_RETURNED:
+  case IRPosition::IRP_CALL_SITE:
+    llvm_unreachable(
+        "AAHeapToShared can only be created for function position!");
+  case IRPosition::IRP_FUNCTION:
+    AA = new (A.Allocator) AAHeapToSharedFunction(IRP, A);
+    break;
+  }
+
+  return *AA;
+}
+
 PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (!containsOpenMP(M, OMPInModule))
     return PreservedAnalyses::all();
@@ -2461,11 +2635,19 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (DisableOpenMPOptimizations)
     return PreservedAnalyses::all();
 
-  // Look at every function definition in the Module.
+  // Create internal copies of each function if this is a kernel Module.
+  DenseSet<const Function *> InternalizedFuncs;
+  if (!OMPInModule.getKernels().empty())
+    for (Function &F : M)
+      if (!F.isDeclaration() && !OMPInModule.getKernels().contains(&F))
+        if (Attributor::internalizeFunction(F, /* Force */ true))
+          InternalizedFuncs.insert(&F);
+
+  // Look at every function definition in the Module that wasn't internalized.
   SmallVector<Function *, 16> SCC;
-  for (Function &Fn : M)
-    if (!Fn.isDeclaration())
-      SCC.push_back(&Fn);
+  for (Function &F : M)
+    if (!F.isDeclaration() && !InternalizedFuncs.contains(&F))
+      SCC.push_back(&F);
 
   if (SCC.empty())
     return PreservedAnalyses::all();
@@ -2486,7 +2668,9 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   OMPInformationCache InfoCache(M, AG, Allocator, /*CGSCC*/ Functions,
                                 OMPInModule.getKernels());
 
-  Attributor A(Functions, InfoCache, CGUpdater);
+  unsigned MaxFixponitIterations = (!OMPInModule.getKernels().empty()) ? 64 : 32;
+  Attributor A(Functions, InfoCache, CGUpdater, nullptr, true, false, MaxFixponitIterations, OREGetter,
+               DEBUG_TYPE);
 
   OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
   bool Changed = OMPOpt.run(true);
@@ -2541,7 +2725,9 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
   OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG, Allocator,
                                 /*CGSCC*/ Functions, OMPInModule.getKernels());
 
-  Attributor A(Functions, InfoCache, CGUpdater, nullptr, false);
+  unsigned MaxFixponitIterations = (!OMPInModule.getKernels().empty()) ? 64 : 32;
+  Attributor A(Functions, InfoCache, CGUpdater, nullptr, false, true, MaxFixponitIterations, OREGetter,
+               DEBUG_TYPE);
 
   OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
   bool Changed = OMPOpt.run(false);
@@ -2617,7 +2803,9 @@ struct OpenMPOptCGSCCLegacyPass : public CallGraphSCCPass {
         *(Functions.back()->getParent()), AG, Allocator,
         /*CGSCC*/ Functions, OMPInModule.getKernels());
 
-    Attributor A(Functions, InfoCache, CGUpdater, nullptr, false);
+    unsigned MaxFixponitIterations = (!OMPInModule.getKernels().empty()) ? 64 : 32;
+    Attributor A(Functions, InfoCache, CGUpdater, nullptr, false, true,
+                 MaxFixponitIterations, OREGetter, DEBUG_TYPE);
 
     OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
     return OMPOpt.run(false);

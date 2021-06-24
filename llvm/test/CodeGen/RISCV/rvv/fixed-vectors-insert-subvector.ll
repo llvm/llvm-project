@@ -68,31 +68,6 @@ define <vscale x 8 x i32> @insert_nxv8i32_v8i32_0(<vscale x 8 x i32> %vec, <8 x 
   ret <vscale x 8 x i32> %v
 }
 
-define <vscale x 8 x i32> @insert_nxv8i32_v8i32_4(<vscale x 8 x i32> %vec, <8 x i32>* %svp) {
-; LMULMAX2-LABEL: insert_nxv8i32_v8i32_4:
-; LMULMAX2:       # %bb.0:
-; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; LMULMAX2-NEXT:    vle32.v v28, (a0)
-; LMULMAX2-NEXT:    vsetivli zero, 12, e32, m4, tu, mu
-; LMULMAX2-NEXT:    vslideup.vi v8, v28, 4
-; LMULMAX2-NEXT:    ret
-;
-; LMULMAX1-LABEL: insert_nxv8i32_v8i32_4:
-; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
-; LMULMAX1-NEXT:    vle32.v v28, (a0)
-; LMULMAX1-NEXT:    addi a0, a0, 16
-; LMULMAX1-NEXT:    vle32.v v12, (a0)
-; LMULMAX1-NEXT:    vsetivli zero, 8, e32, m4, tu, mu
-; LMULMAX1-NEXT:    vslideup.vi v8, v28, 4
-; LMULMAX1-NEXT:    vsetivli zero, 12, e32, m4, tu, mu
-; LMULMAX1-NEXT:    vslideup.vi v8, v12, 8
-; LMULMAX1-NEXT:    ret
-  %sv = load <8 x i32>, <8 x i32>* %svp
-  %v = call <vscale x 8 x i32> @llvm.experimental.vector.insert.v8i32.nxv8i32(<vscale x 8 x i32> %vec, <8 x i32> %sv, i64 4)
-  ret <vscale x 8 x i32> %v
-}
-
 define <vscale x 8 x i32> @insert_nxv8i32_v8i32_8(<vscale x 8 x i32> %vec, <8 x i32>* %svp) {
 ; LMULMAX2-LABEL: insert_nxv8i32_v8i32_8:
 ; LMULMAX2:       # %bb.0:
@@ -506,28 +481,6 @@ define <vscale x 2 x i1> @insert_nxv2i1_v4i1_0(<vscale x 2 x i1> %v, <4 x i1>* %
 ; CHECK-NEXT:    ret
   %sv = load <4 x i1>, <4 x i1>* %svp
   %c = call <vscale x 2 x i1> @llvm.experimental.vector.insert.v4i1.nxv2i1(<vscale x 2 x i1> %v, <4 x i1> %sv, i64 0)
-  ret <vscale x 2 x i1> %c
-}
-
-define <vscale x 2 x i1> @insert_nxv2i1_v4i1_6(<vscale x 2 x i1> %v, <4 x i1>* %svp) {
-; CHECK-LABEL: insert_nxv2i1_v4i1_6:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; CHECK-NEXT:    vle1.v v27, (a0)
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
-; CHECK-NEXT:    vmv.v.i v25, 0
-; CHECK-NEXT:    vmerge.vim v25, v25, 1, v0
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
-; CHECK-NEXT:    vmv.v.i v26, 0
-; CHECK-NEXT:    vmv1r.v v0, v27
-; CHECK-NEXT:    vmerge.vim v26, v26, 1, v0
-; CHECK-NEXT:    vsetivli zero, 10, e8, mf4, tu, mu
-; CHECK-NEXT:    vslideup.vi v25, v26, 6
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
-; CHECK-NEXT:    vmsne.vi v0, v25, 0
-; CHECK-NEXT:    ret
-  %sv = load <4 x i1>, <4 x i1>* %svp
-  %c = call <vscale x 2 x i1> @llvm.experimental.vector.insert.v4i1.nxv2i1(<vscale x 2 x i1> %v, <4 x i1> %sv, i64 6)
   ret <vscale x 2 x i1> %c
 }
 

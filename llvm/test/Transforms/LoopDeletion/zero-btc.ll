@@ -155,20 +155,21 @@ exit:
   ret void
 }
 
-; TODO: SCEV seems not to recognize this as a zero btc loop
 define void @test_multi_exit3(i1 %cond1) {
 ; CHECK-LABEL: @test_multi_exit3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_INC:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    store i32 0, i32* @G, align 4
-; CHECK-NEXT:    br i1 [[COND1:%.*]], label [[LATCH]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[COND1:%.*]], label [[LATCH:%.*]], label [[EXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    store i32 1, i32* @G, align 4
-; CHECK-NEXT:    [[IV_INC]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_INC:%.*]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[BE_TAKEN:%.*]] = icmp ne i32 [[IV_INC]], 1
-; CHECK-NEXT:    br i1 [[BE_TAKEN]], label [[LOOP]], label [[EXIT]]
+; CHECK-NEXT:    br i1 [[BE_TAKEN]], label [[LATCH_LOOP_CRIT_EDGE:%.*]], label [[EXIT]]
+; CHECK:       latch.loop_crit_edge:
+; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

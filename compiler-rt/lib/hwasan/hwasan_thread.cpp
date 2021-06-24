@@ -34,7 +34,8 @@ void Thread::InitRandomState() {
     stack_allocations_->push(0);
 }
 
-void Thread::Init(uptr stack_buffer_start, uptr stack_buffer_size) {
+void Thread::Init(uptr stack_buffer_start, uptr stack_buffer_size,
+                  const InitState *state) {
   CHECK_EQ(0, unique_id_);  // try to catch bad stack reuse
   CHECK_EQ(0, stack_top_);
   CHECK_EQ(0, stack_bottom_);
@@ -44,6 +45,12 @@ void Thread::Init(uptr stack_buffer_start, uptr stack_buffer_size) {
   if (auto sz = flags()->heap_history_size)
     heap_allocations_ = HeapAllocationsRingBuffer::New(sz);
 
+  InitStackAndTls(state);
+  InitStackRingBuffer(stack_buffer_start, stack_buffer_size);
+}
+
+void Thread::InitStackRingBuffer(uptr stack_buffer_start,
+                                 uptr stack_buffer_size) {
   HwasanTSDThreadInit();  // Only needed with interceptors.
   uptr *ThreadLong = GetCurrentThreadLongPtr();
   // The following implicitly sets (this) as the current thread.
@@ -54,13 +61,6 @@ void Thread::Init(uptr stack_buffer_start, uptr stack_buffer_size) {
 
   // ScopedTaggingDisable needs GetCurrentThread to be set up.
   ScopedTaggingDisabler disabler;
-
-  uptr tls_size;
-  uptr stack_size;
-  GetThreadStackAndTls(IsMainThread(), &stack_bottom_, &stack_size, &tls_begin_,
-                       &tls_size);
-  stack_top_ = stack_bottom_ + stack_size;
-  tls_end_ = tls_begin_ + tls_size;
 
   if (stack_bottom_) {
     int local;

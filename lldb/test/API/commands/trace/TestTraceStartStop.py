@@ -1,52 +1,76 @@
 import lldb
+from intelpt_testcase import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
-ADDRESS_REGEX = '0x[0-9a-fA-F]*'
-
-class TestTraceStartStop(TestBase):
+class TestTraceStartStop(TraceIntelPTTestCaseBase):
 
     mydir = TestBase.compute_mydir(__file__)
-    NO_DEBUG_INFO_TESTCASE = True
-
-    def setUp(self):
-        TestBase.setUp(self)
-        if 'intel-pt' not in configuration.enabled_plugins:
-            self.skipTest("The intel-pt test plugin is not enabled")
 
     def expectGenericHelpMessageForStartCommand(self):
         self.expect("help thread trace start",
             substrs=["Syntax: thread trace start [<trace-options>]"])
 
+    @testSBAPIAndCommands
     def testStartStopSessionFileThreads(self):
         # it should fail for processes from json session files
         self.expect("trace load -v " + os.path.join(self.getSourceDir(), "intelpt-trace", "trace.json"))
-        self.expect("thread trace start", error=True,
-            substrs=["error: Process must be alive"])
 
         # the help command should be the generic one, as it's not a live process
         self.expectGenericHelpMessageForStartCommand()
 
-        self.expect("thread trace stop", error=True)
+        self.traceStartThread(error=True)
 
+        self.traceStopThread(error=True)
+
+    @testSBAPIAndCommands
     def testStartWithNoProcess(self):
-        self.expect("thread trace start", error=True, 
-            substrs=["error: Process not available."])
+        self.traceStartThread(error=True)
 
-
+    @testSBAPIAndCommands
     def testStartSessionWithWrongSize(self):
         self.expect("file " + os.path.join(self.getSourceDir(), "intelpt-trace", "a.out"))
         self.expect("b main")
         self.expect("r")
-        self.expect("thread trace start -s 2000", error=True, 
+
+        self.traceStartThread(
+            error=True, threadBufferSize=2000,
             substrs=["The trace buffer size must be a power of 2", "It was 2000"])
-        self.expect("thread trace start -s 5000", error=True,
+
+        self.traceStartThread(
+            error=True, threadBufferSize=5000,
             substrs=["The trace buffer size must be a power of 2", "It was 5000"])
-        self.expect("thread trace start -s 0", error=True,
+
+        self.traceStartThread(
+            error=True, threadBufferSize=0,
             substrs=["The trace buffer size must be a power of 2", "It was 0"])
-        self.expect("thread trace start -s 1048576")
-        
+
+        self.traceStartThread(threadBufferSize=1048576)
+
+    @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
+    def testSBAPIHelp(self):
+        self.expect("file " + os.path.join(self.getSourceDir(), "intelpt-trace", "a.out"))
+        self.expect("b main")
+        self.expect("r")
+
+        help = self.getTraceOrCreate().GetStartConfigurationHelp()
+        self.assertIn("threadBufferSize", help)
+        self.assertIn("processBufferSizeLimit", help)
+
+    @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
+    def testStoppingAThread(self):
+        self.expect("file " + os.path.join(self.getSourceDir(), "intelpt-trace", "a.out"))
+        self.expect("b main")
+        self.expect("r")
+        self.expect("thread trace start")
+        self.expect("n")
+        self.expect("thread trace dump instructions", substrs=["total instructions"])
+        # process stopping should stop the thread
+        self.expect("process trace stop")
+        self.expect("n")
+        self.expect("thread trace dump instructions", error=True, substrs=["not traced"])
+
 
     @skipIf(oslist=no_match(['linux']), archs=no_match(['i386', 'x86_64']))
     def testStartStopLiveThreads(self):
@@ -79,21 +103,21 @@ class TestTraceStartStop(TestBase):
 
         # We start tracing with a small buffer size
         self.expect("thread trace start 1 --size 4096")
-        
+
         # We fail if we try to trace again
-        self.expect("thread trace start", error=True, 
+        self.expect("thread trace start", error=True,
             substrs=["error: Thread ", "already traced"])
 
         # We can reconstruct the single instruction executed in the first line
         self.expect("n")
-        self.expect("thread trace dump instructions", 
+        self.expect("thread trace dump instructions",
             patterns=[f'''thread #1: tid = .*, total instructions = 1
   a.out`main \+ 4 at main.cpp:2
     \[0\] {ADDRESS_REGEX}    movl'''])
 
         # We can reconstruct the instructions up to the second line
         self.expect("n")
-        self.expect("thread trace dump instructions", 
+        self.expect("thread trace dump instructions",
             patterns=[f'''thread #1: tid = .*, total instructions = 5
   a.out`main \+ 4 at main.cpp:2
     \[0\] {ADDRESS_REGEX}    movl .*
@@ -114,7 +138,7 @@ class TestTraceStartStop(TestBase):
         # thread
         self.expect("thread trace start")
         self.expect("n")
-        self.expect("thread trace dump instructions", 
+        self.expect("thread trace dump instructions",
             patterns=[f'''thread #1: tid = .*, total instructions = 1
   a.out`main \+ 20 at main.cpp:5
     \[0\] {ADDRESS_REGEX}    xorl'''])

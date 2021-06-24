@@ -390,9 +390,12 @@ define i32 @test_chr_4(i32* %i, i32 %sum0) !prof !14 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 3
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[ENTRY_SPLIT:%.*]], label [[ENTRY_SPLIT_NONCHR:%.*]], !prof [[PROF15]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ [[TMP3:%.*]], [[ENTRY_SPLIT]] ], [ [[SUM2_NONCHR:%.*]], [[ENTRY_SPLIT_NONCHR]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       entry.split:
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[SUM0:%.*]], 85
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP3]] = add i32 [[SUM0:%.*]], 85
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       entry.split.nonchr:
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[SUM0]], 42
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i32 [[TMP0]], 1
@@ -401,8 +404,8 @@ define i32 @test_chr_4(i32* %i, i32 %sum0) !prof !14 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[SUM1_NONCHR]], 43
-; CHECK-NEXT:    [[SUM2_NONCHR:%.*]] = select i1 [[TMP7]], i32 [[SUM1_NONCHR]], i32 [[TMP8]], !prof [[PROF16]]
-; CHECK-NEXT:    ret i32 [[SUM2_NONCHR]]
+; CHECK-NEXT:    [[SUM2_NONCHR]] = select i1 [[TMP7]], i32 [[SUM1_NONCHR]], i32 [[TMP8]], !prof [[PROF16]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
   %0 = load i32, i32* %i
@@ -2009,14 +2012,16 @@ define i64 @test_chr_22(i1 %i, i64* %j, i64 %v0) !prof !14 {
 ; CHECK-NEXT:    [[V2:%.*]] = add i64 [[REASS_ADD]], 3
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i64 [[V2]], 100
 ; CHECK-NEXT:    br i1 [[C1]], label [[BB0_SPLIT:%.*]], label [[BB0_SPLIT_NONCHR:%.*]], !prof [[PROF15]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret i64 99
 ; CHECK:       bb0.split:
 ; CHECK-NEXT:    [[V299:%.*]] = mul i64 [[V2]], 7860086430977039991
 ; CHECK-NEXT:    store i64 [[V299]], i64* [[J:%.*]], align 4
-; CHECK-NEXT:    ret i64 99
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       bb0.split.nonchr:
 ; CHECK-NEXT:    [[V299_NONCHR:%.*]] = mul i64 [[V2]], 7860086430977039991
 ; CHECK-NEXT:    store i64 [[V299_NONCHR]], i64* [[J]], align 4
-; CHECK-NEXT:    ret i64 99
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 bb0:
   %v1 = add i64 %v0, 3

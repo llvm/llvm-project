@@ -145,11 +145,29 @@ add_libc_benchmark_unittest(json-test
 # Benchmarking tool
 #==============================================================================
 
-add_executable(libc-benchmark-main
-    EXCLUDE_FROM_ALL
-    LibcMemoryBenchmarkMain.cpp
-)
-foreach(entrypoint_target libc.src.string.memcpy libc.src.string.memset)
-    get_target_property(entrypoint_object_file ${entrypoint_target} "OBJECT_FILE_RAW")
-    target_link_libraries(libc-benchmark-main PUBLIC json ${entrypoint_object_file})
-endforeach()
+# Benchmark all implementations that can run on the target CPU.
+function(add_libc_multi_impl_benchmark name)
+  get_property(fq_implementations GLOBAL PROPERTY ${name}_implementations)
+  foreach(fq_config_name IN LISTS fq_implementations)
+    get_target_property(required_cpu_features ${fq_config_name} REQUIRE_CPU_FEATURES)
+    cpu_supports(can_run "${required_cpu_features}")
+    if(can_run)
+        set(benchmark_name ${fq_config_name}_benchmark)
+        add_executable(${benchmark_name}
+            EXCLUDE_FROM_ALL
+            LibcMemoryBenchmarkMain.cpp
+        )
+        get_target_property(entrypoint_object_file ${fq_config_name} "OBJECT_FILE_RAW")
+        target_link_libraries(${benchmark_name} PUBLIC json ${entrypoint_object_file})
+        string(TOUPPER ${name} name_upper)
+        target_compile_definitions(${benchmark_name} PRIVATE "-DLIBC_BENCHMARK_FUNCTION_${name_upper}=1" "-DLIBC_BENCHMARK_FUNCTION_NAME=\"${fq_config_name}\"")
+    else()
+      message(STATUS "Skipping benchmark for '${fq_config_name}' insufficient host cpu features '${required_cpu_features}'")
+    endif()
+  endforeach()
+endfunction()
+
+add_libc_multi_impl_benchmark(memcpy)
+add_libc_multi_impl_benchmark(memset)
+add_libc_multi_impl_benchmark(bzero)
+add_libc_multi_impl_benchmark(memcmp)

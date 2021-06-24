@@ -833,6 +833,8 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
         case AMDGPU::EXEC_HI:
         case AMDGPU::SCC:
         case AMDGPU::M0:
+        case AMDGPU::M0_LO16:
+        case AMDGPU::M0_HI16:
         case AMDGPU::SRC_SHARED_BASE:
         case AMDGPU::SRC_SHARED_LIMIT:
         case AMDGPU::SRC_PRIVATE_BASE:
@@ -963,6 +965,16 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
           IsSGPR = false;
           IsAGPR = true;
           Width = 6;
+        } else if (AMDGPU::VReg_224RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 7;
+        } else if (AMDGPU::SReg_224RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 7;
+        } else if (AMDGPU::AReg_224RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 7;
         } else if (AMDGPU::SReg_256RegClass.contains(Reg)) {
           assert(!AMDGPU::TTMP_256RegClass.contains(Reg) &&
             "trap handler registers should not be used");

@@ -8,8 +8,8 @@ declare float @llvm.exp.f32(float) nounwind readnone
 declare <2 x half> @llvm.exp.v2f16(<2 x half>) nounwind readnone
 declare float @llvm.exp2.f32(float) nounwind readnone
 declare <2 x half> @llvm.exp2.v2f16(<2 x half>) nounwind readnone
-declare float @llvm.powi.f32(float, i32) nounwind readnone
-declare <2 x half> @llvm.powi.v2f16(<2 x half>, i32) nounwind readnone
+declare float @llvm.powi.f32.i32(float, i32) nounwind readnone
+declare <2 x half> @llvm.powi.v2f16.i32(<2 x half>, i32) nounwind readnone
 
 define float @exact_inverse(float %x) {
 ; CHECK-LABEL: @exact_inverse(
@@ -875,11 +875,11 @@ define <2 x half> @exp2_recip(<2 x half> %x, <2 x half> %y) {
 define float @powi_divisor(float %x, i32 %y, float %z) {
 ; CHECK-LABEL: @powi_divisor(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc ninf arcp float @llvm.powi.f32(float [[X:%.*]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc ninf arcp float @llvm.powi.f32.i32(float [[X:%.*]], i32 [[TMP1]])
 ; CHECK-NEXT:    [[R:%.*]] = fmul reassoc ninf arcp float [[TMP2]], [[Z:%.*]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %p = call float @llvm.powi.f32(float %x, i32 %y)
+  %p = call float @llvm.powi.f32.i32(float %x, i32 %y)
   %r = fdiv reassoc arcp ninf float %z, %p
   ret float %r
 }
@@ -888,12 +888,12 @@ define float @powi_divisor(float %x, i32 %y, float %z) {
 
 define float @powi_divisor_extra_use(float %x, i32 %y, float %z) {
 ; CHECK-LABEL: @powi_divisor_extra_use(
-; CHECK-NEXT:    [[P:%.*]] = call float @llvm.powi.f32(float [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[P:%.*]] = call float @llvm.powi.f32.i32(float [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    call void @use_f32(float [[P]])
 ; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc ninf arcp float [[Z:%.*]], [[P]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %p = call float @llvm.powi.f32(float %x, i32 %y)
+  %p = call float @llvm.powi.f32.i32(float %x, i32 %y)
   call void @use_f32(float %p)
   %r = fdiv reassoc arcp ninf float %z, %p
   ret float %r
@@ -903,11 +903,11 @@ define float @powi_divisor_extra_use(float %x, i32 %y, float %z) {
 
 define float @powi_divisor_not_enough_fmf(float %x, i32 %y, float %z) {
 ; CHECK-LABEL: @powi_divisor_not_enough_fmf(
-; CHECK-NEXT:    [[P:%.*]] = call fast float @llvm.powi.f32(float [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[P:%.*]] = call fast float @llvm.powi.f32.i32(float [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    [[R:%.*]] = fdiv reassoc ninf float [[Z:%.*]], [[P]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %p = call fast float @llvm.powi.f32(float %x, i32 %y)
+  %p = call fast float @llvm.powi.f32.i32(float %x, i32 %y)
   %r = fdiv reassoc ninf float %z, %p
   ret float %r
 }
@@ -916,11 +916,11 @@ define float @powi_divisor_not_enough_fmf(float %x, i32 %y, float %z) {
 
 define float @powi_divisor_not_enough_fmf2(float %x, i32 %y, float %z) {
 ; CHECK-LABEL: @powi_divisor_not_enough_fmf2(
-; CHECK-NEXT:    [[P:%.*]] = call fast float @llvm.powi.f32(float [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[P:%.*]] = call fast float @llvm.powi.f32.i32(float [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    [[R:%.*]] = fdiv ninf arcp float [[Z:%.*]], [[P]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
-  %p = call fast float @llvm.powi.f32(float %x, i32 %y)
+  %p = call fast float @llvm.powi.f32.i32(float %x, i32 %y)
   %r = fdiv arcp ninf float %z, %p
   ret float %r
 }
@@ -930,10 +930,10 @@ define float @powi_divisor_not_enough_fmf2(float %x, i32 %y, float %z) {
 define <2 x half> @powi_recip(<2 x half> %x, i32 %y) {
 ; CHECK-LABEL: @powi_recip(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc nnan ninf arcp <2 x half> @llvm.powi.v2f16(<2 x half> [[X:%.*]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc nnan ninf arcp <2 x half> @llvm.powi.v2f16.i32(<2 x half> [[X:%.*]], i32 [[TMP1]])
 ; CHECK-NEXT:    ret <2 x half> [[TMP2]]
 ;
-  %p = call <2 x half> @llvm.powi.v2f16(<2 x half> %x, i32 %y)
+  %p = call <2 x half> @llvm.powi.v2f16.i32(<2 x half> %x, i32 %y)
   %r = fdiv reassoc arcp nnan ninf <2 x half> <half 1.0, half 1.0>, %p
   ret <2 x half> %r
 }

@@ -87,14 +87,12 @@ protected:
       result.AppendError(
           "a single path to a JSON file containing a trace session"
           "is required");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
     auto end_with_failure = [&result](llvm::Error err) -> bool {
       result.AppendErrorWithFormat("%s\n",
                                    llvm::toString(std::move(err)).c_str());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     };
 
@@ -190,7 +188,6 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       result.AppendErrorWithFormat("%s\n", error.AsCString());
-      result.SetStatus(eReturnStatusFailed);
     }
     return result.Succeeded();
   }
@@ -254,7 +251,7 @@ protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     Status error;
     if (command.empty()) {
-      result.SetError(
+      result.AppendError(
           "trace schema cannot be invoked without a plug-in as argument");
       return false;
     }
@@ -281,7 +278,6 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       result.AppendErrorWithFormat("%s\n", error.AsCString());
-      result.SetStatus(eReturnStatusFailed);
     }
     return result.Succeeded();
   }
@@ -316,7 +312,7 @@ Expected<CommandObjectSP> CommandObjectTraceProxy::DoGetProxyCommandObject() {
     return createStringError(inconvertibleErrorCode(),
                              "Process must be alive.");
 
-  if (Expected<TraceSP &> trace_sp = process_sp->GetTarget().GetTraceOrCreate())
+  if (Expected<TraceSP> trace_sp = process_sp->GetTarget().GetTraceOrCreate())
     return GetDelegateCommand(**trace_sp);
   else
     return createStringError(inconvertibleErrorCode(),

@@ -155,7 +155,6 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32**, i32*** [[PTR2_ADDR]], align 8
 // CHECK1-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK1-NEXT:    call void @__kmpc_spmd_kernel_init(i32 [[NVPTX_NUM_THREADS]], i16 1)
-// CHECK1-NEXT:    call void @__kmpc_data_sharing_init_stack_spmd()
 // CHECK1-NEXT:    br label [[DOTEXECUTE:%.*]]
 // CHECK1:       .execute:
 // CHECK1-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
@@ -257,7 +256,6 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[NVPTX_WARP_SIZE5:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK1-NEXT:    [[THREAD_LIMIT6:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS4]], [[NVPTX_WARP_SIZE5]]
 // CHECK1-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT6]], i16 1)
-// CHECK1-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK1-NEXT:    br label [[DOTTERMINATION_NOTIFIER:%.*]]
 // CHECK1:       .termination.notifier:
 // CHECK1-NEXT:    call void @__kmpc_kernel_deinit(i16 1)
@@ -332,7 +330,6 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[NVPTX_WARP_SIZE5:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK1-NEXT:    [[THREAD_LIMIT6:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS4]], [[NVPTX_WARP_SIZE5]]
 // CHECK1-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT6]], i16 1)
-// CHECK1-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK1-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV]], align 8
 // CHECK1-NEXT:    [[CONV7:%.*]] = sext i16 [[TMP5]] to i32
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV7]], 1
@@ -441,7 +438,6 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[NVPTX_WARP_SIZE9:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK1-NEXT:    [[THREAD_LIMIT10:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS8]], [[NVPTX_WARP_SIZE9]]
 // CHECK1-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT10]], i16 1)
-// CHECK1-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK1-NEXT:    [[TMP13:%.*]] = load i32, i32* [[CONV]], align 8
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP13]], 1
 // CHECK1-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 8
@@ -577,7 +573,6 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[NVPTX_WARP_SIZE7:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK1-NEXT:    [[THREAD_LIMIT8:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS6]], [[NVPTX_WARP_SIZE7]]
 // CHECK1-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT8]], i16 1)
-// CHECK1-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV]], align 8
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP6]], 1
 // CHECK1-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 8
@@ -681,7 +676,6 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[NVPTX_WARP_SIZE7:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK1-NEXT:    [[THREAD_LIMIT8:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS6]], [[NVPTX_WARP_SIZE7]]
 // CHECK1-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT8]], i16 1)
-// CHECK1-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK1-NEXT:    [[TMP9:%.*]] = load i32, i32* [[CONV]], align 8
 // CHECK1-NEXT:    [[CONV9:%.*]] = sitofp i32 [[TMP9]] to double
 // CHECK1-NEXT:    [[ADD:%.*]] = fadd double [[CONV9]], 1.500000e+00
@@ -711,56 +705,27 @@ void unreachable_call() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z3baziRd
-// CHECK1-SAME: (i32 [[F3:%.*]], double* nonnull align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR5]] {
+// CHECK1-SAME: (i32 [[F1:%.*]], double* nonnull align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR5]] {
 // CHECK1-NEXT:  entry:
-// CHECK1-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK1-NEXT:    [[F2:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[A_ADDR:%.*]] = alloca double*, align 8
 // CHECK1-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x i8*], align 8
 // CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB3:[0-9]+]])
-// CHECK1-NEXT:    [[TMP1:%.*]] = call i16 @__kmpc_parallel_level(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]])
-// CHECK1-NEXT:    [[TMP2:%.*]] = icmp eq i16 [[TMP1]], 0
-// CHECK1-NEXT:    [[TMP3:%.*]] = call i8 @__kmpc_is_spmd_exec_mode() #[[ATTR2]]
-// CHECK1-NEXT:    [[TMP4:%.*]] = icmp ne i8 [[TMP3]], 0
-// CHECK1-NEXT:    br i1 [[TMP4]], label [[DOTSPMD:%.*]], label [[DOTNON_SPMD:%.*]]
-// CHECK1:       .spmd:
-// CHECK1-NEXT:    br label [[DOTEXIT:%.*]]
-// CHECK1:       .non-spmd:
-// CHECK1-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], i64 4, i64 128
-// CHECK1-NEXT:    [[TMP6:%.*]] = call i8* @__kmpc_data_sharing_coalesced_push_stack(i64 [[TMP5]], i16 0)
-// CHECK1-NEXT:    [[TMP7:%.*]] = bitcast i8* [[TMP6]] to %struct._globalized_locals_ty*
-// CHECK1-NEXT:    br label [[DOTEXIT]]
-// CHECK1:       .exit:
-// CHECK1-NEXT:    [[_SELECT_STACK:%.*]] = phi %struct._globalized_locals_ty* [ null, [[DOTSPMD]] ], [ [[TMP7]], [[DOTNON_SPMD]] ]
-// CHECK1-NEXT:    [[TMP8:%.*]] = bitcast %struct._globalized_locals_ty* [[_SELECT_STACK]] to %struct._globalized_locals_ty.0*
-// CHECK1-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], %struct._globalized_locals_ty* [[_SELECT_STACK]], i32 0, i32 0
-// CHECK1-NEXT:    [[NVPTX_TID:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-// CHECK1-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[NVPTX_TID]], 31
-// CHECK1-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [32 x i32], [32 x i32]* [[F]], i32 0, i32 [[NVPTX_LANE_ID]]
-// CHECK1-NEXT:    [[F1:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0:%.*]], %struct._globalized_locals_ty.0* [[TMP8]], i32 0, i32 0
-// CHECK1-NEXT:    [[TMP10:%.*]] = select i1 [[TMP2]], i32* [[F1]], i32* [[TMP9]]
-// CHECK1-NEXT:    [[TMP11:%.*]] = select i1 [[TMP4]], i32* [[F2]], i32* [[TMP10]]
-// CHECK1-NEXT:    store i32 [[F3]], i32* [[TMP11]], align 4
+// CHECK1-NEXT:    [[F:%.*]] = call i8* @__kmpc_alloc_shared(i64 4)
+// CHECK1-NEXT:    [[F_ON_STACK:%.*]] = bitcast i8* [[F]] to i32*
+// CHECK1-NEXT:    store i32 [[F1]], i32* [[F_ON_STACK]], align 4
 // CHECK1-NEXT:    store double* [[A]], double** [[A_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP12:%.*]] = load double*, double** [[A_ADDR]], align 8
-// CHECK1-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
-// CHECK1-NEXT:    [[TMP14:%.*]] = bitcast i32* [[TMP11]] to i8*
-// CHECK1-NEXT:    store i8* [[TMP14]], i8** [[TMP13]], align 8
-// CHECK1-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS]], i64 0, i64 1
-// CHECK1-NEXT:    [[TMP16:%.*]] = bitcast double* [[TMP12]] to i8*
-// CHECK1-NEXT:    store i8* [[TMP16]], i8** [[TMP15]], align 8
-// CHECK1-NEXT:    [[TMP17:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*, double*)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** [[TMP17]], i64 2)
-// CHECK1-NEXT:    [[TMP18:%.*]] = load i32, i32* [[TMP11]], align 4
-// CHECK1-NEXT:    store i32 [[TMP18]], i32* [[RETVAL]], align 4
-// CHECK1-NEXT:    br i1 [[TMP4]], label [[DOTEXIT5:%.*]], label [[DOTNON_SPMD4:%.*]]
-// CHECK1:       .non-spmd4:
-// CHECK1-NEXT:    [[TMP19:%.*]] = bitcast %struct._globalized_locals_ty* [[_SELECT_STACK]] to i8*
-// CHECK1-NEXT:    call void @__kmpc_data_sharing_pop_stack(i8* [[TMP19]])
-// CHECK1-NEXT:    br label [[DOTEXIT5]]
-// CHECK1:       .exit5:
-// CHECK1-NEXT:    [[TMP20:%.*]] = load i32, i32* [[RETVAL]], align 4
-// CHECK1-NEXT:    ret i32 [[TMP20]]
+// CHECK1-NEXT:    [[TMP1:%.*]] = load double*, double** [[A_ADDR]], align 8
+// CHECK1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
+// CHECK1-NEXT:    [[TMP3:%.*]] = bitcast i32* [[F_ON_STACK]] to i8*
+// CHECK1-NEXT:    store i8* [[TMP3]], i8** [[TMP2]], align 8
+// CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS]], i64 0, i64 1
+// CHECK1-NEXT:    [[TMP5:%.*]] = bitcast double* [[TMP1]] to i8*
+// CHECK1-NEXT:    store i8* [[TMP5]], i8** [[TMP4]], align 8
+// CHECK1-NEXT:    [[TMP6:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
+// CHECK1-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*, double*)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** [[TMP6]], i64 2)
+// CHECK1-NEXT:    [[TMP7:%.*]] = load i32, i32* [[F_ON_STACK]], align 4
+// CHECK1-NEXT:    call void @__kmpc_free_shared(i8* [[F]])
+// CHECK1-NEXT:    ret i32 [[TMP7]]
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16unreachable_callv_l142_worker
@@ -825,7 +790,6 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[NVPTX_WARP_SIZE5:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK1-NEXT:    [[THREAD_LIMIT6:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS4]], [[NVPTX_WARP_SIZE5]]
 // CHECK1-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT6]], i16 1)
-// CHECK1-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK1-NEXT:    call void @_Z6asserti(i32 0) #[[ATTR8:[0-9]+]]
 // CHECK1-NEXT:    unreachable
 // CHECK1:       5:
@@ -909,7 +873,6 @@ void unreachable_call() {
 // CHECK1-NEXT:    [[NVPTX_WARP_SIZE6:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK1-NEXT:    [[THREAD_LIMIT7:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS5]], [[NVPTX_WARP_SIZE6]]
 // CHECK1-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT7]], i16 1)
-// CHECK1-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK1-NEXT:    [[TMP6:%.*]] = load i32, i32* [[CONV]], align 8
 // CHECK1-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP6]], 1
 // CHECK1-NEXT:    store i32 [[ADD]], i32* [[CONV]], align 8
@@ -987,7 +950,6 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[TMP0:%.*]] = load i32**, i32*** [[PTR2_ADDR]], align 4
 // CHECK2-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK2-NEXT:    call void @__kmpc_spmd_kernel_init(i32 [[NVPTX_NUM_THREADS]], i16 1)
-// CHECK2-NEXT:    call void @__kmpc_data_sharing_init_stack_spmd()
 // CHECK2-NEXT:    br label [[DOTEXECUTE:%.*]]
 // CHECK2:       .execute:
 // CHECK2-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
@@ -1089,7 +1051,6 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[NVPTX_WARP_SIZE5:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK2-NEXT:    [[THREAD_LIMIT6:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS4]], [[NVPTX_WARP_SIZE5]]
 // CHECK2-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT6]], i16 1)
-// CHECK2-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK2-NEXT:    br label [[DOTTERMINATION_NOTIFIER:%.*]]
 // CHECK2:       .termination.notifier:
 // CHECK2-NEXT:    call void @__kmpc_kernel_deinit(i16 1)
@@ -1164,7 +1125,6 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[NVPTX_WARP_SIZE5:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK2-NEXT:    [[THREAD_LIMIT6:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS4]], [[NVPTX_WARP_SIZE5]]
 // CHECK2-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT6]], i16 1)
-// CHECK2-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK2-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV]], align 4
 // CHECK2-NEXT:    [[CONV7:%.*]] = sext i16 [[TMP5]] to i32
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV7]], 1
@@ -1272,7 +1232,6 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[NVPTX_WARP_SIZE9:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK2-NEXT:    [[THREAD_LIMIT10:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS8]], [[NVPTX_WARP_SIZE9]]
 // CHECK2-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT10]], i16 1)
-// CHECK2-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK2-NEXT:    [[TMP13:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP13]], 1
 // CHECK2-NEXT:    store i32 [[ADD]], i32* [[A_ADDR]], align 4
@@ -1407,7 +1366,6 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[NVPTX_WARP_SIZE6:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK2-NEXT:    [[THREAD_LIMIT7:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS5]], [[NVPTX_WARP_SIZE6]]
 // CHECK2-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT7]], i16 1)
-// CHECK2-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK2-NEXT:    [[TMP6:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP6]], 1
 // CHECK2-NEXT:    store i32 [[ADD]], i32* [[A_ADDR]], align 4
@@ -1510,7 +1468,6 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[NVPTX_WARP_SIZE7:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK2-NEXT:    [[THREAD_LIMIT8:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS6]], [[NVPTX_WARP_SIZE7]]
 // CHECK2-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT8]], i16 1)
-// CHECK2-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK2-NEXT:    [[TMP9:%.*]] = load i32, i32* [[B_ADDR]], align 4
 // CHECK2-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP9]] to double
 // CHECK2-NEXT:    [[ADD:%.*]] = fadd double [[CONV]], 1.500000e+00
@@ -1540,56 +1497,27 @@ void unreachable_call() {
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_Z3baziRd
-// CHECK2-SAME: (i32 [[F3:%.*]], double* nonnull align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR5]] {
+// CHECK2-SAME: (i32 [[F1:%.*]], double* nonnull align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR5]] {
 // CHECK2-NEXT:  entry:
-// CHECK2-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK2-NEXT:    [[F2:%.*]] = alloca i32, align 4
 // CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca double*, align 4
 // CHECK2-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x i8*], align 4
 // CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB3:[0-9]+]])
-// CHECK2-NEXT:    [[TMP1:%.*]] = call i16 @__kmpc_parallel_level(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]])
-// CHECK2-NEXT:    [[TMP2:%.*]] = icmp eq i16 [[TMP1]], 0
-// CHECK2-NEXT:    [[TMP3:%.*]] = call i8 @__kmpc_is_spmd_exec_mode() #[[ATTR2]]
-// CHECK2-NEXT:    [[TMP4:%.*]] = icmp ne i8 [[TMP3]], 0
-// CHECK2-NEXT:    br i1 [[TMP4]], label [[DOTSPMD:%.*]], label [[DOTNON_SPMD:%.*]]
-// CHECK2:       .spmd:
-// CHECK2-NEXT:    br label [[DOTEXIT:%.*]]
-// CHECK2:       .non-spmd:
-// CHECK2-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], i32 4, i32 128
-// CHECK2-NEXT:    [[TMP6:%.*]] = call i8* @__kmpc_data_sharing_coalesced_push_stack(i32 [[TMP5]], i16 0)
-// CHECK2-NEXT:    [[TMP7:%.*]] = bitcast i8* [[TMP6]] to %struct._globalized_locals_ty*
-// CHECK2-NEXT:    br label [[DOTEXIT]]
-// CHECK2:       .exit:
-// CHECK2-NEXT:    [[_SELECT_STACK:%.*]] = phi %struct._globalized_locals_ty* [ null, [[DOTSPMD]] ], [ [[TMP7]], [[DOTNON_SPMD]] ]
-// CHECK2-NEXT:    [[TMP8:%.*]] = bitcast %struct._globalized_locals_ty* [[_SELECT_STACK]] to %struct._globalized_locals_ty.0*
-// CHECK2-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], %struct._globalized_locals_ty* [[_SELECT_STACK]], i32 0, i32 0
-// CHECK2-NEXT:    [[NVPTX_TID:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-// CHECK2-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[NVPTX_TID]], 31
-// CHECK2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [32 x i32], [32 x i32]* [[F]], i32 0, i32 [[NVPTX_LANE_ID]]
-// CHECK2-NEXT:    [[F1:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0:%.*]], %struct._globalized_locals_ty.0* [[TMP8]], i32 0, i32 0
-// CHECK2-NEXT:    [[TMP10:%.*]] = select i1 [[TMP2]], i32* [[F1]], i32* [[TMP9]]
-// CHECK2-NEXT:    [[TMP11:%.*]] = select i1 [[TMP4]], i32* [[F2]], i32* [[TMP10]]
-// CHECK2-NEXT:    store i32 [[F3]], i32* [[TMP11]], align 4
+// CHECK2-NEXT:    [[F:%.*]] = call i8* @__kmpc_alloc_shared(i32 4)
+// CHECK2-NEXT:    [[F_ON_STACK:%.*]] = bitcast i8* [[F]] to i32*
+// CHECK2-NEXT:    store i32 [[F1]], i32* [[F_ON_STACK]], align 4
 // CHECK2-NEXT:    store double* [[A]], double** [[A_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP12:%.*]] = load double*, double** [[A_ADDR]], align 4
-// CHECK2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
-// CHECK2-NEXT:    [[TMP14:%.*]] = bitcast i32* [[TMP11]] to i8*
-// CHECK2-NEXT:    store i8* [[TMP14]], i8** [[TMP13]], align 4
-// CHECK2-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS]], i32 0, i32 1
-// CHECK2-NEXT:    [[TMP16:%.*]] = bitcast double* [[TMP12]] to i8*
-// CHECK2-NEXT:    store i8* [[TMP16]], i8** [[TMP15]], align 4
-// CHECK2-NEXT:    [[TMP17:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK2-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*, double*)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** [[TMP17]], i32 2)
-// CHECK2-NEXT:    [[TMP18:%.*]] = load i32, i32* [[TMP11]], align 4
-// CHECK2-NEXT:    store i32 [[TMP18]], i32* [[RETVAL]], align 4
-// CHECK2-NEXT:    br i1 [[TMP4]], label [[DOTEXIT5:%.*]], label [[DOTNON_SPMD4:%.*]]
-// CHECK2:       .non-spmd4:
-// CHECK2-NEXT:    [[TMP19:%.*]] = bitcast %struct._globalized_locals_ty* [[_SELECT_STACK]] to i8*
-// CHECK2-NEXT:    call void @__kmpc_data_sharing_pop_stack(i8* [[TMP19]])
-// CHECK2-NEXT:    br label [[DOTEXIT5]]
-// CHECK2:       .exit5:
-// CHECK2-NEXT:    [[TMP20:%.*]] = load i32, i32* [[RETVAL]], align 4
-// CHECK2-NEXT:    ret i32 [[TMP20]]
+// CHECK2-NEXT:    [[TMP1:%.*]] = load double*, double** [[A_ADDR]], align 4
+// CHECK2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
+// CHECK2-NEXT:    [[TMP3:%.*]] = bitcast i32* [[F_ON_STACK]] to i8*
+// CHECK2-NEXT:    store i8* [[TMP3]], i8** [[TMP2]], align 4
+// CHECK2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS]], i32 0, i32 1
+// CHECK2-NEXT:    [[TMP5:%.*]] = bitcast double* [[TMP1]] to i8*
+// CHECK2-NEXT:    store i8* [[TMP5]], i8** [[TMP4]], align 4
+// CHECK2-NEXT:    [[TMP6:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
+// CHECK2-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*, double*)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** [[TMP6]], i32 2)
+// CHECK2-NEXT:    [[TMP7:%.*]] = load i32, i32* [[F_ON_STACK]], align 4
+// CHECK2-NEXT:    call void @__kmpc_free_shared(i8* [[F]])
+// CHECK2-NEXT:    ret i32 [[TMP7]]
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16unreachable_callv_l142_worker
@@ -1654,7 +1582,6 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[NVPTX_WARP_SIZE5:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK2-NEXT:    [[THREAD_LIMIT6:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS4]], [[NVPTX_WARP_SIZE5]]
 // CHECK2-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT6]], i16 1)
-// CHECK2-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK2-NEXT:    call void @_Z6asserti(i32 0) #[[ATTR8:[0-9]+]]
 // CHECK2-NEXT:    unreachable
 // CHECK2:       5:
@@ -1737,7 +1664,6 @@ void unreachable_call() {
 // CHECK2-NEXT:    [[NVPTX_WARP_SIZE5:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK2-NEXT:    [[THREAD_LIMIT6:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS4]], [[NVPTX_WARP_SIZE5]]
 // CHECK2-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT6]], i16 1)
-// CHECK2-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK2-NEXT:    [[TMP6:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK2-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP6]], 1
 // CHECK2-NEXT:    store i32 [[ADD]], i32* [[A_ADDR]], align 4
@@ -1815,7 +1741,6 @@ void unreachable_call() {
 // CHECK3-NEXT:    [[TMP0:%.*]] = load i32**, i32*** [[PTR2_ADDR]], align 4
 // CHECK3-NEXT:    [[NVPTX_NUM_THREADS:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK3-NEXT:    call void @__kmpc_spmd_kernel_init(i32 [[NVPTX_NUM_THREADS]], i16 1)
-// CHECK3-NEXT:    call void @__kmpc_data_sharing_init_stack_spmd()
 // CHECK3-NEXT:    br label [[DOTEXECUTE:%.*]]
 // CHECK3:       .execute:
 // CHECK3-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1:[0-9]+]])
@@ -1917,7 +1842,6 @@ void unreachable_call() {
 // CHECK3-NEXT:    [[NVPTX_WARP_SIZE5:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK3-NEXT:    [[THREAD_LIMIT6:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS4]], [[NVPTX_WARP_SIZE5]]
 // CHECK3-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT6]], i16 1)
-// CHECK3-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK3-NEXT:    br label [[DOTTERMINATION_NOTIFIER:%.*]]
 // CHECK3:       .termination.notifier:
 // CHECK3-NEXT:    call void @__kmpc_kernel_deinit(i16 1)
@@ -1992,7 +1916,6 @@ void unreachable_call() {
 // CHECK3-NEXT:    [[NVPTX_WARP_SIZE5:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK3-NEXT:    [[THREAD_LIMIT6:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS4]], [[NVPTX_WARP_SIZE5]]
 // CHECK3-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT6]], i16 1)
-// CHECK3-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK3-NEXT:    [[TMP5:%.*]] = load i16, i16* [[CONV]], align 4
 // CHECK3-NEXT:    [[CONV7:%.*]] = sext i16 [[TMP5]] to i32
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV7]], 1
@@ -2100,7 +2023,6 @@ void unreachable_call() {
 // CHECK3-NEXT:    [[NVPTX_WARP_SIZE9:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK3-NEXT:    [[THREAD_LIMIT10:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS8]], [[NVPTX_WARP_SIZE9]]
 // CHECK3-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT10]], i16 1)
-// CHECK3-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK3-NEXT:    [[TMP13:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP13]], 1
 // CHECK3-NEXT:    store i32 [[ADD]], i32* [[A_ADDR]], align 4
@@ -2235,7 +2157,6 @@ void unreachable_call() {
 // CHECK3-NEXT:    [[NVPTX_WARP_SIZE6:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK3-NEXT:    [[THREAD_LIMIT7:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS5]], [[NVPTX_WARP_SIZE6]]
 // CHECK3-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT7]], i16 1)
-// CHECK3-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK3-NEXT:    [[TMP6:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP6]], 1
 // CHECK3-NEXT:    store i32 [[ADD]], i32* [[A_ADDR]], align 4
@@ -2338,7 +2259,6 @@ void unreachable_call() {
 // CHECK3-NEXT:    [[NVPTX_WARP_SIZE7:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK3-NEXT:    [[THREAD_LIMIT8:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS6]], [[NVPTX_WARP_SIZE7]]
 // CHECK3-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT8]], i16 1)
-// CHECK3-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK3-NEXT:    [[TMP9:%.*]] = load i32, i32* [[B_ADDR]], align 4
 // CHECK3-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP9]] to double
 // CHECK3-NEXT:    [[ADD:%.*]] = fadd double [[CONV]], 1.500000e+00
@@ -2368,56 +2288,27 @@ void unreachable_call() {
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_Z3baziRd
-// CHECK3-SAME: (i32 [[F3:%.*]], double* nonnull align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR5]] {
+// CHECK3-SAME: (i32 [[F1:%.*]], double* nonnull align 8 dereferenceable(8) [[A:%.*]]) #[[ATTR5]] {
 // CHECK3-NEXT:  entry:
-// CHECK3-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-// CHECK3-NEXT:    [[F2:%.*]] = alloca i32, align 4
 // CHECK3-NEXT:    [[A_ADDR:%.*]] = alloca double*, align 4
 // CHECK3-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [2 x i8*], align 4
 // CHECK3-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB3:[0-9]+]])
-// CHECK3-NEXT:    [[TMP1:%.*]] = call i16 @__kmpc_parallel_level(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]])
-// CHECK3-NEXT:    [[TMP2:%.*]] = icmp eq i16 [[TMP1]], 0
-// CHECK3-NEXT:    [[TMP3:%.*]] = call i8 @__kmpc_is_spmd_exec_mode() #[[ATTR2]]
-// CHECK3-NEXT:    [[TMP4:%.*]] = icmp ne i8 [[TMP3]], 0
-// CHECK3-NEXT:    br i1 [[TMP4]], label [[DOTSPMD:%.*]], label [[DOTNON_SPMD:%.*]]
-// CHECK3:       .spmd:
-// CHECK3-NEXT:    br label [[DOTEXIT:%.*]]
-// CHECK3:       .non-spmd:
-// CHECK3-NEXT:    [[TMP5:%.*]] = select i1 [[TMP2]], i32 4, i32 128
-// CHECK3-NEXT:    [[TMP6:%.*]] = call i8* @__kmpc_data_sharing_coalesced_push_stack(i32 [[TMP5]], i16 0)
-// CHECK3-NEXT:    [[TMP7:%.*]] = bitcast i8* [[TMP6]] to %struct._globalized_locals_ty*
-// CHECK3-NEXT:    br label [[DOTEXIT]]
-// CHECK3:       .exit:
-// CHECK3-NEXT:    [[_SELECT_STACK:%.*]] = phi %struct._globalized_locals_ty* [ null, [[DOTSPMD]] ], [ [[TMP7]], [[DOTNON_SPMD]] ]
-// CHECK3-NEXT:    [[TMP8:%.*]] = bitcast %struct._globalized_locals_ty* [[_SELECT_STACK]] to %struct._globalized_locals_ty.0*
-// CHECK3-NEXT:    [[F:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], %struct._globalized_locals_ty* [[_SELECT_STACK]], i32 0, i32 0
-// CHECK3-NEXT:    [[NVPTX_TID:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-// CHECK3-NEXT:    [[NVPTX_LANE_ID:%.*]] = and i32 [[NVPTX_TID]], 31
-// CHECK3-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [32 x i32], [32 x i32]* [[F]], i32 0, i32 [[NVPTX_LANE_ID]]
-// CHECK3-NEXT:    [[F1:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY_0:%.*]], %struct._globalized_locals_ty.0* [[TMP8]], i32 0, i32 0
-// CHECK3-NEXT:    [[TMP10:%.*]] = select i1 [[TMP2]], i32* [[F1]], i32* [[TMP9]]
-// CHECK3-NEXT:    [[TMP11:%.*]] = select i1 [[TMP4]], i32* [[F2]], i32* [[TMP10]]
-// CHECK3-NEXT:    store i32 [[F3]], i32* [[TMP11]], align 4
+// CHECK3-NEXT:    [[F:%.*]] = call i8* @__kmpc_alloc_shared(i32 4)
+// CHECK3-NEXT:    [[F_ON_STACK:%.*]] = bitcast i8* [[F]] to i32*
+// CHECK3-NEXT:    store i32 [[F1]], i32* [[F_ON_STACK]], align 4
 // CHECK3-NEXT:    store double* [[A]], double** [[A_ADDR]], align 4
-// CHECK3-NEXT:    [[TMP12:%.*]] = load double*, double** [[A_ADDR]], align 4
-// CHECK3-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
-// CHECK3-NEXT:    [[TMP14:%.*]] = bitcast i32* [[TMP11]] to i8*
-// CHECK3-NEXT:    store i8* [[TMP14]], i8** [[TMP13]], align 4
-// CHECK3-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS]], i32 0, i32 1
-// CHECK3-NEXT:    [[TMP16:%.*]] = bitcast double* [[TMP12]] to i8*
-// CHECK3-NEXT:    store i8* [[TMP16]], i8** [[TMP15]], align 4
-// CHECK3-NEXT:    [[TMP17:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
-// CHECK3-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*, double*)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** [[TMP17]], i32 2)
-// CHECK3-NEXT:    [[TMP18:%.*]] = load i32, i32* [[TMP11]], align 4
-// CHECK3-NEXT:    store i32 [[TMP18]], i32* [[RETVAL]], align 4
-// CHECK3-NEXT:    br i1 [[TMP4]], label [[DOTEXIT5:%.*]], label [[DOTNON_SPMD4:%.*]]
-// CHECK3:       .non-spmd4:
-// CHECK3-NEXT:    [[TMP19:%.*]] = bitcast %struct._globalized_locals_ty* [[_SELECT_STACK]] to i8*
-// CHECK3-NEXT:    call void @__kmpc_data_sharing_pop_stack(i8* [[TMP19]])
-// CHECK3-NEXT:    br label [[DOTEXIT5]]
-// CHECK3:       .exit5:
-// CHECK3-NEXT:    [[TMP20:%.*]] = load i32, i32* [[RETVAL]], align 4
-// CHECK3-NEXT:    ret i32 [[TMP20]]
+// CHECK3-NEXT:    [[TMP1:%.*]] = load double*, double** [[A_ADDR]], align 4
+// CHECK3-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
+// CHECK3-NEXT:    [[TMP3:%.*]] = bitcast i32* [[F_ON_STACK]] to i8*
+// CHECK3-NEXT:    store i8* [[TMP3]], i8** [[TMP2]], align 4
+// CHECK3-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[CAPTURED_VARS_ADDRS]], i32 0, i32 1
+// CHECK3-NEXT:    [[TMP5:%.*]] = bitcast double* [[TMP1]] to i8*
+// CHECK3-NEXT:    store i8* [[TMP5]], i8** [[TMP4]], align 4
+// CHECK3-NEXT:    [[TMP6:%.*]] = bitcast [2 x i8*]* [[CAPTURED_VARS_ADDRS]] to i8**
+// CHECK3-NEXT:    call void @__kmpc_parallel_51(%struct.ident_t* @[[GLOB3]], i32 [[TMP0]], i32 1, i32 -1, i32 -1, i8* bitcast (void (i32*, i32*, i32*, double*)* @__omp_outlined__1 to i8*), i8* bitcast (void (i16, i32)* @__omp_outlined__1_wrapper to i8*), i8** [[TMP6]], i32 2)
+// CHECK3-NEXT:    [[TMP7:%.*]] = load i32, i32* [[F_ON_STACK]], align 4
+// CHECK3-NEXT:    call void @__kmpc_free_shared(i8* [[F]])
+// CHECK3-NEXT:    ret i32 [[TMP7]]
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z16unreachable_callv_l142_worker
@@ -2482,7 +2373,6 @@ void unreachable_call() {
 // CHECK3-NEXT:    [[NVPTX_WARP_SIZE5:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK3-NEXT:    [[THREAD_LIMIT6:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS4]], [[NVPTX_WARP_SIZE5]]
 // CHECK3-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT6]], i16 1)
-// CHECK3-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK3-NEXT:    call void @_Z6asserti(i32 0) #[[ATTR8:[0-9]+]]
 // CHECK3-NEXT:    unreachable
 // CHECK3:       5:
@@ -2565,7 +2455,6 @@ void unreachable_call() {
 // CHECK3-NEXT:    [[NVPTX_WARP_SIZE5:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 // CHECK3-NEXT:    [[THREAD_LIMIT6:%.*]] = sub nuw i32 [[NVPTX_NUM_THREADS4]], [[NVPTX_WARP_SIZE5]]
 // CHECK3-NEXT:    call void @__kmpc_kernel_init(i32 [[THREAD_LIMIT6]], i16 1)
-// CHECK3-NEXT:    call void @__kmpc_data_sharing_init_stack()
 // CHECK3-NEXT:    [[TMP6:%.*]] = load i32, i32* [[A_ADDR]], align 4
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP6]], 1
 // CHECK3-NEXT:    store i32 [[ADD]], i32* [[A_ADDR]], align 4

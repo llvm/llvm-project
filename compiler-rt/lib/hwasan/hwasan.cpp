@@ -276,7 +276,6 @@ static void InitInstrumentation() {
   }
 
   InitThreads();
-  hwasanThreadList().CreateCurrentThread();
 
   hwasan_instrumentation_inited = 1;
 }
@@ -546,7 +545,7 @@ void __hwasan_print_memory_usage() {
   Printf("%s\n", s.data());
 }
 
-static const u8 kFallbackTag = 0xBB;
+static const u8 kFallbackTag = 0xBB & kTagMask;
 
 u8 __hwasan_generate_tag() {
   Thread *t = GetCurrentThread();

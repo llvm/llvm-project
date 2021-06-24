@@ -7,14 +7,14 @@ func @main() {
 
   %cf1 = constant 1.00000e+00 : f32
 
-  linalg.fill(%A, %cf1) : memref<16x16xf32>, f32
-  linalg.fill(%B, %cf1) : memref<16x16xf32>, f32
+  linalg.fill(%cf1, %A) : f32, memref<16x16xf32>
+  linalg.fill(%cf1, %B) : f32, memref<16x16xf32>
 
   %reps = constant 1 : index
 
   %t_start = call @rtclock() : () -> f64
   affine.for %arg0 = 0 to 5 {
-    linalg.fill(%C, %cf1) : memref<16x16xf32>, f32
+    linalg.fill(%cf1, %C) : f32, memref<16x16xf32>
     call @sgemm_naive(%A, %B, %C) : (memref<16x16xf32>, memref<16x16xf32>, memref<16x16xf32>) -> ()
   }
   %t_end = call @rtclock() : () -> f64

@@ -601,6 +601,7 @@ enum CommandArgumentType {
   eArgTypeCommand,
   eArgTypeColumnNum,
   eArgTypeModuleUUID,
+  eArgTypeSaveCoreStyle,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -958,6 +959,25 @@ enum ExpressionEvaluationPhase {
   eExpressionEvaluationComplete
 };
 
+/// Architecture-agnostic categorization of instructions for traversing the
+/// control flow of a trace.
+///
+/// A single instruction can match one or more of these categories.
+FLAGS_ENUM(TraceInstructionControlFlowType){
+    /// Any instruction.
+    eTraceInstructionControlFlowTypeInstruction = (1u << 1),
+    /// A conditional or unconditional branch/jump.
+    eTraceInstructionControlFlowTypeBranch = (1u << 2),
+    /// A conditional or unconditional branch/jump that changed
+    /// the control flow of the program.
+    eTraceInstructionControlFlowTypeTakenBranch = (1u << 3),
+    /// A call to a function.
+    eTraceInstructionControlFlowTypeCall = (1u << 4),
+    /// A return from a function.
+    eTraceInstructionControlFlowTypeReturn = (1u << 5)};
+
+LLDB_MARK_AS_BITMASK_ENUM(TraceInstructionControlFlowType)
+
 /// Watchpoint Kind.
 ///
 /// Indicates what types of events cause the watchpoint to fire. Used by Native
@@ -1111,6 +1131,14 @@ enum CommandInterpreterResult {
   /// Stopped because quit was requested.
   eCommandInterpreterResultQuitRequested,
 };
+
+// Style of core file to create when calling SaveCore.
+enum SaveCoreStyle {
+  eSaveCoreUnspecified = 0,
+  eSaveCoreFull = 1,
+  eSaveCoreDirtyOnly = 2,
+};
+
 } // namespace lldb
 
 #endif // LLDB_LLDB_ENUMERATIONS_H

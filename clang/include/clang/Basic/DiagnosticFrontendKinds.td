@@ -25,10 +25,10 @@ def note_fe_source_mgr : Note<"%0">, CatSourceMgr;
 def err_fe_cannot_link_module : Error<"cannot link module '%0': %1">,
   DefaultFatal;
 
-def warn_fe_frame_larger_than : Warning<"stack frame size of %0 bytes in %q1">,
-    BackendInfo, InGroup<BackendFrameLargerThanEQ>;
+def warn_fe_frame_larger_than : Warning<"stack frame size (%0) exceeds limit (%1) in %q2">,
+    BackendInfo, InGroup<BackendFrameLargerThan>;
 def warn_fe_backend_frame_larger_than: Warning<"%0">,
-    BackendInfo, InGroup<BackendFrameLargerThanEQ>;
+    BackendInfo, InGroup<BackendFrameLargerThan>;
 def err_fe_backend_frame_larger_than: Error<"%0">, BackendInfo;
 def note_fe_backend_frame_larger_than: Note<"%0">, BackendInfo;
 

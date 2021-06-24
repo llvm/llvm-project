@@ -13,7 +13,6 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Target/ThreadPostMortemTrace.h"
-#include "lldb/Utility/TraceOptions.h"
 
 using namespace lldb;
 using namespace lldb_private;

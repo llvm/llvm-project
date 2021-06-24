@@ -75,7 +75,6 @@ bool CommandObjectQuit::DoExecute(Args &command, CommandReturnObject &result) {
   if (command.GetArgumentCount() > 1) {
     result.AppendError("Too many arguments for 'quit'. Only an optional exit "
                        "code is allowed");
-    result.SetStatus(eReturnStatusFailed);
     return false;
   }
 
@@ -88,13 +87,11 @@ bool CommandObjectQuit::DoExecute(Args &command, CommandReturnObject &result) {
       std::string arg_str = arg.str();
       s.Printf("Couldn't parse '%s' as integer for exit code.", arg_str.data());
       result.AppendError(s.GetString());
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
     if (!m_interpreter.SetQuitExitCode(exit_code)) {
       result.AppendError("The current driver doesn't allow custom exit codes"
                          " for the quit command.");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
   }

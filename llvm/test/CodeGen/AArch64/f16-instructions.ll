@@ -517,20 +517,14 @@ define void @test_fccmp(half %in, half* %out) {
 ; CHECK-CVT-NEXT: fcvt s1, h1
 ; CHECK-CVT-NEXT: fcvt s0, h0
 ; CHECK-CVT-NEXT: fcmp s0, s1
-; CHECK-CVT-NEXT: b.mi [[BRCC_ELSE:.?LBB[0-9_]+]]
-; CHECK-CVT-NEXT: str  wzr, [x0]
-; CHECK-CVT-NEXT: ret
-; CHECK-CVT-NEXT: [[BRCC_ELSE]]:
-; CHECK-CVT-NEXT: str  wzr, [x1]
+; CHECK-CVT-NEXT: csel x8, x0, x1, pl
+; CHECK-CVT-NEXT: str wzr, [x8]
 ; CHECK-CVT-NEXT: ret
 
 ; CHECK-FP16-LABEL: test_br_cc:
 ; CHECK-FP16-NEXT: fcmp h0, h1
-; CHECK-FP16-NEXT: b.mi [[BRCC_ELSE:.?LBB[0-9_]+]]
-; CHECK-FP16-NEXT: str  wzr, [x0]
-; CHECK-FP16-NEXT: ret
-; CHECK-FP16-NEXT: [[BRCC_ELSE]]:
-; CHECK-FP16-NEXT: str  wzr, [x1]
+; CHECK-FP16-NEXT: csel x8, x0, x1, pl
+; CHECK-FP16-NEXT: str wzr, [x8]
 ; CHECK-FP16-NEXT: ret
 
 define void @test_br_cc(half %a, half %b, i32* %p1, i32* %p2) #0 {
@@ -772,7 +766,7 @@ define half @test_bitcast_i16tohalf(i16 %a) #0 {
 
 
 declare half @llvm.sqrt.f16(half %a) #0
-declare half @llvm.powi.f16(half %a, i32 %b) #0
+declare half @llvm.powi.f16.i32(half %a, i32 %b) #0
 declare half @llvm.sin.f16(half %a) #0
 declare half @llvm.cos.f16(half %a) #0
 declare half @llvm.pow.f16(half %a, half %b) #0
@@ -835,7 +829,7 @@ define half @test_sqrt(half %a) #0 {
 ; CHECK-COMMON-NEXT: ldp x29, x30, [sp], #16
 ; CHECK-COMMON-NEXT: ret
 define half @test_powi(half %a, i32 %b) #0 {
-  %r = call half @llvm.powi.f16(half %a, i32 %b)
+  %r = call half @llvm.powi.f16.i32(half %a, i32 %b)
   ret half %r
 }
 

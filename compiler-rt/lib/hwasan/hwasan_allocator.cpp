@@ -229,7 +229,19 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
       flags()->tag_in_free && malloc_bisect(stack, 0) &&
       atomic_load_relaxed(&hwasan_allocator_tagging_enabled)) {
     // Always store full 8-bit tags on free to maximize UAF detection.
-    tag_t tag = t ? t->GenerateRandomTag(/*num_bits=*/8) : kFallbackFreeTag;
+    tag_t tag;
+    if (t) {
+      // Make sure we are not using a short granule tag as a poison tag. This
+      // would make us attempt to read the memory on a UaF.
+      // The tag can be zero if tagging is disabled on this thread.
+      do {
+        tag = t->GenerateRandomTag(/*num_bits=*/8);
+      } while (UNLIKELY(tag < kShadowAlignment && tag != 0));
+    } else {
+      static_assert(kFallbackFreeTag >= kShadowAlignment,
+                    "fallback tag must not be a short granule tag.");
+      tag = kFallbackFreeTag;
+    }
     TagMemoryAligned(reinterpret_cast<uptr>(aligned_ptr), TaggedSize(orig_size),
                      tag);
   }

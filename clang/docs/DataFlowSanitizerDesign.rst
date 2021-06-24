@@ -171,8 +171,8 @@ Checking ABI Consistency
 DFSan changes the ABI of each function in the module.  This makes it possible
 for a function with the native ABI to be called with the instrumented ABI,
 or vice versa, thus possibly invoking undefined behavior.  A simple way
-of statically detecting instances of this problem is to prepend the prefix
-"dfs$" to the name of each instrumented-ABI function.
+of statically detecting instances of this problem is to append the suffix
+".dfsan" to the name of each instrumented-ABI function.
 
 This will not catch every such problem; in particular function pointers passed
 across the instrumented-native barrier cannot be used on the other side.

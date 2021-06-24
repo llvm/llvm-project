@@ -39,6 +39,8 @@ FormatTokenLexer::FormatTokenLexer(
 
   for (const std::string &ForEachMacro : Style.ForEachMacros)
     Macros.insert({&IdentTable.get(ForEachMacro), TT_ForEachMacro});
+  for (const std::string &IfMacro : Style.IfMacros)
+    Macros.insert({&IdentTable.get(IfMacro), TT_IfMacro});
   for (const std::string &AttributeMacro : Style.AttributeMacros)
     Macros.insert({&IdentTable.get(AttributeMacro), TT_AttributeMacro});
   for (const std::string &StatementMacro : Style.StatementMacros)
@@ -1014,6 +1016,13 @@ FormatToken *FormatTokenLexer::getNextToken() {
               tok::pp_define) &&
         it != Macros.end()) {
       FormatTok->setType(it->second);
+      if (it->second == TT_IfMacro) {
+        // The lexer token currently has type tok::kw_unknown. However, for this
+        // substitution to be treated correctly in the TokenAnnotator, faking
+        // the tok value seems to be needed. Not sure if there's a more elegant
+        // way.
+        FormatTok->Tok.setKind(tok::kw_if);
+      }
     } else if (FormatTok->is(tok::identifier)) {
       if (MacroBlockBeginRegex.match(Text)) {
         FormatTok->setType(TT_MacroBlockBegin);

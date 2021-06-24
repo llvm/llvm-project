@@ -85,18 +85,6 @@ struct __kmpc_data_sharing_slot {
   char Data[DS_Worker_Warp_Slot_Size];
 };
 
-// Data structure to keep in shared memory that traces the current slot, stack,
-// and frame pointer as well as the active threads that didn't exit the current
-// environment.
-struct DataSharingStateTy {
-  __kmpc_data_sharing_slot *SlotPtr[DS_Max_Warp_Number];
-  void *StackPtr[DS_Max_Warp_Number];
-  void *volatile FramePtr[DS_Max_Warp_Number];
-  __kmpc_impl_lanemask_t ActiveThreads[DS_Max_Warp_Number];
-};
-
-extern DataSharingStateTy EXTERN_SHARED(DataSharingState);
-
 ////////////////////////////////////////////////////////////////////////////////
 // task ICV and (implicit & explicit) task state
 

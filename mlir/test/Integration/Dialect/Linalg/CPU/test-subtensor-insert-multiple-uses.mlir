@@ -10,12 +10,12 @@ func @main() {
   %const = constant dense<10.0> : tensor<2xf32>
   %insert_val = constant dense<20.0> : tensor<1xf32>
 
-  // Both of these subtensor_insert ops insert into the same original tensor
+  // Both of these insert_slice ops insert into the same original tensor
   // value `%const`. This can easily cause bugs if at the memref level
   // we attempt to write in-place into the memref that %const has been
   // converted into.
-  %inserted_at_position_0 = subtensor_insert %insert_val into %const[0][1][1] : tensor<1xf32> into tensor<2xf32>
-  %inserted_at_position_1 = subtensor_insert %insert_val into %const[1][1][1] : tensor<1xf32> into tensor<2xf32>
+  %inserted_at_position_0 = tensor.insert_slice %insert_val into %const[0][1][1] : tensor<1xf32> into tensor<2xf32>
+  %inserted_at_position_1 = tensor.insert_slice %insert_val into %const[1][1][1] : tensor<1xf32> into tensor<2xf32>
 
   %unranked_at_position_0 = tensor.cast %inserted_at_position_0 : tensor<2xf32> to tensor<*xf32>
   call @print_memref_f32(%unranked_at_position_0) : (tensor<*xf32>) -> ()

@@ -102,7 +102,7 @@ for.body.i.i:                                     ; preds = %entry, %for.body.i.
   store i32 0, i32* %__first.addr.08.i.i, align 4
   %cmp.i.i = icmp eq i32* %ptrincdec.i.i, %end
   br i1 %cmp.i.i, label %_ZSt4fillIPiiEvT_S1_RKT0_.exit, label %for.body.i.i
-; CHECK: Loop %for.body.i.i: backedge-taken count is ((-4 + (-1 * %begin) + %end) /u 4)
+; CHECK: Loop %for.body.i.i: backedge-taken count is ((-4 + (-1 * (ptrtoint i32* %begin to i64)) + (ptrtoint i32* %end to i64)) /u 4)
 ; CHECK: Loop %for.body.i.i: max backedge-taken count is 4611686018427387903
 _ZSt4fillIPiiEvT_S1_RKT0_.exit:                   ; preds = %for.body.i.i, %entry
   ret void
@@ -147,7 +147,7 @@ bb7:                                              ; preds = %bb1
 }
 
 ; CHECK-LABEL: PR12376
-; CHECK: -->  {(4 + %arg)<nuw>,+,4}<nuw><%bb2>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: (4 + (4 * ((-1 + (-1 * %arg) + ((4 + %arg)<nuw> umax %arg1)) /u 4))<nuw> + %arg)
+; CHECK: -->  {(4 + %arg)<nuw>,+,4}<nuw><%bb2>{{ U: [^ ]+ S: [^ ]+}}{{ *}}Exits: (4 + (4 * ((-1 + (-1 * (ptrtoint i32* %arg to i64)) + ((4 + (ptrtoint i32* %arg to i64))<nuw> umax (ptrtoint i32* %arg1 to i64))) /u 4))<nuw> + %arg)
 define void @PR12376(i32* nocapture %arg, i32* nocapture %arg1)  {
 bb:
   br label %bb2

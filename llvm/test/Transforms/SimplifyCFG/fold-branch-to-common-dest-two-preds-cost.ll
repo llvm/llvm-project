@@ -26,12 +26,14 @@ define void @two_preds_with_extra_op(i8 %v0, i8 %v1, i8 %v2, i8 %v3) {
 ; THR1-NEXT:    [[V3_ADJ:%.*]] = add i8 [[V1]], [[V2]]
 ; THR1-NEXT:    [[C3:%.*]] = icmp eq i8 [[V3_ADJ]], 0
 ; THR1-NEXT:    br i1 [[C3]], label [[FINAL_LEFT]], label [[FINAL_RIGHT]]
+; THR1:       common.ret:
+; THR1-NEXT:    ret void
 ; THR1:       final_left:
 ; THR1-NEXT:    call void @sideeffect0()
-; THR1-NEXT:    ret void
+; THR1-NEXT:    br label [[COMMON_RET:%.*]]
 ; THR1:       final_right:
 ; THR1-NEXT:    call void @sideeffect1()
-; THR1-NEXT:    ret void
+; THR1-NEXT:    br label [[COMMON_RET]]
 ;
 ; THR2-LABEL: @two_preds_with_extra_op(
 ; THR2-NEXT:  entry:
@@ -49,12 +51,14 @@ define void @two_preds_with_extra_op(i8 %v0, i8 %v1, i8 %v2, i8 %v3) {
 ; THR2-NEXT:    [[C3:%.*]] = icmp eq i8 [[V3_ADJ]], 0
 ; THR2-NEXT:    [[OR_COND:%.*]] = select i1 [[C2]], i1 [[C3]], i1 false
 ; THR2-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT]], label [[FINAL_RIGHT]]
+; THR2:       common.ret:
+; THR2-NEXT:    ret void
 ; THR2:       final_left:
 ; THR2-NEXT:    call void @sideeffect0()
-; THR2-NEXT:    ret void
+; THR2-NEXT:    br label [[COMMON_RET:%.*]]
 ; THR2:       final_right:
 ; THR2-NEXT:    call void @sideeffect1()
-; THR2-NEXT:    ret void
+; THR2-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
   %c0 = icmp eq i8 %v0, 0
@@ -99,12 +103,14 @@ define void @two_preds_with_extra_op_and_branchweights(i8 %v0, i8 %v1, i8 %v2, i
 ; ALL-NEXT:    [[V3_ADJ_OLD:%.*]] = add i8 [[V1]], [[V2]]
 ; ALL-NEXT:    [[C3_OLD:%.*]] = icmp eq i8 [[V3_ADJ_OLD]], 0
 ; ALL-NEXT:    br i1 [[C3_OLD]], label [[FINAL_LEFT]], label [[FINAL_RIGHT]]
+; ALL:       common.ret:
+; ALL-NEXT:    ret void
 ; ALL:       final_left:
 ; ALL-NEXT:    call void @sideeffect0()
-; ALL-NEXT:    ret void
+; ALL-NEXT:    br label [[COMMON_RET:%.*]]
 ; ALL:       final_right:
 ; ALL-NEXT:    call void @sideeffect1()
-; ALL-NEXT:    ret void
+; ALL-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
   %c0 = icmp eq i8 %v0, 0

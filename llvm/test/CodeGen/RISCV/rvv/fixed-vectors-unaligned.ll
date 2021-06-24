@@ -584,7 +584,7 @@ define void @masked_load_v2i32_align1(<2 x i32>* %a, <2 x i32> %m, <2 x i32>* %r
 ; RV32-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
 ; RV32-NEXT:    vslideup.vi v25, v26, 1
 ; RV32-NEXT:  .LBB8_4: # %else2
-; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
 ; RV32-NEXT:    vse32.v v25, (a1)
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
@@ -644,7 +644,7 @@ define void @masked_load_v2i32_align1(<2 x i32>* %a, <2 x i32> %m, <2 x i32>* %r
 ; RV64-NEXT:    vsetvli zero, zero, e32, mf2, tu, mu
 ; RV64-NEXT:    vslideup.vi v25, v26, 1
 ; RV64-NEXT:  .LBB8_4: # %else2
-; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
 ; RV64-NEXT:    vse32.v v25, (a1)
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret

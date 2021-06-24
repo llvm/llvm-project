@@ -363,7 +363,7 @@ Error Trace::Start(const llvm::json::Value &request) {
   return m_live_process->TraceStart(request);
 }
 
-Error Trace::StopProcess() {
+Error Trace::Stop() {
   if (!m_live_process)
     return createStringError(inconvertibleErrorCode(),
                              "Tracing requires a live process.");
@@ -371,7 +371,7 @@ Error Trace::StopProcess() {
       TraceStopRequest(GetPluginName().AsCString()));
 }
 
-Error Trace::StopThreads(const std::vector<lldb::tid_t> &tids) {
+Error Trace::Stop(llvm::ArrayRef<lldb::tid_t> tids) {
   if (!m_live_process)
     return createStringError(inconvertibleErrorCode(),
                              "Tracing requires a live process.");
@@ -405,7 +405,7 @@ Optional<size_t> Trace::GetLiveProcessBinaryDataSize(llvm::StringRef kind) {
   return data_it->second;
 }
 
-Expected<std::vector<uint8_t>>
+Expected<ArrayRef<uint8_t>>
 Trace::GetLiveThreadBinaryData(lldb::tid_t tid, llvm::StringRef kind) {
   if (!m_live_process)
     return createStringError(inconvertibleErrorCode(),
@@ -423,7 +423,7 @@ Trace::GetLiveThreadBinaryData(lldb::tid_t tid, llvm::StringRef kind) {
   return m_live_process->TraceGetBinaryData(request);
 }
 
-Expected<std::vector<uint8_t>>
+Expected<ArrayRef<uint8_t>>
 Trace::GetLiveProcessBinaryData(llvm::StringRef kind) {
   if (!m_live_process)
     return createStringError(inconvertibleErrorCode(),
@@ -472,4 +472,9 @@ void Trace::RefreshLiveProcessState() {
     m_live_process_data[item.kind] = item.size;
 
   DoRefreshLiveProcessState(std::move(live_process_state));
+}
+
+uint32_t Trace::GetStopID() {
+  RefreshLiveProcessState();
+  return m_stop_id;
 }

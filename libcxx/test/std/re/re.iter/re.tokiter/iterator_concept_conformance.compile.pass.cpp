@@ -21,3 +21,5 @@ static_assert(!std::bidirectional_iterator<std::cregex_token_iterator>);
 static_assert(!std::indirectly_writable<std::cregex_token_iterator, char>);
 static_assert(std::sentinel_for<std::cregex_token_iterator, std::cregex_token_iterator>);
 static_assert(!std::sized_sentinel_for<std::cregex_token_iterator, std::cregex_token_iterator>);
+static_assert(!std::indirectly_movable<std::cregex_token_iterator, std::cregex_token_iterator>);
+static_assert(!std::indirectly_movable_storable<std::cregex_token_iterator, std::cregex_token_iterator>);

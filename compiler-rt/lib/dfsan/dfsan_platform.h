@@ -20,7 +20,6 @@ namespace __dfsan {
 
 using __sanitizer::uptr;
 
-#if defined(__x86_64__)
 struct Mapping {
   static const uptr kShadowAddr = 0x100000008000;
   static const uptr kOriginAddr = 0x200000008000;
@@ -28,46 +27,10 @@ struct Mapping {
   static const uptr kAppAddr = 0x700000008000;
   static const uptr kShadowMask = ~0x600000000000;
 };
-#elif defined(__mips64)
-struct Mapping {
-  static const uptr kShadowAddr = 0x1000008000;
-  static const uptr kUnusedAddr = 0x2000000000;
-  static const uptr kAppAddr = 0xF000008000;
-  static const uptr kShadowMask = ~0xE000000000;
-};
-#elif defined(__aarch64__)
-struct Mapping39 {
-  static const uptr kShadowAddr = 0x10000;
-  static const uptr kUnusedAddr = 0x1000000000;
-  static const uptr kAppAddr = 0x7000008000;
-  static const uptr kShadowMask = ~0x7800000000;
-};
-
-struct Mapping42 {
-  static const uptr kShadowAddr = 0x10000;
-  static const uptr kUnusedAddr = 0x8000000000;
-  static const uptr kAppAddr = 0x3ff00008000;
-  static const uptr kShadowMask = ~0x3c000000000;
-};
-
-struct Mapping48 {
-  static const uptr kShadowAddr = 0x10000;
-  static const uptr kUnusedAddr = 0x8000000000;
-  static const uptr kAppAddr = 0xffff00008000;
-  static const uptr kShadowMask = ~0xfffff0000000;
-};
-
-extern int vmaSize;
-# define DFSAN_RUNTIME_VMA 1
-#else
-# error "DFSan not supported for this platform!"
-#endif
 
 enum MappingType {
   MAPPING_SHADOW_ADDR,
-#if defined(__x86_64__)
   MAPPING_ORIGIN_ADDR,
-#endif
   MAPPING_UNUSED_ADDR,
   MAPPING_APP_ADDR,
   MAPPING_SHADOW_MASK
@@ -90,17 +53,7 @@ uptr MappingImpl(void) {
 
 template<int Type>
 uptr MappingArchImpl(void) {
-#ifdef __aarch64__
-  switch (vmaSize) {
-    case 39: return MappingImpl<Mapping39, Type>();
-    case 42: return MappingImpl<Mapping42, Type>();
-    case 48: return MappingImpl<Mapping48, Type>();
-  }
-  DCHECK(0);
-  return 0;
-#else
   return MappingImpl<Mapping, Type>();
-#endif
 }
 
 ALWAYS_INLINE
@@ -110,11 +63,7 @@ uptr ShadowAddr() {
 
 ALWAYS_INLINE
 uptr OriginAddr() {
-#if defined(__x86_64__)
   return MappingArchImpl<MAPPING_ORIGIN_ADDR>();
-#else
-  return 0;
-#endif
 }
 
 ALWAYS_INLINE

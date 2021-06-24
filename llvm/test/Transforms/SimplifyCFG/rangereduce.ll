@@ -10,21 +10,21 @@ define i32 @test1(i32 %a) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 30
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    switch i32 [[TMP4]], label [[DEF:%.*]] [
+; CHECK-NEXT:    switch i32 [[TMP4]], label [[COMMON_RET:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[ONE:%.*]]
 ; CHECK-NEXT:    i32 1, label [[TWO:%.*]]
 ; CHECK-NEXT:    i32 2, label [[THREE:%.*]]
 ; CHECK-NEXT:    i32 3, label [[THREE]]
 ; CHECK-NEXT:    ]
-; CHECK:       def:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 8867, [[TMP0:%.*]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ]
-; CHECK-NEXT:    ret i32 [[MERGE]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       one:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       two:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       three:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
   switch i32 %a, label %def [
   i32 97, label %one
@@ -47,21 +47,21 @@ three:
 ; Optimization shouldn't trigger; bitwidth > 64
 define i128 @test2(i128 %a) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    switch i128 [[A:%.*]], label [[DEF:%.*]] [
+; CHECK-NEXT:    switch i128 [[A:%.*]], label [[COMMON_RET:%.*]] [
 ; CHECK-NEXT:    i128 97, label [[ONE:%.*]]
 ; CHECK-NEXT:    i128 101, label [[TWO:%.*]]
 ; CHECK-NEXT:    i128 105, label [[THREE:%.*]]
 ; CHECK-NEXT:    i128 109, label [[THREE]]
 ; CHECK-NEXT:    ]
-; CHECK:       def:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi i128 [ 8867, [[TMP0:%.*]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ]
-; CHECK-NEXT:    ret i128 [[MERGE]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i128 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
+; CHECK-NEXT:    ret i128 [[COMMON_RET_OP]]
 ; CHECK:       one:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       two:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       three:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
   switch i128 %a, label %def [
   i128 97, label %one
@@ -84,20 +84,20 @@ three:
 ; Optimization shouldn't trigger; no holes present
 define i32 @test3(i32 %a) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    switch i32 [[A:%.*]], label [[DEF:%.*]] [
+; CHECK-NEXT:    switch i32 [[A:%.*]], label [[COMMON_RET:%.*]] [
 ; CHECK-NEXT:    i32 97, label [[ONE:%.*]]
 ; CHECK-NEXT:    i32 98, label [[TWO:%.*]]
 ; CHECK-NEXT:    i32 99, label [[THREE:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       def:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 8867, [[TMP0:%.*]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ]
-; CHECK-NEXT:    ret i32 [[MERGE]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       one:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       two:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       three:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
   switch i32 %a, label %def [
   i32 97, label %one
@@ -119,21 +119,21 @@ three:
 ; Optimization shouldn't trigger; not an arithmetic progression
 define i32 @test4(i32 %a) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    switch i32 [[A:%.*]], label [[DEF:%.*]] [
+; CHECK-NEXT:    switch i32 [[A:%.*]], label [[COMMON_RET:%.*]] [
 ; CHECK-NEXT:    i32 97, label [[ONE:%.*]]
 ; CHECK-NEXT:    i32 102, label [[TWO:%.*]]
 ; CHECK-NEXT:    i32 105, label [[THREE:%.*]]
 ; CHECK-NEXT:    i32 109, label [[THREE]]
 ; CHECK-NEXT:    ]
-; CHECK:       def:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 8867, [[TMP0:%.*]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ]
-; CHECK-NEXT:    ret i32 [[MERGE]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       one:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       two:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       three:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
   switch i32 %a, label %def [
   i32 97, label %one
@@ -156,21 +156,21 @@ three:
 ; Optimization shouldn't trigger; not a power of two
 define i32 @test5(i32 %a) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    switch i32 [[A:%.*]], label [[DEF:%.*]] [
+; CHECK-NEXT:    switch i32 [[A:%.*]], label [[COMMON_RET:%.*]] [
 ; CHECK-NEXT:    i32 97, label [[ONE:%.*]]
 ; CHECK-NEXT:    i32 102, label [[TWO:%.*]]
 ; CHECK-NEXT:    i32 107, label [[THREE:%.*]]
 ; CHECK-NEXT:    i32 112, label [[THREE]]
 ; CHECK-NEXT:    ]
-; CHECK:       def:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 8867, [[TMP0:%.*]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ]
-; CHECK-NEXT:    ret i32 [[MERGE]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       one:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       two:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       three:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
   switch i32 %a, label %def [
   i32 97, label %one
@@ -196,21 +196,21 @@ define i32 @test6(i32 %a) optsize {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 30
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    switch i32 [[TMP4]], label [[DEF:%.*]] [
+; CHECK-NEXT:    switch i32 [[TMP4]], label [[COMMON_RET:%.*]] [
 ; CHECK-NEXT:    i32 3, label [[ONE:%.*]]
 ; CHECK-NEXT:    i32 2, label [[TWO:%.*]]
 ; CHECK-NEXT:    i32 1, label [[THREE:%.*]]
 ; CHECK-NEXT:    i32 0, label [[THREE]]
 ; CHECK-NEXT:    ]
-; CHECK:       def:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 8867, [[TMP0:%.*]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ]
-; CHECK-NEXT:    ret i32 [[MERGE]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       one:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       two:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       three:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
   switch i32 %a, label %def [
   i32 -97, label %one
@@ -237,14 +237,14 @@ define i8 @test7(i8 %a) optsize {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i8 [[TMP1]], 6
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i8 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i8 [[TMP4]], 4
-; CHECK-NEXT:    br i1 [[TMP5]], label [[SWITCH_LOOKUP:%.*]], label [[DEF:%.*]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = zext i8 [[TMP4]] to i32
 ; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul i32 [[SWITCH_CAST]], 8
 ; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i32 -943228976, [[SWITCH_SHIFTAMT]]
 ; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i32 [[SWITCH_DOWNSHIFT]] to i8
 ; CHECK-NEXT:    ret i8 [[SWITCH_MASKED]]
-; CHECK:       def:
+; CHECK:       common.ret:
 ; CHECK-NEXT:    ret i8 -93
 ;
   switch i8 %a, label %def [
@@ -271,21 +271,21 @@ define i32 @test8(i32 %a) optsize {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 30
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    switch i32 [[TMP4]], label [[DEF:%.*]] [
+; CHECK-NEXT:    switch i32 [[TMP4]], label [[COMMON_RET:%.*]] [
 ; CHECK-NEXT:    i32 0, label [[ONE:%.*]]
 ; CHECK-NEXT:    i32 1, label [[TWO:%.*]]
 ; CHECK-NEXT:    i32 2, label [[THREE:%.*]]
 ; CHECK-NEXT:    i32 4, label [[THREE]]
 ; CHECK-NEXT:    ]
-; CHECK:       def:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 8867, [[TMP0:%.*]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ]
-; CHECK-NEXT:    ret i32 [[MERGE]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       one:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       two:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       three:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
   switch i32 %a, label %def [
   i32 97, label %one
@@ -311,21 +311,21 @@ define i32 @test9(i32 %a) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i32 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 31
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    switch i32 [[TMP4]], label [[DEF:%.*]] [
+; CHECK-NEXT:    switch i32 [[TMP4]], label [[COMMON_RET:%.*]] [
 ; CHECK-NEXT:    i32 6, label [[ONE:%.*]]
 ; CHECK-NEXT:    i32 7, label [[TWO:%.*]]
 ; CHECK-NEXT:    i32 0, label [[THREE:%.*]]
 ; CHECK-NEXT:    i32 2, label [[THREE]]
 ; CHECK-NEXT:    ]
-; CHECK:       def:
-; CHECK-NEXT:    [[MERGE:%.*]] = phi i32 [ 8867, [[TMP0:%.*]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ]
-; CHECK-NEXT:    ret i32 [[MERGE]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       one:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       two:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       three:
-; CHECK-NEXT:    br label [[DEF]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
   switch i32 %a, label %def [
   i32 18, label %one

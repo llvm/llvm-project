@@ -90,13 +90,13 @@ let Constraints = "$src = $dst" in {
 // $reg, $ccr <- $reg op $reg
 class MxBiArOp_RFRR_xEA<string MN, SDNode NODE, MxType TYPE, bits<4> CMD, MxBead REG>
     : MxInst<(outs TYPE.ROp:$dst), (ins TYPE.ROp:$src, TYPE.ROp:$opd),
-           MN#"."#TYPE.Prefix#"\t$opd, $dst",
-           [(set TYPE.VT:$dst, CCR, (NODE TYPE.VT:$src, TYPE.VT:$opd))],
-           MxArithEncoding<MxBead4Bits<CMD>,
-                           !cast<MxEncOpMode>("MxOpMode"#TYPE.Size#TYPE.RLet#"EA"),
-                           REG,
-                           !cast<MxEncEA>("MxEncEA"#TYPE.RLet#"_2"),
-                           MxExtEmpty>>;
+             MN#"."#TYPE.Prefix#"\t$opd, $dst",
+             [(set TYPE.VT:$dst, CCR, (NODE TYPE.VT:$src, TYPE.VT:$opd))],
+             MxArithEncoding<MxBead4Bits<CMD>,
+                             !cast<MxEncOpMode>("MxOpMode"#TYPE.Size#TYPE.RLet#"EA"),
+                             REG,
+                             !cast<MxEncEA>("MxEncEA"#TYPE.RLet#"_2"),
+                             MxExtEmpty>>;
 
 /// This Op is similar to the one above except it uses reversed opmode, some
 /// commands(e.g. eor) do not support dEA or rEA modes and require EAd for
@@ -106,42 +106,42 @@ class MxBiArOp_RFRR_xEA<string MN, SDNode NODE, MxType TYPE, bits<4> CMD, MxBead
 /// mess.
 class MxBiArOp_RFRR_EAd<string MN, SDNode NODE, MxType TYPE, bits<4> CMD>
     : MxInst<(outs TYPE.ROp:$dst), (ins TYPE.ROp:$src, TYPE.ROp:$opd),
-           MN#"."#TYPE.Prefix#"\t$opd, $dst",
-           [(set TYPE.VT:$dst, CCR, (NODE TYPE.VT:$src, TYPE.VT:$opd))],
-           MxArithEncoding<MxBead4Bits<CMD>,
-                           !cast<MxEncOpMode>("MxOpMode"#TYPE.Size#"EAd"),
-                           MxBeadDReg<2>, MxEncEAd_0, MxExtEmpty>>;
+             MN#"."#TYPE.Prefix#"\t$opd, $dst",
+             [(set TYPE.VT:$dst, CCR, (NODE TYPE.VT:$src, TYPE.VT:$opd))],
+             MxArithEncoding<MxBead4Bits<CMD>,
+                             !cast<MxEncOpMode>("MxOpMode"#TYPE.Size#"EAd"),
+                             MxBeadDReg<2>, MxEncEAd_0, MxExtEmpty>>;
 
 // $reg <- $reg op $imm
 class MxBiArOp_RFRI_xEA<string MN, SDNode NODE, MxType TYPE, bits<4> CMD>
     : MxInst<(outs TYPE.ROp:$dst), (ins TYPE.ROp:$src, TYPE.IOp:$opd),
-              MN#"."#TYPE.Prefix#"\t$opd, $dst",
-              [(set TYPE.VT:$dst, CCR, (NODE TYPE.VT:$src, TYPE.IPat:$opd))],
-              MxArithEncoding<MxBead4Bits<CMD>,
-                              !cast<MxEncOpMode>("MxOpMode"#TYPE.Size#TYPE.RLet#"EA"),
-                              MxBeadDReg<0>, MxEncEAi,
-                              !cast<MxEncExt>("MxExtI"#TYPE.Size#"_2")>>;
+             MN#"."#TYPE.Prefix#"\t$opd, $dst",
+             [(set TYPE.VT:$dst, CCR, (NODE TYPE.VT:$src, TYPE.IPat:$opd))],
+             MxArithEncoding<MxBead4Bits<CMD>,
+                             !cast<MxEncOpMode>("MxOpMode"#TYPE.Size#TYPE.RLet#"EA"),
+                             MxBeadDReg<0>, MxEncEAi,
+                             !cast<MxEncExt>("MxExtI"#TYPE.Size#"_2")>>;
 
 // Again, there are two ways to write an immediate to Dn register either dEA
 // opmode or using *I encoding, and again some instrucitons also support address
 // registers some do not.
 class MxBiArOp_RFRI<string MN, SDNode NODE, MxType TYPE, bits<4> CMD>
     : MxInst<(outs TYPE.ROp:$dst), (ins TYPE.ROp:$src, TYPE.IOp:$opd),
-              MN#"i."#TYPE.Prefix#"\t$opd, $dst",
-              [(set TYPE.VT:$dst, CCR, (NODE TYPE.VT:$src, TYPE.IPat:$opd))],
-              MxArithImmEncoding<MxBead4Bits<CMD>, !cast<MxEncSize>("MxEncSize"#TYPE.Size),
-                   !cast<MxEncEA>("MxEncEA"#TYPE.RLet#"_0"), MxExtEmpty,
-                   !cast<MxEncExt>("MxExtI"#TYPE.Size#"_2")>>;
+             MN#"i."#TYPE.Prefix#"\t$opd, $dst",
+             [(set TYPE.VT:$dst, CCR, (NODE TYPE.VT:$src, TYPE.IPat:$opd))],
+             MxArithImmEncoding<MxBead4Bits<CMD>, !cast<MxEncSize>("MxEncSize"#TYPE.Size),
+                                !cast<MxEncEA>("MxEncEA"#TYPE.RLet#"_0"), MxExtEmpty,
+                                !cast<MxEncExt>("MxExtI"#TYPE.Size#"_2")>>;
 
 let mayLoad = 1 in
 class MxBiArOp_RFRM<string MN, SDNode NODE, MxType TYPE, MxOperand OPD, ComplexPattern PAT,
                     bits<4> CMD, MxEncEA EA, MxEncExt EXT>
     : MxInst<(outs TYPE.ROp:$dst), (ins TYPE.ROp:$src, OPD:$opd),
-           MN#"."#TYPE.Prefix#"\t$opd, $dst",
-           [(set TYPE.VT:$dst, CCR, (NODE TYPE.VT:$src, (TYPE.Load PAT:$opd)))],
-           MxArithEncoding<MxBead4Bits<CMD>,
-                           !cast<MxEncOpMode>("MxOpMode"#TYPE.Size#TYPE.RLet#"EA"),
-                           MxBeadDReg<0>, EA, EXT>>;
+             MN#"."#TYPE.Prefix#"\t$opd, $dst",
+             [(set TYPE.VT:$dst, CCR, (NODE TYPE.VT:$src, (TYPE.Load PAT:$opd)))],
+             MxArithEncoding<MxBead4Bits<CMD>,
+                             !cast<MxEncOpMode>("MxOpMode"#TYPE.Size#TYPE.RLet#"EA"),
+                             MxBeadDReg<0>, EA, EXT>>;
 
 } // Constraints
 
@@ -153,22 +153,22 @@ class MxBiArOp_FMR<string MN, SDNode NODE, MxType TYPE,
                    MxOperand MEMOpd, ComplexPattern MEMPat,
                    bits<4> CMD, MxEncEA EA, MxEncExt EXT>
     : MxInst<(outs), (ins MEMOpd:$dst, TYPE.ROp:$opd),
-        MN#"."#TYPE.Prefix#"\t$opd, $dst",
-        [],
-        MxArithEncoding<MxBead4Bits<CMD>,
-                        !cast<MxEncOpMode>("MxOpMode"#TYPE.Size#"EA"#TYPE.RLet),
-                        MxBeadDReg<1>, EA, EXT>>;
+             MN#"."#TYPE.Prefix#"\t$opd, $dst",
+             [],
+             MxArithEncoding<MxBead4Bits<CMD>,
+                             !cast<MxEncOpMode>("MxOpMode"#TYPE.Size#"EA"#TYPE.RLet),
+                             MxBeadDReg<1>, EA, EXT>>;
 
 class MxBiArOp_FMI<string MN, SDNode NODE, MxType TYPE,
                    MxOperand MEMOpd, ComplexPattern MEMPat,
                    bits<4> CMD, MxEncEA MEMEA, MxEncExt MEMExt>
     : MxInst<(outs), (ins MEMOpd:$dst, TYPE.IOp:$opd),
-        MN#"."#TYPE.Prefix#"\t$opd, $dst",
-        [],
-        MxArithImmEncoding<MxBead4Bits<CMD>,
-                            !cast<MxEncSize>("MxEncSize"#TYPE.Size),
-                            MEMEA, MEMExt,
-                            !cast<MxEncExt>("MxExtI"#TYPE.Size#"_1")>>;
+             MN#"."#TYPE.Prefix#"\t$opd, $dst",
+             [],
+             MxArithImmEncoding<MxBead4Bits<CMD>,
+                                !cast<MxEncSize>("MxEncSize"#TYPE.Size),
+                                MEMEA, MEMExt,
+                                !cast<MxEncExt>("MxExtI"#TYPE.Size#"_1")>>;
 } // mayLoad, mayStore
 } // Defs = [CCR]
 
@@ -481,8 +481,8 @@ let Defs = [CCR] in
 let Constraints = "$src = $dst" in
 class MxExt<MxType TO, MxType FROM>
     : MxInst<(outs TO.ROp:$dst), (ins TO.ROp:$src),
-              "ext."#TO.Prefix#"\t$src", [],
-              MxExtEncoding<!cast<MxBead3Bits>("MxExtOpmode_"#TO.Prefix#FROM.Prefix)>>;
+             "ext."#TO.Prefix#"\t$src", [],
+             MxExtEncoding<!cast<MxBead3Bits>("MxExtOpmode_"#TO.Prefix#FROM.Prefix)>>;
 
 def EXT16 : MxExt<MxType16d, MxType8d>;
 def EXT32 : MxExt<MxType32d, MxType16d>;
@@ -781,13 +781,13 @@ foreach N = ["add", "addc"] in {
 
   // add imm, (An)
   def : Pat<(store (!cast<SDNode>(N) (load MxType8.JPat:$dst), MxType8.IPat:$opd),
-                    MxType8.JPat:$dst),
+                   MxType8.JPat:$dst),
             (ADD8ji MxType8.JOp:$dst, imm:$opd)>;
   def : Pat<(store (!cast<SDNode>(N) (load MxType16.JPat:$dst), MxType16.IPat:$opd),
-                    MxType16.JPat:$dst),
+                   MxType16.JPat:$dst),
             (ADD16ji MxType16.JOp:$dst, imm:$opd)>;
   def : Pat<(store (!cast<SDNode>(N) (load MxType32.JPat:$dst), MxType32.IPat:$opd),
-                    MxType32.JPat:$dst),
+                   MxType32.JPat:$dst),
             (ADD32ji MxType32.JOp:$dst, imm:$opd)>;
 
 } // foreach add, addc
@@ -858,35 +858,23 @@ def : Pat<(sube i8 :$src, i8 :$opd), (SUBX8dd  MxDRD8 :$src, MxDRD8 :$opd)>;
 def : Pat<(sube i16:$src, i16:$opd), (SUBX16dd MxDRD16:$src, MxDRD16:$opd)>;
 def : Pat<(sube i32:$src, i32:$opd), (SUBX32dd MxDRD32:$src, MxDRD32:$opd)>;
 
+multiclass BitwisePat<string INST, SDNode OP> {
+  // op reg, reg
+  def : Pat<(OP i8 :$src, i8 :$opd),
+            (!cast<MxInst>(INST#"8dd")  MxDRD8 :$src, MxDRD8 :$opd)>;
+  def : Pat<(OP i16:$src, i16:$opd),
+            (!cast<MxInst>(INST#"16dd") MxDRD16:$src, MxDRD16:$opd)>;
+  def : Pat<(OP i32:$src, i32:$opd),
+            (!cast<MxInst>(INST#"32dd") MxDRD32:$src, MxDRD32:$opd)>;
+  // op reg, imm
+  def : Pat<(OP i8: $src, MximmSExt8 :$opd),
+            (!cast<MxInst>(INST#"8di")  MxDRD8 :$src, imm:$opd)>;
+  def : Pat<(OP i16:$src, MximmSExt16:$opd),
+            (!cast<MxInst>(INST#"16di") MxDRD16:$src, imm:$opd)>;
+  def : Pat<(OP i32:$src, MximmSExt32:$opd),
+            (!cast<MxInst>(INST#"32di") MxDRD32:$src, imm:$opd)>;
+}
 
-// and reg, reg
-def : Pat<(and i8 :$src, i8 :$opd), (AND8dd  MxDRD8 :$src, MxDRD8 :$opd)>;
-def : Pat<(and i16:$src, i16:$opd), (AND16dd MxDRD16:$src, MxDRD16:$opd)>;
-def : Pat<(and i32:$src, i32:$opd), (AND32dd MxDRD32:$src, MxDRD32:$opd)>;
-
-// and reg, imm
-def : Pat<(and i8: $src, MximmSExt8 :$opd), (AND8di  MxDRD8 :$src, imm:$opd)>;
-def : Pat<(and i16:$src, MximmSExt16:$opd), (AND16di MxDRD16:$src, imm:$opd)>;
-def : Pat<(and i32:$src, MximmSExt32:$opd), (AND32di MxDRD32:$src, imm:$opd)>;
-
-
-// xor reg,reg
-def : Pat<(xor i8 :$src, i8 :$opd), (XOR8dd  MxDRD8 :$src, MxDRD8 :$opd)>;
-def : Pat<(xor i16:$src, i16:$opd), (XOR16dd MxDRD16:$src, MxDRD16:$opd)>;
-def : Pat<(xor i32:$src, i32:$opd), (XOR32dd MxDRD32:$src, MxDRD32:$opd)>;
-
-// xor reg, imm
-def : Pat<(xor i8: $src, MximmSExt8 :$opd), (XOR8di  MxDRD8 :$src, imm:$opd)>;
-def : Pat<(xor i16:$src, MximmSExt16:$opd), (XOR16di MxDRD16:$src, imm:$opd)>;
-def : Pat<(xor i32:$src, MximmSExt32:$opd), (XOR32di MxDRD32:$src, imm:$opd)>;
-
-
-// or reg, reg
-def : Pat<(or i8 :$src, i8 :$opd), (OR8dd  MxDRD8 :$src, MxDRD8 :$opd)>;
-def : Pat<(or i16:$src, i16:$opd), (OR16dd MxDRD16:$src, MxDRD16:$opd)>;
-def : Pat<(or i32:$src, i32:$opd), (OR32dd MxDRD32:$src, MxDRD32:$opd)>;
-
-// or reg, imm
-def : Pat<(or i8: $src, MximmSExt8 :$opd), (OR8di  MxDRD8 :$src, imm:$opd)>;
-def : Pat<(or i16:$src, MximmSExt16:$opd), (OR16di MxDRD16:$src, imm:$opd)>;
-def : Pat<(or i32:$src, MximmSExt32:$opd), (OR32di MxDRD32:$src, imm:$opd)>;
+defm : BitwisePat<"AND", and>;
+defm : BitwisePat<"OR",  or>;
+defm : BitwisePat<"XOR", xor>;

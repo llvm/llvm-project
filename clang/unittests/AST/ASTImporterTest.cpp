@@ -4382,6 +4382,245 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportTemplateParameterLists) {
   EXPECT_EQ(ToD->getNumTemplateParameterLists(), 1u);
 }
 
+const internal::VariadicDynCastAllOfMatcher<Decl, VarTemplateDecl>
+    varTemplateDecl;
+
+const internal::VariadicDynCastAllOfMatcher<
+    Decl, VarTemplatePartialSpecializationDecl>
+    varTemplatePartialSpecializationDecl;
+
+TEST_P(ASTImporterOptionSpecificTestBase,
+       FunctionTemplateParameterDeclContext) {
+  constexpr auto Code =
+      R"(
+      template<class T>
+      void f() {};
+      )";
+
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11);
+
+  auto *FromD = FirstDeclMatcher<FunctionTemplateDecl>().match(
+      FromTU, functionTemplateDecl(hasName("f")));
+
+  ASSERT_EQ(FromD->getTemplateParameters()->getParam(0)->getDeclContext(),
+            FromD->getTemplatedDecl());
+
+  auto *ToD = Import(FromD, Lang_CXX11);
+  EXPECT_EQ(ToD->getTemplateParameters()->getParam(0)->getDeclContext(),
+            ToD->getTemplatedDecl());
+  EXPECT_TRUE(SharedStatePtr->getLookupTable()->contains(
+      ToD->getTemplatedDecl(), ToD->getTemplateParameters()->getParam(0)));
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ClassTemplateParameterDeclContext) {
+  constexpr auto Code =
+      R"(
+      template<class T1, class T2>
+      struct S {};
+      template<class T2>
+      struct S<int, T2> {};
+      )";
+
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11);
+
+  auto *FromD = FirstDeclMatcher<ClassTemplateDecl>().match(
+      FromTU, classTemplateDecl(hasName("S")));
+  auto *FromDPart =
+      FirstDeclMatcher<ClassTemplatePartialSpecializationDecl>().match(
+          FromTU, classTemplatePartialSpecializationDecl(hasName("S")));
+
+  ASSERT_EQ(FromD->getTemplateParameters()->getParam(0)->getDeclContext(),
+            FromD->getTemplatedDecl());
+  ASSERT_EQ(FromDPart->getTemplateParameters()->getParam(0)->getDeclContext(),
+            FromDPart);
+
+  auto *ToD = Import(FromD, Lang_CXX11);
+  auto *ToDPart = Import(FromDPart, Lang_CXX11);
+
+  EXPECT_EQ(ToD->getTemplateParameters()->getParam(0)->getDeclContext(),
+            ToD->getTemplatedDecl());
+  EXPECT_TRUE(SharedStatePtr->getLookupTable()->contains(
+      ToD->getTemplatedDecl(), ToD->getTemplateParameters()->getParam(0)));
+
+  EXPECT_EQ(ToDPart->getTemplateParameters()->getParam(0)->getDeclContext(),
+            ToDPart);
+  EXPECT_TRUE(SharedStatePtr->getLookupTable()->contains(
+      ToDPart, ToDPart->getTemplateParameters()->getParam(0)));
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase,
+       CXXDeductionGuideTemplateParameterDeclContext) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      template <typename T> struct A {
+        A(T);
+      };
+      A a{(int)0};
+      )",
+      Lang_CXX17, "input.cc");
+// clang-format off
+/*
+|-ClassTemplateDecl 0x1fe5000 <input.cc:2:7, line:4:7> line:2:36 A
+| |-TemplateTypeParmDecl 0x1fe4eb0 <col:17, col:26> col:26 referenced typename depth 0 index 0 T
+| |-CXXRecordDecl 0x1fe4f70 <col:29, line:4:7> line:2:36 struct A definition
+
+|-FunctionTemplateDecl 0x1fe5860 <line:2:7, line:3:12> col:9 implicit <deduction guide for A>
+| |-TemplateTypeParmDecl 0x1fe4eb0 <line:2:17, col:26> col:26 referenced typename depth 0 index 0 T
+| |-CXXDeductionGuideDecl 0x1fe57a8 <line:3:9, col:12> col:9 implicit <deduction guide for A> 'auto (T) -> A<T>'
+| | `-ParmVarDecl 0x1fe56b0 <col:11> col:12 'T'
+| `-CXXDeductionGuideDecl 0x20515d8 <col:9, col:12> col:9 implicit used <deduction guide for A> 'auto (int) -> A<int>'
+|   |-TemplateArgument type 'int'
+|   | `-BuiltinType 0x20587e0 'int'
+|   `-ParmVarDecl 0x2051388 <col:11> col:12 'int':'int'
+`-FunctionTemplateDecl 0x1fe5a78 <line:2:7, col:36> col:36 implicit <deduction guide for A>
+  |-TemplateTypeParmDecl 0x1fe4eb0 <col:17, col:26> col:26 referenced typename depth 0 index 0 T
+  `-CXXDeductionGuideDecl 0x1fe59c0 <col:36> col:36 implicit <deduction guide for A> 'auto (A<T>) -> A<T>'
+    `-ParmVarDecl 0x1fe5958 <col:36> col:36 'A<T>'
+*/
+// clang-format on
+  auto *FromD1 = FirstDeclMatcher<CXXDeductionGuideDecl>().match(
+      FromTU, cxxDeductionGuideDecl());
+  auto *FromD2 = LastDeclMatcher<CXXDeductionGuideDecl>().match(
+      FromTU, cxxDeductionGuideDecl());
+
+  NamedDecl *P1 =
+      FromD1->getDescribedFunctionTemplate()->getTemplateParameters()->getParam(
+          0);
+  NamedDecl *P2 =
+      FromD2->getDescribedFunctionTemplate()->getTemplateParameters()->getParam(
+          0);
+  DeclContext *DC = P1->getDeclContext();
+
+  ASSERT_EQ(P1, P2);
+  ASSERT_TRUE(DC == FromD1 || DC == FromD2);
+
+  auto *ToD1 = Import(FromD1, Lang_CXX17);
+  auto *ToD2 = Import(FromD2, Lang_CXX17);
+  ASSERT_TRUE(ToD1 && ToD2);
+
+  P1 = ToD1->getDescribedFunctionTemplate()->getTemplateParameters()->getParam(
+      0);
+  P2 = ToD2->getDescribedFunctionTemplate()->getTemplateParameters()->getParam(
+      0);
+  DC = P1->getDeclContext();
+
+  EXPECT_EQ(P1, P2);
+  EXPECT_TRUE(DC == ToD1 || DC == ToD2);
+
+  ASTImporterLookupTable *Tbl = SharedStatePtr->getLookupTable();
+  if (Tbl->contains(ToD1, P1)) {
+    EXPECT_FALSE(Tbl->contains(ToD2, P1));
+  } else {
+    EXPECT_TRUE(Tbl->contains(ToD2, P1));
+  }
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, VarTemplateParameterDeclContext) {
+  constexpr auto Code =
+      R"(
+      template<class T1, class T2>
+      int X1;
+      template<class T2>
+      int X1<int, T2>;
+
+      namespace Ns {
+        template<class T1, class T2>
+        int X2;
+        template<class T2>
+        int X2<int, T2>;
+      }
+      )";
+
+  Decl *FromTU = getTuDecl(Code, Lang_CXX14);
+
+  auto *FromD1 = FirstDeclMatcher<VarTemplateDecl>().match(
+      FromTU, varTemplateDecl(hasName("X1")));
+  auto *FromD1Part =
+      FirstDeclMatcher<VarTemplatePartialSpecializationDecl>().match(
+          FromTU, varTemplatePartialSpecializationDecl(hasName("X1")));
+  auto *FromD2 = FirstDeclMatcher<VarTemplateDecl>().match(
+      FromTU, varTemplateDecl(hasName("X2")));
+  auto *FromD2Part =
+      FirstDeclMatcher<VarTemplatePartialSpecializationDecl>().match(
+          FromTU, varTemplatePartialSpecializationDecl(hasName("X2")));
+
+  ASSERT_EQ(FromD1->getTemplateParameters()->getParam(0)->getDeclContext(),
+            FromD1->getDeclContext());
+  ASSERT_EQ(FromD2->getTemplateParameters()->getParam(0)->getDeclContext(),
+            FromD2->getDeclContext());
+
+  ASSERT_EQ(FromD1Part->getTemplateParameters()->getParam(0)->getDeclContext(),
+            FromD1Part->getDeclContext());
+  // FIXME: VarTemplatePartialSpecializationDecl does not update ("adopt")
+  // template parameter decl context
+  // ASSERT_EQ(FromD2Part->getTemplateParameters()->getParam(0)->getDeclContext(),
+  // FromD2Part->getDeclContext());
+
+  auto *ToD1 = Import(FromD1, Lang_CXX14);
+  auto *ToD2 = Import(FromD2, Lang_CXX14);
+
+  auto *ToD1Part = Import(FromD1Part, Lang_CXX14);
+  auto *ToD2Part = Import(FromD2Part, Lang_CXX14);
+
+  EXPECT_EQ(ToD1->getTemplateParameters()->getParam(0)->getDeclContext(),
+            ToD1->getDeclContext());
+  EXPECT_TRUE(SharedStatePtr->getLookupTable()->contains(
+      ToD1->getDeclContext(), ToD1->getTemplateParameters()->getParam(0)));
+  EXPECT_EQ(ToD2->getTemplateParameters()->getParam(0)->getDeclContext(),
+            ToD2->getDeclContext());
+  EXPECT_TRUE(SharedStatePtr->getLookupTable()->contains(
+      ToD2->getDeclContext(), ToD2->getTemplateParameters()->getParam(0)));
+
+  EXPECT_EQ(ToD1Part->getTemplateParameters()->getParam(0)->getDeclContext(),
+            ToD1Part->getDeclContext());
+  EXPECT_TRUE(SharedStatePtr->getLookupTable()->contains(
+      ToD1Part->getDeclContext(),
+      ToD1Part->getTemplateParameters()->getParam(0)));
+  // EXPECT_EQ(ToD2Part->getTemplateParameters()->getParam(0)->getDeclContext(),
+  // ToD2Part->getDeclContext());
+  // EXPECT_TRUE(SharedStatePtr->getLookupTable()->contains(
+  //     ToD2Part->getDeclContext(),
+  //     ToD2Part->getTemplateParameters()->getParam(0)));
+  (void)ToD2Part;
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase,
+       TypeAliasTemplateParameterDeclContext) {
+  constexpr auto Code =
+      R"(
+      template<class T1, class T2>
+      struct S {};
+      template<class T> using S1 = S<T, int>;
+      namespace Ns {
+        template<class T> using S2 = S<T, int>;
+      }
+      )";
+
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11);
+
+  auto *FromD1 = FirstDeclMatcher<TypeAliasTemplateDecl>().match(
+      FromTU, typeAliasTemplateDecl(hasName("S1")));
+  auto *FromD2 = FirstDeclMatcher<TypeAliasTemplateDecl>().match(
+      FromTU, typeAliasTemplateDecl(hasName("S2")));
+
+  ASSERT_EQ(FromD1->getTemplateParameters()->getParam(0)->getDeclContext(),
+            FromD1->getDeclContext());
+  ASSERT_EQ(FromD2->getTemplateParameters()->getParam(0)->getDeclContext(),
+            FromD2->getDeclContext());
+
+  auto *ToD1 = Import(FromD1, Lang_CXX11);
+  auto *ToD2 = Import(FromD2, Lang_CXX11);
+
+  EXPECT_EQ(ToD1->getTemplateParameters()->getParam(0)->getDeclContext(),
+            ToD1->getDeclContext());
+  EXPECT_TRUE(SharedStatePtr->getLookupTable()->contains(
+      ToD1->getDeclContext(), ToD1->getTemplateParameters()->getParam(0)));
+  EXPECT_EQ(ToD2->getTemplateParameters()->getParam(0)->getDeclContext(),
+            ToD2->getDeclContext());
+  EXPECT_TRUE(SharedStatePtr->getLookupTable()->contains(
+      ToD2->getDeclContext(), ToD2->getTemplateParameters()->getParam(0)));
+}
+
 struct ASTImporterLookupTableTest : ASTImporterOptionSpecificTestBase {};
 
 TEST_P(ASTImporterLookupTableTest, OneDecl) {

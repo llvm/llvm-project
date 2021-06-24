@@ -9,6 +9,7 @@
 #include "TraceIntelPT.h"
 
 #include "CommandObjectTraceStartIntelPT.h"
+#include "TraceIntelPTConstants.h"
 #include "TraceIntelPTSessionFileParser.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/Process.h"
@@ -98,11 +99,9 @@ const DecodedThread *TraceIntelPT::Decode(Thread &thread) {
   return &it->second->Decode();
 }
 
-size_t TraceIntelPT::GetCursorPosition(Thread &thread) {
-  const DecodedThread *decoded_thread = Decode(thread);
-  if (!decoded_thread)
-    return 0;
-  return decoded_thread->GetCursorPosition();
+lldb::TraceCursorUP TraceIntelPT::GetCursor(Thread &thread) {
+  // TODO: to implement
+  return nullptr;
 }
 
 void TraceIntelPT::TraverseInstructions(
@@ -209,7 +208,30 @@ void TraceIntelPT::DoRefreshLiveProcessState(
 }
 
 bool TraceIntelPT::IsTraced(const Thread &thread) {
+  RefreshLiveProcessState();
   return m_thread_decoders.count(&thread);
+}
+
+const char *TraceIntelPT::GetStartConfigurationHelp() {
+  return R"(Parameters:
+
+  Note: If a parameter is not specified, a default value will be used.
+
+  - int threadBufferSize (defaults to 4096 bytes):
+    [process and thread tracing]
+    Trace size in bytes per thread. It must be a power of 2 greater
+    than or equal to 4096 (2^12). The trace is circular keeping the
+    the most recent data.
+
+  - int processBufferSizeLimit (defaults to 500 MB):
+    [process tracing only]
+    Maximum total trace size per process in bytes. This limit applies
+    to the sum of the sizes of all thread traces of this process,
+    excluding the ones created explicitly with "thread tracing".
+    Whenever a thread is attempted to be traced due to this command
+    and the limit would be reached, the process is stopped with a
+    "processor trace" reason, so that the user can retrace the process
+    if needed.)";
 }
 
 Error TraceIntelPT::Start(size_t thread_buffer_size,
@@ -221,7 +243,25 @@ Error TraceIntelPT::Start(size_t thread_buffer_size,
   return Trace::Start(toJSON(request));
 }
 
-llvm::Error TraceIntelPT::Start(const std::vector<lldb::tid_t> &tids,
+Error TraceIntelPT::Start(StructuredData::ObjectSP configuration) {
+  size_t thread_buffer_size = kThreadBufferSize;
+  size_t process_buffer_size_limit = kProcessBufferSizeLimit;
+
+  if (configuration) {
+    if (StructuredData::Dictionary *dict = configuration->GetAsDictionary()) {
+      dict->GetValueForKeyAsInteger("threadBufferSize", thread_buffer_size);
+      dict->GetValueForKeyAsInteger("processBufferSizeLimit",
+                                    process_buffer_size_limit);
+    } else {
+      return createStringError(inconvertibleErrorCode(),
+                               "configuration object is not a dictionary");
+    }
+  }
+
+  return Start(thread_buffer_size, process_buffer_size_limit);
+}
+
+llvm::Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
                                 size_t thread_buffer_size) {
   TraceIntelPTStartRequest request;
   request.threadBufferSize = thread_buffer_size;
@@ -230,6 +270,22 @@ llvm::Error TraceIntelPT::Start(const std::vector<lldb::tid_t> &tids,
   for (lldb::tid_t tid : tids)
     request.tids->push_back(tid);
   return Trace::Start(toJSON(request));
+}
+
+Error TraceIntelPT::Start(llvm::ArrayRef<lldb::tid_t> tids,
+                          StructuredData::ObjectSP configuration) {
+  size_t thread_buffer_size = kThreadBufferSize;
+
+  if (configuration) {
+    if (StructuredData::Dictionary *dict = configuration->GetAsDictionary()) {
+      dict->GetValueForKeyAsInteger("threadBufferSize", thread_buffer_size);
+    } else {
+      return createStringError(inconvertibleErrorCode(),
+                               "configuration object is not a dictionary");
+    }
+  }
+
+  return Start(tids, thread_buffer_size);
 }
 
 Expected<std::vector<uint8_t>>

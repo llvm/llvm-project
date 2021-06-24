@@ -16,7 +16,7 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnueabi"
 
 ; CHECK: function 'f':
-; CHECK: (Low: (20000 + %a) High: (60004 + %a))
+; CHECK: (Low: (20000 + %a)<nuw> High: (60004 + %a))
 
 @B = common global i32* null, align 8
 @A = common global i32* null, align 8

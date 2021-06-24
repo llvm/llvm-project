@@ -216,6 +216,17 @@ LLVMErrorRef LLVMOrcLLJITLookup(LLVMOrcLLJITRef J,
  */
 LLVMOrcObjectLayerRef LLVMOrcLLJITGetObjLinkingLayer(LLVMOrcLLJITRef J);
 
+/**
+ * Returns a non-owning reference to the LLJIT instance's object linking layer.
+ */
+LLVMOrcObjectTransformLayerRef
+LLVMOrcLLJITGetObjTransformLayer(LLVMOrcLLJITRef J);
+
+/**
+ * Returns a non-owning reference to the LLJIT instance's IR transform layer.
+ */
+LLVMOrcIRTransformLayerRef LLVMOrcLLJITGetIRTransformLayer(LLVMOrcLLJITRef J);
+
 LLVM_C_EXTERN_C_END
 
 #endif /* LLVM_C_LLJIT_H */

@@ -85,7 +85,7 @@ class HwasanThreadList {
         RoundUpTo(ring_buffer_size_ + sizeof(Thread), ring_buffer_size_ * 2);
   }
 
-  Thread *CreateCurrentThread() {
+  Thread *CreateCurrentThread(const Thread::InitState *state = nullptr) {
     Thread *t = nullptr;
     {
       SpinMutexLock l(&free_list_mutex_);
@@ -104,7 +104,7 @@ class HwasanThreadList {
       SpinMutexLock l(&live_list_mutex_);
       live_list_.push_back(t);
     }
-    t->Init((uptr)t - ring_buffer_size_, ring_buffer_size_);
+    t->Init((uptr)t - ring_buffer_size_, ring_buffer_size_, state);
     AddThreadStats(t);
     return t;
   }
@@ -200,4 +200,4 @@ class HwasanThreadList {
 void InitThreadList(uptr storage, uptr size);
 HwasanThreadList &hwasanThreadList();
 
-} // namespace
+} // namespace __hwasan

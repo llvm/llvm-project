@@ -1678,6 +1678,7 @@ class piecewise_linear_distribution
 */
 
 #include <__config>
+#include <__random/uniform_int_distribution.h>
 #include <algorithm>
 #include <cmath>
 #include <concepts>
@@ -3771,42 +3772,6 @@ generate_canonical(_URNG& __g)
     for (size_t __i = 1; __i < __k; ++__i, __base *= _Rp)
         _Sp += (__g() - _URNG::min()) * __base;
     return _Sp / __base;
-}
-
-// uniform_int_distribution
-
-// in <algorithm>
-
-template <class _CharT, class _Traits, class _IT>
-basic_ostream<_CharT, _Traits>&
-operator<<(basic_ostream<_CharT, _Traits>& __os,
-           const uniform_int_distribution<_IT>& __x)
-{
-    __save_flags<_CharT, _Traits> __lx(__os);
-    typedef basic_ostream<_CharT, _Traits> _Ostream;
-    __os.flags(_Ostream::dec | _Ostream::left);
-    _CharT __sp = __os.widen(' ');
-    __os.fill(__sp);
-    return __os << __x.a() << __sp << __x.b();
-}
-
-template <class _CharT, class _Traits, class _IT>
-basic_istream<_CharT, _Traits>&
-operator>>(basic_istream<_CharT, _Traits>& __is,
-           uniform_int_distribution<_IT>& __x)
-{
-    typedef uniform_int_distribution<_IT> _Eng;
-    typedef typename _Eng::result_type result_type;
-    typedef typename _Eng::param_type param_type;
-    __save_flags<_CharT, _Traits> __lx(__is);
-    typedef basic_istream<_CharT, _Traits> _Istream;
-    __is.flags(_Istream::dec | _Istream::skipws);
-    result_type __a;
-    result_type __b;
-    __is >> __a >> __b;
-    if (!__is.fail())
-        __x.param(param_type(__a, __b));
-    return __is;
 }
 
 // uniform_real_distribution

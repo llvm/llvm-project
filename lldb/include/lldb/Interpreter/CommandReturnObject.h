@@ -132,8 +132,6 @@ public:
 
   void SetError(const Status &error, const char *fallback_error_cstr = nullptr);
 
-  void SetError(llvm::StringRef error_cstr);
-
   lldb::ReturnStatus GetStatus();
 
   void SetStatus(lldb::ReturnStatus status);

@@ -17,7 +17,7 @@
 ;          and @gptr.8 is used within non-kernel function @f1. Hence @lds.7 is lowered.
 ;.
 
-; CHECK: %llvm.amdgcn.module.lds.t = type { [3 x float], [4 x i8], [2 x float], [1 x float] }
+; CHECK: %llvm.amdgcn.module.lds.t = type { [3 x float], [1 x float], [2 x float] }
 
 ; CHECK: @lds.1 = addrspace(3) global i16 undef, align 2
 ; CHECK: @lds.2 = addrspace(3) global i32 undef, align 4
@@ -36,7 +36,7 @@
 
 ; CHECK: @gptr.3 = addrspace(1) global i64* addrspacecast (i64 addrspace(3)* @lds.3 to i64*), align 8
 ; CHECK: @gptr.4 = addrspace(1) global i64* addrspacecast (i64 addrspace(3)* bitcast (float addrspace(3)* @lds.4 to i64 addrspace(3)*) to i64*), align 8
-; CHECK: @gptr.5 = addrspace(1) global i64* addrspacecast (i64 addrspace(3)* bitcast ([1 x float] addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 3) to i64 addrspace(3)*) to i64*), align 8
+; CHECK: @gptr.5 = addrspace(1) global i64* addrspacecast (i64 addrspace(3)* bitcast ([1 x float] addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 1) to i64 addrspace(3)*) to i64*), align 8
 ; CHECK: @gptr.6 = addrspace(1) global i64* addrspacecast (i64 addrspace(3)* bitcast ([2 x float] addrspace(3)* getelementptr inbounds (%llvm.amdgcn.module.lds.t, %llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds, i32 0, i32 2) to i64 addrspace(3)*) to i64*), align 8
 ; CHECK: @gptr.7 = addrspace(1) global i64* addrspacecast (i64 addrspace(3)* bitcast (%llvm.amdgcn.module.lds.t addrspace(3)* @llvm.amdgcn.module.lds to i64 addrspace(3)*) to i64*), align 8
 ; CHECK: @gptr.8 = addrspace(1) global i64** addrspacecast (i64* addrspace(1)* @gptr.7 to i64**), align 8

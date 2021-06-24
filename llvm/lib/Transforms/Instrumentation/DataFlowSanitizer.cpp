@@ -123,11 +123,6 @@ static const Align MinOriginAlignment = Align(4);
 static const unsigned ArgTLSSize = 800;
 static const unsigned RetvalTLSSize = 800;
 
-// External symbol to be used when generating the shadow address for
-// architectures with multiple VMAs. Instead of using a constant integer
-// the runtime will set the external mask based on the VMA range.
-const char DFSanExternShadowPtrMask[] = "__dfsan_shadow_ptr_mask";
-
 // The -dfsan-preserve-alignment flag controls whether this pass assumes that
 // alignment requirements provided by the input IR are correct.  For example,
 // if the input IR contains a load with alignment 8, this flag will cause
@@ -403,7 +398,6 @@ class DataFlowSanitizer {
   Constant *ArgOriginTLS;
   Constant *RetvalTLS;
   Constant *RetvalOriginTLS;
-  Constant *ExternalShadowMask;
   FunctionType *DFSanUnionLoadFnTy;
   FunctionType *DFSanLoadLabelAndOriginFnTy;
   FunctionType *DFSanUnimplementedFnTy;
@@ -437,7 +431,6 @@ class DataFlowSanitizer {
   DFSanABIList ABIList;
   DenseMap<Value *, Function *> UnwrappedFnMap;
   AttrBuilder ReadOnlyNoneAttrs;
-  bool DFSanRuntimeShadowMask = false;
 
   Value *getShadowOffset(Value *Addr, IRBuilder<> &IRB);
   Value *getShadowAddress(Value *Addr, Instruction *Pos);
@@ -451,7 +444,7 @@ class DataFlowSanitizer {
   TransformedFunction getCustomFunctionType(FunctionType *T);
   InstrumentedABI getInstrumentedABI();
   WrapperKind getWrapperKind(Function *F);
-  void addGlobalNamePrefix(GlobalValue *GV);
+  void addGlobalNameSuffix(GlobalValue *GV);
   Function *buildWrapperFunction(Function *F, StringRef NewFName,
                                  GlobalValue::LinkageTypes NewFLink,
                                  FunctionType *NewFT);
@@ -1013,6 +1006,11 @@ bool DataFlowSanitizer::init(Module &M) {
   Triple TargetTriple(M.getTargetTriple());
   const DataLayout &DL = M.getDataLayout();
 
+  if (TargetTriple.getOS() != Triple::Linux)
+    report_fatal_error("unsupported operating system");
+  if (TargetTriple.getArch() != Triple::x86_64)
+    report_fatal_error("unsupported architecture");
+
   Mod = &M;
   Ctx = &M.getContext();
   Int8Ptr = Type::getInt8PtrTy(*Ctx);
@@ -1024,27 +1022,9 @@ bool DataFlowSanitizer::init(Module &M) {
   ZeroPrimitiveShadow = ConstantInt::getSigned(PrimitiveShadowTy, 0);
   ZeroOrigin = ConstantInt::getSigned(OriginTy, 0);
 
-  // TODO: these should be platform-specific and set in the switch-stmt below.
   ShadowBase = ConstantInt::get(IntptrTy, 0x100000008000LL);
   OriginBase = ConstantInt::get(IntptrTy, 0x200000008000LL);
-
-  switch (TargetTriple.getArch()) {
-  case Triple::x86_64:
-    ShadowPtrMask = ConstantInt::getSigned(IntptrTy, ~0x600000000000LL);
-    break;
-  case Triple::mips64:
-  case Triple::mips64el:
-    ShadowPtrMask = ConstantInt::getSigned(IntptrTy, ~0xE000000000LL);
-    break;
-  case Triple::aarch64:
-  case Triple::aarch64_be:
-    // AArch64 supports multiple VMAs and the shadow mask is set at runtime.
-    DFSanRuntimeShadowMask = true;
-    break;
-  default:
-    report_fatal_error("unsupported triple");
-  }
-
+  ShadowPtrMask = ConstantInt::getSigned(IntptrTy, ~0x600000000000LL);
   Type *DFSanUnionLoadArgs[2] = {PrimitiveShadowPtrTy, IntptrTy};
   DFSanUnionLoadFnTy = FunctionType::get(PrimitiveShadowTy, DFSanUnionLoadArgs,
                                          /*isVarArg=*/false);
@@ -1114,9 +1094,9 @@ DataFlowSanitizer::WrapperKind DataFlowSanitizer::getWrapperKind(Function *F) {
   return WK_Warning;
 }
 
-void DataFlowSanitizer::addGlobalNamePrefix(GlobalValue *GV) {
-  std::string GVName = std::string(GV->getName()), Prefix = "dfs$";
-  GV->setName(Prefix + GVName);
+void DataFlowSanitizer::addGlobalNameSuffix(GlobalValue *GV) {
+  std::string GVName = std::string(GV->getName()), Suffix = ".dfsan";
+  GV->setName(GVName + Suffix);
 
   // Try to change the name of the function in module inline asm.  We only do
   // this for specific asm directives, currently only ".symver", to try to avoid
@@ -1127,8 +1107,13 @@ void DataFlowSanitizer::addGlobalNamePrefix(GlobalValue *GV) {
   std::string SearchStr = ".symver " + GVName + ",";
   size_t Pos = Asm.find(SearchStr);
   if (Pos != std::string::npos) {
-    Asm.replace(Pos, SearchStr.size(),
-                ".symver " + Prefix + GVName + "," + Prefix);
+    Asm.replace(Pos, SearchStr.size(), ".symver " + GVName + Suffix + ",");
+    Pos = Asm.find("@");
+
+    if (Pos == std::string::npos)
+      report_fatal_error("unsupported .symver: " + Asm);
+
+    Asm.replace(Pos, 1, Suffix + "@");
     GV->getParent()->setModuleInlineAsm(Asm);
   }
 }
@@ -1390,9 +1375,6 @@ bool DataFlowSanitizer::runImpl(Module &M) {
 
   injectMetadataGlobals(M);
 
-  ExternalShadowMask =
-      Mod->getOrInsertGlobal(DFSanExternShadowPtrMask, IntptrTy);
-
   initializeCallbackFunctions(M);
   initializeRuntimeFunctions(M);
 
@@ -1416,7 +1398,7 @@ bool DataFlowSanitizer::runImpl(Module &M) {
 
     bool GAInst = isInstrumented(GA), FInst = isInstrumented(F);
     if (GAInst && FInst) {
-      addGlobalNamePrefix(GA);
+      addGlobalNameSuffix(GA);
     } else if (GAInst != FInst) {
       // Non-instrumented alias of an instrumented function, or vice versa.
       // Replace the alias with a native-ABI wrapper of the aliasee.  The pass
@@ -1445,8 +1427,9 @@ bool DataFlowSanitizer::runImpl(Module &M) {
                               FT->getReturnType()->isVoidTy());
 
     if (isInstrumented(&F)) {
-      // Instrumented functions get a 'dfs$' prefix.  This allows us to more
-      // easily identify cases of mismatching ABIs.
+      // Instrumented functions get a '.dfsan' suffix.  This allows us to more
+      // easily identify cases of mismatching ABIs. This naming scheme is
+      // mangling-compatible (see Itanium ABI), using a vendor-specific suffix.
       if (getInstrumentedABI() == IA_Args && !IsZeroArgsVoidRet) {
         FunctionType *NewFT = getArgsFunctionType(FT);
         Function *NewF = Function::Create(NewFT, F.getLinkage(),
@@ -1478,9 +1461,9 @@ bool DataFlowSanitizer::runImpl(Module &M) {
         NewF->takeName(&F);
         F.eraseFromParent();
         *FI = NewF;
-        addGlobalNamePrefix(NewF);
+        addGlobalNameSuffix(NewF);
       } else {
-        addGlobalNamePrefix(&F);
+        addGlobalNameSuffix(&F);
       }
     } else if (!IsZeroArgsVoidRet || getWrapperKind(&F) == WK_Custom) {
       // Build a wrapper function for F.  The wrapper simply calls F, and is
@@ -1741,13 +1724,8 @@ void DFSanFunction::setShadow(Instruction *I, Value *Shadow) {
 Value *DataFlowSanitizer::getShadowOffset(Value *Addr, IRBuilder<> &IRB) {
   // Returns Addr & shadow_mask
   assert(Addr != RetvalTLS && "Reinstrumenting?");
-  Value *ShadowPtrMaskValue;
-  if (DFSanRuntimeShadowMask)
-    ShadowPtrMaskValue = IRB.CreateLoad(IntptrTy, ExternalShadowMask);
-  else
-    ShadowPtrMaskValue = ShadowPtrMask;
   return IRB.CreateAnd(IRB.CreatePtrToInt(Addr, IntptrTy),
-                       IRB.CreatePtrToInt(ShadowPtrMaskValue, IntptrTy));
+                       IRB.CreatePtrToInt(ShadowPtrMask, IntptrTy));
 }
 
 std::pair<Value *, Value *>

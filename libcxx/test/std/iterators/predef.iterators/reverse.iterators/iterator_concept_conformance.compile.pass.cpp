@@ -30,15 +30,21 @@ static_assert(common_reverse_iterator_checks<reverse_bidirectional_iterator>());
 static_assert(std::bidirectional_iterator<reverse_bidirectional_iterator>);
 static_assert(!std::random_access_iterator<reverse_bidirectional_iterator>);
 static_assert(!std::sized_sentinel_for<reverse_bidirectional_iterator, reverse_bidirectional_iterator>);
+static_assert( std::indirectly_movable<reverse_bidirectional_iterator, reverse_bidirectional_iterator>);
+static_assert( std::indirectly_movable_storable<reverse_bidirectional_iterator, reverse_bidirectional_iterator>);
 
 using reverse_random_access_iterator = std::reverse_iterator<random_access_iterator<int*>>;
 static_assert(common_reverse_iterator_checks<reverse_random_access_iterator>());
 static_assert(std::random_access_iterator<reverse_random_access_iterator>);
 static_assert(!std::contiguous_iterator<reverse_random_access_iterator>);
 static_assert(std::sized_sentinel_for<reverse_random_access_iterator, reverse_random_access_iterator>);
+static_assert( std::indirectly_movable<reverse_random_access_iterator, reverse_random_access_iterator>);
+static_assert( std::indirectly_movable_storable<reverse_random_access_iterator, reverse_random_access_iterator>);
 
 using reverse_contiguous_iterator = std::reverse_iterator<contiguous_iterator<int*>>;
 static_assert(common_reverse_iterator_checks<reverse_contiguous_iterator>());
 static_assert(std::random_access_iterator<reverse_contiguous_iterator>);
 static_assert(!std::contiguous_iterator<reverse_contiguous_iterator>);
 static_assert(std::sized_sentinel_for<reverse_contiguous_iterator, reverse_contiguous_iterator>);
+static_assert( std::indirectly_movable<reverse_contiguous_iterator, reverse_contiguous_iterator>);
+static_assert( std::indirectly_movable_storable<reverse_contiguous_iterator, reverse_contiguous_iterator>);

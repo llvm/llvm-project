@@ -1126,12 +1126,19 @@ public:
   ///
   /// \return
   ///   The trace object. It might be undefined.
-  lldb::TraceSP &GetTrace();
+  lldb::TraceSP GetTrace();
 
-  /// Similar to \a GetTrace, but this also tries to create a \a Trace object
-  /// if not available using the default supported tracing technology for
-  /// this process.
-  llvm::Expected<lldb::TraceSP &> GetTraceOrCreate();
+  /// Create a \a Trace object for the current target using the using the
+  /// default supported tracing technology for this process.
+  ///
+  /// \return
+  ///     The new \a Trace or an \a llvm::Error if a \a Trace already exists or
+  ///     the trace couldn't be created.
+  llvm::Expected<lldb::TraceSP> CreateTrace();
+
+  /// If a \a Trace object is present, this returns it, otherwise a new Trace is
+  /// created with \a Trace::CreateTrace.
+  llvm::Expected<lldb::TraceSP> GetTraceOrCreate();
 
   // Since expressions results can persist beyond the lifetime of a process,
   // and the const expression results are available after a process is gone, we

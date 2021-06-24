@@ -121,12 +121,12 @@ def itertests(test_patterns, parser, script_name, comment_prefix=None, argparse_
                      comment_prefix, argparse_callback)
 
 
-def should_add_line_to_output(input_line, prefix_set, skip_global_checks = False):
+def should_add_line_to_output(input_line, prefix_set, skip_global_checks = False, comment_marker = ';'):
   # Skip any blank comment lines in the IR.
-  if not skip_global_checks and input_line.strip() == ';':
+  if not skip_global_checks and input_line.strip() == comment_marker:
     return False
   # Skip a special double comment line we use as a separator.
-  if input_line.strip() == SEPARATOR:
+  if input_line.strip() == comment_marker + SEPARATOR:
     return False
   # Skip any blank lines in the IR.
   #if input_line.strip() == '':
@@ -204,7 +204,7 @@ SCRUB_LOOP_COMMENT_RE = re.compile(
     r'# =>This Inner Loop Header:.*|# in Loop:.*', flags=re.M)
 SCRUB_TAILING_COMMENT_TOKEN_RE = re.compile(r'(?<=\S)+[ \t]*#$', flags=re.M)
 
-SEPARATOR = ';.'
+SEPARATOR = '.'
 
 def error(msg, test_file=None):
   if test_file:
@@ -291,11 +291,12 @@ class function_body(object):
     return self.scrub
 
 class FunctionTestBuilder:
-  def __init__(self, run_list, flags, scrubber_args):
+  def __init__(self, run_list, flags, scrubber_args, path):
     self._verbose = flags.verbose
     self._record_args = flags.function_signature
     self._check_attributes = flags.check_attributes
     self._scrubber_args = scrubber_args
+    self._path = path
     # Strip double-quotes if input was read by UTC_ARGS
     self._replace_value_regex = list(map(lambda x: x.strip('"'), flags.replace_value_regex))
     self._func_dict = {}
@@ -309,7 +310,7 @@ class FunctionTestBuilder:
 
   def finish_and_get_func_dict(self):
     for prefix in self._get_failed_prefixes():
-      warn('Prefix %s had conflicting output from different RUN lines for all functions' % (prefix,))
+      warn('Prefix %s had conflicting output from different RUN lines for all functions in test %s' % (prefix,self._path,))
     return self._func_dict
 
   def func_order(self):
@@ -350,27 +351,6 @@ class FunctionTestBuilder:
         for l in scrubbed_body.splitlines():
           print('  ' + l, file=sys.stderr)
       for prefix in prefixes:
-        if func in self._func_dict[prefix]:
-          if (self._func_dict[prefix][func] is None or
-              str(self._func_dict[prefix][func]) != scrubbed_body or
-              self._func_dict[prefix][func].args_and_sig != args_and_sig or
-                  self._func_dict[prefix][func].attrs != attrs):
-            if (self._func_dict[prefix][func] is not None and
-                self._func_dict[prefix][func].is_same_except_arg_names(
-                scrubbed_extra,
-                args_and_sig,
-                attrs)):
-              self._func_dict[prefix][func].scrub = scrubbed_extra
-              self._func_dict[prefix][func].args_and_sig = args_and_sig
-              continue
-            else:
-              # This means a previous RUN line produced a body for this function
-              # that is different from the one produced by this current RUN line,
-              # so the body can't be common accross RUN lines. We use None to
-              # indicate that.
-              self._func_dict[prefix][func] = None
-              continue
-
         # Replace function names matching the regex.
         for regex in self._replace_value_regex:
           # Pattern that matches capture groups in the regex in leftmost order.
@@ -393,7 +373,29 @@ class FunctionTestBuilder:
                 func_repl = group_regex.sub(re.escape(g), func_repl, count=1)
             # Substitute function call names that match the regex with the same
             # capture groups set.
-            scrubbed_body = re.sub(func_repl, '{{' + func_repl + '}}', scrubbed_body)
+            scrubbed_body = re.sub(func_repl, '{{' + func_repl + '}}',
+                                   scrubbed_body)
+
+        if func in self._func_dict[prefix]:
+          if (self._func_dict[prefix][func] is None or
+              str(self._func_dict[prefix][func]) != scrubbed_body or
+              self._func_dict[prefix][func].args_and_sig != args_and_sig or
+                  self._func_dict[prefix][func].attrs != attrs):
+            if (self._func_dict[prefix][func] is not None and
+                self._func_dict[prefix][func].is_same_except_arg_names(
+                scrubbed_extra,
+                args_and_sig,
+                attrs)):
+              self._func_dict[prefix][func].scrub = scrubbed_extra
+              self._func_dict[prefix][func].args_and_sig = args_and_sig
+              continue
+            else:
+              # This means a previous RUN line produced a body for this function
+              # that is different from the one produced by this current RUN line,
+              # so the body can't be common accross RUN lines. We use None to
+              # indicate that.
+              self._func_dict[prefix][func] = None
+              continue
 
         self._func_dict[prefix][func] = function_body(
             scrubbed_body, scrubbed_extra, args_and_sig, attrs)
@@ -792,7 +794,7 @@ def add_global_checks(glob_val_dict, comment_marker, prefix_list, output_lines, 
         if not glob_val_dict[checkprefix][nameless_value.check_prefix]:
           continue
 
-        output_lines.append(SEPARATOR)
+        output_lines.append(comment_marker + SEPARATOR)
 
         global_vars_seen_before = [key for key in global_vars_seen.keys()]
         for line in glob_val_dict[checkprefix][nameless_value.check_prefix]:
@@ -808,7 +810,7 @@ def add_global_checks(glob_val_dict, comment_marker, prefix_list, output_lines, 
         break
 
   if printed_prefixes:
-      output_lines.append(SEPARATOR)
+      output_lines.append(comment_marker + SEPARATOR)
 
 
 def check_prefix(prefix):
@@ -901,7 +903,7 @@ def dump_input_lines(output_lines, test_info, prefix_set, comment_string):
     args = input_line_info.args
     if line.strip() == comment_string:
       continue
-    if line.strip() == SEPARATOR:
+    if line.strip() == comment_string + SEPARATOR:
       continue
     if line.lstrip().startswith(comment_string):
       m = CHECK_RE.match(line)

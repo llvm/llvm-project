@@ -3162,7 +3162,7 @@ int main() {
 // CHECK3-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
 // CHECK3-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK3-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
-// CHECK3-NEXT:    [[TMP11:%.*]] = load i32, i32* [[CONV]], align 8, !nontemporal !8
+// CHECK3-NEXT:    [[TMP11:%.*]] = load i32, i32* [[CONV]], align 8, !nontemporal !9, !llvm.access.group !8
 // CHECK3-NEXT:    [[CONV2:%.*]] = bitcast i64* [[ARG_CASTED]] to i32*
 // CHECK3-NEXT:    store i32 [[TMP11]], i32* [[CONV2]], align 4
 // CHECK3-NEXT:    [[TMP12:%.*]] = load i64, i64* [[ARG_CASTED]], align 8
@@ -3246,7 +3246,7 @@ int main() {
 // CHECK3-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP9]], 1
 // CHECK3-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK3-NEXT:    store i32 [[ADD]], i32* [[I]], align 4
-// CHECK3-NEXT:    store i32 0, i32* [[CONV]], align 8, !nontemporal !8
+// CHECK3-NEXT:    store i32 0, i32* [[CONV]], align 8, !nontemporal !9, !llvm.access.group !13
 // CHECK3-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK3:       omp.body.continue:
 // CHECK3-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -4870,7 +4870,7 @@ int main() {
 // CHECK4-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
 // CHECK4-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK4-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
-// CHECK4-NEXT:    [[TMP11:%.*]] = load i32, i32* [[CONV]], align 8, !nontemporal !8
+// CHECK4-NEXT:    [[TMP11:%.*]] = load i32, i32* [[CONV]], align 8, !nontemporal !9, !llvm.access.group !8
 // CHECK4-NEXT:    [[CONV2:%.*]] = bitcast i64* [[ARG_CASTED]] to i32*
 // CHECK4-NEXT:    store i32 [[TMP11]], i32* [[CONV2]], align 4
 // CHECK4-NEXT:    [[TMP12:%.*]] = load i64, i64* [[ARG_CASTED]], align 8
@@ -4954,7 +4954,7 @@ int main() {
 // CHECK4-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP9]], 1
 // CHECK4-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK4-NEXT:    store i32 [[ADD]], i32* [[I]], align 4
-// CHECK4-NEXT:    store i32 0, i32* [[CONV]], align 8, !nontemporal !8
+// CHECK4-NEXT:    store i32 0, i32* [[CONV]], align 8, !nontemporal !9, !llvm.access.group !13
 // CHECK4-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK4:       omp.body.continue:
 // CHECK4-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -10712,7 +10712,7 @@ int main() {
 // CHECK11-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
 // CHECK11-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK11-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
-// CHECK11-NEXT:    [[TMP11:%.*]] = load i32, i32* [[CONV]], align 8, !nontemporal !12
+// CHECK11-NEXT:    [[TMP11:%.*]] = load i32, i32* [[CONV]], align 8, !nontemporal !13, !llvm.access.group !12
 // CHECK11-NEXT:    [[CONV2:%.*]] = bitcast i64* [[ARG_CASTED]] to i32*
 // CHECK11-NEXT:    store i32 [[TMP11]], i32* [[CONV2]], align 4
 // CHECK11-NEXT:    [[TMP12:%.*]] = load i64, i64* [[ARG_CASTED]], align 8
@@ -10796,7 +10796,7 @@ int main() {
 // CHECK11-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP9]], 1
 // CHECK11-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK11-NEXT:    store i32 [[ADD]], i32* [[I]], align 4
-// CHECK11-NEXT:    store i32 0, i32* [[CONV]], align 8, !nontemporal !12
+// CHECK11-NEXT:    store i32 0, i32* [[CONV]], align 8, !nontemporal !13, !llvm.access.group !17
 // CHECK11-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK11:       omp.body.continue:
 // CHECK11-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -12420,7 +12420,7 @@ int main() {
 // CHECK12-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
 // CHECK12-NEXT:    [[TMP9:%.*]] = load i32, i32* [[DOTOMP_COMB_UB]], align 4
 // CHECK12-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
-// CHECK12-NEXT:    [[TMP11:%.*]] = load i32, i32* [[CONV]], align 8, !nontemporal !12
+// CHECK12-NEXT:    [[TMP11:%.*]] = load i32, i32* [[CONV]], align 8, !nontemporal !13, !llvm.access.group !12
 // CHECK12-NEXT:    [[CONV2:%.*]] = bitcast i64* [[ARG_CASTED]] to i32*
 // CHECK12-NEXT:    store i32 [[TMP11]], i32* [[CONV2]], align 4
 // CHECK12-NEXT:    [[TMP12:%.*]] = load i64, i64* [[ARG_CASTED]], align 8
@@ -12504,7 +12504,7 @@ int main() {
 // CHECK12-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP9]], 1
 // CHECK12-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK12-NEXT:    store i32 [[ADD]], i32* [[I]], align 4
-// CHECK12-NEXT:    store i32 0, i32* [[CONV]], align 8, !nontemporal !12
+// CHECK12-NEXT:    store i32 0, i32* [[CONV]], align 8, !nontemporal !13, !llvm.access.group !17
 // CHECK12-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK12:       omp.body.continue:
 // CHECK12-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]

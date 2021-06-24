@@ -185,7 +185,6 @@ lldb::ReturnStatus SBCommandInterpreter::HandleCommand(
   } else {
     result->AppendError(
         "SBCommandInterpreter or the command line is not valid");
-    result->SetStatus(eReturnStatusFailed);
   }
 
   return result.GetStatus();
@@ -203,7 +202,6 @@ void SBCommandInterpreter::HandleCommandsFromFile(
 
   if (!IsValid()) {
     result->AppendError("SBCommandInterpreter is not valid.");
-    result->SetStatus(eReturnStatusFailed);
     return;
   }
 
@@ -211,7 +209,6 @@ void SBCommandInterpreter::HandleCommandsFromFile(
     SBStream s;
     file.GetDescription(s);
     result->AppendErrorWithFormat("File is not valid: %s.", s.GetData());
-    result->SetStatus(eReturnStatusFailed);
   }
 
   FileSpec tmp_spec = file.ref();
@@ -439,7 +436,6 @@ void SBCommandInterpreter::ResolveCommand(const char *command_line,
   } else {
     result->AppendError(
         "SBCommandInterpreter or the command line is not valid");
-    result->SetStatus(eReturnStatusFailed);
   }
 }
 
@@ -469,7 +465,6 @@ void SBCommandInterpreter::SourceInitFileInHomeDirectory(
     m_opaque_ptr->SourceInitFileHome(result.ref());
   } else {
     result->AppendError("SBCommandInterpreter is not valid");
-    result->SetStatus(eReturnStatusFailed);
   }
 }
 
@@ -487,7 +482,6 @@ void SBCommandInterpreter::SourceInitFileInHomeDirectory(
     m_opaque_ptr->SourceInitFileHome(result.ref(), is_repl);
   } else {
     result->AppendError("SBCommandInterpreter is not valid");
-    result->SetStatus(eReturnStatusFailed);
   }
 }
 
@@ -506,7 +500,6 @@ void SBCommandInterpreter::SourceInitFileInCurrentWorkingDirectory(
     m_opaque_ptr->SourceInitFileCwd(result.ref());
   } else {
     result->AppendError("SBCommandInterpreter is not valid");
-    result->SetStatus(eReturnStatusFailed);
   }
 }
 

@@ -987,9 +987,9 @@ public:
         if (LI1->getParent() != LI2->getParent())
           return VLOperands::ScoreFail;
 
-        Optional<int> Dist =
-            getPointersDiff(LI1->getPointerOperand(), LI2->getPointerOperand(),
-                            DL, SE, /*StrictCheck=*/true);
+        Optional<int> Dist = getPointersDiff(
+            LI1->getType(), LI1->getPointerOperand(), LI2->getType(),
+            LI2->getPointerOperand(), DL, SE, /*StrictCheck=*/true);
         return (Dist && *Dist == 1) ? VLOperands::ScoreConsecutiveLoads
                                     : VLOperands::ScoreFail;
       }
@@ -2968,7 +2968,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
       OrdersType CurrentOrder;
       // Check the order of pointer operands.
-      if (llvm::sortPtrAccesses(PointerOps, *DL, *SE, CurrentOrder)) {
+      if (llvm::sortPtrAccesses(PointerOps, ScalarTy, *DL, *SE, CurrentOrder)) {
         Value *Ptr0;
         Value *PtrN;
         if (CurrentOrder.empty()) {
@@ -2978,7 +2978,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           Ptr0 = PointerOps[CurrentOrder.front()];
           PtrN = PointerOps[CurrentOrder.back()];
         }
-        Optional<int> Diff = getPointersDiff(Ptr0, PtrN, *DL, *SE);
+        Optional<int> Diff = getPointersDiff(
+            ScalarTy, Ptr0, ScalarTy, PtrN, *DL, *SE);
         // Check that the sorted loads are consecutive.
         if (static_cast<unsigned>(*Diff) == VL.size() - 1) {
           if (CurrentOrder.empty()) {
@@ -3243,7 +3244,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
       OrdersType CurrentOrder;
       // Check the order of pointer operands.
-      if (llvm::sortPtrAccesses(PointerOps, *DL, *SE, CurrentOrder)) {
+      if (llvm::sortPtrAccesses(PointerOps, ScalarTy, *DL, *SE, CurrentOrder)) {
         Value *Ptr0;
         Value *PtrN;
         if (CurrentOrder.empty()) {
@@ -3253,7 +3254,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           Ptr0 = PointerOps[CurrentOrder.front()];
           PtrN = PointerOps[CurrentOrder.back()];
         }
-        Optional<int> Dist = getPointersDiff(Ptr0, PtrN, *DL, *SE);
+        Optional<int> Dist =
+            getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, *DL, *SE);
         // Check that the sorted pointer operands are consecutive.
         if (static_cast<unsigned>(*Dist) == VL.size() - 1) {
           if (CurrentOrder.empty()) {
@@ -5499,6 +5501,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
 
       Value *ScalarArg = nullptr;
       std::vector<Value *> OpVecs;
+      SmallVector<Type *, 2> TysForDecl =
+          {FixedVectorType::get(CI->getType(), E->Scalars.size())};
       for (int j = 0, e = CI->getNumArgOperands(); j < e; ++j) {
         ValueList OpVL;
         // Some intrinsics have scalar arguments. This argument should not be
@@ -5507,6 +5511,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           CallInst *CEI = cast<CallInst>(VL0);
           ScalarArg = CEI->getArgOperand(j);
           OpVecs.push_back(CEI->getArgOperand(j));
+          if (hasVectorInstrinsicOverloadedScalarOpd(IID, j))
+            TysForDecl.push_back(ScalarArg->getType());
           continue;
         }
 
@@ -5523,8 +5529,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
                          false /*HasGlobalPred*/);
         CF = VFDatabase(*CI).getVectorizedFunction(Shape);
       } else {
-        Type *Tys[] = {FixedVectorType::get(CI->getType(), E->Scalars.size())};
-        CF = Intrinsic::getDeclaration(F->getParent(), ID, Tys);
+        CF = Intrinsic::getDeclaration(F->getParent(), ID, TysForDecl);
       }
 
       SmallVector<OperandBundleDef, 1> OpBundles;
@@ -6890,9 +6895,10 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
     ++IterCnt;
     CheckedPairs[Idx].set(K);
     CheckedPairs[K].set(Idx);
-    Optional<int> Diff = getPointersDiff(Stores[K]->getPointerOperand(),
-                                         Stores[Idx]->getPointerOperand(), *DL,
-                                         *SE, /*StrictCheck=*/true);
+    Optional<int> Diff = getPointersDiff(
+        Stores[K]->getValueOperand()->getType(), Stores[K]->getPointerOperand(),
+        Stores[Idx]->getValueOperand()->getType(),
+        Stores[Idx]->getPointerOperand(), *DL, *SE, /*StrictCheck=*/true);
     if (!Diff || *Diff == 0)
       return false;
     int Val = *Diff;
@@ -8030,10 +8036,6 @@ static bool findBuildAggregate(Instruction *LastInsertInst,
   return false;
 }
 
-static bool PhiTypeSorterFunc(Value *V, Value *V2) {
-  return V->getType() < V2->getType();
-}
-
 /// Try and get a reduction value from a phi node.
 ///
 /// Given a phi node \p P in a block \p ParentBB, consider possible reductions
@@ -8287,6 +8289,10 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
   bool Changed = false;
   SmallVector<Value *, 4> Incoming;
   SmallPtrSet<Value *, 16> VisitedInstrs;
+  // Maps phi nodes to the non-phi nodes found in the use tree for each phi
+  // node. Allows better to identify the chains that can be vectorized in the
+  // better way.
+  DenseMap<Value *, SmallVector<Value *, 4>> PHIToOpcodes;
 
   bool HaveVectorizedPhiNodes = true;
   while (HaveVectorizedPhiNodes) {
@@ -8299,22 +8305,113 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       if (!P)
         break;
 
-      if (!VisitedInstrs.count(P) && !R.isDeleted(P))
+      // No need to analyze deleted, vectorized and non-vectorizable
+      // instructions.
+      if (!VisitedInstrs.count(P) && !R.isDeleted(P) &&
+          !P->getType()->isVectorTy())
         Incoming.push_back(P);
     }
 
-    // Sort by type.
-    llvm::stable_sort(Incoming, PhiTypeSorterFunc);
+    // Find the corresponding non-phi nodes for better matching when trying to
+    // build the tree.
+    for (Value *V : Incoming) {
+      SmallVectorImpl<Value *> &Opcodes =
+          PHIToOpcodes.try_emplace(V).first->getSecond();
+      if (!Opcodes.empty())
+        continue;
+      SmallVector<Value *, 4> Nodes(1, V);
+      SmallPtrSet<Value *, 4> Visited;
+      while (!Nodes.empty()) {
+        auto *PHI = cast<PHINode>(Nodes.pop_back_val());
+        if (!Visited.insert(PHI).second)
+          continue;
+        for (Value *V : PHI->incoming_values()) {
+          if (auto *PHI1 = dyn_cast<PHINode>((V))) {
+            Nodes.push_back(PHI1);
+            continue;
+          }
+          Opcodes.emplace_back(V);
+        }
+      }
+    }
+
+    // Sort by type, parent, operands.
+    stable_sort(Incoming, [&PHIToOpcodes](Value *V1, Value *V2) {
+      if (V1->getType() < V2->getType())
+        return true;
+      if (V1->getType() > V2->getType())
+        return false;
+      ArrayRef<Value *> Opcodes1 = PHIToOpcodes[V1];
+      ArrayRef<Value *> Opcodes2 = PHIToOpcodes[V2];
+      if (Opcodes1.size() < Opcodes2.size())
+        return true;
+      if (Opcodes1.size() > Opcodes2.size())
+        return false;
+      for (int I = 0, E = Opcodes1.size(); I < E; ++I) {
+        // Undefs are compatible with any other value.
+        if (isa<UndefValue>(Opcodes1[I]) || isa<UndefValue>(Opcodes2[I]))
+          continue;
+        if (auto *I1 = dyn_cast<Instruction>(Opcodes1[I]))
+          if (auto *I2 = dyn_cast<Instruction>(Opcodes2[I])) {
+            if (I1->getParent() < I2->getParent())
+              return true;
+            if (I1->getParent() > I2->getParent())
+              return false;
+            InstructionsState S = getSameOpcode({I1, I2});
+            if (S.getOpcode())
+              continue;
+            return I1->getOpcode() < I2->getOpcode();
+          }
+        if (isa<Constant>(Opcodes1[I]) && isa<Constant>(Opcodes2[I]))
+          continue;
+        if (Opcodes1[I]->getValueID() < Opcodes2[I]->getValueID())
+          return true;
+        if (Opcodes1[I]->getValueID() > Opcodes2[I]->getValueID())
+          return false;
+      }
+      return false;
+    });
+
+    auto &&AreCompatiblePHIs = [&PHIToOpcodes](Value *V1, Value *V2) {
+      if (V1 == V2)
+        return true;
+      if (V1->getType() != V2->getType())
+        return false;
+      ArrayRef<Value *> Opcodes1 = PHIToOpcodes[V1];
+      ArrayRef<Value *> Opcodes2 = PHIToOpcodes[V2];
+      if (Opcodes1.size() != Opcodes2.size())
+        return false;
+      for (int I = 0, E = Opcodes1.size(); I < E; ++I) {
+        // Undefs are compatible with any other value.
+        if (isa<UndefValue>(Opcodes1[I]) || isa<UndefValue>(Opcodes2[I]))
+          continue;
+        if (auto *I1 = dyn_cast<Instruction>(Opcodes1[I]))
+          if (auto *I2 = dyn_cast<Instruction>(Opcodes2[I])) {
+            if (I1->getParent() != I2->getParent())
+              return false;
+            InstructionsState S = getSameOpcode({I1, I2});
+            if (S.getOpcode())
+              continue;
+            return false;
+          }
+        if (isa<Constant>(Opcodes1[I]) && isa<Constant>(Opcodes2[I]))
+          continue;
+        if (Opcodes1[I]->getValueID() != Opcodes2[I]->getValueID())
+          return false;
+      }
+      return true;
+    };
 
     // Try to vectorize elements base on their type.
+    SmallVector<Value *, 4> Candidates;
     for (SmallVector<Value *, 4>::iterator IncIt = Incoming.begin(),
                                            E = Incoming.end();
          IncIt != E;) {
 
-      // Look for the next elements with the same type.
+      // Look for the next elements with the same type, parent and operand
+      // kinds.
       SmallVector<Value *, 4>::iterator SameTypeIt = IncIt;
-      while (SameTypeIt != E &&
-             (*SameTypeIt)->getType() == (*IncIt)->getType()) {
+      while (SameTypeIt != E && AreCompatiblePHIs(*SameTypeIt, *IncIt)) {
         VisitedInstrs.insert(*SameTypeIt);
         ++SameTypeIt;
       }
@@ -8332,7 +8429,20 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
         // Success start over because instructions might have been changed.
         HaveVectorizedPhiNodes = true;
         Changed = true;
-        break;
+      } else if (NumElts < 4 &&
+                 (Candidates.empty() ||
+                  Candidates.front()->getType() == (*IncIt)->getType())) {
+        Candidates.append(IncIt, std::next(IncIt, NumElts));
+      }
+      // Final attempt to vectorize phis with the same types.
+      if (SameTypeIt == E || (*SameTypeIt)->getType() != (*IncIt)->getType()) {
+        if (Candidates.size() > 1 &&
+            tryToVectorizeList(Candidates, R, /*AllowReorder=*/true)) {
+          // Success start over because instructions might have been changed.
+          HaveVectorizedPhiNodes = true;
+          Changed = true;
+        }
+        Candidates.clear();
       }
 
       // Start over at the next instruction of a different type (or the end).

@@ -23,6 +23,18 @@ def FoldSubViewOps : Pass<"fold-memref-subview-ops"> {
   ];
 }
 
+def ResolveShapedTypeResultDims : Pass<"resolve-shaped-type-result-dims"> {
+  let summary = "Resolve memref.dim of result values";
+  let description = [{
+    The pass resolves memref.dim of result of operations that
+    implement the `InferShapedTypeOpInterface` in terms of shapes of
+    its operands.
+  }];
+  let constructor = "mlir::memref::createResolveShapedTypeResultDimsPass()";
+  let dependentDialects = [
+    "memref::MemRefDialect", "tensor::TensorDialect"
+  ];
+}
 
 #endif // MLIR_DIALECT_MEMREF_TRANSFORMS_PASSES
 

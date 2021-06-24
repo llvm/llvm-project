@@ -42,6 +42,7 @@
 ; GCN-O0-NEXT:       Inliner for always_inline functions
 ; GCN-O0-NEXT:     A No-Op Barrier Pass
 ; GCN-O0-NEXT:     Lower OpenCL enqueued blocks
+; GCN-O0-NEXT:     Replace within non-kernel function use of LDS with pointer
 ; GCN-O0-NEXT:     Lower uses of LDS variables from non-kernel functions
 ; GCN-O0-NEXT:     FunctionPass Manager
 ; GCN-O0-NEXT:       Dominator Tree Construction
@@ -201,6 +202,7 @@
 ; GCN-O1-NEXT:       Inliner for always_inline functions
 ; GCN-O1-NEXT:     A No-Op Barrier Pass
 ; GCN-O1-NEXT:     Lower OpenCL enqueued blocks
+; GCN-O1-NEXT:     Replace within non-kernel function use of LDS with pointer
 ; GCN-O1-NEXT:     Lower uses of LDS variables from non-kernel functions
 ; GCN-O1-NEXT:     FunctionPass Manager
 ; GCN-O1-NEXT:       Infer address spaces
@@ -352,6 +354,7 @@
 ; GCN-O1-NEXT:         Live Variable Analysis
 ; GCN-O1-NEXT:         MachineDominator Tree Construction
 ; GCN-O1-NEXT:         Machine Natural Loop Construction
+; GCN-O1-NEXT:         SI Optimize VGPR LiveRange
 ; GCN-O1-NEXT:         Eliminate PHI nodes for register allocation
 ; GCN-O1-NEXT:         SI Lower control flow pseudo instructions
 ; GCN-O1-NEXT:         Two-Address instruction pass
@@ -464,6 +467,7 @@
 ; GCN-O1-OPTS-NEXT:       Inliner for always_inline functions
 ; GCN-O1-OPTS-NEXT:     A No-Op Barrier Pass
 ; GCN-O1-OPTS-NEXT:     Lower OpenCL enqueued blocks
+; GCN-O1-OPTS-NEXT:     Replace within non-kernel function use of LDS with pointer
 ; GCN-O1-OPTS-NEXT:     Lower uses of LDS variables from non-kernel functions
 ; GCN-O1-OPTS-NEXT:     FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:       Infer address spaces
@@ -647,6 +651,7 @@
 ; GCN-O1-OPTS-NEXT:         Live Variable Analysis
 ; GCN-O1-OPTS-NEXT:         MachineDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:         Machine Natural Loop Construction
+; GCN-O1-OPTS-NEXT:         SI Optimize VGPR LiveRange
 ; GCN-O1-OPTS-NEXT:         Eliminate PHI nodes for register allocation
 ; GCN-O1-OPTS-NEXT:         SI Lower control flow pseudo instructions
 ; GCN-O1-OPTS-NEXT:         Two-Address instruction pass
@@ -760,6 +765,7 @@
 ; GCN-O2-NEXT:       Inliner for always_inline functions
 ; GCN-O2-NEXT:     A No-Op Barrier Pass
 ; GCN-O2-NEXT:     Lower OpenCL enqueued blocks
+; GCN-O2-NEXT:     Replace within non-kernel function use of LDS with pointer
 ; GCN-O2-NEXT:     Lower uses of LDS variables from non-kernel functions
 ; GCN-O2-NEXT:     FunctionPass Manager
 ; GCN-O2-NEXT:       Infer address spaces
@@ -943,6 +949,7 @@
 ; GCN-O2-NEXT:         Live Variable Analysis
 ; GCN-O2-NEXT:         MachineDominator Tree Construction
 ; GCN-O2-NEXT:         Machine Natural Loop Construction
+; GCN-O2-NEXT:         SI Optimize VGPR LiveRange
 ; GCN-O2-NEXT:         Eliminate PHI nodes for register allocation
 ; GCN-O2-NEXT:         SI Lower control flow pseudo instructions
 ; GCN-O2-NEXT:         Two-Address instruction pass
@@ -1057,6 +1064,7 @@
 ; GCN-O3-NEXT:       Inliner for always_inline functions
 ; GCN-O3-NEXT:     A No-Op Barrier Pass
 ; GCN-O3-NEXT:     Lower OpenCL enqueued blocks
+; GCN-O3-NEXT:     Replace within non-kernel function use of LDS with pointer
 ; GCN-O3-NEXT:     Lower uses of LDS variables from non-kernel functions
 ; GCN-O3-NEXT:     FunctionPass Manager
 ; GCN-O3-NEXT:       Infer address spaces
@@ -1253,6 +1261,7 @@
 ; GCN-O3-NEXT:         Live Variable Analysis
 ; GCN-O3-NEXT:         MachineDominator Tree Construction
 ; GCN-O3-NEXT:         Machine Natural Loop Construction
+; GCN-O3-NEXT:         SI Optimize VGPR LiveRange
 ; GCN-O3-NEXT:         Eliminate PHI nodes for register allocation
 ; GCN-O3-NEXT:         SI Lower control flow pseudo instructions
 ; GCN-O3-NEXT:         Two-Address instruction pass

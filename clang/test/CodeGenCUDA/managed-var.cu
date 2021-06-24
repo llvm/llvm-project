@@ -146,7 +146,7 @@ float load3() {
 // HOST:  %3 = getelementptr inbounds [100 x %struct.vec], [100 x %struct.vec]* %2, i64 0, i64 1, i32 1
 // HOST:  %4 = ptrtoint float* %3 to i64
 // HOST:  %5 = sub i64 %4, %1
-// HOST:  %6 = sdiv i64 %5, 4
+// HOST:  %6 = sdiv exact i64 %5, 4
 // HOST:  %7 = sitofp i64 %6 to float
 // HOST:  ret float %7
 float addr_taken2() {

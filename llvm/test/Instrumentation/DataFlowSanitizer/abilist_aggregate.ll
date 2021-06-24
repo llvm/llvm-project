@@ -17,7 +17,7 @@ define {i1, i7} @functional({i32, i1} %a, [2 x i7] %b) {
 }
 
 define {i1, i7} @call_functional({i32, i1} %a, [2 x i7] %b) {
-  ; TLS_ABI-LABEL: @"dfs$call_functional"
+  ; TLS_ABI-LABEL: @call_functional.dfsan
   ; TLS_ABI-NEXT: %[[#REG:]] = load [2 x i[[#SBITS]]], [2 x i[[#SBITS]]]* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__dfsan_arg_tls to i64), i64 [[#mul(2,SBYTES)]]) to [2 x i[[#SBITS]]]*), align [[ALIGN:2]]
   ; TLS_ABI-NEXT: %[[#REG+1]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([100 x i64]* @__dfsan_arg_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
   ; TLS_ABI-NEXT: %[[#REG+2]] = extractvalue { i[[#SBITS]], i[[#SBITS]] } %[[#REG+1]], 0
@@ -31,7 +31,7 @@ define {i1, i7} @call_functional({i32, i1} %a, [2 x i7] %b) {
   ; TLS_ABI-NEXT: %[[#REG+10]] = insertvalue { i[[#SBITS]], i[[#SBITS]] } %[[#REG+9]], i[[#SBITS]] %[[#REG+8]], 1
   ; TLS_ABI: store { i[[#SBITS]], i[[#SBITS]] } %[[#REG+10]], { i[[#SBITS]], i[[#SBITS]] }* bitcast ([100 x i64]* @__dfsan_retval_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
 
-  ; ARGS_ABI: @"dfs$call_functional"({ i32, i1 } %0, [2 x i7] %1, i[[#SBITS]] %2, i[[#SBITS]] %3)
+  ; ARGS_ABI: @call_functional.dfsan({ i32, i1 } %0, [2 x i7] %1, i[[#SBITS]] %2, i[[#SBITS]] %3)
   ; ARGS_ABI: %[[#U:]]  = or i[[#SBITS]] %2, %3
   ; ARGS_ABI: %r = call { i1, i7 } @functional({ i32, i1 } %0, [2 x i7] %1)
   ; ARGS_ABI: %[[#R:]] = insertvalue { { i1, i7 }, i[[#SBITS]] } undef, { i1, i7 } %r, 0
@@ -52,10 +52,10 @@ define {i1, i7} @discard({i32, i1} %a, [2 x i7] %b) {
 }
 
 define {i1, i7} @call_discard({i32, i1} %a, [2 x i7] %b) {
-  ; TLS_ABI: @"dfs$call_discard"
+  ; TLS_ABI: @call_discard.dfsan
   ; TLS_ABI: store { i[[#SBITS]], i[[#SBITS]] } zeroinitializer, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([100 x i64]* @__dfsan_retval_tls to { i[[#SBITS]], i[[#SBITS]] }*), align 2
 
-  ; ARGS_ABI: @"dfs$call_discard"
+  ; ARGS_ABI: @call_discard.dfsan
   ; ARGS_ABI: %r = call { i1, i7 } @discard({ i32, i1 } %0, [2 x i7] %1)
   ; ARGS_ABI: [[R0:%.*]] = insertvalue { { i1, i7 }, i[[#SBITS]] } undef, { i1, i7 } %r, 0
   ; ARGS_ABI: [[R1:%.*]] = insertvalue { { i1, i7 }, i[[#SBITS]] } [[R0]], i[[#SBITS]] 0, 1
@@ -75,11 +75,11 @@ define {i1, i7} @uninstrumented({i32, i1} %a, [2 x i7] %b) {
 }
 
 define {i1, i7} @call_uninstrumented({i32, i1} %a, [2 x i7] %b) {
-  ; TLS_ABI: @"dfs$call_uninstrumented"
+  ; TLS_ABI: @call_uninstrumented.dfsan
   ; TLS_ABI: call void @__dfsan_unimplemented
   ; TLS_ABI: store { i[[#SBITS]], i[[#SBITS]] } zeroinitializer, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([100 x i64]* @__dfsan_retval_tls to { i[[#SBITS]], i[[#SBITS]] }*), align 2
 
-  ; ARGS_ABI: @"dfs$call_uninstrumented"
+  ; ARGS_ABI: @call_uninstrumented.dfsan
   ; ARGS_ABI: call void @__dfsan_unimplemented
   ; ARGS_ABI: %r = call { i1, i7 } @uninstrumented({ i32, i1 } %0, [2 x i7] %1)
   ; ARGS_ABI: [[R0:%.*]] = insertvalue { { i1, i7 }, i[[#SBITS]] } undef, { i1, i7 } %r, 0
@@ -91,7 +91,7 @@ define {i1, i7} @call_uninstrumented({i32, i1} %a, [2 x i7] %b) {
 }
 
 define {i1, i7} @call_custom_with_ret({i32, i1} %a, [2 x i7] %b) {
-  ; TLS_ABI: @"dfs$call_custom_with_ret"
+  ; TLS_ABI: @call_custom_with_ret.dfsan
   ; TLS_ABI: %labelreturn = alloca i[[#SBITS]], align [[#SBYTES]]
   ; TLS_ABI: [[B:%.*]] = load [2 x i[[#SBITS]]], [2 x i[[#SBITS]]]* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__dfsan_arg_tls to i64), i64 [[#mul(2,SBYTES)]]) to [2 x i[[#SBITS]]]*), align [[ALIGN:2]]
   ; TLS_ABI: [[A:%.*]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([100 x i64]* @__dfsan_arg_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
@@ -113,7 +113,7 @@ define {i1, i7} @call_custom_with_ret({i32, i1} %a, [2 x i7] %b) {
 }
 
 define void @call_custom_without_ret({i32, i1} %a, [2 x i7] %b) {
-  ; TLS_ABI: @"dfs$call_custom_without_ret"
+  ; TLS_ABI: @call_custom_without_ret.dfsan
   ; TLS_ABI: [[B:%.*]] = load [2 x i[[#SBITS]]], [2 x i[[#SBITS]]]* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__dfsan_arg_tls to i64), i64 [[#mul(2,SBYTES)]]) to [2 x i[[#SBITS]]]*), align [[ALIGN:2]]
   ; TLS_ABI: [[A:%.*]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([100 x i64]* @__dfsan_arg_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
   ; TLS_ABI: [[A0:%.*]] = extractvalue { i[[#SBITS]], i[[#SBITS]] } [[A]], 0
@@ -129,7 +129,7 @@ define void @call_custom_without_ret({i32, i1} %a, [2 x i7] %b) {
 }
 
 define void @call_custom_varg({i32, i1} %a, [2 x i7] %b) {
-  ; TLS_ABI: @"dfs$call_custom_varg"
+  ; TLS_ABI: @call_custom_varg.dfsan
   ; TLS_ABI: [[B:%.*]] = load [2 x i[[#SBITS]]], [2 x i[[#SBITS]]]* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__dfsan_arg_tls to i64), i64 [[#mul(2,SBYTES)]]) to [2 x i[[#SBITS]]]*), align [[ALIGN:2]]
   ; TLS_ABI: %labelva = alloca [1 x i[[#SBITS]]], align [[#SBYTES]]
   ; TLS_ABI: [[A:%.*]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([100 x i64]* @__dfsan_arg_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
@@ -149,7 +149,7 @@ define void @call_custom_varg({i32, i1} %a, [2 x i7] %b) {
 }
 
 define {i1, i7} @call_custom_cb({i32, i1} %a, [2 x i7] %b) {
-  ; TLS_ABI: define { i1, i7 } @"dfs$call_custom_cb"({ i32, i1 } %a, [2 x i7] %b) {
+  ; TLS_ABI: define { i1, i7 } @call_custom_cb.dfsan({ i32, i1 } %a, [2 x i7] %b) {
   ; TLS_ABI: %labelreturn = alloca i[[#SBITS]], align [[#SBYTES]]
   ; TLS_ABI: [[B:%.*]] = load [2 x i[[#SBITS]]], [2 x i[[#SBITS]]]* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__dfsan_arg_tls to i64), i64 [[#mul(2,SBYTES)]]) to [2 x i[[#SBITS]]]*), align [[ALIGN:2]]
   ; TLS_ABI: [[A:%.*]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([100 x i64]* @__dfsan_arg_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
@@ -159,7 +159,7 @@ define {i1, i7} @call_custom_cb({i32, i1} %a, [2 x i7] %b) {
   ; TLS_ABI: [[B0:%.*]] = extractvalue [2 x i[[#SBITS]]] [[B]], 0
   ; TLS_ABI: [[B1:%.*]] = extractvalue [2 x i[[#SBITS]]] [[B]], 1
   ; TLS_ABI: [[B01:%.*]] = or i[[#SBITS]] [[B0]], [[B1]]
-  ; TLS_ABI: [[R:%.*]]  = call { i1, i7 } @__dfsw_custom_cb({ i1, i7 } ({ i1, i7 } ({ i32, i1 }, [2 x i7])*, { i32, i1 }, [2 x i7], i[[#SBITS]], i[[#SBITS]], i[[#SBITS]]*)* @"dfst0$custom_cb", i8* bitcast ({ i1, i7 } ({ i32, i1 }, [2 x i7])* @"dfs$cb" to i8*), { i32, i1 } %a, [2 x i7] %b, i[[#SBITS]] zeroext 0, i[[#SBITS]] zeroext [[A01]], i[[#SBITS]] zeroext [[B01]], i[[#SBITS]]* %labelreturn)
+  ; TLS_ABI: [[R:%.*]]  = call { i1, i7 } @__dfsw_custom_cb({ i1, i7 } ({ i1, i7 } ({ i32, i1 }, [2 x i7])*, { i32, i1 }, [2 x i7], i[[#SBITS]], i[[#SBITS]], i[[#SBITS]]*)* @"dfst0$custom_cb", i8* bitcast ({ i1, i7 } ({ i32, i1 }, [2 x i7])* @cb.dfsan to i8*), { i32, i1 } %a, [2 x i7] %b, i[[#SBITS]] zeroext 0, i[[#SBITS]] zeroext [[A01]], i[[#SBITS]] zeroext [[B01]], i[[#SBITS]]* %labelreturn)
   ; TLS_ABI: [[RE:%.*]] = load i[[#SBITS]], i[[#SBITS]]* %labelreturn, align [[#SBYTES]]
   ; TLS_ABI: [[RS0:%.*]] = insertvalue { i[[#SBITS]], i[[#SBITS]] } undef, i[[#SBITS]] [[RE]], 0
   ; TLS_ABI: [[RS1:%.*]] = insertvalue { i[[#SBITS]], i[[#SBITS]] } [[RS0]], i[[#SBITS]] [[RE]], 1
@@ -177,7 +177,7 @@ define {i1, i7} @custom_cb({i1, i7} ({i32, i1}, [2 x i7])* %cb, {i32, i1} %a, [2
 }
 
 define {i1, i7} @cb({i32, i1} %a, [2 x i7] %b) {
-  ; TLS_ABI: define { i1, i7 } @"dfs$cb"({ i32, i1 } %a, [2 x i7] %b)
+  ; TLS_ABI: define { i1, i7 } @cb.dfsan({ i32, i1 } %a, [2 x i7] %b)
   ; TLS_ABI: [[BL:%.*]] = load [2 x i[[#SBITS]]], [2 x i[[#SBITS]]]* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__dfsan_arg_tls to i64), i64 [[#mul(2,SBYTES)]]) to [2 x i[[#SBITS]]]*), align [[ALIGN:2]]
   ; TLS_ABI: [[AL:%.*]] = load { i[[#SBITS]], i[[#SBITS]] }, { i[[#SBITS]], i[[#SBITS]] }* bitcast ([100 x i64]* @__dfsan_arg_tls to { i[[#SBITS]], i[[#SBITS]] }*), align [[ALIGN]]
   ; TLS_ABI: [[AL1:%.*]] = extractvalue { i[[#SBITS]], i[[#SBITS]] } [[AL]], 1
@@ -194,7 +194,7 @@ define {i1, i7} @cb({i32, i1} %a, [2 x i7] %b) {
 }
 
 define {i1, i7}  ({i32, i1}, [2 x i7])* @ret_custom() {
-  ; TLS_ABI: @"dfs$ret_custom"
+  ; TLS_ABI: @ret_custom.dfsan
   ; TLS_ABI: store i[[#SBITS]] 0, i[[#SBITS]]* bitcast ([100 x i64]* @__dfsan_retval_tls to i[[#SBITS]]*), align 2
   ; TLS_ABI: ret {{.*}} @"dfsw$custom_with_ret"
   ret {i1, i7}  ({i32, i1}, [2 x i7])* @custom_with_ret

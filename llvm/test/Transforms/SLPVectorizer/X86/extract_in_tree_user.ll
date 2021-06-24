@@ -33,7 +33,7 @@ entry:
 }
 
 
-declare float @llvm.powi.f32(float, i32)
+declare float @llvm.powi.f32.i32(float, i32)
 define void @fn2(i32* %a, i32* %b, float* %c) {
 ; CHECK-LABEL: @fn2(
 ; CHECK-NEXT:  entry:
@@ -50,7 +50,7 @@ define void @fn2(i32* %a, i32* %b, float* %c) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i32> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sitofp <4 x i32> [[TMP4]] to <4 x float>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x float> @llvm.powi.v4f32(<4 x float> [[TMP5]], i32 [[TMP6]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[TMP5]], i32 [[TMP6]])
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, float* [[C:%.*]], i32 1
 ; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, float* [[C]], i32 2
 ; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds float, float* [[C]], i32 3
@@ -63,7 +63,7 @@ entry:
   %i1 = load i32, i32* %b, align 4
   %add1 = add i32 %i0, %i1
   %fp1 = sitofp i32 %add1 to float
-  %call1 = tail call float @llvm.powi.f32(float %fp1,i32 %add1) nounwind readnone
+  %call1 = tail call float @llvm.powi.f32.i32(float %fp1,i32 %add1) nounwind readnone
 
   %arrayidx2 = getelementptr inbounds i32, i32* %a, i32 1
   %i2 = load i32, i32* %arrayidx2, align 4
@@ -71,7 +71,7 @@ entry:
   %i3 = load i32, i32* %arrayidx3, align 4
   %add2 = add i32 %i2, %i3
   %fp2 = sitofp i32 %add2 to float
-  %call2 = tail call float @llvm.powi.f32(float %fp2,i32 %add1) nounwind readnone
+  %call2 = tail call float @llvm.powi.f32.i32(float %fp2,i32 %add1) nounwind readnone
 
   %arrayidx4 = getelementptr inbounds i32, i32* %a, i32 2
   %i4 = load i32, i32* %arrayidx4, align 4
@@ -79,7 +79,7 @@ entry:
   %i5 = load i32, i32* %arrayidx5, align 4
   %add3 = add i32 %i4, %i5
   %fp3 = sitofp i32 %add3 to float
-  %call3 = tail call float @llvm.powi.f32(float %fp3,i32 %add1) nounwind readnone
+  %call3 = tail call float @llvm.powi.f32.i32(float %fp3,i32 %add1) nounwind readnone
 
   %arrayidx6 = getelementptr inbounds i32, i32* %a, i32 3
   %i6 = load i32, i32* %arrayidx6, align 4
@@ -87,7 +87,7 @@ entry:
   %i7 = load i32, i32* %arrayidx7, align 4
   %add4 = add i32 %i6, %i7
   %fp4 = sitofp i32 %add4 to float
-  %call4 = tail call float @llvm.powi.f32(float %fp4,i32 %add1) nounwind readnone
+  %call4 = tail call float @llvm.powi.f32.i32(float %fp4,i32 %add1) nounwind readnone
 
   store float %call1, float* %c, align 4
   %arrayidx8 = getelementptr inbounds float, float* %c, i32 1

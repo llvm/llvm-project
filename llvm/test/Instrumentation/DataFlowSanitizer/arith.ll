@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @__dfsan_shadow_width_bytes = weak_odr constant i32 [[#SBYTES:]]
 
 define i8 @add(i8 %a, i8 %b) {
-  ; CHECK: @"dfs$add"
+  ; CHECK: @add.dfsan
   ; CHECK-DAG: %[[#ALABEL:]] = load i[[#SBITS]], i[[#SBITS]]* bitcast ([[ARGTLSTYPE:\[100 x i64\]]]* @__dfsan_arg_tls to i[[#SBITS]]*), align [[ALIGN:2]]
   ; CHECK-DAG: %[[#BLABEL:]] = load i[[#SBITS]], i[[#SBITS]]* inttoptr (i64 add (i64 ptrtoint ([[ARGTLSTYPE]]* @__dfsan_arg_tls to i64), i64 2) to i[[#SBITS]]*), align [[ALIGN]]
   ; CHECK: %[[#UNION:]] = or i[[#SBITS]] %[[#ALABEL]], %[[#BLABEL]]
@@ -18,7 +18,7 @@ define i8 @add(i8 %a, i8 %b) {
 }
 
 define i8 @sub(i8 %a, i8 %b) {
-  ; CHECK: @"dfs$sub"
+  ; CHECK: @sub.dfsan
   ; CHECK: load{{.*}}__dfsan_arg_tls
   ; CHECK: load{{.*}}__dfsan_arg_tls
   ; CHECK: or i[[#SBITS]]
@@ -30,7 +30,7 @@ define i8 @sub(i8 %a, i8 %b) {
 }
 
 define i8 @mul(i8 %a, i8 %b) {
-  ; CHECK: @"dfs$mul"
+  ; CHECK: @mul.dfsan
   ; CHECK: load{{.*}}__dfsan_arg_tls
   ; CHECK: load{{.*}}__dfsan_arg_tls
   ; CHECK: or i[[#SBITS]]
@@ -42,7 +42,7 @@ define i8 @mul(i8 %a, i8 %b) {
 }
 
 define i8 @sdiv(i8 %a, i8 %b) {
-  ; CHECK: @"dfs$sdiv"
+  ; CHECK: @sdiv.dfsan
   ; CHECK: load{{.*}}__dfsan_arg_tls
   ; CHECK: load{{.*}}__dfsan_arg_tls
   ; CHECK: or i[[#SBITS]]
@@ -54,7 +54,7 @@ define i8 @sdiv(i8 %a, i8 %b) {
 }
 
 define i8 @udiv(i8 %a, i8 %b) {
-  ; CHECK: @"dfs$udiv"
+  ; CHECK: @udiv.dfsan
   ; CHECK: load{{.*}}__dfsan_arg_tls
   ; CHECK: load{{.*}}__dfsan_arg_tls
   ; CHECK: or i[[#SBITS]]
@@ -66,7 +66,7 @@ define i8 @udiv(i8 %a, i8 %b) {
 }
 
 define double @fneg(double %a) {
-  ; CHECK: @"dfs$fneg"
+  ; CHECK: @fneg.dfsan
   ; CHECK: load{{.*}}__dfsan_arg_tls
   ; CHECK: %c = fneg double %a
   ; CHECK: store{{.*}}__dfsan_retval_tls

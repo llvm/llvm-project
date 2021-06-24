@@ -819,7 +819,7 @@ static bool isWorthFoldingADDlow(SDValue N) {
 
     // ldar and stlr have much more restrictive addressing modes (just a
     // register).
-    if (isStrongerThanMonotonic(cast<MemSDNode>(Use)->getOrdering()))
+    if (isStrongerThanMonotonic(cast<MemSDNode>(Use)->getSuccessOrdering()))
       return false;
   }
 
@@ -2918,6 +2918,7 @@ static int getIntOperandFromRegisterString(StringRef RegString) {
 
   assert(AllIntFields &&
           "Unexpected non-integer value in special register string.");
+  (void)AllIntFields;
 
   // Need to combine the integer fields of the string into a single value
   // based on the bit encoding of MRS/MSR instruction.

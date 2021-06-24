@@ -200,5 +200,24 @@ int main(int, char**)
     assert(m.get_allocator().get_id() == 48);
     }
 
+    {
+    // Examples from LWG3025
+    std::unordered_multimap m{std::pair{1, 1}, {2, 2}, {3, 3}};
+    ASSERT_SAME_TYPE(decltype(m), std::unordered_multimap<int, int>);
+
+    std::unordered_multimap m2{m.begin(), m.end()};
+    ASSERT_SAME_TYPE(decltype(m2), std::unordered_multimap<int, int>);
+    }
+
+    {
+    // Examples from LWG3531
+    std::unordered_multimap m1{{std::pair{1, 2}, {3, 4}}, 0};
+    ASSERT_SAME_TYPE(decltype(m1), std::unordered_multimap<int, int>);
+
+    using value_type = std::pair<const int, int>;
+    std::unordered_multimap m2{{value_type{1, 2}, {3, 4}}, 0};
+    ASSERT_SAME_TYPE(decltype(m2), std::unordered_multimap<int, int>);
+    }
+
     return 0;
 }

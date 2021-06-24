@@ -4,7 +4,7 @@
 
 ; Test that powi has its integer argument sign extended on mips64.
 
-declare double @llvm.powi.f64(double, i32)
+declare double @llvm.powi.f64.i32(double, i32)
 
 define double @powi(double %value, i32 %power) {
 ; MIPSN64-LABEL: powi:
@@ -30,11 +30,11 @@ define double @powi(double %value, i32 %power) {
 ; MIPSN32-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; MIPSN32-NEXT:    jr $ra
 ; MIPSN32-NEXT:    addiu $sp, $sp, 16
-        %1 = tail call double @llvm.powi.f64(double %value, i32 %power)
+        %1 = tail call double @llvm.powi.f64.i32(double %value, i32 %power)
         ret double %1
 }
 
-declare float @llvm.powi.f32(float, i32)
+declare float @llvm.powi.f32.i32(float, i32)
 
 define float @powfi(float %value, i32 %power) {
 ; MIPSN64-LABEL: powfi:
@@ -60,6 +60,6 @@ define float @powfi(float %value, i32 %power) {
 ; MIPSN32-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; MIPSN32-NEXT:    jr $ra
 ; MIPSN32-NEXT:    addiu $sp, $sp, 16
-        %1 = tail call float @llvm.powi.f32(float %value, i32 %power)
+        %1 = tail call float @llvm.powi.f32.i32(float %value, i32 %power)
         ret float %1
 }

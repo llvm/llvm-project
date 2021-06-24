@@ -329,6 +329,12 @@ TLI_DEFINE_STRING_INTERNAL("__isoc99_scanf")
 /// int __isoc99_sscanf(const char *s, const char *format, ...)
 TLI_DEFINE_ENUM_INTERNAL(dunder_isoc99_sscanf)
 TLI_DEFINE_STRING_INTERNAL("__isoc99_sscanf")
+/// void __kmpc_alloc_shared(size_t nbyte);
+TLI_DEFINE_ENUM_INTERNAL(__kmpc_alloc_shared)
+TLI_DEFINE_STRING_INTERNAL("__kmpc_alloc_shared")
+/// void __kmpc_free_shared(void *ptr);
+TLI_DEFINE_ENUM_INTERNAL(__kmpc_free_shared)
+TLI_DEFINE_STRING_INTERNAL("__kmpc_free_shared")
 /// double __log10_finite(double x);
 TLI_DEFINE_ENUM_INTERNAL(log10_finite)
 TLI_DEFINE_STRING_INTERNAL("__log10_finite")

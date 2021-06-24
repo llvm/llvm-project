@@ -2762,6 +2762,46 @@ define <2 x i64> @sse2_psll_q_128_masked(<2 x i64> %v, <2 x i64> %a) {
   ret <2 x i64> %2
 }
 
+; The shift amount is in range (masked with 31 and high 32-bits are zero),
+; so convert to standard IR - https://llvm.org/PR50123
+
+define <2 x i64> @sse2_psll_q_128_masked_bitcast(<2 x i64> %v, <2 x i64> %a) {
+; CHECK-LABEL: @sse2_psll_q_128_masked_bitcast(
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i64> [[A:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[M:%.*]] = and <4 x i32> [[B]], <i32 31, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[I:%.*]] = insertelement <4 x i32> [[M]], i32 0, i32 1
+; CHECK-NEXT:    [[SHAMT:%.*]] = bitcast <4 x i32> [[I]] to <2 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[SHAMT]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i64> [[V:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
+;
+  %b = bitcast <2 x i64> %a to <4 x i32>
+  %m = and <4 x i32> %b, <i32 31, i32 poison, i32 poison, i32 poison>
+  %i = insertelement <4 x i32> %m, i32 0, i32 1
+  %shamt = bitcast <4 x i32> %i to <2 x i64>
+  %r = tail call <2 x i64> @llvm.x86.sse2.psll.q(<2 x i64> %v, <2 x i64> %shamt) #2
+  ret <2 x i64> %r
+}
+
+; TODO: This could be recognized as an over-shift.
+
+define <2 x i64> @sse2_psll_q_128_masked_bitcast_overshift(<2 x i64> %v, <2 x i64> %a) {
+; CHECK-LABEL: @sse2_psll_q_128_masked_bitcast_overshift(
+; CHECK-NEXT:    [[B:%.*]] = bitcast <2 x i64> [[A:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[M:%.*]] = and <4 x i32> [[B]], <i32 31, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[I:%.*]] = insertelement <4 x i32> [[M]], i32 1, i32 1
+; CHECK-NEXT:    [[SHAMT:%.*]] = bitcast <4 x i32> [[I]] to <2 x i64>
+; CHECK-NEXT:    [[R:%.*]] = tail call <2 x i64> @llvm.x86.sse2.psll.q(<2 x i64> [[V:%.*]], <2 x i64> [[SHAMT]])
+; CHECK-NEXT:    ret <2 x i64> [[R]]
+;
+  %b = bitcast <2 x i64> %a to <4 x i32>
+  %m = and <4 x i32> %b, <i32 31, i32 poison, i32 poison, i32 poison>
+  %i = insertelement <4 x i32> %m, i32 1, i32 1
+  %shamt = bitcast <4 x i32> %i to <2 x i64>
+  %r = tail call <2 x i64> @llvm.x86.sse2.psll.q(<2 x i64> %v, <2 x i64> %shamt) #2
+  ret <2 x i64> %r
+}
+
 define <16 x i16> @avx2_psll_w_256_masked(<16 x i16> %v, <8 x i16> %a) {
 ; CHECK-LABEL: @avx2_psll_w_256_masked(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <8 x i16> [[A:%.*]], <i16 15, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison>

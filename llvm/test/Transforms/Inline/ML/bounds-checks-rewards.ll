@@ -6,19 +6,23 @@
 ; factor, we penalize the 'bad' decision.
 ; REQUIRES: have_tf_api
 ;
+; Generate mock model
+; RUN: rm -rf %t && mkdir %t
+; RUN: %python %S/../../../../lib/Analysis/models/generate_mock_model.py %S/../../../../lib/Analysis/models/inlining/config.py %t
+;
 ; When the bounds are very wide ("no bounds"), all inlinings happen.
-; RUN: opt -passes=scc-oz-module-inliner -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -ml-inliner-model-under-training=%S/../../../../lib/Analysis/models/inliner -training-log=- -enable-ml-inliner=development -ml-advisor-size-increase-threshold=10.0 -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=NOBOUNDS
+; RUN: opt -passes=scc-oz-module-inliner -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -ml-inliner-model-under-training=%t -training-log=- -enable-ml-inliner=development -ml-advisor-size-increase-threshold=10.0 -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=NOBOUNDS
 ;
 ; When the bounds are very restrictive, the first inlining happens but it's
 ; considered as "bad" (since it trips over the bounds) and its reward is a
 ; penalty. However, the mandatory inlining, which is considered next, happens.
 ; No other inlinings happend.
-; RUN: opt -passes=scc-oz-module-inliner -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -ml-inliner-model-under-training=%S/../../../../lib/Analysis/models/inliner -training-log=- -enable-ml-inliner=development -ml-advisor-size-increase-threshold=1.0 -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=BOUNDS
+; RUN: opt -passes=scc-oz-module-inliner -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -ml-inliner-model-under-training=%t -training-log=- -enable-ml-inliner=development -ml-advisor-size-increase-threshold=1.0 -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=BOUNDS
 ;
 ; With more restrictive bounds, the first inlining happens and is OK. The
 ; mandatory inlining happens next, and it trips over the bounds, which then
 ; forces no further inlinings.
-; RUN: opt -passes=scc-oz-module-inliner -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -ml-inliner-model-under-training=%S/../../../../lib/Analysis/models/inliner -training-log=- -enable-ml-inliner=development -ml-advisor-size-increase-threshold=1.1 -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=RELAXED-BOUNDS
+; RUN: opt -passes=scc-oz-module-inliner -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -ml-inliner-model-under-training=%t -training-log=- -enable-ml-inliner=development -ml-advisor-size-increase-threshold=1.1 -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=RELAXED-BOUNDS
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"

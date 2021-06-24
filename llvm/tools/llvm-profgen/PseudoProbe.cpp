@@ -88,12 +88,7 @@ void PseudoProbe::print(raw_ostream &OS,
   }
   OS << "Index: " << Index << "  ";
   OS << "Type: " << PseudoProbeTypeStr[static_cast<uint8_t>(Type)] << "  ";
-  if (isDangling()) {
-    OS << "Dangling  ";
-  }
-  if (isTailCall()) {
-    OS << "TailCall  ";
-  }
+
   std::string InlineContextStr = getInlineContextStr(GUID2FuncMAP, ShowName);
   if (InlineContextStr.size()) {
     OS << "Inlined: @ ";
@@ -189,7 +184,7 @@ void PseudoProbeDecoder::buildAddress2ProbeMap(const uint8_t *Start,
   //           TYPE (uint4)
   //             0 - block probe, 1 - indirect call, 2 - direct call
   //           ATTRIBUTE (uint3)
-  //             1 - tail call, 2 - dangling
+  //             1 - reserved
   //           ADDRESS_TYPE (uint1)
   //             0 - code address, 1 - address delta
   //           CODE_ADDRESS (uint64 or ULEB128)

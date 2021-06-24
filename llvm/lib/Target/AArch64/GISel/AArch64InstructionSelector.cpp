@@ -1685,19 +1685,19 @@ bool AArch64InstructionSelector::selectVectorSHL(MachineInstr &I,
   Optional<int64_t> ImmVal = getVectorSHLImm(Ty, Src2Reg, MRI);
 
   unsigned Opc = 0;
-  if (Ty == LLT::vector(2, 64)) {
+  if (Ty == LLT::fixed_vector(2, 64)) {
     Opc = ImmVal ? AArch64::SHLv2i64_shift : AArch64::USHLv2i64;
-  } else if (Ty == LLT::vector(4, 32)) {
+  } else if (Ty == LLT::fixed_vector(4, 32)) {
     Opc = ImmVal ? AArch64::SHLv4i32_shift : AArch64::USHLv4i32;
-  } else if (Ty == LLT::vector(2, 32)) {
+  } else if (Ty == LLT::fixed_vector(2, 32)) {
     Opc = ImmVal ? AArch64::SHLv2i32_shift : AArch64::USHLv2i32;
-  } else if (Ty == LLT::vector(4, 16)) {
+  } else if (Ty == LLT::fixed_vector(4, 16)) {
     Opc = ImmVal ? AArch64::SHLv4i16_shift : AArch64::USHLv4i16;
-  } else if (Ty == LLT::vector(8, 16)) {
+  } else if (Ty == LLT::fixed_vector(8, 16)) {
     Opc = ImmVal ? AArch64::SHLv8i16_shift : AArch64::USHLv8i16;
-  } else if (Ty == LLT::vector(16, 8)) {
+  } else if (Ty == LLT::fixed_vector(16, 8)) {
     Opc = ImmVal ? AArch64::SHLv16i8_shift : AArch64::USHLv16i8;
-  } else if (Ty == LLT::vector(8, 8)) {
+  } else if (Ty == LLT::fixed_vector(8, 8)) {
     Opc = ImmVal ? AArch64::SHLv8i8_shift : AArch64::USHLv8i8;
   } else {
     LLVM_DEBUG(dbgs() << "Unhandled G_SHL type");
@@ -1739,25 +1739,25 @@ bool AArch64InstructionSelector::selectVectorAshrLshr(
   unsigned NegOpc = 0;
   const TargetRegisterClass *RC =
       getRegClassForTypeOnBank(Ty, RBI.getRegBank(AArch64::FPRRegBankID), RBI);
-  if (Ty == LLT::vector(2, 64)) {
+  if (Ty == LLT::fixed_vector(2, 64)) {
     Opc = IsASHR ? AArch64::SSHLv2i64 : AArch64::USHLv2i64;
     NegOpc = AArch64::NEGv2i64;
-  } else if (Ty == LLT::vector(4, 32)) {
+  } else if (Ty == LLT::fixed_vector(4, 32)) {
     Opc = IsASHR ? AArch64::SSHLv4i32 : AArch64::USHLv4i32;
     NegOpc = AArch64::NEGv4i32;
-  } else if (Ty == LLT::vector(2, 32)) {
+  } else if (Ty == LLT::fixed_vector(2, 32)) {
     Opc = IsASHR ? AArch64::SSHLv2i32 : AArch64::USHLv2i32;
     NegOpc = AArch64::NEGv2i32;
-  } else if (Ty == LLT::vector(4, 16)) {
+  } else if (Ty == LLT::fixed_vector(4, 16)) {
     Opc = IsASHR ? AArch64::SSHLv4i16 : AArch64::USHLv4i16;
     NegOpc = AArch64::NEGv4i16;
-  } else if (Ty == LLT::vector(8, 16)) {
+  } else if (Ty == LLT::fixed_vector(8, 16)) {
     Opc = IsASHR ? AArch64::SSHLv8i16 : AArch64::USHLv8i16;
     NegOpc = AArch64::NEGv8i16;
-  } else if (Ty == LLT::vector(16, 8)) {
+  } else if (Ty == LLT::fixed_vector(16, 8)) {
     Opc = IsASHR ? AArch64::SSHLv16i8 : AArch64::USHLv16i8;
     NegOpc = AArch64::NEGv16i8;
-  } else if (Ty == LLT::vector(8, 8)) {
+  } else if (Ty == LLT::fixed_vector(8, 8)) {
     Opc = IsASHR ? AArch64::SSHLv8i8 : AArch64::USHLv8i8;
     NegOpc = AArch64::NEGv8i8;
   } else {
@@ -1961,7 +1961,8 @@ bool AArch64InstructionSelector::convertPtrAddToAdd(
   if (PtrTy.getAddressSpace() != 0)
     return false;
 
-  const LLT CastPtrTy = PtrTy.isVector() ? LLT::vector(2, 64) : LLT::scalar(64);
+  const LLT CastPtrTy =
+      PtrTy.isVector() ? LLT::fixed_vector(2, 64) : LLT::scalar(64);
   auto PtrToInt = MIB.buildPtrToInt(CastPtrTy, AddOp1Reg);
   // Set regbanks on the registers.
   if (PtrTy.isVector())
@@ -2160,6 +2161,40 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     emitIntegerCompare(Cmp->getOperand(2), Cmp->getOperand(3),
                        Cmp->getOperand(1), MIB);
     emitCSetForICMP(I.getOperand(0).getReg(), Pred, MIB, X);
+    I.eraseFromParent();
+    return true;
+  }
+  case TargetOpcode::G_OR: {
+    // Look for operations that take the lower `Width=Size-ShiftImm` bits of
+    // `ShiftSrc` and insert them into the upper `Width` bits of `MaskSrc` via
+    // shifting and masking that we can replace with a BFI (encoded as a BFM).
+    Register Dst = I.getOperand(0).getReg();
+    LLT Ty = MRI.getType(Dst);
+
+    if (!Ty.isScalar())
+      return false;
+
+    unsigned Size = Ty.getSizeInBits();
+    if (Size != 32 && Size != 64)
+      return false;
+
+    Register ShiftSrc;
+    int64_t ShiftImm;
+    Register MaskSrc;
+    int64_t MaskImm;
+    if (!mi_match(
+            Dst, MRI,
+            m_GOr(m_OneNonDBGUse(m_GShl(m_Reg(ShiftSrc), m_ICst(ShiftImm))),
+                  m_OneNonDBGUse(m_GAnd(m_Reg(MaskSrc), m_ICst(MaskImm))))))
+      return false;
+
+    if (ShiftImm > Size || ((1ULL << ShiftImm) - 1ULL) != uint64_t(MaskImm))
+      return false;
+
+    int64_t Immr = Size - ShiftImm;
+    int64_t Imms = Size - ShiftImm - 1;
+    unsigned Opc = Size == 32 ? AArch64::BFMWri : AArch64::BFMXri;
+    emitInstr(Opc, {Dst}, {MaskSrc, ShiftSrc, Immr, Imms}, MIB);
     I.eraseFromParent();
     return true;
   }
@@ -2618,7 +2653,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     auto &MemOp = **I.memoperands_begin();
     uint64_t MemSizeInBytes = MemOp.getSize();
     unsigned MemSizeInBits = MemSizeInBytes * 8;
-    AtomicOrdering Order = MemOp.getOrdering();
+    AtomicOrdering Order = MemOp.getSuccessOrdering();
 
     // Need special instructions for atomics that affect ordering.
     if (Order != AtomicOrdering::NotAtomic &&
@@ -2884,7 +2919,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       I.setDesc(TII.get(TargetOpcode::COPY));
       return true;
     } else if (DstRB.getID() == AArch64::FPRRegBankID) {
-      if (DstTy == LLT::vector(4, 16) && SrcTy == LLT::vector(4, 32)) {
+      if (DstTy == LLT::fixed_vector(4, 16) &&
+          SrcTy == LLT::fixed_vector(4, 32)) {
         I.setDesc(TII.get(AArch64::XTNv4i16));
         constrainSelectedInstRegOperands(I, TII, TRI, RBI);
         return true;
@@ -3205,13 +3241,13 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         AArch64::GPRRegBankID)
       return false; // We expect the fpr regbank case to be imported.
     LLT VecTy = MRI.getType(I.getOperand(0).getReg());
-    if (VecTy == LLT::vector(8, 8))
+    if (VecTy == LLT::fixed_vector(8, 8))
       I.setDesc(TII.get(AArch64::DUPv8i8gpr));
-    else if (VecTy == LLT::vector(16, 8))
+    else if (VecTy == LLT::fixed_vector(16, 8))
       I.setDesc(TII.get(AArch64::DUPv16i8gpr));
-    else if (VecTy == LLT::vector(4, 16))
+    else if (VecTy == LLT::fixed_vector(4, 16))
       I.setDesc(TII.get(AArch64::DUPv4i16gpr));
-    else if (VecTy == LLT::vector(8, 16))
+    else if (VecTy == LLT::fixed_vector(8, 16))
       I.setDesc(TII.get(AArch64::DUPv8i16gpr));
     else
       return false;
@@ -3252,7 +3288,7 @@ bool AArch64InstructionSelector::selectReduction(MachineInstr &I,
   if (I.getOpcode() == TargetOpcode::G_VECREDUCE_ADD) {
     // For <2 x i32> ADDPv2i32 generates an FPR64 value, so we need to emit
     // a subregister copy afterwards.
-    if (VecTy == LLT::vector(2, 32)) {
+    if (VecTy == LLT::fixed_vector(2, 32)) {
       Register DstReg = I.getOperand(0).getReg();
       auto AddP = MIB.buildInstr(AArch64::ADDPv2i32, {&AArch64::FPR64RegClass},
                                  {VecReg, VecReg});
@@ -3265,13 +3301,13 @@ bool AArch64InstructionSelector::selectReduction(MachineInstr &I,
     }
 
     unsigned Opc = 0;
-    if (VecTy == LLT::vector(16, 8))
+    if (VecTy == LLT::fixed_vector(16, 8))
       Opc = AArch64::ADDVv16i8v;
-    else if (VecTy == LLT::vector(8, 16))
+    else if (VecTy == LLT::fixed_vector(8, 16))
       Opc = AArch64::ADDVv8i16v;
-    else if (VecTy == LLT::vector(4, 32))
+    else if (VecTy == LLT::fixed_vector(4, 32))
       Opc = AArch64::ADDVv4i32v;
-    else if (VecTy == LLT::vector(2, 64))
+    else if (VecTy == LLT::fixed_vector(2, 64))
       Opc = AArch64::ADDPv2i64p;
     else {
       LLVM_DEBUG(dbgs() << "Unhandled type for add reduction");
@@ -3283,9 +3319,9 @@ bool AArch64InstructionSelector::selectReduction(MachineInstr &I,
 
   if (I.getOpcode() == TargetOpcode::G_VECREDUCE_FADD) {
     unsigned Opc = 0;
-    if (VecTy == LLT::vector(2, 32))
+    if (VecTy == LLT::fixed_vector(2, 32))
       Opc = AArch64::FADDPv2i32p;
-    else if (VecTy == LLT::vector(2, 64))
+    else if (VecTy == LLT::fixed_vector(2, 64))
       Opc = AArch64::FADDPv2i64p;
     else {
       LLVM_DEBUG(dbgs() << "Unhandled type for fadd reduction");

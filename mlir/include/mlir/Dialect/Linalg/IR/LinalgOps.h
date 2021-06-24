@@ -10,6 +10,7 @@
 #define MLIR_DIALECT_LINALG_LINALGOPS_H_
 
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/AffineExpr.h"
@@ -71,19 +72,19 @@ getReassociationIndicesForReshape(ShapedType sourceType, ShapedType targetType);
 ///
 /// Examples:
 ///
-/// 1. linalg.fill(%A, %f) : memref<f32>, f32
-///   name mangles into `linalg_fill_viewf32_f32_impl`
+/// 1. linalg.fill(%f, %A) : f32, memref<f32>
+///   name mangles into `linalg_fill_f32_viewf32`
 ///
 /// 2. linalg.dot %A, %B, %C :
 ///      (memref<?xf32, stride_specification>,
 ///       memref<?xf32, stride_specification>, memref<f32>)
-///   name mangles into `linalg_dot_viewxf32_viewxf32_viewf32_impl`
+///   name mangles into `linalg_dot_viewxf32_viewxf32_viewf32`
 ///
 /// 3. linalg.matmul(...) :
 ///      memref<?x?xf32, stride_specification>,
 ///      memref<?x?xf32, stride_specification>,
 ///      memref<?x?xf32, stride_specification>
-///   name mangles into `linalg_matmul_viewxxf32_viewxxf32_viewxxf32_impl`
+///   name mangles into `linalg_matmul_viewxxf32_viewxxf32_viewxxf32`
 std::string generateLibraryCallName(Operation *op);
 
 /// Returns `num` AffineDimExpr dimensions at positions
@@ -119,11 +120,6 @@ LogicalResult verifyStructuredOpInterface(Operation *op);
 } // namespace linalg
 } // namespace mlir
 
-namespace mlir {
-namespace linalg {
-class IndexedGenericOp;
-} // namespace linalg
-} // namespace mlir
 #include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
 
 #define GET_OP_CLASSES

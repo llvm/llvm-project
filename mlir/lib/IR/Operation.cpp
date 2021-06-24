@@ -216,21 +216,6 @@ void Operation::destroy() {
   free(rawMem);
 }
 
-/// Return the context this operation is associated with.
-MLIRContext *Operation::getContext() { return location->getContext(); }
-
-/// Return the dialect this operation is associated with, or nullptr if the
-/// associated dialect is not registered.
-Dialect *Operation::getDialect() { return getName().getDialect(); }
-
-Region *Operation::getParentRegion() {
-  return block ? block->getParent() : nullptr;
-}
-
-Operation *Operation::getParentOp() {
-  return block ? block->getParentOp() : nullptr;
-}
-
 /// Return true if this operation is a proper ancestor of the `other`
 /// operation.
 bool Operation::isProperAncestor(Operation *other) {

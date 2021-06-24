@@ -287,7 +287,7 @@ define <2 x i64> @v2i64_func_void() #0 {
 
 ; GCN-LABEL: {{^}}v3i64_func_void:
 ; GCN-DAG: buffer_load_dwordx4 v[0:3], off
-; GCN-DAG: buffer_load_dwordx4 v[4:7], off
+; GCN-DAG: buffer_load_dwordx2 v[4:5], off
 ; GCN: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define <3 x i64> @v3i64_func_void() #0 {

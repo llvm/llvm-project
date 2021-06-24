@@ -106,7 +106,6 @@ bool CommandObjectMultiword::Execute(const char *args_string,
   if (m_subcommand_dict.empty()) {
     result.AppendErrorWithFormat("'%s' does not have any subcommands.\n",
                                  GetCommandName().str().c_str());
-    result.SetStatus(eReturnStatusFailed);
     return false;
   }
 
@@ -144,7 +143,6 @@ bool CommandObjectMultiword::Execute(const char *args_string,
   }
   error_msg.append("\n");
   result.AppendRawError(error_msg.c_str());
-  result.SetStatus(eReturnStatusFailed);
   return false;
 }
 
@@ -398,6 +396,6 @@ bool CommandObjectProxy::Execute(const char *args_string,
   CommandObject *proxy_command = GetProxyCommandObject();
   if (proxy_command)
     return proxy_command->Execute(args_string, result);
-  result.SetError(GetUnsupportedError());
+  result.AppendError(GetUnsupportedError());
   return false;
 }

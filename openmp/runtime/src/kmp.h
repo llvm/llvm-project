@@ -1675,14 +1675,12 @@ typedef struct KMP_ALIGN_CACHE dispatch_private_info32 {
   kmp_int32 lb;
   kmp_int32 st;
   kmp_int32 tc;
-  kmp_int32 static_steal_counter; /* for static_steal only; maybe better to put
-                                     after ub */
-  kmp_lock_t *th_steal_lock; // lock used for chunk stealing
-  // KMP_ALIGN( 16 ) ensures ( if the KMP_ALIGN macro is turned on )
+  kmp_lock_t *steal_lock; // lock used for chunk stealing
+  // KMP_ALIGN(32) ensures (if the KMP_ALIGN macro is turned on)
   //    a) parm3 is properly aligned and
-  //    b) all parm1-4 are in the same cache line.
+  //    b) all parm1-4 are on the same cache line.
   // Because of parm1-4 are used together, performance seems to be better
-  // if they are in the same line (not measured though).
+  // if they are on the same cache line (not measured though).
 
   struct KMP_ALIGN(32) { // AC: changed 16 to 32 in order to simplify template
     kmp_int32 parm1; //     structures in kmp_dispatch.cpp. This should
@@ -1694,9 +1692,6 @@ typedef struct KMP_ALIGN_CACHE dispatch_private_info32 {
   kmp_uint32 ordered_lower;
   kmp_uint32 ordered_upper;
 #if KMP_OS_WINDOWS
-  // This var can be placed in the hole between 'tc' and 'parm1', instead of
-  // 'static_steal_counter'. It would be nice to measure execution times.
-  // Conditional if/endif can be removed at all.
   kmp_int32 last_upper;
 #endif /* KMP_OS_WINDOWS */
 } dispatch_private_info32_t;
@@ -1708,9 +1703,7 @@ typedef struct KMP_ALIGN_CACHE dispatch_private_info64 {
   kmp_int64 lb; /* lower-bound */
   kmp_int64 st; /* stride */
   kmp_int64 tc; /* trip count (number of iterations) */
-  kmp_int64 static_steal_counter; /* for static_steal only; maybe better to put
-                                     after ub */
-  kmp_lock_t *th_steal_lock; // lock used for chunk stealing
+  kmp_lock_t *steal_lock; // lock used for chunk stealing
   /* parm[1-4] are used in different ways by different scheduling algorithms */
 
   // KMP_ALIGN( 32 ) ensures ( if the KMP_ALIGN macro is turned on )
@@ -1729,9 +1722,6 @@ typedef struct KMP_ALIGN_CACHE dispatch_private_info64 {
   kmp_uint64 ordered_lower;
   kmp_uint64 ordered_upper;
 #if KMP_OS_WINDOWS
-  // This var can be placed in the hole between 'tc' and 'parm1', instead of
-  // 'static_steal_counter'. It would be nice to measure execution times.
-  // Conditional if/endif can be removed at all.
   kmp_int64 last_upper;
 #endif /* KMP_OS_WINDOWS */
 } dispatch_private_info64_t;
@@ -1785,9 +1775,8 @@ typedef struct KMP_ALIGN_CACHE dispatch_private_info {
   } u;
   enum sched_type schedule; /* scheduling algorithm */
   kmp_sched_flags_t flags; /* flags (e.g., ordered, nomerge, etc.) */
+  std::atomic<kmp_uint32> steal_flag; // static_steal only, state of a buffer
   kmp_int32 ordered_bumped;
-  // To retain the structure size after making ordered_iteration scalar
-  kmp_int32 ordered_dummy[KMP_MAX_ORDERED - 3];
   // Stack of buffers for nest of serial regions
   struct dispatch_private_info *next;
   kmp_int32 type_size; /* the size of types in private_info */
@@ -1802,7 +1791,7 @@ typedef struct dispatch_shared_info32 {
   /* chunk index under dynamic, number of idle threads under static-steal;
      iteration index otherwise */
   volatile kmp_uint32 iteration;
-  volatile kmp_uint32 num_done;
+  volatile kmp_int32 num_done;
   volatile kmp_uint32 ordered_iteration;
   // Dummy to retain the structure size after making ordered_iteration scalar
   kmp_int32 ordered_dummy[KMP_MAX_ORDERED - 1];
@@ -1812,7 +1801,7 @@ typedef struct dispatch_shared_info64 {
   /* chunk index under dynamic, number of idle threads under static-steal;
      iteration index otherwise */
   volatile kmp_uint64 iteration;
-  volatile kmp_uint64 num_done;
+  volatile kmp_int64 num_done;
   volatile kmp_uint64 ordered_iteration;
   // Dummy to retain the structure size after making ordered_iteration scalar
   kmp_int64 ordered_dummy[KMP_MAX_ORDERED - 3];
@@ -1848,7 +1837,7 @@ typedef struct kmp_disp {
   dispatch_private_info_t *th_dispatch_pr_current;
 
   dispatch_private_info_t *th_disp_buffer;
-  kmp_int32 th_disp_index;
+  kmp_uint32 th_disp_index;
   kmp_int32 th_doacross_buf_idx; // thread's doacross buffer index
   volatile kmp_uint32 *th_doacross_flags; // pointer to shared array of flags
   kmp_int64 *th_doacross_info; // info on loop bounds

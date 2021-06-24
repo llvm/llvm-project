@@ -227,72 +227,6 @@ func @generic_scalar_operand_block_arg_type(%arg0: f32) {
 
 // -----
 
-func @indexed_generic_block_arg_count(%arg0: memref<?xf32>) {
-  // expected-error @+1 {{expected as many non-induction variable region arguments as the number of input/output operands}}
-  linalg.indexed_generic {
-    indexing_maps =  [ affine_map<(i) -> (i)> ],
-    iterator_types = ["parallel"]}
-      outs(%arg0 : memref<?xf32>) {
-    ^bb(%f: f32):
-      linalg.yield %f : f32
-  }
-}
-
-// -----
-
-func @indexed_generic_block_induction_var_arg_type(%arg0: memref<?xf32>) {
-  // expected-error @+1 {{op expected index block argument #0}}
-  linalg.indexed_generic {
-    indexing_maps =  [ affine_map<(d0) -> (d0)> ],
-    iterator_types = ["parallel"]}
-      outs(%arg0 : memref<?xf32>) {
-    ^bb(%i: f64, %f: f32):
-    linalg.yield %f: f32
-  }
-}
-
-// -----
-
-func @indexed_generic_block_arg_type(%arg0: memref<?xf32>) {
-  // expected-error @+1 {{expected type of bb argument #1 ('i1') to match element or self type of the corresponding operand ('f32')}}
-  linalg.indexed_generic {
-    indexing_maps =  [ affine_map<(d0) -> (d0)> ],
-    iterator_types = ["parallel"]}
-      outs(%arg0 : memref<?xf32>) {
-    ^bb(%i: index, %f: i1):
-    linalg.yield %i: index
-  }
-}
-
-// -----
-
-func @indexed_generic_arg_count(%arg0: memref<f32>) {
-  // expected-error @+1 {{expected as many non-induction variable region arguments as the number of input/output operands}}
-  linalg.indexed_generic {
-    indexing_maps =  [ affine_map<()[] -> ()> ],
-    iterator_types = []}
-      outs(%arg0 : memref<f32>) {
-    ^bb(%0: index, %1: f32):
-      linalg.yield %1: f32
-  }
-  return
-}
-
-// -----
-
-func @indexed_generic_result_count(%arg0: memref<?xf32>) {
-  // expected-error @+6 {{op expected number of yield values (1) to match the number of operands of the enclosing LinalgOp (2)}}
-  linalg.indexed_generic {
-    indexing_maps =  [ affine_map<(d0) -> (d0)> ],
-    iterator_types = ["parallel"]}
-      outs(%arg0 : memref<?xf32>) {
-    ^bb(%i: index, %val: f32):
-      linalg.yield %val, %val: f32, f32
-  }
-}
-
-// -----
-
 func @generic_result_0_element_type(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
   // expected-error @+7 {{type of yield operand 1 ('i1') doesn't match the element type of the enclosing linalg.generic op ('f32')}}
   linalg.generic {
@@ -707,7 +641,7 @@ func @illegal_fill_tensor_no_return(%arg0 : index, %arg1 : index, %arg2 : f32)
 {
   %0 = linalg.init_tensor [%arg0, %arg1] : tensor<?x?xf32>
   // expected-error @+1 {{expected fill op with no result value to use memref type}}
-  linalg.fill(%0, %arg2) : tensor<?x?xf32>, f32
+  linalg.fill(%arg2, %0) : f32, tensor<?x?xf32>
 }
 
 // -----
@@ -715,7 +649,7 @@ func @illegal_fill_tensor_no_return(%arg0 : index, %arg1 : index, %arg2 : f32)
 func @illegal_fill_memref_with_return(%arg0 : memref<?x?xf32>, %arg1 : f32) -> memref<?x?xf32>
 {
   // expected-error @+1 {{unexpected #results > #outputs}}
-  %0 = linalg.fill(%arg0, %arg1) : memref<?x?xf32>, f32 -> memref<?x?xf32>
+  %0 = linalg.fill(%arg1, %arg0) : f32, memref<?x?xf32> -> memref<?x?xf32>
   return %0 : memref<?x?xf32>
 }
 
@@ -725,7 +659,7 @@ func @illegal_fill_memref_with_tensor_return
   (%arg0 : memref<?x?xf32>, %arg1 : f32) -> tensor<?x?xf32>
 {
   // expected-error @+1 {{unexpected #results > #outputs}}
-  %0 = linalg.fill(%arg0, %arg1) : memref<?x?xf32>, f32 -> tensor<?x?xf32>
+  %0 = linalg.fill(%arg1, %arg0) : f32, memref<?x?xf32> -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
 
@@ -734,8 +668,8 @@ func @illegal_fill_memref_with_tensor_return
 func @illegal_fill_tensor_with_memref_return
   (%arg0 : tensor<?x?xf32>, %arg1 : f32) -> memref<?x?xf32>
 {
-  // expected-error @+1 {{expected type of operand #0 ('tensor<?x?xf32>') to match type of corresponding result ('memref<?x?xf32>')}}
-  %0 = linalg.fill(%arg0, %arg1) : tensor<?x?xf32>, f32 -> memref<?x?xf32>
+  // expected-error @+1 {{expected type of operand #1 ('tensor<?x?xf32>') to match type of corresponding result ('memref<?x?xf32>')}}
+  %0 = linalg.fill(%arg1, %arg0) : f32, tensor<?x?xf32> -> memref<?x?xf32>
   return %0 : memref<?x?xf32>
 }
 

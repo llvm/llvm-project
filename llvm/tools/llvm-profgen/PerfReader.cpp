@@ -444,27 +444,57 @@ bool PerfReader::extractLBRStack(TraceStream &TraceIt,
 
     bool SrcIsInternal = Binary->addressIsCode(Src);
     bool DstIsInternal = Binary->addressIsCode(Dst);
+    bool IsExternal = !SrcIsInternal && !DstIsInternal;
+    bool IsIncoming = !SrcIsInternal && DstIsInternal;
+    bool IsOutgoing = SrcIsInternal && !DstIsInternal;
     bool IsArtificial = false;
+
     // Ignore branches outside the current binary.
-    if (!SrcIsInternal && !DstIsInternal)
+    if (IsExternal)
       continue;
-    if (!SrcIsInternal && DstIsInternal) {
-      // For transition from external code (such as dynamic libraries) to
-      // the current binary, keep track of the branch target which will be
-      // grouped with the Source of the last transition from the current
-      // binary.
-      PrevTrDst = Dst;
-      continue;
-    }
-    if (SrcIsInternal && !DstIsInternal) {
+
+    if (IsOutgoing) {
+      if (!PrevTrDst) {
+        // This is unpaired outgoing jump which is likely due to interrupt or
+        // incomplete LBR trace. Ignore current and subsequent entries since
+        // they are likely in different contexts.
+        break;
+      }
+
+      if (Binary->addressIsReturn(Src)) {
+        // In a callback case, a return from internal code, say A, to external
+        // runtime can happen. The external runtime can then call back to
+        // another internal routine, say B. Making an artificial branch that
+        // looks like a return from A to B can confuse the unwinder to treat
+        // the instruction before B as the call instruction.
+        break;
+      }
+
       // For transition to external code, group the Source with the next
       // availabe transition target.
-      if (!PrevTrDst)
-        continue;
       Dst = PrevTrDst;
       PrevTrDst = 0;
       IsArtificial = true;
+    } else {
+      if (PrevTrDst) {
+        // If we have seen an incoming transition from external code to internal
+        // code, but not a following outgoing transition, the incoming
+        // transition is likely due to interrupt which is usually unpaired.
+        // Ignore current and subsequent entries since they are likely in
+        // different contexts.
+        break;
+      }
+
+      if (IsIncoming) {
+        // For transition from external code (such as dynamic libraries) to
+        // the current binary, keep track of the branch target which will be
+        // grouped with the Source of the last transition from the current
+        // binary.
+        PrevTrDst = Dst;
+        continue;
+      }
     }
+
     // TODO: filter out buggy duplicate branches on Skylake
 
     LBRStack.emplace_back(LBREntry(Src, Dst, IsArtificial));

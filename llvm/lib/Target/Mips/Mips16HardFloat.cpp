@@ -359,7 +359,7 @@ static const char *const IntrinsicInline[] = {
   "llvm.log10.f32", "llvm.log10.f64",
   "llvm.nearbyint.f32", "llvm.nearbyint.f64",
   "llvm.pow.f32", "llvm.pow.f64",
-  "llvm.powi.f32", "llvm.powi.f64",
+  "llvm.powi.f32.i32", "llvm.powi.f64.i32",
   "llvm.rint.f32", "llvm.rint.f64",
   "llvm.round.f32", "llvm.round.f64",
   "llvm.sin.f32", "llvm.sin.f64",

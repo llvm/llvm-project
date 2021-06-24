@@ -730,6 +730,12 @@ let Command = "process status" in {
     Desc<"Show verbose process status including extended crash information.">;
 }
 
+let Command = "process save_core" in {
+  def process_save_core_style : Option<"style", "s">, Group<1>,
+    EnumArg<"SaveCoreStyle", "SaveCoreStyles()">, Desc<"Request a specific style "
+    "of corefile to be saved.">;
+}
+
 let Command = "script import" in {
   def script_import_allow_reload : Option<"allow-reload", "r">, Group<1>,
     Desc<"Allow the script to be loaded even if it was already loaded before. "

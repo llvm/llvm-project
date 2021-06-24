@@ -659,10 +659,10 @@ func @matmul_on_tensors(%t0: tensor<32x1024xf32>, %t1: tensor<1024x1024xf32>) ->
     scf.yield %2 : tensor<?x?xf32>
   }
 //   CHECK-NOT: tensor.cast
-//       CHECK: %[[RES:.*]] = subtensor_insert %[[FOR_RES]] into %[[T1]][0, 0] [32, 1024] [1, 1] : tensor<32x1024xf32> into tensor<1024x1024xf32>
+//       CHECK: %[[RES:.*]] = tensor.insert_slice %[[FOR_RES]] into %[[T1]][0, 0] [32, 1024] [1, 1] : tensor<32x1024xf32> into tensor<1024x1024xf32>
 //       CHECK: return %[[RES]] : tensor<1024x1024xf32>
   %2 = tensor.cast %1 : tensor<?x?xf32> to tensor<32x1024xf32>
-  %res = subtensor_insert %2 into %t1[0, 0] [32, 1024] [1, 1] : tensor<32x1024xf32> into tensor<1024x1024xf32>
+  %res = tensor.insert_slice %2 into %t1[0, 0] [32, 1024] [1, 1] : tensor<32x1024xf32> into tensor<1024x1024xf32>
   return %res : tensor<1024x1024xf32>
 }
 
@@ -897,3 +897,33 @@ func @combineIfs4(%arg0 : i1, %arg2: i64) {
 // CHECK-NEXT:       "test.firstCodeTrue"() : () -> ()
 // CHECK-NEXT:       "test.secondCodeTrue"() : () -> ()
 // CHECK-NEXT:     }
+
+// -----
+
+// CHECK-LABEL: func @propagate_into_execute_region
+func @propagate_into_execute_region() {
+  %cond = constant 0 : i1
+  affine.for %i = 0 to 100 {
+    "test.foo"() : () -> ()
+    %v = scf.execute_region -> i64 {
+      cond_br %cond, ^bb1, ^bb2
+
+    ^bb1:
+      %c1 = constant 1 : i64
+      br ^bb3(%c1 : i64)
+
+    ^bb2:
+      %c2 = constant 2 : i64
+      br ^bb3(%c2 : i64)
+
+    ^bb3(%x : i64):
+      scf.yield %x : i64
+    }
+    "test.bar"(%v) : (i64) -> ()
+    // CHECK:      %[[C2:.*]] = constant 2 : i64
+    // CHECK:        scf.execute_region -> i64 {
+    // CHECK-NEXT:     scf.yield %[[C2]] : i64
+    // CHECK-NEXT:   }
+  }
+  return
+}

@@ -19,7 +19,7 @@ declare <2 x i32> @llvm.bswap.v2i32(<2 x i32>)
 declare <2 x i32> @llvm.ctlz.v2i32(<2 x i32>, i1)
 
 ; Unary fp plus any scalar operand
-declare <2 x float> @llvm.powi.v2f32(<2 x float>, i32)
+declare <2 x float> @llvm.powi.v2f32.i32(<2 x float>, i32)
 
 ; Binary int plus constant scalar operand
 declare <2 x i32> @llvm.smul.fix.sat.v2i32(<2 x i32>, <2 x i32>, i32)
@@ -104,13 +104,13 @@ define <2 x i32> @scalarize_ctlz_v2i32(<2 x i32> %x) #0 {
 }
 
 ; CHECK-LABEL: @scalarize_powi_v2f32(
-; CHECK: %powi.i0 = call float @llvm.powi.f32(float %x.i0, i32 %y)
-; CHECK: %powi.i1 = call float @llvm.powi.f32(float %x.i1, i32 %y)
+; CHECK: %powi.i0 = call float @llvm.powi.f32.i32(float %x.i0, i32 %y)
+; CHECK: %powi.i1 = call float @llvm.powi.f32.i32(float %x.i1, i32 %y)
 ; CHECK: %powi.upto0 = insertelement <2 x float> poison, float %powi.i0, i32 0
 ; CHECK: %powi = insertelement <2 x float> %powi.upto0, float %powi.i1, i32 1
 ; CHECK: ret <2 x float> %powi
 define <2 x float> @scalarize_powi_v2f32(<2 x float> %x, i32 %y) #0 {
-  %powi = call <2 x float> @llvm.powi.v2f32(<2 x float> %x, i32 %y)
+  %powi = call <2 x float> @llvm.powi.v2f32.i32(<2 x float> %x, i32 %y)
   ret <2 x float> %powi
 }
 

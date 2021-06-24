@@ -242,7 +242,7 @@ define void @test_fpowi(half* %p, i32 %b) {
 ; CHECK-NEXT:    vstr.16 s0, [r4]
 ; CHECK-NEXT:    pop {r4, pc}
   %a = load half, half* %p, align 2
-  %r = call half @llvm.powi.f16(half %a, i32 %b)
+  %r = call half @llvm.powi.f16.i32(half %a, i32 %b)
   store half %r, half* %p
   ret void
 }
@@ -587,7 +587,7 @@ define void @test_fmuladd(half* %p, half* %q, half* %r) {
 }
 
 declare half @llvm.sqrt.f16(half %a)
-declare half @llvm.powi.f16(half %a, i32 %b)
+declare half @llvm.powi.f16.i32(half %a, i32 %b)
 declare half @llvm.sin.f16(half %a)
 declare half @llvm.cos.f16(half %a)
 declare half @llvm.pow.f16(half %a, half %b)

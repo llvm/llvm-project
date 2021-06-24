@@ -404,7 +404,6 @@ protected:
 
     if (num_watchpoints == 0) {
       result.AppendError("No watchpoints exist to have commands added");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -419,7 +418,6 @@ protected:
     if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(target, command,
                                                                valid_wp_ids)) {
       result.AppendError("Invalid watchpoints specification.");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -514,14 +512,12 @@ protected:
 
     if (num_watchpoints == 0) {
       result.AppendError("No watchpoints exist to have commands deleted");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
     if (command.GetArgumentCount() == 0) {
       result.AppendError(
           "No watchpoint specified from which to delete the commands");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -529,7 +525,6 @@ protected:
     if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(target, command,
                                                                valid_wp_ids)) {
       result.AppendError("Invalid watchpoints specification.");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -543,7 +538,6 @@ protected:
           wp->ClearCallback();
       } else {
         result.AppendErrorWithFormat("Invalid watchpoint ID: %u.\n", cur_wp_id);
-        result.SetStatus(eReturnStatusFailed);
         return false;
       }
     }
@@ -586,14 +580,12 @@ protected:
 
     if (num_watchpoints == 0) {
       result.AppendError("No watchpoints exist for which to list commands");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
     if (command.GetArgumentCount() == 0) {
       result.AppendError(
           "No watchpoint specified for which to list the commands");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -601,7 +593,6 @@ protected:
     if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(target, command,
                                                                valid_wp_ids)) {
       result.AppendError("Invalid watchpoints specification.");
-      result.SetStatus(eReturnStatusFailed);
       return false;
     }
 
@@ -633,7 +624,6 @@ protected:
         } else {
           result.AppendErrorWithFormat("Invalid watchpoint ID: %u.\n",
                                        cur_wp_id);
-          result.SetStatus(eReturnStatusFailed);
         }
       }
     }

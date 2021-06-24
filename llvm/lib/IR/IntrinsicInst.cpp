@@ -118,6 +118,23 @@ void DbgVariableIntrinsic::replaceVariableLocationOp(unsigned OpIdx,
       0, MetadataAsValue::get(getContext(), DIArgList::get(getContext(), MDs)));
 }
 
+void DbgVariableIntrinsic::addVariableLocationOps(ArrayRef<Value *> NewValues,
+                                                  DIExpression *NewExpr) {
+  assert(NewExpr->hasAllLocationOps(getNumVariableLocationOps() +
+                                    NewValues.size()) &&
+         "NewExpr for debug variable intrinsic does not reference every "
+         "location operand.");
+  assert(!is_contained(NewValues, nullptr) && "New values must be non-null");
+  setArgOperand(2, MetadataAsValue::get(getContext(), NewExpr));
+  SmallVector<ValueAsMetadata *, 4> MDs;
+  for (auto *VMD : location_ops())
+    MDs.push_back(getAsMetadata(VMD));
+  for (auto *VMD : NewValues)
+    MDs.push_back(getAsMetadata(VMD));
+  setArgOperand(
+      0, MetadataAsValue::get(getContext(), DIArgList::get(getContext(), MDs)));
+}
+
 Optional<uint64_t> DbgVariableIntrinsic::getFragmentSizeInBits() const {
   if (auto Fragment = getExpression()->getFragmentInfo())
     return Fragment->SizeInBits;
@@ -266,7 +283,7 @@ bool ConstrainedFPIntrinsic::classof(const IntrinsicInst *I) {
 
 ElementCount VPIntrinsic::getStaticVectorLength() const {
   auto GetVectorLengthOfType = [](const Type *T) -> ElementCount {
-    auto VT = cast<VectorType>(T);
+    const auto *VT = cast<VectorType>(T);
     auto ElemCount = VT->getElementCount();
     return ElemCount;
   };
@@ -380,7 +397,7 @@ bool VPIntrinsic::canIgnoreVectorLengthParam() const {
   // Check whether "W == vscale * EC.getKnownMinValue()"
   if (EC.isScalable()) {
     // Undig the DL
-    auto ParMod = this->getModule();
+    const auto *ParMod = this->getModule();
     if (!ParMod)
       return false;
     const auto &DL = ParMod->getDataLayout();
@@ -393,7 +410,7 @@ bool VPIntrinsic::canIgnoreVectorLengthParam() const {
   }
 
   // standard SIMD operation
-  auto VLConst = dyn_cast<ConstantInt>(VLParam);
+  const auto *VLConst = dyn_cast<ConstantInt>(VLParam);
   if (!VLConst)
     return false;
 

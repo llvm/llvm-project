@@ -47,16 +47,16 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   const LLT s128 = LLT::scalar(128);
   const LLT s256 = LLT::scalar(256);
   const LLT s512 = LLT::scalar(512);
-  const LLT v16s8 = LLT::vector(16, 8);
-  const LLT v8s8 = LLT::vector(8, 8);
-  const LLT v4s8 = LLT::vector(4, 8);
-  const LLT v8s16 = LLT::vector(8, 16);
-  const LLT v4s16 = LLT::vector(4, 16);
-  const LLT v2s16 = LLT::vector(2, 16);
-  const LLT v2s32 = LLT::vector(2, 32);
-  const LLT v4s32 = LLT::vector(4, 32);
-  const LLT v2s64 = LLT::vector(2, 64);
-  const LLT v2p0 = LLT::vector(2, p0);
+  const LLT v16s8 = LLT::fixed_vector(16, 8);
+  const LLT v8s8 = LLT::fixed_vector(8, 8);
+  const LLT v4s8 = LLT::fixed_vector(4, 8);
+  const LLT v8s16 = LLT::fixed_vector(8, 16);
+  const LLT v4s16 = LLT::fixed_vector(4, 16);
+  const LLT v2s16 = LLT::fixed_vector(2, 16);
+  const LLT v2s32 = LLT::fixed_vector(2, 32);
+  const LLT v4s32 = LLT::fixed_vector(4, 32);
+  const LLT v2s64 = LLT::fixed_vector(2, 64);
+  const LLT v2p0 = LLT::fixed_vector(2, p0);
 
   std::initializer_list<LLT> PackedVectorAllTypeList = {/* Begin 128bit types */
                                                         v16s8, v8s16, v4s32,
@@ -92,7 +92,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           [=](const LegalityQuery &Query) {
             LLT EltTy = Query.Types[0].getElementType();
             if (EltTy == s64)
-              return std::make_pair(0, LLT::vector(2, 64));
+              return std::make_pair(0, LLT::fixed_vector(2, 64));
             return std::make_pair(0, EltTy);
           });
 
@@ -977,7 +977,7 @@ bool AArch64LegalizerInfo::legalizeLoadStore(
   }
 
   unsigned PtrSize = ValTy.getElementType().getSizeInBits();
-  const LLT NewTy = LLT::vector(ValTy.getNumElements(), PtrSize);
+  const LLT NewTy = LLT::vector(ValTy.getElementCount(), PtrSize);
   auto &MMO = **MI.memoperands_begin();
   if (MI.getOpcode() == TargetOpcode::G_STORE) {
     auto Bitcast = MIRBuilder.buildBitcast(NewTy, ValReg);
@@ -1073,7 +1073,7 @@ bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
   assert((Size == 32 || Size == 64) && "Expected only 32 or 64 bit scalars!");
   if (Size == 32)
     Val = MIRBuilder.buildZExt(LLT::scalar(64), Val).getReg(0);
-  const LLT V8S8 = LLT::vector(8, LLT::scalar(8));
+  const LLT V8S8 = LLT::fixed_vector(8, LLT::scalar(8));
   Val = MIRBuilder.buildBitcast(V8S8, Val).getReg(0);
   auto CTPOP = MIRBuilder.buildCTPOP(V8S8, Val);
   auto UADDLV =

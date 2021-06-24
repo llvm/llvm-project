@@ -17,7 +17,7 @@ define i32 @functional(i32 %a, i32 %b) {
 }
 
 ; CHECK: define i32 (i32, i32)* @discardg(i32 %0)
-; CHECK: %[[CALL:.*]] = call { i32 (i32, i32)*, i[[#SBITS]] } @"dfs$g"(i32 %0, i[[#SBITS]] 0)
+; CHECK: %[[CALL:.*]] = call { i32 (i32, i32)*, i[[#SBITS]] } @g.dfsan(i32 %0, i[[#SBITS]] 0)
 ; CHECK: %[[XVAL:.*]] = extractvalue { i32 (i32, i32)*, i[[#SBITS]] } %[[CALL]], 0
 ; CHECK: ret {{.*}} %[[XVAL]]
 @discardg = alias i32 (i32, i32)* (i32), i32 (i32, i32)* (i32)* @g
@@ -44,7 +44,7 @@ declare void @customcb(i32 (i32)* %cb)
 
 declare i32 @cb(i32)
 
-; CHECK: @"dfs$f"
+; CHECK: @f.dfsan
 define void @f(i32 %x) {
   ; CHECK: %[[LABELVA2:.*]] = alloca [2 x i[[#SBITS]]]
   ; CHECK: %[[LABELVA1:.*]] = alloca [2 x i[[#SBITS]]]
@@ -56,7 +56,7 @@ define void @f(i32 %x) {
   ; CHECK: call i32 @__dfsw_custom2(i32 1, i32 2, i[[#SBITS]] zeroext 0, i[[#SBITS]] zeroext 0, i[[#SBITS]]* %[[LABELRETURN]])
   call i32 @custom2(i32 1, i32 2)
 
-  ; CHECK: call void @__dfsw_customcb({{.*}} @"dfst0$customcb", i8* bitcast ({{.*}} @"dfs$cb" to i8*), i[[#SBITS]] zeroext 0)
+  ; CHECK: call void @__dfsw_customcb({{.*}} @"dfst0$customcb", i8* bitcast ({{.*}} @cb.dfsan to i8*), i[[#SBITS]] zeroext 0)
   call void @customcb(i32 (i32)* @cb)
 
   ; CHECK: %[[LABELVA1_0:.*]] = getelementptr inbounds [2 x i[[#SBITS]]], [2 x i[[#SBITS]]]* %[[LABELVA1]], i32 0, i32 0
@@ -75,13 +75,13 @@ define void @f(i32 %x) {
   ret void
 }
 
-; CHECK: @"dfs$g"
+; CHECK: @g.dfsan
 define i32 (i32, i32)* @g(i32) {
   ; CHECK: ret {{.*}} @"dfsw$custom2"
   ret i32 (i32, i32)* @custom2
 }
 
-; CHECK: define { i32, i[[#SBITS]] } @"dfs$adiscard"(i32 %0, i32 %1, i[[#SBITS]] %2, i[[#SBITS]] %3)
+; CHECK: define { i32, i[[#SBITS]] } @adiscard.dfsan(i32 %0, i32 %1, i[[#SBITS]] %2, i[[#SBITS]] %3)
 ; CHECK: %[[CALL:.*]] = call i32 @discard(i32 %0, i32 %1)
 ; CHECK: %[[IVAL0:.*]] = insertvalue { i32, i[[#SBITS]] } undef, i32 %[[CALL]], 0
 ; CHECK: %[[IVAL1:.*]] = insertvalue { i32, i[[#SBITS]] } %[[IVAL0]], i[[#SBITS]] 0, 1

@@ -68,6 +68,42 @@ enum Fixups {
   // Used to generate an R_RISCV_ALIGN relocation, which indicates the linker
   // should fixup the alignment after linker relaxation.
   fixup_riscv_align,
+  // 8-bit fixup corresponding to R_RISCV_SET8 for local label assignment.
+  fixup_riscv_set_8,
+  // 8-bit fixup corresponding to R_RISCV_ADD8 for 8-bit symbolic difference
+  // paired relocations.
+  fixup_riscv_add_8,
+  // 8-bit fixup corresponding to R_RISCV_SUB8 for 8-bit symbolic difference
+  // paired relocations.
+  fixup_riscv_sub_8,
+  // 16-bit fixup corresponding to R_RISCV_SET16 for local label assignment.
+  fixup_riscv_set_16,
+  // 16-bit fixup corresponding to R_RISCV_ADD16 for 16-bit symbolic difference
+  // paired reloctions.
+  fixup_riscv_add_16,
+  // 16-bit fixup corresponding to R_RISCV_SUB16 for 16-bit symbolic difference
+  // paired reloctions.
+  fixup_riscv_sub_16,
+  // 32-bit fixup corresponding to R_RISCV_SET32 for local label assignment.
+  fixup_riscv_set_32,
+  // 32-bit fixup corresponding to R_RISCV_ADD32 for 32-bit symbolic difference
+  // paired relocations.
+  fixup_riscv_add_32,
+  // 32-bit fixup corresponding to R_RISCV_SUB32 for 32-bit symbolic difference
+  // paired relocations.
+  fixup_riscv_sub_32,
+  // 64-bit fixup corresponding to R_RISCV_ADD64 for 64-bit symbolic difference
+  // paired relocations.
+  fixup_riscv_add_64,
+  // 64-bit fixup corresponding to R_RISCV_SUB64 for 64-bit symbolic difference
+  // paired relocations.
+  fixup_riscv_sub_64,
+  // 6-bit fixup corresponding to R_RISCV_SET6 for local label assignment in
+  // DWARF CFA.
+  fixup_riscv_set_6b,
+  // 6-bit fixup corresponding to R_RISCV_SUB6 for local label assignment in
+  // DWARF CFA.
+  fixup_riscv_sub_6b,
 
   // Used as a sentinel, must be the last
   fixup_riscv_invalid,

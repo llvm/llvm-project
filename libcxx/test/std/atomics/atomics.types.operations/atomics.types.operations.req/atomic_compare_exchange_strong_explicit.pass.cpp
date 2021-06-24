@@ -35,9 +35,8 @@ struct TestFn {
   void operator()() const {
     {
         typedef std::atomic<T> A;
-        A a;
         T t(T(1));
-        std::atomic_init(&a, t);
+        A a(t);
         assert(std::atomic_compare_exchange_strong_explicit(&a, &t, T(2),
                std::memory_order_seq_cst, std::memory_order_seq_cst) == true);
         assert(a == T(2));
@@ -49,9 +48,8 @@ struct TestFn {
     }
     {
         typedef std::atomic<T> A;
-        volatile A a;
         T t(T(1));
-        std::atomic_init(&a, t);
+        volatile A a(t);
         assert(std::atomic_compare_exchange_strong_explicit(&a, &t, T(2),
                std::memory_order_seq_cst, std::memory_order_seq_cst) == true);
         assert(a == T(2));

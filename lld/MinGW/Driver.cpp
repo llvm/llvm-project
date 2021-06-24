@@ -428,7 +428,7 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
     return false;
 
   if (args.hasArg(OPT_verbose) || args.hasArg(OPT__HASH_HASH_HASH))
-    lld::outs() << llvm::join(linkArgs, " ") << "\n";
+    lld::errs() << llvm::join(linkArgs, " ") << "\n";
 
   if (args.hasArg(OPT__HASH_HASH_HASH))
     return true;
@@ -437,5 +437,8 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   std::vector<const char *> vec;
   for (const std::string &s : linkArgs)
     vec.push_back(s.c_str());
+  // Pass the actual binary name, to make error messages be printed with
+  // the right prefix.
+  vec[0] = argsArr[0];
   return coff::link(vec, canExitEarly, stdoutOS, stderrOS);
 }

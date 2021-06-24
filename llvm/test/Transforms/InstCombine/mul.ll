@@ -247,6 +247,76 @@ define i32 @mul_bools_sext_use3(i1 %x, i1 %y) {
   ret i32 %r
 }
 
+define i32 @mul_bools_sext_one_use_per_op(i1 %x, i1 %y) {
+; CHECK-LABEL: @mul_bools_sext_one_use_per_op(
+; CHECK-NEXT:    [[MULBOOL:%.*]] = and i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[MULBOOL]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sx = sext i1 %x to i32
+  %sy = sext i1 %y to i32
+  %r = mul i32 %sx, %sy
+  ret i32 %r
+}
+
+define i32 @mul_bool_sext_one_user(i1 %x) {
+; CHECK-LABEL: @mul_bool_sext_one_user(
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[X:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sx = sext i1 %x to i32
+  %r = mul i32 %sx, %sx
+  ret i32 %r
+}
+
+define i32 @mul_bools_zext_one_use_per_op(i1 %x, i1 %y) {
+; CHECK-LABEL: @mul_bools_zext_one_use_per_op(
+; CHECK-NEXT:    [[MULBOOL:%.*]] = and i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[MULBOOL]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %zx = zext i1 %x to i32
+  %zy = zext i1 %y to i32
+  %r = mul i32 %zx, %zy
+  ret i32 %r
+}
+
+define i32 @mul_bool_zext_one_user(i1 %x) {
+; CHECK-LABEL: @mul_bool_zext_one_user(
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[X:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sx = zext i1 %x to i32
+  %r = mul i32 %sx, %sx
+  ret i32 %r
+}
+
+define i32 @mul_bool_sext_one_extra_user(i1 %x) {
+; CHECK-LABEL: @mul_bool_sext_one_extra_user(
+; CHECK-NEXT:    [[SX:%.*]] = sext i1 [[X:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[SX]])
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[X]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sx = sext i1 %x to i32
+  call void @use32(i32 %sx)
+  %r = mul i32 %sx, %sx
+  ret i32 %r
+}
+
+define i32 @mul_bool_zext_one_extra_user(i1 %x) {
+; CHECK-LABEL: @mul_bool_zext_one_extra_user(
+; CHECK-NEXT:    [[SX:%.*]] = zext i1 [[X:%.*]] to i32
+; CHECK-NEXT:    call void @use32(i32 [[SX]])
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[X]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %sx = zext i1 %x to i32
+  call void @use32(i32 %sx)
+  %r = mul i32 %sx, %sx
+  ret i32 %r
+}
+
 define <3 x i32> @mul_bools_mixed_ext(<3 x i1> %x, <3 x i1> %y) {
 ; CHECK-LABEL: @mul_bools_mixed_ext(
 ; CHECK-NEXT:    [[MULBOOL:%.*]] = and <3 x i1> [[X:%.*]], [[Y:%.*]]

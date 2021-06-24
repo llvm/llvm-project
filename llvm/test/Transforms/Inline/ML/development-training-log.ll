@@ -1,9 +1,13 @@
 ; Test that we can produce a log if we have or do not have a model, in development mode.
 ; REQUIRES: have_tf_api
-; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=- -ml-inliner-model-under-training=%S/../../../../lib/Analysis/models/inliner -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -S < %s | FileCheck %s 
-; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=- -ml-inliner-model-under-training=%S/../../../../lib/Analysis/models/inliner -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -ml-inliner-output-spec-override=%S/Inputs/test_output_spec.json -S < %s | FileCheck %s --check-prefixes=EXTRA-OUTPUTS,CHECK
+; Generate mock model
+; RUN: rm -rf %t && mkdir %t
+; RUN: %python %S/../../../../lib/Analysis/models/generate_mock_model.py %S/../../../../lib/Analysis/models/inlining/config.py %t
+;
+; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=- -ml-inliner-model-under-training=%t -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -S < %s | FileCheck %s 
+; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=- -ml-inliner-model-under-training=%t -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -ml-inliner-output-spec-override=%S/Inputs/test_output_spec.json -S < %s | FileCheck %s --check-prefixes=EXTRA-OUTPUTS,CHECK
 ; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=- -ml-inliner-ir2native-model=%S/../../../../unittests/Analysis/Inputs/ir2native_x86_64_model -S < %s | FileCheck %s
-; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=- -ml-inliner-model-under-training=%S/../../../../lib/Analysis/models/inliner -S < %s | FileCheck %s --check-prefix=NOREWARD
+; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=- -ml-inliner-model-under-training=%t -S < %s | FileCheck %s --check-prefix=NOREWARD
 ; RUN: opt -enable-ml-inliner=development -passes=scc-oz-module-inliner -training-log=- -S < %s | FileCheck %s --check-prefix=NOREWARD
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -44,7 +48,7 @@ define dso_local i32 @top() {
 ; Check we produce a protobuf that has inlining decisions and rewards.
 ; CHECK-NOT: fake_extra_output
 ; EXTRA-OUTPUTS:          key: "fake_extra_output" value: {
-; EXTRA-OUTPUTS-NEXT:       feature: { int64_list: { value: [1] } }
+; EXTRA-OUTPUTS-NEXT:       feature: { int64_list: { value: [{{[0-9]+}}] } }
 ; CHECK:          key: "inlining_decision" value: {
 ; CHECK-NEXT:       feature: { int64_list: { value: [1] } }
 ; CHECK:          key: "delta_size" value: {

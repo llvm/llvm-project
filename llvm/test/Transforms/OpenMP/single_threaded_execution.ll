@@ -1,8 +1,8 @@
-; RUN: opt -passes=openmp-opt-cgscc -debug-only=openmp-opt -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=openmp-opt -debug-only=openmp-opt -disable-output < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 ; ModuleID = 'single_threaded_exeuction.c'
 
-define void @kernel() {
+define weak void @kernel() {
   call void @__kmpc_kernel_init(i32 512, i16 1)
   call void @nvptx()
   call void @amdgcn()
@@ -12,14 +12,15 @@ define void @kernel() {
 ; CHECK-NOT: [openmp-opt] Basic block @nvptx entry is executed by a single thread.
 ; CHECK: [openmp-opt] Basic block @nvptx if.then is executed by a single thread.
 ; CHECK-NOT: [openmp-opt] Basic block @nvptx if.end is executed by a single thread.
-; Function Attrs: noinline nounwind uwtable
-define dso_local void @nvptx() {
+; Function Attrs: noinline
+define internal void @nvptx() {
 entry:
   %call = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
   %cmp = icmp eq i32 %call, 0
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
+  call void @foo()
   call void @bar()
   br label %if.end
 
@@ -30,14 +31,15 @@ if.end:
 ; CHECK-NOT: [openmp-opt] Basic block @amdgcn entry is executed by a single thread.
 ; CHECK: [openmp-opt] Basic block @amdgcn if.then is executed by a single thread.
 ; CHECK-NOT: [openmp-opt] Basic block @amdgcn if.end is executed by a single thread.
-; Function Attrs: noinline nounwind uwtable
-define dso_local void @amdgcn() {
+; Function Attrs: noinline
+define internal void @amdgcn() {
 entry:
   %call = call i32 @llvm.amdgcn.workitem.id.x()
   %cmp = icmp eq i32 %call, 0
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
+  call void @foo()
   call void @bar()
   br label %if.end
 
@@ -45,9 +47,16 @@ if.end:
   ret void
 }
 
-; CHECK: [openmp-opt] Basic block @bar entry is executed by a single thread.
-; Function Attrs: noinline nounwind uwtable
-define internal void @bar() {
+; CHECK: [openmp-opt] Basic block @foo entry is executed by a single thread.
+; Function Attrs: noinline
+define internal void @foo() {
+entry:
+  ret void
+}
+
+; CHECK: [openmp-opt] Basic block @bar.internalized entry is executed by a single thread.
+; Function Attrs: noinline
+define void @bar() {
 entry:
   ret void
 }
