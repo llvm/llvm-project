@@ -9192,52 +9192,60 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     auto GetReplicateRegion = [](VPRecipeBase *R) -> VPRegionBlock * {
       auto *Region =
           dyn_cast_or_null<VPRegionBlock>(R->getParent()->getParent());
-      if (Region && Region->isReplicator())
+      if (Region && Region->isReplicator()) {
+        assert(Region->getNumSuccessors() == 1 &&
+               Region->getNumPredecessors() == 1 && "Expected SESE region!");
+        assert(R->getParent()->size() == 1 &&
+               "A recipe in an original replicator region must be the only "
+               "recipe in its block");
         return Region;
+      }
       return nullptr;
     };
-
-    // If the target is in a replication region, make sure to move Sink to the
-    // block after it, not into the replication region itself.
-    if (auto *TargetRegion = GetReplicateRegion(Target)) {
-      assert(TargetRegion->getNumSuccessors() == 1 && "Expected SESE region!");
-      assert(!GetReplicateRegion(Sink) &&
-             "cannot sink a region into another region yet");
-      VPBasicBlock *NextBlock =
-          cast<VPBasicBlock>(TargetRegion->getSuccessors().front());
-      Sink->moveBefore(*NextBlock, NextBlock->getFirstNonPhi());
-      continue;
-    }
-
+    auto *TargetRegion = GetReplicateRegion(Target);
     auto *SinkRegion = GetReplicateRegion(Sink);
-    // Unless the sink source is in a replicate region, sink the recipe
-    // directly.
     if (!SinkRegion) {
-      Sink->moveAfter(Target);
+      // If the sink source is not a replicate region, sink the recipe directly.
+      if (TargetRegion) {
+        // The target is in a replication region, make sure to move Sink to
+        // the block after it, not into the replication region itself.
+        VPBasicBlock *NextBlock =
+            cast<VPBasicBlock>(TargetRegion->getSuccessors().front());
+        Sink->moveBefore(*NextBlock, NextBlock->getFirstNonPhi());
+      } else
+        Sink->moveAfter(Target);
       continue;
     }
 
-    // If the sink source is in a replicate region, we need to move the whole
-    // replicate region, which should only contain a single recipe in the main
-    // block.
-    assert(Sink->getParent()->size() == 1 &&
-           "parent must be a replicator with a single recipe");
-    auto *SplitBlock =
-        Target->getParent()->splitAt(std::next(Target->getIterator()));
+    // The sink source is in a replicate region. Unhook the region from the CFG.
+    auto *SinkPred = SinkRegion->getSinglePredecessor();
+    auto *SinkSucc = SinkRegion->getSingleSuccessor();
+    VPBlockUtils::disconnectBlocks(SinkPred, SinkRegion);
+    VPBlockUtils::disconnectBlocks(SinkRegion, SinkSucc);
+    VPBlockUtils::connectBlocks(SinkPred, SinkSucc);
 
-    auto *Pred = SinkRegion->getSinglePredecessor();
-    auto *Succ = SinkRegion->getSingleSuccessor();
-    VPBlockUtils::disconnectBlocks(Pred, SinkRegion);
-    VPBlockUtils::disconnectBlocks(SinkRegion, Succ);
-    VPBlockUtils::connectBlocks(Pred, Succ);
+    if (TargetRegion) {
+      // The target recipe is also in a replicate region, move the sink region
+      // after the target region.
+      auto *TargetSucc = TargetRegion->getSingleSuccessor();
+      VPBlockUtils::disconnectBlocks(TargetRegion, TargetSucc);
+      VPBlockUtils::connectBlocks(TargetRegion, SinkRegion);
+      VPBlockUtils::connectBlocks(SinkRegion, TargetSucc);
+    } else {
+      // The sink source is in a replicate region, we need to move the whole
+      // replicate region, which should only contain a single recipe in the main
+      // block.
+      auto *SplitBlock =
+          Target->getParent()->splitAt(std::next(Target->getIterator()));
 
-    auto *SplitPred = SplitBlock->getSinglePredecessor();
+      auto *SplitPred = SplitBlock->getSinglePredecessor();
 
-    VPBlockUtils::disconnectBlocks(SplitPred, SplitBlock);
-    VPBlockUtils::connectBlocks(SplitPred, SinkRegion);
-    VPBlockUtils::connectBlocks(SinkRegion, SplitBlock);
-    if (VPBB == SplitPred)
-      VPBB = SplitBlock;
+      VPBlockUtils::disconnectBlocks(SplitPred, SplitBlock);
+      VPBlockUtils::connectBlocks(SplitPred, SinkRegion);
+      VPBlockUtils::connectBlocks(SinkRegion, SplitBlock);
+      if (VPBB == SplitPred)
+        VPBB = SplitBlock;
+    }
   }
 
   // Interleave memory: for each Interleave Group we marked earlier as relevant
