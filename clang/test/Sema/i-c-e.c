@@ -70,10 +70,12 @@ char y[__builtin_constant_p(expr) ? -1 : 1];
 char z[__builtin_constant_p(4) ? 1 : -1];
 
 // Comma tests
-int comma1[0?1,2:3];
-int comma2[1||(1,2)]; // expected-warning {{use of logical '||' with constant operand}} \
-                      // expected-note {{use '|' for a bitwise operation}}
-int comma3[(1,2)]; // expected-warning {{variable length array folded to constant array as an extension}}
+int comma1[0?1,2:3]; // expected-warning {{left operand of comma operator has no effect}}
+int comma2[1 || (1, 2)]; // expected-warning {{use of logical '||' with constant operand}} \
+                      // expected-note {{use '|' for a bitwise operation}} \
+                      // expected-warning {{left operand of comma operator has no effect}}
+int comma3[(1, 2)];   // expected-warning {{variable length array folded to constant array as an extension}} \
+                      // expected-warning {{left operand of comma operator has no effect}}
 
 // Pointer + __builtin_constant_p
 char pbcp[__builtin_constant_p(4) ? (intptr_t)&expr : 0]; // expected-error {{variable length array declaration not allowed at file scope}}

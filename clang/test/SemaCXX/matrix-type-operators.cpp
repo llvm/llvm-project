@@ -179,12 +179,12 @@ void insert(sx5x10_t a, float f) {
 
   a[4, 5] = 5.0;
   // expected-error@-1 {{comma expressions are not allowed as indices in matrix subscript expressions}}
-  // expected-warning@-2 {{expression result unused}}
+  // expected-warning@-2 {{left operand of comma operator has no effect}}
 
   a[4, 5, 4] = 5.0;
   // expected-error@-1 {{comma expressions are not allowed as indices in matrix subscript expressions}}
-  // expected-warning@-2 {{expression result unused}}
-  // expected-warning@-3 {{expression result unused}}
+  // expected-warning@-2 {{left operand of comma operator has no effect}}
+  // expected-warning@-3 {{left operand of comma operator has no effect}}
 }
 
 void extract(sx5x10_t a, float f) {

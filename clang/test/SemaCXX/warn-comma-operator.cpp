@@ -242,8 +242,8 @@ struct bool_seq;
 
 template <typename... xs>
 class Foo {
-  typedef bool_seq<(xs::value, true)...> all_true;
-  typedef bool_seq<(xs::value, false)...> all_false;
+  typedef bool_seq<((void)xs::value, true)...> all_true;
+  typedef bool_seq<((void)xs::value, false)...> all_false;
   typedef bool_seq<xs::value...> seq;
 };
 
