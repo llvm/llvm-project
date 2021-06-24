@@ -1834,11 +1834,9 @@ void MappingTraits<ELFYAML::LinkerOption>::mapping(IO &IO,
   IO.mapRequired("Value", Opt.Value);
 }
 
-void MappingTraits<ELFYAML::CallGraphEntry>::mapping(
-    IO &IO, ELFYAML::CallGraphEntry &E) {
+void MappingTraits<ELFYAML::CallGraphEntryWeight>::mapping(
+    IO &IO, ELFYAML::CallGraphEntryWeight &E) {
   assert(IO.getContext() && "The IO context is not initialized");
-  IO.mapRequired("From", E.From);
-  IO.mapRequired("To", E.To);
   IO.mapRequired("Weight", E.Weight);
 }
 

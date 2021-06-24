@@ -18,6 +18,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Object/ELFTypes.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/ObjectYAML/ELFYAML.h"
@@ -1474,14 +1475,9 @@ void ELFState<ELFT>::writeSectionContent(
   if (!Section.Entries)
     return;
 
-  for (const ELFYAML::CallGraphEntry &E : *Section.Entries) {
-    unsigned From = toSymbolIndex(E.From, Section.Name, /*IsDynamic=*/false);
-    unsigned To = toSymbolIndex(E.To, Section.Name, /*IsDynamic=*/false);
-
-    CBA.write<uint32_t>(From, ELFT::TargetEndianness);
-    CBA.write<uint32_t>(To, ELFT::TargetEndianness);
+  for (const ELFYAML::CallGraphEntryWeight &E : *Section.Entries) {
     CBA.write<uint64_t>(E.Weight, ELFT::TargetEndianness);
-    SHeader.sh_size += 16;
+    SHeader.sh_size += sizeof(object::Elf_CGProfile_Impl<ELFT>);
   }
 }
 

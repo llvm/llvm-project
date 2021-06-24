@@ -367,7 +367,7 @@ Sections:
 # RUN: llvm-readelf %t7 --section-headers | FileCheck %s --check-prefix=LINK-IMPLICIT
 
 # LINK-IMPLICIT:      [Nr] Name          Type                    Address          Off    Size   ES Flg Lk Inf Al
-# LINK-IMPLICIT:      [ 1] .cgp          LLVM_CALL_GRAPH_PROFILE 0000000000000000 000040 000000 10      0   0  0
+# LINK-IMPLICIT:      [ 1] .cgp          LLVM_CALL_GRAPH_PROFILE 0000000000000000 000040 000000 08      0   0  0
 # LINK-IMPLICIT-NEXT: [ 2] .llvm_addrsig LLVM_ADDRSIG            0000000000000000 000040 000000 00      0   0  0
 # LINK-IMPLICIT-NEXT: [ 3] .group        GROUP                   0000000000000000 000040 000000 04      0   0  0
 # LINK-IMPLICIT-NEXT: [ 4] .rela         RELA                    0000000000000000 000040 000000 18      0   0  0
