@@ -440,25 +440,17 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
   // consistency discussions (i.e. what to do with output tensors whose bbarg is
   // not used).
   Block &block = linalgOp->getRegion(0).front();
-  unsigned numBBIvs = linalgOp.getNumPayloadInductionVariables();
 
-  if (linalgOp.getNumInputsAndOutputs() + numBBIvs != block.getNumArguments())
+  if (linalgOp.getNumInputsAndOutputs() != block.getNumArguments())
     return op->emitOpError("expected as many non-induction variable region "
                            "arguments as the number of input/output operands");
 
-  // Note: the number and type of yield values are checked in the YieldOp.
-  for (unsigned i = 0; i < numBBIvs; ++i)
-    if (!block.getArgument(i).getType().isIndex())
-      return op->emitOpError("expected index block argument #") << i;
-
   for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands()) {
     Type elementType = getElementTypeOrSelf(opOperand->get());
-    Type argType =
-        block.getArgument(numBBIvs + opOperand->getOperandNumber()).getType();
+    Type argType = block.getArgument(opOperand->getOperandNumber()).getType();
     if (elementType != argType)
       return op->emitOpError("expected type of bb argument #")
-             << numBBIvs + opOperand->getOperandNumber() << " (" << argType
-             << ")"
+             << opOperand->getOperandNumber() << " (" << argType << ")"
              << " to match element or self type of the corresponding operand ("
              << elementType << ")";
   }

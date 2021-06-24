@@ -197,9 +197,6 @@ template <typename T> inline T *alignUp(T *value, size_t alignment) {
       alignDown((intptr_t)(value + alignment - 1), alignment));
 }
 
-hsa_status_t register_allocation(void *addr, size_t size,
-                                 atmi_devtype_t DeviceType);
-
 extern bool atl_is_atmi_initialized();
 
 bool handle_group_signal(hsa_signal_value_t value, void *arg);

@@ -339,6 +339,7 @@ private:
 template <typename OpT = void> class OperationPass : public Pass {
 protected:
   OperationPass(TypeID passID) : Pass(passID, OpT::getOperationName()) {}
+  OperationPass(const OperationPass &) = default;
 
   /// Support isa/dyn_cast functionality.
   static bool classof(const Pass *pass) {
@@ -371,6 +372,7 @@ protected:
 template <> class OperationPass<void> : public Pass {
 protected:
   OperationPass(TypeID passID) : Pass(passID) {}
+  OperationPass(const OperationPass &) = default;
 };
 
 /// A model for providing function pass specific utilities.
@@ -409,6 +411,7 @@ public:
 
 protected:
   PassWrapper() : BaseT(TypeID::get<PassT>()) {}
+  PassWrapper(const PassWrapper &) = default;
 
   /// Returns the derived pass name.
   StringRef getName() const override { return llvm::getTypeName<PassT>(); }

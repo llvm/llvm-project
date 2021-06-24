@@ -100,9 +100,21 @@ LogicalResult mlir::linalg::LinalgOpToLibraryCallRewrite::matchAndRewrite(
   if (isa<CopyOp>(op))
     return failure();
 
+  // Swap the operand order of the FillOp to maintain the pretty printed
+  // signature that takes an output buffer followed by the fill value.
+  SmallVector<Value> originalOperandOrder = op->getOperands();
+  if (auto fillOp = dyn_cast<FillOp>(op.getOperation())) {
+    Value value = fillOp.value();
+    Value output = fillOp.output();
+    op->setOperands(ValueRange{output, value});
+  }
+
   auto libraryCallName = getLibraryCallSymbolRef(op, rewriter);
-  if (!libraryCallName)
+  if (!libraryCallName) {
+    // Restore the operand order in case it has been modified.
+    op->setOperands(originalOperandOrder);
     return failure();
+  }
 
   // TODO: Add support for more complex library call signatures that include
   // indices or captured values.

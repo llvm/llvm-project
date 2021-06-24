@@ -35,6 +35,7 @@ def ShapeDialect : Dialect {
   }];
 
   let cppNamespace = "::mlir::shape";
+  let dependentDialects = ["tensor::TensorDialect"];
 
   let hasConstantMaterializer = 1;
   let hasOperationAttrVerify = 1;

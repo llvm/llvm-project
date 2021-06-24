@@ -24,6 +24,13 @@
 // A possible future refinement is to specialise the structure per-kernel, so
 // that fields can be elided based on more expensive analysis.
 //
+// NOTE: Since this pass will directly pack LDS (assume large LDS) into a struct
+// type which would cause allocating huge memory for struct instance within
+// every kernel. Hence, before running this pass, it is advisable to run the
+// pass "amdgpu-replace-lds-use-with-pointer" which will replace LDS uses within
+// non-kernel functions by pointers and thereby minimizes the unnecessary per
+// kernel allocation of LDS memory.
+//
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"

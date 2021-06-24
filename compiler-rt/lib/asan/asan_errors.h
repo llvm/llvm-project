@@ -367,14 +367,96 @@ struct ErrorGeneric : ErrorBase {
   AddressDescription addr_description;
   uptr pc, bp, sp;
   uptr access_size;
-  const char *bug_descr;
   bool is_write;
   u8 shadow_val;
-
+  char bug_desc[512];
   ErrorGeneric() = default;  // (*)
   ErrorGeneric(u32 tid, uptr addr, uptr pc_, uptr bp_, uptr sp_, bool is_write_,
                uptr access_size_);
   void Print();
+};
+
+// Common data shared by non-self error types.
+struct NonSelfCommonData {
+  struct codeobject_location {
+    int fd;
+    s64 vma_adjust;
+    u64 offset, size;
+    codeobject_location() = default;
+    codeobject_location(int fd_, s64 vma_adjust_, u64 offset_, u64 size_)
+        : fd(fd_), vma_adjust(vma_adjust_), offset(offset_), size(size_) {}
+  } cb_loc;
+  u32 access_size;
+  bool is_write;
+
+  NonSelfCommonData() = default;
+  NonSelfCommonData(int fd_, s64 vm_adj, u64 off_, u64 sz_, u32 acc_size,
+                    bool is_write_)
+      : cb_loc(fd_, vm_adj, off_, sz_),
+        access_size(acc_size),
+        is_write(is_write_) {}
+};
+
+// NonSelf Generic Error can be used to report
+// an error triggered by cpu thread that compiler-rt is not aware of
+struct ErrorNonSelfGeneric : ErrorBase {
+  NonSelfCommonData data;
+  // At present, we assume one thread triggered the error
+  static constexpr u32 threads_count = 1;
+  static constexpr u32 addr_count = 1;
+  static constexpr u32 maxcs_depth = 1;
+
+  uptr addresses[addr_count];
+  u64 thread_id[threads_count];
+  uptr callstack[maxcs_depth];
+
+  char bug_desc[512];
+  u8 shadow_val;
+
+  ErrorNonSelfGeneric() = default;
+  ErrorNonSelfGeneric(uptr *callstack_, u32 n_callstack, uptr *addrs,
+                      u32 n_addrs, u64 *threadids, u32 n_threads, bool is_write,
+                      u32 access_size, int fd_, s64 vm_adj, u64 off_, u64 sz_);
+  void Print();
+};
+
+// AMDGPU Device Generic Error
+// Represents an invaid memory access made by a single amdgpu wave-front
+// Todo: abstract amdgpu related info into a base classes in case of
+// multiple error types for AMDGPU
+struct ErrorNonSelfAMDGPU : ErrorBase {
+  NonSelfCommonData data;
+  // amdgpu wave-front can have atmost 64 active threads
+  static constexpr u32 wavesize = 64;
+  uptr device_address[wavesize];
+  // currently we don't support callstack of depth > 1
+  static constexpr u32 maxcs_depth = 1;
+  uptr callstack[maxcs_depth];
+
+  struct workgroup_id {
+    u64 idx, idy, idz;
+    workgroup_id() = default;
+    workgroup_id(u64 idx_, u64 idy_, u64 idz_)
+        : idx(idx_), idy(idy_), idz(idz_) {}
+  } wg;
+  u64 workitem_ids[wavesize];
+  u32 nactive_threads;
+  int device_id;
+  u8 shadow_val;
+  char bug_desc[512];
+
+  ErrorNonSelfAMDGPU() = default;
+  ErrorNonSelfAMDGPU(uptr *dev_callstack, u32 n_callstack, uptr *dev_address,
+                     u32 n_addrs, u64 *wi_ids, u32 n_wi, bool is_write_,
+                     u32 access_size_, int fd_, s64 vm_adj, u64 file_start_,
+                     u64 file_size_);
+  void Print();
+
+  // error type identifying key
+  static constexpr const char *key = "amdgpu";
+
+ private:
+  void PrintThreadsAndAddresses();
 };
 
 // clang-format off
@@ -400,7 +482,9 @@ struct ErrorGeneric : ErrorBase {
   macro(BadParamsToAnnotateContiguousContainer) \
   macro(ODRViolation)                           \
   macro(InvalidPointerPair)                     \
-  macro(Generic)
+  macro(Generic)                                \
+  macro(NonSelfGeneric)                         \
+  macro(NonSelfAMDGPU)
 // clang-format on
 
 #define ASAN_DEFINE_ERROR_KIND(name) kErrorKind##name,

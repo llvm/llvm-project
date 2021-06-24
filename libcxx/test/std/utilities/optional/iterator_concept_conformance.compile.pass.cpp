@@ -19,3 +19,5 @@
 static_assert(!std::indirectly_readable<std::optional<int> >);
 static_assert(!std::indirectly_writable<std::optional<int>, int>);
 static_assert(!std::weakly_incrementable<std::optional<int> >);
+static_assert(!std::indirectly_movable<std::optional<int>, std::optional<int>>);
+static_assert(!std::indirectly_movable_storable<std::optional<int>, std::optional<int>>);

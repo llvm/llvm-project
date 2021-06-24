@@ -17,7 +17,7 @@ class OutputDirectoryTest(unittest.TestCase):
     @staticmethod
     def run_analyzer(outdir, args, cmd):
         return check_call_and_report(
-            ['scan-build', '--intercept-first', '-o', outdir] + args,
+            ['scan-build-py', '--intercept-first', '-o', outdir] + args,
             cmd)
 
     def test_regular_keeps_report_dir(self):
@@ -49,7 +49,7 @@ class RunAnalyzerTest(unittest.TestCase):
         with libear.TemporaryDirectory() as tmpdir:
             make = make_args(tmpdir) + ['build_regular']
             outdir = check_call_and_report(
-                ['scan-build', '--plist', '-o', tmpdir, '--override-compiler'],
+                ['scan-build-py', '--plist', '-o', tmpdir, '--override-compiler'],
                 make)
 
             self.assertTrue(os.path.isdir(outdir))
@@ -59,7 +59,7 @@ class RunAnalyzerTest(unittest.TestCase):
         with libear.TemporaryDirectory() as tmpdir:
             make = make_args(tmpdir) + ['build_regular']
             outdir = check_call_and_report(
-                ['scan-build', '--plist', '-o', tmpdir, '--intercept-first',
+                ['scan-build-py', '--plist', '-o', tmpdir, '--intercept-first',
                  '--override-compiler'],
                 make)
 
@@ -70,7 +70,7 @@ class RunAnalyzerTest(unittest.TestCase):
         with libear.TemporaryDirectory() as tmpdir:
             make = make_args(tmpdir) + ['build_regular']
             outdir = check_call_and_report(
-                ['scan-build', '--plist', '-o', tmpdir, '--intercept-first'],
+                ['scan-build-py', '--plist', '-o', tmpdir, '--intercept-first'],
                 make)
 
             self.assertTrue(os.path.isdir(outdir))
@@ -89,21 +89,21 @@ class RunAnalyzerTest(unittest.TestCase):
     def test_interposition_cc_works(self):
         with libear.TemporaryDirectory() as tmpdir:
             outdir = check_call_and_report(
-                ['scan-build', '--plist', '-o', tmpdir, '--override-compiler'],
+                ['scan-build-py', '--plist', '-o', tmpdir, '--override-compiler'],
                 self.compile_empty_source_file(tmpdir, False))
             self.assertEqual(self.get_plist_count(outdir), 1)
 
     def test_interposition_cxx_works(self):
         with libear.TemporaryDirectory() as tmpdir:
             outdir = check_call_and_report(
-                ['scan-build', '--plist', '-o', tmpdir, '--override-compiler'],
+                ['scan-build-py', '--plist', '-o', tmpdir, '--override-compiler'],
                 self.compile_empty_source_file(tmpdir, True))
             self.assertEqual(self.get_plist_count(outdir), 1)
 
     def test_intercept_cc_works(self):
         with libear.TemporaryDirectory() as tmpdir:
             outdir = check_call_and_report(
-                ['scan-build', '--plist', '-o', tmpdir, '--override-compiler',
+                ['scan-build-py', '--plist', '-o', tmpdir, '--override-compiler',
                  '--intercept-first'],
                 self.compile_empty_source_file(tmpdir, False))
             self.assertEqual(self.get_plist_count(outdir), 1)
@@ -111,7 +111,7 @@ class RunAnalyzerTest(unittest.TestCase):
     def test_intercept_cxx_works(self):
         with libear.TemporaryDirectory() as tmpdir:
             outdir = check_call_and_report(
-                ['scan-build', '--plist', '-o', tmpdir, '--override-compiler',
+                ['scan-build-py', '--plist', '-o', tmpdir, '--override-compiler',
                  '--intercept-first'],
                 self.compile_empty_source_file(tmpdir, True))
             self.assertEqual(self.get_plist_count(outdir), 1)

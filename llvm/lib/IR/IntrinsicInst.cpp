@@ -266,7 +266,7 @@ bool ConstrainedFPIntrinsic::classof(const IntrinsicInst *I) {
 
 ElementCount VPIntrinsic::getStaticVectorLength() const {
   auto GetVectorLengthOfType = [](const Type *T) -> ElementCount {
-    auto VT = cast<VectorType>(T);
+    const auto *VT = cast<VectorType>(T);
     auto ElemCount = VT->getElementCount();
     return ElemCount;
   };
@@ -380,7 +380,7 @@ bool VPIntrinsic::canIgnoreVectorLengthParam() const {
   // Check whether "W == vscale * EC.getKnownMinValue()"
   if (EC.isScalable()) {
     // Undig the DL
-    auto ParMod = this->getModule();
+    const auto *ParMod = this->getModule();
     if (!ParMod)
       return false;
     const auto &DL = ParMod->getDataLayout();
@@ -393,7 +393,7 @@ bool VPIntrinsic::canIgnoreVectorLengthParam() const {
   }
 
   // standard SIMD operation
-  auto VLConst = dyn_cast<ConstantInt>(VLParam);
+  const auto *VLConst = dyn_cast<ConstantInt>(VLParam);
   if (!VLConst)
     return false;
 

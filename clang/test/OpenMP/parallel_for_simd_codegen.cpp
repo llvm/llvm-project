@@ -792,10 +792,12 @@ for (int i = 0; i < 10; ++i);
 //
 
 // OMP45-NOT: !{!"llvm.loop.vectorize.enable", i1 false}
-// OMP45-DAG: ![[VECT]] = distinct !{![[VECT]], ![[VM:.+]]}
+// OMP45-DAG: ![[VECT]] = distinct !{![[VECT]], ![[PA:.+]], ![[VM:.+]]}
+// OMP45-DAG: ![[PA]] = !{!"llvm.loop.parallel_accesses", !{{.+}}}
 // OMP45-DAG: ![[VM]] = !{!"llvm.loop.vectorize.enable", i1 true}
 // OMP45-NOT: !{!"llvm.loop.vectorize.enable", i1 false}
-// OMP50-DAG: ![[VECT]] = distinct !{![[VECT]], ![[VM:.+]]}
+// OMP50-DAG: ![[VECT]] = distinct !{![[VECT]], ![[PA:.+]], ![[VM:.+]]}
+// OMP50-DAG  ![[PA]] = !{!"llvm.loop.parallel_accesses", !{{.+}}}
 // OMP50-DAG: ![[VM]] = !{!"llvm.loop.vectorize.enable", i1 true}
 // OMP50-DAG: ![[NOVECT]] = distinct !{![[NOVECT]], ![[NOVM:.+]]}
 // OMP50-DAG: ![[NOVM]] = !{!"llvm.loop.vectorize.enable", i1 false}
@@ -808,7 +810,7 @@ void parallel_simd(float *a) {
 #pragma omp parallel for simd
   // TERM_DEBUG-NOT: __kmpc_global_thread_num
   // TERM_DEBUG:     invoke i32 {{.*}}bar{{.*}}()
-  // TERM_DEBUG:     unwind label %[[TERM_LPAD:.+]],
+  // TERM_DEBUG:     unwind label %[[TERM_LPAD:[a-zA-Z0-9\.]+]],
   // TERM_DEBUG-NOT: __kmpc_global_thread_num
   // TERM_DEBUG:     [[TERM_LPAD]]
   // TERM_DEBUG:     call void @__clang_call_terminate

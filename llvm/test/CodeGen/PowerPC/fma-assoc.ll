@@ -320,18 +320,20 @@ define double @test_reassoc_FMADD_ASSOC2(double %A, double %B, double %C,
   ret double %I
 }
 
+; FIXME: -ffp-contract=fast does NOT work here?
 define double @test_reassoc_FMSUB_ASSOC1(double %A, double %B, double %C,
 ; CHECK-LABEL: test_reassoc_FMSUB_ASSOC1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmsub 0, 3, 4, 5
-; CHECK-NEXT:    fmadd 1, 1, 2, 0
+; CHECK-NEXT:    fmul 0, 3, 4
+; CHECK-NEXT:    fmadd 0, 1, 2, 0
+; CHECK-NEXT:    fsub 1, 0, 5
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-VSX-LABEL: test_reassoc_FMSUB_ASSOC1:
 ; CHECK-VSX:       # %bb.0:
-; CHECK-VSX-NEXT:    xsmsubmdp 3, 4, 5
-; CHECK-VSX-NEXT:    xsmaddadp 3, 1, 2
-; CHECK-VSX-NEXT:    fmr 1, 3
+; CHECK-VSX-NEXT:    xsmuldp 0, 3, 4
+; CHECK-VSX-NEXT:    xsmaddadp 0, 1, 2
+; CHECK-VSX-NEXT:    xssubdp 1, 0, 5
 ; CHECK-VSX-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul reassoc double %A, %B         ; <double> [#uses=1]
@@ -340,6 +342,28 @@ define double @test_reassoc_FMSUB_ASSOC1(double %A, double %B, double %C,
   %I = fsub reassoc double %H, %E         ; <double> [#uses=1]
   ret double %I
 }
+
+define double @test_reassoc_FMSUB_ASSOC11(double %A, double %B, double %C,
+; CHECK-LABEL: test_reassoc_FMSUB_ASSOC11:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fmsub 0, 3, 4, 5
+; CHECK-NEXT:    fmadd 1, 1, 2, 0
+; CHECK-NEXT:    blr
+;
+; CHECK-VSX-LABEL: test_reassoc_FMSUB_ASSOC11:
+; CHECK-VSX:       # %bb.0:
+; CHECK-VSX-NEXT:    xsmsubmdp 3, 4, 5
+; CHECK-VSX-NEXT:    xsmaddadp 3, 1, 2
+; CHECK-VSX-NEXT:    fmr 1, 3
+; CHECK-VSX-NEXT:    blr
+                                 double %D, double %E) {
+  %F = fmul contract reassoc double %A, %B         ; <double> [#uses=1]
+  %G = fmul contract reassoc double %C, %D         ; <double> [#uses=1]
+  %H = fadd contract reassoc double %F, %G         ; <double> [#uses=1]
+  %I = fsub contract reassoc double %H, %E         ; <double> [#uses=1]
+  ret double %I
+}
+
 
 define double @test_reassoc_FMSUB_ASSOC2(double %A, double %B, double %C,
 ; CHECK-LABEL: test_reassoc_FMSUB_ASSOC2:
@@ -366,15 +390,16 @@ define double @test_reassoc_FMSUB_ASSOC2(double %A, double %B, double %C,
 define double @test_fast_FMSUB_ASSOC2(double %A, double %B, double %C,
 ; CHECK-LABEL: test_fast_FMSUB_ASSOC2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fnmsub 0, 3, 4, 5
-; CHECK-NEXT:    fnmsub 1, 1, 2, 0
+; CHECK-NEXT:    fmul 0, 3, 4
+; CHECK-NEXT:    fmadd 0, 1, 2, 0
+; CHECK-NEXT:    fsub 1, 5, 0
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-VSX-LABEL: test_fast_FMSUB_ASSOC2:
 ; CHECK-VSX:       # %bb.0:
-; CHECK-VSX-NEXT:    xsnmsubmdp 3, 4, 5
-; CHECK-VSX-NEXT:    xsnmsubadp 3, 1, 2
-; CHECK-VSX-NEXT:    fmr 1, 3
+; CHECK-VSX-NEXT:    xsmuldp 0, 3, 4
+; CHECK-VSX-NEXT:    xsmaddadp 0, 1, 2
+; CHECK-VSX-NEXT:    xssubdp 1, 5, 0
 ; CHECK-VSX-NEXT:    blr
                                  double %D, double %E) {
   %F = fmul reassoc double %A, %B         ; <double> [#uses=1]

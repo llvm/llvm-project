@@ -233,6 +233,43 @@ void __asan_storeN_noabort(uptr addr, uptr size) {
   }
 }
 
+// This interface enables to report an error that is triggered in a
+// thread of execution that the compiler-rt doesn't have information about
+// heterogeneous devices such as GPUs, FGPAs can be call this function to
+// report violations.
+// @param nonself_callstack          - pointer to a array of callstack pointers
+// @param n_nonself_callstack        - depth of callstack
+// @param nonself_addrs              - pointer to the array of addresses
+// whose access is defined by instrumentation as invalid
+// @param n_nonself_addrs            - number of such addresses
+// @param nonself_tids               - pointer to the array identifying the
+// reporting entity.
+// @param n_nonself_tids             - length of the identity
+// @param is_write                   - access type
+// @param access_size                - access size
+// @param is_abort                   - flag to abort the execution
+// @param nonself_name               - c string literal describing the non self
+// entity
+// @param nonself_adjust_vma         - difference between actual load address
+// and VA specified in object.
+// @param nonself_fd                 - posix file handle to the object code (-1
+// if not applicable)
+// @param nonself_file_extent_size   - file size (0 if not applicable)
+// @param nonself_file_extent_start  - file offset (0 if not applicable)
+//
+extern "C" NOINLINE INTERFACE_ATTRIBUTE void __asan_report_nonself_error(
+    uptr *nonself_callstack, u32 n_nonself_callstack, uptr *nonself_addrs,
+    u32 n_nonself_addrs, u64 *nonself_tids, u32 n_nonself_tids, bool is_write,
+    u32 access_size, bool is_abort, const char *nonself_name,
+    s64 nonself_adjust_vma, int nonself_fd, u64 nonself_file_extent_size,
+    u64 nonself_file_extent_start = /*default*/ 0) {
+  ReportNonselfError(nonself_callstack, n_nonself_callstack, nonself_addrs,
+                     n_nonself_addrs, nonself_tids, n_nonself_tids, is_write,
+                     access_size, is_abort, nonself_name, nonself_adjust_vma,
+                     nonself_fd, nonself_file_extent_size,
+                     nonself_file_extent_start);
+}
+
 // Force the linker to keep the symbols for various ASan interface functions.
 // We want to keep those in the executable in order to let the instrumented
 // dynamic libraries access the symbol even if it is not used by the executable
@@ -288,6 +325,8 @@ static NOINLINE void force_interface_symbols() {
     case 43: __asan_set_shadow_f3(0, 0); break;
     case 44: __asan_set_shadow_f5(0, 0); break;
     case 45: __asan_set_shadow_f8(0, 0); break;
+    case 46: __asan_report_nonself_error(0,0,0,0,0,0,0,0,0,
+                 0,0,0,0,0); break;
   }
   // clang-format on
 }

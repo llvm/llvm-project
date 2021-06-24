@@ -123,4 +123,34 @@ func @vector_add_transfer_3d(%id0 : index, %id1 : index, %A: memref<64x64x64xf32
   return
 }
 
+// -----
 
+#map0 = affine_map<(d0, d1, d2, d3) -> (d3, 0, 0)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (0, d3, d0)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d3, d2, d1)>
+
+// CHECK-DAG: #[[MAP0:.*]] = affine_map<()[s0] -> (s0 * 2)>
+// CHECK-DAG: #[[MAP1:.*]] = affine_map<(d0, d1, d2, d3) -> (d3, 0, 0)>
+// CHECK-DAG: #[[MAP2:.*]] = affine_map<(d0, d1, d2, d3) -> (0, d3, d0)>
+// CHECK-DAG: #[[MAP3:.*]] = affine_map<(d0, d1, d2, d3) -> (d3, d2, d1)>
+
+//       CHECK: func @vector_add_transfer_permutation
+//  CHECK-SAME: (%[[ID_0:.*]]: index, %[[ID_1:.*]]: index
+//       CHECK:    %[[C0:.*]] = constant 0 : index
+//       CHECK:    %[[ID2:.*]] = affine.apply #[[MAP0]]()[%[[ID_0]]]
+//  CHECK-NEXT:    %[[EXA:.*]] = vector.transfer_read %{{.*}}[%[[C0]], %[[C0]], %[[C0]], %[[ID2]]], %{{.*}} {permutation_map = #[[MAP1]]} : memref<?x?x?x?xf32>, vector<2x4x1xf32>
+//  CHECK-NEXT:    %[[EXB:.*]] = vector.transfer_read %{{.*}}[%[[ID_0]], %[[C0]], %[[C0]], %[[C0]]], %{{.*}} {permutation_map = #[[MAP2]]} : memref<?x?x?x?xf32>, vector<2x4x1xf32>
+//  CHECK-NEXT:    %[[ADD:.*]] = addf %[[EXA]], %[[EXB]] : vector<2x4x1xf32>
+//  CHECK-NEXT:    %[[ID3:.*]] = affine.apply #[[MAP0]]()[%[[ID_0]]]
+//  CHECK-NEXT:    vector.transfer_write %[[ADD]], %{{.*}}[%[[C0]], %[[ID_1]], %[[C0]], %[[ID3]]] {permutation_map = #[[MAP3]]} : vector<2x4x1xf32>, memref<?x?x?x?xf32>
+//  CHECK-NEXT:    return
+func @vector_add_transfer_permutation(%id0 : index, %id1 : index, %A: memref<?x?x?x?xf32>,
+  %B: memref<?x?x?x?xf32>, %C: memref<?x?x?x?xf32>) {
+  %c0 = constant 0 : index
+  %cf0 = constant 0.0 : f32
+  %a = vector.transfer_read %A[%c0, %c0, %c0, %c0], %cf0 {permutation_map = #map0} : memref<?x?x?x?xf32>, vector<64x4x32xf32>
+  %b = vector.transfer_read %B[%c0, %c0, %c0, %c0], %cf0 {permutation_map = #map1}: memref<?x?x?x?xf32>, vector<64x4x32xf32>
+  %acc = addf %a, %b: vector<64x4x32xf32>
+  vector.transfer_write %acc, %C[%c0, %c0, %c0, %c0] {permutation_map = #map2}: vector<64x4x32xf32>, memref<?x?x?x?xf32>
+  return
+}

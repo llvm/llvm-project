@@ -819,7 +819,7 @@ static bool isWorthFoldingADDlow(SDValue N) {
 
     // ldar and stlr have much more restrictive addressing modes (just a
     // register).
-    if (isStrongerThanMonotonic(cast<MemSDNode>(Use)->getOrdering()))
+    if (isStrongerThanMonotonic(cast<MemSDNode>(Use)->getSuccessOrdering()))
       return false;
   }
 

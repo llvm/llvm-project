@@ -15,9 +15,11 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Utils/Utils.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
@@ -555,7 +557,7 @@ SmallVector<Value, 4> makeTiledShapes(OpBuilder &b, Location loc,
     }
     LLVM_DEBUG(llvm::dbgs() << ": tiled: figure out subshape...\n");
 
-    // Construct a new subview / subtensor for the tile.
+    // Construct a new subview / extract_slice for the tile.
     SmallVector<OpFoldResult, 4> offsets, sizes, strides;
     offsets.reserve(rank);
     sizes.reserve(rank);
@@ -584,7 +586,7 @@ SmallVector<Value, 4> makeTiledShapes(OpBuilder &b, Location loc,
       Value size = makeComposedAffineApply(b, loc, s0 + 1, closedIntSize);
       LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: raw size: " << size << "\n");
 
-      // The size of the subview / subtensor should be trimmed to avoid
+      // The size of the subview / extract_slice should be trimmed to avoid
       // out-of-bounds accesses, unless we statically know the subshape size
       // divides the shape size evenly.
       int64_t shapeSize = shape[r];
@@ -618,8 +620,8 @@ SmallVector<Value, 4> makeTiledShapes(OpBuilder &b, Location loc,
       tiledShapes.push_back(
           b.create<memref::SubViewOp>(loc, shapedOp, offsets, sizes, strides));
     else
-      tiledShapes.push_back(
-          b.create<SubTensorOp>(loc, shapedOp, offsets, sizes, strides));
+      tiledShapes.push_back(b.create<tensor::ExtractSliceOp>(
+          loc, shapedOp, offsets, sizes, strides));
   }
 
   return tiledShapes;

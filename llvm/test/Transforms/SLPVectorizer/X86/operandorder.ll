@@ -136,8 +136,8 @@ ext:
   ret void
 }
 
-define void @shuffle_preserve_broadcast4(double * noalias %from, double * noalias %to, double %v1, double %v2) {
-; CHECK-LABEL: @shuffle_preserve_broadcast4(
+define void @shuffle_nodes_match1(double * noalias %from, double * noalias %to, double %v1, double %v2) {
+; CHECK-LABEL: @shuffle_nodes_match1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
 ; CHECK:       lp:
@@ -175,8 +175,8 @@ ext:
   ret void
 }
 
-define void @vecload_vs_broadcast5(double * noalias %from, double * noalias %to, double %v1, double %v2) {
-; CHECK-LABEL: @vecload_vs_broadcast5(
+define void @vecload_vs_broadcast4(double * noalias %from, double * noalias %to, double %v1, double %v2) {
+; CHECK-LABEL: @vecload_vs_broadcast4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
 ; CHECK:       lp:
@@ -212,8 +212,8 @@ ext:
 }
 
 
-define void @shuffle_preserve_broadcast6(double * noalias %from, double * noalias %to, double %v1, double %v2) {
-; CHECK-LABEL: @shuffle_preserve_broadcast6(
+define void @shuffle_nodes_match2(double * noalias %from, double * noalias %to, double %v1, double %v2) {
+; CHECK-LABEL: @shuffle_nodes_match2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LP:%.*]]
 ; CHECK:       lp:
