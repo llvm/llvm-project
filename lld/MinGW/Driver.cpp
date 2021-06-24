@@ -83,7 +83,7 @@ public:
 } // namespace
 
 static void printHelp(const char *argv0) {
-  MinGWOptTable().PrintHelp(
+  MinGWOptTable().printHelp(
       lld::outs(), (std::string(argv0) + " [options] file...").c_str(), "lld",
       false /*ShowHidden*/, true /*ShowAllAliases*/);
   lld::outs() << "\n";
@@ -401,7 +401,7 @@ bool mingw::link(ArrayRef<const char *> argsArr, bool canExitEarly,
   for (auto *a : args) {
     switch (a->getOption().getID()) {
     case OPT_INPUT:
-      if (StringRef(a->getValue()).endswith_lower(".def"))
+      if (StringRef(a->getValue()).endswith_insensitive(".def"))
         add("-def:" + StringRef(a->getValue()));
       else
         add(prefix + StringRef(a->getValue()));

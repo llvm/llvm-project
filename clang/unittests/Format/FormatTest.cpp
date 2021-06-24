@@ -1789,6 +1789,98 @@ TEST_F(FormatTest, ElseIf) {
                getLLVMStyleWithColumns(62));
 }
 
+TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
+  FormatStyle Style = getLLVMStyle();
+  // Check first the default LLVM style
+  // Style.PointerAlignment = FormatStyle::PAS_Right;
+  // Style.ReferenceAlignment = FormatStyle::RAS_Pointer;
+  verifyFormat("int *f1(int *a, int &b, int &&c);", Style);
+  verifyFormat("int &f2(int &&c, int *a, int &b);", Style);
+  verifyFormat("int &&f3(int &b, int &&c, int *a);", Style);
+  verifyFormat("int *f1(int &a) const &;", Style);
+  verifyFormat("int *f1(int &a) const & = 0;", Style);
+  verifyFormat("int *a = f1();", Style);
+  verifyFormat("int &b = f2();", Style);
+  verifyFormat("int &&c = f3();", Style);
+
+  Style.AlignConsecutiveDeclarations = FormatStyle::ACS_Consecutive;
+  verifyFormat("Const unsigned int *c;\n"
+               "const unsigned int *d;\n"
+               "Const unsigned int &e;\n"
+               "const unsigned int &f;\n"
+               "const unsigned    &&g;\n"
+               "Const unsigned      h;",
+               Style);
+
+  Style.PointerAlignment = FormatStyle::PAS_Left;
+  Style.ReferenceAlignment = FormatStyle::RAS_Pointer;
+  verifyFormat("int* f1(int* a, int& b, int&& c);", Style);
+  verifyFormat("int& f2(int&& c, int* a, int& b);", Style);
+  verifyFormat("int&& f3(int& b, int&& c, int* a);", Style);
+  verifyFormat("int* f1(int& a) const& = 0;", Style);
+  verifyFormat("int* a = f1();", Style);
+  verifyFormat("int& b = f2();", Style);
+  verifyFormat("int&& c = f3();", Style);
+
+  Style.AlignConsecutiveDeclarations = FormatStyle::ACS_Consecutive;
+  verifyFormat("Const unsigned int* c;\n"
+               "const unsigned int* d;\n"
+               "Const unsigned int& e;\n"
+               "const unsigned int& f;\n"
+               "const unsigned&&    g;\n"
+               "Const unsigned      h;",
+               Style);
+
+  Style.PointerAlignment = FormatStyle::PAS_Right;
+  Style.ReferenceAlignment = FormatStyle::RAS_Left;
+  verifyFormat("int *f1(int *a, int& b, int&& c);", Style);
+  verifyFormat("int& f2(int&& c, int *a, int& b);", Style);
+  verifyFormat("int&& f3(int& b, int&& c, int *a);", Style);
+  verifyFormat("int *a = f1();", Style);
+  verifyFormat("int& b = f2();", Style);
+  verifyFormat("int&& c = f3();", Style);
+
+  Style.AlignConsecutiveDeclarations = FormatStyle::ACS_Consecutive;
+  verifyFormat("Const unsigned int *c;\n"
+               "const unsigned int *d;\n"
+               "Const unsigned int& e;\n"
+               "const unsigned int& f;\n"
+               "const unsigned      g;\n"
+               "Const unsigned      h;",
+               Style);
+
+  Style.PointerAlignment = FormatStyle::PAS_Left;
+  Style.ReferenceAlignment = FormatStyle::RAS_Middle;
+  verifyFormat("int* f1(int* a, int & b, int && c);", Style);
+  verifyFormat("int & f2(int && c, int* a, int & b);", Style);
+  verifyFormat("int && f3(int & b, int && c, int* a);", Style);
+  verifyFormat("int* a = f1();", Style);
+  verifyFormat("int & b = f2();", Style);
+  verifyFormat("int && c = f3();", Style);
+
+  Style.AlignConsecutiveDeclarations = FormatStyle::ACS_Consecutive;
+  verifyFormat("Const unsigned int*  c;\n"
+               "const unsigned int*  d;\n"
+               "Const unsigned int & e;\n"
+               "const unsigned int & f;\n"
+               "const unsigned &&    g;\n"
+               "Const unsigned       h;",
+               Style);
+
+  Style.PointerAlignment = FormatStyle::PAS_Middle;
+  Style.ReferenceAlignment = FormatStyle::RAS_Right;
+  verifyFormat("int * f1(int * a, int &b, int &&c);", Style);
+  verifyFormat("int &f2(int &&c, int * a, int &b);", Style);
+  verifyFormat("int &&f3(int &b, int &&c, int * a);", Style);
+  verifyFormat("int * a = f1();", Style);
+  verifyFormat("int &b = f2();", Style);
+  verifyFormat("int &&c = f3();", Style);
+
+  // FIXME: we don't handle this yet, so output may be arbitrary until it's
+  // specifically handled
+  // verifyFormat("int Add2(BTree * &Root, char * szToAdd)", Style);
+}
+
 TEST_F(FormatTest, FormatsForLoop) {
   verifyFormat(
       "for (int VeryVeryLongLoopVariable = 0; VeryVeryLongLoopVariable < 10;\n"
@@ -18013,6 +18105,15 @@ TEST_F(FormatTest, ParsesConfiguration) {
               FormatStyle::PAS_Right);
   CHECK_PARSE("PointerAlignment: Middle", PointerAlignment,
               FormatStyle::PAS_Middle);
+  Style.ReferenceAlignment = FormatStyle::RAS_Middle;
+  CHECK_PARSE("ReferenceAlignment: Pointer", ReferenceAlignment,
+              FormatStyle::RAS_Pointer);
+  CHECK_PARSE("ReferenceAlignment: Left", ReferenceAlignment,
+              FormatStyle::RAS_Left);
+  CHECK_PARSE("ReferenceAlignment: Right", ReferenceAlignment,
+              FormatStyle::RAS_Right);
+  CHECK_PARSE("ReferenceAlignment: Middle", ReferenceAlignment,
+              FormatStyle::RAS_Middle);
   // For backward compatibility:
   CHECK_PARSE("PointerBindsToType: Left", PointerAlignment,
               FormatStyle::PAS_Left);

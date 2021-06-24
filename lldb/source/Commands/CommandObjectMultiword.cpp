@@ -98,7 +98,7 @@ bool CommandObjectMultiword::Execute(const char *args_string,
     return result.Succeeded();
   }
 
-  if (sub_command.equals_lower("help")) {
+  if (sub_command.equals_insensitive("help")) {
     this->CommandObject::GenerateHelpText(result);
     return result.Succeeded();
   }

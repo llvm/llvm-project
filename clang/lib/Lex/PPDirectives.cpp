@@ -196,7 +196,7 @@ static MacroDiag shouldWarnOnMacroUndef(Preprocessor &PP, IdentifierInfo *II) {
 static bool warnByDefaultOnWrongCase(StringRef Include) {
   // If the first component of the path is "boost", treat this like a standard header
   // for the purposes of diagnostics.
-  if (::llvm::sys::path::begin(Include)->equals_lower("boost"))
+  if (::llvm::sys::path::begin(Include)->equals_insensitive("boost"))
     return true;
 
   // "condition_variable" is the longest standard header name at 18 characters.
@@ -1723,7 +1723,8 @@ static bool trySimplifyPath(SmallVectorImpl<StringRef> &Components,
         // If these path components differ by more than just case, then we
         // may be looking at symlinked paths. Bail on this diagnostic to avoid
         // noisy false positives.
-        SuggestReplacement = RealPathComponentIter->equals_lower(Component);
+        SuggestReplacement =
+            RealPathComponentIter->equals_insensitive(Component);
         if (!SuggestReplacement)
           break;
         Component = *RealPathComponentIter;

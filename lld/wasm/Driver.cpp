@@ -823,7 +823,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle --help
   if (args.hasArg(OPT_help)) {
-    parser.PrintHelp(lld::outs(),
+    parser.printHelp(lld::outs(),
                      (std::string(argsArr[0]) + " [options] file...").c_str(),
                      "LLVM Linker", false);
     return;

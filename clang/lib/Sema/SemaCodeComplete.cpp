@@ -9491,10 +9491,10 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
         // Only files that really look like headers. (Except in system dirs).
         if (!IsSystem) {
           // Header extensions from Types.def, which we can't depend on here.
-          if (!(Filename.endswith_lower(".h") ||
-                Filename.endswith_lower(".hh") ||
-                Filename.endswith_lower(".hpp") ||
-                Filename.endswith_lower(".inc")))
+          if (!(Filename.endswith_insensitive(".h") ||
+                Filename.endswith_insensitive(".hh") ||
+                Filename.endswith_insensitive(".hpp") ||
+                Filename.endswith_insensitive(".inc")))
             break;
         }
         AddCompletion(Filename, /*IsDirectory=*/false);

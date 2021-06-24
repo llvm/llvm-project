@@ -2725,7 +2725,7 @@ struct FormatStyle {
   /// (counted relative to leading non-whitespace column).
   unsigned PenaltyIndentedWhitespace;
 
-  /// The ``&`` and ``*`` alignment style.
+  /// The ``&``, ``&&`` and ``*`` alignment style.
   enum PointerAlignmentStyle : unsigned char {
     /// Align pointer to the left.
     /// \code
@@ -2819,6 +2819,31 @@ struct FormatStyle {
   ///         CanonicalDelimiter: 'cc'
   /// \endcode
   std::vector<RawStringFormat> RawStringFormats;
+
+  /// \brief The ``&`` and ``&&`` alignment style.
+  enum ReferenceAlignmentStyle {
+    /// Align reference like ``PointerAlignment``.
+    RAS_Pointer,
+    /// Align reference to the left.
+    /// \code
+    ///   int& a;
+    /// \endcode
+    RAS_Left,
+    /// Align reference to the right.
+    /// \code
+    ///   int &a;
+    /// \endcode
+    RAS_Right,
+    /// Align reference in the middle.
+    /// \code
+    ///   int & a;
+    /// \endcode
+    RAS_Middle
+  };
+
+  /// \brief Reference alignment style (overrides ``PointerAlignment`` for
+  /// references).
+  ReferenceAlignmentStyle ReferenceAlignment;
 
   // clang-format off
   /// If ``true``, clang-format will attempt to re-flow comments.
@@ -3455,6 +3480,7 @@ struct FormatStyle {
                R.PenaltyBreakTemplateDeclaration &&
            PointerAlignment == R.PointerAlignment &&
            RawStringFormats == R.RawStringFormats &&
+           ReferenceAlignment == R.ReferenceAlignment &&
            ShortNamespaceLines == R.ShortNamespaceLines &&
            SortIncludes == R.SortIncludes &&
            SortJavaStaticImport == R.SortJavaStaticImport &&
