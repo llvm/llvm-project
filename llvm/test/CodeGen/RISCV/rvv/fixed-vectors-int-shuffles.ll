@@ -104,37 +104,19 @@ define <4 x i16> @vrgather_shuffle_vv_v4i16(<4 x i16> %x, <4 x i16> %y) {
 }
 
 define <4 x i16> @vrgather_shuffle_xv_v4i16(<4 x i16> %x) {
-; RV32-LABEL: vrgather_shuffle_xv_v4i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    addi a0, zero, 12
-; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
-; RV32-NEXT:    vmv.s.x v0, a0
-; RV32-NEXT:    lui a0, 16
-; RV32-NEXT:    addi a0, a0, 2
-; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
-; RV32-NEXT:    vmv.v.x v26, a0
-; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
-; RV32-NEXT:    vmv.v.i v25, 5
-; RV32-NEXT:    vsetvli zero, zero, e16, mf2, tu, mu
-; RV32-NEXT:    vrgather.vv v25, v8, v26, v0.t
-; RV32-NEXT:    vmv1r.v v8, v25
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: vrgather_shuffle_xv_v4i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    addi a0, zero, 12
-; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
-; RV64-NEXT:    vmv.s.x v0, a0
-; RV64-NEXT:    lui a0, 16
-; RV64-NEXT:    addiw a0, a0, 2
-; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
-; RV64-NEXT:    vmv.v.x v26, a0
-; RV64-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
-; RV64-NEXT:    vmv.v.i v25, 5
-; RV64-NEXT:    vsetvli zero, zero, e16, mf2, tu, mu
-; RV64-NEXT:    vrgather.vv v25, v8, v26, v0.t
-; RV64-NEXT:    vmv1r.v v8, v25
-; RV64-NEXT:    ret
+; CHECK-LABEL: vrgather_shuffle_xv_v4i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi a0, zero, 12
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
+; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vid.v v25
+; CHECK-NEXT:    vrsub.vi v26, v25, 4
+; CHECK-NEXT:    vmv.v.i v25, 5
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, tu, mu
+; CHECK-NEXT:    vrgather.vv v25, v8, v26, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v25
+; CHECK-NEXT:    ret
   %s = shufflevector <4 x i16> <i16 5, i16 5, i16 5, i16 5>, <4 x i16> %x, <4 x i32> <i32 0, i32 3, i32 6, i32 5>
   ret <4 x i16> %s
 }
@@ -142,12 +124,12 @@ define <4 x i16> @vrgather_shuffle_xv_v4i16(<4 x i16> %x) {
 define <4 x i16> @vrgather_shuffle_vx_v4i16(<4 x i16> %x) {
 ; CHECK-LABEL: vrgather_shuffle_vx_v4i16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vid.v v25
 ; CHECK-NEXT:    addi a0, zero, 3
+; CHECK-NEXT:    vmul.vx v26, v25, a0
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
 ; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    lui a0, 48
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
-; CHECK-NEXT:    vmv.v.x v26, a0
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; CHECK-NEXT:    vmv.v.i v25, 5
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, tu, mu
