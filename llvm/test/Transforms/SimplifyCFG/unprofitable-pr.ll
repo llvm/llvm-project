@@ -18,6 +18,8 @@ define void @test_01(i1 %c, i64* align 1 %ptr) local_unnamed_addr #0 {
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
 ; CHECK-NEXT:    store volatile i64 0, i64* [[PTR]], align 8
 ; CHECK-NEXT:    store volatile i64 3, i64* [[PTR]], align 8
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       true2.critedge:
 ; CHECK-NEXT:    [[PTRINT_C:%.*]] = ptrtoint i64* [[PTR]] to i64
@@ -26,7 +28,7 @@ define void @test_01(i1 %c, i64* align 1 %ptr) local_unnamed_addr #0 {
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND_C]])
 ; CHECK-NEXT:    store volatile i64 0, i64* [[PTR]], align 8
 ; CHECK-NEXT:    store volatile i64 2, i64* [[PTR]], align 8
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
   br i1 %c, label %true1, label %false1
 
@@ -68,6 +70,8 @@ define void @test_02(i1 %c, i64* align 1 %ptr) local_unnamed_addr #0 {
 ; CHECK-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
 ; CHECK-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
 ; CHECK-NEXT:    store volatile i64 3, i64* [[PTR]], align 8
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       true2.critedge:
 ; CHECK-NEXT:    [[PTRINT_C:%.*]] = ptrtoint i64* [[PTR]] to i64
@@ -81,7 +85,7 @@ define void @test_02(i1 %c, i64* align 1 %ptr) local_unnamed_addr #0 {
 ; CHECK-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
 ; CHECK-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
 ; CHECK-NEXT:    store volatile i64 2, i64* [[PTR]], align 8
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
   br i1 %c, label %true1, label %false1
 
@@ -131,12 +135,14 @@ define void @test_03(i1 %c, i64* align 1 %ptr) local_unnamed_addr #0 {
 ; CHECK:       false1:
 ; CHECK-NEXT:    store volatile i64 1, i64* [[PTR]], align 4
 ; CHECK-NEXT:    br label [[TRUE1]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
 ; CHECK:       true2:
 ; CHECK-NEXT:    store volatile i64 2, i64* [[PTR]], align 8
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       false2:
 ; CHECK-NEXT:    store volatile i64 3, i64* [[PTR]], align 8
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
   br i1 %c, label %true1, label %false1
 
@@ -184,6 +190,8 @@ define void @test_04(i1 %c, i64* align 1 %ptr, [3 x i8*]* %vtable) local_unnamed
 ; CHECK-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
 ; CHECK-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
 ; CHECK-NEXT:    store volatile i64 3, i64* [[PTR]], align 8
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       true2.critedge:
 ; CHECK-NEXT:    [[VTABLEI8_C:%.*]] = bitcast [3 x i8*]* [[VTABLE]] to i8*
@@ -196,7 +204,7 @@ define void @test_04(i1 %c, i64* align 1 %ptr, [3 x i8*]* %vtable) local_unnamed
 ; CHECK-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
 ; CHECK-NEXT:    store volatile i64 -1, i64* [[PTR]], align 8
 ; CHECK-NEXT:    store volatile i64 2, i64* [[PTR]], align 8
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
   br i1 %c, label %true1, label %false1
 

@@ -55,30 +55,51 @@ public:
   }
 
   /// Get a low-level vector of some number of elements and element width.
-  /// \p NumElements must be at least 2.
-  static LLT vector(uint16_t NumElements, unsigned ScalarSizeInBits,
-                    bool Scalable = false) {
-    assert(((!Scalable && NumElements > 1) || NumElements > 0) &&
-           "invalid number of vector elements");
+  static LLT vector(ElementCount EC, unsigned ScalarSizeInBits) {
+    assert(!EC.isScalar() && "invalid number of vector elements");
     assert(ScalarSizeInBits > 0 && "invalid vector element size");
-    return LLT{/*isPointer=*/false, /*isVector=*/true,
-               ElementCount::get(NumElements, Scalable), ScalarSizeInBits,
+    return LLT{/*isPointer=*/false, /*isVector=*/true, EC, ScalarSizeInBits,
                /*AddressSpace=*/0};
   }
 
   /// Get a low-level vector of some number of elements and element type.
-  static LLT vector(uint16_t NumElements, LLT ScalarTy, bool Scalable = false) {
-    assert(((!Scalable && NumElements > 1) || NumElements > 0) &&
-           "invalid number of vector elements");
+  static LLT vector(ElementCount EC, LLT ScalarTy) {
+    assert(!EC.isScalar() && "invalid number of vector elements");
     assert(!ScalarTy.isVector() && "invalid vector element type");
-    return LLT{ScalarTy.isPointer(), /*isVector=*/true,
-               ElementCount::get(NumElements, Scalable),
+    return LLT{ScalarTy.isPointer(), /*isVector=*/true, EC,
                ScalarTy.getSizeInBits(),
                ScalarTy.isPointer() ? ScalarTy.getAddressSpace() : 0};
   }
 
+  /// Get a low-level fixed-width vector of some number of elements and element
+  /// width.
+  static LLT fixed_vector(unsigned NumElements, unsigned ScalarSizeInBits) {
+    return vector(ElementCount::getFixed(NumElements), ScalarSizeInBits);
+  }
+
+  /// Get a low-level fixed-width vector of some number of elements and element
+  /// type.
+  static LLT fixed_vector(unsigned NumElements, LLT ScalarTy) {
+    return vector(ElementCount::getFixed(NumElements), ScalarTy);
+  }
+
+  /// Get a low-level scalable vector of some number of elements and element
+  /// width.
+  static LLT scalable_vector(unsigned MinNumElements,
+                             unsigned ScalarSizeInBits) {
+    return vector(ElementCount::getScalable(MinNumElements), ScalarSizeInBits);
+  }
+
+  /// Get a low-level scalable vector of some number of elements and element
+  /// type.
+  static LLT scalable_vector(unsigned MinNumElements, LLT ScalarTy) {
+    return vector(ElementCount::getScalable(MinNumElements), ScalarTy);
+  }
+
   static LLT scalarOrVector(uint16_t NumElements, LLT ScalarTy) {
-    return NumElements == 1 ? ScalarTy : LLT::vector(NumElements, ScalarTy);
+    // FIXME: Migrate interface to use ElementCount
+    return NumElements == 1 ? ScalarTy
+                            : LLT::fixed_vector(NumElements, ScalarTy);
   }
 
   static LLT scalarOrVector(uint16_t NumElements, unsigned ScalarSize) {
@@ -150,9 +171,7 @@ public:
   /// If this type is a vector, return a vector with the same number of elements
   /// but the new element type. Otherwise, return the new element type.
   LLT changeElementType(LLT NewEltTy) const {
-    return isVector() ? LLT::vector(getElementCount().getKnownMinValue(),
-                                    NewEltTy, isScalable())
-                      : NewEltTy;
+    return isVector() ? LLT::vector(getElementCount(), NewEltTy) : NewEltTy;
   }
 
   /// If this type is a vector, return a vector with the same number of elements
@@ -161,8 +180,7 @@ public:
   LLT changeElementSize(unsigned NewEltSize) const {
     assert(!getScalarType().isPointer() &&
            "invalid to directly change element size for pointers");
-    return isVector() ? LLT::vector(getElementCount().getKnownMinValue(),
-                                    NewEltSize, isScalable())
+    return isVector() ? LLT::vector(getElementCount(), NewEltSize)
                       : LLT::scalar(NewEltSize);
   }
 

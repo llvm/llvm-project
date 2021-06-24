@@ -17,41 +17,31 @@
 ; YAML:      - INST_subs:   '1'
 
 ; YAML:      Name:            InstructionMix
-; YAML-NEXT: DebugLoc:        { File: arm64-instruction-mix-remarks.ll, Line: 20, Column: 20 }
-; YAML-NEXT: Function:        foo
-; YAML-NEXT: Args:
-; YAML:        - BasicBlock: then
-; YAML:        - INST_orr:   '1'
-; YAML:        - INST_ret:   '1'
-
-; YAML:      Name:            InstructionMix
 ; YAML-NEXT: DebugLoc:        { File: arm64-instruction-mix-remarks.ll, Line: 30, Column: 30 }
 ; YAML-NEXT: Function:        foo
 ; YAML-NEXT: Args:
 ; YAML:       - BasicBlock:  else
 ; YAML:       - INST_madd:   '2'
-; YAML:       - INST_orr:    '1'
-; YAML:       - INST_ret:    '1'
+; YAML:       - INST_movz:   '1'
 ; YAML:       - INST_str:    '1'
 define i32 @foo(i32* %ptr, i32 %x, i64 %y) !dbg !3 {
 ; CHECK-LABEL: foo:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    ldr w9, [x0]
+; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:    mov w10, #16959
 ; CHECK-NEXT:    movk w10, #15, lsl #16
-; CHECK-NEXT:    add w8, w8, w1
-; CHECK-NEXT:    add x9, x8, x2
+; CHECK-NEXT:    add w0, w9, w1
+; CHECK-NEXT:    add x9, x0, x2
 ; CHECK-NEXT:    cmp x9, x10
-; CHECK-NEXT:    b.ne LBB0_2
-; CHECK-NEXT:  ; %bb.1: ; %then
-; CHECK-NEXT:    mov w0, w8
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  LBB0_2: ; %else
-; CHECK-NEXT:    mul w8, w8, w1
+; CHECK-NEXT:    b.eq LBB0_2
+; CHECK-NEXT:  ; %bb.1: ; %else
+; CHECK-NEXT:    mul w10, w0, w1
 ; CHECK-NEXT:    mov w9, #10
-; CHECK-NEXT:    mul w8, w8, w1
-; CHECK-NEXT:    str w9, [x0]
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    mul w0, w10, w1
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:  LBB0_2: ; %common.ret
+; CHECK-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 entry:
   %l = load i32, i32* %ptr, !dbg !4

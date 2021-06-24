@@ -13,7 +13,7 @@ define void @zot() local_unnamed_addr align 2 personality i8* undef {
 ; CHECK-NEXT:    to label [[BB14:%.*]] unwind label [[BB21:%.*]]
 ; CHECK:       bb14:
 ; CHECK-NEXT:    [[I0:%.*]] = invoke i16 @baz()
-; CHECK-NEXT:    to label [[BB15:%.*]] unwind label [[BB25:%.*]]
+; CHECK-NEXT:    to label [[BB15:%.*]] unwind label [[BB21]]
 ; CHECK:       bb15:
 ; CHECK-NEXT:    switch i16 [[I0]], label [[BB19:%.*]] [
 ; CHECK-NEXT:    i16 42, label [[BB23:%.*]]
@@ -21,22 +21,18 @@ define void @zot() local_unnamed_addr align 2 personality i8* undef {
 ; CHECK-NEXT:    ]
 ; CHECK:       bb19:
 ; CHECK-NEXT:    invoke void @snork()
-; CHECK-NEXT:    to label [[BB20:%.*]] unwind label [[BB25]]
+; CHECK-NEXT:    to label [[BB20:%.*]] unwind label [[BB21]]
 ; CHECK:       bb20:
 ; CHECK-NEXT:    unreachable
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
 ; CHECK:       bb21:
 ; CHECK-NEXT:    [[I22:%.*]] = landingpad { i8*, i32 }
 ; CHECK-NEXT:    cleanup
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       bb23:
 ; CHECK-NEXT:    invoke void @spam()
-; CHECK-NEXT:    to label [[BB24:%.*]] unwind label [[BB25]]
-; CHECK:       bb24:
-; CHECK-NEXT:    ret void
-; CHECK:       bb25:
-; CHECK-NEXT:    [[I26:%.*]] = landingpad { i8*, i32 }
-; CHECK-NEXT:    cleanup
-; CHECK-NEXT:    br label [[BB24]]
+; CHECK-NEXT:    to label [[COMMON_RET]] unwind label [[BB21]]
 ;
 bb:
   invoke void @widget()

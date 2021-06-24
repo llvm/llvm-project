@@ -438,7 +438,7 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
   } else {
     // Vector was split, and elements promoted to a wider type.
     // FIXME: Should handle floating point promotions.
-    LLT BVType = LLT::vector(LLTy.getNumElements(), PartLLT);
+    LLT BVType = LLT::fixed_vector(LLTy.getNumElements(), PartLLT);
     auto BV = B.buildBuildVector(BVType, Regs);
     B.buildTrunc(OrigRegs[0], BV);
   }

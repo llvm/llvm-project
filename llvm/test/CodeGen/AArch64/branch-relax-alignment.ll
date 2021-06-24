@@ -6,19 +6,12 @@
 
 define i32 @invert_bcc_block_align_higher_func(i32 %x, i32 %y) align 4 #0 {
 ; CHECK-LABEL: invert_bcc_block_align_higher_func:
-; CHECK:       ; %bb.0:
+; CHECK:       ; %bb.0: ; %common.ret
 ; CHECK-NEXT:    cmp w0, w1
-; CHECK-NEXT:    b.eq LBB0_1
-; CHECK-NEXT:    b LBB0_2
-; CHECK-NEXT:  LBB0_1: ; %bb1
-; CHECK-NEXT:    mov w8, #42
-; CHECK-NEXT:    mov w0, wzr
-; CHECK-NEXT:    str w8, [x8]
-; CHECK-NEXT:    ret
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB0_2: ; %bb2
 ; CHECK-NEXT:    mov w8, #9
-; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    mov w9, #42
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    csel w8, w9, w8, eq
 ; CHECK-NEXT:    str w8, [x8]
 ; CHECK-NEXT:    ret
   %1 = icmp eq i32 %x, %y

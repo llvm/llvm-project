@@ -168,13 +168,13 @@ define void @f6() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i
 ; CHECK-LABEL: @f6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FOO:%.*]] = invoke i32 @fn()
-; CHECK-NEXT:    to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD:%.*]]
-; CHECK:       invoke.cont2:
+; CHECK-NEXT:    to label [[COMMON_RET:%.*]] unwind label [[LPAD:%.*]]
+; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { i8*, i32 }
 ; CHECK-NEXT:    cleanup
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
   invoke void @purefn()

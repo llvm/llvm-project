@@ -10,18 +10,22 @@ define signext i8 @foo() {
 ; LINUX-PIC-NEXT:    .save {r4, lr}
 ; LINUX-PIC-NEXT:    push {r4, lr}
 ; LINUX-PIC-NEXT:    ldr r4, .LCPI0_0
+; LINUX-PIC-NEXT:    mov r0, #0
 ; LINUX-PIC-NEXT:  .LPC0_0:
 ; LINUX-PIC-NEXT:    ldr r4, [pc, r4]
-; LINUX-PIC-NEXT:    ldrb r0, [r4]
-; LINUX-PIC-NEXT:    cmp r0, #0
-; LINUX-PIC-NEXT:    movne r0, #0
-; LINUX-PIC-NEXT:    popne {r4, pc}
-; LINUX-PIC-NEXT:  .LBB0_1: @ %bb1
+; LINUX-PIC-NEXT:    ldrb r1, [r4]
+; LINUX-PIC-NEXT:    cmp r1, #0
+; LINUX-PIC-NEXT:    beq .LBB0_2
+; LINUX-PIC-NEXT:  @ %bb.1: @ %common.ret
+; LINUX-PIC-NEXT:    sxtb r0, r0
+; LINUX-PIC-NEXT:    pop {r4, pc}
+; LINUX-PIC-NEXT:  .LBB0_2: @ %bb1
 ; LINUX-PIC-NEXT:    bl bar
-; LINUX-PIC-NEXT:    ldrsb r0, [r4]
+; LINUX-PIC-NEXT:    ldrb r0, [r4]
+; LINUX-PIC-NEXT:    sxtb r0, r0
 ; LINUX-PIC-NEXT:    pop {r4, pc}
 ; LINUX-PIC-NEXT:    .p2align 2
-; LINUX-PIC-NEXT:  @ %bb.2:
+; LINUX-PIC-NEXT:  @ %bb.3:
 ; LINUX-PIC-NEXT:  .LCPI0_0:
 ; LINUX-PIC-NEXT:  .Ltmp0:
 ; LINUX-PIC-NEXT:    .long x(GOT_PREL)-((.LPC0_0+8)-.Ltmp0)

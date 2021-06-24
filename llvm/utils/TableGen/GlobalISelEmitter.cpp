@@ -138,8 +138,11 @@ public:
       return;
     }
     if (Ty.isVector()) {
-      OS << "LLT::vector(" << Ty.getElementCount().getKnownMinValue() << ", "
-         << Ty.getScalarSizeInBits() << ", " << Ty.isScalable() << ")";
+      OS << "LLT::vector("
+         << (Ty.isScalable() ? "ElementCount::getScalable("
+                             : "ElementCount::getFixed(")
+         << Ty.getElementCount().getKnownMinValue() << "), "
+         << Ty.getScalarSizeInBits() << ")";
       return;
     }
     if (Ty.isPointer() && Ty.getSizeInBits() > 0) {
@@ -195,9 +198,8 @@ static Optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT) {
   MVT VT(SVT);
 
   if (VT.isVector() && !VT.getVectorElementCount().isScalar())
-    return LLTCodeGen(LLT::vector(VT.getVectorNumElements(),
-                                  VT.getScalarSizeInBits(),
-                                  VT.isScalableVector()));
+    return LLTCodeGen(
+        LLT::vector(VT.getVectorElementCount(), VT.getScalarSizeInBits()));
 
   if (VT.isInteger() || VT.isFloatingPoint())
     return LLTCodeGen(LLT::scalar(VT.getSizeInBits()));

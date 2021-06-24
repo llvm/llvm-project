@@ -69,8 +69,8 @@ LegalizeMutation LegalizeMutations::moreElementsToNextPow2(unsigned TypeIdx,
     const LLT VecTy = Query.Types[TypeIdx];
     unsigned NewNumElements =
         std::max(1u << Log2_32_Ceil(VecTy.getNumElements()), Min);
-    return std::make_pair(TypeIdx,
-                          LLT::vector(NewNumElements, VecTy.getElementType()));
+    return std::make_pair(
+        TypeIdx, LLT::fixed_vector(NewNumElements, VecTy.getElementType()));
   };
 }
 

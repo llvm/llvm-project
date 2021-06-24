@@ -24,7 +24,7 @@ LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL) {
     LLT ScalarTy = getLLTForType(*VTy->getElementType(), DL);
     if (EC.isScalar())
       return ScalarTy;
-    return LLT::vector(EC.getKnownMinValue(), ScalarTy, EC.isScalable());
+    return LLT::vector(EC, ScalarTy);
   }
 
   if (auto PTy = dyn_cast<PointerType>(&Ty)) {
@@ -56,7 +56,7 @@ LLT llvm::getLLTForMVT(MVT Ty) {
   if (!Ty.isVector())
     return LLT::scalar(Ty.getSizeInBits());
 
-  return LLT::vector(Ty.getVectorNumElements(),
+  return LLT::vector(Ty.getVectorElementCount(),
                      Ty.getVectorElementType().getSizeInBits());
 }
 

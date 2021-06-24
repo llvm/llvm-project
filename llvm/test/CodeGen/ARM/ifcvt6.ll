@@ -5,9 +5,11 @@ define void @foo(i32 %X, i32 %Y) {
 ; CHECK-LABEL: foo:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    cmpne r0, #3
-; CHECK-NEXT:    bxhi lr
-; CHECK-NEXT:  LBB0_1: @ %cond_true
+; CHECK-NEXT:    beq LBB0_2
+; CHECK-NEXT:  @ %bb.1: @ %entry
+; CHECK-NEXT:    cmp r0, #4
+; CHECK-NEXT:    bxhs lr
+; CHECK-NEXT:  LBB0_2: @ %cond_true
 ; CHECK-NEXT:    push {lr}
 ; CHECK-NEXT:    bl _bar
 ; CHECK-NEXT:    pop {lr}
