@@ -93,17 +93,17 @@ TEST(LegalizerInfoTest, VectorRISC) {
   LegalizerInfo L;
   auto &LegacyInfo = L.getLegacyLegalizerInfo();
   // Typical RISCy set of operations based on ARM.
-  LegacyInfo.setAction({G_ADD, LLT::vector(8, 8)},
+  LegacyInfo.setAction({G_ADD, LLT::fixed_vector(8, 8)},
                        LegacyLegalizeActions::Legal);
-  LegacyInfo.setAction({G_ADD, LLT::vector(16, 8)},
+  LegacyInfo.setAction({G_ADD, LLT::fixed_vector(16, 8)},
                        LegacyLegalizeActions::Legal);
-  LegacyInfo.setAction({G_ADD, LLT::vector(4, 16)},
+  LegacyInfo.setAction({G_ADD, LLT::fixed_vector(4, 16)},
                        LegacyLegalizeActions::Legal);
-  LegacyInfo.setAction({G_ADD, LLT::vector(8, 16)},
+  LegacyInfo.setAction({G_ADD, LLT::fixed_vector(8, 16)},
                        LegacyLegalizeActions::Legal);
-  LegacyInfo.setAction({G_ADD, LLT::vector(2, 32)},
+  LegacyInfo.setAction({G_ADD, LLT::fixed_vector(2, 32)},
                        LegacyLegalizeActions::Legal);
-  LegacyInfo.setAction({G_ADD, LLT::vector(4, 32)},
+  LegacyInfo.setAction({G_ADD, LLT::fixed_vector(4, 32)},
                        LegacyLegalizeActions::Legal);
 
   LegacyInfo.setLegalizeVectorElementToDifferentSizeStrategy(
@@ -116,19 +116,19 @@ TEST(LegalizerInfoTest, VectorRISC) {
 
   // Check we infer the correct types and actually do what we're told for some
   // simple cases.
-  EXPECT_EQ(L.getAction({G_ADD, {LLT::vector(8, 8)}}),
+  EXPECT_EQ(L.getAction({G_ADD, {LLT::fixed_vector(8, 8)}}),
             LegalizeActionStep(Legal, 0, LLT{}));
-  EXPECT_EQ(L.getAction({G_ADD, {LLT::vector(8, 7)}}),
-            LegalizeActionStep(WidenScalar, 0, LLT::vector(8, 8)));
-  EXPECT_EQ(L.getAction({G_ADD, {LLT::vector(2, 8)}}),
-            LegalizeActionStep(MoreElements, 0, LLT::vector(8, 8)));
-  EXPECT_EQ(L.getAction({G_ADD, {LLT::vector(8, 32)}}),
-            LegalizeActionStep(FewerElements, 0, LLT::vector(4, 32)));
+  EXPECT_EQ(L.getAction({G_ADD, {LLT::fixed_vector(8, 7)}}),
+            LegalizeActionStep(WidenScalar, 0, LLT::fixed_vector(8, 8)));
+  EXPECT_EQ(L.getAction({G_ADD, {LLT::fixed_vector(2, 8)}}),
+            LegalizeActionStep(MoreElements, 0, LLT::fixed_vector(8, 8)));
+  EXPECT_EQ(L.getAction({G_ADD, {LLT::fixed_vector(8, 32)}}),
+            LegalizeActionStep(FewerElements, 0, LLT::fixed_vector(4, 32)));
   // Check a few non-power-of-2 sizes:
-  EXPECT_EQ(L.getAction({G_ADD, {LLT::vector(3, 3)}}),
-            LegalizeActionStep(WidenScalar, 0, LLT::vector(3, 8)));
-  EXPECT_EQ(L.getAction({G_ADD, {LLT::vector(3, 8)}}),
-            LegalizeActionStep(MoreElements, 0, LLT::vector(8, 8)));
+  EXPECT_EQ(L.getAction({G_ADD, {LLT::fixed_vector(3, 3)}}),
+            LegalizeActionStep(WidenScalar, 0, LLT::fixed_vector(3, 8)));
+  EXPECT_EQ(L.getAction({G_ADD, {LLT::fixed_vector(3, 8)}}),
+            LegalizeActionStep(MoreElements, 0, LLT::fixed_vector(8, 8)));
 }
 
 TEST(LegalizerInfoTest, MultipleTypes) {
@@ -228,18 +228,18 @@ TEST(LegalizerInfoTest, RuleSets) {
   const LLT s33 = LLT::scalar(33);
   const LLT s64 = LLT::scalar(64);
 
-  const LLT v2s5 = LLT::vector(2, 5);
-  const LLT v2s8 = LLT::vector(2, 8);
-  const LLT v2s16 = LLT::vector(2, 16);
-  const LLT v2s32 = LLT::vector(2, 32);
-  const LLT v3s32 = LLT::vector(3, 32);
-  const LLT v4s32 = LLT::vector(4, 32);
-  const LLT v2s33 = LLT::vector(2, 33);
-  const LLT v2s64 = LLT::vector(2, 64);
+  const LLT v2s5 = LLT::fixed_vector(2, 5);
+  const LLT v2s8 = LLT::fixed_vector(2, 8);
+  const LLT v2s16 = LLT::fixed_vector(2, 16);
+  const LLT v2s32 = LLT::fixed_vector(2, 32);
+  const LLT v3s32 = LLT::fixed_vector(3, 32);
+  const LLT v4s32 = LLT::fixed_vector(4, 32);
+  const LLT v2s33 = LLT::fixed_vector(2, 33);
+  const LLT v2s64 = LLT::fixed_vector(2, 64);
 
   const LLT p0 = LLT::pointer(0, 32);
-  const LLT v3p0 = LLT::vector(3, p0);
-  const LLT v4p0 = LLT::vector(4, p0);
+  const LLT v3p0 = LLT::fixed_vector(3, p0);
+  const LLT v4p0 = LLT::fixed_vector(4, p0);
 
   {
     LegalizerInfo LI;

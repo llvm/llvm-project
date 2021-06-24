@@ -1479,7 +1479,8 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   // are vectors.
   if (VectorWidth && !PtrTy.isVector()) {
     BaseReg =
-        MIRBuilder.buildSplatVector(LLT::vector(VectorWidth, PtrTy), BaseReg)
+        MIRBuilder
+            .buildSplatVector(LLT::fixed_vector(VectorWidth, PtrTy), BaseReg)
             .getReg(0);
     PtrIRTy = FixedVectorType::get(PtrIRTy, VectorWidth);
     PtrTy = getLLTForType(*PtrIRTy, *DL);

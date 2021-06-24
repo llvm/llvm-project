@@ -428,7 +428,7 @@ TEST_F(AArch64GISelMITest, MatchSpecificType) {
                        m_GAdd(m_SpecificType(s64), m_Reg())));
 
   // Try to match the destination type of a bitcast.
-  LLT v2s32 = LLT::vector(2, 32);
+  LLT v2s32 = LLT::fixed_vector(2, 32);
   auto MIBCast = B.buildCast(v2s32, Copies[0]);
   EXPECT_TRUE(
       mi_match(MIBCast.getReg(0), *MRI, m_GBitcast(m_Reg())));
