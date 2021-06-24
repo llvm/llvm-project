@@ -206,3 +206,60 @@ define i1 @compare_geps_same_indices_different_types(ptr %a, ptr %b, i64 %idx) {
   %c = icmp eq ptr %a2, %b2
   ret i1 %c
 }
+
+define ptr @indexed_compare(ptr %A, i64 %offset) {
+; CHECK-LABEL: @indexed_compare(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[BB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[RHS_IDX:%.*]] = phi i64 [ [[RHS_ADD:%.*]], [[BB]] ], [ [[OFFSET:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RHS_ADD]] = add nsw i64 [[RHS_IDX]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i64 [[RHS_IDX]], 100
+; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
+; CHECK:       bb2:
+; CHECK-NEXT:    [[RHS_PTR:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[RHS_IDX]]
+; CHECK-NEXT:    ret ptr [[RHS_PTR]]
+;
+entry:
+  %tmp = getelementptr inbounds i32, ptr %A, i64 %offset
+  br label %bb
+
+bb:
+  %RHS = phi ptr [ %RHS.next, %bb ], [ %tmp, %entry ]
+  %LHS = getelementptr inbounds i32, ptr %A, i32 100
+  %RHS.next = getelementptr inbounds i32, ptr %RHS, i64 1
+  %cond = icmp ult ptr %LHS, %RHS
+  br i1 %cond, label %bb2, label %bb
+
+bb2:
+  ret ptr %RHS
+}
+
+define ptr @indexed_compare_different_types(ptr %A, i64 %offset) {
+; CHECK-LABEL: @indexed_compare_different_types(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    br label [[BB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[RHS:%.*]] = phi ptr [ [[RHS_NEXT:%.*]], [[BB]] ], [ [[TMP]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[LHS:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 100
+; CHECK-NEXT:    [[RHS_NEXT]] = getelementptr inbounds i32, ptr [[RHS]], i64 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult ptr [[LHS]], [[RHS]]
+; CHECK-NEXT:    br i1 [[COND]], label [[BB2:%.*]], label [[BB]]
+; CHECK:       bb2:
+; CHECK-NEXT:    ret ptr [[RHS]]
+;
+entry:
+  %tmp = getelementptr inbounds i32, ptr %A, i64 %offset
+  br label %bb
+
+bb:
+  %RHS = phi ptr [ %RHS.next, %bb ], [ %tmp, %entry ]
+  %LHS = getelementptr inbounds i64, ptr %A, i32 100
+  %RHS.next = getelementptr inbounds i32, ptr %RHS, i64 1
+  %cond = icmp ult ptr %LHS, %RHS
+  br i1 %cond, label %bb2, label %bb
+
+bb2:
+  ret ptr %RHS
+}
