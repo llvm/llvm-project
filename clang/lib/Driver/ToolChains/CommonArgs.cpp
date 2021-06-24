@@ -1796,6 +1796,12 @@ bool tools::GetSDLFromOffloadArchive(Compilation &C, const Driver &D,
       UBArgs.push_back(C.getArgs().MakeArgString(InputArg.c_str()));
       UBArgs.push_back(C.getArgs().MakeArgString(OffloadArg.c_str()));
       UBArgs.push_back(C.getArgs().MakeArgString(OutputArg.c_str()));
+
+      // Add this flag to not exit from clang-offload-bundler if no compatible
+      // code object is found in heterogenous archive library.
+      std::string AdditionalArgs("-allow-missing-bundles");
+      UBArgs.push_back(C.getArgs().MakeArgString(AdditionalArgs.c_str()));
+
       C.addCommand(std::make_unique<Command>(
           JA, T, ResponseFileSupport::AtFileCurCP(), UBProgram, UBArgs, Inputs,
           InputInfo(&JA, C.getArgs().MakeArgString(OutputLib.c_str()))));
