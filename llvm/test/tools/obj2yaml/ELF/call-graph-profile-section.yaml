@@ -16,12 +16,8 @@
 # BASIC-NEXT:     Type: SHT_LLVM_CALL_GRAPH_PROFILE
 # BASIC-NEXT:     Link: .symtab
 # BASIC-NEXT:     Entries:
-# BASIC-NEXT:       - From:   foo
-# BASIC-NEXT:         To:     bar
-# BASIC-NEXT:         Weight: 89
-# BASIC-NEXT:       - From:   bar
-# BASIC-NEXT:         To:     foo
-# BASIC-NEXT:         Weight: 98
+# BASIC-NEXT:       - Weight: 89
+# BASIC-NEXT:       - Weight: 98
 # BASIC-NEXT: Symbols:
 
 --- !ELF
@@ -33,12 +29,8 @@ Sections:
   - Name: .llvm.call-graph-profile
     Type: SHT_LLVM_CALL_GRAPH_PROFILE
     Entries:
-      - From:   1
-        To:     2
-        Weight: 89
-      - From:   2
-        To:     1
-        Weight: 98
+      - Weight: 89
+      - Weight: 98
 Symbols:
   - Name: foo
   - Name: bar
@@ -57,59 +49,45 @@ Symbols:
 # INVALID-NEXT:   - Name: .empty
 # INVALID-NEXT:     Type: SHT_LLVM_CALL_GRAPH_PROFILE
 # INVALID-NEXT:     Link: .symtab
-# INVALID-NEXT:   - Name: .multiple.16.valid
+# INVALID-NEXT:   - Name: .multiple.8.valid
 # INVALID-NEXT:     Type: SHT_LLVM_CALL_GRAPH_PROFILE
 # INVALID-NEXT:     Link: .symtab
 # INVALID-NEXT:     Entries:
-# INVALID-NEXT:       - From:   foo
-# INVALID-NEXT:         To:     bar
 # INVALID-NEXT:         Weight: 3
-# INVALID-NEXT:   - Name: .non.multiple.16
+# INVALID-NEXT:   - Name: .non.multiple.8
 # INVALID-NEXT:     Type: SHT_LLVM_CALL_GRAPH_PROFILE
 # INVALID-NEXT:     Link: .symtab
-# INVALID-NEXT:     Content: '0000000100000002000000000000000300'
-# INVALID-NEXT:   - Name: .multiple.16.invalid
+# INVALID-NEXT:     Content: '000000000000000300'
+# INVALID-NEXT:   - Name: .multiple.8.invalid
 # INVALID-NEXT:     Type: SHT_LLVM_CALL_GRAPH_PROFILE
 # INVALID-NEXT:     Link: .symtab
-# INVALID-NEXT:     Content: 00112233445566778899AABBCCDDEEFF
-# INVALID-NEXT:   - Name: .unknown.symbol.1
-# INVALID-NEXT:     Type: SHT_LLVM_CALL_GRAPH_PROFILE
-# INVALID-NEXT:     Link: .symtab
-# INVALID-NEXT:     Content: 000000FF000000020000000000000003
-# INVALID-NEXT:   - Name: .unknown.symbol.2
-# INVALID-NEXT:     Type: SHT_LLVM_CALL_GRAPH_PROFILE
-# INVALID-NEXT:     Link: .symtab
-# INVALID-NEXT:     Content: 00000001000000FF0000000000000003
+# INVALID-NEXT:     Content: 008899AABBCCDDEEFF
 # INVALID-NEXT:   - Name: .link.to.symtable
 # INVALID-NEXT:     Type: SHT_LLVM_CALL_GRAPH_PROFILE
 # INVALID-NEXT:     Link: .symtab
 # INVALID-NEXT:     Entries:
-# INVALID-NEXT:       - From:   foo
-# INVALID-NEXT:         To:     bar
-# INVALID-NEXT:         Weight: 0
+# INVALID-NEXT:       - Weight: 0
 # INVALID-NEXT:   - Name: .link.to.non.symtable.1
 # INVALID-NEXT:     Type: SHT_LLVM_CALL_GRAPH_PROFILE
-# INVALID-NEXT:     Content: '00000001000000020000000000000000'
+# INVALID-NEXT:     Entries:
+# INVALID-NEXT:           - Weight: 0
 # INVALID-NEXT:   - Name: .link.to.non.symtable.2
 # INVALID-NEXT:     Type: SHT_LLVM_CALL_GRAPH_PROFILE
 # INVALID-NEXT:     Link: .empty
-# INVALID-NEXT:     Content: '00000001000000020000000000000000'
+# INVALID-NEXT:     Entries:
+# INVALID-NEXT:      - Weight: 0
 # INVALID-NEXT:   - Name:    .zero.entry.size
 # INVALID-NEXT:     Type:    SHT_LLVM_CALL_GRAPH_PROFILE
 # INVALID-NEXT:     Link:    .symtab
 # INVALID-NEXT:     EntSize: 0x0
 # INVALID-NEXT:     Entries:
-# INVALID-NEXT:       - From:   foo
-# INVALID-NEXT:         To:     bar
-# INVALID-NEXT:         Weight: 0
+# INVALID-NEXT:       - Weight: 0
 # INVALID-NEXT:   - Name: .invalid.entry.size
 # INVALID-NEXT:     Type: SHT_LLVM_CALL_GRAPH_PROFILE
 # INVALID-NEXT:     Link: .symtab
 # INVALID-NEXT:     EntSize: 0x1
 # INVALID-NEXT:     Entries:
-# INVALID-NEXT:       - From:   foo
-# INVALID-NEXT:         To:     bar
-# INVALID-NEXT:         Weight: 0
+# INVALID-NEXT:       - Weight: 0
 # INVALID-NEXT: Symbols:
 # INVALID-NEXT:   - Name: foo
 # INVALID-NEXT:   - Name: bar
@@ -129,67 +107,43 @@ Sections:
 ##         using the "Content" property otherwise.
 ## TODO: Teach yaml2obj to accept 'Size' key for SHT_LLVM_CALL_GRAPH_PROFILE
 ##       sections and use Entries for cases below.
-  - Name: .multiple.16.valid
+  - Name: .multiple.8.valid
     Type: SHT_LLVM_CALL_GRAPH_PROFILE
-    Content: "00000001000000020000000000000003"
-  - Name: .non.multiple.16
+    Content: "0000000000000003"
+  - Name: .non.multiple.8
     Type: SHT_LLVM_CALL_GRAPH_PROFILE
-    Content: "0000000100000002000000000000000300"
-  - Name: .multiple.16.invalid
+    Content: "000000000000000300"
+  - Name: .multiple.8.invalid
     Type: SHT_LLVM_CALL_GRAPH_PROFILE
-    Content: "00112233445566778899AABBCCDDEEFF"
-## Case 3: Check we use the "Content" property when unable to match a
-##         symbol index to a symbol.
-  - Name: .unknown.symbol.1
-    Type: SHT_LLVM_CALL_GRAPH_PROFILE
-    Entries:
-      - From:   0xff
-        To:     2
-        Weight: 3
-  - Name: .unknown.symbol.2
-    Type: SHT_LLVM_CALL_GRAPH_PROFILE
-    Entries:
-      - From:   1
-        To:     0xff
-        Weight: 3
+    Content: "008899AABBCCDDEEFF"
 ## Case 4: Check we use the "Content" property when a linked section
 ##         is not a symbol table.
   - Name: .link.to.symtable
     Type: SHT_LLVM_CALL_GRAPH_PROFILE
     Entries:
-      - From:   1
-        To:     2
-        Weight: 0
+      - Weight: 0
   - Name: .link.to.non.symtable.1
     Type: SHT_LLVM_CALL_GRAPH_PROFILE
     Link: 0
     Entries:
-      - From:   1
-        To:     2
-        Weight: 0
+      - Weight: 0
   - Name: .link.to.non.symtable.2
     Type: SHT_LLVM_CALL_GRAPH_PROFILE
     Link: 1
     Entries:
-      - From:   1
-        To:     2
-        Weight: 0
+      - Weight: 0
 ## Case 5: Check we can dump a section that has a sh_entsize that is not a multiple of 16.
 ##         Check that in these cases we print the "EntSize" key.
   - Name: .zero.entry.size
     Type: SHT_LLVM_CALL_GRAPH_PROFILE
     EntSize: 0
     Entries:
-      - From:   1
-        To:     2
-        Weight: 0
+      - Weight: 0
   - Name: .invalid.entry.size
     Type: SHT_LLVM_CALL_GRAPH_PROFILE
     EntSize: 1
     Entries:
-      - From:   1
-        To:     2
-        Weight: 0
+      - Weight: 0
 Symbols:
   - Name: foo
   - Name: bar
