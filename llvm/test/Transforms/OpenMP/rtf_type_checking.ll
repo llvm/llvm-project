@@ -49,13 +49,14 @@ declare void @__kmpc_flush(%struct.ident_t*)
 ; Different return type.
 declare void @omp_get_thread_num()
 
-!llvm.module.flags = !{!0}
+!llvm.module.flags = !{!0, !4}
 !llvm.ident = !{!1}
 
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{!"clang"}
 !2 = !{!3}
 !3 = !{i64 2, i64 -1, i64 -1, i1 true}
+!4 = !{i32 7, !"openmp", i32 50}
 
 ; NPM: Running pass: OpenMPOptCGSCCPass on (.omp_outlined.)
 ; NPM-NOT: Running pass: OpenMPOptCGSCCPass on (.omp_outlined.)
