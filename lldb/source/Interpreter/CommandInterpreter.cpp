@@ -2675,7 +2675,7 @@ void CommandInterpreter::FindCommandsForApropos(
     const bool search_long_help = false;
     const bool search_syntax = false;
     const bool search_options = false;
-    if (command_name.contains_lower(search_word) ||
+    if (command_name.contains_insensitive(search_word) ||
         cmd_obj->HelpTextContainsWord(search_word, search_short_help,
                                       search_long_help, search_syntax,
                                       search_options)) {

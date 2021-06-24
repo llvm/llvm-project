@@ -60,17 +60,18 @@ uint32_t Log::GetFlags(llvm::raw_ostream &stream, const ChannelMap::value_type &
   bool list_categories = false;
   uint32_t flags = 0;
   for (const char *category : categories) {
-    if (llvm::StringRef("all").equals_lower(category)) {
+    if (llvm::StringRef("all").equals_insensitive(category)) {
       flags |= UINT32_MAX;
       continue;
     }
-    if (llvm::StringRef("default").equals_lower(category)) {
+    if (llvm::StringRef("default").equals_insensitive(category)) {
       flags |= entry.second.m_channel.default_flags;
       continue;
     }
-    auto cat = llvm::find_if(
-        entry.second.m_channel.categories,
-        [&](const Log::Category &c) { return c.name.equals_lower(category); });
+    auto cat = llvm::find_if(entry.second.m_channel.categories,
+                             [&](const Log::Category &c) {
+                               return c.name.equals_insensitive(category);
+                             });
     if (cat != entry.second.m_channel.categories.end()) {
       flags |= cat->flag;
       continue;

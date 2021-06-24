@@ -41,7 +41,7 @@ static uint32_t ResolveLLDBRegisterNum(llvm::StringRef reg_name, llvm::Triple::A
   auto it = llvm::find_if(
       register_names,
       [&reg_name](const llvm::EnumEntry<uint16_t> &register_entry) {
-        return reg_name.compare_lower(register_entry.Name) == 0;
+        return reg_name.compare_insensitive(register_entry.Name) == 0;
       });
 
   if (it == register_names.end())
