@@ -44,7 +44,6 @@ add_lldb_library(lldbSymbol
     lldbHost
     lldbTarget
     lldbUtility
-    lldbPluginObjCLanguage
 
   LINK_COMPONENTS
     Support
