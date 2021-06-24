@@ -1431,6 +1431,61 @@ llvm::Error NativeProcessLinux::DeallocateMemory(lldb::addr_t addr) {
   return llvm::Error::success();
 }
 
+Status NativeProcessLinux::ReadMemoryTags(int32_t type, lldb::addr_t addr,
+                                          size_t len,
+                                          std::vector<uint8_t> &tags) {
+  llvm::Expected<NativeRegisterContextLinux::MemoryTaggingDetails> details =
+      GetCurrentThread()->GetRegisterContext().GetMemoryTaggingDetails(type);
+  if (!details)
+    return Status(details.takeError());
+
+  // Ignore 0 length read
+  if (!len)
+    return Status();
+
+  // lldb will align the range it requests but it is not required to by
+  // the protocol so we'll do it again just in case.
+  // Remove non address bits too. Ptrace calls may work regardless but that
+  // is not a guarantee.
+  MemoryTagManager::TagRange range(details->manager->RemoveNonAddressBits(addr),
+                                   len);
+  range = details->manager->ExpandToGranule(range);
+
+  // Allocate enough space for all tags to be read
+  size_t num_tags = range.GetByteSize() / details->manager->GetGranuleSize();
+  tags.resize(num_tags * details->manager->GetTagSizeInBytes());
+
+  struct iovec tags_iovec;
+  uint8_t *dest = tags.data();
+  lldb::addr_t read_addr = range.GetRangeBase();
+
+  // This call can return partial data so loop until we error or
+  // get all tags back.
+  while (num_tags) {
+    tags_iovec.iov_base = dest;
+    tags_iovec.iov_len = num_tags;
+
+    Status error = NativeProcessLinux::PtraceWrapper(
+        details->ptrace_read_req, GetID(), reinterpret_cast<void *>(read_addr),
+        static_cast<void *>(&tags_iovec), 0, nullptr);
+
+    if (error.Fail()) {
+      // Discard partial reads
+      tags.resize(0);
+      return error;
+    }
+
+    size_t tags_read = tags_iovec.iov_len;
+    assert(tags_read && (tags_read <= num_tags));
+
+    dest += tags_read * details->manager->GetTagSizeInBytes();
+    read_addr += details->manager->GetGranuleSize() * tags_read;
+    num_tags -= tags_read;
+  }
+
+  return Status();
+}
+
 size_t NativeProcessLinux::UpdateThreads() {
   // The NativeProcessLinux monitoring threads are always up to date with
   // respect to thread state and they keep the thread list populated properly.
