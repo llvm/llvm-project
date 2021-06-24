@@ -176,6 +176,22 @@ bool AA::isValidInScope(const Value &V, const Function *Scope) {
   return false;
 }
 
+bool AA::isValidAtPosition(const Value &V, const Instruction &CtxI,
+                           InformationCache &InfoCache) {
+  if (isa<Constant>(V))
+    return true;
+  const Function *Scope = CtxI.getFunction();
+  if (auto *A = dyn_cast<Argument>(&V))
+    return A->getParent() == Scope;
+  if (auto *I = dyn_cast<Instruction>(&V))
+    if (I->getFunction() == Scope) {
+      const DominatorTree *DT =
+          InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(*Scope);
+      return DT && DT->dominates(I, &CtxI);
+    }
+  return false;
+}
+
 Value *AA::getWithType(Value &V, Type &Ty) {
   if (V.getType() == &Ty)
     return &V;
