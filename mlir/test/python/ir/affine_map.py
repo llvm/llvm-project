@@ -3,6 +3,7 @@
 import gc
 from mlir.ir import *
 
+
 def run(f):
   print("\nTEST:", f.__name__)
   f()
@@ -20,6 +21,7 @@ def testAffineMapCapsule():
   am2 = AffineMap._CAPICreate(affine_map_capsule)
   assert am2 == am1
   assert am2.context is ctx
+
 
 run(testAffineMapCapsule)
 
@@ -97,6 +99,7 @@ def testAffineMapGet():
       # CHECK: number of results out of bounds
       print(e)
 
+
 run(testAffineMapGet)
 
 
@@ -116,6 +119,7 @@ def testAffineMapDerive():
     # CHECK: (d0, d1, d2, d3, d4) -> (d3, d4)
     map34 = map5.get_minor_submap(2)
     print(map34)
+
 
 run(testAffineMapDerive)
 
@@ -141,6 +145,7 @@ def testAffineMapProperties():
     print(map3.is_permutation)
     # CHECK: False
     print(map3.is_projected_permutation)
+
 
 run(testAffineMapProperties)
 
@@ -175,23 +180,22 @@ def testAffineMapExprs():
       print(expr)
     assert list(map3.results) == [d2, d0, d1]
 
+
 run(testAffineMapExprs)
+
 
 # CHECK-LABEL: TEST: testCompressUnusedSymbols
 def testCompressUnusedSymbols():
   with Context() as ctx:
-    d0, d1, d2 = (
-      AffineDimExpr.get(0), 
-      AffineDimExpr.get(1), 
-      AffineDimExpr.get(2))
-    s0, s1, s2 = (
-      AffineSymbolExpr.get(0), 
-      AffineSymbolExpr.get(1), 
-      AffineSymbolExpr.get(2))
+    d0, d1, d2 = (AffineDimExpr.get(0), AffineDimExpr.get(1),
+                  AffineDimExpr.get(2))
+    s0, s1, s2 = (AffineSymbolExpr.get(0), AffineSymbolExpr.get(1),
+                  AffineSymbolExpr.get(2))
     maps = [
         AffineMap.get(3, 3, [d2, d0, d1]),
         AffineMap.get(3, 3, [d2, d0 + s2, d1]),
-        AffineMap.get(3, 3, [d1, d2, d0])]
+        AffineMap.get(3, 3, [d1, d2, d0])
+    ]
 
     compressed_maps = AffineMap.compress_unused_symbols(maps, ctx)
 
@@ -207,3 +211,29 @@ def testCompressUnusedSymbols():
 
 
 run(testCompressUnusedSymbols)
+
+
+# CHECK-LABEL: TEST: testReplace
+def testReplace():
+  with Context() as ctx:
+    d0, d1, d2 = (AffineDimExpr.get(0), AffineDimExpr.get(1),
+                  AffineDimExpr.get(2))
+    s0, s1, s2 = (AffineSymbolExpr.get(0), AffineSymbolExpr.get(1),
+                  AffineSymbolExpr.get(2))
+    map1 = AffineMap.get(3, 3, [d2, d0 + s1 + s2, d1 + s0])
+
+    replace0 = map1.replace(s0, AffineConstantExpr.get(42), 3, 3)
+    replace1 = map1.replace(s1, AffineConstantExpr.get(42), 3, 3)
+    replace3 = map1.replace(s2, AffineConstantExpr.get(42), 3, 2)
+
+    # CHECK: (d0, d1, d2)[s0, s1, s2] -> (d2, d0 + s1 + s2, d1 + 42)
+    print(replace0)
+
+    # CHECK: (d0, d1, d2)[s0, s1, s2] -> (d2, d0 + s2 + 42, d1 + s0)
+    print(replace1)
+
+    # CHECK: (d0, d1, d2)[s0, s1] -> (d2, d0 + s1 + 42, d1 + s0)
+    print(replace3)
+
+
+run(testReplace)

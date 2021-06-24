@@ -45,9 +45,11 @@ class OperandDefConfig(YAMLObject):
 
   def __init__(self,
                operand_def: OperandDef,
-               shape_map: Optional[_ir.AffineMap] = None):
+               shape_map: Optional[_ir.AffineMap] = None,
+               attribute_map: Optional[_ir.AffineMap] = None):
     self.operand_def = operand_def
     self.shape_map = shape_map  # type: Optional[_ir.AffineMap]
+    self.attribute_map = attribute_map  # type: Optional[_ir.AffineMap]
     self.indexing_map = None  # type: Optional[_ir.AffineMap]
 
   @property
@@ -60,21 +62,25 @@ class OperandDefConfig(YAMLObject):
 
   @property
   def usage(self) -> str:
-    if self.operand_def.output:
-      return "output"
-    return "input"
+    if self.operand_def.kind == OperandKind.Attribute:
+      return "IndexAttribute"
+    if self.operand_def.kind == OperandKind.OutputTensor:
+      return "OutputOperand"
+    return "InputOperand"
 
   def to_yaml_custom_dict(self):
-    self_dict = dict(name=self.name)
-    self_dict["usage"] = self.usage
-    if not self.operand_def.scalar:
-      self_dict["shape"] = _serialize_affine_map(self.shape_map)
-    self_dict["type_var"] = self.type_var.name
+    self_dict = dict(
+        name=self.name, usage=self.usage, type_var=self.type_var.name)
+    if self.shape_map:
+      self_dict["shape_map"] = _serialize_affine_map(self.shape_map)
+    if self.attribute_map:
+      self_dict["attribute_map"] = _serialize_affine_map(self.attribute_map)
     return self_dict
 
   def __repr__(self):
     return (f"OperandDefConfig({self.operand_def}, "
-            f"shape_map={self.shape_map}, indexing_map={self.indexing_map})")
+            f"shape_map={self.shape_map}, attribute_map={self.attribute_map}, "
+            f"indexing_map={self.indexing_map})")
 
 
 class LinalgIndexingMapsConfig(YAMLObject):
@@ -109,6 +115,7 @@ class LinalgStructuredOpConfig(YAMLObject):
 
   def __init__(self,
                comprehension: Comprehension,
+               registered_operands: Sequence[OperandDef],
                context: Optional[_ir.Context] = None):
     self.context = context if context is not None else _ir.Context()
     self.affine_state = AffineBuildState()
@@ -131,22 +138,33 @@ class LinalgStructuredOpConfig(YAMLObject):
       read_use.collect_scalar_uses(collected_scalar_uses)
       read_use.collect_indices(collected_indices)
 
-    # Need to add all definitions before uses, so process twice.
+    # Collect all attribute definitions
+    collected_attr_defs = list()
+    for operand in registered_operands:
+      if operand.kind == OperandKind.Attribute:
+        collected_attr_defs.append(operand)
+
+    # Add all definitions before uses, so process twice.
     for use in collected_tensor_uses:
       self.add_operand(use.operand_def)
     for use in collected_scalar_uses:
       self.add_operand(use.operand_def)
+    for definition in collected_attr_defs:
+      self.add_operand(definition)
     for use in collected_tensor_uses:
       self.add_tensor_use(use)
 
-    # Now normalize all defs and uses indexing maps now that full count of
-    # dims and symbols are known.
+    # Normalize all shape and indexing maps now that full count of dims and
+    # symbols are known.
     for cuse in self.uses.values():
       cuse.indexing_map = self._normalize_affine_map(cuse.indexing_map)
-    for cdef in self.operands.values():
-      if not cdef.operand_def.scalar:
-        cdef.shape_map = self._normalize_affine_map(
-            cdef.shape_map, with_dims=False)
+    for operand_config in self.operands.values():
+      if operand_config.shape_map:
+        operand_config.shape_map = self._normalize_affine_map(
+            operand_config.shape_map, with_dims=False)
+      if operand_config.attribute_map:
+        operand_config.attribute_map = self._normalize_affine_map(
+            operand_config.attribute_map, with_dims=False)
 
     # Now for each write use, propagate the indexing maps from the use to the
     # tensor, ensuring that there are not conflicts.
@@ -174,12 +192,16 @@ class LinalgStructuredOpConfig(YAMLObject):
 
     # Set the indexing map of all scalar uses to the empty map.
     for operand_config in self.operands.values():
-      if operand_config.operand_def.scalar:
-        operand_config.indexing_map = self._create_empty_affine_map()
+      if operand_config.operand_def.kind == OperandKind.Scalar:
+        operand_config.indexing_map = self._get_scalar_map()
 
-    # Sanity check that all defs have an indexing map.
-    assert all(d.indexing_map for d in self.operands.values()), (
-        f"Missing indexing map on OperandConfigDef: {self.operands}")
+    # Check all registered tensor and scalar operands have an indexing map.
+    for operand in registered_operands:
+      if operand.kind == OperandKind.Attribute:
+        continue
+      if not (operand in self.operands and self.operands[operand].indexing_map):
+        raise ValueError(f"Failed to compute an indexing map for operand "
+                         f"{operand.name}")
 
     # Collect reduction dims and ensure all the same.
     all_reduction_dims = set(comprehension.all_reduction_dims)
@@ -189,7 +211,7 @@ class LinalgStructuredOpConfig(YAMLObject):
           f"dims. Got: {all_reduction_dims}")
     self.reduction_dims = next(iter(all_reduction_dims))
 
-    # Check the index dimension exists and resolve
+    # Check the index dimension exists and resolve.
     for index in collected_indices:
       if index.dim_def.dimname not in self.affine_state.all_dims:
         raise ValueError(
@@ -221,7 +243,7 @@ class LinalgStructuredOpConfig(YAMLObject):
 
   @property
   def indexing_maps(self) -> Sequence[_ir.AffineMap]:
-    return [d.indexing_map for d in self.ordered_operands]
+    return [o.indexing_map for o in self.ordered_operands if o.indexing_map]
 
   @property
   def iterator_types(self) -> Sequence[str]:
@@ -237,20 +259,24 @@ class LinalgStructuredOpConfig(YAMLObject):
   def add_operand(self, operand_def: OperandDef):
     if operand_def in self.operands:
       return
-    if operand_def.scalar:
+    if operand_def.kind == OperandKind.Scalar:
       self.operands[operand_def] = OperandDefConfig(operand_def)
       return
     with self.context:
       local_state = AffineBuildState(
           global_state=self.affine_state, allow_new_dims=False)
       exprs = []
-      for expr in operand_def.shape:
+      for expr in operand_def.size_exprs:
         exprs.append(expr.build(state=local_state))
       assert local_state.local_dim_count == 0
-      shape_map = _ir.AffineMap.get(
+      affine_map = _ir.AffineMap.get(
           dim_count=0, symbol_count=local_state.symbol_count, exprs=exprs)
-      def_config = OperandDefConfig(operand_def, shape_map)
-      self.operands[operand_def] = def_config
+      if operand_def.kind == OperandKind.Attribute:
+        self.operands[operand_def] = OperandDefConfig(
+            operand_def, attribute_map=affine_map)
+      else:
+        self.operands[operand_def] = OperandDefConfig(
+            operand_def, shape_map=affine_map)
 
   def add_tensor_use(self, tensor_use: TensorUse):
     if tensor_use in self.uses:
@@ -261,7 +287,6 @@ class LinalgStructuredOpConfig(YAMLObject):
       exprs = []
       for expr in tensor_use.indices:
         exprs.append(expr.build(state=local_state))
-      assert local_state.local_symbol_count == 0
       indexing_map = _ir.AffineMap.get(
           dim_count=local_state.dim_count,
           symbol_count=local_state.symbol_count,
@@ -270,8 +295,8 @@ class LinalgStructuredOpConfig(YAMLObject):
       use_config = TensorUseConfig(tensor_use, indexing_map)
       self.uses[tensor_use] = use_config
 
-  def _create_empty_affine_map(self) -> _ir.AffineMap:
-    """Create an affine map with an empty range."""
+  def _get_scalar_map(self) -> _ir.AffineMap:
+    """Create an empty affine map used to index a scalar."""
     with self.context:
       return _ir.AffineMap.get(
           dim_count=self.affine_state.dim_count,
@@ -345,8 +370,9 @@ class LinalgOpConfig(YAMLObject):
     return [
         LinalgOpConfig(
             tc_op_def.metadata,
-            structured_op=LinalgStructuredOpConfig(tc_op_def.comprehensions[0],
-                                                   context)),
+            structured_op=LinalgStructuredOpConfig(
+                tc_op_def.comprehensions[0],
+                tc_op_def.registered_operands.values(), context)),
     ]
 
   def __repr__(self):

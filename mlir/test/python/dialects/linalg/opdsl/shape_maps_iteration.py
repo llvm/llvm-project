@@ -7,9 +7,9 @@ from mlir.dialects.linalg.opdsl.lang import *
 # dims auto discovered emits the right shape, indexing maps and iterator types.
 # CHECK: ---
 # CHECK-LABEL: matmul
-# CHECK: shape: affine_map<()[s0, s1, s2] -> (s0, s2)>
-# CHECK: shape: affine_map<()[s0, s1, s2] -> (s2, s1)>
-# CHECK: shape: affine_map<()[s0, s1, s2] -> (s0, s1)>
+# CHECK: shape_map: affine_map<()[s0, s1, s2] -> (s0, s2)>
+# CHECK: shape_map: affine_map<()[s0, s1, s2] -> (s2, s1)>
+# CHECK: shape_map: affine_map<()[s0, s1, s2] -> (s0, s1)>
 # CHECK: static_indexing_maps:
 # CHECK-NEXT: - affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0, d2)>
 # CHECK-NEXT: - affine_map<(d0, d1, d2)[s0, s1, s2] -> (d2, d1)>
@@ -19,9 +19,10 @@ from mlir.dialects.linalg.opdsl.lang import *
 # CHECK-NEXT: - parallel
 # CHECK-NEXT: - reduction
 @linalg_structured_op
-def matmul(A=TensorDef(T, S.M, S.K),
-           B=TensorDef(T, S.K, S.N),
-           C=TensorDef(U, S.M, S.N, output=True)):
+def matmul(
+    A=TensorDef(T, S.M, S.K),
+    B=TensorDef(T, S.K, S.N),
+    C=TensorDef(U, S.M, S.N, output=True)):
   C[D.m, D.n] += cast(U, A[D.m, D.k]) * cast(U, B[D.k, D.n])
 
 
@@ -29,9 +30,9 @@ def matmul(A=TensorDef(T, S.M, S.K),
 # correctly.
 # CHECK: ---
 # CHECK-LABEL: dot
-# CHECK: shape: affine_map<()[s0] -> (s0)>
-# CHECK: shape: affine_map<()[s0] -> (s0)>
-# CHECK: shape: affine_map<()[s0] -> ()>
+# CHECK: shape_map: affine_map<()[s0] -> (s0)>
+# CHECK: shape_map: affine_map<()[s0] -> (s0)>
+# CHECK: shape_map: affine_map<()[s0] -> ()>
 # CHECK: static_indexing_maps:
 # CHECK-NEXT: - affine_map<(d0)[s0] -> (d0)>
 # CHECK-NEXT: - affine_map<(d0)[s0] -> (d0)>
