@@ -261,6 +261,8 @@ def ForOp : SCF_Op<"for",
       return getOperation()->getNumOperands() - getNumControlOperands();
     }
     /// Get the region iter arg that corresponds to an OpOperand.
+    /// This helper prevents internal op implementation detail leakage to
+    /// clients by hiding the operand / block argument mapping.
     BlockArgument getRegionIterArgForOpOperand(OpOperand &opOperand) {
       assert(opOperand.getOperandNumber() >= getNumControlOperands() &&
              "expected an iter args operand");
@@ -270,6 +272,8 @@ def ForOp : SCF_Op<"for",
         opOperand.getOperandNumber() - getNumControlOperands()];
     }
     /// Get the OpOperand& that corresponds to a region iter arg.
+    /// This helper prevents internal op implementation detail leakage to
+    /// clients by hiding the operand / block argument mapping.
     OpOperand &getOpOperandForRegionIterArg(BlockArgument bbArg) {
       assert(bbArg.getArgNumber() >= getNumInductionVars() &&
              "expected a bbArg that is not an induction variable");
@@ -277,6 +281,27 @@ def ForOp : SCF_Op<"for",
              "bbArg does not belong to the scf::ForOp body");
       return getOperation()->getOpOperand(
         getNumControlOperands() + bbArg.getArgNumber() - getNumInductionVars());
+    }
+    /// Get the OpResult that corresponds to an OpOperand.
+    /// Assert that opOperand is an iterArg.
+    /// This helper prevents internal op implementation detail leakage to
+    /// clients by hiding the operand / block argument mapping.
+    OpResult getResultForOpOperand(OpOperand &opOperand) {
+      assert(opOperand.getOperandNumber() >= getNumControlOperands() &&
+             "expected an iter args operand");
+      assert(opOperand.getOwner() == getOperation() &&
+             "opOperand does not belong to this scf::ForOp operation");
+      return getOperation()->getResult(
+        opOperand.getOperandNumber() - getNumControlOperands());
+    }
+    /// Get the OpOperand& that corresponds to an OpResultOpOperand.
+    /// This helper prevents internal op implementation detail leakage to
+    /// clients by hiding the operand / block argument mapping.
+    OpOperand &getOpOperandForResult(OpResult opResult) {
+      assert(opResult.getDefiningOp() == getOperation() &&
+             "opResult does not belong to the scf::ForOp operation");
+      return getOperation()->getOpOperand(
+        getNumControlOperands() + opResult.getResultNumber());
     }
 
     /// Return operands used when entering the region at 'index'. These operands
