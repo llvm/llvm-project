@@ -243,7 +243,7 @@ define void @sink_replicate_region_4_requires_split_at_end_of_block(i32 %x, i8* 
 ; CHECK-NEXT:   WIDEN ir<%conv> = sext vp<%6>
 ; CHECK-NEXT: Successor(s): pred.srem
 ; CHECK-EMPTY:
-; CHECK-NEXT:      <xVFxUF> pred.srem: {
+; CHECK-NEXT: <xVFxUF> pred.srem: {
 ; CHECK-NEXT:   pred.srem.entry:
 ; CHECK-NEXT:     BRANCH-ON-MASK vp<%3>
 ; CHECK-NEXT:   Successor(s): pred.srem.if, pred.srem.continue
@@ -345,20 +345,20 @@ define void @sink_replicate_region_after_replicate_region(i32* %ptr, i32 %x, i8 
 ; CHECK-NEXT:  Successor(s): pred.sdiv.if, pred.sdiv.continue
 ; CHECK-NEXT:  CondBit: vp<%3> (loop)
 ; CHECK-EMPTY:
-; CHECK-NEXT:       pred.sdiv.if:
+; CHECK-NEXT:  pred.sdiv.if:
 ; CHECK-NEXT:    REPLICATE ir<%rem.div> = sdiv ir<20>, vp<%6>
 ; CHECK-NEXT:  Successor(s): pred.sdiv.continue
 ; CHECK-EMPTY:
-; CHECK-NEXT:       pred.sdiv.continue:
+; CHECK-NEXT:  pred.sdiv.continue:
 ; CHECK-NEXT:    PHI-PREDICATED-INSTRUCTION vp<%8> = ir<%rem.div>
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): loop.1.split
 ; CHECK-EMPTY:
-; CHECK-NEXT:      loop.1.split:
+; CHECK-NEXT: loop.1.split:
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
-; CHECK-NEXT:       <xVFxUF> pred.store: {
+; CHECK-NEXT: <xVFxUF> pred.store: {
 ; CHECK-NEXT:   pred.store.entry:
 ; CHECK-NEXT:     BRANCH-ON-MASK vp<%3>
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
