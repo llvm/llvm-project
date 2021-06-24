@@ -99,13 +99,6 @@ const DecodedThread *TraceIntelPT::Decode(Thread &thread) {
   return &it->second->Decode();
 }
 
-size_t TraceIntelPT::GetCursorPosition(Thread &thread) {
-  const DecodedThread *decoded_thread = Decode(thread);
-  if (!decoded_thread)
-    return 0;
-  return decoded_thread->GetCursorPosition();
-}
-
 lldb::TraceCursorUP TraceIntelPT::GetCursor(Thread &thread) {
   // TODO: to implement
   return nullptr;

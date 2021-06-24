@@ -72,8 +72,6 @@ public:
 
   llvm::Optional<size_t> GetInstructionCount(Thread &thread) override;
 
-  size_t GetCursorPosition(Thread &thread) override;
-
   lldb::TraceCursorUP GetCursor(Thread &thread) override;
 
   void DoRefreshLiveProcessState(
