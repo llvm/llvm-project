@@ -965,6 +965,16 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
           IsSGPR = false;
           IsAGPR = true;
           Width = 6;
+        } else if (AMDGPU::VReg_224RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 7;
+        } else if (AMDGPU::SReg_224RegClass.contains(Reg)) {
+          IsSGPR = true;
+          Width = 7;
+        } else if (AMDGPU::AReg_224RegClass.contains(Reg)) {
+          IsSGPR = false;
+          IsAGPR = true;
+          Width = 7;
         } else if (AMDGPU::SReg_256RegClass.contains(Reg)) {
           assert(!AMDGPU::TTMP_256RegClass.contains(Reg) &&
             "trap handler registers should not be used");
