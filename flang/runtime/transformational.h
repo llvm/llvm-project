@@ -23,13 +23,12 @@
 
 namespace Fortran::runtime {
 
-// TODO: redo API, put under extern "C"
-OwningPtr<Descriptor> RTNAME(Reshape)(const Descriptor &source,
+extern "C" {
+
+void RTNAME(Reshape)(Descriptor &result, const Descriptor &source,
     const Descriptor &shape, const Descriptor *pad = nullptr,
     const Descriptor *order = nullptr, const char *sourceFile = nullptr,
     int line = 0);
-
-extern "C" {
 
 void RTNAME(Cshift)(Descriptor &result, const Descriptor &source,
     const Descriptor &shift, int dim = 1, const char *sourceFile = nullptr,
