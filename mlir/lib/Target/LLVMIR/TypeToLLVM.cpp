@@ -1,4 +1,4 @@
-//===- TypeTranslation.cpp - type translation between MLIR LLVM & LLVM IR -===//
+//===- TypeToLLVM.cpp - type translation from MLIR to LLVM IR -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Target/LLVMIR/TypeTranslation.h"
+#include "mlir/Target/LLVMIR/TypeToLLVM.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"

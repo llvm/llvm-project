@@ -1,4 +1,4 @@
-//===- TypeTranslation.h - Translate types between MLIR & LLVM --*- C++ -*-===//
+//===- TypeToLLVM.h - Translate types from MLIR to LLVM --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_TARGET_LLVMIR_TYPETRANSLATION_H
-#define MLIR_TARGET_LLVMIR_TYPETRANSLATION_H
+#ifndef MLIR_TARGET_LLVMIR_TYPETOLLVM_H
+#define MLIR_TARGET_LLVMIR_TYPETOLLVM_H
 
 #include <memory>
 
@@ -58,4 +58,4 @@ private:
 } // namespace LLVM
 } // namespace mlir
 
-#endif // MLIR_TARGET_LLVMIR_TYPETRANSLATION_H
+#endif // MLIR_TARGET_LLVMIR_TYPETOLLVM_H
