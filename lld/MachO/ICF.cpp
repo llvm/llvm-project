@@ -106,7 +106,7 @@ static bool equalsVariable(const ConcatInputSection *ia,
         const auto *db = dyn_cast<Defined>(sb);
         if (da->value != db->value)
           return false;
-        if (da->isAbsolute() != da->isAbsolute())
+        if (da->isAbsolute() != db->isAbsolute())
           return false;
         if (da->isec)
           if (da->isec->icfEqClass[icfPass % 2] !=
