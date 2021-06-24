@@ -25,7 +25,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}constant_load_v3i64:
-; GCN: s_load_dwordx8 {{s\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0x0{{$}}
+; GCN-DAG: s_load_dwordx4 {{s\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0x0{{$}}
+; GCN-DAG: s_load_dwordx2 {{s\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, 0x{{[0-9]+}}{{$}}
 
 ; EG-DAG: VTX_READ_128
 ; EG-DAG: VTX_READ_128
