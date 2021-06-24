@@ -9,12 +9,14 @@ define void @test(i1 %a) {
 ; CHECK-NEXT:    [[A_OFF:%.*]] = add i1 [[A:%.*]], true
 ; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i1 [[A_OFF]], true
 ; CHECK-NEXT:    br i1 [[SWITCH]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
 ; CHECK:       true:
 ; CHECK-NEXT:    call void @foo(i32 1)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       false:
 ; CHECK-NEXT:    call void @foo(i32 3)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
   switch i1 %a, label %default [i1 1, label %true
   i1 0, label %false]
@@ -37,18 +39,20 @@ define void @test2(i2 %a) {
 ; CHECK-NEXT:    i2 -2, label [[CASE2:%.*]]
 ; CHECK-NEXT:    i2 -1, label [[CASE3:%.*]]
 ; CHECK-NEXT:    ]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
 ; CHECK:       case0:
 ; CHECK-NEXT:    call void @foo(i32 0)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       case1:
 ; CHECK-NEXT:    call void @foo(i32 1)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       case2:
 ; CHECK-NEXT:    call void @foo(i32 2)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       case3:
 ; CHECK-NEXT:    call void @foo(i32 3)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       default1:
 ; CHECK-NEXT:    unreachable
 ;
@@ -82,18 +86,20 @@ define void @test3(i2 %a) {
 ; CHECK-NEXT:    i2 1, label [[CASE1:%.*]]
 ; CHECK-NEXT:    i2 -2, label [[CASE2:%.*]]
 ; CHECK-NEXT:    ]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
 ; CHECK:       case0:
 ; CHECK-NEXT:    call void @foo(i32 0)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       case1:
 ; CHECK-NEXT:    call void @foo(i32 1)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       case2:
 ; CHECK-NEXT:    call void @foo(i32 2)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       default:
 ; CHECK-NEXT:    call void @foo(i32 3)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
   switch i2 %a, label %default [i2 0, label %case0
   i2 1, label %case1
@@ -121,15 +127,17 @@ define void @test4(i128 %a) {
 ; CHECK-NEXT:    i128 0, label [[CASE0:%.*]]
 ; CHECK-NEXT:    i128 1, label [[CASE1:%.*]]
 ; CHECK-NEXT:    ]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
 ; CHECK:       case0:
 ; CHECK-NEXT:    call void @foo(i32 0)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       case1:
 ; CHECK-NEXT:    call void @foo(i32 1)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       default:
 ; CHECK-NEXT:    call void @foo(i32 2)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
   switch i128 %a, label %default [i128 0, label %case0
   i128 1, label %case1]
@@ -153,12 +161,14 @@ define void @test5(i8 %a) {
 ; CHECK-NEXT:    [[A_OFF:%.*]] = add i8 [[A]], -1
 ; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i8 [[A_OFF]], 1
 ; CHECK-NEXT:    br i1 [[SWITCH]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
 ; CHECK:       true:
 ; CHECK-NEXT:    call void @foo(i32 1)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       false:
 ; CHECK-NEXT:    call void @foo(i32 3)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
   %cmp = icmp ult i8 %a, 2
   call void @llvm.assume(i1 %cmp)
@@ -184,12 +194,14 @@ define void @test6(i8 %a) {
 ; CHECK-NEXT:    [[A_OFF:%.*]] = add i8 [[A]], 1
 ; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i8 [[A_OFF]], 1
 ; CHECK-NEXT:    br i1 [[SWITCH]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
 ; CHECK:       true:
 ; CHECK-NEXT:    call void @foo(i32 1)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       false:
 ; CHECK-NEXT:    call void @foo(i32 3)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
   %and = and i8 %a, 254
   %cmp = icmp eq i8 %and, 254
@@ -217,12 +229,14 @@ define void @test7(i8 %a) {
 ; CHECK-NEXT:    [[A_OFF:%.*]] = add i8 [[A]], 1
 ; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i8 [[A_OFF]], 1
 ; CHECK-NEXT:    br i1 [[SWITCH]], label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
 ; CHECK:       true:
 ; CHECK-NEXT:    call void @foo(i32 1)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       false:
 ; CHECK-NEXT:    call void @foo(i32 3)
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
   %and = and i8 %a, 254
   %cmp = icmp eq i8 %and, 254

@@ -13,24 +13,25 @@ target triple = "arm64--"
 define void @func() {
 ; CHECK-LABEL: func:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    cbnz w8, .LBB0_3
 ; CHECK-NEXT:  // %bb.1: // %b1
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    cbz wzr, .LBB0_4
 ; CHECK-NEXT:  // %bb.2: // %b3
 ; CHECK-NEXT:    ldr w8, [x8]
-; CHECK-NEXT:    tbz w8, #8, .LBB0_5
-; CHECK-NEXT:  .LBB0_3: // %b7
+; CHECK-NEXT:    and w0, w8, #0x100
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    cbz w0, .LBB0_5
+; CHECK-NEXT:  .LBB0_3: // %common.ret.sink.split
 ; CHECK-NEXT:    b extfunc
 ; CHECK-NEXT:  .LBB0_4: // %b2
 ; CHECK-NEXT:    bl extfunc
-; CHECK-NEXT:    cbnz w0, .LBB0_3
-; CHECK-NEXT:  .LBB0_5: // %b8
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    cbnz w0, .LBB0_3
+; CHECK-NEXT:  .LBB0_5: // %common.ret
 ; CHECK-NEXT:    ret
   %c0 = icmp sgt i64 0, 0
   br i1 %c0, label %b1, label %b6

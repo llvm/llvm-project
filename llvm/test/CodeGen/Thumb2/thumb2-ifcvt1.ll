@@ -7,9 +7,9 @@
 define i32 @t1(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
 ; ALL-LABEL: t1:
 ; ALL:       @ %bb.0:
-; ALL-NEXT:    cmp r2, #7
+; ALL-NEXT:    cmp r2, #1
 ; ALL-NEXT:    ittee ne
-; ALL-NEXT:    cmpne r2, #1
+; ALL-NEXT:    cmpne r2, #7
 ; ALL-NEXT:    addne r0, r1
 ; ALL-NEXT:    addeq r0, r1
 ; ALL-NEXT:    addeq r0, #1
@@ -242,9 +242,9 @@ entry:
 define void @t3(i32 %a, i32 %b) nounwind {
 ; V01-LABEL: t3:
 ; V01:       @ %bb.0: @ %entry
-; V01-NEXT:    cmp r0, #11
-; V01-NEXT:    it lt
-; V01-NEXT:    bxlt lr
+; V01-NEXT:    cmp r0, #10
+; V01-NEXT:    it le
+; V01-NEXT:    bxle lr
 ; V01-NEXT:  LBB4_1: @ %cond_true
 ; V01-NEXT:    str lr, [sp, #-4]!
 ; V01-NEXT:    mov r0, r1
@@ -254,14 +254,15 @@ define void @t3(i32 %a, i32 %b) nounwind {
 ;
 ; V23-LABEL: t3:
 ; V23:       @ %bb.0: @ %entry
-; V23-NEXT:    cmp r0, #11
-; V23-NEXT:    it lt
-; V23-NEXT:    bxlt lr
+; V23-NEXT:    cmp r0, #10
+; V23-NEXT:    it le
+; V23-NEXT:    bxle lr
 ; V23-NEXT:  .LBB4_1: @ %cond_true
 ; V23-NEXT:    push {r7, lr}
 ; V23-NEXT:    mov r0, r1
 ; V23-NEXT:    bl foo
-; V23-NEXT:    pop {r7, pc}
+; V23-NEXT:    pop.w {r7, lr}
+; V23-NEXT:    bx lr
 entry:
 	%tmp1 = icmp sgt i32 %a, 10		; <i1> [#uses=1]
 	br i1 %tmp1, label %cond_true, label %UnifiedReturnBlock

@@ -32,7 +32,7 @@ define i32 @main() local_unnamed_addr #1 {
 ; CHECK-NEXT:    b .LBB0_3
 ; CHECK-NEXT:  .LBB0_2: // %if.then
 ; CHECK-NEXT:    bl f2
-; CHECK-NEXT:  .LBB0_3: // %for.inc
+; CHECK-NEXT:  .LBB0_3: // %common.ret
 ; CHECK-NEXT:    ldr x30, [sp, #96] // 8-byte Folded Reload
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    add sp, sp, #112 // =112

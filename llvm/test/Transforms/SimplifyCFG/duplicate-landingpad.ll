@@ -13,14 +13,14 @@ define void @test1() personality i32 (...)* @__gxx_personality_v0 {
 ; CHECK-NEXT:    to label [[INVOKE2:%.*]] unwind label [[LPAD2:%.*]]
 ; CHECK:       invoke2:
 ; CHECK-NEXT:    invoke void @fn()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD2]]
-; CHECK:       invoke.cont:
+; CHECK-NEXT:    to label [[COMMON_RET:%.*]] unwind label [[LPAD2]]
+; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       lpad2:
 ; CHECK-NEXT:    [[EXN2:%.*]] = landingpad { i8*, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @fn()
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
   invoke void @fn()
@@ -56,8 +56,8 @@ define void @neg1() personality i32 (...)* @__gxx_personality_v0 {
 ; CHECK-NEXT:    to label [[INVOKE2:%.*]] unwind label [[LPAD1:%.*]]
 ; CHECK:       invoke2:
 ; CHECK-NEXT:    invoke void @fn()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD2:%.*]]
-; CHECK:       invoke.cont:
+; CHECK-NEXT:    to label [[COMMON_RET:%.*]] unwind label [[LPAD2:%.*]]
+; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       lpad1:
 ; CHECK-NEXT:    [[EXN:%.*]] = landingpad { i8*, i32 }
@@ -70,7 +70,7 @@ define void @neg1() personality i32 (...)* @__gxx_personality_v0 {
 ; CHECK-NEXT:    br label [[SHARED_RESUME]]
 ; CHECK:       shared_resume:
 ; CHECK-NEXT:    call void @fn()
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
   invoke void @fn()
@@ -107,8 +107,8 @@ define void @neg2() personality i32 (...)* @__gxx_personality_v0 {
 ; CHECK-NEXT:    to label [[INVOKE2:%.*]] unwind label [[LPAD1:%.*]]
 ; CHECK:       invoke2:
 ; CHECK-NEXT:    invoke void @fn()
-; CHECK-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD2:%.*]]
-; CHECK:       invoke.cont:
+; CHECK-NEXT:    to label [[COMMON_RET:%.*]] unwind label [[LPAD2:%.*]]
+; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       lpad1:
 ; CHECK-NEXT:    [[EXN:%.*]] = landingpad { i8*, i32 }
@@ -120,7 +120,7 @@ define void @neg2() personality i32 (...)* @__gxx_personality_v0 {
 ; CHECK-NEXT:    br label [[SHARED_RESUME]]
 ; CHECK:       shared_resume:
 ; CHECK-NEXT:    call void @fn()
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
   invoke void @fn()

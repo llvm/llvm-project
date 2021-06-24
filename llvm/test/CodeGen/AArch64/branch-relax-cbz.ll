@@ -12,7 +12,7 @@ define void @split_block_no_fallthrough(i64 %val) #0 {
 ; CHECK-NEXT:    ldr w8, [x8]
 ; CHECK-NEXT:    cbnz w8, LBB0_2
 ; CHECK-NEXT:    b LBB0_4
-; CHECK-NEXT:  LBB0_2: ; %b8
+; CHECK-NEXT:  LBB0_2: ; %common.ret
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB0_3: ; %b2

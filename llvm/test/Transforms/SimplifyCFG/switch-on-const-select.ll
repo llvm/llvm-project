@@ -10,13 +10,16 @@ define i32 @foo(i64 %x, i64 %y) nounwind {
 ; CHECK:       switch:
 ; CHECK-NEXT:    [[LT:%.*]] = icmp slt i64 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[LT]], label [[A:%.*]], label [[B]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 1, [[A]] ], [ [[RETVAL:%.*]], [[B]] ]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       a:
 ; CHECK-NEXT:    tail call void @bees.a() #[[ATTR0:[0-9]+]]
-; CHECK-NEXT:    ret i32 1
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ; CHECK:       b:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i32 [ 0, [[SWITCH]] ], [ 2, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RETVAL]] = phi i32 [ 0, [[SWITCH]] ], [ 2, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    tail call void @bees.b() #[[ATTR0]]
-; CHECK-NEXT:    ret i32 [[RETVAL]]
+; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
   %eq = icmp eq i64 %x, %y
@@ -127,8 +130,8 @@ define i32 @xyzzy(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i64 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[LT:%.*]] = icmp slt i64 [[X]], [[Y]]
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[LT]], i32 -1, i32 1
-; CHECK-NEXT:    [[VAL:%.*]] = select i1 [[EQ]], i32 0, i32 [[SPEC_SELECT]]
-; CHECK-NEXT:    ret i32 [[VAL]]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = select i1 [[EQ]], i32 0, i32 [[SPEC_SELECT]]
+; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ;
 entry:
   %eq = icmp eq i64 %x, %y

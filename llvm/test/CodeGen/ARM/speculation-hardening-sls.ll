@@ -26,9 +26,9 @@
 define dso_local i32 @double_return(i32 %a, i32 %b) local_unnamed_addr {
 ; NOHARDENARM-LABEL: double_return:
 ; NOHARDENARM:       @ %bb.0: @ %entry
-; NOHARDENARM-NEXT:    cmp r0, #1
-; NOHARDENARM-NEXT:    mulge r0, r1, r0
-; NOHARDENARM-NEXT:    bxge lr
+; NOHARDENARM-NEXT:    cmp r0, #0
+; NOHARDENARM-NEXT:    mulgt r0, r1, r0
+; NOHARDENARM-NEXT:    bxgt lr
 ; NOHARDENARM-NEXT:  .LBB0_1: @ %if.else
 ; NOHARDENARM-NEXT:    sdiv r1, r0, r1
 ; NOHARDENARM-NEXT:    sdiv r1, r0, r1
@@ -37,8 +37,8 @@ define dso_local i32 @double_return(i32 %a, i32 %b) local_unnamed_addr {
 ;
 ; NOHARDENTHUMB-LABEL: double_return:
 ; NOHARDENTHUMB:       @ %bb.0: @ %entry
-; NOHARDENTHUMB-NEXT:    cmp r0, #1
-; NOHARDENTHUMB-NEXT:    blt .LBB0_2
+; NOHARDENTHUMB-NEXT:    cmp r0, #0
+; NOHARDENTHUMB-NEXT:    ble .LBB0_2
 ; NOHARDENTHUMB-NEXT:  @ %bb.1: @ %if.then
 ; NOHARDENTHUMB-NEXT:    muls r0, r1, r0
 ; NOHARDENTHUMB-NEXT:    bx lr
