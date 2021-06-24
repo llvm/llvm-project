@@ -77,7 +77,7 @@ define i32 @test_rauw(i8* %a, i8* %b, i8** %c) {
 ; CHECK-NEXT:    [[ADD180:%.*]] = add i64 [[CALL49]], 1
 ; CHECK-NEXT:    [[YO107:%.*]] = call i64 @llvm.objectsize.i64.p0i8(i8* [[B:%.*]], i1 false, i1 false, i1 false)
 ; CHECK-NEXT:    [[CALL50:%.*]] = call i8* @__memmove_chk(i8* [[B]], i8* [[A]], i64 [[ADD180]], i64 [[YO107]])
-; CHECK-NEXT:    [[STRLEN:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) [[B]])
+; CHECK-NEXT:    [[STRLEN:%.*]] = call i64 @strlen(i8* nocapture noundef nonnull dereferenceable(1) [[B]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[STRCHR1:%.*]] = getelementptr i8, i8* [[B]], i64 [[STRLEN]]
 ; CHECK-NEXT:    [[D:%.*]] = load i8*, i8** [[C:%.*]], align 8
 ; CHECK-NEXT:    [[SUB182:%.*]] = ptrtoint i8* [[D]] to i64
@@ -114,13 +114,13 @@ declare i8* @__memset_chk(i8*, i32, i64, i64)
 define float* @pr25892(i64 %size) #0 {
 ; CHECK-LABEL: @pr25892(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @malloc(i64 [[SIZE:%.*]]) [[ATTR3:#.*]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @malloc(i64 [[SIZE:%.*]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[CALL]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[CLEANUP:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast i8* [[CALL]] to float*
 ; CHECK-NEXT:    [[CALL2:%.*]] = tail call i64 @llvm.objectsize.i64.p0i8(i8* nonnull [[CALL]], i1 false, i1 false, i1 false)
-; CHECK-NEXT:    [[CALL3:%.*]] = tail call i8* @__memset_chk(i8* nonnull [[CALL]], i32 0, i64 [[SIZE]], i64 [[CALL2]]) [[ATTR3]]
+; CHECK-NEXT:    [[CALL3:%.*]] = tail call i8* @__memset_chk(i8* nonnull [[CALL]], i32 0, i64 [[SIZE]], i64 [[CALL2]]) #[[ATTR3]]
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi float* [ [[BC]], [[IF_END]] ], [ null, [[ENTRY:%.*]] ]

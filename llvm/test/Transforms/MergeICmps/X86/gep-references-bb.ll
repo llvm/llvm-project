@@ -24,7 +24,7 @@ define i1 @bug(%Triple* nonnull dereferenceable(16) %lhs, %Triple* nonnull deref
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, i32* [[GEP]], i64 2
 ; CHECK-NEXT:    [[CSTR:%.*]] = bitcast i32* [[TMP0]] to i8*
 ; CHECK-NEXT:    [[CSTR1:%.*]] = bitcast i32* [[TMP1]] to i8*
-; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* [[CSTR]], i8* [[CSTR1]], i64 8)
+; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* nocapture [[CSTR]], i8* nocapture [[CSTR1]], i64 8) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    br label [[FINAL]]
 ; CHECK:       final:
