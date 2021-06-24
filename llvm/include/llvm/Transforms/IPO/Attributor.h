@@ -142,6 +142,12 @@ namespace AA {
 /// instruction/argument of \p Scope.
 bool isValidInScope(const Value &V, const Function *Scope);
 
+/// Return true if \p V is a valid value at position \p CtxI, that is a
+/// constant, an argument of the same function as \p CtxI, or an instruction in
+/// that function that dominates \p CtxI.
+bool isValidAtPosition(const Value &V, const Instruction &CtxI,
+                       InformationCache &InfoCache);
+
 /// Try to convert \p V to type \p Ty without introducing new instructions. If
 /// this is not possible return `nullptr`. Note: this function basically knows
 /// how to cast various constants.
