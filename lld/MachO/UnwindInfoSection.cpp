@@ -297,8 +297,6 @@ static void addEntriesForFunctionsWithoutUnwindInfo(
   // Add explicit "has no unwind info" entries for all global and local symbols
   // without unwind info.
   auto markNoUnwindInfo = [&cuVector, &hasUnwindInfo](const Defined *d) {
-    // FIXME: The d->isec null check might be incorrect for symbols
-    // from LTO files.
     if (d->isLive() && d->isec && isCodeSection(d->isec)) {
       Ptr ptr = d->getVA();
       if (!hasUnwindInfo.count(ptr))
