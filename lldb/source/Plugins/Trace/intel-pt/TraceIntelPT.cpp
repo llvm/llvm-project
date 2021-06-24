@@ -106,6 +106,11 @@ size_t TraceIntelPT::GetCursorPosition(Thread &thread) {
   return decoded_thread->GetCursorPosition();
 }
 
+lldb::TraceCursorUP TraceIntelPT::GetCursor(Thread &thread) {
+  // TODO: to implement
+  return nullptr;
+}
+
 void TraceIntelPT::TraverseInstructions(
     Thread &thread, size_t position, TraceDirection direction,
     std::function<bool(size_t index, Expected<lldb::addr_t> load_addr)>

@@ -15,6 +15,7 @@
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Target/TraceCursor.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/TraceGDBRemotePackets.h"
 #include "lldb/Utility/UnimplementedError.h"
@@ -204,6 +205,14 @@ public:
       std::function<bool(size_t index, llvm::Expected<lldb::addr_t> load_addr)>
           callback) = 0;
 
+  /// Get a \a TraceCursor for the given thread's trace.
+  ///
+  /// \return
+  ///     A \a TraceCursorUP. If the thread is not traced or its trace
+  ///     information failed to load, the corresponding error is embedded in the
+  ///     trace.
+  virtual lldb::TraceCursorUP GetCursor(Thread &thread) = 0;
+
   /// Get the number of available instructions in the trace of the given thread.
   ///
   /// \param[in] thread
@@ -279,6 +288,11 @@ public:
   /// Get the trace file of the given post mortem thread.
   llvm::Expected<const FileSpec &> GetPostMortemTraceFile(lldb::tid_t tid);
 
+  /// \return
+  ///     The stop ID of the live process being traced, or an invalid stop ID
+  ///     if the trace is in an error or invalid state.
+  uint32_t GetStopID();
+
 protected:
   /// Get binary data of a live thread given a data identifier.
   ///
@@ -350,8 +364,8 @@ protected:
   /// The result is cached through the same process stop.
   void RefreshLiveProcessState();
 
+  uint32_t m_stop_id = LLDB_INVALID_STOP_ID;
   /// Process traced by this object if doing live tracing. Otherwise it's null.
-  int64_t m_stop_id = -1;
   Process *m_live_process = nullptr;
   /// tid -> data kind -> size
   std::map<lldb::tid_t, std::unordered_map<std::string, size_t>>
