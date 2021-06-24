@@ -44,15 +44,20 @@ class DefinedOpCallable:
     self.op_name = op_name
     self.model = model
 
-  def __call__(self, *args, emit_generic: bool = False, **kwargs):
+  def __call__(self, *ins: ir.Value, outs: Sequence[ir.Value], **kwargs):
     """Emits the corresponding op definition as IR.
 
     Most arguments are passed through to the underlying emitter. The following
-    are interpreted here:
+    keyword argument is interpreted here:
       emit_generic: Emits a generic form as appropriate (default True). If
         False, a named form is emitted (which must have been built in to the
         compiler).
     """
+    emit_generic = kwargs.pop("emit_generic", False)
+    if not isinstance(emit_generic, bool):
+      raise ValueError(f"The named argument 'emit_generic' needs to be "
+                       f" of type bool but got {type(emit_generic)}")
+
     op_configs = LinalgOpConfig.from_linalg_op_def(
         self.model, context=ir.Context.current)
 
@@ -70,12 +75,16 @@ class DefinedOpCallable:
     op_config = op_configs[0]
     if op_config.structured_op:
       if emit_generic:
-        return emit_generic_structured_op(op_config.structured_op, *args,
-                                          **kwargs)
+        return emit_generic_structured_op(
+            op_config.structured_op, *ins, outs=outs, **kwargs)
       else:
-        return emit_named_structured_op(op_config.structured_op, self.op_name,
-                                        self.model.metadata.cpp_class_name,
-                                        *args, **kwargs)
+        return emit_named_structured_op(
+            op_config.structured_op,
+            self.op_name,
+            self.model.metadata.cpp_class_name,
+            *ins,
+            outs=outs,
+            **kwargs)
 
     raise NotImplementedError(
         f"Emission of linalg op type not supported: {op_config}")
@@ -104,14 +113,12 @@ def linalg_structured_op(dsl_func=None,
   sig = inspect.signature(dsl_func)
   for param_name, param in sig.parameters.items():
     param_default = param.default
-    if isinstance(param_default, TensorDef):
-      tc_model.add_operand(param_name, param_default.operand_def)
-    elif isinstance(param_default, ScalarDef):
+    if isinstance(param_default, (TensorDef, ScalarDef, AttributeDef)):
       tc_model.add_operand(param_name, param_default.operand_def)
     else:
       raise ValueError(f"@tc_def_op function parameters must be defaulted as "
-                       f"TensorDef(...) or ScalarDef(...): Found {param_name}"
-                       f": {param_default}")
+                       f"TensorDef(...), ScalarDef(...), or AttributeDef(...): "
+                       f"Found {param_name}: {param_default}")
     dsl_func_args.append(param_default)
 
   # Invoke the DSL func to finish populating the model.
