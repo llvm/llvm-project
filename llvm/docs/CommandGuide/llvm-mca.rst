@@ -148,8 +148,8 @@ option specifies "``-``", then the output will also be sent to standard output.
 
 .. option:: -timeline-max-cycles=<cycles>
 
-  Limit the number of cycles in the timeline view. By default, the number of
-  cycles is set to 80.
+  Limit the number of cycles in the timeline view, or use 0 for no limit. By
+  default, the number of cycles is set to 80.
 
 .. option:: -resource-pressure
 
