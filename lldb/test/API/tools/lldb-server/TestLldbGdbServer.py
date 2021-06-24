@@ -1025,6 +1025,14 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
         self.assertEqual(supported_dict.get('fork-events', '-'), '-')
         self.assertEqual(supported_dict.get('vfork-events', '-'), '-')
 
+    # We need to be able to self.runCmd to get cpuinfo,
+    # which is not possible when using a remote platform.
+    @skipIfRemote
+    def test_qSupported_memory_tagging(self):
+        supported_dict = self.get_qSupported_dict()
+        self.assertEqual(supported_dict.get("memory-tagging", '-'),
+                         '+' if self.isAArch64MTE() else '-')
+
     @skipIfWindows # No pty support to test any inferior output
     def test_written_M_content_reads_back_correctly(self):
         self.build()
