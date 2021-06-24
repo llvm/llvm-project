@@ -163,6 +163,7 @@ template <class T, class Allocator, class Predicate>
 #include <__config>
 #include <__debug>
 #include <__split_buffer>
+#include <__utility/forward.h>
 #include <algorithm>
 #include <compare>
 #include <initializer_list>

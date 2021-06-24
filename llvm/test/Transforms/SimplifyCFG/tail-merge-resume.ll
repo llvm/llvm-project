@@ -39,19 +39,20 @@ define void @merge_simple(i1 %cond) personality i8* bitcast (i32 (...)* @__gxx_p
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    call void @baz()
 ; CHECK-NEXT:    br label [[RESUME2]]
+; CHECK:       common.resume:
+; CHECK-NEXT:    [[COMMON_RESUME_OP:%.*]] = phi { i8*, i32 } [ [[LP]], [[RESUME0]] ], [ [[LP]], [[RESUME1]] ], [ [[SEMICOMMON_LP:%.*]], [[RESUME2]] ]
+; CHECK-NEXT:    call void @common()
+; CHECK-NEXT:    resume { i8*, i32 } [[COMMON_RESUME_OP]]
 ; CHECK:       resume0:
 ; CHECK-NEXT:    call void @qux()
-; CHECK-NEXT:    call void @common()
-; CHECK-NEXT:    resume { i8*, i32 } [[LP]]
+; CHECK-NEXT:    br label [[COMMON_RESUME:%.*]]
 ; CHECK:       resume1:
 ; CHECK-NEXT:    call void @quux()
-; CHECK-NEXT:    call void @common()
-; CHECK-NEXT:    resume { i8*, i32 } [[LP]]
+; CHECK-NEXT:    br label [[COMMON_RESUME]]
 ; CHECK:       resume2:
-; CHECK-NEXT:    [[SEMICOMMON_LP:%.*]] = phi { i8*, i32 } [ [[LP2]], [[LPAD2]] ], [ [[LP3]], [[LPAD3]] ]
+; CHECK-NEXT:    [[SEMICOMMON_LP]] = phi { i8*, i32 } [ [[LP2]], [[LPAD2]] ], [ [[LP3]], [[LPAD3]] ]
 ; CHECK-NEXT:    call void @quuz()
-; CHECK-NEXT:    call void @common()
-; CHECK-NEXT:    resume { i8*, i32 } [[SEMICOMMON_LP]]
+; CHECK-NEXT:    br label [[COMMON_RESUME]]
 ;
   invoke void @maybe_throws() to label %invoke.cont unwind label %lpad
 

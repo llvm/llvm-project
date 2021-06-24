@@ -232,6 +232,7 @@
 #include <__availability>
 #include <__config>
 #include <__debug>
+#include <__utility/forward.h>
 #include <chrono>
 #include <compare>
 #include <cstddef>

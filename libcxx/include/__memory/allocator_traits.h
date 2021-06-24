@@ -13,6 +13,7 @@
 #include <__config>
 #include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
+#include <__utility/forward.h>
 #include <limits>
 #include <type_traits>
 

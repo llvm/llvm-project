@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__algorithm/unwrap_iter.h>
+#include <__utility/move.h>
 #include <cstring>
 #include <utility>
 #include <type_traits>
