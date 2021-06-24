@@ -21,9 +21,9 @@ structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
     name: O
-    usage: output
-    shape: affine_map<()[s0, s1] -> (s0, s1)>
+    usage: OutputOperand
     type_var: T
+    shape_map: affine_map<()[s0, s1] -> (s0, s1)>
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
     - affine_map<(d0, d1)[s0, s1] -> (d0, d1)>
@@ -86,12 +86,13 @@ structured_op: !LinalgStructuredOpConfig
 
 # @linalg_structured_op
 # def test2(I=TensorDef(T, S.M, S.N),
-#           O=TensorDef(T, S.M, S.N, output=True)):
+#           O=TensorDef(T, S.M, S.N, output=True),
+#           strides=AttributeDef(S.SM, S.SN)):
 #   """Title.
 
 #   Detailed description.
 #   """
-#   O[D.m, D.n] = I[D.n, D.m]
+#   O[D.m, D.n] = I[D.n * S.SM, D.m * S.SN]
 
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
@@ -104,24 +105,24 @@ metadata: !LinalgOpMetadata
 structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig
-    name: value
-    usage: input
-    type_var: T
-  - !LinalgOperandDefConfig
     name: I
-    usage: input
-    shape: affine_map<()[s0, s1] -> (s1, s0)>
+    usage: InputOperand
     type_var: T
+    shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s1)>
   - !LinalgOperandDefConfig
     name: O
-    usage: output
-    shape: affine_map<()[s0, s1] -> (s0, s1)>
+    usage: OutputOperand
     type_var: T
+    shape_map: affine_map<()[s0, s1, s2, s3] -> (s0, s1)>
+  - !LinalgOperandDefConfig
+    name: strides
+    usage: IndexAttribute
+    type_var: I64
+    attribute_map: affine_map<()[s0, s1, s2, s3] -> (s2, s3)>
   indexing_maps: !LinalgIndexingMapsConfig
     static_indexing_maps:
-    - affine_map<(d0, d1)[s0, s1] -> ()>
-    - affine_map<(d0, d1)[s0, s1] -> (d1, d0)>
-    - affine_map<(d0, d1)[s0, s1] -> (d0, d1)>
+    - affine_map<(d0, d1)[s0, s1, s2, s3] -> (d1 * s2, d0 * s3)>
+    - affine_map<(d0, d1)[s0, s1, s2, s3] -> (d0, d1)>
   iterator_types:
   - parallel
   - parallel
@@ -129,23 +130,41 @@ structured_op: !LinalgStructuredOpConfig
   - !ScalarAssign
     arg: O
     value: !ScalarExpression
-      scalar_apply:
-        fn_name: add
-        operands:
-        - !ScalarExpression
-          scalar_arg: value
-        - !ScalarExpression
-          scalar_arg: I
+      scalar_arg: I
 
-# IMPL-LABEL:  Test2Op::iterator_types()
-#  IMPL-NEXT:  { getParallelIteratorTypeName(), getParallelIteratorTypeName() }
+# ODS-LABEL:  def Test2Op : LinalgStructuredBase_Op<"test2"
+
+#       ODS:  let arguments =
+#  ODS-NEXT:    Variadic<AnyType>:$inputs,
+#  ODS-NEXT:    Variadic<AnyShaped>:$outputs,
+#  ODS-NEXT:    RankedI64ElementsAttr<[2]>:$strides
+
+#       ODS:  "Attribute":$strides
+#       ODS:  $_state.addAttribute("strides", strides);
+
+#       ODS:  bool hasDynamicIndexingMaps();
+#  ODS-NEXT:  LogicalResult verifyIndexingMapRequiredAttributes();
+
+#       IMPL:  getSymbolBindings(Test2Op self)
+#       IMPL:  cst2 = self.strides().getValue<int64_t>({ 0 });
+#  IMPL-NEXT:  getAffineConstantExpr(cst2, context)
+#       IMPL:  cst3 = self.strides().getValue<int64_t>({ 1 });
+#  IMPL-NEXT:  getAffineConstantExpr(cst3, context)
 
 #       IMPL:  Test2Op::indexing_maps()
-#       IMPL:  "affine_map<(d0, d1)[s0, s1] -> ()>"
-#       IMPL:  "affine_map<(d0, d1)[s0, s1] -> (d1, d0)>"
-#       IMPL:  "affine_map<(d0, d1)[s0, s1] -> (d0, d1)>"
+#       IMPL:  = getSymbolBindings(*this);
+#       IMPL:  "affine_map<(d0, d1)[s0, s1, s2, s3] -> (d1 * s2, d0 * s3)>"
+#       IMPL:  "affine_map<(d0, d1)[s0, s1, s2, s3] -> (d0, d1)>"
+
+#       IMPL:  Test2Op::getNumRegionArgs() { return 2; }
+
+#       IMPL:  Test2Op::hasDynamicIndexingMaps() { return true; }
+#       IMPL:  Test2Op::verifyIndexingMapRequiredAttributes()
+#       IMPL:  auto attr = op->getAttrOfType<DenseElementsAttr>("strides")
+#       IMPL:  "missing indexing map required attribute 'strides'"
 
 #       IMPL:  void Test2Op::regionBuilder(
-#       IMPL:    ImplicitLocOpBuilder &b, Block &block, ValueRange captures)
+#  IMPL-NEXT:    ImplicitLocOpBuilder &b, Block &block, ValueRange captures)
+#  IMPL-NEXT:    assert(2 > 0 && block.getNumArguments() == 2 &&
 
-#       IMPL:   = helper.applyfn__add(block.getArgument(0), block.getArgument(1));
+#       IMPL:   yields.push_back(block.getArgument(0));
