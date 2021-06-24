@@ -383,7 +383,7 @@ bool parse(llvm::ArrayRef<const char *> args, MachOLinkingContext &ctx) {
         !parsedArgs.getLastArg(OPT_test_file_usage)) {
       // If no -arch and no options at all, print usage message.
       if (parsedArgs.size() == 0) {
-        table.PrintHelp(llvm::outs(),
+        table.printHelp(llvm::outs(),
                         (std::string(args[0]) + " [options] file...").c_str(),
                         "LLVM Linker", false);
       } else {

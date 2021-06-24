@@ -93,11 +93,11 @@ TEST(Option, OptionParsing) {
   // Check the help text.
   std::string Help;
   raw_string_ostream RSO(Help);
-  T.PrintHelp(RSO, "test", "title!");
+  T.printHelp(RSO, "test", "title!");
   EXPECT_NE(std::string::npos, Help.find("-A"));
 
   // Check usage line.
-  T.PrintHelp(RSO, "name [options] file...", "title!");
+  T.printHelp(RSO, "name [options] file...", "title!");
   EXPECT_NE(std::string::npos, Help.find("USAGE: name [options] file...\n"));
 
   // Test aliases.
