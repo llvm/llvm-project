@@ -586,8 +586,18 @@ static void AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
 
   Flags imported_self_type_flags(imported_self_type.GetTypeInfo());
 
-  swift::Type object_type =
-      GetSwiftType(imported_self_type)->getWithoutSpecifierType();
+  auto swift_self_type = GetSwiftType(imported_self_type);
+  if (!swift_self_type) {
+    Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES |
+                                                    LIBLLDB_LOG_EXPRESSIONS));
+    if (log)
+      log->Printf("Couldn't get SwiftASTContext type for self type %s.",
+                  imported_self_type.GetDisplayTypeName().AsCString("<unknown>"));
+    
+    return;
+  }
+
+  swift::Type object_type = swift_self_type->getWithoutSpecifierType();
 
   if (object_type.getPointer() &&
       (object_type.getPointer() != imported_self_type.GetOpaqueQualType()))
