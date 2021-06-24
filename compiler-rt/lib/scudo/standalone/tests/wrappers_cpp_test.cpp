@@ -11,6 +11,7 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <memory>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -111,7 +112,9 @@ TEST(ScudoWrappersCppTest, ThreadedNew) {
 #if !SCUDO_ANDROID
   // TODO: Investigate why libc sometimes crashes with tag missmatch in
   // __pthread_clockjoin_ex.
-  scudo::ScopedDisableMemoryTagChecks NoTags;
+  std::unique_ptr<scudo::ScopedDisableMemoryTagChecks> NoTags;
+  if (scudo::systemSupportsMemoryTagging())
+    NoTags = std::make_unique<scudo::ScopedDisableMemoryTagChecks>();
 #endif
   Ready = false;
   std::thread Threads[32];
