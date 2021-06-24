@@ -278,3 +278,19 @@ func @omp_wsloop_pretty_multiple(%lb1 : i32, %ub1 : i32, %step1 : i32, %lb2 : i3
 
   return
 }
+
+// CHECK-LABEL: omp_target
+func @omp_target(%if_cond : i1, %device : si32,  %num_threads : si32) -> () {
+
+    // Test with optional operands; if_expr, device, thread_limit, and nowait.
+    // CHECK: omp.target
+    "omp.target"(%if_cond, %device, %num_threads) ({
+       // CHECK: omp.terminator
+       omp.terminator
+    }) {operand_segment_sizes = dense<[1,1,1]>: vector<3xi32>, nowait } : ( i1, si32, si32  ) -> ()
+
+    // CHECK: omp.barrier
+    omp.barrier
+
+    return
+}
