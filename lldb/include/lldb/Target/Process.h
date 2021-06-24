@@ -2721,6 +2721,13 @@ protected:
   ///     false.
   bool RouteAsyncStructuredData(const StructuredData::ObjectSP object_sp);
 
+  /// Check whether the process supports memory tagging.
+  ///
+  /// \return
+  ///     true if the process supports memory tagging,
+  ///     false otherwise.
+  virtual bool SupportsMemoryTagging() { return false; }
+
   // Type definitions
   typedef std::map<lldb::LanguageType, lldb::LanguageRuntimeSP>
       LanguageRuntimeCollection;

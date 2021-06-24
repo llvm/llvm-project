@@ -243,8 +243,9 @@ public:
     pass_signals = (1u << 3),
     auxv = (1u << 4),
     libraries_svr4 = (1u << 5),
+    memory_tagging = (1u << 6),
 
-    LLVM_MARK_AS_BITMASK_ENUM(libraries_svr4)
+    LLVM_MARK_AS_BITMASK_ENUM(memory_tagging)
   };
 
   class Factory {
